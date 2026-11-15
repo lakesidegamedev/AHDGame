@@ -40,19 +40,18 @@ import { emitTx } from "@/lib/financialTxLog/emit";
 import { CURRENCY_SYMBOLS } from "@/lib/constants/currencies";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { isPendingShareOfferDuplicateKey } from "@/lib/elections/duplicateKey";
-import type {
-  Character,
-  Corporation,
-  Notification,
-  ShareListing,
-  ShareOffer,
-} from "@/lib/db/types";
+import type { Notification, ShareListing, ShareOffer } from "@/lib/db/types";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { assertCeoAcquisitionWithinCap } from "@/lib/corporations/ceoShareAcquisitionCap";
 import { rejectDuringTurn } from "@/lib/api/rejectDuringTurn";
 import { checkNegotiatedSale } from "@/lib/corporations/negotiatedSaleGuards";
 import { getGameTime } from "@/lib/time/gameTime";
 import { settleListingOffer } from "./acceptShareOffer";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { notificationsCollection } from "@/lib/db/repositories/notifications";
+import { shareListingsCollection } from "@/lib/db/repositories/shareListings";
+import { shareOffersCollection } from "@/lib/db/repositories/shareOffers";
 
 interface RouteParams {
   params: Promise<{ id: string; listingId: string }>;
@@ -97,9 +96,7 @@ export async function submitShareOffer(request: Request, { params }: RouteParams
       return errorResponse(400, "Invalid listing ID");
     }
 
-    const listing = await db
-      .collection<ShareListing>("shareListings")
-      .findOne({ _id: new ObjectId(listingId) });
+    const listing = await shareListingsCollection(db).findOne({ _id: new ObjectId(listingId) });
 
     if (!listing) return errorResponse(404, "Listing not found");
     if (!listing.corporationId.equals(corporation._id)) {
@@ -117,9 +114,7 @@ export async function submitShareOffer(request: Request, { params }: RouteParams
 
     // Fetch listing corp early so price-bound error messages use the correct currency symbol.
     // pricePerShare and marketPriceAtCreation are stored in the corp's liquidCurrencyCode (v0.2.6).
-    const listingCorp = await db
-      .collection<Corporation>("corporations")
-      .findOne({ _id: listing.corporationId });
+    const listingCorp = await corporationsCollection(db).findOne({ _id: listing.corporationId });
     const listingCorpSym =
       CURRENCY_SYMBOLS[(listingCorp?.liquidCurrencyCode ?? "USD") as CurrencyCode] ?? "₳";
 
@@ -162,12 +157,10 @@ export async function submitShareOffer(request: Request, { params }: RouteParams
       if (!negotiated.buyerCharacterId.equals(character._id)) {
         return errorResponse(403, "This sale is reserved for another player");
       }
-      const seller = await db
-        .collection<Character>("characters")
-        .findOne(
-          { _id: listing.sellerCharacterId },
-          { projection: { _id: 1, userId: 1, name: 1, createdTurn: 1, createdAt: 1 } }
-        );
+      const seller = await charactersCollection(db).findOne(
+        { _id: listing.sellerCharacterId },
+        { projection: { _id: 1, userId: 1, name: 1, createdTurn: 1, createdAt: 1 } }
+      );
       if (!seller) return errorResponse(404, "Seller not found");
       const gameTime = await getGameTime();
       const guard = await checkNegotiatedSale(
@@ -191,9 +184,11 @@ export async function submitShareOffer(request: Request, { params }: RouteParams
     }
 
     // One pending offer per buyer per listing
-    const existingOffer = await db
-      .collection<ShareOffer>("shareOffers")
-      .findOne({ listingId: listing._id, buyerCharacterId: character._id, status: "pending" });
+    const existingOffer = await shareOffersCollection(db).findOne({
+      listingId: listing._id,
+      buyerCharacterId: character._id,
+      status: "pending",
+    });
     if (existingOffer) {
       return errorResponse(400, "You already have a pending offer on this listing");
     }
@@ -238,9 +233,10 @@ export async function submitShareOffer(request: Request, { params }: RouteParams
     let placedOfferId: ObjectId | null = null;
 
     if (offerAsCorporation) {
-      const placerCorp = await db
-        .collection<Corporation>("corporations")
-        .findOne({ ceoId: character._id, ceoVacant: { $ne: true } });
+      const placerCorp = await corporationsCollection(db).findOne({
+        ceoId: character._id,
+        ceoVacant: { $ne: true },
+      });
       if (!placerCorp) {
         return errorResponse(403, "You must be an active CEO to offer on behalf of a corporation");
       }
@@ -309,7 +305,7 @@ export async function submitShareOffer(request: Request, { params }: RouteParams
 
       let offerId: ObjectId;
       try {
-        const insertResult = await db.collection<Omit<ShareOffer, "_id">>("shareOffers").insertOne({
+        const insertResult = await shareOffersCollection<Omit<ShareOffer, "_id">>(db).insertOne({
           listingId: listing._id,
           corporationId: listing.corporationId,
           buyerCharacterId: character._id,
@@ -350,7 +346,7 @@ export async function submitShareOffer(request: Request, { params }: RouteParams
         });
       } catch (err) {
         await Promise.all([
-          db.collection<ShareOffer>("shareOffers").deleteOne({ _id: offerId, status: "pending" }),
+          shareOffersCollection(db).deleteOne({ _id: offerId, status: "pending" }),
           refundCorpLiquidCapital(db, placerCorp._id, escrowInPlacerCapital),
         ]);
         throw err;
@@ -397,7 +393,7 @@ export async function submitShareOffer(request: Request, { params }: RouteParams
 
       let offerId: ObjectId;
       try {
-        const insertResult = await db.collection<Omit<ShareOffer, "_id">>("shareOffers").insertOne({
+        const insertResult = await shareOffersCollection<Omit<ShareOffer, "_id">>(db).insertOne({
           listingId: listing._id,
           corporationId: listing.corporationId,
           buyerCharacterId: character._id,
@@ -438,7 +434,7 @@ export async function submitShareOffer(request: Request, { params }: RouteParams
         });
       } catch (err) {
         await Promise.all([
-          db.collection<ShareOffer>("shareOffers").deleteOne({ _id: offerId, status: "pending" }),
+          shareOffersCollection(db).deleteOne({ _id: offerId, status: "pending" }),
           refundCharacterCash(db, character._id, homeCurrency, escrowInHome, forexEnabled),
         ]);
         throw err;
@@ -447,7 +443,7 @@ export async function submitShareOffer(request: Request, { params }: RouteParams
 
     if (negotiated) {
       const placed = placedOfferId
-        ? await db.collection<ShareOffer>("shareOffers").findOne({ _id: placedOfferId })
+        ? await shareOffersCollection(db).findOne({ _id: placedOfferId })
         : null;
       if (!placed) return errorResponse(500, "Negotiated sale payment was not recorded");
       const settled = await settleListingOffer(db, {
@@ -465,11 +461,12 @@ export async function submitShareOffer(request: Request, { params }: RouteParams
         );
       }
       void (async () => {
-        const sellerChar = await db
-          .collection<Character>("characters")
-          .findOne({ _id: listing.sellerCharacterId }, { projection: { userId: 1 } });
+        const sellerChar = await charactersCollection(db).findOne(
+          { _id: listing.sellerCharacterId },
+          { projection: { userId: 1 } }
+        );
         if (!sellerChar) return;
-        await db.collection<Omit<Notification, "_id">>("notifications").insertOne({
+        await notificationsCollection<Omit<Notification, "_id">>(db).insertOne({
           userId: sellerChar.userId,
           type: "share_offer_accepted",
           title: "Your negotiated share sale went through",
@@ -484,13 +481,14 @@ export async function submitShareOffer(request: Request, { params }: RouteParams
 
     // Notify the seller
     void (async () => {
-      const sellerChar = await db
-        .collection<Character>("characters")
-        .findOne({ _id: listing.sellerCharacterId }, { projection: { userId: 1 } });
+      const sellerChar = await charactersCollection(db).findOne(
+        { _id: listing.sellerCharacterId },
+        { projection: { userId: 1 } }
+      );
 
       if (!sellerChar) return;
 
-      await db.collection<Omit<Notification, "_id">>("notifications").insertOne({
+      await notificationsCollection<Omit<Notification, "_id">>(db).insertOne({
         userId: sellerChar.userId,
         type: "share_listing_offer_received",
         title: "New offer on your share listing",

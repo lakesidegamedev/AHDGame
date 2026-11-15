@@ -21,6 +21,10 @@ import {
   computeEffectiveCommodityPressureRatio,
   type CommodityType,
 } from "@/lib/constants/commodities";
+import {
+  methodAdoptionSurchargeFraction,
+  methodBuildDelayTurns,
+} from "@/lib/corporations/rules/methodAdoption";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { fetchJson } from "@/lib/observability/fetchJson";
 
@@ -37,6 +41,8 @@ interface StrategyChangeConfirmProps {
   dailyRevenue: number;
   /** Corp's liquidCurrencyCode — drives formatAmount wallet-pref display. */
   liquidCurrencyCode?: string | null;
+  /** Multiplier on the retool fee; below 1 for a discounted sunset conversion. */
+  retoolCostMultiplier?: number;
   onConfirm: () => void;
   onCancel: () => void;
   loading?: boolean;
@@ -112,6 +118,7 @@ export default function StrategyChangeConfirm({
   targetStrategyId,
   dailyRevenue,
   liquidCurrencyCode,
+  retoolCostMultiplier = 1,
   onConfirm,
   onCancel,
   loading,
@@ -175,7 +182,12 @@ export default function StrategyChangeConfirm({
   const target = strategies.find((s) => s.id === targetStrategyId) as SectorStrategy | undefined;
   if (!current || !target) return null;
 
-  const retoolCost = dailyRevenue * STRATEGY_RETOOL_COST_FRACTION;
+  // The downside charge is billed on top of the retool fee and no discount covers it.
+  const downsideCharge = dailyRevenue * methodAdoptionSurchargeFraction(target);
+  const retoolCost =
+    dailyRevenue * STRATEGY_RETOOL_COST_FRACTION * retoolCostMultiplier + downsideCharge;
+  const buildDelay = methodBuildDelayTurns(target);
+  const sunsetDiscount = retoolCostMultiplier < 1;
   const hasMarketData = Object.keys(marketData).length > 0;
 
   // Estimate commodity margin impact
@@ -217,11 +229,22 @@ export default function StrategyChangeConfirm({
         <span className="text-sm font-semibold text-foreground">Switch to {target.name}?</span>
         <span className="text-xs text-error font-medium">
           Retooling cost {fmtMoney(retoolCost)}
+          {sunsetDiscount && (
+            <span className="ml-1 text-success">
+              ({Math.round((1 - retoolCostMultiplier) * 100)}% off: replaces a retired method)
+            </span>
+          )}
         </span>
       </div>
 
       {/* Description */}
       <p className="text-xs text-muted">{target.description}</p>
+      {downsideCharge > 0 && (
+        <p className="text-xs text-muted">
+          Downside charge {fmtMoney(downsideCharge)}, included above
+          {target.downside ? `: ${target.downside}` : "."}
+        </p>
+      )}
 
       {/* Commodity changes table */}
       <table className="w-full border-collapse">
@@ -371,6 +394,7 @@ export default function StrategyChangeConfirm({
       {/* Footer */}
       <div className="flex items-center justify-between pt-0.5">
         <span className="text-xs text-muted">
+          {buildDelay > 0 && `Runs your current method for ${buildDelay} turns while it is built. `}
           Phases in over {STRATEGY_TRANSITION_TURNS} turns, costs{" "}
           {Math.abs(STRATEGY_TRANSITION_MARGIN_PENALTY)} points of margin meanwhile, and locks
           further changes for {STRATEGY_COOLDOWN_TURNS} turns.

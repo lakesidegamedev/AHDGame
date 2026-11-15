@@ -16,8 +16,7 @@ export function toneClass(value: number | null | undefined): string {
 
 /**
  * Change against the commodity's base price, as a percentage. Shared by the
- * overview movers list and the commodities tab; it used to sit in the tab module,
- * which dragged the whole catalogue into the eager overview.
+ * overview movers list and the commodities tab.
  */
 export function vsBasePct(c: Pick<CommodityData, "globalPrice" | "basePrice">): number | null {
   return c.basePrice > 0 ? (c.globalPrice / c.basePrice - 1) * 100 : null;

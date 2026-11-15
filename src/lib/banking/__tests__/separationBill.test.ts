@@ -19,7 +19,7 @@ vi.mock("@/lib/discordWebhooks", () => ({
   sendCountryGameEvent: vi.fn().mockResolvedValue(undefined),
   DISCORD_COLORS: { billEnacted: 0x00ff00 },
 }));
-vi.mock("@/lib/archetypeAffinities", () => ({
+vi.mock("@/lib/policyShiftImpacts", () => ({
   calculateShiftImpacts: vi.fn().mockReturnValue({}),
 }));
 vi.mock("@/lib/budget/revenue", () => ({
@@ -47,7 +47,11 @@ describe("banking separation legislation", () => {
   });
 
   it("catalog entry exists for a sample of countries with separated/universal options", () => {
-    const sampleScopes = ["us", "uk", "de", "jp", "fr", "br", "ng"];
+    // The one law book has no charter bill for these countries.
+    for (const scope of ["us", "uk", "ru", "dd"]) {
+      expect(bankingSeparationLegislationTypes.some((t) => t.countryScope === scope)).toBe(false);
+    }
+    const sampleScopes = ["de", "jp", "fr", "br", "ng"];
     for (const scope of sampleScopes) {
       const entry = bankingSeparationLegislationTypes.find((t) => t.countryScope === scope);
       expect(entry, `missing banking separation for ${scope}`).toBeDefined();
@@ -106,9 +110,9 @@ describe("banking separation legislation", () => {
     expect(afterUniversal).toEqual(["retail", "investment", "universal"]);
   });
 
-  it("onBillEnacted wires applySeparationBill for us_banking_separation", async () => {
-    const usType = bankingSeparationLegislationTypes.find((t) => t._id === "us_banking_separation");
-    expect(usType).toBeDefined();
+  it("onBillEnacted wires applySeparationBill for jp_banking_separation", async () => {
+    const jpType = bankingSeparationLegislationTypes.find((t) => t._id === "jp_banking_separation");
+    expect(jpType).toBeDefined();
 
     db.collection("legislationTypes");
     db.collection("gameState");
@@ -116,7 +120,7 @@ describe("banking separation legislation", () => {
     db.collection("bankingLaws");
 
     db.collectionMocks.legislationTypes!.find = vi.fn().mockReturnValue({
-      toArray: vi.fn().mockResolvedValue([usType]),
+      toArray: vi.fn().mockResolvedValue([jpType]),
     });
     db.collectionMocks.gameState!.findOne.mockResolvedValue({
       _id: "current",
@@ -139,12 +143,12 @@ describe("banking separation legislation", () => {
     const bill = {
       _id: billId,
       title: "Enact Banking Separation Act",
-      countryId: "US" as const,
-      stateId: "federal",
+      countryId: "JP" as const,
+      stateId: "jp_national",
       provisions: [
         {
-          legislationTypeId: "us_banking_separation",
-          policyOptionId: "us_banking_separation_separated",
+          legislationTypeId: "jp_banking_separation",
+          policyOptionId: "jp_banking_separation_separated",
           effectDirection: 1,
           economic: -3,
           social: 0,
@@ -156,7 +160,7 @@ describe("banking separation legislation", () => {
 
     expect(db.collectionMocks.bankingLaws!.updateOne).toHaveBeenCalled();
     const [filter, update] = db.collectionMocks.bankingLaws!.updateOne.mock.calls[0];
-    expect(filter).toEqual({ _id: "US" });
+    expect(filter).toEqual({ _id: "JP" });
     expect(update.$set).toMatchObject({
       separation: "separated",
       enactedTurn: 30,

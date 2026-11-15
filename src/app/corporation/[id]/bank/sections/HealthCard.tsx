@@ -177,10 +177,7 @@ export function HealthCard({ data }: { data: ConsolePayload }) {
         />
         <HealthStat
           label="Reserves"
-          // The bank's ring-fenced cash, which is the same quantity the
-          // surplus/shortfall tooltip is measured from. This used to render a
-          // legacy `reserves` mirror written once per turn, so the headline and
-          // the line under it could be two different numbers on the same card.
+          // ring-fenced cash: same quantity the surplus/shortfall tooltip is measured from, so headline and subline stay consistent.
           value={formatBankMoney(charter.cashReserves, charter.currency)}
           sub={reserveSub}
           tone={reserveGap == null ? "default" : reserveGap < 0 ? "error" : "success"}

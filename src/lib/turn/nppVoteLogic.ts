@@ -96,12 +96,3 @@ export function calculateWhippedVote(
   // Did not comply - use base ideology vote
   return calculateBaseVote(npp, bill, random);
 }
-
-/**
- * Calculate compliance chance for display purposes.
- */
-export function calculateComplianceChance(npp: NPP): number {
-  const loyalty = (npp.personality?.loyalty ?? 50) / 100;
-  const stubbornness = (npp.personality?.stubbornness ?? 50) / 100;
-  return loyalty * 0.7 + (1 - stubbornness) * 0.3;
-}

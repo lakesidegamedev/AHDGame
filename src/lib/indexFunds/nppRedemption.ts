@@ -1,32 +1,14 @@
 /**
- * Autonomous NPP index-fund redemptions (issue #2120).
+ * Gated autonomous NPP index-fund redemptions, using the same
+ * `enqueueRedemption` path as the player route so the cron pays out later.
  *
- * Before this module the ONLY caller of `enqueueRedemption` was the player
- * redeem route, so the NPP branch of `processQueuedRedemptions` in
- * `fundCron.ts` was unreachable in a running world and the full
- * subscribe -> rebalance -> redeem round trip had never happened.
- *
- * This adds a *gated* autonomous redemption policy: when
- * `gameConfig.nppFundRedemptionEnabled === true`, the NPP investing pass may
- * redeem a bounded fraction of an overweight position through the SAME
- * `enqueueRedemption` path the player route uses, so the cron pays it out on a
- * later turn. The policy has three hard properties:
- *
- *   1. Strictly bounded per turn — a single position can give up at most
- *      `NPP_FUND_REDEMPTION_MAX_FRACTION_PER_TURN` of its units in one pass.
- *   2. Never removes more units than held — the position debit is the atomic,
- *      balance-gated `debitFundPosition` guard; a failed debit skips the entry.
- *   3. Deterministic — the planner is pure and orders positions by value then
- *      by fund id, so identical inputs produce identical intents.
- *
- * When the flag is absent or false the pass performs a single config read and
- * returns zero with NO writes, so the NPP investing pass is byte-identical to
- * its pre-flag behavior.
+ * Properties: bounded per turn per position; never exceeds held units
+ * (balance-gated `debitFundPosition`); planner is pure and deterministically
+ * ordered. When the flag is off, returns zero with no writes.
  */
 
 import { ObjectId, type ClientSession, type Db } from "mongodb";
 import type {
-  GameConfig,
   IndexFund,
   IndexFundPosition,
   IndexFundRedemptionQueueEntry,
@@ -34,16 +16,19 @@ import type {
 } from "@/lib/db/types";
 import { assertTransactionSupportAtBoot } from "@/lib/db/transactionSupport";
 import {
-  FUND_COLLECTION,
-  FUND_POSITION_COLLECTION,
-  FUND_REDEMPTION_QUEUE_COLLECTION,
-  FUND_TRANSACTION_COLLECTION,
   creditFundPosition,
   debitFundPosition,
   enqueueRedemption,
   insertFundTransaction,
 } from "@/lib/indexFunds/fundQueries";
 import { boundedParallelMap } from "@/lib/indexFunds/boundedParallelMap";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import { indexFundTransactionsCollection } from "@/lib/db/repositories/indexFundTransactions";
+import { indexFundRedemptionQueueCollection } from "@/lib/db/repositories/indexFundRedemptionQueue";
+import { indexFundPositionsCollection } from "@/lib/db/repositories/indexFundPositions";
+import type { Document } from "mongodb";
 
 /** Mirrors `NPRiskArchetype` in nppInvesting.ts (kept local to avoid an import cycle). */
 export type NppRiskArchetype = "conservative" | "moderate" | "aggressive";
@@ -168,9 +153,10 @@ export async function processNppFundRedemptions(
     archetypesByNppId: ReadonlyMap<string, NppRiskArchetype>;
   }
 ): Promise<NppRedemptionPassResult> {
-  const config = await db
-    .collection<GameConfig>("gameConfig")
-    .findOne({ _id: "default" }, { projection: { nppFundRedemptionEnabled: 1 } });
+  const config = await gameConfigCollection(db).findOne(
+    { _id: "default" },
+    { projection: { nppFundRedemptionEnabled: 1 } }
+  );
   if (config?.nppFundRedemptionEnabled !== true || options.currentTurn <= 0) {
     return { redemptionsQueued: 0, unitsRedeemed: 0, errors: [] };
   }
@@ -181,8 +167,7 @@ export async function processNppFundRedemptions(
 
   const fundById = new Map(options.activeFunds.map((fund) => [fund._id.toString(), fund]));
 
-  const positions = await db
-    .collection<IndexFundPosition>(FUND_POSITION_COLLECTION)
+  const positions = await indexFundPositionsCollection<IndexFundPosition>(db)
     .find({ holderKind: "npp" }, { projection: { nppId: 1, fundId: 1, units: 1 } })
     .toArray();
 
@@ -204,8 +189,7 @@ export async function processNppFundRedemptions(
   }
 
   const cashByNppId = new Map<string, number>();
-  const cashDocs = await db
-    .collection<{ _id: ObjectId; nppInvestmentCashAnchor?: number }>("npps")
+  const cashDocs = await nppsCollection<{ _id: ObjectId; nppInvestmentCashAnchor?: number }>(db)
     .find({ _id: { $in: candidateNppIds } }, { projection: { nppInvestmentCashAnchor: 1 } })
     .toArray();
   for (const doc of cashDocs) cashByNppId.set(doc._id.toString(), doc.nppInvestmentCashAnchor ?? 0);
@@ -326,7 +310,7 @@ export async function writeNppRedemptionBatch(
   // Same balance-gated pipeline debit as debitFundPosition, in intent order,
   // stamped with the clock at the debit as debitFundPosition stamps it.
   const debitedAt = new Date();
-  const debit = await db.collection(FUND_POSITION_COLLECTION).bulkWrite(
+  const debit = await indexFundPositionsCollection<Document>(db).bulkWrite(
     planned.map((p) => ({
       updateOne: {
         filter: { ...identity(p), units: { $gte: p.intent.units } },
@@ -348,13 +332,13 @@ export async function writeNppRedemptionBatch(
   if (debit.matchedCount !== planned.length) throw new NppRedemptionGuardMiss();
 
   // debitFundPosition removes a position the debit took to zero.
-  await db.collection(FUND_POSITION_COLLECTION).bulkWrite(
+  await indexFundPositionsCollection<Document>(db).bulkWrite(
     planned.map((p) => ({ deleteOne: { filter: { ...identity(p), units: { $lte: 0 } } } })),
     { ordered: true, ...opts }
   );
 
   // Guarded supply burn per intent, as the per-intent path does it.
-  const burn = await db.collection<IndexFund>(FUND_COLLECTION).bulkWrite(
+  const burn = await indexFundsCollection<IndexFund>(db).bulkWrite(
     planned.map((p) => ({
       updateOne: {
         filter: { _id: p.intent.fundId, unitSupply: { $gte: p.intent.units } },
@@ -365,11 +349,11 @@ export async function writeNppRedemptionBatch(
   );
   if (burn.matchedCount !== planned.length) throw new NppRedemptionGuardMiss();
 
-  await db.collection<IndexFundRedemptionQueueEntry>(FUND_REDEMPTION_QUEUE_COLLECTION).insertMany(
+  await indexFundRedemptionQueueCollection<IndexFundRedemptionQueueEntry>(db).insertMany(
     planned.map((p) => queueEntryFor(p, now) as IndexFundRedemptionQueueEntry),
     { ordered: true, ...opts }
   );
-  await db.collection<IndexFundTransaction>(FUND_TRANSACTION_COLLECTION).insertMany(
+  await indexFundTransactionsCollection<IndexFundTransaction>(db).insertMany(
     planned.map((p) => queuedTransactionFor(p, now) as IndexFundTransaction),
     { ordered: true, ...opts }
   );
@@ -451,12 +435,10 @@ export async function applyNppRedemptionsSequentially(
           // Burn the redeemed units from fund supply at request time, mirroring
           // the player route; the cron then only pays cash. Guarded; if supply
           // moved under us, restore the position and skip.
-          const burn = await db
-            .collection<IndexFund>(FUND_COLLECTION)
-            .updateOne(
-              { _id: intent.fundId, unitSupply: { $gte: intent.units } },
-              { $inc: { unitSupply: -intent.units }, $set: { updatedAt: now } }
-            );
+          const burn = await indexFundsCollection<IndexFund>(db).updateOne(
+            { _id: intent.fundId, unitSupply: { $gte: intent.units } },
+            { $inc: { unitSupply: -intent.units }, $set: { updatedAt: now } }
+          );
           if (burn.matchedCount === 0) {
             await creditFundPosition(
               db,

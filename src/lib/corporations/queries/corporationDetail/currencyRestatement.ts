@@ -9,7 +9,7 @@ import {
 } from "@/lib/currency/corporationCapital";
 
 /**
- * Host → ₳ → corp restatement for the corporation detail view (#587).
+ * Host → ₳ → corp restatement for the corporation detail view.
  *
  * Sector economic fields are stored in each sector's HOST-state currency, but
  * every figure on the page is shown in the corp's home currency. Restating
@@ -17,9 +17,8 @@ import {
  * single-currency; it is the identity for domestic sectors, where host and
  * corp currency match.
  *
- * Extracted from `loadCorporationDetailView` because it must stay
- * single-currency and is one of the parts that has generated bugs. Pure and
- * testable on its own rather than only through a full view load.
+ * Pure and testable on its own; this must stay single-currency and is a spot
+ * that has generated bugs.
  */
 export interface SectorCurrencyRestatement {
   /** The corp's own currency, which every figure on the page is stated in. */

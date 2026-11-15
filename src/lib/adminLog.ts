@@ -1,6 +1,8 @@
 import { getDb } from "@/lib/mongodb";
 import type { AdminLogCategory, AdminLogAction } from "@/lib/db/types";
 import { recordAudit } from "@/lib/audit/recordAudit";
+import { adminLogsCollection } from "@/lib/db/repositories/adminLogs";
+import type { Document } from "mongodb";
 
 interface CreateAdminLogParams {
   category: AdminLogCategory;
@@ -24,7 +26,7 @@ interface CreateAdminLogParams {
 export async function createAdminLog(params: CreateAdminLogParams): Promise<void> {
   try {
     const db = await getDb();
-    const result = await db.collection("adminLogs").insertOne({
+    const result = await adminLogsCollection<Document>(db).insertOne({
       ...params,
       createdAt: new Date(),
     });

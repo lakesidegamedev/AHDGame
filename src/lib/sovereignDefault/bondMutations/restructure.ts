@@ -14,6 +14,7 @@ import type { Db, AnyBulkWriteOperation } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import type { Bond } from "@/lib/db/types/bond";
 import { RESTRUCTURE_BOND_MARKET_PRICE } from "../constants";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
 
 export async function applyCountryBondRestructure(
   db: Db,
@@ -21,8 +22,7 @@ export async function applyCountryBondRestructure(
   haircutPercent: number,
   maturityExtensionTurns: number
 ): Promise<{ bondsAffected: number }> {
-  const bonds = await db
-    .collection<Bond>("bonds")
+  const bonds = await bondsCollection(db)
     .find({
       issuerType: "sovereign",
       countryId: countryCode,
@@ -55,6 +55,6 @@ export async function applyCountryBondRestructure(
     };
   });
 
-  await db.collection<Bond>("bonds").bulkWrite(ops);
+  await bondsCollection(db).bulkWrite(ops);
   return { bondsAffected: ops.length };
 }

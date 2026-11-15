@@ -2,21 +2,7 @@ import type { PartySeed } from "@/lib/seeds/reference/politicalParties";
 
 /**
  * United States default political parties.
- *
- * ⚠️ THESE WERE THE ONLY PARTY ROWS IN `seeds/reference/politicalParties.ts`,
- * A FILE NAMED AS IF IT HELD EVERY COUNTRY'S. Every other country already keeps
- * its own roster -- Japan in `jp/data/jpParties.ts`, and the rest in
- * `admin/seed/seedAT.ts`, `seedBR.ts`, `seedCN.ts` and their siblings. The US
- * was the odd one out purely because it is the DEFAULT country, so its data
- * ended up in the shared file under the shared name.
- *
- * Consumers had already noticed and worked around it:
- * `finalizeResetGameWorld.ts` imported it as
- * `const { politicalParties: usParties } = ...`, renaming it at the call site,
- * and `StartingStateDashboardData.ts` files it under a `US:` key. When readers
- * alias a shared name to a country name, the name is wrong.
- *
- * seedOrder determines the sequentialId assignment order within the US.
+ * NOTE: seedOrder determines the sequentialId assignment order within the US.
  */
 export const usParties: PartySeed[] = [
   {
@@ -56,5 +42,55 @@ export const usParties: PartySeed[] = [
     memberCount: 0,
     isDefault: true,
     createdBy: null,
+  },
+  {
+    seedOrder: 3,
+    countryId: "US",
+    name: "Green Party",
+    abbreviation: "GRN",
+    tier: "minor",
+    color: "#17AA5C",
+    economicPosition: -4,
+    socialPosition: -4,
+    chairId: null,
+    viceChairId: null,
+    treasurerId: null,
+    committeeIds: [],
+    treasury: 1_000_000,
+    nationalTaxRate: 0,
+    politicalStrength: 0,
+    memberCount: 0,
+    isDefault: true,
+    createdBy: null,
+    validForPresets: ["2007-default", "2019-default", "2023-default", "2027-default"],
+  },
+  {
+    seedOrder: 4,
+    countryId: "US",
+    name: "Libertarian Party",
+    abbreviation: "LIB",
+    tier: "minor",
+    color: "#E5B72F",
+    economicPosition: 4,
+    socialPosition: -4,
+    chairId: null,
+    viceChairId: null,
+    treasurerId: null,
+    committeeIds: [],
+    treasury: 1_000_000,
+    nationalTaxRate: 0,
+    politicalStrength: 0,
+    memberCount: 0,
+    isDefault: true,
+    createdBy: null,
+    validForPresets: [
+      "1979-default",
+      "1991-default",
+      "1999-default",
+      "2007-default",
+      "2019-default",
+      "2023-default",
+      "2027-default",
+    ],
   },
 ];

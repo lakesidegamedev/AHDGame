@@ -1,24 +1,26 @@
 import type { Db, ObjectId } from "mongodb";
 import type { UKBudget, UKBudgetStatus } from "@/lib/db/types/ukBudget";
 import type { Bill, BillProvision } from "@/lib/db/types/legislation";
-import { validateBudget } from "@/lib/uk/budget/budgetValidation";
-import { applyConfidenceEventToGov } from "@/lib/uk/confidence/confidenceGaugeStore";
+import { validateBudget } from "@/lib/countries/uk/budget/budgetValidation";
+import { applyConfidenceEventToGov } from "@/lib/countries/uk/confidence/confidenceGaugeStore";
 import { getNationalDocId } from "@/lib/constants/nationalScope";
+import { billsCollection } from "@/lib/db/repositories/bills";
+import { ukBudgetsCollection } from "@/lib/db/repositories/ukBudgets";
 
 /** Hours a Budget vote runs — mirrors the UK bill voting window. */
 const BUDGET_VOTING_HOURS = 24;
 
 /**
- * UK Budget persistence + lifecycle (epic #856, ticket #858).
- * Collection: "ukBudgets" — one document per fiscal year.
+ * UK Budget persistence and lifecycle.
+ * Collection: "ukBudgets", one document per fiscal year.
  *
  * Lifecycle: draft → tabled → passed | defeated. A defeat fires the
- * `budgetDefeat` confidence event (the biggest single gauge hit) — the key
- * connective piece between the Budget and the confidence gauge.
+ * `budgetDefeat` confidence event (the biggest single gauge hit), linking the
+ * Budget to the confidence gauge.
  */
 
 function getUKBudgetsCollection(db: Db) {
-  return db.collection<UKBudget>("ukBudgets");
+  return ukBudgetsCollection<UKBudget>(db);
 }
 
 export async function getBudgetForFiscalYear(db: Db, fiscalYear: number): Promise<UKBudget | null> {
@@ -171,7 +173,7 @@ export async function createBudgetBill(
     createdAt: args.now,
     updatedAt: args.now,
   };
-  const res = await db.collection<Omit<Bill, "_id">>("bills").insertOne(bill);
+  const res = await billsCollection<Omit<Bill, "_id">>(db).insertOne(bill);
   return res.insertedId;
 }
 
@@ -194,7 +196,7 @@ export async function tableBudgetWithBill(
   } catch (error) {
     let existingBill: Pick<Bill, "_id"> | null;
     try {
-      existingBill = await db.collection<Bill>("bills").findOne(
+      existingBill = await billsCollection(db).findOne(
         {
           countryId: "UK",
           budgetFiscalYear: args.fiscalYear,

@@ -9,21 +9,30 @@ import { findMergedRegionMetricsMany } from "@/lib/macroMetrics/merge";
 import { getDb } from "@/lib/mongodb";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
-import type { State, StateDemographics, DemographicCategory, GameState } from "@/lib/db/types";
+import type { State, StateDemographics, GameState } from "@/lib/db/types";
 import type { StatePartyOrg } from "@/lib/db/types/statePartyOrg";
 import { resolveGameYear } from "@/lib/era/era";
-import { calculateStateLean } from "@/lib/utils/demographics";
+import { censusStateLean } from "@/lib/demographics/censusLean";
+import { eraYearContextFromGameState } from "@/lib/era/context";
 import { getUkEconomicLeanLabelHex, getSocialLeanLabelHex } from "@/lib/utils/politics";
 import {
   BASE_APPROVAL,
   calculateStateApproval,
   computeNationalAveragesFromMetrics,
+  loadElectorateGroups,
   weightingFor,
 } from "@/lib/utils/governmentApproval";
 import {
   isPoliticalApprovalCountry,
   loadPoliticalApprovalBases,
 } from "@/lib/politicalLegislation/politicalApprovalProvider";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
+import { seatsCollection } from "@/lib/db/repositories/seats";
+import type { Document } from "mongodb";
 
 export interface MapRegionLean {
   regionId: string;
@@ -47,12 +56,8 @@ export interface MapOverviewResponse {
  * Countries whose map renders the labelled left/right lean colour scale.
  * Everything else renders neutral grey.
  *
- * This was previously derived from which archetype category id the country
- * used, which is why it names an explicit set now. The set is the behaviour
- * that derivation produced, NG included: NG has no archetype category entry in
- * that old map, so it fell through to the neutral branch. Whether NG should
- * carry the scale is a separate call, not a side effect of removing the
- * archetype lookup.
+ * NG is intentionally excluded: whether it should carry the scale is a
+ * separate call.
  */
 const LEAN_SCALE_COUNTRIES = new Set<CountryId>(["UK", "DE"]);
 
@@ -66,27 +71,27 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
     }
 
     // Currently only UK, CN, DE, and NG have map overview support
-    if (countryId !== "UK" && countryId !== "CN" && countryId !== "DE" && countryId !== "NG") {
+    if (
+      !countryHasFeature("ukApi", countryId) &&
+      !countryHasFeature("cnApi", countryId) &&
+      !countryHasFeature("deApi", countryId) &&
+      !countryHasFeature("ngApi", countryId)
+    ) {
       return errorResponse(404, `Map overview not yet supported for ${config.name}`);
     }
 
     const db = await getDb();
 
-    const [allStates, allDemographics, demographicCategories] = await Promise.all([
-      db.collection<State>("states").find({ countryId }).toArray(),
-      db.collection<StateDemographics>("stateDemographics").find({ countryId }).toArray(),
-      // Load every category and let each region's own `categoryWeights` select
-      // which ones apply (`calculateStateLean`). This route used to name the
-      // per-country archetype category id directly, which meant a country whose
-      // catalog is not in that hardcoded map fell back to a foreign one.
-      db.collection<DemographicCategory>("demographicCategories").find({}).toArray(),
+    const [allStates, allDemographics] = await Promise.all([
+      statesCollection(db).find({ countryId }).toArray(),
+      stateDemographicsCollection(db).find({ countryId }).toArray(),
     ]);
 
     const stateIds = allStates.map((s) => s._id);
     const [allMetrics, presetDoc] = await Promise.all([
       // SP5: merged two-store view.
       findMergedRegionMetricsMany(db, { _id: { $in: stateIds } }),
-      db.collection<GameState>("gameState").findOne(
+      gameStateCollection(db).findOne(
         { _id: "current" },
         {
           projection: {
@@ -94,7 +99,6 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
             currentYear: 1,
             currentTurn: 1,
             startingYear: 1,
-            eraSystemEnabled: 1,
           },
         }
       ),
@@ -103,7 +107,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
     // hero / stored snapshot under non-2019 presets.
     const preset = (presetDoc?.preset as string | undefined) ?? null;
     // Live year for era-aware scoring; null while the flag is off (legacy path).
-    const year = presetDoc?.eraSystemEnabled ? resolveGameYear(presetDoc) : null;
+    const year = presetDoc ? resolveGameYear(presetDoc) : null;
 
     const demoByState = new Map(allDemographics.map((d) => [d._id, d]));
 
@@ -118,13 +122,17 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
       if (state.cachedEconomicLean != null && state.cachedSocialLean != null) {
         economicLean = state.cachedEconomicLean;
         socialLean = state.cachedSocialLean;
-      } else if (demographics && demographicCategories.length > 0) {
-        const calculated = calculateStateLean(demographics, demographicCategories);
+      } else if (demographics) {
+        const calculated = censusStateLean(demographics, {
+          countryId,
+          stateId,
+          preset,
+          ...eraYearContextFromGameState(presetDoc),
+        });
         economicLean = calculated.economicLean;
         socialLean = calculated.socialLean;
       } else {
-        economicLean = 0;
-        socialLean = 0;
+        throw new Error(`No census electorate for ${countryId} region ${stateId}`);
       }
 
       const regionId = stateId;
@@ -151,9 +159,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
     // Compute approval per region — electorate-weighted (P6d), reusing the
     // already-loaded demographics (composite key matches weightingFor).
     const nationalAverages = computeNationalAveragesFromMetrics(allMetrics);
-    const groupsByState = new Map(
-      allDemographics.map((d) => [`${d.countryId}:${d._id}`, Object.values(d.groups ?? {})])
-    );
+    const groupsByState = await loadElectorateGroups(db, { countryId });
     // SP4: playable countries score from the hybrid political base.
     const politicalBases = isPoliticalApprovalCountry(countryId, true)
       ? await loadPoliticalApprovalBases(db, countryId)
@@ -188,9 +194,11 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
       )?.key;
 
       const [partyOrgDocs, seatDocs] = await Promise.all([
-        db.collection<StatePartyOrg>("statePartyOrg").find({ countryId }).toArray(),
+        statePartyOrgCollection(db).find({ countryId }).toArray(),
         lowerChamberOfficeType
-          ? db.collection("seats").find({ countryId, officeType: lowerChamberOfficeType }).toArray()
+          ? seatsCollection<Document>(db)
+              .find({ countryId, officeType: lowerChamberOfficeType })
+              .toArray()
           : Promise.resolve([]),
       ]);
 

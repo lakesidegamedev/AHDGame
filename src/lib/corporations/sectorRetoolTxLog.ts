@@ -6,10 +6,9 @@ import { emitTx } from "@/lib/financialTxLog/emit";
  * Finance-history row for a sector strategy change fee.
  *
  * Retooling a sector (25% of its daily revenue) and cancelling a retool in
- * flight both debit `liquidCapital` directly. Neither wrote a ledger row, so
- * the cash vanished from the corporation with no entry in its finance history
- * and the stock-vs-flow reconciler flagged the turn as an unexplained
- * divergence (same shape as #1689 union-busting and #1998 tech unlocks).
+ * flight both debit `liquidCapital` directly; without a ledger row the cash
+ * vanishes from finance history and the reconciler flags an unexplained
+ * divergence.
  *
  * Call after the guarded cash write has applied; `emitTx` never throws.
  */

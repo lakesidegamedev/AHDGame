@@ -1,21 +1,11 @@
 /**
- * Commodity-level dominance: the build toll and the dumping guard.
+ * Commodity-level dominance: measures a firm's potential output of a
+ * commodity (operating capacity plus queued builds) against world demand,
+ * complementing the per-(state, sectorType) local-headroom toll in
+ * `corporations.ts`. Freight and local services sell only in-state, so they
+ * measure against that state's demand, not the world's.
  *
- * The per-(state, sectorType) dominance toll in `corporations.ts` measures
- * share of a local headroom pool, discounted by rival density. A conglomerate
- * can sit at a tiny local share of one cell while owning several times the
- * whole world's demand for a commodity, and pays an affordable surcharge to
- * keep building. This module measures the other thing: a firm's potential
- * output of a commodity (owned operating capacity plus queued builds, in
- * commodity units) over what the world actually wants of it.
- *
- * Freight and the local services sell only in the state that makes them, so
- * for those the market is the target sector's state: the firm's capacity in
- * that state over that state's demand. Measuring them against the world let a
- * firm's idle trucks in another country price a build in a starved state.
- *
- * Rules only: plain data in, plain data out. The shell loads documents and
- * demand, this module prices them.
+ * Rules only: plain data in, plain data out.
  */
 import { isCountryBookCommodity } from "@/lib/market/rules/commodityMarketScope";
 import type { CommodityType } from "@/lib/constants/commodities";

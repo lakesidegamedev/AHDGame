@@ -28,28 +28,23 @@ import { WAL_IDENTITY } from "@/lib/countries/wal/identity";
 import { BLR_IDENTITY } from "@/lib/countries/blr/identity";
 import { UKR_IDENTITY } from "@/lib/countries/ukr/identity";
 import { BAL_IDENTITY } from "@/lib/countries/bal/identity";
+import { CA_IDENTITY } from "@/lib/countries/ca/identity";
+import { QC_IDENTITY } from "@/lib/countries/qc/identity";
 
 /**
  * National-identity layer for state-owned / National Corporation surfaces.
  *
- * Source of truth for the per-country visual identity used by the
- * `NationalSeal` / `NationalMasthead` components (the
- * "state enterprise" look that diverges from the private/market corp page).
+ * Source of truth for the per-country visual identity used by `NationalSeal` /
+ * `NationalMasthead`.
  *
- * Design origin: the Country Identity Kit in the nationalization UI design
- * bundle (`docs/superpowers/specs/2026-05-30-nationalization-ui-design/`).
+ * Theming contract: each country's `palette` (banner gradient) and `accent` are
+ * fixed brand colors that do not change with the active theme. Everything else
+ * (surfaces, borders, body text) uses `ahd-design-system` tokens, so the identity
+ * layer stays theme-native across all themes.
  *
- * **Theming contract:** each country's `palette` (banner gradient) and `accent`
- * are intentionally *fixed brand colors* — they ARE the national identity and do
- * not change with the active theme. Everything else (card surfaces, borders,
- * body text) is rendered with `ahd-design-system` tokens in the components, so
- * the identity layer stays theme-native across all themes. A dark national
- * gradient reading like a product masthead on a light page is the intended look.
- *
- * **Marks:** original monograms / CJK glyphs / generic seal motifs only —
- * deliberately NOT official state emblems (Crown arms, Bundesadler, Irish harp),
- * to avoid IP concerns. Ministry/registry strings follow the project's
- * native-language convention: English label + original-language name.
+ * Marks: original monograms / CJK glyphs / generic seal motifs only, deliberately
+ * NOT official state emblems, to avoid IP concerns. Ministry/registry strings use
+ * English label plus original-language name.
  */
 /**
  * Emblem motif ring drawn around the seal medallion (the redesigned National
@@ -130,6 +125,8 @@ export const NATIONAL_IDENTITY: Record<CountryId, NationalIdentity> = {
   SCO: SCO_IDENTITY.national,
   // Latent secession country — Welsh flavor; refined at activation (SP2).
   WAL: WAL_IDENTITY.national,
+  CA: CA_IDENTITY.national,
+  QC: QC_IDENTITY.national,
 };
 
 export function getNationalIdentity(countryId: CountryId): NationalIdentity {

@@ -5,6 +5,7 @@ import { requireBotToken } from "@/lib/api/requireBotToken";
 import { checkRateLimit, rateLimitResponse, BOT_FINANCIAL_LIMITS } from "@/lib/api/rateLimit";
 import { isPatreonActive } from "@/lib/db/types/patreon";
 import type { User } from "@/lib/db/types";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 // GET /api/discord-bot/supporters — Bulk feed for the Discord supporter-role sync.
 // Returns every active-supporter Discord user (with tier) plus the full set of
@@ -29,8 +30,7 @@ export async function GET(request: Request) {
 
     // Every user with a linked Discord account. Projection only pulls the
     // fields the sync needs — no PII beyond the Discord ID + supporter status.
-    const linkedUsers = await db
-      .collection<User>("users")
+    const linkedUsers = await usersCollection(db)
       .find({ discordId: { $exists: true, $ne: "" } })
       .project<{
         discordId: string;

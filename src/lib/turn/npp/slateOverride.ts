@@ -1,25 +1,20 @@
-/**
- * Slate precedence for the turn's NPP election-entry pass (tickets #904, #906).
- *
- * The default entry logic re-asserts an NPP's own "natural" race every turn:
- * incumbents auto-defend their seat, and non-incumbents auto-pick their
- * highest-priority open primary. That silently undoes a chair's slate decision
- * — withdrawing an incumbent from the slate (#904) or moving an NPP to a
- * different race (#906) reverts on the next tick.
- *
- * These helpers let a chair's slate take precedence, but ONLY for
- * slate-COMPLIANT NPPs (`isNppSlateCompliant`: loyalty ≥ 40 && stubbornness ≤
- * 70). A disloyal / stubborn NPP keeps today's autonomous behavior — the "if
- * loyalty is high enough" lever. Everything is gated on a chair-managed slate
- * actually existing for the (party, race), so worlds without player chairs (and
- * every NPP that isn't slate-managed) behave byte-identically to before.
- */
+/* Slate precedence for the NPP election-entry pass. Default entry re-asserts
+ * each NPP's natural race every turn, silently undoing a chair's withdrawals
+ * or reassignments. These helpers let a chair's slate win, but only for
+ * slate-compliant NPPs (loyalty >= 40 && stubbornness <= 70); others keep
+ * autonomous behavior. Gated on a chair-managed slate existing, so worlds
+ * without player chairs behave as before. */
 import type { ObjectId } from "mongodb";
 import type { NPP, Election, ElectionCandidate } from "@/lib/db/types";
 import type { RecruitmentSlate, SlateCandidate } from "@/lib/db/types";
 import type { NPPContext } from "./context";
 import { isNppSlateCompliant } from "@/lib/slateAssignments";
-import { removeWithdrawnCandidateFromTally } from "@/lib/electionEngine/tallyCleaner";
+import { removeWithdrawnCandidateFromTally } from "@/lib/elections/engine/tallyCleaner";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
+import type { Document } from "mongodb";
+import { slateCandidatesCollection } from "@/lib/db/repositories/slateCandidates";
+import { recruitmentSlatesCollection } from "@/lib/db/repositories/recruitmentSlates";
 
 export interface SlateOverrideMaps {
   /** `${partyId}:${electionId}` for every race a chair is actively slating. */
@@ -49,8 +44,7 @@ export async function buildSlateOverrideMaps(
   const openElectionIds = openPrimaries.map((p) => p._id);
   if (openElectionIds.length === 0) return EMPTY_MAPS;
 
-  const slates = await db
-    .collection<RecruitmentSlate>("recruitmentSlates")
+  const slates = await recruitmentSlatesCollection(db)
     .find({ electionId: { $in: openElectionIds } }, { projection: { electionId: 1, partyId: 1 } })
     .toArray();
   if (slates.length === 0) return EMPTY_MAPS;
@@ -65,8 +59,7 @@ export async function buildSlateOverrideMaps(
   // An NPP "has the chair's blessing" for a race when they hold a slate row that
   // is accepted (will file this turn) or already filed. invited/considering/
   // declined/withdrawn rows do NOT count — the chair hasn't committed them.
-  const rows = await db
-    .collection<SlateCandidate>("slateCandidates")
+  const rows = await slateCandidatesCollection(db)
     .find(
       {
         electionId: { $in: slateElectionIds },
@@ -89,10 +82,9 @@ export async function buildSlateOverrideMaps(
 }
 
 /**
- * Should incumbent-defense be suppressed for this NPP + seat primary? True when
- * the NPP is slate-compliant, a chair is managing that (party, race), and the
- * NPP is NOT on that race's slate — i.e. the chair withdrew/benched them (#904)
- * or moved them elsewhere. A non-compliant incumbent still defends.
+ * Should incumbent defense be suppressed for this NPP + seat primary? True when
+ * the NPP is slate-compliant, a chair manages that party and race, and the NPP
+ * is not on that race's slate. A non-compliant incumbent still defends.
  */
 export function slateSuppressesIncumbentDefense(
   npp: NPP,
@@ -109,9 +101,8 @@ export function slateSuppressesIncumbentDefense(
 
 /**
  * Should this NPP be held out of Phase-2 generic auto-pick? True when a
- * compliant NPP has an accepted chair-slate assignment — they must only enter
- * where the chair slated them (via fileAcceptedSlateRows), never get auto-picked
- * back into their preferred race (#906).
+ * compliant NPP has an accepted chair-slate assignment. They must only enter
+ * where the chair slated them.
  */
 export function slateSuppressesAutoPick(npp: NPP, maps: SlateOverrideMaps): boolean {
   if (maps.slatedElectionIdsByNpp.size === 0) return false;
@@ -135,14 +126,13 @@ export function slateProtectsCandidacy(
 }
 
 /**
- * Free a compliant NPP's live candidacy in a race the chair moved them AWAY
- * from, so their new slate assignment can file (#906). The chair's move action
- * only rewrites slate rows — it does not withdraw the standing candidacy — so
- * without this the NPP stays blocked in the old race by the one-active-candidacy
- * rule. Tightly scoped: only fires for a compliant NPP that (a) holds an
- * accepted/filed slate row for some race, and (b) has an active candidacy in a
- * DIFFERENT chair-managed (party,race) they are NOT slated to. Mirrors the
- * slate-withdraw cleanup (mark withdrawn → detally → archive campaign).
+ * Free a compliant NPP's live candidacy in a race the chair moved them away
+ * from, so their new slate assignment can file. The chair's move only rewrites
+ * slate rows, not standing candidacies, so without this the NPP stays blocked
+ * by the one-active-candidacy rule. Only fires for a compliant NPP that holds
+ * an accepted/filed slate row and has an active candidacy in a different
+ * chair-managed (party,race) they are not slated to. Mirrors the
+ * slate-withdraw cleanup.
  *
  * Returns the number of candidacies withdrawn.
  */
@@ -162,8 +152,7 @@ export async function reconcileSlateMoves(
   }
   if (compliantNppIds.length === 0) return 0;
 
-  const activeCandidacies = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const activeCandidacies = await electionCandidatesCollection(db)
     .find({ nppId: { $in: compliantNppIds }, status: "active" })
     .toArray();
 
@@ -179,11 +168,12 @@ export async function reconcileSlateMoves(
     // never a race the chair never engaged with (preserves NPP autonomy there).
     if (!maps.chairManagedByPartyElection.has(partyElectionKey(npp.party, electionId))) continue;
 
-    await db
-      .collection<ElectionCandidate>("electionCandidates")
-      .updateOne({ _id: cand._id }, { $set: { status: "withdrawn", withdrawnAt: now } });
+    await electionCandidatesCollection(db).updateOne(
+      { _id: cand._id },
+      { $set: { status: "withdrawn", withdrawnAt: now } }
+    );
     await removeWithdrawnCandidateFromTally(db, cand.electionId, cand._id.toString());
-    await db.collection("campaigns").updateOne(
+    await campaignsCollection<Document>(db).updateOne(
       { electionId: cand.electionId, candidateId: cand.characterId, status: { $ne: "archived" } },
       {
         $set: {

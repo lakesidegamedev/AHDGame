@@ -9,11 +9,15 @@ import { getDb } from "@/lib/mongodb";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { COUNTRY_CONFIGS, isParliamentarySystem, type CountryId } from "@/lib/constants/countries";
 import { getGovernmentFormationsCollection } from "@/lib/db/collections/governmentFormation";
-import type { Character, ParliamentaryGovernment, PoliticalParty } from "@/lib/db/types";
+import type { ParliamentaryGovernment, PoliticalParty } from "@/lib/db/types";
 import {
   resolveGoverningPartyIdsFromDocuments,
   resolveOppositionLeader,
 } from "@/lib/turn/parliamentaryGovernment";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { parliamentaryGovernmentsCollection } from "@/lib/db/repositories/parliamentaryGovernments";
 
 export async function GET(_request: Request, { params }: { params: Promise<{ code: string }> }) {
   try {
@@ -35,9 +39,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
     // while governmentFormations still has the correct PM/seatsByParty.
     const [govFormation, govDoc] = await Promise.all([
       getGovernmentFormationsCollection(db).findOne({ _id: countryId }),
-      db
-        .collection<ParliamentaryGovernment>("parliamentaryGovernments")
-        .findOne({ _id: countryId }),
+      parliamentaryGovernmentsCollection(db).findOne({ _id: countryId }),
     ]);
 
     // governmentFormations is authoritative for parliamentary head-of-government
@@ -51,7 +53,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
       ? (govFormation?.pmCharacterId ?? null)
       : (govDoc?.pmCharacterId ?? null);
     let hogChar = pmCharacterId
-      ? await db.collection<Character>("characters").findOne({ _id: pmCharacterId })
+      ? await charactersCollection(db).findOne({ _id: pmCharacterId })
       : null;
 
     // Keep legacy and presidential callers working when there is no canonical
@@ -61,31 +63,41 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
       !formationHasPmField &&
       (govDoc === null || !Object.prototype.hasOwnProperty.call(govDoc, "pmCharacterId"));
     if (!hogChar && (!isParliamentarySystem(config) || noCanonicalPmField)) {
-      hogChar = await db.collection<Character>("characters").findOne({
+      hogChar = await charactersCollection(db).findOne({
         countryId,
         "currentOffice.type": executiveKey,
       });
     }
 
+    const hogNpp = govFormation?.pmNppId
+      ? await nppsCollection(db).findOne(
+          { _id: govFormation.pmNppId, countryId, retiredAt: null },
+          { projection: { name: 1, party: 1, sequentialId: 1, avatarUrl: 1, updatedAt: 1 } }
+        )
+      : null;
+    const hog = hogChar ?? hogNpp;
     let primeMinister = null;
-    if (hogChar) {
+    if (hog) {
       // Resolve party sequentialId to display name
-      const partySeqId = hogChar.party ? Number.parseInt(hogChar.party, 10) : Number.NaN;
-      let partyLabel: string | null = hogChar.party || null;
+      const partySeqId = hog.party ? Number.parseInt(hog.party, 10) : Number.NaN;
+      let partyLabel: string | null = hog.party || null;
       if (!Number.isNaN(partySeqId)) {
-        const partyDoc = await db
-          .collection<PoliticalParty>("politicalParties")
-          .findOne({ sequentialId: partySeqId, countryId });
+        const partyDoc = await politicalPartiesCollection(db).findOne({
+          sequentialId: partySeqId,
+          countryId,
+        });
         if (partyDoc) partyLabel = partyDoc.name;
       }
 
       primeMinister = {
-        characterId: hogChar._id.toString(),
-        sequentialId: hogChar.sequentialId ?? null,
-        characterName: hogChar.name,
+        characterId: hogChar?._id.toString() ?? null,
+        nppId: hogNpp?._id.toString() ?? null,
+        isNPP: !hogChar,
+        sequentialId: hog.sequentialId ?? null,
+        characterName: hog.name,
         party: partyLabel,
-        since: hogChar.updatedAt?.toISOString() || null,
-        avatarUrl: hogChar.avatarUrl ?? null,
+        since: hog.updatedAt?.toISOString() || null,
+        avatarUrl: hog.avatarUrl ?? null,
       };
     }
 
@@ -107,8 +119,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
         .map((k) => Number.parseInt(k, 10))
         .filter((n) => !Number.isNaN(n));
       const partyDocs = partySeqNums.length
-        ? await db
-            .collection<PoliticalParty>("politicalParties")
+        ? await politicalPartiesCollection(db)
             .find({ countryId, sequentialId: { $in: partySeqNums } })
             .toArray()
         : [];
@@ -123,18 +134,27 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
       );
 
       if (result) {
-        const oppositionChar = await db
-          .collection<Character>("characters")
-          .findOne({ _id: result.chairId });
+        const oppositionChar = result.chairId
+          ? await charactersCollection(db).findOne({ _id: result.chairId })
+          : null;
+        const oppositionNpp = result.nppId
+          ? await nppsCollection(db).findOne(
+              { _id: result.nppId, countryId, retiredAt: null },
+              { projection: { name: 1, party: 1, sequentialId: 1, avatarUrl: 1, updatedAt: 1 } }
+            )
+          : null;
+        const opposition = oppositionChar ?? oppositionNpp;
 
-        if (oppositionChar) {
+        if (opposition) {
           oppositionLeader = {
-            characterId: oppositionChar._id.toString(),
-            sequentialId: oppositionChar.sequentialId ?? null,
-            characterName: oppositionChar.name,
-            party: result.partyDoc?.name || oppositionChar.party || null,
-            since: oppositionChar.updatedAt?.toISOString() || null,
-            avatarUrl: oppositionChar.avatarUrl ?? null,
+            characterId: oppositionChar?._id.toString() ?? null,
+            nppId: oppositionNpp?._id.toString() ?? null,
+            isNPP: !oppositionChar,
+            sequentialId: opposition.sequentialId ?? null,
+            characterName: opposition.name,
+            party: result.partyDoc?.name || opposition.party || null,
+            since: opposition.updatedAt?.toISOString() || null,
+            avatarUrl: opposition.avatarUrl ?? null,
           };
         }
       }

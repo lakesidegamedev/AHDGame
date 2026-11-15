@@ -25,17 +25,15 @@ interface ContractProductionArgs {
 /**
  * Resolve one sector's actual run and its supply-agreement damage ceiling.
  *
- * Actual production follows the operator's production policy and mothball
- * choice. It also follows the demand throttle, which targets last turn's sales
- * plus a probe margin so a plant does not run flat out into a glut. A named
- * buyer's allocated demand is a floor on that target.
+ * Actual production follows the operator's production policy, mothball choice,
+ * and the demand throttle (targets last turn's sales plus a probe margin so
+ * plants do not run flat out into a glut). A named buyer's allocated demand is
+ * a floor on that target.
  *
  * The contract ceiling asks a different question: what could the sector have
- * produced if the operator requested a full run? External constraints still
- * apply, including inputs, capital, strikes, disasters, extraction limits and
- * the demand throttle. Production policy and mothballing do not apply because
- * either one is a voluntary way to reduce output and must not forgive a signed
- * commitment.
+ * produced at a full run? External constraints apply (inputs, capital, strikes,
+ * disasters, extraction limits, demand throttle). Policy and mothballing do
+ * NOT apply: those are voluntary reductions and must not forgive a commitment.
  */
 export function computeContractProduction(args: ContractProductionArgs): {
   producedUnits: number;

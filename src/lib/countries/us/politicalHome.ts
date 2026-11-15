@@ -4,6 +4,8 @@ import type { State } from "@/lib/db/types/state";
 import { getHouseSeats } from "@/lib/constants/states";
 import { admittedStateIdsAsOf, TERRITORY_ADMISSIONS } from "@/lib/elections/statehoodAdmission";
 import { NUMERIC_BSON_TYPE } from "@/lib/db/queryHelpers";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /**
  * Load the set of US state ids that currently host full state politics
@@ -17,18 +19,18 @@ export async function loadUsPoliticalStateIds(db: Db): Promise<{
   /** Full states, DC, and playable US territories with resident party politics. */
   residentPoliticalIds: Set<string>;
 }> {
-  const gameState = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { projection: { preset: 1, currentYear: 1 } });
+  const gameState = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { projection: { preset: 1, currentYear: 1 } }
+  );
   const preset = gameState?.preset;
   const currentYear = gameState?.currentYear ?? Number.POSITIVE_INFINITY;
-  const admissionBearing = (await db
-    .collection<State>("states")
-    .find(
+  const admissionBearing = await statesCollection(db)
+    .find<{ _id: string; admittedYear?: number }>(
       { countryId: "US", admittedYear: { $type: NUMERIC_BSON_TYPE } },
       { projection: { _id: 1, admittedYear: 1 } }
     )
-    .toArray()) as unknown as Array<{ _id: string; admittedYear?: number }>;
+    .toArray();
   const admittedIds = new Set(admittedStateIdsAsOf(admissionBearing, currentYear));
   const politicalIds = new Set<string>([...Object.keys(getHouseSeats(preset)), ...admittedIds]);
   const residentPoliticalIds = new Set<string>([

@@ -1,27 +1,15 @@
 /**
- * ONE plants-aware sector profit / book-value basis.
+ * The single plants-aware sector profit / book-value basis. Callers pass the
+ * currency code and rate right for their call site (corp-liquid currency for
+ * credit paths, sector-host currency for the listing path); this module owns
+ * the profit identity `dailyProfit = revenue × margin − growthCost` and the
+ * plants rule.
  *
- * Every "what is this sector worth" surface (credit model, bond issuance,
- * dissolution salvage, listing quotes, nationalization compensation) used to
- * re-derive the same expression independently:
- *
- *     dailyProfit = revenue × margin − growthCost
- *
- * ...each with its own FX discipline and its own way of getting `growthCost`
- * (recompute it from `calculateDailyGrowthCost`, or read the persisted
- * `currentGrowthCost`). Under the plants tier (marketSystemMode >= "plants")
- * the growth slider no longer buys capacity — capacity is bought with explicit
- * build orders and capitalized as construction-in-progress — so the growth cost
- * is vestigial and DEDUCTING it is a phantom charge that makes every sector
- * look permanently less valuable than it is.
- *
- * This module is the single place that knows that. Callers keep owning their FX
- * discipline (they pass the currency code + rate that is right for their call
- * site — corp-liquid currency for the credit paths, sector-host currency for
- * the listing path); this module owns the profit identity and the plants rule.
- *
- * Below "plants" every function here is behaviour-identical to the expression
- * it replaced.
+ * Under the plants tier (marketSystemMode >= "plants") capacity is bought with
+ * explicit build orders and capitalized as construction-in-progress, so the
+ * growth cost is vestigial and deducting it is a phantom charge. Below
+ * "plants" every function here is behaviour-identical to the expression it
+ * replaced.
  */
 import { calculateDailyGrowthCost, GROWTH_RATE_TURNS_PER_YEAR } from "@/lib/constants/corporations";
 import {
@@ -82,12 +70,9 @@ export type SectorGrowthCostBasis =
 
 export interface SectorProfitBasisOptions {
   /**
-   * True when marketSystemMode >= "plants". When true the growth-cost
-   * deduction is dropped: growth spend no longer buys capacity, so charging
-   * for it in a valuation is a phantom expense.
-   *
-   * Callers that genuinely cannot resolve the mode (pure/synchronous contexts)
-   * may pass `false`, which reproduces the legacy behaviour exactly.
+   * When true, the growth-cost deduction is dropped: growth spend no longer
+   * buys capacity, so charging it in a valuation is a phantom expense.
+   * Callers that cannot resolve the mode may pass `false`.
    */
   plantsEnabled: boolean;
   growthCost: SectorGrowthCostBasis;
@@ -376,22 +361,11 @@ export function sectorCapacityBookAnchor(
 }
 
 /**
- * Book value of a sector, in ₳ (D11).
- *
- *     book = capacityBookAnchor × BOOK_DEPRECIATION_FACTOR
- *            + constructionInProgressAnchor
- *
- * `capacityBookAnchor` is the depreciated PAID basis of the owned capacity (see
- * {@link sectorCapacityBookAnchor}); the turn processor scales it down in step
- * with `capitalStock` every turn, so no extra age term is needed here — see
- * {@link BOOK_DEPRECIATION_FACTOR}. CIP is cash paid for capacity not yet
- * delivered, at the price it was actually charged.
- *
- * Both legs are therefore cash the corp really spent, which is what makes the
- * D11 claim true: a sector that is built and then immediately liquidated
- * recovers `salvageFraction × build cost` and never more. Exits cannot mint.
- *
- * Returns 0 for a sector with no capacity and no build in flight.
+ * Book value of a sector, in ₳ (D11): capacityBookAnchor *
+ * BOOK_DEPRECIATION_FACTOR + constructionInProgressAnchor. capacityBookAnchor
+ * is already depreciated in step with capitalStock each turn, so no age term
+ * here. Both legs are cash actually spent, so a built-then-liquidated sector
+ * recovers at most salvageFraction * build cost: exits cannot mint.
  */
 export function sectorBookValueAnchor(
   sector: SectorBookValueInput,

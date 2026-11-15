@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { TurnPhaseTelemetryMap } from "@/lib/db/types";
+import { LEGACY_PHASE_GROUPS } from "./legacyPhaseNames";
 import type { BondTurnResult } from "@/lib/turn/bondTurn";
 import { TurnMustStopError } from "@/lib/turn/turnMustStop";
 import { PHASE_TIMEOUT_MS } from "@/lib/turn/processingLock";
@@ -763,5 +764,54 @@ describe("interrupted phases are never silently applied (turn 736)", () => {
       pensionTurn: { status: "failed", resumeCarried: "interrupted" },
     });
     expect(warnings.join(" ")).toMatch(/pensionTurn: interrupted by a crash/);
+  });
+});
+
+describe("resuming a turn an older build left half finished", () => {
+  const read = (statuses: Record<string, unknown>) =>
+    readCrashedTurnPhaseState(statuses as unknown as TurnPhaseTelemetryMap, null);
+
+  it("counts an old phase name as the renamed phase", () => {
+    const decay = LEGACY_PHASE_GROUPS.find((g) => g.current === "bucketApprovalDecay")!;
+    expect(decay.legacy).toHaveLength(1);
+    const state = read({ [decay.legacy[0]]: { status: "completed" } });
+    expect(state.completed.has("bucketApprovalDecay")).toBe(true);
+  });
+
+  it("never reruns a merged phase once any old member ran", () => {
+    const done = read({
+      ukBillLifecycle: { status: "completed" },
+      deBillLifecycle: { status: "completed" },
+      ukElections: { status: "completed" },
+      jpElections: { status: "pending" },
+    });
+    expect(done.completed.has("countryBillLifecycle")).toBe(true);
+    expect(done.completed.has("countryElections")).toBe(true);
+
+    const cut = read({
+      ukBillLifecycle: { status: "completed" },
+      deBillLifecycle: { status: "running" },
+    });
+    expect(cut.interrupted.has("countryBillLifecycle")).toBe(true);
+    expect(cut.completed.has("countryBillLifecycle")).toBe(false);
+  });
+
+  it("runs a merged phase when no old member ran", () => {
+    const state = read({
+      fundGeneration: { status: "failed", reason: "other" },
+      ukElections: { status: "notReached" },
+      ukBillLifecycle: { status: "skipped", reason: "conditional" },
+    });
+    expect(state.completed.has("countryElections")).toBe(false);
+    expect(state.interrupted.has("countryElections")).toBe(false);
+    expect(state.completed.has("countryBillLifecycle")).toBe(false);
+  });
+
+  it("ignores old names on a record this build wrote", () => {
+    const state = read({
+      ukElections: { status: "completed" },
+      countryElections: { status: "pending" },
+    });
+    expect(state.completed.has("countryElections")).toBe(false);
   });
 });

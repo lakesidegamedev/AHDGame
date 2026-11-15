@@ -1,5 +1,5 @@
 /**
- * Client side of mothballing from the sector list (suggestion 412). It posts
+ * Client side of mothballing from the sector list. It posts
  * the same `{ action }` body the sector page sends to the build route, so a
  * route rename breaks this function's test rather than the menu in silence.
  */

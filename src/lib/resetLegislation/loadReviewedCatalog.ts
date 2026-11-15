@@ -1,6 +1,5 @@
 /** Database shell for the pure reviewed-option catalog. */
 import type { Db } from "mongodb";
-import type { FederalBudget } from "@/lib/db/types/budget";
 import type { State } from "@/lib/db/types/state";
 import type { ResetDepartmentAccountSnapshot } from "@/lib/resetFinance/rules/liveDepartmentAccount";
 import { resetLawFamilies } from "./catalog";
@@ -15,6 +14,11 @@ import {
   DEPARTMENT_DEFINITIONS,
   resolveDepartmentDefinitionName,
 } from "@/lib/governmentFinance/departmentCatalog";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { resetLawProgramsCollection } from "@/lib/db/repositories/resetLawPrograms";
+import { resetDepartmentAccountsCollection } from "@/lib/db/repositories/resetDepartmentAccounts";
+import { resetLawOpeningBoardsCollection } from "@/lib/db/repositories/resetLawOpeningBoards";
 
 export interface ReviewedLawFamilyCatalog {
   familyId: string;
@@ -45,10 +49,9 @@ export async function loadReviewedLawCatalog(input: {
   }
   const boardId = scope === "national" ? `${country}:national` : `${country}:${regionId}`;
   const [board, accounts, federalBudget, region, currentPrograms] = await Promise.all([
-    db.collection<ResetLawOpeningBoard>("resetLawOpeningBoards").findOne({ _id: boardId, worldId }),
+    resetLawOpeningBoardsCollection<ResetLawOpeningBoard>(db).findOne({ _id: boardId, worldId }),
     scope === "national"
-      ? db
-          .collection<ResetDepartmentAccountSnapshot>("resetDepartmentAccounts")
+      ? resetDepartmentAccountsCollection<ResetDepartmentAccountSnapshot>(db)
           .find(
             { worldId, countryId: country },
             {
@@ -64,17 +67,15 @@ export async function loadReviewedLawCatalog(input: {
           .toArray()
       : Promise.resolve([]),
     scope === "national"
-      ? db
-          .collection<FederalBudget>("federalBudget")
-          .findOne({ countryId: country }, { projection: { gdp: 1 } })
+      ? federalBudgetCollection(db).findOne({ countryId: country }, { projection: { gdp: 1 } })
       : Promise.resolve(null),
     scope === "regional"
-      ? db
-          .collection<State>("states")
-          .findOne({ _id: regionId!, countryId: country }, { projection: { gdp: 1 } })
+      ? statesCollection(db).findOne(
+          { _id: regionId!, countryId: country },
+          { projection: { gdp: 1 } }
+        )
       : Promise.resolve(null),
-    db
-      .collection<ResetLawProgramDocument>("resetLawPrograms")
+    resetLawProgramsCollection<ResetLawProgramDocument>(db)
       .find(
         {
           worldId,
@@ -117,7 +118,12 @@ export async function loadReviewedLawCatalog(input: {
       const reference = references[family.id];
       const profile = profileByFamily.get(family.id);
       if (!reference || !profile) throw new Error(`Missing reviewed inputs for ${family.id}`);
-      const seatId = scope === "national" ? fundingSeatForLaw(family, country) : null;
+      const fundingYear = board.modeledOpening?.year ?? 1991;
+      const enabledSeats = new Set(
+        board.modeledOpening && fundingYear >= 1980 ? ["secretary_of_education"] : []
+      );
+      const seatId =
+        scope === "national" ? fundingSeatForLaw(family, country, enabledSeats, fundingYear) : null;
       const account = seatId
         ? accounts.find((candidate) => candidate.controllingSeatId === seatId)
         : null;

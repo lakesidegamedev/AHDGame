@@ -1,50 +1,10 @@
 /**
- * 1991-era adjustments for `StateMetricBaseline` documents. Mirrors the
- * field-level shifts in `stateMetrics1991.ts` so freshly-seeded 1991
- * worlds have baselines aligned with the era-floored metric values
- * (zero decay pressure at game start).
- *
- * Applied at seed time by each country's `seedXBaselines` function
- * (and `runCoreSeed` for US) when the active preset is `1991-default`.
- *
- * Mirrors the approach in `stateDemographics1991.ts` / `stateMetrics1991.ts`
- * — a deep-clone + field-level shift, not a separately-curated 1991
- * baseline file. Pure function: no DB, no Date.
- *
- * Field-level rules (each guarded by a presence check, so countries
- * that don't seed a given field pass through unchanged):
- *
- *   - infrastructure.broadbandAccess → 0 (residential broadband didn't
- *     exist in 1991; cable-modem experiments began 1995).
- *   - mediaInformation.socialMediaSentiment → 0 (no platforms).
- *   - mediaInformation.disinformationRisk → clamped ≤20 (pre-internet
- *     info environment).
- *   - mediaInformation.mediaPolarization → −15 (clamped 10..35; cable-
- *     news polarization had not yet started, Fox News 1996).
- *   - mediaInformation.pressFreedom → +10 (clamped 60..95).
- *   - mediaInformation.newsTrust → +10 (clamped 40..80).
- *   - economic.unemploymentRate → +1.5pp (clamped 4.5..11; 1990-91
- *     recession).
- *   - economic.gdpGrowth → −2pp (clamped −2.5..3; 1991 US growth
- *     was −0.1%).
- *   - economic.medianIncome → ×0.4 (1991 nominal vs 2020 nominal).
- *   - economic.costOfLiving → ×0.5.
- *   - economic.povertyRate → +2pp (clamped 8..22).
- *   - healthcare.lifeExpectancy → −3 (clamped 70..78; 1991 US peak).
- *   - healthcare.uninsuredRate → +4pp (pre-ACA, pre-1997 SCHIP).
- *   - publicSafety.crimeRate → ×1.35 (1991-93 US crime peak).
- *   - publicSafety.violentCrimeRate → ×1.4.
- *   - publicSafety.incarcerationRate → ×0.75 (mass-incarceration ramp
- *     was mid-1990s on).
- *   - governance.voterTurnout → +5pp (clamped 45..75).
- *   - governance.debtToGdp → ×0.5 (clamped 25..70; US 60% in 1991 vs
- *     130% today).
- *
- * Country-specific fields (IE / DE / CN) are explicitly handled below
- * so cross-country baselines (e.g. UK's `bbcTrust`, IE's `gniStarGap`,
- * DE's `schuldenbremseHeadroom`, CN's `socialCreditCoverage`) don't get
- * contaminated by US-side shifts. Each clause guards with `!== undefined`
- * so a country that doesn't carry the field is a no-op.
+ * 1991-era field-level adjustments for StateMetricBaseline documents, so
+ * freshly-seeded 1991 worlds start with zero decay pressure. Pure function:
+ * no DB, no Date. Each field is guarded by a presence check so countries
+ * that do not seed it pass through unchanged. Country-specific fields (IE,
+ * DE, CN) are handled explicitly so cross-country baselines are not
+ * contaminated by US-side shifts.
  */
 
 import { clamp } from "@/lib/numeric/rules";

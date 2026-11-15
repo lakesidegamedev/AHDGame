@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { handleRouteError, badRequest } from "@/lib/api/errors";
 import { getDb } from "@/lib/mongodb";
 import { requireAuthWithCharacter } from "@/lib/api/requireAuth";
-import { loadCommonsVacancyStatus } from "@/lib/uk/elections/commonsVacancyStatus";
+import { loadCommonsVacancyStatus } from "@/lib/countries/uk/elections/commonsVacancyStatus";
 
 const NO_STORE = { "Cache-Control": "no-store, no-transform" };
 

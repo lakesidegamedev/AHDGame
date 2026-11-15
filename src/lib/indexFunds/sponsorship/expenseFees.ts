@@ -1,7 +1,7 @@
 import { bankMayManageFunds } from "./rules/eligibility";
 /** Sponsor fees transfer marked fund backing to corporate income once per turn. */
 import { ObjectId, type Db } from "mongodb";
-import type { Corporation, IndexFund, IndexFundTransaction } from "@/lib/db/types";
+import type { IndexFund, IndexFundTransaction } from "@/lib/db/types";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import {
   anchorToCorpLiquidCapital,
@@ -15,6 +15,9 @@ import { sumFundBondHoldingsByFundId } from "@/lib/bonds/fundBondHoldings";
 import { loadOpenOrdersEscrowByFundId, loadQueuedRedemptionUnitsByFundId } from "../fundValuation";
 import { computeHoldingsValueAnchor } from "../fundAllocation";
 import { feeDecision, markedFundBacking } from "./rules/accounting";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import { indexFundTransactionsCollection } from "@/lib/db/repositories/indexFundTransactions";
 export { feeDecision } from "./rules/accounting";
 
 export interface ExpenseFeeOutcome {
@@ -41,8 +44,7 @@ export async function chargeSponsorExpenseFees(
   const now = new Date();
   return withSessionDb(db, async (tx) => {
     const outcome = { ...empty };
-    const current = await tx
-      .collection<IndexFund>("indexFunds")
+    const current = await indexFundsCollection(tx)
       .find(
         {
           _id: { $in: ids },
@@ -56,8 +58,7 @@ export async function chargeSponsorExpenseFees(
       )
       .toArray();
     if (!current.length) return outcome;
-    const sponsors = await tx
-      .collection<Corporation>("corporations")
+    const sponsors = await corporationsCollection(tx)
       .find(
         {
           _id: {
@@ -168,11 +169,11 @@ export async function chargeSponsorExpenseFees(
       outcome.totalFeeAnchor += feeAnchor;
     }
     if (!receipts.length) return outcome;
-    const debits = await tx.collection<IndexFund>("indexFunds").bulkWrite(fundUpdates);
+    const debits = await indexFundsCollection(tx).bulkWrite(fundUpdates);
     if (debits.matchedCount !== receipts.length) throw new Error("Fund fee debit failed");
-    const credits = await tx.collection<Corporation>("corporations").bulkWrite(sponsorUpdates);
+    const credits = await corporationsCollection(tx).bulkWrite(sponsorUpdates);
     if (credits.matchedCount !== receipts.length) throw new Error("Sponsor fee credit failed");
-    await tx.collection<IndexFundTransaction>("indexFundTransactions").insertMany(receipts);
+    await indexFundTransactionsCollection(tx).insertMany(receipts);
     // One thresholds and one turn-cadence read for every fee row: the
     // single-row emitter repeated both once per sponsored fund. Loaded only
     // once a fee is actually charged, so a pass that charges nothing reads

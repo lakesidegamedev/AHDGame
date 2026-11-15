@@ -53,7 +53,6 @@ beforeEach(async () => {
   acceptSpy.mockResolvedValue({ applied: true, resolved: false });
   for (const c of ["gameState", "conflicts", "peaceOffers"]) db.collection(c);
   db.collectionMocks.gameState.findOne.mockResolvedValue({
-    conflictsEnabled: true,
     currentTurn: 40,
   });
   db.collectionMocks.conflicts.findOne.mockResolvedValue(conflict);
@@ -301,12 +300,6 @@ describe("refusals", () => {
   it("400s an unknown action", async () => {
     const { POST } = await import("./route");
     expect((await POST(req("surrender"), params())).status).toBe(400);
-  });
-
-  it("404s when the conflicts subsystem is off", async () => {
-    db.collectionMocks.gameState.findOne.mockResolvedValue({ conflictsEnabled: false });
-    const { POST } = await import("./route");
-    expect((await POST(req("accept"), params())).status).toBe(404);
   });
 });
 

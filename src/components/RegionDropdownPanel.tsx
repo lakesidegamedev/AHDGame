@@ -11,6 +11,7 @@ import {
   legislatureUrl,
   countryUrl,
 } from "@/lib/urls";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 export interface RegionDropdownPanelProps {
   regionId: string;
@@ -37,7 +38,7 @@ export function RegionDropdownPanel({
   // UK devolved-body section only renders when both nationId and the region
   // belong to the UK. JP/DE Länder/prefectures don't share this concept.
   const devolvedBody =
-    regionCountryId === "UK" && nationId
+    countryHasFeature("ukUi", regionCountryId) && nationId
       ? UK_NATIONS.find((n) => n.id === nationId)?.devolvedBody
       : undefined;
   // Show the "My Party" regional-branch link when the viewer's party is in

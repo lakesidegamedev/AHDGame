@@ -1,4 +1,5 @@
 import { createHmac, timingSafeEqual } from "crypto";
+import { authConfig } from "@/lib/config/auth";
 
 /**
  * Start-to-callback binding for provider link flows (Google/Discord/Apple).
@@ -49,7 +50,7 @@ const ENVELOPE_VERSION = "v1";
 
 /** Domain-separated HMAC key. Never the raw AUTH_SECRET, never a default. */
 function getLinkContextKey(): Buffer {
-  const secret = process.env.AUTH_SECRET;
+  const secret = authConfig.authSecret();
   if (!secret) {
     throw new Error("providerLinkContext: AUTH_SECRET is not configured");
   }

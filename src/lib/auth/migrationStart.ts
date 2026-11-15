@@ -5,6 +5,7 @@ import type {
   MigrationCoordinatorClient,
   MigrationReservation,
 } from "@/lib/auth/migrationCoordinator";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 const DEFAULT_PROVENANCE = "ahd:password-login:web-migration";
 
@@ -55,7 +56,7 @@ export async function migrateSourceAccount(input: {
   if (identifier.length < 1 || identifier.length > 320) {
     throw new MigrationStartError(400, "invalid_request");
   }
-  const collection = input.db.collection<StartUser>("users");
+  const collection = usersCollection<StartUser>(input.db);
   const user = await collection.findOne(
     { $or: [{ email: identifier }, { username: identifier }] },
     { projection: { _id: 1, isBanned: 1, authMigrationFence: 1 } }

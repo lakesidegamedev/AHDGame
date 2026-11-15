@@ -67,7 +67,6 @@ export interface PrimaryCandidateInfo {
   id: string;
   name: string;
   color: string;
-  archetype?: string;
 }
 
 export interface PrimaryViewModelInput {
@@ -166,7 +165,6 @@ export function buildPerStateSlices(
         candidateId,
         candidateName: candidate.name,
         color: candidate.color,
-        archetype: candidate.archetype,
         pct: (votes / total) * 100,
       });
     }

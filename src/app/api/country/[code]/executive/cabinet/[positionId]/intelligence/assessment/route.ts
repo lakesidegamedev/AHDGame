@@ -1,19 +1,14 @@
 // GET .../intelligence/assessment?target=RU&domain=strategic|military
 //
-// What this service currently knows about one target, graded by live (decayed)
-// coverage in the requested domain. `strategic` reads their nuclear posture;
-// `military` reads their fronts, strength and readiness.
+// What the service knows about one target, graded by live (decayed) coverage
+// in the requested domain. SIGHT ONLY: never grants authority and does not
+// touch conflictVisibility.
 //
-// SIGHT ONLY. Nothing here grants authority, and `conflictVisibility` is
-// untouched: a non-belligerent with coverage gets an intelligence picture, never
-// a belligerent's own command console.
+// Raw facts and the fog factor NEVER leave the server; serving the factor
+// would make every estimate invertible.
 //
-// The raw facts and the fog factor NEVER leave the server. Serving the factor
-// would make every estimate invertible, which is the mistake financialFogOfWar
-// records having had to fix.
-//
-// Auth: the intelligence seat holder, their head of government or head of state,
-// or an admin. Errors: 400, 401, 403, 404
+// Auth: intelligence seat, their head of government or head of state, or admin.
+// Errors: 400, 401, 403, 404
 import { NextResponse } from "next/server";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { getCovertNuclearProgram } from "@/lib/db/collections/covertNuclearPrograms";
@@ -25,7 +20,6 @@ import { belligerentSideOf } from "@/lib/military/conflictVisibility";
 import { derivedSupplies } from "@/lib/military/occupation";
 import { assessMilitary } from "@/lib/intelligence/militaryAssessment";
 import { assessEconomic } from "@/lib/intelligence/economicAssessment";
-import type { Corporation } from "@/lib/db/types/corporation";
 import { COVERT_CAPABLE, COVERT_STAGES } from "@/lib/military/covertNuclear";
 import { currentCoverage } from "@/lib/intelligence/coverage";
 import {
@@ -39,6 +33,7 @@ import {
   requireRegisteredTarget,
   type IntelligenceRouteParams,
 } from "../shared";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export async function GET(request: Request, { params }: IntelligenceRouteParams) {
   try {
@@ -104,8 +99,7 @@ export async function GET(request: Request, { params }: IntelligenceRouteParams)
     }
 
     if (requestedDomain === "economic") {
-      const corps = await db
-        .collection<Corporation>("corporations")
+      const corps = await corporationsCollection(db)
         .find({ countryId: targetCountryId })
         .project({ isPrivate: 1, liquidCapital: 1 })
         .toArray();

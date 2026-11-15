@@ -1,7 +1,8 @@
 /**
- * Persistence shell for durable UK Commons vacancies (epic #856, #860).
+ * Persistence shell for durable Commons vacancies (every chamber in the
+ * Commons by-election table).
  *
- * A vacancy doc is the durable WHY/HOW-MANY behind a holder-less `commons`
+ * A vacancy doc is the durable WHY/HOW-MANY behind a holder-less Commons
  * official row. Every write is idempotent so turn retries and concurrent
  * triggers converge: one open-or-scheduled vacancy per official row, claims
  * only move `open -> scheduled`, and terminal states are never reopened.
@@ -10,14 +11,19 @@
 import { ObjectId } from "mongodb";
 import type { Db } from "@/lib/mongodb";
 import type { ElectedOfficial } from "@/lib/db/types";
+import type { CountryId } from "@/lib/constants/countries";
+import { commonsChamberForOffice } from "@/lib/elections/rules/commonsByElectionChambers";
 import { getUkCommonsVacanciesCollection } from "@/lib/db/collections/ukByElection";
 import type {
   CommonsVacancyReason,
   CommonsVacancyStatus,
   UkCommonsVacancy,
 } from "@/lib/db/types/ukByElection";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 export interface VacateCommonsSeatInput {
+  /** Defaults to the UK Commons. */
+  countryId?: CountryId;
   officialId: ObjectId;
   state: string;
   seats?: number;
@@ -57,7 +63,7 @@ export async function createCommonsVacancy(
   if (existing) return existing;
   const doc: UkCommonsVacancy = {
     _id: new ObjectId(),
-    countryId: "UK",
+    countryId: input.countryId ?? "UK",
     state: input.state,
     officialId: input.officialId,
     ...(input.constituency ? { constituency: input.constituency } : {}),
@@ -79,7 +85,7 @@ export async function createCommonsVacancy(
 }
 
 /**
- * Tombstone a held `commons` official row and record the vacancy behind it.
+ * Tombstone a held Commons official row and record the vacancy behind it.
  * When the row is already holder-less (death/retirement paths tombstone
  * first), only the vacancy doc is ensured. Idempotent: repeated calls return
  * the same live vacancy and never clear a newly seated holder.
@@ -91,7 +97,8 @@ export async function vacateCommonsSeat(
   vacatedTurn: number,
   now: Date
 ): Promise<UkCommonsVacancy | null> {
-  if (official.officeType !== "commons") return null;
+  const chamber = commonsChamberForOffice(official.officeType, official.countryId ?? undefined);
+  if (!chamber) return null;
   const state = typeof official.state === "string" ? official.state : null;
   if (!state) return null;
 
@@ -100,7 +107,7 @@ export async function vacateCommonsSeat(
   const priorNppId = official.nppId ?? undefined;
 
   if (held) {
-    const result = await db.collection<ElectedOfficial>("electedOfficials").updateOne(
+    const result = await electedOfficialsCollection(db).updateOne(
       {
         _id: official._id,
         $or: [{ characterId: { $ne: null } }, { nppId: { $ne: null } }],
@@ -119,12 +126,11 @@ export async function vacateCommonsSeat(
     }
   }
 
-  const officialDoc = (await db
-    .collection<ElectedOfficial>("electedOfficials")
-    .findOne({ _id: official._id })) as
+  const officialDoc = (await electedOfficialsCollection(db).findOne({ _id: official._id })) as
     (ElectedOfficial & { constituency?: string; constituencyId?: string }) | null;
 
   return await createCommonsVacancy(db, {
+    countryId: chamber.countryId,
     officialId: official._id,
     state,
     seats: 1,

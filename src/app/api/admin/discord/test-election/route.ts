@@ -38,6 +38,11 @@ import type {
   PoliticalParty,
 } from "@/lib/db/types";
 import { ObjectId } from "mongodb";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 /**
  * `electionType` is intentionally an open string here rather than a hardcoded
@@ -104,7 +109,7 @@ export async function POST(request: Request) {
     // that would post nowhere. The actual URL is resolved inside
     // sendCountryGameEventMultiple, which also applies the enabled-country gate;
     // do NOT post directly from here or that gate is bypassed.
-    const config = await db.collection<GameConfig>("gameConfig").findOne({ _id: "default" });
+    const config = await gameConfigCollection(db).findOne({ _id: "default" });
     const hasDestination = Boolean(descriptor.url || config?.discordGameWebhookUrl);
     if (!hasDestination) {
       return errorResponse(400, `No ${inferredCountryId} game webhook URL configured`);
@@ -120,8 +125,7 @@ export async function POST(request: Request) {
     };
 
     // Find most recent resolved elections of this type
-    const recentElections = await db
-      .collection<Election>("elections")
+    const recentElections = await electionsCollection(db)
       .find(electionQuery)
       .sort({ updatedAt: -1 })
       .limit(50)
@@ -133,8 +137,7 @@ export async function POST(request: Request) {
 
     // Get the finalized tallies for these elections
     const electionIds = recentElections.map((e) => e._id);
-    const tallies = await db
-      .collection<ElectionVoteTally>("electionVoteTallies")
+    const tallies = await electionVoteTalliesCollection(db)
       .find({ electionId: { $in: electionIds }, finalized: true })
       .toArray();
 
@@ -142,8 +145,7 @@ export async function POST(request: Request) {
 
     // Resolve party names from politicalParties collection (Bug 2 fix)
     const uniqueCountryIds = [...new Set(recentElections.map((e) => e.countryId ?? "US"))];
-    const partyDocs = await db
-      .collection<PoliticalParty>("politicalParties")
+    const partyDocs = await politicalPartiesCollection(db)
       .find({ countryId: { $in: uniqueCountryIds } })
       .toArray();
     const partyNameMap = new Map<string, string>();
@@ -178,9 +180,9 @@ export async function POST(request: Request) {
       const winnerId = ranked[0]?.id;
       if (!winnerId) continue;
 
-      const winner = await db
-        .collection<ElectionCandidate>("electionCandidates")
-        .findOne({ _id: new ObjectId(winnerId) });
+      const winner = await electionCandidatesCollection(db).findOne({
+        _id: new ObjectId(winnerId),
+      });
 
       if (winner) {
         const elCountryId = election.countryId ?? "US";

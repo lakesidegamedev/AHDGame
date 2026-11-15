@@ -9,6 +9,10 @@ import { createNotifications, type NotificationInput } from "@/lib/notifications
 import { getCountryConfig, type CountryId } from "@/lib/constants/countries";
 import { getExecutiveOfficialFilter } from "@/lib/elections/executiveOfficeFilters";
 import { hasReachedExecutiveTermLimit } from "@/lib/elections/executiveTermLimits";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import type { Document } from "mongodb";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 
 /**
  * For each player presidential nominee without a runningMateId, tentatively
@@ -25,11 +29,12 @@ export async function autoAssignTentativeRunningMates(
   if (needsVp.length === 0) return;
 
   // Incumbent president is disqualified from being a running mate
-  const incumbent = await db
-    .collection("electedOfficials")
-    .findOne(getExecutiveOfficialFilter(countryId, "president"), {
+  const incumbent = await electedOfficialsCollection<Document>(db).findOne(
+    getExecutiveOfficialFilter(countryId, "president"),
+    {
       projection: { characterId: 1 },
-    });
+    }
+  );
   const incumbentId: ObjectId | null = (incumbent?.characterId as ObjectId | null) ?? null;
   const countryConfig = getCountryConfig(countryId);
 
@@ -44,8 +49,7 @@ export async function autoAssignTentativeRunningMates(
   }
 
   const partyQueries = [...nomineesByParty.keys()].map((party) =>
-    db
-      .collection<Character>("characters")
+    charactersCollection(db)
       .find({
         countryId,
         party,
@@ -63,8 +67,7 @@ export async function autoAssignTentativeRunningMates(
   }
 
   // Batch-fetch nominee characters for notifications in one query
-  const nomineeChars = await db
-    .collection<Character>("characters")
+  const nomineeChars = await charactersCollection(db)
     .find(
       { _id: { $in: needsVp.map((n) => n.characterId) } },
       { projection: { _id: 1, userId: 1 } }
@@ -123,13 +126,12 @@ export async function autoAssignTentativeRunningMates(
     }
   }
   if (runningMateWrites.length > 0) {
-    const result = await db
-      .collection<ElectionCandidate>("electionCandidates")
-      .bulkWrite(runningMateWrites, { ordered: false });
+    const result = await electionCandidatesCollection(db).bulkWrite(runningMateWrites, {
+      ordered: false,
+    });
     let confirmedNotifications = notificationAssignments;
     if (result.matchedCount !== runningMateWrites.length && notificationAssignments.length > 0) {
-      const confirmed = await db
-        .collection<ElectionCandidate>("electionCandidates")
+      const confirmed = await electionCandidatesCollection(db)
         .find(
           {
             _id: { $in: notificationAssignments.map(({ nomineeId }) => nomineeId) },

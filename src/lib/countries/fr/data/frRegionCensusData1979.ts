@@ -1,27 +1,10 @@
 /**
- * France Region Census Profiles — Layer 1 (1979, Fifth Republic / Giscard era).
+ * France Region Census Profiles, 1979.
  *
- * SEED INDEPENDENCE — DO NOT DERIVE FROM ANOTHER ERA.
- * Authored for ~1979 directly. NOT imported/transformed from frRegionCensusData1953.ts.
+ * SEED INDEPENDENCE: authored for ~1979 directly, do not derive from another era.
  * Primary sources: INSEE Recensement 1975, Labour Force Survey 1978.
  *
- * Key 1979 anchors vs 1953:
- * - Urbanization HIGHER: 73% urban (vs ~47% in 1953; Les Trente Glorieuses rural exodus)
- * - Education HIGHER: secondary near-majority; bac rate ~25%; university ~10%
- * - North African immigration MUCH HIGHER: post-1962 Algerian independence wave;
- *   ~1.5M Maghrebis resident by 1975; concentrated in IDF and MED regions
- * - European immigrant share LOWER: Italian/Spanish inter-war migrants now integrated
- * - Income: substantially higher nominal (Trente Glorieuses growth); still very
- *   blue-collar industrial in NOR/EST; service-economy in IDF
- * - Age: Trente Glorieuses baby boom cohort now 25–40; ageing less acute than 2019
- *
- * Dimension keys match FRRegionLayer1:
- *   ethnicity: french | european_immigrant | north_african | other
- *   education: primary_or_below | secondary | vocational | university
- *   age: young | mid | mature | senior
- *   income: low | middle | high
- *   urbanization: urban | suburban | rural
- * Each dimension sums to 100.
+ * Every dimension sums to 100.
  */
 
 import type { FRRegionLayer1 } from "@/lib/seeds/fr/frRegionCensusData";

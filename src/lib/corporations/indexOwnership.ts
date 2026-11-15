@@ -1,19 +1,7 @@
 /**
  * Index-fund ownership of a corporation, and the issuer-side benefits it earns.
  *
- * Before this, index funds were an entirely one-way system: `fundCron` absorbed
- * public float, `fundCrossRebalancing` moved holdings between funds, and
- * `dividendPassThrough` paid unit holders - but the CORPORATION being held got
- * nothing for it. Nothing in the credit model or the share-price formula looked
- * at fund ownership at all. The Global Top 50 sat at two or three real holdings
- * because inclusion bought the issuer precisely zero (suggestion #62).
- *
- * Real issuers care a great deal about index membership: a wider, stickier
- * holder base is cheaper capital and a firmer bid under the stock. Both legs are
- * modelled here, deliberately as the mirror image of the insider-concentration
- * penalties that already exist - concentrated insider ownership is punished, a
- * broad passive base is rewarded, and they use the same shapes so the two can be
- * reasoned about together.
+ * A wider, stickier holder base is cheaper capital and a firmer bid under the stock. Both legs are modelled here, deliberately as the mirror image of the insider-concentration penalties that already exist: concentrated insider ownership is punished, a broad passive base is rewarded, and they use the same shapes so the two can be reasoned about together.
  */
 
 import type { Corporation } from "@/lib/db/types";

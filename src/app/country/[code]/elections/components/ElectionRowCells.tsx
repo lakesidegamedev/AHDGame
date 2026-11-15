@@ -23,8 +23,8 @@ const CLASS_ROMAN: Record<number, string> = { 1: "I", 2: "II", 3: "III" };
 
 /**
  * Region plus any class/seat qualifier, e.g. "Connecticut · Class I". A
- * by-election shares its office section and region with the regular race, so it
- * is tagged; otherwise only the seat count told the two rows apart (ticket 1379).
+ * by-election shares its office section and region with the regular race,
+ * so it is tagged to tell the two rows apart.
  */
 export function RegionCell({ election }: { election: ElectionDisplay }) {
   const regionName = ELECTION_STATE_NAMES[election.state] ?? election.state;

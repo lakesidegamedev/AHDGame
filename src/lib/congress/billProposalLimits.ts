@@ -13,11 +13,16 @@ import type { EnactedLaw } from "@/lib/db/types/budget";
 import { ObjectId } from "mongodb";
 import { inferCountryIdFromStateId } from "@/lib/congress/resolveBillCountryId";
 import { regionalDefaultLevel } from "@/lib/politicalLegislation/regionalDefaults";
+import { isUnseededEraLaw } from "@/lib/politicalLegislation/catalog";
 import {
   canonicalizeLegislationTypeId,
   getEquivalentLegislationTypeIds,
   humanizeLegislationTypeId,
 } from "@/lib/legislationTypeAliases";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
+import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
+import { enactedLawsCollection } from "@/lib/db/repositories/enactedLaws";
+import { governorExecutiveOrdersCollection } from "@/lib/db/repositories/governorExecutiveOrders";
 
 export interface PolicyProvisionInput {
   legislationTypeId: string;
@@ -107,12 +112,10 @@ export async function checkDuplicateProvisions(
     const key = `${canonicalId}:${provision.policyOptionId}`;
     if (activeProvisionKeys.has(key)) {
       // Look up the legislation type name for a user-friendly error
-      const lt = await db
-        .collection<LegislationType>("legislationTypes")
-        .findOne(
-          { _id: { $in: getEquivalentLegislationTypeIds(provision.legislationTypeId) } },
-          { projection: { name: 1 } }
-        );
+      const lt = await legislationTypesCollection(db).findOne(
+        { _id: { $in: getEquivalentLegislationTypeIds(provision.legislationTypeId) } },
+        { projection: { name: 1 } }
+      );
       const name =
         lt?.name ??
         humanizeLegislationTypeId(provision.legislationTypeId) ??
@@ -258,8 +261,7 @@ export async function checkCurrentPolicyLevel(
   ];
 
   // Primary: check statePolicies
-  const currentPolicies = await db
-    .collection<StatePolicy>("statePolicies")
+  const currentPolicies = await statePoliciesCollection(db)
     .find({ stateId: policyStoreId, legislationTypeId: { $in: legTypeIds } })
     .toArray();
 
@@ -272,8 +274,7 @@ export async function checkCurrentPolicyLevel(
   const orderById = orderIds.length
     ? new Map(
         (
-          await db
-            .collection<GovernorExecutiveOrder>("governorExecutiveOrders")
+          await governorExecutiveOrdersCollection(db)
             .find({ _id: { $in: orderIds } })
             .toArray()
         ).map((o) => [o._id!.toString(), o])
@@ -315,8 +316,7 @@ export async function checkCurrentPolicyLevel(
     }
 
     // Fetch enacted laws sorted by enactedAt desc — only the most recent per type matters
-    const enactedLaws = await db
-      .collection<EnactedLaw>("enactedLaws")
+    const enactedLaws = await enactedLawsCollection(db)
       .find(enactedLawFilter)
       .sort({ enactedAt: -1 })
       .toArray();
@@ -339,8 +339,7 @@ export async function checkCurrentPolicyLevel(
           lawsNeedingOption.flatMap((law) => getEquivalentLegislationTypeIds(law.legislationTypeId))
         ),
       ];
-      const legislationTypeDocs = await db
-        .collection<LegislationType>("legislationTypes")
+      const legislationTypeDocs = await legislationTypesCollection(db)
         .find({ _id: { $in: equivalentIds } }, { projection: { policyOptions: 1 } })
         .toArray();
       const byId = new Map(legislationTypeDocs.map((lt) => [lt._id, lt]));
@@ -372,8 +371,7 @@ export async function checkCurrentPolicyLevel(
       if (defaulted.length > 0) {
         // One batched fetch, not a findOne per law — the same N+1 the enacted-law
         // lookup above was rewritten to avoid, on the same propose hot path.
-        const docs = await db
-          .collection<LegislationType>("legislationTypes")
+        const docs = await legislationTypesCollection(db)
           .find(
             { _id: { $in: defaulted.map((entry) => entry.id) } },
             { projection: { policyOptions: 1 } }
@@ -385,6 +383,12 @@ export async function checkCurrentPolicyLevel(
           if (opt?.id) policyMap.set(id, opt.id);
         }
       }
+    } else {
+      // National scope: a later-era law has no seeded row until its first bill,
+      // and the engine reads it at level 0, so "no statute" is the current law.
+      for (const id of canonicalLegTypeIds) {
+        if (!policyMap.has(id) && isUnseededEraLaw(id)) policyMap.set(id, "l0");
+      }
     }
   }
 
@@ -393,12 +397,10 @@ export async function checkCurrentPolicyLevel(
       canonicalizeLegislationTypeId(provision.legislationTypeId) ?? provision.legislationTypeId;
     const currentOptionId = policyMap.get(canonicalId);
     if (currentOptionId && currentOptionId === provision.policyOptionId) {
-      const lt = await db
-        .collection<LegislationType>("legislationTypes")
-        .findOne(
-          { _id: { $in: getEquivalentLegislationTypeIds(provision.legislationTypeId) } },
-          { projection: { name: 1 } }
-        );
+      const lt = await legislationTypesCollection(db).findOne(
+        { _id: { $in: getEquivalentLegislationTypeIds(provision.legislationTypeId) } },
+        { projection: { name: 1 } }
+      );
       const name =
         lt?.name ??
         humanizeLegislationTypeId(provision.legislationTypeId) ??

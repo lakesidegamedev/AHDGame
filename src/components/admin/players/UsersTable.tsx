@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { getPartyTextColor, getPartyLabel } from "@/lib/utils/politics";
 import { formatDate } from "@/lib/utils/formatters";
 import { ResponsiveTable, type ResponsiveTableColumn } from "@/components/ui";
@@ -29,6 +29,7 @@ interface UsersTableProps {
   onDeleteUser: (userId: string, username: string) => void;
   onSetSingleplayerEntitlement: (userId: string, username: string, entitled: boolean) => void;
   onSetSandboxAccess: (userId: string, username: string, granted: boolean) => void;
+  onSetVpnWhitelist?: (userId: string, username: string, whitelisted: boolean) => void;
 }
 
 export function UsersTable({
@@ -52,6 +53,7 @@ export function UsersTable({
   onDeleteUser,
   onSetSingleplayerEntitlement,
   onSetSandboxAccess,
+  onSetVpnWhitelist,
 }: UsersTableProps) {
   const columns: ResponsiveTableColumn<UserData>[] = [
     {
@@ -213,18 +215,12 @@ export function UsersTable({
   }
 
   const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
   // Menu state keys off the row's user id; a row that leaves the page unmounts
   // its menu with it, so no cleanup effect is needed.
   const [menuUserId, setMenuUserId] = useState<string | null>(null);
 
   const openDossier = (userId: string) => {
-    const params = new URLSearchParams(searchParams);
-    params.set("tab", "players");
-    params.set("sub", "dossier");
-    params.set("user", userId);
-    router.push(`${pathname}?${params.toString()}`);
+    router.push(`/control/players/dossier?user=${encodeURIComponent(userId)}`);
   };
 
   return (
@@ -350,6 +346,16 @@ export function UsersTable({
                           onSetSandboxAccess(user.id, user.username, !user.sandboxAccessGranted);
                         }}
                       />
+                      {onSetVpnWhitelist && !user.isAdmin && (
+                        <MenuItem
+                          label={user.vpnWhitelisted ? "Revoke VPN access" : "Allow VPN"}
+                          title="Let this player take game actions while connected through a VPN"
+                          onClick={() => {
+                            setMenuUserId(null);
+                            onSetVpnWhitelist(user.id, user.username, !user.vpnWhitelisted);
+                          }}
+                        />
+                      )}
                       <MenuItem
                         label="View retired"
                         disabled={retiredLoading}

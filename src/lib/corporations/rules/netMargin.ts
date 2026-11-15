@@ -2,18 +2,10 @@
  * Net margin for a plants sector: realized profit over realized revenue, in
  * percent.
  *
- * Pure rules: figures in, percent out. The corporation page rows and the
- * sector detail page both call it, each in its own currency; the ratio does
- * not care which, as long as profit and revenue share one.
- *
- * Why this and not the stored `effectiveProfitMargin`: that one divides by the
- * revenue SOLD units earned, so a sector selling 15% of its output shows a fat
- * margin while it loses money. Profit here already nets the whole bill,
- * unsold output included, so profit over revenue is an ordinary net margin:
- * at most 100%, negative when the sector loses money.
- *
- * It replaced profit over total cost, which ran to four or five figures when
- * upkeep was tiny (a sector with near-free upkeep read as a 134,031% margin).
+ * Profit already nets the whole bill, unsold output included, so this is an
+ * ordinary net margin, unlike the stored `effectiveProfitMargin` which divides
+ * by sold revenue and inflates when little output sells. At most 100 percent,
+ * negative when losing money.
  *
  * Presentation only. Nothing in the turn reads it back.
  */

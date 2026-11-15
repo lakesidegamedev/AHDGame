@@ -24,10 +24,8 @@ export interface StatePanelProps {
 }
 
 /**
- * The state overview that opens when a state is clicked: who leads and by how
- * much, each ticket's projected share with its change since last turn, which
- * way the state is moving, and the county results. Chrome (overlay or bottom
- * sheet) is the caller's; this is only the content.
+ * Content of the state overview shown when a state is clicked. Chrome
+ * (overlay or bottom sheet) is the caller's; this is only the content.
  */
 export const StatePanel = forwardRef<HTMLDivElement, StatePanelProps>(function StatePanel(
   { state, model, electionId, countryId: _countryId, turn, onClose },

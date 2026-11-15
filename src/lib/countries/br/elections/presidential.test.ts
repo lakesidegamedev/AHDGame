@@ -7,18 +7,18 @@ const { live, autonomy } = vi.hoisted(() => ({
   autonomy: vi.fn(),
 }));
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
-vi.mock("@/lib/turn/perpetualElections/shared", () => ({
+vi.mock("@/lib/elections/scheduling/shared", () => ({
   countryElectionsLive: live,
   ensureRegionalDelegateElections: vi.fn(),
   ensureRegionalGovernorElections: vi.fn(),
   seatsFromRegionField: vi.fn(),
 }));
 vi.mock("@/lib/nppAutonomy/featureFlag", () => ({ isNppAutonomyActive: autonomy }));
-vi.mock("@/lib/turn/perpetualElections/engine", async (importActual) => ({
-  ...(await importActual<typeof import("@/lib/turn/perpetualElections/engine")>()),
+vi.mock("@/lib/elections/scheduling/engine", async (importActual) => ({
+  ...(await importActual<typeof import("@/lib/elections/scheduling/engine")>()),
   getCurrentTurnAndCtx: vi.fn(),
 }));
-import { getCurrentTurnAndCtx } from "@/lib/turn/perpetualElections/engine";
+import { getCurrentTurnAndCtx } from "@/lib/elections/scheduling/engine";
 import { ensureBRPresidentialElection } from "./perpetual";
 
 let mock: MockDb;

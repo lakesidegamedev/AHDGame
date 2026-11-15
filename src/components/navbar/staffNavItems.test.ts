@@ -19,18 +19,17 @@ describe("buildStaffNavItems", () => {
     expect(isStaffUser({ isAdmin: false, isModerator: false })).toBe(false);
   });
 
-  it("moderator sees Mod Panel and Docs only", async () => {
+  it("moderator sees the Control Panel and Docs only", async () => {
     const { visibleStaffNavItems } = await load("https://ops.example.com");
     const visible = visibleStaffNavItems({ isAdmin: false, isModerator: true });
-    expect(visible.map((i) => i.label)).toEqual(["Mod Panel", "Docs"]);
+    expect(visible.map((i) => i.label)).toEqual(["Control Panel", "Docs"]);
   });
 
   it("admin sees all staff links when an ops dashboard is configured", async () => {
     const { visibleStaffNavItems } = await load("https://ops.example.com");
     const visible = visibleStaffNavItems({ isAdmin: true, isModerator: true });
     expect(visible.map((i) => i.label)).toEqual([
-      "Admin Panel",
-      "Mod Panel",
+      "Control Panel",
       "Ops Dashboard",
       "Docs",
       "Tickets",
@@ -41,7 +40,14 @@ describe("buildStaffNavItems", () => {
   it("ops dashboard links hide when no dashboard is configured", async () => {
     const { visibleStaffNavItems } = await load(undefined);
     const visible = visibleStaffNavItems({ isAdmin: true, isModerator: true });
-    expect(visible.map((i) => i.label)).toEqual(["Admin Panel", "Mod Panel", "Docs"]);
+    expect(visible.map((i) => i.label)).toEqual(["Control Panel", "Docs"]);
+  });
+
+  it("junior dev sees the Control Panel and Docs, nothing admin-gated", async () => {
+    const { visibleStaffNavItems, isStaffUser } = await load("https://ops.example.com");
+    const opts = { isAdmin: false, isModerator: false, isJuniorDev: true };
+    expect(visibleStaffNavItems(opts).map((i) => i.label)).toEqual(["Control Panel", "Docs"]);
+    expect(isStaffUser(opts)).toBe(true);
   });
 
   it("admin-only links are gated", async () => {
@@ -56,7 +62,7 @@ describe("buildStaffNavItems", () => {
     const { visibleStaffNavItems } = await load("https://ops.example.com");
     const visible = visibleStaffNavItems({ isAdmin: true, isSingleplayerOwner: true });
     expect(visible[0]).toMatchObject({ label: "Local World", href: "/singleplayer/admin" });
-    expect(visible.map((i) => i.label)).toContain("Admin Panel");
+    expect(visible.map((i) => i.label)).toContain("Control Panel");
   });
 
   it("hides Local World without owner authority", async () => {

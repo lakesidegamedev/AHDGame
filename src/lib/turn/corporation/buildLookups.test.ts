@@ -152,7 +152,7 @@ describe("buildCorporationLookups — bond holdings", () => {
           sourceTurn: 1,
           completedAt: "verified",
           verificationHash: "verified",
-          countries: ["IE"],
+          countries: ["US", "UK", "JP", "IE"],
         },
       },
     });
@@ -170,7 +170,7 @@ describe("buildCorporationLookups — bond holdings", () => {
         evaluateResetApprovalModifiers(observations, {
           countryId: "UK",
           preset: "1991-default",
-          year: null,
+          year: 1991,
         })
       )
     );

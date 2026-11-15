@@ -1,3 +1,4 @@
+import { hostsSovereigntyReferendums } from "@/lib/referendum/rules/sovereigntyRegions";
 import { z } from "zod";
 import { requireHumanSessionWithCharacter } from "@/lib/api/requireAuth";
 import { handleRouteError, errorResponse, statusResponse } from "@/lib/api/errors";
@@ -8,9 +9,9 @@ import { canDecideReferendum } from "@/lib/referendum/pmAccess";
 import { grantReferendum } from "@/lib/referendum/grantReferendum";
 
 // POST /api/country/[code]/referendum/[refId]/submit
-// Auth: requireHumanSessionWithCharacter; must be the sitting UK Prime Minister
-//   (or an admin via adminOverride). The PM grants or declines a requested
-//   referendum (no Commons consent vote — Westminster's bill comes at conversion).
+// Auth: requireHumanSessionWithCharacter; must be the country's sitting Prime
+//   Minister (or an admin via adminOverride). The PM grants or declines a
+//   requested referendum; the consent bill comes later, at conversion.
 // Errors: 400, 401, 403, 404
 export async function POST(
   request: Request,
@@ -22,8 +23,8 @@ export async function POST(
     if (!COUNTRY_CONFIGS[countryId]) {
       return errorResponse(400, "Invalid country");
     }
-    if (countryId !== "UK") {
-      return errorResponse(400, "Referendums are UK-only.");
+    if (!hostsSovereigntyReferendums(countryId)) {
+      return errorResponse(400, "This country holds no sovereignty referendums.");
     }
 
     const auth = await requireHumanSessionWithCharacter(request);
@@ -43,7 +44,7 @@ export async function POST(
 
     const isAdmin = auth.user.isAdmin === true;
     const adminOverride = parsed.data.adminOverride === true && isAdmin;
-    const isPM = await canDecideReferendum(db, auth.user.character._id);
+    const isPM = await canDecideReferendum(db, countryId, auth.user.character._id);
 
     const result = await grantReferendum(db, {
       countryId,

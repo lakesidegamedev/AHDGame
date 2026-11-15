@@ -10,7 +10,7 @@ import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { findPartyBySequentialId } from "@/lib/db/partyLookup";
 import { isSameCountry } from "@/lib/api/sameCountry";
 import { getGameTime } from "@/lib/time/gameTime";
-import { castLeadershipBallotVote } from "@/lib/uk/leadership/leadershipCommands";
+import { castLeadershipBallotVote } from "@/lib/countries/uk/leadership/leadershipCommands";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string }>;

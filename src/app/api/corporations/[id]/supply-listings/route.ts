@@ -13,7 +13,7 @@ import {
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { supplyAgreementRequiresState } from "@/lib/market/commodityMarketScope";
 import { COMMODITY_LABELS, COMMODITY_TYPES } from "@/lib/constants/commodities";
-import type { CorporateSector, Corporation, GameConfig, State } from "@/lib/db/types";
+import type { CorporateSector, GameConfig, State } from "@/lib/db/types";
 import type { SupplyListing, SupplyListingView } from "@/lib/db/types/supplyListing";
 import {
   PUBLISHER_PROJECTION,
@@ -26,6 +26,11 @@ import {
   supplyAgreementReachProblem,
   supplyReachMessage,
 } from "@/lib/corporations/supplyExchange/rules/deliveryReach";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { supplyListingsCollection } from "@/lib/db/repositories/supplyListings";
 
 type Context = { params: Promise<{ id: string }> };
 const privateHeaders = { "Cache-Control": "private, no-store" };
@@ -37,9 +42,10 @@ async function access(context: Context) {
   if (!resolved.ok) return resolved;
   const denied = requireCeo(resolved.corporation, auth.user.userId);
   if (denied) return { ok: false as const, response: denied };
-  const config = await db
-    .collection<GameConfig>("gameConfig")
-    .findOne({ _id: "default" }, { projection: { supplyAgreementsEnabled: 1 } });
+  const config = await gameConfigCollection(db).findOne(
+    { _id: "default" },
+    { projection: { supplyAgreementsEnabled: 1 } }
+  );
   if (!config?.supplyAgreementsEnabled)
     return {
       ok: false as const,
@@ -60,7 +66,7 @@ export async function GET(request: Request, context: Context) {
     });
     if (!query.success) return errorResponse(400, "Invalid listing filter");
     const turn = await getCurrentTurn(a.db);
-    const collection = a.db.collection<SupplyListing>("supplyListings");
+    const collection = supplyListingsCollection(a.db);
     const [rows, own, viewerSectors] = await Promise.all([
       collection
         .find({
@@ -75,13 +81,11 @@ export async function GET(request: Request, context: Context) {
         .find({ corporationId: a.corp._id, expiresAtTurn: { $gt: turn } })
         .limit(10)
         .toArray(),
-      a.db
-        .collection<CorporateSector>("corporateSectors")
+      corporateSectorsCollection(a.db)
         .find({ corporationId: a.corp._id }, { projection: REACH_SECTOR_PROJECTION })
         .toArray(),
     ]);
-    const corps = await a.db
-      .collection<Corporation>("corporations")
+    const corps = await corporationsCollection(a.db)
       .find({ _id: { $in: [...rows, ...own].map((row) => row.corporationId) } })
       .project<PublisherFields>(PUBLISHER_PROJECTION)
       .toArray();
@@ -135,7 +139,7 @@ export async function POST(request: Request, context: Context) {
     if (!parsed.success) return errorResponse(parsed.status, parsed.error);
     const body = parsed.data;
     const id = `${a.corp._id}:${body.slot}`;
-    const collection = a.db.collection<SupplyListing>("supplyListings");
+    const collection = supplyListingsCollection(a.db);
     if (body.action === "withdraw") {
       await collection.deleteOne({ _id: id, corporationId: a.corp._id });
       return NextResponse.json({ success: true }, { headers: privateHeaders });
@@ -143,9 +147,7 @@ export async function POST(request: Request, context: Context) {
     const stateId = supplyAgreementRequiresState(body.commodity) ? body.stateId : undefined;
     if (
       stateId &&
-      !(await a.db
-        .collection<State>("states")
-        .findOne({ _id: stateId }, { projection: { _id: 1 } }))
+      !(await statesCollection(a.db).findOne({ _id: stateId }, { projection: { _id: 1 } }))
     )
       return errorResponse(400, "Unknown fulfillment state");
     const turn = await getCurrentTurn(a.db);

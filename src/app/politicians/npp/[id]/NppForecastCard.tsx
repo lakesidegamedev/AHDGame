@@ -2,6 +2,9 @@ import type { Bill, NPPVotePrediction, StateBill } from "@/lib/db/types";
 import type { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import { CrossPressureForceBar } from "@/components/CrossPressureForceBar";
+import { billsCollection } from "@/lib/db/repositories/bills";
+import { stateBillsCollection } from "@/lib/db/repositories/stateBills";
+import { nppVotePredictionsCollection } from "@/lib/db/repositories/nppVotePredictions";
 
 /**
  * Server component — loads the most recent cross-pressure prediction this NPP
@@ -18,22 +21,22 @@ async function loadLatestPrediction(nppId: ObjectId): Promise<{
     | Pick<StateBill, "_id" | "title" | "status">;
 } | null> {
   const db = await getDb();
-  const prediction = await db
-    .collection<NPPVotePrediction>("nppVotePredictions")
-    .findOne({ nppId }, { sort: { computedAtTurn: -1, updatedAt: -1 } });
+  const prediction = await nppVotePredictionsCollection(db).findOne(
+    { nppId },
+    { sort: { computedAtTurn: -1, updatedAt: -1 } }
+  );
   if (!prediction) return null;
 
   const bill = prediction.billId
-    ? await db
-        .collection<Bill>("bills")
-        .findOne(
-          { _id: prediction.billId },
-          { projection: { _id: 1, title: 1, status: 1, currentChamber: 1 } }
-        )
+    ? await billsCollection(db).findOne(
+        { _id: prediction.billId },
+        { projection: { _id: 1, title: 1, status: 1, currentChamber: 1 } }
+      )
     : prediction.stateBillId
-      ? await db
-          .collection<StateBill>("stateBills")
-          .findOne({ _id: prediction.stateBillId }, { projection: { _id: 1, title: 1, status: 1 } })
+      ? await stateBillsCollection(db).findOne(
+          { _id: prediction.stateBillId },
+          { projection: { _id: 1, title: 1, status: 1 } }
+        )
       : null;
   if (!bill) return null;
   return { prediction, bill };

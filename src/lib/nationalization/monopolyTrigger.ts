@@ -18,6 +18,9 @@ import {
   controlGroupMemberIds,
   controlGroupRootByCorpId,
 } from "@/lib/corporations/groups/controlGroups";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 /** gameConfig.groupSizeCostsStage at which the monopoly trigger reads the control group. */
 const GROUP_MONOPOLY_TRIGGER_STAGE = 4;
@@ -66,12 +69,12 @@ export async function loadGroupTopMarketShares(
   db: Db,
   corporationIds: readonly ObjectId[]
 ): Promise<Map<string, number> | null> {
-  const cfg = await db
-    .collection<{ groupSizeCostsStage?: number }>("gameConfig")
-    .findOne({ _id: "default" as never }, { projection: { groupSizeCostsStage: 1 } });
+  const cfg = await gameConfigCollection<{ groupSizeCostsStage?: number }>(db).findOne(
+    { _id: "default" as never },
+    { projection: { groupSizeCostsStage: 1 } }
+  );
   if ((cfg?.groupSizeCostsStage ?? 0) < GROUP_MONOPOLY_TRIGGER_STAGE) return null;
-  const corps = await db
-    .collection<Corporation>("corporations")
+  const corps = await corporationsCollection(db)
     .find({}, { projection: { shareholders: 1, totalShares: 1, superShareMultiplier: 1 } })
     .toArray();
   const rootByCorpId = controlGroupRootByCorpId(corps);
@@ -82,8 +85,7 @@ export async function loadGroupTopMarketShares(
   for (const root of requestedRoots)
     for (const id of controlGroupMemberIds(rootByCorpId, root)) memberIds.add(id);
   const memberObjectIds = corps.map((c) => c._id).filter((id) => memberIds.has(id.toString()));
-  const sectors = await db
-    .collection<CorporateSector>("corporateSectors")
+  const sectors = await corporateSectorsCollection(db)
     .find({ corporationId: { $in: memberObjectIds } })
     .toArray();
   const shareBySectorId = await fetchMarketSharePercentForSectors(db, sectors);

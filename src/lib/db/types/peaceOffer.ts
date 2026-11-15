@@ -41,8 +41,6 @@ export const PEACE_OFFER_DURATION_TURNS = 72;
  * already shipped for coalition offensives — no player commits another player's
  * army — and avoids whole-side peace's failure mode, where one inactive country on a
  * roster could never consent and would freeze the war permanently.
- *
- * Spec: docs/superpowers/specs/2026-08-04-suing-for-peace-design.md
  */
 export interface PeaceOfferDoc {
   _id: ObjectId;
@@ -51,20 +49,14 @@ export interface PeaceOfferDoc {
   fromCountry: CountryId;
   toCountry: CountryId;
   /**
-   * Which of the two parties this deal takes OUT of the war. Always `fromCountry`
-   * or `toCountry`.
+   * Which party this deal takes OUT of the war. Always `fromCountry` or
+   * `toCountry`.
    *
-   * Explicit rather than implied, because an offer now runs in both directions:
-   *
-   *   - `leaver === fromCountry` is "let me out", the original shape. The sender
-   *     proposes to end their own participation.
-   *   - `leaver === toCountry` is "you get out": the sender asks the recipient to
-   *     withdraw and stays in the war themselves. This is how a coalition is peeled
-   *     apart by negotiation, which the player wiki has advised as strategy since
-   *     before it was possible.
-   *
-   * Either way the RECIPIENT is the one who accepts or refuses. Nobody is ever
-   * removed from a war without their own government agreeing to it.
+   * Explicit rather than implied because offers run in both directions:
+   * `leaver === fromCountry` means "let me out"; `leaver === toCountry` means
+   * "you get out" and the sender stays in, peeling a coalition apart by
+   * negotiation. The RECIPIENT always accepts or refuses, so nobody is removed
+   * from a war without their own government agreeing.
    */
   leaver: CountryId;
   /**
@@ -72,13 +64,11 @@ export interface PeaceOfferDoc {
    * than by the UI: a discriminated union makes a deal carrying two terms
    * unrepresentable, so it cannot be stored or hand-rolled over the API.
    *
-   * Replaced the old `indemnity` field. An indemnity is now one branch of the
-   * union, and `amount: 0` is still a clean white peace, the same mechanism
-   * dialled to nothing rather than a separate code path. Its `payer` stays
-   * explicit because EITHER party may pay: a losing country buys its way out, and
-   * a winning country may pay to disengage from a war it no longer wants. That
-   * amount is ALWAYS quoted in the payer's local currency, since every
-   * treasuryBalance is denominated locally.
+   * An indemnity is one branch of the union, and `amount: 0` is a clean white
+   * peace, the same mechanism dialled to nothing. Its `payer` stays explicit
+   * because EITHER party may pay: a losing country buys its way out, and a
+   * winning country may pay to disengage. That amount is ALWAYS quoted in the
+   * payer's local currency, since every treasuryBalance is denominated locally.
    */
   term: PeaceTerm;
   /** Optional note, moderated. Public on the conflict record once accepted. */

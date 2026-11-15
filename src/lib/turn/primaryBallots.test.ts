@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { turnVoteWeight } from "@/lib/electionEngine/voteCalculations";
+import { turnVoteWeight } from "@/lib/elections/engine/voteCalculations";
 import {
   primaryBallotWindow,
   accruePrimaryBallotTurn,

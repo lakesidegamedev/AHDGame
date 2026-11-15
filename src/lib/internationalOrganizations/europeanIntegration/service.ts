@@ -18,13 +18,16 @@ import {
   reconcileEuropeanTreaty,
   type EuropeanIntegrationState,
 } from "./rules";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { organizationMembershipsCollection } from "@/lib/db/repositories/organizationMemberships";
+import { macroCountriesCollection } from "@/lib/db/repositories/macroCountries";
 
 export async function ensureEuropeanIntegrationState(
   db: Db,
   preset: string,
   hasEuropeanMembers: boolean
 ): Promise<EuropeanIntegrationState> {
-  const states = db.collection<GameState>("gameState");
+  const states = gameStateCollection(db);
   const state = await states.findOne(
     { _id: "current" },
     { projection: { currentTurn: 1, europeanIntegration: 1 } }
@@ -62,7 +65,7 @@ export async function ensureEuropeanIntegrationState(
 
 export async function loadEuropeanTreatyContext(db: Db, turn?: number) {
   const [world, memberships] = await Promise.all([
-    db.collection<GameState>("gameState").findOne(
+    gameStateCollection(db).findOne(
       { _id: "current" },
       {
         projection: {
@@ -75,8 +78,7 @@ export async function loadEuropeanTreatyContext(db: Db, turn?: number) {
         },
       }
     ),
-    db
-      .collection<{ countryId: string; joinedTurn?: number }>("organizationMemberships")
+    organizationMembershipsCollection<{ countryId: string; joinedTurn?: number }>(db)
       .find({ organizationId: "EU" }, { projection: { countryId: 1, joinedTurn: 1 } })
       .toArray(),
   ]);
@@ -120,7 +122,7 @@ async function mutateEuropeanState(
     if (!context) return false;
     const next = decide(context);
     if (next === context.state) return false;
-    const result = await db.collection<GameState>("gameState").updateOne(
+    const result = await gameStateCollection(db).updateOne(
       {
         _id: "current",
         "europeanIntegration.revision": context.state.revision ?? { $exists: false },
@@ -158,8 +160,7 @@ export async function reconcileEuropeanTreatyLive(db: Db, turn: number): Promise
   const context = await loadEuropeanTreatyContext(db, turn);
   if (!context || !canRatifyMaastricht(context.date, context.state.stage)) return false;
   // One projected read for every background member, never one read per country.
-  const countries = await db
-    .collection<MacroCountryState>("macroCountries")
+  const countries = await macroCountriesCollection<MacroCountryState>(db)
     .find(
       { _id: { $in: context.members }, ...ACTIVE_MACRO_COUNTRY_FILTER },
       {

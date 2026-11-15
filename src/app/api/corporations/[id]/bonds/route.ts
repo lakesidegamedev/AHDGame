@@ -21,7 +21,6 @@ import {
 } from "@/lib/bonds/primaryMarket";
 import type { BondMaturityTurns } from "@/lib/db/types/bond";
 import {
-  BOND_ISSUANCE_FREEZE_UNTIL,
   BOND_ISSUANCE_COOLDOWN_TURNS,
   BOND_ISSUANCE_COOLDOWN_TURNS_PRIVATE,
   BOND_ISSUANCE_MIN_HEADROOM,
@@ -71,6 +70,9 @@ import type { CurrencyCode } from "@/lib/constants/currencies";
 import { loadBankingPolicy } from "@/lib/banking/policy";
 import { resolvePrimaryUnderwritingOffer } from "@/lib/banking/underwritingOffer";
 import { settlePrimaryUnderwritingFill } from "@/lib/banking/underwritingSettlement";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -94,15 +96,11 @@ export async function GET(request: Request, { params }: RouteParams) {
     // centralBanks come from the shared per-turn cache so a burst of corp-
     // detail requests in the same turn shares a single DB round-trip.
     const [bonds, sectors, refData, fxByCurrency, marketMode] = await Promise.all([
-      db
-        .collection<Bond>("bonds")
+      bondsCollection(db)
         .find({ corporationId: corporation._id })
         .sort({ createdAt: -1 })
         .toArray(),
-      db
-        .collection<CorporateSector>("corporateSectors")
-        .find({ corporationId: corporation._id })
-        .toArray(),
+      corporateSectorsCollection(db).find({ corporationId: corporation._id }).toArray(),
       getTurnReferenceData(db, currentTurn),
       loadFxRatesByCurrency(db),
       getMarketSystemModeForDb(db),
@@ -252,8 +250,7 @@ export async function GET(request: Request, { params }: RouteParams) {
     }
 
     // Find bonds this corporation HOLDS in other companies
-    const heldBonds = await db
-      .collection<Bond>("bonds")
+    const heldBonds = await bondsCollection(db)
       .find({
         "holders.corporationId": corporation._id,
         corporationId: { $ne: corporation._id },
@@ -264,8 +261,7 @@ export async function GET(request: Request, { params }: RouteParams) {
     const issuerIds = [...new Set(heldBonds.map((b) => b.corporationId.toString()))];
     const issuers =
       issuerIds.length > 0
-        ? await db
-            .collection<Corporation>("corporations")
+        ? await corporationsCollection(db)
             .find({ _id: { $in: issuerIds.map((i) => new ObjectId(i)) } })
             .project<Pick<Corporation, "_id" | "name" | "sequentialId">>({
               _id: 1,
@@ -317,9 +313,8 @@ export async function GET(request: Request, { params }: RouteParams) {
       MIN_BOND_ISSUANCE_PER_ISSUE,
       annualRevenueGet * MAX_BOND_ISSUANCE_REVENUE_FRACTION
     );
-    // Ticket #1198: the ceiling is also capped by realizable (exit-basis)
-    // equity, so the headroom quoted here cannot exceed the assets
-    // `filterInsolventCorps` would count if this debt went unpaid.
+    // Effective ceiling is capped by realizable (exit-basis) equity,
+    // so headroom cannot exceed what filterInsolventCorps would count.
     const { exitEquityAnchor } = await loadCorpExitEquityAnchor(db, {
       liquidCapitalAnchor,
       sectors,
@@ -331,9 +326,9 @@ export async function GET(request: Request, { params }: RouteParams) {
       currentTurn,
     });
 
-    // Effective issuance window the POST handler enforces: the flat minimum is
-    // clamped to the corp's own headroom so min never exceeds max
-    // (ticket #1083). `bondsAvailable` is false below the dust floor.
+    // Effective issuance window enforced by POST: the flat minimum is
+    // clamped to corp headroom so min never exceeds max.
+    // bondsAvailable is false below the dust floor.
     const {
       maxAllowed: maxAllowedIssuance,
       effectiveMin: minIssuance,
@@ -346,11 +341,9 @@ export async function GET(request: Request, { params }: RouteParams) {
       exitEquity: exitEquityAnchor,
     });
 
-    // Remaining DEBT-CEILING room, before the per-issuance cap is applied: the
-    // lower of the two ceilings the POST enforces. Sent so the Bonds tab can
-    // render the same number the server would enforce instead of re-deriving
-    // one of the two rules client-side, which is how #1198's quoted-vs-enforced
-    // gap survived a server-side fix in the first place.
+    // Remaining debt-ceiling room before the per-issuance cap: the lower
+    // of the two ceilings POST enforces, sent so the client renders the
+    // enforced number instead of re-deriving a rule and drifting.
     const debtHeadroom = Math.max(
       0,
       Math.min(
@@ -428,7 +421,7 @@ export async function GET(request: Request, { params }: RouteParams) {
       maxAllowedIssuance: Math.round(maxAllowedIssuance),
       minIssuance: Math.round(minIssuance),
       bondsAvailable,
-      // #1198: what the corp could realize by selling up, and the remaining
+      // What the corp could realize by selling up, and the remaining
       // debt-ceiling room derived from it. `issuanceLimitedBy` names which of
       // the three rules is currently binding.
       exitEquity: Math.round(exitEquityAnchor),
@@ -437,10 +430,6 @@ export async function GET(request: Request, { params }: RouteParams) {
       isCeo,
       cooldownTurnsRemaining,
       currentTurn,
-      issuanceFrozenUntil:
-        BOND_ISSUANCE_FREEZE_UNTIL && Date.now() < BOND_ISSUANCE_FREEZE_UNTIL.getTime()
-          ? BOND_ISSUANCE_FREEZE_UNTIL.toISOString()
-          : null,
     });
   } catch (error) {
     return handleRouteError(error);
@@ -491,23 +480,14 @@ export async function POST(request: Request, { params }: RouteParams) {
     const gameState = await getGameState();
     const currentTurn = gameState?.currentTurn ?? 1;
 
-    // Launch-window freeze: block all corporate bond issuance until the freeze
-    // instant passes. Time-boxed to give the opening days an easier start; it
-    // lifts itself with no deploy. See BOND_ISSUANCE_FREEZE_UNTIL.
-    if (BOND_ISSUANCE_FREEZE_UNTIL && Date.now() < BOND_ISSUANCE_FREEZE_UNTIL.getTime()) {
-      return errorResponse(
-        400,
-        "Bond issuance is paused for the opening of the world and will reopen shortly."
-      );
-    }
-
     // Check cooldown (private corps have a halved cooldown).
     const postEffectiveCooldown = corporation.isPrivate
       ? BOND_ISSUANCE_COOLDOWN_TURNS_PRIVATE
       : BOND_ISSUANCE_COOLDOWN_TURNS;
-    const latestBond = await db
-      .collection<Bond>("bonds")
-      .findOne({ corporationId: corporation._id }, { sort: { issuedAtTurn: -1 } });
+    const latestBond = await bondsCollection(db).findOne(
+      { corporationId: corporation._id },
+      { sort: { issuedAtTurn: -1 } }
+    );
     if (latestBond) {
       const cooldownEnd = latestBond.issuedAtTurn + postEffectiveCooldown;
       if (currentTurn < cooldownEnd) {
@@ -530,14 +510,8 @@ export async function POST(request: Request, { params }: RouteParams) {
     // wildly inflated credit-score drift on new non-USD bond issuances and
     // setting the wrong coupon rate for the bond's entire lifetime.
     const [existingBonds, sectors, refData, fxByCurrency, postMarketMode] = await Promise.all([
-      db
-        .collection<Bond>("bonds")
-        .find({ corporationId: corporation._id, matured: false })
-        .toArray(),
-      db
-        .collection<CorporateSector>("corporateSectors")
-        .find({ corporationId: corporation._id })
-        .toArray(),
+      bondsCollection(db).find({ corporationId: corporation._id, matured: false }).toArray(),
+      corporateSectorsCollection(db).find({ corporationId: corporation._id }).toArray(),
       getTurnReferenceData(db, currentTurn),
       loadFxRatesByCurrency(db),
       getMarketSystemModeForDb(db),
@@ -590,14 +564,13 @@ export async function POST(request: Request, { params }: RouteParams) {
       );
     }
 
-    // The flat ₳100,000 minimum is clamped to the corp's own ceiling (smaller of
-    // the smallest of the three ceilings below), so a small corp is never
-    // locked out by min > max (ticket #1083). Below the dust floor, bonds are
-    // unavailable entirely.
+    // The flat ₳100,000 minimum is clamped to the corp's own ceiling (the smallest
+    // of the three ceilings below), so a small corp is never locked out by
+    // min > max. Below the dust floor, bonds are unavailable entirely.
     //
-    // Ticket #1198: same exit-equity cap the GET preview quotes. Recomputed
-    // here rather than trusted from the client, and from the same post-lock
-    // corp snapshot the rest of this handler uses.
+    // Same exit-equity cap the GET preview quotes, recomputed here rather than
+    // trusted from the client, from the same post-lock corp snapshot this
+    // handler uses.
     const { exitEquityAnchor: exitEquityPost } = await loadCorpExitEquityAnchor(db, {
       liquidCapitalAnchor: postLiquidCapitalAnchor,
       sectors,
@@ -645,20 +618,16 @@ export async function POST(request: Request, { params }: RouteParams) {
       );
     }
 
-    // Ticket #1198: and never more than the corp could actually realize by
-    // selling up. Without this a CEO can borrow against going-concern value
-    // that the insolvency test does not recognise, then be liquidated for it.
+    // Never more than the corp could realize by selling up. Without this a CEO
+    // could borrow against going-concern value that the insolvency test does not
+    // recognise, then be liquidated for it.
     //
-    // `exitEquityPost` deliberately excludes the proceeds of THIS issuance,
-    // even though they would land in `liquidCapital` and lift exit equity by
-    // the face value a moment later. Counting them would make the rule
-    // circular: an assetless shell could borrow any amount at all, since the
-    // cash it was handed would always cover the debt that created it, right up
-    // until it spent the cash on something that is not an asset. The test is
-    // whether what the corp ALREADY owns covers what it will owe.
-    //
-    // The invariant survives the issuance either way: proceeds add `face` to
-    // both sides, so a corp inside the ceiling before is inside it after.
+    // `exitEquityPost` excludes the proceeds of THIS issuance, even though they
+    // land in `liquidCapital` and lift exit equity by the face value a moment
+    // later. Counting them makes the rule circular: an assetless shell could
+    // borrow any amount, since the cash it was handed would cover the debt that
+    // created it. The test is whether what the corp ALREADY owns covers what it
+    // will owe.
     if (existingDebt + faceValue > exitEquityPost * MAX_BOND_ISSUANCE_EXIT_EQUITY_FRACTION) {
       return errorResponse(
         400,
@@ -702,9 +671,9 @@ export async function POST(request: Request, { params }: RouteParams) {
             currentTurn,
             fxByCurrency,
           }).liquidityScore ?? undefined,
-        // Ticket #1138: this route DISPLAYS, it does not advance the model. Passing
-        // the stored snapshot as `previousCompositeScore` blended it a second time
-        // and reported a score the turn never wrote. Use it verbatim instead.
+        // This route displays, it does not advance the model. The stored
+        // snapshot is passed verbatim as previousCompositeScore; blending it
+        // again would report a score the turn never wrote.
         persistedCompositeScore: corporation.creditCompositeSnapshot ?? undefined,
         insiderConcentrationPenalty: insiderConcentrationPenaltyApplies(corporation),
       }
@@ -855,20 +824,18 @@ export async function POST(request: Request, { params }: RouteParams) {
       };
     } else {
       const insertResult = underwrittenBondId
-        ? await db.collection<Bond>("bonds").insertOne({ _id: underwrittenBondId, ...bondDoc })
-        : await db.collection<Bond>("bonds").insertOne(bondDoc as Bond);
+        ? await bondsCollection(db).insertOne({ _id: underwrittenBondId, ...bondDoc })
+        : await bondsCollection(db).insertOne(bondDoc as Bond);
       insertedBondId = insertResult.insertedId;
-      // Serialize the treasury credit against other same-corp money ops (e.g. a
-      // hostile takeover firing on this corp in the same instant) so the two
-      // writes can't interleave and drop one (issue #2949).
+      // Serialize the treasury credit against other same-corp money ops (e.g.
+      // a hostile takeover firing on this corp at the same instant) so the two
+      // writes can't interleave and drop one.
       if (faceValueInCorpCapital > 0) {
         await withCorpLock(corporation._id, () =>
-          db
-            .collection<Corporation>("corporations")
-            .updateOne(
-              { _id: corporation._id },
-              { $inc: { liquidCapital: faceValueInCorpCapital }, $set: { updatedAt: now } }
-            )
+          corporationsCollection(db).updateOne(
+            { _id: corporation._id },
+            { $inc: { liquidCapital: faceValueInCorpCapital }, $set: { updatedAt: now } }
+          )
         );
       }
     }

@@ -10,6 +10,7 @@ import type { Db } from "@/lib/mongodb";
 import type { ElectedOfficial, PoliticalParty } from "@/lib/db/types";
 import { getPartyHex } from "@/lib/utils/politics";
 import { computeBlocsForCountry, type Bloc } from "@/lib/congress/blocs";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 export interface NgChamberPartySeats {
   party: string;
@@ -30,8 +31,7 @@ export async function getNgChamberComposition(
   partyMap: Map<string, PoliticalParty>,
   memberOfficeType: "house" | "senate"
 ): Promise<NgChamberComposition> {
-  const officials = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const officials = await electedOfficialsCollection(db)
     .find({
       officeType: memberOfficeType,
       countryId: "NG",

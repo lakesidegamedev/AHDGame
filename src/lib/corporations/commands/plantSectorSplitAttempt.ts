@@ -33,6 +33,8 @@ import {
   didPlantSectorSplitSucceed,
   type PlantSectorSplitQuote,
 } from "@/lib/corporations/plantSectorSplit";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 export interface SplitResolution {
   quote: PlantSectorSplitQuote;
@@ -99,24 +101,22 @@ export async function attemptPlantSectorSplit(
       uncommittedDebit = null;
 
       // READ THESE IN SEQUENCE. A Mongo ClientSession cannot carry concurrent
-      // operations. Issued through Promise.all, all four reads raced to be the
-      // one that opens the transaction, each sending `startTransaction` at the
-      // same txnNumber; the first won and every loser came back with
-      // "Only servers in a sharded cluster can start a new transaction at the
-      // active transaction number" (ticket #1239). Despite the wording that is
-      // Mongo code 117 on an ordinary replica set, and because the race is in
-      // OUR call pattern rather than in the session, retrying on a fresh
-      // session cannot clear it: every attempt re-runs the same race.
-      const freshAttacker = await db
-        .collection<Corporation>("corporations")
-        .findOne({ _id: attacker._id }, { session });
-      const freshTarget = await db
-        .collection<CorporateSector>("corporateSectors")
-        .findOne({ _id: targetSectorId, stateId, corporationId: defender._id }, { session });
-      const freshDefender = await db
-        .collection<Corporation>("corporations")
-        .findOne({ _id: defender._id }, { session });
-      const existingOwnSector = await db.collection<CorporateSector>("corporateSectors").findOne(
+      // operations. Promise.all would race all four reads to open the transaction
+      // at the same txnNumber; the losers fail with code 117. The race is in our
+      // call pattern, so retrying on a fresh session cannot clear it.
+      const freshAttacker = await corporationsCollection(db).findOne(
+        { _id: attacker._id },
+        { session }
+      );
+      const freshTarget = await corporateSectorsCollection(db).findOne(
+        { _id: targetSectorId, stateId, corporationId: defender._id },
+        { session }
+      );
+      const freshDefender = await corporationsCollection(db).findOne(
+        { _id: defender._id },
+        { session }
+      );
+      const existingOwnSector = await corporateSectorsCollection(db).findOne(
         {
           stateId,
           sectorType: targetSector.sectorType,
@@ -203,7 +203,7 @@ export async function attemptPlantSectorSplit(
         freshAttacker,
         attackerFxRate
       );
-      const debit = await db.collection<Corporation>("corporations").updateOne(
+      const debit = await corporationsCollection(db).updateOne(
         {
           _id: freshAttacker._id,
           liquidCapital: { $gte: attackCostLocal },
@@ -249,7 +249,7 @@ export async function attemptPlantSectorSplit(
         bookValueTransferredAnchor = defenderBookValueAnchor * transferFraction;
         const now = new Date();
 
-        const targetWrite = await db.collection<CorporateSector>("corporateSectors").updateOne(
+        const targetWrite = await corporateSectorsCollection(db).updateOne(
           {
             _id: freshTarget._id,
             plantCount: openingCount,
@@ -279,7 +279,7 @@ export async function attemptPlantSectorSplit(
           );
 
         if (existingOwnSector) {
-          const attackerWrite = await db.collection<CorporateSector>("corporateSectors").updateOne(
+          const attackerWrite = await corporateSectorsCollection(db).updateOne(
             { _id: existingOwnSector._id },
             {
               $inc: {
@@ -319,9 +319,9 @@ export async function attemptPlantSectorSplit(
             updatedAt: now,
           };
           try {
-            await db
-              .collection<CorporateSector>("corporateSectors")
-              .insertOne(newSector as CorporateSector, { session });
+            await corporateSectorsCollection(db).insertOne(newSector as CorporateSector, {
+              session,
+            });
           } catch (error) {
             if (isCorporateSectorDuplicateKey(error)) {
               throw new SplitConflictError("Your sector changed during the split.");
@@ -354,8 +354,7 @@ export async function attemptPlantSectorSplit(
     } | null;
     if (pendingRefund) {
       uncommittedDebit = null;
-      await db
-        .collection<Corporation>("corporations")
+      await corporationsCollection(db)
         .updateOne(
           { _id: attacker._id },
           {

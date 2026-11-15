@@ -9,6 +9,13 @@ vi.mock("@/lib/financialTxLog/emit", () => ({
   emitTxBulk: vi.fn(),
   loadTxThresholds: vi.fn(),
 }));
+vi.mock("@/lib/gameState", () => ({ getGameState: vi.fn(async () => ({ currentTurn: 7 })) }));
+vi.mock("@/lib/db/collections/gameState", () => ({
+  getGameStatePresetOrDefault: vi.fn(async () => "2027"),
+}));
+vi.mock("@/lib/financialTxLog/expiresAt", () => ({ loadTurnLengthMinutes: vi.fn(async () => 60) }));
+
+const adminId = new ObjectId().toString();
 
 describe("POST /api/admin/resources/grant", () => {
   let db: MockDb;
@@ -22,7 +29,7 @@ describe("POST /api/admin/resources/grant", () => {
     const { requireAdmin } = await import("@/lib/api/requireAdmin");
     vi.mocked(requireAdmin).mockResolvedValue({
       ok: true,
-      admin: { userId: new ObjectId().toString(), username: "Admin" },
+      admin: { userId: adminId, username: "Admin" },
     } as never);
     const { isForexEnabled } = await import("@/lib/currency/featureFlag");
     vi.mocked(isForexEnabled).mockResolvedValue(false);
@@ -32,6 +39,9 @@ describe("POST /api/admin/resources/grant", () => {
     const characterId = new ObjectId();
     db.collection("characters");
     db.collection("adminLogs");
+    db.collection("users");
+    db.collection("actionAuditLog");
+    db.collectionMocks.users!.findOne.mockResolvedValue({ role: "admin" });
     db.collectionMocks.characters!.updateMany.mockResolvedValue({ modifiedCount: 1 });
 
     const { POST } = await import("./route");
@@ -64,5 +74,30 @@ describe("POST /api/admin/resources/grant", () => {
     expect(db.collectionMocks.adminLogs!.insertOne).toHaveBeenCalledWith(
       expect.objectContaining({ details: expect.stringMatching(/positions update voucher/i) })
     );
+    const [[audit]] = db.collectionMocks.actionAuditLog!.insertMany.mock.calls[0]!;
+    expect(audit).toMatchObject({ action: "grant.voucher", world: "2027", outcome: "ok" });
+    expect(audit.actor.userId.toString()).toBe(adminId);
+    expect(audit.actor.role).toBe("admin");
+  });
+
+  it("refuses and changes nothing when the actor has no staff account behind it", async () => {
+    db.collection("characters");
+    db.collection("adminLogs");
+    db.collection("users");
+    db.collection("actionAuditLog");
+    db.collectionMocks.users!.findOne.mockResolvedValue(null);
+
+    const { POST } = await import("./route");
+    const response = await POST(
+      new Request("http://localhost/api/admin/resources/grant", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ allPlayers: true, actions: 5 }),
+      })
+    );
+
+    expect(response.status).toBe(403);
+    expect(db.collectionMocks.characters!.updateMany).not.toHaveBeenCalled();
+    expect(db.collectionMocks.actionAuditLog!.insertMany).not.toHaveBeenCalled();
   });
 });

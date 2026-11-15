@@ -14,6 +14,7 @@ Borrow too much and the whole country gets poorer: a worse credit rating, less p
 | Payroll tax | Rate set by law |
 | Tariffs | Rate set by law, charged on imports |
 | Sales tax | Rate set by law |
+| Automation levy | Share of input spending paid by sectors running automation methods, set by the automation tax and pension levy laws (see [Automation Levy](/wiki/automation-levy)) |
 | Healthcare income | Earnings of national healthcare corporations (the NHS, for example) |
 | Other | Non-tax receipts that grow with GDP, plus earnings of other state-owned corporations |
 
@@ -123,7 +124,7 @@ Open a country's Budget page to see revenue by source, spending by category, the
 
 Characters pay income tax on what they personally earn: corporate salary, dividends (including index fund dividends), bond coupons, savings interest and bank deposit interest. Starting capital, transfers between characters, borrowing, campaign fundraising and repaid principal are not taxed.
 
-- **Your tier.** Earnings over the last 12 turns are scaled up to a yearly figure and compared with the median income of your home state. Below 75% of the median you pay the Low Income rate. From 75% up to just under 200% you pay Medium Income. At 200% and above you pay High Income. With a state median of 40,000, Low is under 30,000, Medium is 30,000 to 79,999 and High is 80,000 or more. If you earned 6,000 in 12 turns, that scales to 24,000 a year, so you are in the Low tier.
+- **Your tier.** Earnings over the last 12 turns are scaled up to a yearly figure and compared with the median income of your home state. Below 75% of the median you pay the Low Income rate. From 75% up to just under 200% you pay Medium Income. At 200% and above you pay High Income. With a state median of 40,000, Low is under 30,000, Medium is 30,000 to 79,999 and High is 80,000 or more. Your earnings are first adjusted for the country's accumulated price level, so earning the same real income while prices rise does not push you into a higher tier. The same adjustment applies when tax is assessed and when it is withheld on a share sale. In a world where prices are not tracked, no adjustment is made. If you earned 6,000 in 12 turns, that scales to 24,000 a year, so you are in the Low tier.
 - **Who gets the tax.** The national rate for your tier goes to the national treasury and your home state's rate for the same tier goes to the state budget. Together they can never be more than the income itself.
 - **When it is charged.** Each turn you receive taxable income, from the money that income paid into.
 - **If you cannot pay in full.** Available cash pays part of the bill. Only the remaining debt counts against your wealth, and later turns collect more.
@@ -135,5 +136,5 @@ Two questions come up often. *Why did my sale pay less than expected?* Tax on th
 
 Every world has national budgets for every country. The rules differ by country: US formula grants, regional budgets in the UK, Japan and Germany, the UK Budget vote, and East Germany's minimum borrowing limit. Fixed per-person policy costs scale with the country's GDP per person, so poorer and early-era economies are not hit by modern prices. IMF austerity applies only while a country is under a bailout.
 
-Last checked 2026-10-29, version 1.18.0. Exact rules: [National Budget (design)](https://docs.lakesidegames.net/design/national-budget.html). See also: [Glossary](/wiki/glossary)
+Last checked 2026-11-10, version 1.20.0. Exact rules: [National Budget (design)](https://docs.lakesidegames.net/design/national-budget.html). See also: [Glossary](/wiki/glossary)
 `;

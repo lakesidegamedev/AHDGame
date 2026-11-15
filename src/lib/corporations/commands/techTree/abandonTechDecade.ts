@@ -6,6 +6,7 @@ import {
   getUnlockedNodes,
   sumStrengthGrants,
 } from "@/lib/constants/techTree";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export type AbandonTechDecadeResult =
   | { ok: true; status: 200; decadeId: string; removedNodeIds: string[] }
@@ -64,9 +65,7 @@ export async function abandonTechDecade(
   };
   if (Object.keys(dec).length > 0) update.$inc = dec;
 
-  const res = await db
-    .collection<Corporation>("corporations")
-    .updateOne({ _id: corporation._id }, update);
+  const res = await corporationsCollection(db).updateOne({ _id: corporation._id }, update);
 
   if (res.modifiedCount === 0) {
     return { ok: false, status: 409, error: "Abandon could not be completed — please retry." };

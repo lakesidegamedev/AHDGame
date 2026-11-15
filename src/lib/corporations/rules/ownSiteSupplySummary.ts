@@ -1,6 +1,6 @@
 /**
  * What a company's own sites sent each other last turn, by good, for the CEO
- * Internal supply panel (issue 5385).
+ * Internal supply panel.
  *
  * The panel read the legacy reservation record, which a funded turn never
  * writes, so every company saw "nothing was reserved" while its sites were

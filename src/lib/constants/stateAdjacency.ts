@@ -1,22 +1,18 @@
 /**
  * Per-country state/region geographic adjacency.
  *
- * Used by the founding-cohort picker in charter creation (`F4` redesign)
- * to constrain which states the player can place founding NPPs in beyond
- * the chair's home state itself.
+ * Used by the founding-cohort picker in charter creation to constrain which
+ * states the player can place founding NPPs in beyond the chair's home state.
  *
  * Invariants:
- *   - Symmetric: if `A ∈ STATE_ADJACENCY[country][B]` then
- *     `B ∈ STATE_ADJACENCY[country][A]`. Enforced by tests.
+ *   - Symmetric: if `A` in `STATE_ADJACENCY[country][B]` then `B` in
+ *     `STATE_ADJACENCY[country][A]`. Enforced by tests.
  *   - State IDs match the documents in `<countryRegions>.ts` seeds.
- *   - Sea-border edges are included case-by-case where there's a
- *     historic / ferry / cultural-territorial relationship (see per-
- *     country comments below).
+ *   - Sea-border edges are included case-by-case where there's a historic /
+ *     ferry / cultural-territorial relationship (see per-country comments).
  *
- * Lookups via `adjacentStates(country, id)` rather than direct map access
- * — returns `[]` for unknown country/state instead of `undefined`.
- *
- * See `docs/plans/archive/2026-05/2026-05-22-f4-founding-cohort-redesign.md`.
+ * Use `adjacentStates(country, id)` rather than direct map access: returns
+ * `[]` for unknown country/state instead of `undefined`.
  */
 
 import type { CountryId } from "./countries";
@@ -49,6 +45,8 @@ import { WAL_ADJACENCY_MAP } from "@/lib/countries/wal/geographyFacts";
 import { BLR_ADJACENCY_MAP } from "@/lib/countries/blr/geographyFacts";
 import { UKR_ADJACENCY_MAP } from "@/lib/countries/ukr/geographyFacts";
 import { BAL_ADJACENCY_MAP } from "@/lib/countries/bal/geographyFacts";
+import { CA_ADJACENCY_MAP } from "@/lib/countries/ca/geographyFacts";
+import { QC_ADJACENCY_MAP } from "@/lib/countries/qc/geographyFacts";
 
 export type AdjacencyMap = Record<string, readonly string[]>;
 
@@ -63,15 +61,11 @@ export type AdjacencyMap = Record<string, readonly string[]>;
  */
 
 /**
- * RU (USSR) 17 macro-regions — ten RSFSR economic macro-regions plus seven
- * grouped union republics (see `ruRegions.ts`). Ukraine, Byelorussia and the
- * Baltics used to be RU regions and are separate countries now, so their edges
- * are gone from this map. Land adjacency at the
- * macro-region grain; a pair is adjacent when any constituent oblast/
- * republic borders touch. One sea-border edge by F4-redesign convention:
- *   - TRA ↔ CAS: Baku–Krasnovodsk Caspian rail ferry (the historic
- *     freight/passenger link between Transcaucasia and Central Asia).
- * NCA ↔ KAZ (Caspian only, no service) is deliberately excluded.
+ * RU (USSR) 17 macro-regions: ten RSFSR economic regions plus seven grouped
+ * union republics. Land adjacency at macro-region grain; adjacent when any
+ * constituent oblast borders touch. One sea-border edge by design:
+ *   - TRA <-> CAS: Baku-Krasnovodsk Caspian rail ferry.
+ * NCA <-> KAZ (Caspian only, no service) is deliberately excluded.
  */
 
 /**
@@ -171,6 +165,8 @@ export const STATE_ADJACENCY: Readonly<Record<CountryId, AdjacencyMap>> = {
   DD: DD_ADJACENCY_MAP,
   SCO: SCO_ADJACENCY_MAP,
   WAL: WAL_ADJACENCY_MAP,
+  CA: CA_ADJACENCY_MAP,
+  QC: QC_ADJACENCY_MAP,
 };
 
 /**
@@ -184,3 +180,17 @@ export const STATE_ADJACENCY: Readonly<Record<CountryId, AdjacencyMap>> = {
 export function adjacentStates(country: CountryId, stateId: string): readonly string[] {
   return STATE_ADJACENCY[country]?.[stateId] ?? [];
 }
+
+/**
+ * Regions that joined a country after its map was seeded, with the neighbours
+ * they gained there. Kept apart from `STATE_ADJACENCY` because that map is the
+ * seeded vocabulary of each country; applying these edges needs the live
+ * region set (see `annexedNeighbours`).
+ *
+ * IE: Northern Ireland (`NIR`) joins by referendum. Donegal's seeded region
+ * covers the border counties of Donegal, Cavan and Monaghan; Midlands and
+ * Kildare cover the remaining border to the east.
+ */
+export const ANNEXED_REGION_ADJACENCY: Partial<Record<CountryId, AdjacencyMap>> = {
+  IE: { NIR: ["DON", "MID", "KIL"] },
+};

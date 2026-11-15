@@ -126,14 +126,10 @@ describe("runCensus (phase)", () => {
     expect((await runCensus(db as unknown as Db, 96)).ran).toBe(false);
   });
 
-  it("redraws reapportioned states even when redistricting is off (#1190)", async () => {
+  it("redraws the reapportioned states", async () => {
     // The district map is the delegation's size of record for the districted
-    // resolver, so it must track `houseDistricts` whether or not the flag is on.
-    // Regeneration used to be entirely flag-gated: a census that ran with the
-    // flag off left the maps at the OLD seat count, and enabling the flag later
-    // resurrected the #1190 mismatch — allocation over a stale district count
-    // against a correctly-sized race.
-    setup(2020, undefined); // no redistrictingEnabled on gameState
+    // resolver, so it must track `houseDistricts`.
+    setup(2020, undefined);
     const { runCensus } = await import("./census");
     const { regenerateCongressionalDistricts } = await import("@/lib/redistricting/regenerate");
 
@@ -141,18 +137,11 @@ describe("runCensus (phase)", () => {
 
     expect(regenerateCongressionalDistricts).toHaveBeenCalledTimes(1);
     const opts = vi.mocked(regenerateCongressionalDistricts).mock.calls[0][1];
-    // Exactly the states whose apportionment moved, and nothing else: the
-    // auto-neutralize sweep stays part of the redistricting system proper.
     expect([...opts.stateIds].sort()).toEqual(result.deltas!.map((d) => d.state).sort());
-    const { getAutoNeutralizeStateIds } = await import("@/lib/redistricting/autoNeutralizeStates");
-    expect(getAutoNeutralizeStateIds).not.toHaveBeenCalled();
   });
 
-  it("adds the auto-neutralize sweep only when redistricting is on", async () => {
+  it("adds the auto-neutralize sweep", async () => {
     setup(2020, undefined);
-    db.collectionMocks.gameState!.findOne = vi
-      .fn()
-      .mockResolvedValue({ _id: "current", currentYear: 2020, redistrictingEnabled: true });
     const { runCensus } = await import("./census");
     const { regenerateCongressionalDistricts } = await import("@/lib/redistricting/regenerate");
     const { getAutoNeutralizeStateIds } = await import("@/lib/redistricting/autoNeutralizeStates");

@@ -32,7 +32,7 @@ describe("PUT manpower", () => {
     db.collection("cabinetMembers");
     db.collection("nationalManpower");
     db.collection("statePolicies");
-    db.collectionMocks.gameState.findOne.mockResolvedValue({ conflictsEnabled: true });
+    db.collectionMocks.gameState.findOne.mockResolvedValue({});
     db.collectionMocks.cabinetMembers.findOne.mockResolvedValue({
       _id: "m1",
       characterId: "char_1",
@@ -78,12 +78,6 @@ describe("PUT manpower", () => {
     } as never);
     const { PUT } = await import(ROUTE);
     expect((await PUT(req({ mode: "trained" }), call)).status).toBe(403);
-  });
-
-  it("404s when conflicts is disabled", async () => {
-    db.collectionMocks.gameState.findOne.mockResolvedValue({ conflictsEnabled: false });
-    const { PUT } = await import(ROUTE);
-    expect((await PUT(req({ mode: "trained" }), call)).status).toBe(404);
   });
 
   it("404s a non-defense seat", async () => {

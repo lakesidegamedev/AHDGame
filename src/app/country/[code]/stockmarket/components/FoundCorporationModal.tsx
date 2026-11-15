@@ -48,8 +48,8 @@ export function FoundCorporationModal({
   /** The founder's home country — used to fetch investor confidence (feed-3). */
   countryId?: string;
   /**
-   * Turns remaining on the per-user 168-turn founding cooldown (Bug #0728).
-   * 0 = may found now. Disables the Found button and shows a countdown.
+   * Turns remaining on the 168-turn founding cooldown.
+   * 0 = may found now; otherwise disables Found and shows a countdown.
    */
   foundingCooldownTurnsRemaining?: number;
 }) {

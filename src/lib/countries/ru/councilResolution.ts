@@ -8,11 +8,9 @@ import type { Election } from "@/lib/db/types";
 import { logger } from "@/lib/observability/logger";
 import { certifyRussianCouncilElection } from "./councilElectionResult";
 import { certifyRussianCouncilRepeat } from "./councilRepeatResult";
-import {
-  RUSSIAN_COUNCIL_OPENINGS_COLLECTION,
-  type RussianCouncilOpeningRecord,
-} from "./councilElectionOpening";
+import { type RussianCouncilOpeningRecord } from "./councilElectionOpening";
 import { readyRussianCouncilCohorts, readyRussianCouncilRepeats } from "./rules/councilDispatch";
+import { russianCouncilElectionOpeningsCollection } from "@/lib/db/repositories/russianCouncilElectionOpenings";
 
 export async function resolveRussianCouncilGenerations(
   db: Db,
@@ -66,8 +64,7 @@ export async function resolveRussianCouncilGenerations(
       )
     ),
   ];
-  const openings = await db
-    .collection<RussianCouncilOpeningRecord>(RUSSIAN_COUNCIL_OPENINGS_COLLECTION)
+  const openings = await russianCouncilElectionOpeningsCollection<RussianCouncilOpeningRecord>(db)
     .find(
       { _id: { $in: ids } },
       {

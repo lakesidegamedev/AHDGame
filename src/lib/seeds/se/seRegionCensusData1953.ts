@@ -1,20 +1,14 @@
 /**
- * Sweden Region Census Profiles — 1953 era.
+ * Sweden Region Census Profiles, 1953 era.
  *
- * 1953-default companion to {@link seRegionCensusData} (the 1979 profiles).
- * Anchored on 1950 Swedish Census and Statistiska centralbyrån data.
+ * Anchored on 1950 Swedish Census and Statistiska centralbyrån data. Sweden is
+ * near-homogeneous: the decisive axes are urban (Stockholm / Göteborg) vs. the
+ * rural interior and Norrland. University attendance is below 4% everywhere;
+ * agriculture employs ~20% of the workforce; the Sámi minority (~10K) lives
+ * almost entirely in Norrland.
  *
- * Era anchors: Sweden in 1953 is remarkably homogeneous — post-war immigration
- * barely exists outside a small Finnish labour contingent; the decisive axes are
- * urban (Stockholm / Göteborg) vs. the rural interior and Norrland. Social
- * Democrats have governed continuously since 1932; the welfare state is
- * expanding but has not yet reached the heights of the 1970s. University
- * attendance is below 4% everywhere. Agriculture still employs ~20% of the
- * workforce. Norrland is sparsely settled; Stockholm is the sole metropolis.
- * The Sámi minority (~10K) lives almost entirely in Norrland.
- *
- * SEED INDEPENDENCE — all values independently authored from 1953 historical
- * knowledge; NOT scaled from any other era file.
+ * All values independently authored from 1953 historical knowledge; NOT scaled
+ * from any other era file.
  */
 
 import type { SERegionLayer1 } from "./seRegionCensusData";

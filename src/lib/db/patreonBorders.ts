@@ -2,6 +2,7 @@ import type { Db } from "@/lib/mongodb";
 import type { User } from "@/lib/db/types";
 import type { ProfileBorderKey } from "@/lib/db/types";
 import { ObjectId } from "mongodb";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 export interface BorderData {
   borderKey: ProfileBorderKey | null;
@@ -30,8 +31,7 @@ export async function fetchBordersByUserIds(
 
   if (objectIds.length === 0) return EMPTY_MAP;
 
-  const users = await db
-    .collection<User>("users")
+  const users = await usersCollection(db)
     .find({ _id: { $in: objectIds } })
     .project<Pick<User, "_id" | "patreonProfileBorder" | "patreonHighlightColor">>({
       _id: 1,

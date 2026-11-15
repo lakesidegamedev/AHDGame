@@ -4,6 +4,7 @@
 // reproduces the US Cook-PVI arithmetic exactly (Phase 2 depends on that).
 
 export interface SubdivisionInput {
+  leanStatus?: "unavailable" | "modeled" | "observed";
   id: string;
   name: string;
   electorate: number;
@@ -123,7 +124,8 @@ export function distributeSubdivisionVotes(
  */
 export function assignSeatConsistentWinners(
   distributed: SubdivisionVoteResult[],
-  seatsByCandidate: Record<string, number>
+  seatsByCandidate: Record<string, number>,
+  placementScores?: Readonly<Record<string, Readonly<Record<string, number>>>>
 ): SubdivisionVoteResult[] {
   const remaining: Record<string, number> = { ...seatsByCandidate };
   const pairs: { id: string; cid: string; share: number }[] = [];
@@ -131,7 +133,7 @@ export function assignSeatConsistentWinners(
     const total = Object.values(d.votes).reduce((s, v) => s + v, 0);
     if (total <= 0) continue;
     for (const [cid, v] of Object.entries(d.votes)) {
-      pairs.push({ id: d.id, cid, share: v / total });
+      pairs.push({ id: d.id, cid, share: placementScores?.[d.id]?.[cid] ?? v / total });
     }
   }
   pairs.sort((a, b) => b.share - a.share || a.id.localeCompare(b.id) || a.cid.localeCompare(b.cid));
@@ -227,4 +229,13 @@ export function formatLeanLabel(
   }
   const side = leanScalar < 0 ? "Left" : "Right";
   return { label: `${side} +${Math.abs(leanScalar).toFixed(1)}`, neutral: false };
+}
+
+export function formatSubdivisionLean(
+  lean: number | undefined,
+  status?: SubdivisionInput["leanStatus"]
+): string | null {
+  if (status === "unavailable") return "Unavailable (no district PVI source)";
+  if (typeof lean !== "number") return null;
+  return `${status === "modeled" ? "Modeled: " : ""}${formatLeanLabel(lean).label}`;
 }

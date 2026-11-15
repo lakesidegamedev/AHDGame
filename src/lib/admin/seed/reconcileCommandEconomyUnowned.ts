@@ -1,22 +1,16 @@
 /**
- * Command-economy SOE / plants reconcile (ticket #1014).
+ * Command-economy SOE / plants reconcile.
  *
  * Under plants, Eastern-bloc command countries need state capacity in EVERY
- * sector. The old "commanding heights" SOE lists left most sectors as
- * unreachable unowned headroom (private founding is banned), and even the
- * seeded SOE buckets carried a full unowned twin that diluted capacity share
- * to ~50%.
+ * sector, but private founding is banned and seeded SOE buckets carried a
+ * full unowned twin that diluted capacity share to ~50%.
  *
- * This pass:
- *   1. Upserts one SOE corporation + per-state plants for every sector in
- *      {@link commandEconomySoeSectors} (matched by assignedSectorTypes so
- *      live ObjectIds from prior id layouts are reused).
- *   2. Deletes unowned docs and foreign-held corporate sectors only for the
- *      (country, type, state) triples this run actually covers — so a
- *      dual-track country like CN keeps unowned headroom outside its shorter
- *      SOE set, and a merge survivor keeps the absorbed regions' sectors the
- *      seed built no row for (ticket #1271). Never delete what you did not
- *      replace.
+ * This pass upserts one SOE corporation plus per-state plants for every
+ * sector in {@link commandEconomySoeSectors}, then deletes unowned and
+ * foreign-held corporate sectors ONLY for the (country, type, state) triples
+ * it covers. Never delete what you did not replace: dual-track countries
+ * like CN keep unowned headroom outside their shorter SOE set, and merge
+ * survivors keep sectors the seed built no row for.
  *
  * Idempotent. Called at the end of `seedUnownedSectors` and from the deploy
  * migration for live worlds.
@@ -25,14 +19,7 @@
 import { operatingSectorFilter } from "@/lib/constants/corporations";
 import type { Db } from "mongodb";
 import { ObjectId } from "mongodb";
-import type {
-  Corporation,
-  CorporateSector,
-  GameConfig,
-  GameState,
-  State,
-  UnownedSector,
-} from "@/lib/db/types";
+import type { CorporateSector, GameConfig, GameState, State, UnownedSector } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import type { OperatingSectorType } from "@/lib/constants/corporations";
 import { commandEconomySoeSectors, isCommandEconomy } from "@/lib/constants/commandEconomy";
@@ -40,6 +27,12 @@ import { getStartingYearForPreset } from "@/lib/constants/turnTime";
 import { generateCountryOwnedSeedData } from "@/lib/seeds/reference/budgets";
 import { loadWorldPreset } from "@/lib/currency/gdpAnchorRate";
 import { NUMERIC_BSON_TYPE } from "@/lib/db/queryHelpers";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
 
 export interface ReconcileCommandEconomyUnownedResult {
   commandCountries: CountryId[];
@@ -82,12 +75,14 @@ export async function reconcileCommandEconomyUnowned(
   };
 
   const [gameConfig, gameState, presetFromDb] = await Promise.all([
-    db
-      .collection<GameConfig>("gameConfig")
-      .findOne({ _id: "default" }, { projection: { commandEconomyEnabled: 1 } }),
-    db
-      .collection<GameState>("gameState")
-      .findOne({ _id: "current" as never }, { projection: { currentYear: 1 } }),
+    gameConfigCollection(db).findOne(
+      { _id: "default" },
+      { projection: { commandEconomyEnabled: 1 } }
+    ),
+    gameStateCollection(db).findOne(
+      { _id: "current" as never },
+      { projection: { currentYear: 1 } }
+    ),
     opts.preset ? Promise.resolve(opts.preset) : loadWorldPreset(db),
   ]);
 
@@ -97,11 +92,10 @@ export async function reconcileCommandEconomyUnowned(
     return empty;
   }
 
-  const preset = opts.preset ?? presetFromDb ?? "1953-default";
+  const preset = opts.preset ?? presetFromDb;
   const year = resolveSeedYear(preset, gameState?.currentYear ?? null);
 
-  const states = await db
-    .collection<State>("states")
+  const states = await statesCollection(db)
     .find({ _id: { $not: /^NATIONAL_/ } })
     .project<Pick<State, "_id" | "countryId" | "population" | "gdp">>({
       countryId: 1,
@@ -138,10 +132,9 @@ export async function reconcileCommandEconomyUnowned(
   let sectorsUpserted = 0;
 
   // States this run actually covers, per (country, sector type). The deletes
-  // below must never reach past them: after a merge (German reunification) the
-  // survivor owns regions the seed never built SOE rows for, and wiping those
-  // regions' sectors while creating nothing in their place destroys live
-  // production instead of reconciling it (ticket #1271).
+  // below must never reach past them: after a merge the survivor owns regions
+  // the seed never built SOE rows for, and wiping those regions' sectors while
+  // creating nothing in their place destroys live production.
   const coveredStatesByCountryType = new Map<
     string,
     { countryId: CountryId; sectorType: OperatingSectorType; stateIds: Set<string> }
@@ -161,7 +154,7 @@ export async function reconcileCommandEconomyUnowned(
       entry.corporation.type) as OperatingSectorType;
     const countryId = entry.corporation.countryOwnerId as CountryId;
 
-    const existing = await db.collection<Corporation>("corporations").findOne({
+    const existing = await corporationsCollection(db).findOne({
       countryOwnerId: countryId,
       assignedSectorTypes: sectorType,
     });
@@ -170,10 +163,11 @@ export async function reconcileCommandEconomyUnowned(
     if (!existing) {
       if (!dryRun) {
         // Never overwrite an ObjectId that already belongs to another corp
-        // (legacy 3-digit SOE ids collided with the first #1014 band map).
-        const idTaken = await db
-          .collection<Corporation>("corporations")
-          .findOne({ _id: corpId }, { projection: { _id: 1, countryOwnerId: 1 } });
+        // (legacy 3-digit SOE ids collided with the first band map).
+        const idTaken = await corporationsCollection(db).findOne(
+          { _id: corpId },
+          { projection: { _id: 1, countryOwnerId: 1 } }
+        );
         if (idTaken) {
           corpId = new ObjectId();
         }
@@ -181,12 +175,12 @@ export async function reconcileCommandEconomyUnowned(
         const { _id, sequentialId: seedSequentialId, ...corpData } = entry.corporation;
         let sequentialId = seedSequentialId;
         if (sequentialId != null) {
-          const conflict = await db
-            .collection<Corporation>("corporations")
-            .findOne({ sequentialId }, { projection: { _id: 1 } });
+          const conflict = await corporationsCollection(db).findOne(
+            { sequentialId },
+            { projection: { _id: 1 } }
+          );
           if (conflict && !conflict._id.equals(corpId)) {
-            const [maxRow] = await db
-              .collection<Corporation>("corporations")
+            const [maxRow] = await corporationsCollection(db)
               .find({ sequentialId: { $type: NUMERIC_BSON_TYPE } })
               .project({ sequentialId: 1 })
               .sort({ sequentialId: -1 })
@@ -195,18 +189,16 @@ export async function reconcileCommandEconomyUnowned(
             sequentialId = (maxRow?.sequentialId ?? sequentialId) + 1;
           }
         }
-        await db
-          .collection<Corporation>("corporations")
-          .updateOne(
-            { _id: corpId },
-            { $set: { ...corpData, ...(sequentialId != null ? { sequentialId } : {}) } },
-            { upsert: true }
-          );
+        await corporationsCollection(db).updateOne(
+          { _id: corpId },
+          { $set: { ...corpData, ...(sequentialId != null ? { sequentialId } : {}) } },
+          { upsert: true }
+        );
       }
       soesCreated++;
     } else {
       if (!dryRun) {
-        await db.collection<Corporation>("corporations").updateOne(
+        await corporationsCollection(db).updateOne(
           { _id: corpId },
           {
             $set: {
@@ -227,12 +219,12 @@ export async function reconcileCommandEconomyUnowned(
     }
 
     // Drop sectors for this country/type that still hang off a foreign corp
-    // (ObjectId overwrite fallout from the first #1014 heal) — but ONLY in
+    // (ObjectId overwrite fallout from the first heal), but ONLY in
     // states this run covers with a fresh SOE row. Anything outside that set
     // (an absorbed region the seed has no row for) keeps its sectors; the
     // nationalization mechanic, with compensation, is what moves those.
     if (!dryRun && entry.sectors.length > 0) {
-      await db.collection<CorporateSector>("corporateSectors").deleteMany({
+      await corporateSectorsCollection(db).deleteMany({
         countryId,
         ...operatingSectorFilter(sectorType),
         stateId: { $in: [...new Set(entry.sectors.map((s) => s.stateId))] },
@@ -243,7 +235,7 @@ export async function reconcileCommandEconomyUnowned(
     for (const sector of entry.sectors) {
       if (!dryRun) {
         const { _id: _sectorId, corporationId: _ignored, ...sectorData } = sector;
-        await db.collection<CorporateSector>("corporateSectors").updateOne(
+        await corporateSectorsCollection(db).updateOne(
           {
             corporationId: corpId,
             stateId: sector.stateId,
@@ -265,10 +257,10 @@ export async function reconcileCommandEconomyUnowned(
   }
 
   // Drain unowned only where an SOE row now covers the (country, type, state).
-  // CN (and any future short-list command country) must keep unowned outside
-  // its SOE set — and after a merge the survivor must keep unowned in regions
-  // the seed built no row for, so a later nationalization still has a pool to
-  // carve into the National Corporation (ticket #1271).
+  // CN and other short-list command countries must keep unowned outside their
+  // SOE set, and after a merge the survivor must keep unowned in regions the
+  // seed built no row for, so a later nationalization still has a pool to
+  // carve into the National Corporation.
   const covered = [...coveredStatesByCountryType.values()].map(
     ({ countryId, sectorType, stateIds }) => ({
       countryId,
@@ -288,11 +280,9 @@ export async function reconcileCommandEconomyUnowned(
   if (covered.length === 0) {
     log("reconcileCommandEconomyUnowned: no SOE rows covered — nothing to drain");
   } else if (dryRun) {
-    unownedDeleted = await db
-      .collection<UnownedSector>("unownedSectors")
-      .countDocuments(unownedFilter);
+    unownedDeleted = await unownedSectorsCollection(db).countDocuments(unownedFilter);
   } else {
-    const del = await db.collection<UnownedSector>("unownedSectors").deleteMany(unownedFilter);
+    const del = await unownedSectorsCollection(db).deleteMany(unownedFilter);
     unownedDeleted = del.deletedCount ?? 0;
   }
 

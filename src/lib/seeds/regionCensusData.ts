@@ -4,8 +4,8 @@ import type { ResetPresetId } from "@/lib/seeds/presetSelector";
 import { selectPresetBundleOptional } from "@/lib/seeds/presetSelector";
 // 1979-era census bundles (authored for the 1979 reset).
 
-/** Archetype-style Layer-1 census (UK/JP/DE/IE/CN/BR). */
-export interface ArchetypeRegionCensus {
+/** Layer-1 census for countries with their own dimensions (UK/JP/DE/IE/CN/BR). */
+export interface IntlRegionCensus {
   ethnicity: Record<string, number>;
   age: Record<string, number>;
   education: Record<string, number>;
@@ -13,7 +13,7 @@ export interface ArchetypeRegionCensus {
   urbanization: Record<string, number>;
 }
 
-export type RegionCensus = Layer1Config | ArchetypeRegionCensus;
+export type RegionCensus = Layer1Config | IntlRegionCensus;
 
 type PresetBundles = Partial<Record<ResetPresetId, Record<string, RegionCensus>>>;
 
@@ -49,6 +49,8 @@ import { WAL_GEOGRAPHY } from "@/lib/countries/wal/geography";
 import { BLR_GEOGRAPHY } from "@/lib/countries/blr/geography";
 import { UKR_GEOGRAPHY } from "@/lib/countries/ukr/geography";
 import { BAL_GEOGRAPHY } from "@/lib/countries/bal/geography";
+import { CA_GEOGRAPHY } from "@/lib/countries/ca/geography";
+import { QC_GEOGRAPHY } from "@/lib/countries/qc/geography";
 
 export const CENSUS_BUNDLES: Partial<Record<CountryId, PresetBundles>> = {
   PL: PL_GEOGRAPHY.censusBundles,
@@ -93,6 +95,8 @@ export const CENSUS_BUNDLES: Partial<Record<CountryId, PresetBundles>> = {
   // the former UK Scotland/Wales aggregate).
   SCO: SCO_GEOGRAPHY.censusBundles,
   WAL: WAL_GEOGRAPHY.censusBundles,
+  CA: CA_GEOGRAPHY.censusBundles,
+  QC: QC_GEOGRAPHY.censusBundles,
 };
 
 /**
@@ -106,14 +110,9 @@ export function getRegionCensusData(
 ): RegionCensus | null {
   const byPreset = CENSUS_BUNDLES[countryId];
   if (!byPreset) return null;
-  // Deliberately NOT selectPresetBundle: that helper throws when neither the
-  // exact preset nor a "2019-default" fallback exists, which is correct for
-  // required seed data but wrong here — this function's contract (see doc
-  // comment above) is to return null for "no bundle for the country" so
-  // callers can skip cleanly: seedCohortVectors skips the state and logs why;
-  // the region-page render path degrades to null instead of crashing. Several
-  // countries (FR/IT/ES/RU/DD, as of 2026-06) only have 1953/1979 bundles
-  // authored — those should skip cleanly under 2019-default, not abort.
+  // Optional on purpose: a country with no census for this preset returns null
+  // and seedCohortVectors skips it. The seed contract reports that gap; another
+  // preset's census is never substituted.
   const bundle = selectPresetBundleOptional(preset ?? DEFAULT_SEED_PRESET, byPreset);
   return bundle?.[stateId] ?? null;
 }

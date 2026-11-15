@@ -23,6 +23,9 @@ import {
   isControllingHolder,
 } from "@/lib/equities/rules/cashoutLimits";
 import { toInternalUnits } from "./locMath";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { locLedgerCollection } from "@/lib/db/repositories/locLedger";
+import { shareTradeHistoryCollection } from "@/lib/db/repositories/shareTradeHistory";
 
 /** Trade kinds that put shares into the recipient's hands. */
 const ACQUISITION_KINDS: ShareTradeKind[] = [
@@ -55,8 +58,7 @@ export async function computeControlledEquityHaircutInternal(
   currentTurn: number
 ): Promise<ControlledEquityHaircut> {
   const charId = character._id;
-  const corps = await db
-    .collection<Corporation>("corporations")
+  const corps = await corporationsCollection(db)
     .find({ "shareholders.characterId": charId })
     .project<
       Pick<
@@ -102,17 +104,14 @@ export async function computeControlledEquityHaircutInternal(
   const lookbackStart = currentTurn - LEVERED_PURCHASE_LOOKBACK_TURNS;
   const [basisById, recentDraw] = await Promise.all([
     loadCorpBookBasisById(db, ids),
-    db
-      .collection<LocLedgerEntry>("locLedger")
-      .findOne(
-        { characterId: charId, type: "draw", turn: { $gt: lookbackStart } },
-        { projection: { _id: 1 } }
-      ),
+    locLedgerCollection(db).findOne(
+      { characterId: charId, type: "draw", turn: { $gt: lookbackStart } },
+      { projection: { _id: 1 } }
+    ),
   ]);
   const leveredByCorp = new Map<string, number>();
   if (recentDraw) {
-    const rows = await db
-      .collection<ShareTradeHistory>("shareTradeHistory")
+    const rows = await shareTradeHistoryCollection(db)
       .find(
         {
           corporationId: { $in: ids },

@@ -4,16 +4,9 @@
  * for later campaigns; both chambers and presidential promulgation are required.
  */
 import { ObjectId, type AnyBulkWriteOperation, type ClientSession, type Db } from "mongodb";
-import type {
-  Bill,
-  Character,
-  CountryGameState,
-  GameState,
-  Election,
-  ElectionVoteTally,
-} from "@/lib/db/types";
+import type { Bill, Character, GameState, Election } from "@/lib/db/types";
 import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
-import { TALLY_WITH_LATEST_SNAPSHOT_ONLY } from "@/lib/electionEngine/tallyProjections";
+import { TALLY_WITH_LATEST_SNAPSHOT_ONLY } from "@/lib/elections/engine/tallyProjections";
 import { calendarTurn } from "@/lib/utils/gameDate";
 import {
   passesRoElectoralAmendment,
@@ -21,7 +14,15 @@ import {
 } from "./rules/electoralDecision1992";
 
 import { RO_1992_DEPUTIES_BY_REGION, RO_1992_SENATORS_BY_REGION } from "./rules/parliament1992";
-import type { CountryState } from "@/lib/db/types/countryState";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
+import type { Document } from "mongodb";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { billsCollection } from "@/lib/db/repositories/bills";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
+import { countryStateCollection } from "@/lib/db/repositories/countryState";
+import { ro1992ElectoralProposalsCollection } from "@/lib/db/repositories/ro1992ElectoralProposals";
 
 export const RO_1992_PROPOSALS_COLLECTION = "ro1992ElectoralProposals";
 const ID = "1991-default:ro-electoral:parliament1992";
@@ -40,18 +41,18 @@ export interface Ro1992ElectoralProposal {
 export class Ro1992ElectoralConflict extends Error {}
 
 async function availability(db: Db, game: Calendar, turn: number, session?: ClientSession) {
-  const current = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { session, projection: { preset: 1 } });
-  const runtime = await db
-    .collection<CountryState>("countryState")
-    .findOne({ _id: "RO" }, { session, projection: { governmentType: 1 } });
-  const country = await db
-    .collection<CountryGameState>("countryGameStates")
-    .findOne(
-      { _id: "RO" },
-      { session, projection: { roElectoralLaw1992SinceTurn: 1, roParliament1992SinceTurn: 1 } }
-    );
+  const current = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { session, projection: { preset: 1 } }
+  );
+  const runtime = await countryStateCollection(db).findOne(
+    { _id: "RO" },
+    { session, projection: { governmentType: 1 } }
+  );
+  const country = await countryGameStatesCollection(db).findOne(
+    { _id: "RO" },
+    { session, projection: { roElectoralLaw1992SinceTurn: 1, roParliament1992SinceTurn: 1 } }
+  );
   return ro1992DecisionAvailability({
     preset: current?.preset,
     calendarTurn: calendarTurn(turn, {
@@ -85,17 +86,15 @@ export async function materializeRo1992ElectoralProposal(input: {
     throw new Error("Romanian electoral proposal needs a transaction, turn and time");
   const allowed = await availability(db, game, turn, session);
   if (!allowed.available) throw new Ro1992ElectoralConflict(allowed.reason);
-  const proposals = db.collection<Ro1992ElectoralProposal>(RO_1992_PROPOSALS_COLLECTION);
+  const proposals = ro1992ElectoralProposalsCollection<Ro1992ElectoralProposal>(db);
   const prior = await proposals.findOne({ _id: ID }, { session });
   if (prior) {
     if (!Number.isSafeInteger(prior.revision) || prior.revision < 1)
       throw new Ro1992ElectoralConflict("Invalid electoral proposal revision");
-    const bill = await db
-      .collection<Bill>("bills")
-      .findOne(
-        { _id: prior.billId },
-        { session, projection: { countryId: 1, status: 1, romanianElectoralMandate: 1 } }
-      );
+    const bill = await billsCollection(db).findOne(
+      { _id: prior.billId },
+      { session, projection: { countryId: 1, status: 1, romanianElectoralMandate: 1 } }
+    );
     if (
       !bill ||
       bill.countryId !== "RO" ||
@@ -106,8 +105,7 @@ export async function materializeRo1992ElectoralProposal(input: {
       throw new Ro1992ElectoralConflict("Electoral proposal no longer matches its bill");
     if (!["failed", "vetoed", "override_failed"].includes(bill.status)) return prior;
   }
-  const regions = await db
-    .collection("states")
+  const regions = await statesCollection<Document>(db)
     .find({ countryId: "RO" }, { session, projection: { houseDistricts: 1, stateSenateSeats: 1 } })
     .toArray();
   const capacities = {
@@ -165,7 +163,7 @@ export async function materializeRo1992ElectoralProposal(input: {
   );
   if (prior && claim.matchedCount !== 1)
     throw new Ro1992ElectoralConflict("Electoral proposal changed");
-  await db.collection<Bill>("bills").insertOne(bill, { session });
+  await billsCollection(db).insertOne(bill, { session });
   return proposal;
 }
 
@@ -188,7 +186,7 @@ async function authorizeRo1992ElectoralProposal(
 ) {
   if (!session.inTransaction())
     throw new Error("Romanian electoral authorization needs a transaction");
-  const proposals = db.collection<Ro1992ElectoralProposal>(RO_1992_PROPOSALS_COLLECTION);
+  const proposals = ro1992ElectoralProposalsCollection<Ro1992ElectoralProposal>(db);
   const proposal = await proposals.findOne({ _id: ID, status: "open" }, { session });
   if (!proposal || !(await availability(db, game, turn, session)).available) return false;
   if (
@@ -199,7 +197,7 @@ async function authorizeRo1992ElectoralProposal(
     !Number.isFinite(now.getTime())
   )
     throw new Ro1992ElectoralConflict("Invalid electoral authorization revision or clock");
-  const bill = await db.collection<Bill>("bills").findOne(
+  const bill = await billsCollection(db).findOne(
     {
       _id: proposal.billId,
       countryId: "RO",
@@ -233,13 +231,11 @@ async function authorizeRo1992ElectoralProposal(
       "Enacted amendment lacks a quorate frozen parliamentary result"
     );
   await rebindRo1992PrimaryCohort(db, turn, now, session);
-  await db
-    .collection<CountryGameState>("countryGameStates")
-    .updateOne(
-      { _id: "RO", roElectoralLaw1992SinceTurn: { $exists: false } },
-      { $set: { roElectoralLaw1992SinceTurn: turn } },
-      { session, upsert: true }
-    );
+  await countryGameStatesCollection(db).updateOne(
+    { _id: "RO", roElectoralLaw1992SinceTurn: { $exists: false } },
+    { $set: { roElectoralLaw1992SinceTurn: turn } },
+    { session, upsert: true }
+  );
   const updated = await proposals.updateOne(
     { _id: ID, status: "open", revision: proposal.revision },
     { $set: { status: "authorized", authorizedOnTurn: turn } },
@@ -253,13 +249,11 @@ async function authorizeRo1992ElectoralProposal(
 export async function loadRo1992ElectoralDecision(db: Db, game: Calendar, turn: number) {
   if (game.preset !== "1991-default") return null;
   const allowed = await availability(db, game, turn);
-  const proposal = await db
-    .collection<Ro1992ElectoralProposal>(RO_1992_PROPOSALS_COLLECTION)
-    .findOne({ _id: ID });
+  const proposal = await ro1992ElectoralProposalsCollection<Ro1992ElectoralProposal>(db).findOne({
+    _id: ID,
+  });
   const bill = proposal
-    ? await db
-        .collection<Bill>("bills")
-        .findOne({ _id: proposal.billId }, { projection: { status: 1 } })
+    ? await billsCollection(db).findOne({ _id: proposal.billId }, { projection: { status: 1 } })
     : null;
   return {
     kind: "parliament1992" as const,
@@ -287,14 +281,16 @@ export async function processRo1992ElectoralMandate(
   now: Date
 ) {
   if (game.preset !== "1991-default") return false;
-  const proposal = await db
-    .collection<Ro1992ElectoralProposal>(RO_1992_PROPOSALS_COLLECTION)
-    .findOne({ _id: ID, status: "open" }, { projection: { billId: 1 } });
+  const proposal = await ro1992ElectoralProposalsCollection<Ro1992ElectoralProposal>(db).findOne(
+    { _id: ID, status: "open" },
+    { projection: { billId: 1 } }
+  );
   if (
     !proposal ||
-    !(await db
-      .collection<Bill>("bills")
-      .findOne({ _id: proposal.billId, status: "signed" }, { projection: { _id: 1 } }))
+    !(await billsCollection(db).findOne(
+      { _id: proposal.billId, status: "signed" },
+      { projection: { _id: 1 } }
+    ))
   )
     return false;
   return runRequiredTransaction(
@@ -305,8 +301,7 @@ export async function processRo1992ElectoralMandate(
 
 /** Only an untouched complete bicameral primary cohort may accept new capacity. */
 async function rebindRo1992PrimaryCohort(db: Db, turn: number, now: Date, session: ClientSession) {
-  const polls = await db
-    .collection<Election>("elections")
+  const polls = await electionsCollection(db)
     .find(
       {
         countryId: "RO",
@@ -320,8 +315,7 @@ async function rebindRo1992PrimaryCohort(db: Db, turn: number, now: Date, sessio
       }
     )
     .toArray();
-  const tallies = await db
-    .collection<ElectionVoteTally>("electionVoteTallies")
+  const tallies = await electionVoteTalliesCollection(db)
     .find(
       { electionId: { $in: polls.map((row) => row._id) } },
       { session, projection: TALLY_WITH_LATEST_SNAPSHOT_ONLY }
@@ -377,5 +371,5 @@ async function rebindRo1992PrimaryCohort(db: Db, turn: number, now: Date, sessio
       },
     }));
   });
-  if (updates.length) await db.collection<Election>("elections").bulkWrite(updates, { session });
+  if (updates.length) await electionsCollection(db).bulkWrite(updates, { session });
 }

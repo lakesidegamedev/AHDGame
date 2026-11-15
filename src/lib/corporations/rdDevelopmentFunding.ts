@@ -1,13 +1,12 @@
 import type { Db } from "mongodb";
 import { getMarketSystemMode, marketAtLeast } from "@/lib/market/featureFlag";
-import type { GameConfig } from "@/lib/db/types";
 import { getManufacturingProductKind } from "@/lib/products/manufacturingCatalog";
-import {
-  MANUFACTURING_PRODUCT_PROJECTS_V2,
-  type ManufacturingProductProject,
-} from "@/lib/products/manufacturingProject";
-import { MEDIA_PRODUCT_PROJECTS, type MediaProductProject } from "@/lib/products/mediaProduct";
+import { type ManufacturingProductProject } from "@/lib/products/manufacturingProject";
+import { type MediaProductProject } from "@/lib/products/mediaProduct";
 import type { RdDevelopmentProject } from "./strengthProjection";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { mediaProductProjectsV1Collection } from "@/lib/db/repositories/mediaProductProjectsV1";
+import { manufacturingProductProjectsV2Collection } from "@/lib/db/repositories/manufacturingProductProjectsV2";
 
 export interface RdDevelopmentFundingProject extends RdDevelopmentProject {
   /** Player-facing product name. */
@@ -22,7 +21,7 @@ export async function loadRdDevelopmentProjects(
   db: Db,
   corporationId: string
 ): Promise<RdDevelopmentFundingProject[]> {
-  const config = await db.collection<GameConfig>("gameConfig").findOne(
+  const config = await gameConfigCollection(db).findOne(
     { _id: "default" },
     {
       projection: {
@@ -39,14 +38,16 @@ export async function loadRdDevelopmentProjects(
 
   const [manufacturing, media] = await Promise.all([
     manufacturingOn
-      ? db
-          .collection<ManufacturingProductProject>(MANUFACTURING_PRODUCT_PROJECTS_V2)
-          .findOne({ activeCorporationId: corporationId, corporationId })
+      ? manufacturingProductProjectsV2Collection<ManufacturingProductProject>(db).findOne({
+          activeCorporationId: corporationId,
+          corporationId,
+        })
       : null,
     mediaOn
-      ? db
-          .collection<MediaProductProject>(MEDIA_PRODUCT_PROJECTS)
-          .findOne({ activeDevelopmentCorporationId: corporationId, corporationId })
+      ? mediaProductProjectsV1Collection<MediaProductProject>(db).findOne({
+          activeDevelopmentCorporationId: corporationId,
+          corporationId,
+        })
       : null,
   ]);
 

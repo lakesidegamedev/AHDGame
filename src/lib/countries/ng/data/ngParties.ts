@@ -1,38 +1,17 @@
 import type { PartySeed } from "@/lib/seeds/reference/politicalParties";
 
 /**
- * Nigeria default political parties.
+ * Nigeria default political parties, keyed by preset.
+ * Preset rosters (see seedOrder):
+ * - 1953-default: NCNC / AG / NPC (three major regional parties of late
+ * colonial Nigeria).
+ * - 1979-default: NPN / UPN / NPP / GNPP / PRP (five parties of the Second
+ * Republic's 1979 election).
+ * - 1991-default: SDP / NRC (the two state-created Third Republic parties).
+ * - 2019-default: APC / PDP / LP / NNPP / APGA (modern post-2019 landscape).
  *
- * Preset rosters:
- *   - 1953-default: NCNC / AG / NPC — the three major regional parties of late
- *     colonial Nigeria under the Macpherson (1951) / Lyttelton (1954)
- *     constitutions. Independence is still seven years away (1960), but these
- *     parties already contested real regional and federal elections.
- *     NCNC (National Council of Nigeria and the Cameroons, founded 1944) —
- *     Igbo/Eastern base, Nnamdi Azikiwe. AG (Action Group, founded 1951) —
- *     Yoruba/Western base, Obafemi Awolowo. NPC (Northern People's Congress,
- *     founded 1951) — Hausa-Fulani/Northern base, Ahmadu Bello / Tafawa Balewa.
- *   - 1979-default: NPN / UPN / NPP / GNPP / PRP — the five parties that
- *     contested the 1979 general election launching the Second Republic
- *     after the 1966-79 military interregnum. NPN (National Party of
- *     Nigeria) — Shagari's centrist federal big tent, strongest in the
- *     North. UPN (Unity Party of Nigeria) — Awolowo's Action Group
- *     successor, Yoruba/South-West base. NPP (Nigerian Peoples Party) —
- *     Azikiwe's NCNC successor, Igbo/Eastern base. GNPP (Great Nigeria
- *     Peoples Party) — Ibrahim Waziri's breakaway from the NPN, North-East
- *     base. PRP (Peoples Redemption Party) — Aminu Kano's radical populist
- *     vehicle, Kano/Northern-urban base.
- *   - 2019-default: APC / PDP / LP / NNPP / APGA — the modern post-2019
- *     landscape. APC is the incumbent centre-right big tent, PDP the
- *     historical centrist catch-all, LP the centre-left populist vehicle,
- *     NNPP a centrist challenger, APGA a centre-right regional party.
- *   - 1991-default: SDP / NRC — the two state-created parties of the aborted
- *     Third Republic. SDP (Social Democratic Party) was center-left, Abiola's
- *     base, dominant in the South-West. NRC (National Republican Convention)
- *     was center-right, dominant in North-East/North-West/South-East.
- *
- * Seeded as `isDefault: true` — they always exist and cannot be deleted.
- * seedOrder determines sequentialId assignment within NG.
+ * Seeded as isDefault: true (always exist, cannot be deleted). seedOrder
+ * determines sequentialId assignment within NG.
  */
 export const ngParties: PartySeed[] = [
   {

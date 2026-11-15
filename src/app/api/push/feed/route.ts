@@ -9,6 +9,8 @@ import { withNoStore } from "@/lib/api/withNoStore";
 import { buildPushPreview, shouldPush, type PushPreview } from "@/lib/nativePush/policy";
 import type { Notification } from "@/lib/db/types/notifications";
 import type { User } from "@/lib/db/types/user";
+import { usersCollection } from "@/lib/db/repositories/users";
+import { notificationsCollection } from "@/lib/db/repositories/notifications";
 
 /** Alerts a desktop client shows per poll; the rest are summarised as a count. */
 const SHOWN = 3;
@@ -36,7 +38,7 @@ export const GET = withNoStore(async (request: Request) => {
     return await suppressTracing(async () => {
       const db = await getDb();
       const userId = new ObjectId(auth.user.userId);
-      const notifications = db.collection<Notification>("notifications");
+      const notifications = notificationsCollection(db);
       if (after === null) {
         const newest = await notifications.findOne(
           { userId },
@@ -45,9 +47,10 @@ export const GET = withNoStore(async (request: Request) => {
         return NextResponse.json({ cursor: newest?._id.toString() ?? null, items: [], more: 0 });
       }
       const [user, scanned] = await Promise.all([
-        db
-          .collection<User>("users")
-          .findOne({ _id: userId }, { projection: { notificationPreferences: 1 } }),
+        usersCollection(db).findOne(
+          { _id: userId },
+          { projection: { notificationPreferences: 1 } }
+        ),
         notifications
           .find(
             { userId, _id: { $gt: new ObjectId(after) } },

@@ -12,6 +12,8 @@ import { checkWikiDisabled } from "@/lib/api/wikiGuard";
 import { notifyModeratorsOfWikiSubmission } from "@/lib/wiki/reviewNotifications";
 import type { User, WikiPage } from "@/lib/db/types";
 import { ObjectId } from "mongodb";
+import { usersCollection } from "@/lib/db/repositories/users";
+import { wikiPagesCollection } from "@/lib/db/repositories/wikiPages";
 
 interface RouteContext {
   params: Promise<{ slug: string }>;
@@ -29,7 +31,7 @@ async function handleGET(request: Request, context: RouteContext) {
     const user = await getAuthUser();
 
     const db = await getDb();
-    const wikiPages = db.collection<WikiPage>("wikiPages");
+    const wikiPages = wikiPagesCollection(db);
 
     const page = await wikiPages.findOne({ slug });
     if (!page) {
@@ -95,7 +97,7 @@ export async function PATCH(request: Request, context: RouteContext) {
     }
 
     const db = await getDb();
-    const wikiPages = db.collection<WikiPage>("wikiPages");
+    const wikiPages = wikiPagesCollection(db);
     const page = await wikiPages.findOne({ slug });
     if (!page) {
       return NextResponse.json(notFound().toJson(), { status: 404 });
@@ -148,9 +150,10 @@ export async function PATCH(request: Request, context: RouteContext) {
     // Edits that flip a page back into review need the moderator queue ping —
     // otherwise the submission sits silent until someone happens to check.
     if (wasPublished) {
-      const submitter = await db
-        .collection<User>("users")
-        .findOne({ _id: userId }, { projection: { username: 1, displayName: 1 } });
+      const submitter = await usersCollection(db).findOne(
+        { _id: userId },
+        { projection: { username: 1, displayName: 1 } }
+      );
       notifyModeratorsOfWikiSubmission({
         slug,
         title: updated?.title ?? page.title,

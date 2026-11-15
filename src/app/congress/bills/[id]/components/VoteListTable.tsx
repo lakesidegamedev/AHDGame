@@ -16,24 +16,40 @@ interface IndividualVote {
 }
 
 interface VoteListTableProps {
-  billId: string;
-  chamber: "origin" | "other";
+  billId?: string;
+  chamber?: "origin" | "other";
   /** Whether to show the seatsHeld column. True for multi-seat chambers (UK Commons, US House, state legislature). False for US Senate. */
   showSeats: boolean;
+  /** Optional preloaded voters list; when provided, skips fetching from the bills API. */
+  initialVoters?: IndividualVote[];
 }
 
 type VoteFilter = "all" | "for" | "against" | "abstain";
 type TypeFilter = "all" | "players" | "npps";
 
-export function VoteListTable({ billId, chamber, showSeats }: VoteListTableProps) {
-  const [voters, setVoters] = useState<IndividualVote[]>([]);
-  const [loading, setLoading] = useState(true);
+export function VoteListTable({
+  billId,
+  chamber = "origin",
+  showSeats,
+  initialVoters,
+}: VoteListTableProps) {
+  const [voters, setVoters] = useState<IndividualVote[]>(initialVoters ?? []);
+  const [loading, setLoading] = useState(initialVoters === undefined);
   const [partyFilter, setPartyFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("all");
   const [voteFilter, setVoteFilter] = useState<VoteFilter>("all");
   const [query, setQuery] = useState("");
 
   useEffect(() => {
+    if (initialVoters !== undefined) {
+      setVoters(initialVoters);
+      setLoading(false);
+      return;
+    }
+    if (!billId) {
+      setLoading(false);
+      return;
+    }
     let cancelled = false;
     fetch(`/api/congress/bills/${billId}/votes?chamber=${chamber}`)
       .then((res) => res.json())
@@ -49,7 +65,7 @@ export function VoteListTable({ billId, chamber, showSeats }: VoteListTableProps
     return () => {
       cancelled = true;
     };
-  }, [billId, chamber]);
+  }, [billId, chamber, initialVoters]);
 
   const uniqueParties = useMemo(() => {
     const seen = new Map<string, { partyName: string; partyColor: string }>();

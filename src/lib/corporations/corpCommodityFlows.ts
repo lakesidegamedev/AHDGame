@@ -1,26 +1,25 @@
 /**
  * Corporation-level commodity flows for the Commodities tab.
  *
- * This mirrors the world supply ledger (`computeRawSupplyDemand` in
- * `src/lib/constants/commodities.ts`) leg for leg, because the tab's whole job
- * is to tell a CEO what their corporation actually puts on the market. Any
- * derivation of its own drifts from the number every other surface reports.
+ * Mirrors the world supply ledger (`computeRawSupplyDemand` in
+ * `src/lib/constants/commodities.ts`) leg for leg, so the tab reports what the
+ * corp actually puts on the market. Any independent derivation drifts from
+ * every other surface.
  *
- * Under the plants tier a sector has already MEASURED what it made, so real
- * output is `plantsSupplyScaledUnits(producedUnits) × commodityMixWeight` — the
- * same canonical chain the ledger, the clearing offer and the supply-agreement
- * capacity check use. The revenue nameplate (`revenue × rate / basePrice`) is
- * only the fallback for a sector that has never run a plants turn, and the sole
- * path for extraction, which carries its own deposit-capacity rationing that
- * `producedUnits` would double-count.
+ * Under the plants tier a sector has MEASURED output, so real output is
+ * `plantsSupplyScaledUnits(producedUnits) × commodityMixWeight`, the canonical
+ * chain used by the ledger, clearing offer and supply-agreement capacity check.
+ * The revenue nameplate (`revenue × rate / basePrice`) is only the fallback for
+ * a sector that has never run a plants turn, and the sole path for extraction,
+ * whose deposit-capacity rationing `producedUnits` would double-count.
  *
- * Revenue arrives in the sector's HOST currency. Every nameplate leg therefore
- * runs on `revenueAnchor` (₳), never `revenue` — dividing francs by an ₳ base
- * price reports a French sector at its FX rate, not its output (ticket #1177).
+ * Revenue arrives in the sector's HOST currency, so every nameplate leg uses
+ * `revenueAnchor` (₳), never `revenue`: dividing francs by an ₳ base price
+ * reports a French sector at its FX rate, not its output.
  *
  * Global market context (price, stock, cover, spoilage) is read from the latest
- * `commodityFlows` ledger row per commodity — that data is only global, so it is
- * surfaced as market context, not attributed to the corp.
+ * `commodityFlows` ledger row per commodity; that data is only global, so it is
+ * market context, not attributed to the corp.
  */
 import type { CorporateSector } from "@/lib/db/types";
 import type { CommodityFlow } from "@/lib/db/types/commodityFlow";

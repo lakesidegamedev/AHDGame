@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import type { Bill } from "@/lib/db/types";
+import { billsCollection } from "@/lib/db/repositories/bills";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -18,12 +19,10 @@ export async function generateMetadata({
   if (!ObjectId.isValid(id)) return {};
 
   const db = await getDb();
-  const bill = await db
-    .collection<Bill>("bills")
-    .findOne(
-      { _id: new ObjectId(id) },
-      { projection: { title: 1, summary: 1, sponsorName: 1, status: 1 } }
-    );
+  const bill = await billsCollection(db).findOne(
+    { _id: new ObjectId(id) },
+    { projection: { title: 1, summary: 1, sponsorName: 1, status: 1 } }
+  );
   if (!bill) return {};
 
   const title = `${bill.title} | A House Divided`;

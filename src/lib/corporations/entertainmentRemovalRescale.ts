@@ -1,17 +1,16 @@
 /**
- * One-time capacity rescale for the removal of the entertainment commodity
- * (2026-10-19).
+ * One-time capacity rescale for the removal of the entertainment commodity.
  *
  * Every media recipe that sold entertainment now sells the same output value
  * as advertising. A sector's owned units are priced through its strategy's
- * revenue per capacity unit (RPU = 1 / Σ rate / basePrice), and advertising is
- * cheaper per unit than entertainment was, so the same stock would be worth
+ * revenue per capacity unit (RPU = 1 / sum rate / basePrice), and advertising
+ * is cheaper per unit than entertainment was, so the same stock would be worth
  * less. Multiplying owned units by RPU_old / RPU_new keeps every sector's
  * nameplate value exactly where it was, the same ratio a strategy switch
  * applies (`capacityRescaleRatio`).
  *
- * The removed mixes are frozen here because the live catalog no longer
- * carries them. Keys are `${operatingType}/${resolvedStrategyId}`.
+ * The removed mixes are frozen here because the live catalog no longer carries
+ * them. Keys are `${operatingType}/${resolvedStrategyId}`.
  */
 import { COMMODITY_BASE_PRICES, type CommodityType } from "@/lib/constants/commodities";
 import {

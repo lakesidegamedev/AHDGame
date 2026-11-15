@@ -4,6 +4,7 @@ import { getAuthored1953MacroCountry } from "@/lib/world/macro/roster1953";
 import { getTransitionMacroCountry } from "@/lib/world/transitions";
 import { getMacroCountriesCollection } from "@/lib/db/collections/macroCountries";
 import { buildBackgroundMacroCountry } from "./backgroundSeed";
+import { buildBackground2027MacroCountry, isAuthoredBackground2027 } from "./background2027";
 
 /**
  * Collections that must remain empty for a Tier-2 macro country.
@@ -21,7 +22,7 @@ export const MACRO_FORBIDDEN_SEED_COLLECTIONS = [
 
 /**
  * Seed sphere-macro countries for the active preset.
- * 1953-default: European (#3719) + Asian/Middle Eastern (#3720) + African/American (#3721)
+ * 1953-default: European + Asian/Middle Eastern + African/American
  * Tier-2 rosters; Austria remains the reference oracle. Emergent decolonization
  * targets wait for sovereignty before receiving transition-roster macros.
  *
@@ -56,7 +57,13 @@ export async function seedMacroCountries(
     if (entry.status !== "sovereign") continue;
 
     if (entry.simulationTier === "background-macro") {
-      docs.push(buildBackgroundMacroCountry(entry, preset, now));
+      // The 2027 background countries are real trading economies with
+      // authored 2027 data; every other background entity keeps the estimate.
+      docs.push(
+        isAuthoredBackground2027(preset, entry.entityId)
+          ? buildBackground2027MacroCountry(entry.entityId, now)
+          : buildBackgroundMacroCountry(entry, preset, now)
+      );
       continue;
     }
 
@@ -66,7 +73,7 @@ export async function seedMacroCountries(
       );
     }
 
-    // Post-sovereignty transition targets (Ghana + #3727 roster).
+    // Post-sovereignty transition targets (Ghana + roster).
     const transitionMacro = getTransitionMacroCountry(entry.entityId, 1, now);
     if (transitionMacro) {
       docs.push({ ...transitionMacro, simulationTier: "sphere-macro" as const });

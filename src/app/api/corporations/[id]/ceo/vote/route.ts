@@ -10,11 +10,13 @@ import { createNotification } from "@/lib/notifications";
 import { resolveCorporation } from "@/lib/api/corporations/resolveQuery";
 import { isCorporationCeoVoteDuplicateKey } from "@/lib/elections/duplicateKey";
 import type { Corporation } from "@/lib/db/types";
-import type { Character } from "@/lib/db/types/character";
 import { bulkFetchCharacterNames } from "@/lib/db/characterLookup";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { holdsAnyBondsInCorp } from "@/lib/bonds/ceoBondConflict";
 import { shareholderVotingPower } from "@/lib/corporations/superShares";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { corporationCeoVotesCollection } from "@/lib/db/repositories/corporationCeoVotes";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -167,12 +169,10 @@ async function reconcilePendingCeo(
 
   if (!leaderId || leaderId === incumbentId) {
     if (prevPending) {
-      await db
-        .collection<Corporation>("corporations")
-        .updateOne(
-          { _id: corporation._id },
-          { $unset: { pendingCeoCharacterId: "" }, $set: { updatedAt: now } }
-        );
+      await corporationsCollection(db).updateOne(
+        { _id: corporation._id },
+        { $unset: { pendingCeoCharacterId: "" }, $set: { updatedAt: now } }
+      );
     }
     return;
   }
@@ -184,16 +184,15 @@ async function reconcilePendingCeo(
   ).holds;
   if (leaderHoldsBonds) return;
 
-  await db
-    .collection<Corporation>("corporations")
-    .updateOne(
-      { _id: corporation._id },
-      { $set: { pendingCeoCharacterId: new ObjectId(leaderId), updatedAt: now } }
-    );
+  await corporationsCollection(db).updateOne(
+    { _id: corporation._id },
+    { $set: { pendingCeoCharacterId: new ObjectId(leaderId), updatedAt: now } }
+  );
 
-  const leaderChar = await db
-    .collection<Character>("characters")
-    .findOne({ _id: new ObjectId(leaderId) }, { projection: { userId: 1, name: 1 } });
+  const leaderChar = await charactersCollection(db).findOne(
+    { _id: new ObjectId(leaderId) },
+    { projection: { userId: 1, name: 1 } }
+  );
 
   if (leaderChar?.userId) {
     await createNotification({
@@ -255,8 +254,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     if (!charShareholding) {
       // Check if the user is CEO of a corporation that holds shares in this corp.
-      const managedCorps = await db
-        .collection<Corporation>("corporations")
+      const managedCorps = await corporationsCollection(db)
         .find({ ceoId: voterCharacter._id, ceoType: { $ne: "npp" } }, { projection: { _id: 1 } })
         .toArray();
 
@@ -275,12 +273,10 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     // Candidate must exist and be in the corporation's HQ state
     const candidateOid = new ObjectId(candidateCharacterId);
-    const candidate = await db
-      .collection<Character>("characters")
-      .findOne(
-        { _id: candidateOid },
-        { projection: { name: 1, userId: 1, homeState: 1, countryId: 1 } }
-      );
+    const candidate = await charactersCollection(db).findOne(
+      { _id: candidateOid },
+      { projection: { name: 1, userId: 1, homeState: 1, countryId: 1 } }
+    );
     if (!candidate) {
       return errorResponse(404, "Candidate character not found");
     }
@@ -314,7 +310,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     try {
-      await db.collection<Omit<CeoVote, "_id">>("corporationCeoVotes").updateOne(
+      await corporationCeoVotesCollection<Omit<CeoVote, "_id">>(db).updateOne(
         upsertFilter,
         {
           $set: {
@@ -334,7 +330,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       if (!isCorporationCeoVoteDuplicateKey(error)) {
         throw error;
       }
-      await db.collection<Omit<CeoVote, "_id">>("corporationCeoVotes").updateOne(upsertFilter, {
+      await corporationCeoVotesCollection<Omit<CeoVote, "_id">>(db).updateOne(upsertFilter, {
         $set: {
           candidateCharacterId: candidateOid,
           updatedAt: now,
@@ -343,8 +339,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     // Tally all votes for this corporation, weighted by voting power
-    const allVotesRaw = await db
-      .collection<CeoVote>("corporationCeoVotes")
+    const allVotesRaw = await corporationCeoVotesCollection<CeoVote>(db)
       .find({ corporationId: corporation._id })
       .toArray();
     const allVotes = dedupeCeoVotes(allVotesRaw);
@@ -381,8 +376,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     if (!resolved.ok) return resolved.response;
     const { corporation } = resolved;
 
-    const allVotesRaw = await db
-      .collection<CeoVote>("corporationCeoVotes")
+    const allVotesRaw = await corporationCeoVotesCollection<CeoVote>(db)
       .find({ corporationId: corporation._id })
       .toArray();
     const allVotes = dedupeCeoVotes(allVotesRaw);
@@ -433,11 +427,10 @@ export async function GET(_request: Request, { params }: RouteParams) {
 }
 
 /**
- * DELETE /api/corporations/[id]/ceo/vote
- * Withdraw the caller's CEO vote. POST is an upsert, so before this a
- * shareholder could switch their vote but never take it back — abstaining was
- * impossible once you had voted once, including the self-vote founding casts
- * on your behalf. Removing the last vote also clears any pending offer.
+ * DELETE withdraws the caller's CEO vote. POST is an upsert, so without
+ * this a shareholder could switch votes but never abstain once voted,
+ * including the self-vote founding casts. Removing the last vote also
+ * clears any pending offer.
  */
 export async function DELETE(_request: Request, { params }: RouteParams) {
   try {
@@ -462,13 +455,12 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
     // Withdraw both identities the voter may have used: their own character
     // vote and any vote cast through a corporation they run.
     const managedCorpIds = (
-      await db
-        .collection<Corporation>("corporations")
+      await corporationsCollection(db)
         .find({ ceoId: voterCharacter._id, ceoType: { $ne: "npp" } }, { projection: { _id: 1 } })
         .toArray()
     ).map((mc) => mc._id);
 
-    const deletion = await db.collection<CeoVote>("corporationCeoVotes").deleteMany({
+    const deletion = await corporationCeoVotesCollection<CeoVote>(db).deleteMany({
       corporationId: corporation._id,
       $or: [
         { voterCharacterId: voterCharacter._id, voterCorporationId: { $exists: false } },
@@ -481,8 +473,7 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
     }
 
     const allVotes = dedupeCeoVotes(
-      await db
-        .collection<CeoVote>("corporationCeoVotes")
+      await corporationCeoVotesCollection<CeoVote>(db)
         .find({ corporationId: corporation._id })
         .toArray()
     );

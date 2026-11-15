@@ -96,9 +96,9 @@ function UnionDashboard({ id }: { id: string }) {
   /** A side fetch failed while the union itself loaded. Shown as a banner, not a dead end. */
   const [partialError, setPartialError] = useState<string | null>(null);
   const [notFound, setNotFound] = useState(false);
-  // Result of the last action, with its outcome, a failed action used to
-  // render as muted grey body text at the bottom of the panel, which reads as
-  // "the button did nothing" rather than "you cannot afford this".
+  // Result of the last action. A failed action used to render as muted grey
+  // body text, which reads as "the button did nothing" rather than "you
+  // cannot afford this".
   const [actionResult, setActionResult] = useState<{ ok: boolean; text: string } | null>(null);
   // The organize panel keeps its own result. It sits above the leader and
   // election panels and is open to everyone, so a shared slot would report a

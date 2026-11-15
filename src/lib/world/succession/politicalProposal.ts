@@ -3,22 +3,22 @@ import type { CountryId } from "@/lib/constants/countries";
 import { getCountryConfig } from "@/lib/constants/countries";
 import { getNationalDocId } from "@/lib/constants/nationalScope";
 import type { Bill } from "@/lib/db/types/legislation";
-import type { GameState } from "@/lib/db/types/gameState";
 import { getWorldEntityOrThrow } from "@/lib/world/worldEntityManifest";
 import { earliestFederationDecisionYear } from "./availability";
 import { proposalRevisionConflict } from "./rules/proposalRevision";
 import { loadLiveSuccessionInventory } from "./loadLiveInventory";
 import { planSuccessionCustody } from "./rules/custody";
 import { planSuccessionTerritories } from "./rules/territory";
-import {
-  FEDERATION_SETTLEMENT_APPLICATIONS_COLLECTION,
-  type FederationSettlementApplicationRecord,
-} from "./runtimeEntities";
+import { type FederationSettlementApplicationRecord } from "./runtimeEntities";
 import {
   hashFederationPoliticalTerms,
   federationPoliticalTermsFromActivation,
   type FederationPoliticalTerms,
 } from "./settlementIntent";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { billsCollection } from "@/lib/db/repositories/bills";
+import { federationPoliticalProposalsCollection } from "@/lib/db/repositories/federationPoliticalProposals";
+import { federationSettlementApplicationsCollection } from "@/lib/db/repositories/federationSettlementApplications";
 
 export const FEDERATION_POLITICAL_PROPOSALS_COLLECTION = "federationPoliticalProposals";
 const VOTING_DURATION_TURNS = 24;
@@ -61,9 +61,10 @@ export async function openFederationPoliticalProposal(input: {
   sponsorParty?: string;
 }): Promise<FederationPoliticalProposalRecord> {
   const { db, sourceCountryId, activation, now, sponsorParty } = input;
-  const state = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { projection: { preset: 1, currentYear: 1, currentTurn: 1 } });
+  const state = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { projection: { preset: 1, currentYear: 1, currentTurn: 1 } }
+  );
   const availableYear = earliestFederationDecisionYear(state?.preset ?? "", sourceCountryId);
   if (
     state?.preset !== "1991-default" ||
@@ -141,18 +142,15 @@ export async function openFederationPoliticalProposal(input: {
     !validWeights(terms.debtBasis, terms.debtWeights)
   )
     throw new Error("Federation proposal financial shares disagree with territory");
-  const applied = await db
-    .collection<FederationSettlementApplicationRecord>(
-      FEDERATION_SETTLEMENT_APPLICATIONS_COLLECTION
-    )
-    .findOne({ presetId: "1991-default", sourceEntityId: sourceCountryId, status: "applied" });
+  const applied =
+    await federationSettlementApplicationsCollection<FederationSettlementApplicationRecord>(
+      db
+    ).findOne({ presetId: "1991-default", sourceEntityId: sourceCountryId, status: "applied" });
   if (applied) throw new FederationProposalConflictError("Federation has already settled");
 
   const _id = `1991-default:${terms.settlementId}:${terms.revision}`;
   const termsHash = hashFederationPoliticalTerms(activation);
-  const collection = db.collection<FederationPoliticalProposalRecord>(
-    FEDERATION_POLITICAL_PROPOSALS_COLLECTION
-  );
+  const collection = federationPoliticalProposalsCollection<FederationPoliticalProposalRecord>(db);
   const latest = (
     await collection
       .find(
@@ -233,7 +231,7 @@ export async function openFederationPoliticalProposal(input: {
     createdAt: stored.createdAt,
     updatedAt: stored.createdAt,
   };
-  const bills = db.collection<Bill>("bills");
+  const bills = billsCollection(db);
   await bills.updateOne({ _id: stored.billId }, { $setOnInsert: bill }, { upsert: true });
   const savedBill = await bills.findOne({ _id: stored.billId });
   if (

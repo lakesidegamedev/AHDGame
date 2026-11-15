@@ -1,5 +1,5 @@
 /**
- * Tests for the granular-cell electorate substrate (`granularElectorateEnabled`).
+ * Tests for the granular-cell electorate substrate.
  *
  * Covers:
  *  - archetype→bucket mapping invariants (weights sum to 1, valid dims, 1-3 buckets)
@@ -12,9 +12,8 @@
  *  - perf smoke: substrate loop stays within budget of the archetype loop
  */
 
+import { electorateFromFixture } from "@/lib/demographics/electorateFixture";
 import { describe, it, expect, beforeEach } from "vitest";
-import { getCountryLayer1Model } from "@/lib/seeds/international";
-import { eraForPreset } from "@/lib/seeds/presetSelector";
 // Side-effect import — populates stateCensusData with all US states so the
 // Layer-1 derivation can find census configs.
 import "@/lib/seeds/stateDemographics";
@@ -22,20 +21,16 @@ import type {
   DemographicCategory,
   Layer1PositionOverlay,
   Layer1TurnoutOverlay,
-  StateDemographics,
+  CensusGroupView,
   StateDemographicTurnout,
 } from "@/lib/db/types";
-import type { EnrichedCandidate } from "@/lib/electionEngine/types";
-import { distributeVotesByGroupLevelAllocation } from "@/lib/electionEngine/voteDistribution";
+import type { EnrichedCandidate } from "@/lib/elections/engine/types";
+import { distributeVotesByGroupLevelAllocation } from "@/lib/elections/engine/voteDistribution";
 import { GRANULAR_DIMENSIONS } from "@/lib/demographics/granularCells";
-import {
-  ARCHETYPE_BUCKET_MAP,
-  archetypeValuesToBuckets,
-} from "@/lib/demographics/archetypeBucketMap";
 import {
   buildGranularElectorateSubstrate,
   deriveGranularElectorateUnits,
-  remapArchetypeValuesToUnits,
+  bucketValuesToUnits,
   clearGranularElectorateCache,
   campaignContactByBucket,
   ELECTORATE_PRUNE_FLOOR,
@@ -89,7 +84,7 @@ const LEGACY_CATEGORIES: DemographicCategory[] = [
   },
 ];
 
-const LEGACY_DEMOGRAPHICS: StateDemographics = {
+const LEGACY_DEMOGRAPHICS: CensusGroupView = {
   _id: "CT",
   countryId: "US",
   categoryWeights: { voterGroups: 100 },
@@ -137,7 +132,6 @@ function buildSubstrate(overrides?: {
     turnoutDoc: overrides?.turnoutDoc ?? null,
     statePopulation: 1_000_000,
     demographics: LEGACY_DEMOGRAPHICS,
-    categories: LEGACY_CATEGORIES,
     enriched: overrides?.enriched ?? [
       makeCandidate("left", "democrat", -2, -2),
       makeCandidate("right", "republican", 2, 2),
@@ -149,55 +143,6 @@ function buildSubstrate(overrides?: {
 
 beforeEach(() => {
   clearGranularElectorateCache();
-});
-
-describe("ARCHETYPE_BUCKET_MAP", () => {
-  it("covers all 12 archetypes with 1-3 buckets whose weights sum to 1", () => {
-    const validDims = new Set<string>(GRANULAR_DIMENSIONS);
-    for (const archetypeId of ARCHETYPE_IDS) {
-      const weights = ARCHETYPE_BUCKET_MAP[archetypeId];
-      expect(weights, archetypeId).toBeDefined();
-      expect(weights.length).toBeGreaterThanOrEqual(1);
-      expect(weights.length).toBeLessThanOrEqual(3);
-      const sum = weights.reduce((s, w) => s + w.w, 0);
-      expect(sum, `${archetypeId} weights must sum to 1`).toBeCloseTo(1, 10);
-      for (const { dim, w } of weights) {
-        expect(validDims.has(dim), `${archetypeId} dim ${dim}`).toBe(true);
-        expect(w).toBeGreaterThan(0);
-      }
-    }
-  });
-
-  it("distributes archetype values onto buckets by weight", () => {
-    const buckets = archetypeValuesToBuckets({ retirees: 40 });
-    expect(buckets["age:senior"]).toBeCloseTo(28, 8);
-    expect(buckets["age:mature"]).toBeCloseTo(12, 8);
-    expect(Object.keys(buckets)).toHaveLength(2);
-  });
-
-  it("maps UK voter groups onto UK buckets when the country is given", () => {
-    // Twice-corrected contract. It first asserted {} (the bug as the contract),
-    // then asserted "projects somewhere" — which passed while projecting onto US
-    // buckets the UK electorate does not have. The country is what makes it land.
-    const buckets = archetypeValuesToBuckets({ urban_progressives: 25 }, "UK");
-    expect(Object.keys(buckets).length).toBeGreaterThan(0);
-    // Weights sum to 1, so the full magnitude survives the projection.
-    expect(Object.values(buckets).reduce((s, v) => s + v, 0)).toBeCloseTo(25, 8);
-    const model = getCountryLayer1Model("UK", eraForPreset("1953-default"))!;
-    const real = new Set(
-      model.dims.flatMap((d) => Object.keys(model.turnoutRates[d] ?? {}).map((k) => `${d}:${k}`))
-    );
-    for (const bucket of Object.keys(buckets)) expect(real.has(bucket), bucket).toBe(true);
-  });
-
-  it("drops a UK group asked for in the US vocabulary", () => {
-    // The US table has no UK-only ids, and must not acquire any.
-    expect(archetypeValuesToBuckets({ urban_progressives: 25 }, "US")).toEqual({});
-  });
-
-  it("still ignores a genuinely unknown id", () => {
-    expect(archetypeValuesToBuckets({ not_a_real_group: 25 })).toEqual({});
-  });
 });
 
 describe("deriveGranularElectorateUnits", () => {
@@ -282,24 +227,6 @@ describe("deriveGranularElectorateUnits", () => {
     const baseSenior = weightedTurnout(base.units, (w) => w > 0.9);
     const boostedSenior = weightedTurnout(boosted.units, (w) => w > 0.9);
     expect(boostedSenior).toBeGreaterThan(baseSenior);
-  });
-
-  it("folds archetype-keyed GOTV modifiers via the bucket map", () => {
-    const doc: StateDemographicTurnout = {
-      _id: "CT",
-      countryId: "US",
-      modifiers: { voterGroups: { retirees: 15 } },
-      lastDecayApplied: new Date(),
-      lastUpdated: new Date(),
-    };
-    const base = deriveGranularElectorateUnits("US", "CT", "2019-default", null)!;
-    const boosted = deriveGranularElectorateUnits("US", "CT", "2019-default", doc)!;
-    const seniorTurnout = (units: typeof base.units) => {
-      const subset = units.filter((u) => (u.bucketWeights["age:senior"] ?? 0) > 0.9);
-      const share = subset.reduce((s, u) => s + u.share, 0);
-      return subset.reduce((s, u) => s + u.share * u.turnout, 0) / share;
-    };
-    expect(seniorTurnout(boosted.units)).toBeGreaterThan(seniorTurnout(base.units));
   });
 });
 
@@ -387,7 +314,7 @@ describe("layer1PositionOverrides — durable era-checkpoint base-value shift", 
     const overlay: Layer1PositionOverlay = {
       age: { senior: { economicLean: 3, socialLean: 0 } },
     };
-    const defaultsWithOverlay: StateDemographics = {
+    const defaultsWithOverlay: CensusGroupView = {
       ...LEGACY_DEMOGRAPHICS,
       layer1PositionOverrides: overlay,
     };
@@ -399,7 +326,6 @@ describe("layer1PositionOverrides — durable era-checkpoint base-value shift", 
       turnoutDoc: null,
       statePopulation: 1_000_000,
       demographics: LEGACY_DEMOGRAPHICS,
-      categories: LEGACY_CATEGORIES,
       enriched: [],
       demographicDefaults: defaultsWithOverlay,
     })!;
@@ -533,7 +459,7 @@ describe("layer1TurnoutOverrides — durable turnout shift (the Voting Rights Ac
 
   it("flows into buildGranularElectorateSubstrate via demographicDefaults.layer1TurnoutOverrides", () => {
     const overlay: Layer1TurnoutOverlay = { race: { black: 25 } };
-    const defaultsWithOverlay: StateDemographics = {
+    const defaultsWithOverlay: CensusGroupView = {
       ...LEGACY_DEMOGRAPHICS,
       _id: "AL",
       layer1TurnoutOverrides: overlay,
@@ -545,7 +471,6 @@ describe("layer1TurnoutOverrides — durable turnout shift (the Voting Rights Ac
       turnoutDoc: null,
       statePopulation: 1_000_000,
       demographics: { ...LEGACY_DEMOGRAPHICS, _id: "AL" },
-      categories: LEGACY_CATEGORIES,
       enriched: [],
     })!;
     const withOverlay = buildGranularElectorateSubstrate({
@@ -555,7 +480,6 @@ describe("layer1TurnoutOverrides — durable turnout shift (the Voting Rights Ac
       turnoutDoc: null,
       statePopulation: 1_000_000,
       demographics: { ...LEGACY_DEMOGRAPHICS, _id: "AL" },
-      categories: LEGACY_CATEGORIES,
       enriched: [],
       demographicDefaults: defaultsWithOverlay,
     })!;
@@ -602,7 +526,6 @@ describe("layer1TurnoutOverrides — durable turnout shift (the Voting Rights Ac
       turnoutDoc: null,
       statePopulation: 1_000_000,
       demographics: LEGACY_DEMOGRAPHICS,
-      categories: LEGACY_CATEGORIES,
       enriched,
     })!;
 
@@ -614,7 +537,6 @@ describe("layer1TurnoutOverrides — durable turnout shift (the Voting Rights Ac
       turnoutDoc: null,
       statePopulation: 1_000_000,
       demographics: LEGACY_DEMOGRAPHICS,
-      categories: LEGACY_CATEGORIES,
       enriched,
       demographicDefaults: { ...LEGACY_DEMOGRAPHICS, layer1TurnoutOverrides: overlay },
     })!;
@@ -627,8 +549,7 @@ describe("layer1TurnoutOverrides — durable turnout shift (the Voting Rights Ac
         s.totalPool,
         s.totalPool,
         1_000_000,
-        s.demographics,
-        s.categories,
+        s.electorate,
         new Map(),
         { isGeneralElection: true, countryId: "US", liveTurnouts: s.liveTurnouts }
       );
@@ -705,9 +626,9 @@ describe("buildGranularElectorateSubstrate", () => {
       lastDecayApplied: new Date("2024-01-01"),
       lastUpdated: new Date("2024-01-01"),
     };
-    const contactByBucket = campaignContactByBucket(turnoutDoc, "US");
+    const contactByBucket = campaignContactByBucket(turnoutDoc);
     expect(contactByBucket["age:young"]).toBe(4);
-    expect(contactByBucket["age:senior"]).toBeCloseTo(2.8);
+    expect(contactByBucket["age:senior"]).toBeUndefined();
 
     const male = Array<number>(101).fill(1);
     const female = Array<number>(101).fill(1);
@@ -727,18 +648,20 @@ describe("buildGranularElectorateSubstrate", () => {
     expect(substrate.participationSummary?.saturation).toBeLessThan(0);
   });
 
-  it("remaps candidate archetypeApprovals onto units", () => {
+  it("remaps candidate bucketApprovals onto units", () => {
     const substrate = buildSubstrate({
-      enriched: [makeCandidate("cand", "democrat", 0, 0, { archetypeApprovals: { retirees: 40 } })],
+      enriched: [
+        makeCandidate("cand", "democrat", 0, 0, { bucketApprovals: { "age:senior": 28 } }),
+      ],
     })!;
-    const approvals = substrate.enriched[0].archetypeApprovals!;
+    const approvals = substrate.enriched[0].bucketApprovals!;
     const values = Object.values(approvals);
     expect(values.length).toBeGreaterThan(0);
     for (const v of values) {
       expect(Number.isFinite(v)).toBe(true);
       expect(Math.abs(v)).toBeLessThanOrEqual(100);
     }
-    // A pure-senior unit picks up the full senior bucket value (0.7 x 40 = 28).
+    // A pure-senior unit picks up the full senior bucket value.
     const pureSenior = substrate.units.find((u) => (u.bucketWeights["age:senior"] ?? 0) > 0.99);
     if (pureSenior) {
       expect(approvals[pureSenior.id]).toBeCloseTo(28, 1);
@@ -755,7 +678,7 @@ describe("buildGranularElectorateSubstrate", () => {
 
   it("remaps partyGroupFavorability keys onto units", () => {
     const substrate = buildSubstrate({
-      partyGroupFavorabilityByKey: new Map([["democrat:retirees", 10]]),
+      partyGroupFavorabilityByKey: new Map([["democrat:age:senior", 10]]),
     })!;
     const remapped = substrate.partyGroupFavorabilityByKey!;
     expect(remapped.size).toBeGreaterThan(0);
@@ -765,77 +688,33 @@ describe("buildGranularElectorateSubstrate", () => {
     }
   });
 
-  it("folds legislation-driven lean drift (live vs seeded defaults) onto unit leans", () => {
-    // Seeded snapshot: retirees at economicLean 1. Live doc: drifted to 3
-    // (+2 economic drift from legislation). Senior-heavy units must shift
-    // right relative to a substrate built without the defaults doc.
-    const defaults: StateDemographics = {
+  it("folds live-doc bucket overlay drift onto unit leans", () => {
+    const live: CensusGroupView = {
       ...LEGACY_DEMOGRAPHICS,
-      groups: {
-        ...LEGACY_DEMOGRAPHICS.groups,
-        retirees: { ...LEGACY_DEMOGRAPHICS.groups.retirees, economicLean: 1 },
-      },
+      layer1PositionOverrides: { age: { senior: { economicLean: 2, socialLean: 0 } } },
     };
-    const live: StateDemographics = {
-      ...LEGACY_DEMOGRAPHICS,
-      groups: {
-        ...LEGACY_DEMOGRAPHICS.groups,
-        retirees: { ...LEGACY_DEMOGRAPHICS.groups.retirees, economicLean: 3 },
-      },
+    const input = {
+      countryId: "US",
+      stateId: "CT",
+      preset: "2019-default",
+      turnoutDoc: null,
+      statePopulation: 1_000_000,
+      enriched: [],
     };
     const base = buildGranularElectorateSubstrate({
-      countryId: "US",
-      stateId: "CT",
-      preset: "2019-default",
-      turnoutDoc: null,
-      statePopulation: 1_000_000,
-      demographics: live,
-      categories: LEGACY_CATEGORIES,
-      enriched: [],
+      ...input,
+      demographics: LEGACY_DEMOGRAPHICS,
     })!;
-    const folded = buildGranularElectorateSubstrate({
-      countryId: "US",
-      stateId: "CT",
-      preset: "2019-default",
-      turnoutDoc: null,
-      statePopulation: 1_000_000,
-      demographics: live,
-      categories: LEGACY_CATEGORIES,
-      enriched: [],
-      demographicDefaults: defaults,
-    })!;
-    // Pure-senior unit: full drift (+2 x 0.7 senior weight = +1.4).
+    const folded = buildGranularElectorateSubstrate({ ...input, demographics: live })!;
     const seniorUnit = folded.units.find((u) => (u.bucketWeights["age:senior"] ?? 0) > 0.99);
     expect(seniorUnit).toBeDefined();
     const baseLean = base.demographics.groups[seniorUnit!.id].economicLean;
     const foldedLean = folded.demographics.groups[seniorUnit!.id].economicLean;
-    expect(foldedLean - baseLean).toBeCloseTo(1.4, 6);
-    // Units with no senior/mature membership are untouched.
-    const unrelated = folded.units.find(
-      (u) =>
-        (u.bucketWeights["age:senior"] ?? 0) === 0 && (u.bucketWeights["age:mature"] ?? 0) === 0
-    );
+    expect(foldedLean - baseLean).toBeCloseTo(2, 6);
+    const unrelated = folded.units.find((u) => (u.bucketWeights["age:senior"] ?? 0) === 0);
     if (unrelated) {
       expect(folded.demographics.groups[unrelated.id].economicLean).toBeCloseTo(
         base.demographics.groups[unrelated.id].economicLean,
-        8
-      );
-    }
-    // No drift when live matches the seeded snapshot.
-    const identical = buildGranularElectorateSubstrate({
-      countryId: "US",
-      stateId: "CT",
-      preset: "2019-default",
-      turnoutDoc: null,
-      statePopulation: 1_000_000,
-      demographics: live,
-      categories: LEGACY_CATEGORIES,
-      enriched: [],
-      demographicDefaults: live,
-    })!;
-    for (const u of identical.units) {
-      expect(identical.demographics.groups[u.id].economicLean).toBeCloseTo(
-        base.demographics.groups[u.id].economicLean,
         8
       );
     }
@@ -843,8 +722,8 @@ describe("buildGranularElectorateSubstrate", () => {
 
   it("remap is linear and exact for coalesced units", () => {
     const { units } = deriveGranularElectorateUnits("US", "CT", "2019-default", null)!;
-    const a = remapArchetypeValuesToUnits({ retirees: 20 }, units);
-    const b = remapArchetypeValuesToUnits({ retirees: 40 }, units);
+    const a = bucketValuesToUnits({ "age:senior": 20 }, units);
+    const b = bucketValuesToUnits({ "age:senior": 40 }, units);
     for (const [unitId, v] of Object.entries(a)) {
       expect(b[unitId]).toBeCloseTo(v * 2, 8);
     }
@@ -861,8 +740,7 @@ describe("granular substrate through the vote engine", () => {
       substrate.totalPool,
       substrate.totalPool,
       1_000_000,
-      substrate.demographics,
-      substrate.categories,
+      substrate.electorate,
       new Map(),
       {
         isGeneralElection: true,
@@ -918,13 +796,13 @@ describe("granular substrate through the vote engine", () => {
     expect(towardShares["mover"]).toBeGreaterThan(awayShares["mover"]);
   });
 
-  it("archetype-keyed approvals shift cell-engine results in the right direction", () => {
+  it("bucket approvals shift cell-engine results in the right direction", () => {
     const neutral = buildSubstrate({
       enriched: [makeCandidate("a", "democrat", 0, 0), makeCandidate("b", "republican", 0, 0)],
     })!;
     const boosted = buildSubstrate({
       enriched: [
-        makeCandidate("a", "democrat", 0, 0, { archetypeApprovals: { retirees: 60 } }),
+        makeCandidate("a", "democrat", 0, 0, { bucketApprovals: { "age:senior": 60 } }),
         makeCandidate("b", "republican", 0, 0),
       ],
     })!;
@@ -958,7 +836,7 @@ describe("granular substrate through the vote engine", () => {
         })),
       },
     ];
-    const twelveDemographics: StateDemographics = {
+    const twelveDemographics: CensusGroupView = {
       _id: "CT",
       countryId: "US",
       categoryWeights: { voterGroups: 100 },
@@ -982,8 +860,7 @@ describe("granular substrate through the vote engine", () => {
         500_000,
         500_000,
         1_000_000,
-        twelveDemographics,
-        twelveGroups,
+        electorateFromFixture(twelveDemographics, twelveGroups),
         new Map(),
         { isGeneralElection: true, countryId: "US" }
       );
@@ -1022,8 +899,7 @@ describe("flag OFF — legacy engine untouched", () => {
       500_000,
       500_000,
       1_000_000,
-      LEGACY_DEMOGRAPHICS,
-      LEGACY_CATEGORIES,
+      electorateFromFixture(LEGACY_DEMOGRAPHICS, LEGACY_CATEGORIES),
       new Map(),
       { isGeneralElection: true, countryId: "US" }
     );

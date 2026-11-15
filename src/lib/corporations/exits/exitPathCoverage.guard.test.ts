@@ -11,7 +11,7 @@ import { join, sep } from "path";
 const NOT_AN_EXIT: Record<string, string> = {
   "src/lib/corporations/subsidiaries/commands/spinOff.ts":
     "Rolls back a spin-off corporation that was created and never went live.",
-  "src/app/api/corporations/route.ts":
+  "src/lib/corporations/commands/founding/foundCorporation.ts":
     "Rolls back a founding that failed part-way; the corporation never existed.",
   "src/lib/world/succession/materializeCustody.ts":
     "Moves a state shell into federation custody archives; the document is restorable.",

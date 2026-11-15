@@ -1,7 +1,6 @@
 import type { Db, ObjectId } from "mongodb";
 import type { CurrencyCode } from "@/lib/constants/currencies";
-
-const PROMO_GRANTS_COLLECTION = "promoGrants";
+import { promoGrantsCollection } from "@/lib/db/repositories/promoGrants";
 
 /** A pending attempt older than this is presumed dead and may be retried. */
 export const PROMO_GRANT_STALE_PENDING_MS = 10 * 60 * 1000;
@@ -37,7 +36,7 @@ export interface PromoGrant {
 }
 
 export function getPromoGrantsCollection(db: Db) {
-  return db.collection<PromoGrant>(PROMO_GRANTS_COLLECTION);
+  return promoGrantsCollection<PromoGrant>(db);
 }
 
 let indexesReady: Promise<void> | null = null;

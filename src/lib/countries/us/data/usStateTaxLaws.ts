@@ -1,12 +1,10 @@
-/**
- * US state-level tax sliders — regional sidecar, not part of the locked
- * 109-law core. The new-generation federal catalog only carries national
- * tax sliders (`allowedScope: "national"`), so governors and state
- * legislatures had a Tax category with nothing to pick (ticket #1106).
+/*
+ * US state-level tax sliders. The federal catalog only carries national tax
+ * sliders (`allowedScope: "national"`), so without these governors and state
+ * legislatures have a Tax category with nothing to pick.
  *
- * Baseline rates match `generateStateBudgets` US defaults so day-one
- * stateBudgets.taxRates stay the source of truth (tax laws seed neither
- * statePolicies nor enactedLaws).
+ * Baseline rates match `generateStateBudgets` US defaults so
+ * stateBudgets.taxRates stay the source of truth.
  */
 
 import type { PoliticalLaw, TaxPolicy } from "@/lib/politicalLegislation/types";

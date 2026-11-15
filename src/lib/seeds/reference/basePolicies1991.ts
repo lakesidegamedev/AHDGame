@@ -169,17 +169,6 @@ export const COUNTRY_POLICY_CONFIGS_1991: Record<string, CountryPolicyConfig> = 
   us: {
     nationalStateId: "federal",
     defaults: {
-      // ── Education ──────────────────────────────────────────────────────────
-      us_federal_education_funding: { economic: 1, social: 0 }, // 1991: "Education President" rhetoric, flat funding, no major increases
-      us_federal_science_funding: { economic: 0, social: 0 }, // 1991: bipartisan NIH/NSF support, steady growth
-      us_school_standards: { economic: 0, social: 1 }, // 1991: America 2000 goals announced — accountability push
-      // ── Healthcare ─────────────────────────────────────────────────────────
-      us_federal_healthcare_funding: { economic: 2, social: 0 }, // 1991: no major federal expansion; pre-HillaryCare debate
-      us_drug_pricing_medicare: { economic: 1, social: 0 }, // 1991: OBRA 1990 Medicaid drug rebates active
-      us_public_health: { economic: 0, social: 0 }, // 1991: CDC neutral baseline; HIV/AIDS funding climbing
-      // ── Environment ────────────────────────────────────────────────────────
-      us_clean_energy: { economic: 0, social: 0 }, // 1991: Clean Air Act 1990 amendments just signed — bipartisan
-      us_conservation: { economic: -1, social: 0 }, // 1991: Bush "no net loss" wetlands policy
       // ── Economy ────────────────────────────────────────────────────────────
       us_federal_income_tax_rate: { economic: 0, social: 0 }, // 1991: OBRA 1990 raised top bracket to 31% — recent change
       us_federal_domestic_corporate_tax_rate: { economic: 0, social: 0 }, // 1991: 34% from 1986 TRA, stable
@@ -187,35 +176,6 @@ export const COUNTRY_POLICY_CONFIGS_1991: Record<string, CountryPolicyConfig> = 
       us_federal_payroll_tax_rate: { economic: 0, social: 0 }, // 1991: 15.3% combined (12.4% SS + 2.9% Medicare) — same as 2020
       us_federal_tariff_rate: { economic: 0, social: 0 }, // Game baseline: tariffs start at 0%
       us_federal_sales_tax_rate: { economic: 0, social: 0 }, // 1991: no federal sales tax (unchanged)
-      us_federal_spending_stimulus: { economic: 1, social: 0 }, // 1991: Gramm-Rudman caps + Desert Storm supplemental constrain stimulus
-      us_transportation: { economic: -1, social: 0 }, // 1991: ISTEA enacted Dec 1991 — major bipartisan infra
-      us_broadband_energy: { economic: 0, social: 0 }, // 1991: no internet / broadband; placeholder neutral
-      us_minimum_wage: { economic: 0, social: 0 }, // 1991: FLSA raised $3.80 → $4.25 in April 1991, recent change
-      us_workforce_development: { economic: 0, social: 0 }, // 1991: JTPA + Carl Perkins active, status quo
-      us_housing: { economic: 1, social: 0 }, // 1991: HUD Kemp + Cranston-Gonzalez Act 1990, modest tilt
-      us_food_nutrition: { economic: 0, social: 0 }, // 1991: WIC + SNAP at established levels
-      // ── Safety Net ─────────────────────────────────────────────────────────
-      us_social_security: { economic: 0, social: 0 }, // 1991: post-1983 amendments, status quo
-      us_medicaid: { economic: 0, social: 0 }, // 1991: OBRA 1990 mandated pregnancy/child expansions
-      us_medicaid_expansion: { economic: -1, social: 0 }, // 1991: OBRA 1990 expansions of mandatory coverage
-      // ── Law & Justice ──────────────────────────────────────────────────────
-      us_law_enforcement_criminal_justice: { economic: 0, social: 1 }, // 1991: Bush 1991 crime bill push (failed), tough-on-crime peak
-      us_prison_rehabilitation: { economic: 1, social: 1 }, // 1991: war-on-drugs peak, mass-incarceration ramp beginning
-      // ── Defense & Foreign ──────────────────────────────────────────────────
-      us_defense_spending: { economic: 1, social: 0 }, // 1991: $300B+ baseline + Desert Storm supplemental, peak Cold War spending
-      us_foreign_policy: { economic: 0, social: 0 }, // 1991: "New World Order" multilateralism, Gulf coalition
-      // ── Immigration ────────────────────────────────────────────────────────
-      us_border_security_enforcement: { economic: 1, social: 1 }, // 1991: IRCA 1986 sanctions in force, NAFTA negotiations underway
-      us_legal_immigration_visas: { economic: 0, social: 0 }, // 1991: Immigration Act 1990 raised legal immigration (700k cap, diversity visa)
-      // ── Social ─────────────────────────────────────────────────────────────
-      us_reproductive_rights: { economic: 0, social: 1 }, // 1991: Mexico City gag in place, Casey decision 1992 pending (Roe still law)
-      us_paid_family_leave: { economic: 1, social: 0 }, // 1991: no paid leave; even unpaid FMLA not passed until 1993 — market-reliant
-      us_gun_control: { economic: 0, social: 0 }, // 1991: Brady Bill debated, not yet passed (1993)
-      // ── Governance ─────────────────────────────────────────────────────────
-      us_government_ethics: { economic: 0, social: 0 }, // 1991: post-Iran-Contra era, Office of Government Ethics established 1989
-      us_civics_voting_rights: { economic: 0, social: 0 }, // 1991: Motor Voter Act being debated (NVRA 1993)
-      us_media_communications: { economic: 0, social: 0 }, // 1991: FCC pre-1996 Telecom Act era, Fairness Doctrine recently repealed (1987)
-      us_emergency_services: { economic: 0, social: 0 }, // 1991: FEMA + Stafford Act, status quo
     },
     optionIndexes: {
       us_federal_income_tax_rate: 4, // 20% — calibration knob, not statutory: revenue = taxableIncome(0.3537·GDP) × rate, so 20% yields ~7.1% of GDP, matching real 1991 individual income tax (~7.4% of GDP). The prior 10% produced only ~3.5% and left an implausible deficit.
@@ -224,7 +184,6 @@ export const COUNTRY_POLICY_CONFIGS_1991: Record<string, CountryPolicyConfig> = 
       us_federal_payroll_tax_rate: 5, // 15% — Social Security + Medicare rate identical to 2020
       us_federal_tariff_rate: 0, // 0% game baseline (all tariffs start at zero on reset)
       us_federal_sales_tax_rate: 0, // 0% — no federal sales tax (unchanged across eras)
-      us_social_security: 5,
     },
     regions: states1991,
   },
@@ -237,54 +196,6 @@ export const COUNTRY_POLICY_CONFIGS_1991: Record<string, CountryPolicyConfig> = 
     defaults: {
       // ── Healthcare ─────────────────────────────────────────────────────────
       uk_nhs_funding: { economic: 0, social: 0 }, // 1991: NHS internal market (Working for Patients) just enacted, contested but not yet defunded
-      uk_social_care: { economic: 1, social: 0 }, // 1991: NHS and Community Care Act 1990 shifting care to local authorities
-      uk_mental_health: { economic: 0, social: 0 }, // 1991: care-in-the-community shift underway
-      uk_public_health: { economic: 0, social: 0 }, // 1991: pre-NICE, pre-PHE
-      // ── Education ──────────────────────────────────────────────────────────
-      uk_tuition_fees: { economic: 0, social: 0 }, // 1991: no tuition fees yet (introduced 1998); university expansion underway
-      uk_education_standards: { economic: 0, social: 1 }, // 1991: National Curriculum + GCSE-era standards push
-      uk_education_funding: { economic: 1, social: 0 }, // 1991: tight Treasury control under Lamont
-      uk_research_science: { economic: 0, social: 0 }, // 1991: Research Council reform underway
-      // ── Economic ───────────────────────────────────────────────────────────
-      uk_fiscal_spending: { economic: 1, social: 0 }, // 1991: ERM membership pins rates high — tight fiscal stance
-      uk_local_government_funding: { economic: 0, social: 0 }, // 1991: Poll Tax → Council Tax transition (announced Mar 1991)
-      // ── Infrastructure ─────────────────────────────────────────────────────
-      uk_transport_rail: { economic: 0, social: 0 }, // 1991: BR pre-privatisation, modest investment
-      uk_energy_grid: { economic: 1, social: 0 }, // 1991: post-1990 electricity privatisation, market-led
-      // ── Environment ────────────────────────────────────────────────────────
-      uk_climate_net_zero: { economic: 1, social: 0 }, // 1991: pre-Kyoto, pre-net-zero — no statutory climate target
-      uk_north_sea_energy: { economic: 1, social: 0 }, // 1991: peak North Sea production, heavy licensing
-      // ── Law & Justice ──────────────────────────────────────────────────────
-      uk_policing_crime: { economic: 0, social: 1 }, // 1991: Criminal Justice Act 1991 — community sentences + tougher mandatory
-      uk_prison_rehabilitation: { economic: 0, social: 0 }, // 1991: Woolf Report 1991 pushed reform, status quo
-      // ── Defence ────────────────────────────────────────────────────────────
-      uk_defence_spending: { economic: 1, social: 0 }, // 1991: Options for Change cuts underway, but Gulf War boosting short-term
-      uk_trident_defence: { economic: 0, social: 0 }, // 1991: Trident programme on schedule, bipartisan
-      // ── Foreign Policy ─────────────────────────────────────────────────────
-      uk_foreign_policy: { economic: 0, social: 0 }, // 1991: Gulf coalition partner, EU integration debates ahead of Maastricht
-      // ── Welfare ────────────────────────────────────────────────────────────
-      uk_universal_credit: { economic: 0, social: 0 }, // 1991: UC didn't exist — predecessor income support / family credit
-      uk_state_pensions: { economic: 0, social: 0 }, // 1991: SERPS reforms continuing; no triple lock
-      uk_childcare: { economic: 1, social: 0 }, // 1991: minimal state childcare provision — market/family reliant
-      // ── Immigration ────────────────────────────────────────────────────────
-      uk_immigration_asylum: { economic: 0, social: 1 }, // 1991: Asylum Bill drafted, tighter controls
-      uk_work_visas: { economic: 0, social: 0 }, // 1991: pre-EU-free-movement-cleanup, points system not yet
-      // ── Labour ─────────────────────────────────────────────────────────────
-      uk_workers_rights: { economic: 1, social: 0 }, // 1991: Thatcher-era trade union laws still active; opt-outs from EU Social Chapter
-      uk_workforce_development: { economic: 0, social: 0 }, // 1991: Training and Enterprise Councils launched 1990
-      // ── Housing ────────────────────────────────────────────────────────────
-      uk_housing_planning: { economic: 1, social: 0 }, // 1991: Right to Buy ongoing, low social housing build
-      uk_leasehold_reform: { economic: 0, social: 0 }, // 1991: Leasehold Reform Act 1993 pending
-      // ── Governance ─────────────────────────────────────────────────────────
-      uk_devolution_local_powers: { economic: 1, social: 0 }, // 1991: pre-devolution (1997-99); rate-capping era
-      uk_government_ethics: { economic: 0, social: 0 }, // 1991: pre-Nolan principles (1995)
-      uk_electoral_reform: { economic: 0, social: 0 }, // 1991: FPTP unchallenged
-      // ── Media ──────────────────────────────────────────────────────────────
-      uk_bbc_public_media: { economic: 0, social: 0 }, // 1991: licence fee stable; Broadcasting Act 1990 just enacted
-      uk_digital_broadband: { economic: 0, social: 0 }, // 1991: no commercial internet yet
-      // ── Civil Liberties ────────────────────────────────────────────────────
-      uk_surveillance_privacy: { economic: 0, social: 1 }, // 1991: Security Service Act 1989 active
-      uk_drug_policy: { economic: 0, social: 1 }, // 1991: Misuse of Drugs Act unchallenged, war-on-drugs aligned with US
     },
     optionIndexes: {
       uk_income_tax_rate: 6, // 25% basic in 1991 (vs 20% in 2020); option array indexed up
@@ -294,9 +205,6 @@ export const COUNTRY_POLICY_CONFIGS_1991: Record<string, CountryPolicyConfig> = 
       uk_domestic_corporation_tax: 8, // 33-35% in 1991 (vs 19% in 2020)
       uk_foreign_corporation_tax: 7, // Day-one parity below domestic 8
       uk_nhs_funding: 3,
-      uk_tuition_fees: 0, // No tuition fees in 1991 (introduced 1998); index 0 = lowest
-      uk_state_pensions: 3,
-      uk_fiscal_spending: 3,
     },
     regions: ukRegions1991,
   },
@@ -395,7 +303,7 @@ export const COUNTRY_POLICY_CONFIGS_1991: Record<string, CountryPolicyConfig> = 
       de_minimum_wage: { economic: 2, social: 0 }, // 1991: no statutory minimum wage (introduced 2015); collective bargaining dominant
       de_renewable_energy_target: { economic: 1, social: 0 }, // 1991: pre-Energiewende, coal + nuclear dominant
       de_immigration_policy: { economic: 0, social: 1 }, // 1991: asylum law amended 1993 (Asylkompromiss) pending
-      // ── PR2 (Healthcare + Education + Social) ───────────────────────────
+      // ── (Healthcare + Education + Social) ───────────────────────────
       de_health_insurance: { economic: 0, social: 0 }, // 1991: GKV stable, GSG 1992 (Seehofer reform) pending
       de_elder_care: { economic: 1, social: 0 }, // 1991: pre-Pflegeversicherung (1995)
       de_mental_health: { economic: 0, social: 0 }, // 1991: status quo
@@ -408,7 +316,7 @@ export const COUNTRY_POLICY_CONFIGS_1991: Record<string, CountryPolicyConfig> = 
       de_family_policy: { economic: -1, social: 1 }, // 1991: Erziehungsgeld 1986 in force, traditional family model
       de_unemployment_welfare: { economic: 0, social: 0 }, // 1991: pre-Hartz (2005); BfA active
       de_gender_equality: { economic: 0, social: 0 }, // 1991: GG Art 3 baseline, FüPoG II is 2021
-      // ── PR3 (Defense + Foreign + Tech + Public Safety) ──────────────────
+      // ── (Defense + Foreign + Tech + Public Safety) ──────────────────
       de_bundeswehr_funding: { economic: 1, social: 1 }, // 1991: post-reunification peace dividend; force reduction to 370k
       de_defense_posture: { economic: 0, social: 1 }, // 1991: post-Gulf-War debate on out-of-area deployments
       de_cybersecurity: { economic: 0, social: 0 }, // 1991: pre-internet, no cyber posture
@@ -420,7 +328,7 @@ export const COUNTRY_POLICY_CONFIGS_1991: Record<string, CountryPolicyConfig> = 
       de_policing_public_safety: { economic: 0, social: 0 }, // 1991: Länder police, status quo
       de_criminal_justice: { economic: 0, social: 0 }, // 1991: status quo
       de_constitutional_protection: { economic: 0, social: 1 }, // 1991: post-reunification BfV expansion to former GDR
-      // ── PR4 (Economic + Infra + Env + Imm + Agri + Gov + Media) ─────────
+      // ── (Economic + Infra + Env + Imm + Agri + Gov + Media) ─────────
       de_fiscal_stimulus_act: { economic: -1, social: 0 }, // 1991: heavy Aufbau-Ost deficit spending, pre-Schuldenbremse
       de_labor_reform: { economic: 0, social: 0 }, // 1991: status quo, pre-Hartz
       de_sme_mittelstand: { economic: -1, social: 0 }, // 1991: Treuhand restructuring of East-German SOEs
@@ -440,7 +348,7 @@ export const COUNTRY_POLICY_CONFIGS_1991: Record<string, CountryPolicyConfig> = 
       de_government_ethics: { economic: 0, social: 0 }, // 1991: pre-Parteispendenaffäre fallout
       de_public_broadcasting: { economic: 0, social: 0 }, // 1991: ARD + ZDF + new private channels (RTL 1984)
       de_press_freedom: { economic: 0, social: 0 }, // 1991: GG Art 5 baseline
-      // ── PR5 (Land-level) ────────────────────────────────────────────────
+      // ── (Land-level) ────────────────────────────────────────────────
       de_land_education: { economic: -1, social: 0 }, // 1991: largest Land budget line, East-rebuilding investment
       de_land_police: { economic: 0, social: 0 }, // 1991: status quo
       de_land_culture: { economic: 0, social: 0 }, // 1991: status quo

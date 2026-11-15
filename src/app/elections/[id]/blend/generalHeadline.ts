@@ -1,17 +1,12 @@
 /**
- * The general-election screen's newsroom headline.
+ * The general-election screen's newsroom headline, generated from the standing.
  *
- * Proposal D sets a headline over the live tally ("Vance clears 270 as the
- * belt turns"). That is editorial prose, so it is generated here from the
- * standing rather than invented per render: a fixed phrase set, every number
- * taken from the tally, and no claim the figures do not support.
+ * This screen renders only while a race is RUNNING; every figure it reports is
+ * a projection from votes banked so far, and none of it is won. Phrases must
+ * avoid the vocabulary of a finished count ("clears", "banked"), which on a
+ * race with turns left reads as a called result.
  *
- * Pure and display-only. Nothing here feeds resolution — and that is exactly
- * why the wording matters. This screen renders only while a race is RUNNING;
- * a concluded one gets the results screen instead. So every figure it reports
- * is a projection from the votes banked so far, and none of it is won. The
- * phrases below used the vocabulary of a finished count ("clears", "banked"),
- * which on a race with half its turns left reads as a called result.
+ * Pure and display-only. Nothing here feeds resolution.
  */
 
 export interface GeneralHeadlineInput {

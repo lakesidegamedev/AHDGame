@@ -17,8 +17,6 @@ export const executiveNationalizeSchema = z
     message: "Provide exactly one of corporationId or sectorId",
   });
 
-export type ExecutiveNationalizeBody = z.infer<typeof executiveNationalizeSchema>;
-
 /**
  * Executive privatization request (spec §13): carve one or more sectors out of a
  * National Corporation into a new private corp, distributed by IPO float or auction.
@@ -46,19 +44,13 @@ export const executivePrivatizeSchema = z.object({
   headquartersState: z.string().min(1).optional(),
 });
 
-export type ExecutivePrivatizeBody = z.infer<typeof executivePrivatizeSchema>;
-
 /** Place/raise a bid on an open privatization auction (escrow at bid time). */
 export const auctionBidSchema = z.object({
   amount: z.number().positive(),
   asCorporationId: z.string().length(24).optional(),
 });
 
-export type AuctionBidBody = z.infer<typeof auctionBidSchema>;
-
 /** Designate / remove a strategic sector type (spec §6.3/§8). */
 export const designateStrategicSectorSchema = z.object({
   sectorType: z.enum(OPERATING_SECTOR_TYPES),
 });
-
-export type DesignateStrategicSectorBody = z.infer<typeof designateStrategicSectorSchema>;

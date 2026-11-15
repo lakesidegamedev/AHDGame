@@ -4,6 +4,7 @@ import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import type { RetiredCharacter } from "@/lib/db/types/retiredCharacter";
 import { getSiteUrl } from "@/lib/siteMetadata";
+import { retiredCharactersCollection } from "@/lib/db/repositories/retiredCharacters";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -22,9 +23,10 @@ export async function generateMetadata({
   if (!ObjectId.isValid(id)) return {};
 
   const db = await getDb();
-  const retired = await db
-    .collection<RetiredCharacter>("retiredCharacters")
-    .findOne({ _id: new ObjectId(id) }, { projection: { snapshot: 1 } });
+  const retired = await retiredCharactersCollection(db).findOne(
+    { _id: new ObjectId(id) },
+    { projection: { snapshot: 1 } }
+  );
   if (!retired?.snapshot) return {};
 
   const s = retired.snapshot;

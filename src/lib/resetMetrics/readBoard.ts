@@ -7,11 +7,15 @@ import {
   normalizeNationalMetricBoard,
   type ResetMetricSnapshot,
 } from "./rules/snapshot";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { resetMetricSnapshotsCollection } from "@/lib/db/repositories/resetMetricSnapshots";
+import { getStartingYearForPreset } from "@/lib/constants/turnTime";
+import { yearOfTurn } from "@/lib/utils/gameDate";
 
 export type ResetMetricBoardRead =
   | { status: "not_enabled" }
   | { status: "missing" | "invalid" | "stale" }
-  | { status: "ready"; board: ResetMetricSnapshot };
+  | { status: "ready"; board: ResetMetricSnapshot; year: number };
 
 /** Fail closed on a missing or outdated v2 board; never substitute a v1 board. */
 export async function readResetMetricBoard(
@@ -20,7 +24,7 @@ export async function readResetMetricBoard(
   regionId?: string,
   ready: ResetV2Readiness = RESET_V2_READY
 ): Promise<ResetMetricBoardRead> {
-  const gameState = await db.collection<GameState>("gameState").findOne(
+  const gameState = await gameStateCollection(db).findOne(
     { _id: "current" },
     {
       projection: {
@@ -28,6 +32,11 @@ export async function readResetMetricBoard(
         resetVersionSeeds: 1,
         metricsSystemVersion: 1,
         currentTurn: 1,
+        currentYear: 1,
+        startingYear: 1,
+        preset: 1,
+        "preIteration.active": 1,
+        preIterationTurns: 1,
       },
     }
   );
@@ -37,7 +46,7 @@ export async function readResetMetricBoard(
   const worldId = gameState?.resetWorldId;
   if (typeof worldId !== "string") return { status: "missing" };
   const id = `${countryId}:${regionId ?? "national"}`;
-  const stored = await db.collection<ResetMetricSnapshot>("resetMetricSnapshots").findOne(
+  const stored = await resetMetricSnapshotsCollection<ResetMetricSnapshot>(db).findOne(
     { _id: id, worldId },
     {
       projection: {
@@ -75,5 +84,17 @@ export async function readResetMetricBoard(
     return { status: "invalid" };
   }
   if (board.asOfTurn !== gameState?.currentTurn) return { status: "stale" };
-  return { status: "ready", board };
+  // Ready boards belong to the current turn, so use the same calendar year as
+  // gameplay, including custom reset dates and the founding-phase clock.
+  const year =
+    gameState?.currentYear ??
+    yearOfTurn(
+      board.asOfTurn,
+      gameState?.startingYear ?? getStartingYearForPreset(gameState?.preset ?? ""),
+      {
+        preIterationActive: gameState?.preIteration?.active,
+        preIterationTurns: gameState?.preIterationTurns,
+      }
+    );
+  return { status: "ready", board, year };
 }

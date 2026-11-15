@@ -20,10 +20,9 @@ export function MilitaryBudgetTab({
   /** Live in-game year for era-gated branches (null = modern catalog). */
   liveYear?: number | null;
 }) {
-  // Real money on both sides: what the line brings in each turn against what the standing
-  // force costs to sustain. This card used to compare the abstract upkeep aggregate to a
-  // synthetic envelope floored at a country-independent constant, so it showed the same
-  // allowance to every nation and told a minister nothing about their own budget.
+  // Real money on both sides: what the line brings in each turn against what the
+  // standing force costs to sustain.
+
   const income = forceSummary.appropriationAccrual;
   const upkeep = forceSummary.appropriationUpkeep;
   const use = income > 0 ? upkeep / income : upkeep > 0 ? 1 : 0;

@@ -20,6 +20,7 @@ import {
   DEFAULT_KEEP_EVERY_K,
   type RetentionPolicy,
 } from "./policy";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export interface CollectionResult {
   collection: string;
@@ -118,7 +119,7 @@ export async function runRetention(
   const db = await getDb();
   const now = Date.now();
 
-  const gs = (await db.collection("gameState").findOne({ _id: "current" as never })) as {
+  const gs = (await gameStateCollection<Document>(db).findOne({ _id: "current" as never })) as {
     currentTurn?: number;
     turn?: number;
   } | null;

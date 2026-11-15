@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import type { Db } from "mongodb";
 import { createMockDb } from "@/lib/test-utils/mockDb";
-import { ngElectionsLive } from "./perpetualElections";
+import { ngElectionsLive } from "@/lib/elections/scheduling";
 
 /**
  * NG election spawning is gated on the RUNTIME status (countryGameStates.status),

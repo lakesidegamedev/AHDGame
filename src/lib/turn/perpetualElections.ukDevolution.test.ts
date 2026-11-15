@@ -46,7 +46,7 @@ async function run(
   };
   const { getDb } = await import("@/lib/mongodb");
   vi.mocked(getDb).mockResolvedValue(db as never);
-  const { ensureRegionalGovernorElections } = await import("./perpetualElections/shared");
+  const { ensureRegionalGovernorElections } = await import("@/lib/elections/scheduling/shared");
   await ensureRegionalGovernorElections("UK", new Date("2026-01-01T00:00:00Z"));
   return inserted;
 }

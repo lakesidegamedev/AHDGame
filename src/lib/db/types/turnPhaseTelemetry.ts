@@ -6,7 +6,11 @@ export type TurnPhaseExecutionStatus =
  * at least one phase failed, or was skipped because an upstream phase failed,
  * so its work for this turn did not happen.
  */
-export type TurnOutcome = "clean" | "degraded";
+/**
+ * `incomplete`: the turn committed, but a money-moving step was interrupted by
+ * a process death and not rerun, or a step never ran. Never a success.
+ */
+export type TurnOutcome = "clean" | "degraded" | "incomplete";
 
 export type TurnPhaseSkipReason =
   | "conditional"
@@ -54,15 +58,15 @@ export interface TurnPhaseTelemetry {
   /**
    * Largest command sources, recorded for phases with at least
    * TOP_COLLECTIONS_MIN_ROUND_TRIPS round trips so N+1s are visible without a
-   * profiled replay (#2689).
+   * profiled replay.
    */
   topCollections?: Array<{ collection: string; roundTrips: number }>;
-  /** Wall time and round trips per named sequential segment of the phase (#2689). */
+  /** Wall time and round trips per named sequential segment of the phase. */
   substeps?: Record<string, { ms: number; roundTrips?: number; calls: number }>;
   /**
    * Set on a phase a crash-resumed turn skipped because the dead holder already
    * applied it: how that holder left it. A second crash reads this so the phase
-   * still never runs again (#3429).
+   * still never runs again.
    */
   resumeCarried?: "completed" | "interrupted";
 }

@@ -19,15 +19,13 @@ export interface DerivedFiscalState {
 }
 
 /**
- * Resync the derived fiscal fields from the signed treasury balance. Mirrors the
- * math `processAnnualDebt` used, but driven off the balance rather than an annual
- * deficit jump. `gdp` of 0 yields a 0 ratio (avoids divide-by-zero).
+ * Resync the derived fiscal fields from the signed treasury balance. `gdp` of
+ * 0 yields a 0 ratio (avoids divide-by-zero).
  *
- * Legacy helper (refs #1975): federal `debt.principal` and `debtToGdpRatio`
- * now come from the sovereign bond ledger (see bonds/sovereignPrincipal.ts),
- * never from this balance math. Production budget code must not call this to
- * derive stored principal or ratios; it remains for the frozen migration that
- * already ran and for unit coverage of the helper itself.
+ * Legacy helper: federal `debt.principal` and `debtToGdpRatio` now come from
+ * the sovereign bond ledger (see bonds/sovereignPrincipal.ts). Production
+ * budget code must not call this to derive stored principal or ratios; it
+ * remains only for the frozen migration and unit coverage of the helper.
  */
 export function deriveFiscalState(input: {
   treasuryBalance: number;
@@ -36,7 +34,7 @@ export function deriveFiscalState(input: {
   gdpSmoothed?: number;
   ceiling: number;
   investorConfidence?: number;
-  /** Caps the tier-derived rate at the concessional IMF rate (refs #3813). */
+  /** Caps the tier-derived rate at the concessional IMF rate. */
   imfBailoutActive?: boolean;
   sovereignRiskAnchor?: SovereignRiskAnchor;
 }): DerivedFiscalState {

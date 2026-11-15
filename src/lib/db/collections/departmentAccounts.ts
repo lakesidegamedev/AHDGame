@@ -7,14 +7,12 @@ import type {
 import type {
   DepartmentAccountSettlement,
   DepartmentProgramClaimSettlement,
-  ProgramAccountSettlement,
 } from "@/lib/governmentFinance/rules/types";
 import {
   createEmptyDepartmentAccount,
   createEmptyUsHealthDepartmentAccount,
 } from "@/lib/governmentFinance/departments";
 import { DEPARTMENT_DEFINITIONS } from "@/lib/governmentFinance/departmentCatalog";
-import { TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
 
 function budgets(db: Db) {
@@ -51,57 +49,6 @@ export async function ensureDepartmentAccount(
     { $set: { [`departmentAccounts.${departmentId}`]: initial } }
   );
   return initial;
-}
-
-function programStateFrom(settlement: ProgramAccountSettlement): DepartmentProgramState {
-  return {
-    programId: settlement.programId,
-    legislationTypeId: settlement.legislationTypeId,
-    policyOptionId: settlement.policyOptionId,
-    status: settlement.status,
-    annualDemand: settlement.programDemand * TURNS_PER_YEAR,
-    periodDemand: settlement.programDemand,
-    authorityThisTurn: settlement.authorityAccrued,
-    obligated: settlement.obligated,
-    outlaid: settlement.outlaid,
-    arrears: settlement.arrears,
-    fundingRatio: settlement.implementation.fundingRatio,
-    capacityRatio: settlement.implementation.capacityRatio,
-    coverageRatio: settlement.implementation.coverageRatio,
-    rampFactor: settlement.implementation.rampFactor,
-    implementationFactor: settlement.implementation.implementationFactor,
-    bindingConstraint: settlement.implementation.bindingConstraint,
-    lastSettledTurn: settlement.turn,
-    ...(settlement.repealTurn !== undefined ? { repealTurn: settlement.repealTurn } : {}),
-  };
-}
-
-export async function applyDepartmentProgramSettlement(
-  db: Db,
-  countryId: string,
-  departmentId: string,
-  opening: DepartmentAccount,
-  settlement: ProgramAccountSettlement
-): Promise<boolean> {
-  if (settlement.replayed) return false;
-  const base = `departmentAccounts.${departmentId}`;
-  const result = await budgets(db).updateOne(
-    {
-      countryId,
-      [`${base}.accruedThroughTurn`]: { $lt: settlement.turn },
-      [`${base}.balance`]: opening.balance,
-      [`${base}.encumbered`]: opening.encumbered,
-    },
-    {
-      $set: {
-        [`${base}.balance`]: settlement.closingBalance,
-        [`${base}.encumbered`]: settlement.closingEncumbered,
-        [`${base}.accruedThroughTurn`]: settlement.turn,
-        [`${base}.programs.${settlement.programId}`]: programStateFrom(settlement),
-      },
-    }
-  );
-  return result.modifiedCount > 0;
 }
 
 function generalizedProgramStateFrom(

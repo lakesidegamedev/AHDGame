@@ -28,7 +28,7 @@ import {
 } from "@/lib/legislature/dto/stateLegislature";
 import { SubsidySectorSelect } from "@/components/bills/SubsidySectorSelect";
 import { TaxRateSliderControl } from "@/components/legislation/TaxRateSliderControl";
-import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
+import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencyCodes";
 import { GuidedLegislationModal } from "@/components/legislation/GuidedLegislationModal";
 
 function LegacyProposeStateBillModal({
@@ -651,11 +651,8 @@ function LegacyProposeStateBillModal({
                         <PolicyEffectIndicators
                           effectTargetsWeighted={type?.effectTargetsWeighted}
                           effectDirection={p.effectDirection}
-                          archetypeApprovals={
-                            options.find((o) => o.id === p.policyOptionId)?.archetypeApprovals
-                          }
-                          groupApprovals={
-                            options.find((o) => o.id === p.policyOptionId)?.groupApprovals
+                          bucketApprovals={
+                            options.find((o) => o.id === p.policyOptionId)?.bucketApprovals
                           }
                           policyDomain={type?.policyDomain}
                           currentPolicyIndex={

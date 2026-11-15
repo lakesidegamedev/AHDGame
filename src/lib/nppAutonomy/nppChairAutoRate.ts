@@ -3,7 +3,6 @@ import type { Db, ObjectId } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import type { CentralBank, RateChangeRecord } from "@/lib/db/types/centralBank";
 import { SYSTEM_RATE_ACTOR } from "@/lib/centralBank/rateHistory";
-import type { FederalBudget } from "@/lib/db/types/budget";
 import type { StateMetrics } from "@/lib/db/types/stateMetrics";
 import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
 import { isCommandEconomy } from "@/lib/constants/commandEconomy";
@@ -50,6 +49,12 @@ import {
   fxDepreciation,
   fxRateAdjustment,
 } from "@/lib/nppAutonomy/v6/rules/fxRateResponse";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 
 /**
  * Bounded step toward the target: 0.5x the gap, clamped to [-1.75, +0.75].
@@ -133,22 +138,17 @@ export async function processNppChairAutoRate(
   commonIndicators?: EuroPolicyIndicators
 ): Promise<void> {
   if (bank.chairMode !== "npp") return;
-  // A government-controlled bank (the pre-1997 Bank of England) has no rate of
-  // its own to set: the head of government or the finance minister sets it, and
-  // the technocrat chair is a forecaster, not an authority. Without this the
-  // autonomous chair moved the rate anyway and stamped `lastRateChangeTurn`,
-  // and because the government shares that one cooldown field the Treasury's
-  // window slammed shut every time it opened — the rate card sat permanently on
-  // "on cooldown" and the government could never actually set the rate (#1250).
-  // `fomcMeetingTurn` and `seedFomcBoards` already make the same check.
-  //
-  // A government that never uses the lever would otherwise freeze the rate for
-  // the whole world: the 1991 UK sat at 4.5% for its first 28 turns through 15%
-  // inflation. So once the government has left the rate alone for a quarter,
-  // the Treasury acts on the bank's standing advice: the same bounded Taylor
-  // step, recorded in the published history. It is paced by its own field and
-  // never touches `lastRateChangeTurn`, so the government's window stays open
-  // and any rate it sets wins.
+  // A government-controlled bank (e.g. the pre-1997 Bank of England) has no
+  // independent rate authority: the head of government or finance minister sets
+  // it, and the technocrat chair only forecasts. Without this special case the
+  // autonomous chair moved the rate and stamped `lastRateChangeTurn`, sharing
+  // the government's cooldown field and permanently locking the rate card to
+  // "on cooldown". A government that never uses the lever would otherwise
+  // freeze the rate indefinitely, so once it has been idle for a quarter the
+  // Treasury applies the bank's standing advice as a bounded Taylor step,
+  // recorded in published history. It never touches `lastRateChangeTurn`, so
+  // the government's window stays open and any rate it sets wins.
+  // `fomcMeetingTurn` and `seedFomcBoards` make the same check.
   const governmentControlled = isBankGovernmentControlled(bank, countryId, startingYear);
   if (isCommandEconomy(countryId, currentYear, commandEconomyEnabled)) return;
 
@@ -168,7 +168,7 @@ export async function processNppChairAutoRate(
   const budgetId = getNationalBudgetId(countryId);
   const budget = commonIndicators
     ? null
-    : await db.collection<FederalBudget>("federalBudget").findOne({ _id: budgetId });
+    : await federalBudgetCollection(db).findOne({ _id: budgetId });
   const inflationRate =
     commonIndicators?.inflationRate ??
     finiteOr(budget?.economicFactors?.inflationRate, targetInflation);
@@ -177,7 +177,7 @@ export async function processNppChairAutoRate(
   const nationalMetrics =
     !commonIndicators && nationalDocId
       ? // SP5: national economic rollup lives on macroMetrics.
-        await db.collection<StateMetrics>("macroMetrics").findOne({ _id: nationalDocId })
+        await macroMetricsCollection(db).findOne({ _id: nationalDocId })
       : null;
   const gdpGrowth =
     commonIndicators?.gdpGrowth ??
@@ -204,8 +204,7 @@ export async function processNppChairAutoRate(
       alignment: bank.chairAlignment,
     });
   } else {
-    const regions = await db
-      .collection<State>("states")
+    const regions = await statesCollection(db)
       .find(
         { countryId },
         { projection: { gdp: 1, outputGap: 1, outputTrendGrowth: 1, realOutputStartTurn: 1 } }
@@ -237,7 +236,7 @@ export async function processNppChairAutoRate(
   let fxShift = 0;
   let fxMove: number | null = null;
   if (!commonIndicators && (await nppAutonomyAtLeast(db, countryId, NPP_ENGINE_LEVEL))) {
-    const fx = await db.collection<ExchangeRate>("exchangeRates").findOne(
+    const fx = await exchangeRatesCollection(db).findOne(
       { _id: countryId },
       {
         projection: {
@@ -267,7 +266,7 @@ export async function processNppChairAutoRate(
   // produces a continuous value, and storing it raw left the bank on a rate no
   // human chair could ever step away from: the card offers base +/-0.25, which
   // from an off-grid base is still off-grid, so every submission was refused
-  // with "Rate must be in 0.25% increments" (ticket #1238).
+  // with "Rate must be in 0.25% increments".
   const newRate = snapToPrimeRateGrid(bank.primeRate + step);
   // Snapping can land back on the current rate for a sub-quarter-point step;
   // writing that would burn the cooldown on a no-op move.
@@ -283,9 +282,10 @@ export async function processNppChairAutoRate(
   const now = new Date();
   const chairName = bank.chairNppId
     ? ((
-        await db
-          .collection<{ _id: ObjectId; name?: string }>("npps")
-          .findOne({ _id: bank.chairNppId }, { projection: { name: 1 } })
+        await nppsCollection<{ _id: ObjectId; name?: string }>(db).findOne(
+          { _id: bank.chairNppId },
+          { projection: { name: 1 } }
+        )
       )?.name ?? null)
     : null;
   const fxNote =
@@ -311,7 +311,7 @@ export async function processNppChairAutoRate(
         reason: taylor,
       };
 
-  await db.collection<CentralBank>("centralBanks").updateOne(
+  await centralBanksCollection(db).updateOne(
     { _id: bank._id },
     {
       $set: governmentControlled
@@ -361,7 +361,7 @@ export async function processNppCurrencyDefence(
   if (isBankGovernmentControlled(bank, countryId, startingYear)) return "none";
   if (!(await nppAutonomyAtLeast(db, countryId, NPP_ENGINE_LEVEL))) return "none";
 
-  const fx = await db.collection<ExchangeRate>("exchangeRates").findOne(
+  const fx = await exchangeRatesCollection(db).findOne(
     { _id: countryId },
     {
       projection: {
@@ -387,12 +387,10 @@ export async function processNppCurrencyDefence(
   const now = new Date();
 
   if (action === "release" && band) {
-    await db
-      .collection<ExchangeRate>("exchangeRates")
-      .updateOne(
-        { _id: countryId, "interventionPolicy.setAtTurn": band.setAtTurn },
-        { $set: { interventionPolicy: null, updatedAt: now } }
-      );
+    await exchangeRatesCollection(db).updateOne(
+      { _id: countryId, "interventionPolicy.setAtTurn": band.setAtTurn },
+      { $set: { interventionPolicy: null, updatedAt: now } }
+    );
     return action;
   }
   if (action !== "set") return "none";
@@ -404,9 +402,10 @@ export async function processNppCurrencyDefence(
     ceiling: baseRate * RATE_CEILING_MULTIPLIER,
   });
   if (!target) return "none";
-  const chair = await db
-    .collection<{ _id: ObjectId; name?: string }>("npps")
-    .findOne({ _id: bank.chairNppId }, { projection: { name: 1 } });
+  const chair = await nppsCollection<{ _id: ObjectId; name?: string }>(db).findOne(
+    { _id: bank.chairNppId },
+    { projection: { name: 1 } }
+  );
   const policy: InterventionPolicy = {
     floor: target.floor,
     ceiling: target.ceiling,
@@ -417,11 +416,9 @@ export async function processNppCurrencyDefence(
     recentInterventions: [],
   };
   // Only into an empty slot: a band a person set between the read and now wins.
-  await db
-    .collection<ExchangeRate>("exchangeRates")
-    .updateOne(
-      { _id: countryId, interventionPolicy: null },
-      { $set: { interventionPolicy: policy, updatedAt: now } }
-    );
+  await exchangeRatesCollection(db).updateOne(
+    { _id: countryId, interventionPolicy: null },
+    { $set: { interventionPolicy: policy, updatedAt: now } }
+  );
   return action;
 }

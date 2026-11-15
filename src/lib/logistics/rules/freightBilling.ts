@@ -1,27 +1,15 @@
 /**
- * Canonical freight billing v1 (issue #897, markets plan Phase 4): apportion
- * the sourcing pass's per-state shipping money onto the corps that owe and
- * earn it.
+ * Freight billing: apportions the sourcing pass's per-state shipping money onto the
+ * sectors that owe and earn it.
  *
- * The sourcing pass settles freight state by state, so its money aggregates
- * are state-scoped: `freightChargesByDestState` is what buyers in a state
- * collectively owe for inbound hauls, `haulRevenueByOriginState` is what that
- * state's freight network earned. This module splits both across sectors:
+ * Charges are split proportional to each sector's demand for the charged commodity
+ * over ALL buyer demand in the destination state (households and unowned production
+ * included). Haul revenue is split proportional to each sector's `freight` supply
+ * share in ALL origin-state supply (unowned hauliers included).
  *
- *  - CHARGES: proportional to each sector's input demand units of the charged
- *    commodity divided by ALL buyer demand in the destination state, including
- *    households and unowned production. Sourcing does not identify individual
- *    buyers, so this is a proportional model allocation.
- *  - HAUL REVENUE: proportional to each sector's `freight` commodity supply
- *    share in ALL origin-state supply, including unowned hauliers.
- *
- * Pure by design, like the sourcing pass itself: the corporation turn owns
- * persistence. Apportionment is conserving; whatever cannot be attributed (a
- * charged state where no sector demands the commodity, an earning state with
- * no freight-supplying sector) is returned as an unapportioned remainder
- * rather than silently smeared or dropped, so
- *   sum(sector shares) + unapportioned == state aggregate
- * holds exactly on both sides.
+ * Pure: the corporation turn owns persistence. Apportionment is conserving; anything
+ * unattributable is returned as an unapportioned remainder, so
+ * sum(sector shares) + unapportioned == state aggregate holds exactly on both sides.
  */
 
 import type { CommodityType } from "@/lib/constants/commodities";

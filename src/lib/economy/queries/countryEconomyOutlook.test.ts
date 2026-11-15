@@ -220,6 +220,7 @@ it.each(["US", "UK", "JP"] as const)(
   async (countryId) => {
     vi.mocked(readResetMetricBoard).mockResolvedValue({
       status: "ready",
+      year: 1991,
       board: { countryId, asOfTurn: 412 },
     } as never);
     vi.mocked(readNationalMetricRollup).mockResolvedValue({ "01": { value: 9.2 } } as never);

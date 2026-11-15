@@ -31,12 +31,19 @@ import type { CurrencyCode } from "@/lib/constants/currencies";
 import type { BankingTransition, TransitionLeg } from "@/lib/banking/rules/boundary";
 import { oid } from "@/lib/banking/rules/boundary";
 import { netTolerance } from "@/lib/banking/rules/invariants";
-import { MONEY_MOVE_COLLECTION } from "@/lib/banking/moneyMove";
 import { resumeSettlement, settleTransition } from "@/lib/banking/settlementJournal";
+import { productAdvertisingCashWitness } from "./productAdvertisingLedger";
+import { loadExchangeRatesMap } from "@/lib/lineOfCredit/netWorth";
 import {
   productAdvertisingDenominationWitness,
   type ProductAdvertisingDenominationWitness,
 } from "@/lib/products/rules/productAdvertising";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { productAdvertisingPayablesCollection } from "@/lib/db/repositories/productAdvertisingPayables";
+import { productAdvertisingClearingCollection } from "@/lib/db/repositories/productAdvertisingClearing";
+import { productAdvertisingClearancesCollection } from "@/lib/db/repositories/productAdvertisingClearances";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
+import { productAdvertisingAllocationsCollection } from "@/lib/db/repositories/productAdvertisingAllocations";
 
 export type ProductAdvertisingFamily = "media" | "manufacturing";
 
@@ -150,24 +157,22 @@ export async function recordProductAdvertisingAllocations(
   }[]
 ): Promise<void> {
   if (entries.length === 0) return;
-  await db
-    .collection<ProductAdvertisingAllocationTable>(PRODUCT_ADVERTISING_ALLOCATIONS_COLLECTION)
-    .bulkWrite(
-      entries.map((entry) => ({
-        updateOne: {
-          filter: { _id: entry.payableId },
-          update: {
-            $set: {
-              family,
-              turn,
-              sellerAllocations: entry.sellerAllocations,
-            },
+  await productAdvertisingAllocationsCollection<ProductAdvertisingAllocationTable>(db).bulkWrite(
+    entries.map((entry) => ({
+      updateOne: {
+        filter: { _id: entry.payableId },
+        update: {
+          $set: {
+            family,
+            turn,
+            sellerAllocations: entry.sellerAllocations,
           },
-          upsert: true,
         },
-      })),
-      { ordered: false }
-    );
+        upsert: true,
+      },
+    })),
+    { ordered: false }
+  );
 }
 
 /** Drop tables of orders whose payable will never exist. */
@@ -176,9 +181,9 @@ export async function dropProductAdvertisingAllocations(
   payableIds: readonly string[]
 ): Promise<void> {
   if (payableIds.length === 0) return;
-  await db
-    .collection<ProductAdvertisingAllocationTable>(PRODUCT_ADVERTISING_ALLOCATIONS_COLLECTION)
-    .deleteMany({ _id: { $in: [...payableIds] } });
+  await productAdvertisingAllocationsCollection<ProductAdvertisingAllocationTable>(db).deleteMany({
+    _id: { $in: [...payableIds] },
+  });
 }
 
 /** Load the tables of payables that do not carry their own, in one read. */
@@ -190,8 +195,7 @@ export async function resolveProductAdvertisingPayables(
   const tables =
     unresolved.length === 0
       ? []
-      : ((await db
-          .collection<ProductAdvertisingAllocationTable>(PRODUCT_ADVERTISING_ALLOCATIONS_COLLECTION)
+      : ((await productAdvertisingAllocationsCollection<ProductAdvertisingAllocationTable>(db)
           .find(
             { _id: { $in: unresolved.map((payable) => payable._id) } },
             { projection: { _id: 1, sellerAllocations: 1 } }
@@ -244,19 +248,17 @@ export async function ensureClearingPool(
   currencyCode: string
 ): Promise<string> {
   const _id = clearingPoolId(family, currencyCode);
-  await db
-    .collection<ProductAdvertisingClearingPool>(PRODUCT_ADVERTISING_CLEARING_COLLECTION)
-    .updateOne(
-      { _id },
-      {
-        $setOnInsert: {
-          family,
-          currencyCode: currencyCode as CurrencyCode,
-          [CLEARING_POOL_BALANCE_PATH]: 0,
-        },
+  await productAdvertisingClearingCollection<ProductAdvertisingClearingPool>(db).updateOne(
+    { _id },
+    {
+      $setOnInsert: {
+        family,
+        currencyCode: currencyCode as CurrencyCode,
+        [CLEARING_POOL_BALANCE_PATH]: 0,
       },
-      { upsert: true }
-    );
+    },
+    { upsert: true }
+  );
   return _id;
 }
 
@@ -296,7 +298,8 @@ export function productAdvertisingClearingTransition(
   turn: number,
   payables: readonly ProductAdvertisingOwedPayable[],
   poolBalances: ReadonlyMap<string, number> = new Map(),
-  canPay: (allocation: ProductAdvertisingPayableAllocation) => boolean = () => true
+  canPay: (allocation: ProductAdvertisingPayableAllocation) => boolean = () => true,
+  witnessRates: Readonly<Partial<Record<CurrencyCode, number>>> = {}
 ): BankingTransition | null {
   const definition = ADVERTISING_FAMILY[family];
   // A seller that cannot receive cash right now (its denomination moved since
@@ -437,6 +440,7 @@ export function productAdvertisingClearingTransition(
     retryCreditLegOnGuardFailure: true,
     legs: [...debitGroups.map(debitLeg), ...creditLegs],
     projections: [
+      productAdvertisingCashWitness(key, turn, creditLegs, witnessRates),
       ...(residuals.length > 0
         ? [
             {
@@ -529,10 +533,11 @@ async function sellerEligibility(
       )
     ),
   ].filter((id) => ObjectId.isValid(id));
-  const rows = await db
-    .collection<{ _id: ObjectId; liquidCurrencyCode?: unknown; countryId?: unknown }>(
-      "corporations"
-    )
+  const rows = await corporationsCollection<{
+    _id: ObjectId;
+    liquidCurrencyCode?: unknown;
+    countryId?: unknown;
+  }>(db)
     .find(
       { _id: { $in: ids.map((id) => new ObjectId(id)) } },
       { projection: { _id: 1, liquidCurrencyCode: 1, countryId: 1 } }
@@ -563,10 +568,8 @@ export async function clearProductAdvertisingPayables(
   family: ProductAdvertisingFamily,
   turn: number
 ): Promise<ObjectId[]> {
-  const journal = db.collection<ClearingJournalRecord>(MONEY_MOVE_COLLECTION);
-  const payablesCollection = db.collection<ProductAdvertisingPayable>(
-    PRODUCT_ADVERTISING_PAYABLES_COLLECTION
-  );
+  const journal = bankMoneyMovesCollection<ClearingJournalRecord>(db);
+  const payablesCollection = productAdvertisingPayablesCollection<ProductAdvertisingPayable>(db);
   const touched = new Map<string, ObjectId>();
   const touch = (ids: ObjectId[]) => ids.forEach((id) => touched.set(id.toHexString(), id));
   const recordOf = (key: string) =>
@@ -595,8 +598,7 @@ export async function clearProductAdvertisingPayables(
   if (owed.length === 0) return [...touched.values()];
   const cleared = new Set(
     (
-      await db
-        .collection<{ _id: string }>(PRODUCT_ADVERTISING_CLEARANCES_COLLECTION)
+      await productAdvertisingClearancesCollection<{ _id: string }>(db)
         .find({ _id: { $in: owed.map((payable) => payable._id) } }, { projection: { _id: 1 } })
         .toArray()
     ).map((row) => row._id)
@@ -606,8 +608,7 @@ export async function clearProductAdvertisingPayables(
   if (due.length === 0) return [...touched.values()];
 
   const poolIds = [...new Set(due.map((payable) => payable.poolId))];
-  const pools = await db
-    .collection<ProductAdvertisingClearingPool>(PRODUCT_ADVERTISING_CLEARING_COLLECTION)
+  const pools = await productAdvertisingClearingCollection<ProductAdvertisingClearingPool>(db)
     .find({ _id: { $in: poolIds } }, { projection: { _id: 1, [CLEARING_POOL_BALANCE_PATH]: 1 } })
     .toArray();
   const payableTables = await resolveProductAdvertisingPayables(db, due);
@@ -617,7 +618,8 @@ export async function clearProductAdvertisingPayables(
     turn,
     payableTables,
     new Map(pools.map((pool) => [pool._id, pool.cashLocal])),
-    canPay
+    canPay,
+    await loadExchangeRatesMap(db)
   );
   if (!transition) return [...touched.values()];
   const result = await settleTransition(db, transition);
@@ -634,9 +636,9 @@ export async function clearProductAdvertisingPayables(
 async function removePaidPayables(db: Db, payableIds: readonly string[]): Promise<void> {
   if (payableIds.length === 0) return;
   await Promise.all([
-    db
-      .collection<ProductAdvertisingPayable>(PRODUCT_ADVERTISING_PAYABLES_COLLECTION)
-      .deleteMany({ _id: { $in: [...payableIds] } }),
+    productAdvertisingPayablesCollection<ProductAdvertisingPayable>(db).deleteMany({
+      _id: { $in: [...payableIds] },
+    }),
     dropProductAdvertisingAllocations(db, payableIds),
   ]);
 }

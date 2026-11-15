@@ -1,4 +1,5 @@
 "use client";
+import { displayCanadianRegionCode } from "@/lib/countries/ca/regionCodes";
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
@@ -104,7 +105,7 @@ function RiskRow({ item }: { item: PartyAnalyticsRiskItem }) {
           </Badge>
         </div>
         <p className="text-body-sm text-muted">
-          {item.homeState}
+          {displayCanadianRegionCode(item.homeState)}
           {item.currentOffice ? ` · ${item.currentOffice}` : ""}
         </p>
       </div>
@@ -153,7 +154,7 @@ function SlateItemRow({ item }: { item: PartyAnalyticsSlateItem }) {
     >
       <div className="min-w-0">
         <p className="truncate text-sm font-medium text-foreground">{item.electionLabel}</p>
-        <p className="text-body-sm text-muted">{item.state}</p>
+        <p className="text-body-sm text-muted">{displayCanadianRegionCode(item.state)}</p>
       </div>
       <Badge color={item.statusLabel.startsWith("No") ? "warning" : "error"} className="shrink-0">
         {item.statusLabel}
@@ -180,7 +181,9 @@ function CoverageSummary({ coverage }: { coverage: PartyAnalyticsSlateCoverageIt
       <div className="flex items-center justify-between gap-3">
         <div>
           <h3 className="text-sm font-semibold text-foreground">Coverage summary</h3>
-          <p className="mt-1 text-body-sm text-muted">{coverage.state}</p>
+          <p className="mt-1 text-body-sm text-muted">
+            {displayCanadianRegionCode(coverage.state)}
+          </p>
         </div>
         <Badge color={uncovered > 0 ? "warning" : "success"}>
           {uncovered > 0 ? `${uncovered} open` : "Covered"}

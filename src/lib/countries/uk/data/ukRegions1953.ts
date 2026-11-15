@@ -1,19 +1,9 @@
 /**
- * SEED INDEPENDENCE — DO NOT DERIVE FROM ANOTHER ERA.
- * Each era seed is self-contained. This file MUST NOT import and transform
- * another era's region data. All values are authored for 1953 directly.
- * Type-only imports are allowed.
- *
- * UK regions for the 1953-default preset (Churchill's second government;
- * Korean War armistice; Festival of Britain aftermath). The 12 electoral regions
- * are structurally stable; the era-specific values are ~1951-census population,
- * ~1953 regional GVA (GBP millions, nominal — far smaller than later eras), and
- * the **625-seat** Westminster distribution in force 1950–1955 (England 506 /
- * Scotland 71 / Wales 36 / Northern Ireland 12).
- *
- * NOTE (anachronism): `stateSenateSeats` keeps the modern devolved/regional
- * counts (Scottish Parliament 129, Senedd 60, NI Assembly 90), none of which
- * existed in 1953 — era-invariant in this model as per the 1979 seed convention.
+ * DO NOT DERIVE FROM ANOTHER ERA. Values authored for 1953 directly.
+ * Type-only imports allowed.
+ * Westminster distribution is the 625-seat 1950-1955 split.
+ * NOTE: `stateSenateSeats` keeps modern devolved counts, none of which
+ * existed in 1953; era-invariant per the 1979 seed convention.
  */
 import type { State } from "@/lib/db/types";
 

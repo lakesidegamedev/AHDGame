@@ -2,10 +2,12 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getDb } from "@/lib/mongodb";
 import { requireModerator } from "@/lib/api/requireModerator";
+import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { parseJsonBody } from "@/lib/api/validate";
 import { createAdminLog } from "@/lib/adminLog";
 import type { GameConfig } from "@/lib/db/types";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 const patchSchema = z.object({ enabled: z.boolean() });
 
@@ -18,7 +20,7 @@ export async function GET() {
     if (!auth.ok) return auth.response;
 
     const db = await getDb();
-    const config = await db.collection<GameConfig>("gameConfig").findOne(
+    const config = await gameConfigCollection(db).findOne(
       { _id: "default" },
       {
         projection: {
@@ -40,11 +42,11 @@ export async function GET() {
 }
 
 // PATCH /api/admin/ip-collision-check — flip the collision-check toggle
-// Auth: requireModerator (admin or moderator)
+// Auth: requireAdmin
 // Errors: 400, 403
 export async function PATCH(request: Request) {
   try {
-    const auth = await requireModerator();
+    const auth = await requireAdmin();
     if (!auth.ok) return auth.response;
 
     const parsed = await parseJsonBody(request, patchSchema);
@@ -53,10 +55,10 @@ export async function PATCH(request: Request) {
     const { enabled } = parsed.data;
     const db = await getDb();
     const now = new Date().toISOString();
-    const actor = auth.user.username;
+    const actor = auth.admin.username;
 
     if (enabled) {
-      await db.collection<GameConfig>("gameConfig").updateOne(
+      await gameConfigCollection(db).updateOne(
         { _id: "default" },
         {
           $set: {
@@ -68,7 +70,7 @@ export async function PATCH(request: Request) {
         { upsert: true }
       );
     } else {
-      await db.collection<GameConfig>("gameConfig").updateOne(
+      await gameConfigCollection(db).updateOne(
         { _id: "default" },
         {
           $set: { ipCollisionCheckEnabled: false },

@@ -1,5 +1,5 @@
 import type { Db } from "mongodb";
-import type { Corporation, Bond, FederalBudget, GameState } from "@/lib/db/types";
+import type { GameState } from "@/lib/db/types";
 import { loadValuationFxRates } from "@/lib/currency/corporationCapital";
 import { resolveCountryCurrencyCode } from "@/lib/currency/govBudgetFields";
 import { bankEquity, getCashReserves } from "@/lib/banking/rules/balanceSheet";
@@ -8,15 +8,19 @@ import {
   euroFeedbackExposure,
   type FinancialCountryExposure,
 } from "./rules/financialExposure";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /** Current enacted euro membership and actual sovereign-bank positions. */
 export async function loadFinancialExposure(db: Db, availableCountries: Set<string>) {
   const [gameState, budgets, banks, bonds, rates] = await Promise.all([
-    db
-      .collection<GameState>("gameState")
-      .findOne({ _id: "current" }, { projection: { eurozoneEnabled: 1, euroAdoptedCountries: 1 } }),
-    db
-      .collection<FederalBudget>("federalBudget")
+    gameStateCollection(db).findOne(
+      { _id: "current" },
+      { projection: { eurozoneEnabled: 1, euroAdoptedCountries: 1 } }
+    ),
+    federalBudgetCollection(db)
       .find(
         {},
         {
@@ -31,15 +35,13 @@ export async function loadFinancialExposure(db: Db, availableCountries: Set<stri
         }
       )
       .toArray(),
-    db
-      .collection<Corporation>("corporations")
+    corporationsCollection(db)
       .find(
         { "bankCharter.status": { $in: ["active", "failed"] } },
         { projection: { countryId: 1, bankCharter: 1 } }
       )
       .toArray(),
-    db
-      .collection<Bond>("bonds")
+    bondsCollection(db)
       .find(
         { issuerType: "sovereign", defaulted: false },
         { projection: { countryId: 1, holders: 1, faceValue: 1, marketPrice: 1, currencyCode: 1 } }

@@ -8,6 +8,7 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { getGameState } from "@/lib/gameState";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
 import type { CorporationPrivatizationVote } from "@/lib/db/types";
+import { corporationPrivatizationVotesCollection } from "@/lib/db/repositories/corporationPrivatizationVotes";
 
 interface RouteParams {
   params: Promise<{ id: string; voteId: string }>;
@@ -32,9 +33,10 @@ export async function GET(_request: Request, { params }: RouteParams) {
     if (!resolved.ok) return resolved.response;
     const { corporation } = resolved;
 
-    let vote = await db
-      .collection<CorporationPrivatizationVote>("corporationPrivatizationVotes")
-      .findOne({ _id: new ObjectId(voteId), corporationId: corporation._id });
+    let vote = await corporationPrivatizationVotesCollection(db).findOne({
+      _id: new ObjectId(voteId),
+      corporationId: corporation._id,
+    });
     if (!vote) return errorResponse(404, "Vote not found");
 
     const gameState = await getGameState();
@@ -51,9 +53,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
           gameState?.stockHoldingTaxStartTurn !== undefined &&
           currentTurn >= gameState.stockHoldingTaxStartTurn,
       });
-      vote = await db
-        .collection<CorporationPrivatizationVote>("corporationPrivatizationVotes")
-        .findOne({ _id: vote._id });
+      vote = await corporationPrivatizationVotesCollection(db).findOne({ _id: vote._id });
       if (!vote) return errorResponse(404, "Vote not found");
     }
 

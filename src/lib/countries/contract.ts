@@ -36,24 +36,16 @@ import type { LegislativeProcess } from "@/lib/legislature/process";
 import type { OrderOfBattleEntry } from "@/lib/seeds/reference/ordersOfBattle";
 import type { CountryElectionPhaseEntry } from "@/lib/turn/countryPhases";
 import type { MajorDefaultParty } from "@/lib/seeds/defaultPartyTiers";
-import type { SpawnElectionsHandler } from "@/lib/turn/perpetualElections/registry";
+import type { SpawnElectionsHandler } from "@/lib/elections/scheduling/registry";
 import type { ShippingPreset } from "@/lib/world/eraRoster";
 import type { WorldEntityRegion } from "@/lib/world/worldEntityManifest";
 
-/**
+/*
  * The shape a country folder declares.
  *
- * Every member type is defined HERE, before any phase moves anything, so no
- * later phase can reference a type that does not yet exist. Entry types are
- * imported from their current homes rather than re-declared: a second copy of a
- * shape is a second thing to keep in sync, which is the failure this whole plan
- * exists to stop.
- *
- * Which files each member absorbs, and which phase does it, is tracked
- * mechanically in `singleCountryData.ts` -- not in prose here.
- *
- * Every configured country now implements this shape. The runtime forwarding
- * harness verifies that each registry still resolves to the folder's values.
+ * Member types are defined here so no later phase references a type that does not
+ * yet exist. Entry types are imported from their current homes rather than re-declared:
+ * a second copy of a shape is a second thing to keep in sync.
  */
 
 /**
@@ -82,39 +74,21 @@ export interface CountryIdentity {
    */
   readonly commandFlavor: CountryCommandFlavor;
   /**
-   * ⚠️ MEASURED, NOT GUESSED. `COUNTRY_CONFIGS` holds 29 playable countries.
-   * This field's registry holds 9. The others relaxed alongside it hold 8, 10,
-   * 26 and 27. Every one of them was `readonly` and required, and every one of
-   * their readers already handles the absence -- `getCabinetIdentity` falls back
-   * to a documented shell, `getMinisterialOrders` returns `[]`, `getSeal`
-   * returns null, `getRegionCensus` returns null "for no bundle for the
-   * country", and `seedCabinetEstates` simply `continue`s.
-   *
-   * They were discovered one country at a time -- Russia relaxed eight, East
-   * Germany two more -- until the coverage of all 53 registries was measured
-   * against the playable roster in one go. These six are the remainder. See
-   * `stats` for why the first cohort hid this.
+   * Optional despite COUNTRY_CONFIGS listing 29 playable countries: this
+   * registry covers only 9, and every reader already handles absence.
    */
   readonly cabinet?: CabinetIdentity;
   readonly national: NationalIdentity;
   /**
-   * ⚠️ OPTIONAL BECAUSE THE FIRST SIX COUNTRIES WERE NOT THE GAME. This field
-   * was required while only Japan, the United States, the United Kingdom,
-   * Germany, China and Ireland had folders -- and those six are exactly the
-   * countries its registry covers. Russia has a `COUNTRY_CONFIGS` row, a
-   * cabinet, regions and elections, and no row here at all; the registry holds
-   * six to eight keys in total, so what looked like a contract about countries
-   * was a contract about the first cohort.
-   *
-   * Every reader already handles the absence: this one is
-   * `NATIONAL_STATS_IDENTITY[countryId] ?? DEFAULT_STATS_IDENTITY`. A folder
-   * that filled the gap with that default would convert a documented fallback
-   * into an authored value and hide which countries are really configured.
-   *
-   * The same reasoning relaxes `economyText`, `legislativeProcess`,
-   * `economicBaseline`, `repEcon`, `costScaleAnchors`, `conscription` and
-   * `populationMultipliers`. Each one is recorded per country in the runtime
-   * harness's ABSENT_UPSTREAM, which fails if the absence ever stops being true.
+   * ⚠️ OPTIONAL: the registry only covers the first six country folders,
+   * not every country. Readers already fall back via
+   * `NATIONAL_STATS_IDENTITY[countryId] ?? DEFAULT_STATS_IDENTITY`; filling
+   * this in with that default would turn a documented fallback into an
+   * authored value and hide which countries are really configured.
+   * `economyText`, `legislativeProcess`, `economicBaseline`, `repEcon`,
+   * `costScaleAnchors`, `conscription` and `populationMultipliers` are
+   * relaxed for the same reason. The runtime harness records each absence
+   * in ABSENT_UPSTREAM and fails if that stops being true.
    */
   readonly stats?: StatsIdentity;
   /**
@@ -308,22 +282,13 @@ export interface CountryElections {
 /**
  * D4 -- economy and fiscal.
  *
- * Absorbs: COUNTRY_CURRENCY_MAP, ECONOMIC_BASELINES, MONETARY_BASELINES and its
- * 1953/1971/1979/1991 era tables, COST_SCALE_ANCHORS,
- * SOVEREIGN_CORP_LEGAL_STRUCTURE, M2_TO_GDP_1953, COUNTRY_SECTOR_WEIGHTS and its
- * 1979/1991 era tables, DEFAULT_STRATEGIC_SECTORS, REP_ECON,
- * TREASURY_PS_RATE_BY_COUNTRY, NEUTRAL_FEDERAL_SALES_TAX_BY_COUNTRY,
- * NEUTRAL_STATE_SALES_TAX_BY_COUNTRY, PLAYER_PAYOUT_CAP_PER_TURN,
- * NATIONAL_POLICY_STATE_IDS, LEGISLATION_COUNTRY_SCOPES.
- *
  * ⚠️ Exchange rates do NOT belong here. INITIAL_RATES* is relational -- a rate is
  * a fact BETWEEN two currencies, so a per-country copy drifts. Same for the two
- * SOE base tables in budgets.ts: relational data, which belongs beside the
- * rows it must stay consistent with rather than in either country.
+ * SOE base tables in budgets.ts: relational data belongs beside the rows it
+ * must stay consistent with.
  *
  * ⚠️ REP_ECON and the sector-weight tables are BALANCE surfaces. A changed number
- * here needs a GitHub issue and a scripts/sim/ report per CLAUDE.md. This move
- * must change none of them.
+ * here needs a GitHub issue and a scripts/sim/ report per CLAUDE.md.
  */
 export interface CountryEconomy {
   /**
@@ -387,23 +352,14 @@ export interface CountryEconomy {
 }
 
 /**
- * D5 -- geography, regions, demographics.
+ * D5: geography, regions, demographics.
  *
- * Absorbs: COUNTRY_CONTINENT, COUNTRY_TO_ISO_NUMERIC with its inverse,
- * COUNTRY_UN_MEMBER_SINCE, STATE_ADJACENCY, REGION_ROSTERS,
- * FULL_ERA_REGION_BUNDLES, REGION_NAME_MAPS, NPP_CAPITAL_STATES,
- * COUNTRY_MAP_REGISTRY, HAZARD_GROUPS, COUNTRY_REGIONS,
- * REGION_DEMOGRAPHIC_CATEGORY_IDS, CENSUS_BUNDLES, POPULATION_MULTIPLIERS,
- * CONSCRIPTION_SEED, POPULATION_ANCHOR_BUNDLES, METRIC_PRESET_BUNDLES,
- * CORE5_NORMALS, INCOME_ANCHORS, TARGETS, RAW_BUNDLES,
- * COUNTRY_ERA1991_PATCHES.
+ * ⚠️ `rosters` is function-valued (RosterThunk) and nested country -> era;
+ * compare resolved output, not references.
  *
- * ⚠️ `rosters` is FUNCTION-VALUED (RosterThunk) and nested country -> era, so the
- * harness must walk both levels and compare RESOLVED output, not references.
- *
- * ⚠️ CORE5_NORMALS is METRIC-first with a `global` pseudo-country. There is no
- * CORE5_NORMALS.JP to read; Japan's values sit under eight metric keys beside
- * `global` fallbacks that must not move.
+ * ⚠️ CORE5_NORMALS is metric-first with a `global` pseudo-country. Japan's
+ * values sit under eight metric keys beside `global` fallbacks that must
+ * not move.
  */
 /**
  * D5 -- geography, regions, demographics.

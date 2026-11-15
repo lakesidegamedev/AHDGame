@@ -1,0 +1,537 @@
+import type { Db } from "mongodb";
+import type {
+  Election,
+  ElectionStatus,
+  ElectionVoteTally,
+  ElectedOfficial,
+  NPP,
+  OfficeType,
+} from "@/lib/db/types";
+import {
+  MULTI_SEAT_TYPES,
+  isCommonsGeneralElection,
+  isSpecialCommonsElection,
+  officeKeyForElectionType,
+} from "@/lib/utils/electionLabels";
+import { reopenCommonsVacanciesForRetry } from "@/lib/countries/uk/elections/commonsVacancyShell";
+import { triggerLeadershipElectionsAfterChamberVote } from "@/lib/congress/leadershipElections";
+import {
+  spawnHouseElection,
+  spawnCommonsElection,
+} from "@/lib/elections/resolution/electionSpawning";
+import { notifyGovernorOfSenateVacancy } from "@/lib/governors/senateVacancy";
+import { isExecutiveOffice } from "@/lib/elections/executiveOffice";
+import { captureOfficeTransition } from "@/lib/analytics/officeTransitionAnalytics";
+import type { ElectionNewsOutcome } from "./electionNotifications";
+import { voidDebateSessionsForElection } from "@/lib/debate/debateSessionLifecycle";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import type { Document } from "mongodb";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+
+export interface OneElectionResult {
+  resolved: boolean;
+  newsOutcomes: ElectionNewsOutcome[];
+}
+
+/** Flatten tally.primaryResults.byParty into candidateId → sharePct (won nominees). */
+export function buildPrimaryShareMap(
+  primaryResults: {
+    byParty: Record<string, { candidateId: string; sharePct: number; won: boolean }[]>;
+  } | null
+): Record<string, number> | null {
+  if (!primaryResults?.byParty) return null;
+  const out: Record<string, number> = {};
+  for (const entries of Object.values(primaryResults.byParty)) {
+    for (const e of entries) {
+      if (e.won) out[e.candidateId] = e.sharePct;
+    }
+  }
+  return Object.keys(out).length > 0 ? out : null;
+}
+
+/** Chamber class to scope by when the election is a class-staggered multi-seat race. */
+export function getChamberClass(election: Election): 1 | 2 | undefined {
+  if (election.electionType !== "sangiin") return undefined;
+  return election.chamberClass;
+}
+
+/** Filter for clearing/reading electedOfficials for a multi-seat race, scoped by chamberClass when present.
+ *  Snap elections resolve to the SAME office as their regular counterpart — a snap_commons
+ *  winner holds officeType "commons", so the filter must query the regular key to catch
+ *  pre-snap officials who need sweeping. */
+export function multiSeatOfficialFilter(election: Election): Record<string, unknown> {
+  const filter: Record<string, unknown> = {
+    officeType: officeKeyForElectionType(election.electionType, election.countryId),
+    state: election.state,
+  };
+  const cls = getChamberClass(election);
+  if (cls) filter.chamberClass = cls;
+  return filter;
+}
+
+export function carryForwardCommonsConstituency(
+  nextOffice: OfficeType,
+  previousOffice: OfficeType | null
+): OfficeType {
+  if (
+    nextOffice.type !== "commons" ||
+    !previousOffice ||
+    previousOffice.type !== "commons" ||
+    !("state" in previousOffice) ||
+    !("state" in nextOffice) ||
+    previousOffice.state !== nextOffice.state ||
+    !("constituency" in previousOffice) ||
+    !previousOffice.constituency
+  ) {
+    return nextOffice;
+  }
+
+  return {
+    ...nextOffice,
+    constituency: previousOffice.constituency,
+    ...("constituencyId" in previousOffice && previousOffice.constituencyId
+      ? { constituencyId: previousOffice.constituencyId }
+      : {}),
+  };
+}
+
+/**
+ * When a sitting national executive wins a legislative/regional election,
+ * preserve their executive currentOffice rather than overwriting it with the
+ * lower office. Update state/constituency from the new seat so the executive's
+ * linked constituency stays current. This keeps heads of government (PM,
+ * Chancellor, Taoiseach, Premier, President) able to act on crises and other
+ * executive mechanics after winning their legislative seat.
+ */
+export function preserveExecutiveOffice(
+  nextOffice: OfficeType,
+  previousOffice: OfficeType | null
+): OfficeType {
+  if (!previousOffice || !isExecutiveOffice(previousOffice)) {
+    return nextOffice;
+  }
+  const preserved: Record<string, unknown> = {
+    type: previousOffice.type,
+  };
+  if ("state" in nextOffice && typeof nextOffice.state === "string") {
+    preserved.state = nextOffice.state;
+  }
+  if ("positionId" in previousOffice && typeof previousOffice.positionId === "string") {
+    preserved.positionId = previousOffice.positionId;
+  }
+  if ("constituency" in nextOffice && nextOffice.constituency) {
+    preserved.constituency = nextOffice.constituency;
+  }
+  if ("constituencyId" in nextOffice && nextOffice.constituencyId) {
+    preserved.constituencyId = nextOffice.constituencyId;
+  }
+  return preserved as OfficeType;
+}
+
+/**
+ * After a multi-seat constituency election resolves, clear currentOffice on any
+ * character/NPP who claims that state but is no longer in electedOfficials.
+ * Handles both candidates who lost and incumbents who didn't enter the race.
+ * Works for commons, shugiin, sangiin, and any other multi-seat election type.
+ *
+ * For class-staggered chambers (JP Sangiin), scope by chamberClass so resolving
+ * one class doesn't vacate officials who hold the other class's seats.
+ */
+export async function sweepStaleOffice(
+  db: Db,
+  electionType: string,
+  state: string,
+  now: Date,
+  chamberClass?: 1 | 2,
+  telemetryOrCountry?: { turn: number; nationId?: string } | Election["countryId"]
+): Promise<void> {
+  // Normalize snap types — a snap_commons election sweeps "commons" officials.
+  // Country chamber keys can differ from their seated office type. Bulgaria's
+  // nationalAssembly, for example, seats assemblyDeputy holders.
+  const telemetry = typeof telemetryOrCountry === "object" ? telemetryOrCountry : undefined;
+  const countryId = (
+    typeof telemetryOrCountry === "string" ? telemetryOrCountry : telemetry?.nationId
+  ) as Election["countryId"];
+  const officeType = officeKeyForElectionType(electionType, countryId);
+  const officialFilter: Record<string, unknown> = { officeType, state };
+  if (chamberClass) officialFilter.chamberClass = chamberClass;
+
+  const current = await electedOfficialsCollection(db)
+    .find(officialFilter, { projection: { characterId: 1, nppId: 1 } })
+    .toArray();
+
+  const currentCharIds = current
+    .filter((o: ElectedOfficial) => o.characterId)
+    .map((o: ElectedOfficial) => o.characterId!);
+  const currentNppIds = current
+    .filter((o: ElectedOfficial) => o.nppId)
+    .map((o: ElectedOfficial) => o.nppId!);
+
+  const officeMatch: Record<string, unknown> = {
+    "currentOffice.type": officeType,
+    "currentOffice.state": state,
+  };
+  if (chamberClass) officeMatch["currentOffice.chamberClass"] = chamberClass;
+
+  const departingFilter = {
+    ...officeMatch,
+    ...(currentCharIds.length > 0 ? { _id: { $nin: currentCharIds } } : {}),
+  };
+  const departingPlayers = telemetry
+    ? await charactersCollection(db)
+        .find(departingFilter, { projection: { _id: 1, party: 1, countryId: 1 } })
+        .toArray()
+        .catch(() => [])
+    : [];
+  await charactersCollection(db).updateMany(departingFilter, {
+    $set: { currentOffice: null, updatedAt: now },
+  });
+  if (telemetry)
+    await Promise.all(
+      departingPlayers.map((character) =>
+        captureOfficeTransition({
+          db,
+          officeType,
+          transitionType: "lost",
+          selectionMethod: "election",
+          partyId: character.party ?? undefined,
+          nationId: character.countryId ?? telemetry.nationId,
+          turn: telemetry.turn,
+        })
+      )
+    );
+
+  await nppsCollection(db).updateMany(
+    {
+      ...officeMatch,
+      ...(currentNppIds.length > 0 ? { _id: { $nin: currentNppIds } } : {}),
+    },
+    { $set: { currentOffice: null, updatedAt: now } }
+  );
+}
+
+/**
+ * Empty-race handler: election completed but no tally document exists (no
+ * votes were recorded). For multi-seat elections, clear stale officials so
+ * the previous cycle's winners don't persist, and open the next race.
+ * Extracted verbatim from resolveOneGeneralElection's `!tally` branch.
+ */
+export async function resolveElectionWithNoTally(
+  db: Db,
+  election: Election,
+  now: Date,
+  currentTurn = 0
+): Promise<OneElectionResult> {
+  // Commons by-elections (#860) never sweep: an uncontested race leaves the
+  // seats vacant and the watcher retries after the cooldown.
+  if (
+    MULTI_SEAT_TYPES.has(election.electionType) &&
+    !isSpecialCommonsElection(election.electionType) &&
+    election.state
+  ) {
+    await electedOfficialsCollection(db).deleteMany(multiSeatOfficialFilter(election));
+    await sweepStaleOffice(
+      db,
+      election.electionType,
+      election.state,
+      now,
+      getChamberClass(election),
+      { turn: currentTurn, nationId: election.countryId }
+    );
+  }
+  // Clear single-seat incumbent when election resolves with no tally
+  if (["governor", "senate"].includes(election.electionType) && election.state) {
+    const incumbentFilter: Record<string, unknown> = {
+      officeType: election.electionType,
+      state: election.state,
+    };
+    if (election.electionType === "senate" && election.senateClass) {
+      incumbentFilter.senateClass = election.senateClass;
+    }
+    const incumbent = await electedOfficialsCollection(db).findOne(incumbentFilter);
+    if (incumbent) {
+      const officeFilter: Record<string, unknown> = {
+        "currentOffice.type": election.electionType,
+        "currentOffice.state": election.state,
+      };
+      if (election.electionType === "senate" && election.senateClass) {
+        officeFilter["currentOffice.senateClass"] = election.senateClass;
+      }
+      if (incumbent.characterId) {
+        await charactersCollection(db).updateOne(
+          { _id: incumbent.characterId, ...officeFilter },
+          { $set: { currentOffice: null, updatedAt: now } }
+        );
+      }
+      if (incumbent.nppId) {
+        await nppsCollection(db).updateOne(
+          { _id: incumbent.nppId, ...officeFilter },
+          { $set: { currentOffice: null, updatedAt: now } }
+        );
+      }
+      await electedOfficialsCollection(db).deleteOne({ _id: incumbent._id });
+      if (incumbent.characterId && !incumbent.isNPP)
+        await captureOfficeTransition({
+          db,
+          officeType: election.electionType,
+          transitionType: "lost",
+          selectionMethod: "election",
+          partyId: incumbent.party ?? undefined,
+          nationId: election.countryId,
+          turn: currentTurn,
+        });
+      if (election.electionType === "senate") {
+        await notifyGovernorOfSenateVacancy(db, election.state, election.senateClass);
+      }
+      console.log(
+        `[Turn] Vacated ${election.electionType} seat ` +
+          `(${election.state}${election.senateClass ? ` Class ${election.senateClass}` : ""}) — election resolved with no tally`
+      );
+    }
+  }
+  // An empty Commons by-election seats nobody: reopen its claimed vacancies
+  // so the watcher retries after the cooldown instead of stranding the seats
+  // as `scheduled` behind a finished race.
+  if (isSpecialCommonsElection(election.electionType)) {
+    await reopenCommonsVacanciesForRetry(db, election._id, now);
+  }
+  // Spawn next cycle for election types with dedicated respawn functions
+  if (election.electionType === "house") {
+    await spawnHouseElection(db, election, now);
+    await triggerLeadershipElectionsAfterChamberVote(db, "house", now);
+  }
+  if (election.electionType === "senate") {
+    await triggerLeadershipElectionsAfterChamberVote(db, "senate", now);
+  }
+  if (isCommonsGeneralElection(election.electionType) && election.state) {
+    await spawnCommonsElection(db, election, now);
+  }
+  await electionsCollection(db).updateOne(
+    { _id: election._id },
+    { $set: { status: "resolved" satisfies ElectionStatus, updatedAt: now } }
+  );
+  await voidDebateSessionsForElection(db, election._id, now);
+  return { resolved: false, newsOutcomes: [] };
+}
+
+/**
+ * Empty-race handler: a tally exists but zero votes were cast. Extracted
+ * verbatim from resolveOneGeneralElection's `totalVotesCast === 0` branch.
+ */
+export async function resolveElectionWithZeroVotes(
+  db: Db,
+  election: Election,
+  now: Date,
+  currentTurn = 0
+): Promise<OneElectionResult> {
+  await electionVoteTalliesCollection(db).updateOne(
+    { electionId: election._id },
+    { $set: { finalized: true, updatedAt: now } }
+  );
+  await electionCandidatesCollection<Document>(db).updateMany(
+    { electionId: election._id, status: "active" },
+    { $set: { status: "withdrawn", withdrawnAt: now } }
+  );
+  if (election.electionType === "house") {
+    await spawnHouseElection(db, election, now);
+    await triggerLeadershipElectionsAfterChamberVote(db, "house", now);
+  }
+  if (election.electionType === "senate") {
+    await triggerLeadershipElectionsAfterChamberVote(db, "senate", now);
+  }
+  // Clear stale officials for any multi-seat election type — except Commons
+  // by-elections (#860), which leave vacant seats in place for watcher retry.
+  if (
+    MULTI_SEAT_TYPES.has(election.electionType) &&
+    !isSpecialCommonsElection(election.electionType) &&
+    election.state
+  ) {
+    await electedOfficialsCollection(db).deleteMany(multiSeatOfficialFilter(election));
+    await sweepStaleOffice(
+      db,
+      election.electionType,
+      election.state,
+      now,
+      getChamberClass(election),
+      { turn: currentTurn, nationId: election.countryId }
+    );
+  }
+  // Clear single-seat incumbent when election resolves with zero votes cast
+  if (["governor", "senate"].includes(election.electionType) && election.state) {
+    const incumbentFilter: Record<string, unknown> = {
+      officeType: election.electionType,
+      state: election.state,
+    };
+    if (election.electionType === "senate" && election.senateClass) {
+      incumbentFilter.senateClass = election.senateClass;
+    }
+    const incumbent = await electedOfficialsCollection(db).findOne(incumbentFilter);
+    if (incumbent) {
+      const officeFilter: Record<string, unknown> = {
+        "currentOffice.type": election.electionType,
+        "currentOffice.state": election.state,
+      };
+      if (election.electionType === "senate" && election.senateClass) {
+        officeFilter["currentOffice.senateClass"] = election.senateClass;
+      }
+      if (incumbent.characterId) {
+        await charactersCollection(db).updateOne(
+          { _id: incumbent.characterId, ...officeFilter },
+          { $set: { currentOffice: null, updatedAt: now } }
+        );
+      }
+      if (incumbent.nppId) {
+        await nppsCollection(db).updateOne(
+          { _id: incumbent.nppId, ...officeFilter },
+          { $set: { currentOffice: null, updatedAt: now } }
+        );
+      }
+      await electedOfficialsCollection(db).deleteOne({ _id: incumbent._id });
+      if (incumbent.characterId && !incumbent.isNPP)
+        await captureOfficeTransition({
+          db,
+          officeType: election.electionType,
+          transitionType: "lost",
+          selectionMethod: "election",
+          partyId: incumbent.party ?? undefined,
+          nationId: election.countryId,
+          turn: currentTurn,
+        });
+      if (election.electionType === "senate") {
+        await notifyGovernorOfSenateVacancy(db, election.state, election.senateClass);
+      }
+      console.log(
+        `[Turn] Vacated ${election.electionType} seat ` +
+          `(${election.state}${election.senateClass ? ` Class ${election.senateClass}` : ""}) — election resolved with zero votes cast`
+      );
+    }
+  }
+  // An empty Commons by-election seats nobody: reopen its claimed vacancies
+  // so the watcher retries after cooldown instead of leaving them `scheduled`.
+  if (isSpecialCommonsElection(election.electionType)) {
+    await reopenCommonsVacanciesForRetry(db, election._id, now);
+  }
+  // Spawn next cycle for election types with dedicated respawn functions
+  if (isCommonsGeneralElection(election.electionType) && election.state) {
+    await spawnCommonsElection(db, election, now);
+  }
+  await electionsCollection(db).updateOne(
+    { _id: election._id },
+    { $set: { status: "resolved" satisfies ElectionStatus, updatedAt: now } }
+  );
+  await voidDebateSessionsForElection(db, election._id, now);
+  return { resolved: true, newsOutcomes: [] };
+}
+
+/**
+ * Empty-race handler: votes existed but every ranked candidate was dropped
+ * (missing candidate docs / deleted characters). Extracted verbatim from
+ * resolveOneGeneralElection's `ranked.length === 0` branch.
+ */
+export async function resolveElectionWithNoRankedCandidates(
+  db: Db,
+  election: Election,
+  now: Date,
+  currentTurn = 0
+): Promise<OneElectionResult> {
+  await electionVoteTalliesCollection(db).updateOne(
+    { electionId: election._id },
+    { $set: { finalized: true, updatedAt: now } }
+  );
+  await electionCandidatesCollection<Document>(db).updateMany(
+    { electionId: election._id, status: "active" },
+    { $set: { status: "withdrawn", withdrawnAt: now } }
+  );
+  if (election.electionType === "house") {
+    await spawnHouseElection(db, election, now);
+    await triggerLeadershipElectionsAfterChamberVote(db, "house", now);
+  }
+  if (election.electionType === "senate") {
+    await triggerLeadershipElectionsAfterChamberVote(db, "senate", now);
+  }
+  // Clear stale officials for any multi-seat election type — except Commons
+  // by-elections (#860), which leave vacant seats in place for watcher retry.
+  if (
+    MULTI_SEAT_TYPES.has(election.electionType) &&
+    !isSpecialCommonsElection(election.electionType) &&
+    election.state
+  ) {
+    await electedOfficialsCollection(db).deleteMany(multiSeatOfficialFilter(election));
+    await sweepStaleOffice(
+      db,
+      election.electionType,
+      election.state,
+      now,
+      getChamberClass(election),
+      { turn: currentTurn, nationId: election.countryId }
+    );
+  }
+  if (isCommonsGeneralElection(election.electionType) && election.state) {
+    await spawnCommonsElection(db, election, now);
+  }
+  // Clear single-seat incumbent when election resolves with no ranked candidates
+  if (["governor", "senate"].includes(election.electionType) && election.state) {
+    const incumbentFilter: Record<string, unknown> = {
+      officeType: election.electionType,
+      state: election.state,
+    };
+    if (election.electionType === "senate" && election.senateClass) {
+      incumbentFilter.senateClass = election.senateClass;
+    }
+    const incumbent = await electedOfficialsCollection(db).findOne(incumbentFilter);
+    if (incumbent) {
+      const officeFilter: Record<string, unknown> = {
+        "currentOffice.type": election.electionType,
+        "currentOffice.state": election.state,
+      };
+      if (election.electionType === "senate" && election.senateClass) {
+        officeFilter["currentOffice.senateClass"] = election.senateClass;
+      }
+      if (incumbent.characterId) {
+        await charactersCollection(db).updateOne(
+          { _id: incumbent.characterId, ...officeFilter },
+          { $set: { currentOffice: null, updatedAt: now } }
+        );
+      }
+      if (incumbent.nppId) {
+        await nppsCollection(db).updateOne(
+          { _id: incumbent.nppId, ...officeFilter },
+          { $set: { currentOffice: null, updatedAt: now } }
+        );
+      }
+      await electedOfficialsCollection(db).deleteOne({ _id: incumbent._id });
+      if (incumbent.characterId && !incumbent.isNPP)
+        await captureOfficeTransition({
+          db,
+          officeType: election.electionType,
+          transitionType: "lost",
+          selectionMethod: "election",
+          partyId: incumbent.party ?? undefined,
+          nationId: election.countryId,
+          turn: currentTurn,
+        });
+      if (election.electionType === "senate") {
+        await notifyGovernorOfSenateVacancy(db, election.state, election.senateClass);
+      }
+      console.log(
+        `[Turn] Vacated ${election.electionType} seat ` +
+          `(${election.state}${election.senateClass ? ` Class ${election.senateClass}` : ""}) — election resolved with no ranked candidates`
+      );
+    }
+  }
+  // An empty Commons by-election seats nobody: reopen its claimed vacancies
+  // so the watcher retries after cooldown instead of leaving them `scheduled`.
+  if (isSpecialCommonsElection(election.electionType)) {
+    await reopenCommonsVacanciesForRetry(db, election._id, now);
+  }
+  await electionsCollection(db).updateOne(
+    { _id: election._id },
+    { $set: { status: "resolved" satisfies ElectionStatus, updatedAt: now } }
+  );
+  await voidDebateSessionsForElection(db, election._id, now);
+  return { resolved: true, newsOutcomes: [] };
+}

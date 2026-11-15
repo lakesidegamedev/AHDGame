@@ -5,10 +5,7 @@ import { Button } from "@/components/ui/Button";
 import { Label } from "@/components/ui/Label";
 import { Modal } from "@/components/ui/Modal";
 
-/**
- * Admin healing tools for fixing data issues
- * Currently supports: Bug #0803 nationalization share loss healing
- */
+/** Admin healing tools for fixing data issues. */
 export function HealingTools() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isRunning, setIsRunning] = useState(false);

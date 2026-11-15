@@ -52,6 +52,9 @@ import {
 } from "@/lib/corporations/shareEscrowSettlement";
 import { COUNTRY_CURRENCY_MAP, getSeedCurrencyCode } from "@/lib/constants/currencies";
 import { nppHomeFxRate, localToAnchor } from "./nppEconomicAccount";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { witnessNppShareCash } from "./shareCashLedger";
 
 export type NppShareBuyResult =
   | {
@@ -105,7 +108,7 @@ export async function nppBuyShares(
   const corp =
     corpSnapshot?._id.equals(corporationId) === true
       ? corpSnapshot
-      : await db.collection<Corporation>("corporations").findOne({ _id: corporationId });
+      : await corporationsCollection(db).findOne({ _id: corporationId });
   if (!corp) return { ok: false, reason: "Corporation not found." };
   if (corp.isPrivate) return { ok: false, reason: "Corporation is private." };
   if (corp.isNationalized) return { ok: false, reason: "Corporation is nationalized." };
@@ -158,7 +161,7 @@ export async function nppBuyShares(
 
   // Deduct from the personal forex account first (atomic guard), then credit
   // shares. NOT campaign `funds` — equity investing is real-economy.
-  const deducted = await db.collection<NPP>("npps").findOneAndUpdate(
+  const deducted = await nppsCollection(db).findOneAndUpdate(
     { _id: npp._id, nppInvestmentCashAnchor: { $gte: costAnchor } },
     { $inc: { nppInvestmentCashAnchor: -costAnchor }, $set: { updatedAt: now } },
     // Only the balance is read back; an NPP document is ~28 KB.
@@ -185,12 +188,10 @@ export async function nppBuyShares(
   );
   if (!credited) {
     // Float was taken between read and credit — refund and bail, no partial state.
-    await db
-      .collection<NPP>("npps")
-      .updateOne(
-        { _id: npp._id },
-        { $inc: { nppInvestmentCashAnchor: costAnchor }, $set: { updatedAt: new Date() } }
-      );
+    await nppsCollection(db).updateOne(
+      { _id: npp._id },
+      { $inc: { nppInvestmentCashAnchor: costAnchor }, $set: { updatedAt: new Date() } }
+    );
     return { ok: false, reason: "Share float no longer available; purchase refunded." };
   }
 
@@ -201,6 +202,8 @@ export async function nppBuyShares(
     sharesBought: shares,
     pools: tradePools,
   });
+
+  await witnessNppShareCash(db, npp, -costAnchor, now);
 
   return {
     ok: true,
@@ -273,7 +276,7 @@ export async function nppSellShares(
   const corp =
     corpSnapshot?._id.equals(corporationId) === true
       ? corpSnapshot
-      : await db.collection<Corporation>("corporations").findOne({ _id: corporationId });
+      : await corporationsCollection(db).findOne({ _id: corporationId });
   if (!corp) return { ok: false, reason: "Corporation not found." };
   if (corp.isPrivate) return { ok: false, reason: "Corporation is private." };
   if (corp.isNationalized) return { ok: false, reason: "Corporation is nationalized." };
@@ -375,12 +378,14 @@ export async function nppSellShares(
     return { ok: false, reason: "Shares no longer available; sale reversed." };
   }
 
-  const credited = await db.collection<NPP>("npps").findOneAndUpdate(
+  const credited = await nppsCollection(db).findOneAndUpdate(
     { _id: npp._id },
     { $inc: { nppInvestmentCashAnchor: proceedsAnchor }, $set: { updatedAt: now } },
     // Only the balance is read back; an NPP document is ~28 KB.
     { returnDocument: "after", projection: { nppInvestmentCashAnchor: 1 } }
   );
+
+  if (credited) await witnessNppShareCash(db, npp, proceedsAnchor, now);
 
   void onFloatSellCommitted(db, corp, proceeds, { pools });
 

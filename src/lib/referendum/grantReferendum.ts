@@ -5,7 +5,7 @@ import { withSessionDb, afterCommit } from "@/lib/db/sessionDb";
  * vote at this stage — Westminster's legislative consent comes later as a
  * Commons bill at the conversion stage (alongside Ireland's Dáil bill).
  *
- * See docs/superpowers/specs/2026-06-16-independence-process-design.md §6.
+ * See the independence-process design.
  */
 import type { Db } from "mongodb";
 import type { MacroMetricsDoc } from "@/lib/db/types/macroMetrics";
@@ -20,13 +20,15 @@ import {
 } from "@/lib/constants/referendum";
 import { announceReferendumDecision } from "@/lib/referendum/referendumWebhooks";
 import { recordWireEvent } from "@/lib/referendum/wire";
+import { hostsSovereigntyReferendums } from "@/lib/referendum/rules/sovereigntyRegions";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 
 export type GrantReferendumAction = "grant" | "decline";
 
 export interface GrantReferendumInput {
   countryId: CountryId;
   referendumId: string;
-  /** True when the acting character is the sitting UK PM. */
+  /** True when the acting character is the referendum country's sitting PM. */
   isPM: boolean;
   action: GrantReferendumAction;
   /** Turn hosts supply the phase turn; HTTP callers use persisted GameState. */
@@ -51,8 +53,8 @@ async function grantReferendumInTransaction(
   db: Db,
   input: GrantReferendumInput
 ): Promise<GrantReferendumResult> {
-  if (input.countryId !== "UK") {
-    return { status: 400, body: { error: "Referendums are UK-only." } };
+  if (!hostsSovereigntyReferendums(input.countryId)) {
+    return { status: 400, body: { error: "This country holds no sovereignty referendums." } };
   }
   if (!input.isPM && input.adminOverride !== true) {
     return { status: 403, body: { error: "Only the Prime Minister can decide on a referendum." } };
@@ -62,7 +64,9 @@ async function grantReferendumInTransaction(
     return { status: 400, body: { error: "Invalid referendum ID." } };
   const refs = getReferendumCollection(db);
   const ref = await refs.findOne({ _id: new ObjectId(input.referendumId) });
-  if (!ref) return { status: 404, body: { error: "Referendum not found." } };
+  // A Prime Minister decides only their own country's referendums.
+  if (!ref || ref.countryId !== input.countryId)
+    return { status: 404, body: { error: "Referendum not found." } };
   if (ref.status !== "requested") {
     return { status: 400, body: { error: "Referendum is not awaiting a decision." } };
   }
@@ -83,11 +87,9 @@ async function grantReferendumInTransaction(
     // A rebuffed petition inflames the cause: nudge the region's desire up
     // (clamped to 100) so a decline is not a free way to bury the question.
     // SP5: independenceDesire lives top-level on macroMetrics.
-    const metric = await db
-      .collection<MacroMetricsDoc>("macroMetrics")
-      .findOne({ _id: ref.regionId });
+    const metric = await macroMetricsCollection<MacroMetricsDoc>(db).findOne({ _id: ref.regionId });
     const current = metric?.independenceDesire?.value ?? ref.yesShare;
-    await db.collection<MacroMetricsDoc>("macroMetrics").updateOne(
+    await macroMetricsCollection<MacroMetricsDoc>(db).updateOne(
       { _id: ref.regionId },
       {
         $set: {
@@ -111,9 +113,7 @@ async function grantReferendumInTransaction(
   const closeTurn = currentTurn + CAMPAIGN_WINDOW_TURNS;
   // Seed the campaign baseline from the region's CURRENT desire at grant time
   // (spec §7), so the Yes share starts from where sentiment actually sits.
-  const metric = await db
-    .collection<MacroMetricsDoc>("macroMetrics")
-    .findOne({ _id: ref.regionId });
+  const metric = await macroMetricsCollection<MacroMetricsDoc>(db).findOne({ _id: ref.regionId });
   const baseYesShare = metric?.independenceDesire?.value ?? ref.yesShare;
   await refs.updateOne(
     { _id: ref._id, status: "requested" },

@@ -61,7 +61,7 @@ describe("computeMergerConcentration", () => {
   });
 
   /**
-   * Ticket #1163: a target holding only chemical sectors triggered an
+   * A target holding only chemical sectors triggered an
    * extraction warning, because the acquirer already led extraction. The deal
    * changes nothing in extraction — the acquirer's share there is identical
    * before and after.

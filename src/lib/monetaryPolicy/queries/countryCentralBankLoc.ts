@@ -5,7 +5,6 @@
 import { getPresetMonetaryScope } from "../presetMonetaryScope";
 import type { Db } from "mongodb";
 import { getCharacterByUserId } from "@/lib/db/characterLookup";
-import type { CentralBank } from "@/lib/db/types";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { getSeedCurrencyCode } from "@/lib/constants/currencies";
 import { getGameStatePresetOrDefault } from "@/lib/db/collections/gameState";
@@ -13,6 +12,7 @@ import { isForexEnabled } from "@/lib/currency/featureFlag";
 import { buildLocSnapshot } from "@/lib/lineOfCredit/buildSnapshot";
 import { fetchLocLedgerForCharacter } from "@/lib/lineOfCredit/ledger";
 import { getBankId } from "@/lib/centralBank/helpers";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 const DEFAULT_PRIME = 2.5;
 
@@ -38,7 +38,7 @@ export async function loadCountryCentralBankLoc(params: {
   const [forexEnabled, character, bank] = await Promise.all([
     isForexEnabled(),
     getCharacterByUserId(db, userId),
-    db.collection<CentralBank>("centralBanks").findOne({ _id: getBankId(countryId) }),
+    centralBanksCollection(db).findOne({ _id: getBankId(countryId) }),
   ]);
 
   if (!character) {

@@ -23,6 +23,7 @@ import {
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { getNationalBudgetId } from "@/lib/bonds/sovereign";
 import type { FederalBudget, ImfBoardOverrideKind } from "@/lib/db/types/budget";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 const VALID_ACTIONS = ["modify-terms", "endorse", "criticize", "no-action"] as const;
 
@@ -70,7 +71,7 @@ export async function POST(req: Request) {
   }
 
   const budgetId = getNationalBudgetId(upper);
-  const budget = await db.collection<FederalBudget>("federalBudget").findOne({ _id: budgetId });
+  const budget = await federalBudgetCollection(db).findOne({ _id: budgetId });
   if (!budget) {
     return errorResponse(404, "Country budget not found");
   }
@@ -127,9 +128,10 @@ export async function POST(req: Request) {
   // imfBoardOverrideAt being null — if a second writer arrives, modifiedCount
   // is 0 and we return 409. The trust-hit side-effect runs only AFTER the
   // atomic guard succeeds so a losing race doesn't double-apply public-trust.
-  const result = await db
-    .collection<FederalBudget>("federalBudget")
-    .updateOne({ _id: budgetId, imfBoardOverrideAt: null }, { $set: set });
+  const result = await federalBudgetCollection(db).updateOne(
+    { _id: budgetId, imfBoardOverrideAt: null },
+    { $set: set }
+  );
   if (result.modifiedCount === 0) {
     return errorResponse(409, "Override already actioned for this window");
   }

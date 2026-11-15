@@ -13,7 +13,7 @@ import { loadEuroMonetaryUnion } from "@/lib/currency/euro/service";
  *
  * Called when a bill is enacted (signed into law or veto overridden).
  * Updates the active policy for the state/federal level, records initial policy reactions,
- * and applies archetype approval impacts to legislators who voted for the bill.
+ * and applies bucket approval impacts to legislators who voted for the bill.
  *
  * ## Currency convention (v0.2.6)
  *
@@ -52,12 +52,7 @@ import type { LawCountryId } from "@/lib/politicalLegislation/types";
 import { recordAudit } from "@/lib/audit/recordAudit";
 import { needsPhaseIn, stepTaxRate } from "@/lib/budget/taxRatePhaseIn";
 import { getNationalBudgetId } from "@/lib/bonds/sovereign";
-import type {
-  FederalBudget,
-  FederalTaxRates,
-  StateBudget,
-  StateTaxRates,
-} from "@/lib/db/types/budget";
+import type { FederalTaxRates, StateBudget, StateTaxRates } from "@/lib/db/types/budget";
 import type { GameState } from "@/lib/db/types/gameState";
 import { applyElectoralLawProvision } from "@/lib/elections/electoralLaws";
 import type {
@@ -66,7 +61,7 @@ import type {
   ElectoralLawProvision,
 } from "@/lib/db/types/legislation";
 import { applyEconomicSystemReformProvision } from "@/lib/economy/economicSystemReform";
-import { FOMC_COMMITTEE_COUNTRY_IDS, type CentralBank } from "@/lib/db/types/centralBank";
+import { FOMC_COMMITTEE_COUNTRY_IDS } from "@/lib/db/types/centralBank";
 import { getBankId } from "@/lib/centralBank/helpers";
 import { seedFomcBoards } from "@/lib/centralBank/seedFomcBoard";
 import { scrutinyAfterRevocation } from "@/lib/centralBank/independence";
@@ -77,7 +72,8 @@ import { recordEnactedLaw } from "@/lib/budget/enactedLaws";
 import { sendCountryGameEvent, DISCORD_COLORS } from "@/lib/discordWebhooks";
 import { generateDiscordEventCard } from "@/lib/discord/eventCard";
 import { billChamberVoteSplits } from "@/lib/charts/voteSplitChart";
-import { calculateShiftImpacts } from "@/lib/archetypeAffinities";
+import { calculateShiftImpacts } from "@/lib/policyShiftImpacts";
+import { automationBucketImpacts, mergeBucketImpacts } from "@/lib/automationPolicy/rules";
 import { regionalDefaultLevel } from "@/lib/politicalLegislation/regionalDefaults";
 import { taxSliderRateLabel } from "@/lib/politicalLegislation/taxSlider";
 import {
@@ -109,6 +105,19 @@ import {
   separationPolicyFromOptionId,
 } from "@/lib/banking/separationBill";
 import { applyResetLawBillEnactment } from "@/lib/resetLegislation/enactBill";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
+import { billsCollection } from "@/lib/db/repositories/bills";
+import type { Document } from "mongodb";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
+import { governorExecutiveOrdersCollection } from "@/lib/db/repositories/governorExecutiveOrders";
 
 type EnactableBill = Pick<
   Bill | StateBill,
@@ -148,10 +157,10 @@ type EnactableBill = Pick<
   otherChamberVoteSnapshot?: Bill["otherChamberVoteSnapshot"];
   overrideDisplaySnapshot?: Bill["overrideDisplaySnapshot"];
   /**
-   * #3598: attribution tag threaded onto the resulting `EnactedLaw` row.
+   * Attribution tag threaded onto the resulting `EnactedLaw` row.
    * Omitted for ordinary bills; set to "scotus_ruling" by the SCOTUS docket
    * turn processor when synthesizing a diverged-case enactment, or
-   * "scotus_surprise_ruling" (#3607) by the surprise-case turn processor, or
+   * "scotus_surprise_ruling" by the surprise-case turn processor, or
    * "uk_judicial_review_surprise" by the UK JR surprise turn.
    */
   source?: EnactedLaw["source"];
@@ -183,13 +192,9 @@ async function applyTaxRateChange(
   retry = 0,
   countryOverride?: CountryId
 ): Promise<void> {
-  // Slider tax laws (ruling #16) carry scope+taxType on `taxSlider`, not the discrete
-  // `taxRateChange` schema — the two are projected side by side, but only for freshly
-  // seeded types. A stored `legislationTypes` doc written before that projection landed
-  // has `taxSlider` alone, and the slider enactment path (see the call site) hands us such
-  // a type. Requiring `taxRateChange` here is what made ticket 1102's Poon Choi Economic
-  // Act enact its VAT/customs sliders without ever writing federalBudget.taxRates. Resolve
-  // from whichever field the type carries so a slider provision always applies.
+  // Slider tax laws carry scope+taxType on `taxSlider`, not `taxRateChange`.
+  // Stored legislationTypes predating the projection may have only `taxSlider`.
+  // Resolve from whichever field the type carries so slider provisions always apply.
   const change = legislationType.taxRateChange ?? legislationType.taxSlider;
   if (!change || selectedOptionRate === undefined) {
     return;
@@ -201,12 +206,12 @@ async function applyTaxRateChange(
     const countryId =
       countryOverride ?? ((legislationType.countryScope ?? "us").toUpperCase() as CountryId);
     const budgetId = getNationalBudgetId(countryId);
-    const budget = await db.collection<FederalBudget>("federalBudget").findOne({ _id: budgetId });
+    const budget = await federalBudgetCollection(db).findOne({ _id: budgetId });
     if (!budget) return;
     const normalizedTaxRates = normalizeFederalTaxRates(budget.taxRates);
     if (!normalizedTaxRates) return;
 
-    // Ticket #1102: a big move ramps instead of landing whole. The rate starts
+    // A big move ramps instead of landing whole. The rate starts
     // moving this turn and the legislature's figure is still exactly the
     // destination; only the speed changes. Anything within one step applies
     // outright, so ordinary budget tweaks behave as before.
@@ -243,9 +248,10 @@ async function applyTaxRateChange(
     // netting is a no-op (sourcedImports stays undefined) for every other tax.
     let sourcedImports: { tariffPaidAnchor: number; importValueAnchor: number } | undefined;
     if (taxType === "tariffs") {
-      const moneyWiringConfig = await db
-        .collection<GameConfig>("gameConfig")
-        .findOne({ _id: "default" }, { projection: { interstateMoneyWiringEnabled: 1 } });
+      const moneyWiringConfig = await gameConfigCollection(db).findOne(
+        { _id: "default" },
+        { projection: { interstateMoneyWiringEnabled: 1 } }
+      );
       if (moneyWiringConfig?.interstateMoneyWiringEnabled === true) {
         const sourcedByCountry = await loadLatestSourcedImportAggregates(
           db,
@@ -270,7 +276,7 @@ async function applyTaxRateChange(
     );
     const newSurplus = newRevenue.total - budget.spending.total;
 
-    const written = await db.collection<FederalBudget>("federalBudget").updateOne(
+    const written = await federalBudgetCollection(db).updateOne(
       { _id: budgetId, taxRates: budget.taxRates },
       {
         $set: {
@@ -331,9 +337,10 @@ async function applyTaxRateChange(
 
     const stateBudgetCountryId =
       countryOverride ?? ((legislationType.countryScope ?? "us").toUpperCase() as CountryId);
-    const budget = await db
-      .collection<StateBudget>("stateBudgets")
-      .findOne({ _id: stateId, countryId: stateBudgetCountryId });
+    const budget = await stateBudgetsCollection(db).findOne({
+      _id: stateId,
+      countryId: stateBudgetCountryId,
+    });
     if (!budget) return;
     const normalizedTaxRates = normalizeStateTaxRates(budget.taxRates);
     if (!normalizedTaxRates) return;
@@ -357,7 +364,7 @@ async function applyTaxRateChange(
     );
     const newSurplus = newRevenue.total - (budget.spending?.total ?? 0);
 
-    const written = await db.collection<StateBudget>("stateBudgets").updateOne(
+    const written = await stateBudgetsCollection(db).updateOne(
       {
         _id: stateId,
         countryId: stateBudgetCountryId,
@@ -422,14 +429,12 @@ export async function applyCentralBankIndependenceProvision(
     return;
   }
   const governmentControlled = provision.action === "revoke";
-  const banks = db.collection<CentralBank>("centralBanks");
+  const banks = centralBanksCollection(db);
   const bankId = getBankId(countryId);
 
-  // B5: revoking independence costs the INSTITUTION credibility. Taking the
-  // bank by statute was previously free — the government got a bank that does
-  // what it says at no cost to what that bank's word is worth, which is the
-  // one thing that should have moved. Granting independence deliberately
-  // refunds nothing: if it did, grant-revoke cycling would launder scrutiny.
+  // Revoking independence costs the institution credibility; otherwise
+  // statute-taking is free. Granting refunds nothing, else grant-revoke
+  // cycling would launder scrutiny.
   let revocationScrutiny: number | undefined;
   if (governmentControlled) {
     const bank = await banks.findOne({ _id: bankId }, { projection: { chairInfamy: 1 } });
@@ -498,7 +503,7 @@ export async function onBillEnacted(
         bill,
         getNationalBudgetId(budgetCountryId)
       );
-      await db.collection("bills").updateOne(
+      await billsCollection<Document>(db).updateOne(
         { _id: bill._id as unknown as ObjectId },
         {
           $set: {
@@ -513,9 +518,7 @@ export async function onBillEnacted(
         }
       );
       if (validation.warning === "DEBT_CEILING_EXCEEDED") {
-        const budgetGateGameState = await db
-          .collection<GameState>("gameState")
-          .findOne({ _id: "current" });
+        const budgetGateGameState = await gameStateCollection(db).findOne({ _id: "current" });
         await triggerDebtCeilingCrisis(
           db,
           budgetGateGameState?.currentYear ?? new Date().getFullYear()
@@ -654,13 +657,10 @@ export async function onBillEnacted(
         effectDirection: p.effectDirection,
         economic: p.economic,
         social: p.social,
-        // Tax-slider laws (ruling #16): the chosen rate lives ONLY on the
-        // provision — there is no options ladder to recover it from. Dropping
-        // it here made every slider tax law inert: the statePolicy and
-        // enactedLaw rows were written, but `processProvisionEnactment`'s
-        // `provision.proposedRate !== undefined` guard never fired, so
-        // federalBudget.taxRates never moved and the duties/VAT the bill
-        // levied were never collected (ticket #1102).
+        // Tax-slider laws: the chosen rate lives ONLY on the provision, with
+        // no options ladder to recover it from. Dropping it makes the law inert:
+        // the `provision.proposedRate !== undefined` guard in
+        // `processProvisionEnactment` never fires and taxRates never move.
         proposedRate: p.proposedRate,
         policyOptionNameSnapshot: p.policyOptionNameSnapshot,
         currentPolicyOptionNameSnapshot: p.currentPolicyOptionNameSnapshot,
@@ -688,8 +688,7 @@ export async function onBillEnacted(
   const legTypes = knownTypesAreComplete
     ? uniqueLegTypeIds.map((id) => knownLegislationTypes.get(id) as LegislationType)
     : uniqueLegTypeIds.length
-      ? await db
-          .collection<LegislationType>("legislationTypes")
+      ? await legislationTypesCollection(db)
           .find({ _id: { $in: uniqueLegTypeIds } })
           .toArray()
       : [];
@@ -698,7 +697,7 @@ export async function onBillEnacted(
   );
 
   // Fetch fiscal year from game state
-  const gameState = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+  const gameState = await gameStateCollection(db).findOne({ _id: "current" });
   const fiscalYear = gameState?.currentYear ?? new Date().getFullYear();
 
   // Collect all "for" voters from both chambers
@@ -715,7 +714,7 @@ export async function onBillEnacted(
   }
 
   const resolvedCountry = await getResolvedCountry();
-  // UK-only archetype routing hook (unchanged behavior for non-UK)
+  // UK-only bucket routing hook (unchanged behavior for non-UK)
   const billCountryId = resolvedCountry ?? undefined;
 
   const nationalScopeCountry = inferCountryIdFromStateId(stateId);
@@ -787,12 +786,10 @@ export async function onBillEnacted(
   const proposalPayerId =
     bill.proposalPayerId ?? bill.proposedByGovernor?.characterId ?? bill.sponsorId;
   if (proposalPayerId && (bill.proposalNpiCost || bill.proposalActionCost)) {
-    const sponsor = await db
-      .collection<Character>("characters")
-      .findOne(
-        { _id: proposalPayerId },
-        { projection: { actions: 1, nationalInfluence: 1, stats: 1 } }
-      );
+    const sponsor = await charactersCollection(db).findOne(
+      { _id: proposalPayerId },
+      { projection: { actions: 1, nationalInfluence: 1, stats: 1 } }
+    );
     if (sponsor) {
       const refundNpi = bill.proposalNpiCost ?? 0;
       const refundActions = bill.proposalActionCost ?? 0;
@@ -805,29 +802,28 @@ export async function onBillEnacted(
       if (refundNpi > 0) {
         updateOp.$inc = { nationalInfluence: refundNpi };
       }
-      await db.collection<Character>("characters").updateOne({ _id: proposalPayerId }, updateOp);
+      await charactersCollection(db).updateOne({ _id: proposalPayerId }, updateOp);
     }
   }
 
   // Discord notification (fire-and-forget)
   const locationLabel = (() => {
-    if (nationalScopeCountry && resolvedCountry === "UK") return "Westminster";
-    if (nationalScopeCountry && resolvedCountry === "US") return "Federal";
-    if (nationalScopeCountry && resolvedCountry === "DE") return "Bundestag";
-    if (nationalScopeCountry && resolvedCountry === "JP") return "Kokkai";
+    if (nationalScopeCountry && countryHasFeature("ukLib", resolvedCountry)) return "Westminster";
+    if (nationalScopeCountry && countryHasFeature("usLib", resolvedCountry)) return "Federal";
+    if (nationalScopeCountry && countryHasFeature("deLib", resolvedCountry)) return "Bundestag";
+    if (nationalScopeCountry && countryHasFeature("jpLib", resolvedCountry)) return "Kokkai";
     if (nationalScopeCountry) return getCountryConfig(resolvedCountry).name;
     return bill.stateId || "Federal";
   })();
-  const countryLabel =
-    resolvedCountry === "US"
-      ? "USA"
-      : resolvedCountry === "UK"
-        ? "UK"
-        : resolvedCountry === "DE"
-          ? "Germany"
-          : resolvedCountry === "JP"
-            ? "Japan"
-            : getCountryConfig(resolvedCountry).name;
+  const countryLabel = countryHasFeature("usLib", resolvedCountry)
+    ? "USA"
+    : countryHasFeature("ukLib", resolvedCountry)
+      ? "UK"
+      : countryHasFeature("deLib", resolvedCountry)
+        ? "Germany"
+        : countryHasFeature("jpLib", resolvedCountry)
+          ? "Japan"
+          : getCountryConfig(resolvedCountry).name;
 
   // Build policy domain label from the first provision's legislation type
   const firstLegType =
@@ -898,7 +894,7 @@ export async function onBillEnacted(
 
 /**
  * Process a single provision and create/update the StatePolicy record.
- * Also applies archetype approval impacts to legislators who voted FOR the bill.
+ * Also applies bucket approval impacts to legislators who voted FOR the bill.
  */
 async function processProvisionEnactment(
   db: Db,
@@ -963,15 +959,16 @@ async function processProvisionEnactment(
   }
 
   // Get old policy index before updating
-  const oldPolicy = await db
-    .collection<StatePolicy>("statePolicies")
-    .findOne({ stateId, legislationTypeId: provision.legislationTypeId });
+  const oldPolicy = await statePoliciesCollection(db).findOne({
+    stateId,
+    legislationTypeId: provision.legislationTypeId,
+  });
   // Default a missing prior policy to the CENTER OF THIS TYPE'S OPTIONS (not the
   // hardcoded 3, which is out of bounds for any type with <4 options). An
   // out-of-bounds index makes optionScores[oldIndex] undefined, which drops
   // calculateShiftImpacts onto the legacy bare-index path that inverts every
-  // archetype-approval sign for right→left-ordered option sets. Clamping keeps
-  // it on the curated-score path so signs stay correct. (#2899 — ticket 921.)
+  // bucket-approval sign for right→left-ordered option sets. Clamping keeps
+  // it on the curated-score path so signs stay correct.
   const optionCount = lt?.policyOptions?.length ?? 0;
   const centerIndex = optionCount ? Math.floor(optionCount / 2) : 3;
   // A region with no row for a new-generation `both` law sits at level 0 — what
@@ -1020,11 +1017,12 @@ async function processProvisionEnactment(
 
   // If a prior executive order set this same policy, mark it superseded so
   // the order's turn-phase doesn't try to revert the bill's effect.
-  const priorPolicy = await db
-    .collection<StatePolicy>("statePolicies")
-    .findOne({ stateId, legislationTypeId: provision.legislationTypeId });
+  const priorPolicy = await statePoliciesCollection(db).findOne({
+    stateId,
+    legislationTypeId: provision.legislationTypeId,
+  });
   if (priorPolicy?.enactedBy?.kind === "order") {
-    await db.collection("governorExecutiveOrders").updateOne(
+    await governorExecutiveOrdersCollection<Document>(db).updateOne(
       { _id: priorPolicy.enactedBy.id, status: "active" },
       {
         $set: {
@@ -1037,13 +1035,11 @@ async function processProvisionEnactment(
   }
 
   // Upsert into statePolicies collection keyed by (stateId, legislationTypeId)
-  await db
-    .collection<StatePolicy>("statePolicies")
-    .updateOne(
-      { stateId, legislationTypeId: provision.legislationTypeId },
-      { $set: statePolicy },
-      { upsert: true }
-    );
+  await statePoliciesCollection(db).updateOne(
+    { stateId, legislationTypeId: provision.legislationTypeId },
+    { $set: statePolicy },
+    { upsert: true }
+  );
   if (stateId === "uk_national" && provision.legislationTypeId === "uk_devolution_local_powers") {
     await reconcileEnactedUKDevolution(db, new Date());
   }
@@ -1100,30 +1096,34 @@ async function processProvisionEnactment(
     }
   }
 
-  // Calculate and apply archetype approval impacts based on policy shift
+  // Calculate and apply bucket approval impacts based on policy shift
   if (!corporateRateHandled && lt?.policyDomain && forVoters.length > 0) {
-    const impacts = calculateShiftImpacts(
-      lt.policyDomain,
-      oldPolicyIndex,
-      newPolicyIndex,
-      countryId,
-      // Curated position scores → correct shift direction even for right→left-ordered
-      // option sets (all tax brackets, some CN/DE/JP types). Without these the bare
-      // index flips every approval sign (e.g. libertarians "approve" a 50% income tax).
-      lt.policyOptions?.map((o) => (o.economic ?? 0) + (o.social ?? 0))
+    const impacts = mergeBucketImpacts(
+      calculateShiftImpacts(
+        lt.policyDomain,
+        oldPolicyIndex,
+        newPolicyIndex,
+        countryId,
+        // Curated position scores → correct shift direction even for right→left-ordered
+        // option sets (all tax brackets, some CN/DE/JP types). Without these the bare
+        // index flips every approval sign (e.g. libertarians "approve" a 50% income tax).
+        lt.policyOptions?.map((o) => (o.economic ?? 0) + (o.social ?? 0))
+      ),
+      // The automation laws also move the buckets they help or tax.
+      automationBucketImpacts(lt._id, oldPolicyIndex, newPolicyIndex)
     );
 
     if (Object.keys(impacts).length > 0) {
-      await applyArchetypeImpactsToVoters(db, forVoters, impacts);
+      await applyBucketImpactsToVoters(db, forVoters, impacts);
     }
   }
 }
 
 /**
- * Apply archetype approval impacts to a list of character IDs.
+ * Apply bucket approval impacts to a list of character IDs.
  * Handles both player characters and NPPs.
  */
-async function applyArchetypeImpactsToVoters(
+async function applyBucketImpactsToVoters(
   db: Db,
   voterIds: string[],
   impacts: Record<string, number>
@@ -1132,8 +1132,8 @@ async function applyArchetypeImpactsToVoters(
 
   // Build the $inc updates
   const incUpdates: Record<string, number> = {};
-  for (const [archetypeId, impact] of Object.entries(impacts)) {
-    incUpdates[`archetypeApprovals.${archetypeId}`] = impact;
+  for (const [bucketId, impact] of Object.entries(impacts)) {
+    incUpdates[`bucketApprovals.${bucketId}`] = impact;
   }
 
   // Convert string IDs to ObjectIds, filtering invalid ones
@@ -1144,28 +1144,23 @@ async function applyArchetypeImpactsToVoters(
   if (validObjectIds.length === 0) return;
 
   // Update characters
-  await db
-    .collection<Character>("characters")
-    .updateMany({ _id: { $in: validObjectIds } }, { $inc: incUpdates });
+  await charactersCollection(db).updateMany({ _id: { $in: validObjectIds } }, { $inc: incUpdates });
 
   // Update NPPs (some voter IDs might be NPPs)
-  await db
-    .collection<NPP>("npps")
-    .updateMany({ _id: { $in: validObjectIds } }, { $inc: incUpdates });
+  await nppsCollection(db).updateMany({ _id: { $in: validObjectIds } }, { $inc: incUpdates });
 
   // Clamp values for characters
-  const characters = await db
-    .collection<Character>("characters")
-    .find({ _id: { $in: validObjectIds }, archetypeApprovals: { $exists: true } })
+  const characters = await charactersCollection(db)
+    .find({ _id: { $in: validObjectIds }, bucketApprovals: { $exists: true } })
     .toArray();
 
   const charBulkOps: AnyBulkWriteOperation<Character>[] = [];
   for (const char of characters) {
-    if (!char.archetypeApprovals) continue;
+    if (!char.bucketApprovals) continue;
     let needsUpdate = false;
     const clamped: Record<string, number> = {};
 
-    for (const [id, val] of Object.entries(char.archetypeApprovals)) {
+    for (const [id, val] of Object.entries(char.bucketApprovals)) {
       const clampedVal = Math.max(-100, Math.min(100, val));
       clamped[id] = clampedVal;
       if (clampedVal !== val) needsUpdate = true;
@@ -1175,28 +1170,27 @@ async function applyArchetypeImpactsToVoters(
       charBulkOps.push({
         updateOne: {
           filter: { _id: char._id },
-          update: { $set: { archetypeApprovals: clamped } },
+          update: { $set: { bucketApprovals: clamped } },
         },
       });
     }
   }
   if (charBulkOps.length > 0) {
-    await db.collection<Character>("characters").bulkWrite(charBulkOps);
+    await charactersCollection(db).bulkWrite(charBulkOps);
   }
 
   // Clamp values for NPPs
-  const npps = await db
-    .collection<NPP>("npps")
-    .find({ _id: { $in: validObjectIds }, archetypeApprovals: { $exists: true } })
+  const npps = await nppsCollection(db)
+    .find({ _id: { $in: validObjectIds }, bucketApprovals: { $exists: true } })
     .toArray();
 
   const nppBulkOps: AnyBulkWriteOperation<NPP>[] = [];
   for (const npp of npps) {
-    if (!npp.archetypeApprovals) continue;
+    if (!npp.bucketApprovals) continue;
     let needsUpdate = false;
     const clamped: Record<string, number> = {};
 
-    for (const [id, val] of Object.entries(npp.archetypeApprovals)) {
+    for (const [id, val] of Object.entries(npp.bucketApprovals)) {
       const clampedVal = Math.max(-100, Math.min(100, val));
       clamped[id] = clampedVal;
       if (clampedVal !== val) needsUpdate = true;
@@ -1206,12 +1200,12 @@ async function applyArchetypeImpactsToVoters(
       nppBulkOps.push({
         updateOne: {
           filter: { _id: npp._id },
-          update: { $set: { archetypeApprovals: clamped } },
+          update: { $set: { bucketApprovals: clamped } },
         },
       });
     }
   }
   if (nppBulkOps.length > 0) {
-    await db.collection<NPP>("npps").bulkWrite(nppBulkOps);
+    await nppsCollection(db).bulkWrite(nppBulkOps);
   }
 }

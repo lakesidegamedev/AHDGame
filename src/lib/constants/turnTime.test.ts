@@ -39,20 +39,13 @@ describe("getStartingYearForPreset", () => {
     expect(getStartingYearForPreset("2019-default")).toBe(2019);
   });
 
-  it("1999-default cycle anchors are all positive turn numbers", () => {
-    // With the missing branch, a 1999 world could pair era election years with
-    // a 2019 startingYear and compute negative endTurns (e.g. endOfYear(2000,
-    // 2019) = -864). With startingYear correctly 1999, every anchor — even via
-    // the 2019-default election-year fallback — must land strictly in the
-    // future.
-    const anchors = getCycleAnchors({
-      startingYear: getStartingYearForPreset("1999-default"),
-      preset: "1999-default",
-    });
-    for (const [key, turn] of Object.entries(anchors)) {
-      if (turn == null) continue; // deliberate era-gates (esCongreso)
-      expect(turn, `${key} anchor (${turn}) must be positive`).toBeGreaterThan(0);
-    }
+  it("1999-default has no election anchors to borrow", () => {
+    expect(() =>
+      getCycleAnchors({
+        startingYear: getStartingYearForPreset("1999-default"),
+        preset: "1999-default",
+      })
+    ).toThrow(/electionAnchors/);
   });
 
   it("2027-default cycle anchors are positive", () => {

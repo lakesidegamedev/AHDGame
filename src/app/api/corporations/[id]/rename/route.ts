@@ -21,7 +21,7 @@ import {
 } from "@/lib/currency/corporationCapital";
 import { logWireEvent } from "@/lib/wireEvent";
 import { formatFundsCompact } from "@/lib/utils/formatters";
-import type { Corporation } from "@/lib/db/types";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -81,7 +81,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     // Check name uniqueness (case-insensitive), same pattern as corporation founding
     const escapedName = newName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    const nameTaken = await db.collection<Corporation>("corporations").findOne({
+    const nameTaken = await corporationsCollection(db).findOne({
       _id: { $ne: corporation._id },
       name: { $regex: new RegExp(`^${escapedName}$`, "i") },
     });
@@ -114,7 +114,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     const oldName = corporation.name;
 
-    const renamed = await db.collection<Corporation>("corporations").updateOne(
+    const renamed = await corporationsCollection(db).updateOne(
       {
         _id: corporation._id,
         liquidCapital: { $gte: costInCorpCurrency },

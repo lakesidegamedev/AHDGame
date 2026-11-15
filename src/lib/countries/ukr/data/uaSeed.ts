@@ -2,7 +2,6 @@ import type { EasternBlocSeedConfig } from "@/lib/admin/seed/seedEasternBloc";
 import { uaRegions } from "@/lib/seeds/ua/uaRegions";
 import { uaRegions1953 } from "@/lib/seeds/ua/uaRegions1953";
 import { uaParties } from "@/lib/seeds/ua/uaParties";
-import { makeEasternBlocCategories } from "@/lib/seeds/shared/easternBlocModel";
 import {
   makeEasternBlocStateMetrics,
   makeEasternBlocBaselines,
@@ -110,10 +109,8 @@ export function getUaSeedConfig(preset: string): EasternBlocSeedConfig {
   );
   return {
     countryId: "UKR",
-    categoryId: "ua_voterGroups",
     regions,
     parties: uaParties,
-    categories: makeEasternBlocCategories("ua_voterGroups", "Ukraine Voter Groups"),
     metrics,
     baselines: makeEasternBlocBaselines(metrics),
   };

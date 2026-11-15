@@ -13,6 +13,12 @@ import { emitPartyMembershipEvent, buildPartyEventSnapshots } from "@/lib/partie
 import { withPartyTerritoryMutation } from "./territoryMutation";
 import { canCharacterJoinParty } from "./partyFrontier";
 import { PartyTerritoryError } from "./relocationTerritory";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import type { Document } from "mongodb";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { coalitionsCollection } from "@/lib/db/repositories/coalitions";
+import { nationalPartyElectionsCollection } from "@/lib/db/repositories/nationalPartyElections";
 
 export interface ApplyCharacterPartyJoinArgs {
   db: Db;
@@ -52,7 +58,7 @@ export interface ApplyCharacterPartyJoinArgs {
  *
  * Shared by the immediate "open" join path (`join/route.ts`) and the
  * leader-approved "approval" accept path (`join-requests/route.ts`, suggestion
- * #72) so both stay in exact lockstep. Callers must have already run the
+ * ) so both stay in exact lockstep. Callers must have already run the
  * country / already-member / switch-cooldown / purge-block guards — this
  * function only performs the mutations.
  */
@@ -88,7 +94,7 @@ export async function applyCharacterPartyJoin(
       // Update character's party and reset party influence.
       // `partyJoinedAt` is the third anchor of the 24-hour new-character
       // cooldown on leadership/committee actions (see newCharacterCooldown.ts).
-      await db.collection("characters").updateOne(
+      await charactersCollection(db).updateOne(
         { _id: character._id },
         {
           $set: {
@@ -113,12 +119,10 @@ export async function applyCharacterPartyJoin(
 
       // Update any ElectedOfficial records for this character to reflect the new party
       // This ensures Congress/Parliament and state legislature displays show the correct party
-      await db
-        .collection("electedOfficials")
-        .updateMany(
-          { characterId: character._id },
-          { $set: { party: partyIdStr, updatedAt: now } }
-        );
+      await electedOfficialsCollection<Document>(db).updateMany(
+        { characterId: character._id },
+        { $set: { party: partyIdStr, updatedAt: now } }
+      );
 
       if (!oldParty || oldParty === "independent") {
         const { transferredCount } = await transferIndependentCandidaciesToParty(
@@ -188,7 +192,7 @@ export async function applyCharacterPartyJoin(
         // Caucuses are scoped to a single (countryId, partyId). Switching parties
         // without going independent must drop old-party caucus membership the same
         // way leave does — otherwise factionId/membership linger and block founding
-        // or joining a caucus in the new party (ticket #1030 / leave fix #0552).
+        // or joining a caucus in the new party.
         const caucusCleanup = await cleanupCaucusParticipationForCharacters(db, [character._id], {
           removeMembership: true,
           membershipStatus: "left",
@@ -205,12 +209,10 @@ export async function applyCharacterPartyJoin(
       // We just verified the character's country matches the new party's country
       // via isSameCountry upstream, so countryId (URL/new-party country) == old-party country.
       if (oldParty && oldParty !== "independent") {
-        await db
-          .collection<PoliticalParty>("politicalParties")
-          .updateOne(
-            { sequentialId: parseInt(oldParty, 10), countryId },
-            { $inc: { memberCount: -1 } }
-          );
+        await politicalPartiesCollection(db).updateOne(
+          { sequentialId: parseInt(oldParty, 10), countryId },
+          { $inc: { memberCount: -1 } }
+        );
       }
 
       // Vacant national chair: optionally auto-assign to joiner (gameConfig
@@ -219,12 +221,10 @@ export async function applyCharacterPartyJoin(
       // The lookup only runs when the cheap conditions already hold.
       let becameChair = autoChairWhenVacant && party.isDefault === true && party.chairId === null;
       if (becameChair) {
-        const activeChairElection = await db
-          .collection("nationalPartyElections")
-          .findOne(
-            { partyId: partyIdStr, countryId, position: "chair", status: "voting" },
-            { projection: { _id: 1 } }
-          );
+        const activeChairElection = await nationalPartyElectionsCollection<Document>(db).findOne(
+          { partyId: partyIdStr, countryId, position: "chair", status: "voting" },
+          { projection: { _id: 1 } }
+        );
         if (activeChairElection) becameChair = false;
       }
 
@@ -235,7 +235,7 @@ export async function applyCharacterPartyJoin(
         partyUpdate.updatedAt = now;
       }
 
-      await db.collection<PoliticalParty>("politicalParties").updateOne(
+      await politicalPartiesCollection(db).updateOne(
         { _id: party._id },
         {
           $inc: { memberCount: 1 },
@@ -245,12 +245,10 @@ export async function applyCharacterPartyJoin(
 
       // If auto-promoted to chair, sync any coalition this party leads
       if (becameChair) {
-        await db
-          .collection("coalitions")
-          .updateMany(
-            { chairPartyId: party._id },
-            { $set: { chairCharacterId: character._id, updatedAt: now } }
-          );
+        await coalitionsCollection<Document>(db).updateMany(
+          { chairPartyId: party._id },
+          { $set: { chairCharacterId: character._id, updatedAt: now } }
+        );
       }
 
       // Update presence for old and new parties
@@ -264,12 +262,10 @@ export async function applyCharacterPartyJoin(
       if (oldParty && oldParty !== "independent") {
         const oldSeq = parseInt(oldParty, 10);
         if (!isNaN(oldSeq)) {
-          oldPartyDoc = await db
-            .collection<PoliticalParty>("politicalParties")
-            .findOne(
-              { sequentialId: oldSeq, countryId },
-              { projection: { sequentialId: 1, name: 1, countryId: 1 } }
-            );
+          oldPartyDoc = await politicalPartiesCollection(db).findOne(
+            { sequentialId: oldSeq, countryId },
+            { projection: { sequentialId: 1, name: 1, countryId: 1 } }
+          );
         }
       }
 

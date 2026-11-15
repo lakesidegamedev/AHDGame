@@ -375,13 +375,20 @@ export function priceCommodity(
     for (const countryId of reachableBooks.keys()) {
       const book = reachableBooks.get(countryId)?.get(commodity);
       if (!book || (book.supply <= 0 && book.demand <= 0)) continue;
+      // Plants take their reference price from this book, so it moves at the
+      // same pace as the published global and national prices. Unpaced, a glut
+      // halved it in one turn and the next turn's asks, markdown floor and
+      // household ceilings followed it down.
       reachablePrices[countryId] =
         pegged ??
-        computeMarketPrice(
-          effBaseFor(countryId),
-          book.supply + NATIONAL_COMMODITY_STABILIZER,
-          book.demand + NATIONAL_COMMODITY_STABILIZER,
-          priceKnee
+        paced(
+          computeMarketPrice(
+            effBaseFor(countryId),
+            book.supply + NATIONAL_COMMODITY_STABILIZER,
+            book.demand + NATIONAL_COMMODITY_STABILIZER,
+            priceKnee
+          ),
+          existing?.reachablePrices?.[countryId]
         );
     }
   }
@@ -416,16 +423,9 @@ export function priceCommodity(
     } else {
       // Three-leg blend: 50% reachable-market + 25% national + 25% regional.
       // For macro-driven commodities the regional leg redirects to national.
-      //
-      // The wide leg is the price of the market this country can actually
-      // REACH — the same reachable book the clearing engine fills sellers
-      // from (#1077) — not the planet-wide aggregate. The planet-wide leg
-      // priced every open economy against supply that could never arrive:
-      // observed on prod, the Eastern bloc's command farms carried a 13.45M
-      // food surplus against 2.94M of bloc demand and the single global
-      // ledger crushed food to 0.58x base across a West that was itself
-      // 2.7M short. Partitioned clearing with unpartitioned pricing meant
-      // the iron curtain stopped the goods but not the glut. Countries
+      // The wide leg is the reachable book the clearing engine fills sellers
+      // from, not the planet-wide aggregate. Partitioned clearing with
+      // unpartitioned pricing let unreachable supply crush prices; countries
       // without a reachable book keep the world aggregate.
       const countryId = stateToCountry.get(stateId);
       const nationalLeg =
@@ -445,15 +445,11 @@ export function priceCommodity(
       const wideLeg =
         (countryId != null ? reachablePrices[countryId] : undefined) ?? globalMktPrice;
       let targetPrice = blendPrice(wideLeg, nationalLeg, regionalLeg);
-      // Autarky (P3, owner decision 2026-08-16): in a planned economy the
-      // PLAN sets prices, not the market — for the whole state price, not
-      // just the national leg. With the iron curtain closed the bloc's
-      // internal surpluses would otherwise crater its market legs and
-      // starve every state farm of revenue the plan is supposed to
-      // guarantee; administered pricing is what makes the bloc function in
-      // autarky (the state eats the imbalance, historically exactly right,
-      // and the overhang machinery accounts it). Dual-track economies blend
-      // by plannedShare; market economies are untouched.
+      // Planned economy: the PLAN sets prices for the whole state price, not
+      // just the national leg. With the iron curtain closed, bloc internal
+      // surpluses would otherwise crater market legs and starve state farms of
+      // planned revenue; the state absorbs the imbalance and overhang machinery
+      // accounts it. Dual-track economies blend by plannedShare.
       if (
         countryId &&
         commandEconomyEnabled &&

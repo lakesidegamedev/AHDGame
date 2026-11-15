@@ -37,6 +37,14 @@ import {
 import { resolvePartyTier } from "@/lib/parties/partyTier";
 import { getOfficeLabel } from "@/lib/utils/officeTitle";
 import { formatElectionTypeLabel } from "@/lib/utils/electionLabels";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { nppInfluenceAttemptsCollection } from "@/lib/db/repositories/nppInfluenceAttempts";
 
 export type { PartyInfluenceCalculation } from "./partyExecutorCalculations";
 export type { ExecutePartyInfluenceInput } from "./partyExecutorTypes";
@@ -66,12 +74,13 @@ async function findPartyForInfluence(
 ): Promise<PoliticalParty | null> {
   const parsedPartyId = Number.parseInt(input.partyId, 10);
   if (input.partyObjectId) {
-    return db.collection<PoliticalParty>("politicalParties").findOne({ _id: input.partyObjectId });
+    return politicalPartiesCollection(db).findOne({ _id: input.partyObjectId });
   }
   if (!Number.isNaN(parsedPartyId) && input.countryId) {
-    return db
-      .collection<PoliticalParty>("politicalParties")
-      .findOne({ countryId: input.countryId, sequentialId: parsedPartyId });
+    return politicalPartiesCollection(db).findOne({
+      countryId: input.countryId,
+      sequentialId: parsedPartyId,
+    });
   }
   return null;
 }
@@ -89,20 +98,16 @@ async function getNationalRelocationTargetCost(
     return { ok: false, error: "Select a target state for this relocation request." };
   }
 
-  const targetState = await db
-    .collection<State>("states")
-    .findOne({ _id: targetStateId, countryId });
+  const targetState = await statesCollection(db).findOne({ _id: targetStateId, countryId });
   if (!targetState) {
     return { ok: false, error: "Target state not found in this country." };
   }
 
-  const countryStates = await db
-    .collection<State>("states")
+  const countryStates = await statesCollection(db)
     .find({ countryId }, { projection: { _id: 1 } })
     .toArray();
   const countryStateIds = countryStates.map((state) => state._id);
-  const partyNpps = await db
-    .collection<NPP>("npps")
+  const partyNpps = await nppsCollection(db)
     .find({
       party: partyId,
       retiredAt: null,
@@ -138,10 +143,8 @@ async function executeStatePartyInfluenceCore(
   }
 
   const statePartyKey = `${input.stateId}_${input.partyId}`;
-  const statePartyOrg = await db
-    .collection<StatePartyOrg>("statePartyOrg")
-    .findOne({ _id: statePartyKey });
-  const npp = await db.collection<NPP>("npps").findOne({ _id: input.nppId });
+  const statePartyOrg = await statePartyOrgCollection(db).findOne({ _id: statePartyKey });
+  const npp = await nppsCollection(db).findOne({ _id: input.nppId });
   const party = await findPartyForInfluence(db, input);
 
   if (!statePartyOrg || !npp || !party) {
@@ -183,7 +186,7 @@ async function executeStatePartyInfluenceCore(
     };
   }
 
-  const gameState = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+  const gameState = await gameStateCollection(db).findOne({ _id: "current" });
   const currentTurn = gameState?.currentTurn || 1;
   const stateLeadershipBonus =
     qualifiesForStateLeadershipBonus(input.influenceType) &&
@@ -218,16 +221,14 @@ async function executeStatePartyInfluenceCore(
   // Guarded by `$exists:false` → idempotent under concurrent spends.
   if (statePartyOrg.nppActionPoints == null) {
     const apCap = nppActionPointCap("state", resolvePartyTier(party));
-    await db
-      .collection<StatePartyOrg>("statePartyOrg")
-      .updateOne(
-        { _id: statePartyKey, nppActionPoints: { $exists: false } },
-        { $set: { nppActionPoints: apCap } }
-      );
+    await statePartyOrgCollection(db).updateOne(
+      { _id: statePartyKey, nppActionPoints: { $exists: false } },
+      { $set: { nppActionPoints: apCap } }
+    );
     statePartyOrg.nppActionPoints = apCap;
   }
 
-  const resourceDebit = await db.collection<StatePartyOrg>("statePartyOrg").updateOne(
+  const resourceDebit = await statePartyOrgCollection(db).updateOne(
     {
       _id: statePartyKey,
       nppActionPoints: { $gte: totalActionCost },
@@ -250,7 +251,7 @@ async function executeStatePartyInfluenceCore(
     };
   }
 
-  await db.collection<NPP>("npps").updateOne(
+  await nppsCollection(db).updateOne(
     { _id: npp._id },
     {
       $set: {
@@ -269,19 +270,17 @@ async function executeStatePartyInfluenceCore(
     outcome === "success" &&
     effectResult.withdrawApplied === false
   ) {
-    await db.collection<StatePartyOrg>("statePartyOrg").updateOne(
+    await statePartyOrgCollection(db).updateOne(
       { _id: statePartyKey },
       {
         $inc: { nppActionPoints: totalActionCost, treasury: totalFundCost },
         $set: { updatedAt: new Date() },
       }
     );
-    await db
-      .collection<NPP>("npps")
-      .updateOne(
-        { _id: npp._id },
-        { $inc: { "influenceState.totalTimesInfluenced": -1 }, $set: { updatedAt: new Date() } }
-      );
+    await nppsCollection(db).updateOne(
+      { _id: npp._id },
+      { $inc: { "influenceState.totalTimesInfluenced": -1 }, $set: { updatedAt: new Date() } }
+    );
 
     const failOutcome: InfluenceOutcome = "failure";
     const failMsg =
@@ -324,7 +323,7 @@ async function executeStatePartyInfluenceCore(
       partyInfluence: { type: "state", partyId: input.partyId, stateId: input.stateId! },
       createdAt: now,
     };
-    await db.collection<NPPInfluenceAttempt>("nppInfluenceAttempts").insertOne(failAttempt);
+    await nppInfluenceAttemptsCollection(db).insertOne(failAttempt);
 
     return {
       success: false,
@@ -371,7 +370,7 @@ async function executeStatePartyInfluenceCore(
     createdAt: now,
   };
 
-  await db.collection<NPPInfluenceAttempt>("nppInfluenceAttempts").insertOne(attemptRecord);
+  await nppInfluenceAttemptsCollection(db).insertOne(attemptRecord);
   return { success: outcome === "success", outcome, message, calculation, roll };
 }
 
@@ -380,7 +379,7 @@ async function executeNationalPartyInfluenceCore(
 ): Promise<ExecutePartyInfluenceResult> {
   const db = await getDb();
   const party = await findPartyForInfluence(db, input);
-  const npp = await db.collection<NPP>("npps").findOne({ _id: input.nppId });
+  const npp = await nppsCollection(db).findOne({ _id: input.nppId });
 
   if (!party || !npp) {
     return {
@@ -413,12 +412,10 @@ async function executeNationalPartyInfluenceCore(
     };
   }
 
-  const gameState = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+  const gameState = await gameStateCollection(db).findOne({ _id: "current" });
   const currentTurn = gameState?.currentTurn || 1;
   const statePartyKey = `${npp.homeState}_${input.partyId}`;
-  const statePartyOrg = await db
-    .collection<StatePartyOrg>("statePartyOrg")
-    .findOne({ _id: statePartyKey });
+  const statePartyOrg = await statePartyOrgCollection(db).findOne({ _id: statePartyKey });
   const organizationLevel = statePartyOrg?.organization || 50;
   // Fund lever retired — NPP work no longer spends treasury, so no fund bonus.
   const calculation = calculatePartyInfluenceChance(npp, input.partyId, organizationLevel, 0);
@@ -459,16 +456,14 @@ async function executeNationalPartyInfluenceCore(
   // regenerated game) to the full tier cap, so the atomic `$gte` debit can match.
   if (party.nppActionPoints == null) {
     const apCap = nppActionPointCap("national", resolvePartyTier(party));
-    await db
-      .collection<PoliticalParty>("politicalParties")
-      .updateOne(
-        { _id: party._id, nppActionPoints: { $exists: false } },
-        { $set: { nppActionPoints: apCap } }
-      );
+    await politicalPartiesCollection(db).updateOne(
+      { _id: party._id, nppActionPoints: { $exists: false } },
+      { $set: { nppActionPoints: apCap } }
+    );
     party.nppActionPoints = apCap;
   }
 
-  const resourceDebit = await db.collection<PoliticalParty>("politicalParties").updateOne(
+  const resourceDebit = await politicalPartiesCollection(db).updateOne(
     {
       _id: party._id,
       nppActionPoints: { $gte: totalActionCost },
@@ -491,7 +486,7 @@ async function executeNationalPartyInfluenceCore(
     };
   }
 
-  await db.collection<NPP>("npps").updateOne(
+  await nppsCollection(db).updateOne(
     { _id: npp._id },
     {
       $set: {
@@ -506,19 +501,17 @@ async function executeNationalPartyInfluenceCore(
   if (outcome === "success") {
     effectResult = await applyPartyInfluenceEffects(input, npp, party);
     if (input.influenceType === "withdraw_election" && effectResult.withdrawApplied === false) {
-      await db.collection<PoliticalParty>("politicalParties").updateOne(
+      await politicalPartiesCollection(db).updateOne(
         { _id: party._id },
         {
           $inc: { nppActionPoints: totalActionCost, treasury: totalFundCost },
           $set: { updatedAt: new Date() },
         }
       );
-      await db
-        .collection<NPP>("npps")
-        .updateOne(
-          { _id: npp._id },
-          { $inc: { "influenceState.totalTimesInfluenced": -1 }, $set: { updatedAt: new Date() } }
-        );
+      await nppsCollection(db).updateOne(
+        { _id: npp._id },
+        { $inc: { "influenceState.totalTimesInfluenced": -1 }, $set: { updatedAt: new Date() } }
+      );
 
       const failOutcome: InfluenceOutcome = "failure";
       const failMsg =
@@ -561,7 +554,7 @@ async function executeNationalPartyInfluenceCore(
         partyInfluence: { type: "national", partyId: input.partyId, stateId: npp.homeState },
         createdAt: now,
       };
-      await db.collection<NPPInfluenceAttempt>("nppInfluenceAttempts").insertOne(failAttempt);
+      await nppInfluenceAttemptsCollection(db).insertOne(failAttempt);
 
       return {
         success: false,
@@ -609,7 +602,7 @@ async function executeNationalPartyInfluenceCore(
     createdAt: now,
   };
 
-  await db.collection<NPPInfluenceAttempt>("nppInfluenceAttempts").insertOne(attemptRecord);
+  await nppInfluenceAttemptsCollection(db).insertOne(attemptRecord);
   return { success: outcome === "success", outcome, message, calculation, roll };
 }
 
@@ -695,15 +688,13 @@ export async function getStatePartyInfluenceOptions(
 }> {
   const db = await getDb();
 
-  const npps = await db
-    .collection<NPP>("npps")
+  const npps = await nppsCollection(db)
     .find({ homeState: statePartyOrg.stateId, party: statePartyOrg.partyId, retiredAt: null })
     .toArray();
   const nppIds = npps.map((npp) => npp._id);
   const candidacies =
     nppIds.length > 0
-      ? await db
-          .collection<ElectionCandidate>("electionCandidates")
+      ? await electionCandidatesCollection(db)
           .find({
             nppId: { $in: nppIds },
             status: "active",
@@ -713,8 +704,7 @@ export async function getStatePartyInfluenceOptions(
   const electionIds = candidacies.map((candidate) => candidate.electionId);
   const elections =
     electionIds.length > 0
-      ? await db
-          .collection<Election>("elections")
+      ? await electionsCollection(db)
           .find(
             { _id: { $in: electionIds } },
             { projection: { _id: 1, electionType: 1, state: 1, senateClass: 1, chamberClass: 1 } }
@@ -803,15 +793,13 @@ export async function getNationalPartyInfluenceOptions(party: PoliticalParty): P
   const db = await getDb();
   const partyId = String(party.sequentialId);
   const countryId = party.countryId ?? "US";
-  const states = await db
-    .collection<State>("states")
+  const states = await statesCollection(db)
     .find({ countryId }, { projection: { _id: 1, name: 1 } })
     .toArray();
   const stateIds = states.map((state) => state._id);
   const stateNames = Object.fromEntries(states.map((state) => [state._id, state.name]));
 
-  const npps = await db
-    .collection<NPP>("npps")
+  const npps = await nppsCollection(db)
     .find({
       homeState: { $in: stateIds },
       party: partyId,
@@ -842,8 +830,7 @@ export async function getNationalPartyInfluenceOptions(party: PoliticalParty): P
   const allStatePartyKeys = stateIds.map((id) => `${id}_${partyId}`);
   const statePartyOrgs =
     allStatePartyKeys.length > 0
-      ? await db
-          .collection<StatePartyOrg>("statePartyOrg")
+      ? await statePartyOrgCollection(db)
           .find({ _id: { $in: allStatePartyKeys } })
           .toArray()
       : [];
@@ -853,16 +840,14 @@ export async function getNationalPartyInfluenceOptions(party: PoliticalParty): P
   const nppIds = npps.map((npp) => npp._id);
   const candidacies =
     nppIds.length > 0
-      ? await db
-          .collection<ElectionCandidate>("electionCandidates")
+      ? await electionCandidatesCollection(db)
           .find({ nppId: { $in: nppIds }, status: "active" })
           .toArray()
       : [];
   const electionIds = candidacies.map((c) => c.electionId);
   const elections =
     electionIds.length > 0
-      ? await db
-          .collection<Election>("elections")
+      ? await electionsCollection(db)
           .find(
             { _id: { $in: electionIds } },
             { projection: { _id: 1, electionType: 1, state: 1, senateClass: 1, chamberClass: 1 } }

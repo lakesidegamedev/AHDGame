@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { UK_NATIONS, UK_REGIONS } from "@/lib/constants/uk";
 import { regionUrl, regionPartyUrl, regionLegislatureUrl, regionElectionsUrl } from "@/lib/urls";
 import { campaignManagerHref } from "@/lib/campaignManager/links";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 export interface StateDropdownPanelProps {
   stateId: string;
@@ -44,7 +45,7 @@ export function StateDropdownPanel({
   const t = useTranslations("nav");
 
   const legislatureLabel = (() => {
-    if (countryId !== "UK") return t("state.legislature");
+    if (!countryHasFeature("ukUi", countryId)) return t("state.legislature");
     const nation = UK_NATIONS.find((n) => n.id === stateId);
     if (nation?.devolvedBody) return nation.devolvedBody;
     const region = UK_REGIONS.find((r) => r.id === stateId);
@@ -147,7 +148,7 @@ export function StateDropdownPanel({
       {/* Governor's / Minister-President's Office - only when viewer is the office-holder */}
       {governorOffice && governorOffice.stateId === stateId && (
         <Link
-          href={`/country/${countryId.toLowerCase()}/region/${stateId.toLowerCase()}/office`}
+          href={`${regionUrl(countryId.toLowerCase(), stateId.toLowerCase())}/office`}
           onClick={() => onClose()}
           className="flex items-center gap-2 px-4 py-2.5 text-sm text-foreground transition-colors hover:bg-background/60"
         >

@@ -1,19 +1,17 @@
 /**
- * Shadow measurement for price-gap trade routing (market rebuild #4379).
+ * Shadow measurement for price-gap trade routing.
  *
- * Plain data in, plain data out: no clock, rng or ambient state. Nothing reads
- * the result back into the turn; it is persisted on the trade snapshot so the
- * routing change can be decided on live evidence.
+ * Plain data in, plain data out: no clock, rng or ambient state. Results are
+ * persisted on the trade snapshot for evaluation, never fed back into the turn.
  *
- * Trade today is allocated by a gravity fit on fixed affinities, and prices are
- * not an input. Two things would show that price-gap routing would change
- * outcomes:
+ * Trade today is allocated by a gravity fit on fixed affinities; price is not
+ * an input. Price-gap routing would change outcomes if:
  *
- * - **Stranded units**: surplus left uncleared in one country while another
- *   country it can reach has unmet demand at a higher price, net of the route's
- *   import cost. Greedy fill over pairs ranked by gap, each side used once.
- * - **Wrong-way units**: shipped volume from a country to one whose price is
- *   lower than the exporter's price net of import cost.
+ * - **Stranded units**: surplus uncleared in one country while a reachable
+ *   country has unmet demand at a higher price net of import cost. Greedy fill
+ *   over pairs ranked by gap, each side used once.
+ * - **Wrong-way units**: volume shipped to a market priced below the exporter's
+ *   price net of import cost.
  */
 import type { CountryId } from "@/lib/constants/countries";
 import type { CommodityType } from "@/lib/constants/commodities";

@@ -152,7 +152,9 @@ export function TurnControls() {
             setTurnProgress(d.processingProgress);
           }
         }
-      } catch {}
+      } catch {
+        // Progress polling is cosmetic; the next tick retries.
+      }
     }, 900);
   };
 

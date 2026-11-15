@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { ObjectId } from "mongodb";
 import type { Election } from "@/lib/db/types";
-import { buildCanonicalSpawn } from "@/lib/turn/perpetualElections/engine";
+import { buildCanonicalSpawn } from "@/lib/elections/scheduling/engine";
 import { buildBg1991AssemblySpawn } from "./assemblyClock1991";
 import { BG_ORDINARY_ASSEMBLY_SEATS } from "./rules/assemblyTransition";
 import {

@@ -2,9 +2,13 @@
  * Vacant seats are excluded; multi-seat delegations retain their seat count.
  */
 import type { Db } from "mongodb";
-import type { Character, ElectedOfficial, NPP, PoliticalParty } from "@/lib/db/types";
+import type { ElectedOfficial, NPP, PoliticalParty } from "@/lib/db/types";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { getPartyHex } from "@/lib/utils/politics";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export interface MapOfficeholder {
   id: string;
@@ -23,8 +27,7 @@ export async function computeMapOfficeholders(
   regionIds: readonly string[]
 ): Promise<Record<string, MapOfficeholder[]>> {
   const [officials, parties] = await Promise.all([
-    db
-      .collection<ElectedOfficial>("electedOfficials")
+    electedOfficialsCollection(db)
       .find(
         {
           officeType: { $in: ["senate", "house", "governor"] },
@@ -47,8 +50,7 @@ export async function computeMapOfficeholders(
         }
       )
       .toArray(),
-    db
-      .collection<PoliticalParty>("politicalParties")
+    politicalPartiesCollection(db)
       .find({ countryId }, { projection: { sequentialId: 1, name: 1, color: 1 } })
       .toArray(),
   ]);
@@ -57,14 +59,12 @@ export async function computeMapOfficeholders(
   const nppIds = filled.flatMap((o) => (o.nppId ? [o.nppId] : []));
   const [characters, npps] = await Promise.all([
     characterIds.length
-      ? db
-          .collection<Character>("characters")
+      ? charactersCollection(db)
           .find({ _id: { $in: characterIds } }, { projection: { _id: 1, avatarUrl: 1 } })
           .toArray()
       : [],
     nppIds.length
-      ? db
-          .collection<NPP>("npps")
+      ? nppsCollection(db)
           .find({ _id: { $in: nppIds } }, { projection: { _id: 1, avatarUrl: 1 } })
           .toArray()
       : [],

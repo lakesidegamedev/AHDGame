@@ -2,8 +2,8 @@ import { refundConversionConstruction } from "../refundConversionConstruction";
 import { updateParliamentaryGovernmentSeats } from "@/lib/turn/parliamentaryGovernment";
 import { withSessionDb, afterCommit, unboundDb } from "@/lib/db/sessionDb";
 /**
- * Atomic driver that stands a seceding UK region up as a sovereign country
- * (Scotland / Wales). Composes the SP2b + SP2c steps in dependency order,
+ * Atomic driver that stands a seceding region up as its registered successor
+ * country (Scotland and Wales from the UK). Composes the SP2b + SP2c steps in dependency order,
  * recomputes both countries' national figures, and records a country-history
  * event for each side. Idempotent — re-firing on an already-seceded region is a
  * no-op.
@@ -17,7 +17,7 @@ import { withSessionDb, afterCommit, unboundDb } from "@/lib/db/sessionDb";
  *   4. Parties    — reconcile region parties to the configured majors (SP2c).
  *   5. Officials  — retire departing mandates + retain FM as head of government (SP2c).
  *   6. Elections  — seed the standup chamber cycle (SP2c).
- *   7. Recompute  — national metrics for rump-UK + the new country.
+ *   7. Recompute  — national metrics for the parent + the new country.
  *   8. History    — record a secession event for both sides.
  */
 import { convertLawPrograms } from "../conversionPrograms";
@@ -29,12 +29,18 @@ import type { State } from "@/lib/db/types";
 import { computeNationalMetrics } from "@/lib/nationalMetrics";
 import { recordCountryEvent } from "@/lib/turn/history/recordCountryEvent";
 import { activateCountry } from "@/lib/country/registeredCountries";
-import { CAPITAL_SUBREGION, type SecedingCountryId } from "./subRegions";
+import { CAPITAL_SUBREGION, isResetV2Successor, isSecedingCountryId } from "./subRegions";
+import { sovereigntyRegionIn } from "../rules/sovereigntyRegions";
 import { expandToSubRegions } from "./expandToSubRegions";
 import { promoteEconomyToNational } from "./promoteEconomyToNational";
 import { splitParties } from "./splitParties";
 import { carryOverOfficials } from "./carryOverOfficials";
 import { promoteResetV2ForIndependence } from "./promoteResetV2";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import type { Document } from "mongodb";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { organizationMembershipsCollection } from "@/lib/db/repositories/organizationMemberships";
 
 export interface SecedeRegionArgs {
   regionId: string;
@@ -52,10 +58,6 @@ export interface SecedeRegionResult {
   };
 }
 
-function isSecedingCountryId(id: string): id is SecedingCountryId {
-  return id === "SCO" || id === "WAL";
-}
-
 export async function secedeRegion(db: Db, args: SecedeRegionArgs): Promise<SecedeRegionResult> {
   return withSessionDb(db, (transactionDb) =>
     secedeRegionInTransaction(transactionDb, args, unboundDb(db))
@@ -68,14 +70,15 @@ async function secedeRegionInTransaction(
   originalDb: Db
 ): Promise<SecedeRegionResult> {
   const { regionId, fromCountryId, currentTurn } = args;
-  if (!isSecedingCountryId(regionId)) return { ok: false, skipped: "unsupported-region" };
-  const toCountryId = regionId;
+  const entry = sovereigntyRegionIn(fromCountryId, regionId);
+  const toCountryId = entry?.kind === "independence" ? entry.successorCountryId : null;
+  if (!entry?.actuates || !isSecedingCountryId(toCountryId)) {
+    return { ok: false, skipped: "unsupported-region" };
+  }
 
   // Guard: the region's aggregate states doc must exist; bail if already expanded.
-  const aggregate = await db.collection<State>("states").findOne({ _id: regionId });
-  const capital = await db
-    .collection<State>("states")
-    .findOne({ _id: CAPITAL_SUBREGION[toCountryId] });
+  const aggregate = await statesCollection(db).findOne({ _id: regionId });
+  const capital = await statesCollection(db).findOne({ _id: CAPITAL_SUBREGION[toCountryId] });
   if (capital) {
     await promoteResetV2ForIndependence(db, toCountryId, currentTurn);
     return { ok: true, skipped: "already-seceded" };
@@ -87,8 +90,7 @@ async function secedeRegionInTransaction(
   // 1. Register the country at runtime.
   await activateCountry(db, toCountryId);
 
-  const oldRaces = await db
-    .collection("elections")
+  const oldRaces = await electionsCollection<Document>(db)
     .find(
       {
         countryId: fromCountryId,
@@ -99,15 +101,17 @@ async function secedeRegionInTransaction(
     )
     .toArray();
   const electionIds = oldRaces.map((row) => row._id);
-  await db.collection("electionCandidates").deleteMany({ electionId: { $in: electionIds } });
-  await db.collection("elections").deleteMany({ _id: { $in: electionIds } });
+  await electionCandidatesCollection<Document>(db).deleteMany({ electionId: { $in: electionIds } });
+  await electionsCollection<Document>(db).deleteMany({ _id: { $in: electionIds } });
 
   // 2-3. Stand up the data + economy.
   const expanded = await expandToSubRegions(db, toCountryId);
   await promoteEconomyToNational(db, fromCountryId, toCountryId, currentTurn);
   await promoteResetV2ForIndependence(db, toCountryId, currentTurn);
 
-  await convertLawPrograms(db, { regionId, countryId: toCountryId, independent: true });
+  if (isResetV2Successor(toCountryId)) {
+    await convertLawPrograms(db, { regionId, countryId: toCountryId, independent: true });
+  }
 
   // 4-5. Government: parties then officials (officials consume the split idMap).
   const split = await splitParties(db, regionId, fromCountryId, toCountryId);
@@ -115,7 +119,7 @@ async function secedeRegionInTransaction(
 
   await updateParliamentaryGovernmentSeats(db, fromCountryId);
   await standupElections(db, toCountryId, currentTurn, new Date());
-  await db.collection("organizationMemberships").updateOne(
+  await organizationMembershipsCollection<Document>(db).updateOne(
     { organizationId: "UN", countryId: toCountryId },
     {
       $setOnInsert: {
@@ -131,7 +135,7 @@ async function secedeRegionInTransaction(
   );
 
   await afterCommit(db, async () => {
-    // 7. Recompute rump-UK + the new country's national figures.
+    // 7. Recompute the parent's and the new country's national figures.
     await computeNationalMetrics(originalDb).catch((err) =>
       console.error(`${regionId} secession national-metrics recompute failed:`, err)
     );

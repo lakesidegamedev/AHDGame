@@ -9,6 +9,8 @@ export type AdminLogAction =
   | "freight_settlement_activated"
   | "freight_settlement_shadowed"
   | "sandbox_access_granted"
+  | "vpn_whitelist_granted"
+  | "vpn_whitelist_revoked"
   | "sandbox_access_revoked"
   | "sandbox_tester_access_enabled"
   | "sandbox_tester_access_disabled"
@@ -60,6 +62,8 @@ export type AdminLogAction =
   | "singleplayer_entitlement_revoked"
   | "client_access_granted"
   | "moderator_assigned"
+  | "junior_dev_assigned"
+  | "junior_dev_removed"
   | "moderator_removed"
   | "line_of_credit_enabled"
   | "line_of_credit_disabled"
@@ -101,6 +105,7 @@ export type AdminLogAction =
   | "turn_system_started"
   | "turn_system_stopped"
   | "turn_lock_reset"
+  | "turn_hold_released"
   | "corporation_actions_paused"
   | "corporation_actions_resumed"
   | "ip_ban_added"
@@ -123,13 +128,9 @@ export interface AdminLog {
   createdAt: Date;
   /**
    * Reset-run outcome. Present only on `game_reset` / `game_full_reset` rows.
-   *
    * The row is INSERTED at the START of a reset with `status: "running"` and
-   * updated when the run ends. That ordering is the point: it used to be
-   * written in finalize, so a reset that died in teardown left no trace at all
-   * while leaving the world sealed and half-built.
-   *
-   * Structured rather than stuffed into `details` so it stays queryable.
+   * updated when the run ends, so a reset that dies mid-teardown still leaves
+   * a trace. Structured (not in `details`) so it stays queryable.
    */
   resetRun?: {
     runId: string;
@@ -143,5 +144,7 @@ export interface AdminLog {
     durationMs?: number;
     /** Last 200 log lines — the tail is what describes the failure. */
     logTail?: string[];
+    /** Count of post-reset residue violations; each one is also in `failures`. */
+    residueViolations?: number;
   };
 }

@@ -1,3 +1,4 @@
+import { regionUrl } from "@/lib/urls";
 import { CDN_LOGO_URL } from "@/lib/images/staticCdnAssets";
 import type { Metadata } from "next";
 import { getDb } from "@/lib/mongodb";
@@ -7,6 +8,8 @@ import type { State } from "@/lib/db/types";
 import { isCountryEnabledForPlayers } from "@/lib/countryAccess";
 import { getSiteUrl } from "@/lib/siteMetadata";
 import { resolveCountryIdentity } from "@/lib/country/countryIdentity";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -29,28 +32,24 @@ export async function generateMetadata({
 
   const db = await getDb();
   if (!(await isCountryEnabledForPlayers(db, countryId))) return {};
-  const party = await db
-    .collection<PoliticalParty>("politicalParties")
-    .findOne(
-      { sequentialId, countryId },
-      { projection: { name: 1, abbreviation: 1, logoUrl: 1, heroImageUrl: 1 } }
-    );
+  const party = await politicalPartiesCollection(db).findOne(
+    { sequentialId, countryId },
+    { projection: { name: 1, abbreviation: 1, logoUrl: 1, heroImageUrl: 1 } }
+  );
   if (!party) return {};
 
   // Resolve the region's display name — the raw param may be a compact code
   // (BUD) or a full prefixed id (HU_BUD), neither of which belongs in copy.
-  const state = await db
-    .collection<State>("states")
-    .findOne(
-      { _id: canonicalRegionId(countryId, regionId), countryId },
-      { projection: { name: 1 } }
-    );
+  const state = await statesCollection(db).findOne(
+    { _id: canonicalRegionId(countryId, regionId), countryId },
+    { projection: { name: 1 } }
+  );
   const regionName = state?.name ?? regionId;
 
   const title = `${party.name} in ${regionName} | A House Divided`;
   const { name: countryName } = await resolveCountryIdentity(db, countryId);
   const description = `${party.abbreviation ? `${party.abbreviation} · ` : ""}${party.name} in ${regionName}, ${countryName}. Regional support, candidates, and turnout.`;
-  const url = `${getSiteUrl()}/country/${code}/region/${regionId}/party/${partyId}`;
+  const url = `${getSiteUrl()}${regionUrl(code, regionId)}/party/${partyId}`;
   const image = party.logoUrl || party.heroImageUrl || CDN_LOGO_URL;
 
   return {

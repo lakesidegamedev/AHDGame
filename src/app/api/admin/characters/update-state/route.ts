@@ -10,8 +10,12 @@ import { parseJsonBody } from "@/lib/api/validate";
 import { errorResponse } from "@/lib/api/errors";
 import { z } from "zod";
 import { MAX_REGION_ID_LENGTH } from "@/lib/constants/states";
-import type { Character, State } from "@/lib/db/types";
+import type { State } from "@/lib/db/types";
 import { performRelocation } from "@/lib/character/performRelocation";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { usersCollection } from "@/lib/db/repositories/users";
+import type { Document } from "mongodb";
 
 const updateStateSchema = z.object({
   username: z.string().min(1, "username is required"),
@@ -46,12 +50,12 @@ export const PATCH = withAdminRoute(async (_auth, request: Request) => {
 
   const db = await getDb();
 
-  const user = await db.collection("users").findOne({ username });
+  const user = await usersCollection<Document>(db).findOne({ username });
   if (!user) {
     return errorResponse(404, `User '${username}' not found`);
   }
 
-  const character = await db.collection<Character>("characters").findOne({ userId: user._id });
+  const character = await charactersCollection(db).findOne({ userId: user._id });
   if (!character) {
     return errorResponse(404, `No character found for user '${username}'`);
   }
@@ -67,9 +71,10 @@ export const PATCH = withAdminRoute(async (_auth, request: Request) => {
   // Admins move characters WITHIN their own country: scoping the lookup to
   // `character.countryId` both resolves the region and rejects cross-country
   // moves in one step. This is the authoritative check on `homeState`.
-  const targetState = await db
-    .collection<State>("states")
-    .findOne({ _id: homeState, countryId: character.countryId });
+  const targetState = await statesCollection(db).findOne({
+    _id: homeState,
+    countryId: character.countryId,
+  });
   if (!targetState) {
     // Name the country that was searched: the caller picks a region from a
     // country list, so "not found" is far more often the wrong country than

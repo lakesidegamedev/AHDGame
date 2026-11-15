@@ -47,6 +47,8 @@ import { bankEquity } from "@/lib/banking/balanceSheet";
 import { bankNpvFromPerTurnIncome } from "@/lib/banking/valuation";
 import { bankIncomeIncludingUnbookedSovereignAssets } from "@/lib/banking/rules/sovereignClaims";
 import { applyPriceMultipliers } from "@/lib/corporations/applyPriceMultipliers";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporationHistoryCollection } from "@/lib/db/repositories/corporationHistory";
 
 export interface RecomputeSharePricesResult {
   corpsRepriced: number;
@@ -119,8 +121,7 @@ export async function recomputeSharePricesAfterBondTurn(
   // the plants trailing-growth estimator (sectorNPV history); still one query,
   // no per-corp reads.
   const [histRows, prevHistRows] = await Promise.all([
-    database
-      .collection<CorporationHistory>("corporationHistory")
+    corporationHistoryCollection(database)
       .find({ turn })
       // Snapshot rows carry the full shareholder register and the SOE backing
       // breakdown; this pass prices off four numbers from each. Projected, the
@@ -144,8 +145,7 @@ export async function recomputeSharePricesAfterBondTurn(
         perTurnBondDragOnNetIncome: 1,
       })
       .toArray(),
-    database
-      .collection<CorporationHistory>("corporationHistory")
+    corporationHistoryCollection(database)
       .find({ turn: { $gte: turn - TRAILING_GROWTH_WINDOW_TURNS, $lt: turn } })
       .project<{
         corporationId: ObjectId;
@@ -236,20 +236,12 @@ export async function recomputeSharePricesAfterBondTurn(
         )
       : 0;
 
-    // Revenue-weighted sector growth rate from current sector state (already
-    // updated this turn). Ratio is currency-neutral since all sector revenues
-    // for a given corp are in the same home currency.
-    //
-    // PLANTS (marketSystemMode >= "plants"): `currentGrowthRate` is the CEO's
-    // growth SLIDER, and under plants that slider no longer buys any capacity —
-    // build orders do. It keeps whatever value it was last left at, forever.
-    // Feeding it to the Gordon-growth terminal-value premium below would pay
-    // every corp a permanent unearned premium for a setting that does nothing.
-    // Instead g is estimated from trailing sector-NPV growth over the last
-    // TRAILING_GROWTH_WINDOW_TURNS turns (annualized). A corp whose enterprise
-    // value is actually expanding earns a premium; a flat or shrinking one
-    // gets g = 0, the premium's neutral value. The formula still caps g at
-    // costOfCapital - buffer, so this can never blow up the terminal value.
+    // Revenue-weighted sector growth rate from current sector state. Ratio is
+    // currency-neutral since all sector revenues for a given corp share a home
+    // currency. Under plants, `currentGrowthRate` is the CEO's growth slider
+    // and no longer buys capacity, so it would pay a permanent unearned premium;
+    // instead estimate g from trailing sector-NPV growth (annualized, floored
+    // at 0, capped at costOfCapital - buffer by the terminal-value formula).
     const sectors = lookups.sectorsByCorp.get(id) ?? [];
     let growthNumer = 0;
     let growthDenom = 0;
@@ -430,12 +422,11 @@ export async function recomputeSharePricesAfterBondTurn(
 
   if (corpOps.length > 0) {
     const [corpResult] = await Promise.all([
-      database
-        .collection<Corporation>("corporations")
-        .bulkWrite(corpOps, intraHour ? { ordered: false } : undefined),
-      histOps.length > 0
-        ? database.collection<CorporationHistory>("corporationHistory").bulkWrite(histOps)
-        : null,
+      corporationsCollection(database).bulkWrite(
+        corpOps,
+        intraHour ? { ordered: false } : undefined
+      ),
+      histOps.length > 0 ? corporationHistoryCollection(database).bulkWrite(histOps) : null,
     ]);
     return {
       corpsRepriced: corpResult.matchedCount,

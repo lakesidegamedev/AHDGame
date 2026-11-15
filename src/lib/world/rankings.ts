@@ -1,16 +1,10 @@
 /**
- * Nation ranking rules for the world rankings page.
+ * Nation ranking rules for the world rankings page. Pure: no database, clock,
+ * randomness or network.
  *
- * Plain data in, plain data out: the page feeds in the national metrics payload
- * it already receives and gets back an ordered table, so the same ordering can
- * be reused by a report, a sim harness or an embed without importing React.
- * No database, clock, randomness or network here.
- *
- * Ranks come from `score`, not the raw measure: `scoreMetric` is what knows
- * which direction a statistic runs (unemployment is better low, growth better
- * high) and what the country's era-scaled bands are. A nation with no score has
- * no comparable figure and sorts after every ranked nation as unranked, rather
- * than being treated as zero.
+ * Ranks come from `score`, not the raw measure, because `scoreMetric` knows
+ * which direction a statistic runs and the era-scaled bands. A nation with no
+ * score sorts after every ranked nation as unranked, not as zero.
  */
 
 import type { MetricCategoryId } from "@/lib/db/types";

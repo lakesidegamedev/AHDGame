@@ -23,6 +23,11 @@ import {
 import { getCabinetPositions } from "@/lib/constants/cabinetMechanics";
 import { getLowerChamberOfficeType } from "@/lib/legislature/chamberOfficeType";
 import { isCountryEnabledForPlayers } from "@/lib/countryAccess";
+import { statesCollection } from "@/lib/db/repositories/states";
+import type { Document } from "mongodb";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export type CheckSeverity = "required" | "recommended";
 
@@ -63,12 +68,17 @@ export async function assessCountryV1Readiness(
   const lowerOffice = getLowerChamberOfficeType(countryId);
 
   const [npps, parties, lowerChamberNppSeats, states, enabledForPlayers] = await Promise.all([
-    db.collection("npps").countDocuments({ countryId, retiredAt: null }),
-    db.collection("politicalParties").countDocuments({ countryId, isDefunct: { $ne: true } }),
-    db
-      .collection("electedOfficials")
-      .countDocuments({ countryId, officeType: lowerOffice, isNPP: true }),
-    db.collection("states").countDocuments({ countryId }),
+    nppsCollection<Document>(db).countDocuments({ countryId, retiredAt: null }),
+    politicalPartiesCollection<Document>(db).countDocuments({
+      countryId,
+      isDefunct: { $ne: true },
+    }),
+    electedOfficialsCollection<Document>(db).countDocuments({
+      countryId,
+      officeType: lowerOffice,
+      isNPP: true,
+    }),
+    statesCollection<Document>(db).countDocuments({ countryId }),
     isCountryEnabledForPlayers(db, countryId),
   ]);
   const cabinetPositions = getCabinetPositions(countryId).length;

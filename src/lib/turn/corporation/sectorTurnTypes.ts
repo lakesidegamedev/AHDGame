@@ -36,6 +36,11 @@ export interface SectorTurnEnv {
    * employs no one. Undefined = revenue-implied staffing, as before.
    */
   fundedHeadcountBySectorId?: ReadonlyMap<string, { desiredWorkers: number; workers: number }>;
+  /**
+   * 2027 world only: per-state workers automation methods no longer employ.
+   * Presence enables automation crew factors.
+   */
+  automationDisplacedByState?: Map<string, number>;
   pendingStrikeEvents: SectorCalculationsResult["strikeEvents"];
   pendingCapacityBindingEvents: SectorCalculationsResult["capacityBindingEvents"];
   sectorOps: SectorUpdateOp[];

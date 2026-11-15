@@ -8,7 +8,7 @@ import { getDb } from "@/lib/mongodb";
 import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { countryIdSchema } from "@/lib/api/schemas/country";
-import type { Corporation, CorporateSector } from "@/lib/db/types";
+import type { CorporateSector } from "@/lib/db/types";
 import {
   fxRateForCorpFromMap,
   loadValuationFxRates,
@@ -16,6 +16,8 @@ import {
 } from "@/lib/currency/corporationCapital";
 import { readCorpEconomicAnchor } from "@/lib/currency/corpEconomyFields";
 import type { CurrencyCode } from "@/lib/constants/currencies";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 export async function GET(request: Request) {
   try {
@@ -34,8 +36,8 @@ export async function GET(request: Request) {
     }
 
     const [corps, sectors, fxByCurrency] = await Promise.all([
-      db.collection<Corporation>("corporations").find(corpFilter).toArray(),
-      db.collection<CorporateSector>("corporateSectors").find({}).toArray(),
+      corporationsCollection(db).find(corpFilter).toArray(),
+      corporateSectorsCollection(db).find({}).toArray(),
       loadValuationFxRates(db),
     ]);
 

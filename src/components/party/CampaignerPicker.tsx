@@ -1,4 +1,5 @@
 "use client";
+import { displayCanadianRegionCode } from "@/lib/countries/ca/regionCodes";
 
 import { useMemo, useState } from "react";
 
@@ -157,7 +158,11 @@ export function CampaignerPicker({
                   className="block w-full text-left px-3 py-2 text-sm hover:bg-background border-b border-card-border/40 last:border-b-0"
                 >
                   {m.name}
-                  {m.homeState && <span className="ml-2 text-xs text-muted">{m.homeState}</span>}
+                  {m.homeState && (
+                    <span className="ml-2 text-xs text-muted">
+                      {displayCanadianRegionCode(m.homeState)}
+                    </span>
+                  )}
                 </button>
               ))}
             </div>

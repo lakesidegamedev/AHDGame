@@ -17,6 +17,11 @@ import type {
   ElectedOfficial,
   ElectionVoteTally,
 } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
 
 export async function GET() {
   try {
@@ -26,9 +31,7 @@ export async function GET() {
     // Resolve character for auth-enriched fields
     let character: Character | null = null;
     if (authUser) {
-      character = await db
-        .collection<Character>("characters")
-        .findOne({ userId: new ObjectId(authUser.userId) });
+      character = await charactersCollection(db).findOne({ userId: new ObjectId(authUser.userId) });
     }
 
     const isAdmin = authUser?.isAdmin === true;
@@ -42,8 +45,7 @@ export async function GET() {
     const secondaryOfficeType = countryConfig.legislature.upperChamber?.key ?? null;
 
     // Active elections feed — filtered by enabled countries, sorted soonest first
-    const activeFeedRaw = await db
-      .collection<Election>("elections")
+    const activeFeedRaw = await electionsCollection(db)
       .find({
         status: { $in: ["active", "upcoming"] },
         ...(enabledCountries !== undefined && { countryId: { $in: enabledCountries } }),
@@ -71,14 +73,12 @@ export async function GET() {
 
     // Legislature composition for the character's country — derived from config, not hardcoded
     const [primaryOfficials, secondaryOfficials] = await Promise.all([
-      db
-        .collection<ElectedOfficial>("electedOfficials")
+      electedOfficialsCollection(db)
         .find({ officeType: primaryOfficeType })
         .project({ party: 1, seatsHeld: 1, state: 1 })
         .toArray() as Promise<ElectedOfficial[]>,
       secondaryOfficeType
-        ? (db
-            .collection<ElectedOfficial>("electedOfficials")
+        ? (electedOfficialsCollection(db)
             .find({ officeType: secondaryOfficeType })
             .project({ party: 1, seatsHeld: 1, state: 1 })
             .toArray() as Promise<ElectedOfficial[]>)
@@ -113,14 +113,16 @@ export async function GET() {
     // Player race (auth only)
     let playerRace = null;
     if (character) {
-      const candidacy = await db
-        .collection<ElectionCandidate>("electionCandidates")
-        .findOne({ characterId: character._id, status: "active" });
+      const candidacy = await electionCandidatesCollection(db).findOne({
+        characterId: character._id,
+        status: "active",
+      });
 
       if (candidacy) {
-        const election = await db
-          .collection<Election>("elections")
-          .findOne({ _id: candidacy.electionId, status: { $in: ["active", "upcoming"] } });
+        const election = await electionsCollection(db).findOne({
+          _id: candidacy.electionId,
+          status: { $in: ["active", "upcoming"] },
+        });
 
         if (election) {
           const inPrimary =
@@ -129,13 +131,10 @@ export async function GET() {
 
           // Rank candidate by vote count from the tally
           const [allCandidates, voteTally] = await Promise.all([
-            db
-              .collection<ElectionCandidate>("electionCandidates")
+            electionCandidatesCollection(db)
               .find({ electionId: election._id, status: "active" })
               .toArray(),
-            db
-              .collection<ElectionVoteTally>("electionVoteTallies")
-              .findOne({ electionId: election._id }),
+            electionVoteTalliesCollection(db).findOne({ electionId: election._id }),
           ]);
 
           let position: number | null = null;

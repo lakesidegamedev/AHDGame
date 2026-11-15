@@ -11,7 +11,6 @@ import type { Db } from "mongodb";
 import { type CountryId } from "@/lib/constants/countries";
 import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
 import type { InternationalOrganizationId } from "@/lib/constants/internationalOrganizations";
-import type { FederalBudget } from "@/lib/db/types";
 import { loadWorldPreset } from "@/lib/currency/gdpAnchorRate";
 import {
   convertLocal,
@@ -19,6 +18,9 @@ import {
   localToUsd,
   resolveOrgFundCurrencyCountry,
 } from "./organizationFund";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 
 /**
  * Aid packages disburse from the organization's pooled fund (capitalized by
@@ -55,19 +57,16 @@ async function applyOrganizationAidBoost(
 ): Promise<void> {
   const boost = aidGrowthBoost(amountUsd);
   if (boost <= 0) return;
-  const states = await db
-    .collection<{ _id: string; countryId: CountryId }>("states")
+  const states = await statesCollection<{ _id: string; countryId: CountryId }>(db)
     .find({ countryId: recipient })
     .project<{ _id: string }>({ _id: 1 })
     .toArray();
   if (states.length === 0) return;
   // SP5: economic.* lives on macroMetrics.
-  await db
-    .collection<{ _id: string }>("macroMetrics")
-    .updateMany(
-      { _id: { $in: states.map((s) => s._id) } },
-      { $inc: { [AID_BOOST_METRIC_PATH]: boost }, $set: { lastUpdated: new Date() } }
-    );
+  await macroMetricsCollection<{ _id: string }>(db).updateMany(
+    { _id: { $in: states.map((s) => s._id) } },
+    { $inc: { [AID_BOOST_METRIC_PATH]: boost }, $set: { lastUpdated: new Date() } }
+  );
 }
 
 /**
@@ -86,6 +85,10 @@ export async function payOrganizationAid(
   if (!(amountFund > 0)) return false;
   const context = await organizationCashContext(db, options);
   return withOrganizationCashBatch(db, context, async (batch) => {
+    // An organization can retain historical members outside this preset's
+    // fiscal roster. No recipient treasury means no payment, and no FX quote
+    // should be requested for that nonexistent destination.
+    if (batch?.treasuryCashLedgerEnabled && !batch.budgetCurrencies.has(recipient)) return false;
     const fundCountry = await resolveOrgFundCurrencyCountry(db, organizationId);
     const preset = batch?.preset ?? (await loadWorldPreset(db));
     const recipientLocal = convertLocal(fundCountry, recipient, amountFund, preset);
@@ -118,22 +121,6 @@ export async function payOrganizationAid(
       });
       if (result.status !== "applied" && result.status !== "replayed") return false;
       if (result.status === "applied") {
-        await witnessOrganizationCash(db, batch, {
-          kind: "org",
-          ref: organizationId,
-          countryId: fundCountry,
-          amount: -amountFund,
-          site: "aid_fund",
-          now: new Date(),
-        });
-        await witnessOrganizationCash(db, batch, {
-          kind: "government",
-          ref: recipient,
-          countryId: recipient,
-          amount: fundedRecipientLocal,
-          site: "aid_treasury",
-          now: new Date(),
-        });
         await applyOrganizationAidBoost(db, recipient, localToUsd(fundCountry, amountFund, preset));
       }
       return true;
@@ -145,7 +132,7 @@ export async function payOrganizationAid(
     // Aid credits cash, not income: revenue/spending/surplus are untouched, and
     // `debt.principal` belongs to the bond ledger (see bonds/sovereignPrincipal.ts),
     // so a cash-only $inc correctly leaves it alone (#1975).
-    const credit = await db.collection<FederalBudget>("federalBudget").updateOne(
+    const credit = await federalBudgetCollection(db).updateOne(
       { countryId: recipient },
       {
         $inc: { treasuryBalance: recipientLocal },

@@ -103,16 +103,10 @@ export const THEATER_COMMAND = {
    * Share of a fighting general's award that the TC earns for a battle in their
    * theater, whether or not they led any unit in it.
    *
-   * Directing a front earned NOTHING before this: a player ran three successful
-   * offensives as Theater Commander and their general gained no XP at all, because
-   * credit flowed only to generals with units assigned to them at that front.
-   *
-   * The measure is what a general leading ONE AVERAGE FORMATION at that front would
-   * have earned. Deliberately not the front's total: that would let a superpower's TC
-   * level many times faster than a small nation's for the same work. Deliberately not
-   * the mean over the generals present either — that moves when you reshuffle which
-   * general holds which unit, so command structure could be gamed for XP. This measure
-   * reads only the fighting.
+   * The measure is what a general leading ONE AVERAGE FORMATION at that front
+   * would have earned. Not the front's total, which would let a superpower's TC
+   * outlevel a small nation's. Not the mean over generals present, which shifts
+   * with command structure and could be gamed for XP.
    *
    * Half, because commanding is worth less than commanding AND fighting.
    */
@@ -132,18 +126,6 @@ export const MAP_FILTERS = [
   { id: "unassigned", label: "UNASSIGNED" },
 ];
 
-/** Static national-doctrine effects surfaced in the command detail (design's DOCTRINE list). */
-export const NATIONAL_DOCTRINE_EFFECTS = [
-  { val: "+8%", label: "joint operations — Joint Staff System" },
-  { val: "+10%", label: "supply throughput — Strategic Logistics" },
-  { val: "+6%", label: "Army/Air coordination — Air-Land Battle" },
-  { val: "+8%", label: "overseas command range — Blue-Water Navy" },
-  { val: "+10%", label: "overseas sustainment — Expeditionary Supply Chains" },
-];
-
-export const MISSING_SYNERGY =
-  "Unified Theater Commands would reduce over-capacity penalties across regional commands.";
-
 /** Attrition, manpower and retreat tuning (first-pass — expected to move in playtest). */
 export const ATTRITION = {
   /**
@@ -158,31 +140,18 @@ export const ATTRITION = {
   /**
    * How far a single battle's luck can move the odds it is actually fought at.
    *
-   * `battleForecast` clamps `ratio` to 0.02..0.98 and every player-facing surface
-   * calls it a chance -- the war room's "You attack" row, and the wiki's "Your chance
-   * if you launch the offensive". The five-round attrition loop did not deliver that.
-   * Its damage multipliers are `0.5 + ratio` and `1.5 - ratio`, so over five rounds
-   * the two tracks separate by about `80 * (2 * ratio - 1)` against a round-to-round
-   * spread of only ~15. That is a near-deterministic function of the force balance: a
-   * projected 16% won 0.01% of the time and a projected 84% won 99.99%. Players read
-   * the number as a probability, watched the stronger side win every time, and filed
-   * it as the odds being wrong or the enemy being impossibly lucky. Both readings were
-   * fair -- `oddsPct` was a force share wearing a probability's label.
-   *
-   * One roll per battle shifts the ratio the loop fights at:
+   * `battleForecast` clamps `ratio` to 0.02..0.98 and every player-facing
+   * surface calls it a chance. The attrition loop's damage multipliers
+   * (`0.5 + ratio`, `1.5 - ratio`) made outcomes near-deterministic in the
+   * force balance, so a displayed probability was not a probability. To fix
+   * that, one roll per battle offsets the ratio the loop fights at:
    *
    *   effective = ratio + uniform(-fortuneSpread, +fortuneSpread)
    *
-   * At exactly 0.5 the arithmetic is self-calibrating rather than fitted. The loop
-   * turns on whether `effective` clears 0.5, and `effective` is uniform on a window of
-   * width 1 centred on `ratio`, so P(effective > 0.5) is `ratio` itself. Measured over
-   * 300k seeds the realised win rate tracks the projection to within 0.7 points from
-   * 10% to 90%, with the tails compressed inward (2% -> 4.8%, 98% -> 95.3%) because
-   * round-to-round noise still smears across the clamp.
-   *
-   * Drawn ONCE for the whole engagement, not per round: a side that has a good day
-   * fights the whole battle well, which is what the round notes, the casualty split
-   * and the margin already assume.
+   * At 0.5 this is self-calibrating: P(effective > 0.5) equals `ratio`, so
+   * realised win rates track the projection. Drawn ONCE per engagement, not
+   * per round: the round notes, casualty split and margin all assume a single
+   * day's luck for the whole battle.
    */
   fortuneSpread: 0.5,
   /** Maximum distance from parity used by the casualty/readiness exchange. */
@@ -227,50 +196,20 @@ export const ATTRITION = {
  * that lost thousands ended at 25.
  */
 /**
- * How much combat value a front can hold in contact at once, on open ground.
- *
- * A front has finite width. Value beyond this is in DEPTH: it neither fights nor bleeds
- * this turn. Bounds the casualty growth at its source -- side totals used to go as
- * roughly `0.6N + 1`, so committing more men cost more men even when they could not all
- * reach the line -- and makes the ground cap a consequence of frontage rather than an
- * arbitrary rule.
- *
- * Denominated in `frontageCost` -- combat value WITHOUT the readiness curve -- so this
- * number is not comparable to the 900 that preceded it. Frontage used to be billed at
- * full combat value, which charged an army for how good and how rested it was; the old
- * calibration note read "East Germany's eleven formations are 731 combat value", a
- * figure that both predated general modifiers (x1.4-2.3) and moved every time a force
- * rested. Same formations under the current bill: 1,138.
- *
- * Re-derived at 4,000 in scripts/sim/frontCapacity2026-08-28.ts. It is the SMALLEST
- * frontage at which the size of an army orders the result the way a player expects. At
- * 900 and at 2,400 the curve is inverted -- the Soviet Army's 44 formations fight worse
- * alone than East Germany's 11, because a cap this tight is spent on whichever side has
- * the better divisions rather than the bigger army. From 4,000 the ordering is
- * DD alone 47% < RU alone 56% < DD+RU 60%, and the war run forward resolves the way the
- * fiction says it should: East Germany alone loses to the US on turn 385, and with
- * Soviet backing takes the map on turn 42.
- *
- * Deliberately not higher. Above 6,000 the whole coalition is in the line at once and
- * the war collapses to 26 turns, which buys nothing the ordering has not already given
- * and removes the cost of winning it.
+ * Combat value a front can hold in contact at once on open ground. Value beyond
+ * this is in depth: it neither fights nor bleeds. Denominated in `frontageCost`
+ * (combat value without the readiness curve). Smallest frontage at which army
+ * size orders the result as expected; much higher and the war collapses.
  */
 export const FRONT_CAPACITY_BASE = 4000;
 
 /**
  * Share of a formation's strength that the worst possible engagement takes.
  *
- * Was an unnamed `0.5` inline in the casualty formula, which this file's own opening
- * line forbids: all balance values live here. Named so it can be tuned against a
- * simulation rather than found by reading the calc layer.
- *
- * DELIBERATELY UNCHANGED at 0.5. The design expected to cut this by about 11%, to absorb
- * the casualty discount that stopped being near-universal once `retreatTrack` made a
- * break uncommon. Measured after front capacity and the readiness ledger landed, the
- * compensation is not needed and would overshoot: casualties FELL rather than rose,
- * because capacity removed the formations that were bleeding without ever reaching the
- * line. A solo offensive costs 5.4% of the attacking force against 7.8% before this
- * work. Revisit only against a fresh simulation.
+ * All balance values live in this file, so this is named for tuning against a
+ * simulation rather than by reading the calc layer. Currently 0.5: measured
+ * casualties fell after front capacity and the readiness ledger landed, so the
+ * expected compensation was not needed. Revisit only against a fresh simulation.
  */
 export const CASUALTY_RATE_SCALE = 0.5;
 
@@ -341,23 +280,15 @@ export const OCCUPATION = {
    * Turns a war takes to reach full pace, and the fraction of a normal advance the
    * front moves on turn one.
    *
-   * The two blocs do not arrive together and cannot be made to. `classifyWarEntry`
-   * gives the HOST side collective defence, which is immediate and needs no vote,
-   * and the side attacking it an offensive coalition, which needs a national bill,
-   * ratification and mobilisation. That asymmetry is correct and deliberate: a
-   * defensive pact really does answer faster than a war of choice.
+   * `classifyWarEntry` gives the HOST side collective defence, which is immediate, and
+   * the attacking side an offensive coalition, which needs a vote, ratification and
+   * mobilisation. That asymmetry is deliberate. Without a ramp, the defender's bloc
+   * advances and can decide the war before the attacker's bloc is allowed to field an
+   * army.
    *
-   * What was wrong is that the front did not wait. In the War for Germany the
-   * defender's bloc was in on turn 415, the day it opened; the attacker's coalition
-   * arrived on 465, 480, and in four cases never. By the time Britain joined,
-   * control had already moved from 50 to 56.8, and by Ireland's entry to 78.9. The
-   * coalition was ratifying its way into a war that had been decided without it.
-   *
-   * A ramp rather than a cliff: the advance is worth `mobilizationFloor` on the
-   * opening turn and reaches full value at `mobilizationTurns`, which is set to the
-   * observed span between the two blocs' arrivals. A war can still be lost in the
-   * window, it just cannot be run to the pole before the other side is allowed to
-   * field an army.
+   * The advance is worth `mobilizationFloor` on the opening turn and reaches full
+   * value at `mobilizationTurns`. A war can still be lost in the window, just not run
+   * to the pole before the other side arrives.
    */
   mobilizationTurns: 50,
   mobilizationFloor: 0.4,

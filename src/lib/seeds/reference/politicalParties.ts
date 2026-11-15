@@ -7,15 +7,9 @@ import type { PoliticalParty } from "@/lib/db/types";
 export type PartySeed = Omit<PoliticalParty, "_id" | "sequentialId" | "createdAt" | "updatedAt"> & {
   seedOrder: number;
   /**
-   * When set, this party is only seeded for the listed preset IDs (e.g.
-   * `["1991-default"]` for UUP — the historically-dominant unionist
-   * party in NI pre-1998 that doesn't fit a 2019 roster). When omitted,
-   * the party is preset-agnostic (the common case).
-   *
-   * `ensureDefaultParties` and `seedUKParties` skip parties whose
-   * `validForPresets` excludes the current preset, and `resetGameWorld`
-   * deletes default parties whose `validForPresets` no longer matches
-   * the new preset on reset.
+   * When set, this party is only seeded for the listed preset IDs. When omitted,
+   * the party is preset-agnostic. `ensureDefaultParties`, `seedUKParties` and
+   * `resetGameWorld` all filter on this field.
    */
   validForPresets?: string[];
 };

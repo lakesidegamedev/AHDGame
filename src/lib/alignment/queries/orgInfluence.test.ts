@@ -32,7 +32,7 @@ describe("loadOrgInfluence", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     db = createMockDb();
-    gameState({ _id: "current", currentYear: 1953, intOrgAlignmentEnabled: true });
+    gameState({ _id: "current", currentYear: 1953 });
     db.collection("organizationFunds").findOne.mockResolvedValue({
       organizationId: "NATO",
       balanceLocal: 5_000_000,
@@ -58,7 +58,6 @@ describe("loadOrgInfluence", () => {
   it("reports the org's channel for the live era", async () => {
     const { loadOrgInfluence } = await import("./orgInfluence");
     const v = await loadOrgInfluence(db as unknown as Db, "NATO");
-    expect(v.enabled).toBe(true);
     expect(v.channel).toMatchObject({ poleId: "WEST", weight: 1 });
     // Tokens, never hex — 11 themes ship with the app.
     expect(v.channel!.accentToken).toMatch(/^(info|error|warning|success)$/);
@@ -83,7 +82,6 @@ describe("loadOrgInfluence", () => {
     const { loadOrgInfluence } = await import("./orgInfluence");
     const v = await loadOrgInfluence(db as unknown as Db, "andes-pact");
 
-    expect(v.enabled).toBe(true);
     expect(v.channel).toMatchObject({
       poleId: "ORG:andes-pact",
       poleLabel: "Andes Pact",
@@ -96,18 +94,8 @@ describe("loadOrgInfluence", () => {
     const { loadOrgInfluence } = await import("./orgInfluence");
     // The EU carries influence only from 1991.
     const v = await loadOrgInfluence(db as unknown as Db, "EU");
-    expect(v.enabled).toBe(true);
     expect(v.channel).toBeNull();
     expect(v.targets).toEqual([]);
-  });
-
-  it("reads nothing when the gate is off", async () => {
-    gameState({ _id: "current", currentYear: 1953, intOrgAlignmentEnabled: false });
-    const { loadOrgInfluence } = await import("./orgInfluence");
-    const v = await loadOrgInfluence(db as unknown as Db, "NATO");
-    expect(v.enabled).toBe(false);
-    expect(db.collection("countryAlignments").find).not.toHaveBeenCalled();
-    expect(db.collection("alignmentPlays").find).not.toHaveBeenCalled();
   });
 
   it("omits locked nations, which the command would refuse anyway", async () => {
@@ -204,7 +192,6 @@ describe("loadOrgInfluence", () => {
       _id: "current",
       currentYear: 1953,
       currentTurn: 100,
-      intOrgAlignmentEnabled: true,
     });
     alignments([{ entityId: "TR", shares: { WEST: 12, EAST: 20 }, nonAligned: 68 }]);
     orgMembers([{ organizationId: "NATO", countryId: "TR", wantsOutSinceTurn: 89 }]);
@@ -242,7 +229,6 @@ describe("loadOrgInfluence", () => {
       _id: "current",
       currentYear: 1953,
       currentTurn: 100,
-      intOrgAlignmentEnabled: true,
     });
     alignments([{ entityId: "TR", shares: { WEST: 12, EAST: 20 }, nonAligned: 68 }]);
     orgMembers([
@@ -315,7 +301,6 @@ describe("loadOrgInfluence", () => {
       _id: "current",
       currentYear: 1953,
       preset: "1953-default",
-      intOrgAlignmentEnabled: true,
     });
     db.collection("organizationFunds").findOne.mockResolvedValue({
       organizationId: "WARSAW_PACT",
@@ -515,7 +500,6 @@ describe("loadOrgInfluence", () => {
         _id: "current",
         currentYear: 1953,
         currentTurn: 10,
-        intOrgAlignmentEnabled: true,
       });
 
     it("reports a rival's landed points and never its money", async () => {
@@ -605,7 +589,6 @@ describe("loadOrgInfluence", () => {
         _id: "current",
         currentYear: 1992,
         currentTurn: 10,
-        intOrgAlignmentEnabled: true,
       });
       plays([
         {

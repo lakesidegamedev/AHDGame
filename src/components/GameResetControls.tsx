@@ -1,5 +1,6 @@
 "use client";
 
+import { supportsNoStartingParties } from "@/lib/admin/startingPartiesPresets";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { ResetSeedReadiness } from "@/lib/admin/resetAndBootstrapGameWorld";
@@ -19,9 +20,8 @@ interface ResetPreset {
 }
 
 /**
- * Start year embedded at the front of every preset name ("2019 Start Date — …").
- * Used to order the selector chronologically. Names without a leading year sort
- * last.
+ * Start year embedded at the front of preset names, used to order the
+ * selector chronologically. Names without a leading year sort last.
  */
 function presetStartYear(preset: ResetPreset): number {
   const match = preset.name.match(/\b(\d{4})\b/);
@@ -34,6 +34,7 @@ function presetStartYear(preset: ResetPreset): number {
  * for presets that don't follow the convention.
  */
 function presetVariant(preset: ResetPreset): string {
+  if (preset.id === "2027-default") return "Default Parties";
   const idx = preset.name.indexOf(" - ");
   return idx >= 0 ? preset.name.slice(idx + 3).trim() : preset.name;
 }
@@ -162,7 +163,7 @@ export function GameResetControls() {
   const [resetStage, setResetStage] = useState("");
   const [presets, setPresets] = useState<ResetPreset[]>([]);
   const [selectedPreset, setSelectedPreset] = useState("2019-default");
-  const [startingParties, setStartingParties] = useState<"default" | "none">("default");
+  const [startingParties, setStartingParties] = useState<"default" | "none" | "no-npps">("default");
   const [startYear, setStartYear] = useState(2019);
   const [startWeek, setStartWeek] = useState(1);
   // In-progress text in the year/week fields; null shows the committed date.
@@ -203,7 +204,8 @@ export function GameResetControls() {
   }, []);
 
   const handleReset = async (type: ResetType) => {
-    const noStartingParties = selectedPreset === "1991-default" && startingParties === "none";
+    const noStartingParties =
+      supportsNoStartingParties(selectedPreset) && startingParties === "none";
     const config =
       noStartingParties && type === "resetAndBootstrap"
         ? {
@@ -215,16 +217,25 @@ export function GameResetControls() {
             ],
             successPrefix: "Reset + no parties bootstrap completed",
           }
-        : RESET_CONFIG[type];
+        : startingParties === "no-npps" && type === "resetAndBootstrap"
+          ? {
+              ...RESET_CONFIG[type],
+              title: "Reset + no NPPs",
+              warningLines: [
+                ...RESET_CONFIG[type].warningLines.slice(0, 2),
+                "Player countries retain default parties but start without political NPPs or occupied offices. Economic actors and background governments remain.",
+              ],
+            }
+          : RESET_CONFIG[type];
     const presetName = noStartingParties
-      ? "1991 Start Date - No starting parties"
+      ? `${presets.find((p) => p.id === selectedPreset)?.name ?? selectedPreset} - No starting parties`
       : (presets.find((p) => p.id === selectedPreset)?.name ?? selectedPreset);
     const firstConfirm = [
       `${config.title}`,
       "",
       ...config.warningLines.map((line) => `- ${line}`),
       "",
-      `Starting conditions: ${presetName}`,
+      `Starting conditions: ${presetName}${startingParties === "no-npps" ? " (No political NPPs in player countries)" : ""}`,
       `Reset date: ${startYear}, week ${startWeek}`,
       "",
       "Continue to typed confirmation?",
@@ -260,7 +271,7 @@ export function GameResetControls() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...config.body,
-          ...(selectedPreset === "1991-default" ? { startingParties } : {}),
+          ...(supportsNoStartingParties(selectedPreset) ? { startingParties } : {}),
           iteration,
           startDate: { year: startYear, week: startWeek },
         }),
@@ -320,7 +331,9 @@ export function GameResetControls() {
             } else if (event.type === "error") {
               setMessage(`Error: ${event.message ?? "Reset failed"}`);
             }
-          } catch {}
+          } catch {
+            // A partial or malformed event line; wait for the next full event.
+          }
         }
       }
     } catch {
@@ -342,23 +355,33 @@ export function GameResetControls() {
   // Year + condition button grids, both derived from the preset names so new
   // presets appear automatically. A condition is only clickable when a preset
   // exists for the selected year with that variant suffix.
-  const variants = [...new Set(sortedPresets.map(presetVariant))];
+  const variants = [...new Set([...sortedPresets.map(presetVariant), "No NPPs", "No Parties"])];
   const selectedYear = selectedPresetData ? presetStartYear(selectedPresetData) : null;
-  const noStartingParties = selectedPreset === "1991-default" && startingParties === "none";
+  const noStartingParties = supportsNoStartingParties(selectedPreset) && startingParties === "none";
+  const noStartingNpps = selectedPreset === "2027-default" && startingParties === "no-npps";
   const selectedVariant = noStartingParties
     ? "No Parties"
-    : selectedPresetData
-      ? presetVariant(selectedPresetData)
-      : null;
+    : noStartingNpps
+      ? "No NPPs"
+      : selectedPresetData
+        ? presetVariant(selectedPresetData)
+        : null;
   const findPreset = (year: number, variant: string) =>
-    year === 1991 && variant === "No Parties"
-      ? sortedPresets.find((p) => p.id === "1991-default")
-      : sortedPresets.find((p) => presetStartYear(p) === year && presetVariant(p) === variant);
+    year === 2027 && variant === "No NPPs"
+      ? sortedPresets.find((p) => p.id === "2027-default")
+      : variant === "No Parties" &&
+          sortedPresets.some((p) => presetStartYear(p) === year && supportsNoStartingParties(p.id))
+        ? sortedPresets.find((p) => presetStartYear(p) === year && supportsNoStartingParties(p.id))
+        : sortedPresets.find((p) => presetStartYear(p) === year && presetVariant(p) === variant);
 
   const selectConditions = (preset: ResetPreset, variant: string | null) => {
     setSelectedPreset(preset.id);
     setStartingParties(
-      preset.id === "1991-default" && variant === "No Parties" ? "none" : "default"
+      supportsNoStartingParties(preset.id) && variant === "No Parties"
+        ? "none"
+        : preset.id === "2027-default" && variant === "No NPPs"
+          ? "no-npps"
+          : "default"
     );
   };
 
@@ -564,8 +587,10 @@ export function GameResetControls() {
         {selectedPresetData && (
           <p className="mt-3 text-xs text-muted">
             {noStartingParties
-              ? "1991 world data with no starting parties in player countries. Their political offices start vacant for player-created parties and elections. Background countries keep their modeled parties and governments."
-              : selectedPresetData.description}
+              ? `${selectedYear} world data with no starting parties in player countries. Their political offices start vacant for player-created parties and elections. Background countries keep their modeled parties and governments.`
+              : noStartingNpps
+                ? "Default parties remain, with no political NPPs or occupied political offices in player countries. Economic actors and background governments are preserved."
+                : selectedPresetData.description}
           </p>
         )}
       </div>
@@ -716,12 +741,18 @@ export function GameResetControls() {
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="font-medium">
-              {noStartingParties ? "Reset + no parties" : RESET_CONFIG.resetAndBootstrap.title}
+              {noStartingParties
+                ? "Reset + no parties"
+                : noStartingNpps
+                  ? "Reset + no NPPs"
+                  : RESET_CONFIG.resetAndBootstrap.title}
             </p>
             <p className="mt-1 text-sm text-muted">
               {noStartingParties
-                ? "Rebuilds the 1991 world with vacant political offices and no starting parties in player countries."
-                : RESET_CONFIG.resetAndBootstrap.description}
+                ? `Rebuilds the ${selectedYear} world with vacant political offices and no starting parties in player countries.`
+                : noStartingNpps
+                  ? "Rebuilds the 2027 world with default parties and vacant political offices in player countries."
+                  : RESET_CONFIG.resetAndBootstrap.description}
             </p>
           </div>
           <button
@@ -733,7 +764,9 @@ export function GameResetControls() {
               ? "Running..."
               : noStartingParties
                 ? "Reset + no parties"
-                : "Reset + historical"}
+                : noStartingNpps
+                  ? "Reset + no NPPs"
+                  : "Reset + historical"}
           </button>
         </div>
       </div>

@@ -7,7 +7,11 @@ import { ObjectId } from "mongodb";
 import { createNotification } from "@/lib/notifications";
 import { notifyGovernorOfSenateVacancy } from "@/lib/governors/senateVacancy";
 import { resignExecutiveOffice } from "@/lib/elections/resignExecutiveOffice";
-import type { ElectedOfficial, Character } from "@/lib/db/types";
+import type { ElectedOfficial } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import type { Document } from "mongodb";
 
 // POST /api/officials/[id]/resign — Resigns the authenticated character (or any official for admins) from their elected office.
 // Auth: requireBasicAuth
@@ -28,8 +32,8 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
     const officialId = new ObjectId(id);
 
     const db = await getDb();
-    const officialsCollection = db.collection<ElectedOfficial>("electedOfficials");
-    const charactersCollection = db.collection<Character>("characters");
+    const officialsCollection = electedOfficialsCollection(db);
+    const charactersHandle = charactersCollection(db);
 
     // Find the official
     const official = await officialsCollection.findOne({ _id: officialId });
@@ -44,7 +48,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
     }
 
     // Check auth: must be the character holding the office OR admin
-    const character = await charactersCollection.findOne({ _id: official.characterId });
+    const character = await charactersHandle.findOne({ _id: official.characterId });
     if (!character) {
       return NextResponse.json(notFound("Character not found").toJson(), { status: 404 });
     }
@@ -62,7 +66,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
     // Legislative resignations are blocked during active candidacies; executive
     // resignations are allowed so a VP can step down before a contingent ballot.
     if (!isExecutiveOffice) {
-      const activeElection = await db.collection("electionCandidates").findOne({
+      const activeElection = await electionCandidatesCollection<Document>(db).findOne({
         characterId: official.characterId,
         electionId: { $exists: true },
         status: "active",

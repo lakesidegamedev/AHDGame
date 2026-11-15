@@ -1,17 +1,14 @@
 /**
- * Every route on the lander that a signed-out visitor can actually read.
+ * Every route on the lander a signed-out visitor can actually read.
  *
  * Membership rule: the page must render real content with no session and no
- * character. That is stricter than "exports publicPageMetadata": a page can
+ * character. That is stricter than "exports publicPageMetadata"; a page can
  * advertise itself to crawlers and still hand an anonymous visitor an empty
- * state. `/world/german-question` is exactly that case (it returns a "No
- * character" empty state when signed out), so it is deliberately absent here.
- * `/officials` and `/world/legacy` do read the session, but only to highlight
- * the viewer's own row, so both stay in.
+ * state. `/officials` and `/world/legacy` read the session only to highlight the
+ * viewer's own row, so both stay in.
  *
- * The footer and the drawer tray both build from this file so the two lists
- * cannot drift apart. Label keys resolve under the `auth` namespace, and
- * `publicLinks.test.ts` asserts every one of them exists in every locale.
+ * The footer and drawer tray both build from this file so the lists cannot drift.
+ * `publicLinks.test.ts` asserts every label key exists in every locale.
  */
 
 export type LandingLink = {
@@ -54,9 +51,7 @@ export const LANDING_FOOTER_SECTIONS: readonly LandingFooterSection[] = [
       { href: "/guides", labelKey: "landing.footer.guides" },
       { href: "/wiki", labelKey: "landing.footer.wiki" },
       { href: "/faq", labelKey: "landing.footer.faq" },
-      // The in-app /api-guide page was retired in #771 and the route is now a
-      // 308 to the docs site, so link the canonical URL rather than bouncing
-      // through a redirect that lands on another domain unannounced.
+      // Link the canonical docs URL directly: the in-app route is a cross-domain redirect.
       { href: API_DOCS_URL, labelKey: "landing.footer.apiDocs", external: true },
       { href: "/about", labelKey: "landing.footer.about" },
     ],

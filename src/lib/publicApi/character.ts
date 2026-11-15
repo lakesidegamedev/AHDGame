@@ -7,7 +7,6 @@ import type {
   State,
   ElectionCandidate,
   Election,
-  Corporation,
   InvestorRankingSnapshot,
   CharacterAchievement,
   Achievement,
@@ -18,6 +17,16 @@ import { getDiscordAvatarUrl } from "@/lib/discord";
 import { escapeRegex } from "@/lib/utils/escapeRegex";
 import { buildCharacterHref, parseCharacterId } from "@/lib/utils/profileUrls";
 import { partyUrl } from "@/lib/urls";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { usersCollection } from "@/lib/db/repositories/users";
+import { achievementsCollection } from "@/lib/db/repositories/achievements";
+import { characterAchievementsCollection } from "@/lib/db/repositories/characterAchievements";
+import { investorRankingSnapshotsCollection } from "@/lib/db/repositories/investorRankingSnapshots";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://ahousedividedgame.com";
 
@@ -95,8 +104,7 @@ async function enrichPublicCharacters(db: Db, characters: Character[]): Promise<
 
   const [parties, states, userDocs, activeCandidacies] = await Promise.all([
     partyLookups.length > 0
-      ? db
-          .collection<PoliticalParty>("politicalParties")
+      ? politicalPartiesCollection(db)
           .find({
             $or: partyLookups.map((l) => ({
               countryId: l.countryId,
@@ -105,12 +113,10 @@ async function enrichPublicCharacters(db: Db, characters: Character[]): Promise<
           })
           .toArray()
       : Promise.resolve([]),
-    db
-      .collection<State>("states")
+    statesCollection(db)
       .find({ _id: { $in: stateIds } })
       .toArray(),
-    db
-      .collection<UserProjection>("users")
+    usersCollection<UserProjection>(db)
       .find({ _id: { $in: userIds } })
       .project<UserProjection>({
         _id: 1,
@@ -120,8 +126,7 @@ async function enrichPublicCharacters(db: Db, characters: Character[]): Promise<
         isBanned: 1,
       })
       .toArray(),
-    db
-      .collection<ElectionCandidate>("electionCandidates")
+    electionCandidatesCollection(db)
       .find({ characterId: { $in: characterIds }, status: "active" })
       .toArray(),
   ]);
@@ -129,8 +134,7 @@ async function enrichPublicCharacters(db: Db, characters: Character[]): Promise<
   const activeElectionIds = (activeCandidacies as ElectionCandidate[]).map((c) => c.electionId);
   const activeElections =
     activeElectionIds.length > 0
-      ? await db
-          .collection<Pick<Election, "_id" | "electionType" | "state">>("elections")
+      ? await electionsCollection<Pick<Election, "_id" | "electionType" | "state">>(db)
           .find({ _id: { $in: activeElectionIds } }, { projection: { electionType: 1, state: 1 } })
           .toArray()
       : [];
@@ -150,8 +154,7 @@ async function enrichPublicCharacters(db: Db, characters: Character[]): Promise<
 
   const corporations =
     characterIds.length > 0
-      ? await db
-          .collection<Corporation>("corporations")
+      ? await corporationsCollection(db)
           .find({ ceoId: { $in: characterIds }, ceoVacant: { $ne: true } })
           .project<{ _id: ObjectId; name: string; ceoId: ObjectId }>({ _id: 1, name: 1, ceoId: 1 })
           .toArray()
@@ -162,9 +165,9 @@ async function enrichPublicCharacters(db: Db, characters: Character[]): Promise<
     if (corp.ceoId) ceoCorpMap.set(corp.ceoId.toString(), corp.name);
   }
 
-  const investorSnapshot = (await db
-    .collection<{ _id: string }>("investorRankingSnapshots")
-    .findOne({ _id: "global" })) as unknown as InvestorRankingSnapshot | null;
+  const investorSnapshot = await investorRankingSnapshotsCollection<{ _id: string }>(
+    db
+  ).findOne<InvestorRankingSnapshot>({ _id: "global" });
 
   const portfolioValues = new Map<string, number>();
   const investorRankMap = new Map<string, number>();
@@ -258,14 +261,13 @@ export async function queryCharacters(
   let characters: Character[] = [];
 
   if (discordId) {
-    const user = await db.collection<User>("users").findOne({ discordId });
+    const user = await usersCollection(db).findOne({ discordId });
     if (user) {
-      const char = await db.collection<Character>("characters").findOne({ userId: user._id });
+      const char = await charactersCollection(db).findOne({ userId: user._id });
       if (char) characters = [char];
     }
   } else if (name) {
-    characters = await db
-      .collection<Character>("characters")
+    characters = await charactersCollection(db)
       .find({ name: { $regex: escapeRegex(name), $options: "i" } })
       .limit(5)
       .toArray();
@@ -291,7 +293,7 @@ export async function queryCharacterById(
       ? { sequentialId: parsed.value }
       : { _id: new ObjectId(parsed.value) };
 
-  const char = await db.collection<Character>("characters").findOne(filter);
+  const char = await charactersCollection(db).findOne(filter);
   if (!char) return null;
 
   const results = await enrichPublicCharacters(db, [char]);
@@ -315,9 +317,7 @@ export async function queryCharacterCareer(
     toState: string | null;
   }>;
 } | null> {
-  const char = await db
-    .collection<Character>("characters")
-    .findOne({ _id: new ObjectId(characterId) });
+  const char = await charactersCollection(db).findOne({ _id: new ObjectId(characterId) });
   if (!char) return null;
 
   const career = [...(char.careerHistory ?? [])].reverse().map((event) => ({
@@ -350,15 +350,12 @@ export async function queryCharacterAchievements(
     earnedAt: string | null;
   }>;
 } | null> {
-  const char = await db
-    .collection<Character>("characters")
-    .findOne({ _id: new ObjectId(characterId) });
+  const char = await charactersCollection(db).findOne({ _id: new ObjectId(characterId) });
   if (!char) return null;
 
   const highlightedIds = new Set<string>((char.highlightedAchievementIds ?? []).map(String));
 
-  const earned = await db
-    .collection<CharacterAchievement>("characterAchievements")
+  const earned = await characterAchievementsCollection(db)
     .find({ characterId: char._id })
     .toArray();
 
@@ -367,8 +364,7 @@ export async function queryCharacterAchievements(
   }
 
   const achievementIds = earned.map((e) => e.achievementId);
-  const defs = await db
-    .collection<Achievement>("achievements")
+  const defs = await achievementsCollection(db)
     .find({ _id: { $in: achievementIds } })
     .toArray();
 
@@ -419,8 +415,7 @@ export async function queryCharactersBulk(
   if (objectIds.length > 0) filters.push({ _id: { $in: objectIds } });
   const characters =
     filters.length > 0
-      ? await db
-          .collection<Character>("characters")
+      ? await charactersCollection(db)
           .find(filters.length === 1 ? filters[0] : { $or: filters })
           .limit(100)
           .toArray()

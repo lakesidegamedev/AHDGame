@@ -4,7 +4,7 @@
 // Fog: returns odds BOTH ways + own strength/supply + a coarse enemy band — never the
 // enemy roster. The counter-projection is derived from sides already built here.
 // Auth: mirrors the declare route (the theater commander where one is designated,
-// otherwise the defense holder; admin always). Gated by conflictsEnabled + defense seat.
+// otherwise the defense holder; admin always). Gated by the defense seat.
 // Errors: 400, 401, 403, 404.
 import { NextResponse } from "next/server";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
@@ -201,9 +201,8 @@ export async function GET(request: Request, { params }: RouteParams) {
       ),
     ]);
     const ownByCountry = new Map(ownSides.map((s) => [s.country, s]));
-    // `filter(Boolean)` is not enough for the type narrowing, and a miss would be a
-    // logic error rather than a data condition — every name in both rosters was just
-    // used to build `ownSides`.
+    // filter(Boolean) does not narrow the type; a miss here is a logic error,
+    // since every name was already used to build ownSides.
     const pickOwn = (countries: string[]) =>
       countries.map((c) => ownByCountry.get(c)).filter((s) => s !== undefined);
     const attackerSides = pickOwn(attackerCountries);

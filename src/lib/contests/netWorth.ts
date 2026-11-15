@@ -6,10 +6,7 @@
  * arrived from outside a character's own play (wires, loan principal), which
  * the contest nets out of growth.
  */
-import type { Db, ObjectId } from "mongodb";
-import type { Character } from "@/lib/db/types";
-import type { Corporation } from "@/lib/db/types/corporation";
-import type { Bond } from "@/lib/db/types/bond";
+import type { Db, Document, ObjectId } from "mongodb";
 import { BOND_UNIT_FACE_VALUE } from "@/lib/db/types/bond";
 import type { IndexFund, IndexFundPosition } from "@/lib/db/types/indexFund";
 import type { CurrencyCode } from "@/lib/constants/currencies";
@@ -21,6 +18,12 @@ import {
   shareTradeAnchorValue,
 } from "@/lib/currency/corporationCapital";
 import { fetchExchangeRateMap, getRateDoc, toInternalAmount } from "@/lib/world/forex";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import { indexFundPositionsCollection } from "@/lib/db/repositories/indexFundPositions";
 
 const add = (m: Map<string, number>, key: string, value: number) =>
   m.set(key, (m.get(key) ?? 0) + value);
@@ -33,8 +36,7 @@ export async function loadCharacterNetWorths(
   const out = new Map<string, number>();
   if (characterIds.length === 0) return out;
   const [characters, rateMap, fx, corps, bonds, positions] = await Promise.all([
-    db
-      .collection<Character>("characters")
+    charactersCollection(db)
       .find(
         { _id: { $in: characterIds } },
         { projection: { countryId: 1, currencyBalances: 1, cashOnHand: 1, savingsOnHand: 1 } }
@@ -42,22 +44,19 @@ export async function loadCharacterNetWorths(
       .toArray(),
     fetchExchangeRateMap(db),
     loadValuationFxRates(db),
-    db
-      .collection<Corporation>("corporations")
+    corporationsCollection(db)
       .find(
         { "shareholders.characterId": { $in: characterIds } },
         { projection: { shareholders: 1, sharePrice: 1, liquidCurrencyCode: 1 } }
       )
       .toArray(),
-    db
-      .collection<Bond>("bonds")
+    bondsCollection(db)
       .find(
         { "holders.characterId": { $in: characterIds } },
         { projection: { holders: 1, marketPrice: 1, currencyCode: 1 } }
       )
       .toArray(),
-    db
-      .collection<IndexFundPosition>("indexFundPositions")
+    indexFundPositionsCollection(db)
       .find(
         { holderKind: "character", characterId: { $in: characterIds } },
         { projection: { fundId: 1, characterId: 1, units: 1 } }
@@ -85,8 +84,7 @@ export async function loadCharacterNetWorths(
     }
   }
   if (positions.length > 0) {
-    const funds = await db
-      .collection<IndexFund>("indexFunds")
+    const funds = await indexFundsCollection(db)
       .find(
         { _id: { $in: [...new Set(positions.map((p) => p.fundId))] } },
         { projection: { quotedNav: 1 } }
@@ -131,8 +129,7 @@ export async function loadExternalInflows(
   const totals = new Map<string, number>();
   if (characterIds.length === 0) return totals;
   const [rows, fx] = await Promise.all([
-    db
-      .collection("financialTxLog")
+    financialTxLogCollection<Document>(db)
       .find(
         {
           type: { $in: Object.keys(INFLOW_SIGN) },

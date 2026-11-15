@@ -1,19 +1,15 @@
 /**
  * NPP supply-agreement matching (supplyAgreementsEnabled).
  *
- * Player CEOs propose and accept bilateral contracts. NPP CEOs never did, so
- * under a 1953 all-flags plants world the contract book stayed empty while
- * every plant sat input-starved (sandbox soak: throughputFactor 0.85 on all
- * 675 sectors) and extractors sat in shortage. This pass is the missing
- * operator: NPP buyers accept honest inbound proposals, NPP suppliers lock
- * same-country NPP buyers, and a mothballed supplier serves cancel notice
- * before shortfall damages land on a cold plant.
+ * Player CEOs propose and accept bilateral contracts; NPP CEOs do too here:
+ * NPP buyers accept honest inbound proposals, NPP suppliers lock same-country
+ * NPP buyers, and a mothballed supplier serves cancel notice before
+ * shortfall damages land on a cold plant.
  *
- * Same-country only. 1953 has CoCom/Comecon embargo lanes; crossing them
- * here would ignore the trade graph the clearing book already respects.
- * Player counterparties are never proposed to (inbox spam); a player who
- * proposes TO an NPP buyer still gets an auto-accept when the terms are
- * honest.
+ * Same-country only. Embargo lanes exist; crossing them here would ignore the
+ * trade graph the clearing book already respects. Player counterparties are
+ * never proposed to (inbox spam); a player who proposes TO an NPP buyer still
+ * gets an auto-accept when the terms are honest.
  */
 
 import { substepMarker } from "@/lib/observability/phaseSubsteps";
@@ -50,6 +46,14 @@ import {
   supportsCorporationWideSupplyAgreement,
 } from "@/lib/market/commodityMarketScope";
 import { supplyAgreementSectorsInScope } from "@/lib/corporations/supplyAgreementCapacity";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
+import { supplyAgreementsCollection } from "@/lib/db/repositories/supplyAgreements";
+import { supplyListingsCollection } from "@/lib/db/repositories/supplyListings";
+import { tradeEmbargoesCollection } from "@/lib/db/repositories/tradeEmbargoes";
 
 /** Fill below this: the seller cannot move output and will discount to lock a buyer. */
 export const NPP_CONTRACT_GLUT_FILL = 0.5;
@@ -885,7 +889,7 @@ export async function syncAiSupplyListings(
 ): Promise<{ upserted: number; removed: number }> {
   const { turn, now } = args;
   const desired = decideAiSupplyListings(args);
-  const collection = db.collection<SupplyListing>("supplyListings");
+  const collection = supplyListingsCollection(db);
   const corpObjectIds = args.parties.map((p) => new ObjectId(p.corpId));
   const existing = await collection
     .find(
@@ -1067,19 +1071,16 @@ export async function processNppSupplyAgreements(
   now: Date,
   plantsEnabled: boolean
 ): Promise<{ accepted: number; cancelled: number; proposed: number }> {
-  const cfg = await db
-    .collection<GameConfig>("gameConfig")
-    .findOne(
-      { _id: "default" },
-      { projection: { supplyAgreementsEnabled: 1, commandEconomyEnabled: 1 } }
-    );
+  const cfg = await gameConfigCollection(db).findOne(
+    { _id: "default" },
+    { projection: { supplyAgreementsEnabled: 1, commandEconomyEnabled: 1 } }
+  );
   if (cfg?.supplyAgreementsEnabled !== true) {
     return { accepted: 0, cancelled: 0, proposed: 0 };
   }
   const step = substepMarker();
 
-  const nppCorps = await db
-    .collection<Corporation>("corporations")
+  const nppCorps = await corporationsCollection(db)
     .find(
       { ceoType: "npp", suspended: { $ne: true } },
       {
@@ -1094,12 +1095,10 @@ export async function processNppSupplyAgreements(
   // together removes three sequential database waits from the turn's NPP
   // supply-agreement phase.
   const [sectors, rawAgreements, commodityPriceDocs, gameState, embargoes] = await Promise.all([
-    db
-      .collection<CorporateSector>("corporateSectors")
+    corporateSectorsCollection(db)
       .find({ corporationId: { $in: corpIds } }, { projection: NPP_SUPPLY_SECTOR_PROJECTION })
       .toArray(),
-    db
-      .collection<SupplyAgreement>("supplyAgreements")
+    supplyAgreementsCollection(db)
       .find(
         {
           status: { $in: ["pending", "active", "cancelling"] },
@@ -1108,21 +1107,17 @@ export async function processNppSupplyAgreements(
         { projection: NPP_SUPPLY_AGREEMENT_PROJECTION }
       )
       .toArray(),
-    db
-      .collection<{
-        commodity: string;
-        turn?: number;
-        basePrice?: number;
-        globalPrice?: number;
-        nationalPrices?: Record<string, number>;
-      }>("commodityPrices")
+    commodityPricesCollection<{
+      commodity: string;
+      turn?: number;
+      basePrice?: number;
+      globalPrice?: number;
+      nationalPrices?: Record<string, number>;
+    }>(db)
       .find({})
       .toArray(),
-    db
-      .collection<GameState>("gameState")
-      .findOne({ _id: "current" }, { projection: { currentYear: 1 } }),
-    db
-      .collection<TradeEmbargo>("tradeEmbargoes")
+    gameStateCollection(db).findOne({ _id: "current" }, { projection: { currentYear: 1 } }),
+    tradeEmbargoesCollection(db)
       .find(
         {
           mode: "block",
@@ -1159,8 +1154,7 @@ export async function processNppSupplyAgreements(
   const externalBuyers = new Map<string, ExternalBuyer>();
   const externalBuyerUsers = new Map<string, Corporation["userId"]>();
   if (externalBuyerIds.length > 0) {
-    const docs = await db
-      .collection<Corporation>("corporations")
+    const docs = await corporationsCollection(db)
       .find(
         { _id: { $in: externalBuyerIds.map((id) => new ObjectId(id)) } },
         { projection: { countryId: 1, userId: 1 } }
@@ -1280,7 +1274,7 @@ export async function processNppSupplyAgreements(
     }
   }
 
-  const agreementsCollection = db.collection<SupplyAgreement>("supplyAgreements");
+  const agreementsCollection = supplyAgreementsCollection(db);
   const durationById = new Map(agreements.map((a) => [a.id, a.durationTurns]));
   // Contracts AI corporations signed with each other before AI contracts had a
   // term never expire, and every live contract is settled and rewritten each

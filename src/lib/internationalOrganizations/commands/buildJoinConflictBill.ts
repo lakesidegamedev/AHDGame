@@ -6,6 +6,7 @@ import type { JoinConflictProvision } from "@/lib/db/types/legislation";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { getJointSittingOfficeTypes } from "@/lib/legislature/chamberOfficeType";
 import { notifyChambersVoteOpen } from "@/lib/turn/billLifecycle/lifecycleHelpers";
+import { billsCollection } from "@/lib/db/repositories/bills";
 
 /** Both chambers get the same 24-turn clock — they are voting at the same time. */
 const JOIN_CONFLICT_VOTE_HOURS = 24;
@@ -28,7 +29,7 @@ export async function buildJoinConflictBill(params: {
   provision: JoinConflictProvision;
 }): Promise<ObjectId> {
   const { db, countryId, preset, sponsor, conflictName, organizationId, provision } = params;
-  const existing = await db.collection<Bill>("bills").findOne(
+  const existing = await billsCollection(db).findOne(
     {
       countryId,
       provisions: {
@@ -102,7 +103,7 @@ export async function buildJoinConflictBill(params: {
     updatedAt: now,
   } as unknown as Bill;
 
-  await db.collection<Bill>("bills").insertOne(bill);
+  await billsCollection(db).insertOne(bill);
 
   // The engine notifies on activation; a builder-inserted bill never passes through
   // it, and this one lands unbidden in chambers that did not ask for it.

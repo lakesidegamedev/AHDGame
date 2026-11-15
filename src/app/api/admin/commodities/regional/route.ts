@@ -11,6 +11,10 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { countryIdSchema } from "@/lib/api/schemas/country";
 import type { CommodityPrice, CommodityPriceHistory, GameState, State } from "@/lib/db/types";
 import { computeCommodityPressureRatio } from "@/lib/constants/commodities";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
+import { commodityPriceHistoryCollection } from "@/lib/db/repositories/commodityPriceHistory";
 
 const querySchema = z.object({
   countryId: countryIdSchema,
@@ -30,10 +34,8 @@ export const GET = withAdminAuth(async (_auth, request: Request) => {
     const db = await getDb();
 
     const [prices, gameState] = await Promise.all([
-      db.collection<CommodityPrice>("commodityPrices").find({}).toArray(),
-      db
-        .collection<GameState>("gameState")
-        .findOne({ _id: "current" }, { projection: { currentTurn: 1 } }),
+      commodityPricesCollection(db).find({}).toArray(),
+      gameStateCollection(db).findOne({ _id: "current" }, { projection: { currentTurn: 1 } }),
     ]);
 
     const currentTurn = gameState?.currentTurn ?? 0;
@@ -42,8 +44,7 @@ export const GET = withAdminAuth(async (_auth, request: Request) => {
       240
     );
 
-    const historyDocs = await db
-      .collection<CommodityPriceHistory>("commodityPriceHistory")
+    const historyDocs = await commodityPriceHistoryCollection(db)
       .find({ turn: { $gte: currentTurn - historyTurns, $lte: currentTurn } })
       .sort({ turn: 1 })
       .toArray();
@@ -90,8 +91,7 @@ export const GET = withAdminAuth(async (_auth, request: Request) => {
 
     // ── Country aggregate view ──
     // Get all stateIds belonging to this country
-    const countryStates = await db
-      .collection<State>("states")
+    const countryStates = await statesCollection(db)
       .find({ countryId }, { projection: { _id: 1 } })
       .toArray();
     const stateIds = new Set(countryStates.map((s) => s._id));

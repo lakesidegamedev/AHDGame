@@ -29,13 +29,13 @@ describe("resolveSourceLink", () => {
       stateId: "CA",
       countryId: "US",
     });
-    expect(s?.href).toBe("/country/us/region/ca/legislature/bills/abc123");
+    expect(s?.href).toBe("/country/us/region/CA/legislature/bills/abc123");
     expect(s?.label).toBe("View bill");
   });
 
   it("falls back to US country for legacy state bill notifications without countryId", () => {
     const s = resolveSourceLink("system", { billId: "abc123", stateId: "TX" });
-    expect(s?.href).toBe("/country/us/region/tx/legislature/bills/abc123");
+    expect(s?.href).toBe("/country/us/region/TX/legislature/bills/abc123");
   });
 
   it("links an election notification", () => {
@@ -163,17 +163,17 @@ describe("resolveSourceLink", () => {
   });
 
   // ── Feedback ─────────────────────────────────────────────────────────────
-  it("feedback_status_changed links to admin feedback tab", () => {
+  it("feedback_status_changed links to the admin suggestions tool", () => {
     const s = resolveSourceLink("feedback_status_changed", {
       issueNumber: 42,
     });
-    expect(s?.href).toBe("/admin?tab=feedback&issue=42");
+    expect(s?.href).toBe("/control/support/suggestions");
     expect(s?.label).toBe("View issue #42");
   });
 
-  it("new_feedback links to admin feedback tab", () => {
+  it("new_feedback links to the admin suggestions tool", () => {
     const s = resolveSourceLink("new_feedback", { issueNumber: 5 });
-    expect(s?.href).toBe("/admin?tab=feedback&issue=5");
+    expect(s?.href).toBe("/control/support/suggestions");
     expect(s?.label).toBe("View #5");
   });
 
@@ -182,7 +182,7 @@ describe("resolveSourceLink", () => {
     const s = resolveSourceLink("new_player_suggestion", {
       suggestionIssueNumber: 3,
     });
-    expect(s?.href).toBe("/admin?tab=support&sub=suggestions&issue=3");
+    expect(s?.href).toBe("/control/support/suggestions?issue=3");
     expect(s?.label).toBe("Review S#3");
   });
 

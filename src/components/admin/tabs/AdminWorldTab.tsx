@@ -3,8 +3,6 @@
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { DemographicsManager } from "@/components/DemographicsManager";
-import { Layer1PositionsToggle } from "@/components/positionEditor/Layer1PositionsToggle";
-import { SubNavLayout } from "./SubNavLayout";
 
 const NPPManagement = dynamic(
   () =>
@@ -22,13 +20,6 @@ const CrisesManager = dynamic(
   () =>
     import("@/components/admin/crises/CrisesManager").then((m) => ({
       default: m.CrisesManager,
-    })),
-  { ssr: false }
-);
-const GermanQuestionManager = dynamic(
-  () =>
-    import("@/components/admin/settlement/GermanQuestionManager").then((m) => ({
-      default: m.GermanQuestionManager,
     })),
   { ssr: false }
 );
@@ -51,23 +42,15 @@ const RandomEventsManager = dynamic(
 );
 
 export type WorldSubTab =
-  | "demographics"
-  | "npps"
-  | "politicians"
-  | "crises"
-  | "german-question"
-  | "events"
-  | "countries"
-  | "conflicts";
+  "demographics" | "npps" | "politicians" | "crises" | "events" | "countries" | "conflicts";
 
 interface AdminWorldTabProps {
   activeSub: WorldSubTab;
-  onSubChange: (sub: WorldSubTab) => void;
 }
 
-export function AdminWorldTab({ activeSub, onSubChange }: AdminWorldTabProps) {
+export function AdminWorldTab({ activeSub }: AdminWorldTabProps) {
   return (
-    <SubNavLayout tab="world" active={activeSub} onChange={onSubChange}>
+    <>
       <div className="space-y-6">
         {activeSub === "demographics" && (
           <div className="space-y-4">
@@ -77,15 +60,11 @@ export function AdminWorldTab({ activeSub, onSubChange }: AdminWorldTabProps) {
                   <h3 className="text-lg text-foreground">Position editor</h3>
                   <p className="mt-0.5 max-w-xl text-sm text-muted">
                     Author Layer-1 demographic positions and turnout by state, then apply them as
-                    global seed defaults. The toggle below gates whether a reseed derives leans from
-                    this model.
+                    global seed defaults.
                   </p>
-                  <div className="mt-3">
-                    <Layer1PositionsToggle />
-                  </div>
                 </div>
                 <Link
-                  href="/admin/position-editor"
+                  href="/control/world/position-editor"
                   className="inline-flex shrink-0 items-center justify-center rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary-dark"
                 >
                   Open position editor →
@@ -98,11 +77,10 @@ export function AdminWorldTab({ activeSub, onSubChange }: AdminWorldTabProps) {
         {activeSub === "npps" && <NPPManagement />}
         {activeSub === "politicians" && <PoliticianPagesTab />}
         {activeSub === "crises" && <CrisesManager />}
-        {activeSub === "german-question" && <GermanQuestionManager />}
         {activeSub === "events" && <RandomEventsManager />}
         {activeSub === "countries" && <CountryManagement />}
         {activeSub === "conflicts" && <ConflictsManager />}
       </div>
-    </SubNavLayout>
+    </>
   );
 }

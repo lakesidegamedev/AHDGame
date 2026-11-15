@@ -31,6 +31,11 @@ import {
   controlGroupMemberIds,
   controlGroupRootByCorpId,
 } from "@/lib/corporations/groups/controlGroups";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
 
 /** gameConfig.groupSizeCostsStage at which the commodity toll reads the whole control group. */
 export const GROUP_DOMINANCE_TOLL_STAGE = 2;
@@ -61,8 +66,7 @@ async function dominanceCorporationIds(
   groupSizeCostsStage: number
 ): Promise<Corporation["_id"][]> {
   if (groupSizeCostsStage < GROUP_DOMINANCE_TOLL_STAGE) return [corporationId];
-  const corps = await db
-    .collection<Corporation>("corporations")
+  const corps = await corporationsCollection(db)
     .find({}, { projection: { shareholders: 1, totalShares: 1, superShareMultiplier: 1 } })
     .toArray();
   const roots = controlGroupRootByCorpId(corps);
@@ -178,19 +182,19 @@ export async function loadCommodityDominanceContext(
   }
 ): Promise<CommodityDominanceContext | null> {
   try {
-    const config = await db
-      .collection<{ commandEconomyEnabled?: boolean; groupSizeCostsStage?: number }>("gameConfig")
-      .findOne(
-        { _id: "default" as never },
-        { projection: { commandEconomyEnabled: 1, groupSizeCostsStage: 1 } }
-      );
+    const config = await gameConfigCollection<{
+      commandEconomyEnabled?: boolean;
+      groupSizeCostsStage?: number;
+    }>(db).findOne(
+      { _id: "default" as never },
+      { projection: { commandEconomyEnabled: 1, groupSizeCostsStage: 1 } }
+    );
     const corporationIds = await dominanceCorporationIds(
       db,
       args.corporation._id,
       typeof config?.groupSizeCostsStage === "number" ? config.groupSizeCostsStage : 0
     );
-    const rows = await db
-      .collection<CorporateSector>("corporateSectors")
+    const rows = await corporateSectorsCollection(db)
       .find({ corporationId: { $in: corporationIds } }, { projection: FIRM_SECTOR_PROJECTION })
       .toArray();
     const commandEconomyEnabled = config?.commandEconomyEnabled === true;
@@ -220,8 +224,7 @@ export async function loadCommodityDominanceContext(
     const countryStateIds =
       targetCountryId && commodities.some(isCountryBookCommodity)
         ? (
-            await db
-              .collection<State>("states")
+            await statesCollection(db)
               .find(
                 { countryId: targetCountryId as State["countryId"] },
                 { projection: { _id: 1 } }
@@ -229,8 +232,7 @@ export async function loadCommodityDominanceContext(
               .toArray()
           ).map((s) => String(s._id))
         : [];
-    const priceDocs = await db
-      .collection<CommodityPrice>("commodityPrices")
+    const priceDocs = await commodityPricesCollection(db)
       .find(
         { commodity: { $in: commodities } },
         {

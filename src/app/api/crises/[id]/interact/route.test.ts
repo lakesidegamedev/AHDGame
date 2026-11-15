@@ -17,10 +17,6 @@ vi.mock("@/lib/crises/optionActions", () => ({ runCrisisOptionAction: vi.fn() })
 vi.mock("@/lib/crises/aidPledge", () => ({ submitCrisisAidPledge: vi.fn() }));
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
 vi.mock("@/lib/api/requireAuth", () => ({ requireAuthWithCharacter: vi.fn() }));
-vi.mock("@/lib/crises/featureFlag", () => ({
-  isCrisisInteractionEnabled: vi.fn().mockResolvedValue(true),
-  isCrisisAidBillsEnabled: vi.fn().mockResolvedValue(false),
-}));
 vi.mock("@/lib/wireEvent", () => ({ logWireEvent: vi.fn().mockResolvedValue(undefined) }));
 
 let db: MockDb;

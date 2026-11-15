@@ -15,6 +15,9 @@ import { isLabourFullMode } from "@/lib/labour/featureFlag";
 import type { PoliticalMetricId } from "@/lib/politicalMetrics/types";
 import { normalizeServiceIds, servicesWorkerSecurityNudge } from "./unionServices";
 import { loadFundedUnionServices, UNION_SERVICE_FUNDING_PROJECTION } from "./unionServiceFunding";
+import { unionsCollection } from "@/lib/db/repositories/unions";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { bargainingCampaignsCollection } from "@/lib/db/repositories/bargainingCampaigns";
 
 /** Political attention fades unless a dispute escalates again. */
 export const LABOUR_DISPUTE_DECAY = 0.9;
@@ -142,14 +145,14 @@ export async function loadLabourRelationsPoliticalNudgesByCountry(
   db: Db,
   currentTurn: number
 ): Promise<CountryPoliticalNudges> {
-  const config = await db
-    .collection<GameConfig>("gameConfig")
-    .findOne({ _id: "default" }, { projection: { labourSystemMode: 1 } });
+  const config = await gameConfigCollection(db).findOne(
+    { _id: "default" },
+    { projection: { labourSystemMode: 1 } }
+  );
   if (!(await isLabourFullMode(config))) return new Map();
 
   const [campaigns, unions] = await Promise.all([
-    db
-      .collection<BargainingCampaign>("bargainingCampaigns")
+    bargainingCampaignsCollection(db)
       .find(
         {
           $or: [
@@ -175,8 +178,7 @@ export async function loadLabourRelationsPoliticalNudgesByCountry(
       .toArray(),
     // Only unions with a recorded payment can produce service nudges.
     // The selected slate can differ from the already purchased entitlement.
-    db
-      .collection<Union>("unions")
+    unionsCollection(db)
       .find(
         { suspended: { $ne: true }, serviceReceipts: { $exists: true } },
         { projection: { countryId: 1, ...UNION_SERVICE_FUNDING_PROJECTION } }

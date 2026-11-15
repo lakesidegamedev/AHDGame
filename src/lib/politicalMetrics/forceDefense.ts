@@ -8,7 +8,6 @@ import { FORCE_EFFECT } from "@/lib/constants/military";
  * alongside the mapped cabinet deltas, then folded/decayed like any residual driver.
  *
  * Values are already in political-point/turn space (NOT run through the cabinet GAIN).
- * Spec: docs/superpowers/specs/2026-07-23-military-defense-political-drivers-design.md
  */
 
 /** Per-family scale (playtest-tunable): ~0.3 → a baseline force ≈ 3-point steady-state. */

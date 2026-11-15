@@ -2,8 +2,14 @@ import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError } from "@/lib/api/errors";
-import type { Campaign, Election, ElectionCandidate, Character } from "@/lib/db/types";
+import type { Campaign, Election, ElectionCandidate } from "@/lib/db/types";
 import { ObjectId } from "mongodb";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
+import type { Document } from "mongodb";
+import { adminLogsCollection } from "@/lib/db/repositories/adminLogs";
 
 /**
  * GET /api/admin/heal/stale-campaigns
@@ -21,8 +27,7 @@ export async function GET() {
 
     const db = await getDb();
 
-    const allCampaigns = await db
-      .collection<Campaign>("campaigns")
+    const allCampaigns = await campaignsCollection(db)
       .find({}, { projection: { activityHistory: 0 } })
       .toArray();
 
@@ -32,15 +37,13 @@ export async function GET() {
 
     // Gather all referenced election IDs
     const electionIds = [...new Set(allCampaigns.map((c) => c.electionId.toString()))];
-    const elections = await db
-      .collection<Election>("elections")
+    const elections = await electionsCollection(db)
       .find({ _id: { $in: electionIds.map((id) => new ObjectId(id)) } })
       .toArray();
     const electionMap = new Map(elections.map((e) => [e._id.toString(), e]));
 
     // Gather all active election candidates for the referenced elections
-    const activeCandidates = await db
-      .collection<ElectionCandidate>("electionCandidates")
+    const activeCandidates = await electionCandidatesCollection(db)
       .find({
         electionId: { $in: electionIds.map((id) => new ObjectId(id)) },
         status: "active",
@@ -55,8 +58,7 @@ export async function GET() {
 
     // Gather all referenced non-NPP candidate character IDs to check countryId
     const charIds = allCampaigns.filter((c) => !c.candidateIsNPP).map((c) => c.candidateId);
-    const characters = await db
-      .collection<Character>("characters")
+    const characters = await charactersCollection(db)
       .find({ _id: { $in: charIds } })
       .toArray();
     const charMap = new Map(characters.map((c) => [c._id.toString(), c]));
@@ -171,8 +173,7 @@ export async function POST() {
 
     const db = await getDb();
 
-    const allCampaigns = await db
-      .collection<Campaign>("campaigns")
+    const allCampaigns = await campaignsCollection(db)
       .find({}, { projection: { activityHistory: 0 } })
       .toArray();
 
@@ -181,14 +182,12 @@ export async function POST() {
     }
 
     const electionIds = [...new Set(allCampaigns.map((c) => c.electionId.toString()))];
-    const elections = await db
-      .collection<Election>("elections")
+    const elections = await electionsCollection(db)
       .find({ _id: { $in: electionIds.map((id) => new ObjectId(id)) } })
       .toArray();
     const electionMap = new Map(elections.map((e) => [e._id.toString(), e]));
 
-    const activeCandidates = await db
-      .collection<ElectionCandidate>("electionCandidates")
+    const activeCandidates = await electionCandidatesCollection(db)
       .find({
         electionId: { $in: electionIds.map((id) => new ObjectId(id)) },
         status: "active",
@@ -201,8 +200,7 @@ export async function POST() {
     );
 
     const charIds = allCampaigns.filter((c) => !c.candidateIsNPP).map((c) => c.candidateId);
-    const characters = await db
-      .collection<Character>("characters")
+    const characters = await charactersCollection(db)
       .find({ _id: { $in: charIds } })
       .toArray();
     const charMap = new Map(characters.map((c) => [c._id.toString(), c]));
@@ -243,9 +241,9 @@ export async function POST() {
       });
     }
 
-    const result = await db.collection("campaigns").deleteMany({ _id: { $in: staleIds } });
+    const result = await campaignsCollection<Document>(db).deleteMany({ _id: { $in: staleIds } });
 
-    await db.collection("adminLogs").insertOne({
+    await adminLogsCollection<Document>(db).insertOne({
       action: "heal_stale_campaigns",
       adminUsername: auth.admin.username,
       details: {

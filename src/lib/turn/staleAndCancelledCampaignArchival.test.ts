@@ -46,7 +46,7 @@ describe("stale / cancelled election sweeps — campaign archival", () => {
     stubFind("elections", [{ _id: electionId }]);
     stubElectionCandidates(db, [{ _id: candidacyId, electionId, characterId, status: "active" }]);
 
-    const { cleanupStaleElectionCandidates } = await import("./perpetualElections/engine");
+    const { cleanupStaleElectionCandidates } = await import("@/lib/elections/scheduling/engine");
     await cleanupStaleElectionCandidates(NOW);
 
     expect(db.collectionMocks.campaigns!.updateMany).toHaveBeenCalled();
@@ -64,7 +64,7 @@ describe("stale / cancelled election sweeps — campaign archival", () => {
     stubFind("elections", [{ _id: electionId }, { _id: runoffId }]);
     stubElectionCandidates(db, [{ _id: candidacyId, electionId, characterId, status: "active" }]);
 
-    const { cleanupStaleElectionCandidates } = await import("./perpetualElections/engine");
+    const { cleanupStaleElectionCandidates } = await import("@/lib/elections/scheduling/engine");
     await cleanupStaleElectionCandidates(NOW);
 
     expect(db.collectionMocks.electionCandidates!.updateMany).not.toHaveBeenCalled();

@@ -1,16 +1,13 @@
 /**
- * Trade routes in the unified producer market (owner decisions 2026-10-18:
- * sales should go to real buyers who can reach them; government distortions
- * are real flows).
+ * Trade routes in the unified producer market.
  *
  * - Eligibility: a buyer may only buy from sellers in its own country or in a
  *   country it can trade with for that commodity (embargoes, the curtain and
- *   blockades close a route). The answer comes from the same affinity matrix
- *   the trade system uses, so both agree on which routes exist.
+ *   blockades close a route). Uses the same affinity matrix as the trade
+ *   system so both agree on which routes exist.
  * - Tariffs: each cross-border sale pays the importer's tariff on its value to
- *   the importing country's treasury. Charged after clearing, so a tariff moves
- *   money but does not yet change which seller wins (a delivered-price book is
- *   a later step).
+ *   the importing country's treasury. Charged after clearing, so a tariff
+ *   moves money but does not yet change which seller wins.
  *
  * Pure: plain data and lookups in, eligibility lists and transfers out.
  */

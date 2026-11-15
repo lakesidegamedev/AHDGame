@@ -1,8 +1,8 @@
 import type { Db } from "mongodb";
 import type { CampaignFieldOffice } from "@/lib/db/types";
-import { FIELD_OFFICES_COLLECTION } from "./commands";
 import { fieldOfficeRegionEffect } from "./effects";
 import { getFieldOfficeRules } from "./rules";
+import { campaignFieldOfficesCollection } from "@/lib/db/repositories/campaignFieldOffices";
 
 /**
  * Engine-side reader. One query loads every office for the turn; each race
@@ -25,8 +25,7 @@ const ENGINE_PROJECTION = {
 } as const;
 
 export async function loadFieldOfficesByElection(db: Db): Promise<FieldOfficesByElection> {
-  const rows = await db
-    .collection<CampaignFieldOffice>(FIELD_OFFICES_COLLECTION)
+  const rows = await campaignFieldOfficesCollection<CampaignFieldOffice>(db)
     .find({}, { projection: ENGINE_PROJECTION })
     .toArray();
   const byElection: FieldOfficesByElection = new Map();
@@ -43,8 +42,7 @@ export async function loadFieldOfficesForElection(
   db: Db,
   electionId: { toString(): string }
 ): Promise<CampaignFieldOffice[]> {
-  return db
-    .collection<CampaignFieldOffice>(FIELD_OFFICES_COLLECTION)
+  return campaignFieldOfficesCollection<CampaignFieldOffice>(db)
     .find(
       { electionId: electionId as CampaignFieldOffice["electionId"] },
       { projection: ENGINE_PROJECTION }

@@ -9,6 +9,9 @@ import type { GameConfig } from "@/lib/db/types";
 import type { ObjectId } from "mongodb";
 import { ReferralAwardError } from "@/lib/contests/referralAward";
 import { awardIterationReferralsNow } from "@/lib/contests/engine";
+import { usersCollection } from "@/lib/db/repositories/users";
+import type { Document } from "mongodb";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 const TOP_N = 100;
 
@@ -56,14 +59,15 @@ function toLeaderRow(
 // Errors: 403
 export const GET = withAdminRoute(async (_auth) => {
   const db = await getDb();
-  const config = await db
-    .collection<GameConfig>("gameConfig")
-    .findOne({ _id: "default" }, { projection: { referralContestStartedAt: 1 } });
+  const config = await gameConfigCollection(db).findOne(
+    { _id: "default" },
+    { projection: { referralContestStartedAt: 1 } }
+  );
 
   const contestStartedAt = config?.referralContestStartedAt ?? null;
   const contestMode = contestStartedAt instanceof Date && !Number.isNaN(contestStartedAt.getTime());
 
-  const usersCol = db.collection<LeaderUserDoc>("users");
+  const usersCol = usersCollection<LeaderUserDoc>(db);
 
   const [allTimeDocs, contestDocs] = (await Promise.all([
     usersCol
@@ -145,14 +149,12 @@ export const PATCH = withAdminRoute(async (auth, request: Request) => {
 
   if (parsed.data.action === "start-contest") {
     await Promise.all([
-      db
-        .collection<GameConfig>("gameConfig")
-        .updateOne(
-          { _id: "default" },
-          { $set: { referralContestStartedAt: now } },
-          { upsert: true }
-        ),
-      db.collection("users").updateMany({}, { $set: { referralContestCount: 0 } }),
+      gameConfigCollection(db).updateOne(
+        { _id: "default" },
+        { $set: { referralContestStartedAt: now } },
+        { upsert: true }
+      ),
+      usersCollection<Document>(db).updateMany({}, { $set: { referralContestCount: 0 } }),
     ]);
 
     await createAdminLog({
@@ -171,14 +173,12 @@ export const PATCH = withAdminRoute(async (auth, request: Request) => {
   }
 
   await Promise.all([
-    db
-      .collection<GameConfig>("gameConfig")
-      .updateOne(
-        { _id: "default" },
-        { $unset: { referralContestStartedAt: "" } },
-        { upsert: true }
-      ),
-    db.collection("users").updateMany({}, { $set: { referralContestCount: 0 } }),
+    gameConfigCollection(db).updateOne(
+      { _id: "default" },
+      { $unset: { referralContestStartedAt: "" } },
+      { upsert: true }
+    ),
+    usersCollection<Document>(db).updateMany({}, { $set: { referralContestCount: 0 } }),
   ]);
 
   await createAdminLog({

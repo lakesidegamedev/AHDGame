@@ -4,6 +4,7 @@ import { getNationalDocId } from "@/lib/constants/nationalScope";
 import type { Bill } from "@/lib/db/types";
 import type { InternationalOrganizationProvision } from "@/lib/db/types/legislation";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
+import { billsCollection } from "@/lib/db/repositories/bills";
 
 /**
  * Create a national-legislature bill carrying an `international_organization`
@@ -29,7 +30,7 @@ export async function buildMembershipBill(params: {
   const currentTurn = await getCurrentTurn(db);
   const billId = new ObjectId();
 
-  await db.collection<Bill>("bills").insertOne({
+  await billsCollection(db).insertOne({
     _id: billId,
     countryId,
     stateId: nationalStateId,

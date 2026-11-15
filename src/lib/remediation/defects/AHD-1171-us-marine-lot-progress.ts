@@ -1,5 +1,9 @@
 import { ObjectId, type Db } from "mongodb";
 import type { Defect, DetectResult, HealPlan, HealResult, VerifyResult } from "../types";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { militaryUnitsCollection } from "@/lib/db/repositories/militaryUnits";
+import { defenceContractsCollection } from "@/lib/db/repositories/defenceContracts";
+import { nationalArsenalCollection } from "@/lib/db/repositories/nationalArsenal";
 
 export const DEFECT_ID = "AHD-1171-us-marine-lot-progress";
 export const CONTRACT_ID = "6a888f0a7badf9bb53c3971f";
@@ -39,12 +43,12 @@ interface Survey {
 
 async function survey(db: Db): Promise<Survey> {
   const [contract, unit, arsenal] = await Promise.all([
-    db.collection<ContractEvidence>("defenceContracts").findOne({ _id: new ObjectId(CONTRACT_ID) }),
-    db.collection<UnitEvidence>("militaryUnits").findOne({ _id: new ObjectId(UNIT_ID) }),
-    db.collection<ArsenalEvidence>("nationalArsenal").findOne({ countryId: "US" }),
+    defenceContractsCollection<ContractEvidence>(db).findOne({ _id: new ObjectId(CONTRACT_ID) }),
+    militaryUnitsCollection<UnitEvidence>(db).findOne({ _id: new ObjectId(UNIT_ID) }),
+    nationalArsenalCollection<ArsenalEvidence>(db).findOne({ countryId: "US" }),
   ]);
   const contractProvesDelivery =
-    contract?.countryId === "US" &&
+    countryHasFeature("usLib", contract?.countryId) &&
     contract.component === "marine" &&
     contract.status === "complete" &&
     contract.lotsOrdered === 1 &&
@@ -52,7 +56,7 @@ async function survey(db: Db): Promise<Survey> {
     contract.amountPaid === 151_500_000;
   const affected =
     contractProvesDelivery &&
-    unit?.countryId === "US" &&
+    countryHasFeature("usLib", unit?.countryId) &&
     unit.domain === "marine" &&
     unit.type === "Marine Division" &&
     unit.equipment?.firepower === 3 &&
@@ -103,7 +107,7 @@ async function plan(db: Db): Promise<HealPlan> {
 
 async function apply(db: Db, healPlan: HealPlan): Promise<HealResult> {
   if (healPlan.affected === 0) return { documentsScanned: 0, documentsUpdated: 0 };
-  const result = await db.collection<UnitEvidence>("militaryUnits").updateOne(
+  const result = await militaryUnitsCollection<UnitEvidence>(db).updateOne(
     {
       _id: new ObjectId(UNIT_ID),
       countryId: "US",

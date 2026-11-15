@@ -7,6 +7,7 @@ import { resolveCorporation, requireCeo } from "@/lib/api/corporations/resolveQu
 import { cancelCorporationVote } from "@/lib/corporations/votes/voteService";
 import { notifyVoteEvent } from "@/lib/corporations/votes/voteNotifications";
 import type { CorporationVote } from "@/lib/db/types/corporationVote";
+import { corporationVotesCollection } from "@/lib/db/repositories/corporationVotes";
 
 interface RouteParams {
   params: Promise<{ id: string; voteId: string }>;
@@ -25,8 +26,11 @@ export async function POST(_request: Request, { params }: RouteParams) {
 
     const ceoCheck = requireCeo(corporation, auth.user.userId);
     if (ceoCheck) return ceoCheck;
+    if (!ObjectId.isValid(voteId)) {
+      return errorResponse(400, "Invalid vote ID");
+    }
 
-    const vote = await db.collection<CorporationVote>("corporationVotes").findOne({
+    const vote = await corporationVotesCollection(db).findOne({
       _id: new ObjectId(voteId),
       corporationId: corporation._id,
     });

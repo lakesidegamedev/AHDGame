@@ -5,7 +5,7 @@
  */
 import { createHash } from "node:crypto";
 import { ObjectId, type ClientSession, type Db } from "mongodb";
-import type { Character, ElectedOfficial, NPP, PoliticalParty } from "@/lib/db/types";
+import type { Character, ElectedOfficial, NPP } from "@/lib/db/types";
 import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
 import { MS_PER_TURN } from "@/lib/constants/turnTime";
 import { huListParentCollection, readHuListAssemblyReceipt } from "./listAssemblyReceipt";
@@ -14,6 +14,15 @@ import {
   findHu1991ListVacancies,
   type Hu1991ListReplacement,
 } from "./rules/listVacancies1991";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
+import { notificationsCollection } from "@/lib/db/repositories/notifications";
+import type { Document } from "mongodb";
+import { hu1991AssemblyOfficeArchivesCollection } from "@/lib/db/repositories/hu1991AssemblyOfficeArchives";
+import { hu1991ListReplacementsCollection } from "@/lib/db/repositories/hu1991ListReplacements";
 
 export const HU_1991_LIST_REPLACEMENTS_COLLECTION = "hu1991ListReplacements";
 interface ReplacementReceipt {
@@ -37,8 +46,7 @@ async function readContext(db: Db, turn: number, session?: ClientSession) {
   const parent = await readHuListAssemblyReceipt(db, session);
   if (!parent?.settled || parent.seatedAtTurn == null || turn >= parent.seatedAtTurn + 192)
     return null;
-  const held = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const held = await electedOfficialsCollection(db)
     .find(
       { countryId: "HU", officeType: "assemblyDelegate" },
       {
@@ -53,8 +61,7 @@ async function readContext(db: Db, turn: number, session?: ClientSession) {
       }
     )
     .toArray();
-  const history = await db
-    .collection<ReplacementReceipt>(HU_1991_LIST_REPLACEMENTS_COLLECTION)
+  const history = await hu1991ListReplacementsCollection<ReplacementReceipt>(db)
     .find(
       { parentReceiptId: parent._id },
       { session, projection: { replacement: 1, generation: 1, reason: 1, turn: 1 } }
@@ -90,8 +97,7 @@ async function readContext(db: Db, turn: number, session?: ClientSession) {
   const people = parent.nominations.people.filter((row) => eligible.has(row.id));
   const departed = preliminary.map((row) => row.mandate);
   const ownerPeople = [...people, ...departed];
-  const npcs = await db
-    .collection<NPP>("npps")
+  const npcs = await nppsCollection(db)
     .find(
       {
         _id: {
@@ -104,8 +110,7 @@ async function readContext(db: Db, turn: number, session?: ClientSession) {
       { session, projection: { party: 1, currentOffice: 1 } }
     )
     .toArray();
-  const players = await db
-    .collection<Character>("characters")
+  const players = await charactersCollection(db)
     .find(
       {
         _id: {
@@ -184,7 +189,7 @@ export async function designateHu1991ListDeputy(input: {
     const context = await readContext(db, turn, session);
     const vacancy = context?.vacancies.find((row) => row.slotPersonId === input.slotPersonId);
     if (!context || context.parent._id !== input.receiptId || !vacancy) return false;
-    const party = await db.collection<PoliticalParty>("politicalParties").findOne(
+    const party = await politicalPartiesCollection(db).findOne(
       {
         countryId: "HU",
         $expr: { $eq: [{ $toString: "$sequentialId" }, vacancy.mandate.partyId] },
@@ -219,9 +224,10 @@ export async function designateHu1991ListDeputy(input: {
     }
     // Handover writes this same chamber document. A concurrent new Assembly
     // therefore forces this transaction to retry against its latest receipt.
-    const chamberLock = await db
-      .collection<{ _id: string; hu1991MandateGeneration?: number }>("governmentFormations")
-      .updateOne({ _id: "HU" }, { $inc: { hu1991MandateGeneration: 1 } }, { session });
+    const chamberLock = await governmentFormationsCollection<{
+      _id: string;
+      hu1991MandateGeneration?: number;
+    }>(db).updateOne({ _id: "HU" }, { $inc: { hu1991MandateGeneration: 1 } }, { session });
     if (chamberLock.matchedCount !== 1) throw new Error("Hungarian chamber authority is missing");
     // The shared parent write serializes different vacancies claiming one person.
     const lock = await huListParentCollection(db, context.parent._id).updateOne(
@@ -232,27 +238,24 @@ export async function designateHu1991ListDeputy(input: {
     if (lock.modifiedCount !== 1) throw new Error("Hungarian replacement parent changed");
     const id = `${context.parent._id}:list:${vacancy.slotPersonId}:${mandate.personId}`;
     const officialId = stableId(`${context.parent._id}:person:${vacancy.slotPersonId}`);
-    const original = await db
-      .collection<ElectedOfficial>("electedOfficials")
-      .findOne({ _id: officialId }, { session });
+    const original = await electedOfficialsCollection(db).findOne({ _id: officialId }, { session });
     if (original?.characterId || original?.nppId)
       throw new Error("Hungarian list vacancy is occupied");
     if (original) {
-      await db
-        .collection<{
-          _id: string;
-          countryId: "HU";
-          receiptId: string;
-          turn: number;
-          official: ElectedOfficial;
-        }>("hu1991AssemblyOfficeArchives")
-        .insertOne(
-          { _id: `${id}:departed`, countryId: "HU", receiptId: id, turn, official: original },
-          { session }
-        );
-      await db
-        .collection<ElectedOfficial>("electedOfficials")
-        .deleteOne({ _id: officialId, characterId: null, nppId: null }, { session });
+      await hu1991AssemblyOfficeArchivesCollection<{
+        _id: string;
+        countryId: "HU";
+        receiptId: string;
+        turn: number;
+        official: ElectedOfficial;
+      }>(db).insertOne(
+        { _id: `${id}:departed`, countryId: "HU", receiptId: id, turn, official: original },
+        { session }
+      );
+      await electedOfficialsCollection(db).deleteOne(
+        { _id: officialId, characterId: null, nppId: null },
+        { session }
+      );
     }
     const official: ElectedOfficial = {
       _id: officialId,
@@ -283,7 +286,7 @@ export async function designateHu1991ListDeputy(input: {
         rootCandidateId: mandate.candidateId,
       },
     };
-    await db.collection<ElectedOfficial>("electedOfficials").insertOne(official, { session });
+    await electedOfficialsCollection(db).insertOne(official, { session });
     const owner = context.owners.get(mandate.ownerId)!;
     const seats =
       context.held.filter(
@@ -335,7 +338,7 @@ export async function designateHu1991ListDeputy(input: {
       );
     }
     if (!mandate.isNpc)
-      await db.collection<Character>("characters").updateOne(
+      await charactersCollection(db).updateOne(
         { _id: new ObjectId(mandate.ownerId) },
         {
           $push: {
@@ -352,7 +355,7 @@ export async function designateHu1991ListDeputy(input: {
         { session }
       );
     if (!mandate.isNpc && owner.userId)
-      await db.collection("notifications").insertOne(
+      await notificationsCollection<Document>(db).insertOne(
         {
           _id: stableId(`${id}:notice:${mandate.ownerId}`),
           userId: owner.userId,
@@ -366,7 +369,7 @@ export async function designateHu1991ListDeputy(input: {
         },
         { session }
       );
-    await db.collection<ReplacementReceipt>(HU_1991_LIST_REPLACEMENTS_COLLECTION).insertOne(
+    await hu1991ListReplacementsCollection<ReplacementReceipt>(db).insertOne(
       {
         _id: id,
         parentReceiptId: context.parent._id,
@@ -396,8 +399,7 @@ export async function advanceHu1991ListVacancy(db: Db, turn: number, now: Date):
     )
   )
     return false;
-  const parties = await db
-    .collection<PoliticalParty>("politicalParties")
+  const parties = await politicalPartiesCollection(db)
     .find(
       {
         countryId: "HU",
@@ -429,8 +431,7 @@ export async function advanceHu1991ListVacancy(db: Db, turn: number, now: Date):
 }
 
 export async function loadHu1991ListReplacementHistory(db: Db) {
-  return db
-    .collection<ReplacementReceipt>(HU_1991_LIST_REPLACEMENTS_COLLECTION)
+  return hu1991ListReplacementsCollection<ReplacementReceipt>(db)
     .find(
       {},
       {

@@ -1,34 +1,16 @@
 import { clamp01 } from "@/lib/numeric/rules";
-import type { AlignmentPoleId } from "@/lib/constants/alignmentEras";
 
 /**
- * Bloc stress — the price of holding a bloc together.
+ * Bloc stress: a 0-1 gauge of strain over a bloc's own members.
  *
- * Every other alignment mechanic is per-nation: shares move, a nation joins, a
- * nation walks out. Nothing modelled the BLOC as a thing that can be strained,
- * so an alliance could grab half the map and defend all of it exactly as well as
- * a compact one. Expansion was free.
+ * Inputs:
+ *  - contested members (rival poles actively pulling at them)
+ *  - members heading for the door (`wantsOutSinceTurn` at the leave threshold)
+ *  - recent accessions (a decaying digestion cost, not a permanent tax)
  *
- * Stress is a 0-1 gauge over a bloc's own members, built from three things that
- * really do stretch an alliance:
- *
- *  - **Contested members.** A member the rival poles are actively pulling at
- *    costs attention. A member nobody is fighting for costs nothing.
- *  - **Members heading for the door.** `wantsOutSinceTurn` is already the
- *    engine's sustained-run signal that a member's share has fallen to the leave
- *    threshold. A bloc arguing with its own members is not projecting outward.
- *  - **Recent accessions.** A bloc that just took on three new members is
- *    digesting them. This decays: it is a transition cost, not a permanent tax
- *    on being large.
- *
- * Note what is deliberately NOT an input: raw member count. Size alone is not
- * strain — a large bloc of settled, uncontested members is the historically
- * strong case (NATO through the 1960s), and taxing size directly would just
- * make expansion bad rather than costly.
- *
- * The effect is a dampener on the bloc's own plays, so an overextended alliance
- * pushes less hard everywhere. It is self-correcting: stress falls as members
- * settle, and a bloc that stops overreaching recovers without spending anything.
+ * Member count is deliberately NOT an input: size alone is not strain, and
+ * taxing it would make expansion bad rather than costly. Stress dampens the
+ * bloc's own plays and self-corrects as members settle.
  */
 
 /** Weights sum to 1, so stress is a clean 0-1 gauge. */
@@ -39,17 +21,10 @@ const DIGESTION_WEIGHT = 0.2;
 /**
  * A member is contested when a RIVAL pole holds at least this much of it.
  *
- * This was originally "our share is below the locked gate (85)", which was
- * miscalibrated against the game's own seeds: the 1953 rosters hold members at
- * 64-88, so most of both blocs read as contested on day one and every world
- * started Strained with no player having done anything. Worse, it was
- * asymmetric — NATO's authored shares are lower than the Warsaw Pact's, so the
- * West began permanently docked relative to the East.
- *
- * A rival's share is the honest measure and matches this module's own claim
- * that "a member nobody is fighting for costs nothing". The threshold reuses
- * `crisis.ts`'s tug-of-war convention and its reasoning: two poles at 4 and 3
- * are not fighting over a country, they are ignoring it.
+ * A rival's share is the honest measure and matches this module's claim that
+ * a member nobody is fighting for costs nothing. The threshold reuses
+ * `crisis.ts`'s tug-of-war convention: two poles at 4 and 3 are not fighting
+ * over a country, they are ignoring it.
  */
 const CONTESTED_RIVAL_MIN = 25;
 
@@ -146,6 +121,3 @@ export function blocStressLabel(stress: number): "Settled" | "Strained" | "Overe
   if (stress < 0.6) return "Strained";
   return "Overextended";
 }
-
-/** The pole a bloc pushes for, for callers mapping orgs to stress. */
-export type BlocPole = AlignmentPoleId;

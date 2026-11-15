@@ -7,6 +7,8 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { parseJsonBody } from "@/lib/api/validate";
 import { resetAndBootstrapGameWorld } from "@/lib/admin/resetAndBootstrapGameWorld";
 import { isKnownPreset } from "@/lib/seeds/presetSelector";
+import { checkSeedContract } from "@/lib/seeds/contract/checkSeedContract";
+import { unreadyEraMessage } from "@/lib/singleplayer/unreadyEra";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
 import {
   applyStartupRepairsAfterReset,
@@ -64,6 +66,8 @@ export async function POST(request: Request) {
     if (!isKnownPreset(preset)) {
       return errorResponse(400, `Unknown preset "${preset}"`);
     }
+
+    if (checkSeedContract(preset).length > 0) return errorResponse(400, unreadyEraMessage(preset));
 
     const db = await getDb();
     await ensureSingleplayerUser(db, body.displayName);

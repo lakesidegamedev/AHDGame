@@ -4,39 +4,11 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { fetchJson } from "@/lib/observability/fetchJson";
 import { NoticeStrip } from "./ledger/NoticeStrip";
+import type { CorpNationalizationStatus } from "@/lib/nationalization/corpNationalizationStatus";
 
-export interface NationalizationStatus {
-  hasStatus: boolean;
+export interface NationalizationStatus extends CorpNationalizationStatus {
   canBid?: boolean;
   hasExposure?: boolean;
-  pendingTaking: {
-    turnsLeft: number;
-    deadlineTurn: number;
-    tier: string;
-    method: string;
-    triggers: string[];
-    curableTriggers: string[];
-    isSector: boolean;
-  } | null;
-  billsInVoting: {
-    billId: string;
-    title: string;
-    whole: boolean;
-    sectorCount: number;
-  }[];
-  isSpunOut: boolean;
-  privatizedAtTurn: number | null;
-  goldenSharePercent: number;
-  auctionOpen: boolean;
-  auction: {
-    auctionId: string;
-    countryId: string;
-    reservePrice: number;
-    currency: string;
-    highestBid: number;
-    bidCount: number;
-    turnsLeft: number;
-  } | null;
 }
 
 /**

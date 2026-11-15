@@ -249,19 +249,13 @@ export interface PensionBenefitPayment {
 }
 
 /**
- * The pro-rata cut. The entire reason the funding ratio exists.
+ * Pro-rata benefit cut when cash is short.
  *
- * A scheme pays benefits out of the CASH it holds. It does not overdraw, it
- * does not borrow, and it categorically does not mint: a scheme that could pay
- * a benefit it had no assets for would make every contribution, every top-up
- * and every funding ratio in phase 1 decorative. When the cash is short, every
- * pensioner takes the same proportional cut, because a pension scheme that paid
- * some members in full and others nothing would be choosing between them, and
- * nothing in the model gives it a basis to choose.
- *
- * The unpaid part is NOT forgiven and NOT carried as arrears: the claim stays
- * on the books as liability, so the scheme still shows as underfunded and the
- * employer still gets asked for a top-up next turn.
+ * A scheme pays out only the cash it holds; it cannot overdraw, borrow, or
+ * mint. When cash falls short, every pensioner takes the same proportional
+ * cut. The unpaid part is not forgiven or carried as arrears; it stays as
+ * liability, so the scheme remains underfunded and the employer is asked for
+ * a top-up next turn.
  */
 export function pensionBenefitPayment(params: {
   benefitsDueAnchor: number;
@@ -280,20 +274,18 @@ export function pensionBenefitPayment(params: {
 }
 
 /**
- * How much cash a scheme may put into index funds this turn.
- *
- * Two constraints, and the tighter one wins:
+ * How much cash a scheme may put into index funds this turn. The tighter
+ * constraint wins:
  *
  * 1. Keep `PENSION_LIQUIDITY_BUFFER_TURNS` turns of benefits in cash. Fund
- *    units are not a payment instrument here: the scheme has no redemption
- *    path, so anything invested is unavailable to pensioners. Investing past
- *    the buffer would manufacture the pro-rata cut rather than reveal it.
+ *    units have no redemption path, so anything invested is unavailable to
+ *    pensioners and would manufacture the pro-rata cut rather than reveal it.
  * 2. Never invest more than `1 - PENSION_CASH_FLOOR_FRACTION` of cash, so a
- *    scheme with no pensioners yet does not go fully illiquid before its first
- *    one appears.
+ *    scheme with no pensioners yet does not go fully illiquid before its
+ *    first one appears.
  *
- * Returns 0 below `PENSION_MIN_INVESTMENT_ANCHOR` so a scheme with pocket
- * change does not generate a fund transaction every turn forever.
+ * Returns 0 below `PENSION_MIN_INVESTMENT_ANCHOR` to avoid a fund transaction
+ * every turn on pocket change.
  */
 export function pensionInvestableCashAnchor(params: {
   cashAnchor: number;

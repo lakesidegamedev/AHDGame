@@ -6,7 +6,7 @@ vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
 vi.mock("@/lib/gameState", () => ({
   getGameState: vi.fn().mockResolvedValue({ currentTurn: 50, startingYear: 1991 }),
 }));
-vi.mock("@/lib/uk/confidence/confidenceGaugeStore", () => ({
+vi.mock("@/lib/countries/uk/confidence/confidenceGaugeStore", () => ({
   getUkConfidenceErosionScale: vi.fn().mockReturnValue(1),
   tickConfidenceForGov: vi.fn().mockResolvedValue({
     value: 60,
@@ -14,7 +14,7 @@ vi.mock("@/lib/uk/confidence/confidenceGaugeStore", () => ({
     dissolutionEnabled: false,
   }),
 }));
-vi.mock("@/lib/uk/nhs/nhsStore", () => ({
+vi.mock("@/lib/countries/uk/nhs/nhsStore", () => ({
   tickNhsFromBudget: vi.fn().mockResolvedValue(undefined),
 }));
 vi.mock("@/lib/turn/snapElection", () => ({ triggerSnapElection: vi.fn() }));
@@ -46,7 +46,8 @@ describe("UK confidence tick", () => {
     const { tickUkGovernmentGauges } = await import("@/lib/countries/uk/governmentFormation");
     await tickUkGovernmentGauges(db as unknown as Db, new Date("2026-10-23T00:00:00Z"));
 
-    const { tickConfidenceForGov } = await import("@/lib/uk/confidence/confidenceGaugeStore");
+    const { tickConfidenceForGov } =
+      await import("@/lib/countries/uk/confidence/confidenceGaugeStore");
     expect(tickConfidenceForGov).toHaveBeenCalledWith(
       db,
       expect.objectContaining({ approval: 55, brokenPromiseMeter: 0.25 })
@@ -65,7 +66,8 @@ describe("UK confidence tick", () => {
     const { tickUkGovernmentGauges } = await import("@/lib/countries/uk/governmentFormation");
     await tickUkGovernmentGauges(db as unknown as Db, new Date("2026-10-23T00:00:00Z"));
 
-    const { tickConfidenceForGov } = await import("@/lib/uk/confidence/confidenceGaugeStore");
+    const { tickConfidenceForGov } =
+      await import("@/lib/countries/uk/confidence/confidenceGaugeStore");
     const opts = vi.mocked(tickConfidenceForGov).mock.calls[0][1];
     expect(opts.brokenPromiseMeter).toBeUndefined();
   });
@@ -85,7 +87,8 @@ describe("confidence collapse while an election is running", () => {
     });
     db.collection("governmentFormations");
     db.collectionMocks.governmentFormations.findOne.mockResolvedValue({ _id: "UK", ...government });
-    const { tickConfidenceForGov } = await import("@/lib/uk/confidence/confidenceGaugeStore");
+    const { tickConfidenceForGov } =
+      await import("@/lib/countries/uk/confidence/confidenceGaugeStore");
     vi.mocked(tickConfidenceForGov).mockResolvedValue({
       value: 0,
       dissolutionDue: true,
@@ -95,7 +98,7 @@ describe("confidence collapse while an election is running", () => {
     await tickUkGovernmentGauges(db as unknown as Db, new Date("2026-10-29"));
     const { triggerSnapElection } = await import("@/lib/turn/snapElection");
     expect(triggerSnapElection).toHaveBeenCalledTimes(expected ? 1 : 0);
-    const { tickNhsFromBudget } = await import("@/lib/uk/nhs/nhsStore");
+    const { tickNhsFromBudget } = await import("@/lib/countries/uk/nhs/nhsStore");
     expect(tickNhsFromBudget).toHaveBeenCalledTimes(1);
   });
 });

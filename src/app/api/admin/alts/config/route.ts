@@ -21,6 +21,7 @@ import { parseJsonBody } from "@/lib/api/validate";
 import { createAdminLog } from "@/lib/adminLog";
 import { resolveAltScoringConfig } from "@/lib/altDetection/config";
 import type { GameConfig } from "@/lib/db/types";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 // GET /api/admin/alts/config
 export async function GET() {
@@ -29,9 +30,10 @@ export async function GET() {
     if (!auth.ok) return auth.response;
 
     const db = await getDb();
-    const gameConfig = await db
-      .collection<GameConfig>("gameConfig")
-      .findOne({ _id: "default" }, { projection: { altScoring: 1 } });
+    const gameConfig = await gameConfigCollection(db).findOne(
+      { _id: "default" },
+      { projection: { altScoring: 1 } }
+    );
 
     const resolved = resolveAltScoringConfig(gameConfig?.altScoring);
     return NextResponse.json(resolved);
@@ -61,7 +63,7 @@ export const PUT = withAdminRoute(async (auth, request: Request) => {
   const resolved = resolveAltScoringConfig(parsed.data);
 
   const db = await getDb();
-  await db.collection<GameConfig>("gameConfig").updateOne(
+  await gameConfigCollection(db).updateOne(
     { _id: "default" },
     {
       $set: {

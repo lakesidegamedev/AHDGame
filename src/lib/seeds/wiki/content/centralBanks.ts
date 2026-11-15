@@ -104,6 +104,12 @@ Changing the person does not reset the score. In a handover through the draw, sc
 
 While a bank is government-controlled the chair is still chosen the usual way, but only the head of government or the finance minister can move the rate. The Bank of England had no operational independence until 1997, so a British world that starts earlier opens with the Treasury setting Bank Rate, and Parliament must legislate the change. Time passing does not do it. Granting independence gives the Bank of England back to its single governor; only the US bank gets a rate committee. A bank shared across countries, like the European Central Bank, cannot have its independence legislated by one member, and a euro member's own independence law leaves rate-setting with the euro authority.
 
+### How a computer-run chair sets the rate
+
+A caretaker chair, and any other computer-run chair, aims for the neutral rate plus the inflation gap: for every point inflation runs above target, the target rate rises one point, and it falls one point for every point below. Slack and growth adjust it too. The chair closes half of the gap to its target on each eligible move, and never aims below 0.25. A chair's alignment can change the weights and the inflation target. With inflation on target, the target rate is the neutral rate.
+
+The offline long-run budget projections (the published 2027 to 2050 tables) use the same rule, so a hotter-inflation scenario there raises borrowing costs and the interest share of revenue. The live game is not changed by this.
+
 ## Money operations and bank reserves
 
 **Money operations (Money supply tab).** QE has the bank buy units of one of the country's sovereign bonds from the public at market price, and the cash it pays is new money. QT sells bank-held units back and destroys the cash. You choose the bond and the number of units, limited by the units available. At most one operation per 6 turns. Holdings lift that bond's price by half the bank's share of the issue, up to 20%. These move money and bond prices first and real activity later, so use them when the bond market is broken or the rate is stuck, not as a growth button. Liquidity injections are capped at 3% of GDP and direct treasury advances at 1% of GDP.
@@ -165,5 +171,5 @@ The chair does not control fiscal policy, which needs legislation. But the two i
 
 Live in every world that has an active central bank. The euro area shares one bank in worlds that have the euro (from 1999). Savings, lines of credit, FX intervention and money operations need the country's currency to be one of the tradable currencies, which covers the 18 main ones. The reserve requirement and insurance fund apply in worlds where private banking is open.
 
-Last checked 2026-10-29, version 1.18.0. Exact rules: [Monetary system (design)](https://docs.lakesidegames.net/design/monetary-system-as-shipped.html)
+Last checked 2026-11-10, version 1.20.0. Exact rules: [Monetary system (design)](https://docs.lakesidegames.net/design/monetary-system-as-shipped.html)
 `;

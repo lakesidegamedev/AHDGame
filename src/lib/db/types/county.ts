@@ -1,6 +1,6 @@
 import type { CountyCountryId, CountyPopulationBaseline } from "@/lib/counties/rules";
 
-/** Persisted map subdivision stock: US county, UK constituency or Japanese prefecture. */
+/** Persisted stock: US county, UK constituency, Japanese prefecture or Canadian census division. */
 export interface County {
   _id: string;
   countryId: CountyCountryId;

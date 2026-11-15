@@ -12,22 +12,27 @@ export function CommitteeProposalsSection({
   partyId,
   characterId: _characterId,
   isChair: _isChair,
+  isDefaultParty = false,
 }: {
   country: string;
   countryCode: string;
   partyId: string;
   characterId: string | null;
   isChair: boolean;
+  isDefaultParty?: boolean;
 }) {
   const [data, setData] = useState<ProposalsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [showPast, setShowPast] = useState(false);
+  const [loadError, setLoadError] = useState(false);
 
   const fetchProposals = useCallback(async () => {
     try {
       const res = await fetch(`${partyApiUrl(country, partyId)}/committee/proposals`);
+      setLoadError(!res.ok);
       if (res.ok) setData(await res.json());
     } catch {
+      setLoadError(true);
     } finally {
       setLoading(false);
     }
@@ -49,6 +54,11 @@ export function CommitteeProposalsSection({
 
   return (
     <div className="rounded-xl border border-card-border bg-card p-6 space-y-5">
+      {loadError ? (
+        <div className="rounded-lg border border-error/40 bg-error/10 p-3 text-sm text-error">
+          Could not load committee proposals. Check your connection and refresh.
+        </div>
+      ) : null}
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold">Committee proposals</h2>
         {canPropose && (
@@ -57,6 +67,7 @@ export function CommitteeProposalsSection({
             partyId={partyId}
             countryCode={countryCode}
             isChair={canProposeMerge}
+            isDefaultParty={isDefaultParty}
             currentTransactionApprovalMode={data?.currentTransactionApprovalMode ?? "double"}
             onCreated={fetchProposals}
           />

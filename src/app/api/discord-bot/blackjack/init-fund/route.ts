@@ -5,6 +5,7 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { requireBotToken } from "@/lib/api/requireBotToken";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import type { DiscordBotFund } from "@/lib/db/types/discordBotFund";
+import { discordBotFundsCollection } from "@/lib/db/repositories/discordBotFunds";
 
 // POST /api/discord-bot/blackjack/init-fund — Initializes the blackjack prize pool with $200M.
 // This is a one-time setup endpoint. Should only be called by admins.
@@ -22,9 +23,9 @@ export async function POST(request: Request) {
     const db = await getDb();
 
     // Check if fund already exists
-    const existingFund = await db
-      .collection<DiscordBotFund>("discordBotFunds")
-      .findOne({ name: "blackjack_prize_pool" });
+    const existingFund = await discordBotFundsCollection(db).findOne({
+      name: "blackjack_prize_pool",
+    });
 
     if (existingFund) {
       return errorResponse(409, "Already initialized", {
@@ -39,7 +40,7 @@ export async function POST(request: Request) {
     const now = new Date();
     const INITIAL_BALANCE = 200_000_000; // $200 million USD equivalent
 
-    const result = await db.collection<DiscordBotFund>("discordBotFunds").insertOne({
+    const result = await discordBotFundsCollection(db).insertOne({
       _id: new ObjectId(),
       name: "blackjack_prize_pool",
       balance: INITIAL_BALANCE,

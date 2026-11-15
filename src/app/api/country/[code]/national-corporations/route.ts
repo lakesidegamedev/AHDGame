@@ -9,7 +9,10 @@ import { getDb } from "@/lib/mongodb";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { OPERATING_SECTOR_TYPES } from "@/lib/constants/corporations";
-import type { Character, Corporation, CorporateSector } from "@/lib/db/types";
+import type { Character, CorporateSector } from "@/lib/db/types";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 interface RouteParams {
   params: Promise<{ code: string }>;
@@ -24,16 +27,12 @@ export async function GET(_request: Request, { params }: RouteParams) {
     }
 
     const db = await getDb();
-    const corps = await db
-      .collection<Corporation>("corporations")
-      .find({ countryOwnerId: countryId })
-      .toArray();
+    const corps = await corporationsCollection(db).find({ countryOwnerId: countryId }).toArray();
 
     const corpIds = corps.map((c) => c._id);
     const sectors =
       corpIds.length > 0
-        ? await db
-            .collection<CorporateSector>("corporateSectors")
+        ? await corporateSectorsCollection(db)
             .find({ corporationId: { $in: corpIds } })
             .project<{
               corporationId: CorporateSector["corporationId"];
@@ -66,8 +65,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     const ceoIds = corps.filter((c) => !c.ceoVacant && c.ceoId).map((c) => c.ceoId);
     const ceos =
       ceoIds.length > 0
-        ? await db
-            .collection<Character>("characters")
+        ? await charactersCollection(db)
             .find({ _id: { $in: ceoIds } })
             .project<{ _id: Character["_id"]; name: string }>({ _id: 1, name: 1 })
             .toArray()
@@ -77,11 +75,10 @@ export async function GET(_request: Request, { params }: RouteParams) {
     // Sector types the minister can split off = those the PRIMARY National
     // Corporation actually holds (fully or partially nationalized). A split moves
     // the primary's sectors of that type into a new corp, so types already split
-    // off — or never nationalized — are naturally excluded (the primary holds
-    // none of them). Ordered by OPERATING_SECTOR_TYPES for a stable dropdown.
-    // Sorted on _id so a data bug carrying two flagged primaries (ticket #1254)
-    // still yields one deterministic answer; `mergeNationalCorporations` is the
-    // real collapse.
+    // off or never nationalized are excluded (the primary holds none).
+    // Ordering by OPERATING_SECTOR_TYPES gives a stable dropdown. Sorted on _id
+    // so a data bug carrying two flagged primaries still yields one
+    // deterministic answer; `mergeNationalCorporations` is the real collapse.
     const primaryId = corps
       .filter((c) => c.isPrimaryNationalCorporation)
       .sort((a, b) => a._id.toString().localeCompare(b._id.toString()))[0]?._id;

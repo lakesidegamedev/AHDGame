@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ObjectId, type Db } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
 import { huRegions1991 } from "@/lib/countries/hu/data/huRegions1991";
-import { ensureHUElections } from "./perpetualElections";
+import { ensureHUElections } from "@/lib/elections/scheduling";
 
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
 vi.mock("./assemblyCampaignBinding2011", () => ({

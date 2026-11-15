@@ -65,8 +65,6 @@ describe("TreasuryGotvControl demographic catalog", () => {
     expect(screen.getByRole("option", { name: "Education" })).toBeTruthy();
     expect(screen.getByRole("option", { name: "No qualifications" })).toBeTruthy();
     expect(screen.getByRole("option", { name: "Degree or higher" })).toBeTruthy();
-    // Existing archetypes remain available after the matching census buckets,
-    // so the party picker becomes a superset rather than invalidating targets.
-    expect(screen.getByRole("option", { name: "Voter Group" })).toBeTruthy();
+    expect(screen.queryByRole("option", { name: "Voter Group" })).toBeNull();
   });
 });

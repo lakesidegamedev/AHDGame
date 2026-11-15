@@ -1,5 +1,5 @@
 /**
- * #3034: FR/IT/ES/SE/TR/GR/AT/FI open 1991 with sourced nominal GDP, budgets and
+ * FR/IT/ES/SE/TR/GR/AT/FI open 1991 with sourced nominal GDP, budgets and
  * exchange rates authored together, so the dollar conversion is right.
  */
 import { describe, expect, it } from "vitest";

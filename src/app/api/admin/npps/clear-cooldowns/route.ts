@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError } from "@/lib/api/errors";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import type { Document } from "mongodb";
 
 // POST /api/admin/npps/clear-cooldowns — Clears all election cooldowns from every NPP to fix stale cooldowns
 // Auth: requireAdmin
@@ -14,12 +16,10 @@ export async function POST() {
     const db = await getDb();
 
     // Clear all electionCooldowns from all NPPs
-    const result = await db
-      .collection("npps")
-      .updateMany(
-        { electionCooldowns: { $exists: true, $ne: {} } },
-        { $set: { electionCooldowns: {} } }
-      );
+    const result = await nppsCollection<Document>(db).updateMany(
+      { electionCooldowns: { $exists: true, $ne: {} } },
+      { $set: { electionCooldowns: {} } }
+    );
 
     return NextResponse.json({
       success: true,

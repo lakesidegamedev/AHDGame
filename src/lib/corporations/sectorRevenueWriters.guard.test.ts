@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { beforeAll, describe, it, expect } from "vitest";
 import { readdirSync, readFileSync, statSync } from "fs";
 import { join, sep } from "path";
 
@@ -46,14 +46,14 @@ const REVENUE_KEY = /\brevenue\s*:/;
  * to the writer.
  *
  * There is no way to follow the variable back to its shape with a grep, so this
- * rule does not try. It keys on the COLLECTION NAME being named right at the
- * insert, and treats any such indirect insert as a revenue writer that must be
+ * rule does not try. It keys on the collection (by name or its typed getter)
+ * being named right at the insert, and treats any such indirect insert as a revenue writer that must be
  * registered and attested. The cost of being wrong is one registry entry
  * explaining that the docs carry no `revenue`; the cost of not having the rule
  * is a silent, unreviewed writer, which is what this file exists to prevent.
  */
 const INDIRECT_INSERT =
-  /\.collection\s*(?:<[^>]*>)?\s*\(\s*["'`]corporateSectors["'`]\s*\)\s*\.insert(?:One|Many)\s*\(\s*[A-Za-z_$]/;
+  /(?:\.collection\s*(?:<[^>]*>)?\s*\(\s*["'`]corporateSectors["'`]\s*\)|getCorporateSectorsCollection\s*\([^)]*\)\s*\)|\bcorporateSectorsCollection\s*(?:<[^>]*>)?\s*\([^)]*\))\s*\.insert(?:One|Many)\s*\(\s*[A-Za-z_$]/;
 
 /**
  * Return the source text of the object literal that begins at `open` (the index
@@ -164,12 +164,14 @@ const ALLOWED_WRITERS: Record<string, WriterEntry> = {
   },
   // ─── Reviewed and gated (this sweep) ─────────────────────────────────────
   "src/lib/nationalization/reverseNationalization.ts": {
-    writeSites: 1,
+    writeSites: 4,
     status: "plants-gated",
     reason:
       "Hand-back restores formerCapitalStock alongside formerRevenue, so under " +
       "plants the nameplate is restated from the restored capacity next turn and " +
-      "the revenue write is the legacy view, not the quantity.",
+      "the revenue write is the legacy view, not the quantity. A merged holding " +
+      "splits revenue and capitalStock together in the same write, on the survivor " +
+      "and on the returned row.",
   },
   "src/lib/turn/corporation/rdInnovation.ts": {
     writeSites: 1,
@@ -215,9 +217,11 @@ const ALLOWED_WRITERS: Record<string, WriterEntry> = {
       "handling is plants-aware regardless.",
   },
   "src/lib/turn/autoSectorSeed.ts": {
-    writeSites: 2,
+    writeSites: 1,
     status: "plants-gated",
-    reason: "World seeding of sectors; seeds capacity under plants.",
+    reason:
+      "The national-corporation update grows capacity alongside revenue under plants. " +
+      "Unowned-market inserts use a separate prebuilt batch, not corporateSectors.",
   },
   "src/lib/corporations/commands/sectorOperations/expandSector.ts": {
     writeSites: 1,
@@ -316,10 +320,10 @@ const ALLOWED_WRITERS: Record<string, WriterEntry> = {
   // `unownedPoolTrailingSet` stage restate revenue, so the detector no longer
   // sees a revenue write in the file and a registry entry would be STALE. The
   // sector docs it builds are still covered — they are inserted by
-  // `src/lib/turn/corporation/index.ts`, registered below.
+  // `src/lib/turn/corporation/corporationTurnPayouts.ts`, registered below.
 
   // ─── Found only once the detector learned about indirect inserts ─────────
-  "src/lib/turn/corporation/index.ts": {
+  "src/lib/turn/corporation/corporationTurnPayouts.ts": {
     writeSites: 1,
     status: "plants-gated",
     reason:
@@ -390,7 +394,7 @@ const MUST_BE_PLANTS_AWARE = [
   // (`nppCorporationBehavior.ts` was here too — see the note in ALLOWED_WRITERS
   // for why it no longer writes the field at all.)
   // Surfaced by the indirect-insert rule.
-  "src/lib/turn/corporation/index.ts",
+  "src/lib/turn/corporation/corporationTurnPayouts.ts",
   // The two nationalization writers. These were the guard's own worked example
   // of the failure it exists to prevent (see the attestation note below):
   // `nationalizeSectorWide` sat in ALLOWED_WRITERS, registered green, while BOTH
@@ -437,8 +441,12 @@ function findRevenueWriters(): string[] {
 }
 
 describe("corporateSectors.revenue writer registry", () => {
+  let writers: string[];
+  beforeAll(() => {
+    writers = findRevenueWriters();
+  }, 60_000);
   it("has no unregistered writer", () => {
-    const unregistered = findRevenueWriters().filter((f) => !(f in ALLOWED_WRITERS));
+    const unregistered = writers.filter((f) => !(f in ALLOWED_WRITERS));
     expect(
       unregistered,
       "New write site(s) to corporateSectors.revenue.\n" +
@@ -451,7 +459,7 @@ describe("corporateSectors.revenue writer registry", () => {
   });
 
   it("has no stale registry entry", () => {
-    const actual = new Set(findRevenueWriters());
+    const actual = new Set(writers);
     const stale = Object.keys(ALLOWED_WRITERS).filter((f) => !actual.has(f));
     expect(
       stale,

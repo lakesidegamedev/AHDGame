@@ -8,6 +8,7 @@ import { advanceWorldsim, MAX_WORLD_SIM_BATCH_TURNS } from "@/lib/singleplayerWo
 import { getSingleplayerWorldAvailability } from "@/lib/singleplayerOperator";
 import { getSingleplayerConfig } from "@/lib/singleplayerServer";
 import { maybeAutosave } from "@/lib/singleplayer/saves";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 600;
@@ -29,9 +30,9 @@ export async function POST(request: Request) {
     if ((await getSingleplayerWorldAvailability(db)) !== "off") {
       return errorResponse(409, "Resume the world before ending a turn.");
     }
-    const playerCount = await db
-      .collection("characters")
-      .countDocuments({ retiredAt: { $exists: false } });
+    const playerCount = await charactersCollection(db).countDocuments({
+      retiredAt: { $exists: false },
+    });
     if (playerCount > 0) {
       return errorResponse(409, "Worldsim mode requires a playerless world");
     }

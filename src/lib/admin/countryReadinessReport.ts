@@ -5,12 +5,21 @@ import {
   type ReadinessCheck,
 } from "@/lib/constants/countryReadinessExpectations";
 import { getReadinessExpectations } from "@/lib/constants/readinessExpectations";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
+import type { Document } from "mongodb";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
 
 /** Best-effort preset lookup; null when the world has no gameState yet. */
 async function readPreset(db: Db): Promise<string | null> {
-  const gs = await db
-    .collection<{ preset?: string }>("gameState")
-    .findOne({ _id: "current" as never });
+  const gs = await gameStateCollection<{ preset?: string }>(db).findOne({
+    _id: "current" as never,
+  });
   return typeof gs?.preset === "string" ? gs.preset : null;
 }
 
@@ -21,39 +30,28 @@ export interface CountryReadinessReport {
 }
 
 /**
- * Generate a per-country readiness report. Driven by
- * COUNTRY_READINESS_EXPECTATIONS so every supported country gets the same
- * diagnostic.
+ * Generate a per-country readiness report driven by COUNTRY_READINESS_EXPECTATIONS.
+ * Returns null when the country has no expectations entry (caller should 404).
+ * Reads only, never writes.
  *
- * Returns null when the country has no expectations entry (caller should
- * 404). Reads only — never writes.
- *
- * `preset` makes the expectations era-aware, through
- * `getReadinessExpectations`. The entries in COUNTRY_READINESS_EXPECTATIONS
- * describe the modern world, but region counts are era-dependent — 1953/1979
- * seed the 11 western Länder while 1991+ seed the reunified 16 — so a flat
- * expectation reports a correct historical seed as incomplete. The party roster
- * is era-dependent for the same reason, and used to name the CPSU in a 2019
- * world. Pass the preset when the caller knows it; otherwise it is read from
- * gameState, and when neither is available the authored entry is used as-is
- * rather than assuming a modern default.
+ * `preset` makes the expectations era-aware via `getReadinessExpectations`.
+ * Region counts and party rosters differ by era (1953/1979 seed 11 Länder, 1991+
+ * seed 16; rosters name era-appropriate parties), so the modern authored entry
+ * would flag a correct historical seed as incomplete. Falls back to gameState's
+ * preset, then to the authored entry as-is.
  */
 /**
  * Total SEATS in a collection, not the number of rows holding them.
  *
- * ⚠️ THE TWO ARE NOT THE SAME, AND THE EXPECTATIONS ARE WRITTEN IN SEATS.
  * `seats` stores one row per constituency with a `totalSeats` count, and
  * `electedOfficials` one row per (region, party) with a `seatsHeld` count.
- * Japan's 465-seat Shugiin is 8 rows in `seats` and 51 in `electedOfficials`.
- * Counting rows against `seatMin: 713` therefore reported "found 32" for a
- * fully and correctly seeded Diet -- a false alarm on every reset, for every
- * country: the UK read 12 against 650 while holding exactly 650.
+ * Japan's 465-seat Shugiin is 8 rows in `seats` and 51 in `electedOfficials`,
+ * so counting rows produces false alarms against seat expectations.
  *
- * ⚠️ A MISSING COUNT MEANS ONE SEAT, NOT ZERO. Single-seat offices omit the
- * field entirely rather than storing 1: US senate (100 rows), governors,
- * president and Ireland's uachtaran all have no `totalSeats`. Summing without
- * the fallback scores the entire US Senate as nothing. The field is never
- * explicitly 0, so `$ifNull` is safe here and `$max` against 1 would be wrong.
+ * A missing count means ONE seat, not zero: single-seat offices omit the field
+ * rather than storing 1 (US senate, governors, president, Ireland's uachtaran).
+ * The field is never explicitly 0, so `$ifNull` is correct and `$max` against 1
+ * would be wrong.
  */
 async function sumSeats(
   db: Db,
@@ -85,7 +83,7 @@ export async function buildCountryReadinessReport(
   const checks: ReadinessCheck[] = [];
 
   const expectedRegions = expect.regionCount;
-  const regionCount = await db.collection("states").countDocuments({ countryId });
+  const regionCount = await statesCollection<Document>(db).countDocuments({ countryId });
   checks.push({
     name: "Regions",
     status: regionCount === expectedRegions ? "ok" : regionCount > 0 ? "warning" : "missing",
@@ -93,7 +91,7 @@ export async function buildCountryReadinessReport(
     detail: `Expected ${expectedRegions}, found ${regionCount}`,
   });
 
-  const partyCount = await db.collection("politicalParties").countDocuments({ countryId });
+  const partyCount = await politicalPartiesCollection<Document>(db).countDocuments({ countryId });
   checks.push({
     name: "Parties",
     status:
@@ -106,7 +104,7 @@ export async function buildCountryReadinessReport(
     detail: `Expected ≥${expect.partyMin} (${expect.partyRoster}), found ${partyCount}`,
   });
 
-  const orgCount = await db.collection("statePartyOrg").countDocuments({ countryId });
+  const orgCount = await statePartyOrgCollection<Document>(db).countDocuments({ countryId });
   checks.push({
     name: "StatePartyOrg",
     status:
@@ -132,7 +130,7 @@ export async function buildCountryReadinessReport(
     detail: `${expect.seatNote}, found ${seatCount}`,
   });
 
-  const nppCount = await db.collection("npps").countDocuments({ countryId });
+  const nppCount = await nppsCollection<Document>(db).countDocuments({ countryId });
   checks.push({
     name: "NPPs",
     status:
@@ -159,7 +157,7 @@ export async function buildCountryReadinessReport(
   });
 
   const expectedDemographics = expect.demographicsCount;
-  const demoCount = await db.collection("stateDemographics").countDocuments({ countryId });
+  const demoCount = await stateDemographicsCollection<Document>(db).countDocuments({ countryId });
   checks.push({
     name: "Demographics",
     status: demoCount === expectedDemographics ? "ok" : demoCount > 0 ? "warning" : "missing",
@@ -171,9 +169,9 @@ export async function buildCountryReadinessReport(
   // in step-6 Phase 3, so counting it reported EVERY country as missing its
   // region metrics. macroMetrics is where seeded region metrics live now.
   const expectedMetrics = expect.stateMetricsCount;
-  const metricsCount = await db
-    .collection<{ _id: string }>("macroMetrics")
-    .countDocuments(expect.stateMetricsFilter);
+  const metricsCount = await macroMetricsCollection<{ _id: string }>(db).countDocuments(
+    expect.stateMetricsFilter
+  );
   checks.push({
     name: "RegionMetrics",
     status: metricsCount >= expectedMetrics ? "ok" : metricsCount > 0 ? "warning" : "missing",
@@ -182,9 +180,9 @@ export async function buildCountryReadinessReport(
   });
 
   // legislationTypes docs carry `countryScope` (lowercase id), never `countryId`.
-  const legTypeCount = await db
-    .collection("legislationTypes")
-    .countDocuments({ countryScope: countryId.toLowerCase() });
+  const legTypeCount = await legislationTypesCollection<Document>(db).countDocuments({
+    countryScope: countryId.toLowerCase(),
+  });
   checks.push({
     name: "LegislationTypes",
     status:

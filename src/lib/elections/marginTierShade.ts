@@ -1,23 +1,11 @@
 /**
  * Turning a margin tier into a colour.
  *
- * One idea runs through the ramp: **certainty is distance from the ground the
- * tile sits on.** A safe state is the party colour at full strength; a toss-up
- * has almost faded into the page behind it. That reads the same way on paper
- * and on a dark screen, and it is the convention every printed election map
- * already uses — a pale pink county is a lean, not a landslide.
- *
- * The earlier ramp encoded a different idea for each end. It darkened "safe"
- * to 70% of the party colour, left "likely" as the colour itself, then pushed
- * "lean" and "toss-up" halfway and most of the way to WHITE. On the white map
- * it was written for that was coherent. On the dark boards that are now its
- * only callers it was not: safe and likely — 40 of 48 states in a typical race
- * — differed by a single darkening step that a dark page swallows, while the
- * six or seven loosest states blew out to near-white and grabbed the eye. The
- * board read as two flat colours plus a couple of bright holes.
- *
- * Mixing toward a ground the caller names fixes both ends at once and leaves
- * one rule to reason about.
+ * Certainty is distance from the ground the tile sits on: safe is the party
+ * colour at full strength, toss-up has almost faded into the page behind it.
+ * This reads the same on paper and dark screens, and matches printed election
+ * maps (a pale pink county is a lean, not a landslide). Mixing toward a caller
+ * named ground fixes both ends and leaves one rule to reason about.
  */
 
 import type { MarginTier } from "./generalViewModel";

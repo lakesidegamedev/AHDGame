@@ -23,6 +23,8 @@ export interface WorldNavItem {
    * and hiding the parent does not hide it.
    */
   parentId?: string;
+  /** Count shown beside the label; hidden when zero or absent. */
+  badge?: number;
 }
 
 export interface WorldNavOpts {
@@ -30,7 +32,6 @@ export interface WorldNavOpts {
   myCorporationId?: number | null;
   myCorporationHasGroup?: boolean;
   myUnionId?: string | null;
-  conflictsEnabled?: boolean;
   unionsEnabled?: boolean;
   /**
    * A settlement crisis is LIVE — not merely that the subsystem is switched on.
@@ -39,6 +40,8 @@ export interface WorldNavOpts {
    * feature is enabled.
    */
   settlementCrisisLive?: boolean;
+  /** Crises where the viewer has an action available now. */
+  crisisActionCount?: number;
 }
 
 /**
@@ -50,9 +53,9 @@ export function buildWorldNavItems({
   myCorporationId = null,
   myCorporationHasGroup = false,
   myUnionId = null,
-  conflictsEnabled = false,
   unionsEnabled = false,
   settlementCrisisLive = false,
+  crisisActionCount = 0,
 }: WorldNavOpts): WorldNavItem[] {
   const country = countryId.toLowerCase();
 
@@ -109,6 +112,7 @@ export function buildWorldNavItems({
       href: "/world/crises",
       section: "main",
       show: true,
+      badge: crisisActionCount,
     },
     {
       // Nested under Crises: it IS a crisis, not a sibling of the crisis board.
@@ -127,9 +131,9 @@ export function buildWorldNavItems({
       id: "conflicts",
       label: "Conflicts",
       labelKey: "menus.world.conflicts",
-      href: "/world/conflicts",
+      href: "/world/crises?view=conflicts",
       section: "main",
-      show: conflictsEnabled,
+      show: true,
     },
     {
       id: "internationalOrgs",
@@ -220,18 +224,11 @@ export function visibleWorldNavItems(opts: WorldNavOpts): WorldNavItem[] {
 
 // ── Mobile category grouping ────────────────────────────────────────────────
 //
-// The desktop World dropdown (WorldDropdown.tsx / ExperimentalNavbar's inline
-// worldMenu) renders `worldSubItems` as a mostly-flat list with a couple of
-// cosmetic position-based headers (see ExperimentalNavbar's `showLeaderboardHeader`
-// / `showMarketsHeader`). That rendering is untouched by this grouping — it's
-// consumed only by the mobile drawer, which needed real collapsible categories
-// (parity with the National Details Government/Politics/Economy/Other groups)
-// rather than one long flat list.
-//
-// `WORLD_NAV_GROUPS` is the ordered, data-driven source of both group order
-// and in-group item order for the mobile World section — this is where a
-// future traffic-informed reorder should edit (reorder the group entries,
-// or the `itemIds` arrays within a group).
+// `WORLD_NAV_GROUPS` is the ordered, data-driven source of group order and
+// in-group item order for the mobile World drawer's collapsible categories.
+// The desktop World dropdown renders `worldSubItems` directly and does not
+// consume this grouping. To reorder traffic, edit the group entries or the
+// `itemIds` arrays within a group.
 export type WorldNavGroupId = "diplomacy" | "economy" | "other";
 
 export interface WorldNavGroup {
@@ -250,10 +247,9 @@ interface WorldNavGroupDef {
   itemIds: string[];
 }
 
-// Group and item order is set by measured traffic (Umami, 24 days to
-// 2026-07-23, 318k pageviews), quoted as % of all site pageviews. Economy
-// leads on Stock Market alone (2.82%, plus 0.82% for the country-scoped
-// route); everything in Diplomacy is under 0.4%.
+// Group and item order follows measured traffic, as % of all site pageviews.
+// Economy leads on Stock Market alone (2.82%, plus 0.82% country-scoped);
+// everything in Diplomacy is under 0.4%.
 const WORLD_NAV_GROUPS: WorldNavGroupDef[] = [
   {
     id: "economy",

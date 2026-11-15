@@ -164,7 +164,7 @@ export function SectorRow({
       ? sector.displayName
       : sector.stateName;
 
-  // Prefer realized revenue (matches the corp-level total's basis, #3001/#3002)
+  // Prefer realized revenue (matches the corp-level total's basis)
   // over the nameplate `revenue` figure for anything shown as "how much this
   // sector makes"; falls back to nameplate pre-reprocessing.
   const displayRevenue = sector.siteStatement?.revenue ?? sector.financialRevenue ?? sector.revenue;
@@ -175,12 +175,10 @@ export function SectorRow({
   const fmtScaled = (val: number | null | undefined) =>
     val == null ? "n/a" : fmtMoney(val * scaleFactor);
 
-  // Revenue reconciliation. The cell shows the realized figure (above), because
-  // that is the basis profit and the effective margin are computed from. But
-  // nameplate is what the market-share and commodity screens talk about, and the
-  // gap between the two was invisible, so the row read as "revenue × margin
-  // does not equal profit" with nothing on screen to explain it (player report,
-  // #gameplay-advisors, 2026-07-30). Reconcile the full chain in the tooltip.
+  // Revenue reconciliation. The cell shows the realized figure, since
+  // profit and effective margin are computed from it. Nameplate is what
+  // market-share and commodity screens reference; the gap between the two
+  // was invisible, so the tooltip reconciles the full chain.
   const nameplate = sector.revenue as number | null | undefined;
   const realized = displayRevenue as number | null | undefined;
   const realizationGap =

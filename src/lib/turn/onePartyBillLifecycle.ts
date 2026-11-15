@@ -1,19 +1,13 @@
-/**
+/*
  * One-Party State Bill Lifecycle Processor
  *
- * Called once per turn. Iterates every country with
- * `governmentType: "onePartyState"` and handles expired bill votes.
- * One-party states are unicameral by default (CN) — bills originate and
- * pass in the lower chamber only, with no assent delay. Bicameral one-party
- * configs (RU: `legislature.bicameral` + `upperElectionSystem`) run the JP
- * crossover instead (D8/D9): a bill must clear BOTH chambers, each by the
- * cast-votes majority rule; a second-chamber rejection kills the bill (no
- * override chamber in a one-party state).
+ * Runs once per turn over every `governmentType: "onePartyState"` country.
+ * Default is unicameral (CN): bills pass in the lower chamber only, no assent delay.
+ * Bicameral configs (RU) require BOTH chambers to pass; a second-chamber
+ * rejection kills the bill (no override).
  *
- * Also drives the per-turn ruling-party confidence drift: any bills
- * enacted this turn become policy-alignment inputs, and any unprocessed
- * purge events recorded against the country are folded in and marked
- * processed once consumed.
+ * Also folds enacted bills into policy-alignment inputs and consumes pending
+ * purge events.
  */
 import { governmentLeaderReference, leaderStateId } from "@/lib/government/leaderReference";
 
@@ -51,10 +45,7 @@ import { getCountryState } from "@/lib/countryState";
 import { getCountryStateCollection } from "@/lib/db/collections/countryState";
 import { runBillLifecycle } from "@/lib/turn/billLifecycle/engine";
 import { buildOnePartyBillConfig } from "@/lib/turn/billLifecycle/configs/oneParty";
-import {
-  BG_1991_PROPOSALS_COLLECTION,
-  type Bg1991ConstitutionalProposal,
-} from "@/lib/countries/bg/constitutionalProposals1991";
+import { type Bg1991ConstitutionalProposal } from "@/lib/countries/bg/constitutionalProposals1991";
 import { BG_CONTINUED_ASSEMBLY_DISSOLUTION_ID } from "@/lib/countries/bg/assemblyDissolution1991";
 import {
   passesBgConstitution1991,
@@ -63,22 +54,19 @@ import {
 } from "@/lib/countries/bg/rules/constitutionalDecision1991";
 import { buildConfiguredCountryBillLifecycle } from "@/lib/turn/billLifecycle/configs/configuredCountry";
 import type { BillLifecycleRuntimeContext } from "@/lib/turn/billLifecycle/types";
-import type { CountryGameState } from "@/lib/db/types/gameState";
-import {
-  RO_1992_PROPOSALS_COLLECTION,
-  type Ro1992ElectoralProposal,
-} from "@/lib/countries/ro/electoralProposals1992";
+import { type Ro1992ElectoralProposal } from "@/lib/countries/ro/electoralProposals1992";
 import { passesRoElectoralAmendment } from "@/lib/countries/ro/rules/electoralDecision1992";
 import { passesHuElectoralAmendment } from "@/lib/countries/hu/rules/electoralLaw";
-import {
-  HU_1994_PROPOSALS_COLLECTION,
-  type Hu1994ElectoralProposal,
-} from "@/lib/countries/hu/electoralProposals1994";
+import { type Hu1994ElectoralProposal } from "@/lib/countries/hu/electoralProposals1994";
 
-import {
-  HU_2011_PROPOSALS_COLLECTION,
-  type Hu2011ElectoralProposal,
-} from "@/lib/countries/hu/electoralProposals2011";
+import { type Hu2011ElectoralProposal } from "@/lib/countries/hu/electoralProposals2011";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
+import { rulingPartyPurgeEventsCollection } from "@/lib/db/repositories/rulingPartyPurgeEvents";
+import { ro1992ElectoralProposalsCollection } from "@/lib/db/repositories/ro1992ElectoralProposals";
+import { bg1991ConstitutionalProposalsCollection } from "@/lib/db/repositories/bg1991ConstitutionalProposals";
+import { hu2011ElectoralProposalsCollection } from "@/lib/db/repositories/hu2011ElectoralProposals";
+import { hu1994ElectoralProposalsCollection } from "@/lib/db/repositories/hu1994ElectoralProposals";
 
 const DEMOCRATIC_1991_COUNTRIES: readonly CountryId[] = ["PL", "CS", "HU", "RO", "BG", "YU"];
 
@@ -108,25 +96,22 @@ export async function processOnePartyBillLifecycleForCountry(
     // These registry entries also host the democratic 1991 institutions.
     // Other converted one-party countries keep their existing conversion guard.
     if (preset === "1991-default" && DEMOCRATIC_1991_COUNTRIES.includes(countryId)) {
-      const state = await db
-        .collection<CountryGameState>("countryGameStates")
-        .findOne({ _id: countryId }, { projection: { dissolvedTurn: 1 } });
+      const state = await countryGameStatesCollection(db).findOne(
+        { _id: countryId },
+        { projection: { dissolvedTurn: 1 } }
+      );
       if (state?.dissolvedTurn != null) return { enacted: 0, failed: 0 };
       const lifecycle = buildConfiguredCountryBillLifecycle(countryId, preset);
-      if (countryId === "HU") {
+      if (countryHasFeature("huTurn", countryId)) {
         const proposals = await Promise.all([
-          db
-            .collection<Hu1994ElectoralProposal>(HU_1994_PROPOSALS_COLLECTION)
-            .findOne(
-              { _id: "1991-default:hu-electoral:threshold1994", status: "open" },
-              { projection: { billId: 1, revision: 1 } }
-            ),
-          db
-            .collection<Hu2011ElectoralProposal>(HU_2011_PROPOSALS_COLLECTION)
-            .findOne(
-              { _id: "1991-default:hu-electoral:system2011", status: "open" },
-              { projection: { billId: 1, revision: 1 } }
-            ),
+          hu1994ElectoralProposalsCollection<Hu1994ElectoralProposal>(db).findOne(
+            { _id: "1991-default:hu-electoral:threshold1994", status: "open" },
+            { projection: { billId: 1, revision: 1 } }
+          ),
+          hu2011ElectoralProposalsCollection<Hu2011ElectoralProposal>(db).findOne(
+            { _id: "1991-default:hu-electoral:system2011", status: "open" },
+            { projection: { billId: 1, revision: 1 } }
+          ),
         ]);
         for (const stage of lifecycle.stages) {
           if (stage.kind !== "chamberVote") continue;
@@ -145,22 +130,22 @@ export async function processOnePartyBillLifecycleForCountry(
           };
         }
       }
-      if (countryId === "BG") {
-        const proposals = await db
-          .collection<Bg1991ConstitutionalProposal>(BG_1991_PROPOSALS_COLLECTION)
-          .find(
-            {
-              _id: {
-                $in: [
-                  "1991-default:bg-constitutional:constitution1991",
-                  BG_CONTINUED_ASSEMBLY_DISSOLUTION_ID,
-                ],
+      if (countryHasFeature("bgTurn", countryId)) {
+        const proposals =
+          await bg1991ConstitutionalProposalsCollection<Bg1991ConstitutionalProposal>(db)
+            .find(
+              {
+                _id: {
+                  $in: [
+                    "1991-default:bg-constitutional:constitution1991",
+                    BG_CONTINUED_ASSEMBLY_DISSOLUTION_ID,
+                  ],
+                },
+                status: "open",
               },
-              status: "open",
-            },
-            { projection: { billId: 1, revision: 1, capacity: 1, disposition: 1 } }
-          )
-          .toArray();
+              { projection: { billId: 1, revision: 1, capacity: 1, disposition: 1 } }
+            )
+            .toArray();
         for (const stage of lifecycle.stages)
           if (stage.kind === "chamberVote")
             stage.passCheck = (bill, totals) => {
@@ -184,13 +169,13 @@ export async function processOnePartyBillLifecycleForCountry(
                     passesBgConstitution1991(totals, 400);
             };
       }
-      if (countryId === "RO") {
-        const proposal = await db
-          .collection<Ro1992ElectoralProposal>(RO_1992_PROPOSALS_COLLECTION)
-          .findOne(
-            { _id: "1991-default:ro-electoral:parliament1992", status: "open" },
-            { projection: { billId: 1, revision: 1, capacities: 1 } }
-          );
+      if (countryHasFeature("roTurn", countryId)) {
+        const proposal = await ro1992ElectoralProposalsCollection<Ro1992ElectoralProposal>(
+          db
+        ).findOne(
+          { _id: "1991-default:ro-electoral:parliament1992", status: "open" },
+          { projection: { billId: 1, revision: 1, capacities: 1 } }
+        );
         for (const stage of lifecycle.stages)
           if (stage.kind === "chamberVote") {
             stage.passCheck = (bill, totals) => {
@@ -290,9 +275,8 @@ async function processCountryBills(
     );
   }
 
-  // Resolve this country's expired lower-chamber bills through the unified engine
-  // (single vote → immediate enact; votes scoped + snapshotted, #0836/#0982). The
-  // engine returns the enacted categories the regime drifts below consume.
+  // Resolve expired lower-chamber bills via the unified engine and
+  // return enacted categories for regime drift.
   const engineResult = await runBillLifecycle(
     db,
     buildOnePartyBillConfig(config, preset),
@@ -391,7 +375,7 @@ async function processCountryPopularDrift(
   const leader = governmentLeaderReference(gov);
   if (!leader) return;
 
-  const purgeColl = db.collection<PurgeEvent>("rulingPartyPurgeEvents");
+  const purgeColl = rulingPartyPurgeEventsCollection<PurgeEvent>(db);
   const pendingPurges = await purgeColl.find({ countryId, processed: false }).toArray();
 
   const [economic, election, internalRepression] = await Promise.all([
@@ -425,7 +409,7 @@ async function processCountryConfidenceDrift(
   currentTurn: number,
   policyCategories: string[]
 ): Promise<void> {
-  const purgeColl = db.collection<PurgeEvent>("rulingPartyPurgeEvents");
+  const purgeColl = rulingPartyPurgeEventsCollection<PurgeEvent>(db);
   const pendingPurges = await purgeColl.find({ countryId, processed: false }).toArray();
 
   const result = await processRulingPartyConfidenceTurn(

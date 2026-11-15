@@ -4,6 +4,9 @@ import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError } from "@/lib/api/errors";
 import { archiveCampaignsForCandidates } from "@/lib/campaigns/archiveWithdrawnCampaigns";
 import type { Election, ElectionCandidate, NPP } from "@/lib/db/types";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 
 // POST /api/admin/npps/vacate-primaries — Withdraws all NPP candidates from every active election
 // Auth: requireAdmin
@@ -17,12 +20,11 @@ export async function POST() {
     const now = new Date();
 
     // Get all NPP IDs (the authoritative source)
-    const allNPPs = await db.collection<NPP>("npps").find({}).project({ _id: 1 }).toArray();
+    const allNPPs = await nppsCollection(db).find({}).project({ _id: 1 }).toArray();
     const nppIds = allNPPs.map((n) => n._id);
 
     // Find all active elections
-    const activeElections = await db
-      .collection<Election>("elections")
+    const activeElections = await electionsCollection(db)
       .find({ status: "active" })
       .project({ _id: 1 })
       .toArray();
@@ -39,15 +41,14 @@ export async function POST() {
 
     // Withdraw candidates where characterId is an NPP
     // This catches all NPP candidates regardless of isNPP/nppId tagging
-    const vacated = await db
-      .collection<ElectionCandidate>("electionCandidates")
+    const vacated = await electionCandidatesCollection(db)
       .find({
         electionId: { $in: electionIds },
         characterId: { $in: nppIds },
         status: "active",
       })
       .toArray();
-    const result = await db.collection<ElectionCandidate>("electionCandidates").updateMany(
+    const result = await electionCandidatesCollection(db).updateMany(
       {
         _id: { $in: vacated.map((c) => c._id) },
       },
@@ -72,7 +73,7 @@ export async function POST() {
     });
 
     // Also fix tagging on these candidates for consistency
-    await db.collection<ElectionCandidate>("electionCandidates").updateMany(
+    await electionCandidatesCollection(db).updateMany(
       {
         characterId: { $in: nppIds },
         $or: [{ isNPP: { $ne: true } }, { nppId: { $exists: false } }],

@@ -23,20 +23,20 @@ import type { NPP, IndexFund, IndexFundPosition, IndexFundTransaction } from "@/
 import { isIndexFundsEnabled } from "@/lib/indexFunds/featureFlag";
 import { emitTxBulk, loadTxThresholds } from "@/lib/financialTxLog/emit";
 import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
-import {
-  FUND_POSITION_COLLECTION,
-  FUND_TRANSACTION_COLLECTION,
-  listActiveFunds,
-} from "@/lib/indexFunds/fundQueries";
+import { listActiveFunds } from "@/lib/indexFunds/fundQueries";
 import { processNppFundRedemptions, type NppRiskArchetype } from "@/lib/indexFunds/nppRedemption";
 import type { CountryId } from "@/lib/constants/countries";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { JP_NPP_INVESTING_MINIMUM } from "@/lib/countries/jp/economy";
-import type { GameConfig } from "@/lib/db/types";
 import { accountId } from "@/lib/ledger/accounts";
 import { emitLedgerEntries } from "@/lib/ledger/emit";
 import { isLedgerShadowEnabledFromConfig } from "@/lib/ledger/featureFlag";
 import type { LedgerEntryInput } from "@/lib/ledger/types";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { indexFundTransactionsCollection } from "@/lib/db/repositories/indexFundTransactions";
+import { indexFundPositionsCollection } from "@/lib/db/repositories/indexFundPositions";
 
 // ── GDP per capita by country (USD-equivalent, annual) ────────────────
 // These are approximate 2024 GDP per capita figures used to determine NPP
@@ -55,34 +55,15 @@ const GDP_PER_CAPITA_ANCHOR: Record<string, number> = {
 
 const TURNS_PER_YEAR = 48;
 
-// ── NPP wealth saturation damping (#3245) ─────────────────────────────
+// NPP wealth saturation damping:
 //
-// The per-turn GDP accrual below is the ONLY structural income into NPP
-// personal wealth (nppInvestmentCashAnchor + the fund positions it buys), and
-// nothing ever consumes it - every other flow is an asset swap (bonds/shares/
-// fund units) or an investment return. In autonomous/headless worlds that
-// made median NPP wealth a pure ramp (~₳666/turn for US = ₳2,664 per 4-turn
-// invest cycle; observed 12.5k → 168k over ~5 game-years, flat Gini because
-// every NPP in a country accrues the identical amount).
-//
-// Fix: damp the accrual linearly as wealth approaches a saturation target,
-// instead of adding an expense drain. Rationale: NPP personal wealth sits
-// entirely OUTSIDE the shadow-ledger perimeter (accounts.ts defines no NPP
-// account kind and this accrual emits no financialTxLog row - it is an
-// uninstrumented modeled mint), so booking a drain as a `sink:` leg would
-// show up as unexplained money destruction with no matching instrumented
-// source. Minting less requires no ledger legs at all and can never debit,
-// so live-world NPPs above target simply stop accruing - no crash.
-//
-// Equilibrium math: income i = GDPpc × investFraction(0.4) / 48 per turn;
-// damping d(W) = max(0, 1 − W / cap) with cap = NPP_WEALTH_SATURATION_YEARS ×
-// GDPpc. dW/dt = i·(1 − W/cap) ⇒ W(t) = cap·(1 − e^(−t/τ)), τ = cap/i =
-// (2 × 48) / 0.4 = 240 turns (5 game-years) in EVERY country. Steady state:
-// accrual → 0 at W = cap = 2 years of GDP-per-capita income (US ₳160k,
-// UK ₳92k, CN ₳25k, NG ₳4.4k) ≈ 2-3× median annual income (GDPpc runs above
-// the median), inside the intended 1-3× band. Above cap only genuine
-// investment returns (dividends, coupons, NAV drift) move wealth, and those
-// are bounded by portfolio yield rather than compounding unbounded principal.
+// Per-turn GDP accrual is the only structural income into NPP personal wealth
+// and nothing consumes it, so median wealth ramps unbounded in headless worlds.
+// Damp the accrual linearly as wealth approaches a saturation target
+// (NPP_WEALTH_SATURATION_YEARS x GDP-per-capita) instead of adding a drain: NPP
+// wealth sits outside the shadow-ledger perimeter, so a sink leg would show as
+// unexplained money destruction. Minting less requires no ledger legs and can
+// never debit.
 
 /**
  * Saturation target for autonomously accrued NPP personal wealth, in years of
@@ -282,34 +263,19 @@ function buildNppSubscriptions(
 }
 
 /**
- * Process fund investments for all active NPPs.
- * Called from the fund cron cycle.
+ * Process fund investments for all active NPPs. Called from the fund cron cycle.
  *
- * Batched rewrite (2026-07): the original version did this per-NPP with an
- * awaited DB round-trip inside the loop (accrual, then per-subscription
- * debit+credit+fund-update+tx-insert) - ~5-10 sequential round-trips per NPP.
- * At 10k+ NPPs that's 50k-100k+ sequential awaits in one turn phase, found via
- * the headless sim harness to be THE dominant cost of a turn (turnLogs showed
- * ~97s of a ~108s turn with zero telemetry, traced to this exact function via
- * the indexFunds phase). Rewritten as: (1) compute every NPP's accrual +
- * subscriptions in memory (pure, no IO - extracted to buildNppSubscriptions),
- * (2) one bulkWrite for all accruals, (3) one bulkWrite for all debits (same
- * $gte guard as before, preserved per-op), (4) fund-level unitSupply/
- * cashAnchor updates AGGREGATED per fund across every NPP first, so a fund
- * held by thousands of NPPs gets ONE $inc, not thousands, (5) position
- * credits split into a bulkWrite for existing positions (using the exact same
- * weighted-avgNavAnchor aggregation-pipeline update creditFundPosition uses)
- * and an insertMany for brand-new positions, (6) one insertMany for the
- * transaction log.
+ * Batched: per-NPP sequential round-trips made this the dominant turn cost, so
+ * accrual and subscriptions are computed in memory (buildNppSubscriptions), then
+ * applied as bulk writes: accruals, debits ($gte guard kept per-op), fund-level
+ * unitSupply/cashAnchor updates aggregated per fund (one $inc per fund, not per
+ * NPP), position credits (weighted-avgNavAnchor aggregation for existing, insert
+ * for new), and one transaction-log insertMany.
  *
- * Correctness: subscription amounts are constructed as fractions of `budget`
- * that sum to at most `budget` by construction (domesticBudget + globalBudget
- * + sectorBudget === budget, and each per-fund split further floors down) -
- * so investedThisNPP can never exceed the budget just accrued in this same
- * synchronous pass, and the debit guard (kept, not just assumed) will always
- * match. A `investedThisNPP > budget` check is kept anyway as a canary: if
- * that math is ever wrong, this NPP's subscriptions are dropped and logged as
- * an error rather than risking an over-debit.
+ * Subscription fractions sum to at most `budget` by construction, so
+ * investedThisNPP cannot exceed the budget accrued this pass. The
+ * investedThisNPP > budget canary is kept: if it ever fires, that NPP's
+ * subscriptions are dropped and logged rather than risking an over-debit.
  */
 export type NPPFundInvestingResult = {
   nppsProcessed: number;
@@ -370,8 +336,7 @@ export async function processNPPFundInvestments(
   let redemptionsQueued = 0;
   let unitsRedeemed = 0;
 
-  const npps = await db
-    .collection<NPP>("npps")
+  const npps = await nppsCollection(db)
     .find({ retiredAt: null })
     .project<ProjectedNPP>({
       _id: 1,
@@ -391,7 +356,7 @@ export async function processNPPFundInvestments(
     archetypesByNppId.set(String(npp._id), determineNPPRiskArchetype(npp as NPP));
   }
 
-  // ── Step 6b: gated autonomous NPP redemptions (#2120) ────────────────────
+  // ── Step 6b: gated autonomous NPP redemptions ────────────────────
   // Runs after the subscription writes settle so the planner sees this pass's
   // post-subscribe positions and cash. With the flag absent/false the executor
   // returns with zero writes, so the pass is byte-identical to its pre-flag
@@ -413,7 +378,7 @@ export async function processNPPFundInvestments(
     }
   };
 
-  // ── Wealth valuation for saturation damping (#3245) ──────────────────────
+  // ── Wealth valuation for saturation damping ──────────────────────
   // One batched pass over NPP fund positions, valued at the active funds'
   // quotedNav, so the damping below can see where the accrual actually ends up
   // (nearly all of each cycle's budget is immediately converted into fund
@@ -426,9 +391,10 @@ export async function processNPPFundInvestments(
   const navByFundId = new Map(activeFunds.map((f) => [String(f._id), f.quotedNav]));
   const fundValueByNpp = new Map<string, number>();
   if (npps.length > 0) {
-    const positionCursor = db
-      .collection<IndexFundPosition>(FUND_POSITION_COLLECTION)
-      .find({ holderKind: "npp" }, { projection: { nppId: 1, fundId: 1, units: 1 } });
+    const positionCursor = indexFundPositionsCollection<IndexFundPosition>(db).find(
+      { holderKind: "npp" },
+      { projection: { nppId: 1, fundId: 1, units: 1 } }
+    );
     for await (const pos of positionCursor) {
       if (!pos.nppId) continue;
       const nav = navByFundId.get(String(pos.fundId));
@@ -451,13 +417,10 @@ export async function processNPPFundInvestments(
   for (const npp of npps) {
     try {
       const archetype = determineNPPRiskArchetype(npp as NPP);
-      // Multiply by the throttle interval so a less-frequent pass invests the
-      // same total over time (N turns' worth at once). Multiplier is 1 for the
-      // every-turn default. Then damp by current personal wealth (investment
-      // cash + fund-position value) so accrual tapers to zero at the
-      // saturation target instead of ramping forever - see the #3245 block
-      // comment on NPP_WEALTH_SATURATION_YEARS. Saturated NPPs are skipped
-      // entirely (no accrual, no subscriptions), never debited.
+      // Throttle interval * budget spreads the same total over time (multiplier
+      // is 1 per turn by default). Damp by wealth (investment cash + fund value)
+      // so accrual tapers to zero at NPP_WEALTH_SATURATION_YEARS.
+      // Saturated NPPs are skipped entirely (no accrual, no subscriptions), never debited.
       const wealthAnchor =
         (npp.nppInvestmentCashAnchor ?? 0) + (fundValueByNpp.get(String(npp._id)) ?? 0);
       const damping = nppAccrualDampingMultiplier(
@@ -516,7 +479,7 @@ export async function processNPPFundInvestments(
       let investedThisNPP = 0;
       const nppPlanned: PlannedSubscription[] = [];
 
-      // #992 tranche 4: the ledger row for each subscription is denominated
+      // The ledger row for each subscription is denominated
       // in the NPP home currency so the subject account matches the snapshot
       // (npp:<id>:<homeCurrency>); the ₳ value is stated outright, never
       // derived from the live FX table.
@@ -559,7 +522,7 @@ export async function processNPPFundInvestments(
         totalInvested += investedThisNPP;
         // The financialTxLog subscription below owns the holder debit and
         // fund receipt. Emitting another primary leg here counts the same
-        // cash movement twice in stock-versus-flow reconciliation (#992).
+        // cash movement twice in stock-versus-flow reconciliation.
       }
 
       nppsProcessed++;
@@ -573,11 +536,11 @@ export async function processNPPFundInvestments(
   // Sequential relative to each other (debit's guard depends on accrual
   // having landed), but each pass is a single batched round-trip.
   if (accrualOps.length > 0) {
-    await db.collection("npps").bulkWrite(accrualOps, { ordered: false });
+    await nppsCollection<Document>(db).bulkWrite(accrualOps, { ordered: false });
   }
   if (debitOps.length > 0) {
     try {
-      const result = await db.collection("npps").bulkWrite(debitOps, { ordered: false });
+      const result = await nppsCollection<Document>(db).bulkWrite(debitOps, { ordered: false });
       assertBulkWriteCount("NPP subscription debits", result.modifiedCount, debitOps.length);
     } catch (originalError) {
       try {
@@ -587,7 +550,7 @@ export async function processNPPFundInvestments(
             update: { $inc: { nppInvestmentCashAnchor: debit.amount }, $set: { updatedAt: now } },
           },
         }));
-        const result = await db.collection("npps").bulkWrite(undoOps, { ordered: false });
+        const result = await nppsCollection<Document>(db).bulkWrite(undoOps, { ordered: false });
         // A zero count is valid when the failed debit batch applied nothing.
         if (result.modifiedCount > undoOps.length) {
           throw new Error(
@@ -610,9 +573,10 @@ export async function processNPPFundInvestments(
     }
   }
   if (ledgerEntries.length > 0) {
-    const config = await db
-      .collection<GameConfig>("gameConfig")
-      .findOne({ _id: "default" }, { projection: { ledgerShadow: 1 } });
+    const config = await gameConfigCollection(db).findOne(
+      { _id: "default" },
+      { projection: { ledgerShadow: 1 } }
+    );
     if (isLedgerShadowEnabledFromConfig(config)) {
       await emitLedgerEntries(db, ledgerEntries);
     }
@@ -661,8 +625,7 @@ export async function processNPPFundInvestments(
   const distinctNppIds = [...new Set(planned.map((p) => String(p.nppId)))].map(
     (id) => new ObjectId(id)
   );
-  const existingPositions = await db
-    .collection<IndexFundPosition>(FUND_POSITION_COLLECTION)
+  const existingPositions = await indexFundPositionsCollection<IndexFundPosition>(db)
     .find(
       { holderKind: "npp", nppId: { $in: distinctNppIds } },
       { projection: { fundId: 1, nppId: 1, units: 1, avgNavAnchor: 1 } }
@@ -735,9 +698,9 @@ export async function processNPPFundInvestments(
 
     if (completed.transactions !== "none") {
       await attempt("remove subscription transactions", async () => {
-        const result = await db
-          .collection(FUND_TRANSACTION_COLLECTION)
-          .deleteMany({ _id: { $in: txDocs.map((doc) => doc._id) } });
+        const result = await indexFundTransactionsCollection<Document>(db).deleteMany({
+          _id: { $in: txDocs.map((doc) => doc._id) },
+        });
         assertCompensationCount(
           "transaction compensation",
           result.deletedCount,
@@ -748,9 +711,9 @@ export async function processNPPFundInvestments(
     }
     if (completed.positionInserts !== "none") {
       await attempt("remove inserted NPP positions", async () => {
-        const result = await db
-          .collection(FUND_POSITION_COLLECTION)
-          .deleteMany({ _id: { $in: positionInsertDocs.map((doc) => doc._id) } });
+        const result = await indexFundPositionsCollection<Document>(db).deleteMany({
+          _id: { $in: positionInsertDocs.map((doc) => doc._id) },
+        });
         assertCompensationCount(
           "inserted-position compensation",
           result.deletedCount,
@@ -784,9 +747,9 @@ export async function processNPPFundInvestments(
             },
           };
         });
-        const result = await db
-          .collection(FUND_POSITION_COLLECTION)
-          .bulkWrite(undoOps, { ordered: false });
+        const result = await indexFundPositionsCollection<Document>(db).bulkWrite(undoOps, {
+          ordered: false,
+        });
         assertCompensationCount(
           "position compensation",
           result.modifiedCount,
@@ -815,7 +778,9 @@ export async function processNPPFundInvestments(
             };
           }
         );
-        const result = await db.collection("indexFunds").bulkWrite(undoOps, { ordered: false });
+        const result = await indexFundsCollection<Document>(db).bulkWrite(undoOps, {
+          ordered: false,
+        });
         assertCompensationCount(
           "fund compensation",
           result.modifiedCount,
@@ -831,7 +796,7 @@ export async function processNPPFundInvestments(
           update: { $inc: { nppInvestmentCashAnchor: debit.amount }, $set: { updatedAt: now } },
         },
       }));
-      const result = await db.collection("npps").bulkWrite(undoOps, { ordered: false });
+      const result = await nppsCollection<Document>(db).bulkWrite(undoOps, { ordered: false });
       assertBulkWriteCount("NPP debit compensation", result.modifiedCount, undoOps.length);
     });
 
@@ -849,23 +814,24 @@ export async function processNPPFundInvestments(
   try {
     if (fundOps.length > 0) {
       completed.funds = "uncertain";
-      const result = await db.collection("indexFunds").bulkWrite(fundOps, { ordered: false });
+      const result = await indexFundsCollection<Document>(db).bulkWrite(fundOps, {
+        ordered: false,
+      });
       assertBulkWriteCount("fund subscription credits", result.modifiedCount, fundOps.length);
       completed.funds = "confirmed";
     }
     if (positionUpdateOps.length > 0) {
       completed.positionUpdates = "uncertain";
-      const result = await db
-        .collection(FUND_POSITION_COLLECTION)
-        .bulkWrite(positionUpdateOps, { ordered: false });
+      const result = await indexFundPositionsCollection<Document>(db).bulkWrite(positionUpdateOps, {
+        ordered: false,
+      });
       assertBulkWriteCount("NPP position credits", result.modifiedCount, positionUpdateOps.length);
       completed.positionUpdates = "confirmed";
     }
     if (positionInsertDocs.length > 0) {
       completed.positionInserts = "uncertain";
-      const result = await db
-        .collection<IndexFundPosition>(FUND_POSITION_COLLECTION)
-        .insertMany(positionInsertDocs);
+      const result =
+        await indexFundPositionsCollection<IndexFundPosition>(db).insertMany(positionInsertDocs);
       assertBulkWriteCount(
         "NPP position inserts",
         Object.keys(result.insertedIds).length,
@@ -875,9 +841,8 @@ export async function processNPPFundInvestments(
     }
     if (txDocs.length > 0) {
       completed.transactions = "uncertain";
-      const result = await db
-        .collection<IndexFundTransaction>(FUND_TRANSACTION_COLLECTION)
-        .insertMany(txDocs);
+      const result =
+        await indexFundTransactionsCollection<IndexFundTransaction>(db).insertMany(txDocs);
       assertBulkWriteCount(
         "NPP transaction inserts",
         Object.keys(result.insertedIds).length,
@@ -886,13 +851,11 @@ export async function processNPPFundInvestments(
       completed.transactions = "confirmed";
     }
 
-    // ── Pass 6 (#992 tranche 4): financialTxLog legs for the same subscriptions.
-    // One index_fund_subscribe row per subscription, subject NPP in the NPP home
-    // currency with fundId/fundCurrency meta. The shadow ledger mirrors the fund
-    // side off that meta when the currencies match (same convention as the
-    // player subscribe rows in fundTxLog.ts); a cross-currency pair stays
-    // single-sided under the fund_subscription reason, never guessed. Bulk path:
-    // every row carries an explicit anchorAmount so no per-row FX read happens.
+    // One index_fund_subscribe row per subscription, subject NPP in home currency
+    // with fundId/fundCurrency meta. Shadow ledger mirrors the fund side off that
+    // meta when currencies match; a cross-currency pair stays single-sided under
+    // the fund_subscription reason, never guessed. AnchorAmount is explicit so no
+    // per-row FX read happens.
     if (planned.length > 0) {
       const thresholds = await loadTxThresholds(db);
       await emitTxBulk(

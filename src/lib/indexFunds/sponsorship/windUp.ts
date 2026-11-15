@@ -12,7 +12,6 @@
  */
 
 import { ObjectId, type Db } from "mongodb";
-import type { Corporation } from "@/lib/db/types";
 import type { IndexFund, IndexFundPosition, IndexFundTransaction } from "@/lib/db/types/indexFund";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import {
@@ -40,11 +39,17 @@ import { processQueuedRedemptions } from "@/lib/indexFunds/processQueuedRedempti
 import { isForexEnabled } from "@/lib/currency/featureFlag";
 import { cancelFundShareOrder } from "@/lib/indexFunds/fundShareOrders";
 import { refundQueuedSubscriptionsForFund } from "@/lib/indexFunds/subscriptions";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import { shareOrdersCollection } from "@/lib/db/repositories/shareOrders";
+import type { Document } from "mongodb";
+import { indexFundCommandsCollection } from "@/lib/db/repositories/indexFundCommands";
+import { indexFundRedemptionQueueCollection } from "@/lib/db/repositories/indexFundRedemptionQueue";
+import { indexFundTransactionsCollection } from "@/lib/db/repositories/indexFundTransactions";
+import { indexFundPositionsCollection } from "@/lib/db/repositories/indexFundPositions";
 
-const FUND_TX = "indexFundTransactions";
-const REDEMPTION_QUEUE = "indexFundRedemptionQueue";
 const UNSETTLED_REDEMPTION_STATUSES = ["queued", "partial", "processing"];
-const POSITIONS = "indexFundPositions";
 
 export type WindUpResult =
   { ok: false; error: string; status: number } | { ok: true; status: IndexFund["status"] };
@@ -63,7 +68,7 @@ export async function beginWindUp(
   if (fund.status === "winding_down" || fund.status === "delisted")
     return { ok: true, status: fund.status };
 
-  const claim = await db.collection<IndexFund>("indexFunds").updateOne(
+  const claim = await indexFundsCollection(db).updateOne(
     { _id: fund._id, status: { $in: ["active", "paused"] } },
     {
       $set: {
@@ -113,10 +118,7 @@ export async function advanceWindDowns(
     errors: [],
   };
 
-  const funds = await db
-    .collection<IndexFund>("indexFunds")
-    .find({ status: "winding_down" })
-    .toArray();
+  const funds = await indexFundsCollection(db).find({ status: "winding_down" }).toArray();
 
   // Funds whose stocks are gone sell their bonds this pass; they complete
   // only once no bond units remain (checked in one batched read below).
@@ -138,12 +140,9 @@ export async function advanceWindDowns(
             note: "Wind-up liquidation",
           });
         }
-        // A holding in a corporation that no longer exists can never be sold:
-        // the sale path skips it, so without this the fund retries the same
-        // dead position every pass and never reaches completion, with no error
-        // to show for it. A dead corporation's shares are worth zero, so write
-        // the position off (as the constituent rebalance already does) and let
-        // a later pass finish the fund.
+        // A holding in a dead corporation can't be sold, so without writing it off the fund
+        // retries the same dead position forever and never completes. Shares are worth zero;
+        // write off (as the constituent rebalance does) so a later pass can finish.
         const afterSale = (await getFundById(db, fund._id)) ?? fund;
         await writeOffDeadConstituentHoldings(db, afterSale, afterSale.holdings ?? []);
         continue;
@@ -162,8 +161,7 @@ export async function advanceWindDowns(
 
   let stillHoldingBonds: Set<string>;
   try {
-    const rows = await db
-      .collection("bonds")
+    const rows = await bondsCollection(db)
       .aggregate<{ _id: unknown }>([
         { $match: { "holders.fundId": { $in: bondPhase.map((f) => f._id) } } },
         { $unwind: "$holders" },
@@ -188,7 +186,7 @@ export async function advanceWindDowns(
     if (stillHoldingBonds.has(String(fund._id))) continue;
     try {
       // Orders and subscriptions both block completion and neither is served
-      // once the fund is winding down, so clear them here (#4219). Cancelling an
+      // once the fund is winding down, so clear them here. Cancelling an
       // order returns its unspent escrow to the fund; refunding a subscription
       // returns the investor's reserved cash.
       await clearSettlementBlockers(db, fund, currentTurn);
@@ -223,8 +221,7 @@ async function clearSettlementBlockers(
   fund: IndexFund,
   currentTurn: number
 ): Promise<void> {
-  const openOrders = await db
-    .collection("shareOrders")
+  const openOrders = await shareOrdersCollection<Document>(db)
     .find({ placerFundId: fund._id, status: "open" }, { projection: { _id: 1 } })
     .toArray();
   for (const order of openOrders) {
@@ -234,9 +231,10 @@ async function clearSettlementBlockers(
 }
 
 async function hasUnsettledRedemptions(db: Db, fund: IndexFund): Promise<boolean> {
-  const count = await db
-    .collection(REDEMPTION_QUEUE)
-    .countDocuments({ fundId: fund._id, status: { $in: UNSETTLED_REDEMPTION_STATUSES } });
+  const count = await indexFundRedemptionQueueCollection<Document>(db).countDocuments({
+    fundId: fund._id,
+    status: { $in: UNSETTLED_REDEMPTION_STATUSES },
+  });
   return count > 0;
 }
 
@@ -278,25 +276,29 @@ export async function completeWindUp(
   currentTurn: number
 ): Promise<number> {
   return withSessionDb(db, async (tx) => {
-    const current = await tx
-      .collection<IndexFund>("indexFunds")
-      .findOne({ _id: fund._id }, { projection: { floatSettlementPlan: 0 } });
+    const current = await indexFundsCollection(tx).findOne(
+      { _id: fund._id },
+      { projection: { floatSettlementPlan: 0 } }
+    );
     if (!current || current.status === "delisted") return 0;
     if (current.status !== "winding_down") throw new Error("Fund is not winding down");
     if (current.holdings.some((holding) => holding.shares > 0))
       throw new Error("Fund still holds stocks");
-    const bonds = await tx
-      .collection("bonds")
-      .countDocuments({ holders: { $elemMatch: { fundId: fund._id, units: { $gt: 0 } } } });
-    const orders = await tx
-      .collection("shareOrders")
-      .countDocuments({ placerFundId: fund._id, status: "open" });
-    const withdrawals = await tx
-      .collection("indexFundRedemptionQueue")
-      .countDocuments({ fundId: fund._id, status: { $in: ["queued", "partial", "processing"] } });
-    const subscriptions = await tx
-      .collection("indexFundCommands")
-      .countDocuments({ "subscription.fundId": fund._id, "subscription.status": "queued" });
+    const bonds = await bondsCollection(tx).countDocuments({
+      holders: { $elemMatch: { fundId: fund._id, units: { $gt: 0 } } },
+    });
+    const orders = await shareOrdersCollection<Document>(tx).countDocuments({
+      placerFundId: fund._id,
+      status: "open",
+    });
+    const withdrawals = await indexFundRedemptionQueueCollection<Document>(tx).countDocuments({
+      fundId: fund._id,
+      status: { $in: ["queued", "partial", "processing"] },
+    });
+    const subscriptions = await indexFundCommandsCollection<Document>(tx).countDocuments({
+      "subscription.fundId": fund._id,
+      "subscription.status": "queued",
+    });
     if (bonds || orders || withdrawals || subscriptions)
       throw new Error("Fund settlement must finish before wind-up");
     return settleWindUp(tx, current, currentTurn);
@@ -305,8 +307,7 @@ export async function completeWindUp(
 
 async function settleWindUp(db: Db, fund: IndexFund, currentTurn: number): Promise<number> {
   const now = new Date();
-  const positions = await db
-    .collection<IndexFundPosition>(POSITIONS)
+  const positions = await indexFundPositionsCollection<IndexFundPosition>(db)
     .find({ fundId: fund._id, units: { $gt: 0 } })
     .toArray();
 
@@ -326,9 +327,8 @@ async function settleWindUp(db: Db, fund: IndexFund, currentTurn: number): Promi
   );
   let holdersPaid = corporatePayout.holdersPaid;
   let distributedAnchor = corporatePayout.distributedAnchor;
-  // Every remaining holder is paid from one bulk write per holder collection and
-  // one receipt write, in position order. The book used to cost one exchange-rate
-  // read, one credit and one receipt per holder.
+  // Every remaining holder is paid from one bulk write per holder collection
+  // and one receipt write, in position order.
   const holderPayouts: FundHolderCashPayout[] = [];
   for (const position of positions) {
     if (position.holderKind === "corporation") continue;
@@ -368,18 +368,17 @@ async function settleWindUp(db: Db, fund: IndexFund, currentTurn: number): Promi
     holdersPaid += payouts.paid.filter((position) => position.holderKind !== "fund_reserve").length;
   }
 
-  await db
-    .collection<IndexFundPosition>(POSITIONS)
-    .updateMany({ fundId: fund._id }, { $set: { units: 0, updatedAt: now } });
+  await indexFundPositionsCollection<IndexFundPosition>(db).updateMany(
+    { fundId: fund._id },
+    { $set: { units: 0, updatedAt: now } }
+  );
 
   const remainingAnchor = Math.max(0, fund.cashAnchor - distributedAnchor);
 
   let returnedToSponsorAnchor = 0;
   let escheatedToReserveAnchor = 0;
   if (fund.sponsorCorporationId && remainingAnchor > 0) {
-    const sponsor = await db
-      .collection<Corporation>("corporations")
-      .findOne({ _id: fund.sponsorCorporationId });
+    const sponsor = await corporationsCollection(db).findOne({ _id: fund.sponsorCorporationId });
     if (sponsor) {
       const fxRate = await getCorpFxRate(db, sponsor);
       if (!Number.isFinite(fxRate) || fxRate <= 0)
@@ -401,7 +400,7 @@ async function settleWindUp(db: Db, fund: IndexFund, currentTurn: number): Promi
           meta: {
             kind: "fund_seed_capital_return",
             fundId: fund._id.toString(),
-            // #992 tranche 3: lets the shadow ledger mirror this row against
+            // Lets the shadow ledger mirror this row against
             // the fund cash account (fail-closed on currency mismatch).
             fundCurrency: fund.anchorCurrencyCode,
             seedCapitalAnchor: fund.seedCapitalAnchor ?? 0,
@@ -427,7 +426,7 @@ async function settleWindUp(db: Db, fund: IndexFund, currentTurn: number): Promi
     }
   }
 
-  await db.collection<IndexFundTransaction>(FUND_TX).insertOne({
+  await indexFundTransactionsCollection<IndexFundTransaction>(db).insertOne({
     _id: new ObjectId(),
     fundId: fund._id,
     kind: "seed_capital_return",
@@ -443,7 +442,7 @@ async function settleWindUp(db: Db, fund: IndexFund, currentTurn: number): Promi
     createdAt: now,
   } as IndexFundTransaction);
 
-  await db.collection<IndexFund>("indexFunds").updateOne(
+  await indexFundsCollection(db).updateOne(
     { _id: fund._id },
     {
       $set: {

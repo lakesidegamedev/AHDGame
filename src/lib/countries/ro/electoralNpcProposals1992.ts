@@ -8,6 +8,11 @@ import {
   passesRoElectoralAmendment,
   ro1992DecisionAvailability,
 } from "./rules/electoralDecision1992";
+import { statesCollection } from "@/lib/db/repositories/states";
+import type { Document } from "mongodb";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
 export async function processRo1992ElectoralNpcProposal(
   db: Db,
   game: GameState,
@@ -26,22 +31,21 @@ export async function processRo1992ElectoralNpcProposal(
     return false;
   const decision = await loadRo1992ElectoralDecision(db, game, turn);
   if (!decision?.available || decision.proposal) return false;
-  const government = await db
-    .collection<GovernmentFormation>("governmentFormations")
-    .findOne({ _id: "RO" }, { projection: { status: 1, pmCharacterId: 1, pmNppId: 1 } });
+  const government = await governmentFormationsCollection(db).findOne(
+    { _id: "RO" },
+    { projection: { status: 1, pmCharacterId: 1, pmNppId: 1 } }
+  );
   if (government?.status !== "formed" || government.pmCharacterId || !government.pmNppId)
     return false;
   const [leader, officials, regions] = await Promise.all([
-    db.collection<NPP>("npps").findOne({ _id: government.pmNppId }, { projection: { party: 1 } }),
-    db
-      .collection<ElectedOfficial>("electedOfficials")
+    nppsCollection(db).findOne({ _id: government.pmNppId }, { projection: { party: 1 } }),
+    electedOfficialsCollection(db)
       .find(
         { countryId: "RO", officeType: { $in: ["deputy", "senator"] } },
         { projection: { officeType: 1, characterId: 1, party: 1, seatsHeld: 1 } }
       )
       .toArray(),
-    db
-      .collection("states")
+    statesCollection<Document>(db)
       .find({ countryId: "RO" }, { projection: { houseDistricts: 1, stateSenateSeats: 1 } })
       .toArray(),
   ]);

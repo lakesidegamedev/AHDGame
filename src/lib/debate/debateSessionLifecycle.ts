@@ -13,6 +13,7 @@ import {
   type DebateStrategy,
 } from "./debateScoring";
 import { resolveDebateSession } from "./resolveDebateSession";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /** Neutral stat block for participants without an allocated sheet (unmigrated / NPP). */
 function neutralStats(): CharacterStats {
@@ -160,9 +161,9 @@ async function applyDebatePractice(
   if (participant.kind !== "character" || !participant.characterId) return;
   const { success } = rollDebatePractice(rng, participant.stats?.debate ?? NEUTRAL_STAT, won);
   if (!success) return;
-  await db
-    .collection("characters")
-    .updateOne({ _id: participant.characterId, stats: { $exists: true } }, [
+  await charactersCollection(db).updateOne(
+    { _id: participant.characterId, stats: { $exists: true } },
+    [
       {
         $set: {
           "stats.debate": {
@@ -171,7 +172,8 @@ async function applyDebatePractice(
           updatedAt: now,
         },
       },
-    ]);
+    ]
+  );
 }
 
 /**

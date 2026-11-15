@@ -1,8 +1,8 @@
 /**
  * Source-pinned synthetic-actor driver for the opposition-research flow
- * (issue #2102).
+ *.
  *
- * The #2040 registry marks `campaigns-player-actions` partial because no
+ * The registry marks `campaigns-player-actions` partial because no
  * campaign-entry or action-spend driver existed; the Bundle 3 collectors
  * record generic actor coverage but never enter candidates, fetch eligible
  * opposition targets, purchase, or retain the target identity and effects —
@@ -38,10 +38,12 @@ import { getOppoDrainPerTurn } from "@/lib/campaigns/opsEffects";
 import { getEffectiveBranchCost } from "@/lib/campaigns/upgradeCosts";
 import { isCampaignUpgradeGeneralPhase } from "@/lib/elections/phases";
 import { assertKnownActorMechanic } from "./actorCoverage";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
 
 /** World preset the bounded experiment runs against. */
 export const OPPO_DRIVER_PRESET = "1953-default";
-/** Processed-turn envelope for the bounded experiment (issue #2102). */
+/** Processed-turn envelope for the bounded experiment. */
 export const OPPO_DRIVER_TURNS = 12;
 /** Turns of post-purchase favorability effects the driver retains. */
 export const OPPO_DRIVER_EFFECT_TURNS = 4;
@@ -246,7 +248,7 @@ export async function runOppositionResearchFlow(
   const mechanicId = assertKnownActorMechanic("campaigns-player-actions");
   const { electionId, actors, gameTime } = options;
 
-  const election = await db.collection<Election>("elections").findOne({ _id: electionId });
+  const election = await electionsCollection(db).findOne({ _id: electionId });
   if (!election) {
     throw new OppoDriverError("race election not found in the sandbox world");
   }
@@ -268,8 +270,7 @@ export async function runOppositionResearchFlow(
     party: actors.party,
   });
 
-  const campaigns = await db
-    .collection<Campaign>("campaigns")
+  const campaigns = await campaignsCollection(db)
     .find({ _id: { $in: [buyerCampaignId, rivalCampaignId] } })
     .toArray();
   const buyerCampaign = campaigns.find((c) => c._id.equals(buyerCampaignId));
@@ -285,13 +286,11 @@ export async function runOppositionResearchFlow(
   }
 
   // Sandbox fixture grant, recorded in the evidence (live worlds accrue).
-  await db
-    .collection<Campaign>("campaigns")
-    .updateOne(
-      { _id: buyerCampaignId },
-      { $set: { funds: options.fixtureFunds, actions: options.fixtureActions } }
-    );
-  const before = await db.collection<Campaign>("campaigns").findOne({ _id: buyerCampaignId });
+  await campaignsCollection(db).updateOne(
+    { _id: buyerCampaignId },
+    { $set: { funds: options.fixtureFunds, actions: options.fixtureActions } }
+  );
+  const before = await campaignsCollection(db).findOne({ _id: buyerCampaignId });
   if (!before) throw new OppoDriverError("buyer campaign unreadable after fixture grant");
   // Snapshot primitives now: the purchase mutates the stored document in
   // place, so holding the reference would alias the post-purchase read and
@@ -358,7 +357,7 @@ export async function runOppositionResearchFlow(
   const expectedFundsDebit = campaignAnchorToLocal(cost.funds, election.countryId ?? "US", rates);
   const expectedActionsDebit = cost.actions;
 
-  const after = await db.collection<Campaign>("campaigns").findOne({ _id: buyerCampaignId });
+  const after = await campaignsCollection(db).findOne({ _id: buyerCampaignId });
   if (!after) throw new OppoDriverError("buyer campaign unreadable after purchase");
   const actualFundsDebit = beforeFunds - after.funds;
   const actualActionsDebit = beforeActions - after.actions;

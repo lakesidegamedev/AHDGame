@@ -6,16 +6,8 @@
  */
 import type { Db } from "mongodb";
 import type { ObjectId } from "mongodb";
-import type {
-  Bond,
-  Character,
-  Corporation,
-  CorporateSector,
-  State,
-  StateMetrics,
-} from "@/lib/db/types";
+import type { Corporation, CorporateSector, State, StateMetrics } from "@/lib/db/types";
 import type { ImperialCharacter } from "@/lib/db/types/imperialCharacter";
-import type { CentralBank } from "@/lib/db/types/centralBank";
 import { ApiError } from "@/lib/api/errors";
 import { corporationDissolutionAgeBlock } from "@/lib/corporations/dissolutionAgeGuard";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
@@ -51,6 +43,16 @@ import {
 } from "@/lib/constants/commodities";
 import { NATIONAL_SCOPE_IDS } from "@/lib/constants/nationalScope";
 import { buildStateLookups, stateGdpAnchorBlend } from "@/lib/turn/commodity/sectorLedger";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 
 export type CommodityGlobalDeltaPreview = {
   commodity: CommodityType;
@@ -116,9 +118,8 @@ export async function previewQuickDissolve(
   const corpIdStr = corporation._id.toString();
 
   const [outstandingBonds, heldBonds, fxByCurrency] = await Promise.all([
-    db.collection<Bond>("bonds").countDocuments({ corporationId: corporation._id, matured: false }),
-    db
-      .collection<Bond>("bonds")
+    bondsCollection(db).countDocuments({ corporationId: corporation._id, matured: false }),
+    bondsCollection(db)
       .find({ "holders.corporationId": corporation._id, matured: false })
       .toArray(),
     loadFxRatesByCurrency(db),
@@ -142,10 +143,9 @@ export async function previewQuickDissolve(
     );
   }
 
-  // Cross-corp equity holdings are distributed in-kind on dissolution (NOT
-  // cashed at market price — that was the money-mint), so they no longer
-  // contribute to the cash payout preview. Held bonds (redeemed at face),
-  // liquidCapital, and the operating-sector salvage below form the returned cash.
+  // Cross-corp equity holdings are distributed in-kind on dissolution, not
+  // cashed, so they never enter the cash payout preview. Held bonds, liquid
+  // capital, and sector salvage form the returned cash.
 
   // Operating sectors leave the corporation on dissolution (to NPP successors,
   // or the unowned market), so a salvage fraction of their capitalized NPV is realized as cash — mirrors the
@@ -173,7 +173,7 @@ export async function previewQuickDissolve(
     )
   );
 
-  const ceoChar = await db.collection<Character>("characters").findOne({ _id: corporation.ceoId });
+  const ceoChar = await charactersCollection(db).findOne({ _id: corporation.ceoId });
   const forexEnabled = await isForexEnabled();
 
   let returnedCapitalHome = returnedCapitalCorp;
@@ -193,9 +193,8 @@ export async function previewQuickDissolve(
     }
   }
 
-  // Bug #0540 fix: compute the per-shareholder allocation so the preview can
-  // surface what the CEO actually receives (their pro-rata share) rather than
-  // the total pool, plus the corporate and publicFloat slices for context.
+  // Compute the per-shareholder allocation so the preview surfaces what the CEO
+  // actually receives (pro-rata share) rather than the total, plus corp and publicFloat slices.
   const shareholderPoolAnchor = corpLiquidCapitalToAnchor(
     returnedCapitalCorp,
     corporation,
@@ -212,20 +211,17 @@ export async function previewQuickDissolve(
     .filter((id): id is ObjectId => id !== undefined);
   const [shareholderChars, imperialShareholderChars, corpShareholderDocs] = await Promise.all([
     regularShareholderIds.length > 0
-      ? db
-          .collection<Character>("characters")
+      ? charactersCollection(db)
           .find({ _id: { $in: regularShareholderIds } }, { projection: { _id: 1, name: 1 } })
           .toArray()
       : [],
     imperialShareholderIds.length > 0
-      ? db
-          .collection<ImperialCharacter>("imperialCharacters")
+      ? imperialCharactersCollection(db)
           .find({ _id: { $in: imperialShareholderIds } }, { projection: { _id: 1, name: 1 } })
           .toArray()
       : [],
     corpShareholderIds.length > 0
-      ? db
-          .collection<Corporation>("corporations")
+      ? corporationsCollection(db)
           .find({ _id: { $in: corpShareholderIds } }, { projection: { _id: 1, name: 1 } })
           .toArray()
       : [],
@@ -247,23 +243,21 @@ export async function previewQuickDissolve(
     ).length + ((corporation.publicFloat ?? 0) > 0 ? 1 : 0);
   const ceoIsSoleShareholder = totalRealHolders <= 1 && !!ceoRow;
 
-  const gameState = await db
-    .collection<{
-      _id: string;
-      currentTurn: number;
-      preset?: string;
-      stateGdpAnchoredDemand?: boolean;
-    }>("gameState")
-    .findOne({ _id: "current" });
+  const gameState = await gameStateCollection<{
+    _id: string;
+    currentTurn: number;
+    preset?: string;
+    stateGdpAnchoredDemand?: boolean;
+  }>(db).findOne({ _id: "current" });
   const currentTurn = gameState?.currentTurn ?? 0;
 
-  const gdpPhaseConfig = await db
-    .collection<{ _id: string; stateGdpAnchorPhaseStartTurn?: number }>("gameConfig")
-    .findOne({ _id: "default" }, { projection: { stateGdpAnchorPhaseStartTurn: 1 } });
+  const gdpPhaseConfig = await gameConfigCollection<{
+    _id: string;
+    stateGdpAnchorPhaseStartTurn?: number;
+  }>(db).findOne({ _id: "default" }, { projection: { stateGdpAnchorPhaseStartTurn: 1 } });
 
   const [allSectors, allCorps, allStates, stateMetrics, centralBanks] = await Promise.all([
-    db
-      .collection<CorporateSector>("corporateSectors")
+    corporateSectorsCollection(db)
       .find(
         {},
         {
@@ -280,8 +274,7 @@ export async function previewQuickDissolve(
         }
       )
       .toArray(),
-    db
-      .collection<Corporation>("corporations")
+    corporationsCollection(db)
       .find(
         {},
         {
@@ -295,15 +288,13 @@ export async function previewQuickDissolve(
         }
       )
       .toArray(),
-    db
-      .collection<State>("states")
+    statesCollection(db)
       .find({}, { projection: { _id: 1, countryId: 1, gdp: 1 } })
       .toArray(),
-    db
-      .collection<StateMetrics>("macroMetrics")
+    macroMetricsCollection(db)
       .find({}, { projection: { "economic.gdpGrowth.value": 1 } })
       .toArray(),
-    db.collection<CentralBank>("centralBanks").find({}).toArray(),
+    centralBanksCollection(db).find({}).toArray(),
   ]);
 
   const natcorpIds = new Set(

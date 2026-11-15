@@ -21,6 +21,7 @@ import { processNppEndorsements } from "./npp/endorsements";
 import { processBillVoting } from "./npp/billVoting";
 import { processStateBillVoting } from "./npp/stateBillVoting";
 import { processSlateResponses, syncPersistentSlateAssignments } from "./npp/slateResponses";
+import { workerConfig } from "@/lib/config/worker";
 
 // ─── Main Export ───────────────────────────────────────────────────────────────
 
@@ -40,10 +41,9 @@ async function runNppTurn(
 }> {
   console.log("[Turn] NPP behavior processing started");
 
-  // Env-gated sub-step timing (SIM_CORP_TIMING=1), same mechanism as
-  // processCorporationTurn — zero-cost when off, used to find which of this
-  // phase's steps dominate its per-turn cost.
-  const timingOn = process.env.SIM_CORP_TIMING === "1";
+  // Env-gated sub-step timing (SIM_CORP_TIMING=1), matching
+  // processCorporationTurn; zero-cost when off.
+  const timingOn = workerConfig.simCorpTiming();
   const timings: Array<[string, number]> = [];
   let _tPrev = timingOn ? Date.now() : 0;
   // Always feeds the persisted phase sub-steps (#2689).
@@ -68,9 +68,9 @@ async function runNppTurn(
   });
   mark("processNppMortality");
 
-  if (mortality.deaths > 0) {
+  if (mortality.replacements > 0 || mortality.birthYearsAssigned > 0) {
     console.log(
-      `[Turn] NPP mortality: ${mortality.deaths} deaths, ${mortality.replacements} successors seated`
+      `[Turn] NPP mortality: ${mortality.deaths} deaths, ${mortality.retirements} retirements, ${mortality.replacements} successors seated, ${mortality.birthYearsAssigned} birth years assigned`
     );
   }
 
@@ -132,10 +132,9 @@ async function runNppTurn(
 }
 
 /**
- * NPP behavior phase. Runs under per-phase snapshots of the autonomy level and
- * country access (#2690): the per-actor autonomy gates otherwise re-read the
- * `gameState` and `countryGameStates` documents on every call. Nothing in this
- * phase writes either, which is what makes the snapshots valid.
+ * NPP behavior phase. Runs under per-phase snapshots of autonomy level and
+ * country access so gates do not re-read documents on every call. Nothing in
+ * this phase writes either, which makes the snapshots valid.
  */
 export async function processNPPTurn(
   now: Date,

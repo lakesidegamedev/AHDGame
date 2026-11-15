@@ -1,0 +1,49 @@
+{
+  "config": {
+    "governmentType": "parliamentaryRepublic",
+    "regionLabel": "Region",
+    "legislature": {
+      "name": "Eduskunta",
+      "lowerChamber": {
+        "key": "eduskunta",
+        "name": "Eduskunta",
+        "shortName": "Eduskunta",
+        "seats": 200,
+        "description": "200 members elected by open-list proportional representation for four-year terms — the unicameral parliament Finland has kept since 1906."
+      }
+    },
+    "officeTypes": [
+      {
+        "key": "primeMinister",
+        "label": "Prime Minister",
+        "labelPlural": "Prime Ministers",
+        "isExecutive": true,
+        "isSubNational": false
+      },
+      {
+        "key": "president",
+        "label": "President",
+        "labelPlural": "Presidents",
+        "isExecutive": true,
+        "isSubNational": false,
+        "isHeadOfState": true
+      },
+      {
+        "key": "deputy",
+        "label": "Member of Parliament",
+        "labelPlural": "Members of Parliament",
+        "chamberKey": "eduskunta",
+        "isExecutive": false,
+        "isSubNational": false
+      },
+      {
+        "key": "centralBankChair",
+        "label": "Governor of the Bank of Finland",
+        "labelPlural": "Governors of the Bank of Finland",
+        "isExecutive": false,
+        "isSubNational": false
+      }
+    ],
+    "lowerElectionSystem": { "snapElectionsAllowed": true }
+  }
+}

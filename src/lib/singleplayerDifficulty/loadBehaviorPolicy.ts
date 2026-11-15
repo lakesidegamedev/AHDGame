@@ -17,6 +17,7 @@
 import type { Db } from "mongodb";
 import type { GameState, SingleplayerDifficulty } from "@/lib/db/types/gameState";
 import { nppBehaviorPolicy, type NppBehaviorPolicy } from "./rules/behavior";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export type { NppBehaviorPolicy };
 
@@ -24,9 +25,10 @@ export type { NppBehaviorPolicy };
 export async function loadSingleplayerDifficulty(
   db: Db
 ): Promise<SingleplayerDifficulty | undefined> {
-  const state = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { projection: { "singleplayerConfig.difficulty": 1 } });
+  const state = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { projection: { "singleplayerConfig.difficulty": 1 } }
+  );
   return state?.singleplayerConfig?.difficulty;
 }
 

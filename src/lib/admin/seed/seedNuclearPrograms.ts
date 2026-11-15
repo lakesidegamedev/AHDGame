@@ -6,16 +6,11 @@ import { getNuclearProgramsCollection } from "@/lib/db/collections/nuclearProgra
 /**
  * Historical nuclear-programme seeding for the founding cold-war powers.
  *
- * Era-aware: for the world's seed year, each capable country adopts exactly
- * the tree nodes whose historical adoption year has already passed, and gets
- * a game-scale stockpile interpolated between anchor years. The data is inert
- * while the Cold War subsystem is off (nothing reads it), so seeding is
- * unconditional and harmless.
- *
- * NEVER clobbers: a country whose doc already has adopted nodes is skipped,
- * so re-runs and live-world migrations cannot wipe player progress. A world
- * reset drops this runtime collection and calls this seeder for the new era,
- * preventing arsenal state from leaking across presets.
+ * Era-aware: for the seed year, each capable country adopts the tree nodes
+ * whose historical adoption year has passed, with a game-scale stockpile
+ * interpolated between anchor years. Inert while the Cold War subsystem is off,
+ * so seeding is unconditional. Never clobbers: countries with adopted nodes are
+ * skipped so re-runs and migrations cannot wipe player progress.
  */
 
 /** node key -> historical adoption year, per country. */

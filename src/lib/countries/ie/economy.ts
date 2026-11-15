@@ -5,27 +5,11 @@ import type { LegalStructureId } from "@/lib/constants/legalStructures";
 
 /** WDI 1991 current-LCU GDP, restored from EUR to IEP at the fixed conversion. */
 export const IE_NOMINAL_GDP_1991_IEP = 39_277_360_000 * 0.787564;
-
 /**
- * IE's money.
- *
- * ⚠ GENERATED FROM `__snapshots__/ie.pre-move.json`, NOT TRANSCRIBED.
- * Regenerate with:
- *
- *     npx tsx scripts/countries/gen-country-economy.ts IE --force
- *
- * ⚠ THE EXCHANGE RATE IS NOT HERE, DELIBERATELY. Currency IDENTITY is this
- * country's fact and moved; a rate is a fact about a PAIR of countries in a
- * YEAR, and belongs beside the rates it must stay consistent with. Moving one
- * into a country folder would give it a value whose meaning only exists relative
- * to the table it left.
- *
- * ⚠ EVERY FIGURE BELOW IS IN LOCAL CURRENCY and is not comparable to another
- * country's. Do not reconcile one toward its neighbours.
- *
- * ⚠ NO MONETARY BASELINE FOR 1953: IE has no entry in
- * those era tables and takes the base baseline. The key is ABSENT rather than
- * defaulted, because inventing one would turn a fallback into an authored value.
+ * GENERATED FROM __snapshots__/ie.pre-move.json. Regenerate with:
+ * npx tsx scripts/countries/gen-country-economy.ts IE --force
+ * Exchange rate lives with the rates it must stay consistent with, not here.
+ * Every figure is in local currency; do not reconcile across countries.
  */
 
 const currencyCode = "IEP" as CurrencyCode;

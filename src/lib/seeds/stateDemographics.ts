@@ -1,4 +1,4 @@
-import type { StateDemographics, StateDemographicGroup } from "@/lib/db/types";
+import type { CensusGroupView, StateDemographicGroup } from "@/lib/db/types";
 import type { DemographicModifiers } from "@/lib/db/types/stateDemographicTurnout";
 import type { CountryId } from "@/lib/constants/countries";
 import {
@@ -7,6 +7,7 @@ import {
   getEraComposition,
 } from "./demographicCategories";
 import type { EraId } from "./presetSelector";
+import { roundedDemographicShares } from "./rules/demographicShares";
 import { stateCensusData as importedCensusData } from "./stateCensusData";
 
 import type { Layer1Config, Layer1SeedOverride } from "./stateDemographicsPure";
@@ -104,14 +105,14 @@ function generateStateDemographics(
     positions?: Record<string, Record<string, { economicLean: number; socialLean: number }>>;
     turnout?: Layer1SeedOverride["turnout"];
   } = {}
-): StateDemographics {
+): CensusGroupView {
   // Turnout overrides are authored alongside positions and only applied when
   // the Layer-1 path is on (the legacy path is left untouched).
   const override: Layer1SeedOverride | undefined = opts.layer1Positions
     ? { positions: opts.positions, turnout: opts.turnout }
     : undefined;
   const comp = getEraComposition(era);
-  const populations = deriveGroupPopulations(config, era, override);
+  const populations = roundedDemographicShares(deriveGroupPopulations(config, era, override));
   const groups: Record<string, StateDemographicGroup> = {};
 
   for (const id of comp.groupIds) {
@@ -123,7 +124,7 @@ function generateStateDemographics(
         deriveGroupLeanFromLayer1(id, config, era, opts.positions, override, stateId)
       : deriveGroupLean(id, config, era);
     groups[id] = {
-      population: Math.round(populations[id] * 100) / 100,
+      population: populations[id],
       ...lean,
       turnout: derivedTurnout, // always store derived turnout from underlying Layer 1
     };
@@ -225,7 +226,7 @@ export function registerAndGenerate(
     positions?: Record<string, Record<string, { economicLean: number; socialLean: number }>>;
     turnout?: Layer1SeedOverride["turnout"];
   } = {}
-): StateDemographics {
+): CensusGroupView {
   stateCensusDataByEra[era][stateId] = config;
   return generateStateDemographics(stateId, config, era, "US", opts);
 }
@@ -240,7 +241,7 @@ export function generateStateDemographicsForTest(
     positions?: Record<string, Record<string, { economicLean: number; socialLean: number }>>;
     turnout?: Layer1SeedOverride["turnout"];
   }
-): StateDemographics {
+): CensusGroupView {
   return generateStateDemographics(stateId, config, era, "US", opts);
 }
 
@@ -250,7 +251,7 @@ for (const [stateId, config] of Object.entries(importedCensusData)) {
 }
 
 // Generate demographics from imported data
-export const stateDemographics: StateDemographics[] = Object.entries(importedCensusData).map(
+export const stateDemographics: CensusGroupView[] = Object.entries(importedCensusData).map(
   ([stateId, config]) => registerAndGenerate(stateId, config, "2019")
 );
 

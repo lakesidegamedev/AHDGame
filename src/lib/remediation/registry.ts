@@ -2,17 +2,14 @@
 //
 // Adding a defect:
 //   1. Write the DETECTOR first. If you cannot count the bad rows, you cannot
-//      prove the heal worked, and the defect does not belong here yet.
+//      prove the heal worked.
 //   2. Create src/lib/remediation/defects/<id>.ts exporting `defect: Defect`.
 //   3. Import and append below.
 //   4. Pin codeFix.requiredCommit once the code half merges, so the code gate
-//      can refuse to heal an env the fix has not reached.
+//      refuses to heal an env the fix has not reached.
 //
-// What does NOT belong here:
-//   - Schema cutovers and one-shot data moves. Those are migrations
-//     (src/lib/migrations/registry.ts) and are allowed to be non-idempotent.
-//   - Anything you cannot re-run safely. If re-running is not a no-op, it is a
-//     migration by definition.
+// Not here: schema cutovers and one-shot, non-idempotent data moves are
+// migrations (src/lib/migrations/registry.ts).
 
 import { defect as orphanNullPartySeats } from "./defects/AHD-951-orphan-null-party-seats";
 import { defect as duplicateSectors } from "./defects/AHD-duplicate-sectors";
@@ -43,7 +40,7 @@ import { defect as wholePlantsConversion } from "./defects/AHD-whole-plants-conv
 import type { Defect } from "./types";
 
 export const DEFECTS: Defect[] = [
-  // #951 — vacate bug stranded seatsHeld on holder-less blocs; tallies skip
+  //, vacate bug stranded seatsHeld on holder-less blocs; tallies skip
   // null-party rows so the seats read as vacant.
   orphanNullPartySeats,
   // Cross-border sectors stamped with the owner's HQ country; a later takeover
@@ -51,38 +48,36 @@ export const DEFECTS: Defect[] = [
   duplicateSectors,
   defenceProcurementOveraward,
   privateMarketCapHistory,
-  // Ticket #1102: the Poon Choi Act was law for 67 turns while a tax-slider
+  // The Poon Choi Act was law for 67 turns while a tax-slider
   // enactment bug left UK sales tax and tariffs at 0.
   ukVatRevenueGap,
-  // Ticket #1124: BR's 1953 inflation target was the Vargas CPI, so the Taylor
+  // BR's 1953 inflation target was the Vargas CPI, so the Taylor
   // rule chased 10% inflation and BRL ran away. Bond maturities are compulsory,
   // so holders were force-converted out of BRL at the corrupted rate.
   brlForcedMaturityRestitution,
-  // Ticket #1266: turn-568 TR repudiation double-charged holder cash on top
+  // Turn-568 TR repudiation double-charged holder cash on top
   // of the paper loss. Repays the second charge to the 19 debited holders.
   trRepudiationRestitution,
   commandEconomyPrivateSectorOwnership,
   tinkyStaleVoteExcess,
   usMarineLotProgress,
   defenceSupplierWindfall,
-  // Ticket #1267: pre-fix hostile merger deleted Vermont Finance's live bank
-  // with the shell. Restitutes Hunt Oil's owner residual and the household
-  // book stranded out of the money supply.
+  // Pre-fix hostile merger deleted Vermont Finance's live bank with the
+  // shell. Restitutes Hunt Oil's owner residual and the household book
+  // stranded out of the money supply.
   vfBankRestitution,
-  // Incident #1694: central bank liquidity injections booked interest-bearing
+  // Incident: central bank liquidity injections booked interest-bearing
   // debt on banks that never asked for it; the interest failed or revoked
-  // them. Refunds the interest and reopens the closed banks. Applied to prod
-  // 2026-10-27 (run_2026-10-27044343_c9ba214a).
+  // them. Refunds the interest and reopens the closed banks.
   injectedBankRestoration,
-  // Incident #1694, Greenbaum Group: a solvent bond-heavy bank failed the
-  // cash-only run test (code fix #5062). Owner-approved 2026-10-27: return the
+  // Incident, Greenbaum Group: a solvent bond-heavy bank failed the
+  // cash-only run test (code fix). Return the
   // 3.005B posted capital from the USD insurance fund and reopen the bank.
-  // Applied to prod 2026-10-27 (run_2026-10-27224005_552bfcf6).
   greenbaumRestoration,
-  // Ticket #1749: the turn-601 frozen deposit resolution left Monroe Indrustry's
+  // The turn-601 frozen deposit resolution left Monroe Indrustry's
   // universal bank closed with its household book moved to the central bank.
   monroeBankRestoration,
-  // Ticket #1271: extraction is the one SOE sector gated on a per-state
+  // Extraction is the one SOE sector gated on a per-state
   // `country:state` capacity key, so a country merge strands every state it
   // absorbs. Reunification left the eleven western Laender with no extraction
   // sector and the Ruhr, the Saar and the Niedersachsen gas fields unreachable.
@@ -93,19 +88,19 @@ export const DEFECTS: Defect[] = [
   // Same ticket, third shape: split-off National Corporations inherited the
   // sovereign issuer's `type: "financial"` instead of the sector they operate.
   natCorpSplitSectorType,
-  // Ticket #1372: older party mergers left their regional Org/Reg rows live.
+  // Older party mergers left their regional Org/Reg rows live.
   // Modern mergers delete them; this releases the legacy Reg shares and
   // removes the stale regional organizations.
   mergedPartyOrg,
-  // Ticket #1448: canonical freight billing charged a full day's bill every
+  // Canonical freight billing charged a full day's bill every
   // hourly turn. Credits overcharged buyers once; haulers keep their surplus.
   freightOverbillingRestitution,
   // Dissolutions used to delete their plants into the unowned pool. Rebuilds
   // NPP successors for past exits from the restore tokens they left behind.
   dissolutionNppSuccessors,
   // Sovereign maturity payouts whose unapplied credit legs named a shared
-  // central bank by country id or a deleted holder stayed partial forever.
-  // #4754 resolves legs to live targets; this re-points any that still strand.
+  // central bank by country id or a deleted holder stayed partial forever;
+  // this re-points any that still strand.
   sovereignMaturityStrandedPayout,
   // Matured sovereign bonds a short Treasury neither repaid nor refinanced.
   // The fixed bond turn sells a refunding issue and pays every holder; this

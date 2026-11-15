@@ -1,16 +1,13 @@
 // src/lib/turn/npp/frontierEntryCandidate.ts
 /**
- * Capped frontier-entry experiment glue for the NPP turn path (issue #991).
+ * Capped frontier-entry experiment glue for the NPP turn path.
  *
- * Deep turn helper with a narrow interface: the decision engine in
- * `nppCorporationBehavior.ts` calls three functions (shell state, candidate
- * evaluation, placement settlement) and keeps the priced founding block
- * shared. Everything experiment-specific lives here; flag off reads as absent
- * and the decision is byte-identical to the legacy path.
+ * The decision engine calls three functions (shell state, candidate
+ * evaluation, placement settlement); everything experiment-specific lives
+ * here. Flag off reads as absent and the decision is byte-identical to the
+ * legacy path.
  *
- * Shell zone module: operates on decision-local values and the per-turn slot
- * sets the shell owns. The experiment contract itself (relaxable reasons,
- * cohort/controller caps, guardrails) lives in the portable rules module
+ * The experiment contract itself lives in the portable rules module
  * `economy/frontierEntryExperiment`; this file only threads it through the
  * turn.
  */
@@ -83,39 +80,12 @@ function controllerKeyOf(corp: Corporation): string {
 /**
  * Evaluate the experiment fallback for one corporation.
  *
- * When the flag is on, a policy-cleared candidate rejected only on an
- * expectational gate (profitability, margin band, nominal cash surplus) gets
- * one priced evaluation through the SAME founding block: the same real quote,
- * the same post-floor affordability, the same headroom/size/per-turn-cap
- * gates, the same cash debit and unowned-pool draw. Only the relaxable
- * reasons and the measured-use pacing opportunity qualify. State-controlled, glutted, retail-paused,
- * cap-rejected, and candidate-less rejections never reach
- * here. A profitable, uncovered positive-use candidate outside the ordinary
- * stagger may use the bounded experiment slot. Priced affordability stays
- * binding: an override never
- * funds a plant the corp cannot pay for.
- *
- * Slot check only at this stage: the founding block prices the quote, and a
- * placement still requires its affordability gate to pass. Ordinary entries
- * consume the same cohort/controller slots (recorded at settlement), so a
- * cohort that already entered this turn is ineligible.
- *
- * Clause map onto `frontierEntryEligible` in
- * economy/frontierEntryExperiment (the contract definition, unit-tested
- * there): experimentEnabled comes from the flag-gated turn state,
- * policyCleared holds because the candidate survived the
- * partition/state-control/deposit filters, the set checks are the
- * cohort/controller caps, and foundingCostPriced/financed are the
- * affordability gate in the founding block operating on the real debited
- * amounts.
- *
- * The funnel reason names the FIRST failing gate, so a relaxable reason does
- * not prove the later gates passed: an unprofitable corp may also be
- * logistics-capped, retail-paused, or glutted. Re-verify
- * every non-expectational pre-pricing gate explicitly, mirroring the
- * diagnostic inputs. Anything failing here keeps its own reason and never
- * reaches the priced block. (The per-turn cap needs no check here: the
- * founding-block predicate still enforces it.)
+ * A policy-cleared candidate rejected only on an expectational gate gets one
+ * priced evaluation through the same founding block (same quote, debit,
+ * affordability and cap gates). The funnel reason names the FIRST failing
+ * gate, so re-verify every non-expectational pre-pricing gate explicitly;
+ * anything failing keeps its own reason. Priced affordability stays binding:
+ * an override never funds a plant the corp cannot pay for.
  */
 export function evaluateFrontierCandidate(args: {
   turnState: FrontierEntryTurnState | null | undefined;
@@ -168,18 +138,16 @@ export function evaluateFrontierCandidate(args: {
  * Settle experiment slot accounting after the founding block.
  *
  * A placement consumes one state-country cohort slot and one controller slot
- * for the rest of the turn, whether it entered through the ordinary path or
- * the experiment fallback. A placement counts as the experiment's only when
+ * for the rest of the turn. A placement counts as the experiment's only when
  * the founding block ran because of the fallback (neither ordinary nor
- * exceptional entry held): note the ordinary target alone cannot distinguish
- * them, since a corp that earned a candidate but missed the nominal surplus
- * band still prices that same candidate through the experiment. Experiment
+ * exceptional entry held); the ordinary target alone cannot distinguish them,
+ * since a corp that earned a candidate but missed the nominal surplus band
+ * still prices that same candidate through the experiment. Experiment
  * placements carry the trial marker so the rollback report is computable from
  * persisted funnel diagnostics; the capacity observation keeps the
  * authoritative gate verdict (the relaxed reason), so the funnel still
- * measures the un-overridden pipeline. No protection is attached to the
- * founded sector: it divests, mothballs, and fails exactly like any ordinary
- * founding.
+ * measures the un-overridden pipeline. No protection attaches to the founded
+ * sector: it divests and fails exactly like an ordinary founding.
  */
 export function settleFrontierEntryPlacement(args: {
   turnState: FrontierEntryTurnState | null | undefined;

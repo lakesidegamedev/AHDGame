@@ -3,27 +3,16 @@ import type { PartySeed } from "@/lib/seeds/reference/politicalParties";
 /**
  * Japan default political parties.
  *
- * Economic/social positions on -5 to +5 scale, calibrated to Japanese politics:
- *   LDP:      centre-right economically, socially conservative (dominant ruling party)
- *   CDP:      centre-left economically, progressive socially (main opposition; 2019-only)
- *   Komeito:  centrist economically and socially (LDP coalition partner, Soka Gakkai)
- *   JCP:      far-left economically, progressive socially
- *   Ishin:    right-leaning economically (neoliberal reform), mildly conservative socially (2019-only)
- *   DPFP:     centrist economically, mildly progressive socially (reformist centre; 2019-only)
- *   RYO:      Liberal Party / Jiyūtō - Yoshida's ruling conservatives in 1953
- *   JDP:      Japan Democratic Party / Hatoyama-Progressive lineage - 1953 opposition
- *   JSP:      left-economically, progressive socially (1953 + 1991 - main opposition pre-1996)
- *   DSP:      centrist economically, mildly conservative socially (1991-only - Sōhyō-aligned)
- *
+ * Economic/social positions on -5 to +5 scale, calibrated to Japanese politics.
  * seedOrder determines the sequentialId assignment order within JP.
- * Abbreviations must match party IDs used in getMajorPartiesForRegion and majorPartyIds.
+ * Abbreviations must match party IDs used in getMajorPartiesForRegion and
+ * majorPartyIds.
  *
- * 2027 note: the six continuing parties (LDP, CDP, Komeito, JCP, Ishin,
- * DPFP) are all valid for 2027-default. Post-2024 newcomers (Reiwa, Sanseito,
- * Conservative Party of Japan) are deliberately NOT added: their slugs,
- * majorPartyIds entries, and polling anchors live in shared files outside
- * the country-local scope, and seeding bare PartySeed rows with zero
- * regional org would be worse than omitting them. Revisit when the shared
+ * 2027 note: the six continuing parties (LDP, CDP, Komeito, JCP, Ishin, DPFP)
+ * are all valid for 2027-default. Post-2024 newcomers are deliberately NOT
+ * added: their slugs, majorPartyIds entries, and polling anchors live in shared
+ * files outside the country-local scope, and seeding bare PartySeed rows with
+ * zero regional org would be worse than omitting them. Revisit when the shared
  * party registry supports a 2027 roster.
  */
 export const jpParties: PartySeed[] = [

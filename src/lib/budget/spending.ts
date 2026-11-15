@@ -1,3 +1,4 @@
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 /**
  * Federal / state spending projections derived from enacted laws.
  *
@@ -38,8 +39,19 @@ import { getNationalDocId } from "@/lib/constants/nationalScope";
 import type { StateMetrics } from "@/lib/db/types/stateMetrics";
 import { keepLatestActiveLawPerType } from "./keepLatestActiveLawPerType";
 import { nonLawSpendingAmount } from "./rules/nonLawSpending";
+import { applyCategoryScale } from "./rules/fiscalStabilizer";
+import { applyAgingCostScale } from "@/lib/societyPressures/rules/agingCosts";
 import { loadSovereignCouponBooks } from "@/lib/bonds/sovereignCouponBook";
 import { sovereignStockAnnualService } from "@/lib/budget/rules/sovereignDebtService";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { enactedLawsCollection } from "@/lib/db/repositories/enactedLaws";
+import { regionalBudgetsCollection } from "@/lib/db/repositories/regionalBudgets";
+import { annualFormulaGrantPool } from "./rules/formulaGrants";
+import { formulaGrants } from "@/lib/seeds/reference/formulaGrants";
+import { usesCaProvincialFinance } from "@/lib/countries/ca/rules/provincialServices";
 
 // Re-exported so existing importers of `./spending` keep working.
 export { keepLatestActiveLawPerType } from "./keepLatestActiveLawPerType";
@@ -66,12 +78,12 @@ const CONFIG_DERIVED_TRANSFER_FIELD: Partial<
   CN: "centralTransferGrant",
   DE: "federalEqualizationGrant",
   // DD funds its Länder from the same config-derived equalization pool DE does
-  // (see `federalEqualizationGrantPerCapita` on the DD config), and had the same
-  // hole: the 16 Länder were each credited a transfer that `spending.stateGrants`
-  // recorded as DDM 0, so DDM 8.0B/yr showed up as regional income with no national
-  // expense (#1323). Booked under the plan-economy lapse rule below — DD is
-  // marketization level 0, so an allocation a Land never draws down lapses
-  // rather than being charged to the centre.
+  // (see `federalEqualizationGrantPerCapita` on the DD config). Without booking
+  // the grant here, the 16 Länder each receive a transfer that
+  // `spending.stateGrants` records as DDM 0, showing regional income with no
+  // national expense. Booked under the plan-economy lapse rule below: an
+  // allocation a Land never draws down lapses rather than being charged to the
+  // centre.
   DD: "federalEqualizationGrant",
   // UK joined this set when the political-legislation v2 catalog retired
   // `uk_local_government_funding`: with no isGrant law left to book it, the
@@ -146,8 +158,7 @@ export function normalizeStateSpending(
 }
 
 async function getCountryPopulation(db: Db, countryId: CountryId): Promise<number> {
-  const states = await db
-    .collection<State>("states")
+  const states = await statesCollection(db)
     .find({ countryId }, { projection: { population: 1 } })
     .toArray();
   return states.reduce((sum, state) => sum + (state.population ?? 0), 0);
@@ -161,9 +172,7 @@ export async function resolveNationalGdpPerCapita(
   db: Db,
   countryId: CountryId
 ): Promise<number | undefined> {
-  const budget = await db
-    .collection<FederalBudget>("federalBudget")
-    .findOne({ _id: getNationalBudgetId(countryId) });
+  const budget = await federalBudgetCollection(db).findOne({ _id: getNationalBudgetId(countryId) });
   if (!budget?.gdp) return undefined;
   const population = await getCountryPopulation(db, countryId);
   return population > 0 ? budget.gdp / population : undefined;
@@ -182,9 +191,10 @@ export async function resolveNationalMedianIncome(
 ): Promise<number | undefined> {
   const nationalDocId = getNationalDocId(countryId);
   if (!nationalDocId) return undefined;
-  const doc = await db
-    .collection<StateMetrics>("macroMetrics")
-    .findOne({ _id: nationalDocId }, { projection: { "economic.medianIncome.value": 1 } });
+  const doc = await macroMetricsCollection(db).findOne(
+    { _id: nationalDocId },
+    { projection: { "economic.medianIncome.value": 1 } }
+  );
   const value = doc?.economic?.medianIncome?.value;
   return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : undefined;
 }
@@ -211,6 +221,7 @@ export async function calculateFederalLawAnnualCosts(
   activeLaws: EnactedLaw[];
   eraYear: number | null;
   commandEconomyEnabled: boolean;
+  preset?: string | null;
 }> {
   const budgetCountryId = (budget.countryId ||
     (budget._id === COUNTRY_CONFIGS.UK.id
@@ -223,16 +234,17 @@ export async function calculateFederalLawAnnualCosts(
   };
   const [rawLaws, population, nationalMedianIncome, eraContext, v2Base, gameConfig] =
     await Promise.all([
-      db.collection<EnactedLaw>("enactedLaws").find(nationalQuery).toArray(),
+      enactedLawsCollection(db).find(nationalQuery).toArray(),
       getCountryPopulation(db, budgetCountryId),
       resolveNationalMedianIncome(db, budgetCountryId),
       hoistedEraContext ? Promise.resolve(hoistedEraContext) : getEraContext(db),
       budgetCountryId in COST_INCOME_ANCHORS
         ? countryFiscalBase(db, budgetCountryId)
         : Promise.resolve(undefined),
-      db
-        .collection<{ _id: string; commandEconomyEnabled?: boolean }>("gameConfig")
-        .findOne({ _id: "default" }, { projection: { commandEconomyEnabled: 1 } }),
+      gameConfigCollection<{ _id: string; commandEconomyEnabled?: boolean }>(db).findOne(
+        { _id: "default" },
+        { projection: { commandEconomyEnabled: 1 } }
+      ),
     ]);
   const { year: eraYear, incomeBandIndexByCountry } = eraContext;
   const nationalGdpPerCapita = population > 0 ? budget.gdp / population : undefined;
@@ -262,6 +274,7 @@ export async function calculateFederalLawAnnualCosts(
     activeLaws,
     eraYear,
     commandEconomyEnabled: gameConfig?.commandEconomyEnabled === true,
+    preset: eraContext.preset,
   };
 }
 
@@ -280,7 +293,7 @@ export async function calculateFederalSpending(
     (budget._id === COUNTRY_CONFIGS.UK.id
       ? COUNTRY_CONFIGS.UK.id
       : COUNTRY_CONFIGS.US.id)) as CountryId;
-  const { items, eraYear, commandEconomyEnabled } = await calculateFederalLawAnnualCosts(
+  const { items, eraYear, commandEconomyEnabled, preset } = await calculateFederalLawAnnualCosts(
     db,
     budget,
     hoistedEraContext
@@ -311,6 +324,15 @@ export async function calculateFederalSpending(
     }
   }
 
+  // Formula receipts are appropriated annually, alongside the regional books.
+  if (countryHasFeature("usLib", budgetCountryId) && preset === "2027-default")
+    stateGrants = annualFormulaGrantPool(
+      budget.spending?.stateGrants,
+      budget.revenue.total,
+      formulaGrants
+    );
+  if (usesCaProvincialFinance(budgetCountryId, preset)) stateGrants = budget.spending.stateGrants;
+
   // The 1991 Russian law catalog covers only a portion of the observed
   // general-government envelope. Keep the calibrated non-law portion alongside
   // enacted costs so later law changes still move total spending.
@@ -334,13 +356,11 @@ export async function calculateFederalSpending(
   const transferGrantField = CONFIG_DERIVED_TRANSFER_FIELD[budgetCountryId];
   if (transferGrantField && !items.some(({ law }) => law.isGrant)) {
     const stateIds = (
-      await db
-        .collection<State>("states")
+      await statesCollection(db)
         .find({ countryId: budgetCountryId }, { projection: { _id: 1 } })
         .toArray()
     ).map((s) => s._id);
-    const regionalBudgets = await db
-      .collection<RegionalBudget>("regionalBudgets")
+    const regionalBudgets = await regionalBudgetsCollection(db)
       .find({ _id: { $in: stateIds } })
       .toArray();
     // A PLANNED economy allocates rather than disburses: an allocation a
@@ -363,9 +383,10 @@ export async function calculateFederalSpending(
   if (usesUKDevolution(budgetCountryId)) {
     const signal = await loadNorthernIrelandSignal(db);
     if (signal?.hasOpened && signal.status !== "closed") {
-      const region = await db
-        .collection<State>("states")
-        .findOne({ _id: "NIR", countryId: budgetCountryId }, { projection: { gdp: 1 } });
+      const region = await statesCollection(db).findOne(
+        { _id: "NIR", countryId: budgetCountryId },
+        { projection: { gdp: 1 } }
+      );
       byCategory[NI_SECURITY_SPENDING_KEY] = northernIrelandSecurityCost(
         signal,
         (region?.gdp ?? 0) * 1_000_000
@@ -389,7 +410,14 @@ export async function calculateFederalSpending(
   if (capacityRepair > 0) byCategory[CAPACITY_REPAIR_SPENDING_KEY] = capacityRepair;
 
   return normalizeFederalSpending({
-    byCategory,
+    // Cuts from an AI government's consolidation package persist as a
+    // per-category scale, so they survive this rebuild from enacted laws. In
+    // the 2027 world the pension and health lines first follow the age
+    // structure (absent elsewhere, so a no-op).
+    byCategory: applyCategoryScale(
+      applyAgingCostScale(byCategory, budget.agingCostPressure),
+      budget.fiscalConsolidation?.categoryScale
+    ),
     stateGrants,
     debtInterest,
     total: 0,
@@ -415,13 +443,12 @@ export async function calculateStateSpendingDetail(
   lawCosts: Array<{ law: EnactedLaw; annualCost: number; category: string }>;
 }> {
   const enactedLaws = keepLatestActiveLawPerType(
-    await db
-      .collection<EnactedLaw>("enactedLaws")
+    await enactedLawsCollection(db)
       .find({ scope: "state", stateId, repealedAt: { $exists: false } })
       .toArray()
   );
 
-  const state = await db.collection<State>("states").findOne({ _id: stateId, countryId });
+  const state = await statesCollection(db).findOne({ _id: stateId, countryId });
   // The cost-scale ramp is a national-era factor, so it uses the country's national
   // GDP-per-capita even for state laws (the per-capita cost itself still uses the
   // state population below).
@@ -474,10 +501,10 @@ export async function calculateStateSpendingDetail(
  */
 export async function syncFederalBudgetSpending(db: Db, countryId: CountryId): Promise<void> {
   const budgetId = getNationalBudgetId(countryId);
-  const budget = await db.collection<FederalBudget>("federalBudget").findOne({ _id: budgetId });
+  const budget = await federalBudgetCollection(db).findOne({ _id: budgetId });
   if (!budget) return;
 
-  // Same stock-service rule as the turn and fiscal-year paths (#2089): bonds
+  // Same stock-service rule as the turn and fiscal-year paths: bonds
   // at their locked coupons, any uncovered remainder at the marginal rate.
   const couponBooks = await loadSovereignCouponBooks(db, [countryId]);
   const debtInterest = sovereignStockAnnualService({
@@ -490,7 +517,8 @@ export async function syncFederalBudgetSpending(db: Db, countryId: CountryId): P
   if (spending.total === 0) return;
 
   const surplus = (budget.revenue?.total ?? 0) - spending.total;
-  await db
-    .collection<FederalBudget>("federalBudget")
-    .updateOne({ _id: budgetId }, { $set: { spending, surplus, updatedAt: new Date() } });
+  await federalBudgetCollection(db).updateOne(
+    { _id: budgetId },
+    { $set: { spending, surplus, updatedAt: new Date() } }
+  );
 }

@@ -52,10 +52,9 @@ export function snakeOrder(model: PresMapModel, left: string, right: string): Sn
 }
 
 /**
- * The road to the electoral majority: every state as a segment sized by its
- * electoral votes and painted as on the map, in order of how safely it leans
- * from one leading ticket to the other, with the majority line marked. The
- * state where the line falls is the one that decides the race.
+ * Every state as a segment sized by electoral votes and ordered by lean
+ * safety, with the majority line marked; the state the line falls in
+ * decides the race.
  */
 export function CollegeSnake({
   model,

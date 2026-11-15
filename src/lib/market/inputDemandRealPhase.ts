@@ -3,17 +3,13 @@ import type { GameConfig } from "@/lib/db/types";
 /**
  * Input demand follows real output, not the price level.
  *
- * A sector's input demand is `revenue x recipe rate / base price`. Revenue is
- * nominal and carries the sector's realized price premium (clearing factor
- * over sold fraction: scarcity memory, market balance, the nominal index), so
- * a short market raised its buyers' revenue, which raised their input demand,
- * which deepened the shortages upstream. Over this many turns the revenue that
- * drives input demand is divided by the sector's own price leg, so demand
- * tracks the volume a sector actually makes.
+ * Nominal revenue carries the sector's realized price premium, so scarce
+ * markets inflate buyers' revenue and deepen shortages upstream. After
+ * INPUT_DEMAND_REAL_PHASE_TURNS, revenue is divided by the sector's price leg
+ * so demand tracks actual volume.
  *
- * Plants worlds are exempt (`effectiveInputDemandRealPhase`): their persisted
- * revenue is a base-priced capacity nameplate already scaled by utilization,
- * so it carries no price leg to remove.
+ * Plants worlds are exempt (`effectiveInputDemandRealPhase`): their revenue is
+ * base-priced capacity scaled by utilization, with no price leg to remove.
  */
 export const INPUT_DEMAND_REAL_PHASE_TURNS = 24;
 

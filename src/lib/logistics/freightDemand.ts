@@ -6,17 +6,13 @@ type Balance = { supply: number; demand: number };
 /**
  * Book the sourcing pass's price-tolerant haul TEU as freight demand.
  *
- * The sourcing pass includes both TEU that moved and final, price-tolerant
- * requests refused by the origin state's capacity. That demand enters all
- * three levels the market reads before clearing: byState (the local seller's
- * book and stored stateDemand), byCountry (aggregated before sourcing, so it
- * needs its own add), and global. Haul TEU and freight supply share the era
- * unit basis. Haul TEU has been booked as real freight demand since the
- * logistics recalibration (ticket #1039). Freight is never itself shipped
- * (FREIGHT_CLASS_BY_COMMODITY.freight = null), so this cannot feed back into
- * the same pass; see interstate logistics plan step 5 for the intended
- * follow-on. Higher freight prices damp the next turn's request through
- * shipping cost. Money still does not move; shipping stays unbilled to buyers.
+ * Includes both TEU that moved and final, price-tolerant requests refused by
+ * the origin state's capacity. Enters all three levels the market reads before
+ * clearing: byState (local seller's book and stored stateDemand), byCountry
+ * (aggregated before sourcing, so it needs its own add), and global. Freight is
+ * never itself shipped, so this cannot feed back into the same pass. Higher
+ * freight prices damp the next turn's request through shipping cost. Money
+ * still does not move; shipping stays unbilled to buyers.
  */
 export function applyFreightHaulDemand(
   freightDemandTeuByState: ReadonlyMap<string, Record<FreightClass, number>>,

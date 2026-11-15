@@ -420,14 +420,9 @@ export interface TerrainDef {
 /**
  * Terrain effects, keyed by terrain FAMILY.
  *
- * This table used to be keyed by the ids of the four retired static theaters
- * (`afghan`, `nicaragua`, `angola`, `ogaden`). Conflicts are dynamic now, so every
- * live front's id missed the lookup and `terrainFactor` returned 1 — meaning no
- * per-domain or per-trait terrain effect applied anywhere in the game.
- *
- * The families are the same ones `createConflict.terrainProfile` already matches on,
- * so terrain has one vocabulary across the system and a new conflict is covered the
- * moment it is created rather than needing an entry of its own.
+ * The families are the same ones `createConflict.terrainProfile` matches on, so
+ * terrain has one vocabulary across the system and a new conflict is covered
+ * the moment it is created rather than needing an entry of its own.
  */
 export type TerrainFamily = "highland" | "littoral" | "arid" | "temperate" | "maritime";
 
@@ -546,23 +541,12 @@ export const ROLES: Role[] = [
   },
   {
     /**
-     * MEASURED, and the postmortem's framing did not survive it. "Nothing caps what
-     * bleeds ... past the cap every extra soldier adds full casualties and zero power"
-     * is not what this table does: a formation held in depth already bled about a
-     * twelfth of one standing in the line, against an engagement discount of a tenth.
-     * The overflow was never bleeding like frontline troops.
-     *
-     * What was real is much smaller. Bleed per point of contribution was 0.15/0.10 =
-     * 1.50 against the frontline's 1.35/1.00, so depth cost about 11% more per point of
-     * combat power than the line did. A mild inversion, not the reported catastrophe.
-     *
-     * 0.135 is exact parity: 0.135/0.10 = 1.35, the frontline's own ratio. Depth is now
-     * neither punished nor rewarded for being out of the line, and the strategic value
-     * of holding a reserve is carried by `sustain`, which is the mechanic built for it.
-     * Deliberately NOT 0.10, which was tried: that makes depth 26% CHEAPER per point of
-     * contribution than the line and, stacked on top of sustain, turns holding an army
-     * back into the dominant play. That is the Soviet air force sitting at 90 readiness
-     * behind the front for the whole war, rewarded rather than merely tolerated.
+     * 0.135 is exact parity: cas/engage matches the frontline ratio (1.35/1.00),
+     * so depth is neither punished nor rewarded for being out of the line. The
+     * strategic value of holding a reserve is carried by `sustain`. Deliberately
+     * NOT 0.10: that makes depth ~26% cheaper per point of contribution than the
+     * line, and stacked on sustain turns holding an army back into the dominant
+     * play.
      */
     id: "rear",
     label: "Rear Area",
@@ -728,22 +712,20 @@ export function combatValue(u: CombatUnit, nm: NatMods, gm: GenMods): number {
 }
 
 /**
- * What a formation costs in FRONTAGE — `combatValue` without the readiness curve.
+ * What a formation costs in FRONTAGE: `combatValue` without the readiness curve.
  *
- * Frontage is a claim about physical width: how many formations can stand on this
- * ground at once. Readiness is how much fight is left in them, and a worn division
- * occupies the same country as a rested one. Charging the front at `combatValue` made
- * the two move together, with two consequences neither system wanted: restoring a
- * worn army's readiness SHRANK the line it could hold, so every readiness fix silently
- * re-tightened whatever `FRONT_CAPACITY_BASE` had been calibrated against; and a force
- * could widen its own frontage by letting itself degrade.
+ * Frontage is physical width, how many formations can stand on this ground at
+ * once. Readiness is how much fight is left, and a worn division occupies the
+ * same ground as a rested one. Charging at `combatValue` moved the two together:
+ * restoring readiness shrank the line, and a force could widen its own frontage
+ * by degrading.
  *
- * Everything else about a formation still costs room — base platform, veterancy, tech,
- * equipment, doctrine and its general all remain in `effPower`/`doctrineMult`. Only the
- * readiness term, which is a state rather than a size, comes out.
+ * Everything else still costs room: base platform, veterancy, tech, equipment,
+ * doctrine and general remain in `effPower`/`doctrineMult`. Only readiness, a
+ * state not a size, comes out.
  *
- * Used ONLY by `planEngagement` to decide who stands in the line. What those formations
- * are then WORTH in the fight is still `combatValue`, readiness included.
+ * Used ONLY by `planEngagement` to decide who stands in the line. What those
+ * formations are WORTH is still `combatValue`, readiness included.
  */
 export function frontageCost(u: CombatUnit, nm: NatMods, gm: GenMods): number {
   return Math.round(effPower(u) * doctrineMult(u, nm, gm));
@@ -755,11 +737,9 @@ export function effUpkeep(u: CombatUnit, nm: NatMods, gm: GenMods, countryScale:
 }
 
 /**
- * Terrain multiplier on a unit's contribution, clamped 0.6..1.4 (design terrainFactor).
- *
- * Takes the FRONT, not its id: terrain is resolved from `front.terrain`, which every
- * conflict carries (`conflictToFront`). Keying off the id only ever worked for the four
- * static theaters that no longer exist.
+ * Terrain multiplier on a unit's contribution, clamped 0.6..1.4.
+ * Takes the front so terrain comes from `front.terrain`, which every
+ * conflict carries; every caller has a front, not a static theater id.
  */
 export function terrainFactor(
   front: Pick<Front, "terrain"> | undefined,
@@ -778,24 +758,19 @@ export function terrainFactor(
 /**
  * How much of a naval formation reaches a land battle, by hull class and sea access.
  *
- * Deliberately NOT folded into `terrainFactor`. That function clamps to 0.6..1.4, which
- * encodes a rule worth keeping -- terrain never swings a unit more than +/-40%. Whether
- * a hull can touch the battle at all is a different question and has to go below 0.6.
+ * Deliberately NOT folded into `terrainFactor`, which clamps to 0.6..1.4 to keep
+ * terrain swings within +/-40%. Whether a hull can touch the battle at all is a
+ * different question and must go below 0.6.
  *
- * Only `Carrier Strike Group` carries `strategic` among naval types (the other holders
- * are air, rocket and space domain), so scoping to the naval domain makes that trait a
- * clean carrier test without inventing new data.
+ * Only `Carrier Strike Group` carries `strategic` among naval types, so scoping to
+ * the naval domain is a clean carrier test.
  *
- * `marine` is deliberately NOT covered. Marines are amphibious GROUND troops and fight
- * ashore perfectly well, so they take no reach penalty; the terrain table already
- * weights them where it should (`maritime` 1.15, `highland` 0.95). Do not "fix" this by
- * folding marine in with the hulls.
+ * `marine` is deliberately not covered: marines are amphibious GROUND troops and
+ * take no reach penalty. Do not fold marine in with the hulls.
  *
- * `Amphibious Group` lands on the escort side of the split, which is a deliberate
- * simplification rather than an oversight: it puts troops ashore, so it is worth more
- * than a frigate on a coastal front and nothing at all inland, and one number cannot say
- * both. If amphibious assault ever needs its own band, that is a third class, not a
- * reclassification of this one.
+ * `Amphibious Group` lands on the escort side by simplification: it puts troops
+ * ashore, so it is worth more than a frigate on a coastal front and nothing
+ * inland. A separate band would be a third class, not a reclassification.
  */
 /**
  * How much combat value this ground can hold in contact, from its terrain.

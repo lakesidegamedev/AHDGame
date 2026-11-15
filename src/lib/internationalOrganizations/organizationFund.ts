@@ -20,8 +20,8 @@ import {
   type InternationalOrganizationId,
 } from "@/lib/constants/internationalOrganizations";
 import { getOrganizationFundsCollection } from "@/lib/db/collections";
-import type { FederalBudget } from "@/lib/db/types";
 import { loadOrganizationDef } from "@/lib/internationalOrganizations/service";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 /** Per-turn USD dues a member owes given its USD GDP + the org's annual rate. */
 export function memberDueUsd(gdpUsd: number, duesRateAnnual: number): number {
@@ -31,7 +31,7 @@ export function memberDueUsd(gdpUsd: number, duesRateAnnual: number): number {
 
 /**
  * Convert a country's local-currency amount to USD (USD = local × rate).
- * `preset` selects the era's rate (refs #3778) — see `getGdpAnchorRate`.
+ * `preset` selects the era's rate; see `getGdpAnchorRate`.
  */
 export function localToUsd(country: CountryId, amountLocal: number, preset?: string): number {
   if (!(amountLocal > 0)) return 0;
@@ -134,9 +134,10 @@ export async function chargeOrganizationDues(
   return withOrganizationCashBatch(db, context, async (batch) => {
     const preset = context?.preset ?? (await loadWorldPreset(db));
     const now = new Date();
-    const budget = db.collection<FederalBudget>("federalBudget");
+    const budget = federalBudgetCollection(db);
     let totalFund = 0;
     const fundedCash = batch?.treasuryCashLedgerEnabled === true;
+    let fundReady = false;
     for (const m of memberGdpUsd) {
       const dueUsd = memberDueUsd(m.gdpUsd, duesRateAnnual);
       if (dueUsd <= 0) continue;
@@ -144,34 +145,31 @@ export async function chargeOrganizationDues(
       const dueLocal = Math.round(dueUsd / rate); // member's own currency (debit)
       if (dueLocal <= 0) continue;
       // CREDIT ONLY WHAT WAS ACTUALLY DEBITED. A member with no `federalBudget`
-      // row matches nothing here, and crediting the fund anyway would mint money
-      // the reconciler cannot attribute to anyone. That was unreachable while
-      // dues were restricted to player-enabled countries, which all have a row —
-      // it became reachable when non-voting members started paying dues in
-      // organisations that levy no tribute (#1156).
-      //
-      // Tribute takes the other branch for the same case and counts it as an
-      // explicit `minted` figure. Dues have no such accounting, so an unmodelled
-      // member simply does not contribute rather than contributing from nowhere.
-      // Credit the fund in its (founding) currency.
+      // row matches nothing here; crediting the fund anyway would mint money
+      // the reconciler cannot attribute. Non-voting members in organisations
+      // that levy no tribute can reach this case, so an unmodelled member
+      // simply does not contribute. Credit the fund in its (founding) currency.
       if (fundedCash && batch) {
         const treasuryRate = organizationTreasuryLocalPerAnchor(batch, m.countryId);
         const fundRate = organizationLocalPerAnchor(batch, currencyCountryId);
         const fundAmount = (dueLocal / treasuryRate) * fundRate;
-        const fundCollection = await getOrganizationFundsCollection(db);
-        await fundCollection.updateOne(
-          { organizationId },
-          {
-            $setOnInsert: {
-              _id: new ObjectId(),
-              organizationId,
-              balanceLocal: 0,
-              duesRateAnnual,
-              currencyCountryId,
+        if (!fundReady) {
+          const fundCollection = await getOrganizationFundsCollection(db);
+          await fundCollection.updateOne(
+            { organizationId },
+            {
+              $setOnInsert: {
+                _id: new ObjectId(),
+                organizationId,
+                balanceLocal: 0,
+                duesRateAnnual,
+                currencyCountryId,
+              },
             },
-          },
-          { upsert: true }
-        );
+            { upsert: true }
+          );
+          fundReady = true;
+        }
         const result = await settleOrganizationFundedCashMove(db, batch, {
           key: `organization-dues:${batch.turn}:${organizationId}:${m.countryId}`,
           kind: "organization_dues",
@@ -197,22 +195,6 @@ export async function chargeOrganizationDues(
         });
         if (result.status === "applied") {
           totalFund += fundAmount;
-          await witnessOrganizationCash(db, batch, {
-            kind: "government",
-            ref: m.countryId,
-            countryId: m.countryId,
-            amount: -dueLocal,
-            site: "dues_treasury",
-            now,
-          });
-          await witnessOrganizationCash(db, batch, {
-            kind: "org",
-            ref: organizationId,
-            countryId: currencyCountryId,
-            amount: fundAmount,
-            site: "dues_fund",
-            now,
-          });
         }
       } else {
         const debit = await budget.updateOne(

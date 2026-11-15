@@ -7,19 +7,15 @@ import { componentsForStrategy, gradeCeilingFor } from "@/lib/military/arsenalCo
 import { rawLotsFromSector } from "@/lib/military/arsenal";
 import { contractLotsThisTurn, normalizeGrade } from "@/lib/military/defenceLotEconomics";
 
-/**
+/*
  * ONE answer to "can this plant fill this order", shared by every path that asks.
  *
- * The award picker, the award route, the CEO's accept, and the delivery sweep each used to
- * carry their own version of the question, and they disagreed. That is the whole shape of the
- * #1076/#1083/#1087/#1099/#1108/#1127 ticket cluster: a state-owned supplier the picker
- * offered and delivery refused; a non-USD domestic plant the picker hid because a missing
- * `liquidCurrencyCode` was read as USD; a plant that could be awarded a contract it had no
- * certified line for. AWARDABLE MUST MEAN DELIVERABLE, and that only holds if there is one
- * function.
+ * The award picker, award route, CEO accept, and delivery sweep must not each carry
+ * their own version, or they disagree. AWARDABLE MUST MEAN DELIVERABLE, and that
+ * only holds if there is one function.
  *
- * Pure: no database, no `mongodb` import, so the corporation page and the ministerial picker
- * can both call it on documents they already hold.
+ * Pure: no database, so the corporation page and ministerial picker can both call
+ * it on documents they already hold.
  */
 
 export type FillIneligibilityReason =
@@ -68,15 +64,12 @@ type SupplierSector = Pick<CorporateSector, "strategyId" | "revenue">;
 /**
  * Whether this corporation may be paid out of this country's appropriation at all.
  *
- * Domestic-only is a payment-safety constraint, not a simplification. Paying a mismatched
- * corp would move one currency into a balance denominated in another with no conversion
- * anywhere. A missing `liquidCurrencyCode` is inferred from the corp's country - the same
- * rule `resolveCorpLiquidCurrencyCode` uses everywhere else - not treated as USD. The USD
- * default hid every non-US domestic plant from the award picker (ticket #1087).
+ * Domestic-only is a payment-safety constraint: paying a mismatched corp would move
+ * one currency into a balance denominated in another with no conversion. A missing
+ * `liquidCurrencyCode` is inferred from the corp's country, not treated as USD.
  *
- * State ownership is NOT a factor here and never was: a National Corporation banks in its own
- * country's currency like any other, and the only thing its lack of a player CEO changes is
- * who has to click Accept.
+ * State ownership is not a factor: a National Corporation banks in its own country's
+ * currency like any other.
  */
 export function canSupply(corp: SupplierCorp, countryId: string): boolean {
   if (corp.countryId !== countryId) return false;

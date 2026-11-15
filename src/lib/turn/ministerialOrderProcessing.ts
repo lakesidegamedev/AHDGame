@@ -1,8 +1,7 @@
-import type { FederalBudget } from "@/lib/db/types";
 // src/lib/turn/ministerialOrderProcessing.ts
 import { getDb } from "@/lib/mongodb";
 import { ObjectId, type AnyBulkWriteOperation } from "mongodb";
-import type { Character, StateMetrics, UnifiedCabinetMember, CabinetSetting } from "@/lib/db/types";
+import type { StateMetrics, UnifiedCabinetMember, CabinetSetting } from "@/lib/db/types";
 import { statMultiplier } from "@/lib/stats/statMultiplier";
 import { NEUTRAL_STAT } from "@/lib/stats/statsConstants";
 import { getCabinetMembersCollection } from "@/lib/db/collections/cabinetMembers";
@@ -60,34 +59,31 @@ import { INFRA_POSITION_BY_COUNTRY } from "@/lib/constants/cabinetInfra";
 import { applyTreasuryEffects } from "./treasuryEffects";
 import { THRESHOLDS } from "@/lib/utils/metricScoring";
 import { getBankId } from "@/lib/centralBank/helpers";
-import type { CentralBank } from "@/lib/db/types/centralBank";
 import type { MilitaryUnit } from "@/lib/db/types/militaryUnit";
 import type { CountryId } from "@/lib/constants/countries";
 import { expireMinisterialOrders } from "@/lib/cabinet/ministerialOrderLifecycle";
+import { getCharactersCollection } from "@/lib/db/collections/characters";
+import { getFederalBudgetCollection } from "@/lib/db/collections/federalBudget";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { militaryUnitsCollection } from "@/lib/db/repositories/militaryUnits";
 
 /**
- * Maximum |modifier| any single metric can receive per turn from the
- * combined effect of all active cabinet orders + tier settings + regional
- * targets + advocacy. Without this cap a fully-staffed cabinet stacks
- * 10+ active orders that each $inc the same metric every turn, producing
- * 26%+ runaway gdpGrowth (bug #0571) before the slow policyEffects decay
- * can pull the metric back. The cap stays a HARD per-turn ceiling on combined
- * cabinet pressure (the #0571 guarantee); it was raised 0.05 → 0.08 in #0800 to
- * let the now-non-reabsorbed effects register a little more strongly, while still
- * bounding any single metric well below the uncapped runaway.
+ * Maximum |modifier| any single metric can receive per turn from the combined
+ * effect of all active cabinet orders, tier settings, regional targets, and
+ * advocacy. This is a HARD per-turn ceiling: without it, a fully-staffed
+ * cabinet stacking 10+ active orders each $inc-ing the same metric produces
+ * runaway gdpGrowth before policyEffects decay can pull the metric back.
  *
- * Exported so the rounding-plateau regression test
- * (cabinetEffectPlateau.test.ts) measures the SAME applied per-turn step the
- * turn phase uses, rather than a drifting copy.
+ * Exported so the plateau regression test measures the SAME applied per-turn
+ * step the turn phase uses, rather than a drifting copy.
  */
 export const MAX_PER_METRIC_MODIFIER_PER_TURN = 0.08;
 
 /**
- * Uniform strength multiplier applied to every cabinet metric effect (orders,
- * tier settings, regional targets, advocacy, emergencies) before the per-metric
- * cap. A single tuning knob (vs editing ~200 authored magnitudes into non-round
- * values) so the whole cabinet system can be balanced in one place. #0800 set it
- * to 1.25 (+25%) once the rounding-plateau fix made effects actually register.
+ * Uniform strength multiplier applied to every cabinet metric effect before the
+ * per-metric cap. One tuning knob instead of editing ~200 authored magnitudes.
  * Does NOT touch inflation-pressure effects (routed to the central bank before
  * this point) or non-metric values (cost/duration/thresholds).
  */
@@ -162,8 +158,9 @@ export async function processMinisterialOrders(currentTurn: number): Promise<{
   ].map((s) => new ObjectId(s));
   const statecraftMultByChar = new Map<string, number>();
   if (orderCharIds.length > 0) {
-    const issuers = await db
-      .collection<Character>("characters")
+    const issuers = await (
+      await getCharactersCollection(db)
+    )
       .find({ _id: { $in: orderCharIds } }, { projection: { _id: 1, stats: 1 } })
       .toArray();
     for (const c of issuers) {
@@ -185,9 +182,8 @@ export async function processMinisterialOrders(currentTurn: number): Promise<{
     politicalDirect?: Record<string, number>;
   }
 
-  // Ticket #1129: effects are kept SPLIT BY CHANNEL rather than summed into one
-  // bucket per country. The macro half re-merges them immediately below (its
-  // behaviour is unchanged), but the political half is capped per channel, so a
+  // Effects are kept SPLIT BY CHANNEL rather than summed per country. The macro
+  // half re-merges them below, but the political half is capped per channel, so a
   // saturated order book no longer makes a newly built estate worth zero.
   const effectsByCountry: Record<
     string,
@@ -273,8 +269,7 @@ export async function processMinisterialOrders(currentTurn: number): Promise<{
         advocacyActive: 1,
       })
       .toArray(),
-    db
-      .collection<{ _id: string; countryId: string }>("states")
+    statesCollection<{ _id: string; countryId: string }>(db)
       .find({}, { projection: { _id: 1, countryId: 1 } })
       .toArray(),
   ]);
@@ -382,7 +377,7 @@ export async function processMinisterialOrders(currentTurn: number): Promise<{
   // charged for it would be a standing asymmetry between the two sweeps.
   const appropriationPreset = await getGameStatePresetOrDefault(db);
   const defenseUnitsByCountry = new Map<string, MilitaryUnit[]>();
-  for (const unit of await db.collection<MilitaryUnit>("militaryUnits").find({}).toArray()) {
+  for (const unit of await militaryUnitsCollection(db).find({}).toArray()) {
     const units = defenseUnitsByCountry.get(unit.countryId) ?? [];
     units.push(unit);
     defenseUnitsByCountry.set(unit.countryId, units);
@@ -390,8 +385,9 @@ export async function processMinisterialOrders(currentTurn: number): Promise<{
   const defenseCountryIds = Object.keys(DEFENSE_POSITION_BY_COUNTRY);
   const defenseBudgetByCountry = new Map(
     (
-      await db
-        .collection<FederalBudget>("federalBudget")
+      await (
+        await getFederalBudgetCollection(db)
+      )
         .find(
           { countryId: { $in: defenseCountryIds } },
           {
@@ -451,11 +447,9 @@ export async function processMinisterialOrders(currentTurn: number): Promise<{
     // Nuclear stockpile accrual, right after refit so it competes for the same
     // appropriation AFTER conventional deliveries have settled: a nation short
     // of rifles equips the army before it grows the arsenal of last resort.
-    // Gates itself on coldWarEnabled and the procurement kill switch via the
-    // preloaded flags; countries with no programme return without a write.
+    // Gates itself on the procurement kill switch via the preloaded flag; countries with no programme return without a write.
     if (defenceYear != null) {
       await applyNuclearProduction(db, cid as CountryId, defenceYear, currentTurn, {
-        coldWarEnabled: defenceGameState?.coldWarEnabled,
         defenceProcurementPaused: defenceGameState?.defenceProcurementPaused,
       });
     }
@@ -463,9 +457,7 @@ export async function processMinisterialOrders(currentTurn: number): Promise<{
     // a write when the programme was never opened. Deliberately not behind the
     // procurement pause: covert funding is off the books by design.
     if (COVERT_CAPABLE.includes(cid as CountryId)) {
-      await applyCovertNuclearTurn(db, cid as CountryId, currentTurn, {
-        coldWarEnabled: defenceGameState?.coldWarEnabled,
-      });
+      await applyCovertNuclearTurn(db, cid as CountryId, currentTurn);
     }
   }
 
@@ -497,24 +489,21 @@ export async function processMinisterialOrders(currentTurn: number): Promise<{
 
   // 4b-ii. Resolve declared theater offensives (Conflicts). Declarations made on an
   // earlier turn resolve now against the target's real units, persisting outcomes to
-  // both nations' live units + reports. Gated upstream by conflictsEnabled at declare time.
+  // both nations' live units + reports.
   await resolveBattleDeclarations(db, currentTurn);
 
-  // 4b-ii-a. Resolve proxy wars pinned at a pole for three turns. AFTER the battles,
-  // so a front pushed off the pole this turn has already cleared its stamp and does
-  // not resolve for a side that no longer holds it.
+  // 4b-ii-a. Resolve proxy wars pinned at a pole for three turns. Runs AFTER battles
+  // so a front pushed off the pole this turn has cleared its stamp.
   //
-  // A turn step and not a check inside `applyOccupation`, because that only runs when
-  // a battle MOVES the front: once a side is pinned at 100 the front cannot move
-  // further, nothing would re-enter it, and the timer would never fire. The hold has
-  // to be measured on turns where nobody fought at all. It reads `conflictsEnabled`
-  // itself — it is the only conflict step with no declaration upstream to gate it.
+  // Must be a turn step, not a check inside `applyOccupation`: once pinned at 100
+  // the front cannot move, so nothing would re-enter it and the timer would never
+  // fire.
   await resolveColdWarHolds(db, currentTurn);
 
   // 4b-ii-a-i. Finish non-proxy wars that reached a pole before their 24-turn
   // minimum and still hold it now. This runs after battles for the same reason as
   // the proxy hold sweep: a counterattack this turn must clear the pole first.
-  await resolveMatureWarPoles(db, currentTurn, defenceGameState?.conflictsEnabled === true);
+  await resolveMatureWarPoles(db, currentTurn);
 
   // 4b-ii-a-ii. White-peace any won war whose dictate window has lapsed. A real
   // sweep rather than lazy expiry: nothing forces a victor to open the conflict
@@ -540,7 +529,7 @@ export async function processMinisterialOrders(currentTurn: number): Promise<{
   // still under its own general. Deliberately covers EVERY country, not just those
   // with a defense seat — simulated nations must sustain their forces too.
   const reinforcementUnitsByCountry = new Map<string, MilitaryUnit[]>();
-  for (const unit of await db.collection<MilitaryUnit>("militaryUnits").find({}).toArray()) {
+  for (const unit of await militaryUnitsCollection(db).find({}).toArray()) {
     const units = reinforcementUnitsByCountry.get(unit.countryId) ?? [];
     units.push(unit);
     reinforcementUnitsByCountry.set(unit.countryId, units);
@@ -561,10 +550,7 @@ export async function processMinisterialOrders(currentTurn: number): Promise<{
   // a seat's condition-drift write touches only its own estates, so reading them
   // all up front sees exactly what each per-seat read would have seen.
   const [estateBudgets, allEstates] = await Promise.all([
-    db
-      .collection<FederalBudget>("federalBudget")
-      .find({ countryId: { $in: estateCountryIds } })
-      .toArray(),
+    (await getFederalBudgetCollection(db)).find({ countryId: { $in: estateCountryIds } }).toArray(),
     getCabinetEstatesCollection(db)
       .find({ countryId: { $in: estateCountryIds as CountryId[] } })
       .toArray(),
@@ -643,15 +629,10 @@ export async function processMinisterialOrders(currentTurn: number): Promise<{
       // Apply the uniform strength multiplier, THEN cap the per-turn modifier per
       // metric so cabinet stacking can't produce runaway compounding against the
       // slow policyEffects decay loop.
-      // Macro paths only. The political half of a cabinet order used to $inc a
-      // legacy doc; no country has one, so it wrote nowhere.
-      //
-      // National political deltas are snapshotted ONCE below
-      // (`mapCabinetDeltasToPolitical(bucket.national)`). Folding them here
-      // would double-drive the same effect and multiply it by the region count.
-      // Regional political deltas (estates, regional orders/targets) are
-      // snapshotted separately as `regional[stateId]` so a Field Office in CA
-      // tilts only CA.
+      // Macro paths only; political deltas are snapshotted once below
+      // (`mapCabinetDeltasToPolitical(bucket.national)`) to avoid double-driving,
+      // and regional deltas are snapshotted separately as `regional[stateId]`
+      // so a Field Office in CA tilts only CA.
       const macroInc: Record<string, number> = {};
       for (const [metricPath, modifier] of Object.entries(combinedEffects)) {
         if (!isMacroMetricPath(metricPath)) continue;
@@ -680,12 +661,10 @@ export async function processMinisterialOrders(currentTurn: number): Promise<{
     // when empty so a cleared cabinet (or a demolished estate) lets the residual
     // decay away.
     if (isPoliticalApprovalCountry(countryId)) {
-      // Cabinet StateMetrics deltas (mapped via the key→family table) + direct
-      // political contributions (the military force effect's defense-family drive).
-      //
-      // Split by channel (ticket #1129) so the dynamics step can cap each one
-      // on its own. The flat `contribution`/`regional` fields stay the SUM of
-      // the channels, so every other reader sees exactly what it always did.
+      // Cabinet StateMetrics deltas plus direct political contributions.
+      // Split by channel so the dynamics step can cap each one separately; the
+      // flat `contribution`/`regional` fields stay the SUM of the channels for
+      // existing readers.
       const sources: Record<string, CabinetSourceContribution> = {};
       let politicalContribution: Record<string, number> = {};
       const regionalPolitical: Record<string, Record<string, number>> = {};
@@ -715,7 +694,7 @@ export async function processMinisterialOrders(currentTurn: number): Promise<{
   }
 
   if (macroMetricsBulkOps.length > 0) {
-    await db.collection<StateMetrics>("macroMetrics").bulkWrite(macroMetricsBulkOps);
+    await macroMetricsCollection(db).bulkWrite(macroMetricsBulkOps);
   }
 
   // Persist discretionary monetary-policy inflation pressure per bank (steady-state pp).
@@ -726,12 +705,11 @@ export async function processMinisterialOrders(currentTurn: number): Promise<{
     const bankId = getBankId(cid as CountryId);
     pressureByBank[bankId] = (pressureByBank[bankId] ?? 0) + pressure;
   }
-  const allBanks = await db
-    .collection<CentralBank>("centralBanks")
+  const allBanks = await centralBanksCollection(db)
     .find({}, { projection: { _id: 1 } })
     .toArray();
   if (allBanks.length > 0) {
-    await db.collection<CentralBank>("centralBanks").bulkWrite(
+    await centralBanksCollection(db).bulkWrite(
       allBanks.map((b) => ({
         updateOne: {
           filter: { _id: b._id },
@@ -741,11 +719,10 @@ export async function processMinisterialOrders(currentTurn: number): Promise<{
     );
   }
 
-  // 6. Accrue ministerial actions: +1 every MINISTERIAL_ACTION_ACCRUAL_TURNS
-  // turns, banked up to the cap, all countries. UK player-held rows draw from
-  // the shared per-player pool (issue #2049) and are accrued through it below,
-  // so the per-row pass skips them. Rows below cap that already accrued this
-  // turn do not match, so a re-run of the phase is a no-op.
+  // Accrue ministerial actions: +1 every MINISTERIAL_ACTION_ACCRUAL_TURNS
+  // turns, capped, all countries. UK player-held rows come from the shared
+  // per-player pool below, so the per-row pass skips them. Rows already
+  // accrued this turn do not match, so a re-run is a no-op.
   let actionsRegenerated = 0;
   if (isMinisterialAccrualTurn(currentTurn)) {
     const rowResult = await membersCol.updateMany(

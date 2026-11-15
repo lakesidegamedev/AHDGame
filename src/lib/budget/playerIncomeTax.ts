@@ -6,18 +6,13 @@
 import type { ImperialCharacter } from "@/lib/db/types/imperialCharacter";
 import type { TradeHistoryEntry } from "@/lib/db/types/tradeHistory";
 import { type Db, type AnyBulkWriteOperation } from "mongodb";
-import type {
-  Character,
-  FederalBudget,
-  StateBudget,
-  ExchangeRate,
-  GameState,
-} from "@/lib/db/types";
+import type { Character, StateBudget, ExchangeRate, GameState } from "@/lib/db/types";
 import type { MacroMetricsDoc } from "@/lib/db/types/macroMetrics";
 import type { FinancialTxLogEntry } from "@/lib/db/types/financialTxLog";
 import { getNationalBudgetId } from "@/lib/bonds/sovereign";
 import { getHomeCurrency } from "@/lib/currency/characterFunds";
 import { TURNS_PER_YEAR } from "@/lib/constants/turnTime";
+import { resolvePriceIndex } from "@/lib/metricEngine/rules/priceLevel";
 import type { PlayerIncomeTaxAssessment, PlayerIncomeTaxTurnPlan } from "@/lib/db/types/incomeTax";
 import { settlePlayerIncomeTaxAssessments } from "./playerIncomeTaxSettlement";
 import {
@@ -32,6 +27,15 @@ import {
   playerIncomeTax,
   annualizedIncome,
 } from "./rules/incomeTaxTiers";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { playerIncomeTaxAssessmentsCollection } from "@/lib/db/repositories/playerIncomeTaxAssessments";
+import { tradeHistoryCollection } from "@/lib/db/repositories/tradeHistory";
 
 /**
  * Pass-through distributions already taxed at source (the owner tax on
@@ -82,8 +86,7 @@ export async function processPlayerIncomeTax(
     conversions,
     imperialCharacters,
   ] = await Promise.all([
-    db
-      .collection<FinancialTxLogEntry>("financialTxLog")
+    financialTxLogCollection(db)
       .find(
         {
           subjectType: "character",
@@ -104,8 +107,7 @@ export async function processPlayerIncomeTax(
         }
       )
       .toArray(),
-    db
-      .collection<Character>("characters")
+    charactersCollection(db)
       .find(
         { incomeTaxStartTurn: { $lte: turn } },
         {
@@ -120,24 +122,19 @@ export async function processPlayerIncomeTax(
         }
       )
       .toArray(),
-    db
-      .collection<FederalBudget>("federalBudget")
-      .find({}, { projection: { countryId: 1, taxRates: 1, currencyCode: 1 } })
+    federalBudgetCollection(db)
+      .find({}, { projection: { countryId: 1, taxRates: 1, currencyCode: 1, priceIndex: 1 } })
       .toArray(),
-    db
-      .collection<StateBudget>("stateBudgets")
+    stateBudgetsCollection(db)
       .find({}, { projection: { countryId: 1, taxRates: 1 } })
       .toArray(),
-    db
-      .collection<MacroMetricsDoc>("macroMetrics")
+    macroMetricsCollection<MacroMetricsDoc>(db)
       .find({}, { projection: { "economic.medianIncome.value": 1 } })
       .toArray(),
-    db
-      .collection<ExchangeRate>("exchangeRates")
+    exchangeRatesCollection(db)
       .find({}, { projection: { currencyCode: 1, rate: 1 } })
       .toArray(),
-    db
-      .collection<TradeHistoryEntry>("tradeHistory")
+    tradeHistoryCollection(db)
       .find(
         { turn, source: { $in: ["auto_dividend", "auto_coupon"] } },
         {
@@ -154,8 +151,7 @@ export async function processPlayerIncomeTax(
         }
       )
       .toArray(),
-    db
-      .collection<ImperialCharacter>("imperialCharacters")
+    imperialCharactersCollection(db)
       .find(
         { incomeTaxStartTurn: { $lte: turn } },
         {
@@ -228,8 +224,7 @@ export async function processPlayerIncomeTax(
     conversionByKey.set(key, total);
   }
   const worldId = gameState.resetWorldId ?? "legacy";
-  const existingPlans = await db
-    .collection<PlayerIncomeTaxTurnPlan>("playerIncomeTaxAssessments")
+  const existingPlans = await playerIncomeTaxAssessmentsCollection<PlayerIncomeTaxTurnPlan>(db)
     .find({ status: "plan", worldId, turn })
     .toArray();
   // A request can pass the turn guard just before the turn starts, then
@@ -241,8 +236,7 @@ export async function processPlayerIncomeTax(
   const earliestDue = receiptDueTurns.reduce((earliest, due) => Math.min(earliest, due), turn);
   const previousPlans =
     receiptDueTurns.length && earliestDue < turn
-      ? await db
-          .collection<PlayerIncomeTaxTurnPlan>("playerIncomeTaxAssessments")
+      ? await playerIncomeTaxAssessmentsCollection<PlayerIncomeTaxTurnPlan>(db)
           .find(
             { status: "plan", worldId, turn: { $gte: earliestDue, $lt: turn } },
             { projection: { characterId: 1, ownerCollection: 1, stockTaxReceiptIds: 1 } }
@@ -336,7 +330,7 @@ export async function processPlayerIncomeTax(
       Math.min(LOOKBACK_TURNS, turn - character.incomeTaxStartTurn! + 1),
       TURNS_PER_YEAR
     );
-    const tier = earnedIncomeTier(annual, median);
+    const tier = earnedIncomeTier(annual, median, resolvePriceIndex(budget.priceIndex));
     const groups = new Map<
       string,
       { currency: string; path: string; gross: number; taxKind: "income" | "capitalGains" }
@@ -496,9 +490,8 @@ export async function processPlayerIncomeTax(
     });
   }
   if (planOps.length)
-    await db.collection<PlayerIncomeTaxTurnPlan>("playerIncomeTaxAssessments").bulkWrite(planOps);
-  const ownedPlans = await db
-    .collection<PlayerIncomeTaxTurnPlan>("playerIncomeTaxAssessments")
+    await playerIncomeTaxAssessmentsCollection<PlayerIncomeTaxTurnPlan>(db).bulkWrite(planOps);
+  const ownedPlans = await playerIncomeTaxAssessmentsCollection<PlayerIncomeTaxTurnPlan>(db)
     .find({ status: "plan", worldId, turn })
     .toArray();
   for (const plan of ownedPlans) {
@@ -522,13 +515,12 @@ export async function processPlayerIncomeTax(
       },
     });
   }
-  if (tierOps.length) await db.collection<Character>("characters").bulkWrite(tierOps);
-  if (imperialTierOps.length)
-    await db.collection<ImperialCharacter>("imperialCharacters").bulkWrite(imperialTierOps);
+  if (tierOps.length) await charactersCollection(db).bulkWrite(tierOps);
+  if (imperialTierOps.length) await imperialCharactersCollection(db).bulkWrite(imperialTierOps);
   const inserted = assessmentOps.length
-    ? await db
-        .collection<PlayerIncomeTaxAssessment>("playerIncomeTaxAssessments")
-        .bulkWrite(assessmentOps)
+    ? await playerIncomeTaxAssessmentsCollection<PlayerIncomeTaxAssessment>(db).bulkWrite(
+        assessmentOps
+      )
     : undefined;
   await settlePlayerIncomeTaxAssessments(
     db,
@@ -540,8 +532,8 @@ export async function processPlayerIncomeTax(
     turnLengthMinutes,
     gameState.forexEnabled === true
   );
-  const pending = await db
-    .collection<PlayerIncomeTaxAssessment>("playerIncomeTaxAssessments")
-    .countDocuments({ worldId: gameState.resetWorldId ?? "legacy", status: "unpaid" });
+  const pending = await playerIncomeTaxAssessmentsCollection<PlayerIncomeTaxAssessment>(
+    db
+  ).countDocuments({ worldId: gameState.resetWorldId ?? "legacy", status: "unpaid" });
   return { assessed: inserted?.upsertedCount ?? 0, pending };
 }

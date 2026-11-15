@@ -1,6 +1,8 @@
 import type { Db } from "@/lib/mongodb";
 import type { CongressLeader, ElectedOfficial } from "@/lib/db/types";
 import { openSpeakerElection } from "./openSpeakerElection";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { congressLeadersCollection } from "@/lib/db/repositories/congressLeaders";
 
 /**
  * If the current Speaker no longer has a House seat, vacate the position and
@@ -10,22 +12,18 @@ import { openSpeakerElection } from "./openSpeakerElection";
  * exactly once per vacancy (no re-open loop if that election later fails).
  */
 export async function vacateSpeakerIfLostSeat(db: Db): Promise<void> {
-  const leaderDoc = await db
-    .collection<CongressLeader>("congressLeaders")
-    .findOne({ role: "speaker_of_the_house" });
+  const leaderDoc = await congressLeadersCollection(db).findOne({ role: "speaker_of_the_house" });
   if (!leaderDoc?.characterId) return;
-  const stillHasSeat = await db.collection<ElectedOfficial>("electedOfficials").findOne({
+  const stillHasSeat = await electedOfficialsCollection(db).findOne({
     officeType: "house",
     $or: [{ characterId: leaderDoc.characterId }, { nppId: leaderDoc.characterId }],
   });
   if (stillHasSeat) return;
   const now = new Date();
-  await db
-    .collection<CongressLeader>("congressLeaders")
-    .updateOne(
-      { role: "speaker_of_the_house" },
-      { $set: { characterId: null, characterName: "Vacant", updatedAt: now } }
-    );
+  await congressLeadersCollection(db).updateOne(
+    { role: "speaker_of_the_house" },
+    { $set: { characterId: null, characterName: "Vacant", updatedAt: now } }
+  );
   // The chair is now empty — open an election so the House can refill it without
   // waiting on an admin to start one.
   await openSpeakerElection(db, now);

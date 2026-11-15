@@ -531,23 +531,15 @@ export interface EasternBlocPolicy1953Overrides {
 /**
  * 1953 (high-Stalinist) variant of {@link easternBlocPolicyConfig}.
  *
- * SEED INDEPENDENCE — authored for 1953, not scaled from the 1979 table.
+ * Authored for 1953, not scaled from the 1979 table: harder on nearly every
+ * lever (total surplus remittance, maximal turnover tax, total centralisation,
+ * vanguard dictatorship, frozen prices with rationing).
  *
- * The shared config above encodes the *settled* bloc of the Brezhnev years:
- * orthodox planning, the leading role, administered prices. 1953 sits one notch
- * harder on almost every lever — total surplus remittance rather than the
- * standing levy, maximal turnover tax, total centralisation rather than the
- * ordinary plan, vanguard dictatorship rather than the constitutional leading
- * role, and frozen prices with rationing rather than ordinary price regulation.
+ * The two static tax levers are deliberate: income tax stayed trivial (state
+ * set wages directly), and the foreign-trade monopoly was already maximal.
  *
- * The two tax levers that do NOT move are deliberate: personal income tax stayed
- * trivial (the state set wages directly, so taxing them back was pointless) and
- * the foreign-trade monopoly was already absolute in the 1979 table — there is
- * no harder option to select.
- *
- * `overrides` exists because the bloc was not uniform in 1953. Yugoslavia had
- * been outside it since the 1948 split and is the large exception; see the
- * per-country entries in basePolicies1953.
+ * `overrides` covers the exceptions: Yugoslavia left the bloc in 1948. See
+ * basePolicies1953 per country.
  */
 export function easternBlocPolicyConfig1953(
   prefix: string,
@@ -598,58 +590,34 @@ export function easternBlocPolicyConfig1953(
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Spending-side legislation (ticket: "the Warsaw-Pact six spend nothing").
+// Spending-side legislation.
 //
-// PROBLEM. The 8 levers above are all revenue/system levers — none of them ever
-// carries a budgetCategory or a cost. Because `calculateFederalSpending`
-// (src/lib/budget/spending.ts) only falls back to the static
-// `baselineSpendingByCategory` when NO enacted law books ANY cost, and the
-// fallback is all-or-nothing, these six countries' spending has been a frozen
-// dollar constant for the whole game — invisible to any policy choice, and
-// (since revenue tracks GDP growth while spending does not) their debt/GDP
-// ratchets monotonically over a long game.
+// The revenue/system levers above never carry a budgetCategory or cost.
+// `calculateFederalSpending` only falls back to `baselineSpendingByCategory`
+// when NO enacted law books ANY cost, and that fallback is all-or-nothing, so
+// without a spending law these countries' spending is a frozen dollar constant
+// and their debt/GDP ratchets monotonically over a long game.
 //
-// FIX. `makeEasternBlocSpendingLegislation` mints one spending LegislationType
-// per authored baseline category (see `makeEasternBlocBudget1953`'s
-// `baselineSpendingByCategory`: defense 7%, socialSecurity 8%, healthcare 4%,
+// `makeEasternBlocSpendingLegislation` mints one spending LegislationType per
+// authored baseline category (defense 7%, socialSecurity 8%, healthcare 4%,
 // education 5%, infrastructure 18%, other 7% of GDP, plus a `stateGrants`-
-// routed grant law at 5% GDP — ~54% GDP total, matching the factory's own
-// "~52% GDP revenue against ~54% authored spend" comment). Each type carries a
-// 5-option austerity↔expansion ladder (index 0 = most-market/least-spend,
-// index 4 = most-state/most-spend, matching the existing 8 levers' own
-// right-first ordering) with the CENTER option (index 2, economic score 0)
-// landing exactly on the authored 1953 share — so a fresh seed's default
-// enactment (which falls back to the closest-to-(0,0) option whenever a
-// country config does not explicitly override it — see
-// `easternBlocSpendingPolicyConfig1953` below, which pins it explicitly)
-// reproduces the authored baseline to the cent, while choosing a different
+// routed grant law at 5% GDP, ~54% GDP total). Each type carries a 5-option
+// austerity/expansion ladder (index 0 = least spend, index 4 = most spend) with
+// the CENTER option (index 2) landing exactly on the authored 1953 share, so a
+// fresh seed reproduces the authored baseline to the cent while any other
 // option genuinely moves the booked cost.
 //
-// Cost class: gdpFraction (era-aware runtime path — see
-// legislationCostCatalog.ts). Every option ALSO carries the legacy
-// `annualCostPerCapita` field (= fraction × gdp ÷ population, computed from
-// the SAME per-country gdp/population passed to `makeEasternBlocBudget1953`),
-// because `deriveEnactedLaws`/`deriveSpending` in budgets.ts (seed-generation
-// time) call `calculatePolicyOptionAnnualCost` WITHOUT a `year` in context, so
-// the era-aware branch is inert there and the legacy per-capita field is what
-// actually prices the seed. None of these six countries has a
-// `COST_SCALE_ANCHORS` entry, so the legacy scale is 1 — the per-capita figure
-// prices exactly the same %GDP the era-aware runtime path would.
+// Cost class is gdpFraction (era-aware runtime path in legislationCostCatalog).
+// Every option ALSO carries `annualCostPerCapita` (= fraction × gdp ÷ population,
+// from the same per-country gdp/population), because seed-generation
+// `deriveEnactedLaws`/`deriveSpending` call `calculatePolicyOptionAnnualCost`
+// WITHOUT a `year`, so the era-aware branch is inert there and the legacy field
+// prices the seed. None of these countries has a `COST_SCALE_ANCHORS` entry, so
+// the legacy scale is 1 and both paths price the same %GDP.
 //
-// Sourcing (order-of-magnitude, not exact-to-the-percent — the real archives
-// are not public to that precision): Fiat/Kaser-style estimates of Stalinist
-// five-year-plan investment put capital formation at roughly a fifth of net
-// material product in the early 1950s satellites, heaviest in Poland/
-// Czechoslovakia's forced heavy-industry drives (Montias, "Central Planning in
-// Poland"); trade-union-administered social insurance (pensions, disability,
-// family allowances) ran a high-single-digit share (Holzman, "Soviet
-// Taxation"); satellite defense burdens sat below the USSR's own (~20% NMP,
-// per the CIA Bergson estimate already cited in `makeEasternBlocBudget1953`)
-// but above peacetime Western norms, consistent with the ~7% used here;
-// health/education were in the middle of their 1950s expansion drives. These
-// are the SAME order-of-magnitude figures already authored into
-// `makeEasternBlocBudget1953` — this factory does not re-derive them, it only
-// gives them a law to attach to.
+// Sourcing is order-of-magnitude, matching `makeEasternBlocBudget1953`'s own
+// authored figures; this factory does not re-derive them, it only gives them a
+// law to attach to.
 export interface EasternBlocSpendingOpts {
   /** Legislation id prefix, e.g. "hu" → "hu_infrastructure_investment". */
   prefix: string;
@@ -1162,24 +1130,10 @@ export function makeEasternBlocSpendingLegislation(
 
 /**
  * Standard COUNTRY_POLICY_CONFIGS_1953 defaults/optionIndexes for the 7
- * spending types above. Every country pins to index 2 — the CENTER option on
- * each ladder, which is calibrated (see `spendingLadder` above) to reproduce
- * `makeEasternBlocBudget1953`'s authored per-category %GDP exactly. Unlike
- * `easternBlocPolicyConfig1953`, there is no per-country override parameter:
- * the authored baseline is IDENTICAL %GDP across all six countries (same
- * shared factory, different GDP dollar figures), so there is nothing to vary
- * here — country flavour lives in `EasternBlocSpendingOpts` (planName /
- * selfManagement) instead, not in which option is enacted by default.
- *
- * Deliberately 1953-only: the modern/1979 `COUNTRY_POLICY_CONFIGS` map is NOT
- * given a companion here. Those presets' `deriveEnactedLaws`/`deriveSpending`
- * fall back to the closest-to-(0,0) option (the same center option, since no
- * override is configured), which happens to book the same %GDP mix as 1953 —
- * a reasonable default, not pixel-tuned to the softer 1979 Brezhnev-era shares
- * (defense 5%/socialSecurity 12%/healthcare 5%/education 6%/infrastructure 18%/
- * other 8%/stateGrants 6% per `makeEasternBlocBudget` — see budgets.ts). If the
- * 1979 preset needs its own exact reconciliation later, add a
- * `easternBlocSpendingPolicyConfig` sibling then.
+ * spending types above. Every country pins to index 2 (the CENTER option),
+ * calibrated to reproduce `makeEasternBlocBudget1953`'s per-category %GDP.
+ * No per-country override: the authored baseline is identical %GDP across all
+ * countries, so country flavour lives in `EasternBlocSpendingOpts` instead.
  */
 export function easternBlocSpendingPolicyConfig1953(prefix: string) {
   const ids = [

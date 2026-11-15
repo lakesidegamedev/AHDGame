@@ -1,53 +1,27 @@
 /**
- * SEED INDEPENDENCE — DO NOT DERIVE FROM ANOTHER ERA.
- * Authored for 1953 directly; never imports or transforms the 1990/2021 tables.
+ * SEED INDEPENDENCE: authored for 1953 directly; never derive from another era.
  *
- * 1953 German Bundestag Zweitstimmen per Land
+ * 1953 German Bundestag Zweitstimmen per Land, from the 6 September 1953 election,
+ * the chamber deRegions1953.ts seats. Used by calculateDEStatePartyOrgs when the
+ * active preset is 1953-default. National result the table is calibrated against:
+ * CDU 36.4 + CSU 8.8 = 45.2, SPD 28.8, FDP 9.5, GB/BHE 5.9, DP 3.3.
  *
- * Vote-share percentages from the 2nd Bundestag election (6 September 1953),
- * the chamber `deRegions1953.ts` seats. Used by `calculateDEStatePartyOrgs`
- * when the active preset is `1953-default`.
+ * Parties outside the seeded 1953 roster (Bayernpartei, Zentrum, KPD, DRP) have no
+ * party seed, so their share goes unallocated rather than folded into another
+ * party. This is the only table carrying dp and gbbhe, the two 1953-only parties;
+ * without them those parties get no statePartyOrg row and cannot field candidates.
+ * Only the 11 FRG Laender appear; the DDR's own org rows use the same ids and must
+ * not collide. CSU contests only BY and CDU is absent from BY.
  *
- * National result the regional table is calibrated against: CDU 36.4 + CSU 8.8
- * = 45.2, SPD 28.8, FDP 9.5, GB/BHE 5.9, DP 3.3. Parties outside the seeded
- * 1953 roster are NOT modeled — the Bayernpartei (~9% in BY), Zentrum, the KPD
- * (2.2%, banned 1956) and the DRP have no `deParties.ts` seed, so their share
- * simply goes unallocated rather than being folded into a party that did not
- * win it.
+ * Two Laender had NO 1953 Bundestag vote and are explicitly MODELED, not copied:
+ * - SL (Saarland) was a French protectorate until 1957. Seeded from the era's Saar
+ *   landscape (CVP maps to CDU, SPS to SPD, DPS to FDP); DP and GB/BHE did not
+ *   organize there and are omitted.
+ * - BE (West Berlin) sent non-voting observer deputies under Four-Power status.
+ *   Seeded from the Berlin Abgeordnetenhaus balance of the period, with no
+ *   DP/GB-BHE organization.
  *
- * Key differences from the 1990 and 2021 datasets:
- *   - Greens (1980), PDS (1989), Linke (2007) and AfD (2013) all postdate the
- *     era. None appear here, and `deParties.ts` preset-filters them out anyway.
- *   - Two 1953-only parties DO appear, and this is the only table that carries
- *     them: `dp` (Deutsche Partei — Konrad Adenauer's Lower-Saxon coalition
- *     partner, a genuine regional force in NI/SH and negligible in the south)
- *     and `gbbhe` (Gesamtdeutscher Block/BHE — the expellee party, strongest
- *     exactly where the 1945-50 expulsions resettled: SH, NI, BY, HE). Before
- *     this table existed, `1953-default` fell through to the 2021 table, which
- *     has no slug for either — so DP and GB/BHE got NO statePartyOrg row in any
- *     region and `canPartyFieldInState` hard-blocked two of the six seeded 1953
- *     parties from fielding a single candidate (#3780).
- *   - Only the 11 FRG Länder of `deRegions1953.ts`. The 2021 fallback also
- *     emitted BB/MV/SN/ST/TH rows — regions that are not DE in 1953 and whose
- *     `${stateId}_${partySeqId}` ids collide with the DDR's own National-Front
- *     org rows (`ddRegions1953.ts` uses the same five ids).
- *   - CSU still only contests in BY; CDU still absent from BY.
- *
- * Two Länder had NO 1953 Bundestag vote and are explicitly modeled, not
- * copied — flagged here so the numbers are never mistaken for results:
- *   - SL (Saarland) was a French protectorate until 1957 and elected no
- *     Bundestag deputies. Seeded from the era's actual Saar party landscape
- *     (the pro-autonomy CVP mapping to CDU, the SPS to SPD, the DPS to FDP) so
- *     the region is contested rather than dead. DP and GB/BHE did not organise
- *     in the Saar and are omitted — an omitted party means "no presence
- *     seeded", which is the historically correct outcome here.
- *   - BE (West Berlin) sent 22 indirectly-elected, non-voting observer
- *     deputies under Four-Power status. Seeded from the Berlin Abgeordnetenhaus
- *     balance of the period (a strong SPD city under Ernst Reuter's successors),
- *     again with no DP/GB-BHE organisation.
- *
- * Values rounded for gameplay calibration from Bundeswahlleiter 1953
- * Zweitstimmen-by-Land tables.
+ * Values rounded for gameplay calibration from Bundeswahlleiter 1953 tables.
  */
 
 export const DE_LAND_VOTE_SHARES_1953: Record<string, Record<string, number>> = {

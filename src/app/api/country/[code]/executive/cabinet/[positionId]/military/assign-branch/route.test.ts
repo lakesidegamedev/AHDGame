@@ -37,7 +37,7 @@ describe("POST assign-branch", () => {
     db.collection("militaryFormations");
     db.collection("characters");
     db.collection("characterGenerals");
-    db.collectionMocks.gameState.findOne.mockResolvedValue({ conflictsEnabled: true });
+    db.collectionMocks.gameState.findOne.mockResolvedValue({});
     db.collectionMocks.cabinetMembers.findOne.mockResolvedValue({
       _id: "m1",
       characterId: "char_1",
@@ -130,7 +130,7 @@ describe("POST assign-branch", () => {
   });
 
   it("403s a non-holder non-admin", async () => {
-    db.collectionMocks.gameState.findOne.mockResolvedValue({ conflictsEnabled: false });
+    db.collectionMocks.gameState.findOne.mockResolvedValue({});
     vi.mocked(requireAuth).mockResolvedValue({
       ok: true,
       user: { isAdmin: false, character: { _id: "other" } },
@@ -140,8 +140,8 @@ describe("POST assign-branch", () => {
     expect(res.status).toBe(403);
   });
 
-  it("assigns a branch when conflicts is disabled", async () => {
-    db.collectionMocks.gameState.findOne.mockResolvedValue({ conflictsEnabled: false });
+  it("assigns a branch", async () => {
+    db.collectionMocks.gameState.findOne.mockResolvedValue({});
     const { POST } = await import(ROUTE);
     const res = await POST(req({ branchId: "navy", assignedGeneralId: "gen1" }), call);
     expect(res.status).toBe(200);

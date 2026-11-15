@@ -113,7 +113,7 @@ export function quoteIndexFundSubscription(
   };
 }
 
-// KEPT INTENTIONALLY (issue #2824): creditFundUnits/debitFundUnits form the
+// KEPT INTENTIONALLY: creditFundUnits/debitFundUnits form the
 // double-entry, NAV-weighted fund unit ledger. They are tested but not yet
 // wired into production fund flows - they await integration with the shadow
 // ledger arc (financialTxLog conservation checks). Do not delete as dead code.
@@ -204,12 +204,9 @@ export function splitIndexFundDividend(grossAnchor: number): FundDividendSplit {
  * Water-filling by units: each entry may draw its proportion of what is
  * available, measured against the units still unserved in this pass. The last
  * entry is uncapped, so rounding can never strand cash in the fund forever.
- *
- * This exists because the queue used to be served first-come-first-served to
- * exhaustion. One GLB50 holder redeemed over half the fund and was paid out
- * turn after turn while 2,700 other positions received nothing, which is a run
- * in every sense. Real funds gate redemptions pro-rata precisely to stop the
- * first mover taking the whole book.
+ * Serving the queue first-come-first-served let one large holder redeem over
+ * half the fund while thousands of other positions received nothing; real
+ * funds gate redemptions pro-rata to stop the first mover taking the book.
  */
 export function proRataRedemptionCashShare(input: {
   entryUnits: number;
@@ -264,11 +261,11 @@ export function quoteCashOnlyRedemption(input: {
 }
 
 /**
- * Ticket #857 grandfather: the ₳ → native multiplier to apply when crediting a
- * redemption to a character/imperial wallet. Fund payouts are computed in ₳;
- * pre-fix "legacy" units were charged the raw ₳ magnitude as native (× 1), so
- * they must be paid back at × 1 (no windfall), while post-fix units convert at
- * the true fund FX rate. The result is the per-unit blend across the request,
+ * The ₳ → native multiplier to apply when crediting a redemption to a
+ * character/imperial wallet. Fund payouts are computed in ₳; pre-fix
+ * "legacy" units were charged the raw ₳ magnitude as native (× 1), so they
+ * must be paid back at × 1 (no windfall), while post-fix units convert at the
+ * true fund FX rate. The result is the per-unit blend across the request,
  * applied uniformly to every payout leg (immediate + queued). Returns 1 when
  * forex is off or there is nothing to redeem.
  */
@@ -286,18 +283,16 @@ export function blendedRedeemFxRate(params: {
 }
 
 /**
- * Ticket #857 grandfather - display side. A position is valued in the UI by
- * feeding an ₳ amount to the currency layer, which multiplies by the fund's FX
- * rate to render native currency. Legacy units redeem rate-free (× 1), so in ₳
- * terms they are worth only `1 / rate` of a normal unit - otherwise the display
- * layer's × rate step over-states a legacy holder's position by ~rate× (≈100×),
- * showing a value the holder can never actually redeem. This returns the
- * legacy-adjusted unit count to substitute for raw `units` when computing any
- * ₳ figure that will be run through `formatAmount`/`formatPrice` (position
- * value, cost basis, per-unit avg NAV). After the display layer applies × rate,
- * the legacy portion collapses back to its true rate-free native value. Returns
- * `units` unchanged when forex is off, there is no position, or nothing is
- * legacy - so post-fix holders are untouched.
+ * Display-side legacy adjustment. A position is valued in the UI by feeding an
+ * ₳ amount to the currency layer, which multiplies by the fund's FX rate to
+ * render native currency. Legacy units redeem rate-free (× 1), so in ₳ terms
+ * they are worth only `1 / rate` of a normal unit; otherwise the display's × rate
+ * step over-states a legacy holder's position by ~rate× (≈100×), showing a
+ * value never redeemable. Returns the legacy-adjusted unit count to substitute
+ * for raw `units` when computing any ₳ figure run through
+ * `formatAmount`/`formatPrice`. After the display applies × rate, the legacy
+ * portion collapses to its true rate-free native value. Returns `units`
+ * unchanged when forex is off, there is no position, or nothing is legacy.
  */
 export function legacyAdjustedDisplayUnits(params: {
   units: number;

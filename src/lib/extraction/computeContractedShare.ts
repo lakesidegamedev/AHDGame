@@ -3,6 +3,7 @@ import type { ExtractableResource } from "@/lib/constants/commodities";
 import type { ExtractionContract } from "@/lib/db/types/extractionContract";
 import { getExtractionContractsCollection } from "@/lib/db/collections/extractionContracts";
 import { GOVT_CONTRACT_MAX_TOTAL_SHARE } from "@/lib/constants/prospecting";
+import { governmentTendersCollection } from "@/lib/db/repositories/governmentTenders";
 
 /**
  * Filter for contracts that COUNT TOWARD the 75% headroom cap on a
@@ -32,8 +33,9 @@ export async function computeContractedShare(
   countryId?: string
 ): Promise<number> {
   // Read reservations first: an award cannot disappear between the reservation and contract reads.
-  const reserved = await db
-    .collection<import("@/lib/governmentContracts/types").GovernmentTender>("governmentTenders")
+  const reserved = await governmentTendersCollection<
+    import("@/lib/governmentContracts/types").GovernmentTender
+  >(db)
     .find(
       {
         "terms.type": "extraction",

@@ -6,11 +6,13 @@
 import type { LawFamilyDefinition } from "./catalog";
 import { getCabinetMechanics } from "@/lib/constants/cabinetMechanics";
 import { resolveDepartment } from "@/lib/cabinet/rosterEra";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
-export type ResetCountry = "US" | "UK" | "JP" | "IE" | "SCO" | "WAL";
+export type ResetCountry = "US" | "UK" | "JP" | "IE" | "SCO" | "WAL" | "CA";
 
 const SEATS = {
   FIN: {
+    CA: "minister_of_finance",
     US: "secretary_of_treasury",
     UK: "chancellor",
     JP: "finance_minister",
@@ -19,6 +21,7 @@ const SEATS = {
     WAL: "financeSecretary",
   },
   LAB: {
+    CA: "minister_of_labour",
     US: "secretary_of_labor",
     UK: "work_secretary",
     JP: "health_minister",
@@ -27,6 +30,7 @@ const SEATS = {
     WAL: "socialJusticeSecretary",
   },
   ECO: {
+    CA: "minister_of_industry",
     US: "secretary_of_commerce",
     UK: "business_secretary",
     JP: "economy_minister",
@@ -35,6 +39,7 @@ const SEATS = {
     WAL: "economySecretary",
   },
   EDU: {
+    CA: "minister_of_education_and_skills",
     US: "secretary_of_health",
     UK: "education_secretary",
     JP: "education_minister",
@@ -43,6 +48,7 @@ const SEATS = {
     WAL: "educationSecretary",
   },
   SCI: {
+    CA: "minister_of_industry",
     US: "secretary_of_commerce",
     UK: "education_secretary",
     JP: "education_minister",
@@ -51,6 +57,7 @@ const SEATS = {
     WAL: "educationSecretary",
   },
   HLT: {
+    CA: "minister_of_health",
     US: "secretary_of_health",
     UK: "health_secretary",
     JP: "health_minister",
@@ -59,6 +66,7 @@ const SEATS = {
     WAL: "healthSecretary",
   },
   SOC: {
+    CA: "minister_of_labour",
     US: "secretary_of_health",
     UK: "work_secretary",
     JP: "health_minister",
@@ -67,6 +75,7 @@ const SEATS = {
     WAL: "socialJusticeSecretary",
   },
   HOU: {
+    CA: "minister_of_housing",
     US: "secretary_of_hud",
     UK: "levelling_secretary",
     JP: "land_minister",
@@ -75,6 +84,7 @@ const SEATS = {
     WAL: "communitiesSecretary",
   },
   TRN: {
+    CA: "minister_of_infrastructure",
     US: "secretary_of_transportation",
     UK: "transport_secretary",
     JP: "land_minister",
@@ -83,6 +93,7 @@ const SEATS = {
     WAL: "transportSecretary",
   },
   COM: {
+    CA: "minister_of_industry",
     US: "secretary_of_commerce",
     UK: "business_secretary",
     JP: "internal_affairs_minister",
@@ -91,6 +102,7 @@ const SEATS = {
     WAL: "netZeroSecretary",
   },
   ENE: {
+    CA: "minister_of_natural_resources",
     US: "secretary_of_energy",
     UK: "business_secretary",
     JP: "economy_minister",
@@ -99,6 +111,7 @@ const SEATS = {
     WAL: "netZeroSecretary",
   },
   ENV: {
+    CA: "minister_of_environment",
     US: "secretary_of_interior",
     UK: "levelling_secretary",
     JP: "environment_minister",
@@ -107,6 +120,7 @@ const SEATS = {
     WAL: "netZeroSecretary",
   },
   AGR: {
+    CA: "minister_of_agriculture",
     US: "secretary_of_agriculture",
     UK: "agriculture_secretary",
     JP: "health_minister",
@@ -115,6 +129,7 @@ const SEATS = {
     WAL: "communitiesSecretary",
   },
   JUS: {
+    CA: "minister_of_justice",
     US: "attorney_general",
     UK: "home_secretary",
     JP: "justice_minister",
@@ -123,6 +138,7 @@ const SEATS = {
     WAL: "justiceSecretary",
   },
   GOV: {
+    CA: "minister_of_intergovernmental_affairs",
     US: "attorney_general",
     UK: "first_secretary_of_state",
     JP: "internal_affairs_minister",
@@ -131,6 +147,7 @@ const SEATS = {
     WAL: "deputyFirstMinister",
   },
   DEF: {
+    CA: "minister_of_national_defence",
     US: "secretary_of_defense",
     UK: "defence_secretary",
     JP: "defense_minister",
@@ -145,17 +162,19 @@ export type ResetOwnerCode = keyof typeof SEATS;
 export function fundingSeatForLaw(
   law: Pick<LawFamilyDefinition, "id" | "ownerCode">,
   country: ResetCountry,
-  enabledSeats: ReadonlySet<string> = new Set()
+  enabledSeats: ReadonlySet<string> = new Set(),
+  year = 1991
 ): string {
   if (!(law.ownerCode in SEATS)) throw new Error(`Unknown reset owner ${law.ownerCode}`);
   const code = law.ownerCode as ResetOwnerCode;
-  if (country === "US") {
-    if (law.id === "L50") return "secretary_of_treasury"; // ATF in the 1991 Treasury.
+  if (countryHasFeature("usSeeds", country)) {
+    if (law.id === "L50") return year >= 2003 ? "attorney_general" : "secretary_of_treasury";
     if (code === "EDU" && enabledSeats.has("secretary_of_education")) {
       return "secretary_of_education";
     }
   }
-  if (country === "UK") {
+  if (countryHasFeature("ukSeeds", country)) {
+    if (code === "AGR" && year >= 2001) return "environment_secretary";
     if (law.id === "L21" || law.id === "L38") return "health_secretary";
     if (law.id === "L36") return "justice_secretary";
   }
@@ -166,16 +185,22 @@ export function fundingSeatForLaw(
 export function fundingNameForLaw1991(
   law: Pick<LawFamilyDefinition, "id" | "ownerCode">,
   country: ResetCountry,
-  enabledSeats: ReadonlySet<string> = new Set()
+  enabledSeats: ReadonlySet<string> = new Set(),
+  year = 1991
 ): string {
-  const seatId = fundingSeatForLaw(law, country, enabledSeats);
-  if (country === "US") {
+  const seatId = fundingSeatForLaw(law, country, enabledSeats, year);
+  if (year !== 1991) {
+    const mechanics = getCabinetMechanics(country, seatId);
+    if (!mechanics) throw new Error(`No Cabinet mechanics for ${country} ${seatId}`);
+    return resolveDepartment(mechanics, year);
+  }
+  if (countryHasFeature("usSeeds", country)) {
     if (law.id === "L50") return "Department of the Treasury (ATF funding)";
     if (seatId === "secretary_of_health" && !enabledSeats.has("secretary_of_education")) {
       return "Department of Health, Education, and Welfare";
     }
   }
-  if (country === "JP") {
+  if (countryHasFeature("jpSeeds", country)) {
     const labels: Record<string, string> = {
       finance_minister: "Ministry of Finance",
       health_minister: "Ministry of Health and Welfare",
@@ -192,7 +217,8 @@ export function fundingNameForLaw1991(
     };
     if (labels[seatId]) return labels[seatId];
   }
-  if (country === "UK" && seatId === "transport_secretary") return "Department of Transport";
+  if (countryHasFeature("ukSeeds", country) && seatId === "transport_secretary")
+    return "Department of Transport";
   const mechanics = getCabinetMechanics(country, seatId);
   if (!mechanics) throw new Error(`No Cabinet mechanics for ${country} ${seatId}`);
   return resolveDepartment(mechanics, 1991);

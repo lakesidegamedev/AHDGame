@@ -13,12 +13,13 @@
  */
 
 import type { Db, ObjectId } from "mongodb";
-import type { Character } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import type { UnifiedCabinetMember } from "@/lib/db/types/unifiedCabinetMember";
 import { getCabinetPositions } from "@/lib/constants/cabinetMechanics";
 import { isSeatActive, resolveSeatName } from "@/lib/cabinet/rosterEra";
 import { MERGER_AUTHORITY_SEAT_BY_COUNTRY } from "./constants";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { cabinetMembersCollection } from "@/lib/db/repositories/cabinetMembers";
 
 export interface MergerAuthority {
   seatId: string;
@@ -56,12 +57,10 @@ export async function resolveMergerAuthority(
     countryId,
   };
 
-  const member = await db
-    .collection<UnifiedCabinetMember>("cabinetMembers")
-    .findOne(
-      { countryId: countryId as CountryId, positionId: seatId },
-      { projection: { characterId: 1, characterName: 1, isNPP: 1 } }
-    );
+  const member = await cabinetMembersCollection<UnifiedCabinetMember>(db).findOne(
+    { countryId: countryId as CountryId, positionId: seatId },
+    { projection: { characterId: 1, characterName: 1, isNPP: 1 } }
+  );
   if (!member) return authority;
 
   if (member.isNPP || !member.characterId) {
@@ -72,9 +71,10 @@ export async function resolveMergerAuthority(
 
   authority.holderCharacterId = member.characterId;
   authority.holderName = member.characterName;
-  const holder = await db
-    .collection<Character>("characters")
-    .findOne({ _id: member.characterId }, { projection: { userId: 1 } });
+  const holder = await charactersCollection(db).findOne(
+    { _id: member.characterId },
+    { projection: { userId: 1 } }
+  );
   if (holder?.userId) authority.holderUserId = holder.userId;
   return authority;
 }

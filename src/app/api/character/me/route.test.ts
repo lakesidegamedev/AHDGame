@@ -19,9 +19,6 @@ vi.mock("@/lib/currency/corporationCapital", () => ({ loadFxRatesRecord: vi.fn()
 vi.mock("@/lib/db/characterLookup", () => ({ getCharacterByUserId: vi.fn() }));
 // Tracked-step writes are gated on the onboarding flag; default it ON here and
 // flip it per-test to prove the fail-closed path.
-vi.mock("@/lib/onboarding/featureFlag", () => ({
-  isOnboardingChecklistEnabled: vi.fn(async () => true),
-}));
 
 // Inline schema mirrors the one defined in route.ts for unit testing
 const patchSchema = z.object({
@@ -230,20 +227,6 @@ describe("PATCH /api/character/me onboarding step tracking", () => {
     expect(filter["onboarding.steps.read-wire"]).toEqual({ $exists: false });
     // Timestamp is set server-side; the client can't choose the value.
     expect(update.$set["onboarding.steps.read-wire"]).toBeInstanceOf(Date);
-  });
-
-  it("skips the tracked-step write when the onboarding flag is off (fail-closed)", async () => {
-    const { isOnboardingChecklistEnabled } = await import("@/lib/onboarding/featureFlag");
-    vi.mocked(isOnboardingChecklistEnabled).mockResolvedValueOnce(false);
-
-    const { PATCH } = await import("./route");
-    const res = await PATCH(patchRequest({ onboardingStep: "read-wire" }));
-
-    // Still a successful no-op response; flag-off worlds take zero onboarding
-    // writes even if a stray client sends the field. The characters collection
-    // mock is created lazily on first access, so undefined = never touched.
-    expect(res.status).toBe(200);
-    expect(db.collectionMocks.characters).toBeUndefined();
   });
 
   it("dismissing the checklist stamps onboarding.dismissedAt alongside the legacy boolean", async () => {

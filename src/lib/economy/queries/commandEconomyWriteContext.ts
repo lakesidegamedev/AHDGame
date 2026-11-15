@@ -17,12 +17,13 @@ import { getGameState } from "@/lib/gameState";
 import { commandEconomyOffices } from "@/lib/constants/commandEconomyOffices";
 import { isPlannedEconomy, scheduledMarketizationLevel } from "@/lib/constants/commandEconomy";
 import { getNationalBudgetId } from "@/lib/bonds/sovereign";
-import type { FederalBudget } from "@/lib/db/types/budget";
 import type { GameConfig } from "@/lib/db/types";
 import {
   resolveCommandEconomyRoles,
   type CommandEconomyRoles,
 } from "@/lib/economy/commandEconomyAuth";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 export interface CommandEconomyWriteContext {
   db: Db;
@@ -56,9 +57,10 @@ export async function resolveWriteContext(code: string): Promise<WriteContextRes
 
   const db = await getDb();
   const [gameConfig, gameState] = await Promise.all([
-    db
-      .collection<GameConfig>("gameConfig")
-      .findOne({ _id: "default" }, { projection: { commandEconomyEnabled: 1 } }),
+    gameConfigCollection(db).findOne(
+      { _id: "default" },
+      { projection: { commandEconomyEnabled: 1 } }
+    ),
     getGameState(),
   ]);
   const enabled = gameConfig?.commandEconomyEnabled === true;
@@ -88,11 +90,12 @@ export async function resolveWriteContext(code: string): Promise<WriteContextRes
 
   const [roles, budget] = await Promise.all([
     resolveCommandEconomyRoles(db, countryId, characterId),
-    db
-      .collection<FederalBudget>("federalBudget")
-      .findOne({ _id: getNationalBudgetId(countryId) } as { _id: "federal" }, {
+    federalBudgetCollection(db).findOne(
+      { _id: getNationalBudgetId(countryId) } as { _id: "federal" },
+      {
         projection: { "economicFactors.marketizationLevel": 1 },
-      }),
+      }
+    ),
   ]);
 
   const persisted = budget?.economicFactors?.marketizationLevel;

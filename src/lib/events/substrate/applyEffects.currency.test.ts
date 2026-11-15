@@ -136,7 +136,7 @@ describe("applyDeclarativeEffects era currency routing (issue #2291)", () => {
 
     expect(db.collectionMocks.campaigns!.updateOne).toHaveBeenCalledWith(
       { characterId: CHARACTER_ID, electionId: ELECTION_ID },
-      { $inc: { "currencyBalances.campaign": 920 } }
+      { $inc: { funds: 920 } }
     );
   });
 
@@ -150,7 +150,7 @@ describe("applyDeclarativeEffects era currency routing (issue #2291)", () => {
 
     expect(db.collectionMocks.campaigns!.updateOne).toHaveBeenCalledWith(
       { characterId: CHARACTER_ID, electionId: ELECTION_ID },
-      { $inc: { "currencyBalances.campaign": 4_500 } }
+      { $inc: { funds: 4_500 } }
     );
   });
 

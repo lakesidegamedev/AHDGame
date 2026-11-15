@@ -12,7 +12,9 @@ import {
 } from "@/lib/military/defenceLotEconomics";
 import { loadDefencePriceRatios } from "@/lib/military/defencePriceRatios";
 import { DEFENCE_CARRY_REASON_TEXT, type DefenceCarryReason } from "@/lib/db/types/defenceContract";
-import type { Corporation, CorporateSector } from "@/lib/db/types/corporation";
+import type { CorporateSector } from "@/lib/db/types/corporation";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 /** One procurement contract as the supplying CEO sees it. */
 export interface CorporationContractView {
@@ -114,7 +116,7 @@ export async function loadCorporationDefenceContracts(
 ): Promise<CorporationDefenceView> {
   const [contracts, corp] = await Promise.all([
     listContractsForCorp(db, corporationId),
-    db.collection<Corporation>("corporations").findOne({ _id: corporationId }),
+    corporationsCollection(db).findOne({ _id: corporationId }),
   ]);
 
   if (contracts.length === 0) {
@@ -130,8 +132,7 @@ export async function loadCorporationDefenceContracts(
 
   // One read for every sector the contracts point at, rather than one per contract.
   const sectorIds = [...new Set(contracts.map((c) => c.sectorId.toString()))];
-  const sectors = await db
-    .collection<CorporateSector>("corporateSectors")
+  const sectors = await corporateSectorsCollection(db)
     .find({ _id: { $in: sectorIds.map((id) => new ObjectId(id)) } })
     .toArray();
   const sectorById = new Map(sectors.map((s) => [s._id.toString(), s]));
@@ -174,7 +175,7 @@ export async function loadCorporationDefenceContracts(
       productionCostPaid: c.productionCostPaid ?? 0,
       // The SAME selector the delivery sweep bills through, so the order book states the
       // margin the CEO is actually paid. A pre-#1134 contract shows its old economics because
-      // that is what it will settle at (ticket #1134).
+      // that is what it will settle at.
       unitProductionCost: sector
         ? (contractLotProductionCost(c, sector.strategyId, priceRatios) ?? 0) *
           GRADE_PRICE_SCALE[normalizeGrade(c.gradeCeiling)]
@@ -182,7 +183,7 @@ export async function loadCorporationDefenceContracts(
       encumberedAmount: c.encumberedAmount ?? 0,
       // Carry reasons explain why a LIVE order did not move this turn. Older completed rows
       // can retain a reason stamped before their final delivery, so never present that stale
-      // diagnostic as a current funding failure (ticket #1171).
+      // diagnostic as a current funding failure.
       ...(c.status === "active" && c.carryReason
         ? {
             carryReason: c.carryReason,

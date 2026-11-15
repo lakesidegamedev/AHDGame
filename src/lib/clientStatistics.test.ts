@@ -9,6 +9,7 @@ import {
   toStoredDocument,
   turnBucket,
 } from "./clientStatistics";
+import { SEED_PRESET_IDS } from "@/lib/constants/turnTime";
 
 function validReport() {
   return {
@@ -22,8 +23,8 @@ function validReport() {
       autonomy: "v1",
       featureFlags: {
         forexEnabled: true,
-        rpgStatsEnabled: false,
-        onboardingChecklistEnabled: true,
+        sectorTechTreesEnabled: false,
+        playerRandomEventsEnabled: true,
       },
     },
     metrics: {
@@ -62,7 +63,8 @@ describe("clientStatisticsReportSchema", () => {
 
   it("accepts every allowlisted era, mode, difficulty, and autonomy value", () => {
     const base = validReport();
-    for (const era of ["1953", "1979", "1991", "1999", "2007", "2019", "2023"]) {
+    // Every shipping preset: a hand-kept copy once stopped at 2023 and rejected 2027 reports.
+    for (const era of SEED_PRESET_IDS.map((preset) => preset.slice(0, 4))) {
       const parsed = clientStatisticsReportSchema.safeParse({
         ...base,
         setup: { ...base.setup, era },
@@ -173,7 +175,7 @@ describe("clientStatisticsReportSchema", () => {
     ).toBe(true);
   });
 
-  it("rejects feature flags outside the game allowlist", () => {
+  it("drops feature flags outside the game allowlist instead of rejecting the report", () => {
     const base = validReport();
     const parsed = clientStatisticsReportSchema.safeParse({
       ...base,
@@ -181,6 +183,19 @@ describe("clientStatisticsReportSchema", () => {
         ...base.setup,
         featureFlags: { forexEnabled: true, customFlag: true },
       },
+    });
+    expect(parsed.success).toBe(true);
+    expect(parsed.success && parsed.data.setup.featureFlags).toEqual({ forexEnabled: true });
+  });
+
+  it("rejects an oversized feature flag payload", () => {
+    const base = validReport();
+    const featureFlags = Object.fromEntries(
+      Array.from({ length: 201 }, (_, i) => [`flag${i}`, true])
+    );
+    const parsed = clientStatisticsReportSchema.safeParse({
+      ...base,
+      setup: { ...base.setup, featureFlags },
     });
     expect(parsed.success).toBe(false);
   });
@@ -311,8 +326,8 @@ describe("turnBucket", () => {
 
 describe("hashFeatureFlags", () => {
   it("is stable for the same allowlisted flags regardless of insertion order", () => {
-    const a = hashFeatureFlags({ rpgStatsEnabled: false, forexEnabled: true });
-    const b = hashFeatureFlags({ forexEnabled: true, rpgStatsEnabled: false });
+    const a = hashFeatureFlags({ sectorTechTreesEnabled: false, forexEnabled: true });
+    const b = hashFeatureFlags({ forexEnabled: true, sectorTechTreesEnabled: false });
     expect(a).toBe(b);
     expect(a).toMatch(/^[0-9a-f]{16}$/);
   });

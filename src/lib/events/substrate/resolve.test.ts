@@ -111,6 +111,54 @@ describe("event substrate resolve + sweep", () => {
     expect(instances.findOneAndUpdate).toHaveBeenCalled();
   });
 
+  function pendingCharacterInstance(): EventInstance {
+    return {
+      _id: new ObjectId(),
+      kind: "pree.test",
+      scope: "character",
+      scopeId,
+      definitionVersion: 1,
+      status: "pending",
+      roll: 80,
+      payload: {},
+      offeredAtTurn: 10,
+      offeredAt: new Date(),
+      expiresAtRealtimeMs: Date.now() + 60_000,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+  }
+
+  it("claims the event before applying effects, so a concurrent resolve applies nothing", async () => {
+    const applySpy = vi.fn().mockResolvedValue(undefined);
+    makeHandler(applySpy);
+    const instance = pendingCharacterInstance();
+    const { instances } = touchEventCollections(db);
+    instances.findOne.mockResolvedValue(instance);
+    instances.findOneAndUpdate.mockResolvedValue(null);
+
+    await expect(resolveEvent(db as never, instance._id, "act", "player", 10)).rejects.toThrow(
+      /resolved concurrently/
+    );
+    expect(applySpy).not.toHaveBeenCalled();
+  });
+
+  it("hands the event back to pending when an effect throws after the claim", async () => {
+    const applySpy = vi.fn().mockRejectedValue(new Error("effect failed"));
+    makeHandler(applySpy);
+    const instance = pendingCharacterInstance();
+    const { instances } = touchEventCollections(db);
+    instances.findOne.mockResolvedValue(instance);
+    instances.findOneAndUpdate.mockResolvedValue({ ...instance, status: "resolved" });
+
+    await expect(resolveEvent(db as never, instance._id, "act", "player", 10)).rejects.toThrow(
+      "effect failed"
+    );
+    const [filter, update] = instances.updateOne.mock.calls.at(-1)!;
+    expect(filter).toMatchObject({ _id: instance._id, status: "resolved" });
+    expect(update).toMatchObject({ $set: { status: "pending" } });
+  });
+
   it("sweepExpired resolves timed-out instances with the default option", async () => {
     const applySpy = vi.fn().mockResolvedValue(undefined);
     makeHandler(applySpy);

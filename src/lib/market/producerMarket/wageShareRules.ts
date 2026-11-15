@@ -1,19 +1,21 @@
 /**
  * Wage share of value added in the funded producer economy.
  *
- * Plant payroll comes from the labour model (headcount times the state wage),
- * which pays workers about an eighth of the value a plant adds. Most of the
- * rest stays with the company as profit, and households, who spend only the
- * cash they receive, buy a small share of output. With the stage on, a plant
- * pays its workers more where its own last receipt shows room for it: wages
- * rise toward a target share of value added, but the raise never takes more
- * than a set share of the surplus left after the base wage and site bills.
- * A plant that made no surplus last turn pays the base wage only.
+ * Plant payroll from the labour model (headcount times state wage) pays workers
+ * about an eighth of the value a plant adds; most of the rest becomes company
+ * profit, and households buy a small share of output. With the stage on, a
+ * plant whose last receipt shows room raises wages toward a target share of
+ * value added, but the raise never takes more than a set share of last turn's
+ * surplus after the base wage and site bills. A plant with no surplus pays the
+ * base wage only.
  *
- * Everything is per unit of output, so a plant that runs harder or lighter
- * this turn than last pays the raise on this turn's run. The raise is read
- * from last turn's value added and site bill, never from last turn's wages,
- * so it does not feed back on itself.
+ * The raise is scaled by the share of last turn's run that sold; a receipt
+ * with no sales count reads as fully sold.
+ *
+ * Everything is per unit of output, so a plant running harder or lighter pays
+ * the raise on this turn's run. The raise is read from last turn's value added
+ * and site bill, never from last turn's wages, so it does not feed back on
+ * itself.
  *
  * Pure: plain data in, a wage bill out.
  */
@@ -69,6 +71,14 @@ function receiptSiteBill(last: WageShareReceipt): number {
   return (last.otherOperatingPaid ?? 0) + (last.otherOperatingArrears ?? 0);
 }
 
+/** Share of last turn's run that sold, 0 to 1; no sales count reads as fully sold. */
+export function receiptSellThrough(last: WageShareReceipt): number {
+  if (!(last.producedUnits > 0)) return 1;
+  const sold = last.soldUnits;
+  if (typeof sold !== "number" || !Number.isFinite(sold)) return 1;
+  return Math.min(1, Math.max(0, sold / last.producedUnits));
+}
+
 /** This turn's wage bill at the full planned run, never below the base payroll. */
 export function wageShareLabourCost(input: WageShareInput): number {
   const base = input.baseLabourCost;
@@ -90,20 +100,17 @@ export function wageShareLabourCost(input: WageShareInput): number {
     target * valueAddedPerUnit - basePerUnit,
     cap * (valueAddedPerUnit - sitePerUnit - basePerUnit)
   );
-  return raisePerUnit > 0 ? base + raisePerUnit * input.fullRunUnits : base;
+  // Only the part of last turn's run that sold earned the money for a rise.
+  const sellThrough = receiptSellThrough(last);
+  return raisePerUnit > 0 ? base + raisePerUnit * sellThrough * input.fullRunUnits : base;
 }
 
 /*
- * Labour-linked target.
- *
- * With the labour stage on, the target share is no longer one constant: it
- * follows the plant's state labour market. At or below the natural rate of
- * unemployment workers are scarce and the target sits at its maximum; at the
- * slack rate or above it falls to its floor; in between it moves in a straight
- * line. Wages are sticky: a plant's effective target moves at most `step` of
- * value added a turn away from the wage share it actually paid last turn, so a
- * jump in unemployment (or switching the stage on) walks wages over several
- * turns instead of in one.
+ * Labour-linked target: the target share follows the plant's state labour
+ * market. At or below the natural rate it sits at its maximum; at the slack
+ * rate or above it falls to its floor; in between it moves linearly. Wages are
+ * sticky: the effective target moves at most `step` of value added per turn,
+ * so a jump in unemployment walks wages over several turns.
  */
 
 /** Tunables for the labour-linked target. Shares are of value added; rates in percent. */
@@ -190,14 +197,12 @@ export function labourLinkedWageShareTarget(input: {
  * country. With the labour stage on it is built from two parts per state:
  *
  * - tightness: `tightnessPerPoint` x (natural rate - unemployment), so a tight
- *   market adds growth and a slack one takes it away (the same 0.3 a point the
- *   median income node uses);
+ *   market adds growth and a slack one takes it away;
  * - wage move: the change in the state's wage bill the labour target implies
  *   for next turn (each plant steps its paid share toward its state target,
  *   limited by `step` and by its surplus), annualized and scaled by
- *   `movePassthrough`, then capped at `moveCap` points either way. This is the
- *   rise or fall in the effective average wage the plants are making; it is
- *   large while wages walk to a new level and near zero once they arrive.
+ *   `movePassthrough`, then capped at `moveCap` points either way. Large while
+ *   wages walk to a new level, near zero once they arrive.
  *
  * States are weighted by GDP. The country rate is `neutral` plus that mean,
  * smoothed against last turn's rate with `inertia` so one noisy receipt cannot

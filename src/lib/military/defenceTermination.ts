@@ -2,20 +2,14 @@ import type { DefenceCarryReason, DefenceContractStatus } from "@/lib/db/types/d
 import { TARGET_SUPPLIER_MARGIN } from "@/lib/military/defenceLotEconomics";
 
 /**
- * What it costs a defence minister to tear up a contract they have already signed.
+ * What it costs a defence minister to tear up a signed contract.
  *
- * Awarding a contract to yourself is disclosed and priced (`defenceSelfDealing`). Cancelling
- * someone else's was free: instant, silent, and it handed back both the appropriation and the
- * window quota, so a minister could cancel a rival's order and re-award the freed room to
- * their own plant inside the same window. That asymmetry is the whole exploit, and players
- * reported it as ministers tearing up rivals' contracts rather than as a pricing bug.
- *
- * The answer is the one the rest of the game already uses. Not a ban, and not another cap:
- * a price, disclosure, and a distinction between the two reasons a contract really gets torn
- * up. Terminating for CAUSE, because the supplier is not building, stays free. Terminating
- * for CONVENIENCE, because you would rather the money went somewhere else, pays the supplier
- * the margin they were promised, keeps the window quota spent, and goes on the public wire
- * with the minister's name on it.
+ * Awarding to yourself is disclosed and priced; cancelling someone else's was free,
+ * returning both appropriation and window quota, so a minister could cancel a rival's
+ * order and re-award the room to their own plant. The answer is a price, disclosure,
+ * and a distinction between reasons: CAUSE (supplier not building) stays free;
+ * CONVENIENCE (you want the money elsewhere) pays the promised margin, keeps the
+ * window quota spent, and goes on the public wire with the minister's name.
  */
 
 /**

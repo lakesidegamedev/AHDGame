@@ -1,28 +1,17 @@
-// AHD-1271 (b): `unownedSectors` rows filed under the wrong country.
+// Heal: `unownedSectors` rows filed under the wrong country.
 //
-// The unowned pool row is keyed by (stateId, sectorType) but CARRIES a
-// countryId, and every reader filters on it: the sector browser's country
-// filter, the command-economy drain in `reconcileCommandEconomyUnowned`, and
-// the commodity supply math. `buildCapacity` resolved that countryId as
-// `sector.countryId ?? corporation.countryId` and then fell through to a
-// literal "US" when neither was set, so a sector with no stored country minted
-// a pool row under the corporation's domicile, or under the United States
-// outright.
+// The pool row is keyed by (stateId, sectorType) but carries a countryId
+// that every reader filters on: the sector browser, the command-economy
+// drain, and the commodity supply math. `buildCapacity` resolved it as
+// `sector.countryId ?? corporation.countryId` and fell through to a
+// literal "US", minting rows under the wrong country. A command economy's
+// pool is drained by countryId, so mis-keyed rows were exempt from the
+// drain. `buildCapacity` now resolves the country from the STATE, which is
+// the only authority for where capacity physically is, and never
+// substitutes a hardcoded country.
 //
-// On live this left two rows sitting on Ukrainian states under `countryId: "US"`
-// (UKR_WES agriculture, UKR_KYI media): invisible to Ukraine, counted as
-// American headroom, and — because Ukraine is a command economy whose pool is
-// drained by countryId — permanently exempt from the drain that should have
-// removed them.
-//
-// Half A (code): `buildCapacity` now resolves the country from the STATE, which
-// is the only thing that can be authoritative for where capacity physically is,
-// and never substitutes a hardcoded country.
-// Half B (this heal): re-key the existing rows onto their state's country.
-//
-// Scoped to `unownedSectors` deliberately. The same corruption in
-// `corporateSectors` is AHD-duplicate-sectors, which additionally has to merge
-// the parallel rows a later takeover created; live currently shows none.
+// Scoped to `unownedSectors`; the same corruption in `corporateSectors`
+// additionally needs parallel rows merged and is handled separately.
 
 import type { Db } from "mongodb";
 import type {
@@ -33,6 +22,9 @@ import type {
   HealResult,
   VerifyResult,
 } from "../types";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
+import type { Document } from "mongodb";
 
 export const DEFECT_ID = "AHD-1271-pool-country-attribution";
 
@@ -56,14 +48,12 @@ interface Misfiled extends PoolRow {
  * the question. Those are counted into `notes` instead.
  */
 async function findMisfiled(db: Db): Promise<{ rows: Misfiled[]; statelessCount: number }> {
-  const states = await db
-    .collection<{ _id: string; countryId: string }>("states")
+  const states = await statesCollection<{ _id: string; countryId: string }>(db)
     .find({}, { projection: { countryId: 1 } })
     .toArray();
   const countryOfState = new Map(states.map((s) => [s._id, s.countryId]));
 
-  const pool = await db
-    .collection<PoolRow>("unownedSectors")
+  const pool = await unownedSectorsCollection<PoolRow>(db)
     .find({}, { projection: { stateId: 1, countryId: 1, sectorType: 1 } })
     .toArray();
 
@@ -134,7 +124,7 @@ async function apply(db: Db, healPlan: HealPlan, ctx: HealContext): Promise<Heal
   let updated = 0;
   for (const row of rows) {
     if (!approved.has(String(row._id))) continue;
-    const res = await db.collection("unownedSectors").updateOne(
+    const res = await unownedSectorsCollection<Document>(db).updateOne(
       // The old country is part of the filter, so a concurrent correction wins
       // and this becomes a no-op rather than clobbering it.
       { _id: row._id, countryId: row.countryId } as Record<string, unknown>,

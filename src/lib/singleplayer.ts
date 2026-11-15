@@ -1,29 +1,22 @@
+import { serverEnv } from "@/lib/config/read";
+
 /**
  * Singleplayer mode.
  *
- * A singleplayer world is this same application, running on the player's own
- * machine against a local database, with exactly one account in it. Nothing
- * about the game changes: the same pages, the same API routes, the same
- * simulation. What changes is that there is no one to authenticate against,
- * so the session is fixed rather than negotiated.
+ * The same application running locally with exactly one account: same pages,
+ * API routes, simulation. Nothing about the game changes; with no one to
+ * authenticate against, the session is fixed rather than negotiated.
  *
- * That makes this module a deliberate authentication bypass, which is only
- * ever safe on a single-user machine. Everything below exists to make it
- * impossible to enable anywhere else. `assertSingleplayerAllowed` throws on
- * any host that looks like a deployment, and it throws rather than returning
- * false so a misconfigured server fails to boot instead of quietly serving
- * every request as the local player.
+ * This is a deliberate authentication bypass, safe only on a single-user
+ * machine. `assertSingleplayerAllowed` throws on any host that looks like a
+ * deployment, so a misconfigured server fails to boot instead of quietly
+ * serving every request as the local player.
  *
  * The seam is the middleware (`src/proxy.ts`), which mints a normal signed
- * session cookie for the local player when one is absent. Nothing downstream
- * is special-cased: `verifyAuth`, the direct cookie readers in /api/auth/me
- * and /api/client-nav, and all 987 call sites see an ordinary logged-in
- * session. That is deliberate. An auth *bypass* would have to be re-applied
- * at every path that reads a session; a real session is read the same way by
- * all of them.
- *
- * This module must stay free of `mongodb` and other Node-only imports: the
- * middleware that consumes it runs on the Edge runtime.
+ * session cookie for the local player. Nothing downstream is special-cased:
+ * a real session is read normally everywhere, unlike a bypass that would have
+ * to be re-applied at every path. Must stay free of `mongodb` and Node-only
+ * imports (Edge runtime).
  */
 
 /**
@@ -54,7 +47,7 @@ function flagIsSet(value: string | undefined): boolean {
  * `NEXT_PUBLIC_BASE_URL` is included because the desktop build always points
  * at loopback: a public origin means this is serving somebody else.
  */
-function deploymentSignals(env: SingleplayerEnv = process.env): string[] {
+function deploymentSignals(env: SingleplayerEnv = serverEnv()): string[] {
   const signals: string[] = [];
   if (env.RAILWAY_ENVIRONMENT_NAME) signals.push("RAILWAY_ENVIRONMENT_NAME");
   if (env.RAILWAY_SERVICE_NAME) signals.push("RAILWAY_SERVICE_NAME");
@@ -115,7 +108,7 @@ export class SingleplayerNotAllowedError extends Error {
  * Throws when singleplayer is requested on anything that looks like a server.
  * Safe to call when singleplayer is not requested: it does nothing.
  */
-export function assertSingleplayerAllowed(env: SingleplayerEnv = process.env): void {
+export function assertSingleplayerAllowed(env: SingleplayerEnv = serverEnv()): void {
   if (!flagIsSet(env.SINGLEPLAYER)) return;
   const signals = deploymentSignals(env);
   if (signals.length > 0) throw new SingleplayerNotAllowedError(signals);
@@ -126,14 +119,14 @@ export function assertSingleplayerAllowed(env: SingleplayerEnv = process.env): v
  * false on a deployment, so the bypass can never degrade into "off" on a
  * machine that was one env var away from serving every request as one user.
  */
-export function isSingleplayer(env: SingleplayerEnv = process.env): boolean {
+export function isSingleplayer(env: SingleplayerEnv = serverEnv()): boolean {
   if (!flagIsSet(env.SINGLEPLAYER)) return false;
   assertSingleplayerAllowed(env);
   return true;
 }
 
 /** Whether the local player also gets the admin surfaces. Opt-in. */
-export function singleplayerIsAdmin(env: SingleplayerEnv = process.env): boolean {
+export function singleplayerIsAdmin(env: SingleplayerEnv = serverEnv()): boolean {
   return isSingleplayer(env) && flagIsSet(env.SINGLEPLAYER_ADMIN);
 }
 
@@ -142,7 +135,7 @@ export function singleplayerIsAdmin(env: SingleplayerEnv = process.env): boolean
  * in `@/lib/auth`. Signed by the middleware with the local `AUTH_SECRET`, so
  * downstream verification is the ordinary path and not a special case.
  */
-export function singleplayerSessionClaims(env: SingleplayerEnv = process.env): {
+export function singleplayerSessionClaims(env: SingleplayerEnv = serverEnv()): {
   userId: string;
   email: string;
   username: string;

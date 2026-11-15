@@ -4,7 +4,6 @@
  * Seeding order (dependency-safe):
  *   1. DE regions (states collection, countryId: "DE")
  *   2. DE political parties (politicalParties collection)
- *   3. DE demographic categories (demographicCategories collection)
  *   4. DE region demographics (stateDemographics + demographicDefaults collections)
  *   5. DE demographic turnout modifiers (stateDemographicTurnout collection)
  *   6. DE state party orgs (statePartyOrg collection — one per Land × party)
@@ -28,26 +27,22 @@ import { connectDb, closeDb } from "../utils/db";
 import type {
   State,
   PoliticalParty,
-  DemographicCategory,
-  StateDemographics,
+  CensusGroupView,
   StateDemographicTurnout,
   StatePartyOrg,
   StateMetrics,
 } from "../../src/lib/db/types";
 import type { StateMetricBaseline } from "../../src/lib/db/types/statePolicy";
 import type { GovernmentFormation } from "../../src/lib/db/types/governmentFormation";
-import type { LegislationType } from "../../src/lib/db/types/legislation";
 import { deRegions } from "../../src/lib/seeds/de/deRegions";
 import { deParties } from "../../src/lib/seeds/de/deParties";
-import { deDemographicCategories } from "../../src/lib/seeds/de/deDemographicCategories";
 import { deRegionDemographics } from "../../src/lib/seeds/de/deRegionDemographics";
 import { deDemographicTurnout } from "../../src/lib/seeds/de/deDemographicTurnout";
 import { calculateDEStatePartyOrgs } from "../../src/lib/seeds/de/deStatePartyOrgCalculations";
 import { deStateMetrics } from "../../src/lib/seeds/de/deStateMetrics";
 import { deStateBaselines } from "../../src/lib/seeds/de/deStateBaselines";
 import { deGovernmentFormation } from "../../src/lib/seeds/de/deGovernmentFormation";
-import { deLegislationTypes } from "../../src/lib/seeds/de/deLegislationTypes";
-import { calculateStateLean } from "../../src/lib/utils/demographics";
+import { calculateStateLeanForCache } from "../../src/lib/demographics/cachedStateLean";
 import { ObjectId } from "mongodb";
 import { getNextSequentialId } from "../../src/lib/db/sequentialId";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
@@ -92,33 +87,23 @@ async function main() {
   }
   console.log(`   ✓ Upserted ${deParties.length} DE parties.`);
 
-  // ── 3. DE Demographic Categories ──────────────────────────────────────────
-  console.log("3. Seeding DE demographic categories (12 voter archetypes)...");
-  for (const category of deDemographicCategories) {
-    await db
-      .collection<DemographicCategory>("demographicCategories")
-      .updateOne({ _id: category._id }, { $set: category }, { upsert: true });
-  }
-  const groupCount = deDemographicCategories.reduce((s, c) => s + c.groups.length, 0);
-  console.log(
-    `   ✓ Upserted ${deDemographicCategories.length} category (${groupCount} DE voter archetypes).`
-  );
-
   // ── 4. DE Region Demographics ─────────────────────────────────────────────
   console.log("4. Seeding DE region demographics...");
   for (const sd of deRegionDemographics) {
+    const { groups: _groups, ...storedDemographics } = sd;
     await db
-      .collection<StateDemographics>("stateDemographics")
-      .updateOne({ _id: sd._id }, { $set: sd }, { upsert: true });
+      .collection<CensusGroupView>("stateDemographics")
+      .updateOne({ _id: sd._id }, { $set: storedDemographics }, { upsert: true });
     await db
-      .collection<StateDemographics>("demographicDefaults")
-      .updateOne({ _id: sd._id }, { $set: sd }, { upsert: true });
+      .collection<CensusGroupView>("demographicDefaults")
+      .updateOne({ _id: sd._id }, { $set: storedDemographics }, { upsert: true });
 
-    const allCategories = await db
-      .collection<DemographicCategory>("demographicCategories")
-      .find({})
-      .toArray();
-    const lean = calculateStateLean(sd, allCategories);
+    const lean = calculateStateLeanForCache(sd, [], {
+      countryId: "DE",
+      stateId: sd._id,
+      preset: "2019-default",
+      demographicDefaults: sd,
+    });
     await db.collection<State>("states").updateOne(
       { _id: sd._id },
       {
@@ -194,25 +179,11 @@ async function main() {
   );
   console.log("   ✓ DE government formation upserted (status: pending).");
 
-  // ── 10. DE Legislation Types ──────────────────────────────────────────────
-  console.log("10. Seeding DE legislation types (tier-1 subset)...");
-  for (const type of deLegislationTypes) {
-    await db
-      .collection<LegislationType>("legislationTypes")
-      .updateOne(
-        { _id: type._id },
-        { $set: { ...type, source: "seed" as const, updatedAt: now } },
-        { upsert: true }
-      );
-  }
-  console.log(`   ✓ Upserted ${deLegislationTypes.length} DE legislation types.`);
-
   console.log("\n=== DE Seed Complete ===");
   console.log(
     `Bundesländer: ${deRegions.length}, Parties: ${deParties.length}, ` +
-      `Archetypes: ${groupCount}, Party Orgs: ${deStatePartyOrgs.length}, ` +
-      `Metrics: ${deStateMetrics.length}, Baselines: ${deStateBaselines.length}, ` +
-      `Legislation Types: ${deLegislationTypes.length}`
+      `Party Orgs: ${deStatePartyOrgs.length}, ` +
+      `Metrics: ${deStateMetrics.length}, Baselines: ${deStateBaselines.length}`
   );
 }
 

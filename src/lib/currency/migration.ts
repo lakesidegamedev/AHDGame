@@ -6,6 +6,7 @@ import {
   COUNTRY_CURRENCY_MAP,
   INITIAL_RATES,
   getInitialRates,
+  getRuntimeInitialRates,
   getSeedCurrencyCode,
   getSeedHardPeg,
 } from "@/lib/constants/currencies";
@@ -15,6 +16,14 @@ import { getStartingYearForPreset } from "@/lib/constants/turnTime";
 import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
 import { getBankId } from "@/lib/centralBank/helpers";
 import { getPresetMonetaryScope } from "@/lib/monetaryPolicy/presetMonetaryScope";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import type { Document } from "mongodb";
+import { currencyOrdersCollection } from "@/lib/db/repositories/currencyOrders";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { tradeHistoryCollection } from "@/lib/db/repositories/tradeHistory";
 
 const BATCH_SIZE = 500;
 
@@ -44,7 +53,7 @@ export async function migrateCharacterBalances(
    */
   preset?: string
 ): Promise<MigrationResult> {
-  const col = db.collection("characters");
+  const col = charactersCollection<Document>(db);
   const cursor = col
     .find({})
     .project({ _id: 1, countryId: 1, funds: 1, cashOnHand: 1, currencyBalances: 1 })
@@ -113,14 +122,18 @@ function buildCharacterUpdateOp(
       : COUNTRY_CURRENCY_MAP[doc.countryId];
   // Euro rows share the DE anchor rate — the same table `seedExchangeRates`
   // uses — so the migrated balance agrees with the seeded FX row in anchor
-  // units. RUB rows use the preset's RU row the same way. All other paths
-  // keep the legacy modern-table rate, byte-identical to before.
+  // units. RUB rows use the preset's RU row the same way, and every other
+  // 2027 row uses the 2027 table (2024 rates, TRY, PLN, RON), matching
+  // `seedExchangeRates`. All other presets keep the legacy modern-table rate,
+  // byte-identical to before.
   const homeRate =
     homeCurrency === "EUR"
-      ? (getInitialRates(preset ?? "").DE ?? INITIAL_RATES[doc.countryId] ?? 1)
+      ? (getRuntimeInitialRates(preset).DE ?? INITIAL_RATES[doc.countryId] ?? 1)
       : homeCurrency === "RUB"
-        ? (getInitialRates(preset ?? "").RU ?? INITIAL_RATES[doc.countryId] ?? 1)
-        : (INITIAL_RATES[doc.countryId] ?? 1);
+        ? (getRuntimeInitialRates(preset).RU ?? INITIAL_RATES[doc.countryId] ?? 1)
+        : preset === "2027-default"
+          ? (getRuntimeInitialRates(preset)[doc.countryId] ?? INITIAL_RATES[doc.countryId] ?? 1)
+          : (INITIAL_RATES[doc.countryId] ?? 1);
   const cashOnHand = doc.cashOnHand ?? 0;
   const convertedCash = cashOnHand * homeRate;
   const convertedCampaignFunds = doc.funds * homeRate;
@@ -159,7 +172,7 @@ export async function seedExchangeRates(db: Db, preset: string): Promise<void> {
     const currencyCode = getSeedCurrencyCode(countryId, preset);
     // Euro followers share the anchor's row value, not their legacy rate.
     const rate =
-      currencyCode === "EUR" && countryId !== "DE"
+      currencyCode === "EUR" && !countryHasFeature("deLib", countryId)
         ? (rates.DE ?? rates[countryId]!)
         : rates[countryId]!;
     const hardPeg = getSeedHardPeg(countryId, preset);
@@ -187,27 +200,23 @@ export async function seedExchangeRates(db: Db, preset: string): Promise<void> {
   });
 
   // exchangeRates uses string _id (CountryId), not ObjectId
-  await db.collection("exchangeRates").bulkWrite(ops as never);
+  await exchangeRatesCollection<Document>(db).bulkWrite(ops as never);
 }
 
 // ── Central bank updates ────────────────────────────────────────────────────────
 
 /**
- * Ensure every preset-scoped central bank exists and has the required
- * forexRevenue / tradeGrowth fields. A tradable currency alone does not imply
- * a modelled central bank: countries without authored fiscal coverage remain
- * in exchangeRates but are removed here. Safe to run multiple times; upsert is
- * idempotent and $setOnInsert preserves accumulated state on existing banks.
- *
- * Previously this hardcoded ["US","UK","JP"] and omitted DE, which caused EUR
- * spread fees to be silently dropped (updateOne no-ops when the document is absent).
+ * Ensure every preset-scoped central bank exists with forexRevenue /
+ * tradeGrowth. Tradable currency does not imply a modelled central bank:
+ * countries without authored fiscal coverage are removed here. Idempotent;
+ * $setOnInsert preserves accumulated state on existing banks.
  */
 export async function updateCentralBanks(db: Db, preset: string): Promise<void> {
   const now = new Date();
   const scope = getPresetMonetaryScope(preset);
   // centralBanks uses string _id, resolved via getBankId so shared banks (e.g.
   // ECB for DE) map to the canonical document instead of per-country dupes.
-  await db.collection("centralBanks").bulkWrite(
+  await centralBanksCollection(db).bulkWrite(
     scope.centralBankCountries.map((countryId) => {
       const bankId = getBankId(countryId);
       return {
@@ -254,7 +263,7 @@ export async function updateCentralBanks(db: Db, preset: string): Promise<void> 
     ),
   ];
   if (excludedBankIds.length > 0) {
-    await db.collection<{ _id: string }>("centralBanks").deleteMany({
+    await centralBanksCollection<{ _id: string }>(db).deleteMany({
       _id: { $in: excludedBankIds },
     });
   }
@@ -272,14 +281,14 @@ export async function updateCentralBanks(db: Db, preset: string): Promise<void> 
  */
 export async function migrateCorporationLiquidCapital(db: Db): Promise<MigrationResult> {
   // Load exchange rates (seeded in prior step)
-  const rateEntries = await db.collection("exchangeRates").find({}).toArray();
+  const rateEntries = await exchangeRatesCollection<Document>(db).find({}).toArray();
   const rateByCountry = new Map(
     (rateEntries as unknown as { countryId: string; rate: number; currencyCode: string }[]).map(
       (r) => [r.countryId, { rate: r.rate, currencyCode: r.currencyCode }]
     )
   );
 
-  const col = db.collection("corporations");
+  const col = corporationsCollection(db);
   const cursor = col
     .find({})
     .project({ _id: 1, countryId: 1, liquidCapital: 1, liquidCurrencyCode: 1 })
@@ -336,12 +345,14 @@ export async function migrateCorporationLiquidCapital(db: Db): Promise<Migration
  */
 export async function createForexIndexes(db: Db): Promise<void> {
   await Promise.all([
-    db.collection("tradeHistory").createIndex({ turn: -1 }, { background: true }),
-    db
-      .collection("tradeHistory")
-      .createIndex({ buyerCharacterId: 1, turn: -1 }, { background: true }),
-    db
-      .collection("currencyOrders")
-      .createIndex({ status: 1, expiresAtTurn: 1 }, { background: true }),
+    tradeHistoryCollection<Document>(db).createIndex({ turn: -1 }, { background: true }),
+    tradeHistoryCollection<Document>(db).createIndex(
+      { buyerCharacterId: 1, turn: -1 },
+      { background: true }
+    ),
+    currencyOrdersCollection<Document>(db).createIndex(
+      { status: 1, expiresAtTurn: 1 },
+      { background: true }
+    ),
   ]);
 }

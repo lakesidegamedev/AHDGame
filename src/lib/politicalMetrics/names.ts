@@ -8,8 +8,7 @@ import {
 /**
  * Per-country display names for every metric family — the country "flavoring"
  * over the shared backend catalog. Transcribed verbatim from the approved
- * design catalog (docs/superpowers/specs/assets/2026-07-16-metrics-mock-data.js
- * FAMILIES names: {us, uk, su}). `satisfies Record<PoliticalMetricId, string>`
+ * design catalog (FAMILIES names: {us, uk, su}). `satisfies Record<PoliticalMetricId, string>`
  * makes a missing or extra entry a compile error.
  */
 
@@ -284,6 +283,9 @@ const NAMES_BY_COUNTRY: Record<PoliticalMetricsCountryId, Record<PoliticalMetric
   UK: UK_METRIC_NAMES,
   RU: RU_METRIC_NAMES,
   DD: DD_METRIC_NAMES,
+  DE: US_METRIC_NAMES,
+  JP: US_METRIC_NAMES,
+  CN: US_METRIC_NAMES,
 };
 
 export function getMetricDisplayName(
@@ -313,6 +315,9 @@ const CATEGORY_NAMES_BY_COUNTRY: Record<
   ) as Record<PoliticalMetricCategoryId, string>,
   RU: baseCategoryNames(),
   DD: baseCategoryNames(),
+  DE: baseCategoryNames(),
+  JP: baseCategoryNames(),
+  CN: baseCategoryNames(),
 };
 
 export function getCategoryDisplayName(
@@ -348,5 +353,20 @@ export const COUNTRY_CHROME: Record<
     registry: "Council of Ministers · State Central Administration for Statistics",
     seal: "SZS · STATE STATISTICS ADMIN",
     glyph: "DDR",
+  },
+  DE: {
+    registry: "Federal Chancellery · Federal Statistical Office",
+    seal: "STATISTISCHES BUNDESAMT",
+    glyph: "DE",
+  },
+  JP: {
+    registry: "Cabinet Office · Statistics Bureau of Japan",
+    seal: "STATISTICS BUREAU OF JAPAN",
+    glyph: "JP",
+  },
+  CN: {
+    registry: "State Council · National Bureau of Statistics",
+    seal: "NATIONAL BUREAU OF STATISTICS",
+    glyph: "CN",
   },
 };

@@ -6,7 +6,7 @@ import type { NPP, PoliticalParty } from "@/lib/db/types";
 import { applyPartyInfluenceEffects } from "./partyExecutorEffects";
 
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
-vi.mock("@/lib/electionEngine/tallyCleaner", () => ({
+vi.mock("@/lib/elections/engine/tallyCleaner", () => ({
   removeWithdrawnCandidateFromTally: vi.fn(),
 }));
 vi.mock("@/lib/governors/senateVacancy", () => ({
@@ -91,7 +91,8 @@ describe("applyPartyInfluenceEffects", () => {
   });
 
   it("auto-resigns and withdraws the NPP before relocating when they hold office and are in a race", async () => {
-    const { removeWithdrawnCandidateFromTally } = await import("@/lib/electionEngine/tallyCleaner");
+    const { removeWithdrawnCandidateFromTally } =
+      await import("@/lib/elections/engine/tallyCleaner");
     const { notifyGovernorOfSenateVacancy } = await import("@/lib/governors/senateVacancy");
     const nppId = new ObjectId();
     const electionId = new ObjectId();

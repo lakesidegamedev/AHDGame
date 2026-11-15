@@ -13,7 +13,14 @@ export function producerWalletId(worldEpoch: string, scope: ProducerWalletScope)
   if (
     !worldEpoch ||
     !scope.countryId ||
-    !["households", "publicBuyer", "investmentBuyer", "operatingPayee"].includes(scope.kind) ||
+    ![
+      "households",
+      "publicBuyer",
+      "investmentBuyer",
+      "operatingPayee",
+      "backgroundEconomy",
+      "tariffCollector",
+    ].includes(scope.kind) ||
     !ZOD_CURRENCY_ENUM.includes(scope.currency)
   )
     throw new Error("Invalid producer wallet scope");

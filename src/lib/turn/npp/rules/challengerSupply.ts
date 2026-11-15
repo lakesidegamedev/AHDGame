@@ -9,7 +9,10 @@ export function getChallengerSupplyPolicy(
 ): { canReuse: boolean; canGenerate: boolean } {
   if (!access?.registered) return { canReuse: false, canGenerate: false };
   if (access.enabledForPlayers) {
-    return { canReuse: electionType !== "president", canGenerate: false };
+    return {
+      canReuse: electionType !== "president" && electionType !== "special_president",
+      canGenerate: false,
+    };
   }
   return { canReuse: true, canGenerate: true };
 }

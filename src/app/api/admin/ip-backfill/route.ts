@@ -4,6 +4,8 @@ import { withAdminAuth } from "@/lib/api/withAdminAuth";
 import { getDb } from "@/lib/mongodb";
 import { checkIpFireAndForget } from "@/lib/ip/ipteoh";
 import type { User, GameConfig } from "@/lib/db/types";
+import { usersCollection } from "@/lib/db/repositories/users";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 // POST /api/admin/ip-backfill — Backfill IP details for users missing them.
 // Auth: requireAdmin
@@ -14,17 +16,17 @@ export const POST = withAdminAuth(async (_auth) => {
     const db = await getDb();
 
     // Check if IP detection is enabled
-    const config = await db
-      .collection<GameConfig>("gameConfig")
-      .findOne({ _id: "default" }, { projection: { ipDetectionEnabled: 1 } });
+    const config = await gameConfigCollection(db).findOne(
+      { _id: "default" },
+      { projection: { ipDetectionEnabled: 1 } }
+    );
 
     if (!config?.ipDetectionEnabled) {
       return errorResponse(503, "IP detection is not enabled. Enable it in admin config first.");
     }
 
     // Find users without ipDetails, oldest first (they were registered first)
-    const users = await db
-      .collection<User>("users")
+    const users = await usersCollection(db)
       .find({ ipDetails: { $exists: false } })
       .sort({ createdAt: 1 })
       .limit(10)
@@ -46,7 +48,7 @@ export const POST = withAdminAuth(async (_auth) => {
 
       const ipDetails = await checkIpFireAndForget(ip);
       if (ipDetails) {
-        await db.collection<User>("users").updateOne({ _id: user._id }, { $set: { ipDetails } });
+        await usersCollection(db).updateOne({ _id: user._id }, { $set: { ipDetails } });
         processed++;
       } else {
         failed++;

@@ -5,8 +5,10 @@ import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { parseJsonBody } from "@/lib/api/validate";
 import { z } from "zod";
-import type { Character } from "@/lib/db/types";
 import { awardAchievement } from "@/lib/achievements";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { achievementsCollection } from "@/lib/db/repositories/achievements";
+import type { Document } from "mongodb";
 
 const grantSchema = z.object({
   characterId: z.string().refine((s) => ObjectId.isValid(s), "Invalid character ID"),
@@ -29,14 +31,14 @@ export async function POST(request: Request) {
     const { characterId, achievementSlug } = parsed.data;
     const db = await getDb();
 
-    const character = await db
-      .collection<Character>("characters")
-      .findOne({ _id: new ObjectId(characterId) });
+    const character = await charactersCollection(db).findOne({ _id: new ObjectId(characterId) });
     if (!character) {
       return errorResponse(404, "Character not found");
     }
 
-    const achievement = await db.collection("achievements").findOne({ slug: achievementSlug });
+    const achievement = await achievementsCollection<Document>(db).findOne({
+      slug: achievementSlug,
+    });
     if (!achievement) {
       return errorResponse(404, "Achievement not found");
     }

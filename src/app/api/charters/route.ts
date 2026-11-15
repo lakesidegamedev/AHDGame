@@ -10,7 +10,9 @@ import { draftCharterSchema } from "@/lib/api/schemas/charters";
 import { draftCharter } from "@/lib/charters/draftCharter";
 import type { CountryId } from "@/lib/constants/countries";
 import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
-import type { Character, PartyCharter, PartyCharterStatus } from "@/lib/db/types";
+import type { PartyCharter, PartyCharterStatus } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { partyChartersCollection } from "@/lib/db/repositories/partyCharters";
 
 function draftCharterErrorMessage(reason: string): string {
   switch (reason) {
@@ -71,8 +73,7 @@ async function handleGET(request: Request) {
     if (me) {
       // Resolve the session userId → all owned character ids → match any.
       const ownedCharacterIds = (
-        await db
-          .collection<Character>("characters")
+        await charactersCollection(db)
           .find({ userId: new ObjectId(auth.user.userId) })
           .project<{ _id: ObjectId }>({ _id: 1 })
           .toArray()
@@ -83,8 +84,7 @@ async function handleGET(request: Request) {
       filter.status = status;
     }
 
-    const charters = await db
-      .collection<PartyCharter>("partyCharters")
+    const charters = await partyChartersCollection(db)
       .find(filter)
       .sort({ createdAt: -1 })
       .limit(50)

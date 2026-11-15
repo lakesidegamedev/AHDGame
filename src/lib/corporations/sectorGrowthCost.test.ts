@@ -25,7 +25,7 @@ describe("growthCostFor", () => {
     expect(growthCostFor(revenue, ratePct, primeRate, marketShare)).toBe(expected);
   });
 
-  // Clock-alignment regression guard (#3934). Growth ACCRUES on the 48-turn game
+  // Clock-alignment regression guard. Growth ACCRUES on the 48-turn game
   // year (sectorTurn.ts divides the rate by GROWTH_RATE_TURNS_PER_YEAR) but cost
   // is CHARGED on the 24-turn financial day (hourlyGrowthCost = daily cost /
   // TURNS_PER_DAY). If `calculateDailyGrowthCost` converts to daily using 48

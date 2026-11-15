@@ -15,7 +15,6 @@ import type { AnyBulkWriteOperation, Db } from "mongodb";
 import { findMergedRegionMetricsMany } from "@/lib/macroMetrics/merge";
 import type { StateMetrics, MetricCategoryId, State } from "@/lib/db/types";
 import type { GovernmentApproval } from "@/lib/db/types/governmentApproval";
-import type { FederalBudget } from "@/lib/db/types/budget";
 import { enforcementApprovalModifier } from "@/lib/unions/enforcementCosts";
 import type { StateApprovalHistory } from "@/lib/db/types/stateApproval";
 import {
@@ -27,6 +26,7 @@ import { actingAppointmentsEnabled } from "@/lib/cabinet/actingEligibility";
 import { getCabinetPositions } from "@/lib/constants/cabinetMechanics";
 import { resolveCabinetRoster } from "@/lib/cabinet/rosterEra";
 import { resolveGameYear } from "@/lib/era/era";
+import { getGameStateCollection } from "@/lib/db/collections/gameState";
 import type { GameState } from "@/lib/db/types/gameState";
 import { getHeadOfGovernmentReference } from "@/lib/api/headOfGovernmentReference";
 import {
@@ -42,12 +42,16 @@ import type { LeaderReference } from "@/lib/government/leaderReference";
 import type { ElectedOfficial } from "@/lib/db/types/officials";
 import { getGovernmentFormationsCollection } from "@/lib/db/collections/governmentFormation";
 import { MS_PER_TURN } from "@/lib/constants/turnTime";
+import { recordLeaderDeparture } from "@/lib/government/leaderLegacy";
+import { logger } from "@/lib/observability/logger";
 import {
   evaluateModifiers,
   applyModifiers,
   type ActiveModifier,
 } from "@/lib/utils/approvalModifiers";
-import { getEraContext } from "@/lib/era/context";
+import { electorateUnitsByRegion } from "@/lib/demographics/electorateWeights";
+import { loadCountryTiers } from "@/lib/country/countryTier";
+import { eraYearContextFromGameState, getEraContext } from "@/lib/era/context";
 import { isMetricActive } from "@/lib/era/metricCatalog";
 import { getActiveNationalAddressModifier } from "@/lib/governorOffice/address/activeAddressModifiers";
 import { getActiveOrgStatementModifiersByCountry } from "@/lib/internationalOrganizations/jointStatement";
@@ -64,6 +68,17 @@ import {
   isPoliticalApprovalCountry,
   loadPoliticalApprovalBases,
 } from "@/lib/politicalLegislation/politicalApprovalProvider";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
+import { cabinetMembersCollection } from "@/lib/db/repositories/cabinetMembers";
+import { governmentApprovalsCollection } from "@/lib/db/repositories/governmentApprovals";
+import { demographicDefaultsCollection } from "@/lib/db/repositories/demographicDefaults";
+import { governorAddressesCollection } from "@/lib/db/repositories/governorAddresses";
+import type { Document } from "mongodb";
+import { stateApprovalHistoryCollection } from "@/lib/db/repositories/stateApprovalHistory";
 
 /**
  * The cabinet's own drag on national approval, as modifiers.
@@ -74,21 +89,15 @@ import {
  * that escape hatch costs: cheap enough to use, dear enough that a president who
  * never bothers with confirmation votes pays for it.
  *
- * Returned as {@link ActiveModifier}s so they go through the ONE applyModifiers
- * call with everything else. They used to be subtracted after that call, which
- * moved the rating while leaving nothing in `activeNationalModifiers` to explain
- * it: a president could seat four acting secretaries, watch approval fall two
- * points, and find no chip anywhere on the page saying why. The arithmetic is
- * unchanged. Negatives are uncapped in applyModifiers. The acting penalty is a
- * multiple of 0.5 and the empty seats penalty is rounded to a tenth, so both land
- * on the tenth-of-a-point grid.
+ * Returned as {@link ActiveModifier}s so they go through the one applyModifiers
+ * call with everything else, keeping them visible in `activeNationalModifiers`.
+ * Negatives are uncapped in applyModifiers. The acting penalty is a multiple of
+ * 0.5 and the empty seats penalty is rounded to a tenth, so both land on the
+ * tenth-of-a-point grid.
  *
  * The empty cabinet penalty scales with the share of seats left empty (see
  * {@link emptyCabinetSeatsModifier}): all vacant costs the full 7.5, a full
  * cabinet costs nothing.
- *
- * Exported for its own test: this is the only pure part of an otherwise
- * database-wide aggregate, and it shipped without coverage.
  */
 export function buildCabinetApprovalModifiers(
   cabinetMembers: Array<{ acting?: boolean; positionId?: string }>,
@@ -177,6 +186,10 @@ export const APPROVAL_EXCLUDED_METRICS = new Set([
   // Realized-flow diagnostic readout (§8.2) — surfaced for UI comparison against
   // the policy migrationRate input, not an approval term.
   "realizedMigrationRate",
+  // 2027 world readouts: housing pressure reaches voters through the cost of
+  // living, and the education index through re-employment after automation.
+  "housingPressure",
+  "tertiaryAttainment",
   // Surfaced supply-side trend (P1c-1) — redundant with the gdpGrowth it drives;
   // `laborForce` is a raw headcount. Neither is an approval term.
   "potentialGrowth",
@@ -286,31 +299,64 @@ export function effectiveMetricWeight(
   return popSum > 0 ? weighted / popSum : 1;
 }
 
+/** Countries whose regions must have census cells, per loaded electorate map. */
+const fullSimCountriesByGroups = new WeakMap<object, ReadonlySet<string>>();
+
 /**
- * P6d — load each state's demographic groups for electorate-weighted approval,
- * keyed by `${countryId}:${stateId}` so a cross-country state-ID collision
- * (CN HB / DE HB) never returns the wrong electorate. Pass a Mongo filter to
- * scope the read (e.g. `{ countryId }` or `{ _id: { $in: stateIds }, countryId }`).
+ * P6d — each state's census electorate as voter units for electorate-weighted
+ * approval, keyed by `${countryId}:${stateId}` so a cross-country state-ID
+ * collision (CN HB / DE HB) never returns the wrong electorate. A background
+ * country's state without census cells has no entry and its approval stays
+ * unweighted; {@link weightingFor} throws for the same gap in a playable or
+ * NPP-run country. Pass a Mongo filter to scope the read (e.g. `{ countryId }`
+ * or `{ _id: { $in: stateIds }, countryId }`).
  */
 export async function loadElectorateGroups(
   db: Db,
   filter: Record<string, unknown> = {}
 ): Promise<Map<string, StateDemographicGroup[]>> {
-  const docs = await db
-    .collection<StateDemographics>("stateDemographics")
-    .find(filter, { projection: { _id: 1, countryId: 1, groups: 1 } })
-    .toArray();
-  return new Map(docs.map((d) => [`${d.countryId}:${d._id}`, Object.values(d.groups ?? {})]));
+  const projection = {
+    _id: 1,
+    countryId: 1,
+    layer1PositionOverrides: 1,
+    layer1TurnoutOverrides: 1,
+  };
+  const [docs, defaultDocs, gameState, tiers] = await Promise.all([
+    stateDemographicsCollection(db).find(filter, { projection }).toArray(),
+    demographicDefaultsCollection(db).find(filter, { projection }).toArray(),
+    getGameStateCollection(db).then((col) =>
+      col.findOne(
+        { _id: "current" },
+        { projection: { preset: 1, currentYear: 1, startingYear: 1 } }
+      )
+    ),
+    loadCountryTiers(db),
+  ]);
+  const groups = electorateUnitsByRegion(
+    docs,
+    new Map(defaultDocs.map((d) => [`${d.countryId}:${d._id}`, d])),
+    { preset: gameState?.preset, ...eraYearContextFromGameState(gameState) }
+  );
+  fullSimCountriesByGroups.set(groups, new Set(tiers.fullSimulationIds));
+  return groups;
 }
 
-/** Build the optional `weighting` arg for a state from a composite-keyed group map. */
+/**
+ * Build the optional `weighting` arg for a state from a composite-keyed group map.
+ * A region with no census is unweighted only in a background country; in a
+ * playable or NPP-run country it is missing data and throws.
+ */
 export function weightingFor(
   groupsByState: Map<string, StateDemographicGroup[]>,
   countryId: string,
   stateId: string
 ): { groups: StateDemographicGroup[] } | undefined {
   const groups = groupsByState.get(`${countryId}:${stateId}`);
-  return groups && groups.length > 0 ? { groups } : undefined;
+  if (groups && groups.length > 0) return { groups };
+  if (fullSimCountriesByGroups.get(groupsByState)?.has(countryId)) {
+    throw new Error(`Approval weighting: no census electorate for ${countryId}:${stateId}`);
+  }
+  return undefined;
 }
 
 /**
@@ -373,10 +419,10 @@ export function computeStateApprovalBase(
   stateMetrics: StateMetrics,
   nationalAverages: Record<string, Record<string, number>>,
   weighting?: { groups: StateDemographicGroup[] },
-  // This is a CALCULATION util, not a seeder: a wrong preset here yields a
-  // wrong approval number, it does not write modern data into a historical
-  // world. It also sits after an optional parameter, so making it required
-  // needs a signature reorder across every caller. Tracked on #3908.
+  // Calculation util, not a seeder: a wrong preset yields a wrong number, it
+  // does not write modern data into a historical world. Preset sits after an
+  // optional param, so making it required needs a signature reorder across
+  // every caller.
   // eslint-disable-next-line no-restricted-syntax
   preset: string = "2019-default",
   /** Live year (null while the era flag is off) — gates inactive-metric terms. */
@@ -429,7 +475,7 @@ export function computeApprovalBaseFromAverages(
   values: Record<string, Record<string, number>>,
   referenceAverages: Record<string, Record<string, number>>,
   // Calculation util, not a seeder; see the note on computeStateApprovalBase.
-  // Tracked on #3908.
+  // Tracked on.
   // eslint-disable-next-line no-restricted-syntax
   preset: string = "2019-default",
   countryId?: string | null,
@@ -537,8 +583,7 @@ async function getActiveAddressModifiersByState(
   countryId: CountryId,
   currentTurn: number
 ): Promise<Map<string, ActiveModifier[]>> {
-  const active = await db
-    .collection("governorAddresses")
+  const active = await governorAddressesCollection<Document>(db)
     .find({ countryId, "approvalEffect.expiresAtTurn": { $gt: currentTurn } })
     .toArray();
   const map = new Map<string, ActiveModifier[]>();
@@ -564,13 +609,11 @@ async function getActiveAddressModifiersByState(
 /**
  * Maximum points a state's stored approval rating may move per turn.
  *
- * Approval is a pure function of live metrics, so metric shocks used to jump
- * the stored rating (and everything reading it: coattails, charts, the
- * national aggregate) several points in a single turn. Issue #2891 item 1:
- * approval moving 37 to 43 in about 2 days was owner-agreed too fast.
- * Damping the SNAPSHOT keeps the derived target intact while the stored,
- * player-visible and election-consumed rating steps toward it at most this
- * many points per turn.
+ * Approval is a pure function of live metrics, so metric shocks would
+ * otherwise jump the stored rating (and coattails, charts, the national
+ * aggregate) several points in a single turn. Damping the SNAPSHOT keeps the
+ * derived target intact while the stored, player-visible, election-consumed
+ * rating steps toward it at most this many points per turn.
  */
 export const APPROVAL_MAX_STEP_PER_TURN = 2;
 
@@ -642,12 +685,10 @@ async function recordedHeadSinceTurn(
   turn: number
 ): Promise<number | null> {
   if (!("kind" in head)) {
-    const president = await db
-      .collection<ElectedOfficial>("electedOfficials")
-      .findOne(
-        { countryId, officeType: "president", characterId: head },
-        { projection: { electedAt: 1 } }
-      );
+    const president = await electedOfficialsCollection(db).findOne(
+      { countryId, officeType: "president", characterId: head },
+      { projection: { electedAt: 1 } }
+    );
     const fromElection = turnForDate(president?.electedAt, turn, new Date(), MS_PER_TURN);
     if (fromElection !== null) return fromElection;
   }
@@ -663,7 +704,7 @@ async function recordedHeadSinceTurn(
  * Called each turn. History is capped at the last 20 entries.
  *
  * When a long-horizon context is supplied, the same scored values are also
- * appended to the durable `approvalTelemetry` series (issue #2099), which
+ * appended to the durable `approvalTelemetry` series, which
  * keeps every turn. Without a context the operational write is unchanged.
  */
 export async function snapshotApprovalHistory(
@@ -673,7 +714,7 @@ export async function snapshotApprovalHistory(
   telemetryCtx?: LongHorizonContext,
   bankFailureMods: ActiveModifier[] = []
 ): Promise<void> {
-  const statesCol = db.collection<State>("states");
+  const statesCol = statesCollection(db);
 
   // Score approval with the live era's ruleset. Omitting this silently used the
   // 2019 excluded-metric set + 2019 named modifiers, so the stored snapshot (which
@@ -683,19 +724,16 @@ export async function snapshotApprovalHistory(
   const { preset, year } = await getEraContext(db);
 
   const stateIds = await statesCol.distinct("_id", { countryId });
-  const [allMetrics, allStates, allDemographics] = await Promise.all([
+  const [allMetrics, allStates, groupsByState] = await Promise.all([
     // Scope the metrics fetch to the same country so a cross-country state-ID
     // collision (CN HB / DE HB) can't pull in another country's metrics.
     // SP5: merged two-store view (macro + political halves).
     findMergedRegionMetricsMany(db, { _id: { $in: stateIds }, countryId }),
     statesCol.find({ countryId }, { projection: { _id: 1, population: 1 } }).toArray(),
-    // P6d: per-state demographic groups drive the electorate-weighted approval.
+    // P6d: per-state census electorate drives the electorate-weighted approval.
     // Scoped by countryId like the metrics fetch above so a cross-country
     // state-ID collision (CN HB / DE HB) can't pull the wrong electorate.
-    db
-      .collection<StateDemographics>("stateDemographics")
-      .find({ _id: { $in: stateIds }, countryId }, { projection: { _id: 1, groups: 1 } })
-      .toArray(),
+    loadElectorateGroups(db, { _id: { $in: stateIds }, countryId }),
   ]);
 
   // The war block is computed BEFORE the metrics guard below, and persisted on
@@ -703,7 +741,7 @@ export async function snapshotApprovalHistory(
   // whichever direction the country is currently going, so it only reaches the
   // right value if it is stepped EVERY turn. A country that returned early here
   // would freeze its exhaustion — and, once at peace, never finish healing.
-  const approvalDoc = await db.collection<GovernmentApproval>("governmentApprovals").findOne(
+  const approvalDoc = await governmentApprovalsCollection(db).findOne(
     { _id: countryId },
     {
       projection: {
@@ -711,6 +749,7 @@ export async function snapshotApprovalHistory(
         warExhaustionConflictId: 1,
         headOfGovernmentKey: 1,
         headOfGovernmentSinceTurn: 1,
+        approvalRating: 1,
       },
     }
   );
@@ -729,7 +768,7 @@ export async function snapshotApprovalHistory(
     // `upsert: false` — a country with neither metrics nor an approval document
     // has no exhaustion to heal, and inventing one here would create a document
     // missing every other required field.
-    await db.collection<GovernmentApproval>("governmentApprovals").updateOne(
+    await governmentApprovalsCollection(db).updateOne(
       { _id: countryId },
       {
         $set: {
@@ -743,9 +782,6 @@ export async function snapshotApprovalHistory(
   }
 
   const statePopMap = new Map(allStates.map((s) => [s._id, s.population ?? 0]));
-  const groupsByState = new Map<string, StateDemographicGroup[]>(
-    allDemographics.map((d) => [d._id, Object.values(d.groups ?? {})])
-  );
   const nationalAverages = computeNationalAveragesFromMetrics(allMetrics);
   // SP4: playable countries score their metric base from the hybrid political
   // model — one provider call per snapshot, applied as baseOverride so
@@ -762,7 +798,6 @@ export async function snapshotApprovalHistory(
   // redistricting flag is off or the country has no district docs).
   const fairnessModifiersByState = await getActiveFairnessGapModifiers(db, countryId);
   const stateApprovals = allMetrics.map((m) => {
-    const groups = groupsByState.get(m._id);
     return {
       stateId: m._id,
       approval: calculateStateApproval(
@@ -772,7 +807,7 @@ export async function snapshotApprovalHistory(
           ...(addressModifiersByState.get(m._id) ?? []),
           ...(fairnessModifiersByState.get(m._id) ?? []),
         ],
-        groups && groups.length > 0 ? { groups } : undefined,
+        weightingFor(groupsByState, countryId, String(m._id)),
         preset,
         year,
         isPoliticalApprovalCountry(countryId, true)
@@ -784,13 +819,11 @@ export async function snapshotApprovalHistory(
     };
   });
 
-  // Per-turn damping (issue #2891 item 1): step each state's stored rating
-  // toward its freshly derived target by at most APPROVAL_MAX_STEP_PER_TURN
-  // points instead of jumping. The damped values feed both the per-state
-  // snapshot and the national aggregate, so every reader of the stored
-  // ratings (charts, rankings, coattails) sees the same smoothed series.
-  const prevDocs = await db
-    .collection<StateApprovalHistory>("stateApprovalHistory")
+  // Per-turn damping: step each state's stored rating toward its freshly
+  // derived target by at most APPROVAL_MAX_STEP_PER_TURN points instead of
+  // jumping. Damped values feed both the per-state snapshot and the national
+  // aggregate, so all readers see the same smoothed series.
+  const prevDocs = await stateApprovalHistoryCollection(db)
     .find(
       { _id: { $in: stateApprovals.map((s) => s.stateId) }, countryId },
       { projection: { _id: 1, approvalRating: 1 } }
@@ -804,32 +837,24 @@ export async function snapshotApprovalHistory(
 
   let approval = calculateNationalApproval(dampedStateApprovals);
 
-  // Every national-scope modifier goes through ONE applyModifiers call.
-  //
-  //  - the head-of-government address bump, applied at country level rather than
-  //    cascaded through per-state approvals so it shows on the national rating
-  //    without bumping every state;
-  //  - international joint statements about this country, bounded and time
-  //    limited, which lift cleanly when the statement lapses;
-  //  - the war block, one modifier per term (exhaustion, effort, alliance
-  //    contribution), each already stepped by computeWarApproval.
-  //
-  // One call rather than a chain: each call independently clamps to [0,100] and
-  // rounds to a tenth, and each gets its own POSITIVE_MODIFIER_NET_CAP — so
-  // chaining rounds twice and lets each source spend the cap the others are
-  // subject to. The stored modifier list is exactly what this call consumed, so
-  // the chips a reader shows cannot disagree with the rating beside them.
+  // Every national-scope modifier goes through ONE applyModifiers call:
+  // head-of-government address bump (country level, not per-state), international
+  // joint statements (bounded, time limited), and the war block (one modifier
+  // per term). Chaining would round twice and let each source spend its own
+  // POSITIVE_MODIFIER_NET_CAP, and the stored modifier list must match exactly
+  // what the rating consumed so chips cannot disagree with it.
   const nationalAddressMods = await getActiveNationalAddressModifier(db, countryId, turn);
   const orgStatementMods = await getActiveOrgStatementModifiersByCountry(db, countryId, turn);
 
-  const cabinetMembers = await db
-    .collection<{ acting?: boolean; positionId?: string }>("cabinetMembers")
+  const cabinetMembers = await cabinetMembersCollection<{ acting?: boolean; positionId?: string }>(
+    db
+  )
     .find({ countryId }, { projection: { acting: 1, positionId: 1 } })
     .toArray();
   // One gameState read per country per turn: the live year and the seats created
   // by legislation decide how many cabinet seats exist right now. No seats
   // registered for the country leaves the set undefined (binary penalty).
-  const gameStateDoc = await db.collection<GameState>("gameState").findOne(
+  const gameStateDoc = await gameStateCollection(db).findOne(
     { _id: "current" },
     {
       projection: {
@@ -880,7 +905,24 @@ export async function snapshotApprovalHistory(
   } catch {
     // keep the stored tenure
   }
-  // The honeymoon lasts the head of government's whole term (owner, ticket 1455).
+  // A head who has just left office gets a legacy. It must never block the
+  // snapshot, and a retry writes nothing twice (the row id is stable).
+  if (storedTenure?.key && storedTenure.key !== tenure.key) {
+    try {
+      await recordLeaderDeparture(db, {
+        countryId,
+        leaderKey: storedTenure.key,
+        sinceTurn: storedTenure.sinceTurn,
+        nextKey: tenure.key,
+        turn,
+        exitApproval:
+          typeof approvalDoc?.approvalRating === "number" ? approvalDoc.approvalRating : null,
+      });
+    } catch (err) {
+      logger.error("Approval", `Leader legacy failed for ${countryId}`, err);
+    }
+  }
+  // The honeymoon lasts the head of government's whole term (owner).
   const countryConfig = getCountryConfig(countryId, gameStateDoc?.preset);
   const headOffice = countryConfig.officeTypes.find(
     (office) => office.key === getHeadOfGovernmentOfficeKey(countryId, gameStateDoc?.preset)
@@ -890,9 +932,10 @@ export async function snapshotApprovalHistory(
     turn,
     expectationsRampTurns(headOffice, countryConfig.lowerElectionSystem)
   );
-  const unionBudget = await db
-    .collection<FederalBudget>("federalBudget")
-    .findOne({ countryId }, { projection: { unionsBanned: 1, unionEnforcementPosture: 1 } });
+  const unionBudget = await federalBudgetCollection(db).findOne(
+    { countryId },
+    { projection: { unionsBanned: 1, unionEnforcementPosture: 1 } }
+  );
   const unionEnforcementMod = enforcementApprovalModifier(
     unionBudget?.unionsBanned === true,
     unionBudget?.unionEnforcementPosture
@@ -917,7 +960,7 @@ export async function snapshotApprovalHistory(
   const allNationalMods = [expectationsMod, ...nationalMods];
   approval = applyModifiers(approval, allNationalMods);
 
-  await db.collection<GovernmentApproval>("governmentApprovals").updateOne(
+  await governmentApprovalsCollection(db).updateOne(
     { _id: countryId },
     {
       $set: {
@@ -979,16 +1022,15 @@ export async function snapshotApprovalHistory(
     new Date()
   );
   if (stateApprovalOps.length > 0) {
-    await db
-      .collection<StateApprovalHistory>("stateApprovalHistory")
-      .bulkWrite(stateApprovalOps as AnyBulkWriteOperation<StateApprovalHistory>[]);
+    await stateApprovalHistoryCollection(db).bulkWrite(
+      stateApprovalOps as AnyBulkWriteOperation<StateApprovalHistory>[]
+    );
   }
 
-  // Durable long-horizon series (#2099): the same damped values the pages
-  // read, one point per scope, with world/run provenance. Runs after the
-  // operational writes so a telemetry failure can never block them
-  // (runPhase logs it); a missed turn surfaces as an explicit gap, never a
-  // fabricated point.
+  // Durable long-horizon series: the same damped values the pages read, one
+  // point per scope, with world/run provenance. Runs after operational writes
+  // so a telemetry failure can never block them; a missed turn is an explicit
+  // gap, never a fabricated point.
   if (telemetryCtx) {
     const netOf = (value: number): number => value - (100 - value);
     await appendApprovalTelemetry(db, telemetryCtx, countryId, turn, {

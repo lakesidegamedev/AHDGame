@@ -23,12 +23,11 @@ import type {
   InterventionRecord,
 } from "@/lib/db/types/exchangeRate";
 import { FOREX_AND_MACRO_CHART_HISTORY_TURNS } from "@/lib/constants/turnTime";
-import type { Character } from "@/lib/db/types/character";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import {
   INITIAL_RATES,
   getCountryIdForCurrency,
-  getInitialRates,
+  getRuntimeInitialRates,
   getSeedCurrencyCode,
   INTERVENTION_FAILURE_INFAMY,
   INTERVENTION_HISTORY_MAX,
@@ -51,7 +50,6 @@ import {
   participatesInFloat,
   resolveMonetaryRegime,
 } from "@/lib/monetary/brettonWoods";
-import type { GameConfig } from "@/lib/db/types/gameConfig";
 import { isCommandEconomy, MARKETIZATION_SCHEDULE } from "@/lib/constants/commandEconomy";
 import { rankReserveCurrencies } from "@/lib/centralBank/reserveCurrencyRanking";
 import { computeCurrencyVolumes } from "@/lib/currency/volumeTracker";
@@ -71,6 +69,10 @@ import {
   expireStaleOrders,
   sendFillNotifications,
 } from "./forexLimitOrders";
+import { getCharactersCollection } from "@/lib/db/collections/characters";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 export interface ForexTurnResult {
   countriesUpdated: number;
@@ -99,6 +101,9 @@ export function extractMacroInputs(bank: CentralBank): MacroInputs {
     inflationRate: finiteOr(bank.inflationHistory?.at(-1)?.rate, 0),
     gdpGrowth: finiteOr(bank.gdpGrowthHistory?.at(-1)?.rate, 0),
     tradeGrowth: finiteOr(bank.tradeGrowth, 0),
+    ...(Number.isFinite(bank.backgroundTradePressure)
+      ? { tradeBalancePressure: bank.backgroundTradePressure }
+      : {}),
   };
 }
 
@@ -150,28 +155,28 @@ export async function processForexTurn(
 
   // Resolve the era-selected initial-rate table ONCE per turn (not per country)
   // — the same lookup `seedExchangeRates` used at world creation.
-  const eraInitialRates = getInitialRates(preset ?? DEFAULT_SEED_PRESET);
+  const eraInitialRates = getRuntimeInitialRates(preset ?? DEFAULT_SEED_PRESET);
   const activeCountries = getPresetMonetaryScope(preset ?? DEFAULT_SEED_PRESET).forexCountries;
 
   const euroUnion = await reconcileEuroMonetaryUnion(db, currentTurn);
 
   // Load all central bank data in one query
-  const banks = await db.collection<CentralBank>("centralBanks").find({}).toArray();
+  const banks = await centralBanksCollection(db).find({}).toArray();
   const bankMap = new Map(banks.map((b) => [b.countryId, b]));
 
   // Command-economy regime gate (default OFF). When on, command-era currencies
   // (USSR, command-China) are held at a fixed, non-convertible official rate.
-  const gameConfig = await db
-    .collection<GameConfig>("gameConfig")
-    .findOne({ _id: "default" }, { projection: { commandEconomyEnabled: 1 } });
+  const gameConfig = await gameConfigCollection(db).findOne(
+    { _id: "default" },
+    { projection: { commandEconomyEnabled: 1 } }
+  );
   const commandEconomyEnabled = gameConfig?.commandEconomyEnabled === true;
 
   // Compute volumes for all currencies in one pass
   const volumes = await computeCurrencyVolumes(db, currentTurn, euroUnion);
 
   // Pre-fetch all existing exchange rates in one query
-  const existingRateDocs = await db
-    .collection<ExchangeRate>("exchangeRates")
+  const existingRateDocs = await exchangeRatesCollection(db)
     .find({ _id: { $in: activeCountries } })
     .toArray();
   const rateMap = new Map(existingRateDocs.map((r) => [r._id, r]));
@@ -277,7 +282,7 @@ export async function processForexTurn(
         sellVolume24: 0,
         updatedAt: now,
       };
-      await db.collection<ExchangeRate>("exchangeRates").insertOne(existingRate);
+      await exchangeRatesCollection(db).insertOne(existingRate);
     }
 
     const macro = extractMacroInputs(bank);
@@ -506,7 +511,7 @@ export async function processForexTurn(
       for (const key of ["rate", "macroTarget", "rateHistory", "interventionPolicy"])
         delete setFields[key];
     }
-    await db.collection<ExchangeRate>("exchangeRates").updateOne(
+    await exchangeRatesCollection(db).updateOne(
       { _id: countryId },
       {
         $set: setFields,
@@ -524,9 +529,9 @@ export async function processForexTurn(
     countriesUpdated++;
   }
 
+  const linkedWrites: AnyBulkWriteOperation<ExchangeRate>[] = [];
   if (euroUnion) {
     const linked = linkedEuroRates(euroUnion, ratesByCurrency);
-    const writes: AnyBulkWriteOperation<ExchangeRate>[] = [];
     for (const member of Object.values(euroUnion.members)) {
       if (!member || member.countryId === euroUnion.anchorCountryId) continue;
       const existing = rateMap.get(member.countryId);
@@ -534,7 +539,7 @@ export async function processForexTurn(
       if (!existing || rate === undefined)
         throw new Error("A euro member quotation is unavailable");
       const volume = volumes[member.ledgerCurrency] ?? { buyVolume24: 0, sellVolume24: 0 };
-      writes.push({
+      linkedWrites.push({
         updateOne: {
           filter: { _id: member.countryId },
           update: {
@@ -553,12 +558,45 @@ export async function processForexTurn(
         },
       });
     }
-    if (writes.length) {
-      const result = await db.collection<ExchangeRate>("exchangeRates").bulkWrite(writes);
-      if (result.matchedCount !== writes.length)
-        throw new Error("A euro member quotation could not be persisted");
-      countriesUpdated += writes.length;
+  }
+
+  // A shared-currency quotation does not require a separate national bank.
+  const sharedEuroRate = euroAnchorRate ?? deDocRate;
+  if (sharedEuroRate !== null) {
+    for (const countryId of activeCountries) {
+      const existing = rateMap.get(countryId);
+      if (
+        !existing ||
+        existing.currencyCode !== "EUR" ||
+        countryId === euroAnchorCountry ||
+        bankMap.has(countryId) ||
+        euroUnion?.members[countryId] ||
+        (!euroUnion && getSeedCurrencyCode(countryId, presetForSeed) !== "EUR")
+      )
+        continue;
+      linkedWrites.push({
+        updateOne: {
+          filter: { _id: existing._id, currencyCode: "EUR" },
+          update: {
+            $set: {
+              rate: sharedEuroRate,
+              macroTarget: euroAnchorMacroTarget ?? sharedEuroRate,
+              rateHistory: [
+                ...existing.rateHistory,
+                { turn: currentTurn, rate: sharedEuroRate },
+              ].slice(-FOREX_AND_MACRO_CHART_HISTORY_TURNS),
+              updatedAt: now,
+            },
+          },
+        },
+      });
     }
+  }
+  if (linkedWrites.length) {
+    const result = await exchangeRatesCollection(db).bulkWrite(linkedWrites);
+    if (result.matchedCount !== linkedWrites.length)
+      throw new Error("A shared euro quotation could not be persisted");
+    countriesUpdated += linkedWrites.length;
   }
 
   // Process triggered limit orders
@@ -763,12 +801,12 @@ async function persistInterventionSideEffects(
   outcome: InterventionOutcome
 ): Promise<void> {
   if (outcome.infamyCharged && bank.chairCharacterId) {
-    const chair = await db
-      .collection<Character>("characters")
-      .findOne(
-        { _id: bank.chairCharacterId },
-        { projection: { _id: 1, userId: 1, name: 1, sequentialId: 1 } }
-      );
+    const chair = await (
+      await getCharactersCollection(db)
+    ).findOne(
+      { _id: bank.chairCharacterId },
+      { projection: { _id: 1, userId: 1, name: 1, sequentialId: 1 } }
+    );
     if (chair) {
       await sendSystemMail(db, {
         toCharacterId: chair._id,

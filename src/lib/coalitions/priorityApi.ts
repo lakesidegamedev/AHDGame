@@ -2,7 +2,6 @@ import { ObjectId, type Db } from "mongodb";
 import type { AuthUserWithCharacter } from "@/lib/auth";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import type { PoliticalParty } from "@/lib/db/types/party";
-import type { Character } from "@/lib/db/types/character";
 import type { Bill } from "@/lib/db/types/legislation";
 import type { Coalition, CoalitionPriority } from "@/lib/db/types/coalition";
 import type { CoalitionPrioritiesPayload } from "@/lib/coalitions/types";
@@ -13,6 +12,10 @@ import {
   getPriorityVoteTally,
   normalizeCoalitionPriorities,
 } from "./priorities";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { coalitionsCollection } from "@/lib/db/repositories/coalitions";
+import { legislationCollection } from "@/lib/db/repositories/legislation";
 
 const LIVE_PRIORITY_BILL_STATUSES: ReadonlySet<Bill["status"]> = new Set([
   "active",
@@ -56,15 +59,12 @@ export async function loadCoalitionPriorityContext(
   countryId: CountryId,
   sequentialId: number
 ): Promise<CoalitionPriorityContext | null> {
-  const coalition = await db
-    .collection<Coalition>("coalitions")
-    .findOne({ countryId, sequentialId });
+  const coalition = await coalitionsCollection(db).findOne({ countryId, sequentialId });
   if (!coalition) return null;
 
   const memberPartyObjectIds = coalition.members.map((member) => member.partyId);
   const memberParties = memberPartyObjectIds.length
-    ? await db
-        .collection<PoliticalParty>("politicalParties")
+    ? await politicalPartiesCollection(db)
         .find({ _id: { $in: memberPartyObjectIds }, countryId })
         .toArray()
     : [];
@@ -87,8 +87,7 @@ export async function loadCoalitionPriorityContext(
   }
 
   const characters = characterIds.size
-    ? await db
-        .collection<Character>("characters")
+    ? await charactersCollection(db)
         .find(
           { _id: { $in: [...characterIds].map((id) => new ObjectId(id)) } },
           { projection: { _id: 1, name: 1 } }
@@ -96,8 +95,7 @@ export async function loadCoalitionPriorityContext(
         .toArray()
     : [];
 
-  const liveBills = await db
-    .collection<Bill>("legislation")
+  const liveBills = await legislationCollection(db)
     .find(
       { countryId, status: { $in: [...LIVE_PRIORITY_BILL_STATUSES] } },
       {

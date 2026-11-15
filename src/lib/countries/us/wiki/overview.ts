@@ -20,7 +20,7 @@ State Senator is the usual first race. It builds the favorability and Political 
 | U.S. Senator | FPTP statewide election | 6 years (staggered) | 100 (96 in 1953) |
 | U.S. Representative | Statewide multi-seat by vote share, or one election per district | 2 years | 435 |
 | Governor | FPTP statewide election | 4 years | 1 per state (50, or 48 in 1953) |
-| State Senator | Multi-seat by vote share within the state | 4 years | 1,972 (varies per state) |
+| State Senator | Multi-seat by vote share within the state | 4 years | 1,973 in 2027; varies by preset and state |
 | Federal Reserve Chair | Appointed (in-game action) | 4 years | 1 |
 
 A State Senator (+1 action per turn) who wins a governorship moves to +2 actions per turn, and a later Presidency is +4. The President's 4-year term is 192 turns (8 real days), a House term is 96 turns (4 real days), and a State Senator or Governor term is 192 turns. Plan the jump so that you are not stuck waiting: a House seat comes up every 4 real days, a Senate seat for your class every 12.

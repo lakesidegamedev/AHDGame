@@ -5,6 +5,16 @@
  */
 import { resolveCampaignPriceLevel } from "@/lib/campaigns/rules/priceLevel";
 import {
+  campaignGdpPerCapitaIndex,
+  requireNationalGdpPerCapita,
+} from "@/lib/campaigns/rules/gdpBaseline";
+import {
+  campaignAnchorToLocal,
+  campaignLocalRate,
+  loadCampaignCurrencyRates,
+  type CampaignCurrencyRates,
+} from "@/lib/campaigns/campaignCurrency";
+import {
   getStateDemographicTurnoutCollection,
   getPartyBudgetCollection,
 } from "@/lib/db/collections";
@@ -44,7 +54,6 @@ import {
   calculateStateGOTVBoost,
   calculateCanvassingBoost,
 } from "./demographicTurnoutCalculations";
-import { resolveCanvassGroup } from "@/lib/demographics/countryDemographics";
 import { resolvePartyTurnoutTargetLean } from "@/lib/demographics/partyTurnoutTargetResolver";
 import {
   calculateRegistrationDriveBoost,
@@ -65,6 +74,17 @@ import {
   buildRegistrationPresence,
   registrationPresenceKey,
 } from "@/lib/parties/rules/registrationPresence";
+import { getPoliticalPartiesCollection } from "@/lib/db/collections/politicalParties";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { partyBudgetCollection } from "@/lib/db/repositories/partyBudget";
+import { stateRegistrationPoolCollection } from "@/lib/db/repositories/stateRegistrationPool";
+import { orgRegLedgerCollection } from "@/lib/db/repositories/orgRegLedger";
 
 type StoredPartyBudget = PartyBudget & { countryId?: CountryId };
 
@@ -174,12 +194,16 @@ interface RevenueContext {
   /** World reset preset selecting the GDP-baseline era (issue #798). */
   preset: string;
   priceLevel?: number;
+  /** Frozen base-rate snapshot: anchor campaign money -> local treasury currency. */
+  campaignRates: CampaignCurrencyRates;
   partyMap: Map<string, PoliticalParty>;
   statePartyOrgMap: Map<string, StatePartyOrg>;
   statePopMap: Map<string, number>;
   // Raw state GDP (undefined when absent → country-average scalar 1.0, matching
   // the turn processor; coalescing to 0 would wrongly clamp to the 0.9 floor).
   stateGdpMap: Map<string, number | undefined>;
+  /** Live national GDP per capita by country, the income-scalar baseline. */
+  nationalGdpIndex: ReadonlyMap<string, number>;
   // NPPs only generate/are taxed when the economy is enabled (mirrors
   // processNppFundGeneration); otherwise they contribute $0 to revenue, so GOTV
   // never budgets against NPP income the treasury will not receive.
@@ -229,18 +253,38 @@ function calculatePartyRevenueFromContext(
         politicalInfluence: member.politicalInfluence ?? 0,
         preset: ctx.preset,
         priceLevel: ctx.priceLevel,
+        nationalGdpPerCapita: requireNationalGdpPerCapita(ctx.nationalGdpIndex, countryId),
       });
-      revenue += calculateTaxAmount(totalFundRate, nationalTaxRate);
+      // Treasuries hold LOCAL campaign money: the deposit phases convert anchor
+      // generation to local before taxing, so the revenue estimate must too.
+      revenue += calculateTaxAmount(
+        campaignAnchorToLocal(
+          totalFundRate,
+          member.countryId ?? "US",
+          ctx.campaignRates,
+          ctx.preset
+        ),
+        nationalTaxRate
+      );
     }
     for (const npp of npps) {
       const pop = ctx.statePopMap.get(npp.homeState) ?? 0;
+      const nppRate = campaignLocalRate(npp.countryId ?? "US", ctx.campaignRates, ctx.preset);
       const totalFundRate = projectNppGeneration({
         population: pop,
         donorBaseLevel: npp.donorBaseLevel ?? 0,
-        currentFundsLocal: (npp.funds ?? 0) / (ctx.priceLevel ?? 1),
+        currentFundsLocal: (npp.funds ?? 0) / (nppRate * (ctx.priceLevel ?? 1)),
         nppEconomyEnabled: ctx.nppEconomyEnabled,
       });
-      revenue += calculateTaxAmount(totalFundRate * (ctx.priceLevel ?? 1), nationalTaxRate);
+      revenue += calculateTaxAmount(
+        campaignAnchorToLocal(
+          totalFundRate * (ctx.priceLevel ?? 1),
+          npp.countryId ?? "US",
+          ctx.campaignRates,
+          ctx.preset
+        ),
+        nationalTaxRate
+      );
     }
     return revenue;
   } else {
@@ -268,37 +312,47 @@ function calculatePartyRevenueFromContext(
         politicalInfluence: member.politicalInfluence ?? 0,
         preset: ctx.preset,
         priceLevel: ctx.priceLevel,
+        nationalGdpPerCapita: requireNationalGdpPerCapita(ctx.nationalGdpIndex, countryId ?? "US"),
       });
-      revenue += calculateTaxAmount(totalFundRate, stateTaxRate);
+      revenue += calculateTaxAmount(
+        campaignAnchorToLocal(
+          totalFundRate,
+          member.countryId ?? "US",
+          ctx.campaignRates,
+          ctx.preset
+        ),
+        stateTaxRate
+      );
     }
     for (const npp of npps) {
+      const nppRate = campaignLocalRate(npp.countryId ?? "US", ctx.campaignRates, ctx.preset);
       const totalFundRate = projectNppGeneration({
         population: pop,
         donorBaseLevel: npp.donorBaseLevel ?? 0,
-        currentFundsLocal: (npp.funds ?? 0) / (ctx.priceLevel ?? 1),
+        currentFundsLocal: (npp.funds ?? 0) / (nppRate * (ctx.priceLevel ?? 1)),
         nppEconomyEnabled: ctx.nppEconomyEnabled,
       });
-      revenue += calculateTaxAmount(totalFundRate * (ctx.priceLevel ?? 1), stateTaxRate);
+      revenue += calculateTaxAmount(
+        campaignAnchorToLocal(
+          totalFundRate * (ctx.priceLevel ?? 1),
+          npp.countryId ?? "US",
+          ctx.campaignRates,
+          ctx.preset
+        ),
+        stateTaxRate
+      );
     }
     return revenue;
   }
 }
 
 /**
- * Process party GOTV spending for all active party budgets.
- * Boosts demographics within 2 points of party position.
+ * Process party GOTV spending and boost demographics within 2 points of the
+ * party position.
  *
- * gotvBudgetPercent (0-25) is the percentage of hourly revenue allocated to GOTV.
- * The actual dollar amount spent each turn is computed from this percentage.
- *
- * @param budgets - Optional array of budgets for testing. If not provided, fetches active budgets from DB.
- * @param turnoutData - Optional array of turnout data for testing. If not provided, fetches from DB.
- * @param partyPosition - Optional party position for testing. If not provided, fetches from DB.
- * @param revenueOverride - Optional revenue for testing. If provided, skips DB revenue calculation.
- * @param preloadedStateMap - Optional pre-loaded state map to avoid duplicate DB query.
- * @param statePartyOrgOverrides - Optional state party orgs for testing (treasury source for state budgets). If not provided with `budgets`, state-scope treasury defaults to 0.
- * @param politicalPartyOverrides - Optional political parties for testing (treasury source for national budgets). If not provided with `budgets`, national-scope treasury defaults to 0.
- * @returns Updated turnout data and budgets
+ * `gotvBudgetPercent` (0-25) is the share of hourly revenue spent on GOTV.
+ * Optional params are for testing or to skip DB lookups; when `budgets` are
+ * passed without party overrides, the relevant treasury defaults to 0.
  */
 export async function processPartyGOTV(
   budgets?: PartyBudget[],
@@ -402,16 +456,14 @@ export async function processPartyGOTV(
             votingEligiblePopulation: s.votingEligiblePopulation,
           }))
         )
-      : db
-          .collection<State>("states")
+      : statesCollection(db)
           .find({}, { projection: { _id: 1, population: 1, gdp: 1, votingEligiblePopulation: 1 } })
           .toArray();
 
     const [statePartyOrgs, parties, allCharacters, allNPPs, allStates] = await Promise.all([
-      db.collection<StatePartyOrg>("statePartyOrg").find({}).toArray(),
-      db.collection<PoliticalParty>("politicalParties").find({}).toArray(),
-      db
-        .collection<Character>("characters")
+      statePartyOrgCollection(db).find({}).toArray(),
+      politicalPartiesCollection(db).find({}).toArray(),
+      charactersCollection(db)
         .find(
           {},
           {
@@ -426,8 +478,7 @@ export async function processPartyGOTV(
           }
         )
         .toArray(),
-      db
-        .collection<NPP>("npps")
+      nppsCollection(db)
         .find(
           { retiredAt: null },
           {
@@ -444,7 +495,7 @@ export async function processPartyGOTV(
         .toArray(),
       statesPromise,
     ]);
-    const gameConfig = await db.collection<GameConfig>("gameConfig").findOne({ _id: "default" });
+    const gameConfig = await gameConfigCollection(db).findOne({ _id: "default" });
     const nppEconomyEnabled = gameConfig?.nppEconomyEnabled !== false;
     // GDP-baseline era for revenue math: the world's reset preset, so
     // historical worlds budget against their own denomination (issue #798).
@@ -493,14 +544,17 @@ export async function processPartyGOTV(
     revenueCtx = {
       preset,
       priceLevel: resolveCampaignPriceLevel(gameConfig?.campaignEraPriceLevelEnabled, preset),
+      campaignRates: await loadCampaignCurrencyRates(db),
       partyMap: nationalPartyMap,
       statePartyOrgMap,
-      // Donor base = adults: use the voting-age population (P1b-1c), falling back
-      // to total on unseeded worlds. Fund generation scales with this base.
-      statePopMap: new Map(
-        allStates.map((s) => [s._id, s.votingEligiblePopulation ?? s.population])
-      ),
+      // Both deposit phases scale generation with total state population, so
+      // the revenue estimate uses the same base.
+      statePopMap: new Map(allStates.map((s) => [s._id, s.population])),
       stateGdpMap: new Map(allStates.map((s) => [s._id, s.gdp])),
+      nationalGdpIndex: campaignGdpPerCapitaIndex(allStates, {
+        live: gameConfig?.campaignLiveGdpBasisEnabled === true,
+        preset,
+      }),
       nppEconomyEnabled,
       charactersByParty,
       charactersByPartyState,
@@ -529,8 +583,7 @@ export async function processPartyGOTV(
     if (anyRegistrationBudget) {
       // Reuse the already loaded rosters. One projected officeholder read per
       // phase, not one presence query per party/region. Cached flags can be stale.
-      const officials = await db
-        .collection<ElectedOfficial>("electedOfficials")
+      const officials = await electedOfficialsCollection(db)
         .find({}, { projection: { countryId: 1, party: 1, state: 1 } })
         .toArray();
       registrationPresence = buildRegistrationPresence(
@@ -539,10 +592,7 @@ export async function processPartyGOTV(
         allNPPs,
         officials
       );
-      const pools = await db
-        .collection<StateRegistrationPool>("stateRegistrationPool")
-        .find({})
-        .toArray();
+      const pools = await stateRegistrationPoolCollection(db).find({}).toArray();
       for (const pool of pools) {
         registrationPoolMap.set(`${pool.countryId}:${pool.stateId}`, pool);
       }
@@ -639,8 +689,8 @@ export async function processPartyGOTV(
       const targetGroup = budget.gotvTargetGroup;
 
       if (targetCategory && targetGroup) {
-        // Party targeting now accepts the same Layer-1 bucket catalog as the
-        // region Demographics tab while preserving established targets.
+        // Party targets are census buckets, the same catalog as the region
+        // Demographics tab. A stale target resolves to null and is not charged.
         const lean = resolvePartyTurnoutTargetLean(
           budgetCountryId,
           targetCategory,
@@ -1010,7 +1060,7 @@ export async function processPartyGOTV(
         update: { $inc: { treasury: -amount }, $set: { updatedAt: new Date() } },
       },
     }));
-    await db.collection<StatePartyOrg>("statePartyOrg").bulkWrite(ops);
+    await statePartyOrgCollection(db).bulkWrite(ops);
 
     for (const [key, amount] of statePartyTreasuryDeductions.entries()) {
       const sp = statePartyOrgMap.get(key);
@@ -1040,7 +1090,7 @@ export async function processPartyGOTV(
         },
       };
     });
-    await db.collection<PoliticalParty>("politicalParties").bulkWrite(ops);
+    await politicalPartiesCollection(db).bulkWrite(ops);
 
     for (const [key, amount] of nationalPartyGotvDeductions.entries()) {
       const [cidRaw, seqStr] = key.split(":");
@@ -1096,7 +1146,7 @@ export async function processPartyGOTV(
   }
 
   if (db && budgetCountryBackfills.size > 0) {
-    await db.collection<StoredPartyBudget>("partyBudget").bulkWrite(
+    await partyBudgetCollection<StoredPartyBudget>(db).bulkWrite(
       [...budgetCountryBackfills.entries()].map(([budgetId, countryId]) => ({
         updateOne: {
           filter: { _id: new ObjectId(budgetId), countryId: { $exists: false } },
@@ -1155,7 +1205,7 @@ export async function processPartyGOTV(
   // multiple parties in the same state compose without lost updates, and so this
   // phase composes with the later regDriftDecay phase in the same turn.
   if (db && registrationRegDeltas.size > 0) {
-    await db.collection<StatePartyOrg>("statePartyOrg").bulkWrite(
+    await statePartyOrgCollection(db).bulkWrite(
       [...registrationRegDeltas.entries()].map(([rowId, delta]) => ({
         updateOne: {
           filter: { _id: rowId },
@@ -1169,7 +1219,7 @@ export async function processPartyGOTV(
       ...registrationPoolUnregDrawn.keys(),
       ...registrationPoolIndepDrawn.keys(),
     ]);
-    await db.collection<StateRegistrationPool>("stateRegistrationPool").bulkWrite(
+    await stateRegistrationPoolCollection(db).bulkWrite(
       [...poolIds].map((poolId) => ({
         updateOne: {
           filter: { _id: poolId },
@@ -1185,9 +1235,9 @@ export async function processPartyGOTV(
     );
   }
   if (db && registrationLedgerRows.length > 0) {
-    await db
-      .collection<OrgRegLedger>("orgRegLedger")
-      .insertMany(registrationLedgerRows.map((r) => ({ ...r }) as OrgRegLedger));
+    await orgRegLedgerCollection(db).insertMany(
+      registrationLedgerRows.map((r) => ({ ...r }) as OrgRegLedger)
+    );
   }
 
   // (Legacy passive Org Building application block removed — Org growth
@@ -1267,9 +1317,9 @@ async function getPartyPosition(
 ): Promise<PartyPosition> {
   const db = await getDb();
   // Parties are uniquely identified by (countryId, sequentialId).
-  const party = await db
-    .collection<PoliticalParty>("politicalParties")
-    .findOne({ sequentialId: Number(partyId), countryId });
+  const party = await (
+    await getPoliticalPartiesCollection(db)
+  ).findOne({ sequentialId: Number(partyId), countryId });
   if (!party) return { economic: 0, social: 0 };
   return { economic: party.economicPosition, social: party.socialPosition };
 }
@@ -1331,9 +1381,7 @@ export async function processPlayerCanvassing(
     const state = stateTurnout.find((s) => s._id === action.stateId);
     if (!state) continue;
 
-    // Country-aware lean lookup off the canvassed region's own country
-    // (US-only lookup collapsed non-US targets to a (0,0) lean).
-    const canvassLean = resolveCanvassGroup(
+    const canvassLean = resolvePartyTurnoutTargetLean(
       state.countryId,
       action.demographic.category,
       action.demographic.group

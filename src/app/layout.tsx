@@ -12,19 +12,13 @@ import Script from "next/script";
 import { cookies, headers } from "next/headers";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages, getTranslations } from "next-intl/server";
-import { NavbarWrapper } from "@/components/NavbarWrapper";
-import { BugReportFab } from "@/components/BugReportFab";
-import { AskDrawer } from "@/components/askDrawer/AskDrawer";
-import { StatusBar } from "@/components/StatusBar";
 import {
-  DeferredSeasonRecapGate,
-  DeferredStatAllocationGate,
-  DeferredWealthTierRepickGate,
-  DeferredTutorialCoachMount,
-  DeferredSingleplayerGuide,
-  DeferredTurnProgressToast,
-  DeferredNominationChoicePrompt,
-} from "@/components/DeferredShellOverlays";
+  ShellOverlaysBottom,
+  ShellOverlaysTop,
+  type ShellFlags,
+} from "@/components/shell/ShellOverlays";
+import { LightShellGuard } from "@/components/LightShellGuard";
+import { shouldUseLightShell } from "@/lib/shell/lightShell";
 import { FeedbackProvider } from "@/contexts/FeedbackContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { BrowserPreferencesProvider } from "@/contexts/BrowserPreferencesContext";
@@ -40,26 +34,12 @@ import { getGameStatePreset } from "@/lib/db/collections/gameState";
 import { getEnabledCountryIds } from "@/lib/countryAccess";
 import { getDb } from "@/lib/mongodb";
 import { COUNTRY_ORDER, type CountryId } from "@/lib/constants/countries";
-import { LiveRefreshBanner } from "@/components/LiveRefreshBanner";
-import { MassCrashAlertBanner } from "@/components/MassCrashAlertBanner";
-import { MaintenancePartialBanner } from "@/components/MaintenancePartialBanner";
-import { PollBannerNotice } from "@/components/PollBannerNotice";
 import { isSingleplayer } from "@/lib/singleplayer";
-import { AdSlot } from "@/components/AdSlot";
-import { AdSenseSlot } from "@/components/AdSenseSlot";
 import { CookieConsentBanner } from "@/components/CookieConsent";
-import { SiteFooter } from "@/components/SiteFooter";
-import { AuthConnectivityGate } from "@/components/AuthConnectivityGate";
+import { COOKIE_CONSENT_KEY } from "@/lib/analytics/storageKeys";
 import { SiteTrafficTracker } from "@/components/SiteTrafficTracker";
 import { DeferredAnalytics } from "@/components/DeferredAnalytics";
 import { CDN_LOGO_URL } from "@/lib/images/cdnStaticUrls";
-import {
-  buildGoogleTagBootstrapScript,
-  getAdSenseClientId,
-  getAdSensePageTagUrl,
-  shouldRenderConsentManagedGoogleTags,
-  shouldRenderGooglePrivacyMessaging,
-} from "@/lib/googlePrivacyMessaging";
 import {
   DEFAULT_SITE_DESCRIPTION,
   SITE_BRAND,
@@ -78,25 +58,15 @@ import { resolveNavbarPageCountry } from "@/lib/navigation/resolveNavbarPageCoun
 import "./globals.css";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
 
-// Geist Sans sets every heading and all body copy, so it is the only family
-// preloaded: it is what renders above the fold on a cold anonymous load,
-// including the landing page's LCP element.
+// Geist Sans is the only preloaded family: it renders above the fold on a
+// cold anonymous load, including the landing page's LCP element. The mono
+// families load lazily and would otherwise compete for the connection during
+// first paint. `display: "swap"` plus next/font's size-adjust fallback avoids
+// layout shift.
 //
-// Preloading every family used to put 166KB of woff2 across 5 files on the
-// wire at ~200ms, all fighting for the same connection. On a throttled
-// mid-tier mobile profile (4x CPU, 1.6Mbps) they did not finish until
-// 2326-3342ms, and the landing LCP fired at 2940ms because the paragraph was
-// waiting on its own font swap.
-//
-// The mono families below still load normally when a glyph needs them; they
-// just do not compete during first paint. `display: "swap"` keeps their text
-// visible in the fallback face meanwhile, and next/font's automatic
-// size-adjust fallback keeps the swap from shifting layout.
-//
-// The variable classes go on <html>, not <body>: the Tailwind theme declares
-// --font-sans and --default-font-family on :root as var(--font-geist-sans),
-// and a custom property only resolves against variables defined on its own
-// element or an ancestor.
+// Variable classes go on <html>, not <body>: the Tailwind theme declares
+// --font-sans on :root as var(--font-geist-sans), and a custom property only
+// resolves against variables on its own element or an ancestor.
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -140,8 +110,10 @@ const jetbrainsMono = JetBrains_Mono({
 
 const siteUrl = getSiteUrl();
 const defaultDocumentTitle = `${SITE_BRAND} | ${SITE_SUBTITLE}`;
-const GA_MEASUREMENT_ID = "G-5GBG3BHWCZ";
-const GOOGLE_ADS_ID = "AW-18130975758";
+// Optional self-hosted umami tag. Both vars must be set; see the script block
+// at the end of the layout for why the host is not hardcoded.
+const umamiSrc = process.env.NEXT_PUBLIC_UMAMI_SRC?.trim();
+const umamiWebsiteId = process.env.NEXT_PUBLIC_UMAMI_WEBSITE_ID?.trim();
 
 /**
  * Edge to edge on notched phones. Without `cover`, iOS insets the page below
@@ -156,12 +128,9 @@ export const viewport: Viewport = {
 };
 
 /**
- * Async so the description and the SEO keywords name the countries that are
- * ACTUALLY open to players right now. Both used to be hand-written lists, and
- * both went stale independently: the keywords tag was still selling Germany and
- * Japan months after those closed. Source of truth is
- * `lib/marketing/marketedWorldServer`; the read is served from a 5-minute
- * in-process cache, so this does not add a Mongo round-trip per request.
+ * Async so the description and SEO keywords reflect the countries currently
+ * open to players. Source of truth is `lib/marketing/marketedWorldServer`,
+ * served from a 5-minute in-process cache (no Mongo round-trip per request).
  */
 export async function generateMetadata(): Promise<Metadata> {
   const world = await getMarketedWorldSafe();
@@ -330,34 +299,44 @@ export default async function RootLayout({
     pathname,
     search: requestHeaders.get("x-search"),
   });
-  // The root layout does not re-render on a client-side navigation, so it ships
-  // only what its own client tree renders: the navbar and the tutorial coach.
-  // `app/template.tsx` adds the rest for the current route and refreshes it on
-  // every navigation. Measured 2026-10-24: the full catalog was 70,586 bytes
-  // gzipped, almost the whole 78,378-byte /corporation/1 document.
+  // Root layout does not re-render on client navigation, so it ships only
+  // what its own client tree renders; app/template.tsx adds the rest per route.
   const clientMessages = pickClientNamespaces(intlMessages, SHELL_CLIENT_NAMESPACES);
-  const adSenseClientId = getAdSenseClientId();
-  // Never load the AdSense page tag (auto ads + CMP) inside the native app
-  // WebView: AdSense is not permitted in app WebViews, and its third-party
-  // requests are routinely killed by mobile DNS filters / adblockers, which
-  // the Android shell used to misread as the server being unreachable.
-  // The page tag enables Google Auto ads. Loading it on a game, account, or
-  // community screen can result in Google-served ads on a non-editorial page,
-  // even when no manual AdSense component is mounted there.
-  const renderGoogleCmp = shouldRenderGooglePrivacyMessaging(pathname, host) && !isNativeApp;
   // Server component, so this is a plain call. Throws on a deployment
   // that sets SINGLEPLAYER, by design: see @/lib/singleplayer.
   const singleplayer = isSingleplayer();
-  const renderConsentManagedGoogleTags = shouldRenderConsentManagedGoogleTags(pathname, {
-    storeApp: isStoreApp,
+  const lightShell = shouldUseLightShell({
+    // Only a path the proxy actually reported: a missing header must never
+    // select the light shell.
+    pathname: requestHeaders.get("x-pathname") ?? "",
+    hasSessionCookie,
+    singleplayer,
+    isWikiSubdomain,
+    isNativeApp,
+    isClientShell,
+    isStoreApp,
   });
-  const googleTagBootstrap = buildGoogleTagBootstrapScript(
-    GA_MEASUREMENT_ID,
-    renderGoogleCmp ? "cmp" : "fallback"
-  );
+  // Loaded only when the shell is full, so the anonymous landing and sign-in
+  // bundles do not carry the signed-in overlays.
+  const shellFull = lightShell ? null : await import("@/components/shell/ShellOverlaysFull");
+  const shellFlags: ShellFlags = {
+    light: lightShell,
+    pathname,
+    isWikiSubdomain,
+    singleplayer,
+    isNativeApp,
+    isClientShell,
+    isStoreApp,
+    nativeStatusDock,
+    displayMode,
+    initialPageCountry,
+    typedWordmark,
+  };
 
+  // The pre-paint consent script adds a browser-only attribute to this element.
   return (
     <html
+      suppressHydrationWarning
       lang={locale}
       data-store-app={isStoreApp ? "true" : undefined}
       data-store-os={isStoreApp ? (isIosStoreApp ? "ios" : "android") : undefined}
@@ -378,36 +357,16 @@ export default async function RootLayout({
             __html: `window.__AHD_DISPLAY_MODE=${JSON.stringify(displayMode ?? null)};`,
           }}
         />
-        {renderGoogleCmp ? (
-          <>
-            <Script
-              id="google-privacy-messaging-bootstrap"
-              strategy="beforeInteractive"
-              dangerouslySetInnerHTML={{
-                __html:
-                  "window.googlefc = window.googlefc || {}; window.googlefc.callbackQueue = window.googlefc.callbackQueue || [];",
-              }}
-            />
-            {/*
-              afterInteractive, not beforeInteractive: the AdSense page tag is
-              ~56KB and pulls in show_ads_impl (~186KB more), and as a
-              beforeInteractive script it ran ahead of hydration on every page.
-              Measured on the landing page (4x CPU, 1.6Mbps), blocking Google
-              ad+analytics traffic cut Total Blocking Time from 2398ms to
-              1483ms and JS heap from 24MB to 12.7MB. Perf audit 2026-07-26.
-
-              The googlefc consent bootstrap above stays beforeInteractive so
-              the CMP callback queue still exists before any consent callback
-              can fire; only the tag fetch is deferred, which matches Google's
-              own async-loading guidance.
-            */}
-            <Script
-              src={getAdSensePageTagUrl(adSenseClientId!)}
-              strategy="afterInteractive"
-              crossOrigin="anonymous"
-            />
-          </>
-        ) : null}
+        {/* Applied before first paint so a returning player never sees the
+            consent banner flash, and a first-time visitor gets it as part of
+            FCP instead of a post-hydration mount. See CookieConsentBanner. */}
+        <Script
+          id="cookie-consent-mode"
+          strategy="beforeInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `try{var c=localStorage.getItem(${JSON.stringify(COOKIE_CONSENT_KEY)});if(c==="accepted"||c==="rejected"){document.documentElement.dataset.cookieConsent=c;}}catch(e){}`,
+          }}
+        />
         <a
           href="#main-content"
           className="absolute -top-24 left-4 z-[200] rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white outline-none transition-[top] duration-150 focus:top-4 focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background"
@@ -430,29 +389,8 @@ export default async function RootLayout({
                     <FeedbackProvider>
                       <ToastProvider>
                         <CharacterStatsProvider>
-                          {!isWikiSubdomain && (
-                            <NavbarWrapper
-                              singleplayer={singleplayer}
-                              clientShell={isClientShell}
-                              phoneApp={isStoreApp}
-                              displayMode={displayMode}
-                              initialPageCountry={initialPageCountry}
-                              typedWordmark={typedWordmark}
-                            />
-                          )}
-                          {!isWikiSubdomain && <BugReportFab displayMode={displayMode} />}
-                          {/* Experimental opt-in (Settings). Singleplayer has no Ask service. */}
-                          {!isWikiSubdomain && !singleplayer && <AskDrawer />}
-                          {!isWikiSubdomain && <MassCrashAlertBanner />}
-                          {!isWikiSubdomain && <MaintenancePartialBanner />}
-                          {/* Admin-controlled survey strip. Not auth-gated: it must reach
-                            signed-out visitors too. */}
-                          {!isWikiSubdomain && <PollBannerNotice />}
-                          <AuthConnectivityGate />
-                          <DeferredStatAllocationGate />
-                          <DeferredWealthTierRepickGate />
-                          <DeferredSeasonRecapGate />
-                          <DeferredNominationChoicePrompt />
+                          <ShellOverlaysTop {...shellFlags} full={shellFull} />
+                          {lightShell && <LightShellGuard />}
                           {/* overflow-x-CLIP, not -hidden: hidden makes this element the
                             scroll container for every `position: sticky` descendant
                             (admin status bar / sidebars / table headers), which both
@@ -474,19 +412,7 @@ export default async function RootLayout({
                             )}
                             {children}
                           </main>
-                          {!isWikiSubdomain && !isNativeApp && <AdSlot />}
-                          {!isWikiSubdomain && !isNativeApp && <AdSenseSlot />}
-                          {!isWikiSubdomain && <SiteFooter displayMode={displayMode} />}
-                          {!isWikiSubdomain && !nativeStatusDock && (
-                            <StatusBar
-                              showOnlineStatus={!isClientShell}
-                              turnStatusLink={!singleplayer}
-                            />
-                          )}
-                          {!isWikiSubdomain && singleplayer && <DeferredTurnProgressToast />}
-                          {!isWikiSubdomain && singleplayer && <DeferredSingleplayerGuide />}
-                          {!isWikiSubdomain && <DeferredTutorialCoachMount />}
-                          {!isWikiSubdomain && <LiveRefreshBanner />}
+                          <ShellOverlaysBottom {...shellFlags} full={shellFull} />
                           {/* Singleplayer loads no analytics (see below), so there is
                               nothing to consent to. */}
                           {!isNativeApp && !singleplayer && <CookieConsentBanner />}
@@ -506,38 +432,22 @@ export default async function RootLayout({
                               the self-hosted umami tag below. */}
                           {!singleplayer && (
                             <>
-                              {renderConsentManagedGoogleTags ? (
-                                <>
-                                  <Script
-                                    src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}
-                                    strategy="afterInteractive"
-                                  />
-                                  <Script
-                                    id="google-analytics"
-                                    strategy="afterInteractive"
-                                    dangerouslySetInnerHTML={{
-                                      __html: googleTagBootstrap,
-                                    }}
-                                  />
-                                  <Script
-                                    id="google-ads"
-                                    strategy="afterInteractive"
-                                    dangerouslySetInnerHTML={{
-                                      __html: `gtag('config', '${GOOGLE_ADS_ID}');`,
-                                    }}
-                                  />
-                                </>
+                              {/* Optional self-hosted umami tag. The host is
+                                  configured rather than hardcoded: the old
+                                  analytics.lakesidegames.net instance stopped
+                                  resolving, and the hardcoded tag shipped a
+                                  failed request plus a console error (a Best
+                                  Practices failure) on every page. Set both
+                                  NEXT_PUBLIC_UMAMI_SRC and
+                                  NEXT_PUBLIC_UMAMI_WEBSITE_ID to enable it. */}
+                              {umamiSrc && umamiWebsiteId ? (
+                                <Script
+                                  id="umami-analytics"
+                                  src={umamiSrc}
+                                  data-website-id={umamiWebsiteId}
+                                  strategy="afterInteractive"
+                                />
                               ) : null}
-                              {/* The canonical host. The old analytics.ahousedividedgame.com
-                                  308s here, which serves the script but breaks every event:
-                                  the tracker posts to its own origin, and a CORS preflight
-                                  cannot follow a redirect. */}
-                              <Script
-                                id="umami-analytics"
-                                src="https://analytics.lakesidegames.net/script.js"
-                                data-website-id="caa223b2-469d-4325-9ad3-63e3e87ed3d1"
-                                strategy="afterInteractive"
-                              />
                             </>
                           )}
                         </CharacterStatsProvider>

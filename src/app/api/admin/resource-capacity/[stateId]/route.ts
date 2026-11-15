@@ -8,6 +8,7 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { z } from "zod";
 import { EXTRACTABLE_RESOURCES } from "@/lib/constants/commodities";
 import type { StateResourceCapacity } from "@/lib/db/types/stateResourceCapacity";
+import { stateResourceCapacityCollection } from "@/lib/db/repositories/stateResourceCapacity";
 
 const schema = z.object({
   resources: z.record(z.enum(EXTRACTABLE_RESOURCES), z.number().min(0)),
@@ -26,13 +27,11 @@ export async function PATCH(
     if (!parsed.success) return errorResponse(parsed.status, parsed.error);
 
     const db = await getDb();
-    await db
-      .collection<StateResourceCapacity>("stateResourceCapacity")
-      .updateOne(
-        { stateId },
-        { $set: { resources: parsed.data.resources, updatedAt: new Date() } },
-        { upsert: true }
-      );
+    await stateResourceCapacityCollection(db).updateOne(
+      { stateId },
+      { $set: { resources: parsed.data.resources, updatedAt: new Date() } },
+      { upsert: true }
+    );
 
     return NextResponse.json({ success: true });
   } catch (error) {

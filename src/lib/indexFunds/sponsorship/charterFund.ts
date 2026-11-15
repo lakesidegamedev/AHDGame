@@ -2,7 +2,7 @@ import { fundCreationEligibility } from "./eligibility";
 import { bankMayManageFunds, fundBankCharter } from "./rules/eligibility";
 import { validatePickedStocks, type PickedStockMandate } from "../rules/mandate";
 import { ObjectId, type Db } from "mongodb";
-import type { Corporation, FederalBudget } from "@/lib/db/types";
+import type { Corporation } from "@/lib/db/types";
 import type {
   IndexFund,
   IndexFundKind,
@@ -33,8 +33,13 @@ import {
   MAX_EXPENSE_RATIO_ANNUAL,
   MIN_EXPENSE_RATIO_ANNUAL,
 } from "./constants";
-
-const FUND_TX = "indexFundTransactions";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import type { Document } from "mongodb";
+import { indexFundPositionsCollection } from "@/lib/db/repositories/indexFundPositions";
+import { indexFundTransactionsCollection } from "@/lib/db/repositories/indexFundTransactions";
 
 export interface CharterFundInput {
   sponsor: Corporation;
@@ -113,9 +118,10 @@ export async function charterFund(db: Db, input: CharterFundInput): Promise<Char
   const name = input.name.trim();
 
   const eligibility = await fundCreationEligibility(db, sponsor, {
-    replay: !!(await db
-      .collection("indexFunds")
-      .findOne({ slug: sponsoredFundSlug(tickerSymbol), sponsorCorporationId: sponsor._id })),
+    replay: !!(await indexFundsCollection<Document>(db).findOne({
+      slug: sponsoredFundSlug(tickerSymbol),
+      sponsorCorporationId: sponsor._id,
+    })),
   });
   if (eligibility) return { ok: false, status: 403, error: eligibility };
 
@@ -128,9 +134,7 @@ async function commitCharter(
   tickerSymbol: string,
   name: string
 ): Promise<CharterFundResult> {
-  const sponsor = await db
-    .collection<Corporation>("corporations")
-    .findOne({ _id: input.sponsor._id });
+  const sponsor = await corporationsCollection(db).findOne({ _id: input.sponsor._id });
   if (!sponsor || String(sponsor.userId) !== String(input.sponsor.userId))
     return {
       ok: false,
@@ -138,9 +142,10 @@ async function commitCharter(
       error: "Corporation ownership changed. Reload before creating a fund.",
     };
   const eligibility = await fundCreationEligibility(db, sponsor, {
-    replay: !!(await db
-      .collection("indexFunds")
-      .findOne({ slug: sponsoredFundSlug(tickerSymbol), sponsorCorporationId: sponsor._id })),
+    replay: !!(await indexFundsCollection<Document>(db).findOne({
+      slug: sponsoredFundSlug(tickerSymbol),
+      sponsorCorporationId: sponsor._id,
+    })),
   });
   if (eligibility) return { ok: false, status: 403, error: eligibility };
   let mandate: PickedStockMandate | undefined;
@@ -172,8 +177,7 @@ async function commitCharter(
     };
     const invalid = validatePickedStocks(mandate);
     if (invalid) return { ok: false, status: 400, error: invalid };
-    const issuers = await db
-      .collection<Corporation>("corporations")
+    const issuers = await corporationsCollection(db)
       .find(
         {
           _id: { $in: mandate.stocks.map((s) => new ObjectId(s.corporationId)) },
@@ -204,8 +208,10 @@ async function commitCharter(
         error: "Pick public companies at home that you do not control.",
       };
   }
-  const sectors = await db
-    .collection<{ corporationId: ObjectId; sectorType: OperatingSectorType }>("corporateSectors")
+  const sectors = await corporateSectorsCollection<{
+    corporationId: ObjectId;
+    sectorType: OperatingSectorType;
+  }>(db)
     .find({ corporationId: sponsor._id }, { projection: { sectorType: 1 } })
     .toArray();
   const invalid = validateCharter(
@@ -215,7 +221,7 @@ async function commitCharter(
   if (invalid) return { ok: false, status: 400, error: invalid };
   const { currentTurn } = input;
   const slug = sponsoredFundSlug(tickerSymbol);
-  const prior = await db.collection<IndexFund>("indexFunds").findOne({ slug });
+  const prior = await indexFundsCollection(db).findOne({ slug });
   if (
     prior &&
     prior.seedAccounting === "paid_units" &&
@@ -235,9 +241,9 @@ async function commitCharter(
   // Ticker must not collide with an existing fund OR an existing corporation:
   // the two share a namespace on every market surface in the game.
   const [tickerTaken, slugTaken, corpTickerTaken] = await Promise.all([
-    db.collection<IndexFund>("indexFunds").countDocuments({ tickerSymbol }),
-    db.collection<IndexFund>("indexFunds").countDocuments({ slug }),
-    db.collection<Corporation>("corporations").countDocuments({ tickerSymbol }),
+    indexFundsCollection(db).countDocuments({ tickerSymbol }),
+    indexFundsCollection(db).countDocuments({ slug }),
+    corporationsCollection(db).countDocuments({ tickerSymbol }),
   ]);
   if (tickerTaken > 0 || slugTaken > 0 || corpTickerTaken > 0)
     return { ok: false, error: `Ticker ${tickerSymbol} is already in use.`, status: 409 };
@@ -250,7 +256,7 @@ async function commitCharter(
 
   if (!Number.isFinite(fxRate) || fxRate <= 0) throw new Error("Sponsor exchange rate unavailable");
   const budget = sponsor.countryId
-    ? await db.collection<FederalBudget>("federalBudget").findOne({ countryId: sponsor.countryId })
+    ? await federalBudgetCollection(db).findOne({ countryId: sponsor.countryId })
     : null;
   if (!budget || resolveCountryCurrencyCode(budget) !== currencyCode)
     return {
@@ -301,7 +307,7 @@ async function commitCharter(
     createdAt: now,
     updatedAt: now,
   } as Omit<IndexFund, "_id">);
-  await db.collection("indexFundPositions").insertOne({
+  await indexFundPositionsCollection<Document>(db).insertOne({
     _id: new ObjectId(),
     fundId,
     holderKind: "corporation",
@@ -328,7 +334,7 @@ async function commitCharter(
       })
     : 0;
 
-  // #992 tranche 3: the corp debit below covers seed + fee while the fund
+  // The corp debit below covers seed + fee while the fund
   // receives the seed alone, so the debit row can never mirror the fund side.
   // Book the fund's seed receipt as its own fund-subject row: single-sided by
   // construction (the sponsor evidences the debit), netting against the debit
@@ -396,7 +402,7 @@ async function commitCharter(
         seedCapitalAnchor: input.seedCapitalAnchor,
       },
     }),
-    db.collection<IndexFundTransaction>(FUND_TX).insertOne({
+    indexFundTransactionsCollection<IndexFundTransaction>(db).insertOne({
       _id: new ObjectId(),
       fundId,
       kind: "sponsor_seed_capital",

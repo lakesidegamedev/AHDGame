@@ -14,6 +14,10 @@ import { getMetricDefinition } from "@/lib/constants/metricDefinitions";
 import { getEraMetricName } from "@/lib/era/metricCatalog";
 import type { MetricCategoryId, StateMetricValue } from "@/lib/db/types";
 import type { PoliticalMetricId } from "./types";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 
 export type EvidenceSource =
   | { kind: "macro"; category: "economic" | "population"; metricId: string }
@@ -104,19 +108,17 @@ export async function loadEvidence(
   >;
   const nationalId = getNationalDocId(countryId) ?? "federal";
   const [macro, regionDocs, states, bank, budget] = await Promise.all([
-    db.collection<MacroDoc>("macroMetrics").findOne({ _id: nationalId, countryId } as never),
+    macroMetricsCollection<MacroDoc>(db).findOne({ _id: nationalId, countryId } as never),
     // Fallback source: the national rollup doc only exists after the first
     // turn; a fresh world aggregates the regional docs population-weighted.
-    db
-      .collection<MacroDoc>("macroMetrics")
+    macroMetricsCollection<MacroDoc>(db)
       .find({ countryId } as never)
       .toArray(),
-    db
-      .collection<{ _id: string; population?: number }>("states")
+    statesCollection<{ _id: string; population?: number }>(db)
       .find({ countryId } as never, { projection: { population: 1 } })
       .toArray(),
-    db.collection("centralBanks").findOne({ _id: getBankId(countryId) } as never),
-    db.collection("federalBudget").findOne({ _id: getNationalBudgetId(countryId) } as never),
+    centralBanksCollection(db).findOne({ _id: getBankId(countryId) } as never),
+    federalBudgetCollection(db).findOne({ _id: getNationalBudgetId(countryId) } as never),
   ]);
   const populationById = new Map(states.map((s) => [s._id, s.population ?? 0]));
   const resolveMacro = (

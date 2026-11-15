@@ -1,7 +1,7 @@
 /**
  * @vitest-environment happy-dom
  */
-import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
+import { describe, it, expect, afterEach, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
 import navMessages from "../../../../../messages/en/nav.json";
@@ -19,11 +19,6 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(tabParam),
 }));
 
-const conflictsSpy = vi.fn().mockReturnValue(true);
-vi.mock("@/contexts/AuthDataContext", async (importOriginal) => ({
-  ...(await importOriginal<Record<string, unknown>>()),
-  useConflictsEnabled: () => conflictsSpy(),
-}));
 // The shell's gating is what is under test here, not the panels inside the tab.
 vi.mock("./components/ForeignAffairsTab", () => ({
   ForeignAffairsTab: ({ canAct }: { canAct: boolean }) => (
@@ -94,7 +89,6 @@ describe("ExecutiveTabsClient admin tab", () => {
 });
 
 describe("ExecutiveTabsClient foreign affairs tab", () => {
-  beforeEach(() => conflictsSpy.mockReturnValue(true));
   afterEach(() => vi.restoreAllMocks());
 
   it("shows for the sitting head of government", () => {
@@ -109,13 +103,6 @@ describe("ExecutiveTabsClient foreign affairs tab", () => {
 
   it("is hidden from an ordinary viewer", () => {
     renderTabs({});
-    expect(screen.queryByRole("button", { name: "Foreign affairs" })).toBeNull();
-  });
-
-  it("is hidden when the conflicts subsystem is off, even for the leader", () => {
-    // Matches every other conflict surface; the routes 404 in this state anyway.
-    conflictsSpy.mockReturnValue(false);
-    renderTabs({ viewerIsLeader: true });
     expect(screen.queryByRole("button", { name: "Foreign affairs" })).toBeNull();
   });
 
@@ -134,7 +121,6 @@ describe("ExecutiveTabsClient foreign affairs tab", () => {
 });
 
 describe("ExecutiveTabsClient deep link", () => {
-  beforeEach(() => conflictsSpy.mockReturnValue(true));
   afterEach(() => {
     tabParam = "";
   });

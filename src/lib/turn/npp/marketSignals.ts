@@ -49,34 +49,26 @@ const PRODUCTION_POLICY_SENSITIVITY = 75;
 const PRODUCTION_POLICY_DEADBAND = 0.05;
 
 /**
- * Shortage score (weighted output price ratio) at or above which a commodity
- * is treated as CRITICALLY short — its producer sector jumps the founding type
- * cascade so any cash-healthy NPP can build it, regardless of the corp's own
- * primary/secondary type.
- *
- * Why: a commodity produced by a SINGLE sector type has no builder pool unless
- * an NPP happens to be that type. Freight ← logistics is the archetype: freight
- * is a recipe input to six sector classes (the whole physical economy) yet only
- * logistics makes it, so when logistics is seeded thin the shortage is
- * structurally unanswerable — the type tiers below never surface logistics for
- * an agriculture/manufacturing corp, no matter how far freight has spiked
- * (observed on prod 2026-08-16: freight 2.0x base, 19% US coverage, and no NPP
- * founding it). 1.6 clears genuine multi-turn shortages without firing on a
- * mild 1.1x premium, and self-disarms: as capacity lands the ratio falls back
- * under the bar. Both ordinary and exceptional entry remain paced and bounded
- * by the corporation's logistics-supported footprint.
+ * Shortage score at or above which a commodity is CRITICALLY short and its
+ * producer sector jumps the founding-type cascade for any cash-healthy NPP.
+ * Needed because single-sector commodities (e.g. freight ← logistics) have
+ * no builder pool otherwise: freight feeds six sector classes yet only
+ * logistics makes it, and type tiers never surface it for other corps. Set
+ * at 1.6 to clear genuine shortages without firing on mild premiums; it
+ * self-disarms as capacity lands. Output remains bounded by the corp's
+ * logistics-supported footprint.
  */
 export const ESSENTIAL_SHORTAGE_SCORE = 1.6;
 
 /**
- * Markets selected for the bounded supply-breadth treatment. These are not a
- * general concentration rule: each has a measured shortage and a known supply
+ * Markets selected for the bounded supply-breadth treatment. Not a general
+ * concentration rule: each has a measured shortage and a known supply
  * response path. Advertising and freight need more producer breadth,
- * fertilizers need dedicated chemical capacity, and rare earths need focused
- * extraction in states with deposit headroom. Healthcare and entertainment
- * services (#2088) are produced only by their own sector types, so a chronic
- * all-NPP shortage there has no other builder pool; each sector lists every
- * commodity it answers, scanned in order.
+ * fertilizers need dedicated chemical capacity, and rare earths need
+ * focused extraction in states with deposit headroom. Healthcare and
+ * entertainment services are produced only by their own sector types, so a
+ * chronic all-NPP shortage has no other builder pool; each sector lists
+ * every commodity it answers, scanned in order.
  */
 export const FRAGILE_MARKET_COMMODITIES_BY_SECTOR: Readonly<
   Partial<Record<OperatingSectorType, readonly CommodityType[]>>
@@ -455,11 +447,10 @@ export function findBestUnownedSector(
   const countryUnowned = unownedByCountry.get(countryId);
   if (!countryUnowned || countryUnowned.length === 0) return null;
 
-  // Under plants a market's size IS its headroom in capacity units, and that is
-  // also what the founding build is sized and priced off — so rank on the same
-  // quantity the decision spends against. Ranking on ₳ revenue there would sort
-  // markets by a nameplate the plants engine no longer treats as authoritative,
-  // and would mis-order two markets whose commodity mixes price differently.
+  // Under plants a market's size is its headroom in capacity units, which
+  // is what the founding build is sized and priced off. Ranking on revenue
+  // would sort by a nameplate the plants engine does not treat as
+  // authoritative and mis-order markets with different commodity mixes.
   const sizeOf = (us: UnownedSector) =>
     plantsEnabled
       ? unownedHeadroomUnitsOf(
@@ -743,9 +734,9 @@ export function findBestUnownedSector(
  * Elevated price (shortage/premium) → positive policy (ramp output to capture
  * the premium and add supply). Depressed price (glut) → 0, not negative:
  * productionPolicy's intentional lean-ops asymmetry cuts input demand (−15% at
- * −25) harder than output (−10%), so economy-wide NPP contraction *worsens*
- * gluts and permanently pins sectors at max contraction (1953-default audit,
- * GH #3370). Glut capacity is reduced via targetGrowthRate instead (section 2a).
+ * −25) harder than output (−10%), so economy-wide NPP contraction worsens
+ * gluts and pins sectors at max contraction. Glut capacity is reduced via
+ * targetGrowthRate instead.
  */
 export function computeMacroProductionPolicy(
   sectorType: OperatingSectorType,

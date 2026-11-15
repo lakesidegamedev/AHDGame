@@ -3,20 +3,10 @@
 /**
  * Who holds this market, at a glance.
  *
- * The ring answers one question: how much of this sector is yours. Everything
- * about its construction serves that and nothing else.
- *
- * It used to give every rival its own slice, cycling a nine-colour list with
- * `i % 9`. In a sector with seventeen NPP rivals at ~5% each that produced a
- * rainbow of near-identical wedges in which the viewer's own 5.7% was
- * indistinguishable, and the cycling meant two different companies could be
- * handed the same colour. The colours were also assigned by array POSITION, so a
- * rival leaving the sector repainted everyone after it.
- *
- * So the ring is now an emphasis chart. Player-owned corps keep saturated,
- * stable colours; the NPP field folds into a single muted arc behind them. That
- * is a deliberate trade: per-NPP detail leaves the chart and lives in the list
- * beside it, which is the right home for seventeen near-equal values.
+ * The ring answers one question: how much of this sector is yours. Player-owned
+ * corps keep saturated, stable colours; the NPP field folds into a single muted
+ * arc behind them. Per-NPP detail lives in the list beside it, the right home
+ * for many near-equal values.
  */
 
 import { playerSlotColor, NPP_ARC_COLOR } from "../lib/marketColors";

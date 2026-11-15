@@ -36,6 +36,8 @@ export function requestedConflictCivilianLoss(
 export interface ConflictCivilianLossOrder {
   _id: string;
   worldEpochId: string;
+  /** Set when a Crisis v2 effect raised this, so completion is recorded on the crisis instead of an interaction. */
+  origin?: "crisis";
   interactionId: string;
   crisisId: string;
   outcomeId: string;
@@ -57,6 +59,8 @@ export interface ConflictCivilianLossRegion {
 export interface ConflictCivilianLossResult {
   _id: string;
   worldEpochId: string;
+  /** Set when a Crisis v2 effect raised this, so completion is recorded on the crisis instead of an interaction. */
+  origin?: "crisis";
   interactionId: string;
   crisisId: string;
   outcomeId: string;
@@ -165,6 +169,7 @@ export function planConflictCivilianLosses(
     results.push({
       _id: order._id,
       worldEpochId,
+      ...(order.origin ? { origin: order.origin } : {}),
       interactionId: order.interactionId,
       crisisId: order.crisisId,
       outcomeId: order.outcomeId,

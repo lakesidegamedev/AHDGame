@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Card } from "@/components/ui";
 import { tierPrimaryRoute } from "@/lib/urls";
 import type { ElectionDetail, PartyGroup } from "./ElectionDetailTypes";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 /** Country defaults fetched once when activeParties is empty so we can still
  *  render the primary-map pills (the per-party primary surfaces are useful
@@ -38,13 +39,13 @@ const TIER_LABEL: Record<NonNullable<ReturnType<typeof resolveTier>>, string> = 
 
 /**
  * Tier the pills should link to. `tierPrimaryRoute` returns the presidential
- * URL for "president" and the /elections/primary/* tree for the lower tiers.
- * The per-party primary pages are US-only (hardcoded US state list + GeoJSON),
- * so non-US elections must not link to them — a Japanese party's sequentialId
- * would otherwise resolve to the same-numbered US party (ticket #954).
+ * URL for "president" and the /elections/primary/* tree for lower tiers.
+ * Non-US elections must not link to per-party primary pages: they are US-only
+ * (hardcoded state list + GeoJSON), so a foreign sequentialId would resolve to
+ * the same-numbered US party.
  */
 function resolveTier(election: ElectionDetail) {
-  if (election.countryId !== "US") return undefined;
+  if (!countryHasFeature("usUi", election.countryId)) return undefined;
   return TIER_FROM_ELECTION_TYPE[election.electionType];
 }
 

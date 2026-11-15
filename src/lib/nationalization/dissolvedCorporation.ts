@@ -1,8 +1,9 @@
 import type { Db, ObjectId } from "mongodb";
-import type { Corporation, CorporationExitReason } from "@/lib/db/types";
+import type { CorporationExitReason } from "@/lib/db/types";
 import { recordCorporationExit } from "@/lib/corporations/exits/recordCorporationExit";
 import { snapshotCorporationCurrency } from "@/lib/ledger/balanceSnapshot";
 import { witnessTreasuryCash, type TreasuryCashOptions } from "./treasuryLedger";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /**
  * Delete a dissolved corporation and witness the cash it still held, which
@@ -19,7 +20,7 @@ export async function deleteDissolvedCorporation(
   site: string,
   exit: { reason: CorporationExitReason; successorId?: ObjectId }
 ): Promise<void> {
-  const corps = db.collection<Corporation>("corporations");
+  const corps = corporationsCollection(db);
   const closing = await corps.findOne(
     { _id: corporationId },
     {

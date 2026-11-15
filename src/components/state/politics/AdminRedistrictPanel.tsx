@@ -1,13 +1,13 @@
 "use client";
 
 import { apiErrorText } from "@/lib/errors/catalog";
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { regionRedistrictUrl } from "@/lib/urls";
 
 /**
  * Admin-only control on the State Politics tab to reset a state's district map
- * and open the redistrict editor. US-only; hidden when the feature flag is off.
+ * and open the redistrict editor. US-only.
  */
 export function AdminRedistrictPanel({
   countryCode,
@@ -17,28 +17,8 @@ export function AdminRedistrictPanel({
   stateId: string;
 }) {
   const router = useRouter();
-  const [enabled, setEnabled] = useState<boolean | null>(null);
-  const [loading, setLoading] = useState(true);
   const [triggering, setTriggering] = useState(false);
   const [error, setError] = useState("");
-
-  const fetchStatus = useCallback(async () => {
-    try {
-      const res = await fetch("/api/auth/me");
-      if (res.ok) {
-        const data = (await res.json()) as { user?: { redistrictingEnabled?: boolean } };
-        setEnabled(data.user?.redistrictingEnabled ?? false);
-      }
-    } catch {
-      // silent
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchStatus();
-  }, [fetchStatus]);
 
   async function handleTrigger() {
     if (triggering) return;
@@ -61,8 +41,6 @@ export function AdminRedistrictPanel({
       setTriggering(false);
     }
   }
-
-  if (loading || !enabled) return null;
 
   return (
     <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-4">

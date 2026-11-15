@@ -190,10 +190,6 @@ export function SuggestionsTab({ initialIssueNumber }: { initialIssueNumber?: nu
     void fetchCounts();
   }, [fetchCounts]);
 
-  useEffect(() => {
-    dispatch({ type: "SET_PAGE", page: 0 });
-  }, [state.activeStage]);
-
   const fetchDetail = useCallback(async (issueNumStr: string) => {
     dispatch({ type: "SELECT", id: issueNumStr });
     try {

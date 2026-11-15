@@ -88,12 +88,10 @@ export interface SectorRevenueTaxPayload {
 }
 
 /**
- * sectorGrowth node — the revenue-weighted, consumption-tax-adjusted sector
- * growth: the CYCLICAL SIGNAL (the supply/production path, §5.2). This is the old
- * `gdpGrowth` node's exact logic (helpers + constants + INERTIA EMA + policy/tax
- * coexistence) — only renamed. Under P1c-2 it no longer IS gdpGrowth; it feeds the
- * gdpGrowth node below, which reverts it toward potential via the output gap. N5:
- * the INERTIA EMA smooths THIS series; the gap-closure is a separate series.
+ * Sector growth: the revenue-weighted, consumption-tax-adjusted cyclical
+ * signal (the supply/production path). Feeds the gdpGrowth node, which
+ * reverts it toward potential via the output gap. An INERTIA EMA smooths
+ * this series; the gap-closure is a separate series.
  */
 /**
  * Net-exports coupling weight (T5): how strongly LAGGED `tradeGrowth`'s deviation
@@ -226,31 +224,21 @@ export const gdpGrowthNode: RegistryNode = {
  * smoothing pass or direct policy-point bonuses. The legacy fallback below
  * applies only when civilian labor-force data is unavailable.
  *
- * Legacy path: Okun's law on gdpGrowth. A VALUE-EMA with no policy
- * delta (maxPolicyDelta:0), mirroring gdpGrowth.ts exactly: target =
- * clamp(prevUnemployment − okun·gdpDeviation), then 0.85·prev + 0.15·target.
- * The phase feeds `prevSimBaseline["economic.unemploymentRate"]` = the prior
- * unemployment VALUE (defaulted to 4.5 when absent), used for BOTH the Okun
- * target's prev term and the EMA blend. decimals 2; bounds [1,15] (floor
- * matches metricDefinitions minValue 1 so 1953 FR IDF 1.5% survives; ceiling
- * stays tighter than the def's Depression-level 25).
+ * Legacy path: Okun's law on gdpGrowth, a VALUE-EMA with no policy delta
+ * (maxPolicyDelta:0): target = clamp(prevUnemployment − okun·gdpDeviation), then
+ * 0.85·prev + 0.15·target. `prevSimBaseline["economic.unemploymentRate"]` is the
+ * prior VALUE (defaulted to 4.5), used for both the Okun prev term and the EMA
+ * blend. decimals 2; bounds [1,15] (floor matches metricDefinitions minValue 1;
+ * ceiling tighter than the def's Depression-level 25).
  *
- * v2-3a/v2-3b (gated on labourSystemMode ≥ "macro"): a labour wage-index Δ
- * AND a separate automation-index Δ each add a one-time labor-demand bump,
- * summed and applied AFTER the Okun target/clamp (so the Okun mechanism's
- * own invariants are untouched), then the combined value is re-clamped to
- * the node's bounds. See `labourUnemploymentWagePressure` (3a) for why this
- * reads `economic.labourWageIndexDelta` — the SAME signal medianIncomeNode
- * (v2-2) reads — instead of the wage LEVEL, and `labourUnemploymentAutomationPressure`
- * (3b) for the separate, sign-inverted automation signal.
+ * When labourSystemMode ≥ "macro": a wage-index Δ and a separate automation
+ * Δ each add a one-time labor-demand bump, summed and applied AFTER the Okun
+ * target/clamp (leaving Okun's invariants untouched), then re-clamped.
  *
- * #791: the corp turn's MEASURED state tightness (`economic.labourTightness`,
- * seeded by the phase from the prior turn's doc, same treatment as the Δ
- * signals above — deliberately NOT a declared `inputs` edge, so the topo
- * order is untouched and no cycle is possible) adds a LEVEL channel: a
- * sustained tight market holds the target below Okun, sustained slack holds
- * it above. Capped per turn so one extreme reading cannot whipsaw the EMA;
- * absent (cold start) reads exactly 0, byte-identical to today.
+ * `economic.labourTightness` (seeded from the prior turn's doc, deliberately NOT
+ * a declared `inputs` edge, so the topo order is untouched and no cycle is
+ * possible) adds a LEVEL channel: sustained tight holds the target below Okun,
+ * sustained slack above. Capped per turn; absent reads exactly 0.
  */
 export const unemploymentNode: RegistryNode = {
   id: "economic.unemploymentRate",
@@ -359,17 +347,15 @@ export const medianIncomeNode: RegistryNode = {
   categoryId: "economic",
   metricId: "medianIncome",
   kind: "derived",
-  // Bounds must span every ERA. Floor 1000 was a modern-USD assumption —
-  // NG NORTH_EAST authors 100 (and JP 600–900, CN 320–480) on the 1953 seed
-  // scale. Ceiling 10M clipped 1991 TR old-lira medians (10M-40M, #3371).
-  // Match metricDefinitions [0, 1_000_000_000].
+  // Bounds must span every ERA: NG NORTH_EAST authors 100, JP 600-900, CN
+  // 320-480 on the 1953 seed scale; ceilings must cover 1991 TR old-lira
+  // medians. Match metricDefinitions [0, 1_000_000_000].
   inputs: ["economic.productivityGrowth", "economic.unemploymentRate"],
   bounds: [0, 1_000_000_000],
   inertia: 0,
   // The value stays whole currency units; the growth baseline carries 6dp so a
-  // small step on a low-unit income (1%/yr on 1,884 CNY is 0.39 a turn)
-  // accumulates instead of rounding away (#3394). 1e9 x 1e6 stays inside
-  // double precision.
+  // small step on a low-unit income accumulates instead of rounding away.
+  // 1e9 x 1e6 stays inside double precision.
   decimals: 0,
   baselineDecimals: 6,
   compute: (ctx) => {

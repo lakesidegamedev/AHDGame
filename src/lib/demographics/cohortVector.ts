@@ -145,10 +145,20 @@ export function sexRatioFromVector(v: AgeSexVector): number {
   return (males / total) * 100;
 }
 
-/** Dependency ratio: (youth + senior) / working-age. 0 when no workforce. */
-export function dependencyRatio(v: AgeSexVector): number {
-  const work = workingAge(v);
+/**
+ * Dependency ratio: (below working age + at or above retirement) / working age.
+ * Bounds follow the configurable working and retirement ages; the defaults
+ * (18 and 64) give the classic 0..17 / 18..64 / 65+ split. 0 when no workforce.
+ */
+export function dependencyRatio(
+  v: AgeSexVector,
+  workingAgeMin: number = DEFAULT_WORKING_AGE,
+  retirementAge: number = DEFAULT_RETIREMENT_AGE
+): number {
+  const lo = Math.max(0, Math.min(LAST_INDEX, Math.floor(workingAgeMin)));
+  const hi = Math.max(lo, Math.min(LAST_INDEX, Math.floor(retirementAge)));
+  const work = sumBoth(v, lo, hi);
   if (work <= 0) return 0;
-  const g = coarseGroups(v);
-  return (g.youth + g.senior) / work;
+  const dependants = sumBoth(v, 0, lo - 1) + sumBoth(v, hi + 1, LAST_INDEX);
+  return dependants / work;
 }

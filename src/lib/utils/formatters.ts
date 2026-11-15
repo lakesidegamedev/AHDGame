@@ -14,6 +14,10 @@ import {
   DEFAULT_CYCLE_ANCHOR_CONTEXT,
   type CycleAnchorContext,
 } from "@/lib/elections/cycleAnchorContext";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { usRegionalElectionYearForWorld } from "@/lib/countries/us/rules/regionalElectionCalendar";
+import { provincialElectionYearForWorld } from "@/lib/countries/ca/rules/provincialElectionCalendar";
+import { CA_PROVINCIAL_LEGISLATURES } from "@/lib/countries/ca/data/caProvincialLegislatures";
 
 export * from "./formattersCore";
 
@@ -41,6 +45,8 @@ export function resolveElectionYear(
     electionYear?: number | null;
     senateClass?: number | null;
     chamberClass?: number | null;
+    countryId?: string;
+    state?: string;
   },
   ctx: CycleAnchorContext = DEFAULT_CYCLE_ANCHOR_CONTEXT
 ): number {
@@ -50,7 +56,9 @@ export function resolveElectionYear(
     election.cycle,
     election.senateClass,
     election.chamberClass,
-    ctx
+    ctx,
+    election.countryId as CountryId | undefined,
+    election.state
   );
 }
 
@@ -60,11 +68,24 @@ export function electionToLarpYear(
   senateClass?: number | null,
   chamberClass?: number | null,
   ctx: CycleAnchorContext = DEFAULT_CYCLE_ANCHOR_CONTEXT,
-  countryId?: CountryId
+  countryId?: CountryId,
+  state?: string
 ): number {
   // Cycle 0 is the pre-iteration "founding" election: it happens at the pinned
   // era start, so it is labeled with the starting year (not a pre-anchor year).
   if (cycle === 0) return ctx.startingYear;
+  const regional =
+    countryId && state
+      ? (usRegionalElectionYearForWorld(state, electionType, cycle, countryId, ctx.preset) ??
+        provincialElectionYearForWorld(
+          CA_PROVINCIAL_LEGISLATURES[state]?.nextElectionYear,
+          electionType,
+          cycle,
+          countryId,
+          ctx.preset
+        ))
+      : undefined;
+  if (regional !== undefined) return regional;
   const years =
     CANONICAL_REAL_ELECTION_YEARS_BY_PRESET[ctx.preset] ??
     CANONICAL_REAL_ELECTION_YEARS_BY_PRESET["2019-default"];
@@ -86,16 +107,22 @@ export function electionToLarpYear(
     return years.ngGeneral + (cycle - 1) * 4;
   }
   if (ctx.preset === "1991-default") {
-    if (countryId === "RO" && (electionType === "chamberOfDeputies" || electionType === "senat")) {
+    if (
+      countryHasFeature("roLib", countryId) &&
+      (electionType === "chamberOfDeputies" || electionType === "senat")
+    ) {
       return 1992 + (cycle - 1) * 4;
     }
-    if ((electionType === "sejm" || electionType === "senat") && countryId === "PL") {
+    if (
+      (electionType === "sejm" || electionType === "senat") &&
+      countryHasFeature("plLib", countryId)
+    ) {
       return cycle === 1 ? (years.plSejm ?? 1991) : (years.plSejm ?? 1991) + 2 + (cycle - 2) * 4;
     }
     if (electionType === "chamberOfThePeople" || electionType === "chamberOfNations") {
       return (years.csFederalAssembly ?? 1992) + (cycle - 1) * 2;
     }
-    if (electionType === "nationalAssembly" && countryId === "HU") {
+    if (electionType === "nationalAssembly" && countryHasFeature("huLib", countryId)) {
       return (years.huNationalAssembly ?? 1994) + (cycle - 1) * 4;
     }
     if (electionType === "unionCongressDeputy") {
@@ -110,7 +137,7 @@ export function electionToLarpYear(
       // BR Federal Senate: 4-year cycle riding its own `brSenate` anchor —
       // see BR_SENATE_CYCLE_PERIOD_HOURS in canonicalCycle.ts for the
       // full-chamber staggering-simplification note.
-      if (countryId === "BR") {
+      if (countryHasFeature("brLib", countryId)) {
         return years.brSenate + (cycle - 1) * 4;
       }
       // 6-year cycles, staggered by class
@@ -120,6 +147,7 @@ export function electionToLarpYear(
       return firstYear + (cycle - 1) * 6;
     }
     case "president":
+    case "special_president":
       // 4-year cycles
       return years.president + (cycle - 1) * 4;
     case "governor":
@@ -130,10 +158,10 @@ export function electionToLarpYear(
       // doc's stored electionYear when present. RU First Secretaries ride the
       // republic-soviet cycle (D10) and DD Land First Secretaries the
       // Volkskammer cycle — same anchor overrides as canonicalCycle.
-      if (countryId === "RU") {
+      if (countryHasFeature("ruLib", countryId)) {
         return (years.ruRepublicSoviet ?? years.governorStateSenate) + (cycle - 1) * 4;
       }
-      if (countryId === "DD") {
+      if (countryHasFeature("ddLib", countryId)) {
         return (years.ddVolkskammer ?? years.governorStateSenate) + (cycle - 1) * 4;
       }
       return years.governorStateSenate + (cycle - 1) * 4;
@@ -222,6 +250,12 @@ export function electionToLarpYear(
       return years.seRiksdag + (cycle - 1) * 4;
     case "milletMeclisi":
       return years.trMeclis + (cycle - 1) * 4;
+    case "caCommons":
+    case "snap_caCommons":
+    case "special_caCommons":
+      return (years.caCommons ?? years.governorStateSenate) + (cycle - 1) * 4;
+    case "qcAssembly":
+      return (years.qcAssembly ?? years.governorStateSenate) + (cycle - 1) * 4;
     default:
       return years.governorStateSenate + (cycle - 1) * 4;
   }

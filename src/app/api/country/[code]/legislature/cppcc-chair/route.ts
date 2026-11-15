@@ -39,6 +39,12 @@ import type {
   CongressLeader,
   ElectedOfficial,
 } from "@/lib/db/types";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { congressLeadersCollection } from "@/lib/db/repositories/congressLeaders";
+import { cppccChairNominationsCollection } from "@/lib/db/repositories/cppccChairNominations";
+import { cppccChairElectionsCollection } from "@/lib/db/repositories/cppccChairElections";
 
 const cppccChairActionSchema = z.object({
   action: z.enum(["declare", "withdraw", "vote", "start_election", "force_end"]),
@@ -51,7 +57,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
   try {
     const { code } = await params;
     const countryId = code.toUpperCase();
-    if (countryId !== "CN" || !COUNTRY_CONFIGS.CN) {
+    if (!countryHasFeature("cnApi", countryId) || !COUNTRY_CONFIGS.CN) {
       return errorResponse(400, "CPPCC Chairman endpoint is CN-only");
     }
     const db = await getDb();
@@ -63,13 +69,13 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
     let myParty: string | null = null;
     let isSittingDelegate = false;
     if (authUser) {
-      const char = await db
-        .collection<Character>("characters")
-        .findOne({ userId: new ObjectId(authUser.userId) });
+      const char = await charactersCollection(db).findOne({
+        userId: new ObjectId(authUser.userId),
+      });
       if (char) {
         myCharacterId = char._id.toString();
         myParty = char.party ?? null;
-        const official = await db.collection<ElectedOfficial>("electedOfficials").findOne({
+        const official = await electedOfficialsCollection(db).findOne({
           characterId: char._id,
           officeType: "npcDelegate",
           countryId: "CN",
@@ -79,9 +85,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
     }
 
     // Auto-resolve an expired election before responding (parity with US Speaker GET).
-    const electionDoc = await db
-      .collection<CppccChairElection>("cppccChairElections")
-      .findOne({ _id: "current" });
+    const electionDoc = await cppccChairElectionsCollection(db).findOne({ _id: "current" });
     if (electionDoc?.status === "voting") {
       const gameTime = await getGameTime();
       if (isLeadershipElectionClosed(electionDoc, gameTime.currentTurn, gameTime.effectiveNow)) {
@@ -90,10 +94,9 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
     }
 
     const [leader, election, nominations] = await Promise.all([
-      db.collection<CongressLeader>("congressLeaders").findOne({ role: "chair_cppcc" }),
-      db.collection<CppccChairElection>("cppccChairElections").findOne({ _id: "current" }),
-      db
-        .collection<CppccChairNomination>("cppccChairNominations")
+      congressLeadersCollection(db).findOne({ role: "chair_cppcc" }),
+      cppccChairElectionsCollection(db).findOne({ _id: "current" }),
+      cppccChairNominationsCollection(db)
         .find({ status: { $in: ["open", "voting"] } })
         .sort({ votesFor: -1 })
         .toArray(),
@@ -161,7 +164,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
   try {
     const { code } = await params;
     const countryId = code.toUpperCase();
-    if (countryId !== "CN" || !COUNTRY_CONFIGS.CN) {
+    if (!countryHasFeature("cnApi", countryId) || !COUNTRY_CONFIGS.CN) {
       return errorResponse(400, "CPPCC Chairman endpoint is CN-only");
     }
 

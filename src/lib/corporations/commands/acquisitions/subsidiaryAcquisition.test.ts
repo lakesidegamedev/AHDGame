@@ -53,7 +53,7 @@ const TURN = 200;
 
 function subsidiaryWorld(opts: Parameters<typeof buildAcquisitionWorld>[0] = {}): AcquisitionWorld {
   const w = buildAcquisitionWorld(opts);
-  w.memory.seed("gameState", [{ _id: "current", subsidiaryCorporationsEnabled: true }]);
+  w.memory.seed("gameState", [{ _id: "current" }]);
   (w.offer as { outcome?: string }).outcome = "subsidiary";
   return w;
 }
@@ -264,14 +264,6 @@ describe("agreed acquisition, subsidiary outcome: eligibility at execution", () 
     expect(target?.subsidiaryFormalizedAtTurn).toBeUndefined();
     expect(await w.memory.collection("acquisitionSettlements").countDocuments({})).toBe(0);
   }
-
-  it("is refused when the subsidiary feature is off", async () => {
-    const w = subsidiaryWorld();
-    w.memory
-      .collection("gameState")
-      .updateOne({ _id: "current" }, { $set: { subsidiaryCorporationsEnabled: false } });
-    await expectRefused(w, /not enabled/);
-  });
 
   it("is refused for a state-owned acquirer and for a formalized-subsidiary acquirer", async () => {
     const national = subsidiaryWorld();

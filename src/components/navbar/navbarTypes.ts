@@ -4,6 +4,7 @@ export interface NavbarUser {
   username: string;
   isAdmin?: boolean;
   isModerator?: boolean;
+  isJuniorDev?: boolean;
   singleplayer?: boolean;
   canSeeCampaignManager?: boolean;
   patreonTier?: string | null;

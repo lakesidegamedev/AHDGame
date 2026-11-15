@@ -1,4 +1,5 @@
 import { ObjectId, type Db } from "mongodb";
+import { playerEndorsementLocksCollection } from "@/lib/db/repositories/playerEndorsementLocks";
 
 interface PlayerEndorsementLock {
   _id: string;
@@ -20,7 +21,7 @@ export async function claimPlayerEndorsementLock(
   const lockId = `${characterId.toString()}:${electionId.toString()}`;
   const token = new ObjectId();
   try {
-    const claimed = await db.collection<PlayerEndorsementLock>("playerEndorsementLocks").updateOne(
+    const claimed = await playerEndorsementLocksCollection<PlayerEndorsementLock>(db).updateOne(
       {
         _id: lockId,
         $or: [{ expiresAt: { $lte: now } }, { expiresAt: { $exists: false } }],
@@ -40,8 +41,9 @@ export async function claimPlayerEndorsementLock(
   }
 
   return async () => {
-    await db
-      .collection<PlayerEndorsementLock>("playerEndorsementLocks")
-      .deleteOne({ _id: lockId, token });
+    await playerEndorsementLocksCollection<PlayerEndorsementLock>(db).deleteOne({
+      _id: lockId,
+      token,
+    });
   };
 }

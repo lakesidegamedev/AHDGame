@@ -15,10 +15,8 @@ function leanLabel(value: number | null): string {
 }
 
 /**
- * Justice office page (#3605) — mirrors `VicePresidentOfficePage` (same
- * header shape, same self-serve action panel pattern) for a seated
- * player-Justice: which seat they hold, their ideology leans, remaining
- * judicial actions (#3598 justiceActions.ts).
+ * Justice office page for a seated player-Justice: seat held, ideology leans,
+ * remaining judicial actions. Mirrors VicePresidentOfficePage.
  */
 export default function JusticeOfficePage() {
   const resolveCountryName = useCountryDisplayName();

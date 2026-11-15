@@ -1,5 +1,3 @@
-import { getAllTurnoutTargetOptions } from "@/lib/demographics/turnoutTargets";
-
 export const POLICY_DOMAINS = [
   "economic",
   "education",
@@ -94,14 +92,6 @@ export const METRIC_OPTIONS: Record<string, string[]> = {
     "stateMediaControl",
   ],
 };
-
-/**
- * Census buckets for demographic targeting: the vocabulary the electorate is
- * actually made of, and the same one the Address and canvassing pickers use.
- * The wizard is not scoped to a country, so this is the union across every
- * seeded country, deduped by id.
- */
-export const DEMOGRAPHIC_BUCKETS = getAllTurnoutTargetOptions();
 
 // Committee names by policy domain
 export const COMMITTEE_NAMES: Record<string, string> = {

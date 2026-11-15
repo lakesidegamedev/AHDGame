@@ -38,19 +38,13 @@ function withHeadOfGovernment(
 }
 
 /**
- * DD's departments are GDR-authentic (ddCabinetMechanics.ts), which is right for
- * DD and wrong for the countries that merely reuse the GDR cabinet SHAPE — a
- * Bulgarian central-bank liaison must not read "Staatsbank der DDR", a Polish
- * interior ministry should carry its own name rather than the GDR's, and no bloc
- * security service is the Stasi. These three seats get bloc-neutral departments;
- * every other DD department ("Ministry of Transport", "State Planning
- * Commission", …) is already generic and carries over unchanged.
- *
- * The interior seat used to carry the Stasi's own title on DD ("Minister for
- * State Security"), which leaked through the shape into every country reusing
- * it. DD itself now reads "Minister of Internal Affairs", and the Stasi title
- * moved to the dedicated `director_of_intelligence` seat, whose bloc name and
- * year are neutralized by `withNeutralSecurityService`.
+ * DD's departments are GDR-authentic (ddCabinetMechanics.ts), which is wrong
+ * for countries that reuse the GDR cabinet SHAPE. A Bulgarian central-bank
+ * liaison must not read "Staatsbank der DDR", a Polish interior ministry
+ * should carry its own name, and no bloc security service is the Stasi.
+ * These three seats get bloc-neutral departments; every other DD department
+ * is already generic. The Stasi title lives on the dedicated
+ * `director_of_intelligence` seat, neutralized by `withNeutralSecurityService`.
  */
 const BLOC_NEUTRAL_DEPARTMENTS: Record<string, string> = {
   gosbank_liaison: "State Bank",

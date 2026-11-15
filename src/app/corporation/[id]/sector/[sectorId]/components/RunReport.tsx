@@ -11,14 +11,10 @@ import { fmtPct, fmtUnits } from "../lib/plants";
 /**
  * What the run did, why, and what to do about it, above the run meter.
  *
- * The meter shows where capacity went; it could not say which slice the player
- * can fix, or that a "ramping" slice was really being cut for a loss (ticket
- * 1765), or how "held by cash" differed from "short of cash" (ticket 1767).
- * This card answers three questions in order: how much is running, why the
- * rest is not (in the planner's own terms, from the same rule the turn uses),
- * and the one or two things that would change it. The per-unit bar puts the
- * price beside what each unit costs, because a run held down for a loss can
- * only be fixed by that gap closing.
+ * Answers three questions in order: how much is running, why the rest is not
+ * (in the planner's own terms, from the same rule the turn uses), and the one
+ * or two things that would change it. The per-unit bar puts the price beside
+ * each unit's cost, since a run held down for a loss is fixed by that gap.
  *
  * COPY RULE: plain language, no dashes, no jargon.
  */
@@ -179,7 +175,14 @@ export default function RunReport({
     },
     { key: "wages", label: "Wages", value: report.unitWages ?? 0, fill: "bg-orange-600/70" },
     { key: "site", label: "Site running", value: report.unitSite ?? 0, fill: "bg-slate-500/60" },
+    {
+      key: "own-sites",
+      label: "Charged by your sites",
+      value: report.unitOwnSiteCharge ?? 0,
+      fill: "bg-sky-600/60",
+    },
   ];
+  const ownSiteCharge = (report.unitOwnSiteCharge ?? 0) > 0;
   const unitCost = costs.reduce((n, c) => n + c.value, 0);
   const scale = Math.max(unitCost, price ?? 0) * 1.05;
   const margin = price != null ? price - unitCost : null;
@@ -259,6 +262,9 @@ export default function RunReport({
               : ""}
             {report.ownSiteValued
               ? " Units sent to your own sites are valued at your asking price."
+              : ""}
+            {ownSiteCharge
+              ? " Charged by your sites is what your own farms and mines billed this sector for inputs. It is income to those sites, so your company as a whole is unaffected."
               : ""}
           </p>
         </div>

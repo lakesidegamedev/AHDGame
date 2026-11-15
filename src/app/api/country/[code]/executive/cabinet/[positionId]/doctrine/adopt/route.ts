@@ -1,6 +1,6 @@
 // POST /api/country/[code]/executive/cabinet/[positionId]/doctrine/adopt
 // Adopt a national-doctrine node. Auth: defense holder or admin. Gated by
-// conflictsEnabled + defense seat. Server re-validates via adoptNode (never
+// the defense seat. Server re-validates via adoptNode (never
 // trusts the client). Errors: 400, 401, 403, 404.
 import { NextResponse } from "next/server";
 import { z } from "zod";
@@ -51,11 +51,8 @@ export async function POST(request: Request, { params }: RouteParams) {
     const gsCol = await getGameStateCollection(db);
     const gs = await gsCol.findOne(
       { _id: "current" },
-      { projection: { conflictsEnabled: 1, currentYear: 1, currentTurn: 1, startingYear: 1 } }
+      { projection: { currentYear: 1, currentTurn: 1, startingYear: 1 } }
     );
-    if (!gs?.conflictsEnabled) {
-      return errorResponse(404, "Conflicts subsystem disabled");
-    }
 
     const member = await getCabinetMembersCollection(db).findOne({ countryId, positionId });
     const isHolder =
@@ -73,9 +70,9 @@ export async function POST(request: Request, { params }: RouteParams) {
     if (actingDenied) return actingDenied;
 
     const currentEra = await resolveDoctrineEra(db);
-    const year = resolveGameYear(gs);
+    const year = gs ? resolveGameYear(gs) : null;
     const current =
-      year != null && gs.startingYear != null
+      gs && year != null && gs.startingYear != null
         ? await settleDoctrineIncome(db, countryId, gs.startingYear, year)
         : await getNationalDoctrine(db, countryId);
     const res = adoptNode(current, parsed.data.key, currentEra);

@@ -21,6 +21,7 @@ import { canActOnCorporationAsParent } from "@/lib/corporations/subsidiaries/aut
 import { buildOperatorPolicy, operatorPolicyInputSchema } from "@/lib/corporations/operatorPolicy";
 import { operatorPermissionsFor } from "@/lib/turn/npp/operatorPermissions";
 import type { Corporation } from "@/lib/db/types";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -98,7 +99,7 @@ export async function PUT(request: Request, { params }: RouteParams): Promise<Ne
     if (!parsed.success) return errorResponse(parsed.status, parsed.error);
     const policy = buildOperatorPolicy(parsed.data, await getCurrentTurn(db));
     // Re-assert the operator seat so a CEO change between read and write cannot land the edit.
-    const result = await db.collection<Corporation>("corporations").updateOne(
+    const result = await corporationsCollection(db).updateOne(
       {
         _id: corporation._id,
         userId: corporation.userId,
@@ -120,12 +121,10 @@ export async function DELETE(_request: Request, { params }: RouteParams): Promis
     const loaded = await load(params);
     if (loaded.response) return loaded.response;
     const { db, corporation } = loaded;
-    await db
-      .collection<Corporation>("corporations")
-      .updateOne(
-        { _id: corporation._id, userId: corporation.userId },
-        { $unset: { operatorPolicy: "" }, $set: { updatedAt: new Date() } }
-      );
+    await corporationsCollection(db).updateOne(
+      { _id: corporation._id, userId: corporation.userId },
+      { $unset: { operatorPolicy: "" }, $set: { updatedAt: new Date() } }
+    );
     const { operatorPolicy: _removed, ...rest } = corporation;
     return NextResponse.json(view(rest as Corporation));
   } catch (error) {

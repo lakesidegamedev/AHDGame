@@ -10,6 +10,10 @@ import type {
 } from "@/lib/db/types";
 import { projectCharacterGeneration, calculateTaxAmount } from "@/lib/utils/fundGeneration";
 import { resolveCampaignPriceLevel } from "@/lib/campaigns/rules/priceLevel";
+import {
+  campaignGdpPerCapitaIndex,
+  requireNationalGdpPerCapita,
+} from "@/lib/campaigns/rules/gdpBaseline";
 import { campaignAnchorToLocal } from "@/lib/campaigns/campaignCurrency";
 import { getHomeCurrency } from "@/lib/currency/characterFunds";
 import type { AnyBulkWriteOperation } from "mongodb";
@@ -22,6 +26,11 @@ import type { FinancialTxLogEntry } from "@/lib/db/types/financialTxLog";
 import { COUNTRY_CURRENCY_MAP, type CurrencyCode } from "@/lib/constants/currencies";
 import { getGameStatePresetOrDefault } from "@/lib/db/collections/gameState";
 import type { GameConfig } from "@/lib/db/types/gameConfig";
+import { getStatesCollection } from "@/lib/db/collections/states";
+import { getCharactersCollection } from "@/lib/db/collections/characters";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 /**
  * Process fund generation for all characters each turn.
@@ -55,9 +64,10 @@ export async function processFundGeneration(
       // GDP-baseline era for income math: the world's reset preset, so
       // historical worlds scale against their own denomination (issue #798).
       const preset = await getGameStatePresetOrDefault(db);
-      const gameConfig = await db
-        .collection<GameConfig>("gameConfig")
-        .findOne({ _id: "default" }, { projection: { campaignEraPriceLevelEnabled: 1 } });
+      const gameConfig = await gameConfigCollection(db).findOne(
+        { _id: "default" },
+        { projection: { campaignEraPriceLevelEnabled: 1, campaignLiveGdpBasisEnabled: 1 } }
+      );
       const priceLevel = resolveCampaignPriceLevel(
         gameConfig?.campaignEraPriceLevelEnabled,
         preset
@@ -65,16 +75,18 @@ export async function processFundGeneration(
 
       const stateMap =
         preloadedStateMap ??
-        new Map((await db.collection<State>("states").find({}).toArray()).map((s) => [s._id, s]));
+        new Map((await (await getStatesCollection(db)).find({}).toArray()).map((s) => [s._id, s]));
+
+      const nationalGdpIndex = campaignGdpPerCapitaIndex(stateMap.values(), {
+        live: gameConfig?.campaignLiveGdpBasisEnabled === true,
+        preset,
+      });
 
       // Use composite keys to avoid cross-country sequential ID collisions
-      const parties = await db
-        .collection<PoliticalPartyType>("politicalParties")
-        .find({})
-        .toArray();
+      const parties = await politicalPartiesCollection<PoliticalPartyType>(db).find({}).toArray();
       const partyMap = new Map(parties.map((p) => [`${p.countryId ?? "US"}:${p.sequentialId}`, p]));
 
-      const statePartyOrgs = await db.collection<StatePartyOrg>("statePartyOrg").find({}).toArray();
+      const statePartyOrgs = await statePartyOrgCollection(db).find({}).toArray();
       const statePartyMap = new Map(
         statePartyOrgs.map((sp) => [`${sp.stateId}_${sp.partyId}`, sp])
       );
@@ -114,6 +126,10 @@ export async function processFundGeneration(
           politicalInfluence: character.politicalInfluence ?? 0,
           preset,
           priceLevel,
+          nationalGdpPerCapita: requireNationalGdpPerCapita(
+            nationalGdpIndex,
+            character.countryId ?? "US"
+          ),
         });
         const totalFundGeneration = campaignAnchorToLocal(
           totalFundGenerationAnchor,
@@ -198,7 +214,7 @@ export async function processFundGeneration(
       }
 
       if (characterOps.length > 0) {
-        await db.collection<Character>("characters").bulkWrite(characterOps);
+        await (await getCharactersCollection(db)).bulkWrite(characterOps);
       }
 
       if (nationalTreasuryUpdates.size > 0) {
@@ -208,7 +224,7 @@ export async function processFundGeneration(
             update: { $inc: { treasury: amount }, $set: { updatedAt: now } },
           },
         }));
-        await db.collection<PoliticalPartyType>("politicalParties").bulkWrite(partyOps);
+        await politicalPartiesCollection<PoliticalPartyType>(db).bulkWrite(partyOps);
 
         // Emit per-party treasury audit rows. Fund-generation aggregates a
         // turn's worth of national-tax dues; one credit row per party.
@@ -255,7 +271,7 @@ export async function processFundGeneration(
             },
           })
         );
-        await db.collection<StatePartyOrg>("statePartyOrg").bulkWrite(statePartyOps);
+        await statePartyOrgCollection(db).bulkWrite(statePartyOps);
 
         for (const [statePartyKey, amount] of stateTreasuryUpdates.entries()) {
           const sp = statePartyMap.get(statePartyKey);

@@ -2,34 +2,26 @@
  * The metric engine's political nodes, expressed as a bounded addend to a
  * family's composed board target.
  *
- * WHY THIS EXISTS. The engine's registry carries 62 political nodes — education
- * attainment from per-capita education spending, health outcomes from health
- * spending, public safety from inequality, and so on. They used to read and
- * write a region's legacy metrics doc. Retiring that collection would have
- * deleted the whole causal channel, because Bridge B covers only 8 of the 63
- * families (the seven `economy.*` plus `society.demography`) and every other
- * family moves on enacted law alone. Budget spending would have stopped
- * affecting education, health, and crime outcomes entirely.
+ * The engine's registry carries 62 political nodes (education from per-capita
+ * education spending, health from health spending, public safety from
+ * inequality, and so on). They no longer own a persisted value: each node
+ * contributes a per-turn TARGET, and the board's own `driftStep` does the
+ * smoothing the node's EMA used to do. One smoothing mechanism, no second
+ * political representation. Without this, budget spending would stop affecting
+ * education, health, and crime outcomes entirely, since only Bridge B (8 of 63
+ * families) moves off enacted law.
  *
- * So the nodes' MODEL survives and their STORE does not: a node no longer owns
- * a persisted value, it contributes a per-turn TARGET, and the board's own
- * `driftStep` does the smoothing that the node's EMA used to do. One smoothing
- * mechanism instead of two, and no second political representation.
- *
- * SHAPE-IDENTICAL TO BRIDGE B, deliberately. `macroResidualFor` converts macro
- * paths to a family score and returns a bounded gap against the law target;
- * this does the same for engine outputs. Two channels, one composition rule:
+ * SHAPE-IDENTICAL TO BRIDGE B. `macroResidualFor` converts macro paths to a
+ * bounded gap against the law target; this does the same for engine outputs.
  *
  *   target = composeTarget(points, supplement, structural + macroTerm + engineTerm)
  *
- * NOT PERSISTED, for the same reason Bridge B is not: `residuals` means "the
- * structural gap fixed at reset", and the dynamics self-heal recomputes it as
- * `value − composedLawTarget`. Folding a per-turn causal term into it would
- * bake this turn's spending level into the country's permanent equilibrium and
- * corrupt every later heal.
+ * NOT PERSISTED, same reason as Bridge B: `residuals` means "structural gap
+ * fixed at reset", and self-heal recomputes it as value − composedLawTarget.
+ * Baking in a per-turn causal term would corrupt every later heal.
  *
- * BOUNDED so the law ladder still wins. A government that funds schools should
- * bend education outcomes, not overrule the education laws on the books.
+ * BOUNDED so the law ladder still wins: funding schools should bend education
+ * outcomes, not overrule the education laws on the books.
  */
 import { ADAPTER_TIER1 } from "@/lib/politicalLegislation/marginAdapter";
 import { politicalScoreFromLegacyValue } from "./derive/legacyInversion";

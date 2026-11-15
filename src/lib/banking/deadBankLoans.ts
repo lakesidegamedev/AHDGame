@@ -1,58 +1,29 @@
 /**
  * Loans outstanding to a bank that no longer exists.
  *
- * The banking turn services banks whose charter is `active`, which is correct
- * for everything except the loans a dead bank leaves behind. Those loans were
- * simply never serviced again: the borrower stopped paying, the asset sat on a
- * revoked charter at full value forever, and the money that should have reached
- * the people who lost out when the bank failed reached nobody. Every comment in
- * the wind-up paths said "loans are LEFT IN PLACE and keep amortizing", and
- * none of them did.
+ * The banking turn services only `active` charters, so a dead bank's loans were
+ * never serviced again. A loan is an obligation to whoever holds it, and a bank
+ * failing does not discharge it. What changes is who the payment is owed to:
  *
- * A loan is an obligation to whoever holds it, and a bank failing does not
- * discharge it. What changes is who the payment is owed to:
- *
- *  - **Before the deposit book is resolved**, it is owed to the bank, and it
- *    lands in the same `cashReserves` the resolution waterfall is about to
- *    distribute. A recovery that arrives in time simply makes the waterfall
- *    bigger, which is exactly what it is for.
- *  - **After resolution has closed**, the claimants are gone: the household
- *    book was made whole by the insurance fund and the treasury behind it, and
- *    the owner has taken whatever residual there was. A late recovery therefore
- *    belongs to the insurer that stood in, so it is paid into the currency's
- *    deposit insurance fund. That is subrogation, and it is the only
- *    destination that does not either strand the money on a dead charter or
- *    hand a windfall to a shareholder who has already been paid out.
- *  - **If the charter is already archived**, no live resolution pass can
- *    distribute its snapshot, so recovery goes to the insurer as a safe
- *    fallback for legacy data that predates the unresolved-estate guard.
+ * - Before the deposit book is resolved, it is owed to the bank and lands in the
+ *   same `cashReserves` the resolution waterfall distributes.
+ * - After resolution has closed, the claimants are gone: recovery goes to the
+ *   deposit insurance fund that stood in (subrogation).
+ * - If the charter is archived, recovery also goes to the insurer as a fallback
+ *   for legacy data predating the unresolved-estate guard.
  *
  * Both destinations go through the same money primitive under a deterministic
- * per-turn key (the book's batch key, or the loan's own key when it cannot join
- * the batch), so a retried turn cannot charge a borrower twice.
- *
- * A whole epoch's book is serviced in at most two journaled moves. The named
- * loans and the household tranches share one: the decisions are still taken
- * loan by loan against a running borrower balance and a running household pool,
- * the borrower debits are summed per borrower, the pool debits one per
- * currency, the credit is summed once and the loan records ride the same
- * receipt. The construction loans take a second move, because they hold a
- * lease and a loan lock that the per-loan path used to take once per loan. The
- * per-loan path remains for the loans neither move can carry: an untagged
- * legacy loan whose lease cannot name the epoch, a borrower with no document,
- * a corporation whose book spans currencies, and anything another receipt
- * still owns.
+ * per-turn key, so a retried turn cannot charge a borrower twice.
  */
 
 import type { Db, ObjectId } from "mongodb";
 import { lifecycleStage, stageAllows } from "@/lib/banking/rules/lifecycle";
-import type { Character, Corporation } from "@/lib/db/types";
+import type { Corporation } from "@/lib/db/types";
 import type { BankCharterHistoryEntry, BankLoan } from "@/lib/db/types/bank";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { getCountryIdForCurrency } from "@/lib/constants/currencies";
 import { getBankId } from "@/lib/centralBank/helpers";
 import type { MoneyTarget } from "@/lib/banking/moneyMove";
-import { MONEY_MOVE_COLLECTION } from "@/lib/banking/moneyMove";
 import { ensureFund } from "@/lib/banking/insurance";
 import { loanCharterEpoch } from "@/lib/banking/loanEpoch";
 import { getCreditBand } from "@/lib/banking/rules/creditBands";
@@ -71,6 +42,12 @@ import {
 } from "@/lib/banking/loanServiceBatch";
 import type { TransitionLeg, TransitionProjection } from "@/lib/banking/rules/boundary";
 import { emitTxBulk, loadTxThresholds, type TxInput } from "@/lib/financialTxLog/emit";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { bankLoansCollection } from "@/lib/db/repositories/bankLoans";
+import { bankCharterHistoryCollection } from "@/lib/db/repositories/bankCharterHistory";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
 
 export type DeadBankLoanSummary = {
   /** Loans belonging to a wound-up bank that were serviced this turn. */
@@ -110,8 +87,7 @@ type DeadBank = {
 
 /** Banks whose charter has ended but whose loan book has not. */
 export async function findDeadBanksWithLoans(db: Db): Promise<DeadBank[]> {
-  const history = await db
-    .collection<BankCharterHistoryEntry>("bankCharterHistory")
+  const history = await bankCharterHistoryCollection(db)
     .find(
       {},
       {
@@ -142,8 +118,7 @@ export async function findDeadBanksWithLoans(db: Db): Promise<DeadBank[]> {
       history.map((entry) => [entry.corporationId.toString(), entry.corporationId])
     ).values(),
   ];
-  const corps = await db
-    .collection<Corporation>("corporations")
+  const corps = await corporationsCollection(db)
     .find({
       $or: [
         { "bankCharter.status": { $in: ["failed", "revoked"] } },
@@ -263,8 +238,7 @@ export function recoveryTargetFor(
 
 /**
  * Everything the servicing pass can know about a loan before it services it.
- * The per-loan path used to read the borrower (and the currency's household
- * pool) once per loan; both are turn-level facts read once per cohort now.
+ * Borrower and household pool are turn-level facts, read once per cohort.
  */
 export type DeadBankLoanPrefetch = {
   /** Borrower cash and name, kept in sync between that borrower's loans. */
@@ -334,8 +308,7 @@ async function loadDeadBankLoanPrefetch(
 
   const [characters, corporations, centralBanks] = await Promise.all([
     characterIds.size > 0
-      ? db
-          .collection<Character>("characters")
+      ? charactersCollection(db)
           .find(
             { _id: { $in: [...characterIds.values()] } },
             { projection: { name: 1, "currencyBalances.personal": 1 } }
@@ -343,8 +316,7 @@ async function loadDeadBankLoanPrefetch(
           .toArray()
       : Promise.resolve([]),
     corporationIds.size > 0
-      ? db
-          .collection<Corporation>("corporations")
+      ? corporationsCollection(db)
           .find(
             { _id: { $in: [...corporationIds.values()] } },
             { projection: { name: 1, liquidCapital: 1 } }
@@ -352,8 +324,7 @@ async function loadDeadBankLoanPrefetch(
           .toArray()
       : Promise.resolve([]),
     npcCurrencies.size > 0
-      ? db
-          .collection<{ _id: string; externalBroadMoney?: number }>("centralBanks")
+      ? centralBanksCollection<{ _id: string; externalBroadMoney?: number }>(db)
           .find(
             {
               _id: {
@@ -450,8 +421,7 @@ export async function processDeadBankLoans(
   // One loan read for every dead book, then grouped per bank in collection
   // order, instead of one query per bank. Each bank still services its own
   // loans in the same order.
-  const allLoans: BankLoan[] = await db
-    .collection<BankLoan>("bankLoans")
+  const allLoans: BankLoan[] = await bankLoansCollection(db)
     .find({
       bankCorporationId: { $in: deadBanks.map((bank) => bank.corporationId) },
       status: { $in: ["current", "arrears"] },
@@ -923,16 +893,10 @@ type ConstructionBatchOutcome = {
 /**
  * A dead bank's construction book in one journaled move.
  *
- * The lease and the loan lock stay. `constructionFinance`, `constructionSale`,
- * `constructionCancellation` and `constructionSettlement` run from request
- * handlers beside the turn and coordinate with it only through
- * `bankConstructionFunding` and `constructionSettlementOwner`; the turn's
- * banking lanes are in-memory keys that those writers never take. Dropping
- * either would let a cancellation or a sale settle the same pledge while the
- * instalment charges it. What changes is that both are taken once for the whole
- * bank epoch rather than once per loan, and the money and loan records land as
- * one receipt. The pledge reads themselves were always projections, so nothing
- * per loan remains to prefetch. A loan another receipt still owns keeps the
+ * Lease and loan lock are taken once for the whole bank epoch rather than
+ * per loan; money and loan records land as one receipt. Dropping either lock
+ * would let a cancellation or sale settle the same pledge while the
+ * instalment charges it. A loan another receipt still owns keeps the
  * per-loan path, which knows how to recover it.
  */
 async function serviceConstructionBatch(
@@ -944,7 +908,7 @@ async function serviceConstructionBatch(
   const key = deadBankConstructionServiceKey(bank, turn);
   const loanIds = loans.map((loan) => loan._id);
   const anchor = loans.find((loan) => loan.constructionCollateral);
-  const bankLoans = db.collection<BankLoan>("bankLoans");
+  const bankLoans = bankLoansCollection(db);
   const constructionTarget: MoneyTarget = holdsBankEpoch
     ? {
         ...target,
@@ -1146,8 +1110,7 @@ async function clearStaleConstructionBatchLocks(
     ),
   ];
   if (stale.length === 0) return;
-  const records = await db
-    .collection<{ _id: string }>(MONEY_MOVE_COLLECTION)
+  const records = await bankMoneyMovesCollection<{ _id: string }>(db)
     .find({ _id: { $in: stale } }, { projection: { _id: 1 } })
     .toArray();
   const claimed = new Set(records.map((record) => record._id));
@@ -1166,10 +1129,8 @@ async function clearStaleConstructionBatchLocks(
     if (complete || unfunded) cleared.push(owner);
   }
   if (cleared.length === 0) return;
-  await db
-    .collection<BankLoan>("bankLoans")
-    .updateMany(
-      { constructionSettlementOwner: { $in: cleared } },
-      { $unset: { constructionSettlementOwner: "" } }
-    );
+  await bankLoansCollection(db).updateMany(
+    { constructionSettlementOwner: { $in: cleared } },
+    { $unset: { constructionSettlementOwner: "" } }
+  );
 }

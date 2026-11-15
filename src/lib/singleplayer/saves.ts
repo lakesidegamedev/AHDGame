@@ -10,6 +10,8 @@ import {
   verifySaveArchive,
   writeSaveArchive,
 } from "@/lib/singleplayer/saveArchive";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /**
  * Save slots and autosaves for a local world.
@@ -260,25 +262,21 @@ interface WorldFacts {
 }
 
 async function readWorldFacts(db: Db): Promise<WorldFacts | null> {
-  const state = await db
-    .collection<{
-      _id: string;
-      currentTurn?: number;
-      preset?: string;
-      isProcessing?: boolean;
-      singleplayerConfig?: { mode?: string };
-    }>("gameState")
-    .findOne(
-      { _id: "current" },
-      { projection: { currentTurn: 1, preset: 1, isProcessing: 1, singleplayerConfig: 1 } }
-    );
+  const state = await gameStateCollection<{
+    _id: string;
+    currentTurn?: number;
+    preset?: string;
+    isProcessing?: boolean;
+    singleplayerConfig?: { mode?: string };
+  }>(db).findOne(
+    { _id: "current" },
+    { projection: { currentTurn: 1, preset: 1, isProcessing: 1, singleplayerConfig: 1 } }
+  );
   if (!state) return null;
-  const character = await db
-    .collection("characters")
-    .findOne(
-      { userId: new ObjectId(SINGLEPLAYER_USER_ID), retiredAt: { $exists: false } },
-      { projection: { name: 1 } }
-    );
+  const character = await charactersCollection(db).findOne(
+    { userId: new ObjectId(SINGLEPLAYER_USER_ID), retiredAt: { $exists: false } },
+    { projection: { name: 1 } }
+  );
   return {
     turn: typeof state.currentTurn === "number" ? state.currentTurn : null,
     preset: typeof state.preset === "string" ? state.preset : null,

@@ -6,6 +6,7 @@ import { requireAdmin } from "@/lib/api/requireAdmin";
 import { parseJsonBody } from "@/lib/api/validate";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import type { User } from "@/lib/db/types/user";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 const switchSchema = z.object({
   type: z.enum(["character", "imperial"]),
@@ -32,18 +33,16 @@ export async function POST(request: Request) {
 
     if (type === "imperial") {
       // Verify the admin has an imperial character
-      const user = await db.collection<User>("users").findOne({ _id: adminUserId });
+      const user = await usersCollection(db).findOne({ _id: adminUserId });
       if (!user?.activeImperialCharacterId) {
         return errorResponse(400, "No imperial character found for this account");
       }
     }
 
-    await db
-      .collection<User>("users")
-      .updateOne(
-        { _id: adminUserId },
-        { $set: { activeCharacterType: type, updatedAt: new Date() } }
-      );
+    await usersCollection(db).updateOne(
+      { _id: adminUserId },
+      { $set: { activeCharacterType: type, updatedAt: new Date() } }
+    );
 
     return NextResponse.json({ success: true, activeCharacterType: type });
   } catch (error) {

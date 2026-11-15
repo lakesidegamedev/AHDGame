@@ -49,16 +49,10 @@ export function RegionalMetricCard({
   detailHref,
 }: RegionalMetricCardProps) {
   const [open, setOpen] = useState(false);
-  const {
-    preset,
-    eraSystemEnabled,
-    currentYear,
-    startingYear,
-    incomeBandIndexByCountry,
-    incomeStartVintages,
-  } = useWorldFlags();
+  const { preset, currentYear, startingYear, incomeBandIndexByCountry, incomeStartVintages } =
+    useWorldFlags();
   // Live year for era-aware score bands; null while the flag is off (legacy path).
-  const eraYear = eraSystemEnabled ? currentYear : null;
+  const eraYear = currentYear;
   const incomeIndex = eraYear != null ? (incomeBandIndexByCountry?.[countryId] ?? null) : null;
   const def = getMetricDefinition(category as MetricCategoryId, metricId);
   const name = def ? getEraMetricName(def, eraYear, regionId) : metricId;

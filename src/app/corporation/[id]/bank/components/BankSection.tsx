@@ -5,14 +5,10 @@ import { useTranslations } from "next-intl";
 import { DenseSection } from "@/components/corporation/dense/DenseKit";
 
 /**
- * Shared frame for the bank console's panels.
- *
- * Every panel answers one question first: can the CEO change this? The answer
- * rides beside the heading as plain text ("CEO control", "Monitor",
- * "Reference", "Supervision") instead of an uppercase eyebrow above it.
- * Detail that used to sit in always-visible paragraphs (formulas, inputs,
- * levers) lives in `Tooltip`s so the panel shows the number and the action,
- * not the manual.
+ * Shared frame for the bank console's panels. Each panel's heading shows
+ * whether the CEO can change it ("CEO control", "Monitor", "Reference",
+ * "Supervision") as plain text, and detail like formulas and inputs lives
+ * in tooltips so panels show the number and action, not the manual.
  */
 export type EyebrowKind = "ceoControl" | "monitor" | "reference" | "supervision";
 

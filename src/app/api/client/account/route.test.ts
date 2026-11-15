@@ -4,16 +4,22 @@ const requireBasicAuth = vi.fn();
 const getAuthUserFromToken = vi.fn();
 const findOne = vi.fn();
 const getCookie = vi.fn();
-const isPatreonActive = vi.fn(() => false);
-const isPlusOrBetter = vi.fn(() => false);
 
+const isFreeAccessOn = vi.fn(async () => false);
+const hasLakesideEntitlement = vi.fn(async (..._args: [string, string]) => false);
+
+vi.mock("@/lib/lakesideEntitlements", () => ({ hasLakesideEntitlement }));
+
+vi.mock("@/lib/freeAccess", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/freeAccess")>()),
+  isFreeAccessOn,
+}));
 vi.mock("@/lib/api/requireAuth", () => ({ requireBasicAuth }));
 vi.mock("@/lib/auth", () => ({ getAuthUserFromToken }));
 vi.mock("next/headers", () => ({ cookies: vi.fn(async () => ({ get: getCookie })) }));
 vi.mock("@/lib/mongodb", () => ({
   getDb: vi.fn(async () => ({ collection: () => ({ findOne }) })),
 }));
-vi.mock("@/lib/db/types", () => ({ isPatreonActive, isPlusOrBetter }));
 
 describe("GET /api/client/account", () => {
   it("rejects unauthenticated WebView requests", async () => {
@@ -27,8 +33,7 @@ describe("GET /api/client/account", () => {
     expect(findOne).not.toHaveBeenCalled();
   });
 
-  it("returns only the desktop account summary", async () => {
-    isPatreonActive.mockReturnValueOnce(true);
+  it("returns only the desktop account summary, including singleplayer for a supporter", async () => {
     requireBasicAuth.mockResolvedValueOnce({
       ok: true,
       user: { userId: "507f1f77bcf86cd799439011" },
@@ -36,7 +41,7 @@ describe("GET /api/client/account", () => {
     findOne.mockResolvedValueOnce({
       username: "Ada",
       displayName: "Ada Lovelace",
-      patreonTier: "supporter",
+      patreonTier: "supporter-plus",
       patreonExpiresAt: null,
       email: "private@example.com",
       discordId: "123",
@@ -54,7 +59,7 @@ describe("GET /api/client/account", () => {
       displayName: "Ada Lovelace",
       avatarUrl: "https://cdn.discordapp.com/avatars/123/avatar-hash.png?size=128",
       supporter: true,
-      singleplayer: { entitled: false, expiresAt: null },
+      singleplayer: { entitled: true },
     });
     expect(body).not.toHaveProperty("email");
   });
@@ -66,8 +71,6 @@ describe("GET /api/client/account", () => {
         ok: true,
         user: { userId: "507f1f77bcf86cd799439011" },
       });
-      isPatreonActive.mockReturnValueOnce(true);
-      isPlusOrBetter.mockReturnValueOnce(true);
       findOne.mockResolvedValueOnce({
         username: "Ada",
         patreonTier,
@@ -83,6 +86,78 @@ describe("GET /api/client/account", () => {
       expect(Date.parse(body.singleplayer.expiresAt)).toBeGreaterThan(Date.now());
     }
   );
+
+  it.each(["supporter", "supporter-plus", "supporter-plus-plus"])(
+    "denies singleplayer to a lapsed %s account with no purchase",
+    async (patreonTier) => {
+      requireBasicAuth.mockResolvedValueOnce({
+        ok: true,
+        user: { userId: "507f1f77bcf86cd799439011" },
+      });
+      findOne.mockResolvedValueOnce({
+        username: "Ada",
+        patreonTier,
+        patreonExpiresAt: new Date(Date.now() - 60_000),
+      });
+      const { GET } = await import("./route");
+
+      const body = await (await GET()).json();
+
+      expect(body.supporter).toBe(false);
+      expect(body.singleplayer).toEqual({ entitled: false, expiresAt: null });
+    }
+  );
+
+  it("does not include singleplayer with plain supporter", async () => {
+    requireBasicAuth.mockResolvedValueOnce({
+      ok: true,
+      user: { userId: "507f1f77bcf86cd799439011" },
+    });
+    findOne.mockResolvedValueOnce({ username: "Ada", patreonTier: "supporter" });
+    const { GET } = await import("./route");
+
+    const body = await (await GET()).json();
+
+    expect(body.supporter).toBe(true);
+    expect(body.singleplayer).toEqual({ entitled: false, expiresAt: null });
+  });
+
+  it("grants a Lakeside grant a one hour cap, not the long grace", async () => {
+    requireBasicAuth.mockResolvedValueOnce({
+      ok: true,
+      user: { userId: "507f1f77bcf86cd799439011" },
+    });
+    findOne.mockResolvedValueOnce({ username: "Ada", patreonTier: "supporter" });
+    hasLakesideEntitlement.mockResolvedValueOnce(true);
+    const { GET } = await import("./route");
+
+    const body = await (await GET()).json();
+
+    expect(hasLakesideEntitlement).toHaveBeenCalledWith(
+      "507f1f77bcf86cd799439011",
+      "ahd-singleplayer"
+    );
+    expect(body.singleplayer.entitled).toBe(true);
+    expect(Date.parse(body.singleplayer.expiresAt)).toBeLessThanOrEqual(Date.now() + 3_600_000);
+  });
+
+  it("keeps singleplayer for a purchase holder after the supporter tier lapses", async () => {
+    requireBasicAuth.mockResolvedValueOnce({
+      ok: true,
+      user: { userId: "507f1f77bcf86cd799439011" },
+    });
+    findOne.mockResolvedValueOnce({
+      username: "Ada",
+      patreonTier: "supporter",
+      patreonExpiresAt: new Date(Date.now() - 60_000),
+      singleplayerEntitledAt: new Date(),
+    });
+    const { GET } = await import("./route");
+
+    const body = await (await GET()).json();
+
+    expect(body.singleplayer.entitled).toBe(true);
+  });
 
   it("grants singleplayer to moderators without a supporter or manual entitlement", async () => {
     requireBasicAuth.mockResolvedValueOnce({
@@ -167,5 +242,42 @@ describe("GET /api/client/account", () => {
     const { GET } = await import("./route");
     const body = await (await GET()).json();
     expect(body.singleplayer).toEqual({ entitled: false, expiresAt: null });
+  });
+
+  describe("free access", () => {
+    const ownerAuth = { ok: true, user: { userId: "507f1f77bcf86cd799439011" } };
+
+    it("is off by default and reports freeAccess false", async () => {
+      requireBasicAuth.mockResolvedValueOnce(ownerAuth);
+      findOne.mockResolvedValueOnce({ username: "Ada" });
+      const { GET } = await import("./route");
+      const body = await (await GET()).json();
+      expect(body.freeAccess).toBe(false);
+      expect(body.singleplayer).toEqual({ entitled: false, expiresAt: null });
+    });
+
+    it("entitles a linked account with no ownership, capped at one hour", async () => {
+      isFreeAccessOn.mockResolvedValueOnce(true);
+      requireBasicAuth.mockResolvedValueOnce(ownerAuth);
+      findOne.mockResolvedValueOnce({ username: "Ada" });
+      const { GET } = await import("./route");
+      const body = await (await GET()).json();
+      expect(body.freeAccess).toBe(true);
+      expect(body.singleplayer.entitled).toBe(true);
+      const ttl = Date.parse(body.singleplayer.expiresAt) - Date.now();
+      expect(ttl).toBeGreaterThan(0);
+      expect(ttl).toBeLessThanOrEqual(60 * 60 * 1000);
+    });
+
+    it("keeps the long expiry for a real owner while free access is on", async () => {
+      isFreeAccessOn.mockResolvedValueOnce(true);
+      requireBasicAuth.mockResolvedValueOnce(ownerAuth);
+      findOne.mockResolvedValueOnce({ username: "Ada", singleplayerEntitledAt: new Date() });
+      const { GET } = await import("./route");
+      const body = await (await GET()).json();
+      expect(body.freeAccess).toBe(true);
+      const ttl = Date.parse(body.singleplayer.expiresAt) - Date.now();
+      expect(ttl).toBeGreaterThan(24 * 60 * 60 * 1000);
+    });
   });
 });

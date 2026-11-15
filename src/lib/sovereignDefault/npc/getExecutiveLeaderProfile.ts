@@ -16,11 +16,12 @@
  */
 
 import type { Db, ObjectId } from "mongodb";
-import type { Character } from "@/lib/db/types";
 import type { NPP } from "@/lib/db/types/npp";
 import { COUNTRY_CONFIGS, getCountryConfig, type CountryId } from "@/lib/constants/countries";
 import type { NpcGovernmentType, NpcIdeology } from "./npcConstants";
 import type { NpcExecutiveProfile } from "./types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 type PolicyPositionsLike = { economic?: number; social?: number };
 
@@ -67,7 +68,7 @@ export async function getExecutiveLeaderProfile(
 
   // Player Character first. We restrict to live (not retired) characters by
   // requiring `currentOffice.type` to be one of the executive keys.
-  const character = await db.collection<Character>("characters").findOne({
+  const character = await charactersCollection(db).findOne({
     countryId: countryCode,
     "currentOffice.type": { $in: execKeys },
   });
@@ -83,7 +84,7 @@ export async function getExecutiveLeaderProfile(
   // Else NPP holding the executive office. NPP `currentOffice` mirrors
   // Character's `OfficeType` discriminated union (per npp.ts), so we filter
   // on the `type` discriminant to match across all variants.
-  const npp = await db.collection<NPP>("npps").findOne({
+  const npp = await nppsCollection(db).findOne({
     countryId: countryCode,
     "currentOffice.type": { $in: execKeys },
     retiredAt: null,

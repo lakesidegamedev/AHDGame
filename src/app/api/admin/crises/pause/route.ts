@@ -5,6 +5,7 @@ import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { parseJsonBody } from "@/lib/api/validate";
 import type { GameState } from "@/lib/db/types";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 const bodySchema = z.object({ paused: z.boolean() });
 
@@ -26,12 +27,10 @@ export async function POST(request: Request) {
     }
 
     const db = await getDb();
-    await db
-      .collection<GameState>("gameState")
-      .updateOne(
-        { _id: "current" },
-        { $set: { autoCrisisPaused: parsed.data.paused, updatedAt: new Date() } }
-      );
+    await gameStateCollection(db).updateOne(
+      { _id: "current" },
+      { $set: { autoCrisisPaused: parsed.data.paused, updatedAt: new Date() } }
+    );
 
     return NextResponse.json({ success: true, autoCrisisPaused: parsed.data.paused });
   } catch (error) {

@@ -65,10 +65,8 @@ export interface Migration {
 }
 
 /**
- * Schema of documents in the migrationsRun collection. Already in use by
- * three production scripts (bondCurrencyStamp, corpEconomyToLocalCurrency,
- * 2026-05-05-phase-11-live-bootstrap) — this interface formalizes the schema
- * so the runner can write markers in the same shape.
+ * Schema of documents in the migrationsRun collection, shaped to match what
+ * existing production scripts already write so the runner can append markers.
  */
 export interface MigrationMarker {
   _id: string;

@@ -33,6 +33,9 @@ import { getGovernmentFormationsCollection } from "@/lib/db/collections/governme
 import { getExecutiveOfficialFilter } from "@/lib/elections/executiveOfficeFilters";
 import { tallySeatsByParty } from "@/lib/turn/parliamentaryGovernment";
 import { nppAutonomyAtLeast } from "./featureFlag";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 /**
  * Seat an NPP president for `countryId` when the office is vacant. Returns true
@@ -61,14 +64,14 @@ export async function appointNppPresident(
   // the fallback still supplies a governing brain.
   if (
     COUNTRIES_WITH_PRESIDENTIAL_ELECTION_CYCLES.has(countryId) &&
-    (config.status !== "coming-soon" || countryId === "BR")
+    (config.status !== "coming-soon" || countryHasFeature("brLib", countryId))
   ) {
     return false;
   }
 
   // Idempotent: only act when no president currently holds the office.
   const presidentFilter = getExecutiveOfficialFilter(countryId, "president");
-  const seated = await db.collection<ElectedOfficial>("electedOfficials").findOne(presidentFilter);
+  const seated = await electedOfficialsCollection(db).findOne(presidentFilter);
   if (seated && (seated.characterId || seated.nppId)) return false;
 
   const govCol = getGovernmentFormationsCollection(db);
@@ -79,8 +82,7 @@ export async function appointNppPresident(
   // Pick the most electable NPP: a directly-elected national executive is the
   // country's most prominent figure, so favorability is the electability proxy.
   // Deterministic tie-breaks (influence, then id) keep the choice stable.
-  const candidates = await db
-    .collection<NPP>("npps")
+  const candidates = await nppsCollection(db)
     .find(
       { countryId, retiredAt: null },
       { projection: { name: 1, party: 1, favorability: 1, politicalInfluence: 1 } }
@@ -99,15 +101,13 @@ export async function appointNppPresident(
 
   // Defensive: clear any stale NPP president/VP office in this country first, so
   // the country never ends a turn with two NPPs claiming the executive.
-  await db
-    .collection<NPP>("npps")
-    .updateMany(
-      { countryId, "currentOffice.type": { $in: ["president", "vicePresident"] } },
-      { $set: { currentOffice: null, updatedAt: now } }
-    );
+  await nppsCollection(db).updateMany(
+    { countryId, "currentOffice.type": { $in: ["president", "vicePresident"] } },
+    { $set: { currentOffice: null, updatedAt: now } }
+  );
 
   // Upsert the president official record (NPP-held).
-  await db.collection<ElectedOfficial>("electedOfficials").updateOne(
+  await electedOfficialsCollection(db).updateOne(
     presidentFilter,
     {
       $set: {
@@ -126,18 +126,16 @@ export async function appointNppPresident(
     { upsert: true }
   );
 
-  // A newly-seated executive holds no other office (#2038): vacate any
+  // A newly-seated executive holds no other office: vacate any
   // legislative seat the appointee already holds through the real vacancy
   // mechanism before stamping the executive office.
   await vacateNonExecutiveOfficesForExecutive(db, { nppId: president._id }, now);
 
   // Seat the NPP as head of state.
-  await db
-    .collection<NPP>("npps")
-    .updateOne(
-      { _id: president._id },
-      { $set: { currentOffice: { type: "president" }, updatedAt: now } }
-    );
+  await nppsCollection(db).updateOne(
+    { _id: president._id },
+    { $set: { currentOffice: { type: "president" }, updatedAt: now } }
+  );
 
   // Record the formed presidential government, mirroring the PM path's fields.
   // pmName carries the head-of-government display string; presidentNppId is the

@@ -68,7 +68,7 @@ const program = (over: Partial<NonNullable<World["program"]>> = {}) => ({
   ...over,
 });
 
-const FLAGS = { coldWarEnabled: true, defenceProcurementPaused: false };
+const FLAGS = { defenceProcurementPaused: false };
 
 describe("applyNuclearProduction", () => {
   it("builds the ordered warheads and draws the cost from the appropriation", async () => {
@@ -77,17 +77,6 @@ describe("applyNuclearProduction", () => {
     expect(r).toEqual({ warheadsBuilt: 2, spent: 1_600 });
     expect(w.appropriation.balance).toBe(8_400);
     expect(w.programWrites[0]).toMatchObject({ warheads: 5, productionRate: 2 });
-  });
-
-  it("does nothing while the Cold War subsystem is off", async () => {
-    const w: World = { program: program(), appropriation: { balance: 10_000 }, programWrites: [] };
-    const r = await applyNuclearProduction(stubDb(w), "US", 1953, 42, {
-      ...FLAGS,
-      coldWarEnabled: false,
-    });
-    expect(r).toEqual({ warheadsBuilt: 0, spent: 0 });
-    expect(w.appropriation.balance).toBe(10_000);
-    expect(w.programWrites).toHaveLength(0);
   });
 
   // The stockpile is procurement by another name; the kill switch must cover it.

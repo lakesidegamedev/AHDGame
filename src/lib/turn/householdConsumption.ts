@@ -7,100 +7,65 @@ import {
 import { eraForPreset, type EraId } from "@/lib/seeds/presetSelector";
 
 /**
- * ─────────────────────────────────────────────────────────────────────────────
- * Household Ledger — income-driven final consumer demand.
- * ─────────────────────────────────────────────────────────────────────────────
+ * Household Ledger: income-driven final consumer demand.
  *
- * The legacy engine synthesises "consumer" demand from corporate retail revenue,
- * flat GDP fractions and a stabilizer — household income (`medianIncome`),
- * employment (`unemploymentRate`) and sentiment (`consumerConfidence`) are
- * computed every turn but never feed demand. This module closes that loop: a
- * per-state consumption budget that turns those household signals into demand
- * for a consumer basket, with a bounded price-elasticity response (buy less when
- * things get dear — demand destruction, a stabilizing negative feedback).
+ * Household income (`medianIncome`), employment (`unemploymentRate`) and
+ * sentiment (`consumerConfidence`) are computed every turn but never feed
+ * demand elsewhere. This module closes the loop: a per-state consumption
+ * budget turning those signals into demand for a consumer basket, with a
+ * bounded price-elasticity response (buy less when things get dear, a
+ * stabilizing negative feedback).
  *
- * Gated behind `householdConsumptionEnabled` (default off; uncalibrated — same
- * rollout posture as `demographicsDemandEnabled`). When enabled it also
- * supersedes retail's SECTOR_DEMAND input proxy (see `suppressRetailConsumerDemand`
- * in `computeRawSupplyDemand`) so consumers buy those basket commodities
- * directly — but the retail-commodity output self-loop stays (ticket #1026).
+ * Gated behind `householdConsumptionEnabled` (default off; uncalibrated). When
+ * enabled it also supersedes retail's SECTOR_DEMAND input proxy (see
+ * `suppressRetailConsumerDemand` in `computeRawSupplyDemand`) so consumers buy
+ * those basket commodities directly. The retail-commodity output self-loop
+ * stays.
  *
  * Budget base: POPULATION, not GDP. Seed GDP (and medianIncome) is unit-
- * inconsistent across countries — several are inflated 10–1000× (e.g. NG/JP/IT
- * carry local-currency-scale GDP), which would let a mis-seeded country drive
- * global consumer demand. Population is the one cross-country-consistent field,
- * so consumption is sized as `population × per-capita spend`, and `wealthMult`
- * (which reads the unreliable GDP/capita) is demoted to tilting only the basket
- * COMPOSITION (Engel), never its size. Household signals enter as dimensionless
- * multipliers centred on 1, so missing metrics degrade to a flat per-capita
- * basket. `per-capita spend` is in millions of ₳/person/turn, so
- * `demand = budget × weight / basePrice` lands in the same "units" pool as the
- * rest of `computeRawSupplyDemand`.
+ * inconsistent across countries, several inflated 10 to 1000x (local-currency-
+ * scale GDP), which would let a mis-seeded country drive global consumer
+ * demand. Population is the one cross-country-consistent field, so consumption
+ * is sized as `population x per-capita spend`, and `wealthMult` (reading the
+ * unreliable GDP/capita) tilts only basket COMPOSITION (Engel), never its size.
+ * Household signals enter as dimensionless multipliers centred on 1, so missing
+ * metrics degrade to a flat per-capita basket. `per-capita spend` is in
+ * millions of \u20b3/person/turn, so `demand = budget x weight / basePrice` lands
+ * in the same units pool as the rest of `computeRawSupplyDemand`.
  */
 
 /**
- * Consumer spend per person per turn, in millions of ₳ (so population × this is
- * a ₳-millions budget, matching the demand pool's unit). The one calibration
- * knob (overridable per-world via `gameConfig.householdConsumptionPerCapita`).
+ * Consumer spend per person per turn, in millions of ₳ (so population × this
+ * is a ₳-millions budget, matching the demand pool's unit). The one
+ * calibration knob (overridable per-world via
+ * `gameConfig.householdConsumptionPerCapita`).
  *
- * Calibrated against two live snapshots via the real pure functions:
- *   - turn-1 Beta-3 (near-empty, 17 sectors): consumer demand is a big share of
- *     a stabilizer-dominated market, so a little goes a long way.
- *   - turn-960 sandbox (mature, 63 sectors): supply is large, so the same
- *     population-based demand is gentler. At 0.002 the mature economy sees
- *     retail ~+12%, oversupplied consumer goods (food/healthcare)
- *     nudged toward equilibrium, and pre-existing energy/electronics shortages
- *     ~unchanged. The mature economy is representative, so the default targets it.
- *
- * Because consumer demand scales with population (roughly fixed) while B2B supply
- * grows as players build, its relative price weight eases as the economy matures.
+ * Calibrated against a mature snapshot: retail rises modestly, oversupplied
+ * consumer goods ease toward equilibrium, and pre-existing shortages stay
+ * ~unchanged. Consumer demand scales with roughly fixed population while B2B
+ * supply grows as players build, so its relative price weight eases as the
+ * economy matures.
  */
 export const HOUSEHOLD_CONSUMPTION_PER_CAPITA = 0.002;
 
 /**
- * Plants-tier unit re-anchor for household demand (ticket #1027).
- *
- * `HOUSEHOLD_CONSUMPTION_PER_CAPITA` was calibrated against the LEGACY supply
- * pool, where sector supply was derived from revenue nameplates. Under plants
- * (`marketSystemMode >= "plants"`) supply became PHYSICAL `producedUnits` from
- * plants seeded at national-economy capacities (a single flipped NPP plant
- * carries 100k-300k units/day), while household demand stayed on the legacy
- * basis — two unit systems in one ledger. Measured live (turn 21, pop 1.5B,
- * 238 states): every plants-produced good sat 12-312x oversupplied (food 312x,
- * retail 167x, chemicals 72x), every finished-good price was pinned at the
- * log-curve floor (~0.55x base), and player plants cleared soldFraction
- * 0.003-0.08 — new-player corps earned single-digit currency per hour.
- *
- * This scale moves household demand onto the plants unit basis. Sizing: total
- * pop 1.5e9 x 0.002 x weight/basePrice puts food at ~3.9k units against 23.3M
- * supply; x3000 lands food fill ~0.4, consumer services 0.3-0.75, leaving
- * markets glutted enough that price signals and NPP growth governors still
- * bite, but cleared enough that a founder's plant sells a meaningful share of
- * its output. Physically: ~6kg food/person/day against the seed's ~15kg
- * produced — demand is anchored to the seeded supply scale, which is itself
- * inflated vs reality but is not re-seedable on live worlds.
- *
- * Applied ONLY when the caller passes `plantsUnitScale` (plants worlds);
- * legacy worlds are byte-identical. The per-world
- * `gameConfig.householdConsumptionPerCapita` override composes with it
- * (override replaces the per-capita base, scale still applies).
+ * Moves household demand onto the plants unit basis: physical `producedUnits`
+ * supply dwarfs the legacy per-capita demand basis, so without scaling every
+ * plants good is glutted and prices pin at the floor. Applies only when the
+ * caller passes `plantsUnitScale` (legacy worlds byte-identical); the per-world
+ * `householdConsumptionPerCapita` override composes with it.
  */
 export const PLANTS_HOUSEHOLD_UNIT_SCALE = 3000;
 
 /**
  * Per-era override of {@link PLANTS_HOUSEHOLD_UNIT_SCALE}, for eras whose
- * seeded supply per capita is far below the world the 3000 was calibrated on.
+ * seeded supply per capita differs sharply from the 3000 baseline.
  *
- * 1991: the seed produces ~0.1 food units/person against the ~15 the 3000
- * assumed, so scaled household demand sat 3.5x (plastics) to 92x
- * (pharmaceuticals) above seeded supply, geometric mean 17.8x, measured per
- * commodity on the live 1991 world as `population x perCapita x 3000 x
- * basketShare / basePrice / globalSupply`. Every household commodity then hit
- * the 1.5x supply cap, so the cap, not the economy, set demand and latent
- * shortages read 19x to 90x. Scale 200 (3000 x 1.25 / 17.8, rounded) puts the
- * average opening ratio near 1.25x, inside the 1.0 to 1.5x band where the cap
- * stops binding on average. Spread between commodities is real (services seed
- * thin, manufacturing thick) and is left to the build signals to close.
+ * 1991: seeded supply is far below the baseline, so scaled household demand
+ * ran well above supply and every commodity hit the 1.5x supply cap, letting
+ * the cap rather than the economy set demand. Scale 200 puts the opening
+ * ratio near 1.25x, inside the 1.0-1.5x band where the cap does not bind on
+ * average. Spread across commodities is left to build signals to close.
  * Eras without an entry keep the default.
  */
 export const PLANTS_HOUSEHOLD_UNIT_SCALE_BY_ERA: Partial<Record<EraId, number>> = {
@@ -269,7 +234,7 @@ export interface HouseholdConsumptionResult {
    * commodity → household demand units removed by the PLANTS_HOUSEHOLD_SUPPLY_CAP
    * clamp this turn. Recorded, not applied: the cap makes every recorded
    * shortage a property of the cap, so the truncated amount is the only way
-   * to see how short the world really is (#1460).
+   * to see true shortfall.
    */
   truncated: Map<CommodityType, number>;
 }

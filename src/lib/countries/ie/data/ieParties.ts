@@ -2,21 +2,11 @@ import type { PartySeed } from "@/lib/seeds/reference/politicalParties";
 import { PARTY_ROSTERS_2027 } from "@/lib/seeds/partyRosters2027";
 
 /**
- * Ireland default political parties.
- *
- * Two preset rosters:
- *   - 2019-default: FG / FF / SF / Labour / Green — the modern base roster.
- *     Sinn Féin in 1991 was a tiny abstentionist party with no Dáil seats
- *     (didn't take seats until 1997). Modern Sinn Féin / Greens are gated
- *     to modern presets only.
- *   - 2027-default: the modern base plus parties elected in 2024.
- *   - 1991-default: FF / FG / Labour + Workers' Party (WP) + Progressive
- *     Democrats (PD). WP held 7 Dáil seats in 1989; PD held 6 (FF-PD
- *     formed government). WP split into Democratic Left in 1992 then
- *     merged into Labour in 1999; PD dissolved in 2008.
- *
- * Seeded as `isDefault: true` — they always exist and cannot be deleted.
- * seedOrder determines sequentialId assignment within IE.
+ * Ireland preset party rosters.
+ * 1991: FF/FG/Labour + WP + PD (WP/PD dissolved by 2008).
+ * 2019: FG/FF/SF/Labour/Green. 2027: adds 2024-elected parties.
+ * Modern SF/Greens are gated to modern presets (1991 SF was abstentionist, no Dáil seats).
+ * isDefault: always exist, cannot be deleted. seedOrder => sequentialId within IE.
  */
 export const ieParties: PartySeed[] = [
   ...(PARTY_ROSTERS_2027.IE ?? []),

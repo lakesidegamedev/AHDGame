@@ -7,6 +7,7 @@
 
 import type { Db } from "mongodb";
 import type { Migration, MigrationMarker, MigrationResult } from "./types";
+import { migrationsRunCollection } from "@/lib/db/repositories/migrationsRun";
 
 export interface RunOpts {
   migrations: Migration[];
@@ -29,8 +30,6 @@ export interface RunSummary {
   dryRun: boolean;
 }
 
-const COLLECTION = "migrationsRun";
-
 export async function runMigrations(db: Db, opts: RunOpts): Promise<RunSummary> {
   const summary: RunSummary = { ranIds: [], skippedIds: [], results: {}, dryRun: opts.dryRun };
 
@@ -42,9 +41,9 @@ export async function runMigrations(db: Db, opts: RunOpts): Promise<RunSummary> 
     if (unsafe) throw new Error(`Cannot force non-idempotent migration: ${unsafe.id}`);
   }
   for (const migration of ordered) {
-    const existing = await db
-      .collection<MigrationMarker>(COLLECTION)
-      .findOne({ _id: migration.id });
+    const existing = await migrationsRunCollection<MigrationMarker>(db).findOne({
+      _id: migration.id,
+    });
 
     const forcedRerun = opts.force === true && opts.only?.includes(migration.id) === true;
     const shouldSkip = existing != null && !forcedRerun;
@@ -61,7 +60,7 @@ export async function runMigrations(db: Db, opts: RunOpts): Promise<RunSummary> 
       // Upsert, not insert: a --force rerun executes over an existing marker,
       // and an insertOne here threw E11000 AFTER the migration had already
       // applied, which reads as a failed run when the data change succeeded.
-      await db.collection<MigrationMarker>(COLLECTION).replaceOne(
+      await migrationsRunCollection<MigrationMarker>(db).replaceOne(
         { _id: migration.id },
         {
           _id: migration.id,

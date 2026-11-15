@@ -2,6 +2,7 @@ import type { Db } from "mongodb";
 import type { SphereMembership } from "./types";
 import { assertValidSphereMembership, membershipFromManifestEntry } from "./relationships";
 import { getWorldEntityOrThrow } from "@/lib/world/worldEntityManifest";
+import { sphereMembershipsCollection } from "@/lib/db/repositories/sphereMemberships";
 
 export const SPHERE_MEMBERSHIPS_COLLECTION = "sphereMemberships";
 
@@ -19,9 +20,10 @@ export async function loadSphereMembership(
   presetId: string,
   entityId: string
 ): Promise<SphereMembership> {
-  const doc = await db
-    .collection<PersistedSphereMembership>(SPHERE_MEMBERSHIPS_COLLECTION)
-    .findOne({ _id: entityId, presetId });
+  const doc = await sphereMembershipsCollection<PersistedSphereMembership>(db).findOne({
+    _id: entityId,
+    presetId,
+  });
   if (doc) {
     const membership: SphereMembership = {
       entityId: doc.entityId,
@@ -46,7 +48,7 @@ export async function saveSphereMembership(
 ): Promise<void> {
   assertValidSphereMembership(membership);
   const now = new Date();
-  await db.collection<PersistedSphereMembership>(SPHERE_MEMBERSHIPS_COLLECTION).updateOne(
+  await sphereMembershipsCollection<PersistedSphereMembership>(db).updateOne(
     { _id: membership.entityId },
     {
       $set: {
@@ -71,9 +73,9 @@ export async function ensureSphereMembership(
   presetId: string,
   entityId: string
 ): Promise<SphereMembership> {
-  const existing = await db
-    .collection<PersistedSphereMembership>(SPHERE_MEMBERSHIPS_COLLECTION)
-    .findOne({ _id: entityId });
+  const existing = await sphereMembershipsCollection<PersistedSphereMembership>(db).findOne({
+    _id: entityId,
+  });
   if (existing && existing.presetId === presetId) {
     return {
       entityId: existing.entityId,

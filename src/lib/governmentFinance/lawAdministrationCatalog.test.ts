@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { JurisdictionMode } from "@/lib/db/types/legislation";
-import { legislationTypes } from "@/lib/seeds/reference/legislationTypes";
+import { legislationTypes as referenceTypes } from "@/lib/seeds/reference/legislationTypes";
+import { getProjectedPoliticalLegislationTypes } from "@/lib/admin/seed/seedPoliticalLegislation";
 import { resolvePortfolioDepartment, type DepartmentCountryId } from "./departmentCatalog";
 import {
   buildLawAdministration,
@@ -13,6 +14,8 @@ const countryIdByScope: Record<string, DepartmentCountryId> = {
   uk: "UK",
   jp: "JP",
 };
+
+const legislationTypes = [...referenceTypes, ...getProjectedPoliticalLegislationTypes()];
 
 const initialCatalog = legislationTypes.filter(
   (type) => type.countryScope && type.countryScope in countryIdByScope
@@ -34,10 +37,9 @@ function hasCost(type: (typeof legislationTypes)[number]): boolean {
 
 describe("law administration catalog", () => {
   it("classifies every US, UK, and Japan law", () => {
-    // 195 authored laws plus the Subsidiary Limits and Foreign Investment Acts
-    // (US, UK, JP) and Japan's Competition Act from mechanicalLaws.
+    // The one law book for US, UK and Japan, and the mechanical laws.
     expect(initialCatalog.filter((type) => !/__(?:income|capital)_/.test(type._id))).toHaveLength(
-      202
+      455
     );
     expect(initialCatalog.some((type) => type._id.endsWith("__income_low"))).toBe(true);
     expect(initialCatalog.some((type) => type._id.endsWith("__capital_low"))).toBe(true);
@@ -75,21 +77,23 @@ describe("law administration catalog", () => {
   });
 
   it("keeps ordinary federal laws federally administered", () => {
-    const publicHealth = legislationTypes.find((type) => type._id === "us_public_health")!;
+    const publicHealth = legislationTypes.find(
+      (type) => type._id === "us.health.prevention.primary"
+    )!;
     expect(publicHealth.administration?.allowedJurisdictionModes).toEqual(["national_direct"]);
     expect(publicHealth.policyOptions?.map((option) => option.stance)).toEqual([
-      "left",
-      "left",
-      "left",
+      "right",
+      "right",
       "center",
-      "right",
-      "right",
-      "right",
+      "left",
+      "left",
     ]);
   });
 
   it("authors grants and devolution on policy options instead of a proposal selector", () => {
-    const education = legislationTypes.find((type) => type._id === "us_federal_education_funding")!;
+    const education = legislationTypes.find(
+      (type) => type._id === "us.education.universalSchooling.primary"
+    )!;
     expect(education.administration).toMatchObject({
       defaultJurisdictionMode: "national_direct",
       allowedJurisdictionModes: [
@@ -98,11 +102,10 @@ describe("law administration catalog", () => {
         "regional_discretion",
       ],
     });
-    expect(education.policyOptions?.[4]?.jurisdictionMode).toBe("grant_supported_regional");
-    expect(education.policyOptions?.[5]?.jurisdictionMode).toBe("regional_discretion");
-    expect(education.policyOptions?.[6]?.jurisdictionMode).toBe("regional_discretion");
+    expect(education.policyOptions?.[1]?.jurisdictionMode).toBe("grant_supported_regional");
+    expect(education.policyOptions?.[0]?.jurisdictionMode).toBe("regional_discretion");
 
-    const science = legislationTypes.find((type) => type._id === "us_federal_science_funding")!;
+    const science = legislationTypes.find((type) => type._id === "us.education.research.primary")!;
     expect(science.administration?.allowedJurisdictionModes).toEqual(["national_direct"]);
     expect(science.policyOptions?.every((option) => option.jurisdictionMode === undefined)).toBe(
       true
@@ -110,7 +113,9 @@ describe("law administration catalog", () => {
   });
 
   it("refreshes authored option jurisdiction on previously materialized catalog rows", () => {
-    const education = initialCatalog.find((type) => type._id === "us_federal_education_funding")!;
+    const education = initialCatalog.find(
+      (type) => type._id === "us.education.universalSchooling.primary"
+    )!;
     const stale = {
       ...education,
       administration: {
@@ -138,8 +143,8 @@ describe("law administration catalog", () => {
 
     const [refreshed] = withLawAdministration([stale]);
 
-    expect(refreshed.policyOptions?.[4]?.jurisdictionMode).toBe("grant_supported_regional");
-    expect(refreshed.policyOptions?.[5]?.jurisdictionMode).toBe("regional_discretion");
+    expect(refreshed.policyOptions?.[1]?.jurisdictionMode).toBe("grant_supported_regional");
+    expect(refreshed.policyOptions?.[0]?.jurisdictionMode).toBe("regional_discretion");
     expect(refreshed.administration).toMatchObject({
       responsibleDepartmentId: "us_department_of_education",
       capacityWeight: 1.5,
@@ -156,23 +161,29 @@ describe("law administration catalog", () => {
     for (const type of initialCatalog) {
       if (hasCost(type)) {
         expect(
-          type.policyOptions?.every((option) => option.implementation),
+          type.policyOptions
+            ?.filter(
+              (option) => (option.costModelV2?.gdpCostFraction ?? 0) > 0 || !option.costModelV2
+            )
+            .every((option) => option.implementation),
           type._id
         ).toBe(true);
       }
     }
-    const tax = legislationTypes.find((type) => type._id === "us_federal_income_tax_rate")!;
+    const tax = legislationTypes.find((type) => type._id === "us.tax.incomeTax")!;
     expect(tax.administration?.lawKind).toBe("revenue");
-    expect(tax.policyOptions?.every((option) => option.implementation === undefined)).toBe(true);
+    expect(tax.policyOptions ?? []).toEqual([]);
   });
 
   it("preserves the verified public-health slice identifiers", () => {
-    const type = legislationTypes.find((candidate) => candidate._id === "us_public_health")!;
-    const option = type.policyOptions?.find((candidate) => candidate.id === "public_health_opt_1");
+    const type = legislationTypes.find(
+      (candidate) => candidate._id === "us.health.prevention.primary"
+    )!;
+    const option = type.policyOptions?.find((candidate) => candidate.id === "l4");
     expect(type.administration).toMatchObject({
       primaryPortfolioId: "health",
       primaryDepartmentId: "us_health_department",
-      policyFamilyId: "us_public_health",
+      policyFamilyId: "us.health.prevention.primary",
     });
     expect(option?.implementation).toMatchObject({
       programId: "us_public_health_workforce",

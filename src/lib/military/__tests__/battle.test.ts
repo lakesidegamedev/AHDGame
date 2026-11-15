@@ -1,9 +1,9 @@
 import { describe, it, expect } from "vitest";
+import { buildEnemy } from "../rules/enemyRoster";
 import {
   computeBattle,
   applyOutcome,
   forecast,
-  buildEnemy,
   resolvePvpBattle,
   softenRetreatUnit,
   battleForecast,

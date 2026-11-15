@@ -6,7 +6,7 @@ import { handleRouteError } from "@/lib/api/errors";
 import { getGameState } from "@/lib/gameState";
 import { TYPE_SWITCH_PENALTY_TURNS } from "@/lib/constants/corporations";
 import { parseJsonBody } from "@/lib/api/validate";
-import type { Corporation } from "@/lib/db/types";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 const healTimersSchema = z.object({
   forceAll: z.boolean().optional(),
@@ -24,8 +24,7 @@ export async function GET() {
     const db = await getDb();
     const currentTurn = (await getGameState())?.currentTurn ?? 0;
 
-    const corps = await db
-      .collection<Corporation>("corporations")
+    const corps = await corporationsCollection(db)
       .find(
         {
           $or: [{ typeSwitchTurn: { $ne: null } }, { typeSwitchCooldownUntilTurn: { $ne: null } }],
@@ -75,8 +74,7 @@ export async function POST(request: Request) {
     const db = await getDb();
     const currentTurn = (await getGameState())?.currentTurn ?? 0;
 
-    const corps = await db
-      .collection<Corporation>("corporations")
+    const corps = await corporationsCollection(db)
       .find(
         {
           $or: [{ typeSwitchTurn: { $ne: null } }, { typeSwitchCooldownUntilTurn: { $ne: null } }],
@@ -93,7 +91,7 @@ export async function POST(request: Request) {
       const isExpired = cooldownUntil <= currentTurn;
 
       if (forceAll || isExpired) {
-        await db.collection<Corporation>("corporations").updateOne(
+        await corporationsCollection(db).updateOne(
           { _id: corp._id },
           {
             $unset: { typeSwitchTurn: "", typeSwitchCooldownUntilTurn: "" },

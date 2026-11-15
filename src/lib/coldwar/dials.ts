@@ -1,12 +1,13 @@
 import type { Db } from "mongodb";
-import {
-  deriveVietnamDials,
-  getVietnamEscalation,
-  type VietnamDials,
-} from "@/lib/crises/vietnamEscalation";
-import { getGameState } from "@/lib/gameState";
+import { deriveVietnamDials, type VietnamDials } from "@/lib/crises/vietnamEscalation";
 import { livingVietnamAsLegacyState } from "@/lib/livingConflict/vietnamCompat";
-import { getColdWarTension, TENSION_BASELINE } from "@/lib/coldwar/tension";
+import {
+  getColdWarTension,
+  tensionBand,
+  TENSION_BASELINE,
+  type TensionBand,
+} from "@/lib/coldwar/tension";
+import { hottestDyad, type BlocDyad, type BlocPairId } from "@/lib/coldwar/rules/blocTension";
 
 /**
  * The Cold War console's dials, as the server holds them.
@@ -42,6 +43,13 @@ export interface ColdWarDials {
    * resting values. The UI does not have to guess whether a calm reading is real.
    */
   source: "vietnam" | "tension" | "peacetime";
+  /**
+   * 2027 worlds only (#5695): tension per pair of blocs. Readiness, procurement
+   * and detente goodwill answer to the hotter of the global value and the
+   * hottest pair, so a US-China standoff reads as tense even when the rest of
+   * the world is quiet.
+   */
+  blocTension?: { pair: BlocPairId; value: number; band: TensionBand }[];
 }
 
 /** The console's resting values with no war anywhere. Mirrors its own defaults. */
@@ -99,24 +107,37 @@ function tightest(war: ColdWarDials, tension: ColdWarDials): ColdWarDials {
     defcon: Math.min(war.defcon, tension.defcon),
     procurementMultiplier: Math.max(war.procurementMultiplier, tension.procurementMultiplier),
     detenteGoodwillPenalty: Math.max(war.detenteGoodwillPenalty, tension.detenteGoodwillPenalty),
+    ...(tension.blocTension ? { blocTension: tension.blocTension } : {}),
   };
 }
 
 /**
  * Read the console's dials off server state.
  *
- * Two drivers feed them: the war ladder (legacy or living-conflict Vietnam)
+ * Two drivers feed them: the war ladder (the living-conflict Vietnam)
  * and the global tension reading. They compose by taking the tightest reading
  * across drivers, dial by dial, rather than the last one to write.
  */
 export async function getColdWarDials(db: Db): Promise<ColdWarDials> {
-  const gameState = await getGameState(db);
   const [vietnam, tension] = await Promise.all([
-    gameState?.livingConflictsEnabled ? livingVietnamAsLegacyState(db) : getVietnamEscalation(db),
+    livingVietnamAsLegacyState(db),
     getColdWarTension(db),
   ]);
-  const tensionDials =
-    tension.value > TENSION_BASELINE ? fromTension(tension.value) : PEACETIME_DIALS;
+  const reading = dialTensionReading(tension.value, tension.blocDyads);
+  const blocTension = tension.blocDyads?.map((d) => ({
+    pair: d.pair,
+    value: d.value,
+    band: tensionBand(d.value),
+  }));
+  const tensionDials = {
+    ...(reading > TENSION_BASELINE ? fromTension(reading) : PEACETIME_DIALS),
+    ...(blocTension ? { blocTension } : {}),
+  };
   if (vietnam.level <= 0) return tensionDials;
   return tightest(fromVietnam(deriveVietnamDials(vietnam)), tensionDials);
+}
+
+/** The value the dials read: the global tension, or the hottest bloc pair when hotter. */
+export function dialTensionReading(global: number, dyads: readonly BlocDyad[] | undefined): number {
+  return Math.max(global, hottestDyad(dyads)?.value ?? 0);
 }

@@ -4,7 +4,7 @@ import type { StateDemographicTurnout } from "@/lib/db/types";
  * Brazil macro-region demographic turnout modifier seeds.
  *
  * All modifiers start at 0 — no GOTV, canvassing, or suppression effects
- * applied yet. Keys match the BR voter group IDs from brDemographicCategories.ts.
+ * applied yet. Keys match the BR voter group IDs from the country Layer-1 model.
  *
  * The category key is "br_voterGroups" to align with the BR demographic
  * profile and avoid collision with DE/US/UK/JP documents in the same

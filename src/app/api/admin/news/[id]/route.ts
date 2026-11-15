@@ -4,6 +4,9 @@ import { getDb } from "@/lib/mongodb";
 import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError, notFound } from "@/lib/api/errors";
 import type { NewsPost } from "@/lib/db/types";
+import { newsPostsCollection } from "@/lib/db/repositories/newsPosts";
+import { newsReactionsCollection } from "@/lib/db/repositories/newsReactions";
+import type { Document } from "mongodb";
 
 // DELETE /api/admin/news/[id] — Delete a news post and all its replies and reactions.
 // Auth: requireAdmin
@@ -18,22 +21,21 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
 
     const db = await getDb();
 
-    const post = await db.collection<NewsPost>("newsPosts").findOne({ _id: postId });
+    const post = await newsPostsCollection(db).findOne({ _id: postId });
     if (!post) throw notFound("News post not found");
 
     // Collect reply IDs before deleting anything
-    const replies = await db
-      .collection<NewsPost>("newsPosts")
+    const replies = await newsPostsCollection(db)
       .find({ parentId: postId }, { projection: { _id: 1 } })
       .toArray();
     const replyIds = replies.map((r) => r._id);
     const allIds = [postId, ...replyIds];
 
     // Delete reactions for post and all replies
-    await db.collection("newsReactions").deleteMany({ postId: { $in: allIds } });
+    await newsReactionsCollection<Document>(db).deleteMany({ postId: { $in: allIds } });
 
     // Delete post and all replies
-    await db.collection<NewsPost>("newsPosts").deleteMany({ _id: { $in: allIds } });
+    await newsPostsCollection(db).deleteMany({ _id: { $in: allIds } });
 
     return NextResponse.json({ success: true });
   } catch (error) {

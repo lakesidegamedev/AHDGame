@@ -57,9 +57,8 @@ interface SoEGroup {
 }
 
 /**
- * Canonical tradability read (#2033): the persisted snapshot flag wins, and
- * pre-flag legacy rows fall back to the same canonical predicate, never a
- * local re-derivation.
+ * Persisted tradability flag wins; legacy rows fall back to the
+ * canonical predicate, never a local re-derivation.
  */
 function listingTradable(listing: StockListing): boolean {
   return listing.isTradable ?? isTradableListing(listing);

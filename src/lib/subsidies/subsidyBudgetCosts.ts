@@ -1,5 +1,5 @@
 import type { Db } from "mongodb";
-import type { Corporation, CorporateSector } from "@/lib/db/types";
+import type { CorporateSector } from "@/lib/db/types";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
 import { writeGovBudgetLocal } from "@/lib/currency/govBudgetFields";
@@ -18,38 +18,23 @@ import { readCorpEconomicAnchor } from "@/lib/currency/corpEconomyFields";
 import { TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import { getMarketSystemModeForDb, marketAtLeast } from "@/lib/market/featureFlag";
 import { sumRealizedRevenue } from "@/lib/turn/gdpGrowth";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 /** Real-world fiscal inefficiency premium on top of the corp-delivered benefit. Tunable. */
 const SUBSIDY_DEADWEIGHT_FACTOR = 1.4;
 /**
  * Multiplier converting one turn's subsidized revenue into annualized budget cost.
- * A subsidy delivers `SUBSIDY_MARGIN_BONUS` percentage points of margin (= that
- * fraction of revenue in corp profit; see sectorCalculations.ts). The government's
- * fiscal cost is that delivered profit times a deadweight/admin premium. Keeping
- * this tied to SUBSIDY_MARGIN_BONUS keeps cost and benefit in lockstep.
+ * Ties the fiscal cost to the delivered margin (SUBSIDY_MARGIN_BONUS × deadweight
+ * premium), so cost and benefit stay in lockstep.
  *
- * P3.5 — WHICH REVENUE. "In lockstep" also requires cost and benefit to be
- * measured on the SAME revenue. Below the plants tier they already are:
- * `revenue` is the only revenue there is. Under plants `revenue` becomes the
- * capacity NAMEPLATE (capacity × mixPrice) while the margin bonus is earned on
- * REALIZED revenue — what the sector actually produced and sold. Billing
- * nameplate for a benefit paid on realized overcharged the treasury by the
- * whole realization gap (roughly 2.4x on a typical plants world), so under
- * plants the basis is `realizedRevenue`.
+ * Below the plants tier `revenue` is realized revenue; under plants `revenue` is
+ * the capacity nameplate while the margin bonus is earned on realized revenue.
+ * Billing nameplate would overcharge by the realization gap, so under plants the
+ * basis is `realizedRevenue`.
  *
- * PER-UNIT READING. The re-based charge is a production subsidy in disguise.
- * With `r` = realized revenue per unit sold, the rate is
- *   rate(₳/unit) = (SUBSIDY_MARGIN_BONUS / 100) × SUBSIDY_DEADWEIGHT_FACTOR × r
- * and the annual bill is `soldUnits × rate × TURNS_PER_YEAR`, which is
- * identically `realizedRevenue × TURNS_PER_YEAR × SUBSIDY_COST_MULTIPLIER` —
- * the expression below. The government pays per unit actually delivered.
- *
- * CALIBRATION. The rate is pinned at the calibration state — every realization
- * leg equal to 1, i.e. `realizedRevenue === revenue` — where the new cost equals
- * the old cost exactly. No constant changes, so a world at full realization
- * (and every world below the plants tier, on any turn including the flip turn)
- * bills the identical figure. Worlds below full realization bill less, which is
- * the defect being repaired rather than a re-tune.
+ * Pinned at the calibration state (`realizedRevenue === revenue`), so a world at
+ * full realization bills the identical figure and less-realized worlds bill less.
  */
 export const SUBSIDY_COST_MULTIPLIER = (SUBSIDY_MARGIN_BONUS / 100) * SUBSIDY_DEADWEIGHT_FACTOR;
 
@@ -66,17 +51,15 @@ export interface AnnualSubsidyCostMaps {
  * corps. Budget money fields (federal/state/regional spending) are stored in
  * the owning country's currency since v0.2.6, so each subsidy's total is
  * re-denominated from ₳ to its country's currency here — callers write these
- * totals directly without a further conversion step (#2825).
+ * totals directly without a further conversion step.
  */
 export async function loadAnnualSubsidyCostMaps(db: Db): Promise<AnnualSubsidyCostMaps> {
   const [subsidies, corporations, sectors, fxByCurrency, marketMode] = await Promise.all([
     getActiveSubsidies(db),
-    db
-      .collection<Corporation>("corporations")
+    corporationsCollection(db)
       .find({}, { projection: { headquartersState: 1, countryId: 1, liquidCurrencyCode: 1 } })
       .toArray(),
-    db
-      .collection<CorporateSector>("corporateSectors")
+    corporateSectorsCollection(db)
       .find(
         {},
         {

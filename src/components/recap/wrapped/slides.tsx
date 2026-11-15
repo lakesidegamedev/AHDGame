@@ -326,12 +326,13 @@ function GuessSlide({ recap, accent, motion, player }: SlideProps) {
 
   useEffect(() => {
     hold();
+    if (!motion) return;
     const t = window.setTimeout(() => {
       setRevealed(true);
       release();
     }, GUESS_TIMEOUT_MS);
     return () => window.clearTimeout(t);
-  }, [hold, release]);
+  }, [hold, release, motion]);
 
   const choose = (t: ActionType) => {
     if (revealed) return;

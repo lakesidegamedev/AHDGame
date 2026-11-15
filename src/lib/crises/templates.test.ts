@@ -75,8 +75,9 @@ describe("crisis templates", () => {
         expect(template.description).toBeTruthy();
         expect(["global", "country", "region"]).toContain(template.scope);
         // Market Adjustment is effect-free on purpose: it adds no damage of its own
-        // on top of the losses the funded market already books.
-        if (key !== MARKET_ADJUSTMENT_TEMPLATE_KEY) {
+        // on top of the losses the funded market already books. Opportunities are
+        // too: their gains come only from the paths a government pays for.
+        if (key !== MARKET_ADJUSTMENT_TEMPLATE_KEY && template.opportunity !== true) {
           expect(template.effects.length).toBeGreaterThan(0);
         }
       });
@@ -179,10 +180,16 @@ describe("P3.5 margin-shock physicality classification", () => {
     expect(physical).toEqual(
       [
         "bridge_collapse",
+        // 2027 world: a fab fire, a dock strike, a depot lockout and a grid
+        // emergency each plainly stop output, like their older counterparts.
+        "chip_fab_fire",
+        "grid_emergency",
         "industrial_accident",
         "labor_strikes",
         "port_closure",
+        "port_workers_strike",
         "power_grid_failure",
+        "robotic_depot_lockout",
         "steel_strike",
         "supply_chain_disruption",
         // Three struck sectors, so the wildcat strike carries three physical

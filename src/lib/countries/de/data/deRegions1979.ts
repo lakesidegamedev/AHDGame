@@ -1,20 +1,15 @@
 /**
- * SEED INDEPENDENCE — DO NOT DERIVE FROM ANOTHER ERA.
- * Each era seed is self-contained. This file MUST NOT import and transform
- * another era's region data. All values are authored for 1979 directly.
- * Type-only imports are allowed.
+ * DO NOT DERIVE FROM ANOTHER ERA. Each era seed is self-contained: this file
+ * must not import and transform another era's region data. All values are
+ * authored for 1979 directly. Type-only imports are allowed.
  *
- * German Bundesländer for the 1979-default preset (8th Bundestag — the
- * Schmidt SPD–FDP era, pre-reunification West Germany). The calibration target
- * for this cell is "West Germany 1980 (Schmidt SPD); West Länder only".
+ * German Bundesländer for the 1979-default preset (8th Bundestag, Schmidt
+ * SPD-FDP, pre-reunification West Germany).
  *
- * MODELLING NOTE (pre-reunification): 1979 is a WEST GERMAN world. The FRG is the
- * eleven western units only (BW BY NW HE RP SL NI SH HH BRE + West Berlin) with
- * real ~1979 West German population + nominal GDP. The five eastern Länder
- * (BB/MV/SN/ST/TH) are NOT carried here — East Germany is modeled as the separate
- * `DD` (GDR) country, so two-state Germany is represented by FRG (DE) + GDR (DD)
- * rather than by east-Länder folded into the FRG. Berlin holds the ~1.95M West
- * Berlin figure (the West German playable unit), not the whole divided city.
+ * West Germany only: the eleven western units with real ~1979 population and
+ * nominal GDP. The five eastern Länder are not carried here; the GDR is a
+ * separate `DD` country. Berlin holds the ~1.95M West Berlin figure, not the
+ * whole divided city.
  */
 import type { State } from "@/lib/db/types";
 

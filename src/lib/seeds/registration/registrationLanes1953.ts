@@ -6,35 +6,25 @@
  */
 
 /**
- * Party registration + organization seed for the four playable countries in
- * the 1953-default preset.
+ * Party registration + organization seed for the four playable countries in the
+ * 1953-default preset.
  *
- * DESIGN: 1953 is the ABSOLUTE PEAK of Solid South Democratic registration and
- * of the old New Deal coalition in its structural form. Eisenhower won a
- * PRESIDENTIAL landslide in 1952, but party REGISTRATION in the South barely
- * moved — most Southern whites were lifelong Democrats by registration even
- * while voting for Ike. The ancestral-Democrat South is even stronger than in
- * 1979.
+ * 1953 is the absolute peak of Solid South Democratic registration and of the
+ * old New Deal coalition in structural form. Eisenhower won a presidential
+ * landslide in 1952, but Southern registration barely moved: most Southern
+ * whites were lifelong Democrats by registration even while voting for Ike.
  *
- * 1953-era characteristics vs 1979:
- *   - Independents LOWEST of all eras (~5-8 pts) — pre-dealignment; formal
- *     party identification extraordinarily strong; voters thought of themselves
- *     AS Democrats or Republicans, not independents
- *   - Unregistered HIGHER in South (pre-VRA 1965; poll taxes; literacy tests;
- *     Black disenfranchisement widespread; Southern unregistered pool large)
- *   - The Solid South at its structural peak: LA/MS/AL/SC had ~85-92%
- *     Democratic registration in 1953; AR/GA/TX/OK/WV/KY ~70-80% Dem
- *   - The Mountain West and Great Plains were the Republican stronghold
- *     (VT/ME/NH were still solid Republican; CT/NJ/NY were competitive)
- *   - Midwestern industrial states were competitive with slight Democratic
- *     lean (union households very Democratic)
- *   - New England outside VT/NH/ME was becoming more Democratic
- *     (Catholic working-class machine politics in MA/RI/CT)
+ * 1953 characteristics vs 1979: independents lowest of all eras (~5-8 pts,
+ * pre-dealignment); unregistered higher in the South (pre-VRA 1965, poll taxes,
+ * literacy tests); Solid South at structural peak (LA/MS/AL/SC ~85-92% Dem;
+ * AR/GA/TX/OK/WV/KY ~70-80%); Mountain West and Great Plains Republican;
+ * Midwestern industrial competitive with slight Democratic lean; New England
+ * outside VT/NH/ME increasingly Democratic.
  *
- * US values are curated from 1950s-era state SoS registration data and the
- * 1952 partisan map. UK values use the 1951 regional vote table, while RU and
- * DD make the explicitly-authored one-party / National Front organization
- * tables serve as the registration baseline. No country borrows another era.
+ * US values curated from 1950s state SoS registration data and the 1952
+ * partisan map; UK from the 1951 regional vote table; RU and DD use their
+ * authored one-party / National Front organization tables as the registration
+ * baseline. No country borrows another era.
  */
 
 import type { StateRegistrationSeed } from "./registrationLanes";

@@ -6,6 +6,7 @@ import { resolveSelfDealing } from "@/lib/military/defenceSelfDealing";
 import { createSystemNewsPost } from "@/lib/news";
 import { tenderSelfDealingPenalty } from "./rules/selfDealing";
 import type { GovernmentTender } from "./types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export function tenderAwardInterest(
   tender: GovernmentTender,
@@ -35,7 +36,7 @@ export async function discloseExtractionAward(db: Db, tender: GovernmentTender) 
   const interest = tender.awardSelfDealing;
   if (!interest || tender.terms.type !== "extraction") return;
   if (interest.ministerCharacterId)
-    await db.collection("characters").updateOne(
+    await charactersCollection(db).updateOne(
       { _id: interest.ministerCharacterId, governmentContractDisclosures: { $ne: tender._id } },
       {
         $inc: { favorability: -interest.favorabilityPenalty },

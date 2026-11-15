@@ -28,6 +28,7 @@ import {
   enemyEngagedExposure,
 } from "./rules/battleFortune";
 import { readinessBaselineOf } from "./readinessDrift";
+import { buildEnemy, rng, type EnemyUnit } from "./rules/enemyRoster";
 import { EQUIPMENT_TRACK_MAX } from "./arsenal";
 import {
   type CombatUnit,
@@ -118,16 +119,6 @@ function frontage(ctx: BattleContext, u: CombatUnit): number {
 }
 
 /** Deterministic mulberry32-style RNG (design rng). */
-function rng(seed: number): () => number {
-  let a = seed >>> 0;
-  return () => {
-    a += 0x6d2b79f5;
-    let t = a;
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
 export function hashStr(str: string): number {
   let h = 2166136261;
   for (let i = 0; i < str.length; i++) {
@@ -135,108 +126,6 @@ export function hashStr(str: string): number {
     h = Math.imul(h, 16777619);
   }
   return h >>> 0;
-}
-
-export interface EnemyUnit {
-  id: string;
-  name: string;
-  icon: string;
-  domain: string;
-  traits: string[];
-  s: StatObj;
-  cv: number;
-}
-
-const ENEMY_KIND: Record<
-  string,
-  { icon: string; domain: string; t: string[]; s: StatObj; names: string[] }
-> = {
-  armor: {
-    icon: "tank",
-    domain: "ground",
-    t: ["armored", "antiarmor"],
-    s: { fp: 74, ar: 88, sh: 86, mo: 62, mb: 55, rn: 25, aa: 20, rc: 35 },
-    names: ["Guards Tank Regiment", "Heavy Armor Bde", "Armor Division"],
-  },
-  mech: {
-    icon: "tank",
-    domain: "ground",
-    t: ["armored", "rapid"],
-    s: { fp: 64, ar: 68, sh: 66, mo: 60, mb: 74, rn: 28, aa: 32, rc: 45 },
-    names: ["Motor Rifle Division", "Mechanized Bde"],
-  },
-  infantry: {
-    icon: "soldier",
-    domain: "ground",
-    t: ["allweather", "recon"],
-    s: { fp: 50, ar: 40, sh: 46, mo: 58, mb: 42, rn: 30, aa: 26, rc: 50 },
-    names: ["Infantry Brigade", "Militia Column", "Airborne Bde"],
-  },
-  arty: {
-    icon: "artillery",
-    domain: "ground",
-    t: ["longrange", "antiarmor"],
-    s: { fp: 90, ar: 30, sh: 42, mo: 55, mb: 35, rn: 88, aa: 10, rc: 32 },
-    names: ["Rocket Artillery Bde", "Artillery Group"],
-  },
-  air: {
-    icon: "jet",
-    domain: "air",
-    t: ["antiair", "rapid"],
-    s: { fp: 86, ar: 30, sh: 80, mo: 65, mb: 96, rn: 82, aa: 88, rc: 76 },
-    names: ["Air Regiment", "Fighter Wing", "Air Assault Bde"],
-  },
-  airdef: {
-    icon: "missile",
-    domain: "air",
-    t: ["antiair"],
-    s: { fp: 42, ar: 40, sh: 34, mo: 58, mb: 52, rn: 74, aa: 95, rc: 60 },
-    names: ["Air Defense Corps", "SAM Regiment"],
-  },
-  missile: {
-    icon: "missile",
-    domain: "rocket",
-    t: ["longrange", "strategic"],
-    s: { fp: 92, ar: 32, sh: 82, mo: 55, mb: 45, rn: 95, aa: 8, rc: 52 },
-    names: ["Missile Battalion", "Rocket Brigade"],
-  },
-  naval: {
-    icon: "ship",
-    domain: "naval",
-    t: ["antiair", "longrange"],
-    s: { fp: 72, ar: 55, sh: 58, mo: 62, mb: 68, rn: 80, aa: 70, rc: 66 },
-    names: ["Destroyer Flotilla", "Naval Squadron"],
-  },
-};
-/** Fallback enemy composition when a front carries no `enemyMix` of its own. */
-const DEFAULT_ENEMY_MIX = ["mech", "infantry", "arty"];
-
-/** Deterministic enemy force generator for a front (design buildEnemy). */
-export function buildEnemy(front: Front, seed: number): EnemyUnit[] {
-  const r = rng(seed);
-  const pick = <T>(arr: T[]): T => arr[Math.floor(r() * arr.length)];
-  const mix = front.enemyMix ?? DEFAULT_ENEMY_MIX;
-  const count = 3 + Math.floor(r() * 2);
-  const arr: EnemyUnit[] = [];
-  for (let i = 0; i < count; i++) {
-    const k = ENEMY_KIND[mix[Math.floor(r() * mix.length)]];
-    const grade = 0.85 + r() * 0.4;
-    const s = {} as StatObj;
-    for (const key in k.s) {
-      const kk = key as keyof StatObj;
-      s[kk] = Math.max(3, Math.min(100, Math.round(k.s[kk] * (kk === "mo" ? 1 : grade))));
-    }
-    arr.push({
-      id: "e" + i,
-      name: pick(k.names),
-      icon: k.icon,
-      domain: k.domain,
-      traits: k.t,
-      s,
-      cv: Math.round((45 + r() * 75) * grade),
-    });
-  }
-  return arr;
 }
 
 export interface AggItem {
@@ -333,11 +222,7 @@ export interface SideMults {
 export function sideMults(A: SideAgg, B: SideAgg): SideMults {
   const cl = (x: number) => Math.max(-0.5, Math.min(0.5, x));
   const pen = 1 + 0.3 * cl((A.fp - B.ar) / 120);
-  // Head to head hold on the sky, decided by `navairOperations` before this battle
-  // ran. The 0.24 coefficient and the 120 spread are UNCHANGED from the previous
-  // formula on purpose: the input changes, the magnitude does not, so the static
-  // replay isolates the effect of measuring air power properly from the effect of
-  // retuning it. Retune only once the replay says what the first change did.
+  // Air superiority comes from navairOperations before this battle. Coefficients and spread are unchanged on purpose so static replay isolates the input change from retuning.
   const airm = 1 + 0.24 * cl((A.airSuperiority - B.airSuperiority) / 120);
   const rec = 1 + 0.15 * cl((A.rc - B.rc) / 120);
   const stand = 1 + 0.15 * cl((A.rn - B.rn) / 120);
@@ -594,24 +479,19 @@ const ENGAGE_PRIORITY: Record<string, number> = {
   rear: 5,
 };
 
-/**
- * Fill a front to `capacity` in combat value; hold everything past it in depth.
+/*
+ * Fill a front to `capacity` in combat value; hold the rest in depth.
  *
- * Computed ONCE for a whole side and consumed by both the strength path
- * (`ownSideProfile`) and the casualty path (`unitOutcomes`). Those were independent, and
- * that is exactly how a formation could be out of contact for strength purposes and go
- * on bleeding anyway.
+ * Computed once per side and consumed by both `ownSideProfile` (strength) and
+ * `unitOutcomes` (casualties), so they cannot disagree about who is in contact.
  *
- * Order: the player's own role assignment first, so the existing role system is the
- * control surface and there is no new concept to learn; then combat value, so the best
- * formations hold the line; then unit id, so a tie never depends on the order Mongo
- * returned the units in. That last tiebreak is not cosmetic -- the roster reaches the
- * battle report.
+ * Order: player role assignment, then combat value, then unit id. The id
+ * tiebreak keeps the ordering stable in the battle report regardless of Mongo
+ * return order.
  *
- * Deliberately NOT applied to `supplyState`: a formation held in depth really is doing
- * rear-area work, and its logistics presence is not the question the cap is asking.
+ * Not applied to `supplyState`: depth formations still do rear-area work.
  *
- * One formation is always in contact. A side that fielded nothing would not be a battle.
+ * One formation is always in contact; a side with no units would not be battle.
  */
 export function planEngagement(
   ctxs: BattleContext[],
@@ -872,21 +752,18 @@ function enemyFaction(ctx: BattleContext, f: Front): string {
 }
 
 /** Per-unit casualties/readiness/xp for one contingent at a front, given the battle ratio
- *  (own perspective) and a shared rng stream. Two draws per unit — the exact order
- *  the synthetic and PvP paths both rely on. Returns results + total casualties.
+ *  (own perspective) and a shared rng stream. Two draws per unit, the order both the
+ *  synthetic and PvP paths rely on.
  *
- * `share` is the unit's fraction of the SIDE's combat value at the front, passed in
- * as `sideRawTotal` by the PvP path. The old denominator renormalised every
- * contingent to 1.0, so a one-unit ally's `share` read 1.0 and its (0.6 + share)
- * concentration term charged it as though its handful of divisions were the whole
- * army. Absent `sideRawTotal` (the synthetic forecast path, one context by
- * construction) the contingent's own total is the denominator, exactly as before.
+ * `share` is the unit's fraction of the SIDE's combat value, passed as `sideRawTotal`
+ * by the PvP path. Without it the contingent renormalises to 1.0 and a one-unit ally's
+ * concentration term overcharges it. Absent `sideRawTotal` (synthetic forecast path,
+ * one context by construction) the contingent's own total is the denominator.
  *
- * `sustain` is the opposite question and takes the opposite answer: it is a property of
- * a nation's OWN tail, looked up per unit in `contingentSustain`. Side-wide, it let an
- * ally's rear echelon shelter your frontline. The `rearShare`/`reserveRes` scalars remain
- * as the fallback for the synthetic path, where the side IS the contingent and the two
- * are identical by construction. */
+ * `sustain` is the opposite: property of a nation's OWN tail, looked up per unit in
+ * `contingentSustain`. Side-wide, an ally's rear echelon shelters your frontline.
+ * `rearShare`/`reserveRes` are the fallback for the synthetic path, where side and
+ * contingent are identical by construction. */
 function unitOutcomes(
   units: CombatUnit[],
   positions: Record<string, string>,
@@ -935,18 +812,13 @@ function unitOutcomes(
         exposure
     );
     /**
-     * Readiness is SUBTRACTED, not assigned.
-     *
-     * `armorMit` and `rc` are the same terms the casualty line above uses, and they are
-     * correct for a subtraction: armour reduces what a battle takes out of a crew, and a
-     * more exposed role increases it. Assigning them to a LEVEL inverted both, which is
-     * why an armoured division used to end a battle more exhausted than the infantry
-     * beside it, and a carrier that lost three men ended more exhausted than either.
+     * Readiness is SUBTRACTED, not assigned. `armorMit` and `rc` are correct for a
+     * subtraction: armour reduces what a battle takes out of a crew, and exposure
+     * increases it. Assigning them to a LEVEL inverts both.
      *
      * `depletion` is measured against the NOMINAL posture baseline, not the arrears- or
-     * tier-suppressed one: it asks how worn this formation is against what its posture
-     * normally holds, and an unfunded army must not read as fresher merely because its
-     * target sagged.
+     * tier-suppressed one: an unfunded army must not read as fresher because its target
+     * sagged.
      */
     const baseline = readinessBaselineOf(u.posture);
     const depletion = Math.max(0, Math.min(1, 1 - u.readiness / Math.max(1, baseline)));
@@ -1200,9 +1072,7 @@ export function battleForecast(
   theaterId: string,
   /**
    * What the naval and air layer delivered to each side at this front this turn.
-   * Optional so every existing caller keeps its previous behaviour exactly: absent
-   * means no air superiority, no close air support and no interdiction, which is
-   * what a battle fought before this subsystem existed had.
+   * Optional: absent means no air superiority, close air support or interdiction.
    */
   supportA: FrontSupport = NO_SUPPORT,
   supportD: FrontSupport = NO_SUPPORT

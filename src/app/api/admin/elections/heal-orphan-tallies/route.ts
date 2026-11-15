@@ -3,10 +3,9 @@ import { getDb } from "@/lib/mongodb";
 import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError } from "@/lib/api/errors";
 import type { Election, ElectionCandidate } from "@/lib/db/types";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 
-// GET /api/admin/elections/heal-orphan-tallies — Diagnoses candidate records for elections that no longer exist.
-// Auth: requireAdmin
-// Errors: 403
 export async function GET() {
   try {
     const auth = await requireAdmin();
@@ -15,16 +14,11 @@ export async function GET() {
     const db = await getDb();
 
     // Get all election IDs
-    const allElections = await db
-      .collection<Election>("elections")
-      .find({})
-      .project({ _id: 1 })
-      .toArray();
+    const allElections = await electionsCollection(db).find({}).project({ _id: 1 }).toArray();
     const electionIds = new Set(allElections.map((e) => e._id.toString()));
 
     // Get all candidates and check if their election exists
-    const allCandidates = await db
-      .collection<ElectionCandidate>("electionCandidates")
+    const allCandidates = await electionCandidatesCollection(db)
       .find({})
       .project({ electionId: 1 })
       .toArray();
@@ -54,9 +48,6 @@ export async function GET() {
   }
 }
 
-// POST /api/admin/elections/heal-orphan-tallies — Deletes candidate records for elections that no longer exist.
-// Auth: requireAdmin
-// Errors: 403
 export async function POST() {
   try {
     const auth = await requireAdmin();
@@ -65,15 +56,11 @@ export async function POST() {
     const db = await getDb();
 
     // Get all election IDs
-    const allElections = await db
-      .collection<Election>("elections")
-      .find({})
-      .project({ _id: 1 })
-      .toArray();
+    const allElections = await electionsCollection(db).find({}).project({ _id: 1 }).toArray();
     const electionIds = allElections.map((e) => e._id);
 
     // Delete candidates whose election doesn't exist
-    const result = await db.collection<ElectionCandidate>("electionCandidates").deleteMany({
+    const result = await electionCandidatesCollection(db).deleteMany({
       electionId: { $nin: electionIds },
     });
 

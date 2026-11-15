@@ -9,10 +9,10 @@ import { getDb } from "@/lib/mongodb";
 import { requireAdmin } from "@/lib/api/requireAdmin";
 import { parseJsonBody } from "@/lib/api/validate";
 import { handleRouteError, notFound, errorResponse } from "@/lib/api/errors";
-import type { Corporation } from "@/lib/db/types";
 import { z } from "zod";
 import { executeCorporationBondDefaultDissolution } from "@/lib/bonds/executeCorporationBondDefaultDissolution";
 import { withCorporationSettlementLock } from "@/lib/corporations/settlementLock";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 const schema = z.object({ confirm: z.literal(true) });
 
@@ -35,9 +35,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     const db = await getDb();
-    const corp = await db
-      .collection<Corporation>("corporations")
-      .findOne({ _id: new ObjectId(id) });
+    const corp = await corporationsCollection(db).findOne({ _id: new ObjectId(id) });
     if (!corp) throw notFound("Corporation not found");
 
     if (corp.imfInstitution) {

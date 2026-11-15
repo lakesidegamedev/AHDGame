@@ -10,7 +10,7 @@ import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError } from "@/lib/api/errors";
 import { ensurePerpetualElections, ensureUKElections } from "@/lib/turnSystem";
-import { ensureDEElections } from "@/lib/turn/perpetualElections";
+import { ensureDEElections } from "@/lib/elections/scheduling";
 
 // POST /api/admin/elections/restart — Spawns any missing US, UK, and DE elections immediately without waiting for the next turn.
 // Auth: requireAdmin

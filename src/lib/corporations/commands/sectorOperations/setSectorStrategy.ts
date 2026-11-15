@@ -51,13 +51,43 @@ import {
 } from "@/lib/corporations/shortageRetool";
 import type { CommodityPrice } from "@/lib/db/types";
 import type { CommodityType } from "@/lib/constants/commodities";
-import { getStrategyAvailability } from "@/lib/constants/techTree";
+import { getStrategyAvailability, sunsetRetoolCostMultiplier } from "@/lib/constants/techTree";
+import {
+  loadPrerequisiteLaneResearch,
+  loadSectorFrontierResearch,
+} from "@/lib/corporations/techTree/frontierResearch";
+import { loadStrategyDiffusionWorld } from "@/lib/corporations/techTree/diffusion";
 import { retoolRescaleFields } from "@/lib/corporations/retoolRescale";
 import { getMarketSystemModeForDb, marketAtLeast } from "@/lib/market/featureFlag";
 import { STARTING_YEAR, TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import { rejectDuringTurn } from "@/lib/api/rejectDuringTurn";
 import { emitSectorRetoolTx } from "@/lib/corporations/sectorRetoolTxLog";
 import { freeTransitionConversion } from "@/lib/market/producerMarket/transitionRules";
+import {
+  methodAdoptionSurchargeFraction,
+  methodBuildDelayTurns,
+  methodTransitionStartTurn,
+} from "@/lib/corporations/rules/methodAdoption";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
+import { stateResourceCapacityCollection } from "@/lib/db/repositories/stateResourceCapacity";
+
+const STRATEGY_LOCK_MESSAGE: Record<
+  "era" | "tech" | "research" | "prerequisite" | "sunset" | "diffusion",
+  string
+> = {
+  era: "This production method is not available in this era yet.",
+  tech: "Unlock this production method in the Tech tree first.",
+  research:
+    "This production method needs more research across its sector before anyone can build it.",
+  prerequisite:
+    "This production method depends on research in other sectors that has not happened yet.",
+  sunset: "This production method has been retired and is closed to new sites.",
+  diffusion: "This production method has not reached this country yet.",
+};
 
 interface RouteParams {
   params: Promise<{ id: string; sectorId: string }>;
@@ -109,9 +139,10 @@ export async function setSectorStrategy(request: Request, { params }: RouteParam
       return errorResponse(400, "Invalid sector ID");
     }
 
-    const sector = await db
-      .collection<CorporateSector>("corporateSectors")
-      .findOne({ _id: new ObjectId(sectorId), corporationId: corporation._id });
+    const sector = await corporateSectorsCollection(db).findOne({
+      _id: new ObjectId(sectorId),
+      corporationId: corporation._id,
+    });
 
     if (!sector) {
       return errorResponse(404, "Sector not found");
@@ -131,9 +162,10 @@ export async function setSectorStrategy(request: Request, { params }: RouteParam
     const operatingModel = getMediaOperatingModel(strategyId);
     let operatingModelsEnabled = false;
     if (operatingModel) {
-      const config = await db
-        .collection<GameConfig>("gameConfig")
-        .findOne({ _id: "default" }, { projection: { mediaOperatingModelsEnabled: 1 } });
+      const config = await gameConfigCollection(db).findOne(
+        { _id: "default" },
+        { projection: { mediaOperatingModelsEnabled: 1 } }
+      );
       operatingModelsEnabled = config?.mediaOperatingModelsEnabled === true;
       if (!operatingModelsEnabled) {
         return errorResponse(404, "Media operating models are not available.");
@@ -164,7 +196,7 @@ export async function setSectorStrategy(request: Request, { params }: RouteParam
     }
 
     // Get current turn
-    const gameState = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+    const gameState = await gameStateCollection(db).findOne({ _id: "current" });
     const currentTurn = gameState?.currentTurn ?? 0;
 
     // Funded market: a turn freezes each plant's physical image and rejects a
@@ -184,14 +216,28 @@ export async function setSectorStrategy(request: Request, { params }: RouteParam
 
     // Tech-tree production-method gate: modern methods are locked until the
     // world reaches their era and/or the corp unlocks them in the tech tree.
-    // Inert when the feature is off.
-    const techTreesEnabled = gameState?.sectorTechTreesEnabled === true;
+    const techTreesEnabled = true;
     const currentYear =
       gameState?.currentYear ??
       STARTING_YEAR + Math.floor((Math.max(1, currentTurn) - 1) / TURNS_PER_YEAR);
     if (operatingModel && currentYear < operatingModel.availableFromYear) {
       return errorResponse(400, "This business model is not available in this era yet.");
     }
+    // Breakthrough methods also need the sector's world research total.
+    const [sectorResearch, laneResearch, diffusion] = await Promise.all([
+      techTreesEnabled && targetStrategy.researchThreshold != null
+        ? loadSectorFrontierResearch(db, sectorType)
+        : undefined,
+      loadPrerequisiteLaneResearch(db, [targetStrategy], techTreesEnabled),
+      // Diffusion worlds: the method must have reached the sector's country.
+      // A player company may license it early where a foreign company runs it.
+      loadStrategyDiffusionWorld(db, {
+        preset: gameState?.preset,
+        techTreesEnabled,
+        countryId: sector.countryId,
+        adopter: corporation.ceoType === "npp" ? "npp" : "player",
+      }),
+    ]);
     const availability = getStrategyAvailability(
       {
         type: corporation.type,
@@ -201,16 +247,26 @@ export async function setSectorStrategy(request: Request, { params }: RouteParam
       },
       targetStrategy,
       currentYear,
-      techTreesEnabled
+      techTreesEnabled,
+      { sectorResearch, laneResearch, diffusion }
     );
     if (availability.locked) {
+      const message = STRATEGY_LOCK_MESSAGE[availability.reason ?? "tech"];
       return errorResponse(
         400,
-        availability.reason === "era"
-          ? "This production method is not available in this era yet."
-          : "Unlock this production method in the Tech tree first."
+        availability.reason === "diffusion" && availability.opensYear != null
+          ? `${message} It opens here in ${availability.opensYear}.`
+          : message
       );
     }
+    // Retiring a sunset method for one of its named successors is discounted.
+    const sunsetCostMultiplier = techTreesEnabled
+      ? sunsetRetoolCostMultiplier(
+          strategies.find((s) => s.id === currentStrategyId),
+          strategyId,
+          currentYear
+        )
+      : 1;
 
     // Check cooldown
     if (
@@ -223,9 +279,10 @@ export async function setSectorStrategy(request: Request, { params }: RouteParam
     }
 
     if (sectorType === "extraction") {
-      const capDoc = await db
-        .collection<StateResourceCapacity>("stateResourceCapacity")
-        .findOne({ stateId: sector.stateId }, { projection: { resources: 1 } });
+      const capDoc = await stateResourceCapacityCollection(db).findOne(
+        { stateId: sector.stateId },
+        { projection: { resources: 1 } }
+      );
       const stateResources = capDoc ? (capDoc.resources ?? null) : undefined;
 
       if (isExtractionStrategyZeroYield(targetStrategy, stateResources)) {
@@ -240,8 +297,7 @@ export async function setSectorStrategy(request: Request, { params }: RouteParam
     // resource in global shortage (s/d < 0.5) waives the retool fee and halves
     // the transition window. Lagged balances from commodityPrices — same
     // one-turn lag as every market input. Self-deactivates as supply recovers.
-    const priceBalanceDocs = await db
-      .collection<CommodityPrice>("commodityPrices")
+    const priceBalanceDocs = await commodityPricesCollection(db)
       .find({}, { projection: { commodity: 1, globalSupply: 1, globalDemand: 1 } })
       .toArray();
     const globalBalances = new Map<CommodityType, { supply: number; demand: number }>(
@@ -260,14 +316,19 @@ export async function setSectorStrategy(request: Request, { params }: RouteParam
     const corpFxRate = await getCorpFxRate(db, corporation);
     const liquidCode = resolveCorpLiquidCurrencyCode(corporation);
     const sectorHostRate = await getSectorHostFxRate(db, sector, corporation);
+    const sectorRevenueAnchor = readCorpEconomicAnchor(
+      sector.revenue,
+      resolveSectorHostCurrencyCode(sector, corporation),
+      sectorHostRate
+    );
+    // The method's downside is a one-off bill that waivers on the retool fee do not cover.
+    const adoptionSurchargeAnchor =
+      sectorRevenueAnchor * methodAdoptionSurchargeFraction(targetStrategy);
     const retoolCostAnchor =
-      shortageDiscount.qualifies || freeConversion
+      (shortageDiscount.qualifies || freeConversion
         ? 0
-        : readCorpEconomicAnchor(
-            sector.revenue,
-            resolveSectorHostCurrencyCode(sector, corporation),
-            sectorHostRate
-          ) * STRATEGY_RETOOL_COST_FRACTION;
+        : sectorRevenueAnchor * STRATEGY_RETOOL_COST_FRACTION * sunsetCostMultiplier) +
+      adoptionSurchargeAnchor;
     // Foreign-sector FX friction (symmetry with the foreign operating-income
     // spread): retooling a sector in a different-currency country incurs the
     // reduced sector spread on top of the base cost, routed to the CB system.
@@ -291,7 +352,10 @@ export async function setSectorStrategy(request: Request, { params }: RouteParam
           anchorToCorpLiquidCapital(totalCostAnchor, corporation, corpFxRate),
           corporation.liquidCapital,
           resolveCorpLiquidCurrencyCode(corporation)
-        ) + " (25% of daily revenue, incl. FX on foreign sector)."
+        ) +
+          (sunsetCostMultiplier < 1
+            ? " (discounted conversion from a retired method, incl. FX on foreign sector)."
+            : " (25% of daily revenue, incl. FX on foreign sector).")
       );
     }
 
@@ -324,7 +388,7 @@ export async function setSectorStrategy(request: Request, { params }: RouteParam
     });
 
     // Apply changes atomically
-    const debit = await db.collection("corporations").updateOne(
+    const debit = await corporationsCollection(db).updateOne(
       {
         _id: corporation._id,
         liquidCapital: { $gte: retoolCostInCorpCapital },
@@ -353,7 +417,7 @@ export async function setSectorStrategy(request: Request, { params }: RouteParam
       toStrategyId: strategyId,
     });
     await Promise.all([
-      db.collection<CorporateSector>("corporateSectors").updateOne(
+      corporateSectorsCollection(db).updateOne(
         { _id: sector._id },
         {
           $set: {
@@ -362,9 +426,12 @@ export async function setSectorStrategy(request: Request, { params }: RouteParam
             // Shortage destinations get a half-window transition: backdating
             // the start turn makes every consumer of the standard progress
             // formula see the shorter ramp without schema changes.
-            transitionStartTurn: shortageDiscount.qualifies
-              ? currentTurn - SHORTAGE_RETOOL_TRANSITION_HEADSTART
-              : currentTurn,
+            // A method with a build time keeps the old one running until built.
+            transitionStartTurn: methodTransitionStartTurn({
+              currentTurn,
+              strategy: targetStrategy,
+              headstart: shortageDiscount.qualifies ? SHORTAGE_RETOOL_TRANSITION_HEADSTART : 0,
+            }),
             transitionCooldownUntilTurn: currentTurn + STRATEGY_COOLDOWN_TURNS,
             // Persist whether the forward rescale actually ran, so a cancel can
             // decide whether to invert it. The helper records the GATE, not
@@ -409,6 +476,8 @@ export async function setSectorStrategy(request: Request, { params }: RouteParam
         ? STRATEGY_TRANSITION_TURNS - SHORTAGE_RETOOL_TRANSITION_HEADSTART
         : STRATEGY_TRANSITION_TURNS,
       cooldownTurns: STRATEGY_COOLDOWN_TURNS,
+      buildDelayTurns: methodBuildDelayTurns(targetStrategy),
+      adoptionSurcharge: Math.round(adoptionSurchargeAnchor),
       freeConversion,
       // Shortage-destination discount metadata (client toast/messaging).
       shortageDiscount: shortageDiscount.qualifies

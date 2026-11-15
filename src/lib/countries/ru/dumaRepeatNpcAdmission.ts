@@ -4,17 +4,10 @@
  * registers its entire slate atomically and records replay-safe admission reasons.
  */
 import { type ClientSession, type Db, type ObjectId } from "mongodb";
-import type { CountryGameState, Election, GameState } from "@/lib/db/types";
 import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
 import { ensureBoundedNpcCandidateGuards } from "@/lib/admin/seed/indexes/boundedNpcCandidates";
-import {
-  RUSSIAN_DUMA_REPEAT_OPENINGS_COLLECTION,
-  type RussianDumaRepeatOpeningRecord,
-} from "./dumaRepeatOpening";
-import {
-  RUSSIAN_DUMA_RESULTS_COLLECTION,
-  type RussianDumaResultRecord,
-} from "./dumaElectionResult";
+import { type RussianDumaRepeatOpeningRecord } from "./dumaRepeatOpening";
+import { type RussianDumaResultRecord } from "./dumaElectionResult";
 import { registerRussianDumaNpcSlates } from "./dumaNpcRegistration";
 import { resolveRussianDumaRepeatGeneration } from "./rules/assemblyCohort";
 import { loadRussianAssemblyRepeatTerm } from "./assemblyRepeatTerm";
@@ -24,6 +17,11 @@ import {
   russianDumaRootFilter,
 } from "./dumaConvocationAuthority";
 import { hasAuthorizedPostSovietTransition } from "./rules/postSovietTransition";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
+import { russianDumaRepeatOpeningsCollection } from "@/lib/db/repositories/russianDumaRepeatOpenings";
+import { russianDumaElectionResultsCollection } from "@/lib/db/repositories/russianDumaElectionResults";
 
 export async function materializeRussianDumaRepeatNpcAdmission(input: {
   db: Db;
@@ -44,11 +42,12 @@ export async function materializeRussianDumaRepeatNpcAdmission(input: {
     now.getTime() < 0
   )
     throw new Error("Duma repeat admission requires a transaction, generation, turn and time");
-  const game = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { session, projection: { preset: 1 } });
+  const game = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { session, projection: { preset: 1 } }
+  );
   if (game?.preset !== "1991-default") return null;
-  const countries = db.collection<CountryGameState>("countryGameStates");
+  const countries = countryGameStatesCollection(db);
   const country = await countries.findOne(
     { _id: "RU" },
     {
@@ -74,9 +73,7 @@ export async function materializeRussianDumaRepeatNpcAdmission(input: {
     )
   )
     return null;
-  const openings = db.collection<RussianDumaRepeatOpeningRecord>(
-    RUSSIAN_DUMA_REPEAT_OPENINGS_COLLECTION
-  );
+  const openings = russianDumaRepeatOpeningsCollection<RussianDumaRepeatOpeningRecord>(db);
   const authority = await loadRussianDumaAuthority({
     db,
     session,
@@ -99,9 +96,10 @@ export async function materializeRussianDumaRepeatNpcAdmission(input: {
     throw new Error("Duma repeat admission has no matching opening");
   if (opening.npcAdmission)
     return { created: 0, unrepresentedParties: opening.npcAdmission.unrepresentedParties };
-  const previous = await db
-    .collection<RussianDumaResultRecord>(RUSSIAN_DUMA_RESULTS_COLLECTION)
-    .findOne({ _id: opening.previousResultId }, { session });
+  const previous = await russianDumaElectionResultsCollection<RussianDumaResultRecord>(db).findOne(
+    { _id: opening.previousResultId },
+    { session }
+  );
   if (
     !previous?.ballots ||
     previous.countryId !== "RU" ||
@@ -122,8 +120,7 @@ export async function materializeRussianDumaRepeatNpcAdmission(input: {
     turn,
     previous,
   });
-  const elections = await db
-    .collection<Election>("elections")
+  const elections = await electionsCollection(db)
     .find(
       { countryId: "RU", "russianDumaRound.cohortId": opening.cohortId },
       {
@@ -247,11 +244,12 @@ export async function admitRussianDumaRepeatNpcNominees(
     input.now.getTime() < 0
   )
     throw new Error("Duma repeat admission requires a generation, turn and time");
-  const game = await input.db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { projection: { preset: 1 } });
+  const game = await gameStateCollection(input.db).findOne(
+    { _id: "current" },
+    { projection: { preset: 1 } }
+  );
   if (game?.preset !== "1991-default") return null;
-  const country = await input.db.collection<CountryGameState>("countryGameStates").findOne(
+  const country = await countryGameStatesCollection(input.db).findOne(
     { _id: "RU" },
     {
       projection: {
@@ -272,12 +270,12 @@ export async function admitRussianDumaRepeatNpcNominees(
     )
   )
     return null;
-  const opening = await input.db
-    .collection<RussianDumaRepeatOpeningRecord>(RUSSIAN_DUMA_REPEAT_OPENINGS_COLLECTION)
-    .findOne(
-      { _id: `${input.rootCohortId.toHexString()}:repeat:${input.generation}` },
-      { projection: { rootCohortId: 1, generation: 1, mandateSinceTurn: 1, npcAdmission: 1 } }
-    );
+  const opening = await russianDumaRepeatOpeningsCollection<RussianDumaRepeatOpeningRecord>(
+    input.db
+  ).findOne(
+    { _id: `${input.rootCohortId.toHexString()}:repeat:${input.generation}` },
+    { projection: { rootCohortId: 1, generation: 1, mandateSinceTurn: 1, npcAdmission: 1 } }
+  );
   if (
     opening?.rootCohortId.equals(input.rootCohortId) &&
     opening.generation === input.generation &&

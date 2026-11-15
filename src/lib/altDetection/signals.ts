@@ -17,24 +17,18 @@ import {
 } from "./behavior";
 
 /**
- * Alt-detection signal registry (forensics/alt-detection rework plan §3.2,
- * Phase 5 T5.1). Each entry is a PURE evaluator: given two candidate facets
- * (order-independent) plus the configured weight for this run, it returns
- * either `null` (signal not applicable to this pair — no evidence at all) or
- * a {@link SignalMatch} describing the effective weight and human-readable,
- * PII-masked evidence.
+ * Alt-detection signal registry. Each entry is a PURE evaluator: given two
+ * candidate facets (order-independent) plus the configured weight for this
+ * run, it returns either `null` (signal not applicable, no evidence) or a
+ * {@link SignalMatch} with the effective weight and PII-masked evidence.
  *
- * Guards (CF-edge IP, degenerate fingerprint) are NOT modeled as "no match" —
- * they return an explicit `weight: 0` match so the evidence is still visible
- * ("we checked and guarded this to zero"), matching plan §4.8's acceptance
- * criterion that false-positive guards must be visible in the UI. A
- * zero-weight signal is a no-op in the noisy-OR aggregate (see `score.ts`),
- * so this costs nothing numerically.
+ * Guards (CF-edge IP, degenerate fingerprint) are NOT modeled as "no match";
+ * they return an explicit `weight: 0` match so the evidence stays visible
+ * ("we checked and guarded this to zero"). A zero-weight signal is a no-op
+ * in the noisy-OR aggregate (see `score.ts`).
  *
- * DB reads/candidate assembly are Phase 6 (`src/lib/altDetection/run.ts`,
- * a later agent) — this module only consumes the {@link AltCandidateFacet}
- * shape below, which Phase 6 populates from `users`/`activityLog`/
- * `financialTxLog`/`actionAuditLog`.
+ * This module only consumes the {@link AltCandidateFacet} shape below; DB
+ * reads and candidate assembly live in `src/lib/altDetection/run.ts`.
  */
 
 // ─── Candidate facet (pure input shape) ────────────────────────────────────

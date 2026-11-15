@@ -1,4 +1,5 @@
 "use client";
+import { displayCanadianRegionCode } from "@/lib/countries/ca/regionCodes";
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
@@ -8,9 +9,10 @@ import type {
   CommonsVacancyDto,
   CommonsVacancyStatus,
   RecallPetitionDto,
-} from "@/lib/uk/elections/commonsVacancyStatus";
+} from "@/lib/countries/uk/elections/commonsVacancyStatus";
 import { apiErrorText } from "@/lib/errors/catalog";
 import { campaignManagerHref } from "@/lib/campaignManager/links";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 const VACANCY_REASON_LABELS: Record<string, string> = {
   death: "Death",
@@ -111,7 +113,7 @@ function VacancyCard({
     <li className="rounded-xl border border-card-border/60 bg-card px-4 py-3">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <p className="text-sm font-medium text-foreground">
-          {vacancy.constituency ?? vacancy.state} · {vacancy.seats} seat
+          {displayCanadianRegionCode(vacancy.constituency ?? vacancy.state)} · {vacancy.seats} seat
           {vacancy.seats === 1 ? "" : "s"}
         </p>
         <span className="text-xs text-muted">
@@ -176,7 +178,7 @@ function PetitionCard({
     <li className="rounded-xl border border-card-border/60 bg-card px-4 py-3">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <p className="text-sm font-medium text-foreground">
-          {petition.targetCharacterName} · {petition.state}
+          {petition.targetCharacterName} · {displayCanadianRegionCode(petition.state)}
         </p>
         <span className="text-xs text-muted">
           {PETITION_STATUS_LABELS[petition.status] ?? petition.status}
@@ -261,11 +263,11 @@ export function CommonsVacancyPanel({ countryId }: { countryId: CountryId }) {
   }, []);
 
   useEffect(() => {
-    if (countryId !== "UK") return;
+    if (!countryHasFeature("ukUi", countryId)) return;
     void load();
   }, [countryId, load]);
 
-  if (countryId !== "UK") return null;
+  if (!countryHasFeature("ukUi", countryId)) return null;
 
   async function refreshAfter(message: string) {
     setFeedback(message);
@@ -382,7 +384,9 @@ export function CommonsVacancyPanel({ countryId }: { countryId: CountryId }) {
 
       {holdsSeat && (
         <div className="mb-4 rounded-xl border border-card-border/60 bg-card px-4 py-3">
-          <p className="text-sm font-medium text-foreground">Your seat · {status?.viewer.state}</p>
+          <p className="text-sm font-medium text-foreground">
+            Your seat · {displayCanadianRegionCode(status?.viewer.state)}
+          </p>
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <button
               type="button"

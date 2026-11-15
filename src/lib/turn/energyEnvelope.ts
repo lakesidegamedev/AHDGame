@@ -1,5 +1,4 @@
 import type { Db } from "mongodb";
-import type { FederalBudget } from "@/lib/db/types/budget";
 import {
   ENERGY_ENVELOPE_FALLBACK_GDP_FRACTION,
   ENERGY_DISCRETIONARY_FRACTION,
@@ -7,6 +6,7 @@ import {
   ENERGY_DISCRETIONARY_CAP,
   ENERGY_UPKEEP_UNIT,
 } from "@/lib/constants/cabinetEnergy";
+import { getFederalBudgetCollection } from "@/lib/db/collections/federalBudget";
 
 /**
  * Read-only energy discretionary budget (absolute currency). Energy has no federal category,
@@ -15,7 +15,7 @@ import {
  * Never mutates the budget.
  */
 export async function resolveEnergyEnvelope(db: Db, countryId: string): Promise<number> {
-  const budget = await db.collection<FederalBudget>("federalBudget").findOne({ countryId });
+  const budget = await (await getFederalBudgetCollection(db)).findOne({ countryId });
   if (!budget) return 0;
   const gdp = budget.gdp;
   const slice =

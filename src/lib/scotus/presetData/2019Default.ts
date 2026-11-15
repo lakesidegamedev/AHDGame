@@ -1,8 +1,8 @@
 import type { ScotusPresetSeed } from "./types";
 
 /**
- * SCOTUS Original Roster + Docket for the "2019-default" preset (#3602, spec
- * #3581). This is the default/most-played era preset — the real Roberts
+ * SCOTUS Original Roster + Docket for the "2019-default" preset.
+ * This is the default/most-played era preset, the real Roberts
  * Court as seated in 2019, with its full real succession chain through
  * "present" (2026): Ruth Bader Ginsburg's September 2020 death and Amy Coney
  * Barrett's October 2020 confirmation, and Stephen Breyer's 2022 retirement
@@ -31,7 +31,7 @@ import type { ScotusPresetSeed } from "./types";
  * `decideCaseOutcome` actually computes from the leans below for the real
  * roster seated in that case's decision year — this is what makes an
  * unmodified 2019-default game correctly "affirm" (no divergence) for every
- * case here, which is the load-bearing invariant (spec #3581 user story 18).
+ * case here, which is the load-bearing invariant.
  *
  * Known modeling limitation (see ahd-scotus-adr-majority-headcount-
  * divergence — headcount by design, not an averaged score): a handful of
@@ -89,8 +89,8 @@ export const SCOTUS_2019_DEFAULT_SEED: ScotusPresetSeed = {
       seatNumber: 1,
       historicalOccupants: [
         {
-          key: "roberts-2019",
-          name: "John Roberts",
+          key: "rowe-2019",
+          name: "Jonathan Rowe",
           party: REPUBLICAN_SEQ_ID,
           // Mildly negative on both axes: the Court's institutionalist swing
           // vote in 2020 (DACA, Bostock, June Medical) — see file header.
@@ -107,8 +107,8 @@ export const SCOTUS_2019_DEFAULT_SEED: ScotusPresetSeed = {
       seatNumber: 2,
       historicalOccupants: [
         {
-          key: "thomas-2019",
-          name: "Clarence Thomas",
+          key: "thornton-2019",
+          name: "Calvin Thornton",
           party: REPUBLICAN_SEQ_ID,
           economicLean: 4,
           socialLean: 5,
@@ -124,8 +124,8 @@ export const SCOTUS_2019_DEFAULT_SEED: ScotusPresetSeed = {
       seatNumber: 3,
       historicalOccupants: [
         {
-          key: "ginsburg-2019",
-          name: "Ruth Bader Ginsburg",
+          key: "sterling-2019",
+          name: "Miriam Gold Sterling",
           party: DEMOCRAT_SEQ_ID,
           economicLean: -4,
           socialLean: -5,
@@ -136,8 +136,8 @@ export const SCOTUS_2019_DEFAULT_SEED: ScotusPresetSeed = {
           departureReason: "death",
         },
         {
-          key: "barrett-2021",
-          name: "Amy Coney Barrett",
+          key: "cole-2021",
+          name: "Margaret Ellison Cole",
           party: REPUBLICAN_SEQ_ID,
           economicLean: 3,
           socialLean: 4,
@@ -154,8 +154,8 @@ export const SCOTUS_2019_DEFAULT_SEED: ScotusPresetSeed = {
       seatNumber: 4,
       historicalOccupants: [
         {
-          key: "breyer-2019",
-          name: "Stephen Breyer",
+          key: "brewster-2019",
+          name: "Simon Brewster",
           party: DEMOCRAT_SEQ_ID,
           economicLean: -3,
           socialLean: -3,
@@ -164,8 +164,8 @@ export const SCOTUS_2019_DEFAULT_SEED: ScotusPresetSeed = {
           departureReason: "retirement",
         },
         {
-          key: "jackson-2022",
-          name: "Ketanji Brown Jackson",
+          key: "jamison-2022",
+          name: "Kendra Brooks Jamison",
           party: DEMOCRAT_SEQ_ID,
           economicLean: -3,
           socialLean: -4,
@@ -180,8 +180,8 @@ export const SCOTUS_2019_DEFAULT_SEED: ScotusPresetSeed = {
       seatNumber: 5,
       historicalOccupants: [
         {
-          key: "alito-2019",
-          name: "Samuel Alito",
+          key: "amato-2019",
+          name: "Salvatore Amato",
           party: REPUBLICAN_SEQ_ID,
           economicLean: 4,
           socialLean: 5,
@@ -196,8 +196,8 @@ export const SCOTUS_2019_DEFAULT_SEED: ScotusPresetSeed = {
       seatNumber: 6,
       historicalOccupants: [
         {
-          key: "sotomayor-2019",
-          name: "Sonia Sotomayor",
+          key: "valdemoro-2019",
+          name: "Sofia Valdemoro",
           party: DEMOCRAT_SEQ_ID,
           economicLean: -3,
           socialLean: -5,
@@ -212,8 +212,8 @@ export const SCOTUS_2019_DEFAULT_SEED: ScotusPresetSeed = {
       seatNumber: 7,
       historicalOccupants: [
         {
-          key: "kagan-2019",
-          name: "Elena Kagan",
+          key: "kaminski-2019",
+          name: "Elise Kaminski",
           party: DEMOCRAT_SEQ_ID,
           economicLean: -3,
           socialLean: -4,
@@ -228,8 +228,8 @@ export const SCOTUS_2019_DEFAULT_SEED: ScotusPresetSeed = {
       seatNumber: 8,
       historicalOccupants: [
         {
-          key: "gorsuch-2019",
-          name: "Neil Gorsuch",
+          key: "gorham-2019",
+          name: "Nathan Gorham",
           party: REPUBLICAN_SEQ_ID,
           economicLean: 3,
           // Lower than the other conservative appointees: textualist/
@@ -247,8 +247,8 @@ export const SCOTUS_2019_DEFAULT_SEED: ScotusPresetSeed = {
       seatNumber: 9,
       historicalOccupants: [
         {
-          key: "kavanaugh-2019",
-          name: "Brett Kavanaugh",
+          key: "keegan-2019",
+          name: "Bradley Keegan",
           party: REPUBLICAN_SEQ_ID,
           // Mildly negative on economic only: the second GOP-appointee
           // crossover (with Roberts) in Moore v. Harper — see file header.
@@ -274,9 +274,9 @@ export const SCOTUS_2019_DEFAULT_SEED: ScotusPresetSeed = {
       // diverged ruling represents the Court instead permitting rescission —
       // the restrictive/enforcement-heavy end of border enforcement policy.
       effect: {
-        legislationTypeId: "us_border_security_enforcement",
-        policyOptionId: "border_security_enforcement_opt_5",
-        effectDirection: -1,
+        legislationTypeId: "us.sec.immigrationNationality",
+        policyOptionId: "l4",
+        effectDirection: 1,
       },
     },
     {
@@ -302,9 +302,9 @@ export const SCOTUS_2019_DEFAULT_SEED: ScotusPresetSeed = {
       // A diverged ruling represents the Court instead upholding it — a
       // restrictive move on reproductive rights.
       effect: {
-        legislationTypeId: "us_reproductive_rights",
-        policyOptionId: "reproductive_rights_opt_4",
-        effectDirection: -1,
+        legislationTypeId: "us.society.demography.primary",
+        policyOptionId: "l3",
+        effectDirection: 1,
       },
     },
 
@@ -319,9 +319,9 @@ export const SCOTUS_2019_DEFAULT_SEED: ScotusPresetSeed = {
       // ruling represents the Court instead reaffirming a federal
       // reproductive-rights floor.
       effect: {
-        legislationTypeId: "us_reproductive_rights",
-        policyOptionId: "reproductive_rights_opt_2",
-        effectDirection: 1,
+        legislationTypeId: "us.society.demography.primary",
+        policyOptionId: "l1",
+        effectDirection: -1,
       },
     },
     {
@@ -334,8 +334,8 @@ export const SCOTUS_2019_DEFAULT_SEED: ScotusPresetSeed = {
       // A diverged ruling represents the Court instead upholding
       // restrictive carry licensing.
       effect: {
-        legislationTypeId: "us_gun_control",
-        policyOptionId: "gun_control_opt_2",
+        legislationTypeId: "us.order.safety.primary",
+        policyOptionId: "l3",
         effectDirection: 1,
       },
     },
@@ -350,8 +350,8 @@ export const SCOTUS_2019_DEFAULT_SEED: ScotusPresetSeed = {
       // diverged ruling represents the Court instead upholding expansive
       // EPA authority.
       effect: {
-        legislationTypeId: "us_clean_energy",
-        policyOptionId: "clean_energy_opt_1",
+        legislationTypeId: "us.environment.conservation.primary",
+        policyOptionId: "l4",
         effectDirection: 1,
       },
     },

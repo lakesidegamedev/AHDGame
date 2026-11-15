@@ -1,5 +1,7 @@
 import type { CreateIndexesOptions, Db, IndexSpecification } from "mongodb";
 import type { Migration, MigrationResult } from "../types";
+import { unionsCollection } from "@/lib/db/repositories/unions";
+import type { Document } from "mongodb";
 
 type IndexPlan = {
   collection: string;
@@ -57,10 +59,10 @@ const INDEXES: IndexPlan[] = [
 async function backfillSeededFounderNull(db: Db, dryRun: boolean): Promise<string> {
   const filter = { foundedByCharacterId: { $exists: false } };
   if (dryRun) {
-    const pending = await db.collection("unions").countDocuments(filter);
+    const pending = await unionsCollection<Document>(db).countDocuments(filter);
     return `would set foundedByCharacterId: null on ${pending} seeded union(s)`;
   }
-  const result = await db.collection("unions").updateMany(filter, {
+  const result = await unionsCollection<Document>(db).updateMany(filter, {
     $set: { foundedByCharacterId: null },
   });
   return `set foundedByCharacterId: null on ${result.modifiedCount} seeded union(s)`;

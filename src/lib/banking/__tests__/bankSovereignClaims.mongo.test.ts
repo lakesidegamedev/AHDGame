@@ -1,3 +1,4 @@
+import { readFundedBankMaturityCash } from "@/lib/turn/bondTurnBankMaturityCash";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { ObjectId, type Db } from "mongodb";
 import { settleBankSovereignClaims } from "../bankSovereignClaims";
@@ -151,6 +152,7 @@ describe.runIf(REAL_MONGO_ENABLED)(
             turn: 12,
             anchorRate: 1,
             treasuryCashLedgerEnabled: true,
+            ledgerShadow: true,
           },
         ],
       });
@@ -185,6 +187,10 @@ describe.runIf(REAL_MONGO_ENABLED)(
       const after = await db.collection("corporations").findOne({ _id: bankId });
       expect(after?.bankCharter?.cashReserves).toBe(8_500);
       expect(after?.bankCharter?.sovereignTreasuryMarkValue).toBe(0);
+      expect(await readFundedBankMaturityCash(db, 12)).toEqual({ US: 8_000 });
+      await settleBankSovereignClaims(db, frozen as never, 12);
+      expect(await readFundedBankMaturityCash(db, 12)).toEqual({ US: 8_000 });
+      expect(await readFundedBankMaturityCash(db, 13)).toEqual({});
     });
   }
 );

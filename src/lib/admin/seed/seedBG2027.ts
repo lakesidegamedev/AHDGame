@@ -9,6 +9,15 @@ import {
 } from "@/lib/seeds/ensureDefaultParties";
 import { bgRegions2027 } from "@/lib/countries/bg/data/bgRegions2027";
 import { bgParties } from "@/lib/countries/bg/data/bgParties";
+import { statesCollection } from "@/lib/db/repositories/states";
+import type { Document } from "mongodb";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
+import { stateDemographicTurnoutCollection } from "@/lib/db/repositories/stateDemographicTurnout";
+import { stateBaselinesCollection } from "@/lib/db/repositories/stateBaselines";
 
 /** Political, demographic and regional metric substrate. Demographics use the
  * modern BG Layer-1 model; metrics are authored 2027 gameplay estimates
@@ -21,13 +30,12 @@ export async function seedBG2027(
 ): Promise<void> {
   if (preset !== "2027-default") return;
   if (reset) {
-    await db.collection("states").deleteMany({ countryId: "BG" });
-    await db.collection("statePartyOrg").deleteMany({ countryId: "BG" });
-    await db.collection("stateDemographics").deleteMany({ countryId: "BG" });
-    await db.collection("stateDemographicTurnout").deleteMany({ countryId: "BG" });
-    await db.collection("demographicCategories").deleteMany({ _id: "bg_voterGroups" as never });
-    await db.collection("macroMetrics").deleteMany({ countryId: "BG" });
-    await db.collection("stateBaselines").deleteMany({
+    await statesCollection<Document>(db).deleteMany({ countryId: "BG" });
+    await statePartyOrgCollection<Document>(db).deleteMany({ countryId: "BG" });
+    await stateDemographicsCollection<Document>(db).deleteMany({ countryId: "BG" });
+    await stateDemographicTurnoutCollection<Document>(db).deleteMany({ countryId: "BG" });
+    await macroMetricsCollection<Document>(db).deleteMany({ countryId: "BG" });
+    await stateBaselinesCollection<Document>(db).deleteMany({
       _id: {
         $in: ["BG_SOF", "BG_NOR", "BG_COA", "BG_THR", "BG_SW", ...bgRegions2027.map((r) => r._id)],
       } as never,
@@ -36,7 +44,7 @@ export async function seedBG2027(
   const ops = bgRegions2027.map(({ _id, ...data }) => ({
     updateOne: { filter: { _id }, update: { $set: data }, upsert: true },
   }));
-  await db.collection<State>("states").bulkWrite(ops, { ordered: false });
+  await statesCollection(db).bulkWrite(ops, { ordered: false });
   await prunePresetMismatchedDefaultParties(db, bgParties, preset);
   const seeds = selectPartyRosterForPreset(bgParties, preset);
   const now = new Date();
@@ -44,7 +52,7 @@ export async function seedBG2027(
     const { seedOrder: _order, validForPresets: _presets, ...data } = seed;
     void _order;
     void _presets;
-    const collection = db.collection<PoliticalParty>("politicalParties");
+    const collection = politicalPartiesCollection(db);
     const existing = await collection.findOne({ name: seed.name, countryId: "BG" });
     if (existing)
       await collection.updateOne({ _id: existing._id }, { $set: { ...data, updatedAt: now } });
@@ -59,8 +67,7 @@ export async function seedBG2027(
         updatedAt: now,
       } as PoliticalParty);
   }
-  const parties = await db
-    .collection<PoliticalParty>("politicalParties")
+  const parties = await politicalPartiesCollection(db)
     .find({ countryId: "BG", isDefault: true })
     .toArray();
   for (const region of bgRegions2027)
@@ -82,13 +89,11 @@ export async function seedBG2027(
         hasPresence: true,
         consecutiveLosses: 0,
       };
-      await db
-        .collection<StatePartyOrg>("statePartyOrg")
-        .updateOne(
-          { _id },
-          { $set: { ...data, updatedAt: now }, $setOnInsert: { createdAt: now } },
-          { upsert: true }
-        );
+      await statePartyOrgCollection(db).updateOne(
+        { _id },
+        { $set: { ...data, updatedAt: now }, $setOnInsert: { createdAt: now } },
+        { upsert: true }
+      );
     }
   const formation: Omit<GovernmentFormation, "createdAt" | "updatedAt"> = {
     _id: "BG",
@@ -112,13 +117,11 @@ export async function seedBG2027(
     formedTurn: null,
     collapsedAt: null,
   };
-  await db
-    .collection<GovernmentFormation>("governmentFormations")
-    .updateOne(
-      { _id: "BG" },
-      { $set: { ...formation, updatedAt: now }, $setOnInsert: { createdAt: now } },
-      { upsert: true }
-    );
+  await governmentFormationsCollection(db).updateOne(
+    { _id: "BG" },
+    { $set: { ...formation, updatedAt: now }, $setOnInsert: { createdAt: now } },
+    { upsert: true }
+  );
   const {
     seedModernTransitionDemographics,
     seedModernTransitionStateMetrics,

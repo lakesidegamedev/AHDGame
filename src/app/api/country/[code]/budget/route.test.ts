@@ -46,8 +46,8 @@ vi.mock("@/lib/db/collections/ukBudgets", () => ({
 vi.mock("@/lib/politicalLegislation/enactedLevels", () => ({
   getEnactedLevels: getEnactedLevelsMock,
 }));
-vi.mock("@/lib/uk/budget/annualBudget", async (importOriginal) => {
-  const original = await importOriginal<typeof import("@/lib/uk/budget/annualBudget")>();
+vi.mock("@/lib/countries/uk/budget/annualBudget", async (importOriginal) => {
+  const original = await importOriginal<typeof import("@/lib/countries/uk/budget/annualBudget")>();
   return {
     ...original,
     buildAnnualBudgetProvisions: buildAnnualBudgetProvisionsMock,

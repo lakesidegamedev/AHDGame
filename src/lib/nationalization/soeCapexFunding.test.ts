@@ -105,6 +105,19 @@ describe("state capex grant under funded Treasury cash", () => {
     const ukDebit = 1_000_000_000 - budget(db, "UK").treasuryCashLocal;
     expect(ukDebit).toBeGreaterThan(0);
     expect(budget(db, "UK").treasuryBalance).toBe(1_000_000_000 - ukDebit);
+    const legs = db
+      .collection("ledgerEntries")
+      .docs.flatMap(
+        (entry) =>
+          entry.legs as { account: string; role: string; amount: number; anchorAmount: number }[]
+      );
+    const net = (account: string) =>
+      legs
+        .filter((leg) => leg.role === "primary" && leg.account === account)
+        .reduce((sum, leg) => sum + leg.amount, 0);
+    expect(net("government_cash:UK:GBP")).toBe(-ukDebit);
+    expect(net("government:UK:GBP")).toBe(-ukDebit);
+    expect(legs.reduce((sum, leg) => sum + leg.anchorAmount, 0)).toBeCloseTo(0, 8);
     expect(sectorDoc(db, UK_SECTOR).capacityBookAnchor).toBeGreaterThan(0);
 
     const moves = db.collection("bankMoneyMoves").docs;

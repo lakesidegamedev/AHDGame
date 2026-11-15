@@ -13,7 +13,7 @@ export function sumAccountedOutstandingShares(corp: Corporation): number {
   return sh + float;
 }
 
-export type HolderKind = "character" | "imperial" | "corporation" | "fund";
+export type HolderKind = "character" | "imperial" | "corporation" | "fund" | "npp";
 
 type AllocPart = {
   key: string;
@@ -30,6 +30,7 @@ function holderKindOf(h: Shareholder): HolderKind | null {
   if (h.imperialCharacterId) return "imperial";
   if (h.corporationId) return "corporation";
   if (h.fundId) return "fund";
+  if (h.nppId) return "npp";
   return null;
 }
 
@@ -37,6 +38,7 @@ function ownerIdOf(h: Shareholder, kind: HolderKind): ObjectId {
   if (kind === "character") return h.characterId!;
   if (kind === "imperial") return h.imperialCharacterId!;
   if (kind === "fund") return h.fundId!;
+  if (kind === "npp") return h.nppId!;
   return h.corporationId!;
 }
 
@@ -175,17 +177,15 @@ export function allocateProportionalShareTotals(
     if (p.kind === "character") entry.characterId = p.ownerId;
     else if (p.kind === "imperial") entry.imperialCharacterId = p.ownerId;
     else if (p.kind === "fund") entry.fundId = p.ownerId;
+    else if (p.kind === "npp") entry.nppId = p.ownerId;
     else entry.corporationId = p.ownerId;
     if (p.avgCostPerShare != null) {
       entry.avgCostPerShare = p.avgCostPerShare * basisFactor;
     }
     // Scale supershares proportionally to the share allocation so dual-class
-    // voting power survives splits/reverse splits. The split ratio is n / p.weight
-    // (new shares ÷ old shares for this holder). Floored and capped at n so the
-    // effective invariant `min(superShares, shares)` is never violated. This was
-    // previously missing entirely — the entire shareholders array was $set without
-    // superShares, silently demoting every dual-class founder to one-share-one-vote
-    // after any split (Bug #0832).
+    // voting power survives splits/reverse splits. Ratio is n / p.weight;
+    // floored and capped at n so `min(superShares, shares)` holds. Without
+    // this, $set silently demotes dual-class founders to one-share-one-vote.
     if (p.superShares != null && p.superShares > 0 && p.weight > 0) {
       const scaledSuper = Math.floor((p.superShares * n) / p.weight);
       if (scaledSuper > 0) {
@@ -196,8 +196,16 @@ export function allocateProportionalShareTotals(
   }
 
   shareholders.sort((a, b) => {
-    const aId = (a.characterId ?? a.imperialCharacterId ?? a.corporationId ?? a.fundId)!.toString();
-    const bId = (b.characterId ?? b.imperialCharacterId ?? b.corporationId ?? b.fundId)!.toString();
+    const aId = (a.characterId ??
+      a.imperialCharacterId ??
+      a.corporationId ??
+      a.fundId ??
+      a.nppId)!.toString();
+    const bId = (b.characterId ??
+      b.imperialCharacterId ??
+      b.corporationId ??
+      b.fundId ??
+      b.nppId)!.toString();
     return aId.localeCompare(bId);
   });
 
@@ -224,7 +232,7 @@ export type FundHoldingSplitSync = {
 export function planFundHoldingSplitSync(
   newShareholders: Pick<
     Shareholder,
-    "characterId" | "imperialCharacterId" | "corporationId" | "fundId" | "shares"
+    "characterId" | "imperialCharacterId" | "corporationId" | "fundId" | "nppId" | "shares"
   >[],
   oldTotal: number,
   newTotal: number
@@ -243,7 +251,7 @@ export function planFundHoldingSplitSync(
 export type DroppedShareholder = { kind: HolderKind; ownerId: ObjectId };
 
 /**
- * Returns every holder (character, imperial, corporation, fund) that was present
+ * Returns every holder (character, imperial, corporation, fund, NPP) that was present
  * in `before` with positive shares but is missing or zero-share in `after`.
  * Zero-share input rows are ignored — those are never expected to survive.
  * Structured so callers can surface names instead of raw ObjectIds.
@@ -251,20 +259,24 @@ export type DroppedShareholder = { kind: HolderKind; ownerId: ObjectId };
 export function findDroppedShareholders(
   before: Pick<
     Shareholder,
-    "characterId" | "imperialCharacterId" | "corporationId" | "fundId" | "shares"
+    "characterId" | "imperialCharacterId" | "corporationId" | "fundId" | "nppId" | "shares"
   >[],
   after: Pick<
     Shareholder,
-    "characterId" | "imperialCharacterId" | "corporationId" | "fundId" | "shares"
+    "characterId" | "imperialCharacterId" | "corporationId" | "fundId" | "nppId" | "shares"
   >[]
 ): DroppedShareholder[] {
   const entryOf = (
-    h: Pick<Shareholder, "characterId" | "imperialCharacterId" | "corporationId" | "fundId">
+    h: Pick<
+      Shareholder,
+      "characterId" | "imperialCharacterId" | "corporationId" | "fundId" | "nppId"
+    >
   ): DroppedShareholder | null => {
     if (h.characterId) return { kind: "character", ownerId: h.characterId };
     if (h.imperialCharacterId) return { kind: "imperial", ownerId: h.imperialCharacterId };
     if (h.corporationId) return { kind: "corporation", ownerId: h.corporationId };
     if (h.fundId) return { kind: "fund", ownerId: h.fundId };
+    if (h.nppId) return { kind: "npp", ownerId: h.nppId };
     return null;
   };
   const keyOf = (e: DroppedShareholder) => `${e.kind}:${e.ownerId.toString()}`;
@@ -286,20 +298,19 @@ export function findDroppedShareholders(
 }
 
 /**
- * Defense in depth: verify that a CEO-driven split / reverse split preserved
- * every owner in the input shareholders list. The proportional allocator is
- * designed to emit one output row per positive input holder, so a missing
- * entry means a bug shape was reintroduced (e.g., only considering one holder
- * kind).
+ * Verify that a CEO-driven split or reverse split preserved every owner in the
+ * input shareholders list. The proportional allocator emits one output row per
+ * positive input holder, so a missing entry means a bug (e.g. only one holder
+ * kind considered).
  */
 export function assertShareStructureChangePreservesHolders(
   before: Pick<
     Shareholder,
-    "characterId" | "imperialCharacterId" | "corporationId" | "fundId" | "shares"
+    "characterId" | "imperialCharacterId" | "corporationId" | "fundId" | "nppId" | "shares"
   >[],
   after: Pick<
     Shareholder,
-    "characterId" | "imperialCharacterId" | "corporationId" | "fundId" | "shares"
+    "characterId" | "imperialCharacterId" | "corporationId" | "fundId" | "nppId" | "shares"
   >[]
 ): void {
   const dropped = findDroppedShareholders(before, after);
@@ -307,7 +318,7 @@ export function assertShareStructureChangePreservesHolders(
     const keys = dropped.map((d) => `${d.kind}:${d.ownerId.toString()}`);
     throw new Error(
       `Share structure change dropped holders: ${keys.join(", ")}. ` +
-        `All owner kinds (character, imperial, corporation, fund) must be preserved.`
+        `All owner kinds (character, imperial, corporation, fund, NPP) must be preserved.`
     );
   }
 }

@@ -1,7 +1,8 @@
+import { seedPresetsFrom } from "@/lib/constants/turnTime";
 import type { MajorDefaultParty } from "@/lib/seeds/defaultPartyTiers";
 import type { CountryElections } from "../contract";
 import type { CountryElectionPhaseEntry } from "@/lib/turn/countryPhases";
-import type { SpawnElectionsResult } from "@/lib/turn/perpetualElections/registry";
+import type { SpawnElectionsResult } from "@/lib/elections/scheduling/registry";
 import {
   TOTAL_UK_COMMONS_SEATS,
   UK_COMMONS_SEATS,
@@ -14,19 +15,10 @@ import {
 } from "./elections/perpetual";
 
 /**
- * The United Kingdom's elections.
- *
- * ⚠️ SERVER ONLY. The continuity spawners reach `getDb`.
- *
- * ⚠️ THE SEAT TABLES ARE IMPORTED, NOT DECLARED. Japan's equivalent module wrote
- * its tables out by value while `constants/states.ts` also declared them, and the
- * two sat as a second source -- `===` different, `JSON.stringify` equal -- through
- * a completed phase, because a comment promising a later decision is not a guard.
- * Importing leaves nothing to diverge.
- *
- * ⚠️ THE TABLES STAY IN `constants/states.ts` for the same reason the US ones do:
- * that file is still multi-country, holding CN, DE, NG and RU seat tables beside
- * these. It is not the UK's file to take.
+ * SERVER ONLY: continuity spawners reach getDb.
+ * Seat tables are imported, not declared, to avoid duplicate sources that
+ * could silently diverge. They stay in constants/states.ts alongside other
+ * countries' tables.
  */
 
 /**
@@ -51,13 +43,10 @@ const spawn = async (now: Date, currentTurn?: number): Promise<SpawnElectionsRes
 };
 
 /**
- * The election phases, in the order `countryPhases.ts` declares them.
+ * Election turn phases, in the order `countryPhases.ts` declares them.
  *
- * ⚠️ `spawn` AND `electionPhases` ARE DIFFERENT LISTS AND THIS COUNTRY HAS
- * BOTH. `spawn` is the continuity check the perpetual-election registry runs;
- * these are the turn phases. They overlap but are not the same set -- the
- * folder previously carried only `spawn`, so anything reading the folder for a
- * country's phases got nothing. The harness compares this list against
+ * Distinct from `spawn`: `spawn` is the perpetual-election continuity check,
+ * these are turn phases. The harness compares this list against
  * `COUNTRY_ELECTION_PHASES` entry by entry, `fn` by reference.
  */
 const phases: CountryElectionPhaseEntry[] = [
@@ -74,14 +63,7 @@ const majorDefaultParties: MajorDefaultParty[] = [
   // the historic Liberal Party (LIB, 1953-only seed) is a Minor third party.
   {
     abbr: "LD",
-    presets: [
-      "1979-default",
-      "1991-default",
-      "1999-default",
-      "2007-default",
-      "2019-default",
-      "2023-default",
-    ],
+    presets: seedPresetsFrom("1979-default"),
   },
 ];
 

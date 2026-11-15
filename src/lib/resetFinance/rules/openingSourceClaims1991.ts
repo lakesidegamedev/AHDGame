@@ -1,5 +1,6 @@
 import { PLAYER_RESET_DEFICIT_GDP_SHARE_1991 } from "@/lib/seeds/reference/rules/openingFiscalEnvelope";
 import { fitOpeningObligations } from "./openingObligations";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 export type ResetOpeningCountry = "US" | "UK" | "JP" | "IE";
 
@@ -99,7 +100,8 @@ export function fitReviewedOpeningClaims1991(
               annualAmount: component.annualBooked,
               protectedTransfer:
                 component.replacementRestriction === "protected-transfer" ||
-                (country === "UK" && component.sourceId === "uk_local_government_funding"),
+                (countryHasFeature("ukSeeds", country) &&
+                  component.sourceId === "uk_local_government_funding"),
             }))
         ),
       ...STANDALONE_CONTINUITY[country].map((account) => ({

@@ -177,3 +177,45 @@ describe("unitRowsFrom for seat-ordered results", () => {
     expect(row.shares).toEqual([{ name: "Bo", partyId: "2", color: "#dc2626", pct: 100 }]);
   });
 });
+
+describe("seat placement map colors", () => {
+  const data = {
+    mode: "seatConsistent",
+    viewBox: "0 0 1 1",
+    subdivisions: [
+      {
+        id: "CA-FED-2023-10001",
+        name: "Riding",
+        path: "M0,0Z",
+        votes: { a: 70, b: 30 },
+        margin: -40,
+        winner: "b",
+      },
+    ],
+    candidateNames: { a: "A", b: "B" },
+    candidateParties: { a: "1", b: "2" },
+    partyColors: { "1": "#ff0000", "2": "#0000ff" },
+  };
+  it("colors the assigned winner while retaining the actual ballot shares", () => {
+    const row = unitRowsFrom(data, "#111111")[0];
+    expect(row.leaderPartyId).toBe("2");
+    expect(row.shares.map((s) => s.pct)).toEqual([70, 30]);
+    expect(row.fill).toBe(
+      unitRowsFrom(
+        { ...data, subdivisions: [{ ...data.subdivisions[0], votes: {} }] },
+        "#111111"
+      )[0].fill
+    );
+  });
+  it("leaves a vacant riding neutral instead of coloring its vote leader", () => {
+    expect(
+      unitRowsFrom(
+        { ...data, subdivisions: [{ ...data.subdivisions[0], winner: "" }] },
+        "#111111"
+      )[0]
+    ).toMatchObject({ fill: "#111111", leaderPartyId: "" });
+  });
+  it("keeps vote-leader coloring on ordinary county and primary projections", () => {
+    expect(unitRowsFrom({ ...data, mode: "projected" }, "#111111")[0].leaderPartyId).toBe("1");
+  });
+});

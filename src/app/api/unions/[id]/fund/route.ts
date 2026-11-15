@@ -1,11 +1,10 @@
 /**
- * POST /api/unions/[id]/fund: the union president moves personal cash into the
- * treasury of the union they lead. Gated on `labourSystemMode >= "full"`.
+ * POST /api/unions/[id]/fund: the union president moves personal cash into
+ * the treasury of the union they lead. Gated on `labourSystemMode >= "full"`.
  *
- * Answers player tickets #1121 ("how do I send money to a union") and #1112
- * ("what is the treasury and how do I get more of it"): before this, dues were
- * the only inflow, so a newly founded union with an empty treasury could not
- * afford the drive it needed to win the members that dues are charged on.
+ * Without this, dues are the only inflow, so a newly founded union with an
+ * empty treasury cannot afford the drive needed to win the members dues are
+ * charged on.
  *
  * Head-only, see `fundUnionTreasury` for why an open donation channel is not
  * the shape we want.

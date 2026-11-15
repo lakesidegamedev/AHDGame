@@ -217,9 +217,7 @@ function WhatIfDebtPanel({
 
   const debtSliderBounds = useMemo(() => {
     if (!bondInfo.creditDiagnostics) return { min: 0, max: 0 };
-    // The ceiling the POST actually enforces, straight from the server (#1198).
-    // Modelling a raise this panel would refuse is worse than not modelling it:
-    // the going-concern headroom alone can be ~75x the enforced one.
+    // Ceiling the POST enforces. Modelling a raise the panel would refuse is worse than not modelling it.
     if (bondInfo.maxAllowedIssuance !== undefined) {
       return { min: -bondInfo.totalDebt, max: Math.max(0, bondInfo.maxAllowedIssuance) };
     }

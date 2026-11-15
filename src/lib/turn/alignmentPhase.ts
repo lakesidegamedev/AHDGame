@@ -31,7 +31,6 @@ import { closeDueCrises, openCrisisTargets, openDueCrises } from "@/lib/alignmen
 import { JOIN_SHARE, SUSTAIN_TURNS, standingFor } from "@/lib/alignment/membershipEligibility";
 import { resolveOpeningShares } from "@/lib/alignment/seedAlignment";
 import { getDissolvedCountryIds } from "@/lib/country/registeredCountries";
-import { isIntOrgAlignmentEnabled } from "@/lib/alignment/featureFlag";
 import { applyAlignmentToMembership } from "@/lib/alignment/sphereProjection";
 import { leadFor } from "@/lib/alignment/project";
 import {
@@ -49,7 +48,6 @@ import {
   computeBlocStress,
   type BlocStressBreakdown,
 } from "@/lib/alignment/blocStress";
-import type { OrganizationMembership } from "@/lib/db/types/internationalOrganization";
 import { loadWorldPreset } from "@/lib/currency/gdpAnchorRate";
 import { resolveGameYear } from "@/lib/era/era";
 import { getAllCountryAccess } from "@/lib/countryAccess";
@@ -68,10 +66,13 @@ import { getOrganizationProposalsCollection } from "@/lib/db/collections";
 import { ORG_PROPOSAL_VOTING_TURNS } from "@/lib/constants/internationalOrganizations";
 import {
   saveSphereMembership,
-  SPHERE_MEMBERSHIPS_COLLECTION,
   type PersistedSphereMembership,
 } from "@/lib/world/spheres/membershipStore";
 import { loadAlignmentTopology } from "@/lib/alignment/topology";
+import { loadBackgroundStancePulls } from "@/lib/alignment/backgroundStancePulls";
+import { getGameStateCollection } from "@/lib/db/collections/gameState";
+import { organizationMembershipsCollection } from "@/lib/db/repositories/organizationMemberships";
+import { sphereMembershipsCollection } from "@/lib/db/repositories/sphereMemberships";
 
 // Membership pull lives in `drift.ts` as `membershipPullForTurn`, alongside the
 // ceiling it is bounded by.
@@ -125,35 +126,18 @@ export async function processAlignmentTurn(
   db: Db,
   currentTurn: number
 ): Promise<AlignmentPhaseResult> {
-  const gs = await db.collection<GameState>("gameState").findOne(
+  const gs = await (
+    await getGameStateCollection(db)
+  ).findOne(
     { _id: "current" },
     {
       projection: {
         currentYear: 1,
         currentTurn: 1,
         startingYear: 1,
-        intOrgAlignmentEnabled: 1,
       },
     }
   );
-
-  // Gate off: touch nothing. Alignment must be invisible until it is switched on.
-  if (!(await isIntOrgAlignmentEnabled(gs ?? {}))) {
-    return {
-      countriesDrifted: 0,
-      erasCrossed: 0,
-      spheresSynced: 0,
-      rowsHealed: 0,
-      playsResolved: 0,
-      playsRefunded: 0,
-      blocStress: {},
-      defections: 0,
-      defectionWarnings: 0,
-      joinRequests: 0,
-      crisesOpened: 0,
-      crisesResolved: 0,
-    };
-  }
 
   const cashContext = await loadOrganizationCashContext(db, currentTurn);
   return withOrganizationCashBatch(db, cashContext, (batch) =>
@@ -172,10 +156,9 @@ async function processEnabledAlignmentTurn(
   const { poles } = topology;
 
   const col = await getCountryAlignmentsCollection(db);
-  const [allDocs, memberships, dissolved] = await Promise.all([
+  const [allDocs, memberships, dissolved, stancePulls] = await Promise.all([
     col.find({}).toArray(),
-    db
-      .collection<OrganizationMembership>("organizationMemberships")
+    organizationMembershipsCollection(db)
       .find({})
       .project<{
         organizationId: string;
@@ -190,6 +173,7 @@ async function processEnabledAlignmentTurn(
       })
       .toArray(),
     getDissolvedCountryIds(db),
+    loadBackgroundStancePulls(db, poles),
   ]);
 
   // A country absorbed into another keeps its alignment row, and that row keeps
@@ -248,8 +232,7 @@ async function processEnabledAlignmentTurn(
 
   // Sphere memberships exist for macro-tier entities, every one of which
   // alignment now seeds. Loaded once rather than per row.
-  const sphereDocs = await db
-    .collection<PersistedSphereMembership>(SPHERE_MEMBERSHIPS_COLLECTION)
+  const sphereDocs = await sphereMembershipsCollection<PersistedSphereMembership>(db)
     .find({})
     .toArray();
   const sphereByEntity = new Map(sphereDocs.map((d) => [d.entityId, d]));
@@ -461,6 +444,15 @@ async function processEnabledAlignmentTurn(
         if (!sanctioningOrgs.has(channel.organizationId)) continue;
         pull[channel.poleId] =
           (pull[channel.poleId] ?? 0) - SANCTIONS_ALIGNMENT_EROSION * channel.weight;
+      }
+    }
+
+    // A background country's government leans it (#5702). The pull is small,
+    // on the scale of a membership's, and joins the same capped vector.
+    const stancePull = stancePulls.get(doc.entityId);
+    if (stancePull) {
+      for (const [poleId, value] of Object.entries(stancePull) as [AlignmentPoleId, number][]) {
+        pull[poleId] = (pull[poleId] ?? 0) + value;
       }
     }
 

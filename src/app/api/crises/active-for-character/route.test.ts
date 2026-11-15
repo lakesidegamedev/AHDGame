@@ -13,10 +13,6 @@ import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
 
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
 vi.mock("@/lib/api/requireAuth", () => ({ requireAuthWithCharacter: vi.fn() }));
-vi.mock("@/lib/crises/featureFlag", () => ({
-  isCrisisInteractionEnabled: vi.fn().mockResolvedValue(true),
-  isCrisisAidBillsEnabled: vi.fn().mockResolvedValue(false),
-}));
 
 let db: MockDb;
 
@@ -295,14 +291,7 @@ describe("GET /api/crises/active-for-character — query volume", () => {
   });
 });
 
-// ── Aid nodes outlive the flag that created them (audit) ───────────────────
-// createCrisisInteraction promotes a choice node to an `aid` node only while
-// crisisAidBillsEnabled is on, but the promoted tree is stored on the
-// interaction. Turn the flag off and those nodes stay `aid` while the interact
-// route refuses them with "Aid bills are not enabled" and the crisis page
-// renders no controls. Advertising the prompt as actionable is then a lie.
-
-describe("GET /api/crises/active-for-character — aid nodes with aid bills off", () => {
+describe("GET /api/crises/active-for-character — aid nodes", () => {
   const AID_NODE = {
     ...NODE,
     type: "aid" as const,
@@ -331,20 +320,7 @@ describe("GET /api/crises/active-for-character — aid nodes with aid bills off"
     });
   }
 
-  it("does not offer the prompt when aid bills are disabled", async () => {
-    const { isCrisisAidBillsEnabled } = await import("@/lib/crises/featureFlag");
-    vi.mocked(isCrisisAidBillsEnabled).mockResolvedValue(false);
-    stubAidCrisis();
-
-    const res = await get();
-    const body = (await res.json()) as { crises: Array<{ canInteract: boolean }> };
-
-    expect(body.crises).toHaveLength(0);
-  });
-
-  it("offers the prompt when aid bills are enabled", async () => {
-    const { isCrisisAidBillsEnabled } = await import("@/lib/crises/featureFlag");
-    vi.mocked(isCrisisAidBillsEnabled).mockResolvedValue(true);
+  it("offers the prompt", async () => {
     stubAidCrisis();
 
     const res = await get();

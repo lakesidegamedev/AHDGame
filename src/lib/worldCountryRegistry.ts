@@ -38,6 +38,7 @@ export const WORLD_COUNTRY_ISO_TO_ID: Record<string, CountryId> = {
   "076": "BR",
   "156": "CN",
   "566": "NG",
+  "124": "CA",
   // 1979 countries that still exist on a modern map.
   "250": "FR",
   "380": "IT",

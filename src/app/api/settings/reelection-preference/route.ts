@@ -6,7 +6,9 @@ import { requireBasicAuth } from "@/lib/api/requireAuth";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { parseJsonBody } from "@/lib/api/validate";
 import { autoRunForReelectionSchema } from "@/lib/api/schemas/settings";
-import type { Character } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { usersCollection } from "@/lib/db/repositories/users";
+import type { Document } from "mongodb";
 
 // PATCH /api/settings/reelection-preference — Updates the authenticated character's auto-run-for-reelection preference
 // Auth: requireBasicAuth
@@ -32,25 +34,25 @@ export async function PATCH(request: Request) {
 
     const db = await getDb();
     const userObjectId = new ObjectId(user.userId);
-    const userDoc = await db
-      .collection("users")
-      .findOne({ _id: userObjectId }, { projection: { activeCharacterId: 1 } });
+    const userDoc = await usersCollection<Document>(db).findOne(
+      { _id: userObjectId },
+      { projection: { activeCharacterId: 1 } }
+    );
 
-    const character = await db
-      .collection<Character>("characters")
-      .findOne(
-        userDoc?.activeCharacterId
-          ? { _id: userDoc.activeCharacterId, userId: userObjectId }
-          : { userId: userObjectId }
-      );
+    const character = await charactersCollection(db).findOne(
+      userDoc?.activeCharacterId
+        ? { _id: userDoc.activeCharacterId, userId: userObjectId }
+        : { userId: userObjectId }
+    );
 
     if (!character) {
       return errorResponse(404, "Character not found");
     }
 
-    await db
-      .collection<Character>("characters")
-      .updateOne({ _id: character._id }, { $set: { autoRunForReelection } });
+    await charactersCollection(db).updateOne(
+      { _id: character._id },
+      { $set: { autoRunForReelection } }
+    );
 
     return NextResponse.json({ success: true });
   } catch (error) {

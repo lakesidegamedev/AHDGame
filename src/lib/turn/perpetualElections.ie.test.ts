@@ -75,7 +75,7 @@ describe("ensureIEElections", () => {
     const mock = makeIEMockDb(states, 1);
     await mountIEDb(mock);
 
-    const { ensureIEElections } = await import("./perpetualElections");
+    const { ensureIEElections } = await import("@/lib/elections/scheduling");
     await ensureIEElections(now);
 
     const inserted = mock.insertCalls.flat();
@@ -89,16 +89,13 @@ describe("ensureIEElections", () => {
     expect(inserted.reduce((s, d) => s + (d.totalSeats ?? 0), 0)).toBe(160);
   });
 
-  it("falls back to a single seat only when a region is missing houseDistricts", async () => {
+  it("throws when a region is missing houseDistricts instead of guessing a seat count", async () => {
     const now = new Date("2026-04-01T00:00:00Z");
     const mock = makeIEMockDb([{ _id: "DUB", houseDistricts: 64 }, { _id: "XXX" }], 1);
     await mountIEDb(mock);
 
-    const { ensureIEElections } = await import("./perpetualElections");
-    await ensureIEElections(now);
-
-    const inserted = mock.insertCalls.flat();
-    expect(inserted.find((d) => d.state === "DUB")?.totalSeats).toBe(64);
-    expect(inserted.find((d) => d.state === "XXX")?.totalSeats).toBe(1);
+    const { ensureIEElections } = await import("@/lib/elections/scheduling");
+    await expect(ensureIEElections(now)).rejects.toThrow(/XXX is missing houseDistricts/);
+    expect(mock.insertCalls.flat()).toHaveLength(0);
   });
 });

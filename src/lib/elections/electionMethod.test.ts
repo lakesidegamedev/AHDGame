@@ -125,6 +125,11 @@ const INVENTORY: [CountryId, string, string][] = [
   ["ES", "congresoDiputados", "pr_hareQuota"],
   ["SE", "riksdag", "pr_hareQuota"],
   ["TR", "milletMeclisi", "pr_hareQuota"],
+  ["AT", "nationalrat", "pr_hareQuota"],
+  ["FI", "eduskunta", "pr_hareQuota"],
+  ["GR", "vouli", "pr_hareQuota"],
+  ["IT", "senato", "pr_hareQuota"],
+  ["BR", "chamber", "pr_hareQuota"],
 ];
 
 describe("getElectionMethod inventory (replicates current behavior)", () => {
@@ -158,6 +163,27 @@ describe("headOfGovernment parliamentary <=> confidence-of-legislature formation
     if (hog === "parliamentary") expect(isConfidence).toBe(true);
     if (isConfidence && hog !== undefined) expect(hog).toBe("parliamentary");
   });
+});
+
+describe("every multi-seat election type maps to a position", () => {
+  // MULTI_SEAT_TYPES also carries seated-office keys; those are not election types.
+  const OFFICE_KEYS = new Set([
+    "deputy",
+    "senator",
+    "member",
+    "procurador",
+    "sovietDeputy",
+    "sejmDeputy",
+    "nationsDeputy",
+    "assemblyDeputy",
+    "assemblyDelegate",
+  ]);
+  it.each([...MULTI_SEAT_TYPES].filter((type) => !OFFICE_KEYS.has(type)))(
+    "%s has a position",
+    (type) => {
+      expect(positionForElectionType(type)).toBeDefined();
+    }
+  );
 });
 
 describe("every labeled election type maps to a position", () => {

@@ -2,13 +2,6 @@
  * Per-state extraction capacity (commodity units/turn ceiling per resource).
  * Used by `computeExtractionCapacityMultipliers` during turn processing.
  *
- * Reference: a $10M/day extraction company with a 0.20 rate produces
- *   oil: ($10M × 0.20) / $80 = 25,000 bbl/turn
- *   coal: ($10M × 0.20) / $150 = 13,333 tons/turn
- *   copper: ($10M × 0.10) / $9,000 = 111 tons/turn
- *   natural_gas: ($10M × 0.12) / $25 = 48,000 MMBtu/turn
- *   timber: ($10M × 0.08) / $400 = 2,000 m³/turn
- *
  * States not listed here are seeded with `resources: {}`, which caps extraction
  * of every resource at 0 for that state (prevents unbounded supply inflating
  * the commodity margin math).
@@ -22,12 +15,11 @@ export interface StateResourceCapacityEntry {
   resources: Partial<Record<ExtractableResource, number>>;
 }
 
-// Extraction-capacity remediation Phase 2 (2026-07-05): iron is the one resource
-// that is genuinely per-state capacity-bound (77% reachable utilization, 37/42
-// mined states maxed at t855) — adoption/placement can't help where the deposit
-// itself is the ceiling. All iron capacities below were raised ×1.8 so reachable
-// iron capacity clears local demand with headroom. The live prod game is bumped by
-// the same factor out-of-band (fresh resets seed these values directly).
+// Iron is the one resource genuinely per-state capacity-bound: adoption and
+// placement cannot help where the deposit itself is the ceiling. All iron
+// capacities below are raised x1.8 so reachable iron capacity clears local
+// demand with headroom. Live prod game is bumped out-of-band; fresh resets
+// seed these values directly.
 export const STATE_RESOURCE_CAPACITY: Record<string, StateResourceCapacityEntry> = {
   // ── United States ─────────────────────────────────────────────────────
   "US:TX": { countryId: "US", resources: { oil: 450000, natural_gas: 2250000, coal: 15000 } },
@@ -77,9 +69,8 @@ export const STATE_RESOURCE_CAPACITY: Record<string, StateResourceCapacityEntry>
   "US:ME": { countryId: "US", resources: { timber: 60000 } },
   "US:GA": { countryId: "US", resources: { timber: 67500 } },
   "US:WI": { countryId: "US", resources: { timber: 37500, iron: 18000 } },
-  // Northeast — mostly timber, minor gas
-  // Gas raised 22,500 -> 40,000 (2026-10-13): live desired gas output ran 1.41x
-  // the deposit. Sized so desired output sits at ~80% of capacity.
+  // Northeast: mostly timber, minor gas.
+  // Gas sized so desired output sits at ~80% of capacity.
   "US:NY": { countryId: "US", resources: { timber: 45000, natural_gas: 40000 } },
   "US:MA": { countryId: "US", resources: { timber: 7500, natural_gas: 15000 } },
   "US:CT": { countryId: "US", resources: { timber: 3000 } },
@@ -117,7 +108,7 @@ export const STATE_RESOURCE_CAPACITY: Record<string, StateResourceCapacityEntry>
   "UK:SWE": { countryId: "UK", resources: { rare_earth: 538, timber: 12000 } },
   "UK:SEE": { countryId: "UK", resources: { timber: 7500 } },
   "UK:NIR": { countryId: "UK", resources: { coal: 3000, timber: 6000 } },
-  // Timber raised 750 -> 1,250 (2026-10-13): live desired timber output ran
+  // Timber raised 750 -> 1,250: live desired timber output ran
   // 1.33x the deposit. Sized so desired output sits at ~80% of capacity.
   "UK:LON": { countryId: "UK", resources: { timber: 1250 } },
 
@@ -247,9 +238,8 @@ export const STATE_RESOURCE_CAPACITY: Record<string, StateResourceCapacityEntry>
   "IE:MID": { countryId: "IE", resources: { timber: 4500 } },
   "IE:WEX": { countryId: "IE", resources: { timber: 6000 } },
   "IE:LIM": { countryId: "IE", resources: { natural_gas: 30000, timber: 7500 } },
-  // Cork: Cork/Kerry historical copper (Allihies), some gas exploration
-  // Gas raised 7,500 -> 11,500 (2026-10-13): live desired gas output ran 1.21x
-  // the deposit. Sized so desired output sits at ~80% of capacity.
+  // Cork: Cork/Kerry historical copper (Allihies), some gas.
+  // Gas sized so desired output sits at ~80% of capacity.
   "IE:COR": { countryId: "IE", resources: { natural_gas: 11500, timber: 9000, rare_earth: 321 } },
   // Galway: Corrib gas field (Mayo), Connacht forestry
   "IE:GAL": { countryId: "IE", resources: { natural_gas: 30000, timber: 9000 } },
@@ -588,15 +578,12 @@ export function getStateResourceCapacity(
 /**
  * Look up a state's resource capacity entry, tolerating a post-merge owner.
  *
- * The map is keyed `${countryId}:${stateId}` against the world the reference
- * was authored for. When a country absorbs another (German reunification: the
- * FRG Laender accede to DD), the regions cross but the static map keeps their
- * capacity under the OLD owner (`DE:NW`), so a strict `${countryId}:${stateId}`
- * lookup reports no resources for land that still sits on the Ruhr coal.
- * Prefer the live owner's key (cross-country state-id collisions such as
- * `DE:SN` vs `DD:SN` must keep resolving to the owner's own budget), and fall
- * back to any other owner key for the same region, sorted for determinism.
- * Geology does not move when the flag above it changes.
+ * The map is keyed `${countryId}:${stateId}` against the authored world. When a
+ * country absorbs another, the regions cross but the static map keeps their
+ * capacity under the OLD owner, so a strict lookup reports no resources for
+ * land that still has them. Prefer the live owner's key (cross-country
+ * state-id collisions must resolve to the owner's own budget), then fall back
+ * to any other owner key for the same region, sorted for determinism.
  */
 export function lookupStateResourceCapacity(
   capacityMap: Record<string, StateResourceCapacityEntry>,

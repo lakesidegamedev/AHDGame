@@ -1,4 +1,6 @@
 import type { Migration } from "../types";
+import { unionOrganizersCollection } from "@/lib/db/repositories/unionOrganizers";
+import type { Document } from "mongodb";
 
 export const migration: Migration = {
   id: "2026-09-29-union-prosecution-bar-index",
@@ -6,12 +8,10 @@ export const migration: Migration = {
   idempotent: true,
   async execute(db, ctx) {
     if (!ctx.dryRun) {
-      await db
-        .collection("unionOrganizers")
-        .createIndex(
-          { characterId: 1, barredUntilTurn: 1 },
-          { name: "union_prosecution_bar_by_character", background: true }
-        );
+      await unionOrganizersCollection<Document>(db).createIndex(
+        { characterId: 1, barredUntilTurn: 1 },
+        { name: "union_prosecution_bar_by_character", background: true }
+      );
     }
     return {
       documentsScanned: 0,

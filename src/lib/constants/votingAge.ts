@@ -1,16 +1,12 @@
 /**
  * Voting-age eligibility threshold.
  *
- * An explicit per-world `gameState.votingAgeEligible` always wins — that is the
- * channel franchise legislation writes through. With no explicit value the
- * threshold comes from the YEAR: 21 before the 26th Amendment, 18 after.
- *
- * That fallback is the whole point of this function existing. Nothing in the
- * codebase has ever written `votingAgeEligible`, so it resolved to 18 in every
- * world — meaning a 1953 world enfranchised 18-to-20-year-olds eighteen years
- * before the Amendment did, inflating the electorate by roughly 6% and handing
- * it the era's most left-leaning cohort. A null year keeps the flat modern
- * default, so a world with no clock is unchanged.
+ * An explicit per-world `gameState.votingAgeEligible` always wins. With no
+ * explicit value the threshold comes from the YEAR: 21 before the 26th
+ * Amendment, 18 after. That fallback is why this function exists: nothing
+ * writes `votingAgeEligible`, so without it pre-1971 worlds would enfranchise
+ * 18-to-20-year-olds and inflate the electorate. A null year keeps the flat
+ * modern default.
  *
  * Clamped to a sane band so a malformed stored value can't empty or absurdly
  * inflate the electorate.

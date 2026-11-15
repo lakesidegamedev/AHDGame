@@ -1,6 +1,4 @@
-// GET — Fetches a single retired character by _id for the account owner
-// Auth: requireBasicAuth (verify userId matches authenticated user)
-// Errors: 401, 404
+// GET retired character by _id for the owner. Auth: requireBasicAuth, userId must match. Errors: 401, 404.
 
 import { NextResponse } from "next/server";
 import { withNoStore } from "@/lib/api/withNoStore";
@@ -12,6 +10,8 @@ import { ObjectId } from "mongodb";
 import type { RetiredCharacter } from "@/lib/db/types/retiredCharacter";
 import type { GameState } from "@/lib/db/types";
 import { gameDateAnchorFromState } from "@/lib/utils/gameDate";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { retiredCharactersCollection } from "@/lib/db/repositories/retiredCharacters";
 
 async function handleGET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -26,8 +26,8 @@ async function handleGET(_request: Request, { params }: { params: Promise<{ id: 
 
     const db = await getDb();
     const [retired, gameState] = await Promise.all([
-      db.collection<RetiredCharacter>("retiredCharacters").findOne({ _id: new ObjectId(id) }),
-      db.collection<GameState>("gameState").findOne({ _id: "current" }),
+      retiredCharactersCollection(db).findOne({ _id: new ObjectId(id) }),
+      gameStateCollection(db).findOne({ _id: "current" }),
     ]);
 
     if (!retired) {

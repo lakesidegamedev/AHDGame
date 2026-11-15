@@ -12,6 +12,11 @@ import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
 import { hasAuthorizedPostSovietTransition } from "./rules/postSovietTransition";
 import { planRussianPresidentialBallot } from "./rules/presidentialSchedule";
 import type { RussianConstitutionalCalendar } from "./constitutionalProposals";
+import { STATE_POPULATION_FIELDS } from "@/lib/db/collections/states";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
+import { stateRegistrationPoolCollection } from "@/lib/db/repositories/stateRegistrationPool";
 
 export async function materializeRussianPresidentialElectionOpening(input: {
   db: Db;
@@ -30,7 +35,7 @@ export async function materializeRussianPresidentialElectionOpening(input: {
     preIterationTurns: game.preIterationTurns,
   };
   if (calendarTurn(turn, clock) < 13) return null;
-  const countries = db.collection<CountryGameState>("countryGameStates");
+  const countries = countryGameStatesCollection(db);
   const country = await countries.findOne(
     { _id: "RU" },
     {
@@ -52,7 +57,7 @@ export async function materializeRussianPresidentialElectionOpening(input: {
     )
   )
     return null;
-  const elections = db.collection<Election>("elections");
+  const elections = electionsCollection(db);
   if (country.ruPresidencyFirstElectionId) {
     const existing = await elections.findOne(
       { _id: country.ruPresidencyFirstElectionId, countryId: "RU", electionType: "president" },
@@ -76,15 +81,10 @@ export async function materializeRussianPresidentialElectionOpening(input: {
     { session, projection: { _id: 1 } }
   );
   if (existing) throw new Error("An unresolved Russian presidential ballot already exists");
-  const regions = await db
-    .collection<State>("states")
-    .find(
-      { countryId: "RU" },
-      { session, projection: { _id: 1, population: 1, votingEligiblePopulation: 1 } }
-    )
+  const regions = await statesCollection(db)
+    .find({ countryId: "RU" }, { session, projection: STATE_POPULATION_FIELDS })
     .toArray();
-  const pools = await db
-    .collection<StateRegistrationPool>("stateRegistrationPool")
+  const pools = await stateRegistrationPoolCollection(db)
     .find({ countryId: "RU" }, { session, projection: { stateId: 1, unregistered: 1 } })
     .toArray();
   const registeredVoters = russianPresidentialRegisteredVoters(

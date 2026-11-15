@@ -37,12 +37,9 @@ const WAR_FALLBACK_TITLE =
   "How the war is going, and how long the public has carried it. Affects approval only.";
 
 /**
- * Zero is its own tone, not a shade of negative.
- *
- * The chip used to branch on `effect > 0` alone, which painted a zero in the
- * same red as a two point penalty and gave it a downward arrow. Only the war
- * chips can reach zero and still render, and a war term that is currently a
- * wash is not costing the government anything.
+ * Zero is its own tone, not a shade of negative. Only war chips can reach zero
+ * and still render; a war term that is currently a wash costs the government
+ * nothing.
  */
 export function toneFor(effect: number): ModifierTone {
   if (effect > 0) return "positive";
@@ -59,6 +56,8 @@ export function buildModifierTitle(modifier: ActiveModifier): string {
     return "Taxpayer-funded bank failure backstop relative to GDP. Approval cost fades over one game year; confidence is measured separately.";
   if (modifier.source === "market")
     return "Approval cost of a market adjustment: plants losing money across the economy and unemployment above its level when the adjustment began. Measured, never a reward for a response; fades over one game year after it ends.";
+  if (modifier.source === "fiscal")
+    return "Approval cost of the austerity budget the government enacted to close its deficit, larger for a bigger package. Fades over one game year.";
   if (modifier.source === "war") return WAR_TITLES[modifier.id] ?? WAR_FALLBACK_TITLE;
   return METRIC_TITLE;
 }

@@ -66,30 +66,20 @@ export function aggregateYesShare(
 }
 
 /**
- * Build re-centered cohorts from a region's Layer-1 bucket profile: layer each
- * bucket's affinity onto the region desire, then additively shift all leans so
- * the turnout-weighted aggregate equals `regionDesire` exactly.
+ * Build cohorts from a region's bucket profile: layer each bucket's affinity
+ * onto region desire, then additively shift all leans so the turnout-weighted
+ * aggregate equals `regionDesire` exactly.
  *
- * Cohorts are census buckets rather than voter archetypes, which is what makes
- * a cohort something a player can also poll, canvass and target a Governor's
- * Address at — one vocabulary across the interface instead of a referendum-only
- * one.
+ * SHARE NORMALISATION. A bucket profile sums to 100 within a dimension, so the
+ * five UK dimensions describe the same electorate five times. Each bucket's
+ * share is divided by the dimension count, making shares sum to 1 across the
+ * table with every dimension weighted equally. Cross-dimension correlation is
+ * lost (a young urban graduate counts once per dimension at a third weight),
+ * but re-centering makes the aggregate exact and ground game uses marginals.
  *
- * SHARE NORMALISATION. A bucket profile gives shares that sum to 100 WITHIN a
- * dimension, so the five UK dimensions describe the same electorate five times
- * over. Each bucket's share is therefore divided by the number of dimensions,
- * which makes the shares sum to 1 across the whole table and gives every
- * dimension equal say. The cost is that cross-dimension correlation is lost —
- * a young urban graduate is counted once in each of three dimensions at a third
- * of the weight rather than once as one person. That is the standard
- * marginals-only approximation, and it is acceptable here because the
- * re-centering below makes the aggregate exact regardless, and the ground game
- * operates on marginals anyway.
- *
- * Single-bucket dimensions are dropped. Northern Ireland's ethnicity marginal
- * is 100% white British, so keeping it would spend a fifth of the electorate's
- * weight on a cohort that cannot differentiate between Yes and No and would
- * flatten the other four dimensions by that much for no information.
+ * Single-bucket dimensions are dropped: Northern Ireland's 100% white British
+ * ethnicity marginal cannot differentiate Yes/No and would flatten the other
+ * dimensions for no information.
  */
 export function buildReferendumCohorts(
   sections: Array<{

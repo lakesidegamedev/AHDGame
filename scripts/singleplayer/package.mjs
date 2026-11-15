@@ -161,11 +161,28 @@ function buildStandalone(root) {
   if (build.status !== 0) process.exit(build.status ?? 1);
 }
 
+export const CAPABILITIES_FILE = "singleplayer-capabilities.json";
+
+/** Writes the capabilities manifest the client reads before the server starts. */
+export function writeCapabilitiesManifest(root, out) {
+  const tsxCli = path.join(root, "node_modules", "tsx", "dist", "cli.mjs");
+  const run = spawnSync(
+    process.execPath,
+    [tsxCli, path.join(root, "scripts", "singleplayer", "write-capabilities.ts"), out],
+    { cwd: root, stdio: "inherit" }
+  );
+  if (run.status !== 0) throw new Error("could not write the singleplayer capabilities manifest");
+  if (!existsSync(path.join(out, CAPABILITIES_FILE))) {
+    throw new Error(`${CAPABILITIES_FILE} missing from the singleplayer payload`);
+  }
+}
+
 export function packageSingleplayer(root = ROOT) {
   const beforeBuild = captureBuildProvenance(root);
   buildStandalone(root);
   const buildProvenance = finalizeBuildProvenance(beforeBuild, captureBuildProvenance(root));
   const out = assembleSingleplayerPayload({ root, buildProvenance });
+  writeCapabilitiesManifest(root, out);
   console.log(`singleplayer build ready in ${out}`);
   return out;
 }

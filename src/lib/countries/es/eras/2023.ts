@@ -1,20 +1,12 @@
 import type { CountryEraOverride } from "../../contract";
 
 /**
- * ES, 2023.
- *
- * ⚠ GENERATED from `__snapshots__/es.pre-move.json`. Regenerate with:
- *
- *     npx tsx scripts/countries/gen-country-eras.ts ES --force
- *
- * ⚠ DIFFERENCES ONLY. Everything not named here comes from the base modules.
- *
- * No config override: this era uses ES's base configuration. The field
- * is ABSENT rather than an empty object, because `getCountryConfig` merges
- * shallowly and `config: {}` reads as an override that supplies nothing.
- *
- * No per-era orders of battle: this era falls back to the base set rather
- * than inventing an empty one.
+ * GENERATED from __snapshots__/es.pre-move.json.
+ * Regenerate: npx tsx scripts/countries/gen-country-eras.ts ES --force
+ * DIFFERENCES ONLY. Unnamed fields come from base modules.
+ * config is ABSENT, not {}, because getCountryConfig merges shallowly
+ * and {} would read as an override supplying nothing.
+ * No order of battle override: falls back to base set.
  */
 export const ES_2023: CountryEraOverride = {
   preset: "2023-default",

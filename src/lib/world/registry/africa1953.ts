@@ -1,12 +1,12 @@
 /**
- * Africa — 1953 Tier-3 registry (#3728).
+ * Africa, 1953 Tier-3 registry.
  *
  * Already classified: NG (Tier-1 full-autonomous), GC (Gold Coast tracer), GH (emergent).
  * French West / Equatorial Africa listed as constituent territories under FR
  * (AOF/AEF federation wrappers are approximated by parenting each colony to FR).
  * Rhodesias keep colonial names; Southwest Africa is a SA mandate.
  *
- * Tier-2 candidates ET/ZA listed as Tier-3 until #3721.
+ * Tier-2 candidates ET/ZA listed as Tier-3 for now.
  */
 import type { WorldEntityManifestEntry } from "@/lib/world/worldEntityManifest";
 import {
@@ -568,7 +568,7 @@ export function africa1953Entries(presetId: string): WorldEntityManifestEntry[] 
       mapFeatureIds: ["132"],
     }),
     tier3Entry(presetId, {
-      // STP — not ST (HEAD #3727 uses ST for the combined Somalia Trust tracer).
+      // STP, not ST (HEAD uses ST for the combined Somalia Trust tracer).
       entityId: "STP",
       displayName: "São Tomé and Príncipe",
       region: "africa",

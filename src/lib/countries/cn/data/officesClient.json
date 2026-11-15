@@ -1,0 +1,98 @@
+{
+  "config": {
+    "governmentType": "onePartyState",
+    "regionLabel": "Province",
+    "legislature": {
+      "name": "National People's Congress",
+      "lowerChamber": {
+        "key": "npc",
+        "name": "National People's Congress",
+        "shortName": "NPC",
+        "seats": 2980,
+        "description": "2,980 delegates representing provinces, municipalities, autonomous regions, the armed forces, and special administrative regions. Five-year terms."
+      },
+      "upperChamber": {
+        "key": "cppcc",
+        "name": "CPPCC",
+        "shortName": "CPPCC",
+        "seats": 2169,
+        "description": "2,169 members of the Chinese People's Political Consultative Conference - an advisory body representing diverse social and economic constituencies."
+      }
+    },
+    "subNationalChamber": {
+      "key": "peoplesCongress",
+      "name": "People's Congress",
+      "shortName": "People's Congress",
+      "regionalModel": true
+    },
+    "officeTypes": [
+      {
+        "key": "premier",
+        "label": "Premier",
+        "labelPlural": "Premiers",
+        "isExecutive": true,
+        "isSubNational": false
+      },
+      {
+        "key": "president",
+        "label": "President",
+        "labelPlural": "Presidents",
+        "isExecutive": true,
+        "isSubNational": false,
+        "isHeadOfState": true
+      },
+      {
+        "key": "npcDelegate",
+        "label": "NPC Delegate",
+        "labelPlural": "NPC Delegates",
+        "chamberKey": "npc",
+        "isExecutive": false,
+        "isSubNational": false
+      },
+      {
+        "key": "peoplesCongress",
+        "label": "Provincial Delegate",
+        "labelPlural": "Provincial Delegates",
+        "chamberKey": "peoplesCongress",
+        "isExecutive": false,
+        "isSubNational": true
+      },
+      {
+        "key": "governor",
+        "label": "Governor",
+        "labelPlural": "Governors",
+        "isExecutive": false,
+        "isSubNational": true
+      },
+      {
+        "key": "centralBankChair",
+        "label": "Governor of the PBoC",
+        "labelPlural": "Governors of the PBoC",
+        "isExecutive": false,
+        "isSubNational": false
+      }
+    ],
+    "lowerElectionSystem": { "snapElectionsAllowed": false }
+  },
+  "eraOverrides": {
+    "1953-default": {
+      "legislature": {
+        "name": "National People's Congress",
+        "lowerChamber": {
+          "key": "npc",
+          "name": "National People's Congress",
+          "shortName": "NPC",
+          "seats": 1226,
+          "description": "1,226 deputies of the First National People's Congress (1954 convocation)."
+        },
+        "upperChamber": {
+          "key": "cppcc",
+          "name": "CPPCC",
+          "shortName": "CPPCC",
+          "seats": 2169,
+          "description": "Members of the Chinese People's Political Consultative Conference - an advisory body representing diverse social and economic constituencies."
+        }
+      }
+    }
+  }
+}

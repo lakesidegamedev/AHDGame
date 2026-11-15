@@ -8,6 +8,7 @@ import { resolveCorporation, requireCeo } from "@/lib/api/corporations/resolveQu
 import type { CorporateSector } from "@/lib/db/types";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { setSectorSupplyPrioritySchema } from "@/lib/api/schemas/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 interface RouteParams {
   params: Promise<{ id: string; sectorId: string }>;
@@ -16,7 +17,7 @@ interface RouteParams {
 /**
  * POST /api/corporations/[id]/sectors/[sectorId]/supply-priority
  * Opt a sector in or out of selling to outside buyers before the company's own
- * plants (suggestion 427). Off removes the field, so the default is unchanged.
+ * plants. Off removes the field, so the default is unchanged.
  * CEO only. Applies from the next turn.
  */
 export async function setSectorSupplyPriority(request: Request, { params }: RouteParams) {
@@ -46,19 +47,18 @@ export async function setSectorSupplyPriority(request: Request, { params }: Rout
 
     if (!ObjectId.isValid(sectorId)) return errorResponse(400, "Invalid sector ID");
 
-    const sector = await db
-      .collection<CorporateSector>("corporateSectors")
-      .findOne({ _id: new ObjectId(sectorId), corporationId: corporation._id });
+    const sector = await corporateSectorsCollection(db).findOne({
+      _id: new ObjectId(sectorId),
+      corporationId: corporation._id,
+    });
     if (!sector) return errorResponse(404, "Sector not found");
 
-    await db
-      .collection<CorporateSector>("corporateSectors")
-      .updateOne(
-        { _id: sector._id, corporationId: corporation._id },
-        sellOutsideFirst
-          ? { $set: { sellOutsideFirst: true, updatedAt: new Date() } }
-          : { $unset: { sellOutsideFirst: "" }, $set: { updatedAt: new Date() } }
-      );
+    await corporateSectorsCollection(db).updateOne(
+      { _id: sector._id, corporationId: corporation._id },
+      sellOutsideFirst
+        ? { $set: { sellOutsideFirst: true, updatedAt: new Date() } }
+        : { $unset: { sellOutsideFirst: "" }, $set: { updatedAt: new Date() } }
+    );
 
     return NextResponse.json({ success: true, sellOutsideFirst });
   } catch (error) {

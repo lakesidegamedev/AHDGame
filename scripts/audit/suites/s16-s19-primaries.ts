@@ -140,7 +140,7 @@ export function suite17_primary6040(): string {
 export function suite18_primaryField(): string {
   const lines: string[] = [
     "## Suite 18: Primary Multi-candidate Field\n\n" +
-      "**Setup:** 5-candidate Democrat primary (party pos: −1/−2). Varied archetypes.\n\n" +
+      "**Setup:** 5-candidate Democrat primary (party pos: −1/−2). Varied candidates.\n\n" +
       "**Question:** Does the ranking match design intent? Celebrity should not win on stats alone.\n",
   ];
 

@@ -54,11 +54,11 @@ describe("corporate tax reactions", () => {
         const call = db.collectionMocks[collection]!.bulkWrite.mock.calls[0]!;
         expect(call[1]).toEqual({ session });
         const fields = call[0][0].updateOne.update[0].$set;
-        expect(fields[`archetypeApprovals.${dimension}:low`].$min[1].$max[1].$add[1]).toBe(-sign);
-        expect(fields[`archetypeApprovals.${dimension}:middle`].$min[1].$max[1].$add[1]).toBe(
+        expect(fields[`bucketApprovals.${dimension}:low`].$min[1].$max[1].$add[1]).toBe(-sign);
+        expect(fields[`bucketApprovals.${dimension}:middle`].$min[1].$max[1].$add[1]).toBe(
           -0.8 * sign
         );
-        expect(fields[`archetypeApprovals.${dimension}:high`].$min[1].$max[1].$add[1]).toBe(
+        expect(fields[`bucketApprovals.${dimension}:high`].$min[1].$max[1].$add[1]).toBe(
           1.2 * sign
         );
       }

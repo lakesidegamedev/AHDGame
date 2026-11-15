@@ -26,7 +26,7 @@ export type BattleAuthzResult =
     };
 
 /**
- * Shared gate: auth + valid country + defense seat + conflictsEnabled.
+ * Shared gate: auth + valid country + defense seat.
  *
  * Deliberately does NOT reject a non-holder. Authority over a Conflict is
  * per-theater and can only be decided once the theater is known: where a Theater
@@ -54,10 +54,7 @@ export async function authorizeBattleAction(
   const db = await getDb();
   const gs = await (
     await getGameStateCollection(db)
-  ).findOne({ _id: "current" }, { projection: { conflictsEnabled: 1, currentTurn: 1 } });
-  if (!gs?.conflictsEnabled) {
-    return { error: errorResponse(404, "Conflicts subsystem disabled") };
-  }
+  ).findOne({ _id: "current" }, { projection: { currentTurn: 1 } });
 
   const member = await getCabinetMembersCollection(db).findOne({ countryId, positionId });
   const isHolder = Boolean(
@@ -69,7 +66,7 @@ export async function authorizeBattleAction(
   return {
     db,
     countryId,
-    currentTurn: gs.currentTurn ?? 0,
+    currentTurn: gs?.currentTurn ?? 0,
     characterId: auth.user.character?._id?.toString() ?? null,
     isHolder,
     isAdmin: Boolean(auth.user.isAdmin),

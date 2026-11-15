@@ -3,6 +3,7 @@ import type { WikiPage } from "@/lib/db/types";
 import type { WikiSeedPage } from "./types";
 import { WIKI_SEED_PAGES } from "./pages";
 import { WIKI_LAST_UPDATED } from "./lastUpdated.generated";
+import { wikiPagesCollection } from "@/lib/db/repositories/wikiPages";
 
 export interface WikiSeedSkipped {
   slug: string;
@@ -96,7 +97,7 @@ export async function seedWikiPages(
   adminUserId: ObjectId,
   options: WikiSeedOptions = {}
 ): Promise<WikiSeedResult> {
-  const wikiPages = db.collection<WikiPage>("wikiPages");
+  const wikiPages = wikiPagesCollection(db);
   const list = options.pages ?? WIKI_SEED_PAGES;
   const filterSet = options.slugs?.length ? new Set(options.slugs) : null;
   const now = new Date();

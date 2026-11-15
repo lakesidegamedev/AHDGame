@@ -6,7 +6,7 @@ import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError } from "@/lib/api/errors";
-import { allocateSeats } from "@/lib/turn/election/seatAllocation";
+import { allocateSeats } from "@/lib/elections/resolution/seatAllocation";
 import { loadApportionment } from "@/lib/elections/apportionment";
 import { getGameStateCollection } from "@/lib/db/collections";
 import type {
@@ -14,9 +14,14 @@ import type {
   ElectionVoteTally,
   ElectedOfficial,
   ElectionCandidate,
-  Character,
   NPP,
 } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
 
 interface MisallocatedElection {
   electionId: string;
@@ -49,8 +54,7 @@ export async function GET() {
     const db = await getDb();
 
     // Find recently resolved House/State Senate elections
-    const recentElections = await db
-      .collection<Election>("elections")
+    const recentElections = await electionsCollection(db)
       .find({
         electionType: { $in: ["house", "stateSenate"] },
         status: "resolved",
@@ -67,10 +71,8 @@ export async function GET() {
       });
     }
 
-    // House seat counts are era- and census-dependent. Without the live
-    // apportionment `allocateSeats` falls back to the modern 2020 map, so on a
-    // 1953 world this heal "corrected" delegations to the wrong size and undid
-    // the census sizing the turn loop maintains (#1190).
+    // Seat counts are era- and census-dependent. Without live apportionment
+    // allocateSeats falls back to 2020, corrupting non-modern delegations.
     const gs = await (await getGameStateCollection(db)).findOne({ _id: "current" });
     const { houseSeats } = await loadApportionment(db, gs?.preset, gs?.currentYear);
 
@@ -78,12 +80,10 @@ export async function GET() {
 
     // Get vote tallies for these elections
     const [tallies, allOfficials] = await Promise.all([
-      db
-        .collection<ElectionVoteTally>("electionVoteTallies")
+      electionVoteTalliesCollection(db)
         .find({ electionId: { $in: electionIds } })
         .toArray(),
-      db
-        .collection<ElectedOfficial>("electedOfficials")
+      electedOfficialsCollection(db)
         .find({
           officeType: { $in: ["house", "stateSenate"] },
           state: { $in: recentElections.map((e) => e.state) },
@@ -180,8 +180,7 @@ export async function POST() {
     const now = new Date();
 
     // Find resolved House/State Senate elections
-    const recentElections = await db
-      .collection<Election>("elections")
+    const recentElections = await electionsCollection(db)
       .find({
         electionType: { $in: ["house", "stateSenate"] },
         status: "resolved",
@@ -197,10 +196,8 @@ export async function POST() {
       });
     }
 
-    // House seat counts are era- and census-dependent. Without the live
-    // apportionment `allocateSeats` falls back to the modern 2020 map, so on a
-    // 1953 world this heal "corrected" delegations to the wrong size and undid
-    // the census sizing the turn loop maintains (#1190).
+    // Seat counts are era- and census-dependent. Without live apportionment
+    // allocateSeats falls back to 2020, corrupting non-modern delegations.
     const gs = await (await getGameStateCollection(db)).findOne({ _id: "current" });
     const { houseSeats } = await loadApportionment(db, gs?.preset, gs?.currentYear);
 
@@ -208,12 +205,10 @@ export async function POST() {
 
     // Get vote tallies and candidates
     const [tallies, allCandidates] = await Promise.all([
-      db
-        .collection<ElectionVoteTally>("electionVoteTallies")
+      electionVoteTalliesCollection(db)
         .find({ electionId: { $in: electionIds } })
         .toArray(),
-      db
-        .collection<ElectionCandidate>("electionCandidates")
+      electionCandidatesCollection(db)
         .find({ electionId: { $in: electionIds } })
         .toArray(),
     ]);
@@ -261,7 +256,7 @@ export async function POST() {
       const candidateMap = new Map(electionCandidates.map((c) => [c._id.toString(), c]));
 
       // Remove current officials for this election
-      const removeResult = await db.collection<ElectedOfficial>("electedOfficials").deleteMany({
+      const removeResult = await electedOfficialsCollection(db).deleteMany({
         officeType: election.electionType,
         state: election.state,
       });
@@ -286,7 +281,7 @@ export async function POST() {
           updatedAt: now,
         };
 
-        await db.collection<ElectedOfficial>("electedOfficials").insertOne({
+        await electedOfficialsCollection(db).insertOne({
           _id: new ObjectId(),
           createdAt: now,
           ...officialDoc,
@@ -300,19 +295,15 @@ export async function POST() {
             : { type: "stateSenate" as const, state: election.state, seatsHeld: seats };
 
         if (candidate.isNPP && candidate.nppId) {
-          await db
-            .collection<NPP>("npps")
-            .updateOne(
-              { _id: candidate.nppId },
-              { $set: { currentOffice: officeType, updatedAt: now } }
-            );
+          await nppsCollection(db).updateOne(
+            { _id: candidate.nppId },
+            { $set: { currentOffice: officeType, updatedAt: now } }
+          );
         } else if (candidate.characterId) {
-          await db
-            .collection<Character>("characters")
-            .updateOne(
-              { _id: candidate.characterId },
-              { $set: { currentOffice: officeType, updatedAt: now } }
-            );
+          await charactersCollection(db).updateOne(
+            { _id: candidate.characterId },
+            { $set: { currentOffice: officeType, updatedAt: now } }
+          );
         }
       }
 

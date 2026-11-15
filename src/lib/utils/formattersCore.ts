@@ -224,7 +224,7 @@ export function formatCompactNumber(value: number): string {
  */
 /**
  * Signed gain or loss percentage for a holding: "+874.3%", "-12.5%",
- * "+110,067.2%". Callers used to print the raw float (ticket 1701).
+ * "+110,067.2%". Callers used to print the raw float.
  */
 export function formatSignedPercent(value: number): string {
   const sign = value >= 0 ? "+" : "-";
@@ -302,7 +302,7 @@ export function formatCurrencyCompactChip(amount: number, symbol = "$"): string 
 /**
  * Cost-of-revenue accounting wrapper. Expenses render in parentheses.
  * A negative amount is a credit (plants residual when wages exceed derived
- * operating cost) and must not render as `(-$X)` — that was ticket #1122.
+ * operating cost) and must not render as `(-$X)`, that was.
  */
 export function formatAccountingCost(
   amount: number,
@@ -364,16 +364,14 @@ export interface TimeRemaining {
 /**
  * Format time remaining until a deadline against the game clock.
  *
- * **Prefer `useGameClock().formatRemaining(deadline)` (client) or
- * `(await getGameClock()).formatRemaining(deadline)` (server) instead of
- * calling this directly** — those facades thread the game clock in for you
- * and ensure the UI is consistent with the game's resolution logic.
+ * Prefer `useGameClock().formatRemaining(deadline)` (client) or
+ * `(await getGameClock()).formatRemaining(deadline)` (server); those thread the
+ * game clock in for you and keep the UI consistent with deadline resolution.
  *
  * @param endTimeStr - ISO date string or Date for the deadline
  * @param pausedAt - If set (game paused), used as the reference instead of gameTimeRef
- * @param gameTimeRef - Required. The current game-clock "now" (lastTurnProcessed).
- *   Using a real-Date() fallback here is forbidden because it desyncs the UI
- *   countdown from the game's deadline resolution.
+ * @param gameTimeRef - Required game-clock "now" (lastTurnProcessed). A real
+ *   Date() fallback is forbidden because it desyncs the countdown.
  * @returns Object with formatted text and urgency level
  */
 export function formatTimeRemaining(
@@ -419,17 +417,10 @@ export function formatTimeRemaining(
 /**
  * Compute the LARP election year from an election's endTime.
  *
- * Uses currentTurn + lastTurnProcessed for an absolute (not relative) calculation
- * so elections with a past endTime are labelled correctly.
- *
- * Elections that end exactly on "Week 1" of a new year are displayed as
- * "Week 52" of the previous year — matching turnToLarpDate's special-case for
- * turn 48 and honouring the user preference that a race barely crossing a year
- * boundary keeps the prior year's label.
- *
- * @param endTime - ISO string or Date for the election's endTime
- * @param currentTurn - Current game turn (1-based)
- * @param lastTurnProcessed - Real-world timestamp of the last processed turn
+ * Uses currentTurn + lastTurnProcessed for an absolute calculation so elections
+ * with a past endTime are labelled correctly. Elections ending on "Week 1" of a
+ * new year display as "Week 52" of the previous year, matching turnToLarpDate's
+ * special-case for turn 48.
  */
 export function endTimeToGameYear(
   endTime: string | Date,
@@ -439,7 +430,7 @@ export function endTimeToGameYear(
   /**
    * Founding-phase clock. `currentTurn` is RAW, so without it an election year
    * reads a game year ahead of the status bar on a world that burned turns
-   * before its calendar started (#1208).
+   * before its calendar started.
    */
   clock?: CalendarClock
 ): number {
@@ -462,19 +453,16 @@ export function endTimeToGameYear(
 }
 
 /**
- * Format time until a deadline in compact hours format against the game clock.
+ * Format time until a deadline in compact hours against the game clock.
  *
- * **Prefer `useGameClock().formatCompact(deadline)` (client) or
- * `(await getGameClock()).formatCompact(deadline)` (server) instead of
- * calling this directly** — those facades thread the game clock in for you.
- *
- * For wall-clock countdowns (e.g. StatusBar's next-cron timer), use
- * `formatRealTimeCountdown` instead.
+ * Prefer `useGameClock().formatCompact(deadline)` (client) or
+ * `(await getGameClock()).formatCompact(deadline)` (server) over calling this
+ * directly. For wall-clock countdowns use `formatRealTimeCountdown` instead.
  *
  * @param endTime - ISO date string or Date for the deadline
  * @param pausedAt - If set (game paused), used as the reference instead of gameTimeRef
- * @param gameTimeRef - Required. The current game-clock "now" (lastTurnProcessed).
- *   Using a real-Date() fallback here is forbidden — see formatTimeRemaining.
+ * @param gameTimeRef - Required. The current game-clock "now" (lastTurnProcessed);
+ *   a real-Date() fallback is forbidden.
  * @returns Compact string like "45m", "2h 30m", "2d 0h", or "Ended"
  */
 export function formatTimeUntilCompact(
@@ -502,8 +490,7 @@ export function formatTimeUntilCompact(
  * count down to a wall-clock event (e.g. the StatusBar's next-cron countdown).
  *
  * For game-clock deadlines (election timers, vote windows, cooldowns, bond
- * maturity, etc.), use `useGameClock().formatCompact()` instead — see
- * docs/plans/archive/2026-05/2026-05-20-clock-mismatch-design.md.
+ * maturity, etc.), use `useGameClock().formatCompact()` instead.
  *
  * @returns "—" when no endTime, "Ended" when past, "Paused" when paused,
  *   otherwise a compact string like "45m", "2h 30m", "2d 0h".
@@ -616,7 +603,7 @@ export function turnToLarpParts(
  * Prefer this over calling {@link turnToLarpDate} directly. A world with a
  * founding phase burns `preIterationTurns` before its calendar starts, so a raw
  * turn is a game year ahead of the date the status bar shows, and passing one
- * straight to the formatter dates everything a year late (#1208). The status bar
+ * straight to the formatter dates everything a year late. The status bar
  * has always done this conversion; this is the same thing, named once.
  */
 export function rawTurnToLarpDate(

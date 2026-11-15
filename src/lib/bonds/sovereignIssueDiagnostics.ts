@@ -1,19 +1,14 @@
 /**
- * Sovereign issuance diagnostics (#1001): issue-level subscription, holder
- * counts, spreads, maturity concentration, and the tranche-consolidation
- * planner.
+ * Sovereign issuance diagnostics: issue-level subscription, holder counts,
+ * spreads, maturity concentration, and the tranche-consolidation planner.
  *
  * Pure rules module: plain data in, plain data out. No database, wall clock,
  * randomness, or environment reads, so the headless harness can copy it.
  *
- * Two uses:
- * - observability (always on): `summarizeSovereignIssue` and
- *   `summarizeSovereignIssuanceByCountry` report what the scheduler and the
- *   market produced. They change no behavior.
- * - consolidation (gated off): `consolidateSovereignTranches` merges dust
- *   tranches into the ladder. It only runs when the caller enables it; the
- *   scheduler keeps it behind `sovereignIssuanceConsolidationEnabled` until
- *   worldsim evidence lands.
+ * `summarizeSovereignIssue` and `summarizeSovereignIssuanceByCountry` are
+ * observability only and change no behavior. `consolidateSovereignTranches`
+ * merges dust tranches into the ladder and runs only when the caller enables
+ * it; the scheduler keeps it off pending worldsim evidence.
  */
 
 import { BOND_UNIT_FACE_VALUE } from "@/lib/db/types/bond";
@@ -270,16 +265,11 @@ export function consolidateSovereignTranches(
 }
 
 /**
- * Why an unheld sovereign issue has no fund holder (#1001 demand channel).
- * Exactly one reason is assigned per issue, in allocator order: the first
- * gate that excludes the issue from every fund that could otherwise buy it.
- * The order mirrors `deployBondReserveFromCash` / `loadBondFundCandidates`:
- * availability, then mandate (domestic coverage, cross-border scope, currency
- * convertibility, rating universe), then per-fund limits (holder cap, cash
- * buffer and reserve target). Anything left over is transient demand, not a
- * structural gate: the mandate, cash, cap, and float all allow a purchase
- * that simply has not happened yet (timing, breadth caps, queued redemptions
- * skipping the deploy pass).
+ * Why an unheld sovereign issue has no fund holder. Exactly one reason per
+ * issue, in allocator order: the first gate excluding it from every fund that
+ * could otherwise buy it. Order mirrors `deployBondReserveFromCash` /
+ * `loadBondFundCandidates`: availability, mandate, then per-fund limits.
+ * Anything left over is transient demand, not a structural gate.
  */
 export type SovereignDemandGapReason =
   | "no_float"

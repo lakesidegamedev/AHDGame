@@ -54,7 +54,7 @@ describe("crackdown labor approval", () => {
     expect(updateOne).not.toHaveBeenCalled();
   });
 
-  it("charges labor archetypes once per turn on the executive document", async () => {
+  it("charges labour buckets once per turn on the executive document", async () => {
     const { db, updateOne, find } = stubDb("crackdown");
     expect(await processCrackdownLabourApprovalTurn(db, 42)).toBe(1);
     expect(await processCrackdownLabourApprovalTurn(db, 42)).toBe(0);
@@ -70,20 +70,20 @@ describe("crackdown labor approval", () => {
     });
     const set = pipeline[0].$set;
     expect(set["lastUnionCrackdownApprovalTurn.US"]).toBe(42);
-    expect(set["archetypeApprovals.union_trades"]).toEqual({
+    expect(set["bucketApprovals.wealth:low"]).toEqual({
       $max: [
         -100,
         {
           $subtract: [
-            { $ifNull: ["$archetypeApprovals.union_trades", 0] },
+            { $ifNull: ["$bucketApprovals.wealth:low", 0] },
             CRACKDOWN_LABOUR_APPROVAL_COST_PER_TURN,
           ],
         },
       ],
     });
-    expect(set).toHaveProperty("archetypeApprovals.college_liberals");
-    expect(set).toHaveProperty("archetypeApprovals.public_sector");
-    expect(set).not.toHaveProperty("archetypeApprovals.small_business");
+    expect(set).toHaveProperty("bucketApprovals.education:no_college");
+    expect(set).toHaveProperty("bucketApprovals.age:young");
+    expect(set).not.toHaveProperty("bucketApprovals.wealth:high");
   });
 
   it("waits for a sitting executive rather than consuming a turn claim", async () => {

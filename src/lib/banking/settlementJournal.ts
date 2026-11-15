@@ -26,7 +26,6 @@ import { resumeTreasuryReserveTransfer } from "@/lib/budget/treasuryReserveTrans
 
 import { type Collection, type Db, type Document, type Filter } from "mongodb";
 import {
-  MONEY_MOVE_COLLECTION,
   applyMoneyMove,
   type MoneyMoveLeg,
   resumeMoneyMove,
@@ -49,7 +48,11 @@ import {
   bindProjectionTargets,
   invalidProjectionTarget,
   isUpdateProjection,
+  prepareLoanProjectionBatch,
+  flushLoanProjectionBatch,
 } from "./projectionSettlement";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
+import { settlementReadEpoch } from "./settlementReadSnapshot";
 export { reviveObjectIds } from "./settlementEncoding";
 
 export type SettlementStatus = "applied" | "replayed" | "rejected" | "partial";
@@ -233,7 +236,7 @@ export async function settleTransition(
   db: Db,
   transition: BankingTransition
 ): Promise<SettlementResult> {
-  const journal = db.collection<{ _id: string } & JournalExtension>(MONEY_MOVE_COLLECTION);
+  const journal = bankMoneyMovesCollection<{ _id: string } & JournalExtension>(db);
   const result: SettlementResult = {
     status: "applied",
     key: transition.key,
@@ -496,7 +499,7 @@ async function finishProjections(
   options: FinishOptions = {},
   ownedRecords?: JournalProjectionRecord[]
 ): Promise<SettlementResult> {
-  const journal = db.collection<{ _id: string } & JournalExtension>(MONEY_MOVE_COLLECTION);
+  const journal = bankMoneyMovesCollection<{ _id: string } & JournalExtension>(db);
 
   // The record is the authority on what remains to do. A caller replaying
   // after a crash may have recomputed its transition from state the first
@@ -582,6 +585,24 @@ async function finishProjections(
     }
   }
 
+  const loanBatch = ownsAllProjections
+    ? await prepareLoanProjectionBatch(
+        db,
+        transition.key,
+        records.map((r) => r.projection)
+      )
+    : undefined;
+  const readEpoch = settlementReadEpoch();
+  const readSnapshot =
+    readEpoch === undefined || !records.some((r) => isUpdateProjection(r.projection))
+      ? undefined
+      : {
+          epoch: readEpoch,
+          record: await journal.findOne(
+            { _id: transition.key },
+            { projection: { projections: 1 } }
+          ),
+        };
   let stuck: string | undefined;
   // Insert projections carry fixed ids, so replaying one after a crash is a
   // duplicate-key no-op. Their "applied" marks therefore ride on the next
@@ -597,6 +618,8 @@ async function finishProjections(
       continue;
     }
     const projection = record.projection;
+    if (projection.collection !== "bankLoans")
+      await flushLoanProjectionBatch(db, transition.key, loanBatch);
     if (isUpdateProjection(projection) && !record.receiptProtocol && !record.claimedAt) {
       await journal.updateOne(
         {
@@ -630,7 +653,7 @@ async function finishProjections(
     }
 
     const outcome = isUpdateProjection(projection)
-      ? await applyProtectedProjection(db, transition.key, i, projection)
+      ? await applyProtectedProjection(db, transition.key, i, projection, loanBatch, readSnapshot)
       : (preInserted.get(i) ??
         (await applyProjection(db, projection, projectionStamp(transition.key, i))));
     if (!outcome.ok) {
@@ -645,6 +668,7 @@ async function finishProjections(
     insertMarks[`projections.${i}.applied`] = true;
   }
 
+  await flushLoanProjectionBatch(db, transition.key, loanBatch);
   if (failed) {
     // Keep update claims intact: a legacy ambiguity must never become a
     // fresh admission on the next recovery attempt. New protocols may retry
@@ -720,10 +744,9 @@ export async function listUnfinishedProjections(
     { _id: string; kind: string; turn?: number } & JournalExtension,
     "_id" | "kind" | "turn" | "projections"
   >;
-  const rows = await db
-    .collection<{ _id: string; kind: string; turn?: number } & JournalExtension>(
-      MONEY_MOVE_COLLECTION
-    )
+  const rows = await bankMoneyMovesCollection<
+    { _id: string; kind: string; turn?: number } & JournalExtension
+  >(db)
     // The repair queue counts what is pending; the legs and the event on the
     // same record are most of its bytes and nothing here reads them.
     .find<QueuedRow>(
@@ -754,25 +777,23 @@ export async function resumeSettlement(
   key: string,
   options: FinishOptions = {}
 ): Promise<SettlementResult> {
-  const record = await db
-    .collection<{
-      _id: string;
-      atomicDocument?: unknown;
-      legacyInterestBatch?: unknown;
-      locSettlement?: unknown;
-      treasuryReserveTransfer?: unknown;
-    }>(MONEY_MOVE_COLLECTION)
-    .findOne(
-      { _id: key },
-      {
-        projection: {
-          atomicDocument: 1,
-          legacyInterestBatch: 1,
-          locSettlement: 1,
-          treasuryReserveTransfer: 1,
-        },
-      }
-    );
+  const record = await bankMoneyMovesCollection<{
+    _id: string;
+    atomicDocument?: unknown;
+    legacyInterestBatch?: unknown;
+    locSettlement?: unknown;
+    treasuryReserveTransfer?: unknown;
+  }>(db).findOne(
+    { _id: key },
+    {
+      projection: {
+        atomicDocument: 1,
+        legacyInterestBatch: 1,
+        locSettlement: 1,
+        treasuryReserveTransfer: 1,
+      },
+    }
+  );
   if (record?.locSettlement) {
     const { resumeLocSettlement } = await import("@/lib/lineOfCredit/settlement");
     return resumeLocSettlement(db, key);
@@ -805,9 +826,9 @@ export async function recoverProjections(
   key: string,
   options: FinishOptions = {}
 ): Promise<SettlementResult> {
-  const journal = db.collection<{ _id: string; kind: string; turn?: number } & JournalExtension>(
-    MONEY_MOVE_COLLECTION
-  );
+  const journal = bankMoneyMovesCollection<
+    { _id: string; kind: string; turn?: number } & JournalExtension
+  >(db);
   // Recovery re-applies the projections and re-arms the settlement shape they
   // belong to. The legs and the frozen event are not read here, and the legs
   // are the second largest field after the projections themselves.

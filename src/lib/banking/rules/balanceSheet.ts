@@ -1,51 +1,25 @@
 /**
- * The one place a bank's balance sheet is defined.
+ * The single definition of a bank's balance sheet. Every phase, pass, route, and
+ * panel reads its lines from here; no other module may redefine bankEquity,
+ * requiredReserves, the deposit ceiling, the run line, or the confidence
+ * denominators.
  *
- * ## Why this module exists
+ * The two deposit kinds are not interchangeable, ever:
+ * - npcDeposits are CASH-BACKED. bankingTurn moves real money from the central
+ *   bank's externalBroadMoney into the bank's cashReserves, so they are a real
+ *   liability and sit in every reserve and equity denominator.
+ * - savingsHolder is a POINTER. The balance never leaves
+ *   character.currencyBalances.savings; only the label changes. No cash arrived,
+ *   so it is not a liability, not in the reserve denominator, not in equity, and
+ *   returning it moves no money. It binds only the deposit ceiling, which is a
+ *   capacity rule, not a cash rule.
  *
- * Private banking accumulated roughly fifteen patches that all chased the same
- * disease: a quantity on the bank's books that no cash stood behind, and two
- * screens that answered the same question with two different numbers. Ticket
- * 1111 is the canonical case. The console computed equity from cash-backed
- * deposits, the solvency pass computed reserve cover from the whole deposit
- * aggregate (which includes player pointer balances the bank never held), and
- * both were "right" against their own local arithmetic.
- *
- * A bug of that shape cannot be fixed by fixing the two call sites, because a
- * third one gets written next month. It is fixed by there being exactly one
- * definition of each line, in one file, that every phase, pass, route and panel
- * reads. That is this file. Nothing else in the codebase may define
- * `bankEquity`, `requiredReserves`, the deposit ceiling, the run line or the
- * confidence denominators; the modules that used to are now thin re-exports.
- *
- * ## The two deposit kinds are not interchangeable, ever
- *
- * - **NPC household deposits (`npcDeposits`) are CASH-BACKED.** `bankingTurn`
- *   debits the central bank's `externalBroadMoney` and credits the bank's
- *   `cashReserves` by the same amount. Real money moved, so it is a real
- *   liability, it sits in every reserve and equity denominator, and returning
- *   it to the depositor must move cash back.
- * - **Player savings (`savingsHolder`) are a POINTER.** The balance never
- *   leaves `character.currencyBalances.savings`; only the label saying who
- *   holds it changes. No cash arrived, so it is NOT a liability of the bank,
- *   NOT in the reserve denominator, NOT in equity, and returning it moves no
- *   money at all.
- *
- * The one thing pointer deposits do bind is the deposit ceiling: a bank may not
- * label more savings as its own than its branch network and capital can carry.
- * That is a capacity rule, not a cash rule, which is why it is the only line
- * below that takes them as an input.
- *
- * ## Two capital lines, deliberately, with different jobs
- *
- * `bookEquity` answers "how much of this bank is the owner's?" and is the
- * ceiling on every distribution. `regulatoryCapital` answers "how much loss can
- * this bank absorb before someone else eats it?" and is the supervisor's
- * anchor. They differ because the supervisor deliberately excludes the deposit
- * base and the loan book from its ratio (see `capitalAdequacy.ts` for why), and
- * the owner deliberately cannot count depositor money as their own. Both are
- * computed here, from the same inputs, so the difference is a stated design
- * choice rather than two files that drifted.
+ * Two capital lines, deliberately: bookEquity caps owner distributions and
+ * regulatoryCapital is the supervisor's loss-absorption anchor. They differ
+ * because the supervisor excludes the deposit base and loan book from its ratio
+ * while the owner cannot count depositor money as their own. Both are computed
+ * here from the same inputs so the difference is a stated design choice, not
+ * drift.
  */
 
 import type { BankCharter } from "@/lib/db/types/bank";
@@ -199,12 +173,12 @@ export function requiredReserves(
  *
  *   equity = cash + loans - cashBackedDeposits - borrowings
  *
- * The prop book is deliberately absent from the asset side. It is marked to a
+ * The prop book is deliberately absent from the asset side: it is marked to a
  * moving market and force-liquidated under stress, so counting it would let an
- * owner upstream cash against a valuation that the same turn's liquidation can
- * erase. Arrears ARE in the borrowings side: unpaid interest is still owed, and
- * leaving it out was equity overstated by exactly the amount the bank could not
- * afford to pay.
+ * owner upstream cash against a valuation the same turn's liquidation can
+ * erase. Arrears ARE in the borrowings side: unpaid interest is still owed,
+ * and excluding it overstates equity by exactly the amount the bank cannot
+ * pay.
  */
 export function bankEquity(
   charter: BalanceSheetCharter | null | undefined,
@@ -266,15 +240,11 @@ export const STRESS_CAPITAL_RATIO = 0.06;
 export const STRESS_LOSS_FRACTION = 0.15;
 
 /**
- * Capital a bank must keep after paying its owner, so that the payout cannot
- * itself make the bank anything less than adequate: at least the minimum ratio
- * on its risk assets, and enough to clear the stress ratio after the published
- * shock. Cash leaving does not shrink risk assets, so this is a fixed floor
- * under book equity for the distribution.
- *
- * Before 2026-11-02 the cap stopped at zero equity, so an adequate bank could
- * pay out everything above its deposits and fail on the next small mark move
- * (ticket 1749, bank of corporation 2857, turn 601).
+ * Capital a bank must keep after paying its owner, so the payout cannot leave
+ * it below adequacy: at least the minimum ratio on its risk assets, and enough
+ * to clear the stress ratio after the published shock. Cash leaving does not
+ * shrink risk assets, so this is a fixed floor under book equity for the
+ * distribution.
  */
 export function capitalRetainedOnDistribution(
   riskAssets: number,
@@ -364,11 +334,9 @@ export function bankBalanceSheet(input: BankBalanceSheetInput): BankBalanceSheet
   const depositCeiling =
     input.capacityCeiling === undefined ? equityCeiling : Math.min(capacityCeiling, equityCeiling);
 
-  // Two ceilings on a distribution, take the lower: the bank may not drop below
-  // its reserve requirement, and it may never pay the owner more than the book
-  // equity it holds above the capital an adequate bank must keep, because
-  // anything below that is depositors' cushion. Zero unless the supervisor
-  // calls the bank adequate.
+  // Two ceilings, take the lower: the reserve requirement, and book
+  // equity above the adequate-bank capital floor (below it is depositors'
+  // cushion). Zero unless the supervisor calls the bank adequate.
   const standing = charter?.capitalStanding;
   const riskAssets =
     loans +
@@ -427,7 +395,7 @@ export function equityCappedDepositCeiling(capacityCeiling: number, equity: numb
 /**
  * One cap, stated the way a player needs to read it.
  *
- * Tickets 1090, 1111 and 1113 are all the same complaint: the console showed a
+ * and 1113 are all the same complaint: the console showed a
  * number that stopped the player doing something and never said where the
  * number came from, so the only way to learn a cap was to hit it. Every cap
  * that can block an action ships its formula and the values currently in that

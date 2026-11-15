@@ -26,6 +26,14 @@ export interface MacroCountrySeedSpec {
   tradeExposure: number;
   sectorWeights: Partial<Record<OperatingSectorType, number>>;
   resources: Partial<Record<ExtractableResource, number>>;
+  /**
+   * Per-turn sector capacity per unit of annual GDP. Absent: 1/48, the
+   * aggregate scale every 1953 and estimated seed uses. The 2027 background
+   * tier sizes its economy like a full country of the same GDP instead.
+   */
+  perTurnCapacityPerGdp?: number;
+  /** Annual real trend growth carried onto the document. */
+  trendGrowth?: number;
 }
 
 const REQUIRED_SCALAR_FIELDS = [
@@ -71,9 +79,15 @@ function demandRatio(sectorType: OperatingSectorType, economicSystem: MacroEcono
 }
 
 export function buildSectorsFromSpec(
-  spec: Pick<MacroCountrySeedSpec, "annualGdpGameUnits" | "sectorWeights" | "economicSystem">
+  spec: Pick<
+    MacroCountrySeedSpec,
+    "annualGdpGameUnits" | "sectorWeights" | "economicSystem" | "perTurnCapacityPerGdp"
+  >
 ): Partial<Record<OperatingSectorType, MacroSectorState>> {
-  const perTurnGdp = spec.annualGdpGameUnits / MACRO_TURNS_PER_YEAR;
+  const perTurnGdp =
+    spec.perTurnCapacityPerGdp === undefined
+      ? spec.annualGdpGameUnits / MACRO_TURNS_PER_YEAR
+      : spec.annualGdpGameUnits * spec.perTurnCapacityPerGdp;
   const weightSum = Object.values(spec.sectorWeights).reduce((a, b) => a + (b ?? 0), 0);
   if (weightSum <= 0) {
     throw new Error("Macro seed sector weights must sum to a positive total.");
@@ -163,6 +177,7 @@ export function buildMacroCountryFromSpec(
     stability: spec.stability,
     tradeExposure: spec.tradeExposure,
     shockModifier: 1,
+    ...(spec.trendGrowth !== undefined ? { trendGrowth: spec.trendGrowth } : {}),
     resources: spec.resources,
     sectors,
     dataQuality: { ...dataQuality, provenance: options.provenance ?? dataQuality.provenance },

@@ -14,7 +14,10 @@ import { CONGRESS_LIMITS, checkRateLimit, rateLimitResponse } from "@/lib/api/ra
 import { buildEmbeddedVoteTallyUpdate } from "@/lib/votes/embeddedVoteTally";
 import { getGameTime } from "@/lib/time/gameTime";
 import { isVotingDeadlinePassed } from "@/lib/legislature/billVotingWindow";
-import type { CabinetNomination, ElectedOfficial, Character } from "@/lib/db/types";
+import type { CabinetNomination, ElectedOfficial } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { cabinetNominationsCollection } from "@/lib/db/repositories/cabinetNominations";
 
 const voteSchema = z.object({
   vote: z.enum(["for", "against", "abstain"]),
@@ -52,7 +55,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     // so a stalled or drifted real clock can't open/close the window early.
     const gameTime = await getGameTime();
 
-    const nomination = await db.collection<CabinetNomination>("cabinetNominations").findOne({
+    const nomination = await cabinetNominationsCollection(db).findOne({
       _id: nominationOid,
       status: "active",
     });
@@ -70,14 +73,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       return errorResponse(409, "Voting has ended");
     }
 
-    const myCharacter = await db.collection<Character>("characters").findOne({
+    const myCharacter = await charactersCollection(db).findOne({
       userId: new ObjectId(authUser.userId),
     });
     if (!myCharacter) {
       return errorResponse(400, "No character");
     }
 
-    const legislatorOfficial = await db.collection<ElectedOfficial>("electedOfficials").findOne({
+    const legislatorOfficial = await electedOfficialsCollection(db).findOne({
       characterId: myCharacter._id,
       officeType: { $in: ["senate", "house"] },
     });
@@ -100,7 +103,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         ? { for: "houseVotesFor", against: "houseVotesAgainst", abstain: "houseVotesAbstain" }
         : { for: "votesFor", against: "votesAgainst", abstain: "votesAbstain" };
 
-    const updateResult = await db.collection<CabinetNomination>("cabinetNominations").updateOne(
+    const updateResult = await cabinetNominationsCollection(db).updateOne(
       { _id: nominationOid, status: "active" },
       buildEmbeddedVoteTallyUpdate({
         voteField,

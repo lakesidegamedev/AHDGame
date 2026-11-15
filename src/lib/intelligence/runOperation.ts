@@ -13,7 +13,6 @@ import type {
   OperationCompromise,
   OperationOutcome,
 } from "@/lib/db/types/intelligence";
-import type { FederalBudget } from "@/lib/db/types/budget";
 import {
   creditIntelligenceAppropriation,
   debitIntelligenceAppropriation,
@@ -32,10 +31,10 @@ import { operationCost } from "./cost";
 import { clampCoverage, currentCoverage } from "./coverage";
 import { applyOperationToNetwork, isNetworkUsable } from "./network";
 import { resolveOperation } from "./resolveOperation";
-import { readMilitarySabotageEnabled } from "./flags";
 import { applyEconomicAction, type EconomicActionResult } from "./economicAction";
 import { applyMilitaryAction, type MilitaryActionResult } from "./militaryAction";
 import { applyStrategicAction, type StrategicActionResult } from "./strategicAction";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 export type OperationKind = "collect" | "action";
 
@@ -128,9 +127,7 @@ export async function runOperation(args: RunOperationArgs): Promise<RunOperation
   //
   // Money first, and refunded if the slot claim loses. The reverse ordering would
   // charge for an operation that never ran.
-  const budget = await db
-    .collection<FederalBudget>("federalBudget")
-    .findOne({ countryId: agency.countryId });
+  const budget = await federalBudgetCollection(db).findOne({ countryId: agency.countryId });
   const cost = Math.round(operationCost(kind, budget?.gdp ?? 0));
 
   if (!(await debitIntelligenceAppropriation(db, agency.countryId, cost))) {
@@ -219,13 +216,7 @@ export async function runOperation(args: RunOperationArgs): Promise<RunOperation
       // No balance gate: a leak moves no number, it changes who can read one.
       economicEffect = await applyEconomicAction(db, targetCountryId, turn);
     } else if (domain === "military") {
-      // Gated: the magnitudes are a balance change and their report could not be
-      // produced (no engaged front in the live world). While off, the operation
-      // still resolves and still costs and risks everything it normally does; it
-      // simply lands on nothing, and says so.
-      militaryEffect = (await readMilitarySabotageEnabled(db))
-        ? await applyMilitaryAction(db, targetCountryId)
-        : { frontSabotaged: null, formationsDegraded: 0 };
+      militaryEffect = await applyMilitaryAction(db, targetCountryId);
     }
   }
 

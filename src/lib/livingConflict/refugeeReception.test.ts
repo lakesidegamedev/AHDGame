@@ -126,16 +126,12 @@ describe("humanitarian response outbox and service shell", () => {
       expect.anything()
     );
   });
-  it("requires a real host fiscal base and stays inert when living conflicts are off", async () => {
+  it("requires a real host fiscal base", async () => {
     const f = fixture();
     f.memory.collection("federalBudget").findOne.mockResolvedValue({ gdp: 0 });
     await expect(
       prepareRefugeeReceptionOrder(f.db, f.crisis, f.interaction, "AT", f.option, "neighbor")
     ).rejects.toThrow("fiscal base");
-    f.memory.collection("gameState").findOne.mockResolvedValue({ livingConflictsEnabled: false });
-    expect(
-      await prepareRefugeeReceptionOrder(f.db, f.crisis, f.interaction, "AT", f.option, "neighbor")
-    ).toBeUndefined();
   });
   it("loads claimed orders even after the interaction resolves, filtering future and other-world entries", async () => {
     const f = fixture();
@@ -160,8 +156,7 @@ describe("humanitarian response outbox and service shell", () => {
           ],
         },
       ]);
-    expect(await loadPendingRefugeeReceptions(f.db, "world", 8, true)).toEqual([order]);
-    expect(await loadPendingRefugeeReceptions(f.db, "world", 8, false)).toEqual([]);
+    expect(await loadPendingRefugeeReceptions(f.db, "world", 8)).toEqual([order]);
   });
   it("persists actual routes before completing the response and never debits treasury directly", async () => {
     const f = fixture();

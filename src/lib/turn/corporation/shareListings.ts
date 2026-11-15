@@ -4,13 +4,7 @@ import {
   SHORT_TERM_HOLDING_TURNS,
 } from "@/lib/corporations/rules/holdingTerms";
 import type { Db, AnyBulkWriteOperation } from "mongodb";
-import type {
-  Character,
-  Corporation,
-  Notification,
-  ShareListing,
-  ShareOffer,
-} from "@/lib/db/types";
+import type { Corporation, Notification, ShareListing, ShareOffer } from "@/lib/db/types";
 import { creditShares, creditSharesToCorp } from "@/lib/corporations/shareholderOps";
 import { buildPersonalBalanceBulkOp } from "@/lib/currency/characterFunds";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
@@ -24,6 +18,11 @@ import { COUNTRY_CURRENCY_MAP, INITIAL_RATES, type CurrencyCode } from "@/lib/co
 import type { CountryId } from "@/lib/constants/countries";
 import { emitTxBulk, loadTxThresholds } from "@/lib/financialTxLog/emit";
 import type { FinancialTxLogEntry } from "@/lib/db/types/financialTxLog";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { notificationsCollection } from "@/lib/db/repositories/notifications";
+import { shareListingsCollection } from "@/lib/db/repositories/shareListings";
+import { shareOffersCollection } from "@/lib/db/repositories/shareOffers";
 
 /**
  * Expire share listings whose expiresAt has passed:
@@ -42,8 +41,7 @@ export async function expireShareListings(db: Db, now: Date, currentTurn: number
       { expiresAtTurn: { $exists: false }, expiresAt: { $lte: now } },
     ],
   };
-  const candidates = await db
-    .collection<ShareListing>("shareListings")
+  const candidates = await shareListingsCollection(db)
     .find({
       status: "open",
       activeShareFillKey: { $exists: false },
@@ -76,8 +74,7 @@ export async function expireShareListings(db: Db, now: Date, currentTurn: number
         update: { $set: { holdingTerms: matureHoldingTerms(listing.holdingTerms!, currentTurn) } },
       },
     }));
-  if (maturationOps.length)
-    await db.collection<ShareListing>("shareListings").bulkWrite(maturationOps);
+  if (maturationOps.length) await shareListingsCollection(db).bulkWrite(maturationOps);
 
   if (expiredListings.length === 0) return;
 
@@ -86,13 +83,11 @@ export async function expireShareListings(db: Db, now: Date, currentTurn: number
   // so only one lifecycle path can own the escrow and reserved shares.
   const claimedListings: ShareListing[] = [];
   for (const listing of expiredListings) {
-    const claimed = await db
-      .collection<ShareListing>("shareListings")
-      .findOneAndUpdate(
-        { _id: listing._id, ...expiryFilter },
-        { $set: { status: "cancelled" } },
-        { returnDocument: "before" }
-      );
+    const claimed = await shareListingsCollection(db).findOneAndUpdate(
+      { _id: listing._id, ...expiryFilter },
+      { $set: { status: "cancelled" } },
+      { returnDocument: "before" }
+    );
     if (claimed) claimedListings.push(claimed);
   }
 
@@ -102,19 +97,16 @@ export async function expireShareListings(db: Db, now: Date, currentTurn: number
 
   // Snapshot candidates, then claim each pending offer individually. An offer
   // accepted or cancelled after the read cannot be overwritten or refunded.
-  const pendingOfferCandidates = await db
-    .collection<ShareOffer>("shareOffers")
+  const pendingOfferCandidates = await shareOffersCollection(db)
     .find({ listingId: { $in: listingIds }, status: "pending" })
     .toArray();
   const pendingOffers: ShareOffer[] = [];
   for (const offer of pendingOfferCandidates) {
-    const claimed = await db
-      .collection<ShareOffer>("shareOffers")
-      .findOneAndUpdate(
-        { _id: offer._id, listingId: offer.listingId, status: "pending" },
-        { $set: { status: "expired" } },
-        { returnDocument: "before" }
-      );
+    const claimed = await shareOffersCollection(db).findOneAndUpdate(
+      { _id: offer._id, listingId: offer.listingId, status: "pending" },
+      { $set: { status: "expired" } },
+      { returnDocument: "before" }
+    );
     if (claimed) pendingOffers.push(claimed);
   }
 
@@ -133,8 +125,7 @@ export async function expireShareListings(db: Db, now: Date, currentTurn: number
   );
   const listingCorps =
     listingCorpIds.length > 0
-      ? await db
-          .collection<Corporation>("corporations")
+      ? await corporationsCollection(db)
           .find({ _id: { $in: listingCorpIds } })
           .project<Pick<Corporation, "_id" | "liquidCurrencyCode" | "countryId">>({
             _id: 1,
@@ -179,8 +170,7 @@ export async function expireShareListings(db: Db, now: Date, currentTurn: number
   if (charCashRefunds.size > 0) {
     const forexEnabled = await isForexEnabled();
     const refundCharIds = [...charCashRefunds.keys()].map((id) => new ObjectId(id));
-    const refundChars = await db
-      .collection<Character>("characters")
+    const refundChars = await charactersCollection(db)
       .find({ _id: { $in: refundCharIds } })
       .project<{ _id: ObjectId; countryId: string; name: string }>({
         _id: 1,
@@ -235,15 +225,14 @@ export async function expireShareListings(db: Db, now: Date, currentTurn: number
     });
     // bulkWrite op array type doesn't satisfy AnyBulkWriteOperation narrowing — runtime shape is valid
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await db.collection<Character>("characters").bulkWrite(ops as any);
+    await charactersCollection(db).bulkWrite(ops as any);
   }
 
   // Refund corporation liquid capital. Escrow amounts are stored in ₳; each
   // corp's liquidCapital is in its home currency, so convert on refund.
   if (corpLiquidRefunds.size > 0) {
     const refundCorpIds = [...corpLiquidRefunds.keys()].map((id) => new ObjectId(id));
-    const refundCorps = await db
-      .collection<Corporation>("corporations")
+    const refundCorps = await corporationsCollection(db)
       .find({ _id: { $in: refundCorpIds } })
       .project<{
         _id: ObjectId;
@@ -295,7 +284,7 @@ export async function expireShareListings(db: Db, now: Date, currentTurn: number
     });
     // bulkWrite op array type doesn't satisfy AnyBulkWriteOperation narrowing — runtime shape is valid
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await db.collection<Corporation>("corporations").bulkWrite(ops as any);
+    await corporationsCollection(db).bulkWrite(ops as any);
   }
 
   // Emit batched refund tx entries.
@@ -304,69 +293,72 @@ export async function expireShareListings(db: Db, now: Date, currentTurn: number
     void emitTxBulk(db, refundTxEntries, thresholds);
   }
 
-  // Return reserved shares to sellers
+  // Return reserved shares to sellers. The listings are already claimed
+  // cancelled, so one failed return is logged and the rest still go back.
   for (const listing of claimedListings) {
     if (listing.sharesRemaining <= 0) continue;
-    if (listing.sellerCorporationId) {
-      const targetCorp = await db
-        .collection<Corporation>("corporations")
-        .findOne(
-          { _id: listing.corporationId, "shareholders.corporationId": listing.sellerCorporationId },
+    try {
+      if (listing.sellerCorporationId) {
+        const targetCorp = await corporationsCollection(db).findOne(
+          {
+            _id: listing.corporationId,
+            "shareholders.corporationId": listing.sellerCorporationId,
+          },
           { projection: { "shareholders.$": 1 } }
         );
-      const existingAvg =
-        targetCorp?.shareholders?.[0]?.avgCostPerShare ?? listing.marketPriceAtCreation;
-      await creditSharesToCorp(
-        db,
-        listing.corporationId,
-        listing.sellerCorporationId,
-        listing.sharesRemaining,
-        existingAvg,
-        { $set: { updatedAt: now } }
-      );
-    } else {
-      if (listing.holdingTerms) {
-        const restored = await creditShares(
+        const existingAvg =
+          targetCorp?.shareholders?.[0]?.avgCostPerShare ?? listing.marketPriceAtCreation;
+        await creditSharesToCorp(
+          db,
+          listing.corporationId,
+          listing.sellerCorporationId,
+          listing.sharesRemaining,
+          existingAvg,
+          { $set: { updatedAt: now } }
+        );
+      } else {
+        if (listing.holdingTerms) {
+          const restored = await creditShares(
+            db,
+            listing.corporationId,
+            listing.sellerCharacterId,
+            listing.sharesRemaining,
+            { $set: { updatedAt: now } },
+            {
+              holdingChange: {
+                turn: currentTurn,
+                restore: listing.holdingTerms,
+                trackingEnabled: true,
+              },
+            }
+          );
+          if (!restored) throw new Error("Expired stock holding could not be restored");
+          continue;
+        }
+        const targetCorp = await corporationsCollection(db).findOne(
+          { _id: listing.corporationId, "shareholders.characterId": listing.sellerCharacterId },
+          { projection: { "shareholders.$": 1 } }
+        );
+        const returnPrice =
+          targetCorp?.shareholders?.[0]?.avgCostPerShare ?? listing.marketPriceAtCreation;
+        await creditShares(
           db,
           listing.corporationId,
           listing.sellerCharacterId,
           listing.sharesRemaining,
           { $set: { updatedAt: now } },
-          {
-            holdingChange: {
-              turn: currentTurn,
-              restore: listing.holdingTerms,
-              trackingEnabled: true,
-            },
-          }
+          { pricePerShare: returnPrice }
         );
-        if (!restored) throw new Error("Expired stock holding could not be restored");
-        continue;
       }
-      const targetCorp = await db
-        .collection<Corporation>("corporations")
-        .findOne(
-          { _id: listing.corporationId, "shareholders.characterId": listing.sellerCharacterId },
-          { projection: { "shareholders.$": 1 } }
-        );
-      const returnPrice =
-        targetCorp?.shareholders?.[0]?.avgCostPerShare ?? listing.marketPriceAtCreation;
-      await creditShares(
-        db,
-        listing.corporationId,
-        listing.sellerCharacterId,
-        listing.sharesRemaining,
-        { $set: { updatedAt: now } },
-        { pricePerShare: returnPrice }
-      );
+    } catch (error) {
+      console.error(`[shareListings] could not return shares for listing ${listing._id}:`, error);
     }
   }
 
   // Notify buyers
   if (notifyKeys.size > 0) {
     const buyerCharIds = [...new Set([...notifyKeys.values()].map((v) => v.charId))];
-    const buyerChars = await db
-      .collection<Character>("characters")
+    const buyerChars = await charactersCollection(db)
       .find({ _id: { $in: buyerCharIds } }, { projection: { _id: 1, userId: 1 } })
       .toArray();
     const charToUser = new Map(buyerChars.map((c) => [c._id.toString(), c.userId]));
@@ -389,9 +381,7 @@ export async function expireShareListings(db: Db, now: Date, currentTurn: number
     if (notifications.length > 0) {
       // notifications array is Omit<Notification, "_id">[] — insertMany expects OptionalUnlessRequiredId
       /* eslint-disable @typescript-eslint/no-explicit-any */
-      await db
-        .collection<Omit<Notification, "_id">>("notifications")
-        .insertMany(notifications as any);
+      await notificationsCollection<Omit<Notification, "_id">>(db).insertMany(notifications as any);
       /* eslint-enable @typescript-eslint/no-explicit-any */
     }
   }

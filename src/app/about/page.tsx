@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { publicPageMetadata } from "@/lib/siteMetadata";
-import { AdSenseUnit } from "@/components/AdSenseUnit";
 import { formatNationList } from "@/lib/marketing/marketedWorld";
 import { getMarketedWorldSafe } from "@/lib/marketing/marketedWorldServer";
 
@@ -79,12 +78,6 @@ export default async function AboutPage() {
               </p>
             </div>
           </section>
-
-          <AdSenseUnit
-            slot="ahd-about-inarticle"
-            format="auto"
-            className="min-h-[280px] sm:min-h-[90px] my-6"
-          />
 
           <section>
             <h2 className="text-lg font-bold mb-3">Who runs it?</h2>

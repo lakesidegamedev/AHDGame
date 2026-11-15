@@ -433,4 +433,94 @@ export const MANUFACTURING_V3: V3LaneContent = {
       ],
     },
   ],
+  "2039": [
+    {
+      name: "Electrified Process Heat",
+      description: "Electric furnaces run on cheap hours and cut the energy bill.",
+      effects: [{ kind: "inputCost", commodity: "energy", pct: 0.09 }],
+    },
+    {
+      name: "Robot-Built Premium Lines",
+      description: "Precision robot assembly sells at a quality premium.",
+      effects: [{ kind: "plantOutput", pct: 0.018 }],
+    },
+    {
+      name: "Critical Supply Designation",
+      description: "Strategic supplier status brings priority access and legal cover.",
+      effects: [
+        { kind: "dominanceShield", pct: 0.11 },
+        { kind: "tariffShield", pct: 0.09 },
+      ],
+    },
+    {
+      name: "Robot-Built Robot Lines",
+      description: "Robots assemble more robots, so capacity grows without new hires.",
+      effects: [
+        { kind: "laborCostReduction", pct: 0.1 },
+        { kind: "outputRate", commodity: "electronics", pct: 0.09 },
+      ],
+    },
+    {
+      name: "Certified Low-Carbon Steel",
+      description: "Audited low-carbon steel commands the top price in green procurement.",
+      effects: [
+        { kind: "plantOutput", pct: 0.03 },
+        { kind: "marketingStrength", flat: 30 },
+      ],
+    },
+    {
+      name: "Friend-Shored Plant Network",
+      description:
+        "Matching plants across allied countries keep supply running through any trade fight.",
+      effects: [
+        { kind: "tariffShield", pct: 0.24 },
+        { kind: "expansionDiscount", pct: 0.17 },
+      ],
+    },
+  ],
+  "2049": [
+    {
+      name: "Superconducting Process Power",
+      description: "Lossless power systems run furnaces on the cheapest hours.",
+      effects: [{ kind: "inputCost", commodity: "energy", pct: 0.1 }],
+    },
+    {
+      name: "Atom-Precise Premium Lines",
+      description: "Atom-precise parts sell at a quality premium.",
+      effects: [{ kind: "plantOutput", pct: 0.019 }],
+    },
+    {
+      name: "Strategic Capacity Designation",
+      description: "Designated national capacity brings priority access and legal cover.",
+      effects: [
+        { kind: "dominanceShield", pct: 0.12 },
+        { kind: "tariffShield", pct: 0.1 },
+      ],
+    },
+    {
+      name: "Self-Replicating Lines",
+      description: "Lines build copies of themselves, so capacity grows with no new hires.",
+      effects: [
+        { kind: "laborCostReduction", pct: 0.1 },
+        { kind: "outputRate", commodity: "electronics", pct: 0.095 },
+      ],
+    },
+    {
+      name: "Orbital-Grade Materials",
+      description: "Alloys made in orbit command the top price in advanced procurement.",
+      effects: [
+        { kind: "plantOutput", pct: 0.03 },
+        { kind: "marketingStrength", flat: 32 },
+      ],
+    },
+    {
+      name: "Planetary Plant Network",
+      description:
+        "Mirrored plants across many regions keep supply running through any trade fight.",
+      effects: [
+        { kind: "tariffShield", pct: 0.25 },
+        { kind: "expansionDiscount", pct: 0.18 },
+      ],
+    },
+  ],
 };

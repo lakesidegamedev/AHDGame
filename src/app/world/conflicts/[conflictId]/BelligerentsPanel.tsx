@@ -34,30 +34,15 @@ export interface BelligerentsView {
 }
 
 /**
- * Who is actually fighting, side by side.
- *
- * The masthead already carries each side's label and a terse code roll under it
- * ("DD · RU"), and that is where this started: it is legible once you know the
- * codes, and invisible if you do not. A player reading the record of the war for
- * Germany could not tell that Russia was in it, let alone why.
- *
- * So the roll gets its own panel, above the momentum bar, with the ENTRY column
- * doing the work: the country that declared, the country declared on, and every
- * ally a charter dragged in, each saying which. That last one is the whole point
- * — enforced mutual defence puts countries into wars they never chose, and the
- * record has to say so plainly rather than leaving a code in a list.
- *
- * ATTACKERS and DEFENDERS come from the server, which resolves them from the
- * host's own roster membership; a war whose host fights on neither side (every
- * proxy war) gets each side's own label instead, because naming an aggressor
- * there would be a claim the data does not support.
+ * Masthead's terse code roll ("DD · RU") is illegible to players who don't
+ * know the codes, so each side gets a panel with an ENTRY column stating who
+ * declared, who was declared on, and which charter dragged in each ally.
+ * ATTACKERS/DEFENDERS come from the server; proxy wars (host on neither side)
+ * fall back to each side's own label rather than naming an aggressor.
  */
 export function BelligerentsPanel({ view }: { view?: BelligerentsView }) {
-  // A missing roll renders NOTHING, and is not an error. These props cross a
-  // serialization boundary: a page rendered before this shipped carries no
-  // belligerents at all, and a panel that threw on it would take the whole
-  // conflict record down rather than lose one block of it. Absent data means an
-  // absent panel — the rest of the record is still worth reading.
+  // Missing roll renders nothing, not an error: absent data means an absent
+  // panel, and the rest of the record is still worth showing.
   if (!view?.a || !view?.b) return null;
 
   return (

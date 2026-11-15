@@ -10,7 +10,6 @@ import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { resolveCorporation } from "@/lib/api/corporations/resolveQuery";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { isOperatingSectorType } from "@/lib/constants/corporations";
-import { isSubsidiaryCorporationsEnabled } from "@/lib/corporations/subsidiaries/featureFlag";
 import { spinOff } from "@/lib/corporations/subsidiaries/commands/spinOff";
 
 const bodySchema = z.object({
@@ -42,9 +41,6 @@ export async function POST(request: Request, { params }: RouteParams) {
     const db = await getDb();
     const corpGuard = await requireCorporationActionsEnabled(db);
     if (corpGuard) return corpGuard;
-    if (!(await isSubsidiaryCorporationsEnabled())) {
-      return errorResponse(403, "Subsidiary corporations are not enabled.");
-    }
 
     const parsed = await parseJsonBody(request, bodySchema);
     if (!parsed.success) return errorResponse(parsed.status, parsed.error);

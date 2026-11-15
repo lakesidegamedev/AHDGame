@@ -1,5 +1,5 @@
 /**
- * State Ownership Concentration Index (SOCI, spec rebalance 2026-06-24). A
+ * State Ownership Concentration Index (SOCI). A
  * per-country 0–100 measure = state-owned corporate revenue ÷ total national
  * corporate revenue. Stored on the FederalBudget doc, recomputed each turn. The
  * shared `sociMultiplier` turns it into the escalation factor every
@@ -7,7 +7,7 @@
  * with the unrelated `concentrationMultiplier` in `@/lib/economicModels`.)
  */
 import { ObjectId, type Db } from "mongodb";
-import type { Corporation, CorporateSector, FederalBudget } from "@/lib/db/types";
+import type { CorporateSector } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import {
@@ -17,6 +17,9 @@ import {
 } from "@/lib/currency/corporationCapital";
 import { readCorpEconomicAnchor } from "@/lib/currency/corpEconomyFields";
 import { clampConcentration, sociMultiplier } from "./concentrationClamp";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 export { clampConcentration, sociMultiplier };
 
@@ -35,9 +38,10 @@ export async function readStateOwnershipConcentration(
   db: Db,
   countryId: CountryId
 ): Promise<number> {
-  const budget = await db
-    .collection<FederalBudget>("federalBudget")
-    .findOne({ countryId }, { projection: { stateOwnershipConcentration: 1 } });
+  const budget = await federalBudgetCollection(db).findOne(
+    { countryId },
+    { projection: { stateOwnershipConcentration: 1 } }
+  );
   const raw = budget?.stateOwnershipConcentration;
   return typeof raw === "number" ? clampConcentration(raw) : 0;
 }
@@ -49,7 +53,7 @@ export async function writeStateOwnershipConcentration(
   value: number,
   turn: number
 ): Promise<void> {
-  await db.collection<FederalBudget>("federalBudget").updateOne(
+  await federalBudgetCollection(db).updateOne(
     { countryId },
     {
       $set: {
@@ -74,8 +78,7 @@ export async function computeCountryStateOwnershipConcentration(
   countryId: CountryId,
   fxByCurrency?: ReadonlyMap<CurrencyCode, number>
 ): Promise<number> {
-  const sectors = await db
-    .collection<CorporateSector>("corporateSectors")
+  const sectors = await corporateSectorsCollection(db)
     .find({ countryId })
     .project<{ corporationId: ObjectId; revenue: number }>({ corporationId: 1, revenue: 1 })
     .toArray();
@@ -85,8 +88,7 @@ export async function computeCountryStateOwnershipConcentration(
     new Map(sectors.map((s) => [s.corporationId.toString(), s.corporationId])).values()
   );
   const [corps, fx] = await Promise.all([
-    db
-      .collection<Corporation>("corporations")
+    corporationsCollection(db)
       .find(
         { _id: { $in: uniqueCorpIds } },
         {

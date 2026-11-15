@@ -1,11 +1,15 @@
 import type { Db } from "mongodb";
-import type { CountryId } from "@/lib/constants/countries";
+import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import type { CongressionalDistrict } from "@/lib/db/types";
 import { buildDistrictDocsForStates } from "./buildStateDocs";
 import { seedRedistrictingAuthority } from "./seedRedistrictingAuthority";
+import { congressionalDistrictsCollection } from "@/lib/db/repositories/congressionalDistricts";
+import type { Document } from "mongodb";
+import { seedOpeningHouseHolders } from "./seedOpeningHolders";
 
 interface SeedOpts {
   countryId?: CountryId;
+  preset?: string;
   now: Date;
   log?: (m: string) => void;
 }
@@ -22,9 +26,9 @@ export async function seedCongressionalDistricts(
   const countryId = (opts.countryId ?? "US") as CountryId;
   const log = opts.log ?? (() => {});
 
-  const docs = await buildDistrictDocsForStates(db, countryId, opts.now);
+  const docs = await buildDistrictDocsForStates(db, countryId, opts.now, undefined, opts.preset);
   if (docs.length > 0) {
-    await db.collection<CongressionalDistrict>("congressionalDistricts").bulkWrite(
+    await congressionalDistrictsCollection(db).bulkWrite(
       docs.map((doc) => ({
         updateOne: { filter: { _id: doc._id }, update: { $set: doc }, upsert: true },
       })),
@@ -32,9 +36,9 @@ export async function seedCongressionalDistricts(
     );
   }
   const seeded = docs.length;
+  if (countryId === COUNTRY_CONFIGS.US.id) await seedOpeningHouseHolders(db, opts.preset, log);
 
-  await db
-    .collection("congressionalDistricts")
+  await congressionalDistrictsCollection<Document>(db)
     .createIndex({ countryId: 1, stateId: 1, index: 1 }, { unique: true })
     .catch(() => {});
 

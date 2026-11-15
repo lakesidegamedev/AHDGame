@@ -31,6 +31,13 @@ import {
   assertCampaignActorForSurrogate,
   getCurrentTurn,
 } from "./campaignManagementCommands";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import type { Document } from "mongodb";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
+import { activityLogCollection } from "@/lib/db/repositories/activityLog";
 export {
   appointCampaignManager,
   contributeCampaignStrength,
@@ -60,7 +67,7 @@ export async function upgradeCampaign(params: {
   const branch = params.branch ?? null;
   const campaign = await getCampaignOrThrow(db, campaignId);
 
-  const election = await db.collection<Election>("elections").findOne({ _id: campaign.electionId });
+  const election = await electionsCollection(db).findOne({ _id: campaign.electionId });
   // Fundraising is the running-mate surrogate's only upgrade lane; every other
   // lever stays manager/nominee-only. The surrogate assert is a superset, so
   // managers/nominees are unaffected on the fundraising lane too.
@@ -149,11 +156,9 @@ export async function upgradeCampaign(params: {
     if (targetOid.equals(campaign.candidateId)) {
       throw badRequest("You cannot research your own candidate");
     }
-    const targetChar = await db.collection<Character>("characters").findOne({ _id: targetOid });
+    const targetChar = await charactersCollection(db).findOne({ _id: targetOid });
     oppoTargetChar = targetChar;
-    const targetNpp = !targetChar
-      ? await db.collection<NPP>("npps").findOne({ _id: targetOid })
-      : null;
+    const targetNpp = !targetChar ? await nppsCollection(db).findOne({ _id: targetOid }) : null;
     const target = targetChar || targetNpp;
     if (!target) {
       throw notFound("Target not found");
@@ -228,7 +233,7 @@ export async function upgradeCampaign(params: {
     guard[`${category}Tree.${branch}`] = currentBranchLevel;
   }
 
-  const updateResult = await db.collection<Campaign>("campaigns").updateOne(guard, {
+  const updateResult = await campaignsCollection(db).updateOne(guard, {
     $inc: incOnPurchase,
     $push: {
       activityHistory: { $each: [activity], $slice: -CAMPAIGN_ACTIVITY_HISTORY_CAP },
@@ -258,9 +263,9 @@ export async function upgradeCampaign(params: {
         },
       },
     ];
-    const charRes = await db.collection("characters").updateOne({ _id: targetOid }, clampFav);
+    const charRes = await charactersCollection(db).updateOne({ _id: targetOid }, clampFav);
     if (charRes.matchedCount === 0) {
-      await db.collection("npps").updateOne({ _id: targetOid }, clampFav);
+      await nppsCollection<Document>(db).updateOne({ _id: targetOid }, clampFav);
     }
   }
 
@@ -315,15 +320,15 @@ export async function donateToCampaign(params: {
       throw badRequest("Invalid party id");
     }
 
-    const party = await db
-      .collection<PoliticalParty>("politicalParties")
-      .findOne({ sequentialId: numericPartyId, countryId: user.character.countryId });
+    const party = await politicalPartiesCollection(db).findOne({
+      sequentialId: numericPartyId,
+      countryId: user.character.countryId,
+    });
     if (!party) {
       throw notFound("Party not found");
     }
 
-    const ownedCharacters = await db
-      .collection<Character>("characters")
+    const ownedCharacters = await charactersCollection(db)
       .find(
         { userId: new ObjectId(user.userId) },
         { projection: { _id: 1, name: 1, countryId: 1 } }
@@ -352,9 +357,10 @@ export async function donateToCampaign(params: {
       );
     }
 
-    const election = await db
-      .collection<Election>("elections")
-      .findOne({ _id: campaign.electionId }, { projection: { countryId: 1 } });
+    const election = await electionsCollection(db).findOne(
+      { _id: campaign.electionId },
+      { projection: { countryId: 1 } }
+    );
     if (!election) {
       throw notFound("Election not found");
     }
@@ -406,40 +412,44 @@ export async function donateToCampaign(params: {
     };
 
     const applyPartyDonationInTransaction = async (session: ClientSession) => {
-      const debitResult = await db
-        .collection<PoliticalParty>("politicalParties")
-        .updateOne({ _id: party._id, treasury: { $gte: amountPartyLocal } }, partyDebit, {
+      const debitResult = await politicalPartiesCollection(db).updateOne(
+        { _id: party._id, treasury: { $gte: amountPartyLocal } },
+        partyDebit,
+        {
           session,
-        });
+        }
+      );
       if (debitResult.matchedCount === 0) {
         throw badRequest("Insufficient party funds");
       }
-      const campaignUpdateResult = await db
-        .collection<Campaign>("campaigns")
-        .updateOne({ _id: campaignId }, campaignUpdate, { session });
+      const campaignUpdateResult = await campaignsCollection(db).updateOne(
+        { _id: campaignId },
+        campaignUpdate,
+        { session }
+      );
       if (campaignUpdateResult.matchedCount === 0) {
         throw notFound("Campaign not found");
       }
     };
 
     const applyPartyDonationWithoutTransaction = async () => {
-      const debitResult = await db
-        .collection<PoliticalParty>("politicalParties")
-        .updateOne({ _id: party._id, treasury: { $gte: amountPartyLocal } }, partyDebit);
+      const debitResult = await politicalPartiesCollection(db).updateOne(
+        { _id: party._id, treasury: { $gte: amountPartyLocal } },
+        partyDebit
+      );
       if (debitResult.matchedCount === 0) {
         throw badRequest("Insufficient party funds");
       }
 
-      const campaignUpdateResult = await db
-        .collection<Campaign>("campaigns")
-        .updateOne({ _id: campaignId }, campaignUpdate);
+      const campaignUpdateResult = await campaignsCollection(db).updateOne(
+        { _id: campaignId },
+        campaignUpdate
+      );
       if (campaignUpdateResult.matchedCount === 0) {
-        await db
-          .collection<PoliticalParty>("politicalParties")
-          .updateOne(
-            { _id: party._id },
-            { $inc: { treasury: amountPartyLocal }, $set: { updatedAt: new Date() } }
-          );
+        await politicalPartiesCollection(db).updateOne(
+          { _id: party._id },
+          { $inc: { treasury: amountPartyLocal }, $set: { updatedAt: new Date() } }
+        );
         throw notFound("Campaign not found");
       }
     };
@@ -456,7 +466,7 @@ export async function donateToCampaign(params: {
     // Log the donor-side outflow in the party's local home currency — same
     // unit the treasury ledger / chair UI displays. (The donation amount the
     // player typed is in anchor; we record the LOCAL value actually debited.)
-    void db.collection("activityLog").insertOne({
+    void activityLogCollection<Document>(db).insertOne({
       type: "fund_event",
       timestamp: now,
       userId: new ObjectId(user.userId),
@@ -494,16 +504,15 @@ export async function donateToCampaign(params: {
     return;
   }
 
-  const character = await db
-    .collection<Character>("characters")
-    .findOne({ _id: user.character._id });
+  const character = await charactersCollection(db).findOne({ _id: user.character._id });
   if (!character) {
     throw notFound("Character not found");
   }
 
-  const characterDonationElection = await db
-    .collection<Election>("elections")
-    .findOne({ _id: campaign.electionId }, { projection: { countryId: 1 } });
+  const characterDonationElection = await electionsCollection(db).findOne(
+    { _id: campaign.electionId },
+    { projection: { countryId: 1 } }
+  );
   if (!characterDonationElection) {
     throw notFound("Election not found");
   }
@@ -552,39 +561,46 @@ export async function donateToCampaign(params: {
 
   await runWithOptionalTransaction(
     async (session) => {
-      const debitResult = await db
-        .collection<Character>("characters")
-        .updateOne(characterBalanceFilter, characterDebit, { session });
+      const debitResult = await charactersCollection(db).updateOne(
+        characterBalanceFilter,
+        characterDebit,
+        { session }
+      );
       if (debitResult.matchedCount === 0) {
         throw badRequest("Insufficient funds");
       }
 
-      const campaignUpdateResult = await db
-        .collection<Campaign>("campaigns")
-        .updateOne({ _id: campaignId }, campaignUpdate, { session });
+      const campaignUpdateResult = await campaignsCollection(db).updateOne(
+        { _id: campaignId },
+        campaignUpdate,
+        { session }
+      );
       if (campaignUpdateResult.matchedCount === 0) {
         throw notFound("Campaign not found");
       }
     },
     async () => {
-      const debitResult = await db
-        .collection<Character>("characters")
-        .updateOne(characterBalanceFilter, characterDebit);
+      const debitResult = await charactersCollection(db).updateOne(
+        characterBalanceFilter,
+        characterDebit
+      );
       if (debitResult.matchedCount === 0) {
         throw badRequest("Insufficient funds");
       }
 
       try {
-        const campaignUpdateResult = await db
-          .collection<Campaign>("campaigns")
-          .updateOne({ _id: campaignId }, campaignUpdate);
+        const campaignUpdateResult = await campaignsCollection(db).updateOne(
+          { _id: campaignId },
+          campaignUpdate
+        );
         if (campaignUpdateResult.matchedCount === 0) {
           throw notFound("Campaign not found");
         }
       } catch (error) {
-        await db
-          .collection<Character>("characters")
-          .updateOne({ _id: character._id }, { $inc: { [campaignFundsField]: amountLocal } });
+        await charactersCollection(db).updateOne(
+          { _id: character._id },
+          { $inc: { [campaignFundsField]: amountLocal } }
+        );
         throw error;
       }
     }
@@ -593,7 +609,7 @@ export async function donateToCampaign(params: {
   // Log the donor-side outflow in the character's local home currency so the
   // activityLog reflects what the character actually paid. The Campaign.funds
   // ledger remains anchor-denominated until that subsystem is migrated.
-  void db.collection("activityLog").insertOne({
+  void activityLogCollection<Document>(db).insertOne({
     type: "fund_event",
     timestamp: now,
     userId: new ObjectId(user.userId),

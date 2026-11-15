@@ -20,8 +20,11 @@ import {
 } from "@/lib/military/warGoals";
 import { MS_PER_TURN } from "@/lib/constants/calendar";
 import type { Bill } from "@/lib/db/types/legislation";
-import type { Character } from "@/lib/db/types";
 import { BILL_PROPOSE_ACTION_COST } from "@shared/constants/legislation";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { billsCollection } from "@/lib/db/repositories/bills";
+import { cabinetMembersCollection } from "@/lib/db/repositories/cabinetMembers";
+import type { Document } from "mongodb";
 
 const bodySchema = z.object({
   targetCountry: z.string().min(2).max(3),
@@ -55,10 +58,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
     const db = await getDb();
     const gs = await (
       await getGameStateCollection(db)
-    ).findOne({ _id: "current" }, { projection: { conflictsEnabled: 1, currentTurn: 1 } });
-    if (!gs?.conflictsEnabled) {
-      return errorResponse(404, "Conflicts subsystem disabled");
-    }
+    ).findOne({ _id: "current" }, { projection: { currentTurn: 1 } });
 
     const parsed = await parseJsonBody(request, bodySchema);
     if (!parsed.success) {
@@ -79,9 +79,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
     const defenceSeat = DEFENSE_POSITION_BY_COUNTRY[countryId];
     const isDefence =
       !!defenceSeat &&
-      !!(await db
-        .collection("cabinetMembers")
-        .findOne({ countryId, positionId: defenceSeat, characterId: character._id }));
+      !!(await cabinetMembersCollection<Document>(db).findOne({
+        countryId,
+        positionId: defenceSeat,
+        characterId: character._id,
+      }));
     if (!auth.user.isAdmin && !isHog && !isDefence) {
       return errorResponse(
         403,
@@ -89,7 +91,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
       );
     }
 
-    const currentTurn = gs.currentTurn ?? 0;
+    const currentTurn = gs?.currentTurn ?? 0;
     const check = await validateDeclareWar(
       db,
       { targetCountry, warGoal: parsed.data.warGoal },
@@ -100,7 +102,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
 
     // One live declaration at a time, so a chamber is never asked to ratify two
     // wars against the same country at once.
-    const existing = await db.collection<Bill>("bills").findOne({
+    const existing = await billsCollection(db).findOne({
       countryId,
       status: { $in: ["proposed", "active", "passed_origin", "active_other", "active_both"] },
       "provisions.type": "declare_war",
@@ -120,9 +122,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
     if (!auth.user.isAdmin) {
       // Re-read rather than trusting `auth.user.character`, which is a snapshot taken
       // at the top of the request and may have been spent down since.
-      const fresh = await db
-        .collection<Character>("characters")
-        .findOne({ _id: character._id }, { projection: { actions: 1 } });
+      const fresh = await charactersCollection(db).findOne(
+        { _id: character._id },
+        { projection: { actions: 1 } }
+      );
       const currentActions = fresh?.actions ?? 0;
       if (currentActions < actionCost) {
         return errorResponse(
@@ -132,12 +135,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
       }
       // Conditional $inc, not read-then-write: two declarations submitted at once
       // would both clear the check above and both spend the same points.
-      const spend = await db
-        .collection<Character>("characters")
-        .updateOne(
-          { _id: character._id, actions: { $gte: actionCost } },
-          { $inc: { actions: -actionCost }, $set: { updatedAt: new Date() } }
-        );
+      const spend = await charactersCollection(db).updateOne(
+        { _id: character._id, actions: { $gte: actionCost } },
+        { $inc: { actions: -actionCost }, $set: { updatedAt: new Date() } }
+      );
       if (spend.modifiedCount === 0) {
         return errorResponse(409, "Your actions changed. Please try again.");
       }
@@ -183,15 +184,13 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
     // that now does not exist, and nothing downstream would ever refund them.
     let result;
     try {
-      result = await db.collection<Bill>("bills").insertOne(bill as Bill);
+      result = await billsCollection(db).insertOne(bill as Bill);
     } catch (error) {
       if (!auth.user.isAdmin) {
-        await db
-          .collection<Character>("characters")
-          .updateOne(
-            { _id: character._id },
-            { $inc: { actions: actionCost }, $set: { updatedAt: new Date() } }
-          );
+        await charactersCollection(db).updateOne(
+          { _id: character._id },
+          { $inc: { actions: actionCost }, $set: { updatedAt: new Date() } }
+        );
       }
       throw error;
     }

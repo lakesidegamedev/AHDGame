@@ -4,10 +4,7 @@
  * The statute book, at NATIONAL or STATE scope.
  *
  * Both scopes read the same endpoint and receive the same
- * `PolicyRecordResponse[]`; only the renderer used to differ, and the state one
- * had drifted — its own eight-entry domain-label table against this file's
- * seventeen, no titles, no provenance, no axis summary. One component removes
- * the class of bug rather than the two instances of it.
+ * `PolicyRecordResponse[]`, so one component keeps their rendering in sync.
  */
 
 import { useMemo, useState } from "react";

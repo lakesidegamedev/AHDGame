@@ -5,19 +5,11 @@ const DUPLICATE_KEY = 11000;
 
 /**
  * Unique series-coordinate indexes for `macroTelemetry` and `approvalTelemetry`
- * on a live database (#2688).
- *
- * `seedTelemetryIndexes` covers freshly seeded worlds, which is why sandbox
- * worlds are fast. A world seeded before #2099/#2100 never received them, so
- * every per-turn telemetry upsert (about 790 a turn) scanned its whole
- * collection. Production spent about 20 s a turn in the `metricHistory` phase
- * on 7 round trips, growing with every turn as the collections grow.
- *
- * Runs at startup because the full registry is an operator action and this
- * cost grows until the index exists. Create-only and idempotent. A duplicate
- * coordinate would block a unique build; that case is reported, never thrown,
- * so it cannot stop a deployment. Rerun with `--only <id> --force` after
- * removing the duplicates.
+ * on live databases. Without them, every per-turn telemetry upsert scans the
+ * whole collection, so cost grows each turn. Runs at startup because the cost
+ * grows until the index exists. Create-only and idempotent. Duplicate
+ * coordinates are reported, not thrown, so a unique build cannot block a
+ * deployment; rerun with `--only <id> --force` after removing duplicates.
  */
 export const migration: Migration = {
   id: "2026-09-30-long-horizon-telemetry-indexes",

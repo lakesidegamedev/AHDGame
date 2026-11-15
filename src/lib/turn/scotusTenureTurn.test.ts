@@ -83,6 +83,47 @@ describe("processScotusTenureTurn", () => {
     expect(db.collectionMocks.supremeCourtSeats!.updateOne).not.toHaveBeenCalled();
   });
 
+  it("retires an open-ended seeded justice once the authored record has ended", async () => {
+    const { getGameState } = await import("@/lib/gameState");
+    vi.mocked(getGameState).mockResolvedValue({ currentTurn: 1, startingYear: 2027 } as never);
+    const seatId = new ObjectId();
+    const seat = {
+      _id: seatId,
+      countryId: "US",
+      seatNumber: 1,
+      isDivergent: false,
+      justiceMode: "historical",
+      justiceName: "Justice A",
+      historicalOccupantIndex: 0,
+      historicalOccupants: [
+        {
+          key: "a",
+          name: "Justice A",
+          economicLean: 2,
+          socialLean: 2,
+          seatedYear: 2027,
+          departureYear: null,
+          departureReason: null,
+        },
+      ],
+    };
+    db.collectionMocks.supremeCourtSeats!.find.mockReturnValue({
+      toArray: vi.fn().mockResolvedValue([seat]),
+    });
+    const random = vi.spyOn(Math, "random").mockReturnValue(0);
+    try {
+      const { processScotusTenureTurn } = await import("./scotusTenureTurn");
+      const result = await processScotusTenureTurn(100, db as unknown as Db);
+      expect(result.seatsVacatedByHazard).toBe(1);
+      expect(db.collectionMocks.supremeCourtSeats!.updateOne).toHaveBeenCalledWith(
+        { _id: seatId, justiceMode: "historical" },
+        expect.objectContaining({ $set: expect.objectContaining({ justiceMode: null }) })
+      );
+    } finally {
+      random.mockRestore();
+    }
+  });
+
   it("opens a playable vacancy instead of auto-seating the next historical occupant (#1289)", async () => {
     const seatId = new ObjectId();
     const seat = {

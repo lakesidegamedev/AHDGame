@@ -9,7 +9,7 @@
  */
 
 import type { Db, ObjectId } from "mongodb";
-import type { Corporation, GameState } from "@/lib/db/types";
+import type { Corporation } from "@/lib/db/types";
 import { getControllingCorporateParent } from "@/lib/corporations/corporateOwnership";
 import {
   isEligibleAsSubsidiary,
@@ -27,20 +27,11 @@ import {
   type SubsidiaryAcquisitionFacts,
   type SubsidiaryBlock,
 } from "./rules/subsidiaryOutcome";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import type { Document } from "mongodb";
 
 const SYSTEM_USER_ID = "000000000000000000000000";
-
-async function subsidiaryFeatureEnabled(db: Db): Promise<boolean> {
-  const state = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { projection: { subsidiaryCorporationsEnabled: 1 } });
-  return state?.subsidiaryCorporationsEnabled === true;
-}
-
-/** Whether the world allows subsidiary-mode acquisitions at all (UI discovery). */
-export function isSubsidiaryAcquisitionAvailable(db: Db): Promise<boolean> {
-  return subsidiaryFeatureEnabled(db);
-}
 
 /**
  * Resolve every fact the subsidiary outcome is judged on. One cap-table read of
@@ -52,16 +43,9 @@ async function gatherFacts(
   acquirer: Corporation,
   target: Corporation
 ): Promise<SubsidiaryAcquisitionFacts> {
-  const [featureEnabled, allCorps] = await Promise.all([
-    subsidiaryFeatureEnabled(db),
-    db
-      .collection<Corporation>("corporations")
-      .find(
-        {},
-        { projection: { _id: 1, shareholders: 1, totalShares: 1, superShareMultiplier: 1 } }
-      )
-      .toArray(),
-  ]);
+  const allCorps = await corporationsCollection(db)
+    .find({}, { projection: { _id: 1, shareholders: 1, totalShares: 1, superShareMultiplier: 1 } })
+    .toArray();
 
   const targetParent = getControllingCorporateParent(target);
   const targetControlsOthers = allCorps.some((corp) => {
@@ -88,7 +72,6 @@ async function gatherFacts(
   }
 
   return {
-    featureEnabled,
     acquirerStateOwned: acquirer.countryOwnerId != null || acquirer.ownershipState === "stateOwned",
     acquirerIsFormalizedSubsidiary: acquirer.subsidiaryFormalizedAtTurn != null,
     targetStateOwned: !isEligibleAsSubsidiary(target),
@@ -151,7 +134,7 @@ export async function transferTargetEquityToAcquirer(
     now: Date;
   }
 ): Promise<boolean> {
-  const corps = db.collection<Corporation>("corporations");
+  const corps = corporationsCollection(db);
   const current = await corps.findOne(
     { _id: input.targetId, acquisitionSettlementId: input.offerId },
     { projection: { totalShares: 1 } }
@@ -187,8 +170,11 @@ export async function transferTargetEquityToAcquirer(
   // Index funds keep no position in a corporation nobody else can own. Paid
   // holdings were pulled with their payout leg; this only sweeps dust holdings
   // whose payout rounded to nothing, so no fund is left holding phantom shares.
-  await db.collection("indexFunds").updateMany({ "holdings.corporationId": input.targetId }, {
-    $pull: { holdings: { corporationId: input.targetId } },
-  } as never);
+  await indexFundsCollection<Document>(db).updateMany(
+    { "holdings.corporationId": input.targetId },
+    {
+      $pull: { holdings: { corporationId: input.targetId } },
+    } as never
+  );
   return true;
 }

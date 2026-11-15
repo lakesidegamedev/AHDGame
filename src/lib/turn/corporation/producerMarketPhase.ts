@@ -17,6 +17,9 @@ import {
   stageClock,
   type StageTimings,
 } from "@/lib/market/producerMarket/stageTimings";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { producerEconomyAccountsCollection } from "@/lib/db/repositories/producerEconomyAccounts";
 
 /** Stop on convergence, with a bounded fallback for difficult live markets. */
 export const LIVE_PLANNING_PASSES = 64;
@@ -61,7 +64,7 @@ export async function createProducerWallets(
   const entries = [...unique];
   if (entries.length === 0) return;
   // One unordered bulk write; the driver splits it into server-sized batches.
-  await db.collection<ProducerEconomyAccount>("producerEconomyAccounts").bulkWrite(
+  await producerEconomyAccountsCollection(db).bulkWrite(
     entries.map(([_id, scope]) => ({
       updateOne: {
         filter: {
@@ -116,6 +119,7 @@ export async function runCorporationProducerMarket(
       | "householdIncomeSpend"
       | "captiveShortValue"
       | "shortageAsk"
+      | "importTariffs"
     >;
     /** Closing transfers frozen and published with the settlement (see applySettlementClose). */
     close?: Parameters<typeof settleProducerTurn>[1]["close"];
@@ -139,15 +143,13 @@ export async function runCorporationProducerMarket(
   for (const scope of input.walletScopes) observedRate(scope.currency, input.rates);
   await createProducerWallets(db, input.worldEpoch, input.walletScopes);
   const [corporations, wallets] = await Promise.all([
-    db
-      .collection<Corporation>("corporations")
+    corporationsCollection(db)
       .find(
         { _id: { $in: [...corporationIds].map((id) => new ObjectId(id)) } },
         { projection: { liquidCapital: 1, liquidCurrencyCode: 1, producerPayables: 1 } }
       )
       .toArray(),
-    db
-      .collection<ProducerEconomyAccount>("producerEconomyAccounts")
+    producerEconomyAccountsCollection(db)
       .find(
         { worldEpoch: input.worldEpoch },
         { projection: { cash: 1, currency: 1, producerPayables: 1 } }
@@ -237,15 +239,13 @@ async function publishHostState(
   // Read authoritative post-settlement state even on retry. Applying an old
   // receipt's delta to freshly loaded cash would credit the same proceeds twice.
   const [closingCorporations, closingSectors] = await Promise.all([
-    db
-      .collection<Corporation>("corporations")
+    corporationsCollection(db)
       .find(
         { _id: { $in: [...corporationIds].map((id) => new ObjectId(id)) } },
         { projection: { liquidCapital: 1, pendingOperatingCash: 1, producerPayables: 1 } }
       )
       .toArray(),
-    db
-      .collection<CorporateSector>("corporateSectors")
+    corporateSectorsCollection(db)
       .find(
         { _id: { $in: settled.targets.map((target) => new ObjectId(target.sectorId)) } },
         {
@@ -302,5 +302,10 @@ async function publishHostState(
     totals.expenses += receipt.revenue - receipt.profit;
     totals.profit += receipt.profit;
   }
-  return { result: settled.result, closingSectors, operatingByCorporation };
+  return {
+    result: settled.result,
+    closingSectors,
+    operatingByCorporation,
+    openingAccounts: settled.openingAccounts,
+  };
 }

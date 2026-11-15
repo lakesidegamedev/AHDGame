@@ -36,3 +36,18 @@ export function sovereignIssuanceFlowsByCountry(input: {
     add(placement.countryId, placement.cashPaid, placement.face);
   return Object.fromEntries(flows);
 }
+
+/** Bond stock is authoritative; in-kind exchanges move no cash or net face. */
+export function reconcileSovereignDebtFaceFlows(input: {
+  openingDebt: number;
+  closingDebt: number;
+  issuedFace: number;
+}): { issuedFace: number; retiredFace: number } {
+  for (const value of Object.values(input)) {
+    if (!Number.isFinite(value) || value < 0 || value > Number.MAX_SAFE_INTEGER) {
+      throw new Error("Invalid sovereign principal stock or issuance");
+    }
+  }
+  const issuedFace = Math.max(input.issuedFace, input.closingDebt - input.openingDebt);
+  return { issuedFace, retiredFace: input.openingDebt + issuedFace - input.closingDebt };
+}

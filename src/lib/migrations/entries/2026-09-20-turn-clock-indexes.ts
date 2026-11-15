@@ -1,4 +1,6 @@
 import type { Migration } from "../types";
+import { turnLogsCollection } from "@/lib/db/repositories/turnLogs";
+import type { Document } from "mongodb";
 
 export const migration: Migration = {
   id: "2026-09-20-turn-clock-indexes",
@@ -6,7 +8,7 @@ export const migration: Migration = {
   idempotent: true,
   async execute(db, ctx) {
     if (ctx.dryRun) return { notes: ["Would create successful turn clock indexes."] };
-    const logs = db.collection("turnLogs");
+    const logs = turnLogsCollection<Document>(db);
     await logs.createIndex(
       { success: 1, "iteration.type": 1, "iteration.number": 1, turn: -1, gameTime: -1 },
       { name: "turnLogs_success_iteration_clock" }

@@ -4,25 +4,10 @@
  * inserts one player candidacy atomically and preserves profiles and financial accounts.
  */
 import { ObjectId, type ClientSession, type Db } from "mongodb";
-import type {
-  Campaign,
-  Character,
-  CountryGameState,
-  Election,
-  ElectionCandidate,
-  ElectionVoteTally,
-  GameState,
-  PoliticalParty,
-} from "@/lib/db/types";
+import type { Character, Election, ElectionCandidate } from "@/lib/db/types";
 import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
-import {
-  RUSSIAN_COUNCIL_OPENINGS_COLLECTION,
-  type RussianCouncilOpeningRecord,
-} from "./councilElectionOpening";
-import {
-  RUSSIAN_DUMA_RESULTS_COLLECTION,
-  type RussianDumaResultRecord,
-} from "./dumaElectionResult";
+import { type RussianCouncilOpeningRecord } from "./councilElectionOpening";
+import { type RussianDumaResultRecord } from "./dumaElectionResult";
 import { decideRussianCouncilFiling } from "./rules/councilFiling";
 import { planRussianCouncilPlayerAdmission } from "./rules/councilPlayerAdmission";
 import { loadRussianCouncilOpeningBinding } from "./councilOpeningBinding";
@@ -33,6 +18,16 @@ type FilingCharacter = Pick<
   "_id" | "countryId" | "homeState" | "party" | "currentOffice" | "federationPendingResidenceId"
 >;
 import { russianDumaBoundRoot } from "./dumaConvocationAuthority";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
+import { russianCouncilElectionOpeningsCollection } from "@/lib/db/repositories/russianCouncilElectionOpenings";
+import { russianDumaElectionResultsCollection } from "@/lib/db/repositories/russianDumaElectionResults";
 export async function validateRussianCouncilPlayerFiling(input: {
   db: Db;
   election: Election;
@@ -48,10 +43,11 @@ export async function validateRussianCouncilPlayerFiling(input: {
   });
   const binding = election.russianCouncilRound;
   if (!binding) return reject("unbound-mandate");
-  const game = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { session, projection: { preset: 1 } });
-  const country = await db.collection<CountryGameState>("countryGameStates").findOne(
+  const game = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { session, projection: { preset: 1 } }
+  );
+  const country = await countryGameStatesCollection(db).findOne(
     { _id: "RU" },
     {
       session,
@@ -102,15 +98,12 @@ export async function validateRussianCouncilPlayerFiling(input: {
     Number.isSafeInteger(partySequence) &&
     partySequence > 0 &&
     String(partySequence) === character.party
-      ? await db
-          .collection<PoliticalParty>("politicalParties")
-          .findOne(
-            { countryId: "RU", sequentialId: partySequence, regimeStatus: { $ne: "banned" } },
-            { session, projection: { countryId: 1, sequentialId: 1, regimeStatus: 1 } }
-          )
+      ? await politicalPartiesCollection(db).findOne(
+          { countryId: "RU", sequentialId: partySequence, regimeStatus: { $ne: "banned" } },
+          { session, projection: { countryId: 1, sequentialId: 1, regimeStatus: 1 } }
+        )
       : null;
-  const candidates = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const candidates = await electionCandidatesCollection(db)
     .find(
       {
         status: "active",
@@ -149,8 +142,7 @@ export async function validateRussianCouncilPlayerFiling(input: {
   if (!admission.allowed) return admission;
   const dumaRoot = russianDumaBoundRoot(country);
   const dumaResults = dumaRoot
-    ? await db
-        .collection<RussianDumaResultRecord>(RUSSIAN_DUMA_RESULTS_COLLECTION)
+    ? await russianDumaElectionResultsCollection<RussianDumaResultRecord>(db)
         .find(
           {
             countryId: "RU",
@@ -243,10 +235,8 @@ export async function materializeRussianCouncilPlayerFiling(input: {
     !candidate.electionId.equals(electionId)
   )
     throw new Error("Council player filing needs a transaction and one player identity");
-  const election = await db
-    .collection<Election>("elections")
-    .findOne({ _id: electionId }, { session });
-  const character = await db.collection<Character>("characters").findOne(
+  const election = await electionsCollection(db).findOne({ _id: electionId }, { session });
+  const character = await charactersCollection(db).findOne(
     { _id: candidate.characterId },
     {
       session,
@@ -275,13 +265,14 @@ export async function materializeRussianCouncilPlayerFiling(input: {
     session,
   });
   if (!decision.allowed) return decision;
-  const tally = await db
-    .collection<ElectionVoteTally>("electionVoteTallies")
-    .findOne({ electionId }, { session, projection: { totalVotes: 1 } });
+  const tally = await electionVoteTalliesCollection(db).findOne(
+    { electionId },
+    { session, projection: { totalVotes: 1 } }
+  );
   if (Object.values(tally?.totalVotes ?? {}).some((votes) => votes !== 0))
     return { allowed: false as const, reason: "filing-closed" as const };
   const binding = election.russianCouncilRound!;
-  const guard = await db.collection<CountryGameState>("countryGameStates").updateOne(
+  const guard = await countryGameStatesCollection(db).updateOne(
     {
       _id: "RU",
       ruFirstCouncilElectionCohortId: binding.rootCohortId ?? binding.cohortId,
@@ -292,7 +283,7 @@ export async function materializeRussianCouncilPlayerFiling(input: {
   );
   if (guard.matchedCount !== 1) throw new Error("Council filing mandate changed during admission");
   if (decision.withdrawIds.length) {
-    const withdrawn = await db.collection<ElectionCandidate>("electionCandidates").updateMany(
+    const withdrawn = await electionCandidatesCollection(db).updateMany(
       {
         _id: { $in: decision.withdrawIds.map((id) => new ObjectId(id)) },
         electionId,
@@ -310,30 +301,28 @@ export async function materializeRussianCouncilPlayerFiling(input: {
         )
       )
     );
-    await db
-      .collection<ElectionVoteTally>("electionVoteTallies")
-      .updateOne({ electionId }, { $unset: unset, $set: { updatedAt: now } }, { session });
+    await electionVoteTalliesCollection(db).updateOne(
+      { electionId },
+      { $unset: unset, $set: { updatedAt: now } },
+      { session }
+    );
   }
-  await db
-    .collection<ElectionCandidate>("electionCandidates")
-    .insertOne(
-      { ...candidate, _id: candidateId, russianCouncilNomination: decision.nomination },
-      { session }
-    );
-  await db
-    .collection<Campaign>("campaigns")
-    .updateOne(
-      { electionId, candidateId: candidate.characterId, status: { $ne: "archived" } },
-      { $set: { party: candidate.party, updatedAt: now } },
-      { session }
-    );
-  const receipt = await db
-    .collection<RussianCouncilOpeningRecord>(RUSSIAN_COUNCIL_OPENINGS_COLLECTION)
-    .updateOne(
-      { cohortId: binding.cohortId, mandateSinceTurn: binding.mandateSinceTurn },
-      { $inc: { playerFilings: 1 } },
-      { session }
-    );
+  await electionCandidatesCollection(db).insertOne(
+    { ...candidate, _id: candidateId, russianCouncilNomination: decision.nomination },
+    { session }
+  );
+  await campaignsCollection(db).updateOne(
+    { electionId, candidateId: candidate.characterId, status: { $ne: "archived" } },
+    { $set: { party: candidate.party, updatedAt: now } },
+    { session }
+  );
+  const receipt = await russianCouncilElectionOpeningsCollection<RussianCouncilOpeningRecord>(
+    db
+  ).updateOne(
+    { cohortId: binding.cohortId, mandateSinceTurn: binding.mandateSinceTurn },
+    { $inc: { playerFilings: 1 } },
+    { session }
+  );
   if (receipt.matchedCount !== 1)
     throw new Error("Council opening receipt changed during admission");
   return { allowed: true as const, insertedId: candidateId };

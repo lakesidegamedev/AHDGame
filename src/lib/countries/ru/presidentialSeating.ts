@@ -1,24 +1,23 @@
 /**
  * Russia seats only a certified president and vice-president ticket.
- * materializeRussianPresidentialSeating archives replaced offices and vacates
- * the winners' incompatible seats, preserving the remaining Congress and government.
+ * Seating archives replaced offices and vacates the winners' incompatible seats.
  */
 import { type Db, type ClientSession, type ObjectId } from "mongodb";
-import type {
-  Character,
-  NPP,
-  CountryGameState,
-  ElectedOfficial,
-  ElectionCandidate,
-} from "@/lib/db/types";
+import type { ElectedOfficial } from "@/lib/db/types";
 import { PM_VACANCY_DEADLINE_TURNS } from "@/lib/constants/turnTime";
 import type { UnifiedCabinetMember } from "@/lib/db/types/unifiedCabinetMember";
-import type { GovernmentFormation } from "@/lib/db/types/governmentFormation";
-import {
-  RUSSIAN_PRESIDENTIAL_RESULTS_COLLECTION,
-  type RussianPresidentialResultRecord,
-} from "./presidentialElectionResult";
-const RUSSIAN_PRESIDENTIAL_ARCHIVES_COLLECTION = "russianPresidentialOfficeArchives";
+import { type RussianPresidentialResultRecord } from "./presidentialElectionResult";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
+import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
+import { cabinetMembersCollection } from "@/lib/db/repositories/cabinetMembers";
+import { pmAppointmentVotesCollection } from "@/lib/db/repositories/pmAppointmentVotes";
+import type { Document } from "mongodb";
+import { russianPresidentialOfficeArchivesCollection } from "@/lib/db/repositories/russianPresidentialOfficeArchives";
+import { russianPresidentialElectionResultsCollection } from "@/lib/db/repositories/russianPresidentialElectionResults";
 interface Archive {
   _id: string;
   preset: "1991-default";
@@ -42,7 +41,7 @@ export async function materializeRussianPresidentialSeating(input: {
     !Number.isFinite(now.getTime())
   )
     throw new Error("Russian seating needs an active transaction, turn and time");
-  const countries = db.collection<CountryGameState>("countryGameStates");
+  const countries = countryGameStatesCollection(db);
   const country = await countries.findOne(
     { _id: "RU" },
     {
@@ -57,9 +56,7 @@ export async function materializeRussianPresidentialSeating(input: {
     }
   );
   if (!country?.ruPresidencyCertifiedElectionId) return false;
-  const results = db.collection<RussianPresidentialResultRecord>(
-    RUSSIAN_PRESIDENTIAL_RESULTS_COLLECTION
-  );
+  const results = russianPresidentialElectionResultsCollection<RussianPresidentialResultRecord>(db);
   const result = await results.findOne(
     {
       _id: country.ruPresidencyCertifiedElectionId.toHexString(),
@@ -95,8 +92,7 @@ export async function materializeRussianPresidentialSeating(input: {
   )
     throw new Error("Russian certified ticket identities overlap");
   const chars = charIds.length
-    ? await db
-        .collection<Character>("characters")
+    ? await charactersCollection(db)
         .find(
           {
             _id: { $in: charIds },
@@ -108,8 +104,7 @@ export async function materializeRussianPresidentialSeating(input: {
         .toArray()
     : [];
   const npps = nppIds.length
-    ? await db
-        .collection<NPP>("npps")
+    ? await nppsCollection(db)
         .find(
           {
             _id: { $in: nppIds },
@@ -127,12 +122,12 @@ export async function materializeRussianPresidentialSeating(input: {
     ...(charIds.length ? [{ characterId: { $in: charIds } }] : []),
     ...(nppIds.length ? [{ nppId: { $in: nppIds } }] : []),
   ];
-  const cabinet = db.collection<UnifiedCabinetMember>("cabinetMembers");
+  const cabinet = cabinetMembersCollection<UnifiedCabinetMember>(db);
   const winningMinisters = await cabinet
     .find({ countryId: "RU", $or: identities }, { session })
     .toArray();
   if (winningMinisters.length) {
-    await db.collection<Archive>(RUSSIAN_PRESIDENTIAL_ARCHIVES_COLLECTION).bulkWrite(
+    await russianPresidentialOfficeArchivesCollection<Archive>(db).bulkWrite(
       winningMinisters.map((cabinetMember) => ({
         updateOne: {
           filter: { _id: `${result._id}:cabinet:${cabinetMember._id.toHexString()}` },
@@ -152,7 +147,7 @@ export async function materializeRussianPresidentialSeating(input: {
     );
     await cabinet.deleteMany({ _id: { $in: winningMinisters.map((row) => row._id) } }, { session });
   }
-  const officials = db.collection<ElectedOfficial>("electedOfficials");
+  const officials = electedOfficialsCollection(db);
   const retiredTypes = ["chairmanOfSupremeSoviet", "president", "vicePresident"];
   const old = await officials
     .find(
@@ -161,7 +156,7 @@ export async function materializeRussianPresidentialSeating(input: {
     )
     .toArray();
   if (old.length) {
-    await db.collection<Archive>(RUSSIAN_PRESIDENTIAL_ARCHIVES_COLLECTION).bulkWrite(
+    await russianPresidentialOfficeArchivesCollection<Archive>(db).bulkWrite(
       old.map((official) => ({
         updateOne: {
           filter: { _id: `${result._id}:${official._id.toHexString()}` },
@@ -198,20 +193,16 @@ export async function materializeRussianPresidentialSeating(input: {
         { session }
       );
   }
-  await db
-    .collection<Character>("characters")
-    .updateMany(
-      { countryId: "RU", "currentOffice.type": { $in: retiredTypes }, _id: { $nin: charIds } },
-      { $set: { currentOffice: null, updatedAt: now } },
-      { session }
-    );
-  await db
-    .collection<NPP>("npps")
-    .updateMany(
-      { countryId: "RU", "currentOffice.type": { $in: retiredTypes }, _id: { $nin: nppIds } },
-      { $set: { currentOffice: null, updatedAt: now } },
-      { session }
-    );
+  await charactersCollection(db).updateMany(
+    { countryId: "RU", "currentOffice.type": { $in: retiredTypes }, _id: { $nin: charIds } },
+    { $set: { currentOffice: null, updatedAt: now } },
+    { session }
+  );
+  await nppsCollection(db).updateMany(
+    { countryId: "RU", "currentOffice.type": { $in: retiredTypes }, _id: { $nin: nppIds } },
+    { $set: { currentOffice: null, updatedAt: now } },
+    { session }
+  );
   const rows: ElectedOfficial[] = ticket.map((person, i) => ({
     _id: officialIds[i],
     countryId: "RU",
@@ -256,19 +247,17 @@ export async function materializeRussianPresidentialSeating(input: {
       },
     }));
     const updated = isNpp
-      ? await db.collection<NPP>("npps").bulkWrite(writes, { session })
-      : await db.collection<Character>("characters").bulkWrite(writes, { session });
+      ? await nppsCollection(db).bulkWrite(writes, { session })
+      : await charactersCollection(db).bulkWrite(writes, { session });
     if (updated.matchedCount !== people.length)
       throw new Error("Russian certified office holder changed");
   }
-  await db
-    .collection<ElectionCandidate>("electionCandidates")
-    .updateMany(
-      { countryId: "RU", status: "active", $or: identities },
-      { $set: { status: "withdrawn", withdrawnAt: now } },
-      { session }
-    );
-  await db.collection<GovernmentFormation>("governmentFormations").updateOne(
+  await electionCandidatesCollection(db).updateMany(
+    { countryId: "RU", status: "active", $or: identities },
+    { $set: { status: "withdrawn", withdrawnAt: now } },
+    { session }
+  );
+  await governmentFormationsCollection(db).updateOne(
     { _id: "RU" },
     {
       $set: {
@@ -281,7 +270,7 @@ export async function materializeRussianPresidentialSeating(input: {
     { session }
   );
   // A PM elected to the national ticket vacates that job; other PMs retain it.
-  await db.collection<GovernmentFormation>("governmentFormations").updateOne(
+  await governmentFormationsCollection(db).updateOne(
     { _id: "RU", $or: [{ pmCharacterId: { $in: charIds } }, { pmNppId: { $in: nppIds } }] },
     {
       $set: {
@@ -296,13 +285,11 @@ export async function materializeRussianPresidentialSeating(input: {
     },
     { session }
   );
-  await db
-    .collection("pmAppointmentVotes")
-    .updateMany(
-      { countryId: "RU", office: "headOfState", status: "active" },
-      { $set: { status: "cancelled", closedAt: now, updatedAt: now } },
-      { session }
-    );
+  await pmAppointmentVotesCollection<Document>(db).updateMany(
+    { countryId: "RU", office: "headOfState", status: "active" },
+    { $set: { status: "cancelled", closedAt: now, updatedAt: now } },
+    { session }
+  );
   const activated = await countries.updateOne(
     {
       _id: "RU",

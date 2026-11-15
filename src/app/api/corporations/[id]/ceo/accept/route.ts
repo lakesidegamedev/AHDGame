@@ -5,13 +5,15 @@ import { requireAuthWithCharacter } from "@/lib/api/requireAuth";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { createNotification } from "@/lib/notifications";
 import { resolveCorporation } from "@/lib/api/corporations/resolveQuery";
-import type { Corporation, State } from "@/lib/db/types";
+import type { State } from "@/lib/db/types";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { isStateOwned } from "@/lib/nationalization/nationalCorporation";
 import { openCeoTenure } from "@/lib/corporations/ceoHistory";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { holdsAnyBondsInCorp } from "@/lib/bonds/ceoBondConflict";
 import { characterCeoResidencyFailure } from "@/lib/corporations/ceoEligibilityRules";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -73,9 +75,7 @@ export async function POST(_request: Request, { params }: RouteParams) {
     if (residencyFailure === "headquarters-state") {
       // Enforce CEO must reside in HQ state
       // Look up HQ state name for a friendly error message
-      const hqState = await db
-        .collection<State>("states")
-        .findOne({ _id: corporation.headquartersState });
+      const hqState = await statesCollection(db).findOne({ _id: corporation.headquartersState });
       const hqName = hqState?.name ?? corporation.headquartersState;
       return errorResponse(
         400,
@@ -84,7 +84,7 @@ export async function POST(_request: Request, { params }: RouteParams) {
     }
 
     // Enforce one CEO per character: check if this character is already CEO of another active corporation
-    const existingCeo = await db.collection<Corporation>("corporations").findOne({
+    const existingCeo = await corporationsCollection(db).findOne({
       ceoId: myChar._id,
       ceoVacant: { $ne: true },
       _id: { $ne: corporation._id },
@@ -109,15 +109,15 @@ export async function POST(_request: Request, { params }: RouteParams) {
 
     const now = new Date();
 
-    // Install new CEO. `ceoType` MUST be stamped, not just left alone: the seat
-    // may previously have been held by an NPP (spawned or caretaker) or an
+    // ceoType MUST be stamped: the seat may have been held by an NPP or
     // imperial character, and corporationDetail resolves the CEO from the
-    // collection named by `ceoType`. A stale "npp" makes the corp page render
-    // "CEO Vacant" while a live character sits in `ceoId`. Any caretaker record
-    // dies with the handover — leaving it would let a later dismissal restore
-    // the old human over the one just seated.
-    await db.collection<Corporation>("corporations").updateOne(
-      { _id: corporation._id },
+    // collection named by ceoType. A stale "npp" renders "CEO Vacant"
+    // while a live character sits in ceoId. Caretaker records must die with
+    // the handover, or a later dismissal restores the old human over the new.
+    // Claimed on the offer still naming this character, so an accept that
+    // lands after a withdrawal, re-offer or a parallel accept seats no one.
+    const seated = await corporationsCollection(db).updateOne(
+      { _id: corporation._id, pendingCeoCharacterId: myChar._id },
       {
         $set: {
           ceoId: myChar._id,
@@ -129,6 +129,9 @@ export async function POST(_request: Request, { params }: RouteParams) {
         $unset: { pendingCeoCharacterId: "", caretakerCeo: "" },
       }
     );
+    if (seated.matchedCount === 0) {
+      return errorResponse(409, "This CEO offer is no longer pending");
+    }
 
     await openCeoTenure(db, corporation._id, {
       holderId: myChar._id,

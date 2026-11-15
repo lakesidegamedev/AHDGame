@@ -1,17 +1,9 @@
 /**
- * Ireland Region Census Profiles — 1999 (early Celtic Tiger) era.
+ * Ireland Region Census Profiles, 1999 era.
  *
- * Era anchor: CSO Census of Population 2002 (interpolated back to 1999 with
- * 1996 census detail). Every value is independently authored from historical
- * knowledge of each region in 1999 — NOT scaled or derived from any other era
- * file.
- *
- * 1999 Ireland: FDI boom concentrated in Dublin and Cork (pharma/tech),
- * unemployment collapsing, net migration just turned positive as emigrants of
- * the 1980s returned; inward migration still small (returning Irish, some UK,
- * first asylum cohorts). Free-fees third level (1996) and the 1967 secondary
- * expansion now visible in the adult stock. Income tiers are era-neutral
- * relative tiers.
+ * Anchored to CSO Census 2002 interpolated back to 1999 (1996 detail).
+ * Every value is independently authored for 1999, NOT scaled or derived
+ * from another era file. Income tiers are era-neutral relative tiers.
  */
 
 import type { IERegionLayer1 } from "@/lib/seeds/ie/ieRegionCensusData";

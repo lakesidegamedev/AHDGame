@@ -30,13 +30,24 @@ import { unformGovernmentAndVacatePM } from "@/lib/turn/parliamentaryGovernment"
  * out first so they stay in the source country, leaving only player residents
  * for the rescope.
  */
-import type { Db, ObjectId } from "mongodb";
+import type { Db, Document, ObjectId } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import type { ParliamentaryGovernment } from "@/lib/db/types/parliamentaryGovernment";
 import type { StatePartyOrg } from "@/lib/db/types/statePartyOrg";
 import type { PoliticalParty } from "@/lib/db/types/party";
 import type { NPP } from "@/lib/db/types/npp";
 import { officeRemapFor, remapOffice } from "@/lib/country/dissolvingOfficeRemap";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
+import { cabinetMembersCollection } from "@/lib/db/repositories/cabinetMembers";
+import { seatsCollection } from "@/lib/db/repositories/seats";
 
 /**
  * Region-scoped party collections.
@@ -96,11 +107,7 @@ export async function evacuateRegionPolitics(
 
   // 1. Relocate NPP politicians OUT of the region (stay in the source country,
   //    drop any office). Capture ids first so their corporations can follow.
-  const npps = await db
-    .collection<NPP>("npps")
-    .find({ homeState: regionId })
-    .project({ _id: 1 })
-    .toArray();
+  const npps = await nppsCollection(db).find({ homeState: regionId }).project({ _id: 1 }).toArray();
   const nppIds = npps.map((n) => n._id);
   // A dissolving source has nowhere to retreat to: the NPPs stay in the region
   // and cross with it, becoming the target's.
@@ -114,7 +121,7 @@ export async function evacuateRegionPolitics(
   // `electedOfficials` row intact and the politician holding nothing.
   const dissolving = relocateToRegionId === null;
   if (nppIds.length) {
-    await db.collection<NPP>("npps").updateMany(
+    await nppsCollection(db).updateMany(
       { _id: { $in: nppIds } },
       {
         $set: {
@@ -128,11 +135,11 @@ export async function evacuateRegionPolitics(
 
   if (nppIds.length && !dissolving) {
     const held = { countryId: fromCountryId, nppId: { $in: nppIds } };
-    await db.collection("electedOfficials").deleteMany(held);
-    await db.collection("cabinetMembers").deleteMany(held);
-    const departingGovernment = await db
-      .collection<ParliamentaryGovernment>("governmentFormations")
-      .findOne({ _id: fromCountryId, pmNppId: { $in: nppIds } });
+    await electedOfficialsCollection<Document>(db).deleteMany(held);
+    await cabinetMembersCollection<Document>(db).deleteMany(held);
+    const departingGovernment = await governmentFormationsCollection<ParliamentaryGovernment>(
+      db
+    ).findOne({ _id: fromCountryId, pmNppId: { $in: nppIds } });
     if (departingGovernment)
       await unformGovernmentAndVacatePM(db, fromCountryId, now, { reason: "lost-seat" });
   }
@@ -142,7 +149,7 @@ export async function evacuateRegionPolitics(
   //     to another of its regions if so, into the target with the region if not.
   let corpsFollowedCeo = 0;
   if (nppIds.length) {
-    const res = await db.collection("corporations").updateMany(
+    const res = await corporationsCollection(db).updateMany(
       { ceoType: "npp", ceoId: { $in: nppIds } },
       {
         $set: {
@@ -166,15 +173,14 @@ export async function evacuateRegionPolitics(
   // they just won is the opposite of what a merge should do. Their `party` value
   // is already correct because `mergePartiesIntoCountry` renumbered it before
   // this region moved.
-  const playerDocs = await db
-    .collection("characters")
+  const playerDocs = await charactersCollection<Document>(db)
     .find({ homeState: regionId, userId: { $ne: null } })
     .project({ _id: 1 })
     .toArray();
   const playerIds = playerDocs.map((p) => p._id);
   let playersToIndependent = 0;
   if (playerIds.length > 0 && !dissolving) {
-    const upd = await db.collection("characters").updateMany(
+    const upd = await charactersCollection(db).updateMany(
       { _id: { $in: playerIds } },
       {
         $set: { party: "independent", updatedAt: now },
@@ -186,9 +192,9 @@ export async function evacuateRegionPolitics(
     for (const col of ["cabinetMembers", "electedOfficials"] as const) {
       await db.collection(col).deleteMany(heldInSource);
     }
-    const departingGovernment = await db
-      .collection<ParliamentaryGovernment>("governmentFormations")
-      .findOne({ _id: fromCountryId, pmCharacterId: { $in: playerIds } });
+    const departingGovernment = await governmentFormationsCollection<ParliamentaryGovernment>(
+      db
+    ).findOne({ _id: fromCountryId, pmCharacterId: { $in: playerIds } });
     if (departingGovernment)
       await unformGovernmentAndVacatePM(db, fromCountryId, now, { reason: "lost-seat" });
   }
@@ -207,8 +213,7 @@ export async function evacuateRegionPolitics(
   // destroying them along with the state.
   if (!dissolving) {
     // The surviving parent party retains the cash of its dissolved organisation.
-    const orgs = await db
-      .collection<StatePartyOrg>("statePartyOrg")
+    const orgs = await statePartyOrgCollection(db)
       .find({ countryId: fromCountryId, stateId: regionId })
       .toArray();
     const cash = new Map<number, number>();
@@ -217,13 +222,12 @@ export async function evacuateRegionPolitics(
         cash.set(Number(org.partyId), (cash.get(Number(org.partyId)) ?? 0) + org.treasury);
     }
     if (cash.size) {
-      const parties = await db
-        .collection<PoliticalParty>("politicalParties")
+      const parties = await politicalPartiesCollection(db)
         .find({ countryId: fromCountryId, sequentialId: { $in: [...cash.keys()] } })
         .toArray();
       if (parties.length !== cash.size)
         throw new Error("Regional party cash has no surviving owner");
-      await db.collection<PoliticalParty>("politicalParties").bulkWrite(
+      await politicalPartiesCollection(db).bulkWrite(
         parties.map((party) => ({
           updateOne: {
             filter: { _id: party._id },
@@ -263,21 +267,22 @@ export async function evacuateRegionPolitics(
       now,
     }));
   } else {
-    const officials = await db
-      .collection("electedOfficials")
-      .deleteMany({ countryId: fromCountryId, state: regionId });
+    const officials = await electedOfficialsCollection<Document>(db).deleteMany({
+      countryId: fromCountryId,
+      state: regionId,
+    });
     officialsDissolved = officials?.deletedCount ?? 0;
-    const seats = await db
-      .collection("seats")
-      .deleteMany({ countryId: fromCountryId, state: regionId });
+    const seats = await seatsCollection<Document>(db).deleteMany({
+      countryId: fromCountryId,
+      state: regionId,
+    });
     seatsDissolved = seats?.deletedCount ?? 0;
   }
 
   // 4b. Dissolve the region's source-country races + their candidates so they
   //     don't resolve into phantom source-country officeholders after it leaves;
   //     the target's election engine re-spawns the region's own races next turn.
-  const regionElections = await db
-    .collection<{ _id: ObjectId }>("elections")
+  const regionElections = await electionsCollection<{ _id: ObjectId }>(db)
     .find({
       countryId: fromCountryId,
       state: regionId,
@@ -288,19 +293,19 @@ export async function evacuateRegionPolitics(
   const electionIds = regionElections.map((e) => e._id);
   let electionsDissolved = 0;
   if (electionIds.length > 0) {
-    await db.collection("electionCandidates").deleteMany({ electionId: { $in: electionIds } });
-    const res = await db.collection("elections").deleteMany({ _id: { $in: electionIds } });
+    await electionCandidatesCollection<Document>(db).deleteMany({
+      electionId: { $in: electionIds },
+    });
+    const res = await electionsCollection<Document>(db).deleteMany({ _id: { $in: electionIds } });
     electionsDissolved = res?.deletedCount ?? 0;
   }
 
   // 5. Any corporations still HQ'd in the region (player- or vacant-CEO'd) follow
   //    it into the target country, as their region becomes the target's.
-  const corpsToTarget = await db
-    .collection("corporations")
-    .updateMany(
-      { headquartersState: regionId },
-      { $set: { countryId: toCountryId, updatedAt: now } }
-    );
+  const corpsToTarget = await corporationsCollection(db).updateMany(
+    { headquartersState: regionId },
+    { $set: { countryId: toCountryId, updatedAt: now } }
+  );
 
   return {
     nppsRelocated: nppIds.length,
@@ -352,16 +357,16 @@ async function carryOfficials(
   // before this path existed — the same outcome, made deliberate rather than
   // emergent from `remapOffice` returning null for every office in turn.
   if (!officeRemapFor(fromCountryId, toCountryId)) {
-    const dropped = await db
-      .collection("electedOfficials")
-      .deleteMany({ countryId: fromCountryId, state: regionId });
+    const dropped = await electedOfficialsCollection<Document>(db).deleteMany({
+      countryId: fromCountryId,
+      state: regionId,
+    });
     return { officialsRemapped: 0, officialsRetired: dropped?.deletedCount ?? 0 };
   }
 
-  const officials = (await db
-    .collection("electedOfficials")
-    .find({ countryId: fromCountryId, state: regionId })
-    .toArray()) as unknown as CarriedOfficial[];
+  const officials = await electedOfficialsCollection<Document>(db)
+    .find<CarriedOfficial>({ countryId: fromCountryId, state: regionId })
+    .toArray();
 
   // THE OFFICE ONLY, NOT THE SEAT COUNT. The chamber they are joining is sized
   // from the region's `houseDistricts` / `stateSenateSeats`, and this runs BEFORE
@@ -371,17 +376,15 @@ async function carryOfficials(
   for (const official of officials) {
     const targetOffice = remapOffice(fromCountryId, toCountryId, official.officeType);
     if (targetOffice === null) {
-      await db.collection("electedOfficials").deleteOne({ _id: official._id });
+      await electedOfficialsCollection<Document>(db).deleteOne({ _id: official._id });
       officialsRetired++;
       continue;
     }
 
-    await db
-      .collection("electedOfficials")
-      .updateOne(
-        { _id: official._id },
-        { $set: { countryId: toCountryId, officeType: targetOffice, updatedAt: now } }
-      );
+    await electedOfficialsCollection<Document>(db).updateOne(
+      { _id: official._id },
+      { $set: { countryId: toCountryId, officeType: targetOffice, updatedAt: now } }
+    );
 
     // `currentOffice` is a STORED denormalisation on the politician, not a
     // derived one, and `actionRefresh` looks the office key up in the country's
@@ -390,19 +393,15 @@ async function carryOfficials(
     // silently lose the bonus their seat is meant to carry. Most of these seats
     // are NPP-held rather than player-held, so both cases matter.
     if (official.characterId) {
-      await db
-        .collection("characters")
-        .updateOne(
-          { _id: official.characterId },
-          { $set: { "currentOffice.type": targetOffice, updatedAt: now } }
-        );
+      await charactersCollection(db).updateOne(
+        { _id: official.characterId },
+        { $set: { "currentOffice.type": targetOffice, updatedAt: now } }
+      );
     } else if (official.nppId) {
-      await db
-        .collection("npps")
-        .updateOne(
-          { _id: official.nppId },
-          { $set: { "currentOffice.type": targetOffice, updatedAt: now } }
-        );
+      await nppsCollection<Document>(db).updateOne(
+        { _id: official.nppId },
+        { $set: { "currentOffice.type": targetOffice, updatedAt: now } }
+      );
     }
     officialsRemapped++;
   }

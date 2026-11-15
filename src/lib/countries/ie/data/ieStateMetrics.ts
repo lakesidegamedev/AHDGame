@@ -2,22 +2,22 @@ import type { StateMetrics } from "@/lib/db/types";
 import { withUniformMetricSet } from "@/lib/seeds/shared/uniformStateMetrics";
 
 /**
- * Ireland planning regions initial metrics — approximate 2022/2023 CSO /
- * ESRI Ireland data, tuned for gameplay feel.
+ * Ireland planning regions initial metrics, from 2022/2023 CSO / ESRI data,
+ * tuned for gameplay feel.
  *
- * Units and conventions:
- *   unemploymentRate   — %, e.g. 4.2 means 4.2%
- *   medianIncome       — annual household income in EUR
- *   gdpGrowth          — year-over-year % change
- *   povertyRate        — % below 60% median-income threshold
- *   costOfLiving       — index, 100 = national mean
- *   crimeRate          — incidents per 100k population
- *   lifeExpectancy     — years at birth
- *   carbonEmissions    — tons CO2 per capita per year (lower = better)
- *   corruptionIndex    — 0-100 scale (lower = cleaner; Transparency Int'l style)
- *   voterTurnout       — % turnout in most recent Dáil election
+ * Units:
+ *   unemploymentRate: %
+ *   medianIncome: annual household income in EUR
+ *   gdpGrowth: year-over-year % change
+ *   povertyRate: % below 60% median-income threshold
+ *   costOfLiving: index, 100 = national mean
+ *   crimeRate: incidents per 100k population
+ *   lifeExpectancy: years at birth
+ *   carbonEmissions: tons CO2 per capita per year (lower is better)
+ *   corruptionIndex: 0-100 (lower is cleaner)
+ *   voterTurnout: % turnout in most recent Dail election
  *
- * All values use `{ value, trend? }` wrappers expected by the engine.
+ * Values use `{ value, trend? }` wrappers expected by the engine.
  */
 
 function mv(value: number, trend?: number) {

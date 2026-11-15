@@ -5,10 +5,10 @@
 
 import { tierFor, type ShippingPreset } from "@/lib/world/eraRoster";
 import type { CountryId } from "@/lib/constants/countries";
-import { SHOWCASE_1991, TICKER_1991 } from "./broadcast1991";
-import type { HistoricalCrisisShowcaseEntry } from "./historicalCrisisShowcase";
+import type { CountryTier } from "./countryTiers";
+import type { EraId } from "@/lib/seeds/presetSelector";
 
-export type EraId = "1953" | "1979" | "1991" | "1999" | "2007" | "2019" | "2023" | "2027";
+export type { EraId };
 
 export type EraAccess = {
   enabledForPlayers: boolean;
@@ -23,42 +23,23 @@ export type EraTileKey =
 export type EraNation = {
   id: string;
   name: string;
-  tier: "player" | "econ" | "npp";
-};
-
-/** Where a headline was filed from. */
-export type BroadcastPlace = { name: string; lonLat: readonly [number, number] };
-
-/** One of the year's headlines. The globe's uplinks name its place and date. */
-export type BroadcastTickerItem = {
-  /** Short dateline, e.g. "25 Dec". Rendered uppercase. */
-  date: string;
-  /** Sentence-case headline. Rendered uppercase, read as written. */
-  text: string;
-  /** Where it was filed from. The globe's satellites beam down to it. */
-  place?: BroadcastPlace;
+  tier: "player" | "econ" | "npp" | "background";
 };
 
 /**
- * The broadcast lander: the hero framed as a satellite news feed of the era's
- * defining week, instead of the CRT console `wireframeColor` draws. An era
- * either has this or it doesn't; the two looks never stack.
+ * The broadcast lander: the hero framed as a news broadcast instead of the CRT
+ * console `wireframeColor` draws. An era either has this or it doesn't.
  */
 export type BroadcastLanderConfig = {
-  /** The year's headlines, oldest first. Their places are the satellites' datelines. */
-  ticker: readonly BroadcastTickerItem[];
   /**
-   * Map feature ids of a state that has just broken up. Their merged outline is
-   * drawn as a fading dashed border, and the borders between them as new ones.
+   * Country count per tier for the hero's tier key. When set, the key lists
+   * only these tiers, with their counts.
    */
-  dissolvedStateFeatureIds: readonly string[];
-  /** Name riding beside the satellite on the inner orbit. */
-  orbitLabel: string;
-  /** The globe's idle tour for this era, in place of the Cold War tour. */
-  showcase: readonly HistoricalCrisisShowcaseEntry[];
-  /** Badge on the tour's cards. */
-  showcaseBadge: string;
+  tierCounts?: Partial<Record<CountryTier, number>>;
 };
+
+/** An off-site link under the hero. `labelKey` (in the `auth` namespace) wins over `label`. */
+export type EraLink = { href: string; label: string; labelKey?: string };
 
 export type EraConfig = {
   id: EraId;
@@ -103,32 +84,17 @@ export type EraConfig = {
    * Off-site explainer for this era's world, linked under the hero copy. It
    * lives on the studio site, so the link opens in a new tab.
    */
-  explainer?: { href: string; label: string };
+  explainer?: EraLink;
+  /** The studio news post that announced this world, linked beside the explainer. */
+  newsPost?: EraLink;
+  /**
+   * How the country list groups its rows: by Cold War bloc (the default), or
+   * by tier for a world where the tiers are the story.
+   */
+  rosterGrouping?: "bloc" | "tier";
   /** Globe rotation at first paint, `[-lon, -lat, 0]`. Defaults to the Mediterranean. */
   initialRotation?: [number, number, number];
 };
-
-/**
- * The fifteen Soviet republics as Natural Earth feature ids. Their union is the
- * USSR's last outline, and the arcs they share are the borders it left behind.
- */
-export const SOVIET_REPUBLIC_FEATURE_IDS: readonly string[] = [
-  "643", // Russia
-  "804", // Ukraine
-  "112", // Belarus
-  "498", // Moldova
-  "233", // Estonia
-  "428", // Latvia
-  "440", // Lithuania
-  "268", // Georgia
-  "051", // Armenia
-  "031", // Azerbaijan
-  "398", // Kazakhstan
-  "860", // Uzbekistan
-  "795", // Turkmenistan
-  "417", // Kyrgyzstan
-  "762", // Tajikistan
-];
 
 /**
  * A curated roster entry: the display NAME and the order it appears in.
@@ -155,6 +121,8 @@ function accessFor(
     if (tier === "player") out[id] = PLAYER;
     else if (tier === "econ") out[id] = ECON;
     else if (tier === "npp") out[id] = NPP;
+    // A background country has no access record: the globe tiers it from the
+    // manifest's background-macro roster, not as a named economy.
     // `latent` and `absent` are not shown on the landing page at all.
   }
   return out;
@@ -168,9 +136,30 @@ function nationsFor(
   const out: EraNation[] = [];
   for (const { id, name } of curated) {
     const tier = tierFor(preset, id as CountryId);
-    if (tier === "player" || tier === "econ" || tier === "npp") out.push({ id, name, tier });
+    if (tier === "player" || tier === "econ" || tier === "npp" || tier === "background") {
+      out.push({ id, name, tier });
+    }
   }
   return out;
+}
+
+/** Countries per globe tier, for the hero key. Computer-run full simulations draw as Economic Powers. */
+function tierCountsFor(
+  preset: ShippingPreset,
+  curated: ReadonlyArray<{ id: string; name: string }>
+): Partial<Record<CountryTier, number>> {
+  const counts: Partial<Record<CountryTier, number>> = {};
+  const globeTier: Record<EraNation["tier"], CountryTier> = {
+    player: "player",
+    econ: "economic",
+    npp: "economic",
+    background: "background",
+  };
+  for (const nation of nationsFor(preset, curated)) {
+    const tier = globeTier[nation.tier];
+    counts[tier] = (counts[tier] ?? 0) + 1;
+  }
+  return counts;
 }
 
 /** Curated display roster for 1953: name and order only; tier is derived. */
@@ -271,29 +260,69 @@ const NATIONS_2019 = [
   n("RU", "Russia"),
 ] as const;
 
-/** Curated display roster for 2023: name and order only; tier is derived. */
-const NATIONS_2023 = [
-  n("US", "United States"),
-  n("UK", "United Kingdom"),
-  n("DE", "Germany"),
-  n("FR", "France"),
-  n("JP", "Japan"),
-  n("CN", "China"),
-  n("BR", "Brazil"),
-  n("IN", "India"),
-  n("RU", "Russia"),
-] as const;
+const NATIONS_2023 = NATIONS_2019;
 
 /**
- * Curated display roster for 2027: identical to 2023's, because the list is
- * name and ORDER only.
- *
- * Upstream authored 2027 with per-nation tiers baked in (`P`/`E`/`N`). This
- * branch derives the tier from `ERA_ROSTER` instead, so hard-coding one here
- * would give the landing page a second opinion about who is playable -- and the
- * landing page disagreeing with the world is the drift this roster removed.
+ * Curated display roster for 2027: name and order only; tier is derived. The
+ * two player countries come first, then the four computer-run full
+ * simulations, then the sixteen background countries.
  */
-const NATIONS_2027 = NATIONS_2023;
+const NATIONS_2027 = [
+  n("US", "United States"),
+  n("CA", "Canada"),
+  n("UK", "United Kingdom"),
+  n("DE", "Germany"),
+  n("JP", "Japan"),
+  n("CN", "China"),
+  n("FR", "France"),
+  n("IT", "Italy"),
+  n("ES", "Spain"),
+  n("SE", "Sweden"),
+  n("TR", "Turkey"),
+  n("AT", "Austria"),
+  n("FI", "Finland"),
+  n("GR", "Greece"),
+  n("IE", "Ireland"),
+  n("PL", "Poland"),
+  n("HU", "Hungary"),
+  n("RO", "Romania"),
+  n("BG", "Bulgaria"),
+  n("RU", "Russia"),
+  n("BR", "Brazil"),
+  n("NG", "Nigeria"),
+] as const;
+
+const ERA_2023: EraConfig = {
+  id: "2023",
+  year: 2023,
+  label: "Current Era · 2023",
+  gameDate: "January 2023",
+  wireframeColor: null,
+  loginTagline: "A political simulation set in 2023.",
+  heroHeadline: "A political simulation set in 2023.",
+  heroDek:
+    "Inflation is cooling but hasn't broken. The Ukraine war has reshaped European security. AI is upending labor markets. Every real hour is a game week.",
+  primaryCta: "Start playing",
+  secondaryCta: "Explore the map",
+  eraChips: [
+    "AI Revolution",
+    "Ukraine War",
+    "Inflation",
+    "De-Dollarization",
+    "Green Transition",
+    "Tech Regulation",
+  ],
+  playSectionDek:
+    "Govern through an era of rapid technological change, geopolitical realignment, and fiscal pressure.",
+  worldSectionDek:
+    "{playableCount} of these nations are open to players. The rest run their own economies and politics. Drag the globe to explore.",
+  closingHeadline: "Pick a country and a role.",
+  closingDek: "A turn resolves every hour, and the world keeps running while you are offline.",
+  closingCta: "Get started",
+  footerTagline: "A persistent political and economic simulation with no seasonal resets.",
+  accessMap: accessFor("2023-default", NATIONS_2023),
+  nations: nationsFor("2023-default", NATIONS_2023),
+};
 
 export const ERA_CONFIGS: Record<EraId, EraConfig> = {
   "1953": {
@@ -399,13 +428,7 @@ export const ERA_CONFIGS: Record<EraId, EraConfig> = {
     // Open over the Balkans so the old Soviet outline fills the right of the
     // first frame and the UK's chip clears the hero copy.
     initialRotation: [-24, -42, 0],
-    broadcast: {
-      ticker: TICKER_1991,
-      dissolvedStateFeatureIds: SOVIET_REPUBLIC_FEATURE_IDS,
-      orbitLabel: "MIR",
-      showcase: SHOWCASE_1991,
-      showcaseBadge: "Special report",
-    },
+    broadcast: {},
     explainer: {
       href: "https://lakesidegames.net/ahd-1991/",
       label: "What's new in the 1991 world",
@@ -494,67 +517,64 @@ export const ERA_CONFIGS: Record<EraId, EraConfig> = {
     nations: nationsFor("2019-default", NATIONS_2019),
   },
 
-  "2023": {
-    id: "2023",
-    year: 2023,
-    label: "Current Era · 2023",
-    gameDate: "January 2023",
-    wireframeColor: null,
-    loginTagline: "A political simulation set in 2023.",
-    heroHeadline: "A political simulation set in 2023.",
-    heroDek:
-      "Inflation is cooling but hasn't broken. The Ukraine war has reshaped European security. AI is upending labor markets. Every real hour is a game week.",
-    primaryCta: "Start playing",
-    secondaryCta: "Explore the map",
-    eraChips: [
-      "AI Revolution",
-      "Ukraine War",
-      "Inflation",
-      "De-Dollarization",
-      "Green Transition",
-      "Tech Regulation",
-    ],
-    playSectionDek:
-      "Govern through an era of rapid technological change, geopolitical realignment, and fiscal pressure.",
-    worldSectionDek:
-      "{playableCount} of these nations are open to players. The rest run their own economies and politics. Drag the globe to explore.",
-    closingHeadline: "Pick a country and a role.",
-    closingDek: "A turn resolves every hour, and the world keeps running while you are offline.",
-    closingCta: "Get started",
-    footerTagline: "A persistent political and economic simulation with no seasonal resets.",
-    accessMap: accessFor("2023-default", NATIONS_2023),
-    nations: nationsFor("2023-default", NATIONS_2023),
-  },
+  "2023": ERA_2023,
   "2027": {
     id: "2027",
     year: 2027,
-    label: "Current Era · 2027",
+    label: "Automation Age · 2027",
     gameDate: "January 2027",
     wireframeColor: null,
     loginTagline: "A political simulation set in 2027.",
     heroHeadline: "A political simulation set in 2027.",
     heroDek:
-      "Inflation is cooling but hasn't broken. The Ukraine war has reshaped European security. AI is upending labor markets. Every real hour is a game week.",
+      "Automation is changing work, the population is ageing and the climate is under pressure. The United States and Canada are open to players, and the world runs on to 2050. Every real hour is a game week.",
     primaryCta: "Start playing",
     secondaryCta: "Explore the map",
     eraChips: [
-      "AI Revolution",
-      "Ukraine War",
-      "Inflation",
-      "De-Dollarization",
-      "Green Transition",
-      "Tech Regulation",
+      "Automation",
+      "Climate Pressure",
+      "Cyber Operations",
+      "Treaty Trade",
+      "Ageing Populations",
+      "Quebec Question",
     ],
     playSectionDek:
-      "Govern through an era of rapid technological change, geopolitical realignment, and fiscal pressure.",
+      "Run for office in the United States or Canada, pass laws on AI, energy and pensions, and steer a country through the decades to 2050.",
+    tileBodies: {
+      stateMetrics:
+        "Track demographics, unemployment and public trust in every US state and every Canadian province and territory.",
+      ballot:
+        "Run for the House, Senate, governor or a state legislature, or for the House of Commons and the legislatures of Canada's thirteen provinces and territories.",
+      bills:
+        "Draft bills on AI liability, data protection, housing supply or an automation tax, and carry them through Congress or Parliament.",
+      markets:
+        "Trade commodities and currencies, the Canadian dollar and the modern Turkish lira included, and 10 and 30 year government bonds.",
+    },
     worldSectionDek:
-      "{playableCount} of these nations are open to players. The rest run their own economies and politics. Drag the globe to explore.",
+      "{playableCount} of these nations are open to players. The United Kingdom, Germany, Japan and China run full simulations of their own, and sixteen more run in the background. Drag the globe to explore.",
     closingHeadline: "Pick a country and a role.",
     closingDek: "A turn resolves every hour, and the world keeps running while you are offline.",
     closingCta: "Get started",
     footerTagline: "A persistent political and economic simulation with no seasonal resets.",
     accessMap: accessFor("2027-default", NATIONS_2027),
     nations: nationsFor("2027-default", NATIONS_2027),
+    // Open over the western Atlantic: the two player countries clear of the
+    // hero copy on the day side, Europe's lit cities past the terminator.
+    initialRotation: [48, -30, 0],
+    broadcast: {
+      tierCounts: tierCountsFor("2027-default", NATIONS_2027),
+    },
+    explainer: {
+      href: "https://lakesidegames.net/ahd-2027/",
+      label: "The 2027 world",
+      labelKey: "landing.world2027.overview",
+    },
+    newsPost: {
+      href: "https://lakesidegames.net/news/state-of-the-game-november-2026/",
+      label: "State of the Game, November 2026",
+      labelKey: "landing.world2027.stateOfTheGame",
+    },
+    rosterGrouping: "tier",
   },
 };
 

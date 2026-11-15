@@ -1,13 +1,13 @@
 import type { Db, ObjectId } from "mongodb";
-import type {
-  Character,
-  Corporation,
-  CorporateSector,
-  NationalizationAuction,
-} from "@/lib/db/types";
+import type { Corporation, CorporateSector, NationalizationAuction } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import type { CorporationType, OperatingSectorType } from "@/lib/constants/corporations";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { nationalizationAuctionsCollection } from "@/lib/db/repositories/nationalizationAuctions";
 
 /**
  * Enriched, display-ready view of one open privatization auction (spec §13.3).
@@ -89,17 +89,13 @@ export async function buildAuctionListings(
   const filter: Record<string, unknown> = { status: "open" };
   if (opts.countryId) filter.countryId = opts.countryId;
 
-  const auctions = await db
-    .collection<NationalizationAuction>("nationalizationAuctions")
-    .find(filter)
-    .toArray();
+  const auctions = await nationalizationAuctionsCollection(db).find(filter).toArray();
   if (auctions.length === 0) return [];
 
   const corpIds = auctions.map((a) => a.corporationId);
 
   const [shells, sectors] = await Promise.all([
-    db
-      .collection<Corporation>("corporations")
+    corporationsCollection(db)
       .find({ _id: { $in: corpIds } })
       .project<ShellProjection>({
         _id: 1,
@@ -112,8 +108,7 @@ export async function buildAuctionListings(
         sharePrice: 1,
       })
       .toArray(),
-    db
-      .collection<CorporateSector>("corporateSectors")
+    corporateSectorsCollection(db)
       .find({ corporationId: { $in: corpIds } })
       .toArray(),
   ]);
@@ -131,8 +126,7 @@ export async function buildAuctionListings(
   for (const sec of sectors) if (sec.stateId) stateIds.add(sec.stateId);
   const stateDocs =
     stateIds.size > 0
-      ? await db
-          .collection<{ _id: string; name: string }>("states")
+      ? await statesCollection<{ _id: string; name: string }>(db)
           .find({ _id: { $in: [...stateIds] } })
           .toArray()
       : [];
@@ -163,15 +157,13 @@ export async function buildAuctionListings(
   }
   const [bidderChars, bidderCorps] = await Promise.all([
     bidderCharIds.length > 0
-      ? db
-          .collection<Character>("characters")
+      ? charactersCollection(db)
           .find({ _id: { $in: bidderCharIds } })
           .project<{ _id: ObjectId; name: string }>({ _id: 1, name: 1 })
           .toArray()
       : Promise.resolve([]),
     bidderCorpIds.length > 0
-      ? db
-          .collection<Corporation>("corporations")
+      ? corporationsCollection(db)
           .find({ _id: { $in: bidderCorpIds } })
           .project<{ _id: ObjectId; name: string }>({ _id: 1, name: 1 })
           .toArray()

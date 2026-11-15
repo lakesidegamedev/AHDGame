@@ -4,7 +4,7 @@ import { getDb } from "@/lib/mongodb";
 import { requireAuthWithCharacter } from "@/lib/api/requireAuth";
 import { createNotification } from "@/lib/notifications";
 import { findPartyBySequentialId } from "@/lib/db/partyLookup";
-import type { Character, GameConfig, GameState, PoliticalParty } from "@/lib/db/types";
+import type { GameConfig, GameState, PoliticalParty } from "@/lib/db/types";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { getPartyRoleLabel } from "@/lib/parties/partyRoleLabels";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
@@ -18,6 +18,10 @@ import { applyCharacterPartyJoin } from "@/lib/parties/applyCharacterPartyJoin";
 import { canCharacterJoinParty } from "@/lib/parties/partyFrontier";
 import { getActingChairId } from "@/lib/parties/actingChair";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 // POST /api/country/[code]/parties/[id]/join — Join a political party
 // Auth: requireAuthWithCharacter
@@ -47,13 +51,15 @@ export async function POST(
 
     const [party, gameConfig, currentTurn, gameState] = await Promise.all([
       findPartyBySequentialId(db, id, countryId),
-      db
-        .collection<GameConfig>("gameConfig")
-        .findOne({ _id: "default" }, { projection: { firstJoinerBecomesPartyChair: 1 } }),
+      gameConfigCollection(db).findOne(
+        { _id: "default" },
+        { projection: { firstJoinerBecomesPartyChair: 1 } }
+      ),
       getCurrentTurn(db),
-      db
-        .collection<GameState>("gameState")
-        .findOne({ _id: "current" }, { projection: { freePartyMovesOpen: 1 } }),
+      gameStateCollection(db).findOne(
+        { _id: "current" },
+        { projection: { freePartyMovesOpen: 1 } }
+      ),
     ]);
 
     if (!party) {
@@ -127,7 +133,7 @@ export async function POST(
         (r) => String(r.characterId) === String(auth.character._id)
       );
       if (!alreadyRequested) {
-        await db.collection<PoliticalParty>("politicalParties").updateOne(
+        await politicalPartiesCollection(db).updateOne(
           { _id: party._id },
           {
             $push: {
@@ -144,9 +150,10 @@ export async function POST(
         // Notify the party leader (chair, or acting vice-chair when the seat is vacant).
         const leaderId = getActingChairId(party);
         if (leaderId) {
-          const leaderChar = await db
-            .collection<Character>("characters")
-            .findOne({ _id: leaderId }, { projection: { userId: 1 } });
+          const leaderChar = await charactersCollection(db).findOne(
+            { _id: leaderId },
+            { projection: { userId: 1 } }
+          );
           if (leaderChar) {
             await createNotification({
               userId: leaderChar.userId,

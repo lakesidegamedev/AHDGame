@@ -1,5 +1,6 @@
 import type { Db, ObjectId } from "mongodb";
 import type { Corporation, CeoTenure } from "@/lib/db/types";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export type { CeoTenure };
 
@@ -13,20 +14,13 @@ export async function openCeoTenure(
   corpId: ObjectId,
   args: { holderId: ObjectId; ceoType: "character" | "imperial" | "npp"; turn: number }
 ): Promise<void> {
-  // Gate the close-step on the array already existing. A positional array
-  // update (`ceoHistory.$[t]`) throws MongoServerError "The path 'ceoHistory'
-  // must exist in the document in order to apply array updates" when the field
-  // is absent — true for brand-new corps (founding doesn't seed it) and legacy
-  // corps founded before this feature. The filter no-ops on those; the $push
-  // below then creates the array with the new open tenure.
-  await db
-    .collection<Corporation>("corporations")
-    .updateOne(
-      { _id: corpId, ceoHistory: { $exists: true } },
-      { $set: { "ceoHistory.$[t].endTurn": args.turn } },
-      { arrayFilters: [{ "t.endTurn": { $exists: false } }] }
-    );
-  await db.collection<Corporation>("corporations").updateOne(
+  // Gate the $set on ceoHistory existing: positional updates on an absent array throw. The filter no-ops for new and legacy corps; the $push below creates it.
+  await corporationsCollection(db).updateOne(
+    { _id: corpId, ceoHistory: { $exists: true } },
+    { $set: { "ceoHistory.$[t].endTurn": args.turn } },
+    { arrayFilters: [{ "t.endTurn": { $exists: false } }] }
+  );
+  await corporationsCollection(db).updateOne(
     { _id: corpId },
     {
       $push: {
@@ -48,13 +42,11 @@ export async function closeCeoTenure(
   // Gate on the array existing — a positional array update on an absent
   // `ceoHistory` throws (see openCeoTenure). Nothing to close on a corp that
   // never had a tenure recorded, so a no-op is the correct outcome.
-  await db
-    .collection<Corporation>("corporations")
-    .updateOne(
-      { _id: corpId, ceoHistory: { $exists: true } },
-      { $set: { "ceoHistory.$[t].endTurn": args.turn } },
-      { arrayFilters: [{ "t.holderId": args.holderId, "t.endTurn": { $exists: false } }] }
-    );
+  await corporationsCollection(db).updateOne(
+    { _id: corpId, ceoHistory: { $exists: true } },
+    { $set: { "ceoHistory.$[t].endTurn": args.turn } },
+    { arrayFilters: [{ "t.holderId": args.holderId, "t.endTurn": { $exists: false } }] }
+  );
 }
 
 /**

@@ -263,6 +263,54 @@ describe("getCountryAccess()", () => {
     expect(result.econOnly).toBe(false);
   });
 
+  it("leaves Canada unregistered in a world seeded before it joined the roster", async () => {
+    await setupDb();
+    db.collectionMocks["countryGameStates"]!.findOne.mockImplementation(
+      async (filter: { _id?: string }) => (filter._id === "CA" ? null : { _id: "UK" })
+    );
+
+    const { getCountryAccess } = await import("./countryAccess");
+    const result = await getCountryAccess("CA");
+
+    expect(result.registered).toBe(false);
+    expect(result.econOnly).toBe(false);
+    expect(result.enabledForPlayers).toBe(false);
+  });
+
+  it("registers Canada in a world that holds no rows yet", async () => {
+    await setupDb();
+    db.collectionMocks["countryGameStates"]!.findOne.mockResolvedValue(null);
+
+    const { getCountryAccess } = await import("./countryAccess");
+    expect((await getCountryAccess("CA")).registered).toBe(true);
+  });
+
+  it("registers Canada in a world whose reset seeded its row", async () => {
+    await setupDb();
+    db.collectionMocks["countryGameStates"]!.findOne.mockResolvedValue({
+      _id: "CA",
+      status: "active",
+      enabledForPlayers: true,
+      absentInEra: false,
+    });
+
+    const { getCountryAccess } = await import("./countryAccess");
+    const result = await getCountryAccess("CA");
+
+    expect(result.registered).toBe(true);
+    expect(result.enabledForPlayers).toBe(true);
+  });
+
+  it("leaves Canada out of every country's access list when no row exists", async () => {
+    await setupDb();
+    db.collectionMocks["countryGameStates"]!.find.mockReturnValue({
+      toArray: vi.fn().mockResolvedValue([{ _id: "UK", status: "active" }]),
+    });
+
+    const { getAllCountryAccess } = await import("./countryAccess");
+    expect(Object.keys(await getAllCountryAccess())).not.toContain("CA");
+  });
+
   it("registers a latent country once its row flips to active", async () => {
     await setupDb();
     db.collectionMocks["countryGameStates"]!.findOne.mockResolvedValue({

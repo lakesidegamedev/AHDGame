@@ -14,6 +14,7 @@ import {
   DEFAULT_GUARD_DROP_PCT,
   DEFAULT_GUARD_GRACE_TURNS,
 } from "@/lib/market/launchGuardConstants";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 /**
  * Launch guard — automated kill switch for the clearing/capital flip.
@@ -36,16 +37,15 @@ const FUNDAMENTAL_COVERAGE_FLOOR = 0.8;
 /**
  * Where the guard reverts to from `mode`.
  *
- * NOT a fixed "ledger": from `plants` that is a TWO-tier drop, and it lands on a
- * tier with no growth mechanism at all — capacity-derived revenue is gone and
- * the compounding nameplate it replaced is not coming back, so the economy would
- * sit flat until a human noticed. `capital` is the nearest tier below plants
- * that still has one (the growth slider is investment, capacity builds), so a
- * plants trip degrades to a working economy rather than a stalled one.
+ * NOT a fixed "ledger": from `plants` that is a two-tier drop, landing on a
+ * tier with no growth mechanism at all. Capacity-derived revenue is gone and
+ * the compounding nameplate it replaced is not coming back, so the economy
+ * would sit flat. `capital` is the nearest tier below plants that still has
+ * growth, so a plants trip degrades to a working economy rather than a
+ * stalled one.
  *
- * clearing/capital keep the historical `ledger` target: ledger is
- * observability-only and never changes balance, which is the correct floor for
- * the tiers whose revenue legs it was originally built to catch.
+ * clearing/capital revert to `ledger`: it is observability-only and never
+ * changes balance, the correct floor for those tiers.
  */
 export function guardRevertTarget(mode: MarketSystemMode): MarketSystemMode {
   return mode === "plants" ? "capital" : "ledger";
@@ -102,25 +102,13 @@ export function evaluateLaunchGuard(args: {
     marketAtLeast(args.mode, "clearing");
   if (!armed || !(args.currentMcap > 0)) return {};
 
-  // First armed turn (or a stale/zero reference): stamp the mcap baseline ONLY.
-  //
   // VINTAGE INVARIANT. `currentMcap` is this turn's aggregate, but
-  // `currentFundamentalMcap` is computed from `corp.fundamentalSharePrice`,
-  // which `recomputeSharePricesAfterBondTurn` only writes in a LATER phase of
-  // the same turn — so the fundamental reading the guard sees at turn T is
-  // always turn T-1's. Stamping both here would pair mcap(T) with
-  // fundamental(T-1). Normally a one-turn skew is noise; on the FLIP turn it is
-  // the entire revaluation. (Observed: the plants flip doubled aggregate
-  // sectorNPV, so the reference became mcap = post-flip 5.71B against
-  // fundamental = pre-flip 4.09B. Every later ratio curFund/refFund was then
-  // inflated by the flip factor, clamped to 1 by the `min` below, and the
-  // fundamentals leg was permanently disabled — leaving the raw drawdown from
-  // the post-flip peak, which tripped at turn 158 by 0.01%.)
-  //
-  // Deferring the fundamental stamp by one turn makes the pair (mcap(R),
-  // fundamental(R)) — same vintage, both post-flip — and the running comparison
-  // fundamental(T-1) vs fundamental(R) is then a like-for-like, conservatively
-  // lagged ratio.
+  // `currentFundamentalMcap` reads `corp.fundamentalSharePrice`, which is only
+  // written in a later phase, so the guard sees turn T-1's fundamental at turn
+  // T. Stamping both here would pair mcap(T) with fundamental(T-1); on a flip
+  // turn that skew is the whole revaluation and permanently disables the
+  // fundamentals leg. Deferring the fundamental stamp by one turn keeps the
+  // pair same-vintage.
   if (!(typeof args.referenceMcap === "number" && args.referenceMcap > 0)) {
     return { setReference: args.currentMcap };
   }
@@ -166,19 +154,10 @@ export function evaluateLaunchGuard(args: {
 
   // Fundamentals may only ever make the guard MORE lenient, never stricter.
   //
-  // The naive form (`referenceMcap * curFund/refFund`) reduces the criterion to
-  // a fall in the price/fundamental MULTIPLIER, and that multiplier is exactly
-  // what applyPriceMultipliers writes from sentiment and order flow — where
-  // SENTIMENT_CAP alone permits a market-wide 0.75x. So any broadly negative
-  // sentiment window would trip a guard that then PERMANENTLY reverts the market
-  // tier, turning a routine market state into a one-way break. Worse, when
-  // fundamentals collapse alongside price the expected value shrinks with them
-  // and the drop reads as ~zero — meaning a genuine economy-wide death spiral,
-  // the exact thing worth catching, would never fire.
-  //
-  // Clamping to the launch reference keeps the original absolute-drawdown floor
-  // intact and uses fundamentals only to EXCUSE a fall that a lower valuation
-  // justifies (the prime-rate repricing this was built for).
+  // Using curFund/refFund directly would reduce the criterion to a fall in the
+  // price/fundamental multiplier, which sentiment and order flow drive, // broadly negative sentiment would then trip a guard that PERMANENTLY
+  // reverts the market tier. Clamping to the launch reference keeps the
+  // absolute-drawdown floor and lets fundamentals only excuse a justified fall.
   const expectedMcap = fundamentalsUsable
     ? Math.min(args.referenceMcap, args.referenceMcap * (curFund / refFund))
     : args.referenceMcap;
@@ -212,7 +191,7 @@ export async function runLaunchGuard(
    *  the guard falls back to the raw launch drawdown. */
   fundamentals?: { aggregateFundamentalMcap: number; coverage: number }
 ): Promise<void> {
-  const cfg = await db.collection<GameConfig>("gameConfig").findOne(
+  const cfg = await gameConfigCollection(db).findOne(
     { _id: "default" },
     {
       projection: {
@@ -247,7 +226,7 @@ export async function runLaunchGuard(
   // MCAP reference only — a fundamental-only stamp must not move it, or the
   // grace window would restart a turn after arming.
   if (decision.setReference !== undefined || decision.setReferenceFundamental !== undefined) {
-    await db.collection<GameConfig>("gameConfig").updateOne(
+    await gameConfigCollection(db).updateOne(
       { _id: "default" },
       {
         $set: {
@@ -267,7 +246,7 @@ export async function runLaunchGuard(
   }
 
   if (decision.trip) {
-    await db.collection<GameConfig>("gameConfig").updateOne(
+    await gameConfigCollection(db).updateOne(
       { _id: "default" },
       {
         $set: {

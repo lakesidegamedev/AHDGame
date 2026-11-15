@@ -1,0 +1,20 @@
+/** RU (Soviet Union) region id → display name. Matches ruRegions seed names. */
+export const RU_REGION_NAMES: Record<string, string> = {
+  CEN: "Central Russia",
+  NWR: "Northwest Russia",
+  NOR: "European North",
+  CBE: "Central Black Earth",
+  VOL: "Volga",
+  NCA: "North Caucasus",
+  URA: "Urals",
+  WSB: "West Siberia",
+  ESB: "East Siberia",
+  FEA: "Russian Far East",
+  UKR: "Ukraine",
+  KAZ: "Kazakhstan",
+  TRA: "Transcaucasia",
+  CAS: "Central Asia",
+  MOL: "Moldova",
+  BEL: "Byelorussia",
+  BLT: "Baltic Republics",
+};

@@ -8,6 +8,7 @@ import { getDb } from "@/lib/mongodb";
 import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError } from "@/lib/api/errors";
 import type { ExchangeRate } from "@/lib/db/types";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 export async function GET() {
   try {
@@ -15,7 +16,7 @@ export async function GET() {
     if (!auth.ok) return auth.response;
 
     const db = await getDb();
-    const rates = await db.collection<ExchangeRate>("exchangeRates").find({}).toArray();
+    const rates = await exchangeRatesCollection(db).find({}).toArray();
 
     const rows = rates.map((r) => ({
       countryId: r.countryId,

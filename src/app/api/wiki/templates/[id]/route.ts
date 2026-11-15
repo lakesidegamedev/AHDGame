@@ -3,6 +3,7 @@ import { getDb } from "@/lib/mongodb";
 import { handleRouteError, notFound } from "@/lib/api/errors";
 import { checkWikiDisabled } from "@/lib/api/wikiGuard";
 import type { WikiTemplate } from "@/lib/db/types";
+import { wikiTemplatesCollection } from "@/lib/db/repositories/wikiTemplates";
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -18,7 +19,7 @@ export async function GET(request: Request, context: RouteContext) {
     const { id } = await context.params;
 
     const db = await getDb();
-    const template = await db.collection<WikiTemplate>("wikiTemplates").findOne({ _id: id });
+    const template = await wikiTemplatesCollection(db).findOne({ _id: id });
 
     if (!template) {
       return NextResponse.json(notFound().toJson(), { status: 404 });

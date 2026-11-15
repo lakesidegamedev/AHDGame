@@ -12,6 +12,8 @@ import {
   supportsHu2011NpcAmendment,
 } from "./rules/electoralTransition2011";
 import { calendarTurn } from "@/lib/utils/gameDate";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export async function processHu2011ElectoralNpcProposal(
   db: Db,
@@ -39,9 +41,8 @@ export async function processHu2011ElectoralNpcProposal(
   if (government?.status !== "formed" || government.pmCharacterId || !government.pmNppId)
     return false;
   const [leader, officials] = await Promise.all([
-    db.collection<NPP>("npps").findOne({ _id: government.pmNppId }, { projection: { party: 1 } }),
-    db
-      .collection<ElectedOfficial>("electedOfficials")
+    nppsCollection(db).findOne({ _id: government.pmNppId }, { projection: { party: 1 } }),
+    electedOfficialsCollection(db)
       .find(
         { countryId: "HU", officeType: "assemblyDelegate" },
         { projection: { characterId: 1, party: 1, seatsHeld: 1 } }

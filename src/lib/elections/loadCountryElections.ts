@@ -3,6 +3,7 @@ import type { Election, ElectionDisplay } from "@/lib/db/types";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { resolveElections } from "@/lib/elections/resolveElection";
 import { toElectionDisplay } from "./electionDisplay";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 export interface ElectionsViewerContext {
   userId: string | null;
@@ -28,8 +29,7 @@ export async function loadCountryElections(
   } else {
     query.countryId = countryId;
   }
-  const elections = await db
-    .collection<Election>("elections")
+  const elections = await electionsCollection(db)
     .find(query)
     .sort({ state: 1, electionType: 1, senateClass: 1 })
     .toArray();

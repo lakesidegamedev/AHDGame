@@ -1,5 +1,5 @@
 import type { Db } from "mongodb";
-import type { FederalBudget, SovereignRiskAnchor } from "@/lib/db/types/budget";
+import type { SovereignRiskAnchor } from "@/lib/db/types/budget";
 import { seedRegistrationLanes } from "@/lib/admin/seed/seedRegistrationLanes";
 import {
   calculateCreditRating,
@@ -8,15 +8,18 @@ import {
 } from "@/lib/budget/debt";
 import { getInitialNationalBudgetsForPreset } from "@/lib/seeds/reference/budgets";
 import type { Migration, MigrationResult } from "../types";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 const PRESET = "1953-default";
 
 async function heal1953SeedBalance(db: Db, dryRun: boolean): Promise<MigrationResult> {
   // The gameState singleton is keyed by the STRING "current", not an ObjectId,
   // so the collection has to be typed or the driver infers `_id: ObjectId`.
-  const gameState = await db
-    .collection<{ _id: string; preset?: string }>("gameState")
-    .findOne({ _id: "current" }, { projection: { preset: 1 } });
+  const gameState = await gameStateCollection<{ _id: string; preset?: string }>(db).findOne(
+    { _id: "current" },
+    { projection: { preset: 1 } }
+  );
   if (gameState?.preset !== PRESET) {
     return { notes: [`skipped: active preset is ${String(gameState?.preset ?? "unknown")}`] };
   }
@@ -25,8 +28,7 @@ async function heal1953SeedBalance(db: Db, dryRun: boolean): Promise<MigrationRe
   const anchors = new Map<string, SovereignRiskAnchor>(
     authoredBudgets.map((budget) => [budget.countryId, budget.sovereignRiskAnchor!])
   );
-  const currentBudgets = await db
-    .collection<FederalBudget>("federalBudget")
+  const currentBudgets = await federalBudgetCollection(db)
     .find({ countryId: { $in: [...anchors.keys()] } })
     .toArray();
 
@@ -56,7 +58,7 @@ async function heal1953SeedBalance(db: Db, dryRun: boolean): Promise<MigrationRe
     const priorDebtInterest = budget.spending.debtInterest ?? 0;
     const spendingTotal = Math.max(0, budget.spending.total - priorDebtInterest + debtInterest);
 
-    await db.collection<FederalBudget>("federalBudget").updateOne(
+    await federalBudgetCollection(db).updateOne(
       { _id: budget._id },
       {
         $set: {

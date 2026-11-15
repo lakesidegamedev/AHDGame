@@ -11,6 +11,7 @@ import {
   FOREX_ACTIVE_CURRENCIES,
   type CurrencyCode,
 } from "@/lib/constants/currencies";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 type HolderType = "user" | "corp" | "reserve";
 
@@ -41,8 +42,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ currency
     const db = await getDb();
     const balPath = `currencyBalances.personal.${ccy}`;
 
-    const [facet] = await db
-      .collection("characters")
+    const [facet] = await charactersCollection(db)
       .aggregate([
         { $match: { [balPath]: { $gt: 0 } } },
         { $project: { _id: 0, name: 1, type: { $literal: "user" }, amount: `$${balPath}` } },

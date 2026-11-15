@@ -48,7 +48,7 @@ describe("PUT theaters", () => {
     db.collectionMocks.conflicts.find.mockReturnValue({
       toArray: vi.fn().mockResolvedValue([{ _id: "afghan" }]),
     });
-    db.collectionMocks.gameState.findOne.mockResolvedValue({ conflictsEnabled: true });
+    db.collectionMocks.gameState.findOne.mockResolvedValue({});
     db.collectionMocks.cabinetMembers.findOne.mockResolvedValue({
       _id: "m1",
       characterId: "char_1",
@@ -88,12 +88,5 @@ describe("PUT theaters", () => {
     const { PUT } = await import(ROUTE);
     const res = await PUT(req({ cohesion: 80, committed: { afghan: 10 } }), call);
     expect(res.status).toBe(403);
-  });
-
-  it("404s when conflicts is disabled", async () => {
-    db.collectionMocks.gameState.findOne.mockResolvedValue({ conflictsEnabled: false });
-    const { PUT } = await import(ROUTE);
-    const res = await PUT(req({ cohesion: 80, committed: { afghan: 10 } }), call);
-    expect(res.status).toBe(404);
   });
 });

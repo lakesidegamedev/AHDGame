@@ -1,9 +1,11 @@
+import { regionUrl } from "@/lib/urls";
 import { CDN_LOGO_URL } from "@/lib/images/staticCdnAssets";
 import type { Metadata } from "next";
 import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import type { StateBill } from "@/lib/db/types/stateBill";
 import { getSiteUrl } from "@/lib/siteMetadata";
+import { stateBillsCollection } from "@/lib/db/repositories/stateBills";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -22,18 +24,16 @@ export async function generateMetadata({
   if (!ObjectId.isValid(billId)) return {};
 
   const db = await getDb();
-  const bill = await db
-    .collection<StateBill>("stateBills")
-    .findOne(
-      { _id: new ObjectId(billId) },
-      { projection: { title: 1, summary: 1, sponsorName: 1, status: 1 } }
-    );
+  const bill = await stateBillsCollection(db).findOne(
+    { _id: new ObjectId(billId) },
+    { projection: { title: 1, summary: 1, sponsorName: 1, status: 1 } }
+  );
   if (!bill) return {};
 
   const title = `${bill.title} | A House Divided`;
   const description =
     truncate(bill.summary) || `Sponsored by ${bill.sponsorName}. Status: ${bill.status}.`;
-  const url = `${getSiteUrl()}/country/${code}/region/${id}/legislature/bills/${billId}`;
+  const url = `${getSiteUrl()}${regionUrl(code, id)}/legislature/bills/${billId}`;
 
   return {
     title,

@@ -26,6 +26,11 @@ import { emitTreasuryTransaction } from "@/lib/treasury/emit";
 import { emitTx } from "@/lib/financialTxLog/emit";
 import { TreasuryExecutionUncertainError } from "@/lib/treasury/executionUncertain";
 import { getGameState } from "@/lib/gameState";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { adminLogsCollection } from "@/lib/db/repositories/adminLogs";
+import type { Document } from "mongodb";
+import { activityLogCollection } from "@/lib/db/repositories/activityLog";
 
 export interface ExecuteTransferToStateArgs {
   db: Db;
@@ -74,21 +79,25 @@ export async function executeTransferToStateParty(
   };
 
   const applyInTransaction = async (session: ClientSession) => {
-    const debitResult = await db
-      .collection<PoliticalParty>("politicalParties")
-      .updateOne({ _id: party._id, treasury: { $gte: amount } }, partyDebit, { session });
+    const debitResult = await politicalPartiesCollection(db).updateOne(
+      { _id: party._id, treasury: { $gte: amount } },
+      partyDebit,
+      { session }
+    );
     if (debitResult.matchedCount === 0) {
       throw badRequest(`Insufficient treasury balance. Available: $${treasury.toLocaleString()}`);
     }
-    await db
-      .collection<StatePartyOrg>("statePartyOrg")
-      .updateOne({ _id: statePartyKey }, statePartyCredit, { upsert: true, session });
+    await statePartyOrgCollection(db).updateOne({ _id: statePartyKey }, statePartyCredit, {
+      upsert: true,
+      session,
+    });
   };
 
   const applyWithoutTransaction = async (): Promise<NextResponse | null> => {
-    const debitResult = await db
-      .collection<PoliticalParty>("politicalParties")
-      .updateOne({ _id: party._id, treasury: { $gte: amount } }, partyDebit);
+    const debitResult = await politicalPartiesCollection(db).updateOne(
+      { _id: party._id, treasury: { $gte: amount } },
+      partyDebit
+    );
     if (debitResult.matchedCount === 0) {
       return errorResponse(
         400,
@@ -96,21 +105,19 @@ export async function executeTransferToStateParty(
       );
     }
     try {
-      await db
-        .collection<StatePartyOrg>("statePartyOrg")
-        .updateOne({ _id: statePartyKey }, statePartyCredit, { upsert: true });
+      await statePartyOrgCollection(db).updateOne({ _id: statePartyKey }, statePartyCredit, {
+        upsert: true,
+      });
     } catch (error) {
       // Refund on failure. If the refund ALSO fails the treasury is
       // short with nothing credited, and this can no longer be reported
       // as an ordinary refusal: the approve route would hand the
       // signature back and reopen the row for a second debit.
       try {
-        await db
-          .collection<PoliticalParty>("politicalParties")
-          .updateOne(
-            { _id: party._id },
-            { $inc: { treasury: amount }, $set: { updatedAt: new Date() } }
-          );
+        await politicalPartiesCollection(db).updateOne(
+          { _id: party._id },
+          { $inc: { treasury: amount }, $set: { updatedAt: new Date() } }
+        );
       } catch (refundError) {
         console.error(
           JSON.stringify({
@@ -168,7 +175,7 @@ export async function executeTransferToStateParty(
   // second Approve click to spend again. Losing an audit row is a
   // reporting gap; throwing one was a double payout.
   try {
-    await db.collection("adminLogs").insertOne({
+    await adminLogsCollection<Document>(db).insertOne({
       category: "system",
       action: "funds_transferred",
       username: args.initiatorUsername,
@@ -265,7 +272,7 @@ export async function executeTransferToStateParty(
       },
     });
 
-    void db.collection("activityLog").insertOne({
+    void activityLogCollection<Document>(db).insertOne({
       type: "fund_event",
       timestamp: new Date(),
       userId: new ObjectId(args.initiatorUserId),

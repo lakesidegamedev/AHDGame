@@ -8,8 +8,6 @@
  * the turn settled no funded market, or the book stage was off.
  */
 import type { Db } from "mongodb";
-import type { GameState } from "@/lib/db/types";
-import { PRODUCER_MARKET_OUTCOMES } from "./fundedLedgerRules";
 import type { FundedCountryBookRow } from "./fundedBookRules";
 import {
   overlayFundedNationalBalances,
@@ -18,6 +16,8 @@ import {
   type FundedBooksForTurn,
   type WithNationalBalanceSource,
 } from "./fundedCountryViewRules";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { producerMarketOutcomesCollection } from "@/lib/db/repositories/producerMarketOutcomes";
 
 export async function loadFundedCountryBooks(
   db: Db,
@@ -27,15 +27,13 @@ export async function loadFundedCountryBooks(
   if (typeof turn !== "number" || !Number.isFinite(turn)) return null;
   const epoch =
     worldEpochId ??
-    (
-      await db
-        .collection<GameState>("gameState")
-        .findOne({ _id: "current" }, { projection: { worldEpochId: 1 } })
-    )?.worldEpochId;
+    (await gameStateCollection(db).findOne({ _id: "current" }, { projection: { worldEpochId: 1 } }))
+      ?.worldEpochId;
   if (!epoch) return null;
-  const doc = await db
-    .collection<{ _id: string; books?: FundedCountryBookRow[] }>(PRODUCER_MARKET_OUTCOMES)
-    .findOne({ _id: `${epoch}:${turn}` }, { projection: { books: 1 } });
+  const doc = await producerMarketOutcomesCollection<{
+    _id: string;
+    books?: FundedCountryBookRow[];
+  }>(db).findOne({ _id: `${epoch}:${turn}` }, { projection: { books: 1 } });
   return doc?.books && doc.books.length > 0 ? { turn, rows: doc.books } : null;
 }
 

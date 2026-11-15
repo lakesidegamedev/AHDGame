@@ -8,20 +8,19 @@ import { BOT_READ_LIMITS, checkRateLimit, rateLimitResponse } from "@/lib/api/ra
 import { parseJsonBody } from "@/lib/api/validate";
 import { createNotifications, type NotificationInput } from "@/lib/notifications";
 import type { User } from "@/lib/db/types";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 // POST /api/webhooks/ask-notification
 // The Ask service (ask.lakesidegames.net) pushes player notifications here:
-// a question credited back after a quality check flagged its answer, an
-// answer that staff corrected, or a watch the player set firing. Each event
-// names its player by AHD userId (web sessions) or by linked discordId
-// (Discord /ask users).
+// question refunds, staff answer corrections, and player watches firing. Each
+// event names its player by AHD userId or linked discordId.
 //
 // Auth: Authorization: Bearer $ASK_S2S_TOKEN (requireAskToken).
 //
 // Results are positional per event: { ok: true } delivered, or
 // { error: "unknown_user" } when no account matches, which the sender treats
-// as permanent and retires. Unknown users are expected (Discord askers who
-// never linked an account) and are not an error at the batch level.
+// as permanent and retires. Unknown users are expected and are not a
+// batch-level error.
 //
 // Errors: 400, 401, 429.
 
@@ -74,7 +73,7 @@ export async function POST(request: Request) {
     }
 
     const db = await getDb();
-    const users = db.collection<User>("users");
+    const users = usersCollection(db);
     const results: Array<{ ok: true } | { error: "unknown_user" }> = [];
     const notifications: NotificationInput[] = [];
 

@@ -8,7 +8,7 @@ vi.mock("@/lib/api/requireAuth", () => ({ requireAuthWithCharacter: vi.fn() }));
 vi.mock("@/lib/db/partyLookup", () => ({ findPartyBySequentialId: vi.fn() }));
 vi.mock("@/lib/db/recruitmentSlateLookup", () => ({ findSlateForElection: vi.fn() }));
 vi.mock("@/lib/slateAuthority", () => ({ resolveSlateAuthority: vi.fn() }));
-vi.mock("@/lib/electionEngine/tallyCleaner", () => ({
+vi.mock("@/lib/elections/engine/tallyCleaner", () => ({
   removeWithdrawnCandidateFromTally: vi.fn(),
 }));
 

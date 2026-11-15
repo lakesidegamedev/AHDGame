@@ -59,7 +59,7 @@ describe("POST /api/moderator/supporter-requests/[id]/approve", () => {
       { $set: { supporterWallName: "Cool Name" } }
     );
     expect(db.collectionMocks.supporterRequests.updateOne).toHaveBeenCalledWith(
-      { _id: requestId },
+      { _id: requestId, status: "pending" },
       expect.objectContaining({
         $set: expect.objectContaining({ status: "approved", decidedBy: moderatorId }),
       })

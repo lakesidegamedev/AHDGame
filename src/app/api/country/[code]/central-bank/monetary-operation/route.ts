@@ -7,7 +7,7 @@ import { getDb } from "@/lib/mongodb";
 import { getGameState } from "@/lib/gameState";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { getBankId, getMonetaryPolicyScope } from "@/lib/centralBank/helpers";
-import type { CentralBank, FederalBudget, GameConfig } from "@/lib/db/types";
+import type { GameConfig } from "@/lib/db/types";
 import { getNationalBudgetId } from "@/lib/bonds/sovereign";
 import {
   DIRECT_ADVANCE_GDP_CAP,
@@ -25,6 +25,9 @@ import {
 } from "@/lib/moneySupply/monetaryOperationJournal";
 import { snapshotMoneySupply } from "@/lib/moneySupply/snapshot";
 import { isMoneySupplyEnabledFromConfig } from "@/lib/moneySupply/featureFlag";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 const schema = z.object({
   type: z.enum(["qe", "qt", "treasury_advance", "liquidity_injection"]),
@@ -48,14 +51,15 @@ export async function POST(request: Request, context: { params: Promise<{ code: 
     if (!parsed.success) return errorResponse(parsed.status, parsed.error);
     const db = await getDb();
     const [bank, gameState, budget, config] = await Promise.all([
-      db.collection<CentralBank>("centralBanks").findOne({ _id: getBankId(countryId) }),
+      centralBanksCollection(db).findOne({ _id: getBankId(countryId) }),
       getGameState(db),
-      db
-        .collection<FederalBudget>("federalBudget")
-        .findOne({ _id: getNationalBudgetId(countryId) } as { _id: "federal" }),
-      db
-        .collection<GameConfig>("gameConfig")
-        .findOne({ _id: "default" }, { projection: { moneySupplyEnabled: 1 } }),
+      federalBudgetCollection(db).findOne({ _id: getNationalBudgetId(countryId) } as {
+        _id: "federal";
+      }),
+      gameConfigCollection(db).findOne(
+        { _id: "default" },
+        { projection: { moneySupplyEnabled: 1 } }
+      ),
     ]);
     if (!isMoneySupplyEnabledFromConfig(config))
       return errorResponse(409, "Money-supply policy is not enabled");
@@ -64,12 +68,10 @@ export async function POST(request: Request, context: { params: Promise<{ code: 
     const authority =
       scope.bankId === bank._id
         ? bank
-        : await db
-            .collection<CentralBank>("centralBanks")
-            .findOne(
-              { _id: scope.bankId },
-              { projection: { chairCharacterId: 1, chairControlsLocked: 1 } }
-            );
+        : await centralBanksCollection(db).findOne(
+            { _id: scope.bankId },
+            { projection: { chairCharacterId: 1, chairControlsLocked: 1 } }
+          );
     const isChair =
       auth.user.character?._id != null &&
       authority?.chairCharacterId?.toString() === auth.user.character._id.toString();

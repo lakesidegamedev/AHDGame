@@ -5,6 +5,7 @@ import { getDb } from "@/lib/mongodb";
 import type { CabinetNomination } from "@/lib/db/types";
 import { getCabinetPositionById } from "@/lib/constants";
 import { getSiteUrl } from "@/lib/siteMetadata";
+import { cabinetNominationsCollection } from "@/lib/db/repositories/cabinetNominations";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -20,12 +21,10 @@ export async function generateMetadata({
   if (!ObjectId.isValid(id)) return {};
 
   const db = await getDb();
-  const nomination = await db
-    .collection<CabinetNomination>("cabinetNominations")
-    .findOne(
-      { _id: new ObjectId(id) },
-      { projection: { positionId: 1, nomineeCharacterName: 1, nomineeParty: 1, status: 1 } }
-    );
+  const nomination = await cabinetNominationsCollection(db).findOne(
+    { _id: new ObjectId(id) },
+    { projection: { positionId: 1, nomineeCharacterName: 1, nomineeParty: 1, status: 1 } }
+  );
   if (!nomination) return {};
 
   const pos = getCabinetPositionById(nomination.positionId);

@@ -4,34 +4,28 @@ import { autoGrantedNodeIds } from "@/lib/constants/techTree";
 import { STARTING_YEAR } from "@/lib/constants/turnTime";
 import { resolveGameYear } from "@/lib/era/era";
 import type { Migration, MigrationContext, MigrationResult } from "../types";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 type SpinOffTechRow = Pick<Corporation, "_id" | "type" | "unlockedTechNodeIds">;
 
 /**
- * Spin-off subsidiaries were created with no tech at all (suggestion #363).
- * Grant each the passed-decade baseline a newly founded corp of its type gets.
- * Additive only: nothing researched since the spin-off is touched.
+ * Spin-off subsidiaries were created with no tech. Grant each the passed-decade
+ * baseline a newly founded corp of its type gets. Additive only: nothing
+ * researched since the spin-off is touched.
  */
 async function backfillSpinOffTechBaselines(
   db: Db,
   ctx: MigrationContext
 ): Promise<MigrationResult> {
-  const gameState = await db.collection<GameState>("gameState").findOne(
+  const gameState = await gameStateCollection(db).findOne(
     { _id: "current" },
     {
-      projection: { currentYear: 1, currentTurn: 1, startingYear: 1, sectorTechTreesEnabled: 1 },
+      projection: { currentYear: 1, currentTurn: 1, startingYear: 1 },
     }
   );
-  if (gameState?.sectorTechTreesEnabled !== true) {
-    return {
-      documentsScanned: 0,
-      documentsUpdated: 0,
-      notes: ["Sector tech trees are off; nothing to grant."],
-    };
-  }
-  const currentYear = resolveGameYear(gameState) ?? STARTING_YEAR;
-  const corporations = await db
-    .collection<SpinOffTechRow>("corporations")
+  const currentYear = resolveGameYear(gameState ?? {}) ?? STARTING_YEAR;
+  const corporations = await corporationsCollection<SpinOffTechRow>(db)
     .find({ isSpinOff: true })
     .project<SpinOffTechRow>({ _id: 1, type: 1, unlockedTechNodeIds: 1 })
     .toArray();
@@ -66,7 +60,7 @@ async function backfillSpinOffTechBaselines(
     };
   }
 
-  const result = await db.collection<Corporation>("corporations").bulkWrite(operations);
+  const result = await corporationsCollection(db).bulkWrite(operations);
   return {
     documentsScanned: corporations.length,
     documentsUpdated: result.modifiedCount,

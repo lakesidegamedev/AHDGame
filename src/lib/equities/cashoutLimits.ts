@@ -4,7 +4,7 @@
  * records what the pool paid, and values a borrower's controlled holdings.
  */
 import type { Db, ObjectId } from "mongodb";
-import type { Bond, Corporation, CorporateSector } from "@/lib/db/types";
+import type { Corporation, CorporateSector } from "@/lib/db/types";
 import type { BankLoan } from "@/lib/db/types/bank";
 import type { ExchangeRate } from "@/lib/db/types/exchangeRate";
 import type { GameConfig } from "@/lib/db/types/gameConfig";
@@ -36,11 +36,17 @@ import {
   trailingAnnualEarnings,
   type PrimaryPlacementLimits,
 } from "./rules/cashoutLimits";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { bankLoansCollection } from "@/lib/db/repositories/bankLoans";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 export async function loadEquityCashoutLimitsStage(db: Db): Promise<number> {
-  const config = await db
-    .collection<Pick<GameConfig, "equityCashoutLimitsStage">>("gameConfig")
-    .findOne({ _id: "default" } as never, { projection: { equityCashoutLimitsStage: 1 } });
+  const config = await gameConfigCollection<Pick<GameConfig, "equityCashoutLimitsStage">>(
+    db
+  ).findOne({ _id: "default" } as never, { projection: { equityCashoutLimitsStage: 1 } });
   const stage = config?.equityCashoutLimitsStage;
   return typeof stage === "number" && Number.isFinite(stage) ? stage : 0;
 }
@@ -102,12 +108,10 @@ export async function loadCorpBookBasisById(
   if (corporationIds.length === 0) return result;
   const ids = [...new Map(corporationIds.map((id) => [id.toHexString(), id])).values()];
   const [corps, sectors, bonds, loans, rateDocs, gameState, eraUnitScale] = await Promise.all([
-    db
-      .collection<Corporation>("corporations")
+    corporationsCollection(db)
       .find({ _id: { $in: ids } }, { projection: BASIS_CORP_PROJECTION })
       .toArray() as Promise<BasisCorp[]>,
-    db
-      .collection<CorporateSector>("corporateSectors")
+    corporateSectorsCollection(db)
       .find(
         { corporationId: { $in: ids } },
         {
@@ -124,8 +128,7 @@ export async function loadCorpBookBasisById(
         }
       )
       .toArray(),
-    db
-      .collection<Bond>("bonds")
+    bondsCollection(db)
       .find(
         {
           corporationId: { $in: ids },
@@ -136,8 +139,7 @@ export async function loadCorpBookBasisById(
         { projection: { corporationId: 1, totalIssued: 1, currencyCode: 1, countryId: 1 } }
       )
       .toArray(),
-    db
-      .collection<BankLoan>("bankLoans")
+    bankLoansCollection(db)
       .find(
         {
           borrowerType: "corporation",
@@ -148,7 +150,7 @@ export async function loadCorpBookBasisById(
         { projection: { borrowerId: 1, outstanding: 1, currency: 1 } }
       )
       .toArray(),
-    db.collection<ExchangeRate>("exchangeRates").find({}).toArray(),
+    exchangeRatesCollection(db).find({}).toArray(),
     getGameState(db),
     loadWorldEraUnitScale(db),
   ]);
@@ -276,7 +278,7 @@ export async function recordPrimaryPoolPlacement(
   paidLocal: number
 ): Promise<void> {
   if (!(paidLocal > 0)) return;
-  await db.collection<Corporation>("corporations").updateOne({ _id: corporationId }, [
+  await corporationsCollection(db).updateOne({ _id: corporationId }, [
     {
       $set: {
         primaryPoolPlacements: {

@@ -1,8 +1,9 @@
 import { type Db } from "mongodb";
 import { getEligibleVoterSet } from "@/lib/parties/proposals";
 import { getUKPartyConferencesCollection } from "@/lib/db/collections/ukPartyConferences";
-import type { UKPartyConference } from "@/lib/uk/conference/types";
-import type { Character, PoliticalParty } from "@/lib/db/types";
+import type { UKPartyConference } from "@/lib/countries/uk/conference/types";
+import type { PoliticalParty } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export function partySeqIdOf(party: PoliticalParty): string {
   return String(party.sequentialId);
@@ -22,7 +23,7 @@ export function frozenRollOf(doc: UKPartyConference): EligibleRoll | null {
 }
 
 export async function countPartyMembers(db: Db, party: PoliticalParty): Promise<number> {
-  return db.collection<Character>("characters").countDocuments({
+  return charactersCollection(db).countDocuments({
     party: partySeqIdOf(party),
     userId: { $exists: true },
   });
@@ -30,8 +31,7 @@ export async function countPartyMembers(db: Db, party: PoliticalParty): Promise<
 
 /** Live electorate: player-member characters plus the committee voter set. */
 async function computeEligibleRoll(db: Db, party: PoliticalParty): Promise<EligibleRoll> {
-  const rows = await db
-    .collection<Character>("characters")
+  const rows = await charactersCollection(db)
     .find({ party: partySeqIdOf(party), userId: { $exists: true } }, { projection: { _id: 1 } })
     .toArray();
   return {

@@ -3,21 +3,21 @@ import type { Db } from "mongodb";
 import type { FederalBudget, StateBudget, LegislationType } from "@/lib/db/types";
 import { incomeTierForTaxKey, incomeTaxRate } from "./rules/incomeTaxTiers";
 import { capitalGainsTierForTaxKey, capitalGainsTaxRate } from "./rules/capitalGainsTax";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 
 export async function alignSeedIncomeTaxTierRecords<
   T extends { scope: string; stateId?: string; legislationTypeId: string; policyOptionId?: string },
 >(db: Db, records: T[]): Promise<T[]> {
   const [national, regional, types] = await Promise.all([
-    db
-      .collection<FederalBudget>("federalBudget")
+    federalBudgetCollection(db)
       .find({}, { projection: { countryId: 1, taxRates: 1, taxRatePhaseIn: 1 } })
       .toArray(),
-    db
-      .collection<StateBudget>("stateBudgets")
+    stateBudgetsCollection(db)
       .find({}, { projection: { countryId: 1, taxRates: 1 } })
       .toArray(),
-    db
-      .collection<LegislationType>("legislationTypes")
+    legislationTypesCollection(db)
       .find(
         {
           _id: {

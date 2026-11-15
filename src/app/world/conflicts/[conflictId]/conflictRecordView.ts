@@ -15,12 +15,9 @@ import { READINESS_DRIFT_STEP, readinessBaselineOf } from "@/lib/military/readin
 /**
  * The tier-scoped half of a conflict record.
  *
- * THE FOG RULE: this runs on the server and whatever it returns ends up in the HTML
- * payload, so a field a tier may not see is OMITTED here — never rendered
- * conditionally on the client. `battleReports` carry the enemy's roster and both
- * sides' strengths; only `archive` may pass them through.
- *
- * Spec: docs/superpowers/specs/2026-07-26-conflict-viewer-tiers-design.md
+ * Whatever this returns ends up in the HTML payload, so a field a tier may not
+ * see must be OMITTED here, never hidden client-side. `battleReports` carry the
+ * enemy roster and both sides' strengths; only `archive` may pass them through.
  */
 
 /** One formation in a live order of battle. */
@@ -59,12 +56,9 @@ export interface RecordBattleRow {
   attackers: string[];
   defenders: string[];
   /**
-   * Dead per attacking nation, principal first — NOT a side total under the
-   * principal's flag, which is what this used to be. A DD+RU offensive reported
-   * "DD 16,299" when DD had lost 5,360 and RU 10,939.
-   *
-   * One entry per side on a pre-coalition report, carrying that side's whole loss:
-   * accurate, because those reports describe bilateral battles.
+   * Dead per attacking nation, principal first, not a side total under the
+   * principal's flag. A coalition offensive must show each nation's loss
+   * separately. Pre-coalition reports carry one entry per side.
    */
   attackerLosses: CountryLoss[];
   /** Dead per defending nation, principal first. */
@@ -85,9 +79,8 @@ export interface RecordBattleRow {
   rosters?: EngagementRoster[];
   /**
    * True when rosters are present but the opposing side's were filtered out.
-   *
-   * The renderer used to infer this from a roster count of 1, which a two-nation
-   * coalition breaks — it would list both allies and imply nothing was hidden.
+   * A plain roster count of 1 cannot detect this: a two-nation coalition
+   * would list both allies and imply nothing was hidden.
    */
   rostersWithheld?: boolean;
 }
@@ -346,9 +339,8 @@ export function buildRecordExtras(input: RecordExtrasInput): RecordExtras {
     return Math.round((r.controlBefore - r.controlAfter) * 10) / 10;
   };
 
-  // Unopposed advances are events too. The list used to drop every report with no
-  // `result`, so a war won entirely by walkover showed a front that claimed never
-  // to have been contested next to a history that recorded nothing at all.
+  // Unopposed advances are events too; without them a walkover war shows a
+  // front that was never contested and a history that recorded nothing.
   const battles: RecordBattleRow[] = reports
     .filter((r) => r.result || r.unopposedAdvance)
     .map((r) => {

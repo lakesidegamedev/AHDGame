@@ -3,20 +3,13 @@ import type { CountryId } from "@/lib/constants/countries";
 /**
  * Passive materiel production for planned-defence economies.
  *
- * The national arsenal is fed by defence contracts: a ministry appropriates, a supplying
- * corporation builds, lots are delivered. A command economy has no such market to place
- * an order into, so that pipeline never runs for it and its store stays empty however
- * much it spends. Measured on the live world, RU's last procurement window closed on turn
- * 204 and DD had never signed a contract at all, which left both unable to replace a
- * single piece of battle-destroyed equipment while the US refitted after every engagement.
+ * Command economies have no market for contracts to place into, so the contract
+ * pipeline never runs and their store stays empty. This is the substitute: a
+ * modest uncontracted trickle into the store, as state arsenals producing to plan.
  *
- * This is the substitute: a modest, uncontracted trickle straight into the store,
- * representing state arsenals producing to plan rather than to order.
- *
- * A NAMED ROSTER on purpose, not derived from `isCommandEconomy`. That predicate covers
- * only RU and CN and drives non-convertible currency, the passive monobank, administered
- * CPI and soft budgets. Adding DD to it to obtain arsenal accrual would flip East Germany
- * into all of that, which is a far larger change than arms supply.
+ * A NAMED ROSTER on purpose, not derived from `isCommandEconomy`: that predicate
+ * also drives non-convertible currency, the passive monobank, administered CPI and
+ * soft budgets, so reusing it would flip DD into all of that.
  *
  * Spec: calibrated in scripts/sim/stateArmsIndustry2026-08-28.ts.
  */
@@ -40,24 +33,18 @@ export function stateArmsLotsPerTurn(countryId: string): number {
 }
 
 /**
- * The emergency floor, for everyone who is NOT on the roster above.
+ * The emergency floor, for everyone NOT on the planned-economy roster.
  *
- * The asymmetry this closes: a planned economy's equipment cannot reach zero, because
- * `STATE_ARMS_INDUSTRY` tops it up every turn whatever else is happening. A market
- * economy's can, and did. On the live world the United States finished the War for
- * Germany with 0/0/0 firepower, protection and support on its Armored and Infantry
- * Divisions, because the only route into its store is a defence contract, and
- * `applyDefenceRefit` returns immediately on an empty arsenal. Procurement was also
- * frozen at the time, which made the gap total.
+ * Planned economies are topped up every turn; market economies can reach zero and did.
+ * A nation whose only route to stores is a defence contract, with procurement frozen,
+ * can finish a war with nothing.
  *
- * This is a FLOOR, not a pipeline, and the distinction is the whole design:
+ * This is a FLOOR, not a pipeline:
  *
- *  - It engages only for a domain whose store is at zero. One lot arrives, the store
- *    is no longer empty, and the floor switches itself off next turn. It cannot fill a
- *    store, only refuse to leave one at nothing.
+ *  - It engages only for a domain whose store is at zero. One lot arrives and the floor
+ *    switches off next turn. It refuses to leave a store at nothing; it cannot fill one.
  *  - It is a third of the Soviet rate and equal to East Germany's, so planned production
- *    keeps its whole advantage: RU still re-equips a stripped 52-formation roster in
- *    about 81 turns, and nobody else can approach that.
+ *    keeps its whole advantage.
  *  - It never substitutes for procurement. Contracts remain the only way to stock an
  *    arsenal, modernise a tier, or supply a war at pace.
  *

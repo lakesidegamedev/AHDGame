@@ -3,20 +3,11 @@ import type { RegionalBudget } from "@/lib/db/types/regionalBudget";
 import { JP_REGIONAL_GRANT_FIELD } from "@/lib/countries/jp/economy";
 
 /**
- * Which `regionalBudgets` field holds a country's central-government grant.
- *
- * `RegionalBudget` carries one grant field per country family (JP's
- * `nationalGrant`, DE's `federalEqualizationGrant`, CN/DD's
- * `centralTransferGrant`, UK's `westminsterGrant`, RU's `unionGrant`), so every
- * reader has to map country → field. Those mappings were written three separate
- * times as if/else chains, and each one ENDED IN A DEFAULT — `westminsterGrant`
- * in `federalBudgetDetail`. A country the chain did not name therefore read the
- * UK's field, silently, and reported DDM 0 rather than failing: DD's Länder grants
- * disappeared from the budget detail that way (#1323).
- *
- * A lookup that returns `undefined` for an unmapped country is the point. It
- * cannot quietly hand back another country's number, and a country added later
- * shows up as absent instead of as zero.
+ * Maps country to its `regionalBudgets` grant field. `RegionalBudget` carries
+ * one grant field per country family, so a lookup returning `undefined` for an
+ * unmapped country is intentional: it must never silently fall back to another
+ * country's field (that hid DD's Länder grants) and a new country shows as
+ * absent rather than zero.
  */
 const REGIONAL_GRANT_FIELD: Partial<
   Record<

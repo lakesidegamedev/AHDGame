@@ -44,7 +44,7 @@ export const BW_EARLIEST_EXIT_YEAR = 1968;
 
 /**
  * Gold cover below which convertibility becomes untenable and the decision arms.
- * Historically ~$10B of US gold against ~$50B of foreign dollar claims by 1971.
+ * Historically ~$10B US gold against ~$50B foreign dollar claims by 1971.
  */
 export const BW_COVER_SUSPENSION_THRESHOLD = 0.25;
 

@@ -1,15 +1,9 @@
 /**
- * Selection rules for comparing two nations on the world map.
+ * Selection rules for comparing two nations on the world map. Pure: no React,
+ * clock, randomness or network.
  *
- * Plain data in, plain data out, so the same selection behaviour can run in a
- * test, a harness or a future embed without React. No clock, randomness or
- * network here.
- *
- * The map holds exactly two slots, unlike the rankings page tray which refuses a
- * fourth pick. A full tray here makes room for the newer pick instead: a player
- * clicking their way across the globe should never have to clear the panel to
- * change one side, and the nation they picked longest ago is the one they are
- * least likely to still be looking at.
+ * The map holds two slots. A full tray drops the oldest pick to make room, so a
+ * player clicking across the globe never has to clear the panel to change one side.
  */
 
 /** How many nations the map comparison holds at once. */

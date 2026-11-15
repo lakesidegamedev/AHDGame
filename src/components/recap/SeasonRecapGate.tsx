@@ -5,9 +5,8 @@ import { useEffect, useRef, useState } from "react";
 import { useAuthMe } from "@/contexts/AuthDataContext";
 import { fetchJson } from "@/lib/observability/fetchJson";
 import type { CharacterRecap } from "@/lib/recap/types";
-// The story is a full-screen overlay only the handful of players with a pending
-// recap ever see. Its slides and charts used to sit in the layout chunk for
-// every page load.
+// The story is a full-screen overlay only the handful of players with a
+// pending recap ever see, so load it lazily.
 const SeasonRecapStory = dynamic(
   () => import("./SeasonRecapStory").then((module) => module.SeasonRecapStory),
   { ssr: false }

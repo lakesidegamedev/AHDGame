@@ -2,24 +2,8 @@ import type { PartySeed } from "@/lib/seeds/reference/politicalParties";
 
 /**
  * German default political parties.
- *
- * Economic/social positions on -5 to +5 scale, calibrated to German politics:
- *   SPD:      centre-left economically, progressive socially (grand-coalition staple)
- *   CDU:      centre-right economically, moderate-traditional socially
- *   CSU:      centre-right economically, traditional socially (Bavaria-only; CDU's sister)
- *   Grüne:    centre-left economically (ecological), very progressive socially
- *   FDP:      pro-market liberal economically, socially liberal
- *   Linke:    far-left economically, very progressive socially (eastern strongholds; modern-only)
- *   AfD:      right-populist economically, very traditional socially (eastern strongholds; modern-only)
- *   PDS:      far-left economically, secular-progressive socially (East-only successor to SED; 1991-only)
- *   DP:       national-conservative (1953-only; Adenauer coalition partner)
- *   GB/BHE:   expellee party (1953-only; entered Bundestag 1953)
- *
- * Major-party IDs in countries.ts reference: "spd" and "cdu" (CDU/CSU act as one
- * union faction for Fraktion purposes but remain two distinct parties in seed).
- *
- * Seeded as `isDefault: true` — they always exist and cannot be deleted.
- * seedOrder determines sequentialId assignment within DE.
+ * Economic/social positions on -5 to +5 scale. Major-party IDs referenced in countries.ts: "spd", "cdu".
+ * Seeded as isDefault: true (always exist, cannot be deleted). seedOrder sets sequentialId within DE.
  */
 export const deParties: PartySeed[] = [
   {

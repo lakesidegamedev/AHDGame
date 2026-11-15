@@ -17,7 +17,6 @@
  * 3. Random noise — small jitter prevents perfectly predictable movement
  *
  * Guardrails clamp the final rate to +/-50% of base rate.
- * See docs/design/currency-exchange.md "Rate Update Formula" for rationale.
  */
 
 import type { CountryId } from "@/lib/constants/countries";
@@ -32,6 +31,7 @@ import {
   ABSOLUTE_INFLATION_SENSITIVITY,
   GDP_GROWTH_SENSITIVITY,
   TRADE_GROWTH_SENSITIVITY,
+  TRADE_BALANCE_SENSITIVITY,
   VOLUME_PRESSURE_SENSITIVITY,
   VOLUME_PRESSURE_CAP,
   VOLUME_DIRECTION_WEIGHT,
@@ -50,6 +50,11 @@ export interface MacroInputs {
   inflationRate: number;
   gdpGrowth: number;
   tradeGrowth: number;
+  /**
+   * Background countries only: smoothed funded-trade surplus (+) or
+   * deficit (-), -0.5 to 0.5. Absent everywhere else, which adds nothing.
+   */
+  tradeBalancePressure?: number;
 }
 
 /** Volume data computed by the volume tracker for a single currency */
@@ -94,17 +99,15 @@ export function resolveMonetaryBaseline(countryId: CountryId, currentYear?: numb
 /**
  * Compute the macro-fundamental target rate for a currency.
  *
- * The target reflects how economic deviations from baseline affect currency strength:
- * - Higher prime rate -> stronger (investors seek yield)
- * - Higher inflation -> weaker (purchasing power erodes)
- * - Higher GDP growth -> stronger (economic confidence)
- * - Higher trade growth -> stronger (trade surplus demand)
+ * Deviations from baseline move the target:
+ * - Higher prime rate -> stronger (yield)
+ * - Higher inflation -> weaker (purchasing power)
+ * - Higher GDP growth -> stronger
+ * - Higher trade growth -> stronger
  *
- * `currentYear` is the CURRENT in-game year (`gameState.currentYear`); it
- * selects the era monetary baselines (see {@link resolveMonetaryBaseline}).
- * Note the asymmetry with `baseRate`: the anchor rate stays the world's own
- * SEEDED calibration (preset-keyed, see `processForexTurn`), while the
- * deviation terms below are judged against the current era's anchors.
+ * `currentYear` is the CURRENT in-game year and selects the era monetary
+ * baselines for the deviation terms. `baseRate` stays the world's SEEDED
+ * calibration (preset-keyed), hence the asymmetry.
  */
 export function computeMacroTarget(
   baseRate: number,
@@ -115,24 +118,27 @@ export function computeMacroTarget(
   const economicBaseline = ECONOMIC_BASELINES[countryId];
   const monetaryBaseline = resolveMonetaryBaseline(countryId, currentYear);
 
-  // Absolute-inflation depreciation (#3064 Phase 2) — needs ONLY inflation, so it
-  // applies to every currency, including forex-active ones with no full economic
-  // baseline (IT/ES/SE/TR/FR/RU). Those previously returned baseRate unchanged, i.e.
-  // a fixed peg that never depreciated no matter how high their inflation ran — the
-  // perfect carry vehicle. Now inflation above a universal healthy ceiling weakens
-  // the currency regardless of its own high baseline, so high inflation costs the
-  // holder and cannot be farmed as a free real carry.
+  // Absolute-inflation depreciation applies to every currency, including
+  // forex-active ones with no full economic baseline. Those previously returned
+  // baseRate unchanged, i.e. a fixed peg that never depreciated no matter how
+  // high their inflation ran. Now inflation above a universal healthy ceiling
+  // weakens the currency regardless of its own high baseline.
   const excessInflation = Math.max(
     0,
     inputs.inflationRate - ABSOLUTE_INFLATION_DEPRECIATION_THRESHOLD
   );
   const absoluteInflationPenalty = excessInflation * ABSOLUTE_INFLATION_SENSITIVITY;
+  // A trade surplus strengthens (lowers the rate); needs no baseline, so it
+  // also moves background currencies that have no economic baseline.
+  const tradeBalance = Number.isFinite(inputs.tradeBalancePressure)
+    ? (inputs.tradeBalancePressure as number) * TRADE_BALANCE_SENSITIVITY
+    : 0;
 
   if (!economicBaseline || !monetaryBaseline) {
-    // Not fully modelled (no economic/monetary baseline) — the deviation terms
-    // can't be computed, but the absolute-inflation weakening still applies so the
-    // currency is no longer a static peg.
-    return baseRate * Math.max(0.01, 1 + absoluteInflationPenalty);
+    // Not fully modelled (no economic/monetary baseline): deviation terms are
+    // unavailable, but absolute-inflation weakening still applies so this is not
+    // a static peg.
+    return baseRate * Math.max(0.01, 1 + absoluteInflationPenalty - tradeBalance);
   }
 
   // Rate is "local currency per internal unit", so lower = stronger.
@@ -151,7 +157,8 @@ export function computeMacroTarget(
     (inputs.inflationRate - monetaryBaseline.targetInflation) * INFLATION_SENSITIVITY +
     absoluteInflationPenalty -
     (inputs.gdpGrowth - economicBaseline.gdpGrowth) * GDP_GROWTH_SENSITIVITY -
-    (inputs.tradeGrowth - economicBaseline.tradeGrowth) * TRADE_GROWTH_SENSITIVITY;
+    (inputs.tradeGrowth - economicBaseline.tradeGrowth) * TRADE_GROWTH_SENSITIVITY -
+    tradeBalance;
 
   return baseRate * Math.max(0.01, multiplier);
 }
@@ -310,16 +317,12 @@ export interface RateUpdateResult {
  * Run the full rate update pipeline for a single currency.
  *
  * Steps: macro target -> drift -> volume pressure -> cycle pressure -> noise -> clamp.
- * All inputs are pre-fetched by the caller; this function has no side effects.
+ * Inputs are pre-fetched; no side effects.
  *
  * `cyclePressure` is the active 12-hour regime's directional bias (default 0).
- * `currentYear` is the CURRENT in-game year; it selects the era monetary
- * baselines for the macro target (omitted or 1999+ = modern, byte-identical
- * to prior behavior).
- * `band` is the guardrail half-width as a fraction of base and
- * `driftMultiplier` scales DRIFT_SPEED (the post-Bretton-Woods float widens
- * the former and speeds the latter); both default to the historical pegged
- * behavior, byte-identical to prior behavior.
+ * `currentYear` selects era monetary baselines (omitted or 1999+ = modern).
+ * `band` is the guardrail half-width as a fraction of base; `driftMultiplier`
+ * scales DRIFT_SPEED. Both default to historical pegged behavior.
  */
 export function computeRateUpdate(
   currentRate: number,

@@ -8,14 +8,7 @@
 import { loadCampaignPriceLevel } from "@/lib/campaigns/campaignCurrency";
 
 import type { Db, ObjectId } from "mongodb";
-import type {
-  NPP,
-  StatePartyOrg,
-  PoliticalParty,
-  State,
-  GameConfig,
-  Character,
-} from "@/lib/db/types";
+import type { NPP, StatePartyOrg, State, GameConfig } from "@/lib/db/types";
 import { projectNppGeneration, calculateTaxAmount } from "@/lib/utils/fundGeneration";
 import {
   campaignAnchorToLocal,
@@ -33,6 +26,12 @@ import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { singleplayerNppTuning } from "@/lib/singleplayerDifficulty/rules";
 import { loadSingleplayerDifficulty } from "@/lib/singleplayerDifficulty/loadBehaviorPolicy";
+import { getStatesCollection } from "@/lib/db/collections/states";
+import { getPoliticalPartiesCollection } from "@/lib/db/collections/politicalParties";
+import { getCharactersCollection } from "@/lib/db/collections/characters";
+import { getNppsCollection } from "@/lib/db/collections/npps";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 /*
  * NPPs receive 2 action points per turn (vs. 3+ for player characters). The
@@ -61,23 +60,18 @@ export async function processNppFundGeneration(
   currentTurn: number,
   preloadedStateMap?: Map<string, State>
 ): Promise<NppFundGenerationResult> {
-  const config = await db.collection<GameConfig>("gameConfig").findOne({ _id: "default" });
+  const config = await gameConfigCollection(db).findOne({ _id: "default" });
   // NPP economy is on by default; only an explicit `false` disables it.
   if (config?.nppEconomyEnabled === false) {
     return { nppsProcessed: 0, totalGenerated: 0, totalStateTax: 0, totalNationalTax: 0 };
   }
-  // Local-world difficulty resource tuning. Read from the PERSISTED
-  // singleplayerConfig rather than the SINGLEPLAYER env flag: hosted worlds
-  // never persist that field (see its type comment), so multiplayer resolves to
-  // undefined → `normal` → the live NPP_ACTIONS_PER_TURN / NPP_ACTION_CAP /
-  // ×1 constants, byte-identical to before. The env flag was the wrong key
-  // because the world, not the process, owns the difficulty: the headless
-  // harness and any other host that processes turns without setting
-  // SINGLEPLAYER used to silently ignore a local world's own setting.
+  // Local-world difficulty tuning. Read from the PERSISTED singleplayerConfig,
+  // not the SINGLEPLAYER env flag: hosted worlds never persist that field, so
+  // multiplayer resolves to undefined -> normal -> the live constants. The world,
+  // not the process, owns the difficulty.
   //
-  // This is the resource half of difficulty and is disclosed to the player as a
-  // resource bonus. The behaviour half is
-  // `singleplayerDifficulty/rules/behavior.ts` and never touches funds or AP.
+  // This is the resource half of difficulty, disclosed as a resource bonus. The
+  // behaviour half lives in singleplayerDifficulty/rules/behavior.ts.
   const difficulty = await loadSingleplayerDifficulty(db);
   const tuning = singleplayerNppTuning(difficulty);
   const campaignRates = await loadCampaignCurrencyRates(db);
@@ -85,17 +79,18 @@ export async function processNppFundGeneration(
 
   const stateMap =
     preloadedStateMap ??
-    new Map((await db.collection<State>("states").find({}).toArray()).map((s) => [s._id, s]));
+    new Map((await (await getStatesCollection(db)).find({}).toArray()).map((s) => [s._id, s]));
 
-  const parties = await db.collection<PoliticalParty>("politicalParties").find({}).toArray();
+  const parties = await (await getPoliticalPartiesCollection(db)).find({}).toArray();
   const partyBySequentialId = new Map(
     parties.map((p) => [`${p.countryId ?? "US"}:${p.sequentialId}`, p])
   );
-  const statePartyOrgs = await db.collection<StatePartyOrg>("statePartyOrg").find({}).toArray();
+  const statePartyOrgs = await statePartyOrgCollection(db).find({}).toArray();
   const statePartyMap = new Map(statePartyOrgs.map((sp) => [`${sp.stateId}_${sp.partyId}`, sp]));
 
-  const characters = await db
-    .collection<Character>("characters")
+  const characters = await (
+    await getCharactersCollection(db)
+  )
     .find({ party: { $ne: "independent" } })
     .project<{ homeState: string; party: string }>({ homeState: 1, party: 1 })
     .toArray();
@@ -112,7 +107,7 @@ export async function processNppFundGeneration(
 
   // Technocrat NPPs (e.g. autonomous central-bank chairs) are excluded via
   // isTechnocrat: { $ne: true } — they don't generate political campaign funds.
-  const cursor = db.collection<NPP>("npps").find(
+  const cursor = (await getNppsCollection(db)).find(
     { retiredAt: null, isTechnocrat: { $ne: true } },
     {
       projection: {
@@ -231,7 +226,7 @@ export async function processNppFundGeneration(
     }
 
     if (nppOps.length > 0) {
-      await db.collection<NPP>("npps").bulkWrite(nppOps);
+      await (await getNppsCollection(db)).bulkWrite(nppOps);
     }
 
     nppsProcessed += nppOps.length;
@@ -261,7 +256,7 @@ export async function processNppFundGeneration(
         update: { $inc: { treasury: amount } },
       },
     }));
-    await db.collection<PoliticalParty>("politicalParties").bulkWrite(partyOps);
+    await (await getPoliticalPartiesCollection(db)).bulkWrite(partyOps);
 
     const partyById = new Map(parties.map((p) => [String(p._id), p]));
     for (const { amount, _id } of nationalTreasuryUpdates.values()) {
@@ -308,7 +303,7 @@ export async function processNppFundGeneration(
         update: { $inc: { treasury: amount } },
       },
     }));
-    await db.collection<StatePartyOrg>("statePartyOrg").bulkWrite(statePartyOps);
+    await statePartyOrgCollection(db).bulkWrite(statePartyOps);
 
     for (const [statePartyKey, amount] of stateTreasuryUpdates.entries()) {
       const sp = statePartyMap.get(statePartyKey);
@@ -364,7 +359,7 @@ export async function processNppFundGeneration(
         update: { $set: { stateTaxRate: DEFAULT_NPP_STATE_TAX_RATE } },
       },
     }));
-    await db.collection<StatePartyOrg>("statePartyOrg").bulkWrite(taxRateOps);
+    await statePartyOrgCollection(db).bulkWrite(taxRateOps);
   }
 
   return { nppsProcessed, totalGenerated, totalStateTax, totalNationalTax };

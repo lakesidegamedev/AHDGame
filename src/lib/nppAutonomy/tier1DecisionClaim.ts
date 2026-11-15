@@ -1,15 +1,13 @@
 /**
- * Persistence adapter for Tier-1 NPP strategic decision slots (#3724).
+ * Persistence adapter for Tier-1 NPP strategic decision slots.
  *
- * Claims are stored on `countryGameStates.lastNppStrategicDecisionCycle` with a
- * compare-and-set filter so a restarted worker cannot double-fire the same
- * cycle. Watermark-only upserts are safe for access resolution: missing
- * enablement fields still fall back to CountryConfig (including US, which is
- * not normally seeded into this collection).
+ * Claims use a compare-and-set filter on `countryGameStates.lastNppStrategicDecisionCycle`
+ * so a restarted worker cannot double-fire the same cycle. Watermark-only
+ * upserts are safe for access resolution: missing enablement fields fall back
+ * to CountryConfig (including US, not normally seeded into this collection).
  *
- * `playerControlled` is caller-supplied: country-level strategy (diplomacy /
- * sphere / NPP governing brain) passes true when humans own that surface.
- * Scheduling alone never infers it from enablement flags.
+ * `playerControlled` is caller-supplied: country-level strategy passes true
+ * when humans own that surface. Scheduling never infers it from enablement.
  */
 
 import type { Db } from "mongodb";
@@ -19,6 +17,7 @@ import {
   evaluateTier1NppDecisionSchedule,
   type Tier1DecisionScheduleVerdict,
 } from "./tier1DecisionSchedule";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
 
 export interface ClaimTier1NppDecisionSlotOptions {
   /** When true, refuse the slot — humans own this decision surface. */
@@ -38,7 +37,7 @@ export async function claimTier1NppDecisionSlot(
 ): Promise<Tier1DecisionScheduleVerdict> {
   const playerControlled = options?.playerControlled === true;
 
-  const col = db.collection<CountryGameState>("countryGameStates");
+  const col = countryGameStatesCollection(db);
   const existing = await col.findOne(
     { _id: countryId },
     { projection: { lastNppStrategicDecisionCycle: 1 } }

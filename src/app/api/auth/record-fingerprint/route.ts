@@ -12,6 +12,7 @@ import { getClientIp } from "@/lib/utils/network";
 import { getCfFingerprint, isEmptyCfFingerprint } from "@/lib/utils/cfFingerprint";
 import { classifyDevice } from "@/lib/utils/userAgent";
 import { createHash } from "crypto";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 const bodySchema = z.object({
   fingerprint: z.string().max(128).optional(),
@@ -90,7 +91,7 @@ export async function POST(request: Request) {
     const { fingerprint, fingerprintComponents } = parsed.data;
 
     const db = await getDb();
-    const users = db.collection<User>("users");
+    const users = usersCollection(db);
     const userId = new ObjectId(authUser.userId);
     const user = await users.findOne(
       { _id: userId },

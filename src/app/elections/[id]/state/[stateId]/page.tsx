@@ -1,7 +1,9 @@
+import { electionRegionUrl } from "@/lib/urls";
 import { redirect } from "next/navigation";
 import { getDb } from "@/lib/mongodb";
 import type { State } from "@/lib/db/types";
 import { downBallotRedirectTarget } from "@/lib/elections/downBallotRedirect";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 export default async function ElectionStateRedirect({
   params,
@@ -13,9 +15,10 @@ export default async function ElectionStateRedirect({
   const db = await getDb();
   const elsewhere = await downBallotRedirectTarget(db, id);
   if (elsewhere) redirect(elsewhere);
-  const state = await db
-    .collection<State>("states")
-    .findOne({ _id: upper }, { projection: { countryId: 1 } });
+  const state = await statesCollection(db).findOne(
+    { _id: upper },
+    { projection: { countryId: 1 } }
+  );
   const countryId = state?.countryId ?? "US";
-  redirect(`/elections/${id}/country/${countryId.toLowerCase()}/region/${upper}`);
+  redirect(`${electionRegionUrl(id, countryId, upper)}`);
 }

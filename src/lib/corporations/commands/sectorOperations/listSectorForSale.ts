@@ -18,6 +18,7 @@ import { computeSectorListingValuation } from "@/lib/corporations/sectorValuatio
 import { getGameState } from "@/lib/gameState";
 import { getMarketSystemModeForDb, marketAtLeast } from "@/lib/market/featureFlag";
 import { loadWorldEraUnitScale } from "@/lib/currency/gdpAnchorRate";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 interface RouteParams {
   params: Promise<{ id: string; sectorId: string }>;
@@ -51,9 +52,10 @@ export async function listSectorForSale(_request: Request, { params }: RoutePara
       return errorResponse(400, "Invalid sector ID");
     }
 
-    const sector = await db
-      .collection<CorporateSector>("corporateSectors")
-      .findOne({ _id: new ObjectId(sectorId), corporationId: corporation._id });
+    const sector = await corporateSectorsCollection(db).findOne({
+      _id: new ObjectId(sectorId),
+      corporationId: corporation._id,
+    });
 
     if (!sector) {
       return errorResponse(404, "Sector not found");
@@ -131,7 +133,7 @@ export async function listSectorForSale(_request: Request, { params }: RoutePara
     }
 
     const now = new Date();
-    const listed = await db.collection<CorporateSector>("corporateSectors").updateOne(
+    const listed = await corporateSectorsCollection(db).updateOne(
       {
         _id: sector._id,
         corporationId: corporation._id,

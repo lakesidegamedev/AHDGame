@@ -39,6 +39,10 @@ export const opening1991Anchors: Record<
   IE: { lifeYears: 74.8, growthPercent: 0.250480411451676 },
 };
 
+const openingAnchorsByCountry: Partial<
+  Record<OpeningCountry | "CA", (typeof opening1991Anchors)[OpeningCountry]>
+> = opening1991Anchors;
+
 function valid(value: number | null | undefined): value is number {
   return typeof value === "number" && Number.isFinite(value);
 }
@@ -85,9 +89,12 @@ function proxy(
 
 /** Never provides national energy security or any other unreviewed metric. */
 export function provisionalRegionalOpening(
-  country: OpeningCountry,
-  rows: readonly ProvisionalRegionInput[]
+  country: OpeningCountry | "CA",
+  rows: readonly ProvisionalRegionInput[],
+  anchors = openingAnchorsByCountry[country],
+  sourceLabel = "1991"
 ): ReadonlyMap<string, Record<string, OpeningMetricObservation>> {
+  if (!anchors) throw new Error("Canadian modeled metrics require explicit preset anchors");
   if (new Set(rows.map((row) => row.regionId)).size !== rows.length) {
     throw new Error("duplicate region in provisional opening inputs");
   }
@@ -172,7 +179,7 @@ export function provisionalRegionalOpening(
         "20": proxy(
           "20",
           valid(row.lifeExpectancy) && valid(lifeMean)
-            ? opening1991Anchors[country].lifeYears + 0.5 * (row.lifeExpectancy - lifeMean)
+            ? anchors.lifeYears + 0.5 * (row.lifeExpectancy - lifeMean)
             : null,
           "1991 country life-expectancy anchor plus regional legacy deviation",
           "Regional legacy deviation is halved for a conservative game estimate, not a regional life table; future values require age-specific mortality."
@@ -194,12 +201,18 @@ export function provisionalRegionalOpening(
         "54": proxy(
           "54",
           valid(row.populationGrowth) && valid(growthMean)
-            ? opening1991Anchors[country].growthPercent + row.populationGrowth - growthMean
+            ? anchors.growthPercent + row.populationGrowth - growthMean
             : null,
           "1991 country population-change anchor plus regional legacy deviation",
           "Regional pattern is game-calibrated; future change must reconcile births, deaths, and migration."
         ),
       };
+      if (sourceLabel !== "1991") {
+        for (const observation of Object.values(observations)) {
+          observation.source = observation.source.replaceAll("1991", sourceLabel);
+          observation.note = observation.note.replaceAll("1991", sourceLabel);
+        }
+      }
       return [row.regionId, observations] as const;
     })
   );

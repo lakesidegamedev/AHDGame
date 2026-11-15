@@ -4,6 +4,7 @@ import { COUNTRY_ORDER, type CountryId } from "@/lib/constants/countries";
 import type { Crisis, CrisisInteraction, GlobalResponseOutcome } from "@/lib/db/types/crisis";
 import type { TradeEmbargo } from "@/lib/db/types/tradeEmbargo";
 import { planCrisisSanctions } from "./rules";
+import { tradeEmbargoesCollection } from "@/lib/db/repositories/tradeEmbargoes";
 
 /** Idempotent materialization; expired or repealed rows remain replay tombstones. */
 export async function applyCrisisTradeSanctions(
@@ -41,8 +42,10 @@ export async function applyCrisisTradeSanctions(
       sourceCrisisId: crisis._id,
       sourceOutcomeId: outcome.outcomeId,
     };
-    await db
-      .collection<TradeEmbargo>("tradeEmbargoes")
-      .updateOne({ _id }, { $setOnInsert: embargo }, { upsert: true });
+    await tradeEmbargoesCollection(db).updateOne(
+      { _id },
+      { $setOnInsert: embargo },
+      { upsert: true }
+    );
   }
 }

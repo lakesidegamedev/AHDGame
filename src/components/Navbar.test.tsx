@@ -112,7 +112,7 @@ describe("Navbar mobile menu", () => {
     expect(menu.getByRole("link", { name: /My Office/ })).toBeTruthy();
 
     fireEvent.click(menu.getByRole("button", { name: "Staff" }));
-    expect(menu.getByRole("link", { name: "Admin Panel" })).toBeTruthy();
+    expect(menu.getByRole("link", { name: "Control Panel" })).toBeTruthy();
 
     fireEvent.click(menu.getByRole("button", { name: /United States/ }));
     expect(menu.getByRole("link", { name: /Cabinet Office/ })).toBeTruthy();

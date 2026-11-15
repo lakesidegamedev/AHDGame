@@ -1,18 +1,12 @@
 /**
  * Pure driver functions for the per-turn popularLegitimacy drift.
  *
- * Each driver takes typed inputs and returns a number in a documented
- * range. No DB access, no side effects — the integration layer
- * (`popularLegitimacyTurn.ts`) sums the components and applies the
- * delta via `adjustPopularLegitimacy`.
+ * Each driver takes typed inputs and returns a number in a documented range.
+ * No DB access, no side effects: the integration layer sums the components and
+ * applies the delta via `adjustPopularLegitimacy`.
  *
- * The slow-buildup tuning principle from the design doc lives here:
- * normal-turn drift bounded to a fraction of a point per component,
- * worst-case totals around -4 (disaster turn), with a +0.2 always-on
- * natural-recovery target.
- *
- * See `docs/superpowers/specs/2026-05-28-one-party-state-collapse-design.md`
- * § "Scalar mechanics" for the drift table.
+ * Drift is deliberately slow: each component is a fraction of a point per turn,
+ * worst-case totals around -4 on a disaster turn.
  */
 import { clamp } from "@/lib/numeric/rules";
 import type { PopularMoodAxisProfile } from "@/lib/constants/popularMoodProfiles";
@@ -183,11 +177,9 @@ export function electionCredibilityShock(sig: ElectionCredibilitySignals): numbe
  */
 export function intraPartyCouplingBleed(partyConfidence: number): number {
   if (partyConfidence >= 30) return 0;
-  // Must stay below POPULAR_RECOVERY_RATE (0.1), or the two coupling bleeds
-  // form an inescapable death spiral once both scalars cross their
-  // thresholds: at the old -0.3 the net popular drift was ~-0.15/turn with
-  // popular pinned at 0 regardless of econ health, which is what ground CN
-  // into the t1061 Stage 3 split (#3165).
+  // Must stay below POPULAR_RECOVERY_RATE (0.1) or the two coupling
+  // bleeds form an inescapable death spiral once both scalars cross their
+  // thresholds.
   return -0.05;
 }
 

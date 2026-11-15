@@ -21,6 +21,9 @@ import {
 import { emitTx, loadTxThresholds } from "@/lib/financialTxLog/emit";
 import type { TxThresholds } from "@/lib/db/types/financialTxLog";
 import { insertFundTransaction } from "@/lib/indexFunds/fundQueries";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import type { Document } from "mongodb";
 
 export interface SellFundBondsResult {
   proceedsAnchor: number;
@@ -40,7 +43,7 @@ export async function sellFundBondHoldingsForCash(
   now: Date = new Date(),
   options?: {
     /**
-     * #992 tranche 6: game turn stamped on each fund-subject ledger row.
+     * Game turn stamped on each fund-subject ledger row.
      * When absent the sales still settle but emit no rows.
      */
     turn?: number;
@@ -51,8 +54,7 @@ export async function sellFundBondHoldingsForCash(
   const result: SellFundBondsResult = { proceedsAnchor: 0, unitsSold: 0, bondsTouched: 0 };
   if (!(neededAnchor > 0)) return result;
 
-  const bonds = await db
-    .collection<Bond>("bonds")
+  const bonds = await bondsCollection(db)
     .find({
       matured: false,
       defaulted: { $ne: true },
@@ -89,7 +91,7 @@ export async function sellFundBondHoldingsForCash(
 
     const debit = await debitBondPoolGated(db, currency, proceedsLocal, "salesOut", now);
     if (!debit.ok) continue;
-    const release = await db.collection<Bond>("bonds").updateOne(
+    const release = await bondsCollection(db).updateOne(
       {
         _id: bond._id,
         sovereignMaturityClaim: { $exists: false },
@@ -101,18 +103,16 @@ export async function sellFundBondHoldingsForCash(
       await refundBondPoolDebit(db, currency, proceedsLocal, "salesOut", now);
       continue;
     }
-    await db.collection<Bond>("bonds").updateOne({ _id: bond._id }, {
+    await bondsCollection(db).updateOne({ _id: bond._id }, {
       $pull: { holders: { fundId: fund._id, units: { $lte: 0 } } },
     } as unknown as UpdateFilter<Bond>);
 
     const proceedsAnchor =
       Math.round(corpCapitalToAnchor(proceedsLocal, currency, rate) * 100) / 100;
-    await db
-      .collection("indexFunds")
-      .updateOne(
-        { _id: fund._id },
-        { $inc: { cashAnchor: proceedsAnchor }, $set: { updatedAt: now } }
-      );
+    await indexFundsCollection<Document>(db).updateOne(
+      { _id: fund._id },
+      { $inc: { cashAnchor: proceedsAnchor }, $set: { updatedAt: now } }
+    );
     await insertFundTransaction(db, {
       fundId: fund._id,
       kind: "bond_sale",
@@ -122,13 +122,11 @@ export async function sellFundBondHoldingsForCash(
       createdAt: now,
     });
 
-    // #992 tranche 6: fund-subject ledger leg for the cashAnchor credit
-    // above. The bond position is an asset account the shadow ledger does
-    // not carry, so the row is single-sided under the shared
-    // bond_principal_investment reason (the purchase leg shares it, netting
-    // per currency). Fund-subject rows never mirror, so this is the only
-    // ledger row for the credit, and it fires only on the committed path
-    // — a refunded pool debit or a lost holder race emits nothing.
+    // Fund-subject ledger leg for the cashAnchor credit above. The bond position
+    // is an asset account the shadow ledger does not carry, so this row is
+    // single-sided under the shared bond_principal_investment reason. Fund-subject
+    // rows never mirror, so this is the only ledger row for the credit, and it
+    // fires only on the committed path.
     if (options?.turn !== undefined) {
       await emitTx(
         db,

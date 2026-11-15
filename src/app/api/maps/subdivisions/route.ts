@@ -1,3 +1,7 @@
+import {
+  SUBDIVISION_REGION_PATTERN,
+  subdivisionRegionMatchesCountry,
+} from "@/lib/maps/rules/region";
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { getDb } from "@/lib/mongodb";
@@ -16,7 +20,7 @@ const querySchema = z.object({
   country: z.string().regex(/^[A-Z]{2,3}$/),
   type: z.string().min(1).max(64),
   // regionId feeds a filesystem path: region-code shapes only.
-  region: z.string().regex(/^[A-Z]{2,3}$/),
+  region: z.string().regex(SUBDIVISION_REGION_PATTERN),
 });
 
 // GET /api/maps/subdivisions?country=US&type=governor&region=SD — one region's
@@ -34,8 +38,12 @@ export async function GET(request: NextRequest) {
     });
     if (!parsed.success) return errorResponse(400, "Invalid query parameters");
     const { country, type, region } = parsed.data;
+    if (!subdivisionRegionMatchesCountry(country, region))
+      return errorResponse(400, "Region country mismatch");
 
-    const modeEntry = getSubdivisionMode(country, type);
+    const layer = request.nextUrl.searchParams.get("layer");
+    if (layer && layer !== "census-divisions") return errorResponse(400, "Invalid map layer");
+    const modeEntry = getSubdivisionMode(country, type, layer);
     if (!modeEntry) return errorResponse(404, "No sub-unit map for this race type");
 
     const db = await getDb();
@@ -46,6 +54,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       viewBox: file.viewBox,
+      notice: file.notice,
       unitLabel:
         modeEntry.config.unitLabel ?? FOLDER_LABELS[modeEntry.config.dataDir]?.one ?? "Subdivision",
       unitLabelPlural:

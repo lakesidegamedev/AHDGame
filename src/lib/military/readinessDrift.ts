@@ -45,21 +45,14 @@ export const READINESS_DRIFT_STEP = 8;
 export const ARREARS_READINESS_WEIGHT = 0.35;
 
 /**
- * The readiness a posture pulls toward, defaulting to `standard` for an unknown one and
+ * The readiness a posture pulls toward, defaulting to `standard` for an unknown one, and
  * suppressed by any unfunded share of the country's defence appropriation.
  *
- * `arrearsRatio` lives here, in the leaf both the turn processor and the conflict record
- * import, rather than in either caller: the record PROJECTS recovery at the player
- * ("+4%/turn · full in 6") from this same function, so a suppression applied in only one
- * of them would have the record promising a recovery the tick never delivers.
+ * Lives in this leaf, shared by the turn processor and the conflict record, so the
+ * record's projected recovery always matches what the tick delivers.
  *
- * `tier` is the DEPARTMENT-WIDE readiness setting the defence seat holds
- * (reduced / standard / elevated), not the unit's own posture. Ticket #1140: it used to
- * scale only the in-memory aggregate inside `aggregateForce`, so an Elevated department
- * charged 1.25x upkeep nationally and moved no unit's readiness by a single point. A
- * setting whose whole description is "higher force readiness" must move the number the
- * player is looking at, so it scales the BASELINE each unit walks toward. Capped at 100:
- * Elevated on High Alert (92 x 1.1) would otherwise target 101.
+ * `tier` is the DEPARTMENT-WIDE readiness setting (reduced / standard / elevated), not
+ * the unit's own posture. It scales the baseline each unit walks toward, capped at 100.
  */
 export function readinessBaselineOf(
   posture: string,

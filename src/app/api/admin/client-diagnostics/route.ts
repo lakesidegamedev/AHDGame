@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { requireModerator } from "@/lib/api/requireModerator";
 import { getDb } from "@/lib/mongodb";
-import { CLIENT_DIAGNOSTICS_COLLECTION } from "@/lib/clientDiagnostics";
 import { parseBoundedIntParam } from "@/lib/api/validate";
+import { clientDiagnosticsCollection } from "@/lib/db/repositories/clientDiagnostics";
+import type { Document } from "mongodb";
 
 export const dynamic = "force-dynamic";
 
@@ -12,7 +13,7 @@ export async function GET(request: Request) {
   if (!auth.ok) return auth.response;
   const limit = parseBoundedIntParam(new URL(request.url).searchParams, "limit", 25, 1, 100);
   const db = await getDb();
-  const collection = db.collection(CLIENT_DIAGNOSTICS_COLLECTION);
+  const collection = clientDiagnosticsCollection<Document>(db);
   const since = new Date(Date.now() - 30 * 86_400_000);
   const [reports, total, byVersion, byReason] = await Promise.all([
     collection

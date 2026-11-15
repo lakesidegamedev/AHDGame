@@ -14,6 +14,7 @@ import type { Db } from "@/lib/mongodb";
 import type { ElectedOfficial, PoliticalParty } from "@/lib/db/types";
 import { getPartyHex } from "@/lib/utils/politics";
 import { computeBlocsForCountry, type Bloc } from "./blocs";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 export interface BundestagPartySeats {
   party: string;
@@ -43,8 +44,7 @@ export async function getBundestagComposition(
   db: Db,
   partyMap: Map<string, PoliticalParty>
 ): Promise<BundestagComposition> {
-  const officials = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const officials = await electedOfficialsCollection(db)
     .find({
       officeType: "bundestag",
       countryId: "DE",

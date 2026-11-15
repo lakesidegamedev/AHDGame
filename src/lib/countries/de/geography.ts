@@ -4,6 +4,7 @@ import type { CountryGeography } from "../contract";
 import { deMetricPresets1953 } from "./data/deMetricPresets1953";
 import { deMetricPresets1979 } from "./data/deMetricPresets1979";
 import { deMetricPresets1991, deMetricPresets2019 } from "./data/deMetricPresets";
+import { deMetricPresets2027 } from "./data/deMetricPresets2027";
 import { dePopulationAnchors1991, dePopulationAnchors2019 } from "./data/dePopulationAnchors";
 import { deRegionCensusData } from "./data/deRegionCensusData";
 import { deRegionCensusData1953 } from "./data/deRegionCensusData1953";
@@ -35,20 +36,16 @@ import { DE_MAP_REGISTRY } from "./data/deMapConfig";
 /**
  * Where Germany is, and who lives there.
  *
- * ⚠ HEAVY. Every era of census, metric and region data is imported as a VALUE. A
- * registry that needs one string imports `./geographyFacts` instead, which has
- * no value imports at all -- `countryContinents.ts` once held `JP: "Asia"` at
- * zero cost, was repointed at a heavy module, and began pulling 108 KB into
- * every client bundle that read a continent.
+ * HEAVY: imports every census, metric and region era as a VALUE. Use
+ * `./geographyFacts` (no value imports) for single strings; repointing a
+ * registry here pulls 108 KB into every client bundle that reads it.
  *
- * ⚠ EVERY BUNDLE IS REFERENCED, NEVER INLINED, and `===` is what proves it. An
- * early revision of Japan's geography generated copies from the snapshot; deep
- * equality passed and Japan had two sources for every region.
+ * Bundles must be REFERENCED, never inlined; `===` proves it. Copies pass
+ * deep equality and create duplicate sources per region.
  *
- * ⚠ THE PRESET KEYS COME FROM THE SNAPSHOT. Germany authors 5 census
- * eras, 4 metric eras, 2 anchor eras and 7 region eras. The gaps are real:
- * an unauthored era inherits, and inventing a key for it would turn a fallback
- * into an authored value.
+ * Preset keys come from the snapshot. Germany authors 5 census eras, 4 metric
+ * eras, 2 anchor eras, 7 region eras. Gaps are real: unauthored eras inherit,
+ * and adding a key would turn a fallback into an authored value.
  */
 
 const regionNames: Record<string, string> = Object.fromEntries(
@@ -64,6 +61,7 @@ const censusBundles = {
 };
 
 const metricPresetBundles = {
+  "2027-default": deMetricPresets2027,
   "2019-default": deMetricPresets2019,
   "1991-default": deMetricPresets1991,
   "1979-default": deMetricPresets1979,
@@ -246,8 +244,9 @@ export const DE_GEOGRAPHY: CountryGeography = {
   },
   hazardGroups: {
     coastal: ["SH", "HH", "BRE", "MV", "NI"],
-    flood: ["NW", "RP", "BW", "BY", "SN", "ST", "BB", "NI", "SH", "HE"],
+    flood: ["NW", "RP", "BW", "BY", "SN", "ST", "BB", "NI", "SH", "HE", "SL", "BE"],
     wintry: ["BY", "BW", "SN", "TH", "ST"],
+    hot: ["BW", "RP"],
   },
   demographicCategoryIds: ["de_voterGroups"],
 };

@@ -1,3 +1,5 @@
+import { vacateBannedOfficerSeats } from "@/lib/parties/bannedOfficers";
+import { loadNationalGdpPerCapita } from "@/lib/campaigns/nationalGdpBasis";
 import { loadCampaignPriceLevel } from "@/lib/campaigns/campaignCurrency";
 import { loadCampaignCurrencyRates } from "@/lib/campaigns/campaignCurrency";
 import { NextResponse } from "next/server";
@@ -46,6 +48,14 @@ import { primaryOpenFilter } from "@/lib/elections/electionDeadlineFilters";
 import { findPartyBudgetForScope, getEffectivePartyBudgetSpending } from "@/lib/partyBudgetGuards";
 import { getTreasuryForecast, getTreasuryReserveSummary } from "@/lib/partyTreasuryPlan";
 import { countDistinctOfficers } from "@/lib/treasury/payoutCapValues";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { usersCollection } from "@/lib/db/repositories/users";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string; partyId: string }>;
@@ -84,11 +94,11 @@ export async function GET(_request: Request, { params }: RouteParams) {
 
     // NPPs only generate/are taxed when the economy is enabled (mirrors
     // processNppFundGeneration); otherwise they contribute $0 to revenue.
-    const gameConfig = await db.collection<GameConfig>("gameConfig").findOne({ _id: "default" });
+    const gameConfig = await gameConfigCollection(db).findOne({ _id: "default" });
     const nppEconomyEnabled = gameConfig?.nppEconomyEnabled ?? false;
 
     // Verify state exists
-    const state = await db.collection<State>("states").findOne({ _id: stateId, countryId });
+    const state = await statesCollection(db).findOne({ _id: stateId, countryId });
     if (!state) {
       return errorResponse(404, "State not found");
     }
@@ -109,6 +119,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     // renumber / region fuse, ticket #1256) still reads back here instead of
     // showing 0 while the state's org breakdown shows the party's real number.
     const statePartyOrg = await findStatePartyOrgRow(db, countryId, stateId, party);
+    await vacateBannedOfficerSeats(db, statePartyOrg);
 
     // Get state lean for display
     const { getStateLean } = await import("@/lib/utils/demographics");
@@ -119,11 +130,11 @@ export async function GET(_request: Request, { params }: RouteParams) {
       leaderId: ObjectId | null | undefined
     ): Promise<LeaderInfo | null> => {
       if (!leaderId) return null;
-      const character = await db.collection<Character>("characters").findOne({ _id: leaderId });
+      const character = await charactersCollection(db).findOne({ _id: leaderId });
       if (!character) return null;
 
       // Check if user is banned
-      const user = await db.collection<User>("users").findOne({ _id: character.userId });
+      const user = await usersCollection(db).findOne({ _id: character.userId });
       if (user?.isBanned) return null;
 
       return {
@@ -155,15 +166,13 @@ export async function GET(_request: Request, { params }: RouteParams) {
     // Filter out banned users AND players inactive for >96 turns — both the
     // roster display and the effective PS cap exclude inactive players, matching
     // partyActionGeneration's player-member check.
-    const characters = await db
-      .collection<Character>("characters")
+    const characters = await charactersCollection(db)
       .find({ homeState: stateId, party: partyKey })
       .toArray();
 
     // Get user IDs and fetch ban + activity status
     const userIds = characters.map((c) => c.userId);
-    const users = await db
-      .collection<User>("users")
+    const users = await usersCollection(db)
       .find({ _id: { $in: userIds } })
       .toArray();
 
@@ -183,8 +192,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     );
 
     // Fetch NPPs in this state party (for tax calculation and members list)
-    const npps = await db
-      .collection<NPP>("npps")
+    const npps = await nppsCollection(db)
       .find({ homeState: stateId, party: partyKey, retiredAt: null })
       .toArray();
 
@@ -235,6 +243,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     // GDP-baseline era for income math: the world's reset preset, so
     // historical worlds estimate in their own denomination (issue #798).
     const preset = await getGameStatePresetOrDefault(db);
+    const nationalGdpPerCapita = await loadNationalGdpPerCapita(db, countryId);
     // 1. Calculate for players
     for (const character of characters) {
       // Skip banned users (already filtered from members)
@@ -249,6 +258,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
         countryId,
         politicalInfluence: character.politicalInfluence ?? 0,
         preset,
+        nationalGdpPerCapita,
       });
       expectedHourlyIncome += calculateTaxAmount(toLocal(totalFundRate), stateTaxRate);
     }
@@ -295,10 +305,8 @@ export async function GET(_request: Request, { params }: RouteParams) {
     const orgBuildingPercent = 0;
     const orgBuildingEstimatedSpend = 0;
     const statePsInvestmentBudget = statePartyOrg?.psInvestmentBudget ?? 0;
-    // Mirror of computePartyPsGain's spend stream: full-rate conversion bounded
-    // by PS_INVESTMENT_MAX_TIERS and the headroom below the hard cap after passive
-    // (soft-cap bands removed 2026-06-28), so the previewed debit matches what the
-    // turn engine will actually charge.
+    // Mirrors computePartyPsGain's spend stream: debits at full rate, bounded by
+    // PS_INVESTMENT_MAX_TIERS and the headroom below the hard cap after passive.
     let estimatedStatePsInvestmentDebit = 0;
     const stateCap = effectiveStatePsCap(characterMembers.length > 0);
     const stateHeadroomAfterPassive = Math.max(
@@ -337,7 +345,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     const primaryAllocationEffective: "PR" | "WTA" =
       primaryAllocation ?? getDefaultPrimaryAllocation(stateId, family);
     const primaryAllocationIsExplicit = primaryAllocation !== null;
-    const activePresPrimary = await db.collection<Election>("elections").findOne({
+    const activePresPrimary = await electionsCollection(db).findOne({
       countryId,
       electionType: "president",
       status: "active",
@@ -348,14 +356,10 @@ export async function GET(_request: Request, { params }: RouteParams) {
     // Rival parties present in this state — read-only, powers the Contest panel
     // on the party sub-page. Sorted by Org desc (strongest first) via the shared
     // buildStateRivals mapper.
-    const rivalRows = await db
-      .collection<StatePartyOrg>("statePartyOrg")
-      .find({ stateId })
-      .toArray();
+    const rivalRows = await statePartyOrgCollection(db).find({ stateId }).toArray();
     const rivalSeqIds = rivalRows.map((r) => Number(r.partyId)).filter(Boolean);
     const rivalParties = rivalSeqIds.length
-      ? await db
-          .collection<PoliticalParty>("politicalParties")
+      ? await politicalPartiesCollection(db)
           .find({ sequentialId: { $in: rivalSeqIds }, countryId })
           .toArray()
       : [];

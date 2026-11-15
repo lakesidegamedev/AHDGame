@@ -2,22 +2,19 @@ import type { StateMetrics } from "@/lib/db/types";
 import { withUniformMetricSet } from "@/lib/seeds/shared/uniformStateMetrics";
 
 /**
- * China macro-region initial metrics — approximate 2023 NBS / World Bank data,
- * tuned for gameplay feel.
+ * China macro-region initial metrics, approximate 2023 data tuned for gameplay.
  *
- * Units and conventions:
- *   unemploymentRate   — %, e.g. 5.2 means 5.2%
- *   medianIncome       — annual household income in CNY
- *   gdpGrowth          — year-over-year % change
- *   povertyRate        — % below national poverty line
- *   costOfLiving       — index, 100 = national mean
- *   crimeRate          — incidents per 100k population
- *   lifeExpectancy     — years at birth
- *   carbonEmissions    — tons CO2 per capita per year (lower = better)
- *   corruptionIndex    — 0-100 scale (lower = cleaner; Transparency Int'l style)
- *   voterTurnout       — % turnout in NPC delegate elections
- *
- * All values use `{ value, trend? }` wrappers expected by the engine.
+ * Units:
+ *   unemploymentRate , %
+ *   medianIncome , annual household income in CNY
+ *   gdpGrowth , year-over-year % change
+ *   povertyRate , % below national poverty line
+ *   costOfLiving , index, 100 = national mean
+ *   crimeRate , incidents per 100k population
+ *   lifeExpectancy , years at birth
+ *   carbonEmissions , tons CO2 per capita per year
+ *   corruptionIndex , 0-100 (lower = cleaner)
+ *   voterTurnout , % in NPC delegate elections
  */
 
 function mv(value: number, trend?: number) {

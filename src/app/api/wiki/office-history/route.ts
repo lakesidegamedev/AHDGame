@@ -12,6 +12,7 @@ import {
   isoDateToUtcNoon,
   assertTenureFields,
 } from "@/lib/wiki/officeHistoryValidation";
+import { manualOfficeHistoryCollection } from "@/lib/db/repositories/manualOfficeHistory";
 
 export const officeHistoryBodySchema = z.object({
   countryId: z.string(),
@@ -78,9 +79,7 @@ export async function POST(request: Request) {
       updatedAt: now,
     } as Omit<ManualOfficeHistoryEntry, "_id">;
 
-    const res = await db
-      .collection<ManualOfficeHistoryEntry>("manualOfficeHistory")
-      .insertOne(doc as ManualOfficeHistoryEntry);
+    const res = await manualOfficeHistoryCollection(db).insertOne(doc as ManualOfficeHistoryEntry);
     return NextResponse.json({ success: true, id: res.insertedId.toString() });
   } catch (error) {
     return handleRouteError(error);

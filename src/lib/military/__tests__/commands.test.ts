@@ -234,7 +234,7 @@ describe("validateDraft", () => {
     ).toBe(true);
   });
 
-  // Ticket #1244. The warning keyed on `regionIds.length >= REGION_CAP`, and REGION_CAP
+  // The warning keyed on `regionIds.length >= REGION_CAP`, and REGION_CAP
   // is a hard cap the dialog and the reducer both enforce, so it fired on every full
   // non-Logistics command whatever the geography. South Asia, East Asia and Southeast
   // Asia are one theatre; sustaining them needs no separate logistics tail, and any two

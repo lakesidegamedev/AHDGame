@@ -114,10 +114,9 @@ export const UK_CABINET_MECHANICS: Record<string, CabinetPositionMechanics> = {
         higherIsBetter: true,
       },
       {
-        // `socialCohesion` lives under the `social` category in metricDefinitions. Declaring
-        // it as `governance` here won resolveMetricPath's position-metrics preference and
-        // sent every one of this seat's cohesion effects to `governance.socialCohesion`,
-        // a StateMetrics path that does not exist (found auditing ticket #1140).
+        // `socialCohesion` lives under the `social` category in metricDefinitions.
+        // Declaring it as `governance` wins resolveMetricPath's position-metrics
+        // preference and routes effects to a StateMetrics path that does not exist.
         category: "social",
         metricId: "socialCohesion",
         label: "Social Cohesion",
@@ -134,10 +133,9 @@ export const UK_CABINET_MECHANICS: Record<string, CabinetPositionMechanics> = {
         higherIsBetter: true,
       },
       {
-        // `socialCohesion` lives under the `social` category in metricDefinitions. Declaring
-        // it as `governance` here won resolveMetricPath's position-metrics preference and
-        // sent every one of this seat's cohesion effects to `governance.socialCohesion`,
-        // a StateMetrics path that does not exist (found auditing ticket #1140).
+        // `socialCohesion` lives under the `social` category in metricDefinitions.
+        // Declaring it as `governance` wins resolveMetricPath's position-metrics
+        // preference and routes effects to a StateMetrics path that does not exist.
         category: "social",
         metricId: "socialCohesion",
         label: "Social Cohesion",
@@ -624,8 +622,7 @@ export const UK_CABINET_MECHANICS: Record<string, CabinetPositionMechanics> = {
       description:
         "Launch a focused public health campaign in one region, delivering a targeted healthcare quality improvement.",
       // `healthcareQuality` is a LABEL, not a metric id. The seat's actual metric is
-      // healthcare.publicHealthPreparedness, so the bare key resolved to nothing and this
-      // campaign wrote to no metric at all (found auditing ticket #1140).
+      // healthcare.publicHealthPreparedness; the bare key resolves to nothing.
       effects: { "healthcare.publicHealthPreparedness": 0.05 },
     },
   },

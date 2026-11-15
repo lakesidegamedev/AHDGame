@@ -14,6 +14,7 @@ import {
   isStateServiceSupplyMix,
   stateServiceHeadroomUnits,
 } from "@/lib/turn/npp/rules/stateServiceHeadroom";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 /**
  * Raise each local service pool row the cohort ranks to the state book's unmet
@@ -41,8 +42,7 @@ export async function liftStateServiceHeadroom(
     }
   }
   if (rows.length === 0) return 0;
-  const queued = await db
-    .collection<CorporateSector>("corporateSectors")
+  const queued = await corporateSectorsCollection(db)
     .find(
       {
         sectorType: { $in: [...new Set(rows.map((row) => row.sectorType))] },

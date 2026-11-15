@@ -1,6 +1,6 @@
 import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
-import type { Corporation, CorporateSector, Bond } from "@/lib/db/types";
+import type { CorporateSector } from "@/lib/db/types";
 import { BOND_UNIT_FACE_VALUE } from "@/lib/db/types/bond";
 import { perTurnCouponPayment } from "@/lib/constants/bonds";
 import {
@@ -16,18 +16,22 @@ import {
 import { getPublicShareQuote } from "@/lib/corporations/marketQuote";
 import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
 import type { CurrencyCode } from "@/lib/constants/currencies";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { indexFundPositionsCollection } from "@/lib/db/repositories/indexFundPositions";
+import type { Document } from "mongodb";
 
 export async function getFinancialData(characterId: ObjectId) {
   const db = await getDb();
 
   const [corporation, corporationsWithShares, activeBonds, fundPosition] = await Promise.all([
-    db.collection<Corporation>("corporations").findOne({
+    corporationsCollection(db).findOne({
       ceoId: characterId,
       ceoVacant: { $ne: true },
       imfInstitution: { $ne: true },
     }),
-    db
-      .collection<Corporation>("corporations")
+    corporationsCollection(db)
       .find({ "shareholders.characterId": characterId })
       .project({
         _id: 1,
@@ -39,17 +43,14 @@ export async function getFinancialData(characterId: ObjectId) {
         countryId: 1,
       })
       .toArray(),
-    db
-      .collection<Bond>("bonds")
+    bondsCollection(db)
       .find({ matured: false, defaulted: false, "holders.characterId": characterId })
       .project({ couponRate: 1, currencyCode: 1, countryId: 1, holders: 1 })
       .toArray(),
-    db
-      .collection("indexFundPositions")
-      .findOne(
-        { holderKind: "character", characterId, units: { $gt: 0 } },
-        { projection: { _id: 1 } }
-      ),
+    indexFundPositionsCollection<Document>(db).findOne(
+      { holderKind: "character", characterId, units: { $gt: 0 } },
+      { projection: { _id: 1 } }
+    ),
   ]);
 
   const latestHistByCorp = await fetchLatestCorpHistoryDividendRows(
@@ -125,8 +126,7 @@ export async function getFinancialData(characterId: ObjectId) {
 
   let corporateSectorSummary: { sectorCount: number; totalRevenuePerTurn: number } | null = null;
   if (corporation) {
-    const sectorAgg = await db
-      .collection<CorporateSector>("corporateSectors")
+    const sectorAgg = await corporateSectorsCollection(db)
       .aggregate<{ total: number; n: number }>([
         { $match: { corporationId: corporation._id } },
         { $group: { _id: null, total: { $sum: "$revenue" }, n: { $sum: 1 } } },

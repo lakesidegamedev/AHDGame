@@ -4,20 +4,25 @@
  * government formation in the same transaction as the territorial settlement.
  */
 import { ObjectId, type AnyBulkWriteOperation, type ClientSession, type Db } from "mongodb";
-import type {
-  Character,
-  CountryGameState,
-  ElectedOfficial,
-  Election,
-  NPP,
-  State,
-} from "@/lib/db/types";
-import type { CountryState } from "@/lib/db/types/countryState";
-import type { GovernmentFormation } from "@/lib/db/types/governmentFormation";
+import type { Character, ElectedOfficial, NPP } from "@/lib/db/types";
 import { invalidateCachedCountryState } from "@/lib/countryState/cache";
 import { PM_VACANCY_DEADLINE_TURNS } from "@/lib/constants/turnTime";
 import type { FederationStateTransferPlan } from "./territoryTransferPlan";
 import { planProvisionalRussianCongress } from "./rules/provisionalCongress";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
+import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
+import { cabinetMembersCollection } from "@/lib/db/repositories/cabinetMembers";
+import type { Document } from "mongodb";
+import { ukCabinetCooldownsCollection } from "@/lib/db/repositories/ukCabinetCooldowns";
+import { pmAppointmentVotesCollection } from "@/lib/db/repositories/pmAppointmentVotes";
+import { countryStateCollection } from "@/lib/db/repositories/countryState";
+import { federationArchivedPoliticalRowsCollection } from "@/lib/db/repositories/federationArchivedPoliticalRows";
 
 export const FEDERATION_ARCHIVED_POLITICAL_ROWS_COLLECTION = "federationArchivedPoliticalRows";
 const UNION_OFFICES = ["unionCongressDeputy", "chairmanOfCabinet", "sovietPresident"];
@@ -44,13 +49,15 @@ export async function materializeProvisionalRussianCongress(input: {
     transfers.length === 0 ||
     new Set(transfers.map((row) => row.stateId)).size !== transfers.length ||
     retainedStateIds.length === 0 ||
-    transfers.some((row) => row.leavesDetailedSource !== (row.successorEntityId !== "RU"))
+    transfers.some(
+      (row) => row.leavesDetailedSource !== !countryHasFeature("ruLib", row.successorEntityId)
+    )
   ) {
     throw new Error(
       "Russian political succession needs a transaction and approved retained territory"
     );
   }
-  const countries = db.collection<CountryGameState>("countryGameStates");
+  const countries = countryGameStatesCollection(db);
   const country = await countries.findOne(
     { _id: "RU" },
     {
@@ -69,12 +76,12 @@ export async function materializeProvisionalRussianCongress(input: {
     country.ruPresidencySinceTurn != null ||
     country.ruCongressDissolvedSinceTurn != null ||
     country.ruFederalAssemblySinceTurn != null;
-  const runtime = await db
-    .collection<CountryState>("countryState")
-    .findOne({ _id: "RU" }, { session, projection: { _id: 1 } });
+  const runtime = await countryStateCollection(db).findOne(
+    { _id: "RU" },
+    { session, projection: { _id: 1 } }
+  );
   if (!runtime) throw new Error("Russian succession requires its existing runtime country state");
-  const states = await db
-    .collection<State>("states")
+  const states = await statesCollection(db)
     .find(
       { countryId: "RU", _id: { $in: retainedStateIds } },
       { session, projection: { houseDistricts: 1 } }
@@ -82,8 +89,7 @@ export async function materializeProvisionalRussianCongress(input: {
     .toArray();
   if (states.length !== retainedStateIds.length)
     throw new Error("Retained Russian territory changed during political succession");
-  const officials = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const officials = await electedOfficialsCollection(db)
     .find({ countryId: "RU" }, { session })
     .toArray();
   if (establishedConstitution) {
@@ -115,8 +121,7 @@ export async function materializeProvisionalRussianCongress(input: {
     !row.characterId && row.nppId ? [new ObjectId(row.nppId)] : []
   );
   const players = playerIds.length
-    ? await db
-        .collection<Character>("characters")
+    ? await charactersCollection(db)
         .find(
           {
             _id: { $in: playerIds },
@@ -128,8 +133,7 @@ export async function materializeProvisionalRussianCongress(input: {
         .toArray()
     : [];
   const npps = nppIds.length
-    ? await db
-        .collection<NPP>("npps")
+    ? await nppsCollection(db)
         .find({ _id: { $in: nppIds }, countryId: "RU" }, { session, projection: { _id: 1 } })
         .toArray()
     : [];
@@ -138,12 +142,12 @@ export async function materializeProvisionalRussianCongress(input: {
     npps.length !== new Set(nppIds.map(String)).size
   )
     throw new Error("A retained deputy is missing or awaiting residence choice");
-  const archive = db.collection<{
+  const archive = federationArchivedPoliticalRowsCollection<{
     _id: string;
     applicationId: string;
     sourceCountryId: string;
     value: ElectedOfficial;
-  }>(FEDERATION_ARCHIVED_POLITICAL_ROWS_COLLECTION);
+  }>(db);
   if (officials.length)
     await archive.insertMany(
       officials.map((value) => ({
@@ -155,20 +159,16 @@ export async function materializeProvisionalRussianCongress(input: {
       { session }
     );
   // Clear office links in batches; personal wealth and residence never change.
-  await db
-    .collection<Character>("characters")
-    .updateMany(
-      { countryId: "RU", "currentOffice.type": { $in: FEDERAL_PERSON_OFFICES } },
-      { $set: { currentOffice: null, updatedAt: now } },
-      { session }
-    );
-  await db
-    .collection<NPP>("npps")
-    .updateMany(
-      { countryId: "RU", "currentOffice.type": { $in: FEDERAL_PERSON_OFFICES } },
-      { $set: { currentOffice: null, updatedAt: now } },
-      { session }
-    );
+  await charactersCollection(db).updateMany(
+    { countryId: "RU", "currentOffice.type": { $in: FEDERAL_PERSON_OFFICES } },
+    { $set: { currentOffice: null, updatedAt: now } },
+    { session }
+  );
+  await nppsCollection(db).updateMany(
+    { countryId: "RU", "currentOffice.type": { $in: FEDERAL_PERSON_OFFICES } },
+    { $set: { currentOffice: null, updatedAt: now } },
+    { session }
+  );
   const characterUpdates: AnyBulkWriteOperation<Character>[] = [];
   const nppUpdates: AnyBulkWriteOperation<NPP>[] = [];
   for (const deputy of plan.retained) {
@@ -197,18 +197,16 @@ export async function materializeProvisionalRussianCongress(input: {
       });
   }
   if (characterUpdates.length) {
-    const result = await db
-      .collection<Character>("characters")
-      .bulkWrite(characterUpdates, { session });
+    const result = await charactersCollection(db).bulkWrite(characterUpdates, { session });
     if (result.matchedCount !== characterUpdates.length)
       throw new Error("A retained player deputy is missing or awaiting residence choice");
   }
   if (nppUpdates.length) {
-    const result = await db.collection<NPP>("npps").bulkWrite(nppUpdates, { session });
+    const result = await nppsCollection(db).bulkWrite(nppUpdates, { session });
     if (result.matchedCount !== nppUpdates.length)
       throw new Error("A retained NPC deputy is missing");
   }
-  const seats = db.collection<ElectedOfficial>("electedOfficials");
+  const seats = electedOfficialsCollection(db);
   if (plan.retired.length)
     await seats.deleteMany(
       { countryId: "RU", _id: { $in: plan.retired.map((row) => new ObjectId(row.id)) } },
@@ -220,13 +218,11 @@ export async function materializeProvisionalRussianCongress(input: {
       { $set: { officeType: "congressDeputy", updatedAt: now } },
       { session }
     );
-  await db
-    .collection<Election>("elections")
-    .updateMany(
-      { countryId: "RU", status: { $in: ["upcoming", "active"] } },
-      { $set: { status: "cancelled", updatedAt: now } },
-      { session }
-    );
+  await electionsCollection(db).updateMany(
+    { countryId: "RU", status: { $in: ["upcoming", "active"] } },
+    { $set: { status: "cancelled", updatedAt: now } },
+    { session }
+  );
   for (const collection of ["pmAppointmentVotes", "noConfidenceVotes"])
     await db
       .collection(collection)
@@ -235,9 +231,9 @@ export async function materializeProvisionalRussianCongress(input: {
         { $set: { status: "cancelled", closedAt: now, updatedAt: now } },
         { session }
       );
-  await db.collection("cabinetMembers").deleteMany({ countryId: "RU" }, { session });
-  await db.collection("ukCabinetCooldowns").deleteMany({ countryId: "RU" }, { session });
-  await db.collection<GovernmentFormation>("governmentFormations").updateOne(
+  await cabinetMembersCollection<Document>(db).deleteMany({ countryId: "RU" }, { session });
+  await ukCabinetCooldownsCollection<Document>(db).deleteMany({ countryId: "RU" }, { session });
+  await governmentFormationsCollection(db).updateOne(
     { _id: "RU" },
     {
       $set: {
@@ -276,7 +272,7 @@ export async function materializeProvisionalRussianCongress(input: {
     },
     { session, upsert: true }
   );
-  const runtimeChanged = await db.collection<CountryState>("countryState").updateOne(
+  const runtimeChanged = await countryStateCollection(db).updateOne(
     { _id: "RU" },
     {
       $set: {
@@ -365,25 +361,24 @@ async function preserveEstablishedRussianConstitution(input: {
     ),
   ].map((id) => new ObjectId(id));
   if (retired.length) {
-    await db
-      .collection<{
-        _id: string;
-        applicationId: string;
-        sourceCountryId: string;
-        value: ElectedOfficial;
-      }>(FEDERATION_ARCHIVED_POLITICAL_ROWS_COLLECTION)
-      .insertMany(
-        retired.map((value) => ({
-          _id: `${applicationId}:electedOfficials:${value._id.toHexString()}`,
-          applicationId,
-          sourceCountryId: "RU",
-          value,
-        })),
-        { session }
-      );
-    await db
-      .collection<ElectedOfficial>("electedOfficials")
-      .deleteMany({ countryId: "RU", _id: { $in: retired.map((row) => row._id) } }, { session });
+    await federationArchivedPoliticalRowsCollection<{
+      _id: string;
+      applicationId: string;
+      sourceCountryId: string;
+      value: ElectedOfficial;
+    }>(db).insertMany(
+      retired.map((value) => ({
+        _id: `${applicationId}:electedOfficials:${value._id.toHexString()}`,
+        applicationId,
+        sourceCountryId: "RU",
+        value,
+      })),
+      { session }
+    );
+    await electedOfficialsCollection(db).deleteMany(
+      { countryId: "RU", _id: { $in: retired.map((row) => row._id) } },
+      { session }
+    );
   }
   for (const [collection, ids] of [
     ["characters", retiredPlayers],
@@ -406,7 +401,7 @@ async function preserveEstablishedRussianConstitution(input: {
       { session }
     );
   }
-  await db.collection<Election>("elections").updateMany(
+  await electionsCollection(db).updateMany(
     {
       countryId: "RU",
       officeType: { $in: UNION_OFFICES },
@@ -415,7 +410,7 @@ async function preserveEstablishedRussianConstitution(input: {
     { $set: { status: "cancelled", updatedAt: now } },
     { session }
   );
-  const governments = db.collection<GovernmentFormation>("governmentFormations");
+  const governments = governmentFormationsCollection(db);
   const government = await governments.findOne({ _id: "RU" }, { session });
   const lostHolder = (characterId?: ObjectId | null, nppId?: ObjectId | null) =>
     (characterId != null && retiredPlayers.some((id) => id.equals(characterId))) ||
@@ -442,8 +437,8 @@ async function preserveEstablishedRussianConstitution(input: {
           { session }
         );
     }
-    await db.collection("cabinetMembers").deleteMany({ countryId: "RU" }, { session });
-    await db.collection("ukCabinetCooldowns").deleteMany({ countryId: "RU" }, { session });
+    await cabinetMembersCollection<Document>(db).deleteMany({ countryId: "RU" }, { session });
+    await ukCabinetCooldownsCollection<Document>(db).deleteMany({ countryId: "RU" }, { session });
     for (const collection of ["characters", "npps"]) {
       await db
         .collection(collection)
@@ -455,13 +450,11 @@ async function preserveEstablishedRussianConstitution(input: {
     }
   }
   // A direct presidency or an absent legislature cannot retain a Union head-of-state ballot.
-  await db
-    .collection("pmAppointmentVotes")
-    .updateMany(
-      { countryId: "RU", status: "active", office: "headOfState" },
-      { $set: { status: "cancelled", closedAt: now, updatedAt: now } },
-      { session }
-    );
+  await pmAppointmentVotesCollection<Document>(db).updateMany(
+    { countryId: "RU", status: "active", office: "headOfState" },
+    { $set: { status: "cancelled", closedAt: now, updatedAt: now } },
+    { session }
+  );
   if (government && lostHolder(government.hosCharacterId, government.hosNppId)) {
     Object.assign(changes, { hosCharacterId: null, hosNppId: null, hosName: null });
   }
@@ -474,14 +467,12 @@ async function preserveEstablishedRussianConstitution(input: {
       { $set: { ...changes, updatedAt: now } },
       { session }
     );
-  await db
-    .collection<CountryState>("countryState")
-    .updateOne(
-      { _id: "RU" },
-      { $set: { displayNameOverride: "Russia", flagEmojiOverride: "🇷🇺", updatedAt: now } },
-      { session }
-    );
-  const stamped = await db.collection<CountryGameState>("countryGameStates").updateOne(
+  await countryStateCollection(db).updateOne(
+    { _id: "RU" },
+    { $set: { displayNameOverride: "Russia", flagEmojiOverride: "🇷🇺", updatedAt: now } },
+    { session }
+  );
+  const stamped = await countryGameStatesCollection(db).updateOne(
     {
       _id: "RU",
       $or: [

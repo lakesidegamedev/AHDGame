@@ -1,15 +1,8 @@
-/**
- * Plants capacity advance and the P5 paid basis of capacity (#588).
- *
- * Pure computation split out of processSector. Plants tier: capacity is
- * AUTHORITATIVE, not a haircut. The first plants turn adopts
- * capacity := max(existing capitalStock, impliedOutputUnits(nameplate)) so a
- * sector arriving from capital mode keeps the capital it built; capacity then
- * only DEPRECIATES here (the growth slider no longer builds it, build orders
- * arrive in P3). The paid basis tracks (book + landed cash) scaled by the
- * same depreciation factor the stock takes, so the per-unit basis stays flat
- * under depreciation. No reads or writes here, only the turn inputs.
- */
+/* Plants tier: capacity is AUTHORITATIVE. First plants turn adopts
+ * capacity := max(capitalStock, impliedOutputUnits(nameplate)). Capacity
+ * then only depreciates here; build orders arrive in P3. Paid basis tracks
+ * (book + landed cash) scaled by the same factor, so per-unit basis stays
+ * flat. Pure: no reads or writes. */
 import { governorAnchorTurn, type GovernorGlide } from "@/lib/market/capital";
 import { activeCapacityFraction } from "@/lib/corporations/investment/rules";
 import { getStrategyForOperatingModel } from "@/lib/constants/sectorStrategies";
@@ -145,16 +138,11 @@ export function computePlantsCapacity(input: PlantsCapacityInput): PlantsCapacit
     embargoLegacyMothball,
   } = input;
 
-  // In-flight auto-retools historically rescaled capitalStock but left the
-  // per-unit residual on the old unit basis. Worse, transitions committed
-  // before the rescale existed (or under capital mode, where the RPU basis
-  // does not apply) surface under plants with source-basis stock and no
-  // (or explicitly false) rescale flag: stamping the flag there without
-  // converting the stock lets the blend ratio manufacture unsupported
-  // operating capacity (issue #2009 - 2,314.82 source units x ~390 blend =
-  // 903,166 operating units on an oil_gas to rare_earth_mining retool).
-  // Heal on the next sector-turn write while transitionFromStrategyId
-  // evidence remains; no mongo script.
+  // Heal retooled stock basis: in-flight auto-retools and transitions from
+  // capital mode can surface under plants with source-basis stock and no
+  // rescale flag, letting the blend ratio manufacture unsupported operating
+  // capacity. Stamp the flag and convert the stock on the next sector-turn
+  // write while transitionFromStrategyId evidence remains.
   const storedOtherOpexAnchor =
     typeof sector.otherOpexPerUnitAnchor === "number" &&
     Number.isFinite(sector.otherOpexPerUnitAnchor)
@@ -242,31 +230,17 @@ export function computePlantsCapacity(input: PlantsCapacityInput): PlantsCapacit
   const plantsPrevStock = plantsBaseStock + landedBuildUnits;
   const continuousOwnedCapacity = plantsEnabled
     ? advanceCapitalStock({
-        // The max() is a ONE-TIME migration, keyed off the absent ramp anchor.
-        // Applying it every turn would re-lift capacity back to whatever the
-        // current revenue implies, which is exactly the compounding-nameplate
-        // behaviour plants removes — and would silently cancel depreciation.
+        // max() is a ONE-TIME migration keyed off the absent ramp anchor.
+        // Applying it every turn would re-lift capacity to current revenue implies,
+        // reintroducing compounding nameplate and cancelling depreciation.
         //
-        // CAPITAL_SEED_HEADROOM on the nameplate arm ONLY: capital-mode seeding
-        // (seedCapitalStock) gives a sector 1.1x its implied units so it starts
-        // with slack rather than pinned at 100% utilization. Without the same
-        // factor here, any sector created AFTER the flip was born at exactly
-        // 100% utilization and began depreciating on turn one, while an
-        // otherwise identical sector that predated the flip carried slack — the
-        // sector's economics depended on which side of the flip it was created.
-        // `storedCapacity` is deliberately NOT scaled: a real stored capitalStock
-        // already contains its own headroom history (it was seeded with 1.1x and
-        // has depreciated/invested since), so re-applying the factor would
-        // silently gift capacity on every flip.
+        // CAPITAL_SEED_HEADROOM on the nameplate arm only: capital seeding gives 1.1x
+        // slack, so the same factor here keeps post-flip sectors from starting pinned
+        // at 100% utilization. `storedCapacity` is not scaled, since stored capital
+        // already carries its own headroom history.
         //
-        // P3a: capacity delivered by build orders that came online this turn is
-        // added BEFORE the advance, so a landed plant produces the turn it
-        // lands (and takes that turn's depreciation like every other unit - a
-        // ~0.05% haircut, not worth a special case).
-        // `seedCapitalStock` IS `impliedOutputUnits(...) x CAPITAL_SEED_HEADROOM`
-        // - the same expression the capital-mode seeding arm above uses. The two
-        // seeding paths must agree or a sector's capacity changes depending on
-        // which tier it was born in. Hoisted to `plantsBaseStock` above.
+        // Capacity from build orders landing this turn is added before the advance so
+        // the plant produces its landing turn.
         prevStock: plantsPrevStock,
         currentGrowthRate: 0,
       }) * recessionFactorOf(input.recessionCapacityFactor)
@@ -301,25 +275,20 @@ export function computePlantsCapacity(input: PlantsCapacityInput): PlantsCapacit
   //   book_next = (book_prev + cash of the orders that just landed) × (the same
   //               depreciation factor the stock just took)
   //
-  // Scaling by the stock's own factor is what keeps the PER-UNIT basis flat
-  // under depreciation: units and the cash that bought them fall off together,
-  // so a plant half worn out books at half what was paid for it — never at half
-  // the LIST price, which is the mint this closes.
+  // Scaling by the stock's own factor keeps the PER-UNIT basis flat under
+  // depreciation: a plant half worn out books at half what was paid for it,
+  // never at half the LIST price.
   //
-  // The seed for a sector with no recorded basis is the list value of the stock
-  // it starts the turn with. Pre-plants capacity was bought through the legacy
-  // growth stack at exactly `capacityPricePerUnit` (identity B), so those units
-  // really did cost list; it is only the P3a build path's discounts that make
-  // list wrong going forward. This is also the same number
-  // `sectorCapacityBookAnchor`'s fallback returns, so the stamp is a no-op for
-  // valuation on the turn it happens.
+  // Seed for a sector with no recorded basis is the list value of its starting
+  // stock. Pre-plants capacity was bought at exactly `capacityPricePerUnit`,
+  // so the stamp is a no-op for valuation on the turn it happens.
   //
-  // Capacity granted for free (an R&D breakthrough, a world grant, an
-  // autoSectorSeed multiplier) adds units without adding cash, so it DILUTES
-  // the per-unit basis. That is deliberate: free capacity has no paid basis,
-  // and must not be exitable for cash it never cost.
-  // Whole plants: the basis falls by the share of plants that came off, so
-  // credit converted into a plant (free) dilutes rather than inflates it.
+  // Free capacity (R&D breakthrough, world grant, autoSectorSeed multiplier)
+  // adds units without adding cash, so it DILUTES the per-unit basis. That is
+  // deliberate: free capacity has no paid basis and must not be exitable for
+  // cash it never cost. Whole plants: basis falls by the share of plants that
+  // came off, so credit converted into a plant (free) dilutes rather than
+  // inflates it.
   const plantsCapacityDepreciationFactor = wholePlantChange
     ? wholePlantChange.bookRetention
     : plantsPrevStock > 0
@@ -352,29 +321,12 @@ export function computePlantsCapacity(input: PlantsCapacityInput): PlantsCapacit
   const plantsMixPrice = plantsMixPriceYield > 0 ? 1 / plantsMixPriceYield : 0;
   const plantsCapacity = plantsOwnedCapacity * retoolCapacityRatio;
   const priorProductionUnitRatio = plantsEnabled ? retoolMeasurementRatio(retoolBasis) : 1;
-  // The nameplate plants writes back to `sector.revenue`: what the OWNED
-  // capacity is worth at mix prices. This keeps `revenue` a potential/nameplate
-  // figure (exactly as every other mode treats it) while making capacity — not
-  // last turn's compounding — the only thing that moves it.
-  //
-  // It must NOT be the realized figure. `sector.revenue` is re-read as next
-  // turn's `sectorRevenueAnchor` AND is the base the commodity supply ledger
-  // derives world supply from (computeRawSupplyDemand: revenue × rate / base).
-  // Persisting realized revenue would multiply the anchor by every realization
-  // leg once per turn, compounding them: a sector running at a steady 0.93
-  // price realization loses ~7%/turn of its base for as long as the mode is on
-  // (measured: −94% over 50 turns with flat capacity and flat produced units),
-  // dragging world commodity supply down with it. Capacity-implied revenue is
-  // invariant under that feedback because `plantsMixPrice` is 1/Σ(rate/base),
-  // independent of the revenue it was measured from.
-  //
-  // Sectors with no priced output mix (nameplateUnits 0 ⇒ mixPrice 0) have no
-  // capacity to price, so they hold the un-compounded anchor instead of being
-  // zeroed.
-  //
-  // Owned stock stays on the destination strategy basis. Temporary operating
-  // capacity uses the blended recipe, so capacity times mix price retains the
-  // same nameplate throughout a retool. Neither basis is quantized.
+  // Nameplate plants writes back to `sector.revenue`: owned capacity at mix
+  // prices. It must NOT be the realized figure. `sector.revenue` is re-read as
+  // next turn's anchor AND the commodity supply base, so persisting realized
+  // revenue compounds each realization once per turn (−7%/turn at 0.93
+  // realization). Capacity-implied revenue is invariant thanks to plantsMixPrice.
+  // Sectors with no priced mix (nameplateUnits 0) hold the un-compounded anchor.
   const plantsNameplateRevenue =
     plantsEnabled && plantsMixPrice > 0 ? plantsCapacity * plantsMixPrice : newRevenue;
   // Governor ramp anchor: stamped on the sector's FIRST plants turn and never

@@ -1,8 +1,9 @@
 import type { ObjectId } from "mongodb";
-import type { RankedBallot, PrStvResult } from "@/lib/turn/election/rules/prStv";
-import type { DemocraticHealthElectionSnapshot } from "@/lib/electionEngine/democraticHealth";
-import type { FactorLedgerSnapshot } from "@/lib/electionEngine/factorLedger";
+import type { RankedBallot, PrStvResult } from "@/lib/elections/rules/prStv";
+import type { DemocraticHealthElectionSnapshot } from "@/lib/elections/engine/democraticHealth";
+import type { FactorLedgerSnapshot } from "@/lib/elections/engine/factorLedger";
 import type { ParticipationSummary } from "@/lib/demographics/v2/rules";
+import type { CanadianRidingResult } from "@/lib/countries/ca/rules/ridingResults";
 
 export interface VoteTurnSnapshot {
   turn: number;
@@ -50,6 +51,10 @@ export interface ResolvedSeatHolder {
 }
 
 export interface ElectionVoteTally {
+  /** Immutable Canadian federal riding placement; provincial seat totals remain authoritative. */
+  canadianRidingResult?: CanadianRidingResult;
+  /** Frozen US House district winners/geometry; removed with this tally on reset. */
+  houseDistrictResult?: import("@/lib/redistricting/rules/houseResult").HouseDistrictResult;
   brazilPresidentialResult?: import("@/lib/countries/br/rules/presidential").BrazilPresidentialDecision;
   _id: ObjectId;
   electionId: ObjectId;
@@ -124,20 +129,16 @@ export interface ElectionVoteTally {
   primaryResults?: PrimaryResults;
   /**
    * Non-presidential primaries: cumulative PRIMARY ballots per candidate,
-   * accrued by `recordPrimarySnapshots` over the closing window of the primary
-   * (as long as the race's general window; see primaryBallotWindow). Each
-   * turn's party pool is the region's resolved turnout pool scaled by that
-   * party's registration share, split within the party by that turn's score
-   * shares — so ballots are the time-integral of the standings the players
-   * watched, and `resolvePrimariesIfNeeded` picks the nominee from these
-   * counts when they exist (score fallback otherwise).
+   * accrued by `recordPrimarySnapshots` over the primary's closing window (as
+   * long as the race's general window; see primaryBallotWindow).
+   * `resolvePrimariesIfNeeded` picks the nominee from these counts when they
+   * exist (score fallback otherwise).
    *
    * Deliberately separate from `totalVotes`, which holds GENERAL ballots only:
-   * seat estimates, the swing-flow engine and every general display sum
-   * `totalVotes` and must never see primary ballots in that denominator.
-   * Absent on legacy rows and on races whose region lacks registration or
-   * demographic data. Presidential primaries never use this — they have their
-   * own per-state vote projection (`primaryStateVotes` / `primaryDelegates`).
+   * seat estimates, swing-flow and general displays sum `totalVotes` and must
+   * never see primary ballots in that denominator. Absent on legacy rows and
+   * on races whose region lacks registration or demographic data. Presidential
+   * primaries use `primaryStateVotes` / `primaryDelegates` instead.
    */
   primaryVotes?: Record<string, number>;
   /**
@@ -239,7 +240,7 @@ export interface ElectionVoteTally {
   unitTurnSnapshots?: Record<string, VoteTurnSnapshot[]>;
   /**
    * President only: the economic-referendum reading the engine applied on the
-   * last accumulation turn (see `src/lib/electionEngine/economicReferendum.ts`).
+   * last accumulation turn (see `src/lib/elections/engine/economicReferendum.ts`).
    * Descriptive snapshot for the UI gauge — the shift is already baked into the
    * vote totals and must NOT be applied again anywhere downstream.
    */
@@ -263,7 +264,7 @@ export interface ElectionVoteTally {
   democraticHealth?: DemocraticHealthElectionSnapshot;
   /**
    * President only: the descriptive factor ledger the engine teed on the last
-   * accumulation turn (see `src/lib/electionEngine/factorLedger.ts`). A
+   * accumulation turn (see `src/lib/elections/engine/factorLedger.ts`). A
    * read-only decomposition of each candidate's votes into named factors
    * (state lean & standing, policy fit, name recognition, turnout, persuasion
    * swing, spoiler, national mood, campaign, and a rounding residual). Already

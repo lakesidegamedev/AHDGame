@@ -19,8 +19,7 @@ export const GW_START = 10;
 export const PC_START = 60;
 export const STAND_GOODWILL = 55;
 export const STAND_COST = 15;
-export const STAND_DROP = 40;
-export const LOG_MAX = 5;
+const STAND_DROP = 40;
 
 export type Posture = { label: string; color: string };
 

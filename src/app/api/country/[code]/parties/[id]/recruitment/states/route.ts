@@ -18,6 +18,9 @@ import type { State, StatePartyOrg, NPP } from "@/lib/db/types";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { getPartyNppCapacity, partyNppCapacityError } from "@/lib/npp/partyCapacity";
 import { activePartyNppFilter } from "@/lib/npp/recruitmentScope";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 // GET /api/country/[code]/parties/[id]/recruitment/states — Return eligible states with NPP slot and cost info for recruitment
 // Auth: requireAuthWithCharacter
@@ -56,18 +59,16 @@ export async function GET(
     }
 
     // Get all states in country
-    const states = await db.collection<State>("states").find({ countryId: countryId }).toArray();
+    const states = await statesCollection(db).find({ countryId: countryId }).toArray();
 
     // Get state party org for this party
-    const statePartyOrgs = await db
-      .collection<StatePartyOrg>("statePartyOrg")
+    const statePartyOrgs = await statePartyOrgCollection(db)
       .find({ partyId: partyIdStr, countryId: countryId })
       .toArray();
     const orgByState = new Map(statePartyOrgs.map((o) => [o.stateId, o]));
 
     // Count NPPs per state
-    const nppAgg = await db
-      .collection<NPP>("npps")
+    const nppAgg = await nppsCollection(db)
       .aggregate<{ _id: string; count: number }>([
         { $match: activePartyNppFilter(countryId, partyIdStr) },
         { $group: { _id: "$homeState", count: { $sum: 1 } } },
@@ -88,9 +89,8 @@ export async function GET(
     const partyActionPoints = party.nppActionPoints ?? nppActionPointCap("national", apTier);
     const partyTreasury = party.treasury ?? 0;
 
-    // States that already have a state Chair or Vice Chair. We surface this as
-    // an informational flag to the UI but no longer filter such states out —
-    // national leadership can recruit anywhere within their country.
+    // Informational flag only: national leadership can recruit in states that
+    // already have a Chair or Vice Chair, so do not filter them out.
     const statesWithLeadership = new Set(
       statePartyOrgs.filter((o) => o.chairId || o.viceChairId).map((o) => o.stateId)
     );

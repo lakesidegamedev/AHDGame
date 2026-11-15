@@ -3,7 +3,7 @@
 import Link from "next/link";
 import type { ExchangeRateDisplay } from "@/app/country/[code]/forex/types";
 import type { CurrencyCode } from "@/lib/constants/currencies";
-import { CURRENCY_SYMBOLS } from "@/lib/constants/currencies";
+import { CURRENCY_SYMBOLS } from "@/lib/constants/currencyCodes";
 import { formatCurrencyFaceAmount } from "@/lib/currency/formatCurrencyFaceAmount";
 import {
   CURRENCY_COLORS,

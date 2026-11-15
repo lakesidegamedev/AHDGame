@@ -1,21 +1,23 @@
 /** @vitest-environment happy-dom */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { legislationTypes } from "@/lib/seeds/reference/legislationTypes";
+import { getProjectedPoliticalLegislationTypes } from "@/lib/admin/seed/seedPoliticalLegislation";
 import {
   withLegislativePriorities,
   getDefaultLegislativePriorities,
 } from "@/lib/demographics/legislativePriorities/profile";
 import {
+  priorityOptionsFor,
   resolvePrioritySelection,
   type LegislativePrioritySelection,
   type PriorityLaw,
 } from "@/lib/demographics/legislativePriorities/rules";
 import { ElectorateDossier } from "./ElectorateDossier";
 
-const laws: PriorityLaw[] = legislationTypes
-  .filter((l) => l.countryScope === "us" && l.policyOptions?.length)
-  .map((l) => ({ ...l, policyOptions: l.policyOptions! }));
+const laws: PriorityLaw[] = getProjectedPoliticalLegislationTypes()
+  .filter((l) => l.countryScope === "us")
+  .map((l) => ({ ...l, policyOptions: priorityOptionsFor(l) }))
+  .filter((l) => l.policyOptions.length);
 const lawMap = new Map(laws.map((l) => [l._id, l]));
 const profile = withLegislativePriorities(
   [
@@ -117,13 +119,13 @@ describe("admin electorate priority editing", () => {
     await openEditor();
     expect(screen.getAllByRole("combobox")).toHaveLength(8);
     fireEvent.change(screen.getByRole("combobox", { name: "Primary law" }), {
-      target: { value: "us_state_environment" },
+      target: { value: "us.environment.conservation.primary" },
     });
     expect(
       (screen.getByRole("button", { name: "Save priorities" }) as HTMLButtonElement).disabled
     ).toBe(true);
     fireEvent.change(screen.getByRole("combobox", { name: "Primary level" }), {
-      target: { value: "state_environment_opt_1" },
+      target: { value: "l3" },
     });
     fireEvent.click(screen.getByRole("button", { name: "Save priorities" }));
     await screen.findByText("Legislative priorities saved.");
@@ -135,21 +137,25 @@ describe("admin electorate priority editing", () => {
       regionId: "CA",
       bucketId: "age:young",
       priorities: {
-        primary: { lawTypeId: "us_state_environment", policyOptionId: "state_environment_opt_1" },
+        primary: { lawTypeId: "us.environment.conservation.primary", policyOptionId: "l3" },
       },
     });
     expect(payload.priorities.secondary).toHaveLength(3);
     fireEvent.click(screen.getByRole("button", { name: "simple" }));
-    expect(screen.getByText("Desired level: State Clean Energy Leadership Act")).toBeTruthy();
+    expect(screen.getByText("Desired level: Strict Limits")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: /Over 65s/ }));
-    expect(screen.getByText("Desired level: Benefit Protection Act")).toBeTruthy();
+    expect(
+      screen.getByText(
+        `Desired level: ${profile[0].buckets.find((b) => b.id === "age:senior")!.legislativePriorities!.primary.policyOptionName}`
+      )
+    ).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: /Under 30s/ }));
     await openEditor();
     fireEvent.click(screen.getByRole("button", { name: "Restore defaults" }));
     await screen.findByText("Default priorities restored.");
     fireEvent.click(screen.getByRole("button", { name: "simple" }));
     expect(screen.getByText(`Desired level: ${initial.primary.policyOptionName}`)).toBeTruthy();
-    expect(screen.queryByText("Desired level: State Clean Energy Leadership Act")).toBeNull();
+    expect(screen.queryByText("Desired level: Strict Limits")).toBeNull();
   });
 
   it("allows editing secondary laws and levels and blocks duplicate laws", async () => {
@@ -166,16 +172,16 @@ describe("admin electorate priority editing", () => {
       (screen.getByRole("button", { name: "Save priorities" }) as HTMLButtonElement).disabled
     ).toBe(true);
     fireEvent.change(screen.getByRole("combobox", { name: "Secondary 2 law" }), {
-      target: { value: "us_state_environment" },
+      target: { value: "us.environment.conservation.primary" },
     });
     fireEvent.change(screen.getByRole("combobox", { name: "Secondary 2 level" }), {
-      target: { value: "state_environment_opt_2" },
+      target: { value: "l3" },
     });
     fireEvent.click(screen.getByRole("button", { name: "Save priorities" }));
     await screen.findByText("Legislative priorities saved.");
     expect(saved.get("age:young")!.secondary[1]).toEqual({
-      lawTypeId: "us_state_environment",
-      policyOptionId: "state_environment_opt_2",
+      lawTypeId: "us.environment.conservation.primary",
+      policyOptionId: "l3",
     });
   });
 
@@ -193,7 +199,7 @@ describe("admin electorate priority editing", () => {
     render(dossier());
     await openEditor();
     fireEvent.change(screen.getByRole("combobox", { name: "Primary level" }), {
-      target: { value: "state_housing_opt_2" },
+      target: { value: "l3" },
     });
     fetchMock.mockResolvedValueOnce(json({ error: "Forbidden" }, 403));
     fireEvent.click(screen.getByRole("button", { name: "Save priorities" }));
@@ -242,20 +248,20 @@ describe("admin electorate priority editing", () => {
     const { rerender } = render(dossier());
     await openEditor();
     fireEvent.change(screen.getByRole("combobox", { name: "Primary level" }), {
-      target: { value: "state_housing_opt_2" },
+      target: { value: "l3" },
     });
     fireEvent.click(screen.getByRole("button", { name: "Save priorities" }));
     await screen.findByText("Legislative priorities saved.");
     fireEvent.click(screen.getByRole("button", { name: "simple" }));
-    expect(screen.getByText("Desired level: State Housing Investment Act")).toBeTruthy();
+    expect(screen.getByText("Desired level: Expanded Construction")).toBeTruthy();
     const fresh = structuredClone(profile);
     const young = fresh[0].buckets.find((b) => b.id === "age:young")!;
-    young.legislativePriorities!.primary.policyOptionId = "state_housing_opt_0";
-    young.legislativePriorities!.primary.policyOptionName = "State Housing Guarantee Act";
+    young.legislativePriorities!.primary.policyOptionId = "l4";
+    young.legislativePriorities!.primary.policyOptionName = "Universal Housing Duty";
     rerender(
       <ElectorateDossier profile={fresh} regionParties={[]} isAdmin countryId="US" regionId="CA" />
     );
-    expect(screen.getByText("Desired level: State Housing Guarantee Act")).toBeTruthy();
-    expect(screen.queryByText("Desired level: State Housing Investment Act")).toBeNull();
+    expect(screen.getByText("Desired level: Universal Housing Duty")).toBeTruthy();
+    expect(screen.queryByText("Desired level: Expanded Construction")).toBeNull();
   });
 });

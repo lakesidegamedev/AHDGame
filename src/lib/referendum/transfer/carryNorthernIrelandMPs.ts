@@ -3,6 +3,15 @@ import { unformGovernmentAndVacatePM } from "@/lib/turn/parliamentaryGovernment"
 /** Reunification carries Northern Ireland's Commons delegation into the Dail in its existing region. */
 import type { Db } from "mongodb";
 import type { ElectedOfficial } from "@/lib/db/types/officials";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import type { Document } from "mongodb";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
+import { cabinetMembersCollection } from "@/lib/db/repositories/cabinetMembers";
 
 export async function carryNorthernIrelandMPs(
   db: Db,
@@ -14,15 +23,14 @@ export async function carryNorthernIrelandMPs(
     { characterId: { $in: mps.flatMap((mp) => (mp.characterId ? [mp.characterId] : [])) } },
     { nppId: { $in: mps.flatMap((mp) => (mp.nppId ? [mp.nppId] : [])) } },
   ];
-  const government = await db.collection<ParliamentaryGovernment>("governmentFormations").findOne({
+  const government = await governmentFormationsCollection<ParliamentaryGovernment>(db).findOne({
     _id: "UK",
     $or: [{ pmCharacterId: holders[0].characterId }, { pmNppId: holders[1].nppId }],
   });
   if (government) await unformGovernmentAndVacatePM(db, "UK", now, { reason: "lost-seat" });
-  await db.collection("electedOfficials").deleteMany({ countryId: "UK", $or: holders });
-  await db.collection("cabinetMembers").deleteMany({ countryId: "UK", $or: holders });
-  const parties = await db
-    .collection("politicalParties")
+  await electedOfficialsCollection<Document>(db).deleteMany({ countryId: "UK", $or: holders });
+  await cabinetMembersCollection<Document>(db).deleteMany({ countryId: "UK", $or: holders });
+  const parties = await politicalPartiesCollection<Document>(db)
     .find(
       { countryId: { $in: ["UK", "IE"] } },
       { projection: { countryId: 1, sequentialId: 1, abbreviation: 1 } }
@@ -30,12 +38,12 @@ export async function carryNorthernIrelandMPs(
     .toArray();
   const source = new Map(
     parties
-      .filter((row) => row.countryId === "UK")
+      .filter((row) => countryHasFeature("ukLib", row.countryId))
       .map((row) => [String(row.sequentialId), row.abbreviation])
   );
   const target = new Map(
     parties
-      .filter((row) => row.countryId === "IE")
+      .filter((row) => countryHasFeature("ieLib", row.countryId))
       .map((row) => [row.abbreviation, String(row.sequentialId)])
   );
   const rows = mps.map((mp) => ({
@@ -46,16 +54,14 @@ export async function carryNorthernIrelandMPs(
     party: target.get(source.get(mp.party ?? "")) ?? "independent",
     updatedAt: now,
   }));
-  await db.collection<ElectedOfficial>("electedOfficials").insertMany(rows);
+  await electedOfficialsCollection(db).insertMany(rows);
   await mirrorNorthernIrelandMPs(db, rows, now);
   const nppIds = rows.flatMap((mp) => (mp.nppId ? [mp.nppId] : []));
   if (nppIds.length)
-    await db
-      .collection("corporations")
-      .updateMany(
-        { ceoType: "npp", ceoId: { $in: nppIds } },
-        { $set: { headquartersState: "NIR", countryId: "IE", updatedAt: now } }
-      );
+    await corporationsCollection(db).updateMany(
+      { ceoType: "npp", ceoId: { $in: nppIds } },
+      { $set: { headquartersState: "NIR", countryId: "IE", updatedAt: now } }
+    );
 }
 
 export async function mirrorNorthernIrelandMPs(
@@ -103,6 +109,6 @@ export async function mirrorNorthernIrelandMPs(
         ]
       : []
   );
-  if (playerOps.length) await db.collection("characters").bulkWrite(playerOps);
-  if (nppOps.length) await db.collection("npps").bulkWrite(nppOps);
+  if (playerOps.length) await charactersCollection<Document>(db).bulkWrite(playerOps);
+  if (nppOps.length) await nppsCollection<Document>(db).bulkWrite(nppOps);
 }

@@ -6,7 +6,7 @@ import { getPresetMonetaryScope } from "@/lib/monetaryPolicy/presetMonetaryScope
 
 /**
  * ⚠️ Any seed-path code reaching for `getDb()` instead of taking the `db`
- * argument must land in the SAME in-memory database. `isLayer1PositionsEnabled`
+ * argument must land in the SAME in-memory database. `loadEraFullOverride`
  * does exactly that, and without this mock it would write to whatever
  * `MONGODB_URI` names - in this checkout, the shared Atlas testing cluster.
  */

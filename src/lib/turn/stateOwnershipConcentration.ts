@@ -5,7 +5,6 @@
  * (a country with no state-owned corp recomputes to 0), so SOCI tracks both
  * nationalizations and private-economy growth without artificial decay.
  */
-import type { FederalBudget } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import { getDb } from "@/lib/mongodb";
 import { loadFxRatesByCurrency } from "@/lib/currency/corporationCapital";
@@ -14,13 +13,15 @@ import {
   writeStateOwnershipConcentration,
 } from "@/lib/nationalization/concentration";
 import { logger } from "../observability/logger";
+import { getFederalBudgetCollection } from "@/lib/db/collections/federalBudget";
 
 export async function processStateOwnershipConcentration(
   turn: number
 ): Promise<{ countriesUpdated: number }> {
   const db = await getDb();
-  const budgets = await db
-    .collection<FederalBudget>("federalBudget")
+  const budgets = await (
+    await getFederalBudgetCollection(db)
+  )
     .find({}, { projection: { countryId: 1 } })
     .toArray();
 

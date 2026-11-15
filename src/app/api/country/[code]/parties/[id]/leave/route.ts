@@ -16,6 +16,12 @@ import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { isSameCountry } from "@/lib/api/sameCountry";
 import { emitPartyMembershipEvent, buildPartyEventSnapshots } from "@/lib/parties/membershipEvents";
 import { withPartyTerritoryMutation } from "@/lib/parties/territoryMutation";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import type { Document } from "mongodb";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { coalitionsCollection } from "@/lib/db/repositories/coalitions";
 
 // POST /api/country/[code]/parties/[id]/leave — Leave a political party and become independent
 // Auth: requireAuthWithCharacter
@@ -61,17 +67,10 @@ export async function POST(
         const now = new Date();
         const characterId = auth.character._id;
 
-        // Update character to independent and reset party influence.
-        // Clear partyJoinedAt since the third cooldown anchor no longer applies.
-        //
-        // Becoming independent is NOT a party switch, so it must not (re)arm the
-        // 24-hour join cooldown — that cooldown is incurred only by joining an
-        // actual party (the join route stamps lastPartySwitchAt). We deliberately
-        // leave the existing lastPartySwitchAt untouched: a player who joined a
-        // party minutes ago still serves out that join's cooldown through an
-        // independent stint (no leave→rejoin hop escape), while a long-tenured
-        // member who quits is free to join elsewhere immediately.
-        await db.collection("characters").updateOne(
+        // Becoming independent is NOT a party switch: leave lastPartySwitchAt
+        // untouched so a recent join's cooldown still applies, but clear
+        // partyJoinedAt since the third cooldown anchor no longer applies.
+        await charactersCollection(db).updateOne(
           { _id: characterId },
           {
             $set: {
@@ -87,9 +86,10 @@ export async function POST(
 
         // Update any ElectedOfficial records for this character to reflect the new party
         // This ensures Congress/Parliament and state legislature displays show the correct party
-        await db
-          .collection("electedOfficials")
-          .updateMany({ characterId }, { $set: { party: "independent", updatedAt: now } });
+        await electedOfficialsCollection<Document>(db).updateMany(
+          { characterId },
+          { $set: { party: "independent", updatedAt: now } }
+        );
 
         // Withdraw from any primaries where the character was registered under their old party
         const { withdrawnCount } = await withdrawFromMismatchedPrimaries(
@@ -141,9 +141,8 @@ export async function POST(
 
         // Caucuses are scoped to a single (countryId, partyId), so leaving the
         // party means leaving the caucus. Closes membership, clears factionId,
-        // withdraws chair candidacies, vacates chair/vice-chair seats. Without
-        // this the character keeps factionId pointing at the old caucus and is
-        // blocked from founding or joining caucuses elsewhere (bug #0552).
+        // withdraws chair candidacies, vacates chair/vice-chair seats, and frees
+        // the character to found or join caucuses elsewhere.
         const caucusCleanup = await cleanupCaucusParticipationForCharacters(db, [characterId], {
           removeMembership: true,
           membershipStatus: "left",
@@ -181,7 +180,7 @@ export async function POST(
         }
 
         // Update party: decrement member count and clear leadership if needed
-        await db.collection<PoliticalParty>("politicalParties").updateOne(
+        await politicalPartiesCollection(db).updateOne(
           { _id: party._id },
           {
             $inc: { memberCount: -1 },
@@ -191,40 +190,31 @@ export async function POST(
 
         // If the chair left, clear coalitionChairCharacterId for any coalition this party leads
         if (isChair) {
-          await db
-            .collection("coalitions")
-            .updateMany(
-              { chairPartyId: party._id },
-              { $set: { chairCharacterId: null, updatedAt: now } }
-            );
+          await coalitionsCollection<Document>(db).updateMany(
+            { chairPartyId: party._id },
+            { $set: { chairCharacterId: null, updatedAt: now } }
+          );
         }
 
-        // Clear any state-level party leadership seats this character held (ticket
-        // #0860). Leaving the party (like retiring) invalidates a state chair/vice
-        // chair/treasurer seat, but this previously only cleared the *national*
-        // leadership fields above — a departed state chair left a stale id behind,
-        // permanently blocking new appointments to that seat ("not vacant").
-        await db
-          .collection("statePartyOrg")
-          .updateMany({ chairId: characterId }, { $set: { chairId: null, updatedAt: now } });
-        await db
-          .collection("statePartyOrg")
-          .updateMany(
-            { viceChairId: characterId },
-            { $set: { viceChairId: null, updatedAt: now } }
-          );
-        await db
-          .collection("statePartyOrg")
-          .updateMany(
-            { treasurerId: characterId },
-            { $set: { treasurerId: null, updatedAt: now } }
-          );
-        await db
-          .collection("statePartyOrg")
-          .updateMany(
-            { campaignerId: characterId },
-            { $set: { campaignerId: null, updatedAt: now } }
-          );
+        // Clear any state-level party leadership seats this character held. Leaving the
+        // party invalidates a state chair/vice chair/treasurer seat; a stale id would
+        // permanently block new appointments ("not vacant").
+        await statePartyOrgCollection<Document>(db).updateMany(
+          { chairId: characterId },
+          { $set: { chairId: null, updatedAt: now } }
+        );
+        await statePartyOrgCollection<Document>(db).updateMany(
+          { viceChairId: characterId },
+          { $set: { viceChairId: null, updatedAt: now } }
+        );
+        await statePartyOrgCollection<Document>(db).updateMany(
+          { treasurerId: characterId },
+          { $set: { treasurerId: null, updatedAt: now } }
+        );
+        await statePartyOrgCollection<Document>(db).updateMany(
+          { campaignerId: characterId },
+          { $set: { campaignerId: null, updatedAt: now } }
+        );
 
         // Update presence for the party the character left
         await updatePartyPresence(db, auth.character.homeState, id);

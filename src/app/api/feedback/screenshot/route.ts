@@ -8,15 +8,9 @@
  * Returns { url } of the stored screenshot.
  * Auth: requires a logged-in user (rate limiting inherited from feedback flow).
  */
-import { NextResponse } from "next/server";
 import { requireBasicAuth } from "@/lib/api/requireAuth";
-import { handleRouteError, errorResponse } from "@/lib/api/errors";
-import { parseFormData } from "@/lib/api/validate";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
-import { isR2Enabled, uploadFile } from "@/lib/r2";
-
-const ALLOWED_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
-const MAX_SIZE = 8 * 1024 * 1024; // 8 MB
+import { storeScreenshotUpload } from "@/lib/feedback/screenshotUpload";
 
 // POST /api/feedback/screenshot — Upload a screenshot image for a feedback submission.
 // Auth: requireBasicAuth
@@ -29,51 +23,5 @@ export async function POST(request: Request) {
   const rateLimit = checkRateLimit(`api/feedback/screenshot:${user.userId}`, 10, 60000);
   if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
 
-  const parsed = await parseFormData(request);
-  if (!parsed.success) {
-    return errorResponse(parsed.status, parsed.error);
-  }
-  const formData = parsed.data;
-
-  const file = formData.get("file");
-  if (!file || !(file instanceof Blob)) {
-    return errorResponse(400, "No file uploaded");
-  }
-  if (!ALLOWED_TYPES.has(file.type)) {
-    return errorResponse(400, "Only PNG, JPEG, and WebP images are allowed.");
-  }
-  if (file.size > MAX_SIZE) {
-    return errorResponse(400, "Screenshot must be under 8 MB.");
-  }
-
-  const ext = file.type === "image/jpeg" ? "jpg" : file.type === "image/webp" ? "webp" : "png";
-  const timestamp = Date.now();
-  const userId = user.userId.toString().slice(-8);
-
-  try {
-    let url: string;
-
-    if (isR2Enabled()) {
-      url = await uploadFile(
-        `feedback-screenshots/${timestamp}-${userId}.${ext}`,
-        Buffer.from(await file.arrayBuffer())
-      );
-    } else {
-      const fs = await import("fs/promises");
-      const path = await import("path");
-
-      const dir = path.join(process.cwd(), "uploads", "feedback-screenshots");
-      await fs.mkdir(dir, { recursive: true });
-
-      const filename = `${timestamp}-${userId}.${ext}`;
-      const buffer = Buffer.from(await file.arrayBuffer());
-      await fs.writeFile(path.join(dir, filename), buffer);
-
-      url = `/api/uploads/feedback-screenshots/${filename}`;
-    }
-
-    return NextResponse.json({ url });
-  } catch (err) {
-    return handleRouteError(err);
-  }
+  return storeScreenshotUpload(request, user.userId, "feedback-screenshots");
 }

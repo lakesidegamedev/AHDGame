@@ -8,6 +8,11 @@ import type {
 } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import { regionPartyUrl } from "@/lib/urls";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { adminLogsCollection } from "@/lib/db/repositories/adminLogs";
+import { partyBudgetCollection } from "@/lib/db/repositories/partyBudget";
+import { treasuryTransactionsCollection } from "@/lib/db/repositories/treasuryTransactions";
 
 export interface TreasuryStateFundingMetric {
   stateId: string;
@@ -77,14 +82,10 @@ export async function buildNationalTreasuryInsights(
   partyName: string
 ): Promise<NationalTreasuryInsights> {
   const [statePartyOrgs, budgets, states, transferRows, overrideLogs] = await Promise.all([
-    db.collection<StatePartyOrg>("statePartyOrg").find({ countryId, partyId }).toArray(),
-    db
-      .collection<PartyBudget>("partyBudget")
-      .find({ countryId, partyId, scope: "state" })
-      .toArray(),
-    db.collection<State>("states").find({ countryId }).toArray(),
-    db
-      .collection<TreasuryTransaction>("treasuryTransactions")
+    statePartyOrgCollection(db).find({ countryId, partyId }).toArray(),
+    partyBudgetCollection(db).find({ countryId, partyId, scope: "state" }).toArray(),
+    statesCollection(db).find({ countryId }).toArray(),
+    treasuryTransactionsCollection(db)
       .find({
         countryId,
         partyId,
@@ -95,8 +96,7 @@ export async function buildNationalTreasuryInsights(
       .sort({ createdAt: -1 })
       .limit(200)
       .toArray(),
-    db
-      .collection<AdminLog>("adminLogs")
+    adminLogsCollection(db)
       .find({
         action: "funds_transferred",
         details: {
@@ -168,8 +168,7 @@ export async function buildStateTreasuryInsights(
   partyName: string,
   stateName: string
 ): Promise<StateTreasuryInsights> {
-  const overrideLogs = await db
-    .collection<AdminLog>("adminLogs")
+  const overrideLogs = await adminLogsCollection(db)
     .find({
       action: "funds_transferred",
       details: {

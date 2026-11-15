@@ -1,4 +1,5 @@
 "use client";
+import { displayCanadianRegionCode } from "@/lib/countries/ca/regionCodes";
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
@@ -429,7 +430,7 @@ export function UnionSectorsTable({
                           checked={isSelected}
                           disabled={!isSelected && atBatchMax}
                           onChange={() => toggle(s.sectorId)}
-                          aria-label={`Select ${s.corporationName} in ${s.stateId}`}
+                          aria-label={`Select ${s.corporationName} in ${displayCanadianRegionCode(s.stateId)}`}
                           className="h-4 w-4 accent-primary"
                         />
                       </td>
@@ -486,7 +487,7 @@ export function UnionSectorsTable({
                         </div>
                       )}
                     </td>
-                    <td className="px-3 py-3 text-muted">{s.stateId}</td>
+                    <td className="px-3 py-3 text-muted">{displayCanadianRegionCode(s.stateId)}</td>
                     <td className="px-3 py-3 text-right font-mono tabular-nums">
                       <div>{members.toLocaleString("en-US")}</div>
                       <div className="text-[10px] text-muted">

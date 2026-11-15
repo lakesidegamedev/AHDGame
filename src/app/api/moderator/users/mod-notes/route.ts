@@ -7,6 +7,7 @@ import { createModAuditLog } from "@/lib/modAuditLog";
 import { parseJsonBody } from "@/lib/api/validate";
 import { z } from "zod";
 import type { User, ModNote } from "@/lib/db/types";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 const addNoteSchema = z.object({
   userId: z.string().length(24),
@@ -31,7 +32,7 @@ export async function POST(request: Request) {
     const db = await getDb();
     const objectId = new ObjectId(userId);
 
-    const targetUser = await db.collection<User>("users").findOne({ _id: objectId });
+    const targetUser = await usersCollection(db).findOne({ _id: objectId });
     if (!targetUser) {
       return errorResponse(404, "User not found");
     }
@@ -49,12 +50,10 @@ export async function POST(request: Request) {
         text: targetUser.modNote,
         createdAt: targetUser.updatedAt ?? new Date(),
       };
-      await db
-        .collection<User>("users")
-        .updateOne(
-          { _id: objectId },
-          { $set: { modNotes: [legacyNote] }, $unset: { modNote: "" } }
-        );
+      await usersCollection(db).updateOne(
+        { _id: objectId },
+        { $set: { modNotes: [legacyNote] }, $unset: { modNote: "" } }
+      );
     }
 
     const note: ModNote = {
@@ -65,7 +64,7 @@ export async function POST(request: Request) {
       createdAt: new Date(),
     };
 
-    await db.collection<User>("users").updateOne(
+    await usersCollection(db).updateOne(
       { _id: objectId },
       {
         $push: { modNotes: note } as Record<string, unknown>,

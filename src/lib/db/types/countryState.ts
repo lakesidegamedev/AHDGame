@@ -117,19 +117,9 @@ export interface CountryState {
    */
   socialAxisDriftTurn?: number;
   /**
-   * What this country is CALLED, when a runtime event has changed it.
-   *
-   * The compiled name and the era alias are seed data and describe the world as
-   * it was set up. Reunification changes the answer: the shell that survives is a
-   * unified Germany whatever its document id, and it must not go on rendering as
-   * "East Germany" or "West Germany" once the other one is gone. Null means "use
-   * the compiled name / era alias", which is every country that has not been
-   * through such an event.
-   *
-   * ⚠️ NOT a licence to rename countries generally. `COUNTRY_CONFIGS.name` stays
-   * the identity every synchronous call site reads; this is the display layer's
-   * override, consulted where a reader would otherwise be told something the
-   * world has stopped being true.
+   * Display name override, set only when a runtime event (e.g. reunification)
+   * changes what the country is called; the compiled name stays the identity
+   * every synchronous call site reads. Null/absent = use the compiled name.
    */
   displayNameOverride?: string | null;
   /** The flag to show alongside it, on the same terms. */

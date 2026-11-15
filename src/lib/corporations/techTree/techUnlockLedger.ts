@@ -2,40 +2,33 @@ import * as Sentry from "@sentry/nextjs";
 import type { Db, ObjectId } from "mongodb";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { sumStrengthGrants, type TechTreeNode } from "@/lib/constants/techTree";
-import type { ActionAuditInput, Corporation, FinancialTxLogEntry } from "@/lib/db/types";
+import type { ActionAuditInput } from "@/lib/db/types";
 import { emitTxStrict, loadTxThresholds, type TxInput } from "@/lib/financialTxLog/emit";
+import { frontierResearchInc } from "./frontierResearch";
+import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /**
- * Finance-history ledger rows for sector tech-tree unlocks (ticket #1998).
+ * Finance-history ledger rows for sector tech-tree unlocks.
  *
- * Both unlock entry points debit `liquidCapital` through a guarded,
- * once-only write — the player command's `updateOne` in
- * `commands/techTree/unlockTechNode.ts` and the NPP brain's bulkWrite op in
- * `turn/npp/corpBehaviorConfig.ts`. Neither wrote a matching finance-history
- * row, so a corp could lose most of its cash while every visible entry showed
- * a gain. This module is the shared boundary both paths use:
+ * Both unlock paths (player command `unlockTechNode.ts`, NPP bulkWrite in
+ * `corpBehaviorConfig.ts`) debit `liquidCapital` via a guarded once-only write but could
+ * leave the debit without a matching finance-history row, making cash losses invisible.
+ * This is the shared boundary:
  *
- * - `buildTechUnlockTxEntry` (pure) builds the exact debit row: negative
- *   `amount` equal to the cash cost, the corp's own currency, the turn, and
- *   the technology's identity in `meta`.
- * - `emitTxStrict` persists it with bounded retries and THROWS on persistent
- *   failure, so a committed debit can never go silently invisible. An
- *   applied-but-unacknowledged insert is adopted (verified field-by-field),
- *   not rolled back.
- * - `buildTechUnlockRefundUpdate` (pure) reverses one committed unlock for
- *   the compensating refund when the ledger insert persistently fails:
- *   rolled-back unlocks then show neither a cash debit nor a ledger row.
+ * - `buildTechUnlockTxEntry` (pure) builds the debit row: negative `amount` equal to the
+ *   cash cost, corp currency, turn, technology identity in `meta`.
+ * - `emitTxStrict` persists with bounded retries and THROWS on persistent failure, so a
+ *   committed debit is never silently invisible. Applied-but-unacknowledged inserts are
+ *   adopted (verified field-by-field), not rolled back.
+ * - `buildTechUnlockRefundUpdate` (pure) reverses a committed unlock for compensating
+ *   refund when the ledger insert persistently fails.
  *
- * Ordering rule (both paths): the guarded cash write commits FIRST, the
- * ledger row is emitted only after the write provably applied
- * (`modifiedCount > 0` / post-bulkWrite verification read). A rejected or
- * raced unlock never reaches the emit, so failures create no row.
+ * Ordering (both paths): the guarded cash write commits FIRST, the ledger row is emitted
+ * only after the write provably applied. Rejected or raced unlocks never emit.
  *
- * Idempotency: `financialTxLog` carries no unique idempotency index, so the
- * once-only cash write IS the dedupe — a retry of a successful manual unlock
- * hits the `already-owned` guard, and the NPP flush re-checks the committed
- * node set plus existing rows before emitting. The stable
- * `meta.ledgerKey` still lets forensics match a row to its unlock.
+ * Idempotency: `financialTxLog` has no unique index, so the once-only cash write IS the
+ * dedupe. `meta.ledgerKey` still lets forensics match rows to unlocks.
  */
 
 /** One intended (decision-time) tech unlock awaiting ledger flush. */
@@ -127,6 +120,9 @@ export function buildTechUnlockRefundUpdate(spec: TechUnlockRefundSpec): {
   };
   if ((spec.marketingGrant ?? 0) > 0) $inc.marketingStrength = -(spec.marketingGrant ?? 0);
   if ((spec.logisticsGrant ?? 0) > 0) $inc.logisticsStrength = -(spec.logisticsGrant ?? 0);
+  for (const [field, amount] of Object.entries(frontierResearchInc(spec.decadeId, spec.rdCost))) {
+    $inc[field] = -amount;
+  }
   return {
     $inc,
     $pull: { unlockedTechNodeIds: spec.nodeId },
@@ -188,21 +184,19 @@ export function buildTechUnlockFlushAudit(result: TechUnlockFlushResult): Action
   };
 }
 
-/**
+/*
  * Flush NPP tech-unlock ledger rows AFTER the corporation bulkWrite applied.
  *
  * Only unlocks verified against the post-write snapshot produce a row: the
  * node must be absent from the decision-time snapshot and present now, which
- * proves this turn's guarded op committed it (a raced/concurrent manual
- * unlock that won instead is the manual path's row to write). Rows already
- * present for the same (corp, node, turn) — a turn re-run or the manual race
- * above — are skipped, never duplicated.
+ * proves this turn's guarded op committed it. Concurrent manual unlocks that
+ * won instead are the manual path's row to write. Rows already present for the
+ * same (corp, node, turn) are skipped, never duplicated.
  *
- * A persistently failing insert triggers the compensating refund so a debited
- * corp never keeps an invisible debit: the unlock is rolled back and counted
- * in `refunded`. Read failures on the verification queries are reported via
- * Sentry and returned as zero-emit; the cash writes they cover stay intact
- * because re-running the turn re-enters this flush idempotently.
+ * A persistently failing insert triggers the compensating refund, counted in
+ * `refunded`, so a debited corp never keeps an invisible debit. Read failures
+ * are reported via Sentry and returned as zero-emit; the cash writes stay
+ * intact because re-running the turn re-enters this flush idempotently.
  */
 export async function flushNppTechUnlockLedger(
   db: Db,
@@ -221,8 +215,7 @@ export async function flushNppTechUnlockLedger(
     const corpIds = [...new Set(intended.map((e) => e.corporationId.toString()))].map(
       (id) => intended.find((e) => e.corporationId.toString() === id)!.corporationId
     );
-    const posts = await db
-      .collection<Corporation>("corporations")
+    const posts = await corporationsCollection(db)
       .find({ _id: { $in: corpIds } }, { projection: { unlockedTechNodeIds: 1 } })
       .toArray();
     const postOwnedByCorp = new Map(
@@ -238,8 +231,7 @@ export async function flushNppTechUnlockLedger(
     if (committed.length === 0) return result;
 
     const turns = [...new Set(committed.map((e) => e.turn))];
-    const existing = await db
-      .collection<FinancialTxLogEntry>("financialTxLog")
+    const existing = await financialTxLogCollection(db)
       .find(
         {
           type: "corp_tech_unlock",
@@ -295,7 +287,7 @@ export async function flushNppTechUnlockLedger(
  */
 async function refundUnrecordedUnlock(db: Db, entry: TechUnlockLedgerInput): Promise<void> {
   try {
-    await db.collection<Corporation>("corporations").updateOne(
+    await corporationsCollection(db).updateOne(
       { _id: entry.corporationId },
       buildTechUnlockRefundUpdate({
         nodeId: entry.nodeId,

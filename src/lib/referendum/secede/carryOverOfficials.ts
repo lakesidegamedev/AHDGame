@@ -8,6 +8,13 @@ import { getCountryConfig, type CountryId } from "@/lib/constants/countries";
 import type { ElectedOfficial } from "@/lib/db/types/officials";
 import type { ParliamentaryGovernment } from "@/lib/db/types/parliamentaryGovernment";
 import { CAPITAL_SUBREGION, type SecedingCountryId } from "./subRegions";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import type { Document } from "mongodb";
+import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
+import { cabinetMembersCollection } from "@/lib/db/repositories/cabinetMembers";
+import { seatsCollection } from "@/lib/db/repositories/seats";
 
 export interface CarryOverOfficialsResult {
   msps: number;
@@ -22,18 +29,16 @@ export async function carryOverOfficials(
   idMap: Record<number, number>
 ): Promise<CarryOverOfficialsResult> {
   const now = new Date();
-  const officials = db.collection<ElectedOfficial>("electedOfficials");
+  const officials = electedOfficialsCollection(db);
   const fm = await officials.findOne({
     countryId: fromCountryId,
     officeType: "governor",
     state: regionId,
   });
-  const residents = await db
-    .collection("characters")
+  const residents = await charactersCollection(db)
     .find({ countryId: toCountryId }, { projection: { _id: 1 } })
     .toArray();
-  const npps = await db
-    .collection("npps")
+  const npps = await nppsCollection<Document>(db)
     .find({ countryId: toCountryId }, { projection: { _id: 1 } })
     .toArray();
   const departing = await officials.find({ countryId: fromCountryId, state: regionId }).toArray();
@@ -46,24 +51,26 @@ export async function carryOverOfficials(
     ...departing.flatMap((row) => (row.nppId ? [row.nppId] : [])),
   ];
   const holders = [{ characterId: { $in: characterIds } }, { nppId: { $in: nppIds } }];
-  const government = await db.collection<ParliamentaryGovernment>("governmentFormations").findOne({
+  const government = await governmentFormationsCollection<ParliamentaryGovernment>(db).findOne({
     _id: fromCountryId,
     $or: [{ pmCharacterId: { $in: characterIds } }, { pmNppId: { $in: nppIds } }],
   });
   if (government)
     await unformGovernmentAndVacatePM(db, fromCountryId, now, { reason: "lost-seat" });
   await officials.deleteMany({ countryId: fromCountryId, $or: [{ state: regionId }, ...holders] });
-  await db.collection("cabinetMembers").deleteMany({ countryId: fromCountryId, $or: holders });
-  await db.collection("seats").deleteMany({ countryId: fromCountryId, state: regionId });
-  await db
-    .collection("characters")
-    .updateMany(
-      { _id: { $in: characterIds } },
-      { $set: { currentOffice: null, updatedAt: now }, $unset: { cabinetPosition: "" } }
-    );
-  await db
-    .collection("npps")
-    .updateMany({ _id: { $in: nppIds } }, { $set: { currentOffice: null, updatedAt: now } });
+  await cabinetMembersCollection<Document>(db).deleteMany({
+    countryId: fromCountryId,
+    $or: holders,
+  });
+  await seatsCollection<Document>(db).deleteMany({ countryId: fromCountryId, state: regionId });
+  await charactersCollection(db).updateMany(
+    { _id: { $in: characterIds } },
+    { $set: { currentOffice: null, updatedAt: now }, $unset: { cabinetPosition: "" } }
+  );
+  await nppsCollection<Document>(db).updateMany(
+    { _id: { $in: nppIds } },
+    { $set: { currentOffice: null, updatedAt: now } }
+  );
   if (!fm || (!fm.characterId && !fm.nppId)) {
     await ensureParliamentaryGovernmentFormation(db, toCountryId);
     return { msps: 0, headOfGov: 0 };
@@ -92,7 +99,7 @@ export async function carryOverOfficials(
     }
   );
   const seats = getCountryConfig(toCountryId).legislature.lowerChamber.seats;
-  await db.collection<ParliamentaryGovernment>("governmentFormations").updateOne(
+  await governmentFormationsCollection<ParliamentaryGovernment>(db).updateOne(
     { _id: toCountryId },
     {
       $set: {

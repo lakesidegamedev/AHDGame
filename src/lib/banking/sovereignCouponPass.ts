@@ -1,18 +1,10 @@
 /**
- * The pass-wide half of the funded sovereign coupon settlement.
- *
- * One Treasury turn used to repeat the same queue probes inside every
- * country's lane: the settleable claim load, the payee existence reads, the
- * frozen-claim install probe and the payee pool upsert. Each of them is keyed
- * by budget id, so they answer for every country in one read instead of one
- * read per country, and the lane is then left with the money moves it alone
- * can order.
- *
- * The decisions are the same ones the per-budget path takes, taken from the
- * same prefetch. A claim is loaded when it is worth no more than the cash its
- * budget holds, or when a receipt already owns it; it is ready when every
- * payee document exists under the frozen quote it would be paid at; a budget
- * that can cover none of its queue is skipped exactly as before.
+ * Pass-wide prefetch for funded sovereign coupon settlement: one read per
+ * budget-keyed concern instead of one per country lane. Decisions mirror the
+ * per-budget path taken against the same prefetch: a claim loads when worth no
+ * more than its budget's cash or already owned by a receipt; ready when every
+ * payee doc exists under the frozen quote; a budget covering none of its queue
+ * is skipped.
  */
 
 import type { Bond } from "@/lib/db/types/bond";
@@ -37,6 +29,7 @@ import {
   type SovereignCouponSettlementPrefetch,
 } from "@/lib/banking/fundedSovereignCoupons";
 import type { SovereignCouponCorporationQuote } from "@/lib/banking/rules/sovereignCoupons";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 /**
  * Receipt-owned claim ids one settleable-queue read may inline. A healthy pass
@@ -94,9 +87,8 @@ export async function flushSovereignCouponBatchClose(
 }
 
 /**
- * Drop the settled claim history every completed budget no longer needs. The
- * per-budget pass issues this for its own budget; a prepared pass collects the
- * budgets that completed and issues it once.
+ * Drops settled claim history for completed budgets: the per-budget pass
+ * prunes its own budget, a prepared pass prunes all completed budgets.
  */
 export async function pruneSovereignCouponClaims(
   db: Db,
@@ -233,7 +225,7 @@ export async function loadSovereignCouponPass(
           ]
         : []
     );
-    if (marks.length) await db.collection<FederalBudget>("federalBudget").bulkWrite(marks);
+    if (marks.length) await federalBudgetCollection(db).bulkWrite(marks);
   }
 
   // One keyed read for every budget's settleable queue. Each branch is the

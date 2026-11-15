@@ -4,37 +4,23 @@ import type { CorporationType, MediaDiscriminator } from "@/lib/constants/corpor
 import type { UnionServiceId } from "@/lib/unions/unionServices";
 
 /**
- * v3 Phase 8 (`labourSystemMode >= "full"`), a player-run union.
+ * A player-run union, scoped to one industry in one country.
  *
- * Dues v1 changed the scope rule. A union is still scoped to one industry in
- * one country, but there may now be SEVERAL in that pair: players can found a
- * rival in an industry that already has a union. Which sectors a union actually
- * holds is no longer implied by the (countryId, sectorType) match, it is
- * recorded on the sector as `CorporateSector.representingUnionId`, and a
- * targeted organizing drive can take a sector off a rival. Same-industry only:
- * a union never organizes outside its own `sectorType`.
+ * Several unions may share a (countryId, sectorType) pair, so which sectors a
+ * union holds is not implied by that match: it is recorded on the sector as
+ * `CorporateSector.representingUnionId`, and a targeted organizing drive can
+ * take a sector off a rival. Same-industry only: a union never organizes
+ * outside its own `sectorType`.
  *
- * The original type-scoped note follows, and still describes how a union's
- * CANDIDATE sectors are found (matching countryId+sectorType) before
- * representation is checked:
+ * Membership is the abstract `unionization`/`membershipPressure` stat (an NPC
+ * worker population), not a roster of player Characters. Leaders are contested
+ * continuously CEO-style: organizers fund drives until strength crosses a
+ * threshold, then vote weighted by banked strength; the plurality winner must
+ * accept and may displace a sitting player or NPP president.
  *
- * One Union per (countryId, sectorType) pair, a union organizes an entire
- * industry within a country (e.g. "US Manufacturing Workers"), not a
- * hand-picked list of sectors. Its scope (which `CorporateSector`s it
- * affects) is computed by querying for matching countryId+sectorType at
- * read/action time, not stored as a join table, this maps directly onto
- * the existing per-sector `unionization` stat with no new plumbing.
- *
- * Deliberately NOT a membership-roster social system: "membership" is the
- * abstract `unionization`/`membershipPressure` stat (an NPC worker
- * population), not a roster of player Characters who joined. Player leaders
- * are contested continuously (CEO-style): organizers fund
- * drives until strength crosses a threshold, then vote weighted by banked
- * strength; the plurality winner must accept the offer and may displace a
- * sitting player or NPP president.
- *
- * `ownerId` is the source of truth for who leads this union, see the
- * denormalized `Character.unionLeaderOf` cache in `src/lib/db/types/character.ts`.
+ * `ownerId` is the source of truth for who leads this union; see the
+ * denormalized `Character.unionLeaderOf` cache in
+ * `src/lib/db/types/character.ts`.
  */
 /** A service slate purchased during settlement for a specific following turn. */
 export interface UnionServiceReceipt {
@@ -134,7 +120,7 @@ export interface Union {
   /** Visible target wageLevel this union is demanding from CEOs in its scope, or null if none set. */
   demandedWageLevel: number | null;
   /**
-   * Union ban (player suggestion #93): true while this union's country has
+   * Union ban: true while this union's country has
    * `FederalBudget.unionsBanned` set by an enacted ban. Suspended unions are
    * frozen: `processUnionsTurn` skips dues/decay/inactivity-vacancy for them
    * and player actions 403, but the document (leadership, treasury,

@@ -44,7 +44,7 @@ export interface WorldEntityMapSnapshot {
  * than disappearing silently. Historical geometry can later attach additional
  * feature IDs without changing the world-entity domain.
  *
- * Tier-3 rows may declare `mapFeatureIds` as modern proxies (#3728).
+ * Tier-3 rows may declare `mapFeatureIds` as modern proxies.
  */
 export function getWorldEntityMapSnapshot(
   presetId: string,

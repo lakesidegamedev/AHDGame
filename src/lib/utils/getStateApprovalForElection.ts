@@ -21,6 +21,7 @@ import {
   loadPoliticalApprovalBases,
   type PoliticalApprovalBases,
 } from "@/lib/politicalLegislation/politicalApprovalProvider";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /**
  * Get state government approval for a given state (0-100).
@@ -53,8 +54,7 @@ export async function getAllStateApprovalsForElection(
   const countryIds = options?.countryIds;
   const stateFilter = countryIds && countryIds.length > 0 ? { countryId: { $in: countryIds } } : {};
 
-  const allStates = await db
-    .collection<State>("states")
+  const allStates = await statesCollection(db)
     .find(stateFilter, { projection: { _id: 1, countryId: 1 } })
     .toArray();
 

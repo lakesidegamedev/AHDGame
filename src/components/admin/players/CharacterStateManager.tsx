@@ -73,6 +73,70 @@ const POSITION_LABELS: Record<number, string> = {
   [5]: "Far Right / Far Traditional",
 };
 
+function PositionSlider({
+  axis,
+  labelIndex,
+  value,
+  onChange,
+}: {
+  axis: "economic" | "social";
+  labelIndex: 0 | 1;
+  value: number | null;
+  onChange: (value: number | null) => void;
+}) {
+  const id = `pos-${axis}`;
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-1.5">
+        <label className="text-xs font-medium text-muted" htmlFor={id}>
+          {axis === "economic" ? "Economic position" : "Social position"}
+        </label>
+        {value !== null && (
+          <button
+            type="button"
+            onClick={() => onChange(null)}
+            className="text-[10px] text-muted hover:text-foreground underline"
+          >
+            Skip
+          </button>
+        )}
+      </div>
+      {value !== null ? (
+        <>
+          <span className="text-xs font-normal text-foreground">
+            {value > 0 ? `+${value}` : value} — {POSITION_LABELS[value]?.split(" / ")[labelIndex]}
+          </span>
+          <input
+            id={id}
+            type="range"
+            min={-5}
+            max={5}
+            step={1}
+            value={value}
+            onChange={(e) => onChange(Number(e.target.value))}
+            className="w-full accent-primary mt-1"
+          />
+        </>
+      ) : (
+        <button
+          type="button"
+          onClick={() => onChange(0)}
+          className="w-full rounded-lg border border-dashed border-card-border bg-background px-3 py-2 text-xs text-muted hover:text-foreground hover:border-foreground/30 transition-colors"
+        >
+          + Set {axis} position
+        </button>
+      )}
+      {value !== null && (
+        <div className="flex justify-between text-xs text-muted mt-1">
+          <span>−5</span>
+          <span>0</span>
+          <span>+5</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function CharacterStateManager({ context = "admin" }: CharacterStateManagerProps) {
   const registered = useRegisteredCountries();
   // Derived from the runtime registered set so an activated country (via the
@@ -443,104 +507,8 @@ export function CharacterStateManager({ context = "admin" }: CharacterStateManag
             )}
           </div>
 
-          <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <label className="text-xs font-medium text-muted" htmlFor="pos-economic">
-                Economic position
-              </label>
-              {economic !== null && (
-                <button
-                  type="button"
-                  onClick={() => setEconomic(null)}
-                  className="text-[10px] text-muted hover:text-foreground underline"
-                >
-                  Skip
-                </button>
-              )}
-            </div>
-            {economic !== null ? (
-              <>
-                <span className="text-xs font-normal text-foreground">
-                  {economic > 0 ? `+${economic}` : economic} —{" "}
-                  {POSITION_LABELS[economic]?.split(" / ")[0]}
-                </span>
-                <input
-                  id="pos-economic"
-                  type="range"
-                  min={-5}
-                  max={5}
-                  step={1}
-                  value={economic}
-                  onChange={(e) => setEconomic(Number(e.target.value))}
-                  className="w-full accent-primary mt-1"
-                />
-              </>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setEconomic(0)}
-                className="w-full rounded-lg border border-dashed border-card-border bg-background px-3 py-2 text-xs text-muted hover:text-foreground hover:border-foreground/30 transition-colors"
-              >
-                + Set economic position
-              </button>
-            )}
-            {economic !== null && (
-              <div className="flex justify-between text-xs text-muted mt-1">
-                <span>−5</span>
-                <span>0</span>
-                <span>+5</span>
-              </div>
-            )}
-          </div>
-
-          <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <label className="text-xs font-medium text-muted" htmlFor="pos-social">
-                Social position
-              </label>
-              {social !== null && (
-                <button
-                  type="button"
-                  onClick={() => setSocial(null)}
-                  className="text-[10px] text-muted hover:text-foreground underline"
-                >
-                  Skip
-                </button>
-              )}
-            </div>
-            {social !== null ? (
-              <>
-                <span className="text-xs font-normal text-foreground">
-                  {social > 0 ? `+${social}` : social} — {POSITION_LABELS[social]?.split(" / ")[1]}
-                </span>
-                <input
-                  id="pos-social"
-                  type="range"
-                  min={-5}
-                  max={5}
-                  step={1}
-                  value={social}
-                  onChange={(e) => setSocial(Number(e.target.value))}
-                  className="w-full accent-primary mt-1"
-                />
-              </>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setSocial(0)}
-                className="w-full rounded-lg border border-dashed border-card-border bg-background px-3 py-2 text-xs text-muted hover:text-foreground hover:border-foreground/30 transition-colors"
-              >
-                + Set social position
-              </button>
-            )}
-            {social !== null && (
-              <div className="flex justify-between text-xs text-muted mt-1">
-                <span>−5</span>
-                <span>0</span>
-                <span>+5</span>
-              </div>
-            )}
-          </div>
+          <PositionSlider axis="economic" labelIndex={0} value={economic} onChange={setEconomic} />
+          <PositionSlider axis="social" labelIndex={1} value={social} onChange={setSocial} />
 
           <button
             type="submit"

@@ -22,11 +22,9 @@ import type {
  *   org:<id>:<currency>                international org funds
  *   pension_scheme:<id>:<currency>     union pension scheme assets
  *   npp:<id>:<currency>                NPP investment cash (anchor-backed)
- *   mint:<reason>:<currency>           system money creation (see plan §1.3)
+ *   mint:<reason>:<currency>           system money creation
  *   sink:<reason>:<currency>           system money destruction
- *   fx:<A>/<B>:<currency>              FX translation account (see plan §1.4)
- *
- * See docs/plans/2026-07-05-shadow-ledger-plan.md §1.1.
+ *   fx:<A>/<B>:<currency>              FX translation account
  */
 
 export type LedgerAccountKind =
@@ -49,22 +47,19 @@ export type LedgerAccountKind =
   | "fx";
 
 /**
- * The real (balance-backed) kinds the reconciler stock-checks. System kinds
+ * Real (balance-backed) kinds the reconciler stock-checks. System kinds
  * (mint/sink/fx) are not stock-checked. Every kind listed here MUST have
  * opening/closing snapshot coverage in balanceSnapshot.ts; a listed kind with
  * no snapshot reads every leg as a divergence against a zero balance.
  *
  * `state_party` (statePartyOrg.treasury) and `pension_scheme`
- * (PensionScheme.assetsAnchor) are stock-checked since #992 tranche 2. Their
- * still-uninstrumented flows (org-build debits, dividend-reinvest fund
- * inflows, NPP fund investing, secession deletes, transfer currency
- * rescaling) report as honest amber findings with a lifecycle hint, not as
- * hidden backlog - see the StockVsFlowFinding lifecycleHint.
+ * (PensionScheme.assetsAnchor) are stock-checked; their uninstrumented flows
+ * (org-build debits, dividend-reinvest fund inflows, NPP fund investing,
+ * secession deletes, transfer currency rescaling) report as amber findings with
+ * a lifecycle hint, not hidden backlog.
  *
  * `org` is backed by organizationFunds.balanceLocal, keyed by organizationId
- * and the stored/founding country currency. Dues, aid, spending and refunds
- * publish direct primary witnesses; financialTxLog subjects still need no org
- * mapping because these cash writers own their ledger entries.
+ * and the stored/founding country currency.
  */
 const REAL_ACCOUNT_KINDS: readonly LedgerAccountKind[] = [
   "character",
@@ -125,10 +120,7 @@ export function subjectAccount(
     case "government":
       return ids.countryId ? accountId("government", ids.countryId, currency) : null;
     case "fund":
-      // #992 tranche 6: fund-subject rows (bond purchases/sales, holding
-      // sales, order-fill seller legs, float buys) evidence the fund cash
-      // side directly, so they derive here against the cashAnchor snapshot
-      // below. They never mirror (see fundMirrorAccount).
+      // Fund-subject rows (bond purchases/sales, holding sales, order-fill seller legs, float buys) evidence the fund cash side directly, so they derive here against the cashAnchor snapshot below. They never mirror (see fundMirrorAccount).
       return ids.subjectId ? accountId("fund", ids.subjectId, currency) : null;
     case "pension_scheme":
       return ids.subjectId ? accountId("pension_scheme", ids.subjectId, currency) : null;

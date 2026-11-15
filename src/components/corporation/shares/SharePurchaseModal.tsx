@@ -9,7 +9,7 @@ import { HoldingTermSelector } from "./HoldingTermSelector";
 import { Button, useDialogA11y } from "@/components/ui";
 import type { CorporationDetail, MarketOrder, MyShareOrder } from "../CorporationPageTypes";
 import PrivateSalePanel from "./PrivateSalePanel";
-import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
+import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencyCodes";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { useWorldFlags } from "@/hooks/useWorldFlags";
 import { useCurrency } from "@/contexts/CurrencyContext";

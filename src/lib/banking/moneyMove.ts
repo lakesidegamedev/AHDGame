@@ -43,6 +43,13 @@ import {
 } from "@/lib/banking/rules/invariants";
 import { validEquityCustodyMutation } from "./rules/equityCustody";
 import { countBankingEvent } from "@/lib/banking/telemetry";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
+import {
+  settlementReadEpoch,
+  settlementTargetSnapshot,
+  rememberSettlementTarget,
+  forgetSettlementTarget,
+} from "./settlementReadSnapshot";
 
 /** Collection holding the claim records. Also the repair queue. */
 export const MONEY_MOVE_COLLECTION = "bankMoneyMoves";
@@ -282,7 +289,7 @@ export async function claimMoneyMove(db: Db, move: MoneyMove): Promise<MoneyMove
   };
 
   try {
-    await db.collection<MoneyMoveRecord>(MONEY_MOVE_COLLECTION).insertOne(record);
+    await bankMoneyMovesCollection<MoneyMoveRecord>(db).insertOne(record);
   } catch (error) {
     const code =
       typeof error === "object" && error !== null && "code" in error
@@ -313,7 +320,7 @@ export async function completeMoneyMove(
   error?: string,
   status: MoneyMoveStatus = error ? "partial" : "applied"
 ): Promise<void> {
-  const records = db.collection<MoneyMoveRecord>(MONEY_MOVE_COLLECTION);
+  const records = bankMoneyMovesCollection<MoneyMoveRecord>(db);
   // Each leg's durable target stamp is the witness. Completion only marks
   // confirmed legs; rereading and replacing the whole array can overwrite a
   // concurrent recovery stamp and costs a round trip for every fresh move.
@@ -377,7 +384,7 @@ export async function applyMoneyMove(db: Db, move: MoneyMove): Promise<MoneyMove
     // Preserve selectors such as countryId in the public API, but freeze the
     // selected document before claiming cash. Replays use the original binding
     // even if a previous write changed the caller's selector fields.
-    const prior = await db.collection<MoneyMoveRecord>(MONEY_MOVE_COLLECTION).findOne(
+    const prior = await bankMoneyMovesCollection<MoneyMoveRecord>(db).findOne(
       {
         _id: move.key,
       },
@@ -400,6 +407,7 @@ export async function applyMoneyMove(db: Db, move: MoneyMove): Promise<MoneyMove
       leg.filter = { ...leg.filter, _id: target._id };
     }
   }
+  const readEpoch = settlementReadEpoch();
   const claim = await claimMoneyMove(db, {
     ...move,
     legs: prepared,
@@ -410,18 +418,20 @@ export async function applyMoneyMove(db: Db, move: MoneyMove): Promise<MoneyMove
     },
   });
   if (claim.status === "replayed") {
-    const existing = await db
-      .collection<MoneyMoveRecord>(MONEY_MOVE_COLLECTION)
-      .findOne({ _id: move.key }, { projection: { legs: 1, quoteIdentity: 1 } });
+    const existing = await bankMoneyMovesCollection<MoneyMoveRecord>(db).findOne(
+      { _id: move.key },
+      { projection: { legs: 1, quoteIdentity: 1 } }
+    );
     if (valuedQuoteConflict(existing, prepared, move.quoteIdentity))
       return valuedQuoteConflictResult(move.key);
     if (move.turn !== undefined) countBankingEvent(db, move.turn, "replayedSettlements");
     return { status: "replayed", applied: [] };
   }
   if (claim.status === "rejected") {
-    const existing = await db
-      .collection<MoneyMoveRecord>(MONEY_MOVE_COLLECTION)
-      .findOne({ _id: move.key }, { projection: { legs: 1, quoteIdentity: 1 } });
+    const existing = await bankMoneyMovesCollection<MoneyMoveRecord>(db).findOne(
+      { _id: move.key },
+      { projection: { legs: 1, quoteIdentity: 1 } }
+    );
     if (valuedQuoteConflict(existing, prepared, move.quoteIdentity))
       return valuedQuoteConflictResult(move.key);
     if (move.turn !== undefined) countBankingEvent(db, move.turn, "rejectedSettlements");
@@ -432,7 +442,7 @@ export async function applyMoneyMove(db: Db, move: MoneyMove): Promise<MoneyMove
     return { status: "rejected", applied: [], error: bindingError };
   }
   if (claim.legs.length === 0) return { status: "applied", applied: [] };
-  return executeMoneyMove(db, move.key, false, claim.record);
+  return executeMoneyMove(db, move.key, false, claim.record, readEpoch);
 }
 
 /**
@@ -509,7 +519,7 @@ async function acknowledgeLeg(
   id: unknown,
   receipt: LegReceipt
 ): Promise<void> {
-  const records = db.collection<MoneyMoveRecord>(MONEY_MOVE_COLLECTION);
+  const records = bankMoneyMovesCollection<MoneyMoveRecord>(db);
   const path = `legs.${receipt.index}`;
   const field = receipt.outcome === "applied" ? `${path}.applied` : `${path}.refusal`;
   const acknowledged = await records.updateOne(
@@ -551,9 +561,10 @@ async function applyLeg(
   db: Db,
   key: string,
   i: number,
-  leg: MoneyMoveRecordLeg
+  leg: MoneyMoveRecordLeg,
+  readSnapshot?: { record: MoneyMoveRecord; epoch: number }
 ): Promise<string | null> {
-  const records = db.collection<MoneyMoveRecord>(MONEY_MOVE_COLLECTION);
+  const records = bankMoneyMovesCollection<MoneyMoveRecord>(db);
   const path = `legs.${i}`;
   if (leg.kind === "mint" || leg.kind === "burn") {
     await records.updateOne(
@@ -574,23 +585,38 @@ async function applyLeg(
   const id = { _id: leg.filter._id } as Filter<LegTarget>;
   const stamp = legStamp(key, i);
   for (let attempt = 0; attempt < 5; attempt++) {
-    const current = await target.findOne(id, {
-      projection: { [PENDING_LEG]: 1, [LEG_REVISION]: 1, settledKeys: 1 },
-    });
+    const cached =
+      attempt === 0
+        ? settlementTargetSnapshot<LegTarget>(db, "cash", leg.collection, leg.filter._id)
+        : undefined;
+    const current = cached
+      ? cached.value
+      : await target.findOne(id, {
+          projection: { [PENDING_LEG]: 1, [LEG_REVISION]: 1, settledKeys: 1 },
+        });
     // Only this leg is read back. A maturity payout carries one leg per
     // holder (120-170 on the live world), so projecting the whole array makes
     // every leg acknowledgement decode the entire receipt again.
-    const record = await records.findOne(
-      { _id: key },
-      {
-        projection: {
-          status: 1,
-          genericMoneyMoveVersion: 1,
-          retryCreditLegOnGuardFailure: 1,
-          legs: { $slice: [i, 1] },
-        },
-      }
-    );
+    // The journal must follow the cached target observation. A competing delivery
+    // defeats the generation guard and retries with fresh target and journal reads.
+    const useRecord =
+      cached &&
+      readSnapshot &&
+      cached.epoch <= readSnapshot.epoch &&
+      readSnapshot.record.genericMoneyMoveVersion === 2;
+    const record = useRecord
+      ? readSnapshot.record
+      : await records.findOne(
+          { _id: key },
+          {
+            projection: {
+              status: 1,
+              genericMoneyMoveVersion: 1,
+              retryCreditLegOnGuardFailure: 1,
+              legs: { $slice: [i, 1] },
+            },
+          }
+        );
     // The server answers with the one-element slice; an in-memory test double
     // may return the whole array. Length tells the two apart without guessing
     // at an index the record does not have.
@@ -604,6 +630,7 @@ async function applyLeg(
       // A completed cash leg may belong to a command outside this queue page.
       // Help acknowledge that exact leg, so older waiters cannot starve it.
       await acknowledgeLeg(db, leg.collection, leg.filter._id, receipt);
+      forgetSettlementTarget(db, "cash", leg.collection, leg.filter._id);
       if (receipt.key === key && receipt.index === i)
         return receipt.outcome === "applied" ? null : receipt.error!;
       continue;
@@ -673,6 +700,11 @@ async function applyLeg(
     );
     if (write.matchedCount) {
       await acknowledgeLeg(db, leg.collection, leg.filter._id, delivered);
+      rememberSettlementTarget(db, "cash", leg.collection, leg.filter._id, {
+        _id: leg.filter._id,
+        moneyMoveRevision: delivered.generation,
+        settledKeys: [...(current.settledKeys ?? []), stamp].slice(-SETTLED_KEYS_CAP),
+      });
       return null;
     }
     // Refusal competes on the same unconsumed generation as delivery. A late
@@ -697,7 +729,7 @@ async function applyLeg(
 }
 
 /** Below this many eligible credit legs a move keeps the per-leg path. */
-export const BATCHED_CREDIT_MIN_LEGS = 4;
+export const BATCHED_CREDIT_MIN_LEGS = 2;
 
 /**
  * Deliver a run of independent cash legs in fixed round trips instead of
@@ -764,7 +796,7 @@ async function deliverCashLegsInBatch(
     const row = rows.find((r) => isDeepStrictEqual(r._id, legs[i].filter!._id));
     if (row) current.set(i, row);
   }
-  const records = db.collection<MoneyMoveRecord>(MONEY_MOVE_COLLECTION);
+  const records = bankMoneyMovesCollection<MoneyMoveRecord>(db);
   // The batch only needs each leg's applied/refusal mark. Projecting those
   // two subfields keeps array positions and count without decoding every
   // leg's selector, valuation and note on a large payout.
@@ -906,14 +938,13 @@ async function executeMoneyMove(
   db: Db,
   key: string,
   resuming: boolean,
-  claimed?: MoneyMoveRecord
+  claimed?: MoneyMoveRecord,
+  claimedReadEpoch?: number
 ): Promise<MoneyMoveResult> {
-  const records = db.collection<MoneyMoveRecord>(MONEY_MOVE_COLLECTION);
-  // A move this call just claimed is exactly the record it inserted, so it is
-  // not read back. Every leg still re-reads the journal before it writes, so
-  // a recovery worker that touched the record meanwhile is still respected.
-  // The legs are replayed; the frozen settlement projections on the same
-  // record are 89 KB of its 97, are applied by the journal and never read here.
+  const records = bankMoneyMovesCollection<MoneyMoveRecord>(db);
+  const readEpoch = claimed ? claimedReadEpoch : settlementReadEpoch();
+  // Fresh claims carry their frozen record. Recovery loads cash-leg metadata;
+  // projection delivery owns its separate plan and generation checks.
   const record =
     claimed ??
     (await records.findOne(
@@ -1000,7 +1031,13 @@ async function executeMoneyMove(
       if (record.status === "partial") bookkeeping.add(i);
       continue;
     }
-    const failed = await applyLeg(db, key, i, leg);
+    const failed = await applyLeg(
+      db,
+      key,
+      i,
+      leg,
+      readEpoch === undefined ? undefined : { record, epoch: readEpoch }
+    );
     if (failed) {
       failure = failed;
       break;
@@ -1083,8 +1120,7 @@ export async function listUnfinishedMoneyMoves(
   db: Db,
   options: { kind?: string; limit?: number } = {}
 ): Promise<MoneyMoveRepairRow[]> {
-  const rows = await db
-    .collection<MoneyMoveRecord>(MONEY_MOVE_COLLECTION)
+  const rows = await bankMoneyMovesCollection<MoneyMoveRecord>(db)
     .find({ status: "partial", ...(options.kind ? { kind: options.kind } : {}) })
     .sort({ createdAt: 1 })
     .limit(Math.max(1, options.limit ?? 100))
@@ -1111,12 +1147,10 @@ export async function listUnfinishedMoneyMoves(
  * record so the queue means what it says.
  */
 export async function closeMoneyMove(db: Db, key: string, note: string): Promise<boolean> {
-  const res = await db
-    .collection<MoneyMoveRecord>(MONEY_MOVE_COLLECTION)
-    .updateOne(
-      { _id: key, status: "partial" },
-      { $set: { status: "applied", completedAt: new Date(), error: `repaired: ${note}` } }
-    );
+  const res = await bankMoneyMovesCollection<MoneyMoveRecord>(db).updateOne(
+    { _id: key, status: "partial" },
+    { $set: { status: "applied", completedAt: new Date(), error: `repaired: ${note}` } }
+  );
   return res.matchedCount === 1;
 }
 

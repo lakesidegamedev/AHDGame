@@ -5,6 +5,7 @@ import type {
   PrivatizationVoteCast,
 } from "@/lib/db/types";
 import { shareholderVotingPower } from "@/lib/corporations/superShares";
+import { corporationPrivatizationVotesCollection } from "@/lib/db/repositories/corporationPrivatizationVotes";
 
 export interface CastVoteInput {
   db: Db;
@@ -68,14 +69,12 @@ export async function castPrivatizationVote(input: CastVoteInput): Promise<CastV
   });
   const newVotes = [...filteredVotes, newCast];
 
-  const updateRes = await db
-    .collection<CorporationPrivatizationVote>("corporationPrivatizationVotes")
-    .updateOne(
-      // The votes array this cast was built from is the guard: a cast that
-      // landed in between must not be overwritten by this one.
-      { _id: vote._id, status: "open", votes: vote.votes },
-      { $set: { votes: newVotes, updatedAt: new Date() } }
-    );
+  const updateRes = await corporationPrivatizationVotesCollection(db).updateOne(
+    // The votes array this cast was built from is the guard: a cast that
+    // landed in between must not be overwritten by this one.
+    { _id: vote._id, status: "open", votes: vote.votes },
+    { $set: { votes: newVotes, updatedAt: new Date() } }
+  );
   if (updateRes.matchedCount === 0) {
     return { ok: false, error: "Vote state changed; retry", status: 409 };
   }

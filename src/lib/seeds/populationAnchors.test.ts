@@ -95,9 +95,8 @@ describe("getRegionPopulationAnchor", () => {
     expect(a!.birthRate).toBeGreaterThan(0);
   });
 
-  it("falls back to the 2019 bundle when the preset is absent", () => {
-    const a = getRegionPopulationAnchor("IE", "DUB", "some-unknown-preset");
-    expect(a).toBeTruthy();
+  it("never borrows another preset's anchors", () => {
+    expect(getRegionPopulationAnchor("IE", "DUB", "some-unknown-preset")).toBeNull();
   });
 
   it("returns null for an unknown country or region", () => {

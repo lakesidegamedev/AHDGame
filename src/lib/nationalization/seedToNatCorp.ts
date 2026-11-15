@@ -16,6 +16,9 @@ import {
   readSectorPlantFields,
 } from "@/lib/corporations/sectorTransferCapex";
 import { seedPlantLedger } from "@/lib/corporations/plantLedger";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
 
 const DEFAULT_PROFIT_MARGIN = 20;
 const DEFAULT_GROWTH_RATE = 1;
@@ -34,13 +37,13 @@ async function loadFxRateForCountry(
   db: Db,
   countryId: CountryId
 ): Promise<{ code: CurrencyCode | undefined; rate: number }> {
-  const direct = await db.collection<ExchangeRate>("exchangeRates").findOne({ countryId });
+  const direct = await exchangeRatesCollection(db).findOne({ countryId });
   if (direct && direct.rate > 0) {
     return { code: direct.currencyCode, rate: direct.rate };
   }
   const code = COUNTRY_CURRENCY_MAP[countryId];
   if (!code) return { code: undefined, rate: 1 };
-  const doc = await db.collection<ExchangeRate>("exchangeRates").findOne({ currencyCode: code });
+  const doc = await exchangeRatesCollection(db).findOne({ currencyCode: code });
   return { code, rate: doc?.rate && doc.rate > 0 ? doc.rate : 1 };
 }
 
@@ -121,7 +124,7 @@ export async function incrementNatCorpSectorRevenue(
       )
     : 0;
 
-  const sectors = db.collection<CorporateSector>("corporateSectors");
+  const sectors = corporateSectorsCollection(db);
   const existing = await sectors.findOne({
     corporationId: corp._id,
     stateId: params.stateId,
@@ -192,7 +195,7 @@ export async function absorbUnownedDocIntoNatCorp(
   const revenue = Math.round(opts?.revenueOverride ?? doc.revenue ?? 0);
   if (revenue <= 0) {
     if (!opts?.dryRun) {
-      await db.collection<UnownedSector>("unownedSectors").deleteOne({ _id: doc._id });
+      await unownedSectorsCollection(db).deleteOne({ _id: doc._id });
     }
     return 0;
   }
@@ -206,7 +209,7 @@ export async function absorbUnownedDocIntoNatCorp(
       mediaDiscriminator: doc.mediaDiscriminator,
       revenueDelta: revenue,
     });
-    await db.collection<UnownedSector>("unownedSectors").deleteOne({ _id: doc._id });
+    await unownedSectorsCollection(db).deleteOne({ _id: doc._id });
   }
   return revenue;
 }
@@ -254,7 +257,7 @@ export async function absorbOwnedSectorIntoNatCorp(
   opts?: { dryRun?: boolean }
 ): Promise<number> {
   const revenue = Math.round(sector.revenue ?? 0);
-  const sectors = db.collection<CorporateSector>("corporateSectors");
+  const sectors = corporateSectorsCollection(db);
   const plantsEnabled = marketAtLeast(await getMarketSystemModeForDb(db), "plants");
 
   // PLANT STATE decides whether this row is empty — not `revenue`.

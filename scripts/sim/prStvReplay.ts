@@ -4,7 +4,7 @@ import { execFileSync } from "node:child_process";
 import { writeFileSync } from "node:fs";
 import { BSON, MongoClient, ObjectId, type Db, type Document } from "mongodb";
 import type { Election, ElectionCandidate, ElectionVoteTally } from "../../src/lib/db/types";
-import { countPrStv, validateRankedBallots } from "../../src/lib/turn/election/rules/prStv";
+import { countPrStv, validateRankedBallots } from "@/lib/elections/rules/prStv";
 
 const arg = (name: string) =>
   process.argv.find((v) => v.startsWith(`--${name}=`))?.slice(name.length + 3);
@@ -44,9 +44,9 @@ async function main() {
     if (measuring && event.reply) returnedBson += BSON.calculateObjectSize(event.reply);
   });
   const { resolveOneGeneralElection } =
-    await import("../../src/lib/turn/election/generalResolution");
+    await import("@/lib/elections/resolution/generalResolution");
   const { initElectionVoteTally, accumulateVoteTurn } =
-    await import("../../src/lib/electionEngine/tallyManagement");
+    await import("../../src/lib/elections/engine/tallyManagement");
   const { computeSeatEstimates } = await import("../../src/lib/elections/buildPollingData");
   const results: Document[] = [];
 
@@ -433,26 +433,6 @@ async function main() {
       name: "Synthetic Dublin",
       population: 100_000,
       votingSystem: "proportional",
-    });
-    await db.collection("demographicCategories").insertOne({
-      _id: "ideology" as never,
-      name: "Synthetic ideology",
-      groups: [
-        {
-          id: "left",
-          name: "Left",
-          defaultEconomicLean: -2,
-          defaultSocialLean: 0,
-          defaultTurnout: 60,
-        },
-        {
-          id: "right",
-          name: "Right",
-          defaultEconomicLean: 2,
-          defaultSocialLean: 0,
-          defaultTurnout: 60,
-        },
-      ],
     });
     await db.collection("stateDemographics").insertOne({
       _id: "DUB" as never,

@@ -3,60 +3,35 @@ import type { EngineNodeContext, RegistryNode } from "../types";
 import { LIFE_EXPECTANCY_MID, PREVENTABLE_MORTALITY_MID } from "@/lib/demographics/flows/mortality";
 
 /**
- * Healthcare outcome nodes (spec P2b §4.2), LIVE via the generic phase wiring.
- * Cold-start is parity-preserving (P2a-proven: the seed governs the LEVEL, these
- * formulas govern the RESPONSE to spending/access/demand changes). Constants are
- * first-pass directional; the per-phase balance pass tunes magnitudes.
+ * Healthcare outcome nodes (spec P2b 4.2), live via generic phase wiring.
+ * Cold-start is parity-preserving: the seed governs LEVEL, these formulas
+ * govern RESPONSE to spending/access/demand. Constants are first-pass
+ * directional; per-phase balance tunes magnitudes.
  *
- * Roots NOT animated (seedCurrent reads): uninsuredRate (coverage policy),
- * publicHealthPreparedness (policy root), slaintecareProgress (IE reform).
- * Elder DEMAND uses population.dependencyRatio — a real demographic-phase output
- * ((youth+senior)/working, ~0.4-0.9) — so no new provider is needed.
+ * Roots NOT animated (seedCurrent reads): uninsuredRate, publicHealthPreparedness,
+ * slaintecareProgress.
  *
- * The mortality loop: lifeExpectancy + preventableMortality feed the demographic
- * phase's healthcareMortalityModifier (real units — Task 0a). Damping: both are
- * heavily inertia-smoothed AND the modifier is clamped [0.7,1.4]; the loop's sim
- * test asserts convergence.
+ * Elder demand uses population.dependencyRatio, a real demographic output.
+ *
+ * Mortality loop: lifeExpectancy + preventableMortality feed the demographic
+ * phase's healthcareMortalityModifier. Both are inertia-smoothed and the
+ * modifier is clamped [0.7,1.4]; the sim test asserts convergence.
  */
 
 // Per-capita healthcare spend at which the channel reaches half its max response.
 //
-// Recalibrated (ticket #826 item 14 follow-up, coordinated 6-category pass).
-// The old value (1.5) was a toy-scale placeholder against REAL per-capita
-// spend (spendingProvider sums federal-per-capita + state-per-capita in real
-// dollars, typically hundreds to low-thousands) -- every US region sat at
-// >99.9% of max response regardless of budget posture (confirmed live:
-// physicianRate simBaseline pinned at 5.49-5.50/1k in WA/NY/TX/CA/MS alike),
-// so healthcare bills barely moved outcomes at all.
+// spendingProvider sums federal + state per-capita spend in real dollars, which
+// reaches $0 (fully defunded) to ~$9.5k/capita (fully maximized) across
+// healthcare legislation. A small half-saturation point pins every region near
+// max response regardless of budget posture, so healthcare bills never move
+// outcomes. 4000 sits near the middle of the achievable range (below the ~$5.8k
+// policy-default baseline, leaving room to climb), giving a meaningful slope
+// across the range a player can actually reach.
 //
-// Real range (US), grounded in seed data:
-//   - FY2023 federal healthcare budget ($1.7T, src/lib/seeds/reference/budgets.ts)
-//     / US population (~334.9M) ~= $5,076/capita federal actual.
-//   - Every healthcare-budgetCategory legislationType's withPerCapitaCosts()
-//     range (src/lib/seeds/reference/legislationTypes.ts): federal bills
-//     us_federal_healthcare_funding ($0-4,650) + us_drug_pricing_medicare
-//     ($0-744) + us_medicaid ($0-1,300) + us_public_health ($0-124) sum to
-//     $0-6,818/capita nationally-spread; state bills us_state_healthcare
-//     ($0-2,480) + us_state_public_health ($0-186) sum to $0-2,666/capita
-//     region-local. Combined achievable range via spendingProvider (federal +
-//     state per-capita) is $0 (fully defunded) to $9,484 (fully maximized).
-//   - Policy-default baseline (FY2023 defaults + moderate state posture) is
-//     ~$5,798/capita, closely matching the $5,076/capita real-world figure
-//     above (cross-validates the bill-cost scale).
-//
-// HEALTH_SPEND_HALF_SAT=4000 sits near the middle of the $0-9,484 achievable
-// range (and below the ~$5,798 realistic baseline, leaving room to climb
-// toward max): response at baseline ~= 59.2%, at max ~= 70.3% (11pp of real
-// slope), vs. the old constant's ~99.97%/99.98% (0.01pp of slope) -- a
-// meaningful, non-degenerate curve across the range a player can actually
-// reach via healthcare legislation.
-//
-// KNOWN LIMITATION: this is a single GLOBAL constant shared across all
-// countries, but per-capita costs in non-US per-country legislation seed
-// files (e.g. src/lib/countries/jp/data/jpLegislationTypes.ts) are in LOCAL CURRENCY
-// UNITS with no USD normalization -- a half-sat tuned to USD-scale ranges may
-// under/over-saturate other countries' healthcare channel. Out of scope for
-// this pass; flag for a follow-up per-country/currency-normalized constant.
+// KNOWN LIMITATION: single GLOBAL constant, but per-capita costs in non-US
+// per-country legislation seed files are in LOCAL CURRENCY UNITS with no USD
+// normalization, so a USD-scale half-sat may under/over-saturate other
+// countries. Flag for a per-country/currency-normalized constant.
 const HEALTH_SPEND_HALF_SAT = 4000;
 
 const spendResp = (ctx: EngineNodeContext): number =>

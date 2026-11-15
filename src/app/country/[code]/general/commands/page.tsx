@@ -37,7 +37,7 @@ export default async function CommandingGeneralPage({
   if (!COUNTRY_CONFIGS[countryId]) notFound();
 
   const gameState = await getGameState();
-  if (!gameState?.conflictsEnabled) notFound();
+  if (!gameState) notFound();
 
   const authUser = await getAuthUserWithCharacter();
   const characterId = authUser?.character?._id ? String(authUser.character._id) : null;

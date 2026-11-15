@@ -20,19 +20,14 @@ export const SPEC_META: Record<GeneralSpec, { label: string; accent: string }> =
 };
 
 /**
- * A general's best-fit specialisation, derived from the tree nodes they have trained.
+ * A general's best-fit specialisation, derived from trained tree nodes.
  *
- * Specialisation is not chosen: it is a label for what someone actually learned, and it
- * drifts as they train — enough logistics nodes and an Armor Officer becomes a
- * Quartermaster. `fit` is the share of that spec's seed they have trained, which is what
- * the profile reads as "Doctrine Fit".
+ * Not chosen: it drifts as they train. `fit` is the share of the spec's seed
+ * they have trained, read by the profile as "Doctrine Fit".
  *
- * Pure and recomputed on read, never stored: a cached derivation is a staleness bug
- * waiting to happen.
- *
- * A general who has trained nothing has not specialised. Rather than invent a
- * specialisation for them, this returns `fit: 0` — callers should render that as
- * unassigned rather than as a real discipline.
+ * Pure and recomputed on read, never stored (a cache would go stale).
+ * A general with no training returns `fit: 0`; callers render that as
+ * unassigned, not as a real discipline.
  */
 /**
  * Shown instead of a discipline for a general who has not trained into one.

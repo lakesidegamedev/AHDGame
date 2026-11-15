@@ -24,7 +24,7 @@ import { convertPublicCurrency } from "./convertPublicCurrency";
 import { loadFxScalePair } from "@/lib/country/mergeFxScale";
 import { carryNorthernIrelandMPs, mirrorNorthernIrelandMPs } from "./carryNorthernIrelandMPs";
 import type { ElectedOfficial } from "@/lib/db/types/officials";
-import type { State, Corporation } from "@/lib/db/types";
+import type { State } from "@/lib/db/types";
 import { computeNationalMetrics } from "@/lib/nationalMetrics";
 import { recordCountryEvent } from "@/lib/turn/history/recordCountryEvent";
 import {
@@ -39,6 +39,12 @@ import { reseedJoinedRegionElections } from "./reseedJoinedRegionElections";
 import { rescaleRegionDelegations } from "@/lib/country/apportionChamber";
 import { transferResetV2RegionToIreland } from "./transferResetV2Region";
 import { ensureIrelandResetV2ForReunification } from "@/lib/countries/ie/resetV2/ensureForReunification";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import type { Document } from "mongodb";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { countiesCollection } from "@/lib/db/repositories/counties";
 
 export interface TransferRegionArgs {
   regionId: string;
@@ -66,17 +72,11 @@ export interface TransferRegionArgs {
   /**
    * Skip the two COUNTRY-wide passes at the end, leaving them to the caller.
    *
-   * `computeNationalMetrics` recomputes every country in the world from every
-   * state, and `reseedJoinedRegionElections` re-seeds a whole country's races.
-   * Neither is scoped to the region that just moved, so a merge transferring
-   * sixteen regions one at a time did each of them sixteen times — and that is
-   * not a tidiness point. It is why a live reunification ran at roughly five
-   * seconds a region, blew the request timeout it was started from, and left a
-   * country half-merged.
-   *
-   * A single transfer leaves this false and pays for both, which is right: there
-   * is no later pass coming. A merge sets it and runs them ONCE when the loop is
-   * done, which produces the same end state for a fraction of the work.
+   * `computeNationalMetrics` recomputes every country in the world and
+   * `reseedJoinedRegionElections` re-seeds a whole country's races. Neither is
+   * region-scoped, so a merge transferring many regions would repeat both per
+   * region. A single transfer leaves this false and pays for both; a merge sets
+   * it and runs them once when the loop is done.
    */
   deferCountryWidePasses?: boolean;
 }
@@ -94,7 +94,11 @@ export async function transferRegion(
   db: Db,
   args: TransferRegionArgs
 ): Promise<TransferRegionResult> {
-  if (args.fromCountryId !== "UK" || args.toCountryId !== "IE" || args.relocateToRegionId === null)
+  if (
+    !countryHasFeature("ukLib", args.fromCountryId) ||
+    !countryHasFeature("ieLib", args.toCountryId) ||
+    args.relocateToRegionId === null
+  )
     return transferRegionInTransaction(db, args, unboundDb(db));
   return withSessionDb(db, (transactionDb) =>
     transferRegionInTransaction(transactionDb, args, unboundDb(db))
@@ -119,25 +123,26 @@ async function transferRegionInTransaction(
   } = args;
 
   // Idempotency: bail if the region doesn't exist or already belongs to target.
-  const region = await db.collection<State>("states").findOne({ _id: regionId });
+  const region = await statesCollection(db).findOne({ _id: regionId });
   if (!region) return { ok: false, skipped: "region-not-found" };
   if (region.countryId === toCountryId) {
-    if (fromCountryId === "UK" && toCountryId === "IE") {
+    if (countryHasFeature("ukLib", fromCountryId) && countryHasFeature("ieLib", toCountryId)) {
       await ensureIrelandResetV2ForReunification(db);
       await transferResetV2RegionToIreland(db, regionId);
     }
     return { ok: true, skipped: "already-transferred" };
   }
 
-  if (fromCountryId === "UK" && toCountryId === "IE") {
+  if (countryHasFeature("ukLib", fromCountryId) && countryHasFeature("ieLib", toCountryId)) {
     await ensureIrelandResetV2ForReunification(db);
   }
 
   const reunifyingNorthernIreland =
-    regionId === "NIR" && fromCountryId === "UK" && toCountryId === "IE";
+    regionId === "NIR" &&
+    countryHasFeature("ukLib", fromCountryId) &&
+    countryHasFeature("ieLib", toCountryId);
   const carriedMPs = reunifyingNorthernIreland
-    ? await db
-        .collection<ElectedOfficial>("electedOfficials")
+    ? await electedOfficialsCollection(db)
         .find({ countryId: "UK", state: "NIR", officeType: "commons" })
         .toArray()
     : [];
@@ -151,8 +156,7 @@ async function transferRegionInTransaction(
     // The carried delegation can include NPPs living elsewhere in the UK.
     // Their corporations follow them after evacuation, so resolve worldwide
     // construction and freeze its native currency BEFORE either HQ changes.
-    const incomingCorps = await db
-      .collection<Corporation>("corporations")
+    const incomingCorps = await corporationsCollection(db)
       .find(
         {
           ceoType: "npp",
@@ -165,7 +169,7 @@ async function transferRegionInTransaction(
     await refundConversionConstruction(db, regionId, currentTurn, incomingIds);
     if (currencyPair?.kind === "convert") {
       // Freeze inferred GBP before countryId changes, including legacy unstamped corporations.
-      await db.collection("corporations").updateMany(
+      await corporationsCollection<Document>(db).updateMany(
         {
           $and: [{ $or: [{ headquartersState: regionId }, { _id: { $in: incomingIds } }] }],
           $or: [
@@ -189,9 +193,9 @@ async function transferRegionInTransaction(
   await convertRegionDoc(db, { regionId, toCountryId, province, displayName, votingSystem });
   // Departing UK regions no longer use the Westminster constituency layer.
   // Population remains on the transferred state and cohort documents.
-  if (fromCountryId === "UK" && toCountryId !== "UK")
-    await db.collection("counties").deleteMany({ countryId: "UK", stateId: regionId });
-  if (fromCountryId === "UK" && toCountryId === "IE") {
+  if (countryHasFeature("ukLib", fromCountryId) && !countryHasFeature("ukLib", toCountryId))
+    await countiesCollection<Document>(db).deleteMany({ countryId: "UK", stateId: regionId });
+  if (countryHasFeature("ukLib", fromCountryId) && countryHasFeature("ieLib", toCountryId)) {
     await transferResetV2RegionToIreland(db, regionId, currencyScale);
   }
 
@@ -205,8 +209,7 @@ async function transferRegionInTransaction(
   if (relocateToRegionId === null || reunifyingNorthernIreland) {
     await rescaleRegionDelegations(db, { regionId, countryId: toCountryId, now: new Date() });
     if (reunifyingNorthernIreland) {
-      const seated = await db
-        .collection<ElectedOfficial>("electedOfficials")
+      const seated = await electedOfficialsCollection(db)
         .find({ countryId: "IE", state: "NIR", officeType: "dail" })
         .toArray();
       await mirrorNorthernIrelandMPs(db, seated, new Date());

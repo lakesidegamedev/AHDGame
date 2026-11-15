@@ -16,6 +16,9 @@ import { compareVersionsDesc } from "@/lib/changelog/postUtils";
 import type { ChangelogPost } from "@/lib/changelog/types";
 import { getCanonicalUrl, getWikiCanonicalUrl } from "@/lib/siteMetadata";
 import crypto from "crypto";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { changelogSentHistoryCollection } from "@/lib/db/repositories/changelogSentHistory";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -303,12 +306,10 @@ async function sendEmbedsBatched(url: string, embeds: DiscordEmbed[]): Promise<v
 
 async function getChangelogWebhookUrl(): Promise<string | undefined> {
   const db = await getDb();
-  const config = await db
-    .collection<GameConfig>("gameConfig")
-    .findOne(
-      { _id: "default" },
-      { projection: { discordChangelogWebhookUrl: 1, discordWebhookOwnerService: 1 } }
-    );
+  const config = await gameConfigCollection(db).findOne(
+    { _id: "default" },
+    { projection: { discordChangelogWebhookUrl: 1, discordWebhookOwnerService: 1 } }
+  );
   // #1208 — a database restored into another deployment inherits these URLs.
   if (!ownsConfiguredWebhooks(config?.discordWebhookOwnerService)) return undefined;
   return config?.discordChangelogWebhookUrl || undefined;
@@ -325,9 +326,9 @@ async function notifyAllUsersOfUpdate(version: string): Promise<void> {
     // Get all users who have a character (active players). The link lives on
     // the character (characters.userId), not on the user document — users have
     // no characterId field, so the old users.characterId query matched nobody.
-    const userIds = (await db
-      .collection("characters")
-      .distinct("userId", { userId: { $exists: true, $ne: null } })) as ObjectId[];
+    const userIds = (await charactersCollection(db).distinct("userId", {
+      userId: { $type: "objectId" },
+    })) as ObjectId[];
 
     const notificationPromises = userIds.map((userId) =>
       createNotification({
@@ -396,7 +397,7 @@ export async function postChangelogUpdates(webhookUrl?: string): Promise<{
 
   const posts = loadPublicPosts();
   const db = await getDb();
-  const sentCol = db.collection<ChangelogSentRecord>("changelogSentHistory");
+  const sentCol = changelogSentHistoryCollection<ChangelogSentRecord>(db);
 
   const sent: { version: string; type: "new" | "update"; embeds: number }[] = [];
   const skipped: string[] = [];

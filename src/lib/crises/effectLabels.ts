@@ -3,13 +3,9 @@ import { getMetricShortName } from "@/lib/constants/metricDefinitions";
 
 /**
  * Round a crisis effect magnitude for display: at most two decimals, no
- * trailing zeros.
- *
- * Effect values are floats and land with binary-rounding tails — authoring
- * 0.15 three times over stores 0.44999999999999996, and the live recession
- * carries -0.6599999999999999. Every surface that prints one needs this, and
- * each used to keep its own copy; the sign is the caller's to add, since some
- * surfaces colour it instead.
+ * trailing zeros. Effect values are floats with binary-rounding tails (e.g.
+ * 0.44999999999999996), so every surface that prints one needs this. The
+ * sign is the caller's to add, since some surfaces colour it instead.
  */
 export function formatCrisisEffectValue(value: number): string {
   return Number(value.toFixed(2)).toString();
@@ -27,22 +23,14 @@ function slugToTitle(s: string): string {
 }
 
 /**
- * Resolve a crisis effect to the canonical game stat it actually moves.
+ * Resolve a crisis effect to the canonical game stat it moves.
  *
- * Every effect carries a freeform `label` (flavor prose like "Austerity GDP
- * deepening") that corresponds to no real stat — it's just a caption a template
- * author typed. The mechanical target is the resolved
- * `(targetType, metricCategory, metricField)` tuple, already alias-resolved at
- * template-build time (see `templates.ts` METRIC_ALIASES). This maps that tuple
- * back to the player-facing stat name used everywhere else (national metrics
- * dashboard, region pages) so crisis effect chips "link up" to a recognizable
- * stat instead of dangling prose.
- *
- * It also surfaces the engine's real shape honestly: several template concepts
- * (investor/consumer confidence) alias onto one metric (Small Business
- * Formation), and the segmented approval labels (business/workers/base) all
- * collapse onto a single Government Approval figure — `applyEffects.ts` writes
- * them to one `approvalRating`. Keep the prose as a tooltip for the flavor.
+ * The effect's `label` is freeform flavor prose, not a real stat. The mechanical
+ * target is the already alias-resolved `(targetType, metricCategory, metricField)`
+ * tuple; this maps it to the player-facing stat name so effect chips link to a
+ * recognizable stat. Several template concepts alias onto one metric (e.g.
+ * investor/consumer confidence -> Small Business Formation; segmented approval
+ * labels all collapse onto `approvalRating`). Keep the prose as a tooltip.
  */
 export function formatCrisisEffectTarget(effect: CrisisEffect): string {
   switch (effect.targetType) {

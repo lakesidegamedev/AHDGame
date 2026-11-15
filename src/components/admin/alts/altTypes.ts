@@ -10,6 +10,11 @@
 // server round-trip.
 
 import type { AltSignal } from "@/lib/db/types/altDetection";
+import type {
+  CalibrationBin,
+  SignalPrecision,
+  ThresholdPoint,
+} from "@/lib/altDetection/calibration";
 
 export type { AltSignal };
 
@@ -123,35 +128,11 @@ export interface AltConfig {
 // runMetrics.ts). Dates arrive as ISO strings over the wire, so the fields
 // that are `Date` server-side are typed `string` here.
 
-export interface CalibrationBin {
-  lower: number;
-  upper: number;
-  count: number;
-  confirmedCount: number;
-  meanPredicted: number;
-  observedRate: number;
-  gap: number;
-  lowSample: boolean;
-}
-
-export interface ThresholdPoint {
-  threshold: number;
-  truePositives: number;
-  falsePositives: number;
-  falseNegatives: number;
-  precision: number;
-  recall: number;
-  f1: number;
-}
-
-export interface SignalPrecision {
-  signal: AltSignal;
-  occurrences: number;
-  confirmedCount: number;
-  precision: number;
-  lift: number;
-  lowConfidence: boolean;
-}
+export type {
+  CalibrationBin,
+  SignalPrecision,
+  ThresholdPoint,
+} from "@/lib/altDetection/calibration";
 
 export interface CalibrationReport {
   generatedAt: string;

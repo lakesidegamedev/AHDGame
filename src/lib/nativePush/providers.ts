@@ -3,12 +3,22 @@ import { createPrivateKey, sign } from "node:crypto";
 import { connect, constants } from "node:http2";
 import type { DeliveryResult, PushDevice, PushProvider } from "./types";
 import type { PushPreview } from "./policy";
+import { runtimeConfig } from "@/lib/config/runtime";
+import { servicesConfig } from "@/lib/config/services";
 
 export function providerConfigured(provider: PushProvider): boolean {
-  if (process.env.NATIVE_PUSH_ENABLED !== "true") return false;
+  if (!runtimeConfig.nativePushEnabled()) return false;
   return provider === "fcm"
-    ? !!(process.env.FCM_PROJECT_ID && process.env.FCM_CLIENT_EMAIL && process.env.FCM_PRIVATE_KEY)
-    : !!(process.env.APNS_TEAM_ID && process.env.APNS_KEY_ID && process.env.APNS_PRIVATE_KEY);
+    ? !!(
+        servicesConfig.fcmProjectId() &&
+        servicesConfig.fcmClientEmail() &&
+        servicesConfig.fcmPrivateKey()
+      )
+    : !!(
+        servicesConfig.apnsTeamId() &&
+        servicesConfig.apnsKeyId() &&
+        servicesConfig.apnsPrivateKey()
+      );
 }
 function jwt(header: object, payload: object, pem: string, algorithm: "RSA-SHA256" | "SHA256") {
   const encode = (value: object) => Buffer.from(JSON.stringify(value)).toString("base64url");
@@ -20,7 +30,7 @@ function jwt(header: object, payload: object, pem: string, algorithm: "RSA-SHA25
 let googleToken: { value: string; expiresAt: number; identity: string } | undefined;
 let googlePending: Promise<string> | undefined;
 async function fcmAccessToken(): Promise<string> {
-  const identity = `${process.env.FCM_CLIENT_EMAIL}:${process.env.FCM_PRIVATE_KEY}`;
+  const identity = `${servicesConfig.fcmClientEmail()}:${servicesConfig.fcmPrivateKey()}`;
   if (googleToken?.identity === identity && googleToken.expiresAt > Date.now())
     return googleToken.value;
   if (googlePending) return googlePending;
@@ -29,13 +39,13 @@ async function fcmAccessToken(): Promise<string> {
     const assertion = jwt(
       { alg: "RS256", typ: "JWT" },
       {
-        iss: process.env.FCM_CLIENT_EMAIL,
+        iss: servicesConfig.fcmClientEmail(),
         scope: "https://www.googleapis.com/auth/firebase.messaging",
         aud: "https://oauth2.googleapis.com/token",
         iat: now,
         exp: now + 3600,
       },
-      process.env.FCM_PRIVATE_KEY!,
+      servicesConfig.fcmPrivateKey()!,
       "RSA-SHA256"
     );
     const response = await fetch("https://oauth2.googleapis.com/token", {
@@ -70,7 +80,7 @@ async function fcmAccessToken(): Promise<string> {
 async function sendFcm(device: PushDevice, preview: PushPreview): Promise<DeliveryResult> {
   const accessToken = await fcmAccessToken();
   const response = await fetch(
-    `https://fcm.googleapis.com/v1/projects/${encodeURIComponent(process.env.FCM_PROJECT_ID!)}/messages:send`,
+    `https://fcm.googleapis.com/v1/projects/${encodeURIComponent(servicesConfig.fcmProjectId()!)}/messages:send`,
     {
       method: "POST",
       redirect: "error",
@@ -125,16 +135,16 @@ async function sendFcm(device: PushDevice, preview: PushPreview): Promise<Delive
 }
 let appleToken: { value: string; expiresAt: number; identity: string } | undefined;
 function apnsAccessToken(): string {
-  const identity = `${process.env.APNS_TEAM_ID}:${process.env.APNS_KEY_ID}:${process.env.APNS_PRIVATE_KEY}`;
+  const identity = `${servicesConfig.apnsTeamId()}:${servicesConfig.apnsKeyId()}:${servicesConfig.apnsPrivateKey()}`;
   if (appleToken?.identity === identity && appleToken.expiresAt > Date.now())
     return appleToken.value;
   const value = jwt(
-    { alg: "ES256", kid: process.env.APNS_KEY_ID },
+    { alg: "ES256", kid: servicesConfig.apnsKeyId() },
     {
-      iss: process.env.APNS_TEAM_ID,
+      iss: servicesConfig.apnsTeamId(),
       iat: Math.floor(Date.now() / 1000),
     },
-    process.env.APNS_PRIVATE_KEY!,
+    servicesConfig.apnsPrivateKey()!,
     "SHA256"
   );
   appleToken = { value, expiresAt: Date.now() + 45 * 60_000, identity };

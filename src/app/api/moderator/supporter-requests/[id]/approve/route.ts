@@ -10,6 +10,8 @@ import { nameCollidesWithUser } from "@/lib/supporter/requestValidation";
 import { notifySubmitterOfSupporterDecision } from "@/lib/supporter/reviewNotifications";
 import { escapeRegex } from "@/lib/utils/escapeRegex";
 import { syncDenormalizedNppName } from "@/lib/npp/syncDenormalizedName";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -38,57 +40,71 @@ export async function POST(_request: Request, { params }: RouteContext) {
       return errorResponse(409, "Request has already been decided.");
     }
 
-    const requester = await db
-      .collection<User>("users")
-      .findOne({ _id: req.userId }, { projection: { username: 1, nppRenameUsedAt: 1 } });
+    const requester = await usersCollection(db).findOne(
+      { _id: req.userId },
+      { projection: { username: 1, nppRenameUsedAt: 1 } }
+    );
     if (!requester) {
       return errorResponse(404, "Requesting user not found.");
     }
 
     const now = new Date();
     const moderatorId = new ObjectId(moderator.userId);
-    let summary: string;
 
+    let renameTarget: NPP | null = null;
     if (req.kind === "wall-name") {
       if (!req.proposedName) {
         return errorResponse(400, "Request is missing a proposed name.");
       }
-      await db
-        .collection<User>("users")
-        .updateOne({ _id: req.userId }, { $set: { supporterWallName: req.proposedName } });
-      summary = `"${req.proposedName}"`;
     } else {
       if (!req.nppId || !req.proposedNppName) {
         return errorResponse(400, "Request is missing rename details.");
       }
-      const npp = await db.collection<NPP>("npps").findOne({ _id: req.nppId });
-      if (!npp || npp.retiredAt) {
+      renameTarget = await nppsCollection(db).findOne({ _id: req.nppId });
+      if (!renameTarget || renameTarget.retiredAt) {
         return errorResponse(409, "The target politician no longer exists or is retired.");
       }
       // Re-check uniqueness at decision time to close the submit/approve race.
       const exact = new RegExp(`^${escapeRegex(req.proposedNppName)}$`, "i");
-      const taken = await db
-        .collection<NPP>("npps")
-        .findOne(
-          { _id: { $ne: npp._id }, countryId: npp.countryId, name: exact },
-          { projection: { _id: 1 } }
-        );
+      const taken = await nppsCollection(db).findOne(
+        { _id: { $ne: renameTarget._id }, countryId: renameTarget.countryId, name: exact },
+        { projection: { _id: 1 } }
+      );
       if (taken || (await nameCollidesWithUser(db, req.proposedNppName, req.userId))) {
         return errorResponse(
           409,
           "The proposed name is no longer unique. Reject the request instead."
         );
       }
+    }
 
-      await db
-        .collection<NPP>("npps")
-        .updateOne({ _id: npp._id }, { $set: { name: req.proposedNppName, updatedAt: now } });
+    // The decision is claimed before any effect writes: two moderators on the
+    // same queue must not both apply a rename or consume the rename credit.
+    const claim = await requestsCol.updateOne(
+      { _id: req._id, status: "pending" },
+      { $set: { status: "approved", decidedAt: now, decidedBy: moderatorId } }
+    );
+    if (claim.modifiedCount === 0) {
+      return errorResponse(409, "Request has already been decided.");
+    }
+
+    let summary: string;
+    if (req.kind === "wall-name") {
+      await usersCollection(db).updateOne(
+        { _id: req.userId },
+        { $set: { supporterWallName: req.proposedName } }
+      );
+      summary = `"${req.proposedName}"`;
+    } else {
+      const npp = renameTarget!;
+      await nppsCollection(db).updateOne(
+        { _id: npp._id },
+        { $set: { name: req.proposedNppName, updatedAt: now } }
+      );
       // Keep denormalized ballot / office labels in lockstep with npps.name
       // (ticket #1037: polls kept the pre-rename name after supporter rename).
-      await syncDenormalizedNppName(db, npp._id, req.proposedNppName);
-      await db
-        .collection<User>("users")
-        .updateOne({ _id: req.userId }, { $set: { nppRenameUsedAt: now } });
+      await syncDenormalizedNppName(db, npp._id, req.proposedNppName!);
+      await usersCollection(db).updateOne({ _id: req.userId }, { $set: { nppRenameUsedAt: now } });
       // Audit trail: store the name the NPP actually held at approval time.
       await requestsCol.updateOne(
         { _id: req._id },
@@ -96,11 +112,6 @@ export async function POST(_request: Request, { params }: RouteContext) {
       );
       summary = `"${npp.name}" is now "${req.proposedNppName}"`;
     }
-
-    await requestsCol.updateOne(
-      { _id: req._id },
-      { $set: { status: "approved", decidedAt: now, decidedBy: moderatorId } }
-    );
 
     await createModAuditLog({
       moderatorId: moderator.userId,

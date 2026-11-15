@@ -13,7 +13,7 @@ const row = (id: string, party: string, primaryScore: number, isYou = false): Ro
 describe("selectGeneralPhaseDisplayCandidates", () => {
   // The bug this guards: US House advances 3 per party under the districted
   // redistricting system, but every display surface capped at 1 because the
-  // `redistrictingEnabled` argument was omitted at the call site. Players saw
+  // districting argument was omitted at the call site. Players saw
   // themselves as their party's sole nominee, then lost districts to the
   // co-nominees who had been advancing invisibly all along.
   it("keeps all three US House nominees per party when the cap is 3", () => {

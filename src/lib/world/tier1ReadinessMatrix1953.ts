@@ -1,8 +1,8 @@
 /**
- * 1953 Tier-1 readiness matrix (#3723).
+ * 1953 Tier-1 readiness matrix.
  *
  * Evaluates every proposed Tier-1 country against the archetype-aware readiness
- * contract (#3722), attaches capability + follow-up issue references to every
+ * contract, attaches capability + follow-up issue references to every
  * blocker, and exposes a deterministic admin/diagnostics read model.
  */
 
@@ -28,6 +28,7 @@ import {
   type Proposed1953Tier1EntityId,
   type TierReclassificationRecord,
 } from "@/lib/world/tier1Readiness1953Data";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 export interface Tier1MatrixBlocker {
   capabilityId: string;
@@ -287,7 +288,7 @@ export function build1953Tier1ReadinessMatrix(): Tier1ReadinessMatrix1953 {
 /** Japan 1953 resolution helper — ready (autonomous) / blocked (player). */
 export function resolveJapan1953MatrixRow(): Tier1MatrixRow {
   const matrix = build1953Tier1ReadinessMatrix();
-  const japan = matrix.rows.find((r) => r.entityId === "JP");
+  const japan = matrix.rows.find((r) => countryHasFeature("jpLib", r.entityId));
   if (!japan) throw new Error("Japan missing from 1953 Tier-1 matrix.");
   return japan;
 }

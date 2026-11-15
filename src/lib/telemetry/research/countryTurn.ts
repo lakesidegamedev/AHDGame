@@ -1,16 +1,16 @@
 /**
- * Shell for the research country-turn panel (#2331, #2336).
+ * Shell for the research country-turn panel.
  *
  * Runs once per turn from `stateEffectsPhase`, right after the long-horizon
- * context is resolved, so the row for turn N is written with the same state the
- * operational snapshots see. Six batched reads for the whole world, one bulk
- * upsert: never a query per country. Every access goes through the passed `Db`
- * handle, which on sim runs is the isolated sandbox database.
+ * context is resolved, so the row for turn N is written with the same state
+ * the operational snapshots see. Six batched reads for the whole world, one
+ * bulk upsert: never a query per country. Every access goes through the passed
+ * `Db` handle, which on sim runs is the isolated sandbox database.
  *
  * Sovereign principal is the authoritative `federalBudget.debt.principal`
  * (resynced from the bond ledger); the flows come from the same ledger, so the
- * annual reconciliation in `buildAnnualFiscalPanel` exposes any drift between
- * the two instead of hiding it.
+ * annual reconciliation in `buildAnnualFiscalPanel` exposes any drift instead
+ * of hiding it.
  */
 import type { Db } from "mongodb";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
@@ -22,8 +22,6 @@ import { isBankGovernmentControlled } from "@/lib/centralBank/governance";
 import { SYSTEM_RATE_ACTOR } from "@/lib/centralBank/rateHistory";
 import { getCountryTurnTelemetryCollection } from "@/lib/db/collections/researchTelemetry";
 import type { CentralBank } from "@/lib/db/types/centralBank";
-import type { FederalBudget } from "@/lib/db/types/budget";
-import type { Bond } from "@/lib/db/types/bond";
 import type { ExchangeRate } from "@/lib/db/types/exchangeRate";
 import type { State } from "@/lib/db/types/state";
 import type { StateMetrics } from "@/lib/db/types/stateMetrics";
@@ -36,6 +34,12 @@ import {
   weightedMean,
   type CountryTurnRow,
 } from "./rules";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 
 /** Recent-first change from the bank's rate ledger when it landed on `turn`. */
 function changeThisTurn(bank: CentralBank, turn: number) {
@@ -69,18 +73,15 @@ export async function buildCountryTurnRows(
   observedAt: Date
 ): Promise<CountryTurnRow[]> {
   const [banks, budgets, rates, states, metrics, sovereignBonds, conflicts] = await Promise.all([
-    db.collection<CentralBank>("centralBanks").find({}).toArray(),
-    db
-      .collection<FederalBudget>("federalBudget")
+    centralBanksCollection(db).find({}).toArray(),
+    federalBudgetCollection(db)
       .find({ mergedInto: { $exists: false } })
       .toArray(),
-    db.collection<ExchangeRate>("exchangeRates").find({}).toArray(),
-    db
-      .collection<State>("states")
+    exchangeRatesCollection(db).find({}).toArray(),
+    statesCollection(db)
       .find({}, { projection: { countryId: 1, gdp: 1, outputGap: 1, population: 1 } })
       .toArray(),
-    db
-      .collection<StateMetrics>("macroMetrics")
+    macroMetricsCollection(db)
       .find(
         {},
         {
@@ -92,8 +93,7 @@ export async function buildCountryTurnRows(
         }
       )
       .toArray(),
-    db
-      .collection<Bond>("bonds")
+    bondsCollection(db)
       .find(
         {
           issuerType: "sovereign",

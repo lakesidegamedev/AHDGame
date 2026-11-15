@@ -162,4 +162,19 @@ describe("secedeRegion", () => {
     ).toEqual({ ok: true, skipped: "already-seceded" });
     expect(promoteResetV2ForIndependence).toHaveBeenLastCalledWith(db, "SCO", 301);
   });
+
+  it("refuses regions the registry cannot carry out", async () => {
+    const { db } = seedWorld();
+    for (const args of [
+      { regionId: "SCO", fromCountryId: "CA" as const },
+      { regionId: "NIR", fromCountryId: "UK" as const },
+      { regionId: "CA_QC", fromCountryId: "UK" as const },
+      { regionId: "LON", fromCountryId: "UK" as const },
+    ]) {
+      expect(await secedeRegion(db, { ...args, currentTurn: 1 })).toEqual({
+        ok: false,
+        skipped: "unsupported-region",
+      });
+    }
+  });
 });

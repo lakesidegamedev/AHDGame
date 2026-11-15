@@ -2,7 +2,7 @@
 
 import { poolLiquidityAllocation } from "@/lib/moneySupply/rules/poolTarget";
 import type { Db } from "mongodb";
-import type { Corporation } from "@/lib/db/types";
+import type { Corporation, CorporationPrivatizationVote } from "@/lib/db/types";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { EQUITY_MARKET_POOLS_COLLECTION } from "@/lib/db/types/equityMarketPool";
 import { issuanceDilutionFactorExpr } from "@/lib/corporations/shareConsolidation";
@@ -30,6 +30,8 @@ import {
   recordPrimaryPoolPlacement,
   type LoadedPrimaryPlacementLimits,
 } from "./cashoutLimits";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporationPrivatizationVotesCollection } from "@/lib/db/repositories/corporationPrivatizationVotes";
 
 /** Maximum share of the pool's equity-liquidity allocation committed to one issue. */
 const EQUITY_PRIMARY_COMMIT_SHARE = 0.2;
@@ -276,14 +278,22 @@ export async function placePendingShareIssuances(
   turn: number,
   now: Date
 ): Promise<{ corporationsTouched: number; sharesPlaced: number; paidLocal: number }> {
-  const corporations = await db
-    .collection<Corporation>("corporations")
+  const corporations = await corporationsCollection(db)
     .find(
       { "pendingShareIssuance.remainingShares": { $gt: 0 }, isPrivate: { $ne: true } },
       { projection: SETTLEMENT_HISTORY_EXCLUDED }
     )
     .sort({ "pendingShareIssuance.createdAtTurn": 1 })
     .toArray();
+  // Shares placed while a privatization vote is open were never counted in the
+  // CEO's buyout reserve but would be paid out at resolve.
+  const openVoteCorpIds = new Set(
+    (
+      await corporationPrivatizationVotesCollection(db)
+        .find({ status: "open" }, { projection: { corporationId: 1 } })
+        .toArray()
+    ).map((v) => v.corporationId.toHexString())
+  );
   const result = { corporationsTouched: 0, sharesPlaced: 0, paidLocal: 0 };
   const budgetByCurrency = new Map<CurrencyCode, number>();
   const bankIds = [
@@ -296,8 +306,7 @@ export async function placePendingShareIssuances(
   ];
   const banks =
     bankIds.length > 0
-      ? await db
-          .collection<Corporation>("corporations")
+      ? await corporationsCollection(db)
           .find(
             { _id: { $in: bankIds } },
             {
@@ -323,6 +332,7 @@ export async function placePendingShareIssuances(
       : null;
 
   for (const corporation of corporations) {
+    if (openVoteCorpIds.has(corporation._id.toHexString())) continue;
     const pending = corporation.pendingShareIssuance;
     if (!pending || pending.remainingShares <= 0) continue;
     // Upfront IPO shares already sit in the float, so the pool can only buy
@@ -474,12 +484,10 @@ export async function placePendingShareIssuances(
     } else {
       const debit = await debitEquityPoolGated(db, currency, paidLocal, "issuanceOut", now);
       if (!debit.ok) continue;
-      const update = await db
-        .collection<Corporation>("corporations")
-        .updateOne(
-          { _id: corporation._id, "pendingShareIssuance.remainingShares": { $gte: shares } },
-          publication
-        );
+      const update = await corporationsCollection(db).updateOne(
+        { _id: corporation._id, "pendingShareIssuance.remainingShares": { $gte: shares } },
+        publication
+      );
       if (update.modifiedCount === 0) {
         await refundEquityPoolDebit(db, currency, paidLocal, "issuanceOut", now);
         continue;

@@ -40,8 +40,8 @@ export default function CountryComparePanel({ fullscreen = false }: { fullscreen
   const countryName = useCountryDisplayName();
   const [chosenCategory, setChosenCategory] = useState<MetricCategoryId>(DEFAULT_CATEGORY);
 
-  // Every national document, keyed by country id. The ISO-keyed map is a subset,
-  // so it is only used to fill in anything the by-id payload somehow misses.
+  // Every national document, keyed by country id. The ISO-keyed map is a subset
+  // and only fills gaps in the by-id payload.
   const byId = useMemo(() => {
     const map = new Map<string, WorldMetricsCountry>();
     if (!worldMetrics) return map;

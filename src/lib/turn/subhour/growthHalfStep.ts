@@ -5,6 +5,7 @@ import type { FederalBudget } from "@/lib/db/types/budget";
 import { TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import { NATIONAL_SCOPE, NATIONAL_SCOPE_IDS } from "@/lib/constants/nationalScope";
 import { compoundGdpLevel } from "@/lib/metricEngine/gdpLevel";
+import { perTurnPriceFactor } from "@/lib/metricEngine/priceLevel";
 import { gdpWeightedGrowth, resolvePipelineGdpGrowth } from "@/lib/country/nationalGdpGrowth";
 import { getRegisteredCountryIdSet } from "@/lib/country/registeredCountries";
 import {
@@ -18,6 +19,9 @@ import {
   type SubhourGrowthMetricBase,
   type SubhourGrowthStateBase,
 } from "./stepBase";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 
 type GrowthState = Pick<State, "_id" | "countryId" | "gdp" | "outputGap" | "subhourStep"> & {
   subhourBase?: State["subhourBase"];
@@ -51,12 +55,15 @@ function roundNational(value: number): number {
  * root of the hour's factor (TURNS_PER_YEAR / fraction steps a year).
  */
 export function growthHalfStepForRegion(
-  input: { gdp: number; outputGap: number; gdpGrowth: number },
+  input: { gdp: number; outputGap: number; gdpGrowth: number; inflationRate?: number },
   fraction = HALF_TICK_FRACTION
 ): { gdp: number; outputGap: number; gdpGrowth: number } {
   const turnsPerStep = TURNS_PER_YEAR / fraction;
   return {
-    gdp: compoundGdpLevel(input.gdp, input.gdpGrowth, turnsPerStep),
+    // The level is nominal: real growth and the price level move it together.
+    gdp:
+      compoundGdpLevel(input.gdp, input.gdpGrowth, turnsPerStep) *
+      perTurnPriceFactor(input.inflationRate ?? 0, turnsPerStep),
     outputGap: input.outputGap,
     gdpGrowth: input.gdpGrowth,
   };
@@ -83,8 +90,7 @@ export async function runGrowthHalfStep(
   const stamp = subhourStepStamp(turn, fraction);
 
   const [states, metrics, budgets, liveCountries] = await Promise.all([
-    db
-      .collection<State>("states")
+    statesCollection(db)
       .find({})
       .project<GrowthState>({
         countryId: 1,
@@ -94,8 +100,7 @@ export async function runGrowthHalfStep(
         subhourBase: 1,
       })
       .toArray(),
-    db
-      .collection<StateMetrics>("macroMetrics")
+    macroMetricsCollection(db)
       .find({})
       .project<GrowthMetrics>({
         "economic.gdpGrowth.value": 1,
@@ -103,18 +108,23 @@ export async function runGrowthHalfStep(
         subhourBase: 1,
       })
       .toArray(),
-    db
-      .collection<FederalBudget>("federalBudget")
+    federalBudgetCollection(db)
       .find({})
       .project<Pick<FederalBudget, "_id" | "countryId" | "economicFactors" | "subhourStep">>({
         countryId: 1,
         "economicFactors.gdpGrowth": 1,
+        "economicFactors.inflationRate": 1,
         subhourStep: 1,
       })
       .toArray(),
     getRegisteredCountryIdSet(db),
   ]);
   const metricsById = new Map(metrics.map((m) => [String(m._id), m]));
+  const inflationByCountry = new Map<string, number>();
+  for (const budget of budgets) {
+    const rate = budget.economicFactors?.inflationRate;
+    if (finite(rate)) inflationByCountry.set(String(budget.countryId ?? budget._id), rate);
+  }
 
   const stateOps: AnyBulkWriteOperation<State>[] = [];
   const metricOps: AnyBulkWriteOperation<StateMetrics>[] = [];
@@ -135,7 +145,15 @@ export async function runGrowthHalfStep(
       alreadyStepped++;
     } else if (finite(gdp) && gdp > 0 && finite(growth)) {
       const outputGap = finite(state.outputGap) ? state.outputGap : 0;
-      const next = growthHalfStepForRegion({ gdp, outputGap, gdpGrowth: growth }, fraction);
+      const next = growthHalfStepForRegion(
+        {
+          gdp,
+          outputGap,
+          gdpGrowth: growth,
+          inflationRate: inflationByCountry.get(state.countryId),
+        },
+        fraction
+      );
       const stateBase: SubhourGrowthStateBase = {
         turn,
         gdp: { base: gdp, written: next.gdp },
@@ -243,11 +261,11 @@ export async function runGrowthHalfStep(
 
   // Region stocks first: each state doc holds the start values the turn needs,
   // so a failure after this write leaves only display fields behind.
-  if (stateOps.length > 0) await db.collection<State>("states").bulkWrite(stateOps);
+  if (stateOps.length > 0) await statesCollection(db).bulkWrite(stateOps);
   if (metricOps.length > 0)
-    await db.collection<StateMetrics>("macroMetrics").bulkWrite(metricOps, { ordered: false });
+    await macroMetricsCollection(db).bulkWrite(metricOps, { ordered: false });
   if (budgetOps.length > 0)
-    await db.collection<FederalBudget>("federalBudget").bulkWrite(budgetOps, { ordered: false });
+    await federalBudgetCollection(db).bulkWrite(budgetOps, { ordered: false });
 
   return {
     regions: stateOps.length,

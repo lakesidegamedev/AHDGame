@@ -4,7 +4,6 @@ import { requireAuthWithCharacter } from "@/lib/api/requireAuth";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { getGameState } from "@/lib/gameState";
-import { isOnboardingChecklistEnabled } from "@/lib/onboarding/featureFlag";
 import { loadOnboardingChecklist } from "@/lib/onboarding/checklist";
 import { grantOnboardingReward } from "@/lib/onboarding/reward";
 
@@ -21,11 +20,6 @@ export async function POST() {
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
 
     const gameState = await getGameState();
-    // Fail closed: with the gate off the reward cannot be claimed.
-    if (!(await isOnboardingChecklistEnabled(gameState ?? {}))) {
-      return errorResponse(404, "Onboarding checklist is not available");
-    }
-
     if (character.onboarding?.rewardGrantedAt !== undefined) {
       return NextResponse.json({ success: true, alreadyClaimed: true, amount: 0 });
     }

@@ -2,6 +2,7 @@ import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import type { RetiredCharacter } from "@/lib/db/types/retiredCharacter";
 import type { CharacterRecap } from "./types";
+import { retiredCharactersCollection } from "@/lib/db/repositories/retiredCharacters";
 
 /**
  * The newest frozen recap for a characterId, for the public share surfaces
@@ -13,12 +14,10 @@ export async function loadPublicRecap(characterId: string): Promise<CharacterRec
   try {
     if (!ObjectId.isValid(characterId)) return null;
     const db = await getDb();
-    const doc = await db
-      .collection<RetiredCharacter>("retiredCharacters")
-      .findOne(
-        { characterId: new ObjectId(characterId), recap: { $exists: true } },
-        { sort: { retiredAt: -1 }, projection: { recap: 1 } }
-      );
+    const doc = await retiredCharactersCollection(db).findOne(
+      { characterId: new ObjectId(characterId), recap: { $exists: true } },
+      { sort: { retiredAt: -1 }, projection: { recap: 1 } }
+    );
     return doc?.recap ?? null;
   } catch {
     return null;

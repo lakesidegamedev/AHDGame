@@ -4,6 +4,7 @@ import {
   type ElectionPosition,
 } from "@/lib/constants/countriesCore";
 import { getCountryClientConfig } from "@/lib/constants/countryClientConfig";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 /**
  * Canonical electionType → position map. Snap variants share their base type's
@@ -17,6 +18,8 @@ export const POSITION_BY_ELECTION_TYPE: Readonly<Record<string, ElectionPosition
   snap_holyrood: "lowerChamber",
   senedd: "lowerChamber",
   snap_senedd: "lowerChamber",
+  qcAssembly: "lowerChamber",
+  snap_qcAssembly: "lowerChamber",
   house: "lowerChamber",
   commons: "lowerChamber",
   snap_commons: "lowerChamber",
@@ -47,17 +50,28 @@ export const POSITION_BY_ELECTION_TYPE: Readonly<Record<string, ElectionPosition
   cameraDeputati: "lowerChamber",
   congresoDiputados: "lowerChamber",
   riksdag: "lowerChamber",
+  caCommons: "lowerChamber",
+  snap_caCommons: "lowerChamber",
+  special_caCommons: "lowerChamber",
   milletMeclisi: "lowerChamber",
+  nationalrat: "lowerChamber",
+  eduskunta: "lowerChamber",
+  vouli: "lowerChamber",
+  // BR Chamber of Deputies.
+  chamber: "lowerChamber",
   // upper chambers
   senate: "upperChamber",
   senat: "upperChamber",
   sangiin: "upperChamber",
   seanad: "upperChamber",
+  senato: "upperChamber",
+  senado: "upperChamber",
   nationalitiesDeputy: "upperChamber",
   // sub-national chambers
   stateSenate: "subNationalChamber",
   regionalCouncil: "subNationalChamber",
   landtag: "subNationalChamber",
+  provincialLegislature: "subNationalChamber",
   landAssembly: "subNationalChamber",
   peoplesCongress: "subNationalChamber",
   republicSupremeSoviet: "subNationalChamber",
@@ -71,6 +85,7 @@ export const POSITION_BY_ELECTION_TYPE: Readonly<Record<string, ElectionPosition
   chancellor: "headOfGovernment", // DE Bundeskanzler — selected via parliamentary formation
   president: "headOfState",
   uachtaran: "headOfState",
+  special_president: "headOfState", // presidential vacancy fill, same seat as `president`
 };
 
 export function positionForElectionType(electionType: string): ElectionPosition | undefined {
@@ -119,11 +134,14 @@ export function getElectionMethod(
   // Both post-communist Romanian eras use regional proportional elections for
   // these chamber keys. The Cold War chamber has a different key, so this
   // country/type route is safe for callers that lack a preset argument.
-  if (countryId === "RO" && (electionType === "chamberOfDeputies" || electionType === "senat")) {
+  if (
+    countryHasFeature("roElections", countryId) &&
+    (electionType === "chamberOfDeputies" || electionType === "senat")
+  ) {
     return "pr_hareQuota";
   }
   if (
-    countryId === "BG" &&
+    countryHasFeature("bgElections", countryId) &&
     preset === "1991-default" &&
     electionType === "nationalAssembly" &&
     cycle != null &&

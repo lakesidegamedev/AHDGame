@@ -1,4 +1,5 @@
 import type { PatreonTier } from "@/lib/db/types";
+import { servicesConfig } from "@/lib/config/services";
 
 // Patreon campaign member listing for the supporter reconciler.
 //
@@ -43,7 +44,7 @@ interface TierInfo {
 }
 
 function getToken(): string {
-  const token = process.env.PATREON_CREATOR_TOKEN?.trim();
+  const token = servicesConfig.patreonCreatorToken()?.trim();
   if (!token) {
     throw new Error("PATREON_CREATOR_TOKEN is not set — cannot list Patreon campaign members");
   }
@@ -64,7 +65,7 @@ async function api(pathAndQuery: string, token: string): Promise<any> {
 }
 
 async function resolveCampaignId(token: string): Promise<string> {
-  const pinned = process.env.PATREON_CAMPAIGN_ID?.trim();
+  const pinned = servicesConfig.patreonCampaignId()?.trim();
   if (pinned) return pinned;
   const data = await api("/campaigns", token);
   const first = Array.isArray(data?.data) ? data.data[0] : null;

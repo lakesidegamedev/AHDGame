@@ -12,7 +12,7 @@ import { calculateCreditScore } from "@/lib/constants/bonds";
 import { CREDIT_RATINGS } from "@/lib/db/types/centralBank";
 
 /**
- * Suggestion #62: index-fund inclusion has to be worth something to the ISSUER.
+ * Index-fund inclusion has to be worth something to the ISSUER.
  * Before this, funds absorbed float and paid their unit holders while the corp
  * being held got nothing, so nobody cared whether they were in the Global Top 50.
  */

@@ -151,4 +151,45 @@ describe("ReferendumPanel", () => {
     );
     expect(requestBtn(/Request Reunification Referendum/i)).toBeTruthy();
   });
+
+  it("speaks of sovereignty, the Premier and Ottawa in Quebec", () => {
+    const { unmount } = render(
+      <ReferendumPanel
+        countryId="CA"
+        stateId="CA_QC"
+        currentTurn={100}
+        viewerCanManage
+        data={{
+          referendum: null,
+          eligible: false,
+          eligibilityReason:
+            "A referendum cannot be held until an independent state can be formed.",
+        }}
+      />
+    );
+    expect(requestBtn(/Request Sovereignty Referendum/i).disabled).toBe(true);
+    expect(screen.getByText(/the\s+Premier may formally request/i)).toBeTruthy();
+    expect(screen.getByText(/independent state can be formed/i)).toBeTruthy();
+    unmount();
+    render(
+      <ReferendumPanel
+        countryId="CA"
+        stateId="CA_QC"
+        currentTurn={100}
+        viewerCanManage
+        data={{
+          referendum: {
+            id: "r1",
+            status: "declined",
+            kind: "independence",
+            yesShare: 40,
+            campaignCloseTurn: null,
+            cooldownReadyAtTurn: 90,
+          },
+          eligible: false,
+        }}
+      />
+    );
+    expect(screen.getByText("Ottawa declined the referendum.")).toBeTruthy();
+  });
 });

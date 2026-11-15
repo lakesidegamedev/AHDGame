@@ -108,7 +108,7 @@ describe("ensureBRElections", () => {
     const mock = makeBRMockDb(regions, [], [], 1);
     await mountBRDb(mock);
 
-    const { ensureBRElections } = await import("./perpetualElections");
+    const { ensureBRElections } = await import("@/lib/elections/scheduling");
     await ensureBRElections(now);
 
     const inserted = mock.insertCalls.flat();
@@ -142,7 +142,7 @@ describe("ensureBRElections", () => {
     const mock = makeBRMockDb(regions, live, [], 1);
     await mountBRDb(mock);
 
-    const { ensureBRElections } = await import("./perpetualElections");
+    const { ensureBRElections } = await import("@/lib/elections/scheduling");
     await ensureBRElections(now);
 
     expect(mock.electionsCollection.bulkWrite).toHaveBeenCalledOnce();
@@ -209,7 +209,7 @@ describe("ensureBRElections", () => {
     const { getDb } = await import("@/lib/mongodb");
     vi.mocked(getDb).mockResolvedValue(mockDb as never);
 
-    const { ensureBRElections } = await import("./perpetualElections");
+    const { ensureBRElections } = await import("@/lib/elections/scheduling");
     await ensureBRElections(now);
     expect(dbState.elections).toHaveLength(BR_REGIONS.length);
     await ensureBRElections(now);
@@ -284,7 +284,7 @@ describe("ensureBRSenateElections", () => {
     const mock = makeBRSenateMockDb(regions, [], [], 1);
     await mountBRSenateDb(mock);
 
-    const { ensureBRSenateElections } = await import("./perpetualElections");
+    const { ensureBRSenateElections } = await import("@/lib/elections/scheduling");
     await ensureBRSenateElections(now);
 
     const inserted = mock.insertCalls.flat();
@@ -350,7 +350,7 @@ describe("ensureBRSenateElections", () => {
     const { getDb } = await import("@/lib/mongodb");
     vi.mocked(getDb).mockResolvedValue(mockDb as never);
 
-    const { ensureBRSenateElections } = await import("./perpetualElections");
+    const { ensureBRSenateElections } = await import("@/lib/elections/scheduling");
     await ensureBRSenateElections(now);
     expect(dbState.elections).toHaveLength(BR_REGIONS.length);
     await ensureBRSenateElections(now);

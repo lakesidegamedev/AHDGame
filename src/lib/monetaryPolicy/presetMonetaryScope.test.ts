@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import type { CountryId } from "@/lib/constants/countries";
 import { FOREX_ACTIVE_COUNTRIES } from "@/lib/constants/currencies";
 import { getNationalBudgetSeedConfigsForPreset } from "@/lib/seeds/reference/budgets";
-import { SHIPPING_PRESETS } from "@/lib/world/eraRoster";
+import { COUNTRY_ORDER } from "@/lib/constants/countriesCore";
+import { SHIPPING_PRESETS, isRegisteredTier, tierFor } from "@/lib/world/eraRoster";
 import { getPresetMonetaryScope } from "./presetMonetaryScope";
 
 describe("getPresetMonetaryScope", () => {
@@ -26,7 +27,13 @@ describe("getPresetMonetaryScope", () => {
         : preset === "2019-default"
           ? [...FOREX_ACTIVE_COUNTRIES, "PL", "HU", "RO", "BG"]
           : preset === "2027-default"
-            ? [...FOREX_ACTIVE_COUNTRIES, "BG"]
+            ? [
+                ...FOREX_ACTIVE_COUNTRIES.filter((countryId) => countryId !== "DD"),
+                "HU",
+                "PL",
+                "RO",
+                "BG",
+              ]
             : FOREX_ACTIVE_COUNTRIES;
     expect(scope.forexCountries).toEqual(expectedForex);
     expect(scope.centralBankCountries.every((countryId) => budgeted.has(countryId))).toBe(true);
@@ -51,6 +58,22 @@ describe("getPresetMonetaryScope", () => {
     expect(getPresetMonetaryScope("1991-default").forexCountries).toContain("BG");
   });
 
+  it("drives 2027 exchange rows from the roster minus absent countries", () => {
+    const scope = getPresetMonetaryScope("2027-default");
+    const registered = COUNTRY_ORDER.filter((countryId) =>
+      isRegisteredTier(tierFor("2027-default", countryId))
+    );
+    expect([...scope.forexCountries].sort()).toEqual([...registered].sort());
+    expect(scope.forexCountries).toEqual(expect.arrayContaining(["HU", "PL", "RO"]));
+    expect(scope.forexCountries).not.toContain("DD");
+    // Every rostered country with its own currency has a 2027 fiscal book and a bank.
+    expect(scope.centralBankCountries).toEqual(expect.arrayContaining(["HU", "PL", "RO", "RU"]));
+    expect(scope.exclusions.map(({ reason }) => reason)).not.toContain("fiscal-model-unauthored");
+    expect(scope.exclusions).toContainEqual(
+      expect.objectContaining({ countryId: "BG", reason: "shared-currency-bank" })
+    );
+  });
+
   it.each(["1953-default", "1979-default"])("models RU and DD fiscally in %s", (preset) => {
     const scope = getPresetMonetaryScope(preset);
     expect(scope.centralBankCountries).toEqual(expect.arrayContaining(["RU", "DD"]));
@@ -59,7 +82,7 @@ describe("getPresetMonetaryScope", () => {
     );
   });
 
-  it.each(["1999-default", "2007-default", "2023-default", "2027-default"])(
+  it.each(["1999-default", "2007-default", "2023-default"])(
     "records explicit RU/DD exclusions in %s",
     (preset) => {
       const scope = getPresetMonetaryScope(preset);
@@ -95,5 +118,20 @@ describe("getPresetMonetaryScope", () => {
       expect.objectContaining({ countryId: "DD", reason: "absent-in-era" })
     );
     expect(scope.exclusions.map(({ countryId }) => countryId)).not.toContain("RU");
+  });
+
+  it.each(SHIPPING_PRESETS)(
+    "gives no central bank to a country outside the %s roster",
+    (preset) => {
+      const scope = getPresetMonetaryScope(preset);
+      expect(scope.centralBankCountries.filter((c) => tierFor(preset, c) === "absent")).toEqual([]);
+    }
+  );
+
+  it("keeps Canada's exchange row but not a central bank before 2027", () => {
+    const scope = getPresetMonetaryScope("2019-default");
+    expect(scope.forexCountries).toContain("CA");
+    expect(scope.centralBankCountries).not.toContain("CA");
+    expect(getPresetMonetaryScope("2027-default").centralBankCountries).toContain("CA");
   });
 });

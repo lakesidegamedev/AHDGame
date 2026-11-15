@@ -1,11 +1,5 @@
 import type { Db } from "mongodb";
-import type {
-  Bond,
-  BondMaturityTurns,
-  CentralBank,
-  Corporation,
-  CorporateSector,
-} from "@/lib/db/types";
+import type { Bond, BondMaturityTurns, Corporation, CorporateSector } from "@/lib/db/types";
 import { BOND_UNIT_FACE_VALUE, BOND_MATURITY_LABELS } from "@/lib/db/types/bond";
 import {
   buildPrimeRateMap,
@@ -18,6 +12,7 @@ import {
   sumNonMaturedBondPrincipal,
 } from "@/lib/bonds/corporateBondDefault";
 import { sumCorporateSectorConstructionInProgress } from "@/lib/bonds/corporateCredit";
+import { assertNoBankTreasuryHolders } from "@/lib/bonds/payInstitutionalBondHolders";
 import { getMarketSystemModeForDb, marketAtLeast } from "@/lib/market/featureFlag";
 import { MAX_BOND_DEFAULT_REFINANCES } from "@/lib/constants/bonds";
 import { TURNS_PER_YEAR } from "@/lib/constants/turnTime";
@@ -31,6 +26,12 @@ import {
 } from "@/lib/currency/corporationCapital";
 import { emitTx } from "@/lib/financialTxLog/emit";
 import type { CurrencyCode } from "@/lib/constants/currencies";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { corporationHistoryCollection } from "@/lib/db/repositories/corporationHistory";
+import type { Document } from "mongodb";
 
 export interface CorporationRefinanceResult {
   ok: true;
@@ -71,14 +72,14 @@ export async function executeCorporationBondRefinance(
 ): Promise<CorporationRefinanceResult | CorporationRefinanceInfeasible> {
   const { now, currentTurn, maturityTurns } = options;
 
-  const defaultedBonds = await db
-    .collection<Bond>("bonds")
+  const defaultedBonds = await bondsCollection(db)
     .find({ corporationId: corporation._id, matured: false, defaulted: true })
     .toArray();
 
   if (defaultedBonds.length === 0) {
     return { ok: false, reason: "No defaulted bonds to refinance" };
   }
+  assertNoBankTreasuryHolders(defaultedBonds);
 
   // Cap lifetime refinances to prevent default → refi cash-extraction loops.
   const refiCount = corporation.bondDefaultRefinanceCount ?? 0;
@@ -86,16 +87,14 @@ export async function executeCorporationBondRefinance(
     return { ok: false, reason: "Refinance limit reached" };
   }
 
-  const allNonMatured = await db
-    .collection<Bond>("bonds")
+  const allNonMatured = await bondsCollection(db)
     .find({ corporationId: corporation._id, matured: false })
     .toArray();
 
-  const sectors = await db
-    .collection<CorporateSector>("corporateSectors")
+  const sectors = await corporateSectorsCollection(db)
     .find({ corporationId: corporation._id })
     .toArray();
-  const centralBanks = await db.collection<CentralBank>("centralBanks").find({}).toArray();
+  const centralBanks = await centralBanksCollection(db).find({}).toArray();
   const primeRateByCountry = buildPrimeRateMap(centralBanks);
   const fxByCurrency = await loadFxRatesByCurrency(db);
   // Under plants the growth-cost deduction is a phantom charge (growth spend no
@@ -158,13 +157,30 @@ export async function executeCorporationBondRefinance(
     holders.push({ corporationId: h.corporationId, units: h.units });
     holderUnitSum += h.units;
   }
+  for (const h of merged.fundHolderUnits.values()) {
+    holders.push({
+      fundId: h.fundId,
+      units: h.units,
+      ...(h.avgCostPerUnit !== undefined ? { avgCostPerUnit: h.avgCostPerUnit } : {}),
+    });
+    holderUnitSum += h.units;
+  }
+  for (const h of merged.nppHolderUnits.values()) {
+    holders.push({
+      nppId: h.nppId,
+      units: h.units,
+      ...(h.avgCostPerUnit !== undefined ? { avgCostPerUnit: h.avgCostPerUnit } : {}),
+    });
+    holderUnitSum += h.units;
+  }
   const publicFloatFinal = Math.max(0, merged.publicFloat);
   const totalUnits = holderUnitSum + publicFloatFinal;
   const actualFaceValueLocal = totalUnits * BOND_UNIT_FACE_VALUE;
 
-  const latestHistory = await db
-    .collection("corporationHistory")
-    .findOne({ corporationId: corporation._id }, { sort: { turn: -1 } });
+  const latestHistory = await corporationHistoryCollection<Document>(db).findOne(
+    { corporationId: corporation._id },
+    { sort: { turn: -1 } }
+  );
   const annualIncome = (latestHistory?.income ?? 0) * TURNS_PER_YEAR;
 
   const countryId = corporation.countryId;
@@ -205,14 +221,14 @@ export async function executeCorporationBondRefinance(
     updatedAt: now,
   };
 
-  const inserted = await db.collection("bonds").insertOne(bondDoc);
+  const inserted = await bondsCollection<Omit<Bond, "_id">>(db).insertOne(bondDoc);
 
   // Refinancing is a debt-for-debt swap: existing holders are rolled into the new
   // bond at par (no cash changes hands). Do NOT credit the corporation with the
   // face value — there are no new investors purchasing the issuance, so treating
   // it as a cash raise would print phantom money and enable a default → refi
   // cash-extraction loop.
-  await db.collection<Corporation>("corporations").updateOne(
+  await corporationsCollection(db).updateOne(
     { _id: corporation._id },
     {
       $inc: { bondDefaultRefinanceCount: 1 },
@@ -224,7 +240,7 @@ export async function executeCorporationBondRefinance(
   // Preserve `defaultedAtTurn` (historical mark) and stamp `defaultCure` so the
   // Bonds tab can render the "Default cured" badge. The caller's game-state
   // guard guarantees currentTurn > 0, so the stamp is unconditionally safe.
-  await db.collection<Bond>("bonds").updateMany(
+  await bondsCollection(db).updateMany(
     { _id: { $in: oldIds }, sovereignMaturityClaim: { $exists: false } },
     {
       $set: {

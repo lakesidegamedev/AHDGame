@@ -4,6 +4,7 @@ import React from "react";
 import Link from "next/link";
 import { PartySection } from "./ElectionDetailComponents";
 import type { ElectionDetail, PartyGroup } from "./ElectionDetailTypes";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 interface UpcomingElectionViewProps {
   election: ElectionDetail;
@@ -55,7 +56,10 @@ export function UpcomingElectionView({
               electionId={electionId}
               isEnded={false}
               onRemoveSuccess={onRemoveSuccess}
-              isPresident={election.countryId !== "RU" && election.electionType === "president"}
+              isPresident={
+                !countryHasFeature("ruUi", election.countryId) &&
+                election.electionType === "president"
+              }
               advancingCount={advancingCount}
             />
           ))}
@@ -67,7 +71,7 @@ export function UpcomingElectionView({
         </div>
       )}
 
-      {election.countryId === "US" &&
+      {countryHasFeature("usUi", election.countryId) &&
         election.electionType === "president" &&
         election.myCharId && (
           <p className="text-sm text-muted">

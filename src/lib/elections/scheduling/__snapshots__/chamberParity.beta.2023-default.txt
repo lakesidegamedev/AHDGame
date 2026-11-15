@@ -1,0 +1,280 @@
+## fresh-t1 fr.assembleeNationale
+(none)
+## fresh-t1 it.cameraDeputati
+(none)
+## fresh-t1 es.congresoDiputados
+(none)
+## fresh-t1 se.riksdag
+(none)
+## fresh-t1 tr.milletMeclisi
+TR/milletMeclisi/TR_ANK c1 y2028 active seats=41 turns=1/264/288 dur=48/24 seat=TR-milletMeclisi-TR_ANK shift=- t=2026-11-08T12:00:00.000Z|2026-11-19T11:00:00.000Z|2026-11-20T11:00:00.000Z
+TR/milletMeclisi/TR_BLA c1 y2028 active seats=52 turns=1/264/288 dur=48/24 seat=TR-milletMeclisi-TR_BLA shift=- t=2026-11-08T12:00:00.000Z|2026-11-19T11:00:00.000Z|2026-11-20T11:00:00.000Z
+TR/milletMeclisi/TR_CEN c1 y2028 active seats=48 turns=1/264/288 dur=48/24 seat=TR-milletMeclisi-TR_CEN shift=- t=2026-11-08T12:00:00.000Z|2026-11-19T11:00:00.000Z|2026-11-20T11:00:00.000Z
+TR/milletMeclisi/TR_ESA c1 y2028 active seats=43 turns=1/264/288 dur=48/24 seat=TR-milletMeclisi-TR_ESA shift=- t=2026-11-08T12:00:00.000Z|2026-11-19T11:00:00.000Z|2026-11-20T11:00:00.000Z
+TR/milletMeclisi/TR_IST c1 y2028 active seats=197 turns=1/264/288 dur=48/24 seat=TR-milletMeclisi-TR_IST shift=- t=2026-11-08T12:00:00.000Z|2026-11-19T11:00:00.000Z|2026-11-20T11:00:00.000Z
+TR/milletMeclisi/TR_IZM c1 y2028 active seats=77 turns=1/264/288 dur=48/24 seat=TR-milletMeclisi-TR_IZM shift=- t=2026-11-08T12:00:00.000Z|2026-11-19T11:00:00.000Z|2026-11-20T11:00:00.000Z
+TR/milletMeclisi/TR_MED c1 y2028 active seats=76 turns=1/264/288 dur=48/24 seat=TR-milletMeclisi-TR_MED shift=- t=2026-11-08T12:00:00.000Z|2026-11-19T11:00:00.000Z|2026-11-20T11:00:00.000Z
+TR/milletMeclisi/TR_SEA c1 y2028 active seats=66 turns=1/264/288 dur=48/24 seat=TR-milletMeclisi-TR_SEA shift=- t=2026-11-08T12:00:00.000Z|2026-11-19T11:00:00.000Z|2026-11-20T11:00:00.000Z
+## fresh-t1 gr.vouli
+(none)
+## fresh-t1 at.nationalrat
+(none)
+## fresh-t1 fi.eduskunta
+(none)
+## fresh-t300 fr.assembleeNationale
+(none)
+## fresh-t300 it.cameraDeputati
+(none)
+## fresh-t300 es.congresoDiputados
+(none)
+## fresh-t300 se.riksdag
+(none)
+## fresh-t300 tr.milletMeclisi
+TR/milletMeclisi/TR_ANK c2 y2032 active seats=41 turns=300/456/480 dur=48/24 seat=TR-milletMeclisi-TR_ANK shift=- t=2026-11-08T12:00:00.000Z|2026-11-15T00:00:00.000Z|2026-11-16T00:00:00.000Z
+TR/milletMeclisi/TR_BLA c2 y2032 active seats=52 turns=300/456/480 dur=48/24 seat=TR-milletMeclisi-TR_BLA shift=- t=2026-11-08T12:00:00.000Z|2026-11-15T00:00:00.000Z|2026-11-16T00:00:00.000Z
+TR/milletMeclisi/TR_CEN c2 y2032 active seats=48 turns=300/456/480 dur=48/24 seat=TR-milletMeclisi-TR_CEN shift=- t=2026-11-08T12:00:00.000Z|2026-11-15T00:00:00.000Z|2026-11-16T00:00:00.000Z
+TR/milletMeclisi/TR_ESA c2 y2032 active seats=43 turns=300/456/480 dur=48/24 seat=TR-milletMeclisi-TR_ESA shift=- t=2026-11-08T12:00:00.000Z|2026-11-15T00:00:00.000Z|2026-11-16T00:00:00.000Z
+TR/milletMeclisi/TR_IST c2 y2032 active seats=197 turns=300/456/480 dur=48/24 seat=TR-milletMeclisi-TR_IST shift=- t=2026-11-08T12:00:00.000Z|2026-11-15T00:00:00.000Z|2026-11-16T00:00:00.000Z
+TR/milletMeclisi/TR_IZM c2 y2032 active seats=77 turns=300/456/480 dur=48/24 seat=TR-milletMeclisi-TR_IZM shift=- t=2026-11-08T12:00:00.000Z|2026-11-15T00:00:00.000Z|2026-11-16T00:00:00.000Z
+TR/milletMeclisi/TR_MED c2 y2032 active seats=76 turns=300/456/480 dur=48/24 seat=TR-milletMeclisi-TR_MED shift=- t=2026-11-08T12:00:00.000Z|2026-11-15T00:00:00.000Z|2026-11-16T00:00:00.000Z
+TR/milletMeclisi/TR_SEA c2 y2032 active seats=66 turns=300/456/480 dur=48/24 seat=TR-milletMeclisi-TR_SEA shift=- t=2026-11-08T12:00:00.000Z|2026-11-15T00:00:00.000Z|2026-11-16T00:00:00.000Z
+## fresh-t300 gr.vouli
+(none)
+## fresh-t300 at.nationalrat
+(none)
+## fresh-t300 fi.eduskunta
+(none)
+## after-cycle1-t120 fr.assembleeNationale
+(none)
+## after-cycle1-t120 it.cameraDeputati
+(none)
+## after-cycle1-t120 es.congresoDiputados
+(none)
+## after-cycle1-t120 se.riksdag
+(none)
+## after-cycle1-t120 tr.milletMeclisi
+TR/milletMeclisi/TR_ANK c2 y2032 active seats=3 turns=120/456/480 dur=48/24 seat=TR-milletMeclisi-TR_ANK shift=- t=2026-11-08T12:00:00.000Z|2026-11-22T12:00:00.000Z|2026-11-23T12:00:00.000Z
+TR/milletMeclisi/TR_BLA c2 y2032 active seats=3 turns=120/456/480 dur=48/24 seat=TR-milletMeclisi-TR_BLA shift=- t=2026-11-08T12:00:00.000Z|2026-11-22T12:00:00.000Z|2026-11-23T12:00:00.000Z
+TR/milletMeclisi/TR_CEN c2 y2032 active seats=3 turns=120/456/480 dur=48/24 seat=TR-milletMeclisi-TR_CEN shift=- t=2026-11-08T12:00:00.000Z|2026-11-22T12:00:00.000Z|2026-11-23T12:00:00.000Z
+TR/milletMeclisi/TR_ESA c2 y2032 active seats=3 turns=120/456/480 dur=48/24 seat=TR-milletMeclisi-TR_ESA shift=- t=2026-11-08T12:00:00.000Z|2026-11-22T12:00:00.000Z|2026-11-23T12:00:00.000Z
+TR/milletMeclisi/TR_IST c2 y2032 active seats=3 turns=120/456/480 dur=48/24 seat=TR-milletMeclisi-TR_IST shift=- t=2026-11-08T12:00:00.000Z|2026-11-22T12:00:00.000Z|2026-11-23T12:00:00.000Z
+TR/milletMeclisi/TR_IZM c2 y2032 active seats=3 turns=120/456/480 dur=48/24 seat=TR-milletMeclisi-TR_IZM shift=- t=2026-11-08T12:00:00.000Z|2026-11-22T12:00:00.000Z|2026-11-23T12:00:00.000Z
+TR/milletMeclisi/TR_MED c2 y2032 active seats=3 turns=120/456/480 dur=48/24 seat=TR-milletMeclisi-TR_MED shift=- t=2026-11-08T12:00:00.000Z|2026-11-22T12:00:00.000Z|2026-11-23T12:00:00.000Z
+TR/milletMeclisi/TR_SEA c2 y2032 active seats=3 turns=120/456/480 dur=48/24 seat=TR-milletMeclisi-TR_SEA shift=- t=2026-11-08T12:00:00.000Z|2026-11-22T12:00:00.000Z|2026-11-23T12:00:00.000Z
+## after-cycle1-t120 gr.vouli
+(none)
+## after-cycle1-t120 at.nationalrat
+(none)
+## after-cycle1-t120 fi.eduskunta
+(none)
+## after-cycle1-t700 fr.assembleeNationale
+(none)
+## after-cycle1-t700 it.cameraDeputati
+(none)
+## after-cycle1-t700 es.congresoDiputados
+(none)
+## after-cycle1-t700 se.riksdag
+(none)
+## after-cycle1-t700 tr.milletMeclisi
+TR/milletMeclisi/TR_ANK c4 y2040 active seats=3 turns=700/840/864 dur=48/24 seat=TR-milletMeclisi-TR_ANK shift=- t=2026-11-08T12:00:00.000Z|2026-11-14T08:00:00.000Z|2026-11-15T08:00:00.000Z
+TR/milletMeclisi/TR_BLA c4 y2040 active seats=3 turns=700/840/864 dur=48/24 seat=TR-milletMeclisi-TR_BLA shift=- t=2026-11-08T12:00:00.000Z|2026-11-14T08:00:00.000Z|2026-11-15T08:00:00.000Z
+TR/milletMeclisi/TR_CEN c4 y2040 active seats=3 turns=700/840/864 dur=48/24 seat=TR-milletMeclisi-TR_CEN shift=- t=2026-11-08T12:00:00.000Z|2026-11-14T08:00:00.000Z|2026-11-15T08:00:00.000Z
+TR/milletMeclisi/TR_ESA c4 y2040 active seats=3 turns=700/840/864 dur=48/24 seat=TR-milletMeclisi-TR_ESA shift=- t=2026-11-08T12:00:00.000Z|2026-11-14T08:00:00.000Z|2026-11-15T08:00:00.000Z
+TR/milletMeclisi/TR_IST c4 y2040 active seats=3 turns=700/840/864 dur=48/24 seat=TR-milletMeclisi-TR_IST shift=- t=2026-11-08T12:00:00.000Z|2026-11-14T08:00:00.000Z|2026-11-15T08:00:00.000Z
+TR/milletMeclisi/TR_IZM c4 y2040 active seats=3 turns=700/840/864 dur=48/24 seat=TR-milletMeclisi-TR_IZM shift=- t=2026-11-08T12:00:00.000Z|2026-11-14T08:00:00.000Z|2026-11-15T08:00:00.000Z
+TR/milletMeclisi/TR_MED c4 y2040 active seats=3 turns=700/840/864 dur=48/24 seat=TR-milletMeclisi-TR_MED shift=- t=2026-11-08T12:00:00.000Z|2026-11-14T08:00:00.000Z|2026-11-15T08:00:00.000Z
+TR/milletMeclisi/TR_SEA c4 y2040 active seats=3 turns=700/840/864 dur=48/24 seat=TR-milletMeclisi-TR_SEA shift=- t=2026-11-08T12:00:00.000Z|2026-11-14T08:00:00.000Z|2026-11-15T08:00:00.000Z
+## after-cycle1-t700 gr.vouli
+(none)
+## after-cycle1-t700 at.nationalrat
+(none)
+## after-cycle1-t700 fi.eduskunta
+(none)
+## all-live fr.assembleeNationale
+(none)
+## all-live it.cameraDeputati
+(none)
+## all-live es.congresoDiputados
+(none)
+## all-live se.riksdag
+(none)
+## all-live tr.milletMeclisi
+(none)
+## all-live gr.vouli
+(none)
+## all-live at.nationalrat
+(none)
+## all-live fi.eduskunta
+(none)
+## late-joiner fr.assembleeNationale
+(none)
+## late-joiner it.cameraDeputati
+(none)
+## late-joiner es.congresoDiputados
+(none)
+## late-joiner se.riksdag
+(none)
+## late-joiner tr.milletMeclisi
+TR/milletMeclisi/TR_CEN c3 y2036 active seats=48 turns=450/648/672 dur=48/24 seat=TR-milletMeclisi-TR_CEN shift=- t=2026-11-08T12:00:00.000Z|2026-11-16T18:00:00.000Z|2026-11-17T18:00:00.000Z
+## late-joiner gr.vouli
+(none)
+## late-joiner at.nationalrat
+(none)
+## late-joiner fi.eduskunta
+(none)
+## late-joiner-with-history fr.assembleeNationale
+(none)
+## late-joiner-with-history it.cameraDeputati
+(none)
+## late-joiner-with-history es.congresoDiputados
+(none)
+## late-joiner-with-history se.riksdag
+(none)
+## late-joiner-with-history tr.milletMeclisi
+TR/milletMeclisi/TR_CEN c3 y2036 active seats=3 turns=450/648/672 dur=48/24 seat=TR-milletMeclisi-TR_CEN shift=- t=2026-11-08T12:00:00.000Z|2026-11-16T18:00:00.000Z|2026-11-17T18:00:00.000Z
+## late-joiner-with-history gr.vouli
+(none)
+## late-joiner-with-history at.nationalrat
+(none)
+## late-joiner-with-history fi.eduskunta
+(none)
+## resolved-this-turn fr.assembleeNationale
+(none)
+## resolved-this-turn it.cameraDeputati
+(none)
+## resolved-this-turn es.congresoDiputados
+(none)
+## resolved-this-turn se.riksdag
+(none)
+## resolved-this-turn tr.milletMeclisi
+(none)
+## resolved-this-turn gr.vouli
+(none)
+## resolved-this-turn at.nationalrat
+(none)
+## resolved-this-turn fi.eduskunta
+(none)
+## gate-closed fr.assembleeNationale
+(none)
+## gate-closed it.cameraDeputati
+(none)
+## gate-closed es.congresoDiputados
+(none)
+## gate-closed se.riksdag
+(none)
+## gate-closed tr.milletMeclisi
+(none)
+## gate-closed gr.vouli
+(none)
+## gate-closed at.nationalrat
+(none)
+## gate-closed fi.eduskunta
+(none)
+## after-called-snap fr.assembleeNationale
+(none)
+## after-called-snap it.cameraDeputati
+(none)
+## after-called-snap es.congresoDiputados
+(none)
+## after-called-snap se.riksdag
+(none)
+## after-called-snap tr.milletMeclisi
+TR/milletMeclisi/TR_ANK c5 y2035 active seats=3 turns=450/588/612 dur=48/24 seat=TR-milletMeclisi-TR_ANK shift=612 t=2026-11-08T12:00:00.000Z|2026-11-14T06:00:00.000Z|2026-11-15T06:00:00.000Z
+TR/milletMeclisi/TR_BLA c5 y2035 active seats=3 turns=450/588/612 dur=48/24 seat=TR-milletMeclisi-TR_BLA shift=612 t=2026-11-08T12:00:00.000Z|2026-11-14T06:00:00.000Z|2026-11-15T06:00:00.000Z
+TR/milletMeclisi/TR_CEN c5 y2035 active seats=3 turns=450/588/612 dur=48/24 seat=TR-milletMeclisi-TR_CEN shift=612 t=2026-11-08T12:00:00.000Z|2026-11-14T06:00:00.000Z|2026-11-15T06:00:00.000Z
+TR/milletMeclisi/TR_ESA c5 y2035 active seats=3 turns=450/588/612 dur=48/24 seat=TR-milletMeclisi-TR_ESA shift=612 t=2026-11-08T12:00:00.000Z|2026-11-14T06:00:00.000Z|2026-11-15T06:00:00.000Z
+TR/milletMeclisi/TR_IST c5 y2035 active seats=3 turns=450/588/612 dur=48/24 seat=TR-milletMeclisi-TR_IST shift=612 t=2026-11-08T12:00:00.000Z|2026-11-14T06:00:00.000Z|2026-11-15T06:00:00.000Z
+TR/milletMeclisi/TR_IZM c5 y2035 active seats=3 turns=450/588/612 dur=48/24 seat=TR-milletMeclisi-TR_IZM shift=612 t=2026-11-08T12:00:00.000Z|2026-11-14T06:00:00.000Z|2026-11-15T06:00:00.000Z
+TR/milletMeclisi/TR_MED c5 y2035 active seats=3 turns=450/588/612 dur=48/24 seat=TR-milletMeclisi-TR_MED shift=612 t=2026-11-08T12:00:00.000Z|2026-11-14T06:00:00.000Z|2026-11-15T06:00:00.000Z
+TR/milletMeclisi/TR_SEA c5 y2035 active seats=3 turns=450/588/612 dur=48/24 seat=TR-milletMeclisi-TR_SEA shift=612 t=2026-11-08T12:00:00.000Z|2026-11-14T06:00:00.000Z|2026-11-15T06:00:00.000Z
+## after-called-snap gr.vouli
+(none)
+## after-called-snap at.nationalrat
+(none)
+## after-called-snap fi.eduskunta
+(none)
+## after-imposed-snap fr.assembleeNationale
+(none)
+## after-imposed-snap it.cameraDeputati
+(none)
+## after-imposed-snap es.congresoDiputados
+(none)
+## after-imposed-snap se.riksdag
+(none)
+## after-imposed-snap tr.milletMeclisi
+TR/milletMeclisi/TR_ANK c5 y2044 active seats=3 turns=450/1032/1056 dur=48/24 seat=TR-milletMeclisi-TR_ANK shift=- t=2026-11-08T12:00:00.000Z|2026-12-02T18:00:00.000Z|2026-12-03T18:00:00.000Z
+TR/milletMeclisi/TR_BLA c5 y2044 active seats=3 turns=450/1032/1056 dur=48/24 seat=TR-milletMeclisi-TR_BLA shift=- t=2026-11-08T12:00:00.000Z|2026-12-02T18:00:00.000Z|2026-12-03T18:00:00.000Z
+TR/milletMeclisi/TR_CEN c5 y2044 active seats=3 turns=450/1032/1056 dur=48/24 seat=TR-milletMeclisi-TR_CEN shift=- t=2026-11-08T12:00:00.000Z|2026-12-02T18:00:00.000Z|2026-12-03T18:00:00.000Z
+TR/milletMeclisi/TR_ESA c5 y2044 active seats=3 turns=450/1032/1056 dur=48/24 seat=TR-milletMeclisi-TR_ESA shift=- t=2026-11-08T12:00:00.000Z|2026-12-02T18:00:00.000Z|2026-12-03T18:00:00.000Z
+TR/milletMeclisi/TR_IST c5 y2044 active seats=3 turns=450/1032/1056 dur=48/24 seat=TR-milletMeclisi-TR_IST shift=- t=2026-11-08T12:00:00.000Z|2026-12-02T18:00:00.000Z|2026-12-03T18:00:00.000Z
+TR/milletMeclisi/TR_IZM c5 y2044 active seats=3 turns=450/1032/1056 dur=48/24 seat=TR-milletMeclisi-TR_IZM shift=- t=2026-11-08T12:00:00.000Z|2026-12-02T18:00:00.000Z|2026-12-03T18:00:00.000Z
+TR/milletMeclisi/TR_MED c5 y2044 active seats=3 turns=450/1032/1056 dur=48/24 seat=TR-milletMeclisi-TR_MED shift=- t=2026-11-08T12:00:00.000Z|2026-12-02T18:00:00.000Z|2026-12-03T18:00:00.000Z
+TR/milletMeclisi/TR_SEA c5 y2044 active seats=3 turns=450/1032/1056 dur=48/24 seat=TR-milletMeclisi-TR_SEA shift=- t=2026-11-08T12:00:00.000Z|2026-12-02T18:00:00.000Z|2026-12-03T18:00:00.000Z
+## after-imposed-snap gr.vouli
+(none)
+## after-imposed-snap at.nationalrat
+(none)
+## after-imposed-snap fi.eduskunta
+(none)
+## after-shifted-regular fr.assembleeNationale
+(none)
+## after-shifted-regular it.cameraDeputati
+(none)
+## after-shifted-regular es.congresoDiputados
+(none)
+## after-shifted-regular se.riksdag
+(none)
+## after-shifted-regular tr.milletMeclisi
+TR/milletMeclisi/TR_ANK c5 y2034 active seats=3 turns=450/548/572 dur=48/24 seat=TR-milletMeclisi-TR_ANK shift=572 t=2026-11-08T12:00:00.000Z|2026-11-12T14:00:00.000Z|2026-11-13T14:00:00.000Z
+TR/milletMeclisi/TR_BLA c5 y2034 active seats=3 turns=450/548/572 dur=48/24 seat=TR-milletMeclisi-TR_BLA shift=572 t=2026-11-08T12:00:00.000Z|2026-11-12T14:00:00.000Z|2026-11-13T14:00:00.000Z
+TR/milletMeclisi/TR_CEN c5 y2034 active seats=3 turns=450/548/572 dur=48/24 seat=TR-milletMeclisi-TR_CEN shift=572 t=2026-11-08T12:00:00.000Z|2026-11-12T14:00:00.000Z|2026-11-13T14:00:00.000Z
+TR/milletMeclisi/TR_ESA c5 y2034 active seats=3 turns=450/548/572 dur=48/24 seat=TR-milletMeclisi-TR_ESA shift=572 t=2026-11-08T12:00:00.000Z|2026-11-12T14:00:00.000Z|2026-11-13T14:00:00.000Z
+TR/milletMeclisi/TR_IST c5 y2034 active seats=3 turns=450/548/572 dur=48/24 seat=TR-milletMeclisi-TR_IST shift=572 t=2026-11-08T12:00:00.000Z|2026-11-12T14:00:00.000Z|2026-11-13T14:00:00.000Z
+TR/milletMeclisi/TR_IZM c5 y2034 active seats=3 turns=450/548/572 dur=48/24 seat=TR-milletMeclisi-TR_IZM shift=572 t=2026-11-08T12:00:00.000Z|2026-11-12T14:00:00.000Z|2026-11-13T14:00:00.000Z
+TR/milletMeclisi/TR_MED c5 y2034 active seats=3 turns=450/548/572 dur=48/24 seat=TR-milletMeclisi-TR_MED shift=572 t=2026-11-08T12:00:00.000Z|2026-11-12T14:00:00.000Z|2026-11-13T14:00:00.000Z
+TR/milletMeclisi/TR_SEA c5 y2034 active seats=3 turns=450/548/572 dur=48/24 seat=TR-milletMeclisi-TR_SEA shift=572 t=2026-11-08T12:00:00.000Z|2026-11-12T14:00:00.000Z|2026-11-13T14:00:00.000Z
+## after-shifted-regular gr.vouli
+(none)
+## after-shifted-regular at.nationalrat
+(none)
+## after-shifted-regular fi.eduskunta
+(none)
+## live-snap fr.assembleeNationale
+(none)
+## live-snap it.cameraDeputati
+(none)
+## live-snap es.congresoDiputados
+(none)
+## live-snap se.riksdag
+(none)
+## live-snap tr.milletMeclisi
+(none)
+## live-snap gr.vouli
+(none)
+## live-snap at.nationalrat
+(none)
+## live-snap fi.eduskunta
+(none)
+## mixed-snap-and-regular-history fr.assembleeNationale
+(none)
+## mixed-snap-and-regular-history it.cameraDeputati
+(none)
+## mixed-snap-and-regular-history es.congresoDiputados
+(none)
+## mixed-snap-and-regular-history se.riksdag
+(none)
+## mixed-snap-and-regular-history tr.milletMeclisi
+TR/milletMeclisi/TR_ANK c3 y2036 active seats=3 turns=450/648/672 dur=48/24 seat=TR-milletMeclisi-TR_ANK shift=- t=2026-11-08T12:00:00.000Z|2026-11-16T18:00:00.000Z|2026-11-17T18:00:00.000Z
+TR/milletMeclisi/TR_BLA c3 y2036 active seats=3 turns=450/648/672 dur=48/24 seat=TR-milletMeclisi-TR_BLA shift=- t=2026-11-08T12:00:00.000Z|2026-11-16T18:00:00.000Z|2026-11-17T18:00:00.000Z
+TR/milletMeclisi/TR_CEN c3 y2036 active seats=3 turns=450/648/672 dur=48/24 seat=TR-milletMeclisi-TR_CEN shift=- t=2026-11-08T12:00:00.000Z|2026-11-16T18:00:00.000Z|2026-11-17T18:00:00.000Z
+TR/milletMeclisi/TR_ESA c3 y2036 active seats=3 turns=450/648/672 dur=48/24 seat=TR-milletMeclisi-TR_ESA shift=- t=2026-11-08T12:00:00.000Z|2026-11-16T18:00:00.000Z|2026-11-17T18:00:00.000Z
+TR/milletMeclisi/TR_IST c6 y2035 active seats=3 turns=450/578/602 dur=48/24 seat=TR-milletMeclisi-TR_IST shift=602 t=2026-11-08T12:00:00.000Z|2026-11-13T20:00:00.000Z|2026-11-14T20:00:00.000Z
+TR/milletMeclisi/TR_IZM c3 y2036 active seats=3 turns=450/648/672 dur=48/24 seat=TR-milletMeclisi-TR_IZM shift=- t=2026-11-08T12:00:00.000Z|2026-11-16T18:00:00.000Z|2026-11-17T18:00:00.000Z
+TR/milletMeclisi/TR_MED c3 y2036 active seats=3 turns=450/648/672 dur=48/24 seat=TR-milletMeclisi-TR_MED shift=- t=2026-11-08T12:00:00.000Z|2026-11-16T18:00:00.000Z|2026-11-17T18:00:00.000Z
+TR/milletMeclisi/TR_SEA c3 y2036 active seats=3 turns=450/648/672 dur=48/24 seat=TR-milletMeclisi-TR_SEA shift=- t=2026-11-08T12:00:00.000Z|2026-11-16T18:00:00.000Z|2026-11-17T18:00:00.000Z
+## mixed-snap-and-regular-history gr.vouli
+(none)
+## mixed-snap-and-regular-history at.nationalrat
+(none)
+## mixed-snap-and-regular-history fi.eduskunta
+(none)

@@ -39,6 +39,8 @@ import {
   sovereignRolloverBondShell,
   type SovereignRolloverBondIdentity,
 } from "./sovereignRolloverBond";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
 
 export interface SovereignMaturityRefundingInput {
   /** The maturing bond; its issuer identity is copied onto the refunding issue. */
@@ -105,14 +107,15 @@ export async function refundSovereignMaturityShortfall(
       if (shared) {
         // The shared bond carries every refunding of the turn, so this sale's
         // own face is the one its cash receipt recorded.
-        const receipt = await db
-          .collection<{ _id: ObjectId; meta?: { face?: number } }>("financialTxLog")
-          .findOne({ _id: primaryDocumentId(`${key}:receipt`) }, { projection: { meta: 1 } });
+        const receipt = await financialTxLogCollection<{ _id: ObjectId; meta?: { face?: number } }>(
+          db
+        ).findOne({ _id: primaryDocumentId(`${key}:receipt`) }, { projection: { meta: 1 } });
         return { status: "replayed", key, bondId, faceLocal: receipt?.meta?.face ?? 0 };
       }
-      const issued = await db
-        .collection<Bond>("bonds")
-        .findOne({ _id: bondId }, { projection: { totalIssued: 1 } });
+      const issued = await bondsCollection(db).findOne(
+        { _id: bondId },
+        { projection: { totalIssued: 1 } }
+      );
       return { status: "replayed", key, bondId, faceLocal: issued?.totalIssued ?? 0 };
     }
   } catch {
@@ -188,7 +191,7 @@ export async function refundSovereignMaturityShortfall(
     // guard; it can only target a document that exists, so the first sale
     // of the turn creates the shared bond empty. Idempotent and safe under
     // concurrent writers: an upsert on a fixed id with no amounts.
-    await db.collection<Bond>("bonds").updateOne(
+    await bondsCollection(db).updateOne(
       { _id: bondId },
       {
         $setOnInsert: {

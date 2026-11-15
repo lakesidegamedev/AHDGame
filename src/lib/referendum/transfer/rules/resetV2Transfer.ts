@@ -1,3 +1,4 @@
+import { normalizeConvertedMetricBoard } from "@/lib/resetMetrics/rules/convertedBoard";
 import {
   buildResetLawOpeningBoard,
   type ResetLawOpeningBoard,
@@ -26,7 +27,7 @@ export function transferResetV2MetricToIreland(
 ): ResetMetricSnapshot {
   if (!Number.isFinite(scale) || scale <= 0)
     throw new Error("Invalid reunification currency scale");
-  return {
+  return normalizeConvertedMetricBoard({
     ...source,
     _id: `IE:${regionId}`,
     countryId: "IE",
@@ -51,7 +52,7 @@ export function transferResetV2MetricToIreland(
           })),
         ])
       ),
-  };
+  });
 }
 
 export function transferResetV2LawToIreland(
@@ -85,6 +86,16 @@ export function transferResetV2FiscalToIreland(
     annualSpending: source.annualSpending * scale,
     familyOwned: source.familyOwned * scale,
     otherExistingServices: source.otherExistingServices * scale,
+    ...(source.existingServicesByCategory
+      ? {
+          existingServicesByCategory: Object.fromEntries(
+            Object.entries(source.existingServicesByCategory).map(([category, amount]) => [
+              category,
+              amount * scale,
+            ])
+          ),
+        }
+      : {}),
     allocatedClaims: source.allocatedClaims.map((claim) => ({
       ...claim,
       annualBooked: claim.annualBooked * scale,

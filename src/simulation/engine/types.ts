@@ -28,6 +28,8 @@ export interface TurnExecutionContext {
   gameNow: Date;
   realNow: Date;
   startTimeMs: number;
+  /** Resolved once per turn from the resilience stage: use the stamped, rerun-safe write paths. */
+  rerunSafe?: boolean;
   nextTurnTime: Date;
   characters: Character[];
   states: State[];
@@ -43,13 +45,13 @@ export interface TurnPhaseRuntime {
   /**
    * Resolves once every phase that timed out has actually stopped. A timeout
    * does not cancel the phase function, so the turn must await this before it
-   * commits or releases its lock (#3385).
+   * commits or releases its lock.
    */
   drainTimedOutPhases?(): Promise<void>;
   /**
    * The phase result a dependent phase needs, or an explicit failure. On a crash
    * resume, distinguishes an interrupted phase from a completed one whose stored
-   * result is missing; neither reruns and neither becomes a zero flow (#3429).
+   * result is missing; neither reruns and neither becomes a zero flow.
    */
   requirePhaseResult<T>(phase: string, result: T | null, dependent: string): T;
   /**

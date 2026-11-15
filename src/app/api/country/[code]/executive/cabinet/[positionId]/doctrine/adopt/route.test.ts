@@ -37,7 +37,7 @@ describe("POST doctrine/adopt", () => {
     db.collection("gameState");
     db.collection("cabinetMembers");
     db.collection("nationalDoctrine");
-    db.collectionMocks.gameState.findOne.mockResolvedValue({ conflictsEnabled: true });
+    db.collectionMocks.gameState.findOne.mockResolvedValue({});
     db.collectionMocks.cabinetMembers.findOne.mockResolvedValue({
       _id: "m1",
       characterId: "char_1",
@@ -66,13 +66,6 @@ describe("POST doctrine/adopt", () => {
     expect(res.status).toBe(403);
   });
 
-  it("404s when conflicts is disabled", async () => {
-    db.collectionMocks.gameState.findOne.mockResolvedValue({ conflictsEnabled: false });
-    const { POST } = await import(ROUTE);
-    const res = await POST(req({ key: VALID_KEY }), call);
-    expect(res.status).toBe(404);
-  });
-
   it("400s an already-adopted node without writing", async () => {
     const { POST } = await import(ROUTE);
     const res = await POST(req({ key: "maneuver-0" }), call); // already in DEFAULT_ADOPTED
@@ -81,7 +74,6 @@ describe("POST doctrine/adopt", () => {
 
   it("books yearly income before spending when the world has ticked past start", async () => {
     db.collectionMocks.gameState.findOne.mockResolvedValue({
-      conflictsEnabled: true,
       startingYear: 1953,
       currentYear: 1954,
     });

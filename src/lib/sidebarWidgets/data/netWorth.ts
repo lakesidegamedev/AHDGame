@@ -1,8 +1,10 @@
 import { ObjectId, type Db } from "mongodb";
 import type { User } from "@/lib/db/types/user";
-import type { Character } from "@/lib/db/types/character";
 import type { PortfolioHistory } from "@/lib/db/types/portfolioHistory";
 import { COUNTRY_CURRENCY_MAP, type CurrencyCode } from "@/lib/constants/currencyCodes";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { usersCollection } from "@/lib/db/repositories/users";
+import { portfolioHistoryCollection } from "@/lib/db/repositories/portfolioHistory";
 
 export interface NetWorthPoint {
   turn: number;
@@ -26,16 +28,17 @@ const NET_WORTH_TURNS = 12;
  * of each point is kept, so the client can convert at the rate of the time.
  */
 export async function loadNetWorth(db: Db, userId: string): Promise<NetWorthWidgetData | null> {
-  const user = await db
-    .collection<User>("users")
-    .findOne({ _id: new ObjectId(userId) }, { projection: { activeCharacterId: 1 } });
+  const user = await usersCollection(db).findOne(
+    { _id: new ObjectId(userId) },
+    { projection: { activeCharacterId: 1 } }
+  );
   if (!user?.activeCharacterId) return null;
   const [character, history] = await Promise.all([
-    db
-      .collection<Character>("characters")
-      .findOne({ _id: user.activeCharacterId }, { projection: { countryId: 1 } }),
-    db
-      .collection<PortfolioHistory>("portfolioHistory")
+    charactersCollection(db).findOne(
+      { _id: user.activeCharacterId },
+      { projection: { countryId: 1 } }
+    ),
+    portfolioHistoryCollection(db)
       .find({ characterId: user.activeCharacterId })
       .sort({ turn: -1 })
       .limit(NET_WORTH_TURNS)

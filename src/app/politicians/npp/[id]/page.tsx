@@ -1,3 +1,4 @@
+import { displayCanadianRegionCode } from "@/lib/countries/ca/regionCodes";
 import { CDN_LOGO_URL } from "@/lib/images/staticCdnAssets";
 import type { Metadata } from "next";
 import Image from "next/image";
@@ -7,7 +8,7 @@ import Link from "next/link";
 import { getDb } from "@/lib/mongodb";
 import { parseNppId } from "@/lib/utils/profileUrls";
 import { getCurrencyPrefix } from "@/lib/utils/budgetCalculations";
-import type { NPP, State, PoliticalParty, Corporation } from "@/lib/db/types";
+import type { NPP, State, PoliticalParty } from "@/lib/db/types";
 import { deriveCeoArchetype } from "@/lib/npp/ceoArchetype";
 import { getPartyColor, getPartyHex, ensureReadableOnDark } from "@/lib/utils/politics";
 import { getOfficeLabel } from "@/lib/utils/officeTitle";
@@ -19,6 +20,10 @@ import { NppForecastCard } from "./NppForecastCard";
 import { NppCapitalPanel } from "./NppCapitalPanel";
 import { bypassNextImageOptimization } from "@/lib/images/bypassImageOptimization";
 import { NPP_MAX_DONOR_BASE_LEVEL } from "@/lib/npp/actionAi";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -41,11 +46,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   let npp: NPP | null = null;
   if (parsed.type === "sequential") {
-    npp = await db.collection<NPP>("npps").findOne({ sequentialId: parsed.value }, { projection });
+    npp = await nppsCollection(db).findOne({ sequentialId: parsed.value }, { projection });
   } else if (ObjectId.isValid(parsed.value)) {
-    npp = await db
-      .collection<NPP>("npps")
-      .findOne({ _id: new ObjectId(parsed.value) }, { projection });
+    npp = await nppsCollection(db).findOne({ _id: new ObjectId(parsed.value) }, { projection });
   }
   if (!npp) return {};
 
@@ -105,10 +108,10 @@ async function getNPPData(id: string) {
   let npp: NPP | null = null;
 
   if (parsed.type === "sequential") {
-    npp = await db.collection<NPP>("npps").findOne({ sequentialId: parsed.value });
+    npp = await nppsCollection(db).findOne({ sequentialId: parsed.value });
   } else {
     if (!ObjectId.isValid(parsed.value)) return null;
-    npp = await db.collection<NPP>("npps").findOne({ _id: new ObjectId(parsed.value) });
+    npp = await nppsCollection(db).findOne({ _id: new ObjectId(parsed.value) });
 
     if (npp?.sequentialId) {
       redirect(`/politicians/npp/${npp.sequentialId}`);
@@ -117,28 +120,28 @@ async function getNPPData(id: string) {
 
   if (!npp) return null;
 
-  const homeState = await db
-    .collection<State>("states")
-    .findOne({ _id: npp.homeState, countryId: npp.countryId });
+  const homeState = await statesCollection(db).findOne({
+    _id: npp.homeState,
+    countryId: npp.countryId,
+  });
   let party: PoliticalParty | null = null;
   if (npp.party && npp.party !== "independent") {
     const partySeqId = parseInt(npp.party, 10);
     const nppCountry = npp.countryId ?? "US";
     if (!isNaN(partySeqId)) {
-      party = await db
-        .collection<PoliticalParty>("politicalParties")
-        .findOne({ sequentialId: partySeqId, countryId: nppCountry });
+      party = await politicalPartiesCollection(db).findOne({
+        sequentialId: partySeqId,
+        countryId: nppCountry,
+      });
     }
   }
 
   // Corporation this NPP currently runs as CEO, if any (parity with politician
   // profiles that surface office). ceoId holds the NPP _id when ceoType === "npp".
-  const ledCorp = await db
-    .collection<Corporation>("corporations")
-    .findOne(
-      { ceoType: "npp", ceoId: npp._id, ceoVacant: { $ne: true } },
-      { projection: { name: 1, sequentialId: 1, type: 1, ceoHistory: 1 } }
-    );
+  const ledCorp = await corporationsCollection(db).findOne(
+    { ceoType: "npp", ceoId: npp._id, ceoVacant: { $ne: true } },
+    { projection: { name: 1, sequentialId: 1, type: 1, ceoHistory: 1 } }
+  );
   let ledCorporation: {
     name: string;
     sequentialId?: number;
@@ -275,7 +278,7 @@ export default async function NppProfilePage({ params }: PageProps) {
                   href={regionUrl(npp.countryId ?? "US", npp.homeState)}
                   className="rounded-full border border-zinc-700 bg-zinc-800 px-3 py-1 text-xs text-zinc-300 hover:border-zinc-500 transition-colors"
                 >
-                  {homeState?.name || npp.homeState}
+                  {displayCanadianRegionCode(homeState?.name || npp.homeState)}
                 </Link>
               </div>
 

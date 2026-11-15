@@ -1,4 +1,5 @@
 "use client";
+import { displayCanadianRegionCode } from "@/lib/countries/ca/regionCodes";
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
@@ -286,7 +287,9 @@ export function WealthList({ entries }: { entries: WealthEntry[] }) {
                               </span>
                             </div>
                             <div className="flex items-center gap-1 text-xs text-muted">
-                              <span className="truncate">{entry.state}</span>
+                              <span className="truncate">
+                                {displayCanadianRegionCode(entry.state)}
+                              </span>
                               {entry.corporation && (
                                 <>
                                   <span>•</span>

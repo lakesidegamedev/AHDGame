@@ -33,6 +33,11 @@ describe("1991 player fiscal openings", () => {
       const laws = generateDefaultEnactedLaws("1991-default").filter(
         (law) => law.countryId === countryId && law.rate === undefined
       );
+      if (countryId === "US" || countryId === "UK" || countryId === "JP") {
+        // The political-legislation book owns their laws; the seed derives none.
+        expect(laws).toEqual([]);
+        return;
+      }
       expect(laws.length).toBeGreaterThan(0);
       const byCategory: Record<string, number> = {};
       let grants = 0;

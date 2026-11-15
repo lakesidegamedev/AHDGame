@@ -1,8 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ObjectId, type Db } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
-import { SURPRISE_CASE_TEMPLATES } from "@/lib/scotus/surpriseCaseTemplates";
-import { SURPRISE_CASE_SPAWN_PROBABILITY_PER_TURN } from "@/lib/scotus/surpriseCaseSpawn";
+import { SURPRISE_CASE_TEMPLATES, templatesForYear } from "@/lib/scotus/surpriseCaseTemplates";
+import {
+  SURPRISE_CASE_HEARING_DELAY_TURNS,
+  SURPRISE_CASE_SPAWN_PROBABILITY_PER_TURN,
+} from "@/lib/scotus/surpriseCaseSpawn";
 
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
 vi.mock("@/lib/gameState", () => ({ getGameState: vi.fn() }));
@@ -47,6 +50,16 @@ describe("processScotusSurpriseCaseTurn", () => {
     });
   });
 
+  // The turn reads docketCases twice: pending cases due a hearing, then the
+  // surprise cases already heard. Route by filter so each gets its own rows.
+  function mockDocketFind(rows: { due?: unknown[]; heard?: unknown[] }) {
+    db.collectionMocks.docketCases!.find.mockImplementation(((filter: Record<string, unknown>) => ({
+      toArray: vi
+        .fn()
+        .mockResolvedValue(filter.hearingDueTurn ? (rows.due ?? []) : (rows.heard ?? [])),
+    })) as never);
+  }
+
   function seat(overrides: Partial<Record<string, unknown>>) {
     return {
       _id: new ObjectId(),
@@ -70,9 +83,7 @@ describe("processScotusSurpriseCaseTurn", () => {
     db.collectionMocks.supremeCourtSeats!.find.mockReturnValue({
       toArray: vi.fn().mockResolvedValue([seat({ economicLean: 2, socialLean: 2 })]),
     });
-    db.collectionMocks.docketCases!.find.mockReturnValue({
-      toArray: vi.fn().mockResolvedValue([]),
-    });
+    mockDocketFind({ heard: [] });
 
     const eligible1953 = new Set(
       templatesForYear(SURPRISE_CASE_TEMPLATES, 1953).map((t) => t.templateKey)
@@ -107,9 +118,7 @@ describe("processScotusSurpriseCaseTurn", () => {
     db.collectionMocks.supremeCourtSeats!.find.mockReturnValue({
       toArray: vi.fn().mockResolvedValue([seat({ economicLean: 2, socialLean: 2 })]),
     });
-    db.collectionMocks.docketCases!.find.mockReturnValue({
-      toArray: vi.fn().mockResolvedValue([]),
-    });
+    mockDocketFind({ heard: [] });
 
     const { processScotusSurpriseCaseTurn } = await import("./scotusSurpriseCaseTurn");
     await processScotusSurpriseCaseTurn(463, db as unknown as Db, 0, 0);
@@ -129,155 +138,185 @@ describe("processScotusSurpriseCaseTurn", () => {
       0
     );
 
-    expect(result).toEqual({ spawned: false });
+    expect(result).toEqual({ spawned: false, decided: 0 });
     const { onBillEnacted } = await import("@/lib/billEnactment");
     expect(onBillEnacted).not.toHaveBeenCalled();
     expect(db.collectionMocks.docketCases!.insertOne).not.toHaveBeenCalled();
   });
 
-  it("spawns, resolves via majority headcount (positive), and calls onBillEnacted with source scotus_surprise_ruling", async () => {
-    const seats = [
-      seat({ seatNumber: 1, economicLean: 3, socialLean: 3 }),
-      seat({ seatNumber: 2, economicLean: 2, socialLean: 2 }),
-      seat({ seatNumber: 3, justiceMode: null, economicLean: null, socialLean: null }), // vacant — excluded
-    ];
+  it("files a spawned case as pending with a hearing turn and applies nothing yet", async () => {
+    mockDocketFind({});
     db.collectionMocks.supremeCourtSeats!.find.mockReturnValue({
-      toArray: vi.fn().mockResolvedValue(seats),
+      toArray: vi.fn().mockResolvedValue([seat({ seatNumber: 1, economicLean: 3, socialLean: 3 })]),
     });
-    // No previously-spawned surprise cases — every template is available.
-    db.collectionMocks.docketCases!.find.mockReturnValue({
-      toArray: vi.fn().mockResolvedValue([]),
-    });
-
     const template = SURPRISE_CASE_TEMPLATES[0];
 
     const { processScotusSurpriseCaseTurn } = await import("./scotusSurpriseCaseTurn");
-    const result = await processScotusSurpriseCaseTurn(1, db as unknown as Db, 0, 0);
+    const result = await processScotusSurpriseCaseTurn(100, db as unknown as Db, 0, 0, 0);
 
-    expect(result).toEqual({ spawned: true, caseKey: template.templateKey, majoritySide: 1 });
-
-    const { onBillEnacted } = await import("@/lib/billEnactment");
-    expect(onBillEnacted).toHaveBeenCalledTimes(1);
-    const [, syntheticBill] = vi.mocked(onBillEnacted).mock.calls[0];
-    expect(syntheticBill).toMatchObject({
+    expect(result).toEqual({ spawned: true, caseKey: template.templateKey, decided: 0 });
+    const inserted = db.collectionMocks.docketCases!.insertOne.mock.calls[0][0] as Record<
+      string,
+      unknown
+    >;
+    expect(inserted).toMatchObject({
       countryId: "US",
-      stateId: "federal",
-      source: "scotus_surprise_ruling",
-      legislationTypeId: template.positiveEffect.legislationTypeId,
-      provisions: [
-        expect.objectContaining({
-          legislationTypeId: template.positiveEffect.legislationTypeId,
-          policyOptionId: template.positiveEffect.policyOptionId,
-        }),
-      ],
+      caseKey: template.templateKey,
+      status: "pending",
+      isSurprise: true,
+      hearingDueTurn: 100 + SURPRISE_CASE_HEARING_DELAY_TURNS.min,
     });
-
-    expect(db.collectionMocks.docketCases!.insertOne).toHaveBeenCalledWith(
-      expect.objectContaining({
-        countryId: "US",
-        preset: "1953-default",
-        caseKey: template.templateKey,
-        title: template.title,
-        axis: template.axis,
-        status: "decided",
-        outcome: "diverged",
-        decidedAtTurn: 1,
-        decisionSeatedFor: 2,
-        decisionSeatedAgainst: 0,
-        isSurprise: true,
-        effect: template.positiveEffect,
-      })
-    );
-
-    const { generateScotusSurpriseNews } = await import("@/lib/scotus/scotusNews");
-    expect(generateScotusSurpriseNews).toHaveBeenCalledTimes(1);
-    const [newsTemplateArg, newsDecisionArg] = vi.mocked(generateScotusSurpriseNews).mock.calls[0];
-    expect(newsTemplateArg).toBe(template);
-    expect(newsDecisionArg).toMatchObject({ majoritySide: 1 });
-  });
-
-  it("resolves via majority headcount (negative) and picks the template's negativeEffect", async () => {
-    const seats = [
-      seat({ seatNumber: 1, economicLean: -3, socialLean: -3 }),
-      seat({ seatNumber: 2, economicLean: -2, socialLean: -2 }),
-      seat({ seatNumber: 3, economicLean: 1, socialLean: 1 }),
-    ];
-    db.collectionMocks.supremeCourtSeats!.find.mockReturnValue({
-      toArray: vi.fn().mockResolvedValue(seats),
-    });
-    db.collectionMocks.docketCases!.find.mockReturnValue({
-      toArray: vi.fn().mockResolvedValue([]),
-    });
-
-    const template = SURPRISE_CASE_TEMPLATES[0];
-
-    const { processScotusSurpriseCaseTurn } = await import("./scotusSurpriseCaseTurn");
-    const result = await processScotusSurpriseCaseTurn(1, db as unknown as Db, 0, 0);
-
-    expect(result).toEqual({ spawned: true, caseKey: template.templateKey, majoritySide: -1 });
-
-    const { onBillEnacted } = await import("@/lib/billEnactment");
-    const [, syntheticBill] = vi.mocked(onBillEnacted).mock.calls[0];
-    expect(syntheticBill).toMatchObject({
-      source: "scotus_surprise_ruling",
-      legislationTypeId: template.negativeEffect.legislationTypeId,
-      provisions: [
-        expect.objectContaining({ policyOptionId: template.negativeEffect.policyOptionId }),
-      ],
-    });
-  });
-
-  it("on a headcount tie, records the case but applies no effect and never calls onBillEnacted", async () => {
-    const seats = [
-      seat({ seatNumber: 1, economicLean: 2, socialLean: 2 }),
-      seat({ seatNumber: 2, economicLean: -2, socialLean: -2 }),
-    ];
-    db.collectionMocks.supremeCourtSeats!.find.mockReturnValue({
-      toArray: vi.fn().mockResolvedValue(seats),
-    });
-    db.collectionMocks.docketCases!.find.mockReturnValue({
-      toArray: vi.fn().mockResolvedValue([]),
-    });
-
-    const template = SURPRISE_CASE_TEMPLATES[0];
-
-    const { processScotusSurpriseCaseTurn } = await import("./scotusSurpriseCaseTurn");
-    const result = await processScotusSurpriseCaseTurn(1, db as unknown as Db, 0, 0);
-
-    expect(result).toEqual({ spawned: true, caseKey: template.templateKey, majoritySide: 0 });
-
+    expect(inserted).not.toHaveProperty("outcome");
     const { onBillEnacted } = await import("@/lib/billEnactment");
     expect(onBillEnacted).not.toHaveBeenCalled();
+    const { generateScotusSurpriseNews } = await import("@/lib/scotus/scotusNews");
+    expect(generateScotusSurpriseNews).not.toHaveBeenCalled();
+  });
 
-    expect(db.collectionMocks.docketCases!.insertOne).toHaveBeenCalledWith(
-      expect.objectContaining({
-        status: "decided",
-        outcome: "diverged",
-        effect: undefined,
-      })
+  it("rules on a new case the turn it is filed when the pending docket is off", async () => {
+    mockDocketFind({});
+    const { processScotusSurpriseCaseTurn } = await import("./scotusSurpriseCaseTurn");
+    await processScotusSurpriseCaseTurn(100, db as unknown as Db, 0, 0, 0, false);
+
+    const inserted = db.collectionMocks.docketCases!.insertOne.mock.calls[0][0] as {
+      hearingDueTurn: number;
+    };
+    expect(inserted.hearingDueTurn).toBe(100);
+    const dueReads = db.collectionMocks.docketCases!.find.mock.calls.filter(
+      ([filter]) => (filter as { hearingDueTurn?: unknown }).hearingDueTurn !== undefined
     );
-    const insertedDoc = db.collectionMocks.docketCases!.insertOne.mock.calls[0][0];
-    expect(insertedDoc).not.toHaveProperty("enactedLawId");
+    expect(dueReads).toHaveLength(2);
+    const insertOrder = db.collectionMocks.docketCases!.insertOne.mock.invocationCallOrder[0];
+    const lastDueRead = db.collectionMocks.docketCases!.find.mock.invocationCallOrder.at(-1)!;
+    expect(lastDueRead).toBeGreaterThan(insertOrder);
+  });
+
+  it("draws the hearing delay across the configured range", async () => {
+    mockDocketFind({});
+    const { processScotusSurpriseCaseTurn } = await import("./scotusSurpriseCaseTurn");
+    await processScotusSurpriseCaseTurn(100, db as unknown as Db, 0, 0, 0.9999);
+    const inserted = db.collectionMocks.docketCases!.insertOne.mock.calls[0][0] as {
+      hearingDueTurn: number;
+    };
+    expect(inserted.hearingDueTurn).toBe(100 + SURPRISE_CASE_HEARING_DELAY_TURNS.max);
+  });
+
+  describe("hearing a pending case", () => {
+    const template = SURPRISE_CASE_TEMPLATES[0];
+    function pendingRow(hearingDueTurn: number) {
+      return {
+        _id: new ObjectId(),
+        countryId: "US",
+        caseKey: template.templateKey,
+        status: "pending",
+        isSurprise: true,
+        hearingDueTurn,
+      };
+    }
+    // Spawn roll fails (draw 1) so only the hearing step runs.
+    async function hear(seats: unknown[], turn = 50) {
+      mockDocketFind({ due: [pendingRow(turn)] });
+      db.collectionMocks.supremeCourtSeats!.find.mockReturnValue({
+        toArray: vi.fn().mockResolvedValue(seats),
+      });
+      const { processScotusSurpriseCaseTurn } = await import("./scotusSurpriseCaseTurn");
+      return processScotusSurpriseCaseTurn(turn, db as unknown as Db, 1, 0, 0);
+    }
+
+    it("rules by the sitting majority (positive) and enacts the positive effect", async () => {
+      const result = await hear([
+        seat({ seatNumber: 1, economicLean: 3, socialLean: 3 }),
+        seat({ seatNumber: 2, economicLean: 2, socialLean: 2 }),
+        seat({ seatNumber: 3, justiceMode: null, economicLean: null, socialLean: null }),
+      ]);
+      expect(result).toEqual({ spawned: false, decided: 1 });
+
+      const { onBillEnacted } = await import("@/lib/billEnactment");
+      expect(onBillEnacted).toHaveBeenCalledTimes(1);
+      const [, syntheticBill] = vi.mocked(onBillEnacted).mock.calls[0];
+      expect(syntheticBill).toMatchObject({
+        countryId: "US",
+        stateId: "federal",
+        source: "scotus_surprise_ruling",
+        legislationTypeId: template.positiveEffect.legislationTypeId,
+        provisions: [
+          expect.objectContaining({
+            legislationTypeId: template.positiveEffect.legislationTypeId,
+            policyOptionId: template.positiveEffect.policyOptionId,
+          }),
+        ],
+      });
+
+      expect(db.collectionMocks.docketCases!.updateOne).toHaveBeenCalledWith(
+        expect.objectContaining({ status: "pending" }),
+        {
+          $set: expect.objectContaining({
+            status: "decided",
+            outcome: "diverged",
+            decidedAtTurn: 50,
+            decisionSeatedFor: 2,
+            decisionSeatedAgainst: 0,
+            effect: template.positiveEffect,
+          }),
+        }
+      );
+      const { generateScotusSurpriseNews } = await import("@/lib/scotus/scotusNews");
+      expect(generateScotusSurpriseNews).toHaveBeenCalledTimes(1);
+      const [newsTemplateArg, newsDecisionArg] = vi.mocked(generateScotusSurpriseNews).mock
+        .calls[0];
+      expect(newsTemplateArg).toBe(template);
+      expect(newsDecisionArg).toMatchObject({ majoritySide: 1 });
+    });
+
+    it("rules by the sitting majority (negative) and enacts the negative effect", async () => {
+      await hear([
+        seat({ seatNumber: 1, economicLean: -3, socialLean: -3 }),
+        seat({ seatNumber: 2, economicLean: -2, socialLean: -2 }),
+        seat({ seatNumber: 3, economicLean: 1, socialLean: 1 }),
+      ]);
+      const { onBillEnacted } = await import("@/lib/billEnactment");
+      const [, syntheticBill] = vi.mocked(onBillEnacted).mock.calls[0];
+      expect(syntheticBill).toMatchObject({
+        source: "scotus_surprise_ruling",
+        legislationTypeId: template.negativeEffect.legislationTypeId,
+        provisions: [
+          expect.objectContaining({ policyOptionId: template.negativeEffect.policyOptionId }),
+        ],
+      });
+    });
+
+    it("on a headcount tie, decides with no effect and never calls onBillEnacted", async () => {
+      await hear([
+        seat({ seatNumber: 1, economicLean: 2, socialLean: 2 }),
+        seat({ seatNumber: 2, economicLean: -2, socialLean: -2 }),
+      ]);
+      const { onBillEnacted } = await import("@/lib/billEnactment");
+      expect(onBillEnacted).not.toHaveBeenCalled();
+      const update = db.collectionMocks.docketCases!.updateOne.mock.calls[0][1] as {
+        $set: Record<string, unknown>;
+      };
+      expect(update.$set).toMatchObject({ status: "decided", effect: undefined });
+      expect(update.$set).not.toHaveProperty("enactedLawId");
+    });
   });
 
   it("never repeats a template already spawned this game", async () => {
     db.collectionMocks.supremeCourtSeats!.find.mockReturnValue({
       toArray: vi.fn().mockResolvedValue([seat({ seatNumber: 1, economicLean: 1, socialLean: 1 })]),
     });
-    // Every template except the last one has already spawned.
-    const alreadyUsed = SURPRISE_CASE_TEMPLATES.slice(0, -1).map((t) => ({
-      caseKey: t.templateKey,
-    }));
-    db.collectionMocks.docketCases!.find.mockReturnValue({
-      toArray: vi.fn().mockResolvedValue(alreadyUsed),
-    });
+    // Every template except the last 1953-eligible one has already spawned.
+    const eligible = templatesForYear(SURPRISE_CASE_TEMPLATES, 1953);
+    const lastTemplate = eligible[eligible.length - 1];
+    const alreadyUsed = SURPRISE_CASE_TEMPLATES.filter(
+      (t) => t.templateKey !== lastTemplate.templateKey
+    ).map((t) => ({ caseKey: t.templateKey, decisionYear: 1953 }));
+    mockDocketFind({ heard: alreadyUsed });
 
     const { processScotusSurpriseCaseTurn } = await import("./scotusSurpriseCaseTurn");
     // templatePickRandomDraw = 0 would normally pick index 0, but only the
     // last template remains available, so it must be picked instead.
     const result = await processScotusSurpriseCaseTurn(1, db as unknown as Db, 0, 0);
 
-    const lastTemplate = SURPRISE_CASE_TEMPLATES[SURPRISE_CASE_TEMPLATES.length - 1];
     expect(result.caseKey).toBe(lastTemplate.templateKey);
   });
 
@@ -285,15 +324,16 @@ describe("processScotusSurpriseCaseTurn", () => {
     db.collectionMocks.supremeCourtSeats!.find.mockReturnValue({
       toArray: vi.fn().mockResolvedValue([]),
     });
-    const allUsed = SURPRISE_CASE_TEMPLATES.map((t) => ({ caseKey: t.templateKey }));
-    db.collectionMocks.docketCases!.find.mockReturnValue({
-      toArray: vi.fn().mockResolvedValue(allUsed),
-    });
+    const allUsed = SURPRISE_CASE_TEMPLATES.map((t) => ({
+      caseKey: t.templateKey,
+      decisionYear: 1953,
+    }));
+    mockDocketFind({ heard: allUsed });
 
     const { processScotusSurpriseCaseTurn } = await import("./scotusSurpriseCaseTurn");
     const result = await processScotusSurpriseCaseTurn(1, db as unknown as Db, 0, 0);
 
-    expect(result).toEqual({ spawned: false });
+    expect(result).toEqual({ spawned: false, decided: 0 });
     const { onBillEnacted } = await import("@/lib/billEnactment");
     expect(onBillEnacted).not.toHaveBeenCalled();
     expect(db.collectionMocks.docketCases!.insertOne).not.toHaveBeenCalled();

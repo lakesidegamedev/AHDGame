@@ -1,6 +1,6 @@
 "use client";
 
-import { CURRENCY_SYMBOLS } from "@/lib/constants/currencies";
+import { CURRENCY_SYMBOLS } from "@/lib/constants/currencyCodes";
 
 export interface EstimateLineProps {
   /** Optional leading label, e.g. "Build" / "Contest". */
@@ -9,7 +9,7 @@ export interface EstimateLineProps {
   costPS: number;
   /**
    * Cash cost alongside the PS, in the paying tier's local currency. Omitted by
-   * actions that cost no money; Build Org has charged treasury since 2026-09-02.
+   * actions that cost no money.
    */
   costCash?: { amount: number; currencyCode: string };
   gain: { sign: "+" | "−"; value: number; unit: string };

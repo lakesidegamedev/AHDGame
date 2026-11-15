@@ -4,17 +4,15 @@
  * counted withdrawals and avoiding a query per constituency or nominee.
  */
 import { type ClientSession, type Db, type ObjectId } from "mongodb";
-import type {
-  Character,
-  Election,
-  ElectionCandidate,
-  ElectionVoteTally,
-  NPP,
-} from "@/lib/db/types";
+import type { Election, ElectionCandidate, ElectionVoteTally, NPP } from "@/lib/db/types";
 import { russianDumaConvocationOfficeCompatible } from "./rules/dumaConvocation";
 import { loadPendingRussianCouncilOwners } from "./pendingCouncilMandates";
 import type { RussianDumaResultRecord } from "./dumaElectionResult";
 import type { RussianDumaCohortBallot } from "./rules/assemblyCohort";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
 
 export async function loadRussianDumaCertificationInputs(input: {
   db: Db;
@@ -26,7 +24,7 @@ export async function loadRussianDumaCertificationInputs(input: {
 }) {
   const { db, session, cohort } = input;
   const electionIds = cohort.map((row) => row._id);
-  const tallies = db.collection<ElectionVoteTally>("electionVoteTallies");
+  const tallies = electionVoteTalliesCollection(db);
   const counted = await tallies
     .find(
       { electionId: { $in: electionIds } },
@@ -49,8 +47,7 @@ export async function loadRussianDumaCertificationInputs(input: {
     counted.some((row) => row.finalized || row.russianDumaBallot?.certifiedCohortId)
   )
     throw new Error("The Duma needs one unique unfinalized tally per ballot");
-  const candidates = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const candidates = await electionCandidatesCollection(db)
     .find(
       { electionId: { $in: electionIds } },
       {
@@ -73,8 +70,7 @@ export async function loadRussianDumaCertificationInputs(input: {
   const npcIds = candidates.filter((row) => row.isNPP && row.nppId).map((row) => row.nppId!);
   const playerIds = candidates.filter((row) => !row.isNPP).map((row) => row.characterId);
   const npcs = npcIds.length
-    ? await db
-        .collection<NPP>("npps")
+    ? await nppsCollection(db)
         .find(
           {
             _id: { $in: npcIds },
@@ -87,8 +83,7 @@ export async function loadRussianDumaCertificationInputs(input: {
         .toArray()
     : [];
   const players = playerIds.length
-    ? await db
-        .collection<Character>("characters")
+    ? await charactersCollection(db)
         .find(
           {
             _id: { $in: playerIds },
