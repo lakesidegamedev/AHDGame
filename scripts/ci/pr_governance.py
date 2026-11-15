@@ -3,8 +3,12 @@
 
 For a PR opened by anyone other than a maintainer account or a bot:
 1. The "Conflict of interest" section must be present with exactly one box ticked.
-2. A change to economy or turn-processing code needs the maintainer's approving review
-   on the PR's current commit. The check re-runs when a review is submitted.
+2. A change to economy or turn-processing code needs a maintainer's approving review, and
+   the "Conflict of interest" section must say who the change affects (an `Affects:` line).
+   Test files never count as economy code. An approval on an earlier commit still counts
+   when no economy file changed between that commit and the current head.
+3. Trusted contributors skip the economy approval, unless they ticked the conflict box.
+   CI and governance files always need a maintainer approval on the current commit.
 
 Exemptions and alternatives:
 - Promote PRs (development -> staging, staging -> main) opened from a branch in this same
@@ -31,6 +35,9 @@ BOTS = {"dependabot[bot]", "github-actions[bot]"}
 # Operator bots follow every rule that applies to contributors. The only difference is that
 # their `/approve <sha>` comment relaying a maintainer's approval is honoured.
 OPERATOR_BOTS = {"keir-bot"}
+# Contributors with a clean record in economy code. Their economy PRs merge on the normal
+# gate unless they disclose a conflict; a conflicted PR always needs a maintainer.
+TRUSTED = {"HyawiiGithub"}
 PROMOTE_PAIRS = {("development", "staging"), ("staging", "main")}
 APPROVE_COMMENT = re.compile(r"\A\s*/approve\s+([0-9a-fA-F]{7,40})(?![0-9a-zA-Z])")
 # Code that moves money, prices, production or turn results for every player.
@@ -42,9 +49,12 @@ ECONOMY = re.compile(
     r"sovereignDefault|nationalization|unions|wealth|products|macroMetrics|npps?|constants)(?:/|\.|$)"
     r"|^src/lib/turnSystem\.ts$"
 )
+TESTS = re.compile(r"(?:\.test|\.spec)\.[cm]?[jt]sx?$|/__tests__/")
 # The rules themselves: CI workflows, code owners and these scripts. Without this a
 # contributor could rewrite the check in the same PR it is checking.
 GOVERNANCE = re.compile(r"^\.github/|^scripts/ci/")
+AFFECTS = re.compile(r"^\s*Affects:\s*(\S.{4,})$", re.M | re.I)
+COMMENT = re.compile(r"<!--.*?-->", re.S)
 BOX = re.compile(r"^\s*-\s*\[([ xX])\]\s*(.+)$", re.M)
 
 
@@ -67,14 +77,26 @@ def paged(path):
         page += 1
 
 
-def coi_problem(body):
-    m = re.search(r"^##\s*Conflict of interest\s*$(.*?)(?=^##\s|\Z)", body or "", re.M | re.S | re.I)
-    if not m:
+def coi_section(body):
+    m = re.search(r"^##\s*Conflict of interest\s*$(.*?)(?=^##\s|\Z)", COMMENT.sub("", body or ""), re.M | re.S | re.I)
+    return m.group(1) if m else None
+
+
+def coi_problem(body, economy=False):
+    section = coi_section(body)
+    if section is None:
         return "The PR description is missing its \"Conflict of interest\" section. Restore it from the template and tick one box."
-    ticked = [text for mark, text in BOX.findall(m.group(1)) if mark.lower() == "x"]
+    ticked = [text for mark, text in BOX.findall(section) if mark.lower() == "x"]
     if len(ticked) != 1:
         return f"Tick exactly one box under \"Conflict of interest\" ({len(ticked)} ticked)."
+    if economy and not AFFECTS.search(section):
+        return "This changes economy or turn code, so the \"Conflict of interest\" section needs an `Affects:` line saying who the change helps or hurts (for example: every nation at war, corporations that own mines)."
     return None
+
+
+def declares_conflict(body):
+    section = coi_section(body) or ""
+    return any(mark.lower() == "x" and text.strip().lower().startswith("it does") for mark, text in BOX.findall(section))
 
 
 def is_promote(pr):
@@ -86,6 +108,37 @@ def is_promote(pr):
 
 def approved_by_review(reviews, head):
     return any(r["user"]["login"] in MAINTAINERS and r["state"] == "APPROVED" and r.get("commit_id") == head for r in reviews)
+
+
+def approved_commits(reviews, comments, author):
+    """Every commit a maintainer approved, newest last (comment SHAs may be prefixes)."""
+    shas = [r.get("commit_id") for r in reviews if r["user"]["login"] in MAINTAINERS and r["state"] == "APPROVED"]
+    for c in comments:
+        who = (c.get("user") or {}).get("login")
+        if who == author or (who not in MAINTAINERS and who not in OPERATOR_BOTS):
+            continue
+        m = APPROVE_COMMENT.match(c.get("body") or "")
+        if m:
+            shas.append(m.group(1).lower())
+    return [s for s in shas if s]
+
+
+def approval_still_covers(shas, head, changed_since):
+    """True if an earlier approval covers head: no economy file changed since that commit."""
+    for sha in reversed(shas):
+        if head.lower().startswith(sha.lower()):
+            continue
+        try:
+            changed = changed_since(sha)
+        except Exception:  # unknown commit, API error: fall back to needing a fresh approval
+            continue
+        if changed is not None and not [f for f in changed if is_economy(f)]:
+            return True
+    return False
+
+
+def is_economy(path):
+    return bool(ECONOMY.search(path)) and not TESTS.search(path)
 
 
 def approved_by_comment(comments, head, author):
@@ -102,20 +155,30 @@ def approved_by_comment(comments, head, author):
     return False
 
 
-def evaluate(pr, files, fetch_approvals, guard_only=False):
-    """Return the list of problems for a non-maintainer PR. fetch_approvals() -> (reviews, comments)."""
+def evaluate(pr, files, fetch_approvals, guard_only=False, changed_since=None):
+    """Return the list of problems for a non-maintainer PR.
+
+    fetch_approvals() -> (reviews, comments); changed_since(sha) -> files changed from sha to head.
+    """
     if is_promote(pr):
         return []
     problems = []
-    coi = None if guard_only else coi_problem(pr.get("body"))
+    author = pr["user"]["login"]
+    economy = [] if guard_only else [f for f in files if is_economy(f)]
+    coi = None if guard_only else coi_problem(pr.get("body"), economy=bool(economy))
     if coi:
         problems.append(coi)
-    economy = [] if guard_only else [f for f in files if ECONOMY.search(f)]
+    if economy and author in TRUSTED and not declares_conflict(pr.get("body")):
+        economy = []
     rules = [f for f in files if GOVERNANCE.search(f)]
     if economy or rules:
         head = pr["head"]["sha"]
         reviews, comments = fetch_approvals()
-        approved = approved_by_review(reviews, head) or approved_by_comment(comments, head, pr["user"]["login"])
+        approved = approved_by_review(reviews, head) or approved_by_comment(comments, head, author)
+        # Governance files always need approval on the exact head; economy approval carries
+        # over pushes that leave economy code untouched.
+        if not approved and economy and not rules and changed_since:
+            approved = approval_still_covers(approved_commits(reviews, comments, author), head, changed_since)
         if not approved and rules:
             rerun = " After approving, re-run this check." if guard_only else ""
             problems.append(f"This changes CI or governance files ({', '.join(rules[:5])}). It needs an approving review from a maintainer on the current commit {head[:10]}, or a maintainer comment `/approve {head[:10]}`.{rerun}")
@@ -145,7 +208,15 @@ def main():
     guard_only = os.environ.get("GOVERNANCE_GUARD_ONLY") == "1"
     files = [f["filename"] for f in paged(f"pulls/{pr['number']}/files")]
     n = pr["number"]
-    problems = evaluate(pr, files, lambda: (paged(f"pulls/{n}/reviews"), paged(f"issues/{n}/comments")), guard_only)
+    head = pr["head"]["sha"]
+
+    def changed_since(sha):
+        cmp = api(f"compare/{sha}...{head}")
+        if len(cmp.get("files") or []) >= 300:
+            return None  # compare truncates at 300 files; too big to trust
+        return [f["filename"] for f in cmp.get("files") or []]
+
+    problems = evaluate(pr, files, lambda: (paged(f"pulls/{n}/reviews"), paged(f"issues/{n}/comments")), guard_only, changed_since)
     if problems:
         for p in problems:
             print(f"::error::{p}")
