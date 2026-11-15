@@ -14,6 +14,8 @@ import { useTranslations } from "next-intl";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useUserData } from "@/hooks/useUserData";
 import { useAuthMe } from "@/contexts/AuthDataContext";
+import { useUsernameMode } from "@/hooks/useAccountFieldsMode";
+import { ACCOUNT_URL, USERNAME_ACTION } from "@/lib/auth/accountFields/rules";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useInterface, type InterfaceMode } from "@/contexts/InterfaceContext";
 import { useToast } from "@/contexts/ToastContext";
@@ -183,6 +185,8 @@ export function SettingsPageContent() {
   const [referralCount, setReferralCount] = useState(0);
   const [userId, setUserId] = useState("");
   const [username, setUsername] = useState("");
+  const [formerName, setFormerName] = useState<string | null>(null);
+  const usernameMode = useUsernameMode();
   const [email, setEmail] = useState("");
   const [hasPassword, setHasPassword] = useState(true);
   const [oauthData, setOauthData] = useState<OAuthData>({});
@@ -290,6 +294,7 @@ export function SettingsPageContent() {
     setReferralCount(rawUser.referralCount ?? 0);
     setUserId(rawUser.id ?? "");
     setUsername(rawUser.username ?? "");
+    setFormerName(typeof rawUser.formerUsername === "string" ? rawUser.formerUsername : null);
     setEmail(rawUser.email ?? "");
     setHasPassword(rawUser.hasPassword ?? true);
 
@@ -563,6 +568,14 @@ export function SettingsPageContent() {
               <div className="rounded-xl border border-card-border bg-background/50 px-4 py-2.5 text-sm text-foreground">
                 {username || "..."}
               </div>
+              {formerName && <p className="mt-1 text-xs text-muted">formerly {formerName}</p>}
+              {usernameMode === "central" && (
+                <p className="mt-1 text-xs text-muted">
+                  <a href={ACCOUNT_URL} className="underline">
+                    {USERNAME_ACTION}
+                  </a>
+                </p>
+              )}
             </div>
             <EmailSection email={email} hasPassword={hasPassword} />
             <p className="text-xs text-muted">{t("page.contactAdmin")}</p>

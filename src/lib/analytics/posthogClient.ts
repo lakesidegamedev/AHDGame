@@ -1,5 +1,6 @@
 "use client";
 
+import { sendAnonymousPageview } from "./anonymousPageviewBeacon";
 import { postHogConfigFor, resolvePostHogMode, type PostHogMode } from "./posthogMode";
 import { getAnalyticsAccount, isAnalyticsGenerationCurrent } from "./accountContext";
 import { getStoredConsent } from "@/components/CookieConsent";
@@ -20,6 +21,7 @@ let identifiedAccountId: string | null = null;
 
 const IDLE_TIMEOUT_MS = 3_000;
 let activeMode: PostHogMode | null = null;
+let anonymousStarted = false;
 
 /** Never initialise during hydration or first paint. */
 function whenIdle(): Promise<void> {
@@ -56,13 +58,37 @@ function attachSurveyDismissalMirror(posthog: PostHogClient): void {
   );
 }
 
+/** URL of the page view already sent by beacon; the SDK's own initial one is dropped. */
+let beaconUrl: string | null = null;
+
+type BeforeSend = Extract<
+  NonNullable<import("posthog-js").PostHogConfig["before_send"]>,
+  (...args: never[]) => unknown
+>;
+
+const dropBeaconedPageview: BeforeSend = (event) => {
+  if (
+    event &&
+    beaconUrl !== null &&
+    event.event === "$pageview" &&
+    event.properties?.$current_url === beaconUrl
+  ) {
+    beaconUrl = null;
+    return null;
+  }
+  return event;
+};
+
 function loadPostHog(key: string, mode: PostHogMode): Promise<PostHogClient | null> {
   activeMode = mode;
   clientPromise = whenIdle()
     .then(() => import("posthog-js"))
     .then(({ default: posthog }) => {
       if (mode === "full" && getStoredConsent() !== "accepted") return null;
-      posthog.init(key, postHogConfigFor(mode));
+      posthog.init(key, {
+        ...postHogConfigFor(mode),
+        ...(mode === "anonymous" ? { before_send: dropBeaconedPageview } : {}),
+      });
       if (mode === "anonymous") return posthog;
       posthog.opt_in_capturing();
       attachSurveyDismissalMirror(posthog);
@@ -78,16 +104,30 @@ function loadPostHog(key: string, mode: PostHogMode): Promise<PostHogClient | nu
   return clientPromise;
 }
 
+const ANONYMOUS_SDK_INTERACTIONS = ["pointerdown", "keydown", "touchstart", "scroll"] as const;
+
 /**
- * Starts anonymous page counting for a visitor who has not accepted analytics.
+ * Anonymous page counting for a visitor who has not accepted analytics. The page
+ * view goes out as one small beacon at idle, and posthog-js itself loads only on
+ * the first interaction (so client-side navigation is still counted afterwards).
  * Nothing is stored on the device. A visitor who accepts later in the visit gets
  * full tracking on the next page load, because the mode is fixed at init.
  */
 export function startAnonymousPageviews(): void {
   const key = process.env.NEXT_PUBLIC_POSTHOG_KEY;
-  if (!key || clientPromise) return;
+  if (!key || clientPromise || anonymousStarted) return;
   if (resolvePostHogMode(getStoredConsent()) !== "anonymous") return;
-  void loadPostHog(key, "anonymous");
+  anonymousStarted = true;
+  beaconUrl = sendAnonymousPageview(key);
+  const load = () => {
+    for (const name of ANONYMOUS_SDK_INTERACTIONS) window.removeEventListener(name, load);
+    if (!clientPromise && resolvePostHogMode(getStoredConsent()) === "anonymous") {
+      void loadPostHog(key, "anonymous");
+    }
+  };
+  for (const name of ANONYMOUS_SDK_INTERACTIONS) {
+    window.addEventListener(name, load, { once: true, passive: true });
+  }
 }
 
 /** Full product tracking loads only for a visitor who has accepted analytics. */

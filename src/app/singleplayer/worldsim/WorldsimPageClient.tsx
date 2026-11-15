@@ -117,7 +117,7 @@ export function WorldsimPageClient() {
         aria-label="World map"
         className="mb-6 h-[min(72vh,720px)] min-h-[420px] overflow-hidden rounded border border-card-border bg-slate-950"
       >
-        <LandingGlobe bare initialZoom={1.05} hideLiveIndicator navigationDisabled allowBareZoom />
+        <LandingGlobe initialZoom={1.05} navigationDisabled allowBareZoom />
       </section>
 
       <section className="rounded border border-card-border bg-card-muted p-5">
