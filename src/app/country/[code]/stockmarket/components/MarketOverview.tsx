@@ -23,6 +23,7 @@ import type { ExchangeFilter } from "../types";
 import type { ExchangeMetaEntry } from "../stockMarketRouting";
 import type {
   CandlestickData,
+  WhitespaceData,
   HistogramData,
   IChartApi,
   ISeriesApi,
@@ -407,14 +408,21 @@ export function MarketOverview({
     if (!candleSeries || !volumeSeries || !chart) return;
     const up = cssVar("--success", "#22c55e");
     const down = cssVar("--error", "#ef4444");
+    // lightweight-charts throws "Value is null" on a null or NaN price, which
+    // takes the whole market page down. A candle with no usable price (a turn
+    // the exchange did not trade) renders as a gap instead.
     candleSeries.setData(
-      candles.map((c): CandlestickData<UTCTimestamp> => ({
-        time: c.time as UTCTimestamp,
-        open: c.open,
-        high: c.high,
-        low: c.low,
-        close: c.close,
-      }))
+      candles.map((c): CandlestickData<UTCTimestamp> | WhitespaceData<UTCTimestamp> =>
+        [c.open, c.high, c.low, c.close].every(Number.isFinite)
+          ? {
+              time: c.time as UTCTimestamp,
+              open: c.open,
+              high: c.high,
+              low: c.low,
+              close: c.close,
+            }
+          : { time: c.time as UTCTimestamp }
+      )
     );
     volumeSeries.setData(
       candles.map((c): HistogramData<UTCTimestamp> => ({
@@ -493,7 +501,7 @@ export function MarketOverview({
           const values = ma(closes, window);
           const data: LineData<UTCTimestamp>[] = [];
           values.forEach((v, i) => {
-            if (v !== null) data.push({ time: times[i], value: v });
+            if (v !== null && Number.isFinite(v)) data.push({ time: times[i], value: v });
           });
           ref.current.setData(data);
         }
@@ -571,10 +579,12 @@ export function MarketOverview({
         const opening = points[0]?.open;
         applyLine(
           opening > 0
-            ? points.map((p) => ({
-                time: p.time as UTCTimestamp,
-                value: (p.close / opening - 1) * 100,
-              }))
+            ? points
+                .filter((p) => Number.isFinite(p.close))
+                .map((p) => ({
+                  time: p.time as UTCTimestamp,
+                  value: (p.close / opening - 1) * 100,
+                }))
             : []
         );
       })
