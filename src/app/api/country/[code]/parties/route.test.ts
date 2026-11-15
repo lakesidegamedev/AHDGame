@@ -65,6 +65,36 @@ describe("GET /api/country/[code]/parties", () => {
     const body = await res.json();
     const [party] = body.parties;
     expect(party.playerCount).toBe(0);
+    expect(party).not.toHaveProperty("organizationByRegion");
+    expect(db.collection("statePartyOrg").find).not.toHaveBeenCalled();
+  });
+
+  it("optionally returns regional organization with one country-scoped projected read", async () => {
+    const org = db.collection("statePartyOrg");
+    org.find.mockReturnValue({
+      toArray: vi.fn().mockResolvedValue([
+        { partyId: "7", stateId: "CA", organization: 42.75 },
+        { partyId: "7", stateId: "NY", organization: 0 },
+      ]),
+    });
+    const { GET } = await import("./route");
+    const res = await GET(makeRequest("?includeRegionalOrg=1"), {
+      params: Promise.resolve({ code: "us" }),
+    });
+    expect(res.status).toBe(200);
+    expect((await res.json()).parties[0].organizationByRegion).toEqual({ CA: 42.75, NY: 0 });
+    expect(org.find).toHaveBeenCalledExactlyOnceWith(
+      { countryId: "US", partyId: { $in: ["7"] } },
+      { projection: { _id: 0, partyId: 1, stateId: 1, organization: 1 } }
+    );
+  });
+
+  it("returns an empty regional organization map for a party without organization rows", async () => {
+    const { GET } = await import("./route");
+    const res = await GET(makeRequest("?includeRegionalOrg=1"), {
+      params: Promise.resolve({ code: "us" }),
+    });
+    expect((await res.json()).parties[0].organizationByRegion).toEqual({});
   });
 
   it("optionally includes the live frontier for creation, with null for empty parties", async () => {
