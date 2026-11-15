@@ -504,7 +504,6 @@ interface SectorPreview {
   currency: string;
   affectedCount: number;
   totalCompensationLocal: number;
-  unownedSliceRevenuePerTurn: number;
   affectedCorps: {
     corporationId: string;
     name: string;
@@ -593,7 +592,7 @@ function SectorTakeoverRow({
       </label>
 
       <div className="flex flex-wrap gap-1.5">
-        {(["all", "corporations", "unowned", "npp_unowned"] as const).map((s) => (
+        {(["all", "corporations", "npp_unowned"] as const).map((s) => (
           <button
             key={s}
             type="button"
@@ -609,16 +608,6 @@ function SectorTakeoverRow({
         ))}
       </div>
 
-      {scope === "unowned" && (
-        <p className="rounded-lg border border-warning/30 bg-warning/10 px-2.5 py-1.5 text-[11px] text-warning">
-          <span className="font-semibold">Unowned market only</span> takes just the unclaimed share
-          of this sector — it nationalizes nothing from existing companies and pays no compensation.
-          To take company-held holdings, choose{" "}
-          <span className="font-semibold">Corporations only</span> or{" "}
-          <span className="font-semibold">All holders + unowned market</span>.
-        </p>
-      )}
-
       {sectorType && preview && (
         <div className="rounded-lg border border-card-border bg-card-muted p-3 text-xs">
           <div className="flex flex-wrap items-center justify-between gap-2">
@@ -632,11 +621,6 @@ function SectorTakeoverRow({
               </span>
             </span>
           </div>
-          {preview.unownedSliceRevenuePerTurn > 0 && scope !== "corporations" && (
-            <div className="mt-1 text-[11px] text-muted">
-              + {money(preview.unownedSliceRevenuePerTurn)}/turn of unowned market taken free.
-            </div>
-          )}
           {preview.affectedCorps.length > 0 && (
             <ul className="mt-2 max-h-32 space-y-0.5 overflow-y-auto">
               {preview.affectedCorps.map((c) => (

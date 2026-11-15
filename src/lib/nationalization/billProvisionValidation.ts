@@ -73,7 +73,10 @@ export async function validateNationalizationProvisions(
         const fraction = r.sectorCarveFraction ?? 1;
         if (!(fraction > 0 && fraction <= 1)) return fail("Sector carve fraction must be 0–100%.");
         const scope = r.sectorScope ?? "all";
-        if (!["all", "corporations", "unowned", "npp_unowned"].includes(scope)) {
+        if (scope === "unowned") {
+          return fail("There is no unowned market to take. Choose which corporations to take from.");
+        }
+        if (!["all", "corporations", "npp_unowned"].includes(scope)) {
           return fail("Invalid sector nationalization scope.");
         }
         out.push({
