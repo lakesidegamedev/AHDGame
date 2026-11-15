@@ -56,10 +56,10 @@ describe("PageErrorBoundary", () => {
       </PageErrorBoundary>
     );
 
-    expect(screen.getByText("Something went wrong")).toBeTruthy();
+    expect(screen.getByText("This page hit a problem")).toBeTruthy();
     expect(captureException).toHaveBeenCalledWith(
       renderError,
-      expect.objectContaining({ tags: { error_code: "CLIENT_ERROR" } })
+      expect.objectContaining({ tags: expect.objectContaining({ error_code: "CLIENT_ERROR" }) })
     );
     expect(screen.getByTestId("error-code").textContent).toBe("CLIENT_ERROR");
   });

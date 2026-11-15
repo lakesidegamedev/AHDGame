@@ -35,6 +35,7 @@ export const CDN_LOGIN_IMAGES: Record<string, string> = {
   "2007": `${CDN_STATIC_BASE}/login/login-2007.webp`, // G8 Heiligendamm — GODL, PM Office India
   "2019": `${CDN_STATIC_BASE}/login/login-2019.webp`, // House of Commons Brexit — CC BY 3.0, UK Parliament
   "2023": `${CDN_STATIC_BASE}/login/login-2023.webp`, // NATO Vilnius summit — CC BY 2.0, No 10 Downing St
+  "2027": `${CDN_STATIC_BASE}/login/login-2027.webp`, // Parliament Hill from the Ottawa River at sunset. CC BY-SA 4.0, Wikimedia Commons
 };
 
 /**

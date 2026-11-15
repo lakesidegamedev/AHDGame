@@ -1,7 +1,6 @@
 "use client";
 
-import Link from "next/link";
-import { ErrorRef } from "@/components/ui/ErrorRef";
+import { ErrorPanel } from "@/components/ui/ErrorPanel";
 import { useReportedError } from "@/lib/errors/useReportedError";
 
 interface NavigationLink {
@@ -15,9 +14,9 @@ interface ErrorPageContentProps {
   error: Error & { digest?: string };
   /** Reset function from Next.js error boundary */
   reset: () => void;
-  /** Title shown in the error UI */
+  /** Overrides the plain-language title for the error code */
   title?: string;
-  /** Description shown below the title */
+  /** Page-specific lead sentence */
   description?: string;
   /** Log prefix for console.error (e.g., "Dashboard error") */
   logPrefix?: string;
@@ -36,52 +35,22 @@ export type RouteErrorProps = Pick<ErrorPageContentProps, "error" | "reset">;
 export function ErrorPageContent({
   error,
   reset,
-  title = "Something went wrong",
-  description = "An unexpected error occurred. This may be a temporary issue.",
+  title,
+  description,
   logPrefix = "Page error",
   navigationLinks = [{ href: "/dashboard", label: "Dashboard" }],
   fullScreen = false,
 }: ErrorPageContentProps) {
   const reported = useReportedError(error, { logPrefix });
-  const links = navigationLinks.some((l) => l.href === "/")
-    ? navigationLinks
-    : [...navigationLinks, { href: "/", label: "Home" }];
-
-  const heightClass = fullScreen ? "min-h-screen" : "min-h-[50vh]";
-
   return (
-    <div
-      className={`${heightClass} bg-background flex flex-col items-center justify-center px-6 py-12`}
-    >
-      <div className="rounded-xl border border-card-border bg-card p-8 max-w-md text-center space-y-4">
-        <h1 className="text-lg font-semibold text-foreground">{title}</h1>
-        <p className="text-sm text-muted">{description}</p>
-        <p className="font-mono text-xs text-muted" data-testid="error-code">
-          {reported.code}
-        </p>
-        <ErrorRef code={reported.ref} label="Ref" />
-        <div className="flex flex-wrap gap-3 justify-center">
-          <button
-            onClick={reset}
-            className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90 transition-colors"
-          >
-            Try again
-          </button>
-          {links.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className={
-                link.primary
-                  ? "rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90 transition-colors"
-                  : "rounded-lg border border-card-border px-4 py-2 text-sm font-medium text-muted hover:text-foreground transition-colors"
-              }
-            >
-              {link.label}
-            </Link>
-          ))}
-        </div>
-      </div>
-    </div>
+    <ErrorPanel
+      error={error}
+      reported={reported}
+      onRetry={reset}
+      title={title}
+      description={description}
+      links={navigationLinks}
+      fullScreen={fullScreen}
+    />
   );
 }
