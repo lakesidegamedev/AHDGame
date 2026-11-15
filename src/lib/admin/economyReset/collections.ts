@@ -138,7 +138,7 @@ export const ECONOMY_RESET_PARTIAL_WIPE_COLLECTIONS: Readonly<Record<string, str
  * runtime collections, so the full world reset handles them separately.
  */
 export const ECONOMY_RESET_EXTRA_WIPE_COLLECTIONS = Object.freeze([
-  // Rebuilt by seedUnownedSectors with refresh after the wipe.
+  // Retired collection, dropped when a world still carries it.
   "unownedSectors",
 ] as const);
 

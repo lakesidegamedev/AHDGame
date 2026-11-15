@@ -21,7 +21,6 @@ export const ECONOMY_RESET_PHASES = [
   "unset",
   "indexes",
   "reseedCountryCorporations",
-  "reseedUnownedSectors",
   "reseedNppCorporations",
   "reseedNpcBanks",
   "reseedUnions",

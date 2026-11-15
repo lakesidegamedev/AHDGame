@@ -13,7 +13,7 @@ vi.mock("@/lib/currency/gdpAnchorRate", () => ({
 }));
 
 import { generateCountryOwnedSeedData } from "@/lib/seeds/reference/budgets";
-import { reconcileCommandEconomyUnowned } from "./reconcileCommandEconomyUnowned";
+import { reconcileCommandEconomySoes } from "./reconcileCommandEconomySoes";
 
 function cursor(docs: unknown[]) {
   return {
@@ -24,7 +24,7 @@ function cursor(docs: unknown[]) {
   };
 }
 
-describe("reconcileCommandEconomyUnowned", () => {
+describe("reconcileCommandEconomySoes", () => {
   let db: MockDb;
 
   beforeEach(() => {
@@ -33,7 +33,6 @@ describe("reconcileCommandEconomyUnowned", () => {
     db.collection("gameConfig");
     db.collection("gameState");
     db.collection("states");
-    db.collection("unownedSectors");
     db.collection("corporations");
     db.collection("corporateSectors");
 
@@ -51,8 +50,6 @@ describe("reconcileCommandEconomyUnowned", () => {
         { _id: "CA", countryId: "US", population: 10_000_000, gdp: 100_000 },
       ])
     );
-    db.collectionMocks.unownedSectors.deleteMany.mockResolvedValue({ deletedCount: 12 });
-    db.collectionMocks.unownedSectors.countDocuments.mockResolvedValue(12);
   });
 
   it("no-ops when commandEconomyEnabled is off", async () => {
@@ -60,12 +57,12 @@ describe("reconcileCommandEconomyUnowned", () => {
       _id: "default",
       commandEconomyEnabled: false,
     });
-    const result = await reconcileCommandEconomyUnowned(db as unknown as Db);
+    const result = await reconcileCommandEconomySoes(db as unknown as Db);
     expect(result.commandCountries).toEqual([]);
     expect(generateCountryOwnedSeedData).not.toHaveBeenCalled();
   });
 
-  it("creates missing SOEs, reuses existing by assignedSectorTypes, deletes unowned", async () => {
+  it("creates missing SOEs, reuses existing by assignedSectorTypes, and never touches a market collection", async () => {
     const existingCorpId = new ObjectId();
     const newCorpId = new ObjectId();
     const sectorId = new ObjectId();
@@ -129,7 +126,7 @@ describe("reconcileCommandEconomyUnowned", () => {
       })
       .mockResolvedValueOnce(null);
 
-    const result = await reconcileCommandEconomyUnowned(db as unknown as Db, {
+    const result = await reconcileCommandEconomySoes(db as unknown as Db, {
       preset: "1953-default",
     });
 
@@ -137,25 +134,6 @@ describe("reconcileCommandEconomyUnowned", () => {
     expect(result.soesCreated).toBe(1);
     expect(result.soesReused).toBe(1);
     expect(result.sectorsUpserted).toBe(2);
-    expect(result.unownedDeleted).toBe(12);
-    expect(db.collectionMocks.unownedSectors.deleteMany).toHaveBeenCalledWith({
-      $or: [
-        {
-          countryId: "DD",
-          sectorType: "manufacturing",
-          industryModel: null,
-          mediaDiscriminator: null,
-          stateId: { $in: ["SN"] },
-        },
-        {
-          countryId: "DD",
-          sectorType: "retail",
-          industryModel: null,
-          mediaDiscriminator: null,
-          stateId: { $in: ["SN"] },
-        },
-      ],
-    });
     // Fallout cleanup reaches only the covered state, not the whole country.
     expect(db.collectionMocks.corporateSectors.deleteMany).toHaveBeenCalledWith({
       countryId: "DD",
@@ -168,76 +146,9 @@ describe("reconcileCommandEconomyUnowned", () => {
     expect(CORPORATION_TYPES.length).toBeGreaterThan(6);
   });
 
-  it("scopes unowned drain to covered (country, type, state) triples (CN keeps dual-track headroom)", async () => {
-    db.collectionMocks.states.find.mockReturnValue(
-      cursor([{ _id: "BJ", countryId: "CN", population: 5_000_000, gdp: 20_000 }])
-    );
-    const mfgId = new ObjectId();
-    const energyId = new ObjectId();
-    const seedEntry = (
-      corpId: ObjectId,
-      sectorType: "manufacturing" | "energy",
-      revenue: number
-    ) => ({
-      corporation: {
-        _id: corpId,
-        countryOwnerId: "CN",
-        assignedSectorTypes: [sectorType],
-        type: sectorType,
-        name: `Chinese ${sectorType} Enterprise`,
-        description: sectorType,
-        soe: { sector: sectorType, planTarget: 1 },
-      },
-      sectors: [
-        {
-          _id: new ObjectId(),
-          corporationId: corpId,
-          countryId: "CN",
-          stateId: "BJ",
-          sectorType,
-          revenue,
-          capitalStock: 5,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-      ],
-    });
-    vi.mocked(generateCountryOwnedSeedData).mockReturnValue([
-      seedEntry(mfgId, "manufacturing", 100),
-      seedEntry(energyId, "energy", 80),
-    ] as never);
-    db.collectionMocks.corporations.findOne
-      .mockResolvedValueOnce(null)
-      .mockResolvedValueOnce(null)
-      .mockResolvedValueOnce(null)
-      .mockResolvedValueOnce(null);
-
-    await reconcileCommandEconomyUnowned(db as unknown as Db, { preset: "1953-default" });
-
-    const filter = db.collectionMocks.unownedSectors.deleteMany.mock.calls[0]?.[0] as {
-      $or: Array<{ countryId: string; sectorType: string; stateId: { $in: string[] } }>;
-    };
-    expect(filter.$or).toEqual([
-      {
-        countryId: "CN",
-        sectorType: "manufacturing",
-        industryModel: null,
-        mediaDiscriminator: null,
-        stateId: { $in: ["BJ"] },
-      },
-      {
-        countryId: "CN",
-        sectorType: "energy",
-        industryModel: null,
-        mediaDiscriminator: null,
-        stateId: { $in: ["BJ"] },
-      },
-    ]);
-  });
-
   it("never deletes sectors in states the seed built no row for (ticket #1271)", async () => {
     // DD absorbs a western region (NW) the SOE seed does not cover: the entry
-    // only carries SN, so NW's live private sector and unowned pool survive.
+    // only carries SN, so NW's live private sector survives.
     const soeId = new ObjectId();
     const seedSectorId = new ObjectId();
     vi.mocked(generateCountryOwnedSeedData).mockReturnValue([
@@ -272,7 +183,7 @@ describe("reconcileCommandEconomyUnowned", () => {
       assignedSectorTypes: ["extraction"],
     });
 
-    const result = await reconcileCommandEconomyUnowned(db as unknown as Db, {
+    const result = await reconcileCommandEconomySoes(db as unknown as Db, {
       preset: "1953-default",
     });
 
@@ -280,26 +191,20 @@ describe("reconcileCommandEconomyUnowned", () => {
     for (const call of db.collectionMocks.corporateSectors.deleteMany.mock.calls) {
       expect(call[0].stateId).toEqual({ $in: ["SN"] });
     }
-    const drain = db.collectionMocks.unownedSectors.deleteMany.mock.calls[0]?.[0] as {
-      $or: Array<{ stateId: { $in: string[] } }>;
-    };
-    expect(drain.$or).toHaveLength(1);
-    expect(drain.$or[0].stateId).toEqual({ $in: ["SN"] });
   });
 
-  it("drains nothing when the seed covers nothing", async () => {
+  it("writes nothing when the seed covers nothing", async () => {
     vi.mocked(generateCountryOwnedSeedData).mockReturnValue([]);
 
-    const result = await reconcileCommandEconomyUnowned(db as unknown as Db, {
+    const result = await reconcileCommandEconomySoes(db as unknown as Db, {
       preset: "1953-default",
     });
 
-    expect(result.unownedDeleted).toBe(0);
-    expect(db.collectionMocks.unownedSectors.deleteMany).not.toHaveBeenCalled();
+    expect(result.sectorsUpserted).toBe(0);
     expect(db.collectionMocks.corporateSectors.deleteMany).not.toHaveBeenCalled();
   });
 
-  it("dry-run counts unowned without writing", async () => {
+  it("dry-run writes nothing", async () => {
     const soeId = new ObjectId();
     vi.mocked(generateCountryOwnedSeedData).mockReturnValue([
       {
@@ -333,20 +238,7 @@ describe("reconcileCommandEconomyUnowned", () => {
       assignedSectorTypes: ["manufacturing"],
     });
 
-    const result = await reconcileCommandEconomyUnowned(db as unknown as Db, { dryRun: true });
-    expect(result.unownedDeleted).toBe(12);
-    expect(db.collectionMocks.unownedSectors.countDocuments).toHaveBeenCalledWith({
-      $or: [
-        {
-          countryId: "DD",
-          sectorType: "manufacturing",
-          industryModel: null,
-          mediaDiscriminator: null,
-          stateId: { $in: ["SN"] },
-        },
-      ],
-    });
-    expect(db.collectionMocks.unownedSectors.deleteMany).not.toHaveBeenCalled();
+    const result = await reconcileCommandEconomySoes(db as unknown as Db, { dryRun: true });
     expect(db.collectionMocks.corporations.updateOne).not.toHaveBeenCalled();
     expect(db.collectionMocks.corporateSectors.deleteMany).not.toHaveBeenCalled();
   });

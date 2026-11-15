@@ -323,7 +323,6 @@ export const TOOLS: readonly ToolDef[] = [
       ["budgets", "Budget overview"],
       ["npp-economy", "NPP economy"],
       ["index-funds", "Index funds"],
-      ["sector-seed", "Sector seed"],
     ] as const
   ).map(([id, label]): ToolDef => ({
     id,

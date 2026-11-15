@@ -401,9 +401,7 @@ async function phaseMoneyMoves(db: Db, plan: EconomyResetPlan, digest: string): 
 
 async function phaseWipe(db: Db): Promise<void> {
   for (const name of economyResetFullWipeCollections()) {
-    // Reference rows are deleted so the collection and its indexes stay.
-    if (name === "unownedSectors") await db.collection(name).deleteMany({});
-    else await dropIfExists(db, name);
+    await dropIfExists(db, name);
   }
 }
 
@@ -652,11 +650,6 @@ async function runPhase(
     case "reseedCountryCorporations":
       await reseedCountryOwnedCorporations(db, plan.preset, plan.commandEconomyEnabled, log);
       return {};
-    case "reseedUnownedSectors": {
-      const { seedUnownedSectors } = await import("@/lib/admin/seed/seedUnownedSectors");
-      await seedUnownedSectors(db, log, 1, plan.preset, true);
-      return {};
-    }
     case "reseedNppCorporations": {
       const { seedNppCorporations } = await import("@/lib/admin/seed/seedNppCorporations");
       const result = await seedNppCorporations(

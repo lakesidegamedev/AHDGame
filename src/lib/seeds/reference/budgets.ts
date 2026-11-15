@@ -30,8 +30,6 @@ import type { Corporation, CorporateSector } from "@/lib/db/types";
 import type { EnactedLaw, FederalBudget, StateBudget } from "@/lib/db/types/budget";
 import type { LegislationPolicyOption, LegislationType } from "@/lib/db/types/legislation";
 import {
-  SECTOR_MARKET_GDP_FRACTION,
-  SECTOR_TYPE_COUNT,
   OPERATING_SECTOR_TYPE_LABELS,
   OPERATING_SECTOR_TYPES,
   operatingSectorIdentity,
@@ -192,7 +190,7 @@ import {
   DD_PUBLIC_SEQUENTIAL_ID,
 } from "@/lib/seeds/dd/ddCorporations";
 import { getCountryConfig } from "@/lib/constants/countries";
-import { computeUnownedSeedRevenue } from "@/lib/admin/seed/seedUnownedSectors";
+import { computeStateEnterpriseSeedRevenue } from "@/lib/seeds/reference/stateEnterpriseSizing";
 import { getStateResourceCapacity, lookupStateResourceCapacity } from "./stateResourceCapacity";
 import { CA_ECONOMY } from "@/lib/countries/ca/economy";
 
@@ -641,6 +639,9 @@ import { tierFor } from "@/lib/world/eraRoster";
  * countries only override defense/healthcare so command-economy and developing
  * baselines don't invent 30-40% GDP deficits against modern-derived revenue.
  */
+/** GDP multiple that sizes the UK health service against its sector market. */
+const UK_HEALTHCARE_MARKET_GDP_FRACTION = 100;
+
 const BASELINE_OVERRIDE_CATEGORIES = ["defense", "healthcare", "health"] as const;
 
 /**
@@ -3242,7 +3243,7 @@ function buildCommandSoeCorpEntries(params: {
 
   // One owned producing sector for (state, sectorType) under `corpId`. Sector
   // revenue is stored in the corp's LOCAL currency: the canonical ₳ market size
-  // from computeUnownedSeedRevenue divided back through the country's USD rate,
+  // from computeStateEnterpriseSeedRevenue divided back through the country's USD rate,
   // matching the NatCorp convention commodityPriceTurn expects. Under plants,
   // capitalStock is seeded in lockstep from the same ₳ figure so capacity
   // exists on day one (sectorTurn would otherwise lazy-seed from revenue).
@@ -3256,7 +3257,7 @@ function buildCommandSoeCorpEntries(params: {
       sectorType === "extraction"
         ? (extractionStrategyByState?.[state.id] ?? defaultExtractionStrategyId)
         : undefined;
-    const revenueAtlantic = computeUnownedSeedRevenue({
+    const revenueAtlantic = computeStateEnterpriseSeedRevenue({
       gdp: state.gdp,
       countryId,
       stateId: state.id,
@@ -3365,8 +3366,7 @@ function buildCommandSoeCorpEntries(params: {
 // democracies without the RU/CN/Warsaw-Pact SOE stack, but each is modeled
 // as ONE state-holding corporation that owns a realistic minority/plurality
 // share of a handful of nationalized anchors; the rest of each sector (and
-// every unlisted sector) stays in `unownedSectors` for players to found new
-// corporations against. 1953 preset only: by later presets several of these
+// every unlisted sector) is left to private corporations. 1953 preset only: by later presets several of these
 // firms were privatized.
 //
 // ES is excluded and kept dormant (DORMANT_MARKET_STATE_ENTERPRISE_SPECS):
@@ -3375,9 +3375,9 @@ function buildCommandSoeCorpEntries(params: {
 interface MarketStateEnterpriseSectorSpec {
   type: OperatingSectorType;
   /**
-   * Share of the (state, sectorType) unowned-market bucket this state
-   * enterprise captures, e.g. 0.9 ⇒ the state holds ~90% of that sector's
-   * addressable market in every seeded region, the remainder stays unowned.
+   * Share of the (state, sectorType) market size this state enterprise is
+   * sized to, e.g. 0.9 ⇒ the state holds ~90% of that sector's market in
+   * every seeded region.
    */
   marketShare: number;
 }
@@ -3423,9 +3423,8 @@ function buildMarketStateEnterpriseCorpEntries(params: {
   for (const sectorSpec of spec.sectors) {
     const identity = operatingSectorIdentity(sectorSpec.type);
     for (const state of countryStates) {
-      // Canonical (state, sectorType) market size, same source of truth the
-      // unowned-market seeder uses — then take only this enterprise's share.
-      const bucketRevenueAtlantic = computeUnownedSeedRevenue({
+      // Canonical (state, sectorType) market size, then only this enterprise's share.
+      const bucketRevenueAtlantic = computeStateEnterpriseSeedRevenue({
         gdp: state.gdp,
         countryId: spec.countryId,
         stateId: state.id,
@@ -3743,7 +3742,7 @@ export function generateCountryOwnedSeedData(
     // NHS captures ~80 % of the UK healthcare market in game-unit terms.
     const NHS_MARKET_SHARE = 0.8;
     const totalUkGdp = ukStates.reduce((sum, state) => sum + state.gdp, 0);
-    const totalHealthcareMarket = (totalUkGdp * SECTOR_MARKET_GDP_FRACTION) / SECTOR_TYPE_COUNT;
+    const totalHealthcareMarket = (totalUkGdp * UK_HEALTHCARE_MARKET_GDP_FRACTION) / OPERATING_SECTOR_TYPES.length;
     const requiredRevenue = Math.round(totalHealthcareMarket * NHS_MARKET_SHARE);
 
     // Derive the multiplier that bridges game-scale operating income → real budget revenue.
@@ -3853,7 +3852,7 @@ export function generateCountryOwnedSeedData(
   // is an economic ghost. Seed the RU National Corporation to OWN producing
   // sectors across the commanding heights in every Soviet region, so RU
   // generates commodity supply each turn. Sector revenue is stored in the
-  // corp's LOCAL currency (SUR): computeUnownedSeedRevenue returns the
+  // corp's LOCAL currency (SUR): computeStateEnterpriseSeedRevenue returns the
   // canonical market size in ₳, divided back to SUR via the RU exchange rate
   // (corporateSectors.revenue is liquidCurrencyCode-denominated — matching the
   // UK/CN NatCorp convention and what commodityPriceTurn expects).
@@ -3882,7 +3881,7 @@ export function generateCountryOwnedSeedData(
       sectorType: CorporationType,
       corpId: ObjectId
     ) => {
-      const revenueAtlantic = computeUnownedSeedRevenue({
+      const revenueAtlantic = computeStateEnterpriseSeedRevenue({
         gdp: state.gdp,
         countryId: "RU",
         stateId: state.id,
@@ -4166,7 +4165,7 @@ export function generateCountryOwnedSeedData(
   // SOEs are the non-primary producing arms with deterministic 0xB00-range ids
   // that never collide with the issuer or player-founded corporations. Only
   // OWNED sectors count as commodity supply, so this adds the SOE-performance
-  // channel without double-counting the unowned market pool.
+  // channel without double-counting private supply.
   const cnStates = states.filter(
     (state) => countryHasFeature("cnSeeds", state.countryId) && state.gdp > 0
   );
@@ -4203,7 +4202,7 @@ export function generateCountryOwnedSeedData(
 
   // ── Warsaw-Pact satellite SOEs ─────────────────────────────────────────
   // These command economies have no country-owned producing corps
-  // otherwise: their output exists only as `unownedSectors`, so a player taking DD
+  // otherwise: their output would otherwise have no producer, so a player taking DD
   // inherited an economy with no enterprises to direct. Each gets the full
   // commanding-height SOE split only when the flag is on AND its era level is
   // fully command, so a future preset outside the command band does not sprout

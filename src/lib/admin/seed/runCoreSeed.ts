@@ -94,8 +94,7 @@ import { policiesCollection } from "@/lib/db/repositories/policies";
  * collections outright and re-seeded only the US: MEASURED at **1,995 documents
  * lost, `states` 24 countries -> 1**, with `statePartyOrg` 591 -> 100,
  * `politicalParties` 71 -> 2 and `politicalMetrics` 188 -> 51. Worse, the
- * region-keyed collections SURVIVED at full count (`unownedSectors` 3,842,
- * `congressionalDistricts` 435, `unions` 408), leaving them pointing at a
+ * region-keyed collections SURVIVED at full count (`congressionalDistricts` 435, `unions` 408), leaving them pointing at a
  * 51-row `states` — dangling references, not clean loss.
  *
  * Each entry below therefore says how it is scoped:

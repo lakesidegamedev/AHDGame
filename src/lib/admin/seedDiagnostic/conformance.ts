@@ -5,6 +5,7 @@
 
 import { supportsNoStartingParties } from "@/lib/admin/startingPartiesPresets";
 import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
+import type { OperatingSectorType } from "@/lib/constants/corporationsClient";
 import {
   STARTING_POLITICAL_COLLECTIONS,
   RETAINED_PARTY_COLLECTIONS,
@@ -27,6 +28,7 @@ import {
   scheduledMarketizationLevel,
 } from "@/lib/constants/commandEconomy";
 import { sectorRevenueDistribution } from "./rules/sectorDistribution";
+import { openingSizeDeviations } from "./rules/openingSize";
 import { DEFAULT_STRATEGIC_SECTORS } from "@/lib/seeds/reference/strategicSectors";
 import { COUNTRY_ELECTION_PHASES } from "@/lib/turn/countryPhases";
 import {
@@ -69,7 +71,6 @@ import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSecto
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
-import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
 import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
 import { stateDemographicTurnoutCollection } from "@/lib/db/repositories/stateDemographicTurnout";
 import { demographicDefaultsCollection } from "@/lib/db/repositories/demographicDefaults";
@@ -297,55 +298,77 @@ export async function checkSectors(
   );
 
   for (const countryId of countries) {
-    // The command-band seed moves production into country-owned SOEs. Its
-    // residual unowned pool may be empty or only extraction, and is not the
-    // country's productive-sector distribution. Match the same authored era
-    // and command flag used by the SOE seeder, then require actual SOE rows.
+    // The command-band seed moves production into country-owned SOEs. Match the
+    // same authored era and command flag used by the SOE seeder, then require
+    // actual SOE rows.
     const budgetYear = budgetYears.get(countryId);
     const commandSoeSeed =
       config?.commandEconomyEnabled === true &&
       budgetYear !== undefined &&
       commandEconomySoeSectors(countryId).length > 0 &&
       scheduledMarketizationLevel(countryId, budgetYear) < COMMAND_CEILING;
-    // Background countries (#5702) keep their regions but run no sectors, so
-    // seedUnownedSectors deliberately writes no pool for them.
+    // Background countries keep their regions but run no sectors.
     const backgroundCountry = isBackgroundInPreset(expect.preset, countryId);
-    const unownedCount = await unownedSectorsCollection<Document>(db).countDocuments({ countryId });
-    checks.push(
-      backgroundCountry
-        ? ok(
-            `sectors.${countryId}.unowned`,
-            countryId,
-            "unownedSectors.count",
-            "none for a background country",
-            unownedCount,
-            "background countries run outside the full simulation and seed no sector pool"
+    if (!backgroundCountry && !commandSoeSeed) {
+      const nppCorps = await corporationsCollection<{ _id: ObjectId }>(db)
+        .find({ ceoType: "npp", countryId }, { projection: { _id: 1 } })
+        .toArray();
+      const openingRows = nppCorps.length
+        ? (
+            await corporateSectorsCollection<{
+              sectorType?: string;
+              industryModel?: string | null;
+              mediaDiscriminator?: string | null;
+              strategyId?: string | null;
+              capitalStock?: number;
+            }>(db)
+              .find(
+                {
+                  countryId,
+                  corporationId: { $in: nppCorps.map((corp) => corp._id) },
+                  $or: [{ strategyId: null }, { strategyId: "standard" }],
+                },
+                {
+                  projection: {
+                    sectorType: 1,
+                    industryModel: 1,
+                    mediaDiscriminator: 1,
+                    capitalStock: 1,
+                  },
+                }
+              )
+              .toArray()
           )
-        : commandSoeSeed
+            .filter((row) => Number(row.capitalStock) > 0 && row.sectorType !== "extraction")
+            .map((row) => ({
+              lane: getOperatingSectorType(
+                row.sectorType as string,
+                row.industryModel,
+                row.mediaDiscriminator
+              ) as OperatingSectorType,
+              capacityUnits: Number(row.capitalStock),
+            }))
+        : [];
+      const deviations = openingSizeDeviations(openingRows);
+      checks.push(
+        deviations.length === 0
           ? ok(
-              `sectors.${countryId}.unowned`,
+              `sectors.${countryId}.openingSize`,
               countryId,
-              "unownedSectors.count",
-              "optional with country-owned SOE production",
-              unownedCount,
-              "command-band production is validated in the country-owned SOE pool"
+              "npp opening size per lane",
+              "standard size in every lane",
+              `${openingRows.length} sectors`
             )
-          : unownedCount > 0
-            ? ok(
-                `sectors.${countryId}.unowned`,
-                countryId,
-                "unownedSectors.count",
-                ">0",
-                unownedCount
-              )
-            : critical(
-                `sectors.${countryId}.unowned`,
-                countryId,
-                "unownedSectors.count",
-                ">0",
-                unownedCount
-              )
-    );
+          : warn(
+              `sectors.${countryId}.openingSize`,
+              countryId,
+              "npp opening size per lane",
+              "standard size in every lane",
+              `${deviations.length} off size`,
+              `lanes off the standard opening size: ${[...new Set(deviations.map((d) => d.lane))].join(", ")}`
+            )
+      );
+    }
 
     const strategicCount = await strategicSectorDesignationsCollection<Document>(db).countDocuments(
       { countryId }
@@ -371,7 +394,8 @@ export async function checkSectors(
     );
 
     // Sanity: revenue shares must sum to ~1 and no single sector dominate.
-    // Exact weight-table match is unreliable once MIN_UNOWNED floors apply.
+    // Only command economies hold a seeded sector mix; market economies open
+    // at one standard plant per lane.
     type LaneRow = {
       sectorType?: string;
       industryModel?: string | null;
@@ -386,13 +410,7 @@ export async function checkSectors(
         : row.sectorType,
       revenue: row.revenue,
     });
-    const rows = (
-      await unownedSectorsCollection<LaneRow>(db)
-        .find({ countryId })
-        .project<LaneRow>({ sectorType: 1, industryModel: 1, mediaDiscriminator: 1, revenue: 1 })
-        .toArray()
-    ).map(toLaneRow);
-    let productiveRows = rows;
+    let productiveRows: Array<{ sectorType?: string; revenue?: number }> = [];
     if (commandSoeSeed) {
       const owners = await corporationsCollection<{ _id: ObjectId }>(db)
         .find({ countryOwnerId: countryId }, { projection: { _id: 1 } })
@@ -432,7 +450,7 @@ export async function checkSectors(
               producingOwned.length
             )
       );
-      productiveRows = [...rows, ...owned];
+      productiveRows = owned;
     }
     const distribution = sectorRevenueDistribution(productiveRows);
     if (distribution) {

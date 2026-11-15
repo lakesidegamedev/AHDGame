@@ -255,9 +255,7 @@ export const STALE_PROGRESS_GAME_STATE_UNSET: Readonly<Record<string, "">> = Obj
   // UI summary of the last census's seat deltas — belongs to the census above,
   // and would otherwise show the dead world's reapportionment on the new one.
   lastCensus: "",
-  // Auto sector-seed cadence guard: `currentTurn - lastAutoSeedTurn < TURNS_PER_YEAR`
-  // (src/lib/turn/autoSectorSeed.ts). Carrying 944 into a turn-1 world makes the
-  // difference permanently negative, disabling auto-seeding for the whole game.
+  // Retired cadence field; cleared so an old world's value does not linger.
   lastAutoSeedTurn: "",
   // Same cadence-guard shape for the extraction auto-strategy phase.
   lastExtractionAutoStrategyTurn: "",
