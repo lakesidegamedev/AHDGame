@@ -74,6 +74,7 @@ describe("applyFundedSwitch", () => {
       worldEpoch: EPOCH,
       producerMarketLiveFromTurn: 51,
       transitionStampsCleared: 2,
+      pricesReset: 0,
     });
     const config = await db.collection<Doc>("gameConfig").findOne({ _id: "default" });
     expect(config).toMatchObject(fundedSwitchGameConfigUpdate(50).$set as Record<string, unknown>);
@@ -101,6 +102,7 @@ describe("applyFundedSwitch", () => {
       worldEpoch: EPOCH,
       producerMarketLiveFromTurn: 51,
       transitionStampsCleared: 0,
+      pricesReset: 0,
     });
   });
 
@@ -120,6 +122,25 @@ describe("applyFundedSwitch", () => {
     expect(result.transitionStampsCleared).toBe(1);
     const sector = await db.collection<Doc>("corporateSectors").findOne({ _id: "sector-a" });
     expect(sector).not.toHaveProperty("cutoverStruggling");
+  });
+
+  it("opens the funded market with every commodity at base and no scarcity memory", async () => {
+    const db = await worldDb({ worldEpochId: EPOCH, currentTurn: 50, producerOpening: OPENING });
+    await db.collection<Doc>("commodityPrices").insertOne({
+      _id: "steel",
+      commodity: "steel",
+      globalPrice: 1900,
+      statePrices: { a: 2000 },
+      scarcityMult: 1.8,
+    });
+
+    const first = await applyFundedSwitch(db, { expectedWorldEpoch: EPOCH });
+    const second = await applyFundedSwitch(db, { expectedWorldEpoch: EPOCH });
+
+    expect(first.pricesReset).toBe(1);
+    expect(second.pricesReset).toBe(0);
+    const steel = await db.collection<Doc>("commodityPrices").findOne({ _id: "steel" });
+    expect(steel).toMatchObject({ globalPrice: 800, statePrices: { a: 800 }, scarcityMult: 1 });
   });
 
   it("refuses a world without the opening marker", async () => {

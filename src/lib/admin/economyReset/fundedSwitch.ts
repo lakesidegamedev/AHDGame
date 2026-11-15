@@ -7,7 +7,7 @@
  * start on the next turn. The config write is the one proven in rehearsal.
  *
  * The opening marker is the only proof this world is converted, so it is
- * checked before anything is written. Running it again on a switched world is a
+ * checked before anything is written. Prices go back to base first. Running it again on a switched world is a
  * no-op success, which is what makes a resumed apply safe.
  */
 import type { Db, Document, UpdateFilter } from "mongodb";
@@ -16,6 +16,7 @@ import type { GameState } from "@/lib/db/types/gameState";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { normalizeOpeningPrices } from "@/lib/market/producerMarket/openingPriceApply";
 
 /** Funded rules a rebuilt economy starts with, keyed from its last legacy turn. */
 export function fundedSwitchGameConfigUpdate(currentTurn: number): UpdateFilter<GameConfig> {
@@ -60,6 +61,8 @@ export interface ApplyFundedSwitchResult {
   worldEpoch: string;
   producerMarketLiveFromTurn: number;
   transitionStampsCleared: number;
+  /** Commodities whose prices or scarcity memory were put back at base. */
+  pricesReset: number;
 }
 
 function matches(config: Document | null, set: Record<string, unknown>): boolean {
@@ -96,6 +99,11 @@ export async function applyFundedSwitch(
       `The funded switch needs the producer opening at turn ${currentTurn}; it was applied at turn ${opening.turn}`
     );
 
+  // Same turn as the opening, so this cannot reset prices a funded turn has set.
+  const prices = await normalizeOpeningPrices(db, {
+    expectedWorldEpoch: options.expectedWorldEpoch,
+  });
+
   const update = fundedSwitchGameConfigUpdate(currentTurn);
   const set = (update.$set ?? {}) as unknown as Record<string, unknown>;
   const liveFromTurn = set.producerMarketLiveFromTurn as number;
@@ -112,6 +120,7 @@ export async function applyFundedSwitch(
       worldEpoch: options.expectedWorldEpoch,
       producerMarketLiveFromTurn: liveFromTurn,
       transitionStampsCleared: 0,
+      pricesReset: prices.commoditiesChanged,
     };
 
   if (transitionStamps > 0)
@@ -127,5 +136,6 @@ export async function applyFundedSwitch(
     worldEpoch: options.expectedWorldEpoch,
     producerMarketLiveFromTurn: liveFromTurn,
     transitionStampsCleared: transitionStamps,
+    pricesReset: prices.commoditiesChanged,
   };
 }
