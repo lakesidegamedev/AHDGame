@@ -5,7 +5,7 @@ summary: >-
   Maps for the UK, Germany, Japan, China, Brazil, Nigeria and Canada now use the
   same large map layout as the US map.
 tags: [frontend]
-badges: [improvement]
+badges: [minor]
 areas: [frontend]
 ---
 
