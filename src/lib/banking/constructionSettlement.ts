@@ -4,6 +4,7 @@ import type { BankingSnapshot, BorrowerSnapshot } from "./rules/boundary";
 import { oid } from "./rules/boundary";
 import { decideBankCommand } from "./rules/decide";
 import { bindConstructionLoanTransition } from "./rules/constructionFinance";
+import { withoutRetiredProjections } from "./rules/constructionBuild";
 import {
   constructionContributionTransition,
   constructionPaidBuildTransition,
@@ -201,7 +202,7 @@ export async function settleReservedConstruction(input: {
       : { ok: false, error: "The paid construction receipt is pending acknowledgement" };
   }
   if (paidClaim.effects && !paidClaim.effectsPaid) {
-    let effects = await settleTransition(db, paidClaim.effects.transition);
+    let effects = await settleTransition(db, withoutRetiredProjections(paidClaim.effects.transition));
     if (effects.status === "partial" || (effects.status === "replayed" && effects.error))
       effects = await resumeSettlement(db, paidClaim.effects.transition.key);
     if (!complete(effects))

@@ -12,7 +12,6 @@ import { settleTransition } from "./settlementJournal";
 import { oid } from "./rules/boundary";
 import { settleReservedConstruction } from "./constructionSettlement";
 import { prepareConstructionBuildEffects } from "./constructionBuildEffects";
-import type { UnownedPoolBucket } from "@/lib/market/unownedPoolDraw";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import type { BankingSnapshot, BorrowerSnapshot } from "./rules/boundary";
 import type { BankingPolicySnapshot } from "./rules/policy";
@@ -57,10 +56,6 @@ export async function requestConstructionFinance(input: {
   preloadedFundingContext?: PreloadedConstructionFundingContext;
   buildContext?: {
     destinationCurrency: CurrencyCode | null;
-    bucket: UnownedPoolBucket;
-    eraUnitScale: number;
-    /** New market-entry capacity only. Replacement capacity already owns its share. */
-    growthUnits: number;
   };
 }): Promise<ConstructionFinanceResult> {
   if (!input.enabled) return { ok: false, error: "Construction finance is not enabled" };
@@ -69,13 +64,6 @@ export async function requestConstructionFinance(input: {
   const { db, sector, corporation } = input;
   if (!sector.corporationId.equals(corporation._id) || sector.forSale)
     return { ok: false, error: "The borrower does not own an available construction site" };
-  if (
-    input.buildContext &&
-    (!Number.isSafeInteger(input.buildContext.growthUnits) ||
-      input.buildContext.growthUnits < 0 ||
-      input.buildContext.growthUnits > input.order.unitsOrdered)
-  )
-    return { ok: false, error: "Construction market units are invalid" };
   const claimId = `${sector._id.toHexString()}:${input.requestId}`;
   const loanId = new ObjectId(
     createHash("sha256")
@@ -181,9 +169,6 @@ export async function requestConstructionFinance(input: {
           currency: bankSnapshot.currency,
           feeLocal: input.constructionCostLocal - input.collateralCostLocal,
           destinationCurrency: input.buildContext.destinationCurrency,
-          bucket: input.buildContext.bucket,
-          units: input.buildContext.growthUnits,
-          eraUnitScale: input.buildContext.eraUnitScale,
         })
       : null;
     if (prepared && !prepared.ok) return { ok: false, error: prepared.error };
