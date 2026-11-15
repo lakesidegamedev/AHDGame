@@ -106,11 +106,46 @@ export async function reconcileContestAchievements(
       add(record._id, "completionist", record.placings.at(-1)?.characterId ?? undefined);
   }
   if (docs.length === 0) return;
-  await characterAchievementsCollection(db).bulkWrite(
-    docs.map((doc) => ({
-      updateOne: { filter: { _id: doc._id }, update: { $setOnInsert: doc }, upsert: true },
-    })),
-    { ordered: false }
+  // Rows written before achievements carried a userId are keyed only by
+  // (characterId, achievementId), which the unique index enforces. The userId
+  // read above cannot see them, so a fresh insert for the same character
+  // collides and fails the whole batch. Treat such a row as the award already
+  // made, and stamp the owner on it instead of inserting a duplicate.
+  const keyed = docs.filter((doc) => doc.characterId);
+  const legacy = keyed.length
+    ? await characterAchievementsCollection(db)
+        .find(
+          {
+            $or: keyed.map((doc) => ({
+              characterId: doc.characterId,
+              achievementId: doc.achievementId,
+            })),
+          },
+          { projection: { _id: 1, characterId: 1, achievementId: 1, userId: 1 } }
+        )
+        .toArray()
+    : [];
+  const pairKey = (characterId: ObjectId | undefined, achievementId: ObjectId) =>
+    `${characterId?.toString()}:${achievementId.toString()}`;
+  const legacyByPair = new Map(
+    legacy.map((row) => [pairKey(row.characterId, row.achievementId), row])
   );
+  const writes = docs.map((doc) => {
+    const row = doc.characterId
+      ? legacyByPair.get(pairKey(doc.characterId, doc.achievementId))
+      : undefined;
+    if (!row) {
+      return {
+        updateOne: { filter: { _id: doc._id }, update: { $setOnInsert: doc }, upsert: true },
+      };
+    }
+    return {
+      updateOne: {
+        filter: { _id: row._id, userId: { $exists: false } },
+        update: { $set: { userId: doc.userId } },
+      },
+    };
+  });
+  await characterAchievementsCollection(db).bulkWrite(writes, { ordered: false });
   invalidateRarityCache();
 }
