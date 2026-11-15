@@ -98,7 +98,7 @@ describe("typeOutputMix", () => {
     const mix = typeOutputMix([
       sector({ sectorType: "manufacturing", strategyId: "heavy_metals", capacityUnits: 1_000 }),
     ]);
-    expect(mix?.commodity).toBe("vehicles");
+    expect(mix?.commodity).toBe("steel");
     expect(mix?.share).toBeCloseTo(1);
   });
 
