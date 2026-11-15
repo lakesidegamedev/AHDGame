@@ -30,7 +30,7 @@ Browser (React 19 / Next.js App Router)
      (elections, bills, NPPs, economy, demographics, conflict, metrics)
 ```
 
-Stack: Next.js 16, React 19, TypeScript, Tailwind 4, MongoDB, Vitest and Playwright, Sentry-compatible monitoring, Cloudflare R2 for uploads (local-disk fallback in dev), deployed on Railway with the turn processor scheduled in-process by `node-cron`.
+Stack: Next.js 16, React 19, TypeScript, Tailwind 4, MongoDB, Vitest and Playwright, Sentry-compatible monitoring, Cloudflare R2 for uploads (local-disk fallback in dev). Turns run on a scheduled turn processor; in local development it runs in-process on `node-cron`.
 
 ## Running it locally
 
