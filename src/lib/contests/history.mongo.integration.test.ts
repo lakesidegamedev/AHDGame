@@ -202,6 +202,34 @@ describe.skipIf(!uri)("contest records and career ranking on isolated Mongo", ()
     await reconcileContestAchievements(db);
     expect(await db.collection("characterAchievements").countDocuments({ userId: user })).toBe(4);
   });
+  it("adopts a legacy character-keyed award instead of colliding with it", async () => {
+    await migration.execute(db, { dryRun: false });
+    await db
+      .collection("characterAchievements")
+      .createIndex({ characterId: 1, achievementId: 1 }, { unique: true });
+    await getContestRoundsCollection(db).insertMany([round(1)]);
+    await reconcileContestAchievements(db);
+    const awarded = await db.collection("characterAchievements").find({ userId: user }).toArray();
+    expect(awarded.length).toBeGreaterThan(0);
+    // Rewind one award to its pre-userId shape under a different _id.
+    const [first] = awarded;
+    await db.collection("characterAchievements").deleteOne({ _id: first._id });
+    const legacyId = new ObjectId();
+    await db.collection("characterAchievements").insertOne({
+      _id: legacyId,
+      characterId: first.characterId,
+      achievementId: first.achievementId,
+      earnedAt: date,
+    });
+    await reconcileContestAchievements(db);
+    const rows = await db
+      .collection("characterAchievements")
+      .find({ characterId: first.characterId, achievementId: first.achievementId })
+      .toArray();
+    expect(rows).toHaveLength(1);
+    expect(rows[0]._id).toEqual(legacyId);
+    expect(rows[0].userId).toEqual(user);
+  });
   it("preserves laws enacted after a sponsor retires, before bill collections are reset", async () => {
     await db.collection("retiredCharacters").insertOne({
       userId: user,
