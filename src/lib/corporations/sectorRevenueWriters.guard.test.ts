@@ -237,10 +237,10 @@ const ALLOWED_WRITERS: Record<string, WriterEntry> = {
     reason: "Nationalization ownership transfer; plants-aware.",
   },
   "src/lib/nationalization/nationalizeSectorWide.ts": {
-    writeSites: 5,
+    writeSites: 3,
     status: "plants-gated",
     reason:
-      "Sector-wide nationalization. Both revenue writers are plants-gated off `plantsEnabled`: the carve into the NatCorp moves the donor's sliced plant state (capitalStock haircut by NATIONALIZATION_REVENUE_HAIRCUT, CIP and build orders at full value) and the donor keeps the 1−f complement, so capacity is conserved; the unowned-headroom capture increments capitalStock from the same ₳ figure as revenue.",
+      "Sector-wide nationalization. The revenue writer is plants-gated off `plantsEnabled`: the carve into the NatCorp moves the donor's sliced plant state (capitalStock haircut by NATIONALIZATION_REVENUE_HAIRCUT, CIP and build orders at full value) and the donor keeps the 1−f complement, so capacity is conserved.",
   },
   "src/lib/nationalization/privatizeAsset.ts": {
     writeSites: 2,
@@ -350,14 +350,6 @@ const ALLOWED_WRITERS: Record<string, WriterEntry> = {
       "plants: the whole run returns early when marketSystemMode is at the plants tier " +
       "(revenue is derived there and restated in host currency every turn), and any " +
       "individual row with `plantsStartTurn` stamped is skipped by the planner.",
-  },
-  "src/lib/banking/constructionBuildEffects.ts": {
-    writeSites: 1,
-    status: "plants-gated",
-    reason:
-      "GREP FALSE POSITIVE: the detected revenue literal initializes an `unownedSectors` " +
-      "construction market bucket at zero. The corporateSectors projection only marks " +
-      "construction financing effects as paid and does not write sector revenue.",
   },
 };
 
