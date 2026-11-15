@@ -41,6 +41,7 @@ import type { OverviewCounts } from "@/lib/country/overviewCounts";
 import { fetchJson } from "@/lib/observability/fetchJson";
 import { NationalIdeologyBand, type NationalAxesData } from "./components/NationalIdeologyBand";
 import { ExploreDirectory, type DirectoryGroup } from "./components/ExploreDirectory";
+import { EconomyAtAGlance } from "./components/EconomyAtAGlance";
 import { buildCountryDirectory } from "./components/countryDirectory";
 import { useCountryDisplayName } from "@/contexts/RegisteredCountriesContext";
 
@@ -571,6 +572,10 @@ export default function CountryOverviewClient({
         {/* National history: the compact sparkline form of the economy page's
             chart, for every country including economy-only ones. */}
         <NationalHistoryPanel countryId={countryId} compact />
+
+        {/* The figures a player checks before opening anything, each with its
+            recent direction. Same payload as the economy page. */}
+        <EconomyAtAGlance countryId={countryId} />
 
         {/* National ideology: equal-weight axes over implemented national laws */}
         <NationalIdeologyBand countryId={countryId} data={axesData} loading={axesLoading} />
