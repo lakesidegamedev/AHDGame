@@ -2410,8 +2410,8 @@
       "narrativeLines": 1
     },
     "src/app/layout.tsx": {
-      "longBlocks": 2,
-      "narrativeLines": 4
+      "longBlocks": 1,
+      "narrativeLines": 2
     },
     "src/app/notifications/inbox/Avatar.tsx": {
       "longBlocks": 0,
@@ -2773,10 +2773,6 @@
       "longBlocks": 0,
       "narrativeLines": 1
     },
-    "src/components/DeferredAnalytics.tsx": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
     "src/components/economy/MarketsStrip.test.tsx": {
       "longBlocks": 0,
       "narrativeLines": 1
@@ -2837,16 +2833,12 @@
       "longBlocks": 0,
       "narrativeLines": 1
     },
-    "src/components/landing/broadcastGlobe.tsx": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
     "src/components/landing/countryTierRosters.ts": {
       "longBlocks": 7,
       "narrativeLines": 0
     },
     "src/components/landing/eraThemes.ts": {
-      "longBlocks": 1,
+      "longBlocks": 0,
       "narrativeLines": 3
     },
     "src/components/landing/flavorCards.ts": {
@@ -3120,10 +3112,6 @@
     "src/i18n/RouteIntlProvider.test.tsx": {
       "longBlocks": 0,
       "narrativeLines": 1
-    },
-    "src/instrumentation-client.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
     },
     "src/lib/__tests__/macroEconomy.calibration.test.ts": {
       "longBlocks": 1,
@@ -3433,10 +3421,6 @@
       "longBlocks": 0,
       "narrativeLines": 1
     },
-    "src/lib/admin/seed/seedNppCorporations.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
-    },
     "src/lib/admin/seed/seedPoliticalLegislation.test.ts": {
       "longBlocks": 0,
       "narrativeLines": 1
@@ -3495,7 +3479,7 @@
     },
     "src/lib/admin/seed/worldsimReadiness.integration.test.ts": {
       "longBlocks": 0,
-      "narrativeLines": 2
+      "narrativeLines": 1
     },
     "src/lib/admin/seedDiagnostic/conformance.test.ts": {
       "longBlocks": 0,
@@ -3644,14 +3628,6 @@
     "src/lib/analytics/acquisition.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
-    },
-    "src/lib/analytics/capture.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/analytics/posthogClient.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
     },
     "src/lib/api/assertSameOrigin.ts": {
       "longBlocks": 1,
@@ -6123,10 +6099,6 @@
     },
     "src/lib/countries/jp/data/jpStatePartyOrgCalculations.ts": {
       "longBlocks": 2,
-      "narrativeLines": 0
-    },
-    "src/lib/countries/jp/data/nationalBudget1953.ts": {
-      "longBlocks": 1,
       "narrativeLines": 0
     },
     "src/lib/countries/jp/economy.ts": {
@@ -9190,7 +9162,7 @@
       "narrativeLines": 1
     },
     "src/lib/metricEngine/registry/education.legislation.sim.test.ts": {
-      "longBlocks": 1,
+      "longBlocks": 0,
       "narrativeLines": 2
     },
     "src/lib/metricEngine/registry/education.sim.test.ts": {
@@ -11198,8 +11170,8 @@
       "narrativeLines": 1
     },
     "src/lib/seeds/reference/budgets1953.test.ts": {
-      "longBlocks": 3,
-      "narrativeLines": 4
+      "longBlocks": 1,
+      "narrativeLines": 2
     },
     "src/lib/seeds/reference/budgets1953EasternBlocRevenue.test.ts": {
       "longBlocks": 1,
@@ -11222,8 +11194,8 @@
       "narrativeLines": 0
     },
     "src/lib/seeds/reference/educationSpendingSweep.test.ts": {
-      "longBlocks": 2,
-      "narrativeLines": 1
+      "longBlocks": 1,
+      "narrativeLines": 0
     },
     "src/lib/seeds/reference/environmentSpendingSweep.test.ts": {
       "longBlocks": 1,
@@ -11459,7 +11431,7 @@
     },
     "src/lib/settings/resignations.ts": {
       "longBlocks": 0,
-      "narrativeLines": 3
+      "narrativeLines": 2
     },
     "src/lib/settlement/actorContext.ts": {
       "longBlocks": 1,
@@ -12600,10 +12572,6 @@
     "src/lib/turn/inflationRecalc.test.ts": {
       "longBlocks": 0,
       "narrativeLines": 2
-    },
-    "src/lib/turn/infraEnvelope.test.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
     },
     "src/lib/turn/intelligenceTurn.ts": {
       "longBlocks": 1,

@@ -316,3 +316,49 @@ describe("password login, long passwords", () => {
     expect(vi.mocked(fetch)).not.toHaveBeenCalled();
   });
 });
+
+describe("password login, account whose password moved to the central account", () => {
+  beforeEach(() => {
+    state.user = {
+      _id: userId,
+      email: "player@example.invalid",
+      username: "player",
+      passwordSupersededAt: new Date("2030-01-01T00:00:00Z"),
+      role: "player",
+    };
+  });
+
+  it("signs in when the central check accepts", async () => {
+    setMode("central");
+    setBridge("ok");
+    expect((await login(loginRequest("anything"))).status).toBe(200);
+    expect(state.bridgeCalls[0].path).toBe("password-check");
+  });
+
+  it.each(["wrong", "disabled"] as const)("rejects on central %s", async (central) => {
+    setMode("central");
+    setBridge(central);
+    expect((await login(loginRequest("anything"))).status).toBe(401);
+  });
+
+  it.each(["error", "timeout", "unknown"] as const)(
+    "refuses with the outage message on central %s and never checks a local hash",
+    async (central) => {
+      setMode("central");
+      setBridge(central);
+      const res = await login(loginRequest("right-password"));
+      expect(res.status).toBe(503);
+      const body = await res.json();
+      expect(body.error).toBe(
+        "Sign-in is temporarily unavailable. Please try again in a few minutes."
+      );
+    }
+  );
+
+  it("refuses a password too long for the central account without calling it", async () => {
+    setMode("central");
+    setBridge("ok");
+    expect((await login(loginRequest("x".repeat(80)))).status).toBe(401);
+    expect(state.bridgeCalls).toEqual([]);
+  });
+});

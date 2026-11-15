@@ -424,11 +424,11 @@ function PartyHubChrome({
           </div>
           {modViewBanner}
           {statsStrip}
-          {/* Scrolls sideways when the tabs outrun the width; the faded right
-              edge and the trailing space show there is more past the edge. */}
+          {/* Scrolls sideways when the tabs outrun the width; visible scrollbar
+              plus the faded right edge make off-screen tabs discoverable. */}
           <nav
             aria-label="Party sections"
-            className="flex gap-6 overflow-x-auto border-t border-card-border px-4 scrollbar-hide [mask-image:linear-gradient(to_right,black_calc(100%_-_2.5rem),transparent)] after:block after:w-6 after:shrink-0 after:content-[''] sm:px-7"
+            className="flex gap-6 overflow-x-auto border-t border-card-border px-4 [mask-image:linear-gradient(to_right,black_calc(100%_-_2.5rem),transparent)] after:block after:w-6 after:shrink-0 after:content-[''] sm:px-7"
           >
             {tabs.map((t) => (
               <button

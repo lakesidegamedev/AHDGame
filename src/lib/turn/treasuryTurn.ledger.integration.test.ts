@@ -236,6 +236,87 @@ describe("treasury accrual stock-flow ownership", () => {
     expect(options?.projection).not.toHaveProperty("holders");
   });
 
+  /**
+   * A process death at ANY write boundary of the treasury phase, followed by a
+   * rerun of the same turn, lands the same cash, holder credits and ledger as an
+   * uninterrupted turn. Sweeps every write call, before and after it applies.
+   */
+  async function mixedHolderWorldAfterTurn9() {
+    const db = world(false);
+    const nppIds = Array.from({ length: 4 }, (_, i) => new ObjectId(`65000000000000000000009${i}`));
+    const fundIds = Array.from(
+      { length: 4 },
+      (_, i) => new ObjectId(`6500000000000000000000a${i}`)
+    );
+    db.seed(
+      "npps",
+      nppIds.map((_id) => ({ _id, nppInvestmentCashAnchor: 0 }))
+    );
+    db.seed(
+      "indexFunds",
+      fundIds.map((_id) => ({ _id, cashAnchor: 0 }))
+    );
+    db.seed("bonds", [
+      {
+        _id: new ObjectId("6500000000000000000000b0"),
+        issuerType: "sovereign",
+        countryId: "US",
+        currencyCode: "USD",
+        couponRate: 4.8,
+        maturityTurn: 48,
+        matured: false,
+        defaulted: false,
+        publicFloat: 0,
+        holders: [
+          ...nppIds.map((nppId) => ({ nppId, units: 10 })),
+          ...fundIds.map((fundId) => ({ fundId, units: 10 })),
+        ],
+      },
+    ]);
+    db.collection("federalBudget").docs[0].treasuryCashLocal = 1_000;
+    await processTreasuryTurn(9);
+    db.collection("gameConfig").docs[0].treasuryCashLedgerEnabled = true;
+    return db;
+  }
+
+  function endState(db: Awaited<ReturnType<typeof mixedHolderWorldAfterTurn9>>) {
+    return {
+      cashLocal: db.collection("federalBudget").docs[0].treasuryCashLocal,
+      balance: db.collection("federalBudget").docs[0].treasuryBalance,
+      npps: db.collection("npps").docs.map((r) => r.nppInvestmentCashAnchor),
+      funds: db.collection("indexFunds").docs.map((r) => r.cashAnchor),
+      ledgerEntries: db.collection("ledgerEntries").docs.length,
+    };
+  }
+
+  it("a death at any write boundary then a rerun equals an uninterrupted turn", async () => {
+    const clean = await mixedHolderWorldAfterTurn9();
+    await processTreasuryTurn(10);
+    const expected = endState(clean);
+    expect(expected.cashLocal).toBe(920);
+
+    let boundaries = 0;
+    for (const afterWrite of [false, true]) {
+      for (let onCall = 1; onCall <= 80; onCall++) {
+        const db = await mixedHolderWorldAfterTurn9();
+        const crash = withInjectedCrash(db, { onCall, afterWrite });
+        vi.mocked(getDb).mockResolvedValue(crash.db);
+        let died = false;
+        try {
+          await processTreasuryTurn(10);
+        } catch {
+          died = true;
+        }
+        vi.mocked(getDb).mockResolvedValue(db as unknown as Db);
+        if (!died) break;
+        boundaries += 1;
+        await processTreasuryTurn(10);
+        expect(endState(db), `death at write ${onCall} afterWrite=${afterWrite}`).toEqual(expected);
+      }
+    }
+    expect(boundaries).toBeGreaterThan(4);
+  });
+
   it("funds opening bank-holder coupons once from treasury cash without changing gross budget interest", async () => {
     const db = world(true);
     const bankId = new ObjectId("650000000000000000000001");

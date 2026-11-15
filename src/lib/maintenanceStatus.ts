@@ -72,6 +72,17 @@ export const MAINTENANCE_BYPASS_PREFIXES: readonly string[] = [
   // players come looking for what changed. Content is static markdown with no
   // game-state reads, so it is safe to serve while sealed.
   "/changelog",
+  // The wiki holds the history of every past world, including the chronicle
+  // of the one that just ended. Between iterations is when players go back to
+  // read it and share it. Page reads only; edits still go through their own
+  // authenticated API routes.
+  "/wiki",
+  // The desktop and mobile clients send a player here to link their game
+  // account before single-player starts. Single-player runs on the player's
+  // own machine and does not depend on the online world, so the online
+  // down-window must not block it. The page only shows the signed-in account
+  // and calls its own authenticated /api/client route.
+  "/client/link",
 ];
 
 /** True when the path is reachable to non-admins during maintenance.

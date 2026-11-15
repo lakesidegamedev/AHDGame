@@ -114,7 +114,14 @@ describe("bridge client", () => {
       })
     ).toEqual({ ok: true, data: null });
     route(() => json({ error: "secret detail" }, 500));
-    expect(await bridgePasswordSet("u1", "pw")).toEqual({ ok: false, kind: "error" });
+    const failed = await bridgePasswordSet("u1", "pw");
+    // The failure carries a reason, status and node for logs, never the response body.
+    expect(failed).toEqual({
+      ok: false,
+      kind: "error",
+      detail: { reason: "http", phase: "call", status: 500 },
+    });
+    expect(JSON.stringify(failed)).not.toContain("secret detail");
     route(() => json({ result: "ok" }));
     expect(await bridgeAccountDelete("u1")).toEqual({ ok: true, data: null });
   });
@@ -143,5 +150,87 @@ describe("bridge address safety", () => {
     vi.stubEnv("LAKESIDE_ACCOUNT_BRIDGE_URL", "https://bridge.example.invalid/");
     vi.stubEnv("LAKESIDE_ACCOUNT_BRIDGE_TOKEN_URL", "http://token.example.invalid/token");
     expect(isBridgeConfigured()).toBe(false);
+  });
+});
+
+describe("password check failure reasons and the single retry", () => {
+  function netError(code: string): Error {
+    return Object.assign(new TypeError("fetch failed"), { cause: { code } });
+  }
+
+  it("retries once after a timeout and returns the second answer", async () => {
+    let calls = 0;
+    route(async () => {
+      calls += 1;
+      if (calls === 1) throw Object.assign(new Error("timed out"), { name: "TimeoutError" });
+      return json({ result: "ok" });
+    });
+    await expect(
+      bridgePasswordCheck("6af6a3f1c51fffa232cd7088", "pw", { enforceEnabled: true })
+    ).resolves.toBe("ok");
+    expect(calls).toBe(2);
+  });
+
+  it("retries once after a refused connection, then fails closed with the error", async () => {
+    let calls = 0;
+    route(async () => {
+      calls += 1;
+      throw netError("ECONNREFUSED");
+    });
+    await expect(
+      bridgePasswordCheck("6af6a3f1c51fffa232cd7088", "pw", { enforceEnabled: true })
+    ).resolves.toBe("error");
+    expect(calls).toBe(2);
+  });
+
+  it("never retries a wrong password", async () => {
+    let calls = 0;
+    route(async () => {
+      calls += 1;
+      return json({ result: "wrong" });
+    });
+    await expect(
+      bridgePasswordCheck("6af6a3f1c51fffa232cd7088", "pw", { enforceEnabled: true })
+    ).resolves.toBe("wrong");
+    expect(calls).toBe(1);
+  });
+
+  it("never retries an HTTP error answer", async () => {
+    let calls = 0;
+    route(async () => {
+      calls += 1;
+      return json({ error: "x" }, 500);
+    });
+    await expect(
+      bridgePasswordCheck("6af6a3f1c51fffa232cd7088", "pw", { enforceEnabled: true })
+    ).resolves.toBe("error");
+    expect(calls).toBe(1);
+  });
+
+  it("sends one request id on both attempts and logs reason, status and node", async () => {
+    const ids: string[] = [];
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    let calls = 0;
+    route(async (_path, init) => {
+      calls += 1;
+      ids.push(String((init.headers as Record<string, string>)["X-Request-Id"]));
+      if (calls === 1) throw netError("ECONNRESET");
+      return new Response("busy", {
+        status: 503,
+        headers: { "X-Lakeside-Node": "127.0.0.1:8082" },
+      });
+    });
+    await expect(
+      bridgePasswordCheck("6af6a3f1c51fffa232cd7088", "pw", { enforceEnabled: true })
+    ).resolves.toBe("error");
+    expect(ids).toHaveLength(2);
+    expect(ids[0]).toMatch(/^[0-9a-f-]{36}$/);
+    expect(ids[1]).toBe(ids[0]);
+    const logged = warn.mock.calls.map((c) => JSON.stringify(c)).join("\n");
+    expect(logged).toContain("connection_reset");
+    expect(logged).toContain("127.0.0.1:8082");
+    expect(logged).toContain("503");
+    expect(logged).not.toContain('"pw"');
+    warn.mockRestore();
   });
 });
