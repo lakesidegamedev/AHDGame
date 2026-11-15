@@ -165,7 +165,6 @@ import { createRelocationCreditBatch } from "@/simulation/engine/v2/relocationCr
 
 import { createFrontierEntryTurnState } from "@/lib/turn/npp/frontierEntryCandidate";
 import type {
-  NppCorpDecision,
   NppCorpDecisionContext,
   NppPlantsContext,
   NppSectorUpdateDoc,
@@ -494,7 +493,6 @@ export async function processNppCorporationDecisions(
         producerFundedRestartStage?: number;
         wholePlantsStage?: number;
         producerCaptiveDeliveryStage?: number;
-        nppStateServiceHeadroomStage?: number;
         nppDividendAfterTaxStage?: number;
         nppGrowthPerProductFillStage?: number;
       } & ShortageGrowthFinanceConfigInput
@@ -507,7 +505,6 @@ export async function processNppCorporationDecisions(
           producerFundedRestartStage: 1,
           wholePlantsStage: 1,
           producerCaptiveDeliveryStage: 1,
-          nppStateServiceHeadroomStage: 1,
           nppShortageGrowthFinanceStage: 1,
           nppDividendAfterTaxStage: 1,
           nppGrowthPerProductFillStage: 1,

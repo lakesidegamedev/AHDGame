@@ -15,7 +15,6 @@ import type { CorporateSector } from "@/lib/db/types";
 import { candidate } from "./__fixtures__/marketCandidates";
 import type { MarketCandidate } from "./marketCandidates";
 import type { CommodityType, ExtractableResource } from "@/lib/constants/commodities";
-import type { CountryId } from "@/lib/constants/countries";
 
 // A timber-only state next to a rare earth state, with rare earth critically
 // short. Before the fix the timber state's aggregate deposit room qualified it

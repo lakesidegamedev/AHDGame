@@ -467,7 +467,7 @@ export function findBestMarketCandidate(
   stateControlled: ReadonlySet<string>,
   priceRatioOf: CommodityPriceRatioFn,
   plantsEnabled: boolean = false,
-  eraUnitScale: number = 1,
+  _eraUnitScale: number = 1,
   signals?: PlacementSignals,
   preferredStateIds?: ReadonlySet<string>,
   stats?: CandidateExclusionStats,
