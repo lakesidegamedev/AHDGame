@@ -42,6 +42,7 @@ import { getTRRegionImage } from "./trRegionImages";
 import { getGRRegionImage } from "@/lib/constants/grRegionImages";
 import { getATRegionImage } from "@/lib/constants/atRegionImages";
 import { getFIRegionImage } from "@/lib/constants/fiRegionImages";
+import { getCARegionImage } from "@/lib/countries/ca/data/caRegionImages";
 import { getSCORegionImage } from "./scoRegionImages";
 import { getWALRegionImage } from "./walRegionImages";
 
@@ -102,6 +103,7 @@ const REGION_IMAGE_RESOLVERS: Partial<Record<CountryId, (stateId: string) => str
     GR: getGRRegionImage,
     AT: getATRegionImage,
     FI: getFIRegionImage,
+    CA: getCARegionImage,
     SCO: getSCORegionImage,
     WAL: getWALRegionImage,
   };

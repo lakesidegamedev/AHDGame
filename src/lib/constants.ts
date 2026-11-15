@@ -103,6 +103,10 @@ const STATE_DESCRIPTORS: Record<string, string> = {
   MA: "The Commonwealth of",
   PA: "The Commonwealth of",
   VA: "The Commonwealth of",
+  // Canada's three territories are not provinces.
+  CA_YT: "The Territory of",
+  CA_NT: "The Territory of",
+  CA_NU: "The Territory of",
   // Default for others is "The State of"
 };
 
