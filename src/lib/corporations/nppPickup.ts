@@ -19,7 +19,7 @@ import {
   readSectorPlantFields,
 } from "@/lib/corporations/sectorTransferCapex";
 import { hasProtectedConstructionClaim } from "@/lib/corporations/securedConstructionProperty";
-import { restoreSectorsToUnowned } from "@/lib/corporations/restoreSectorsToUnowned";
+import { deleteDisposedSectors } from "@/lib/corporations/deleteDisposedSectors";
 import {
   activeExtractionContractFilter,
   getExtractionContractsCollection,
@@ -32,9 +32,9 @@ import { defenceContractsCollection } from "@/lib/db/repositories/defenceContrac
 
 /**
  * Share of a leaving plant's built capacity an NPP operator takes over. The
- * rest returns to the unowned pool as headroom: real supply is lost there and
- * that demand opens for any builder, so a mass exit still makes room for
- * competitors without blanking the market.
+ * rest stops: that demand goes unmet and shows up as a shortage any builder can
+ * answer, so a mass exit still makes room for competitors without blanking the
+ * market.
  */
 export const NPP_PICKUP_SHARE = 0.75;
 
@@ -262,17 +262,16 @@ export async function creditNppPickup(
  * Dispose of sectors leaving their owner (abandon, dissolution, restructure
  * liquidation).
  *
- * Headroom is bookkeeping, not supply: returning a leaving plant's capacity to
- * the unowned pool means it simply stopped, and the market loses that output
+ * A leaving plant's capacity simply stops, and the market loses that output
  * until someone builds and waits out the window, so one large exit can spike
  * prices across every market it served. An NPP operator instead takes over
  * {@link NPP_PICKUP_SHARE} of each plant's BUILT capacity, system-funded (no
  * cash moves, the leaving owner's refund and payout are unchanged). The
- * remaining share and every undelivered build order return to the pool.
+ * remaining share and every undelivered build order are deleted with the row.
  *
  * Resumable: the receiver is recorded on the leaving row before any capacity
- * moves, credits are guarded by a per-pickup receipt, and the pool restore is
- * itself idempotent.
+ * moves, credits are guarded by a per-pickup receipt, and the row deletion is
+ * idempotent.
  */
 export async function disposeLeavingSectors(
   db: Db,
@@ -356,7 +355,7 @@ export async function disposeLeavingSectors(
       ).map((row) => [row._id.toHexString(), row.nppPickup])
     );
 
-    // 3. Credit each receiver and queue the kept share for the pool.
+    // 3. Credit each receiver; the kept share is deleted with its row.
     for (const sector of eligible) {
       const id = sector._id.toHexString();
       const pickup = storedMarkers.get(id) ?? sector.nppPickup ?? proposals.get(id);
@@ -369,20 +368,18 @@ export async function disposeLeavingSectors(
       const opening = seedPlantLedger(sector, sector.capitalStock).plantCount;
       const split = splitWholePlantCount(opening, NPP_PICKUP_SHARE);
       const carved = carveSectorPlantFields(fields, NPP_PICKUP_SHARE, split.carved);
-      const kept = carveSectorPlantFields(fields, 1 - NPP_PICKUP_SHARE, split.kept);
 
       result.unitsPickedUp += await creditNppPickup(db, sector, pickup, hostCountry, carved, now);
       recipients.set(pickup.receiverCorporationId.toHexString(), pickup.receiverCorporationId);
       handedOff.push({ sector, pickup });
-      // The pool gets the kept share plus every undelivered order, in full.
-      remainders.push({ ...sector, capitalStock: kept.capitalStock });
+      remainders.push(sector);
     }
 
     await repointContracts(db, owner._id, handedOff, now);
     result.recipientIds = [...recipients.values()];
   }
 
-  if (remainders.length > 0) await restoreSectorsToUnowned(db, remainders, now);
+  if (remainders.length > 0) await deleteDisposedSectors(db, remainders);
   return result;
 }
 

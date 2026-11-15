@@ -16,7 +16,7 @@ import {
   isWholePlantStock,
 } from "@/lib/corporations/wholePlants/rules";
 import { buildCapexTxEntry } from "@/lib/corporations/capexTxLog";
-import { resolveWorldYear } from "@/lib/corporations/capacityCapture";
+import { resolveWorldYear } from "@/lib/time/worldYear";
 import { emitTx, loadTxThresholds } from "@/lib/financialTxLog/emit";
 import {
   anchorToCorpLiquidCapital,

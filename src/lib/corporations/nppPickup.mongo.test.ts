@@ -1,6 +1,6 @@
 /**
  * Real-mongod proof that leaving plants are 75% picked up by NPP operators and
- * 25% returned to the unowned pool.
+ * 25% removed with the leaving row (no pool is credited).
  *
  * Opt-in only: runs when `AHD_TEST_REAL_MONGO=1` (see realMongoFixture).
  */
@@ -145,9 +145,8 @@ describe.runIf(REAL_MONGO_ENABLED)("NPP pickup against isolated mongod", () => {
     expect(s3?.buildQueue).toEqual([]);
     expect(s3?.corporationId.equals(nppB)).toBe(true);
 
-    // The pool got the 25% kept share, plus the queued 500 at S3.
-    const pools = await db.collection("unownedSectors").find({}).toArray();
-    expect(pools.map((p) => p.stateId).sort()).toEqual(["S1", "S3"]);
+    // Nothing writes a market pool: capacity that is not picked up just stops.
+    expect(await db.collection("unownedSectors").countDocuments({})).toBe(0);
   });
 
   it("keeps transferred sales available to the next production run", async () => {
@@ -275,7 +274,7 @@ describe.runIf(REAL_MONGO_ENABLED)("NPP pickup against isolated mongod", () => {
     const { aRow } = await seed(db);
     const leaving = plantSector(owner._id, "S1", 2000);
     const key = `npp-pickup:${leaving._id.toHexString()}`;
-    // State after a crash between the credit and the pool restore: the row
+    // State after a crash between the credit and the row delete: the row
     // carries its pickup marker and the receiver already holds the receipt.
     const marked = {
       ...leaving,
@@ -323,7 +322,7 @@ describe.runIf(REAL_MONGO_ENABLED)("NPP pickup against isolated mongod", () => {
     expect(spawned?.ceoType).toBe("npp");
   });
 
-  it("returns everything to the pool for unbuilt sectors", async () => {
+  it("deletes unbuilt sectors without a receiver", async () => {
     await seed(db);
     const leaving = plantSector(owner._id, "S3", 0, {
       buildQueue: [

@@ -63,7 +63,7 @@ export interface CorporationRestructureResult {
  * there) and keeps the corp alive. Shared by the CEO-initiated route and the
  * turn-tick auto-restructure that closes the "default then close the tab"
  * loophole. The caller MUST hold the corporation settlement lock; writes are
- * sequential (restoreSectorsToUnowned is not transaction-safe), mirroring
+ * sequential (deleteDisposedSectors is not transaction-safe), mirroring
  * {@link import("./executeCorporationBondDefaultDissolution")}.
  *
  * Throws {@link badRequest} when there are no defaulted bonds or when even

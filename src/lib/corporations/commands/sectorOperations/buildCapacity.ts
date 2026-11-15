@@ -307,7 +307,7 @@ export async function buildCapacity(request: Request, { params }: RouteParams) {
     }
 
     const ctx = await loadCapacityContext(db, corporation, sector);
-    const { currentTurn, countryId, queue, now, corpCurrencyCode, eraUnitScale } = ctx;
+    const { currentTurn, countryId, queue, now, corpCurrencyCode } = ctx;
 
     const blocked = capacityChangeBlock(sector, false);
     if (blocked) return errorResponse(blocked.status, blocked.error);

@@ -189,11 +189,6 @@ const ALLOWED_WRITERS: Record<string, WriterEntry> = {
     reason:
       "Whole-plant split (player route and NPP attacks) is plants-only; a new row starts at zero revenue and the turn derives its revenue from transferred whole plants.",
   },
-  "src/app/api/country/[code]/region/[id]/economy/attack/route.ts": {
-    writeSites: 5,
-    status: "plants-gated",
-    reason: "Unowned split draws headroomUnits down and grants capacity under plants.",
-  },
   "src/lib/turn/nppCorporateAttacks.ts": {
     writeSites: 4,
     status: "plants-gated",
@@ -376,7 +371,6 @@ const MUST_BE_PLANTS_AWARE = [
   "src/lib/turn/corporation/rdInnovation.ts",
   "src/lib/turn/corporation/corporationSectorShed.ts",
   "src/lib/corporations/commands/plantSectorSplitAttempt.ts",
-  "src/app/api/country/[code]/region/[id]/economy/attack/route.ts",
   "src/lib/turn/nppCorporateAttacks.ts",
   "src/lib/corporations/moveSector.ts",
   // Converted by the ownership/transfer sweep and the P3b audit sweep. Once a
