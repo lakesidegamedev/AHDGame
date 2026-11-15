@@ -238,7 +238,7 @@ describe("reconcileCommandEconomySoes", () => {
       assignedSectorTypes: ["manufacturing"],
     });
 
-    const result = await reconcileCommandEconomySoes(db as unknown as Db, { dryRun: true });
+    await reconcileCommandEconomySoes(db as unknown as Db, { dryRun: true });
     expect(db.collectionMocks.corporations.updateOne).not.toHaveBeenCalled();
     expect(db.collectionMocks.corporateSectors.deleteMany).not.toHaveBeenCalled();
   });

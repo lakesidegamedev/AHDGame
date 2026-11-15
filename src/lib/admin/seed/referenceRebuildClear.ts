@@ -48,7 +48,7 @@ export const RETIRED_COLLECTIONS_DROPPED_ON_REBUILD: readonly string[] = Object.
   "unownedSectors",
 ]);
 
-async function dropRetiredCollections(db: Db): Promise<void> {
+export async function dropRetiredCollections(db: Db): Promise<void> {
   for (const name of RETIRED_COLLECTIONS_DROPPED_ON_REBUILD) {
     try {
       await db.dropCollection(name);
@@ -65,6 +65,5 @@ export async function clearReferenceForRebuild(db: Db): Promise<Record<string, n
     const result = await db.collection(name).deleteMany({});
     deleted[name] = result.deletedCount ?? 0;
   }
-  await dropRetiredCollections(db);
   return deleted;
 }

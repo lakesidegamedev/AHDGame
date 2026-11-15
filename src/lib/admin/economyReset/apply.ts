@@ -76,6 +76,7 @@ import { moneySupplySnapshotsCollection } from "@/lib/db/repositories/moneySuppl
 import { pensionSchemesCollection } from "@/lib/db/repositories/pensionSchemes";
 import { ledgerEntriesCollection } from "@/lib/db/repositories/ledgerEntries";
 import { sovereignCouponClaimsCollection } from "@/lib/db/repositories/sovereignCouponClaims";
+import { dropRetiredCollections } from "@/lib/admin/seed/referenceRebuildClear";
 
 type Log = (message: string) => void;
 
@@ -403,6 +404,7 @@ async function phaseWipe(db: Db): Promise<void> {
   for (const name of economyResetFullWipeCollections()) {
     await dropIfExists(db, name);
   }
+  await dropRetiredCollections(db);
 }
 
 async function phaseUnset(db: Db, plan: EconomyResetPlan): Promise<void> {

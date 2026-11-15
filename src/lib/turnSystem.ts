@@ -117,7 +117,6 @@ import { resetResidueTurnRefusal } from "@/lib/admin/resetContract/rules/residue
 import { serverEnv } from "@/lib/config/read";
 import { workerConfig } from "@/lib/config/worker";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
-import type { Document } from "mongodb";
 import { turnLogsCollection } from "@/lib/db/repositories/turnLogs";
 
 /** Read once per process: the deployment does not change under a running server. */

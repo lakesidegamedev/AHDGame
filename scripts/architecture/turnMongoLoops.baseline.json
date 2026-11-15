@@ -1631,62 +1631,6 @@
       "fingerprint": "5ba2a0a1b74a08badd943832de751bdf7a43357a67aef186ed4ce9d44d201342"
     },
     {
-      "file": "src/lib/admin/seed/reconcileCommandEconomyUnowned.ts",
-      "operation": "findOne",
-      "owner": "reconcileCommandEconomyUnowned",
-      "expression": "db.collection<Corporation>(\"corporations\").findOne({ countryOwnerId: countryId, assignedSectorTypes: sectorType, })",
-      "fingerprint": "7bedb8713d4a66bfba1f5f38b9ce0044c7a81ab529f832a258f0346850382fbf"
-    },
-    {
-      "file": "src/lib/admin/seed/reconcileCommandEconomyUnowned.ts",
-      "operation": "findOne",
-      "owner": "reconcileCommandEconomyUnowned",
-      "expression": "db .collection<Corporation>(\"corporations\") .findOne({ _id: corpId }, { projection: { _id: 1, countryOwnerId: 1 } })",
-      "fingerprint": "e73243bed4b541ff5e4c2ff4ec836a2639c3d906612e2fd7e5c3616fe0d3a6da"
-    },
-    {
-      "file": "src/lib/admin/seed/reconcileCommandEconomyUnowned.ts",
-      "operation": "findOne",
-      "owner": "reconcileCommandEconomyUnowned",
-      "expression": "db .collection<Corporation>(\"corporations\") .findOne({ sequentialId }, { projection: { _id: 1 } })",
-      "fingerprint": "5a8c0d062ecad3d9fdd51c0117251f74f72e6bfd76fcefe422dbb50e3ce62e7f"
-    },
-    {
-      "file": "src/lib/admin/seed/reconcileCommandEconomyUnowned.ts",
-      "operation": "find",
-      "owner": "reconcileCommandEconomyUnowned",
-      "expression": "db .collection<Corporation>(\"corporations\") .find({ sequentialId: { $type: NUMERIC_BSON_TYPE } })",
-      "fingerprint": "b4bd8948cbc48d70bc7c1ded0d130e21aacd851e737e67aff9397f8bc7913902"
-    },
-    {
-      "file": "src/lib/admin/seed/reconcileCommandEconomyUnowned.ts",
-      "operation": "updateOne",
-      "owner": "reconcileCommandEconomyUnowned",
-      "expression": "db .collection<Corporation>(\"corporations\") .updateOne({ _id: corpId }, { $set: { ...corpData, ...(sequentialId != null ? { sequentialId } : {}) } }, { upsert: true })",
-      "fingerprint": "39a3750ad3590f6de746df6edb1a17dd3fa5af49f5ea8e1b01e808d8a5aeb0a0"
-    },
-    {
-      "file": "src/lib/admin/seed/reconcileCommandEconomyUnowned.ts",
-      "operation": "updateOne",
-      "owner": "reconcileCommandEconomyUnowned",
-      "expression": "db.collection<Corporation>(\"corporations\").updateOne({ _id: corpId }, { $set: { soe: entry.corporation.soe, assignedSectorTypes: [sectorType], name: entry.corporation.name, description: entry.corporation.description, updatedAt: new Date(), }, })",
-      "fingerprint": "182661ed467c3159e4fc5834505f3900deea4a44d8656b6d5b056ac5a6e73369"
-    },
-    {
-      "file": "src/lib/admin/seed/reconcileCommandEconomyUnowned.ts",
-      "operation": "deleteMany",
-      "owner": "reconcileCommandEconomyUnowned",
-      "expression": "db.collection<CorporateSector>(\"corporateSectors\").deleteMany({ countryId, ...operatingSectorFilter(sectorType), stateId: { $in: [...new Set(entry.sectors.map((s) => s.stateId))] }, corporationId: { $ne: corpId }, })",
-      "fingerprint": "a868df75bdd5a8588427c82258bf5e2c28747c8ab4b0eb7c58bbf9d15567b951"
-    },
-    {
-      "file": "src/lib/admin/seed/reconcileCommandEconomyUnowned.ts",
-      "operation": "updateOne",
-      "owner": "reconcileCommandEconomyUnowned",
-      "expression": "db.collection<CorporateSector>(\"corporateSectors\").updateOne({ corporationId: corpId, stateId: sector.stateId, sectorType: sector.sectorType, industryModel: sector.industryModel ?? null, mediaDiscriminator: sector.mediaDiscriminator ?? null, }, { $set: { ...sectorData, corporationId: corpId, }, }, { upsert: true })",
-      "fingerprint": "386a7586dfd98a573b8cad986935e5e45487ddc15ce097e690c9aae39c46f9ba"
-    },
-    {
       "file": "src/lib/turn/suspiciousDetection.ts",
       "operation": "updateOne",
       "owner": "processSuspiciousDetection",

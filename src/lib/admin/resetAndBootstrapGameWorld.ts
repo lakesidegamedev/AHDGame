@@ -57,7 +57,10 @@ import {
 import { resetPoliticalMetricsRuntimeState } from "@/lib/admin/seed/resetPoliticalMetricsRuntimeState";
 import { resetMacroMetricsRuntimeState } from "@/lib/admin/seed/resetMacroMetricsRuntimeState";
 import { resetStateRuntimeFields } from "@/lib/admin/seed/resetStateRuntimeFields";
-import { clearReferenceForRebuild } from "@/lib/admin/seed/referenceRebuildClear";
+import {
+  clearReferenceForRebuild,
+  dropRetiredCollections,
+} from "@/lib/admin/seed/referenceRebuildClear";
 import { runResidueScan } from "@/lib/admin/resetContract/residueScan";
 import { formatResidueViolation } from "@/lib/admin/resetContract/rules/residueScan";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
@@ -344,6 +347,7 @@ export async function resetAndBootstrapGameWorld(
           .map(([name, count]) => `${name} ${count}`)
           .join(", ")}`
       );
+      await dropRetiredCollections(db);
     }
     const bootstrap = await bootstrapGameWorld({
       db,

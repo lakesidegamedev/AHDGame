@@ -3305,7 +3305,7 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/admin/seed/reconcileCommandEconomyUnowned.ts": {
+    "src/lib/admin/seed/reconcileCommandEconomySoes.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
@@ -3456,10 +3456,6 @@
     "src/lib/admin/seed/seedUnions.ts": {
       "longBlocks": 1,
       "narrativeLines": 1
-    },
-    "src/lib/admin/seed/seedUnownedSectors.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
     },
     "src/lib/admin/seed/stateMetricsCountryId.test.ts": {
       "longBlocks": 1,
