@@ -58,7 +58,7 @@ export type GdpBaselineUnit = "local" | "usd";
  * secession bundles.
  */
 export type GdpBaselineCountry =
-  "US" | "UK" | "DE" | "JP" | "IE" | "NG" | "CN" | "DD" | "RU" | "SCO" | "WAL";
+  "US" | "UK" | "DE" | "JP" | "IE" | "NG" | "CN" | "DD" | "RU" | "SCO" | "WAL" | "CA";
 
 export interface GdpBaselineResolution {
   /** National GDP per capita in the same unit as the era's `State.gdp`. */
@@ -238,6 +238,18 @@ const GDP_BASELINE_TABLE: Record<GdpBaselineCountry, Record<EraId, number>> = {
     "2023": 23_344,
     "2027": 23_344,
   },
+  // Canada seeds one region bundle, the 2027 one, so every other era repeats
+  // that cell (it is only reachable from a 2027 world).
+  CA: {
+    "1953": 82_558,
+    "1979": 82_558,
+    "1991": 82_558,
+    "1999": 82_558,
+    "2007": 82_558,
+    "2019": 82_558,
+    "2023": 82_558,
+    "2027": 82_558,
+  },
 };
 
 /**
@@ -281,6 +293,16 @@ const BUNDLE_PRESET_OVERRIDES: Partial<Record<GdpBaselineCountry, Partial<Record
       "2007": "2019-default",
       "2023": "2019-default",
       "2027": "2019-default",
+    },
+    // CA authors only the 2027 bundle.
+    CA: {
+      "1953": "2027-default",
+      "1979": "2027-default",
+      "1991": "2027-default",
+      "1999": "2027-default",
+      "2007": "2027-default",
+      "2019": "2027-default",
+      "2023": "2027-default",
     },
     // RU authors two bundles; everything outside 1953/1979 takes the
     // `2019-default` fallback.

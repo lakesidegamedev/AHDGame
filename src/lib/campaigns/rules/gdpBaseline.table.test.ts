@@ -46,6 +46,7 @@ import { states1999 } from "@/lib/seeds/reference/states1999";
 import { states2007 } from "@/lib/seeds/reference/states2007";
 import { states2023 } from "@/lib/seeds/reference/states2023";
 import { states2027 } from "@/lib/seeds/reference/states2027";
+import { caRegions2027 } from "@/lib/countries/ca/data/caRegions2027";
 import { deRegions } from "@/lib/seeds/de/deRegions";
 import { deRegions1953 } from "@/lib/seeds/de/deRegions1953";
 import { deRegions1979 } from "@/lib/seeds/de/deRegions1979";
@@ -237,6 +238,11 @@ const BUNDLES: Record<GdpBaselineCountry, Record<EraId, RegionRow[]>> = {
     EraId,
     RegionRow[]
   >,
+  // One 2027 bundle; only 2027 is recomputed and the rest are asserted as repeats.
+  CA: Object.fromEntries(ERAS.map((era) => [era, caRegions2027])) as unknown as Record<
+    EraId,
+    RegionRow[]
+  >,
 };
 
 /**
@@ -261,6 +267,7 @@ const NON_DERIVABLE_ERAS: Partial<Record<GdpBaselineCountry, { eras: EraId[]; re
   // repeats the one bundle's 2019 cell.
   SCO: { eras: ERAS.filter((era) => era !== "2019"), repeats: "2019" },
   WAL: { eras: ERAS.filter((era) => era !== "2019"), repeats: "2019" },
+  CA: { eras: ERAS.filter((era) => era !== "2027"), repeats: "2027" },
 };
 
 function derivableEras(country: GdpBaselineCountry): EraId[] {
@@ -298,6 +305,7 @@ const EXPECTED_BUNDLE_PRESET: Partial<Record<GdpBaselineCountry, Partial<Record<
     },
     SCO: Object.fromEntries(ERAS.filter((e) => e !== "2019").map((e) => [e, "2019-default"])),
     WAL: Object.fromEntries(ERAS.filter((e) => e !== "2019").map((e) => [e, "2019-default"])),
+    CA: Object.fromEntries(ERAS.filter((e) => e !== "2027").map((e) => [e, "2027-default"])),
   };
 
 function expectedBundlePreset(country: GdpBaselineCountry, era: EraId): string {
@@ -513,13 +521,14 @@ describe("gdpBaseline table derivation (issue #798)", () => {
 
   it("fails loudly for countries without an explicit baseline", () => {
     expect(() => resolveCampaignGdpBaseline("XX", "2019-default")).toThrow(/no GDP baseline/);
-    // CA sat in the old hardcoded table but is not playable: no silent row.
-    expect(() => resolveCampaignGdpBaseline("CA", "2019-default")).toThrow(/no GDP baseline/);
+    expect(() => resolveCampaignGdpBaseline("FR", "2019-default")).toThrow(/no GDP baseline/);
     expect(() => gdpBaselinePerCapita("BR", "1953-default")).toThrow(/no GDP baseline/);
     expect(hasGdpBaseline("US")).toBe(true);
     expect(hasGdpBaseline("NG")).toBe(true);
     expect(hasGdpBaseline("XX")).toBe(false);
-    expect(hasGdpBaseline("CA")).toBe(false);
+    // Canada is playable in 2027 and carries a row derived from its 2027 bundle.
+    expect(hasGdpBaseline("CA")).toBe(true);
+    expect(resolveCampaignGdpBaseline("CA", "2027-default").baseline).toBe(82_558);
     expect(hasGdpBaseline("BR")).toBe(false);
   });
 
