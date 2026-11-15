@@ -25,7 +25,25 @@ import { DE_LANDTAG_SPEC } from "@/lib/countries/de/elections/chamberSpecs";
 import { countriesByTier, type ShippingPreset } from "@/lib/world/eraRoster";
 import { assertKnownSeedPreset, dataPresetFor } from "@/lib/seeds/presetSelector";
 import { checkSeedContract } from "@/lib/seeds/contract/checkSeedContract";
+import { getCollectionCategory } from "@/lib/admin/seed/seedManifest";
+import { findWorldCopyCollections } from "@/lib/admin/resetContract/rules/opsWorldCopies";
 import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
+
+/** Snapshot, backup and one-off collections of an outgoing world, which no reset empties. */
+async function worldCopyFindings(db: Db): Promise<PreflightFinding[]> {
+  if (typeof db.listCollections !== "function") return [];
+  const listed = await db.listCollections({}, { nameOnly: true }).toArray();
+  return findWorldCopyCollections(
+    listed.map((c) => c.name),
+    (name) => getCollectionCategory(name) !== undefined
+  ).map((group) => ({
+    severity: "fail" as const,
+    check: "world-copy-collections",
+    detail: `${group.names.length} ${group.label}: ${group.names.slice(0, 6).join(", ")}${
+      group.names.length > 6 ? ` and ${group.names.length - 6} more` : ""
+    }. Archive them before a reset; none is emptied by it.`,
+  }));
+}
 
 export const PREFLIGHT_PRESET: ShippingPreset = "2027-default";
 
@@ -145,6 +163,8 @@ export async function runPreflight2027(
   for (const problem of residueScanContractProblems()) {
     findings.push({ severity: "fail", check: "residue-scan-contract", detail: problem });
   }
+
+  for (const copy of await worldCopyFindings(db)) findings.push(copy);
 
   const [gameStates, characterCol, nppCol, stateCol, budgetCol] = await Promise.all([
     getGameStateCollection(db),

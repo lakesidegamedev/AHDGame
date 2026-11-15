@@ -3,6 +3,7 @@ import { condition as c } from "@/lib/states/conditions/condition";
 import type { CountryGeography } from "../contract";
 import { modernRegionalPopulation2027 } from "@/lib/seeds/reference/modernRegionalPopulation2027";
 import { ngMetricPresets1953 } from "./data/ngMetricPresets1953";
+import { ngMetricPresets1979 } from "./data/ngMetricPresets1979";
 import { ngMetricPresets1991, ngMetricPresets2019 } from "./data/ngMetricPresets";
 import { ngRegionCensusData } from "@/lib/seeds/ng/ngRegionCensusData";
 import { ngRegionCensusData1953 } from "@/lib/seeds/ng/ngRegionCensusData1953";
@@ -55,6 +56,7 @@ const metricPresetBundles = {
   "2019-default": ngMetricPresets2019,
   "1991-default": ngMetricPresets1991,
   "1953-default": ngMetricPresets1953,
+  "1979-default": ngMetricPresets1979,
 };
 
 const populationAnchors = {};

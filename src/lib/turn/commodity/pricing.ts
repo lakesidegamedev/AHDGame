@@ -375,13 +375,20 @@ export function priceCommodity(
     for (const countryId of reachableBooks.keys()) {
       const book = reachableBooks.get(countryId)?.get(commodity);
       if (!book || (book.supply <= 0 && book.demand <= 0)) continue;
+      // Plants take their reference price from this book, so it moves at the
+      // same pace as the published global and national prices. Unpaced, a glut
+      // halved it in one turn and the next turn's asks, markdown floor and
+      // household ceilings followed it down.
       reachablePrices[countryId] =
         pegged ??
-        computeMarketPrice(
-          effBaseFor(countryId),
-          book.supply + NATIONAL_COMMODITY_STABILIZER,
-          book.demand + NATIONAL_COMMODITY_STABILIZER,
-          priceKnee
+        paced(
+          computeMarketPrice(
+            effBaseFor(countryId),
+            book.supply + NATIONAL_COMMODITY_STABILIZER,
+            book.demand + NATIONAL_COMMODITY_STABILIZER,
+            priceKnee
+          ),
+          existing?.reachablePrices?.[countryId]
         );
     }
   }
