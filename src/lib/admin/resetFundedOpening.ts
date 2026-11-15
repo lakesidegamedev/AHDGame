@@ -1,15 +1,11 @@
 /**
  * Opens a freshly reset world directly on the funded producer market.
  *
- * Before this step, a fresh world ran one legacy turn first, because the
- * opening census needs two values that only a turn produced: physical capacity
- * on sectors seeded without `capitalStock`, and per-state prices for
- * state-scoped commodities. This fills both the way the first turn would, then
- * runs the census, the opening apply and the funded switch. The first turn
- * the operator starts is the first funded turn.
- *
- * Creates no money: capacity and prices are not cash, and the opening apply
- * refuses any plan that creates cash or input stock.
+ * The opening census needs two values a fresh seed lacks: capacity on sectors
+ * seeded without `capitalStock`, and per-state prices for state-scoped
+ * commodities. This fills both the way the first turn would, then runs the
+ * census, the opening apply and the funded switch. Creates no money: the
+ * opening apply refuses any plan that creates cash or input stock.
  */
 import type { AnyBulkWriteOperation, Db, Document } from "mongodb";
 import { isOperatingSectorType } from "@/lib/constants/corporationsClient";
@@ -107,7 +103,10 @@ async function fillOpeningGaps(db: Db) {
   const sectorOps: AnyBulkWriteOperation<Document>[] = [];
   for (const sector of sectors) {
     const corp = corps.get(String(sector.corporationId));
-    const code = resolveSectorHostCurrencyCode(sector, corp as never);
+    const code = resolveSectorHostCurrencyCode(
+      { countryId: typeof sector.countryId === "string" ? sector.countryId : null },
+      corp as never
+    );
     const units = openingCapacityUnits({
       sectorType: sector.sectorType,
       revenueLocal: Number(sector.revenue ?? 0),

@@ -6,6 +6,20 @@
  * reset, which opens a fresh world straight on the funded market.
  */
 import { createHash } from "node:crypto";
+import type { Collection, Document } from "mongodb";
+import { bankLoansCollection } from "@/lib/db/repositories/bankLoans";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { depositInsuranceFundsCollection } from "@/lib/db/repositories/depositInsuranceFunds";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { interbankLoansCollection } from "@/lib/db/repositories/interbankLoans";
+import { producerMarketShadowsCollection } from "@/lib/db/repositories/producerMarketShadows";
+import { savingsAccountsCollection } from "@/lib/db/repositories/savingsAccounts";
+import { supplyAgreementsCollection } from "@/lib/db/repositories/supplyAgreements";
 import {
   planProducerOpening,
   type ExistingWorldProducerOpening,
@@ -44,7 +58,7 @@ export async function captureProducerOpening(
   const approvalReferenceValue = options.approvalReference;
   {
     const readFence = () =>
-      db.collection<GameState>("gameState").findOne(
+      gameStateCollection<GameState>(db).findOne(
         { _id: "current" },
         {
           projection: {
@@ -75,27 +89,25 @@ export async function captureProducerOpening(
       throw new Error("The expected active world is not at an idle turn fence");
 
     const readConfig = () =>
-      db
-        .collection<{
-          _id: string;
-          seedPreset?: string;
-          preset?: string;
-          hardwareInputReliefStartTurn?: number;
-          producerTransitionPackageEnabled?: boolean;
-          updatedAt?: Date;
-        }>("gameConfig")
-        .findOne(
-          { _id: "default" },
-          {
-            projection: {
-              seedPreset: 1,
-              preset: 1,
-              hardwareInputReliefStartTurn: 1,
-              producerTransitionPackageEnabled: 1,
-              updatedAt: 1,
-            },
-          }
-        );
+      gameConfigCollection<{
+        _id: string;
+        seedPreset?: string;
+        preset?: string;
+        hardwareInputReliefStartTurn?: number;
+        producerTransitionPackageEnabled?: boolean;
+        updatedAt?: Date;
+      }>(db).findOne(
+        { _id: "default" },
+        {
+          projection: {
+            seedPreset: 1,
+            preset: 1,
+            hardwareInputReliefStartTurn: 1,
+            producerTransitionPackageEnabled: 1,
+            updatedAt: 1,
+          },
+        }
+      );
     const [gameConfig, source] = await Promise.all([readConfig(), captureSource(db)]);
     const [sourceAgain, gameConfigAgain, after] = await Promise.all([
       captureSource(db),
@@ -116,10 +128,14 @@ export async function captureProducerOpening(
       throw new Error("The live world changed during the read-only opening census");
 
     const preset = gameConfig?.seedPreset ?? gameConfig?.preset ?? before.preset ?? "1991-default";
-    const rates = new Map(source.exchangeRates.map((row: any) => [row.currencyCode, row.rate]));
-    const corporationsById = new Map(source.corporations.map((row: any) => [String(row._id), row]));
+    const rates = new Map(
+      source.exchangeRates.map((row: Document) => [row.currencyCode, row.rate])
+    );
+    const corporationsById = new Map(
+      source.corporations.map((row: Document) => [String(row._id), row])
+    );
     const pricesByCommodity = new Map(
-      source.commodityPrices.map((row: any) => [row.commodity, row])
+      source.commodityPrices.map((row: Document) => [row.commodity, row])
     );
     const blockers: string[] = [];
 
@@ -131,7 +147,7 @@ export async function captureProducerOpening(
         kind: "openingAdjustment",
         approvalReference: approvalReferenceValue,
       },
-      corporations: source.corporations.map((corp: any) => {
+      corporations: source.corporations.map((corp: Document) => {
         const id = String(corp._id);
         const currency = resolveCorpLiquidCurrencyCode(corp);
         const rate = currency ? rates.get(currency) : undefined;
@@ -168,10 +184,10 @@ export async function captureProducerOpening(
           payables,
         };
       }),
-      sectors: source.corporateSectors.map((sector: any) => {
+      sectors: source.corporateSectors.map((sector: Document) => {
         const id = String(sector._id);
         const ownerId = String(sector.corporationId);
-        const owner: any = corporationsById.get(ownerId);
+        const owner: Document | undefined = corporationsById.get(ownerId);
         if (!owner) blockers.push(`missing-owner:${id}`);
         const strategy = getEffectiveStrategyRates(
           sector.sectorType,
@@ -211,7 +227,7 @@ export async function captureProducerOpening(
               blockers.push(`unknown-output:${id}:${commodity}`);
               return null;
             }
-            const price = pricesByCommodity.get(commodity) as any;
+            const price = pricesByCommodity.get(commodity) as Document | undefined;
             const stateScoped = isStateScopedCommodity(commodity as never);
             const localPrice = stateScoped
               ? price?.statePrices?.[sector.stateId]
@@ -268,7 +284,7 @@ export async function captureProducerOpening(
         };
       }),
       protectedImages: Object.entries({
-        corporationFiscalAndBankState: source.corporations.map((corp: any) => ({
+        corporationFiscalAndBankState: source.corporations.map((corp: Document) => ({
           _id: corp._id,
           bankCharter: corp.bankCharter,
           federalTaxArrearsAnchorByCountry: corp.federalTaxArrearsAnchorByCountry,
@@ -278,7 +294,6 @@ export async function captureProducerOpening(
         savingsAccounts: source.savingsAccounts,
         centralBanks: source.centralBanks,
         supplyAgreements: source.supplyAgreements,
-        corporateGroups: source.corporateGroups,
         interbankLoans: source.interbankLoans,
         depositInsuranceFunds: source.depositInsuranceFunds,
       }).map(([key, value]) => ({ key, digest: digest(value) })),
@@ -296,14 +311,13 @@ export async function captureProducerOpening(
         gameConfig?.producerTransitionPackageEnabled === false
           ? []
           : (
-              await db
-                .collection<{
-                  _id: number;
-                  turn: number;
-                  runId?: string;
-                  worldEpoch?: string;
-                  sectorRevenue?: { sectorId: string; legacy: number; funded: number }[];
-                }>("producerMarketShadows")
+              await producerMarketShadowsCollection<{
+                _id: number;
+                turn: number;
+                runId?: string;
+                worldEpoch?: string;
+                sectorRevenue?: { sectorId: string; legacy: number; funded: number }[];
+              }>(db)
                 .find(
                   { worldEpoch: String(before.worldEpochId), sectorRevenue: { $exists: true } },
                   { projection: { sectorRevenue: 1, turn: 1, runId: 1 } }
@@ -331,7 +345,7 @@ export async function captureProducerOpening(
     }
 
     const fiscalArrearsAnchor = source.corporations.reduce(
-      (sum: number, corp: any) =>
+      (sum: number, corp: Document) =>
         sum +
         Object.values(corp.federalTaxArrearsAnchorByCountry ?? {}).reduce(
           (rowSum: number, value: unknown) => rowSum + (typeof value === "number" ? value : 0),
@@ -398,8 +412,8 @@ async function captureSource(db: import("mongodb").Db) {
     pricingMode: 1,
     pricingPosture: 1,
   } as const;
-  const readAll = async (name: string) =>
-    db.collection(name).find({}).sort({ _id: 1 }).maxTimeMS(30_000).toArray();
+  const all = <T extends Document>(collection: Collection<T>, maxTimeMS = 30_000) =>
+    collection.find({}).sort({ _id: 1 }).maxTimeMS(maxTimeMS).toArray();
   const [
     corporations,
     corporateSectors,
@@ -409,30 +423,25 @@ async function captureSource(db: import("mongodb").Db) {
     savingsAccounts,
     centralBanks,
     supplyAgreements,
-    corporateGroups,
     interbankLoans,
     depositInsuranceFunds,
   ] = await Promise.all([
-    db
-      .collection("corporations")
+    corporationsCollection<Document>(db)
       .find({}, { projection })
       .sort({ _id: 1 })
       .maxTimeMS(30_000)
       .toArray(),
-    db
-      .collection("corporateSectors")
+    corporateSectorsCollection<Document>(db)
       .find({}, { projection: sectorProjection })
       .sort({ _id: 1 })
       .maxTimeMS(30_000)
       .toArray(),
-    db
-      .collection("exchangeRates")
+    exchangeRatesCollection<Document>(db)
       .find({}, { projection: { currencyCode: 1, rate: 1 } })
       .sort({ _id: 1 })
       .maxTimeMS(15_000)
       .toArray(),
-    db
-      .collection("commodityPrices")
+    commodityPricesCollection<Document>(db)
       .find(
         {},
         { projection: { commodity: 1, globalPrice: 1, statePrices: 1, reachablePrices: 1 } }
@@ -440,13 +449,12 @@ async function captureSource(db: import("mongodb").Db) {
       .sort({ _id: 1 })
       .maxTimeMS(15_000)
       .toArray(),
-    readAll("bankLoans"),
-    readAll("savingsAccounts"),
-    readAll("centralBanks"),
-    readAll("supplyAgreements"),
-    readAll("corporateGroups"),
-    readAll("interbankLoans"),
-    readAll("depositInsuranceFunds"),
+    all(bankLoansCollection<Document>(db)),
+    all(savingsAccountsCollection<Document>(db)),
+    all(centralBanksCollection<Document>(db)),
+    all(supplyAgreementsCollection<Document>(db)),
+    all(interbankLoansCollection<Document>(db)),
+    all(depositInsuranceFundsCollection<Document>(db)),
   ]);
   return {
     corporations,
@@ -457,7 +465,6 @@ async function captureSource(db: import("mongodb").Db) {
     savingsAccounts,
     centralBanks,
     supplyAgreements,
-    corporateGroups,
     interbankLoans,
     depositInsuranceFunds,
   };
