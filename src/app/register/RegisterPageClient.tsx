@@ -297,7 +297,7 @@ export default function RegisterPageClient({ heroImageUrl }: { heroImageUrl?: st
               {t.rich("newHere", {
                 link: (chunks) => (
                   <Link
-                    href="https://wiki.ahousedividedgame.com/getting-started"
+                    href="/wiki/getting-started"
                     target="_blank"
                     className="font-medium text-primary hover:underline"
                   >
