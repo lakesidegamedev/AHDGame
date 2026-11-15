@@ -132,7 +132,7 @@ import { DEMOGRAPHIC_TURNOUT_RATES } from "@/lib/seeds/demographicCategories";
 import { getRegionCensusData } from "@/lib/seeds/regionCensusData";
 import { stateCensusData } from "@/lib/seeds/stateDemographics";
 import type { Layer1Config } from "@/lib/seeds/stateDemographicsPure";
-import { getCountryLayer1Model } from "@/lib/seeds/international";
+import { getCountryLayer1Model, regionalElectoratePositions } from "@/lib/seeds/international";
 import { resolveGranularPositions } from "@/lib/actions/granularPollPayload";
 import {
   deriveGranularCells,
@@ -567,7 +567,7 @@ function deriveCellsForState(
     substrate = {
       dims: [...model.dims],
       marginals: regionCensus,
-      positions: model.positions,
+      positions: regionalElectoratePositions(model, stateId),
       turnoutRates: model.turnoutRates,
     };
   }

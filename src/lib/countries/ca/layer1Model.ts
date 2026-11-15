@@ -8,10 +8,12 @@
 // and are the most secular bloc, the rural Prairies anchor the right, and
 // graduates and young urban voters lean left. Turnout centres on the 69%
 // Elections Canada reported for April 2025. Regional contrast beyond the
-// census mix comes from party organization seeded from the 2025 result.
+// census mix comes from per-province offsets fitted to the 2025 vote and from
+// party organization seeded from the 2025 result.
 import type { CountryLayer1Model, DemographicPosition } from "@/lib/seeds/international/types";
 import type { EraId } from "@/lib/seeds/presetSelector";
 import { caRegionCensusData2027 } from "./data/caRegionCensusData2027";
+import { caRegionalContext2027 } from "./data/caRegionalContext2027";
 
 const CA_GROUP_IDS = [
   "suburban_families",
@@ -196,5 +198,9 @@ export function getCaModel(era: EraId): CountryLayer1Model | null {
     composition: COMPOSITION,
     defaultLeans: DEFAULT_LEANS,
     census: caCensus(),
+    // Regional contrast fitted to the 2025 federal vote, applied to both the
+    // voter groups and the census electorate.
+    regionalContext: caRegionalContext2027,
+    electorateRegionalContext: true,
   };
 }

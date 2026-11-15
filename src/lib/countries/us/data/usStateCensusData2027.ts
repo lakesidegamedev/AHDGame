@@ -1,4 +1,4 @@
-import { stateCensusData2023 } from "./usStateCensusData2023";
+import { usStatePositions2027 } from "./usStatePositions2027";
 import type { Layer1Config } from "@/lib/seeds/stateDemographics";
 
 /**
@@ -732,9 +732,9 @@ export const stateCensusData2027: Record<string, Layer1Config> = {
   },
 };
 
-// ACS projects the composition shares, not political positions. Preserve each
-// state's latest calibrated 2023 position surface until a newer calibration is
-// authored, so demographic change does not erase regional political character.
+// ACS projects the composition shares, not political positions. Each state's
+// position surface is fitted to its 2024 presidential margin on this census
+// (scripts/seeds/fit-us-state-positions-2027.ts).
 for (const [stateId, config] of Object.entries(stateCensusData2027)) {
-  config.positions = stateCensusData2023[stateId]?.positions;
+  config.positions = usStatePositions2027[stateId];
 }
