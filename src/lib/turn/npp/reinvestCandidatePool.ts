@@ -3,6 +3,8 @@
  * builds. Everything indexes the sector snapshot the shell already holds: no
  * turn-path reads.
  */
+import { floorUnitsToPlants } from "@/lib/corporations/wholePlants/rules";
+import { pacedGrowthUnits } from "@/lib/turn/npp/rules/buildPacing";
 import type { CorporateSector } from "@/lib/db/types";
 import { computeMarketSharePercent } from "@/lib/corporations/marketShare";
 import { bucketKey } from "@/lib/market/marketBuckets";
@@ -17,6 +19,8 @@ export interface ReinvestCandidate {
    * that already existed in this market and claims nothing.
    */
   growthUnits: number;
+  /** The replacement leg of `units`, before whole-plant rounding. */
+  replacementUnits?: number;
   fill: number;
   /** Unmet demand in this sector's bucket, net of capacity already claimed. */
   unmetUnits: number;
@@ -49,4 +53,33 @@ export function buildLocalRevenueShareLookup(
   }
   return (sector) =>
     computeMarketSharePercent(sector.revenue ?? 0, revenueByBucket.get(keyOf(sector)) ?? 0);
+}
+
+/**
+ * A candidate with its growth leg cut to the pace room. Ordered growth is what
+ * the order adds over the replacement leg, which whole-plant rounding can lift
+ * above the sized growth. Replacement is kept, so a cut never cancels the
+ * upkeep of worn capacity.
+ */
+export function pacedCandidate(
+  candidate: Pick<ReinvestCandidate, "units" | "growthUnits" | "replacementUnits">,
+  args: { roomUnits: number; plantUnits: number; wholePlants: boolean }
+): { units: number; growthUnits: number } {
+  const replacement = Math.max(0, candidate.replacementUnits ?? 0);
+  const orderedGrowth = Math.max(0, candidate.units - replacement);
+  if (orderedGrowth <= args.roomUnits) {
+    return { units: candidate.units, growthUnits: candidate.growthUnits };
+  }
+  const allowed = pacedGrowthUnits({
+    growthUnits: orderedGrowth,
+    roomUnits: args.roomUnits,
+    plantUnits: args.plantUnits,
+    wholePlants: args.wholePlants,
+  });
+  const raw = replacement + allowed;
+  const units =
+    raw > 0 && args.wholePlants && args.plantUnits > 0
+      ? Math.max(args.plantUnits, floorUnitsToPlants(raw, args.plantUnits))
+      : raw;
+  return { units, growthUnits: Math.min(candidate.growthUnits, allowed) };
 }

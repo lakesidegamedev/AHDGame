@@ -243,6 +243,38 @@ export interface PlacementSignals {
     },
     units: number
   ) => void;
+  /**
+   * Units of new capacity NPP corporations may still order in a cell this turn
+   * (rules/buildPacing). `pending` is what the deciding corporation has already
+   * ordered in this decision but the pass has not yet claimed. Unwired (isolated
+   * callers) never caps.
+   */
+  paceRoomUnitsOf?: (
+    cell: {
+      stateId: string;
+      countryId: string;
+      sectorType: string;
+    },
+    pending: readonly {
+      stateId: string;
+      countryId: string;
+      sectorType: string;
+      units: number;
+    }[],
+    options?: { strategyId?: string | null; aggregate?: "mean" | "max" }
+  ) => number;
+  /**
+   * Whether the cell's price signal has held above base on the last two
+   * snapshots, which a new founding requires. Unwired never blocks.
+   */
+  priceSignalPersistedOf?: (
+    cell: {
+      stateId: string;
+      countryId: string;
+      sectorType: string;
+    },
+    options?: { strategyId?: string | null }
+  ) => boolean;
   /** Turn-scoped memo of per-candidate facts that do not move during the pass. */
   sectorFacts?: PlacementSectorFacts;
   /**

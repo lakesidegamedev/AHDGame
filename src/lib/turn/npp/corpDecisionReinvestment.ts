@@ -18,7 +18,7 @@ import {
 import type { CorporationType } from "@/lib/constants/corporations";
 import type { CorporateSector, SectorBuildOrder } from "@/lib/db/types";
 import { isStateOwned } from "@/lib/nationalization/nationalCorporation";
-import { type ReinvestCandidate } from "@/lib/turn/npp/reinvestCandidatePool";
+import { pacedCandidate, type ReinvestCandidate } from "@/lib/turn/npp/reinvestCandidatePool";
 import {
   autopilotCapexBudgetLocal,
   AUTOPILOT_CAPEX_SIZING_SLACK,
@@ -524,6 +524,7 @@ export function decideNppCapacityReinvestment({
         sector,
         units,
         growthUnits,
+        replacementUnits,
         fill,
         unmetUnits,
         interventionPriority,
@@ -546,6 +547,31 @@ export function decideNppCapacityReinvestment({
     let placed = 0;
     for (const candidate of candidates) {
       if (placed >= NPP_REINVEST_MAX_SECTORS_PER_TURN) break;
+      // NPP growth shares the cell's per-turn budget of new capacity with every
+      // other NPP order; replacement of worn capacity is never paced.
+      if (!autopilot && candidate.growthUnits > 0 && placementSignals?.paceRoomUnitsOf) {
+        const paced = pacedCandidate(candidate, {
+          roomUnits: placementSignals.paceRoomUnitsOf(
+            {
+              stateId: candidate.sector.stateId,
+              countryId: candidate.sector.countryId ?? corp.countryId,
+              sectorType: candidate.sector.sectorType,
+            },
+            demandClaims,
+            candidate.sector.sectorType === "extraction"
+              ? { strategyId: candidate.sector.strategyId ?? null }
+              : undefined
+          ),
+          plantUnits: plantSizeForSector(candidate.sector),
+          wholePlants: plants?.wholePlants === true,
+        });
+        candidate.growthUnits = paced.growthUnits;
+        candidate.units = paced.units;
+        if (!(candidate.units > 0)) {
+          observeReinvestCandidate("below_minimum_order", candidate.sector, 0, null);
+          continue;
+        }
+      }
       const { sector, units } = candidate;
 
       // Price on the harsher of local footprint and national sector share.

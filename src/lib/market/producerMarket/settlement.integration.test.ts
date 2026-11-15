@@ -12,7 +12,7 @@ import type { LedgerEntry } from "@/lib/ledger/types";
 import { snapshotMoneySupply } from "@/lib/moneySupply/snapshot";
 import { settleProducerTurn } from "./settlement";
 import type { StageTimings } from "./stageTimings";
-import { decodeReceipt } from "./receiptStorage";
+import { decodeReceipt, encodeReceipt } from "./receiptStorage";
 import { CAPITAL_DEPRECIATION_PER_TURN } from "@/lib/market/capital";
 import { TURNS_PER_DAY } from "@/lib/constants/turnTime";
 import { prepareProducerSector } from "@/lib/turn/corporation/producerSectorPlan";
@@ -203,6 +203,119 @@ function corporationById(memory: ReturnType<typeof createInMemoryDb>, id: string
 }
 
 describe("frozen producer turn settlement", () => {
+  it("resumes a frozen receipt without a cash-change witness", async () => {
+    const { memory, input, db } = fixture();
+    const faulty = withInjectedCrash(memory, {
+      collection: "producerEconomyTurns",
+      op: "insertOne",
+      onCall: 1,
+      afterWrite: true,
+    });
+    await expect(settleProducerTurn(faulty.db, input)).rejects.toThrow("crash");
+    const record = memory.collection("producerEconomyTurns").docs[0] as unknown as {
+      payload: string;
+      digest: string;
+    };
+    const frozen = (await decodeReceipt(db, record)) as { result: { cashChanges?: unknown } };
+    delete frozen.result.cashChanges;
+    const encoded = encodeReceipt(frozen);
+    expect(encoded.chunks).toHaveLength(0);
+    Object.assign(record, { payload: encoded.payload, digest: encoded.digest });
+    const result = await settleProducerTurn(db, input);
+    expect(result.cashChanges).toBeUndefined();
+    expect(memory.collection("corporations").docs[0].liquidCapital).toBe(1030);
+    await settleProducerTurn(db, input);
+    expect(memory.collection("corporations").docs[0].liquidCapital).toBe(1030);
+    expect(memory.collection("ledgerEntries").docs).toHaveLength(1);
+  });
+
+  it.each([null, false, true])(
+    "conserves mixed-currency cash on the first funded turn and retries, injectedAfterWrite=%s",
+    async (afterWrite) => {
+      const { memory, input, db } = fixture();
+      const large = 6e12;
+      const rate = 33.891;
+      memory.seed("producerEconomyAccounts", [
+        {
+          _id: "public",
+          worldEpoch: "example",
+          currency: "TRY",
+          cash: large * rate,
+          kind: "publicBuyer",
+          countryId: "TR",
+        },
+      ]);
+      input.production.accounts = [...input.production.accounts, { id: "public", cash: large }];
+      input.bindings = [
+        ...input.bindings,
+        {
+          kind: "economyAccount",
+          accountId: "public",
+          economyAccountId: "public",
+          currency: "TRY",
+          localPerAnchor: rate,
+          openingCashLocal: large * rate,
+        },
+      ];
+      input.production.households = [];
+      input.production.producers[0].outputs[0].policy = { kind: "manual", unitPrice: 0.37 };
+      input.production.externalOrders = [
+        {
+          id: "procurement",
+          accountId: "public",
+          commodity: "goods",
+          book: "world",
+          units: 10,
+          maximumUnitPrice: 0.37,
+        },
+      ];
+      input.close = () => ({
+        transfers: [
+          {
+            reason: "operating_income",
+            fromAccountId: "public",
+            toAccountId: "households",
+            amountAnchor: 0.11,
+          },
+        ],
+      });
+      if (afterWrite != null) {
+        const faulty = withInjectedCrash(memory, {
+          collection: "ledgerEntries",
+          op: "insertOne",
+          onCall: 1,
+          afterWrite,
+        });
+        await expect(settleProducerTurn(faulty.db, input)).rejects.toThrow("crash");
+      }
+      const first = await settleProducerTurn(db, input);
+      expect(first.cashChanges).toBeDefined();
+      expect(first.producers[0].revenue).toBeCloseTo(3.7, 10);
+      expect(memory.collection("corporations").docs[0].liquidCapital).toBeCloseTo(977.4, 10);
+      expect(memory.collection("corporations").docs[0].bankCharter).toEqual({
+        cashReserves: 9000,
+        totalLoans: 6000,
+        totalDeposits: 8000,
+      });
+      expect(
+        memory.collection("producerEconomyAccounts").docs.find((w) => w._id === "public")!.cash
+      ).toBe(large * rate - 3.81 * rate);
+      const beforeRetry = structuredClone(memory.collection("producerEconomyAccounts").docs);
+      input.close = () => {
+        throw new Error("A frozen close must never be recomputed");
+      };
+      const repeated = await settleProducerTurn(db, input);
+      expect(repeated).toEqual(first);
+      expect(memory.collection("producerEconomyAccounts").docs).toEqual(beforeRetry);
+      expect(memory.collection("ledgerEntries").docs).toHaveLength(1);
+      const entry = memory.collection("ledgerEntries").docs[0] as unknown as LedgerEntry;
+      expect(
+        Math.abs(entry.legs.reduce((sum, leg) => sum + (leg.anchorAmount ?? 0), 0))
+      ).toBeLessThan(1e-7);
+      expect(memory.collection("producerEconomyTurns").docs).toHaveLength(1);
+    }
+  );
+
   it("expires before claiming a receipt or changing money or plant state", async () => {
     const { db, input, memory } = fixture();
     const before = structuredClone(memory.collection("corporations").docs);

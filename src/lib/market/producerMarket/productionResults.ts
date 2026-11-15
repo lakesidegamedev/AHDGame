@@ -19,6 +19,7 @@ import {
   type RunCutReason,
 } from "./productionPlan";
 import type { ProducerMarketResult } from "@/lib/market/producerMarket/rules";
+import type { ProducerCashChanges } from "./cashChangesRules";
 
 /** Fills the operating results for each producer and returns the closing accounts. */
 export function buildProducerOperatingResults({
@@ -48,6 +49,7 @@ export function buildProducerOperatingResults({
   heldForPayables,
   originalCash,
   inputOrders,
+  cashChanges,
 }: {
   market: ProducerMarketResult;
   input: ProducerEconomyInput;
@@ -75,6 +77,7 @@ export function buildProducerOperatingResults({
   heldForPayables: Map<string, number>;
   originalCash: Map<string, number>;
   inputOrders: () => PurchaseOrder[];
+  cashChanges: ProducerCashChanges;
 }) {
   const offersById = new Map(market.offers.map((o) => [o.id, o]));
   const ordersById = new Map(market.orders.map((o) => [o.id, o]));
@@ -268,6 +271,7 @@ export function buildProducerOperatingResults({
     }
     const premiumPaid = Math.min(minorInputPremium, Math.max(0, freeCash.get(p.accountId) ?? 0));
     if (premiumPaid > 0) {
+      cashChanges.transfer(p.accountId, p.operatingRecipientAccountId, premiumPaid);
       freeCash.set(p.accountId, freeCash.get(p.accountId)! - premiumPaid);
       freeCash.set(
         p.operatingRecipientAccountId,

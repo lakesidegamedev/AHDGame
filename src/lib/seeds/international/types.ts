@@ -24,4 +24,10 @@ export interface CountryLayer1Model {
    * Absent on every model that has not been calibrated to regional evidence.
    */
   regionalContext?: Record<string, { economicLean?: number; socialLean?: number }>;
+  /**
+   * When true, `regionalContext` also shifts every bucket position of that
+   * region's census electorate (the vote engine, polls and cached region
+   * lean), not only the derived voter-group leans.
+   */
+  electorateRegionalContext?: boolean;
 }
