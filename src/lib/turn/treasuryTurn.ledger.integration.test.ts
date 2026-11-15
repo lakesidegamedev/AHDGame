@@ -7,6 +7,8 @@ import { deriveLedgerEntry } from "@/lib/ledger/deriveFromTx";
 import { reconcileLedger } from "@/lib/ledger/reconcile";
 import type { LedgerEntry } from "@/lib/ledger/types";
 import type { FederalBudget } from "@/lib/db/types/budget";
+import { INITIAL_RATES_1979 } from "@/lib/constants/currenciesTables";
+import type { CountryId } from "@/lib/constants/countries";
 import { processTreasuryTurn } from "./treasuryTurn";
 import { getDb } from "@/lib/mongodb";
 import { ObjectId } from "mongodb";
@@ -611,7 +613,7 @@ describe("treasury accrual stock-flow ownership", () => {
     expect(db.collection("federalBudget").docs[0].treasuryBalance).toBe(0);
     expect(db.collection("ledgerEntries").docs.map((e) => e.turn)).toEqual([11]);
   });
-  it("preserves the complete unpriced flag-off budget cohort", async () => {
+  it("settles the flag-off 1979 Eastern bloc cohort at its authored rates", async () => {
     const db = world();
     await db
       .collection("gameConfig")
@@ -633,12 +635,13 @@ describe("treasury accrual stock-flow ownership", () => {
     expect((await processTreasuryTurn(10)).countriesProcessed).toBe(7);
     expect((await processTreasuryTurn(10)).countriesProcessed).toBe(0);
     for (const budget of db.collection("federalBudget").docs) {
+      const authored = INITIAL_RATES_1979[budget.countryId as CountryId];
       expect(budget.treasuryBalance).toBe(-500);
-      expect(budget.treasuryAccrual).toMatchObject({
-        anchorRate: null,
-        anchorRateSource: "unpriced",
-        ledgerShadow: false,
-      });
+      expect(budget.treasuryAccrual).toMatchObject(
+        budget._id === template._id
+          ? { anchorRate: null, anchorRateSource: "unpriced", ledgerShadow: false }
+          : { anchorRate: authored, anchorRateSource: "authored_budget_only", ledgerShadow: false }
+      );
     }
     expect(db.collection("ledgerEntries").docs).toHaveLength(0);
   });

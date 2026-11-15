@@ -3,6 +3,7 @@ import { condition as c } from "@/lib/states/conditions/condition";
 import type { CountryGeography } from "../contract";
 import { modernRegionalPopulation2027 } from "@/lib/seeds/reference/modernRegionalPopulation2027";
 import { ieMetricPresets1953 } from "./data/ieMetricPresets1953";
+import { ieMetricPresets1979 } from "./data/ieMetricPresets1979";
 import { ieMetricPresets1991, ieMetricPresets2019 } from "./data/ieMetricPresets";
 import { iePopulationAnchors1991, iePopulationAnchors2019 } from "./data/iePopulationAnchors";
 import { ieRegionCensusData } from "./data/ieRegionCensusData";
@@ -60,6 +61,7 @@ const metricPresetBundles = {
   "2019-default": ieMetricPresets2019,
   "1991-default": ieMetricPresets1991,
   "1953-default": ieMetricPresets1953,
+  "1979-default": ieMetricPresets1979,
 };
 
 const populationAnchors = {
