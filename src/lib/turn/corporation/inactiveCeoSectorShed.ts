@@ -53,7 +53,7 @@ export async function shedInactiveCeoSectorsToUnowned(
 ): Promise<SectorShedResult> {
   const candidates = lookups.corporations.filter(isInactiveCeoPenaltyCandidate);
   if (candidates.length === 0) {
-    return { corporateSectorsUpdated: 0, unownedSectorsUpdated: 0, totalRevenueShed: 0 };
+    return { corporateSectorsUpdated: 0, totalRevenueShed: 0 };
   }
 
   const userIds = Array.from(

@@ -544,10 +544,6 @@ export interface TurnLog {
       skipped: number;
     } | null;
 
-    unownedSectorGrowth?: {
-      sectorsProcessed: number;
-    } | null;
-
     metricEngine?: {
       statesProcessed: number;
     } | null;

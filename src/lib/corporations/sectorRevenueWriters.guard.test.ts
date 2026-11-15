@@ -207,22 +207,6 @@ const ALLOWED_WRITERS: Record<string, WriterEntry> = {
   },
 
   // ─── Reviewed by the concurrent plants sweeps (already plants-aware) ─────
-  "src/lib/turn/unownedSectorGrowth.ts": {
-    writeSites: 2,
-    status: "plants-gated",
-    reason:
-      "GREP FALSE POSITIVE, registered to keep the sweep green: its revenue writes " +
-      "target unownedSectors, not corporateSectors. It only READS corporateSectors " +
-      "(line 64), which is enough to satisfy the collection filter above. Its pool " +
-      "handling is plants-aware regardless.",
-  },
-  "src/lib/turn/autoSectorSeed.ts": {
-    writeSites: 1,
-    status: "plants-gated",
-    reason:
-      "The national-corporation update grows capacity alongside revenue under plants. " +
-      "Unowned-market inserts use a separate prebuilt batch, not corporateSectors.",
-  },
   "src/lib/corporations/commands/sectorOperations/expandSector.ts": {
     writeSites: 1,
     status: "plants-gated",
