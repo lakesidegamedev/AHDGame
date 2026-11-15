@@ -138,8 +138,10 @@ export async function appleExemptsDiscordGate(
   userId: ObjectId,
   appleId: string | null | undefined
 ): Promise<boolean> {
+  if (!appleId?.trim()) return false;
   const subjectHash = providerSubjectHash("apple", appleId);
-  if (!subjectHash) return false;
+  // No server secret: keep the exemption as it was before link history rather than take it from every Apple player.
+  if (!subjectHash) return true;
   const earliest = await providerLinkHistoryCollection<Document>(db)
     .find(
       { provider: "apple", subjectHash },

@@ -15,7 +15,8 @@ export function appleExemptionHolds(
   subjectHash: string | null,
   history: readonly LinkHistoryRow[]
 ): boolean {
-  if (!subjectHash) return false;
+  // No hash (no auth secret configured): keep the exemption as it was before link history, never take it away silently.
+  if (!subjectHash) return true;
   const rows = history.filter((row) => row.subjectHash === subjectHash);
   if (rows.length === 0) return true;
   const first = rows.reduce((a, b) => (b.at < a.at ? b : a));

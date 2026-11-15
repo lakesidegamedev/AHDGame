@@ -20,8 +20,8 @@ describe("appleExemptionHolds", () => {
     expect(appleExemptionHolds("u1", "h1", history)).toBe(false);
   });
 
-  it("fails without a subject hash", () => {
-    expect(appleExemptionHolds("u1", null, [])).toBe(false);
+  it("keeps the exemption without a subject hash", () => {
+    expect(appleExemptionHolds("u1", null, [])).toBe(true); // no hash: the exemption stays as before link history
   });
 });
 
