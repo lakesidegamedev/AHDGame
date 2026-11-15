@@ -1,13 +1,13 @@
 import { describe, it, expect } from "vitest";
 import {
-  MODERN_MIN_UNOWNED_SECTOR_REVENUE,
+  MODERN_MIN_STATE_ENTERPRISE_REVENUE,
   SECTOR_SEED_ERA_FLOORS,
+  STATE_ENTERPRISE_SEED_SCALE,
   US_NATIONAL_SEED_GDP_BY_ERA,
   getEraNominalScale,
-  getMinUnownedSectorRevenue,
+  getMinStateEnterpriseRevenue,
   getSectorSeedScale,
 } from "./sectorSeedEra";
-import { SECTOR_SEED_SCALE } from "./corporations";
 import { getNationalBudgetSeedConfigsForPreset } from "@/lib/seeds/reference/budgets";
 
 /**
@@ -28,24 +28,24 @@ const UNCHANGED_PRESETS = [
 ];
 
 describe("sector seed era calibration", () => {
-  it("deflates the unowned-sector floor for 1953 only", () => {
-    expect(getMinUnownedSectorRevenue("1953-default")).toBe(SECTOR_SEED_ERA_FLOORS["1953"]);
-    expect(getMinUnownedSectorRevenue("1953-default")).toBeLessThan(
-      MODERN_MIN_UNOWNED_SECTOR_REVENUE
+  it("deflates the state enterprise floor for 1953 only", () => {
+    expect(getMinStateEnterpriseRevenue("1953-default")).toBe(SECTOR_SEED_ERA_FLOORS["1953"]);
+    expect(getMinStateEnterpriseRevenue("1953-default")).toBeLessThan(
+      MODERN_MIN_STATE_ENTERPRISE_REVENUE
     );
   });
 
   it("is a no-op for every other preset, and with no preset at all", () => {
     for (const preset of UNCHANGED_PRESETS) {
-      expect(getMinUnownedSectorRevenue(preset)).toBe(MODERN_MIN_UNOWNED_SECTOR_REVENUE);
-      expect(getSectorSeedScale(preset)).toBe(SECTOR_SEED_SCALE);
+      expect(getMinStateEnterpriseRevenue(preset)).toBe(MODERN_MIN_STATE_ENTERPRISE_REVENUE);
+      expect(getSectorSeedScale(preset)).toBe(STATE_ENTERPRISE_SEED_SCALE);
     }
-    expect(getMinUnownedSectorRevenue()).toBe(MODERN_MIN_UNOWNED_SECTOR_REVENUE);
-    expect(getSectorSeedScale()).toBe(SECTOR_SEED_SCALE);
+    expect(getMinStateEnterpriseRevenue()).toBe(MODERN_MIN_STATE_ENTERPRISE_REVENUE);
+    expect(getSectorSeedScale()).toBe(STATE_ENTERPRISE_SEED_SCALE);
   });
 
   it("leaves the seed scale era-neutral (it is a GDP multiple)", () => {
-    expect(getSectorSeedScale("1953-default")).toBe(SECTOR_SEED_SCALE);
+    expect(getSectorSeedScale("1953-default")).toBe(STATE_ENTERPRISE_SEED_SCALE);
   });
 
   it("keeps the 1953 floor proportional to the era's nominal economy", () => {
@@ -53,7 +53,7 @@ describe("sector seed era calibration", () => {
     // deflated by the eras' nominal-money ratio (same reasoning as
     // getGdpIndexedCostScale's pre-1991 branch in budget/costs.ts).
     const derived =
-      MODERN_MIN_UNOWNED_SECTOR_REVENUE *
+      MODERN_MIN_STATE_ENTERPRISE_REVENUE *
       (US_NATIONAL_SEED_GDP_BY_ERA["1953"]! / US_NATIONAL_SEED_GDP_BY_ERA["2019"]!);
     const authored = SECTOR_SEED_ERA_FLOORS["1953"]!;
     expect(authored / derived).toBeGreaterThan(0.8);
@@ -91,9 +91,10 @@ describe("getEraNominalScale", () => {
     // The modern default is ₳2,000,000 against a ₳1,000,000 unowned floor — 2x.
     // The deflated 1953 default must keep that ratio against the 1953 floor
     // instead of handing a fresh corp ~70 whole regional sector markets.
-    const modernRatio = 2_000_000 / MODERN_MIN_UNOWNED_SECTOR_REVENUE;
+    const modernRatio = 2_000_000 / MODERN_MIN_STATE_ENTERPRISE_REVENUE;
     const eraRatio =
-      (2_000_000 * getEraNominalScale("1953-default")) / getMinUnownedSectorRevenue("1953-default");
+      (2_000_000 * getEraNominalScale("1953-default")) /
+      getMinStateEnterpriseRevenue("1953-default");
     expect(eraRatio).toBeGreaterThan(modernRatio * 0.8);
     expect(eraRatio).toBeLessThan(modernRatio * 1.2);
   });

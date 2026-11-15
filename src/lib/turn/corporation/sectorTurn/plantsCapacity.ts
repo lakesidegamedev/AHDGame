@@ -283,7 +283,7 @@ export function computePlantsCapacity(input: PlantsCapacityInput): PlantsCapacit
   // stock. Pre-plants capacity was bought at exactly `capacityPricePerUnit`,
   // so the stamp is a no-op for valuation on the turn it happens.
   //
-  // Free capacity (R&D breakthrough, world grant, autoSectorSeed multiplier)
+  // Free capacity (R&D breakthrough, world grant)
   // adds units without adding cash, so it DILUTES the per-unit basis. That is
   // deliberate: free capacity has no paid basis and must not be exitable for
   // cash it never cost. Whole plants: basis falls by the share of plants that

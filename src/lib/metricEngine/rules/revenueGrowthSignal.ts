@@ -20,7 +20,7 @@ const DEFLATOR_INFLATION_BOUND: readonly [number, number] = [-2, 25];
  */
 const SECTOR_FORMATION_GROWTH_PCT = 100;
 
-/** Neutral reading for a sector base still forming: the unowned background rate. */
+/** Neutral reading for a sector base still forming: the background-economy rate. */
 export const SECTOR_FORMATION_NEUTRAL_PCT = 0.5;
 
 /**

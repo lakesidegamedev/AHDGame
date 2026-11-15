@@ -2,12 +2,10 @@ import { describe, expect, it } from "vitest";
 import { ObjectId } from "mongodb";
 import type { CorporateSector } from "@/lib/db/types/corporation";
 import {
-  bucketKey,
   computeCapturedMarketMergeBuckets,
-  computeNatCorpSoleOwnerBuckets,
-  computeSeedProtectedBuckets,
   computeStateControlledBuckets,
 } from "./stateControlledBuckets";
+import { bucketKey } from "@/lib/market/marketBuckets";
 import { sectorTakingKey } from "./enactedSectorTaking";
 
 const NAT = new ObjectId();
@@ -97,42 +95,6 @@ describe("computeStateControlledBuckets", () => {
   it("ignores buckets with no national-corp presence", () => {
     const set = computeStateControlledBuckets([sector(PRIV, "HD", "retail", 5000)], natIds);
     expect(set.size).toBe(0);
-  });
-});
-
-describe("computeNatCorpSoleOwnerBuckets", () => {
-  const natIds = new Set([NAT.toString()]);
-
-  it("marks a bucket where only the national corp holds corporate sectors", () => {
-    const set = computeNatCorpSoleOwnerBuckets([sector(NAT, "BJ", "energy", 5_000_000)], natIds);
-    expect(set.has(bucketKey("BJ", "energy"))).toBe(true);
-  });
-
-  it("does NOT mark a bucket with private competitors (e.g. NHS + private healthcare)", () => {
-    const set = computeNatCorpSoleOwnerBuckets(
-      [sector(NAT, "ENG", "healthcare", 9_000_000), sector(PRIV, "ENG", "healthcare", 1_000_000)],
-      natIds
-    );
-    expect(set.has(bucketKey("ENG", "healthcare"))).toBe(false);
-  });
-});
-
-describe("computeSeedProtectedBuckets", () => {
-  const natIds = new Set([NAT.toString()]);
-
-  it("includes bill-nationalized and sole-owner captures", () => {
-    const set = computeSeedProtectedBuckets(
-      [
-        sector(NAT, "HD", "telecommunications", 1000, 331),
-        sector(NAT, "BJ", "energy", 5_000_000),
-        sector(NAT, "ENG", "healthcare", 9_000_000),
-        sector(PRIV, "ENG", "healthcare", 1_000_000),
-      ],
-      natIds
-    );
-    expect(set.has(bucketKey("HD", "telecommunications"))).toBe(true);
-    expect(set.has(bucketKey("BJ", "energy"))).toBe(true);
-    expect(set.has(bucketKey("ENG", "healthcare"))).toBe(false);
   });
 });
 

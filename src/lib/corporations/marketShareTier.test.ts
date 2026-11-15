@@ -24,7 +24,7 @@ const SECTOR_ID = new ObjectId();
 const COUNTRY_ID: CountryId = "US";
 
 /**
- * Minimal db double. The helper reads states, corporateSectors, unownedSectors
+ * Minimal db double. The helper reads states, corporateSectors
  * and gameConfig; only gameConfig varies between the cases below.
  */
 function makeDb(mode: string | undefined) {
@@ -55,14 +55,6 @@ function makeDb(mode: string | undefined) {
     corporateSectors: {
       find: vi.fn().mockReturnValue({ toArray: vi.fn().mockResolvedValue([sector, sibling]) }),
     },
-    unownedSectors: {
-      findOne: vi.fn().mockResolvedValue({
-        stateId: STATE_ID,
-        sectorType: SECTOR_TYPE,
-        revenue: 1_000_000,
-        headroomUnits: 100,
-      }),
-    },
     gameConfig: {
       findOne: vi.fn().mockResolvedValue(mode ? { _id: "default", marketSystemMode: mode } : null),
     },
@@ -79,10 +71,9 @@ beforeEach(() => vi.clearAllMocks());
 
 describe("fetchSectorMarketSharePercent is revenue-basis in every tier (ticket #1145)", () => {
   // Market share = this sector's revenue over the TOTAL real revenue in the cell.
-  // 1M of (1M + 9M sibling) = 10%. The unowned pool (1M) is NOT in the
-  // denominator any more, and capacity units never were the basis — so every tier
-  // gives the same honest number and the old 9.09% (owned + unowned pool) is gone.
-  it("picks revenue share under plants, ignoring the unowned pool and capacity", async () => {
+  // 1M of (1M + 9M sibling) = 10%. Capacity units are not the basis, so
+  // every tier gives the same number.
+  it("picks revenue share under plants, ignoring capacity", async () => {
     const { db, sector } = makeDb("plants");
     const resolved = await fetchSectorMarketSharePercent(db, sector, CORP);
     expect(resolved).toBeCloseTo(10, 6);

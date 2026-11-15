@@ -1,17 +1,21 @@
 /**
  * Market formation compares active firms with calibrated local demand and
- * available facility capacity. computeMarketFormationSnapshot counts every
+ * unmet demand in units of facility capacity. computeMarketFormationSnapshot counts every
  * observed cell before sampling examples, so missing demand stays unknown.
  */
 import type { CorporateSector } from "@/lib/db/types";
 import type { CommodityPrice } from "@/lib/db/types/commodityPrice";
-import type { UnownedSector } from "@/lib/db/types/unownedSector";
-import type { CorporationType } from "@/lib/constants/corporations";
+import type { CorporationType, MediaDiscriminator } from "@/lib/constants/corporations";
 import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
 import { COMMODITY_BASE_PRICES, SECTOR_SUPPLY } from "@/lib/constants/commodities";
 import { foundingStarterUnits } from "@/lib/corporations/foundingPlant";
-import { unownedHeadroomUnitsOf } from "@/lib/corporations/marketShare";
-import { bucketKey } from "@/lib/nationalization/stateControlledBuckets";
+import { sectorDemandGapUnits } from "@/lib/market/sectorDemandGap";
+import { getStrategy } from "@/lib/constants/sectorStrategies";
+import {
+  bucketKey,
+  enumerateCandidateBuckets,
+  type LaneIdentity,
+} from "@/lib/market/marketBuckets";
 import type {
   CellDemandCoverage,
   CommoditySupplyBreadth,
@@ -120,7 +124,10 @@ function targetDiagnostics(
 
 export function computeMarketFormationSnapshot(args: {
   sectors: CorporateSector[];
-  unownedSectors: UnownedSector[];
+  /** Regions of every country in play; every region x lane is one bucket. */
+  states: readonly { _id: string; countryId: string }[];
+  /** Lanes to enumerate; every operating lane when absent. */
+  lanes?: readonly LaneIdentity[];
   prices: CommodityPrice[];
   entryFunnel?: NppMarketEntryFunnel | null;
   eraUnitScale: number;
@@ -148,12 +155,19 @@ export function computeMarketFormationSnapshot(args: {
     }
     corps.add(sector.corporationId.toString());
   }
-  const universe = new Map<string, UnownedSector>();
-  for (const pool of args.unownedSectors)
-    universe.set(
-      bucketKey(pool.stateId, pool.sectorType, pool.industryModel, pool.mediaDiscriminator),
-      pool
-    );
+  type Bucket = {
+    countryId: string;
+    stateId: string;
+    sectorType: CorporationType;
+    industryModel?: string | null;
+    mediaDiscriminator?: MediaDiscriminator | null;
+  };
+  const universe = new Map<string, Bucket>();
+  for (const state of args.states) {
+    for (const bucket of enumerateCandidateBuckets([state._id], undefined, args.lanes)) {
+      universe.set(bucket.key, { ...bucket, countryId: state.countryId });
+    }
+  }
   for (const sector of args.sectors) {
     const key = bucketKey(
       sector.stateId,
@@ -163,16 +177,11 @@ export function computeMarketFormationSnapshot(args: {
     );
     if (!universe.has(key)) {
       universe.set(key, {
-        _id: sector._id,
         countryId: sector.countryId,
         stateId: sector.stateId,
         sectorType: sector.sectorType,
         industryModel: sector.industryModel,
         mediaDiscriminator: sector.mediaDiscriminator,
-        revenue: 0,
-        headroomUnits: 0,
-        createdAt: sector.createdAt,
-        updatedAt: sector.updatedAt,
       });
     }
   }
@@ -186,15 +195,21 @@ export function computeMarketFormationSnapshot(args: {
       pool.industryModel as "vehicles" | null | undefined,
       pool.mediaDiscriminator
     );
-    const headroomUnits = unownedHeadroomUnitsOf(
-      pool.sectorType,
-      pool.headroomUnits,
-      pool.revenue,
-      args.eraUnitScale,
-      pool.industryModel,
-      pool.mediaDiscriminator
-    );
-    const facilityReady = starterUnits > 0 && headroomUnits >= starterUnits;
+    const supplyMix = getStrategy(
+      getOperatingSectorType(pool.sectorType, pool.industryModel, pool.mediaDiscriminator),
+      ""
+    ).supply;
+    const unmetDemandUnits = sectorDemandGapUnits(supplyMix, (commodity) => {
+      const price = pricesByCommodity.get(commodity);
+      if (!price) return 0;
+      // The state books, like every other figure in this snapshot.
+      const supply = price.stateSupply?.[pool.stateId];
+      const demand = price.stateDemand?.[pool.stateId];
+      return typeof supply === "number" && typeof demand === "number"
+        ? Math.max(0, demand - supply)
+        : 0;
+    });
+    const facilityReady = starterUnits > 0 && unmetDemandUnits >= starterUnits;
     if (facilityReady && !activeBuckets.has(key)) {
       facilityReadyByState.set(pool.stateId, (facilityReadyByState.get(pool.stateId) ?? 0) + 1);
     }
@@ -212,7 +227,7 @@ export function computeMarketFormationSnapshot(args: {
       firms: firmsByBucket.get(key) ?? 0,
       corps: corpsByBucket.get(key)?.size ?? 0,
       starterUnits,
-      headroomUnits,
+      unmetDemandUnits,
       facilityReady,
       market,
       inbound,
@@ -232,7 +247,7 @@ export function computeMarketFormationSnapshot(args: {
         firms,
         corps,
         starterUnits,
-        headroomUnits,
+        unmetDemandUnits,
         facilityReady,
         market,
         inbound,
@@ -247,15 +262,15 @@ export function computeMarketFormationSnapshot(args: {
         let classificationBasis: string;
         if (market.observations === 0) {
           // Unknown, not zero: without a demand observation no claim about
-          // local use is licensed, whatever the headroom says.
+          // local use is licensed, whatever the unmet demand says.
           classification = "data_zero";
           classificationBasis = "No state demand observation for this cell's outputs.";
         } else if (market.demand <= 0 && facilityReady) {
           classification = "data_zero";
-          classificationBasis = "No positive state demand observation for a facility-ready pool.";
+          classificationBasis = "No positive state demand observation for a facility-ready bucket.";
         } else if (!facilityReady) {
           classification = "fundamental_zero";
-          classificationBasis = "Open headroom is smaller than one founding facility.";
+          classificationBasis = "Unmet demand is smaller than one founding facility.";
         } else if (inbound > 0) {
           classification = "import_served";
           classificationBasis = "Delivered output value exceeds same-state output value.";
@@ -270,7 +285,7 @@ export function computeMarketFormationSnapshot(args: {
         } else {
           classification = "unserved";
           classificationBasis =
-            "Positive local use and facility headroom exist without local output, inbound delivery, or a targeted NPP attempt.";
+            "Positive local use and unmet demand exist without local output, inbound delivery, or a targeted NPP attempt.";
         }
 
         return {
@@ -279,7 +294,7 @@ export function computeMarketFormationSnapshot(args: {
           sectorType: pool.sectorType,
           classification,
           classificationBasis,
-          headroomUnits,
+          unmetDemandUnits,
           starterUnits,
           facilityReady,
           activeFirms: firms,
@@ -337,7 +352,7 @@ export function computeMarketFormationSnapshot(args: {
         facilityReadyEmptyCells: 0,
         activeFirms: 0,
         activeCorps: 0,
-        openHeadroomUnits: 0,
+        openUnmetDemandUnits: 0,
         residentDemandValue: 0,
         localProducerDemandValue: 0,
         inboundSupplyValue: 0,
@@ -354,7 +369,7 @@ export function computeMarketFormationSnapshot(args: {
     } else {
       row.emptyCells += 1;
       if (cell.facilityReady) row.facilityReadyEmptyCells += 1;
-      row.openHeadroomUnits += Math.max(0, cell.headroomUnits);
+      row.openUnmetDemandUnits += Math.max(0, cell.unmetDemandUnits);
     }
     if (cell.market.observations > 0) {
       row.demandCoverage.observedCells += 1;
@@ -391,7 +406,7 @@ export function computeMarketFormationSnapshot(args: {
         facilityReadyEmptyCells: 0,
         activeFirms: 0,
         activeCorps: 0,
-        openHeadroomUnits: 0,
+        openUnmetDemandUnits: 0,
         residentDemandValue: 0,
         localProducerDemandValue: 0,
         inboundSupplyValue: 0,
@@ -407,7 +422,7 @@ export function computeMarketFormationSnapshot(args: {
     country.emptyCells += row.emptyCells;
     country.facilityReadyEmptyCells += row.facilityReadyEmptyCells;
     country.activeFirms += row.activeFirms;
-    country.openHeadroomUnits += row.openHeadroomUnits;
+    country.openUnmetDemandUnits += row.openUnmetDemandUnits;
     country.residentDemandValue += row.residentDemandValue;
     country.localProducerDemandValue += row.localProducerDemandValue;
     country.inboundSupplyValue += row.inboundSupplyValue;
@@ -468,13 +483,13 @@ export function computeMarketFormationSnapshot(args: {
   // survives, and record how many rows were dropped.
   //
   // Order: facility-ready first (the actionable ones — a corporation could
-  // enter tomorrow), then largest headroom, then a stable key so the sample
+  // enter tomorrow), then largest unmet demand, then a stable key so the sample
   // does not churn between turns for no reason.
   const sampledEmptyCells = [...emptyMarketCells]
     .sort(
       (a, b) =>
         Number(b.facilityReady) - Number(a.facilityReady) ||
-        b.headroomUnits - a.headroomUnits ||
+        b.unmetDemandUnits - a.unmetDemandUnits ||
         a.countryId.localeCompare(b.countryId) ||
         a.stateId.localeCompare(b.stateId) ||
         a.sectorType.localeCompare(b.sectorType)
@@ -520,6 +535,6 @@ export function computeMarketFormationSnapshot(args: {
     coverageByCountry,
     commodityBreadth,
     basis:
-      "active corporate sectors plus unowned pools; facility headroom; state demand, local supply, delivered supply, and placed output; current-turn NPP entry outcomes",
+      "active corporate sectors plus every region x lane bucket; unmet demand in facility units; state demand, local supply, delivered supply, and placed output; current-turn NPP entry outcomes",
   };
 }

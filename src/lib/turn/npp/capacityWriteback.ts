@@ -3,23 +3,14 @@
  * Cohort capacity write-back for NPP corporation turns.
  *
  * Everything the cohort writes about capacity after deciding: capex ledger
- * legs, in-memory depletion of unowned pools later corps still see, founded
- * sector inserts, founded-capacity drawdown, and bulk flushes. Pure except
+ * legs, founded sector inserts, and bulk flushes. Pure except
  * for the final bulk writes.
  */
 import { ObjectId, type Db } from "mongodb";
 import type { CorporateSector, Corporation } from "@/lib/db/types";
-import type { UnownedSector } from "@/lib/db/types/unownedSector";
 import type { CountryId } from "@/lib/constants/countries";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { type BuildCapexTxInput } from "@/lib/corporations/capexTxLog";
-import {
-  unownedHeadroomBaseExpr,
-  unownedHeadroomUnitsPerAnchor,
-  unownedPoolTrailingSet,
-} from "@/lib/market/unownedHeadroom";
-import { unownedHeadroomUnitsOf } from "@/lib/corporations/marketShare";
-import { bucketKey } from "@/lib/nationalization/stateControlledBuckets";
 import {
   persistNppMarketEntryFunnelBestEffort,
   type NppMarketEntryDiagnostic,
@@ -35,10 +26,8 @@ import {
   type NppReinvestmentCashWitness,
 } from "./reinvestmentCashLedger";
 import type { NppCorpUpdateOp } from "./nppCashWrite";
-import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
 
 export type NppReinvestmentList = NonNullable<NppCorpDecision["reinvestments"]>;
-export type NppUnownedDrawList = NonNullable<NppCorpDecision["unownedDraws"]>;
 export type NppNewSectorList = NonNullable<NppCorpDecision["newSectors"]>;
 
 /**
@@ -72,44 +61,6 @@ export function appendNppReinvestCapexRows(
       units: r.units,
       meta: { source: "npp_reinvestment", onlineTurn: r.onlineTurn },
     });
-  }
-}
-
-/**
- * Deplete the in-memory pool BEFORE the next corp decides. The snapshot is
- * shared across the pass, so without this every corp that picks the same
- * bucket sizes off the same pre-draw pool and mints capacity the drawdown
- * below clamps at 0. Units lead, `revenue` derives from the same quantity.
- */
-export function depleteUnownedPoolsForDraws(
-  unownedIndex: Map<string, UnownedSector>,
-  draws: NppUnownedDrawList,
-  eraUnitScale: number
-): void {
-  for (const draw of draws) {
-    const pool = unownedIndex.get(
-      bucketKey(draw.stateId, draw.sectorType, draw.industryModel, draw.mediaDiscriminator)
-    );
-    if (!pool) continue;
-    const unitsPerAnchor = unownedHeadroomUnitsPerAnchor(
-      draw.sectorType,
-      eraUnitScale,
-      draw.industryModel,
-      draw.mediaDiscriminator
-    );
-    const remaining = Math.max(
-      0,
-      unownedHeadroomUnitsOf(
-        draw.sectorType,
-        pool.headroomUnits,
-        pool.revenue,
-        eraUnitScale,
-        draw.industryModel,
-        draw.mediaDiscriminator
-      ) - draw.units
-    );
-    pool.headroomUnits = remaining;
-    pool.revenue = unitsPerAnchor > 0 ? Math.round(remaining / unitsPerAnchor) : pool.revenue;
   }
 }
 
@@ -160,83 +111,6 @@ export function buildNppFoundedSectorInserts(args: {
     });
   }
   return inserts;
-}
-
-/**
- * Draw founded capacity out of the unowned pools. A founding consumes market
- * headroom; leaving the pool intact counts the same demand twice (owned
- * capacity AND unowned headroom). Pipeline update so `headroomUnits` and the
- * legacy `revenue` view move in lockstep; both clamp at 0. Buckets with no
- * pool doc upsert the scaffold rather than discarding the draw.
- */
-export async function drawFoundedCapacityFromPools(
-  db: Db,
-  draws: NppUnownedDrawList,
-  args: { eraUnitScale: number; now: Date }
-): Promise<void> {
-  if (draws.length === 0) return;
-  await unownedSectorsCollection(db).bulkWrite(
-    draws.map(({ stateId, sectorType, units, countryId, industryModel, mediaDiscriminator }) => {
-      return {
-        updateOne: {
-          filter: {
-            stateId,
-            sectorType,
-            industryModel: industryModel ?? null,
-            mediaDiscriminator: mediaDiscriminator ?? null,
-          },
-          update: [
-            {
-              $set: {
-                stateId: { $ifNull: ["$stateId", stateId] },
-                countryId: { $ifNull: ["$countryId", countryId] },
-                sectorType: { $ifNull: ["$sectorType", sectorType] },
-                industryModel: { $ifNull: ["$industryModel", industryModel ?? null] },
-                mediaDiscriminator: {
-                  $ifNull: ["$mediaDiscriminator", mediaDiscriminator ?? null],
-                },
-                createdAt: { $ifNull: ["$createdAt", args.now] },
-                headroomUnits: {
-                  // Self-healing base, NOT a bare `$ifNull: [..., 0]`: a pool
-                  // doc that predates the backfill would otherwise be wiped to
-                  // zero by its own first drawdown. See
-                  // `unownedHeadroomBaseExpr`.
-                  $max: [
-                    0,
-                    {
-                      $subtract: [
-                        unownedHeadroomBaseExpr(
-                          sectorType,
-                          args.eraUnitScale,
-                          industryModel,
-                          mediaDiscriminator
-                        ),
-                        units,
-                      ],
-                    },
-                  ],
-                },
-                updatedAt: args.now,
-              },
-            },
-            // Restate `revenue` FROM the post-draw units instead of subtracting
-            // from it independently; the shared trailing stage keeps the two
-            // clamped-at-0 legs one quantity in two units.
-            {
-              $set: unownedPoolTrailingSet(
-                sectorType,
-                true,
-                args.eraUnitScale,
-                industryModel,
-                mediaDiscriminator
-              ),
-            },
-          ],
-          upsert: true,
-        },
-      };
-    })
-  );
 }
 
 /**

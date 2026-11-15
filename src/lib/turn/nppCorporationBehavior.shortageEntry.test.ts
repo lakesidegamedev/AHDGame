@@ -1,10 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
 import { ObjectId, type Db } from "mongodb";
-import type { Bond, Corporation, CorporateSector, UnownedSector } from "@/lib/db/types";
+import type { Bond, Corporation, CorporateSector } from "@/lib/db/types";
+import { candidateWithRoom, withCandidateRoom } from "./npp/__fixtures__/marketCandidates";
+import type { MarketCandidate } from "./npp/marketCandidates";
+import { candidatesByCountry } from "./npp/__fixtures__/marketCandidates";
+import { foundingStarterUnits } from "@/lib/corporations/foundingPlant";
 import type { CommodityType } from "@/lib/constants/commodities";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { CAPACITY_ANCHOR_YEAR } from "@/lib/constants/capacityEconomy";
-import { computeUnownedHeadroomUnits } from "@/lib/market/unownedHeadroom";
 import { sectorEntryFeeAnchor } from "@/lib/corporations/foundingPlant";
 import { ceoArchetypeModifiers } from "@/lib/turn/ceoArchetype";
 import { issueRelocationBond } from "@/lib/corporations/issueRelocationBond";
@@ -57,18 +60,11 @@ function sectors(corporationId: ObjectId, count = 8): CorporateSector[] {
 }
 
 function pool(
-  sectorType: UnownedSector["sectorType"] = "manufacturing",
-  stateId = "NY"
-): UnownedSector {
-  const revenue = 80_000_000;
-  return {
-    _id: new ObjectId(),
-    stateId,
-    countryId: "US",
-    sectorType,
-    revenue,
-    headroomUnits: computeUnownedHeadroomUnits(sectorType, revenue, 1),
-  } as unknown as UnownedSector;
+  sectorType: MarketCandidate["sectorType"] = "manufacturing",
+  stateId = "NY",
+  roomFactor = 40
+): MarketCandidate {
+  return candidateWithRoom({ stateId, sectorType }, foundingStarterUnits(sectorType) * roomFactor);
 }
 
 const shortagePrices = (commodity: CommodityType): number =>
@@ -80,7 +76,7 @@ function decide(args: {
   corporation: Corporation;
   prices: (commodity: CommodityType, countryId: string) => number | null;
   eligible?: boolean;
-  pools?: UnownedSector[];
+  pools?: MarketCandidate[];
   sectorCount?: number;
   shortageEntryCreditLocal?: number;
   ordinaryEntryEligible?: boolean;
@@ -98,11 +94,11 @@ function decide(args: {
       ordinaryEntryEligible: args.ordinaryEntryEligible,
       shortageEntryCreditLocal: args.shortageEntryCreditLocal,
     },
-    new Map([["US", args.pools ?? [pool()]]]),
+    candidatesByCountry(args.pools ?? [pool()]),
     noStateControl,
     args.prices,
     plants,
-    args.placementSignals
+    withCandidateRoom(args.placementSignals)
   );
 }
 
@@ -233,9 +229,7 @@ describe("NPP shortage-responsive market entry", () => {
   });
 
   it("expands to an adjacent state before a larger distant market", () => {
-    const distant = pool("manufacturing", "CA");
-    distant.revenue = 1e12;
-    distant.headroomUnits = computeUnownedHeadroomUnits("manufacturing", distant.revenue, 1);
+    const distant = pool("manufacturing", "CA", 40 * 12_500);
     const decision = decide({
       corporation: corp(),
       prices: balancedPrices,

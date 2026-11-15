@@ -32,7 +32,6 @@ const plants = {
   unionizationPct: 31,
   laborIntensity: 0.93,
   governor: { active: false, startTurn: 1, rampTurns: 48, turnsRemaining: 0, cap: 0.15 },
-  headroomUnits: 250,
   currentTurn: 100,
 } as unknown as PlantsData;
 

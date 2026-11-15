@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Db } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
 import { resetCorpFxRateCacheForTests } from "@/lib/currency/corporationCapital";
+import { OPERATING_SECTOR_TYPES } from "@/lib/constants/corporationsClient";
 
 describe("sectorRevenueTaxProvider", () => {
   let db: MockDb;
@@ -20,11 +21,11 @@ describe("sectorRevenueTaxProvider", () => {
     });
   }
 
-  it("produces per-state owned/unowned sector lists and tax rates", async () => {
+  it("produces per-state owned and background sector lists and tax rates", async () => {
     setupCollection("corporateSectors", [
       { _id: "sec1", stateId: "s1", revenue: 100, currentGrowthRate: 2, corporationId: undefined },
     ]);
-    setupCollection("unownedSectors", [{ _id: "u1", stateId: "s1", revenue: 50 }]);
+    setupCollection("states", [{ _id: "s1", countryId: "US", gdp: 1_000_000 }]);
     setupCollection("federalBudget", [
       { _id: "federal", countryId: "US", taxRates: { salesTax: 7 } },
     ]);
@@ -36,14 +37,16 @@ describe("sectorRevenueTaxProvider", () => {
     expect(out.ownedByState.get("s1")).toEqual([
       { revenue: 100, currentGrowthRate: 2, hostRevenue: 100 },
     ]);
-    expect(out.unownedByState.get("s1")).toEqual([{ revenue: 50 }]);
+    const background = out.backgroundByState.get("s1")!;
+    expect(background).toHaveLength(OPERATING_SECTOR_TYPES.length);
+    expect(background.every((row) => row.revenue > 0)).toBe(true);
     expect(out.federalSalesTaxByCountry.get("US")).toBe(7);
     expect(out.stateSalesTaxByState.get("s1")).toBe(6);
   });
 
   it("reports plantsEnabled from marketSystemMode (P2/D7)", async () => {
     setupCollection("corporateSectors", []);
-    setupCollection("unownedSectors", []);
+    setupCollection("states", []);
     setupCollection("federalBudget", []);
     setupCollection("stateBudgets", []);
     db.collection("gameConfig");
@@ -57,7 +60,7 @@ describe("sectorRevenueTaxProvider", () => {
 
   it("reports plantsEnabled false below the plants tier and with no config", async () => {
     setupCollection("corporateSectors", []);
-    setupCollection("unownedSectors", []);
+    setupCollection("states", []);
     setupCollection("federalBudget", []);
     setupCollection("stateBudgets", []);
     const { sectorRevenueTaxProvider } = await import("./providers");
@@ -83,7 +86,7 @@ describe("sectorRevenueTaxProvider", () => {
 
     async function volumeFor(config: Record<string, unknown> | null) {
       setupCollection("corporateSectors", [sector]);
-      setupCollection("unownedSectors", []);
+      setupCollection("states", []);
       setupCollection("federalBudget", []);
       setupCollection("stateBudgets", []);
       db.collection("gameConfig");
@@ -127,7 +130,7 @@ describe("sectorRevenueTaxProvider", () => {
     setupCollection("corporateSectors", [
       { _id: "sec1", stateId: "s1", revenue: 100, growthRate: 3, corporationId: undefined },
     ]);
-    setupCollection("unownedSectors", []);
+    setupCollection("states", []);
     setupCollection("federalBudget", []);
     setupCollection("stateBudgets", []);
 
@@ -138,7 +141,7 @@ describe("sectorRevenueTaxProvider", () => {
     ]);
   });
 
-  it("carries sectorType on owned and unowned rows (P3c — environment mix)", async () => {
+  it("carries sectorType on owned and background rows (P3c — environment mix)", async () => {
     setupCollection("corporateSectors", [
       {
         _id: "sec1",
@@ -149,9 +152,7 @@ describe("sectorRevenueTaxProvider", () => {
         sectorType: "energy",
       },
     ]);
-    setupCollection("unownedSectors", [
-      { _id: "u1", stateId: "s1", revenue: 50, sectorType: "agriculture" },
-    ]);
+    setupCollection("states", [{ _id: "s1", countryId: "US", gdp: 1_000_000 }]);
     setupCollection("federalBudget", []);
     setupCollection("stateBudgets", []);
 
@@ -159,7 +160,9 @@ describe("sectorRevenueTaxProvider", () => {
     const out = await sectorRevenueTaxProvider(db as unknown as Db);
 
     expect(out.ownedByState.get("s1")![0]!.sectorType).toBe("energy");
-    expect(out.unownedByState.get("s1")![0]!.sectorType).toBe("agriculture");
+    expect(out.backgroundByState.get("s1")!.map((row) => row.sectorType)).toEqual([
+      ...OPERATING_SECTOR_TYPES,
+    ]);
   });
 
   it("converts sector revenue with the HOST FX rate, not the owning corp's (ticket #1084)", async () => {
@@ -176,7 +179,7 @@ describe("sectorRevenueTaxProvider", () => {
         corporationId: "corpUSD",
       },
     ]);
-    setupCollection("unownedSectors", []);
+    setupCollection("states", []);
     setupCollection("corporations", [
       { _id: "corpUSD", countryId: "US", liquidCurrencyCode: "USD" },
     ]);
@@ -207,7 +210,7 @@ describe("sectorRevenueTaxProvider", () => {
         corporationId: "corpPL",
       },
     ]);
-    setupCollection("unownedSectors", []);
+    setupCollection("states", []);
     setupCollection("corporations", [
       { _id: "corpPL", countryId: "PL", liquidCurrencyCode: "PLZ" },
     ]);
@@ -245,14 +248,14 @@ describe("sectorRevenueTaxProvider", () => {
 
   it("returns empty maps when no data", async () => {
     setupCollection("corporateSectors", []);
-    setupCollection("unownedSectors", []);
+    setupCollection("states", []);
     setupCollection("federalBudget", []);
     setupCollection("stateBudgets", []);
 
     const { sectorRevenueTaxProvider } = await import("./providers");
     const out = await sectorRevenueTaxProvider(db as unknown as Db);
     expect(out.ownedByState.size).toBe(0);
-    expect(out.unownedByState.size).toBe(0);
+    expect(out.backgroundByState.size).toBe(0);
   });
 
   it("fiscalRatiosProvider reads debtToGdp from the canonical bond ledger, never treasuryBalance", async () => {

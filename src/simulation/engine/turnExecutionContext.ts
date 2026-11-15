@@ -174,7 +174,6 @@ function createInitialTurnLogPhases(): TurnLog["phases"] {
     centralBankChairSelection: null,
     nppFundGeneration: null,
     nppActionProcessing: null,
-    unownedSectorGrowth: null,
     metricEngine: null,
     regionalBudgetProcessing: null,
     jpRegionalBudgetProcessing: null,

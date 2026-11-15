@@ -6,7 +6,6 @@
 import { operatingSectorFilter, type OperatingSectorType } from "@/lib/constants/corporations";
 import type { Db, ObjectId } from "mongodb";
 import type { Corporation, CorporateSector, State } from "@/lib/db/types";
-import type { UnownedSector } from "@/lib/db/types/unownedSector";
 import type { CountryId } from "@/lib/constants/countries";
 
 import { COUNTRY_CURRENCY_MAP, type CurrencyCode } from "@/lib/constants/currencies";
@@ -26,7 +25,6 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
-import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
 
 export interface SectorPreviewAffectedCorp {
   corporationId: string;
@@ -44,13 +42,12 @@ export interface SectorNationalizationPreview {
   affectedCorps: SectorPreviewAffectedCorp[];
   affectedCount: number;
   totalCompensationLocal: number;
-  unownedSliceRevenuePerTurn: number;
 }
 
 /**
  * Estimate an industry-wide sector taking: the affected (non-state-owned, not
  * cooldown-locked) corporations and their treasury compensation in country
- * currency, plus the free unowned-market slice. Mirrors the skips
+ * currency. Mirrors the skips
  * `nationalizeSectorWide` applies so the estimate matches what is actually taken.
  */
 export async function computeSectorNationalizationPreview(
@@ -87,9 +84,7 @@ export async function computeSectorNationalizationPreview(
 
   const affectedCorps: SectorPreviewAffectedCorp[] = [];
   let totalCompensationAnchor = 0;
-  let unownedSliceRevenue = 0;
 
-  // ── Corp-held pool ──
   if (scope !== "unowned" && f > 0) {
     const sectors = await corporateSectorsCollection(db)
       .find({ countryId, ...laneFilter })
@@ -150,14 +145,6 @@ export async function computeSectorNationalizationPreview(
     affectedCorps.sort((a, b) => b.estCompensationLocal - a.estCompensationLocal);
   }
 
-  // ── Unowned market pool (free) ──
-  if (scope !== "corporations" && f > 0) {
-    const unowned = await unownedSectorsCollection(db)
-      .find({ countryId, ...laneFilter })
-      .toArray();
-    for (const u of unowned) unownedSliceRevenue += Math.round((u.revenue ?? 0) * f);
-  }
-
   return {
     sectorType,
     carveFraction: f,
@@ -166,7 +153,6 @@ export async function computeSectorNationalizationPreview(
     affectedCorps,
     affectedCount: affectedCorps.length,
     totalCompensationLocal: toCountryLocal(totalCompensationAnchor),
-    unownedSliceRevenuePerTurn: unownedSliceRevenue,
   };
 }
 

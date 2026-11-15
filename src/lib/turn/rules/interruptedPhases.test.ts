@@ -93,7 +93,6 @@ describe("classifyInterruptedPhases", () => {
       "autoDisasterTurn",
       "autoCrisisTurn",
       "coldWarTension",
-      "autoSectorSeed",
       "extractionAutoStrategy",
       "fundGeneration",
       "actionRefresh",

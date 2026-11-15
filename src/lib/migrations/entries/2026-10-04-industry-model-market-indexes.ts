@@ -13,12 +13,6 @@ const INDEXES = [
     legacyName: "corporateSectors_corporationId_stateId_sectorType",
   },
   {
-    collection: "unownedSectors",
-    keys: { stateId: 1, sectorType: 1, industryModel: 1 },
-    options: { name: "unowned_state_type_model_unique", unique: true, background: true },
-    legacyName: "stateId_1_sectorType_1",
-  },
-  {
     collection: "unions",
     keys: { countryId: 1, sectorType: 1, industryModel: 1 },
     options: {
@@ -73,7 +67,7 @@ async function run(db: Db, dryRun: boolean): Promise<MigrationResult> {
 
 export const migration: Migration = {
   id: "2026-10-04-industry-model-market-indexes",
-  description: "Include industry model in unique unowned market and seeded union keys.",
+  description: "Include industry model in unique sector and seeded union keys.",
   idempotent: true,
   execute: async (db, ctx) => run(db, ctx.dryRun),
 };

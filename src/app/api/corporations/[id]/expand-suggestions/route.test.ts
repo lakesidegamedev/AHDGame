@@ -45,7 +45,6 @@ beforeEach(async () => {
   db = createMockDb();
   db.collection("states");
   db.collection("corporateSectors");
-  db.collection("unownedSectors");
   db.collection("corporations");
   db.collection("gameConfig");
   db.collection("gameState");
@@ -108,13 +107,13 @@ describe("GET /api/corporations/[id]/expand-suggestions (mode=unowned)", () => {
         liquidCapital: 1_000_000,
       },
     } as never);
-    const unownedFilters: unknown[] = [];
-    db.collectionMocks.unownedSectors.find.mockImplementation((filter) => {
-      unownedFilters.push(filter);
-      return {
-        project: vi.fn().mockReturnThis(),
-        toArray: vi.fn().mockResolvedValue([]),
-      } as never;
+    db.collectionMocks.states.find.mockReturnValue({
+      toArray: vi.fn().mockResolvedValue([{ _id: "MI", name: "Michigan", countryId: "US" }]),
+    });
+    const sectorFilters: unknown[] = [];
+    db.collectionMocks.corporateSectors.find.mockImplementation((filter) => {
+      sectorFilters.push(filter);
+      return { project: vi.fn().mockReturnThis(), toArray: vi.fn().mockResolvedValue([]) } as never;
     });
     db.collectionMocks.tradeFlowSnapshots.find.mockReturnValue({
       toArray: vi.fn().mockResolvedValue([]),
@@ -129,11 +128,14 @@ describe("GET /api/corporations/[id]/expand-suggestions (mode=unowned)", () => {
     );
 
     expect(response.status).toBe(200);
-    expect(unownedFilters[0]).toEqual({
+    expect(sectorFilters[0]).toMatchObject({
       sectorType: "manufacturing",
       industryModel: "vehicles",
       mediaDiscriminator: null,
     });
+    const data = await response.json();
+    // No stored cell is needed: every region is offered as a candidate.
+    expect((data.suggestions as { stateId: string }[]).map((r) => r.stateId)).toEqual(["MI"]);
   });
 
   it("surfaces the temporary Retail expansion pause before offering greenfield builds", async () => {
@@ -155,7 +157,6 @@ describe("GET /api/corporations/[id]/expand-suggestions (mode=unowned)", () => {
     expect(response.status).toBe(409);
     expect(data.error).toContain("144 turns remaining");
     expect(data.error).toContain("plant transfers still operate normally");
-    expect(db.collectionMocks.unownedSectors.find).not.toHaveBeenCalled();
   });
 
   it("keeps scope per leg while averaging: NJ logistics quotes on consulting strength despite its freight glut", async () => {
@@ -167,13 +168,6 @@ describe("GET /api/corporations/[id]/expand-suggestions (mode=unowned)", () => {
       _id: "current",
       currentTurn: 10,
       currentYear: 1953,
-    });
-    db.collectionMocks.unownedSectors.find.mockReturnValue({
-      project: vi.fn().mockReturnThis(),
-      toArray: vi.fn().mockResolvedValue([
-        { stateId: "AZ", sectorType: "logistics", revenue: 1000, headroomUnits: 1000 },
-        { stateId: "NJ", sectorType: "logistics", revenue: 1000, headroomUnits: 1000 },
-      ]),
     });
     db.collectionMocks.states.find.mockReturnValue({
       toArray: vi.fn().mockResolvedValue([
@@ -234,26 +228,26 @@ describe("GET /api/corporations/[id]/expand-suggestions (mode=unowned)", () => {
     const response = await GET(makeRequest("sectorType=logistics&mode=unowned"), ctx());
     const data = await response.json();
     const byState = new Map(
-      (data.suggestions as Array<{ stateId: string; headroomUnits: number }>).map((row) => [
+      (data.suggestions as Array<{ stateId: string; roomToBuildUnits: number }>).map((row) => [
         row.stateId,
         row,
       ])
     );
 
     expect(response.status).toBe(200);
-    expect(byState.get("AZ")?.headroomUnits).toBeGreaterThan(0);
+    expect(byState.get("AZ")?.roomToBuildUnits).toBeGreaterThan(0);
     // Demand audit step 4: the mean over legs replaces the min veto, so NJ's
     // nationally-short consulting leg lifts its quote above zero even though
     // its state-local freight leg is glutted. Scope is still per leg — NJ
     // uses NJ freight (0) and US consulting (900), never AZ's freight — so
     // the local glut still drags NJ to no more than AZ.
-    expect(byState.get("NJ")?.headroomUnits).toBeGreaterThan(0);
-    expect(byState.get("NJ")?.headroomUnits).toBeLessThanOrEqual(
-      byState.get("AZ")?.headroomUnits ?? 0
+    expect(byState.get("NJ")?.roomToBuildUnits).toBeGreaterThan(0);
+    expect(byState.get("NJ")?.roomToBuildUnits).toBeLessThanOrEqual(
+      byState.get("AZ")?.roomToBuildUnits ?? 0
     );
   });
 
-  it("shows room where buyers go unserved even when the legacy unowned pool is empty", async () => {
+  it("shows room where buyers go unserved", async () => {
     db.collectionMocks.gameConfig.findOne.mockResolvedValue({
       _id: "default",
       marketSystemMode: "plants",
@@ -262,13 +256,6 @@ describe("GET /api/corporations/[id]/expand-suggestions (mode=unowned)", () => {
       _id: "current",
       currentTurn: 10,
       currentYear: 1953,
-    });
-    db.collectionMocks.unownedSectors.find.mockReturnValue({
-      project: vi.fn().mockReturnThis(),
-      toArray: vi.fn().mockResolvedValue([
-        { stateId: "AZ", sectorType: "logistics", revenue: 1000, headroomUnits: 0 },
-        { stateId: "NJ", sectorType: "logistics", revenue: 1000, headroomUnits: 0 },
-      ]),
     });
     db.collectionMocks.states.find.mockReturnValue({
       toArray: vi.fn().mockResolvedValue([
@@ -328,12 +315,11 @@ describe("GET /api/corporations/[id]/expand-suggestions (mode=unowned)", () => {
 
     const response = await GET(makeRequest("sectorType=logistics&mode=unowned"), ctx());
     const data = await response.json();
-    const az = (data.suggestions as Array<{ stateId: string; headroomUnits: number }>).find(
+    const az = (data.suggestions as Array<{ stateId: string; roomToBuildUnits: number }>).find(
       (row) => row.stateId === "AZ"
     );
-    // AZ freight demand 200 against 100 delivered is a real shortage; an
-    // empty pool of unclaimed market share must not hide it.
-    expect(az?.headroomUnits).toBeGreaterThan(0);
+    // AZ freight demand 200 against 100 delivered is a real shortage.
+    expect(az?.roomToBuildUnits).toBeGreaterThan(0);
   });
 
   it("takes capacity already under construction off the room to build", async () => {
@@ -345,13 +331,6 @@ describe("GET /api/corporations/[id]/expand-suggestions (mode=unowned)", () => {
       _id: "current",
       currentTurn: 10,
       currentYear: 1953,
-    });
-    db.collectionMocks.unownedSectors.find.mockReturnValue({
-      project: vi.fn().mockReturnThis(),
-      toArray: vi.fn().mockResolvedValue([
-        { stateId: "AZ", sectorType: "logistics", revenue: 1000, headroomUnits: 0 },
-        { stateId: "NJ", sectorType: "logistics", revenue: 1000, headroomUnits: 0 },
-      ]),
     });
     db.collectionMocks.states.find.mockReturnValue({
       toArray: vi.fn().mockResolvedValue([
@@ -412,9 +391,9 @@ describe("GET /api/corporations/[id]/expand-suggestions (mode=unowned)", () => {
     const baseline = await (
       await GET(makeRequest("sectorType=logistics&mode=unowned"), ctx())
     ).json();
-    const before = (baseline.suggestions as Array<{ stateId: string; headroomUnits: number }>).find(
-      (row) => row.stateId === "AZ"
-    )!.headroomUnits;
+    const before = (
+      baseline.suggestions as Array<{ stateId: string; roomToBuildUnits: number }>
+    ).find((row) => row.stateId === "AZ")!.roomToBuildUnits;
     db.collectionMocks.corporateSectors.find.mockReturnValue({
       project: vi.fn().mockReturnThis(),
       toArray: vi.fn().mockResolvedValue([
@@ -429,8 +408,8 @@ describe("GET /api/corporations/[id]/expand-suggestions (mode=unowned)", () => {
     });
     const after = (
       (await (await GET(makeRequest("sectorType=logistics&mode=unowned"), ctx())).json())
-        .suggestions as Array<{ stateId: string; headroomUnits: number }>
-    ).find((row) => row.stateId === "AZ")!.headroomUnits;
+        .suggestions as Array<{ stateId: string; roomToBuildUnits: number }>
+    ).find((row) => row.stateId === "AZ")!.roomToBuildUnits;
     expect(after).toBe(Math.max(0, before - 1));
   });
 
@@ -449,18 +428,6 @@ describe("GET /api/corporations/[id]/expand-suggestions (mode=unowned)", () => {
       currentTurn: 10,
       currentYear: 1953,
     });
-    db.collectionMocks.unownedSectors.find.mockImplementation(
-      (query: { revenue?: { $gt?: number } } = {}) => ({
-        project: vi.fn().mockReturnThis(),
-        toArray: vi
-          .fn()
-          .mockResolvedValue(
-            query.revenue
-              ? []
-              : [{ stateId: "CA", sectorType: "real_estate", revenue: 0, headroomUnits: 1000 }]
-          ),
-      })
-    );
     db.collectionMocks.states.find.mockReturnValue({
       toArray: vi.fn().mockResolvedValue([{ _id: "CA", name: "California", countryId: "US" }]),
     });
@@ -476,9 +443,7 @@ describe("GET /api/corporations/[id]/expand-suggestions (mode=unowned)", () => {
     const data = await response.json();
 
     expect(response.status).toBe(200);
-    expect(data.suggestions).toEqual([
-      expect.objectContaining({ stateId: "CA", unownedRevenue: 0, canAfford: true }),
-    ]);
+    expect(data.suggestions).toEqual([expect.objectContaining({ stateId: "CA", canAfford: true })]);
     const suggestion = data.suggestions[0] as { starterBuildCostAnchor: number };
     const expected = computeBuildCost({
       sectorType: "real_estate",
@@ -503,14 +468,6 @@ describe("GET /api/corporations/[id]/expand-suggestions (mode=unowned)", () => {
       _id: "current",
       currentTurn: 10,
       currentYear: 1953,
-    });
-    db.collectionMocks.unownedSectors.find.mockReturnValue({
-      project: vi.fn().mockReturnThis(),
-      toArray: vi
-        .fn()
-        .mockResolvedValue([
-          { stateId: "CA", sectorType: "retail", revenue: 1000, headroomUnits: 1000 },
-        ]),
     });
     db.collectionMocks.states.find.mockReturnValue({
       toArray: vi.fn().mockResolvedValue([{ _id: "CA", name: "California", countryId: "US" }]),
@@ -537,13 +494,6 @@ describe("GET /api/corporations/[id]/expand-suggestions (mode=unowned)", () => {
       _id: "current",
       currentTurn: 10,
       currentYear: 1953,
-    });
-    db.collectionMocks.unownedSectors.find.mockReturnValue({
-      project: vi.fn().mockReturnThis(),
-      toArray: vi.fn().mockResolvedValue([
-        { stateId: "CA", sectorType: "energy", revenue: 1000, headroomUnits: 1000 },
-        { stateId: "ENG", sectorType: "energy", revenue: 2000, headroomUnits: 2000 },
-      ]),
     });
     db.collectionMocks.states.find.mockReturnValue({
       toArray: vi.fn().mockResolvedValue([
@@ -572,14 +522,6 @@ describe("GET /api/corporations/[id]/expand-suggestions (mode=unowned)", () => {
   });
 
   it("excludes command-economy states (RU) from unowned-market suggestions and country chips", async () => {
-    db.collectionMocks.unownedSectors.find.mockReturnValue({
-      project: vi.fn().mockReturnThis(),
-      toArray: vi.fn().mockResolvedValue([
-        { stateId: "CA", sectorType: "energy", revenue: 1000 },
-        { stateId: "UKR", sectorType: "energy", revenue: 5000 },
-      ]),
-    });
-
     // Second call onward (post `stateIds` resolution) needs the full docs.
     db.collectionMocks.states.find.mockReturnValue({
       toArray: vi.fn().mockResolvedValue([
@@ -603,10 +545,6 @@ describe("GET /api/corporations/[id]/expand-suggestions (mode=unowned)", () => {
   });
 
   it("returns no suggestions (not an error) when every candidate state is command-economy", async () => {
-    db.collectionMocks.unownedSectors.find.mockReturnValue({
-      project: vi.fn().mockReturnThis(),
-      toArray: vi.fn().mockResolvedValue([{ stateId: "UKR", sectorType: "energy", revenue: 5000 }]),
-    });
     db.collectionMocks.states.find.mockReturnValue({
       toArray: vi.fn().mockResolvedValue([{ _id: "UKR", name: "Ukraine", countryId: "RU" }]),
     });
@@ -624,18 +562,7 @@ describe("GET /api/corporations/[id]/expand-suggestions (mode=unowned)", () => {
   });
 
   it("pins a below-top-N state into the returned suggestions when ?state= is set", async () => {
-    const rows = [
-      { stateId: "CA", sectorType: "defense", revenue: 68000, headroomUnits: 68000 },
-      { stateId: "NY", sectorType: "defense", revenue: 34000, headroomUnits: 34000 },
-      { stateId: "PA", sectorType: "defense", revenue: 23000, headroomUnits: 23000 },
-      { stateId: "IL", sectorType: "defense", revenue: 21000, headroomUnits: 21000 },
-      { stateId: "OH", sectorType: "defense", revenue: 19000, headroomUnits: 19000 },
-      { stateId: "MD", sectorType: "defense", revenue: 14000, headroomUnits: 14000 },
-    ];
-    db.collectionMocks.unownedSectors.find.mockReturnValue({
-      project: vi.fn().mockReturnThis(),
-      toArray: vi.fn().mockResolvedValue(rows),
-    });
+    const rows = ["CA", "NY", "PA", "IL", "OH", "MD"].map((stateId) => ({ stateId }));
     db.collectionMocks.states.find.mockReturnValue({
       toArray: vi.fn().mockResolvedValue(
         rows.map((r) => ({
@@ -689,9 +616,6 @@ describe("GET /api/corporations/[id]/expand-suggestions (mode=playerCorp)", () =
     db.collectionMocks.states.find.mockReturnValue({
       toArray: vi.fn().mockResolvedValue([{ _id: "UKR", name: "Ukraine", countryId: "RU" }]),
     });
-    db.collectionMocks.unownedSectors.find.mockReturnValue({
-      toArray: vi.fn().mockResolvedValue([]),
-    });
     db.collectionMocks.corporations.find.mockReturnValue({
       project: vi.fn().mockReturnThis(),
       toArray: vi.fn().mockResolvedValue([{ _id: natCorpId, name: "USSR State Energy Trust" }]),
@@ -710,7 +634,6 @@ describe("GET /api/corporations/[id]/expand-suggestions (mode=playerCorp)", () =
 describe("GET /api/corporations/[id]/expand-suggestions entry verdict (plants)", () => {
   type Row = {
     stateId: string;
-    unownedRevenue: number;
     canAfford: boolean;
     entry: { canEnter: boolean; reason: string | null; message: string | null } | null;
     roomToBuildUnits: number | null;
@@ -727,14 +650,6 @@ describe("GET /api/corporations/[id]/expand-suggestions entry verdict (plants)",
       currentTurn: 10,
       currentYear: 1953,
       ...gameState,
-    });
-    db.collectionMocks.unownedSectors.find.mockReturnValue({
-      project: vi.fn().mockReturnThis(),
-      toArray: vi
-        .fn()
-        .mockResolvedValue([
-          { stateId: "CA", sectorType: "real_estate", revenue: 1_200, headroomUnits: 1000 },
-        ]),
     });
     db.collectionMocks.states.find.mockReturnValue({
       toArray: vi.fn().mockResolvedValue([{ _id: "CA", name: "California", countryId: "US" }]),
@@ -771,11 +686,10 @@ describe("GET /api/corporations/[id]/expand-suggestions entry verdict (plants)",
     return { row: (data.suggestions as Row[])[0], data };
   }
 
-  it("marks an affordable market enterable and keeps legacy revenue apart from room to build", async () => {
+  it("marks an affordable market enterable and reports room to build", async () => {
     seedPlantsMarket();
     const { row, data } = await firstRow();
     expect(row.entry).toEqual({ canEnter: true, reason: null, message: null });
-    expect(row.unownedRevenue).toBe(1_200);
     expect(typeof row.roomToBuildUnits).toBe("number");
     expect(row.roomScope).toBe(data.countrySharedDemand ? "country" : "state");
   });
@@ -817,7 +731,7 @@ describe("GET /api/corporations/[id]/expand-suggestions entry verdict (plants)",
     expect(response.status).toBe(200);
     const data = await response.json();
     expect(data.suggestions[0].roomToBuildUnits).toBe(0);
-    expect(data.countryDemandEstimates[0].headroomUnits).toBe(0);
+    expect(data.countryDemandEstimates[0].roomToBuildUnits).toBe(0);
     expect(
       data.suggestions[0].buildDemand.find(
         (r: { commodity: string; scope: string }) =>
@@ -877,9 +791,6 @@ describe("GET /api/corporations/[id]/expand-suggestions entry verdict (plants)",
     );
     db.collectionMocks.states.find.mockReturnValue({
       toArray: vi.fn().mockResolvedValue([{ _id: "UKR", name: "Ukraine", countryId: "RU" }]),
-    });
-    db.collectionMocks.unownedSectors.find.mockReturnValue({
-      toArray: vi.fn().mockResolvedValue([]),
     });
     db.collectionMocks.corporations.find.mockReturnValue({
       project: vi.fn().mockReturnThis(),

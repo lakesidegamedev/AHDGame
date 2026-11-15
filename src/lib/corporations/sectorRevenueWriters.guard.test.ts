@@ -189,11 +189,6 @@ const ALLOWED_WRITERS: Record<string, WriterEntry> = {
     reason:
       "Whole-plant split (player route and NPP attacks) is plants-only; a new row starts at zero revenue and the turn derives its revenue from transferred whole plants.",
   },
-  "src/app/api/country/[code]/region/[id]/economy/attack/route.ts": {
-    writeSites: 5,
-    status: "plants-gated",
-    reason: "Unowned split draws headroomUnits down and grants capacity under plants.",
-  },
   "src/lib/turn/nppCorporateAttacks.ts": {
     writeSites: 4,
     status: "plants-gated",
@@ -207,32 +202,15 @@ const ALLOWED_WRITERS: Record<string, WriterEntry> = {
   },
 
   // ─── Reviewed by the concurrent plants sweeps (already plants-aware) ─────
-  "src/lib/turn/unownedSectorGrowth.ts": {
-    writeSites: 2,
-    status: "plants-gated",
-    reason:
-      "GREP FALSE POSITIVE, registered to keep the sweep green: its revenue writes " +
-      "target unownedSectors, not corporateSectors. It only READS corporateSectors " +
-      "(line 64), which is enough to satisfy the collection filter above. Its pool " +
-      "handling is plants-aware regardless.",
-  },
-  "src/lib/turn/autoSectorSeed.ts": {
-    writeSites: 1,
-    status: "plants-gated",
-    reason:
-      "The national-corporation update grows capacity alongside revenue under plants. " +
-      "Unowned-market inserts use a separate prebuilt batch, not corporateSectors.",
-  },
   "src/lib/corporations/commands/sectorOperations/expandSector.ts": {
     writeSites: 1,
     status: "plants-gated",
     reason:
-      "Founding build; creates capacity under plants. The single remaining write is the " +
-      "new sector's own doc (legacy nameplate, restated from capacity next tick) — the " +
-      "pool drawdown's revenue leg is now the shared `unownedPoolTrailingSet` stage.",
+      "Founding build; creates capacity under plants. The single write is the " +
+      "new sector's own doc (nameplate, restated from capacity next tick).",
   },
   "src/lib/admin/spawnNppCorporation.ts": {
-    writeSites: 2,
+    writeSites: 1,
     status: "plants-gated",
     reason: "NPP corp spawn; plants-aware sector creation.",
   },
@@ -242,10 +220,10 @@ const ALLOWED_WRITERS: Record<string, WriterEntry> = {
     reason: "Nationalization ownership transfer; plants-aware.",
   },
   "src/lib/nationalization/nationalizeSectorWide.ts": {
-    writeSites: 5,
+    writeSites: 3,
     status: "plants-gated",
     reason:
-      "Sector-wide nationalization. Both revenue writers are plants-gated off `plantsEnabled`: the carve into the NatCorp moves the donor's sliced plant state (capitalStock haircut by NATIONALIZATION_REVENUE_HAIRCUT, CIP and build orders at full value) and the donor keeps the 1−f complement, so capacity is conserved; the unowned-headroom capture increments capitalStock from the same ₳ figure as revenue.",
+      "Sector-wide nationalization. The revenue writer is plants-gated off `plantsEnabled`: the carve into the NatCorp moves the donor's sliced plant state (capitalStock haircut by NATIONALIZATION_REVENUE_HAIRCUT, CIP and build orders at full value) and the donor keeps the 1−f complement, so capacity is conserved.",
   },
   "src/lib/nationalization/privatizeAsset.ts": {
     writeSites: 2,
@@ -314,14 +292,6 @@ const ALLOWED_WRITERS: Record<string, WriterEntry> = {
       "revenue is restated by the turn processor in the sector's host currency, so " +
       "rescaling it here would be overwritten anyway. Gated at the write.",
   },
-  // NOTE — `src/lib/turn/nppCorporationBehavior.ts` was registered here while its
-  // founding drawdown wrote `unownedSectors.revenue` from a literal `$set`. That
-  // write is gone: the drawdown now moves `headroomUnits` and lets the shared
-  // `unownedPoolTrailingSet` stage restate revenue, so the detector no longer
-  // sees a revenue write in the file and a registry entry would be STALE. The
-  // sector docs it builds are still covered — they are inserted by
-  // `src/lib/turn/corporation/corporationTurnPayouts.ts`, registered below.
-
   // ─── Found only once the detector learned about indirect inserts ─────────
   "src/lib/turn/corporation/corporationTurnPayouts.ts": {
     writeSites: 1,
@@ -341,11 +311,6 @@ const ALLOWED_WRITERS: Record<string, WriterEntry> = {
       "One-off historical heal, outside the deploy chain. Pre-dates plants and is not " +
       "re-runnable against a plants world; retained for the audit trail only.",
   },
-  "scripts/migrations/heal-dropped-sector-unowned-loss.ts": {
-    writeSites: 1,
-    status: "plants-gated",
-    reason: "One-off historical heal, outside the deploy chain. Pre-dates plants.",
-  },
   "scripts/migrations/heal-sector-revenue-anchor-bug.ts": {
     writeSites: 1,
     status: "plants-gated",
@@ -361,14 +326,6 @@ const ALLOWED_WRITERS: Record<string, WriterEntry> = {
       "(revenue is derived there and restated in host currency every turn), and any " +
       "individual row with `plantsStartTurn` stamped is skipped by the planner.",
   },
-  "src/lib/banking/constructionBuildEffects.ts": {
-    writeSites: 1,
-    status: "plants-gated",
-    reason:
-      "GREP FALSE POSITIVE: the detected revenue literal initializes an `unownedSectors` " +
-      "construction market bucket at zero. The corporateSectors projection only marks " +
-      "construction financing effects as paid and does not write sector revenue.",
-  },
 };
 
 /** Writers in this sweep's territory: these MUST carry a documented plants gate. */
@@ -376,7 +333,6 @@ const MUST_BE_PLANTS_AWARE = [
   "src/lib/turn/corporation/rdInnovation.ts",
   "src/lib/turn/corporation/corporationSectorShed.ts",
   "src/lib/corporations/commands/plantSectorSplitAttempt.ts",
-  "src/app/api/country/[code]/region/[id]/economy/attack/route.ts",
   "src/lib/turn/nppCorporateAttacks.ts",
   "src/lib/corporations/moveSector.ts",
   // Converted by the ownership/transfer sweep and the P3b audit sweep. Once a

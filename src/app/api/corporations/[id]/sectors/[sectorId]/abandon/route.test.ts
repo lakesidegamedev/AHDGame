@@ -29,11 +29,10 @@ beforeEach(() => {
   db.collection("corporations");
   db.collection("exchangeRates");
   db.collection("states");
-  db.collection("unownedSectors");
 });
 
 describe("POST /api/corporations/[id]/sectors/[sectorId]/abandon", () => {
-  it("returns the deleted sector revenue to the unowned pool before deleting it", async () => {
+  it("deletes the abandoned sector without crediting any market pool", async () => {
     const corpId = new ObjectId();
     const sectorId = new ObjectId();
 
@@ -62,7 +61,7 @@ describe("POST /api/corporations/[id]/sectors/[sectorId]/abandon", () => {
     vi.mocked(requireCeo).mockReturnValue(null);
 
     // The command reserves the row before refunding, so only the winning request
-    // refunds while the pool restore still deletes after its idempotent credit.
+    // refunds.
     db.collectionMocks.corporateSectors.findOneAndUpdate.mockResolvedValue({
       _id: sectorId,
       corporationId: corpId,
@@ -76,7 +75,6 @@ describe("POST /api/corporations/[id]/sectors/[sectorId]/abandon", () => {
         toArray: async () => [{ _id: corpId, countryId: "US", liquidCurrencyCode: "USD" }],
       }),
     });
-    db.collectionMocks.unownedSectors.findOneAndUpdate.mockResolvedValue(null);
     db.collectionMocks.corporateSectors.deleteMany.mockResolvedValue({ deletedCount: 1 });
     db.collectionMocks.states.findOne.mockResolvedValue({ _id: "MN", name: "Minnesota" });
 
@@ -92,7 +90,7 @@ describe("POST /api/corporations/[id]/sectors/[sectorId]/abandon", () => {
     expect(response.status).toBe(200);
     expect(data.success).toBe(true);
     expect(data.message).toContain("Its market reopens to builders");
-    expect(db.collectionMocks.unownedSectors.findOneAndUpdate).toHaveBeenCalledTimes(1);
+    expect(db.collectionMocks.unownedSectors).toBeUndefined();
     expect(db.collectionMocks.corporateSectors.findOneAndUpdate).toHaveBeenCalledWith(
       expect.objectContaining({ _id: sectorId, corporationId: corpId }),
       {
@@ -256,11 +254,9 @@ describe("abandoning a sector that feeds the company's bank", () => {
       sectorType: "financial",
       revenue: 1_000,
     });
-    db.collectionMocks.unownedSectors.findOneAndUpdate.mockResolvedValue(null);
     db.collectionMocks.corporateSectors.deleteMany.mockResolvedValue({ deletedCount: 1 });
     db.collectionMocks.states.findOne.mockResolvedValue({ _id: "MN", name: "Minnesota" });
-    // Disposal returns the sector to the unowned pool, which loads the owners
-    // in one batch and needs this corporation among them.
+    // Disposal loads the owners in one batch and needs this corporation among them.
     db.collectionMocks.corporations.findOne.mockResolvedValue({
       _id: testCorpId,
       name: "Fixture Corporation",

@@ -18,8 +18,11 @@ import {
 } from "./nppCorporationBehavior";
 import { ceoArchetypeModifiers } from "./ceoArchetype";
 import { CAPACITY_ANCHOR_YEAR } from "@/lib/constants/capacityEconomy";
-import { computeUnownedHeadroomUnits } from "@/lib/market/unownedHeadroom";
-import type { Corporation, CorporateSector, UnownedSector } from "@/lib/db/types";
+import type { Corporation, CorporateSector } from "@/lib/db/types";
+import type { PlacementSignals } from "./npp/marketSignals";
+import type { MarketCandidate } from "./npp/marketCandidates";
+import { candidate, candidatesByCountry, demandSignals } from "./npp/__fixtures__/marketCandidates";
+import { foundingStarterUnits } from "@/lib/corporations/foundingPlant";
 
 const noState = new Set<string>();
 const TURN = 100;
@@ -77,7 +80,8 @@ function decide(
   sectors: CorporateSector[],
   priceRatioOf: CommodityPriceRatioFn,
   plants?: NppPlantsContext,
-  unowned: Map<string, UnownedSector[]> = new Map()
+  candidates: Map<string, MarketCandidate[]> = new Map(),
+  signals?: PlacementSignals
 ) {
   return makeNppCorpDecision(
     {
@@ -87,10 +91,11 @@ function decide(
       now: new Date(),
       modifiers: ceoArchetypeModifiers("cautious"),
     },
-    unowned,
+    candidates,
     noState,
     priceRatioOf,
-    plants
+    plants,
+    signals
   );
 }
 
@@ -179,7 +184,8 @@ describe("NPP cost mothballing", () => {
   });
 });
 
-const POOL_UNITS = computeUnownedHeadroomUnits("manufacturing", 40_000_000, 1);
+const ROOM_UNITS = foundingStarterUnits("manufacturing") * 40;
+const roomSignals = () => demandSignals({ "NY:manufacturing": ROOM_UNITS });
 
 function manufacturingCorp(): Corporation {
   return {
@@ -211,22 +217,8 @@ function healthySector(): CorporateSector {
   } as unknown as CorporateSector;
 }
 
-function manufacturingPool(): Map<string, UnownedSector[]> {
-  return new Map([
-    [
-      "US",
-      [
-        {
-          _id: new ObjectId(),
-          stateId: "NY",
-          countryId: "US",
-          sectorType: "manufacturing",
-          revenue: 40_000_000,
-          headroomUnits: POOL_UNITS,
-        } as unknown as UnownedSector,
-      ],
-    ],
-  ]);
+function manufacturingPool(): Map<string, MarketCandidate[]> {
+  return candidatesByCountry([candidate({ stateId: "NY" })]);
 }
 
 describe("ordinary-entry glut floor", () => {
@@ -236,7 +228,8 @@ describe("ordinary-entry glut floor", () => {
       [healthySector()],
       glutPrices,
       plantsCtx,
-      manufacturingPool()
+      manufacturingPool(),
+      roomSignals()
     );
     expect(blocked.newSectors ?? []).toHaveLength(0);
 
@@ -245,7 +238,8 @@ describe("ordinary-entry glut floor", () => {
       [healthySector()],
       healthyPrices,
       plantsCtx,
-      manufacturingPool()
+      manufacturingPool(),
+      roomSignals()
     );
     expect(allowed.newSectors ?? []).toHaveLength(1);
   });
@@ -256,7 +250,8 @@ describe("ordinary-entry glut floor", () => {
       [healthySector()],
       () => null,
       plantsCtx,
-      manufacturingPool()
+      manufacturingPool(),
+      roomSignals()
     );
     expect(d.newSectors ?? []).toHaveLength(1);
   });

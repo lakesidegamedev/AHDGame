@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { ObjectId } from "mongodb";
-import type { Corporation, CorporateSector, UnownedSector } from "@/lib/db/types";
+import type { Corporation, CorporateSector } from "@/lib/db/types";
+import {
+  candidate,
+  candidatesByCountry,
+  uniformDemandSignals,
+} from "./__fixtures__/marketCandidates";
 import { computeBuildCost, CAPACITY_ANCHOR_YEAR } from "@/lib/constants/capacityEconomy";
 import { NEUTRAL_STAT } from "@/lib/stats/statsConstants";
 import { ceoArchetypeModifiers } from "../ceoArchetype";
@@ -55,14 +60,7 @@ describe("existing autonomous plant top-ups", () => {
         soldUnits: 80,
         buildQueue: [],
       } as unknown as CorporateSector;
-      const pool = {
-        _id: new ObjectId(),
-        countryId: "US",
-        stateId: "NY",
-        sectorType: "retail",
-        revenue: 100000,
-        headroomUnits: 1000,
-      } as UnownedSector;
+      const pool = candidate({ stateId: "NY", sectorType: "retail" });
       const direction: GroupDirection = {
         revision: "test",
         rootId: "root",
@@ -85,7 +83,7 @@ describe("existing autonomous plant top-ups", () => {
           modifiers,
           strategyLoopEnabled: false,
         },
-        new Map([["US", [pool]]]),
+        candidatesByCountry([pool]),
         new Set(),
         () => 2,
         {
@@ -95,7 +93,8 @@ describe("existing autonomous plant top-ups", () => {
           preset: "2019-default",
           primeRateOf: () => 0,
           costOfLivingOf: () => null,
-        }
+        },
+        uniformDemandSignals(1000)
       );
       const growth = (decision.reinvestments ?? []).reduce((sum, build) => sum + build.units, 0);
       // Maintenance alone is less than one unit in this fixture.
@@ -150,14 +149,7 @@ describe("existing autonomous plant top-ups", () => {
       soldUnits: 80,
       buildQueue: [],
     } as unknown as CorporateSector;
-    const pool = {
-      _id: new ObjectId(),
-      countryId: "US",
-      stateId: "NY",
-      sectorType: "retail",
-      revenue: 100000,
-      headroomUnits: 1000,
-    } as UnownedSector;
+    const pool = candidate({ stateId: "NY", sectorType: "retail" });
     const decide = (commodityDemandOf?: () => number) =>
       makeNppCorpDecision(
         {
@@ -169,7 +161,7 @@ describe("existing autonomous plant top-ups", () => {
           modifiers,
           strategyLoopEnabled: false,
         },
-        new Map([["US", [pool]]]),
+        candidatesByCountry([pool]),
         new Set(),
         () => 2,
         {
@@ -180,7 +172,8 @@ describe("existing autonomous plant top-ups", () => {
           primeRateOf: () => 0,
           costOfLivingOf: () => null,
           ...(commodityDemandOf ? { commodityDemandOf } : {}),
-        }
+        },
+        uniformDemandSignals(1000)
       );
     const built = (d: ReturnType<typeof decide>) =>
       (d.reinvestments ?? []).reduce((sum, build) => sum + build.units, 0);
@@ -223,14 +216,7 @@ describe("expansion hold at the cash floor (nppDividendAfterTaxStage 2)", () => 
       soldUnits: 80,
       buildQueue: [],
     } as unknown as CorporateSector;
-    const pool = {
-      _id: new ObjectId(),
-      countryId: "US",
-      stateId: "NY",
-      sectorType: "retail",
-      revenue: 100000,
-      headroomUnits: 1000,
-    } as UnownedSector;
+    const pool = candidate({ stateId: "NY", sectorType: "retail" });
     const decision = makeNppCorpDecision(
       {
         corp,
@@ -241,7 +227,7 @@ describe("expansion hold at the cash floor (nppDividendAfterTaxStage 2)", () => 
         modifiers,
         strategyLoopEnabled: false,
       },
-      new Map([["US", [pool]]]),
+      candidatesByCountry([pool]),
       new Set(),
       () => 2,
       {
@@ -252,7 +238,8 @@ describe("expansion hold at the cash floor (nppDividendAfterTaxStage 2)", () => 
         primeRateOf: () => 0,
         costOfLivingOf: () => null,
         ...(hold ? { holdExpansionAtCashFloor: true } : {}),
-      }
+      },
+      uniformDemandSignals(1000)
     );
     return {
       growth: (decision.reinvestments ?? []).reduce((sum, build) => sum + build.units, 0),

@@ -36,8 +36,7 @@ describe("computeSectorNationalizationPreview", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     db = createMockDb();
-    for (const n of ["centralBanks", "corporateSectors", "corporations", "unownedSectors"])
-      db.collection(n);
+    for (const n of ["centralBanks", "corporateSectors", "corporations"]) db.collection(n);
     db.collectionMocks.centralBanks.find.mockReturnValue(cursor([]));
     // Corps for the sector pool are fetched in ONE batched `$in` query; this
     // was a findOne per corp (perf audit 2026-08-03). The mock answers from the
@@ -52,16 +51,13 @@ describe("computeSectorNationalizationPreview", () => {
     });
   });
 
-  it("estimates per-corp compensation + free unowned slice, skipping state-owned", async () => {
+  it("estimates per-corp compensation, skipping state-owned", async () => {
     db.collectionMocks.corporateSectors.find.mockReturnValue(
       cursor([
         { _id: new ObjectId(), corporationId: playerCorpId, stateId: "DB", revenue: 100 },
         { _id: new ObjectId(), corporationId: playerCorpId, stateId: "HB", revenue: 100 },
         { _id: new ObjectId(), corporationId: stateCorpId, stateId: "XB", revenue: 999 },
       ])
-    );
-    db.collectionMocks.unownedSectors.find.mockReturnValue(
-      cursor([{ _id: new ObjectId(), stateId: "DB", revenue: 500 }])
     );
 
     const { computeSectorNationalizationPreview } = await import("./billTargetPreview");
@@ -84,7 +80,6 @@ describe("computeSectorNationalizationPreview", () => {
       estCompensationLocal: 2000,
     });
     expect(res.totalCompensationLocal).toBe(2000);
-    expect(res.unownedSliceRevenuePerTurn).toBe(500);
   });
 
   it("excludes a corp within the re-nationalization cooldown", async () => {
@@ -101,7 +96,6 @@ describe("computeSectorNationalizationPreview", () => {
     db.collectionMocks.corporateSectors.find.mockReturnValue(
       cursor([{ _id: new ObjectId(), corporationId: playerCorpId, stateId: "DB", revenue: 100 }])
     );
-    db.collectionMocks.unownedSectors.find.mockReturnValue(cursor([]));
 
     const { computeSectorNationalizationPreview } = await import("./billTargetPreview");
     const res = await computeSectorNationalizationPreview(db as unknown as Db, {
@@ -115,10 +109,9 @@ describe("computeSectorNationalizationPreview", () => {
     expect(res.totalCompensationLocal).toBe(0);
   });
 
-  it("scope=unowned reports no affected corps and the half slice", async () => {
-    db.collectionMocks.corporateSectors.find.mockReturnValue(cursor([]));
-    db.collectionMocks.unownedSectors.find.mockReturnValue(
-      cursor([{ _id: new ObjectId(), stateId: "DB", revenue: 400 }])
+  it("scope=unowned reports no affected corps", async () => {
+    db.collectionMocks.corporateSectors.find.mockReturnValue(
+      cursor([{ _id: new ObjectId(), corporationId: playerCorpId, stateId: "DB", revenue: 100 }])
     );
     const { computeSectorNationalizationPreview } = await import("./billTargetPreview");
     const res = await computeSectorNationalizationPreview(db as unknown as Db, {
@@ -130,7 +123,7 @@ describe("computeSectorNationalizationPreview", () => {
     });
     expect(res.affectedCount).toBe(0);
     expect(res.totalCompensationLocal).toBe(0);
-    expect(res.unownedSliceRevenuePerTurn).toBe(200);
+    expect(res).not.toHaveProperty("unownedSliceRevenuePerTurn");
   });
 });
 
@@ -139,11 +132,9 @@ describe("computeNationalizationProvisionDetail", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     db = createMockDb();
-    for (const n of ["centralBanks", "corporateSectors", "corporations", "unownedSectors"])
-      db.collection(n);
+    for (const n of ["centralBanks", "corporateSectors", "corporations"]) db.collection(n);
     db.collectionMocks.centralBanks.find.mockReturnValue(cursor([]));
     db.collectionMocks.corporateSectors.find.mockReturnValue(cursor([]));
-    db.collectionMocks.unownedSectors.find.mockReturnValue(cursor([]));
   });
 
   it("wraps a sector-wide taking as { kind: 'sector' }", async () => {

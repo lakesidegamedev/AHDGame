@@ -45,7 +45,6 @@ export const ECONOMY_ONLY_PHASES: ReadonlySet<string> = new Set<string>([
   "fiscalYear",
   "policyEffects",
   "demographicEffects",
-  "unownedSectorGrowth",
   "metricDecay",
   "investorConfidenceDecay",
   "stateOwnershipConcentration",
@@ -99,7 +98,6 @@ export const MACRO_ONLY_PHASES: ReadonlySet<string> = new Set<string>([
   "fiscalYear",
   "policyEffects",
   "demographicEffects",
-  "unownedSectorGrowth",
   "metricDecay",
   "investorConfidenceDecay",
   "stateOwnershipConcentration",
@@ -169,7 +167,6 @@ export const ELECTIONS_SKIP_PHASES: ReadonlySet<string> = new Set<string>([
   // demographicFlows, bucketApprovalDecay, approvalSnapshot, metricHistory,
   // partyHistorySnapshot, socialAxisDrift, policyEffects, demographicEffects) are
   // NOT listed here, so they keep running and feed vote share.
-  "unownedSectorGrowth",
   "metricDecay",
   "investorConfidenceDecay",
   "stateOwnershipConcentration",

@@ -11,7 +11,6 @@ import { processStatePolicyEffects } from "@/lib/policyEffects";
 import { processAllStateDemographics } from "@/lib/demographicEffects";
 import { processEraCheckpointsTurn } from "@/lib/turn/eraCheckpointTurn";
 import { processBucketApprovalDecay } from "@/lib/turn/bucketApprovalDecay";
-import { processUnownedSectorGrowth } from "@/lib/turn/unownedSectorGrowth";
 import { processMetricDecay } from "@/lib/turn/metricDecay";
 import { processSubsidyBudget } from "@/lib/turn/subsidyBudgetTurn";
 import { processRegionalBudgets } from "@/lib/turn/regionalBudget";
@@ -239,7 +238,6 @@ export const stateEffectsAndNationalAggregationPhase: TurnPhaseAdapter = {
       { crisisResult, crisisV2Result, navairResult, ministerialOrdersResult, policyResult },
       demoEffectResult,
       bucketDecayResult,
-      unownedResult,
       ,
       ,
       regionalBudgetResult,
@@ -273,7 +271,6 @@ export const stateEffectsAndNationalAggregationPhase: TurnPhaseAdapter = {
         return result;
       }),
       runtime.runPhase("bucketApprovalDecay", () => processBucketApprovalDecay()),
-      runtime.runPhase("unownedSectorGrowth", () => processUnownedSectorGrowth(db)),
       runtime.runPhase("metricDecay", () => processMetricDecay()),
       runtime.runPhase("subsidyBudget", () => processSubsidyBudget(db)),
       ukRegionalBudgetPromise,
@@ -346,7 +343,6 @@ export const stateEffectsAndNationalAggregationPhase: TurnPhaseAdapter = {
     ]);
     phaseResults.policyEffects = { statesProcessed: policyResult ?? 0 };
     phaseResults.demographicEffects = { statesProcessed: demoEffectResult ?? 0 };
-    phaseResults.unownedSectorGrowth = { sectorsProcessed: unownedResult ?? 0 };
     phaseResults.regionalBudgetProcessing = regionalBudgetResult
       ? { regionsProcessed: regionalBudgetResult.regionsProcessed }
       : null;

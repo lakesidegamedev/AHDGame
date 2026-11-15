@@ -31,7 +31,7 @@ export const NPP_REINVEST_MAX_QUEUE_DEPTH = 20;
 export const NPP_REINVEST_MAX_GROWTH_QUEUE_DEPTH = 2;
 /**
  * Growth builds from nothing, like a player's `buildCapacity` — it is NOT gated
- * or sized by the unowned-headroom pool. A plant that is profitable, selling
+ * or sized by a stored market pool. A plant that is profitable, selling
  * through its output (fill >= MIN_FILL) and in a market that is not glutted
  * grows by deploying this share of its post-floor surplus into capacity each
  * turn it can. The per-sector affordability rail and the cash floor bound the
@@ -61,7 +61,7 @@ export const NPP_GROWTH_MIN_UTILIZATION = 0.85;
 export const NPP_GROWTH_MIN_THROTTLE = 0.9;
 /**
  * Per-turn growth ceiling as a fraction of the capacity the plant actually RUNS.
- * The demand anchor that replaces the phantom unowned pool: a plant's proven
+ * The demand anchor: a plant's proven
  * throughput is the honest read on how much more it can sell, so it grows by up
  * to this share of run capacity a turn and reassesses next turn (a player adds a
  * chunk to a selling-out plant, not 10,000x it because they hold cash). Growth
@@ -96,22 +96,12 @@ export const NPP_SHORTAGE_ENTRIES_PER_TURN = 1;
  * entering a market does not stop at one plant — they follow the entry with a
  * `buildCapacity` order scaled to their cash and the shortage. An NPP founds at
  * the same scale, committing this share of its post-floor, post-fee surplus to
- * the first build (still capped by the market's unowned headroom, still floored
+ * the first build (still capped by the market's unmet demand, still floored
  * at one facility). Kept below 1 so a single founding bet never zeroes the
  * treasury or starves reinvestment. Fixes the "$2M treasury funds one plant"
  * under-deployment.
  */
 export const NPP_FOUNDING_DEPLOY_FRACTION = 0.6;
-
-/**
- * A single founding may claim at most this share of a genuinely UNOWNED
- * market's headroom (unmet demand nobody has built into yet — real for a fresh
- * bucket, unlike the ~0 headroom of an already-owned one, which is why growth
- * no longer reads the pool at all). Cash is the primary bind; the cap only
- * keeps a cash-rich corp from vacuuming a fresh market on entry. Floored at one
- * facility below.
- */
-export const NPP_FOUNDING_HEADROOM_SHARE = 0.5;
 
 /**
  * Extraction founds against DEPOSITS, not local demand, so it has no

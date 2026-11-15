@@ -519,14 +519,6 @@ export interface GameConfig {
    */
   producerFundedRestartStage?: number;
   /**
-   * NPP pass: >= 1 reads the unowned headroom of a local service cell
-   * (healthcare, real estate, construction) as the larger of the pool and the
-   * state book's unmet demand net of capacity already in flight. The pool never
-   * refills once incumbents drew it to zero, which closed short states to new
-   * entrants and autopilot growth (rules/stateServiceHeadroom). 0 or absent = off.
-   */
-  nppStateServiceHeadroomStage?: number;
-  /**
    * NPP pass: >= 1 lets an AI company's existing sector whose main output lane
    * went short last turn (units asked over delivered at least 1.33) and whose
    * plant repays a new unit within the payback horizon size one growth step and

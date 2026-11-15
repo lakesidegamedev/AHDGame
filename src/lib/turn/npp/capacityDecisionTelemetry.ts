@@ -29,7 +29,7 @@ import {
   corpLiquidCapitalToAnchor,
   type CorpCapitalCurrencyInfo,
 } from "@/lib/currency/corporationCapital";
-import { bucketKey } from "@/lib/nationalization/stateControlledBuckets";
+import { bucketKey } from "@/lib/market/marketBuckets";
 
 /** In-memory rival corp ids per (state, sectorType) bucket. */
 export type CapacityCompetitorIndex = Map<string, Set<string>>;
@@ -268,16 +268,12 @@ export interface ReinvestCapacityObserver {
   observe(
     gate: CapacityDecisionObservation["outcome"],
     sector: CorporateSector,
-    capitalStock: number,
-    headroomUnits: number | null,
     units: number,
     priced: ReinvestCapacityPriced | null
   ): void;
   observePriced(
     gate: CapacityDecisionObservation["outcome"],
     sector: CorporateSector,
-    capitalStock: number,
-    headroomUnits: number,
     units: number,
     costAnchor: number,
     dominanceMultiplier: number,
@@ -287,8 +283,8 @@ export interface ReinvestCapacityObserver {
 
 /**
  * Observation for one evaluated reinvestment candidate. Market share mirrors
- * the pricing input (owned capacity over owned plus unowned headroom, read off
- * the same in-memory pool the sizing uses). Priced candidates carry the
+ * the pricing input (the sector's revenue share of its bucket, the same figure
+ * the player build path prices on). Priced candidates carry the
  * charged quote; earlier gates observe an explicit zero price with headroom as
  * current cash, and the density-adjusted premium they would have paid.
  */
@@ -297,20 +293,11 @@ export function createReinvestCapacityObserver(deps: {
   competitorCountOf: (stateId: string, sectorType: string) => number;
   cashToAnchor: (amountLocal: number) => number;
   readCashLocal: () => number;
-  poolHeadroomOf: (sector: CorporateSector) => number;
+  localShareOf: (sector: CorporateSector) => number;
   push: (observation: CapacityDecisionObservation) => void;
 }): ReinvestCapacityObserver {
-  const observe: ReinvestCapacityObserver["observe"] = (
-    gate,
-    sector,
-    capitalStock,
-    headroomUnits,
-    units,
-    priced
-  ) => {
-    const headroom = headroomUnits ?? deps.poolHeadroomOf(sector);
-    const bucketTotal = capitalStock + headroom;
-    const marketSharePct = bucketTotal > 0 ? (100 * capitalStock) / bucketTotal : 0;
+  const observe: ReinvestCapacityObserver["observe"] = (gate, sector, units, priced) => {
+    const marketSharePct = deps.localShareOf(sector);
     const competitors = deps.competitorCountOf(sector.stateId, sector.sectorType);
     const rawDominance = getDominanceGrowthCostMultiplier(marketSharePct);
     const density = dominanceDensityFactor(competitors);
@@ -331,19 +318,10 @@ export function createReinvestCapacityObserver(deps: {
   };
   return {
     observe,
-    observePriced(
-      gate,
-      sector,
-      capitalStock,
-      headroomUnits,
-      units,
-      costAnchor,
-      dominanceMultiplier,
-      cashHeadroomAnchor
-    ) {
+    observePriced(gate, sector, units, costAnchor, dominanceMultiplier, cashHeadroomAnchor) {
       // Unit price off the charged total, exactly as the player quote reports
       // it; headroom is cash after the sized cost, matching `buildCapacity`.
-      observe(gate, sector, capitalStock, headroomUnits, units, {
+      observe(gate, sector, units, {
         unitPriceAnchor: units > 0 ? costAnchor / units : 0,
         dominanceMultiplier,
         cashHeadroomAnchor,

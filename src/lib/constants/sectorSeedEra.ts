@@ -1,6 +1,6 @@
 /**
- * `SECTOR_SEED_SCALE` is a GDP multiple, so it is era-neutral. The minimum
- * (`MIN_UNOWNED_SECTOR_REVENUE`, 1,000,000) is an absolute amount calibrated
+ * `STATE_ENTERPRISE_SEED_SCALE` is a GDP multiple, so it is era-neutral. The minimum
+ * (`MIN_STATE_ENTERPRISE_REVENUE`, 1,000,000) is an absolute amount calibrated
  * against modern nominal GDP and must be deflated per era so it stays a fixed
  * share of the economy. Without this, pre-modern seeds clamp nearly every
  * (state, sector) bucket to the floor and lose all differentiation.
@@ -16,13 +16,15 @@
 
 import type { EraId } from "@/lib/seeds/presetSelector";
 import { eraForPreset } from "@/lib/seeds/presetSelector";
-import { SECTOR_SEED_SCALE } from "./corporations";
+
+/** Seed-time GDP multiple that sizes a state enterprise; an era-neutral GDP share. */
+export const STATE_ENTERPRISE_SEED_SCALE = 450;
 
 /**
  * Modern (2019-calibrated) minimum ₳ revenue for one unowned (state, sector)
- * bucket. Re-exported by `seedUnownedSectors` as `MIN_UNOWNED_SECTOR_REVENUE`.
+ * bucket.
  */
-export const MODERN_MIN_UNOWNED_SECTOR_REVENUE = 1_000_000;
+export const MODERN_MIN_STATE_ENTERPRISE_REVENUE = 1_000_000;
 
 /**
  * US national seed GDP by era, from `getNationalBudgetSeedConfigsForPreset` in
@@ -100,21 +102,21 @@ export const SECTOR_SEED_ERA_SCALES: Partial<Record<EraId, number>> = {};
 
 /**
  * Minimum ₳ revenue for one unowned (state, sector) bucket under `preset`.
- * Returns {@link MODERN_MIN_UNOWNED_SECTOR_REVENUE} for every era without an
+ * Returns {@link MODERN_MIN_STATE_ENTERPRISE_REVENUE} for every era without an
  * explicit entry, and for a missing/unknown preset.
  */
-export function getMinUnownedSectorRevenue(preset?: string): number {
-  if (!preset) return MODERN_MIN_UNOWNED_SECTOR_REVENUE;
-  return SECTOR_SEED_ERA_FLOORS[eraForPreset(preset)] ?? MODERN_MIN_UNOWNED_SECTOR_REVENUE;
+export function getMinStateEnterpriseRevenue(preset?: string): number {
+  if (!preset) return MODERN_MIN_STATE_ENTERPRISE_REVENUE;
+  return SECTOR_SEED_ERA_FLOORS[eraForPreset(preset)] ?? MODERN_MIN_STATE_ENTERPRISE_REVENUE;
 }
 
 /**
  * Seed-time GDP multiple for `preset`. Returns the unchanged
- * {@link SECTOR_SEED_SCALE} for every era without an explicit entry.
+ * {@link STATE_ENTERPRISE_SEED_SCALE} for every era without an explicit entry.
  */
 export function getSectorSeedScale(preset?: string): number {
-  if (!preset) return SECTOR_SEED_SCALE;
-  return SECTOR_SEED_ERA_SCALES[eraForPreset(preset)] ?? SECTOR_SEED_SCALE;
+  if (!preset) return STATE_ENTERPRISE_SEED_SCALE;
+  return SECTOR_SEED_ERA_SCALES[eraForPreset(preset)] ?? STATE_ENTERPRISE_SEED_SCALE;
 }
 
 /**

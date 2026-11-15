@@ -290,10 +290,7 @@ describe("finalizeResetGameWorld", () => {
       deleteProfiles: true,
     });
 
-    // unownedSectors keys on `stateId`; regionDemographics `_id` IS the region id.
-    expect(db.collectionMocks.unownedSectors?.deleteMany).toHaveBeenCalledWith({
-      stateId: { $nin: ["CA", "WY", "DD_BLN"] },
-    });
+    // regionDemographics `_id` IS the region id.
     expect(db.collectionMocks.regionDemographics?.deleteMany).toHaveBeenCalledWith({
       _id: { $nin: ["CA", "WY", "DD_BLN"] },
     });
@@ -304,9 +301,9 @@ describe("finalizeResetGameWorld", () => {
 
   it("never purges region rows when the seeded roster came back empty", async () => {
     // Default mock: states.find(...).toArray() → []. A half-failed seed must not
-    // be allowed to empty unownedSectors/regionDemographics for the whole world.
-    db.collection("unownedSectors"); // instantiate the lazy mocks so the
-    db.collection("regionDemographics"); // assertions below are non-vacuous
+    // be allowed to empty regionDemographics for the whole world.
+    db.collection("regionDemographics"); // instantiate the lazy mock so the
+    // assertions below are non-vacuous
 
     await finalizeResetGameWorld(db as never, {
       preset: "2019-default",
@@ -314,7 +311,6 @@ describe("finalizeResetGameWorld", () => {
       deleteProfiles: true,
     });
 
-    expect(db.collectionMocks.unownedSectors?.deleteMany).not.toHaveBeenCalled();
     // The absent-country purge may still scope a delete to countries the preset
     // does not have at all; what must never run is a roster-relative sweep.
     for (const [filter] of db.collectionMocks.regionDemographics?.deleteMany.mock.calls ?? []) {

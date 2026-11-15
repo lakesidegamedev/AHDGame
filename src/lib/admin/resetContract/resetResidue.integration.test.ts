@@ -112,7 +112,7 @@ describe("reset over a world holding every known leftover", () => {
     expect(text).toContain("old-world-turn crises:");
     expect(text).toContain("old-world-turn tradeEmbargoes:");
     expect(text).toContain("currentTurn is 1262, expected 1");
-    expect(text).toContain("lastAutoSeedTurn is 944");
+    expect(text).toContain("lastExtractionAutoStrategyTurn is 944");
     expect(text).toContain("extra documents survive: debt_ceiling_crisis");
     expect(text).toContain("US defence account carries old-world state");
     expect(text).toContain("US intelligence account carries old-world state");
@@ -257,7 +257,7 @@ describe("reset over a world holding every known leftover", () => {
     expect(state.resetWorldId).not.toBe("old-world");
     for (const field of [
       "lastCensusYear",
-      "lastAutoSeedTurn",
+      "lastExtractionAutoStrategyTurn",
       "votingAgeEligibleByCountry",
       "europeanIntegration",
       "legacyWarExhaustion",

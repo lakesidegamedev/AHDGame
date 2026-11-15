@@ -17,7 +17,6 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
-import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
 import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
 import { stateResourceCapacityCollection } from "@/lib/db/repositories/stateResourceCapacity";
 import { organizationMembershipsCollection } from "@/lib/db/repositories/organizationMemberships";
@@ -66,7 +65,6 @@ export async function loadCorporationLookupInputs({
     exchangeRateDocs,
     stateResourceCapacityDocs,
     activeFtaPairs,
-    unownedSectorDocs,
     latestTradeSnapshot,
     orgMembershipDocs,
     activeEmbargoDocs,
@@ -268,7 +266,6 @@ export async function loadCorporationLookupInputs({
       .find({}, { projection: { stateId: 1, resources: 1 } })
       .toArray(),
     loadActiveFtaPairs(db),
-    unownedSectorsCollection(db).find({}).toArray(),
     // Latest trade-flow snapshot (prev turn) → per-country export intensity for
     // the export-reward margin premium. One small doc.
     tradeFlowSnapshotsCollection(db)
@@ -342,7 +339,6 @@ export async function loadCorporationLookupInputs({
     orgMembershipDocs,
     activeFtaPairs,
     allTariffs,
-    unownedSectorDocs,
     stateResourceCapacityDocs,
     activeSubsidies,
   };

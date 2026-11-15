@@ -533,10 +533,6 @@ export default function PlantPanel({
           <DetailRow label="Share that sold" value={fmtPct(plants.fillRate)} />
           <DetailRow label="Idle capacity" value={`${fmtUnits(plants.idleUnits)} units`} />
           <DetailRow label="Staff per unit of capacity" value={plants.laborIntensity.toFixed(3)} />
-          <DetailRow
-            label="Untapped demand here"
-            value={`${fmtUnits(plants.headroomUnits)} units/day`}
-          />
           <DetailRow label="Turn" value={`${plants.currentTurn}`} />
         </dl>
       </DetailsDisclosure>

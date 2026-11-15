@@ -21,7 +21,7 @@ import { foundingStarterUnits, sectorEntryFeeAnchor } from "@/lib/corporations/f
  * Under plants capacity is bought, so founding charges an era-scaled entry fee
  * PLUS a one-facility starter build priced through `computeBuildCost` at
  * CAPACITY_FOUNDING_DISCOUNT. The capacity arrives on a queue rather than
- * existing, and it is drawn out of the unowned pool instead of being minted.
+ * existing.
  *
  * The non-plants path must be untouched (modern fee still applies when the
  * world preset is modern / default).
@@ -113,10 +113,6 @@ async function wireMocks(plants: boolean) {
     matchedCount: 1,
     modifiedCount: 1,
   });
-  db.collectionMocks.unownedSectors.updateOne.mockResolvedValue({
-    matchedCount: 1,
-    modifiedCount: 1,
-  });
   db.collectionMocks.characters.findOne.mockResolvedValue(null);
   db.collectionMocks.stateMetrics.findOne.mockResolvedValue(null);
   db.collectionMocks.gameState.findOne.mockResolvedValue({
@@ -160,7 +156,6 @@ beforeEach(() => {
   db = createMockDb();
   db.collection("corporations");
   db.collection("corporateSectors");
-  db.collection("unownedSectors");
   db.collection("states");
   db.collection("characters");
   db.collection("stateMetrics");
@@ -229,12 +224,7 @@ describe("expandSector — founding build (plants)", () => {
     expect(insertedSector().sectorType).toBe("agriculture");
     const queue = insertedSector().buildQueue as Array<Record<string, number>>;
     expect(queue[0].unitsOrdered).toBe(foundingStarterUnits("agriculture"));
-    expect(db.collectionMocks.unownedSectors.updateOne.mock.calls[0][0]).toEqual({
-      stateId: STATE_ID,
-      sectorType: "agriculture",
-      industryModel: null,
-      mediaDiscriminator: null,
-    });
+    expect(db.collectionMocks.unownedSectors).toBeUndefined();
   });
 
   it("writes a starter-quantum nameplate, not the ₳1M legacy grant (ticket #1027)", async () => {
@@ -330,30 +320,10 @@ describe("expandSector — founding build (plants)", () => {
     expect(queue[0].onlineTurn - CURRENT_TURN).toBe(36);
   });
 
-  it("draws the starter capacity DOWN from the unowned pool", async () => {
+  it("founds without reading or writing any market pool", async () => {
     await wireMocks(true);
     await expandSector(request(), { params });
-
-    const call = db.collectionMocks.unownedSectors.updateOne.mock.calls[0];
-    expect(call[0]).toEqual({
-      stateId: STATE_ID,
-      sectorType: "manufacturing",
-      industryModel: null,
-      mediaDiscriminator: null,
-    });
-    // Pipeline update, TWO stages. Units are the authoritative leg and are drawn
-    // down (clamped >= 0) in stage 1; `revenue` is then RESTATED from the
-    // post-draw units in stage 2 via the shared `unownedPoolTrailingSet`, rather
-    // than being subtracted from independently — two separately-clamped legs
-    // drift apart permanently once either bottoms out.
-    const stages = call[1] as Array<{ $set: Record<string, unknown> }>;
-    const drawStage = stages[0].$set;
-    expect(JSON.stringify(drawStage.headroomUnits)).toContain(String(STARTER_UNITS));
-    expect(JSON.stringify(drawStage.headroomUnits)).toContain("$max");
-    expect(drawStage.revenue).toBeUndefined();
-
-    const trailingStage = stages[1].$set;
-    expect(JSON.stringify(trailingStage.revenue)).toContain("$headroomUnits");
+    expect(db.collectionMocks.unownedSectors).toBeUndefined();
   });
 
   it("emits a capex build leg for the starter build only (not the entry fee)", async () => {
@@ -392,27 +362,6 @@ describe("expandSector — cross-border founding", () => {
     expect(res.status).toBe(201);
     expect(insertedSector().countryId).toBe("UK");
   });
-
-  it("files the unowned pool row it creates under the HOST country too", async () => {
-    // The pool row is an upsert and its `countryId` is stamped
-    // from this bucket, so taking the founder's domicile minted a row on a
-    // foreign state under the founder's own country: unreachable to the country
-    // the capacity is physically in, and counted as the founder's headroom.
-    await wireMocks(true);
-    db.collectionMocks.states.findOne.mockResolvedValue({
-      _id: STATE_ID,
-      name: "England",
-      countryId: "UK",
-    });
-    await expandSector(request(), { params });
-
-    const stages = db.collectionMocks.unownedSectors.updateOne.mock.calls[0][1] as Array<{
-      $set: Record<string, unknown>;
-    }>;
-    const stamped = JSON.stringify(stages[0].$set.countryId);
-    expect(stamped).toContain("UK");
-    expect(stamped).not.toContain('"US"');
-  });
 });
 
 describe("expandSector — non-plants path is unchanged", () => {
@@ -430,12 +379,11 @@ describe("expandSector — non-plants path is unchanged", () => {
     expect(doc.revenue).toBe(DEFAULT_SECTOR_STARTING_REVENUE);
   });
 
-  it("does not touch the unowned pool or the capex ledger", async () => {
+  it("does not touch the capex ledger", async () => {
     await wireMocks(false);
     const { emitBuildCapexTx } = await import("@/lib/corporations/capexTxLog");
     await expandSector(request(), { params });
 
-    expect(db.collectionMocks.unownedSectors.updateOne).not.toHaveBeenCalled();
     expect(emitBuildCapexTx).not.toHaveBeenCalled();
   });
 });

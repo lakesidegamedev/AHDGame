@@ -12,7 +12,6 @@ import type {
   Union,
   Tariff,
   Subsidy,
-  UnownedSector,
 } from "@/lib/db/types";
 import { getControllingCorporateParent } from "@/lib/corporations/corporateOwnership";
 import { canDirectSubsidiaryAsParent } from "@/lib/corporations/subsidiaries/authorization";
@@ -51,7 +50,6 @@ import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
 import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
 import { unionsCollection } from "@/lib/db/repositories/unions";
 import { usersCollection } from "@/lib/db/repositories/users";
-import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
 import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
 import { politicalMetricsCollection } from "@/lib/db/repositories/politicalMetrics";
 import { tariffsCollection } from "@/lib/db/repositories/tariffs";
@@ -411,7 +409,7 @@ export async function loadSectorDetailContext({
   const siblingCorpIds = [...new Set(siblingsSectors.map((s) => s.corporationId.toString()))].map(
     (id) => new ObjectId(id)
   );
-  const [corpsForLookup, siblingCorps, siblingFxByCurrency, unownedDoc] = await Promise.all([
+  const [corpsForLookup, siblingCorps, siblingFxByCurrency] = await Promise.all([
     corpIds.length > 0
       ? corporationsCollection(db)
           .find(
@@ -453,12 +451,6 @@ export async function loadSectorDetailContext({
           .toArray()
       : Promise.resolve([] as SiblingCorpProjection[]),
     loadFxRatesByCurrency(db),
-    unownedSectorsCollection(db).findOne({
-      stateId: sector.stateId,
-      sectorType: sector.sectorType,
-      industryModel: sector.industryModel ?? null,
-      mediaDiscriminator: sector.mediaDiscriminator ?? null,
-    }),
   ]);
   const corpByIdForLookup = new Map(corpsForLookup.map((c) => [c._id.toString(), c]));
   return {
@@ -474,7 +466,6 @@ export async function loadSectorDetailContext({
     siblingCorps,
     siblingsSectors,
     siblingFxByCurrency,
-    unownedDoc,
     allStates,
     commodityPrices,
     sectorAmountAnchor,

@@ -18,7 +18,6 @@ import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
-import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
 import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
 import { seedDiagnosticBaselinesCollection } from "@/lib/db/repositories/seedDiagnosticBaselines";
 
@@ -46,20 +45,14 @@ function setMetric(metrics: Record<string, number>, id: string, value: number | 
 }
 
 /**
- * Sum sector output for a country: unowned sector revenue + corporation revenue.
- * At fresh seed most output sits in unowned; after play it migrates to corps.
+ * Sum sector output for a country: the revenue of its corporations.
  */
 async function sumSectorAggregate(db: Db, countryId: string): Promise<number> {
-  const unowned = await unownedSectorsCollection<{ revenue?: number }>(db)
-    .find({ countryId })
-    .project({ revenue: 1 })
-    .toArray();
   const corps = await corporationsCollection<{ revenue?: number }>(db)
     .find({ countryId })
     .project({ revenue: 1 })
     .toArray();
   let total = 0;
-  for (const row of unowned) total += Number(row.revenue) || 0;
   for (const row of corps) total += Number(row.revenue) || 0;
   return total;
 }

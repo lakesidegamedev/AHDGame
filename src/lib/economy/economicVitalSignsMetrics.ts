@@ -9,7 +9,6 @@ import type {
   Bond,
   WealthListSnapshot,
   MoneySupplySnapshot,
-  UnownedSector,
   NppMarketEntryFunnel,
   EconomicVitalSigns,
 } from "@/lib/db/types";
@@ -83,7 +82,7 @@ export type Inputs = {
   /** Anchor rates by currency code; unknown currencies convert 1:1. */
   anchorRates?: Record<string, number>;
   commodityParticipants: CommodityParticipant[];
-  unownedSectors?: UnownedSector[];
+  states?: { _id: string; countryId: string }[];
   entryFunnel?: NppMarketEntryFunnel | null;
   eraUnitScale?: number;
   history?: VitalSignsHistoryRow[];
@@ -194,7 +193,7 @@ export interface RingFencedCashSummary {
 export function computeEconomicVitalSigns(input: Inputs): EconomicVitalSigns {
   const marketFormation = computeMarketFormationSnapshot({
     sectors: input.sectors,
-    unownedSectors: input.unownedSectors ?? [],
+    states: input.states ?? [],
     prices: input.prices,
     entryFunnel: input.entryFunnel,
     eraUnitScale: input.eraUnitScale ?? 1,

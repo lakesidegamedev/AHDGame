@@ -18,7 +18,6 @@ beforeEach(async () => {
   db = createMockDb();
   db.collection("states");
   db.collection("exchangeRates");
-  db.collection("unownedSectors");
   db.collection("corporateSectors");
   db.collection("corporations");
   db.collection("gameConfig");
@@ -62,16 +61,12 @@ describe("GET /api/sectors country identity (ticket #1271)", () => {
         { _id: "DD", displayNameOverride: "Germany", flagEmojiOverride: "🇩🇪" },
       ]),
     });
-    db.collectionMocks.unownedSectors.find.mockReturnValue({
-      toArray: vi.fn().mockResolvedValue([]),
-    });
-    db.collectionMocks.unownedSectors.countDocuments.mockResolvedValue(0);
     db.collectionMocks.corporateSectors.countDocuments.mockResolvedValue(0);
   });
 
   it("labels the country filter with the name the country now goes by", async () => {
     const { GET } = await import("./route");
-    const data = await (await GET(makeRequest("view=unowned"))).json();
+    const data = await (await GET(makeRequest("view=owned"))).json();
 
     const dd = (data.filters.countries as { value: string; label: string }[]).find(
       (c) => c.value === "DD"
@@ -79,22 +74,11 @@ describe("GET /api/sectors country identity (ticket #1271)", () => {
     expect(dd?.label).toBe("Germany");
   });
 
-  it("tells the page when unowned revenue is a legacy figure (plants)", async () => {
-    const { GET } = await import("./route");
-    expect((await (await GET(makeRequest("view=unowned"))).json()).plantsMode).toBe(false);
-
-    db.collectionMocks.gameConfig.findOne.mockResolvedValue({
-      _id: "default",
-      marketSystemMode: "plants",
-    });
-    expect((await (await GET(makeRequest("view=unowned"))).json()).plantsMode).toBe(true);
-  });
-
   it("applies the flag override alongside the name, not one without the other", async () => {
     // Half-correcting this is how a reunified Germany ends up reading "Germany"
     // under the flag of the state it replaced.
     const { GET } = await import("./route");
-    const data = await (await GET(makeRequest("view=unowned"))).json();
+    const data = await (await GET(makeRequest("view=owned"))).json();
 
     const dd = (data.filters.countries as { value: string; flag: string }[]).find(
       (c) => c.value === "DD"
@@ -112,7 +96,7 @@ describe("GET /api/sectors country identity (ticket #1271)", () => {
     });
 
     const { GET } = await import("./route");
-    const data = await (await GET(makeRequest("view=unowned"))).json();
+    const data = await (await GET(makeRequest("view=owned"))).json();
 
     const ru = (data.filters.countries as { value: string; label: string }[]).find(
       (c) => c.value === "RU"
@@ -122,7 +106,7 @@ describe("GET /api/sectors country identity (ticket #1271)", () => {
 
   it("drops a dissolved country that holds no territory from the filter list", async () => {
     const { GET } = await import("./route");
-    const data = await (await GET(makeRequest("view=unowned"))).json();
+    const data = await (await GET(makeRequest("view=owned"))).json();
 
     const values = (data.filters.countries as { value: string }[]).map((c) => c.value);
     expect(values).toContain("DD");
@@ -151,33 +135,6 @@ describe("GET /api/sectors country identity (ticket #1271)", () => {
     expect(corpFilter).not.toHaveProperty("countryId");
     // ...and the badge is counted on exactly the same basis as the list.
     expect(db.collectionMocks.corporateSectors.countDocuments).toHaveBeenCalledWith(corpFilter);
-  });
-
-  it("keeps a row whose state no longer exists findable under the name it shows", async () => {
-    // `mergeRegion` re-points sector rows before deleting a region, so this is
-    // debris rather than normal state, and the pool heal deliberately leaves it
-    // for a human. It is still labelled from its stored country, so the filter
-    // has to be able to return it: visible unfiltered and gone the moment you
-    // filter by the country it names would be the worst of both.
-    db.collectionMocks.unownedSectors.find.mockReturnValue({
-      toArray: vi.fn().mockResolvedValue([
-        {
-          _id: new ObjectId(),
-          sectorType: "media",
-          stateId: "GONE",
-          countryId: "US",
-          revenue: 1000,
-        },
-      ]),
-    });
-
-    const { GET } = await import("./route");
-    const data = await (await GET(makeRequest("view=unowned&country=US"))).json();
-
-    const filter = db.collectionMocks.unownedSectors.find.mock.calls[0][0];
-    expect(filter.$or[1]).toMatchObject({ countryId: "US" });
-    // Labelled from the stored country, because nothing else is left to use.
-    expect(data.sectors[0]).toMatchObject({ stateId: "GONE", countryId: "US" });
   });
 
   it("labels sector rows with the override too, not the compiled name", async () => {
@@ -222,69 +179,24 @@ describe("GET /api/sectors country identity (ticket #1271)", () => {
 });
 
 describe("GET /api/sectors (view=unowned)", () => {
-  it("excludes unowned markets in command-economy countries (RU/USSR) from the row list", async () => {
-    db.collectionMocks.unownedSectors.find.mockReturnValue({
-      toArray: vi.fn().mockResolvedValue([
-        {
-          _id: new ObjectId(),
-          sectorType: "energy",
-          stateId: "CA",
-          countryId: "US",
-          revenue: 1000,
-        },
-        {
-          _id: new ObjectId(),
-          sectorType: "energy",
-          stateId: "UKR",
-          countryId: "RU",
-          revenue: 5000,
-        },
-      ]),
-    });
-    db.collectionMocks.unownedSectors.countDocuments.mockResolvedValue(1);
-    db.collectionMocks.corporateSectors.countDocuments.mockResolvedValue(0);
-
+  it("answers with an empty list and a deprecation note", async () => {
     const { GET } = await import("./route");
     const response = await GET(makeRequest("view=unowned"));
     const data = await response.json();
 
     expect(response.status).toBe(200);
-    const stateIds = (data.sectors as { stateId: string }[]).map((s) => s.stateId);
-    expect(stateIds).toContain("CA");
-    expect(stateIds).not.toContain("UKR");
-
-    // The badge count query itself must also exclude command-economy countries
-    // (not just the row list), so it can't silently overcount. Expressed as the
-    // command economies' STATES, so the count agrees with the rows and the
-    // filter about which country a sector is in (ticket #1271).
-    expect(db.collectionMocks.unownedSectors.countDocuments).toHaveBeenCalledWith(
-      expect.objectContaining({
-        stateId: expect.objectContaining({
-          $nin: expect.arrayContaining(["UKR"]),
-        }),
-      })
-    );
+    expect(data.view).toBe("unowned");
+    expect(data.sectors).toEqual([]);
+    expect(data.totalItems).toBe(0);
+    expect(data.counts.unowned).toBe(0);
+    expect(typeof data.deprecated).toBe("string");
   });
 
-  it("forces a zero-result count filter when the explicit country filter is itself command-economy", async () => {
-    db.collectionMocks.unownedSectors.find.mockReturnValue({
-      toArray: vi.fn().mockResolvedValue([]),
-    });
-    db.collectionMocks.unownedSectors.countDocuments.mockResolvedValue(0);
-    db.collectionMocks.corporateSectors.countDocuments.mockResolvedValue(0);
-
+  it("defaults to the owned view", async () => {
     const { GET } = await import("./route");
-    const response = await GET(makeRequest("view=unowned&country=RU"));
-
-    expect(response.status).toBe(200);
-    expect(db.collectionMocks.unownedSectors.countDocuments).toHaveBeenCalledWith({
-      stateId: { $in: [] },
-    });
-    // ...and the ROW query is the same one, so the list cannot show a stateless
-    // row stamped with that country while the badge reads zero.
-    expect(db.collectionMocks.unownedSectors.find.mock.calls[0][0]).toMatchObject({
-      stateId: { $in: [] },
-    });
+    const data = await (await GET(makeRequest(""))).json();
+    expect(data.view).toBe("owned");
+    expect(data.deprecated).toBeUndefined();
   });
 });
 
@@ -366,40 +278,5 @@ describe("GET /api/sectors (view=owned)", () => {
       countryName: "Japan",
       revenueAnchor: 100_000,
     });
-  });
-});
-
-describe("GET /api/sectors union-republic coverage", () => {
-  /**
-   * Found during the branch audit. The blocked-country lookup was keyed on
-   * `COUNTRY_ORDER`, which omits BLR, BAL and UKR, so the union republics were
-   * never asked about and their unowned markets were advertised as capture
-   * opportunities that `expandSector` then refuses. Harmless while those
-   * countries carried no block; a real gap once the dial started blocking them.
-   */
-  it("excludes union-republic states from the unowned view", async () => {
-    db.collectionMocks.unownedSectors.find.mockReturnValue({
-      toArray: vi.fn().mockResolvedValue([
-        { _id: new ObjectId(), sectorType: "energy", stateId: "CA", countryId: "US", revenue: 10 },
-        {
-          _id: new ObjectId(),
-          sectorType: "energy",
-          stateId: "BLR_MIN",
-          countryId: "BLR",
-          revenue: 99,
-        },
-      ]),
-    });
-    db.collectionMocks.unownedSectors.countDocuments.mockResolvedValue(1);
-    db.collectionMocks.corporateSectors.countDocuments.mockResolvedValue(0);
-
-    const { GET } = await import("./route");
-    const response = await GET(makeRequest("view=unowned"));
-    const data = await response.json();
-
-    expect(response.status).toBe(200);
-    const stateIds = (data.sectors as { stateId: string }[]).map((s) => s.stateId);
-    expect(stateIds).toContain("CA");
-    expect(stateIds).not.toContain("BLR_MIN");
   });
 });

@@ -32,15 +32,20 @@ import { describe, it, expect } from "vitest";
 import { ObjectId } from "mongodb";
 import {
   makeNppCorpDecision,
-  NPP_FOUNDING_HEADROOM_SHARE,
   type CommodityPriceRatioFn,
   type NppPlantsContext,
 } from "./nppCorporationBehavior";
 import { ceoArchetypeModifiers } from "./ceoArchetype";
-import type { Corporation, CorporateSector, UnownedSector } from "@/lib/db/types";
-import { CAPACITY_ANCHOR_YEAR, computeBuildCost } from "@/lib/constants/capacityEconomy";
+import type { Corporation, CorporateSector } from "@/lib/db/types";
+import { candidate, candidatesByCountry, demandSignals } from "./npp/__fixtures__/marketCandidates";
+import type { MarketCandidate } from "./npp/marketCandidates";
+import { NPP_FOUNDING_UNMET_SHARE } from "./npp/rules/marketSaturation";
+import {
+  CAPACITY_ANCHOR_YEAR,
+  computeBuildCost,
+  revenuePerCapacityUnit,
+} from "@/lib/constants/capacityEconomy";
 import { foundingStarterUnits, sectorEntryFeeAnchor } from "@/lib/corporations/foundingPlant";
-import { computeUnownedHeadroomUnits } from "@/lib/market/unownedHeadroom";
 
 const noPrices: CommodityPriceRatioFn = () => null;
 const noState = new Set<string>();
@@ -49,12 +54,11 @@ const TURN = 100;
 /** JPY in 1953. The A/B's worst offender, and the reason this file exists. */
 const JPY_RATE = 360;
 
-const POOL_REVENUE_ANCHOR = 40_000_000;
-const POOL_UNITS = computeUnownedHeadroomUnits("manufacturing", POOL_REVENUE_ANCHOR, 1);
-// Cash-ample founding deploys to the headroom-share cap, not a single facility.
+const ROOM_UNITS = foundingStarterUnits("manufacturing") * 40;
+// Cash-ample founding deploys to the unmet-demand share cap, not a single facility.
 const EXPECTED_UNITS = Math.max(
   foundingStarterUnits("manufacturing"),
-  Math.floor(POOL_UNITS * NPP_FOUNDING_HEADROOM_SHARE)
+  Math.floor(ROOM_UNITS * NPP_FOUNDING_UNMET_SHARE)
 );
 const EXPECTED_BUILD_ANCHOR = computeBuildCost({
   strategyId: null,
@@ -77,18 +81,8 @@ const plantsCtx: NppPlantsContext = {
   costOfLivingOf: () => null,
 };
 
-function pool(): UnownedSector {
-  return {
-    _id: new ObjectId(),
-    stateId: "KAN",
-    countryId: "JP",
-    sectorType: "manufacturing",
-    // The unowned pool is ₳-denominated (see UnownedSector), which is precisely
-    // why its revenue may not be copied into a sector's local-currency
-    // nameplate without conversion.
-    revenue: POOL_REVENUE_ANCHOR,
-    headroomUnits: POOL_UNITS,
-  } as unknown as UnownedSector;
+function pool(): MarketCandidate {
+  return candidate({ stateId: "KAN", countryId: "JP" });
 }
 
 function corp(overrides: Partial<Corporation> = {}): Corporation {
@@ -129,10 +123,11 @@ function decide(c: Corporation, fxRate: number | undefined, plants?: NppPlantsCo
       fxRate,
       modifiers: ceoArchetypeModifiers("cautious"),
     },
-    new Map<string, UnownedSector[]>([["JP", [pool()]]]),
+    candidatesByCountry([pool()]),
     noState,
     noPrices,
-    plants
+    plants,
+    demandSignals({ "KAN:manufacturing": ROOM_UNITS })
   );
 }
 
@@ -221,10 +216,9 @@ describe("NPP decisions in a non-anchor currency", () => {
     // capacity-derived nameplate back at full local scale — a one-turn ×fx step
     // in the sector's top line. That step is the 6.1x aggregate.
     const decision = decide(corp(), JPY_RATE, plantsCtx);
-    const nameplateShare = Math.min(1, EXPECTED_UNITS / POOL_UNITS);
-    expect(decision.newSectors![0].revenue).toBe(
-      Math.round(POOL_REVENUE_ANCHOR * nameplateShare * JPY_RATE)
-    );
+    const nameplateAnchor =
+      EXPECTED_UNITS * revenuePerCapacityUnit("manufacturing", plantsCtx.eraUnitScale);
+    expect(decision.newSectors![0].revenue).toBe(Math.round(nameplateAnchor * JPY_RATE));
   });
 
   it("blocks a founding the corp cannot actually afford in local terms", () => {

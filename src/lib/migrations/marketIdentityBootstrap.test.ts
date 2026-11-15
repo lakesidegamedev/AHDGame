@@ -89,10 +89,9 @@ describe("bootstrap market identity indexes", () => {
     expect(result.skippedIds).toEqual([]);
     expect(calls.filter((call) => call.startsWith("create:"))).toEqual([
       "create:corporateSectors:corporateSectors_corporation_state_type_models_unique",
-      "create:unownedSectors:unowned_state_type_models_unique",
       "create:unions:unions_country_type_models_seeded_unique",
     ]);
-    expect(calls.findIndex((call) => call.startsWith("drop:"))).toBe(3);
+    expect(calls.findIndex((call) => call.startsWith("drop:"))).toBe(2);
     expect(calls).not.toContain(
       "create:corporateSectors:corporateSectors_corporationId_stateId_sectorType_industryModel"
     );

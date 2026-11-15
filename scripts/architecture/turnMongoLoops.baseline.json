@@ -1611,80 +1611,10 @@
     },
     {
       "file": "src/lib/nationalization/nationalizeSectorWide.ts",
-      "operation": "deleteOne",
-      "owner": "nationalizeSectorWide",
-      "expression": "db.collection<UnownedSector>(\"unownedSectors\").deleteOne({ _id: u._id })",
-      "fingerprint": "6d079f21778fb07aba0cfebdd67eaf06db5cc62a734f8be820e942e7e1059757"
-    },
-    {
-      "file": "src/lib/nationalization/nationalizeSectorWide.ts",
-      "operation": "updateOne",
-      "owner": "nationalizeSectorWide",
-      "expression": "db.collection<UnownedSector>(\"unownedSectors\").updateOne({ _id: u._id }, { $set: { revenue: Math.round((u.revenue ?? 0) * (1 - f)), ...(plantsEnabled && typeof u.headroomUnits === \"number\" ? { headroomUnits: u.headroomUnits * (1 - f) } : {}), updatedAt: now, }, })",
-      "fingerprint": "d381e9ccac838088771e4cabfc531c447a0bcfa9d544809474d003f8fafb0043"
-    },
-    {
-      "file": "src/lib/nationalization/nationalizeSectorWide.ts",
       "operation": "updateOne",
       "owner": "nationalizeSectorWide",
       "expression": "sectors.updateOne({ _id: ns._id }, { $inc: { revenue: captureLocal, ...(captureUnits > 0 ? { capitalStock: captureUnits } : {}), }, $set: { ...(captureUnits > 0 ? seedPlantLedger({ ...params, strategyId: ns.strategyId }, (ns.capitalStock ?? 0) + captureUnits) : {}), nationalizedAtTurn: params.consequence.turn, nationalizationTransitionMultiplier: transitionMultiplier, sectorNationalizationScope: params.scope, sectorNationalizationCarveFraction: f, updatedAt: now, }, })",
       "fingerprint": "5ba2a0a1b74a08badd943832de751bdf7a43357a67aef186ed4ce9d44d201342"
-    },
-    {
-      "file": "src/lib/admin/seed/reconcileCommandEconomyUnowned.ts",
-      "operation": "findOne",
-      "owner": "reconcileCommandEconomyUnowned",
-      "expression": "db.collection<Corporation>(\"corporations\").findOne({ countryOwnerId: countryId, assignedSectorTypes: sectorType, })",
-      "fingerprint": "7bedb8713d4a66bfba1f5f38b9ce0044c7a81ab529f832a258f0346850382fbf"
-    },
-    {
-      "file": "src/lib/admin/seed/reconcileCommandEconomyUnowned.ts",
-      "operation": "findOne",
-      "owner": "reconcileCommandEconomyUnowned",
-      "expression": "db .collection<Corporation>(\"corporations\") .findOne({ _id: corpId }, { projection: { _id: 1, countryOwnerId: 1 } })",
-      "fingerprint": "e73243bed4b541ff5e4c2ff4ec836a2639c3d906612e2fd7e5c3616fe0d3a6da"
-    },
-    {
-      "file": "src/lib/admin/seed/reconcileCommandEconomyUnowned.ts",
-      "operation": "findOne",
-      "owner": "reconcileCommandEconomyUnowned",
-      "expression": "db .collection<Corporation>(\"corporations\") .findOne({ sequentialId }, { projection: { _id: 1 } })",
-      "fingerprint": "5a8c0d062ecad3d9fdd51c0117251f74f72e6bfd76fcefe422dbb50e3ce62e7f"
-    },
-    {
-      "file": "src/lib/admin/seed/reconcileCommandEconomyUnowned.ts",
-      "operation": "find",
-      "owner": "reconcileCommandEconomyUnowned",
-      "expression": "db .collection<Corporation>(\"corporations\") .find({ sequentialId: { $type: NUMERIC_BSON_TYPE } })",
-      "fingerprint": "b4bd8948cbc48d70bc7c1ded0d130e21aacd851e737e67aff9397f8bc7913902"
-    },
-    {
-      "file": "src/lib/admin/seed/reconcileCommandEconomyUnowned.ts",
-      "operation": "updateOne",
-      "owner": "reconcileCommandEconomyUnowned",
-      "expression": "db .collection<Corporation>(\"corporations\") .updateOne({ _id: corpId }, { $set: { ...corpData, ...(sequentialId != null ? { sequentialId } : {}) } }, { upsert: true })",
-      "fingerprint": "39a3750ad3590f6de746df6edb1a17dd3fa5af49f5ea8e1b01e808d8a5aeb0a0"
-    },
-    {
-      "file": "src/lib/admin/seed/reconcileCommandEconomyUnowned.ts",
-      "operation": "updateOne",
-      "owner": "reconcileCommandEconomyUnowned",
-      "expression": "db.collection<Corporation>(\"corporations\").updateOne({ _id: corpId }, { $set: { soe: entry.corporation.soe, assignedSectorTypes: [sectorType], name: entry.corporation.name, description: entry.corporation.description, updatedAt: new Date(), }, })",
-      "fingerprint": "182661ed467c3159e4fc5834505f3900deea4a44d8656b6d5b056ac5a6e73369"
-    },
-    {
-      "file": "src/lib/admin/seed/reconcileCommandEconomyUnowned.ts",
-      "operation": "deleteMany",
-      "owner": "reconcileCommandEconomyUnowned",
-      "expression": "db.collection<CorporateSector>(\"corporateSectors\").deleteMany({ countryId, ...operatingSectorFilter(sectorType), stateId: { $in: [...new Set(entry.sectors.map((s) => s.stateId))] }, corporationId: { $ne: corpId }, })",
-      "fingerprint": "a868df75bdd5a8588427c82258bf5e2c28747c8ab4b0eb7c58bbf9d15567b951"
-    },
-    {
-      "file": "src/lib/admin/seed/reconcileCommandEconomyUnowned.ts",
-      "operation": "updateOne",
-      "owner": "reconcileCommandEconomyUnowned",
-      "expression": "db.collection<CorporateSector>(\"corporateSectors\").updateOne({ corporationId: corpId, stateId: sector.stateId, sectorType: sector.sectorType, industryModel: sector.industryModel ?? null, mediaDiscriminator: sector.mediaDiscriminator ?? null, }, { $set: { ...sectorData, corporationId: corpId, }, }, { upsert: true })",
-      "fingerprint": "386a7586dfd98a573b8cad986935e5e45487ddc15ce097e690c9aae39c46f9ba"
     },
     {
       "file": "src/lib/turn/suspiciousDetection.ts",
@@ -3297,13 +3227,6 @@
       "fingerprint": "ad957dc7f5052aef4177fdd3326b3fe94d38b5c905e949b395555c597b4ac6ce"
     },
     {
-      "file": "src/lib/corporations/restoreSectorsToUnowned.ts",
-      "operation": "findOneAndUpdate",
-      "owner": "restoreSectorsToUnowned",
-      "expression": "db.collection<UnownedSector>(\"unownedSectors\").findOneAndUpdate({ stateId: delta.stateId, sectorType: delta.sectorType, ...(delta.industryModel != null || delta.sectorType === \"manufacturing\" ? { industryModel: delta.industryModel ?? null } : {}), mediaDiscriminator: delta.mediaDiscriminator ?? null, }, [ { $set: { stateId: { $ifNull: [\"$stateId\", delta.stateId] }, countryId: { $ifNull: [\"$countryId\", delta.countryId] }, sectorType: { $ifNull: [\"$sectorType\", delta.sectorType] }, ...(delta.industryModel != null || delta.sectorType === \"manufacturing\" ? { industryModel: { $ifNull: [\"$industryModel\", delta.industryModel ?? null] } } : {}), mediaDiscriminator: { $ifNull: [\"$mediaDiscriminator\", delta.mediaDiscriminator ?? null], }, createdAt: { $ifNull: [\"$createdAt\", now] }, updatedAt: now, [creditField]: { $let: { vars: { currentValue: creditBaseExpr, recentRestores: { $filter: { input: { $ifNull: [\"$recentCorporateSectorRestores\", []] }, as: \"restore\", cond: { $or: [ { $eq: [\"$$restore.pendingSourceDelete\", true] }, { $gte: [\"$$restore.restoredAt\", retryWindowStart] }, ], }, }, }, }, in: { $let: { vars: { recentRestoreIds: { $map: { input: \"$$recentRestores\", as: \"restore\", in: \"$$restore.sectorId\", }, }, }, in: { $cond: [ { $in: [restoreToken, \"$$recentRestoreIds\"] }, \"$$currentValue\", { $add: [\"$$currentValue\", creditAmount] }, ], }, }, }, }, }, recentCorporateSectorRestores: { $let: { vars: { recentRestores: { $filter: { input: { $ifNull: [\"$recentCorporateSectorRestores\", []] }, as: \"restore\", cond: { $or: [ { $eq: [\"$$restore.pendingSourceDelete\", true] }, { $gte: [\"$$restore.restoredAt\", retryWindowStart] }, ], }, }, }, }, in: { $let: { vars: { recentRestoreIds: { $map: { input: \"$$recentRestores\", as: \"restore\", in: \"$$restore.sectorId\", }, }, }, in: { $cond: [ { $in: [restoreToken, \"$$recentRestoreIds\"] }, \"$$recentRestores\", { $concatArrays: [ \"$$recentRestores\", [{ sectorId: restoreToken, restoredAt: now }], ], }, ], }, }, }, }, }, }, }, { $set: unownedPoolTrailingSet(delta.sectorType as CorporationType, plantsEnabled, eraUnitScale, delta.industryModel, delta.mediaDiscriminator), }, ], { upsert: true, returnDocument: \"before\" })",
-      "fingerprint": "623590315529485b765fcff2f620f695b0dd7c0dfb4b0900a5b807f39629fcdb"
-    },
-    {
       "file": "src/lib/turn/bondTurnHelpers.ts",
       "operation": "bulkWrite",
       "owner": "rollbackDefaultedIssuerMaturityFlows",
@@ -3778,34 +3701,6 @@
       "owner": "fillPendingShareOrders",
       "expression": "db.collection<EquityMarketPool>(EQUITY_MARKET_POOLS_COLLECTION).updateOne({ _id: currency, ...(net < 0 ? { cashLocal: { $gte: -net } } : {}), }, { $inc: { cashLocal: net, ...(purchasesIn > 0 ? { \"lifetime.purchasesIn\": purchasesIn } : {}), ...(salesOut > 0 ? { \"lifetime.salesOut\": salesOut } : {}), }, $set: { updatedAt: now }, })",
       "fingerprint": "b14cdf85c7e9fee834aafe9ce97af398cf8708c1b16d3c8dd807a09e4f9ce59d"
-    },
-    {
-      "file": "src/lib/turn/autoSectorSeed.ts",
-      "operation": "find",
-      "owner": "processAutoSectorSeed",
-      "expression": "db .collection<UnownedSector>(\"unownedSectors\") .find({ sectorType, industryModel, mediaDiscriminator })",
-      "fingerprint": "bfe9b9e31e259060f1436fafbcc8d08dcd50d89cd6a3e045c539a947a82cf5a8"
-    },
-    {
-      "file": "src/lib/turn/autoSectorSeed.ts",
-      "operation": "updateMany",
-      "owner": "processAutoSectorSeed",
-      "expression": "db .collection<UnownedSector>(\"unownedSectors\") .updateMany({ _id: { $in: openIds } }, [boostPipeline])",
-      "fingerprint": "c3dc033bef544c5c8671e8a3591a8a3b7011b46f67603c32d31ffc1adbd32522"
-    },
-    {
-      "file": "src/lib/turn/autoSectorSeed.ts",
-      "operation": "updateMany",
-      "owner": "processAutoSectorSeed",
-      "expression": "db.collection(\"corporateSectors\").updateMany({ sectorType, industryModel, mediaDiscriminator, corporationId: { $in: natCorpObjectIds }, }, [ { $set: { revenue: { $round: [{ $multiply: [\"$revenue\", multiplier] }, 0] }, ...(plantsEnabled ? { capitalStock: { $multiply: [{ $ifNull: [\"$capitalStock\", 0] }, multiplier], }, plantCount: { $cond: [ { $gt: [boostedStock, 0] }, { $max: [1, { $floor: [{ $divide: [boostedStock, quantum] }] }] }, 0, ], }, plantUnitRemainder: { $cond: [ { $gte: [boostedStock, quantum] }, { $subtract: [ boostedStock, { $multiply: [ { $floor: [{ $divide: [boostedStock, quantum] }] }, quantum, ], }, ], }, 0, ], }, } : {}), updatedAt: now, }, }, ])",
-      "fingerprint": "367ebafe6d3441220b32f81c40129d8cd93bf84cd22a15ee1f5a9eda7ff44424"
-    },
-    {
-      "file": "src/lib/turn/autoSectorSeed.ts",
-      "operation": "insertOne",
-      "owner": "processAutoSectorSeed",
-      "expression": "db.collection<UnownedSector>(\"unownedSectors\").insertOne({ _id: new ObjectId(), stateId: state._id as string, countryId: state.countryId as CountryId, sectorType, industryModel, mediaDiscriminator, revenue: seedRevenue, headroomUnits: computeUnownedHeadroomUnits(sectorType, seedRevenue, eraUnitScale, industryModel, mediaDiscriminator), createdAt: now, updatedAt: now, })",
-      "fingerprint": "1c4506ee0a08b0ca2de79a1f381c3c160e8ce757ab233e015cdafe4963c34489"
     },
     {
       "file": "src/lib/world/playerHandoff.ts",

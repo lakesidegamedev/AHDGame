@@ -12,12 +12,12 @@
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ObjectId, type Db } from "mongodb";
-import type { Corporation, CorporateSector, UnownedSector } from "@/lib/db/types";
+import type { Corporation, CorporateSector } from "@/lib/db/types";
 import { stubMarketizationDb } from "@/lib/test-utils/stubMarketizationDb";
 
 // Spied rather than stubbed: the assertion that the sweep CONSULTS the gate is
 // what makes this test fail if the filter is deleted. The sweep's entry
-// heuristics depend on headroom, capacity anchors, placement signals and
+// heuristics depend on unmet demand, capacity anchors, placement signals and
 // module-level state that make purely behavioural fixtures order-dependent -
 // verified on 2026-09-15, where the same UKR fixture was load-bearing in one
 // arrangement and vacuous in another. So this pins the seam, not the heuristic.
@@ -75,23 +75,15 @@ function makeOwnedSector(corp: Corporation, stateId: string): CorporateSector {
   } as unknown as CorporateSector;
 }
 
-function makeUnowned(countryId: string, stateId: string): UnownedSector {
-  return {
-    _id: new ObjectId(),
-    countryId,
-    stateId,
-    sectorType: "technology",
-    revenue: 80_000_000,
-    profitMargin: 35,
-    workers: 2000,
-  } as unknown as UnownedSector;
+function makeState(countryId: string, stateId: string) {
+  return { _id: stateId, countryId };
 }
 
 /** Minimal read-only db over the nine collections the sweep touches. */
 function makeDb(rows: {
   corporations: Corporation[];
   corporateSectors: CorporateSector[];
-  unownedSectors: UnownedSector[];
+  states: { _id: string; countryId: string }[];
 }): Db {
   const find = (docs: unknown[]) => ({
     toArray: async () => docs,
@@ -106,8 +98,8 @@ function makeDb(rows: {
           ? rows.corporations
           : name === "corporateSectors"
             ? rows.corporateSectors
-            : name === "unownedSectors"
-              ? rows.unownedSectors
+            : name === "states"
+              ? rows.states
               : [];
       return {
         find: () => find(docs),
@@ -125,14 +117,14 @@ function makeDb(rows: {
 describe("processNppCorporationDecisions - command economy", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("partitions candidate markets through the gate before proposing any entry", async () => {
+  it("partitions candidate regions through the gate before proposing any entry", async () => {
     // The deletion guard. If the filter is removed the gate is never called and
     // this fails, regardless of whether the fixture happened to trigger entry.
     const ru = makeCorp("RU", "CEN");
     const db = makeDb({
       corporations: [ru],
       corporateSectors: [makeOwnedSector(ru, "CEN")],
-      unownedSectors: [makeUnowned("RU", "CEN")],
+      states: [makeState("RU", "CEN")],
     });
 
     await processNppCorporationDecisions(db, TURN, new Date());
@@ -147,7 +139,7 @@ describe("processNppCorporationDecisions - command economy", () => {
     const db = makeDb({
       corporations: [us],
       corporateSectors: [makeOwnedSector(us, "CA")],
-      unownedSectors: [makeUnowned("US", "CA")],
+      states: [makeState("US", "CA")],
     });
 
     await processNppCorporationDecisions(db, TURN, new Date());
@@ -165,7 +157,7 @@ describe("processNppCorporationDecisions - command economy", () => {
     const db = makeDb({
       corporations: [ru, cn],
       corporateSectors: [makeOwnedSector(ru, "CEN"), makeOwnedSector(cn, "HB")],
-      unownedSectors: [makeUnowned("RU", "CEN"), makeUnowned("CN", "HB")],
+      states: [makeState("RU", "CEN"), makeState("CN", "HB")],
     });
 
     const result = await processNppCorporationDecisions(db, TURN, new Date());

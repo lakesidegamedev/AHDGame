@@ -5,19 +5,14 @@ import { getDb } from "@/lib/mongodb";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { requireBotToken } from "@/lib/api/requireBotToken";
 import { checkRateLimit, rateLimitResponse, BOT_FINANCIAL_LIMITS } from "@/lib/api/rateLimit";
-import type { CorporateSector, State, UnownedSector } from "@/lib/db/types";
 import {
   OPERATING_SECTOR_TYPE_LABELS,
-  SECTOR_MARKET_GDP_FRACTION,
-  SECTOR_TYPE_COUNT,
   calculateWorkers,
   isOperatingSectorType,
   operatingSectorFilter,
   OPERATING_SECTOR_TYPES,
 } from "@/lib/constants/corporations";
 
-import { type CountryId } from "@/lib/constants/countries";
-import { getGdpAnchorRate, loadWorldPreset } from "@/lib/currency/gdpAnchorRate";
 import {
   fxRateForCorpFromMap,
   fxRateForSectorHostFromMap,
@@ -31,11 +26,10 @@ import type { CurrencyCode } from "@/lib/constants/currencies";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
-import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
 
 const PAGE_SIZE = 10;
 
-// GET /api/discord-bot/sectors — Returns paginated corporate sector data for a given type; supports owned and unowned market modes.
+// GET /api/discord-bot/sectors — Returns paginated corporate sector data for a given type; unowned=true is retired and returns an empty list.
 // Auth: requireAdminOrApiKey
 // Errors: 400, 401
 export async function GET(request: Request) {
@@ -68,132 +62,18 @@ export async function GET(request: Request) {
     const db = await getDb();
 
     if (unowned) {
-      // The "unowned market per state" list was the split finder, where to CLAIM
-      // an unowned pool. Under plants that mechanic is retired (you expand by
-      // building plants), and the pool is no longer claimable market, so this mode
-      // returns nothing rather than advertising a slice that cannot be taken.
-      const { getMarketSystemModeForDb, marketAtLeast } = await import("@/lib/market/featureFlag");
-      if (marketAtLeast(await getMarketSystemModeForDb(db), "plants")) {
-        return NextResponse.json({
-          found: false,
-          mode: "unowned",
-          sectorType,
-          sectorLabel: OPERATING_SECTOR_TYPE_LABELS[sectorType],
-          page: 1,
-          totalPages: 1,
-          totalItems: 0,
-          sectors: [],
-        });
-      }
-
-      // Compute unowned market per state for this sector type
-      // 1. Get all states with GDP
-      const states = await statesCollection(db)
-        .find({})
-        .project<{
-          _id: string;
-          name: string;
-          gdp: number;
-          countryId: CountryId;
-        }>({ _id: 1, name: 1, gdp: 1, countryId: 1 })
-        .toArray();
-
-      // 2. Get owned + persisted unowned sectors of this type + currency info for anchor
-      // normalization. The persisted `unownedSectors` pool is authoritative (it grows
-      // alongside owned sectors); the GDP-derived formula is only a fallback for
-      // state+sector combos that have never been seeded. Matches the pattern in
-      // /api/discord-bot/marketshare and /api/corporations/.../sectors.
-      const [ownedSectors, persistedUnowned, fxByCurrency, worldPreset] = await Promise.all([
-        corporateSectorsCollection(db).find(laneFilter).toArray(),
-        unownedSectorsCollection(db).find(laneFilter).toArray(),
-        loadFxRatesByCurrency(db),
-        loadWorldPreset(db),
-      ]);
-      const ownerCorpIds = Array.from(new Set(ownedSectors.map((s) => s.corporationId.toString())));
-      const ownerObjectIds = ownerCorpIds
-        .filter((id) => ObjectId.isValid(id))
-        .map((id) => new ObjectId(id));
-      const ownerCorps =
-        ownerObjectIds.length > 0
-          ? await corporationsCollection(db)
-              .find({ _id: { $in: ownerObjectIds } })
-              .project<{ _id: ObjectId } & CorpCapitalCurrencyInfo>({
-                _id: 1,
-                countryId: 1,
-                liquidCurrencyCode: 1,
-              })
-              .toArray()
-          : [];
-      const ownerCorpMap = new Map(ownerCorps.map((c) => [c._id.toString(), c]));
-
-      // Sum owned revenue per state in ₳ (cross-corp, heterogeneous currencies).
-      // `revenue` is denominated in the SECTOR's host currency, so it converts
-      // at the SECTOR's host rate, not the owner's rate.
-      const ownedByState = new Map<string, number>();
-      for (const s of ownedSectors) {
-        const corp = ownerCorpMap.get(s.corporationId.toString());
-        const revenueAnchor = readCorpEconomicAnchor(
-          s.revenue,
-          resolveSectorHostCurrencyCode(s, corp),
-          fxRateForSectorHostFromMap(s, corp, fxByCurrency)
-        );
-        ownedByState.set(s.stateId, (ownedByState.get(s.stateId) ?? 0) + revenueAnchor);
-      }
-
-      // unownedSectors.revenue is ₳-native (Task 9 — cross-corp shed normalizes on write)
-      // so it sums directly with the ₳ owned anchors above.
-      const persistedUnownedByState = new Map<string, number>();
-      for (const u of persistedUnowned) {
-        persistedUnownedByState.set(u.stateId, u.revenue);
-      }
-
-      // Compute unowned for each state. Prefer the persisted pool when present; only
-      // fall back to the GDP-derived market when no pool has been seeded for this
-      // state+sector combo.
-      const unownedList = states
-        .map((state) => {
-          const owned = ownedByState.get(state._id) ?? 0;
-          const persisted = persistedUnownedByState.get(state._id);
-          let totalMarket: number;
-          let unownedRevenue: number;
-          if (persisted !== undefined) {
-            unownedRevenue = Math.max(0, persisted);
-            totalMarket = Math.max(0, owned + unownedRevenue);
-          } else {
-            // Era-scoped GDP→₳ rate (refs #3778).
-            const usdExchangeRate = getGdpAnchorRate(state.countryId, worldPreset);
-            totalMarket = Math.round(
-              (state.gdp * usdExchangeRate * SECTOR_MARKET_GDP_FRACTION) / SECTOR_TYPE_COUNT
-            );
-            unownedRevenue = Math.max(0, totalMarket - owned);
-          }
-          return {
-            stateId: state._id,
-            stateName: state.name,
-            countryId: state.countryId,
-            totalMarket: Math.round(totalMarket),
-            ownedRevenue: Math.round(owned),
-            unownedRevenue: Math.round(unownedRevenue),
-          };
-        })
-        .filter((s) => s.unownedRevenue > 0)
-        .sort((a, b) => b.unownedRevenue - a.unownedRevenue);
-
-      const totalItems = unownedList.length;
-      const totalPages = Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
-      const clampedPage = Math.min(page, totalPages);
-      const start = (clampedPage - 1) * PAGE_SIZE;
-      const pageItems = unownedList.slice(start, start + PAGE_SIZE);
-
+      // The unowned list is retired: markets are entered by building. The request
+      // stays valid for the bot and answers with an empty list.
       return NextResponse.json({
-        found: pageItems.length > 0,
+        found: false,
         mode: "unowned",
+        deprecated: "unowned=true is retired: markets are entered by building. Use the owned list.",
         sectorType,
         sectorLabel: OPERATING_SECTOR_TYPE_LABELS[sectorType],
-        page: clampedPage,
-        totalPages,
-        totalItems,
-        sectors: pageItems,
+        page: 1,
+        totalPages: 1,
+        totalItems: 0,
+        sectors: [],
       });
     }
 

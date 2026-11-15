@@ -741,7 +741,7 @@ export async function executeCorporationBondDefaultDissolution(
   }
 
   // NPP successors take the sectors over so their plants keep producing; only
-  // what they cannot take returns to the unowned pool.
+  // what they cannot take stops producing.
   const disposal = await disposeLeavingSectors(db, refreshedCorporation, sectors, now);
   await bondsCollection(db).deleteMany({ corporationId: refreshedCorporation._id });
   await releaseCorporationHeldSharesToFloat(db, refreshedCorporation._id, now);

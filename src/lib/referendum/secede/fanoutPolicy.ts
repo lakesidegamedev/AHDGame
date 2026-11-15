@@ -76,7 +76,6 @@ export const SECEDE_FANOUT: FanoutScope[] = [
   rehome("subsidies"),
   // ── economic sectors → distribute across sub-regions by GDP (revenue) ────────
   { collection: "corporateSectors", key: "stateIdField", policy: "partitionGdp" },
-  { collection: "unownedSectors", key: "stateIdField", policy: "partitionGdp" },
   // ── one-doc-per-region (_id IS the region id) ───────────────────────────────
   // Both halves of a region's metrics, not just the macro one: the political
   // BOARD is where approval, corp margins and crisis triggers are scored from,

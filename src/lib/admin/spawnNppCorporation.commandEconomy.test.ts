@@ -4,7 +4,6 @@ import { ObjectId } from "mongodb";
 import { createMockDb, getAccessedCollections, type MockDb } from "@/lib/test-utils/mockDb";
 import { stubMarketizationDb } from "@/lib/test-utils/stubMarketizationDb";
 import { OPERATING_SECTOR_TYPES } from "@/lib/constants/corporations";
-import { computeUnownedHeadroomUnits } from "@/lib/market/unownedHeadroom";
 
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
 vi.mock("@/lib/npp/generator", () => ({
@@ -36,9 +35,6 @@ vi.mock("@/lib/constants/sectorSeedEra", () => ({
 vi.mock("./nppCorpCeoSelection", () => ({
   buildCeoAffiliations: vi.fn().mockReturnValue([]),
   chooseNppCorpCeo: vi.fn().mockReturnValue({ kind: "new", party: null }),
-}));
-vi.mock("@/lib/admin/seed/seedUnownedSectors", () => ({
-  computeUnownedSeedRevenue: vi.fn().mockReturnValue(0),
 }));
 vi.mock("@/lib/market/featureFlag", () => ({
   getMarketSystemModeForDb: vi.fn().mockResolvedValue("capital"),
@@ -80,21 +76,12 @@ describe("batchSpawnNppCorporations - planned-economy gate", () => {
 
   it("still spawns the full sector stack in an eligible market economy", async () => {
     base.collection("states");
-    base.collection("unownedSectors");
     base.collection("exchangeRates");
     base.collectionMocks.states!.findOne.mockResolvedValue({
       _id: "DC",
       countryId: "US",
       name: "DC",
       gdp: 1_000_000_000,
-    });
-    base.collectionMocks.unownedSectors!.findOne.mockResolvedValue({
-      _id: new ObjectId(),
-      stateId: "DC",
-      countryId: "US",
-      sectorType: "manufacturing",
-      revenue: 40_000_000,
-      headroomUnits: computeUnownedHeadroomUnits("manufacturing", 40_000_000, 1),
     });
     base.collectionMocks.exchangeRates!.findOne.mockResolvedValue(null);
 

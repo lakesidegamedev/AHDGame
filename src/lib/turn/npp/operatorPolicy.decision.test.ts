@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { ObjectId } from "mongodb";
-import type { Corporation, CorporateSector, UnownedSector } from "@/lib/db/types";
+import type { Corporation, CorporateSector } from "@/lib/db/types";
+import {
+  candidate,
+  candidatesByCountry,
+  uniformDemandSignals,
+} from "./__fixtures__/marketCandidates";
 import type { CorporationOperatorPolicy } from "@/lib/db/types/corporation";
 import { CAPACITY_ANCHOR_YEAR } from "@/lib/constants/capacityEconomy";
 import { AUTOPILOT_MODIFIERS } from "@/lib/corporations/autopilot";
@@ -69,18 +74,10 @@ function run({ autopilot = false, policy, losingSector = false }: Options = {}) 
       plantsPnl: { revenue: 100, costs: 1000, profit: -900 },
     } as unknown as CorporateSector;
   }
-  const pools = specs.map(
-    ([sectorType, countryId, stateId]) =>
-      ({
-        _id: new ObjectId(),
-        countryId,
-        stateId,
-        sectorType,
-        revenue: 1,
-        headroomUnits: 1_000_000,
-      }) as UnownedSector
+  const pools = specs.map(([sectorType, countryId, stateId]) =>
+    candidate({ sectorType, countryId, stateId } as never)
   );
-  const byCountry = new Map<string, UnownedSector[]>();
+  const byCountry = candidatesByCountry([]);
   for (const pool of pools)
     byCountry.set(pool.countryId, [...(byCountry.get(pool.countryId) ?? []), pool]);
   const decision = makeNppCorpDecision(
@@ -95,7 +92,8 @@ function run({ autopilot = false, policy, losingSector = false }: Options = {}) 
     byCountry,
     new Set(),
     () => 2,
-    PLANTS
+    PLANTS,
+    uniformDemandSignals(1000000)
   );
   return { decision, sectors };
 }

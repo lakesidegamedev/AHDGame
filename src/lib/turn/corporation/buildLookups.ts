@@ -173,7 +173,6 @@ export async function buildCorporationLookups(
     orgMembershipDocs,
     activeFtaPairs,
     allTariffs,
-    unownedSectorDocs,
     stateResourceCapacityDocs,
     activeSubsidies,
   } = await loadCorporationLookupInputs({ db, options, embargoTurn });
@@ -804,7 +803,6 @@ export async function buildCorporationLookups(
     sectors: allSectors,
     corpById,
     stateById,
-    unownedSectors: unownedSectorDocs,
     exchangeRatesByCurrency,
     preset: marketSharePreset,
     plantsEnabled: options?.plantsEnabled === true,

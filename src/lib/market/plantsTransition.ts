@@ -358,13 +358,6 @@ export interface PlantsPreflightWorldInput {
   currentTurn: number;
   currentYear: number | null;
   assessments: readonly PlantsPreflightSectorAssessment[];
-  unowned: {
-    total: number;
-    /** Docs still lacking `headroomUnits` — the plants-mode leading field. */
-    missingHeadroomUnits: number;
-    /** Whether `2026-08-01-backfill-unowned-headroom-units` has a marker. */
-    backfillMigrationRan: boolean;
-  };
   crises: {
     /** Active crisis effects whose `physicality` is explicitly "financial". */
     financialOnly: number;
@@ -417,7 +410,6 @@ export interface PlantsPreflightReport {
     landsBetweenTurns: [number, number] | null;
   };
   cip: { sectorsWithOutstanding: number; outstandingOrders: number; totalAnchor: number };
-  unowned: PlantsPreflightWorldInput["unowned"];
   crises: PlantsPreflightWorldInput["crises"];
   /** The worst offenders, for the human-readable report. */
   worstBlockers: PlantsPreflightSectorAssessment[];
@@ -492,24 +484,6 @@ export function buildPlantsPreflightReport(
     );
   }
 
-  if (input.unowned.missingHeadroomUnits > 0) {
-    // The unowned pool's leading field switches to `headroomUnits` under
-    // plants. Docs without it read as zero headroom: the pool stops absorbing
-    // and releasing capacity correctly the moment the tier changes.
-    reasons.push(
-      `${input.unowned.missingHeadroomUnits} of ${input.unowned.total} unownedSectors have no headroomUnits. ` +
-        `Run the 2026-08-01-backfill-unowned-headroom-units migration first` +
-        (input.unowned.backfillMigrationRan
-          ? " (its marker EXISTS, so it ran and left these behind — investigate before flipping)."
-          : " (no marker — it has not run).")
-    );
-  } else if (!input.unowned.backfillMigrationRan && input.unowned.total > 0) {
-    cautions.push(
-      "Every unownedSector has headroomUnits but the backfill migration has no marker — " +
-        "likely seeded rather than backfilled. Harmless, but the marker will not stop a later re-run."
-    );
-  }
-
   if (input.crises.legacyUnflagged > 0) {
     cautions.push(
       `${input.crises.legacyUnflagged} active crisis effect(s) carry no \`physicality\` flag and are therefore ` +
@@ -578,7 +552,6 @@ export function buildPlantsPreflightReport(
       outstandingOrders: outstandingSectors.reduce((s, a) => s + a.outstandingBuildOrders, 0),
       totalAnchor: assessments.reduce((s, a) => s + a.computedCipAnchor, 0),
     },
-    unowned: input.unowned,
     crises: input.crises,
     worstBlockers: [...withBlockers]
       .sort((a, b) => Math.abs(b.revenueDeltaAnchor) - Math.abs(a.revenueDeltaAnchor))

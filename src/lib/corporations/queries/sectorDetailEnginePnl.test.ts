@@ -52,7 +52,6 @@ const BASE_ARGS = {
   techGrowthCostMultiplier: 1,
   eraUnitScale: 1,
   corpCapitalAnchor: 10_000_000,
-  headroomUnits: 500,
   workers: 100,
   regulatoryBurdenPp: 0,
   crisisMarginPenaltyPp: 0,

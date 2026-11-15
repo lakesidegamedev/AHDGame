@@ -24,7 +24,6 @@ const plants = {
   mothballed: false,
   buildTurns: 3,
   laborIntensity: 2,
-  headroomUnits: 10_000_000,
   demandGapUnits: 10_000_000,
   measuredDemandGapUnits: 10_000_000,
   workers: 10,
@@ -107,13 +106,12 @@ it("shows fluctuation and idle-capacity warnings even when an order fits today's
   expect(screen.getByText(/not demand reserved for your company/)).toBeTruthy();
 });
 
-it("does not cap funded building counts by the retired unclaimed-share pool", () => {
+it("sizes funded building counts from the funded build room", () => {
   const size = plantSizeUnits("telecommunications");
   renderDialog(
     vi.fn(),
     {
       ...plants,
-      headroomUnits: 0,
       measuredDemandGapUnits: size * 4,
       buildDemand: [
         {
@@ -177,11 +175,10 @@ describe("BuildCapacityDialog count control", () => {
     expect(screen.queryByLabelText(/Finance this build/)).toBeNull();
     expect(fetch).not.toHaveBeenCalled();
   });
-  it("matches measured buyer demand even when share headroom is larger", () => {
+  it("matches measured buyer demand", () => {
     const units = plantSizeUnits("manufacturing");
     const { input } = renderDialog(vi.fn(), {
       ...plants,
-      headroomUnits: units * 20,
       demandGapUnits: units * 3.9,
       measuredDemandGapUnits: units * 3.9,
     });
@@ -196,7 +193,6 @@ describe("BuildCapacityDialog count control", () => {
     const units = plantSizeUnits("manufacturing");
     const { input } = renderDialog(vi.fn(), {
       ...plants,
-      headroomUnits: units,
       demandGapUnits: units / 2,
       measuredDemandGapUnits: units / 2,
       buildQuote: { ...plants.buildQuote, corpCapitalAnchor: 0, maxAffordableUnits: 0 },

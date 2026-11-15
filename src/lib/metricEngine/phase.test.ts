@@ -1,12 +1,31 @@
 import { constantPriceOutput } from "./rules/outputVolume";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+
+// The real background term is derived from regional GDP and dwarfs the toy
+// revenues these fixtures use. Tests set the mass they mean per region; the
+// derivation itself is covered in backgroundEconomy.test.ts.
+const background = vi.hoisted(() => ({ byState: new Map<string, number>() }));
+vi.mock("./backgroundEconomy", () => ({
+  backgroundSectorMass: (state: { _id: string }) => {
+    const revenue = background.byState.get(state._id);
+    return revenue === undefined ? [] : [{ revenue }];
+  },
+}));
 import type { Db } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
 import { resetCorpFxRateCacheForTests } from "@/lib/currency/corporationCapital";
-import { GDP_GROWTH_SCENARIOS, captureGoldenOutput } from "./__fixtures__/gdpGrowthGolden";
+import {
+  GDP_GROWTH_SCENARIOS,
+  GOLDEN_BACKGROUND_REVENUE,
+  captureGoldenOutput,
+} from "./__fixtures__/gdpGrowthGolden";
 import { runMetricEngine } from "./phase";
 import { applyCrisisEffects } from "@/lib/crises/applyEffects";
 import { POLITICAL_METRIC_FAMILIES } from "@/lib/politicalMetrics/families";
+
+beforeEach(() => {
+  background.byState.clear();
+});
 
 describe("runMetricEngine — golden-master parity with updateGdpGrowth", () => {
   let db: MockDb;
@@ -19,6 +38,9 @@ describe("runMetricEngine — golden-master parity with updateGdpGrowth", () => 
   for (const scenario of GDP_GROWTH_SCENARIOS) {
     it(`${scenario.name}: produces the frozen gdpGrowth output (parity)`, async () => {
       scenario.seed(db);
+      for (const [stateId, revenue] of Object.entries(GOLDEN_BACKGROUND_REVENUE)) {
+        background.byState.set(stateId, revenue);
+      }
       const out = await captureGoldenOutput(db, runMetricEngine, scenario.turn);
       expect(out).toEqual(scenario.expected);
     });
@@ -68,7 +90,6 @@ describe("runMetricEngine — phase behavior", () => {
       ];
       setupCollection("states", regionDocs);
       setupCollection("corporateSectors", []);
-      setupCollection("unownedSectors", []);
       setupCollection(
         "macroMetrics",
         ["YU_BIH", "CA"].map((_id) => ({
@@ -150,7 +171,6 @@ describe("runMetricEngine — phase behavior", () => {
       { _id: "secCA", stateId: "CA", revenue: 1000, currentGrowthRate: 3 },
       { _id: "secTX", stateId: "TX", revenue: 1000, currentGrowthRate: 3 },
     ]);
-    setupCollection("unownedSectors", []);
     setupCollection("macroMetrics", macro);
     db.collectionMocks.stateMetrics = db.collectionMocks.macroMetrics!;
     setupCollection("corporations", []);
@@ -215,7 +235,7 @@ describe("runMetricEngine — phase behavior", () => {
     setupCollection("corporateSectors", [
       { _id: "secA", stateId: "s1", revenue: 1000, currentGrowthRate: 3, corporationId: undefined },
     ]);
-    setupCollection("unownedSectors", [{ _id: "uA", stateId: "s1", revenue: 500 }]);
+    background.byState.set("s1", 500);
     setupCollection("stateMetrics", []);
     // SP5: alias macroMetrics to the same mock — the engine reads/writes both stores.
     db.collectionMocks.macroMetrics = db.collectionMocks.stateMetrics!;
@@ -272,7 +292,6 @@ describe("runMetricEngine — phase behavior", () => {
       { _id: "secA", stateId: "s1", revenue: 1000, currentGrowthRate: 3, corporationId: undefined },
       { _id: "secB", stateId: "s2", revenue: 1000, currentGrowthRate: 3, corporationId: undefined },
     ]);
-    setupCollection("unownedSectors", []);
     setupCollection("stateMetrics", []);
     // SP5: alias macroMetrics to the same mock — the engine reads/writes both stores.
     db.collectionMocks.macroMetrics = db.collectionMocks.stateMetrics!;
@@ -325,7 +344,6 @@ describe("runMetricEngine — phase behavior", () => {
     setupCollection("corporateSectors", [
       { _id: "secA", stateId: "s1", revenue: 1000, currentGrowthRate: 3, corporationId: undefined },
     ]);
-    setupCollection("unownedSectors", []);
     // prior labor force below this turn's (600×0.6=360) → positive g_L
     setupCollection("stateMetrics", [
       { _id: "s1", economic: { laborParticipation: { value: 60 }, laborForce: { value: 358 } } },
@@ -380,7 +398,6 @@ describe("runMetricEngine — phase behavior", () => {
     setupCollection("corporateSectors", [
       { _id: "secA", stateId: "s1", revenue: 1000, currentGrowthRate: 3 },
     ]);
-    setupCollection("unownedSectors", []);
     setupCollection("stateMetrics", [
       { _id: "s1", economic: { laborParticipation: { value: 60 }, laborForce: { value: 360 } } },
     ]);
@@ -437,7 +454,6 @@ describe("runMetricEngine — phase behavior", () => {
     setupCollection("corporateSectors", [
       { _id: "secA", stateId: "s1", revenue: 1000, currentGrowthRate: 2, corporationId: undefined },
     ]);
-    setupCollection("unownedSectors", []);
     setupCollection("stateMetrics", [
       { _id: "s1", economic: { laborParticipation: { value: 60 }, laborForce: { value: 360 } } },
     ]);
@@ -492,7 +508,6 @@ describe("runMetricEngine — phase behavior", () => {
     setupCollection("corporateSectors", [
       { _id: "secA", stateId: "s1", revenue: 1000, currentGrowthRate: 3, corporationId: undefined },
     ]);
-    setupCollection("unownedSectors", []);
     setupCollection("stateMetrics", []);
     // SP5: alias macroMetrics to the same mock — the engine reads/writes both stores.
     db.collectionMocks.macroMetrics = db.collectionMocks.stateMetrics!;
@@ -521,7 +536,6 @@ describe("runMetricEngine — phase behavior", () => {
       { _id: "federal", name: "federal", countryId: "US", population: 1, gdp: 1 },
     ]);
     setupCollection("corporateSectors", []);
-    setupCollection("unownedSectors", []);
     setupCollection("stateMetrics", []);
     // SP5: alias macroMetrics to the same mock — the engine reads/writes both stores.
     db.collectionMocks.macroMetrics = db.collectionMocks.stateMetrics!;
@@ -563,7 +577,6 @@ describe("runMetricEngine — v2-2/v2-3a labour wage-index Δ → medianIncome +
     setupCollection(target, "corporateSectors", [
       { _id: "secA", stateId: "s1", revenue: 1000, currentGrowthRate: 3, corporationId: undefined },
     ]);
-    setupCollection(target, "unownedSectors", []);
     setupCollection(target, "stateMetrics", stateMetrics);
     target.collectionMocks.macroMetrics = target.collectionMocks.stateMetrics!;
     setupCollection(target, "corporations", []);
@@ -965,7 +978,7 @@ describe("runMetricEngine — P2/D7 plants-mode realized-revenue sector signal",
         corporationId: opts.corp?._id,
       },
     ]);
-    setupCollection("unownedSectors", [{ _id: "uA", stateId: "s1", revenue: 500 }]);
+    background.byState.set("s1", 500);
     setupCollection("stateMetrics", opts.prevMetrics ?? []);
     db.collectionMocks.macroMetrics = db.collectionMocks.stateMetrics!;
     setupCollection("corporations", opts.corp ? [opts.corp] : []);
@@ -1038,7 +1051,7 @@ describe("runMetricEngine — P2/D7 plants-mode realized-revenue sector signal",
 
   it("ignores the realized baseline when plants is off (byte-identical legacy)", async () => {
     // Same world, mode capital: the weighted average of growth 3 (1010) and the
-    // 0.5 unowned pin (500) — the realized delta must not leak in.
+    // 0.5 background pin (500) — the realized delta must not leak in.
     seedWorld({
       mode: "capital",
       revenue: 1010,

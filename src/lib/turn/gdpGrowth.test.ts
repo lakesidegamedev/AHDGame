@@ -28,7 +28,7 @@ import {
 // ── computeWeightedGrowthRate ─────────────────────────────────────────────────
 
 describe("computeWeightedGrowthRate", () => {
-  it("returns DEFAULT_UNOWNED_GROWTH_RATE (0.5%) when no sectors exist", () => {
+  it("returns DEFAULT_BACKGROUND_GROWTH_RATE (0.5%) when no sectors exist", () => {
     expect(computeWeightedGrowthRate([], [])).toBe(0.5);
   });
 

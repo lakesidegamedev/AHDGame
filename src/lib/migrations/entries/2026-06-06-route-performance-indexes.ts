@@ -81,11 +81,6 @@ const INDEXES: IndexPlan[] = [
     keys: { corporationId: 1, stateId: 1 },
     options: { name: "corporateSectors_corporation_state", background: true },
   },
-  {
-    collection: "unownedSectors",
-    keys: { stateId: 1, sectorType: 1 },
-    options: { name: "unownedSectors_state_sectorType", background: true },
-  },
 ];
 
 export const migration: Migration = {

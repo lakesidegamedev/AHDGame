@@ -42,7 +42,6 @@ const OLD_ADMIN = [
   "economy:npp-economy",
   "economy:index-funds",
   "economy:financial-ledger",
-  "economy:sector-seed",
   "players:users",
   "players:resources",
   "players:achievements",

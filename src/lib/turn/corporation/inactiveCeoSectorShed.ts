@@ -4,7 +4,7 @@
  * shed market footprint at the same rate as fully vacant corps. CEO retains
  * full authority; shed stops automatically the next turn after the user returns.
  *
- * Runs immediately after `shedVacantCeoSectorsToUnowned` — vacant corps are
+ * Runs immediately after `shedVacantCeoSectors` — vacant corps are
  * excluded here so they don't double-shed in a single turn.
  */
 
@@ -44,7 +44,7 @@ export function isInactiveCeoPenaltyCandidate(
   return true;
 }
 
-export async function shedInactiveCeoSectorsToUnowned(
+export async function shedInactiveCeoSectors(
   db: Db,
   lookups: CorporationLookups,
   now: Date,
@@ -53,7 +53,7 @@ export async function shedInactiveCeoSectorsToUnowned(
 ): Promise<SectorShedResult> {
   const candidates = lookups.corporations.filter(isInactiveCeoPenaltyCandidate);
   if (candidates.length === 0) {
-    return { corporateSectorsUpdated: 0, unownedSectorsUpdated: 0, totalRevenueShed: 0 };
+    return { corporateSectorsUpdated: 0, totalRevenueShed: 0 };
   }
 
   const userIds = Array.from(

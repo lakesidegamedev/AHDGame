@@ -477,22 +477,9 @@ export interface Competitor {
   isNpp?: boolean;
 }
 
-export interface SplitStrengthInfo {
-  splitCost: number;
-  splitMsCost: number;
-  splitEstimatedCapture: number;
-  splitEstimatedNetIncome: number;
-  projectedMarketShare: number;
-  exceedsDominanceThreshold: boolean;
-}
-
 export interface AttackInfo {
   canAttack?: boolean;
-  canSplit?: boolean;
   attackCost: number;
-  splitCost: number;
-  splitEstimatedCapture: number;
-  splitMsCost: number;
   userMarketingStrength: number;
   userLiquidCapital: number;
   userLiquidCurrencyCode?: string | null;
@@ -500,11 +487,6 @@ export interface AttackInfo {
   countryId?: string;
   plantCount?: number;
   plantSplitQuote?: PlantSectorSplitQuote;
-  /** Per-strength cost/capture breakdown. Present on pages loaded after the split-strength feature. */
-  splitStrengths?: {
-    full: SplitStrengthInfo;
-    half: SplitStrengthInfo;
-  };
   /** The viewed sector's current effective profit margin (%). Used to estimate net income. */
   sectorEffectiveMargin?: number;
 }
@@ -520,8 +502,6 @@ export interface Market {
     plantCount: number;
     successProbability: number;
   } | null;
-  unownedRevenue: number;
-  unownedPercent: number;
 }
 
 /**
@@ -713,11 +693,10 @@ export interface PlantsData {
     turnsRemaining: number;
     cap: number;
   };
-  headroomUnits: number;
   /**
    * Weighted expansion appetite across the output mix, including latent demand.
    * This is not a limit at which every output sells. Use measuredDemandGapUnits
-   * for automatic sizing. headroomUnits measures claimable market share.
+   * for automatic sizing.
    */
   demandGapUnits?: number;
   /** Measured room for every output after known queues; excludes latent demand. */
@@ -728,8 +707,6 @@ export interface PlantsData {
   roomHeldByOwnIdle?: boolean;
   /** Unsold-capacity retirement status. Absent when the plant is not glutted. */
   idleRetirement?: { turns: number; graceTurns: number; retiredUnits: number };
-  /** Unowned pool over owned capacity plus that pool, percent. */
-  unclaimedSharePct?: number;
   /** Strategy suggestion when the valuable output is oversupplied. Absent on older payloads. */
   retoolHint?: RetoolHint | null;
   currentTurn: number;

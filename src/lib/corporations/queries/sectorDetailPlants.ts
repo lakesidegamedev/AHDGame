@@ -97,15 +97,11 @@ export function buildSectorPlantsSection(args: {
   eraUnitScale: number;
   preset?: string;
   corpCapitalAnchor: number;
-  /** Untapped units in this market — see `unownedHeadroomUnitsOf`. */
-  headroomUnits: number;
   /** Expansion appetite; automatic sizing uses measuredDemandGapUnits. */
   demandGapUnits?: number;
   measuredDemandGapUnits?: number | null;
   buildDemand?: import("@/lib/corporations/rules/fundedBuildDemand").BuildDemandRow[];
   buildDemandTurn?: number;
-  /** Owned capacity in this (state, sectorType) cell, every producer, units/day. */
-  ownedCellCapacityUnits?: number;
   /** Strategy suggestion when the plant's valuable output is oversupplied (computeRetoolHint). */
   retoolHint?: RetoolHint | null;
   workers: number;
@@ -151,9 +147,7 @@ export function buildSectorPlantsSection(args: {
     eraUnitScale,
     preset,
     corpCapitalAnchor,
-    headroomUnits,
     demandGapUnits = 0,
-    ownedCellCapacityUnits,
     retoolHint = null,
     workers,
     money,
@@ -196,13 +190,6 @@ export function buildSectorPlantsSection(args: {
   // capacity that reaches the market first, so its room to build is 0.
   const ownThrottle = num(sector.demandThrottleFactor);
   const roomHeldByOwnIdle = !mothballed && ownThrottle != null && ownThrottle < 0.999;
-  // Unclaimed share from the same unowned pool `headroomUnits` measures.
-  const ownedCell = num(ownedCellCapacityUnits);
-  const unclaimedPool = nonNeg(headroomUnits);
-  const unclaimedSharePct =
-    ownedCell != null && ownedCell + unclaimedPool > 0
-      ? Math.round((unclaimedPool / (nonNeg(ownedCell) + unclaimedPool)) * 1000) / 10
-      : null;
 
   // ─── Idle attribution ──────────────────────────────────────────────────────
   // Every leg the engine applied is a factor in (0, 1]; its loss weight is
@@ -600,7 +587,6 @@ export function buildSectorPlantsSection(args: {
       turnsRemaining: governorTurnsRemaining,
       cap: governorCap,
     },
-    headroomUnits: nonNeg(headroomUnits),
     demandGapUnits: roomHeldByOwnIdle ? 0 : nonNeg(demandGapUnits),
     measuredDemandGapUnits: roomHeldByOwnIdle ? 0 : (args.measuredDemandGapUnits ?? null),
     buildDemand: args.buildDemand,
@@ -615,7 +601,6 @@ export function buildSectorPlantsSection(args: {
           },
         }
       : {}),
-    ...(unclaimedSharePct != null ? { unclaimedSharePct } : {}),
     retoolHint,
     currentTurn,
     buildQuote: {

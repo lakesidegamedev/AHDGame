@@ -14,7 +14,8 @@ import { ObjectId } from "mongodb";
 import { makeNppCorpDecision, type CommodityPriceRatioFn } from "./nppCorporationBehavior";
 import { ceoArchetypeModifiers } from "./ceoArchetype";
 import type { NppCorpDecision, NppCorpDecisionContext } from "./npp/corpDecisionTypes";
-import type { Corporation, CorporateSector, UnownedSector } from "@/lib/db/types";
+import type { Corporation, CorporateSector } from "@/lib/db/types";
+import type { MarketCandidate } from "./npp/marketCandidates";
 
 const noPrices: CommodityPriceRatioFn = () => null;
 const noState = new Set<string>();
@@ -69,7 +70,7 @@ function decide(
     // artifact.
     strategyLoopEnabled: false,
   };
-  return makeNppCorpDecision(ctx, new Map<string, UnownedSector[]>(), noState, noPrices);
+  return makeNppCorpDecision(ctx, new Map<string, MarketCandidate[]>(), noState, noPrices);
 }
 
 describe("NPP operator binding constraint", () => {

@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { ObjectId } from "mongodb";
-import type { Corporation, CorporateSector, UnownedSector } from "@/lib/db/types";
+import type { Corporation, CorporateSector } from "@/lib/db/types";
+import {
+  candidate,
+  candidatesByCountry,
+  uniformDemandSignals,
+} from "../__fixtures__/marketCandidates";
 import { computeBuildCost, CAPACITY_ANCHOR_YEAR } from "@/lib/constants/capacityEconomy";
 import { NEUTRAL_STAT } from "@/lib/stats/statsConstants";
 import { plantPressure } from "@/lib/market/producerMarket/shortageGrowthRules";
@@ -122,14 +127,7 @@ function decide(stage: number | undefined, products: unknown[], sold: number) {
     demandThrottleFactor: 1,
     producerSettlement: { worldEpoch: "e", products },
   } as unknown as CorporateSector;
-  const pool = {
-    _id: new ObjectId(),
-    countryId: "US",
-    stateId: "NY",
-    sectorType: "retail",
-    revenue: 100000,
-    headroomUnits: 1000,
-  } as UnownedSector;
+  const pool = candidate({ stateId: "NY", sectorType: "retail" });
   const d = makeNppCorpDecision(
     {
       corp,
@@ -141,7 +139,7 @@ function decide(stage: number | undefined, products: unknown[], sold: number) {
       strategyLoopEnabled: false,
       ...(stage === undefined ? {} : { productFillStage: stage }),
     },
-    new Map([["US", [pool]]]),
+    candidatesByCountry([pool]),
     new Set(),
     () => 2,
     {
@@ -151,7 +149,8 @@ function decide(stage: number | undefined, products: unknown[], sold: number) {
       preset: "2019-default",
       primeRateOf: () => 0,
       costOfLivingOf: () => null,
-    }
+    },
+    uniformDemandSignals(1000)
   );
   return (d.reinvestments ?? []).reduce((sum, b) => sum + b.units, 0);
 }

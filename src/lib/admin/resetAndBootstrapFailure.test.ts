@@ -136,13 +136,13 @@ describe("resetAndBootstrapGameWorld — failure handling", () => {
     );
   });
 
-  it("clears the old 1991 unowned market pool after teardown and before fresh taxonomy preflight", async () => {
+  it("drops a retired market collection after teardown and before bootstrap", async () => {
     const { resetGameWorld } = await import("@/lib/admin/resetGameWorld");
     const { bootstrapGameWorld } = await import("@/lib/admin/bootstrapGameWorld");
     const order: string[] = [];
-    db.collection("unownedSectors").deleteMany.mockImplementation(async () => {
-      order.push("clear-unowned");
-      return { deletedCount: 2791 } as never;
+    (db as unknown as { dropCollection: unknown }).dropCollection = vi.fn(async (name: string) => {
+      order.push(`drop-${name}`);
+      return true;
     });
     vi.mocked(resetGameWorld).mockImplementation(async () => {
       order.push("teardown");
@@ -161,8 +161,7 @@ describe("resetAndBootstrapGameWorld — failure handling", () => {
       resetReference: true,
     });
 
-    expect(order).toEqual(["teardown", "clear-unowned", "bootstrap"]);
-    expect(db.collectionMocks.unownedSectors?.deleteMany).toHaveBeenCalledWith({});
+    expect(order).toEqual(["teardown", "drop-unownedSectors", "bootstrap"]);
   });
 
   it("empties every rebuilt reference collection before a reference rebuild of any preset", async () => {
@@ -330,17 +329,6 @@ describe("resetAndBootstrapGameWorld — failure handling", () => {
     expect(order).toEqual(["teardown", "clear-macro-runtime"]);
     expect(vi.mocked(bootstrapGameWorld)).not.toHaveBeenCalled();
     expect(closeUpdate().$set["resetRun.status"]).toBe("failed");
-  });
-
-  it("preserves unowned markets when a reset does not request a reference rebuild", async () => {
-    const { resetAndBootstrapGameWorld } = await import("./resetAndBootstrapGameWorld");
-    await resetAndBootstrapGameWorld({
-      db: db as unknown as Db,
-      preset: "1953-default",
-      resetReference: false,
-    });
-
-    expect(db.collectionMocks.unownedSectors?.deleteMany).toBeUndefined();
   });
 
   it("refuses a 1991 reset without a reference rebuild before sealing or touching the database", async () => {
@@ -719,7 +707,7 @@ describe("build-phase containment boundary", () => {
     for (const name of [
       "seedForex",
       "seedUnions",
-      "seedUnownedSectors",
+      "reconcileCommandEconomySoes",
       "seedSovereignBondInstruments",
       "electionBattery",
       "spawnFoundingElections",

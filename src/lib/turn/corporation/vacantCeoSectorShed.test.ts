@@ -4,7 +4,7 @@ import type { Db } from "mongodb";
 import { ObjectId } from "mongodb";
 import type { Corporation, CorporateSector } from "@/lib/db/types";
 import type { CorporationLookups } from "./types";
-import { VACANT_CEO_SECTOR_SHED_RATE, shedVacantCeoSectorsToUnowned } from "./vacantCeoSectorShed";
+import { VACANT_CEO_SECTOR_SHED_RATE, shedVacantCeoSectors } from "./vacantCeoSectorShed";
 
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
 
@@ -82,7 +82,7 @@ function makeMinimalLookups(
   };
 }
 
-describe("shedVacantCeoSectorsToUnowned", () => {
+describe("shedVacantCeoSectors", () => {
   let db: MockDb;
   const now = new Date("2026-01-01T00:00:00Z");
 
@@ -90,7 +90,6 @@ describe("shedVacantCeoSectorsToUnowned", () => {
     vi.clearAllMocks();
     db = createMockDb();
     db.collection("corporateSectors");
-    db.collection("unownedSectors");
     const { getDb } = await import("@/lib/mongodb");
     vi.mocked(getDb).mockResolvedValue(db as unknown as Db);
   });
@@ -113,15 +112,14 @@ describe("shedVacantCeoSectorsToUnowned", () => {
     } as unknown as CorporateSector;
 
     const lookups = makeMinimalLookups([corp], [sector]);
-    const r = await shedVacantCeoSectorsToUnowned(db as unknown as Db, lookups, now);
+    const r = await shedVacantCeoSectors(db as unknown as Db, lookups, now);
 
     expect(r.corporateSectorsUpdated).toBe(0);
-    expect(r.unownedSectorsUpdated).toBe(0);
     expect(r.totalRevenueShed).toBe(0);
     expect(db.collectionMocks["corporateSectors"]!.bulkWrite).not.toHaveBeenCalled();
   });
 
-  it("sheds 10% revenue and workers from vacant CEO corps into unowned pool", async () => {
+  it("sheds 10% revenue and workers from vacant CEO corps", async () => {
     const corpId = new ObjectId();
     const corp = {
       _id: corpId,
@@ -140,10 +138,9 @@ describe("shedVacantCeoSectorsToUnowned", () => {
     } as unknown as CorporateSector;
 
     const lookups = makeMinimalLookups([corp], [sector]);
-    const r = await shedVacantCeoSectorsToUnowned(db as unknown as Db, lookups, now);
+    const r = await shedVacantCeoSectors(db as unknown as Db, lookups, now);
 
     expect(r.corporateSectorsUpdated).toBe(1);
-    expect(r.unownedSectorsUpdated).toBe(1);
     expect(r.totalRevenueShed).toBe(Math.round(10_000 * VACANT_CEO_SECTOR_SHED_RATE));
 
     expect(sector.revenue).toBe(10_000 - Math.round(10_000 * VACANT_CEO_SECTOR_SHED_RATE));
@@ -158,21 +155,9 @@ describe("shedVacantCeoSectorsToUnowned", () => {
     expect(sectorBulk[0].updateOne.update.$inc.workers).toBe(
       -Math.round(100 * VACANT_CEO_SECTOR_SHED_RATE)
     );
-
-    const unownedBulk = db.collectionMocks["unownedSectors"]!.bulkWrite.mock.calls[0][0] as Array<{
-      updateOne: {
-        filter: { stateId: string; sectorType: string };
-        update: { $inc: { revenue: number } };
-      };
-    }>;
-    expect(unownedBulk[0].updateOne.filter.stateId).toBe("US-CA");
-    expect(unownedBulk[0].updateOne.filter.sectorType).toBe("technology");
-    expect(unownedBulk[0].updateOne.update.$inc.revenue).toBe(
-      Math.round(10_000 * VACANT_CEO_SECTOR_SHED_RATE)
-    );
   });
 
-  it("under plants sheds CAPACITY units to pool headroom and never touches revenue", async () => {
+  it("under plants sheds CAPACITY units and never touches revenue", async () => {
     const corpId = new ObjectId();
     const corp = { _id: corpId, ceoId: null, ceoVacant: true } as unknown as Corporation;
     const sector = {
@@ -191,7 +176,7 @@ describe("shedVacantCeoSectorsToUnowned", () => {
     } as unknown as CorporateSector;
 
     const lookups = makeMinimalLookups([corp], [sector]);
-    const r = await shedVacantCeoSectorsToUnowned(db as unknown as Db, lookups, now, true);
+    const r = await shedVacantCeoSectors(db as unknown as Db, lookups, now, true);
 
     const expectedUnits = 500 * VACANT_CEO_SECTOR_SHED_RATE;
     expect(r.totalRevenueShed).toBe(0);
@@ -205,14 +190,6 @@ describe("shedVacantCeoSectorsToUnowned", () => {
     }>;
     expect(sectorBulk[0].updateOne.update.$inc.capitalStock).toBeCloseTo(-expectedUnits, 2);
     expect(sectorBulk[0].updateOne.update.$inc.revenue).toBeUndefined();
-
-    // The pool is credited in UNITS, through a self-healing pipeline.
-    const unownedBulk = db.collectionMocks["unownedSectors"]!.bulkWrite.mock.calls[0][0] as Array<{
-      updateOne: { filter: Record<string, string>; update: unknown[] };
-    }>;
-    expect(unownedBulk[0].updateOne.filter.stateId).toBe("US-CA");
-    expect(Array.isArray(unownedBulk[0].updateOne.update)).toBe(true);
-    expect(JSON.stringify(unownedBulk[0].updateOne.update)).toContain("headroomUnits");
   });
 
   /**
@@ -223,9 +200,7 @@ describe("shedVacantCeoSectorsToUnowned", () => {
    * null`) `capitalStock` is not yet authoritative, and `sectorTurn`'s adoption
    * step takes `max(storedCapacity, seedCapitalStock(nameplate))` off a revenue
    * this path deliberately never touches — the PRE-shed level. So a shed here
-   * was credited to the pool and then silently restored on the corp in the same
-   * turn: a one-off market-share MINT on every vacant-CEO sector in the world,
-   * on the turn plants is switched on.
+   * would be silently restored on the corp in the same turn.
    *
    * Capacity shedding is therefore deferred one turn. Workers still shed.
    */
@@ -247,14 +222,13 @@ describe("shedVacantCeoSectorsToUnowned", () => {
     } as unknown as CorporateSector;
 
     const lookups = makeMinimalLookups([corp], [sector]);
-    const r = await shedVacantCeoSectorsToUnowned(db as unknown as Db, lookups, now, true);
+    const r = await shedVacantCeoSectors(db as unknown as Db, lookups, now, true);
 
-    // No capacity left the corp and none reached the pool.
+    // No capacity left the corp.
     expect(r.totalCapacityUnitsShed).toBe(0);
     expect(r.totalRevenueShed).toBe(0);
     expect(sector.capitalStock).toBe(500);
     expect(sector.revenue).toBe(10_000);
-    expect(db.collectionMocks["unownedSectors"]!.bulkWrite).not.toHaveBeenCalled();
 
     // Workers still shed — unchanged from the behaviour when `capitalStock` was
     // simply absent, which is the case this sector is indistinguishable from
@@ -288,16 +262,13 @@ describe("shedVacantCeoSectorsToUnowned", () => {
     } as unknown as CorporateSector;
 
     const lookups = makeMinimalLookups([corp], [sector]);
-    const r = await shedVacantCeoSectorsToUnowned(db as unknown as Db, lookups, now);
+    const r = await shedVacantCeoSectors(db as unknown as Db, lookups, now);
 
     expect(r.corporateSectorsUpdated).toBe(0);
     expect(db.collectionMocks["corporateSectors"]!.bulkWrite).not.toHaveBeenCalled();
   });
 
-  it("sheds the corp but does NOT spawn unowned in a state-nationalized bucket", async () => {
-    // A private holder that wandered into a nationalized sector still sheds (its
-    // own row shrinks), but the freed capacity must NOT be released back to the
-    // market as unowned — that's the re-fragmentation the protection prevents.
+  it("sheds a private holder in a state-nationalized bucket without touching the state's sector", async () => {
     const natId = new ObjectId();
     const privId = new ObjectId();
     const natCorp = { _id: natId, countryOwnerId: "CN" } as unknown as Corporation;
@@ -324,14 +295,10 @@ describe("shedVacantCeoSectorsToUnowned", () => {
     } as unknown as CorporateSector;
 
     const lookups = makeMinimalLookups([natCorp, privCorp], [natSector, privSector]);
-    const r = await shedVacantCeoSectorsToUnowned(db as unknown as Db, lookups, now);
+    const r = await shedVacantCeoSectors(db as unknown as Db, lookups, now);
 
-    // The private corp's sector still sheds...
     expect(r.corporateSectorsUpdated).toBe(1);
-    expect(db.collectionMocks["corporateSectors"]!.bulkWrite).toHaveBeenCalled();
-    // ...but no unowned pool is created in the nationalized bucket.
-    expect(r.unownedSectorsUpdated).toBe(0);
-    expect(db.collectionMocks["unownedSectors"]!.bulkWrite).not.toHaveBeenCalled();
+    expect(natSector.revenue).toBe(5_000_000);
   });
 
   it("skips suspended corporations (e.g. a privatization-auction shell)", async () => {
@@ -353,40 +320,9 @@ describe("shedVacantCeoSectorsToUnowned", () => {
     } as unknown as CorporateSector;
 
     const lookups = makeMinimalLookups([corp], [sector]);
-    const r = await shedVacantCeoSectorsToUnowned(db as unknown as Db, lookups, now);
+    const r = await shedVacantCeoSectors(db as unknown as Db, lookups, now);
 
     expect(r.corporateSectorsUpdated).toBe(0);
     expect(db.collectionMocks["corporateSectors"]!.bulkWrite).not.toHaveBeenCalled();
-  });
-
-  // Ticket #1271. The pool row this shed creates carries a countryId every
-  // reader filters on. Taking the sector's stored value and falling through to a
-  // literal "US" is the defect the pool heal repairs, still live in the hourly
-  // turn processor, where it could mint replacements for the very rows healed.
-  it("stamps the pool row with the country the STATE is in, never a hardcoded one", async () => {
-    const corpId = new ObjectId();
-    const corp = { _id: corpId, ceoId: null, ceoVacant: true } as unknown as Corporation;
-    const sector = {
-      _id: new ObjectId(),
-      corporationId: corpId,
-      stateId: "UKR_WES",
-      // Stale: the region changed hands and this was not re-scoped.
-      countryId: "US",
-      sectorType: "technology",
-      revenue: 10_000,
-      workers: 100,
-      updatedAt: new Date(0),
-    } as unknown as CorporateSector;
-
-    const lookups = makeMinimalLookups([corp], [sector]);
-    lookups.stateCountryMap = new Map([["UKR_WES", "UKR"]]);
-    await shedVacantCeoSectorsToUnowned(db as unknown as Db, lookups, now);
-
-    const unownedBulk = db.collectionMocks["unownedSectors"]!.bulkWrite.mock.calls[0][0] as Array<{
-      updateOne: { update: { $setOnInsert?: { countryId?: string } } };
-    }>;
-    const stamped = JSON.stringify(unownedBulk[0].updateOne.update);
-    expect(stamped).toContain("UKR");
-    expect(stamped).not.toContain('"US"');
   });
 });

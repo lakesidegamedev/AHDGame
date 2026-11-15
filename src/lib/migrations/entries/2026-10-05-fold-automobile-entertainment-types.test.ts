@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { MongoClient, ObjectId, type Db } from "mongodb";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { MIGRATIONS } from "../registry";
 import { REQUIRED_STARTUP_MIGRATIONS } from "../startupMigrations";
 import { migration } from "./2026-10-05-fold-automobile-entertainment-types";
@@ -114,19 +114,6 @@ describe.skipIf(!mongoUri)("2026-10-05-fold-automobile-entertainment-types on a 
         workers: 50,
       },
     ]);
-    await db.collection("unownedSectors").insertMany([
-      { stateId: "MI", countryId: "US", sectorType: legacyA, revenue: 1_000, headroomUnits: 10 },
-      {
-        stateId: "MI",
-        countryId: "US",
-        sectorType: "manufacturing",
-        industryModel: "vehicles",
-        mediaDiscriminator: null,
-        revenue: 4_000,
-        headroomUnits: 40,
-      },
-      { stateId: "CA", countryId: "US", sectorType: legacyE, revenue: 2_000, headroomUnits: 20 },
-    ]);
     await db.collection("unions").insertMany([
       {
         _id: union,
@@ -169,7 +156,6 @@ describe.skipIf(!mongoUri)("2026-10-05-fold-automobile-entertainment-types on a 
       ["corporations", "type"],
       ["corporations", "secondaryType"],
       ["corporateSectors", "sectorType"],
-      ["unownedSectors", "sectorType"],
       ["unions", "sectorType"],
       ["states", "sectorSpecializations.primary"],
       ["indexFunds", "sectorType"],
@@ -194,30 +180,11 @@ describe.skipIf(!mongoUri)("2026-10-05-fold-automobile-entertainment-types on a 
     });
   });
 
-  it("does not add market capacity twice when interrupted before source deletion", async () => {
+  it("never touches the retired market pool collection", async () => {
     await withDb(async (db) => {
       await seedLegacyWorld(db);
-      const markets = db.collection("unownedSectors");
-      const collection = db.collection.bind(db);
-      const collectionSpy = vi
-        .spyOn(db, "collection")
-        .mockImplementation(((name, options) =>
-          name === "unownedSectors" ? markets : collection(name, options)) as typeof db.collection);
-      const deletion = vi
-        .spyOn(markets, "deleteOne")
-        .mockRejectedValueOnce(new Error("interrupted"));
-      try {
-        await expect(migration.execute(db, { dryRun: false })).rejects.toThrow("interrupted");
-        await migration.execute(db, { dryRun: false });
-        expect(await markets.findOne({ stateId: "MI", industryModel: "vehicles" })).toMatchObject({
-          revenue: 5_000,
-          headroomUnits: 50,
-        });
-        expect(await markets.countDocuments({ sectorType: legacyA })).toBe(0);
-      } finally {
-        deletion.mockRestore();
-        collectionSpy.mockRestore();
-      }
+      await migration.execute(db, { dryRun: false });
+      expect(await db.collection("unownedSectors").countDocuments({})).toBe(0);
     });
   });
 
@@ -256,22 +223,6 @@ describe.skipIf(!mongoUri)("2026-10-05-fold-automobile-entertainment-types on a 
         [900, 120, 400],
         [300, 30, 50],
       ]);
-
-      // The MI market merged into its existing twin; the CA market re-keyed.
-      const markets = await db.collection("unownedSectors").find().sort({ stateId: -1 }).toArray();
-      expect(markets).toHaveLength(2);
-      expect(markets[0]).toMatchObject({
-        stateId: "MI",
-        industryModel: "vehicles",
-        revenue: 5_000,
-        headroomUnits: 50,
-      });
-      expect(markets[1]).toMatchObject({
-        stateId: "CA",
-        sectorType: "media",
-        mediaDiscriminator: "entertainment",
-        revenue: 2_000,
-      });
 
       // The funded union keeps its id, treasury and represented sectors.
       expect(await db.collection("unions").findOne({ _id: union })).toMatchObject({

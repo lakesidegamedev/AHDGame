@@ -42,7 +42,7 @@ function buildStateInputs(count: number) {
         { revenue: 1000 + i, currentGrowthRate: 2 + (i % 5) },
         { revenue: 3000 + i, currentGrowthRate: 1 + (i % 3) },
       ],
-      unowned: [{ revenue: 5000 + i }],
+      background: [{ revenue: 5000 + i }],
       federalSalesTax: 0,
       stateSalesTax: 6,
       countryId: "US",

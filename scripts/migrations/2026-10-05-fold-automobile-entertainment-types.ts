@@ -6,7 +6,7 @@
  *   entertainment -> media + mediaDiscriminator "entertainment"
  *
  * Rows that carry a corporation or sector identity (corporations, owned
- * sectors, unowned markets, unions) are re-keyed in place. Ids, balances,
+ * sectors, unions) are re-keyed in place. Ids, balances,
  * capacity, workers and holdings are never touched, so money and stock are
  * conserved by construction. Fields that reference an operating lane (state
  * specializations, sector funds, policy targets, crisis and event effects,
@@ -15,8 +15,6 @@
  * the containing type.
  *
  * Collisions:
- *   - an unowned market whose canonical twin already exists is merged into it
- *     (revenue and headroom summed) and the legacy row is removed;
  *   - a vacant, unreferenced world union whose canonical twin exists is
  *     removed after its represented sectors are repointed;
  *   - any other collision (an owned sector, a led or funded union) blocks the
@@ -125,71 +123,6 @@ async function foldCorporateSectors(db: Db, tally: Tally, dryRun: boolean): Prom
         .updateMany(filter, { $set: identitySet(IDENTITY[legacy]) });
       tally.updated += result.modifiedCount;
     }
-  }
-}
-
-/** Unowned markets: merge into an existing canonical twin, else re-key. */
-async function foldUnownedSectors(db: Db, tally: Tally, dryRun: boolean): Promise<void> {
-  for (const legacy of LEGACY_TYPES) {
-    const rows = await db
-      .collection("unownedSectors")
-      .find(
-        { sectorType: legacy },
-        { projection: { _id: 1, stateId: 1, revenue: 1, headroomUnits: 1 } }
-      )
-      .toArray();
-    tally.scanned += rows.length;
-    let merged = 0;
-    let rekeyed = 0;
-    for (const row of rows) {
-      const twin = await db
-        .collection("unownedSectors")
-        .findOne(
-          { stateId: row.stateId, ...identityFilter(IDENTITY[legacy]) },
-          { projection: { _id: 1 } }
-        );
-      if (twin) {
-        merged++;
-        if (dryRun) continue;
-        const revenue =
-          typeof row.revenue === "number" && Number.isFinite(row.revenue) ? row.revenue : 0;
-        const headroom =
-          typeof row.headroomUnits === "number" && Number.isFinite(row.headroomUnits)
-            ? row.headroomUnits
-            : 0;
-        const sourceId = String(row._id);
-        // Keep a durable receipt in the same atomic write as the increment. A
-        // restart after this write but before deletion must not add capacity twice.
-        const result = await db.collection("unownedSectors").updateOne(
-          { _id: twin._id, taxonomyFoldMergedSourceIds: { $ne: sourceId } },
-          {
-            $inc: { revenue, headroomUnits: headroom },
-            $addToSet: { taxonomyFoldMergedSourceIds: sourceId },
-            $set: { updatedAt: new Date() },
-          }
-        );
-        if (result.matchedCount === 0) {
-          const receipt = await db
-            .collection("unownedSectors")
-            .findOne(
-              { _id: twin._id, taxonomyFoldMergedSourceIds: sourceId },
-              { projection: { _id: 1 } }
-            );
-          if (!receipt) throw new Error("Canonical market disappeared during taxonomy fold");
-        }
-        const deletion = await db.collection("unownedSectors").deleteOne({ _id: row._id });
-        tally.updated += result.modifiedCount;
-        tally.deleted += deletion.deletedCount;
-      } else {
-        rekeyed++;
-        if (dryRun) continue;
-        const result = await db
-          .collection("unownedSectors")
-          .updateOne({ _id: row._id }, { $set: identitySet(IDENTITY[legacy]) });
-        tally.updated += result.modifiedCount;
-      }
-    }
-    tally.notes.push(`unownedSectors ${legacy}: ${rekeyed} re-keyed, ${merged} merged into twins`);
   }
 }
 
@@ -614,7 +547,6 @@ export async function foldAutomobileEntertainmentTypes(
 
   await foldCorporations(db, tally, dryRun);
   await foldCorporateSectors(db, tally, dryRun);
-  await foldUnownedSectors(db, tally, dryRun);
   await foldUnions(db, tally, dryRun, unionPlans);
   await foldStates(db, tally, dryRun);
   await foldPolicyReferences(db, tally, dryRun);

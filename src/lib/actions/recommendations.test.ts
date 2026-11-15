@@ -8,13 +8,12 @@ import { orgBuildCashPrice } from "@/lib/politicalStrength/buildOrgFunding";
 import { BUILD_ORG_BASE_PS_COST } from "@/lib/politicalStrength/strengthConstants";
 import {
   checkStatThresholds,
-  findUnownedOpportunities,
   compareMarketPosition,
   checkPartyActions,
   checkGettingStarted,
   generateRecommendations,
 } from "./recommendations";
-import type { StateEconomyData, CorpMarketPosition } from "./recommendations";
+import type { CorpMarketPosition } from "./recommendations";
 
 // Helper to create a minimal character
 function createCharacter(overrides: Partial<Character> = {}): Character {
@@ -176,85 +175,6 @@ describe("checkStatThresholds", () => {
     expect(convertRec?.why).toContain("+100 infamy");
     expect(convertRec?.why).not.toContain("+136 infamy");
     expect(convertRec?.action.estimatedBenefit).toBe("+$25,000,000 campaign funds");
-  });
-});
-
-describe("findUnownedOpportunities", () => {
-  it("returns no recommendations when no large unowned sectors", () => {
-    const character = createCharacter({ homeState: "GA" });
-    const economy: StateEconomyData = {
-      stateId: "GA",
-      stateName: "Georgia",
-      countryId: "US",
-      sectors: [
-        {
-          type: "technology",
-          label: "Technology",
-          totalMarket: 1_000_000_000,
-          ownedRevenue: 900_000_000,
-          unownedRevenue: 100_000_000,
-          unownedPercent: 10,
-          splitCost: 5_000_000,
-          estimatedCapture: 6_250_000,
-          estimatedCapturePercent: 6.25,
-        },
-      ],
-    };
-    const recs = findUnownedOpportunities([economy], character);
-    expect(recs.length).toBe(0);
-  });
-
-  it("flags large unowned sectors (>30%)", () => {
-    const character = createCharacter({ homeState: "GA" });
-    const economy: StateEconomyData = {
-      stateId: "GA",
-      stateName: "Georgia",
-      countryId: "US",
-      sectors: [
-        {
-          type: "retail",
-          label: "Retail",
-          totalMarket: 1_000_000_000,
-          ownedRevenue: 600_000_000,
-          unownedRevenue: 400_000_000,
-          unownedPercent: 40,
-          splitCost: 20_000_000,
-          estimatedCapture: 25_000_000,
-          estimatedCapturePercent: 6.25,
-        },
-      ],
-    };
-    const recs = findUnownedOpportunities([economy], character);
-    expect(recs.length).toBe(1);
-    expect(recs[0].priority).toBe("medium");
-    expect(recs[0].action.targetState).toBe("GA");
-    expect(recs[0].action.targetSectorType).toBe("retail");
-  });
-
-  it("flags huge unowned sectors (>50%) as high priority", () => {
-    const character = createCharacter({ homeState: "GA" });
-    // Need 3+ opportunities for high priority (consolidated recommendation)
-    const economy: StateEconomyData = {
-      stateId: "GA",
-      stateName: "Georgia",
-      countryId: "US",
-      sectors: [
-        {
-          type: "energy",
-          label: "Energy",
-          totalMarket: 1_000_000_000,
-          ownedRevenue: 400_000_000,
-          unownedRevenue: 600_000_000,
-          unownedPercent: 60,
-          splitCost: 30_000_000,
-          estimatedCapture: 37_500_000,
-          estimatedCapturePercent: 6.25,
-        },
-      ],
-    };
-    const recs = findUnownedOpportunities([economy], character, ["energy"]);
-    expect(recs.length).toBe(1);
-    expect(recs[0].priority).toBe("medium"); // Single sector type = medium
   });
 });
 
@@ -511,35 +431,15 @@ describe("generateRecommendations", () => {
     expect(recs.length).toBeLessThanOrEqual(10);
   });
 
-  it("includes unowned sector opportunities", () => {
+  it("never recommends splitting an unowned market", () => {
     const character = createCharacter({ homeState: "GA" });
-    const homeStateEconomy: StateEconomyData = {
-      stateId: "GA",
-      stateName: "Georgia",
-      countryId: "US",
-      sectors: [
-        {
-          type: "retail",
-          label: "Retail",
-          totalMarket: 1_000_000_000,
-          ownedRevenue: 400_000_000,
-          unownedRevenue: 600_000_000,
-          unownedPercent: 60,
-          splitCost: 30_000_000,
-          estimatedCapture: 37_500_000,
-          estimatedCapturePercent: 6.25,
-        },
-      ],
-    };
     const recs = generateRecommendations({
       character,
-      homeStateEconomy,
-      allStateEconomies: [homeStateEconomy],
       currentTurn: 1,
-      userCorpSectorTypes: ["retail"], // Must include sector type to show opportunity
+      userCorpSectorTypes: ["retail"],
     });
-    const unownedRec = recs.find((r) => r.id.includes("unowned-consolidated-retail"));
-    expect(unownedRec).toBeDefined();
+    expect(recs.some((r) => r.id.includes("unowned"))).toBe(false);
+    expect(recs.some((r) => r.action.type === "split")).toBe(false);
   });
 
   it("includes competitive market position recommendations", () => {

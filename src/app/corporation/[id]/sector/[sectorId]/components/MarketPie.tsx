@@ -23,17 +23,10 @@ interface MarketPieProps {
   myShare: number;
   myColor: string;
   competitors: MarketPieCompetitor[];
-  unownedPercent: number;
   size?: number;
 }
 
-export default function MarketPie({
-  myShare,
-  myColor,
-  competitors,
-  unownedPercent,
-  size = 120,
-}: MarketPieProps) {
+export default function MarketPie({ myShare, myColor, competitors, size = 120 }: MarketPieProps) {
   const radius = Math.round(size * 0.4);
   const cx = size / 2;
   const cy = size / 2;
@@ -67,14 +60,6 @@ export default function MarketPie({
         nppRivals.length === 1
           ? `${nppRivals[0].corporationName} (NPP)`
           : `NPP field (${nppRivals.length} corps)`,
-      muted: true,
-    });
-  }
-  if (unownedPercent > 0) {
-    segments.push({
-      percent: unownedPercent,
-      color: "rgba(128,128,128,0.2)",
-      label: "Unowned",
       muted: true,
     });
   }

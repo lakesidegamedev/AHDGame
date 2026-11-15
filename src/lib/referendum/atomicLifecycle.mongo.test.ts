@@ -352,9 +352,7 @@ describe.runIf(REAL_MONGO_ENABLED)("atomic referendum lifecycle against owned Mo
       constructionInProgressAnchor: 0,
       buildQueue: [],
     });
-    expect(
-      await db.collection("unownedSectors").findOne({ stateId: "SCO", sectorType: "manufacturing" })
-    ).toMatchObject({ headroomUnits: 100 });
+    expect(await db.collection("unownedSectors").countDocuments({})).toBe(0);
   });
   it("rolls back Scotland's map and budget when later government migration fails", async () => {
     await db

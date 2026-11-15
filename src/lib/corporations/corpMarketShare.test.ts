@@ -36,12 +36,6 @@ describe("computeCorpMarketShare", () => {
       ])
     );
 
-    db.collectionMocks.unownedSectors = db.collection("unownedSectors");
-    db.collectionMocks.unownedSectors.find.mockReturnValue(
-      // Persisted unowned pool present → market = owned + unowned (no GDP fallback).
-      makeCursor([{ sectorType: "manufacturing", stateId: "US-CA", revenue: 0 }])
-    );
-
     db.collectionMocks.corporations = db.collection("corporations");
     db.collectionMocks.corporations.find.mockReturnValue(
       makeCursor([
