@@ -9,6 +9,10 @@ import {
   useMemo,
   useRef,
 } from "react";
+import {
+  playerContextFromAuthUser,
+  setClientPlayerContext,
+} from "@/lib/observability/clientPlayerContext";
 import type { ReactNode } from "react";
 
 // Shape matches the `user` object from GET /api/auth/me — kept loose so consumers
@@ -188,6 +192,11 @@ export function AuthDataProvider({
   }, [load]);
 
   const refetch = useCallback((isManualRetry?: boolean) => load(!!isManualRetry), [load]);
+
+  // Error reports carry the signed-in player's opaque ids (no names or emails).
+  useEffect(() => {
+    setClientPlayerContext(playerContextFromAuthUser(user));
+  }, [user]);
 
   // Memoized so consumers only re-render when auth state actually changes,
   // not whenever the provider re-renders.
