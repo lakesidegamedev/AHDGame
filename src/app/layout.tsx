@@ -343,11 +343,10 @@ export default async function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} ${lora.variable} ${fraunces.variable} ${jetbrainsMono.variable}`}
     >
       <body className="antialiased">
-        <Script
+        <script
           id="ld-json"
           type="application/ld+json"
-          strategy="beforeInteractive"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }}
         />
         <Script
           id="display-mode"
