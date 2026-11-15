@@ -23,6 +23,14 @@ vi.mock("@/lib/mongodb", async (importOriginal) => {
 vi.mock("@/lib/admin/resetGameWorld", () => ({ resetGameWorld: vi.fn() }));
 vi.mock("@/lib/admin/bootstrapGameWorld", () => ({ bootstrapGameWorld: vi.fn() }));
 vi.mock("@/lib/admin/finalizeResetGameWorld", () => ({ finalizeResetGameWorld: vi.fn() }));
+vi.mock("@/lib/admin/resetFundedOpening", () => ({
+  openResetWorldFunded: vi.fn(async () => ({
+    capacityFilled: 0,
+    statePricesFilled: 0,
+    openingSectors: 1,
+    producerMarketLiveFromTurn: 2,
+  })),
+}));
 vi.mock("@/lib/admin/resetContract/residueScan", () => ({
   runResidueScan: vi.fn().mockResolvedValue([]),
 }));
@@ -481,6 +489,26 @@ describe("resetAndBootstrapGameWorld — failure handling", () => {
     });
     expect(closeUpdate().$set["resetRun.status"]).toBe("succeeded");
     expect(captureSeedBaseline).toHaveBeenCalled();
+  });
+
+  it("opens the fresh world on the funded market", async () => {
+    const { openResetWorldFunded } = await import("@/lib/admin/resetFundedOpening");
+    const result = await run();
+    expect(openResetWorldFunded).toHaveBeenCalledOnce();
+    expect(result.logs.join(" ")).toContain("Funded market open: first funded turn 2");
+  });
+
+  it("keeps turns stopped when the funded opening fails", async () => {
+    const { openResetWorldFunded } = await import("@/lib/admin/resetFundedOpening");
+    vi.mocked(openResetWorldFunded).mockRejectedValueOnce(
+      new Error("Funded opening blocked (1): x")
+    );
+    const result = await run();
+    expect(result.status).toBe("partial");
+    expect(result.readiness.residueViolations).toEqual([
+      "funded opening failed: Funded opening blocked (1): x",
+    ]);
+    expect(closeUpdate().$set["resetRun.residueViolations"]).toBe(1);
   });
 
   it("keeps the world paused and lists every residue violation in the run record", async () => {

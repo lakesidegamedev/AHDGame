@@ -288,7 +288,8 @@ async function runOneTurn(db: Db): Promise<RehearsalFailure[]> {
       .updateOne({ _id: "default" as never }, { $set: { simSandbox: true } }, { upsert: true });
     await db
       .collection("gameState")
-      .updateOne({ _id: "current" as never }, { $set: { isProcessing: false } });
+      // Starting turns marks the world active; a funded turn refuses an inactive one.
+      .updateOne({ _id: "current" as never }, { $set: { isProcessing: false, isActive: true } });
     const { processTurn } = await import("@/lib/turnSystem");
     await processTurn();
     const { drainDeferredTurnWork } = await import("@/lib/turn/deferredTurnWork");
