@@ -431,7 +431,7 @@ export default function CreateCharacterClient() {
     let cancelled = false;
     const fetchParties = async () => {
       try {
-        const res = await fetch(`${partiesApiUrl(country)}?includeFrontier=1`);
+        const res = await fetch(`${partiesApiUrl(country)}?includeFrontier=1&includeRegionalOrg=1`);
         if (res.ok) {
           const data = await res.json();
           // Guard against out-of-order responses when the country selection
@@ -1065,6 +1065,7 @@ export default function CreateCharacterClient() {
       ) : (
         <PartyPicker
           countryId={country}
+          homeState={formData.homeState}
           value={formData.party}
           onChange={(party) => {
             setPartyTouched(true);
