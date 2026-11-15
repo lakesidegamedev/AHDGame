@@ -20,7 +20,8 @@ export type ShadowEventReason =
   | "hop_token"
   | "hop_nonce"
   | "hop_no_session"
-  | "hop_user_mismatch";
+  | "hop_user_mismatch"
+  | "hop_issuer_not_ready";
 
 export interface ShadowEvent {
   userId: string;

@@ -17,6 +17,7 @@
 
 import { createHash } from "crypto";
 import { ObjectId, type Db } from "mongodb";
+import { withAuditedGrant } from "@/lib/audit/grants/recordGrant";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { getHomeCurrency } from "@/lib/currency/characterFunds";
 import type { ExchangeRate } from "@/lib/db/types";
@@ -257,7 +258,11 @@ export function compileCompensationDefect(spec: CompensationSpec): Defect {
     };
   };
 
-  const apply = async (db: Db, healPlan: HealPlan, ctx: HealContext): Promise<HealResult> => {
+  const applyCredits = async (
+    db: Db,
+    healPlan: HealPlan,
+    ctx: HealContext
+  ): Promise<HealResult> => {
     const payload = healPlan.payload as Payload | undefined;
     const credits = payload?.credits ?? [];
     if (credits.length === 0)
@@ -371,6 +376,29 @@ export function compileCompensationDefect(spec: CompensationSpec): Defect {
           : []),
       ],
     };
+  };
+
+  // A credit is a grant: it is refused unless a staff account is on record as
+  // having asked for it, and it is written to the grants audit before it runs.
+  const apply = async (db: Db, healPlan: HealPlan, ctx: HealContext): Promise<HealResult> => {
+    if (spec.mode !== "credit") return applyCredits(db, healPlan, ctx);
+    const credits = (healPlan.payload as Payload | undefined)?.credits ?? [];
+    return withAuditedGrant(
+      db,
+      {
+        actorUserId: ctx.requestedBy ?? "",
+        via: { tool: "heal", requestedBy: ctx.requestedBy ?? "" },
+        recipients: credits.map((c) => ({
+          type: "corporation" as const,
+          id: c.corporationId,
+          name: c.corporationName,
+        })),
+        kind: "credit",
+        amount: credits.reduce((sum, c) => sum + c.amountAnchor, 0),
+        reason: spec.description,
+      },
+      () => applyCredits(db, healPlan, ctx)
+    );
   };
 
   return {

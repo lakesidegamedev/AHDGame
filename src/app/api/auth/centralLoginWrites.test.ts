@@ -223,6 +223,26 @@ describe.each(routes)("%s local failure and long passwords", (_name, route, pass
     );
   });
 
+  it("central: a lost race restores the winner's current hash, not the stale snapshot", async () => {
+    setEnv("central");
+    log.local = "lost";
+    const snapshot = {
+      _id: id,
+      email: "synthetic@example.invalid",
+      password,
+      authRevokedAt: cutoff,
+    };
+    mocks.findOne
+      .mockResolvedValueOnce(snapshot)
+      .mockResolvedValue({ ...snapshot, password: "synthetic-winner-hash" });
+    expect((await route(request())).status).toBe(409);
+    expect(log.order).toEqual(["bridge:password-set", "local", "bridge:account-upsert"]);
+    expect(log.bridgeBodies[1]).toMatchObject({
+      ahdUserId: id.toHexString(),
+      passwordHash: "synthetic-winner-hash",
+    });
+  });
+
   it("central: restores when the local write throws, then surfaces the error", async () => {
     setEnv("central");
     log.local = "throw";

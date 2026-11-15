@@ -1,3 +1,4 @@
+import { loginIdentifierFilter } from "@/lib/auth/accountFields/rules";
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { createHash, randomBytes, randomUUID } from "crypto";
@@ -33,12 +34,13 @@ import {
   centralCheckPassword,
   centralHealUnknownAccount,
   decideCentralLogin,
-  getCentralLoginMode,
+  getCentralLoginModeFor,
   isLongPasswordForCentral,
   recordLoginFallback,
   recordLongPasswordLogin,
   shadowCheckPassword,
 } from "@/lib/auth/centralLogin";
+import { decideSupersededLogin, SIGN_IN_UNAVAILABLE_MESSAGE } from "@/lib/auth/accountFields/rules";
 import { startLakesideHop } from "@/lib/auth/centralLogin/hop";
 import { loginDestination } from "@/lib/auth/lakesideLoginReturn";
 import { usersCollection } from "@/lib/db/repositories/users";
@@ -102,9 +104,7 @@ export async function POST(request: Request) {
     const usersCollectionHandle = usersCollection<Document>(db);
 
     // Find user by email or username
-    const user = await usersCollectionHandle.findOne({
-      $or: [{ email: email.toLowerCase() }, { username: email.toLowerCase() }],
-    });
+    const user = await usersCollectionHandle.findOne(loginIdentifierFilter(email));
 
     if (!user) {
       // Perform dummy bcrypt compare to prevent timing-based username enumeration
@@ -174,10 +174,30 @@ export async function POST(request: Request) {
     }
 
     // Verify password — reject OAuth-only accounts that have no password set
-    const centralMode = getCentralLoginMode();
     const userKey = user._id.toString();
+    const centralMode = getCentralLoginModeFor(userKey);
     let isValidPassword: boolean;
-    if (centralMode === "central" && user.password && !isLongPasswordForCentral(password)) {
+    if (!user.password && user.passwordSupersededAt && centralMode === "central") {
+      // The password lives centrally and no local copy exists, so an outage cannot fall back.
+      const superseded = isLongPasswordForCentral(password)
+        ? "reject"
+        : decideSupersededLogin(await centralCheckPassword(userKey, password));
+      if (superseded === "unavailable") {
+        recordAudit({
+          source: "api",
+          category: "auth",
+          action: "auth.login",
+          subject: { type: "user", id: user._id, name: user.username },
+          net: netBase,
+          outcome: "rejected",
+          reason: "central_unavailable",
+        });
+        return errorResponse(503, SIGN_IN_UNAVAILABLE_MESSAGE, {
+          headers: { "Cache-Control": "private, no-store" },
+        });
+      }
+      isValidPassword = superseded === "accept";
+    } else if (centralMode === "central" && user.password && !isLongPasswordForCentral(password)) {
       const central = await centralCheckPassword(userKey, password);
       const decision = decideCentralLogin(central);
       if (decision.action === "fallback-local") {

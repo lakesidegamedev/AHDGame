@@ -1,3 +1,4 @@
+import { accountFieldsRefusal } from "@/lib/auth/accountFields/mode";
 import { NextResponse } from "next/server";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { ObjectId } from "mongodb";
@@ -28,6 +29,9 @@ import { usersCollection } from "@/lib/db/repositories/users";
 // Errors: 400, 401, 404, 429
 export async function POST(request: Request) {
   try {
+    const accountFieldsBlock = accountFieldsRefusal("password");
+    if (accountFieldsBlock) return accountFieldsBlock;
+
     const auth = await requireBasicAuth();
     if (!auth.ok) return auth.response;
     const userId = auth.user.userId;

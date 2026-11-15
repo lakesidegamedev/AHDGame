@@ -140,6 +140,19 @@ function equalsAny(value: unknown, operand: unknown): boolean {
   return sameValue(value, operand);
 }
 
+/** Range operators compare like with like: numbers, strings or dates. */
+function orderedCompare(
+  value: unknown,
+  operand: unknown,
+  test: (a: number | string, b: number | string) => boolean
+): boolean {
+  if (typeof value === "number" && typeof operand === "number") return test(value, operand);
+  if (typeof value === "string" && typeof operand === "string") return test(value, operand);
+  if (value instanceof Date && operand instanceof Date)
+    return test(value.getTime(), operand.getTime());
+  return false;
+}
+
 function matchesCondition(value: unknown, condition: unknown): boolean {
   if (isPlainObject(condition)) {
     const keys = Object.keys(condition);
@@ -152,29 +165,13 @@ function matchesCondition(value: unknown, condition: unknown): boolean {
           case "$ne":
             return !equalsAny(value, operand);
           case "$gte":
-            return (
-              ((typeof value === "number" && typeof operand === "number") ||
-                (typeof value === "string" && typeof operand === "string")) &&
-              value >= operand
-            );
+            return orderedCompare(value, operand, (a, b) => a >= b);
           case "$gt":
-            return (
-              ((typeof value === "number" && typeof operand === "number") ||
-                (typeof value === "string" && typeof operand === "string")) &&
-              value > operand
-            );
+            return orderedCompare(value, operand, (a, b) => a > b);
           case "$lte":
-            return (
-              ((typeof value === "number" && typeof operand === "number") ||
-                (typeof value === "string" && typeof operand === "string")) &&
-              value <= operand
-            );
+            return orderedCompare(value, operand, (a, b) => a <= b);
           case "$lt":
-            return (
-              ((typeof value === "number" && typeof operand === "number") ||
-                (typeof value === "string" && typeof operand === "string")) &&
-              value < operand
-            );
+            return orderedCompare(value, operand, (a, b) => a < b);
           case "$in":
             return (operand as unknown[]).some((o) => equalsAny(value, o));
           case "$elemMatch":

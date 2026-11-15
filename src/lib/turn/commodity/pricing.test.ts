@@ -369,3 +369,25 @@ describe("export price feedback", () => {
     ).toBe(true);
   });
 });
+
+it("paces a country's reachable price like the global price on a funded turn", () => {
+  const glut = {
+    supply: 100_000_000,
+    demand: 1_000_000,
+    domesticDemand: 1_000_000,
+    imports: 0,
+    exports: 0,
+    blockedSupply: 0,
+    untradedSupply: 0,
+  };
+  const existing = new Map([
+    ["food", commodityPrice({ globalPrice: 300, reachablePrices: { US: 400 } })],
+  ]) as unknown as CommodityPricingContext["existingPriceMap"];
+  const ctx = pricingContext(
+    { supply: 100, demand: 100 },
+    { fundedPricing: true, existingPriceMap: existing }
+  );
+  ctx.reachableBooks.set("US", new Map([["food", glut]]));
+  const { priceOp } = priceCommodity(ctx, "food", new Set());
+  expect(priceOp.updateOne.update.$set.reachablePrices?.US).toBeCloseTo(400 * (1 - 0.06), 6);
+});

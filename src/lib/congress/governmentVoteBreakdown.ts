@@ -220,6 +220,105 @@ export async function computeCabinetNominationTally(
   };
 }
 
+export interface CabinetNominationVoter {
+  id: string;
+  name: string;
+  party: string;
+  partyName: string;
+  partyColor: string;
+  vote: "for" | "against" | "abstain";
+  isNPP: boolean;
+  seatsHeld: number;
+  sequentialId?: number;
+}
+
+export interface CabinetNominationBreakdown {
+  voteByParty: VoteByParty[];
+  voters: CabinetNominationVoter[];
+}
+
+/**
+ * Per-party and individual voter breakdown for a cabinet nomination.
+ * When `activeOnly` is true, restricts to current Senate seat-holders
+ * (matching the active tally); for closed nominations, falls back to weight 1
+ * for any historical voter who has since left the Senate.
+ */
+export async function computeCabinetNominationBreakdown(
+  db: Db,
+  countryId: CountryId,
+  votes: Record<string, "for" | "against" | "abstain"> | undefined,
+  activeOnly: boolean
+): Promise<CabinetNominationBreakdown> {
+  if (!votes || Object.keys(votes).length === 0) {
+    return { voteByParty: [], voters: [] };
+  }
+
+  const keys = Object.keys(votes);
+  const charIdStrs = keys.filter((k) => ObjectId.isValid(k));
+  const nppIdStrs = keys
+    .filter((k) => k.startsWith("npp_"))
+    .map((k) => k.slice(4))
+    .filter((id) => ObjectId.isValid(id));
+  const charOids = charIdStrs.map((id) => new ObjectId(id));
+  const nppOids = nppIdStrs.map((id) => new ObjectId(id));
+
+  const [parties, characters, npps, { voterPartyMap, weightMap }] = await Promise.all([
+    politicalPartiesCollection(db).find({ countryId }).toArray(),
+    charOids.length > 0
+      ? charactersCollection(db)
+          .find({ _id: { $in: charOids } })
+          .project({ _id: 1, name: 1, party: 1, sequentialId: 1 })
+          .toArray()
+      : [],
+    nppOids.length > 0
+      ? nppsCollection(db)
+          .find({ _id: { $in: nppOids } })
+          .project({ _id: 1, name: 1, party: 1 })
+          .toArray()
+      : [],
+    buildVoterPartyAndWeightMaps(db, countryId, "senate", keys),
+  ]);
+
+  const partyMap = new Map(parties.map((p) => [String(p.sequentialId), p]));
+  const charMap = new Map(characters.map((c) => [c._id.toString(), c]));
+  const nppMap = new Map(npps.map((n) => [`npp_${n._id.toString()}`, n]));
+
+  const scopedVotes: Record<string, "for" | "against" | "abstain"> = {};
+  const effectiveWeightMap = new Map<string, number>();
+  const voters: CabinetNominationVoter[] = [];
+
+  for (const [k, v] of Object.entries(votes)) {
+    const liveWeight = weightMap.get(k);
+    if (activeOnly && liveWeight == null) continue;
+    const seatsHeld = liveWeight ?? 1;
+
+    const isNPP = k.startsWith("npp_");
+    const char = isNPP ? undefined : charMap.get(k);
+    const npp = isNPP ? nppMap.get(k) : undefined;
+    if (!char && !npp) continue;
+
+    scopedVotes[k] = v;
+    effectiveWeightMap.set(k, seatsHeld);
+
+    const partySlug = voterPartyMap.get(k) ?? "independent";
+    const partyDoc = partyMap.get(partySlug);
+    voters.push({
+      id: isNPP ? k.slice(4) : k,
+      name: (isNPP ? npp?.name : char?.name) ?? "Unknown",
+      party: partySlug,
+      partyName: partyDoc?.name ?? partySlug,
+      partyColor: partyDoc?.color ?? "#6b7280",
+      vote: v,
+      isNPP,
+      seatsHeld,
+      ...(char?.sequentialId !== undefined ? { sequentialId: char.sequentialId } : {}),
+    });
+  }
+
+  const voteByParty = buildVotesByParty(scopedVotes, voterPartyMap, partyMap, effectiveWeightMap);
+  return { voteByParty, voters };
+}
+
 /** Compute many cabinet tallies after one seat-map load per chamber. */
 export async function computeCabinetNominationTallies(
   db: Db,

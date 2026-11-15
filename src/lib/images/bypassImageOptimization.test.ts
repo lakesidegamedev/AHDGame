@@ -4,6 +4,7 @@ import { bypassNextImageOptimization } from "./bypassImageOptimization";
 describe("bypassNextImageOptimization", () => {
   it("bypasses relative local API routes", () => {
     expect(bypassNextImageOptimization("/api/uploads/avatars/x.webp")).toBe(true);
+    expect(bypassNextImageOptimization("/heroes/elections-voting-1920.webp")).toBe(true);
     expect(bypassNextImageOptimization("/api/images/foo")).toBe(true);
     expect(bypassNextImageOptimization("/api/logos/foo")).toBe(true);
     expect(bypassNextImageOptimization("/api/flags/country/us")).toBe(true);

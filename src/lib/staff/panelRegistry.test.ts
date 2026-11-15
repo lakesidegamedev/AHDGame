@@ -6,6 +6,7 @@ import {
   findTool,
   legacyRedirect,
   navFor,
+  REMOVED_TOOL_REDIRECTS,
   toolForLegacy,
   toolPath,
 } from "./panelRegistry";
@@ -14,7 +15,6 @@ import {
 // check outlives the old config files. An empty sub means the tab had none.
 const OLD_ADMIN = [
   "dashboard:",
-  "traffic:",
   "politics:elections",
   "politics:parties",
   "politics:legislation",
@@ -23,7 +23,6 @@ const OLD_ADMIN = [
   "world:npps",
   "world:politicians",
   "world:crises",
-  "world:german-question",
   "world:events",
   "world:countries",
   "world:conflicts",
@@ -65,7 +64,6 @@ const OLD_ADMIN = [
   "content:wiki-review",
   "content:roadmap",
   "support:suggestions",
-  "support:feedback",
   "support:logs",
   "support:debug",
   "support:migrations",
@@ -78,7 +76,6 @@ const OLD_ADMIN = [
   "system:post-reset",
   "system:heal",
   "system:game-health",
-  "system:code-quality",
   "system:integrations",
   "system:observability",
 ];
@@ -204,6 +201,24 @@ describe("legacyRedirect", () => {
   it("resolves the names the old admin panel already aliased", () => {
     expect(go("admin", "/admin", "tab=elections")).toBe("/control/politics/elections");
     expect(go("admin", "/admin", "tab=party-org")).toBe("/control/politics/parties");
+  });
+
+  it("sends retired admin tools to the nearest surviving tool", () => {
+    expect(go("admin", "/admin", "tab=traffic")).toBe("/control/overview/dashboard");
+    expect(go("admin", "/admin", "tab=feedback")).toBe("/control/support/suggestions");
+    expect(go("admin", "/admin", "tab=support&sub=feedback")).toBe("/control/support/suggestions");
+    expect(go("admin", "/admin", "tab=world&sub=german-question")).toBe("/control/world/countries");
+    expect(go("admin", "/admin", "tab=system&sub=code-quality")).toBe(
+      "/control/diagnostics/game-health"
+    );
+  });
+
+  it("keeps every retired tool id pointing at a live tool", () => {
+    for (const [id, target] of Object.entries(REMOVED_TOOL_REDIRECTS)) {
+      expect(findTool(id), `${id} is still registered`).toBeUndefined();
+      const live = TOOLS.find((t) => toolPath(t) === target);
+      expect(live, `${id} redirects to a missing tool`).toBeDefined();
+    }
   });
 
   it("maps moderator tab and sub, including renamed ones", () => {

@@ -53,4 +53,14 @@ describe("2027 era config", () => {
     expect(ids).toContain("CA");
     expect(ids).not.toContain("IN");
   });
+
+  it("groups its country list by tier, not by Cold War bloc", () => {
+    expect(config.rosterGrouping).toBe("tier");
+    expect(ERA_CONFIGS["1991"].rosterGrouping).toBeUndefined();
+  });
+
+  it("names Canada's institutions in the feature tiles", () => {
+    expect(config.tileBodies?.ballot).toContain("House of Commons");
+    expect(config.tileBodies?.markets).toContain("Canadian dollar");
+  });
 });

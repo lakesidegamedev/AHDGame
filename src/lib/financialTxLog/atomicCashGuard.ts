@@ -8,7 +8,16 @@ import type { Document } from "mongodb";
 
 export type DebitResult = { ok: true; newBalance: number } | { ok: false; error: string };
 
-type CashGuardOptions = { session?: ClientSession; corporateObligation?: boolean };
+type CashGuardOptions = {
+  session?: ClientSession;
+  corporateObligation?: boolean;
+  /**
+   * Per-turn witness written in the same update as the debit: the debit only applies while
+   * the stamp at `path` is not already `turn`, so repeating it for the same turn cannot
+   * debit twice.
+   */
+  stamp?: { path: string; turn: number };
+};
 
 function mongoOptions(options?: CashGuardOptions): { session: ClientSession } | undefined {
   return options?.session ? { session: options.session } : undefined;
@@ -117,8 +126,15 @@ export async function atomicallyDebitCorpLiquidCapital(
       _id: corporationId,
       liquidCapital: { $gte: amountInCorpCapitalUnits },
       ...(options?.corporateObligation ? {} : corporateDiscretionaryCashGuard()),
+      ...(options?.stamp ? { [options.stamp.path]: { $ne: options.stamp.turn } } : {}),
     },
-    { $inc: { liquidCapital: -amountInCorpCapitalUnits }, $set: { updatedAt: new Date() } },
+    {
+      $inc: { liquidCapital: -amountInCorpCapitalUnits },
+      $set: {
+        updatedAt: new Date(),
+        ...(options?.stamp ? { [options.stamp.path]: options.stamp.turn } : {}),
+      },
+    },
     { returnDocument: "after", projection: { liquidCapital: 1 }, ...mongoOptions(options) }
   );
   if (!result)

@@ -5,9 +5,7 @@
 
 import { tierFor, type ShippingPreset } from "@/lib/world/eraRoster";
 import type { CountryId } from "@/lib/constants/countries";
-import { SHOWCASE_1991, TICKER_1991 } from "./broadcast1991";
-import { SHOWCASE_2027, TICKER_2027 } from "./broadcast2027";
-import type { HistoricalCrisisShowcaseEntry } from "./historicalCrisisShowcase";
+import type { CountryTier } from "./countryTiers";
 import type { EraId } from "@/lib/seeds/presetSelector";
 
 export type { EraId };
@@ -28,40 +26,20 @@ export type EraNation = {
   tier: "player" | "econ" | "npp" | "background";
 };
 
-/** Where a headline was filed from. */
-export type BroadcastPlace = { name: string; lonLat: readonly [number, number] };
-
-/** One of the year's headlines. The globe's uplinks name its place and date. */
-export type BroadcastTickerItem = {
-  /** Short dateline, e.g. "25 Dec". Rendered uppercase. */
-  date: string;
-  /** Sentence-case headline. Rendered uppercase, read as written. */
-  text: string;
-  /** Where it was filed from. The globe's satellites beam down to it. */
-  place?: BroadcastPlace;
-};
-
 /**
- * The broadcast lander: the hero framed as a satellite news feed of the era's
- * defining week, instead of the CRT console `wireframeColor` draws. An era
- * either has this or it doesn't; the two looks never stack.
+ * The broadcast lander: the hero framed as a news broadcast instead of the CRT
+ * console `wireframeColor` draws. An era either has this or it doesn't.
  */
 export type BroadcastLanderConfig = {
-  /** The year's headlines, oldest first. Their places are the satellites' datelines. */
-  ticker: readonly BroadcastTickerItem[];
   /**
-   * Map feature ids of a state that has just broken up. Their merged outline is
-   * drawn as a fading dashed border, and the borders between them as new ones.
-   * Absent for an era in which no state has just broken up.
+   * Country count per tier for the hero's tier key. When set, the key lists
+   * only these tiers, with their counts.
    */
-  dissolvedStateFeatureIds?: readonly string[];
-  /** Name riding beside the satellite on the inner orbit. */
-  orbitLabel: string;
-  /** The globe's idle tour for this era, in place of the Cold War tour. */
-  showcase: readonly HistoricalCrisisShowcaseEntry[];
-  /** Badge on the tour's cards. */
-  showcaseBadge: string;
+  tierCounts?: Partial<Record<CountryTier, number>>;
 };
+
+/** An off-site link under the hero. `labelKey` (in the `auth` namespace) wins over `label`. */
+export type EraLink = { href: string; label: string; labelKey?: string };
 
 export type EraConfig = {
   id: EraId;
@@ -106,32 +84,17 @@ export type EraConfig = {
    * Off-site explainer for this era's world, linked under the hero copy. It
    * lives on the studio site, so the link opens in a new tab.
    */
-  explainer?: { href: string; label: string };
+  explainer?: EraLink;
+  /** The studio news post that announced this world, linked beside the explainer. */
+  newsPost?: EraLink;
+  /**
+   * How the country list groups its rows: by Cold War bloc (the default), or
+   * by tier for a world where the tiers are the story.
+   */
+  rosterGrouping?: "bloc" | "tier";
   /** Globe rotation at first paint, `[-lon, -lat, 0]`. Defaults to the Mediterranean. */
   initialRotation?: [number, number, number];
 };
-
-/**
- * The fifteen Soviet republics as Natural Earth feature ids. Their union is the
- * USSR's last outline, and the arcs they share are the borders it left behind.
- */
-export const SOVIET_REPUBLIC_FEATURE_IDS: readonly string[] = [
-  "643", // Russia
-  "804", // Ukraine
-  "112", // Belarus
-  "498", // Moldova
-  "233", // Estonia
-  "428", // Latvia
-  "440", // Lithuania
-  "268", // Georgia
-  "051", // Armenia
-  "031", // Azerbaijan
-  "398", // Kazakhstan
-  "860", // Uzbekistan
-  "795", // Turkmenistan
-  "417", // Kyrgyzstan
-  "762", // Tajikistan
-];
 
 /**
  * A curated roster entry: the display NAME and the order it appears in.
@@ -178,6 +141,25 @@ function nationsFor(
     }
   }
   return out;
+}
+
+/** Countries per globe tier, for the hero key. Computer-run full simulations draw as Economic Powers. */
+function tierCountsFor(
+  preset: ShippingPreset,
+  curated: ReadonlyArray<{ id: string; name: string }>
+): Partial<Record<CountryTier, number>> {
+  const counts: Partial<Record<CountryTier, number>> = {};
+  const globeTier: Record<EraNation["tier"], CountryTier> = {
+    player: "player",
+    econ: "economic",
+    npp: "economic",
+    background: "background",
+  };
+  for (const nation of nationsFor(preset, curated)) {
+    const tier = globeTier[nation.tier];
+    counts[tier] = (counts[tier] ?? 0) + 1;
+  }
+  return counts;
 }
 
 /** Curated display roster for 1953: name and order only; tier is derived. */
@@ -446,13 +428,7 @@ export const ERA_CONFIGS: Record<EraId, EraConfig> = {
     // Open over the Balkans so the old Soviet outline fills the right of the
     // first frame and the UK's chip clears the hero copy.
     initialRotation: [-24, -42, 0],
-    broadcast: {
-      ticker: TICKER_1991,
-      dissolvedStateFeatureIds: SOVIET_REPUBLIC_FEATURE_IDS,
-      orbitLabel: "MIR",
-      showcase: SHOWCASE_1991,
-      showcaseBadge: "Special report",
-    },
+    broadcast: {},
     explainer: {
       href: "https://lakesidegames.net/ahd-1991/",
       label: "What's new in the 1991 world",
@@ -564,6 +540,16 @@ export const ERA_CONFIGS: Record<EraId, EraConfig> = {
     ],
     playSectionDek:
       "Run for office in the United States or Canada, pass laws on AI, energy and pensions, and steer a country through the decades to 2050.",
+    tileBodies: {
+      stateMetrics:
+        "Track demographics, unemployment and public trust in every US state and every Canadian province and territory.",
+      ballot:
+        "Run for the House, Senate, governor or a state legislature, or for the House of Commons and the legislatures of Canada's thirteen provinces and territories.",
+      bills:
+        "Draft bills on AI liability, data protection, housing supply or an automation tax, and carry them through Congress or Parliament.",
+      markets:
+        "Trade commodities and currencies, the Canadian dollar and the modern Turkish lira included, and 10 and 30 year government bonds.",
+    },
     worldSectionDek:
       "{playableCount} of these nations are open to players. The United Kingdom, Germany, Japan and China run full simulations of their own, and sixteen more run in the background. Drag the globe to explore.",
     closingHeadline: "Pick a country and a role.",
@@ -572,15 +558,23 @@ export const ERA_CONFIGS: Record<EraId, EraConfig> = {
     footerTagline: "A persistent political and economic simulation with no seasonal resets.",
     accessMap: accessFor("2027-default", NATIONS_2027),
     nations: nationsFor("2027-default", NATIONS_2027),
-    // Open over the Atlantic so both North American player countries and the
-    // European simulations share the first frame.
-    initialRotation: [30, -40, 0],
+    // Open over the western Atlantic: the two player countries clear of the
+    // hero copy on the day side, Europe's lit cities past the terminator.
+    initialRotation: [48, -30, 0],
     broadcast: {
-      ticker: TICKER_2027,
-      orbitLabel: "RELAY",
-      showcase: SHOWCASE_2027,
-      showcaseBadge: "Looking ahead",
+      tierCounts: tierCountsFor("2027-default", NATIONS_2027),
     },
+    explainer: {
+      href: "https://lakesidegames.net/ahd-2027/",
+      label: "The 2027 world",
+      labelKey: "landing.world2027.overview",
+    },
+    newsPost: {
+      href: "https://lakesidegames.net/news/state-of-the-game-november-2026/",
+      label: "State of the Game, November 2026",
+      labelKey: "landing.world2027.stateOfTheGame",
+    },
+    rosterGrouping: "tier",
   },
 };
 

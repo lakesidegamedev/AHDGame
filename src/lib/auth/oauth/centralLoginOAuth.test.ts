@@ -47,7 +47,12 @@ vi.mock("@/lib/auth/userDocCache", () => ({ invalidateCachedUser: vi.fn() }));
 const hopMock = vi.hoisted(() => ({
   start: vi.fn(async (_input: unknown): Promise<string | null> => null),
 }));
-vi.mock("@/lib/auth/centralLogin/hop", () => ({ startLakesideHop: hopMock.start }));
+const readyMock = vi.hoisted(() => ({ ready: vi.fn(async (): Promise<boolean> => true) }));
+vi.mock("@/lib/auth/centralLogin/issuerReadiness", () => ({ isHopIssuerReady: readyMock.ready }));
+vi.mock("@/lib/auth/centralLogin/hop", () => ({
+  startLakesideHop: hopMock.start,
+  recordHopSkipped: vi.fn(async () => {}),
+}));
 vi.mock("@/lib/db/repositories/gameConfig", () => ({
   gameConfigCollection: () => ({ findOne: async () => ({}) }),
 }));
@@ -292,7 +297,11 @@ describe("OAuth login session hop", () => {
       {} as never
     );
 
-  beforeEach(() => hopMock.start.mockReset());
+  beforeEach(() => {
+    hopMock.start.mockReset();
+    readyMock.ready.mockReset();
+    readyMock.ready.mockResolvedValue(true);
+  });
 
   it.each(["off", "shadow"])("%s: never starts a hop", async (mode) => {
     setEnv(mode);
@@ -313,6 +322,23 @@ describe("OAuth login session hop", () => {
         destination: "https://game.example.invalid/result?s=login_success&n=/",
       })
     );
+  });
+
+  it("central: an issuer that is not ready falls back to the destination", async () => {
+    setEnv("central");
+    readyMock.ready.mockResolvedValue(false);
+    hopMock.start.mockResolvedValue("https://issuer.example.invalid/auth");
+    const res = await run();
+    expect(hopMock.start).not.toHaveBeenCalled();
+    expect(res.headers.get("location")).toContain("/result?s=login_success");
+  });
+
+  it("central: linking a provider never starts a hop", async () => {
+    setEnv("central");
+    hopMock.start.mockResolvedValue("https://issuer.example.invalid/auth");
+    await runOAuthLink(db, linkAdapter, cookieStore, "state");
+    expect(hopMock.start).not.toHaveBeenCalled();
+    expect(readyMock.ready).not.toHaveBeenCalled();
   });
 
   it("central: a skipped hop leaves the normal redirect", async () => {

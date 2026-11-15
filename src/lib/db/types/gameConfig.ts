@@ -168,9 +168,9 @@ export interface GameConfig {
    */
   managementOverheadPpPerDoubling?: number;
   /**
-   * Turn resilience. 0 or absent = today's behaviour. >= 2 lets an interrupted
-   * corporation turn resume from its journal when the journal proves the partial
-   * state is known.
+   * Turn resilience. 0 or absent = today's behaviour. 1: a stale lock is taken
+   * over after about 3 minutes and a stopped turn retries from its failed step.
+   * 2: an interrupted corporation turn may also resume from its journal.
    */
   turnResilienceStage?: number;
   /**

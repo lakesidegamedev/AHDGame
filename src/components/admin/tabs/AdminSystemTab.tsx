@@ -36,7 +36,6 @@ import { IssueSovereignDebtCard } from "@/components/admin/economy/IssueSovereig
 import { DiscordIntegrations } from "@/components/admin/system/DiscordIntegrations";
 import { HealDiscordUsers } from "@/components/admin/heal/HealDiscordUsers";
 import { GameHealthTab } from "@/components/admin/system/GameHealthTab";
-import { CodeQualityTab } from "@/components/admin/system/CodeQualityTab";
 import { AdminObservabilityTab } from "./AdminObservabilityTab";
 import { SubTabBar } from "./SubTabBar";
 
@@ -47,7 +46,6 @@ export type SystemSubTab =
   | "post-reset"
   | "heal"
   | "game-health"
-  | "code-quality"
   | "integrations"
   | "observability";
 
@@ -192,7 +190,6 @@ export function AdminSystemTab({ activeSub }: AdminSystemTabProps) {
           </div>
         )}
         {activeSub === "game-health" && <GameHealthTab />}
-        {activeSub === "code-quality" && <CodeQualityTab />}
         {activeSub === "integrations" && <DiscordIntegrations />}
         {activeSub === "observability" && <AdminObservabilityTab />}
       </div>

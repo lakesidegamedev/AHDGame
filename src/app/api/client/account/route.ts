@@ -9,6 +9,8 @@ import { cookies } from "next/headers";
 import { getAuthUserFromToken } from "@/lib/auth";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { usersCollection } from "@/lib/db/repositories/users";
+import { entitlementExpiryMs, isFreeAccessOn } from "@/lib/freeAccess";
+import { hasLakesideEntitlement } from "@/lib/lakesideEntitlements";
 
 const OFFLINE_ENTITLEMENT_GRACE_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -65,13 +67,26 @@ export async function GET() {
     ? new Date(user.clientAccessExpiresAt).getTime()
     : 0;
   const tempActive = tempExpiresMs > nowMs;
-  const singleplayerEntitled =
+  const realEntitled =
     auth.user.isModerator === true ||
     Boolean(user.singleplayerEntitledAt) ||
     tierActive ||
     tempActive;
+  const [freeAccess, lakesideGrant] = await Promise.all([
+    isFreeAccessOn(),
+    realEntitled
+      ? Promise.resolve(false)
+      : hasLakesideEntitlement(auth.user.userId, "ahd-singleplayer"),
+  ]);
+  const singleplayerEntitled = realEntitled || lakesideGrant || freeAccess;
+  // Grants and free access are revocable remotely, so they get the short cap too.
+  const freeAccessOnly = (freeAccess || lakesideGrant) && !realEntitled;
 
-  const graceEnd = nowMs + OFFLINE_ENTITLEMENT_GRACE_MS;
+  const graceEnd = entitlementExpiryMs({
+    nowMs,
+    graceMs: OFFLINE_ENTITLEMENT_GRACE_MS,
+    freeAccessOnly,
+  });
   const tempOnly =
     tempActive && auth.user.isModerator !== true && !user.singleplayerEntitledAt && !tierActive;
 
@@ -80,6 +95,7 @@ export async function GET() {
       linked: true,
       displayName: user.displayName || user.username,
       supporter,
+      freeAccess,
       avatarUrl,
       singleplayer: {
         entitled: singleplayerEntitled,

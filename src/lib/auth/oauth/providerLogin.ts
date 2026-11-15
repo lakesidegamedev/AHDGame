@@ -33,13 +33,14 @@ import { authMigrationFenceAbsentFilter, isAuthMigrationFenced } from "@/lib/aut
 import {
   bridgeAccountFromUser,
   centralRollbackCreate,
-  getCentralLoginMode,
+  getCentralLoginModeFor,
   centralWriteFirst,
   shadowMirrorWrite,
   shadowRecordProviderLogin,
   type BridgeWriteOp,
 } from "@/lib/auth/centralLogin";
-import { startLakesideHop } from "@/lib/auth/centralLogin/hop";
+import { recordHopSkipped, startLakesideHop } from "@/lib/auth/centralLogin/hop";
+import { isHopIssuerReady } from "@/lib/auth/centralLogin/issuerReadiness";
 import type { OAuthCookieStore, OAuthDb, OAuthLoginAdapter } from "./types";
 import { usersCollection } from "@/lib/db/repositories/users";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
@@ -90,9 +91,13 @@ async function withLakesideHop(
   cookieStore: OAuthCookieStore,
   baseUrl: string
 ): Promise<NextResponse> {
-  if (getCentralLoginMode() !== "central") return normal;
+  if (getCentralLoginModeFor(userId) !== "central") return normal;
   const destination = normal.headers.get("location");
   if (!destination) return normal;
+  if (!(await isHopIssuerReady(userId))) {
+    await recordHopSkipped(userId);
+    return normal;
+  }
   const hopUrl = await startLakesideHop({
     userId,
     destination,

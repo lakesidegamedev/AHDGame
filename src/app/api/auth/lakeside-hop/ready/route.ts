@@ -1,0 +1,19 @@
+import { cookies } from "next/headers";
+import { NextResponse } from "next/server";
+import { recordHopSkipped, sessionUserId } from "@/lib/auth/centralLogin/hop";
+import { isHopIssuerReady } from "@/lib/auth/centralLogin/issuerReadiness";
+import { getCentralLoginModeFor } from "@/lib/auth/centralLogin";
+
+// GET /api/auth/lakeside-hop/ready: Tells the login page whether the central issuer answers, so it can skip the hop instead of showing a dead page.
+// Auth: public (reveals only reachability)
+// Errors: none, failures report ready: false
+export async function GET() {
+  // Only a signed-in caller (a player who just signed in) is recorded, so an
+  // anonymous caller cannot write events by polling this route.
+  const userId = await sessionUserId(await cookies());
+  const ready = await isHopIssuerReady(userId ?? undefined);
+  if (!ready && userId && getCentralLoginModeFor(userId) === "central") {
+    await recordHopSkipped(userId);
+  }
+  return NextResponse.json({ ready }, { headers: { "Cache-Control": "no-store" } });
+}

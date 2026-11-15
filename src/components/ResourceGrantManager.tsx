@@ -58,6 +58,7 @@ export function ResourceGrantManager({ context = "admin" }: ResourceGrantManager
   const [fundsAmount, setFundsAmount] = useState<number>(0);
   const [cashOnHandAmount, setCashOnHandAmount] = useState<number>(0);
   const [grantPositionUpdateVoucher, setGrantPositionUpdateVoucher] = useState(false);
+  const [reason, setReason] = useState("");
   const [fxRates, setFxRates] = useState<Partial<Record<CurrencyCode, number>>>({});
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
@@ -203,6 +204,7 @@ export function ResourceGrantManager({ context = "admin" }: ResourceGrantManager
           funds: fundsAmount !== 0 ? fundsAmount : undefined,
           cashOnHand: cashOnHandAmount !== 0 ? cashOnHandAmount : undefined,
           positionUpdateVoucher: grantPositionUpdateVoucher || undefined,
+          reason: reason.trim() || undefined,
         }),
       });
 
@@ -214,6 +216,7 @@ export function ResourceGrantManager({ context = "admin" }: ResourceGrantManager
         setFundsAmount(0);
         setCashOnHandAmount(0);
         setGrantPositionUpdateVoucher(false);
+        setReason("");
         setSelectedIds(new Set());
         setGrantToAll(false);
         // Refresh character list to show updated values
@@ -386,6 +389,17 @@ export function ResourceGrantManager({ context = "admin" }: ResourceGrantManager
               : `Grant to ALL players (${characters.length} total)`}
           </span>
         </div>
+
+        <label className="mb-4 block text-sm font-medium">
+          Reason (kept in the grants record)
+          <input
+            type="text"
+            value={reason}
+            maxLength={300}
+            onChange={(event) => setReason(event.target.value)}
+            className="mt-1 w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm"
+          />
+        </label>
 
         {/* Grant Button */}
         <button
