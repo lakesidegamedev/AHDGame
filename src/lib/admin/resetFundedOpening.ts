@@ -128,11 +128,11 @@ async function fillOpeningGaps(db: Db) {
 
   const stateIds = (
     await statesCollection<Document>(db)
-      .find({}, { projection: { _id: 0, id: 1 } })
+      .find({}, { projection: { _id: 1 } })
       .toArray()
   )
-    .map((row) => row.id)
-    .filter((id): id is string => typeof id === "string" && id.length > 0);
+    .map((row) => String(row._id))
+    .filter((id) => id.length > 0);
   const priceDocs = await commodityPricesCollection<Document>(db)
     .find({}, { projection: { commodity: 1, globalPrice: 1, statePrices: 1 } })
     .toArray();
