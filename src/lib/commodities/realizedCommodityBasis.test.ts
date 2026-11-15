@@ -204,7 +204,11 @@ describe("realized basis reconciles market and corporation surfaces", () => {
     // Producer: corp B splits measured output across the manufacturing mix.
     const expectedB =
       800 *
-      commodityMixWeight({ steel: 0.4, building_materials: 0.2, vehicles: 0.5 }, COMMODITY_BASE_PRICES, "steel");
+      commodityMixWeight(
+        { steel: 0.4, building_materials: 0.2, vehicles: 0.5 },
+        COMMODITY_BASE_PRICES,
+        "steel"
+      );
     expect(round2(market.supplyByCorp.get("corpB") ?? 0)).toBeCloseTo(round2(expectedB), 1);
     const tabB = corpTabFor(sectors, "corpB").find((c) => c.commodity === "steel");
     expect(
