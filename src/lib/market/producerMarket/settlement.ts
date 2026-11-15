@@ -18,6 +18,11 @@ import { advanceProducerEconomy } from "./production";
 import { producerPlanningWarnings } from "./planningRules";
 import { scopeNeutralBook } from "./shadowCarryRules";
 import { producerCashTransition, type ProducerCashBinding } from "./cashSettlementRules";
+import {
+  closingProducerCash,
+  ProducerCashChanges,
+  producerCashChangeMap,
+} from "./cashChangesRules";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
@@ -84,16 +89,22 @@ function cashWithLedger(payload: FrozenProducerTurn, receiptDigest: string) {
     turn: payload.request.turn,
     opening: payload.request.accounts,
     closing: payload.result.accounts,
+    cashChanges: payload.result.cashChanges,
     bindings: payload.bindings,
     receiptDigest,
   });
   const opening = new Map(payload.request.accounts.map((account) => [account.id, account.cash]));
   const closing = new Map(payload.result.accounts.map((account) => [account.id, account.cash]));
+  const changes = payload.result.cashChanges
+    ? producerCashChangeMap(payload.result.cashChanges)
+    : null;
   const ledgerLegs: LedgerEntry["legs"] = [];
   for (const binding of payload.bindings) {
     const currency = ZOD_CURRENCY_ENUM.find((code) => code === binding.currency);
     if (!currency) throw new Error("Producer settlement requires a native ledger currency");
-    const change = closing.get(binding.accountId)! - opening.get(binding.accountId)!;
+    const change =
+      changes?.get(binding.accountId) ??
+      closing.get(binding.accountId)! - opening.get(binding.accountId)!;
     if (change === 0) continue;
     ledgerLegs.push({
       account:
@@ -386,8 +397,11 @@ function redirectFrozenOwnerCash(
   const opening = new Map(frozen.request.accounts.map((account) => [account.id, account.cash]));
   const closing = new Map(frozen.result.accounts.map((account) => [account.id, account.cash]));
   const changes = new Map<string, number>();
+  const witnessed = frozen.result.cashChanges
+    ? producerCashChangeMap(frozen.result.cashChanges)
+    : null;
   for (const [from, to] of cashRedirect) {
-    const change = closing.get(from)! - opening.get(from)!;
+    const change = witnessed?.get(from) ?? closing.get(from)! - opening.get(from)!;
     changes.set(to, (changes.get(to) ?? 0) + change);
   }
   const accounts = (
@@ -405,17 +419,28 @@ function redirectFrozenOwnerCash(
         ? { ...claim, debtorAccountId: cashRedirect.get(claim.debtorAccountId)! }
         : claim
     );
+  const redirected = witnessed
+    ? new ProducerCashChanges([...opening.keys()].filter((id) => !cashRedirect.has(id)))
+    : null;
+  if (redirected)
+    for (const [id, change] of witnessed!) redirected.add(cashRedirect.get(id) ?? id, change);
+  const redirectedOpening = accounts(frozen.request.accounts, false);
+  const redirectedClosing = accounts(frozen.result.accounts, true);
+  const redirectedChanges = redirected?.rows();
   return {
     ...frozen,
     bindings: frozen.bindings.filter((binding) => !cashRedirect.has(binding.accountId)),
     request: {
       ...frozen.request,
-      accounts: accounts(frozen.request.accounts, false),
+      accounts: redirectedOpening,
       payables: claims(frozen.request.payables ?? []),
     },
     result: {
       ...frozen.result,
-      accounts: accounts(frozen.result.accounts, true),
+      ...(redirectedChanges ? { cashChanges: redirectedChanges } : {}),
+      accounts: redirectedChanges
+        ? closingProducerCash(redirectedOpening, redirectedChanges, redirectedClosing)
+        : redirectedClosing,
       payables: claims(frozen.result.payables),
       payablePayments: frozen.result.payablePayments.map((payment) =>
         cashRedirect.has(payment.debtorAccountId)
@@ -504,6 +529,10 @@ export function applySettlementClose(
   boundAccountIds: ReadonlySet<string>
 ): SettledEconomyResult {
   const cash = new Map(result.accounts.map((a) => [a.id, a.cash]));
+  const changes = result.cashChanges
+    ? new ProducerCashChanges(cash.keys(), result.cashChanges)
+    : null;
+  const closeChanges = changes ? new ProducerCashChanges(cash.keys()) : null;
   for (const t of close.transfers) {
     if (!Number.isFinite(t.amountAnchor) || t.amountAnchor < 0)
       throw new Error(`Invalid closing transfer ${t.reason}`);
@@ -512,12 +541,18 @@ export function applySettlementClose(
     if (!cash.has(t.fromAccountId)) throw new Error("Closing transfer source has no balance");
     cash.set(t.fromAccountId, cash.get(t.fromAccountId)! - t.amountAnchor);
     cash.set(t.toAccountId, (cash.get(t.toAccountId) ?? 0) + t.amountAnchor);
+    changes?.transfer(t.fromAccountId, t.toAccountId, t.amountAnchor);
+    closeChanges?.transfer(t.fromAccountId, t.toAccountId, t.amountAnchor);
   }
   for (const [id, value] of cash)
     if (value < -1e-6) throw new Error(`Closing transfers overdraw ${id}`);
+  const reported = [...cash].map(([id, value]) => ({ id, cash: Math.max(0, value) }));
   return {
     ...result,
-    accounts: [...cash].map(([id, value]) => ({ id, cash: Math.max(0, value) })),
+    accounts: closeChanges
+      ? closingProducerCash(result.accounts, closeChanges.rows(), reported)
+      : reported,
+    ...(changes ? { cashChanges: changes.rows() } : {}),
     close,
   };
 }

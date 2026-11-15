@@ -1,6 +1,11 @@
 /** One closed, valued cash transfer for a frozen producer settlement. */
 import { oid, type BankingTransition, type TransitionLeg } from "@/lib/banking/rules/boundary";
 import type { MarketAccount } from "./rules";
+import {
+  producerCashChangeMap,
+  producerCashSnapshotTolerance,
+  type ProducerCashChange,
+} from "./cashChangesRules";
 
 export type ProducerCashBinding = {
   accountId: string;
@@ -23,6 +28,7 @@ export function producerCashTransition(input: {
   turn: number;
   opening: readonly MarketAccount[];
   closing: readonly MarketAccount[];
+  cashChanges?: readonly ProducerCashChange[];
   bindings: readonly ProducerCashBinding[];
   /** Content hash of the complete immutable production and trade receipt. */
   receiptDigest: string;
@@ -43,6 +49,21 @@ export function producerCashTransition(input: {
   const closing = rows(input.closing);
   if (opening.size !== closing.size || [...opening.keys()].some((id) => !closing.has(id)))
     throw new Error("Producer participants changed during settlement");
+  const changes = input.cashChanges ? producerCashChangeMap(input.cashChanges) : null;
+  if (changes) {
+    if (changes.size !== opening.size || [...changes.keys()].some((id) => !opening.has(id)))
+      throw new Error("Producer cash change participants differ from the snapshots");
+    for (const [id, cash] of opening) {
+      const expected = cash + changes.get(id)!;
+      if (
+        !Number.isFinite(expected) ||
+        expected < -1e-7 ||
+        Math.abs(Math.max(0, expected) - closing.get(id)!) >
+          producerCashSnapshotTolerance(expected, closing.get(id)!)
+      )
+        throw new Error("Producer cash changes differ from the closing snapshot");
+    }
+  }
   const bindings = new Map<string, ProducerCashBinding>();
   const targets = new Set<string>();
   const rates = new Map<string, number>();
@@ -82,7 +103,7 @@ export function producerCashTransition(input: {
   let gross = 0;
   const legs: TransitionLeg[] = [];
   for (const [id, cash] of [...opening].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))) {
-    const change = closing.get(id)! - cash;
+    const change = changes?.get(id) ?? closing.get(id)! - cash;
     net += change;
     gross += Math.abs(change);
     if (change === 0) continue;

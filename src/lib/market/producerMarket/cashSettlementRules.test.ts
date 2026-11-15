@@ -96,4 +96,74 @@ describe("closed producer cash settlement", () => {
     const { opening } = args();
     expect(producerCashTransition({ ...args(), closing: opening }).legs).toEqual([]);
   });
+
+  it.each([
+    { buyerCurrency: "USD", buyerRate: 1, sellerCurrency: "USD", sellerRate: 1 },
+    { buyerCurrency: "TRY", buyerRate: 33.891, sellerCurrency: "JPY", sellerRate: 133.7 },
+  ])("settles small witnessed payments beside a trillion-sized $buyerCurrency balance", (fx) => {
+    const amount = 0.1;
+    const opening = [
+      { id: "buyer", cash: 6e12 },
+      { id: "seller", cash: 20 },
+    ];
+    const closing = [
+      { id: "buyer", cash: 6e12 - amount },
+      { id: "seller", cash: 20 + amount },
+    ];
+    const input = {
+      ...args(),
+      opening,
+      closing,
+      bindings: [
+        {
+          ...bindings[0],
+          currency: fx.buyerCurrency,
+          localPerAnchor: fx.buyerRate,
+          openingCashLocal: 6e12 * fx.buyerRate,
+        },
+        {
+          ...bindings[1],
+          currency: fx.sellerCurrency,
+          localPerAnchor: fx.sellerRate,
+          openingCashLocal: 20 * fx.sellerRate,
+        },
+      ],
+    };
+    expect(() => producerCashTransition(input)).toThrow("conserve");
+    const cashChanges = [
+      { accountId: "buyer", change: -amount },
+      { accountId: "seller", change: amount },
+    ];
+    const receipt = producerCashTransition({ ...input, cashChanges });
+    expect(checkBalancedTransfer(receipt.legs, receipt.key)).toEqual([]);
+    expect(receipt.legs.map((leg) => leg.amount)).toEqual([
+      amount * fx.buyerRate,
+      amount * fx.sellerRate,
+    ]);
+    expect(() =>
+      producerCashTransition({
+        ...input,
+        cashChanges: [{ ...cashChanges[0], change: -amount + 0.00001 }, cashChanges[1]],
+      })
+    ).toThrow("conserve");
+    expect(() =>
+      producerCashTransition({
+        ...input,
+        cashChanges,
+        closing: [{ ...closing[0], cash: closing[0].cash + 0.01 }, closing[1]],
+      })
+    ).toThrow("closing snapshot");
+    expect(() =>
+      producerCashTransition({ ...input, cashChanges: [cashChanges[0], cashChanges[0]] })
+    ).toThrow("witness");
+    expect(() => producerCashTransition({ ...input, cashChanges: [cashChanges[0]] })).toThrow(
+      "participants"
+    );
+    expect(() =>
+      producerCashTransition({
+        ...input,
+        cashChanges: [cashChanges[0], { accountId: "unknown", change: amount }],
+      })
+    ).toThrow("participants");
+  });
 });

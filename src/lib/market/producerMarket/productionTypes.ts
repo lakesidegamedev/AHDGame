@@ -16,6 +16,7 @@ import type {
 } from "./production";
 import type { ProducerPlanningDiagnostics } from "./planningRules";
 import type { ImportTariffTable } from "./tariffRules";
+import type { ProducerCashChange } from "./cashChangesRules";
 
 export type ProducerEconomyInput = {
   turn: number;
@@ -123,6 +124,8 @@ export type ProducerPlanningExecution = {
 
 export type ProducerEconomyResult = {
   accounts: MarketAccount[];
+  /** Optional for legacy frozen receipts. */
+  cashChanges?: ProducerCashChange[];
   payables: ProducerPayable[];
   payablePayments: ProducerPayable[];
   producers: ProducerOperatingResult[];

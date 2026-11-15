@@ -1640,7 +1640,10 @@ describe("spillover measurement tags", () => {
             Object.entries(value)
               .filter(
                 ([k]) =>
-                  k !== "spilloverRequested" && k !== "spilloverRequestedUnits" && k !== "planning"
+                  k !== "spilloverRequested" &&
+                  k !== "spilloverRequestedUnits" &&
+                  k !== "planning" &&
+                  k !== "cashChanges"
               )
               .map(([k, v]) => [k, untagged(v)])
           )
