@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { ObjectId } from "mongodb";
-import type { Corporation, UnownedSector } from "@/lib/db/types";
+import type { Corporation } from "@/lib/db/types";
+import { candidate as marketCandidate } from "./__fixtures__/marketCandidates";
+import type { MarketCandidate } from "./marketCandidates";
 import type { NppMarketEntryDiagnostic } from "@/lib/db/types/marketFormation";
 import {
   createFrontierEntryTurnState,
@@ -17,8 +19,8 @@ function corp(overrides: Partial<Corporation> = {}): Corporation {
   } as unknown as Corporation;
 }
 
-function candidate(stateId = "NY"): UnownedSector {
-  return { stateId, countryId: "US", sectorType: "manufacturing" } as unknown as UnownedSector;
+function candidate(stateId = "NY"): MarketCandidate {
+  return marketCandidate({ stateId });
 }
 
 function diagnostic(reason: NppMarketEntryDiagnostic["reason"]): NppMarketEntryDiagnostic {

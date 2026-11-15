@@ -21,7 +21,9 @@ import {
 import { ceoArchetypeModifiers } from "./ceoArchetype";
 import type { NppCorpDecisionContext } from "./npp/corpDecisionTypes";
 import type { NppStrategyState } from "./npp/corpStrategy";
-import type { Corporation, CorporateSector, UnownedSector } from "@/lib/db/types";
+import type { Corporation, CorporateSector } from "@/lib/db/types";
+import { candidatesByCountry } from "./npp/__fixtures__/marketCandidates";
+import type { MarketCandidate } from "./npp/marketCandidates";
 import { CAPACITY_ANCHOR_YEAR } from "@/lib/constants/capacityEconomy";
 import { bucketKey } from "@/lib/nationalization/stateControlledBuckets";
 import {
@@ -79,7 +81,7 @@ function sector(overrides: Partial<CorporateSector> = {}): CorporateSector {
 function decide(
   c: Corporation,
   sectors: CorporateSector[],
-  pools: UnownedSector[],
+  pools: MarketCandidate[],
   extra: {
     strategy?: NppStrategyState;
     competitorCountOf?: NppCorpDecisionContext["competitorCountOf"];
@@ -96,7 +98,7 @@ function decide(
       strategy: extra.strategy,
       competitorCountOf: extra.competitorCountOf,
     },
-    new Map<string, UnownedSector[]>([["US", pools]]),
+    candidatesByCountry(pools),
     extra.stateControlled ?? new Set<string>(),
     noPrices,
     plantsCtx,

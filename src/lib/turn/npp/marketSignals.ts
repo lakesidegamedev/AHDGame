@@ -393,7 +393,7 @@ export const HQ_STATE_SCORE_BONUS = 1.3;
 /**
  * Is there any bucket this corp could actually enter? The strategy loop needs
  * to tell "healthy and boxed in" (defend) from "healthy with somewhere to go"
- * (expand), and headroom is the difference. Reuses the same ranking the
+ * (expand), and unmet demand is the difference. Reuses the same ranking the
  * expansion path spends against, so the signal and the action agree.
  */
 export function hasEnterableHeadroom(
@@ -402,7 +402,8 @@ export function hasEnterableHeadroom(
   candidatesByCountry: Map<string, MarketCandidate[]>,
   stateControlled: ReadonlySet<string>,
   plantsEnabled: boolean,
-  eraUnitScale: number
+  eraUnitScale: number,
+  signals?: PlacementSignals
 ): boolean {
   const frontier = expansionFrontierStates(corp.countryId, corp.headquartersState, sectors);
   return (
@@ -421,7 +422,7 @@ export function hasEnterableHeadroom(
       () => null,
       plantsEnabled,
       eraUnitScale,
-      undefined,
+      signals,
       frontier,
       undefined,
       corp.industryModel,

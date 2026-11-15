@@ -10,9 +10,12 @@ import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
 import { COMMODITY_BASE_PRICES, SECTOR_SUPPLY } from "@/lib/constants/commodities";
 import { foundingStarterUnits } from "@/lib/corporations/foundingPlant";
 import { sectorDemandGapUnits } from "@/lib/market/sectorDemandGap";
-import { isStateScopedCommodity } from "@/lib/market/rules/commodityMarketScope";
 import { getStrategy } from "@/lib/constants/sectorStrategies";
-import { bucketKey, enumerateCandidateBuckets } from "@/lib/market/marketBuckets";
+import {
+  bucketKey,
+  enumerateCandidateBuckets,
+  type LaneIdentity,
+} from "@/lib/market/marketBuckets";
 import type {
   CellDemandCoverage,
   CommoditySupplyBreadth,
@@ -123,6 +126,8 @@ export function computeMarketFormationSnapshot(args: {
   sectors: CorporateSector[];
   /** Regions of every country in play; every region x lane is one bucket. */
   states: readonly { _id: string; countryId: string }[];
+  /** Lanes to enumerate; every operating lane when absent. */
+  lanes?: readonly LaneIdentity[];
   prices: CommodityPrice[];
   entryFunnel?: NppMarketEntryFunnel | null;
   eraUnitScale: number;
@@ -159,7 +164,7 @@ export function computeMarketFormationSnapshot(args: {
   };
   const universe = new Map<string, Bucket>();
   for (const state of args.states) {
-    for (const bucket of enumerateCandidateBuckets([state._id])) {
+    for (const bucket of enumerateCandidateBuckets([state._id], undefined, args.lanes)) {
       universe.set(bucket.key, { ...bucket, countryId: state.countryId });
     }
   }
@@ -197,9 +202,9 @@ export function computeMarketFormationSnapshot(args: {
     const unmetDemandUnits = sectorDemandGapUnits(supplyMix, (commodity) => {
       const price = pricesByCommodity.get(commodity);
       if (!price) return 0;
-      const [supply, demand] = isStateScopedCommodity(commodity)
-        ? [price.stateSupply?.[pool.stateId], price.stateDemand?.[pool.stateId]]
-        : [price.nationalSupply?.[pool.countryId], price.nationalDemand?.[pool.countryId]];
+      // The state books, like every other figure in this snapshot.
+      const supply = price.stateSupply?.[pool.stateId];
+      const demand = price.stateDemand?.[pool.stateId];
       return typeof supply === "number" && typeof demand === "number"
         ? Math.max(0, demand - supply)
         : 0;

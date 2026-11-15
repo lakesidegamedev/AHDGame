@@ -2,8 +2,8 @@
  * Canonical capture of one `processNppCorporationDecisions` run.
  *
  * The NPP brain is a pile of arithmetic plus a handful of branch points, so
- * "the decision is unchanged" has to mean every emitted write, every draw
- * against the unowned pool and every cash move, not a spot check on sector
+ * "the decision is unchanged" has to mean every emitted write, every claim
+ * against unmet demand and every cash move, not a spot check on sector
  * counts. This module flattens one phase run into a stable string and hashes
  * it, both whole and per corporation, so a refactor that moves a rounding step
  * fails on the corporation that moved instead of on the file.
@@ -19,12 +19,12 @@ import { processNppCorporationDecisions } from "@/lib/turn/nppCorporationBehavio
 import type { NppDecisionsWorld } from "./nppDecisionsWorld";
 
 export interface NppDecisionsCapture {
-  /** One hash over every decision output, the pool after the run and corp cash. */
+  /** One hash over every decision output and corp cash. */
   digest: string;
   /** Per corporation hash, so a mismatch names the corporation. */
   corps: Record<string, string>;
   /** Outputs that are not owned by a single corporation, hashed together. */
-  unowned: string;
+  worldState: string;
   counts: {
     corpUpdates: number;
     sectorUpdates: number;
@@ -106,7 +106,7 @@ export async function captureNppDecisions(
   for (const op of result.corpUpdates) {
     const filter = op.filter as { _id?: unknown } | undefined;
     // The reinvestment cash witness key is minted fresh for this write, so it
-    // is position-stable only; the witness itself is compared in `unowned`.
+    // is position-stable only; the witness itself is compared in `worldState`.
     const update = op.update as { $set?: Record<string, unknown> } | undefined;
     const normalized = update?.$set
       ? (() => {
@@ -148,14 +148,8 @@ export async function captureNppDecisions(
     corps[corpId] = hash(perCorp.get(corpId));
   }
 
-  // World state the phase moves on its own: the pool it drew founding headroom
-  // from and the corporation cash it settled through the writeback.
-  const pool = (await db.collection("unownedSectors").find({}).toArray())
-    .map((row) => {
-      const doc = row as { _id: ObjectId; headroomUnits?: number; revenue?: number };
-      return [doc._id.toHexString(), doc.headroomUnits ?? null, doc.revenue ?? null];
-    })
-    .sort((a, b) => String(a[0]).localeCompare(String(b[0])));
+  // World state the phase moves on its own: the corporation cash it settled
+  // through the writeback.
   const corpsAfter = (await db.collection("corporations").find({}).toArray())
     .map((row) => {
       const doc = row as { _id: ObjectId; liquidCapital?: number; nppStrategy?: unknown };
@@ -163,8 +157,7 @@ export async function captureNppDecisions(
     })
     .sort((a, b) => String(a[0]).localeCompare(String(b[0])));
 
-  const unowned = hash({
-    pool,
+  const worldState = hash({
     corpsAfter,
     reinvestmentWitnesses: stripMintedIds(result.reinvestmentCashWitnesses ?? []),
     foundingWitnesses: stripMintedIds(result.foundingCashWitnesses ?? []),
@@ -172,12 +165,12 @@ export async function captureNppDecisions(
     constructionFinanceBacklogCount: result.constructionFinanceBacklogCount,
   });
 
-  const digest = hash({ corps, unowned });
+  const digest = hash({ corps, worldState });
 
   return {
     digest,
     corps,
-    unowned,
+    worldState,
     counts: {
       corpUpdates: result.corpUpdates.length,
       sectorUpdates: result.sectorUpdates.length,

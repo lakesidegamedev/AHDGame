@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   findBestMarketCandidate as findBestMarketCandidateRaw,
   HQ_STATE_SCORE_BONUS,
+  hasEnterableHeadroom,
   markMarketsActive,
   sectorShortageScore,
 } from "./marketSignals";
@@ -651,5 +652,33 @@ describe("input-aware founding candidacy", () => {
       { foundingInputAvailabilityOf: () => null }
     );
     expect(pick?.stateId).toBe("WI");
+  });
+});
+
+describe("hasEnterableHeadroom without stored markets", () => {
+  const corp = {
+    countryId: "US",
+    headquartersState: "PA",
+    type: "manufacturing",
+    secondaryType: null,
+    industryModel: null,
+  } as never;
+
+  it("is false when the country lists no candidate bucket", () => {
+    expect(hasEnterableHeadroom(corp, [], new Map(), new Set(), true, 1)).toBe(false);
+  });
+
+  it("is true when a candidate bucket still has unmet demand", () => {
+    const pool = new Map([["US", [us("manufacturing", "NY", 5_000)]]]);
+    expect(hasEnterableHeadroom(corp, [], pool, new Set(), true, 1, withCandidateRoom())).toBe(
+      true
+    );
+  });
+
+  it("is false when every candidate reads no unmet demand", () => {
+    const pool = new Map([["US", [us("manufacturing", "NY", 0)]]]);
+    expect(hasEnterableHeadroom(corp, [], pool, new Set(), true, 1, withCandidateRoom())).toBe(
+      false
+    );
   });
 });

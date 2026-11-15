@@ -249,7 +249,8 @@ export function makeNppCorpDecision(
       candidatesByCountry,
       stateControlled,
       plants?.enabled === true,
-      plants?.eraUnitScale ?? 1
+      plants?.eraUnitScale ?? 1,
+      placementSignals
     )
   );
   const situation: StrategySituation = {
