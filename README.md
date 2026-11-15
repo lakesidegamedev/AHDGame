@@ -79,12 +79,13 @@ Game rules (formulas, eligibility, resolution) live in `rules.ts` modules that t
 | [`src/components`](./src/components)         | Shared React components                                                                    |
 | [`src/shared`](./src/shared)                 | Formulas and constants used by both browser and server                                     |
 | [`src/lib/seeds/wiki`](./src/lib/seeds/wiki) | Player wiki source                                                                         |
-| [`scripts`](./scripts)                       | Seeders, world bootstrap, migrations, simulator, lint rules, CI and maintenance tooling    |
+| [`scripts`](./scripts)                       | Seeders, world bootstrap, migrations, simulator, CI and maintenance tooling                |
 | [`tests`](./tests)                           | Playwright end-to-end tests and repository-wide checks (unit tests sit next to their code) |
 | [`content/changelog`](./content/changelog)   | Changelog notes and release posts                                                          |
 | [`messages`](./messages)                     | UI translations                                                                            |
 | [`public`](./public)                         | Static assets, maps and images                                                             |
 | [`docs`](./docs)                             | Design system reference                                                                    |
+| [`eslint-rules`](./eslint-rules)             | Project-specific ESLint rules                                                              |
 | [`vendor`](./vendor)                         | Vendored npm packages                                                                      |
 | [`.github`](./.github)                       | CI workflows, Semgrep rules, issue templates, security policy, code of conduct             |
 

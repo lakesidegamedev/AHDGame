@@ -61,7 +61,7 @@ async function main(): Promise<void> {
   // Initialize the same error and memory reporting before loading the cron
   // graph so failed worker boots and missed turns are observable.
   process.env.SENTRY_RELEASE ||= process.env.RAILWAY_GIT_COMMIT_SHA || "unknown";
-  await import("../src/sentry.server.config");
+  await import("../sentry.server.config");
   const { installCrashCapture } = await import("@/lib/observability/crashCapture");
   installCrashCapture();
   if (process.env.NODE_ENV === "production") {

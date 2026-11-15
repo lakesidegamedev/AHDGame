@@ -5,7 +5,7 @@
  */
 import { RuleTester } from "eslint";
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const rule = require("../scripts/eslint-rules/no-uncoded-error-response.js");
+const rule = require("../eslint-rules/no-uncoded-error-response.js");
 
 const ruleTester = new RuleTester({
   languageOptions: { ecmaVersion: 2022, sourceType: "module" },

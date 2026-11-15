@@ -184,12 +184,12 @@ export const POLICY_TAU = 139; // Time constant for metric decay (turns) - ~96 t
 export const REACTION_HALF_LIFE = 12; // Turns until policy reaction is 50%
 export const VOTE_IMPACT_HALF_LIFE = 24; // Turns until vote impact is 50%
 // Max decay-path points one law can move a metric (before scope multiplier). Kept at
-// 12 so STATE/regional laws (scope 1) are unchanged; the #0962 balance pass boosts
-// NATIONAL laws instead via a raised, normalized federal multiplier (below).
+// 12 so STATE/regional laws (scope 1) stay modest; NATIONAL laws get their
+// extra reach via a raised, normalized federal multiplier (below).
 export const MAX_EFFECT_PER_LAW = 12;
 
 /**
- * Convexity of the intensity→magnitude curve (Bug #0962). gamma < 1 makes the
+ * Convexity of the intensity→magnitude curve. gamma < 1 makes the
  * extremes pull away from the mid-ladder so "Maximum" reads distinctly stronger
  * than "Moderate". 1.0 = linear. Tuned in the balance pass.
  */
@@ -201,7 +201,7 @@ export function effectiveIntensity(intensity: number): number {
 }
 
 /**
- * Per-metric magnitude scale (Bug #0962 #1). Policy effect magnitudes are sized for
+ * Per-metric magnitude scale. Policy effect magnitudes are sized for
  * 0-100 index metrics; a large-range metric (educationSpending ~£13k, medianIncome ~£40k,
  * both capped at 10M) needs the effect scaled to its OPERATING value or the change is
  * imperceptible. We deliberately scale by `referenceValue` (the metric's current/baseline
@@ -210,7 +210,7 @@ export function effectiveIntensity(intensity: number): number {
  * an order of magnitude apart). So a max law moves a large metric by ~1% of its value.
  *
  * Small-range metrics (`maxValue - minValue <= 100`, i.e. every 0-100 index plus tight
- * ranges like populationGrowth) return 1.0 — byte-identical to the pre-#0962 behavior.
+ * ranges like populationGrowth) return 1.0, leaving index metrics unscaled.
  */
 export function metricRangeScale(
   minValue: number,
@@ -246,8 +246,8 @@ export function getFederalMultiplier(countryId: string): number {
 }
 
 /**
- * Normalized per-region scope for a NATIONAL law's DECAY-path metric effect (#0962
- * balance pass). Because every region gets this share and the national metric is the
+ * Normalized per-region scope for a NATIONAL law's DECAY-path metric effect.
+ * Because every region gets this share and the national metric is the
  * (pop-weighted) AVERAGE of its regions, the national-metric movement equals
  * `MAX_EFFECT_PER_LAW × NATIONAL_LAW_DECAY_MULTIPLIER` — INDEPENDENT of region count. So
  * a strong national law moves its primary decay-driven metric ~4.5%/decade whether the

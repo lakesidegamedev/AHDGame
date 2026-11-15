@@ -76,7 +76,7 @@ Password login plus optional Discord and Google OAuth, optional Turnstile on reg
 
 ```bash
 npm run dev           # dev server
-npm run lint          # ESLint, with custom rules in scripts/eslint-rules/
+npm run lint          # ESLint, with custom rules in eslint-rules/
 npm run typecheck     # tsc --noEmit
 npm run test:run      # Vitest unit and integration suite
 npm run test:e2e      # Playwright, needs the dev server running

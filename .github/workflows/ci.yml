@@ -182,9 +182,9 @@ jobs:
       - uses: actions/cache@v4
         with:
           path: .cache/eslint
-          key: eslint-${{ runner.os }}-${{ hashFiles('package-lock.json', '.eslintignore', '.eslintrc*', 'eslint.config.*', 'scripts/eslint-rules/**') }}-${{ github.sha }}
+          key: eslint-${{ runner.os }}-${{ hashFiles('package-lock.json', '.eslintignore', '.eslintrc*', 'eslint.config.*', 'eslint-rules/**') }}-${{ github.sha }}
           restore-keys: |
-            eslint-${{ runner.os }}-${{ hashFiles('package-lock.json', '.eslintignore', '.eslintrc*', 'eslint.config.*', 'scripts/eslint-rules/**') }}-
+            eslint-${{ runner.os }}-${{ hashFiles('package-lock.json', '.eslintignore', '.eslintrc*', 'eslint.config.*', 'eslint-rules/**') }}-
       - name: Lint
         shell: bash
         run: |
@@ -193,7 +193,7 @@ jobs:
             HEAD^1 HEAD > "$changed_file_list"
 
           if [[ "$GITHUB_EVENT_NAME" == "pull_request" ]] &&
-             ! grep -zEq '^(\.eslintignore|\.eslintrc($|\.)|eslint\.config\.|scripts/eslint-rules/|package(-lock)?\.json$|tsconfig.*\.json$)' \
+             ! grep -zEq '^(\.eslintignore|\.eslintrc($|\.)|eslint\.config\.|eslint-rules/|package(-lock)?\.json$|tsconfig.*\.json$)' \
                "$changed_file_list"; then
             lint_file_list="$RUNNER_TEMP/lint-files"
             git diff --name-only -z --diff-filter=ACMRT \

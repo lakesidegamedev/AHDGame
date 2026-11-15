@@ -3,7 +3,7 @@ date: 2026-11-15
 title: Tidier repository root
 summary: >-
   The repository root now holds only the files tools require there. Tests,
-  lint rules, shared formulas, startup files and community policies moved into
+  shared formulas, tooling and community policies moved into
   the folders they belong to, with no change to how the game behaves.
 tags: [repository, tooling]
 badges: [patch]
@@ -13,9 +13,8 @@ areas: [fullstack]
 ## What changed
 
 - `e2e/` moved to `tests/e2e/`, and the test setup file to `tests/setup.ts`.
-- Custom ESLint rules moved to `scripts/eslint-rules/`, the positions atlas to `scripts/analysis/positions-atlas/`, and the Semgrep rules to `.github/semgrep.yml`.
+- The positions atlas moved to `scripts/analysis/positions-atlas/`, and the Semgrep rules to `.github/semgrep.yml`.
 - `shared/` moved to `src/shared/`; the `@shared/*` import alias is unchanged.
-- `instrumentation.ts` and the Sentry server and edge configs moved into `src/`, the location Next.js documents for projects with a `src` directory. Server boot still runs `register()` from there.
 - The code of conduct and security policy moved to `.github/`, where GitHub still lists them.
 - The two root changelog guides merged into `content/changelog/README.md`.
 - Prettier and Knip settings moved into `package.json`.
