@@ -114,6 +114,7 @@ export async function validateBid(
     floor: band?.floor ?? null,
     ceiling: band?.ceiling ?? null,
     supplierRemainingLots: allowance.supplierRemaining,
+    supplierRemainingAmount: allowance.supplierRemainingAmount,
     lots: t.terms.lots,
   });
   if (invalid) throw new ContractError(invalid);

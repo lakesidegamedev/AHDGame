@@ -7,6 +7,11 @@ import * as bidderAlerts from "./opportunityNotifications";
 import { tenders } from "./persistence";
 import { lotPrice } from "@/lib/military/arsenal";
 import { militaryPriceAnchor } from "@/lib/military/procurement";
+import {
+  defenceContractLotCaps,
+  defenceSupplierCapShare,
+} from "@/lib/military/defenceContractLimits";
+import { resolveDefenseLineFrom } from "@/lib/turn/defenseEnvelope";
 import * as defenceEconomics from "@/lib/military/defenceLotEconomics";
 import { lotProductionCost, lotPriceBand } from "@/lib/military/defenceLotEconomics";
 import { COMMODITY_BASE_PRICES, type CommodityType } from "@/lib/constants/commodities";
@@ -69,7 +74,8 @@ describe("defence tender publication price floor", () => {
   function publish(
     maximumPricePerLot: number,
     component: "ground" | "air" | "space" = "ground",
-    grade = 0
+    grade = 0,
+    lots = 1
   ) {
     return publishTender(
       db,
@@ -79,12 +85,23 @@ describe("defence tender publication price floor", () => {
         description: "Synthetic equipment procurement",
         closesTurn: 7,
         awardDeadlineTurn: 31,
-        terms: { type: "defence", component, lots: 1, grade, maximumPricePerLot },
+        terms: { type: "defence", component, lots, grade, maximumPricePerLot },
       },
       government,
       1,
       now
     );
+  }
+  async function privateLotLimit() {
+    const minimum = await floor("standard");
+    const budget = (await db.collection("federalBudget").findOne({ countryId: "US" }))!;
+    const notional = defenceContractLotCaps(
+      resolveDefenseLineFrom(budget),
+      minimum
+    ).procurementNotional;
+    // Same expression the publish gate evaluates, so the boundary matches exactly.
+    const maxPrivateLots = Math.floor((notional * defenceSupplierCapShare(false)) / minimum);
+    return { minimum, maxPrivateLots, notional };
   }
   async function expectNoReservation() {
     expect(await tenders(db).countDocuments({})).toBe(0);
@@ -111,6 +128,38 @@ describe("defence tender publication price floor", () => {
       }))
     );
   }
+  it("accepts a tender at the private share limit and reserves it", async () => {
+    const { minimum, maxPrivateLots } = await privateLotLimit();
+    expect(maxPrivateLots).toBeGreaterThanOrEqual(1);
+    expect(maxPrivateLots + 1).toBeLessThanOrEqual(1000000);
+    const id = await publish(minimum, "ground", 0, maxPrivateLots);
+    const tender = (await tenders(db).findOne({ _id: id }))!;
+    expect(tender.status).toBe("open");
+    expect(tender.reservedAmount).toBe(maxPrivateLots * minimum);
+  });
+  it("rejects a tender no private supplier could deliver with the fitting lot count", async () => {
+    const { minimum, maxPrivateLots } = await privateLotLimit();
+    expect(maxPrivateLots + 1).toBeLessThanOrEqual(1000000);
+    await expect(publish(minimum, "ground", 0, maxPrivateLots + 1)).rejects.toThrow(
+      new RegExp(`at most ${maxPrivateLots} lots?`)
+    );
+    await expectNoReservation();
+  });
+  it("accepts an above-share tender when a state-owned supplier could take the full tranche", async () => {
+    const { minimum, maxPrivateLots, notional } = await privateLotLimit();
+    const maxFullLots = Math.floor(notional / minimum);
+    expect(maxFullLots).toBeGreaterThan(maxPrivateLots);
+    expect(maxPrivateLots + 1).toBeLessThanOrEqual(1000000);
+    await db.collection("corporations").insertOne({
+      countryId: "US",
+      countryOwnerId: "US",
+      ownershipState: "stateOwned",
+      type: "financial",
+      name: "Synthetic national corporation",
+    });
+    const id = await publish(minimum, "ground", 0, maxPrivateLots + 1);
+    expect((await tenders(db).findOne({ _id: id }))?.status).toBe("open");
+  });
   it("rejects a cap of one before inserting a tender or reserving any budget or quota", async () => {
     await expect(publish(1)).rejects.toThrow(/maximum price per lot.*at least.*budget units/i);
     await expectNoReservation();

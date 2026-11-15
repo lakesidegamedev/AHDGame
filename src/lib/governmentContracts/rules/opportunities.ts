@@ -57,12 +57,11 @@ export function hasTenderOpportunity(input: {
             grade: terms.grade,
           });
     if (!band) return false;
-    const remaining = Math.floor(
-      Math.max(
-        0,
-        input.procurementNotional * defenceSupplierCapShare(input.stateOwned) - input.supplierAmount
-      ) / band.floor
+    const supplierRemainingAmount = Math.max(
+      0,
+      input.procurementNotional * defenceSupplierCapShare(input.stateOwned) - input.supplierAmount
     );
+    const remaining = Math.floor(supplierRemainingAmount / band.floor);
     return (
       defenceBidError({
         supplierGrade: fill.gradeCeiling,
@@ -73,6 +72,7 @@ export function hasTenderOpportunity(input: {
         floor: band.floor,
         ceiling: band.ceiling,
         supplierRemainingLots: remaining,
+        supplierRemainingAmount,
         lots: terms.lots,
       }) === null
     );
