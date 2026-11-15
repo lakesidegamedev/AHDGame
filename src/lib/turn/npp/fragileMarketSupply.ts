@@ -1,6 +1,6 @@
 import type { Db } from "mongodb";
 import type { CorporateSector, GameConfig, GameState } from "@/lib/db/types";
-import type { UnownedSector } from "@/lib/db/types/unownedSector";
+import type { MarketCandidate } from "@/lib/turn/npp/marketCandidates";
 import type { StateResourceCapacity } from "@/lib/db/types/stateResourceCapacity";
 import type { CommodityType } from "@/lib/constants/commodities";
 import type { OperatingSectorType } from "@/lib/constants/corporations";
@@ -96,7 +96,7 @@ export async function loadNppPlacementSignals(
 }
 
 export function resolveFragileEntryTreatment(
-  entryCandidate: UnownedSector | null,
+  entryCandidate: MarketCandidate | null,
   placementSignals: PlacementSignals | undefined,
   priceRatioOf: CommodityPriceRatioFn
 ): {

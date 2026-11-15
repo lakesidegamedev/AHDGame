@@ -325,7 +325,7 @@ describe("empty-market coverage treatment", () => {
     expect(pick).toBeNull();
     expect(stats).toMatchObject({
       occupiedExcluded: 0,
-      emptyPoolExcluded: 1,
+      noRoomExcluded: 1,
       stateControlledExcluded: 1,
       depositExcluded: 0,
     });
@@ -355,7 +355,7 @@ describe("empty-market coverage treatment", () => {
     expect(pick).toMatchObject({ stateId: "NY", sectorType: "manufacturing" });
     expect(stats).toMatchObject({
       occupiedExcluded: 0,
-      emptyPoolExcluded: 1,
+      noRoomExcluded: 1,
       stateControlledExcluded: 0,
       depositExcluded: 0,
     });

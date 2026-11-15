@@ -9,7 +9,7 @@
  */
 
 import type { Corporation, CorporateSector } from "@/lib/db/types";
-import type { UnownedSector } from "@/lib/db/types/unownedSector";
+import type { MarketCandidate } from "@/lib/turn/npp/marketCandidates";
 import type {
   CorporationType,
   OperatingSectorType,
@@ -17,9 +17,8 @@ import type {
 } from "@/lib/constants/corporations";
 import type { CountryId } from "@/lib/constants/countries";
 import { adjacentStates } from "@/lib/constants/stateAdjacency";
-import { unownedHeadroomUnitsOf } from "@/lib/corporations/marketShare";
 import { foundingStarterUnits } from "@/lib/corporations/foundingPlant";
-import { bucketKey } from "@/lib/nationalization/stateControlledBuckets";
+import { bucketKey } from "@/lib/market/marketBuckets";
 import {
   isMarketSaturated,
   isPhysicallyShort,
@@ -241,6 +240,21 @@ export interface PlacementSignals {
     },
     options?: { strategyId?: string | null; aggregate?: "mean" | "max" }
   ) => number | null;
+  /**
+   * Record units a founding or growth order claims in a cell this pass, so the
+   * unmet demand later corporations read is net of it. Two corporations must
+   * not both found into a gap that fits one plant.
+   */
+  claimDemandUnits?: (
+    cell: {
+      stateId: string;
+      countryId: string;
+      sectorType: string;
+      industryModel?: string | null;
+      mediaDiscriminator?: string | null;
+    },
+    units: number
+  ) => void;
   /** Turn-scoped memo of per-candidate facts that do not move during the pass. */
   sectorFacts?: PlacementSectorFacts;
   /**
@@ -254,7 +268,7 @@ export interface PlacementSignals {
    * when not gated. A starved cell is never founded into: the plant could not
    * run, whatever its output sells for (rules/inputAvailability).
    */
-  foundingInputAvailabilityOf?: (candidate: UnownedSector) => number | null;
+  foundingInputAvailabilityOf?: (candidate: MarketCandidate) => number | null;
   /**
    * Whether an NPP corp whose primary or secondary type is `sectorType`
    * operates in `countryId`. Gates the essential-shortage valve: it crosses a
@@ -264,13 +278,28 @@ export interface PlacementSignals {
 }
 
 /**
+ * Room a demand-side bucket still has, in capacity units: unmet demand net of
+ * capacity already ordered or claimed this pass. A bucket whose demand cannot
+ * be read has no room. Without a demand signal wired at all (isolated callers)
+ * every bucket reads as open, so the price-based shortage score ranks alone.
+ */
+export function marketRoomUnits(
+  signals: PlacementSignals | undefined,
+  cell: MarketCandidate,
+  options?: { strategyId?: string | null; aggregate?: "mean" | "max" }
+): number {
+  if (!signals?.unmetDemandUnitsOf) return 1;
+  return Math.max(0, signals.unmetDemandUnitsOf(cell, options) ?? 0);
+}
+
+/**
  * Candidate facts that depend only on the turn's snapshot: the two shortage
  * scores behind the ranking. Every NPP corp ranks the same pool, so re-deriving
  * them per corp spent a handful of price reads on each candidate a few hundred
  * times a turn.
  *
  * Market SIZE and the fragile score are deliberately NOT here: both read the
- * pool's live headroom, which founding draws move between corporations in the
+ * bucket's live room, which founding claims move between corporations in the
  * same pass. Remembering them would hand a later corp the market an earlier one
  * already built into.
  */
@@ -370,14 +399,14 @@ export const HQ_STATE_SCORE_BONUS = 1.3;
 export function hasEnterableHeadroom(
   corp: Corporation,
   sectors: CorporateSector[],
-  unownedByCountry: Map<string, UnownedSector[]>,
+  candidatesByCountry: Map<string, MarketCandidate[]>,
   stateControlled: ReadonlySet<string>,
   plantsEnabled: boolean,
   eraUnitScale: number
 ): boolean {
   const frontier = expansionFrontierStates(corp.countryId, corp.headquartersState, sectors);
   return (
-    findBestUnownedSector(
+    findBestMarketCandidate(
       corp.countryId,
       corp.headquartersState,
       corp.type,
@@ -387,7 +416,7 @@ export function hasEnterableHeadroom(
           bucketKey(sec.stateId, sec.sectorType, sec.industryModel, sec.mediaDiscriminator)
         )
       ),
-      unownedByCountry,
+      candidatesByCountry,
       stateControlled,
       () => null,
       plantsEnabled,
@@ -414,26 +443,26 @@ export function hasEnterableHeadroom(
  * shortage fills, so the herd self-disperses.
  */
 /**
- * Per-filter exclusion counts for one `findBestUnownedSector` scan. Passed by
+ * Per-filter exclusion counts for one `findBestMarketCandidate` scan. Passed by
  * the caller and mutated in place, so the entry funnel can report WHICH
  * filter bound when no candidate survives instead of a bare miss.
  */
 export interface CandidateExclusionStats {
   occupiedExcluded?: number;
-  emptyPoolExcluded?: number;
+  noRoomExcluded?: number;
   stateControlledExcluded?: number;
   depositExcluded?: number;
   saturatedExcluded?: number;
   inputStarvedExcluded?: number;
 }
 
-export function findBestUnownedSector(
+export function findBestMarketCandidate(
   countryId: CountryId,
   hqState: string,
   primaryType: string,
   secondaryType: string | null | undefined,
   existingBuckets: ReadonlySet<string>,
-  unownedByCountry: Map<string, UnownedSector[]>,
+  candidatesByCountry: Map<string, MarketCandidate[]>,
   stateControlled: ReadonlySet<string>,
   priceRatioOf: CommodityPriceRatioFn,
   plantsEnabled: boolean = false,
@@ -443,50 +472,34 @@ export function findBestUnownedSector(
   stats?: CandidateExclusionStats,
   primaryIndustryModel?: string | null,
   openMarketFallback: boolean = false
-): UnownedSector | null {
-  const countryUnowned = unownedByCountry.get(countryId);
-  if (!countryUnowned || countryUnowned.length === 0) return null;
+): MarketCandidate | null {
+  const countryCandidates = candidatesByCountry.get(countryId);
+  if (!countryCandidates || countryCandidates.length === 0) return null;
 
-  // Under plants a market's size is its headroom in capacity units, which
-  // is what the founding build is sized and priced off. Ranking on revenue
-  // would sort by a nameplate the plants engine does not treat as
-  // authoritative and mis-order markets with different commodity mixes.
-  const sizeOf = (us: UnownedSector) =>
-    plantsEnabled
-      ? unownedHeadroomUnitsOf(
-          us.sectorType as CorporationType,
-          us.headroomUnits,
-          us.revenue,
-          eraUnitScale,
-          us.industryModel
-        )
-      : us.revenue;
-
-  // Filter to unoccupied buckets with a positive pool, excluding buckets a
-  // National Corporation controls (don't expand into a nationalized sector) and
-  // extraction buckets whose state has zero unclaimed deposit capacity.
-  // "Market size" for ranking and candidacy. For a demand-side sector it is the
-  // unmet local-demand headroom. For EXTRACTION it is the state's unclaimed
-  // DEPOSIT instead: a mine's output is a traded commodity, so its founding
-  // value is deposit richness x how short that commodity is, NOT local
-  // consumption — which is ~0 in an export-oriented deposit and would otherwise
-  // exclude every rich deposit from candidacy (all extraction pools carry zero
-  // demand headroom). The deposit signal is `extractionHeadroomOf`.
-  const marketSizeOf = (us: UnownedSector) =>
+  // Candidates are every region x lane of the country; none is stored. A
+  // bucket the corp already occupies or a state controls is out. "Market size"
+  // for ranking and candidacy is the room the goods market still has: unmet
+  // demand net of capacity already ordered or founded this pass. For EXTRACTION
+  // it is the state's unclaimed DEPOSIT instead: a mine's output is a traded
+  // commodity, so its founding value is deposit richness x how short that
+  // commodity is, not local consumption. The deposit signal is
+  // `extractionHeadroomOf`. Without a demand signal wired (isolated callers) a
+  // demand-side bucket reads as open and the shortage score alone ranks it.
+  const marketSizeOf = (us: MarketCandidate) =>
     us.sectorType === "extraction"
       ? (signals?.extractionHeadroomOf?.(us.stateId) ?? 0)
-      : sizeOf(us);
+      : marketRoomUnits(signals, us);
 
-  const candidates: UnownedSector[] = [];
+  const candidates: MarketCandidate[] = [];
   if (stats) {
     stats.occupiedExcluded = 0;
-    stats.emptyPoolExcluded = 0;
+    stats.noRoomExcluded = 0;
     stats.stateControlledExcluded = 0;
     stats.depositExcluded = 0;
     stats.saturatedExcluded = 0;
     stats.inputStarvedExcluded = 0;
   }
-  for (const us of countryUnowned) {
+  for (const us of countryCandidates) {
     if (
       existingBuckets.has(
         bucketKey(us.stateId, us.sectorType, us.industryModel, us.mediaDiscriminator)
@@ -498,7 +511,7 @@ export function findBestUnownedSector(
     if (!(marketSizeOf(us) > 0)) {
       if (stats) {
         if (us.sectorType === "extraction") stats.depositExcluded! += 1;
-        else stats.emptyPoolExcluded! += 1;
+        else stats.noRoomExcluded! += 1;
       }
       continue;
     }
@@ -540,7 +553,7 @@ export function findBestUnownedSector(
   // Coverage treatment: within a list, prefer markets no active firm serves yet.
   // Applied per type tier below, so an uncovered market of the wrong type never
   // hides an enterable market of the corp's own type.
-  const preferUncovered = (list: UnownedSector[]): UnownedSector[] => {
+  const preferUncovered = (list: MarketCandidate[]): MarketCandidate[] => {
     if (!signals?.preferEmptyMarkets || !activeMarketBuckets) return list;
     const uncovered = list.filter(
       (candidate) =>
@@ -553,10 +566,10 @@ export function findBestUnownedSector(
           )
         ) &&
         // Extraction is deposit-gated (candidacy above), not unit-sized, so
-        // it bypasses the demand-headroom facility-size floor.
+        // it bypasses the demand-room facility-size floor.
         (candidate.sectorType === "extraction" ||
           !plantsEnabled ||
-          sizeOf(candidate) >=
+          marketSizeOf(candidate) >=
             foundingStarterUnits(
               candidate.sectorType as CorporationType,
               candidate.industryModel as ManufacturingIndustryModel | null | undefined
@@ -570,8 +583,8 @@ export function findBestUnownedSector(
   // otherwise. This is what routes a founding to the state that is actually
   // starved instead of treating every state in the country as one market.
   const facts = signals?.sectorFacts;
-  const factKey = (c: UnownedSector) => `${c._id ? String(c._id) : ""}|${countryId}`;
-  const shortageOf = (c: UnownedSector) =>
+  const factKey = (c: MarketCandidate) => `${c.key}|${countryId}`;
+  const shortageOf = (c: MarketCandidate) =>
     remembered(facts?.shortage, factKey(c), () =>
       sectorShortageScore(
         getOperatingSectorType(c.sectorType, c.industryModel, c.mediaDiscriminator),
@@ -582,7 +595,7 @@ export function findBestUnownedSector(
         })
       )
     );
-  const score = (c: UnownedSector) => {
+  const score = (c: MarketCandidate) => {
     // Extraction ranks on deposit x shortage (via marketSizeOf); demand-side
     // sectors on demand-headroom x shortage.
     let s = marketSizeOf(c) * shortageOf(c);
@@ -593,9 +606,9 @@ export function findBestUnownedSector(
   // pairs, so calling these straight from a comparator re-derived a candidate's
   // market size, shortage score and deposit headroom O(n log n) times per tier
   // for values that depend only on the candidate. One value each, per scan.
-  const memoOf = <T>(compute: (candidate: UnownedSector) => T) => {
-    const cache = new Map<UnownedSector, T>();
-    return (candidate: UnownedSector): T => {
+  const memoOf = <T>(compute: (candidate: MarketCandidate) => T) => {
+    const cache = new Map<MarketCandidate, T>();
+    return (candidate: MarketCandidate): T => {
       if (cache.has(candidate)) return cache.get(candidate)!;
       const value = compute(candidate);
       cache.set(candidate, value);
@@ -603,12 +616,12 @@ export function findBestUnownedSector(
     };
   };
   const candidateScore = memoOf(score);
-  const byScore = (a: UnownedSector, b: UnownedSector) => candidateScore(b) - candidateScore(a);
+  const byScore = (a: MarketCandidate, b: MarketCandidate) => candidateScore(b) - candidateScore(a);
   const candidatePriceRatioOf =
-    (c: UnownedSector): CommodityPriceRatioFn =>
+    (c: MarketCandidate): CommodityPriceRatioFn =>
     (commodity, cid) =>
       signals?.statePriceRatioOf?.(commodity, c.stateId) ?? priceRatioOf(commodity, cid);
-  const fragileScore = (c: UnownedSector): number => {
+  const fragileScore = (c: MarketCandidate): number => {
     if (signals?.fragileMarketCountryEligible?.(c.countryId) === false) return 0;
     const commodity = fragileMarketCommodityForSector(
       getOperatingSectorType(c.sectorType, c.industryModel, c.mediaDiscriminator),
@@ -636,7 +649,7 @@ export function findBestUnownedSector(
   // though consulting is at base.
   // Freight reads its own state: a national average of 107% hid states that
   // were 9% supplied, and freight cannot be shipped in from the surplus ones.
-  const peakShortageOf = (c: UnownedSector): number =>
+  const peakShortageOf = (c: MarketCandidate): number =>
     remembered(facts?.peakShortage, factKey(c), () =>
       sectorPeakShortageScore(
         getOperatingSectorType(c.sectorType, c.industryModel, c.mediaDiscriminator),
@@ -650,21 +663,21 @@ export function findBestUnownedSector(
     );
   const candidatePeakShortage = memoOf(peakShortageOf);
   const candidateFragileScore = memoOf(fragileScore);
-  const byFragileScore = (a: UnownedSector, b: UnownedSector) =>
+  const byFragileScore = (a: MarketCandidate, b: MarketCandidate) =>
     candidateFragileScore(b) - candidateFragileScore(a);
   // Highest market-weighted score wins; the HQ state gets a score bonus, not
   // the old unconditional first pick (see HQ_STATE_SCORE_BONUS).
-  const best = (list: UnownedSector[]) => list.sort(byScore)[0];
+  const best = (list: MarketCandidate[]) => list.sort(byScore)[0];
 
-  const physicallyShort = memoOf((c: UnownedSector) =>
+  const physicallyShort = memoOf((c: MarketCandidate) =>
     isPhysicallyShort(signals?.unmetDemandUnitsOf, () =>
       signals!.unmetDemandUnitsOf!(c, { aggregate: "max" })
     )
   );
 
-  const isPrimary = (c: UnownedSector) =>
+  const isPrimary = (c: MarketCandidate) =>
     c.sectorType === primaryType && (c.industryModel ?? null) === (primaryIndustryModel ?? null);
-  const inType = (c: UnownedSector) =>
+  const inType = (c: MarketCandidate) =>
     isPrimary(c) || (secondaryType != null && c.sectorType === secondaryType);
 
   // The governed fragile-market treatment keeps its priority (it reallocates an
@@ -685,7 +698,7 @@ export function findBestUnownedSector(
   // case this valve was made for). Needs a physical shortage; a high price
   // alone is not one (price memory held most prices above the bar). Without
   // the signal (isolated callers) the valve keeps its old reach.
-  const noSameTypeBuilder = (c: UnownedSector) =>
+  const noSameTypeBuilder = (c: MarketCandidate) =>
     signals?.hasSameTypeNppIn ? !signals.hasSameTypeNppIn(c.countryId, c.sectorType) : true;
   const critical = entryCandidates.filter(
     (c) =>

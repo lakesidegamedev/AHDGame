@@ -32,7 +32,7 @@ import {
   resolveSectorHostCurrencyCode,
 } from "@/lib/currency/corporationCapital";
 import type { CorporateSector } from "@/lib/db/types";
-import type { UnownedSector } from "@/lib/db/types/unownedSector";
+import type { MarketCandidate } from "@/lib/turn/npp/marketCandidates";
 import { isAutopilotRun } from "@/lib/corporations/autopilot";
 import { operatorPermissionsFor } from "./operatorPermissions";
 import { operatorAllowsPlacement, operatorMay } from "./rules/operatorPolicy";
@@ -85,7 +85,7 @@ import { decideNppCapacityReinvestment } from "./corpDecisionReinvestment";
 
 export function makeNppCorpDecision(
   ctx: NppCorpDecisionContext,
-  unownedByCountry: Map<string, UnownedSector[]>,
+  candidatesByCountry: Map<string, MarketCandidate[]>,
   stateControlled: ReadonlySet<string>,
   priceRatioOf: CommodityPriceRatioFn,
   plants?: NppPlantsContext,
@@ -109,7 +109,7 @@ export function makeNppCorpDecision(
   const sectorUpdates: NppCorpDecision["sectorUpdates"] = [];
   const newSectors: NppCorpDecision["newSectors"] = [];
   const divestedSectorIds: ObjectId[] = [];
-  const unownedDraws: NonNullable<NppCorpDecision["unownedDraws"]> = [];
+  const demandClaims: NonNullable<NppCorpDecision["demandClaims"]> = [];
   const reinvestments: NonNullable<NppCorpDecision["reinvestments"]> = [];
   const constructionFinanceIntents: NonNullable<NppCorpDecision["constructionFinanceIntents"]> = [];
   let entryDiagnostic: NppCorpDecision["entryDiagnostic"];
@@ -246,7 +246,7 @@ export function makeNppCorpDecision(
     hasEnterableHeadroom(
       corp,
       sectors,
-      unownedByCountry,
+      candidatesByCountry,
       stateControlled,
       plants?.enabled === true,
       plants?.eraUnitScale ?? 1
@@ -257,7 +257,7 @@ export function makeNppCorpDecision(
     debtDominant,
     // "Mostly cannot sell what it makes": a majority of the corp's sectors.
     chronicLowFill: sectorProfits.length > 0 && lowFillSectors * 2 > sectorProfits.length,
-    // Lazy: the headroom scan walks the unowned pools and is only read by the
+    // Lazy: the headroom scan walks every candidate bucket and is only read by the
     // switch evaluation, which most corp-turns never reach (#2693).
     get hasHeadroom() {
       return readHeadroom();
@@ -306,7 +306,7 @@ export function makeNppCorpDecision(
   const entryPools =
     groupDirection?.regions.length || primaryIndustryOnly || placementLimited
       ? new Map(
-          [...unownedByCountry].map(([country, rows]) => [
+          [...candidatesByCountry].map(([country, rows]) => [
             country,
             rows.filter((row) => {
               const rowType = getOperatingSectorType(
@@ -322,7 +322,7 @@ export function makeNppCorpDecision(
             }),
           ])
         )
-      : unownedByCountry;
+      : candidatesByCountry;
 
   // ── 1. Divest losing sectors ──────────────────────────────────────────────
   // Divest a losing sector once its margin falls to/below the archetype's
@@ -361,7 +361,7 @@ export function makeNppCorpDecision(
   // the demand is. Same protections as the margin divest — never the corp's
   // core type, never the last sector, only while something else is profitable —
   // plus a one-per-turn cap so exits stay gradual. Capacity is deliberately not
-  // restored to the unowned pool: the state is glutted, re-listing the bucket
+  // handed back as open room: the state is glutted, re-listing the bucket
   // would invite the next founding straight back in.
   if (plants?.enabled && numSectors > 1 && profitableSectors > 0) {
     let strandedDivests = 0;
@@ -563,7 +563,7 @@ export function makeNppCorpDecision(
   const entry = evaluateNppEntry({
     corp,
     sectors: sectorsAfterConversion(sectors, conversionApplied),
-    unownedByCountry: entryPools,
+    candidatesByCountry: entryPools,
     stateControlled,
     priceRatioOf,
     placementSignals,
@@ -654,7 +654,7 @@ export function makeNppCorpDecision(
     corp,
     cashToAnchor,
     newSectors,
-    unownedDraws,
+    demandClaims,
     cashLocal,
   });
   entryDiagnostic = foundingResult.entryDiagnostic;
@@ -735,7 +735,7 @@ export function makeNppCorpDecision(
     corp,
     groupDirection,
     ctx,
-    unownedByCountry,
+    demandClaims,
     autopilot,
     cashLocal,
     effectiveCashFloor,
@@ -790,7 +790,7 @@ export function makeNppCorpDecision(
     sectorUpdates,
     newSectors: newSectors.length > 0 ? newSectors : undefined,
     divestedSectorIds: divestedSectorIds.length > 0 ? divestedSectorIds : undefined,
-    unownedDraws: unownedDraws.length > 0 ? unownedDraws : undefined,
+    demandClaims: demandClaims.length > 0 ? demandClaims : undefined,
     reinvestments: reinvestments.length > 0 ? reinvestments : undefined,
     constructionFinanceIntents:
       constructionFinanceIntents.length > 0 ? constructionFinanceIntents : undefined,
