@@ -196,7 +196,7 @@ const NPP_ENTRY_VIABILITY_MODES: {
  * migrations on a fresh enable.
  */
 interface SystemMode {
-  key: "labourSystemMode" | "marketSystemMode" | "indexFundsMode" | "freightSettlementMode";
+  key: "labourSystemMode" | "marketSystemMode" | "indexFundsMode";
   label: string;
   desc: string;
   endpoint: string;
@@ -247,26 +247,6 @@ const SYSTEM_MODES: SystemMode[] = [
       { value: "off", label: "Off", blurb: "Funds hidden." },
       { value: "partial", label: "Partial", blurb: "Read-only pages + cron accrual." },
       { value: "full", label: "Full", blurb: "Player buys/sells enabled." },
-    ],
-  },
-  {
-    key: "freightSettlementMode",
-    label: "Freight settlement",
-    desc: "Shadow records routes. Active applies delivered inputs to the next corporation turn.",
-    endpoint: "/api/admin/config/freight-settlement",
-    defaultValue: gameConfigDefaults.freightSettlementMode ?? "shadow",
-    levels: [
-      {
-        value: "shadow",
-        label: "Shadow",
-        blurb: "Observe routes and capacity without changing plant throughput.",
-      },
-      {
-        value: "active",
-        label: "Active",
-        blurb:
-          "Use lagged delivered inputs in plant throughput. Requires market clearing or higher.",
-      },
     ],
   },
 ];

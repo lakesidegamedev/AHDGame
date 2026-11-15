@@ -102,8 +102,6 @@ export async function buildCorporationLookups(
     productLinesV2Enabled?: boolean;
     /** Read durable media projects and receipts only while the feature gate is on. */
     mediaProductSlatesEnabled?: boolean;
-    /** Use lagged freight-delivery availability as a local input constraint. */
-    freightSettlementActive?: boolean;
     /**
      * Canonical freight billing v1 (issue #897):
      * gameConfig.canonicalFreightBillingEnabled. When true, loads last turn's
@@ -498,7 +496,6 @@ export async function buildCorporationLookups(
   } = buildCommodityBalanceLookups({
     commodityPrices,
     globalCommodityBalances,
-    options,
     stateCountryMap,
     latestTradeSnapshot,
   });
@@ -872,11 +869,7 @@ export async function buildCorporationLookups(
   const ownRouteDeliveredByKey = new Map<string, number>();
   const ownRouteFreightByCorp = new Map<string, Map<string, Map<CommodityType, number>>>();
   let ownRouteGroupMembersByRoot = new Map<string, Set<string>>();
-  if (
-    options?.moneyWiringEnabled ||
-    options?.canonicalFreightBillingEnabled ||
-    options?.freightSettlementActive
-  ) {
+  {
     const networkDoc = await sourcingNetworkLoadCollection<SourcingNetworkDoc>(db)
       .find({ turn: { $lte: embargoTurn } })
       .sort({ turn: -1 })
@@ -897,12 +890,10 @@ export async function buildCorporationLookups(
         (doc?.ownRouteDelivered ?? []).map((route) => route.corporationId)
       );
     }
-    if (options?.freightSettlementActive) {
-      for (const r of doc?.ownRouteDelivered ?? []) {
-        if (!(typeof r.units === "number" && r.units > 0)) continue;
-        const key = ownRouteKey(r.commodity, r.corporationId, r.originStateId, r.destStateId);
-        ownRouteDeliveredByKey.set(key, (ownRouteDeliveredByKey.get(key) ?? 0) + r.units);
-      }
+    for (const r of doc?.ownRouteDelivered ?? []) {
+      if (!(typeof r.units === "number" && r.units > 0)) continue;
+      const key = ownRouteKey(r.commodity, r.corporationId, r.originStateId, r.destStateId);
+      ownRouteDeliveredByKey.set(key, (ownRouteDeliveredByKey.get(key) ?? 0) + r.units);
     }
     if (options?.moneyWiringEnabled && doc?.landedPremiums) {
       for (const [stateId, byCommodity] of Object.entries(doc.landedPremiums)) {

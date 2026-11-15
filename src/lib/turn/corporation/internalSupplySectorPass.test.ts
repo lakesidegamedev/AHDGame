@@ -47,7 +47,10 @@ describe("real internal supply clearing and plant-turn chain", () => {
 });
 
 it("keeps matching discount values in anchor across different functional currencies", () => {
-  const r = runInternalSupplyWorld({ priority: "group", discount: 0.1 }, { group: true, fx: 100 });
+  const r = runInternalSupplyWorld(
+    { priority: "group", discount: 0.1, ownFirstAcrossStates: true },
+    { group: true, fx: 100 }
+  );
   const seller = r.updates[0]?.plantsPnl?.internalSupplyDiscountCost ?? 0;
   const buyer = r.updates[1]?.plantsPnl?.internalSupplyDiscountCost ?? 0;
   expect(seller).toBeGreaterThan(0);

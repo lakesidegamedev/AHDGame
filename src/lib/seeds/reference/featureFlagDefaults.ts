@@ -70,7 +70,6 @@ export const FRESH_WORLD_GAME_CONFIG_FLAGS = {
   equityLiquidityFacilityEnabled: true,
   labourSystemMode: "full",
   marketSystemMode: "plants",
-  freightSettlementMode: "active",
   canonicalFreightBillingEnabled: true,
   interstateMoneyWiringEnabled: true,
   shortageResponsiveSourcingEnabled: true,

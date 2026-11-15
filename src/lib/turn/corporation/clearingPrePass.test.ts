@@ -26,7 +26,6 @@ function makeInput(overrides: Partial<ClearingPrePassInput> = {}): ClearingPrePa
     turn: 12,
     currentYear: 1953,
     commandEconomyEnabled: false,
-    freightSettlementActive: false,
     supplyAgreementsEnabled: false,
     settleableAgreements: undefined,
     contractedByCorpCommodity: undefined,
@@ -780,7 +779,7 @@ describe("mixed extraction output placement", () => {
       plantsEnabled: true,
       mediaRegulationEnabled: true,
     } as MarketContext;
-    runClearingPrePass(makeInput({ lookups, market, freightSettlementActive: true }));
+    runClearingPrePass(makeInput({ lookups, market }));
     const clearing = market.clearingBySectorId?.get("sector1");
     expect(clearing?.deliveredUnitsByCommodity?.coal).toBeGreaterThan(0);
     expect(clearing?.deliveredUnitsByCommodity?.timber).toBe(0);

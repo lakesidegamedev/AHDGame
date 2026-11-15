@@ -20,15 +20,15 @@
   },
   "clearing": {
     "sectorsWithClearing": 420,
-    "internalSupplyTrades": 140,
+    "internalSupplyTrades": 26,
     "internalSupplyReceipts": 420,
     "internalInputAvailability": 383,
-    "discountCostSectors": 42,
+    "discountCostSectors": 13,
     "advertisingSellers": 0,
     "contractTargets": 0,
     "brandLoyaltyUpdates": 60,
     "invariantBreaches": 0,
-    "sha256": "b113fc1e2075d9bb167788253c28e1240c50b2d94ea2d84654144ea5b36aef39"
+    "sha256": "585c3e048d86c982e678f8fb35e6cf8deac9e5b19aad651f0c0e51cdc31e0fb2"
   },
   "lookups": {
     "corporations": 60,
@@ -36,7 +36,7 @@
     "sectorPresenceKeys": 0,
     "marketShareBySectorId": 420,
     "nationalDominanceShareBySectorId": 420,
-    "sha256": "d15314fd3c1d68228d8094a6605d6a180cc3d669acc0ae982463e438b4848060"
+    "sha256": "6196a51f4cad9bb6a96daa62239edea965b6388e56f07d271f73c85d17d9aca3"
   },
   "historicalShadow": {
     "plants": 420,

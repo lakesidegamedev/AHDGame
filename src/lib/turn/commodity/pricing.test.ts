@@ -66,7 +66,6 @@ function pricingContext(
     scarcityDriftEnabled: false,
     commandEconomyEnabled: false,
     priceCurrentYear: null,
-    freightSettlementActive: false,
     freightRampFraction: 1,
     freightSettlement: null,
     existingPriceMap: new Map(),
@@ -352,7 +351,6 @@ describe("export price feedback", () => {
           byState,
           allStates: countries.map((_id) => ({ _id })),
           stateToCountry: new Map(countries.map((c) => [c, c])),
-          freightSettlementActive: true,
           freightSettlement,
           existingPriceMap: new Map([
             ["food", commodityPrice({ nationalPrices: prices, globalPrice: 300 })],

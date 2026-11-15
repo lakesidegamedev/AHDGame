@@ -117,7 +117,6 @@ export async function buildExtractionAndPortfolioLookups({
         moneyWiringEnabled?: boolean;
         productLinesV2Enabled?: boolean;
         mediaProductSlatesEnabled?: boolean;
-        freightSettlementActive?: boolean;
         canonicalFreightBillingEnabled?: boolean;
         mediaEditorialEnabled?: boolean;
         politicalMediaMarketEnabled?: boolean;

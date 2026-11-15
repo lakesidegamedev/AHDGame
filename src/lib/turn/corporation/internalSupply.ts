@@ -29,7 +29,6 @@ export function buildInternalSupplyContext(args: {
   sectors: readonly (SupplyAgreementDemandSector & { sectorId: string })[];
   agreements: readonly SettleableSupplyAgreement[];
   turn: number;
-  freightSettlementActive?: boolean;
   /** Restrict own-group reservations to these commodity books (see InternalSupplyClearing). */
   reserveCommodities?: ReadonlySet<CommodityType>;
 }): InternalSupplyClearing | undefined {
@@ -108,12 +107,8 @@ export function buildInternalSupplyContext(args: {
     availabilityOut,
     discountCostOut,
     tradesOut: [],
-    deliveryStateBySector: args.freightSettlementActive
-      ? deliveryStateBySector(args.sectors)
-      : undefined,
-    ownRouteDeliveredByKey: args.freightSettlementActive
-      ? args.lookups.ownRouteDeliveredByKey
-      : undefined,
+    deliveryStateBySector: deliveryStateBySector(args.sectors),
+    ownRouteDeliveredByKey: args.lookups.ownRouteDeliveredByKey,
   };
 }
 

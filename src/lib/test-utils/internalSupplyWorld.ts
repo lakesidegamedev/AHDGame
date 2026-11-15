@@ -10,7 +10,11 @@ import type { CorporationLookups } from "@/lib/turn/corporation/types";
 import { processSector, type SectorTurnEnv } from "@/lib/turn/corporation/sectorTurn";
 import { runClearingPrePass } from "@/lib/turn/corporation/clearingPrePass";
 import { buildMarketContext } from "@/lib/market/marketContext";
-import type { InternalSupplyPolicy } from "@/lib/market/internalSupply/rules";
+import {
+  GROUP_ROUTE_ID_PREFIX,
+  ownRouteKey,
+  type InternalSupplyPolicy,
+} from "@/lib/market/internalSupply/rules";
 function emptyLookups(): CorporationLookups {
   return {
     corporations: [],
@@ -172,6 +176,17 @@ export function runInternalSupplyWorld(
       ])
     : new Map([[parentId.toString(), [mine, factory]]]);
   lookups.globalCommodityBalances.set("iron", { supply: 500, demand: 1000 });
+  if (overrides.coordinationDiscount != null) {
+    lookups.stateInputAvailabilityByState = new Map([["MN", new Map([["iron", 1]])]]);
+    lookups.rawStateBalances = new Map([
+      ["MN", new Map([["iron", { supply: 500, demand: 1000 }]])],
+    ]);
+  }
+  if (overrides.fx && overrides.group) {
+    lookups.ownRouteDeliveredByKey = new Map([
+      [ownRouteKey("iron", `group:${parentId.toString()}`, "MN", "JP-TK"), 1e9],
+    ]);
+  }
   const market = buildMarketContext("plants");
   market.explicitPlantCostsEnabled = true;
   market.groupSupplyEnabled = overrides.coordinationDiscount != null;
@@ -181,7 +196,6 @@ export function runInternalSupplyWorld(
     turn: 1000,
     currentYear: 2019,
     commandEconomyEnabled: false,
-    freightSettlementActive: false,
     supplyAgreementsEnabled: false,
     settleableAgreements: undefined,
     contractedByCorpCommodity: undefined,
