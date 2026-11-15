@@ -165,7 +165,7 @@ describe("initialNppMarketEntryReason", () => {
         candidateExclusions: {
           ...blankNppCandidateExclusions(),
           stateControlledExcluded: 3,
-          emptyPoolExcluded: 1,
+          noRoomExcluded: 1,
         },
       })
     ).toBe("no_enterable_market");

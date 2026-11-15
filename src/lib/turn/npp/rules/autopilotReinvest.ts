@@ -47,7 +47,7 @@ export interface AutopilotGrowthFacts {
   /** Estimated cost of those growth units, in the corporation's currency. */
   growthCostLocal: number;
   /** Market room left for this sector (units). */
-  demandHeadroomUnits: number;
+  unmetDemandUnits: number;
 }
 
 /** Estimated extra profit per turn for one more unit of operating capacity. */
@@ -65,7 +65,7 @@ export function evaluateAutopilotGrowthGate(
 ): AutopilotGrowthGate | null {
   const perUnit = autopilotProfitPerUnit(facts.sectorProfitLocal, facts.operatingCapacityUnits);
   if (!(perUnit > 0) || !(facts.corpEarningsLocal > 0)) return "autopilot_unprofitable";
-  if (!(facts.demandHeadroomUnits >= 1)) return "autopilot_demand_headroom";
+  if (!(facts.unmetDemandUnits >= 1)) return "autopilot_demand_headroom";
   if (!(facts.growthUnits > 0)) return null;
   const recovered = perUnit * facts.growthUnits * AUTOPILOT_PAYBACK_HORIZON_TURNS;
   if (!(recovered >= facts.growthCostLocal)) return "autopilot_no_payback";
@@ -75,10 +75,10 @@ export function evaluateAutopilotGrowthGate(
 /** Growth units after the demand headroom bound. */
 export function autopilotBoundGrowthUnits(
   growthUnits: number,
-  demandHeadroomUnits: number
+  unmetDemandUnits: number
 ): number {
-  if (!Number.isFinite(growthUnits) || !Number.isFinite(demandHeadroomUnits)) return 0;
-  return Math.max(0, Math.floor(Math.min(growthUnits, demandHeadroomUnits)));
+  if (!Number.isFinite(growthUnits) || !Number.isFinite(unmetDemandUnits)) return 0;
+  return Math.max(0, Math.floor(Math.min(growthUnits, unmetDemandUnits)));
 }
 
 /** Cash autopilot may commit to new capacity this turn. */

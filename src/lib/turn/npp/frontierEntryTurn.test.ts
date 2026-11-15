@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { ObjectId } from "mongodb";
-import type { Corporation, CorporateSector, UnownedSector } from "@/lib/db/types";
+import type { Corporation, CorporateSector } from "@/lib/db/types";
+import { candidateWithRoom, withCandidateRoom } from "./__fixtures__/marketCandidates";
+import type { MarketCandidate } from "./marketCandidates";
+import { foundingStarterUnits } from "@/lib/corporations/foundingPlant";
 import type { CommodityType } from "@/lib/constants/commodities";
 import type { CorporationType } from "@/lib/constants/corporations";
 import { CAPACITY_ANCHOR_YEAR } from "@/lib/constants/capacityEconomy";
-import { computeUnownedHeadroomUnits } from "@/lib/market/unownedHeadroom";
 import { ceoArchetypeModifiers } from "@/lib/turn/ceoArchetype";
 import { bucketKey } from "@/lib/nationalization/stateControlledBuckets";
 import { makeNppCorpDecision, type NppPlantsContext } from "../nppCorporationBehavior";
@@ -85,16 +87,8 @@ function thinMarginSectors(corporationId: ObjectId, count = 3): CorporateSector[
   })) as unknown as CorporateSector[];
 }
 
-function pool(sectorType: CorporationType = "manufacturing", stateId = "NY"): UnownedSector {
-  const revenue = 80_000_000;
-  return {
-    _id: new ObjectId(),
-    stateId,
-    countryId: "US",
-    sectorType,
-    revenue,
-    headroomUnits: computeUnownedHeadroomUnits(sectorType, revenue, 1),
-  } as unknown as UnownedSector;
+function pool(sectorType: CorporationType = "manufacturing", stateId = "NY"): MarketCandidate {
+  return candidateWithRoom({ stateId, sectorType }, foundingStarterUnits(sectorType) * 40);
 }
 
 const balancedPrices = (): number => 1;
@@ -114,7 +108,7 @@ function decide(args: {
   corporation: Corporation;
   sectors: CorporateSector[];
   prices?: (commodity: CommodityType, countryId: string) => number | null;
-  pools?: UnownedSector[];
+  pools?: MarketCandidate[];
   stateControlled?: ReadonlySet<string>;
   frontierEntry?: FrontierState;
   ordinaryEntryEligible?: boolean;
@@ -134,7 +128,7 @@ function decide(args: {
     retailExpansionPaused: args.retailExpansionPaused,
     frontierEntry: args.frontierEntry,
   };
-  const byCountry = new Map<string, UnownedSector[]>();
+  const byCountry = new Map<string, MarketCandidate[]>();
   for (const item of args.pools ?? [pool()]) {
     const list = byCountry.get(item.countryId) ?? [];
     list.push(item);
@@ -146,7 +140,7 @@ function decide(args: {
     args.stateControlled ?? new Set<string>(),
     args.prices ?? balancedPrices,
     args.usePlants === false ? undefined : plants,
-    args.placementSignals
+    withCandidateRoom(args.placementSignals)
   );
 }
 
@@ -299,7 +293,7 @@ describe("frontier entry experiment turn path", () => {
     const foundingCost = decision.entryDiagnostic?.foundingCostLocal ?? 0;
     expect(foundingCost).toBeGreaterThan(0);
     expect(decision.liquidCapitalDelta).toBeLessThan(0);
-    expect(decision.unownedDraws).toHaveLength(1);
+    expect(decision.demandClaims).toHaveLength(1);
     // The slot is consumed: the same cohort cannot enter again this turn.
     expect(state.enteredCohorts.has("US\0NY")).toBe(true);
     expect(state.enteredControllers.has(corporation._id.toString())).toBe(true);

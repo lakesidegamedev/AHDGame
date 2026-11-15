@@ -78,7 +78,7 @@ describe("NPP corporation decisions are unchanged", () => {
       `corporations whose decision changed: ${changed.slice(0, 10).join(", ")}`
     ).toEqual([]);
     expect(first.capture.counts).toEqual(golden.capture.counts);
-    expect(first.capture.unowned).toBe(golden.capture.unowned);
+    expect(first.capture.worldState).toBe(golden.capture.worldState);
     expect(first.capture.digest).toBe(golden.capture.digest);
     if (process.env.AHD_NPP_BENCH === "1") {
       console.log(

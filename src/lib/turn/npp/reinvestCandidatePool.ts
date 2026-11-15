@@ -1,72 +1,56 @@
-// src/lib/turn/npp/reinvestCandidatePool.ts
 /**
- * Unowned-pool lookup and reinvestment candidate shape for NPP capacity builds.
- *
- * The pool rows are the SAME object references the turn shell mutates after
- * each corp's draws, so headroom reads here already reflect what earlier corps
- * in the pass took. No turn-path reads: everything indexes the snapshot the
- * shell already holds.
+ * Reinvestment candidate shape and the local share lookup for NPP capacity
+ * builds. Everything indexes the sector snapshot the shell already holds: no
+ * turn-path reads.
  */
-import type { CorporateSector, UnownedSector } from "@/lib/db/types";
-import { unownedHeadroomUnitsOf } from "@/lib/corporations/marketShare";
-import { bucketKey } from "@/lib/nationalization/stateControlledBuckets";
+import type { CorporateSector } from "@/lib/db/types";
+import { computeMarketSharePercent } from "@/lib/corporations/marketShare";
+import { bucketKey } from "@/lib/market/marketBuckets";
 
 /** A sized reinvestment candidate: replacement plus growth units for one sector. */
 export interface ReinvestCandidate {
   sector: CorporateSector;
   units: number;
   /**
-   * The part of `units` that is genuine market ENTRY (the growth leg) and
-   * must therefore be drawn out of the unowned pool. The replacement leg is
-   * deliberately NOT in here: it buys back capacity that already existed in
-   * this market, so it needs no headroom and draws nothing.
+   * The part of `units` that is genuine new capacity (the growth leg), claimed
+   * against the bucket's unmet demand. The replacement leg buys back capacity
+   * that already existed in this market and claims nothing.
    */
   growthUnits: number;
   fill: number;
-  headroomUnits: number;
+  /** Unmet demand in this sector's bucket, net of capacity already claimed. */
+  unmetUnits: number;
   interventionPriority: number;
   /** Set when the growth leg was sized on short-lane bank finance (rules/shortageGrowthFinance). */
   shortageGrowth?: { pressure: number; paybackTurns: number };
 }
 
-/** Pool lookup by (country, state, sectorType), over the shared snapshot. */
-export type ReinvestPoolLookup = (
-  countryId: string,
-  stateId: string,
-  sectorType: string
-) => UnownedSector | null;
+/** Local revenue share of one sector, in percent of its (region, lane) bucket. */
+export type LocalShareLookup = (
+  sector: Pick<CorporateSector, "stateId" | "sectorType" | "industryModel" | "mediaDiscriminator"> & {
+    revenue?: number;
+  }
+) => number;
 
 /**
- * Per-country lazy index over the shell's unowned snapshot. Built on first use
- * per country and read after; the indexed row objects stay shared, so draws
- * the shell applies between corps are visible to later lookups.
+ * Local share from revenue over the bucket's total revenue, the same basis the
+ * player build path prices on. A sector's revenue is in its host currency, as
+ * is every rival in the bucket, so the ratio needs no conversion.
  */
-export function createReinvestPoolLookup(
-  unownedByCountry: Map<string, UnownedSector[]>
-): ReinvestPoolLookup {
-  const poolIndexByCountry = new Map<string, Map<string, UnownedSector>>();
-  return (countryId, stateId, sectorType) => {
-    let index = poolIndexByCountry.get(countryId);
-    if (!index) {
-      index = new Map<string, UnownedSector>();
-      for (const us of unownedByCountry.get(countryId) ?? []) {
-        index.set(bucketKey(us.stateId, us.sectorType), us);
-      }
-      poolIndexByCountry.set(countryId, index);
-    }
-    return index.get(bucketKey(stateId, sectorType)) ?? null;
-  };
-}
-
-/** Headroom units for one sector off the shared pool snapshot, 0 when absent. */
-export function reinvestPoolHeadroomUnits(
-  poolFor: ReinvestPoolLookup,
-  sector: Pick<CorporateSector, "countryId" | "stateId" | "sectorType">,
-  corpCountryId: string,
-  eraUnitScale: number
-): number {
-  const pool = poolFor(sector.countryId ?? corpCountryId, sector.stateId, sector.sectorType);
-  return pool
-    ? unownedHeadroomUnitsOf(sector.sectorType, pool.headroomUnits, pool.revenue, eraUnitScale)
-    : 0;
+export function buildLocalRevenueShareLookup(
+  sectors: readonly Pick<
+    CorporateSector,
+    "stateId" | "sectorType" | "industryModel" | "mediaDiscriminator" | "revenue"
+  >[]
+): LocalShareLookup {
+  const revenueByBucket = new Map<string, number>();
+  const keyOf = (s: Parameters<LocalShareLookup>[0]) =>
+    bucketKey(s.stateId, s.sectorType, s.industryModel, s.mediaDiscriminator);
+  for (const sector of sectors) {
+    const revenue = Number.isFinite(sector.revenue) ? Math.max(0, sector.revenue) : 0;
+    const key = keyOf(sector);
+    revenueByBucket.set(key, (revenueByBucket.get(key) ?? 0) + revenue);
+  }
+  return (sector) =>
+    computeMarketSharePercent(sector.revenue ?? 0, revenueByBucket.get(keyOf(sector)) ?? 0);
 }

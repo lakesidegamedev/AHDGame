@@ -193,7 +193,7 @@ export interface StrategySituation {
   debtDominant: boolean;
   /** True when the corp's sectors mostly cannot sell what they already make. */
   chronicLowFill: boolean;
-  /** True when there is unowned headroom the corp could actually enter. */
+  /** True when there is unmet demand the corp could actually enter. */
   hasHeadroom: boolean;
   /** True when an NPP is running a corp owned by a player. */
   isCaretaker: boolean;

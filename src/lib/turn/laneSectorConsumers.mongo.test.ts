@@ -6,7 +6,6 @@ import type { CorporateSector } from "@/lib/db/types";
 import { resetCorpFxRateCacheForTests } from "@/lib/currency/corporationCapital";
 import { processCorporationTurn } from "./corporationTurn";
 import { processCommodityPriceTurn } from "./commodityPriceTurn";
-import { processUnownedSectorGrowth } from "./unownedSectorGrowth";
 import { runMetricEngine } from "@/lib/metricEngine/phase";
 import { GET as corporationPageQuery } from "@/app/api/corporations/[id]/route";
 import { GET as sectorPageQuery } from "@/app/api/corporations/[id]/sectors/[sectorId]/route";
@@ -142,18 +141,6 @@ describe.skipIf(!mongoUri)("vehicles and entertainment lane native consumers", (
           updatedAt: new Date("1991-01-01"),
         }));
         await db.collection<CorporateSector>("corporateSectors").insertMany(sectors);
-        await db.collection("unownedSectors").insertMany(
-          sectors.map((sector) => ({
-            _id: new ObjectId(),
-            sectorType: sector.sectorType,
-            industryModel: sector.industryModel ?? null,
-            mediaDiscriminator: sector.mediaDiscriminator ?? null,
-            stateId: "CA",
-            countryId: "US",
-            revenue: 100_000,
-            headroomUnits: 10,
-          }))
-        );
 
         reads.clear();
         const commodityResult = await processCommodityPriceTurn(2);
@@ -162,7 +149,6 @@ describe.skipIf(!mongoUri)("vehicles and entertainment lane native consumers", (
         expect(corporationResult.corporationsProcessed).toBe(2);
         expect(corporationResult.sectorsProcessed).toBe(2);
         expect(Number.isFinite(corporationResult.totalIncomeGenerated)).toBe(true);
-        expect(await processUnownedSectorGrowth(db)).toBe(2);
         expect(await runMetricEngine(db, 2)).toBe(1);
 
         for (const [index, corporation] of corporations.entries()) {

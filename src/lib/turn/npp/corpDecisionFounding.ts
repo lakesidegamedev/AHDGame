@@ -4,11 +4,10 @@ import type {
   NppCorpDecisionContext,
   NppCorpDecision,
 } from "@/lib/turn/npp/corpDecisionTypes";
-import type { UnownedSector } from "@/lib/db/types/unownedSector";
+import type { MarketCandidate } from "@/lib/turn/npp/marketCandidates";
 import type { CorporationType, ManufacturingIndustryModel } from "@/lib/constants/corporations";
-import type { PlacementSignals } from "@/lib/turn/npp/marketSignals";
+import { marketRoomUnits, type PlacementSignals } from "@/lib/turn/npp/marketSignals";
 import type { SectorBuildOrder } from "@/lib/db/types";
-import { unownedHeadroomUnitsOf } from "@/lib/corporations/marketShare";
 import { foundingStarterUnits, sectorEntryFeeAnchor } from "@/lib/corporations/foundingPlant";
 import {
   computeBuildCost,
@@ -20,7 +19,6 @@ import { NEUTRAL_STAT } from "@/lib/stats/statsConstants";
 import {
   NPP_FOUNDING_DEPLOY_FRACTION,
   NPP_EXTRACTION_FOUNDING_MAX_FACILITIES,
-  NPP_FOUNDING_HEADROOM_SHARE,
   EXPANSION_COST,
 } from "@/lib/turn/npp/nppCorporationTuning";
 import { foundingUnmetSizing } from "@/lib/turn/npp/rules/marketSaturation";
@@ -54,12 +52,12 @@ export function decideNppFounding({
   corp,
   cashToAnchor,
   newSectors,
-  unownedDraws,
+  demandClaims,
   cashLocal,
 }: {
   foundingBlockEntered: boolean;
   plants: NppPlantsContext | undefined;
-  foundingTarget: UnownedSector | null;
+  foundingTarget: MarketCandidate | null;
   nationalShare: (
     countryId: string,
     sectorType: CorporationType,
@@ -89,7 +87,7 @@ export function decideNppFounding({
     strategyId?: string;
     starterOrder?: SectorBuildOrder;
   }[];
-  unownedDraws: NonNullable<NppCorpDecision["unownedDraws"]>;
+  demandClaims: NonNullable<NppCorpDecision["demandClaims"]>;
   cashLocal: number;
 }) {
   let entryDiagnostic: NppCorpDecision["entryDiagnostic"] = initialEntryDiagnostic;
@@ -100,14 +98,6 @@ export function decideNppFounding({
   if (foundingBlockEntered && foundingTarget !== null) {
     if (plants?.enabled) {
       // NPPs and players found sectors on the same priced-capacity terms.
-      const headroomUnits = unownedHeadroomUnitsOf(
-        foundingTarget.sectorType as CorporationType,
-        foundingTarget.headroomUnits,
-        foundingTarget.revenue,
-        plants.eraUnitScale,
-        foundingTarget.industryModel,
-        foundingTarget.mediaDiscriminator
-      );
       const starterUnits = foundingStarterUnits(
         foundingTarget.sectorType as CorporationType,
         foundingTarget.industryModel as "vehicles" | null | undefined,
@@ -149,7 +139,7 @@ export function decideNppFounding({
         (exceptionalShortageEntry && borrowAllowed ? (ctx.shortageEntryCreditLocal ?? 0) : 0);
       // Size the first build to available capital, not a token facility. Deploy
       // a bounded fraction of post-floor, post-fee surplus into capacity, capped
-      // by the market's unowned headroom and by the per-order ceiling, and
+      // by the market's unmet demand and by the per-order ceiling, and
       // floored at the one-facility quantum so a cash-poor entry still behaves
       // as before. See NPP_FOUNDING_DEPLOY_FRACTION.
       const perUnitFoundingLocal = toCorpLocal(perUnitFoundingAnchor);
@@ -163,26 +153,24 @@ export function decideNppFounding({
       const isExtraction = foundingTarget.sectorType === "extraction";
       // Extraction founds against a DEPOSIT, not local demand: its output is a
       // traded commodity sold wherever the commodity is short, so it has no
-      // demand-headroom cap (headroomUnits is 0 for every extraction bucket by
-      // construction). Cash and a per-mine facility ceiling bound it instead;
-      // the state deposit haircut caps real output and the reinvestment growth
-      // leg deepens it over turns. Demand-side sectors keep the headroom cap.
-      // Demand-side entrants are also capped by what the cell still wants, for
-      // the mix they would run; the unowned pool's headroom overstates it. A
-      // critical-shortage entry reads its deepest leg so a balanced co-product
-      // cannot dilute the shortage (rules/marketSaturation).
-      const unmetSizing = foundingUnmetSizing({
-        unmetUnits: isExtraction
+      // demand cap. Cash and a per-mine facility ceiling bound it instead; the
+      // state deposit haircut caps real output and the reinvestment growth leg
+      // deepens it over turns. Demand-side entrants are capped by what the
+      // bucket still wants, net of capacity already ordered or founded this
+      // pass, for the mix they would run. A critical-shortage entry reads its
+      // deepest leg so a balanced co-product cannot dilute the shortage
+      // (rules/marketSaturation).
+      const unmetUnits =
+        isExtraction || !placementSignals?.unmetDemandUnitsOf
           ? null
-          : (placementSignals?.unmetDemandUnitsOf?.(foundingTarget, {
+          : marketRoomUnits(placementSignals, foundingTarget, {
               strategyId: foundingStrategyId,
               aggregate: exceptionalShortageEntry ? "max" : "mean",
-            }) ?? null),
-        starterUnits,
-      });
+            });
+      const unmetSizing = foundingUnmetSizing({ unmetUnits, starterUnits });
       const sizeCap = isExtraction
         ? starterUnits * NPP_EXTRACTION_FOUNDING_MAX_FACILITIES
-        : Math.min(headroomUnits * NPP_FOUNDING_HEADROOM_SHARE, unmetSizing.sizeCap);
+        : unmetSizing.sizeCap;
       const unmetBlocksEntry = unmetSizing.blocksEntry;
       const sizedUnits =
         starterUnits > 0
@@ -200,7 +188,7 @@ export function decideNppFounding({
       const foundingCost = toCorpLocal(entryFeeAnchor + buildAnchor);
       entryDiagnostic = {
         ...entryDiagnostic,
-        targetHeadroomUnits: headroomUnits,
+        targetUnmetDemandUnits: unmetUnits ?? undefined,
         starterUnits: buildUnits,
         foundingCostLocal: foundingCost,
         entryCapitalLocal: entryCapital,
@@ -219,16 +207,14 @@ export function decideNppFounding({
         affordable:
           buildUnits > 0 &&
           !unmetBlocksEntry &&
-          (isExtraction || headroomUnits >= buildUnits) &&
           entryCapital - foundingCost >= effectiveCashFloor,
         creditPath:
           exceptionalShortageEntry &&
           starterUnits > 0 &&
-          headroomUnits >= starterUnits &&
           !unmetBlocksEntry &&
           !isStateOwned(corp) &&
           !corp.imfBailoutActive,
-        sizeBlocked: starterUnits <= 0 || headroomUnits < starterUnits || unmetBlocksEntry,
+        sizeBlocked: starterUnits <= 0 || unmetBlocksEntry,
         quote: {
           unitPriceAnchor: perUnitFoundingAnchor,
           dominanceMultiplier: foundingUnitQuote?.dominanceMultiplier ?? 1,
@@ -241,19 +227,15 @@ export function decideNppFounding({
           1,
           CAPACITY_BUILD_TURNS(foundingTarget.sectorType as CorporationType, true)
         );
-        // Legacy nameplate: demand-side sectors take the built share of the
-        // pool; extraction has no pool, so it prices the nameplate off the units
-        // built (unit x revenue-per-unit), as the player founding path does.
-        const nameplateShare = headroomUnits > 0 ? Math.min(1, buildUnits / headroomUnits) : 0;
-        const nameplateAnchor = isExtraction
-          ? buildUnits *
-            revenuePerCapacityUnit(
-              foundingTarget.sectorType as CorporationType,
-              plants.eraUnitScale,
-              foundingTarget.industryModel,
-              foundingTarget.mediaDiscriminator
-            )
-          : foundingTarget.revenue * nameplateShare;
+        // Nameplate priced off the units built, as the player founding path does.
+        const nameplateAnchor =
+          buildUnits *
+          revenuePerCapacityUnit(
+            foundingTarget.sectorType as CorporationType,
+            plants.eraUnitScale,
+            foundingTarget.industryModel,
+            foundingTarget.mediaDiscriminator
+          );
         newSectors.push({
           stateId: foundingTarget.stateId,
           countryId: foundingTarget.countryId,
@@ -264,7 +246,7 @@ export function decideNppFounding({
           strategyId: foundingStrategyId,
           // Written in the corp's own currency, because that is what
           // `sectorTurn` reads it as (`readCorpEconomicAnchor` on the way in,
-          // `writeCorpEconomicLocal` on the way out). The unowned pool is ₳,
+          // `writeCorpEconomicLocal` on the way out). The nameplate is ₳,
           // so an unconverted copy made the sector's stored nameplate 1/fx of
           // the value the very next turn would restate it to — a one-turn ×fx
           // step change in every non-anchor currency.
@@ -281,9 +263,9 @@ export function decideNppFounding({
             ...(plants?.wholePlants ? { plantUnits: starterUnits } : {}),
           },
         });
-        unownedDraws.push({
+        demandClaims.push({
           stateId: foundingTarget.stateId,
-          sectorType: foundingTarget.sectorType,
+          sectorType: foundingTarget.sectorType as CorporationType,
           industryModel: (foundingTarget.industryModel ??
             null) as ManufacturingIndustryModel | null,
           mediaDiscriminator: foundingTarget.mediaDiscriminator,
@@ -340,7 +322,19 @@ export function decideNppFounding({
             null) as ManufacturingIndustryModel | null,
           mediaDiscriminator: foundingTarget.mediaDiscriminator,
           strategyId: foundingStrategyId,
-          revenue: Math.round(foundingTarget.revenue * 0.25),
+          revenue: Math.round(
+            foundingStarterUnits(
+              foundingTarget.sectorType as CorporationType,
+              foundingTarget.industryModel as "vehicles" | null | undefined,
+              foundingTarget.mediaDiscriminator
+            ) *
+              revenuePerCapacityUnit(
+                foundingTarget.sectorType as CorporationType,
+                1,
+                foundingTarget.industryModel,
+                foundingTarget.mediaDiscriminator
+              )
+          ),
           profitMargin: 35,
         });
         cashLocal = entryCapital - foundingCost;

@@ -4,7 +4,6 @@ import type {
   NppCorpDecisionContext,
   NppCorpDecision,
 } from "@/lib/turn/npp/corpDecisionTypes";
-import type { UnownedSector } from "@/lib/db/types/unownedSector";
 import type { CapacityDecisionObservation } from "@/lib/corporations/capacityDecisionTelemetry/rules";
 import type { SectorProfitInfo } from "@/lib/turn/npp/sectorProfitability";
 import type { ObjectId } from "mongodb";
@@ -20,9 +19,7 @@ import type { CorporationType } from "@/lib/constants/corporations";
 import type { CorporateSector, SectorBuildOrder } from "@/lib/db/types";
 import { isStateOwned } from "@/lib/nationalization/nationalCorporation";
 import {
-  createReinvestPoolLookup,
   type ReinvestCandidate,
-  reinvestPoolHeadroomUnits,
 } from "@/lib/turn/npp/reinvestCandidatePool";
 import {
   autopilotCapexBudgetLocal,
@@ -87,7 +84,7 @@ export function decideNppCapacityReinvestment({
   corp,
   groupDirection,
   ctx,
-  unownedByCountry,
+  demandClaims,
   autopilot,
   cashLocal,
   effectiveCashFloor,
@@ -121,7 +118,7 @@ export function decideNppCapacityReinvestment({
   corp: Corporation;
   groupDirection: GroupDirection | undefined;
   ctx: NppCorpDecisionContext;
-  unownedByCountry: Map<string, UnownedSector[]>;
+  demandClaims: NonNullable<NppCorpDecision["demandClaims"]>;
   autopilot: boolean;
   cashLocal: number;
   effectiveCashFloor: number;
@@ -174,11 +171,6 @@ export function decideNppCapacityReinvestment({
   reinvestments: NonNullable<NppCorpDecision["reinvestments"]>;
 }) {
   if (plants?.enabled && !isStateOwned(corp) && groupDirection?.allowInvestment !== false) {
-    // Shared-snapshot pool lookup; see reinvestCandidatePool. The shell builds
-    // one for the cohort: the index is a pure function of the pool snapshot, so
-    // rebuilding it per corporation walked every unowned row again per corp.
-    const poolFor = ctx.reinvestPoolFor ?? createReinvestPoolLookup(unownedByCountry);
-
     const candidates: ReinvestCandidate[] = [];
     // Autopilot commits at most a fixed share of cash above the floor to new
     // capacity per turn, spread over candidates in ranking order. NPP corps
@@ -187,19 +179,32 @@ export function decideNppCapacityReinvestment({
       ? autopilotCapexBudgetLocal(cashLocal, effectiveCashFloor)
       : Number.POSITIVE_INFINITY;
     let autopilotCapexSpent = 0;
-    // `plants` narrowing does not persist into the pool callback below.
-    const plantsEraUnitScale = plants.eraUnitScale;
+    // Unmet demand in a sector's bucket, net of capacity claimed against it. No
+    // reading is no evidence of room.
+    const unmetUnitsOf = (sector: CorporateSector): number =>
+      Math.max(
+        0,
+        placementSignals?.unmetDemandUnitsOf?.(
+          {
+            stateId: sector.stateId,
+            countryId: sector.countryId ?? corp.countryId,
+            sectorType: sector.sectorType,
+            industryModel: sector.industryModel,
+            mediaDiscriminator: sector.mediaDiscriminator,
+          },
+          { aggregate: "mean" }
+        ) ?? 0
+      );
     // Observation for one evaluated reinvestment candidate; see
     // capacityDecisionTelemetry. `readCashLocal` tracks the running balance so
-    // unpriced gates observe headroom as current cash.
+    // unpriced gates observe cash headroom as current cash.
     const { observe: observeReinvestCandidate, observePriced: observePricedReinvestCandidate } =
       createReinvestCapacityObserver({
         cohort: capacityCohort,
         competitorCountOf: rivalCount,
         cashToAnchor,
         readCashLocal: () => cashLocal,
-        poolHeadroomOf: (sector) =>
-          reinvestPoolHeadroomUnits(poolFor, sector, corp.countryId, plantsEraUnitScale),
+        localShareOf: (sector) => (ctx.localShareOf?.(sector) ?? 0),
         push: (observation) => capacityObservations.push(observation),
       });
 
@@ -234,8 +239,8 @@ export function decideNppCapacityReinvestment({
         produced,
         sold
       );
-      // (b) Is there room in the market to absorb more output? Same unowned
-      // pool the founding path sizes and draws against.
+      // (b) Is there room in the market to absorb more output? The same unmet
+      // demand the founding path sizes against.
       const sectorCountryId = sector.countryId ?? corp.countryId;
       // Pre-sizing gates in precedence order; the first rejection is observed
       // for the capacity funnel instead of silently skipped.
@@ -258,25 +263,13 @@ export function decideNppCapacityReinvestment({
         cash_cut_run: cashRunCut || (floorHold && !ctx.shortageGrowthFinance),
       });
       if (preSizingGate) {
-        observeReinvestCandidate(preSizingGate, sector, capitalStock, null, 0, null);
+        observeReinvestCandidate(preSizingGate, sector, 0, null);
         continue;
       }
-      // Headroom is a gate on GROWTH, never on REPLACEMENT. A bucket an
-      // incumbent fills has ZERO unowned headroom, and depreciation never
-      // returns capacity to the pool, so gating the whole build on headroom
-      // would block reinvestment exactly where it is needed.
-      //   • REPLACEMENT (δ) buys back capacity that wore out in this market. It
-      //     adds no world capacity, so it needs no headroom and draws nothing.
-      //   • GROWTH (g) is genuine new capacity: headroom-gated, clamped to a
-      //     quarter of the pool and drawn out of it, exactly as founding is.
-      // This matches the player path: `buildCapacity` (a top-up) is not
-      // headroom-gated, while `expandSector` (an entry) draws the pool.
-      const headroomUnits = reinvestPoolHeadroomUnits(
-        poolFor,
-        sector,
-        corp.countryId,
-        plants.eraUnitScale
-      );
+      // Unmet demand bounds autopilot GROWTH and ranks candidates, never
+      // REPLACEMENT: depreciation wears capacity out of a market that may be
+      // fully served, and buying it back adds no world capacity.
+      const unmetUnits = unmetUnitsOf(sector);
 
       // Sizing: replacement restores worn capacity; growth (below) is a
       // separate cash-and-demand decision that no longer reads targetGrowthRate.
@@ -364,9 +357,9 @@ export function decideNppCapacityReinvestment({
       const replacementUnits =
         queueDepth >= NPP_REINVEST_MAX_GROWTH_QUEUE_DEPTH ? 0 : accruedReplacementUnits;
       // GROWTH — build from nothing, sized by cash and demand, exactly as a
-      // player tops up a plant with `buildCapacity`. Demand-side sectors do not
-      // use the unowned pool as a hard cap: their proven sell-through is the
-      // demand signal and the affordability rail limits the order. Extraction
+      // player tops up a plant with `buildCapacity`. Demand-side sectors have no
+      // hard cap: their proven sell-through is the demand signal and the
+      // affordability rail limits the order. Extraction
       // is different. Its physical market is the state's finite deposit, so the
       // deposit headroom signal gates and scales new growth. Without that second
       // gate a rare-earth price spike could make a mine keep adding capacity
@@ -417,7 +410,7 @@ export function decideNppCapacityReinvestment({
       // Existing plants pay the same dominance-tolled list price as players.
       const growthShare =
         capitalStock > 0
-          ? Math.min(100, (100 * capitalStock) / (capitalStock + Math.max(0, headroomUnits)))
+          ? (ctx.localShareOf?.(sector) ?? 0)
           : 0;
       const perUnitGrowthLocal = canGrow
         ? toCorpLocal(
@@ -514,8 +507,6 @@ export function decideNppCapacityReinvestment({
         observeReinvestCandidate(
           evidenceGate,
           sector,
-          capitalStock,
-          headroomUnits,
           replacementUnits,
           null
         );
@@ -525,14 +516,14 @@ export function decideNppCapacityReinvestment({
       // replacement leg through.
       let autopilotGate: ReturnType<typeof evaluateAutopilotGrowthGate> = null;
       if (autopilot && growthUnits > 0) {
-        growthUnits = autopilotBoundGrowthUnits(growthUnits, headroomUnits);
+        growthUnits = autopilotBoundGrowthUnits(growthUnits, unmetUnits);
         autopilotGate = evaluateAutopilotGrowthGate({
           sectorProfitLocal: sectorEconomicToCorpLocal(sp.income, sector),
           operatingCapacityUnits: productionCapacity,
           corpEarningsLocal: totalIncome,
           growthUnits,
           growthCostLocal: perUnitGrowthLocal * growthUnits,
-          demandHeadroomUnits: headroomUnits,
+          unmetDemandUnits: unmetUnits,
         });
         if (autopilotGate) {
           growthUnits = 0;
@@ -541,8 +532,6 @@ export function decideNppCapacityReinvestment({
           observeReinvestCandidate(
             autopilotGate,
             sector,
-            capitalStock,
-            headroomUnits,
             replacementUnits,
             null
           );
@@ -562,8 +551,6 @@ export function decideNppCapacityReinvestment({
           observeReinvestCandidate(
             "below_minimum_order",
             sector,
-            capitalStock,
-            headroomUnits,
             units,
             null
           );
@@ -576,7 +563,7 @@ export function decideNppCapacityReinvestment({
         units,
         growthUnits,
         fill,
-        headroomUnits,
+        unmetUnits,
         interventionPriority,
         shortageGrowth: growthUnits > 0 ? shortageSizing?.shortageGrowth : undefined,
       });
@@ -584,14 +571,14 @@ export function decideNppCapacityReinvestment({
 
     // The governed treatment first reallocates the existing build slot to a
     // critically short fragile market. Normal ranking then uses sell-through
-    // and headroom, including the build size so replacement candidates differ.
+    // and unmet demand, including the build size so replacement candidates differ.
     candidates.sort(
       (a, b) =>
         Number(groupDirection?.regions.includes(b.sector.stateId) ?? false) -
           Number(groupDirection?.regions.includes(a.sector.stateId) ?? false) ||
         Number(b.interventionPriority > 0) - Number(a.interventionPriority > 0) ||
         b.interventionPriority - a.interventionPriority ||
-        b.fill * (b.headroomUnits + b.units) - a.fill * (a.headroomUnits + a.units)
+        b.fill * (b.unmetUnits + b.units) - a.fill * (a.unmetUnits + a.units)
     );
 
     let placed = 0;
@@ -601,8 +588,7 @@ export function decideNppCapacityReinvestment({
 
       // Price on the harsher of local footprint and national sector share.
       const capitalStock = sector.capitalStock ?? 0;
-      const bucketTotal = capitalStock + candidate.headroomUnits;
-      const marketSharePercent = bucketTotal > 0 ? (100 * capitalStock) / bucketTotal : 0;
+      const marketSharePercent = capitalStock > 0 ? (ctx.localShareOf?.(sector) ?? 0) : 0;
 
       // Keep the breakdown for capacity-decision telemetry.
       const reinvestPrice = computeBuildCost({
@@ -651,8 +637,6 @@ export function decideNppCapacityReinvestment({
         observeReinvestCandidate(
           "below_minimum_order",
           sector,
-          capitalStock,
-          candidate.headroomUnits,
           units,
           null
         );
@@ -668,8 +652,6 @@ export function decideNppCapacityReinvestment({
         observePricedReinvestCandidate(
           "autopilot_capex_cap",
           sector,
-          capitalStock,
-          candidate.headroomUnits,
           units,
           costAnchor,
           reinvestPrice.dominanceMultiplier,
@@ -713,8 +695,6 @@ export function decideNppCapacityReinvestment({
         observePricedReinvestCandidate(
           "insufficient_cash",
           sector,
-          capitalStock,
-          candidate.headroomUnits,
           units,
           costAnchor,
           reinvestPrice.dominanceMultiplier,
@@ -744,11 +724,19 @@ export function decideNppCapacityReinvestment({
           $push: { buildQueue: order },
         },
       });
-      // Growth builds from nothing — a plant top-up does not draw the unowned
-      // pool, exactly as a player's `buildCapacity` does not. The pool is not a
-      // finite budget builds are rationed against; capacity is created by paying
-      // for it. (Market share stays well-defined: owned capacity rises, so the
-      // owner's share of owned+headroom rises, without touching the pool.)
+      // Growth capacity is claimed against the bucket's unmet demand so later
+      // corporations this pass read the market net of it; replacement claims
+      // nothing.
+      if (candidate.growthUnits > 0) {
+        demandClaims.push({
+          stateId: sector.stateId,
+          countryId: sector.countryId ?? corp.countryId,
+          sectorType: sector.sectorType,
+          industryModel: sector.industryModel,
+          mediaDiscriminator: sector.mediaDiscriminator,
+          units: candidate.growthUnits,
+        });
+      }
       cashLocal -= costLocal;
       autopilotCapexSpent += costLocal;
       reinvestments.push({
@@ -759,13 +747,11 @@ export function decideNppCapacityReinvestment({
         costLocal,
         onlineTurn: order.onlineTurn,
       });
-      // Observed after the spend: headroom is cash after the charged cost,
-      // the same post-cost headroom the player path records.
+      // Observed after the spend: cash headroom is cash after the charged
+      // cost, the same post-cost figure the player path records.
       observePricedReinvestCandidate(
         "placed",
         sector,
-        capitalStock,
-        candidate.headroomUnits,
         units,
         costAnchor,
         reinvestPrice.dominanceMultiplier,

@@ -3,7 +3,8 @@ import { outputVolumeOnBasis, resolveOutputBasis } from "./rules/outputVolume";
 import type { Db } from "mongodb";
 import type { ConflictDoc } from "@/lib/db/types/conflict";
 import { warDamageByCountry, type WarDamage } from "@/lib/military/warDamage";
-import type { CorporateSector, UnownedSector, Corporation, Bond } from "@/lib/db/types";
+import type { CorporateSector, Corporation, Bond, GameState } from "@/lib/db/types";
+import { DEFAULT_PRESET } from "@/lib/constants/alignmentSeeds";
 import type { FederalBudget, StateBudget } from "@/lib/db/types/budget";
 import type { OperatingSectorType } from "@/lib/constants/corporations";
 import {
@@ -27,7 +28,12 @@ import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSecto
 import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
-import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
+import { statesCollection } from "@/lib/db/repositories/states";
+import {
+  backgroundSectorMass,
+  type BackgroundSectorMass,
+} from "@/lib/metricEngine/backgroundEconomy";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { governmentApprovalsCollection } from "@/lib/db/repositories/governmentApprovals";
 import { organizationMembershipsCollection } from "@/lib/db/repositories/organizationMemberships";
 import { conflictsCollection } from "@/lib/db/repositories/conflicts";
@@ -49,8 +55,8 @@ export interface SectorRevenueTax {
       outputVolume?: number;
     }>
   >;
-  /** Per-state unowned-sector revenue (₳-native). */
-  unownedByState: Map<string, Array<{ revenue: number; sectorType?: OperatingSectorType }>>;
+  /** Per-state background-economy revenue by lane (₳-native); see backgroundEconomy. */
+  backgroundByState: Map<string, BackgroundSectorMass[]>;
   /** Federal sales-tax rate by countryId. */
   federalSalesTaxByCountry: Map<string, number>;
   /** State sales-tax rate by stateId. */
@@ -77,12 +83,13 @@ function finiteRate(value: unknown): number {
 export async function sectorRevenueTaxProvider(db: Db, turn = 0): Promise<SectorRevenueTax> {
   const [
     ownedSectors,
-    unownedSectors,
+    states,
     corporations,
     fxByCurrency,
     federalBudgets,
     stateBudgets,
     marketConfig,
+    gameStatePreset,
   ] = await Promise.all([
     corporateSectorsCollection(db)
       .find({})
@@ -130,20 +137,8 @@ export async function sectorRevenueTaxProvider(db: Db, turn = 0): Promise<Sector
         corporationId: 1,
       })
       .toArray(),
-    unownedSectorsCollection(db)
-      .find({})
-      .project<
-        Pick<
-          UnownedSector,
-          "_id" | "stateId" | "revenue" | "sectorType" | "industryModel" | "mediaDiscriminator"
-        >
-      >({
-        stateId: 1,
-        revenue: 1,
-        sectorType: 1,
-        industryModel: 1,
-        mediaDiscriminator: 1,
-      })
+    statesCollection(db)
+      .find({}, { projection: { _id: 1, gdp: 1, countryId: 1 } })
       .toArray(),
     corporationsCollection(db)
       .find({})
@@ -170,6 +165,9 @@ export async function sectorRevenueTaxProvider(db: Db, turn = 0): Promise<Sector
     // labourSystemMode read in the engine phase), not the global getDb().
     gameConfigCollection(db)
       .findOne({ _id: "default" }, { projection: { marketSystemMode: 1, outputBasis: 1 } })
+      .catch(() => null),
+    gameStateCollection<GameState>(db)
+      .findOne({ _id: "current" }, { projection: { preset: 1 } })
       .catch(() => null),
   ]);
 
@@ -200,11 +198,6 @@ export async function sectorRevenueTaxProvider(db: Db, turn = 0): Promise<Sector
       sectorType?: OperatingSectorType;
     }>
   >();
-  const unownedByState = new Map<
-    string,
-    Array<{ revenue: number; sectorType?: OperatingSectorType }>
-  >();
-
   for (const sector of ownedSectors) {
     const corpKey = sector.corporationId?.toString();
     const corp = corpKey ? corpById.get(corpKey) : undefined;
@@ -241,17 +234,12 @@ export async function sectorRevenueTaxProvider(db: Db, turn = 0): Promise<Sector
     ownedByState.set(sector.stateId, list);
   }
 
-  for (const sector of unownedSectors) {
-    const list = unownedByState.get(sector.stateId) ?? [];
-    list.push({
-      revenue: sector.revenue,
-      sectorType: getOperatingSectorType(
-        sector.sectorType,
-        sector.industryModel,
-        sector.mediaDiscriminator
-      ),
-    });
-    unownedByState.set(sector.stateId, list);
+  // The background economy is derived from each region's GDP, not stored.
+  const preset = gameStatePreset?.preset ?? DEFAULT_PRESET;
+  const backgroundByState = new Map<string, BackgroundSectorMass[]>();
+  for (const state of states) {
+    if (String(state._id).startsWith("NATIONAL_")) continue;
+    backgroundByState.set(String(state._id), backgroundSectorMass(state, preset));
   }
 
   const federalSalesTaxByCountry = new Map<string, number>();
@@ -268,7 +256,7 @@ export async function sectorRevenueTaxProvider(db: Db, turn = 0): Promise<Sector
 
   return {
     ownedByState,
-    unownedByState,
+    backgroundByState,
     federalSalesTaxByCountry,
     stateSalesTaxByState,
     plantsEnabled,

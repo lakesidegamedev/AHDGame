@@ -1,31 +1,25 @@
 import { ObjectId } from "mongodb";
 import { describe, expect, it } from "vitest";
-import type { CommodityPrice, CorporateSector, UnownedSector } from "@/lib/db/types";
+import type { CommodityPrice, CorporateSector } from "@/lib/db/types";
 import type { CorporationType } from "@/lib/constants/corporations";
 import type { CommodityType } from "@/lib/constants/commodities";
-import { foundingStarterUnits } from "@/lib/corporations/foundingPlant";
+import { laneIdentities } from "@/lib/market/marketBuckets";
 import { computeMarketFormationSnapshot } from "./marketFormation";
 import { normalizeMarketFormationSnapshot } from "./marketFormationSnapshot";
 import { summarizeNppMarketEntryFunnel } from "@/lib/turn/npp/entryDiagnostics";
 
 const now = new Date("2026-08-28T00:00:00Z");
 
-function pool(
-  stateId: string,
-  sectorType: CorporationType,
-  headroomUnits = foundingStarterUnits(sectorType)
-): UnownedSector {
-  return {
-    _id: new ObjectId(),
-    stateId,
-    countryId: "US",
-    sectorType,
-    revenue: 1_000_000,
-    headroomUnits,
-    createdAt: now,
-    updatedAt: now,
-  };
+function region(stateId: string, countryId = "US") {
+  return { _id: stateId, countryId };
 }
+
+/** Restrict the enumerated universe to a few lanes so each case stays readable. */
+const lanes = (...types: CorporationType[]) =>
+  laneIdentities().filter((lane) => (types as string[]).includes(lane.lane));
+const MFG = lanes("manufacturing");
+// Large enough to exceed one founding facility in unmet units.
+const BIG = 1_000_000_000;
 
 function sector(stateId: string, sectorType: CorporationType): CorporateSector {
   return {
@@ -68,8 +62,12 @@ describe("computeMarketFormationSnapshot", () => {
   it("separates active cells from facility-ready import-served empty cells", () => {
     const snapshot = computeMarketFormationSnapshot({
       sectors: [sector("NY", "manufacturing")],
-      unownedSectors: [pool("NY", "manufacturing"), pool("PA", "manufacturing")],
-      prices: [price("steel", "PA", 100, 0, 80), price("building_materials", "PA", 100, 0, 80)],
+      states: [region("NY"), region("PA")],
+      lanes: MFG,
+      prices: [
+        price("steel", "PA", BIG, 0, 0.8 * BIG),
+        price("building_materials", "PA", BIG, 0, 0.8 * BIG),
+      ],
       eraUnitScale: 1,
     });
 
@@ -109,8 +107,9 @@ describe("computeMarketFormationSnapshot", () => {
     });
     const snapshot = computeMarketFormationSnapshot({
       sectors: [],
-      unownedSectors: [pool("PA", "manufacturing")],
-      prices: [price("steel", "PA", 100, 0, 0), price("building_materials", "PA", 100, 0, 0)],
+      states: [region("PA")],
+      lanes: MFG,
+      prices: [price("steel", "PA", BIG, 0, 0), price("building_materials", "PA", BIG, 0, 0)],
       entryFunnel: funnel,
       eraUnitScale: 1,
     });
@@ -121,58 +120,57 @@ describe("computeMarketFormationSnapshot", () => {
   });
 
   it("uses transparent fallbacks for clustered, undersized, and missing-demand cells", () => {
-    const steel = price("steel", "AR", 10, 0, 0);
+    const steel = price("steel", "AR", BIG, 0, 0);
     steel.statePrices.WY = 1;
     steel.stateDemand.WY = 10;
     steel.stateSupply.WY = 0;
     steel.stateDeliveredSupply!.WY = 0;
-    const materials = price("building_materials", "AR", 10, 0, 0);
+    const materials = price("building_materials", "AR", BIG, 0, 0);
     materials.statePrices.WY = 1;
     materials.stateDemand.WY = 10;
     materials.stateSupply.WY = 0;
     materials.stateDeliveredSupply!.WY = 0;
     const snapshot = computeMarketFormationSnapshot({
       sectors: [],
-      unownedSectors: [
-        pool("AR", "manufacturing"),
-        pool("AR", "media"),
-        pool("AR", "retail"),
-        pool("WY", "manufacturing", foundingStarterUnits("manufacturing") - 1),
-        pool("AK", "media"),
-      ],
+      states: [region("AR"), region("WY"), region("AK")],
+      lanes: lanes("manufacturing", "media", "retail"),
       prices: [
         steel,
         materials,
-        price("advertising", "AR", 10, 0, 0),
-        price("retail", "AR", 10, 0, 0),
+        price("advertising", "AR", BIG, 0, 0),
+        price("retail", "AR", BIG, 0, 0),
       ],
       eraUnitScale: 1,
     });
 
+    // AR: three facility-ready empty cells with no targeting NPP.
     expect(snapshot.classificationCounts.coordination_gap).toBe(3);
+    // WY manufacturing: demand exists but is smaller than one founding facility.
     expect(snapshot.classificationCounts.fundamental_zero).toBe(1);
-    expect(snapshot.classificationCounts.data_zero).toBe(1);
+    // WY media and retail plus all three AK cells have no demand observation.
+    expect(snapshot.classificationCounts.data_zero).toBe(5);
   });
 });
 
 describe("empty-cell sampling", () => {
   it("counts positive-use country coverage outside the bounded examples", () => {
-    const pools = Array.from({ length: 300 }, (_, i) =>
-      pool(`S${String(i).padStart(4, "0")}`, "manufacturing")
-    );
+    const regions = Array.from({ length: 300 }, (_, i) => region(`S${String(i).padStart(4, "0")}`));
     const steel = price("steel", "unused", 0, 0, 0);
-    steel.stateDemand = Object.fromEntries(
-      pools.map((row, i) => [row.stateId, i >= 250 ? 100 : 0])
-    );
+    steel.stateDemand = Object.fromEntries(regions.map((row, i) => [row._id, i >= 250 ? 100 : 0]));
+    steel.stateSupply = Object.fromEntries(regions.map((row) => [row._id, 0]));
     const snapshot = computeMarketFormationSnapshot({
       sectors: [],
-      unownedSectors: pools,
+      states: regions,
+      lanes: MFG,
       prices: [steel],
       eraUnitScale: 1,
     });
 
     expect(snapshot.emptyMarketCells).toHaveLength(250);
-    expect(snapshot.emptyMarketCells.every((cell) => cell.localDemandValueAnchor === 0)).toBe(true);
+    // The sample leads with the cells that still have unmet demand.
+    expect(
+      snapshot.emptyMarketCells.slice(0, 50).every((cell) => (cell.localDemandValueAnchor ?? 0) > 0)
+    ).toBe(true);
     expect(snapshot.coverageByCountry[0]?.demandCoverage).toEqual({
       observedCells: 300,
       positiveUseCells: 50,
@@ -196,7 +194,8 @@ describe("empty-cell sampling", () => {
         sector("NY", "manufacturing"),
         { ...sector("PA", "manufacturing"), mothballed: true },
       ],
-      unownedSectors: ["NY", "PA", "NJ", "OH", "AK"].map((id) => pool(id, "manufacturing")),
+      states: ["NY", "PA", "NJ", "OH", "AK"].map((id) => region(id)),
+      lanes: MFG,
       prices: [steel],
       eraUnitScale: 1,
     });
@@ -235,16 +234,15 @@ describe("empty-cell sampling", () => {
    * the true total stays exact, the dropped count is reported, and the sample
    * is deterministic rather than whatever order the scan happened to produce.
    */
-  function manyEmptyPools(count: number): UnownedSector[] {
-    return Array.from({ length: count }, (_, i) =>
-      pool(`S${String(i).padStart(4, "0")}`, "manufacturing")
-    );
+  function manyEmptyRegions(count: number) {
+    return Array.from({ length: count }, (_, i) => region(`S${String(i).padStart(4, "0")}`));
   }
 
   it("keeps the exact total while capping the sample, and says how many it dropped", () => {
     const snapshot = computeMarketFormationSnapshot({
       sectors: [],
-      unownedSectors: manyEmptyPools(400),
+      states: manyEmptyRegions(400),
+      lanes: MFG,
       prices: [],
       eraUnitScale: 1,
     });
@@ -260,7 +258,8 @@ describe("empty-cell sampling", () => {
   it("omits the dropped-count field entirely when nothing was dropped", () => {
     const snapshot = computeMarketFormationSnapshot({
       sectors: [],
-      unownedSectors: manyEmptyPools(3),
+      states: manyEmptyRegions(3),
+      lanes: MFG,
       prices: [],
       eraUnitScale: 1,
     });
@@ -272,7 +271,8 @@ describe("empty-cell sampling", () => {
   it("samples deterministically, so the same world yields the same rows", () => {
     const input = {
       sectors: [],
-      unownedSectors: manyEmptyPools(400),
+      states: manyEmptyRegions(400),
+      lanes: MFG,
       prices: [],
       eraUnitScale: 1,
     };
@@ -287,7 +287,8 @@ describe("empty-cell sampling", () => {
   it("puts facility-ready cells first, since those are the actionable ones", () => {
     const snapshot = computeMarketFormationSnapshot({
       sectors: [],
-      unownedSectors: manyEmptyPools(400),
+      states: manyEmptyRegions(400),
+      lanes: MFG,
       prices: [],
       eraUnitScale: 1,
     });
@@ -305,8 +306,9 @@ describe("state-sector coverage", () => {
   it("names an unserved positive-use cell without hiding it", () => {
     const snapshot = computeMarketFormationSnapshot({
       sectors: [],
-      unownedSectors: [pool("PA", "manufacturing")],
-      prices: [price("steel", "PA", 100, 0, 0), price("building_materials", "PA", 100, 0, 0)],
+      states: [region("PA")],
+      lanes: MFG,
+      prices: [price("steel", "PA", BIG, 0, 0), price("building_materials", "PA", BIG, 0, 0)],
       eraUnitScale: 1,
     });
 
@@ -321,7 +323,8 @@ describe("state-sector coverage", () => {
   it("treats unobserved cells as unknown rather than fundamental zeros", () => {
     const snapshot = computeMarketFormationSnapshot({
       sectors: [],
-      unownedSectors: [pool("AK", "media", 0)],
+      states: [region("AK")],
+      lanes: lanes("media"),
       prices: [],
       eraUnitScale: 1,
     });
@@ -333,8 +336,12 @@ describe("state-sector coverage", () => {
   it("separates resident demand from local-producer demand and output", () => {
     const snapshot = computeMarketFormationSnapshot({
       sectors: [],
-      unownedSectors: [pool("PA", "manufacturing")],
-      prices: [price("steel", "PA", 100, 0, 80), price("building_materials", "PA", 100, 0, 80)],
+      states: [region("PA")],
+      lanes: MFG,
+      prices: [
+        price("steel", "PA", BIG, 0, 0.8 * BIG),
+        price("building_materials", "PA", BIG, 0, 0.8 * BIG),
+      ],
       eraUnitScale: 1,
     });
 
@@ -357,8 +364,9 @@ describe("state-sector coverage", () => {
     });
     const snapshot = computeMarketFormationSnapshot({
       sectors: [live(corpId), live(corpId), live(new ObjectId())],
-      unownedSectors: [pool("NY", "manufacturing"), pool("PA", "manufacturing")],
-      prices: [price("steel", "PA", 100, 0, 0), price("building_materials", "PA", 100, 0, 0)],
+      states: [region("NY"), region("PA")],
+      lanes: MFG,
+      prices: [price("steel", "PA", BIG, 0, 0), price("building_materials", "PA", BIG, 0, 0)],
       eraUnitScale: 1,
     });
 
@@ -380,7 +388,7 @@ describe("state-sector coverage", () => {
     steel.globalSupply = 100;
     const snapshot = computeMarketFormationSnapshot({
       sectors: [],
-      unownedSectors: [],
+      states: [],
       prices: [steel],
       eraUnitScale: 1,
     });
@@ -408,13 +416,12 @@ describe("empty-cell classification invariants", () => {
   it("gives every empty cell exactly one known classification", () => {
     const snapshot = computeMarketFormationSnapshot({
       sectors: [sector("NY", "manufacturing")],
-      unownedSectors: [
-        pool("NY", "manufacturing"),
-        pool("PA", "manufacturing"),
-        pool("PA", "retail", 0),
-        pool("OH", "retail"),
+      states: [region("NY"), region("PA"), region("OH")],
+      lanes: lanes("manufacturing", "retail"),
+      prices: [
+        price("steel", "PA", BIG, 0, 0.8 * BIG),
+        price("building_materials", "PA", BIG, 0, 0.8 * BIG),
       ],
-      prices: [price("steel", "PA", 100, 0, 80), price("building_materials", "PA", 100, 0, 80)],
       eraUnitScale: 1,
     });
 
@@ -430,8 +437,9 @@ describe("empty-cell classification invariants", () => {
   it("never calls a positive-use facility-ready cell fundamental or data zero", () => {
     const snapshot = computeMarketFormationSnapshot({
       sectors: [],
-      unownedSectors: [pool("PA", "manufacturing")],
-      prices: [price("steel", "PA", 100, 0, 0), price("building_materials", "PA", 100, 0, 0)],
+      states: [region("PA")],
+      lanes: MFG,
+      prices: [price("steel", "PA", BIG, 0, 0), price("building_materials", "PA", BIG, 0, 0)],
       eraUnitScale: 1,
     });
 

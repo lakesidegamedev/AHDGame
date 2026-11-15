@@ -98,7 +98,6 @@ describe("processCorporationTurn", () => {
     for (const name of [
       "corporations",
       "corporateSectors",
-      "unownedSectors",
       "stateMetrics",
       "commodityPrices",
       "centralBanks",

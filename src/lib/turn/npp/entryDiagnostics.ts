@@ -30,13 +30,13 @@ export {
 } from "./entryFunnelSnapshot";
 
 /**
- * Counts of candidate pools excluded by each `findBestUnownedSector` filter,
+ * Counts of candidate buckets excluded by each `findBestMarketCandidate` filter,
  * so a null candidate still reports WHICH filter bound instead of collapsing
  * every miss into `no_enterable_market`.
  */
 export interface NppCandidateExclusions {
   occupiedExcluded: number;
-  emptyPoolExcluded: number;
+  noRoomExcluded: number;
   stateControlledExcluded: number;
   depositExcluded: number;
   saturatedExcluded: number;
@@ -46,7 +46,7 @@ export interface NppCandidateExclusions {
 export function blankNppCandidateExclusions(): NppCandidateExclusions {
   return {
     occupiedExcluded: 0,
-    emptyPoolExcluded: 0,
+    noRoomExcluded: 0,
     stateControlledExcluded: 0,
     depositExcluded: 0,
     saturatedExcluded: 0,
@@ -86,7 +86,7 @@ export function initialNppMarketEntryReason(args: {
     const exclusions = args.candidateExclusions;
     const otherExcluded =
       (exclusions?.occupiedExcluded ?? 0) +
-      (exclusions?.emptyPoolExcluded ?? 0) +
+      (exclusions?.noRoomExcluded ?? 0) +
       (exclusions?.depositExcluded ?? 0);
     if ((exclusions?.stateControlledExcluded ?? 0) > 0 && otherExcluded === 0) {
       return "state_controlled";

@@ -24,7 +24,7 @@ import { SECTOR_SUPPLY } from "@/lib/constants/commodities";
 import { bucketKey } from "@/lib/nationalization/stateControlledBuckets";
 import type { PlacementSignals } from "./marketSignals";
 import type { Corporation } from "@/lib/db/types";
-import type { UnownedSector } from "@/lib/db/types/unownedSector";
+import type { MarketCandidate } from "@/lib/turn/npp/marketCandidates";
 import type { NppMarketEntryDiagnostic } from "@/lib/db/types/marketFormation";
 
 /**
@@ -64,7 +64,7 @@ export interface FrontierCandidateGates {
 
 /** A policy-cleared candidate granted one priced evaluation this turn. */
 export interface FrontierCandidate {
-  target: UnownedSector;
+  target: MarketCandidate;
   cohortKey: string;
   controllerKey: string;
   relaxedReason: FrontierEntryRelaxableReason | "cohort_ineligible";
@@ -90,7 +90,7 @@ function controllerKeyOf(corp: Corporation): string {
 export function evaluateFrontierCandidate(args: {
   turnState: FrontierEntryTurnState | null | undefined;
   corp: Corporation;
-  candidate: UnownedSector | null;
+  candidate: MarketCandidate | null;
   diagnostic: NppMarketEntryDiagnostic | undefined;
   gates: FrontierCandidateGates;
   placementSignals?: PlacementSignals;
@@ -154,7 +154,7 @@ export function settleFrontierEntryPlacement(args: {
   frontier: FrontierCandidate | null;
   diagnostic: NppMarketEntryDiagnostic | undefined;
   corp: Corporation;
-  fallbackCandidate: UnownedSector | null;
+  fallbackCandidate: MarketCandidate | null;
   ordinaryEntry: boolean;
   exceptionalShortageEntry: boolean;
 }): NppMarketEntryDiagnostic | undefined {

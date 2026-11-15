@@ -40,7 +40,7 @@ export interface NppMarketEntryDiagnostic {
   targetSectorType?: CorporationType;
   targetIndustryModel?: string | null;
   targetMediaDiscriminator?: string | null;
-  targetHeadroomUnits?: number;
+  targetUnmetDemandUnits?: number;
   starterUnits?: number;
   shortageScore?: number;
   foundingCostLocal?: number;
@@ -90,7 +90,7 @@ export interface EmptyMarketCell {
   sectorType: CorporationType;
   classification: EmptyMarketClassification;
   classificationBasis: string;
-  headroomUnits: number;
+  unmetDemandUnits: number;
   starterUnits: number;
   facilityReady: boolean;
   /** Non-mothballed sectors operating in this cell. Zero by construction here. */
@@ -134,7 +134,7 @@ export interface StateSectorCoverage {
   facilityReadyEmptyCells: number;
   activeFirms: number;
   activeCorps: number;
-  openHeadroomUnits: number;
+  openUnmetDemandUnits: number;
   residentDemandValue: number;
   localProducerDemandValue: number;
   inboundSupplyValue: number;
@@ -151,7 +151,7 @@ export interface CountrySectorCoverage {
   facilityReadyEmptyCells: number;
   activeFirms: number;
   activeCorps: number;
-  openHeadroomUnits: number;
+  openUnmetDemandUnits: number;
   residentDemandValue: number;
   localProducerDemandValue: number;
   inboundSupplyValue: number;
@@ -191,7 +191,7 @@ export interface MarketFormationSnapshot {
   emptyByState: Array<{ countryId: string; stateId: string; cells: number }>;
   /**
    * Full state-sector coverage: every observed state with active firms,
-   * headroom, resident demand, local-producer demand, inbound supply, and
+   * unmet demand, resident demand, local-producer demand, inbound supply, and
    * output. Sorted by empty cells descending, then state id.
    */
   coverageByState: StateSectorCoverage[];

@@ -799,7 +799,7 @@ export async function runMetricEngine(db: Db, turn: number): Promise<number> {
       outputEmaNow,
       outputTrendBaseline,
       outputHistorySpanTurns: outputHistorySpanTurns(state.sectorOutputSnapshots, turn),
-      unowned: sectorTax.unownedByState.get(state._id) ?? [],
+      background: sectorTax.backgroundByState.get(state._id) ?? [],
       federalSalesTax:
         sectorTax.federalSalesTaxByCountry.get(countryId) ??
         getNeutralFederalSalesTaxRate(countryId),

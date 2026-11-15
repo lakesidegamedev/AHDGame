@@ -7,7 +7,7 @@ import {
   sumRealizedRevenue,
   SECTOR_SIGNAL_MIN,
   SECTOR_SIGNAL_MAX,
-  DEFAULT_UNOWNED_GROWTH_RATE,
+  DEFAULT_BACKGROUND_GROWTH_RATE,
   INERTIA,
   MAX_POLICY_DELTA,
   NEUTRAL_GDP_GROWTH,
@@ -46,7 +46,7 @@ export interface SectorRevenueTaxPayload {
     hostRevenue?: number;
     hostRealizedRevenue?: number;
   }>;
-  unowned: Array<{ revenue: number; sectorType?: OperatingSectorType }>;
+  background: Array<{ revenue: number; sectorType?: OperatingSectorType }>;
   federalSalesTax: number;
   stateSalesTax: number;
   countryId: string;
@@ -56,7 +56,7 @@ export interface SectorRevenueTaxPayload {
    * P2/D7: `marketSystemMode >= "plants"`. When true the owned-sector
    * contribution to the cyclical signal switches from `currentGrowthRate` (now
    * vestigial — capacity, not the growth field, drives revenue) to the region's
-   * annualized realized-revenue delta, and the unowned 0.5 pin drops out.
+   * annualized realized-revenue delta, and the background 0.5 pin drops out.
    */
   plantsEnabled?: boolean;
   /**
@@ -126,14 +126,14 @@ export const sectorGrowthNode: RegistryNode = {
   decimals: 3,
   compute: (ctx) => {
     const p = ctx.providers["sectorRevenueTax"] as SectorRevenueTaxPayload | undefined;
-    if (!p) return DEFAULT_UNOWNED_GROWTH_RATE;
+    if (!p) return DEFAULT_BACKGROUND_GROWTH_RATE;
     // §6.1 (P7b): concentrate the weighted average toward the region's model's
     // aligned sectors (lagged; parity-neutral when p.model is absent / mixed).
-    const legacySector = computeWeightedGrowthRate(p.owned, p.unowned, (st) =>
+    const legacySector = computeWeightedGrowthRate(p.owned, p.background, (st) =>
       concentrationMultiplier(p.model, st)
     );
     // P2/D7 (plants): realized-revenue delta replaces the vestigial growth-rate
-    // average. Region level, unowned mass excluded, pre-clamped to the node
+    // average. Region level, background mass excluded, pre-clamped to the node
     // bounds. No baseline yet (flip turn) → legacy signal, so the cutover turn
     // cannot spike the EMA. Non-plants is untouched (byte-identical).
     const realizedNow =

@@ -9,7 +9,7 @@
 import {
   ESSENTIAL_SHORTAGE_SCORE,
   expansionFrontierStates,
-  findBestUnownedSector,
+  findBestMarketCandidate,
   sectorPeakShortageScore,
   type CommodityPriceRatioFn,
   type PlacementSignals,
@@ -22,7 +22,7 @@ import {
 import { bucketKey } from "@/lib/nationalization/stateControlledBuckets";
 import { ORDINARY_ENTRY_MIN_SHORTAGE } from "@/lib/turn/npp/nppCorporationTuning";
 import type { Corporation, CorporateSector } from "@/lib/db/types";
-import type { UnownedSector } from "@/lib/db/types/unownedSector";
+import type { MarketCandidate } from "@/lib/turn/npp/marketCandidates";
 import type { NppMarketEntryDiagnostic } from "@/lib/db/types/marketFormation";
 import type { CorporationType } from "@/lib/constants/corporations";
 import { getOperatingSectorType, SECTOR_STRATEGIES } from "@/lib/constants/sectorStrategies";
@@ -32,7 +32,7 @@ import { recipePeakOutputRatio } from "@/lib/turn/npp/rules/foundingRecipe";
 export interface NppEntryEvaluationInput {
   corp: Corporation;
   sectors: CorporateSector[];
-  unownedByCountry: Map<string, UnownedSector[]>;
+  candidatesByCountry: Map<string, MarketCandidate[]>;
   stateControlled: ReadonlySet<string>;
   priceRatioOf: CommodityPriceRatioFn;
   placementSignals: PlacementSignals | undefined;
@@ -67,8 +67,8 @@ export interface NppEntryEvaluationInput {
 }
 
 export interface NppEntryEvaluation {
-  entryCandidate: UnownedSector | null;
-  expansion: UnownedSector | null;
+  entryCandidate: MarketCandidate | null;
+  expansion: MarketCandidate | null;
   hasLogisticsCapacity: boolean;
   marketEntryEligible: boolean;
   /** The candidate's shortage is critical, so the profit and margin screens are bypassed. */
@@ -83,7 +83,7 @@ export interface NppEntryEvaluation {
 }
 
 export function evaluateNppEntry(input: NppEntryEvaluationInput): NppEntryEvaluation {
-  const { corp, sectors, unownedByCountry, stateControlled, priceRatioOf, placementSignals } =
+  const { corp, sectors, candidatesByCountry, stateControlled, priceRatioOf, placementSignals } =
     input;
   // Expansion has no fixed corporation-size ceiling. It proceeds one site at a
   // time on deterministic cohort slots, prefers the neighboring-state frontier,
@@ -94,13 +94,13 @@ export function evaluateNppEntry(input: NppEntryEvaluationInput): NppEntryEvalua
   );
   const frontierStates = expansionFrontierStates(corp.countryId, corp.headquartersState, sectors);
   const candidateExclusions = blankNppCandidateExclusions();
-  const entryCandidate = findBestUnownedSector(
+  const entryCandidate = findBestMarketCandidate(
     corp.countryId,
     corp.headquartersState,
     corp.type,
     corp.secondaryType,
     existingBuckets,
-    unownedByCountry,
+    candidatesByCountry,
     stateControlled,
     priceRatioOf,
     input.plantsEnabled,

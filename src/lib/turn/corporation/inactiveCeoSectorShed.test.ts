@@ -132,7 +132,6 @@ describe("shedInactiveCeoSectorsToUnowned", () => {
     vi.clearAllMocks();
     db = createMockDb();
     db.collection("corporateSectors");
-    db.collection("unownedSectors");
     db.collection("users");
     const { getDb } = await import("@/lib/mongodb");
     vi.mocked(getDb).mockResolvedValue(db as unknown as Db);

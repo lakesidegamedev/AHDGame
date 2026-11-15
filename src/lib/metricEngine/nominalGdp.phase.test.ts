@@ -67,7 +67,6 @@ function seedWorld(db: MockDb, opts: WorldOptions): { states: Op[]; budgets: Op[
     },
   ]);
   setupCollection("corporateSectors", []);
-  setupCollection("unownedSectors", []);
   setupCollection("corporations", []);
   setupCollection("exchangeRates", []);
   setupCollection("stateBudgets", [{ _id: "s_us", taxRates: { salesTax: 0 } }]);

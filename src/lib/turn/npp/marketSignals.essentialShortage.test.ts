@@ -1,25 +1,23 @@
 import { describe, it, expect } from "vitest";
-import { ObjectId } from "mongodb";
 import {
-  findBestUnownedSector,
+  findBestMarketCandidate as findBestMarketCandidateRaw,
   sectorShortageScore,
   ESSENTIAL_SHORTAGE_SCORE,
   fragileMarketCommodityForSector,
   fragileMarketFoundingStrategy,
 } from "./marketSignals";
-import type { UnownedSector } from "@/lib/db/types/unownedSector";
+import type { MarketCandidate } from "./marketCandidates";
+import { candidateWithRoom, withCandidateRoom } from "./__fixtures__/marketCandidates";
 import type { CommodityType } from "@/lib/constants/commodities";
-import type { CountryId } from "@/lib/constants/countries";
 
-const us = (sectorType: string, stateId: string, revenue = 100_000): UnownedSector =>
-  ({
-    _id: new ObjectId(),
-    stateId,
-    countryId: "US" as CountryId,
-    sectorType: sectorType as UnownedSector["sectorType"],
-    revenue,
-    headroomUnits: revenue,
-  }) as UnownedSector;
+const us = (sectorType: string, stateId: string, room = 100_000): MarketCandidate =>
+  candidateWithRoom({ sectorType, stateId } as never, room);
+
+const findBestMarketCandidate: typeof findBestMarketCandidateRaw = (...args) => {
+  const withSignals = [...args] as unknown as Parameters<typeof findBestMarketCandidateRaw>;
+  withSignals[10] = withCandidateRoom(args[10]);
+  return findBestMarketCandidateRaw(...withSignals);
+};
 
 const ratios =
   (map: Partial<Record<CommodityType, number>>) =>
@@ -34,7 +32,7 @@ describe("essential-shortage founding override (freight valve)", () => {
   it("a manufacturing corp founds LOGISTICS when freight is critically short", () => {
     // freight 2.0x base clears the bar; the corp is manufacturing-typed with a
     // manufacturing pool available, so pre-override it would take tier 1.
-    const pick = findBestUnownedSector(
+    const pick = findBestMarketCandidate(
       "US",
       "PA",
       "manufacturing",
@@ -49,7 +47,7 @@ describe("essential-shortage founding override (freight valve)", () => {
   });
 
   it("takes its own type when freight is only mildly elevated (below the bar)", () => {
-    const pick = findBestUnownedSector(
+    const pick = findBestMarketCandidate(
       "US",
       "PA",
       "manufacturing",
@@ -66,7 +64,7 @@ describe("essential-shortage founding override (freight valve)", () => {
   it("does not re-found the same type in the same state", () => {
     // The NY logistics bucket is occupied, so the corp falls back to the open
     // manufacturing bucket in PA. The same type remains legal in other states.
-    const pick = findBestUnownedSector(
+    const pick = findBestMarketCandidate(
       "US",
       "PA",
       "manufacturing",
@@ -83,7 +81,7 @@ describe("essential-shortage founding override (freight valve)", () => {
   it("picks the SHORTEST commodity when several clear the bar", () => {
     // freight 1.7x vs food 2.5x: an agriculture-strategy sector (food) outscores
     // logistics (freight), so the override prefers food.
-    const pick = findBestUnownedSector(
+    const pick = findBestMarketCandidate(
       "US",
       "PA",
       "manufacturing",
@@ -116,7 +114,7 @@ describe("governed fragile-market supply routing", () => {
     ]);
     const prices = ratios({ energy: 3, fertilizers: 2.5 });
 
-    const control = findBestUnownedSector(
+    const control = findBestMarketCandidate(
       "US",
       "PA",
       "energy",
@@ -127,7 +125,7 @@ describe("governed fragile-market supply routing", () => {
       prices,
       false
     );
-    const treatment = findBestUnownedSector(
+    const treatment = findBestMarketCandidate(
       "US",
       "PA",
       "energy",
@@ -151,7 +149,7 @@ describe("governed fragile-market supply routing", () => {
       ["US", [us("manufacturing", "PA", 1_000_000), us("media", "NY", 100_000)]],
     ]);
     const prices = ratios({ advertising: ESSENTIAL_SHORTAGE_SCORE - 0.01 });
-    const treatment = findBestUnownedSector(
+    const treatment = findBestMarketCandidate(
       "US",
       "PA",
       "manufacturing",
@@ -186,7 +184,7 @@ describe("governed fragile-market supply routing", () => {
       ["US", [us("energy", "PA", 1_000_000), us("extraction", "NY", 100_000)]],
     ]);
     const prices = ratios({ energy: 3, rare_earth: 2 });
-    const treatment = findBestUnownedSector(
+    const treatment = findBestMarketCandidate(
       "US",
       "PA",
       "energy",
@@ -211,7 +209,7 @@ describe("governed fragile-market supply routing", () => {
     const candidates = new Map([
       ["US", [us("energy", "PA", 1_000_000), us("media", "NY", 100_000)]],
     ]);
-    const treatment = findBestUnownedSector(
+    const treatment = findBestMarketCandidate(
       "US",
       "PA",
       "energy",
@@ -244,7 +242,7 @@ describe("essential-shortage valve reads each state's freight shortfall", () => 
     // price signal folds the TX shortfall into its state ratio.
     const stateRatio = (commodity: CommodityType, stateId: string) =>
       commodity === "freight" ? (stateId === "TX" ? 4 : 1.07) : null;
-    const pick = findBestUnownedSector(
+    const pick = findBestMarketCandidate(
       "US",
       "PA",
       "manufacturing",
@@ -263,7 +261,7 @@ describe("essential-shortage valve reads each state's freight shortfall", () => 
 
   it("stays in its own field when no state is short", () => {
     const freightPool = new Map([["US", [us("manufacturing", "PA"), us("logistics", "TX")]]]);
-    const pick = findBestUnownedSector(
+    const pick = findBestMarketCandidate(
       "US",
       "PA",
       "manufacturing",

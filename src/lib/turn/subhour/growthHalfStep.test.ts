@@ -99,7 +99,6 @@ async function runEngine(states: Doc[], metrics: Doc[]) {
     { _id: "a", stateId: "s1", revenue: 1000, currentGrowthRate: 4, corporationId: undefined },
     { _id: "b", stateId: "s2", revenue: 800, currentGrowthRate: 1, corporationId: undefined },
   ]);
-  setup("unownedSectors", []);
   setup("stateMetrics", metrics);
   db.collectionMocks.macroMetrics = db.collectionMocks.stateMetrics!;
   setup("corporations", []);
