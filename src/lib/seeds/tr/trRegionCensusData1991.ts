@@ -1,21 +1,7 @@
 /**
- * Turkey Region Census Profiles, 1991 era.
- *
- * 1991-default companion to {@link trRegionCensusData} (1979) and
- * {@link trRegionCensusData1953}. Anchored on the 1990 Turkish census and the
- * 1989 to 1991 demographic and health surveys.
- *
- * Era anchors: the country is now majority urban (about 59% nationally, after
- * two decades of migration to Istanbul, Ankara, Izmir and the Adana belt).
- * Fertility has fallen, so the population is older than in 1979 but still
- * young. Literacy is near 80% and secondary schooling has widened, though the
- * east and southeast remain well behind the west. The Kurdish population is
- * a larger share than in 1979 on higher eastern fertility and displacement
- * into western cities; the Southeastern Anatolia conflict dominates the east.
- * Istanbul has grown into a metropolis with large gecekondu suburbs.
- *
- * SEED INDEPENDENCE: values authored for 1991, not scaled from another era.
- * Each dimension sums to 100.
+ * Turkey region census profiles for the 1991 era, anchored on the 1990 census.
+ * Majority urban, older and better schooled than 1979, with the east still
+ * behind and a larger Kurdish share. Authored for 1991; each dimension sums to 100.
  */
 
 import type { TRRegionLayer1 } from "./trRegionCensusData";
