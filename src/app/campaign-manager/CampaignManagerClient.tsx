@@ -64,7 +64,9 @@ export interface CampaignManagerClientProps {
 type FilterState = Omit<RaceFilter, "regionNames">;
 
 /** Centre-column width (px) from which the race sits beside the map. */
-const SIDE_BY_SIDE_MIN = 1000;
+// Side by side only when the map can still be large next to the race panel;
+// below this the map takes the full centre width and the race panel sits under it.
+const SIDE_BY_SIDE_MIN = 1600;
 
 /**
  * The Campaign Manager screen. Owns what is selected (race type, stage, region,
@@ -487,7 +489,7 @@ export default function CampaignManagerClient(props: CampaignManagerClientProps)
               sideBySide
                 ? {
                     display: "grid",
-                    gridTemplateColumns: "minmax(0, 7fr) minmax(380px, 5fr)",
+                    gridTemplateColumns: "minmax(0, 3fr) minmax(420px, 2fr)",
                     gap: 24,
                     alignItems: "start",
                   }
