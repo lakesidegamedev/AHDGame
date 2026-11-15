@@ -46,7 +46,16 @@ describe("anonymous config", () => {
 });
 
 describe("full config", () => {
-  const config = fullPostHogConfig();
+  const config = fullPostHogConfig(Date.parse("2026-12-01T00:00:00Z"));
+
+  it("samples a third of sessions during launch week, then returns to the base rate", () => {
+    expect(
+      fullPostHogConfig(Date.parse("2026-11-16T12:00:00Z")).session_recording?.sampleRate
+    ).toBe(0.33);
+    expect(
+      fullPostHogConfig(Date.parse("2026-11-23T05:00:00Z")).session_recording?.sampleRate
+    ).toBe(0.1);
+  });
 
   it("keeps sampled, masked replay and local persistence", () => {
     expect(config.session_recording?.sampleRate).toBe(0.1);

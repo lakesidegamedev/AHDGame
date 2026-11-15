@@ -3,7 +3,6 @@
 // State Enterprises panel on the finance-minister office page. Spec §24.
 // Auth: public read (mutating reorg/CEO routes enforce authority)
 // Errors: 400
-import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
@@ -37,15 +36,11 @@ export async function GET(_request: Request, { params }: RouteParams) {
             .project<{
               corporationId: CorporateSector["corporationId"];
               sectorType: CorporateSector["sectorType"];
-              industryModel?: CorporateSector["industryModel"];
-              mediaDiscriminator?: CorporateSector["mediaDiscriminator"];
               revenue: CorporateSector["revenue"];
               workers: CorporateSector["workers"];
             }>({
               corporationId: 1,
               sectorType: 1,
-              industryModel: 1,
-              mediaDiscriminator: 1,
               revenue: 1,
               workers: 1,
             })
@@ -86,9 +81,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     if (primaryId) {
       for (const s of sectors) {
         if (String(s.corporationId) === String(primaryId)) {
-          primaryHeldTypes.add(
-            getOperatingSectorType(s.sectorType, s.industryModel, s.mediaDiscriminator)
-          );
+          primaryHeldTypes.add(s.sectorType);
         }
       }
     }

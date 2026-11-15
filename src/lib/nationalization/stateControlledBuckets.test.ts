@@ -21,13 +21,7 @@ function sector(
   countryId: string = CN
 ): Pick<
   CorporateSector,
-  | "corporationId"
-  | "stateId"
-  | "sectorType"
-  | "industryModel"
-  | "revenue"
-  | "nationalizedAtTurn"
-  | "countryId"
+  "corporationId" | "stateId" | "sectorType" | "revenue" | "nationalizedAtTurn" | "countryId"
 > {
   return {
     corporationId,
@@ -41,18 +35,6 @@ function sector(
 
 describe("computeStateControlledBuckets", () => {
   const natIds = new Set([NAT.toString()]);
-
-  it("keeps generic manufacturing and vehicle manufacturing in separate buckets", () => {
-    const controlled = computeStateControlledBuckets(
-      [
-        { ...sector(NAT, "HD", "manufacturing", 900, 331), industryModel: null },
-        { ...sector(PRIV, "HD", "manufacturing", 50), industryModel: "vehicles" },
-      ],
-      natIds
-    );
-    expect(controlled.has(bucketKey("HD", "manufacturing"))).toBe(true);
-    expect(controlled.has(bucketKey("HD", "manufacturing", "vehicles"))).toBe(false);
-  });
 
   it("marks a nationalized bucket the national corp solely holds as controlled", () => {
     const set = computeStateControlledBuckets(

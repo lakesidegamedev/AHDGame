@@ -44,8 +44,6 @@ function plantSector(
     countryId: "US",
     stateId,
     sectorType: "logistics",
-    industryModel: null,
-    mediaDiscriminator: null,
     revenue: 1000,
     profitMargin: 10,
     workers: 100,

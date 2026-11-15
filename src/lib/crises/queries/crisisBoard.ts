@@ -1,7 +1,7 @@
 import { getCorporationsCollection } from "@/lib/db/collections/corporations";
 import { getCharactersCollection } from "@/lib/db/collections/characters";
 import { ObjectId, type Db } from "mongodb";
-import type { Crisis, CrisisInteraction } from "@/lib/db/types/crisis";
+import type { Crisis, CrisisEffect, CrisisInteraction } from "@/lib/db/types/crisis";
 import type { Character } from "@/lib/db/types";
 import {
   canCharacterInteract,
@@ -19,7 +19,6 @@ import { spilloverSpreadLinks } from "@/lib/crises/v2/spillover";
 import {
   boardGroup,
   buildSpreadLinks,
-  compareBoardCrises,
   crisisKind,
   crisisTurnsLeft,
   exposureReasons,
@@ -30,6 +29,13 @@ import {
   type ViewerExposureContext,
 } from "@/lib/crises/rules/boardView";
 import { crisisSeverity, type CrisisSeverity } from "@/lib/crises/severity";
+import {
+  compareCrisisRows,
+  crisisSection,
+  crisisSeverityScore,
+  severityBandFromScore,
+  type CrisisSection,
+} from "@/lib/crises/rules/crisisRow";
 import { globalResponseRoleFor } from "@/lib/livingConflict/globalResponse";
 import { listCrises } from "@/lib/crises/queries/crisisQueries";
 import { loadCrisisV2Summaries, type CrisisV2Summary } from "@/lib/crises/queries/crisisV2View";
@@ -59,7 +65,12 @@ export interface BoardCrisis {
   startTurn: number;
   durationTurns: number | null;
   turnsLeft: number | null;
+  /** Band from the live severity score (or the effect-based band when there is none). */
   severity: CrisisSeverity;
+  /** 0..100 score the band comes from; orders rows within a section. */
+  severityScore: number;
+  section: CrisisSection;
+  templateKey: string | null;
   kind: CrisisKind;
   group: CrisisBoardGroup;
   /** Short role label for the open decision, e.g. "Head of state". */
@@ -72,8 +83,8 @@ export interface BoardCrisis {
   campaignKey: string | null;
   /** Stage, severity trend, forecast and the viewer's levers. Null for crises outside v2. */
   v2: CrisisV2Summary | null;
-  /** First few effect labels, for dense cards. */
-  effectLabels: string[];
+  /** What the crisis does, for the expanded card. */
+  effects: CrisisEffect[];
   href: string;
 }
 
@@ -240,6 +251,10 @@ export async function loadCrisisBoard(db: Db, viewer: BoardViewer | null): Promi
       crisis.status === "active" &&
       (viewerCanActOnCrisis(crisis, interaction, viewer) || (v2?.levers.length ?? 0) > 0);
     const exposure = context ? exposureReasons(crisis, context, viewerCanAct) : [];
+    const severityScore = crisisSeverityScore({
+      v2Severity: v2?.severity,
+      legacyBand: crisisSeverity(crisis),
+    });
     return {
       id: crisis._id.toString(),
       name: crisis.name,
@@ -252,7 +267,10 @@ export async function loadCrisisBoard(db: Db, viewer: BoardViewer | null): Promi
       startTurn: crisis.startTurn,
       durationTurns: crisis.durationTurns,
       turnsLeft: crisisTurnsLeft(crisis, currentTurn),
-      severity: crisisSeverity(crisis),
+      severity: severityBandFromScore(severityScore),
+      severityScore,
+      section: crisisSection({ status: crisis.status, stage: v2?.stage ?? crisis.v2?.stage }),
+      templateKey: crisis.templateKey ?? null,
       kind: crisisKind(crisis),
       group: boardGroup({ crisis, currentTurn, decisionOpen, viewerCanAct }),
       whoCanAct: decisionOpen && node ? describeRoleRequirement(node) : null,
@@ -263,12 +281,17 @@ export async function loadCrisisBoard(db: Db, viewer: BoardViewer | null): Promi
       chainFamily: crisis.chain?.family ?? null,
       campaignKey: crisis.globalResponse?.conflictKey ?? null,
       v2,
-      effectLabels: crisis.effects.slice(0, 3).map((e) => e.label),
+      effects: crisis.effects,
       href: `/world/crises/${crisis._id.toString()}`,
     };
   });
 
-  rows.sort(compareBoardCrises);
+  rows.sort((a, b) =>
+    compareCrisisRows(
+      { id: a.id, section: a.section, score: a.severityScore, startTurn: a.startTurn },
+      { id: b.id, section: b.section, score: b.severityScore, startTurn: b.startTurn }
+    )
+  );
   return {
     currentTurn,
     startingYear: list.startingYear,

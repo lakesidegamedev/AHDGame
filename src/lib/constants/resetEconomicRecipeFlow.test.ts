@@ -117,7 +117,6 @@ describe("phased hardware demand reaches all physical input rails", () => {
         null,
         null,
         turn,
-        undefined,
         "1991-default",
         219
       );

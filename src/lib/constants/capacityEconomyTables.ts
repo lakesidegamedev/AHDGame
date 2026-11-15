@@ -67,7 +67,6 @@ export const CAPACITY_BUILD_TURNS_TABLE: Record<OperatingSectorType, number> = {
   extraction: 96,
   chemical_industries: 84,
   manufacturing: 72,
-  manufacturing_vehicles: 72,
   defense: 72,
   telecommunications: 60,
   real_estate: 60,
@@ -77,7 +76,6 @@ export const CAPACITY_BUILD_TURNS_TABLE: Record<OperatingSectorType, number> = {
   // Trucks and depots, not a refinery. At 36 turns a freight shortage after a
   // reset ran a game day and a half before any new fleet could help.
   logistics: 15,
-  media_entertainment: 24,
   media: 24,
   financial: 24,
   technology: 24,

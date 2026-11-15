@@ -29,11 +29,10 @@ describe("loadUSMediaOutletDelivery", () => {
         soldFraction: 0.5,
       },
       {
-        _id: "canonical-entertainment",
+        _id: "third-outlet",
         stateId: "CA",
         corporationId: { toString: () => "corp-3" },
         sectorType: "media",
-        mediaDiscriminator: "entertainment",
         strategyId: "live_service",
         producedUnits: 100,
         soldFraction: 1,
@@ -62,10 +61,8 @@ describe("loadUSMediaOutletDelivery", () => {
       producedUnits: 1,
       soldByCommodity: 1,
       outputUnitsByCommodity: 1,
-      mediaDiscriminator: 1,
     });
-    // The entertainment lane sells advertising since the entertainment
-    // commodity was removed, so it is an outlet too (and is not derated).
+    // Every media sector sells advertising, so each is an outlet.
     expect(outlets).toHaveLength(3);
     expect(outlets[0]).toMatchObject({
       stateId: "CA",
@@ -75,7 +72,7 @@ describe("loadUSMediaOutletDelivery", () => {
     });
     expect(outlets[1].deliveredAdvertisingUnits).toBeCloseTo(5);
     expect(outlets[2]).toMatchObject({ corporationId: "corp-3" });
-    expect(outlets[2].deliveredAdvertisingUnits).toBeCloseTo(100);
+    expect(outlets[2].deliveredAdvertisingUnits).toBeCloseTo(10);
   });
 
   it("does not count transition-era estimates without a current turn or exact output", async () => {

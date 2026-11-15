@@ -339,7 +339,6 @@ export async function loadSectorDetailContext({
         {
           countryId: sectorCountryId,
           sectorType: sector.sectorType,
-          industryModel: sector.industryModel ?? null,
         },
         { projection: { name: 1, ownerId: 1, demandedWageLevel: 1, undergroundStrength: 1 } }
       ),
@@ -376,8 +375,6 @@ export async function loadSectorDetailContext({
               stateId: 1,
               countryId: 1,
               sectorType: 1,
-              industryModel: 1,
-              mediaDiscriminator: 1,
               revenue: 1,
               strategyId: 1,
               transitionFromStrategyId: 1,
@@ -395,8 +392,6 @@ export async function loadSectorDetailContext({
         .find({
           stateId: sector.stateId,
           sectorType: sector.sectorType,
-          industryModel: sector.industryModel ?? null,
-          mediaDiscriminator: sector.mediaDiscriminator ?? null,
         })
         .toArray(),
     ]);
@@ -419,8 +414,6 @@ export async function loadSectorDetailContext({
                 _id: 1,
                 countryId: 1,
                 type: 1,
-                industryModel: 1,
-                mediaDiscriminator: 1,
                 unlockedTechNodeIds: 1,
                 techDecadeLane: 1,
                 frontierProgrammes: 1,

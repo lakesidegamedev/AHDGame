@@ -67,9 +67,7 @@ export function baseMarginRow(
 ): BaseMarginRow | null {
   const year = scenario.year ?? 1991;
   const preset = scenario.preset ?? "1991-default";
-  const strategy = getSectorStrategies(sectorType, false, null, preset).find(
-    (s) => s.id === strategyId
-  );
+  const strategy = getSectorStrategies(sectorType, false, preset).find((s) => s.id === strategyId);
   if (!strategy) return null;
   const dailyRevenue = revenuePerCapacityUnitForStrategy(sectorType, strategy.id, 1);
   if (!(dailyRevenue > 0)) return null;
@@ -143,7 +141,7 @@ export function baseMarginRow(
 export function baseMarginTable(scenario: BaseMarginScenario = {}): BaseMarginRow[] {
   const rows: BaseMarginRow[] = [];
   for (const type of OPERATING_SECTOR_TYPES) {
-    for (const s of getSectorStrategies(type, false, null, scenario.preset ?? "1991-default")) {
+    for (const s of getSectorStrategies(type, false, scenario.preset ?? "1991-default")) {
       const row = baseMarginRow(type, s.id, scenario);
       if (row) rows.push(row);
     }

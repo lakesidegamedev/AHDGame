@@ -4,7 +4,7 @@
  * picked deterministically from a hash of the current turn. This handler only
  * applies the host's effects; no bidding, escrow, or multi-turn state.
  *
- * `sectorType: "media_entertainment"` stands in for tourism (no dedicated
+ * `sectorType: "media"` stands in for tourism (no dedicated
  * `CorporationType` exists); `construction` is a real sector used as-is.
  */
 import type { EventHandler } from "@/lib/events/substrate/types";
@@ -34,7 +34,7 @@ registerEventHandler({
             { type: "sectorDemandModifier", sectorType: "construction", pct: 8, durationTurns: 6 },
             {
               type: "sectorDemandModifier",
-              sectorType: "media_entertainment",
+              sectorType: "media",
               pct: 8,
               durationTurns: 6,
             },

@@ -57,8 +57,7 @@ const monetaryByEra: Record<string, EraMonetaryBaseline> = {
 
 /** Sector weights by era. 1979 is the manufacturing peak; 1991 the bubble. */
 const sectorWeightsBase: Partial<Record<OperatingSectorType, number>> = {
-  manufacturing_vehicles: 13,
-  manufacturing: 12,
+  manufacturing: 25,
   technology: 11,
   real_estate: 10,
   financial: 9,
@@ -68,16 +67,14 @@ const sectorWeightsBase: Partial<Record<OperatingSectorType, number>> = {
   chemical_industries: 5,
   telecommunications: 4,
   logistics: 4,
-  media_entertainment: 3,
-  media: 3,
+  media: 6,
   energy: 2,
   defense: 2,
   agriculture: 2,
   extraction: 1,
 };
 const sectorWeights1979: Partial<Record<OperatingSectorType, number>> = {
-  manufacturing: 30,
-  manufacturing_vehicles: 12,
+  manufacturing: 42,
   technology: 5,
   chemical_industries: 6,
   energy: 5,
@@ -91,12 +88,10 @@ const sectorWeights1979: Partial<Record<OperatingSectorType, number>> = {
   financial: 3,
   telecommunications: 2,
   extraction: 1,
-  media: 2,
-  media_entertainment: 4,
+  media: 6,
 };
 const sectorWeights1991: Partial<Record<OperatingSectorType, number>> = {
-  manufacturing: 18,
-  manufacturing_vehicles: 12,
+  manufacturing: 30,
   real_estate: 9,
   financial: 12,
   construction: 9,
@@ -106,15 +101,14 @@ const sectorWeights1991: Partial<Record<OperatingSectorType, number>> = {
   healthcare: 5,
   telecommunications: 3,
   logistics: 4,
-  media_entertainment: 2,
-  media: 2,
+  media: 4,
   energy: 2,
   defense: 1,
   agriculture: 2,
   extraction: 1,
 };
 
-const strategicSectors: OperatingSectorType[] = ["technology", "manufacturing_vehicles"];
+const strategicSectors: OperatingSectorType[] = ["technology", "manufacturing"];
 
 /** GDP and population anchors used to scale legislation costs. Balance surface. */
 const repEcon = {
@@ -223,7 +217,7 @@ export const JP_MEDIAN_INCOME_BAND = { best: 5_500_000, worst: 2_000_000 };
 
 /** Seed sector specialisation for Japanese regions with no authored override. */
 export const JP_SECTOR_SPECIALIZATION = {
-  primary: "manufacturing_vehicles",
+  primary: "manufacturing",
   secondary: "technology",
 } as const;
 

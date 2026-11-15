@@ -6,7 +6,6 @@
  * via the transition primitive (method "legislative", owner-derived triggers,
  * resolved governing party for the ideology multiplier).
  */
-import { operatingSectorIdentity } from "@/lib/constants/corporations";
 import { ObjectId, type Db } from "mongodb";
 import type { Corporation, CorporateSector, PendingNationalization } from "@/lib/db/types";
 import type { CountryLeaderState } from "@/lib/db/types/countryLeaderState";
@@ -41,7 +40,7 @@ export async function applyNationalizeProvision(
     const governingPartyId = await resolveGoverningPartyId(db, countryId);
     await nationalizeSectorWide(db, {
       countryId,
-      ...operatingSectorIdentity(provision.targetSectorType),
+      sectorType: provision.targetSectorType,
       carveFraction: provision.sectorCarveFraction ?? 1,
       scope: provision.sectorScope ?? "all",
       tier: "fair",

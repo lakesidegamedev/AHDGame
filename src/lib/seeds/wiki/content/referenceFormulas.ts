@@ -188,7 +188,7 @@ weight        = appeal x reach x approval x effectiveOrg x infamyMult x other fa
 - **Direction bonus** is suppressed on an axis where you lean against your own party.
 - **Personal floor** means a good candidate with a tiny party is never multiplied down to zero.
 - State races use influence for reach only. Presidential generals also add it to appeal.
-- The group's approval of you (\`group approval\`) is the per-archetype approval from [Government Approval](/wiki/government-approval) style effects, half-weighted.
+- The group's approval of you (\`group approval\`) is the per-voter-group approval from [Government Approval](/wiki/government-approval) style effects, half-weighted.
 
 ### Tenure erosion
 

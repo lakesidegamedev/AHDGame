@@ -38,7 +38,7 @@ jobs:
           case "$checked_tree" in *[!a-f0-9]*) exit 1 ;; esac
           printf 'tree=%s\n' "$checked_tree" >> "$GITHUB_OUTPUT"
       - name: Semgrep (AHD project rules)
-        run: semgrep scan --config .semgrep/ --error --quiet
+        run: semgrep scan --config .github/semgrep.yml --error --quiet
       # Contributors: conflict-of-interest disclosure, and maintainer approval for
       # economy or turn-processing code (see CONTRIBUTING.md).
       - name: Contributor governance

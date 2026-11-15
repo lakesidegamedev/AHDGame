@@ -157,7 +157,7 @@ const SUSPICIOUS_AUTH_CLEAR_REASONS = new Set(["auth_me:user_not_found"]);
  */
 export async function clearAuthCookie(reason: string) {
   // Breadcrumb (not an event): forensic context that survives into the next
-  // captured error in this scope, without creating its own GlitchTip issue.
+  // captured error in this scope, without creating its own error issue.
   Sentry.addBreadcrumb({
     category: "auth",
     type: "info",

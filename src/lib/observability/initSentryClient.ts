@@ -74,7 +74,6 @@ export function initSentryClient(): typeof Sentry.captureRouterTransitionStart {
       "GET /api/players/online",
       "GET /api/client-status",
       "GET /api/client-nav",
-      "POST /api/analytics/pageview",
     ],
 
     // Drop logs until SaaS volume and cost have been measured.
@@ -82,7 +81,7 @@ export function initSentryClient(): typeof Sentry.captureRouterTransitionStart {
 
     // Errors that originate entirely in browser extensions / injected third-party
     // scripts. These are never actionable from our code and were the bulk of the
-    // client-side noise in GlitchTip (crypto-wallet injectors, Firefox reader
+    // client-side noise in the error tracker (crypto-wallet injectors, Firefox reader
     // mode, privacy-mode storage blocks, ad scripts, reference-manager add-ons).
     ignoreErrors: [
       // Crypto-wallet extensions fighting over window.ethereum
@@ -135,7 +134,7 @@ export function initSentryClient(): typeof Sentry.captureRouterTransitionStart {
       const message = event.exception?.values?.[0]?.value ?? "";
       if (isMarketPollingTeardown(event)) return null;
 
-      // Value-less non-Error promise rejections (GlitchTip AHD-89, 98 events):
+      // Value-less non-Error promise rejections:
       // a promise rejected with no reason (undefined/null/empty), so the SDK
       // synthesises a placeholder event with no stack and no actionable payload.
       // Every production occurrence is WebKit (Safari / iOS) rejecting in-flight

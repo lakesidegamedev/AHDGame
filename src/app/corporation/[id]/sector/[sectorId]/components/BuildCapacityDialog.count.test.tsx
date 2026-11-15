@@ -144,25 +144,6 @@ describe("BuildCapacityDialog plant size", () => {
     expect(screen.getByText(/You run 41 plants here now/)).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: /^Build 1 plant/ }));
     // One plant is one vehicle unit, exactly what the queue counts as one plant.
-    expect(onSubmit).toHaveBeenCalledWith(plantSizeUnits("manufacturing_vehicles"), undefined);
-  });
-
-  it("orders vehicle plants for a vehicle-model sector", () => {
-    const onSubmit = vi.fn();
-    render(
-      <BuildCapacityDialog
-        open
-        onClose={vi.fn()}
-        plants={plants}
-        sectorType="manufacturing"
-        industryModel="vehicles"
-        sectorLabel="Manufacturing"
-        submitting={false}
-        errorMessage=""
-        onSubmit={onSubmit}
-      />
-    );
-    fireEvent.click(screen.getByRole("button", { name: /^Build 1 plant/ }));
     expect(onSubmit).toHaveBeenCalledWith(1, undefined);
   });
 });

@@ -104,10 +104,8 @@ export const COUNTRY_SECTOR_WEIGHTS_1979: Record<string, SectorWeightMap> = {
     retail: 2,
     real_estate: 0,
     financial: 0,
-    manufacturing_vehicles: 0,
     technology: 0,
-    media: 0,
-    media_entertainment: 1,
+    media: 1,
   },
   // DD: GDR Kombinat system — chemical (Leuna), machinery, textiles, brown coal
   // (lignite). Honecker hard-line communist. No financial market, no real estate.
@@ -162,7 +160,7 @@ export const COUNTRY_SECTOR_WEIGHTS_1979: Record<string, SectorWeightMap> = {
   UKR: UKR_ECONOMY.sectorWeights.byEra["1979"],
 
   BY: {
-    manufacturing: 30,
+    manufacturing: 31,
     chemical_industries: 12, // Polatsk/Mazyr refining; Salihorsk potash
     agriculture: 14,
     energy: 7,
@@ -172,10 +170,8 @@ export const COUNTRY_SECTOR_WEIGHTS_1979: Record<string, SectorWeightMap> = {
     logistics: 5, // the western transit corridor
     healthcare: 4,
     retail: 2,
-    manufacturing_vehicles: 1,
     telecommunications: 1,
     media: 1,
-    media_entertainment: 0,
     financial: 0,
     real_estate: 0,
     technology: 0,

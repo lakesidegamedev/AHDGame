@@ -28,7 +28,7 @@ import type {
 } from "../src/lib/db/types";
 import type { MetricCategoryId } from "../src/lib/db/types/stateMetrics";
 import { getMetricDefinition } from "./seeds/metricDefinitions";
-import { MAX_EFFECT_PER_LAW, getPolicyDecayFactor } from "../shared/constants/formulas";
+import { MAX_EFFECT_PER_LAW, getPolicyDecayFactor } from "../src/shared/constants/formulas";
 
 const DECAY_FACTOR = getPolicyDecayFactor(); // ~0.00718
 

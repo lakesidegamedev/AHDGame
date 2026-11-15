@@ -490,7 +490,7 @@ describe("loadCorporationDetailView", () => {
     expect(sum("stateTax")).toBeLessThanOrEqual(f.stateTax);
   });
 
-  it("labels a modelled vehicle corporation while preserving its manufacturing identity", async () => {
+  it("labels a manufacturing corporation", async () => {
     const ceo = makeCharacter({
       _id: new ObjectId(),
       userId: new ObjectId(),
@@ -502,7 +502,6 @@ describe("loadCorporationDetailView", () => {
       ceoId: ceo._id,
       userId: ceo.userId,
       type: "manufacturing",
-      industryModel: "vehicles",
       countryId: "US",
       headquartersState: "CA",
       liquidCurrencyCode: "USD",
@@ -526,8 +525,7 @@ describe("loadCorporationDetailView", () => {
     });
 
     expect(result.corporation.type).toBe("manufacturing");
-    expect(result.corporation.industryModel).toBe("vehicles");
-    expect(result.corporation.typeLabel).toBe("Vehicle manufacturing");
+    expect(result.corporation.typeLabel).toBe("Manufacturing");
   });
 
   it("includes active bank equity in the balance sheet", async () => {

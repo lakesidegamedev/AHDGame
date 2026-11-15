@@ -29,7 +29,7 @@ import type { Corporation, NPP } from "@/lib/db/types";
 import { TURNS_PER_DAY } from "@/lib/constants/turnTime";
 import { openCeoTenure, closeCeoTenure } from "./ceoHistory";
 import { chooseNppCorpCeo, type NppCorpCeoAffiliation } from "@/lib/admin/nppCorpCeoSelection";
-import { operatingSectorTypeFor, type OperatingSectorType } from "@/lib/constants/corporations";
+import { type OperatingSectorType } from "@/lib/constants/corporations";
 import {
   gatherNppCeoAffiliations,
   nppCeoSelectionLane,
@@ -118,12 +118,8 @@ export function pickCaretakerNpp(
 }
 
 /** The operating lane a corporation runs under, from its primary type. */
-export function corporationLane(
-  corp: Pick<Corporation, "type" | "industryModel" | "mediaDiscriminator">
-): OperatingSectorType | undefined {
-  return corp.type
-    ? operatingSectorTypeFor(corp.type, corp.industryModel, corp.mediaDiscriminator)
-    : undefined;
+export function corporationLane(corp: Pick<Corporation, "type">): OperatingSectorType | undefined {
+  return corp.type ? corp.type : undefined;
 }
 
 export interface AppointCaretakerCeoResult {

@@ -9,7 +9,6 @@ import {
   OPERATING_SECTOR_TYPE_LABELS,
   calculateWorkers,
   isOperatingSectorType,
-  operatingSectorFilter,
   OPERATING_SECTOR_TYPES,
 } from "@/lib/constants/corporations";
 
@@ -57,7 +56,7 @@ export async function GET(request: Request) {
       );
     }
     const sectorType = requestedType;
-    const laneFilter = operatingSectorFilter(sectorType);
+    const laneFilter = { sectorType: sectorType };
 
     const db = await getDb();
 

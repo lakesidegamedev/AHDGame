@@ -12,7 +12,6 @@ import { EXCHANGE_API_KEYS, getCountryForExchange } from "@/lib/constants/exchan
 import {
   OPERATING_SECTOR_TYPE_LABELS,
   type OperatingSectorType,
-  operatingSectorIdentity,
 } from "@/lib/constants/corporations";
 import { gameDateAnchorFromState } from "@/lib/utils/gameDate";
 import { conditionalJson } from "@/lib/api/conditionalJson";
@@ -139,9 +138,7 @@ export async function GET(request: Request) {
               ...(venueCountry ? { countryId: venueCountry } : {}),
               ...(sector
                 ? {
-                    type: operatingSectorIdentity(sector).sectorType,
-                    industryModel: operatingSectorIdentity(sector).industryModel,
-                    mediaDiscriminator: operatingSectorIdentity(sector).mediaDiscriminator,
+                    type: sector,
                   }
                 : {}),
             })

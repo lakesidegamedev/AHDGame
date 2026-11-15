@@ -62,7 +62,6 @@ export async function loadUSMediaOutletDelivery(
           countryId: 1,
           corporationId: 1,
           sectorType: 1,
-          mediaDiscriminator: 1,
           strategyId: 1,
           transitionFromStrategyId: 1,
           transitionStartTurn: 1,
@@ -187,8 +186,7 @@ export async function loadUSMediaOutletDelivery(
       sector.strategyId ?? "standard",
       sector.transitionFromStrategyId,
       sector.transitionStartTurn,
-      context.currentTurn ?? (hasTransition ? (sector.transitionStartTurn ?? 0) + 12 : 0),
-      sector.mediaDiscriminator
+      context.currentTurn ?? (hasTransition ? (sector.transitionStartTurn ?? 0) + 12 : 0)
     ).supply;
     if (!((rates.advertising ?? 0) > 0)) return [];
 
@@ -211,8 +209,7 @@ export async function loadUSMediaOutletDelivery(
                     sector.countryId ?? "US",
                     context.currentYear,
                     context.commandEconomyEnabled
-                  ),
-                  sector.mediaDiscriminator
+                  )
                 ),
             }) ?? 0) * commodityMixWeight(rates, COMMODITY_BASE_PRICES, "advertising")
           : null;

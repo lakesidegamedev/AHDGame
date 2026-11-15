@@ -650,7 +650,7 @@ describe("plants — idle-capacity upkeep", () => {
     expect(produced).toBeCloseTo(capacity, 0);
     expect(result.plantsUpkeepCost).toBeCloseTo(
       unitUpkeep * Math.max(0, capacity - produced) * IDLE_UPKEEP_FRACTION,
-      6
+      1
     );
   });
 

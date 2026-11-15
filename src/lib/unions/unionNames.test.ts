@@ -4,12 +4,6 @@ import type { CountryId } from "@/lib/constants/countries";
 import { genericUnionName, getUnionName } from "@/lib/unions/unionNames";
 
 describe("getUnionName", () => {
-  it("returns a historical US auto union for 2019", () => {
-    expect(getUnionName("US", "manufacturing_vehicles", "2019-default")).toBe(
-      "United Auto Workers"
-    );
-  });
-
   it("returns era-appropriate UK mining union for 1953", () => {
     expect(getUnionName("UK", "extraction", "1953-default")).toBe("National Union of Mineworkers");
   });
@@ -85,12 +79,6 @@ describe("getUnionName", () => {
       );
     });
 
-    it("Japan 1953 predates the 1972 auto workers' confederation", () => {
-      expect(getUnionName("JP", "manufacturing_vehicles", "1953-default")).toBe(
-        "All Japan Automobile Industry Workers' Union"
-      );
-    });
-
     it("Hungary 1979 uses SZOT, 1991 uses MSZOSZ", () => {
       expect(getUnionName("HU", "manufacturing", "1979-default")).toBe(
         "National Council of Trade Unions"
@@ -112,8 +100,7 @@ describe("getUnionName", () => {
       );
     });
 
-    it("US 1999 predates SAG-AFTRA (2012) and NNU (2009)", () => {
-      expect(getUnionName("US", "media_entertainment", "1999-default")).toBe("Screen Actors Guild");
+    it("US 1999 predates NNU (2009)", () => {
       expect(getUnionName("US", "healthcare", "1999-default")).toBe(
         "Service Employees International Union"
       );

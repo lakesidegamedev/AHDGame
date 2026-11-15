@@ -22,7 +22,7 @@ const baselineMonetary = {
   neutralPrimeRate: 2.75,
 };
 const sectorWeightsBase = {
-  manufacturing: 13,
+  manufacturing: 16,
   real_estate: 12,
   healthcare: 10,
   financial: 8,
@@ -31,13 +31,11 @@ const sectorWeightsBase = {
   technology: 7,
   energy: 6,
   logistics: 5,
-  media: 3,
+  media: 5,
   telecommunications: 3,
   extraction: 3,
-  manufacturing_vehicles: 3,
   chemical_industries: 3,
   agriculture: 2,
-  media_entertainment: 2,
   defense: 1,
 };
 const strategicSectors = ["energy"] as OperatingSectorType[];

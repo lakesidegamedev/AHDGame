@@ -14,7 +14,7 @@ dotenvConfig({ path: path.resolve(process.cwd(), ".env.local") });
  * (use a seeded user with a character for full flow coverage).
  */
 export default defineConfig({
-  testDir: "./e2e",
+  testDir: "./tests/e2e",
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,

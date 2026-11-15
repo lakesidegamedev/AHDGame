@@ -26,7 +26,7 @@ describe("inMemoryDb document paths", () => {
   });
   it("upserts a capacity pipeline and replays it against the same identity", async () => {
     const db = createInMemoryDb();
-    const filter = { stateId: "US-CA", sectorType: "manufacturing", mediaDiscriminator: null };
+    const filter = { stateId: "US-CA", sectorType: "manufacturing" };
     const pipeline = [
       { $set: { headroom: { $max: [0, { $subtract: [{ $ifNull: ["$headroom", 100] }, 20] }] } } },
       { $set: { revenue: { $multiply: ["$headroom", 10] } } },

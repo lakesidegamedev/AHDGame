@@ -116,7 +116,6 @@ vi.mock("@/lib/constants/sectorStrategies", async (importOriginal) => {
   return {
     ...actual,
     getEffectiveStrategyRates: mockEffectiveRates,
-    getEffectiveStrategyRatesForOperatingModel: mockEffectiveRates,
   };
 });
 
@@ -292,7 +291,6 @@ describe("funded manufacturing project development cash", () => {
           corporationId: corp._id.toString(),
           activeDevelopmentCorporationId: corp._id.toString(),
           sectorId: "media",
-          operatingSectorType: "media",
           kindId: "newspaper_edition",
           title: "Record",
           allocationShare: 0.5,
@@ -543,7 +541,6 @@ describe("marketing settlement", () => {
           corporationId: buyer._id.toString(),
           activeDevelopmentCorporationId: buyer._id.toString(),
           sectorId: "media-sector-1",
-          operatingSectorType: "media",
           kindId: "newspaper_edition",
           title: "Daily Record",
           allocationShare: 0.5,
@@ -649,7 +646,6 @@ describe("marketing settlement", () => {
       corporationId: buyer._id.toString(),
       activeDevelopmentCorporationId: buyer._id.toString(),
       sectorId: "media-sector-retry",
-      operatingSectorType: "media",
       kindId: "newspaper_edition",
       title: "Evening Ledger",
       allocationShare: 0.5,
@@ -808,7 +804,6 @@ describe("marketing settlement", () => {
       corporationId: buyer._id.toString(),
       activeDevelopmentCorporationId: buyer._id.toString(),
       sectorId: "media-sector-arrears",
-      operatingSectorType: "media",
       kindId: "newspaper_edition",
       title: "Morning Ledger",
       allocationShare: 0.5,

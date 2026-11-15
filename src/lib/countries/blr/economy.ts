@@ -31,12 +31,11 @@ const baselineMonetary = {
   neutralPrimeRate: 3,
 };
 const sectorWeightsBase = {
-  manufacturing: 24,
+  manufacturing: 30,
   agriculture: 16,
   chemical_industries: 10,
   energy: 8,
   construction: 7,
-  manufacturing_vehicles: 6,
   retail: 5,
 };
 // No REP_ECON row; the folder omits `repEcon` rather than defaulting it.
@@ -79,12 +78,11 @@ export const BLR_ECONOMY: CountryEconomy = {
     base: sectorWeightsBase,
     byEra: {
       "1991": {
-        manufacturing: 24,
+        manufacturing: 30,
         agriculture: 16,
         chemical_industries: 10,
         energy: 8,
         construction: 7,
-        manufacturing_vehicles: 6,
         retail: 5,
       },
     },

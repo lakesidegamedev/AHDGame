@@ -27,10 +27,8 @@ export const NG_UNION_NAMES_MODERN: Partial<Record<OperatingSectorType, string>>
   technology: "Nigeria Labour Congress",
   financial: "Association of Senior Staff of Banks, Insurance and Financial Institutions",
   telecommunications: "Private Telecommunications and Communications Senior Staff Association",
-  media_entertainment: "Nigeria Labour Congress",
   defense: "Nigeria Labour Congress",
   real_estate: "Nigeria Labour Congress",
-  manufacturing_vehicles: "Nigeria Labour Congress",
 };
 
 export const NG_UNION_NAMES_1979: Partial<Record<OperatingSectorType, string>> = {

@@ -47,8 +47,6 @@ const CLIENT_SAFE_SPLITS = [
   "src/lib/approval/activeModifier.ts",
   // strengthUpkeep reads the whole tech tree for the dominance shield.
   "src/lib/corporations/strengthUpkeepRules.ts",
-  // demographicCategories carries every era's tables and the state overrides.
-  "src/lib/seeds/voterArchetypeCategories.ts",
   "src/lib/seeds/demographicLabels.ts",
 ];
 

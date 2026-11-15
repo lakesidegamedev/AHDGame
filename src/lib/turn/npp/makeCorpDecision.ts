@@ -14,7 +14,6 @@ import {
 } from "@/lib/corporations/groups/rules/direction";
 import type { CorporationType } from "@/lib/constants/corporations";
 import { getLogisticsSupportedSectorCount } from "@/lib/constants/corporations";
-import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
 import type { CapacityDecisionObservation } from "@/lib/corporations/capacityDecisionTelemetry/rules";
 import {
   buildNppOperatorObservation,
@@ -97,14 +96,8 @@ export function makeNppCorpDecision(
   const borrowAllowed = operatorMay(operator, "borrow");
   const budgetsAllowed = operatorMay(operator, "budgets");
   const dividendsAllowed = operatorMay(operator, "dividends");
-  const coreSectorModel = corp.industryModel ?? null;
-  const isCoreSector = (sector: CorporateSector) =>
-    sector.sectorType === corp.type && (sector.industryModel ?? null) === coreSectorModel;
-  const operatingCorpType = getOperatingSectorType(
-    corp.type,
-    corp.industryModel,
-    corp.mediaDiscriminator
-  );
+  const isCoreSector = (sector: CorporateSector) => sector.sectorType === corp.type;
+  const operatingCorpType = corp.type;
   const updates: Record<string, unknown> = { updatedAt: now };
   const sectorUpdates: NppCorpDecision["sectorUpdates"] = [];
   const newSectors: NppCorpDecision["newSectors"] = [];
@@ -125,19 +118,8 @@ export function makeNppCorpDecision(
     anchorToCorpCapital(amountAnchor, corpCurrencyCode, corpFxRate);
   const cashToAnchor = makeCapacityCashToAnchor(corp, corpFxRate);
   const capacityCohort = resolveCapacityCohort(corp);
-  const nationalShare = (
-    countryId: string,
-    sectorType: CorporationType,
-    industryModel?: string | null,
-    mediaDiscriminator?: string | null
-  ) =>
-    plants?.nationalShareOf?.(
-      corp._id,
-      countryId,
-      sectorType,
-      industryModel,
-      mediaDiscriminator as "entertainment" | null | undefined
-    ) ?? 0;
+  const nationalShare = (countryId: string, sectorType: CorporationType) =>
+    plants?.nationalShareOf?.(corp._id, countryId, sectorType) ?? 0;
   // Commodity-level build toll, priced exactly as a player's build is: this
   // corp's potential output (owned plus queued plus the order) of each
   // commodity the sector makes, over world demand (state demand for freight and
@@ -310,11 +292,7 @@ export function makeNppCorpDecision(
           [...candidatesByCountry].map(([country, rows]) => [
             country,
             rows.filter((row) => {
-              const rowType = getOperatingSectorType(
-                row.sectorType,
-                row.industryModel,
-                row.mediaDiscriminator
-              );
+              const rowType = row.sectorType;
               return (
                 (!groupDirection?.regions.length || groupDirection.regions.includes(row.stateId)) &&
                 allowsNppIndustryInvestment(operatingCorpType, rowType, primaryIndustryOnly) &&

@@ -148,7 +148,6 @@ describe("method sunsets", () => {
   it("energy conventional retires in 2039 for advanced fission or renewables", () => {
     expect(energyStandard.sunsetDecade).toBe("2039");
     expect(energyStandard.successorIds).toEqual(["advanced_fission", "renewables"]);
-    expect(getStrategy("manufacturing_vehicles", "standard").sunsetDecade).toBe("2049");
   });
 
   it("closes the method to new sites and retools from the sunset tier", () => {

@@ -15,7 +15,7 @@ export const AUSTRIA_ENTITY_ID = "AT";
  * - Sector mix: VOEST steel / alpine hydro / Erzberg iron / Matzen oil / timber.
  */
 const AUSTRIA_1953_SECTOR_WEIGHTS: Partial<Record<OperatingSectorType, number>> = {
-  manufacturing: 26,
+  manufacturing: 29,
   agriculture: 14,
   energy: 8,
   construction: 8,
@@ -23,14 +23,12 @@ const AUSTRIA_1953_SECTOR_WEIGHTS: Partial<Record<OperatingSectorType, number>> 
   chemical_industries: 5,
   logistics: 5,
   retail: 5,
-  manufacturing_vehicles: 3,
   financial: 3,
   real_estate: 3,
   healthcare: 2,
   defense: 2,
   telecommunications: 2,
-  media: 2,
-  media_entertainment: 2,
+  media: 4,
   technology: 0,
 };
 

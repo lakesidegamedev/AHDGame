@@ -3,8 +3,7 @@
  *
  * The slice <title> must come from a single string child: React's server
  * renderer emits an empty <title> for array children, which mismatched the
- * client render and threw hydration error #418 on every region overview
- * (GlitchTip AHD-7U).
+ * client render and threw hydration error #418 on every region overview.
  */
 import { describe, expect, it } from "vitest";
 import { renderToString } from "react-dom/server";

@@ -16,7 +16,7 @@ export function CopyProfileLinkButton({ href }: Props) {
     const url = `${window.location.origin}${href}`;
     // Guard the clipboard promise: Safari (and any non-user-activated context)
     // rejects writeText, and an un-caught rejection surfaces as an
-    // "UnhandledRejection ... value: undefined" in GlitchTip. Swallow the
+    // "UnhandledRejection ... value: undefined" in the error tracker. Swallow the
     // failure; copying is best-effort UI sugar.
     void navigator.clipboard
       .writeText(url)

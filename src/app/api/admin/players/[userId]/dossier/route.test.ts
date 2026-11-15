@@ -105,8 +105,8 @@ describe("GET /api/admin/players/[userId]/dossier", () => {
     vi.mocked(getDb).mockResolvedValue(db as unknown as Db);
   });
 
-  async function seedHappyPath(isAdmin: boolean) {
-    const user = makeUser();
+  async function seedHappyPath(isAdmin: boolean, userOverrides: Partial<User> = {}) {
+    const user = makeUser(userOverrides);
     db.collectionMocks.users.findOne.mockResolvedValue(user);
     db.collectionMocks.characters.find.mockImplementation(
       chainProjectToArray([{ _id: CHAR_ID, userId: USER_ID }])
@@ -246,6 +246,28 @@ describe("GET /api/admin/players/[userId]/dossier", () => {
       { params: Promise.resolve({ userId: USER_ID.toHexString() }) }
     );
     expect(res.status).toBe(404);
+  });
+
+  it("reports appleLinked as a boolean and never returns the Apple id", async () => {
+    await seedHappyPath(false, { appleId: "synthetic-apple-subject" });
+    const { GET } = await import("./route");
+    const res = await GET(
+      new Request(`http://localhost/api/admin/players/${USER_ID.toHexString()}/dossier`),
+      { params: Promise.resolve({ userId: USER_ID.toHexString() }) }
+    );
+    const text = await res.text();
+    expect(JSON.parse(text).identity.oauth.appleLinked).toBe(true);
+    expect(text).not.toContain("synthetic-apple-subject");
+  });
+
+  it("reports appleLinked false when no Apple sign-in is linked", async () => {
+    await seedHappyPath(false);
+    const { GET } = await import("./route");
+    const res = await GET(
+      new Request(`http://localhost/api/admin/players/${USER_ID.toHexString()}/dossier`),
+      { params: Promise.resolve({ userId: USER_ID.toHexString() }) }
+    );
+    expect((await res.json()).identity.oauth.appleLinked).toBe(false);
   });
 
   it("moderator: returns aggregated dossier with masked PII and stripped audit net/meta", async () => {

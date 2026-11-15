@@ -203,7 +203,11 @@ describe("computeCorpCommodityFlows — plants-tier physical production (ticket 
     const steel = commodities.find((c) => c.commodity === "steel")!;
     expect(steel.outputUnits).toBeCloseTo(
       900 *
-        commodityMixWeight({ steel: 0.4, building_materials: 0.2 }, COMMODITY_BASE_PRICES, "steel"),
+        commodityMixWeight(
+          { steel: 0.4, building_materials: 0.2, vehicles: 0.5 },
+          COMMODITY_BASE_PRICES,
+          "steel"
+        ),
       1
     );
   });
@@ -350,7 +354,11 @@ describe("computeCorpCommodityFlows — plants-tier physical production (ticket 
     const steel = commodities.find((c) => c.commodity === "steel")!;
     const unembargoed =
       1_000 *
-      commodityMixWeight({ steel: 0.4, building_materials: 0.2 }, COMMODITY_BASE_PRICES, "steel");
+      commodityMixWeight(
+        { steel: 0.4, building_materials: 0.2, vehicles: 0.5 },
+        COMMODITY_BASE_PRICES,
+        "steel"
+      );
     expect(steel.outputUnits).toBeLessThan(unembargoed);
     expect(steel.outputUnits).toBeCloseTo(
       unembargoed * (1 - 0.5 * TRADE_EMBARGO_EXPORT_LOSS_SHARE),
@@ -380,7 +388,7 @@ describe("computeCorpCommodityFlows — plants-tier physical production (ticket 
     expect(steel.outputUnits).toBeCloseTo(
       1_000 *
         commodityMixWeight(
-          { steel: 0.4, building_materials: 0.2 },
+          { steel: 0.4, building_materials: 0.2, vehicles: 0.5 },
           COMMODITY_BASE_PRICES,
           "steel"
         ) *
@@ -500,7 +508,11 @@ describe("computeCorpCommodityFlows — ledger parity legs (ticket #1177 audit)"
     const steel = commodities.find((c) => c.commodity === "steel")!;
     expect(steel.outputUnits).toBeCloseTo(
       1_000 *
-        commodityMixWeight({ steel: 0.4, building_materials: 0.2 }, COMMODITY_BASE_PRICES, "steel"),
+        commodityMixWeight(
+          { steel: 0.4, building_materials: 0.2, vehicles: 0.5 },
+          COMMODITY_BASE_PRICES,
+          "steel"
+        ),
       1
     );
   });

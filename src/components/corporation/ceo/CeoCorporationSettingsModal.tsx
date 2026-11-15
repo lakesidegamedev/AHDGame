@@ -1,6 +1,5 @@
 "use client";
 
-import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
 import { apiErrorText } from "@/lib/errors/catalog";
 import { useEffect, useId, useState } from "react";
 import Image from "next/image";
@@ -353,11 +352,7 @@ function useStandaloneIdentitySettings({
 }) {
   const [editDescription, setEditDescription] = useState(corporation.description || "");
   const [editBrandColor, setEditBrandColor] = useState(corporation.brandColor ?? "#3b82f6");
-  const corporationLane = getOperatingSectorType(
-    corporation.type,
-    corporation.industryModel,
-    corporation.mediaDiscriminator
-  );
+  const corporationLane = corporation.type;
   const [editPrimaryType, setEditPrimaryType] = useState<OperatingSectorType>(corporationLane);
   const [editSecondaryType, setEditSecondaryType] = useState<OperatingSectorType | "">(
     corporation.secondaryType ?? ""

@@ -2,7 +2,7 @@
  * Structured logger for critical paths.
  *
  * A thin wrapper over `console.*` (which the Sentry `consoleLoggingIntegration`
- * already mirrors into GlitchTip Logs) that enforces a consistent shape:
+ * already mirrors into the error tracker's logs) that enforces a consistent shape:
  * `[component] message { ...data }`. Using it on critical paths (turn engine,
  * auth, stock purchases, elections) makes those logs greppable by component and
  * gives errors a captured exception with structured context — instead of bare
@@ -33,7 +33,7 @@ export const logger = {
   },
 
   warn(component: string, message: string, data?: LogData): void {
-    // console.warn is mirrored to GlitchTip Logs by the consoleLoggingIntegration.
+    // console.warn is mirrored to the error tracker's logs by the consoleLoggingIntegration.
     console.warn(format(component, message), data ?? "");
   },
 

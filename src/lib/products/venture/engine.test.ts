@@ -24,7 +24,11 @@ import {
 import { VENTURE_EVENTS } from "./events";
 import type { ProductVenture } from "./types";
 
-function make(id: string, domain: "media" | "manufacturing" = "media", lineId = "film") {
+function make(
+  id: string,
+  domain: "media" | "manufacturing" = "media",
+  lineId = "television_series"
+) {
   return newVenture({
     id,
     corporationId: "corp-1",
@@ -189,7 +193,13 @@ describe("events", () => {
     const seen = new Set<string>();
     const counts = new Set<number>();
     for (let i = 0; i < 300; i++) {
-      for (const lineId of ["film", "newspaper_edition", "music_release"]) {
+      for (const lineId of [
+        "television_series",
+        "newspaper_edition",
+        "streaming_original",
+        "book",
+        "radio_program",
+      ]) {
         const events = scheduleEvents({
           ventureId: `s-${i}`,
           domain: "media",
@@ -208,7 +218,7 @@ describe("events", () => {
     }
     expect([...counts].sort()).toEqual([1, 2]);
     expect(seen.size).toBeGreaterThanOrEqual(10);
-    for (const line of ["film", "newspaper_edition", "book", "radio_program"]) {
+    for (const line of ["television_series", "newspaper_edition", "book", "radio_program"]) {
       expect(eventPool("media", line).length).toBeGreaterThanOrEqual(2);
     }
   });
@@ -231,7 +241,7 @@ describe("events", () => {
   });
 
   it("applies a chosen option to quality, pending cost and timeline", () => {
-    const v = make("choice", "media", "film");
+    const v = make("choice", "media", "television_series");
     const rec = { ...v.events[0]!, offeredTurn: 110, deadlineTurn: 130 };
     const withOffer = { ...v, events: [rec, ...v.events.slice(1)] };
     const def = VENTURE_EVENTS.find((e) => e.id === rec.eventId)!;

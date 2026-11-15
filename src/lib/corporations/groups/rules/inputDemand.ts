@@ -3,7 +3,7 @@ import {
   energyProductivityMultiplier,
   plantUtilizationForInputs,
 } from "@/lib/corporations/rules/energyProductivityRamp";
-import { getEffectiveStrategyRatesForOperatingModel } from "@/lib/constants/sectorStrategies";
+import { getEffectiveStrategyRates } from "@/lib/constants/sectorStrategies";
 import { getInputMultiplier } from "@/lib/utils/productionPolicy";
 import {
   COMMODITY_BASE_PRICES,
@@ -35,14 +35,12 @@ export function computeSupplyAgreementSectorDemand(args: {
   const sector = args.sector;
   if (args.plantsEnabled && sector.mothballed === true) return units;
   const unitScale = Number.isFinite(args.unitScale) && args.unitScale > 0 ? args.unitScale : 1;
-  const rates = getEffectiveStrategyRatesForOperatingModel(
+  const rates = getEffectiveStrategyRates(
     sector.sectorType,
     sector.strategyId ?? "standard",
     sector.transitionFromStrategyId,
     sector.transitionStartTurn,
     args.currentTurn,
-    sector.industryModel,
-    sector.mediaDiscriminator,
     args.preset,
     args.hardwareInputReliefStartTurn
   );

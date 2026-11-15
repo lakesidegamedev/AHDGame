@@ -29,10 +29,7 @@ import {
 import { readCorpEconomicAnchor } from "@/lib/currency/corpEconomyFields";
 import { loadWorldPreset } from "@/lib/currency/gdpAnchorRate";
 import { defaultSupplyRates, unitYieldForSupply } from "@/lib/constants/capacityEconomy";
-import {
-  getEffectiveStrategyRatesForOperatingModel,
-  getOperatingSectorType,
-} from "@/lib/constants/sectorStrategies";
+import { getEffectiveStrategyRates } from "@/lib/constants/sectorStrategies";
 import { withFundedNationalBalances } from "@/lib/market/producerMarket/loadFundedCountryBooks";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
@@ -54,8 +51,6 @@ export interface CountrySectorMixEntry {
 
 interface PlantsSectorMarketInput {
   type: OperatingSectorType;
-  industryModel?: string | null;
-  mediaDiscriminator?: string | null;
   stateId: string;
   revenueAnchor: number;
   capitalStock?: number;
@@ -154,14 +149,12 @@ function outputRatesForSector(
 ): Partial<Record<CommodityType, number>> {
   const transitionActive =
     sector.transitionFromStrategyId && sector.transitionStartTurn != null && currentTurn != null;
-  return getEffectiveStrategyRatesForOperatingModel(
+  return getEffectiveStrategyRates(
     sector.type,
     sector.strategyId ?? "standard",
     transitionActive ? sector.transitionFromStrategyId : null,
     transitionActive ? sector.transitionStartTurn : null,
-    currentTurn ?? 0,
-    sector.industryModel,
-    sector.mediaDiscriminator
+    currentTurn ?? 0
   ).supply;
 }
 
@@ -188,7 +181,6 @@ function storedCapacityUnits(sector: PlantsSectorMarketInput): number | null {
 
 interface OutputContribution {
   type: OperatingSectorType;
-  industryModel?: string | null;
   /** Output-unit capacity contribution used to split a commodity market. */
   units: number;
   /** ₳ of sector nameplate per one unit of this commodity output. */
@@ -201,20 +193,18 @@ function addOutputWeight(
   weights: OutputWeights,
   commodity: CommodityType,
   type: OperatingSectorType,
-  industryModel: string | null | undefined,
   units: number,
   anchorPerUnit: number
 ): void {
   if (!(units > 0) || !Number.isFinite(units) || !(anchorPerUnit > 0)) return;
   const byType = weights.get(commodity) ?? new Map<string, OutputContribution>();
-  const key = `${type}::${industryModel ?? ""}`;
+  const key = type;
   const previous = byType.get(key);
   const previousUnits = previous?.units ?? 0;
   const totalUnits = previousUnits + units;
   const totalAnchor = previousUnits * (previous?.anchorPerUnit ?? 0) + units * anchorPerUnit;
   byType.set(key, {
     type,
-    industryModel,
     units: totalUnits,
     anchorPerUnit: totalAnchor / totalUnits,
   });
@@ -267,7 +257,7 @@ function addAllocatedLatent(
   nationalWeights: OutputWeights,
   basePrices: Record<CommodityType, number>,
   eraUnitScale: number,
-  bucketKey: (stateId: string, type: OperatingSectorType, industryModel?: string | null) => string
+  bucketKey: (stateId: string, type: OperatingSectorType) => string
 ): void {
   // Convert commodity demand back through the same strategy mix that prices
   // plant capacity. Using the commodity's sticker price directly would break
@@ -288,7 +278,7 @@ function addAllocatedLatent(
   for (const contribution of weights.values()) {
     if (!(contribution.units > 0) || !(contribution.anchorPerUnit > 0)) continue;
     const anchor = ((latentUnits * contribution.units) / totalWeight) * contribution.anchorPerUnit;
-    const key = bucketKey(stateId, contribution.type, contribution.industryModel);
+    const key = bucketKey(stateId, contribution.type);
     target.set(key, (target.get(key) ?? 0) + anchor);
   }
 }
@@ -300,7 +290,7 @@ function buildPlantsMarketAggregation(args: {
   prices: CommodityPrice[];
   eraUnitScale: number;
   currentTurn?: number;
-  bucketKey: (stateId: string, type: OperatingSectorType, industryModel?: string | null) => string;
+  bucketKey: (stateId: string, type: OperatingSectorType) => string;
 }): PlantsMarketAggregation {
   const { sectors, states, prices, eraUnitScale, currentTurn, bucketKey } = args;
   const eraBasePrices = eraScaledBasePrices(eraUnitScale);
@@ -321,7 +311,7 @@ function buildPlantsMarketAggregation(args: {
           : 0
         : Math.max(0, sector.revenueAnchor);
     if (ownedAnchor > 0) {
-      const key = bucketKey(sector.stateId, sector.type, sector.industryModel);
+      const key = bucketKey(sector.stateId, sector.type);
       ownedByBucket.set(key, (ownedByBucket.get(key) ?? 0) + ownedAnchor);
     }
 
@@ -338,22 +328,8 @@ function buildPlantsMarketAggregation(args: {
       if (!(weight > 0)) continue;
       const output = outputUnits * weight;
       const anchorPerOutputUnit = unitYield > 0 ? 1 / unitYield / weight : 0;
-      addOutputWeight(
-        nationalOutputWeights,
-        commodity,
-        sector.type,
-        sector.industryModel,
-        output,
-        anchorPerOutputUnit
-      );
-      addOutputWeight(
-        stateWeights,
-        commodity,
-        sector.type,
-        sector.industryModel,
-        output,
-        anchorPerOutputUnit
-      );
+      addOutputWeight(nationalOutputWeights, commodity, sector.type, output, anchorPerOutputUnit);
+      addOutputWeight(stateWeights, commodity, sector.type, output, anchorPerOutputUnit);
     }
   }
 
@@ -484,28 +460,21 @@ export async function aggregateCountrySectorMix(
   // Legacy owned revenue per (state, sectorType) bucket, ₳-normalized; and the
   // running sum/count of current growth per sector type for the national mean.
   // Plants replaces the revenue buckets below with physical capacity.
-  const bucketKey = (stateId: string, type: OperatingSectorType, industryModel?: string | null) =>
-    `${stateId}::${type}::${industryModel ?? ""}`;
+  const bucketKey = (stateId: string, type: OperatingSectorType) => `${stateId}::${type}`;
   const ownedByBucket = new Map<string, number>();
   const plantsMarketInputs: PlantsSectorMarketInput[] = [];
   for (const s of sectors) {
     const anchor = readCorpEconomicAnchor(s.revenue, hostCode, hostRate);
-    const operatingType = getOperatingSectorType(
-      s.sectorType,
-      s.industryModel,
-      s.mediaDiscriminator
-    );
+    const operatingType = s.sectorType;
     // Each operating lane is its own outlook row.
     const type = operatingType;
     ownedByBucket.set(
-      bucketKey(s.stateId, type, s.industryModel),
-      (ownedByBucket.get(bucketKey(s.stateId, type, s.industryModel)) ?? 0) + anchor
+      bucketKey(s.stateId, type),
+      (ownedByBucket.get(bucketKey(s.stateId, type)) ?? 0) + anchor
     );
     {
       plantsMarketInputs.push({
         type,
-        industryModel: s.industryModel,
-        mediaDiscriminator: s.mediaDiscriminator,
         stateId: s.stateId,
         revenueAnchor: anchor,
         capitalStock: s.capitalStock,

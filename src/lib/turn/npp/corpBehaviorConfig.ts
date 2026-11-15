@@ -10,7 +10,6 @@ import {
 } from "@/lib/constants/techTree";
 import { resolveCorpLiquidCurrencyCode } from "@/lib/currency/corporationCapital";
 import type { TechUnlockLedgerInput } from "@/lib/corporations/techTree/techUnlockLedger";
-import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
 import { frontierResearchInc } from "@/lib/corporations/techTree/frontierResearch";
 
 /**
@@ -32,13 +31,7 @@ export function pickBestNppTechNode(
     0,
     (corp.liquidCapital ?? 0) - Math.max(0, options.cashReserve ?? 0)
   );
-  const candidates = getTreeForType(
-    getOperatingSectorType(
-      corp.type,
-      corp.industryModel,
-      corp.mediaDiscriminator
-    ) as Corporation["type"]
-  )
+  const candidates = getTreeForType(corp.type as Corporation["type"])
     .map((node) => ({
       node,
       cashCost: techNodeCashCost(

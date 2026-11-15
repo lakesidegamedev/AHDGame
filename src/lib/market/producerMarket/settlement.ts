@@ -37,10 +37,7 @@ export interface ProducerSectorTarget {
   capacity: ProducerCapacityState;
   operatingRecipeRatio: number;
   recessionCapacityFactor: number;
-  plantType: Pick<
-    CorporateSector,
-    "sectorType" | "industryModel" | "mediaDiscriminator" | "strategyId"
-  >;
+  plantType: Pick<CorporateSector, "sectorType" | "strategyId">;
 }
 
 interface FrozenProducerTurn {
@@ -281,8 +278,6 @@ async function verifyPhysicalTargets(
           buildQueue: 1,
           producerCapacity: 1,
           sectorType: 1,
-          industryModel: 1,
-          mediaDiscriminator: 1,
           producerInventory: 1,
         },
       }
@@ -351,11 +346,7 @@ async function verifyPhysicalTargets(
         JSON.stringify(openingInventories.get(target.producerId))
     )
       storedOpeningInventory.set(target.producerId, sector.producerInventory);
-    if (
-      sector.sectorType !== target.plantType.sectorType ||
-      (sector.industryModel ?? null) !== (target.plantType.industryModel ?? null) ||
-      (sector.mediaDiscriminator ?? null) !== (target.plantType.mediaDiscriminator ?? null)
-    )
+    if (sector.sectorType !== target.plantType.sectorType)
       throw new Error("Producer physical plant type changed");
   }
   const cashRedirect = new Map<string, string>();

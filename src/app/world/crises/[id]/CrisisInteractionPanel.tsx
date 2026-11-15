@@ -6,7 +6,8 @@ import { useToast } from "@/contexts/ToastContext";
 import type { CrisisDecisionNode, CrisisEffect } from "@/lib/db/types/crisis";
 import type { RefugeeReceptionResult } from "@/lib/livingConflict/rules/refugeeReception";
 import type { ConflictCivilianLossResult } from "@/lib/livingConflict/rules/civilianLoss";
-import { formatCrisisEffectTarget, formatCrisisEffectValue } from "@/lib/crises/effectLabels";
+import { CrisisEffectChip } from "@/components/crises/CrisisRowParts";
+import { describeCrisisEffect } from "@/lib/crises/effectDisplay";
 import { describeRoleRequirement } from "@/lib/crises/rules/authorization";
 import { buildDecisionHistory } from "@/lib/crises/decisionHistory";
 import { computeFiscalImpact } from "@/lib/budget/fiscalImpact";
@@ -159,22 +160,7 @@ function EffectChips({ effects, max = 4 }: { effects: CrisisEffect[]; max?: numb
   return (
     <div className="flex flex-wrap gap-1">
       {shown.map((e, i) => (
-        <span
-          key={i}
-          title={e.label}
-          className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] ${
-            e.value < 0
-              ? "border-error/30 bg-error/5 text-error"
-              : "border-success/30 bg-success/5 text-success"
-          }`}
-        >
-          <span className="text-muted text-body-sm font-medium">{formatCrisisEffectTarget(e)}</span>
-          <span className="font-mono font-semibold">
-            {e.value > 0 ? "+" : ""}
-            {formatCrisisEffectValue(e.value)}
-            {e.targetType === "profitMargin" ? "%" : ""}
-          </span>
-        </span>
+        <CrisisEffectChip key={i} effect={e} />
       ))}
       {overflow > 0 && (
         <span className="rounded-full border border-card-border px-2 py-0.5 text-[11px] text-muted">
@@ -235,7 +221,10 @@ function LeaderResponseRow({ r, effects }: { r: LeaderResponse; effects: CrisisE
         {effects.length > 0 && (
           <span
             title={effects
-              .map((e) => `${formatCrisisEffectTarget(e)} ${e.value > 0 ? "+" : ""}${e.value}`)
+              .map((e) => {
+                const view = describeCrisisEffect(e);
+                return `${view.target} ${view.amount}`;
+              })
               .join(" · ")}
             className="cursor-help text-[10px] text-muted tabular-nums"
           >

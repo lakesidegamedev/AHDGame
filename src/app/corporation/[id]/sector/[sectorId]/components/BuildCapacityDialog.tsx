@@ -47,9 +47,6 @@ interface BuildCapacityDialogProps {
   stateName?: string;
   /** Drives the facility noun throughout the dialog. */
   sectorType: OperatingSectorType;
-  /** With `plants.strategyId`, decides plant size, so the dialog sizes plants like the queue and ledger. */
-  industryModel?: string | null;
-  mediaDiscriminator?: string | null;
   sectorLabel: string;
   submitting: boolean;
   /** Server-side error text from the last attempt, or empty. */
@@ -100,8 +97,6 @@ export default function BuildCapacityDialog({
   stateLabourMarket,
   stateName,
   sectorType,
-  industryModel,
-  mediaDiscriminator,
   sectorLabel,
   submitting,
   errorMessage,
@@ -146,8 +141,6 @@ export default function BuildCapacityDialog({
   const strategyId = plants.strategyId;
   const unitsPerFacility = plantSizeForSector({
     sectorType,
-    industryModel,
-    mediaDiscriminator,
     strategyId,
   });
   const q = plants.buildQuote;
@@ -214,10 +207,7 @@ export default function BuildCapacityDialog({
   const maxAffordableFacilities = Math.floor(q.maxAffordableUnits / unitsPerFacility);
   const ownedFacilities =
     plants.plantCount ??
-    plantsFromUnitsForSector(
-      { sectorType, industryModel, mediaDiscriminator, strategyId },
-      plants.capacityUnits ?? 0
-    );
+    plantsFromUnitsForSector({ sectorType, strategyId }, plants.capacityUnits ?? 0);
   const buyersRoomUnits = Math.max(
     0,
     plants.buildDemand

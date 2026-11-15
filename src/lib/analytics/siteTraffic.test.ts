@@ -1,21 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { classifyDevice, isLikelyBotUserAgent, normalizeAnalyticsPath } from "./siteTraffic";
-
-describe("normalizeAnalyticsPath", () => {
-  it("accepts a normal pathname", () => {
-    expect(normalizeAnalyticsPath("/dashboard")).toBe("/dashboard");
-  });
-
-  it("rejects parent segments", () => {
-    expect(normalizeAnalyticsPath("/foo/../bar")).toBeNull();
-  });
-
-  it("rejects non-path", () => {
-    expect(normalizeAnalyticsPath("no-leading-slash")).toBeNull();
-    expect(normalizeAnalyticsPath("")).toBeNull();
-    expect(normalizeAnalyticsPath(null)).toBeNull();
-  });
-});
+import { classifyDevice, isLikelyBotUserAgent } from "./siteTraffic";
 
 describe("classifyDevice", () => {
   it("classifies iPhone as mobile", () => {

@@ -31,7 +31,6 @@ const INDUSTRY_NAMES: Record<OperatingSectorType, readonly string[]> = {
   chemical_industries: ["Applied Materials", "Chemical Works", "Process Labs"],
   healthcare: ["Care Network", "Medical Partners", "Health Services"],
   retail: ["Trading Stores", "Market House", "General Stores"],
-  manufacturing_vehicles: ["Motor Works", "Coachbuilders", "Vehicle Company"],
   technology: ["Logic Works", "Computing", "Systems Laboratory"],
   energy: ["Power Company", "Gridworks", "Electric Works"],
   agriculture: ["Harvest Cooperative", "Field & Orchard", "Growers"],
@@ -39,7 +38,6 @@ const INDUSTRY_NAMES: Record<OperatingSectorType, readonly string[]> = {
   construction: ["Civil Works", "Builders Guild", "Engineering Company"],
   defense: ["Aerospace & Defense", "Armament Works", "Defense Engineering"],
   telecommunications: ["Telephone & Cable", "Signal Networks", "Communications"],
-  media_entertainment: ["Pictures", "Stage & Screen", "Recording Studios"],
   logistics: ["Freight Lines", "Shipping Company", "Transit Partners"],
   extraction: ["Mineral Company", "Mining & Resources", "Geological Works"],
 };

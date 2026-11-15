@@ -360,7 +360,7 @@ describe("aggregate commodity caps (Phase 1)", () => {
     expect(inputMod).toBeGreaterThanOrEqual(-COMMODITY_AGGREGATE_INPUT_CAP);
   });
 
-  it("automobiles sector: stacked 5× shortage on all inputs does not exceed aggregate input cap", () => {
+  it("manufacturing sector: stacked 5× shortage on all inputs does not exceed aggregate input cap", () => {
     const scarce = makeBalances({
       steel: { supply: 100, demand: 500 },
       iron: { supply: 100, demand: 500 },
@@ -368,12 +368,7 @@ describe("aggregate commodity caps (Phase 1)", () => {
       rare_earth: { supply: 100, demand: 500 },
       plastics: { supply: 100, demand: 500 },
     });
-    const { inputMod } = computeBlendedMarginModifiers(
-      "manufacturing_vehicles",
-      scarce,
-      scarce,
-      scarce
-    );
+    const { inputMod } = computeBlendedMarginModifiers("manufacturing", scarce, scarce, scarce);
     expect(inputMod).toBeGreaterThanOrEqual(-COMMODITY_AGGREGATE_INPUT_CAP);
   });
 
@@ -410,7 +405,7 @@ describe("aggregate commodity caps (Phase 1)", () => {
       electronics: { supply: 100, demand: 150 },
     });
     const { inputMod } = computeBlendedMarginModifiers(
-      "manufacturing_vehicles",
+      "manufacturing",
       moderate,
       moderate,
       moderate
@@ -482,7 +477,6 @@ describe("computeRawSupplyDemand — sectorDemandModifierPct (World Events v1 Ph
   it("is a pure no-op when the map is omitted (existing callers unaffected)", () => {
     const sector = {
       sectorType: "media",
-      mediaDiscriminator: "entertainment" as const,
       revenue: 1_000_000,
       stateId: "S1",
       countryId: "UK",
@@ -507,7 +501,6 @@ describe("computeRawSupplyDemand — sectorDemandModifierPct (World Events v1 Ph
   it("scales a matching sector's demand contribution by the modifier pct (royal-event tourism bump)", () => {
     const sector = {
       sectorType: "media",
-      mediaDiscriminator: "entertainment" as const,
       revenue: 1_000_000,
       stateId: "S1",
       countryId: "UK",
@@ -521,7 +514,7 @@ describe("computeRawSupplyDemand — sectorDemandModifierPct (World Events v1 Ph
       undefined,
       undefined,
       false,
-      new Map([["UK:media_entertainment", 5]])
+      new Map([["UK:media", 5]])
     );
 
     const baseDemand = baseline.byState.get("S1")?.get("software")?.demand ?? 0;
@@ -534,7 +527,6 @@ describe("computeRawSupplyDemand — sectorDemandModifierPct (World Events v1 Ph
   it("only affects the matching country — a modifier for UK does not touch a US sector of the same type", () => {
     const sector = {
       sectorType: "media",
-      mediaDiscriminator: "entertainment" as const,
       revenue: 1_000_000,
       stateId: "S1",
       countryId: "US",
@@ -548,7 +540,7 @@ describe("computeRawSupplyDemand — sectorDemandModifierPct (World Events v1 Ph
       undefined,
       undefined,
       false,
-      new Map([["UK:media_entertainment", 5]])
+      new Map([["UK:media", 5]])
     );
 
     const baseDemand = baseline.byState.get("S1")?.get("software")?.demand ?? 0;
@@ -556,7 +548,7 @@ describe("computeRawSupplyDemand — sectorDemandModifierPct (World Events v1 Ph
     expect(unaffectedDemand).toBeCloseTo(baseDemand, 6);
   });
 
-  it("only affects the matching sectorType — a modifier for entertainment does not touch energy", () => {
+  it("only affects the matching sectorType: a modifier for media does not touch energy", () => {
     const sector = { sectorType: "energy", revenue: 1_000_000, stateId: "S1", countryId: "UK" };
     const baseline = computeRawSupplyDemand([sector]);
     const withEntertainmentModifier = computeRawSupplyDemand(
@@ -567,7 +559,7 @@ describe("computeRawSupplyDemand — sectorDemandModifierPct (World Events v1 Ph
       undefined,
       undefined,
       false,
-      new Map([["UK:media_entertainment", 50]])
+      new Map([["UK:media", 50]])
     );
     const sumDemand = (res: ReturnType<typeof computeRawSupplyDemand>): number => {
       let total = 0;
@@ -581,7 +573,6 @@ describe("computeRawSupplyDemand — sectorDemandModifierPct (World Events v1 Ph
   it("has no effect when the sector has no countryId (older callers that don't thread it)", () => {
     const sector = {
       sectorType: "media",
-      mediaDiscriminator: "entertainment" as const,
       revenue: 1_000_000,
       stateId: "S1",
     };
@@ -594,7 +585,7 @@ describe("computeRawSupplyDemand — sectorDemandModifierPct (World Events v1 Ph
       undefined,
       undefined,
       false,
-      new Map([["UK:media_entertainment", 50]])
+      new Map([["UK:media", 50]])
     );
     const baseDemand = baseline.byState.get("S1")?.get("software")?.demand ?? 0;
     const withMapDemand = withMap.byState.get("S1")?.get("software")?.demand ?? 0;
@@ -1273,31 +1264,6 @@ describe("computeRawSupplyDemand — defence output sold to the state", () => {
     expect(supplyOf(computeRawSupplyDemand([plant(4)]))).toBeCloseTo(0, 6);
     const none = supplyOf(computeRawSupplyDemand([plant()]));
     expect(supplyOf(computeRawSupplyDemand([plant(-3)]))).toBeCloseTo(none, 6);
-  });
-});
-
-describe("manufacturing vehicle ledger", () => {
-  it("runs vehicle rows on the vehicles lane recipes", () => {
-    const legacy = {
-      sectorType: "manufacturing_vehicles",
-      revenue: 125_000,
-      stateId: "MI",
-      strategyId: "ev",
-      transitionFromStrategyId: "standard",
-      transitionStartTurn: 100,
-    };
-    const converted = {
-      ...legacy,
-      sectorType: "manufacturing",
-      industryModel: "vehicles",
-    };
-
-    const oldLedger = computeRawSupplyDemand([legacy], undefined, undefined, 106);
-    const modeledLedger = computeRawSupplyDemand([converted], undefined, undefined, 106);
-    expect([...modeledLedger.byState.get("MI")!.entries()]).toEqual([
-      ...oldLedger.byState.get("MI")!.entries(),
-    ]);
-    expect([...modeledLedger.global.entries()]).toEqual([...oldLedger.global.entries()]);
   });
 });
 

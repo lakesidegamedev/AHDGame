@@ -529,7 +529,7 @@ export function createTurnPhaseRuntime(input: {
             data: { phase: name },
           });
           // Each phase becomes a span nested under the turn cron transaction,
-          // so GlitchTip's trace view shows a per-phase timing waterfall and
+          // so the error tracker's trace view shows a per-phase timing waterfall and
           // flags which phase failed (span status ERROR) — not just the
           // pre-existing breadcrumbs.
           return await withSpan(
@@ -554,7 +554,7 @@ export function createTurnPhaseRuntime(input: {
       // A slow phase is a perf signal, not an error: it is recorded as the
       // breadcrumb above (with durationMs) and tracked first-class by the
       // turndiag tooling off the turn logs. We deliberately do NOT mint a
-      // standalone GlitchTip issue, which only duplicated that signal as
+      // standalone error issue, which only duplicated that signal as
       // error-tracker noise.
       // Coarse per-phase audit envelope (forensics plan §3.1/§4 T2.7) — one
       // `recordAudit` call, fire-and-forget, never awaited; skipped for

@@ -160,14 +160,11 @@ export async function bulkSetSectorOperations(request: Request, { params }: Rout
       // Sector tech-tree growth-cost discount, scoped per sector type.
       const techCorpView = {
         type: corporation.type,
-        industryModel: corporation.industryModel,
-        mediaDiscriminator: corporation.mediaDiscriminator,
         unlockedTechNodeIds: corporation.unlockedTechNodeIds,
         techDecadeLane: corporation.techDecadeLane,
       };
       const techMultFor = (s: CorporateSector) =>
-        getSectorTechEffects(techCorpView, s.sectorType, s.industryModel, s.mediaDiscriminator)
-          .growthCostMultiplier;
+        getSectorTechEffects(techCorpView, s.sectorType).growthCostMultiplier;
       let projectedTotal = 0;
       let currentTotal = 0;
       for (const s of sectors) {

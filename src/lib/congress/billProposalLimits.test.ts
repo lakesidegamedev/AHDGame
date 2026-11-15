@@ -409,7 +409,7 @@ describe("checkDuplicateTariffProvisions", () => {
             {
               type: "tariff",
               scopeType: "sector",
-              targetSectorType: "manufacturing_vehicles",
+              targetSectorType: "manufacturing",
               rate: 10,
             },
           ],
@@ -420,7 +420,7 @@ describe("checkDuplicateTariffProvisions", () => {
       db as unknown as Db,
       "bills",
       { countryId: "UK", status: { $nin: ["failed"] } },
-      [{ scopeType: "sector", targetSectorType: "manufacturing_vehicles" }]
+      [{ scopeType: "sector", targetSectorType: "manufacturing" }]
     );
     expect(result).not.toBeNull();
   });
@@ -434,7 +434,7 @@ describe("checkDuplicateTariffProvisions", () => {
             {
               type: "tariff",
               scopeType: "sector",
-              targetSectorType: "manufacturing_vehicles",
+              targetSectorType: "manufacturing",
               rate: 10,
             },
           ],
@@ -459,7 +459,7 @@ describe("checkDuplicateTariffProvisions", () => {
             {
               type: "tariff",
               scopeType: "sector",
-              targetSectorType: "manufacturing_vehicles",
+              targetSectorType: "manufacturing",
               rate: 10,
             },
           ],

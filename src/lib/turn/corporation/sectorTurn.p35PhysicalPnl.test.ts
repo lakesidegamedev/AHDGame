@@ -825,7 +825,6 @@ describe("energy productivity physical input units", () => {
       undefined,
       undefined,
       turn,
-      undefined,
       preset
     );
     const nominal = update.revenue as number;

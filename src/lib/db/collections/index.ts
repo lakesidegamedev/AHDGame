@@ -9,7 +9,6 @@ export { getRetiredCharactersCollection } from "./retiredCharacters";
 export { getCharacterAchievementsCollection } from "./characterAchievements";
 export { getRegionalBudgetsCollection } from "./regionalBudgets";
 export { getActivityLogCollection } from "./activityLog";
-export { getSiteTrafficPageviewsCollection } from "./siteTrafficPageviews";
 export { getSuspiciousCharactersCollection } from "./suspiciousCharacters";
 export { getCountryLeaderStatesCollection } from "./countryLeaderState";
 export { getCountryHistoryCollection } from "./countryHistory";

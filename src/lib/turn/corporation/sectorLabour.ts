@@ -1,4 +1,3 @@
-import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
 import { plantLaborShare } from "@/lib/corporations/plantCosts/rules";
 import { stagedLaborShare } from "@/lib/market/marketRecoveryStages";
 import type { CorporateSector } from "@/lib/db/types";
@@ -345,28 +344,17 @@ export function resolveSectorLabourEconomics({
     grossMaintenance,
     // Explicit plants distinguish production methods; legacy modes keep the lane share.
     laborShare0: stagedLaborShare(
-      getOperatingSectorType(sector.sectorType, sector.industryModel, sector.mediaDiscriminator),
+      sector.sectorType,
       explicitPlantCostsEnabled
         ? plantLaborShare({
-            sectorType: getOperatingSectorType(
-              sector.sectorType,
-              sector.industryModel,
-              sector.mediaDiscriminator
-            ),
+            sectorType: sector.sectorType,
             strategyId: sector.strategyId,
             transitionFromStrategyId: sector.transitionFromStrategyId,
             transitionStartTurn: sector.transitionStartTurn,
             currentTurn,
             year: currentYear,
           })
-        : getSectorLaborShare(
-            getOperatingSectorType(
-              sector.sectorType,
-              sector.industryModel,
-              sector.mediaDiscriminator
-            ),
-            currentYear
-          ),
+        : getSectorLaborShare(sector.sectorType, currentYear),
       marketRecoveryStage
     ),
     wageMultiplier,

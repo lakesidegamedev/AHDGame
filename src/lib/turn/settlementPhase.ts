@@ -128,8 +128,9 @@ export async function processSettlementTurn(
   }
 
   // Nothing here ever OPENS a crisis. The question is admin-started, from
-  // `/api/admin/settlement`, at whatever moment an operator judges right. This
-  // phase only advances one that already exists.
+  // the crisis panel in the admin control surface (`/api/admin/settlement`), at
+  // whatever moment an operator judges right. This phase only advances one that
+  // already exists.
   const crisis = await crises.findOne({ status: "open" } as Filter<SettlementCrisisDoc>);
   if (!crisis) return idle();
   // `frozen` and `resolved` are both excluded by the query; the explicit guard

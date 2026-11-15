@@ -1,4 +1,3 @@
-import { operatingSectorFilter } from "@/lib/constants/corporations";
 import { ObjectId, type Db, type Document } from "mongodb";
 import { logWireEvent } from "@/lib/wireEvent";
 import { createNotifications } from "@/lib/notifications";
@@ -665,7 +664,7 @@ async function applyProfitMarginEffects(
   for (const effect of effects) {
     if (effect.effectType === "decay") continue;
     const filter: Record<string, unknown> = { stateId: { $in: targetStateIds } };
-    if (effect.sectorType) Object.assign(filter, operatingSectorFilter(effect.sectorType));
+    if (effect.sectorType) Object.assign(filter, { sectorType: effect.sectorType });
     if (effect.strategyId) filter.strategyId = effect.strategyId;
 
     // Aggregation pipeline update to clamp profitMargin to [0, 100]

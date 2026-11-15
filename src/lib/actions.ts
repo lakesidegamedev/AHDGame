@@ -564,6 +564,15 @@ export type CanPerformActionOptions = {
   nationalGdpPerCapita?: number;
 };
 
+/** Stable, content-free rejection codes; sent to analytics instead of the message. */
+export type ActionRejectionCode =
+  | "invalid_action_type"
+  | "quote_rejected"
+  | "not_enough_action_points"
+  | "no_cash_to_convert"
+  | "state_required"
+  | "not_enough_funds";
+
 /**
  * Validate if character can perform an action
  */
@@ -572,13 +581,13 @@ export function canPerformAction(
   actionType: ActionType,
   state?: ActionStateEconomics,
   options?: CanPerformActionOptions
-): { canPerform: boolean; reason?: string } {
+): { canPerform: boolean; reason?: string; code?: ActionRejectionCode } {
   const forexEnabled = options?.forexEnabled ?? false;
   const homeFxRate = options?.homeFxRate;
   const action = ACTIONS[actionType];
 
   if (!action) {
-    return { canPerform: false, reason: "Invalid action type" };
+    return { canPerform: false, reason: "Invalid action type", code: "invalid_action_type" };
   }
 
   // Campaign validates through the same rules quote the UI and the effect use:
@@ -604,7 +613,7 @@ export function canPerformAction(
       options?.priceLevel
     );
     if (!quote.ok) {
-      return { canPerform: false, reason: quote.error };
+      return { canPerform: false, reason: quote.error, code: "quote_rejected" };
     }
   }
 
@@ -631,7 +640,7 @@ export function canPerformAction(
       options?.priceLevel
     );
     if (!quote.ok) {
-      return { canPerform: false, reason: quote.error };
+      return { canPerform: false, reason: quote.error, code: "quote_rejected" };
     }
   }
 
@@ -641,6 +650,7 @@ export function canPerformAction(
   if (character.actions < actualCost) {
     return {
       canPerform: false,
+      code: "not_enough_action_points",
       reason: `Not enough action points. Required: ${actualCost}, Available: ${character.actions}`,
     };
   }
@@ -649,6 +659,7 @@ export function canPerformAction(
   if (actionType === "convertCash" && getTotalPersonalLiquidWealth(character, forexEnabled) <= 0) {
     return {
       canPerform: false,
+      code: "no_cash_to_convert",
       reason: "You have no personal cash on hand to convert.",
     };
   }
@@ -667,7 +678,7 @@ export function canPerformAction(
       options?.priceLevel
     );
     if (!quote.ok) {
-      return { canPerform: false, reason: quote.error };
+      return { canPerform: false, reason: quote.error, code: "quote_rejected" };
     }
   }
 
@@ -683,7 +694,7 @@ export function canPerformAction(
       options?.priceLevel
     );
     if (!quote.ok) {
-      return { canPerform: false, reason: quote.error };
+      return { canPerform: false, reason: quote.error, code: "quote_rejected" };
     }
   }
 
@@ -697,7 +708,7 @@ export function canPerformAction(
       hasStats: !!character.stats,
     });
     if (!quote.ok) {
-      return { canPerform: false, reason: quote.error };
+      return { canPerform: false, reason: quote.error, code: "quote_rejected" };
     }
   }
 
@@ -723,7 +734,7 @@ export function canPerformAction(
       options?.priceLevel
     );
     if (!quote.ok) {
-      return { canPerform: false, reason: quote.error };
+      return { canPerform: false, reason: quote.error, code: "quote_rejected" };
     }
   }
 
@@ -733,7 +744,7 @@ export function canPerformAction(
   if (actionType === "rest") {
     const quote = quoteRestAction();
     if (!quote.ok) {
-      return { canPerform: false, reason: quote.error };
+      return { canPerform: false, reason: quote.error, code: "quote_rejected" };
     }
   }
 
@@ -741,6 +752,7 @@ export function canPerformAction(
   if (action.requiresState && !state) {
     return {
       canPerform: false,
+      code: "state_required",
       reason: `This action requires selecting a state`,
     };
   }
@@ -766,6 +778,7 @@ export function canPerformAction(
       const homeCurrency = getHomeCurrency(character);
       return {
         canPerform: false,
+        code: "not_enough_funds",
         reason: `Not enough funds. Required: ${formatLocalFunds(requiredLocal, homeCurrency)}, Available: ${formatLocalFunds(balanceLocal, homeCurrency)}`,
       };
     }

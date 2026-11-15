@@ -269,7 +269,7 @@ describe("POST advertising agreements", () => {
     });
   });
 
-  it("rejects a supplier outside Media and Entertainment", async () => {
+  it("rejects a supplier outside Media", async () => {
     flagOn();
     supplierSectors([]);
     const { resolveCorporation } = await import("@/lib/api/corporations/resolveQuery");

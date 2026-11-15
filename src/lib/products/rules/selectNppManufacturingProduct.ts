@@ -1,6 +1,6 @@
 import type { CommodityType } from "@/lib/constants/commodities";
 import { commodityMixWeight, eraScaledBasePrices } from "@/lib/constants/commodities";
-import { getEffectiveStrategyRatesForOperatingModel } from "@/lib/constants/sectorStrategies";
+import { getEffectiveStrategyRates } from "@/lib/constants/sectorStrategies";
 import type { CorporateSector } from "@/lib/db/types/corporation";
 import type { TechLane } from "@/lib/constants/techTree/nodes";
 import { analyzeSectorProfitability } from "@/lib/turn/npp/sectorProfitability";
@@ -31,7 +31,6 @@ export function selectNppManufacturingProduct(input: {
     sectorId: sector._id.toString(),
     corporationId: input.corporationId,
     sectorType: sector.sectorType,
-    industryModel: sector.industryModel,
     strategyId: sector.strategyId,
     capitalStock: sector.capitalStock ?? 0,
     plantCount: sector.plantCount ?? 0,
@@ -67,13 +66,12 @@ export function selectNppManufacturingProduct(input: {
     );
     const mixWeight = compatiblePlants.reduce((sum, plant) => {
       const sector = sectorById.get(plant.sectorId);
-      const currentRates = getEffectiveStrategyRatesForOperatingModel(
+      const currentRates = getEffectiveStrategyRates(
         plant.sectorType,
         plant.strategyId ?? "standard",
         sector?.transitionFromStrategyId,
         sector?.transitionStartTurn,
-        input.turn,
-        sector?.industryModel
+        input.turn
       );
       return (
         sum +

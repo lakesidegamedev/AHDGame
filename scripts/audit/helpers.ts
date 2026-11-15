@@ -8,7 +8,7 @@
  */
 
 import { electorateFromFixture } from "../../src/lib/demographics/electorateFixture";
-import { demographicCategories } from "../../src/lib/seeds/demographicCategories";
+import { demographicCategories } from "../../src/lib/seeds/calibration/groupModelCategories";
 import { stateDemographics } from "../../src/lib/seeds/stateDemographics";
 import {
   calcStateTurnout,

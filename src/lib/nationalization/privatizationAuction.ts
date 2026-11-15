@@ -279,14 +279,7 @@ export async function reabsorbSpunOutCorp(
   const destDocs = new Map<string, Corporation>();
   for (const s of shellSectors) {
     if (!destByType.has(s.sectorType)) {
-      const dest = s.industryModel
-        ? await resolveNationalCorporationForSector(
-            db,
-            shell.countryId,
-            s.sectorType,
-            s.industryModel
-          )
-        : await resolveNationalCorporationForSector(db, shell.countryId, s.sectorType);
+      const dest = await resolveNationalCorporationForSector(db, shell.countryId, s.sectorType);
       destByType.set(s.sectorType, dest._id);
       destDocs.set(dest._id.toHexString(), dest);
     }

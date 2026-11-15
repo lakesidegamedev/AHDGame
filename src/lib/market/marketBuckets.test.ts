@@ -3,11 +3,12 @@ import { OPERATING_SECTOR_TYPES } from "@/lib/constants/corporationsClient";
 import { bucketKey, enumerateCandidateBuckets, laneIdentities } from "./marketBuckets";
 
 describe("market buckets", () => {
-  it("lists every lane once with its stored identity", () => {
+  it("lists every sector type once", () => {
     const lanes = laneIdentities();
     expect(lanes.map((l) => l.lane)).toEqual([...OPERATING_SECTOR_TYPES]);
-    const vehicles = lanes.find((l) => l.lane === "manufacturing_vehicles");
-    expect(vehicles).toMatchObject({ sectorType: "manufacturing", industryModel: "vehicles" });
+    expect(lanes.find((l) => l.lane === "manufacturing")).toMatchObject({
+      sectorType: "manufacturing",
+    });
   });
 
   it("crosses regions with lanes and skips blocked buckets", () => {
@@ -19,7 +20,7 @@ describe("market buckets", () => {
   });
 
   it("keeps the bucket key format", () => {
-    expect(bucketKey("S", "manufacturing", "vehicles")).toBe("S:manufacturing:vehicles");
-    expect(bucketKey("S", "media", null, "entertainment")).toBe("S:media:generic:entertainment");
+    expect(bucketKey("S", "manufacturing")).toBe("S:manufacturing");
+    expect(bucketKey("S", "media")).toBe("S:media");
   });
 });

@@ -1,8 +1,7 @@
 import { REVENUE_TREND_MIN_SPAN, REVENUE_TREND_TARGET_SPAN } from "@/lib/turn/gdpGrowth";
 import type { OperatingSectorType } from "@/lib/constants/corporations";
-import type { MediaDiscriminator } from "@/lib/constants/corporations";
 import { unitYieldForSupply } from "@/lib/constants/capacityEconomy";
-import { getEffectiveStrategyRatesForOperatingModel } from "@/lib/constants/sectorStrategies";
+import { getEffectiveStrategyRates } from "@/lib/constants/sectorStrategies";
 
 export interface OutputVolumeSector {
   sectorType: OperatingSectorType;
@@ -10,8 +9,6 @@ export interface OutputVolumeSector {
   strategyId?: string;
   transitionFromStrategyId?: string | null;
   transitionStartTurn?: number | null;
-  industryModel?: string | null;
-  mediaDiscriminator?: MediaDiscriminator | null;
 }
 
 /**
@@ -22,14 +19,12 @@ export interface OutputVolumeSector {
 export function constantPriceOutput(sector: OutputVolumeSector, turn: number): number | null {
   const units = sector.producedUnits;
   if (typeof units !== "number" || !Number.isFinite(units) || units < 0) return null;
-  const rates = getEffectiveStrategyRatesForOperatingModel(
+  const rates = getEffectiveStrategyRates(
     sector.sectorType,
     sector.strategyId ?? "standard",
     sector.transitionFromStrategyId,
     sector.transitionStartTurn,
-    turn,
-    sector.industryModel,
-    sector.mediaDiscriminator
+    turn
   );
   const unitYield = unitYieldForSupply(rates.supply, 1);
   if (!Number.isFinite(unitYield) || unitYield <= 0) return null;
@@ -46,14 +41,12 @@ const MAX_INTERMEDIATE_SHARE = 0.95;
  * output, so the sum is the intermediate share directly.
  */
 export function intermediateShare(sector: OutputVolumeSector, turn: number): number {
-  const rates = getEffectiveStrategyRatesForOperatingModel(
+  const rates = getEffectiveStrategyRates(
     sector.sectorType,
     sector.strategyId ?? "standard",
     sector.transitionFromStrategyId,
     sector.transitionStartTurn,
-    turn,
-    sector.industryModel,
-    sector.mediaDiscriminator
+    turn
   );
   let total = 0;
   for (const rate of Object.values(rates.demand ?? {})) {

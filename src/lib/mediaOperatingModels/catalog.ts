@@ -11,17 +11,14 @@ export type MediaOperatingModelId =
   | "radio_network"
   | "broadcast_tv"
   | "cable_tv"
-  | "film_studio"
-  | "music_label"
   | "publishing_house"
   | "streaming_platform"
   | "social_platform"
   | "creator_network"
-  | "ai_generated_media"
-  | "immersive_media";
+  | "ai_generated_media";
 
-/** Operating lanes inside media that can run a business model. */
-export type MediaOperatingModelSector = "media" | "media_entertainment";
+/** Sector types that can run a media business model. */
+export type MediaOperatingModelSector = "media";
 
 export interface MediaOperatingModelDefinition {
   id: MediaOperatingModelId;
@@ -81,28 +78,6 @@ export const MEDIA_OPERATING_MODELS: readonly MediaOperatingModelDefinition[] = 
     technologies: { media: { decade: "1989", nodeName: "Cable Syndication" } },
   },
   {
-    id: "film_studio",
-    name: "Film Studio",
-    sectorTypes: ["media_entertainment"],
-    availableFromYear: 1910,
-    outputProducts: ["advertising"],
-    recipes: {
-      media_entertainment: { inputStrategyId: "standard", outputStrategyId: "standard" },
-    },
-    technologies: { media_entertainment: { decade: "1940", nodeName: "Hollywood Studio System" } },
-  },
-  {
-    id: "music_label",
-    name: "Music Label",
-    sectorTypes: ["media_entertainment"],
-    availableFromYear: 1950,
-    outputProducts: ["advertising"],
-    recipes: {
-      media_entertainment: { inputStrategyId: "standard", outputStrategyId: "standard" },
-    },
-    technologies: { media_entertainment: { decade: "1950", nodeName: "Record Labels" } },
-  },
-  {
     id: "publishing_house",
     name: "Publishing House",
     sectorTypes: ["media"],
@@ -116,16 +91,14 @@ export const MEDIA_OPERATING_MODELS: readonly MediaOperatingModelDefinition[] = 
   {
     id: "streaming_platform",
     name: "Streaming Platform",
-    sectorTypes: ["media", "media_entertainment"],
+    sectorTypes: ["media"],
     availableFromYear: 2005,
     outputProducts: ["advertising"],
     recipes: {
       media: { inputStrategyId: "streaming_media", outputStrategyId: "streaming_media" },
-      media_entertainment: { inputStrategyId: "streaming", outputStrategyId: "streaming" },
     },
     technologies: {
       media: { decade: "2009", nodeName: "Streaming Platforms" },
-      media_entertainment: { decade: "2009", nodeName: "Streaming Distribution" },
     },
   },
   // The incumbent model of the 2027 world: cheap to run on software and devices, with
@@ -146,52 +119,28 @@ export const MEDIA_OPERATING_MODELS: readonly MediaOperatingModelDefinition[] = 
   {
     id: "creator_network",
     name: "Creator Network",
-    sectorTypes: ["media", "media_entertainment"],
+    sectorTypes: ["media"],
     availableFromYear: 2015,
     outputProducts: ["advertising"],
     recipes: {
       media: { inputStrategyId: "standard", outputStrategyId: "streaming_media" },
-      media_entertainment: { inputStrategyId: "live_service", outputStrategyId: "standard" },
     },
     technologies: {
       media: { decade: "2019", nodeName: "Influencer Networks" },
-      media_entertainment: { decade: "2019", nodeName: "Creator Platforms" },
     },
   },
   // Generated at scale: few staff, heavy compute, energy and network bills.
   {
     id: "ai_generated_media",
     name: "AI-Generated Media",
-    sectorTypes: ["media", "media_entertainment"],
+    sectorTypes: ["media"],
     availableFromYear: 2030,
     outputProducts: ["advertising"],
     recipes: {
       media: { inputStrategyId: "personalised_media", outputStrategyId: "personalised_media" },
-      media_entertainment: {
-        inputStrategyId: "personalised_media",
-        outputStrategyId: "personalised_media",
-      },
     },
     technologies: {
       media: { decade: "2029", nodeName: "AI-Generated Content" },
-      media_entertainment: { decade: "2029", nodeName: "Generative Game Content" },
-    },
-  },
-  // Headsets, haptics and mixed reality venues: premium audiences, dear hardware.
-  {
-    id: "immersive_media",
-    name: "Immersive Media",
-    sectorTypes: ["media_entertainment"],
-    availableFromYear: 2040,
-    outputProducts: ["advertising"],
-    recipes: {
-      media_entertainment: {
-        inputStrategyId: "personalised_media",
-        outputStrategyId: "live_venue",
-      },
-    },
-    technologies: {
-      media_entertainment: { decade: "2039", nodeName: "Mixed Reality Venues" },
     },
   },
 ];

@@ -12,11 +12,10 @@ import type { SectorWeightMap } from "@/lib/seeds/reference/sectorSeedWeights195
  * number is what it is; they do not license changing it.
  */
 export const JP_SECTOR_WEIGHTS_1953: SectorWeightMap = {
-  manufacturing: 30, // Korean War boom; US procurement accelerated recovery; steel/textiles
+  manufacturing: 35, // Korean War boom; US procurement accelerated recovery; steel/textiles
   agriculture: 12, // land reform (1947-50) complete; rice dominant; ~40% of labour
   construction: 10, // war destruction rebuilding; Japan Housing Corporation est. 1955 (just before)
   energy: 8, // coal dominant; electric power reconstruction (TEPCO etc.)
-  manufacturing_vehicles: 5, // Toyota/Nissan just starting passenger cars; military trucks→civilian
   logistics: 5, // Japan National Railways rebuilding; port recovery
   chemical_industries: 4, // zaibatsu successor chemi-firms (Mitsui Chemicals)
   retail: 4, // department stores (depato) recovering; markets dominant
@@ -26,7 +25,6 @@ export const JP_SECTOR_WEIGHTS_1953: SectorWeightMap = {
   real_estate: 2, // massive housing shortage from firebombing; small formal market
   healthcare: 2, // health insurance law 1958 pending; small but growing
   telecommunications: 2, // NTT predecessor; rebuilding
-  media: 2, // Yomiuri/Asahi newspapers; NHK radio; TV just launching 1953
-  media_entertainment: 2, // Toho/Toei cinema boom; Godzilla (1954); pachinko
+  media: 4, // Yomiuri/Asahi newspapers; NHK radio; TV just launching 1953
   technology: 0, // transistors licensed from Bell Labs 1953 (Sony); zero commercial sector
 };

@@ -172,14 +172,10 @@ describe("bootstrapWorldsimCorporations", () => {
   });
 
   it("skips countries that already have NPP corps, so a retry attempts nothing", async () => {
-    const { OPERATING_SECTOR_TYPES, operatingSectorIdentity } =
-      await import("@/lib/constants/corporations");
+    const { OPERATING_SECTOR_TYPES } = await import("@/lib/constants/corporations");
     const complete = OPERATING_SECTOR_TYPES.flatMap((lane) => {
-      const identity = operatingSectorIdentity(lane);
       return Array(3).fill({
-        type: identity.sectorType,
-        industryModel: identity.industryModel,
-        mediaDiscriminator: identity.mediaDiscriminator,
+        type: lane,
       });
     });
     base.collectionMocks.corporations!.find.mockImplementation(
@@ -228,8 +224,7 @@ describe("bootstrapWorldsimCorporations", () => {
 
   it("fills missing sectors when finance seed already created two NPP banks", async () => {
     const { OPERATING_SECTOR_TYPES } = await import("@/lib/constants/corporations");
-    const { getOperatingSectorType } = await import("@/lib/constants/sectorStrategies");
-    type Row = { type: string; industryModel?: string | null; mediaDiscriminator?: string | null };
+    type Row = { type: string };
     const existing: Row[] = [{ type: "financial" }, { type: "financial" }];
     base.collectionMocks.corporations!.find.mockReturnValue({
       project: () => ({ toArray: async () => existing }),
@@ -259,12 +254,7 @@ describe("bootstrapWorldsimCorporations", () => {
     expect(existing).toHaveLength(OPERATING_SECTOR_TYPES.length * 3);
     expect(existing.filter((corp) => corp.type === "financial")).toHaveLength(3);
     for (const lane of OPERATING_SECTOR_TYPES) {
-      expect(
-        existing.filter(
-          (corp) =>
-            getOperatingSectorType(corp.type, corp.industryModel, corp.mediaDiscriminator) === lane
-        )
-      ).toHaveLength(3);
+      expect(existing.filter((corp) => corp.type === lane)).toHaveLength(3);
     }
 
     batchSpawnNppCorporations.mockClear();

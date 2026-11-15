@@ -14,7 +14,6 @@ import type { OperatingSectorType } from "@/lib/constants/corporations";
 
 export const IT_UNION_NAMES_MODERN: Partial<Record<OperatingSectorType, string>> = {
   manufacturing: "FIOM-CGIL",
-  manufacturing_vehicles: "FIOM-CGIL",
   chemical_industries: "FILCTEM-CGIL",
   construction: "FILLEA-CGIL",
   energy: "FLAEI-CISL",
@@ -26,7 +25,6 @@ export const IT_UNION_NAMES_MODERN: Partial<Record<OperatingSectorType, string>>
   technology: "FIOM-CGIL",
   financial: "FISAC-CGIL",
   telecommunications: "SLC-CGIL",
-  media_entertainment: "SLC-CGIL",
   defense: "FIOM-CGIL",
   agriculture: "FLAI-CGIL",
   real_estate: "FILLEA-CGIL",
@@ -46,7 +44,6 @@ export const IT_UNION_NAMES_1999: Partial<Record<OperatingSectorType, string>> =
 
 export const IT_UNION_NAMES_1991: Partial<Record<OperatingSectorType, string>> = {
   manufacturing: "FIOM-CGIL",
-  manufacturing_vehicles: "FIOM-CGIL",
   technology: "FIOM-CGIL",
   defense: "FIOM-CGIL",
   chemical_industries: "FILCEA-CGIL",
@@ -65,7 +62,6 @@ export const IT_UNION_NAMES_1991: Partial<Record<OperatingSectorType, string>> =
 
 export const IT_UNION_NAMES_1979: Partial<Record<OperatingSectorType, string>> = {
   manufacturing: "FIOM-CGIL",
-  manufacturing_vehicles: "FIOM-CGIL",
   technology: "FIOM-CGIL",
   defense: "FIOM-CGIL",
   chemical_industries: "FILCEA-CGIL",

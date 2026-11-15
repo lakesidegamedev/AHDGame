@@ -7,7 +7,6 @@ import {
   getMediaOperatingModelStrategies,
   getSectorStrategies,
   getStrategy,
-  getStrategyForOperatingModel,
   SECTOR_STRATEGIES,
 } from "./sectorStrategies";
 import { COMMODITY_TYPES } from "./commodities";
@@ -84,20 +83,7 @@ describe("unknown persisted sector types", () => {
     expect(SECTOR_STRATEGIES.media[0]?.id).not.toBe("standard");
   });
 
-  it("resolves the obsolete media strategy reproduction to an eligible fallback", () => {
-    const strategy = getStrategyForOperatingModel(
-      "media",
-      "legacy_broadcast",
-      undefined,
-      "entertainment",
-      "1991-default"
-    );
-    expect(strategy.id).toBe("standard");
-    expect(strategy.minDecade).toBeUndefined();
-    expect(strategy.requiresTechUnlock).toBeUndefined();
-  });
-
-  it.each(["media", "media_entertainment", "manufacturing", "extraction", "financial"])(
+  it.each(["media", "manufacturing", "extraction", "financial"])(
     "keeps a valid explicit strategy unchanged in %s",
     (sectorType) => {
       for (const strategy of SECTOR_STRATEGIES[sectorType as keyof typeof SECTOR_STRATEGIES]) {
@@ -112,8 +98,6 @@ describe("media operating model strategies", () => {
     ["media", "newspaper", 0.5],
     ["media", "cable_tv", 0.5],
     ["media", "streaming_platform", 0.5],
-    ["media_entertainment", "film_studio", 0.6],
-    ["media_entertainment", "streaming_platform", 0.6],
   ])("resolves active virtual strategy %s:%s through legacy readers", (sectorType, id, budget) => {
     const strategy = getStrategy(sectorType, id);
     expect(strategy.mediaOperatingModelId).toBe(id);
@@ -148,7 +132,7 @@ describe("media operating model strategies", () => {
     });
   });
 
-  it("uses the catalog's named existing input strategy for every lane recipe", () => {
+  it("uses the catalog's named existing input strategy for every recipe", () => {
     for (const model of MEDIA_OPERATING_MODELS) {
       for (const sectorType of model.sectorTypes) {
         const recipe = model.recipes[sectorType]!;
@@ -165,16 +149,12 @@ describe("media operating model strategies", () => {
   });
 });
 
-describe("persisted media and entertainment sectors", () => {
+describe("persisted media sectors", () => {
   it("resolves their existing strategies while the product rollout is withdrawn", () => {
     expect(() =>
       getEffectiveStrategyRates("media", "legacy_broadcast", null, null, 1065)
     ).not.toThrow();
-    expect(() =>
-      getEffectiveStrategyRates("media_entertainment", "live_service", null, null, 1065)
-    ).not.toThrow();
     expect(SECTOR_STRATEGIES.media).toBeDefined();
-    expect(SECTOR_STRATEGIES.media_entertainment).toBeDefined();
   });
 });
 

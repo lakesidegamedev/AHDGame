@@ -423,7 +423,6 @@ async function returnMergedPortion(
     corporationId: priorOwnerId,
     stateId: survivor.stateId,
     sectorType: survivor.sectorType,
-    industryModel: survivor.industryModel ?? null,
   } as never);
   if (existing) {
     const mergedStock = (existing.capitalStock ?? 0) + returnedStock;

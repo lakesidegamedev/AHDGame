@@ -3,6 +3,7 @@
 import { apiErrorText } from "@/lib/errors/catalog";
 import { useState, useEffect, useCallback } from "react";
 import { getLatestNoteText, type RetiredCharacterEntry, type UserData } from "./types";
+import { isNoDiscordAppleLinked } from "@/lib/admin/appleLink";
 import { getDuplicateGroups } from "./duplicateGroups";
 import { UsersToolbar } from "./UsersToolbar";
 import { UsersTable } from "./UsersTable";
@@ -23,6 +24,7 @@ export function UsersTab({ context = "admin" }: UsersTabProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [showDuplicatesOnly, setShowDuplicatesOnly] = useState(false);
+  const [appleNoDiscordOnly, setAppleNoDiscordOnly] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [page, setPage] = useState(1);
   const [expandedGroups, setExpandedGroups] = useState<Set<number>>(new Set());
@@ -34,7 +36,7 @@ export function UsersTab({ context = "admin" }: UsersTabProps) {
   useEffect(() => {
     setPage(1);
     setExpandedGroups(new Set());
-  }, [searchTerm, showDuplicatesOnly]);
+  }, [searchTerm, showDuplicatesOnly, appleNoDiscordOnly]);
 
   const toggleGroup = (idx: number) => {
     setExpandedGroups((prev) => {
@@ -410,6 +412,7 @@ export function UsersTab({ context = "admin" }: UsersTabProps) {
   const duplicateCount = duplicateUserIds.size;
   const filtered = users.filter((u) => {
     if (showDuplicatesOnly && !duplicateUserIds.has(u.id)) return false;
+    if (appleNoDiscordOnly && !isNoDiscordAppleLinked(u)) return false;
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       return (
@@ -435,6 +438,8 @@ export function UsersTab({ context = "admin" }: UsersTabProps) {
         onSearchTermChange={setSearchTerm}
         showDuplicatesOnly={showDuplicatesOnly}
         onToggleDuplicatesOnly={() => setShowDuplicatesOnly(!showDuplicatesOnly)}
+        appleNoDiscordOnly={appleNoDiscordOnly}
+        onToggleAppleNoDiscordOnly={() => setAppleNoDiscordOnly(!appleNoDiscordOnly)}
         loading={loading}
         error={error}
         onRefresh={fetchUsers}

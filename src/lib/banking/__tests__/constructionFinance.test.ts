@@ -149,13 +149,9 @@ describe("construction request lifecycle", () => {
   it("freezes fees only: no market pool is claimed or created", async () => {
     const { request, memory } = world();
     request.sector.sectorType = "media";
-    request.sector.mediaDiscriminator = "entertainment";
     await request.db
       .collection("corporateSectors")
-      .updateOne(
-        { _id: sectorId },
-        { $set: { sectorType: "media", mediaDiscriminator: "entertainment" } }
-      );
+      .updateOne({ _id: sectorId }, { $set: { sectorType: "media" } });
     const result = await requestConstructionFinance({
       ...request,
       buildContext: { destinationCurrency: "USD" },

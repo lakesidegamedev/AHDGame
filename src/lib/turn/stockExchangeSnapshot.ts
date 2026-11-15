@@ -71,10 +71,7 @@ import { sectorEconomicRevenue } from "@/lib/corporations/sectorRevenueBasis";
 import { corpLevelDailyCosts } from "./corpLevelDailyCosts";
 import { TURNS_PER_YEAR, TURNS_PER_DAY } from "@/lib/constants/turnTime";
 import { readCorpEconomicAnchor, writeCorpEconomicLocal } from "@/lib/currency/corpEconomyFields";
-import {
-  getOperatingSectorType,
-  STRATEGY_TRANSITION_TURNS,
-} from "@/lib/constants/sectorStrategies";
+import { STRATEGY_TRANSITION_TURNS } from "@/lib/constants/sectorStrategies";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
@@ -139,9 +136,7 @@ export async function generateStockExchangeSnapshots(currentTurn: number, db?: D
               sequentialId: 1,
               tickerSymbol: 1,
               type: 1,
-              industryModel: 1,
               secondaryType: 1,
-              mediaDiscriminator: 1,
               headquartersState: 1,
               logoUrl: 1,
               brandColor: 1,
@@ -773,11 +768,7 @@ export async function generateStockExchangeSnapshots(currentTurn: number, db?: D
           const subsidyMod = getSubsidyMarginModifier(
             allSubsidies,
             corp.headquartersState,
-            getOperatingSectorType(
-              sector.sectorType,
-              sector.industryModel,
-              sector.mediaDiscriminator
-            ) as CorporationType,
+            sector.sectorType as CorporationType,
             stateId,
             sector.strategyId,
             sectorCountryId,
@@ -825,11 +816,7 @@ export async function generateStockExchangeSnapshots(currentTurn: number, db?: D
           // until the lookup is wired in. negativeProductionSustainedTurns is
           // available directly on the sector and is passed through correctly.
           const mods = computeAllMarginModifiers(
-            getOperatingSectorType(
-              sector.sectorType,
-              sector.industryModel,
-              sector.mediaDiscriminator
-            ) as Corporation["type"],
+            sector.sectorType as Corporation["type"],
             sector.profitMargin,
             {
               fullMetrics: stateMetrics,
@@ -845,11 +832,7 @@ export async function generateStockExchangeSnapshots(currentTurn: number, db?: D
             },
             commodityMod,
             homeLocationBonus,
-            getOperatingSectorType(
-              corp.type,
-              corp.industryModel,
-              corp.mediaDiscriminator
-            ) as Corporation["type"],
+            corp.type as Corporation["type"],
             corpSectors.length,
             macroEcon,
             corp.logisticsStrength ?? 0,
@@ -1041,11 +1024,7 @@ export async function generateStockExchangeSnapshots(currentTurn: number, db?: D
           name: corp.name,
           ...(corp.tickerSymbol ? { tickerSymbol: corp.tickerSymbol } : {}),
           type: corp.type,
-          industryModel: corp.industryModel ?? null,
-          typeLabel:
-            corp.type === "manufacturing" && corp.industryModel === "vehicles"
-              ? "Vehicle manufacturing"
-              : OPERATING_SECTOR_TYPE_LABELS[corp.type],
+          typeLabel: OPERATING_SECTOR_TYPE_LABELS[corp.type],
           headquartersState: corp.headquartersState,
           headquartersStateName: stateNameMap.get(corp.headquartersState) ?? corp.headquartersState,
           logoUrl: isNatcorp

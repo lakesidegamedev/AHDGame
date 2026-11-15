@@ -12,7 +12,10 @@ import { rawTurnToLarpDate } from "@/lib/utils/formatters";
 import type { Crisis } from "@/lib/db/types/crisis";
 import type { State } from "@/lib/db/types/state";
 import { crisisSeverity, effectImpact } from "@/lib/crises/severity";
-import { formatCrisisEffectTarget } from "@/lib/crises/effectLabels";
+import { describeCrisisEffect } from "@/lib/crises/effectDisplay";
+import { crisisImageUrl } from "@/lib/crises/crisisImages";
+import { crisisKind } from "@/lib/crises/rules/boardView";
+import { crisisSeverityScore, severityBandFromScore } from "@/lib/crises/rules/crisisRow";
 import { resolveCrisisLocationName, interpolateLocation } from "@/lib/crises/crisisLocation";
 import { CRISIS_TOOLTIPS, tooltipForEffect } from "@/lib/crises/tooltipCopy";
 import { Tooltip } from "@/components/ui/Tooltip";
@@ -24,11 +27,6 @@ import CrisisV2Detail from "./CrisisV2Detail";
 import { loadCrisisV2Detail } from "@/lib/crises/queries/crisisV2View";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { crisesCollection } from "@/lib/db/repositories/crises";
-
-// UN General Assembly — shared with the crises list hero so the two surfaces
-// read as one section. https://unsplash.com/photos/41Wj4KxB7BA
-const HERO_IMAGE =
-  "https://images.unsplash.com/photo-1529107386315-e1a2ed48a620?auto=format&fit=crop&w=1600&q=70";
 
 const truncate = (s: string | undefined | null, max = 200) =>
   !s ? "" : s.length <= max ? s : `${s.slice(0, max - 1).trimEnd()}…`;
@@ -45,33 +43,6 @@ function formatGdpLossDollars(fraction: number, gdpMillions: number): string | n
   if (lostMillions >= 1_000) return `$${Math.round(lostMillions / 1_000)}bn`;
   if (lostMillions >= 1) return `$${Math.round(lostMillions)}m`;
   return `$${(lostMillions * 1_000).toFixed(0)}k`;
-}
-
-/** Round a native effect delta for display, trimming float noise (−0.44999996 → −0.45). */
-function formatEffectValue(value: number): string {
-  const rounded = Math.round(value * 100) / 100;
-  return `${rounded > 0 ? "+" : ""}${rounded}`;
-}
-
-/**
- * Unit suffix for an effect's number, so a bare "−0.75" reads as "−0.75 pp" of the
- * named stat (gdpGrowth/approval/inflation are percentage-point deltas; margins are
- * percentage points; character stats are raw points). gdpLoss renders its own
- * "% of GDP" and is excluded here.
- */
-function unitForEffect(effect: { targetType: string }): string {
-  switch (effect.targetType) {
-    case "profitMargin":
-    case "inflation":
-      return "pp";
-    case "approval":
-    case "metric":
-      return "pp";
-    case "stat":
-      return "pts";
-    default:
-      return "";
-  }
 }
 
 /** Cadence label: ticks recur each turn, decay margin hits are one sustained-but-fading shock, flats fire once. */
@@ -134,7 +105,7 @@ const SEVERITY_META: Record<
   { label: string; accent: string; eyebrow: string; badge: string }
 > = {
   high: {
-    label: "High severity",
+    label: "Severe",
     accent: "from-rose-500/80 via-rose-500/30 to-transparent",
     eyebrow: "text-rose-300",
     badge: "border-rose-400/40 bg-rose-500/15 text-rose-200",
@@ -263,7 +234,13 @@ export default async function CrisisDetailPage({ params }: { params: Promise<{ i
     : null;
   // Largest single-effect impact, to scale the per-effect strength bars.
   const maxEffectImpact = crisis.effects.reduce((m, e) => Math.max(m, effectImpact(e)), 0);
-  const severity = crisisSeverity(crisis);
+  const severity = severityBandFromScore(
+    crisisSeverityScore({ v2Severity: v2Detail?.severity, legacyBand: crisisSeverity(crisis) })
+  );
+  const heroSrc = crisisImageUrl(
+    { name: crisis.name, templateKey: crisis.templateKey, kind: crisisKind(crisis) },
+    1600
+  );
   const sev = SEVERITY_META[severity];
   const scopeWord =
     crisis.scope === "country" ? "National" : crisis.scope === "region" ? "Regional" : "Global";
@@ -286,11 +263,12 @@ export default async function CrisisDetailPage({ params }: { params: Promise<{ i
         <header className="relative overflow-hidden rounded-2xl border border-card-border bg-card shadow-lg">
           <div className="relative h-[175px] w-full sm:h-[220px]">
             <Image
-              src={crisis.heroImage ?? HERO_IMAGE}
+              src={heroSrc}
               alt=""
               fill
               className={`object-cover object-center ${isActive ? "" : "grayscale"}`}
               priority
+              unoptimized
               sizes="(max-width: 896px) 100vw, 896px"
             />
             <div
@@ -422,7 +400,10 @@ export default async function CrisisDetailPage({ params }: { params: Promise<{ i
               </div>
               <ul className="divide-y divide-card-border/60">
                 {crisis.effects.map((effect, i) => {
-                  const negative = effect.value < 0;
+                  const display = describeCrisisEffect(effect);
+                  // Colour follows whether the move hurts; the arrow follows the sign.
+                  const negative = display.tone === "bad";
+                  const pointsDown = effect.targetType === "gdpLoss" || effect.value < 0;
                   const isGdpLoss = effect.targetType === "gdpLoss";
                   const isTick = effect.effectType === "tick";
                   const fades = isTick || effect.effectType === "decay";
@@ -442,6 +423,8 @@ export default async function CrisisDetailPage({ params }: { params: Promise<{ i
                     isTick && crisis.durationTurns
                       ? (effect.value * (crisis.durationTurns + 1)) / 2
                       : null;
+                  const amountAt = (value: number) =>
+                    describeCrisisEffect({ ...effect, value }).amount;
                   const pct = Math.abs(effect.value) * 100;
                   const dollars = isGdpLoss
                     ? formatGdpLossDollars(Math.abs(effect.value), affectedGdpMillions)
@@ -474,7 +457,7 @@ export default async function CrisisDetailPage({ params }: { params: Promise<{ i
                               strokeLinecap="round"
                               strokeLinejoin="round"
                               d={
-                                negative
+                                pointsDown
                                   ? "M19 14l-7 7m0 0l-7-7m7 7V3"
                                   : "M5 10l7-7m0 0l7 7m-7-7v18"
                               }
@@ -483,11 +466,11 @@ export default async function CrisisDetailPage({ params }: { params: Promise<{ i
                         </span>
                         <div className="min-w-0 flex-1">
                           <p className="text-sm font-medium text-foreground truncate flex items-center gap-1">
-                            {effect.label}
+                            {display.target}
                             <Tooltip content={tooltipForEffect(effect)} />
                           </p>
                           <p className="text-xs text-muted flex items-center gap-1">
-                            {formatCrisisEffectTarget(effect)}
+                            {effect.label}
                             <Tooltip
                               content={
                                 effect.effectType === "tick"
@@ -521,16 +504,15 @@ export default async function CrisisDetailPage({ params }: { params: Promise<{ i
                               negative ? "text-error" : "text-success"
                             }`}
                           >
-                            {formatEffectValue(effect.value)} {unitForEffect(effect)}
+                            {display.amount}
                             {cumulativeTick != null && (
                               <span className="block text-[11px] font-normal text-muted">
-                                ≈ {formatEffectValue(cumulativeTick)} {unitForEffect(effect)} over{" "}
-                                {crisis.durationTurns} turns
+                                ≈ {amountAt(cumulativeTick)} over {crisis.durationTurns} turns
                               </span>
                             )}
                             {!isTick && isActive && fades && strength < 1 && (
                               <span className="block text-[11px] font-normal text-muted">
-                                {formatEffectValue(effect.value * strength)} now
+                                {amountAt(effect.value * strength)} now
                               </span>
                             )}
                           </span>

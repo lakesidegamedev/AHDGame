@@ -16,7 +16,7 @@
  * returns null, which never blocks.
  */
 
-import type { CommodityType } from "@/lib/constants/commodities";
+import type { CommodityType, ExtractableResource } from "@/lib/constants/commodities";
 import { bucketKey } from "@/lib/market/marketBuckets";
 import { sectorDemandGapUnits } from "@/lib/market/sectorDemandGap";
 import { COMMODITY_BASE_PRICES, commodityMixWeight } from "@/lib/constants/commodities";
@@ -38,8 +38,6 @@ export const NPP_SATURATED_MARKET_THROTTLE = 0.98;
 export interface SaturationSectorLike {
   stateId: string;
   sectorType: string;
-  industryModel?: string | null;
-  mediaDiscriminator?: string | null;
   capitalStock?: number | null;
   demandThrottleFactor?: number | null;
   mothballed?: boolean | null;
@@ -87,7 +85,7 @@ export function buildMarketSaturationIndex(
   for (const s of sectors) {
     const c = contributionOf(s, fundedWorldEpoch);
     if (!c) continue;
-    const key = bucketKey(s.stateId, s.sectorType, s.industryModel, s.mediaDiscriminator);
+    const key = bucketKey(s.stateId, s.sectorType);
     const tally = index.get(key) ?? { capacity: 0, runCapacity: 0 };
     tally.capacity += c.capacity;
     tally.runCapacity += c.run;
@@ -107,15 +105,11 @@ export function marketSaturationOf(
   cell: {
     stateId: string;
     sectorType: string;
-    industryModel?: string | null;
-    mediaDiscriminator?: string | null;
   },
   excluding?: SaturationSectorLike,
   fundedWorldEpoch?: string | null
 ): number | null {
-  const tally = index.get(
-    bucketKey(cell.stateId, cell.sectorType, cell.industryModel, cell.mediaDiscriminator)
-  );
+  const tally = index.get(bucketKey(cell.stateId, cell.sectorType));
   if (!tally) return null;
   const own = excluding ? contributionOf(excluding, fundedWorldEpoch) : null;
   const capacity = tally.capacity - (own?.capacity ?? 0);
@@ -173,6 +167,27 @@ export function isMarketSaturated(level: number | null | undefined): boolean {
  * a second entrant and for the incumbents' own probe.
  */
 export const NPP_FOUNDING_UNMET_SHARE = 0.5;
+
+/**
+ * The output legs a cell can actually supply. An extraction cell keeps only the
+ * resources its state still holds an unclaimed deposit of: a mine cannot answer
+ * a shortage of a resource the state does not have. Every other sector, and a
+ * world with no per-resource deposit signal, keeps the whole mix.
+ */
+export function depositBoundSupplyMix(
+  supplyMix: Partial<Record<CommodityType, number>>,
+  cell: { stateId: string; sectorType: string },
+  resourceHeadroomOf: ((stateId: string, resource: ExtractableResource) => number) | undefined
+): Partial<Record<CommodityType, number>> {
+  if (cell.sectorType !== "extraction" || !resourceHeadroomOf) return supplyMix;
+  const bound: Partial<Record<CommodityType, number>> = {};
+  for (const [commodity, rate] of Object.entries(supplyMix) as [CommodityType, number][]) {
+    if (resourceHeadroomOf(cell.stateId, commodity as ExtractableResource) > 0) {
+      bound[commodity] = rate;
+    }
+  }
+  return bound;
+}
 
 /**
  * Unmet demand for one cell in sector output units, for the output mix the new
@@ -260,4 +275,20 @@ export function canFoundAsBuilder(corp: {
   // No recorded strategy yet: the default posture expands.
   const strategy = corp.strategyId ?? "expand";
   return strategy === "expand" || strategy === "pivot";
+}
+
+/**
+ * Units an existing extraction plant may add this step, bounded by the unmet
+ * demand for what it mines. The deposit step is the upper bound and demand is
+ * the reason: a mine with nothing left to sell grows by nothing however much
+ * deposit remains. `unmetUnits` is null when no demand signal is wired
+ * (isolated callers), which leaves the deposit step alone.
+ */
+export function extractionDemandBoundUnits(
+  depositStepUnits: number,
+  unmetUnits: number | null
+): number {
+  if (unmetUnits == null) return depositStepUnits;
+  if (!Number.isFinite(unmetUnits)) return 0;
+  return Math.max(0, Math.min(depositStepUnits, Math.floor(unmetUnits)));
 }

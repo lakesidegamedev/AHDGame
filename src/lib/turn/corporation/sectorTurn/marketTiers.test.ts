@@ -3,6 +3,7 @@ import { ObjectId } from "mongodb";
 import type { CorporateSector } from "@/lib/db/types";
 import { buildMarketContext } from "@/lib/market/marketContext";
 import { getEffectiveStrategyRates } from "@/lib/constants/sectorStrategies";
+import { revenuePerCapacityUnitForStrategy } from "@/lib/constants/capacityEconomy";
 import { retoolRescaleFields } from "@/lib/corporations/retoolRescale";
 import { retoolOperatingCapacityRatio } from "@/lib/corporations/retooling/rules";
 import { computeMarketTiers, type MarketTiersInput } from "./marketTiers";
@@ -31,7 +32,8 @@ function tiersFor(sector: Partial<CorporateSector>, currentTurn: number) {
     wideCommodityBalances: new Map(),
     stateId: "CA",
     currentTurn,
-    preFlipNameplateRevenue: STANDARD_STOCK * 1000,
+    preFlipNameplateRevenue:
+      STANDARD_STOCK * revenuePerCapacityUnitForStrategy("manufacturing", "standard", 1),
     perTurnGrowthRate: 0,
     eraUnitScale: 1,
   };

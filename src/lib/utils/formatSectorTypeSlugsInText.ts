@@ -2,7 +2,7 @@ import { OPERATING_SECTOR_TYPES, OPERATING_SECTOR_TYPE_LABELS } from "@/lib/cons
 import { escapeRegex } from "./escapeRegex";
 
 /**
- * Replace operating-lane slugs (e.g. `real_estate`, `manufacturing_vehicles`) with display labels
+ * Replace operating-lane slugs (e.g. `real_estate`, `extraction`) with display labels
  * for wire/news tickers. Token boundaries avoid matching inside other identifiers.
  */
 export function formatSectorTypeSlugsInText(text: string): string {

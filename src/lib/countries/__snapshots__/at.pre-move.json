@@ -74,8 +74,7 @@
       "financial": 5,
       "real_estate": 4,
       "healthcare": 3,
-      "media_entertainment": 3,
-      "media": 2,
+      "media": 5,
       "telecommunications": 1,
       "defense": 1
     }
@@ -590,20 +589,18 @@
   "COUNTRY_SECTOR_WEIGHTS": {
     "shape": "country-first",
     "value": {
-      "manufacturing": 17,
+      "manufacturing": 20,
       "real_estate": 12,
       "retail": 9,
       "financial": 8,
       "construction": 8,
       "healthcare": 7,
-      "media_entertainment": 7,
       "energy": 6,
       "logistics": 6,
       "technology": 5,
       "agriculture": 4,
       "chemical_industries": 4,
-      "manufacturing_vehicles": 3,
-      "media": 2,
+      "media": 9,
       "extraction": 2
     }
   },
@@ -619,7 +616,6 @@
       "real_estate": 10,
       "construction": 9,
       "financial": 8,
-      "media_entertainment": 8,
       "energy": 7,
       "healthcare": 6,
       "logistics": 6,
@@ -627,7 +623,7 @@
       "chemical_industries": 4,
       "extraction": 3,
       "technology": 2,
-      "media": 2
+      "media": 10
     }
   },
   "COUNTRY_TO_ISO_NUMERIC": {

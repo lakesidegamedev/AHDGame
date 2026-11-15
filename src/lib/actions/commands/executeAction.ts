@@ -93,7 +93,7 @@ export interface ExecuteCharacterActionParams {
 
 export type ExecuteCharacterActionResult =
   | { ok: true; updatedCharacter: Character; message: string }
-  | { ok: false; error: string; status: number };
+  | { ok: false; error: string; status: number; code?: string };
 
 /**
  * Execute a political action (optionally batched) against a character and apply
@@ -146,7 +146,8 @@ async function executeCharacterActionImpl(
   } = params;
 
   const action = ACTIONS[actionType];
-  if (!action) return { ok: false, error: "Invalid action type", status: 400 };
+  if (!action)
+    return { ok: false, error: "Invalid action type", status: 400, code: "invalid_action_type" };
 
   const forexEnabled = await isForexEnabled();
   let dbStartedAt = Date.now();
@@ -179,7 +180,7 @@ async function executeCharacterActionImpl(
   // executable during a pause, letting a player mint an unbounded campaign war-chest
   // with no turns, competition, or other money flows running.
   if (gameState && gameState.isActive === false) {
-    return { ok: false, error: "The game is currently paused.", status: 409 };
+    return { ok: false, error: "The game is currently paused.", status: 409, code: "game_paused" };
   }
 
   dbStartedAt = Date.now();
@@ -214,7 +215,7 @@ async function executeCharacterActionImpl(
     state = await statesCollection(db).findOne({ _id: stateId, countryId: character.countryId });
     timing.dbReadMs += Date.now() - dbStartedAt;
     if (action.requiresState && !state) {
-      return { ok: false, error: "Invalid state", status: 400 };
+      return { ok: false, error: "Invalid state", status: 400, code: "invalid_state" };
     }
   }
 
@@ -245,7 +246,7 @@ async function executeCharacterActionImpl(
         stoppedReason = "Character not found";
         break;
       }
-      return { ok: false, error: "Character not found", status: 404 };
+      return { ok: false, error: "Character not found", status: 404, code: "character_not_found" };
     }
 
     const actionCost = getActionPointCost(current, actionType);
@@ -262,7 +263,12 @@ async function executeCharacterActionImpl(
         stoppedReason = validation.reason ?? "Action not allowed";
         break;
       }
-      return { ok: false, error: validation.reason ?? "Action not allowed", status: 400 };
+      return {
+        ok: false,
+        error: validation.reason ?? "Action not allowed",
+        status: 400,
+        code: validation.code ?? "action_not_allowed",
+      };
     }
 
     if (actionType === "convertCash") {
@@ -272,7 +278,12 @@ async function executeCharacterActionImpl(
       const homeCcy = getHomeCurrency(current);
       const cash = getPersonalBalance(current, homeCcy, forexEnabled);
       if (!convertAmount || convertAmount <= 0) {
-        return { ok: false, error: "You must specify an amount to convert.", status: 400 };
+        return {
+          ok: false,
+          error: "You must specify an amount to convert.",
+          status: 400,
+          code: "convert_amount_missing",
+        };
       }
       if (convertAmount > cash) {
         const error = `Amount exceeds liquid ${homeCcy} cash on hand. Available: ${cash.toLocaleString()}. Withdraw savings first if needed.`;
@@ -280,7 +291,7 @@ async function executeCharacterActionImpl(
           stoppedReason = error;
           break;
         }
-        return { ok: false, error, status: 400 };
+        return { ok: false, error, status: 400, code: "convert_exceeds_cash" };
       }
     }
 
@@ -298,7 +309,7 @@ async function executeCharacterActionImpl(
           stoppedReason = quote.error;
           break;
         }
-        return { ok: false, error: quote.error, status: 400 };
+        return { ok: false, error: quote.error, status: 400, code: "quote_rejected" };
       }
     }
 
@@ -329,7 +340,7 @@ async function executeCharacterActionImpl(
           stoppedReason = quote.error;
           break;
         }
-        return { ok: false, error: quote.error, status: 400 };
+        return { ok: false, error: quote.error, status: 400, code: "quote_rejected" };
       }
       const convertedLocal = quote.convertedLocal;
       const fundsChangeAnchor =
@@ -426,6 +437,7 @@ async function executeCharacterActionImpl(
           ok: false,
           error: "Your advertising funds or action points changed before the order was funded.",
           status: 409,
+          code: "resources_changed",
         };
       }
       effect = {
@@ -533,7 +545,7 @@ async function executeCharacterActionImpl(
         stoppedReason = error;
         break;
       }
-      return { ok: false, error, status: 409 };
+      return { ok: false, error, status: 409, code: "resources_changed" };
     }
 
     completed += 1;
@@ -625,7 +637,7 @@ async function executeCharacterActionImpl(
 
   if (!updatedCharacter) {
     // count < 1 guard — should not happen (route validates count >= 1).
-    return { ok: false, error: "No action was executed.", status: 400 };
+    return { ok: false, error: "No action was executed.", status: 400, code: "nothing_executed" };
   }
 
   let message = buildBatchResultMessage(

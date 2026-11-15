@@ -128,14 +128,7 @@ describe("laborIntensity strategy awareness (build preview staffing)", () => {
     );
     expect(strategyRpu).toBeGreaterThan(0);
     expect(
-      laborIntensity(
-        "manufacturing",
-        CAPACITY_ANCHOR_YEAR,
-        1,
-        null,
-        null,
-        "vehicle_heavy_machinery"
-      )
+      laborIntensity("manufacturing", CAPACITY_ANCHOR_YEAR, 1, "vehicle_heavy_machinery")
     ).toBeCloseTo(strategyRpu / CAPACITY_REVENUE_PER_WORKER, 9);
   });
 
@@ -147,18 +140,9 @@ describe("laborIntensity strategy awareness (build preview staffing)", () => {
       "manufacturing",
       CAPACITY_ANCHOR_YEAR,
       1,
-      null,
-      null,
       "vehicle_heavy_machinery"
     );
-    const standard = laborIntensity(
-      "manufacturing",
-      CAPACITY_ANCHOR_YEAR,
-      1,
-      null,
-      null,
-      "standard"
-    );
+    const standard = laborIntensity("manufacturing", CAPACITY_ANCHOR_YEAR, 1, "standard");
     expect(heavy).toBeGreaterThan(standard);
     expect(heavy / standard).toBeCloseTo(
       revenuePerCapacityUnitForStrategy("manufacturing", "vehicle_heavy_machinery", 1) /
@@ -169,33 +153,23 @@ describe("laborIntensity strategy awareness (build preview staffing)", () => {
 
   it("falls back to the default-strategy rate with no strategy or an unknown one", () => {
     const standard = laborIntensity("manufacturing", CAPACITY_ANCHOR_YEAR, 1);
-    expect(laborIntensity("manufacturing", CAPACITY_ANCHOR_YEAR, 1, null, null, null)).toBeCloseTo(
+    expect(laborIntensity("manufacturing", CAPACITY_ANCHOR_YEAR, 1, null)).toBeCloseTo(
       standard,
       12
     );
-    expect(
-      laborIntensity("manufacturing", CAPACITY_ANCHOR_YEAR, 1, null, null, "standard")
-    ).toBeCloseTo(standard, 12);
+    expect(laborIntensity("manufacturing", CAPACITY_ANCHOR_YEAR, 1, "standard")).toBeCloseTo(
+      standard,
+      12
+    );
     // Unknown ids resolve to the sector's standard method inside getStrategy.
-    expect(
-      laborIntensity("manufacturing", CAPACITY_ANCHOR_YEAR, 1, null, null, "not_a_strategy")
-    ).toBeCloseTo(standard, 12);
+    expect(laborIntensity("manufacturing", CAPACITY_ANCHOR_YEAR, 1, "not_a_strategy")).toBeCloseTo(
+      standard,
+      12
+    );
   });
 });
 
 describe("identity B (price): ₳ per unit/day of capacity", () => {
-  it("prices canonical entertainment capacity from the legacy entertainment recipe", () => {
-    expect(defaultSupplyRates("media", null, "entertainment")).toEqual(
-      defaultSupplyRates("media_entertainment")
-    );
-    expect(revenuePerCapacityUnit("media", 1, null, "entertainment")).toBeCloseTo(
-      revenuePerCapacityUnit("media_entertainment", 1)
-    );
-    expect(
-      capacityPricePerUnit("media", CAPACITY_ANCHOR_YEAR, 1, null, null, "entertainment")
-    ).toBeCloseTo(capacityPricePerUnit("media_entertainment", CAPACITY_ANCHOR_YEAR, 1, null));
-  });
-
   it.each(ANCHOR_SECTORS)(
     "%s at the anchor year equals the legacy growth charge ÷ the capacity it buys",
     (type) => {

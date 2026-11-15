@@ -1,8 +1,5 @@
-import {
-  getEraComposition,
-  getEraPositions,
-  demographicCategories,
-} from "@/lib/seeds/demographicCategories";
+import { getEraComposition, getEraPositions } from "@/lib/seeds/demographicCategories";
+import { demographicCategories } from "./groupModelCategories";
 import {
   deriveGroupPopulations,
   deriveGroupTurnout,

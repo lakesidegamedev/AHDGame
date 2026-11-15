@@ -690,6 +690,17 @@ function failureCode(status: number): string {
   return "request_failed";
 }
 
+const FAILURE_REASON = /^[A-Za-z][A-Za-z0-9_]{1,47}$/;
+
+/**
+ * The response's machine code (`code`, from the shared error envelope), never its
+ * message. Messages can carry names and balances; codes are fixed identifiers.
+ */
+export function failureReason(responseBody: Record<string, unknown> | null): string {
+  const code = responseBody?.code;
+  return typeof code === "string" && FAILURE_REASON.test(code) ? code.toLowerCase() : "unknown";
+}
+
 function safeElectionType(responseBody: Record<string, unknown> | null): string {
   const nested = responseBody?.election;
   const value =
@@ -957,12 +968,10 @@ async function trackActionResponse(
   };
 
   let resultBody: Record<string, unknown> | null = null;
-  if (response.ok) {
-    try {
-      resultBody = await response.json();
-    } catch {
-      // Mutation endpoints may return no JSON body.
-    }
+  try {
+    resultBody = await response.json();
+  } catch {
+    // Mutation endpoints may return no JSON body.
   }
 
   if (!current()) return;
@@ -971,6 +980,7 @@ async function trackActionResponse(
       ...base,
       ...operationProperties,
       failure_code: response.ok ? "action_rejected" : failureCode(response.status),
+      failure_reason: failureReason(resultBody),
     });
     return;
   }

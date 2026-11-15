@@ -16,7 +16,7 @@ describe("seedSlowQueryIndexes", () => {
     ensureIndexMock.mockReset();
   });
 
-  it("creates the GlitchTip slow-query field-filter indexes (issue #3343)", async () => {
+  it("creates the slow-query field-filter indexes (issue #3343)", async () => {
     const db = {} as unknown as Db;
     await seedSlowQueryIndexes(db, vi.fn());
 

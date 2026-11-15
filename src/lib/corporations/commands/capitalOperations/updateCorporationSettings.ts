@@ -17,11 +17,9 @@ import {
   TYPE_SWITCH_PENALTY_TURNS,
   CEO_SALARY_MAX_REVENUE_MULTIPLE,
   CORP_OVERHEAD_MAX_REVENUE_MULTIPLE,
-  operatingSectorIdentity,
   type OperatingSectorType,
 } from "@/lib/constants/corporations";
 import { migrateUnlockedTechOnPrimaryTypeSwitch } from "@/lib/corporations/techTree/migrateUnlocksOnTypeSwitch";
-import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
 import { STARTING_YEAR, TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import type { CorporateSector } from "@/lib/db/types";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
@@ -221,22 +219,9 @@ export async function updateCorporationSettings(request: Request, { params }: Ro
     let techUnset: Record<string, ""> | undefined;
     let techInc: Record<string, number> | undefined;
     // Type switching (primary or secondary) — enforce cooldown and apply penalty.
-    // Both are operating lanes: picking the vehicles or entertainment lane is a
-    // switch even though the stored corporation type stays the same.
-    const currentLane = getOperatingSectorType(
-      corporation.type,
-      corporation.industryModel,
-      corporation.mediaDiscriminator
-    );
+    const currentLane = corporation.type;
     const applyPrimaryLane = (lane: OperatingSectorType) => {
-      const identity = operatingSectorIdentity(lane);
-      updates.type = identity.sectorType;
-      if (identity.industryModel) updates.industryModel = identity.industryModel;
-      else if (corporation.industryModel) techUnset = { ...(techUnset ?? {}), industryModel: "" };
-      if (identity.mediaDiscriminator) updates.mediaDiscriminator = identity.mediaDiscriminator;
-      else if (corporation.mediaDiscriminator) {
-        techUnset = { ...(techUnset ?? {}), mediaDiscriminator: "" };
-      }
+      updates.type = lane;
     };
     const isTypeChange =
       (primaryType !== undefined && primaryType !== currentLane) ||

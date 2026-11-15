@@ -5,7 +5,7 @@
  * earlier in the same pass.
  */
 import type { Db } from "mongodb";
-import { getOperatingSectorType, getStrategy } from "@/lib/constants/sectorStrategies";
+import { getStrategy } from "@/lib/constants/sectorStrategies";
 import { bucketKey } from "@/lib/market/marketBuckets";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import { addDemandClaim, isStateServiceSupplyMix } from "@/lib/turn/npp/rules/demandClaims";
@@ -14,15 +14,13 @@ export interface DemandClaimCell {
   stateId: string;
   countryId: string;
   sectorType: string;
-  industryModel?: string | null;
-  mediaDiscriminator?: string | null;
 }
 
 /** Ledger key: the bucket for local service lanes, country and lane for the rest. */
 export function demandClaimKeyOf(cell: DemandClaimCell): string {
-  const lane = getOperatingSectorType(cell.sectorType, cell.industryModel, cell.mediaDiscriminator);
+  const lane = cell.sectorType;
   return isStateServiceSupplyMix(getStrategy(lane, "").supply)
-    ? bucketKey(cell.stateId, cell.sectorType, cell.industryModel, cell.mediaDiscriminator)
+    ? bucketKey(cell.stateId, cell.sectorType)
     : `${cell.countryId}|${lane}`;
 }
 
@@ -43,8 +41,6 @@ export async function loadInFlightDemandClaims(
           stateId: 1,
           countryId: 1,
           sectorType: 1,
-          industryModel: 1,
-          mediaDiscriminator: 1,
           "buildQueue.unitsOrdered": 1,
         },
       }

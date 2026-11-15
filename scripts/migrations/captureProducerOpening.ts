@@ -13,7 +13,7 @@ import {
   type ExistingWorldProducerOpening,
 } from "@/lib/market/producerMarket/migrationRules";
 import { COMMODITY_BASE_PRICES, COMMODITY_TYPES } from "@/lib/constants/commodities";
-import { getEffectiveStrategyRatesForOperatingModel } from "@/lib/constants/sectorStrategies";
+import { getEffectiveStrategyRates } from "@/lib/constants/sectorStrategies";
 import { resolveCorpLiquidCurrencyCode } from "@/lib/currency/corporationCapital";
 import { isStateScopedCommodity } from "@/lib/market/rules/commodityMarketScope";
 import { isStorable } from "@/lib/market/inventory";
@@ -175,25 +175,21 @@ export async function captureProducerOpening(
         const ownerId = String(sector.corporationId);
         const owner: any = corporationsById.get(ownerId);
         if (!owner) blockers.push(`missing-owner:${id}`);
-        const strategy = getEffectiveStrategyRatesForOperatingModel(
+        const strategy = getEffectiveStrategyRates(
           sector.sectorType,
           sector.strategyId ?? "standard",
           sector.transitionFromStrategyId,
           sector.transitionStartTurn,
           before.currentTurn,
-          sector.industryModel,
-          sector.mediaDiscriminator,
           preset,
           gameConfig?.hardwareInputReliefStartTurn
         );
-        const finalStrategy = getEffectiveStrategyRatesForOperatingModel(
+        const finalStrategy = getEffectiveStrategyRates(
           sector.sectorType,
           sector.strategyId ?? "standard",
           null,
           null,
           before.currentTurn,
-          sector.industryModel,
-          sector.mediaDiscriminator,
           preset,
           gameConfig?.hardwareInputReliefStartTurn
         );
@@ -458,8 +454,6 @@ async function captureSource(db: import("mongodb").Db) {
     countryId: 1,
     stateId: 1,
     sectorType: 1,
-    industryModel: 1,
-    mediaDiscriminator: 1,
     strategyId: 1,
     transitionFromStrategyId: 1,
     transitionStartTurn: 1,

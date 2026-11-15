@@ -31,12 +31,6 @@ describe("industry conversion at book value", () => {
     });
   });
 
-  it("maps composite lanes to their persisted identity", () => {
-    const result = industryConversionFields(media, "manufacturing_vehicles");
-    if (!result.ok) throw new Error(result.reason);
-    expect(result.set).toMatchObject({ sectorType: "manufacturing", industryModel: "vehicles" });
-  });
-
   it("refuses a conversion into the same lane", () => {
     expect(industryConversionFields(media, "media").ok).toBe(false);
   });

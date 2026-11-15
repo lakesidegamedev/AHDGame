@@ -18,8 +18,6 @@ import {
   OPERATING_SECTOR_TYPE_LABELS,
   type CorporationType,
   type OperatingSectorType,
-  operatingSectorFilter,
-  type ManufacturingIndustryModel,
 } from "@/lib/constants/corporations";
 import { getNationalDocId } from "@/lib/constants/nationalScope";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
@@ -79,10 +77,8 @@ import { collectiveAgreementsCollection } from "@/lib/db/repositories/collective
 
 /** Crisis actions name an operating lane; rows store its identity. */
 function laneFilter(sectorType: string) {
-  return operatingSectorFilter(sectorType) as {
+  return { sectorType: sectorType } as {
     sectorType: CorporationType;
-    industryModel?: ManufacturingIndustryModel | null;
-    mediaDiscriminator?: "entertainment" | null;
   };
 }
 

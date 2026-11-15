@@ -373,7 +373,7 @@ export function CorporationMasthead({
       {(ceoIsInactive || nationalizationRisk || threatActive) && (
         <div className="space-y-2">
           {ceoIsInactive && (
-            <div title="The CEO has not been online in over 72 hours. 10% of each sector's revenue and workforce moves to the unowned-sector pool each turn until they return.">
+            <div title="The CEO has not been online in over 72 hours. 10% of each sector's plant capacity is shed each turn until they return.">
               <NoticeStrip tone="warning" tag="Inactive CEO">
                 Inactive CEO: shedding 10% of each sector per turn until they return.
               </NoticeStrip>

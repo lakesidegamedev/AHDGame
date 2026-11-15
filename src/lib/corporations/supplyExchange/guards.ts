@@ -150,8 +150,6 @@ export const REACH_SECTOR_PROJECTION = {
   strategyId: 1,
   transitionFromStrategyId: 1,
   transitionStartTurn: 1,
-  industryModel: 1,
-  mediaDiscriminator: 1,
 } as const;
 
 /**

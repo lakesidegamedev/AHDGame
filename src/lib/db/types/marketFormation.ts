@@ -38,8 +38,6 @@ export interface NppMarketEntryDiagnostic {
   strategyAllowsExpansion: boolean;
   targetStateId?: string;
   targetSectorType?: CorporationType;
-  targetIndustryModel?: string | null;
-  targetMediaDiscriminator?: string | null;
   targetUnmetDemandUnits?: number;
   starterUnits?: number;
   shortageScore?: number;

@@ -10,7 +10,6 @@ function project(overrides: Partial<MediaProductProject> = {}): MediaProductProj
     corporationId: "corp-1",
     activeDevelopmentCorporationId: "corp-1",
     sectorId: "sector-1",
-    operatingSectorType: "media",
     kindId: "newspaper_edition",
     title: "Daily Record",
     allocationShare: 0.5,

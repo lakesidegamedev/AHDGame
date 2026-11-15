@@ -6,6 +6,7 @@ import { getPartyTextColor, getPartyLabel } from "@/lib/utils/politics";
 import { formatDate } from "@/lib/utils/formatters";
 import { ResponsiveTable, type ResponsiveTableColumn } from "@/components/ui";
 import { Pagination } from "@/components/admin/Pagination";
+import { APPLE_EXEMPT_LABEL } from "@/lib/admin/appleLink";
 import { ACTION_BTN, getLatestNoteText, type UserData } from "./types";
 
 interface UsersTableProps {
@@ -138,6 +139,28 @@ export function UsersTable({
         ) : (
           <span className="text-muted text-xs">--</span>
         ),
+      hideOnMobile: true,
+    },
+    {
+      key: "discord",
+      header: "Discord",
+      render: (u) => (
+        <div className="flex flex-wrap items-center gap-1.5">
+          {u.discordUsername || u.discordId ? (
+            <span className="text-xs text-muted">{u.discordUsername ?? "Linked"}</span>
+          ) : (
+            <span className="text-xs text-muted">--</span>
+          )}
+          {u.appleLinked && (
+            <span
+              className="rounded bg-slate-500/25 px-1.5 py-0.5 text-xs font-medium text-slate-300"
+              title={APPLE_EXEMPT_LABEL}
+            >
+              Apple
+            </span>
+          )}
+        </div>
+      ),
       hideOnMobile: true,
     },
     {

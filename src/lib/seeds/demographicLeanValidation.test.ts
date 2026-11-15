@@ -1,5 +1,5 @@
 /**
- * Validate voter archetype composition and derived state leans against 2020 election data.
+ * Validate voter group composition and derived state leans against 2020 election data.
  *
  * The demographic model produces compressed leans (≈ -1.0 to +2.0) compared to
  * actual 2020 margins (≈ -5 to +4.3). This is structural: averaging 12 groups with
@@ -15,7 +15,8 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { demographicCategories, VOTER_GROUP_COMPOSITION } from "../seeds/demographicCategories";
+import { VOTER_GROUP_COMPOSITION } from "../seeds/demographicCategories";
+import { demographicCategories } from "./calibration/groupModelCategories";
 import { stateDemographics, stateCensusData } from "../seeds/stateDemographics";
 import { calculateStateLean } from "../utils/demographics";
 import { ELECTION_2020_MARGIN, marginToLean } from "../data/2020ElectionResults";

@@ -23,7 +23,7 @@ const SUGGESTION_CATEGORIES = [
   {
     id: "market-opportunity",
     label: "Market opportunities",
-    description: "Unowned sector splits, national expansion",
+    description: "Untapped markets, national expansion",
   },
   { id: "competitive", label: "Competitive", description: "Low market share vs competitors" },
   { id: "party", label: "Party", description: "GOTV, org building, vacant positions" },

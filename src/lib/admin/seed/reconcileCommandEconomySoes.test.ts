@@ -138,8 +138,6 @@ describe("reconcileCommandEconomySoes", () => {
     expect(db.collectionMocks.corporateSectors.deleteMany).toHaveBeenCalledWith({
       countryId: "DD",
       sectorType: "manufacturing",
-      industryModel: null,
-      mediaDiscriminator: null,
       stateId: { $in: ["SN"] },
       corporationId: { $ne: existingCorpId },
     });

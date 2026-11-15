@@ -2,7 +2,6 @@ import { corporateDiscretionaryCashGuard } from "@/lib/corporations/rules/discre
 import { requireSpendableCorporateCash } from "@/lib/api/corporations/requireSpendableCash";
 import { rejectWhileTurnProcessing } from "./turnGuard";
 import { loadWholePlantsOn } from "@/lib/corporations/wholePlants/stage";
-import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
 import { NextResponse } from "next/server";
 import type { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
@@ -26,7 +25,6 @@ import {
   DEFAULT_PROFIT_MARGIN,
   DEFAULT_SECTOR_STARTING_REVENUE,
   DEFAULT_SECTOR_STARTING_WORKERS,
-  operatingSectorIdentity,
 } from "@/lib/constants/corporations";
 import {
   capacityRescaleRatio,
@@ -134,13 +132,9 @@ export async function expandSector(request: Request, { params }: RouteParams) {
     // are a soft economic penalty, not a hard gate. When no type is requested we
     // default to the corp's primary lane. A lane carries its identity: the
     // vehicles lane opens a manufacturing sector with the vehicles model.
-    const corporationLane = getOperatingSectorType(
-      corporation.type,
-      corporation.industryModel,
-      corporation.mediaDiscriminator
-    );
+    const corporationLane = corporation.type;
     const lane = plantsEnabled ? (requestedSectorType ?? corporationLane) : corporationLane;
-    const { sectorType, industryModel, mediaDiscriminator } = operatingSectorIdentity(lane);
+    const sectorType = lane;
 
     // Check the state exists. NOT scoped to the corp's home country: founding
     // abroad is allowed, and the whole command downstream is built for it — the
@@ -171,8 +165,6 @@ export async function expandSector(request: Request, { params }: RouteParams) {
             corporationId: corporation._id,
             stateId,
             sectorType,
-            industryModel,
-            mediaDiscriminator,
           }
         : { corporationId: corporation._id, stateId }
     );
@@ -222,12 +214,7 @@ export async function expandSector(request: Request, { params }: RouteParams) {
       STARTING_YEAR + Math.floor((Math.max(1, gameState?.currentTurn ?? 0) - 1) / TURNS_PER_YEAR);
     // Tech effects scoped to the lane being founded, exactly as `buildCapacity`
     // scopes every later build in it, and as the picker quotes.
-    const techEffects = await loadFoundingTechEffects(
-      db,
-      corporation,
-      { sectorType, industryModel, mediaDiscriminator },
-      quoteYear
-    );
+    const techEffects = await loadFoundingTechEffects(db, corporation, sectorType, quoteYear);
     const baseExpansionCost = sectorEntryFeeAnchor(worldPreset, techEffects.expansionDiscount);
 
     // ─── Plants: founding a sector is a FIRST BUILD, not a free grant ─────────
@@ -274,15 +261,13 @@ export async function expandSector(request: Request, { params }: RouteParams) {
           corporationId: corporation._id,
           countryId: state.countryId as CountryId,
           sectorType,
-          industryModel,
-          mediaDiscriminator,
         }),
       ]);
 
       // One facility quantum, the honest "first plant", priced through the
       // same quote the expansion picker shows.
       const quote = quoteFoundingEntry({
-        identity: { sectorType, industryModel, mediaDiscriminator },
+        sectorType,
         preset: worldPreset,
         currentYear: quoteYear,
         eraUnitScale,
@@ -345,8 +330,7 @@ export async function expandSector(request: Request, { params }: RouteParams) {
     // revenue-per-unit at the default mix, the figure the plants restatement
     // converges to.
     const startingRevenueAnchor = plantsEnabled
-      ? starterUnits *
-        revenuePerCapacityUnit(sectorType, eraUnitScale, industryModel, mediaDiscriminator)
+      ? starterUnits * revenuePerCapacityUnit(sectorType, eraUnitScale)
       : DEFAULT_SECTOR_STARTING_REVENUE;
     const startingRevenueLocal = Math.round(
       writeCorpEconomicLocal(
@@ -364,8 +348,6 @@ export async function expandSector(request: Request, { params }: RouteParams) {
       countryId: state.countryId,
       stateId,
       sectorType,
-      ...(industryModel ? { industryModel } : {}),
-      ...(mediaDiscriminator ? { mediaDiscriminator } : {}),
       targetGrowthRate: 0,
       currentGrowthRate: 0,
       currentGrowthCost: 0,
@@ -428,13 +410,7 @@ export async function expandSector(request: Request, { params }: RouteParams) {
       if (newSector.buildQueue) {
         newSector.buildQueue = rescaleBuildQueueForStrategyChange(
           newSector.buildQueue,
-          capacityRescaleRatio(
-            sectorType,
-            null,
-            foundingSuccessor,
-            industryModel,
-            mediaDiscriminator
-          )
+          capacityRescaleRatio(sectorType, null, foundingSuccessor)
         );
       }
     }
@@ -501,7 +477,6 @@ export async function expandSector(request: Request, { params }: RouteParams) {
           createdAt: now,
           sectorId: newSectorId,
           sectorType,
-          ...(industryModel ? { industryModel } : {}),
           units: starterUnits,
           meta: { founding: true, onlineTurn: starterOnlineTurn },
         }).catch((err) => {

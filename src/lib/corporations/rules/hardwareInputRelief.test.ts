@@ -28,7 +28,6 @@ describe("hardware input relief", () => {
       null,
       231,
       undefined,
-      undefined,
       219
     );
     expect(next.supply).toEqual(old.supply);
@@ -37,40 +36,13 @@ describe("hardware input relief", () => {
     }
   });
   it("blends the relieved hardware leg during transitions in both directions", () => {
-    const hw = getEffectiveStrategyRates(
-      "technology",
-      "hardware",
-      null,
-      null,
-      231,
-      undefined,
-      undefined,
-      219
-    );
-    const sw = getEffectiveStrategyRates(
-      "technology",
-      "software",
-      null,
-      null,
-      231,
-      undefined,
-      undefined,
-      219
-    );
+    const hw = getEffectiveStrategyRates("technology", "hardware", null, null, 231, undefined, 219);
+    const sw = getEffectiveStrategyRates("technology", "software", null, null, 231, undefined, 219);
     for (const [to, from] of [
       ["hardware", "software"],
       ["software", "hardware"],
     ]) {
-      const next = getEffectiveStrategyRates(
-        "technology",
-        to!,
-        from!,
-        225,
-        231,
-        undefined,
-        undefined,
-        219
-      );
+      const next = getEffectiveStrategyRates("technology", to!, from!, 225, 231, undefined, 219);
       expect(next.demand.energy).toBeCloseTo(
         ((hw.demand.energy ?? 0) + (sw.demand.energy ?? 0)) / 2
       );

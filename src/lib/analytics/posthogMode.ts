@@ -37,12 +37,21 @@ export function anonymousPostHogConfig(): Partial<PostHogConfig> {
   };
 }
 
+/** Launch week of the 2027 world records more first sessions; then back to the base rate. */
+export const LAUNCH_REPLAY_SAMPLE_RATE = 0.33;
+export const BASE_REPLAY_SAMPLE_RATE = 0.1;
+export const LAUNCH_REPLAY_ENDS_AT = Date.parse("2026-11-23T05:00:00Z");
+
+export function replaySampleRate(now: number = Date.now()): number {
+  return now < LAUNCH_REPLAY_ENDS_AT ? LAUNCH_REPLAY_SAMPLE_RATE : BASE_REPLAY_SAMPLE_RATE;
+}
+
 /** The consented setup: identified events and sampled, masked replay. */
-export function fullPostHogConfig(): Partial<PostHogConfig> {
+export function fullPostHogConfig(now: number = Date.now()): Partial<PostHogConfig> {
   return {
     ...COMMON,
     session_recording: {
-      sampleRate: 0.1,
+      sampleRate: replaySampleRate(now),
       maskAllInputs: true,
       recordHeaders: false,
       recordBody: false,

@@ -15,32 +15,8 @@ export function getSectorOperatingCountryId(
   return stateCountryByStateId.get(sector.stateId) ?? sector.countryId;
 }
 
-/** Lane criteria apply to owned sectors and their unowned market buckets. */
-export type SectorLaneQuery = Pick<CorporateSector, "sectorType"> & {
-  industryModel: CorporateSector["industryModel"] | null;
-  mediaDiscriminator: CorporateSector["mediaDiscriminator"] | null;
-};
-
-export function getCorporateSectorLaneQuery(
-  sector: Pick<CorporateSector, "sectorType" | "industryModel" | "mediaDiscriminator">
-): SectorLaneQuery {
-  return {
-    sectorType: sector.sectorType,
-    industryModel: sector.industryModel ?? null,
-    mediaDiscriminator: sector.mediaDiscriminator ?? null,
-  };
-}
-
 export function getCorporateSectorLocationKey(
-  sector: Pick<
-    CorporateSector,
-    | "corporationId"
-    | "stateId"
-    | "sectorType"
-    | "industryModel"
-    | "mediaDiscriminator"
-    | "countryId"
-  >,
+  sector: Pick<CorporateSector, "corporationId" | "stateId" | "sectorType" | "countryId">,
   stateCountryByStateId: ReadonlyMap<string, CountryId>
 ): string {
   return [
@@ -48,8 +24,6 @@ export function getCorporateSectorLocationKey(
     getSectorOperatingCountryId(sector, stateCountryByStateId),
     sector.stateId,
     sector.sectorType,
-    sector.industryModel ?? "",
-    sector.mediaDiscriminator ?? "",
   ].join(":");
 }
 
@@ -58,11 +32,7 @@ export function isCorporateSectorDuplicateKey(error: unknown): error is MongoSer
     error instanceof MongoServerError &&
     error.code === 11000 &&
     (!!error.keyPattern?.corporationId ||
-      /\bcorporationId_1_stateId_1_sectorType_1(?:_industryModel_1)?(?:_mediaDiscriminator_1)?\b/.test(
-        error.message
-      ) ||
-      /\bcorporateSectors_corporationId_stateId_sectorType(?:_industryModel)?(?:_mediaDiscriminator)?\b/.test(
-        error.message
-      ))
+      /\bcorporationId_1_stateId_1_sectorType_1\b/.test(error.message) ||
+      /\bcorporateSectors_corporation_state_type_unique\b/.test(error.message))
   );
 }

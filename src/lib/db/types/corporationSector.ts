@@ -1,10 +1,6 @@
 import type { ObjectId } from "mongodb";
 import type { SoeMandate } from "./corporation";
-import type {
-  CorporationType,
-  ManufacturingIndustryModel,
-  MediaDiscriminator,
-} from "../../constants/corporations";
+import type { CorporationType } from "../../constants/corporations";
 import type { CountryId } from "../../constants/countries";
 import type { ExtractableResource } from "../../constants/commodities";
 
@@ -138,10 +134,6 @@ export interface CorporateSector {
   countryId: CountryId;
   stateId: string;
   sectorType: CorporationType;
-  /** Optional production model for a specialized manufacturing industry. */
-  industryModel?: ManufacturingIndustryModel | null;
-  /** Preserves entertainment's legacy operating lane inside canonical media. */
-  mediaDiscriminator?: MediaDiscriminator | null;
   /** Optional CEO-defined display name for this specific sector instance */
   displayName?: string;
   /** Player-set target growth rate (% per game year, 48 turns, e.g. 1.5) */
@@ -816,11 +808,6 @@ export interface CorporateSector {
    * the boundary and only needs the opex-anchor heal.
    */
   retoolRescaleApplied?: boolean;
-  /**
-   * Set once the entertainment commodity removal rescaled this sector's owned
-   * units onto the advertising basis (migrateEntertainmentRemoval).
-   */
-  entertainmentRemovalRescaleApplied?: boolean;
   /** Turn after which a new strategy change is allowed (transition end + cooldown) */
   transitionCooldownUntilTurn?: number | null;
   /**

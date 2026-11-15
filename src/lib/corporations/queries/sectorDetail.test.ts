@@ -27,7 +27,6 @@ describe("getCorporationSectorDetail", () => {
       sequentialId: 6,
       name: "Vehicle Corp",
       type: "manufacturing",
-      industryModel: "vehicles",
       countryId: "US",
       liquidCurrencyCode: "USD",
     });
@@ -37,7 +36,6 @@ describe("getCorporationSectorDetail", () => {
       stateId: "MI",
       countryId: "US",
       sectorType: "manufacturing",
-      industryModel: "vehicles",
       strategyId: "standard",
       revenue: 1_000_000,
     });
@@ -51,7 +49,6 @@ describe("getCorporationSectorDetail", () => {
     expect(response.status).toBe(200);
     expect(data.sector).toMatchObject({
       sectorType: "manufacturing",
-      industryModel: "vehicles",
     });
     expect(db.collectionMocks.sourcingNetworkLoad).toBeUndefined();
   });

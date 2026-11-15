@@ -28,9 +28,8 @@ export const ECONOMY_RESET_FUND_MIGRATIONS: readonly string[] = Object.freeze([
   "2026-09-03-equity-market-pools",
 ]);
 
-/** Model and media-lane unique keys that must exist before seeders write markets. */
+/** Unique keys that must exist before seeders write unions. */
 export const ECONOMY_RESET_INDEX_MIGRATIONS: readonly string[] = Object.freeze([
-  "2026-10-04-media-discriminator-market-indexes",
   // The wipe drops the union collections (and their indexes), and seedIndexes
   // has no union module, so the union-specific migrations must rebuild these
   // guards before reseedUnions and the rebuilt labour economy write to them.

@@ -131,7 +131,6 @@ function buildCorpVolumeRows(
       | "_id"
       | "name"
       | "type"
-      | "industryModel"
       | "sequentialId"
       | "logoUrl"
       | "countryId"
@@ -148,12 +147,7 @@ function buildCorpVolumeRows(
         corpId,
         name: corp?.name ?? "Unknown",
         type: corp?.type,
-        industryModel: corp?.industryModel,
-        typeLabel: corp?.type
-          ? corp.type === "manufacturing" && corp.industryModel === "vehicles"
-            ? "Vehicle manufacturing"
-            : OPERATING_SECTOR_TYPE_LABELS[corp.type]
-          : undefined,
+        typeLabel: corp?.type ? OPERATING_SECTOR_TYPE_LABELS[corp.type] : undefined,
         sequentialId: corp?.sequentialId,
         logoUrl: corp?.logoUrl,
         units: Math.round(units * 100) / 100,
@@ -237,7 +231,6 @@ export async function getCommodityDetailData(
       | "_id"
       | "name"
       | "type"
-      | "industryModel"
       | "sequentialId"
       | "logoUrl"
       | "countryId"
@@ -258,7 +251,6 @@ export async function getCommodityDetailData(
               | "_id"
               | "name"
               | "type"
-              | "industryModel"
               | "sequentialId"
               | "logoUrl"
               | "countryId"
@@ -271,7 +263,6 @@ export async function getCommodityDetailData(
             _id: 1,
             name: 1,
             type: 1,
-            industryModel: 1,
             sequentialId: 1,
             logoUrl: 1,
             countryId: 1,
@@ -429,10 +420,7 @@ export async function getCommodityDetailData(
                   corpId: corp._id.toString(),
                   name: corp.name,
                   type: corp.type,
-                  typeLabel:
-                    corp.type === "manufacturing" && corp.industryModel === "vehicles"
-                      ? "Vehicle manufacturing"
-                      : OPERATING_SECTOR_TYPE_LABELS[corp.type],
+                  typeLabel: OPERATING_SECTOR_TYPE_LABELS[corp.type],
                   sequentialId: corp.sequentialId,
                   logoUrl: corp.logoUrl,
                   headquartersState: corp.headquartersState,

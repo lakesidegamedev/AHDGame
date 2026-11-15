@@ -305,7 +305,6 @@ export function buildSectorPlantsSection(args: {
   const tollModels = args.commodityTollModels ?? [];
   const oneUnitInputs = {
     sectorType,
-    industryModel: sector.industryModel,
     units: 1,
     // Must match what `buildCapacity` charges, or the quote a player sees is
     // 326.9x off the invoice for a rare-earth sector.
@@ -572,14 +571,7 @@ export function buildSectorPlantsSection(args: {
     workersDesired: num(sector.workersDesired) ?? workers,
     labourStaffingFactor: Math.max(0, Math.min(1, num(sector.labourStaffingFactor) ?? 1)),
     unionizationPct: num(sector.unionization) ?? 0,
-    laborIntensity: laborIntensity(
-      sectorType,
-      currentYear,
-      eraUnitScale,
-      sector.industryModel,
-      sector.mediaDiscriminator,
-      sector.strategyId
-    ),
+    laborIntensity: laborIntensity(sectorType, currentYear, eraUnitScale, sector.strategyId),
     governor: {
       active: governorTurnsRemaining > 0,
       startTurn: plantsStartTurn,

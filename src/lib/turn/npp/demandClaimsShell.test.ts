@@ -17,7 +17,7 @@ function fakeDb(queued: unknown[], reads: { count: number }): Db {
 
 describe("demandClaimKeyOf", () => {
   it("keys local service lanes per bucket and other lanes per country and lane", () => {
-    const base = { countryId: "US", industryModel: null, mediaDiscriminator: null };
+    const base = { countryId: "US" };
     expect(demandClaimKeyOf({ ...base, stateId: "CA", sectorType: "healthcare" })).toBe(
       "CA:healthcare"
     );

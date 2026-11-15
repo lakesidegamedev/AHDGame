@@ -2,7 +2,7 @@
  * Custom span helper for instrumenting game operations.
  *
  * Sentry spans are OpenTelemetry-compatible, so wrapping a block in `withSpan`
- * produces a trace segment visible in GlitchTip's Performance / trace view with
+ * produces a trace segment visible in the error tracker's Performance / trace view with
  * a duration, status, and structured tags/data — no separate OTel SDK needed.
  *
  * Usage:
@@ -24,7 +24,7 @@ const SPAN_STATUS_OK = 1 as const;
 const SPAN_STATUS_ERROR = 2 as const;
 
 export interface SpanOptions {
-  /** Indexed tags for filtering/grouping in GlitchTip (kept small + low-cardinality). */
+  /** Indexed tags for filtering/grouping in the error tracker (kept small + low-cardinality). */
   tags?: Record<string, string | number | boolean>;
   /** Structured data attributes attached to the span (higher cardinality is fine). */
   data?: Record<string, unknown>;

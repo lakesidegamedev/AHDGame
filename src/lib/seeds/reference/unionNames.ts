@@ -199,7 +199,7 @@ const NAMES_1999: UnionNameMap = {
  * 1991 era. Diffs from 1999:
  * - US: the union was formally the United Steelworkers of America; OCAW
  *   (merged away 1999) covers chemicals; IBEW stands in for technology and
- *   SAG (pre-AFTRA merger) for entertainment.
+ *   SAG (pre-AFTRA merger) for media.
  * - UK: AEEU formed 1992, so 1991 keeps the Amalgamated Engineering Union;
  *   CWU formed 1995, so telecoms is the National Communications Union
  *   (1985-1995); COHSE only merged into UNISON in 1993.
@@ -222,8 +222,7 @@ const NAMES_1999: UnionNameMap = {
  * - IE: Mandate (1994) and TEEU-successor names post-date 1991; IDATU and
  *   IBOA are era-correct, and construction falls back to the generic name.
  * - IT: SLC-CGIL formed 1996 (FILPT before); FLAI (1988), FILT (1980),
- *   FP (1980) and FISAC (1983) already exist. No era-correct entertainment
- *   federation is attestable, so it falls back to the generic name.
+ *   FP (1980) and FISAC (1983) already exist.
  */
 const NAMES_1991: UnionNameMap = {
   ...NAMES_1999,
@@ -250,11 +249,11 @@ const NAMES_1991: UnionNameMap = {
  *   farm workers were the NUAAW (renamed from NUAW in 1968); BECTU (1991)
  *   was the ACTT.
  * - DE: IG Medien formed 1989; printing/media was IG Druck und Papier and
- *   white-collar entertainment maps to DAG.
+ *   white-collar media maps to DAG.
  * - JP: Rengō formed 1989, so the peak body is Sōhyō. Sectorals founded by
  *   1979 (JAW 1972, Zensen Dōmei, Denki Rōren 1953, Zendentsū 1950, Tanrō
- *   1950, Iroren 1957, seamen 1945) are kept; no defensible-era aviation or
- *   entertainment union is attestable, so those fall back to generic names.
+ *   1950, Iroren 1957, seamen 1945) are kept; no defensible-era aviation
+ *   union is attestable, so it falls back to a generic name.
  * - USSR/Eastern bloc: AUCCTU (VTsSPS) for the USSR and its republics
  *   (Belarus, the Baltic composite); Poland is the CRZZ because Solidarność
  *   was only founded in August 1980; SZOT (Hungary), UGSR (Romania), the

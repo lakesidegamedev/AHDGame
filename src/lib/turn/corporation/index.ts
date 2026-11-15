@@ -1,5 +1,4 @@
 import { configureGroupSupply } from "./groupSupplyTurn";
-import { migrateEntertainmentRemoval } from "./migrateEntertainmentRemoval";
 import { claimProducerPath, loadProducerPath } from "@/lib/market/producerMarket/liveMode";
 import { producerStageEnv, runFundedProducerTurn } from "./fundedProducerTurn";
 import { TurnMustStopError } from "@/lib/turn/turnMustStop";
@@ -40,7 +39,7 @@ import { consumeManufacturingDevelopmentReceiptsV2 } from "@/lib/products/manufa
 import { loadAdvertisingEfficacyByCorp } from "@/lib/advertising/persistence";
 import type { CorporationTurnOptions } from "./corporationTurnOptions";
 import { transitionAnchorTurn } from "@/lib/market/producerMarket/transitionRules";
-import { getEffectiveStrategyRatesForOperatingModel } from "@/lib/constants/sectorStrategies";
+import { getEffectiveStrategyRates } from "@/lib/constants/sectorStrategies";
 import { type SettleableSupplyAgreement } from "./settleSupplyAgreements";
 import type { CommodityType } from "@/lib/constants/commodities";
 import { loadSettleableSupplyAgreements } from "./loadSettleableSupplyAgreements";
@@ -152,12 +151,6 @@ export async function processCorporationTurn(
   // Market share (which drives the dominance growth-cost multiplier) switches
   // to the owned-capacity basis under the plants tier.
   const plantsEnabledForMarketShare = marketAtLeast(marketSystemMode, "plants");
-  // One-time: entertainment commodity removal rescales stock before lookups load it.
-  await migrateEntertainmentRemoval(db, {
-    turn: turn ?? gameState?.currentTurn ?? 0,
-    plantsEnabled: plantsEnabledForMarketShare,
-    now,
-  });
   const interstateMoneyWiringEnabled =
     (marketGovernorConfig as { interstateMoneyWiringEnabled?: boolean } | null)
       ?.interstateMoneyWiringEnabled === true;
@@ -517,14 +510,12 @@ export async function processCorporationTurn(
     for (const [corpId, sectors] of lookups.sectorsByCorp) {
       const corp = lookups.corpById.get(corpId);
       const qSectors = sectors.map((sector) => {
-        const rates = getEffectiveStrategyRatesForOperatingModel(
+        const rates = getEffectiveStrategyRates(
           sector.sectorType,
           sector.strategyId ?? "standard",
           sector.transitionFromStrategyId,
           sector.transitionStartTurn,
-          turn ?? 0,
-          sector.industryModel,
-          sector.mediaDiscriminator
+          turn ?? 0
         );
         const outputs = (Object.keys(rates.supply ?? {}) as CommodityType[]).filter(
           (c) => (rates.supply?.[c] ?? 0) > 0

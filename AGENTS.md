@@ -13,7 +13,7 @@ Treat every change as production-bound.
   them. `.env.local` is git-ignored and stays that way.
 - **Never commit player data or personal information.**
 - **Never open a public issue for a vulnerability or game exploit.** See
-  [SECURITY.md](./SECURITY.md).
+  [SECURITY.md](./.github/SECURITY.md).
 - Match the surrounding code. Strict TypeScript, Zod on all request bodies,
   and no new dependencies without discussion. Prefer collection getters under
   `src/lib/db/collections` when one exists; typed direct
@@ -75,7 +75,7 @@ one:
 
 1. **`verify`**: aggregates the CI jobs (lint with architecture audit, format, typecheck, sharded tests, Next build, federation transactions). This is the required gate.
 2. **`verify:build`**: the Next build run by CI. `npm run build` also runs postbuild quality publishing.
-3. **Semgrep `custom-rules`** — project-specific rules in `.semgrep/`. A hit here
+3. **Semgrep `custom-rules`** — project-specific rules in `.github/semgrep.yml`. A hit here
    is a real bug, not a style nit; fix the code, do not silence the rule.
 4. **Dependency Review** — fails on a new high-severity or license-incompatible
    dependency.

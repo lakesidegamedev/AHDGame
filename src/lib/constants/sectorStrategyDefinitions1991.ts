@@ -24,15 +24,6 @@ export const DEFAULT_DEMAND_1991: Partial<
     vehicles: 0.025,
     plastics: 0.035,
   },
-  manufacturing_vehicles: {
-    steel: 0.19,
-    iron: 0.08,
-    electronics: 0.11,
-    energy: 0.1,
-    freight: 0.08,
-    real_estate_services: 0.02,
-    plastics: 0.055,
-  },
   defense: {
     steel: 0.15,
     iron: 0.07,

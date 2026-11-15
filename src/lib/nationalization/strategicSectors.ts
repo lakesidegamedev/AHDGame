@@ -8,7 +8,6 @@ import type { Db } from "mongodb";
 import type { StrategicSectorDesignation } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import type { OperatingSectorType } from "@/lib/constants/corporations";
-import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
 import { strategicSectorDesignationsCollection } from "@/lib/db/repositories/strategicSectorDesignations";
 
 export async function designateStrategicSector(
@@ -68,16 +67,11 @@ export function corpHasStrategicSector(
   corpSectors: {
     countryId: CountryId;
     sectorType: OperatingSectorType;
-    industryModel?: string | null;
-    mediaDiscriminator?: string | null;
   }[]
 ): boolean {
   return corpSectors.some(
     (s) =>
       s.countryId === countryId &&
-      (designatedTypes.has(s.sectorType) ||
-        designatedTypes.has(
-          getOperatingSectorType(s.sectorType, s.industryModel, s.mediaDiscriminator)
-        ))
+      (designatedTypes.has(s.sectorType) || designatedTypes.has(s.sectorType))
   );
 }

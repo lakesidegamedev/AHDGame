@@ -707,7 +707,7 @@ export interface GameConfig {
   groupSizeCostsStage?: number;
   /** Public media editorial stance and audience response rules. Missing means off. */
   mediaEditorialEnabled?: boolean;
-  /** Paid media and entertainment operating-model catalog. Default off. */
+  /** Paid media operating-model catalog. Default off. */
   mediaOperatingModelsEnabled?: boolean;
   /** Media ownership limits and censorship effects in the advertising market. Default off. */
   mediaRegulationEnabled?: boolean;
@@ -987,11 +987,6 @@ export interface GameConfig {
    * legacy. See src/lib/market/producerMarket/liveMode.ts.
    */
   producerMarketLiveFromTurn?: number;
-  /**
-   * Turn the one-time entertainment commodity removal migration ran
-   * (migrateEntertainmentRemoval). Present means later turns skip it.
-   */
-  entertainmentCommodityRemovedAtTurn?: number;
   /**
    * When true, a sector's input bill adds the landed-price premium for
    * out-of-state sourcing (last turn's sourcingNetworkLoad doc) on top of the

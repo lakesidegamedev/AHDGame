@@ -289,7 +289,12 @@ describe("corporation turn golden capture", () => {
       .spyOn(householdRules, "householdPurchaseOrders")
       .mockImplementation((input) => original({ ...input, fairShare: false }));
     try {
-      expect(await runShadow()).toEqual(readGolden().historicalShadow);
+      const capture = await runShadow();
+      if (process.env.UPDATE_TURN_GOLDEN === "1") {
+        writeGolden({ historicalShadow: capture });
+        return;
+      }
+      expect(capture).toEqual(readGolden().historicalShadow);
     } finally {
       historical.mockRestore();
     }

@@ -31,8 +31,6 @@ export interface MarketTiersInput {
     | "throughputStartTurn"
     | "capitalStock"
     | "sectorType"
-    | "industryModel"
-    | "mediaDiscriminator"
     | "strategyId"
     | "transitionFromStrategyId"
     | "transitionStartTurn"
@@ -233,8 +231,6 @@ export function computeMarketTiers(input: MarketTiersInput): MarketTiersResult {
       ? newCapitalStock *
         retoolOperatingCapacityRatio({
           sectorType: sector.sectorType,
-          industryModel: sector.industryModel,
-          mediaDiscriminator: sector.mediaDiscriminator,
           strategyId: sector.strategyId,
           transitionFromStrategyId: sector.transitionFromStrategyId,
           transitionStartTurn: sector.transitionStartTurn,

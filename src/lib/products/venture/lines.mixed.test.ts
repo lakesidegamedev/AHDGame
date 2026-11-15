@@ -17,7 +17,6 @@ describe("mixed manufacturing corporation lines", () => {
         {
           sectorId: "s2",
           sectorType: "manufacturing",
-          industryModel: "vehicles",
           strategyId: "standard",
           capitalStock: 100,
           plantCount: 3,

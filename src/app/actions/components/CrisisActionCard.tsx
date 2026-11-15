@@ -2,13 +2,24 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { X } from "lucide-react";
+import { ChevronDown, ChevronUp, X } from "lucide-react";
 import { useToast } from "@/contexts/ToastContext";
 import type { Crisis, CrisisInteraction, CrisisDecisionNode } from "@/lib/db/types/crisis";
 // The one severity calculation, shared with the crises list and detail pages.
 // A private copy would drift and disagree across surfaces.
 import { crisisSeverity } from "@/lib/crises/severity";
-import { formatCrisisEffectValue } from "@/lib/crises/effectLabels";
+import { crisisImageUrl } from "@/lib/crises/crisisImages";
+import { crisisKind } from "@/lib/crises/rules/boardView";
+import {
+  compareCrisisRows,
+  crisisSection,
+  crisisSeverityScore,
+  severityBandFromScore,
+  SEVERITY_BAND_LABEL,
+} from "@/lib/crises/rules/crisisRow";
+import { STAGE_LABEL } from "@/lib/crises/v2/ledgerView";
+import { CrisisEffectChip, CrisisThumb, SeverityTag } from "@/components/crises/CrisisRowParts";
+import { CrisisCollapsedList, type CrisisListRow } from "./CrisisCollapsedList";
 import { apiErrorText } from "@/lib/errors/catalog";
 import { CrisisV2Strip } from "@/components/crises/CrisisV2Strip";
 import type { CrisisV2Summary } from "@/lib/crises/queries/crisisV2View";
@@ -30,6 +41,44 @@ interface ActiveCrisisData {
   v2?: CrisisV2Summary | null;
 }
 
+/** Full cards shown above the folded list; any further respondable crisis joins the list. */
+const MAX_SURFACED_CARDS = 2;
+
+function canRespondNow(data: ActiveCrisisData): boolean {
+  return (data.canInteract && !!data.currentNode) || (data.v2?.levers.length ?? 0) > 0;
+}
+
+function rowFor(
+  data: ActiveCrisisData
+): CrisisListRow & { section: ReturnType<typeof crisisSection>; startTurn: number } {
+  const { crisis, v2 } = data;
+  const score = crisisSeverityScore({
+    v2Severity: v2?.severity,
+    legacyBand: crisisSeverity(crisis),
+  });
+  return {
+    id: crisis._id.toString(),
+    title: crisis.name,
+    image: crisisImageUrl(
+      {
+        name: crisis.name,
+        templateKey: crisis.templateKey,
+        kind: crisisKind(crisis),
+      },
+      320
+    ),
+    scope: crisis.scope,
+    countryIds: crisis.countryIds,
+    regionIds: crisis.regionIds,
+    stage: v2 ? STAGE_LABEL[v2.stage] : "Ongoing",
+    band: severityBandFromScore(score),
+    score,
+    canRespond: canRespondNow(data),
+    section: crisisSection({ status: crisis.status, stage: v2?.stage }),
+    startTurn: crisis.startTurn,
+  };
+}
+
 function formatTimeRemaining(minutes: number): string {
   if (minutes <= 0) return "Expired";
   const hours = Math.floor(minutes / 60);
@@ -47,19 +96,19 @@ const SEVERITY_STYLES: Record<
     border: "border-rose-500/40",
     tone: "rose",
     badge: "bg-rose-500/10 text-rose-400",
-    label: "High severity",
+    label: SEVERITY_BAND_LABEL.high,
   },
   medium: {
     border: "border-amber-500/40",
     tone: "amber",
     badge: "bg-amber-500/10 text-amber-400",
-    label: "Medium severity",
+    label: SEVERITY_BAND_LABEL.medium,
   },
   low: {
     border: "border-zinc-400/30",
     tone: "zinc",
     badge: "bg-zinc-400/10 text-zinc-400",
-    label: "Low severity",
+    label: SEVERITY_BAND_LABEL.low,
   },
 };
 
@@ -101,6 +150,9 @@ export default function CrisisActionCard() {
   // Keyed by crisis: one refusal must not print under every open crisis.
   const [error, setError] = useState<{ crisisId: string; message: string } | null>(null);
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
+  const [regionNames, setRegionNames] = useState<Record<string, string>>({});
+  // Cards start as one row; the player opens the ones they want to read.
+  const [openIds, setOpenIds] = useState<Set<string>>(new Set());
   const { showToast } = useToast();
 
   // Load dismissed crisis IDs from localStorage on mount.
@@ -118,6 +170,7 @@ export default function CrisisActionCard() {
       const data = await res.json();
       const next: ActiveCrisisData[] = data.crises ?? [];
       setCrises(next);
+      setRegionNames(data.regionNames ?? {});
       // Forget dismissals for crises that have left the feed. Without this the
       // stored set only ever grows: a player who dismisses the ambient cards
       // each turn accumulates an id per crisis for the life of the browser
@@ -176,6 +229,14 @@ export default function CrisisActionCard() {
     }
   };
 
+  const toggleOpen = useCallback((crisisId: string) => {
+    setOpenIds((prev) => {
+      const next = new Set(prev);
+      if (!next.delete(crisisId)) next.add(crisisId);
+      return next;
+    });
+  }, []);
+
   const handleDismiss = useCallback((crisisId: string) => {
     setDismissedIds((prev) => {
       const next = new Set(prev);
@@ -185,12 +246,21 @@ export default function CrisisActionCard() {
     });
   }, []);
 
-  const visibleCrises = crises.filter((c) => !dismissedIds.has(c.crisis._id.toString()));
+  const ranked = crises
+    .filter((c) => !dismissedIds.has(c.crisis._id.toString()))
+    .map((data) => ({ data, row: rowFor(data) }))
+    .sort((a, b) => compareCrisisRows({ ...a.row }, { ...b.row }));
+  // Only crises this player can act on surface on their own; everything else
+  // waits in the folded list.
+  const surfaced = ranked.filter((r) => r.row.canRespond).slice(0, MAX_SURFACED_CARDS);
+  const surfacedIds = new Set(surfaced.map((r) => r.row.id));
+  const visibleCrises = surfaced.map((r) => r.data);
+  const listRows = ranked.filter((r) => !surfacedIds.has(r.row.id)).map((r) => r.row);
 
   // No skeleton: the Events panel stays hidden until a source has something to show.
   if (loading) return null;
 
-  if (visibleCrises.length === 0) return null;
+  if (ranked.length === 0) return null;
 
   return (
     <>
@@ -205,18 +275,70 @@ export default function CrisisActionCard() {
           optionAvailability,
           v2,
         } = data;
-        const severity = crisisSeverity(crisis);
+        const severity = severityBandFromScore(
+          crisisSeverityScore({ v2Severity: v2?.severity, legacyBand: crisisSeverity(crisis) })
+        );
         const styles = SEVERITY_STYLES[severity];
+        const crisisId = crisis._id.toString();
+        const needsDecision = canInteract && !!currentNode;
+        const image = crisisImageUrl(
+          { name: crisis.name, templateKey: crisis.templateKey, kind: crisisKind(crisis) },
+          960
+        );
+
+        if (!openIds.has(crisisId)) {
+          return (
+            <article
+              key={crisisId}
+              data-event-item="crisis"
+              className={`order-1 overflow-hidden rounded-lg border bg-background/40 ${styles.border}`}
+            >
+              <button
+                type="button"
+                aria-expanded={false}
+                onClick={() => toggleOpen(crisisId)}
+                className="flex w-full items-center gap-3 px-3 py-2 text-left transition-colors hover:bg-card-elevated"
+              >
+                <CrisisThumb
+                  src={crisisImageUrl(
+                    {
+                      name: crisis.name,
+                      templateKey: crisis.templateKey,
+                      kind: crisisKind(crisis),
+                    },
+                    320
+                  )}
+                  className="h-9 w-14"
+                />
+                <span className="min-w-0 flex-1 truncate text-body font-semibold text-foreground">
+                  {crisis.name}
+                </span>
+                <SeverityTag band={severity} />
+                {needsDecision && (
+                  <span className="shrink-0 rounded-full bg-warning/15 px-2 py-0.5 text-body-xs font-semibold text-warning">
+                    Your decision
+                  </span>
+                )}
+                {needsDecision && timeRemainingMinutes !== null && timeRemainingMinutes > 0 && (
+                  <span className="shrink-0 text-body-sm font-semibold text-warning tabular-nums">
+                    {formatTimeRemaining(timeRemainingMinutes)} left
+                  </span>
+                )}
+                <ChevronDown className="h-4 w-4 shrink-0 text-muted" aria-hidden />
+              </button>
+            </article>
+          );
+        }
 
         return (
           <EventItem
             key={crisis._id.toString()}
             kind="crisis"
-            status={canInteract && currentNode ? "decision" : "active"}
+            status={needsDecision ? "decision" : "active"}
             tone={styles.tone}
             className={styles.border}
             title={crisis.name}
-            image={crisis.heroImage}
+            image={image}
             tags={
               <>
                 <span
@@ -232,15 +354,27 @@ export default function CrisisActionCard() {
               </>
             }
             aside={
-              <button
-                type="button"
-                onClick={() => handleDismiss(crisis._id.toString())}
-                className="flex h-7 w-7 items-center justify-center rounded-full bg-background/70 text-muted backdrop-blur-sm transition-colors hover:bg-card-elevated hover:text-foreground"
-                title="Dismiss from actions"
-                aria-label="Dismiss crisis from Actions"
-              >
-                <X className="h-4 w-4" aria-hidden />
-              </button>
+              <>
+                <button
+                  type="button"
+                  aria-expanded
+                  onClick={() => toggleOpen(crisisId)}
+                  className="flex h-7 w-7 items-center justify-center rounded-full bg-background/70 text-muted backdrop-blur-sm transition-colors hover:bg-card-elevated hover:text-foreground"
+                  title="Collapse"
+                  aria-label={`Collapse ${crisis.name}`}
+                >
+                  <ChevronUp className="h-4 w-4" aria-hidden />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleDismiss(crisis._id.toString())}
+                  className="flex h-7 w-7 items-center justify-center rounded-full bg-background/70 text-muted backdrop-blur-sm transition-colors hover:bg-card-elevated hover:text-foreground"
+                  title="Dismiss from actions"
+                  aria-label="Dismiss crisis from Actions"
+                >
+                  <X className="h-4 w-4" aria-hidden />
+                </button>
+              </>
             }
           >
             <p className="text-body-sm text-muted">{crisis.description}</p>
@@ -249,30 +383,7 @@ export default function CrisisActionCard() {
             {crisis.effects.length > 0 && (
               <div className="flex flex-wrap gap-1.5">
                 {crisis.effects.slice(0, 3).map((effect, i) => (
-                  <span
-                    key={i}
-                    className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-body-sm font-medium ${
-                      effect.value < 0 ? "bg-error/10 text-error" : "bg-success/10 text-success"
-                    }`}
-                  >
-                    {effect.effectType === "tick" && (
-                      <svg
-                        className="h-2.5 w-2.5 shrink-0 opacity-70"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2.5}
-                          d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                        />
-                      </svg>
-                    )}
-                    {effect.value > 0 ? "+" : ""}
-                    {formatCrisisEffectValue(effect.value)} {effect.label}
-                  </span>
+                  <CrisisEffectChip key={i} effect={effect} />
                 ))}
                 {crisis.effects.length > 3 && (
                   <Link
@@ -393,17 +504,7 @@ export default function CrisisActionCard() {
                             {option.effects.length > 0 && (
                               <div className="flex flex-wrap gap-1 mt-2">
                                 {option.effects.map((effect, i) => (
-                                  <span
-                                    key={i}
-                                    className={`text-xs px-1.5 py-0.5 rounded border ${
-                                      effect.value < 0
-                                        ? "border-error/20 bg-error/5 text-error"
-                                        : "border-success/20 bg-success/5 text-success"
-                                    }`}
-                                  >
-                                    {effect.value > 0 ? "+" : ""}
-                                    {effect.value} {effect.label}
-                                  </span>
+                                  <CrisisEffectChip key={i} effect={effect} />
                                 ))}
                               </div>
                             )}
@@ -421,6 +522,7 @@ export default function CrisisActionCard() {
           </EventItem>
         );
       })}
+      <CrisisCollapsedList rows={listRows} regionNames={regionNames} alsoRespondable={0} />
     </>
   );
 }

@@ -17,7 +17,7 @@ import { buildFreightBillingBySector } from "../freightBillingTurn";
 import { computeIdleUpkeep } from "../sectorTurn/idleUpkeep";
 import { computeMarketTiers } from "../sectorTurn/marketTiers";
 import { computeSupplyAgreementBuyerDemand } from "@/lib/corporations/groups/rules/inputDemand";
-import { getEffectiveStrategyRatesForOperatingModel } from "@/lib/constants/sectorStrategies";
+import { getEffectiveStrategyRates } from "@/lib/constants/sectorStrategies";
 import { buildProductionTurnWorld } from "../__fixtures__/productionTurnWorld";
 
 interface ProfileNode {
@@ -222,7 +222,7 @@ function micro() {
     liveDocumentShape: true,
   });
   const sector = world.sectors[0]!;
-  const rates = getEffectiveStrategyRatesForOperatingModel(
+  const rates = getEffectiveStrategyRates(
     sector.sectorType,
     sector.strategyId ?? "standard",
     sector.transitionFromStrategyId,
@@ -277,8 +277,6 @@ function micro() {
   const demandSectors = world.sectors.slice(0, 700).map((s) => ({
     corporationId: s.corporationId.toString(),
     sectorType: s.sectorType,
-    industryModel: s.industryModel,
-    mediaDiscriminator: s.mediaDiscriminator,
     revenueAnchor: s.revenue,
     strategyId: s.strategyId,
     transitionFromStrategyId: s.transitionFromStrategyId,

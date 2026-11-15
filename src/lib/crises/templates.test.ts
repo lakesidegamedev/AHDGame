@@ -53,6 +53,25 @@ describe("crisis templates", () => {
     });
   });
 
+  describe("player-facing copy", () => {
+    it("has no em or en dashes in any description or wire", () => {
+      const bad: string[] = [];
+      for (const [key, t] of Object.entries(ALL_CRISIS_TEMPLATES)) {
+        for (const text of [t.description, t.wireMessageOnStart, t.wireMessageOnEnd ?? ""]) {
+          if (/[\u2013\u2014]/.test(text)) bad.push(key);
+        }
+      }
+      expect(bad).toEqual([]);
+    });
+
+    it("keeps wires short and descriptions out of boilerplate", () => {
+      for (const [key, t] of Object.entries(ALL_CRISIS_TEMPLATES)) {
+        expect(t.wireMessageOnStart.length, key).toBeLessThan(260);
+        expect(t.description.length, key).toBeGreaterThan(60);
+      }
+    });
+  });
+
   describe("template registry", () => {
     it("includes the six new templates", () => {
       expect(ALL_CRISIS_TEMPLATES.currency_crisis).toBeDefined();
@@ -192,10 +211,9 @@ describe("P3.5 margin-shock physicality classification", () => {
         "robotic_depot_lockout",
         "steel_strike",
         "supply_chain_disruption",
-        // Three struck sectors, so the wildcat strike carries three physical
+        // Two struck sectors, so the wildcat strike carries two physical
         // shocks: steel and cars stop being made, ports and freight stop
         // moving them.
-        "union_ban_general_strike",
         "union_ban_general_strike",
         "union_ban_general_strike",
       ].sort()

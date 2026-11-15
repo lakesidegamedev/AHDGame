@@ -43,6 +43,8 @@ export interface UserData {
   createdAt: string;
   discordId: string | null;
   discordUsername: string | null;
+  /** Apple sign-in linked (boolean only). Optional for stale bundles. */
+  appleLinked?: boolean;
   modNote: string | null;
   latestModNote?: string | null;
   /** VPN/proxy/Tor flag — boolean if detected, null if not checked. */

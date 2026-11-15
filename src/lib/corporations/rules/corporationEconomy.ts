@@ -485,7 +485,7 @@ export function getWorkforceSkillMarginModifier(workforceSkill: number | null | 
 
 /**
  * Compute profit margin modifier from state crime rate (incidents per 100k).
- * Only applies to: retail, real_estate, entertainment.
+ * Only applies to: retail, real_estate.
  *
  * - At or below 1500 per 100k: 0% modifier
  * - Linear penalty to -5% at 3500+ per 100k (theft, vandalism, lower foot traffic)
@@ -1051,15 +1051,10 @@ export function computeAllMarginModifiers(
   };
 }
 
-/** Canonical policies cover their operating lanes. */
 export function sectorPolicyTargetMatches(
   target: string | null | undefined,
   operatingSectorType: string
 ): boolean {
   if (!target) return false;
-  return (
-    target === operatingSectorType ||
-    (target === "manufacturing" && operatingSectorType === "manufacturing_vehicles") ||
-    (target === "media" && operatingSectorType === "media_entertainment")
-  );
+  return target === operatingSectorType;
 }

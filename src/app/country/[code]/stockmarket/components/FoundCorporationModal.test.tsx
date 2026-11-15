@@ -126,15 +126,13 @@ describe("FoundCorporationModal — mobile reachability (ticket #1003)", () => {
 });
 
 describe("FoundCorporationModal — sector pickers", () => {
-  it("offers the vehicles and entertainment lanes beside their corporation types", () => {
+  it("offers every corporation type", () => {
     renderModal(1);
     const selects = screen.getAllByRole("combobox") as HTMLSelectElement[];
     expect(selects.length).toBeGreaterThan(0);
     const primary = selects[0];
     const values = Array.from(primary.options).map((o) => o.value);
     expect(values).toContain("manufacturing");
-    expect(values).toContain("manufacturing_vehicles");
     expect(values).toContain("media");
-    expect(values).toContain("media_entertainment");
   });
 });

@@ -65,51 +65,27 @@ describe("plants tier — unit-denominated market share", () => {
     expect(shares.get("a")).toBe(0);
     expect(Number.isFinite(shares.get("a")!)).toBe(true);
   });
-
-  it("separates generic media from the entertainment lane", () => {
-    const sectors = [
-      { ...sector("generic", 100), sectorType: "media", mediaDiscriminator: null },
-      { ...sector("ent-a", 100), sectorType: "media", mediaDiscriminator: "entertainment" },
-      { ...sector("ent-b", 100), sectorType: "media", mediaDiscriminator: "entertainment" },
-    ] as unknown as CorporateSector[];
-    const shares = build(sectors);
-
-    expect(shares.get("generic")).toBe(100);
-    expect(shares.get("ent-a")).toBe(50);
-    expect(shares.get("ent-b")).toBe(50);
-  });
 });
 
 describe("national dominance share market identity", () => {
-  it("keeps media lanes distinct", () => {
+  it("splits one national market between rival owners", () => {
     const nationalStateId = "US-CA";
     const sectors = [
       {
-        _id: "generic",
+        _id: "a",
         stateId: nationalStateId,
         countryId: "US",
         revenue: 100,
         sectorType: "media",
-        mediaDiscriminator: null,
         corporationId: "a",
       },
       {
-        _id: "canonical-ent",
+        _id: "b",
         stateId: nationalStateId,
         countryId: "US",
         revenue: 100,
         sectorType: "media",
-        mediaDiscriminator: "entertainment",
         corporationId: "b",
-      },
-      {
-        _id: "ent-b",
-        stateId: nationalStateId,
-        countryId: "US",
-        revenue: 100,
-        sectorType: "media",
-        mediaDiscriminator: "entertainment",
-        corporationId: "c",
       },
     ] as unknown as CorporateSector[];
     const shares = buildNationalDominanceShareBySectorId({
@@ -118,8 +94,7 @@ describe("national dominance share market identity", () => {
       exchangeRatesByCurrency: new Map<CurrencyCode, number>([["USD" as CurrencyCode, 1]]),
     });
 
-    expect(shares.get("generic")).toBe(100);
-    expect(shares.get("canonical-ent")).toBe(50);
-    expect(shares.get("ent-b")).toBe(50);
+    expect(shares.get("a")).toBe(50);
+    expect(shares.get("b")).toBe(50);
   });
 });

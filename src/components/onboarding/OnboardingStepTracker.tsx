@@ -21,7 +21,7 @@ export function OnboardingStepTracker({ step }: { step: "scout-state" | "read-wi
     recordedStep.current = step;
     void captureProductEvent("onboarding_step_viewed", { step, variant });
     // Best-effort tracking: never surface an error for this. fetchJson still
-    // reports network/5xx faults to GlitchTip tagged with the feature.
+    // reports network/5xx faults to the error tracker tagged with the feature.
     void fetchJson("/api/character/me", {
       feature: "onboarding-step-tracker",
       method: "PATCH",

@@ -723,9 +723,7 @@ async function buildCapacityFromDirectedCredit(
             _id: 1,
             corporationId: 1,
             sectorType: 1,
-            // Plant size: lane, operating model and recipe.
-            industryModel: 1,
-            mediaDiscriminator: 1,
+            // Plant size: type and recipe.
             strategyId: 1,
             capitalStock: 1,
             capacityBookAnchor: 1,

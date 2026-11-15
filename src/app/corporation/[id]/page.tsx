@@ -5,7 +5,6 @@ import {
   mothballSectorRequest,
   type MothballAction,
 } from "@/lib/corporations/mothballSectorClient";
-import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
 import { useGameEvents } from "@/hooks/useGameEvents";
 
 import { InlineError } from "@/components/ui/InlineError";
@@ -1426,11 +1425,7 @@ export default function CorporationDetailPage() {
                         sectors={sectors}
                         isCeo={isCeo}
                         corpId={id}
-                        corporationType={getOperatingSectorType(
-                          corporation.type,
-                          corporation.industryModel,
-                          corporation.mediaDiscriminator
-                        )}
+                        corporationType={corporation.type}
                         corporationSecondaryType={corporation.secondaryType}
                         liquidCapital={corporation.liquidCapital}
                         liquidCurrencyCode={corporation.liquidCurrencyCode}
@@ -1490,7 +1485,7 @@ export default function CorporationDetailPage() {
                   {/* Render-time guard, not just the tab-reset effect above: a ?tab=shares
             deep link on a private corp mounts SharesTab on the FIRST render with
             the redacted payload (totalShares etc. stripped for non-CEO viewers)
-            and crashes before the effect can fall back (GlitchTip AHD-A1). */}
+            and crashes before the effect can fall back. */}
                   {tab === "shares" &&
                     !(corpIsPrivate && !isCeo && !corporation.viewerIsShareholder) && (
                       <SharesTab

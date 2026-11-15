@@ -14,7 +14,7 @@ const HEAT_COLLAPSE = modernCrisis({
   name: "Continental Heat Collapse",
   heroImage: HERO.heat,
   description:
-    "A heat wave settles for most of a summer and the cooling systems that people rely on start to fail one after another. Outdoor work stops, crops scorch and the old and the sick are the first to suffer.",
+    "A heat wave has sat over {location} for most of the summer, and the cooling systems people depend on are failing one by one. Outdoor work stops, crops scorch and the old and the sick suffer first. Output drops about 1% at once. For about 5 turns the grid falls short of demand and approval falls with the heat response.",
   durationTurns: 5,
   fromYear: 2050,
   untilYear: 2059,
@@ -24,8 +24,9 @@ const HEAT_COLLAPSE = modernCrisis({
     fx("tick", "metric", "infrastructure", "power", -0.02, "Cooling demand overwhelms supply"),
     fx("tick", "approval", "government", "overall", -0.025, "Anger at the heat response"),
   ],
-  wireStart: "A long heat wave is breaking records. Cooling systems are failing in several cities.",
-  wireEnd: "Temperatures fall at last. Cities begin counting the cost.",
+  wireStart:
+    "A record heat wave is wearing down {location}. Cooling systems are failing in several cities.",
+  wireEnd: "Temperatures finally fall. Cities start counting the cost.",
   prompt: {
     title: "Heat emergency response",
     description: "Power is short and hospitals are full. What does the government do?",
@@ -79,7 +80,7 @@ const SURGE_FLOOD = modernCrisis({
   name: "Coastal Storm Surge Flood",
   heroImage: HERO.tide,
   description:
-    "A powerful storm drives a wall of sea water over the coastal defences. Streets, substations and ports go under, and thousands are evacuated.",
+    "A powerful storm has pushed a wall of sea water over the coastal defenses of {location}. Streets, substations and ports are under water and thousands have been evacuated. Output drops about 1.1% at once. For about 5 turns flooded property loses value, networks need repair and approval falls with the response.",
   durationTurns: 5,
   fromYear: 2050,
   untilYear: 2059,
@@ -90,8 +91,9 @@ const SURGE_FLOOD = modernCrisis({
     fx("tick", "metric", "infrastructure", "damage", 0.02, "Flood damage to networks"),
     fx("tick", "approval", "government", "overall", -0.025, "Anger at the flood response"),
   ],
-  wireStart: "A storm surge has breached the coastal defences. Evacuations are under way.",
-  wireEnd: "The waters have receded. The long clean-up begins.",
+  wireStart:
+    "A storm surge has broken through the coastal defenses of {location}. Evacuations are under way.",
+  wireEnd: "The water has gone. The long clean-up begins.",
   prompt: {
     title: "Flood response",
     description: "Thousands are displaced and the defences need rebuilding. What is the plan?",
@@ -144,7 +146,7 @@ const AQUIFER_COLLAPSE = modernCrisis({
   name: "Aquifer Collapse",
   heroImage: HERO.water,
   description:
-    "A deep aquifer that fed farms and cities for generations runs dry in places and turns salty in others. Wells fail across a whole farming region.",
+    "A deep aquifer that fed the farms and cities of {location} for generations has run dry in places and turned salty in others. Wells are failing across a whole farming region. Farm output drops about 0.6% at once. For about 8 turns irrigated harvests fall and food prices rise, water costs cut margins and approval falls.",
   durationTurns: 8,
   fromYear: 2050,
   untilYear: 2057,
@@ -155,7 +157,8 @@ const AQUIFER_COLLAPSE = modernCrisis({
     marginShock(-2, "Water costs soar", "financial", "agriculture"),
     fx("tick", "approval", "government", "overall", -0.02, "Anger at the water failure"),
   ],
-  wireStart: "Wells are failing across the farm belt. Officials warn the aquifer may not recover.",
+  wireStart:
+    "Wells are failing across the farm belt of {location}. Officials say the aquifer may not recover.",
   wireEnd: "New water supplies are flowing and farms are adapting.",
   prompt: {
     title: "Water supply response",
@@ -210,7 +213,7 @@ const LOGISTICS_STALL = modernCrisis({
   name: "Autonomous Logistics Stall",
   heroImage: HERO.port,
   description:
-    "A coordination fault freezes the self-driving freight fleets that carry most goods. Warehouses fill, shelves empty and nobody can say how long the fix will take.",
+    "A coordination fault has frozen the self-driving freight fleets that carry most goods. Warehouses fill while shelves empty, and nobody can say how long the fix will take. Output drops about 0.9% at once. For about 4 turns margins fall on idle fleets and spoiled stock, shortages dent consumer confidence and approval falls.",
   durationTurns: 4,
   fromYear: 2050,
   untilYear: 2059,
@@ -227,7 +230,8 @@ const LOGISTICS_STALL = modernCrisis({
     fx("tick", "metric", "economy", "consumerConfidence", -0.012, "Shortages in the shops"),
     fx("tick", "approval", "government", "overall", -0.02, "Anger at empty shelves"),
   ],
-  wireStart: "Autonomous freight fleets have stopped. Retailers warn of shortages within days.",
+  wireStart:
+    "Self-driving freight fleets across {location} have stopped. Retailers warn of shortages within days.",
   wireEnd: "The freight network is moving again.",
   prompt: {
     title: "Freight stall response",
@@ -282,7 +286,7 @@ const AUTOMATION_LAYOFFS = modernCrisis({
   name: "Automation Layoff Wave",
   heroImage: HERO.labor,
   description:
-    "Several large employers replace whole departments with automated systems in the same season. Tens of thousands of skilled workers are out of work and towns built around a single employer are hit hardest.",
+    "Several large employers replaced whole departments with automated systems in the same season. Tens of thousands of skilled workers are out of work, and towns built around one employer are hit hardest. For about 6 turns unemployment rises, pay falls for those still working and approval drops among frightened workers.",
   durationTurns: 6,
   fromYear: 2050,
   untilYear: 2059,
@@ -307,7 +311,7 @@ const AUTOMATION_LAYOFFS = modernCrisis({
     fx("tick", "approval", "workers", "overall", -0.03, "Fear and anger among workers"),
   ],
   wireStart:
-    "Major employers are cutting thousands of jobs as automation takes over. Unions call for talks.",
+    "Major employers in {location} are cutting thousands of jobs as automation takes over. Unions are calling for talks.",
   wireEnd: "The layoff wave has passed. Retraining places are filling up.",
   prompt: {
     title: "Layoff wave response",
@@ -368,7 +372,7 @@ const CROP_BLIGHT = modernCrisis({
   name: "Engineered Crop Blight",
   heroImage: HERO.drought,
   description:
-    "A fast-spreading blight hits the high-yield crop strain that most farms now plant. Fields that looked healthy a month ago are lost, and the seed supply is tied to a handful of firms.",
+    "A fast-spreading blight has hit the high-yield crop strain most farms now plant. Fields that looked healthy a month ago are lost, and the seed supply sits with a handful of firms. Farm output drops about 0.6% at once. For about 6 turns food prices rise and approval falls as farmers lose a season.",
   durationTurns: 6,
   fromYear: 2051,
   untilYear: 2059,
@@ -379,7 +383,7 @@ const CROP_BLIGHT = modernCrisis({
     fx("tick", "approval", "workers", "overall", -0.03, "Farmers lose a season"),
   ],
   wireStart:
-    "A blight is spreading through the main crop strain. Farmers report whole fields lost.",
+    "A blight is spreading through the main crop strain in {location}. Farmers report whole fields lost.",
   wireEnd: "A resistant strain is in the ground and the blight is in retreat.",
   prompt: {
     title: "Blight response",
@@ -435,7 +439,7 @@ const SYNTHETIC_MEDIA_PANIC = modernCrisis({
   name: "Synthetic Media Market Panic",
   heroImage: HERO.info,
   description:
-    "A flawless fake of a central banker announcing an emergency move spreads before anyone can check it. Markets lurch, then lurch back, and the public stops trusting any official video.",
+    "A flawless fake video of a central banker announcing an emergency move spread before anyone could check it. Markets lurched, then lurched back, and people now doubt every official video. For about 3 turns investor confidence falls, people feel less sure of what they see and approval slips because the government cannot stop fakes.",
   durationTurns: 3,
   fromYear: 2050,
   untilYear: 2059,
@@ -446,8 +450,8 @@ const SYNTHETIC_MEDIA_PANIC = modernCrisis({
     fx("tick", "approval", "government", "overall", -0.015, "Seen as unable to stop fakes"),
   ],
   wireStart:
-    "A fake video moved markets this morning. Officials are urging calm and asking people to verify.",
-  wireEnd: "Trust measures are in place and markets have settled.",
+    "A fake video moved markets this morning. Officials are urging calm and asking people to verify before sharing.",
+  wireEnd: "Verification measures are in place and markets have settled.",
   prompt: {
     title: "Synthetic media response",
     description:
@@ -501,7 +505,7 @@ const LONGEVITY_PENSION_STRAIN = modernCrisis({
   name: "Longevity Pension Strain",
   heroImage: HERO.bank,
   description:
-    "People are living years longer than the pension tables assumed. Funds that were solvent on paper face a widening gap, and younger workers ask why they should pay for it.",
+    "People are living years longer than the pension tables assumed. Funds that were solvent on paper now face a widening gap, and younger workers ask why they should pay for it. For about 6 turns investors doubt the funds, retirees fear benefit cuts, workers resent higher contributions and approval falls on both sides.",
   durationTurns: 6,
   fromYear: 2052,
   untilYear: 2059,
@@ -513,7 +517,7 @@ const LONGEVITY_PENSION_STRAIN = modernCrisis({
   ],
   wireStart:
     "Pension funds report a widening gap as retirees live longer. Calls for reform are growing.",
-  wireEnd: "A pension settlement has been reached.",
+  wireEnd: "A pension deal has been reached.",
   prompt: {
     title: "Pension settlement",
     description: "Someone has to pay for the longer retirements. Who?",

@@ -55,7 +55,6 @@ import { buildSectorShareMaps } from "@/lib/corporations/marketShare";
 import { buildSovereignDefaultMarginByCorpId } from "@/lib/sovereignDefault/marginPenalty/buildPerCorpMap";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { NEUTRAL_STAT } from "@/lib/stats/statsConstants";
-import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
 import { retoolProductionMeasurements } from "@/lib/corporations/retooling/rules";
 import { getEraUnitScale } from "@/lib/constants/sectorSeedEra";
 import type { SourcingNetworkDoc } from "@/lib/logistics/sourcingLedger";
@@ -230,8 +229,6 @@ export async function buildCorporationLookups(
         // sector, on a 14,000-row world.
         retoolProductionMeasurements({
           sectorType: sector.sectorType,
-          industryModel: sector.industryModel,
-          mediaDiscriminator: sector.mediaDiscriminator,
           strategyId: sector.strategyId,
           transitionFromStrategyId: sector.transitionFromStrategyId,
           transitionStartTurn: sector.transitionStartTurn,
@@ -361,11 +358,7 @@ export async function buildCorporationLookups(
     // Only cross-border presence shifts the blend; domestic sectors don't need keys
     if (sectorCountry === corpCountry) continue;
     // Keyed by operating lane, the type getTariffBlendWeights is asked about.
-    const lane = getOperatingSectorType(
-      sector.sectorType,
-      sector.industryModel,
-      sector.mediaDiscriminator
-    );
+    const lane = sector.sectorType;
     sectorPresenceKeys.add(`${sectorCountry}:${corpCountry}:${lane}`);
     sectorPresenceKeys.add(`${sectorCountry}:corp:${corp._id.toString()}:${lane}`);
   }
@@ -462,8 +455,6 @@ export async function buildCorporationLookups(
             _id: c._id,
             countryId: c.countryId,
             type: c.type,
-            industryModel: c.industryModel,
-            mediaDiscriminator: c.mediaDiscriminator,
           })),
           currentTurn: await getCurrentTurn(db),
           globalGdp: federalBudgets.reduce((acc, b) => acc + gdpToAnchor(b), 0),

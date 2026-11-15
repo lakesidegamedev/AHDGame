@@ -490,7 +490,7 @@ export interface GovernmentDemandInputs {
    * and governments are buyers of the same finished goods, so they share ONE
    * ceiling of GOVERNMENT_DEMAND_SUPPLY_CAP x prior supply instead of each
    * getting their own: with two independent 1.5x caps a saturated market read
-   * 3x its supply (healthcare services, entertainment) and its supply/demand
+   * 3x its supply (healthcare services) and its supply/demand
    * ratio could never rise above a third however much capacity was built.
    * Households are served first; government gets the room that is left.
    */

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { demographicCategories, getEraPositions } from "@/lib/seeds/demographicCategories";
+import { getEraPositions } from "@/lib/seeds/demographicCategories";
+import { demographicCategories } from "@/lib/seeds/calibration/groupModelCategories";
 
 /**
  * The economic and social leans are meant to be two independent axes. They were

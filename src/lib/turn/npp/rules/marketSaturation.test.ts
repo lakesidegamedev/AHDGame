@@ -10,6 +10,8 @@ import {
   cellUnmetDemandUnits,
   foundingUnmetSizing,
   NPP_FOUNDING_UNMET_SHARE,
+  depositBoundSupplyMix,
+  extractionDemandBoundUnits,
 } from "./marketSaturation";
 import { NPP_GROWTH_MIN_THROTTLE } from "../nppCorporationTuning";
 
@@ -51,26 +53,6 @@ describe("marketSaturationOf", () => {
     ]);
     expect(marketSaturationOf(index, { stateId: "TN", sectorType: "logistics" })).toBeNull();
     expect(marketSaturationOf(index, { stateId: "ME", sectorType: "logistics" })).toBeNull();
-  });
-
-  it("keys lanes apart, so an entertainment glut does not block news", () => {
-    const index = buildMarketSaturationIndex([
-      plant({
-        sectorType: "media",
-        mediaDiscriminator: "entertainment",
-        demandThrottleFactor: 0.1,
-      }),
-    ]);
-    expect(
-      marketSaturationOf(index, {
-        stateId: "TN",
-        sectorType: "media",
-        mediaDiscriminator: "entertainment",
-      })
-    ).toBeCloseTo(0.1, 10);
-    expect(
-      marketSaturationOf(index, { stateId: "TN", sectorType: "media", mediaDiscriminator: "news" })
-    ).toBeNull();
   });
 
   it("judges a plant on its rivals when excluding itself", () => {
@@ -248,5 +230,43 @@ describe("funded world saturation reads sell-through", () => {
     expect(
       isStuckAtThrottleFloor({ ...starved, producerSettlement: receipt(100, 10) }, EPOCH)
     ).toBe(true);
+  });
+});
+
+describe("depositBoundSupplyMix", () => {
+  const mix = { iron: 0.4, coal: 0.3, timber: 0.05 } as const;
+  const headroom = (stateId: string, resource: string) =>
+    stateId === "MN" && (resource === "iron" || resource === "coal") ? 1 : 0;
+
+  it("keeps only the resources an extraction state still holds", () => {
+    expect(
+      depositBoundSupplyMix(mix, { stateId: "MN", sectorType: "extraction" }, headroom)
+    ).toEqual({ iron: 0.4, coal: 0.3 });
+    expect(
+      depositBoundSupplyMix(mix, { stateId: "KS", sectorType: "extraction" }, headroom)
+    ).toEqual({});
+  });
+
+  it("leaves other sectors and unwired worlds alone", () => {
+    expect(depositBoundSupplyMix(mix, { stateId: "KS", sectorType: "retail" }, headroom)).toBe(mix);
+    expect(depositBoundSupplyMix(mix, { stateId: "KS", sectorType: "extraction" }, undefined)).toBe(
+      mix
+    );
+  });
+});
+
+describe("extractionDemandBoundUnits", () => {
+  it("bounds the deposit step by unmet demand, never raises it", () => {
+    expect(extractionDemandBoundUnits(100, 40.9)).toBe(40);
+    expect(extractionDemandBoundUnits(100, 400)).toBe(100);
+  });
+
+  it("allows no growth when nothing the mine sells is short", () => {
+    expect(extractionDemandBoundUnits(100, 0)).toBe(0);
+    expect(extractionDemandBoundUnits(100, Number.NaN)).toBe(0);
+  });
+
+  it("leaves the deposit step alone when no demand signal is wired", () => {
+    expect(extractionDemandBoundUnits(100, null)).toBe(100);
   });
 });

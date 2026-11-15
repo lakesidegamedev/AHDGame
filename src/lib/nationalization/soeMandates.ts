@@ -4,7 +4,6 @@
  * its posture. No DB. Metric paths are `${category}.${field}` into StateMetrics
  * and were verified against src/lib/db/types/stateMetrics.ts.
  */
-import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
 import type { Corporation, CorporateSector, SoeMandate } from "@/lib/db/types";
 import type { OperatingSectorType } from "@/lib/constants/corporations";
 import type { CountryId } from "@/lib/constants/countries";
@@ -33,12 +32,11 @@ export interface MandateContribution {
   delta: number;
 }
 
-/** Deliberately partial: media, media_entertainment and extraction carry no mandate. */
+/** Deliberately partial: media and extraction carry no mandate. */
 export const MANDATE_MAP: Partial<Record<OperatingSectorType, MandateContributionDef[]>> = {
   healthcare: [{ metricPath: "healthcare.physicianRate", direction: 1, weight: 1 }],
   energy: [{ metricPath: "infrastructure.powerGridReliability", direction: 1, weight: 1 }],
   logistics: [{ metricPath: "infrastructure.roadCondition", direction: 1, weight: 1 }],
-  manufacturing_vehicles: [{ metricPath: "infrastructure.roadCondition", direction: 1, weight: 1 }],
   construction: [{ metricPath: "infrastructure.roadCondition", direction: 1, weight: 1 }],
   telecommunications: [{ metricPath: "infrastructure.broadbandAccess", direction: 1, weight: 1 }],
   technology: [{ metricPath: "infrastructure.broadbandAccess", direction: 1, weight: 1 }],
@@ -108,8 +106,7 @@ export function getMandateMetricPaths(
  */
 export function getMandateContributions(
   countryId: CountryId,
-  sector: Pick<CorporateSector, "sectorType"> &
-    Partial<Pick<CorporateSector, "industryModel" | "mediaDiscriminator">>,
+  sector: Pick<CorporateSector, "sectorType">,
   mandate: SoeMandate,
   soeShare: number
 ): MandateContribution[] {
@@ -120,11 +117,7 @@ export function getMandateContributions(
   const base = SOE_MANDATE_CONTRIBUTION_AT_FULL_SHARE * share * controlMult;
 
   const out: MandateContribution[] = [];
-  const lane = getOperatingSectorType(
-    sector.sectorType,
-    sector.industryModel,
-    sector.mediaDiscriminator
-  );
+  const lane = sector.sectorType;
   for (const def of defsFor(countryId, lane)) {
     const magnitude = Math.min(SOE_MANDATE_PER_METRIC_CAP, base * def.weight);
     out.push({ metricPath: def.metricPath, delta: magnitude * def.direction });

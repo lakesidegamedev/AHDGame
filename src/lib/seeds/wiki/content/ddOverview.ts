@@ -98,7 +98,7 @@ Era gating is real: the **Minister of National Defence seat only exists from 195
 In worlds that use the command economy (every new world), East Germany comes up **fully command**. Marketization is a dial from 0 (fully command) to 100 (fully market), and East Germany's is scheduled at **10** through 1990 in both presets. See [Planned Economies](/wiki/planned-economies).
 
 - **No stock exchange.** State enterprises are recorded against the **VVB** (Vereinigung Volkseigener Betriebe) register, and founding private corporations is disallowed.
-- **One state-owned enterprise per sector.** Every industry has a VEB-style enterprise with plant capacity (manufacturing, chemicals, energy, extraction, automobiles, agriculture, and the rest of the sector board). All are headquartered administratively in East Berlin.
+- **One state-owned enterprise per sector.** Every industry has a VEB-style enterprise with plant capacity (manufacturing, chemicals, energy, extraction, agriculture, and the rest of the sector board). All are headquartered administratively in East Berlin.
 - **Planning runs through the cabinet.** The planner and state-credit consoles are operated by the State Planning Commission chair and the Staatsbank liaison cabinet seats, the same wiring as the USSR; SOE directors are appointed per enterprise.
 - **Fixed Mark.** The DDM is administered and non-convertible while the country is command. The 1953 preset pins it at 4.2 to the dollar; open inflation stays near half a percent because prices are set by the plan, and the 1979 budget carries the GDR's hidden hard-currency debt to the West.
 

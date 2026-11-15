@@ -33,12 +33,37 @@ export function leverCooldownText(cooldownTurns: number): string {
   return `Then waits ${cooldownTurns} ${cooldownTurns === 1 ? "turn" : "turns"} before reuse`;
 }
 
-export function forecastText(severity: number, forecast: readonly number[]): string | null {
+export function forecastText(
+  severity: number,
+  forecast: readonly number[],
+  graceTurns?: number
+): string | null {
   if (forecast.length === 0) return null;
   const end = forecast[forecast.length - 1];
   const turns = forecast.length;
   const now = Math.round(severity);
   const later = Math.round(end);
-  if (Math.abs(later - now) < 1) return `If nobody acts: holds near ${now} for ${turns} turns.`;
-  return `If nobody acts: ${now} now, about ${later} in ${turns} turns.`;
+  const grace =
+    graceTurns != null && graceTurns > 0
+      ? ` Doing nothing for more than ${graceTurns} ${graceTurns === 1 ? "turn" : "turns"} makes it worse.`
+      : "";
+  if (Math.abs(later - now) < 1)
+    return `If nobody acts: holds near ${now} for ${turns} turns.${grace}`;
+  return `If nobody acts: ${now} now, about ${later} in ${turns} turns.${grace}`;
+}
+
+export interface ResponderView {
+  role: string;
+  actions: readonly string[];
+}
+
+/** Why the viewer has no lever here, and who does. */
+export function noResponseText(responders: readonly ResponderView[]): string {
+  if (responders.length === 0) {
+    return "Nobody can respond to this crisis directly. It runs its course and eases as its causes fade.";
+  }
+  const who = responders.map((r) => `${r.role.toLowerCase()} (${r.actions.join(", ")})`);
+  const list =
+    who.length === 1 ? who[0] : `${who.slice(0, -1).join("; ")} and ${who[who.length - 1]}`;
+  return `Your office has no response to this crisis. It can be answered by the ${list}. If none of them acts, it keeps escalating.`;
 }

@@ -24,10 +24,8 @@ and, if registry-managed, in `src/lib/migrations/registry.ts`.
 | `add-commodity-prices-unique-index.ts`                  | `indexes/commodityPrices.ts`            |
 | `add-election-write-guard-indexes.ts`                   | `indexes/writeGuards.ts`                |
 | `add-governance-write-guard-indexes.ts`                 | `indexes/writeGuards.ts`                |
-| `add-health-quality-indexes.ts`                         | `indexes/observability.ts`              |
 | `add-international-organization-write-guard-indexes.ts` | `indexes/internationalOrganizations.ts` |
 | `add-party-npp-rework-indexes.ts`                       | `indexes/partyNppRework.ts`             |
-| `add-site-traffic-indexes.ts`                           | `indexes/observability.ts`              |
 | `createActivityLogIndexes.ts`                           | `indexes/activity.ts`                   |
 | `createFinancialTxLogIndexes.ts`                        | `indexes/financialTxLog.ts`             |
 | `sovereignDefaultPhase1Indexes.ts`                      | `indexes/sovereignDefault.ts`           |

@@ -19,8 +19,8 @@ import {
 } from "./mediaProductRules";
 
 describe("media product lifecycle rules", () => {
-  it("gives newspaper, radio, television, publishing, and studio distinct coverage and cadence", () => {
-    const supported = ["newspaper_edition", "radio_program", "television_series", "book", "film"];
+  it("gives newspaper, radio, television, and publishing distinct coverage and cadence", () => {
+    const supported = ["newspaper_edition", "radio_program", "television_series", "book"];
     const profiles = supported.map((id) => getMediaProductKind(id)!);
     expect(profiles.every(Boolean)).toBe(true);
     expect(new Set(profiles.map((profile) => profile.coverage)).size).toBe(profiles.length);

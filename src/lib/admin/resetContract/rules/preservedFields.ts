@@ -334,8 +334,6 @@ export const PRESERVED_COLLECTION_CONTRACT: Readonly<Record<string, PreservedCol
     diagnostics: { kind: "keep-whole", reason: KEEP_OPS },
     clientDiagnostics: { kind: "keep-whole", reason: KEEP_OPS },
     clientSimulationStatistics: { kind: "keep-whole", reason: KEEP_OPS },
-    siteTrafficPageviews: { kind: "keep-whole", reason: KEEP_OPS },
-    codeQualitySnapshots: { kind: "keep-whole", reason: KEEP_OPS },
     simRuns: { kind: "keep-whole", reason: KEEP_OPS },
     demographicConfigOverrides: { kind: "keep-whole", reason: KEEP_ADMIN_CONFIG },
     electoratePriorityOverrides: { kind: "keep-whole", reason: KEEP_ADMIN_CONFIG },

@@ -64,22 +64,20 @@
   "COUNTRY_SECTOR_WEIGHTS_1953": {
     "shape": "country-first",
     "value": {
-      "manufacturing": 26,
+      "manufacturing": 32,
       "energy": 10,
       "agriculture": 8,
       "construction": 8,
       "financial": 7,
-      "manufacturing_vehicles": 6,
       "logistics": 5,
       "chemical_industries": 5,
       "retail": 5,
       "defense": 4,
       "real_estate": 3,
-      "media": 2,
+      "media": 3,
       "telecommunications": 2,
       "healthcare": 3,
       "extraction": 2,
-      "media_entertainment": 1,
       "technology": 0
     }
   },
@@ -404,7 +402,6 @@
     "value": {
       "1953": {
         "manufacturing": "Metall",
-        "manufacturing_vehicles": "Metall",
         "chemical_industries": "Metall",
         "construction": "Byggnads",
         "energy": "SIF",
@@ -416,14 +413,12 @@
         "technology": "SIF",
         "financial": "Svenska Bankmannaförbundet",
         "telecommunications": "SIF",
-        "media_entertainment": "SIF",
         "defense": "Metall",
         "agriculture": "Svenska Lantarbetareförbundet",
         "real_estate": "Byggnads"
       },
       "1979": {
         "manufacturing": "Metall",
-        "manufacturing_vehicles": "Metall",
         "chemical_industries": "Metall",
         "construction": "Byggnads",
         "energy": "SIF",
@@ -435,14 +430,12 @@
         "technology": "SIF",
         "financial": "Svenska Bankmannaförbundet",
         "telecommunications": "SIF",
-        "media_entertainment": "SIF",
         "defense": "Metall",
         "agriculture": "Svenska Lantarbetareförbundet",
         "real_estate": "Byggnads"
       },
       "1991": {
         "manufacturing": "Metall",
-        "manufacturing_vehicles": "Metall",
         "chemical_industries": "Metall",
         "construction": "Byggnads",
         "energy": "SIF",
@@ -454,14 +447,12 @@
         "technology": "SIF",
         "financial": "Svenska Bankmannaförbundet",
         "telecommunications": "SIF",
-        "media_entertainment": "SIF",
         "defense": "Metall",
         "agriculture": "Svenska Lantarbetareförbundet",
         "real_estate": "Byggnads"
       },
       "1999": {
         "manufacturing": "IF Metall",
-        "manufacturing_vehicles": "IF Metall",
         "chemical_industries": "IF Metall",
         "construction": "Byggnads",
         "energy": "Sif",
@@ -473,14 +464,12 @@
         "technology": "Sif",
         "financial": "Finansförbundet",
         "telecommunications": "Sif",
-        "media_entertainment": "Sif",
         "defense": "IF Metall",
         "agriculture": "Kommunal",
         "real_estate": "Byggnads"
       },
       "2007": {
         "manufacturing": "IF Metall",
-        "manufacturing_vehicles": "IF Metall",
         "chemical_industries": "IF Metall",
         "construction": "Byggnads",
         "energy": "Sif",
@@ -492,14 +481,12 @@
         "technology": "Sif",
         "financial": "Finansförbundet",
         "telecommunications": "Sif",
-        "media_entertainment": "Sif",
         "defense": "IF Metall",
         "agriculture": "Kommunal",
         "real_estate": "Byggnads"
       },
       "2019": {
         "manufacturing": "IF Metall",
-        "manufacturing_vehicles": "IF Metall",
         "chemical_industries": "IF Metall",
         "construction": "Byggnads",
         "energy": "Unionen",
@@ -511,14 +498,12 @@
         "technology": "Unionen",
         "financial": "Finansförbundet",
         "telecommunications": "Unionen",
-        "media_entertainment": "Unionen",
         "defense": "IF Metall",
         "agriculture": "Kommunal",
         "real_estate": "Byggnads"
       },
       "2023": {
         "manufacturing": "IF Metall",
-        "manufacturing_vehicles": "IF Metall",
         "chemical_industries": "IF Metall",
         "construction": "Byggnads",
         "energy": "Unionen",
@@ -530,14 +515,12 @@
         "technology": "Unionen",
         "financial": "Finansförbundet",
         "telecommunications": "Unionen",
-        "media_entertainment": "Unionen",
         "defense": "IF Metall",
         "agriculture": "Kommunal",
         "real_estate": "Byggnads"
       },
       "2027": {
         "manufacturing": "IF Metall",
-        "manufacturing_vehicles": "IF Metall",
         "chemical_industries": "IF Metall",
         "construction": "Byggnads",
         "energy": "Unionen",
@@ -549,7 +532,6 @@
         "technology": "Unionen",
         "financial": "Finansförbundet",
         "telecommunications": "Unionen",
-        "media_entertainment": "Unionen",
         "defense": "IF Metall",
         "agriculture": "Kommunal",
         "real_estate": "Byggnads"
@@ -1449,12 +1431,11 @@
   "COUNTRY_SECTOR_WEIGHTS": {
     "shape": "country-first",
     "value": {
-      "manufacturing": 16,
+      "manufacturing": 23,
       "real_estate": 11,
       "healthcare": 9,
       "retail": 8,
       "technology": 7,
-      "manufacturing_vehicles": 7,
       "financial": 6,
       "energy": 6,
       "extraction": 6,
@@ -1462,19 +1443,17 @@
       "logistics": 4,
       "agriculture": 3,
       "defense": 3,
-      "media_entertainment": 2,
-      "media": 1
+      "media": 3
     }
   },
   "COUNTRY_SECTOR_WEIGHTS_1979": {
     "shape": "country-first",
     "value": {
-      "manufacturing": 20,
+      "manufacturing": 26,
       "healthcare": 10,
       "energy": 7,
       "retail": 8,
       "construction": 7,
-      "manufacturing_vehicles": 6,
       "chemical_industries": 5,
       "defense": 4,
       "real_estate": 5,
@@ -1483,20 +1462,18 @@
       "logistics": 5,
       "telecommunications": 4,
       "technology": 3,
-      "media": 4,
-      "media_entertainment": 2,
+      "media": 6,
       "extraction": 2
     }
   },
   "COUNTRY_SECTOR_WEIGHTS_1991": {
     "shape": "country-first",
     "value": {
-      "manufacturing": 16,
+      "manufacturing": 23,
       "real_estate": 11,
       "healthcare": 9,
       "retail": 8,
       "technology": 7,
-      "manufacturing_vehicles": 7,
       "financial": 6,
       "energy": 6,
       "extraction": 6,
@@ -1504,8 +1481,7 @@
       "logistics": 4,
       "agriculture": 3,
       "defense": 3,
-      "media_entertainment": 2,
-      "media": 1
+      "media": 3
     }
   },
   "COUNTRY_TO_ISO_NUMERIC": {

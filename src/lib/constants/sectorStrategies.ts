@@ -13,10 +13,7 @@
 import * as Sentry from "@sentry/nextjs";
 import {
   getEffectiveStrategyRates as getEffectiveStrategyRatesRule,
-  getEffectiveStrategyRatesForOperatingModel as getEffectiveStrategyRatesForOperatingModelRule,
-  getOperatingSectorType,
   getStrategy as getStrategyRule,
-  getStrategyForOperatingModel as getStrategyForOperatingModelRule,
 } from "@/lib/corporations/rules/sectorStrategies";
 import {
   SECTOR_STRATEGIES,
@@ -29,9 +26,6 @@ export * from "./sectorStrategiesTables";
 export {
   getMediaOperatingModelStrategies,
   getSectorStrategies,
-  getOperatingSectorType,
-  getOperatingSectorLabel,
-  isNewsMediaLane,
   plannedEconomyMediaSupplyFactor,
 } from "@/lib/corporations/rules/sectorStrategies";
 
@@ -57,69 +51,23 @@ export function getStrategy(
   return getStrategyRule(sectorType, strategyId, preset, options);
 }
 
-export function getStrategyForOperatingModel(
-  sectorType: string,
-  strategyId: string,
-  industryModel?: string | null,
-  mediaDiscriminator?: string | null,
-  preset?: string
-): SectorStrategy {
-  reportUnknownSectorType(getOperatingSectorType(sectorType, industryModel, mediaDiscriminator));
-  return getStrategyForOperatingModelRule(
-    sectorType,
-    strategyId,
-    industryModel,
-    mediaDiscriminator,
-    preset
-  );
-}
-
 export function getEffectiveStrategyRates(
   sectorType: string,
   strategyId: string,
   transitionFromStrategyId: string | undefined | null,
   transitionStartTurn: number | undefined | null,
   currentTurn: number,
-  mediaDiscriminator?: string | null,
   preset?: string,
   hardwareInputReliefStartTurn?: number | null,
   options?: StrategyOptions
 ): EffectiveStrategyRates {
-  reportUnknownSectorType(getOperatingSectorType(sectorType, undefined, mediaDiscriminator));
+  reportUnknownSectorType(sectorType);
   return getEffectiveStrategyRatesRule(
     sectorType,
     strategyId,
     transitionFromStrategyId,
     transitionStartTurn,
     currentTurn,
-    mediaDiscriminator,
-    preset,
-    hardwareInputReliefStartTurn,
-    options
-  );
-}
-
-export function getEffectiveStrategyRatesForOperatingModel(
-  sectorType: string,
-  strategyId: string,
-  transitionFromStrategyId: string | undefined | null,
-  transitionStartTurn: number | undefined | null,
-  currentTurn: number,
-  industryModel?: string | null,
-  mediaDiscriminator?: string | null,
-  preset?: string,
-  hardwareInputReliefStartTurn?: number | null,
-  options?: StrategyOptions
-): EffectiveStrategyRates {
-  reportUnknownSectorType(getOperatingSectorType(sectorType, industryModel, mediaDiscriminator));
-  return getEffectiveStrategyRatesForOperatingModelRule(
-    sectorType,
-    strategyId,
-    transitionFromStrategyId,
-    transitionStartTurn,
-    currentTurn,
-    industryModel,
-    mediaDiscriminator,
     preset,
     hardwareInputReliefStartTurn,
     options

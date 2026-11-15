@@ -6,10 +6,7 @@ import type { CommodityType } from "@/lib/constants/commodities";
 import type { OperatingSectorType } from "@/lib/constants/corporations";
 import { STARTING_YEAR, TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import { isPlannedEconomy } from "@/lib/constants/commandEconomy";
-import {
-  getEffectiveStrategyRatesForOperatingModel,
-  getOperatingSectorType,
-} from "@/lib/constants/sectorStrategies";
+import { getEffectiveStrategyRates } from "@/lib/constants/sectorStrategies";
 import { loadWorldEraUnitScale } from "@/lib/currency/gdpAnchorRate";
 import { loadExtractionRevenueAnchorOf } from "@/lib/extraction/revenueAnchor";
 import { getExtractionOutputScaleEnabled } from "@/lib/market/featureFlag";
@@ -166,11 +163,7 @@ export function fragileReinvestmentPriority(
   const localPriceRatioOf: CommodityPriceRatioFn = (commodity, fallbackCountryId) =>
     placementSignals.statePriceRatioOf?.(commodity, sector.stateId) ??
     priceRatioOf(commodity, fallbackCountryId);
-  const operatingSectorType = getOperatingSectorType(
-    sector.sectorType,
-    sector.industryModel,
-    sector.mediaDiscriminator
-  );
+  const operatingSectorType = sector.sectorType;
   const commodity = fragileMarketCommodityForSector(
     operatingSectorType as OperatingSectorType,
     countryId,
@@ -180,14 +173,12 @@ export function fragileReinvestmentPriority(
     fragileSupplyGate(sector.sectorType, sector.stateId, placementSignals)
   );
   if (!commodity) return 0;
-  const effectiveSupply = getEffectiveStrategyRatesForOperatingModel(
+  const effectiveSupply = getEffectiveStrategyRates(
     sector.sectorType,
     sector.strategyId ?? "standard",
     sector.transitionFromStrategyId,
     sector.transitionStartTurn,
-    turn,
-    sector.industryModel,
-    sector.mediaDiscriminator
+    turn
   ).supply;
   if ((effectiveSupply[commodity] ?? 0) <= 0) return 0;
   return localPriceRatioOf(commodity, countryId) ?? 0;
@@ -208,14 +199,12 @@ export function extractionGrowthHeadroom(
   if (!resourceHeadroomOf) {
     return Math.max(0, Math.min(1, placementSignals?.extractionHeadroomOf?.(sector.stateId) ?? 1));
   }
-  const supply = getEffectiveStrategyRatesForOperatingModel(
+  const supply = getEffectiveStrategyRates(
     sector.sectorType,
     sector.strategyId ?? "standard",
     sector.transitionFromStrategyId,
     sector.transitionStartTurn,
-    turn,
-    sector.industryModel,
-    sector.mediaDiscriminator
+    turn
   ).supply;
   return extractionHeadroomForSupply(supply, (resource) =>
     resourceHeadroomOf(sector.stateId, resource)

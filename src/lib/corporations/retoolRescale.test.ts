@@ -38,11 +38,14 @@ describe("retoolRescaleFields", () => {
       capitalStock,
     });
     const ratio = capacityRescaleRatio("manufacturing", "standard", "vehicle_assembly");
-    // 1,000 steel units (40 plants of 25) are worth 20 vehicle units: 20 vehicle plants.
+    // 1,000 standard units (40 plants of 25) are worth about 20 vehicle units: 19 vehicle plants.
     expect(set.capitalStock).toBeCloseTo(capitalStock * ratio, 6);
     expect(set.plantCount).toBe(Math.floor(capitalStock * ratio));
     expect(set).toMatchObject(
-      seedPlantLedger({ sectorType: "manufacturing_vehicles" }, set.capitalStock)
+      seedPlantLedger(
+        { sectorType: "manufacturing", strategyId: "vehicle_assembly" },
+        set.capitalStock
+      )
     );
 
     // And back: vehicle units return to steel-sized plants.

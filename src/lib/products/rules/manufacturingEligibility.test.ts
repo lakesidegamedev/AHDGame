@@ -20,8 +20,8 @@ describe("manufacturing product eligibility", () => {
     {
       sectorId: "auto-1",
       corporationId: "corp-1",
-      sectorType: "manufacturing_vehicles",
-      strategyId: "standard",
+      sectorType: "manufacturing",
+      strategyId: "vehicle_assembly",
       capitalStock: 250,
       plantCount: 1,
       mothballed: false,
@@ -57,19 +57,18 @@ describe("manufacturing product eligibility", () => {
   });
 
   it("applies product-specific strategy compatibility", () => {
-    const evPlant = { ...plants[1], strategyId: "ev" };
-    const legal = legalManufacturingProductKinds([evPlant]);
+    const heavyPlant = { ...plants[1], strategyId: "vehicle_heavy_machinery" };
+    const legal = legalManufacturingProductKinds([heavyPlant]);
 
-    expect(legal.map((kind) => kind.id)).toContain("passenger_car");
+    expect(legal.map((kind) => kind.id)).toContain("truck");
     expect(legal.map((kind) => kind.id)).toContain("commercial_vehicle");
-    expect(legal.map((kind) => kind.id)).not.toContain("truck");
+    expect(legal.map((kind) => kind.id)).not.toContain("passenger_car");
   });
 
   it("keeps vehicle product eligibility after the model-aware 1991 taxonomy conversion", () => {
     const convertedVehiclePlant = {
       ...plants[1],
       sectorType: "manufacturing",
-      industryModel: "vehicles" as const,
     };
 
     expect(isLegalManufacturingProductForPlant("passenger_car", convertedVehiclePlant)).toBe(true);
@@ -85,7 +84,6 @@ describe("manufacturing product eligibility", () => {
     const evPlant = {
       ...plants[1],
       sectorType: "manufacturing",
-      industryModel: "vehicles" as const,
       strategyId: "ev",
     };
 
@@ -111,7 +109,6 @@ describe("vehicle lines on ordinary manufacturing", () => {
     sectorId: "p1",
     corporationId: "c1",
     sectorType: "manufacturing",
-    industryModel: null,
     strategyId,
     capitalStock: 100,
     plantCount: 4,
@@ -127,7 +124,7 @@ describe("vehicle lines on ordinary manufacturing", () => {
   });
 
   it("does not offer vehicle products to a steel plant", () => {
-    expect(isLegalManufacturingProductForPlant("passenger_car", plant("standard"))).toBe(false);
+    expect(isLegalManufacturingProductForPlant("passenger_car", plant("heavy_metals"))).toBe(false);
     expect(isLegalManufacturingProductForPlant("truck", plant("heavy_metals"))).toBe(false);
   });
 });

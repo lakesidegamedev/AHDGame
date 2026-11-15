@@ -1,121 +1,119 @@
+<div align="center">
+
+<img src="public/ahd-logo.png" alt="A House Divided" width="120">
+
 # A House Divided
 
-<img src="public/ahd-logo.png" alt="" width="96" align="right">
+**A persistent multiplayer political and economic simulation that runs in your browser.**
 
-A browser-based multiplayer political and economic simulation. Players create politicians, win elections, pass legislation, found corporations, and climb from state office to national leadership. In normal multiplayer mode the main turn runs once per real hour. Stock markets refresh between turns at quarter-hour intervals; election returns, growth, inflation and exchange rates also have a half-hour update. Production, action refresh, campaign budgets and race deadlines remain on the main turn. Sub-hour updates skip an inactive world or a turn that is still processing; the half-hour update also skips fast mode. AI politicians fill seats a player does not, so the world stays active at any player count.
+Run for office, pass laws, found corporations and steer a national economy, in a shared world that advances every hour.
 
-Play at [ahousedividedgame.com](https://www.ahousedividedgame.com). Docs at [docs.lakesidegames.net](https://docs.lakesidegames.net). Licensed [PolyForm Noncommercial](./LICENSE.md).
+[![Play now](https://img.shields.io/badge/play-ahousedividedgame.com-c0392b?style=flat-square)](https://www.ahousedividedgame.com)
+[![Docs](https://img.shields.io/badge/docs-docs.lakesidegames.net-2f6fb3?style=flat-square)](https://docs.lakesidegames.net)
+[![Discord](https://img.shields.io/badge/discord-join-5865F2?style=flat-square&logo=discord&logoColor=white)](https://discord.gg/DmF8zJJuqN)
+<br>
+[![CI](https://img.shields.io/github/actions/workflow/status/lakesidegamedev/AHDGame/ci.yml?branch=development&style=flat-square&label=CI)](https://github.com/lakesidegamedev/AHDGame/actions/workflows/ci.yml?query=branch%3Adevelopment)
+[![Release](https://img.shields.io/github/v/release/lakesidegamedev/AHDGame?style=flat-square&label=release)](https://github.com/lakesidegamedev/AHDGame/releases)
+[![License: PolyForm Noncommercial](https://img.shields.io/badge/license-PolyForm%20Noncommercial-555?style=flat-square)](./LICENSE.md)
 
-## The game
+[Play](https://www.ahousedividedgame.com) · [Documentation](https://docs.lakesidegames.net) · [Changelog](https://www.ahousedividedgame.com/changelog) · [Contributing](./CONTRIBUTING.md) · [Security](./.github/SECURITY.md)
 
-**Eras.** Worlds seed from a historical preset (1953, 1979, 1991, 1999, 2007, 2019, 2023, or 2027) and play forward. A preset sets policies, budgets, demographics, seat maps, currencies, commodity prices, cabinet structures, franchise rules, and Supreme Court rosters. As the calendar crosses real inflection points, era checkpoints durably shift the electorate, paced by how the game's own Supreme Court rules on its docket.
+</div>
 
-**Countries.** 25 registered countries on both sides of the Cold War, resolved per world as playable or economy-only. Western democracies and one-party states with planned economies run their own political machinery. Scotland and Wales are authored secession configurations that stay hidden until registered.
+<table>
+  <tr>
+    <td width="50%"><img src="public/changelog/1.13.0/presidential-stage.png" alt="Presidential election map with tipping-point bar"></td>
+    <td width="50%"><img src="public/changelog/1.13.0/market-supply.png" alt="Market page with stock index chart and supply deals"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>Elections, from state results to the Electoral College</sub></td>
+    <td align="center"><sub>Exchanges, bonds, commodities and supply contracts</sub></td>
+  </tr>
+</table>
 
-**Politics.** Per-office electoral systems: first past the post, proportional (Sainte-Laguë and Hare), mixed-member, Electoral College, parliamentary selection. Primaries with delegate math, campaigns with upgrade tracks and upkeep, a two-layer voter model (country archetypes over a granular census-cell electorate), full bill lifecycles with committees and whips, coalitions and confidence votes, cabinets with confirmation fights, an active Supreme Court docket, impeachment, referendums, and politburo machinery for the one-party states.
+<sub>Screenshots use demonstration data.</sub>
 
-**Economy.** Corporations buy productive capacity, staff it from a modeled labor market, and fight for market share. Stock exchanges, index funds, corporate and sovereign bonds with defaults, central banks with rate corridors and FOMC-style meetings, per-country currencies with era-anchored forex, commodities with extraction and depletion, unions and strikes, budgets and sovereign debt, an IMF, two-circuit money for command economies, and a double-entry ledger reconciling all of it every turn.
+## About the game
 
-**World.** Cold War blocs, spheres of influence, crises and détente, international organizations, orders of battle, theaters, and espionage surfaces.
+Players create politicians and climb from local office to national leadership, or build business empires that the politicians have to reckon with. Every world starts from a real historical moment and plays forward from there. AI politicians and AI-run companies fill every seat and market that players leave open, so a world stays alive at any player count.
 
-**Platform.** Player mail and news, an in-game wiki, a Discord bot surface plus per-country event webhooks, a public REST API (`/api-guide` in-app), an admin console, alt-detection, and a PWA install.
+The main turn runs once per real hour. Stock markets tick every 15 minutes, and election returns, growth, inflation and exchange rates also move on the half hour.
 
-## How it runs
+| System        | What it covers                                                                                                                                                                                                                                                                                                                                     |
+| ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Eras**      | Worlds seed from a historical preset between 1953 and 2027: policies, budgets, demographics, seat maps, currencies, commodity prices, cabinets, franchise rules and court rosters. Era checkpoints shift the electorate as the calendar crosses real turning points.                                                                               |
+| **Countries** | 25 registered countries on both sides of the Cold War, each resolved per world as playable or economy-only. Democracies and one-party states run their own political machinery.                                                                                                                                                                    |
+| **Politics**  | First past the post, proportional (Sainte-Laguë and Hare), mixed-member, Electoral College and parliamentary selection. Primaries with delegate math, campaigns, full bill lifecycles with committees and whips, coalitions and confidence votes, cabinet confirmations, a working Supreme Court docket, impeachment, referendums and politburos.  |
+| **Economy**   | Corporations build productive capacity, hire from a modeled labor market and compete for demand. Stock exchanges, index funds, corporate and sovereign bonds with defaults, central banks, per-country currencies, commodities with depletion, unions and strikes, budgets and sovereign debt, all reconciled by a double-entry ledger every turn. |
+| **World**     | Cold War blocs, spheres of influence, crises and détente, international organizations, militaries and theaters.                                                                                                                                                                                                                                    |
+| **Platform**  | In-game mail, news and wiki, a Discord bot and per-country event feeds, a public REST API with an MCP bridge, an admin console and an installable web app.                                                                                                                                                                                         |
 
+## How it is built
+
+```mermaid
+flowchart LR
+  Browser["Browser<br/>React 19 + Next.js App Router"] --> API["API routes<br/>JWT auth, Zod validation"]
+  API --> Mongo[("MongoDB")]
+  Worker["Turn worker<br/>hourly turn + sub-hour ticks"] --> Mongo
+  Worker --> Rules["Portable rules modules<br/>plain data in, plain data out"]
+  API --> Rules
 ```
-Browser (React 19 / Next.js App Router)
-  -> Next.js API routes (JWT auth, Zod validation, 1,400+ route handlers)
-  -> MongoDB (native driver, 100+ document types)
-  -> hourly turn processor: 140+ phases in ordered groups
-     (elections, bills, NPPs, economy, demographics, conflict, metrics)
-```
 
-Stack: Next.js 16, React 19, TypeScript, Tailwind 4, MongoDB, Vitest and Playwright, Sentry-compatible monitoring, Cloudflare R2 for uploads (local-disk fallback in dev). Turns run on a scheduled turn processor; in local development it runs in-process on `node-cron`.
+| Layer      | Technology                                                                                                           |
+| ---------- | -------------------------------------------------------------------------------------------------------------------- |
+| Frontend   | Next.js 16, React 19, TypeScript, Tailwind CSS 4, next-intl                                                          |
+| Backend    | Next.js route handlers (1,500+), Zod, MongoDB native driver                                                          |
+| Simulation | An ordered pipeline of turn phases run by a dedicated turn worker, with a headless world simulator in `scripts/sim/` |
+| Quality    | Vitest, Playwright, ESLint with custom rules, Semgrep, CodeQL, an architecture audit                                 |
+| Operations | Sentry-compatible error monitoring, Cloudflare R2 for uploads                                                        |
 
-## Running it locally
+Game rules (formulas, eligibility, resolution) live in `rules.ts` modules that take plain data and return plain data, so the same rules run in the hourly turn, in the headless simulator and in singleplayer. The architecture audit enforces this.
 
-Requires Node 20.19+ or 22.12+ (CI runs Node 22) and a MongoDB instance.
+## Repository layout
+
+| Path                                         | What lives there                                                                           |
+| -------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| [`src/app`](./src/app)                       | Pages and API routes (Next.js App Router)                                                  |
+| [`src/lib`](./src/lib)                       | Domain logic, one directory per game system                                                |
+| [`src/simulation`](./src/simulation)         | Turn engine and turn phases                                                                |
+| [`src/components`](./src/components)         | Shared React components                                                                    |
+| [`src/shared`](./src/shared)                 | Formulas and constants used by both browser and server                                     |
+| [`src/lib/seeds/wiki`](./src/lib/seeds/wiki) | Player wiki source                                                                         |
+| [`scripts`](./scripts)                       | Seeders, world bootstrap, migrations, simulator, CI and maintenance tooling                |
+| [`tests`](./tests)                           | Playwright end-to-end tests and repository-wide checks (unit tests sit next to their code) |
+| [`content/changelog`](./content/changelog)   | Changelog notes and release posts                                                          |
+| [`messages`](./messages)                     | UI translations                                                                            |
+| [`public`](./public)                         | Static assets, maps and images                                                             |
+| [`docs`](./docs)                             | Design system reference                                                                    |
+| [`eslint-rules`](./eslint-rules)             | Project-specific ESLint rules                                                              |
+| [`vendor`](./vendor)                         | Vendored npm packages                                                                      |
+| [`.github`](./.github)                       | CI workflows, Semgrep rules, issue templates, security policy, code of conduct             |
+
+## Quick start
+
+You need Node 20.19+ or 22.12+ and a MongoDB instance.
 
 ```bash
 git clone https://github.com/lakesidegamedev/AHDGame.git
 cd AHDGame
 npm ci
-cp .env.example .env.local
+cp .env.example .env.local   # set MONGODB_URI, AUTH_SECRET, ADMIN_REGISTRATION_KEY, CRON_SECRET
+npm run bootstrap:full       # builds a complete historical world
+npm run dev                  # http://localhost:3000
 ```
 
-Set the required values in `.env.local`:
-
-```env
-MONGODB_URI=mongodb://localhost:27017/a-house-divided
-AUTH_SECRET=            # openssl rand -base64 32
-ADMIN_REGISTRATION_KEY= # lets the first account register as admin
-CRON_SECRET=            # authenticates the turn cron
-```
-
-Everything else in `.env.example` is optional for the main app. `INTERNAL_API_KEY` is needed by server-side task scripts, while OAuth, monitoring, CAPTCHA, R2, and bot integrations can stay unset for local development.
-
-```bash
-npm run bootstrap:full   # complete historical world, including officials
-npm run dev              # http://localhost:3000
-```
-
-`next dev` auto-seeds an empty database and starts the in-process turn scheduler. For UI-only work, set `DISABLE_DEV_BACKGROUND=1` and use `npm run bootstrap:full` when you intentionally need a complete world. `npm run seed` only loads the US reference pack and does not create a full playable world.
-
-The destructive `reset-and-bootstrap` commands require `--expect-db=<database>`.
-The target follows the app's precedence: `MONGODB_DB`, then `MONGO_DB_NAME`, then
-the database in the connection URI, then `a-house-divided`. Check the selected
-database without resetting it with:
-
-```bash
-npm run reset-and-bootstrap -- --expect-db=my_local_world --check-target
-```
-
-Removing `--check-target` performs the reset. A missing or mismatched target
-assertion exits before connecting or loading the reset implementation.
-
-Register at `/register` with your `ADMIN_REGISTRATION_KEY` to unlock the admin console. To trigger a turn manually:
-
-```bash
-curl -H "Authorization: Bearer $CRON_SECRET" http://localhost:3000/api/cron/turn
-```
-
-### Auth, briefly
-
-Password login plus optional Discord and Google OAuth, optional Turnstile on registration. Sessions are HS256 JWTs signed with `AUTH_SECRET` in HTTP-only cookies. Login and OAuth routes sign them; `src/lib/auth.ts` verifies them. `CRON_SECRET` authenticates cron routes, `INTERNAL_API_KEY` authenticates server-side scripts, and the Discord bot accepts deployment keys or user-created keys from Settings.
-
-## Development
-
-```bash
-npm run dev           # dev server
-npm run lint          # ESLint, with custom rules in eslint-rules/
-npm run typecheck     # tsc --noEmit
-npm run test:run      # Vitest unit and integration suite
-npm run test:e2e      # Playwright, needs the dev server running
-```
-
-CI runs on every pull request and on pushes to `main`: lint plus the architecture audit, format check, typecheck, the sharded unit suite, the Next build, and an integration job that runs federation transactions against an isolated Mongo replica set plus the full bootstrap fixture. A final `verify` job requires all of them. CodeQL, Semgrep, and dependency review run separately.
-
-Useful entry points:
-
-- `src/lib/turnSystem.ts` and `src/simulation/phases/` for the turn processor
-- `src/lib/db/types` for the data contracts
-- `scripts/seed/` for seeders, `scripts/world/` for bootstrap, `scripts/migrations/` for migrations
-- `scripts/sim/` for the headless world simulator, including `localWorldsimMcp.ts`, an MCP server over stdio that lets a coding agent run full world simulations against a local sandbox Mongo. This is how balance changes get validated: simulate hundreds of turns, compare against baseline, then merge.
-
-### Public API MCP bridge
-
-For external read-only integrations, create a **public-scope** API key in Settings and run `npm run --silent api:mcp`. Configure your MCP client to launch that command with `AHD_API_KEY` in its environment. Set `AHD_API_BASE_URL` only for a local or alternate deployment; remote URLs must use HTTPS. The bridge exposes each public v1 read endpoint and own-key capabilities as tools, forwards the key in `X-API-Key`, and respects the API's existing rate limits. It has no write tools and does not use a session cookie. Keep the key in your client secrets store, outside repository config.
-
-The machine-readable catalog at `/api/public/v1/meta` includes MCP setup metadata and the static CDN base URL. CDN assets are public; API data still requires a scoped key. Singleplayer keeps its local `/cdn` mirror and limits downloaded assets to 20 MB each.
-
-## Documentation
-
-[docs.lakesidegames.net](https://docs.lakesidegames.net) has the player wiki, design docs, and engineering guides in one place. Doc sources live in [lakesidegamedev/ahd-docs](https://github.com/lakesidegamedev/ahd-docs); the player wiki is seeded from `src/lib/seeds/wiki/` in this repo. Docs suffixed `-as-shipped` are grounded in current code and win over older design docs where they disagree.
+Register at `/register` with your `ADMIN_REGISTRATION_KEY` to get the admin console. The full local development guide, including environment variables, turn triggering, resets and the test commands, is in [CONTRIBUTING.md](./CONTRIBUTING.md#local-development).
 
 ## Contributing
 
-See [CONTRIBUTING.md](./CONTRIBUTING.md) for what's welcome and what needs discussion first. The short version: bug fixes, UI polish, tests, docs, and country content are welcome; balance and economy changes get extra review. Exploits and vulnerabilities go through [SECURITY.md](./SECURITY.md), never public issues.
+Bug fixes, UI and accessibility polish, tests, documentation and country content are welcome. Balance changes, new mechanics and schema changes start with an issue. Read [CONTRIBUTING.md](./CONTRIBUTING.md) before opening a pull request; AI coding agents should also read [AGENTS.md](./AGENTS.md).
+
+Found an exploit or vulnerability? Report it privately through [SECURITY.md](./.github/SECURITY.md), never in a public issue. Player account problems go through in-game support or [Discord](https://discord.gg/DmF8zJJuqN).
+
+## Documentation
+
+[docs.lakesidegames.net](https://docs.lakesidegames.net) hosts the player wiki, design notes and engineering guides. Their sources live in [lakesidegamedev/ahd-docs](https://github.com/lakesidegamedev/ahd-docs). The in-game wiki is seeded from [`src/lib/seeds/wiki`](./src/lib/seeds/wiki).
 
 ## License
 
-[PolyForm Noncommercial 1.0.0](./LICENSE.md). Read it, run it locally, mod it, contribute. Commercial use, including running a commercial host, is not permitted. "A House Divided" and the logo are trademarks of Lakeside Games; the servers at ahousedividedgame.com are the official way to play.
+[PolyForm Noncommercial 1.0.0](./LICENSE.md). Read it, run it locally, mod it and contribute. Commercial use, including running a commercial host, is not permitted. "A House Divided" and its logo are trademarks of Lakeside Games, and [ahousedividedgame.com](https://www.ahousedividedgame.com) is the official way to play.
