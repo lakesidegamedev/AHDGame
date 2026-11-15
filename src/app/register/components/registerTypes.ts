@@ -10,6 +10,7 @@ export type PartyOption = {
   memberCount: number;
   playerCount: number;
   isDefault: boolean;
+  organizationByRegion?: Record<string, number>;
   /** Null means no established presence; absent means not loaded. */
   frontierRegions?: string[] | null;
   membershipMode?: "open" | "approval";

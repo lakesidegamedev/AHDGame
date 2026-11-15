@@ -6,6 +6,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import CreateCharacterPage from "./CreateCharacterClient";
 
 const router = vi.hoisted(() => ({ replace: vi.fn(), push: vi.fn() }));
+vi.mock("next-intl", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("next-intl")>();
+  const { default: messages } = await import("../../../messages/en/parties.json");
+  return {
+    ...actual,
+    useTranslations: () =>
+      actual.createTranslator({ locale: "en", messages, namespace: "parties.characterCreation" }),
+  };
+});
 vi.mock("next/navigation", () => ({ useRouter: () => router }));
 vi.mock("next/image", () => ({ default: () => null }));
 vi.mock("@/components/ui", () => ({
@@ -119,7 +128,9 @@ beforeEach(() => {
           startDate: "1991",
           flavorText: "",
         };
-      else if (/^\/api\/country\/(us|uk|jp)\/parties\?includeFrontier=1$/.test(url))
+      else if (
+        /^\/api\/country\/(us|uk|jp)\/parties\?includeFrontier=1&includeRegionalOrg=1$/.test(url)
+      )
         body = { parties: partyRows };
       else if (url === "/api/auth/character") {
         if (characterResponse)
@@ -178,7 +189,9 @@ describe("No Parties character creation", () => {
     render(<CreateCharacterPage />);
     fireEvent.click(await screen.findByRole("button", { name: new RegExp(country.name) }));
     await waitFor(() =>
-      expect(fetch).toHaveBeenCalledWith(`/api/country/${country.id}/parties?includeFrontier=1`)
+      expect(fetch).toHaveBeenCalledWith(
+        `/api/country/${country.id}/parties?includeFrontier=1&includeRegionalOrg=1`
+      )
     );
     await waitFor(() => expect(screen.queryByRole("region", { name: "Party" })).toBeNull());
     fireEvent.click(screen.getByRole("button", { name: "Try guided chat" }));
