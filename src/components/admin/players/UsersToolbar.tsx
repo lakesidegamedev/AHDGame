@@ -5,6 +5,8 @@ interface UsersToolbarProps {
   onSearchTermChange: (value: string) => void;
   showDuplicatesOnly: boolean;
   onToggleDuplicatesOnly: () => void;
+  appleNoDiscordOnly: boolean;
+  onToggleAppleNoDiscordOnly: () => void;
   loading: boolean;
   error: string;
   onRefresh: () => void;
@@ -20,6 +22,8 @@ export function UsersToolbar({
   onSearchTermChange,
   showDuplicatesOnly,
   onToggleDuplicatesOnly,
+  appleNoDiscordOnly,
+  onToggleAppleNoDiscordOnly,
   loading,
   error,
   onRefresh,
@@ -66,6 +70,19 @@ export function UsersToolbar({
               : `⚠ Show Duplicates${duplicateGroupCount > 0 ? ` (${duplicateGroupCount})` : ""}`}
           </button>
           <button
+            onClick={onToggleAppleNoDiscordOnly}
+            disabled={loading}
+            aria-pressed={appleNoDiscordOnly}
+            title="Accounts with no Discord linked but an Apple sign-in, which are exempt from the Discord requirement for new characters"
+            className={`rounded-lg px-4 py-2.5 text-sm font-medium transition-colors disabled:opacity-50 ${
+              appleNoDiscordOnly
+                ? "bg-slate-300 text-black hover:bg-slate-200"
+                : "border border-slate-400/50 bg-slate-500/10 text-slate-300 hover:bg-slate-500/20"
+            }`}
+          >
+            No Discord, Apple-linked
+          </button>
+          <button
             onClick={onRefresh}
             disabled={loading}
             className="rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-primary/90 disabled:opacity-50"
@@ -90,7 +107,7 @@ export function UsersToolbar({
               </span>
             </>
           )}
-          {(searchTerm || showDuplicatesOnly) && (
+          {(searchTerm || showDuplicatesOnly || appleNoDiscordOnly) && (
             <>
               <div className="h-4 w-px bg-card-border" />
               <div className="flex items-center gap-2">
