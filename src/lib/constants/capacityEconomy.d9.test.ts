@@ -34,12 +34,9 @@ function mixPriceOf(sectorType: CorporationType, strategyId: string): number {
 }
 
 describe("D9 — RPU per strategy", () => {
-  it("keeps the 1953 baseline media and entertainment recipes on standard", () => {
+  it("keeps the 1953 baseline media recipe on standard", () => {
     expect(defaultSupplyRates("media")).toEqual(
       SECTOR_STRATEGIES.media.find((strategy) => strategy.id === "standard")?.supply
-    );
-    expect(defaultSupplyRates("media_entertainment")).toEqual(
-      SECTOR_STRATEGIES.media_entertainment.find((strategy) => strategy.id === "standard")?.supply
     );
   });
 
@@ -101,10 +98,7 @@ describe("D9 — rescaleCapacityForStrategyChange", () => {
     expect(nameplateAfter).toBeCloseTo(nameplateBefore, 6);
   });
 
-  it.each([
-    ["media", "standard", "digital_first"],
-    ["media_entertainment", "standard", "streaming"],
-  ] as Array<[CorporationType, string, string]>)(
+  it.each([["media", "standard", "digital_first"]] as Array<[CorporationType, string, string]>)(
     "keeps mixed-output model capacity and paid queue value stable for %s %s -> %s",
     (type, from, to) => {
       const stockBefore = 4321;
@@ -143,7 +137,7 @@ describe("D9 — rescaleCapacityForStrategyChange", () => {
   it("is a no-op when the strategy does not actually change", () => {
     expect(capacityRescaleRatio("extraction", "coal_mining", "coal_mining")).toBe(1);
     expect(capacityRescaleRatio("manufacturing", null, "standard")).toBe(1);
-    expect(capacityRescaleRatio("manufacturing", undefined, undefined)).toBe(1);
+    expect(capacityRescaleRatio("manufacturing", null, null)).toBe(1);
   });
 
   it("leaves a sector with no capacity alone", () => {

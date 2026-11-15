@@ -135,10 +135,14 @@ describe("foreign-host founding quote equals charge", () => {
         .findOne({ corporationId: corpId });
       expect(sector!.countryId).toBe(countryId);
       expect(sector!.buildQueue![0].costPaidAnchor).toBeCloseTo(buildCost, 8);
-      expect(sector!.revenue / hostRate).toBeCloseTo(
-        25 * revenuePerCapacityUnitForStrategy("manufacturing", "standard", 1),
-        0
-      );
+      // Revenue is stored in whole host-currency units, so converting back
+      // carries up to half a host unit of rounding.
+      expect(
+        Math.abs(
+          sector!.revenue / hostRate -
+            25 * revenuePerCapacityUnitForStrategy("manufacturing", "standard", 1)
+        )
+      ).toBeLessThan(0.5 / hostRate + 1e-9);
     }
   );
 });

@@ -14,7 +14,6 @@ import type { OperatingSectorType } from "@/lib/constants/corporations";
 
 export const US_UNION_NAMES_MODERN: Partial<Record<OperatingSectorType, string>> = {
   manufacturing: "United Steelworkers",
-  manufacturing_vehicles: "United Auto Workers",
   extraction: "United Mine Workers of America",
   energy: "Utility Workers Union of America",
   construction: "United Brotherhood of Carpenters and Joiners",
@@ -24,7 +23,6 @@ export const US_UNION_NAMES_MODERN: Partial<Record<OperatingSectorType, string>>
   logistics: "International Brotherhood of Teamsters",
   media: "NewsGuild-CWA",
   defense: "International Association of Machinists and Aerospace Workers",
-  media_entertainment: "SAG-AFTRA",
   telecommunications: "Communications Workers of America",
   chemical_industries: "United Steelworkers",
   technology: "Communications Workers of America",
@@ -34,7 +32,6 @@ export const US_UNION_NAMES_2007: Partial<Record<OperatingSectorType, string>> =
   ...US_UNION_NAMES_MODERN,
   healthcare: "Service Employees International Union",
   media: "The Newspaper Guild",
-  media_entertainment: "Screen Actors Guild",
 };
 
 export const US_UNION_NAMES_1991: Partial<Record<OperatingSectorType, string>> = {
@@ -44,7 +41,6 @@ export const US_UNION_NAMES_1991: Partial<Record<OperatingSectorType, string>> =
   media: "The Newspaper Guild",
   healthcare: "Service Employees International Union",
   technology: "International Brotherhood of Electrical Workers",
-  media_entertainment: "Screen Actors Guild",
 };
 
 export const US_UNION_NAMES_1979: Partial<Record<OperatingSectorType, string>> = {
@@ -54,7 +50,6 @@ export const US_UNION_NAMES_1979: Partial<Record<OperatingSectorType, string>> =
 
 export const US_UNION_NAMES_1953: Partial<Record<OperatingSectorType, string>> = {
   manufacturing: "United Steelworkers of America",
-  manufacturing_vehicles: "United Auto Workers",
   extraction: "United Mine Workers of America",
   energy: "Utility Workers Union of America",
   construction: "United Brotherhood of Carpenters and Joiners",
@@ -63,6 +58,5 @@ export const US_UNION_NAMES_1953: Partial<Record<OperatingSectorType, string>> =
   defense: "International Association of Machinists",
   telecommunications: "Communications Workers of America",
   chemical_industries: "Oil Workers International Union",
-  media_entertainment: "Screen Actors Guild",
   retail: "Retail Clerks International Association",
 };

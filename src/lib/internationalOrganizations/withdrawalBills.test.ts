@@ -86,7 +86,7 @@ describe("applyInternationalWithdrawalMeasure — FTA rescission sentiment hook"
       UK: ["energy", "media"],
       US: ["technology"],
       JP: [],
-      DE: ["manufacturing_vehicles"],
+      DE: ["manufacturing"],
     });
 
     const { applyInternationalWithdrawalMeasure } = await import("./withdrawalBills");
@@ -106,7 +106,7 @@ describe("applyInternationalWithdrawalMeasure — FTA rescission sentiment hook"
     );
 
     const grouped = pulsesByCountry();
-    // UK has two sectors (energy, media), US one (technology), JP none, DE one (automobiles)
+    // UK has two sectors (energy, media), US one (technology), JP none, DE one (manufacturing)
     expect(grouped.UK).toHaveLength(2);
     expect(grouped.US).toHaveLength(1);
     expect(grouped.JP ?? []).toHaveLength(0);
@@ -228,7 +228,7 @@ describe("applyInternationalWithdrawalMeasure — FTA rescission sentiment hook"
     setupSignedSectorTariffs({
       UK: ["energy"],
       JP: ["technology"],
-      DE: ["manufacturing_vehicles"],
+      DE: ["manufacturing"],
     });
 
     const { applyInternationalWithdrawalMeasure } = await import("./withdrawalBills");

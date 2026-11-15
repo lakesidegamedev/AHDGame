@@ -23,7 +23,7 @@ const baselineMonetary = {
   neutralPrimeRate: 4,
 };
 const sectorWeightsBase = {
-  manufacturing: 18,
+  manufacturing: 20,
   real_estate: 13,
   construction: 9,
   technology: 9,
@@ -36,10 +36,8 @@ const sectorWeightsBase = {
   extraction: 4,
   agriculture: 3,
   telecommunications: 3,
-  manufacturing_vehicles: 2,
-  media: 1,
+  media: 2,
   defense: 1,
-  media_entertainment: 1,
 };
 const repEcon = {
   gdp: 126000000000000,
@@ -111,8 +109,6 @@ export const CN_ECONOMY: CountryEconomy = {
         healthcare: 1,
         telecommunications: 0,
         media: 0,
-        manufacturing_vehicles: 0,
-        media_entertainment: 0,
         technology: 0,
       },
       "1979": {
@@ -130,12 +126,10 @@ export const CN_ECONOMY: CountryEconomy = {
         technology: 0,
         financial: 0,
         real_estate: 0,
-        manufacturing_vehicles: 0,
         media: 0,
-        media_entertainment: 0,
       },
       "1991": {
-        manufacturing: 28,
+        manufacturing: 29,
         agriculture: 24,
         construction: 7,
         extraction: 8,
@@ -147,11 +141,9 @@ export const CN_ECONOMY: CountryEconomy = {
         real_estate: 3,
         healthcare: 3,
         defense: 2,
-        manufacturing_vehicles: 1,
         telecommunications: 1,
         technology: 1,
-        media: 1,
-        media_entertainment: 1,
+        media: 2,
       },
     },
   },

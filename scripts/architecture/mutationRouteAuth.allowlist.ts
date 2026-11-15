@@ -6,8 +6,6 @@
 export const PUBLIC_MUTATION_ROUTES: Record<string, string> = {
   "src/app/api/analytics/intake/route.ts POST":
     "Anonymous signup funnel event; rate limited per IP, bot user agents dropped.",
-  "src/app/api/analytics/pageview/route.ts POST":
-    "Anonymous page view; session read only to mark the view as signed in.",
   "src/app/api/auth/apple/callback/route.ts POST":
     "Apple form-post callback; only redirects to the GET callback, no state read or written.",
   "src/app/api/auth/confirm-email/route.ts POST":

@@ -139,7 +139,7 @@ type PortfolioSeed = any;
 /**
  * Report a portfolio load failure, except 4xx. A signed-out or expired session
  * answers /api/character/me and /api/character/portfolio with 401 — that is the
- * auth flow working, not a fault, and it was the top client error in GlitchTip.
+ * auth flow working, not a fault, and it was the top client error in the error tracker.
  * Transient failures (dropped connection, timeout, 502/503/504 during a deploy)
  * are shown as a load error but not reported. fetchJson already reports real
  * 5xx faults with its own context.
@@ -336,7 +336,7 @@ function PortfolioPageInner({ initialPortfolio }: PortfolioClientProps) {
       corpQ
         ? fetch(`/api/corporations/${corpQ}`).then((r) => (r.ok ? r.json() : null))
         : Promise.resolve(null),
-      // Optional data: fetchJson reports network/5xx to GlitchTip; the catch
+      // Optional data: fetchJson reports network/5xx to the error tracker; the catch
       // degrades to null (no LoC section) rather than failing the whole load.
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       fetchJson<any>("/api/character/loc", { feature: "portfolio" }).catch(() => null),

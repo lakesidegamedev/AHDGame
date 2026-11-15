@@ -3,15 +3,10 @@ import { isBackgroundInPreset } from "@/lib/world/eraRoster";
 import type { State } from "@/lib/db/types/state";
 import type { CorporateSector } from "@/lib/db/types/corporation";
 import type { Union } from "@/lib/db/types";
-import {
-  OPERATING_SECTOR_TYPES,
-  operatingSectorIdentity,
-  type CorporationType,
-} from "@/lib/constants/corporations";
+import { OPERATING_SECTOR_TYPES, type CorporationType } from "@/lib/constants/corporations";
 import type { CountryId } from "@/lib/constants/countries";
 import { getUnionName } from "@/lib/unions/unionNames";
 import { BASE_APPROVAL } from "@/lib/unions/unionDues";
-import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import { unionsCollection } from "@/lib/db/repositories/unions";
@@ -75,22 +70,18 @@ export async function seedUnions(
   const pairs: {
     countryId: CountryId;
     sectorType: CorporationType;
-    industryModel: CorporateSector["industryModel"];
-    mediaDiscriminator: CorporateSector["mediaDiscriminator"];
   }[] = [];
 
-  // One world union per (country, operating lane): the vehicles and
-  // entertainment lanes keep their own unions under their canonical identity.
+  // One world union per (country, sector type).
   for (const rawCountryId of countryIds) {
     const countryId = rawCountryId as CountryId;
     for (const lane of OPERATING_SECTOR_TYPES) {
-      pairs.push({ countryId, ...operatingSectorIdentity(lane) });
+      pairs.push({ countryId, sectorType: lane });
     }
   }
 
-  for (const { countryId, sectorType, industryModel, mediaDiscriminator } of pairs) {
-    const unionType = getOperatingSectorType(sectorType, industryModel, mediaDiscriminator);
-    const name = getUnionName(countryId, unionType, preset);
+  for (const { countryId, sectorType } of pairs) {
+    const name = getUnionName(countryId, sectorType, preset);
     unionOps.push({
       updateOne: {
         // `null` matches an explicit null AND an absent field, so this is correct
@@ -98,16 +89,12 @@ export async function seedUnions(
         filter: {
           countryId,
           sectorType,
-          industryModel,
-          mediaDiscriminator,
           foundedByCharacterId: null,
         },
         update: {
           $setOnInsert: {
             countryId,
             sectorType,
-            industryModel,
-            mediaDiscriminator,
             name,
             ownerId: null,
             pendingLeaderCharacterId: null,
@@ -155,31 +142,22 @@ export async function seedUnions(
             _id: 1,
             countryId: 1,
             sectorType: 1,
-            industryModel: 1,
-            mediaDiscriminator: 1,
           },
         }
       )
       .toArray();
     const worldUnionIdByPair = new Map(
-      worldUnions.map((u) => [
-        `${u.countryId}|${u.sectorType}|${u.industryModel ?? ""}|${u.mediaDiscriminator ?? ""}`,
-        u._id,
-      ])
+      worldUnions.map((u) => [`${u.countryId}|${u.sectorType}`, u._id])
     );
     const sectorOps: AnyBulkWriteOperation<CorporateSector>[] = [];
-    for (const { countryId, sectorType, industryModel, mediaDiscriminator } of pairs) {
-      const unionId = worldUnionIdByPair.get(
-        `${countryId}|${sectorType}|${industryModel ?? ""}|${mediaDiscriminator ?? ""}`
-      );
+    for (const { countryId, sectorType } of pairs) {
+      const unionId = worldUnionIdByPair.get(`${countryId}|${sectorType}`);
       if (!unionId) continue;
       sectorOps.push({
         updateMany: {
           filter: {
             countryId,
             sectorType,
-            industryModel,
-            mediaDiscriminator,
             representingUnionId: null,
           },
           update: { $set: { representingUnionId: unionId } },

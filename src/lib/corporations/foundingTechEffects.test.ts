@@ -20,8 +20,6 @@ import { loadFoundingTechEffects } from "./foundingTechEffects";
 const db = {} as Db;
 const corporation = {
   type: "energy" as const,
-  industryModel: null,
-  mediaDiscriminator: null,
   unlockedTechNodeIds: ["n1"],
   techDecadeLane: {},
 };
@@ -31,24 +29,15 @@ describe("loadFoundingTechEffects", () => {
     vi.clearAllMocks();
   });
 
-  it("scopes tech to the lane being founded, not the corporation's primary type", async () => {
-    const effects = await loadFoundingTechEffects(
-      db,
-      corporation,
-      { sectorType: "manufacturing", industryModel: "vehicles", mediaDiscriminator: null },
-      1991
-    );
+  it("scopes tech to the sector type being founded, not the corporation's primary type", async () => {
+    const effects = await loadFoundingTechEffects(db, corporation, "manufacturing", 1991);
     expect(getSectorTechEffects).toHaveBeenCalledWith(
       expect.objectContaining({ type: "energy" }),
-      "manufacturing",
-      "vehicles",
-      null
+      "manufacturing"
     );
     expect(upkeptDominanceShield).toHaveBeenCalledWith(
       expect.objectContaining({ type: "energy" }),
       "manufacturing",
-      "vehicles",
-      null,
       1991,
       0
     );

@@ -17,15 +17,10 @@ vi.mock("@/lib/observability/fetchJson", () => ({
 
 afterEach(cleanup);
 
-function renderConfirm(props: {
-  industryModel?: string | null;
-  targetStrategyId: string;
-  retoolCostMultiplier?: number;
-}) {
+function renderConfirm(props: { targetStrategyId: string; retoolCostMultiplier?: number }) {
   return render(
     <StrategyChangeConfirm
       sectorType="manufacturing"
-      industryModel={props.industryModel}
       currentStrategyId="standard"
       targetStrategyId={props.targetStrategyId}
       dailyRevenue={1000}
@@ -36,26 +31,14 @@ function renderConfirm(props: {
   );
 }
 
-describe("StrategyChangeConfirm operating model", () => {
-  it("resolves vehicle plants to the vehicle strategy catalog", () => {
-    renderConfirm({ industryModel: "vehicles", targetStrategyId: "ev" });
-    expect(screen.getByText(/Switch to/)).toBeTruthy();
-  });
-
-  it("does not offer vehicle strategies to an ordinary manufacturing plant", () => {
-    const { container } = renderConfirm({ industryModel: null, targetStrategyId: "ev" });
-    expect(container.textContent).toBe("");
-  });
-});
-
 describe("StrategyChangeConfirm sunset discount", () => {
   it("shows the discounted retool fee", () => {
-    renderConfirm({ industryModel: "vehicles", targetStrategyId: "ev", retoolCostMultiplier: 0.4 });
+    renderConfirm({ targetStrategyId: "vehicle_assembly", retoolCostMultiplier: 0.4 });
     expect(screen.getByText(/Retooling cost/).textContent).toContain("60% off");
   });
 
   it("shows no discount by default", () => {
-    renderConfirm({ industryModel: "vehicles", targetStrategyId: "ev" });
+    renderConfirm({ targetStrategyId: "vehicle_assembly" });
     expect(screen.getByText(/Retooling cost/).textContent).not.toContain("off");
   });
 });
@@ -75,7 +58,7 @@ describe("StrategyChangeConfirm build time and downside", () => {
   });
 
   it("shows neither for a method without a build time", () => {
-    renderConfirm({ industryModel: "vehicles", targetStrategyId: "ev" });
+    renderConfirm({ targetStrategyId: "vehicle_assembly" });
     expect(screen.queryByText(/Downside charge/)).toBeNull();
     expect(screen.getByText(/Phases in/).textContent).not.toContain("while it is built");
   });

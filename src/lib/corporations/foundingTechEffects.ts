@@ -1,6 +1,6 @@
 import type { Db } from "mongodb";
 import type { Corporation } from "@/lib/db/types";
-import type { OperatingSectorIdentity } from "@/lib/constants/corporationsClient";
+import type { OperatingSectorType } from "@/lib/constants/corporationsClient";
 import { getSectorTechEffects } from "@/lib/constants/techTree";
 import { loadStrengthUpkeepStage, upkeptDominanceShield } from "@/lib/corporations/strengthUpkeep";
 
@@ -21,34 +21,22 @@ export interface FoundingTechEffects {
  */
 export async function loadFoundingTechEffects(
   db: Db,
-  corporation: Pick<
-    Corporation,
-    "type" | "industryModel" | "mediaDiscriminator" | "unlockedTechNodeIds" | "techDecadeLane"
-  >,
-  identity: OperatingSectorIdentity,
+  corporation: Pick<Corporation, "type" | "unlockedTechNodeIds" | "techDecadeLane">,
+  sectorType: OperatingSectorType,
   currentYear: number
 ): Promise<FoundingTechEffects> {
   const techView = {
     type: corporation.type,
-    industryModel: corporation.industryModel,
-    mediaDiscriminator: corporation.mediaDiscriminator,
     unlockedTechNodeIds: corporation.unlockedTechNodeIds,
     techDecadeLane: corporation.techDecadeLane,
   };
-  const effects = getSectorTechEffects(
-    techView,
-    identity.sectorType,
-    identity.industryModel,
-    identity.mediaDiscriminator
-  );
+  const effects = getSectorTechEffects(techView, sectorType);
   return {
     expansionDiscount: effects.expansionDiscount ?? 0,
     growthCostMultiplier: effects.growthCostMultiplier ?? 1,
     dominanceShield: upkeptDominanceShield(
       techView,
-      identity.sectorType,
-      identity.industryModel,
-      identity.mediaDiscriminator,
+      sectorType,
       currentYear,
       await loadStrengthUpkeepStage(db)
     ),

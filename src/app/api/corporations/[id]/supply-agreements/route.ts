@@ -138,8 +138,6 @@ export async function GET(_request: Request, { params }: RouteParams) {
                 countryId: 1,
                 stateId: 1,
                 contractAchievableUnits: 1,
-                industryModel: 1,
-                mediaDiscriminator: 1,
               },
             }
           )

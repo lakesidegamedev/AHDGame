@@ -29,10 +29,7 @@ import {
   type CommodityType,
 } from "@/lib/constants/commodities";
 import { EXTRACTABLE_RESOURCES } from "@/lib/constants/commoditiesCore";
-import {
-  getEffectiveStrategyRates,
-  getOperatingSectorType,
-} from "@/lib/constants/sectorStrategies";
+import { getEffectiveStrategyRates } from "@/lib/constants/sectorStrategies";
 import { getTariffBlendWeights } from "@/lib/tariffs/tariffEffects";
 import { NEUTRAL_TECH_EFFECTS } from "@/lib/constants/techTree";
 import { emptyProducerSectorOpening } from "@/lib/market/producerMarket/openingState";
@@ -252,11 +249,7 @@ async function main() {
   // What the margin stack passes per sector: the same global map, the sector's
   // national and state maps, the tariff weights, and fresh scaled rate objects.
   const marginInputs = world.sectors.map((sector) => {
-    const operatingSectorType = getOperatingSectorType(
-      sector.sectorType,
-      sector.industryModel,
-      sector.mediaDiscriminator
-    );
+    const operatingSectorType = sector.sectorType;
     const rates = getEffectiveStrategyRates(
       sector.sectorType,
       sector.strategyId ?? "standard",

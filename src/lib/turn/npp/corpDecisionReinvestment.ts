@@ -32,8 +32,7 @@ import {
   evaluateReinvestPreSizingGate,
 } from "@/lib/turn/npp/capacityDecisionTelemetry";
 import { allowsNppIndustryInvestment } from "./rules/investmentProtection";
-import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
-import { gateFill, type ProductFillRow } from "@/lib/turn/npp/rules/productFill";
+import { gateFill, wholeSellThrough, type ProductFillRow } from "@/lib/turn/npp/rules/productFill";
 import {
   NPP_REINVEST_MAX_QUEUE_DEPTH,
   NPP_REINVEST_MIN_FILL,
@@ -63,7 +62,10 @@ import {
 } from "@/lib/turn/npp/fragileMarketSupply";
 import { CAPITAL_DEPRECIATION_PER_TURN } from "@/lib/market/capital";
 import { operatorMay, operatorAllowsPlacement } from "./rules/operatorPolicy";
-import { isMarketSaturated } from "@/lib/turn/npp/rules/marketSaturation";
+import {
+  extractionDemandBoundUnits,
+  isMarketSaturated,
+} from "@/lib/turn/npp/rules/marketSaturation";
 import { NEUTRAL_STAT } from "@/lib/stats/statsConstants";
 import { existingPlantGrowthStep, existingPlantGrowthUnits } from "./rules/existingPlantGrowth";
 import { sizeShortageGrowthFinance } from "@/lib/turn/npp/rules/shortageGrowthFinance";
@@ -140,9 +142,7 @@ export function decideNppCapacityReinvestment({
     | "defense"
     | "telecommunications"
     | "logistics"
-    | "extraction"
-    | "manufacturing_vehicles"
-    | "media_entertainment";
+    | "extraction";
   primaryIndustryOnly: boolean;
   divestedSectorIds: ObjectId[];
   stateControlled: ReadonlySet<string>;
@@ -153,12 +153,7 @@ export function decideNppCapacityReinvestment({
   levers: StrategyLevers;
   operator: OperatorPermissions;
   toCorpLocal: (amountAnchor: number) => number;
-  nationalShare: (
-    countryId: string,
-    sectorType: CorporationType,
-    industryModel?: string | null,
-    mediaDiscriminator?: string | null
-  ) => number;
+  nationalShare: (countryId: string, sectorType: CorporationType) => number;
   commodityRatioFor: (sector: CorporateSector, extraUnits: number) => number;
   borrowAllowed: boolean;
   sectorEconomicToCorpLocal: (amount: number, sector: CorporateSector) => number;
@@ -179,6 +174,8 @@ export function decideNppCapacityReinvestment({
     let autopilotCapexSpent = 0;
     // Unmet demand in a sector's bucket, net of capacity claimed against it. No
     // reading is no evidence of room.
+    // A mine is read on the recipe it actually runs, so a coal mine is not
+    // credited with a rare earth shortage.
     const unmetUnitsOf = (sector: CorporateSector): number =>
       Math.max(
         0,
@@ -187,10 +184,13 @@ export function decideNppCapacityReinvestment({
             stateId: sector.stateId,
             countryId: sector.countryId ?? corp.countryId,
             sectorType: sector.sectorType,
-            industryModel: sector.industryModel,
-            mediaDiscriminator: sector.mediaDiscriminator,
           },
-          { aggregate: "mean" }
+          {
+            aggregate: "mean",
+            ...(sector.sectorType === "extraction"
+              ? { strategyId: sector.strategyId ?? null }
+              : {}),
+          }
         ) ?? 0
       );
     // Observation for one evaluated reinvestment candidate; see
@@ -208,17 +208,7 @@ export function decideNppCapacityReinvestment({
 
     for (const sp of sectorProfits) {
       const sector = sp.sector;
-      if (
-        !allowsNppIndustryInvestment(
-          operatingCorpType,
-          getOperatingSectorType(
-            sector.sectorType,
-            sector.industryModel,
-            sector.mediaDiscriminator
-          ),
-          primaryIndustryOnly
-        )
-      )
+      if (!allowsNppIndustryInvestment(operatingCorpType, sector.sectorType, primaryIndustryOnly))
         continue;
       // Nothing built yet (a newborn founding, or a pre-flip sector still
       // awaiting its transition order): there is no capacity to maintain and no
@@ -231,12 +221,16 @@ export function decideNppCapacityReinvestment({
       // telemetry means no evidence, and no evidence means no build.
       const produced = sector.producedUnits ?? 0;
       const sold = sector.soldUnits ?? 0;
-      const fill = gateFill(
-        ctx.productFillStage,
-        (sector.producerSettlement as { products?: ProductFillRow[] } | null | undefined)?.products,
-        produced,
-        sold
-      );
+      const fill =
+        sector.sectorType === "extraction"
+          ? wholeSellThrough(produced, sold)
+          : gateFill(
+              ctx.productFillStage,
+              (sector.producerSettlement as { products?: ProductFillRow[] } | null | undefined)
+                ?.products,
+              produced,
+              sold
+            );
       // (b) Is there room in the market to absorb more output? The same unmet
       // demand the founding path sizes against.
       const sectorCountryId = sector.countryId ?? corp.countryId;
@@ -249,14 +243,7 @@ export function decideNppCapacityReinvestment({
         queue_full: queueDepth >= NPP_REINVEST_MAX_QUEUE_DEPTH,
         no_telemetry: !(produced > 0),
         fill_below_min: produced > 0 && fill < NPP_REINVEST_MIN_FILL,
-        state_controlled: stateControlled.has(
-          bucketKey(
-            sector.stateId,
-            sector.sectorType,
-            sector.industryModel,
-            sector.mediaDiscriminator
-          )
-        ),
+        state_controlled: stateControlled.has(bucketKey(sector.stateId, sector.sectorType)),
         property_unavailable: !!sector.forSale || hasProtectedConstructionProperty(sector),
         cash_cut_run: cashRunCut || (floorHold && !ctx.shortageGrowthFinance),
       });
@@ -368,6 +355,12 @@ export function decideNppCapacityReinvestment({
         sector.sectorType === "extraction"
           ? extractionGrowthHeadroom(sector, placementSignals, ctx.turn)
           : 1;
+      // A mine grows only into demand: the deposit bounds the step, it never
+      // justifies one. No demand signal wired leaves the deposit step alone.
+      const mineUnmetUnits =
+        sector.sectorType === "extraction" && placementSignals?.unmetDemandUnitsOf
+          ? unmetUnits
+          : null;
       // Growth is bounded by capacity IN FLIGHT, not by how many orders are
       // pending. The old gate counted orders, so two replacement-sized slices
       // (each ~0.05% of the plant, placed while growth was briefly ineligible)
@@ -385,15 +378,7 @@ export function decideNppCapacityReinvestment({
         levers.allowGrowthCapex &&
         // Growth only: replacing worn capacity is upkeep, so a placement limit never stops it.
         operatorMay(operator, "grow") &&
-        operatorAllowsPlacement(
-          operator,
-          getOperatingSectorType(
-            sector.sectorType,
-            sector.industryModel,
-            sector.mediaDiscriminator
-          ),
-          sectorCountryId
-        ) &&
+        operatorAllowsPlacement(operator, sector.sectorType, sectorCountryId) &&
         !(ctx.retailExpansionPaused && sector.sectorType === "retail") &&
         stateShortage > NPP_GROWTH_MIN_SHORTAGE &&
         // Utilization is measured on throttled output. In a critical shortage
@@ -404,27 +389,21 @@ export function decideNppCapacityReinvestment({
         (utilization >= NPP_GROWTH_MIN_UTILIZATION ||
           (criticalShortage &&
             !isMarketSaturated(placementSignals?.marketSaturationOf?.(sector)))) &&
-        (sector.sectorType !== "extraction" || extractionHeadroom > 0);
+        (sector.sectorType !== "extraction" ||
+          (extractionHeadroom > 0 && (mineUnmetUnits === null || mineUnmetUnits > 0)));
       // Existing plants pay the same dominance-tolled list price as players.
       const growthShare = capitalStock > 0 ? (ctx.localShareOf?.(sector) ?? 0) : 0;
       const perUnitGrowthLocal = canGrow
         ? toCorpLocal(
             computeBuildCost({
               sectorType: sector.sectorType,
-              industryModel: sector.industryModel,
-              mediaDiscriminator: sector.mediaDiscriminator,
               units: 1,
               strategyId: sector.strategyId ?? null,
               year: plants.year,
               preset: plants.preset,
               eraUnitScale: plants.eraUnitScale,
               marketSharePercent: growthShare,
-              nationalMarketSharePercent: nationalShare(
-                sectorCountryId,
-                sector.sectorType,
-                sector.industryModel,
-                sector.mediaDiscriminator
-              ),
+              nationalMarketSharePercent: nationalShare(sectorCountryId, sector.sectorType),
               primeRate: plants.primeRateOf(sectorCountryId),
               commodityDominanceRatio: commodityRatioFor(sector, 1),
               acumen: NEUTRAL_STAT,
@@ -453,7 +432,10 @@ export function decideNppCapacityReinvestment({
         : Math.min(1, NPP_GROWTH_MAX_STEP_OF_RUN * challengerPull);
       const growthStepUnits =
         sector.sectorType === "extraction"
-          ? Math.floor(runUnits * growthStepOfRun * extractionHeadroom)
+          ? extractionDemandBoundUnits(
+              Math.floor(runUnits * growthStepOfRun * extractionHeadroom),
+              mineUnmetUnits
+            )
           : existingPlantGrowthStep(runUnits, growthStepOfRun);
       const growthCapUnits = Math.min(
         growthStepUnits,
@@ -573,8 +555,6 @@ export function decideNppCapacityReinvestment({
       // Keep the breakdown for capacity-decision telemetry.
       const reinvestPrice = computeBuildCost({
         sectorType: sector.sectorType,
-        industryModel: sector.industryModel,
-        mediaDiscriminator: sector.mediaDiscriminator,
         units,
         strategyId: sector.strategyId ?? null,
         year: plants.year,
@@ -583,9 +563,7 @@ export function decideNppCapacityReinvestment({
         marketSharePercent,
         nationalMarketSharePercent: nationalShare(
           sector.countryId ?? corp.countryId,
-          sector.sectorType,
-          sector.industryModel,
-          sector.mediaDiscriminator
+          sector.sectorType
         ),
         // Replacement units re-lay capacity that is wearing out; only the
         // growth part raises the firm's potential output.
@@ -707,8 +685,6 @@ export function decideNppCapacityReinvestment({
           stateId: sector.stateId,
           countryId: sector.countryId ?? corp.countryId,
           sectorType: sector.sectorType,
-          industryModel: sector.industryModel,
-          mediaDiscriminator: sector.mediaDiscriminator,
           units: candidate.growthUnits,
         });
       }

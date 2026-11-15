@@ -17,7 +17,6 @@
 import type { Db } from "mongodb";
 import type { CorporationType } from "@/lib/constants/corporations";
 import type { State } from "@/lib/db/types";
-import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import type { Document } from "mongodb";
@@ -35,8 +34,6 @@ interface AggRow {
   _id: {
     stateId: string;
     sectorType: CorporationType;
-    industryModel?: string | null;
-    mediaDiscriminator?: string | null;
   };
   revenue: number;
 }
@@ -55,8 +52,6 @@ export async function processTopSectorsRecompute(
           _id: {
             stateId: "$stateId",
             sectorType: "$sectorType",
-            industryModel: "$industryModel",
-            mediaDiscriminator: "$mediaDiscriminator",
           },
           revenue: { $sum: "$revenue" },
         },
@@ -71,8 +66,6 @@ export async function processTopSectorsRecompute(
     string,
     Array<{
       sectorType: CorporationType;
-      industryModel?: string | null;
-      mediaDiscriminator?: string | null;
       revenue: number;
     }>
   >();
@@ -81,8 +74,6 @@ export async function processTopSectorsRecompute(
     if (list.length < TOP_N) {
       list.push({
         sectorType: row._id.sectorType,
-        industryModel: row._id.industryModel,
-        mediaDiscriminator: row._id.mediaDiscriminator,
         revenue: row.revenue,
       });
       byState.set(row._id.stateId, list);
@@ -116,15 +107,11 @@ export async function processTopSectorsRecompute(
     const spec = state.sectorSpecializations;
     const sectors = live.map((s) => ({
       sectorType: s.sectorType,
-      ...(s.industryModel != null ? { industryModel: s.industryModel } : {}),
-      ...(s.mediaDiscriminator != null ? { mediaDiscriminator: s.mediaDiscriminator } : {}),
       revenue: s.revenue,
       specializationBonus:
-        spec?.primary ===
-        getOperatingSectorType(s.sectorType, s.industryModel, s.mediaDiscriminator)
+        spec?.primary === s.sectorType
           ? ("primary" as const)
-          : spec?.secondary ===
-              getOperatingSectorType(s.sectorType, s.industryModel, s.mediaDiscriminator)
+          : spec?.secondary === s.sectorType
             ? ("secondary" as const)
             : null,
     }));

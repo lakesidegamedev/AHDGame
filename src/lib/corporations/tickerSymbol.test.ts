@@ -1,5 +1,5 @@
 /**
- * GlitchTip AHD: E11000 on corporations_tickerSymbol_unique. Two concurrent
+ * E11000 on corporations_tickerSymbol_unique. Two concurrent
  * corp creations can race generateTickerSymbol's check-then-insert; the loser
  * must regenerate and retry instead of surfacing a raw MongoServerError.
  */

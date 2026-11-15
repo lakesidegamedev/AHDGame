@@ -1,5 +1,5 @@
 /**
- * MongoDB command monitoring → GlitchTip.
+ * MongoDB command monitoring → the error tracker.
  *
  * Attaching to the driver's command-monitoring events instruments EVERY query
  * in one place, with zero changes to the ~1000 call sites:
@@ -316,7 +316,7 @@ export function attachMongoCommandMonitor(client: MongoClient): void {
     // Slow queries are a perf signal, not an error. They are captured above as
     // an info breadcrumb (with durationMS) so they enrich any real error that
     // follows in the same session — we deliberately do NOT mint a standalone
-    // GlitchTip issue per (command, collection), which flooded the error
+    // error issue per (command, collection), which flooded the error
     // tracker with non-actionable "Slow Mongo query" noise.
   });
 

@@ -13,7 +13,7 @@ import {
   COMMODITY_LABELS,
   type CommodityType,
 } from "@/lib/constants/commodities";
-import { getEffectiveStrategyRatesForOperatingModel } from "@/lib/constants/sectorStrategies";
+import { getEffectiveStrategyRates } from "@/lib/constants/sectorStrategies";
 import { undeliveredUnits } from "@/lib/corporations/buildDelivery";
 import type { CommodityTollModel } from "@/lib/corporations/rules/commodityDominanceRamp";
 import { isCountryBookCommodity } from "@/lib/market/rules/commodityMarketScope";
@@ -42,8 +42,6 @@ export const GROUP_DOMINANCE_TOLL_STAGE = 2;
 
 export const FIRM_SECTOR_PROJECTION = {
   sectorType: 1,
-  industryModel: 1,
-  mediaDiscriminator: 1,
   capitalStock: 1,
   strategyId: 1,
   transitionFromStrategyId: 1,
@@ -100,8 +98,6 @@ export type FirmSectorRow = Pick<
   CorporateSector,
   | "_id"
   | "sectorType"
-  | "industryModel"
-  | "mediaDiscriminator"
   | "capitalStock"
   | "strategyId"
   | "transitionFromStrategyId"
@@ -124,8 +120,6 @@ export function toDominanceSector(row: FirmSectorRow, turn: number): CommodityDo
   return {
     _id: row._id,
     sectorType: row.sectorType,
-    industryModel: row.industryModel,
-    mediaDiscriminator: row.mediaDiscriminator,
     capitalStock: row.capitalStock ?? 0,
     strategyId: row.strategyId,
     transitionFromStrategyId: row.transitionFromStrategyId,
@@ -143,23 +137,16 @@ export function toDominanceSector(row: FirmSectorRow, turn: number): CommodityDo
 export function sectorOutputCommodities(
   sector: Pick<
     CommodityDominanceSector,
-    | "sectorType"
-    | "industryModel"
-    | "mediaDiscriminator"
-    | "strategyId"
-    | "transitionFromStrategyId"
-    | "transitionStartTurn"
+    "sectorType" | "strategyId" | "transitionFromStrategyId" | "transitionStartTurn"
   >,
   turn: number
 ): CommodityType[] {
-  const rates = getEffectiveStrategyRatesForOperatingModel(
+  const rates = getEffectiveStrategyRates(
     sector.sectorType,
     sector.strategyId ?? "standard",
     sector.transitionFromStrategyId,
     sector.transitionStartTurn,
-    turn,
-    sector.industryModel,
-    sector.mediaDiscriminator
+    turn
   );
   const mix = rates.supply ?? {};
   return (Object.keys(mix) as CommodityType[]).filter(

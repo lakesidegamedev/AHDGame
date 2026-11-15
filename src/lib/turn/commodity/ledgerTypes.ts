@@ -23,8 +23,6 @@ export type CountryLedger = Map<string, Map<CommodityType, CommodityBalance>>;
  */
 export interface SectorLedgerRow {
   sectorType: string;
-  industryModel?: string | null;
-  mediaDiscriminator?: string | null;
   revenue: number;
   /** Last turn's realized price leg (clearing factor / sold fraction); null when unknown. */
   priceLeg?: number | null;

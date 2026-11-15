@@ -10,8 +10,7 @@ import type { Document } from "mongodb";
  * where the field is ABSENT, but the crisis template writer serialized an
  * undefined livingConflictEventId as an explicit null, which a sparse index
  * DOES key. The first null insert succeeded and every later one failed with
- * E11000 on { livingConflictEventId: null } — once per spawner turn in prod
- * (GlitchTip AHD-1JV, 23 events at time of writing).
+ * E11000 on { livingConflictEventId: null }, once per spawner turn in prod.
  *
  * Three steps, in an order that cannot strand the collection without a
  * constraint mid-run:
@@ -81,7 +80,7 @@ async function repairLivingEventIndex(db: Db, dryRun: boolean): Promise<Migratio
 export const migration: Migration = {
   id: "2026-08-25-crises-living-event-partial-index",
   description:
-    "Unset null livingConflictEventId keys and rebuild crises_living_event as a partial unique index (fixes per-turn E11000, GlitchTip AHD-1JV)",
+    "Unset null livingConflictEventId keys and rebuild crises_living_event as a partial unique index (fixes per-turn E11000)",
   idempotent: true,
   execute: (db, ctx) => repairLivingEventIndex(db, ctx.dryRun),
 };

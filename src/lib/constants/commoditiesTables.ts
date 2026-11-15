@@ -407,8 +407,8 @@ export const GOVT_DEFENSE_ORDNANCE_DEMAND_RATE = 0.005;
 
 /**
  * Fraction of state GDP that converts to network_services demand (broadband/connectivity).
- * Raised 1e-6 → 4e-6: cross-sector B2B demand (technology, media, financial, retail,
- * entertainment all consuming network services) now adds substantial sector-derived
+ * Raised 1e-6 → 4e-6: cross-sector B2B demand (technology, media, financial and retail
+ * all consuming network services) now adds substantial sector-derived
  * demand; the macro signal is proportionally larger to match.
  * At 4e-6, a $500B-GDP state generates ~1,667 units/day ($500B × 4e-6 / $1200 base price).
  */
@@ -568,7 +568,7 @@ export const COMMODITY_PER_ITEM_CAP = 50;
  * applied, the combined inputMod is clamped to this floor so no sector can
  * be commercially destroyed by stacked commodity shortages from routine market
  * conditions. Stacked 5× shortages on every input would otherwise drive energy,
- * automobiles, and construction to −50+ in normal gameplay.
+ * manufacturing, and construction to −50+ in normal gameplay.
  */
 export const COMMODITY_AGGREGATE_INPUT_CAP = 30;
 
@@ -646,6 +646,7 @@ export const SECTOR_SUPPLY: Partial<Record<OperatingSectorType, CommodityFlow[]>
   manufacturing: [
     { commodity: "steel", rate: 0.4 },
     { commodity: "building_materials", rate: 0.2 },
+    { commodity: "vehicles", rate: 0.5 },
   ],
   technology: [
     { commodity: "electronics", rate: 0.35 },
@@ -664,7 +665,6 @@ export const SECTOR_SUPPLY: Partial<Record<OperatingSectorType, CommodityFlow[]>
   // Reduced from 0.55 → 0.50: food moved to oversupply (D/S ~0.85×) so the prior
   // supply boost is now counterproductive. Lower rate brings supply back toward balance.
   agriculture: [{ commodity: "food", rate: 0.5 }],
-  manufacturing_vehicles: [{ commodity: "vehicles", rate: 0.5 }],
   financial: [{ commodity: "financial_services", rate: 0.5 }],
   media: [{ commodity: "advertising", rate: 0.5 }],
   defense: [
@@ -678,7 +678,6 @@ export const SECTOR_SUPPLY: Partial<Record<OperatingSectorType, CommodityFlow[]>
     { commodity: "software", rate: 0.2 },
     { commodity: "network_services", rate: 0.4 },
   ],
-  media_entertainment: [{ commodity: "advertising", rate: 0.6 }],
   retail: [{ commodity: "retail", rate: 0.5 }],
   logistics: [
     { commodity: "freight", rate: 0.45 },
@@ -779,16 +778,6 @@ export const SECTOR_DEMAND: Partial<Record<OperatingSectorType, CommodityFlow[]>
     { commodity: "timber", rate: 0.04 },
     { commodity: "plastics", rate: 0.05 },
   ],
-  manufacturing_vehicles: [
-    { commodity: "steel", rate: 0.25 },
-    { commodity: "iron", rate: 0.08 },
-    { commodity: "electronics", rate: 0.15 },
-    { commodity: "energy", rate: 0.1 },
-    { commodity: "freight", rate: 0.08 },
-    { commodity: "real_estate_services", rate: 0.02 },
-    { commodity: "rare_earth", rate: 0.08 },
-    { commodity: "plastics", rate: 0.1 },
-  ],
   financial: [
     { commodity: "software", rate: 0.2 },
     { commodity: "electronics", rate: 0.05 },
@@ -849,13 +838,6 @@ export const SECTOR_DEMAND: Partial<Record<OperatingSectorType, CommodityFlow[]>
     { commodity: "construction_services", rate: 0.08 },
     { commodity: "real_estate_services", rate: 0.03 },
     { commodity: "rare_earth", rate: 0.09 },
-  ],
-  media_entertainment: [
-    { commodity: "software", rate: 0.15 },
-    { commodity: "electronics", rate: 0.1 },
-    { commodity: "energy", rate: 0.06 },
-    { commodity: "real_estate_services", rate: 0.03 },
-    { commodity: "network_services", rate: 0.08 },
   ],
   logistics: [
     { commodity: "vehicles", rate: 0.2 },

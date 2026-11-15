@@ -27,7 +27,7 @@ const BASELINE_MAX_SLOT = 9;
  * counts.
  */
 export function computeTechAssetValueAnchor(
-  corp: Pick<Corporation, "type" | "unlockedTechNodeIds" | "techDecadeLane" | "industryModel">,
+  corp: Pick<Corporation, "type" | "unlockedTechNodeIds" | "techDecadeLane">,
   currentYear: number | undefined
 ): number {
   if (!currentYear || !corp.unlockedTechNodeIds?.length) return 0;

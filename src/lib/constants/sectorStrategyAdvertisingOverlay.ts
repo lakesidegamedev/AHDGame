@@ -118,32 +118,6 @@ export const ADVERTISING_INPUT_VARIANT_DEMAND: Readonly<
       steel: 0.212,
     },
   },
-  manufacturing_vehicles: {
-    autonomous_driving: {
-      advertising: 0.07,
-      electronics: 0.2,
-      energy: 0.15,
-      software: 0.1,
-      steel: 0.1,
-    },
-    ev: {
-      advertising: 0.07,
-      electronics: 0.134,
-      energy: 0.097,
-      plastics: 0.071,
-      rare_earth: 0.09,
-      software: 0.097,
-      steel: 0.075,
-    },
-    heavy_machinery: {
-      advertising: 0.07,
-      energy: 0.101,
-      freight: 0.077,
-      iron: 0.116,
-      plastics: 0.048,
-      steel: 0.223,
-    },
-  },
   real_estate: {
     commercial: {
       advertising: 0.07,
@@ -264,16 +238,6 @@ export const ADVERTISING_INPUT_STANDARD_1991_DEMAND: Readonly<Record<string, Dem
     iron: 0.097,
     plastics: 0.049,
     real_estate_services: 0.027,
-  },
-  manufacturing_vehicles: {
-    advertising: 0.07,
-    electronics: 0.098,
-    energy: 0.089,
-    freight: 0.071,
-    iron: 0.071,
-    plastics: 0.049,
-    real_estate_services: 0.018,
-    steel: 0.169,
   },
   real_estate: {
     advertising: 0.07,

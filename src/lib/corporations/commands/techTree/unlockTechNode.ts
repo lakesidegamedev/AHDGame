@@ -4,7 +4,6 @@ import type { Db } from "mongodb";
 import type { Corporation } from "@/lib/db/types";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 
-import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
 import { corpDailyGrossRevenuePricingLocal } from "@/lib/corporations/dailyGrossRevenue";
 import { resolveCorpLiquidCurrencyCode } from "@/lib/currency/corporationCapital";
 import { emitTxStrict } from "@/lib/financialTxLog/emit";
@@ -85,7 +84,6 @@ export async function unlockTechNode(
   // Validate the node (and decade/lane) before pricing.
   const corpView = {
     type: corporation.type,
-    industryModel: corporation.industryModel,
     unlockedTechNodeIds: corporation.unlockedTechNodeIds,
     techDecadeLane: corporation.techDecadeLane,
   };
@@ -118,14 +116,7 @@ export async function unlockTechNode(
   const committing = getCommittedLane(corpView, node.decadeId) === undefined;
   const laneKey = `techDecadeLane.${node.decadeId}`;
   const prereqIds = getNodePrereqIds(node);
-  const rivalIds = getExclusiveRivalIds(
-    getOperatingSectorType(
-      corporation.type,
-      corporation.industryModel,
-      corporation.mediaDiscriminator
-    ),
-    node
-  );
+  const rivalIds = getExclusiveRivalIds(corporation.type, node);
 
   // One-time strength grants applied here (not recomputed each turn).
   const grants = sumStrengthGrants(node.effects);

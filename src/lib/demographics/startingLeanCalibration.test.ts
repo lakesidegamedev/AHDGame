@@ -8,7 +8,7 @@ import { describe, expect, it } from "vitest";
 import { ALL_COUNTRY_IDS } from "@/lib/constants/countries";
 import type { DemographicCategory, CensusGroupView } from "@/lib/db/types";
 import { stateCensusData2027 } from "@/lib/countries/us/data/usStateCensusData2027";
-import { demographicCategories } from "@/lib/seeds/demographicCategories";
+import { demographicCategories } from "@/lib/seeds/calibration/groupModelCategories";
 import { buildModelRegionDemographics, getCountryLayer1Model } from "@/lib/seeds/international";
 import { registerAndGenerate } from "@/lib/seeds/stateDemographics";
 import { calculateStateLean } from "@/lib/utils/demographics";

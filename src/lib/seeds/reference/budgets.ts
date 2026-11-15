@@ -32,8 +32,6 @@ import type { LegislationPolicyOption, LegislationType } from "@/lib/db/types/le
 import {
   OPERATING_SECTOR_TYPE_LABELS,
   OPERATING_SECTOR_TYPES,
-  operatingSectorIdentity,
-  corporationTypeOfLane,
   type OperatingSectorType,
 } from "@/lib/constants/corporations";
 import type { CorporationType } from "@/lib/constants/corporations";
@@ -3252,7 +3250,7 @@ function buildCommandSoeCorpEntries(params: {
     lane: OperatingSectorType,
     corpId: ObjectId
   ) => {
-    const { sectorType, industryModel, mediaDiscriminator } = operatingSectorIdentity(lane);
+    const sectorType = lane;
     const strategyId =
       sectorType === "extraction"
         ? (extractionStrategyByState?.[state.id] ?? defaultExtractionStrategyId)
@@ -3269,9 +3267,7 @@ function buildCommandSoeCorpEntries(params: {
       sectorType,
       revenueAtlantic,
       strategyId,
-      eraUnitScale,
-      industryModel,
-      mediaDiscriminator
+      eraUnitScale
     );
     return {
       _id: new ObjectId(),
@@ -3279,8 +3275,6 @@ function buildCommandSoeCorpEntries(params: {
       countryId,
       stateId: state.id,
       sectorType,
-      ...(industryModel ? { industryModel } : {}),
-      ...(mediaDiscriminator ? { mediaDiscriminator } : {}),
       targetGrowthRate: planGrowthRate,
       currentGrowthRate: planGrowthRate,
       currentGrowthCost: 0,
@@ -3296,8 +3290,7 @@ function buildCommandSoeCorpEntries(params: {
   };
 
   return soeSectors.map((lane) => {
-    const identity = operatingSectorIdentity(lane);
-    const sectorType = identity.sectorType;
+    const sectorType = lane;
     const slot = OPERATING_SECTOR_TYPES.indexOf(lane);
     if (slot < 0) {
       throw new Error(`command SOE lane ${lane} is not an operating sector type`);
@@ -3328,8 +3321,6 @@ function buildCommandSoeCorpEntries(params: {
         name: `${namePrefix} ${label} Enterprise`,
         description: `State-owned enterprise operating the ${label.toLowerCase()} sector of the ${polityDescriptor}.`,
         type: sectorType,
-        ...(identity.industryModel ? { industryModel: identity.industryModel } : {}),
-        ...(identity.mediaDiscriminator ? { mediaDiscriminator: identity.mediaDiscriminator } : {}),
         countryId,
         ceoId,
         userId,
@@ -3421,7 +3412,6 @@ function buildMarketStateEnterpriseCorpEntries(params: {
 
   const sectors: CountryOwnedSeedData["sectors"] = [];
   for (const sectorSpec of spec.sectors) {
-    const identity = operatingSectorIdentity(sectorSpec.type);
     for (const state of countryStates) {
       // Canonical (state, sectorType) market size, then only this enterprise's share.
       const bucketRevenueAtlantic = computeStateEnterpriseSeedRevenue({
@@ -3437,9 +3427,7 @@ function buildMarketStateEnterpriseCorpEntries(params: {
         corporationId: corpId,
         countryId: spec.countryId,
         stateId: state.id,
-        sectorType: identity.sectorType,
-        ...(identity.industryModel ? { industryModel: identity.industryModel } : {}),
-        ...(identity.mediaDiscriminator ? { mediaDiscriminator: identity.mediaDiscriminator } : {}),
+        sectorType: sectorSpec.type,
         targetGrowthRate: growthRate,
         currentGrowthRate: growthRate,
         currentGrowthCost: 0,
@@ -3462,7 +3450,7 @@ function buildMarketStateEnterpriseCorpEntries(params: {
         sequentialId: spec.sequentialId,
         name: spec.name,
         description: spec.description,
-        type: corporationTypeOfLane(spec.sectors[0].type),
+        type: spec.sectors[0].type,
         countryId: spec.countryId,
         ceoId: new ObjectId(spec.ceoOid),
         userId: new ObjectId(spec.userOid),
@@ -3515,13 +3503,13 @@ const MARKET_STATE_ENTERPRISE_SPECS: MarketStateEnterpriseSpec[] = [
     sequentialId: 900_011,
     name: "Régie et Charbonnages de France",
     description:
-      "State holding for France's 1945-46 Liberation nationalizations: Renault (automobiles), EDF/GDF (electricity and gas), Charbonnages de France (coal), SNCF (rail), and the nationalized deposit banks.",
+      "State holding for France's 1945-46 Liberation nationalizations: Renault (cars), EDF/GDF (electricity and gas), Charbonnages de France (coal), SNCF (rail), and the nationalized deposit banks.",
     headquartersState: "FR_IDF",
     sectors: [
       { type: "energy", marketShare: 0.9 }, // EDF + GDF: near-total electricity/gas monopoly
       { type: "extraction", marketShare: 0.85 }, // Charbonnages de France: coal monopoly
       { type: "logistics", marketShare: 0.55 }, // SNCF: dominant rail, private trucking coexists
-      { type: "manufacturing_vehicles", marketShare: 0.35 }, // Renault: ~1/3 of French auto output vs. private Peugeot/Citroën/Simca
+      { type: "manufacturing", marketShare: 0.35 }, // Renault: ~1/3 of French auto output vs. private Peugeot/Citroën/Simca
       { type: "financial", marketShare: 0.45 }, // Banque de France + 4 deposit banks: ~half of French deposits
     ],
   },
@@ -3679,7 +3667,6 @@ export const DORMANT_MARKET_STATE_ENTERPRISE_SPECS: MarketStateEnterpriseSpec[] 
     sectors: [
       { type: "manufacturing", marketShare: 0.45 }, // ENSIDESA integrated steelworks
       { type: "energy", marketShare: 0.5 }, // ENDESA state electricity
-      { type: "manufacturing_vehicles", marketShare: 0.7 }, // SEAT: near-monopoly under autarky import bans
       { type: "logistics", marketShare: 0.8 }, // RENFE: full rail monopoly
     ],
   },

@@ -44,11 +44,9 @@ const ET_WEIGHTS: Partial<Record<OperatingSectorType, number>> = {
   healthcare: 2,
   financial: 1,
   real_estate: 1,
-  media: 1,
-  media_entertainment: 1,
+  media: 2,
   telecommunications: 1,
   chemical_industries: 0,
-  manufacturing_vehicles: 0,
   technology: 0,
 };
 
@@ -67,9 +65,7 @@ const ZA_WEIGHTS: Partial<Record<OperatingSectorType, number>> = {
   healthcare: 2,
   real_estate: 2,
   telecommunications: 1,
-  media: 1,
-  media_entertainment: 1,
-  manufacturing_vehicles: 0,
+  media: 2,
   technology: 0,
 };
 
@@ -81,16 +77,14 @@ const CU_WEIGHTS: Partial<Record<OperatingSectorType, number>> = {
   manufacturing: 10,
   construction: 8,
   extraction: 6, // nickel
-  media_entertainment: 6, // tourism / Havana services proxy
   financial: 4,
   energy: 3,
   defense: 3,
   healthcare: 2,
   real_estate: 2,
   telecommunications: 1,
-  media: 1,
+  media: 7,
   chemical_industries: 0,
-  manufacturing_vehicles: 0,
   technology: 0,
 };
 
@@ -107,11 +101,9 @@ const GT_WEIGHTS: Partial<Record<OperatingSectorType, number>> = {
   financial: 3,
   healthcare: 2,
   real_estate: 2,
-  media: 1,
-  media_entertainment: 1,
+  media: 2,
   telecommunications: 1,
   chemical_industries: 1,
-  manufacturing_vehicles: 0,
   technology: 0,
 };
 
@@ -129,10 +121,8 @@ const PA_WEIGHTS: Partial<Record<OperatingSectorType, number>> = {
   healthcare: 2,
   extraction: 2,
   telecommunications: 2,
-  media: 1,
-  media_entertainment: 1,
+  media: 2,
   chemical_industries: 1,
-  manufacturing_vehicles: 0,
   technology: 0,
 };
 
@@ -149,11 +139,9 @@ const NI_WEIGHTS: Partial<Record<OperatingSectorType, number>> = {
   financial: 3,
   healthcare: 2,
   real_estate: 2,
-  media: 1,
-  media_entertainment: 1,
+  media: 2,
   telecommunications: 1,
   chemical_industries: 1,
-  manufacturing_vehicles: 0,
   technology: 0,
 };
 
@@ -172,16 +160,14 @@ const CL_WEIGHTS: Partial<Record<OperatingSectorType, number>> = {
   healthcare: 2,
   real_estate: 2,
   telecommunications: 1,
-  media: 1,
-  media_entertainment: 1,
-  manufacturing_vehicles: 0,
+  media: 2,
   technology: 0,
 };
 
 const AR_WEIGHTS: Partial<Record<OperatingSectorType, number>> = {
   // Perón Argentina: Pampas agri-exports, ISI manufacturing, state-led industry.
   agriculture: 24,
-  manufacturing: 20,
+  manufacturing: 22,
   construction: 8,
   logistics: 8,
   retail: 7,
@@ -190,19 +176,17 @@ const AR_WEIGHTS: Partial<Record<OperatingSectorType, number>> = {
   financial: 5,
   defense: 4,
   chemical_industries: 3,
-  manufacturing_vehicles: 2,
   healthcare: 2,
   real_estate: 2,
   telecommunications: 1,
-  media: 1,
-  media_entertainment: 1,
+  media: 2,
   technology: 0,
 };
 
 const MX_WEIGHTS: Partial<Record<OperatingSectorType, number>> = {
   // PRI Mexico: oil (PEMEX), ISI manufacturing, agrarian base, political stability.
   agriculture: 22,
-  manufacturing: 18,
+  manufacturing: 20,
   extraction: 12, // oil + silver/minerals
   construction: 8,
   logistics: 7,
@@ -213,10 +197,8 @@ const MX_WEIGHTS: Partial<Record<OperatingSectorType, number>> = {
   chemical_industries: 3,
   healthcare: 2,
   real_estate: 2,
-  manufacturing_vehicles: 2,
   telecommunications: 1,
-  media: 1,
-  media_entertainment: 1,
+  media: 2,
   technology: 0,
 };
 
@@ -235,9 +217,7 @@ const VE_WEIGHTS: Partial<Record<OperatingSectorType, number>> = {
   healthcare: 2,
   chemical_industries: 1,
   telecommunications: 1,
-  media: 1,
-  media_entertainment: 1,
-  manufacturing_vehicles: 0,
+  media: 2,
   technology: 0,
 };
 

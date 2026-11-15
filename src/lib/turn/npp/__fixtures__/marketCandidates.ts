@@ -3,33 +3,23 @@
  * A candidate is a (region, lane) bucket; its room comes from unmet demand, not
  * from a stored document.
  */
-import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
 import { bucketKey } from "@/lib/market/marketBuckets";
 import type { MarketCandidate } from "@/lib/turn/npp/marketCandidates";
 import type { PlacementSignals } from "@/lib/turn/npp/marketSignals";
 
-type CandidateOverrides = Partial<
-  Pick<
-    MarketCandidate,
-    "stateId" | "countryId" | "sectorType" | "industryModel" | "mediaDiscriminator"
-  >
->;
+type CandidateOverrides = Partial<Pick<MarketCandidate, "stateId" | "countryId" | "sectorType">>;
 
 /** One candidate bucket; defaults to manufacturing in CA, US. */
 export function candidate(overrides: CandidateOverrides = {}): MarketCandidate {
   const stateId = overrides.stateId ?? "CA";
   const countryId = overrides.countryId ?? "US";
   const sectorType = overrides.sectorType ?? "manufacturing";
-  const industryModel = overrides.industryModel ?? null;
-  const mediaDiscriminator = overrides.mediaDiscriminator ?? null;
   return {
-    lane: getOperatingSectorType(sectorType, industryModel, mediaDiscriminator),
+    lane: sectorType,
     sectorType,
-    industryModel,
-    mediaDiscriminator,
     stateId,
     countryId,
-    key: bucketKey(stateId, sectorType, industryModel, mediaDiscriminator),
+    key: bucketKey(stateId, sectorType),
   } as MarketCandidate;
 }
 
@@ -61,19 +51,9 @@ export function demandSignals(
   return {
     ...base,
     unmetDemandUnitsOf: (cell) =>
-      Math.max(
-        0,
-        room.get(
-          bucketKey(cell.stateId, cell.sectorType, cell.industryModel, cell.mediaDiscriminator)
-        ) ?? 0
-      ),
+      Math.max(0, room.get(bucketKey(cell.stateId, cell.sectorType)) ?? 0),
     claimDemandUnits: (cell, units) => {
-      const key = bucketKey(
-        cell.stateId,
-        cell.sectorType,
-        cell.industryModel,
-        cell.mediaDiscriminator
-      );
+      const key = bucketKey(cell.stateId, cell.sectorType);
       room.set(key, Math.max(0, (room.get(key) ?? 0) - units));
     },
   };

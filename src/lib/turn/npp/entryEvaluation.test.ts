@@ -228,40 +228,6 @@ describe("critical freight shortage", () => {
   });
 });
 
-describe("existing media sector occupancy", () => {
-  it("still permits a different media model in the same state", () => {
-    const corporation = corp({ type: "media" });
-    const market = pool("media", "KAN");
-    const existing = {
-      _id: new ObjectId(),
-      corporationId: corporation._id,
-      countryId: "US",
-      stateId: "KAN",
-      sectorType: "media",
-      mediaDiscriminator: "entertainment",
-    } as CorporateSector;
-    expect(evaluate({ corporation, pools: [market], sectors: [existing] }).entryCandidate).toBe(
-      market
-    );
-  });
-
-  it("does not found a second entertainment sector in an occupied bucket", () => {
-    const corporation = corp({ type: "media", mediaDiscriminator: "entertainment" });
-    const market = { ...pool("media", "KAN"), mediaDiscriminator: "entertainment" as const };
-    const existing = {
-      _id: new ObjectId(),
-      corporationId: corporation._id,
-      countryId: "US",
-      stateId: "KAN",
-      sectorType: "media",
-      mediaDiscriminator: "entertainment",
-    } as CorporateSector;
-    const result = evaluate({ corporation, pools: [market], sectors: [existing] });
-    expect(result.entryCandidate).toBeNull();
-    expect(result.expansion).toBeNull();
-  });
-});
-
 describe("entry recipe on a funded world", () => {
   // Fertilizers at zero supply, chemicals glutted, everything else at base.
   const fertilizerShort: CommodityPriceRatioFn = (commodity) =>

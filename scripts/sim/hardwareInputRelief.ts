@@ -25,7 +25,6 @@ for (const preset of ["1953-default", "1991-default", "2027-default"])
               null,
               null,
               100 + elapsed,
-              undefined,
               preset,
               enabled ? 100 : undefined
             );

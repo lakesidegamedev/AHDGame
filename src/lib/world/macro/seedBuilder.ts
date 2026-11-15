@@ -51,11 +51,7 @@ const REQUIRED_SCALAR_FIELDS = [
  */
 function demandRatio(sectorType: OperatingSectorType, economicSystem: MacroEconomicSystem): number {
   if (economicSystem === "planned") {
-    if (
-      sectorType === "retail" ||
-      sectorType === "healthcare" ||
-      sectorType === "media_entertainment"
-    ) {
+    if (sectorType === "retail" || sectorType === "healthcare") {
       return 1.25;
     }
     if (

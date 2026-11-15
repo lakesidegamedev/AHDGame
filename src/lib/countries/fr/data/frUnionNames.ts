@@ -14,7 +14,6 @@ import type { OperatingSectorType } from "@/lib/constants/corporations";
 
 export const FR_UNION_NAMES_MODERN: Partial<Record<OperatingSectorType, string>> = {
   manufacturing: "CGT Metalworkers' Federation",
-  manufacturing_vehicles: "CGT Metalworkers' Federation",
   chemical_industries: "CGT Chemical Industries Federation",
   construction: "CGT Building and Wood Federation",
   energy: "CGT Energy Federation",
@@ -26,7 +25,6 @@ export const FR_UNION_NAMES_MODERN: Partial<Record<OperatingSectorType, string>>
   technology: "CGT Metalworkers' Federation",
   financial: "CGT Bank and Insurance Federation",
   telecommunications: "CGT Post and Telecommunications Federation",
-  media_entertainment: "CGT Culture and Media Federation",
   defense: "CGT Metalworkers' Federation",
   agriculture: "CGT Agricultural Workers' Federation",
   real_estate: "CGT Building and Wood Federation",

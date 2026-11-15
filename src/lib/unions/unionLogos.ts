@@ -36,12 +36,10 @@ export const UNION_LOGOS: Record<string, string> = {
   "Free German Trade Union Federation": `${COMMONS}FDGB_Emblem.svg`,
   // CN — likewise, the ACFTU is the only union in China.
   "All-China Federation of Trade Unions": `${COMMONS}ACFTU_logo.svg`,
-  // US — the only two with freely-licensed marks.
+  // US: the only union with a freely-licensed mark.
   "Communications Workers of America": `${COMMONS}Communications_Workers_of_America.svg`,
-  "SAG-AFTRA": `${COMMONS}SAG-AFTRA_logo.svg`,
   // UK / IE
   "National Union of Journalists": `${COMMONS}National_Union_of_Journalists_logo.svg`,
-  BECTU: `${COMMONS}Bectu_logo_space.png`,
   // DE — IG Metall's mark is continuous across the eras it is seeded in; ÖTV
   // and the DPG are the era-correct marks of unions that later merged into
   // ver.di, which carries its own.
@@ -64,9 +62,6 @@ export const UNION_LOGOS: Record<string, string> = {
   // Engineering Union has no entry: its article carries the *Australian* AEU's
   // logo, so it keeps the sector emblem rather than showing another union's mark.
   "Amalgamated Engineering and Electrical Union": `${WIKIPEDIA}Amalgamated_Engineering_and_Electrical_Union_logo.jpg`,
-  "Association of Cinematograph, Television and Allied Technicians": `${WIKIPEDIA}Association_of_Cinematograph,_Television_and_Allied_Technicians_logo.jpg`,
-  // 1953 name of the union whose article is filed under its later title.
-  "Association of Cine-Technicians": `${WIKIPEDIA}Association_of_Cinematograph,_Television_and_Allied_Technicians_logo.jpg`,
   "Association of Scientific, Technical and Managerial Staffs": `${WIKIPEDIA}Astms_Logo.jpg`,
   "Banking, Insurance and Finance Union": `${WIKIPEDIA}Banking,_Insurance_and_Finance_Union_logo.png`,
   // NUBE became BIFU; the article carries the successor mark, same union.
@@ -93,7 +88,6 @@ export const UNION_LOGOS: Record<string, string> = {
   // OCAW is the Oil Workers International Union under its later name.
   "Oil Workers International Union": `${WIKIPEDIA}OCAW_logo.png`,
   SIPTU: `${WIKIPEDIA}SIPTU_logo.jpg`,
-  "Screen Actors Guild": `${WIKIPEDIA}Screen_Actors_Guild_logo.svg`,
   "Service Employees International Union": `${WIKIPEDIA}Service_Employees_International_Union_logo.svg`,
   "Transport and General Workers' Union": `${WIKIPEDIA}TGWU_logo.png`,
   UNISON: `${WIKIPEDIA}UNISON_logo.png`,
@@ -104,7 +98,6 @@ export const UNION_LOGOS: Record<string, string> = {
   "Union of Post Office Workers": `${WIKIPEDIA}Union_of_Post_Office_Workers_logo.jpg`,
   "Union of Shop, Distributive and Allied Workers": `${WIKIPEDIA}USDAW_logo.png`,
   "Unite the Union": `${WIKIPEDIA}Unite_the_Union.svg`,
-  "United Auto Workers": `${WIKIPEDIA}United_Auto_Workers_(logo).svg`,
   "United Brotherhood of Carpenters and Joiners": `${WIKIPEDIA}UBC_union_logo.png`,
   "United Steelworkers of America": `${WIKIPEDIA}United_Steelworkers_logo.svg`,
   "United Farm Workers": `${WIKIPEDIA}UFW_logo.png`,

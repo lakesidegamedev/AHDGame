@@ -3,7 +3,7 @@
 // bill detail view. Keeping the estimate in one place stops the editor preview,
 // the bill view, and the engine from drifting apart (e.g. the re-nationalization
 // cooldown skip — see spec §13.4).
-import { operatingSectorFilter, type OperatingSectorType } from "@/lib/constants/corporations";
+import { type OperatingSectorType } from "@/lib/constants/corporations";
 import type { Db, ObjectId } from "mongodb";
 import type { Corporation, CorporateSector, State } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
@@ -62,7 +62,7 @@ export async function computeSectorNationalizationPreview(
   }
 ): Promise<SectorNationalizationPreview> {
   const { countryId, sectorType, scope, currentTurn } = params;
-  const laneFilter = operatingSectorFilter(sectorType);
+  const laneFilter = { sectorType: sectorType };
   const f = Math.min(1, Math.max(0, params.carveFraction));
   const countryCurrency = (COUNTRY_CURRENCY_MAP[countryId] ?? "USD") as CurrencyCode;
 

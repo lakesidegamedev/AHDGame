@@ -10,6 +10,7 @@ import { migration as successorTaxTypes } from "./entries/2026-11-09-successor-t
 import { migration as cnLawBookBackfill } from "./entries/2026-11-12-cn-law-book-backfill";
 import { migration as modernEraBookBackfill } from "./entries/2026-11-13-modern-era-book-backfill";
 import { migration as realCompanyNames } from "./entries/2026-11-12-real-company-names";
+import { migration as dropUnreadTelemetryCollections } from "./entries/2026-11-15-drop-unread-telemetry-collections";
 import { migration as jpLawLeanEffects } from "./entries/2026-11-09-jp-law-lean-effects";
 import { migration as ukJpSubdivisionPopulations } from "./entries/2026-11-01-uk-jp-subdivision-populations";
 import { migration as archiveNonPresidentialCampaigns } from "./entries/2026-11-01-archive-non-presidential-campaigns";
@@ -37,8 +38,6 @@ import { migration as bankFailurePoliticsIndex } from "./entries/2026-10-04-bank
 import { migration as locRecoveryOwnerIndex } from "./entries/2026-09-30-loc-recovery-owner-index";
 import { migration as politicalMediaOrderIndexes } from "./entries/2026-10-04-political-media-order-indexes";
 import { migration as bankPropForexFeeIndex } from "./entries/2026-10-04-bank-prop-forex-fee-index";
-import { migration as industryModelMarketIndexes } from "./entries/2026-10-04-industry-model-market-indexes";
-import { migration as mediaDiscriminatorMarketIndexes } from "./entries/2026-10-04-media-discriminator-market-indexes";
 import { migration as constructionServiceLeaseIndex } from "./entries/2026-10-04-construction-service-lease-index";
 import { migration as supplyListingIndexes } from "./entries/2026-09-17-supply-listing-indexes";
 import { migration as ukDualMinistryRoleSlot } from "./entries/2026-09-17-uk-dual-ministry-role-slot";
@@ -147,7 +146,6 @@ import { migration as mediaProductProjectsV1Index } from "./entries/2026-10-04-m
 import { migration as bankTreasuryTradeIndexes } from "./entries/2026-10-04-bank-treasury-trade-indexes";
 import { migration as underwritingRecoveryIndexes } from "./entries/2026-10-04-underwriting-recovery-indexes";
 import { migration as advertisingAgreementIndexes } from "./entries/2026-10-05-advertising-agreement-indexes";
-import { migration as foldAutomobileEntertainmentTypes } from "./entries/2026-10-05-fold-automobile-entertainment-types";
 import { migration as activateLiveDemographicsV2 } from "./entries/2026-10-07-activate-live-demographics-v2";
 
 export const MIGRATIONS: Migration[] = [
@@ -369,8 +367,6 @@ export const MIGRATIONS: Migration[] = [
   bankLoanCharterEpoch,
   governmentAccountability,
   politicalMediaOrderIndexes,
-  industryModelMarketIndexes,
-  mediaDiscriminatorMarketIndexes,
   constructionServiceLeaseIndex,
   // v2 product lines use a separate collection and one active slot per corporation.
   manufacturingProductProjectsV2Index,
@@ -379,7 +375,6 @@ export const MIGRATIONS: Migration[] = [
   underwritingRecoveryIndexes,
   bankFailurePoliticsIndex,
   advertisingAgreementIndexes,
-  foldAutomobileEntertainmentTypes,
   productVentureIndexes,
   campaignFieldOfficeIndexes,
   // 15-minute market cap chart rows; also in the startup allowlist.
@@ -465,6 +460,7 @@ export const HELD_MIGRATIONS: Migration[] = [
   modernEraBookBackfill,
   cyberLaunchKeyIndex,
   realCompanyNames,
+  dropUnreadTelemetryCollections,
 ];
 
 // Deferred (need bootstrap-marker pass on production first):

@@ -16,24 +16,14 @@ describe("updateCorporationSettingsSchema", () => {
 });
 
 describe("sectorPolicyTargetMatches", () => {
-  it("lets legacy retired targets reach only the folded lanes", () => {
-    expect(sectorPolicyTargetMatches("manufacturing_vehicles", "manufacturing_vehicles")).toBe(
-      true
-    );
-    expect(sectorPolicyTargetMatches("manufacturing_vehicles", "manufacturing")).toBe(false);
-    expect(sectorPolicyTargetMatches("media_entertainment", "media_entertainment")).toBe(true);
-    expect(sectorPolicyTargetMatches("media_entertainment", "media")).toBe(false);
-  });
-
-  it("lets canonical targets cover their folded lanes", () => {
+  it("matches a target to the same sector type only", () => {
     expect(sectorPolicyTargetMatches("manufacturing", "manufacturing")).toBe(true);
-    expect(sectorPolicyTargetMatches("manufacturing", "manufacturing_vehicles")).toBe(true);
-    expect(sectorPolicyTargetMatches("media", "media_entertainment")).toBe(true);
-    expect(sectorPolicyTargetMatches("media", "manufacturing_vehicles")).toBe(false);
+    expect(sectorPolicyTargetMatches("media", "media")).toBe(true);
+    expect(sectorPolicyTargetMatches("media", "manufacturing")).toBe(false);
   });
 
   it("never matches an empty or unrelated target", () => {
     expect(sectorPolicyTargetMatches(undefined, "manufacturing")).toBe(false);
-    expect(sectorPolicyTargetMatches("energy", "manufacturing_vehicles")).toBe(false);
+    expect(sectorPolicyTargetMatches("energy", "manufacturing")).toBe(false);
   });
 });

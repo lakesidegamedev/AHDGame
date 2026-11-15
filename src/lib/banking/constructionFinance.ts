@@ -210,8 +210,6 @@ export async function requestConstructionFinance(input: {
         corporationId: corporation._id,
         stateId: sector.stateId,
         sectorType: sector.sectorType,
-        industryModel: sector.industryModel ?? null,
-        mediaDiscriminator: sector.mediaDiscriminator ?? null,
         forSale: null,
         ...(sector.strategyId
           ? { strategyId: sector.strategyId }

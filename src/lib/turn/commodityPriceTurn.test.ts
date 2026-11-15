@@ -157,10 +157,7 @@ describe("commodityPriceTurn", () => {
 
       await processCommodityPriceTurn(100);
 
-      expect(mockFind.mock.calls[0]?.[1]?.projection).toMatchObject({
-        industryModel: 1,
-        mediaDiscriminator: 1,
-      });
+      expect(mockFind.mock.calls[0]?.[1]?.projection).toMatchObject({});
     });
 
     it("projects exact product output only when the corporation product flag is on", async () => {

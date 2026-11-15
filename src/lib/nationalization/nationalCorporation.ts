@@ -6,7 +6,6 @@ import type { CorporationType } from "@/lib/constants/corporations";
 import { COUNTRY_CURRENCY_MAP, getSeedCurrencyCode } from "@/lib/constants/currencies";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
 import { getNationalIdentity } from "@/lib/constants/nationalIdentity";
-import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
@@ -128,11 +127,9 @@ export async function ensurePrimaryNationalCorporation(
 export async function resolveNationalCorporationForSector(
   db: Db,
   countryId: CountryId,
-  sectorType: CorporationType,
-  industryModel?: Corporation["industryModel"],
-  mediaDiscriminator?: Corporation["mediaDiscriminator"]
+  sectorType: CorporationType
 ): Promise<Corporation> {
-  const operatingSectorType = getOperatingSectorType(sectorType, industryModel, mediaDiscriminator);
+  const operatingSectorType = sectorType;
   const secondary = await corporationsCollection(db).findOne({
     countryOwnerId: countryId,
     assignedSectorTypes: operatingSectorType,

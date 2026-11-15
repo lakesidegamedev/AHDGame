@@ -3,7 +3,7 @@
  *
  *   MONGODB_URI=mongodb://127.0.0.1:27017/rehearsal-x?directConnection=true \
  *   npx tsx scripts/world/rehearse-reset.ts --expect-db=rehearsal-x \
- *     --preset=2027-default [--no-starting-parties] [--turn] [--record=<path>]
+ *     --preset=2027-default [--no-starting-parties] [--pre-iteration | --no-pre-iteration] [--turn] [--record=<path>]
  *
  * Runs the real reset, then asserts the result is complete and plausible.
  * Conformance only compares a world with its own seed, so the plausibility
@@ -184,6 +184,7 @@ async function main(): Promise<CheckResult[]> {
   const preset = value("--preset");
   if (!preset) throw new Error("--preset=<preset> is required");
   const noStartingParties = flag("--no-starting-parties");
+  const preIteration = preIterationFlag();
   if (noStartingParties && !supportsNoStartingParties(preset))
     throw new Error(`--no-starting-parties is not supported for --preset=${preset}`);
 
@@ -205,6 +206,7 @@ async function main(): Promise<CheckResult[]> {
       mode: "historical",
       preset,
       startingParties: noStartingParties ? "none" : undefined,
+      preIteration,
       resetReference: true,
       deleteProfiles: false,
       adminUsername: "REHEARSAL",
@@ -315,9 +317,21 @@ async function runOneTurn(db: Db): Promise<RehearsalFailure[]> {
   }
 }
 
+// Same flag and default as the reset CLI, so the rehearsal record's
+// fingerprint matches the live reset it gates (starting parties plus a
+// founding round needs --pre-iteration on both).
+function preIterationFlag(): boolean | undefined {
+  if (flag("--pre-iteration")) return true;
+  if (flag("--no-pre-iteration")) return false;
+  return undefined;
+}
+
 function foundingPhaseFor(): boolean {
   const preset = value("--preset") ?? "";
-  return presetDefaultsToFoundingPhase(preset, flag("--no-starting-parties") ? "none" : "default");
+  return (
+    preIterationFlag() ??
+    presetDefaultsToFoundingPhase(preset, flag("--no-starting-parties") ? "none" : "default")
+  );
 }
 
 function recordFingerprint(): string {

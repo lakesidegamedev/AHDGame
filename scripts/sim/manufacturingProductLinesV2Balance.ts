@@ -244,7 +244,6 @@ const admissionQuotes = [
   const capitalAnchor = sectorCapacityBookAnchor(
     {
       sectorType: "manufacturing",
-      industryModel: "vehicles",
       strategyId: "standard",
       capitalStock: 1000,
       capacityBookAnchor: row.stored,

@@ -87,7 +87,6 @@
     "76994aba2b21949110d0aa2e9b475ef7fb6de22a4c3b007072a40cc3e9000cb8": 1,
     "43967c0ac85dc4995f2c04dfe005e387eb8942ec5b4d73bc324d15ebda8eba75": 1,
     "e78cee2879f9100337f29ef0d5055e8f8c13b2c8d050ccaf54e67369be3b1949": 1,
-    "29acdeec68a21971a93f31ee5ad5dec2b1cb9494b9f799409946c5e571b249b8": 1,
     "66434cbfb85884fda1183aa5406fba87fd79ba45dbc1a2cb6e2d6c1c991869ee": 1,
     "e3f648cc636e1dccfe8da37b1fba003c8db6d656a13779cb50386a46a6b6db40": 1,
     "b9fb9e775a6d21700b49edbb6a10d59ce6cf7e899601e093832f8520e8bb5943": 1,
@@ -626,7 +625,8 @@
     "1adec37097776ab6d809c482a67da500b1738e0a5382688e6bc4f69a009f58cb": 1,
     "0fd114d47bbff2b8c74d0783b9fb551e749fbdbf6019355eb6e2a4b46f875c7d": 1,
     "21f38e44a48a7f2757b05d6a3f78dc94807e46e3250008c55867230b75c792ea": 1,
-    "242218b33639a821b23a0e1fc72c8802ddac272ae6fe1430302d2803dbba8c9f": 1
+    "242218b33639a821b23a0e1fc72c8802ddac272ae6fe1430302d2803dbba8c9f": 1,
+    "af3ff91cadd690c4b909fe944036d2130bb40bfb5af8226c462dd9ee609e354c": 1
   },
   "locations": [
     {
@@ -1536,8 +1536,9 @@
       "file": "src/lib/nationalization/privatizeAsset.ts",
       "operation": "insertOne",
       "owner": "privatizeAsset",
-      "expression": "sectors.insertOne({ _id: new ObjectId(), corporationId: newCorpId, countryId: sector.countryId, stateId: sector.stateId, sectorType: sector.sectorType, industryModel: sector.industryModel, targetGrowthRate: sector.targetGrowthRate, currentGrowthRate: sector.currentGrowthRate, currentGrowthCost: Math.round(sector.currentGrowthCost * fraction), revenue: Math.round(sector.revenue * fraction), profitMargin: sector.profitMargin, workers: Math.round(sector.workers * fraction), ...(sector.strategyId ? { strategyId: sector.strategyId } : {}), ...(plantsEnabled ? carvedPlant : {}), createdAt: now, updatedAt: now, } as CorporateSector)",
-      "fingerprint": "29acdeec68a21971a93f31ee5ad5dec2b1cb9494b9f799409946c5e571b249b8"
+      "expression": "sectors.insertOne({ _id: new ObjectId(), corporationId: newCorpId, countryId: sector.countryId, stateId: sector.stateId, sectorType: sector.sectorType, targetGrowthRate: sector.targetGrowthRate, currentGrowthRate: sector.currentGrowthRate, currentGrowthCost: Math.round(sector.currentGrowthCost * fraction), revenue: Math.round(sector.revenue * fraction), profitMargin: sector.profitMargin, workers: Math.round(sector.workers * fraction), ...(sector.strategyId ? { strategyId: sector.strategyId } : {}), ...(plantsEnabled ? carvedPlant : {}), createdAt: now, updatedAt: now, } as CorporateSector)",
+      "fingerprint": "af3ff91cadd690c4b909fe944036d2130bb40bfb5af8226c462dd9ee609e354c",
+      "line": 356
     },
     {
       "file": "src/lib/nationalization/privatizeAsset.ts",
@@ -3286,7 +3287,7 @@
       "file": "src/lib/sovereignDefault/legislative/legislativeTurn.ts",
       "operation": "updateOne",
       "owner": "processSovereignLegislativeTurn",
-      "expression": "db.collection<SovereignCrisisDecision>(\"sovereignCrisisDecisions\").updateOne({ _id: decision._id as ObjectId }, { $set: { state: \"rejected\", currentChamberIndex: null, legislativePhases: updatedPhases, resolvedAt: new Date(realtimeMs), resolvedReason: \"Legislative deadlock — auto-Repudiate (phase 9b)\", }, })",
+      "expression": "db.collection<SovereignCrisisDecision>(\"sovereignCrisisDecisions\").updateOne({ _id: decision._id as ObjectId }, { $set: { state: \"rejected\", currentChamberIndex: null, legislativePhases: updatedPhases, resolvedAt: new Date(realtimeMs), resolvedReason: \"Legislative deadlock \u2014 auto-Repudiate (phase 9b)\", }, })",
       "fingerprint": "4e8be196a9e074fcca6078089c4d06cf45a38d82c7504b78e890d3ea171cd198"
     },
     {

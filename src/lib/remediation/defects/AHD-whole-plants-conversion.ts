@@ -93,8 +93,6 @@ type SectorRow = Pick<
   | "countryId"
   | "stateId"
   | "sectorType"
-  | "industryModel"
-  | "mediaDiscriminator"
   | "strategyId"
   | "capitalStock"
   | "capacityBookAnchor"
@@ -290,8 +288,6 @@ const SECTOR_PROJECTION = {
   countryId: 1,
   stateId: 1,
   sectorType: 1,
-  industryModel: 1,
-  mediaDiscriminator: 1,
   strategyId: 1,
   capitalStock: 1,
   capacityBookAnchor: 1,
@@ -400,8 +396,6 @@ export async function buildConversionReport(db: Db): Promise<ConversionReport> {
         world.year,
         world.unitScale,
         sector.strategyId ?? null,
-        sector.industryModel,
-        sector.mediaDiscriminator,
         world.preset
       ),
     });

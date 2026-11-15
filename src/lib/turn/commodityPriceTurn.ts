@@ -271,12 +271,6 @@ export async function processCommodityPriceTurn(turn: number): Promise<Commodity
         {
           projection: {
             sectorType: 1,
-            // Operating lane discriminators. Without them a canonical
-            // entertainment row reads as news media (derated, remapped) and a
-            // vehicles manufacturing row reads as generic manufacturing, so the
-            // world ledger drifts from the clearing offer.
-            industryModel: 1,
-            mediaDiscriminator: 1,
             revenue: 1,
             // Realized price leg (clearing factor / sold fraction) for the
             // input-demand deflator (src/lib/market/inputDemandRealPhase.ts).

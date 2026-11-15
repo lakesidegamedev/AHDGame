@@ -146,11 +146,10 @@ export default function CorporationGuidePage() {
               </table>
             </div>
             <p className="text-sm text-muted leading-relaxed">
-              There are <strong className="text-foreground">17 sector lines</strong>: Financial,
+              There are <strong className="text-foreground">15 sector lines</strong>: Financial,
               Media, Manufacturing, Healthcare, Retail, Technology, Energy, Agriculture, Real
               Estate, Defense, Telecommunications, Logistics, Extraction, Chemical Industries, and
-              Construction, plus two specialized lines: vehicles (Automobiles) inside Manufacturing
-              and entertainment inside Media.
+              Construction.
             </p>
             <SubHeader>Secondary type trade-off</SubHeader>
             <p className="text-sm text-muted leading-relaxed">
@@ -202,30 +201,18 @@ export default function CorporationGuidePage() {
               </table>
             </div>
 
-            <SubHeader>Market capture (splits)</SubHeader>
+            <SubHeader>Attacking a rival (sector splits)</SubHeader>
             <p className="text-sm text-muted leading-relaxed">
-              Once you own a sector in a state, use{" "}
-              <strong className="text-foreground">splits</strong> to capture unowned market share.
-              Each split costs cash and Marketing Strength (MS):
+              A <strong className="text-foreground">split</strong> is an attempt to take whole
+              plants off a rival&apos;s sector in a state. You do not choose the size: your
+              Marketing Strength (MS) against theirs sets how many of their plants are at stake and
+              your odds. You pay half the book value of those plants plus MS whether or not it
+              lands. On a win the plants move to you intact.
             </p>
-            <FormulaBlock>{`Cash cost  = 5% of the unowned sector's current revenue
-MS cost    = 2^splitEscalation  →  1 → 2 → 4 → 8 → 16 MS per split
-Capture    ≈ 6% of unowned × (1 + marketingStrength ÷ 100)
-
-Escalation drops by 1 each turn. Costs halve if you wait`}</FormulaBlock>
-            <Callout label="Split pacing:">
-              Don&apos;t spam splits. Each one doubles the next MS cost. At 8 MS/split, waiting 2
-              turns brings it back to 2. Patience saves MS and lets you capture more total share for
-              the same marketing budget.
+            <Callout label="Headroom:">
+              There is no unowned pool to buy a slice of. A market grows as you build plants into
+              demand that buyers are not yet getting served.
             </Callout>
-
-            <SubHeader>Unowned sectors grow back</SubHeader>
-            <p className="text-sm text-muted leading-relaxed">
-              The unowned portion of a sector{" "}
-              <strong className="text-foreground">grows every turn</strong> at the average growth
-              rate of player-owned sectors in that state and type. Don&apos;t sit on low market
-              share in a sector you care about. The pool regenerates.
-            </p>
           </section>
 
           {/* ── 4. Margins ── */}
@@ -335,7 +322,7 @@ Escalation drops by 1 each turn. Costs halve if you wait`}</FormulaBlock>
                     <td className="px-4 py-2.5">
                       <Tag variant="negative">−5%</Tag>
                     </td>
-                    <td className="px-4 py-2.5">Retail, Real Estate, Entertainment</td>
+                    <td className="px-4 py-2.5">Retail, Real Estate</td>
                     <td className="px-4 py-2.5">1,500-3,500 per 100k</td>
                   </tr>
                   <tr>
@@ -637,9 +624,9 @@ Logistics & Operations Strength (LS) raises the threshold and halves the slope:
 
             <SubHeader>Marketing budget & marketing strength</SubHeader>
             <p className="text-sm text-muted leading-relaxed">
-              Marketing Strength (MS) determines how much unowned market share you capture per
-              split. It grows each turn based on your daily marketing budget (set in CEO Office →
-              Settings).
+              Marketing Strength (MS) decides how many plants you can take, and your odds, when you
+              split a rival&apos;s sector. It grows each turn based on your daily marketing budget
+              (set in CEO Office → Settings).
             </p>
             <FormulaBlock>{`Base growth    = 1 MS/turn (if any spend at all)
 Scaled growth  = 0.65 × ln(1 + dailyBudget / 100,000)
@@ -816,8 +803,8 @@ Scaled growth  = 0.65 × ln(1 + dailyBudget / 100,000)
                     foreign rate on those sectors&apos; profits.
                   </li>
                   <li>
-                    • <strong className="text-foreground">Crime reduction</strong>. Helps Retail,
-                    Real Estate, Entertainment
+                    • <strong className="text-foreground">Crime reduction</strong>. Helps Retail and
+                    Real Estate
                   </li>
                   <li>
                     • <strong className="text-foreground">Deficit spending</strong>. +0.5% per 1% of
@@ -940,7 +927,7 @@ sectorNPV = (yearly sector profit) ÷ 0.25         ← 25% discount rate`}</Form
                   ],
                   [
                     "Never leave the CEO seat vacant.",
-                    "A corp without a CEO bleeds 10% of sector revenue per turn into the unowned pool. Fill vacancies immediately.",
+                    "A corp without a CEO loses 10% of its plant capacity every turn, and that capacity is gone, not handed to anyone. Fill vacancies immediately.",
                   ],
                   [
                     "Subsidies stack.",

@@ -1,6 +1,6 @@
 /**
  * Export the atlas consumed by the GitHub Pages positions viewer
- * (tools/positions-atlas/). One JSON with:
+ * (scripts/analysis/positions-atlas/). One JSON with:
  *  - anchors: per anchor era, per-state {econ, social, display} through the
  *    live seed path (`deriveRegionLeans`);
  *  - timeline: per year (yearly, 1953..2023), per-state leans blended between
@@ -67,7 +67,7 @@ function anchorMap(era: EraId): Record<string, LeanRow> {
 }
 
 function main() {
-  const outfile = process.argv[2] ?? "tools/positions-atlas/lean-atlas.json";
+  const outfile = process.argv[2] ?? "scripts/analysis/positions-atlas/lean-atlas.json";
   const anchors = Object.fromEntries(ERAS.map((e) => [e, anchorMap(e)]));
 
   const timeline: Record<string, Record<string, LeanRow>> = {};

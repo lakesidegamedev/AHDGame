@@ -56,8 +56,6 @@ export async function incrementNatCorpSectorRevenue(
     countryId: CountryId;
     stateId: string;
     sectorType: CorporationType;
-    industryModel?: CorporateSector["industryModel"];
-    mediaDiscriminator?: CorporateSector["mediaDiscriminator"];
     revenueDelta: number;
   }
 ): Promise<"inc" | "insert" | "noop"> {
@@ -65,13 +63,7 @@ export async function incrementNatCorpSectorRevenue(
   if (revenueDeltaAnchor <= 0) return "noop";
 
   const now = new Date();
-  const corp = await resolveNationalCorporationForSector(
-    db,
-    params.countryId,
-    params.sectorType,
-    params.industryModel,
-    params.mediaDiscriminator
-  );
+  const corp = await resolveNationalCorporationForSector(db, params.countryId, params.sectorType);
 
   // Convert ₳-denominated seed revenue into the natcorp's local currency before
   // persisting. corporateSectors.revenue is stored in liquidCurrencyCode units;
@@ -117,9 +109,7 @@ export async function incrementNatCorpSectorRevenue(
         params.sectorType,
         revenueDeltaAnchor,
         null,
-        await (await import("@/lib/currency/gdpAnchorRate")).loadWorldEraUnitScale(db),
-        params.industryModel,
-        params.mediaDiscriminator
+        await (await import("@/lib/currency/gdpAnchorRate")).loadWorldEraUnitScale(db)
       )
     : 0;
 
@@ -128,8 +118,6 @@ export async function incrementNatCorpSectorRevenue(
     corporationId: corp._id,
     stateId: params.stateId,
     sectorType: params.sectorType,
-    industryModel: params.industryModel ?? null,
-    mediaDiscriminator: params.mediaDiscriminator ?? null,
   });
 
   if (existing) {
@@ -160,8 +148,6 @@ export async function incrementNatCorpSectorRevenue(
     countryId: params.countryId,
     stateId: params.stateId,
     sectorType: params.sectorType,
-    ...(params.industryModel ? { industryModel: params.industryModel } : {}),
-    ...(params.mediaDiscriminator ? { mediaDiscriminator: params.mediaDiscriminator } : {}),
     revenue: revenueDeltaLocal,
     ...(capacityUnitsDelta > 0 ? { capitalStock: capacityUnitsDelta } : {}),
     ...(capacityUnitsDelta > 0 ? seedPlantLedger(params, capacityUnitsDelta) : {}),
@@ -181,8 +167,6 @@ export type OwnedSectorMergeInput = Pick<
   | "_id"
   | "stateId"
   | "sectorType"
-  | "industryModel"
-  | "mediaDiscriminator"
   | "countryId"
   | "revenue"
   | "workers"
@@ -247,29 +231,15 @@ export async function absorbOwnedSectorIntoNatCorp(
   if (opts?.dryRun) return Math.max(0, revenue);
 
   const now = new Date();
-  const corp = sector.industryModel
-    ? await resolveNationalCorporationForSector(
-        db,
-        sector.countryId,
-        sector.sectorType as CorporationType,
-        sector.industryModel,
-        sector.mediaDiscriminator
-      )
-    : await resolveNationalCorporationForSector(
-        db,
-        sector.countryId,
-        sector.sectorType as CorporationType,
-        sector.industryModel,
-        sector.mediaDiscriminator
-      );
+  const corp = await resolveNationalCorporationForSector(
+    db,
+    sector.countryId,
+    sector.sectorType as CorporationType
+  );
   const existing = await sectors.findOne({
     corporationId: corp._id,
     stateId: sector.stateId,
     sectorType: sector.sectorType,
-    mediaDiscriminator: sector.mediaDiscriminator ?? null,
-    ...(sector.industryModel !== undefined || sector.sectorType === "manufacturing"
-      ? { industryModel: sector.industryModel ?? null }
-      : {}),
   });
 
   if (existing && !existing._id.equals(sector._id)) {

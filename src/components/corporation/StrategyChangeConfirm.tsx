@@ -4,9 +4,8 @@ import { useWorldFlags } from "@/hooks/useWorldFlags";
 import { useEffect, useState } from "react";
 import type { OperatingSectorType } from "@/lib/constants/corporationsClient";
 import {
-  getOperatingSectorType,
   getSectorStrategies,
-  getStrategyForOperatingModel,
+  getStrategy,
   STRATEGY_COOLDOWN_TURNS,
   STRATEGY_RETOOL_COST_FRACTION,
   STRATEGY_TRANSITION_MARGIN_PENALTY,
@@ -30,10 +29,6 @@ import { fetchJson } from "@/lib/observability/fetchJson";
 
 interface StrategyChangeConfirmProps {
   sectorType: OperatingSectorType;
-  /** Manufacturing production model (vehicles) of the persisted sector. */
-  industryModel?: string | null;
-  /** Media lane discriminator (entertainment) of the persisted sector. */
-  mediaDiscriminator?: string | null;
   mediaOperatingModelsEnabled?: boolean;
   currentStrategyId: string;
   targetStrategyId: string;
@@ -111,8 +106,6 @@ function estimateCommodityMargin(
 
 export default function StrategyChangeConfirm({
   sectorType,
-  industryModel,
-  mediaDiscriminator,
   mediaOperatingModelsEnabled,
   currentStrategyId,
   targetStrategyId,
@@ -160,25 +153,10 @@ export default function StrategyChangeConfirm({
   }, []);
 
   const { preset } = useWorldFlags();
-  // A vehicle plant is stored as manufacturing and an entertainment lane as
-  // media; both run the folded type's recipes, so resolve the operating type
-  // before looking strategies up or the target is never found.
-  const operatingType = getOperatingSectorType(sectorType, industryModel, mediaDiscriminator);
-  const strategies = getSectorStrategies(
-    operatingType,
-    mediaOperatingModelsEnabled === true,
-    null,
-    preset
-  );
+  const strategies = getSectorStrategies(sectorType, mediaOperatingModelsEnabled === true, preset);
   if (!strategies) return null;
 
-  const current = getStrategyForOperatingModel(
-    sectorType,
-    currentStrategyId,
-    industryModel,
-    mediaDiscriminator,
-    preset
-  );
+  const current = getStrategy(sectorType, currentStrategyId, preset);
   const target = strategies.find((s) => s.id === targetStrategyId) as SectorStrategy | undefined;
   if (!current || !target) return null;
 

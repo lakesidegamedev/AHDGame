@@ -12,7 +12,7 @@ import { parseJsonBody } from "@/lib/api/validate";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { batchSpawnNppCorporations } from "@/lib/admin/spawnNppCorporation";
 import type { CountryId } from "@/lib/constants/countries";
-import { OPERATING_SECTOR_TYPES, operatingSectorIdentity } from "@/lib/constants/corporations";
+import { OPERATING_SECTOR_TYPES } from "@/lib/constants/corporations";
 
 const batchSpawnSchema = z.object({
   countryId: z.string().min(1).max(5),
@@ -41,11 +41,8 @@ export async function POST(request: Request) {
       headquartersState: parsed.data.headquartersState,
       startingCapital: parsed.data.startingCapital,
       sectorMarkets: parsed.data.sectorTypes?.map((lane) => {
-        const identity = operatingSectorIdentity(lane);
         return {
-          type: identity.sectorType,
-          industryModel: identity.industryModel,
-          mediaDiscriminator: identity.mediaDiscriminator,
+          type: lane,
         };
       }),
     });

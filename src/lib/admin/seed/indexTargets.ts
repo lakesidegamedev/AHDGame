@@ -94,8 +94,7 @@ export const INDEX_TARGETS = [
   {
     id: "indexesObservability",
     label: "Indexes — Observability",
-    description:
-      "gameHealthSnapshots, codeQualitySnapshots, siteTrafficPageviews (TTLs + query indexes)",
+    description: "gameHealthSnapshots (TTL + query indexes)",
   },
   {
     id: "indexesFinancialTxLog",

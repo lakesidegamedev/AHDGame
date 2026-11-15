@@ -8,21 +8,15 @@
  * `loadFrontierResearchByLane`.
  */
 import type { Db } from "mongodb";
-import { operatingSectorIdentity, type OperatingSectorType } from "@/lib/constants/corporations";
+import { type OperatingSectorType } from "@/lib/constants/corporations";
 import { countsAsFrontierResearch } from "@/lib/constants/techTree/breakthrough";
-import { getOperatingSectorType, SECTOR_STRATEGIES } from "@/lib/constants/sectorStrategies";
+import { SECTOR_STRATEGIES } from "@/lib/constants/sectorStrategies";
 import type { SectorStrategy } from "@/lib/constants/sectorStrategyTypes";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
-/** Mongo filter for the corporations whose tech tree is this lane's. */
+/** Mongo filter for the corporations whose tech tree is this sector type's. */
 export function laneCorporationFilter(lane: OperatingSectorType): Record<string, unknown> {
-  const identity = operatingSectorIdentity(lane);
-  // null matches an absent field, so a plain lane excludes the folded ones.
-  return {
-    type: identity.sectorType,
-    industryModel: identity.industryModel ?? null,
-    mediaDiscriminator: identity.mediaDiscriminator ?? null,
-  };
+  return { type: lane };
 }
 
 export async function loadSectorFrontierResearch(
@@ -81,15 +75,13 @@ export async function loadPrerequisiteLaneResearch(
 /** One grouped corporation identity and its summed frontier research. */
 export interface FrontierResearchIdentityRow {
   type?: string | null;
-  industryModel?: string | null;
-  mediaDiscriminator?: string | null;
   total?: number | null;
 }
 
 /**
  * Folds grouped identity rows into per-lane totals. A row counts toward a lane
- * only when its identity is exactly that lane's (the `laneCorporationFilter`
- * match), so the totals equal what `loadSectorFrontierResearch` returns.
+ * only when its type is that lane (the `laneCorporationFilter` match), so the
+ * totals equal what `loadSectorFrontierResearch` returns.
  */
 export function frontierResearchByLane(
   rows: readonly FrontierResearchIdentityRow[]
@@ -99,19 +91,7 @@ export function frontierResearchByLane(
     if (typeof row.type !== "string") continue;
     const total = row.total;
     if (typeof total !== "number" || !Number.isFinite(total) || total <= 0) continue;
-    const lane = getOperatingSectorType(
-      row.type,
-      row.industryModel ?? null,
-      row.mediaDiscriminator ?? null
-    ) as OperatingSectorType;
-    const identity = operatingSectorIdentity(lane);
-    if (
-      identity.sectorType !== row.type ||
-      (identity.industryModel ?? null) !== (row.industryModel ?? null) ||
-      (identity.mediaDiscriminator ?? null) !== (row.mediaDiscriminator ?? null)
-    ) {
-      continue;
-    }
+    const lane = row.type as OperatingSectorType;
     byLane.set(lane, (byLane.get(lane) ?? 0) + total);
   }
   return byLane;
@@ -134,8 +114,6 @@ export async function loadFrontierResearchByLane(
         $group: {
           _id: {
             type: "$type",
-            industryModel: "$industryModel",
-            mediaDiscriminator: "$mediaDiscriminator",
           },
           total: { $sum: "$frontierResearchSpent" },
         },
@@ -144,8 +122,6 @@ export async function loadFrontierResearchByLane(
         $project: {
           _id: 0,
           type: "$_id.type",
-          industryModel: "$_id.industryModel",
-          mediaDiscriminator: "$_id.mediaDiscriminator",
           total: 1,
         },
       },

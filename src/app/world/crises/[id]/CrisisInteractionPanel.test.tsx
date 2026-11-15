@@ -106,7 +106,7 @@ describe("CrisisInteractionPanel national capacity", () => {
     stubInteraction();
     render(<CrisisInteractionPanel crisisId="crisis-1" />);
 
-    expect(await screen.findByText("-0.45")).toBeTruthy();
+    expect(await screen.findByText("-0.45 pts")).toBeTruthy();
     expect(screen.queryByText("-0.44999999999999996")).toBeNull();
   });
 });

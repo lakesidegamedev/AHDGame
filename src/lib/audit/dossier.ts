@@ -14,6 +14,7 @@ import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
 import type { Document } from "mongodb";
+import { isAppleLinked } from "@/lib/admin/appleLink";
 import { usersCollection } from "@/lib/db/repositories/users";
 import { activityLogCollection } from "@/lib/db/repositories/activityLog";
 
@@ -90,6 +91,7 @@ export interface DossierIdentity {
   oauth: {
     discordId: string | null;
     discordUsername: string | null;
+    appleLinked: boolean;
     googleId: string | null;
     googleEmail: string | null;
     googleName: string | null;
@@ -161,6 +163,7 @@ function buildDossierIdentity(user: User, isAdmin: boolean): DossierIdentity {
     oauth: {
       discordId: user.discordId ?? null,
       discordUsername: user.discordUsername ?? null,
+      appleLinked: isAppleLinked(user),
       googleId: user.googleId ?? null,
       googleEmail: maskOptional(user.googleEmail, maskEmail, isAdmin),
       googleName: user.googleName ?? null,

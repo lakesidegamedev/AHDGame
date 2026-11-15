@@ -12,15 +12,6 @@ describe("foundCorporationSchema operating lanes", () => {
     }
   });
 
-  it("founds vehicle makers and entertainment houses through their lanes", () => {
-    expect(
-      foundCorporationSchema.safeParse({ ...base, type: "manufacturing_vehicles" }).success
-    ).toBe(true);
-    expect(foundCorporationSchema.safeParse({ ...base, type: "media_entertainment" }).success).toBe(
-      true
-    );
-  });
-
   it("still rejects unknown types", () => {
     expect(foundCorporationSchema.safeParse({ ...base, type: "nope" }).success).toBe(false);
   });

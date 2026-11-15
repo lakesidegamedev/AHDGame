@@ -1,6 +1,5 @@
 import type { Db } from "mongodb";
 import type { Corporation } from "@/lib/db/types";
-import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
 import {
   frontierProgrammeCost,
   frontierPurchaseCount,
@@ -40,11 +39,7 @@ export async function buyFrontierProgramme(
   kind: FrontierProgrammeKind,
   currentYear: number
 ): Promise<BuyFrontierProgrammeResult> {
-  const techType = getOperatingSectorType(
-    corporation.type,
-    corporation.industryModel,
-    corporation.mediaDiscriminator
-  );
+  const techType = corporation.type;
   if (!isFrontierOpen(corporation, techType, currentYear)) {
     return {
       ok: false,

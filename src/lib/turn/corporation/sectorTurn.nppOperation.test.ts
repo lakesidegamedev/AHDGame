@@ -3,7 +3,7 @@ import { ObjectId } from "mongodb";
 import type { CommodityType } from "@/lib/constants/commodities";
 import type { Corporation } from "@/lib/db/types";
 import type { SectorClearingResult } from "@/lib/market/clearing";
-import { getEffectiveStrategyRatesForOperatingModel } from "@/lib/constants/sectorStrategies";
+import { getEffectiveStrategyRates } from "@/lib/constants/sectorStrategies";
 import { scenario, runCase, SECTOR_ID } from "@/lib/test-utils/nppOperatingCapacityFixture";
 describe("NPP operation at the authoritative production boundary", () => {
   it("reduces idle payroll while preserving sold output and paid capacity", () => {
@@ -79,13 +79,7 @@ describe("NPP operation at the authoritative production boundary", () => {
     const s = scenario({ activeCapacityPercent: 15, producedUnits: 200, soldUnits: 200 });
     const full = scenario({ producedUnits: 200, soldUnits: 200 });
     full.env.lookups.engineSixCountries = new Set();
-    const rates = getEffectiveStrategyRatesForOperatingModel(
-      "technology",
-      "software",
-      undefined,
-      undefined,
-      1000
-    );
+    const rates = getEffectiveStrategyRates("technology", "software", undefined, undefined, 1000);
     for (const c of [s, full])
       for (const commodity of Object.keys(rates.demand)) {
         c.env.lookups.globalCommodityBalances.set(commodity as CommodityType, {
@@ -141,7 +135,7 @@ describe("NPP operation at the authoritative production boundary", () => {
       soldUnits: 200,
     });
     b.env.lookups.engineSixCountries = new Set();
-    const rates = getEffectiveStrategyRatesForOperatingModel(
+    const rates = getEffectiveStrategyRates(
       "manufacturing",
       "standard",
       undefined,

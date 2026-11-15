@@ -14,11 +14,7 @@ import {
   type CommodityType,
   type ExtractableResource,
 } from "@/lib/constants/commodities";
-import {
-  SECTOR_STRATEGIES,
-  getOperatingSectorType,
-  getStrategyForOperatingModel,
-} from "@/lib/constants/sectorStrategies";
+import { SECTOR_STRATEGIES, getStrategy } from "@/lib/constants/sectorStrategies";
 import { facilityPlural } from "@/lib/constants/facilityVocabulary";
 import { formatFillPercent, formatUnits } from "./plantsPresentation";
 import type { SectorDetail } from "./CorporationPageTypes";
@@ -115,21 +111,12 @@ export function typeMarketShare(sectors: SectorDetail[]): number | null {
  * drop such a sector while this file still counted it.
  */
 export function resolveSectorStrategy(sector: SectorDetail) {
-  const type = getOperatingSectorType(
-    sector.sectorType,
-    sector.industryModel,
-    sector.mediaDiscriminator
-  ) as OperatingSectorType;
+  const type = sector.sectorType as OperatingSectorType;
   if (!SECTOR_STRATEGIES[type]?.length) return null;
   // `corporationDetail` already normalises an absent id to "standard", so this
   // only matters for a row that arrives with one; kept so the function is
   // correct on its own terms, the same way every other caller writes it.
-  return getStrategyForOperatingModel(
-    sector.sectorType,
-    sector.strategyId ?? "standard",
-    sector.industryModel,
-    sector.mediaDiscriminator
-  );
+  return getStrategy(sector.sectorType, sector.strategyId ?? "standard");
 }
 
 const strategyFor = resolveSectorStrategy;

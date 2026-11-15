@@ -88,8 +88,6 @@ export function buildNppFoundedSectorInserts(args: {
       stateId: ns.stateId,
       sectorType: ns.sectorType,
       nppFoundedTurn: args.turn,
-      ...(ns.industryModel ? { industryModel: ns.industryModel } : {}),
-      ...(ns.mediaDiscriminator ? { mediaDiscriminator: ns.mediaDiscriminator } : {}),
       targetGrowthRate: ns.starterOrder ? 0 : 2,
       currentGrowthRate: 0,
       currentGrowthCost: 0,

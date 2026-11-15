@@ -11,7 +11,7 @@ import { requireAdmin } from "@/lib/api/requireAdmin";
 import { parseJsonBody } from "@/lib/api/validate";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { spawnNppCorporation } from "@/lib/admin/spawnNppCorporation";
-import { OPERATING_SECTOR_TYPES, operatingSectorIdentity } from "@/lib/constants/corporations";
+import { OPERATING_SECTOR_TYPES } from "@/lib/constants/corporations";
 import type { CountryId } from "@/lib/constants/countries";
 
 const spawnSchema = z.object({
@@ -45,12 +45,9 @@ export async function POST(request: Request) {
     }
 
     const { type: lane, ...rest } = parsed.data;
-    const identity = operatingSectorIdentity(lane);
     const result = await spawnNppCorporation(db, {
       ...rest,
-      type: identity.sectorType,
-      industryModel: identity.industryModel,
-      mediaDiscriminator: identity.mediaDiscriminator,
+      type: lane,
       countryId: parsed.data.countryId as CountryId,
     });
 

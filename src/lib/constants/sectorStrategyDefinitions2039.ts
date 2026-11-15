@@ -44,28 +44,6 @@ export const TIER_2039_STRATEGIES: Record<string, SectorStrategy[]> = {
       },
     },
   ],
-  manufacturing_vehicles: [
-    {
-      id: "solid_state_vehicles",
-      requiresTechUnlock: true,
-      minDecade: "2039",
-      name: "Solid-State Vehicles",
-      description:
-        "Solid-state battery vehicles built on mass cell lines. Heavy electronics, rare earth and software demand with little steel.",
-      buildTurns: 144,
-      downside:
-        "Three-year retooling and scarce battery minerals keep input costs high and volatile.",
-      supply: { vehicles: 0.5 },
-      demand: {
-        electronics: 0.16,
-        rare_earth: 0.1,
-        energy: 0.1,
-        software: 0.1,
-        steel: 0.08,
-        plastics: 0.05,
-      },
-    },
-  ],
   real_estate: [
     {
       id: "agentic_property_operations",

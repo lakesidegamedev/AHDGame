@@ -270,8 +270,6 @@ export async function loadCorporationDetailView(args: {
       tickerSymbol: corporation.tickerSymbol ?? undefined,
       description: corporation.description,
       type: corporation.type,
-      industryModel: corporation.industryModel ?? null,
-      mediaDiscriminator: corporation.mediaDiscriminator ?? null,
       countryId: corporation.countryId,
       secondaryType: corporation.secondaryType ?? null,
       typeSwitchCooldownUntilTurn: corporation.typeSwitchCooldownUntilTurn ?? null,
@@ -291,10 +289,7 @@ export async function loadCorporationDetailView(args: {
               : null,
           }
         : {}),
-      typeLabel:
-        corporation.type === "manufacturing" && corporation.industryModel === "vehicles"
-          ? "Vehicle manufacturing"
-          : OPERATING_SECTOR_TYPE_LABELS[corporation.type],
+      typeLabel: OPERATING_SECTOR_TYPE_LABELS[corporation.type],
       headquartersState: corporation.headquartersState,
       federationPendingHeadquartersId: corporation.federationPendingHeadquartersId,
       headquartersStateName:

@@ -65,7 +65,7 @@
     "shape": "country-first",
     "value": {
       "agriculture": 25,
-      "manufacturing": 18,
+      "manufacturing": 19,
       "construction": 10,
       "energy": 10,
       "extraction": 6,
@@ -75,11 +75,9 @@
       "real_estate": 3,
       "defense": 3,
       "telecommunications": 2,
-      "media": 2,
+      "media": 3,
       "healthcare": 2,
-      "manufacturing_vehicles": 1,
       "chemical_industries": 1,
-      "media_entertainment": 1,
       "technology": 0
     }
   },
@@ -409,7 +407,6 @@
         "chemical_industries": "Organización Sindical Española",
         "healthcare": "Organización Sindical Española",
         "retail": "Organización Sindical Española",
-        "manufacturing_vehicles": "Organización Sindical Española",
         "technology": "Organización Sindical Española",
         "energy": "Organización Sindical Española",
         "agriculture": "Organización Sindical Española",
@@ -417,13 +414,11 @@
         "construction": "Organización Sindical Española",
         "defense": "Organización Sindical Española",
         "telecommunications": "Organización Sindical Española",
-        "media_entertainment": "Organización Sindical Española",
         "logistics": "Organización Sindical Española",
         "extraction": "Organización Sindical Española"
       },
       "1979": {
         "manufacturing": "CCOO Industry Federation",
-        "manufacturing_vehicles": "CCOO Industry Federation",
         "chemical_industries": "CCOO Industry Federation",
         "construction": "CCOO Construction Federation",
         "energy": "CCOO Energy Federation",
@@ -435,14 +430,12 @@
         "technology": "CCOO Industry Federation",
         "financial": "CCOO Finance Federation",
         "telecommunications": "CCOO Communications Federation",
-        "media_entertainment": "CCOO Culture Federation",
         "defense": "CCOO Industry Federation",
         "agriculture": "CCOO Agriculture Federation",
         "real_estate": "CCOO Construction Federation"
       },
       "1991": {
         "manufacturing": "CCOO Industry Federation",
-        "manufacturing_vehicles": "CCOO Industry Federation",
         "chemical_industries": "CCOO Industry Federation",
         "construction": "CCOO Construction Federation",
         "energy": "CCOO Energy Federation",
@@ -454,14 +447,12 @@
         "technology": "CCOO Industry Federation",
         "financial": "CCOO Finance Federation",
         "telecommunications": "CCOO Communications Federation",
-        "media_entertainment": "CCOO Culture Federation",
         "defense": "CCOO Industry Federation",
         "agriculture": "CCOO Agriculture Federation",
         "real_estate": "CCOO Construction Federation"
       },
       "1999": {
         "manufacturing": "CCOO Industry Federation",
-        "manufacturing_vehicles": "CCOO Industry Federation",
         "chemical_industries": "CCOO Industry Federation",
         "construction": "CCOO Construction Federation",
         "energy": "CCOO Energy Federation",
@@ -473,14 +464,12 @@
         "technology": "CCOO Industry Federation",
         "financial": "CCOO Finance Federation",
         "telecommunications": "CCOO Communications Federation",
-        "media_entertainment": "CCOO Culture Federation",
         "defense": "CCOO Industry Federation",
         "agriculture": "CCOO Agriculture Federation",
         "real_estate": "CCOO Construction Federation"
       },
       "2007": {
         "manufacturing": "CCOO Industry Federation",
-        "manufacturing_vehicles": "CCOO Industry Federation",
         "chemical_industries": "CCOO Industry Federation",
         "construction": "CCOO Construction Federation",
         "energy": "CCOO Energy Federation",
@@ -492,14 +481,12 @@
         "technology": "CCOO Industry Federation",
         "financial": "CCOO Finance Federation",
         "telecommunications": "CCOO Communications Federation",
-        "media_entertainment": "CCOO Culture Federation",
         "defense": "CCOO Industry Federation",
         "agriculture": "CCOO Agriculture Federation",
         "real_estate": "CCOO Construction Federation"
       },
       "2019": {
         "manufacturing": "CCOO Industry Federation",
-        "manufacturing_vehicles": "CCOO Industry Federation",
         "chemical_industries": "CCOO Industry Federation",
         "construction": "CCOO Construction Federation",
         "energy": "CCOO Energy Federation",
@@ -511,14 +498,12 @@
         "technology": "CCOO Industry Federation",
         "financial": "CCOO Finance Federation",
         "telecommunications": "CCOO Communications Federation",
-        "media_entertainment": "CCOO Culture Federation",
         "defense": "CCOO Industry Federation",
         "agriculture": "CCOO Agriculture Federation",
         "real_estate": "CCOO Construction Federation"
       },
       "2023": {
         "manufacturing": "CCOO Industry Federation",
-        "manufacturing_vehicles": "CCOO Industry Federation",
         "chemical_industries": "CCOO Industry Federation",
         "construction": "CCOO Construction Federation",
         "energy": "CCOO Energy Federation",
@@ -530,14 +515,12 @@
         "technology": "CCOO Industry Federation",
         "financial": "CCOO Finance Federation",
         "telecommunications": "CCOO Communications Federation",
-        "media_entertainment": "CCOO Culture Federation",
         "defense": "CCOO Industry Federation",
         "agriculture": "CCOO Agriculture Federation",
         "real_estate": "CCOO Construction Federation"
       },
       "2027": {
         "manufacturing": "CCOO Industry Federation",
-        "manufacturing_vehicles": "CCOO Industry Federation",
         "chemical_industries": "CCOO Industry Federation",
         "construction": "CCOO Construction Federation",
         "energy": "CCOO Energy Federation",
@@ -549,7 +532,6 @@
         "technology": "CCOO Industry Federation",
         "financial": "CCOO Finance Federation",
         "telecommunications": "CCOO Communications Federation",
-        "media_entertainment": "CCOO Culture Federation",
         "defense": "CCOO Industry Federation",
         "agriculture": "CCOO Agriculture Federation",
         "real_estate": "CCOO Construction Federation"
@@ -1237,12 +1219,10 @@
   "COUNTRY_SECTOR_WEIGHTS": {
     "shape": "country-first",
     "value": {
-      "manufacturing": 14,
+      "manufacturing": 21,
       "real_estate": 12,
       "retail": 9,
       "agriculture": 9,
-      "media_entertainment": 8,
-      "manufacturing_vehicles": 7,
       "construction": 7,
       "financial": 6,
       "healthcare": 6,
@@ -1251,21 +1231,19 @@
       "logistics": 4,
       "defense": 2,
       "technology": 1,
-      "media": 1
+      "media": 9
     }
   },
   "COUNTRY_SECTOR_WEIGHTS_1979": {
     "shape": "country-first",
     "value": {
-      "manufacturing": 18,
+      "manufacturing": 23,
       "agriculture": 10,
       "retail": 9,
       "construction": 8,
       "energy": 7,
       "real_estate": 7,
-      "manufacturing_vehicles": 5,
       "chemical_industries": 5,
-      "media_entertainment": 7,
       "financial": 3,
       "healthcare": 3,
       "defense": 3,
@@ -1273,18 +1251,16 @@
       "logistics": 4,
       "telecommunications": 2,
       "technology": 1,
-      "media": 3
+      "media": 10
     }
   },
   "COUNTRY_SECTOR_WEIGHTS_1991": {
     "shape": "country-first",
     "value": {
-      "manufacturing": 14,
+      "manufacturing": 21,
       "real_estate": 12,
       "retail": 9,
       "agriculture": 9,
-      "media_entertainment": 8,
-      "manufacturing_vehicles": 7,
       "construction": 7,
       "financial": 6,
       "healthcare": 6,
@@ -1293,7 +1269,7 @@
       "logistics": 4,
       "defense": 2,
       "technology": 1,
-      "media": 1
+      "media": 9
     }
   },
   "COUNTRY_TO_ISO_NUMERIC": {

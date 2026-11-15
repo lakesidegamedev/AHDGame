@@ -103,7 +103,6 @@ describe("GET /api/corporations/[id]/expand-suggestions (mode=unowned)", () => {
         userId: "user1",
         countryId: "US",
         type: "manufacturing",
-        industryModel: "vehicles",
         liquidCapital: 1_000_000,
       },
     } as never);
@@ -122,16 +121,11 @@ describe("GET /api/corporations/[id]/expand-suggestions (mode=unowned)", () => {
       toArray: vi.fn().mockResolvedValue([]),
     } as never);
 
-    const response = await GET(
-      makeRequest("sectorType=manufacturing_vehicles&mode=unowned"),
-      ctx()
-    );
+    const response = await GET(makeRequest("sectorType=manufacturing&mode=unowned"), ctx());
 
     expect(response.status).toBe(200);
     expect(sectorFilters[0]).toMatchObject({
       sectorType: "manufacturing",
-      industryModel: "vehicles",
-      mediaDiscriminator: null,
     });
     const data = await response.json();
     // No stored cell is needed: every region is offered as a candidate.

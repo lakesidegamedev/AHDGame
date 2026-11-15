@@ -11,19 +11,9 @@ describe("plannedEconomyMediaSupplyFactor", () => {
   it("derates media in both economy types, and nothing but media", () => {
     // Bloc media was seeded about 4x what a state media budget funds; market
     // media nameplate is ~20x the advertising market, so its derate is deeper.
-    expect(plannedEconomyMediaSupplyFactor("media", true, null)).toBe(0.25);
-    expect(plannedEconomyMediaSupplyFactor("media", false, null)).toBe(0.1);
-    expect(plannedEconomyMediaSupplyFactor("agriculture", true, null)).toBe(1);
-    expect(plannedEconomyMediaSupplyFactor("agriculture", false, null)).toBe(1);
-    expect(plannedEconomyMediaSupplyFactor("media_entertainment", true, null)).toBe(1);
-  });
-
-  it("never derates the canonical entertainment lane", () => {
-    // The derate sized the news media glut. Entertainment rows were never
-    // derated as a legacy sector type and keep that after the taxonomy merge.
-    expect(plannedEconomyMediaSupplyFactor("media", true, "entertainment")).toBe(1);
-    expect(plannedEconomyMediaSupplyFactor("media", false, "entertainment")).toBe(1);
-    expect(plannedEconomyMediaSupplyFactor("media", false, "media")).toBe(0.1);
-    expect(plannedEconomyMediaSupplyFactor("media", false, undefined)).toBe(0.1);
+    expect(plannedEconomyMediaSupplyFactor("media", true)).toBe(0.25);
+    expect(plannedEconomyMediaSupplyFactor("media", false)).toBe(0.1);
+    expect(plannedEconomyMediaSupplyFactor("agriculture", true)).toBe(1);
+    expect(plannedEconomyMediaSupplyFactor("agriculture", false)).toBe(1);
   });
 });

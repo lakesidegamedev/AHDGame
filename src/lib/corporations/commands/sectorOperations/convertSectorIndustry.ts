@@ -11,7 +11,7 @@ import { rejectDuringTurn } from "@/lib/api/rejectDuringTurn";
 import { convertSectorIndustrySchema } from "@/lib/api/schemas/corporations";
 import type { CorporateSector, GameState } from "@/lib/db/types";
 import type { StateResourceCapacity } from "@/lib/db/types/stateResourceCapacity";
-import { operatingSectorIdentity, type OperatingSectorType } from "@/lib/constants/corporations";
+import { type OperatingSectorType } from "@/lib/constants/corporations";
 import { SECTOR_STRATEGIES, STRATEGY_COOLDOWN_TURNS } from "@/lib/constants/sectorStrategies";
 import { isExtractionStrategyZeroYield } from "@/lib/corporations/extractionStrategyAvailability";
 import { industryConversionFields } from "@/lib/corporations/retooling/conversion";
@@ -71,7 +71,6 @@ export async function convertSectorIndustryCore(
 
   const result = industryConversionFields(sector, input.targetLane, input.strategyId);
   if (!result.ok) return { ok: false, status: 400, error: result.reason };
-  const to = operatingSectorIdentity(input.targetLane);
   const strategyId = result.set.strategyId as string;
 
   const duplicate = await corporateSectorsCollection(db).findOne(
@@ -79,9 +78,7 @@ export async function convertSectorIndustryCore(
       _id: { $ne: sector._id },
       corporationId: input.corporationId,
       stateId: sector.stateId,
-      sectorType: to.sectorType,
-      industryModel: to.industryModel,
-      mediaDiscriminator: to.mediaDiscriminator,
+      sectorType: input.targetLane,
     },
     { projection: { _id: 1 } }
   );
@@ -92,7 +89,7 @@ export async function convertSectorIndustryCore(
       error: "You already run that industry in this state. Expand that business instead.",
     };
 
-  if (to.sectorType === "extraction") {
+  if (input.targetLane === "extraction") {
     const strategy = (SECTOR_STRATEGIES[input.targetLane] ?? []).find((s) => s.id === strategyId);
     const capacity = await stateResourceCapacityCollection(db).findOne(
       { stateId: sector.stateId },

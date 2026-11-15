@@ -5,7 +5,7 @@ import { resolveGroupRows } from "@/lib/corporations/groups/groupMembership";
 import { CEO_ARCHETYPE_MODIFIERS } from "@/lib/npp/ceoArchetype";
 import { groupOperator } from "@/lib/corporations/groups/operator";
 import { computeSupplyAgreementSectorDemand } from "@/lib/corporations/groups/rules/inputDemand";
-import { getEffectiveStrategyRatesForOperatingModel } from "@/lib/constants/sectorStrategies";
+import { getEffectiveStrategyRates } from "@/lib/constants/sectorStrategies";
 import {
   commodityMixWeight,
   eraScaledBasePrices,
@@ -135,8 +135,6 @@ export function buildGroupSupplyContext(
         sector: {
           corporationId: corpId,
           sectorType: sector.sectorType,
-          industryModel: sector.industryModel,
-          mediaDiscriminator: sector.mediaDiscriminator,
           revenueAnchor,
           strategyId: sector.strategyId,
           transitionFromStrategyId: sector.transitionFromStrategyId,
@@ -178,14 +176,12 @@ export function buildGroupSupplyContext(
         });
         buyersByCommodity.set(commodity as CommodityType, rows);
       }
-      const rates = getEffectiveStrategyRatesForOperatingModel(
+      const rates = getEffectiveStrategyRates(
         sector.sectorType,
         sector.strategyId ?? "standard",
         sector.transitionFromStrategyId,
         sector.transitionStartTurn,
         turn,
-        sector.industryModel,
-        sector.mediaDiscriminator,
         lookups.preset
       );
       const output = plantsSupplyScaledUnits({

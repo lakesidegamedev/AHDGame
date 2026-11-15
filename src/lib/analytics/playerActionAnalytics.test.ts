@@ -309,6 +309,46 @@ describe("player action analytics", () => {
     uninstall();
   });
 
+  it("forwards the response's machine code as failure_reason, never its message", async () => {
+    const delegate = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          error: "Not enough funds. Required: 900, Available: 12 private",
+          code: "not_enough_funds",
+        }),
+        { status: 400, headers: { "content-type": "application/json" } }
+      )
+    );
+    vi.stubGlobal("window", makeWindow(delegate));
+    const { installPlayerActionAnalytics, setPlayerActionContext } =
+      await import("./playerActionAnalytics");
+    setPlayerActionContext({ userId: "opaque-account-id", characterId: "character-id" });
+    const uninstall = installPlayerActionAnalytics();
+    await window.fetch("/api/actions/execute", {
+      method: "POST",
+      body: JSON.stringify({ actionType: "fundraise" }),
+    });
+    await vi.waitFor(() =>
+      expect(state.captureProductEvent).toHaveBeenCalledWith(
+        "player_action_rejected",
+        expect.objectContaining({
+          failure_code: "validation_failed",
+          failure_reason: "not_enough_funds",
+        })
+      )
+    );
+    expect(JSON.stringify(state.captureProductEvent.mock.calls)).not.toContain("private");
+    uninstall();
+  });
+
+  it("reduces malformed or missing codes to unknown", async () => {
+    const { failureReason } = await import("./playerActionAnalytics");
+    expect(failureReason({ code: "TURN_PROCESSING" })).toBe("turn_processing");
+    expect(failureReason({ code: "has spaces and a name" })).toBe("unknown");
+    expect(failureReason({ code: 409 })).toBe("unknown");
+    expect(failureReason(null)).toBe("unknown");
+  });
+
   it("maps rejected responses to stable failure codes without forwarding response text", async () => {
     const delegate = vi.fn().mockResolvedValue(
       new Response(JSON.stringify({ error: "private server detail" }), {

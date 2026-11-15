@@ -526,34 +526,11 @@ export async function foundNppCorporationsSurplus(
         ? await loadTechDiffusionSnapshot(db)
         : undefined,
   };
-  // Group canonical persisted identities by the operating lane used by founding.
-  const operatingLaneExpression = (typeField: string) => ({
-    $switch: {
-      branches: [
-        {
-          case: {
-            $and: [{ $eq: [typeField, "manufacturing"] }, { $eq: ["$industryModel", "vehicles"] }],
-          },
-          then: "manufacturing_vehicles",
-        },
-        {
-          case: {
-            $and: [
-              { $eq: [typeField, "media"] },
-              { $eq: ["$mediaDiscriminator", "entertainment"] },
-            ],
-          },
-          then: "media_entertainment",
-        },
-      ],
-      default: typeField,
-    },
-  });
   const cellCounts = await (
     await getCorporationsCollection(db)
   )
     .aggregate<{ _id: { c: string; t: string }; n: number }>([
-      { $group: { _id: { c: "$countryId", t: operatingLaneExpression("$type") }, n: { $sum: 1 } } },
+      { $group: { _id: { c: "$countryId", t: "$type" }, n: { $sum: 1 } } },
     ])
     .toArray();
   const existingByCell = new Map<string, number>(
@@ -569,7 +546,7 @@ export async function foundNppCorporationsSurplus(
     .aggregate<{ _id: { t: string; c: ObjectId }; w: number }>([
       {
         $group: {
-          _id: { t: operatingLaneExpression("$sectorType"), c: "$corporationId" },
+          _id: { t: "$sectorType", c: "$corporationId" },
           w: { $sum: { $ifNull: ["$capitalStock", 0] } },
         },
       },

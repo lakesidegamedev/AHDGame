@@ -5,8 +5,6 @@
  * is in the corp's local (country) currency; the page never shows ₳.
  */
 import { plantSizeForSector, sectorPlantCount } from "@/lib/constants/facilityQuantum";
-import { corporationTypeOfLane } from "@/lib/constants/corporations";
-import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
 import type { Db, ObjectId } from "mongodb";
 import type { Corporation, CorporateSector, GameState, State, StateMetrics } from "@/lib/db/types";
 import { getMarketSystemModeForDb, marketAtLeast } from "@/lib/market/featureFlag";
@@ -398,16 +396,13 @@ export async function buildNationalCorporationView(
           0
         ) * 100
       ) / 100;
-    const metricPaths = getMandateMetricPaths(
-      countryId,
-      getOperatingSectorType(s.sectorType, s.industryModel, s.mediaDiscriminator)
-    );
+    const metricPaths = getMandateMetricPaths(countryId, s.sectorType);
     const mappedMetricLabels = metricPaths.map((p) => mandateMetricLabel(p, s.stateId));
     const sectorMetricLevel = metricPaths[0] ? readMetricValue(m, metricPaths[0]) : null;
 
     return {
       sectorId: String(s._id),
-      sectorType: getOperatingSectorType(s.sectorType, s.industryModel, s.mediaDiscriminator),
+      sectorType: s.sectorType,
       stateId: s.stateId,
       stateName: regionName(s.stateId),
       revenue: s.revenue,
@@ -550,9 +545,7 @@ export async function buildNationalCorporationView(
     const entry =
       vs.acquisitionTurn != null
         ? corpLedger.find(
-            (l) =>
-              l.turn === vs.acquisitionTurn &&
-              l.sectorTypes.includes(corporationTypeOfLane(vs.sectorType))
+            (l) => l.turn === vs.acquisitionTurn && l.sectorTypes.includes(vs.sectorType)
           )
         : undefined;
     if (entry) {

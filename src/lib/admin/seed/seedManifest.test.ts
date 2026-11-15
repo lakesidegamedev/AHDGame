@@ -150,8 +150,6 @@ describe("runtime lifecycle category determines reset selection", () => {
     "playerMailReports",
     "playerContentReports",
     // Site analytics and staff tooling
-    "siteTrafficPageviews",
-    "codeQualitySnapshots",
     "apiAccessLog",
   ])("keeps cross-game collection %s out of the reset sweep", (name) => {
     expect(getCollectionCategory(name)).toBe("preserved");

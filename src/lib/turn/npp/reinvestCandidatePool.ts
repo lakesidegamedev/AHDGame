@@ -27,10 +27,7 @@ export interface ReinvestCandidate {
 
 /** Local revenue share of one sector, in percent of its (region, lane) bucket. */
 export type LocalShareLookup = (
-  sector: Pick<
-    CorporateSector,
-    "stateId" | "sectorType" | "industryModel" | "mediaDiscriminator"
-  > & {
+  sector: Pick<CorporateSector, "stateId" | "sectorType"> & {
     revenue?: number;
   }
 ) => number;
@@ -41,14 +38,10 @@ export type LocalShareLookup = (
  * is every rival in the bucket, so the ratio needs no conversion.
  */
 export function buildLocalRevenueShareLookup(
-  sectors: readonly Pick<
-    CorporateSector,
-    "stateId" | "sectorType" | "industryModel" | "mediaDiscriminator" | "revenue"
-  >[]
+  sectors: readonly Pick<CorporateSector, "stateId" | "sectorType" | "revenue">[]
 ): LocalShareLookup {
   const revenueByBucket = new Map<string, number>();
-  const keyOf = (s: Parameters<LocalShareLookup>[0]) =>
-    bucketKey(s.stateId, s.sectorType, s.industryModel, s.mediaDiscriminator);
+  const keyOf = (s: Parameters<LocalShareLookup>[0]) => bucketKey(s.stateId, s.sectorType);
   for (const sector of sectors) {
     const revenue = Number.isFinite(sector.revenue) ? Math.max(0, sector.revenue) : 0;
     const key = keyOf(sector);

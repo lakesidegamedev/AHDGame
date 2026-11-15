@@ -30,8 +30,6 @@ export interface GroupCellShareRow {
   root: string;
   stateId: string;
   sectorType: string;
-  industryModel?: string | null;
-  mediaDiscriminator?: string | null;
   /** The sector's share of its cell, percent 0-100. */
   sharePercent: number;
 }
@@ -43,14 +41,7 @@ export interface GroupCellShareRow {
 export function topGroupCellSharePercent(rows: readonly GroupCellShareRow[]): Map<string, number> {
   const byCell = new Map<string, number>();
   for (const r of rows) {
-    const key = [
-      r.root,
-      r.stateId,
-      r.sectorType,
-      r.industryModel ?? "",
-      r.mediaDiscriminator ?? "",
-    ];
-    const k = key.join("::");
+    const k = [r.root, r.stateId, r.sectorType].join("::");
     byCell.set(k, (byCell.get(k) ?? 0) + r.sharePercent);
   }
   const top = new Map<string, number>();
@@ -94,8 +85,6 @@ export async function loadGroupTopMarketShares(
       root: rootByCorpId.get(s.corporationId.toString()) ?? s.corporationId.toString(),
       stateId: s.stateId,
       sectorType: s.sectorType,
-      industryModel: s.industryModel,
-      mediaDiscriminator: s.mediaDiscriminator,
       sharePercent: shareBySectorId.get(s._id.toString()) ?? 0,
     }))
   );

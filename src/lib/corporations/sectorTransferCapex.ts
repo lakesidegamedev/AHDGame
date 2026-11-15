@@ -25,15 +25,12 @@
 import { mergedActiveCapacityPercent } from "@/lib/corporations/investment/rules";
 import type { CorporateSector, SectorBuildOrder } from "@/lib/db/types/corporation";
 import type { CorporationType } from "@/lib/constants/corporations";
-import type { MediaDiscriminator } from "@/lib/constants/corporations";
 import { seedPlantLedger, splitWholePlantCount } from "@/lib/corporations/plantLedger";
 import { clampProductionPolicy } from "@/lib/utils/productionPolicy";
 
 /** The plant-state subset of a sector doc. Structural so projections fit. */
 export interface SectorPlantFields {
   sectorType?: CorporationType | null;
-  industryModel?: string | null;
-  mediaDiscriminator?: MediaDiscriminator | null;
   /** Decides plant size alongside the lane (vehicle recipes build vehicle plants). */
   strategyId?: string | null;
   capitalStock?: number | null;
@@ -176,12 +173,6 @@ export function mergeSectorPlantFields(
   survivor: SectorPlantFields,
   incoming: SectorPlantFields
 ): SectorPlantFieldsUpdate {
-  if ((survivor.industryModel ?? null) !== (incoming.industryModel ?? null)) {
-    throw new Error("Cannot merge plant ledgers across different industry models");
-  }
-  if ((survivor.mediaDiscriminator ?? null) !== (incoming.mediaDiscriminator ?? null)) {
-    throw new Error("Cannot merge plant ledgers across different media models");
-  }
   const activePercent = mergedActiveCapacityPercent([survivor, incoming]);
   const mergedQueue = [...queue(survivor), ...queue(incoming)].sort(
     (a, b) => a.onlineTurn - b.onlineTurn
@@ -196,8 +187,6 @@ export function mergeSectorPlantFields(
     ? seedPlantLedger(
         {
           sectorType,
-          industryModel: survivor.industryModel ?? incoming.industryModel,
-          mediaDiscriminator: survivor.mediaDiscriminator ?? incoming.mediaDiscriminator,
           strategyId: survivor.strategyId ?? incoming.strategyId,
         },
         capitalStock
@@ -353,7 +342,6 @@ export function hasPlantState(sector: SectorPlantFields): boolean {
 export function readSectorPlantFields(sector: Partial<CorporateSector>): SectorPlantFields {
   return {
     sectorType: sector.sectorType,
-    industryModel: sector.industryModel,
     capitalStock: sector.capitalStock,
     operatingCapacityUnits: sector.operatingCapacityUnits,
     operatingCapacityTurn: sector.operatingCapacityTurn,

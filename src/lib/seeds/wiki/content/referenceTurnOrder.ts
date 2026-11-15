@@ -23,7 +23,7 @@ Your Campaign click lands instantly, but votes, bills and money all settle on th
 | 8. Parliamentary government | Government formation, no-confidence and confidence votes, PM vacancy watcher | After election resolution |
 | 9. Election coverage & diplomacy | Perpetual elections, by-election watcher, leadership elections, stale-candidate cleanup, auto-reelection entry, **international organizations** (votes, treaties, foreign-policy planner), **alignment** and spheres, **settlement** crises (the German Question and its kin), impeachment lifecycle, presidential succession | Parallel-safe |
 | 10. Fiscal year | October processing (turn 40 of 48) | Conditional |
-| 11. Effects & metrics | Crisis turn, naval and air operations, ministerial orders, then policy effects; alongside them demographic effects, archetype-approval decay, unowned sector growth, metric decay, investor-confidence decay, state-ownership concentration, subsidy budget, regional budgets; **ministerial orders are where battles resolve** | Naval/air runs before battles so a battle reads this turn's sea control, air superiority and supply |
+| 11. Effects & metrics | Crisis turn, naval and air operations, ministerial orders, then policy effects; alongside them demographic effects, voter group approval decay, metric decay, investor-confidence decay, state-ownership concentration, subsidy budget, regional budgets; **ministerial orders are where battles resolve** | Naval/air runs before battles so a battle reads this turn's sea control, air superiority and supply |
 | 12. National aggregation | Metric engine, demographic flows, **census**, era crossing, metric activation, national metrics, fiscal base growth, economic model, trade growth mirror, inflation recalc, **command economy**, Forex, central bank chair turn, **FOMC meetings**, NPP monetary operations, chair removal and selection, independence desire drift, referendum lifecycle, party member-count reconcile | After state effects |
 | 13. History | Metric, approval, interest-rate and party snapshots; portfolio, corporate portfolio, stock exchange, investor ranking and wealth-list snapshots; game health; money-supply, ledger balance and reconciliation snapshots; economic vital signs | Parallel-safe |
 | 14. Persistence | Increment turn counter, save turn log, send live update | Not wrapped in try/catch |
@@ -156,7 +156,6 @@ Crisis turn, naval and air operations, ministerial orders and policy effects run
 - **Demographic effects**: State demographic composition shifts based on economic conditions and policy.
 - **Voter group approval decay**: Approval bonuses and penalties with each voter group decay toward zero.
 - **Metric decay**: State metrics decay toward baseline values when no policies are active.
-- **Unowned sector growth**: Sectors not owned by any corporation grow autonomously.
 - **Regional budgets**: Regional spending affects state metrics. The UK, Japan, the Länder-model countries, the one-party states and Russia each have their own processor, and they alternate turns (UK, Länder and Russia on even turns, Japan and the one-party states on odd ones).
 - **Crisis turn**: Active world crises apply their effects and potentially resolve.
 - **Naval and air operations**: standing missions resolve so sea control, air superiority and supply are current before any battle reads them.

@@ -23,7 +23,6 @@ import {
   fxRateForCorpFromMap,
   resolveCorpLiquidCurrencyCode,
 } from "@/lib/currency/corporationCapital";
-import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
 import { buildPersonalBalanceInc, getHomeCurrency } from "@/lib/currency/characterFunds";
 import { sumBondPrincipalAnchor } from "@/lib/bonds/bondPrincipalSum";
@@ -130,9 +129,8 @@ export interface TransitionConsequenceInput {
 }
 
 /** Pairs a seized site with the holding `absorbSectorIntoNatCorp` folds it into. */
-const nationalizedSiteMergeKey = (
-  sector: Pick<CorporateSector, "stateId" | "sectorType" | "industryModel">
-) => `${sector.stateId}|${sector.sectorType}|${sector.industryModel ?? ""}`;
+const nationalizedSiteMergeKey = (sector: Pick<CorporateSector, "stateId" | "sectorType">) =>
+  `${sector.stateId}|${sector.sectorType}`;
 
 /**
  * Move one seized `sector` into the NatCorp `destId`, MERGING into an existing holding
@@ -212,7 +210,6 @@ async function absorbSectorIntoNatCorp(
     corporationId: destId,
     stateId: sector.stateId,
     sectorType: sector.sectorType,
-    industryModel: sector.industryModel ?? null,
   });
   if (existing && !existing._id.equals(sector._id)) {
     // A financed site keeps its own row; `nationalizedSiteMergeKey` refuses
@@ -389,13 +386,9 @@ async function settleForeignSector(
 async function findStateEnterpriseForLane(
   db: Db,
   countryId: CountryId,
-  sector: Pick<CorporateSector, "sectorType" | "industryModel" | "mediaDiscriminator">
+  sector: Pick<CorporateSector, "sectorType">
 ): Promise<Corporation | null> {
-  const operatingSectorType = getOperatingSectorType(
-    sector.sectorType,
-    sector.industryModel,
-    sector.mediaDiscriminator
-  );
+  const operatingSectorType = sector.sectorType;
   const corps = corporationsCollection(db);
   const assigned = await corps.findOne({
     countryOwnerId: countryId,
@@ -452,16 +445,11 @@ export async function nationalizeSector(
 
   // Route to the NatCorp that owns this sector type (split-off if one claims it,
   // else the primary). Future takings of a split-off type land in the right corp.
-  const nationalCorp =
-    sector.industryModel || sector.mediaDiscriminator
-      ? await resolveNationalCorporationForSector(
-          db,
-          params.countryId,
-          sector.sectorType,
-          sector.industryModel,
-          sector.mediaDiscriminator
-        )
-      : await resolveNationalCorporationForSector(db, params.countryId, sector.sectorType);
+  const nationalCorp = await resolveNationalCorporationForSector(
+    db,
+    params.countryId,
+    sector.sectorType
+  );
 
   // Valuation in ₳ via the canonical sector NPV (going-concern, growth-cost-net).
   const [centralBanks, fxByCurrency, donorFxRate, marketMode, gameState] = await Promise.all([
@@ -804,16 +792,7 @@ export async function nationalizeWholeCorp(
   if (loanRefusal) throw badRequest(loanRefusal);
   const financedByDest = new Map<string, { dest: Corporation; sites: CorporateSector[] }>();
   for (const site of financedSites) {
-    const dest =
-      site.industryModel || site.mediaDiscriminator
-        ? await resolveNationalCorporationForSector(
-            db,
-            params.countryId,
-            site.sectorType,
-            site.industryModel,
-            site.mediaDiscriminator
-          )
-        : await resolveNationalCorporationForSector(db, params.countryId, site.sectorType);
+    const dest = await resolveNationalCorporationForSector(db, params.countryId, site.sectorType);
     const group = financedByDest.get(dest._id.toHexString()) ?? { dest, sites: [] };
     group.sites.push(site);
     financedByDest.set(dest._id.toHexString(), group);
@@ -1094,21 +1073,11 @@ export async function nationalizeWholeCorp(
 
   const destByType = new Map<string, ObjectId>();
   for (const s of domesticSectors) {
-    const modelKey = `${s.sectorType}:${s.industryModel ?? ""}:${s.mediaDiscriminator ?? ""}`;
-    let destId = destByType.get(modelKey);
+    let destId = destByType.get(s.sectorType);
     if (!destId) {
-      const dest =
-        s.industryModel || s.mediaDiscriminator
-          ? await resolveNationalCorporationForSector(
-              db,
-              params.countryId,
-              s.sectorType,
-              s.industryModel,
-              s.mediaDiscriminator
-            )
-          : await resolveNationalCorporationForSector(db, params.countryId, s.sectorType);
+      const dest = await resolveNationalCorporationForSector(db, params.countryId, s.sectorType);
       destId = dest._id;
-      destByType.set(modelKey, destId);
+      destByType.set(s.sectorType, destId);
     }
     await absorbSectorIntoNatCorp(
       db,

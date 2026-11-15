@@ -678,10 +678,10 @@ export default function CeoGovernancePanel({
         >
           <div className="space-y-2">
             <p className="text-xs text-muted">
-              Sectors return to the unowned pool, held bonds are redeemed at face value and holdings
-              in other corporations are sold at market. The proceeds go to every shareholder by
-              share count: corporate holders to their treasury, the public float to the central bank
-              reserve, your share to your personal funds.
+              Sectors are wound down, held bonds are redeemed at face value and holdings in other
+              corporations are sold at market. The proceeds go to every shareholder by share count:
+              corporate holders to their treasury, the public float to the central bank reserve,
+              your share to your personal funds.
             </p>
             {!showDissolveConfirm ? (
               <SmallButton

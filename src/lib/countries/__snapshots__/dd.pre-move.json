@@ -82,7 +82,7 @@
   "COUNTRY_SECTOR_WEIGHTS_1953": {
     "shape": "country-first",
     "value": {
-      "manufacturing": 28,
+      "manufacturing": 30,
       "chemical_industries": 8,
       "extraction": 8,
       "defense": 12,
@@ -91,14 +91,12 @@
       "construction": 6,
       "logistics": 4,
       "healthcare": 4,
-      "manufacturing_vehicles": 2,
       "technology": 1,
       "retail": 2,
-      "media": 1,
+      "media": 2,
       "financial": 1,
       "real_estate": 1,
-      "telecommunications": 1,
-      "media_entertainment": 1
+      "telecommunications": 1
     }
   },
   "DOMAIN_BUCKET_AFFINITIES": {
@@ -2013,7 +2011,6 @@
         "chemical_industries": "Free German Trade Union Federation",
         "healthcare": "Free German Trade Union Federation",
         "retail": "Free German Trade Union Federation",
-        "manufacturing_vehicles": "Free German Trade Union Federation",
         "technology": "Free German Trade Union Federation",
         "energy": "Free German Trade Union Federation",
         "agriculture": "Free German Trade Union Federation",
@@ -2021,7 +2018,6 @@
         "construction": "Free German Trade Union Federation",
         "defense": "Free German Trade Union Federation",
         "telecommunications": "Free German Trade Union Federation",
-        "media_entertainment": "Free German Trade Union Federation",
         "logistics": "Free German Trade Union Federation",
         "extraction": "Free German Trade Union Federation"
       },
@@ -2032,7 +2028,6 @@
         "chemical_industries": "Free German Trade Union Federation",
         "healthcare": "Free German Trade Union Federation",
         "retail": "Free German Trade Union Federation",
-        "manufacturing_vehicles": "Free German Trade Union Federation",
         "technology": "Free German Trade Union Federation",
         "energy": "Free German Trade Union Federation",
         "agriculture": "Free German Trade Union Federation",
@@ -2040,7 +2035,6 @@
         "construction": "Free German Trade Union Federation",
         "defense": "Free German Trade Union Federation",
         "telecommunications": "Free German Trade Union Federation",
-        "media_entertainment": "Free German Trade Union Federation",
         "logistics": "Free German Trade Union Federation",
         "extraction": "Free German Trade Union Federation"
       },
@@ -2051,7 +2045,6 @@
         "chemical_industries": "Free German Trade Union Federation",
         "healthcare": "Free German Trade Union Federation",
         "retail": "Free German Trade Union Federation",
-        "manufacturing_vehicles": "Free German Trade Union Federation",
         "technology": "Free German Trade Union Federation",
         "energy": "Free German Trade Union Federation",
         "agriculture": "Free German Trade Union Federation",
@@ -2059,7 +2052,6 @@
         "construction": "Free German Trade Union Federation",
         "defense": "Free German Trade Union Federation",
         "telecommunications": "Free German Trade Union Federation",
-        "media_entertainment": "Free German Trade Union Federation",
         "logistics": "Free German Trade Union Federation",
         "extraction": "Free German Trade Union Federation"
       },
@@ -2070,7 +2062,6 @@
         "chemical_industries": "Free German Trade Union Federation",
         "healthcare": "Free German Trade Union Federation",
         "retail": "Free German Trade Union Federation",
-        "manufacturing_vehicles": "Free German Trade Union Federation",
         "technology": "Free German Trade Union Federation",
         "energy": "Free German Trade Union Federation",
         "agriculture": "Free German Trade Union Federation",
@@ -2078,7 +2069,6 @@
         "construction": "Free German Trade Union Federation",
         "defense": "Free German Trade Union Federation",
         "telecommunications": "Free German Trade Union Federation",
-        "media_entertainment": "Free German Trade Union Federation",
         "logistics": "Free German Trade Union Federation",
         "extraction": "Free German Trade Union Federation"
       },
@@ -2089,7 +2079,6 @@
         "chemical_industries": "Free German Trade Union Federation",
         "healthcare": "Free German Trade Union Federation",
         "retail": "Free German Trade Union Federation",
-        "manufacturing_vehicles": "Free German Trade Union Federation",
         "technology": "Free German Trade Union Federation",
         "energy": "Free German Trade Union Federation",
         "agriculture": "Free German Trade Union Federation",
@@ -2097,7 +2086,6 @@
         "construction": "Free German Trade Union Federation",
         "defense": "Free German Trade Union Federation",
         "telecommunications": "Free German Trade Union Federation",
-        "media_entertainment": "Free German Trade Union Federation",
         "logistics": "Free German Trade Union Federation",
         "extraction": "Free German Trade Union Federation"
       },
@@ -2108,7 +2096,6 @@
         "chemical_industries": "Free German Trade Union Federation",
         "healthcare": "Free German Trade Union Federation",
         "retail": "Free German Trade Union Federation",
-        "manufacturing_vehicles": "Free German Trade Union Federation",
         "technology": "Free German Trade Union Federation",
         "energy": "Free German Trade Union Federation",
         "agriculture": "Free German Trade Union Federation",
@@ -2116,7 +2103,6 @@
         "construction": "Free German Trade Union Federation",
         "defense": "Free German Trade Union Federation",
         "telecommunications": "Free German Trade Union Federation",
-        "media_entertainment": "Free German Trade Union Federation",
         "logistics": "Free German Trade Union Federation",
         "extraction": "Free German Trade Union Federation"
       },
@@ -2127,7 +2113,6 @@
         "chemical_industries": "Free German Trade Union Federation",
         "healthcare": "Free German Trade Union Federation",
         "retail": "Free German Trade Union Federation",
-        "manufacturing_vehicles": "Free German Trade Union Federation",
         "technology": "Free German Trade Union Federation",
         "energy": "Free German Trade Union Federation",
         "agriculture": "Free German Trade Union Federation",
@@ -2135,7 +2120,6 @@
         "construction": "Free German Trade Union Federation",
         "defense": "Free German Trade Union Federation",
         "telecommunications": "Free German Trade Union Federation",
-        "media_entertainment": "Free German Trade Union Federation",
         "logistics": "Free German Trade Union Federation",
         "extraction": "Free German Trade Union Federation"
       },
@@ -2146,7 +2130,6 @@
         "chemical_industries": "Free German Trade Union Federation",
         "healthcare": "Free German Trade Union Federation",
         "retail": "Free German Trade Union Federation",
-        "manufacturing_vehicles": "Free German Trade Union Federation",
         "technology": "Free German Trade Union Federation",
         "energy": "Free German Trade Union Federation",
         "agriculture": "Free German Trade Union Federation",
@@ -2154,7 +2137,6 @@
         "construction": "Free German Trade Union Federation",
         "defense": "Free German Trade Union Federation",
         "telecommunications": "Free German Trade Union Federation",
-        "media_entertainment": "Free German Trade Union Federation",
         "logistics": "Free German Trade Union Federation",
         "extraction": "Free German Trade Union Federation"
       }
@@ -3004,10 +2986,9 @@
   "COUNTRY_SECTOR_WEIGHTS": {
     "shape": "country-first",
     "value": {
-      "manufacturing": 24,
+      "manufacturing": 31,
       "chemical_industries": 10,
       "energy": 9,
-      "manufacturing_vehicles": 7,
       "agriculture": 9,
       "construction": 7,
       "extraction": 6,
@@ -3017,13 +2998,13 @@
       "retail": 3,
       "real_estate": 2,
       "technology": 2,
-      "media_entertainment": 1
+      "media": 1
     }
   },
   "COUNTRY_SECTOR_WEIGHTS_1979": {
     "shape": "country-first",
     "value": {
-      "manufacturing": 25,
+      "manufacturing": 26,
       "chemical_industries": 15,
       "extraction": 12,
       "energy": 10,
@@ -3035,20 +3016,17 @@
       "logistics": 4,
       "telecommunications": 1,
       "technology": 1,
-      "manufacturing_vehicles": 1,
       "real_estate": 0,
       "financial": 0,
-      "media": 1,
-      "media_entertainment": 1
+      "media": 2
     }
   },
   "COUNTRY_SECTOR_WEIGHTS_1991": {
     "shape": "country-first",
     "value": {
-      "manufacturing": 24,
+      "manufacturing": 31,
       "chemical_industries": 10,
       "energy": 9,
-      "manufacturing_vehicles": 7,
       "agriculture": 9,
       "construction": 7,
       "extraction": 6,
@@ -3058,7 +3036,7 @@
       "retail": 3,
       "real_estate": 2,
       "technology": 2,
-      "media_entertainment": 1
+      "media": 1
     }
   },
   "COUNTRY_TO_ISO_NUMERIC": {

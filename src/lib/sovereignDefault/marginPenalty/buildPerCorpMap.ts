@@ -10,7 +10,6 @@
  *   - corps with countryId not set
  */
 
-import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
 import type { ObjectId } from "mongodb";
 import type { CorporationType } from "@/lib/constants/corporations";
 import type { FederalBudget } from "@/lib/db/types/budget";
@@ -26,8 +25,6 @@ export interface PerCorpMapInputs {
     _id: ObjectId;
     countryId?: string;
     type: CorporationType;
-    industryModel?: string | null;
-    mediaDiscriminator?: string | null;
   }[];
   currentTurn: number;
   globalGdp: number;
@@ -52,7 +49,7 @@ export function buildSovereignDefaultMarginByCorpId(inputs: PerCorpMapInputs): M
         corpCountryId: corp.countryId,
         defaultingCountryCode: budget.countryId,
         resolutionType: budget.crisisChoice,
-        corpType: getOperatingSectorType(corp.type, corp.industryModel, corp.mediaDiscriminator),
+        corpType: corp.type,
         currentTurn: inputs.currentTurn,
         lastDefaultTurn: budget.lastDefaultTurn,
       });
@@ -63,7 +60,7 @@ export function buildSovereignDefaultMarginByCorpId(inputs: PerCorpMapInputs): M
         defaultingCountryGdp: budget.gdp ?? 0,
         globalGdp: inputs.globalGdp,
         resolutionType: budget.crisisChoice,
-        corpType: getOperatingSectorType(corp.type, corp.industryModel, corp.mediaDiscriminator),
+        corpType: corp.type,
         currentTurn: inputs.currentTurn,
         lastDefaultTurn: budget.lastDefaultTurn,
       });

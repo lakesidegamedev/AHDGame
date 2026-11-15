@@ -47,6 +47,14 @@ export function IdentityPanel({ identity, devicesAndIps, context }: IdentityPane
           mono
         />
         <Field
+          label="Apple"
+          value={
+            oauth.appleLinked
+              ? "Signed in with Apple: exempt from the Discord requirement for new characters"
+              : null
+          }
+        />
+        <Field
           label="Google"
           value={oauth.googleEmail ?? oauth.googleName ?? (oauth.googleId ? "linked" : null)}
           mono

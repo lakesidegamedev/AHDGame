@@ -10,7 +10,6 @@ import { getCountryConfig } from "@/lib/constants/countries";
 import { CREDIT_RATINGS, type CreditRating } from "@/lib/db/types/centralBank";
 import { getGameState } from "@/lib/gameState";
 import { getTurnReferenceData } from "@/lib/corporations/turnReferenceData";
-import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 interface RouteParams {
@@ -41,7 +40,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     const currentTurn = gameState?.currentTurn ?? 0;
 
     const countryId = corporation.countryId;
-    const sectorType = getOperatingSectorType(corporation.type, corporation.industryModel);
+    const sectorType = corporation.type;
 
     // Scope the corps scan by country in the DB rather than filtering in
     // memory. Share the centralBanks load with other corp-detail routes via
@@ -52,17 +51,11 @@ export async function GET(_request: Request, { params }: RouteParams) {
         .project<
           Pick<
             Corporation,
-            | "_id"
-            | "type"
-            | "industryModel"
-            | "isPrivate"
-            | "creditCompositeSnapshot"
-            | "creditRatingSnapshot"
+            "_id" | "type" | "isPrivate" | "creditCompositeSnapshot" | "creditRatingSnapshot"
           >
         >({
           _id: 1,
           type: 1,
-          industryModel: 1,
           isPrivate: 1,
           creditCompositeSnapshot: 1,
           creditRatingSnapshot: 1,
@@ -93,9 +86,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
         c.isPrivate !== true &&
         typeof c.creditCompositeSnapshot === "number"
     );
-    const sameSector = sameCountry.filter(
-      (c) => getOperatingSectorType(c.type, c.industryModel) === sectorType
-    );
+    const sameSector = sameCountry.filter((c) => c.type === sectorType);
 
     function avgStats(peers: typeof sameCountry) {
       if (peers.length === 0) return null;

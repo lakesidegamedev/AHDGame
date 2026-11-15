@@ -6,18 +6,12 @@ import {
   markMarketsActive,
   sectorShortageScore,
 } from "./marketSignals";
-import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
 import type { MarketCandidate } from "./marketCandidates";
 import { candidateWithRoom, roomOf, withCandidateRoom } from "./__fixtures__/marketCandidates";
 import type { CommodityType } from "@/lib/constants/commodities";
 
-const us = (
-  sectorType: string,
-  stateId: string,
-  room = 100_000,
-  industryModel?: string
-): MarketCandidate =>
-  candidateWithRoom({ sectorType, stateId, industryModel: industryModel ?? null } as never, room);
+const us = (sectorType: string, stateId: string, room = 100_000): MarketCandidate =>
+  candidateWithRoom({ sectorType, stateId } as never, room);
 
 const findBestMarketCandidate: typeof findBestMarketCandidateRaw = (...args) => {
   const withSignals = [...args] as unknown as Parameters<typeof findBestMarketCandidateRaw>;
@@ -133,8 +127,10 @@ describe("state-resolution placement signals (supply dislocation, t202)", () => 
     expect(pick?.stateId).toBe("TX");
   });
 
-  it("extraction ranks by deposit headroom between viable states", () => {
-    const pool = new Map([["US", [us("extraction", "MN"), us("extraction", "WV")]]]);
+  it("extraction ranks by unmet demand between states that both hold a deposit", () => {
+    const pool = new Map([
+      ["US", [us("extraction", "MN", 900_000), us("extraction", "WV", 100_000)]],
+    ]);
     const pick = findBestMarketCandidate(
       "US",
       "WV",
@@ -146,18 +142,14 @@ describe("state-resolution placement signals (supply dislocation, t202)", () => 
       ratios({}),
       false,
       1,
-      // MN wide open, WV nearly claimed. MN's 0.9 vs WV's 0.2 × HQ bonus 1.3.
-      { extractionHeadroomOf: (stateId) => (stateId === "MN" ? 0.9 : 0.2) }
+      // Both deposits are open. MN's room beats WV's 100k x HQ bonus 1.3.
+      { extractionHeadroomOf: () => 1 }
     );
     expect(pick?.stateId).toBe("MN");
   });
 
-  it("founds an extraction mine on a rich deposit with ZERO local demand headroom", () => {
-    // The real prod case: every extraction pool carries zero demand headroom
-    // (revenue 0), which used to filter every mine out of candidacy. A mine's
-    // value is its DEPOSIT x commodity shortage, not local demand, so a rich
-    // deposit in a short commodity is now a valid founding target.
-    const pool = new Map([["US", [us("extraction", "WY", 0), us("extraction", "NJ", 0)]]]);
+  it("founds an extraction mine on a deposit only where its output is short", () => {
+    const pool = new Map([["US", [us("extraction", "WY", 100_000), us("extraction", "NJ", 0)]]]);
     const pick = findBestMarketCandidate(
       "US",
       "NJ",
@@ -167,11 +159,41 @@ describe("state-resolution placement signals (supply dislocation, t202)", () => 
       pool,
       new Set(),
       ratios({ oil: 1.6 }),
-      true, // plants enabled — headroom is the leading (zero) signal
+      true,
       1,
       { extractionHeadroomOf: (stateId) => (stateId === "WY" ? 0.9 : 0) }
     );
     expect(pick?.stateId).toBe("WY");
+  });
+
+  it("never founds a mine on a rich deposit when nothing it digs up is short", () => {
+    const stats = {
+      occupiedExcluded: 0,
+      noRoomExcluded: 0,
+      stateControlledExcluded: 0,
+      depositExcluded: 0,
+      saturatedExcluded: 0,
+      inputStarvedExcluded: 0,
+    };
+    const pool = new Map([["US", [us("extraction", "WY", 0)]]]);
+    const pick = findBestMarketCandidate(
+      "US",
+      "WY",
+      "extraction",
+      null,
+      new Set(),
+      pool,
+      new Set(),
+      ratios({ oil: 1.6 }),
+      true,
+      1,
+      { extractionHeadroomOf: () => 1 },
+      undefined,
+      stats
+    );
+    expect(pick).toBeNull();
+    expect(stats.noRoomExcluded).toBe(1);
+    expect(stats.depositExcluded).toBe(0);
   });
 
   it("returns null when every extraction candidate is depositless", () => {
@@ -262,41 +284,6 @@ describe("empty-market coverage treatment", () => {
     const signals = { preferEmptyMarkets: true, activeMarketBuckets: new Set<string>() };
     markMarketsActive(signals, [us("logistics", "AZ")]);
     expect(signals.activeMarketBuckets).toContain("AZ:logistics");
-  });
-
-  it("matches a manufacturing vehicle corporation to its model-specific market", () => {
-    const pool = new Map([
-      ["US", [us("manufacturing", "MI", 10_000_000), us("manufacturing", "MI", 1, "vehicles")]],
-    ]);
-    const pick = findBestMarketCandidate(
-      "US",
-      "MI",
-      "manufacturing",
-      null,
-      new Set(),
-      pool,
-      new Set(),
-      ratios({}),
-      false,
-      1,
-      undefined,
-      undefined,
-      undefined,
-      "vehicles"
-    );
-
-    expect(pick?.industryModel).toBe("vehicles");
-  });
-
-  it("marks modelled and generic manufacturing as distinct active markets", () => {
-    const signals = { activeMarketBuckets: new Set<string>() };
-    markMarketsActive(signals, [
-      us("manufacturing", "MI"),
-      us("manufacturing", "MI", 1, "vehicles"),
-    ]);
-    expect(signals.activeMarketBuckets).toEqual(
-      new Set(["MI:manufacturing", "MI:manufacturing:vehicles"])
-    );
   });
 
   it("reports which filter bound when no candidate survives", () => {
@@ -473,7 +460,6 @@ describe("type discipline with the coverage treatment", () => {
       undefined,
       undefined,
       undefined,
-      null,
     ] as const;
     expect(findBestMarketCandidate(...args)).toBeNull();
     expect(findBestMarketCandidate(...args, true)?.sectorType).toBe("media");
@@ -532,14 +518,8 @@ describe("candidate ranking is memoized, not re-derived per comparison", () => {
   // score, with the HQ bonus. The memoized scan must land on the same pick.
   const referencePick = (candidates: MarketCandidate[], hqState: string) => {
     const scoreOf = (candidate: MarketCandidate) => {
-      const shortage = sectorShortageScore(
-        getOperatingSectorType(
-          candidate.sectorType,
-          candidate.industryModel,
-          candidate.mediaDiscriminator
-        ),
-        "US",
-        (commodity) => (candidate.stateId === "NY" ? (commodity === "freight" ? 2 : 1.4) : 1)
+      const shortage = sectorShortageScore(candidate.sectorType, "US", (commodity) =>
+        candidate.stateId === "NY" ? (commodity === "freight" ? 2 : 1.4) : 1
       );
       return (
         roomOf(candidate) * shortage * (candidate.stateId === hqState ? HQ_STATE_SCORE_BONUS : 1)
@@ -661,7 +641,6 @@ describe("hasEnterableHeadroom without stored markets", () => {
     headquartersState: "PA",
     type: "manufacturing",
     secondaryType: null,
-    industryModel: null,
   } as never;
 
   it("is false when the country lists no candidate bucket", () => {

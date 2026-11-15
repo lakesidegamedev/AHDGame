@@ -67,7 +67,6 @@ export async function GET(_request: Request, { params }: RouteParams) {
           corporationId: 1,
           activeDevelopmentCorporationId: 1,
           sectorId: 1,
-          operatingSectorType: 1,
           kindId: 1,
           title: 1,
           allocationShare: 1,
@@ -91,7 +90,6 @@ export async function GET(_request: Request, { params }: RouteParams) {
         .project({
           _id: 1,
           sectorType: 1,
-          mediaDiscriminator: 1,
           strategyId: 1,
           capitalStock: 1,
           capacityBookAnchor: 1,
@@ -135,8 +133,6 @@ export async function GET(_request: Request, { params }: RouteParams) {
         sectors: eligibleSectors.map((sector) => ({
           id: sector._id.toString(),
           strategyId: sector.strategyId,
-          operatingSectorType:
-            sector.mediaDiscriminator === "entertainment" ? "media_entertainment" : "media",
           capitalStock: sector.capitalStock ?? 0,
         })),
       },

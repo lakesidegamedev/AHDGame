@@ -41,7 +41,6 @@ describe("advertising input overlay", () => {
       null,
       null,
       10,
-      null,
       "1991-default",
       null,
       { advertisingInput: true }
@@ -53,7 +52,6 @@ describe("advertising input overlay", () => {
       null,
       null,
       10,
-      null,
       "1991-default"
     );
     expect(off.demand).not.toEqual(ADVERTISING_INPUT_STANDARD_1991_DEMAND.agriculture);

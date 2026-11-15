@@ -59,6 +59,7 @@ export interface DossierIdentity {
   oauth: {
     discordId: string | null;
     discordUsername: string | null;
+    appleLinked: boolean;
     googleId: string | null;
     googleEmail: string | null;
     googleName: string | null;

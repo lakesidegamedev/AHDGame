@@ -134,8 +134,6 @@ export function resolveBuildQueueTurn(args: BuildQueueTurnArgs): BuildQueueTurn 
     currentYear ?? CAPACITY_ANCHOR_YEAR,
     eraUnitScale,
     sector.strategyId ?? null,
-    sector.industryModel,
-    sector.mediaDiscriminator,
     args.preset
   );
   // The credit keys on the ACCRUED COST, not on the target slider.

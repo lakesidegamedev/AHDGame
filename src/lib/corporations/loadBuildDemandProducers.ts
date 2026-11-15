@@ -29,8 +29,6 @@ export async function loadBuildDemandProducers(db: Db) {
             stateId: 1,
             countryId: 1,
             sectorType: 1,
-            industryModel: 1,
-            mediaDiscriminator: 1,
             strategyId: 1,
             transitionFromStrategyId: 1,
             transitionStartTurn: 1,
@@ -53,8 +51,6 @@ export async function loadBuildDemandProducers(db: Db) {
           {
             projection: {
               type: 1,
-              industryModel: 1,
-              mediaDiscriminator: 1,
               unlockedTechNodeIds: 1,
               techDecadeLane: 1,
             },

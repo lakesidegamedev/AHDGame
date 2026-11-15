@@ -8,7 +8,6 @@ import type { CorporateSector, State, User } from "@/lib/db/types";
 import {
   OPERATING_SECTOR_TYPE_LABELS,
   isOperatingSectorType,
-  operatingSectorFilter,
   OPERATING_SECTOR_TYPES,
 } from "@/lib/constants/corporations";
 
@@ -67,7 +66,7 @@ export async function GET(request: Request) {
       );
     }
     const sectorType = requestedType;
-    const laneFilter = operatingSectorFilter(sectorType);
+    const laneFilter = { sectorType: sectorType };
 
     if (countryParam && !COUNTRY_IDS.includes(countryParam)) {
       return errorResponse(400, `Invalid country. Options: ${COUNTRY_IDS.join(", ")}`);

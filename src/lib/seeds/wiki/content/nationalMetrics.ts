@@ -96,7 +96,7 @@ Conditions in a state change the profit margin of corporations operating there, 
 | Power grid reliability | 0 above 95% uptime, down to -4 at 85% | All |
 | Corruption index | 0 to -3, scaling to the maximum index | All |
 | Road condition | -3 at 0, 0 at 60, +3 at 100 | Manufacturing, retail, agriculture, vehicles, construction, logistics, extraction |
-| Crime rate | 0 at 1,500 per 100,000, -5 at 3,500 and above | Retail, real estate, entertainment |
+| Crime rate | 0 at 1,500 per 100,000, -5 at 3,500 and above | Retail, real estate |
 | Broadband access | 0 at 70% and above, -4 at 40% and below | Technology, telecommunications, media, financial |
 | Workforce skill | -4 at 0, 0 at 50, +4 at 100 | Technology, chemical industries, healthcare, manufacturing, defence |
 | Carbon emissions | 0 at 3 tons per person, -3 at 25 and above | Energy, chemical industries, manufacturing, vehicles, extraction |

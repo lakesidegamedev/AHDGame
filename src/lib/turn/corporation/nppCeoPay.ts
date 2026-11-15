@@ -52,10 +52,7 @@ export function earliestReviewTurn(startTurn: number): number {
 }
 
 /** The CEO's level in the corporation's operating lane. */
-export function levelFor(
-  corp: Pick<Corporation, "type" | "industryModel" | "mediaDiscriminator">,
-  npp: NppCareer | undefined
-): number {
+export function levelFor(corp: Pick<Corporation, "type">, npp: NppCareer | undefined): number {
   const lane = corporationLane(corp);
   return ceoLevel(lane ? npp?.ceoTrackRecord?.[lane] : undefined);
 }

@@ -1,6 +1,5 @@
 import type { Db } from "mongodb";
 import type { CorporationType, OperatingSectorType } from "@/lib/constants/corporations";
-import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
 import {
   allRealCompanyNames,
   chooseRealCompanyName,
@@ -16,16 +15,7 @@ import type { Migration, MigrationResult } from "../types";
 
 type NamedCorporation = Pick<
   Corporation,
-  | "_id"
-  | "name"
-  | "countryId"
-  | "type"
-  | "industryModel"
-  | "mediaDiscriminator"
-  | "ceoType"
-  | "isNationalized"
-  | "logoUrl"
-  | "sequentialId"
+  "_id" | "name" | "countryId" | "type" | "ceoType" | "isNationalized" | "logoUrl" | "sequentialId"
 > & { npcBankSeedKey?: string; isPrimaryNationalCorporation?: boolean };
 
 /**
@@ -54,8 +44,6 @@ export async function renameNppCorporationsToRealCompanies(
       name: 1,
       countryId: 1,
       type: 1,
-      industryModel: 1,
-      mediaDiscriminator: 1,
       ceoType: 1,
       isNationalized: 1,
       isPrimaryNationalCorporation: 1,
@@ -89,11 +77,7 @@ export async function renameNppCorporationsToRealCompanies(
       }
       continue;
     }
-    const lane: OperatingSectorType = getOperatingSectorType(
-      corp.type as CorporationType,
-      corp.industryModel ?? null,
-      corp.mediaDiscriminator ?? null
-    );
+    const lane: OperatingSectorType = corp.type as CorporationType;
     const position = corporations.indexOf(corp);
     const newName = chooseRealCompanyName({
       countryId: corp.countryId,

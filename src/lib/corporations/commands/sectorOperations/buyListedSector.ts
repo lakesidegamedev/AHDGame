@@ -24,6 +24,7 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { resolveCorporation } from "@/lib/api/corporations/resolveQuery";
 import { requireCorporationActionsEnabled } from "@/lib/api/requireCorporationActions";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
+import { rejectWhileTurnProcessing } from "./turnGuard";
 import { parseJsonBody } from "@/lib/api/validate";
 import { schemas } from "@/lib/api/validate";
 import type { CorporateSector, State } from "@/lib/db/types";
@@ -47,10 +48,7 @@ import { emitTx } from "@/lib/financialTxLog/emit";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { logEconomicAction } from "@/lib/corporations/economicActionLog";
 import { createNotification } from "@/lib/notifications";
-import {
-  getCorporateSectorLaneQuery,
-  isCorporateSectorDuplicateKey,
-} from "@/lib/corporations/sectorLocation";
+import { isCorporateSectorDuplicateKey } from "@/lib/corporations/sectorLocation";
 import {
   identitySectorPlantFields,
   mergeSectorPlantFields,
@@ -82,6 +80,8 @@ export async function buyListedSector(request: Request, { params }: RouteParams)
 
     const rateLimit = checkRateLimit(`sector-buy:${auth.user.userId}`, 10, 60000);
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
+    const turnBusy = await rejectWhileTurnProcessing();
+    if (turnBusy) return turnBusy;
 
     const { id, sectorId } = await params;
     const parsed = await parseJsonBody(request, buySectorSchema);
@@ -198,7 +198,7 @@ export async function buyListedSector(request: Request, { params }: RouteParams)
     const existingBuyerSector = await corporateSectorsCollection(db).findOne({
       corporationId: buyer._id,
       stateId: sector.stateId,
-      ...getCorporateSectorLaneQuery(sector),
+      sectorType: sector.sectorType,
     });
     if (existingBuyerSector && hasProtectedConstructionProperty(existingBuyerSector))
       return errorResponse(409, "The buyer's existing site has an unfinished secured obligation.");

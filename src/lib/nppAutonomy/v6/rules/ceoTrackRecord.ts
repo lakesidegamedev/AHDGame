@@ -17,11 +17,7 @@
  * Pure. The turn shell supplies corporations and sectors already loaded for
  * the corporation turn and writes the result with one bulkWrite.
  */
-import {
-  operatingSectorTypeFor,
-  type CorporationType,
-  type OperatingSectorType,
-} from "@/lib/constants/corporations";
+import { type CorporationType, type OperatingSectorType } from "@/lib/constants/corporations";
 import { TURNS_PER_DAY, TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import type { NppCeoSectorRecord, NppCeoTrackRecord } from "@/lib/db/types/npp";
 
@@ -50,8 +46,6 @@ export interface CeoRecordSector {
   corporationId: { toString(): string };
   countryId: string;
   sectorType: CorporationType;
-  industryModel?: string | null;
-  mediaDiscriminator?: string | null;
   revenue: number;
   realizedRevenue?: number;
   profitMargin: number;
@@ -101,8 +95,7 @@ export function computeCeoSamples(
   corporations: readonly CeoRecordCorporation[],
   sectorsByCorp: ReadonlyMap<string, readonly CeoRecordSector[]>
 ): CeoSample[] {
-  const groupKey = (s: CeoRecordSector) =>
-    `${s.countryId}|${operatingSectorTypeFor(s.sectorType, s.industryModel, s.mediaDiscriminator)}`;
+  const groupKey = (s: CeoRecordSector) => `${s.countryId}|${s.sectorType}`;
   const group = new Map<string, { sum: number; count: number }>();
   for (const sectors of sectorsByCorp.values()) {
     for (const sector of sectors) {

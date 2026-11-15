@@ -4,10 +4,7 @@
  */
 import type { Db } from "mongodb";
 import { OPERATING_SECTOR_TYPES } from "@/lib/constants/corporations";
-import {
-  getOperatingSectorType,
-  getStrategyForOperatingModel,
-} from "@/lib/constants/sectorStrategies";
+import { getStrategy } from "@/lib/constants/sectorStrategies";
 import { COMMODITY_BASE_PRICES, type ExtractableResource } from "@/lib/constants/commodities";
 import { FOREX_ACTIVE_CURRENCIES, getSeedCurrencyCode } from "@/lib/constants/currencies";
 import { getPresetMonetaryScope } from "@/lib/monetaryPolicy/presetMonetaryScope";
@@ -144,10 +141,7 @@ export async function checkEconomicOpening(db: Db, preset: string): Promise<Seed
       new Set(local.map((corp) => corp.name.toLowerCase())).size === local.length
     );
     for (const type of OPERATING_SECTOR_TYPES) {
-      const peers = local.filter(
-        (corp) =>
-          getOperatingSectorType(corp.type, corp.industryModel, corp.mediaDiscriminator) === type
-      );
+      const peers = local.filter((corp) => corp.type === type);
       assert(
         country,
         `competitors-${type}`,
@@ -198,10 +192,7 @@ export async function checkEconomicOpening(db: Db, preset: string): Promise<Seed
       miners.length > 0 &&
         miners.every((sector) => {
           const deposit = deposits.find((row) => row.stateId === sector.stateId);
-          const recipe = getStrategyForOperatingModel(
-            "extraction",
-            sector.strategyId ?? "standard"
-          );
+          const recipe = getStrategy("extraction", sector.strategyId ?? "standard");
           const outputs = Object.entries(recipe.supply).filter(([, share]) => share! > 0);
           const yieldPerAnchor = outputs.reduce(
             (sum, [resource, share]) =>

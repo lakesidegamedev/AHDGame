@@ -11,6 +11,7 @@ import {
 import { loadRecentIdentityValues } from "@/lib/identityHistory/recentValues";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { isAppleLinked } from "@/lib/admin/appleLink";
 import { usersCollection } from "@/lib/db/repositories/users";
 
 export interface UserWithCharacter {
@@ -44,6 +45,8 @@ export interface UserWithCharacter {
   createdAt: string;
   discordId: string | null;
   discordUsername: string | null;
+  /** Boolean only; the Apple id never leaves the server. */
+  appleLinked: boolean;
   modNote: string | null;
   latestModNote: string | null;
   ipDetails?: User["ipDetails"] | null;
@@ -142,6 +145,7 @@ export const GET = withAdminAuth(async (_auth, request: Request) => {
         createdAt: user.createdAt.toISOString(),
         discordId: user.discordId || null,
         discordUsername: user.discordUsername || null,
+        appleLinked: isAppleLinked(user),
         modNote: user.modNote || null,
         latestModNote: user.modNotes?.at(-1)?.text ?? user.modNote ?? null,
         ipDetails: user.ipDetails ?? null,

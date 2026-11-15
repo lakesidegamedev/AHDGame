@@ -49,12 +49,6 @@ const VOCABULARY: Record<OperatingSectorType, FacilityVocabulary> = {
   },
   healthcare: { singular: "clinic", plural: "clinics", buildVerb: "open", runNoun: "the ward" },
   retail: { singular: "store", plural: "stores", buildVerb: "open", runNoun: "the floor" },
-  manufacturing_vehicles: {
-    singular: "assembly plant",
-    plural: "assembly plants",
-    buildVerb: "build",
-    runNoun: "the line",
-  },
   technology: { singular: "campus", plural: "campuses", buildVerb: "build", runNoun: "the floor" },
   energy: {
     singular: "power station",
@@ -76,12 +70,6 @@ const VOCABULARY: Record<OperatingSectorType, FacilityVocabulary> = {
     plural: "network hubs",
     buildVerb: "build",
     runNoun: "the network",
-  },
-  media_entertainment: {
-    singular: "venue",
-    plural: "venues",
-    buildVerb: "open",
-    runNoun: "the room",
   },
   logistics: { singular: "depot", plural: "depots", buildVerb: "open", runNoun: "the fleet" },
   extraction: { singular: "mine", plural: "mines", buildVerb: "sink", runNoun: "the workings" },

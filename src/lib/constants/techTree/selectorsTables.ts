@@ -1,14 +1,10 @@
 import type { OperatingSectorType } from "../corporations";
-import type { ManufacturingIndustryModel } from "../corporations";
-import type { MediaDiscriminator } from "../corporations";
 import { type TechLane, type TechTreeNode } from "./nodes";
 import { type FrontierProgrammeCounts } from "./frontier";
 
 /** Minimal corp shape the selectors need. */
 export interface TechCorpView {
   type: OperatingSectorType;
-  industryModel?: ManufacturingIndustryModel | null;
-  mediaDiscriminator?: MediaDiscriminator | null;
   unlockedTechNodeIds?: string[];
   /** Committed lane per decade id; absent decade ⇒ uncommitted. */
   techDecadeLane?: Record<string, TechLane>;

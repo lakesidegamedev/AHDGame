@@ -35,10 +35,8 @@ describe("manufacturing line gating", () => {
     expect(status?.reason).toMatch(/electronics/);
   });
 
-  it("a dedicated vehicle sector can make cars but not appliances", () => {
-    const sectors = [
-      plant("a", "standard", { sectorType: "manufacturing", industryModel: "vehicles" }),
-    ];
+  it("a vehicle-assembly plant can make cars but not appliances", () => {
+    const sectors = [plant("a", "vehicle_assembly")];
     const available = ids(sectors);
     expect(available).toContain("passenger_car");
     expect(available).not.toContain("home_appliance");
@@ -77,17 +75,21 @@ describe("media line gating", () => {
       {
         sectorId: "f",
         sectorType: "media",
-        strategyId: "film_studio",
-        mediaDiscriminator: "entertainment",
+        strategyId: "broadcast_tv",
       },
       plant("p", "standard"),
     ];
     const available = ids(sectors, "media");
     expect(available).toContain("newspaper_edition");
-    expect(available).toContain("film");
+    expect(available).toContain("television_series");
     expect(available).not.toContain("radio_program");
     expect(
-      liftedSectorIds({ domain: "media", lineId: "film", corporationId: "c", sectors }).sort()
+      liftedSectorIds({
+        domain: "media",
+        lineId: "television_series",
+        corporationId: "c",
+        sectors,
+      }).sort()
     ).toEqual(["f", "n"]);
   });
 });

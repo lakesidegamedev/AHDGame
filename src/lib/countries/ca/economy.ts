@@ -30,7 +30,7 @@ const sectorWeightsBase = {
   energy: 12,
   real_estate: 11,
   extraction: 9,
-  manufacturing: 8,
+  manufacturing: 11,
   healthcare: 8,
   retail: 7,
   construction: 7,
@@ -38,10 +38,8 @@ const sectorWeightsBase = {
   agriculture: 4,
   logistics: 4,
   telecommunications: 3,
-  manufacturing_vehicles: 3,
   chemical_industries: 2,
-  media: 1,
-  media_entertainment: 1,
+  media: 2,
   defense: 1,
 };
 const repEcon = {

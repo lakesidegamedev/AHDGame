@@ -102,7 +102,7 @@ const DEBIT_MARK = "offTypeHandoverDebitKey";
 const CREDIT_MARK = "offTypeHandoverCreditKey";
 
 const laneKey = (corpId: ObjectId | string, s: CorporateSector) =>
-  `${corpId}|${s.stateId}|${s.sectorType}|${s.industryModel ?? ""}|${s.mediaDiscriminator ?? ""}`;
+  `${corpId}|${s.stateId}|${s.sectorType}`;
 
 async function bulkIgnoringWriteErrors(run: () => Promise<unknown>): Promise<void> {
   try {

@@ -20,6 +20,7 @@ import { seedPlantLedger } from "@/lib/corporations/plantLedger";
 import { isAwaitingBuild } from "@/lib/corporations/rules/methodAdoption";
 import { STRATEGY_TRANSITION_TURNS, CANCEL_COST_FRACTION } from "@/lib/constants/sectorStrategies";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
+import { rejectWhileTurnProcessing } from "./turnGuard";
 import {
   anchorToCorpLiquidCapital,
   corpLiquidCapitalToAnchor,
@@ -61,6 +62,8 @@ export async function cancelSectorStrategy(request: Request, { params }: RoutePa
       60000
     );
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
+    const turnBusy = await rejectWhileTurnProcessing();
+    if (turnBusy) return turnBusy;
 
     const { id, sectorId } = await params;
     const db = await getDb();
@@ -185,9 +188,7 @@ export async function cancelSectorStrategy(request: Request, { params }: RoutePa
     const cancelRescaleRatio = capacityRescaleRatio(
       sector.sectorType as CorporationType,
       newTransitionFromStrategyId,
-      newStrategyId,
-      sector.industryModel,
-      sector.mediaDiscriminator
+      newStrategyId
     );
     const rescaledCapitalStock =
       plantsEnabled &&

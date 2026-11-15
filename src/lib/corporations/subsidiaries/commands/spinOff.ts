@@ -7,8 +7,6 @@ import type { Corporation, CorporateSector } from "@/lib/db/types";
 import {
   CEO_INITIAL_SHARES,
   DEFAULT_SHARE_PRICE,
-  operatingSectorIdentity,
-  corporationTypeOfLane,
   type OperatingSectorType,
 } from "@/lib/constants/corporations";
 import { COUNTRY_CURRENCY_MAP, type CurrencyCode } from "@/lib/constants/currencies";
@@ -135,7 +133,7 @@ export async function spinOff(
 
   // Parent must have ≥1 sector of the requested type.
   const sectors = await corporateSectorsCollection(db)
-    .find({ corporationId: parent._id, ...operatingSectorIdentity(sectorType) })
+    .find({ corporationId: parent._id, sectorType: sectorType })
     .toArray();
   if (sectors.length === 0) {
     return fail("The parent does not operate any sector of that type.");
@@ -246,13 +244,7 @@ export async function spinOff(
       _id: newCorpId,
       name: nameTrimmed,
       tickerSymbol: tickerSymbol?.trim() || (await generateTickerSymbol(db, nameTrimmed)),
-      type: corporationTypeOfLane(sectorType),
-      ...(operatingSectorIdentity(sectorType).industryModel
-        ? { industryModel: operatingSectorIdentity(sectorType).industryModel }
-        : {}),
-      ...(operatingSectorIdentity(sectorType).mediaDiscriminator
-        ? { mediaDiscriminator: operatingSectorIdentity(sectorType).mediaDiscriminator }
-        : {}),
+      type: sectorType,
       ceoId,
       ceoType: ceoTypeResolved,
       ceoVacant: false,

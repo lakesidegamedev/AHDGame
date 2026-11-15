@@ -6,7 +6,7 @@ The first real decision you make as CEO is which industry to commit to, because 
 
 Each turn, your plants produce goods, the goods compete for buyers at your pricing posture, and what sells becomes revenue. Margin modifiers (type match, location, state conditions, size) turn revenue into profit. Your overhead budgets and CEO salary are costs taken before tax, so profit is what remains after them; profit then pays tax, and dividends come out of what is left. What is left builds your treasury, and your treasury, plants, earnings and debt set your share price.
 
-You grow by building plants, or by **attacking** a rival's sector to take whole plants off it. Marketing Strength decides those fights. Splitting the unowned pool only exists in worlds that have not reached the plants stage.
+You grow by building plants, or by **attacking** a rival's sector to take whole plants off it. Marketing Strength decides those fights.
 
 ![The ten stages each corporation passes through every turn, from production and clearing to tax, salary and dividends, strength accrual, share orders and the vote sweep.](/wiki-images/diagrams/corporations-turn-flow.svg)
 
@@ -48,7 +48,7 @@ Every turn, the game processes each corporation through these phases:
 
 The headline founding fee is **₳1,000,000** in modern money, and the new corporation starts with **₳1,000,000** in liquid capital. A 1953 world deflates both figures to that era's money (1979, 1991 and modern worlds use the figures above), outside the US the amount is converted into local currency at the world's base exchange rate, and the founding dialog always shows the exact amount before you confirm. Low investor confidence can add up to **25%** to the fee, paid to the country treasury; the corporation's starting capital is never reduced. You can optionally raise the starting treasury as high as **₳50,000,000**; everything above the ₳1,000,000 baseline is deducted from your personal cash on top of the fee.
 
-At founding you choose from **17 sector lines**: the 15 corporation types, plus the vehicles line of manufacturing and the entertainment line of media:
+At founding you choose from the **15 corporation types**:
 
 | Type | Label |
 | --- | --- |
@@ -59,12 +59,10 @@ At founding you choose from **17 sector lines**: the 15 corporation types, plus 
 | media | Media |
 | manufacturing | Manufacturing |
 | retail | Retail |
-| manufacturing_vehicles | Automobiles (manufacturing, vehicles line) |
 | agriculture | Agriculture |
 | real_estate | Real Estate |
 | defense | Defense |
 | telecommunications | Telecommunications |
-| media_entertainment | Entertainment (media, entertainment line) |
 | logistics | Logistics |
 | extraction | Extraction & Mining |
 | chemical_industries | Chemical Industries |
@@ -189,24 +187,9 @@ The capacity **arrives**; it does not appear. A new sector starts at zero capaci
 You may build a sector in any industry. Primary and secondary industries affect
 the margin bonus; they do not gate which plants you can found.
 
-### Market capture (splits)
-
-Splitting the unowned pool is a pre-plants action. Once a world reaches the plants stage the game refuses it, and you grow a sector by building capacity. In a world before plants, once you operate in a state you can "split" the unowned pool there to take market share out of it:
-
-| Parameter | Value |
-| --- | --- |
-| Cash cost | 5% of the unowned pool |
-| MS cost | 2^escalation, so 1, 2, 4, 8, 16... |
-| Capture | 5% of the pool × 1.25 unowned bonus × (1 + MS ÷ 100) |
-| Escalation decay | Falls by 1 each turn, halving the cost back toward 1 MS |
-
-Tariffs cut a foreign company's capture, by up to half at a 100% tariff. Choosing half strength halves the cash cost, the MS cost (minimum 1) and the capture.
-
-Rapid splits get expensive fast, but waiting a few turns resets the cost.
-
 ### Attacking rivals
 
-Under plants you attack a rival with a **sector split**: an attempt to take whole plants off its sector in a state. You do not choose the size. Marketing Strength sets both how much is at stake and whether you win:
+You attack a rival with a **sector split**: an attempt to take whole plants off its sector in a state. You do not choose the size. Marketing Strength sets both how much is at stake and whether you win:
 
 | Part | Rule |
 | --- | --- |
@@ -217,7 +200,7 @@ Under plants you attack a rival with a **sector split**: an attempt to take whol
 
 The defender needs at least two plants, and state-owned or suspended corporations cannot be attacked. Cash and MS are spent whether the split lands or not. On a win the plants move to you whole, into your sector in that state or a new one.
 
-Worlds that have not reached the plants stage have no player attack. Computer-run corporations there use an older contested formula that moves revenue one for one, with two multipliers that keep entrenched monopolies breakable:
+Computer-run corporations in worlds on an older market mode use a contested formula that moves revenue one for one, with two multipliers that keep entrenched monopolies breakable:
 
 | Multiplier | Effect |
 | --- | --- |
@@ -273,11 +256,9 @@ A growth rate is a percentage per game year. Its cost is charged every financial
 
 Because a game year is two financial days, you pay the daily growth cost twice for each game year of growth. The total price of the revenue you add is the growth cost multiplier (currently 3x), adjusted up or down by the prime rate, your CEO's Business Acumen and any market dominance. Set growth to 0% to stop the charge entirely. Under plants the growth rate is retired: the turn sets it to 0 and the controls are hidden, so you add output by building capacity.
 
-### Unowned headroom
+### Headroom
 
-In worlds that have not reached the plants stage, the unowned pool grows at half the average owned-sector growth rate, with a 1% fallback. Once plants are in play, unowned headroom grows with the state's GDP growth instead.
-
-This means unowned market share regenerates over time. Before plants, a sector you partially captured will refill, so sustained expansion requires repeated splits. Under plants the headroom is unmet demand: it stops growing in a recession rather than shrinking, and you grow into it by building capacity.
+Headroom is the part of a market's demand that no plant is serving yet. It grows with the state's GDP growth, stops growing in a recession rather than shrinking, and is what you grow into by building capacity. There is no pool to buy a slice of.
 
 ## What moves your margin
 
@@ -325,7 +306,7 @@ The other ceiling is legal. Competition law can refer a merger, order a divestit
 
 ### The wider game
 
-State GDP growth is driven by your sectors. Before the plants stage it is the revenue-weighted average of the state's corporate sector growth rates, with unowned sectors counted at 0.5%. Once plants are in play it follows what the state's sectors actually sell and produce, after inflation. The rest of the game feeds back into your sectors in return.
+State GDP growth is driven by your sectors: it follows what the state's sectors actually sell and produce, after inflation. The rest of the game feeds back into your sectors in return.
 
 **Prices and trade.** [Commodities](/wiki/commodities) markets affect margins: steel shortages hurt manufacturing, oversupply in energy compresses energy sector margins. [Household demand](/wiki/household-economy) is the end market for consumer sectors, and [freight limits and shipping bills](/wiki/logistics-guide) change sector revenue and margin; if profit collapsed after you added a plant, check the sector's Freight tag and its sold percentage first. Seeded sector markets and specialties (see [Game Starting State](/wiki/game-starting-state)) are what corporations compete for. [Tariffs](/wiki/tariffs) change foreign and domestic sector margins and market share fights, and [Embargoes & Trade Exposure](/wiki/embargo-and-trade-exposure) cut sector revenue, maintenance and margin for exposed foreign operations. A trip of [Market Safeguards](/wiki/market-safeguards) changes how sector revenue is computed, and company earnings set the fundamentals it compares against. Capacity squeezes set what extraction sectors can earn (see [Resources](/wiki/resources-overview)); an extraction corporation with operations in a state can bid for an [extraction contract](/wiki/extraction-contracts), and R&D breakthroughs and surveys raise state resource capacity. A defence contract pays the supplier its margin, and domestic defence plants bid for and fill defence orders (see [Defence Procurement](/wiki/defence-procurement)).
 
@@ -363,7 +344,7 @@ Combined daily spending on marketing, logistics, R&D, and CEO salary cannot exce
 
 Marketing Strength (MS) is your corporation's **economic-warfare currency**. It is not a sales stat: it does not raise demand, clear more of your output, improve your margin, or move your share price. What it decides is who takes market share from whom.
 
-MS grows each turn from what you actually **spend on delivered advertising**, not from the budget you set. Your marketing budget is placed as advertising demand with the media and entertainment sectors, you pay only for the advertising that fills, unfilled budget stays in your treasury, and it is the delivered spend that feeds MS. When advertising fills only part of what is asked for, strength accrues more slowly than the budget figure suggests. A budget you cannot fund next turn places no demand at all.
+MS grows each turn from what you actually **spend on delivered advertising**, not from the budget you set. Your marketing budget is placed as advertising demand with the media sector, you pay only for the advertising that fills, unfilled budget stays in your treasury, and it is the delivered spend that feeds MS. When advertising fills only part of what is asked for, strength accrues more slowly than the budget figure suggests. A budget you cannot fund next turn places no demand at all.
 
 - Base: 1 MS per turn (any delivered spend at all)
 - Scaled: grows with the log of delivered spend
@@ -468,14 +449,12 @@ Computer-run corporations may automatically retool a sector onto a better strate
 | Agriculture | Vertical Farming, Precision Agriculture, Traditional, Industrial, Sustainable | 5 |
 | Chemical Industries | Specialty Chemicals, Industrial Chemicals, Fertilizer Production, Pharmaceuticals, Plastics & Polymers | 5 |
 | Healthcare | Telehealth Network, Standard, Hospital Networks, Outpatient & Preventive | 4 |
-| Manufacturing (vehicles) | Autonomous Vehicles, Standard, EV Focus, Heavy Machinery | 4 |
 | Financial | Algorithmic Trading, Standard, Fintech, Traditional Banking | 4 |
 | Media | Streaming Media, Standard, Digital-First, Legacy Broadcast | 4 |
 | Defense | Directed-Energy Systems, Standard, Cyber Warfare, Heavy Armor, Munitions & Arms Export, Naval Systems, Missile & Rocket Systems, Aerospace Systems | 8 |
 | Real Estate | PropTech Platforms, Standard, Commercial Development, Green Building | 4 |
 | Construction | Modular Construction, General Contracting, Infrastructure Buildout, plus a research-gated Factory-built Modular Construction method from 2019 | 4 |
 | Telecommunications | 5G / 6G Networks, Standard, Wireline Network, 5G/Infrastructure, Cloud Services | 5 |
-| Media (entertainment) | Live-Service Platforms, Standard, Streaming/Digital, Live/Venue | 4 |
 | Retail | E-Commerce Fulfillment, Standard, E-Commerce, Brick & Mortar | 4 |
 | Logistics | Autonomous Freight, Standard, Freight Only, Automated Logistics, Full-Service | 5 |
 | Extraction & Mining | Diversified, Iron & Metals Mining, Oil & Gas, Natural Gas Focus, Rare Earth Minerals Mining, Coal Mining, Timber & Forestry | 7 |

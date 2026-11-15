@@ -85,7 +85,7 @@ describe('UnionsClient, labourSystemMode at "full"', () => {
               name: "United Auto Workers",
               countryId: "US",
               countryName: "United States",
-              sectorLabel: "Automobiles",
+              sectorLabel: "Manufacturing",
               leaderName: "Walter Reuther",
               isVacant: false,
               members: 42500,
@@ -103,7 +103,7 @@ describe('UnionsClient, labourSystemMode at "full"', () => {
     render(<UnionsClient />);
 
     await waitFor(() => expect(screen.getByText("United Auto Workers")).toBeTruthy());
-    expect(screen.getByText("Automobiles")).toBeTruthy();
+    expect(screen.getByText("Manufacturing")).toBeTruthy();
     expect(screen.getByText("UAW")).toBeTruthy();
     expect(screen.getByText("Walter Reuther")).toBeTruthy();
     // Membership, Approval, and Funds columns: thousands separator and %.
@@ -123,7 +123,7 @@ describe('UnionsClient, labourSystemMode at "full"', () => {
               name: "United Auto Workers",
               countryId: "US",
               countryName: "United States",
-              sectorLabel: "Automobiles",
+              sectorLabel: "Manufacturing",
               leaderName: "Walter Reuther",
               isVacant: false,
               members: 40000,

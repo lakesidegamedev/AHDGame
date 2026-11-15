@@ -115,11 +115,7 @@ describe("evaluateMarketEntry", () => {
 describe("quoteFoundingEntry", () => {
   it("is the entry fee plus one founding-discounted facility", () => {
     const quote = quoteFoundingEntry({
-      identity: {
-        sectorType: "manufacturing",
-        industryModel: "vehicles",
-        mediaDiscriminator: null,
-      },
+      sectorType: "manufacturing",
       preset: undefined,
       currentYear: 1991,
       eraUnitScale: 1,
@@ -131,11 +127,9 @@ describe("quoteFoundingEntry", () => {
       acumen: 60,
       hostCostOfLivingIndex: 110,
     });
-    const starterUnits = foundingStarterUnits("manufacturing", "vehicles", null);
+    const starterUnits = foundingStarterUnits("manufacturing");
     const starterBuild = computeBuildCost({
       sectorType: "manufacturing",
-      industryModel: "vehicles",
-      mediaDiscriminator: null,
       units: starterUnits,
       strategyId: null,
       year: 1991,

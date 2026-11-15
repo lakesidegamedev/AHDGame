@@ -15,7 +15,6 @@
  * live worlds.
  */
 
-import { operatingSectorFilter } from "@/lib/constants/corporations";
 import type { Db } from "mongodb";
 import { ObjectId } from "mongodb";
 import type { State } from "@/lib/db/types";
@@ -221,7 +220,7 @@ export async function reconcileCommandEconomySoes(
     if (!dryRun && entry.sectors.length > 0) {
       await corporateSectorsCollection(db).deleteMany({
         countryId,
-        ...operatingSectorFilter(sectorType),
+        sectorType: sectorType,
         stateId: { $in: [...new Set(entry.sectors.map((s) => s.stateId))] },
         corporationId: { $ne: corpId },
       });
@@ -235,8 +234,6 @@ export async function reconcileCommandEconomySoes(
             corporationId: corpId,
             stateId: sector.stateId,
             sectorType: sector.sectorType,
-            industryModel: sector.industryModel ?? null,
-            mediaDiscriminator: sector.mediaDiscriminator ?? null,
           },
           {
             $set: {

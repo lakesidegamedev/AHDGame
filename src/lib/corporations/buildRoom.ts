@@ -14,7 +14,6 @@ import { loadBuildDemandProducers } from "./loadBuildDemandProducers";
 import type { Db } from "mongodb";
 import type { CommodityType } from "@/lib/constants/commodities";
 import type { OperatingSectorType } from "@/lib/constants/corporationsClient";
-import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
 import type { CommodityPrice, CorporateSector, SectorBuildOrder, State } from "@/lib/db/types";
 import { deliveredFraction } from "@/lib/corporations/buildDelivery";
 import { sectorDemandGapUnits } from "@/lib/market/sectorDemandGap";
@@ -188,7 +187,7 @@ export function supplyMixSharesCountryDemand(
   );
 }
 
-type LaneIdentity = Pick<CorporateSector, "sectorType" | "industryModel" | "mediaDiscriminator">;
+type LaneIdentity = Pick<CorporateSector, "sectorType">;
 
 /** Sectors with capacity on order in the given countries, optionally one lane only. */
 async function loadBuildingSectors(
@@ -213,8 +212,6 @@ async function loadBuildingSectors(
         ...(lane
           ? {
               sectorType: lane.sectorType,
-              industryModel: lane.industryModel ?? null,
-              mediaDiscriminator: lane.mediaDiscriminator ?? null,
             }
           : {}),
         "buildQueue.0": { $exists: true },
@@ -223,8 +220,6 @@ async function loadBuildingSectors(
         projection: {
           stateId: 1,
           sectorType: 1,
-          industryModel: 1,
-          mediaDiscriminator: 1,
           buildQueue: 1,
         },
       }
@@ -265,11 +260,7 @@ export async function loadCountryQueuedUnitsByLane(
   for (const { sector } of await loadBuildingSectors(db, [countryId], null)) {
     const queued = queuedUndeliveredUnits(sector.buildQueue, turn);
     if (queued <= 0) continue;
-    const lane = getOperatingSectorType(
-      sector.sectorType,
-      sector.industryModel,
-      sector.mediaDiscriminator
-    );
+    const lane = sector.sectorType;
     result.set(lane, (result.get(lane) ?? 0) + queued);
   }
   return result;

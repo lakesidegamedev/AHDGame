@@ -4,7 +4,7 @@
  * models. Manufacturing lines come from what owned plants actually produce,
  * so a corporation that only builds vehicles cannot release a washing machine.
  */
-import { getOperatingSectorType, SECTOR_STRATEGIES } from "@/lib/constants/sectorStrategies";
+import { SECTOR_STRATEGIES } from "@/lib/constants/sectorStrategies";
 import type { OperatingSectorType } from "@/lib/constants/corporations";
 import { getMediaOperatingModel } from "@/lib/mediaOperatingModels/catalog";
 import { MEDIA_PRODUCT_KINDS } from "../mediaProductCatalog";
@@ -34,9 +34,7 @@ export interface VentureLineStatus {
 export interface VentureSector {
   sectorId: string;
   sectorType: string;
-  industryModel?: ManufacturingPlant["industryModel"];
   strategyId?: string | null;
-  mediaDiscriminator?: string | null;
   capitalStock?: number;
   plantCount?: number;
   mothballed?: boolean;
@@ -74,7 +72,6 @@ function toPlant(sector: VentureSector, corporationId: string): ManufacturingPla
     sectorId: sector.sectorId,
     corporationId,
     sectorType: sector.sectorType,
-    industryModel: sector.industryModel,
     strategyId: sector.strategyId,
     capitalStock: sector.capitalStock ?? 0,
     plantCount: sector.plantCount ?? 0,
@@ -138,7 +135,7 @@ export function liftedSectorIds(input: {
   return input.sectors
     .filter((sector) => {
       if (sector.mothballed) return false;
-      const operating = getOperatingSectorType(sector.sectorType, sector.industryModel);
+      const operating = sector.sectorType;
       if (!kind.sectorTypes.includes(operating as OperatingSectorType)) return false;
       const strategy = SECTOR_STRATEGIES[operating as keyof typeof SECTOR_STRATEGIES]?.find(
         (candidate) => candidate.id === (sector.strategyId ?? "standard")

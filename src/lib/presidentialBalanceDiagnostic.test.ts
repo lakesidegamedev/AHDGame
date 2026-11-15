@@ -17,7 +17,7 @@ import { calcStateTurnout, turnVoteWeight, type EnrichedCandidate } from "@/lib/
 // direct-call diagnostics below exercise the same function the production
 // presidential path uses.
 import { distributeVotesBySwingFlow as distributeVotesByGroupLevelAllocation } from "@/lib/elections/engine/voteDistributionSwingFlow";
-import { demographicCategories } from "@/lib/seeds/demographicCategories";
+import { demographicCategories } from "@/lib/seeds/calibration/groupModelCategories";
 import { stateDemographics } from "@/lib/seeds/stateDemographics";
 import { ELECTORAL_VOTE_UNITS } from "@/lib/constants/states";
 import type { StateDemographics } from "@/lib/db/types";

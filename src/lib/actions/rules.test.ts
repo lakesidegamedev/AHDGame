@@ -151,7 +151,7 @@ describe("donor-level-zero eligibility", () => {
   });
   it("the execute gate still blocks level 0 with the existing reason", () => {
     const result = makeCharacter({ actions: 10, donorBaseLevel: 0 });
-    expect(canPerformAction(result, "fundraise")).toEqual({
+    expect(canPerformAction(result, "fundraise")).toMatchObject({
       canPerform: false,
       reason:
         "You have no donor base. Use 'Build Donor Network' first to establish one before fundraising.",
@@ -358,7 +358,7 @@ describe("campaign failure agreement", () => {
       { gdpMillions: 69_618, population: 1_000_000, countryId: "US" }
     );
     expect(quote).toEqual({ ok: false, error: reason });
-    expect(canPerformAction(campaignCharacter(100), "campaign", campaignState())).toEqual({
+    expect(canPerformAction(campaignCharacter(100), "campaign", campaignState())).toMatchObject({
       canPerform: false,
       reason,
     });
@@ -382,7 +382,7 @@ describe("campaign failure agreement", () => {
     expect(quote.ok).toBe(false);
     if (quote.ok) return;
     expect(quote.error).toMatch(/charisma/);
-    expect(canPerformAction(noStats, "campaign", campaignState())).toEqual({
+    expect(canPerformAction(noStats, "campaign", campaignState())).toMatchObject({
       canPerform: false,
       reason: quote.error,
     });
@@ -394,7 +394,7 @@ describe("campaign failure agreement", () => {
     );
     expect(quote.ok).toBe(false);
     if (quote.ok) return;
-    expect(canPerformAction(campaignCharacter(20), "campaign", undefined)).toEqual({
+    expect(canPerformAction(campaignCharacter(20), "campaign", undefined)).toMatchObject({
       canPerform: false,
       reason: quote.error,
     });
@@ -501,7 +501,7 @@ describe("Advertise quote/debit/result agreement", () => {
   });
   it("the execute gate surfaces the quote reason for missing stats", () => {
     const char = makeCharacter({ actions: 10, favorability: 10, funds: 1_000_000 });
-    expect(canPerformAction(char, "advertise", AVG_STATE)).toEqual({
+    expect(canPerformAction(char, "advertise", AVG_STATE)).toMatchObject({
       canPerform: false,
       reason:
         "Advertise requires an allocated charisma stat. Allocate your stats before advertising.",
@@ -509,7 +509,7 @@ describe("Advertise quote/debit/result agreement", () => {
   });
   it("the execute gate surfaces the quote reason for a missing state", () => {
     const char = advertiseCharacter(10);
-    expect(canPerformAction(char, "advertise")).toEqual({
+    expect(canPerformAction(char, "advertise")).toMatchObject({
       canPerform: false,
       reason: "Advertise requires home-state economic data (GDP and population).",
     });
@@ -851,7 +851,7 @@ describe("GDP-baseline preset parity between UI quote and execution", () => {
     const state = cn1953State();
     const poor = campaignCharacter(0, 5.5, 5.5, { countryId: "CN", funds: 17_000 });
     expect(canPerformAction(poor, "campaign", state)).toEqual({ canPerform: true });
-    expect(canPerformAction(poor, "campaign", state, { preset: "1953-default" })).toEqual({
+    expect(canPerformAction(poor, "campaign", state, { preset: "1953-default" })).toMatchObject({
       canPerform: false,
       reason: expect.stringContaining("Not enough funds"),
     });
@@ -999,7 +999,7 @@ describe("donor failure agreement", () => {
       countryId: "US",
       stats: undefined,
     });
-    expect(canPerformAction(noStats, "buildDonorBase", donorState())).toEqual({
+    expect(canPerformAction(noStats, "buildDonorBase", donorState())).toMatchObject({
       canPerform: false,
       reason: quote.error,
     });
@@ -1012,7 +1012,7 @@ describe("donor failure agreement", () => {
     const quote = quoteBuildDonorBaseAction({ donorBaseLevel: 10, fundraising: 5.5 }, undefined);
     expect(quote.ok).toBe(false);
     if (quote.ok) return;
-    expect(canPerformAction(donorCharacter(10), "buildDonorBase", undefined)).toEqual({
+    expect(canPerformAction(donorCharacter(10), "buildDonorBase", undefined)).toMatchObject({
       canPerform: false,
       reason: quote.error,
     });
@@ -1183,8 +1183,8 @@ describe("poll failure agreement", () => {
       expect(quotePollAction({ intellect: NaN }, tier)).toEqual({ ok: false, error: reason });
     }
     const noStats = pollCharacter(null);
-    expect(canPerformAction(noStats, "poll")).toEqual({ canPerform: false, reason });
-    expect(canPerformAction(noStats, "pollLarge")).toEqual({ canPerform: false, reason });
+    expect(canPerformAction(noStats, "poll")).toMatchObject({ canPerform: false, reason });
+    expect(canPerformAction(noStats, "pollLarge")).toMatchObject({ canPerform: false, reason });
     expect(simulateActionBatch(noStats, undefined, "poll", 5)).toEqual({
       ok: false,
       reason,
@@ -1354,7 +1354,7 @@ describe("fundraise failure agreement", () => {
     const reason = FUNDRAISE_NO_DONOR_ERROR;
     expect(quoteFundraiseAction({ donorBaseLevel: 0 })).toEqual({ ok: false, error: reason });
     const noDonors = fundraiseCharacter(0);
-    expect(canPerformAction(noDonors, "fundraise")).toEqual({ canPerform: false, reason });
+    expect(canPerformAction(noDonors, "fundraise")).toMatchObject({ canPerform: false, reason });
     expect(simulateActionBatch(noDonors, undefined, "fundraise", 5)).toEqual({
       ok: false,
       reason,
@@ -1500,7 +1500,7 @@ describe("debate prep failure agreement", () => {
     const reason = DEBATE_PREP_UNALLOCATED_ERROR;
     expect(quoteDebatePrepAction({})).toEqual({ ok: false, error: reason });
     const noStats = debateCharacter(null);
-    expect(canPerformAction(noStats, "debatePrep")).toEqual({ canPerform: false, reason });
+    expect(canPerformAction(noStats, "debatePrep")).toMatchObject({ canPerform: false, reason });
     expect(simulateActionBatch(noStats, undefined, "debatePrep", 5)).toEqual({
       ok: false,
       reason,

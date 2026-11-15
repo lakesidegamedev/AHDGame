@@ -14,7 +14,7 @@ The first constraint is an explanation of an observed decision, not proof that t
 - Operator schema: 2. Corporation cohort: 547 corporations classified by NPP leadership and primary sector at extraction. Per-turn history denominators vary with available rows and entry. All sampled cash values and write-time FX rates are finite.
 - Decision cash is recorded after the decision's cash movements, before later turn income. Cash-history samples are taken at the corporation-history write. These are reported separately, never relabeled as the same instant or as reconstructed end-of-world cash.
 - Current leader/type metadata defines the historical cash cohort. This does not reconstruct historical CEO changes or recover corporations absent from that cohort.
-- [Complete per-turn regression series](issue-2122-sector-window.csv). Missing histories are missing, never zero. The collector fails on missing whole turns or duplicate corporation histories.
+- Complete per-turn regression series (not kept: it was keyed by the retired sector lanes). Missing histories are missing, never zero. The collector fails on missing whole turns or duplicate corporation histories.
 
 ## Sector diagnosis
 

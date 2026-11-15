@@ -71,7 +71,6 @@ import {
   INTEREST_VOTE_FAVORABILITY_COST,
   type NppBusinessStakes,
 } from "@/lib/nppAutonomy/v6/rules/businessInterest";
-import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
 import { oppositionBlocWorthwhile } from "@/lib/nppAutonomy/v6/rules/oppositionBattles";
 import type { CorporateSector } from "@/lib/db/types";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
@@ -288,8 +287,6 @@ export async function processBillVoting(ctx: NPPContext): Promise<number> {
                 projection: {
                   corporationId: 1,
                   sectorType: 1,
-                  industryModel: 1,
-                  mediaDiscriminator: 1,
                 },
               }
             )
@@ -299,10 +296,7 @@ export async function processBillVoting(ctx: NPPContext): Promise<number> {
     for (const sector of sectors) {
       const key = sector.corporationId.toString();
       const list = sectorTypesByCorporation.get(key) ?? [];
-      list.push(
-        sector.sectorType,
-        getOperatingSectorType(sector.sectorType, sector.industryModel, sector.mediaDiscriminator)
-      );
+      list.push(sector.sectorType, sector.sectorType);
       sectorTypesByCorporation.set(key, list);
     }
     stakesByNpp = buildNppBusinessStakes(

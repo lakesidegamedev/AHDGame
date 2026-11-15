@@ -62,8 +62,7 @@ import { evaluateModifiers } from "@/lib/utils/approvalModifiers";
 import { resolveGameYear } from "@/lib/era/era";
 import { buildFlatMetrics } from "@/lib/utils/governmentApproval";
 import {
-  getEffectiveStrategyRatesForOperatingModel,
-  getOperatingSectorType,
+  getEffectiveStrategyRates,
   STRATEGY_TRANSITION_MARGIN_PENALTY,
   STRATEGY_TRANSITION_TURNS,
 } from "@/lib/constants/sectorStrategies";
@@ -78,7 +77,7 @@ import {
   type CorpCommodityFlowContext,
   type FlowSector,
 } from "@/lib/corporations/corpCommodityFlows";
-import { plannedEconomyMediaSupplyFactor, isNewsMediaLane } from "@/lib/constants/sectorStrategies";
+import { plannedEconomyMediaSupplyFactor } from "@/lib/constants/sectorStrategies";
 import { isPlannedEconomy } from "@/lib/constants/commandEconomy";
 import { resolvePresetIdFromGameState } from "@/lib/world/presetId";
 import { getEraUnitScale } from "@/lib/constants/sectorSeedEra";
@@ -94,7 +93,7 @@ export function mediaAdvertisingOutputForSector(
   currentTurn: number,
   context: CorpCommodityFlowContext
 ): { units: number; factor: number } | null {
-  if (!isNewsMediaLane(sector.sectorType, sector.mediaDiscriminator)) return null;
+  if (sector.sectorType !== "media") return null;
   const planned = isPlannedEconomy(
     sector.countryId,
     context.currentYear,
@@ -102,7 +101,7 @@ export function mediaAdvertisingOutputForSector(
   );
   return {
     units: computeSectorCommodityUnits(sector, currentTurn, context).supply.get("advertising") ?? 0,
-    factor: plannedEconomyMediaSupplyFactor(sector.sectorType, planned, sector.mediaDiscriminator),
+    factor: plannedEconomyMediaSupplyFactor(sector.sectorType, planned),
   };
 }
 
@@ -330,11 +329,7 @@ export function buildSectorDetails(ctx: SectorRowContext) {
     // A plants sector with no plants yet carries its opening stamps (a
     // nameplate revenue and a starting crew) until its first turn zeroes them.
     const sector = plantsMode ? plantlessSectorView(storedSector) : storedSector;
-    const st = getOperatingSectorType(
-      sector.sectorType,
-      sector.industryModel,
-      sector.mediaDiscriminator
-    );
+    const st = sector.sectorType;
     const metrics = stateMetricsMap.get(sector.stateId) ?? getEmptyStateMetricValues();
 
     const stateBalances = rawStateBalances.get(sector.stateId) ?? new Map();
@@ -353,14 +348,12 @@ export function buildSectorDetails(ctx: SectorRowContext) {
       national: Math.round(nationalWeight * 10000) / 100,
       local: Math.round(localWeight * 10000) / 100,
     };
-    const sectorEffectiveRates = getEffectiveStrategyRatesForOperatingModel(
+    const sectorEffectiveRates = getEffectiveStrategyRates(
       st,
       sector.strategyId ?? "standard",
       sector.transitionFromStrategyId,
       sector.transitionStartTurn,
       currentTurn,
-      sector.industryModel,
-      sector.mediaDiscriminator,
       gameState?.preset,
       gameState?.hardwareInputReliefStartTurn
     );
@@ -469,11 +462,7 @@ export function buildSectorDetails(ctx: SectorRowContext) {
       metrics,
       commodityMod,
       homeLocationBonus,
-      getOperatingSectorType(
-        corporation.type,
-        corporation.industryModel,
-        corporation.mediaDiscriminator
-      ),
+      corporation.type,
       sectors.length,
       macroEcon,
       corporation.logisticsStrength ?? 0,
@@ -832,11 +821,7 @@ export function buildSectorDetails(ctx: SectorRowContext) {
       countryId: sector.countryId,
       stateName: stateNameMap.get(sector.stateId) ?? sector.stateId,
       sectorType: sector.sectorType,
-      industryModel: sector.industryModel ?? null,
-      sectorLabel:
-        sector.sectorType === "manufacturing" && sector.industryModel === "vehicles"
-          ? "Vehicle manufacturing"
-          : OPERATING_SECTOR_TYPE_LABELS[st],
+      sectorLabel: OPERATING_SECTOR_TYPE_LABELS[st],
       displayName: sector.displayName ?? null,
       targetGrowthRate:
         sector.targetGrowthRate ?? sector.currentGrowthRate ?? sector.growthRate ?? 0,

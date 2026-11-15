@@ -5,11 +5,7 @@ import {
   computeBuildCost,
   revenuePerCapacityUnitForStrategy,
 } from "./capacityEconomy";
-import {
-  getStrategyForOperatingModel,
-  getEffectiveStrategyRatesForOperatingModel,
-  getSectorStrategies,
-} from "./sectorStrategies";
+import { getStrategy, getEffectiveStrategyRates, getSectorStrategies } from "./sectorStrategies";
 import { sectorEntryFeeAnchor } from "@/lib/corporations/foundingPlant";
 import { getEraNominalAmount } from "./sectorSeedEra";
 
@@ -34,15 +30,6 @@ const LEGACY_INPUTS = {
     food: 0.05,
     vehicles: 0.025,
     plastics: 0.06,
-  },
-  manufacturing_vehicles: {
-    steel: 0.21,
-    iron: 0.08,
-    electronics: 0.13,
-    energy: 0.1,
-    freight: 0.08,
-    real_estate_services: 0.02,
-    plastics: 0.08,
   },
   defense: {
     steel: 0.2,
@@ -109,23 +96,12 @@ describe("1991 reset calibration does not change other era presets", () => {
     "preserves %s input recipes, transitions, menus and entry fees",
     (preset) => {
       for (const [type, demand] of Object.entries(LEGACY_INPUTS)) {
-        expect(getStrategyForOperatingModel(type, "standard", null, null, preset).demand).toEqual(
+        expect(getStrategy(type, "standard", preset).demand).toEqual(demand);
+        expect(getEffectiveStrategyRates(type, "standard", null, null, 50, preset).demand).toEqual(
           demand
         );
         expect(
-          getEffectiveStrategyRatesForOperatingModel(
-            type,
-            "standard",
-            null,
-            null,
-            50,
-            null,
-            null,
-            preset
-          ).demand
-        ).toEqual(demand);
-        expect(
-          getSectorStrategies(type, false, null, preset).find((s) => s.id === "standard")?.demand
+          getSectorStrategies(type, false, preset).find((s) => s.id === "standard")?.demand
         ).toEqual(demand);
       }
       expect(sectorEntryFeeAnchor(preset)).toBe(Math.round(getEraNominalAmount(100_000, preset)));
@@ -133,15 +109,8 @@ describe("1991 reset calibration does not change other era presets", () => {
   );
 
   it("keeps 1991 recipes and entry fees scoped to the originating preset", () => {
-    expect(
-      getStrategyForOperatingModel("manufacturing", "standard", null, null, "1991-default").demand
-        .energy
-    ).toBe(0.16);
-    expect(
-      getStrategyForOperatingModel("manufacturing", "standard", "vehicles", null, "1991-default")
-        .demand.steel
-    ).toBe(0.19);
-    expect(getStrategyForOperatingModel("manufacturing", "standard").demand.energy).toBe(0.18);
+    expect(getStrategy("manufacturing", "standard", "1991-default").demand.energy).toBe(0.16);
+    expect(getStrategy("manufacturing", "standard").demand.energy).toBe(0.18);
     expect(sectorEntryFeeAnchor("1991-default")).toBe(2_500);
   });
 

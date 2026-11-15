@@ -1,4 +1,3 @@
-import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
 import { describe, it, expect, vi } from "vitest";
 import type { Db } from "mongodb";
 import { createMockDb } from "@/lib/test-utils/mockDb";
@@ -118,13 +117,7 @@ describe("generateCountryOwnedSeedData", () => {
         expect(soe.corporation.isPrimaryNationalCorporation).toBe(false);
         expect(soe.corporation.assignedSectorTypes).toEqual([st.sector]);
         expect(soe.sectors.length).toBeGreaterThan(0);
-        expect(
-          soe.sectors.every(
-            (s) =>
-              getOperatingSectorType(s.sectorType, s.industryModel, s.mediaDiscriminator) ===
-              st.sector
-          )
-        ).toBe(true);
+        expect(soe.sectors.every((s) => s.sectorType === st.sector)).toBe(true);
         expect(st.planTarget).toBeGreaterThan(0);
         expect(st.output).toBe(st.planTarget); // starts on-plan
         expect(st.directorId).toBeNull();
@@ -343,13 +336,7 @@ describe("generateCountryOwnedSeedData", () => {
           expect(soe.corporation.isPrimaryNationalCorporation).toBe(false);
           expect(soe.corporation.assignedSectorTypes).toEqual([st.sector]);
           expect(soe.sectors.length).toBeGreaterThan(0);
-          expect(
-            soe.sectors.every(
-              (s) =>
-                getOperatingSectorType(s.sectorType, s.industryModel, s.mediaDiscriminator) ===
-                  st.sector && s.revenue > 0
-            )
-          ).toBe(true);
+          expect(soe.sectors.every((s) => s.sectorType === st.sector && s.revenue > 0)).toBe(true);
           expect(st.planTarget).toBeGreaterThan(0);
           expect(st.output).toBe(st.planTarget);
           expect(st.directorId).toBeNull();

@@ -24,10 +24,16 @@ export async function rejectDuringTurn(db: Db): Promise<NextResponse | null> {
   );
 
   if (gameState?.processingKind === "stockTaxMigration")
-    return errorResponse(409, "Stock holding maintenance is in progress, try again shortly.");
+    return errorResponse(409, "Stock holding maintenance is in progress, try again shortly.", {
+      code: "maintenance_in_progress",
+    });
   if (gameState?.processingKind === "economyReset")
-    return errorResponse(409, "Economy maintenance is in progress, try again shortly.");
+    return errorResponse(409, "Economy maintenance is in progress, try again shortly.", {
+      code: "maintenance_in_progress",
+    });
   if (!gameState || !isTurnProcessingNow(gameState)) return null;
 
-  return errorResponse(409, "The game is processing this turn, try again shortly.");
+  return errorResponse(409, "The game is processing this turn, try again shortly.", {
+    code: "turn_processing",
+  });
 }

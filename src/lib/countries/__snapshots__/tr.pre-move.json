@@ -76,10 +76,8 @@
       "defense": 3,
       "healthcare": 1,
       "telecommunications": 1,
-      "media": 1,
-      "manufacturing_vehicles": 0,
+      "media": 2,
       "chemical_industries": 0,
-      "media_entertainment": 1,
       "technology": 0
     }
   },
@@ -409,7 +407,6 @@
         "chemical_industries": "Petrol-İş",
         "healthcare": "Türk-İş",
         "retail": "Türk-İş",
-        "manufacturing_vehicles": "Türk-İş",
         "technology": "Türk-İş",
         "energy": "Türk-İş",
         "agriculture": "Türk-İş",
@@ -417,13 +414,11 @@
         "construction": "Türk-İş",
         "defense": "Türk-İş",
         "telecommunications": "Türk-İş",
-        "media_entertainment": "Türk-İş",
         "logistics": "TÜMTİS",
         "extraction": "Genel Maden-İş"
       },
       "1979": {
         "manufacturing": "Türk Metal",
-        "manufacturing_vehicles": "Türk Metal",
         "chemical_industries": "Petrol-İş",
         "construction": "Yol-İş",
         "energy": "Tes-İş",
@@ -434,14 +429,12 @@
         "logistics": "TÜMTİS",
         "financial": "Bank-Sen",
         "telecommunications": "Haber-İş",
-        "media_entertainment": "Basın-İş",
         "defense": "Türk Metal",
         "agriculture": "Tarım-İş",
         "real_estate": "Yol-İş"
       },
       "1991": {
         "manufacturing": "Türk Metal",
-        "manufacturing_vehicles": "Türk Metal",
         "chemical_industries": "Petrol-İş",
         "construction": "Yol-İş",
         "energy": "Tes-İş",
@@ -452,14 +445,12 @@
         "logistics": "TÜMTİS",
         "financial": "Bank-Sen",
         "telecommunications": "Haber-İş",
-        "media_entertainment": "Basın-İş",
         "defense": "Türk Metal",
         "agriculture": "Tarım-İş",
         "real_estate": "Yol-İş"
       },
       "1999": {
         "manufacturing": "Türk Metal",
-        "manufacturing_vehicles": "Türk Metal",
         "chemical_industries": "Petrol-İş",
         "construction": "Yol-İş",
         "energy": "Tes-İş",
@@ -470,14 +461,12 @@
         "logistics": "TÜMTİS",
         "financial": "Bank-Sen",
         "telecommunications": "Haber-İş",
-        "media_entertainment": "Basın-İş",
         "defense": "Türk Metal",
         "agriculture": "Tarım-İş",
         "real_estate": "Yol-İş"
       },
       "2007": {
         "manufacturing": "Türk Metal",
-        "manufacturing_vehicles": "Türk Metal",
         "chemical_industries": "Petrol-İş",
         "construction": "Yol-İş",
         "energy": "Tes-İş",
@@ -488,14 +477,12 @@
         "logistics": "TÜMTİS",
         "financial": "Bank-Sen",
         "telecommunications": "Haber-İş",
-        "media_entertainment": "Basın-İş",
         "defense": "Türk Metal",
         "agriculture": "Tarım-İş",
         "real_estate": "Yol-İş"
       },
       "2019": {
         "manufacturing": "Türk Metal",
-        "manufacturing_vehicles": "Türk Metal",
         "chemical_industries": "Petrol-İş",
         "construction": "Yol-İş",
         "energy": "Tes-İş",
@@ -506,14 +493,12 @@
         "logistics": "TÜMTİS",
         "financial": "Bank-Sen",
         "telecommunications": "Haber-İş",
-        "media_entertainment": "Basın-İş",
         "defense": "Türk Metal",
         "agriculture": "Tarım-İş",
         "real_estate": "Yol-İş"
       },
       "2023": {
         "manufacturing": "Türk Metal",
-        "manufacturing_vehicles": "Türk Metal",
         "chemical_industries": "Petrol-İş",
         "construction": "Yol-İş",
         "energy": "Tes-İş",
@@ -524,14 +509,12 @@
         "logistics": "TÜMTİS",
         "financial": "Bank-Sen",
         "telecommunications": "Haber-İş",
-        "media_entertainment": "Basın-İş",
         "defense": "Türk Metal",
         "agriculture": "Tarım-İş",
         "real_estate": "Yol-İş"
       },
       "2027": {
         "manufacturing": "Türk Metal",
-        "manufacturing_vehicles": "Türk Metal",
         "chemical_industries": "Petrol-İş",
         "construction": "Yol-İş",
         "energy": "Tes-İş",
@@ -542,7 +525,6 @@
         "logistics": "TÜMTİS",
         "financial": "Bank-Sen",
         "telecommunications": "Haber-İş",
-        "media_entertainment": "Basın-İş",
         "defense": "Türk Metal",
         "agriculture": "Tarım-İş",
         "real_estate": "Yol-İş"
@@ -1464,28 +1446,26 @@
   "COUNTRY_SECTOR_WEIGHTS": {
     "shape": "country-first",
     "value": {
-      "manufacturing": 16,
+      "manufacturing": 22,
       "agriculture": 14,
       "real_estate": 11,
       "retail": 9,
       "construction": 8,
-      "manufacturing_vehicles": 6,
       "financial": 5,
       "healthcare": 5,
       "energy": 5,
       "logistics": 5,
       "chemical_industries": 4,
       "defense": 4,
-      "media_entertainment": 4,
       "technology": 2,
-      "media": 2
+      "media": 6
     }
   },
   "COUNTRY_SECTOR_WEIGHTS_1979": {
     "shape": "country-first",
     "value": {
       "agriculture": 22,
-      "manufacturing": 15,
+      "manufacturing": 18,
       "construction": 10,
       "retail": 10,
       "energy": 8,
@@ -1494,33 +1474,29 @@
       "healthcare": 4,
       "defense": 5,
       "chemical_industries": 4,
-      "manufacturing_vehicles": 3,
       "financial": 3,
       "logistics": 4,
       "telecommunications": 2,
       "technology": 1,
-      "media": 2,
-      "media_entertainment": 3
+      "media": 5
     }
   },
   "COUNTRY_SECTOR_WEIGHTS_1991": {
     "shape": "country-first",
     "value": {
-      "manufacturing": 16,
+      "manufacturing": 22,
       "agriculture": 14,
       "real_estate": 11,
       "retail": 9,
       "construction": 8,
-      "manufacturing_vehicles": 6,
       "financial": 5,
       "healthcare": 5,
       "energy": 5,
       "logistics": 5,
       "chemical_industries": 4,
       "defense": 4,
-      "media_entertainment": 4,
       "technology": 2,
-      "media": 2
+      "media": 6
     }
   },
   "COUNTRY_TO_ISO_NUMERIC": {

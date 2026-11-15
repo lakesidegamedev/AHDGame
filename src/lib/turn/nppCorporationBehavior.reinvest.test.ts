@@ -101,6 +101,7 @@ function decide(
     retailExpansionPaused?: boolean;
     challengerBoostOf?: (sectorType: string, ownCorporationId: string) => number;
     localShareOf?: LocalShareLookup;
+    productFillStage?: number;
   } = {}
 ) {
   return makeNppCorpDecision(
@@ -114,6 +115,7 @@ function decide(
       retailExpansionPaused: extra.retailExpansionPaused,
       challengerBoostOf: extra.challengerBoostOf,
       localShareOf: extra.localShareOf,
+      ...(extra.productFillStage === undefined ? {} : { productFillStage: extra.productFillStage }),
     },
     candidatesByCountry(pools),
     extra.stateControlled ?? noState,
@@ -386,6 +388,103 @@ describe("NPP capacity reinvestment — a selling-out, fully-utilized plant grow
       6
     );
     expect(decision.reinvestments).toHaveLength(1);
+  });
+
+  describe("a mine expands only into demand", () => {
+    const mine = (over: Partial<CorporateSector> = {}) =>
+      sector({ sectorType: "extraction", strategyId: "iron_mining", ...over });
+    const grewBeyondReplacement = (decision: ReturnType<typeof decide>, s: CorporateSector) => {
+      const write = queueWrites(decision)[0];
+      if (!write) return false;
+      return (
+        pushedOrder(write).unitsOrdered >
+        (s.producedUnits ?? 0) * CAPITAL_DEPRECIATION_PER_TURN * 1.0001
+      );
+    };
+    const open = (unmet: number): PlacementSignals => ({
+      extractionHeadroomOf: () => 1,
+      unmetDemandUnitsOf: () => unmet,
+    });
+
+    it("grows when what it digs up is short and the deposit is open", () => {
+      const s = mine();
+      const decision = decide(
+        corp({ type: "extraction" }),
+        [s],
+        [pool({ sectorType: "extraction" })],
+        plantsCtx,
+        {
+          placementSignals: open(10_000),
+        }
+      );
+      expect(grewBeyondReplacement(decision, s)).toBe(true);
+    });
+
+    it("does not grow on a deposit alone when nothing it sells is short", () => {
+      const s = mine();
+      const decision = decide(
+        corp({ type: "extraction" }),
+        [s],
+        [pool({ sectorType: "extraction" })],
+        plantsCtx,
+        {
+          placementSignals: open(0),
+        }
+      );
+      expect(grewBeyondReplacement(decision, s)).toBe(false);
+      expect(decision.demandClaims).toBeUndefined();
+    });
+
+    it("sizes the step by unmet demand, with the deposit as the ceiling", () => {
+      const s = mine({ capitalStock: 1_000_000, producedUnits: 1_000_000, soldUnits: 1_000_000 });
+      const wide = decide(
+        corp({ type: "extraction" }),
+        [s],
+        [pool({ sectorType: "extraction" })],
+        plantsCtx,
+        {
+          placementSignals: open(1_000_000_000),
+        }
+      );
+      const narrow = decide(
+        corp({ type: "extraction" }),
+        [s],
+        [pool({ sectorType: "extraction" })],
+        plantsCtx,
+        {
+          placementSignals: open(50),
+        }
+      );
+      const units = (d: ReturnType<typeof decide>) => pushedOrder(queueWrites(d)[0]).unitsOrdered;
+      expect(units(narrow)).toBeLessThan(units(wide));
+    });
+
+    it("does not expand a mine whose output mostly goes unsold, even if one product sells out", () => {
+      // 24% of the run sold overall, but the best single product sells out:
+      // per-product fill reads 100%, whole-run sell-through reads 24%.
+      const s = mine({
+        producedUnits: 1_000,
+        soldUnits: 240,
+        producerSettlement: {
+          products: [
+            { offeredUnits: 240, soldUnits: 240 },
+            { offeredUnits: 760, soldUnits: 0 },
+          ],
+        } as unknown as CorporateSector["producerSettlement"],
+      });
+      const decision = decide(
+        corp({ type: "extraction" }),
+        [s],
+        [pool({ sectorType: "extraction" })],
+        plantsCtx,
+        {
+          placementSignals: open(1_000_000),
+          productFillStage: 1,
+        }
+      );
+      expect(queueWrites(decision)).toHaveLength(0);
+      expect(decision.reinvestments ?? []).toHaveLength(0);
+    });
   });
 
   it("treats an unknown extraction capacity document as uncapped", () => {

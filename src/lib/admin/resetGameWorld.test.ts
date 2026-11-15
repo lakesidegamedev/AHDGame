@@ -355,8 +355,6 @@ describe("resetGameWorld", () => {
         $unset: {
           ...STALE_PER_WORLD_GAME_CONFIG_UNSET,
           ...STALE_MARKET_MODE_STAMP_UNSET,
-          fresh1991VehicleModelSeed: "",
-          fresh1991MediaTaxonomySeed: "",
           economyPauseUntilTurn: "",
         },
       }

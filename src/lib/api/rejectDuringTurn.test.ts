@@ -17,6 +17,7 @@ describe("rejectDuringTurn", () => {
     const response = await rejectDuringTurn(db as unknown as Db);
 
     expect(response?.status).toBe(409);
+    expect(await response?.json()).toMatchObject({ code: "turn_processing" });
   });
 
   it("keeps a failed stock migration blocked even after its heartbeat is stale", async () => {

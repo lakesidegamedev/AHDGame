@@ -1,17 +1,10 @@
 import type { CorporateSector } from "@/lib/db/types/corporation";
-import { getOperatingSectorType, getStrategy } from "@/lib/constants/sectorStrategies";
+import { getStrategy } from "@/lib/constants/sectorStrategies";
 
-type StrategyFields = Pick<
-  CorporateSector,
-  "sectorType" | "industryModel" | "mediaDiscriminator" | "strategyId"
->;
+type StrategyFields = Pick<CorporateSector, "sectorType" | "strategyId">;
 
 function strategyLabel(sector: StrategyFields, strategyId: string): string {
-  const operatingType = getOperatingSectorType(
-    sector.sectorType,
-    sector.industryModel,
-    sector.mediaDiscriminator
-  );
+  const operatingType = sector.sectorType;
   return getStrategy(operatingType, strategyId).name || strategyId;
 }
 

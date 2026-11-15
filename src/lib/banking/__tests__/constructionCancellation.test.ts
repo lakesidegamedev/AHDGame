@@ -241,8 +241,6 @@ describe("principal-first financed build cancellation", () => {
         stateId: "CA",
         countryId: "US",
         sectorType: "manufacturing",
-        industryModel: null,
-        mediaDiscriminator: null,
         headroomUnits: 150,
         revenue: 150_000,
       },

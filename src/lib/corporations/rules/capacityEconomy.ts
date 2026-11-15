@@ -18,16 +18,11 @@ import {
   getDominanceGrowthCostMultiplier,
   getNationalDominanceGrowthCostMultiplier,
   type OperatingSectorType,
-  type MediaDiscriminator,
 } from "@/lib/constants/corporations";
 import { NEUTRAL_STAT } from "@/lib/stats/statsConstants";
 import { commodityDominanceMultiplier as commodityMultiplier } from "./commodityDominanceRamp";
 import { COMMODITY_BASE_PRICES, type CommodityType } from "@/lib/constants/commodities";
-import {
-  SECTOR_STRATEGIES,
-  getStrategyForOperatingModel,
-  getOperatingSectorType,
-} from "@/lib/constants/sectorStrategies";
+import { SECTOR_STRATEGIES, getStrategy } from "@/lib/constants/sectorStrategies";
 import { TECH_BUILD_TIME_PER_GROWTH_REDUCTION } from "@/lib/constants/techTree/effects";
 import { eraLaborMultiplier } from "@/lib/labour/laborCost";
 import {
@@ -50,12 +45,9 @@ import {
  * strategies, which cannot be a 1953 world's baseline.
  */
 export function defaultSupplyRates(
-  sectorType: OperatingSectorType,
-  industryModel?: string | null,
-  mediaDiscriminator?: MediaDiscriminator | null
+  sectorType: OperatingSectorType
 ): Partial<Record<CommodityType, number>> {
-  const operatingType = getOperatingSectorType(sectorType, industryModel, mediaDiscriminator);
-  const strategies = SECTOR_STRATEGIES[operatingType] ?? [];
+  const strategies = SECTOR_STRATEGIES[sectorType] ?? [];
   const chosen =
     strategies.find((s) => s.id === DEFAULT_STRATEGY_ID) ??
     strategies.find((s) => !s.requiresTechUnlock && !s.minDecade) ??
@@ -76,13 +68,8 @@ export function defaultSupplyRates(
  * converts ₳→units with the scale and units→₳ without it drifts the two legs
  * of a stored pair by the era ratio, silently and permanently.
  */
-export function capacityUnitYield(
-  sectorType: OperatingSectorType,
-  unitScale: number,
-  industryModel?: string | null,
-  mediaDiscriminator?: MediaDiscriminator | null
-): number {
-  const supply = defaultSupplyRates(sectorType, industryModel, mediaDiscriminator);
+export function capacityUnitYield(sectorType: OperatingSectorType, unitScale: number): number {
+  const supply = defaultSupplyRates(sectorType);
   let k = 0;
   for (const commodity of Object.keys(supply) as CommodityType[]) {
     const rate = supply[commodity] ?? 0;
@@ -104,13 +91,8 @@ export function safeUnitScale(unitScale: number | null | undefined): number {
  * utilization. Reciprocal of {@link capacityUnitYield}, so it carries the
  * era unit scale in the denominator: one 1953 unit earns era-scale ₳.
  */
-export function revenuePerCapacityUnit(
-  sectorType: OperatingSectorType,
-  unitScale: number,
-  industryModel?: string | null,
-  mediaDiscriminator?: MediaDiscriminator | null
-): number {
-  const k = capacityUnitYield(sectorType, unitScale, industryModel, mediaDiscriminator);
+export function revenuePerCapacityUnit(sectorType: OperatingSectorType, unitScale: number): number {
+  const k = capacityUnitYield(sectorType, unitScale);
   return k > 0 ? 1 / k : 0;
 }
 
@@ -151,18 +133,10 @@ export function unitYieldForSupply(
 export function revenuePerCapacityUnitForStrategy(
   sectorType: OperatingSectorType,
   strategyId: string | null | undefined,
-  unitScale: number,
-  industryModel?: string | null,
-  mediaDiscriminator?: MediaDiscriminator | null
+  unitScale: number
 ): number {
-  const operatingType = getOperatingSectorType(sectorType, industryModel, mediaDiscriminator);
-  if (!SECTOR_STRATEGIES[operatingType]?.length) return 0;
-  const strategy = getStrategyForOperatingModel(
-    sectorType,
-    strategyId ?? DEFAULT_STRATEGY_ID,
-    industryModel,
-    mediaDiscriminator
-  );
+  if (!SECTOR_STRATEGIES[sectorType]?.length) return 0;
+  const strategy = getStrategy(sectorType, strategyId ?? DEFAULT_STRATEGY_ID);
   const k = unitYieldForSupply(strategy?.supply ?? {}, unitScale);
   return k > 0 ? 1 / k : 0;
 }
@@ -205,20 +179,12 @@ export function rescaleCapacityForStrategyChange(
   capitalStock: number | null | undefined,
   sectorType: OperatingSectorType,
   fromStrategyId: string | null | undefined,
-  toStrategyId: string | null | undefined,
-  industryModel?: string | null,
-  mediaDiscriminator?: MediaDiscriminator | null
+  toStrategyId: string | null | undefined
 ): number {
   const stock =
     typeof capitalStock === "number" && Number.isFinite(capitalStock) ? capitalStock : 0;
   if (stock <= 0) return stock;
-  const ratio = capacityRescaleRatio(
-    sectorType,
-    fromStrategyId,
-    toStrategyId,
-    industryModel,
-    mediaDiscriminator
-  );
+  const ratio = capacityRescaleRatio(sectorType, fromStrategyId, toStrategyId);
   return stock * ratio;
 }
 
@@ -235,27 +201,13 @@ export function rescaleCapacityForStrategyChange(
 export function capacityRescaleRatio(
   sectorType: OperatingSectorType,
   fromStrategyId: string | null | undefined,
-  toStrategyId: string | null | undefined,
-  industryModel?: string | null,
-  mediaDiscriminator?: MediaDiscriminator | null
+  toStrategyId: string | null | undefined
 ): number {
   if ((fromStrategyId ?? DEFAULT_STRATEGY_ID) === (toStrategyId ?? DEFAULT_STRATEGY_ID)) return 1;
   // The era unit scale cancels in the from/to ratio, so this stays scale-free
   // by construction (passing the world's real scale would change nothing).
-  const rpuFrom = revenuePerCapacityUnitForStrategy(
-    sectorType,
-    fromStrategyId,
-    1,
-    industryModel,
-    mediaDiscriminator
-  );
-  const rpuTo = revenuePerCapacityUnitForStrategy(
-    sectorType,
-    toStrategyId,
-    1,
-    industryModel,
-    mediaDiscriminator
-  );
+  const rpuFrom = revenuePerCapacityUnitForStrategy(sectorType, fromStrategyId, 1);
+  const rpuTo = revenuePerCapacityUnitForStrategy(sectorType, toStrategyId, 1);
   if (!(rpuFrom > 0) || !(rpuTo > 0) || !Number.isFinite(rpuFrom / rpuTo)) return 1;
   return rpuFrom / rpuTo;
 }
@@ -371,17 +323,9 @@ export function capacityPricePerUnit(
   year: number,
   unitScale: number,
   strategyId: string | null | undefined,
-  industryModel?: string | null,
-  mediaDiscriminator?: MediaDiscriminator | null,
   preset?: string
 ): number {
-  const dailyRevenue = revenuePerCapacityUnitForStrategy(
-    sectorType,
-    strategyId,
-    unitScale,
-    industryModel,
-    mediaDiscriminator
-  );
+  const dailyRevenue = revenuePerCapacityUnitForStrategy(sectorType, strategyId, unitScale);
   return uses1991Construction(year, preset)
     ? constructionPriceForDailyRevenue(dailyRevenue)
     : dailyRevenue * GROWTH_COST_MULTIPLIER * capacityEraPriceIndex(year);
@@ -403,26 +347,18 @@ export function laborIntensity(
   sectorType: OperatingSectorType,
   year: number,
   unitScale: number,
-  industryModel?: string | null,
-  mediaDiscriminator?: MediaDiscriminator | null,
   strategyId?: string | null
 ): number {
   // RPU carries the era unit scale in its denominator, so workers-per-unit
   // shrinks by the same factor unit counts grow — total staffing for a given
   // real capacity is era-invariant.
   const strategyRpu = strategyId
-    ? revenuePerCapacityUnitForStrategy(
-        sectorType,
-        strategyId,
-        unitScale,
-        industryModel,
-        mediaDiscriminator
-      )
+    ? revenuePerCapacityUnitForStrategy(sectorType, strategyId, unitScale)
     : 0;
   const rpu =
     strategyRpu > 0 && Number.isFinite(strategyRpu)
       ? strategyRpu
-      : revenuePerCapacityUnit(sectorType, unitScale, industryModel, mediaDiscriminator);
+      : revenuePerCapacityUnit(sectorType, unitScale);
   return (rpu / CAPACITY_REVENUE_PER_WORKER) * capacityEraLaborIndex(year);
 }
 
@@ -468,8 +404,6 @@ export function hostBuildPriceIndex(costOfLivingIndex: number | null | undefined
 /** Inputs to {@link computeBuildCost}. */
 export interface BuildCostInputs {
   sectorType: OperatingSectorType;
-  industryModel?: string | null;
-  mediaDiscriminator?: MediaDiscriminator | null;
   /** Capacity units ordered (output units/day). */
   units: number;
   /**
@@ -624,8 +558,6 @@ export interface BuildCostBreakdown {
 export function computeBuildCost(inputs: BuildCostInputs): BuildCostBreakdown {
   const {
     sectorType,
-    industryModel,
-    mediaDiscriminator,
     units,
     strategyId,
     year,
@@ -643,15 +575,7 @@ export function computeBuildCost(inputs: BuildCostInputs): BuildCostBreakdown {
     techDominanceShield = 0,
   } = inputs;
   const safeUnits = Number.isFinite(units) && units > 0 ? units : 0;
-  const unitPriceAnchor = capacityPricePerUnit(
-    sectorType,
-    year,
-    eraUnitScale,
-    strategyId,
-    industryModel,
-    mediaDiscriminator,
-    preset
-  );
+  const unitPriceAnchor = capacityPricePerUnit(sectorType, year, eraUnitScale, strategyId, preset);
   // Dominance is scaled by how contested the cell is. The factor multiplies the
   // toll's EXCESS over 1.0, so a market with no rivals still pays a monopoly
   // premium, just a smaller one — and a sub-threshold sector (multiplier 1) is

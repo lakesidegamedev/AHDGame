@@ -35,8 +35,6 @@ export async function loadSectorTechContext(
     corporation: Pick<
       Corporation,
       | "type"
-      | "industryModel"
-      | "mediaDiscriminator"
       | "unlockedTechNodeIds"
       | "techDecadeLane"
       | "frontierProgrammes"
@@ -70,8 +68,6 @@ export async function loadSectorTechContext(
     techCurrentYear,
     techCorpView: {
       type: corporation.type,
-      industryModel: corporation.industryModel,
-      mediaDiscriminator: corporation.mediaDiscriminator,
       unlockedTechNodeIds: corporation.unlockedTechNodeIds,
       techDecadeLane: corporation.techDecadeLane,
       frontierProgrammes: corporation.frontierProgrammes,
@@ -88,26 +84,11 @@ export function computeTechGrowthCostReductionPct(args: {
   techCurrentYear: number;
   techCorpView: TechCorpView;
   sectorType: CorporationType;
-  industryModel?: CorporateSector["industryModel"];
-  mediaDiscriminator?: CorporateSector["mediaDiscriminator"];
 }): number {
-  const {
-    techTreesEnabled,
-    techCurrentYear,
-    techCorpView,
-    sectorType,
-    industryModel,
-    mediaDiscriminator,
-  } = args;
+  const { techTreesEnabled, techCurrentYear, techCorpView, sectorType } = args;
   if (!techTreesEnabled) return 0;
   const effects = techCurrentYear
-    ? getSectorTechEffectsForYear(
-        techCorpView,
-        sectorType,
-        techCurrentYear,
-        industryModel,
-        mediaDiscriminator
-      )
-    : getSectorTechEffects(techCorpView, sectorType, industryModel, mediaDiscriminator);
+    ? getSectorTechEffectsForYear(techCorpView, sectorType, techCurrentYear)
+    : getSectorTechEffects(techCorpView, sectorType);
   return Math.round((1 - effects.growthCostMultiplier) * 100 * 10) / 10;
 }

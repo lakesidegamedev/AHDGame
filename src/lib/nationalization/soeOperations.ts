@@ -748,8 +748,6 @@ function computeSoeShareOfStateSector(
 export interface SoeCapexSectorBuy {
   sectorId: CorporateSector["_id"];
   sectorType: CorporateSector["sectorType"];
-  industryModel?: CorporateSector["industryModel"];
-  mediaDiscriminator?: CorporateSector["mediaDiscriminator"];
   /** Decides plant size with the lane. */
   strategyId?: CorporateSector["strategyId"];
   capitalStock: number;
@@ -792,8 +790,7 @@ export function buildSoeCapexGrant(
       sector.sectorType,
       priceYear,
       unitScale,
-      sector.strategyId ?? null,
-      sector.industryModel
+      sector.strategyId ?? null
     );
     if (!Number.isFinite(unitPrice) || unitPrice <= 0) continue;
     const unitsAdded = stock * CAPITAL_DEPRECIATION_PER_TURN;
@@ -812,8 +809,6 @@ export function buildSoeCapexGrant(
     buys.push({
       sectorId: sector._id,
       sectorType: sector.sectorType,
-      industryModel: sector.industryModel,
-      mediaDiscriminator: sector.mediaDiscriminator,
       strategyId: sector.strategyId,
       capitalStock: stock,
       unitsAdded,
@@ -1021,8 +1016,7 @@ async function applyStateCapexGrowth(
         s.sectorType,
         priceYear,
         input.unitScale,
-        s.strategyId ?? null,
-        s.industryModel
+        s.strategyId ?? null
       ),
       shortage: sectorShortageScore(s.sectorType, s.countryId ?? countryId, priceRatioOf),
     })),

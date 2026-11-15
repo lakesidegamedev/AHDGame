@@ -101,7 +101,7 @@ export async function seedCrisisIndexes(db: Db, log: (msg: string) => void) {
   // string type, not sparse: a sparse unique index skips documents where the
   // field is ABSENT but still indexes { livingConflictEventId: null }, and the
   // template writer used to serialize an undefined id as null, so the second
-  // null insert failed E11000 on every spawner turn (GlitchTip AHD-1JV).
+  // null insert failed E11000 on every spawner turn.
   // $type string excludes both null and missing. The legacy sparse version is
   // dropped explicitly first: ensureIndex tolerates "already exists" errors,
   // which would otherwise silently keep the old options forever.
