@@ -22,13 +22,13 @@ export interface SubdivisionModeConfig {
 const REGISTRY: Record<string, Partial<Record<SubdivisionMode, SubdivisionModeConfig>>> = {
   CA: {
     seatConsistent: {
-      electionTypes: ["caCommons", "snap_caCommons"],
+      electionTypes: ["caCommons", "snap_caCommons", "special_caCommons"],
       dataDir: "subdivisions/ca/federal-ridings",
       unitLabel: "Federal riding",
       unitLabelPlural: "Federal ridings",
     },
     distributed: {
-      electionTypes: ["governor", "provincialLegislature", "regionalCouncil"],
+      electionTypes: ["governor", "special_governor", "provincialLegislature", "regionalCouncil"],
       dataDir: "subdivisions/ca/census-divisions",
       populationCountryId: "CA",
       unitLabel: "Census division",
@@ -68,7 +68,7 @@ const REGISTRY: Record<string, Partial<Record<SubdivisionMode, SubdivisionModeCo
       // stateSenate included: the election-detail compact map renders county
       // results for state-senate races (legacy county-results route served any
       // US election type; these four are the ones with UI consumers).
-      electionTypes: ["president", "governor", "senate", "stateSenate"],
+      electionTypes: ["president", "governor", "special_governor", "senate", "stateSenate"],
       dataDir: "counties",
       populationCountryId: "US",
     },
@@ -88,7 +88,9 @@ export function getSubdivisionMode(
   if (
     isCanada(countryId) &&
     layer === "census-divisions" &&
-    (electionType === "caCommons" || electionType === "snap_caCommons")
+    (electionType === "caCommons" ||
+      electionType === "snap_caCommons" ||
+      electionType === "special_caCommons")
   ) {
     return { mode: "distributed", config: REGISTRY.CA.distributed! };
   }

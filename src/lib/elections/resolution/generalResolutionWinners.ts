@@ -412,7 +412,7 @@ export async function selectGeneralElectionWinners({
         const vacantRows = await electedOfficialsCollection(db)
           .find(
             {
-              officeType: "commons",
+              officeType: officeKeyForElectionType(election.electionType, election.countryId),
               state: election.state,
               ...(election.countryId ? { countryId: election.countryId } : {}),
               characterId: null,

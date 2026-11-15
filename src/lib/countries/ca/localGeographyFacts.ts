@@ -6,5 +6,15 @@ export function isCanada(countryId: string): boolean {
 }
 
 export function isCanadianCommons(type: string): boolean {
-  return type === "caCommons" || type === "snap_caCommons";
+  return type === "caCommons" || type === "snap_caCommons" || type === "special_caCommons";
+}
+
+export function canadianRidingNotice(type: string, notice?: string): string | undefined {
+  if (type !== "special_caCommons") return notice;
+  return [
+    notice,
+    "This regional by-election fills only contested vacancies. Riding placement is modeled; unassigned ridings are outside this contest. Campaigning changes placement, not seat totals.",
+  ]
+    .filter(Boolean)
+    .join(" ");
 }

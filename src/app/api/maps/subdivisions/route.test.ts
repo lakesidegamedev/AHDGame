@@ -22,6 +22,15 @@ beforeEach(async () => {
 });
 
 describe("GET /api/maps/subdivisions", () => {
+  it.each([
+    ["US", "special_governor", "OH", "counties"],
+    ["CA", "special_governor", "CA_ON", "subdivisions/ca/census-divisions"],
+    ["CA", "special_caCommons", "CA_ON", "subdivisions/ca/federal-ridings"],
+  ])("serves %s %s geography", async (country, type, region, dataDir) => {
+    expect((await call(`country=${country}&type=${type}&region=${region}`)).status).toBe(200);
+    const { loadSubdivisionFile } = await import("@/lib/maps/subdivisionData");
+    expect(vi.mocked(loadSubdivisionFile).mock.calls.at(-1)?.[0]).toBe(dataDir);
+  });
   it("serves a region's sub-unit shapes for a race type, with no tally needed", async () => {
     const res = await call("country=US&type=governor&region=SD");
     expect(res.status).toBe(200);

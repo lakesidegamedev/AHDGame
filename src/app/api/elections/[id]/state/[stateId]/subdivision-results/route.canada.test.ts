@@ -59,6 +59,30 @@ beforeEach(() => {
 });
 
 describe("Canadian federal riding result API", () => {
+  it("freezes only the by-election vacancy quota without claiming the other ridings", async () => {
+    const election = memory.collection("elections").docs[0];
+    const tally = memory.collection("electionVoteTallies").docs[0];
+    Object.assign(election, { electionType: "special_caCommons", totalSeats: 1 });
+    tally.seatsEstimate = { a: 1, b: 0 };
+    const live = await (await call()).json();
+    expect(live.subdivisions.filter((r: { winner: string }) => r.winner)).toHaveLength(1);
+    tally.canadianRidingResult = await freezeCanadianRidingResult({
+      election: election as never,
+      tally: tally as never,
+      votes: tally.totalVotes as Record<string, number>,
+      seats: tally.seatsEstimate as Record<string, number>,
+      candidateParties: tally.candidateParties as Record<string, string>,
+      parties: memory.collection("politicalParties").docs as never,
+    });
+    election.status = "resolved";
+    const frozen = await (await call()).json();
+    expect(frozen.resultStatus).toBe("frozen");
+    expect(frozen.notice).toContain("only contested vacancies");
+    expect(frozen.subdivisions.filter((r: { winner: string }) => r.winner)).toHaveLength(1);
+    election.districtCampaignBoosts = { "35001": { "2": 7.5 } };
+    expect(await (await call()).json()).toEqual(frozen);
+    expect((await call("CA")).status).toBe(400);
+  });
   it("renders actual Ontario geometry and preserves the recorded provincial allocation", async () => {
     const response = await call();
     expect(response.status).toBe(200);

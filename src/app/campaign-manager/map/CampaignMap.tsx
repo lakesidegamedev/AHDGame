@@ -1,5 +1,6 @@
 "use client";
 import { displayCanadianRegionCode } from "@/lib/countries/ca/regionCodes";
+import { canadianRidingNotice, isCanada } from "@/lib/countries/ca/localGeographyFacts";
 
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
@@ -229,7 +230,9 @@ export function CampaignMap(props: CampaignMapProps) {
   };
 
   const selData = sel ? unitData[sel] : null;
-  const notice = selData?.notice ?? geo.notice;
+  const notice =
+    selData?.notice ??
+    (isCanada(props.countryId) ? canadianRidingNotice(filter.type, geo.notice) : geo.notice);
   // A finished race that counted nothing has no sub-unit results to draw.
   const noCount =
     selectedRace?.stage === "final" &&

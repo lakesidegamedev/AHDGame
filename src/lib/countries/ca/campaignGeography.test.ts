@@ -47,6 +47,8 @@ describe("Canadian Campaign Manager geography", () => {
       expect(getSubdivisionMode("CA", type)?.config.dataDir.endsWith(layer)).toBe(true);
     }
     expect(geo.unitLayerByType?.caCommons).toBe("federal-ridings");
+    expect(geo.unitLayerByType?.special_caCommons).toBe("federal-ridings");
+    expect(geo.unitLayerByType?.special_governor).toBe("census-divisions");
     expect(geo.unitLayerByType?.provincialLegislature).toBe("census-divisions");
     expect(geo.unitLayerByType?.governor).toBe("census-divisions");
     expect(geo.unitLayerByType?.caSenate).toBeUndefined();

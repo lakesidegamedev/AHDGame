@@ -7,7 +7,7 @@ const one = (v: string | string[] | undefined) => (typeof v === "string" ? v : u
 
 const raceSchema = z.string().regex(/^[a-f0-9]{24}(:[\w-]{1,32})?$/i);
 const typeSchema = z.string().regex(/^[A-Za-z][\w]{0,47}$/);
-const stageSchema = z.enum(["all", "primary", "general", "final"]);
+const stageSchema = z.enum(["all", "upcoming", "primary", "general", "final"]);
 const regionSchema = z.string().regex(/^(?:[A-Z]{2,3}|CA_[A-Z]{2})$/);
 const yearSchema = z.coerce.number().int().min(1700).max(2300);
 const partySchema = z.string().regex(/^[\w-]{1,32}$/);

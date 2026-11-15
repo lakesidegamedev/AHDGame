@@ -155,8 +155,8 @@ def write_campaign_map(destination, source, divisions, ridings):
         "regions": dict(sorted(regions.items())), "units": None, "supportedPresets": ["2027-default"],
         "clipUnitsToRegions": True, "labelMin": [34, 22],
         "notice": "Federal riding projections use 2023 boundaries and 2025 votes. Provincial maps use 2021 census divisions with modeled population weights. The 2021 provincial coastlines clip administrative water areas for display.",
-        "unitLayerByType": {"caCommons": "federal-ridings", "snap_caCommons": "federal-ridings",
-            "provincialLegislature": "census-divisions", "governor": "census-divisions",
+        "unitLayerByType": {"caCommons": "federal-ridings", "snap_caCommons": "federal-ridings", "special_caCommons": "federal-ridings",
+            "provincialLegislature": "census-divisions", "governor": "census-divisions", "special_governor": "census-divisions",
             "regionalCouncil": "census-divisions"},
         "unitLayers": {
             "federal-ridings": {"unitLabelPlural": "Federal ridings", "units": {

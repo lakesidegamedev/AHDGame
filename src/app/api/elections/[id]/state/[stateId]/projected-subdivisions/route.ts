@@ -1,4 +1,8 @@
-import { isCanadianCommons, isCanada } from "@/lib/countries/ca/rules/localGeography";
+import {
+  isCanadianCommons,
+  isCanada,
+  canadianRidingNotice,
+} from "@/lib/countries/ca/rules/localGeography";
 import { projectCanadianRidings } from "@/lib/countries/ca/rules/ridingResults";
 import { allocateSeats } from "@/lib/elections/resolution/seatAllocation";
 import {
@@ -187,7 +191,9 @@ export async function GET(
     const subById = new Map(file.subdivisions.map((s) => [s.id, s]));
     return NextResponse.json({
       viewBox: file.viewBox,
-      notice: file.notice,
+      notice: isCanada(election.countryId)
+        ? canadianRidingNotice(election.electionType, file.notice)
+        : file.notice,
       mode:
         isCanada(election.countryId) &&
         isCanadianCommons(election.electionType) &&

@@ -1,7 +1,7 @@
 import type { Election, ElectionVoteTally, PoliticalParty } from "@/lib/db/types";
 import { loadSubdivisionFile } from "@/lib/maps/subdivisionData";
 import { getPartyHex } from "@/lib/utils/politics";
-import { isCanadianCommons } from "./rules/localGeography";
+import { isCanadianCommons, canadianRidingNotice } from "./rules/localGeography";
 import { projectCanadianRidings, type CanadianRidingResult } from "./rules/ridingResults";
 
 export type RidingParty = Pick<
@@ -37,7 +37,7 @@ export async function freezeCanadianRidingResult(input: {
     stateId: election.state!,
     planVersion: "2023",
     viewBox: file.viewBox,
-    notice: file.notice,
+    notice: canadianRidingNotice(election.electionType, file.notice),
     subdivisions: projectCanadianRidings({
       subdivisions: file.subdivisions,
       votes: input.votes,

@@ -1,4 +1,8 @@
-import { isCanadianCommons, isCanada } from "@/lib/countries/ca/rules/localGeography";
+import {
+  isCanadianCommons,
+  isCanada,
+  canadianRidingNotice,
+} from "@/lib/countries/ca/rules/localGeography";
 import { projectCanadianRidings } from "@/lib/countries/ca/rules/ridingResults";
 import {
   SUBDIVISION_REGION_PATTERN,
@@ -341,7 +345,9 @@ export async function GET(
     const subById = new Map(data.subdivisions.map((s) => [s.id, s]));
     return NextResponse.json({
       viewBox: data.viewBox,
-      notice: data.notice,
+      notice: isCanada(election.countryId)
+        ? canadianRidingNotice(election.electionType, data.notice)
+        : data.notice,
       mode: modeEntry.mode,
       unitLabel: modeEntry.config.unitLabel ?? "Subdivision",
       unitLabelPlural: modeEntry.config.unitLabelPlural ?? "Subdivisions",

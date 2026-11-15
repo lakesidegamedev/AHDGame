@@ -123,7 +123,7 @@ describe("GET projected-subdivisions for a finished primary", () => {
 });
 
 describe("Canadian riding placement response", () => {
-  it.each(["caCommons", "snap_caCommons"])(
+  it.each(["caCommons", "snap_caCommons", "special_caCommons"])(
     "marks %s as seat-consistent and colors its assigned winners",
     async (electionType) => {
       const { resolveElectionRouteParam } = await import("@/lib/elections/electionParamResolution");
@@ -169,6 +169,8 @@ describe("Canadian riding placement response", () => {
       expect(response.status).toBe(200);
       const body = await response.json();
       expect(body.mode).toBe("seatConsistent");
+      if (electionType === "special_caCommons")
+        expect(body.notice).toContain("only contested vacancies");
       const rows = unitRowsFrom(body, "#111111");
       expect(rows.map((row) => row.leaderPartyId).sort()).toEqual(["1", "2"]);
       expect(body.subdivisions.map((s: { winner: string }) => s.winner).sort()).toEqual(["d", "r"]);

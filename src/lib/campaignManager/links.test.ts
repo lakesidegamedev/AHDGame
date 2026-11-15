@@ -15,6 +15,14 @@ import { parseCampaignManagerParams } from "./linkParams";
 import { openingFilter } from "./openingFilter";
 
 describe("campaignManagerHref", () => {
+  it.each(["US", "CA"])("round-trips the %s upcoming stage", (country) => {
+    const href = campaignManagerHref({ country, type: "governor", stage: "upcoming" });
+    const params = Object.fromEntries(new URL(href, "http://localhost").searchParams);
+    expect(parseCampaignManagerParams(params)).toMatchObject({
+      country,
+      filter: { type: "governor", stage: "upcoming" },
+    });
+  });
   it("builds a race link", () => {
     expect(campaignManagerHref({ race: "6ae803d32a6841f128efd90d" })).toBe(
       "/campaign-manager?race=6ae803d32a6841f128efd90d"

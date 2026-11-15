@@ -69,6 +69,29 @@ describe.skipIf(!uri)("Canadian riding campaign transactions on isolated Mongo",
     expect(org?.politicalStrength).toBe(100 - first.psCost - second.psCost);
   });
 
+  it("campaigns in a Canadian by-election without changing its vacancy quota or the US race", async () => {
+    await db.collection("elections").updateOne(
+      { _id: electionId },
+      {
+        $set: { electionType: "special_caCommons", totalSeats: 1 },
+      }
+    );
+    const us = {
+      _id: new ObjectId(),
+      countryId: "US",
+      state: "CA",
+      electionType: "governor",
+      status: "active",
+    };
+    await db.collection("elections").insertOne(us);
+    expect(await campaignCanadianRiding(db, request)).toMatchObject({ boost: 2.5, psCost: 2 });
+    expect(await db.collection("elections").findOne({ _id: electionId })).toMatchObject({
+      totalSeats: 1,
+      districtCampaignBoosts: { "35001": { "1": 2.5 } },
+    });
+    expect(await db.collection("elections").findOne({ _id: us._id })).toEqual(us);
+  });
+
   it("serializes concurrent actions without losing a boost or double charging", async () => {
     const outcomes = await Promise.all([
       campaignCanadianRiding(db, request),
