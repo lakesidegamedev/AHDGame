@@ -24,6 +24,7 @@ import { ceoArchetypeModifiers } from "./ceoArchetype";
 import type { Corporation, CorporateSector } from "@/lib/db/types";
 import { candidate, candidatesByCountry } from "./npp/__fixtures__/marketCandidates";
 import type { MarketCandidate } from "./npp/marketCandidates";
+import type { LocalShareLookup } from "./npp/reinvestCandidatePool";
 import {
   CAPACITY_ANCHOR_YEAR,
   CAPACITY_BUILD_TURNS,
@@ -99,7 +100,7 @@ function decide(
     prices?: CommodityPriceRatioFn;
     retailExpansionPaused?: boolean;
     challengerBoostOf?: (sectorType: string, ownCorporationId: string) => number;
-    localShareOf?: (sector: CorporateSector) => number;
+    localShareOf?: LocalShareLookup;
   } = {}
 ) {
   return makeNppCorpDecision(

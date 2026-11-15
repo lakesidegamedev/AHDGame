@@ -17,9 +17,6 @@ describe("AttackPanel plant split", () => {
       <AttackPanel
         attackInfo={{
           attackCost: 0,
-          splitCost: 0,
-          splitEstimatedCapture: 0,
-          splitMsCost: 0,
           userMarketingStrength: 150,
           userLiquidCapital: 500_000,
           stateId: "TX",
@@ -65,9 +62,6 @@ describe("AttackPanel plant split", () => {
       <AttackPanel
         attackInfo={{
           attackCost: 0,
-          splitCost: 0,
-          splitEstimatedCapture: 0,
-          splitMsCost: 0,
           userMarketingStrength: 150,
           userLiquidCapital: 500_000,
           stateId: "TX",

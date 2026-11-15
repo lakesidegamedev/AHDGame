@@ -5,7 +5,7 @@
  */
 import type { CorporateSector } from "@/lib/db/types";
 import type { CommodityPrice } from "@/lib/db/types/commodityPrice";
-import type { CorporationType } from "@/lib/constants/corporations";
+import type { CorporationType, MediaDiscriminator } from "@/lib/constants/corporations";
 import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
 import { COMMODITY_BASE_PRICES, SECTOR_SUPPLY } from "@/lib/constants/commodities";
 import { foundingStarterUnits } from "@/lib/corporations/foundingPlant";
@@ -160,7 +160,7 @@ export function computeMarketFormationSnapshot(args: {
     stateId: string;
     sectorType: CorporationType;
     industryModel?: string | null;
-    mediaDiscriminator?: string | null;
+    mediaDiscriminator?: MediaDiscriminator | null;
   };
   const universe = new Map<string, Bucket>();
   for (const state of args.states) {

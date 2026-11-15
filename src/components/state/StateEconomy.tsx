@@ -911,7 +911,7 @@ export function StateEconomy({ stateId, countryId }: { stateId: string; countryI
                               </span>{" "}
                               +{" "}
                               <span className="font-medium text-foreground">
-                                {data.attackMsCost} MS
+                                {data.attackMsCost ?? 0} MS
                               </span>
                             </span>
                             {owner.attackEstimatedCapture != null &&
@@ -928,12 +928,12 @@ export function StateEconomy({ stateId, countryId }: { stateId: string; countryI
                             onClick={() => handleAttackSector(owner.sectorId)}
                             disabled={
                               attackingId === owner.sectorId ||
-                              data.userMarketingStrength < data.attackMsCost
+                              data.userMarketingStrength < (data.attackMsCost ?? 0)
                             }
                             className="shrink-0 rounded border border-error/30 bg-error/10 px-3 py-1 text-xs font-medium text-error transition-colors hover:bg-error/20 disabled:opacity-40"
                             title={
-                              data.userMarketingStrength < data.attackMsCost
-                                ? `Need ${data.attackMsCost} MS, have ${formatMarketingStrength(data.userMarketingStrength)}`
+                              data.userMarketingStrength < (data.attackMsCost ?? 0)
+                                ? `Need ${data.attackMsCost ?? 0} MS, have ${formatMarketingStrength(data.userMarketingStrength)}`
                                 : "Attack this sector to capture market share"
                             }
                           >

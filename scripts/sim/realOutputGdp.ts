@@ -35,7 +35,6 @@ for (const scenario of cases) {
     outputEma = advanceRevenueEma(outputEma, output);
     const payload: SectorRevenueTaxPayload = {
       owned: [],
-      unowned: [],
       countryId: "US",
       federalSalesTax: 0,
       stateSalesTax: 6,

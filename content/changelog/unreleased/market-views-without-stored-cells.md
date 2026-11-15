@@ -7,7 +7,7 @@ summary: >-
   comes from what buyers are actually not getting.
 tags: [market, economy, api, ui]
 badges: [minor]
-areas: [backend, frontend, api]
+areas: [backend, frontend]
 ---
 
 ## What changed
