@@ -96,7 +96,7 @@ export function BlendShell({
            * viewport. The rails draw their own divider for the contained
            * frame, so it is dropped here rather than doubled.
            */
-          .blend-shell--bleed { min-height: 0; }
+          .blend-shell--bleed { min-height: calc(100vh - 3.5rem); }
           .blend-shell--bleed > .blend-shell__rail {
             background: ${BLEND.rail};
           }
