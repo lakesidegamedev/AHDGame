@@ -34,7 +34,8 @@ describe("corporationsClient", () => {
 
 describe("OPERATING_SECTOR_CHOICES", () => {
   it("lists every operating lane once, with specialized lanes under their parent type", async () => {
-    const { OPERATING_SECTOR_CHOICES, OPERATING_SECTOR_TYPES } = await import("./corporationsClient");
+    const { OPERATING_SECTOR_CHOICES, OPERATING_SECTOR_TYPES } =
+      await import("./corporationsClient");
     const keys = OPERATING_SECTOR_CHOICES.map((c) => c.key);
     expect([...keys].sort()).toEqual([...OPERATING_SECTOR_TYPES].sort());
     expect(keys.indexOf("manufacturing_vehicles")).toBe(keys.indexOf("manufacturing") + 1);
