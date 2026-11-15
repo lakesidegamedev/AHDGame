@@ -83,6 +83,7 @@ import { isLegalManufacturingProductForPlant } from "@/lib/products/rules/manufa
 import { getMediaProductKind } from "@/lib/products/mediaProductCatalog";
 import { mediaProductOfferAvailability } from "@/lib/products/rules/mediaProductSales";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { clearingFillMeasured } from "./sectorTelemetry";
 
 /**
  * Clearing pre-pass for the corporation turn, extracted from index.ts so the
@@ -1052,6 +1053,13 @@ export function runClearingPrePass(input: ClearingPrePassInput): ClearingPrePass
       );
     }
 
+    // A sector that cleared against no prior-turn book measured nothing; tag it
+    // so the telemetry writer leaves its fill unrecorded (see marketTelemetry).
+    for (const clearing of market.clearingBySectorId?.values() ?? []) {
+      if (!clearingFillMeasured(clearing, lookups.initializedLaggedBooks))
+        Object.assign(clearing, { fillMeasured: false });
+    }
+
     // Brand loyalty (A2): roll up per-corp posture/fill/contest from the clearing
     // results and advance each corp's loyalty. Shadow-safe, the resulting
     // brandLoyalty/brandPostureNorm are persisted, but nothing READS them until
@@ -1061,6 +1069,8 @@ export function runClearingPrePass(input: ClearingPrePassInput): ClearingPrePass
       for (const [sectorId, meta] of loyaltySectorMeta) {
         const clearing = market.clearingBySectorId?.get(sectorId);
         if (!clearing) continue;
+        // No prior-turn book to clear against: the zero fill is not a signal.
+        if (!clearingFillMeasured(clearing, lookups.initializedLaggedBooks)) continue;
         let entry = byCorp.get(meta.corpId);
         if (!entry) {
           const corp = lookups.corpById.get(meta.corpId);
