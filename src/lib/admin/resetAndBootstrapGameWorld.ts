@@ -112,6 +112,13 @@ export interface ResetAndBootstrapOptions {
   /** Skip the operator conformance audit for isolated local player worlds. */
   skipDiagnostic?: boolean;
   /**
+   * Open the fresh world on the funded producer market, so the first turn is a
+   * funded turn. Defaults on for a full hosted reset; off for `seedOnly` and
+   * isolated singleplayer worlds (`skipDiagnostic`). A failure keeps turns
+   * stopped instead of letting the world run the legacy market.
+   */
+  fundedOpening?: boolean;
+  /**
    * Whether to open and close the run's `adminLogs` audit row. Defaults on:
    * the hosted game's operators read it. A singleplayer world has no operator
    * and returns its log lines to the caller, so it passes false and keeps two
@@ -661,6 +668,30 @@ export async function resetAndBootstrapGameWorld(
       const line = `residue scan failed: ${err instanceof Error ? err.message : String(err)}`;
       readiness.residueViolations.push(line);
       run.recordFailure("residue", "residueScan", line);
+    }
+
+    // 3c) Funded opening. Runs after the residue scan, which would otherwise read
+    //     the funded switch's gameConfig fields as old-world leftovers.
+    if (options.fundedOpening ?? (!seedOnly && !options.skipDiagnostic)) {
+      phaseReached = "funded opening";
+      try {
+        const { openResetWorldFunded } = await import("@/lib/admin/resetFundedOpening");
+        const opened = await openResetWorldFunded(db, {
+          approvalReference: `world-reset:${adminUsername ?? "system"}`,
+        });
+        collect(
+          `Funded market open: first funded turn ${opened.producerMarketLiveFromTurn}, ` +
+            `${opened.openingSectors} sectors, filled capacity on ${opened.capacityFilled} and ` +
+            `${opened.statePricesFilled} state prices`
+        );
+      } catch (err) {
+        const line = `funded opening failed: ${err instanceof Error ? err.message : String(err)}`;
+        // Counted with the residue so the turn system refuses to start: a world
+        // left on the legacy market must not run by accident.
+        readiness.residueViolations.push(line);
+        run.recordFailure("economy", "fundedOpening", line);
+        collect(line);
+      }
     }
 
     // 4) Seal the freshly-reset world behind maintenance mode, then run the
