@@ -6,7 +6,7 @@ import {
   censusCachedStateLean,
 } from "@/lib/demographics/cachedStateLean";
 import { censusStateLean } from "@/lib/demographics/censusLean";
-import { demographicCategories } from "@/lib/seeds/demographicCategories";
+import { demographicCategories } from "@/lib/seeds/calibration/groupModelCategories";
 import { registerAndGenerate, stateCensusData } from "@/lib/seeds/stateDemographics";
 import { stateCensusData1953 } from "@/lib/seeds/stateCensusData1953";
 

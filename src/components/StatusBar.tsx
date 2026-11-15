@@ -1129,7 +1129,7 @@ export function StatusBar({
                   </div>
                 )}
                 <p className="text-[11px] text-muted leading-relaxed mt-1">
-                  Sets how many plants and what odds you get when you split a rival's sector,
+                  Sets how many plants and what odds you get when you split a rival&apos;s sector,
                   against their MS. Grows from daily marketing spend.
                 </p>
                 <TooltipLink href={`/corporation/${stats.corp.sequentialId}`}>

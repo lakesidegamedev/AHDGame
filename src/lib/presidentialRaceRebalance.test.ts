@@ -18,7 +18,7 @@ import {
   PRESIDENT_PRIMARY_FAVORABILITY_WEIGHT,
   PRESIDENT_PRIMARY_NATIONAL_REACH_WEIGHT,
 } from "@/lib/primaryScore";
-import { demographicCategories } from "@/lib/seeds/demographicCategories";
+import { demographicCategories } from "@/lib/seeds/calibration/groupModelCategories";
 import { stateDemographics } from "@/lib/seeds/stateDemographics";
 import { ELECTORAL_VOTE_UNITS } from "@/lib/constants/states";
 import type { StateDemographics } from "@/lib/db/types";

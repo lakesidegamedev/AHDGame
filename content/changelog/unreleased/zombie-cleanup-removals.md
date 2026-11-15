@@ -6,7 +6,7 @@ summary: >-
   admin Crises panel can start the German Question again.
 tags: [wiki, admin, cleanup]
 badges: [patch]
-areas: [frontend, wiki]
+areas: [fullstack]
 ---
 
 The corporation guides, wiki pages and tooltips no longer talk about buying a
