@@ -13,8 +13,18 @@ qualify for activation.
   entity_id, resource_type, resource_amount. Resource fields describe reported
   spending, never returned account balances.
 - `player_action_rejected`: the same action/entity fields and a controlled
-  failure_code instead of resource fields. Raw errors and request content are
-  never captured.
+  failure_code instead of resource fields, plus `failure_reason`: the response's
+  machine `code` from the shared error envelope, lowercased, or `unknown` when it
+  is missing or not a plain identifier. Raw errors and request content are never
+  captured. Routes without a specific code send the status-class code (for
+  example `validation_failed`). Specific codes so far: `turn_processing` and
+  `maintenance_in_progress` (turn lock), and on `/api/actions/execute`
+  `not_enough_action_points`, `not_enough_funds`, `state_required`,
+  `quote_rejected`, `game_paused`, `resources_changed`, `no_cash_to_convert`,
+  `convert_amount_missing`, `convert_exceeds_cash`, `invalid_action_type`,
+  `invalid_state`, `character_not_found`, `nothing_executed`,
+  `action_not_allowed`. To make a new rejection countable, pass `code` to
+  `errorResponse`.
 - `first_meaningful_action`: action_domain, action_type,
   turns_since_character_creation, starting_nation_id, creation_path,
   character_count. Consent-approved creation anchors live in analyticsRecords;
@@ -117,8 +127,8 @@ separately. Exclude `account_role` admin/moderator where a player-only populatio
 is needed; require `account_role = player` for a strict known non-staff population
 and show excluded unknowns. Test traffic remains unexcluded unless independently
 identified by an existing documented project filter. Never sum generic successful
-actions with their overlapping domain-specific events. Rejection codes remain
-HTTP response classes, not detailed rule or reliability diagnoses.
+actions with their overlapping domain-specific events. `failure_code` remains an HTTP response class; use `failure_reason` for the
+specific rule where a route supplies one.
 
 ### Operation diagnostics
 
