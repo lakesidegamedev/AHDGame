@@ -46,7 +46,6 @@ vi.mock("@/lib/market/featureFlag", () => ({
   marketAtLeast: vi.fn().mockReturnValue(false),
 }));
 
-
 describe("spawnNppCorporation real company names", () => {
   let db: MockDb;
 

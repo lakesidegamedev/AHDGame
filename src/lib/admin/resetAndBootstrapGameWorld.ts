@@ -336,8 +336,7 @@ export async function resetAndBootstrapGameWorld(
     // so the outgoing world's rows for regions, countries and categories the
     // new preset does not write would otherwise survive the reset (see
     // REFERENCE_REBUILD_CLEARED_COLLECTIONS). Cleared after teardown and
-    // immediately before bootstrap, whose 1991 taxonomy preflight also needs
-    // the unowned market pool empty; bootstrap rebuilds every one of them.
+    // immediately before bootstrap, which rebuilds every one of them.
     if (resetReference) {
       const cleared = await clearReferenceForRebuild(db);
       collect(

@@ -204,8 +204,9 @@ describe("spawnNppCorporation — plants", () => {
       headquartersState: "CA",
       maximumStartingRevenue: ceilingUnits * revenuePerCapacityUnit("manufacturing", 1),
     });
-    const sector = db.collectionMocks.corporateSectors!.insertOne.mock
-      .calls[0][0] as { capitalStock: number };
+    const sector = db.collectionMocks.corporateSectors!.insertOne.mock.calls[0][0] as {
+      capitalStock: number;
+    };
     expect(sector.capitalStock).toBeCloseTo(ceilingUnits, 6);
   });
 

@@ -43,6 +43,21 @@ export const REFERENCE_REBUILD_CLEARED_COLLECTIONS: ReadonlyArray<{
     seededBy: seededBy ?? "no current seeder; cleared so retired rows cannot linger",
   }));
 
+/** Collections no code reads or writes any more; a rebuild drops them when a world still carries one. */
+export const RETIRED_COLLECTIONS_DROPPED_ON_REBUILD: readonly string[] = Object.freeze([
+  "unownedSectors",
+]);
+
+async function dropRetiredCollections(db: Db): Promise<void> {
+  for (const name of RETIRED_COLLECTIONS_DROPPED_ON_REBUILD) {
+    try {
+      await db.dropCollection(name);
+    } catch {
+      // Absent on a world that never had it.
+    }
+  }
+}
+
 /** Empty every collection in {@link REFERENCE_REBUILD_CLEARED_COLLECTIONS}. */
 export async function clearReferenceForRebuild(db: Db): Promise<Record<string, number>> {
   const deleted: Record<string, number> = {};
@@ -50,5 +65,6 @@ export async function clearReferenceForRebuild(db: Db): Promise<Record<string, n
     const result = await db.collection(name).deleteMany({});
     deleted[name] = result.deletedCount ?? 0;
   }
+  await dropRetiredCollections(db);
   return deleted;
 }
