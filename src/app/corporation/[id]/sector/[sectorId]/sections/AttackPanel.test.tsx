@@ -31,19 +31,12 @@ describe("AttackPanel plant split", () => {
             successProbability: 0.6,
           },
         }}
-        plantsMode
         targetName="Rival Steel"
         showAttack
-        showSplit={false}
         attacking={false}
         attackError=""
         attackMsg=""
         onAttack={onAttack}
-        splitting={false}
-        splitError=""
-        splitMsg=""
-        onSplit={vi.fn()}
-        sectorCurrencyCode="USD"
       />
     );
 
@@ -76,20 +69,13 @@ describe("AttackPanel plant split", () => {
             successProbability: 0.6,
           },
         }}
-        plantsMode
         targetName="Rival Steel"
         showAttack
-        showSplit={false}
         openPlannerOnMount
         attacking={false}
         attackError=""
         attackMsg=""
         onAttack={onAttack}
-        splitting={false}
-        splitError=""
-        splitMsg=""
-        onSplit={vi.fn()}
-        sectorCurrencyCode="USD"
       />
     );
     expect(screen.getByText("Target: Rival Steel")).toBeTruthy();
