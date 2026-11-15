@@ -74,7 +74,6 @@ export function initSentryClient(): typeof Sentry.captureRouterTransitionStart {
       "GET /api/players/online",
       "GET /api/client-status",
       "GET /api/client-nav",
-      "POST /api/analytics/pageview",
     ],
 
     // Drop logs until SaaS volume and cost have been measured.

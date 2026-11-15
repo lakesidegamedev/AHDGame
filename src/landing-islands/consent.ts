@@ -67,17 +67,4 @@ afterIdle(() => {
   sendIntakeBeaconOnce("landing_viewed", "landing_viewed", { surface: "landing" });
   // Full tracking needs the app; a visitor who accepted gets it on the next page.
   if (config.posthogKey && stored() !== "accepted") sendAnonymousPageview(config.posthogKey);
-  const nav = performance.getEntriesByType("navigation")[0] as
-    PerformanceNavigationTiming | undefined;
-  const end = nav ? Math.round(nav.loadEventEnd || nav.domContentLoadedEventEnd || 0) : 0;
-  const body = JSON.stringify({
-    path: "/",
-    gameVersion: config.gameVersion,
-    ...(end > 0 && end < 120_000 ? { loadTimeMs: end } : {}),
-  });
-  try {
-    navigator.sendBeacon("/api/analytics/pageview", new Blob([body], { type: "application/json" }));
-  } catch {
-    // Best effort.
-  }
 }, 3000);
