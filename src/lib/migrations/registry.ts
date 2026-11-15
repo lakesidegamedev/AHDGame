@@ -10,6 +10,7 @@ import { migration as successorTaxTypes } from "./entries/2026-11-09-successor-t
 import { migration as cnLawBookBackfill } from "./entries/2026-11-12-cn-law-book-backfill";
 import { migration as modernEraBookBackfill } from "./entries/2026-11-13-modern-era-book-backfill";
 import { migration as realCompanyNames } from "./entries/2026-11-12-real-company-names";
+import { migration as dropUnreadTelemetryCollections } from "./entries/2026-11-15-drop-unread-telemetry-collections";
 import { migration as jpLawLeanEffects } from "./entries/2026-11-09-jp-law-lean-effects";
 import { migration as ukJpSubdivisionPopulations } from "./entries/2026-11-01-uk-jp-subdivision-populations";
 import { migration as archiveNonPresidentialCampaigns } from "./entries/2026-11-01-archive-non-presidential-campaigns";
@@ -459,6 +460,7 @@ export const HELD_MIGRATIONS: Migration[] = [
   modernEraBookBackfill,
   cyberLaunchKeyIndex,
   realCompanyNames,
+  dropUnreadTelemetryCollections,
 ];
 
 // Deferred (need bootstrap-marker pass on production first):

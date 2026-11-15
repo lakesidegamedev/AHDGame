@@ -8,7 +8,8 @@ import type { CrisisBoard, BoardCrisis } from "@/lib/crises/queries/crisisBoard"
 import { SovereignDebtWatchPanel } from "@/components/world/SovereignDebtWatchPanel";
 import type { Conflict } from "@/app/world/conflicts/_coldwar/conflicts";
 import { CrisisBoardMap } from "./CrisisBoardMap";
-import { BoardCard, ExposurePanel, GROUP_META, GROUP_ORDER } from "./CrisisBoardCards";
+import { BoardCard, ExposurePanel } from "./CrisisBoardCards";
+import { SECTION_META, SECTION_ORDER } from "@/lib/crises/rules/crisisRow";
 import { SEVERITY_BADGE } from "./crisisBoardStyle";
 
 type View = "all" | "mine" | "conflicts" | "global" | "country" | "region" | "debt";
@@ -110,7 +111,6 @@ function CrisisBoardPage() {
     [board, view]
   );
   const active = visible.filter((c) => c.status === "active");
-  const selected = visible.find((c) => c.id === selectedId) ?? null;
 
   const focus = (id: string) => {
     setSelectedId(id);
@@ -120,6 +120,9 @@ function CrisisBoardPage() {
   };
 
   const activeCount = (board?.crises ?? []).filter((c) => c.status === "active").length;
+  const severeCount = (board?.crises ?? []).filter(
+    (c) => c.status === "active" && c.severity === "high"
+  ).length;
   const showWars = view === "all" || view === "conflicts";
 
   return (
@@ -133,7 +136,7 @@ function CrisisBoardPage() {
             <h1 className="text-2xl font-bold text-foreground">Crises</h1>
             <p className="text-sm text-muted">
               {board
-                ? `${activeCount} active · ${board.actionCount} need your response`
+                ? `${activeCount} active, ${severeCount} severe · ${board.actionCount} need your response`
                 : "Loading"}
             </p>
           </div>
@@ -187,34 +190,31 @@ function CrisisBoardPage() {
                   selectedId={selectedId}
                   onSelect={focus}
                 />
-                {selected && (
-                  <BoardCard crisis={selected} selected onFocus={focus} onPulled={load} />
-                )}
               </div>
               <ExposurePanel crises={board.crises} authenticated={board.authenticated} />
             </div>
 
-            {GROUP_ORDER.map((group) => {
-              const rows = visible.filter((c) => c.group === group);
+            {SECTION_ORDER.map((section) => {
+              const rows = visible.filter((c) => c.section === section);
               if (rows.length === 0) return null;
               return (
-                <section key={group} className="space-y-2">
+                <section key={section} className="space-y-2">
                   <div className="flex items-baseline gap-2">
                     <h2 className="text-base font-semibold text-foreground">
-                      {GROUP_META[group].title}
+                      {SECTION_META[section].title}
                     </h2>
                     <span className="text-xs tabular-nums text-muted">{rows.length}</span>
                     <span className="hidden text-xs text-muted sm:inline">
-                      {GROUP_META[group].hint}
+                      {SECTION_META[section].hint}
                     </span>
                   </div>
-                  <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+                  <div className="grid gap-2">
                     {rows.map((c) => (
                       <BoardCard
                         key={c.id}
                         crisis={c}
                         selected={c.id === selectedId}
-                        onFocus={focus}
+                        regionNames={board.regionNames}
                         onPulled={load}
                       />
                     ))}

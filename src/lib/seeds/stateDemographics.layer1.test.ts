@@ -1,7 +1,8 @@
 import { describe, it, expect } from "vitest";
 import { deriveGroupLeanFromLayer1 } from "./stateDemographics";
 import type { Layer1Config } from "./stateDemographics";
-import { ERA_COMPOSITIONS, getEraPositions, demographicCategories } from "./demographicCategories";
+import { ERA_COMPOSITIONS, getEraPositions } from "./demographicCategories";
+import { demographicCategories } from "./calibration/groupModelCategories";
 import { stateCensusData } from "./stateCensusData";
 import { calculateStateLean, getDisplayLean } from "@/lib/utils/demographics";
 import { stateCensusData1953 } from "./stateCensusData1953";

@@ -326,7 +326,6 @@ export type {
   PopulationStats,
   EconomyStats,
 } from "./gameHealthSnapshot";
-export type { CodeQualitySnapshot } from "./codeQualitySnapshot";
 export type { SystemSettings } from "./systemSettings";
 export type { ExchangeRate } from "./exchangeRate";
 export type { TradeHistoryEntry, TradeSource } from "./tradeHistory";
@@ -342,7 +341,6 @@ export type {
   SuspiciousFlag,
   SuppressedFlag,
 } from "./activityLog";
-export type { SiteTrafficPageview } from "./siteTrafficPageview";
 export type { BannedIp } from "./bannedIp";
 export type { BannedDevice, BannedDeviceKind } from "./bannedDevice";
 export type { StateResourceCapacity } from "./stateResourceCapacity";

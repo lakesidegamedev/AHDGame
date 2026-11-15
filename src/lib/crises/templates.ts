@@ -40,7 +40,7 @@ const BANKING_CRISIS_TEMPLATE: CrisisTemplate = {
   heroImage:
     "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?auto=format&fit=crop&w=1600&q=70",
   description:
-    "A major financial institution faces insolvency. Credit markets freeze, lending dries up, and consumer confidence plummets.",
+    "A large bank has failed to meet its obligations and depositors are pulling their money out. Lenders stop lending, so firms cannot refinance and households cannot borrow. Business profit margins take an immediate hit, and growth, investor confidence and government approval fall while unemployment rises for about 8 turns.",
   scope: "country",
   countryIds: [],
   regionIds: [],
@@ -61,7 +61,8 @@ const BANKING_CRISIS_TEMPLATE: CrisisTemplate = {
     fx("tick", "metric", "economy", "investorConfidence", -0.03, "Investor confidence collapse"),
     fx("tick", "approval", "government", "overall", -0.04, "Government approval erosion"),
   ],
-  wireMessageOnStart: "A banking crisis has erupted. Credit markets freeze and lending dries up.",
+  wireMessageOnStart:
+    "Regulators have frozen a failing bank after a run on deposits. Lending has stopped across the banking system.",
   wireMessageOnEnd: "The banking crisis subsides. Credit markets begin to thaw.",
   interactionDefinition: {
     decisionTree: [
@@ -214,7 +215,7 @@ export const RECESSION_TEMPLATE: CrisisTemplate = {
   heroImage:
     "https://images.unsplash.com/photo-1651341050677-24dba59ce0fd?auto=format&fit=crop&w=1600&q=70",
   description:
-    "Two consecutive quarters of negative GDP growth. Consumer spending falls, business investment stalls, and unemployment rises.",
+    "Output is shrinking and businesses are cutting back. Households spend less, firms put off investment, and unemployment climbs. Growth, consumer and investor confidence and government approval slip each turn, easing off over about 12 turns.",
   scope: "country",
   countryIds: [],
   regionIds: [],
@@ -236,7 +237,7 @@ export const RECESSION_TEMPLATE: CrisisTemplate = {
     fx("tick", "approval", "government", "overall", -0.03, "Government approval erosion"),
   ],
   wireMessageOnStart:
-    "The economy has entered recession. GDP contracts for two consecutive quarters.",
+    "Official figures confirm the economy is contracting. Retailers and manufacturers report falling orders and layoffs have begun.",
   wireMessageOnEnd: "The recession ends. GDP returns to growth.",
   interactionDefinition: {
     decisionTree: [
@@ -340,7 +341,7 @@ export const INFLATION_SPIKE_TEMPLATE: CrisisTemplate = {
   heroImage:
     "https://images.unsplash.com/photo-1604719312566-8912e9227c6a?auto=format&fit=crop&w=1600&q=70",
   description:
-    "Rapid price increases erode purchasing power. Wage-price spirals threaten, and central banks face pressure to act.",
+    "Prices are rising faster than wages. Shoppers cut back, incomes buy less, and firms pay more for inputs and keep less of each sale. Inflation jumps while consumer confidence, real incomes and approval fall, fading over about 6 turns. The central bank is under pressure to raise rates.",
   scope: "country",
   countryIds: [],
   regionIds: [],
@@ -353,7 +354,8 @@ export const INFLATION_SPIKE_TEMPLATE: CrisisTemplate = {
     fx("tick", "metric", "economy", "realWages", -0.025, "Real wage decline"),
     fx("tick", "approval", "government", "overall", -0.03, "Government approval erosion"),
   ],
-  wireMessageOnStart: "Inflation is spiking rapidly. Prices rise and purchasing power erodes.",
+  wireMessageOnStart:
+    "Consumer prices jumped sharply this period. Food, fuel and rent are all up and unions are asking for raises.",
   wireMessageOnEnd: "Inflation moderates. Price stability returns.",
   interactionDefinition: {
     decisionTree: [
@@ -743,7 +745,7 @@ export const MASS_PROTESTS_TEMPLATE: CrisisTemplate = {
   heroImage:
     "https://images.unsplash.com/photo-1591259622709-bdb033b4be2b?auto=format&fit=crop&w=1600&q=70",
   description:
-    "Widespread civil unrest erupts over economic inequality and government corruption. Streets are occupied, transport disrupted, and investor confidence shaken.",
+    "Large crowds have taken to the streets over inequality and corruption. Roads and transit are blocked, shops close early, and investors move money out. Government approval drops quickly, and business margins and growth take a hit for about 5 turns.",
   scope: "country",
   countryIds: [],
   regionIds: [],
@@ -756,7 +758,7 @@ export const MASS_PROTESTS_TEMPLATE: CrisisTemplate = {
     fx("tick", "approval", "government", "overall", -0.05, "Government approval collapse"),
   ],
   wireMessageOnStart:
-    "Mass protests have erupted nationwide. Civil unrest disrupts commerce and shakes investor confidence.",
+    "Tens of thousands marched in cities across the country tonight, blocking main roads. Police have not cleared the squares.",
   wireMessageOnEnd: "The protests subside. Normalcy gradually returns.",
   interactionDefinition: {
     decisionTree: [
@@ -861,7 +863,7 @@ const POLITICAL_SCANDAL_TEMPLATE: CrisisTemplate = {
   heroImage:
     "https://images.unsplash.com/photo-1742413628282-b8b3ff1b7557?auto=format&fit=crop&w=1600&q=70",
   description:
-    "A major corruption scandal implicates senior government officials. Media coverage is relentless, opposition demands resignations, and public trust collapses.",
+    "Leaked records tie senior officials to corruption. The press runs the story daily and the opposition demands resignations. Government approval drops hard, investors turn cautious, and the officials involved lose Charisma and Statecraft.",
   scope: "country",
   countryIds: [],
   regionIds: [],
@@ -874,7 +876,7 @@ const POLITICAL_SCANDAL_TEMPLATE: CrisisTemplate = {
     fx("flat", "stat", "statecraft", "", -0.3, "Scandal undermines political skill"),
   ],
   wireMessageOnStart:
-    "A major political scandal has broken. Senior officials are implicated and public trust collapses.",
+    "Documents published this morning link senior officials to bribes and favors. The opposition has called for resignations.",
   wireMessageOnEnd: "The scandal fades from headlines. Political damage lingers.",
   interactionDefinition: {
     decisionTree: [
@@ -945,7 +947,7 @@ const TRADE_WAR_TEMPLATE: CrisisTemplate = {
   heroImage:
     "https://images.unsplash.com/photo-1613690399151-65ea69478674?auto=format&fit=crop&w=1600&q=70",
   description:
-    "A major trading partner imposes punitive tariffs on your exports. Retaliatory measures escalate, supply chains reorient, and export sectors suffer.",
+    "A major trading partner has put heavy tariffs on your exports and your side has hit back. Exporters lose sales and keep less of each one, the trade balance worsens, and imported goods cost more. Growth slows and prices edge up for about 10 turns.",
   scope: "country",
   countryIds: [],
   regionIds: [],
@@ -958,7 +960,8 @@ const TRADE_WAR_TEMPLATE: CrisisTemplate = {
     fx("tick", "metric", "economy", "inflation", 0.012, "Tariff inflation pass-through"),
     fx("tick", "approval", "government", "overall", -0.02, "Government approval erosion"),
   ],
-  wireMessageOnStart: "A trade war has begun. Tariffs disrupt exports and supply chains.",
+  wireMessageOnStart:
+    "New tariffs on exports took effect today. Retaliation is expected within days and exporters are cancelling shipments.",
   wireMessageOnEnd: "The trade war ends. Tariffs are lifted and trade normalizes.",
   interactionDefinition: {
     decisionTree: [
@@ -1046,7 +1049,7 @@ export const CYBER_ATTACK_TEMPLATE: CrisisTemplate = {
   heroImage:
     "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=format&fit=crop&w=1600&q=70",
   description:
-    "A state-sponsored cyber attack cripples critical infrastructure. Power grids flicker, financial systems stall, and classified data is exfiltrated.",
+    "Attackers have broken into the systems that run power, payments and public services. Parts of them are offline, firms have halted operations, and officials do not yet know what data was taken. It is a short, sharp shock: a large one-off hit to growth, damaged infrastructure, lower confidence in public safety and about 3 turns of recovery.",
   scope: "country",
   countryIds: [],
   regionIds: [],
@@ -1059,7 +1062,7 @@ export const CYBER_ATTACK_TEMPLATE: CrisisTemplate = {
     fx("tick", "approval", "government", "overall", -0.04, "Government approval erosion"),
   ],
   wireMessageOnStart:
-    "A major cyber attack has crippled critical infrastructure. Power and financial systems are disrupted.",
+    "Hackers have disrupted power and payment systems. Several banks and utilities are running on manual backups.",
   wireMessageOnEnd: "Systems are restored. Cybersecurity posture is under review.",
   interactionDefinition: {
     decisionTree: [
@@ -1135,7 +1138,7 @@ export const ENERGY_CRISIS_TEMPLATE: CrisisTemplate = {
   heroImage:
     "https://images.unsplash.com/photo-1473341304170-971dccb5ac1e?auto=format&fit=crop&w=1600&q=70",
   description:
-    "A supply shock disrupts energy markets. Oil and gas prices spike, manufacturing costs soar, and households face heating and transport crises.",
+    "Oil and gas supply has been cut and prices have spiked. Factories and shippers pay more to operate, households pay more to heat and travel, and profit margins shrink. Inflation rises while growth, consumer confidence and approval slip for about 6 turns.",
   scope: "global",
   countryIds: [],
   regionIds: [],
@@ -1149,7 +1152,7 @@ export const ENERGY_CRISIS_TEMPLATE: CrisisTemplate = {
     fx("tick", "approval", "government", "overall", -0.025, "Government approval erosion"),
   ],
   wireMessageOnStart:
-    "An energy crisis has hit global markets. Fuel prices spike and supply chains strain.",
+    "Fuel and gas prices hit new highs after a supply cut. Utilities are warning customers about higher bills.",
   wireMessageOnEnd: "Energy markets stabilize. Prices moderate and supply normalizes.",
   interactionDefinition: {
     decisionTree: [
@@ -1228,7 +1231,7 @@ const REFUGEE_CRISIS_TEMPLATE: CrisisTemplate = {
   heroImage:
     "https://images.unsplash.com/photo-1721390017772-12182f8b685b?auto=format&fit=crop&w=1600&q=70",
   description:
-    "A neighboring conflict triggers a mass displacement. Refugee flows strain border regions, social services buckle, and political tensions rise.",
+    "A war next door has sent large numbers of people across the border. Border regions and local services are stretched, newcomers compete for jobs and food, and the government is judged on how it copes. Expect slower growth, higher unemployment and food costs, and lower approval for about 8 turns.",
   scope: "country",
   countryIds: [],
   regionIds: [],
@@ -1241,7 +1244,7 @@ const REFUGEE_CRISIS_TEMPLATE: CrisisTemplate = {
     fx("tick", "approval", "government", "overall", -0.03, "Government approval erosion"),
   ],
   wireMessageOnStart:
-    "A refugee crisis has begun. Displaced populations strain border regions and social services.",
+    "Thousands of people have crossed the border in the past day. Reception centers in border towns are full.",
   wireMessageOnEnd: "The refugee flow slows. Integration efforts continue.",
   interactionDefinition: {
     decisionTree: [
@@ -1346,7 +1349,7 @@ export const PANDEMIC_TEMPLATE: CrisisTemplate = {
   heroImage:
     "https://images.unsplash.com/photo-1584634731339-252c581abfc5?auto=format&fit=crop&w=1600&q=70",
   description:
-    "A novel infectious disease spreads globally. Healthcare systems strain, economies lock down, and social life is disrupted.",
+    "A new disease is spreading from person to person. Hospitals fill up, people stay home, and shops, travel and restaurants lose customers. Business margins fall, growth and consumer confidence drop, unemployment rises and real wages slip for about 10 turns.",
   scope: "global",
   countryIds: [],
   regionIds: [],
@@ -1361,7 +1364,7 @@ export const PANDEMIC_TEMPLATE: CrisisTemplate = {
     fx("tick", "approval", "government", "overall", -0.025, "Government approval erosion"),
   ],
   wireMessageOnStart:
-    "A pandemic has emerged. Healthcare systems strain and economies face disruption.",
+    "Health authorities have confirmed a fast spreading new illness. Hospitals report rising admissions and some events are cancelled.",
   wireMessageOnEnd: "The pandemic subsides. Recovery begins.",
   interactionDefinition: {
     decisionTree: [
@@ -1442,7 +1445,7 @@ export const CURRENCY_CRISIS_TEMPLATE: CrisisTemplate = {
   heroImage:
     "https://images.unsplash.com/photo-1580519542036-c47de6196ba5?auto=format&fit=crop&w=1600&q=70",
   description:
-    "A sudden loss of confidence triggers capital flight and a sharp currency devaluation. Import prices surge, debt servicing costs spike, and the central bank faces a dilemma.",
+    "Investors are selling the currency and moving money abroad, so its value is falling fast. Imports cost more, firms that buy from abroad lose margin, and savings buy less. Inflation rises while growth, investor confidence, incomes and approval fall for about 6 turns.",
   scope: "country",
   countryIds: [],
   regionIds: [],
@@ -1457,7 +1460,7 @@ export const CURRENCY_CRISIS_TEMPLATE: CrisisTemplate = {
     fx("tick", "approval", "government", "overall", -0.03, "Government approval erosion"),
   ],
   wireMessageOnStart:
-    "A currency crisis has erupted. Capital flees, the exchange rate collapses, and import prices soar.",
+    "The currency lost a large share of its value this week as investors pulled money out. Importers report sharply higher costs.",
   wireMessageOnEnd: "Currency markets stabilize. The worst of the devaluation passes.",
   interactionDefinition: {
     decisionTree: [
@@ -1531,7 +1534,7 @@ const DROUGHT_FAMINE_TEMPLATE: CrisisTemplate = {
   heroImage:
     "https://images.unsplash.com/photo-1753542175735-f57082a5ff79?auto=format&fit=crop&w=1600&q=70",
   description:
-    "Severe drought devastates agriculture. Crop failures push food prices higher, rural livelihoods collapse, and humanitarian agencies warn of famine.",
+    "Months without rain have ruined harvests. Food is scarce and expensive, farm incomes collapse, and aid groups warn of hunger in the worst hit areas. Growth takes a large one-off hit, inflation and the cost of living jump, and incomes and approval fall for about 5 turns.",
   scope: "region",
   countryIds: [],
   regionIds: [],
@@ -1545,7 +1548,7 @@ const DROUGHT_FAMINE_TEMPLATE: CrisisTemplate = {
     fx("tick", "approval", "government", "overall", -0.03, "Government approval erosion"),
   ],
   wireMessageOnStart:
-    "A severe drought is devastating agriculture. Food prices rise and rural livelihoods are at risk.",
+    "Harvests have failed after months of drought. Grain and vegetable prices are climbing and farmers are selling livestock.",
   wireMessageOnEnd: "Rain returns and food markets stabilize. Recovery will take time.",
   interactionDefinition: {
     decisionTree: [
@@ -1609,7 +1612,7 @@ const HOUSING_COLLAPSE_TEMPLATE: CrisisTemplate = {
   heroImage:
     "https://images.unsplash.com/photo-1560518883-ce09059eeffa?auto=format&fit=crop&w=1600&q=70",
   description:
-    "A property bubble bursts. Home prices plunge, construction halts, household wealth evaporates, and heavily mortgaged banks face rising defaults.",
+    "House prices have begun to fall fast after years of rises. Builders stop projects, owners with large mortgages are underwater, and banks worry about defaults. Property values drop about 15% at the outset, construction jobs go, and consumer confidence, margins and approval fall for about 8 turns.",
   scope: "country",
   countryIds: [],
   regionIds: [],
@@ -1624,7 +1627,7 @@ const HOUSING_COLLAPSE_TEMPLATE: CrisisTemplate = {
     fx("tick", "approval", "government", "overall", -0.025, "Government approval erosion"),
   ],
   wireMessageOnStart:
-    "The housing market has collapsed. Prices plunge, construction stops, and household wealth evaporates.",
+    "Home prices fell sharply this quarter and new construction has stalled. Lenders are tightening mortgage terms.",
   wireMessageOnEnd: "Housing markets bottom out. A slow recovery begins.",
   interactionDefinition: {
     decisionTree: [
@@ -1687,7 +1690,7 @@ const LABOR_STRIKES_TEMPLATE: CrisisTemplate = {
   heroImage:
     "https://images.unsplash.com/photo-1511898634545-c01af8a54dd5?auto=format&fit=crop&w=1600&q=70",
   description:
-    "Widespread strikes disrupt transport, manufacturing, and public services. Wage demands fuel inflationary pressure and supply chains seize up.",
+    "Workers in transport, manufacturing and public services have walked out together to demand higher pay. Deliveries stall and output falls, and any raises that follow push prices up. Margins, growth, consumer confidence and approval fall and inflation rises for about 5 turns.",
   scope: "country",
   countryIds: [],
   regionIds: [],
@@ -1701,7 +1704,7 @@ const LABOR_STRIKES_TEMPLATE: CrisisTemplate = {
     fx("tick", "approval", "government", "overall", -0.03, "Government approval erosion"),
   ],
   wireMessageOnStart:
-    "A wave of labor strikes is disrupting the economy. Wage demands and supply-chain bottlenecks mount.",
+    "Rail, factory and public sector workers began a joint strike today. Services are running at a fraction of normal.",
   wireMessageOnEnd: "Strikes wind down. New wage settlements reshape labor costs.",
   interactionDefinition: {
     decisionTree: [
@@ -2179,7 +2182,7 @@ const DEBT_DEFAULT_CONTAGION_TEMPLATE: CrisisTemplate = {
   heroImage:
     "https://images.unsplash.com/photo-1760872645513-63b6846ce3c9?auto=format&fit=crop&w=1600&q=70",
   description:
-    "A major government defaults on its debt. Contagion spreads through credit markets, borrowing costs spike, and austerity looms for debtor nations.",
+    "A large government has stopped paying its debts and lenders fear others will follow. Borrowing gets expensive everywhere, banks that held the bonds take losses, and indebted governments face pressure to cut spending. Growth takes a heavy one-off hit and then a steady drag, with higher unemployment and inflation, for about 6 turns.",
   scope: "country",
   countryIds: [],
   regionIds: [],
@@ -2195,7 +2198,7 @@ const DEBT_DEFAULT_CONTAGION_TEMPLATE: CrisisTemplate = {
     fx("tick", "approval", "government", "overall", -0.04, "Government approval collapse"),
   ],
   wireMessageOnStart:
-    "A sovereign debt default has roiled credit markets. Contagion and austerity fears spread.",
+    "A major government has missed payments on its bonds. Borrowing costs jumped across the market as investors sold debt.",
   wireMessageOnEnd: "Creditors and the defaulting government reach a restructuring deal.",
   interactionDefinition: {
     decisionTree: [
@@ -2263,7 +2266,7 @@ const SUPPLY_CHAIN_DISRUPTION_TEMPLATE: CrisisTemplate = {
   heroImage:
     "https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=1600&q=70",
   description:
-    "A cascade of shipping bottlenecks, factory shutdowns, and port backlogs paralyzes global supply chains. Shelves empty, production stalls, and input costs soar.",
+    "Ships are stuck, factories are short of parts and ports are backed up. Stores run low on goods and firms pay more for what they can get. Profit margins shrink, growth slows, consumer confidence falls and inflation rises for about 8 turns.",
   scope: "global",
   countryIds: [],
   regionIds: [],
@@ -2277,7 +2280,7 @@ const SUPPLY_CHAIN_DISRUPTION_TEMPLATE: CrisisTemplate = {
     fx("tick", "approval", "government", "overall", -0.02, "Government approval erosion"),
   ],
   wireMessageOnStart:
-    "Global supply chains are seizing up. Shipping bottlenecks and factory shutdowns cascade.",
+    "Container backlogs and factory shutdowns are delaying deliveries worldwide. Retailers warn of empty shelves.",
   wireMessageOnEnd: "Supply chains stabilize. Shipping backlogs clear and production resumes.",
   interactionDefinition: {
     decisionTree: [
@@ -2347,7 +2350,7 @@ export const TECH_BUBBLE_BURST_TEMPLATE: CrisisTemplate = {
   heroImage:
     "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1600&q=70",
   description:
-    "Overvalued tech stocks collapse after years of speculative excess. Venture capital evaporates, tech layoffs mount, and startup ecosystems contract sharply.",
+    "Technology company valuations have collapsed. Funding for startups dries up, firms lay off staff, and investors who lost money spend less. Growth takes a large one-off hit, then unemployment rises while investor and consumer confidence fall for about 8 turns.",
   scope: "country",
   countryIds: [],
   regionIds: [],
@@ -2362,7 +2365,7 @@ export const TECH_BUBBLE_BURST_TEMPLATE: CrisisTemplate = {
     fx("tick", "approval", "government", "overall", -0.02, "Government approval erosion"),
   ],
   wireMessageOnStart:
-    "The tech bubble has burst. Valuations collapse and layoffs sweep the sector.",
+    "Tech stocks fell sharply for the third week running. Several well funded startups announced layoffs.",
   wireMessageOnEnd:
     "Tech markets find a floor. Survivors restructure and hiring cautiously resumes.",
   interactionDefinition: {
@@ -2433,7 +2436,7 @@ const EXTREME_HEAT_TEMPLATE: CrisisTemplate = {
   heroImage:
     "https://images.unsplash.com/photo-1563630381190-77c336ea545a?auto=format&fit=crop&w=1600&q=70",
   description:
-    "Record-breaking temperatures overwhelm cooling infrastructure, spike energy demand, and cause widespread health emergencies. Agricultural yields fall and outdoor workers face deadly conditions.",
+    "Temperatures have stayed above records for days. People crowd into hospitals with heat illness, air conditioning pushes the grid hard, and outdoor work slows. Growth slips, energy and food costs rise, air quality worsens and approval falls for about 3 turns.",
   scope: "region",
   countryIds: [],
   regionIds: [],
@@ -2447,7 +2450,7 @@ const EXTREME_HEAT_TEMPLATE: CrisisTemplate = {
     fx("tick", "approval", "government", "overall", -0.025, "Government approval erosion"),
   ],
   wireMessageOnStart:
-    "A record heat wave is sweeping the region. Health systems are overwhelmed and energy grids are straining.",
+    "Record temperatures are straining the power grid and hospitals. Officials urge people to stay indoors during the afternoon.",
   wireMessageOnEnd: "Temperatures moderate. Recovery from the heat wave begins.",
   interactionDefinition: {
     decisionTree: [
@@ -2656,7 +2659,7 @@ export const COUP_ATTEMPT_TEMPLATE: CrisisTemplate = {
   heroImage:
     "https://images.unsplash.com/photo-1608396941316-ea89219bd56e?auto=format&fit=crop&w=1600&q=70",
   description:
-    "A faction of military officers or political extremists attempts to seize power. The capital is locked down, constitutional order is suspended, and foreign governments weigh how to respond.",
+    "Armed factions have seized government buildings and the capital is locked down. Nobody is sure who is in charge, investors pull their money out, and public order breaks down. Growth takes a big one-off hit, investor and public safety confidence collapse, and approval falls sharply for about 3 turns.",
   scope: "country",
   countryIds: [],
   regionIds: [],
@@ -2670,7 +2673,7 @@ export const COUP_ATTEMPT_TEMPLATE: CrisisTemplate = {
     fx("tick", "approval", "government", "overall", -0.06, "Government approval collapse"),
   ],
   wireMessageOnStart:
-    "A coup attempt is underway. Military factions have seized key installations and the capital is in lockdown.",
+    "Soldiers have taken control of key buildings in the capital. The government says it is working to restore order.",
   wireMessageOnEnd: "The coup attempt is defeated. Constitutional order is restored.",
   interactionDefinition: {
     decisionTree: [
@@ -2792,7 +2795,7 @@ export const POWER_GRID_FAILURE_TEMPLATE: CrisisTemplate = {
   heroImage:
     "https://images.unsplash.com/photo-1611416457332-946853cc75d6?auto=format&fit=crop&w=1600&q=70",
   description:
-    "A cascading failure across the power grid plunges regions into darkness. Hospitals run on generators, factories shut down, and communications infrastructure strains under the outage.",
+    "A failure has spread through the power grid and large areas are dark. Factories stop, hospitals run on generators, and phone and data networks strain. Output takes a large one-off hit, grid reliability falls sharply, and consumers and the government lose confidence for about 4 turns.",
   scope: "country",
   countryIds: [],
   regionIds: [],
@@ -2807,7 +2810,7 @@ export const POWER_GRID_FAILURE_TEMPLATE: CrisisTemplate = {
     fx("tick", "approval", "government", "overall", -0.04, "Government approval erosion"),
   ],
   wireMessageOnStart:
-    "A cascading grid failure has caused widespread blackouts. Essential services are running on backup power.",
+    "Blackouts have spread across several regions after a grid failure. Hospitals are on backup power and repair crews are out.",
   wireMessageOnEnd: "Power is restored. Grid engineers assess the systemic failures.",
   interactionDefinition: {
     decisionTree: [
@@ -2882,7 +2885,7 @@ const WATER_CRISIS_TEMPLATE: CrisisTemplate = {
   heroImage:
     "https://images.unsplash.com/photo-1769298315896-fc23a5dcbff8?auto=format&fit=crop&w=1600&q=70",
   description:
-    "Aquifer depletion, contamination, or prolonged drought drives a severe water scarcity crisis. Agriculture collapses, cities impose rationing, and public health deteriorates.",
+    "Water is running short because of drought, contamination or falling aquifers. Farms fail, cities ration supply, and food and water prices rise. Growth takes a large one-off hit, the cost of living and inflation rise, farm unemployment grows and approval falls for about 7 turns.",
   scope: "region",
   countryIds: [],
   regionIds: [],
@@ -2896,7 +2899,7 @@ const WATER_CRISIS_TEMPLATE: CrisisTemplate = {
     fx("tick", "approval", "government", "overall", -0.03, "Government approval erosion"),
   ],
   wireMessageOnStart:
-    "A water crisis has taken hold. Rationing begins and agricultural losses mount.",
+    "Water rationing has begun in several cities. Farmers report crop losses as reservoirs run low.",
   wireMessageOnEnd: "The water crisis eases. Reservoirs begin refilling and supplies stabilize.",
   interactionDefinition: {
     decisionTree: [
@@ -2971,7 +2974,7 @@ export const DISINFORMATION_CRISIS_TEMPLATE: CrisisTemplate = {
   heroImage:
     "https://images.unsplash.com/photo-1504711434969-e33886168f5c?auto=format&fit=crop&w=1600&q=70",
   description:
-    "A coordinated disinformation campaign, possibly foreign-backed, floods media and social platforms. Public trust drops, election results are questioned, and communities split along partisan lines.",
+    "A coordinated campaign of false stories is spreading through news and social media. Trust in institutions falls, people doubt official results, and communities argue over basic facts. Public safety confidence and investor confidence drop and approval falls for about 5 turns.",
   scope: "country",
   countryIds: [],
   regionIds: [],
@@ -2983,7 +2986,7 @@ export const DISINFORMATION_CRISIS_TEMPLATE: CrisisTemplate = {
     fx("tick", "approval", "government", "overall", -0.04, "Government approval erosion"),
   ],
   wireMessageOnStart:
-    "A disinformation crisis is destabilizing public discourse. Trust in institutions is eroding rapidly.",
+    "Fabricated stories are spreading widely online. Officials are asking platforms to remove them as trust in institutions drops.",
   wireMessageOnEnd: "The disinformation wave subsides. Trust in institutions slowly recovers.",
   interactionDefinition: {
     decisionTree: [
@@ -3169,7 +3172,7 @@ const DEBT_CEILING_CRISIS_TEMPLATE: CrisisTemplate = {
   heroImage:
     "https://images.unsplash.com/photo-1468254095679-bbcba94a7066?auto=format&fit=crop&w=1600&q=70",
   description:
-    "Political gridlock over raising the debt ceiling brings government to the brink of default. Markets price in rising risk, credit agencies warn of downgrades, and federal workers face uncertain pay.",
+    "Lawmakers cannot agree to raise the limit on government borrowing, and the treasury is close to running out of room. Lenders ask for more, rating agencies warn of downgrades, and government workers face delayed pay. Investor confidence, growth and margins fall and approval drops for about 4 turns.",
   scope: "country",
   countryIds: [],
   regionIds: [],
@@ -3182,7 +3185,7 @@ const DEBT_CEILING_CRISIS_TEMPLATE: CrisisTemplate = {
     fx("tick", "approval", "government", "overall", -0.05, "Government dysfunction approval hit"),
   ],
   wireMessageOnStart:
-    "A debt ceiling standoff is rattling markets. Default risk climbs as political leaders remain deadlocked.",
+    "Talks to raise the borrowing limit have stalled. Rating agencies warn of a downgrade if there is no deal.",
   wireMessageOnEnd: "A deal is struck. The debt ceiling is raised and default averted.",
   interactionDefinition: {
     decisionTree: [
@@ -3369,7 +3372,7 @@ const BRIDGE_COLLAPSE_TEMPLATE: CrisisTemplate = {
   heroImage:
     "https://images.unsplash.com/photo-1657682947944-a89ee627d862?auto=format&fit=crop&w=1600&q=70",
   description:
-    "A major bridge fails, severing a key transport link. Freight reroutes for miles, commutes seize up, and local businesses lose access to customers and suppliers.",
+    "A major bridge has failed and the route is closed. Trucks take long detours, commuters lose hours, and businesses on both sides lose customers and suppliers. Growth and margins take a one-off hit, nearby infrastructure needs repair, and approval slips for about 3 turns.",
   scope: "region",
   countryIds: [],
   regionIds: [],
@@ -3392,7 +3395,7 @@ const BRIDGE_COLLAPSE_TEMPLATE: CrisisTemplate = {
     fx("tick", "approval", "government", "overall", -0.02, "Government approval erosion"),
   ],
   wireMessageOnStart:
-    "A major bridge has collapsed, severing a key transport link. Freight detours and commutes back up for miles.",
+    "A major bridge has collapsed and the route is closed. Traffic is being diverted and inspectors are on site.",
   wireMessageOnEnd: "A temporary span reopens the crossing. Full repairs continue.",
 };
 
@@ -3403,7 +3406,7 @@ const PORT_CLOSURE_TEMPLATE: CrisisTemplate = {
   heroImage:
     "https://images.unsplash.com/photo-1605745341112-85968b19335b?auto=format&fit=crop&w=1600&q=70",
   description:
-    "The region's main port shuts down after a critical failure. Cargo backs up at anchor, importers run short, and exporters miss shipments.",
+    "The main port has stopped handling cargo after a critical failure. Ships queue offshore, importers run short of goods and exporters miss shipments. Growth and the trade balance take a hit and profit margins fall for about 4 turns.",
   scope: "region",
   countryIds: [],
   regionIds: [],
@@ -3426,7 +3429,7 @@ const PORT_CLOSURE_TEMPLATE: CrisisTemplate = {
     fx("tick", "approval", "government", "overall", -0.015, "Government approval erosion"),
   ],
   wireMessageOnStart:
-    "The region's main port has shut down after a critical failure. Cargo backs up and supply chains seize.",
+    "The main port has halted operations after a critical failure. Ships are waiting offshore and cargo is piling up.",
   wireMessageOnEnd: "The port reopens. Backlogged cargo begins to clear.",
 };
 
@@ -3436,7 +3439,7 @@ const INDUSTRIAL_ACCIDENT_TEMPLATE: CrisisTemplate = {
   heroImage:
     "https://images.unsplash.com/photo-1676624775964-10bc144cbeba?auto=format&fit=crop&w=1600&q=70",
   description:
-    "A major accident at an industrial site forces a shutdown and area evacuation. Production halts and a cleanup operation begins under regulatory scrutiny.",
+    "An explosion or leak at a large industrial site has forced the plant to shut and nearby residents to leave. Output stops, chemicals have fouled the air, and regulators have opened an inquiry. Growth and margins take a one-off hit and air quality drops for about 3 turns.",
   scope: "region",
   countryIds: [],
   regionIds: [],
@@ -3459,7 +3462,7 @@ const INDUSTRIAL_ACCIDENT_TEMPLATE: CrisisTemplate = {
     fx("tick", "approval", "government", "overall", -0.02, "Government approval erosion"),
   ],
   wireMessageOnStart:
-    "A major industrial accident has forced a plant shutdown and area evacuation. Investigators are on site.",
+    "A major accident at an industrial plant has forced a shutdown and an evacuation. Investigators are on site.",
   wireMessageOnEnd: "The site is secured. Operations resume under review.",
 };
 

@@ -884,7 +884,7 @@ function StartingStateDashboard2019() {
           icon={BarChart2}
           label="Sector markets"
           value={String(OPERATING_SECTOR_TYPES.length)}
-          detail="Every region starts with an unowned market pool for each corporation sector."
+          detail="Every region starts with market demand in each corporation sector and no corporation serving it."
         />
       </div>
 

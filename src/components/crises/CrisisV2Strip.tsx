@@ -86,7 +86,7 @@ export function CrisisV2Strip({
   v2: CrisisV2Summary;
   onPulled?: () => void;
 }) {
-  const forecast = forecastText(v2.severity, v2.forecast);
+  const forecast = forecastText(v2.severity, v2.forecast, v2.graceTurns);
   return (
     <div className="space-y-2 text-sm">
       <StageTrack stage={v2.stage} />

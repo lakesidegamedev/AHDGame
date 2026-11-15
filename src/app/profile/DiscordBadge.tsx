@@ -33,7 +33,7 @@ export function DiscordBadge({ discordId, discordUsername, discordAvatar }: Disc
       type="button"
       onClick={() => {
         // best-effort copy; guard the promise so a Safari/denied clipboard
-        // rejection doesn't surface as an unhandled rejection in GlitchTip.
+        // rejection doesn't surface as an unhandled rejection in the error tracker.
         void navigator.clipboard.writeText(discordUsername).catch(() => {});
       }}
       className={`${BADGE_CLASS} cursor-pointer font-medium text-foreground transition-colors hover:bg-card-elevated`}

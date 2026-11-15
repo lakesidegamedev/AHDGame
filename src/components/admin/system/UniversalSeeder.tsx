@@ -215,7 +215,7 @@ const SEED_TARGETS: SeedTarget[] = [
   {
     id: "jpDemographics",
     label: "JP demographics",
-    description: "10 voter archetypes, 8 region demographics, and turnout modifiers",
+    description: "10 voter groups, 8 region demographics, and turnout modifiers",
     destructiveWarning: "Drops and recreates JP demographic data",
     scope: "JP",
   },
@@ -270,7 +270,7 @@ const SEED_TARGETS: SeedTarget[] = [
   {
     id: "deDemographics",
     label: "DE demographics",
-    description: "8 voter archetypes, 16 Land demographics, and turnout modifiers",
+    description: "8 voter groups, 16 Land demographics, and turnout modifiers",
     destructiveWarning: "Drops and recreates DE demographic data",
     scope: "DE",
   },
@@ -349,7 +349,7 @@ const SEED_TARGETS: SeedTarget[] = [
   {
     id: "ieDemographics",
     label: "IE demographics",
-    description: "8 voter archetypes, 8 region demographics, and turnout modifiers",
+    description: "8 voter groups, 8 region demographics, and turnout modifiers",
     destructiveWarning: "Drops and recreates IE demographic data",
     scope: "IE",
   },
@@ -405,7 +405,7 @@ const SEED_TARGETS: SeedTarget[] = [
   {
     id: "brDemographics",
     label: "BR demographics",
-    description: "8 voter archetypes, 5 region demographics, and turnout modifiers",
+    description: "8 voter groups, 5 region demographics, and turnout modifiers",
     destructiveWarning: "Drops and recreates BR demographic data",
     scope: "BR",
   },
@@ -453,7 +453,7 @@ const SEED_TARGETS: SeedTarget[] = [
   {
     id: "ngDemographics",
     label: "NG demographics",
-    description: "Nigeria voter archetypes, region demographics, and turnout modifiers",
+    description: "Nigeria voter groups, region demographics, and turnout modifiers",
     destructiveWarning: "Drops and recreates NG demographic data",
     scope: "NG",
   },
@@ -508,7 +508,7 @@ const SEED_TARGETS: SeedTarget[] = [
   {
     id: "cnDemographics",
     label: "CN demographics",
-    description: "7 voter archetypes, 7 region demographics, and turnout modifiers",
+    description: "7 voter groups, 7 region demographics, and turnout modifiers",
     destructiveWarning: "Drops and recreates CN demographic data",
     scope: "CN",
   },

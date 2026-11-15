@@ -27,6 +27,7 @@ import { loadCrisisV2Summaries, type CrisisV2Summary } from "@/lib/crises/querie
 import type { CampaignRequirementResult } from "@/lib/livingConflict/campaign";
 import type { CampaignCapabilitySnapshot } from "@/lib/db/types/livingConflictCampaign";
 import { crisesCollection } from "@/lib/db/repositories/crises";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 export interface ActiveCrisisForCharacter {
   crisis: Crisis;
@@ -197,9 +198,19 @@ export async function GET(request: Request) {
       .sort(compareActionsPageCrises)
       .map(sanitizeCrisisForActionsPage);
 
+    // Region ids are state ids; the folded list shows their names.
+    const regionIds = [...new Set(affecting.flatMap((e) => e.crisis.regionIds ?? []))];
+    const regionNames: Record<string, string> = {};
+    if (regionIds.length > 0) {
+      const states = await statesCollection<{ _id: string; name?: string }>(db)
+        .find({ _id: { $in: regionIds } }, { projection: { name: 1 } })
+        .toArray();
+      for (const state of states) if (state.name) regionNames[state._id] = state.name;
+    }
+
     // Per-character (filtered by country/home state) — ETag/304 keeps crisis
     // state live per poll while skipping the body when nothing changed.
-    return conditionalJson(request, { crises: affecting });
+    return conditionalJson(request, { crises: affecting, regionNames });
   } catch (err) {
     return handleRouteError(err);
   }

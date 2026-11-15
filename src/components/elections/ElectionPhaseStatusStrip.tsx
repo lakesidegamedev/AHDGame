@@ -42,7 +42,7 @@ export function ElectionPhaseStatusStrip({
   // Absolute deadlines must render through <LocalTime>: this strip is
   // server-rendered on /country/[code]/elections, and formatting with the
   // host's locale/timezone (clock.formatAbsoluteDeadline → toLocaleString)
-  // produced different SSR vs client text — React #418 (GlitchTip AHD-17C).
+  // produced different SSR vs client text (React #418).
   // <LocalTime> emits a deterministic UTC string on SSR + first client render,
   // then swaps to the viewer's local time after mount. `toAbsoluteWallClock`
   // keeps the cron-drift shift the old string had.

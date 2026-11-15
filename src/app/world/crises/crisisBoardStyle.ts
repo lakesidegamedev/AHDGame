@@ -1,5 +1,6 @@
 import type { CrisisKind, ExposureReason } from "@/lib/crises/rules/boardView";
 import type { CrisisSeverity } from "@/lib/crises/severity";
+import { SEVERITY_BAND_LABEL } from "@/lib/crises/rules/crisisRow";
 
 export const KIND_LABEL: Record<CrisisKind, string> = {
   war: "War",
@@ -24,11 +25,7 @@ export const SEVERITY_BADGE: Record<CrisisSeverity, string> = {
   low: "border-zinc-400/30 bg-zinc-400/10 text-muted",
 };
 
-export const SEVERITY_LABEL: Record<CrisisSeverity, string> = {
-  high: "Severe",
-  medium: "Serious",
-  low: "Watch",
-};
+export const SEVERITY_LABEL: Record<CrisisSeverity, string> = SEVERITY_BAND_LABEL;
 
 export const SEVERITY_RADIUS: Record<CrisisSeverity, number> = { high: 11, medium: 8, low: 5.5 };
 

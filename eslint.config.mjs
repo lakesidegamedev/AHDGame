@@ -38,7 +38,7 @@ const eslintConfig = defineConfig([
     ".superpowers/**",
     ".agents-local-backup-*/**",
     // Playwright e2e tests — not part of the Next.js build, no React rules needed
-    "e2e/**",
+    "tests/e2e/**",
     // Ad-hoc debug/test scripts in project root
     "check-min-wage.js",
     "test-uk-filter.js",
@@ -57,9 +57,6 @@ const eslintConfig = defineConfig([
     // Card, etc.) rather than importing — no value in linting them.
     "docs/design-handoffs/**",
     ".design-bundle/**",
-    // Nationalization UI design bundle (Claude Design export) — same reason:
-    // reference-only mockups whose components reference shared globals, not imports.
-    "docs/superpowers/specs/**/prototype/**",
   ]),
   // Project-level rule overrides
   {
@@ -119,7 +116,7 @@ const eslintConfig = defineConfig([
       // Custom rule to prevent hardcoded country literals
       "local/no-country-literals": "error",
       // Surface error-swallowing .catch() handlers that hide fetch failures from
-      // the UI and GlitchTip. Warn (not error) because there is a large existing
+      // the UI and the error tracker. Warn (not error) because there is a large existing
       // backlog to migrate to fetchJson incrementally; the warnings are the backlog.
       "local/no-silent-fetch-catch": "warn",
       // Every user-facing timestamp must render in the VIEWER's local timezone, not

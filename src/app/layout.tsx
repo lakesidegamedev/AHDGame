@@ -37,7 +37,6 @@ import { COUNTRY_ORDER, type CountryId } from "@/lib/constants/countries";
 import { isSingleplayer } from "@/lib/singleplayer";
 import { CookieConsentBanner } from "@/components/CookieConsent";
 import { COOKIE_CONSENT_KEY } from "@/lib/analytics/storageKeys";
-import { SiteTrafficTracker } from "@/components/SiteTrafficTracker";
 import { DeferredAnalytics } from "@/components/DeferredAnalytics";
 import { CDN_LOGO_URL } from "@/lib/images/cdnStaticUrls";
 import {
@@ -406,7 +405,6 @@ export default async function RootLayout({
                             }
                             tabIndex={-1}
                           >
-                            <SiteTrafficTracker gameVersion={world.version} />
                             {!singleplayer && !isNativeApp && !isWikiSubdomain && (
                               <DeferredAnalytics />
                             )}
@@ -428,8 +426,8 @@ export default async function RootLayout({
                               every full document load two origin round-trips, two SSR
                               404 renders and ~68KB for telemetry that never recorded
                               anything. Removed 2026-09-06; see layout.telemetry.test.ts.
-                              Page views are already covered by SiteTrafficTracker and
-                              the self-hosted umami tag below. */}
+                              Page views are covered by the self-hosted umami tag
+                              below. */}
                           {!singleplayer && (
                             <>
                               {/* Optional self-hosted umami tag. The host is

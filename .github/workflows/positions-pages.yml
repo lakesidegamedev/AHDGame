@@ -7,7 +7,7 @@ on:
     branches: [development]
     paths:
       - "src/lib/seeds/**"
-      - "tools/positions-atlas/**"
+      - "scripts/analysis/positions-atlas/**"
       - "scripts/analysis/export-lean-atlas.ts"
       - ".github/workflows/positions-pages.yml"
   workflow_dispatch:
@@ -34,10 +34,10 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci --no-audit --no-fund
-      - run: npx tsx --tsconfig tsconfig.json scripts/analysis/export-lean-atlas.ts tools/positions-atlas/lean-atlas.json
+      - run: npx tsx --tsconfig tsconfig.json scripts/analysis/export-lean-atlas.ts scripts/analysis/positions-atlas/lean-atlas.json
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: tools/positions-atlas
+          path: scripts/analysis/positions-atlas
       - id: deployment
         uses: actions/deploy-pages@v4

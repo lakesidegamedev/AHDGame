@@ -4,7 +4,7 @@
  *
  * Because `fetch` does not reject on HTTP errors, a 4xx/5xx flows through `.then`
  * and the error body is rendered as data (empty list, $0, stale UI), while the
- * zero-argument catch hides the failure from GlitchTip. Prefer `fetchJson` from
+ * zero-argument catch hides the failure from the error tracker. Prefer `fetchJson` from
  * `@/lib/observability/fetchJson`, which checks `response.ok`, throws a typed
  * `HttpError`, and reports genuine faults — then drive a real error state in the
  * caller's own catch.
@@ -35,7 +35,7 @@ function isEmptyReturnValue(node) {
  *     bare identifier; this is defensive error-body parsing, not a hidden fetch
  *     failure (the await on fetch already threw on a network error).
  *   - `fetchJson(...).catch(() => null)` → fetchJson already captures network +
- *     5xx to GlitchTip, so degrading its rejection to null hides nothing.
+ *     5xx to the error tracker, so degrading its rejection to null hides nothing.
  *   - any non-fetch promise's `.catch()` — out of scope for this rule.
  */
 function chainRootName(node) {
@@ -90,7 +90,7 @@ module.exports = {
     },
     messages: {
       silentCatch:
-        "This .catch() swallows the error without inspecting it, hiding failures from the UI and GlitchTip. Use fetchJson (@/lib/observability/fetchJson) and drive an error state, or at least capture the error.",
+        "This .catch() swallows the error without inspecting it, hiding failures from the UI and the error tracker. Use fetchJson (@/lib/observability/fetchJson) and drive an error state, or at least capture the error.",
     },
     schema: [],
   },

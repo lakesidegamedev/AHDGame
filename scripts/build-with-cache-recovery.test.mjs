@@ -144,7 +144,7 @@ test("explicit recovery refuses symlinked compiler directories", async (t) => {
 });
 
 for (const fail of ["never", "first", "always"]) {
-  test(`npm build keeps postbuild after successful compilation only (${fail})`, async (t) => {
+  test(`npm build runs the recovery wrapper and nothing after it (${fail})`, async (t) => {
     const h = fixture(t);
     const { copyFileSync } = await import("node:fs");
     const { spawnSync } = await import("node:child_process");
@@ -156,18 +156,6 @@ for (const fail of ["never", "first", "always"]) {
     }
     mkdirSync(join(h.cwd, "node_modules/next/dist/bin"), { recursive: true });
     copyFileSync(join(h.cwd, "fake-build.cjs"), join(h.cwd, "node_modules/next/dist/bin/next"));
-    mkdirSync(join(h.cwd, "node_modules/.bin"), { recursive: true });
-    writeFileSync(
-      join(h.cwd, "node_modules/.bin/tsx"),
-      "#!/usr/bin/env node\nrequire('node:fs').writeFileSync('postbuilt','yes');",
-      { mode: 0o755 }
-    );
-    if (process.platform === "win32") {
-      writeFileSync(
-        join(h.cwd, "node_modules/.bin/tsx.cmd"),
-        "@node -e \"require('node:fs').writeFileSync('postbuilt','yes')\""
-      );
-    }
     const result = spawnSync("npm", ["run", "build"], {
       cwd: h.cwd,
       env: { ...process.env, RAILWAY_ENVIRONMENT_NAME: "test", FAIL: fail, DIAGNOSTIC: panic },
@@ -177,7 +165,6 @@ for (const fail of ["never", "first", "always"]) {
     assert.equal(result.status, fail === "always" ? 7 : 0, result.stderr);
     assert.equal(h.attempts(), fail === "never" ? 1 : 2);
     assert.equal(h.marker("turbopack"), fail === "never");
-    assert.equal(existsSync(join(h.cwd, "postbuilt")), fail !== "always");
     assert.equal(h.marker("fetch-cache"), true);
   });
 }

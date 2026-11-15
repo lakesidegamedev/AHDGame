@@ -6,9 +6,9 @@ import type { Crisis } from "@/lib/db/types/crisis";
 import { getGameState } from "@/lib/gameState";
 import { resolveCrisisDefinition } from "@/lib/turn/crisisV2/ensureContent";
 import { forecastDoNothing, severityTrend, type SeverityTrend } from "@/lib/crises/v2/forecast";
-import { ledgerView, type LedgerRowView } from "@/lib/crises/v2/ledgerView";
+import { ROLE_LABEL, ledgerView, type LedgerRowView } from "@/lib/crises/v2/ledgerView";
 import { SEVERITY_HISTORY_LIMIT } from "@/lib/crises/v2/severity";
-import type { CrisisScar, CrisisStage, ScarKind } from "@/lib/crises/v2/types";
+import type { CrisisDefinition, CrisisScar, CrisisStage, ScarKind } from "@/lib/crises/v2/types";
 import {
   getAvailableLevers,
   type AvailableCrisisLevers,
@@ -34,6 +34,15 @@ export interface CrisisV2Summary {
   levers: CrisisV2Lever[];
   /** Companies the viewer runs that can pay for a company lever. */
   corporations: Array<{ id: string; name: string }>;
+  /** Who holds a response to this crisis, whatever the viewer can do. */
+  responders: CrisisV2Responder[];
+  /** Idle turns tolerated before doing nothing starts to cost severity. */
+  graceTurns: number;
+}
+
+export interface CrisisV2Responder {
+  role: string;
+  actions: string[];
 }
 
 export interface CrisisV2ScarView {
@@ -58,6 +67,18 @@ const CORPORATIONS_SHOWN = 12;
 
 export function hasLiveV2(crisis: Pick<Crisis, "status" | "v2">): crisis is V2Crisis {
   return crisis.status === "active" && !!crisis.v2 && crisis.v2.stage !== "resolved";
+}
+
+/** Roles that hold a lever on this definition, with the actions each can take. */
+export function respondersFor(
+  def: Pick<CrisisDefinition, "levers"> | undefined
+): CrisisV2Responder[] {
+  const byRole = new Map<string, string[]>();
+  for (const lever of def?.levers ?? []) {
+    const role = ROLE_LABEL[lever.role];
+    byRole.set(role, [...(byRole.get(role) ?? []), lever.label]);
+  }
+  return [...byRole].map(([role, actions]) => ({ role, actions }));
 }
 
 function withCorporationFlag(lever: AvailableLever): CrisisV2Lever {
@@ -94,6 +115,8 @@ function summarize(
     corporations: levers.some((l) => l.needsCorporation)
       ? scoped.map(({ id, name }) => ({ id, name }))
       : [],
+    responders: respondersFor(def),
+    graceTurns: def.severity.inaction.graceTurns,
   };
 }
 
@@ -208,6 +231,8 @@ export async function loadCrisisV2Detail(
     forecast: [],
     levers: [],
     corporations: [],
+    responders: respondersFor(def),
+    graceTurns: def?.severity.inaction.graceTurns ?? 0,
     ledger,
     scars,
   };

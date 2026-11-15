@@ -138,7 +138,7 @@ describe("GET /api/country/UK/executive — government.seatsByParty", () => {
 
 describe("GET /api/country/UK/executive — pmCharacterId shape", () => {
   it("resolves a PM whose id was persisted as a string instead of an ObjectId", async () => {
-    // GlitchTip #566: `pmCharacterId` is typed ObjectId, but a string in the
+    // Error report: `pmCharacterId` is typed ObjectId, but a string in the
     // stored doc made `pmCharacterId.equals(...)` throw and 500 the whole
     // executive page. A string id must resolve the PM, not crash.
     const pmId = new ObjectId();

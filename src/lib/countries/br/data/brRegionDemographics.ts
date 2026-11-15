@@ -1,7 +1,7 @@
 import type { CensusGroupView } from "@/lib/db/types";
 
 /**
- * Brazil macro-region demographic composition using the 8 BR voter archetypes.
+ * Brazil macro-region demographic composition using the 8 BR voter groups.
  * Each region defines population share per archetype (summing to 100%) plus
  * baseline lean and turnout. Regional character comes from mix weight, not
  * archetype-specific lean variation or exclusion; every archetype has a

@@ -51,7 +51,6 @@ Sentry.init({
     "GET /api/players/online",
     "GET /api/client-status",
     "GET /api/client-nav",
-    "POST /api/analytics/pageview",
   ],
 
   // SaaS logs are usage-billed. Keep errors and sampled traces as the initial

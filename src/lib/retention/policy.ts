@@ -165,7 +165,6 @@ export const RETENTION_POLICIES: RetentionPolicy[] = [
     mode: RetentionMode.ARCHIVE_ONLY_NO_DELETE,
     note: "Achievements + abuse detection count cumulatively from this. Needs a stored counter before any delete.",
   },
-  // NOTE: siteTrafficPageviews is intentionally omitted (already TTL'd at 180d).
   // NOTE: primarySnapshots keys on `recordedAt` (no `turn`) — deferred until a
   //       date-based policy is added.
 ];

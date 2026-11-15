@@ -61,8 +61,8 @@ export default function CommoditiesGuidePage() {
               produce certain goods <strong className="text-foreground">add to supply</strong>;
               sectors that consume them <strong className="text-foreground">add to demand</strong>.
               When supply is short, buyers pay a margin penalty. When supply exceeds demand, buyers
-              get a bonus and sellers are squeezed. Only owned sectors participate; unowned sectors
-              contribute nothing to either side.
+              get a bonus and sellers are squeezed. Only sectors that a corporation runs
+              participate; demand nobody serves yet contributes nothing to either side.
             </p>
             <Callout>
               Planned economies work differently: national prices can be administered by the plan

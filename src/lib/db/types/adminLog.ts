@@ -115,7 +115,9 @@ export type AdminLogAction =
   | "ip_rule_allowed"
   | "ip_rule_revoked"
   | "cgnat_soft_allow"
-  | "alt_scoring_config_updated";
+  | "alt_scoring_config_updated"
+  | "settlement_crisis_opened"
+  | "settlement_crisis_closed";
 
 export interface AdminLog {
   _id: ObjectId;

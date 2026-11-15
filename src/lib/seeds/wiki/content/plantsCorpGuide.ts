@@ -88,7 +88,7 @@ Everyone else sees much less. Rivals viewing your sector get market share and th
 
 ![What a rival sees on your sector page: market share and the pie stay public, money is owner only](/static/wiki/plants-corp-guide/sector-market-position.png)
 
-The **Market & supply** tab traces the same market from the outside: your share, your competitors, and the size of the unowned pool. Share is measured per market, one industry in one place, and many markets are small or mostly unowned, so a modest operation can be most of the player owned slice of a market that non player businesses otherwise serve. The "Unowned" wedge in the market pie is the part no corporation controls.
+The **Market & supply** tab traces the same market from the outside: your share, your competitors, and how much of the market nobody serves yet. Share is measured per market, one industry in one place, and many markets are small or mostly unowned, so a modest operation can be most of the player owned slice of a market that non player businesses otherwise serve. The "Unowned" wedge in the market pie is the part no corporation controls.
 
 ![The Market and supply chain view of a sector's market](/static/wiki/plants-corp-guide/market-supply-chain.png)
 
@@ -108,7 +108,7 @@ Three practical rules fall out of this:
 
 - **A low selling share is a demand problem, not a production problem.** Producing more into a glut just raises your costs.
 - **Price is your share weapon.** In an oversupplied market, lowering your price wins sales from rivals. It does not create new demand. Lower your price, or mothball, or point your capacity somewhere tighter.
-- **Watch the unowned pool.** Much of many markets is served by no player corporation at all. That revenue is claimable, but only up to what buyers actually spend.
+- **Watch the unserved demand.** Much of many markets is served by no player corporation at all. That revenue is claimable, but only up to what buyers actually spend.
 
 After ${STRANDED_WARN_TURNS} consecutive turns below half sold, the sector page shows a stranded-plant warning. The warning does not close or change a player-owned plant. It explains the condition and points the CEO to partial mothballing, strategy, inventory and sale controls.
 
@@ -127,7 +127,7 @@ Turning stockpiling off stops new inventory from being added. It does not delete
 
 ## Ordering more capacity
 
-The **Build capacity** dialog on the sector page prices an order, shows how long it takes, and tells you how much room buyers actually have, the smaller of the unowned market you could claim and the unmet demand left in the market. If you order more than that, the dialog warns you: the extra units will arrive with nobody to buy them.
+The **Build capacity** dialog on the sector page prices an order, shows how long it takes, and tells you how much room buyers actually have, the smaller of the market revenue you could claim and the unmet demand left in the market. If you order more than that, the dialog warns you: the extra units will arrive with nobody to buy them.
 
 Build times are per industry. Heavy, sited, permit bound industry is slow; asset light business is fast. For scale, 24 turns is one financial day and 48 turns is one game year:
 
