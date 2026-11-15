@@ -32,7 +32,7 @@ describe("validateNationalizationProvisions", () => {
     }
   });
 
-  it("validates an industry-wide sector-type nationalize with carve + scope", async () => {
+  it("rejects the retired unowned-market scope", async () => {
     const { validateNationalizationProvisions } = await import("./billProvisionValidation");
     const res = await validateNationalizationProvisions(
       db as unknown as Db,
@@ -46,13 +46,30 @@ describe("validateNationalizationProvisions", () => {
       ],
       "US"
     );
+    expect(res.ok).toBe(false);
+  });
+
+  it("validates an industry-wide sector-type nationalize with carve + scope", async () => {
+    const { validateNationalizationProvisions } = await import("./billProvisionValidation");
+    const res = await validateNationalizationProvisions(
+      db as unknown as Db,
+      [
+        {
+          type: "nationalize",
+          targetSectorType: "technology",
+          sectorCarveFraction: 0.4,
+          sectorScope: "npp_unowned",
+        },
+      ],
+      "US"
+    );
     expect(res.ok).toBe(true);
     if (res.ok) {
       expect(res.provisions[0]).toMatchObject({
         type: "nationalize",
         targetSectorType: "technology",
         sectorCarveFraction: 0.4,
-        sectorScope: "unowned",
+        sectorScope: "npp_unowned",
       });
     }
   });

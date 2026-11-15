@@ -382,7 +382,11 @@ async function settleForeignSector(
     throw badRequest("The sector transition reservation was lost during release");
 }
 
-/** The host country's existing state enterprise for a sector's lane, never created on demand. */
+/**
+ * The host country's existing state enterprise for a sector's lane: the lane's
+ * own split-off, else the primary National Corporation that absorbs every lane
+ * without one. Never created on demand.
+ */
 async function findStateEnterpriseForLane(
   db: Db,
   countryId: CountryId,
@@ -393,23 +397,13 @@ async function findStateEnterpriseForLane(
     sector.industryModel,
     sector.mediaDiscriminator
   );
-  const assigned = await corporationsCollection(db).findOne({
+  const corps = corporationsCollection(db);
+  const assigned = await corps.findOne({
     countryOwnerId: countryId,
     assignedSectorTypes: operatingSectorType,
   });
   if (assigned) return assigned;
-  const national = await corporationsCollection(db)
-    .find({ countryOwnerId: countryId })
-    .project<Pick<Corporation, "_id">>({ _id: 1 })
-    .toArray();
-  if (national.length === 0) return null;
-  const operating = await corporateSectorsCollection(db).findOne({
-    corporationId: { $in: national.map((c) => c._id) },
-    sectorType: sector.sectorType,
-  });
-  return operating
-    ? await corporationsCollection(db).findOne({ _id: operating.corporationId })
-    : null;
+  return corps.findOne({ countryOwnerId: countryId, isPrimaryNationalCorporation: true });
 }
 
 // ── Single-sector absorption ──────────────────────────────────────────────────
