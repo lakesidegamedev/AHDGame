@@ -1,4 +1,10 @@
 import { chooseNppCorporationName } from "@/lib/corporations/names/rules";
+import {
+  chooseRealCompanyName,
+  isRealCompanyWorld,
+  realCompanyLogoUrl,
+  type RealNameKind,
+} from "@/lib/corporations/names/realNames";
 import type { Db, Document, WithId } from "mongodb";
 import { ObjectId } from "mongodb";
 import type { Corporation, CorporateSector, GameState, NPP } from "@/lib/db/types";
@@ -91,6 +97,14 @@ import { WAL_NPP_CAPITAL_STATE } from "@/lib/countries/wal/geographyFacts";
 import { BLR_NPP_CAPITAL_STATE } from "@/lib/countries/blr/geographyFacts";
 import { UKR_NPP_CAPITAL_STATE } from "@/lib/countries/ukr/geographyFacts";
 import { BAL_NPP_CAPITAL_STATE } from "@/lib/countries/bal/geographyFacts";
+import { CA_NPP_CAPITAL_STATE } from "@/lib/countries/ca/geographyFacts";
+import { QC_NPP_CAPITAL_STATE } from "@/lib/countries/qc/geographyFacts";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
 
 /**
  * Default founding book for an admin/NPP-spawned corporation, in ₳ at MODERN
@@ -127,11 +141,9 @@ export const NPP_CAPITAL_STATES: Record<CountryId, string> = {
   CS: CS_NPP_CAPITAL_STATE,
   BAL: BAL_NPP_CAPITAL_STATE, // Riga: the largest Baltic city and the regional administrative centre
   RU: RU_NPP_CAPITAL_STATE,
-  // Econ-tier market democracies — capital region (political capital where the
-  // administrative and market capital differ, e.g. Ankara over Istanbul). These
-  // regions are seeded by the econ-tier roster + region seeders, so an NPP corp
-  // can HQ there. Left blank previously, which silently zeroed their NPP-corp
-  // spawn even though the countries are full market economies.
+  // Econ-tier market democracies: capital region (political capital where
+  // administrative and market capital differ, e.g. Ankara). Must be seeded
+  // by the econ-tier roster + region seeders for NPP corp HQ spawn.
   FR: FR_NPP_CAPITAL_STATE, // Île-de-France (Paris)
   IT: IT_NPP_CAPITAL_STATE, // Lazio (Rome)
   ES: ES_NPP_CAPITAL_STATE, // Comunidad de Madrid
@@ -143,6 +155,8 @@ export const NPP_CAPITAL_STATES: Record<CountryId, string> = {
   DD: DD_NPP_CAPITAL_STATE, // regions not yet seeded
   SCO: SCO_NPP_CAPITAL_STATE, // Latent — sub-regions seeded at secession (cannot spawn pre-activation)
   WAL: WAL_NPP_CAPITAL_STATE, // Latent — sub-regions seeded at secession (cannot spawn pre-activation)
+  CA: CA_NPP_CAPITAL_STATE,
+  QC: QC_NPP_CAPITAL_STATE, // latent: regions exist only after independence
 };
 
 export interface SpawnNppCorporationInput {
@@ -168,6 +182,8 @@ export interface SpawnNppCorporationInput {
   brandColor?: string;
   /** Optional ticker symbol (auto-generated if not provided) */
   tickerSymbol?: string;
+  /** Set when `name` is a generated placeholder a modern world may replace with a real company. */
+  realName?: RealNameKind;
   /**
    * Explicit NPP party sequentialId for the CEO. When omitted (or blank), the CEO
    * is chosen by {@link chooseNppCorpCeo}: an existing NPP without a corp is
@@ -243,6 +259,8 @@ export interface CreateNppCorporationShellInput {
   startingCapital?: number;
   brandColor?: string;
   tickerSymbol?: string;
+  /** Set when `name` is a generated placeholder a modern world may replace with a real company. */
+  realName?: RealNameKind;
   nppPartyId?: string;
   foundedAtTurn?: number;
   /** Tech nodes carried over in addition to the era's auto-granted set. */
@@ -268,6 +286,35 @@ export interface CreateNppCorporationShellResult {
 }
 
 /**
+ * A generated placeholder name becomes a real company in modern worlds when
+ * the country and industry still have an unused one. Explicit names pass through.
+ */
+async function resolveNppCorporationName(
+  db: Db,
+  input: {
+    requestedName: string;
+    realName: RealNameKind | undefined;
+    countryId: CountryId;
+    lane: OperatingSectorType;
+    worldYear: number | null;
+  }
+): Promise<string> {
+  if (!input.realName || !isRealCompanyWorld(input.worldYear)) return input.requestedName;
+  const existingNames = (
+    await corporationsCollection(db).find({}).project<{ name: string }>({ name: 1 }).toArray()
+  ).map((corp) => corp.name);
+  return (
+    chooseRealCompanyName({
+      countryId: input.countryId,
+      lane: input.lane,
+      kind: input.realName,
+      existingNames,
+      rng: Math.random,
+    }) ?? input.requestedName
+  );
+}
+
+/**
  * Insert an NPP-run corporation with no sectors: CEO selection, founding book,
  * tech grants, share structure, and the witnessed starting grant. Shared by the
  * admin/seed spawn (which then grants a founding sector out of the unowned pool)
@@ -279,7 +326,7 @@ export async function createNppCorporationShell(
   input: CreateNppCorporationShellInput
 ): Promise<CreateNppCorporationShellResult> {
   const {
-    name,
+    name: requestedName,
     type,
     industryModel,
     mediaDiscriminator,
@@ -313,7 +360,7 @@ export async function createNppCorporationShell(
 
   let npp: NPP | null = null;
   if (choice.kind === "existing") {
-    npp = await db.collection<NPP>("npps").findOne({ _id: new ObjectId(choice.nppId) });
+    npp = await nppsCollection(db).findOne({ _id: new ObjectId(choice.nppId) });
   }
   // Fall back to creating a fresh NPP when told to (choice.kind === "new") or if
   // the chosen existing NPP vanished between gather and fetch (defensive). Either
@@ -331,36 +378,38 @@ export async function createNppCorporationShell(
   // (an explicit `customCapital` is taken literally):
   //
   //  1. FX: ~₳2M expressed in the country's own currency, so weak-currency
-  //     countries (JP, NG, BR) are not seeded with tiny local books. A flat 2M
-  //     LOCAL left e.g. JP corps at ~19k ₳ vs UK/US at ~2M — an ~800x
-  //     cross-nation gap that also kept those corps below the nominal cash
-  //     floors gating expansion. See balance audit (2026-07-21). Converted at
-  //     the world's market rate, the same rate the cash is valued at: the GDP
-  //     normalization factor differs from it wherever authored GDP is not at
-  //     the era's market rate (1991 NG, PL, BG; 1953 JP, IT), see #2985.
-  //  2. ERA: ₳2,000,000 is a MODERN absolute (refs #3778 §3). 1953 nominal GDP
-  //     is ~70x smaller, so the unscaled default handed a fresh NPP corp more
-  //     cash than several 1953 regional sector markets put together. Deflating
-  //     by the era's nominal scale keeps the founding book the same share of
-  //     the economy it is in a 2019 world. No-op for every modern preset.
-  const techGameState = await db.collection<GameState>("gameState").findOne(
+  //     countries are not seeded with tiny local books. A flat 2M LOCAL left some
+  //     corps far below the nominal cash floors gating expansion. Converted at
+  //     the world's market rate, the same rate the cash is valued at (the GDP
+  //     normalization factor differs from it wherever authored GDP is not at the
+  //     era's market rate).
+  //  2. ERA: ₳2,000,000 is a MODERN absolute; 1953 nominal GDP is ~70x smaller, so
+  //     the unscaled default handed a fresh NPP corp more cash than several 1953
+  //     regional sector markets combined. Deflating by the era's nominal scale
+  //     keeps the founding book the same share of the economy as in 2019. No-op
+  //     for every modern preset.
+  const techGameState = await gameStateCollection(db).findOne(
     { _id: "current" },
     {
       projection: {
-        sectorTechTreesEnabled: 1,
         currentYear: 1,
         currentTurn: 1,
         startingYear: 1,
       },
     }
   );
-  const techGrantIds =
-    techGameState?.sectorTechTreesEnabled === true
-      ? autoGrantedNodeIds(
-          getOperatingSectorType(type, industryModel, mediaDiscriminator),
-          resolveGameYear(techGameState) ?? getStartingYearForPreset(preset)
-        )
-      : [];
+  const worldYear =
+    (techGameState ? resolveGameYear(techGameState) : null) ?? getStartingYearForPreset(preset);
+  const operatingLane = getOperatingSectorType(type, industryModel, mediaDiscriminator);
+  const techGrantIds = autoGrantedNodeIds(operatingLane, worldYear);
+  const name = await resolveNppCorporationName(db, {
+    requestedName,
+    realName: input.realName,
+    countryId,
+    lane: operatingLane,
+    worldYear,
+  });
+  const logoUrl = realCompanyLogoUrl(name);
   const startingCapital =
     customCapital ??
     Math.round(
@@ -424,6 +473,7 @@ export async function createNppCorporationShell(
       : {}),
     ceoSalary: 0,
     brandColor: pickBrandColor(brandColor),
+    ...(logoUrl ? { logoUrl } : {}),
     sequentialId,
     totalShares: totalIssuedShares,
     sharePrice: initialSharePrice,
@@ -593,12 +643,12 @@ async function grantNppSectorFromUnownedPool(
       : {}),
   };
 
-  await db.collection<CorporateSector>("corporateSectors").insertOne(sectorDoc as CorporateSector);
+  await corporateSectorsCollection(db).insertOne(sectorDoc as CorporateSector);
 
   // Reduce the unowned sector pool to reflect market capture.
   const unownedSector =
     input.pool ??
-    (await db.collection("unownedSectors").findOne({
+    (await unownedSectorsCollection<Document>(db).findOne({
       stateId,
       sectorType: type,
       industryModel,
@@ -632,7 +682,7 @@ async function grantNppSectorFromUnownedPool(
         ? unownedSector.headroomUnits
         : unownedHeadroomUnitsPerAnchor(type, eraUnitScale, industryModel, mediaDiscriminator) *
           (unownedSector.revenue ?? 0);
-    await db.collection("unownedSectors").updateOne(
+    await unownedSectorsCollection<Document>(db).updateOne(
       { _id: unownedSector._id },
       {
         $set: {
@@ -700,7 +750,7 @@ export async function spawnNppCorporation(
   await assertPrivateEnterprisePermitted(db, countryId);
 
   // Validate state exists and belongs to the country
-  const state = await db.collection<State>("states").findOne({ _id: headquartersState });
+  const state = await statesCollection(db).findOne({ _id: headquartersState });
   if (!state) {
     throw new Error(`State "${headquartersState}" not found`);
   }
@@ -711,7 +761,7 @@ export async function spawnNppCorporation(
   }
   const eraUnitScale = await loadWorldEraUnitScale(db);
   const boundedPool = input.limitToUnownedPool
-    ? await db.collection("unownedSectors").findOne(marketFilter)
+    ? await unownedSectorsCollection<Document>(db).findOne(marketFilter)
     : null;
   // Reject before allocating an NPP CEO or corporation when the sim pool is
   // exhausted. The regular admin spawn path retains its historical floor.
@@ -757,7 +807,8 @@ export async function spawnNppCorporation(
   if (customRevenue !== undefined) {
     startingRevenue = customRevenue;
   } else {
-    const unowned = boundedPool ?? (await db.collection("unownedSectors").findOne(marketFilter));
+    const unowned =
+      boundedPool ?? (await unownedSectorsCollection<Document>(db).findOne(marketFilter));
     if (unowned?.revenue) {
       startingRevenue = Math.round(unowned.revenue * 0.25);
     } else {
@@ -797,6 +848,7 @@ export async function spawnNppCorporation(
       startingCapital: customCapital,
       brandColor,
       tickerSymbol: customTicker,
+      realName: input.realName,
       nppPartyId,
       foundedAtTurn: input.foundedAtTurn,
       now,
@@ -822,7 +874,7 @@ export async function spawnNppCorporation(
   return {
     corporationId: corpId.toString(),
     sequentialId,
-    name,
+    name: corpDoc.name,
     type,
     ...(industryModel ? { industryModel } : {}),
     countryId,
@@ -908,8 +960,7 @@ export async function batchSpawnNppCorporations(
   const perSectorCount = Math.max(1, Math.floor(options?.perSectorCount ?? 1));
   const results: SpawnNppCorporationResult[] = [];
   const existingNames = (
-    await db
-      .collection<Corporation>("corporations")
+    await corporationsCollection(db)
       .find({ countryId })
       .project<{ name: string }>({ name: 1 })
       .toArray()
@@ -929,6 +980,7 @@ export async function batchSpawnNppCorporations(
       try {
         const result = await spawnNppCorporation(db, {
           name,
+          realName: "sector",
           type,
           industryModel,
           mediaDiscriminator,

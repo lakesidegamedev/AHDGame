@@ -9,7 +9,7 @@ import {
   type RefObject,
 } from "react";
 import { createPortal } from "react-dom";
-import Link from "next/link";
+import Link from "@/components/navbar/NavigationLink";
 import { captureProductEvent } from "@/lib/analytics/capture";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";

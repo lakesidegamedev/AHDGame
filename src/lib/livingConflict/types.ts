@@ -218,6 +218,18 @@ export interface ConflictActor {
   regionIds: string[];
 }
 
+/**
+ * An authored preset disposition that may open outside the calendar window,
+ * for example a federation that survives into the 2027 world as an explicit
+ * counterfactual rather than a replay of its historical window.
+ */
+export interface PresetOpeningWindow {
+  preset: "2027-default";
+  disposition: NonNullable<LivingConflictState["openingDisposition"]>;
+  fromYear: number;
+  untilYear: number;
+}
+
 /** A full living-conflict definition. Authored once; drives every world. */
 export interface LivingConflictDef {
   key: string;
@@ -226,6 +238,8 @@ export interface LivingConflictDef {
   /** Era window; the conflict cannot open outside it. */
   fromYear?: number;
   untilYear?: number;
+  /** Preset dispositions that may open outside the calendar window. */
+  presetOpeningWindows?: PresetOpeningWindow[];
   /** False for conflicts that require an explicit trigger rather than a date. */
   autoOpen?: boolean;
   /**
@@ -233,6 +247,11 @@ export interface LivingConflictDef {
    * calendar window. Omitted preserves date-only opening for existing defs.
    */
   minimumOpeningPressure?: number;
+  /**
+   * Roles whose nations count this conflict against the severe-conflict
+   * stacking limit while it is active. Omitted means belligerents only.
+   */
+  severeRoles?: ConflictRole[];
   /** The map anchor / host, for surfaces that need one. */
   hostCountry?: string;
   /** Authored world participants. The role resolver may reinterpret them. */

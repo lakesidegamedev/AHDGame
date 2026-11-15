@@ -21,19 +21,15 @@ import {
 /**
  * Where Sweden is, and who lives there.
  *
- * ⚠ HEAVY. Every era of census, metric and region data is imported as a VALUE. A
- * registry that needs one string imports `./geographyFacts` instead, which has
- * no value imports at all -- `countryContinents.ts` once held `JP: "Asia"` at
- * zero cost, was repointed at a heavy module, and began pulling 108 KB into
- * every client bundle that read a continent.
+ * ⚠ HEAVY. Every era of census, metric and region data is imported as a VALUE.
+ * A registry that needs one string imports `./geographyFacts` instead, which
+ * has no value imports at all.
  *
- * ⚠ EVERY BUNDLE IS REFERENCED, NEVER INLINED, and `===` is what proves it. An
- * early revision of Japan's geography generated copies from the snapshot; deep
- * equality passed and Japan had two sources for every region.
+ * ⚠ EVERY BUNDLE IS REFERENCED, NEVER INLINED, and `===` is what proves it.
  *
- * ⚠ THE PRESET KEYS COME FROM THE SNAPSHOT. Sweden authors 3 census
- * eras, 1 metric eras, 0 anchor eras and 4 region eras. The gaps are real:
- * an unauthored era inherits, and inventing a key for it would turn a fallback
+ * ⚠ THE PRESET KEYS COME FROM THE SNAPSHOT. Sweden authors 3 census eras,
+ * 1 metric era, 0 anchor eras and 4 region eras. The gaps are real: an
+ * unauthored era inherits, and inventing a key for it would turn a fallback
  * into an authored value.
  */
 

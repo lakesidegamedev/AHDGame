@@ -45,10 +45,15 @@ import {
 } from "@/lib/tariffs/tariffInflationExposure";
 import type { CentralBank, TurnSnapshot } from "@/lib/db/types/centralBank";
 import type { ExchangeRate } from "@/lib/db/types/exchangeRate";
-import type { FederalBudget } from "@/lib/db/types/budget";
 import type { GameState } from "@/lib/db/types/gameState";
 import type { SavingsLedgerEntry } from "@/lib/db/types/savingsLedger";
 import type { StateMetrics } from "@/lib/db/types/stateMetrics";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { savingsLedgerCollection } from "@/lib/db/repositories/savingsLedger";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 
 const SAVINGS_FLOW_WINDOW_TURNS = 12;
 
@@ -127,11 +132,10 @@ export async function loadInflationDiagnostics(
     gameState,
     tariffExposureSnapshot,
   ] = await Promise.all([
-    db.collection<CentralBank>("centralBanks").find({}).toArray(),
-    db.collection<ExchangeRate>("exchangeRates").find({}).toArray(),
+    centralBanksCollection(db).find({}).toArray(),
+    exchangeRatesCollection(db).find({}).toArray(),
     loadCommodityPressureSnapshots(db, currentTurn),
-    db
-      .collection<SavingsLedgerEntry>("savingsLedger")
+    savingsLedgerCollection(db)
       .aggregate<{ _id: { countryId: string; type: string }; total: number }>([
         {
           $match: {
@@ -147,9 +151,10 @@ export async function loadInflationDiagnostics(
         },
       ])
       .toArray(),
-    db
-      .collection<GameState>("gameState")
-      .findOne({ _id: "current" }, { projection: { currentYear: 1, startingYear: 1 } }),
+    gameStateCollection(db).findOne(
+      { _id: "current" },
+      { projection: { currentYear: 1, startingYear: 1 } }
+    ),
     loadTurnTariffInflationExposure(db, currentTurn),
   ]);
 
@@ -181,13 +186,13 @@ export async function loadInflationDiagnostics(
     if (!bank) continue;
 
     const budgetId = getNationalBudgetId(countryId);
-    const budget = await db
-      .collection<FederalBudget>("federalBudget")
-      .findOne({ _id: budgetId } as { _id: "federal" });
+    const budget = await federalBudgetCollection(db).findOne({ _id: budgetId } as {
+      _id: "federal";
+    });
 
     const nationalDocId = getNationalDocId(countryId);
     const nationalMetrics = nationalDocId
-      ? await db.collection<StateMetrics>("macroMetrics").findOne({ _id: nationalDocId })
+      ? await macroMetricsCollection(db).findOne({ _id: nationalDocId })
       : null;
 
     const unemployment = finiteOr(nationalMetrics?.economic?.unemploymentRate?.value, 5.0);

@@ -1,5 +1,4 @@
 import { redirect } from "next/navigation";
-import { requireConflictsEnabled } from "../_coldwar/gate";
 
 /**
  * Retired. The mock Alignment & Coercion board modelled 16 hardcoded nations in
@@ -12,6 +11,5 @@ import { requireConflictsEnabled } from "../_coldwar/gate";
  * Console's navigation and any bookmark still land somewhere real.
  */
 export default async function AlignmentPage() {
-  await requireConflictsEnabled();
   redirect("/world/cold-war-ledger");
 }

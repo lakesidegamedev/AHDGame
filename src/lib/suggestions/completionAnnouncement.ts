@@ -8,6 +8,7 @@ import {
   type DiscordEmbed,
 } from "@/lib/discordWebhooks";
 import { resolveSuggestionReporterIdentity } from "@/lib/suggestions/reporterIdentity";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 /**
  * Status values that mean a suggestion shipped. The site writes `completed`;
@@ -41,9 +42,10 @@ async function reporterMatch(db: Db, reporter: ReporterKey): Promise<Filter<Sugg
   if (reporter.userId) {
     or.push({ userId: reporter.userId });
     if (!discordId) {
-      const user = await db
-        .collection<User>("users")
-        .findOne({ _id: reporter.userId }, { projection: { discordId: 1 } });
+      const user = await usersCollection(db).findOne(
+        { _id: reporter.userId },
+        { projection: { discordId: 1 } }
+      );
       discordId = user?.discordId ?? null;
     }
   }

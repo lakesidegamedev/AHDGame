@@ -42,6 +42,11 @@ import type { BankCharterType } from "@/lib/db/types/bank";
 import { savingsApyPercent } from "@/lib/currency/savingsInterest";
 import { loadCentralBankPricingAdjustment } from "@/lib/monetaryPolicy/centralBankPricing";
 import type { ObjectId } from "mongodb";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
 
 // GET /api/banking/hub - World banking hub payload (CBs, private banks, savings, loans).
 // Auth: requireAuth
@@ -109,8 +114,7 @@ async function handleGET() {
       loadBankingPolicy(db),
       getRegisteredCountryIds(db),
       getGameState(db),
-      db
-        .collection<CentralBank>("centralBanks")
+      centralBanksCollection(db)
         .find({})
         .project<
           Pick<
@@ -260,8 +264,7 @@ async function handleGET() {
         | "logoUrl"
         | "bankCharter"
       >;
-      const chartered = (await db
-        .collection<Corporation>("corporations")
+      const chartered = (await corporationsCollection(db)
         .find({ "bankCharter.status": "active" })
         .project({
           _id: 1,
@@ -287,22 +290,19 @@ async function handleGET() {
         .map((corp) => corp.ceoId);
       const [characterCeoDocs, nppCeoDocs, imperialCeoDocs] = await Promise.all([
         characterCeoIds.length
-          ? db
-              .collection<Character>("characters")
+          ? charactersCollection(db)
               .find({ _id: { $in: characterCeoIds } })
               .project({ _id: 1, name: 1, avatarUrl: 1 })
               .toArray()
           : [],
         nppCeoIds.length
-          ? db
-              .collection<NPP>("npps")
+          ? nppsCollection(db)
               .find({ _id: { $in: nppCeoIds } })
               .project({ _id: 1, name: 1, avatarUrl: 1 })
               .toArray()
           : [],
         imperialCeoIds.length
-          ? db
-              .collection<ImperialCharacter>("imperialCharacters")
+          ? imperialCharactersCollection(db)
               .find({ _id: { $in: imperialCeoIds } })
               .project({ _id: 1, name: 1, avatarUrl: 1 })
               .toArray()
@@ -418,8 +418,7 @@ async function handleGET() {
         });
       }
 
-      const owned = await db
-        .collection<Corporation>("corporations")
+      const owned = await corporationsCollection(db)
         .find({ userId: character.userId })
         .project({
           _id: 1,

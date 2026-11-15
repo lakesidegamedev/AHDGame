@@ -5,7 +5,7 @@ import type { StateDemographicTurnout } from "@/lib/db/types";
  *
  * All modifiers start at 0 — no GOTV, canvassing, or suppression effects
  * applied yet. Keys match the DD voter group IDs from
- * ddDemographicCategories.ts (category _id "dd_voterGroups", profile
+ * the country Layer-1 model (category _id "dd_voterGroups", profile
  * "dd_archetypes").
  *
  * One document per Land. `_id` is the region code (BEO/MV/BB/ST/SN/TH) —

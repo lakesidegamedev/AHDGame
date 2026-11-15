@@ -87,14 +87,14 @@ describe("justResolvedInSameTurn — turn-first semantics", () => {
   });
 
   it("is CLOSED on the resolving tick (currentTurn == endTurn)", async () => {
-    const { justResolvedInSameTurn } = await import("./perpetualElections");
+    const { justResolvedInSameTurn } = await import("@/lib/elections/scheduling");
     const now = new Date("2026-04-01T00:00:00Z");
     const prev = { endTurn: 96, updatedAt: now } as Election;
     expect(justResolvedInSameTurn(prev, now, 96)).toBe(true);
   });
 
   it("OPENS one turn later even when almost no wall-clock time has passed (headless sim)", async () => {
-    const { justResolvedInSameTurn } = await import("./perpetualElections");
+    const { justResolvedInSameTurn } = await import("@/lib/elections/scheduling");
     const resolvedAt = new Date("2026-04-01T00:00:00Z");
     const now = new Date(resolvedAt.getTime() + 8_000); // 8 wall-clock seconds later
     const prev = { endTurn: 96, updatedAt: resolvedAt } as Election;
@@ -102,7 +102,7 @@ describe("justResolvedInSameTurn — turn-first semantics", () => {
   });
 
   it("OPENS when currentTurn still equals endTurn but resolution happened long ago (paused world / back-to-back canonical windows)", async () => {
-    const { justResolvedInSameTurn } = await import("./perpetualElections");
+    const { justResolvedInSameTurn } = await import("@/lib/elections/scheduling");
     const resolvedAt = new Date("2026-04-01T00:00:00Z");
     const now = new Date(resolvedAt.getTime() + 5 * MS); // 5 real hours later
     const prev = { endTurn: 288, updatedAt: resolvedAt } as Election;
@@ -110,7 +110,7 @@ describe("justResolvedInSameTurn — turn-first semantics", () => {
   });
 
   it("falls back to wall-clock when the prior doc has no endTurn (legacy)", async () => {
-    const { justResolvedInSameTurn } = await import("./perpetualElections");
+    const { justResolvedInSameTurn } = await import("@/lib/elections/scheduling");
     const resolvedAt = new Date("2026-04-01T00:00:00Z");
     const prev = { updatedAt: resolvedAt } as Election;
     expect(justResolvedInSameTurn(prev, new Date(resolvedAt.getTime() + 8_000), 97)).toBe(true);
@@ -118,7 +118,7 @@ describe("justResolvedInSameTurn — turn-first semantics", () => {
   });
 
   it("falls back to wall-clock when currentTurn is not supplied (back-compat)", async () => {
-    const { justResolvedInSameTurn } = await import("./perpetualElections");
+    const { justResolvedInSameTurn } = await import("@/lib/elections/scheduling");
     const resolvedAt = new Date("2026-04-01T00:00:00Z");
     const prev = { endTurn: 96, updatedAt: resolvedAt } as Election;
     expect(justResolvedInSameTurn(prev, new Date(resolvedAt.getTime() + 8_000))).toBe(true);
@@ -152,7 +152,7 @@ describe("US presidential cycle respawn (1991-default headless-sim regression)",
     );
     await mountDb(mock);
 
-    const { ensurePerpetualElections } = await import("./perpetualElections");
+    const { ensurePerpetualElections } = await import("@/lib/elections/scheduling");
     await ensurePerpetualElections(now, 97);
 
     const presidents = inserted.filter((d) => d.electionType === "president");
@@ -173,7 +173,7 @@ describe("US presidential cycle respawn (1991-default headless-sim regression)",
     );
     await mountDb(mock);
 
-    const { ensurePerpetualElections } = await import("./perpetualElections");
+    const { ensurePerpetualElections } = await import("@/lib/elections/scheduling");
     await ensurePerpetualElections(now, 96);
 
     expect(inserted.filter((d) => d.electionType === "president")).toHaveLength(0);
@@ -196,7 +196,7 @@ describe("US presidential cycle respawn (1991-default headless-sim regression)",
     );
     await mountDb(mock);
 
-    const { ensurePerpetualElections } = await import("./perpetualElections");
+    const { ensurePerpetualElections } = await import("@/lib/elections/scheduling");
     await ensurePerpetualElections(now, 1633);
 
     const presidents = inserted.filter((d) => d.electionType === "president");

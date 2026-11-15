@@ -111,3 +111,10 @@ jobs:
           SINGLEPLAYER_SKIP_HEALTH_PROBE: ${{ inputs.skip_health_probe && '1' || '0' }}
           SINGLEPLAYER_APP_STDIO: ${{ inputs.app_stdio || 'pipe' }}
           SINGLEPLAYER_PROBE_REDIRECT: ${{ inputs.probe_redirect || 'manual' }}
+      - name: Upload smoke timings
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-timings-${{ matrix.platform }}
+          path: smoke-timings.json
+          if-no-files-found: ignore

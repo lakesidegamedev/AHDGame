@@ -7,6 +7,8 @@ import { parseJsonBody } from "@/lib/api/validate";
 import { forceSpawnCrisis } from "@/lib/crises/autoCrisisSpawn";
 import { COUNTRY_ORDER } from "@/lib/constants/countries";
 import type { CountryId } from "@/lib/constants/countries";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import type { Document } from "mongodb";
 
 const bodySchema = z.object({
   templateKey: z.string().min(1),
@@ -30,7 +32,7 @@ export async function POST(request: Request) {
     }
 
     const db = await getDb();
-    const gameState = await db.collection("gameState").findOne({ _id: "current" } as never);
+    const gameState = await gameStateCollection<Document>(db).findOne({ _id: "current" } as never);
     const currentTurn = (gameState as { currentTurn?: number } | null)?.currentTurn ?? 1;
 
     const result = await forceSpawnCrisis(

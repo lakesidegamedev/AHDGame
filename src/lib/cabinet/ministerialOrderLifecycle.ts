@@ -35,8 +35,7 @@ export function isMinisterialOrderActive(
  * Deactivate ministerial orders whose expiry turn has passed.
  *
  * Uses a typed query first, then sweeps any remaining `active: true` docs so
- * legacy rows with missing or string-typed `expiresTurn` cannot linger forever
- * (bug #0761).
+ * legacy rows with missing or string-typed `expiresTurn` cannot linger forever.
  */
 export async function expireMinisterialOrders(
   db: Db,

@@ -16,7 +16,7 @@ import {
   STATE_ORG_MAX_LEVEL,
   STATE_ORG_REFERENCE_FRACTION,
   stateOrgBonusFraction,
-} from "@/lib/electionEngine/constants";
+} from "@/lib/elections/engine/constants";
 import { formatStatePresenceCost, statePresenceNextCost } from "@/lib/campaigns/statePresenceCost";
 
 interface StateOrgRow {

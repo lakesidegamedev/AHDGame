@@ -48,6 +48,7 @@ describe("Bill Lifecycle Integration Tests", () => {
     name: "Tax Policy",
     policyDomain: "economic",
     effectTarget: { metricId: "tax_rate" },
+    administration: { defaultJurisdictionMode: "national_direct" },
   };
 
   beforeEach(async () => {

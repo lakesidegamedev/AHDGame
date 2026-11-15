@@ -1,5 +1,6 @@
 import { substepMarker } from "@/lib/observability/phaseSubsteps";
 import type { CurrencyCode } from "@/lib/constants/currencies";
+import { workerConfig } from "@/lib/config/worker";
 
 export interface CorporationTurnResult {
   corporationsProcessed: number;
@@ -7,10 +8,7 @@ export interface CorporationTurnResult {
   totalRevenueGenerated: number;
   totalIncomeGenerated: number;
   /**
-   * Deterministic `"<phase>: <detail>"` warning strings for this turn (issue
-   * #2054: clearing book invariant breaches). The phase registry appends each
-   * exactly once to the turn warning channel, which the completed-turn health
-   * snapshot counts. Empty on clean turns.
+   * Deterministic `"<phase>: <detail>"` warning strings for this turn (clearing book invariant breaches). The phase registry appends each exactly once to the turn warning channel, which the completed-turn health snapshot counts. Empty on clean turns.
    */
   turnWarnings: string[];
   /** CEO salary + shareholder dividends this turn, internal units (for LOC cap / scoring). */
@@ -20,11 +18,11 @@ export interface CorporationTurnResult {
 }
 
 /**
- * Sub-step timer. Always feeds the persisted phase sub-steps (#2689);
- * `SIM_CORP_TIMING=1` additionally prints the timings for simulation profiling.
+ * Sub-step timer. Always records persisted phase sub-steps;
+ * SIM_CORP_TIMING=1 also logs timings for profiling.
  */
 export function createCorporationTurnTimer() {
-  const enabled = process.env.SIM_CORP_TIMING === "1";
+  const enabled = workerConfig.simCorpTiming();
   const timings: Array<[string, number]> = [];
   let previous = enabled ? Date.now() : 0;
   const steps = substepMarker();

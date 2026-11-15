@@ -2,7 +2,7 @@ import type { CurrencyCode } from "@/lib/constants/currencies";
 import type { CountryId } from "@/lib/constants/countries";
 
 /** Public intervention band info for the exchange page. Reserves stay hidden. */
-export interface PublicInterventionBand {
+interface PublicInterventionBand {
   floor: number;
   ceiling: number;
   setAtTurn: number | null;
@@ -42,14 +42,6 @@ export interface ReserveLeaderDisplay {
   isLeading: boolean;
   /** Per-turn volatility reduction from the rank buff (0.5 = −50%; 0 = no buff). */
   volatilityReduction: number;
-}
-
-/** Cross-rate between two currencies, derived client-side */
-export interface CrossRate {
-  from: CurrencyCode;
-  to: CurrencyCode;
-  rate: number;
-  change24h: number;
 }
 
 /** Order as returned by GET /api/forex/orders and GET /api/forex/exchange */

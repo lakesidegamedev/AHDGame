@@ -11,14 +11,11 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { getGameState } from "@/lib/gameState";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { getCabinetMembersCollection } from "@/lib/db/collections/cabinetMembers";
-import {
-  refundMinisterialAction,
-  resolveMinisterialRemaining,
-  spendMinisterialAction,
-} from "@/lib/cabinet/ministerialActionPool";
+import { officeActionPool } from "@/lib/resetCabinet/actionPool";
 import { getMilitaryUnitsCollection } from "@/lib/db/collections/militaryUnits";
 import {
   DEFENSE_POSITION_BY_COUNTRY,
+  archetypeResearchBlock,
   getBranches,
   getUnitTypesForYear,
 } from "@/lib/constants/military";
@@ -34,6 +31,8 @@ import { getNationalArsenal, drawLots, returnLots } from "@/lib/db/collections/n
 import { lotsRequired, equipUnit } from "@/lib/military/arsenal";
 import { ensureFederalBudget } from "@/lib/turn/ensureFederalBudget";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
+import { statesCollection } from "@/lib/db/repositories/states";
+import type { Document } from "mongodb";
 
 /** Turns before a newly-recruited unit reaches operational readiness. */
 const BUILD_TURNS = 6;
@@ -95,6 +94,15 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     const db = await getDb();
+
+    // Research gate before any resource moves: a modern formation needs materiel the
+    // country's own defence industry has researched and delivered.
+    if (archetype.requiredArsenalGrade != null) {
+      const stocked = await getNationalArsenal(db, countryId);
+      const blocked = archetypeResearchBlock(archetype, stocked.grade[branch.domain]);
+      if (blocked) return errorResponse(400, blocked);
+    }
+
     const membersCol = getCabinetMembersCollection(db);
     const member = await membersCol.findOne({ countryId, positionId });
 
@@ -108,22 +116,27 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     // Shared UK pool: both offices of a dual holder spend one balance (issue #2049).
-    const actions = await resolveMinisterialRemaining(db, countryId, member!);
+    // On Cabinet v2 countries this is the same charge pool the office header shows.
+    const pool = officeActionPool(db, gameState, countryId, member!);
+    const actions = await pool.remaining();
     if (actions < 1) {
       return errorResponse(400, "No ministerial actions remaining");
     }
 
-    const region = await db.collection("states").findOne({ countryId }, { projection: { _id: 1 } });
+    const region = await statesCollection<Document>(db).findOne(
+      { countryId },
+      { projection: { _id: 1 } }
+    );
     if (!region) {
       return errorResponse(400, "No region available to station the unit");
     }
 
-    const spend = await spendMinisterialAction(db, countryId, member!);
+    const spend = await pool.spend();
     if (!spend.ok) {
       return errorResponse(409, "No ministerial actions remaining");
     }
 
-    const refundAction = () => refundMinisterialAction(db, countryId, member!);
+    const refundAction = () => pool.refund();
 
     // Budget existence is checked FIRST, before any resource moves. It is a
     // read/heal, not a spend, so it has no ordering constraint with manpower —

@@ -6,7 +6,7 @@ import { requireModerator } from "@/lib/api/requireModerator";
 import { parseJsonBody } from "@/lib/api/validate";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import type { PlayerContentReport } from "@/lib/db/types";
-import { PLAYER_CONTENT_REPORTS } from "@/lib/safety/playerSafety";
+import { playerContentReportsCollection } from "@/lib/db/repositories/playerContentReports";
 
 const reviewSchema = z.object({
   status: z.enum(["dismissed", "actioned"]),
@@ -32,20 +32,18 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
     const db = await getDb();
     const now = new Date();
-    const updated = await db
-      .collection<PlayerContentReport>(PLAYER_CONTENT_REPORTS)
-      .findOneAndUpdate(
-        { _id: new ObjectId(id) },
-        {
-          $set: {
-            status: parsed.data.status,
-            reviewedAt: now,
-            reviewedByAdminId: new ObjectId(auth.user.userId),
-            ...(parsed.data.adminNote?.trim() ? { adminNote: parsed.data.adminNote.trim() } : {}),
-          },
+    const updated = await playerContentReportsCollection<PlayerContentReport>(db).findOneAndUpdate(
+      { _id: new ObjectId(id) },
+      {
+        $set: {
+          status: parsed.data.status,
+          reviewedAt: now,
+          reviewedByAdminId: new ObjectId(auth.user.userId),
+          ...(parsed.data.adminNote?.trim() ? { adminNote: parsed.data.adminNote.trim() } : {}),
         },
-        { returnDocument: "after" }
-      );
+      },
+      { returnDocument: "after" }
+    );
     if (!updated) {
       return errorResponse(404, "Report not found");
     }

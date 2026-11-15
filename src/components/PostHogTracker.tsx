@@ -5,7 +5,6 @@ import {
   getAnalyticsAccount,
   isAnalyticsGenerationCurrent,
 } from "@/lib/analytics/accountContext";
-import { resetAmplitudeUser } from "@/lib/analytics/amplitudeClient";
 import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { useAuthMe } from "@/contexts/AuthDataContext";
@@ -105,7 +104,6 @@ export function PostHogTracker() {
     if ((previous && previous !== (accepted ? userId : null)) || (accepted && !userId)) {
       lastCapturedPath.current = null;
       lastVisitUser.current = null;
-      void resetAmplitudeUser();
       const { generation } = getAnalyticsAccount();
       void getPostHogClient().then((client) => {
         if (client && isAnalyticsGenerationCurrent(generation)) resetPostHogUser(client);

@@ -3,14 +3,13 @@ import { handleRouteError } from "@/lib/api/errors";
 import { getMarketedWorldSafe } from "@/lib/marketing/marketedWorldServer";
 
 /**
- * GET /api/public/facts — what the game currently IS, for surfaces we do not
+ * GET /api/public/facts: what the game currently IS, for surfaces we do not
  * render.
  *
  * The studio site (lakesidegames.net) is static HTML on a different host, so it
- * cannot import `marketedWorld`. Before this route existed it kept its own
- * hand-typed copy of the same facts, and on 2026-09-06 it was advertising
- * twenty-one playable countries and an intermission before v1.0 while the live
- * game was on 1.6.0 with four. Anything off-origin reads this instead.
+ * cannot import `marketedWorld`. Without this route it would need its own
+ * hand-typed copy of the same facts, which drifts from the live game. Anything
+ * off-origin reads this instead.
  *
  * Deliberately NOT under `/api/public/v1`: those routes require an API key, and
  * a marketing page cannot hold one. Everything here is a public claim we print

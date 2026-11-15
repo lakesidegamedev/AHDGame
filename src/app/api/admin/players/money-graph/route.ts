@@ -1,31 +1,22 @@
 // GET /api/admin/players/money-graph — money-flow graph for the forensics
-// cockpit's cash-laundering-ring visualization (forensics v2 plan, Wave 1
-// item 3). Nodes are accounts/entities (character/corporation/party seen as
-// either side of a transfer, plus government/system leaves); edges are
-// `financialTxLog` transfers aggregated by (from, to, currencyCode) within
-// the requested turn window, expanded breadth-first from a center out to
-// `depth` hops. Surfaces fan-in/fan-out and A->B->A round-trips.
+// cockpit's cash-laundering-ring visualization. Nodes are accounts/entities
+// (character/corporation/party on either side of a transfer, plus
+// government/system leaves); edges are `financialTxLog` transfers aggregated
+// by (from, to, currencyCode) within the turn window, expanded
+// breadth-first from a center out to `depth` hops.
 //
-// Auth: requireModerator (mods and admins both read, matching every other
-// forensics/alt-detection read route — plan §4.6). Non-admins never see
-// `admin_transfer` rows (mirrors `queryAuditLog`'s admin-category guard,
-// the closest existing analog: raw admin cash adjustments are admin-only)
-// and get node display names masked via `maskMoneyGraphName` (same
-// truncate-with-ellipsis convention as `maskFingerprint`/`maskIp`). Node
-// `id`s are never masked — they're needed to pivot into the per-account
-// dossier regardless of role, same as `alts/cluster/[id]` never masking
-// `userId`.
+// Auth: requireModerator. Non-admins never see `admin_transfer` rows and get
+// node names masked via `maskMoneyGraphName`. Node `id`s are never masked,
+// they are needed to pivot into the per-account dossier regardless of role.
 //
-// Query params: `userId` (center) OR `clusterId` (center on every member's
-// character), `depth` (1-2, default 1), `turnsBack` (default 168, matches
-// `TX_TTL_TURNS`), `minAmount` (optional, filters both directions by
-// absolute value).
+// Query params: `userId` or `clusterId` (center), `depth` (1-2, default 1),
+// `turnsBack` (default 168), `minAmount` (optional, filters by abs value).
 //
 // Response: { nodes:[{id, name, banned}], edges:[{from, to, totalAmount,
 // txCount, currencyCode}], truncated, depth, turnMin, currentTurn }
 //
-// Errors: 400 (bad/missing params), 403 (not moderator/admin), 404 (userId
-// has no character, or clusterId doesn't exist)
+// Errors: 400 (bad/missing params), 403 (not moderator/admin), 404
+// (userId has no character, or clusterId doesn't exist)
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";

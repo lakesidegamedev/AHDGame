@@ -28,6 +28,9 @@ import {
   settleMarketMakerReceipt,
   recordMarketMakerRefusal,
 } from "./marketMakerReceipt";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { tradeHistoryCollection } from "@/lib/db/repositories/tradeHistory";
 
 interface MarketMakerTradeParams {
   /** Stable accepted income-event identity for garnished residual conversions. */
@@ -152,7 +155,7 @@ export async function distributeConversionSpreadsBatch(
     })
   );
   if (operations.length > 0) {
-    await db.collection<CentralBank>("centralBanks").bulkWrite(operations);
+    await centralBanksCollection(db).bulkWrite(operations);
   }
 }
 
@@ -272,8 +275,8 @@ async function executeMarketMakerTradeInner(
         params.quoteContext.union,
       ] as const)
     : await Promise.all([
-        db.collection<ExchangeRate>("exchangeRates").findOne({ _id: fromCountryId }),
-        db.collection<ExchangeRate>("exchangeRates").findOne({ _id: toCountryId }),
+        exchangeRatesCollection(db).findOne({ _id: fromCountryId }),
+        exchangeRatesCollection(db).findOne({ _id: toCountryId }),
         loadEuroMonetaryUnion(db),
       ]);
 
@@ -446,9 +449,9 @@ async function executeMarketMakerTradeInner(
     source: source ?? "manual",
     ...(sourceRef ? { sourceRef } : {}),
   };
-  const { insertedId: tradeHistoryId } = await db
-    .collection<TradeHistoryEntry>("tradeHistory")
-    .insertOne(tradeEntry as TradeHistoryEntry);
+  const { insertedId: tradeHistoryId } = await tradeHistoryCollection(db).insertOne(
+    tradeEntry as TradeHistoryEntry
+  );
 
   // Distribute spread fee: destroy sink; forexRevenue to the source currency's
   // CB; the reserve slice (in fromCurrency) accrues to the destination currency's

@@ -1,16 +1,11 @@
 /**
- * China Cabinet mechanics configuration.
- * Drives the per-position Office page: national/regional metrics, tier settings,
- * regional target mechanics, allocation panels, and emergencies.
+ * China Cabinet mechanics configuration for the per-position Office page.
  *
- * Depth note: 5 portfolio positions (finance, defense, education, health,
- * pboc_governor) have full tier-settings, regional targets, and emergency
- * actions. The 4 leadership/coordination positions (premier, vice_premier,
- * state_councillor, minister_of_foreign_affairs) ship with national metrics
- * only — they coordinate other ministries rather than running a portfolio,
- * and tier-settings would not be meaningful for them.
- *
- * Shared types live in cabinetMechanicsTypes.ts.
+ * The 5 portfolio positions (finance, defense, education, health, pboc_governor)
+ * have full tier-settings, regional targets, and emergencies. The 4 leadership
+ * positions (premier, vice_premier, state_councillor,
+ * minister_of_foreign_affairs) have national metrics only: they coordinate
+ * ministries rather than run a portfolio, so tier-settings would be meaningless.
  */
 import type { CabinetPositionMechanics } from "@/lib/constants/cabinetMechanicsTypes";
 

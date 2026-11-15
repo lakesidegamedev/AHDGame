@@ -12,10 +12,14 @@
 // then delete the defunct party rows. The pool value is SET from the invariant,
 // not incremented, so a retry after any partial application is idempotent.
 
-import type { Db } from "mongodb";
+import { ObjectId, type Db } from "mongodb";
 import type { PoliticalParty, StatePartyOrg, StateRegistrationPool } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import type { Defect, DetectResult, HealPlan, HealResult, VerifyResult } from "../types";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { stateRegistrationPoolCollection } from "@/lib/db/repositories/stateRegistrationPool";
 
 interface DefunctParty {
   countryId: CountryId;
@@ -57,9 +61,32 @@ function roundShare(value: number): number {
   return Math.round(Math.max(0, Math.min(100, value)) * 1e12) / 1e12;
 }
 
+/**
+ * When the current world began: the creation time of its epoch id. Regional rows
+ * written at or after it belong to this world's own seed, not to a past merger.
+ */
+async function currentWorldStart(db: Db): Promise<Date | null> {
+  const state = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { projection: { worldEpochId: 1 } }
+  );
+  const epoch = state?.worldEpochId ? String(state.worldEpochId) : null;
+  return epoch && ObjectId.isValid(epoch) ? new ObjectId(epoch).getTimestamp() : null;
+}
+
+/** Rows a past merger left behind; rows this world's seed wrote are not stale. */
+export function rowsFromBeforeThisWorld<T extends { createdAt?: unknown }>(
+  rows: T[],
+  worldStart: Date | null
+): T[] {
+  if (!worldStart) return rows;
+  return rows.filter(
+    (row) => !(row.createdAt instanceof Date) || row.createdAt.getTime() < worldStart.getTime()
+  );
+}
+
 async function survey(db: Db): Promise<Survey> {
-  const defunctParties = await db
-    .collection<PoliticalParty>("politicalParties")
+  const defunctParties = await politicalPartiesCollection(db)
     .find(
       { isDefunct: true },
       { projection: { countryId: 1, sequentialId: 1, name: 1, abbreviation: 1 } }
@@ -85,26 +112,30 @@ async function survey(db: Db): Promise<Survey> {
     };
   }
 
-  const staleRows = await db
-    .collection<StatePartyOrg>("statePartyOrg")
-    .find(
-      {
-        $or: parties.map((party) => ({
-          countryId: party.countryId,
-          partyId: String(party.sequentialId),
-        })),
-      },
-      {
-        projection: {
-          countryId: 1,
-          stateId: 1,
-          partyId: 1,
-          organization: 1,
-          registration: 1,
+  const worldStart = await currentWorldStart(db);
+  const staleRows = rowsFromBeforeThisWorld(
+    await statePartyOrgCollection(db)
+      .find(
+        {
+          $or: parties.map((party) => ({
+            countryId: party.countryId,
+            partyId: String(party.sequentialId),
+          })),
         },
-      }
-    )
-    .toArray();
+        {
+          projection: {
+            countryId: 1,
+            stateId: 1,
+            partyId: 1,
+            organization: 1,
+            registration: 1,
+            createdAt: 1,
+          },
+        }
+      )
+      .toArray(),
+    worldStart
+  );
   if (staleRows.length === 0) {
     return {
       staleRows: [],
@@ -126,18 +157,14 @@ async function survey(db: Db): Promise<Survey> {
   );
   const countryIds = [...new Set(affectedStates.map((state) => state.countryId))];
   const [allRows, activeParties, poolRows] = await Promise.all([
-    db.collection<StatePartyOrg>("statePartyOrg").find({ $or: affectedStates }).toArray(),
-    db
-      .collection<PoliticalParty>("politicalParties")
+    statePartyOrgCollection(db).find({ $or: affectedStates }).toArray(),
+    politicalPartiesCollection(db)
       .find(
         { countryId: { $in: countryIds }, isDefunct: { $ne: true } },
         { projection: { countryId: 1, sequentialId: 1 } }
       )
       .toArray(),
-    db
-      .collection<StateRegistrationPool>("stateRegistrationPool")
-      .find({ $or: affectedStates })
-      .toArray(),
+    stateRegistrationPoolCollection(db).find({ $or: affectedStates }).toArray(),
   ]);
 
   const activePartyKeys = new Set(
@@ -268,8 +295,7 @@ async function apply(db: Db, healPlan: HealPlan, ctx: { now: Date }): Promise<He
 
   const approvedIds = new Set(payload.staleRows.map((row) => row.id));
   const approvedById = new Map(payload.staleRows.map((row) => [row.id, row]));
-  const currentRows = await db
-    .collection<StatePartyOrg>("statePartyOrg")
+  const currentRows = await statePartyOrgCollection(db)
     .find({ _id: { $in: [...approvedIds] } })
     .toArray();
   const partyPairs = Array.from(
@@ -281,8 +307,7 @@ async function apply(db: Db, healPlan: HealPlan, ctx: { now: Date }): Promise<He
     ).values()
   );
   const stillDefunct = partyPairs.length
-    ? await db
-        .collection<PoliticalParty>("politicalParties")
+    ? await politicalPartiesCollection(db)
         .find({
           isDefunct: true,
           $or: partyPairs,
@@ -314,7 +339,7 @@ async function apply(db: Db, healPlan: HealPlan, ctx: { now: Date }): Promise<He
 
   let poolsUpdated = 0;
   if (poolRepairs.length > 0) {
-    const poolWrite = await db.collection<StateRegistrationPool>("stateRegistrationPool").bulkWrite(
+    const poolWrite = await stateRegistrationPoolCollection(db).bulkWrite(
       poolRepairs.map((pool) => ({
         updateOne: {
           filter: { _id: pool.id, countryId: pool.countryId, stateId: pool.stateId },
@@ -331,7 +356,7 @@ async function apply(db: Db, healPlan: HealPlan, ctx: { now: Date }): Promise<He
   }
 
   const deleted = toDelete.length
-    ? await db.collection<StatePartyOrg>("statePartyOrg").deleteMany({
+    ? await statePartyOrgCollection(db).deleteMany({
         _id: { $in: toDelete.map((row) => row._id) },
       })
     : { deletedCount: 0 };

@@ -21,6 +21,8 @@ import {
   toNations,
   type MarketedWorld,
 } from "./marketedWorld";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 /**
  * Five minutes. The root layout asks on every request, so this must not be a
@@ -34,12 +36,8 @@ let inflight: Promise<MarketedWorld> | null = null;
 
 async function loadMarketedWorld(db: Db): Promise<MarketedWorld> {
   const [config, gs] = await Promise.all([
-    db
-      .collection<GameConfig>("gameConfig")
-      .findOne({ _id: "default" }, { projection: { seedYear: 1 } }),
-    db
-      .collection<GameState>("gameState")
-      .findOne({ _id: "current" }, { projection: { startingYear: 1 } }),
+    gameConfigCollection(db).findOne({ _id: "default" }, { projection: { seedYear: 1 } }),
+    gameStateCollection(db).findOne({ _id: "current" }, { projection: { startingYear: 1 } }),
   ]);
 
   const seedYear = config?.seedYear ?? gs?.startingYear ?? DEFAULT_SEED_YEAR;

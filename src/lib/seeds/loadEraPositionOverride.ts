@@ -1,6 +1,7 @@
 import { getDb } from "@/lib/mongodb";
 import type { DemographicConfigOverride } from "@/lib/db/types/demographicConfigOverride";
 import type { EraId } from "./presetSelector";
+import { demographicConfigOverridesCollection } from "@/lib/db/repositories/demographicConfigOverrides";
 
 /** The authored global override fields consumed by the gated seed path. */
 export interface Layer1ModelOverride {
@@ -15,9 +16,7 @@ export async function loadFullOverride(
 ): Promise<Layer1ModelOverride | null> {
   const db = await getDb();
   const id = `${countryId}:${era}`;
-  const doc = await db
-    .collection<DemographicConfigOverride>("demographicConfigOverrides")
-    .findOne({ _id: id });
+  const doc = await demographicConfigOverridesCollection(db).findOne({ _id: id });
   if (!doc) return null;
   return { positions: doc.positions, turnout: doc.turnout };
 }
@@ -29,9 +28,7 @@ export async function loadPositionOverride(
 ): Promise<DemographicConfigOverride["positions"] | null> {
   const db = await getDb();
   const id = `${countryId}:${era}`;
-  const doc = await db
-    .collection<DemographicConfigOverride>("demographicConfigOverrides")
-    .findOne({ _id: id });
+  const doc = await demographicConfigOverridesCollection(db).findOne({ _id: id });
   return doc?.positions ?? null;
 }
 

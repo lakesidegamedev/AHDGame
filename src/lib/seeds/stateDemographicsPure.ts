@@ -4,8 +4,7 @@ import type { EraId } from "./presetSelector";
 /** Authored global override of the era's position/turnout tables, consumed by
  *  the gated seed path (see DemographicConfigOverride). Per-state Layer-1
  *  `share` is never overridden here; it stays census-driven. The archetype
- *  composition table is no longer overridable: it is derived from the census,
- *  and the Position Editor tabs that authored it were removed. */
+ *  composition table is derived from the census and is not overridable. */
 export interface Layer1SeedOverride {
   positions?: Record<string, Record<string, { economicLean: number; socialLean: number }>>;
   turnout?: Record<string, Record<string, number>>;
@@ -39,9 +38,9 @@ function resolveComposition(
   return { ...comp, voterGroupComposition, turnoutRates };
 }
 
-/** Layer 1 config — census-style characteristics per state (used to derive 12 voter groups).
- *  Optionally includes state-specific positions for each demographic dimension,
- *  allowing whites in MA to lean Democratic while whites in GA lean Republican. */
+/** Layer 1 config: census-style characteristics per state, used to derive 12 voter groups.
+ *  Optional state-specific positions per demographic dimension, so whites in MA can lean
+ *  Democratic while whites in GA lean Republican. */
 export interface Layer1Config {
   race: { white: number; black: number; hispanic: number; asian: number; other: number };
   education: { no_college: number; college: number; graduate: number };
@@ -111,9 +110,8 @@ function clampLean(v: number): number {
 
 /**
  * Derive an archetype's econ/social position as the state-share-weighted average
- * of its constituent Layer-1 positions. Selected at seed time when the
- * demographicsLayer1PositionsEnabled flag is on. State sensitivity emerges from
- * the state's own Layer-1 shares — no ad-hoc ideology nets.
+ * of its constituent Layer-1 positions. State sensitivity emerges from the
+ * state's own Layer-1 shares — no ad-hoc ideology nets.
  * NOTE: a lean is a weighted AVERAGE — do NOT apply civicMultiplier here.
  */
 export function deriveGroupLeanFromLayer1(
@@ -125,13 +123,11 @@ export function deriveGroupLeanFromLayer1(
   stateId?: string
 ): { economicLean: number; socialLean: number } {
   const comp = resolveComposition(era, override);
-  // Layered per-key merge: the era-wide table (with any per-state era overrides
-  // from STATE_POSITION_OVERRIDES applied when `stateId` is passed — e.g. the
-  // 1953 Solid-South/Plains white leans) fills every dim/key, state-authored
-  // positions override per-key, and an explicit caller override wins on top.
-  // (Previously `config.positions ?? {}` shadowed the era table entirely, so any
-  // key missing from a state's partial positions block was silently dropped from
-  // the weighted blend — the "wSum biased" bias the calibration suite exists to catch.)
+  // Layered per-key merge: era-wide table (with per-state era overrides when
+  // `stateId` is passed) fills every dim/key, state-authored positions override
+  // per-key, and an explicit caller override wins on top. Keys missing from a
+  // state's partial block must NOT be silently dropped or the weighted blend
+  // becomes biased.
   const positions: Record<
     string,
     Record<string, { economicLean: number; socialLean: number }>

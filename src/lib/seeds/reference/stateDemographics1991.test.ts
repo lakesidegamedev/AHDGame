@@ -9,10 +9,10 @@
  */
 
 import { describe, expect, it } from "vitest";
-import type { StateDemographics } from "@/lib/db/types";
+import type { CensusGroupView } from "@/lib/db/types";
 import { applyEra1991DemographicAdjustments } from "./stateDemographics1991";
 
-function makeDemographics(overrides: Partial<StateDemographics> = {}): StateDemographics {
+function makeDemographics(overrides: Partial<CensusGroupView> = {}): CensusGroupView {
   return {
     _id: "HD",
     countryId: "CN",
@@ -28,7 +28,7 @@ function makeDemographics(overrides: Partial<StateDemographics> = {}): StateDemo
     },
     lastUpdated: new Date("2026-05-29T00:00:00.000Z"),
     ...overrides,
-  } as StateDemographics;
+  } as CensusGroupView;
 }
 
 describe("applyEra1991DemographicAdjustments — lastUpdated type", () => {

@@ -15,6 +15,7 @@ import {
   specProfile,
   type ProfileGeneral,
 } from "../generalsTree";
+import { DOCTRINE_CATS } from "../doctrineTree";
 
 describe("FULLTREE data", () => {
   it("defines the 6 trait categories", () => {
@@ -30,7 +31,9 @@ describe("FULLTREE data", () => {
     expect(armor?.nodes[0]?.name).toBe("Tank Commander");
   });
   it("exposes spec profiles + seeds + stat meta", () => {
-    expect(SPEC_PROFILE.armor.branch).toBe("Army");
+    expect(SPEC_PROFILE.armor.reputation).toBeTruthy();
+    // A general has no branch of their own; the defence holder assigns units of any branch.
+    expect("branch" in SPEC_PROFILE.armor).toBe(false);
     expect(SPEC_SEED.armor.length).toBeGreaterThan(0);
     expect(STAT_META.length).toBeGreaterThan(0);
   });
@@ -42,7 +45,7 @@ describe("findTreeNode + specProfile", () => {
     expect(findTreeNode("nope")).toBeNull();
   });
   it("returns a spec profile (fallback to armor)", () => {
-    expect(specProfile("naval").branch).toBe("Navy");
+    expect(specProfile("naval")).toBe(SPEC_PROFILE.naval);
     expect(specProfile("bogus" as never).reputation).toBeTruthy();
   });
 });
@@ -139,6 +142,40 @@ describe("trainNode", () => {
       }
     }
     expect([...costs]).toEqual([1]);
+  });
+});
+
+describe("modern trait decades", () => {
+  it("authors general traits for the 2020s, 2030s and 2040s", () => {
+    const decades = new Set<number>();
+    for (const ck in FULLTREE) {
+      for (const path of FULLTREE[ck].paths) {
+        for (const node of path.nodes) decades.add(node.dec);
+      }
+    }
+    expect(decades.has(2020)).toBe(true);
+    expect(decades.has(2030)).toBe(true);
+    expect(decades.has(2040)).toBe(true);
+  });
+
+  it("keeps each path chain in ascending decade order", () => {
+    for (const ck in FULLTREE) {
+      for (const path of FULLTREE[ck].paths) {
+        for (let i = 1; i < path.nodes.length; i++) {
+          expect(path.nodes[i].dec, path.nodes[i].id).toBeGreaterThanOrEqual(path.nodes[i - 1].dec);
+        }
+      }
+    }
+  });
+
+  it("boosts modern traits only from doctrine nodes that exist", () => {
+    for (const id of ["de6", "il6"]) {
+      const f = findTreeNode(id)!;
+      const names = DOCTRINE_CATS.flatMap((c) =>
+        c.paths.flatMap((p) => p.nodes.map((n) => n.name))
+      );
+      expect(names).toContain(f.node.boost);
+    }
   });
 });
 

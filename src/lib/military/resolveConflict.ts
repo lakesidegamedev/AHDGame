@@ -13,11 +13,9 @@ function belligerents(c: ConflictDoc): CountryId[] {
 }
 
 /**
- * Stand a conflict down. Records the outcome, then walks every belligerent out of it
- * through `standDownCountry` — the same exit a separate peace uses for one country,
- * so the two cannot drift.
- *
- * Spec: docs/superpowers/specs/2026-07-26-occupation-territory-design.md
+ * Stand a conflict down. Records the outcome, then walks every belligerent out
+ * through `standDownCountry`, the same exit a separate peace uses, so the two
+ * cannot drift.
  */
 export async function resolveConflict(
   db: Db,

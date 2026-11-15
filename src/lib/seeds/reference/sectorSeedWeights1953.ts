@@ -12,35 +12,20 @@
  */
 
 /**
- * 1953-era national sector weights, US only.
+ * 1953-era national sector weights, US only: relative percentage-of-GDP
+ * allocations across the 17 sectors, calibrated to ~1953 BEA value-added shares.
+ * Peak-manufacturing, defense-dominant, pre-service-economy era: manufacturing
+ * at its absolute peak (~25-30% of GDP), defense very high (~14%), autos very
+ * high (Big Three ~100% of US market), agriculture high (~8%), energy high
+ * (coal ~51% of primary energy), chemicals elevated, construction elevated,
+ * technology near zero (ENIAC-era), telecom low (AT&T landlines), finance low
+ * (Glass-Steagall), healthcare low (pre-Medicare), media low (no cable), retail
+ * pre-mall, real estate small, logistics pre-Interstate.
  *
- * Relative percentage-of-GDP allocations across the 17 game sectors, calibrated
- * to ~1953 BEA value-added shares — a *peak-manufacturing, defense-dominant,
- * pre-service-economy* era. Relative to the 1979 and later bundles:
- *   - manufacturing at its absolute PEAK (~25-30% of GDP; WWII-built capacity
- *     running at full tilt; autos, steel, chemicals, rubber all dominant)
- *   - defense VERY HIGH (~14% of GDP; Korean War + NATO nuclear buildup; the
- *     largest peacetime defense share in US history)
- *   - automobiles VERY HIGH (Big Three: GM/Ford/Chrysler have ~100% of US market;
- *     no Japanese/European competition; GI Bill + suburbs driving sales)
- *   - agriculture high (~8% of GDP; farm sector still ~15% of labor force)
- *   - energy high (coal ~51% of primary energy; oil/gas growing; no nuclear yet)
- *   - chemical_industries elevated (DuPont-era; postwar plastics/synthetic rubber boom)
- *   - construction elevated (Levittown suburban boom; GI Bill mortgages)
- *   - technology NEAR ZERO (ENIAC-era; no commercial computers; no silicon)
- *   - telecommunications LOW (AT&T monopoly; all landlines; no TV advertising scale yet)
- *   - financial LOW (Glass-Steagall in full force; no derivatives; regulated rates)
- *   - healthcare LOW (pre-Medicare/Medicaid; mostly private cash-pay; tiny sector)
- *   - media LOW (newspapers peak; TV just emerging; no cable)
- *   - entertainment LOW (Hollywood declining post-HUAC; early TV eating cinema)
- *   - retail moderate (pre-mall era; downtown department stores; no national chains)
- *   - real_estate lower than 1979 (low mortgage rates via FHA/VA but small market)
- *   - logistics moderate (truck + rail; pre-Interstate; trucking regulated)
- * All weights are normalised at read time, so only relative magnitudes matter.
- *
- * Other countries remain on the 2019-default weights until country-specific
- * 1953 data is authored. `getCountrySectorWeights1953` returns an even
- * distribution for any country not in the map.
+ * Weights are normalised at read time, so only relative magnitudes matter.
+ * Other countries remain on 2019 defaults until country-specific 1953 data is
+ * authored; `getCountrySectorWeights1953` returns an even distribution for any
+ * country not in the map.
  */
 
 import { OPERATING_SECTOR_TYPES } from "@/lib/constants/corporations";

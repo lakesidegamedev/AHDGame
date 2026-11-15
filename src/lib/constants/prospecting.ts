@@ -16,10 +16,11 @@ import { RD_INNOVATION_SCORE_THRESHOLD } from "@/lib/constants/corporations";
 // ── Prospecting ──────────────────────────────────────────────────────────────
 
 /**
- * Whether a company may launch a corporate survey. The company's own type or
- * secondary type must be extraction; merely operating an extraction sector
- * (for example after buying one) does not qualify. Shared by the launch command
- * and the sector page so the button and the refusal cannot drift apart.
+ * Whether a company's own type or secondary type is extraction, which on its
+ * own is enough to launch a corporate survey in any state it operates in. Any
+ * other company may still survey a state where it operates an extraction
+ * sector; the launch command and the sector page add that check, so the button
+ * and the refusal cannot drift apart.
  */
 export function corpCanProspect(corp: {
   type?: string | null;
@@ -28,9 +29,9 @@ export function corpCanProspect(corp: {
   return corp.type === "extraction" || corp.secondaryType === "extraction";
 }
 
-/** Refusal shown when a company that is not extraction-typed tries to prospect. */
+/** Refusal shown when a company with no extraction link to the state tries to prospect. */
 export const PROSPECT_NOT_EXTRACTION_MESSAGE =
-  "Only extraction companies can prospect. Your company's main or secondary business must be extraction, and owning an extraction sector is not enough.";
+  "Your company needs an extraction sector in this state, or an extraction main or secondary business, to prospect here.";
 
 /**
  * Turns from launch to resolution (6 turns = half a game quarter at 48/yr).
@@ -133,25 +134,10 @@ export const CONTRACT_SHARE_MAX = 0.75;
 // ── Era ──────────────────────────────────────────────────────────────────────
 
 /**
- * Era scaling for prospecting.
- *
- * A survey in 1953 and a survey in 2019 were running the same numbers, which
- * gets the era wrong in two opposite directions at once.
- *
- * Finding oil in 1953 meant surface geology, magnetometers and single-fold
- * seismic read off paper — no digital processing, no 3D imaging, no satellite
- * gravimetry. Success rates were far worse and a survey took much longer. But
- * the deposits still out there were the easy ones: shallow, large, and
- * unclaimed. By 2019 the technology finds almost anything, and what is left to
- * find is marginal.
- *
- * So the era model is a trade rather than a difficulty slider: earlier worlds
- * hit less often and wait longer, and are paid more when they do hit. That
- * keeps prospecting a live decision in every era instead of a strictly worse
- * one in the past.
- *
- * Anchors interpolate linearly, matching `METRIC_BAND_CURVES`. A null year
- * (era clock off) returns neutral, so an existing world is unchanged.
+ * Era scaling for prospecting: earlier eras succeed less often and take
+ * longer, but pay more on a hit, so prospecting stays a live decision in
+ * every era. Anchors interpolate linearly like `METRIC_BAND_CURVES`; a
+ * null year returns neutral.
  */
 export interface ProspectEraScaling {
   /** Multiplier on success chance. */

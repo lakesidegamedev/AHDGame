@@ -8,7 +8,7 @@
  */
 
 import React, { type RefObject } from "react";
-import Link from "next/link";
+import Link from "@/components/navbar/NavigationLink";
 import { AnchoredDropdownPanel } from "@/components/navbar/AnchoredDropdownPanel";
 
 /**

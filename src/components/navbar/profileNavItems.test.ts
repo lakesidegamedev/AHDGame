@@ -16,7 +16,9 @@ describe("buildProfileNavItems", () => {
   it("appends corporation after Actions when the viewer is CEO", () => {
     const ids = visibleProfileNavItems({ myCorporationId: 42 }).map((i) => i.id);
     expect(ids).toEqual(["profile", "actions", "corporation"]);
-    expect(visibleProfileNavItems({ myCorporationId: 42 }).at(-1)?.href).toBe("/corporation/42");
+    expect(visibleProfileNavItems({ myCorporationId: 42 }).at(-1)?.href).toBe(
+      "/api/corporations/mine"
+    );
   });
 
   it("appends union after corp when the viewer leads or organizes one", () => {

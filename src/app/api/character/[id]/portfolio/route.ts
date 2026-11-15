@@ -8,6 +8,7 @@ import type { Character } from "@/lib/db/types";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
 import { parseCharacterId } from "@/lib/utils/profileUrls";
 import { loadPortfolioForCharacter } from "@/lib/portfolio/loadCharacterPortfolio";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 interface RouteParams {
   params: Promise<{ id: string }>;
 }
@@ -22,14 +23,10 @@ async function handleGET(_request: Request, { params }: RouteParams) {
     let character: Character | null = null;
 
     if (parsed.type === "sequential") {
-      character = await db
-        .collection<Character>("characters")
-        .findOne({ sequentialId: parsed.value });
+      character = await charactersCollection(db).findOne({ sequentialId: parsed.value });
     } else {
       // ObjectId lookup
-      character = await db
-        .collection<Character>("characters")
-        .findOne({ _id: new ObjectId(parsed.value) });
+      character = await charactersCollection(db).findOne({ _id: new ObjectId(parsed.value) });
     }
 
     if (!character) {

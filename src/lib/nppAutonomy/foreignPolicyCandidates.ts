@@ -52,16 +52,9 @@ function organizationThatCanTable(
  * Ballots this planner must not cast, because the country can never be on their
  * roll.
  *
- * An admission and a bloc war entry are decided by the player-enabled members
- * alone (`ballotIsPlayerOnly`), and the planner only ever runs for a country
- * that is NOT player-enabled — `isNppAutonomyActive` requires exactly that. So
- * every such ballot it cast was guaranteed to be ignored by the resolver.
- *
- * Writing them was never free. The row still lands on the proposal, where it is
- * read back by anything listing who has voted, so a bloc showed "yes" rows from
- * members whose consent the tally beside them did not count (ticket #1257). And
- * now that ballots no longer compete for the country's one strategic action,
- * these would be cast reliably every cycle rather than occasionally.
+ * These are decided by player-enabled members alone, and the planner only runs
+ * for countries that are not player-enabled, so any such ballot it cast would
+ * be ignored by the resolver while still appearing in vote listings.
  */
 function planningCountryHoldsNoBallot(kind: OrgBallotKind): boolean {
   return ballotIsPlayerOnly(kind);
@@ -236,7 +229,7 @@ export function bilateralCandidates(
     // sharing the roll is what makes an FTA, aid or an endorsement possible, and
     // it is exactly what makes sanctions incoherent. Drawn from the shared list
     // the target was a fellow member by construction, and Greece spent two turns
-    // tabling Warsaw Pact sanctions against its own allies (ticket #1285).
+    // tabling Warsaw Pact sanctions against its own allies.
     // `proposeLegislation` refuses these outright, so a planner still choosing
     // them would burn the country's one strategic action on a certain refusal.
     const organizationsWithoutTarget = Array.from(sourceOrganizations).filter(
@@ -449,7 +442,6 @@ export function warCandidates(
           offer.expiresTurn > context.currentTurn
       );
       if (
-        context.offensiveInitiationEnabled &&
         deployed.length > 0 &&
         deployedReadiness >= 40 &&
         context.approvalRating >= 40 &&

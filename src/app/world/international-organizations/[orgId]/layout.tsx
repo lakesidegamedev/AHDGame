@@ -64,11 +64,7 @@ export default function OrgLayout({ children }: { children: React.ReactNode }) {
           All organizations
         </Link>
         <div style={orgAccentStyle(org.identity)} className="space-y-5">
-          <OrgMasthead
-            org={org}
-            viewer={viewer}
-            alignmentEnabled={data.intOrgAlignmentEnabled === true}
-          />
+          <OrgMasthead org={org} viewer={viewer} />
           <OrgProvider
             value={{
               org,

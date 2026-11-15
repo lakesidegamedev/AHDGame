@@ -1,3 +1,5 @@
+import { serverEnv } from "@/lib/config/read";
+
 /**
  * Which minute of the hour (UTC) a world takes its turn.
  *
@@ -16,7 +18,7 @@ export type TurnCronMinute = 0 | 30;
 const HOUR_MS = 60 * 60 * 1000;
 const MINUTE_MS = 60 * 1000;
 
-export function resolveTurnCronMinute(env: NodeJS.ProcessEnv = process.env): TurnCronMinute {
+export function resolveTurnCronMinute(env: NodeJS.ProcessEnv = serverEnv()): TurnCronMinute {
   const raw = env.TURN_CRON_MINUTE?.trim();
   if (!raw) return 0;
   if (raw === "0" || raw === "00") return 0;

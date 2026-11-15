@@ -1,11 +1,10 @@
 /**
- * 1953 three-tier world release gate (#3729).
+ * 1953 three-tier world release gate.
  *
- * Proves coverage, readiness, and a deterministic ~20-year (1,000-turn) kernel
- * simulation of Tier-2 macro contributions, sphere flows/sponsor drift,
- * NPP decision staggering, player-handoff invariants, and decolonization /
- * UN lifecycle evaluation — without requiring a multi-hour live Mongo soak.
- *
+ * Proves coverage, readiness, and a deterministic ~20-year (1,000-turn)
+ * kernel simulation of Tier-2 macro contributions, sphere flows/sponsor
+ * drift, NPP decision staggering, player-handoff invariants, and
+ * decolonization / UN lifecycle, without a live Mongo soak.
  * Live-engine soaks (scripts/sim/runWorld.ts) remain the staging proof for
  * full processTurn() wiring; this module is the re-runnable CI gate.
  */
@@ -686,9 +685,7 @@ function checkLiveEngineDeferred(): GateCheckResult {
   };
 }
 
-/**
- * Run the full #3729 release gate and produce a structured report.
- */
+/** Run the full release gate and produce a structured report. */
 export function runReleaseGate1953(options?: { kernelTurns?: number }): ReleaseGate1953Report {
   const kernel = runKernelHorizon(options?.kernelTurns ?? RELEASE_GATE_TARGET_TURNS);
 

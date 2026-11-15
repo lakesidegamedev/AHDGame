@@ -90,7 +90,7 @@ describe("RU delegate spawners (1953-default, status active)", () => {
   it("union chamber seats each region at its houseDistricts", async () => {
     const mock = makeRUMockDb(1);
     await mountRU(mock);
-    const { ensureRUSupremeSovietElections } = await import("./perpetualElections");
+    const { ensureRUSupremeSovietElections } = await import("@/lib/elections/scheduling");
     await ensureRUSupremeSovietElections(new Date("2026-04-01T00:00:00Z"));
 
     const inserted = mock.insertCalls.flat();
@@ -106,7 +106,7 @@ describe("RU delegate spawners (1953-default, status active)", () => {
   it("nationalities chamber seats from RU_NATIONALITIES_SEATS", async () => {
     const mock = makeRUMockDb(1);
     await mountRU(mock);
-    const { ensureRUNationalitiesElections } = await import("./perpetualElections");
+    const { ensureRUNationalitiesElections } = await import("@/lib/elections/scheduling");
     await ensureRUNationalitiesElections(new Date("2026-04-01T00:00:00Z"));
 
     const inserted = mock.insertCalls.flat();
@@ -120,7 +120,7 @@ describe("RU delegate spawners (1953-default, status active)", () => {
   it("republic soviets seat each region at its authored stateSenateSeats", async () => {
     const mock = makeRUMockDb(1);
     await mountRU(mock);
-    const { ensureRURepublicSovietElections } = await import("./perpetualElections");
+    const { ensureRURepublicSovietElections } = await import("@/lib/elections/scheduling");
     await ensureRURepublicSovietElections(new Date("2026-04-01T00:00:00Z"));
 
     const inserted = mock.insertCalls.flat();
@@ -141,7 +141,7 @@ describe("D10 gates", () => {
       ensureRUNationalitiesElections,
       ensureRURepublicSovietElections,
       ensureRUGovernorElections,
-    } = await import("./perpetualElections");
+    } = await import("@/lib/elections/scheduling");
     const now = new Date("2026-04-01T00:00:00Z");
     await ensureRUSupremeSovietElections(now);
     await ensureRUNationalitiesElections(now);
@@ -160,7 +160,7 @@ describe("D10 gates", () => {
       ensureRUNationalitiesElections,
       ensureRURepublicSovietElections,
       ensureRUGovernorElections,
-    } = await import("./perpetualElections");
+    } = await import("@/lib/elections/scheduling");
     const now = new Date("2026-04-01T00:00:00Z");
     await ensureRUSupremeSovietElections(now);
     await ensureRUNationalitiesElections(now);
@@ -174,7 +174,7 @@ describe("D10 gates", () => {
     const mock = makeRUMockDb(1, { startingYear: 2019, preset: "2019-default" });
     await mountRU(mock);
     const { ensureRUSupremeSovietElections, ensureRURepublicSovietElections } =
-      await import("./perpetualElections");
+      await import("@/lib/elections/scheduling");
     const now = new Date("2026-04-01T00:00:00Z");
     await ensureRUSupremeSovietElections(now);
     await ensureRURepublicSovietElections(now);
@@ -184,7 +184,7 @@ describe("D10 gates", () => {
   it("first secretaries spawn on the republic-soviet cycle when active", async () => {
     const mock = makeRUMockDb(1);
     await mountRU(mock);
-    const { ensureRUGovernorElections } = await import("./perpetualElections");
+    const { ensureRUGovernorElections } = await import("@/lib/elections/scheduling");
     await ensureRUGovernorElections(new Date("2026-04-01T00:00:00Z"));
 
     const inserted = mock.insertCalls.flat();

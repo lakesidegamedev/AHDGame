@@ -72,6 +72,9 @@
       "chooseSpecialization": "Wähle eine. Die anderen werden für dieses Jahrzehnt gesperrt. Jeder Abschluss folgt seiner eigenen Wahl."
     },
     "commodityMarket": {
+      "supplyOfferedPerDay": "angeboten pro Tag",
+      "supplyIncludesStock": "inklusive unverkaufter Bestände",
+      "supplyOfferedExplanation": "Das Angebot ist, was Produzenten jede Runde zum Verkauf anbieten: Bestände, die sie früher nicht verkaufen konnten, plus die jetzt geplante Produktion. Unverkaufte Bestände werden jede Runde erneut gezählt, daher kann dieser Wert deutlich über der tatsächlichen Produktion liegen. Die Produzentenrangliste unten nutzt die Kapazität und die Verbraucherrangliste die geschätzten Anlageneingaben, sie ergeben deshalb nicht diesen Wert.",
       "substitutionOrders": "zuzüglich {units} Ersatzbestellungen",
       "substitutionOrdersExplanation": "Haushalte haben diese bestellt, nachdem ihre erste Wahl ausverkauft war. Sie zählen hier nicht als Nachfrage, damit dieses Gut nicht als knapp erscheint."
     },

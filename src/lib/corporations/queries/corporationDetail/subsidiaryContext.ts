@@ -1,5 +1,5 @@
 import { ObjectId, type Db } from "mongodb";
-import type { Bond, Corporation } from "@/lib/db/types";
+import type { Corporation } from "@/lib/db/types";
 import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
 import {
   acquirerOwnershipPercent,
@@ -33,6 +33,8 @@ import {
   strengthUpkeepActive,
 } from "@/lib/corporations/strengthUpkeep";
 import { spinOffCooldownTurnsRemaining } from "@/lib/corporations/subsidiaries/constants";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 async function buildHostileTakeoverEligibility(
   db: Db,
@@ -41,8 +43,7 @@ async function buildHostileTakeoverEligibility(
 ) {
   if (!viewerUserId || corporation.countryOwnerId) return null;
 
-  const myCorps = await db
-    .collection<Corporation>("corporations")
+  const myCorps = await corporationsCollection(db)
     .find({
       userId: new ObjectId(viewerUserId),
       ceoVacant: { $ne: true },
@@ -60,11 +61,8 @@ async function buildHostileTakeoverEligibility(
     const acqPct = acquirerOwnershipPercent(mc._id, corporation);
     if (acqPct > HOSTILE_TAKEOVER_OWNERSHIP_THRESHOLD_PERCENT) {
       const [outstandingBonds, parentCorp] = await Promise.all([
-        db
-          .collection<Bond>("bonds")
-          .find({ corporationId: corporation._id, matured: false })
-          .toArray(),
-        db.collection<Corporation>("corporations").findOne({ _id: mc._id }),
+        bondsCollection(db).find({ corporationId: corporation._id, matured: false }).toArray(),
+        corporationsCollection(db).findOne({ _id: mc._id }),
       ]);
       const outstandingBondDebt = outstandingBonds.reduce((sum, b) => sum + b.totalIssued, 0);
       const parentFx = parentCorp ? fxRateForCorpFromMap(parentCorp, fxByCurrency) : 1;
@@ -106,7 +104,6 @@ export interface SubsidiaryPayload {
 export interface SubsidiaryContextResult {
   parentCorporationPayload: ParentCorporationPayload | null;
   subsidiariesPayload: SubsidiaryPayload[];
-  subsidiaryCorporationsEnabled: boolean;
   isFormalizedSub: boolean;
   activeFloorPct: number;
   canManageAsParent: boolean;
@@ -118,7 +115,7 @@ export interface SubsidiaryContextResult {
   spinOffCooldownTurnsRemaining: number;
   hostileTakeoverEligibility: Awaited<ReturnType<typeof buildHostileTakeoverEligibility>>;
   /**
-   * #1669: present only for the CEO of a group leader whose group runs under
+   * Present only for the CEO of a group leader whose group runs under
    * strength upkeep. The leader pays each formalized subsidiary part of the
    * strength it gains, so the CEO tab's own projection (which counts only the
    * budget's growth and the decay) is incomplete without saying so.
@@ -127,7 +124,7 @@ export interface SubsidiaryContextResult {
 }
 
 /**
- * Parent / subsidiary / takeover / spin-off context for the detail view (#587).
+ * Parent / subsidiary / takeover / spin-off context for the detail view.
  *
  * The parent-corp lookup, the subsidiary-candidates query, and the hostile-
  * takeover eligibility build are independent, so they fan out in one round
@@ -149,15 +146,12 @@ export async function loadSubsidiaryContext(
   const [pDoc, subsidiaryCandidates, hostileTakeoverEligibility, reservedPlacedByThisCorp] =
     await Promise.all([
       controllingParent
-        ? db
-            .collection<Corporation>("corporations")
-            .findOne(
-              { _id: controllingParent.corporationId },
-              { projection: { _id: 1, name: 1, sequentialId: 1 } }
-            )
+        ? corporationsCollection(db).findOne(
+            { _id: controllingParent.corporationId },
+            { projection: { _id: 1, name: 1, sequentialId: 1 } }
+          )
         : Promise.resolve(null),
-      db
-        .collection<Corporation>("corporations")
+      corporationsCollection(db)
         .find({
           shareholders: {
             $elemMatch: {
@@ -215,8 +209,7 @@ export async function loadSubsidiaryContext(
     .map((r) => r.targetCorpId)
     .filter((id) => !candidateIds.has(id.toString()));
   if (missingReservedIds.length > 0) {
-    const extraSubs = await db
-      .collection<Corporation>("corporations")
+    const extraSubs = await corporationsCollection(db)
       .find({ _id: { $in: missingReservedIds } })
       .project<
         Pick<
@@ -265,19 +258,13 @@ export async function loadSubsidiaryContext(
     }
   }
 
-  // Subsidiary corporations (feature-gated): derive management/formalization
-  // eligibility for the viewer + honor the parent dividend floor. Read the flag
-  // via the in-scope db (this query already holds a connection).
-  const subsidiaryGs = await db
-    .collection<{ _id: string; subsidiaryCorporationsEnabled?: boolean }>("gameState")
-    .findOne({ _id: "current" }, { projection: { subsidiaryCorporationsEnabled: 1 } });
-  const subsidiaryCorporationsEnabled = subsidiaryGs?.subsidiaryCorporationsEnabled === true;
+  // Subsidiary corporations: derive management/formalization eligibility for
+  // the viewer + honor the parent dividend floor.
   const isFormalizedSub = isFormalizedSubsidiaryHelper(corporation, controllingParent);
-  // #1669: the budget line on the CEO tab shows the growth a budget buys less
-  // the 5% decay, and never the strength the group leader hands to its
-  // subsidiaries. Show the CEO that the figure is incomplete rather than
-  // letting a rising forecast sit next to a falling total. Only the group
-  // leader pays, so only its CEO needs the note.
+  // The budget line shows growth bought less the 5% decay, not the
+  // strength the leader transfers to subsidiaries. Flag the incomplete figure
+  // so a rising forecast is not read against a falling total. Only the group
+  // leader pays, so only its CEO needs this note.
   const viewerIsCeoOfThisCorp =
     !!viewerUserId &&
     corporation.ceoVacant !== true &&
@@ -290,7 +277,6 @@ export async function loadSubsidiaryContext(
       ? { subsidiaryCount: formalizedSubsidiaryCount }
       : null;
   const activeFloorPct = activeParentDividendFloorPct({
-    enabled: subsidiaryCorporationsEnabled,
     parentDividendFloorPct: corporation.parentDividendFloorPct,
     parentDividendFloorSetByCorpId: corporation.parentDividendFloorSetByCorpId,
     controllingParent,
@@ -301,7 +287,6 @@ export async function loadSubsidiaryContext(
   // Viewer (as CEO of this corp) may spin off a subsidiary when the corp is
   // eligible to act as a parent. The command re-checks cooldown + sector count.
   const canSpinOff =
-    subsidiaryCorporationsEnabled &&
     !!viewerUserId &&
     corporation.ceoVacant !== true &&
     corporation.userId?.toString() === viewerUserId &&
@@ -312,7 +297,7 @@ export async function loadSubsidiaryContext(
     corporation.lastSpinOffTurn,
     currentTurn
   );
-  if (subsidiaryCorporationsEnabled && viewerUserId) {
+  if (viewerUserId) {
     canManageAsParent = await canActOnCorporationAsParent(
       db,
       new ObjectId(viewerUserId),
@@ -328,7 +313,7 @@ export async function loadSubsidiaryContext(
       isEligibleAsSubsidiary(corporation) &&
       corporation.subsidiaryFormalizedAtTurn == null
     ) {
-      const parentDoc = await db.collection<Corporation>("corporations").findOne(
+      const parentDoc = await corporationsCollection(db).findOne(
         { _id: controllingParent.corporationId },
         {
           projection: {
@@ -350,7 +335,6 @@ export async function loadSubsidiaryContext(
   return {
     parentCorporationPayload,
     subsidiariesPayload,
-    subsidiaryCorporationsEnabled,
     isFormalizedSub,
     activeFloorPct,
     canManageAsParent,

@@ -1,36 +1,23 @@
 /**
- * A8: the turn pass that moves pension money.
+ * Turn pass that moves pension money: charges employers, accrues worker claims,
+ * and tops up schemes in deficit for every active collective agreement with a
+ * contribution rate.
  *
- * Runs once per turn over every ACTIVE collective agreement carrying a
- * contribution rate. For each one it charges the employer, accrues the workers'
- * claim, and asks a scheme in deficit for a top-up.
+ * sector.laborCost is written by the corporation turn as telemetry, not read
+ * back into the economy. Reading it here makes it load-bearing: an absent or
+ * unusable figure contributes NOTHING (the labour system can be off, and
+ * inventing a wage bill would charge employers for unmodelled workers), and
+ * the same figure drives both contribution and accrual so they cannot diverge.
  *
- * ## Where the wage bill comes from
+ * It is stored DAILY (per-turn cost times TURNS_PER_DAY) while this pass runs
+ * per TURN, so it is divided back down first; using it as-is would bill 24x.
  *
- * `sector.laborCost` is written by the corporation turn and documented there as
- * display-and-analytics telemetry, not read back into the economy. This reads
- * it back, which makes it load-bearing, so two things follow and are enforced
- * below: an absent or unusable figure contributes NOTHING (the labour system
- * can be off entirely, and inventing a wage bill would charge an employer for
- * workers the economy is not modelling), and the same figure drives BOTH the
- * contribution and the accrual so the two can never be measured against
- * different populations.
- *
- * That field is stored on a DAILY basis (`sectorTurn.ts` writes the per-turn
- * cost times `TURNS_PER_DAY`, like `revenue`), and this pass runs once per TURN,
- * so it is divided back down before anything is charged against it. Reading the
- * stored figure as if it were per-turn billed every employer 24 times the
- * bargained rate and accrued 24 times the claim.
- *
- * ## Order
- *
- * Charge, then accrue, then top up. Accruing first would ask an employer to
- * top up a shortfall created by the very same turn's accrual, before that
- * turn's contribution had been counted against it.
+ * Order: charge, then accrue, then top up, so an employer is never asked to
+ * cover a shortfall created by the same turn's own accrual.
  */
 
 import { ObjectId, type Db } from "mongodb";
-import type { CollectiveAgreement, Corporation, Union } from "@/lib/db/types";
+import type { Union } from "@/lib/db/types";
 import type { CorporateSector } from "@/lib/db/types/corporation";
 import type { PensionScheme } from "@/lib/db/types/pensionScheme";
 import type { CurrencyCode } from "@/lib/constants/currencies";
@@ -54,6 +41,11 @@ import {
   fxRateForCorpFromMap,
   loadFxRatesByCurrency,
 } from "@/lib/currency/corporationCapital";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { unionsCollection } from "@/lib/db/repositories/unions";
+import { collectiveAgreementsCollection } from "@/lib/db/repositories/collectiveAgreements";
+import { pensionSchemesCollection } from "@/lib/db/repositories/pensionSchemes";
 
 export { PENSION_SCHEMES };
 
@@ -77,9 +69,9 @@ async function ensurePensionScheme(
   union: Pick<Union, "_id" | "countryId" | "name">,
   currentTurn: number
 ): Promise<PensionScheme> {
-  const existing = await db
-    .collection<PensionScheme>(PENSION_SCHEMES)
-    .findOne({ unionId: union._id });
+  const existing = await pensionSchemesCollection<PensionScheme>(db).findOne({
+    unionId: union._id,
+  });
   if (existing) return existing;
 
   const now = new Date();
@@ -97,14 +89,12 @@ async function ensurePensionScheme(
     updatedAt: now,
   };
   try {
-    await db.collection<PensionScheme>(PENSION_SCHEMES).insertOne(scheme);
+    await pensionSchemesCollection<PensionScheme>(db).insertOne(scheme);
     return scheme;
   } catch {
     // Lost the race against a concurrent settlement; the unique index did its
     // job and the other writer's document is the one that counts.
-    const raced = await db
-      .collection<PensionScheme>(PENSION_SCHEMES)
-      .findOne({ unionId: union._id });
+    const raced = await pensionSchemesCollection<PensionScheme>(db).findOne({ unionId: union._id });
     if (raced) return raced;
     throw new Error(`Could not create or load a pension scheme for union ${union._id.toString()}`);
   }
@@ -157,8 +147,7 @@ export async function runPensionTurn(db: Db, currentTurn: number): Promise<Pensi
   // a fallen one off entirely.
   await refreshSchemeInvestedValues(db);
 
-  const agreements = await db
-    .collection<CollectiveAgreement>("collectiveAgreements")
+  const agreements = await collectiveAgreementsCollection(db)
     .find({
       ...activeCollectiveAgreementFilter(currentTurn),
       pensionContributionRate: { $gt: 0 },
@@ -172,8 +161,7 @@ export async function runPensionTurn(db: Db, currentTurn: number): Promise<Pensi
   const unionIds = [...new Set(agreements.map((a) => a.unionId.toString()))].map(
     (id) => new ObjectId(id)
   );
-  const unions = await db
-    .collection<Union>("unions")
+  const unions = await unionsCollection(db)
     .find({ _id: { $in: unionIds } }, { projection: { name: 1, countryId: 1 } })
     .toArray();
   const unionById = new Map(unions.map((u) => [u._id.toString(), u]));
@@ -181,8 +169,7 @@ export async function runPensionTurn(db: Db, currentTurn: number): Promise<Pensi
   const employerIds = [...new Set(agreements.map((a) => a.employerCorporationId.toString()))].map(
     (id) => new ObjectId(id)
   );
-  const employers = await db
-    .collection<Corporation>("corporations")
+  const employers = await corporationsCollection(db)
     .find(
       { _id: { $in: employerIds } },
       { projection: { name: 1, countryId: 1, liquidCurrencyCode: 1 } }
@@ -194,8 +181,7 @@ export async function runPensionTurn(db: Db, currentTurn: number): Promise<Pensi
   // Sectors live in their own collection, so load every covered sector for the
   // whole sweep in one read rather than per agreement.
   const coveredSectorIds = agreements.flatMap((a) => a.sectorIds);
-  const sectors = await db
-    .collection<CorporateSector>("corporateSectors")
+  const sectors = await corporateSectorsCollection(db)
     .find({ _id: { $in: coveredSectorIds } }, { projection: { laborCost: 1 } })
     .toArray();
   const sectorById = new Map(sectors.map((s) => [s._id.toString(), s]));
@@ -269,7 +255,7 @@ export async function runPensionTurn(db: Db, currentTurn: number): Promise<Pensi
         fxRate
       );
 
-      await db.collection<PensionScheme>(PENSION_SCHEMES).updateOne(
+      await pensionSchemesCollection<PensionScheme>(db).updateOne(
         { _id: scheme._id },
         {
           $inc: {

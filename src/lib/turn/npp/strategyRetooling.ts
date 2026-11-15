@@ -7,9 +7,10 @@ import {
   STRATEGY_COOLDOWN_TURNS,
 } from "@/lib/constants/sectorStrategies";
 import { getStrategyAvailability } from "@/lib/constants/techTree/strategyAvailability";
+import type { TechDiffusionSnapshot } from "@/lib/constants/techTree/diffusion";
 import { retoolRescaleFields } from "@/lib/corporations/retoolRescale";
 import type { CommodityPriceRatioFn } from "@/lib/turn/npp/marketSignals";
-import { isObsoleteNppParentStrategy } from "./rules/obsoleteStrategyRepair";
+import { isObsoleteNppParentStrategy, sunsetRepairTarget } from "./rules/obsoleteStrategyRepair";
 import { strategyPriceScore } from "./rules/foundingRecipe";
 import { isParentDirectedStrategyProtected } from "./rules/parentDirectedStrategy";
 
@@ -36,6 +37,16 @@ interface StrategyRetoolContext {
   now: Date;
   currentYear: number;
   techTreesEnabled: boolean;
+  /**
+   * World frontier research per lane, read once per turn. Absent keeps every
+   * breakthrough method closed.
+   */
+  sectorResearchByLane?: ReadonlyMap<string, number>;
+  /**
+   * Readiness by country and method operators in worlds with technology
+   * diffusion. NPPs adopt at their country's lag; absent keeps the calendar.
+   */
+  techDiffusion?: TechDiffusionSnapshot;
   plantsEnabled: boolean;
   priceRatioOf: CommodityPriceRatioFn;
 }
@@ -74,6 +85,13 @@ export function chooseNppStrategyRetool(ctx: StrategyRetoolContext): StrategyRet
     const strategies = SECTOR_STRATEGIES[operatingType as OperatingSectorType];
     if (!strategies || strategies.length < 2) continue;
     const countryId = sector.countryId ?? ctx.corp.countryId;
+    const world = {
+      sectorResearch: ctx.sectorResearchByLane?.get(operatingType),
+      laneResearch: ctx.sectorResearchByLane,
+      diffusion: ctx.techDiffusion
+        ? { snapshot: ctx.techDiffusion, countryId, adopter: "npp" as const }
+        : undefined,
+    };
     const currentId = sector.strategyId ?? "standard";
     const current = strategies.find((strategy) => strategy.id === currentId);
     if (!current) {
@@ -82,16 +100,54 @@ export function chooseNppStrategyRetool(ctx: StrategyRetoolContext): StrategyRet
         isObsoleteNppParentStrategy(ctx.corp.ceoType, operatingType, currentId)
       ) {
         const standard = strategies.find((strategy) => strategy.id === "standard");
-        if (
-          standard &&
-          !getStrategyAvailability(ctx.corp, standard, ctx.currentYear, ctx.techTreesEnabled).locked
-        ) {
+        const isOpen = (candidate: (typeof strategies)[number]) =>
+          !getStrategyAvailability(
+            ctx.corp,
+            candidate,
+            ctx.currentYear,
+            ctx.techTreesEnabled,
+            world
+          ).locked;
+        // A retired standard sends the repair on to standard's successor.
+        const target =
+          standard && isOpen(standard)
+            ? standard
+            : standard && ctx.techTreesEnabled
+              ? sunsetRepairTarget(standard, strategies, ctx.currentYear, isOpen, (candidate) =>
+                  strategyPriceScore(candidate, countryId, ctx.priceRatioOf)
+                )
+              : null;
+        if (target) {
           // Keep the obsolete source id throughout the normal blend. Replacing
           // its fallback immediately would change paid capacity's unit basis.
-          best = { sector, toStrategyId: standard.id, advantage: 0, corrective: true };
+          best = { sector, toStrategyId: target.id, advantage: 0, corrective: true };
         }
       }
       continue;
+    }
+    // A retired method converts to its best open successor, ahead of any
+    // price-seeking retool (the obsolete-id repair's corrective path).
+    if (ctx.techTreesEnabled) {
+      const successor = sunsetRepairTarget(
+        current,
+        strategies,
+        ctx.currentYear,
+        (candidate) =>
+          !getStrategyAvailability(
+            ctx.corp,
+            candidate,
+            ctx.currentYear,
+            ctx.techTreesEnabled,
+            world
+          ).locked,
+        (candidate) => strategyPriceScore(candidate, countryId, ctx.priceRatioOf)
+      );
+      if (successor) {
+        if (!best?.corrective) {
+          best = { sector, toStrategyId: successor.id, advantage: 0, corrective: true };
+        }
+        continue;
+      }
     }
     if (best?.corrective) continue;
     const currentScore = strategyPriceScore(current, countryId, ctx.priceRatioOf);
@@ -104,7 +160,8 @@ export function chooseNppStrategyRetool(ctx: StrategyRetoolContext): StrategyRet
         ctx.corp,
         candidate,
         ctx.currentYear,
-        ctx.techTreesEnabled
+        ctx.techTreesEnabled,
+        world
       );
       if (availability.locked) continue;
       const score = strategyPriceScore(candidate, countryId, ctx.priceRatioOf);

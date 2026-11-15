@@ -17,9 +17,6 @@ vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
 vi.mock("@/lib/api/corporations/resolveQuery", () => ({ resolveCorporation: vi.fn() }));
 vi.mock("@/lib/gameState", () => ({ getGameState: vi.fn() }));
 vi.mock("@/lib/auth", () => ({ getAuthUser: vi.fn().mockResolvedValue(null) }));
-vi.mock("@/lib/corporations/techTree/featureFlag", () => ({
-  isSectorTechTreesEnabled: vi.fn().mockResolvedValue(true),
-}));
 vi.mock("@/lib/corporations/dailyGrossRevenue", () => ({
   corpDailyGrossRevenuePricingLocal: vi.fn().mockResolvedValue({
     dailyGrossRevenueLocal: 2_635_025_293.53,

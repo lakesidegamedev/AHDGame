@@ -5,12 +5,16 @@ import { handleRouteError, badRequest, forbidden, notFound, errorResponse } from
 import { createNotification } from "@/lib/notifications";
 import type { Coalition } from "@/lib/db/types/coalition";
 import type { PoliticalParty } from "@/lib/db/types/party";
-import type { Character } from "@/lib/db/types/character";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { canActAsChair } from "@/lib/parties/actingChair";
 import { isBannedParty } from "@/lib/turn/onePartyConstraints";
 import { getCountryState } from "@/lib/countryState";
+import { admitPartyToCoalition } from "@/lib/coalitions/admitParty";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { coalitionsCollection } from "@/lib/db/repositories/coalitions";
+import type { Document } from "mongodb";
 
 // POST /api/coalitions/[id]/invite/accept — Accept a coalition invite
 export async function POST(
@@ -42,17 +46,19 @@ export async function POST(
     const db = await getDb();
 
     // Find coalition
-    const coalition = await db
-      .collection<Coalition>("coalitions")
-      .findOne({ sequentialId: Number(id), countryId });
+    const coalition = await coalitionsCollection(db).findOne({
+      sequentialId: Number(id),
+      countryId,
+    });
     if (!coalition) {
       throw notFound("Coalition not found.");
     }
 
     // Find the character's party
-    const party = await db
-      .collection<PoliticalParty>("politicalParties")
-      .findOne({ sequentialId: Number(character.party), countryId });
+    const party = await politicalPartiesCollection(db).findOne({
+      sequentialId: Number(character.party),
+      countryId,
+    });
     if (!party) {
       throw notFound("Your party could not be found.");
     }
@@ -96,7 +102,7 @@ export async function POST(
       // Remove from pendingInvites and return success
       // $pull with nested object filter hits a TypeScript limitation in MongoDB's UpdateFilter
       /* eslint-disable @typescript-eslint/no-explicit-any */
-      await db.collection("coalitions").updateOne({ _id: coalition._id }, {
+      await coalitionsCollection<Document>(db).updateOne({ _id: coalition._id }, {
         $pull: { pendingInvites: { partyId: party._id } },
         $set: { updatedAt: new Date() },
       } as any);
@@ -106,46 +112,19 @@ export async function POST(
 
     const now = new Date();
 
-    // Use a pipeline update to atomically move party from pendingInvites to members.
-    // Avoids mixing $push + $pull in a single classic update (which can fail
-    // depending on MongoDB server / driver version).
-    await db.collection("coalitions").updateOne({ _id: coalition._id }, [
-      {
-        $set: {
-          pendingInvites: {
-            $filter: {
-              input: "$pendingInvites",
-              as: "inv",
-              cond: { $ne: ["$$inv.partyId", party._id] },
-            },
-          },
-          members: {
-            $concatArrays: [
-              "$members",
-              [
-                {
-                  partyId: party._id,
-                  partySequentialId: party.sequentialId,
-                  joinedAt: now,
-                },
-              ],
-            ],
-          },
-          updatedAt: now,
-        },
-      },
-    ]);
-
-    // Set coalitionId on the party
-    await db
-      .collection<PoliticalParty>("politicalParties")
-      .updateOne({ _id: party._id }, { $set: { coalitionId: coalition._id, updatedAt: now } });
+    if (!(await admitPartyToCoalition(db, coalition, party, "pendingInvites", now))) {
+      return errorResponse(
+        409,
+        "This request was already handled or the party joined another coalition."
+      );
+    }
 
     // Notify coalition chair
     const chairChar = coalition.chairCharacterId
-      ? await db
-          .collection<Character>("characters")
-          .findOne({ _id: coalition.chairCharacterId }, { projection: { userId: 1 } })
+      ? await charactersCollection(db).findOne(
+          { _id: coalition.chairCharacterId },
+          { projection: { userId: 1 } }
+        )
       : null;
     if (chairChar) {
       await createNotification({

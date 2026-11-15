@@ -35,7 +35,13 @@ export const DEFAULT_JUSTICE_AVATAR =
       `</svg>`
   );
 
-/** Mirrored public-domain portraits keyed by the justice's exact seed name. */
+/**
+ * Mirrored public-domain portraits keyed by a justice's exact name.
+ *
+ * Preset seeds now use fictional justices, so no new world matches an entry
+ * here; it only keeps portraits on courts seeded before that change. Do not
+ * add entries: a real portrait must never be shown as the person it depicts.
+ */
 export const HISTORICAL_JUSTICE_IMAGE_URLS: Readonly<Record<string, string>> = {
   "Earl Warren": `${SCOTUS_CDN_BASE}/earl-warren.webp`,
   "Hugo L. Black": `${SCOTUS_CDN_BASE}/hugo-black.webp`,

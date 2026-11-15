@@ -3,10 +3,14 @@ import { getDb } from "@/lib/mongodb";
 import { requireAuthWithCharacter } from "@/lib/api/requireAuth";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { findPartyBySequentialId } from "@/lib/db/partyLookup";
-import type { State, StatePartyOrg, NPP, Character } from "@/lib/db/types";
+import type { State, StatePartyOrg, NPP } from "@/lib/db/types";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { getStateLean } from "@/lib/utils/demographics";
 import { buildStatePartyRows } from "@/lib/states/buildStatePartyRows";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 // GET /api/country/[code]/parties/[id]/state-parties — Aggregate per-region party data
 //   (org%, PS, treasury, registration%, lean, chair, NPP count, priority target) for the
@@ -43,14 +47,12 @@ export async function GET(
       return errorResponse(403, "Not authorized");
     }
 
-    const states = await db.collection<State>("states").find({ countryId }).toArray();
-    const orgRows = await db
-      .collection<StatePartyOrg>("statePartyOrg")
+    const states = await statesCollection(db).find({ countryId }).toArray();
+    const orgRows = await statePartyOrgCollection(db)
       .find({ partyId: partyIdStr, countryId })
       .toArray();
 
-    const nppAgg = await db
-      .collection<NPP>("npps")
+    const nppAgg = await nppsCollection(db)
       .aggregate<{ _id: string; count: number }>([
         { $match: { party: partyIdStr, retiredAt: null } },
         { $group: { _id: "$homeState", count: { $sum: 1 } } },
@@ -63,8 +65,7 @@ export async function GET(
       .map((o) => o.chairId)
       .filter((c): c is NonNullable<typeof c> => c != null);
     const chairs = chairIds.length
-      ? await db
-          .collection<Character>("characters")
+      ? await charactersCollection(db)
           .find({ _id: { $in: chairIds } })
           .toArray()
       : [];

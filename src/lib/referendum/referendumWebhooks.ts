@@ -18,22 +18,37 @@ import {
 } from "@/lib/discordWebhooks";
 import type { Referendum, ReferendumKind } from "@/lib/db/types/referendum";
 import type { CountryId } from "@/lib/constants/countries";
+import { sovereigntyRegion } from "./rules/sovereigntyRegions";
 
 const REGION_NAMES: Record<string, string> = {
   SCO: "Scotland",
   WAL: "Wales",
   NIR: "Northern Ireland",
+  CA_QC: "Quebec",
 };
 
 /** Celebratory green for a completed reunification. */
 const REUNIFICATION_COLOR = 0x169b62;
 /** Celebratory accent for a newly-independent nation (saltire blue / Welsh red). */
-const INDEPENDENCE_COLORS: Record<string, number> = { SCO: 0x005eb8, WAL: 0xc8102e };
+const INDEPENDENCE_COLORS: Record<string, number> = {
+  SCO: 0x005eb8,
+  WAL: 0xc8102e,
+  CA_QC: 0x003da5,
+};
 const INDEPENDENCE_COLOR_FALLBACK = 0x1b9e77;
 const FOOTER = { text: "A House Divided" } as const;
 
 function regionName(regionId: string): string {
   return REGION_NAMES[regionId.toUpperCase()] ?? regionId;
+}
+
+/** The parent government and country an independence region leaves. */
+function parentOf(regionId: string): { national: string; parent: string } {
+  const entry = sovereigntyRegion(regionId);
+  return {
+    national: entry?.nationalGovernmentName ?? "Westminster",
+    parent: entry?.parentName ?? "the United Kingdom",
+  };
 }
 
 function noun(kind: ReferendumKind): string {
@@ -51,11 +66,12 @@ function Noun(kind: ReferendumKind): string {
 export function buildReferendumRequestedEmbed(args: {
   region: string;
   kind: ReferendumKind;
+  executiveTitle?: string;
 }): DiscordEmbed {
   return {
     title: `${args.region}: ${Noun(args.kind)} Referendum Requested`,
     description:
-      `The First Minister of ${args.region} has formally petitioned for a ${noun(args.kind)} ` +
+      `The ${args.executiveTitle ?? "First Minister"} of ${args.region} has formally petitioned for a ${noun(args.kind)} ` +
       `referendum. It now awaits the Prime Minister's decision to grant or decline.`,
     color: DISCORD_COLORS.electionOpen,
     footer: FOOTER,
@@ -91,6 +107,7 @@ export function buildReferendumVoteResultEmbed(args: {
   passed: boolean;
   finalYesShare: number;
   dailConsentRequired?: boolean;
+  national?: string;
 }): DiscordEmbed {
   const yes = Math.round(args.finalYesShare);
   if (args.kind === "peace_agreement") {
@@ -115,7 +132,7 @@ export function buildReferendumVoteResultEmbed(args: {
         ? args.dailConsentRequired === false
           ? ` Westminster must now consent for the union to take effect.`
           : ` Westminster and the Dáil must now both consent for the union to take effect.`
-        : ` Westminster must now consent for independence to take effect.`;
+        : ` ${args.national ?? "Westminster"} must now consent for independence to take effect.`;
     return {
       title,
       description: `${args.region} has voted **Yes** in its ${noun(args.kind)} referendum (${yes}% Yes).${tail}`,
@@ -191,10 +208,12 @@ export function buildReunificationCompleteEmbed(args: { region: string }): Disco
 export function buildIndependenceConsentBillEmbed(args: {
   region: string;
   passed: boolean;
+  national?: string;
 }): DiscordEmbed {
+  const national = args.national ?? "Westminster";
   return args.passed
     ? {
-        title: `Westminster Consents: ${args.region} (Independence) Bill Passes`,
+        title: `${national} Consents: ${args.region} (Independence) Bill Passes`,
         description:
           `The House of Commons has **passed** the bill to release ${args.region} as an ` +
           `independent sovereign country. Independence will now take effect.`,
@@ -202,7 +221,7 @@ export function buildIndependenceConsentBillEmbed(args: {
         footer: FOOTER,
       }
     : {
-        title: `Westminster Rejects the ${args.region} (Independence) Bill`,
+        title: `${national} Rejects the ${args.region} (Independence) Bill`,
         description:
           `The House of Commons has **rejected** the bill to release ${args.region}. ` +
           `Independence cannot proceed.`,
@@ -214,11 +233,12 @@ export function buildIndependenceConsentBillEmbed(args: {
 export function buildSecessionCompleteEmbed(args: {
   region: string;
   regionId: string;
+  parent?: string;
 }): DiscordEmbed {
   return {
     title: `${args.region} Becomes Independent`,
     description:
-      `It is done — ${args.region} has formally left the United Kingdom to become a sovereign ` +
+      `It is done: ${args.region} has formally left ${args.parent ?? "the United Kingdom"} to become a sovereign ` +
       `nation, with its own parliament and government.`,
     color: INDEPENDENCE_COLORS[args.regionId.toUpperCase()] ?? INDEPENDENCE_COLOR_FALLBACK,
     footer: FOOTER,
@@ -244,7 +264,11 @@ async function announceToProcessCountries(ref: Referendum, embed: DiscordEmbed):
 export async function announceReferendumRequested(ref: Referendum): Promise<void> {
   await announceToProcessCountries(
     ref,
-    buildReferendumRequestedEmbed({ region: regionName(ref.regionId), kind: ref.kind })
+    buildReferendumRequestedEmbed({
+      region: regionName(ref.regionId),
+      kind: ref.kind,
+      executiveTitle: sovereigntyRegion(ref.regionId)?.executiveTitle,
+    })
   );
 }
 
@@ -270,6 +294,7 @@ export async function announceReferendumVoteResult(
       passed: args.passed,
       finalYesShare: args.finalYesShare,
       dailConsentRequired: args.dailConsentRequired,
+      national: parentOf(ref.regionId).national,
     })
   );
 }
@@ -285,7 +310,11 @@ export async function announceConsentBillResolved(
   // "release as a sovereign country" wording; reunification uses the NI bills.
   const embed =
     ref.kind === "independence"
-      ? buildIndependenceConsentBillEmbed({ region: regionName(ref.regionId), passed })
+      ? buildIndependenceConsentBillEmbed({
+          region: regionName(ref.regionId),
+          passed,
+          national: parentOf(ref.regionId).national,
+        })
       : buildConsentBillEmbed({ chamber, passed });
   await sendCountryGameEvent(targetCountry, embed);
 }
@@ -301,7 +330,14 @@ export async function announceSecessionComplete(ref: Referendum): Promise<void> 
   // Cross-post to the releasing country (UK) and the new nation's own Game
   // Events webhook (if it has one) — mirroring the reunification cross-post.
   await sendMultiCountryGameEvent(
-    [ref.countryId, ref.regionId as CountryId],
-    buildSecessionCompleteEmbed({ region: regionName(ref.regionId), regionId: ref.regionId })
+    [
+      ref.countryId,
+      (sovereigntyRegion(ref.regionId)?.successorCountryId ?? ref.regionId) as CountryId,
+    ],
+    buildSecessionCompleteEmbed({
+      region: regionName(ref.regionId),
+      regionId: ref.regionId,
+      parent: parentOf(ref.regionId).parent,
+    })
   );
 }

@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { legislationTypes } from "@/lib/seeds/reference/legislationTypes";
 import { getBucketProfileForRegion } from "../bucketProfile";
 import { PRIORITY_COUNTRIES } from "./catalog";
 import { YEAR_2000_PRIORITIES } from "./year2000";
@@ -9,11 +8,9 @@ import {
   isPriorityTarget,
   type PriorityLaw,
 } from "./rules";
-import { withLegislativePriorities } from "./profile";
+import { priorityLaws, withLegislativePriorities } from "./profile";
 
-const laws = new Map<string, PriorityLaw>(
-  legislationTypes.map((law) => [law._id, { ...law, policyOptions: law.policyOptions ?? [] }])
-);
+const laws: ReadonlyMap<string, PriorityLaw> = priorityLaws;
 const requests = (
   cc: string,
   region: string,
@@ -81,9 +78,9 @@ describe("year-2000 legislative calibration", () => {
     const economicRight = requests("US", "AL", "race:white", 3, -3);
     const socialRight = requests("US", "AL", "race:white", -3, 3);
     const health = (all: typeof left) =>
-      all.find((p) => p.lawTypeId === "us_state_healthcare")!.policyOptionId;
+      all.find((p) => p.lawTypeId === "us.health.outcomes.primary")!.policyOptionId;
     const crime = (all: typeof left) =>
-      all.find((p) => p.lawTypeId === "us_state_policing")!.policyOptionId;
+      all.find((p) => p.lawTypeId === "us.order.communityTrust.primary")!.policyOptionId;
     expect(health(left)).not.toBe(health(economicRight));
     expect(health(left)).toBe(health(socialRight));
     expect(crime(left)).toBe(crime(economicRight));
@@ -93,41 +90,43 @@ describe("year-2000 legislative calibration", () => {
   it("lets strong social interests enter the selected priorities in either direction", () => {
     const conservative = requests("US", "AL", "race:white", 0, 3);
     const progressive = requests("US", "AL", "race:white", 0, -3);
-    expect(conservative.find((p) => p.lawTypeId === "us_reproductive_rights")?.policyOptionId).toBe(
-      "reproductive_rights_opt_4"
-    );
-    expect(progressive.find((p) => p.lawTypeId === "us_reproductive_rights")?.policyOptionId).toBe(
-      "reproductive_rights_opt_2"
-    );
     expect(
-      requests("US", "MT", "race:white", 0, 3).some((p) => p.lawTypeId === "us_gun_control")
+      conservative.find((p) => p.lawTypeId === "us.society.demography.primary")?.policyOptionId
+    ).toBe("l3");
+    expect(
+      progressive.find((p) => p.lawTypeId === "us.society.demography.primary")?.policyOptionId
+    ).toBe("l1");
+    expect(
+      requests("US", "MT", "race:white", 0, 3).some(
+        (p) => p.lawTypeId === "us.order.safety.primary"
+      )
     ).toBe(true);
   });
 
   it("preserves no-income-tax institutions and distinguishes Scotland from England", () => {
     const tax = requests("US", "WA", "wealth:high", 3).find(
-      (p) => p.lawTypeId === "us_state_income_tax_rate"
+      (p) => p.lawTypeId === "us.tax.stateIncomeTax"
     )!;
-    expect(tax.policyOptionId).toBe("state_income_tax_rate_opt_0");
+    expect(tax.policyOptionId).toBe("rate_0");
     for (const region of ["AK", "FL", "NH", "NV", "SD", "TN", "TX", "WA", "WY"]) {
       expect(
         requests("US", region, "wealth:high", 3).find(
-          (p) => p.lawTypeId === "us_state_income_tax_rate"
+          (p) => p.lawTypeId === "us.tax.stateIncomeTax"
         )!.policyOptionId
-      ).toBe("state_income_tax_rate_opt_0");
+      ).toBe("rate_0");
     }
-    expect(requests("UK", "SCO", "age:young")[0].policyOptionId).toBe("uk_tuition_fees_opt_0");
+    expect(requests("UK", "SCO", "age:young")[0].policyOptionId).toBe("l4");
     expect(
-      requests("UK", "SEE", "age:young").find((p) => p.lawTypeId === "uk_tuition_fees")
+      requests("UK", "SEE", "age:young").find((p) => p.lawTypeId === "uk.sec.universityGrants")
         ?.policyOptionId
-    ).not.toBe("uk_tuition_fees_opt_0");
+    ).not.toBe("l4");
   });
 
   it("gives Hispanic groups schools and employment priorities with regional differences", () => {
     const florida = requests("US", "FL", "race:hispanic");
     const texas = requests("US", "TX", "race:hispanic");
-    expect(florida[0].lawTypeId).toBe("us_state_education_funding");
-    expect(texas[0].lawTypeId).toBe("us_state_education_funding");
+    expect(florida[0].lawTypeId).toBe("us.education.universalSchooling.primary");
+    expect(texas[0].lawTypeId).toBe("us.education.universalSchooling.primary");
     expect(florida.map((p) => p.lawTypeId)).not.toEqual(texas.map((p) => p.lawTypeId));
   });
 
@@ -146,14 +145,16 @@ describe("year-2000 legislative calibration", () => {
   });
 
   it("prioritizes senior prescriptions, Japanese employment and graduate research without universal tuition", () => {
-    expect(requests("US", "FL", "age:senior")[0].lawTypeId).toBe("us_drug_pricing_medicare");
-    expect(requests("JP", "KAN", "age:young")[0].lawTypeId).toBe(
-      "jp_regional_economic_development"
+    expect(requests("US", "FL", "age:senior")[0].lawTypeId).toBe(
+      "us.health.providerChoice.primary"
     );
-    expect(requests("JP", "SHI", "age:senior")[0].lawTypeId).toBe("jp_elder_care");
+    expect(requests("JP", "KAN", "age:young")[0].lawTypeId).toBe("jp.economy.mobility.primary");
+    expect(requests("JP", "SHI", "age:senior")[0].lawTypeId).toBe(
+      "jp.sec.pensionCoverageExtension"
+    );
     const graduate = requests("JP", "CHU", "education:graduate");
-    expect(graduate.some((p) => p.lawTypeId === "jp_research_science")).toBe(true);
-    expect(graduate.some((p) => p.lawTypeId === "jp_university_tuition")).toBe(false);
+    expect(graduate.some((p) => p.lawTypeId === "jp.education.research.primary")).toBe(true);
+    expect(graduate.some((p) => p.lawTypeId === "jp.sec.universityFunding")).toBe(false);
   });
 
   it("uses live context on the board without mutating demographic leans or the source profile", () => {
@@ -203,7 +204,7 @@ describe("year-2000 legislative calibration", () => {
     );
   });
 
-  it("uses the world clock only when enabled, including worlds started in an earlier era", () => {
+  it("uses the world clock, including worlds started in an earlier era", () => {
     const world = {
       preset: "1953-default",
       currentYear: 2000,
@@ -213,10 +214,6 @@ describe("year-2000 legislative calibration", () => {
     expect(priorityWorldContext(world)).toEqual({
       yearContext: { year: 2000, startingYear: 1953 },
       priorityYear: 2000,
-    });
-    expect(priorityWorldContext({ ...world, eraSystemEnabled: false })).toEqual({
-      yearContext: { year: null, startingYear: 1953 },
-      priorityYear: 1953,
     });
     expect(priorityWorldContext({ ...world, currentYear: Number.NaN }).priorityYear).toBe(1953);
     expect(priorityWorldContext({ preset: "1999-default" }).priorityYear).toBe(1999);

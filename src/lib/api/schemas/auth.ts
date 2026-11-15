@@ -31,6 +31,8 @@ export const loginBodySchema = z.object({
   fingerprint: z.string().optional(),
   deviceKey: deviceKeySchema,
   fingerprintComponents: fingerprintComponentsSchema,
+  /** Where the page would navigate next; used only to carry it through a Lakeside session hop. */
+  returnTo: z.string().max(2048).nullish(),
 });
 
 export const registerBodySchema = z.object({
@@ -67,8 +69,3 @@ export const resetPasswordBodySchema = z.object({
   // Same strength rule as the change-password schema (settings.ts).
   password: z.string().min(6, "Password must be at least 6 characters"),
 });
-
-export type LoginBody = z.infer<typeof loginBodySchema>;
-export type ForgotPasswordBody = z.infer<typeof forgotPasswordBodySchema>;
-export type ResetPasswordBody = z.infer<typeof resetPasswordBodySchema>;
-export type RegisterBody = z.infer<typeof registerBodySchema>;

@@ -1,28 +1,14 @@
 /**
- * `withNoStore` — stamp `Cache-Control: no-store` on a route handler's response.
+ * `withNoStore` stamps `Cache-Control: no-store` on a route handler's response.
+ * User-scoped API routes depend on Next's implicit no-cache, which does not
+ * defend against CDN page rules or `Cache Everything` experiments. Stamping at
+ * the handler boundary makes the origin's intent explicit and cache-rule
+ * independent. Skips routes that set their own `Cache-Control` so deliberate
+ * caching (`s-maxage`) is untouched.
  *
- * Per-user API routes (mail, notifications, profile, etc.) return
- * character/account-scoped bodies. They currently rely on Next.js's implicit
- * no-cache for dynamic routes, which does NOT defend against a Cloudflare page
- * rule, a `Cache Everything` experiment, or a CDN migration — the exact
- * preconditions of the prior cross-user cache-leak incident. Stamping
- * `no-store` at the handler boundary makes the origin's intent explicit and
- * cache-rule-independent.
- *
- * Wrap the exported handler:
- *
- *   export const GET = withNoStore(async (request) => { ... });
- *
- * The header is only set when the handler didn't already send its own
- * `Cache-Control` — so routes that deliberately opt into caching (e.g. a
- * public `s-maxage` response) are left untouched.
- *
- * JSON bodies are also compressed at the origin (`jsonCompression.ts`).
- * `no-transform` is deliberately kept: it is what stops Cloudflare re-encoding
- * with zstd, which old Android WebViews cannot decode. Because `no-transform`
- * also suppresses Next's and Cloudflare's own compression, encoding the body
- * here (Brotli/gzip, chosen by `Accept-Encoding`) is the only way these
- * payloads stop travelling uncompressed.
+ * JSON bodies are compressed here because `no-transform` (kept to stop
+ * Cloudflare re-encoding with zstd, undecodable by old Android WebViews) also
+ * suppresses Next's and Cloudflare's own compression.
  */
 import { compressJsonResponse } from "@/lib/api/jsonCompression";
 

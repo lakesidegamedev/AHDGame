@@ -3,10 +3,9 @@ import type { ObjectId } from "mongodb";
 export const IDENTITY_OBSERVATIONS_COLLECTION = "identityObservations";
 
 /** Evidence older than this no longer groups accounts or renders in the panel.
- * Deliberately SEPARATE from IDENTITY_SIGNAL_MAX_AGE_MS (30d), which continues
- * to govern the scalar fields on `users`. See the design spec section 3.1: the
- * effective grouping window becomes 90 days, and that is intended. Do not
- * "reconcile" these by raising the 30-day constant. */
+ * Deliberately separate from IDENTITY_SIGNAL_MAX_AGE_MS (30d), which governs
+ * the scalar fields on `users`. Do not "reconcile" these by raising the
+ * 30-day constant. */
 export const IDENTITY_HISTORY_MAX_AGE_MS = 90 * 24 * 60 * 60 * 1000;
 
 export type IdentityTrack = "ip" | "fingerprint";

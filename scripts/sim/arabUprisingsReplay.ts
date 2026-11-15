@@ -153,7 +153,6 @@ async function runCase(db: Db, scenario: CaseName, baseTurn: number) {
           currentTurn: turn,
           currentYear: 2011 + step / 48,
           livingConflictsEnabled: true,
-          crisisInteractionEnabled: true,
         },
       }
     );

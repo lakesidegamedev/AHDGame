@@ -15,14 +15,21 @@ describe("buildWorldNavItems", () => {
     expect(labels).toContain("Nations & World Map");
   });
 
-  it("gates conflicts and unions behind feature flags", () => {
-    const off = visibleWorldNavItems({ conflictsEnabled: false, unionsEnabled: false });
-    expect(off.map((i) => i.id)).not.toContain("conflicts");
+  it("always shows conflicts and gates unions behind its feature flag", () => {
+    const off = visibleWorldNavItems({ unionsEnabled: false });
+    expect(off.map((i) => i.id)).toContain("conflicts");
     expect(off.map((i) => i.id)).not.toContain("unions");
 
-    const on = visibleWorldNavItems({ conflictsEnabled: true, unionsEnabled: true });
+    const on = visibleWorldNavItems({ unionsEnabled: true });
     expect(on.map((i) => i.id)).toContain("conflicts");
     expect(on.map((i) => i.id)).toContain("unions");
+  });
+
+  it("badges Crises with the viewer's available action count", () => {
+    const crises = (n?: number) =>
+      visibleWorldNavItems({ crisisActionCount: n }).find((i) => i.id === "crises");
+    expect(crises(3)?.badge).toBe(3);
+    expect(crises()?.badge).toBe(0);
   });
 
   it("shows corporation link only when CEO", () => {
@@ -31,7 +38,7 @@ describe("buildWorldNavItems", () => {
 
     const withCorp = visibleWorldNavItems({ myCorporationId: 42 });
     const corp = withCorp.find((i) => i.id === "myCorporation");
-    expect(corp?.href).toBe("/corporation/42");
+    expect(corp?.href).toBe("/api/corporations/mine");
     expect(corp?.primary).toBe(true);
   });
 
@@ -102,7 +109,6 @@ describe("buildWorldNavSections / looseWorldNavItems", () => {
   it("groups every non-loose visible item under exactly one category", () => {
     const items = visibleWorldNavItems({
       myCorporationId: 1,
-      conflictsEnabled: true,
       unionsEnabled: true,
     });
     const grouped = buildWorldNavSections(items).flatMap((g) => g.items.map((i) => i.id));
@@ -125,7 +131,7 @@ describe("buildWorldNavSections / looseWorldNavItems", () => {
         id: "myCorporation",
         label: "My Corporation",
         labelKey: "menus.world.myCorporation",
-        href: "/corporation/1",
+        href: "/api/corporations/mine",
         section: "corporate",
         show: true,
       },
@@ -136,7 +142,7 @@ describe("buildWorldNavSections / looseWorldNavItems", () => {
   // Order is traffic-derived: Economy leads on Stock Market (2.82% of all
   // pageviews). See WORLD_NAV_GROUPS for the full breakdown.
   it("keeps group order stable: Economy, Diplomacy, Other", () => {
-    const items = visibleWorldNavItems({ conflictsEnabled: true, unionsEnabled: true });
+    const items = visibleWorldNavItems({ unionsEnabled: true });
     const titles = buildWorldNavSections(items).map((g) => g.title);
     expect(titles).toEqual(["Economy", "Diplomacy", "Other"]);
   });

@@ -2,6 +2,7 @@ import type { Db } from "mongodb";
 import type { Crisis } from "@/lib/db/types/crisis";
 import type { State } from "@/lib/db/types/state";
 import { COUNTRY_CONFIGS, COUNTRY_ORDER } from "@/lib/constants/countries";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 const COUNTRY_NAMES: Record<string, string> = Object.fromEntries(
   COUNTRY_ORDER.map((id) => [id, COUNTRY_CONFIGS[id].name])
@@ -44,8 +45,7 @@ export async function resolveCrisisLocationName(
   if (crisis.scope === "region" && crisis.regionIds.length > 0) {
     let names = stateNames;
     if (!names) {
-      const states = await db
-        .collection<State>("states")
+      const states = await statesCollection(db)
         .find({ _id: { $in: crisis.regionIds } })
         .project({ name: 1 })
         .toArray();

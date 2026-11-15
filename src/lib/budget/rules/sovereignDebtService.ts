@@ -1,21 +1,19 @@
 /**
- * Sovereign debt service on the outstanding bond stock (issue #2089).
+ * Sovereign debt service on the outstanding bond stock.
  *
- * The credit ladder in `budget/debt.ts` is a MARGINAL price: what the market
- * charges a government for new borrowing at its current debt/GDP. Outstanding
- * sovereign bonds carry the coupon fixed when they were issued. Charging the
- * whole stock at the current ladder rate repriced a country's entire debt the
- * turn its ratio crossed a band, so a seeded high-debt country (1953 UK at
- * 180% of GDP on 3% gilts) jumped straight to a 10% to 14% coupon on every
- * pound and spiralled into CCC within a few years.
+ * The credit ladder in `budget/debt.ts` is a MARGINAL price for new borrowing.
+ * Outstanding bonds carry the coupon fixed at issuance. Charging the whole
+ * stock at the current ladder rate reprices a country's entire debt the turn
+ * its ratio crosses a band, so a high-debt country jumps to a punitive coupon
+ * on every unit and spirals toward default.
  *
- * The rule here:
+ * The rule:
  * - existing debt is serviced at the coupons its bonds actually carry;
- * - any stock not yet represented by bonds is serviced at the marginal rate;
- * - an active IMF program still caps the effective rate (refs #3813).
+ * - stock not yet represented by bonds is serviced at the marginal rate;
+ * - an active IMF program still caps the effective rate.
  *
  * New issuance is priced by issuer rating in `bonds/sovereign.ts`, so a
- * deteriorating ratio is still priced, at the pace the stock rolls over.
+ * deteriorating ratio is priced at the pace the stock rolls over.
  *
  * Pure rules module: plain data in, plain data out.
  */

@@ -4,17 +4,9 @@
  * for later campaigns; full constituent membership is required.
  */
 import { ObjectId, type AnyBulkWriteOperation, type ClientSession, type Db } from "mongodb";
-import type {
-  Bill,
-  Character,
-  CountryGameState,
-  GameState,
-  Election,
-  ElectionVoteTally,
-} from "@/lib/db/types";
-import type { GovernmentFormation } from "@/lib/db/types/governmentFormation";
+import type { Bill, Character, GameState, Election } from "@/lib/db/types";
 import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
-import { TALLY_WITH_LATEST_SNAPSHOT_ONLY } from "@/lib/electionEngine/tallyProjections";
+import { TALLY_WITH_LATEST_SNAPSHOT_ONLY } from "@/lib/elections/engine/tallyProjections";
 import { calendarTurn, turnToGameMonth } from "@/lib/utils/gameDate";
 import {
   passesBgConstitution1991,
@@ -24,13 +16,12 @@ import {
 } from "./rules/constitutionalDecision1991";
 
 import { BG_ORDINARY_ASSEMBLY_SEATS } from "./rules/assemblyTransition";
-import type { CountryState } from "@/lib/db/types/countryState";
 import {
   loadBg1991Initiative,
   loadBg1991Initiatives,
   signBg1991Initiative,
 } from "./constitutionalInitiative1991";
-import { BG_FOUNDING_COUNTS_COLLECTION, type BgFoundingAssemblyRecord } from "./foundingCount1990";
+import { type BgFoundingAssemblyRecord } from "./foundingCount1990";
 import {
   planBg1991AssemblyClock,
   bgGrandAssemblyRegularAnchor,
@@ -38,6 +29,19 @@ import {
 } from "./rules/assemblyClock1991";
 import { turnToWallClock } from "@/lib/elections/canonicalCycle";
 import { canRebindBg1991PrimaryCohort } from "./rules/primaryHandover1991";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
+import type { Document } from "mongodb";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { billsCollection } from "@/lib/db/repositories/bills";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
+import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
+import { countryStateCollection } from "@/lib/db/repositories/countryState";
+import { bgFoundingAssemblyCountsCollection } from "@/lib/db/repositories/bgFoundingAssemblyCounts";
+import { bg1991ConstitutionalProposalsCollection } from "@/lib/db/repositories/bg1991ConstitutionalProposals";
 
 export const BG_1991_PROPOSALS_COLLECTION = "bg1991ConstitutionalProposals";
 const ID = "1991-default:bg-constitutional:constitution1991";
@@ -61,16 +65,15 @@ export interface Bg1991ConstitutionalProposal {
 export class Bg1991ConstitutionalConflict extends Error {}
 
 async function availability(db: Db, game: Calendar, turn: number, session?: ClientSession) {
-  const current = await db
-    .collection<GameState>("gameState")
-    .findOne(
-      { _id: "current" },
-      { session, projection: { preset: 1, preIteration: 1, preIterationTurns: 1 } }
-    );
-  const runtime = await db
-    .collection<CountryState>("countryState")
-    .findOne({ _id: "BG" }, { session, projection: { governmentType: 1 } });
-  const country = await db.collection<CountryGameState>("countryGameStates").findOne(
+  const current = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { session, projection: { preset: 1, preIteration: 1, preIterationTurns: 1 } }
+  );
+  const runtime = await countryStateCollection(db).findOne(
+    { _id: "BG" },
+    { session, projection: { governmentType: 1 } }
+  );
+  const country = await countryGameStatesCollection(db).findOne(
     { _id: "BG" },
     {
       session,
@@ -118,12 +121,12 @@ export async function materializeBg1991ConstitutionalProposal(input: {
     throw new Error("Bulgarian electoral proposal needs a transaction, turn and time");
   const allowed = await availability(db, game, turn, session);
   if (!allowed.available) throw new Bg1991ConstitutionalConflict(allowed.reason);
-  const proposals = db.collection<Bg1991ConstitutionalProposal>(BG_1991_PROPOSALS_COLLECTION);
+  const proposals = bg1991ConstitutionalProposalsCollection<Bg1991ConstitutionalProposal>(db);
   const prior = await proposals.findOne({ _id: ID }, { session });
   if (prior) {
     if (!Number.isSafeInteger(prior.revision) || prior.revision < 1)
       throw new Bg1991ConstitutionalConflict("Invalid electoral proposal revision");
-    const bill = await db.collection<Bill>("bills").findOne(
+    const bill = await billsCollection(db).findOne(
       { _id: prior.billId },
       {
         session,
@@ -157,8 +160,7 @@ export async function materializeBg1991ConstitutionalProposal(input: {
         "A revised draft cannot precede the previous decision"
       );
   }
-  const regions = await db
-    .collection("states")
+  const regions = await statesCollection<Document>(db)
     .find({ countryId: "BG" }, { session, projection: { houseDistricts: 1 } })
     .toArray();
   const capacity = regions.reduce((n, row) => n + (row.houseDistricts ?? 0), 0);
@@ -176,7 +178,7 @@ export async function materializeBg1991ConstitutionalProposal(input: {
       throw new Bg1991ConstitutionalConflict(
         "One hundred constituent deputies must endorse this draft"
       );
-    const deputy = await db.collection("electedOfficials").findOne(
+    const deputy = await electedOfficialsCollection<Document>(db).findOne(
       {
         countryId: "BG",
         characterId: input.sponsor._id,
@@ -191,9 +193,10 @@ export async function materializeBg1991ConstitutionalProposal(input: {
       );
     sponsorParty = typeof deputy.party === "string" ? deputy.party : undefined;
   } else if (input.reason === "npc_government_constituent_mandate") {
-    const government = await db
-      .collection<GovernmentFormation>("governmentFormations")
-      .findOne({ _id: "BG" }, { session, projection: { status: 1, pmCharacterId: 1, pmNppId: 1 } });
+    const government = await governmentFormationsCollection(db).findOne(
+      { _id: "BG" },
+      { session, projection: { status: 1, pmCharacterId: 1, pmNppId: 1 } }
+    );
     if (
       input.sponsor ||
       government?.status !== "formed" ||
@@ -203,14 +206,15 @@ export async function materializeBg1991ConstitutionalProposal(input: {
       throw new Bg1991ConstitutionalConflict(
         "The current NPC government must introduce this draft"
       );
-    const leader = await db
-      .collection<{ _id: ObjectId; party?: string }>("npps")
-      .findOne({ _id: government.pmNppId }, { session, projection: { party: 1 } });
+    const leader = await nppsCollection<{ _id: ObjectId; party?: string }>(db).findOne(
+      { _id: government.pmNppId },
+      { session, projection: { party: 1 } }
+    );
     if (!leader?.party || sponsorParty !== leader.party)
       throw new Bg1991ConstitutionalConflict("The government sponsor changed before introduction");
     sponsorParty = leader.party;
   } else if (input.sponsor) {
-    const office = await db.collection("electedOfficials").findOne(
+    const office = await electedOfficialsCollection<Document>(db).findOne(
       {
         countryId: "BG",
         characterId: input.sponsor._id,
@@ -272,7 +276,7 @@ export async function materializeBg1991ConstitutionalProposal(input: {
   );
   if (prior && claim.matchedCount !== 1)
     throw new Bg1991ConstitutionalConflict("Electoral proposal changed");
-  await db.collection<Bill>("bills").insertOne(bill, { session });
+  await billsCollection(db).insertOne(bill, { session });
   return proposal;
 }
 
@@ -300,19 +304,17 @@ export async function endorseBg1991ConstitutionalInitiative(
     async (session) => {
       const allowed = await availability(input.db, input.game, input.turn, session);
       if (!allowed.available) throw new Bg1991ConstitutionalConflict(allowed.reason);
-      const prior = await input.db
-        .collection<Bg1991ConstitutionalProposal>(BG_1991_PROPOSALS_COLLECTION)
-        .findOne(
-          { _id: ID },
-          { session, projection: { revision: 1, billId: 1, status: 1, openedOnTurn: 1 } }
-        );
+      const prior = await bg1991ConstitutionalProposalsCollection<Bg1991ConstitutionalProposal>(
+        input.db
+      ).findOne(
+        { _id: ID },
+        { session, projection: { revision: 1, billId: 1, status: 1, openedOnTurn: 1 } }
+      );
       if (prior) {
-        const bill = await input.db
-          .collection<Bill>("bills")
-          .findOne(
-            { _id: prior.billId },
-            { session, projection: { status: 1, "voteSnapshot.resolvedAtTurn": 1 } }
-          );
+        const bill = await billsCollection(input.db).findOne(
+          { _id: prior.billId },
+          { session, projection: { status: 1, "voteSnapshot.resolvedAtTurn": 1 } }
+        );
         if (!bill || !["failed", "vetoed", "override_failed"].includes(bill.status))
           throw new Bg1991ConstitutionalConflict(
             "The current draft must resolve before another initiative"
@@ -357,7 +359,7 @@ async function authorizeBg1991ConstitutionalProposal(
 ) {
   if (!session.inTransaction())
     throw new Error("Bulgarian electoral authorization needs a transaction");
-  const proposals = db.collection<Bg1991ConstitutionalProposal>(BG_1991_PROPOSALS_COLLECTION);
+  const proposals = bg1991ConstitutionalProposalsCollection<Bg1991ConstitutionalProposal>(db);
   const proposal = await proposals.findOne({ _id: ID, status: "open" }, { session });
   if (!proposal || !(await availability(db, game, turn, session)).available) return false;
   if (
@@ -368,7 +370,7 @@ async function authorizeBg1991ConstitutionalProposal(
     !Number.isFinite(now.getTime())
   )
     throw new Bg1991ConstitutionalConflict("Invalid electoral authorization revision or clock");
-  const bill = await db.collection<Bill>("bills").findOne(
+  const bill = await billsCollection(db).findOne(
     {
       _id: proposal.billId,
       countryId: "BG",
@@ -396,7 +398,7 @@ async function authorizeBg1991ConstitutionalProposal(
     );
   const disposition = bg1991ConstituentDisposition(proposal.disposition);
   await rebindBg1991PrimaryCohort(db, game, turn, now, session, disposition);
-  await db.collection<CountryGameState>("countryGameStates").updateOne(
+  await countryGameStatesCollection(db).updateOne(
     { _id: "BG", bgConstitution1991SinceTurn: { $exists: false } },
     {
       $set: {
@@ -419,13 +421,11 @@ async function authorizeBg1991ConstitutionalProposal(
 export async function loadBg1991ConstitutionalDecision(db: Db, game: Calendar, turn: number) {
   if (game.preset !== "1991-default") return null;
   const allowed = await availability(db, game, turn);
-  const proposal = await db
-    .collection<Bg1991ConstitutionalProposal>(BG_1991_PROPOSALS_COLLECTION)
-    .findOne({ _id: ID });
+  const proposal = await bg1991ConstitutionalProposalsCollection<Bg1991ConstitutionalProposal>(
+    db
+  ).findOne({ _id: ID });
   const bill = proposal
-    ? await db
-        .collection<Bill>("bills")
-        .findOne({ _id: proposal.billId }, { projection: { status: 1 } })
+    ? await billsCollection(db).findOne({ _id: proposal.billId }, { projection: { status: 1 } })
     : null;
   const initiatives = await loadBg1991Initiatives(
     db,
@@ -462,14 +462,15 @@ export async function processBg1991ConstitutionalMandate(
   now: Date
 ) {
   if (game.preset !== "1991-default") return false;
-  const proposal = await db
-    .collection<Bg1991ConstitutionalProposal>(BG_1991_PROPOSALS_COLLECTION)
-    .findOne({ _id: ID, status: "open" }, { projection: { billId: 1 } });
+  const proposal = await bg1991ConstitutionalProposalsCollection<Bg1991ConstitutionalProposal>(
+    db
+  ).findOne({ _id: ID, status: "open" }, { projection: { billId: 1 } });
   if (
     !proposal ||
-    !(await db
-      .collection<Bill>("bills")
-      .findOne({ _id: proposal.billId, status: "signed" }, { projection: { _id: 1 } }))
+    !(await billsCollection(db).findOne(
+      { _id: proposal.billId, status: "signed" },
+      { projection: { _id: 1 } }
+    ))
   )
     return false;
   return runRequiredTransaction(
@@ -487,8 +488,7 @@ export async function rebindBg1991PrimaryCohort(
   session: ClientSession,
   disposition: Bg1991ConstituentDisposition = "dissolve"
 ) {
-  const polls = await db
-    .collection<Election>("elections")
+  const polls = await electionsCollection(db)
     .find(
       {
         countryId: "BG",
@@ -510,8 +510,7 @@ export async function rebindBg1991PrimaryCohort(
     )
     .toArray();
   if (!polls.length) return;
-  const tallies = await db
-    .collection<ElectionVoteTally>("electionVoteTallies")
+  const tallies = await electionVoteTalliesCollection(db)
     .find(
       { electionId: { $in: polls.map((row) => row._id) } },
       { session, projection: TALLY_WITH_LATEST_SNAPSHOT_ONLY }
@@ -519,8 +518,7 @@ export async function rebindBg1991PrimaryCohort(
     .toArray();
   const byPoll = new Map(tallies.map((row) => [row.electionId.toHexString(), row]));
   const receipts = polls.length
-    ? await db
-        .collection<BgFoundingAssemblyRecord>(BG_FOUNDING_COUNTS_COLLECTION)
+    ? await bgFoundingAssemblyCountsCollection<BgFoundingAssemblyRecord>(db)
         .find(
           {
             _id: {
@@ -630,13 +628,11 @@ export async function rebindBg1991PrimaryCohort(
     }));
   });
   if (updates.length) {
-    await db.collection<Election>("elections").bulkWrite(updates, { session });
-    await db
-      .collection<ElectionVoteTally>("electionVoteTallies")
-      .updateMany(
-        { electionId: { $in: reboundIds } },
-        { $unset: { bulgarianFoundingBallot: "" } },
-        { session }
-      );
+    await electionsCollection(db).bulkWrite(updates, { session });
+    await electionVoteTalliesCollection(db).updateMany(
+      { electionId: { $in: reboundIds } },
+      { $unset: { bulgarianFoundingBallot: "" } },
+      { session }
+    );
   }
 }

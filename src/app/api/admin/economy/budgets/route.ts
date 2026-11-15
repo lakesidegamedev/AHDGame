@@ -17,9 +17,13 @@ import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
 import { FISCAL_YEAR_START_TURN_IN_YEAR } from "@/lib/budget/fiscalYear";
 import { TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import { z } from "zod";
-import type { FederalBudget, FederalBudgetSnapshot } from "@/lib/db/types/budget";
-import type { CentralBank, GameState } from "@/lib/db/types";
+import type { FederalBudgetSnapshot } from "@/lib/db/types/budget";
+import type { GameState } from "@/lib/db/types";
 import { resolveCountryCurrencyCode } from "@/lib/currency/govBudgetFields";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { federalBudgetSnapshotsCollection } from "@/lib/db/repositories/federalBudgetSnapshots";
 
 const querySchema = z.object({
   countryId: countryIdSchema,
@@ -44,17 +48,16 @@ export async function GET(request: Request) {
     const db = await getDb();
 
     // Always fetch available FY snapshots for the dropdown
-    const snapshots = await db
-      .collection<FederalBudgetSnapshot>("federalBudgetSnapshots")
+    const snapshots = await federalBudgetSnapshotsCollection(db)
       .find({ countryId }, { projection: { fiscalYear: 1 } })
       .toArray();
     const availableFiscalYears = snapshots.map((s) => s.fiscalYear).sort((a, b) => b - a);
 
     // Historical snapshot request
     if (fiscalYear) {
-      const snapshot = await db
-        .collection<FederalBudgetSnapshot>("federalBudgetSnapshots")
-        .findOne({ _id: `${countryId}:FY${fiscalYear}` });
+      const snapshot = await federalBudgetSnapshotsCollection(db).findOne({
+        _id: `${countryId}:FY${fiscalYear}`,
+      });
       if (!snapshot) return errorResponse(404, "Snapshot not found");
 
       return NextResponse.json({
@@ -79,13 +82,9 @@ export async function GET(request: Request) {
 
     // Live budget request
     const [budget, gameState, centralBank] = await Promise.all([
-      db.collection<FederalBudget>("federalBudget").findOne({ _id: budgetId }),
-      db
-        .collection<GameState>("gameState")
-        .findOne({ _id: "current" }, { projection: { currentTurn: 1 } }),
-      db
-        .collection<CentralBank>("centralBanks")
-        .findOne({ countryId }, { projection: { primeRate: 1 } }),
+      federalBudgetCollection(db).findOne({ _id: budgetId }),
+      gameStateCollection(db).findOne({ _id: "current" }, { projection: { currentTurn: 1 } }),
+      centralBanksCollection(db).findOne({ countryId }, { projection: { primeRate: 1 } }),
     ]);
 
     if (!budget) return errorResponse(404, "Budget not found");

@@ -46,14 +46,9 @@ export interface FrontLineMapProps {
   /** The zone's anchor — picks the projection box, and nothing else. */
   hostCountry: string;
   /**
-   * Every entity the war is fought over (`ConflictDoc.hostEntities`), anchor first.
-   * The front line is placed as a share of THIS land, so a war hosted in two
-   * countries puts its line on the border between them rather than through one.
-   *
-   * Absent or empty means "just the anchor", exactly as it does on the document
-   * itself — see `hostEntitiesOf`, which is the same fallback on the server. These
-   * props cross a serialization boundary, so a page rendered before this shipped
-   * can still arrive without the field, and the map must draw rather than throw.
+   * Every entity the war is fought over, anchor first. The front line is a
+   * share of THIS land, so two hosts put the line on their border.
+   * Absent or empty means "just the anchor", matching `hostEntitiesOf`.
    */
   hostEntities?: string[];
   /** Drawable region codes across the whole zone, not just the anchor. */
@@ -96,20 +91,14 @@ interface FrontGeometry {
 }
 
 /**
- * The front line across a host country: two-tone ground clipped to the host's
- * silhouette, the Länder borders on top, and the line itself.
+ * Front line across the host country, derived from one persisted number
+ * (`ConflictDoc.control`) plus an axis of advance from the advancing side's
+ * anchor into the host. Nothing per-region is stored; only geometry is
+ * fetched via the shared shard loader.
  *
- * The whole picture is derived from ONE persisted number (`ConflictDoc.control`)
- * plus an axis of advance running from the advancing side's own anchor into the
- * host. Nothing per-region is stored, and nothing here fetches ownership — only
- * geometry, through the same shard loader every other country map uses.
- *
- * This replaces `FrontMap`'s per-region colour swap on the conflict record.
- * That approach painted whole Länder in the order `orderFeatures` walked them,
- * and with no occupier (the host fights on neither side, which is the normal case
- * for a proxy war) it walked periphery-inward — so a Warsaw Pact holding 80% of
- * Germany still showed Berlin, Saxony and Mecklenburg on NATO's side of a war it
- * was plainly winning. A line cannot do that: it has an orientation.
+ * A line, unlike a per-region colour swap, has an orientation, so a side
+ * holding most of the host reads as advancing rather than as scattered
+ * regions on the wrong side.
  */
 export function FrontLineMap({
   hostCountry,

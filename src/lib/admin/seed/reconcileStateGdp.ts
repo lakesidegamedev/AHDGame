@@ -3,63 +3,41 @@ import type { CountryId } from "@/lib/constants/countries";
 import type { State } from "@/lib/db/types";
 import { NATIONAL_SCOPE_IDS } from "@/lib/constants/nationalScope";
 import { eraForPreset } from "@/lib/seeds/presetSelector";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /**
- * Seed-time regional-GDP ⇄ national-GDP reconciliation.
+ * Seed-time regional-GDP to national-GDP reconciliation.
  *
- * WHY: the annual fiscal-year rollover ("A1 SSOT", `src/lib/budget/fiscalYear.ts`)
- * REPLACES the authored `federalBudget.gdp` with Σ regional `state.gdp` (millions
- * × 1e6). When an era's regional seed files are not denominated consistently with
- * the authored national GDP config, the first rollover snaps national GDP by the
- * full inconsistency (the 1953 world's t39 snap: TR ×286, NG ×14, YU ×18, …
- * BAL ÷17, BY ÷11). Rather than hand-editing hundreds of region rows per era,
- * this normalizes each country's regional gdp values by ONE per-country scalar so
- * Σ state.gdp matches the authored national GDP, preserving every region's
- * relative share.
+ * The fiscal-year rollover replaces federalBudget.gdp with the sum of state.gdp
+ * (millions x 1e6). If an era's regional seeds are not denominated consistently
+ * with the authored national GDP config, the first rollover snaps national GDP by
+ * the full inconsistency. This normalizes each country's regional gdp values by a
+ * single per-country scalar so the sum matches the authored national GDP, preserving
+ * every region's relative share.
  *
- * DESIGN CHOICE (documented per the t39-snap fix): the mechanism is era-agnostic
- * but gated to the SEEDING path with two guards:
+ * Era-agnostic mechanism, seed-path only, with two guards:
+ * 1. Era gate: only pre-1999 eras (1953/1979/1991) are reconciled. Modern presets
+ *    have their own state-sum vs authored-GDP disagreements whose resolution is a
+ *    pending design decision, so a modern reseed must not re-scale regions. The
+ *    reconciler is a no-op for 1999+.
+ * 2. Tolerance guard: within a gated era, only countries deviating from the
+ *    authored national GDP by more than STATE_GDP_RECONCILE_TOLERANCE (2%) are
+ *    rescaled.
  *
- *   1. ERA GATE (refs #3247): only presets whose era (via `eraForPreset`) is
- *      pre-1999 — i.e. 1953/1979/1991 — are reconciled. Modern presets (2019
- *      etc.) have their OWN state-sum vs authored-GDP disagreements (US −14.6%,
- *      UK −31%, …) whose resolution is a pending DESIGN DECISION: which side is
- *      canonical has player-facing consequences, so a reseed of a modern world
- *      must not silently re-scale its regions. Until that decision lands, this
- *      reconciler is a no-op for 1999+ eras.
- *   2. TOLERANCE GUARD: within a gated era, only countries whose regional sum
- *      deviates from the authored national GDP by more than
- *      {@link STATE_GDP_RECONCILE_TOLERANCE} (2%) are rescaled.
+ * Runtime turn processing is never touched; after reconciliation both sources agree
+ * from turn 1.
  *
- * Runtime turn processing is never touched (fiscalYear keeps regional Σ as its
- * SSOT — after this reconciliation the two sources agree from turn 1).
- *
- * ORDERING: must run AFTER a country's regions are seeded and BEFORE anything
- * that derives absolute values from `state.gdp` — the per-country state-budget
- * seeders (`generateStateBudgets`: tax bases/revenue/spending are all linear in
- * state gdp), country-owned corp sizing (`generateCountryOwnedSeedData`), and
- * `seedUnownedSectors` (market sizing).
- *
- * ONE call site: the end of `seedAllCountryData`, covering EVERY country in the
- * preset's configs on both the bootstrap and in-world reset paths.
- *
- * ⚠️ `seedEasternBlocBudget` used to call this again per bloc country, on the
- * documented grounds that "bloc regions seed later than step 1". That stopped
- * being true when the Warsaw-Pact country block moved inside
- * `seedAllCountryData`: bloc regions now exist before the pass above, and the
- * bloc BUDGET block runs after `seedAllCountryData` has returned. Nothing
- * between the two writes `state.gdp` — the in-window writers touch region leans
- * and sector specializations — so the per-country repeat was six no-op passes.
- * Pinned by `gdpReconcileOrdering.test.ts`; if the bloc budget block is ever
- * moved ahead of the reconcile, restore a call rather than deleting that test.
- *
- * `state.capitalStock` is not seeded (the metric engine cold-starts it from gdp
- * at runtime), so scaling gdp alone keeps every downstream consumer coherent.
+ * Ordering: must run after a country's regions are seeded and before anything that
+ * derives absolute values from state.gdp (state-budget seeders, country-owned corp
+ * sizing, seedUnownedSectors). One call site: the end of seedAllCountryData for
+ * every country on both bootstrap and in-world reset paths. state.capitalStock is
+ * not seeded (the metric engine cold-starts it from gdp), so scaling gdp alone keeps
+ * downstream consumers coherent.
  */
 export const STATE_GDP_RECONCILE_TOLERANCE = 0.02;
 
 /**
- * Era gate (refs #3247): reconcile only pre-1999 eras (1953/1979/1991).
+ * Era gate: reconcile only pre-1999 eras (1953/1979/1991).
  * Derived from the preset via {@link eraForPreset} — no ad-hoc preset
  * string-matching — so preset aliases (e.g. `empty`, `2019-no-parties`
  * → era 2019) follow their era family. See the module doc for why modern
@@ -154,8 +132,7 @@ export async function reconcileStateGdpWithNationalSeeds(
   const nationalGdpByCountry = new Map<string, number>(
     configs.map((c) => [c.countryId as string, c.gdp])
   );
-  const regionRows = await db
-    .collection<State>("states")
+  const regionRows = await statesCollection(db)
     .find(
       { countryId: { $in: configs.map((c) => c.countryId as CountryId) } },
       { projection: { countryId: 1, gdp: 1 } }
@@ -165,7 +142,7 @@ export async function reconcileStateGdpWithNationalSeeds(
   const scalars = computeStateGdpScalars(regionRows, nationalGdpByCountry);
   const toApply = scalars.filter((s) => s.applied);
   if (toApply.length > 0) {
-    await db.collection<State>("states").bulkWrite(
+    await statesCollection(db).bulkWrite(
       toApply.map((entry) => ({
         updateMany: {
           filter: {

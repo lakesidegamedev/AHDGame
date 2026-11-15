@@ -1,3 +1,5 @@
+import { corporationTurnRerunSet, startFreshJournal } from "@/simulation/engine/corporationResume";
+import { resilienceStageOf } from "@/lib/turn/corporation/resume/rules";
 import { drainDeferredTurnWork } from "@/lib/turn/deferredTurnWork";
 import {
   executeTurnAdapters,
@@ -31,7 +33,7 @@ import {
   ensurePerpetualElections,
   ensureUKElections,
   ensureUKRegionalCouncilElections,
-} from "@/lib/turn/perpetualElections";
+} from "@/lib/elections/scheduling";
 import { STARTING_YEAR } from "@/lib/constants/turnTime";
 import { DEFAULT_GAME_STATE_FLAGS } from "@/lib/seeds/reference/featureFlagDefaults";
 import { DEFAULT_CYCLE_ANCHOR_CONTEXT } from "@/lib/elections/cycleAnchorContext";
@@ -55,10 +57,24 @@ import {
   totalRoundTrips,
   withPhaseProfiling,
 } from "@/lib/observability/mongoRoundTrips";
+import { TurnMustStopError } from "@/lib/turn/turnMustStop";
+import type { TurnFailureInfo } from "@/lib/turn/rules/retryPolicy";
+import { resolveTurnResilienceStage } from "@/lib/turn/rules/staleLock";
+import {
+  TURN_HOLDER_ID,
+  TurnLockLostError,
+  setTurnLockFence,
+  turnLockFenceActive,
+  turnLockFenceFilter,
+} from "@/lib/turn/turnLockHolder";
+import { armTurnFault, describeTurnError, parseTurnFaultSpec } from "@/lib/turn/faultInjection";
 import { createTurnPhaseRuntime } from "@/simulation/engine/turnPhaseRuntime";
 import {
   isResumeFailClosedError,
+  TurnHeldForRepairError,
   TurnResumeRefusedError,
+  TurnResumeResultUnavailableError,
+  phaseBlocksResumeWhenInterrupted,
 } from "@/simulation/engine/turnPhaseResumeResults";
 import {
   bootstrapPhaseRecord,
@@ -98,6 +114,13 @@ import { captureTurnPosthog } from "@/lib/analytics/turnPosthog";
 import { currentTurnBuild } from "@/lib/turn/turnBuild";
 import { NPP_ENGINE_VERSION } from "@/lib/nppAutonomy/engineVersion";
 import { nextScheduledTurnAfter, resolveTurnCronMinute } from "@/lib/cron/turnCronMinute";
+import { resetResidueTurnRefusal } from "@/lib/admin/resetContract/rules/residueScan";
+import { serverEnv } from "@/lib/config/read";
+import { workerConfig } from "@/lib/config/worker";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
+import type { Document } from "mongodb";
+import { turnLogsCollection } from "@/lib/db/repositories/turnLogs";
 
 /** Read once per process: the deployment does not change under a running server. */
 const turnBuild = currentTurnBuild();
@@ -194,11 +217,11 @@ export async function releaseLocalProcessingLock(reason: string): Promise<boolea
     // reads to decide whether re-running would double-apply. Releasing a turn that had
     // already committed writes therefore made the NEXT cron re-run it from the start and
     // pay every additive income phase twice: fund generation, corp dividends, savings
-    // interest, bond coupons, treasury. The #2815 guard exists to prevent precisely that,
+    // interest, bond coupons, treasury. The guard exists to prevent precisely that,
     // and a clean shutdown was defeating it.
-    const live = await db
-      .collection<GameState>("gameState")
-      .findOne({ _id: "current" }, { projection: { processingPhase: 1 } });
+    const live = await (
+      await getGameStateCollection(db)
+    ).findOne({ _id: "current" }, { projection: { processingPhase: 1 } });
     const committed = turnHasCommittedWrites(live?.processingPhase);
 
     if (committed) {
@@ -206,12 +229,12 @@ export async function releaseLocalProcessingLock(reason: string): Promise<boolea
       // lock read as stale IMMEDIATELY, so the next cron consumes this turn rather than
       // serving the full 20-minute wait first. A deploy then costs the remainder of one
       // turn instead of that turn plus the next slot.
-      await db
-        .collection<GameState>("gameState")
-        .updateOne(
-          { _id: "current", isProcessing: true },
-          { $set: { processingAbandonedAt: new Date(), updatedAt: new Date() } }
-        );
+      await (
+        await getGameStateCollection(db)
+      ).updateOne(
+        { _id: "current", isProcessing: true },
+        { $set: { processingAbandonedAt: new Date(), updatedAt: new Date() } }
+      );
       localTurnLockHeld = false;
       invalidateGameStateCache();
       console.warn(
@@ -224,7 +247,9 @@ export async function releaseLocalProcessingLock(reason: string): Promise<boolea
 
     // Nothing committed yet, so the turn is losslessly re-runnable: release outright and
     // let the next container simply run it.
-    await db.collection<GameState>("gameState").updateOne(
+    await (
+      await getGameStateCollection(db)
+    ).updateOne(
       { _id: "current", isProcessing: true },
       {
         $set: {
@@ -254,6 +279,10 @@ export async function releaseLocalProcessingLock(reason: string): Promise<boolea
   }
 }
 
+function phasesStarted(phase: string | null): boolean {
+  return phase != null && phase !== TURN_BOOTSTRAP_PHASE;
+}
+
 /** What a crashed previous holder left behind, for a resumed turn. */
 type CrashedTurnRecovery = ValidatedTurnResume;
 
@@ -262,7 +291,7 @@ export function processTurn(
 ): ReturnType<typeof processTurnImpl> {
   // When the worker owns turns, the web server never runs one: a turn holds the
   // event loop and takes the site down for its whole duration (turn 372).
-  const refusal = inProcessTurnRefusal(process.env);
+  const refusal = inProcessTurnRefusal(serverEnv());
   if (refusal) {
     console.error(`[Turn System] Refused in-process turn: ${refusal}`);
     return Promise.resolve({
@@ -281,19 +310,31 @@ export function processTurn(
   });
 }
 
-async function processTurnImpl(
-  options: {
-    /** Sandbox tooling hook. Production callers omit it. */
-    onPhaseCompleted?: (phase: CompletedTurnPhaseObservation) => Promise<void>;
-  } = {}
-): Promise<{
+export type TurnProcessResult = {
   success: boolean;
   turn: number;
   message: string;
   warnings: string[];
   health: GameHealthSummary | null;
-}> {
+  /** Present when the turn stopped on an error; drives automatic retry. */
+  failure?: TurnFailureInfo;
+};
+
+async function processTurnImpl(
+  options: {
+    /** Sandbox tooling hook. Production callers omit it. */
+    onPhaseCompleted?: (phase: CompletedTurnPhaseObservation) => Promise<void>;
+    /** Set by the automatic retry loop so the turn log tells the story. */
+    retryAttempt?: { attempt: number; of: number; afterPhase: string | null };
+  } = {}
+): Promise<TurnProcessResult> {
   const warnings: string[] = [];
+  if (options.retryAttempt) {
+    const r = options.retryAttempt;
+    warnings.push(
+      `turnRetry: automatic attempt ${r.attempt} of ${r.of} after ${r.afterPhase ?? "setup"} stopped the turn`
+    );
+  }
   const startTime = Date.now();
   let activeTurn = 0;
   let activeGameNow: Date | null = null;
@@ -311,11 +352,11 @@ async function processTurnImpl(
   let turnLogWritten = false;
   let healthSnapshotWritten = false;
   let lastHealth: GameHealthSummary | null = null;
-  // #2815: if the previous lock holder died mid-turn (after phases began
-  // committing writes), we must NOT re-run that turn — that would double-apply
-  // committed income phases. Captured from the pre-lock snapshot, acted on once
-  // we hold the lock.
+  // If the previous lock holder died after phases began committing writes,
+  // do NOT re-run that turn: committed income phases would double-apply.
+  // Captured from the pre-lock snapshot, acted on once we hold the lock.
   let preLockRecoveryTarget: number | null = null;
+  let resilienceStage = 0;
   /** Set when this turn is a resume; drives the phase skip set below. */
   let resumedFromCrash: CrashedTurnRecovery | null = null;
   const stopMemorySampler = startTurnMemorySampler(() => currentPhaseRef.current);
@@ -328,36 +369,36 @@ async function processTurnImpl(
     const lockAcquiredAt = new Date();
     const staleLockCutoff = new Date(lockAcquiredAt.getTime() - TURN_LOCK_STALE_MS);
 
-    // Auto-pause guard: if wall-clock time since the last *completed* turn (by
-    // turnLog.realTime) exceeds AUTO_PAUSE_DRIFT_MS, cron has stopped firing.
-    // Use realTime — not lastTurnProcessed (game/LARP clock) — so a steady
-    // game-clock offset after an old outage does not false-positive while
-    // hourly cron is still healthy. See docs/plans/archive/2026-05/2026-05-20-clock-mismatch-design.md.
+    // Auto-pause guard: if wall-clock time since the last *completed* turn
+    // (by turnLog.realTime) exceeds AUTO_PAUSE_DRIFT_MS, cron has stopped
+    // firing. Use realTime, not lastTurnProcessed (game/LARP clock), so a
+    // steady game-clock offset after an outage does not false-positive.
     {
-      const preLockState = await db.collection<GameState>("gameState").findOne({ _id: "current" });
-      // SIM-ONLY: the drift guard below models a LIVE deployment where an hourly
-      // cron is supposed to be firing, so a long gap means it stopped. A headless
-      // sandbox world has no cron at all — its turns are driven by runWorld.ts as
-      // fast as the CPU allows — so "wall-clock time since the last completed
-      // turn" measures nothing but how long ago someone last ran the sim.
-      //
-      // Resuming an existing sandbox world therefore trips this guard on its
-      // FIRST turn essentially always: the world was last touched hours or days
-      // ago. That is a hard failure at turn N+1 (runWorld exits 1) for a reason
-      // that has nothing to do with the sim. It bit a 500-turn 1953 run on the
-      // ops box on 2026-07-28, and it would bite every resumed run on a laptop,
-      // which sleeps by definition.
-      //
-      // Undefined in production (runWorld.ts is the only writer), so this is
-      // inert there — the same shape as simTurnPhaseMode below.
-      // A singleplayer world only advances when the player asks it to, so a
-      // gap of days between turns is the normal case, not a dead cron.
-      const simSandbox =
-        localSingleplayer ||
-        (await db.collection<GameConfig>("gameConfig").findOne({ _id: "default" }))?.simSandbox ===
-          true;
+      const preLockState = await (await getGameStateCollection(db)).findOne({ _id: "current" });
+      // SIM-ONLY: the drift guard models a LIVE deployment where an hourly cron
+      // fires, so a long gap means it stopped. A headless sandbox has no cron (turns
+      // run as fast as CPU allows), and a singleplayer world advances only on player
+      // action, so a gap of days is normal. Resuming such a world would trip the
+      // guard on its first turn. Undefined in production, so inert there.
+      const turnConfig = localSingleplayer
+        ? null
+        : await gameConfigCollection(db).findOne({ _id: "default" });
+      const simSandbox = localSingleplayer || turnConfig?.simSandbox === true;
+      resilienceStage = resolveTurnResilienceStage({
+        configStage: turnConfig?.turnResilienceStage,
+        simSandbox: turnConfig?.simSandbox === true,
+        envStage: workerConfig.turnResilienceStage(),
+      });
+      armTurnFault(
+        turnConfig?.simSandbox === true ? parseTurnFaultSpec(workerConfig.turnFaultInject()) : null
+      );
+      const residueRefusal = resetResidueTurnRefusal(turnConfig?.lastReset);
+      if (residueRefusal) {
+        console.error(`[Turn System] Refused turn: ${residueRefusal}`);
+        return { success: false, turn: 0, message: residueRefusal, warnings, health: null };
+      }
       if (preLockState) {
-        // #2815: detect a stale lock left by a turn that crashed after phases
+        // Detect a stale lock left by a turn that crashed after phases
         // began applying writes. Recorded here; the recovery close-out runs
         // after we acquire the lock (and re-verifies against the locked state).
         if (
@@ -374,12 +415,12 @@ async function processTurnImpl(
           //
           // Only the target is taken from this pre-lock read. The phase state is read
           // from the locked document after takeover, which must name the same target
-          // (#3429).
+          //.
           preLockRecoveryTarget = preLockState.processingTargetTurn;
         } else if (isUnownedFailedTurn(preLockState)) {
           // A turn the ordinary failure path released after phases applied. Its
           // finalized statuses are exact for that holder, so it resumes under the
-          // same rules instead of rerunning from scratch (#3429).
+          // same rules instead of rerunning from scratch.
           preLockRecoveryTarget = preLockState.processingTargetTurn ?? null;
         }
         const lastTp = new Date(preLockState.lastTurnProcessed);
@@ -411,7 +452,9 @@ async function processTurnImpl(
           !hasHealthyInFlightTurn &&
           isAutoPauseDrift(cronDriftMs)
         ) {
-          await db.collection<GameState>("gameState").updateOne(
+          await (
+            await getGameStateCollection(db)
+          ).updateOne(
             { _id: "current" },
             {
               $set: {
@@ -448,7 +491,7 @@ async function processTurnImpl(
       }
     }
 
-    const unownedCount = await db.collection("unownedSectors").countDocuments();
+    const unownedCount = await unownedSectorsCollection<Document>(db).countDocuments();
     if (unownedCount === 0) {
       // Seed at the WORLD's era. This used to ride the seeder's "2019-default"
       // parameter default, so a 1953 world auto-seeded modern sector floors
@@ -461,10 +504,14 @@ async function processTurnImpl(
       );
     }
 
-    const lockResult = await db.collection<GameState>("gameState").findOneAndUpdate(
+    const lockResult = await (
+      await getGameStateCollection(db)
+    ).findOneAndUpdate(
       {
         _id: "current",
         processingKind: { $nin: ["stockTaxMigration", "economyReset"] },
+        // A held turn waits for a person; no path takes the lock over.
+        processingHoldReason: null,
         $or: [
           { isProcessing: { $ne: true } },
           { processingHeartbeatAt: { $lt: staleLockCutoff } },
@@ -481,8 +528,8 @@ async function processTurnImpl(
       {
         // Lock fields only. The crash evidence (target, phase, statuses, results)
         // stays as the dead holder left it until the locked document validates the
-        // resume, so a crash during takeover or setup cannot erase it (#3429).
-        $set: lockAcquisitionSet(lockAcquiredAt),
+        // resume, so a crash during takeover or setup cannot erase it.
+        $set: lockAcquisitionSet(lockAcquiredAt, TURN_HOLDER_ID),
       },
       { returnDocument: "after" }
     );
@@ -499,36 +546,29 @@ async function processTurnImpl(
 
     // This process now owns the lock — allow graceful shutdown to release it.
     localTurnLockHeld = true;
+    // With the fast takeover on, a holder that lost its lock must not write over
+    // the new holder's state: every lock-owner write below is conditional on it.
+    setTurnLockFence(resilienceStage >= 1 ? TURN_HOLDER_ID : null);
 
     const gameState = lockResult;
     activeIteration = gameState.iteration ? { ...gameState.iteration } : undefined;
 
-    // #2815: the previous holder died mid-turn after phases began committing.
-    // Re-running the turn from the start would double-apply every additive income
-    // phase it already landed, so this used to CONSUME the turn: advance the clock
-    // past it and run nothing.
-    //
-    // That is far more expensive than it needs to be. A turn is ~157 phases, and a
-    // redeploy usually kills one a few seconds in, so consuming discarded ~150 phases
-    // that had not run at all: every election, settlement, metric and snapshot the turn
-    // had not reached. On a world that redeploys several times an hour, that is the
-    // outage.
-    //
-    // It now RESUMES instead. `appliedPhases` names what must not run again, `runPhase`
-    // skips exactly those, and the rest of the turn executes normally and completes
-    // normally, advancing the clock itself. A phase reads the turn context (a
-    // read-only snapshot built at turn start) and writes its own `phaseResults`
-    // entry. A few phases do consume an earlier phase's result: V2 treasury cash
-    // settles from bondTurn's actual flows. Those phases are listed in
-    // `turnPhaseResumeResults.ts`, store a bounded copy of their result with their
-    // completed status, and the resume hands that copy back. A missing or
-    // interrupted one fails the dependent explicitly instead of rerunning or
-    // assuming zero (#3429).
-    //
-    // The race guard (target === currentTurn+1 against the freshly locked state) still
-    // ensures a concurrent completion between the pre-lock read and lock acquisition
-    // cannot cause a spurious resume.
-    const crashedTurnRecovery = validateLockedResume(gameState, preLockRecoveryTarget);
+    // Crash recovery RESUMES the interrupted turn instead of consuming it.
+    // `appliedPhases` names phases that must not rerun; `runPhase` skips exactly
+    // those and the rest of the turn executes and advances the clock normally.
+    // A phase reads the read-only turn context and writes its own
+    // `phaseResults`. Phases that consume an earlier phase's result are listed
+    // in `turnPhaseResumeResults.ts`, which stores a bounded copy of that result
+    // with its completed status; a missing or interrupted one fails the
+    // dependent explicitly rather than rerunning or assuming zero. The race
+    // guard (target === currentTurn+1 against the freshly locked state) prevents
+    // a spurious resume when a concurrent completion races the lock.
+    const crashedTurnRecovery = validateLockedResume(
+      gameState,
+      preLockRecoveryTarget,
+      await corporationTurnRerunSet(db, gameState),
+      resilienceStage >= 1
+    );
     if (crashedTurnRecovery) {
       resumedFromCrash = crashedTurnRecovery;
       const message =
@@ -546,14 +586,31 @@ async function processTurnImpl(
         },
       });
       warnings.push(message);
+      if (crashedTurnRecovery.interruptedMoneyMoving.length > 0) {
+        // Money-moving steps were mid-flight when the holder died and are not
+        // rerun, so this turn commits without them: it is not a success.
+        const incomplete =
+          `turn ${crashedTurnRecovery.targetTurn} is INCOMPLETE: interrupted steps not rerun: ` +
+          crashedTurnRecovery.interruptedMoneyMoving.join(", ");
+        warnings.push(`turnIncomplete: ${incomplete}`);
+        Sentry.captureMessage("Turn resumed with interrupted money-moving steps skipped", {
+          level: "fatal",
+          fingerprint: ["turn-resume-interrupted-money-steps"],
+          extra: {
+            turn: crashedTurnRecovery.targetTurn,
+            steps: crashedTurnRecovery.interruptedMoneyMoving,
+            diedAt: crashedTurnRecovery.lastPhase,
+          },
+        });
+      }
     } else {
       // Evidence that does not describe a resumable turn is cleared before setup
       // writes anything. Absent on a turn after a clean release: no round trip.
       const reset = staleRecoveryEvidenceReset(gameState);
       if (reset) {
-        await db
-          .collection<GameState>("gameState")
-          .updateOne({ _id: "current", isProcessing: true }, { $set: reset });
+        await (
+          await getGameStateCollection(db)
+        ).updateOne({ _id: "current", isProcessing: true }, { $set: reset });
       }
     }
 
@@ -566,10 +623,17 @@ async function processTurnImpl(
     // Repair their frozen receipt before any resumed phase reads the context.
     await recoverDemographicFlowsBeforeContext(db, gameState, resumedFromCrash?.appliedPhases);
 
-    const config = await db.collection<GameConfig>("gameConfig").findOne({ _id: "default" });
+    const config = await gameConfigCollection(db).findOne({ _id: "default" });
     // One read of the selector per turn, before any phase runs. A resume pins the
     // engine recorded by the holder that died, so config can only choose the engine
     // for the NEXT turn — never for a turn that is already in progress.
+    if (!resumedFromCrash)
+      await startFreshJournal(
+        db,
+        resilienceStageOf(config),
+        gameState.currentTurn + 1,
+        gameState.worldEpochId
+      );
     const engineResolution = selectEngineForAttempt({
       configured: config?.turnEngineVersion,
       inFlightEngine: gameState.processingEngine,
@@ -599,7 +663,9 @@ async function processTurnImpl(
           `${nextTurnNumber} after clock reconciliation; refusing to resume`
       );
     }
-    await db.collection<GameState>("gameState").updateOne(
+    await (
+      await getGameStateCollection(db)
+    ).updateOne(
       { _id: "current", isProcessing: true },
       {
         $set: {
@@ -710,7 +776,7 @@ async function processTurnImpl(
         currentPhaseRef,
       });
     });
-    // A timed-out phase can still be writing (#3385). Nothing after this line
+    // A timed-out phase can still be writing. Nothing after this line
     // may run, and the lock may not be released, until it has stopped.
     await runtime.drainTimedOutPhases?.();
 
@@ -726,7 +792,11 @@ async function processTurnImpl(
       await reconcileFederalBudgetInvariants(db, context.newTurn);
     }
 
-    const completion = completedTurnStatus(warnings, phaseStatuses);
+    const completion = completedTurnStatus(
+      warnings,
+      phaseStatuses,
+      resumedFromCrash?.interruptedMoneyMoving ?? []
+    );
     const marketUpdateAt = completedMarketUpdateAt(phaseStatuses);
     const compactPhaseTimings = Object.entries(phaseStatuses)
       .flatMap(([phase, status]) => {
@@ -735,8 +805,10 @@ async function processTurnImpl(
       })
       .sort((a, b) => b.durationMs - a.durationMs)
       .slice(0, 5);
-    await db.collection<GameState>("gameState").updateOne(
-      { _id: "current" },
+    const completionWrite = await (
+      await getGameStateCollection(db)
+    ).updateOne(
+      { _id: "current", ...turnLockFenceFilter() },
       {
         $set: {
           currentTurn: context.newTurn,
@@ -775,6 +847,9 @@ async function processTurnImpl(
         },
       }
     );
+    if (turnLockFenceActive() && completionWrite.matchedCount === 0) {
+      throw new TurnLockLostError("completion write found the lock gone");
+    }
     localTurnLockHeld = false;
     markServerTurnAnalyticsCommitted({ emit: !localSingleplayer && config?.simSandbox !== true });
 
@@ -790,6 +865,10 @@ async function processTurnImpl(
       durationMs: Date.now() - startTime,
       success: completion.success,
       outcome: completion.outcome,
+      stepAccounting: completion.stepAccounting,
+      ...(completion.incompleteSteps.length > 0
+        ? { incompleteSteps: completion.incompleteSteps }
+        : {}),
       failedPhases: completion.failedPhases,
       abortedPhases: completion.abortedPhases,
       memory: readMemoryPeak(),
@@ -807,8 +886,7 @@ async function processTurnImpl(
     };
     let turnLogId: TurnLog["_id"] | null = null;
     if (!localSingleplayer) {
-      turnLogId = (await db.collection<TurnLog>("turnLogs").insertOne(turnLog as TurnLog))
-        .insertedId;
+      turnLogId = (await turnLogsCollection(db).insertOne(turnLog as TurnLog)).insertedId;
       turnLogWritten = true;
       // Weekly contests read the committed turn's values; never blocks the turn.
       void runContestsAfterTurn(db, context.newTurn);
@@ -818,11 +896,11 @@ async function processTurnImpl(
       );
     }
 
-    // The lock is released: players can act again. Reporting phases that only
-    // write history for charts, rankings and diagnostics run now, stamped with
-    // the turn they describe, and finish before this call returns, so the next
-    // turn in this worker cannot start ahead of them. Never throws: a
-    // committed turn must not take the failure path below.
+    // Lock already released. Reporting phases that only write history for
+    // charts, rankings and diagnostics run here, stamped with the turn they
+    // describe, and complete before returning so the next turn cannot start
+    // ahead of them. Never throws: a committed turn must not hit the failure
+    // path.
     const reporting = await runCommittedTurnReporting({
       context,
       committedDurationMs: turnLog.durationMs,
@@ -833,10 +911,9 @@ async function processTurnImpl(
     healthSnapshotWritten = reporting.healthWritten;
     lastHealth = reporting.health;
     if (!localSingleplayer) {
-      // Anti-abuse scans run after the commit, never holding up the turn
-      // (#2694). Started after the reporting above because the suspect scan
-      // reads this turn's portfolio history. Results land on this turn log
-      // under postTurnScans.
+      // Anti-abuse scans run after commit so they never hold up the turn;
+      // started after reporting because the suspect scan reads this turn's
+      // portfolio history. Results land on the turn log under postTurnScans.
       void runPostTurnIntegrityScans(db, context.newTurn).catch((err) =>
         console.warn("[post-turn] integrity scans failed to start", err)
       );
@@ -922,8 +999,9 @@ async function processTurnImpl(
     return {
       success: completion.success,
       turn: context.newTurn,
-      message:
-        warnings.length === 0
+      message: !completion.success
+        ? `Turn ${context.newTurn} committed INCOMPLETE: ${completion.incompleteSteps.join(", ")} did not run to completion.`
+        : warnings.length === 0
           ? `Turn ${context.newTurn} processed successfully. ${context.characters.length} characters received action points.`
           : `Turn ${context.newTurn} processed with ${warnings.length} warning(s). ${context.characters.length} characters received action points.`,
       warnings,
@@ -931,10 +1009,13 @@ async function processTurnImpl(
     };
   } catch (error) {
     console.error("[Turn System] Critical error processing turn:", error);
-    Sentry.captureException(error, { tags: { component: "turnSystem" } });
+    Sentry.captureException(error, { level: "fatal", tags: { component: "turnSystem" } });
     const failureTime = new Date();
+    // Another process owns the turn now: write nothing about it, retry nothing.
+    const lockLost = error instanceof TurnLockLostError;
     const failureMessage =
       error instanceof Error ? error.message : "Unknown error during turn processing";
+    const failureDetail = describeTurnError(error);
 
     if (!warnings.some((warning) => warning === `turnSystem: ${failureMessage}`)) {
       warnings.push(`turnSystem: ${failureMessage}`);
@@ -942,7 +1023,7 @@ async function processTurnImpl(
 
     try {
       // Releasing the lock while a timed-out phase is still writing would let
-      // the next turn run against its writes (#3385).
+      // the next turn run against its writes.
       await phaseRuntimeForFailure?.drainTimedOutPhases?.();
       const db = await getDb();
       const finalizedPhaseStatuses = phaseStatusesForFailure
@@ -956,7 +1037,7 @@ async function processTurnImpl(
 
       // A fail-closed resume stop keeps the lock held and marked abandoned, with
       // its evidence, so the next attempt resumes and stops again instead of
-      // rerunning the turn from scratch over committed writes (#3429).
+      // rerunning the turn from scratch over committed writes.
       const holdForRepair = isResumeFailClosedError(error);
       const committedPhase =
         currentPhaseRef.current && currentPhaseRef.current !== TURN_BOOTSTRAP_PHASE
@@ -966,6 +1047,53 @@ async function processTurnImpl(
       // Only overwrite evidence with values this attempt actually has. A failure
       // before setup (no statuses, no target yet) must not null out what the
       // previous holder left, or the next attempt would rerun applied phases.
+      /*
+       * HOLD RUNBOOK. processingHoldReason is set when a process died mid-turn with a step in
+       * flight that is not on the safe lists (src/lib/turn/rules/interruptedPhases.ts). The lock
+       * stays held with all evidence; the watchdog, the stuck-lock sweep, lock acquisition and
+       * admin reset-lock all refuse it. A person reads processingHeldPhases and each step's
+       * status message, checks what the step wrote (GET /api/admin/turn/release-hold/preview),
+       * repairs partial writes, then calls POST /api/admin/turn/release-hold with the preview
+       * token: "rerun" clears the held steps, "mark-done" records them as finished.
+       */
+      const heldError = error instanceof TurnHeldForRepairError ? error : null;
+      const holdFields = heldError
+        ? {
+            processingHoldReason: heldError.message,
+            processingHeldPhases: heldError.phases,
+            processingHeldAt: failureTime,
+            lastTurnRetry: {
+              turn: heldError.turn,
+              attempt: 0,
+              afterPhase: heldError.phases[0] ?? null,
+              outcome: "stopped" as const,
+              at: failureTime,
+              note: `Held for a person: ${heldError.phases
+                .map((p) => `${p} (${heldError.details[p]})`)
+                .join("; ")}`,
+            },
+          }
+        : {};
+      if (heldError) {
+        try {
+          Sentry.captureMessage("Turn held for repair after a mid-turn process death", {
+            level: "fatal",
+            fingerprint: ["turn-held-for-repair"],
+            extra: {
+              turn: heldError.turn,
+              steps: heldError.phases,
+              details: heldError.details,
+            },
+          });
+        } catch {
+          // Alerting must not block the hold.
+        }
+      }
+      const failureRecord = {
+        turn: failedTarget,
+        message: failureDetail,
+        at: failureTime,
+      };
       const evidence = {
         ...(holdForRepair
           ? committedPhase
@@ -977,8 +1105,10 @@ async function processTurnImpl(
         ...(failedTarget != null ? { processingTargetTurn: failedTarget } : {}),
         ...(finalizedPhaseStatuses ? { processingPhaseStatuses: finalizedPhaseStatuses } : {}),
       };
-      await db.collection<GameState>("gameState").updateOne(
-        { _id: "current" },
+      await (
+        await getGameStateCollection(db)
+      ).updateOne(
+        { _id: "current", ...turnLockFenceFilter() },
         {
           $set: holdForRepair
             ? {
@@ -987,6 +1117,8 @@ async function processTurnImpl(
                 processingHeartbeatAt: failureTime,
                 processingAbandonedAt: failureTime,
                 ...evidence,
+                ...holdFields,
+                lastTurnFailure: failureRecord,
                 updatedAt: failureTime,
               }
             : {
@@ -994,6 +1126,7 @@ async function processTurnImpl(
                 processingKind: null,
                 processingHeartbeatAt: failureTime,
                 ...evidence,
+                lastTurnFailure: failureRecord,
                 updatedAt: failureTime,
               },
         }
@@ -1002,6 +1135,7 @@ async function processTurnImpl(
 
       if (
         !isSingleplayer() &&
+        !lockLost &&
         finalizedPhaseStatuses &&
         phaseResultsForFailure &&
         activeTurn > 0 &&
@@ -1029,6 +1163,7 @@ async function processTurnImpl(
 
       if (
         !isSingleplayer() &&
+        !lockLost &&
         finalizedPhaseStatuses &&
         phaseResultsForFailure &&
         activeTurn > 0 &&
@@ -1042,6 +1177,7 @@ async function processTurnImpl(
           realTime: failureTime,
           durationMs: Date.now() - startTime,
           success: false,
+          error: failureDetail,
           memory: readMemoryPeak(),
           warnings: [...warnings],
           health: lastHealth,
@@ -1061,21 +1197,19 @@ async function processTurnImpl(
             : {}),
           createdAt: failureTime,
         };
-        await db.collection<TurnLog>("turnLogs").insertOne(crashTurnLog as TurnLog);
+        await turnLogsCollection(db).insertOne(crashTurnLog as TurnLog);
       }
     } catch (releaseError) {
-      // If we can't release the lock here it will be reclaimed by the 20-min
-      // stale takeover on a later cron tick — but surface it rather than
-      // swallow, since a silently-stranded lock is exactly what wedged turns in
-      // the 2026-07 incident. Do NOT clear localTurnLockHeld: keeping it set
-      // lets the graceful-shutdown handler retry the release on exit.
+      // A failed release is reclaimed by the 20-min stale takeover, but
+      // surface it rather than swallow: a silently-stranded lock wedges turns.
+      // Do NOT clear localTurnLockHeld, so graceful shutdown can retry.
       console.error("[Turn System] Failed to release lock after turn error:", releaseError);
       Sentry.captureException(releaseError, {
         tags: { component: "turnSystem", op: "lockReleaseAfterError" },
       });
     }
 
-    if (!isSingleplayer()) {
+    if (!isSingleplayer() && !lockLost) {
       void publishPlatformEvent({
         type: "turn:failed",
         source: "ahd",
@@ -1095,8 +1229,31 @@ async function processTurnImpl(
       message: `Failed to process turn: ${error instanceof Error ? error.message : "Unknown error"}`,
       warnings,
       health: lastHealth,
+      failure: {
+        phase:
+          error instanceof TurnMustStopError
+            ? error.phase
+            : currentPhaseRef.current && currentPhaseRef.current !== TURN_BOOTSTRAP_PHASE
+              ? currentPhaseRef.current
+              : null,
+        target: resumedFromCrash?.targetTurn ?? (activeTurn > 0 ? activeTurn : null),
+        retryable:
+          resilienceStage >= 1 &&
+          !lockLost &&
+          !(
+            currentPhaseRef.current != null &&
+            phaseBlocksResumeWhenInterrupted(currentPhaseRef.current) &&
+            !(error instanceof TurnMustStopError)
+          ) &&
+          (phasesStarted(currentPhaseRef.current) ||
+            !(
+              error instanceof TurnResumeRefusedError ||
+              error instanceof TurnResumeResultUnavailableError
+            )),
+      },
     };
   } finally {
+    setTurnLockFence(null);
     readMemoryPeak();
   }
 }
@@ -1104,12 +1261,20 @@ async function processTurnImpl(
 export async function startTurnSystem(): Promise<{ success: boolean; message: string }> {
   try {
     const db = await getDb();
+    const config = await gameConfigCollection(db).findOne(
+      { _id: "default" },
+      { projection: { lastReset: 1 } }
+    );
+    const residueRefusal = resetResidueTurnRefusal(config?.lastReset);
+    if (residueRefusal) return { success: false, message: residueRefusal };
     const now = new Date();
     const nextHour = nextScheduledTurnAfter(now, resolveTurnCronMinute());
 
     // Deadlines are turn-based, so resuming after a pause needs no Date-shift:
     // frozen turns kept every countdown frozen. (Phase 5 removed shiftDeadlinesOnResume.)
-    await db.collection<GameState>("gameState").updateOne(
+    await (
+      await getGameStateCollection(db)
+    ).updateOne(
       { _id: "current" },
       {
         $set: {
@@ -1144,7 +1309,9 @@ export async function stopTurnSystem(): Promise<{ success: boolean; message: str
   try {
     const db = await getDb();
     const now = new Date();
-    await db.collection<GameState>("gameState").updateOne(
+    await (
+      await getGameStateCollection(db)
+    ).updateOne(
       { _id: "current" },
       {
         $set: {
@@ -1187,12 +1354,12 @@ export async function toggleFastMode(): Promise<{
 
     const newFastModeState = !gameState.fastMode;
 
-    await db
-      .collection<GameState>("gameState")
-      .updateOne(
-        { _id: "current" },
-        { $set: { fastMode: newFastModeState, updatedAt: new Date() } }
-      );
+    await (
+      await getGameStateCollection(db)
+    ).updateOne(
+      { _id: "current" },
+      { $set: { fastMode: newFastModeState, updatedAt: new Date() } }
+    );
 
     invalidateGameStateCache();
 

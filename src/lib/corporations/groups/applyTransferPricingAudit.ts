@@ -22,7 +22,10 @@ import {
 } from "@/lib/currency/corporationCapital";
 import { atomicallyDebitCorpLiquidCapital } from "@/lib/financialTxLog/atomicCashGuard";
 import { emitTx } from "@/lib/financialTxLog/emit";
-import { creditTreasuryProceedsFromAnchor } from "@/lib/nationalization/treasury";
+import {
+  collectFundedCorporationPayment,
+  creditTreasuryProceedsFromAnchor,
+} from "@/lib/nationalization/treasury";
 import { createNotification } from "@/lib/notifications";
 import { recordAudit } from "@/lib/audit/recordAudit";
 import { resolveFormalizedGroups } from "./groupMembership";
@@ -32,8 +35,8 @@ import {
   shiftDirection,
   type IntraGroupPosition,
 } from "./transferPricing";
-
-const AGREEMENTS = "supplyAgreements";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { supplyAgreementsCollection } from "@/lib/db/repositories/supplyAgreements";
 
 export interface TransferPricingResult {
   positionsTracked: number;
@@ -65,8 +68,7 @@ export async function applyTransferPricingAudit(
     corpIds.add(p.supplierCorpId);
     corpIds.add(p.buyerCorpId);
   }
-  const corps = await db
-    .collection<Corporation>("corporations")
+  const corps = await corporationsCollection(db)
     .find({ _id: { $in: [...corpIds].map((id) => new ObjectId(id)) } })
     .project<Pick<Corporation, "_id" | "name" | "countryId" | "userId" | "liquidCurrencyCode">>({
       name: 1,
@@ -123,9 +125,8 @@ export async function applyTransferPricingAudit(
       },
     })
   );
-  await db.collection<SupplyAgreement>(AGREEMENTS).bulkWrite(accrualOps, { ordered: true });
-  const exposureDocs = await db
-    .collection<SupplyAgreement>(AGREEMENTS)
+  await supplyAgreementsCollection<SupplyAgreement>(db).bulkWrite(accrualOps, { ordered: true });
+  const exposureDocs = await supplyAgreementsCollection<SupplyAgreement>(db)
     .find(
       { _id: { $in: tracked.map(({ premium }) => new ObjectId(premium.agreementId)) } },
       { projection: { transferPricingExposureAnchor: 1 } }
@@ -164,22 +165,39 @@ export async function applyTransferPricingAudit(
       // An unaffordable assessment is not waived — it is taken as far as the
       // balance goes and the exposure clock resets either way, so a corp cannot
       // dodge by running its cash down.
-      const debit = await atomicallyDebitCorpLiquidCapital(db, liable._id, localAmount, {
-        corporateObligation: true,
+      const fundedPaid = await collectFundedCorporationPayment(db, {
+        countryId: assessment.claimantCountryId as CountryId,
+        corpId: liable._id,
+        corpCurrency: (resolveCorpLiquidCurrencyCode(liable as Corporation) ??
+          "USD") as CurrencyCode,
+        amountLocal: localAmount,
+        key: `transfer-pricing:${premium.agreementId}:${currentTurn}`,
+        now,
+        flow: "regulatory_fine",
+        site: "transferPricing:applyAudit",
       });
-      const collected = debit.ok ? localAmount : 0;
+      let collected = 0;
+      if (fundedPaid === null) {
+        const debit = await atomicallyDebitCorpLiquidCapital(db, liable._id, localAmount, {
+          corporateObligation: true,
+        });
+        collected = debit.ok ? localAmount : 0;
+        if (collected > 0) {
+          // `collected` is in the LIABLE CORP's currency, and transfer pricing is the
+          // cross-border case, so the claimant country must be credited the amount
+          // converted into its own currency.
+          await creditTreasuryProceedsFromAnchor(
+            db,
+            assessment.claimantCountryId as CountryId,
+            corpLiquidCapitalToAnchor(collected, liable as Corporation, fxRate),
+            now,
+            { flow: "regulatory_fine" }
+          );
+        }
+      } else if (fundedPaid > 0) {
+        collected = localAmount;
+      }
       if (collected > 0) {
-        // Same cross-border unit mismatch as the divestiture fine (#808):
-        // `collected` is in the LIABLE CORP's currency, and transfer pricing is
-        // by definition the cross-border case, so the claimant country must be
-        // credited the ₳ amount converted into its own currency.
-        await creditTreasuryProceedsFromAnchor(
-          db,
-          assessment.claimantCountryId as CountryId,
-          corpLiquidCapitalToAnchor(collected, liable as Corporation, fxRate),
-          now,
-          { flow: "regulatory_fine" }
-        );
         await emitTx(db, {
           type: "corp_fine",
           turn: currentTurn,
@@ -201,7 +219,7 @@ export async function applyTransferPricingAudit(
         });
       }
 
-      await db.collection<SupplyAgreement>(AGREEMENTS).updateOne(
+      await supplyAgreementsCollection<SupplyAgreement>(db).updateOne(
         { _id: new ObjectId(premium.agreementId) },
         {
           $set: {

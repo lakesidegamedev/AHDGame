@@ -8,6 +8,8 @@ import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { parseJsonBody, schemas } from "@/lib/api/validate";
 import { generateBotApiToken } from "@/lib/api/botApiAuth";
 import { getDb } from "@/lib/mongodb";
+import { botApiKeysCollection } from "@/lib/db/repositories/botApiKeys";
+import type { Document } from "mongodb";
 
 const createBotApiKeySchema = z.object({
   name: z.string().trim().min(1, "Name is required").max(80, "Name must be at most 80 characters"),
@@ -27,8 +29,7 @@ async function handleGET() {
     if (!auth.ok) return auth.response;
 
     const db = await getDb();
-    const keys = await db
-      .collection("botApiKeys")
+    const keys = await botApiKeysCollection<Document>(db)
       .find({ userId: new ObjectId(auth.user.userId), revokedAt: null })
       .project({ tokenHash: 0 })
       .sort({ createdAt: -1 })
@@ -59,7 +60,7 @@ export async function POST(request: Request) {
 
     const { token, tokenHash, prefix } = generateBotApiToken();
     const db = await getDb();
-    await db.collection("botApiKeys").insertOne({
+    await botApiKeysCollection<Document>(db).insertOne({
       userId: new ObjectId(auth.user.userId),
       name: parsed.data.name,
       scope: parsed.data.scope,
@@ -94,7 +95,7 @@ export async function DELETE(request: Request) {
     }
 
     const db = await getDb();
-    await db.collection("botApiKeys").updateOne(
+    await botApiKeysCollection<Document>(db).updateOne(
       {
         _id: new ObjectId(parsed.data.keyId),
         userId: new ObjectId(auth.user.userId),

@@ -9,17 +9,7 @@ import type { CountryIdentity } from "../contract";
 
 /**
  * Belarus's names, labels and surface text.
- *
- * ⚠ GENERATED FROM THE PRE-MOVE SNAPSHOT, NOT TRANSCRIBED. Every value below was
- * read out of `__snapshots__/blr.pre-move.json`, emitted from the live
- * registries before anything moved. Regenerate with:
- *
- *     npx tsx scripts/countries/gen-country-identity.ts BLR "Belarus" --force
- *
- * ⚠ TREASURY_IDENTITY IS NOT HERE, DELIBERATELY. It is computed from
- * TREASURY_TEXT plus the national palette (`treasuryIdentity.ts`), so it
- * recomposes itself once the text moves. Forwarding the derived one would create
- * a second source of the same values.
+ * TREASURY_IDENTITY is deliberately absent: it is derived from TREASURY_TEXT plus the national palette, so duplicating it would create a second source.
  */
 
 /**

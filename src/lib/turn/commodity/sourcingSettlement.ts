@@ -20,6 +20,10 @@ import type { DemandUsesByState } from "@/lib/logistics/rules/purchaseExposure";
 import type { SourcingOwnRoute } from "@/lib/logistics/sourcing";
 import { NATIONAL_SCOPE_IDS } from "@/lib/constants/nationalScope";
 import type { CountryLedger, GlobalLedger, StateLedger } from "./ledgerTypes";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { commoditySourcingFlowsCollection } from "@/lib/db/repositories/commoditySourcingFlows";
+import type { Document } from "mongodb";
+import { sourcingNetworkLoadCollection } from "@/lib/db/repositories/sourcingNetworkLoad";
 
 export interface FreightSettlementInputs {
   marketSystemMode: Parameters<typeof marketAtLeast>[0];
@@ -89,7 +93,7 @@ export async function runFreightSettlementPhase(
   // Freight is a separately-soaked rollout. The market ladder enables the
   // ledger needed to observe routes, while this gate decides whether those
   // deliveries constrain next turn's local plant inputs.
-  const freightSettlementConfig = await db.collection<GameConfig>("gameConfig").findOne(
+  const freightSettlementConfig = await gameConfigCollection(db).findOne(
     { _id: "default" },
     {
       projection: {
@@ -109,9 +113,9 @@ export async function runFreightSettlementPhase(
   // configured window instead of a hard balance step. R scales the cap here and
   // the persisted billing money below; unset window → 1 (instant, unchanged).
   const freightRampFraction = freightSettlementRampFraction(freightSettlementConfig, turn);
-  // Canonical freight billing v1 (issue #897): while on, the sourcing pass's
-  // per-state shipping money aggregates are persisted on the network doc for
-  // the next corporation turn to apportion. Off (the default) writes nothing.
+  // While on, the sourcing pass's per-state shipping money aggregates are
+  // persisted on the network doc for the next corporation turn to apportion.
+  // Off (the default) writes nothing.
   const canonicalFreightBillingEnabled =
     freightSettlementConfig?.canonicalFreightBillingEnabled === true;
   let freightSettlement: FreightSettlement | null = null;
@@ -166,12 +170,11 @@ export async function runFreightSettlementPhase(
     if (commodityDocs.length > 0) {
       // Lazy index for the {commodity} + latest-turn read path, mirroring
       // commodityFlows. Fire-and-forget.
-      void db
-        .collection("commoditySourcingFlows")
+      void commoditySourcingFlowsCollection<Document>(db)
         .createIndex({ commodity: 1, turn: -1 })
         .catch(() => {});
       // Upsert by {commodity, turn} so cron retries overwrite rather than append.
-      await db.collection("commoditySourcingFlows").bulkWrite(
+      await commoditySourcingFlowsCollection<Document>(db).bulkWrite(
         commodityDocs.map((doc) => ({
           replaceOne: {
             filter: { commodity: doc.commodity, turn: doc.turn },
@@ -199,14 +202,20 @@ export async function runFreightSettlementPhase(
       units: Math.round(r.units * 10000) / 10000,
       freightCharge: Math.round((r.freightCharge ?? 0) * ownRouteBillingScale * 100) / 100,
     }));
-    await db
-      .collection("sourcingNetworkLoad")
-      .updateOne({ turn }, { $set: networkDoc }, { upsert: true });
+    await sourcingNetworkLoadCollection<Document>(db).updateOne(
+      { turn },
+      { $set: networkDoc },
+      { upsert: true }
+    );
     const sourcingPruneCutoff = turn - SOURCING_FLOW_RETENTION_TURNS;
     if (sourcingPruneCutoff > 0) {
       await Promise.all([
-        db.collection("commoditySourcingFlows").deleteMany({ turn: { $lt: sourcingPruneCutoff } }),
-        db.collection("sourcingNetworkLoad").deleteMany({ turn: { $lt: sourcingPruneCutoff } }),
+        commoditySourcingFlowsCollection<Document>(db).deleteMany({
+          turn: { $lt: sourcingPruneCutoff },
+        }),
+        sourcingNetworkLoadCollection<Document>(db).deleteMany({
+          turn: { $lt: sourcingPruneCutoff },
+        }),
       ]);
     }
 

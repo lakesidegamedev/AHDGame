@@ -27,6 +27,7 @@ import {
   type TreasuryCashOptions,
 } from "@/lib/nationalization/treasuryLedger";
 import { settleTransition } from "@/lib/banking/settlementJournal";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 export interface ApplyTermContext {
   /** The country imposing or offering. Receives an indemnity it is not paying. */
@@ -42,17 +43,14 @@ export interface ApplyTermContext {
 /**
  * Apply one settlement term to the world.
  *
- * Called from BOTH roads: the impose route on a war won outright, and
- * `acceptPeace` on a negotiated deal. That is the whole point of the function.
- * Winning outright and negotiating do the same thing to the world, so they are the
- * same code, and the two cannot drift on what a term means.
+ * Called from both roads: the impose route on a war won outright, and
+ * `acceptPeace` on a negotiated deal, so the two cannot drift on what a term
+ * means.
  *
- * Negotiated indemnities are replay-safe: replica sets commit both treasury writes
- * and the offer marker in one transaction, while standalone Mongo uses an atomic
- * per-treasury offer receipt so an interrupted transfer can resume either leg once.
- * The imposed-terms road still owns its separate claim before entering this function.
- *
- * Spec: docs/superpowers/specs/2026-08-27-peace-terms-design.md
+ * Negotiated indemnities are replay-safe: replica sets commit both treasury
+ * writes and the offer marker in one transaction, while standalone Mongo uses
+ * an atomic per-treasury offer receipt so an interrupted transfer can resume
+ * either leg once.
  */
 export async function applyPeaceTerm(
   db: Db,
@@ -167,21 +165,19 @@ async function convertRegime(
 /**
  * Move the indemnity, once.
  *
- * The amount is quoted in the PAYER's local currency, so it is debited as quoted
- * and CONVERTED before it is credited: every treasury is denominated locally, and
- * moving the raw number would invent or destroy value at the exchange rate.
- * `convertLocal` is a no-op for a same-currency pair, so it is called
- * unconditionally rather than guarded; guarding is how a double conversion gets
- * written.
+ * The amount is quoted in the PAYER's local currency: debit as quoted, CONVERT
+ * before crediting. Every treasury is denominated locally, so moving the raw
+ * number would invent or destroy value at the exchange rate. `convertLocal` is
+ * a no-op for same-currency pairs, so call it unconditionally; guarding is how
+ * a double conversion gets written.
  *
- * `$inc` on `treasuryBalance` only. `debt.principal` belongs to the
- * sovereign bond ledger (see bonds/sovereignPrincipal.ts) and is never
- * re-derived from the balance here; writing both would create two sources of
- * truth (refs #1975).
+ * `$inc` on `treasuryBalance` only. `debt.principal` belongs to the sovereign
+ * bond ledger and is never re-derived here; writing both creates two sources
+ * of truth.
  *
- * No affordability check. A payment may push the payer negative, which is what
- * national debt is: requiring a surplus would mean a country already in debt could
- * never buy peace, which is most of the countries that would want to.
+ * No affordability check: a payment may push the payer negative, which is what
+ * national debt is. Requiring a surplus would block countries already in debt
+ * from buying peace.
  */
 async function moveIndemnity(
   db: Db,
@@ -296,7 +292,7 @@ async function moveIndemnity(
     return;
   }
 
-  const budgets = db.collection<FederalBudget>("federalBudget");
+  const budgets = federalBudgetCollection(db);
   if (ctx.peaceOfferId) {
     const receiptId = String(ctx.peaceOfferId);
     const applyNegotiatedIndemnity = async (session?: ClientSession) => {

@@ -25,6 +25,7 @@ const TOP_FILES = new Set([
   "README.txt",
   "LICENSE.md",
   "AHD_BUILD.json",
+  "singleplayer-capabilities.json",
 ]);
 
 const TOP_DIRS = new Set([".next", "public", "node_modules"]);

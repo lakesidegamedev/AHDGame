@@ -33,10 +33,10 @@ import {
 import type { PeaceTerm } from "@/lib/military/peaceTerm";
 import { isConflictConcluded } from "@/lib/military/conflictLifecycle";
 import { getCountryState } from "@/lib/countryState";
-import type { FederalBudget } from "@/lib/db/types";
 import { opposedBelligerents } from "@/lib/military/occupation";
 import { PEACE_OFFER_DURATION_TURNS, type PeaceOfferDoc } from "@/lib/db/types/peaceOffer";
 import { moderatedBillText } from "@/lib/api/schemas/congress";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 const bodySchema = z.object({
   conflictId: z.string().min(1),
@@ -92,10 +92,7 @@ async function open(code: string) {
   const db = await getDb();
   const gs = await (
     await getGameStateCollection(db)
-  ).findOne({ _id: "current" }, { projection: { conflictsEnabled: 1, currentTurn: 1 } });
-  if (!gs?.conflictsEnabled) {
-    return { bad: errorResponse(404, "Conflicts subsystem disabled") };
-  }
+  ).findOne({ _id: "current" }, { projection: { currentTurn: 1 } });
 
   const { character } = auth.user;
   // Head of government OR the foreign seat holder, either one, no precedence —
@@ -105,7 +102,7 @@ async function open(code: string) {
   const gate = await requirePeaceNegotiator(db, countryId, character._id, auth.user.isAdmin);
   if (!gate.ok) return { bad: gate.response };
 
-  return { db, countryId, character, currentTurn: gs.currentTurn ?? 0 };
+  return { db, countryId, character, currentTurn: gs?.currentTurn ?? 0 };
 }
 
 export async function GET(_request: Request, { params }: { params: Promise<{ code: string }> }) {
@@ -191,24 +188,12 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
           attackerNation: w.sideA.countries[0] ?? null,
           defenderNation: w.sideB.countries[0] ?? null,
           declaredByBillId: w.declaredByBillId ?? null,
-          // Only countries that can actually be offered terms: the opposing roster,
-          // which is empty for a generated force and correctly offers nobody.
-          //
-          // Each carries the withdrawal gate's verdict, so the form can say why a
-          // country cannot simply be asked to leave BEFORE a player composes an offer
-          // the route would refuse. Computed by the same `withdrawalGate` the POST
-          // runs, so the two cannot drift; the server stays the authority.
-          // What OUR own departure would do, for the same reason: the panel must say
-          // whether leaving ends the war rather than claiming the fighting always
-          // carries on without us.
-          // Which way a reunification runs, when this war is carrying the question.
-          // The incumbent is always the side that withdraws, so the challenger asks
-          // THEM to leave and the incumbent offers to leave itself. Null when the
-          // term is not available on this war at all.
-          //
-          // Server-decided: the form would otherwise have to know which war carries
-          // the crisis and who its challenger is, both settlement facts rather than
-          // war ones.
+          // Only countries that can be offered terms; empty for generated forces.
+          // Carries the withdrawalGate verdict so the form can explain refusals
+          // before composing an offer the POST would reject. Same gate as POST.
+          // reunificationLeaver: which side withdraws under a reunification on
+          // this war, or null if not applicable. Server-decided so the form does
+          // not need to know settlement facts.
           reunificationLeaver: !challengerByWar.has(w._id)
             ? null
             : challengerByWar.get(w._id) === countryId
@@ -330,9 +315,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
     // a bar with no reason behind it.
     let maxAmount: number | null = null;
     if (term.kind === "indemnity") {
-      const payerBudget = await db
-        .collection<FederalBudget>("federalBudget")
-        .findOne({ countryId: term.payer }, { projection: { gdp: 1 } });
+      const payerBudget = await federalBudgetCollection(db).findOne(
+        { countryId: term.payer },
+        { projection: { gdp: 1 } }
+      );
       maxAmount = maxIndemnityForGdp(payerBudget?.gdp);
       if (maxAmount == null) {
         return errorResponse(

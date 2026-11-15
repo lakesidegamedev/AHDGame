@@ -14,6 +14,11 @@ import { loadUserCharacterAndCeoCorpIds } from "@/lib/account/loadUserCharacterA
 import { syncSuspiciousFlagsForBanState } from "@/lib/account/syncSuspiciousFlagsForBanState";
 import type { BannedDeviceKind } from "@/lib/db/types";
 import { invalidateCachedUser } from "@/lib/auth/userDocCache";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { usersCollection } from "@/lib/db/repositories/users";
+import type { Document } from "mongodb";
+import { userApiKeysCollection } from "@/lib/db/repositories/userApiKeys";
+import { bannedDevicesCollection } from "@/lib/db/repositories/bannedDevices";
 
 // POST /api/admin/users/ban — Ban or unban a user by userId.
 // Auth: requireAdmin
@@ -37,10 +42,10 @@ export async function POST(request: Request) {
       return errorResponse(400, "You cannot ban yourself");
     }
 
-    const usersCollection = db.collection("users");
+    const usersCollectionHandle = usersCollection<Document>(db);
 
     // Check if user exists
-    const user = await usersCollection.findOne({ _id: objectId });
+    const user = await usersCollectionHandle.findOne({ _id: objectId });
     if (!user) {
       return errorResponse(404, "User not found");
     }
@@ -51,12 +56,12 @@ export async function POST(request: Request) {
     }
 
     // Get character name for logging
-    const character = await db.collection("characters").findOne({ userId: objectId });
+    const character = await charactersCollection(db).findOne({ userId: objectId });
 
     // Update the ban status
     if (ban) {
       const { ceoCorpIds } = await loadUserCharacterAndCeoCorpIds(db, objectId);
-      await usersCollection.updateOne(
+      await usersCollectionHandle.updateOne(
         { _id: objectId },
         {
           $set: {
@@ -85,7 +90,7 @@ export async function POST(request: Request) {
       }
       if (deviceRows.length > 0) {
         const bannedAt = new Date();
-        await db.collection("bannedDevices").bulkWrite(
+        await bannedDevicesCollection<Document>(db).bulkWrite(
           deviceRows.map(({ kind, value }) => ({
             updateOne: {
               filter: { kind, value },
@@ -107,12 +112,10 @@ export async function POST(request: Request) {
       // Revoke the user's API keys. authRevokedAt kills session JWTs but the
       // key path is a separate credential channel — without this a banned
       // player could keep calling /api/v1/* (transfers, forex) on a live key.
-      await db
-        .collection("userApiKeys")
-        .updateMany(
-          { userId: objectId, revokedAt: null },
-          { $set: { revokedAt: new Date(), updatedAt: new Date() } }
-        );
+      await userApiKeysCollection<Document>(db).updateMany(
+        { userId: objectId, revokedAt: null },
+        { $set: { revokedAt: new Date(), updatedAt: new Date() } }
+      );
 
       // Withdraw banned user from all active elections
       await withdrawAllCandidatesForUser(db, objectId);
@@ -125,7 +128,7 @@ export async function POST(request: Request) {
       await vacatePartyLeadershipForBannedUser(db, objectId);
       await stripPartyMembershipForBannedUser(db, objectId);
     } else {
-      await usersCollection.updateOne(
+      await usersCollectionHandle.updateOne(
         { _id: objectId },
         {
           $set: {

@@ -5,7 +5,7 @@ import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { requireAuthWithCharacter } from "@/lib/api/requireAuth";
 import { parseJsonBody } from "@/lib/api/validate";
 import { characterDemographicsSchema } from "@/lib/api/schemas/settings";
-import type { Character } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 // PATCH /api/settings/demographics — Updates the authenticated character's demographic profile fields
 // Auth: requireAuthWithCharacter
@@ -24,12 +24,10 @@ export async function PATCH(request: Request) {
     }
 
     const db = await getDb();
-    await db
-      .collection<Character>("characters")
-      .updateOne(
-        { _id: auth.user.character._id },
-        { $set: { demographics: parsed.data, updatedAt: new Date() } }
-      );
+    await charactersCollection(db).updateOne(
+      { _id: auth.user.character._id },
+      { $set: { demographics: parsed.data, updatedAt: new Date() } }
+    );
 
     return NextResponse.json({ success: true });
   } catch (error) {

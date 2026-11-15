@@ -71,6 +71,27 @@ afterEach(() => {
 });
 
 describe("BillCard override deadline (ticket #936)", () => {
+  it("shows economic and social leans for each bill provision", () => {
+    render(
+      <BillCard
+        bill={overrideBill({
+          provisions: [
+            {
+              legislationTypeId: "L46",
+              legislationTypeName: "Privacy law",
+              effectDirection: 0,
+              directionLabel: "Center",
+              economic: 1.5,
+              social: -2.5,
+            },
+          ],
+        })}
+      />
+    );
+    expect(screen.getByText("Economic")).toBeTruthy();
+    expect(screen.getByText("Social")).toBeTruthy();
+    expect(screen.getByText("Privacy law")).toBeTruthy();
+  });
   it("shows a muted 'Voting Closed' pill once the state override deadline turn passes", () => {
     // currentTurn 996 >= votingEndsOnTurn 996 -> deadline passed, awaiting resolution turn.
     render(<BillCard bill={overrideBill()} timelineVariant="state" />);

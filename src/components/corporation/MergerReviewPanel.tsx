@@ -15,10 +15,7 @@ interface MergerReviewResponse {
  * are caught in, and nothing else.
  *
  * Deciding referrals is the competition officeholder's job and lives on their
- * cabinet office page. It used to be bolted onto this panel, which meant the
- * only route to a national duty ran through some corporation's Deals tab, and
- * meant a seated minister who ran no corporation could not reach their own
- * work at all.
+ * cabinet office page, not here.
  */
 export default function MergerReviewPanel() {
   const [data, setData] = useState<MergerReviewResponse | null>(null);

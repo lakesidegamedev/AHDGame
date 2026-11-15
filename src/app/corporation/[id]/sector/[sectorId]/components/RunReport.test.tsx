@@ -21,6 +21,23 @@ const losing: RunReportData = {
 };
 
 describe("run report card", () => {
+  it("says the unit cost includes units made but not sold, and only when some went unsold", () => {
+    const base = { ...losing, unitPrice: 6000, unitMaterials: 300, unitWages: 200, unitSite: 100 };
+    const props = {
+      capacityUnits: 1000,
+      producedUnits: 900,
+      idleCauses: [],
+      sectorType: "healthcare" as const,
+    };
+    const unsold = render(<RunReport report={{ ...base, unsoldShare: 0.12 }} {...props} />);
+    const text = unsold.container.textContent ?? "";
+    expect(text).toContain("Each unit sold last turn");
+    expect(text).toContain("includes the 12% you made but did not sell");
+    cleanup();
+    const sold = render(<RunReport report={{ ...base, unsoldShare: 0 }} {...props} />);
+    expect(sold.container.textContent ?? "").not.toContain("did not sell");
+  });
+
   it("names a loss-cut mine as losing, shows the unit loss, and leads with the price fix (ticket 1765)", () => {
     const { container } = render(
       <RunReport

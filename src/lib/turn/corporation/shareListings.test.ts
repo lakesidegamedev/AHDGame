@@ -1,8 +1,14 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ObjectId, type Db } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
 import type { ShareListing, ShareOffer } from "@/lib/db/types";
 import { expireShareListings } from "./shareListings";
+
+const creditShares = vi.fn();
+vi.mock("@/lib/corporations/shareholderOps", () => ({
+  creditShares: (...args: unknown[]) => creditShares(...args),
+  creditSharesToCorp: vi.fn(),
+}));
 
 const NOW = new Date("2026-08-24T00:00:00Z");
 
@@ -78,5 +84,24 @@ describe("expireShareListings", () => {
     );
     expect(db.collectionMocks.characters).toBeUndefined();
     expect(db.collectionMocks.corporations).toBeUndefined();
+  });
+
+  it("still returns later sellers' shares when one return fails", async () => {
+    const first = { ...listing(), sharesRemaining: 5, holdingTerms: {} } as ShareListing;
+    const second = { ...listing(), sharesRemaining: 7 };
+    db.collection("corporations");
+    db.collectionMocks.shareListings.find.mockReturnValue(cursorOf([first, second]));
+    db.collectionMocks.shareListings.findOneAndUpdate
+      .mockResolvedValueOnce(first)
+      .mockResolvedValueOnce(second);
+    db.collectionMocks.shareOffers.find.mockReturnValue(cursorOf([]));
+    creditShares.mockReset();
+    creditShares.mockResolvedValueOnce(null).mockResolvedValueOnce({});
+
+    await expireShareListings(db as unknown as Db, NOW, 20);
+
+    expect(creditShares).toHaveBeenCalledTimes(2);
+    expect(creditShares.mock.calls[1][2]).toEqual(second.sellerCharacterId);
+    expect(creditShares.mock.calls[1][3]).toBe(7);
   });
 });

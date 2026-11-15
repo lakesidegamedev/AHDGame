@@ -9,7 +9,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { Tooltip } from "@/components/Tooltip";
-import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
+import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencyCodes";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import type { CountryId } from "@/lib/constants/countriesCore";
 import MarketPie from "../components/MarketPie";
@@ -31,13 +31,11 @@ interface MarketPositionPanelProps {
    * Unclaimed market share and estimated build room, in construction-capacity units.
    *
    * These are DIFFERENT QUANTITIES and the panel has to say so. The pie's
-   * unclaimed slice is `headroomUnits` — share nobody has built into. What a
-   * build estimate is `min(headroomUnits, measuredDemandGapUnits)`, after
-   * reserving existing unused capacity and queued builds. It is advisory,
-   * not a guarantee of sales. Showing only the first produced "60.6% of this
-   * market is unowned but the game will not let me expand into it"
-   * (ticket #1145, #1162). Absent under non-plants tiers, where there is no
-   * unit-denominated capacity model to report.
+   * unclaimed slice is `headroomUnits`; a build estimate is
+   * `min(headroomUnits, measuredDemandGapUnits)`, after reserving existing unused
+   * capacity and queued builds. It is advisory, not a guarantee of sales.
+   * Absent under non-plants tiers, where there is no unit-denominated capacity
+   * model to report.
    */
   room?: {
     headroomUnits: number;

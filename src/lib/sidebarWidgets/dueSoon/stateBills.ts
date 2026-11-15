@@ -4,6 +4,7 @@ import {
   getSubNationalLegislatureKey,
 } from "@/lib/constants/countryClientConfig";
 import type { DueSoonContext, DueSoonItem, PlayerSeat } from "./types";
+import { stateBillsCollection } from "@/lib/db/repositories/stateBills";
 
 const BILL_LIMIT = 50;
 
@@ -57,8 +58,7 @@ export async function stateBillActions(ctx: DueSoonContext): Promise<DueSoonItem
     if (entry.roles.has("legislator")) statuses.add("active").add("veto_override");
     if (entry.roles.has("executive")) statuses.add("passed");
   }
-  const bills = await ctx.db
-    .collection<StateBill>("stateBills")
+  const bills = await stateBillsCollection(ctx.db)
     .find(
       { status: { $in: [...statuses] }, stateId: { $in: [...roles.keys()] } },
       {

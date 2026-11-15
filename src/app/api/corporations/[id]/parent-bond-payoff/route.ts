@@ -14,7 +14,7 @@ import {
   resolveCorporation,
   requireCeo,
 } from "@/lib/api/corporations/resolveQuery";
-import type { Bond, Character, Corporation } from "@/lib/db/types";
+import type { Character, Corporation } from "@/lib/db/types";
 import type { ImperialCharacter } from "@/lib/db/types/imperialCharacter";
 import { BOND_UNIT_FACE_VALUE } from "@/lib/db/types/bond";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
@@ -37,6 +37,10 @@ import { sumNonMaturedBondPrincipal } from "@/lib/bonds/corporateBondDefault";
 import { emitTxBulk, loadTxThresholds } from "@/lib/financialTxLog/emit";
 import { getGameState } from "@/lib/gameState";
 import { withCorporationSettlementLock } from "@/lib/corporations/settlementLock";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -78,7 +82,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     if (!parentQuery) {
       return errorResponse(400, "Invalid parent corporation ID");
     }
-    const parent = await db.collection<Corporation>("corporations").findOne(parentQuery);
+    const parent = await corporationsCollection(db).findOne(parentQuery);
     if (!parent) {
       return errorResponse(404, "Parent corporation not found");
     }
@@ -128,8 +132,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       "bondSettlementInProgressAt",
       now,
       async () => {
-        const outstandingBonds = await db
-          .collection<Bond>("bonds")
+        const outstandingBonds = await bondsCollection(db)
           .find({ corporationId: target._id, matured: false })
           .toArray();
 
@@ -146,7 +149,7 @@ export async function POST(request: Request, { params }: RouteParams) {
         const fxByCurrency = await loadFxRatesByCurrency(db);
         const totalCostAnchor = sumNonMaturedBondPrincipal(outstandingBonds, fxByCurrency);
 
-        const refreshedParent = await db.collection<Corporation>("corporations").findOne({
+        const refreshedParent = await corporationsCollection(db).findOne({
           _id: parent._id,
         });
         if (!refreshedParent) {
@@ -266,8 +269,7 @@ export async function POST(request: Request, { params }: RouteParams) {
           let charReverseOps: AnyBulkWriteOperation<Character>[] = [];
           if (charIncs.size > 0) {
             const charIds = [...charIncs.keys()].map((entryId) => new ObjectId(entryId));
-            const charDocs = await db
-              .collection<Character>("characters")
+            const charDocs = await charactersCollection(db)
               .find({ _id: { $in: charIds } }, sessionOpt)
               .project<Pick<Character, "_id" | "countryId" | "name">>({
                 _id: 1,
@@ -305,8 +307,7 @@ export async function POST(request: Request, { params }: RouteParams) {
           let imperialReverseOps: AnyBulkWriteOperation<ImperialCharacter>[] = [];
           if (imperialIncs.size > 0) {
             const imperialIds = [...imperialIncs.keys()].map((entryId) => new ObjectId(entryId));
-            const imperialDocs = await db
-              .collection<ImperialCharacter>("imperialCharacters")
+            const imperialDocs = await imperialCharactersCollection(db)
               .find({ _id: { $in: imperialIds } }, sessionOpt)
               .project<Pick<ImperialCharacter, "_id" | "countryId" | "name">>({
                 _id: 1,
@@ -344,8 +345,7 @@ export async function POST(request: Request, { params }: RouteParams) {
           let corpReverseOps: AnyBulkWriteOperation<Corporation>[] = [];
           if (corpIncs.size > 0) {
             const creditorIds = [...corpIncs.keys()].map((entryId) => new ObjectId(entryId));
-            const creditorDocs = await db
-              .collection<Corporation>("corporations")
+            const creditorDocs = await corporationsCollection(db)
               .find({ _id: { $in: creditorIds } }, sessionOpt)
               .toArray();
             if (creditorDocs.length !== corpIncs.size) {
@@ -415,7 +415,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
           // 1. Debit the parent (conditional). Nothing else is written yet, so a
           //    failure here needs no compensation.
-          const debitResult = await db.collection<Corporation>("corporations").updateOne(
+          const debitResult = await corporationsCollection(db).updateOne(
             {
               _id: refreshedParent._id,
               liquidCapital: { $gte: costInParentCapital },
@@ -428,50 +428,42 @@ export async function POST(request: Request, { params }: RouteParams) {
             throw badRequest("Insufficient liquid capital (race with another transaction).");
           }
           undo.push(async () => {
-            await db
-              .collection<Corporation>("corporations")
-              .updateOne(
-                { _id: refreshedParent._id },
-                { $inc: { liquidCapital: costInParentCapital }, $set: { updatedAt: now } },
-                sessionOpt
-              );
+            await corporationsCollection(db).updateOne(
+              { _id: refreshedParent._id },
+              { $inc: { liquidCapital: costInParentCapital }, $set: { updatedAt: now } },
+              sessionOpt
+            );
           });
 
           // 2–4. Credit holders. Register each reversal only after the write lands.
           if (charOps.length > 0) {
             try {
-              await db.collection<Character>("characters").bulkWrite(charOps, sessionOpt);
+              await charactersCollection(db).bulkWrite(charOps, sessionOpt);
             } catch (err) {
               return compensateAndThrow(err);
             }
             undo.push(async () => {
-              await db.collection<Character>("characters").bulkWrite(charReverseOps, sessionOpt);
+              await charactersCollection(db).bulkWrite(charReverseOps, sessionOpt);
             });
           }
           if (imperialOps.length > 0) {
             try {
-              await db
-                .collection<ImperialCharacter>("imperialCharacters")
-                .bulkWrite(imperialOps, sessionOpt);
+              await imperialCharactersCollection(db).bulkWrite(imperialOps, sessionOpt);
             } catch (err) {
               return compensateAndThrow(err);
             }
             undo.push(async () => {
-              await db
-                .collection<ImperialCharacter>("imperialCharacters")
-                .bulkWrite(imperialReverseOps, sessionOpt);
+              await imperialCharactersCollection(db).bulkWrite(imperialReverseOps, sessionOpt);
             });
           }
           if (corpOps.length > 0) {
             try {
-              await db.collection<Corporation>("corporations").bulkWrite(corpOps, sessionOpt);
+              await corporationsCollection(db).bulkWrite(corpOps, sessionOpt);
             } catch (err) {
               return compensateAndThrow(err);
             }
             undo.push(async () => {
-              await db
-                .collection<Corporation>("corporations")
-                .bulkWrite(corpReverseOps, sessionOpt);
+              await corporationsCollection(db).bulkWrite(corpReverseOps, sessionOpt);
             });
           }
 
@@ -479,7 +471,7 @@ export async function POST(request: Request, { params }: RouteParams) {
           //    (the only write whose reversal would need prior-state capture).
           let matured: { modifiedCount: number };
           try {
-            matured = await db.collection<Bond>("bonds").updateMany(
+            matured = await bondsCollection(db).updateMany(
               { _id: { $in: bondIds }, corporationId: target._id, matured: false },
               {
                 $set: {

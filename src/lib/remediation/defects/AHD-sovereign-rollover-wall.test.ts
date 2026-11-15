@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { ObjectId, type Db } from "mongodb";
 import { createInMemoryDb, type InMemoryDb } from "@/lib/test-utils/inMemoryDb";
-import { defect, mergeHolders } from "./AHD-sovereign-rollover-wall";
+import { defect, mergeHolders, seriesKey } from "./AHD-sovereign-rollover-wall";
 import type { HealContext } from "../types";
 
 vi.mock("@/lib/db/runRequiredTransaction", () => ({
@@ -88,6 +88,17 @@ describe(defect.id, () => {
     expect(plan.touched[0]!.ids).toHaveLength(5);
   });
 
+  it("does not flag a shared rollover bond paired with a scheduled issue", async () => {
+    const memory = createInMemoryDb();
+    memory.seed("gameState", [{ _id: "current", currentTurn: 680 }]);
+    memory.seed("bonds", [
+      bond(1),
+      bond(2, { sovereignRolloverConsolidated: true }),
+    ] as unknown as Record<string, unknown>[]);
+    const detected = await defect.detect(memory as unknown as Db, { ...ctx, dryRun: true });
+    expect(detected.affected).toBe(0);
+  });
+
   it("folds each series into its oldest bond with face, float and positions conserved", async () => {
     const memory = world();
     const db = memory as unknown as Db;
@@ -160,5 +171,17 @@ describe("mergeHolders", () => {
       { characterId: character, units: 3 },
       { fundId: fundA, units: 3 },
     ]);
+  });
+});
+
+describe("sovereign rollover series identity", () => {
+  it("keeps a scheduled issue out of the shared rollover bond series", () => {
+    const rollover = bond(11, { sovereignRolloverConsolidated: true });
+    const scheduled = bond(12);
+    expect(seriesKey(rollover as never)).not.toBe(seriesKey(scheduled as never));
+  });
+
+  it("still folds two unconsolidated refinancing replacements into one series", () => {
+    expect(seriesKey(bond(13) as never)).toBe(seriesKey(bond(14) as never));
   });
 });

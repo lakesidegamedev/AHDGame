@@ -4,6 +4,10 @@ import type { Achievement, CharacterAchievement } from "@/lib/db/types";
 import { invalidateRarityCache } from "@/lib/achievements/cache";
 import { getContestRoundsCollection } from "./collection";
 import { contestAchievementMilestones, type ContestPlacing } from "./rules/history";
+import { usersCollection } from "@/lib/db/repositories/users";
+import type { Document } from "mongodb";
+import { achievementsCollection } from "@/lib/db/repositories/achievements";
+import { characterAchievementsCollection } from "@/lib/db/repositories/characterAchievements";
 
 /** Reconcile from durable results, with batched reads/writes and retry-safe ids. */
 export async function reconcileContestAchievements(
@@ -51,13 +55,11 @@ export async function reconcileContestAchievements(
   if (records.length === 0) return;
   const owners = records.filter((r) => ObjectId.isValid(r._id)).map((r) => new ObjectId(r._id));
   const [definitions, existing, users] = await Promise.all([
-    db.collection<Achievement>("achievements").find({}).toArray(),
-    db
-      .collection<CharacterAchievement>("characterAchievements")
+    achievementsCollection(db).find({}).toArray(),
+    characterAchievementsCollection(db)
       .find({ userId: { $in: owners } }, { projection: { userId: 1, achievementId: 1 } })
       .toArray(),
-    db
-      .collection("users")
+    usersCollection<Document>(db)
       .find({ _id: { $in: owners }, isBanned: { $ne: true } }, { projection: { _id: 1 } })
       .toArray(),
   ]);
@@ -104,7 +106,7 @@ export async function reconcileContestAchievements(
       add(record._id, "completionist", record.placings.at(-1)?.characterId ?? undefined);
   }
   if (docs.length === 0) return;
-  await db.collection<CharacterAchievement>("characterAchievements").bulkWrite(
+  await characterAchievementsCollection(db).bulkWrite(
     docs.map((doc) => ({
       updateOne: { filter: { _id: doc._id }, update: { $setOnInsert: doc }, upsert: true },
     })),

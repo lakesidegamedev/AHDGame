@@ -17,9 +17,7 @@ const PROX_ADJ = 1.2; // conflict in a region bordering the viewer's home
 export interface ThreatInput {
   viewerCountry: string;
   /**
-   * The era's bloc roll (`loadMilitaryBlocs`), passed in so this stays pure. It used to
-   * be a global read against a static table that answered "west" for every country it
-   * did not list, which weighted an eastern nation's activity as the viewer's own.
+   * The era's bloc roll (`loadMilitaryBlocs`), passed in so this stays pure.
    */
   blocs: BlocLookup;
   /** The viewer's home strategic region — conflict near it reads hotter. */

@@ -3,6 +3,7 @@ import { NATIONAL_SCOPE } from "@/lib/constants/nationalScope";
 import { STATE_IDS } from "@/lib/constants/states";
 import { check } from "./checkFactory";
 import type { SeedDiagnosticCheck } from "./types";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 /** Validate identities, so an orphan cannot replace a missing regional row. */
 export function regionalMetricCoverage(
@@ -48,7 +49,7 @@ interface ScopedTurnoutRow {
 
 /** Only canonical US state keys may use the supported missing-country scope. */
 export function seedTurnoutScopeFilter(countryId: string): Filter<ScopedTurnoutRow> {
-  if (countryId !== "US") return { countryId };
+  if (!countryHasFeature("usAdmin", countryId)) return { countryId };
   return {
     $or: [{ countryId: "US" }, { countryId: null, _id: { $in: [...STATE_IDS, "DC"] } }],
   };

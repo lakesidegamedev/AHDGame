@@ -33,6 +33,16 @@ import {
   isPartyEligible,
   POLICY_BY_ROLE,
 } from "@/lib/congress/leadership/rolePolicy";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { congressLeadersCollection } from "@/lib/db/repositories/congressLeaders";
+import { influenceHistoryCollection } from "@/lib/db/repositories/influenceHistory";
+import type { Document } from "mongodb";
+import { speakerElectionsCollection } from "@/lib/db/repositories/speakerElections";
+import { speakerNominationsCollection } from "@/lib/db/repositories/speakerNominations";
+import { houseLeadershipNominationsCollection } from "@/lib/db/repositories/houseLeadershipNominations";
+import { speakerVacateMotionsCollection } from "@/lib/db/repositories/speakerVacateMotions";
+import { senateLeadershipNominationsCollection } from "@/lib/db/repositories/senateLeadershipNominations";
 
 const ELECTION_DURATION_MS = 24 * 60 * 60 * 1000; // 24 hours
 
@@ -59,12 +69,12 @@ export async function handleSpeakerAction(ctx: ActionContext): Promise<ActionRes
   if (action === "force_end") return handleForceEnd(ctx);
 
   // declare, withdraw, vote require character + House membership
-  const character = await db.collection<Character>("characters").findOne({
+  const character = await charactersCollection(db).findOne({
     userId: new ObjectId(authUser.userId),
   });
   if (!character) return { success: false, error: "No character", status: 400 };
 
-  const myOfficial = await db.collection<ElectedOfficial>("electedOfficials").findOne({
+  const myOfficial = await electedOfficialsCollection(db).findOne({
     characterId: character._id,
     officeType: "house",
   });
@@ -81,9 +91,7 @@ export async function handleSpeakerAction(ctx: ActionContext): Promise<ActionRes
     return handleFileVacateMotion({ ...ctx, character, myOfficial });
   if (action === "vote_vacate_motion") return handleVoteVacateMotion({ ...ctx, character });
 
-  const election = await db
-    .collection<SpeakerElection>("speakerElections")
-    .findOne({ _id: "current" });
+  const election = await speakerElectionsCollection(db).findOne({ _id: "current" });
   const gameTimeForVoting = await getGameTime();
   const isVoting =
     election?.status === "voting" &&
@@ -132,9 +140,7 @@ async function handleStartElection(ctx: ActionContext): Promise<ActionResult> {
   const { db, house, authUser } = ctx;
   if (!authUser.isAdmin) return { success: false, error: "Admin only", status: 403 };
 
-  const existing = await db
-    .collection<SpeakerElection>("speakerElections")
-    .findOne({ _id: "current" });
+  const existing = await speakerElectionsCollection(db).findOne({ _id: "current" });
   const gameTimeForStart = await getGameTime();
   if (
     existing?.status === "voting" &&
@@ -148,17 +154,15 @@ async function handleStartElection(ctx: ActionContext): Promise<ActionResult> {
   }
 
   const now = new Date();
-  await db
-    .collection<SpeakerNomination>("speakerNominations")
-    .updateMany(
-      { status: { $in: ["open", "voting"] } },
-      { $set: { status: "failed", updatedAt: now } }
-    );
+  await speakerNominationsCollection(db).updateMany(
+    { status: { $in: ["open", "voting"] } },
+    { $set: { status: "failed", updatedAt: now } }
+  );
   // Anchor endsAt to the game clock so readers using the same clock can
   // correctly determine when the window closes regardless of real-time drift.
   const endsAt = new Date(gameTimeForStart.effectiveNow.getTime() + ELECTION_DURATION_MS);
   const endsOnTurn = gameTimeForStart.currentTurn + ELECTION_DURATION_MS / 3_600_000;
-  await db.collection<SpeakerElection>("speakerElections").updateOne(
+  await speakerElectionsCollection(db).updateOne(
     { _id: "current" },
     {
       $set: {
@@ -180,21 +184,20 @@ async function handleStartElection(ctx: ActionContext): Promise<ActionResult> {
     majorityBloc: house.majorityBloc,
   });
 
-  const incumbent = await db
-    .collection<CongressLeader>("congressLeaders")
-    .findOne({ role: "speaker_of_the_house" });
+  const incumbent = await congressLeadersCollection(db).findOne({ role: "speaker_of_the_house" });
   if (incumbent?.characterId) {
-    const hasSeat = await db.collection<ElectedOfficial>("electedOfficials").findOne({
+    const hasSeat = await electedOfficialsCollection(db).findOne({
       officeType: "house",
       characterId: incumbent.characterId,
     });
     if (hasSeat) {
-      const char = await db
-        .collection<Character>("characters")
-        .findOne({ _id: incumbent.characterId }, { projection: { party: 1, homeState: 1 } });
+      const char = await charactersCollection(db).findOne(
+        { _id: incumbent.characterId },
+        { projection: { party: 1, homeState: 1 } }
+      );
       const party = char?.party ?? incumbent.party ?? null;
       if (char && party && isPartyEligible(speakerPolicy, party, chamberCtx)) {
-        await db.collection<SpeakerNomination>("speakerNominations").insertOne({
+        await speakerNominationsCollection(db).insertOne({
           _id: new ObjectId(),
           nomineeId: incumbent.characterId,
           nomineeName: incumbent.characterName,
@@ -225,19 +228,15 @@ async function handleResetElection(ctx: ActionContext): Promise<ActionResult> {
   if (!authUser.isAdmin) return { success: false, error: "Admin only", status: 403 };
 
   const now = new Date();
-  await db
-    .collection<SpeakerNomination>("speakerNominations")
-    .updateMany(
-      { status: { $in: ["open", "voting"] } },
-      { $set: { status: "failed", updatedAt: now } }
-    );
-  await db
-    .collection<SpeakerElection>("speakerElections")
-    .updateOne(
-      { _id: "current" },
-      { $set: { status: "closed", updatedAt: now } },
-      { upsert: true }
-    );
+  await speakerNominationsCollection(db).updateMany(
+    { status: { $in: ["open", "voting"] } },
+    { $set: { status: "failed", updatedAt: now } }
+  );
+  await speakerElectionsCollection(db).updateOne(
+    { _id: "current" },
+    { $set: { status: "closed", updatedAt: now } },
+    { upsert: true }
+  );
   return {
     success: true,
     message: "Speaker election reset. You can start a new 24-hour election.",
@@ -284,19 +283,17 @@ async function handleDeclare(
     { nomineeId: character._id },
     myOfficial.nppId && { nomineeId: myOfficial.nppId },
   ].filter(Boolean) as { nomineeId: ObjectId }[];
-  const existingSpeaker = await db.collection<SpeakerNomination>("speakerNominations").findOne({
+  const existingSpeaker = await speakerNominationsCollection(db).findOne({
     $or: orClause,
     status: { $in: ["open", "voting"] },
   });
   if (existingSpeaker)
     return { success: false, error: "You already have an active candidacy.", status: 409 };
 
-  const hasOtherHouse = await db
-    .collection<HouseLeadershipNomination>("houseLeadershipNominations")
-    .findOne({
-      nomineeId: character._id,
-      status: { $in: ["open", "voting"] },
-    });
+  const hasOtherHouse = await houseLeadershipNominationsCollection(db).findOne({
+    nomineeId: character._id,
+    status: { $in: ["open", "voting"] },
+  });
   if (hasOtherHouse) {
     return {
       success: false,
@@ -305,12 +302,10 @@ async function handleDeclare(
       status: 409,
     };
   }
-  const hasSenate = await db
-    .collection<SenateLeadershipNomination>("senateLeadershipNominations")
-    .findOne({
-      nomineeId: character._id,
-      status: { $in: ["open", "voting"] },
-    });
+  const hasSenate = await senateLeadershipNominationsCollection(db).findOne({
+    nomineeId: character._id,
+    status: { $in: ["open", "voting"] },
+  });
   if (hasSenate) {
     return {
       success: false,
@@ -323,7 +318,7 @@ async function handleDeclare(
   const now = new Date();
   const nomineeState = myOfficial.state ?? character.homeState ?? undefined;
   const insertedId = new ObjectId();
-  await db.collection<SpeakerNomination>("speakerNominations").insertOne({
+  await speakerNominationsCollection(db).insertOne({
     _id: insertedId,
     nomineeId: character._id,
     nomineeName: character.name,
@@ -375,7 +370,7 @@ async function handleWithdraw(
   const { db, character, isVoting } = ctx;
   if (!isVoting) return { success: false, error: "No active election.", status: 409 };
 
-  const candidacy = await db.collection<SpeakerNomination>("speakerNominations").findOne({
+  const candidacy = await speakerNominationsCollection(db).findOne({
     nomineeId: character._id,
     status: { $in: ["open", "voting"] },
   });
@@ -386,18 +381,20 @@ async function handleWithdraw(
   }
 
   const now = new Date();
-  await db
-    .collection<Character>("characters")
-    .updateOne({ _id: character._id }, { $inc: { politicalInfluence: -3 } });
-  await db.collection("influenceHistory").insertOne({
+  await charactersCollection(db).updateOne(
+    { _id: character._id },
+    { $inc: { politicalInfluence: -3 } }
+  );
+  await influenceHistoryCollection<Document>(db).insertOne({
     characterId: character._id,
     amount: -3,
     reason: "Withdrew from Speaker election",
     createdAt: now,
   });
-  await db
-    .collection<SpeakerNomination>("speakerNominations")
-    .updateOne({ _id: candidacy._id }, { $set: { status: "failed", updatedAt: now } });
+  await speakerNominationsCollection(db).updateOne(
+    { _id: candidacy._id },
+    { $set: { status: "failed", updatedAt: now } }
+  );
   return { success: true, message: "Candidacy withdrawn. 3 NPI deducted." };
 }
 
@@ -425,7 +422,7 @@ async function handleVote(
   const nominationOid = parseObjectId(nominationId);
   if (!nominationOid) return { success: false, error: "Invalid nomination ID", status: 400 };
 
-  const nomination = await db.collection<SpeakerNomination>("speakerNominations").findOne({
+  const nomination = await speakerNominationsCollection(db).findOne({
     _id: nominationOid,
     status: { $in: ["open", "voting"] },
   });
@@ -460,17 +457,13 @@ async function handleFileVacateMotion(
   const { db, character } = ctx;
 
   // There must be a sitting Speaker to move against.
-  const leader = await db
-    .collection<CongressLeader>("congressLeaders")
-    .findOne({ role: "speaker_of_the_house" });
+  const leader = await congressLeadersCollection(db).findOne({ role: "speaker_of_the_house" });
   if (!leader?.characterId) {
     return { success: false, error: "There is no sitting Speaker to vacate.", status: 409 };
   }
 
   const gameTime = await getGameTime();
-  const existing = await db
-    .collection<SpeakerVacateMotion>("speakerVacateMotions")
-    .findOne({ _id: "current" });
+  const existing = await speakerVacateMotionsCollection(db).findOne({ _id: "current" });
   if (
     existing?.status === "voting" &&
     !isLeadershipElectionClosed(existing, gameTime.currentTurn, gameTime.effectiveNow)
@@ -481,7 +474,7 @@ async function handleFileVacateMotion(
   const now = new Date();
   const endsAt = new Date(gameTime.effectiveNow.getTime() + ELECTION_DURATION_MS);
   const endsOnTurn = gameTime.currentTurn + ELECTION_DURATION_MS / 3_600_000;
-  await db.collection<SpeakerVacateMotion>("speakerVacateMotions").updateOne(
+  await speakerVacateMotionsCollection(db).updateOne(
     { _id: "current" },
     {
       $set: {
@@ -518,9 +511,7 @@ async function handleVoteVacateMotion(
     return { success: false, error: "Vote must be 'for' or 'against'.", status: 400 };
   }
 
-  const motion = await db
-    .collection<SpeakerVacateMotion>("speakerVacateMotions")
-    .findOne({ _id: "current" });
+  const motion = await speakerVacateMotionsCollection(db).findOne({ _id: "current" });
   const gameTime = await getGameTime();
   const open =
     motion?.status === "voting" &&
@@ -530,12 +521,10 @@ async function handleVoteVacateMotion(
   }
 
   const now = new Date();
-  await db
-    .collection<SpeakerVacateMotion>("speakerVacateMotions")
-    .updateOne(
-      { _id: "current" },
-      { $set: { [`votes.${character._id.toString()}`]: vacateVote, updatedAt: now } }
-    );
+  await speakerVacateMotionsCollection(db).updateOne(
+    { _id: "current" },
+    { $set: { [`votes.${character._id.toString()}`]: vacateVote, updatedAt: now } }
+  );
 
   // Choosing a vote clears the Player Whip snapshot, so the "Whipped by Party"
   // badge disappears once the member has voted for themselves.

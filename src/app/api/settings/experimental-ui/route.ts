@@ -7,6 +7,7 @@ import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { parseJsonBody } from "@/lib/api/validate";
 import { experimentalUiSchema } from "@/lib/api/schemas/settings";
 import type { User } from "@/lib/db/types";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 // PATCH /api/settings/experimental-ui — Updates the authenticated user's interface style
 // Auth: requireBasicAuth
@@ -28,12 +29,10 @@ export async function PATCH(request: Request) {
 
     const db = await getDb();
 
-    await db
-      .collection<User>("users")
-      .updateOne(
-        { _id: new ObjectId(user.userId) },
-        { $set: { enableExperimentalUI, updatedAt: new Date() } }
-      );
+    await usersCollection(db).updateOne(
+      { _id: new ObjectId(user.userId) },
+      { $set: { enableExperimentalUI, updatedAt: new Date() } }
+    );
 
     return NextResponse.json({ success: true });
   } catch (error) {

@@ -7,8 +7,10 @@ import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import { handleRouteError, badRequest } from "@/lib/api/errors";
 import { EXTRACTABLE_RESOURCES } from "@/lib/constants/commodities";
-import type { Corporation, CorporateSector } from "@/lib/db/types";
-import type { Character } from "@/lib/db/types/character";
+import type { CorporateSector } from "@/lib/db/types";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 export async function GET(request: Request) {
   try {
@@ -22,8 +24,7 @@ export async function GET(request: Request) {
 
     const db = await getDb();
 
-    const sectors = await db
-      .collection<CorporateSector>("corporateSectors")
+    const sectors = await corporateSectorsCollection(db)
       .find({ stateId }, { projection: { corporationId: 1 } })
       .toArray();
     const corpIds = [...new Set(sectors.map((s) => s.corporationId.toString()))].map(
@@ -31,16 +32,14 @@ export async function GET(request: Request) {
     );
     if (corpIds.length === 0) return NextResponse.json({ corporations: [] });
 
-    const corps = await db
-      .collection<Corporation>("corporations")
+    const corps = await corporationsCollection(db)
       .find({ _id: { $in: corpIds }, type: "extraction" }, { projection: { name: 1, ceoId: 1 } })
       .toArray();
 
     const ceoIds = corps.map((c) => c.ceoId).filter((id): id is ObjectId => id instanceof ObjectId);
     const ceoNameById = new Map<string, string>();
     if (ceoIds.length > 0) {
-      const chars = await db
-        .collection<Character>("characters")
+      const chars = await charactersCollection(db)
         .find({ _id: { $in: ceoIds } }, { projection: { name: 1 } })
         .toArray();
       for (const ch of chars) ceoNameById.set(ch._id.toString(), ch.name);

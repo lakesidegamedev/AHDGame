@@ -42,7 +42,6 @@ const navBody = {
   governorOffice: null,
   isImperialMode: false,
   wikiDisabled: false,
-  conflictsEnabled: false,
   settlementCrisisLive: false,
   unionsEnabled: false,
   pendingCharterCount: 0,
@@ -82,7 +81,7 @@ describe("GET /api/mobile-dock", () => {
     ]);
     expect(body.tabs[0]).toMatchObject({
       label: "Company",
-      href: "/corporation/7",
+      href: "/api/corporations/mine",
       activePrefixes: ["/corporation/7"],
     });
     expect(body.tabs[1]).toMatchObject({ label: "New York", sheet: "state" });

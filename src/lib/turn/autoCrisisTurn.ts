@@ -1,19 +1,17 @@
 import type { Db } from "mongodb";
-import { isAutoDisastersEnabled } from "@/lib/crises/featureFlag";
 import { processAutoCrisisSpawn } from "@/lib/crises/autoCrisisSpawn";
 
 /**
  * Turn phase for the economic/political automatic crises (condition + random
- * tiers). Gated by the same master flag as the regional disaster spawner, so a
- * single admin toggle governs the whole automatic-crisis system.
+ * tiers). Shares the pause switch with the regional disaster spawner.
  */
 export async function processAutoCrisisTurn(
   db: Db,
   turn: number,
-  preloadedGameState?: { autoDisastersEnabled?: boolean; autoCrisisPaused?: boolean }
+  preloadedGameState?: { autoCrisisPaused?: boolean; autoDisastersEnabled?: boolean }
 ): Promise<void> {
-  const enabled = await isAutoDisastersEnabled(preloadedGameState);
-  if (!enabled) return;
+  // Emergency kill switch. The system ships on, so only an explicit false stops it.
+  if (preloadedGameState?.autoDisastersEnabled === false) return;
   // Temporary pause: stay enabled but spawn nothing new this turn.
   if (preloadedGameState?.autoCrisisPaused === true) return;
   await processAutoCrisisSpawn(db, turn);

@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ObjectId, type Db } from "mongodb";
 import { processUkPartyConferenceTurn } from "./ukPartyConferenceTurn";
-import { createFakeLeadershipDb } from "@/lib/uk/leadership/leadershipTestDb";
-import { getOrSeedConference } from "@/lib/uk/conference/conferenceStore";
+import { createFakeLeadershipDb } from "@/lib/countries/uk/leadership/leadershipTestDb";
+import { getOrSeedConference } from "@/lib/countries/uk/conference/conferenceStore";
 import {
   getUKPartyConferencesCollection,
   getUKPartyPlatformsCollection,
@@ -11,8 +11,8 @@ import {
   conferenceOpensAtTurn,
   conferenceVotingClosesTurn,
   conferenceYearStartTurn,
-} from "@/lib/uk/conference/rules";
-import { pledgeCatalogFor } from "@/lib/uk/manifesto/pledgeCatalog";
+} from "@/lib/countries/uk/conference/rules";
+import { pledgeCatalogFor } from "@/lib/countries/uk/manifesto/pledgeCatalog";
 import type { PoliticalParty } from "@/lib/db/types";
 
 vi.mock("@/lib/notifications", () => ({ createNotification: vi.fn(async () => undefined) }));
@@ -82,7 +82,7 @@ async function seedParty(
 
 async function castAyes(db: Db, partySeq: string, voterIds: ObjectId[], turn: number) {
   const { proposePlatform, voteOnPlatform } =
-    await import("@/lib/uk/conference/conferenceCommands");
+    await import("@/lib/countries/uk/conference/conferenceCommands");
   const party = (await db
     .collection("politicalParties")
     .findOne({ countryId: "UK", sequentialId: Number(partySeq) })) as PoliticalParty;
@@ -277,7 +277,7 @@ describe("processUkPartyConferenceTurn", () => {
     await processUkPartyConferenceTurn(db, YEAR1_OPEN, NOW());
     await castAyes(db, world.partySeq, world.memberIds.slice(0, 4), YEAR1_OPEN);
     // Resolve outside the driver (fills + reconciles, leaves payoff owed).
-    const { resolveConference } = await import("@/lib/uk/conference/conferenceCommands");
+    const { resolveConference } = await import("@/lib/countries/uk/conference/conferenceCommands");
     const open = await getUKPartyConferencesCollection(db).findOne({ _id: "UK:2:1" });
     const party = (await db
       .collection("politicalParties")
@@ -331,7 +331,7 @@ describe("processUkPartyConferenceTurn", () => {
 
     // Committee business: table a motion, carry it.
     const { proposeRulesMotion, voteOnMotion, CONFERENCE_RACE_VOID_REASON } =
-      await import("@/lib/uk/conference/conferenceCommands");
+      await import("@/lib/countries/uk/conference/conferenceCommands");
     const { getUKPartyLeadershipCollection } =
       await import("@/lib/db/collections/ukPartyLeadership");
     const committeeActor = (id: ObjectId) => ({

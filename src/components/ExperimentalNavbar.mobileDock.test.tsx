@@ -64,7 +64,6 @@ function renderNav(overrides: Partial<ExperimentalNavbarProps> = {}) {
         myCorporationHasGroup
         myUnionId="union"
         unionsEnabled
-        conflictsEnabled
         settlementCrisisLive
         {...overrides}
       />
@@ -88,7 +87,7 @@ describe("phone navigation dock", () => {
   it("puts the company one tap away and Campaign one sheet away", () => {
     renderNav();
     const links = within(dock()).getAllByRole<HTMLAnchorElement>("link");
-    expect(links.map((a) => a.getAttribute("href"))).toEqual(["/corporation/7"]);
+    expect(links.map((a) => a.getAttribute("href"))).toEqual(["/api/corporations/mine"]);
     // The Campaign tab holds exactly Actions and the Campaign Manager.
     expect(sheetHrefs(en.nav.campaignMenu.label)).toEqual(["/actions", "/campaign-manager"]);
     expect(
@@ -149,13 +148,13 @@ describe("phone navigation dock", () => {
         "/world",
         "/market",
         "/world/trade",
-        "/world/conflicts",
+        "/world/crises?view=conflicts",
         "/unions",
         "/unions/union",
         "/corporation/7/group",
         "/about",
         "/privacy",
-        "/admin",
+        "/control",
       ])
     );
   });

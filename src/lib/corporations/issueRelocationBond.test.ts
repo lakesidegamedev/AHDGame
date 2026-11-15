@@ -1,5 +1,5 @@
 /**
- * Ticket #1198: a relocation bond is new borrowing, so it answers to the same
+ * A relocation bond is new borrowing, so it answers to the same
  * exit-equity ceiling as an ordinary issuance.
  *
  * Every route that calls `previewRelocationBond` mocks it out, so without this

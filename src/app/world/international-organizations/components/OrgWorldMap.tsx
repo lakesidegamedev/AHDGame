@@ -22,18 +22,11 @@ import { OrgCountryCard } from "./OrgCountryCard";
 const BLOB_PREFIX = "bi:";
 
 /**
- * Flat (equal-area) world map for the IntOrg index. Pick an organization from the
- * selector to shade its member countries in the org's accent; click a country to
- * see which organizations it belongs to. Static projection — no globe/rotation.
+ * Equal-area world map for the IntOrg index: pick an org to shade member
+ * countries; click a country to see its orgs. Static, no globe or rotation.
  *
- * The base `countries-110m` features are the present-day world, which is the
- * wrong world for a Cold War game: it has no Soviet Union, no Czechoslovakia, no
- * Yugoslavia and no East Germany. So this map draws the same region overlay the
- * /world map and the situation boards draw — `computeRegionBlobs` unions each
- * shard's regions by their LIVE owner, and the base features an overlay now
- * covers are skipped. Nothing here is era-aware: a 1953 map shows the USSR
- * because the union republics are owned by RU in that world, and a 2019 map
- * shows Russia because they are not.
+ * Base `countries-110m` are present-day, so Cold War eras draw a region blob
+ * overlay from live ownership (same as /world) and skip covered base features.
  */
 export function OrgWorldMap({ orgs }: { orgs: OrgSummary[] }) {
   const [selectedOrgId, setSelectedOrgId] = useState<string | null>(orgs[0]?.id ?? null);
@@ -86,9 +79,8 @@ export function OrgWorldMap({ orgs }: { orgs: OrgSummary[] }) {
           ownResp?.ownership ?? {},
           WORLD_OVERLAY_OWNER_FOLD,
           pc,
-          // Single-owner shards included, exactly as the /world map does. Without
-          // it the USSR would never draw: every one of its regions belongs to RU,
-          // so the shard has one owner and a splits-only overlay skips it.
+          // Include single-owner shards, as the /world map does: every USSR
+          // region belongs to RU, so a splits-only overlay would never draw it.
           true
         );
       } catch {
@@ -237,12 +229,11 @@ export function OrgWorldMap({ orgs }: { orgs: OrgSummary[] }) {
   function fillFor(key: string): { fill: string; interactive: boolean } {
     const owner = blobOwners.get(key);
     const countryId = countryIdFor(key);
-    // Membership is resolved by map feature for base polygons and by OWNER for
-    // overlay blobs: an entity-wide roster includes background nations that have
-    // geometry but no CountryId, and a blob is identified by the country holding
-    // its regions rather than by any ISO code. Non-modelled members still shade;
-    // they stay non-interactive, since the country card behind a click only
-    // exists for modelled countries.
+    // Membership resolves by map feature for base polygons and by owner for
+    // overlay blobs: entity rosters include background nations with geometry
+    // but no CountryId, and a blob is identified by its owning country, not an
+    // ISO code. Non-modelled members shade but stay non-interactive, since the
+    // country card behind a click only exists for modelled countries.
     const isMember = owner ? memberEntityIds.has(owner) : memberFeatureIds.has(key);
     if (isMember && selectedOrg) {
       return { fill: selectedOrg.identity.accent, interactive: countryId != null };

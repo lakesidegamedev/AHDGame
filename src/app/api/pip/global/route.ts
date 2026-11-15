@@ -16,6 +16,11 @@ import { getAuthUser } from "@/lib/auth";
 import { getEnabledCountryIds } from "@/lib/countryAccess";
 import type { ElectedOfficial, PoliticalParty } from "@/lib/db/types";
 import type { Crisis } from "@/lib/db/types/crisis";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import type { Document } from "mongodb";
+import { crisesCollection } from "@/lib/db/repositories/crises";
 
 // Derive primary legislature officeType from country config — avoids hardcoding per-country strings
 function getPrimaryOfficeType(countryId: CountryId): string {
@@ -44,27 +49,19 @@ export async function GET() {
     const officeTypes = [...new Set(countriesToShow.map(getPrimaryOfficeType))];
 
     const [officials, parties, crises, activeElectionCounts, gameState] = await Promise.all([
-      db
-        .collection<ElectedOfficial>("electedOfficials")
+      electedOfficialsCollection(db)
         .find({ officeType: { $in: officeTypes } })
         .project({ officeType: 1, party: 1, seatsHeld: 1, state: 1 })
         .toArray(),
-      db
-        .collection<PoliticalParty>("politicalParties")
+      politicalPartiesCollection(db)
         .find(enabledCountries ? { countryId: { $in: enabledCountries } } : {})
         .project({ _id: 1, name: 1, color: 1, countryId: 1 })
         .toArray() as Promise<Pick<PoliticalParty, "_id" | "name" | "color" | "countryId">[]>,
-      db
-        .collection<Crisis>("crises")
-        .find({ status: "active" })
-        .sort({ createdAt: -1 })
-        .limit(5)
-        .toArray(),
+      crisesCollection(db).find({ status: "active" }).sort({ createdAt: -1 }).limit(5).toArray(),
       // Active election counts per country
       Promise.all(
         countriesToShow.map((cId) =>
-          db
-            .collection("elections")
+          electionsCollection<Document>(db)
             .countDocuments({ countryId: cId, status: { $in: ["active", "upcoming"] } })
             .then((count) => [cId, count] as [CountryId, number])
         )

@@ -20,6 +20,16 @@ vi.mock("./revenue", () => ({
 }));
 
 vi.mock("./spending", () => ({
+  normalizeFederalSpending: vi.fn((spending) => ({
+    ...spending,
+    total:
+      Object.values(spending.byCategory ?? {}).reduce(
+        (sum: number, amount) => sum + Number(amount),
+        0
+      ) +
+      (spending.stateGrants ?? 0) +
+      (spending.debtInterest ?? 0),
+  })),
   calculateFederalSpending: vi.fn(),
   calculateStateSpending: vi.fn(),
   calculateStateSpendingDetail: vi.fn(),
@@ -52,6 +62,12 @@ vi.mock("@/lib/sovereignDefault/crisisDetection", () => ({
   evaluateSovereignAuctionForCountry: vi.fn().mockResolvedValue(null),
 }));
 
+vi.mock("@/lib/sovereignDefault/interestSpiralRestructure", () => ({
+  restructureForInterestSpiral: vi.fn().mockResolvedValue({ ok: true }),
+}));
+
+vi.mock("@/lib/news", () => ({ createSystemNewsPost: vi.fn().mockResolvedValue(undefined) }));
+
 import {
   calculateFederalRevenue,
   calculateStateRevenue,
@@ -65,6 +81,8 @@ import {
 import { processAnnualDebt, resolveDebtCeilingCrisis, getDebtThreshold } from "./debt";
 import { processFormulaGrants, updateStateGrantRevenue } from "./grants";
 import { calculateCountryInflation } from "./inflation";
+import { restructureForInterestSpiral } from "@/lib/sovereignDefault/interestSpiralRestructure";
+import { createSystemNewsPost } from "@/lib/news";
 
 // ── isFiscalYearEnd ───────────────────────────────────────────────────────────
 
@@ -270,6 +288,8 @@ function makeDb(options: {
   stateBudgets?: Record<string, unknown>[];
   resetPrograms?: Record<string, unknown>[];
   gameState?: Record<string, unknown> | null;
+  countryGameStates?: Record<string, unknown>[];
+  gameConfig?: Record<string, unknown> | null;
 }) {
   const {
     federalBudget = makeFederalBudget(),
@@ -279,10 +299,13 @@ function makeDb(options: {
     stateBudgets = [],
     resetPrograms = [],
     gameState = null,
+    countryGameStates = [],
+    gameConfig = null,
   } = options;
   const resolvedFederalBudgets = federalBudgets ?? (federalBudget === null ? [] : [federalBudget]);
 
   const federalBudgetUpdateOne = vi.fn().mockResolvedValue({ modifiedCount: 1 });
+  const federalBudgetBulkWrite = vi.fn().mockResolvedValue({ modifiedCount: 1 });
   const stateBudgetUpdateOne = vi.fn().mockResolvedValue({ modifiedCount: 1 });
   const federalBudgetSnapshotReplaceOne = vi.fn().mockResolvedValue({
     modifiedCount: 1,
@@ -305,6 +328,18 @@ function makeDb(options: {
               return Promise.resolve(found ?? null);
             }),
             updateOne: federalBudgetUpdateOne,
+            bulkWrite: federalBudgetBulkWrite,
+          };
+        case "countryGameStates":
+          return {
+            find: vi
+              .fn()
+              .mockReturnValue({ toArray: vi.fn().mockResolvedValue(countryGameStates) }),
+            findOne: vi
+              .fn()
+              .mockImplementation((query: { _id?: string }) =>
+                Promise.resolve(countryGameStates.find((d) => d._id === query?._id) ?? null)
+              ),
           };
         case "states":
           return {
@@ -344,6 +379,10 @@ function makeDb(options: {
           return {
             findOne: vi.fn().mockResolvedValue(gameState),
           };
+        case "gameConfig":
+          return {
+            findOne: vi.fn().mockResolvedValue(gameConfig),
+          };
         case "federalBudgetSnapshots":
           return {
             replaceOne: federalBudgetSnapshotReplaceOne,
@@ -360,6 +399,7 @@ function makeDb(options: {
       }
     }),
     _federalBudgetUpdateOne: federalBudgetUpdateOne,
+    _federalBudgetBulkWrite: federalBudgetBulkWrite,
     _stateBudgetUpdateOne: stateBudgetUpdateOne,
     _federalBudgetSnapshotReplaceOne: federalBudgetSnapshotReplaceOne,
     _ukBudgetInsertOne: ukBudgetInsertOne,
@@ -415,6 +455,147 @@ describe("processFiscalYear", () => {
       lawCosts: [],
     });
     vi.mocked(applyGrowthToFederalBases).mockImplementation((bases) => bases as never);
+  });
+
+  describe("fiscal stabilizer (#5703)", () => {
+    // Italy-like books: revenue 652, programme spending 925, interest 1,551
+    // on GDP 2,455 (billions). Primary deficit 11% of GDP.
+    function italyWorld(
+      over: {
+        countryId?: string;
+        enabledForPlayers?: boolean;
+        gameConfig?: Record<string, unknown> | null;
+      } = {}
+    ) {
+      const countryId = over.countryId ?? "IT";
+      vi.mocked(calculateFederalRevenue).mockResolvedValue({
+        incomeTax: 300e9,
+        salesTax: 200e9,
+        payrollTax: 100e9,
+        domesticCorporateTax: 30e9,
+        foreignCorporateTax: 22e9,
+        tariffs: 0,
+        total: 652e9,
+      } as never);
+      vi.mocked(calculateFederalSpending).mockResolvedValue({
+        byCategory: { healthcare: 300e9, social: 425e9, education: 100e9, defense: 100e9 },
+        stateGrants: 0,
+        debtInterest: 1_551e9,
+        total: 2_476e9,
+      } as never);
+      vi.mocked(processAnnualDebt).mockResolvedValue({
+        interestPayment: 1_551e9,
+        newPrincipal: 11_081e9,
+        interestRate: 0.14,
+        debtToGdpRatio: 4.5,
+        creditRating: "CCC",
+        ceilingExceeded: false,
+      } as never);
+      vi.mocked(getDebtThreshold).mockReturnValue({
+        maxRatio: Infinity,
+        rating: "CCC",
+        interestRate: 0.14,
+        gdpPenalty: 0.7,
+        trustPenalty: 0,
+      } as never);
+      return makeDb({
+        federalBudget: makeFederalBudget({
+          _id: countryId,
+          countryId,
+          gdp: 2_455e9,
+          debtToGdpRatio: 4.4,
+          fiscalConsolidation: { interestSpiralYears: 1 },
+          taxRates: {
+            incomeTax: 25,
+            incomeTaxLow: 20,
+            incomeTaxMiddle: 25,
+            incomeTaxHigh: 35,
+            domesticCorporateTax: 30,
+            foreignCorporateTax: 30,
+            payrollTax: 10,
+            tariffs: 0,
+            salesTax: 19,
+          },
+        }),
+        gameState: { _id: "current", nppAutonomyLevel: "v6" },
+        gameConfig:
+          over.gameConfig === undefined ? { fiscalStabilizerEnabled: true } : over.gameConfig,
+        countryGameStates: [
+          {
+            _id: countryId,
+            status: over.enabledForPlayers ? "active" : "coming-soon",
+            enabledForPlayers: over.enabledForPlayers ?? false,
+          },
+        ],
+      });
+    }
+
+    it("enacts a package for an AI-run country and restructures after two spiral years", async () => {
+      const db = italyWorld();
+      await processFiscalYear(db as unknown as Db, 2006, 760);
+
+      // The ordinary fiscal-close write carries the reduced spending.
+      const closeWrite = db._federalBudgetUpdateOne.mock.calls.find(
+        (c: unknown[]) => "fiscalYear" in ((c[1] as { $set: object }).$set ?? {})
+      );
+      const spending = (closeWrite![1] as { $set: { spending: { total: number } } }).$set.spending;
+      expect(spending.total).toBeLessThan(2_476e9);
+
+      // Stabilizer state lands in one batched write.
+      expect(db._federalBudgetBulkWrite).toHaveBeenCalledTimes(1);
+      const [ops] = db._federalBudgetBulkWrite.mock.calls[0] as [
+        Array<{ updateOne: { update: { $set: Record<string, unknown> } } }>,
+      ];
+      const set = ops[0].updateOne.update.$set;
+      expect(set["fiscalConsolidation.interestSpiralYears"]).toBe(2);
+      expect(set["fiscalConsolidation.lastPackage"]).toMatchObject({ fiscalYear: 2006 });
+      expect(set["taxRatePhaseIn.salesTax"]).toBeGreaterThan(19);
+
+      expect(createSystemNewsPost).toHaveBeenCalledWith(
+        expect.stringContaining("consolidation package"),
+        "sovereign",
+        expect.anything()
+      );
+      expect(restructureForInterestSpiral).toHaveBeenCalledWith(db, "IT", 760, expect.any(Number), {
+        spiralYears: undefined,
+      });
+    });
+
+    it.each([
+      ["off", { fiscalStabilizerEnabled: false }],
+      ["absent", {}],
+      ["an unseeded config", null],
+    ])("runs no package and no restructuring when the switch is %s", async (_label, gameConfig) => {
+      const db = italyWorld({ gameConfig });
+      await processFiscalYear(db as unknown as Db, 2006, 760);
+
+      const closeWrite = db._federalBudgetUpdateOne.mock.calls.find(
+        (c: unknown[]) => "fiscalYear" in ((c[1] as { $set: object }).$set ?? {})
+      );
+      const spending = (closeWrite![1] as { $set: { spending: { total: number } } }).$set.spending;
+      expect(spending.total).toBe(2_476e9);
+      expect(db._federalBudgetBulkWrite).not.toHaveBeenCalled();
+      expect(createSystemNewsPost).not.toHaveBeenCalled();
+      expect(restructureForInterestSpiral).not.toHaveBeenCalled();
+    });
+
+    it("leaves a player-run country's budget exactly as its laws price it", async () => {
+      const db = italyWorld({ enabledForPlayers: true });
+      await processFiscalYear(db as unknown as Db, 2006, 760);
+
+      const closeWrite = db._federalBudgetUpdateOne.mock.calls.find(
+        (c: unknown[]) => "fiscalYear" in ((c[1] as { $set: object }).$set ?? {})
+      );
+      const spending = (closeWrite![1] as { $set: { spending: { total: number } } }).$set.spending;
+      expect(spending.total).toBe(2_476e9);
+      // Leftover stabilizer state from AI rule is cleared, nothing else written.
+      const [ops] = db._federalBudgetBulkWrite.mock.calls[0] as [
+        Array<{ updateOne: { update: Record<string, unknown> } }>,
+      ];
+      expect(ops[0].updateOne.update).toEqual({ $unset: { fiscalConsolidation: "" } });
+      expect(createSystemNewsPost).not.toHaveBeenCalled();
+      expect(restructureForInterestSpiral).not.toHaveBeenCalled();
+    });
   });
 
   it("returns early when no federal budget exists", async () => {
@@ -867,9 +1048,15 @@ describe("processFiscalYear", () => {
       byCategory: {},
     } as never);
     vi.mocked(calculateStateSpendingDetail).mockResolvedValue({
-      spending: { total: 100_000_000_000, byCategory: {} },
-      lawCosts: [],
-    });
+      spending: { total: 100_000_000_000, byCategory: { education: 100_000_000_000 } },
+      lawCosts: [
+        {
+          law: { legislationTypeId: "state_education", policyOptionIndex: 0 } as never,
+          annualCost: 100_000_000_000,
+          category: "education",
+        },
+      ],
+    } as never);
 
     const db = makeDb({
       states: [{ _id: "US-CA", countryId: "US" }],

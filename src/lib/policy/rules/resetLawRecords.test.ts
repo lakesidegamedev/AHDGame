@@ -32,11 +32,30 @@ describe("reset law statute rows", () => {
       legislationTypeId: "resetLaw:L17",
       policyDomain: "healthcare",
       policyOptionName: "Essential Care Cost Cap",
-      hasEconomic: false,
+      economic: -2.5,
+      hasEconomic: true,
       hasSocial: false,
       enactedByBillId: "bill-1",
     });
     expect(record.detailText).toContain("turn 535");
+  });
+
+  it("shows both privacy axes without calling its final option socially conservative", () => {
+    expect(buildResetLawRecord({ ...row, familyId: "L46", choice: "far_right" })).toMatchObject({
+      economic: 1.5,
+      social: -2.5,
+      hasEconomic: true,
+      hasSocial: true,
+    });
+  });
+
+  it.each(["unknown", "leave_to_states"])("does not invent axes for %s", (choice) => {
+    expect(buildResetLawRecord({ ...row, choice })).toMatchObject({
+      economic: 0,
+      social: 0,
+      hasEconomic: false,
+      hasSocial: false,
+    });
   });
 
   it("feeds last enacted through provenance keyed by the row id", () => {

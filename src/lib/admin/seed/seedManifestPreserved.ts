@@ -142,6 +142,11 @@ export const PRESERVED: CollectionEntry[] = [
       "Scheduled-job leases are operational concurrency guards, not world state. Preserve an active lease across reset so another reconciliation cannot overlap it; expired leases are replaced on acquisition.",
   },
   { name: "ipGeoCache", category: "preserved", notes: "IP-geo lookup cache." },
+  {
+    name: "vpnIpLists",
+    category: "preserved",
+    notes: "Cached public VPN and Private Relay range lists for the VPN gate.",
+  },
   { name: "playerBannerAds", category: "preserved", notes: "Banner-ad infra/content." },
   {
     name: "manualOfficeHistory",
@@ -274,6 +279,17 @@ export const PRESERVED: CollectionEntry[] = [
     name: "authSourceOwnershipProofs",
     category: "preserved",
     notes: "Account ownership evidence survives world resets.",
+  },
+  {
+    name: "lakesideHopFlows",
+    category: "preserved",
+    notes:
+      "Short-lived Lakeside session hop transactions expire through a TTL index and remain independent of game-world resets.",
+  },
+  {
+    name: "centralLoginShadowEvents",
+    category: "preserved",
+    notes: "Central account login shadow comparison events survive world resets.",
   },
   {
     name: "broadcastDms",

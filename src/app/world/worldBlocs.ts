@@ -7,26 +7,13 @@ import type { CustomMapBloc, MapBlocId } from "@/lib/world/blocMembership";
 /**
  * Cold War bloc alignment for the /world globe's BLOCS map mode.
  *
- * The globe's four TIERS (see `components/landing/countryTiers.ts`) answer "how
- * much game is there here?" — player / economic / battleground / background.
- * BLOCS answer a different question: "whose side is this country on?"
- *
- * IT READS THE TREATY, NOT THE SYMPATHY. This used to be a hand-written table
- * that filed every country the era touched as West, East or non-aligned by
- * judgment. That map was handsome and wrong: Spain and Brazil were blue without
- * being in NATO, West Germany was blue two years before it joined, China was red
- * having never been in the Warsaw Pact, and no colour could move when a nation
- * actually acceded or withdrew. A bloc's colour is now its ROLL —
- * `loadBlocMembership` reads live membership of whichever organisations carry an
- * accession-governing pole in the era.
- *
- * So the two alliances are drawn at their real size and everything else is
- * non-aligned, including countries plainly in a superpower's orbit. That is the
- * point: an orbit is not a treaty, and the influence system already has the
- * Cold War Ledger for showing where sympathy lies.
+ * TIERS answer "how much game is here?"; BLOCS answer "whose side is this
+ * country on?" Colour is derived from the live treaty roll via
+ * `loadBlocMembership`, not from judgment about sympathy: an orbit is not a
+ * treaty, and the Cold War Ledger already shows where sympathy lies.
  *
  * SCOPE: presets with built-in Blocs (`BLOC_DESIGNATION_PRESETS`) and any world
- * where a player-founded Bloc exists. The latter receives its own treaty color.
+ * where a player-founded Bloc exists (which receives its own treaty color).
  */
 /**
  * Non-aligned covers both principled neutrality (SE, IE) and genuinely contested ground.
@@ -109,26 +96,18 @@ export function hasBlocData(presetId: string | undefined, customBlocCount = 0): 
 /**
  * Feature id → bloc, from live membership.
  *
- * Two passes, and the order is the rule. Every country the globe draws as
- * interactive starts NON-ALIGNED, then members overwrite themselves with their
- * bloc — so a country the era names but no alliance has claimed reads as
- * uncommitted rather than as an uncoloured hole.
+ * Two passes: interactive features start non-aligned, then members overwrite
+ * with their bloc, so named-but-unclaimed countries read as uncommitted.
  *
- * Members are painted whatever their TIER. NATO seats Canada, the Benelux,
- * Norway, Denmark, Portugal and Iceland as background entities, and an alliance
- * that does not draw its own members is not drawing the alliance. Background
- * NON-members stay out of the map entirely, in their dark grey.
+ * Members paint regardless of TIER: background members (Canada, Benelux,
+ * etc.) still show their bloc. Background non-members stay dark grey.
  *
- * Dependents inherit their metropole's bloc when the metropole is a member —
- * Ukraine / Byelorussia / the Baltics are USSR republics in 1953, so they must
- * paint East with Russia rather than the default non-aligned sand. Sovereign
- * non-members (CN, ES, JP, …) stay non-aligned by design: an orbit is not a
- * treaty.
+ * Dependents inherit their metropole's bloc when the metropole is a member
+ * (USSR republics paint East with Russia). Sovereign non-members stay
+ * non-aligned by design.
  *
- * Includes the `bi:<entityId>` region-overlay blob keys (split Germany, the
- * soviet-union shard) so an overlaid nation is coloured like its base polygon —
- * which is what puts East Germany on the map, since DD has no feature id of its
- * own.
+ * Includes `bi:<entityId>` overlay keys so overlaid nations colour like their
+ * base polygon (DD has no feature id of its own).
  */
 export function buildBlocLookup(params: {
   presetId: string | undefined;

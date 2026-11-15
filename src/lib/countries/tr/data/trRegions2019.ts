@@ -2,20 +2,18 @@ import type { State } from "@/lib/db/types";
 import { trRegions } from "./trRegions";
 
 /**
- * Modern population and assembly overlay for the eight existing TR simulation
- * regions. The weights come from Turkey's 2013 NUTS-1 regional population table,
- * grouped into the simulation's eight regions and normalized to the 83.4 million
- * people in the 2019 national budget. This is an explicit proxy until the
- * province-level modern region bundle tracked in #2317 is authored.
+ * Modern population and assembly overlay for the eight TR simulation regions.
+ * Weights come from Turkey's 2013 NUTS-1 regional population table, grouped
+ * into the eight regions and normalized to the 83.4 million people in the 2019
+ * national budget.
  *
  * Source: Republic of Turkey Ministry of Development, Regional Development
- * National Strategy, ABPRS 2013 table (TR1..TRC):
- * https://www.kalkinmakutuphanesi.gov.tr/assets/upload/dosyalar/regional-development.pdf
+ * National Strategy, ABPRS 2013 table (TR1..TRC).
  *
- * Assembly seats use the 600-seat Grand National Assembly, apportioned by the
- * largest-remainder method on the same weights. Turkey has no Senate in 2019.
+ * Assembly seats use the 600-seat Grand National Assembly, apportioned by
+ * largest remainder on the same weights. Turkey has no Senate in 2019.
  * Geographic IDs and GDP weights are retained from the existing eight-region
- * model; the bootstrap GDP reconciliation scales them to the national budget.
+ * model; bootstrap GDP reconciliation scales them to the national budget.
  */
 const MODERN_REGION_POPULATION_AND_SEATS: Record<
   string,

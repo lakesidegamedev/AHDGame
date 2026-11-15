@@ -45,5 +45,3 @@ export const JP_CABINET_POSITIONS = [
     order: 11,
   },
 ] as const;
-
-export type JPCabinetPositionId = (typeof JP_CABINET_POSITIONS)[number]["id"];

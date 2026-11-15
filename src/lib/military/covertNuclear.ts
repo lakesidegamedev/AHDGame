@@ -1,19 +1,13 @@
 import type { CountryId } from "@/lib/constants/countries";
 
 /**
- * The covert nuclear programme: East Germany building a bomb under the
- * Soviets' nose.
+ * Covert nuclear programme (DDR under Soviet nose).
  *
- * Unlike the overt programme this is a grind, not a tree. Five stages, each a
- * long slog of quiet funding; nothing shows on any public surface until the
- * Soviets catch it or the DDR breaks out. The tension in the design is
- * pace against exposure: funding harder moves faster and burns brighter.
- * Discovery is a Soviet crackdown, not a game over - the programme loses
- * ground and the world learns a little, and the crawl can resume.
- *
- * Completing the final stage banks a device. The breakout test is a separate,
- * deliberate, public act: it opens a real nuclearPrograms entry with the
- * fission device adopted and the biggest tension spike in the system.
+ * Five stages of quiet funding; nothing public until discovery or breakout.
+ * Pace vs exposure: harder funding moves faster and burns brighter. Discovery
+ * is a Soviet crackdown, not game over; progress loses ground and can resume.
+ * Completing final stage banks a device; breakout is a separate deliberate
+ * public act opening a `nuclearPrograms` entry with the fission device adopted.
  */
 
 export const COVERT_CAPABLE: readonly CountryId[] = ["DD"];

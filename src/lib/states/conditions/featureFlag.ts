@@ -1,5 +1,6 @@
 import { getDb } from "@/lib/mongodb";
 import type { GameConfig } from "@/lib/db/types";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 /**
  * Whether the state overview tab surfaces active approval modifiers
@@ -14,8 +15,9 @@ export async function isRegionalConditionsOverviewEnabled(
     return preloadedConfig?.regionalConditionsOverviewEnabled === true;
   }
   const db = await getDb();
-  const config = await db
-    .collection<GameConfig>("gameConfig")
-    .findOne({ _id: "default" }, { projection: { regionalConditionsOverviewEnabled: 1 } });
+  const config = await gameConfigCollection(db).findOne(
+    { _id: "default" },
+    { projection: { regionalConditionsOverviewEnabled: 1 } }
+  );
   return config?.regionalConditionsOverviewEnabled === true;
 }

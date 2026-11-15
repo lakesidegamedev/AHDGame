@@ -1,17 +1,15 @@
 /**
  * Private share invitation endpoints for close-corporation (e.g. S-Corp) flow.
  *
- * GET  /api/corporation/[id]/private-invites — list pending invites for this corp.
- *      CEO sees all pending invites; everyone else sees only invites addressed
+ * GET  lists pending invites: CEO sees all; others see only invites addressed
  *      to their active character.
- * POST /api/corporation/[id]/private-invites — CEO creates a new invite.
+ * POST CEO creates an invite.
  *
  * Gates:
- *  - The corporation must be private (`isPrivate: true`).
- *  - The corporation's legal structure must declare `maxShareholders > 1`
- *    (e.g. `us_s_corp` = 100).
- *  - The invitee must not already be a shareholder.
- *  - Current shareholder count + outstanding pending invites < maxShareholders.
+ *  - Corporation must be private (`isPrivate: true`).
+ *  - Legal structure must declare `maxShareholders > 1` (e.g. `us_s_corp` = 100).
+ *  - Invitee must not already be a shareholder.
+ *  - Current shareholders + outstanding pending invites < maxShareholders.
  */
 import { NextResponse } from "next/server";
 import { withNoStore } from "@/lib/api/withNoStore";
@@ -25,7 +23,10 @@ import { resolveCorporation, requireCeo } from "@/lib/api/corporations/resolveQu
 import { getLegalStructureForCorp } from "@/lib/corporations/legalStructure";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { createNotification } from "@/lib/notifications";
-import type { Character, Corporation, CorporationShareInvite, User } from "@/lib/db/types";
+import type { Corporation, CorporationShareInvite, User } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { usersCollection } from "@/lib/db/repositories/users";
+import { corporationShareInvitesCollection } from "@/lib/db/repositories/corporationShareInvites";
 
 const INVITE_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
@@ -65,9 +66,7 @@ async function handleGET(_request: Request, { params }: RouteParams) {
 
     if (!isCeo) {
       // Restrict to invites addressed to the caller's active character.
-      const userDoc = await db
-        .collection<User>("users")
-        .findOne({ _id: new ObjectId(auth.user.userId) });
+      const userDoc = await usersCollection(db).findOne({ _id: new ObjectId(auth.user.userId) });
       const characterId = userDoc?.activeCharacterId;
       if (!characterId) {
         return NextResponse.json({ invites: [] });
@@ -75,8 +74,7 @@ async function handleGET(_request: Request, { params }: RouteParams) {
       characterFilter.invitedCharacterId = characterId;
     }
 
-    const invites = await db
-      .collection<CorporationShareInvite>("corporationShareInvites")
+    const invites = await corporationShareInvitesCollection(db)
       .find(characterFilter)
       .sort({ createdAt: -1 })
       .toArray();
@@ -152,7 +150,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       return errorResponse(400, "CEO is already the sole shareholder");
     }
 
-    const invitee = await db.collection<Character>("characters").findOne({ _id: inviteeId });
+    const invitee = await charactersCollection(db).findOne({ _id: inviteeId });
     if (!invitee) {
       return errorResponse(404, "Invited character not found");
     }
@@ -167,13 +165,11 @@ export async function POST(request: Request, { params }: RouteParams) {
     const now = new Date();
     // Count current shareholders plus any outstanding pending invites — both
     // consume the cap. A pending invite that's accepted will land a new holder.
-    const pendingInviteCount = await db
-      .collection<CorporationShareInvite>("corporationShareInvites")
-      .countDocuments({
-        corporationId: corporation._id,
-        status: "pending",
-        expiresAt: { $gt: now },
-      });
+    const pendingInviteCount = await corporationShareInvitesCollection(db).countDocuments({
+      corporationId: corporation._id,
+      status: "pending",
+      expiresAt: { $gt: now },
+    });
     const projected = shareholderCount(corporation) + pendingInviteCount + 1;
     if (projected > maxShareholders) {
       return errorResponse(
@@ -195,8 +191,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     // Outstanding pending invites reserve unissued capacity to prevent over-
     // promising the same pool.
-    const reservedByInvites = await db
-      .collection<CorporationShareInvite>("corporationShareInvites")
+    const reservedByInvites = await corporationShareInvitesCollection(db)
       .aggregate<{ total: number }>([
         {
           $match: {
@@ -219,7 +214,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     const issuingCharacterId = corporation.ceoId ?? new ObjectId(auth.user.userId);
     const issuingCharacter = corporation.ceoId
-      ? await db.collection<Character>("characters").findOne({ _id: corporation.ceoId })
+      ? await charactersCollection(db).findOne({ _id: corporation.ceoId })
       : null;
 
     const invite: CorporationShareInvite = {
@@ -240,7 +235,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       updatedAt: now,
     };
 
-    await db.collection<CorporationShareInvite>("corporationShareInvites").insertOne(invite);
+    await corporationShareInvitesCollection(db).insertOne(invite);
 
     await createNotification({
       userId: invitee.userId,

@@ -1,24 +1,13 @@
 /**
  * Whether a money audit envelope is kept in `actionAuditLog`.
  *
- * Every money leg used to be written twice: once to `financialTxLog` (the
- * forensic ledger) and once to `actionAuditLog` (the alt-detection spine).
- * On production that second copy was ~54,000 inserts per turn, 36 MB, into a
- * collection with fifteen indexes including a text index, and the anomaly scan
- * that consumes it already excludes system-actor rows in Mongo because
- * materialising them blew the heap watchdog (#3366). The mirror was pure
- * write amplification on the turn's critical path.
+ * Player/NPP/admin actor legs keep a full mirror (alt detection reads it).
+ * System-actor legs are mirrored only when a detector can use them (related
+ * supply-agreement settlements, party funding, party counterparties); the rest
+ * live only in `financialTxLog`, which already holds the money trail. Mirroring
+ * every leg was write amplification on the turn's critical path.
  *
- * The rule now:
- *  - a player/NPP/admin actor keeps a full mirror (that is what alt detection
- *    reads), and
- *  - a system-actor leg is mirrored only when a detector can use it: related
- *    supply-agreement settlements, party funding, and anything with a party
- *    counterparty. Everything else lives only in `financialTxLog`, which is
- *    where the money trail already is.
- *
- * `AUDIT_MIRROR_SYSTEM_MONEY=1` restores the old full mirror without a code
- * change if a forensic investigation needs it.
+ * `AUDIT_MIRROR_SYSTEM_MONEY=1` restores the full mirror for investigations.
  */
 export interface MoneyMirrorCandidate {
   /** Audit action, for example `bond.coupon` or `party.transfer`. */

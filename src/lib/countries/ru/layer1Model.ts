@@ -1,23 +1,9 @@
-/**
- * USSR (SU) Layer-1 demographic model — census-consuming rebuild.
- *
- * The USSR is seeded in the 1953 and 1979 presets. The 2027 Russian
- * Federation resolves to the separate adult-census model in layer1Modern.
- *
- * Architecture mirrors the CN model:
- *   - dims: ["ethnicity","age","education","income","urbanization"]
- *   - census: ruRegionCensusData (1979 Soviet census, 17 regions incl. BEL/BLT)
- *   - composition: maps each Soviet archetype to census dim/key weights
- *   - region/archetype leans EMERGE from census × positions
- *
- * Axes:
- *   economicLean: -5 (command economy / state-control) to +5 (market-reform)
- *   socialLean:   -5 (cosmopolitan/liberal) to +5 (traditional/nationalist)
- *
- * 1979 anchor: a command economy at its zenith — every group sits firmly on the
- * state-control side; the intelligentsia and the grey-market high-income tier are
- * the least state-bound; Central Asia / the Caucasus are the most socially
- * traditional; the Russian core carries Soviet patriotism.
+/*
+ * USSR (SU) Layer-1 demographic model for 1953 and 1979 presets; 2027 Russia uses layer1Modern.
+ * Mirrors CN model: dims ethnicity/age/education/income/urbanization, composition maps
+ * Soviet archetypes to census dim/key weights, region and archetype leans emerge from
+ * census x positions. economicLean: -5 command economy to +5 market-reform.
+ * socialLean: -5 cosmopolitan/liberal to +5 traditional/nationalist.
  */
 
 import { convertLayer1Census } from "@/lib/seeds/international/convertLayer1Census";

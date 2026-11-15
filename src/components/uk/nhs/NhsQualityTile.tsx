@@ -1,5 +1,5 @@
 /**
- * NHS quality tile (epic #856, ticket #858).
+ * NHS quality tile.
  *
  * Presentational: the 0..100 NHS service-quality score as a labelled, banded
  * meter, plus the healthcare share of the Budget driving it. Quality rises when

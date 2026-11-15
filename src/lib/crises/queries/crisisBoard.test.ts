@@ -1,0 +1,180 @@
+import { describe, expect, it, vi } from "vitest";
+import { ObjectId } from "mongodb";
+import type { Db } from "mongodb";
+import type { Crisis, CrisisDecisionNode, CrisisInteraction } from "@/lib/db/types/crisis";
+import { createMockDb } from "@/lib/test-utils/mockDb";
+
+const roles = vi.hoisted(() => ({ value: ["headOfState"] as string[] }));
+const interactions = vi.hoisted(() => ({ map: new Map<string, unknown>() }));
+const levers = vi.hoisted(() => ({ value: [] as Array<{ crisisId: string }> }));
+
+vi.mock("@/lib/crises/levers/queries", () => ({
+  getAvailableLevers: vi.fn(async () => levers.value),
+}));
+
+vi.mock("@/lib/crises/interactionEngine", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/crises/interactionEngine")>()),
+  resolveCharacterRoles: vi.fn(async () => roles.value),
+  getCrisisInteractionsByCrisisId: vi.fn(async () => interactions.map),
+}));
+
+import { countViewerCrisisActions, viewerCanActOnCrisis, type BoardViewer } from "./crisisBoard";
+
+const characterId = new ObjectId();
+const viewer: BoardViewer = {
+  characterId,
+  countryId: "US",
+  stateId: "US_OH",
+  roles: ["headOfState"],
+};
+
+function node(overrides: Partial<CrisisDecisionNode> = {}): CrisisDecisionNode {
+  return {
+    nodeId: "n1",
+    type: "choice",
+    title: "t",
+    description: "d",
+    options: [],
+    requiredRoles: ["headOfState"],
+    timeLimitMinutes: null,
+    ...overrides,
+  };
+}
+
+function crisis(overrides: Partial<Crisis> = {}): Crisis {
+  return {
+    _id: new ObjectId(),
+    scope: "country",
+    countryIds: ["US"],
+    regionIds: [],
+    status: "active",
+    ...overrides,
+  } as Crisis;
+}
+
+function interaction(c: Crisis, n: CrisisDecisionNode, extra: Partial<CrisisInteraction> = {}) {
+  return {
+    crisisId: c._id,
+    decisionTree: [n],
+    currentNodeId: n.nodeId,
+    contributors: [],
+    leaderResponses: [],
+    resolvedAt: null,
+    resolutionPath: [],
+    ...extra,
+  } as unknown as CrisisInteraction;
+}
+
+describe("viewerCanActOnCrisis", () => {
+  it("allows the head of state of the affected country", () => {
+    const c = crisis();
+    expect(viewerCanActOnCrisis(c, interaction(c, node()), viewer)).toBe(true);
+  });
+
+  it("refuses a wrong role, a foreign country, a resolved interaction and a guest", () => {
+    const c = crisis();
+    expect(
+      viewerCanActOnCrisis(c, interaction(c, node({ requiredRoles: ["centralBankChair"] })), viewer)
+    ).toBe(false);
+    const foreign = crisis({ countryIds: ["FR"] });
+    expect(viewerCanActOnCrisis(foreign, interaction(foreign, node()), viewer)).toBe(false);
+    expect(
+      viewerCanActOnCrisis(c, interaction(c, node(), { resolvedAt: new Date() }), viewer)
+    ).toBe(false);
+    expect(viewerCanActOnCrisis(c, interaction(c, node()), null)).toBe(false);
+  });
+
+  it("leaves a lever-answered decision to the levers on a converted crisis", () => {
+    const answered = node({
+      options: [
+        {
+          optionId: "act",
+          label: "Act",
+          description: "",
+          effects: [],
+          durationReductionTurns: 2,
+          nextNodeId: "end",
+        },
+      ],
+    });
+    const converted = crisis({ v2: { definitionId: "legacy:recession" } as Crisis["v2"] });
+    expect(viewerCanActOnCrisis(converted, interaction(converted, answered), viewer)).toBe(false);
+    const plain = crisis();
+    expect(viewerCanActOnCrisis(plain, interaction(plain, answered), viewer)).toBe(true);
+  });
+
+  it("counts pooled aid only for reached crises the viewer has not given to", () => {
+    const c = crisis();
+    const aid = node({ type: "collective", requiredRoles: ["any"] });
+    expect(viewerCanActOnCrisis(c, interaction(c, aid), viewer)).toBe(true);
+    const gave = interaction(c, aid, {
+      contributors: [{ characterId } as CrisisInteraction["contributors"][number]],
+    });
+    expect(viewerCanActOnCrisis(c, gave, viewer)).toBe(false);
+    const far = crisis({ countryIds: ["FR"] });
+    expect(viewerCanActOnCrisis(far, interaction(far, aid), viewer)).toBe(false);
+  });
+
+  it("refuses a country with no part in a global response", () => {
+    const c = crisis({
+      scope: "global",
+      globalResponse: {
+        roleByCountry: { FR: "belligerent" },
+      } as unknown as Crisis["globalResponse"],
+    });
+    expect(viewerCanActOnCrisis(c, interaction(c, node()), viewer)).toBe(false);
+  });
+});
+
+describe("countViewerCrisisActions", () => {
+  it("counts a crisis with an available v2 lever and no open decision", async () => {
+    levers.value = [{ crisisId: "lever-crisis" }];
+    const db = createMockDb();
+    db.collection("crises").find.mockReturnValue({ toArray: vi.fn().mockResolvedValue([]) });
+    expect(await countViewerCrisisActions(db as unknown as Db, characterId)).toBe(1);
+    levers.value = [];
+  });
+
+  it("counts a crisis once when it has both a decision and a lever", async () => {
+    const mine = crisis();
+    levers.value = [{ crisisId: mine._id.toString() }, { crisisId: "other" }];
+    interactions.map = new Map([[mine._id.toString(), interaction(mine, node())]]);
+    const db = createMockDb();
+    db.collection("crises").find.mockReturnValue({ toArray: vi.fn().mockResolvedValue([mine]) });
+    db.collection("characters").findOne.mockResolvedValue({
+      _id: characterId,
+      countryId: "US",
+      homeState: "US_OH",
+    });
+    expect(await countViewerCrisisActions(db as unknown as Db, characterId)).toBe(2);
+    levers.value = [];
+  });
+
+  it("is zero without a read of characters when no crisis has a decision", async () => {
+    const db = createMockDb();
+    db.collectionMocks.crises = undefined as never;
+    const crises = db.collection("crises");
+    crises.find.mockReturnValue({ toArray: vi.fn().mockResolvedValue([]) });
+    expect(await countViewerCrisisActions(db as unknown as Db, characterId)).toBe(0);
+    expect(db.collection).not.toHaveBeenCalledWith("characters");
+  });
+
+  it("counts only the crises the viewer can answer", async () => {
+    const mine = crisis();
+    const theirs = crisis({ countryIds: ["FR"] });
+    interactions.map = new Map([
+      [mine._id.toString(), interaction(mine, node())],
+      [theirs._id.toString(), interaction(theirs, node())],
+    ]);
+    const db = createMockDb();
+    db.collection("crises").find.mockReturnValue({
+      toArray: vi.fn().mockResolvedValue([mine, theirs]),
+    });
+    db.collection("characters").findOne.mockResolvedValue({
+      _id: characterId,
+      countryId: "US",
+      homeState: "US_OH",
+    });
+    expect(await countViewerCrisisActions(db as unknown as Db, characterId)).toBe(1);
+  });
+});

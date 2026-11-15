@@ -20,6 +20,7 @@ import { getNextSequentialId } from "@/lib/db/sequentialId";
 import { DEFAULT_SHARE_PRICE, CEO_INITIAL_SHARES } from "@/lib/constants/corporations";
 import { getEraFounderShares } from "@/lib/constants/sectorSeedEra";
 import { getGameStatePresetOrDefault } from "@/lib/db/collections/gameState";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export interface EnsureImfPlaceholderResult {
   corporationId: string;
@@ -28,9 +29,7 @@ export interface EnsureImfPlaceholderResult {
 }
 
 export async function ensureImfInstitutionPlaceholder(db: Db): Promise<EnsureImfPlaceholderResult> {
-  const existing = await db
-    .collection<Corporation>("corporations")
-    .findOne({ imfInstitution: true });
+  const existing = await corporationsCollection(db).findOne({ imfInstitution: true });
   if (existing) {
     return {
       corporationId: existing._id.toString(),
@@ -76,8 +75,6 @@ export async function ensureImfInstitutionPlaceholder(db: Db): Promise<EnsureImf
     createdAt: now,
   };
 
-  const { insertedId } = await db
-    .collection<Corporation>("corporations")
-    .insertOne(doc as unknown as Corporation);
+  const { insertedId } = await corporationsCollection(db).insertOne(doc as unknown as Corporation);
   return { corporationId: insertedId.toString(), created: true, sequentialId };
 }

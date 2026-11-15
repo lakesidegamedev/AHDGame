@@ -5,7 +5,7 @@
  */
 import { inheritedCalibrationRegion } from "./rules/conversionCalibration";
 import type { Db } from "mongodb";
-import type { FederalBudget, StateBudget } from "@/lib/db/types/budget";
+import type { StateBudget } from "@/lib/db/types/budget";
 import type { MacroMetricsDoc } from "@/lib/db/types/macroMetrics";
 import type { MilitaryUnit } from "@/lib/db/types/militaryUnit";
 import type { State } from "@/lib/db/types/state";
@@ -52,6 +52,16 @@ import type { HouseholdProductionStatus } from "./rules/householdSources";
 import { modelHouseholdIncome } from "./rules/modelHouseholdIncome";
 import { resolveRegionalBudgetCadence } from "@/simulation/phases/regionalBudgetCadence";
 import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
+import { militaryUnitsCollection } from "@/lib/db/repositories/militaryUnits";
+import { tradeFlowSnapshotsCollection } from "@/lib/db/repositories/tradeFlowSnapshots";
+import { regionalBudgetsCollection } from "@/lib/db/repositories/regionalBudgets";
 
 let openingCalibrationCache: {
   gross: ReturnType<typeof openingGrossPurchasingInputs1991>;
@@ -106,8 +116,7 @@ export async function collectResetMetricOwnerReadings(
       board.scope === "national" && dueResetMetricIds(board, turn, false, false).includes("57")
   );
   const [macro, budgets, units] = await Promise.all([
-    db
-      .collection<MacroMetricsDoc>("macroMetrics")
+    macroMetricsCollection<MacroMetricsDoc>(db)
       .find(
         { _id: { $in: regionalIds } },
         {
@@ -128,8 +137,7 @@ export async function collectResetMetricOwnerReadings(
         }
       )
       .toArray(),
-    db
-      .collection<FederalBudget>("federalBudget")
+    federalBudgetCollection(db)
       .find(
         { countryId: { $in: countryIds } },
         {
@@ -147,8 +155,7 @@ export async function collectResetMetricOwnerReadings(
       )
       .toArray(),
     readinessDue
-      ? db
-          .collection<MilitaryUnit>("militaryUnits")
+      ? militaryUnitsCollection(db)
           .find(
             { countryId: { $in: countryIds } },
             {
@@ -166,12 +173,10 @@ export async function collectResetMetricOwnerReadings(
       : Promise.resolve([]),
   ]);
   const [trade, states, world] = await Promise.all([
-    db
-      .collection<TradeFlowSnapshot>("tradeFlowSnapshots")
+    tradeFlowSnapshotsCollection(db)
       .find({ turn }, { projection: { turn: 1, national: 1 } })
       .toArray(),
-    db
-      .collection<State>("states")
+    statesCollection(db)
       .find(
         { _id: { $in: regionalIds }, countryId: { $in: countryIds } },
         {
@@ -186,9 +191,7 @@ export async function collectResetMetricOwnerReadings(
         }
       )
       .toArray(),
-    db
-      .collection<GameState>("gameState")
-      .findOne({ _id: "current" }, { projection: { preset: 1 } }),
+    gameStateCollection(db).findOne({ _id: "current" }, { projection: { preset: 1 } }),
   ]);
   const turnout = await loadTurnoutReadings(db, {
     turn,
@@ -197,8 +200,7 @@ export async function collectResetMetricOwnerReadings(
     states,
   });
   const stateById = new Map(states.map((s) => [s._id, s]));
-  const serviceMarkets = await db
-    .collection<CommodityPrice>("commodityPrices")
+  const serviceMarkets = await commodityPricesCollection(db)
     .find(
       {
         commodity: { $in: ["healthcare_services", "energy", "food", "coal", "oil", "natural_gas"] },
@@ -284,8 +286,7 @@ export async function collectResetMetricOwnerReadings(
     ]),
   ];
   const modeledRegionalTaxes = modeledCountryIds.length
-    ? await db
-        .collection<StateBudget>("stateBudgets")
+    ? await stateBudgetsCollection(db)
         .find(
           { _id: { $in: regionalIds }, countryId: { $in: modeledCountryIds } },
           { projection: { _id: 1, countryId: 1, taxRates: 1 } }
@@ -294,13 +295,12 @@ export async function collectResetMetricOwnerReadings(
     : [];
   const taxesByRegion = new Map(modeledRegionalTaxes.map((r) => [r._id, r]));
   // UK and JP regional tax owners publish annual assessments, not StateBudget rates.
-  const cohortRegionalBudgets = automaticCountries.some((c) => c !== "US")
-    ? await db
-        .collection<RegionalBudget>("regionalBudgets")
+  const cohortRegionalBudgets = automaticCountries.some((c) => !countryHasFeature("usSeeds", c))
+    ? await regionalBudgetsCollection(db)
         .find(
           {
             _id: { $in: regionalIds },
-            countryId: { $in: automaticCountries.filter((c) => c !== "US") },
+            countryId: { $in: automaticCountries.filter((c) => !countryHasFeature("usSeeds", c)) },
           },
           {
             projection: {
@@ -348,7 +348,7 @@ export async function collectResetMetricOwnerReadings(
                   costOfLiving:
                     macroByRegion.get(b.regionId!)?.economic?.costOfLiving?.value ?? NaN,
                   regionalTaxes: tax?.countryId === countryId ? tax.taxRates : undefined,
-                  ...(pack?.model && countryId !== "US"
+                  ...(pack?.model && !countryHasFeature("usSeeds", countryId)
                     ? {
                         annualHouseholdLevy:
                           regionalBudget?.countryId === countryId &&
@@ -468,7 +468,7 @@ export async function collectResetMetricOwnerReadings(
       householdSourceByCountry.get(country)?.calibration
   );
   const constructionMarket = housingCandidates.length
-    ? await db.collection<CommodityPrice>("commodityPrices").findOne(
+    ? await commodityPricesCollection(db).findOne(
         { commodity: "construction_services", turn },
         {
           projection: {
@@ -669,7 +669,8 @@ export async function collectResetMetricOwnerReadings(
           const readiness = nationalForceReadiness(
             unitsByCountry.get(board.countryId) ?? [],
             turn,
-            board.countryId === "SCO" || board.countryId === "WAL"
+            countryHasFeature("scoSeeds", board.countryId) ||
+              countryHasFeature("walSeeds", board.countryId)
           );
           if (readiness !== null) {
             updates["57"] = {
@@ -891,15 +892,12 @@ export async function collectResetMetricOwnerReadings(
           }
         }
       }
-      // Several v2 outcomes do not yet have a more granular physical ledger in
-      // the game. They carry their opening value forward instead of reading the
-      // retired v1 political score, and the funded law and Cabinet pressure the
-      // board already displays moves them toward its settlement on each refresh
-      // (ticket 1539: the pressure used to be display-only, so energy security
-      // sat at its opening value for 170 turns of enacted energy law). This is
-      // deliberately labelled as a game-calibrated estimate so the UI never
-      // presents it as a fresh measurement. Owners with live ledgers above
-      // remain fail-closed.
+      // These v2 outcomes have no granular physical ledger yet. They carry
+      // their opening value forward rather than reading the retired v1
+      // political score, and funded law plus Cabinet pressure move them toward
+      // settlement on each refresh. Deliberately labelled a game-calibrated
+      // estimate so the UI never presents it as a fresh measurement. Owners
+      // with live ledgers remain fail-closed.
       const pressure = { ...(pressureByBoard.get(board._id) ?? {}) };
       const regions =
         board.scope === "regional"

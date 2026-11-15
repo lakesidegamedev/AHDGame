@@ -14,6 +14,8 @@ import { getOfficeTypeForChamber } from "@/lib/legislature/chamberOfficeType";
 import { getChamberLeaderRole } from "@/lib/partyWhips/constraints";
 import { resolveWhipIssuerRole } from "@/lib/partyWhips/issuerRole";
 import { getBillWhipWindowStart } from "@/lib/congress/billWhipPhase";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { billWhipsCollection } from "@/lib/db/repositories/billWhips";
 
 export { resolveWhipIssuerRole };
 
@@ -52,10 +54,8 @@ interface BillWhipViewerContext {
 const ACTIONABLE_BILL_STATUSES = new Set([
   "active",
   "active_other",
-  // Both chambers are voting, so both are whippable. ⚠️ The whip WRITERS
-  // (applyWhipVotes) must already route per member before this is
-  // opened — otherwise a whipped upper-chamber member's vote and weight land in the
-  // lower tally and the bill can pass on the other house's votes.
+  // Both chambers are whippable. Whip writers must route per member first, or
+  // votes land in the wrong chamber's tally and the bill can pass wrongly.
   "active_both",
   "veto_override",
   "override_shugiin",
@@ -118,10 +118,9 @@ export async function buildBillWhipPanelData(
   const partyIdStr = getPartyIdString(party);
 
   // Access gate. Party Chair/Vice-Chair and admins can always whip. Chamber
-  // leaders (Speaker / Floor Leader / Whip) can whip in the chamber(s) they
-  // lead: the backend whip route already authorizes them, but this panel
-  // historically only rendered for party officers, so whip officers could
-  // never reach the UI (bug: scaffolded, never wired into the client).
+  // leaders (Speaker / Floor Leader / Whip) can whip in the chamber(s) they lead.
+  // The backend whip route authorizes them, but this panel only rendered for
+  // party officers, so whip officers could never reach the UI.
   const isChair = party.chairId?.equals(viewer.characterId);
   const isViceChair = party.viceChairId?.equals(viewer.characterId);
   if (!viewer.isAdmin && !isChair && !isViceChair) {
@@ -140,11 +139,10 @@ export async function buildBillWhipPanelData(
   const officeTypeByChamberKey = new Map(
     activeChambers.map((key) => [key, getOfficeTypeForChamber(countryId, key, undefined, config)])
   );
-  const officials = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const officials = await electedOfficialsCollection(db)
     .find({
       // Country-scoped: party sequentialIds collide across countries and some
-      // office types (e.g. "senate") are shared between countries (bug #0699).
+      // office types (e.g. "senate") are shared between countries.
       countryId,
       party: partyIdStr,
       officeType: { $in: [...officeTypeByChamberKey.values()] },
@@ -161,8 +159,7 @@ export async function buildBillWhipPanelData(
   if (chambersWithPartyMembers.size === 0) return null;
 
   const whipWindowStart = getBillWhipWindowStart(bill);
-  const whips = await db
-    .collection<BillWhip>("billWhips")
+  const whips = await billWhipsCollection(db)
     .find({
       targetType: "bill",
       targetId: bill._id,

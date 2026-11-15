@@ -334,7 +334,7 @@ describe("buildCapacity — build", () => {
     expect(db.collectionMocks.corporations.updateOne).not.toHaveBeenCalled();
   });
 
-  // ─── unowned-pool drawdown (#1145) ──────────────────────────────────────
+  // ─── unowned-pool drawdown ──────────────────────────────────────
   //
   // Building on an EXISTING plant used to leave the pool untouched, so every
   // post-founding unit counted as owned while its demand stayed claimable. The
@@ -869,7 +869,7 @@ describe("buildCapacity — mothball / reactivate", () => {
   });
 });
 
-// ─── unowned-pool country attribution (#1271) ─────────────────────────────
+// ─── unowned-pool country attribution ─────────────────────────────
 //
 // The pool row is keyed by state and sector, but it CARRIES a countryId that
 // every reader filters on. A sector with no stored countryId resolved it from

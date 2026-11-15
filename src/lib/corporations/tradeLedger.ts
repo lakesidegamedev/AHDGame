@@ -1,21 +1,15 @@
 /**
- * Per-holder realized P&L over the share-trade audit trail (suggestion #38).
- *
- * `shareTradeHistory` already records every share movement, but only ever as a
- * per-corporation public tape (`/api/corporations/[id]/shares/history`). There
- * was no way for a player to see THEIR OWN trades, and no cost basis anywhere:
- * `shareholders[].avgCostPerShare` describes the position you still hold, which
- * says nothing about what you made on the ones you already sold.
- *
- * This module is pure. It takes one holder's rows for ONE corporation in
- * chronological order and walks them through a FIFO lot tracker, so a sale is
- * matched against the oldest shares still open — the same convention a
- * brokerage statement uses by default.
+ * Per-holder realized P&L over the share-trade audit trail, via a FIFO lot
+ * tracker: a sale is matched against the oldest open shares, the brokerage
+ * convention. `shareholders[].avgCostPerShare` only describes the held
+ * position, not realized gains.
  *
  * Splits are the trap. A `stock_split` / `reverse_split` row moves no shares
- * between holders but rescales everyone's count, so open lots have to be
- * rescaled with it or every basis computed across a split is wrong by the split
- * ratio. Those rows are matched on `structureChange`, not on `from`/`to`.
+ * between holders but rescales everyone's count, so open lots must be rescaled
+ * with it or every basis computed across a split is wrong by the split ratio.
+ * Those rows are matched on `structureChange`, not on `from`/`to`.
+ *
+ * Pure: takes one holder's rows for one corporation in chronological order.
  */
 
 import type { ObjectId } from "mongodb";

@@ -8,6 +8,7 @@ import type { ElectedOfficial } from "@/lib/db/types";
 import { COUNTRY_CONFIGS, getExecutiveOfficeKey, type CountryId } from "@/lib/constants/countries";
 import { isCountryAccessible } from "@/lib/countryAccess";
 import { getAuthUser } from "@/lib/auth";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 interface LeaderTimelineEntry {
   title: string;
@@ -77,7 +78,7 @@ export async function GET(
       col.find({ countryId }).sort({ turn: -1, timestamp: -1 }).limit(25).toArray(),
       // Fall back to current ElectedOfficial so the widget shows a leader even
       // before any leader_change events have accumulated.
-      db.collection<ElectedOfficial>("electedOfficials").findOne({
+      electedOfficialsCollection(db).findOne({
         officeType: headOfGovernmentOffice,
         countryId,
       }),

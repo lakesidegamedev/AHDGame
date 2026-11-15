@@ -19,6 +19,7 @@ export const CABINET_ROUTE_SCOPES: Record<string, CabinetLeverScope | "operation
   "battle/declare": "operational",
   "battle/auto-join": "operational",
   "navair/mission": "operational",
+  "navair/basing": "operational",
   manpower: "operational",
   order: "operational",
   banner: "operational",
@@ -41,6 +42,7 @@ export const CABINET_ROUTE_SCOPES: Record<string, CabinetLeverScope | "operation
   "nuclear/test": "doctrine",
 
   "intelligence/counter-intel": "stance",
+  "intelligence/cyber": "stance",
   "intelligence/network": "stance",
   "intelligence/operation": "stance",
 

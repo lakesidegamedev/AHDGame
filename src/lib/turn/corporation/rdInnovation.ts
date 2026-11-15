@@ -41,11 +41,7 @@ export function seedDepositLookup(preset: string | undefined): SeedDepositLookup
 // PLANTS-GATED: under plants a breakthrough raises `capitalStock` by the same
 // proportion the legacy path raised `revenue`; the revenue write below runs only
 // below the plants tier, where revenue is still the authoritative quantity.
-/**
- * Result of processing R&D innovations for all corporations in one turn.
- * Used to collect bulk write operations for sector revenue boosts and
- * state resource capacity updates.
- */
+/** Result of processing R&D innovations for all corporations in one turn, collecting bulk write ops for sector revenue boosts and state resource capacity updates. */
 export interface RdInnovationResult {
   /** Bulk ops for sector revenue boosts (corporateSectors collection) */
   sectorBoostOps: Array<{ updateOne: UpdateOneModel<CorporateSector> }>;
@@ -86,22 +82,19 @@ function getStrategyExtractableResources(
  * Fires every RD_INNOVATION_INTERVAL turns.
  *
  * Innovation probability = min(1, rdScore / RD_INNOVATION_SCORE_THRESHOLD).
- * At score 200, innovation is guaranteed. At 100, 50%. At 0, no chance.
+ * At score 200, guaranteed; at 100, 50%; at 0, no chance.
  *
  * Extraction corps (type === "extraction"):
- *   - Pick a random sector, boost its revenue by 1–5% (scaling with rdScore)
- *   - Grow the state's deposit of the sector's binding resource, only when the
+ *   - Pick a random sector, boost its revenue by 1-5% (scaling with rdScore).
+ *   - Grow the state's deposit of the sector's binding resource only when the
  *     sector is deposit-constrained, never past 3x the seeded deposit (see
  *     rules/rdDepositGrowth.ts).
  *
  * Regular corps (all other types):
- *   - Pick a random sector, boost its revenue by 1–10% (floor mirrors
- *     extraction so breakthroughs always feel meaningful).
+ *   - Pick a random sector, boost its revenue by 1-10%.
  *
  * All boosts are permanent revenue increases applied as $inc on the sector
- * document. Deposit growth used to compound on every recipe resource with no
- * ceiling (one state's oil reached 390x its seed); it is now bounded.
- * Notifications are sent to the CEO's user for each breakthrough.
+ * document. Notifications are sent to the CEO's user for each breakthrough.
  */
 export function processRdInnovations(
   lookups: CorporationLookups,
@@ -170,11 +163,7 @@ export function processRdInnovations(
       sector = sectors[Math.floor(rng() * sectors.length)];
     }
 
-    // Magnitude is uniformly random across [MIN, MAX] — rdScore only governs
-    // how often a breakthrough fires (the probability check above), not how
-    // big it is. Prior behavior used scoreFraction interpolation which made
-    // high-rdScore corps a guaranteed cap-hit; that turned R&D into a strictly
-    // dominant strategy over Growth (see bug discussion 2026-05-19).
+    // Mag is uniformly random across [MIN, MAX]: rdScore only governs how often a breakthrough fires, not its size. Score-weighted magnitude made high-rd corps always cap-hit, dominating Growth.
     const magnitudeRoll = rng();
     const boostPercent = isExtraction
       ? RD_EXTRACTION_BOOST_MIN +
@@ -190,26 +179,17 @@ export function processRdInnovations(
 
     if (plantsEnabled) {
       // PLANTS: the breakthrough is new PLANT, not a revenue nameplate.
+      // The turn processor rewrites `revenue` from `capitalStock × mixPrice`
+      // every turn, so a legacy revenue boost is erased on the next tick.
+      // Applying the same percentage to the STOCK reproduces the intended boost
+      // in units: deltaUnits = capitalStock × boostPercent. No FX, no RPU
+      // lookup, and correct after a D9 rescale.
       //
-      // Under plants the identity is `revenue = capitalStock × mixPrice`, and
-      // the turn processor rewrites `revenue` from that product every turn. The
-      // revenue boost the legacy branch applies is therefore erased on the next
-      // tick. Converting it back into units is exact and needs no currency work
-      // at all: deltaUnits = boostAmount / mixPrice = (revenue × boostPercent) /
-      // mixPrice = capitalStock × boostPercent. So the same percentage applied
-      // to the STOCK reproduces the intended boost, in units, with no FX and no
-      // RPU lookup — and it stays correct if the sector later retools (D9
-      // rescales the stock, and a percentage of a rescaled stock is still the
-      // same fraction of the nameplate).
+      // FREE capacity: no `buildQueue` entry and no `costPaidAnchor`, since
+      // nothing was bought and there is no CIP to recognise or refund.
       //
-      // FREE capacity, with no `buildQueue` entry and no `costPaidAnchor`: a
-      // breakthrough is exactly the case where capacity arrives without being
-      // bought, so there is no CIP to recognise and nothing to refund.
-      //
-      // A sector with no stock yet (pre-flip, or a mothballed shell that never
-      // had capacity) is skipped: there is no plant for the lab to improve, and
-      // seeding one here would conjure capacity from a percentage of zero on
-      // the flip turn instead.
+      // A sector with no stock is skipped: there is no plant to improve, and
+      // seeding one would conjure capacity from a percentage of zero.
       const stock =
         typeof sector.capitalStock === "number" && Number.isFinite(sector.capitalStock)
           ? sector.capitalStock

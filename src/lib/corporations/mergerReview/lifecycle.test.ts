@@ -5,6 +5,7 @@ import type { MergerReview } from "@/lib/db/types/mergerReview";
 vi.mock("@/lib/notifications", () => ({ createNotification: vi.fn() }));
 vi.mock("@/lib/audit/recordAudit", () => ({ recordAudit: vi.fn() }));
 vi.mock("@/lib/nationalization/treasury", () => ({
+  collectFundedCorporationPayment: vi.fn(async () => null),
   creditTreasuryProceedsFromAnchor: vi.fn(),
 }));
 vi.mock("@/lib/financialTxLog/atomicCashGuard", () => ({
@@ -240,7 +241,7 @@ describe("fineOverdueDivestitures", () => {
     );
     // The treasury is credited the ANCHOR amount, so the receiving country
     // converts into its own currency rather than banking the payer's local
-    // figure verbatim (#808).
+    // figure verbatim.
     expect(vi.mocked(creditTreasuryProceedsFromAnchor)).toHaveBeenCalledWith(
       db,
       "US",

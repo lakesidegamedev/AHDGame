@@ -12,6 +12,7 @@ import { createSystemNewsPost } from "@/lib/news";
 import { MASS_CASCADE_THRESHOLD } from "../constants";
 import type { CascadeResult } from "./cascadeOrchestrator";
 import type { GlobalAlert } from "@/lib/db/types/globalAlert";
+import { globalAlertsCollection } from "@/lib/db/repositories/globalAlerts";
 
 // 100 turns × 30 minutes/turn — keeps a mass-cascade alert visible across
 // roughly 2 game days of dashboard load before auto-expiring.
@@ -55,7 +56,7 @@ export async function emitMassCascadeAlert(
       expiresAtRealtimeMs: nowMs + MASS_CASCADE_ALERT_TTL_MS,
       dismissedByUserIds: [],
     };
-    await db.collection<GlobalAlert>("globalAlerts").insertOne(alert);
+    await globalAlertsCollection(db).insertOne(alert);
   } catch (err) {
     console.error("emitMassCascadeAlert: failed to insert globalAlert", err);
   }

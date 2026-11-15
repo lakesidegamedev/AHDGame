@@ -14,14 +14,10 @@ function getTimeLeft(target: string) {
 type TimeLeft = ReturnType<typeof getTimeLeft>;
 
 export function MaintenanceCountdown({ expectedEnd }: { expectedEnd: string }) {
-  // `undefined` = not yet mounted. We must NOT compute the live countdown during
-  // render or in the initial useState value: getTimeLeft() reads Date.now(),
-  // which differs between the server (SSR) pass and client hydration, so the
-  // seconds digit mismatches and React throws a hydration text-content error
-  // (minified #418). The server render and the first client render both show the
-  // stable "--" placeholder; every state update happens inside an async timer
-  // callback (never synchronously in the effect body, per react-hooks/
-  // set-state-in-effect), and a 0ms kick fills the real value in imperceptibly.
+  // `undefined` = not yet mounted. Do not compute the countdown during render:
+  // getTimeLeft() reads Date.now(), which differs between SSR and hydration and
+  // causes a hydration text-content mismatch. Server and first client render
+  // show a stable placeholder; the 0ms kick fills in the real value after mount.
   const [timeLeft, setTimeLeft] = useState<TimeLeft | undefined>(undefined);
 
   useEffect(() => {

@@ -8,6 +8,8 @@ import {
 } from "./aidFinalize";
 import type { CrisisAidCommitment } from "@/lib/db/types/crisisAid";
 import { AID_FAILED_PENALTY, AID_PENALTY_TURNS } from "@/lib/constants/crises";
+import { refundTreasurySpend } from "@/lib/budget/treasurySpend";
+import { applyEffectsForCrisis } from "@/lib/crises/interactionEngine";
 
 vi.mock("@/lib/wireEvent", () => ({ logWireEvent: vi.fn().mockResolvedValue(undefined) }));
 
@@ -21,14 +23,8 @@ vi.mock("@/lib/crises/applyEffects", () => ({
   applyCrisisEffects: vi.fn().mockResolvedValue(undefined),
 }));
 
-// Mock creditTreasury so we don't need deriveFiscalState to be wired up.
 vi.mock("@/lib/budget/treasurySpend", () => ({
-  creditTreasury: vi.fn().mockResolvedValue({
-    fromSurplus: 0,
-    addedToDebt: 0,
-    newTreasuryBalance: 110_000,
-    newDebtPrincipal: 0,
-  }),
+  refundTreasurySpend: vi.fn().mockResolvedValue(undefined),
   spendFromTreasury: vi.fn().mockResolvedValue({
     fromSurplus: 10_000,
     addedToDebt: 0,
@@ -165,6 +161,28 @@ describe("processCrisisAidResolutions — failed", () => {
     const expiresTurn = (failedCall![1] as { $set?: Record<string, unknown> })?.$set
       ?.approvalPenaltyExpiresTurn as number;
     expect(expiresTurn).toBe(100 + AID_PENALTY_TURNS);
+    expect(refundTreasurySpend).toHaveBeenCalledWith(
+      expect.anything(),
+      "US",
+      10_000,
+      expect.objectContaining({ key: `crisis-aid:${c.crisisId.toString()}:US` })
+    );
+  });
+
+  it("does nothing when another pass already clawed the commitment back", async () => {
+    const c = makeCommitment();
+    db.collectionMocks["crisisAidCommitments"]!.find.mockReturnValue({
+      toArray: vi.fn().mockResolvedValue([c]),
+    });
+    db.collectionMocks["crisisAidCommitments"]!.updateOne.mockResolvedValue({
+      modifiedCount: 0,
+      matchedCount: 0,
+    });
+    db.collectionMocks["bills"]!.findOne.mockResolvedValue({ _id: c.billId, status: "failed" });
+    await processCrisisAidResolutions(db as unknown as Db, 100);
+    expect(refundTreasurySpend).not.toHaveBeenCalled();
+    expect(applyEffectsForCrisis).not.toHaveBeenCalled();
+    expect(db.collectionMocks["governmentApprovals"]!.updateOne).not.toHaveBeenCalled();
   });
 });
 

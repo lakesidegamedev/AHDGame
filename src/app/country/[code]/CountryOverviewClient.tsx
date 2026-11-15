@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import dynamic from "next/dynamic";
 import BackButton from "@/components/BackButton";
 import { HeroImage } from "@/components/HeroImage";
 import { Avatar } from "@/components/Avatar";
@@ -42,6 +43,13 @@ import { NationalIdeologyBand, type NationalAxesData } from "./components/Nation
 import { ExploreDirectory, type DirectoryGroup } from "./components/ExploreDirectory";
 import { buildCountryDirectory } from "./components/countryDirectory";
 import { useCountryDisplayName } from "@/contexts/RegisteredCountriesContext";
+
+// Below the header, so the compact chart and its request load with the section
+// rather than in the first paint.
+const NationalHistoryPanel = dynamic(
+  () => import("@/components/economy/NationalHistoryPanel").then((m) => m.NationalHistoryPanel),
+  { ssr: false }
+);
 
 function BetaBanner({ countryName }: { countryName: string }) {
   return (
@@ -559,6 +567,10 @@ export default function CountryOverviewClient({
 
         {/* Descriptor blurb */}
         <p className="max-w-3xl text-body-lg leading-relaxed text-muted">{config.descriptor}</p>
+
+        {/* National history: the compact sparkline form of the economy page's
+            chart, for every country including economy-only ones. */}
+        <NationalHistoryPanel countryId={countryId} compact />
 
         {/* National ideology: equal-weight axes over implemented national laws */}
         <NationalIdeologyBand countryId={countryId} data={axesData} loading={axesLoading} />

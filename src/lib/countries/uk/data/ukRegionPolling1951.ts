@@ -8,27 +8,11 @@
  * F.W.S. Craig, British Parliamentary Election Results.
  *
  * Used by `calculateUKStatePartyOrgs` when the active preset is
- * `1953-default`. Compared to the 1992/2020 datasets:
- *  - The historic Liberal Party (`uk_liberal`, a 1953-only default seed)
- *    replaces the Liberal Democrats (founded 1988 — zeroed here; the party is
- *    preset-gated out of 1953 anyway, so the slug would skip on DB lookup).
- *  - Greens (founded 1990) and Reform UK don't exist — zero / no entry.
- *  - SCO 1951 was a Unionist(Con)/Labour dead heat (~48/48); the SNP polled
- *    ~0.3% and stood 2 candidates — seeded 0 (no meaningful presence).
- *  - WAL: Labour dominant (~60%); Liberals kept a rural-Wales redoubt (~7%);
- *    Plaid Cymru ~0.7% — seeded 1.
- *  - NIR: Ulster Unionists dominant (~63%, 9 of 12 seats), mapped to
- *    `uk_conservative` (the UUP took the Conservative whip at Westminster
- *    until 1972; the UUP default seed itself is 1991-only). The nationalist
- *    bloc and NI Labour hold the remaining ~37% — see the NIR entry below.
- *
- * EVERY region's shares must sum to ~100. They are normalized against each
- * other when registration is seeded (`registration: voteShare` in
- * ukStatePartyOrgCalculations.ts), so a region that sums to less than 100
- * does NOT leave the remainder unaligned — it inflates whichever parties ARE
- * seeded. NIR previously listed only `uk_conservative: 63` and summed to 63,
- * which normalized the Unionists to ~100% of the region's registered support
- * and produced an 18-of-18 Commons sweep in play (ticket #1032).
+ * `1953-default`. Shares are normalized against each other when registration
+ * is seeded (`registration: voteShare` in ukStatePartyOrgCalculations.ts), so
+ * a region that sums to less than 100 does NOT leave the remainder unaligned;
+ * it inflates whichever parties ARE seeded. EVERY region's shares must sum to
+ * ~100.
  */
 
 export const UK_REGION_POLLING_1951: Record<string, Record<string, number>> = {
@@ -157,22 +141,14 @@ export const UK_REGION_POLLING_1951: Record<string, Record<string, number>> = {
     uk_sf: 0,
   },
   NIR: {
-    // Ulster Unionists ~63% mapped to uk_conservative (see header). DUP
-    // (founded 1971) is preset-gated out of 1953.
-    //
-    // The nationalist bloc (~30%) is carried by `uk_sf`, which is the only
-    // Irish-nationalist party the 1953 roster seeds — it has no
-    // `validForPresets` gate, unlike UUP (1991-only) and DUP. This is a
-    // deliberate stand-in rather than a claim about 1951: the nationalist
-    // vote that year went to the Nationalist Party / Anti-Partition League,
-    // and Sinn Féin did not contest Westminster until 1955. Carrying the
-    // bloc anachronistically is far closer to the period than the previous
-    // seed, which gave Northern Ireland no nationalist party at all and let
-    // the Unionists take every seat unopposed. Replace this with a
-    // 1953-gated Nationalist Party if one is ever added.
-    //
-    // NI Labour takes ~7%; it ran separately from British Labour but shares
-    // the `uk_labour` slug, the only mainland-left vehicle seeded here.
+    // Ulster Unionists ~63% mapped to uk_conservative. DUP is preset-gated out of 1953.
+    // The nationalist bloc (~30%) uses uk_sf as a deliberate anachronistic stand-in:
+    // it is the only Irish-nationalist party seeded in 1953 (no validForPresets gate,
+    // unlike UUP and DUP). The real 1951 nationalist vote went to the Nationalist
+    // Party / Anti-Partition League, and Sinn Fein did not contest Westminster until
+    // 1955. This is closer to the period than seeding no nationalist party.
+    // Replace with a 1953-gated Nationalist Party if one is added.
+    // NI Labour takes ~7%; it ran separately but shares the uk_labour slug.
     uk_labour: 7,
     uk_conservative: 63,
     uk_liberal: 0,

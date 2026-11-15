@@ -77,7 +77,7 @@ previous area names. The server contracts are documented in
 
 ### Observed account cohorts
 
-Browser product events carry the same account metadata in PostHog and Amplitude,
+Browser product events carry account metadata in PostHog,
 using the authenticated `client-nav` response already loaded by the application:
 
 | Event property         | Meaning                                                      |
@@ -100,11 +100,7 @@ metadata without fabricating `account_created` events. Registration events still
 cover only the consented password-registration path. Its pending marker is bound
 to the returned account ID; legacy unowned markers are discarded.
 
-Both destinations use the opaque authenticated account ID. Amplitude now resets
-its device ID before assigning an account, on account switching, and on logout;
-consent withdrawal opts out and resets both SDKs. Historical anonymous Amplitude
-identities are not backfilled or linked to these accounts. Compare account uniques
-only after rollout, and check actual destination delivery before interpreting
+PostHog uses the opaque authenticated account ID. Consent withdrawal opts out and resets the SDK. Check delivery before interpreting
 counts. PostHog resets before a different account is identified, including initial
 SDK hydration, so a persisted previous account cannot absorb the next account.
 

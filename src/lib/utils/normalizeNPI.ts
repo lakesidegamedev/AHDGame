@@ -1,22 +1,13 @@
 /**
  * Soft diminishing-returns normalization for state-level political influence.
  *
- * Maps raw PI (0..∞) to a 0..1 multiplier via `sqrt(min(100, max(0, pi))/100)`.
- * Hard-capped at 1.0 — state primary scoring already clamps PI to 100, and the
- * general-election appeal multiplier saturates at 1.0 as well. The sqrt shape
- * gives meaningful separation at the high end (PI=85 vs PI=99 ≈ 0.073 spread,
- * or ~1.8 pts out of 25 in the primary infScore) while still flattening
- * compared to a pure linear curve at the low end.
+ * Maps raw PI (0..infinity) to a 0..1 multiplier via sqrt(min(100, max(0, pi))/100).
+ * Hard-capped at 1.0 because state primary scoring already clamps PI to 100 and
+ * the general-election appeal multiplier saturates at 1.0. The sqrt shape keeps
+ * meaningful separation at the high end (PI=85 vs PI=99 is about 0.073 spread)
+ * while flattening low values.
  *
- * Results:
- *   PI=0   → 0.0
- *   PI=25  → 0.5
- *   PI=50  → 0.707
- *   PI=85  → 0.922
- *   PI=99  → 0.995
- *   PI≥100 → 1.0  (capped)
- *
- * Presidential primary reach uses {@link normalizeNationalReachPresidentialPrimary}
+ * Presidential primary reach uses normalizeNationalReachPresidentialPrimary
  * (linear-up-to-cap) and is NOT affected by this curve.
  */
 export function normalizeNPI(npi: number): number {
@@ -41,7 +32,7 @@ export function normalizeNPI(npi: number): number {
  * against a moderate PI gap. The previous linear-up-to-cap curve (held behind
  * the flag below — toggle to `false` to restore) gave PI an outsized monopoly:
  * a 25-pt PI gap produced a 1.45× reach advantage that Support's `[0.6, 1.4]`
- * multiplier could not overcome. Simulation P3 (2026-05-23) showed that under
+ * multiplier could not overcome. Simulation P3 showed that under
  * the linear curve a +35-pt Support insurgent lost 41-59 to a +25-pt PI
  * establishment — inconsistent with real primary dynamics (Sanders 2016 NH,
  * Trump 2016). Under the diminishing curve the same matchup is competitive.
@@ -63,28 +54,21 @@ export function normalizeNationalReachPresidentialPrimary(npi: number): number {
 }
 
 /**
- * Raw `character.partyInfluence` → 0–1 on the presidential-primary party-clout
- * lever (multiply by the presidential primary party-influence weight, currently
- * 30, for the snapshot component score).
+ * Raw `character.partyInfluence` → 0-1 on the presidential-primary party-clout
+ * lever (multiply by the primary party-influence weight for the score).
  *
- * Replaces home-state party organization as the primary "party standing" input:
- * home-state org is near-constant across same-party rivals (it's THE SAME PARTY),
- * so it never differentiated candidates; a candidate's own accumulated party
- * influence does. NPPs (no `partyInfluence` field) pass 0 here by convention.
+ * Used instead of home-state party organization: home-state org is near-constant
+ * across same-party rivals, so it never differentiated candidates; a candidate's
+ * own accumulated party influence does. NPPs (no `partyInfluence` field) pass 0.
  *
- * Curve: **linear, uncapped**, using {@link PRESIDENTIAL_PRIMARY_PARTY_INFLUENCE_SCALE}
+ * Curve: linear, uncapped, using {@link PRESIDENTIAL_PRIMARY_PARTY_INFLUENCE_SCALE}
  * as the reference point (partyInfluence == SCALE → 1.0). partyInfluence has no
- * hard ceiling in-game (accumulates unbounded; live values exceed 200), so the
- * map is deliberately uncapped: influence above the reference scale keeps
- * paying off linearly (normalized > 1.0) rather than being silently clipped.
- * Values at/below the scale are unchanged from the previous capped behavior, so
- * this is a strict widening of the lever's top end. Still NOT a diminishing-
- * returns curve: DR re-creates the saturation that made national reach a dead
- * differentiator (see #934 audit).
+ * hard ceiling in-game, so values above the scale keep paying off linearly
+ * (normalized > 1.0) rather than clipping. No diminishing returns on purpose:
+ * DR re-creates the saturation that made national reach a dead differentiator.
  *
- * Also feeds the state-by-state presidential-primary vote weight via
- * `MAX_PARTY_INFLUENCE_BONUS_PRIMARY` in the election engine (so the vote-weight
- * bonus is likewise no longer ceilinged at that constant).
+ * Also feeds the state-by-state primary vote weight via
+ * `MAX_PARTY_INFLUENCE_BONUS_PRIMARY`.
  */
 const PRESIDENTIAL_PRIMARY_PARTY_INFLUENCE_SCALE = 150;
 

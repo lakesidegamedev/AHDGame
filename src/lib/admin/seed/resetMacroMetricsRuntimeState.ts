@@ -3,6 +3,7 @@ import type { MacroMetricsDoc } from "@/lib/db/types/macroMetrics";
 import { NATIONAL_SCOPE_IDS } from "@/lib/constants/nationalScope";
 import { MACRO_CATEGORIES } from "@/lib/macroMetrics/paths";
 import { METRIC_REGISTRY_SORTED } from "@/lib/metricEngine/registry";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 
 const TOP_LEVEL_RUNTIME_FIELDS = [
   "labourEmployment",
@@ -45,7 +46,7 @@ export interface ResetMacroMetricsRuntimeStateResult {
 export async function resetMacroMetricsRuntimeState(
   db: Db
 ): Promise<ResetMacroMetricsRuntimeStateResult> {
-  const collection = db.collection<MacroMetricsDoc>("macroMetrics");
+  const collection = macroMetricsCollection<MacroMetricsDoc>(db);
   const reset = await collection.updateMany(
     {},
     { $unset: Object.fromEntries(MACRO_RUNTIME_UNSET_FIELDS.map((field) => [field, ""])) }

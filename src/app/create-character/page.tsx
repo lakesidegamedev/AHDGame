@@ -9,9 +9,8 @@ import CreateCharacterClient from "./CreateCharacterClient";
 export const dynamic = "force-dynamic";
 
 /**
- * Server gate in front of the creation form. It settles the two questions the
- * form used to answer only after the player had filled it in: is this a real
- * session, and is character creation open right now.
+ * Server gate in front of the form: verifies a real session and
+ * that character creation is open.
  */
 export default async function CreateCharacterPage() {
   const user = await getAuthUser();

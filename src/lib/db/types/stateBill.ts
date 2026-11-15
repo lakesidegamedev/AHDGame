@@ -96,9 +96,9 @@ export interface StateBill {
   votes: Record<string, "for" | "against" | "abstain">;
   /** Per-voter ideology movement this bill has caused; see Bill.policyShiftLedger. */
   policyShiftLedger?: Record<string, PolicyShiftLedgerEntry>;
-  /** Frozen origin-chamber result, set when the bill leaves `active` (#0982). */
+  /** Frozen origin-chamber result, set when the bill leaves `active`. */
   voteSnapshot?: BillVoteSnapshot;
-  /** Frozen veto-override result, set when the bill leaves `veto_override` (#0982). */
+  /** Frozen veto-override result, set when the bill leaves `veto_override`. */
   overrideVoteSnapshot?: BillVoteSnapshot;
 
   // Effects

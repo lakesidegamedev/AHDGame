@@ -1,7 +1,8 @@
 import type { Db, ObjectId } from "mongodb";
 import type { ElectionCandidate, ElectionVoteTally, Election } from "@/lib/db/types";
-import { initElectionVoteTally } from "@/lib/electionEngine";
-import { initPresidentVoteTally } from "@/lib/presidentialElectionEngine";
+import { initElectionVoteTally } from "@/lib/elections/engine";
+import { initPresidentVoteTally } from "@/lib/elections/presidential/presidentialElectionEngine";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
 
 export async function getOrCreateVoteTally(
   db: Db,
@@ -12,9 +13,7 @@ export async function getOrCreateVoteTally(
   inPrimary: boolean,
   isEnded: boolean
 ): Promise<ElectionVoteTally | null> {
-  let voteTally = await db
-    .collection<ElectionVoteTally>("electionVoteTallies")
-    .findOne({ electionId });
+  let voteTally = await electionVoteTalliesCollection(db).findOne({ electionId });
 
   // If the primary has ended but there's no vote tally yet, create one on-the-fly
   // so the vote engine has a document to write to on the next turn.
@@ -31,9 +30,7 @@ export async function getOrCreateVoteTally(
         await initElectionVoteTally(electionId, tallyCandidates, election.state as string);
       }
 
-      voteTally = await db
-        .collection<ElectionVoteTally>("electionVoteTallies")
-        .findOne({ electionId });
+      voteTally = await electionVoteTalliesCollection(db).findOne({ electionId });
     } catch (err) {
       console.error("Failed to auto-init vote tally:", err);
     }

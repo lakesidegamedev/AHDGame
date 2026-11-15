@@ -14,6 +14,9 @@ import type { MergerOverlapFinding } from "@/lib/db/types/mergerReview";
 import { computeMarketSharePercent } from "../marketShare";
 import { loadIndustryBasis } from "../corpMarketShare";
 import { controlGroupMemberIds, controlGroupRootByCorpId } from "../groups/controlGroups";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 /** gameConfig.groupSizeCostsStage at which merger concentration reads both sides' control groups. */
 export const GROUP_MERGER_CONCENTRATION_STAGE = 5;
@@ -30,12 +33,12 @@ async function dealSides(
   target: Pick<Corporation, "_id">
 ): Promise<{ acquirerIds: string[]; targetIds: string[] }> {
   const alone = { acquirerIds: [acquirer._id.toString()], targetIds: [target._id.toString()] };
-  const cfg = await db
-    .collection<{ groupSizeCostsStage?: number }>("gameConfig")
-    .findOne({ _id: "default" as never }, { projection: { groupSizeCostsStage: 1 } });
+  const cfg = await gameConfigCollection<{ groupSizeCostsStage?: number }>(db).findOne(
+    { _id: "default" as never },
+    { projection: { groupSizeCostsStage: 1 } }
+  );
   if ((cfg?.groupSizeCostsStage ?? 0) < GROUP_MERGER_CONCENTRATION_STAGE) return alone;
-  const corps = await db
-    .collection<Corporation>("corporations")
+  const corps = await corporationsCollection(db)
     .find({}, { projection: { shareholders: 1, totalShares: 1, superShareMultiplier: 1 } })
     .toArray();
   const roots = controlGroupRootByCorpId(corps);
@@ -76,8 +79,7 @@ export async function computeMergerConcentration(
 
   // Industries either side operates in ANYWHERE — filtered to the reviewing
   // country by the rollup itself, which only reads that country's states.
-  const sectors = await db
-    .collection<CorporateSector>("corporateSectors")
+  const sectors = await corporateSectorsCollection(db)
     .find({ corporationId: { $in: [...acquirerIds, ...targetIds].map((id) => new ObjectId(id)) } })
     .project<Pick<CorporateSector, "sectorType">>({ sectorType: 1 })
     .toArray();
@@ -96,19 +98,13 @@ export async function computeMergerConcentration(
       ids.reduce((sum, id) => sum + (basis.basisByCorp.get(id) ?? 0), 0);
     const acquirerBasis = sideBasis(acquirerIds);
     const targetBasis = sideBasis(targetIds);
-    // ─── An overlap needs BOTH sides in the industry (#1163) ───────────────
+    // ─── An overlap needs BOTH sides in the industry ─────────────────────
     //
-    // This used to record an industry whenever EITHER side held share, so a
-    // deal was referred over the acquirer's own pre-existing dominance in an
-    // industry the target does not operate in at all. The reporter's case: a
-    // target holding only chemical sectors triggered an extraction warning,
-    // because the acquirer already led extraction.
-    //
-    // A merger concentrates an industry only where the two firms were
-    // previously separate holders of it. Single-sided industries are unchanged
-    // by the deal — the acquirer's share there is identical before and after,
-    // and the target's share simply changes owner — so referring on them
-    // reports a state of the world that the merger did not create.
+    // A merger concentrates an industry only where the two firms were previously
+    // separate holders of it. Single-sided industries are unchanged by the deal:
+    // the acquirer's share there is identical before and after, and the target's
+    // share simply changes owner. Referring on them would report a state of the
+    // world the merger did not create.
     if (acquirerBasis <= 0 || targetBasis <= 0) continue;
     overlaps.push({
       sectorType,

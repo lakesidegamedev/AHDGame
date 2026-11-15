@@ -1,11 +1,10 @@
 /**
- * One-time household opening cash for the producer-market cutover (owner
- * decision 2026-10-18: about 3 turns of today's household spending).
+ * One-time household opening cash for the producer-market cutover (about three
+ * turns of current household spending).
  *
- * This is the only place the cutover creates money, so it is kept apart from
- * `planProducerOpening`, which never invents funding. The seed needs an
- * explicit approval reference and reports exactly what it creates per country.
- * Pure: plain data in, seed rows out.
+ * The only place the cutover creates money, so it is kept apart from
+ * `planProducerOpening`, which never invents funding. Pure: data in, seed rows
+ * out.
  */
 
 /** Turns of household spending seeded at the cutover. */

@@ -42,6 +42,10 @@ import {
   resolveFundBondCountryId,
   type FundBondCandidateSource,
 } from "@/lib/bonds/fundBondCandidates";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 export { MAX_GLOBAL_SOVEREIGN_ISSUES_PER_PASS };
 export {
@@ -95,15 +99,14 @@ export async function loadBondFundCandidates(
       : { issuerType: { $ne: "sovereign" } }),
     ...(universe.homeOnly ? { countryId: homeCountryId } : {}),
   };
-  const bonds = await db.collection<Bond>("bonds").find(query).toArray();
+  const bonds = await bondsCollection(db).find(query).toArray();
   if (bonds.length === 0) return [];
 
   let eligible = bonds;
   if (universe.minRating || universe.maxRating) {
     if (universe.issuerType === "sovereign") {
       const countryIds = [...new Set(bonds.flatMap((b) => (b.countryId ? [b.countryId] : [])))];
-      const budgets = await db
-        .collection<{ _id: string; creditRating?: string }>("federalBudget")
+      const budgets = await federalBudgetCollection<{ _id: string; creditRating?: string }>(db)
         .find(
           { _id: { $in: countryIds.map((id) => getNationalBudgetId(id)) } },
           { projection: { creditRating: 1 } }
@@ -117,8 +120,9 @@ export async function loadBondFundCandidates(
       );
     } else {
       const corpIds = [...new Set(bonds.map((b) => b.corporationId.toString()))];
-      const corps = await db
-        .collection<{ _id: ObjectId; creditRatingSnapshot?: string }>("corporations")
+      const corps = await corporationsCollection<{ _id: ObjectId; creditRatingSnapshot?: string }>(
+        db
+      )
         .find(
           { _id: { $in: corpIds.map((id) => new ObjectId(id)) } },
           { projection: { creditRatingSnapshot: 1 } }
@@ -132,10 +136,11 @@ export async function loadBondFundCandidates(
   }
   if (universe.homeOnly) return rankSovereignIssuesForBreadth(eligible);
 
-  const currencyRows = await db
-    .collection<{ currencyCode?: string; rate?: number; capitalControls?: boolean }>(
-      "exchangeRates"
-    )
+  const currencyRows = await exchangeRatesCollection<{
+    currencyCode?: string;
+    rate?: number;
+    capitalControls?: boolean;
+  }>(db)
     .find({})
     .project({ currencyCode: 1, rate: 1, capitalControls: 1 })
     .toArray();
@@ -178,8 +183,8 @@ async function deployBondReserve(
   options?: {
     liquidityTargetEnabled?: boolean;
     /**
-     * #992 tranche 6: game turn threaded to each bond purchase's fund-subject
-     * ledger row. When absent the purchases still settle but emit no rows.
+     * Game turn threaded to each bond purchase's fund-subject ledger row.
+     * When absent the purchases still settle but emit no rows.
      */
     turn?: number;
     /**
@@ -235,12 +240,9 @@ async function deployBondReserve(
   }
 
   const countryId = resolveFundBondCountryId(fund);
-  // Coverage funds ensured under the #1001 domestic gate carry no standing
-  // definition entry (definitions only list the broad-fund countries); a
-  // country bond fund with a home country always means its home-sovereign
-  // mandate, so it deploys exactly like a seeded home-only fund. Funds that
-  // exist today all resolve through definitions, so this fallback never fires
-  // for them and gate-off behavior is unchanged.
+  // Bond funds under the domestic gate may lack a standing definition entry;
+  // treat a home-country bond fund as its home-sovereign mandate. Currently unreachable,
+  // since all existing funds resolve through definitions.
   const bondUniverse = fund.kind === "bond" ? resolveFundMandate(fund).bondUniverse : undefined;
   if (fund.kind === "bond" && !bondUniverse) {
     return { deployedAnchor: 0, markedValueAnchor: 0, unitsPurchased: 0, countryId };
@@ -262,17 +264,17 @@ async function deployBondReserve(
       })
     : bondUniverse
       ? await loadBondFundCandidates(db, fund, bondUniverse)
-      : await db
-          .collection<Bond>("bonds")
+      : await bondsCollection(db)
           .find(bondQuery)
           .sort({ maturityTurn: 1, publicFloat: -1 })
           .toArray();
 
   if (globalDemandEnabled && !bondUniverse && !candidateSource) {
-    const currencyRows = await db
-      .collection<{ currencyCode?: string; rate?: number; capitalControls?: boolean }>(
-        "exchangeRates"
-      )
+    const currencyRows = await exchangeRatesCollection<{
+      currencyCode?: string;
+      rate?: number;
+      capitalControls?: boolean;
+    }>(db)
       .find({})
       .project({ currencyCode: 1, rate: 1, capitalControls: 1 })
       .toArray();

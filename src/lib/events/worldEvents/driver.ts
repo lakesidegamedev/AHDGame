@@ -2,7 +2,7 @@
  * World Events v1 Phase 1: the scheduler's turn-phase producer. Registered
  * near `processPlayerRandomEventsTurn` in `turnPhaseRegistry.ts`. Unlike
  * Phase 0 (admin-trigger-only), this offers scheduled country-scope events
- * automatically each turn once `worldEventsEnabled` is on.
+ * automatically each turn.
  *
  * News-spam cap (plan §7, "≤1 world-event offer per country per turn"): the
  * per-country loop below stops after the first successful offer, and the
@@ -13,13 +13,12 @@
  */
 import type { Db } from "mongodb";
 import "@/lib/events/pree/index";
-import type { Character } from "@/lib/db/types/character";
 import type { Crisis } from "@/lib/db/types/crisis";
 import type { EventDefinition } from "@/lib/db/types/events";
 import { COUNTRY_CONFIGS, COUNTRY_ORDER, type CountryId } from "@/lib/constants/countries";
+import { loadCountryTiers } from "@/lib/country/countryTier";
 import { getEventCooldownLedgerCollection } from "@/lib/db/collections/eventCooldownLedger";
 import { getEventDefinitionsCollection } from "@/lib/db/collections/eventDefinitions";
-import { isWorldEventsEnabled } from "@/lib/events/featureFlag";
 import {
   ActiveEventConflictError,
   computeExpiresAtRealtimeMs,
@@ -44,6 +43,8 @@ import {
 } from "./warEmergency";
 import { createCrisisFromTemplate } from "@/lib/crises/createCrisisFromTemplate";
 import { warEmergencyTemplateForEventKind } from "@/lib/crises/warEmergencyCrises";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { crisesCollection } from "@/lib/db/repositories/crises";
 
 export interface WorldEventsTurnResult {
   offered: number;
@@ -107,7 +108,7 @@ async function offerGlobalHostCountryEvent(
     return "skipped";
   }
 
-  const activeCountries = COUNTRY_ORDER.filter((id) => COUNTRY_CONFIGS[id].status === "active");
+  const activeCountries = await worldEventCountries(db);
   if (activeCountries.length === 0) {
     return "skipped";
   }
@@ -144,9 +145,10 @@ async function offerGlobalHostCountryEvent(
 
   const leaderCharId = await getHeadOfGovernmentCharacterId(db, countryId);
   if (leaderCharId) {
-    const leaderChar = await db
-      .collection<Character>("characters")
-      .findOne({ _id: leaderCharId }, { projection: { userId: 1 } });
+    const leaderChar = await charactersCollection(db).findOne(
+      { _id: leaderCharId },
+      { projection: { userId: 1 } }
+    );
     if (leaderChar?.userId) {
       await notifyCountryExecutiveEventOffered(leaderChar.userId, definition, instance);
     }
@@ -231,7 +233,7 @@ async function offerScheduledEventForCountry(
 
       // A country may face different staggered wartime crises at once, but the
       // same crisis must never stack with itself while an earlier copy is live.
-      const alreadyActive = await db.collection<Crisis>("crises").findOne(
+      const alreadyActive = await crisesCollection(db).findOne(
         {
           templateKey: crisisDefinition.templateKey,
           status: "active",
@@ -299,9 +301,10 @@ async function offerScheduledEventForCountry(
     // per plan §7) applies via the existing sweep either way.
     const leaderCharId = await getHeadOfGovernmentCharacterId(db, countryId);
     if (leaderCharId) {
-      const leaderChar = await db
-        .collection<Character>("characters")
-        .findOne({ _id: leaderCharId }, { projection: { userId: 1 } });
+      const leaderChar = await charactersCollection(db).findOne(
+        { _id: leaderCharId },
+        { projection: { userId: 1 } }
+      );
       if (leaderChar?.userId) {
         await notifyCountryExecutiveEventOffered(leaderChar.userId, definition, instance);
       }
@@ -316,24 +319,30 @@ async function offerScheduledEventForCountry(
 }
 
 /**
+ * Countries that host world events: configured active countries minus any
+ * in the background tier. The static status filter keeps presets without
+ * background countries unchanged.
+ */
+async function worldEventCountries(db: Db): Promise<CountryId[]> {
+  const tiers = await loadCountryTiers(db);
+  return COUNTRY_ORDER.filter(
+    (id) => COUNTRY_CONFIGS[id].status === "active" && tiers.tierOf(id) !== "background"
+  );
+}
+
+/**
  * Per-turn producer for scheduled World Events (Phase 1). Registered
- * alongside `worldEventsMaintenance` in `turnPhaseRegistry.ts`. No-op when
- * `worldEventsEnabled` is off (default) or no schedule-bearing definitions
- * are approved yet.
+ * alongside `worldEventsMaintenance` in `turnPhaseRegistry.ts`. No-op when no
+ * schedule-bearing definitions are approved yet.
  */
 export async function processWorldEventsTurn(
   db: Db,
   currentTurn: number,
   preloaded?: {
-    worldEventsEnabled?: boolean;
     /** In-game year for era gating (minYear/maxYear on definitions). Omit = no era filtering. */
     currentYear?: number;
   }
 ): Promise<WorldEventsTurnResult> {
-  const enabled = await isWorldEventsEnabled(preloaded);
-  if (!enabled) {
-    return { offered: 0, skipped: 0, globalHostEventsOffered: 0 };
-  }
   const currentYear = preloaded?.currentYear;
 
   // Phase 3: global-host flavor events (Olympics / World's Fair) run first
@@ -365,7 +374,7 @@ export async function processWorldEventsTurn(
     ? await loadActiveWarEmergencyMitigationPctMap(db, currentTurn)
     : new Map<string, number>();
 
-  const activeCountries = COUNTRY_ORDER.filter((id) => COUNTRY_CONFIGS[id].status === "active");
+  const activeCountries = await worldEventCountries(db);
 
   let offered = 0;
   let skipped = 0;

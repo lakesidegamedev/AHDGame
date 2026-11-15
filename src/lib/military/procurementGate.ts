@@ -3,14 +3,14 @@ import { GOVERNMENT_CONTRACTS_DISABLED_MESSAGE } from "@/lib/governmentContracts
 import type { Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import { activeProcurementRestriction } from "@/lib/db/collections/procurementRestrictions";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /**
  * Temporary freeze on NEW defence procurement.
  *
- * Reads `gameState.defenceProcurementPaused` off the singleton `_id: "current"` doc - the
- * same projection pattern `battleAuthz` uses for `conflictsEnabled`, deliberately NOT filtered
- * on `isActive` (that field is frequently false on the current doc and is not what gates a
- * flag).
+ * Reads `gameState.defenceProcurementPaused` off the singleton `_id: "current"` doc,
+ * deliberately NOT filtered on `isActive` (that field is frequently false on the current doc
+ * and is not what gates a flag).
  *
  * When true, the two routes that create a NEW delivery obligation refuse: awarding a contract
  * and a CEO accepting a pending offer. Everything already active is untouched - the delivery
@@ -19,9 +19,9 @@ import { activeProcurementRestriction } from "@/lib/db/collections/procurementRe
  * teardown of the subsystem; flip it back to resume.
  */
 export async function isDefenceProcurementPaused(db: Db): Promise<boolean> {
-  const gs = await db
-    .collection<{ _id: string; defenceProcurementPaused?: boolean }>("gameState")
-    .findOne({ _id: "current" }, { projection: { defenceProcurementPaused: 1 } });
+  const gs = await gameStateCollection<{ _id: string; defenceProcurementPaused?: boolean }>(
+    db
+  ).findOne({ _id: "current" }, { projection: { defenceProcurementPaused: 1 } });
   return gs?.defenceProcurementPaused === true;
 }
 

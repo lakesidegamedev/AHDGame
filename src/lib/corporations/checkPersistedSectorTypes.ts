@@ -5,10 +5,10 @@
 import type { Db } from "mongodb";
 import type { CorporateSector } from "@/lib/db/types";
 import { SECTOR_STRATEGIES } from "@/lib/constants/sectorStrategies";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 export async function checkPersistedSectorTypes(db: Db): Promise<void> {
-  const unknownTypes = await db
-    .collection<CorporateSector>("corporateSectors")
+  const unknownTypes = await corporateSectorsCollection(db)
     .aggregate<{ _id: string | null; count: number }>([
       { $match: { sectorType: { $nin: Object.keys(SECTOR_STRATEGIES) } } },
       { $group: { _id: "$sectorType", count: { $sum: 1 } } },

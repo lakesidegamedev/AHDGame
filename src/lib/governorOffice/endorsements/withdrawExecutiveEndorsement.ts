@@ -1,6 +1,8 @@
 import type { Db, ObjectId } from "mongodb";
 import type { ElectionCandidate, ExecutiveEndorsement } from "@/lib/db/types";
-import { applyEndorsementSupportBump } from "@/lib/turn/elections/supportEvents";
+import { applyEndorsementSupportBump } from "@/lib/elections/campaigns/supportEvents";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { executiveEndorsementsCollection } from "@/lib/db/repositories/executiveEndorsements";
 
 export type ExecutiveWithdrawReason = NonNullable<ExecutiveEndorsement["withdrawnReason"]>;
 
@@ -12,11 +14,12 @@ export async function withdrawExecutiveEndorsement(
   // B3 — read the endorsement BEFORE marking inactive so we can find the
   // endorsed candidate and reverse the Support bump that landed when
   // the endorsement was created. Symmetric with createExecutiveEndorsement.
-  const endorsement = await db
-    .collection<ExecutiveEndorsement>("executiveEndorsements")
-    .findOne({ _id: endorsementId, isActive: true });
+  const endorsement = await executiveEndorsementsCollection(db).findOne({
+    _id: endorsementId,
+    isActive: true,
+  });
 
-  const res = await db.collection<ExecutiveEndorsement>("executiveEndorsements").updateOne(
+  const res = await executiveEndorsementsCollection(db).updateOne(
     { _id: endorsementId, isActive: true },
     {
       $set: {
@@ -34,9 +37,9 @@ export async function withdrawExecutiveEndorsement(
   // its characterId — `endorsement.candidateId` may key by candidate
   // row id depending on schema.
   if (endorsement && !endorsement.candidateIsNPP) {
-    const candidate = await db
-      .collection<ElectionCandidate>("electionCandidates")
-      .findOne({ _id: endorsement.candidateId });
+    const candidate = await electionCandidatesCollection(db).findOne({
+      _id: endorsement.candidateId,
+    });
     if (candidate?.characterId) {
       await applyEndorsementSupportBump(db, candidate.characterId, true);
     }

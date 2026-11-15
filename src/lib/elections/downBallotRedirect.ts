@@ -5,6 +5,8 @@ import {
   resolveElectionRouteParam,
 } from "@/lib/elections/electionParamResolution";
 import { campaignManagerHref, primaryTierHref } from "@/lib/campaignManager/links";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 /**
  * Down-ballot races live in Campaign Manager; the old election pages redirect
@@ -24,12 +26,10 @@ export async function downBallotRedirectTarget(
 ): Promise<string | null> {
   let election: Pick<Election, "_id" | "electionType"> | null = null;
   if (cycle != null && isElectionRouteSeatId(idParam)) {
-    election = await db
-      .collection<Election>("elections")
-      .findOne(
-        { seatId: idParam, cycle, status: { $ne: "cancelled" } },
-        { projection: { _id: 1, electionType: 1 } }
-      );
+    election = await electionsCollection(db).findOne(
+      { seatId: idParam, cycle, status: { $ne: "cancelled" } },
+      { projection: { _id: 1, electionType: 1 } }
+    );
   } else {
     const resolved = await resolveElectionRouteParam(db, idParam);
     election = resolved.ok ? resolved.election : null;
@@ -52,9 +52,10 @@ export async function primaryPageRedirectTarget(
 ): Promise<string | null> {
   if (!LOWER_TIERS.has(tier)) return null;
   if (/^\d+$/.test(partyParam)) return primaryTierHref(tier, partyParam);
-  const party = await db
-    .collection<PoliticalParty>("politicalParties")
-    .findOne({ countryId: "US", abbreviation: partyParam }, { projection: { sequentialId: 1 } });
+  const party = await politicalPartiesCollection(db).findOne(
+    { countryId: "US", abbreviation: partyParam },
+    { projection: { sequentialId: 1 } }
+  );
   return party
     ? primaryTierHref(tier, String(party.sequentialId))
     : campaignManagerHref({ type: tier, stage: "primary" });

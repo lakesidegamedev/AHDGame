@@ -14,7 +14,7 @@ import { writeBalanceSnapshot, writePreForexBalanceCheckpoint } from "@/lib/ledg
 import { reconcileTurn } from "@/lib/ledger/reconcile";
 import type { LedgerEntry } from "@/lib/ledger/types";
 import type { CrisisDecisionOption } from "@/lib/db/types/crisis";
-import { creditTreasury, spendFromTreasury } from "./treasurySpend";
+import { creditTreasury, refundTreasurySpend, spendFromTreasury } from "./treasurySpend";
 import { spendGlobalResponseCost } from "@/lib/livingConflict/globalResponse";
 import { levyMobilisation } from "@/lib/settlement/mobilisation";
 import { applyPeaceTerm } from "@/lib/military/applyPeaceTerm";
@@ -246,6 +246,42 @@ for (const native of [false, true]) {
           event: { command: "test/funded-expense", amount: 125 },
         });
         expect(await db.collection("bankMoneyMoves").countDocuments()).toBe(1);
+      });
+
+      it("refunds a funded spend once and never refunds one that did not land", async () => {
+        const db = await world(native, false, true);
+        const witness = {
+          flow: "crisis_response" as const,
+          key: "fixture-crisis-lever:UK:refund",
+          site: "test/funded-refund",
+        };
+        await expect(creditTreasury(db, "UK", 125, { witness })).rejects.toThrow(
+          /no paired source/
+        );
+        await refundTreasurySpend(db, "UK", 125, witness);
+        expect(await db.collection("bankMoneyMoves").countDocuments()).toBe(0);
+
+        await spendFromTreasury(db, "UK", 125, { witness });
+        await refundTreasurySpend(db, "UK", 125, witness);
+        await refundTreasurySpend(db, "UK", 125, witness);
+        expect(await db.collection("federalBudget").findOne({ countryId: "UK" })).toMatchObject({
+          treasuryCashLocal: 1_000_000,
+          treasuryBalance: 1_000_000,
+        });
+        expect(
+          await db
+            .collection<{ _id: string }>("bankMoneyMoves")
+            .findOne({ _id: "treasury-spend-refund:fixture-crisis-lever:UK:refund" })
+        ).toMatchObject({ status: "applied", kind: "treasury_funded_expense_refund" });
+        expect(await db.collection("bankMoneyMoves").countDocuments()).toBe(2);
+      });
+
+      it("refunds as a plain credit with the funded ledger off", async () => {
+        const db = await world(native, false, false);
+        const witness = { flow: "crisis_response" as const, key: "k", site: "test/refund" };
+        await spendFromTreasury(db, "UK", 125, { witness });
+        await refundTreasurySpend(db, "UK", 125, witness);
+        expect(await treasury(db, "UK")).toBe(1_000_000);
       });
     }
   );

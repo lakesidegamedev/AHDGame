@@ -30,15 +30,14 @@ export function calculateCorporateCreditScore(
         previousCompositeScore?: number;
         /**
          * The composite the turn already wrote. Used verbatim, no smoothing.
-         * Read-only surfaces pass this so they report the score the turn persisted
-         * rather than blending it a second time (ticket #1138).
+         * Read-only surfaces pass this so they report the persisted score.
          */
         persistedCompositeScore?: number;
         /** One-notch downgrade for insider concentration >65% on public corps. */
         insiderConcentrationPenalty?: boolean;
         /**
          * One-notch UPGRADE for a corp whose shares are meaningfully held by index
-         * funds (suggestion #62). The mirror of the concentration penalty: a broad,
+         * funds. The mirror of the concentration penalty: a broad,
          * sticky passive holder base is cheaper capital. Nets against it - a corp
          * that is both insider-concentrated and index-held ends where it started.
          */
@@ -100,17 +99,13 @@ export function calculateCorporateCreditScore(
       liquidity * policy.weights.liquidity
   );
 
-  // Inertia smoothing: blend 75% new + 25% previous to prevent single-turn score nuking.
-  // Real credit agencies use trailing multi-quarter data - this approximates that lag.
-  //
-  // Ticket #1138: smoothing is a TURN-TIME mechanic. The turn blends against the
-  // previous snapshot and then PERSISTS the result. A read-only surface that passes
-  // the persisted value back in as `previousCompositeScore` blends a second time
-  // against an already-blended number, so it reports a score the turn never wrote.
-  // That is why one corp showed AA / 76 on the bonds panel (0.75 x 85 + 0.25 x 47)
-  // while its header, health card and peer stats all read the stored 47 / BBB.
-  // Display surfaces must pass `persistedCompositeScore` instead, which is used
-  // verbatim. Only the turn may smooth.
+  // Inertia smoothing: blend 75% new + 25% previous to approximate a
+  // multi-quarter trailing average without single-turn score nuking.
+  // Smoothing is a TURN-TIME mechanic: the turn blends against the previous
+  // snapshot and persists the result. Display surfaces must pass
+  // `persistedCompositeScore` (used verbatim) rather than feeding the
+  // persisted value back as `previousCompositeScore`, which would blend
+  // twice and report a score the turn never wrote.
   let compositeScore: number;
   if (options?.persistedCompositeScore != null && options.persistedCompositeScore > 0) {
     compositeScore = Math.round(options.persistedCompositeScore);

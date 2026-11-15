@@ -61,9 +61,8 @@ export async function processRegimeEscalationTurn(
   //    progress).
   await tickConventionPhase(inp.db, inp.countryId, inp.currentTurn);
 
-  // 1. Expire any timed-out active decisions first so the default-action
-  //    fires before this turn's dwell/stage compute. (Phase 4's handlers
-  //    will be invoked here once registered.)
+  // Expire timed-out decisions first so default actions apply before
+  // this turn's dwell/stage compute.
   await expireDecisionsForTurn(inp.db, inp.countryId, inp.currentTurn);
 
   // 2. Update dwell counters from this turn's scalar values.

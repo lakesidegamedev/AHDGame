@@ -1,6 +1,8 @@
 import type { Db } from "mongodb";
 import type { MarketIndexIntraday } from "@/lib/db/types/marketIndexIntraday";
 import type { MarketCapTick } from "@/lib/db/types/marketCapTick";
+import { marketCapTicksCollection } from "@/lib/db/repositories/marketCapTicks";
+import { marketIndexIntradayCollection } from "@/lib/db/repositories/marketIndexIntraday";
 
 const QUARTER_MS = 15 * 60_000;
 
@@ -28,7 +30,7 @@ export async function recordIntradayLevels(
 ): Promise<void> {
   levels = levels.filter((level) => Number.isFinite(level.marketCap) && level.marketCap >= 0);
   if (levels.length === 0) return;
-  const col = db.collection<MarketIndexIntraday>("marketIndexIntraday");
+  const col = marketIndexIntradayCollection(db);
   // The 15-minute series (marketCapTicks) gets the same print, keyed by slot.
   const at = quarterSlotStart(now);
   const slot = at.toISOString();
@@ -52,7 +54,7 @@ export async function recordIntradayLevels(
       }),
       { ordered: false }
     ),
-    db.collection<MarketCapTick>("marketCapTicks").bulkWrite(
+    marketCapTicksCollection(db).bulkWrite(
       levels.map(({ exchange, marketCap }) => {
         const cap = Math.round(marketCap);
         return {

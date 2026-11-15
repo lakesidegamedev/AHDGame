@@ -55,8 +55,14 @@ describe("getCurrencyMemberCountries", () => {
     ]);
   });
 
-  it("returns empty for CAD (no launched country uses it)", () => {
-    expect(getCurrencyMemberCountries("CAD", COUNTRY_ORDER)).toEqual([]);
+  it("routes CAD to Canada, and to nobody in a registry without Canada", () => {
+    expect(getCurrencyMemberCountries("CAD", COUNTRY_ORDER)).toEqual(["CA"]);
+    expect(
+      getCurrencyMemberCountries(
+        "CAD",
+        COUNTRY_ORDER.filter((id) => id !== "CA")
+      )
+    ).toEqual([]);
   });
 });
 

@@ -11,6 +11,7 @@ import { JP_IDENTITY } from "@/lib/countries/jp/identity";
 import { UK_IDENTITY } from "@/lib/countries/uk/identity";
 import { DE_IDENTITY } from "@/lib/countries/de/identity";
 import { IE_IDENTITY } from "@/lib/countries/ie/identity";
+import { CA_IDENTITY } from "@/lib/countries/ca/identity";
 
 export interface ParliamentaryExecutivePlaque {
   title: string;
@@ -46,6 +47,7 @@ export const SURFACES: Partial<Record<CountryId, ParliamentaryExecutiveSurface>>
   DE: DE_IDENTITY.parliamentarySurface,
   JP: JP_IDENTITY.parliamentarySurface,
   IE: IE_IDENTITY.parliamentarySurface,
+  CA: CA_IDENTITY.parliamentarySurface,
 };
 
 /** "Prime Minister" → "PM" — derived seal glyph for unconfigured countries. */

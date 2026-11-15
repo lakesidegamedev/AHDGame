@@ -8,7 +8,6 @@ vi.mock("@/lib/api/requireAuth", () => ({
 }));
 vi.mock("@/lib/events/featureFlag", () => ({
   isPlayerRandomEventsEnabled: vi.fn(),
-  isWorldEventsEnabled: vi.fn(),
 }));
 vi.mock("@/lib/api/headOfGovernment", () => ({
   getHeadOfGovernmentCharacterId: vi.fn(),
@@ -33,11 +32,6 @@ describe("GET /api/events/active", () => {
       ok: true,
       user: { userId: "user-1", character: { _id: characterId, countryId: "US" } },
     } as never);
-
-    // World Events is off by default in these character-scope tests; the
-    // country-scope branch is covered separately.
-    const { isWorldEventsEnabled } = await import("@/lib/events/featureFlag");
-    vi.mocked(isWorldEventsEnabled).mockResolvedValue(false);
   });
 
   it("returns event: null when the feature flag is off, without querying instances", async () => {

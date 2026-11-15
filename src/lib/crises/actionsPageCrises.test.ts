@@ -282,3 +282,33 @@ describe("compareActionsPageCrises", () => {
     );
   });
 });
+
+describe("Crisis v2 entries", () => {
+  const withLevers = { levers: [{ id: "stimulus" }] };
+
+  it("shows a crisis the character can pull a lever on, even a distant one with no effects", () => {
+    const e = entry({ crisis: makeCrisis(0), v2: withLevers });
+    expect(shouldShowCrisisOnActionsPage(e, false)).toBe(true);
+    expect(shouldShowCrisisOnActionsPage(e, true)).toBe(true);
+  });
+
+  it("shows a local v2 crisis for awareness but hides a distant one with no levers", () => {
+    const e = entry({ crisis: makeCrisis(0), v2: { levers: [] } });
+    expect(shouldShowCrisisOnActionsPage(e, true)).toBe(true);
+    expect(shouldShowCrisisOnActionsPage(e, false)).toBe(false);
+  });
+
+  it("ranks a lever crisis alongside decisions the character can take", () => {
+    const ambient = entry({ crisis: { ...makeCrisis(), startTurn: 20 } });
+    const lever = entry({ crisis: { ...makeCrisis(), startTurn: 1 }, v2: withLevers });
+    expect([ambient, lever].sort(compareActionsPageCrises)[0]).toBe(lever);
+  });
+
+  it("keeps the whole v2 ledger out of the feed payload", () => {
+    const crisis = { ...makeCrisis(), v2: { ledger: [1, 2, 3] } } as unknown as Crisis;
+    for (const canInteract of [true, false]) {
+      const out = sanitizeCrisisForActionsPage(entry({ crisis, canInteract }));
+      expect("v2" in out.crisis).toBe(false);
+    }
+  });
+});

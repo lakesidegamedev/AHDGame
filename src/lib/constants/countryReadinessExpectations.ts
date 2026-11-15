@@ -9,6 +9,10 @@ import type { Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import { checkGovernmentFormation } from "@/lib/constants/readinessChecks";
 import { JP_READINESS_EXPECTATIONS } from "@/lib/countries/jp/data/jpReadinessExpectations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { landeslistenCollection } from "@/lib/db/repositories/landeslisten";
+import type { Document } from "mongodb";
+import { countryLeaderStatesCollection } from "@/lib/db/repositories/countryLeaderStates";
 
 export interface ReadinessCheck {
   name: string;
@@ -49,9 +53,9 @@ export interface CountryReadinessExpectations {
 
 /** RU: leader-confidence state (post-Premier-install). */
 async function checkRUCountryLeaderStates(db: Db): Promise<ReadinessCheck> {
-  const count = await db
-    .collection<{ _id: string }>("countryLeaderStates")
-    .countDocuments({ _id: { $regex: "^RU_" } });
+  const count = await countryLeaderStatesCollection<{ _id: string }>(db).countDocuments({
+    _id: { $regex: "^RU_" },
+  });
   return {
     name: "CountryLeaderStates",
     status: count > 0 ? "ok" : "warning",
@@ -62,10 +66,10 @@ async function checkRUCountryLeaderStates(db: Db): Promise<ReadinessCheck> {
 
 /** CN: leader-confidence state (post-PM-install). */
 async function checkCNCountryLeaderStates(db: Db): Promise<ReadinessCheck> {
-  const count = await db
-    .collection<{ _id: string }>("countryLeaderStates")
-    .countDocuments({ _id: { $regex: "^CN_" } });
-  const characterCount = await db.collection("characters").countDocuments({ countryId: "CN" });
+  const count = await countryLeaderStatesCollection<{ _id: string }>(db).countDocuments({
+    _id: { $regex: "^CN_" },
+  });
+  const characterCount = await charactersCollection(db).countDocuments({ countryId: "CN" });
   return {
     name: "CountryLeaderStates",
     status: count > 0 || characterCount === 0 ? "ok" : "warning",
@@ -83,8 +87,8 @@ async function checkCNCountryLeaderStates(db: Db): Promise<ReadinessCheck> {
 
 /** DE: Landeslisten populated. */
 async function checkDELandeslisten(db: Db): Promise<ReadinessCheck> {
-  const count = await db.collection("landeslisten").countDocuments({ countryId: "DE" });
-  const characterCount = await db.collection("characters").countDocuments({ countryId: "DE" });
+  const count = await landeslistenCollection<Document>(db).countDocuments({ countryId: "DE" });
+  const characterCount = await charactersCollection(db).countDocuments({ countryId: "DE" });
   return {
     name: "Landeslisten",
     status: count > 0 || characterCount === 0 ? "ok" : "warning",
@@ -301,6 +305,25 @@ export const COUNTRY_READINESS_EXPECTATIONS: Partial<
     stateMetricsCount: 6,
     legislationTypesMin: 50, // 54 ng-scoped types authored (ngLegislationTypes.ts)
     extras: [(db) => checkGovernmentFormation("NG", db)],
+  },
+  CA: {
+    regionCount: 13,
+    partyMin: 5,
+    partyRoster: "FUP, NPA, LCP, AL, GHP",
+    // Every party is organized in all 13 provinces and territories; the Quebec
+    // party sits at the floor outside Quebec.
+    statePartyOrgMin: 65,
+    seatMin: 343,
+    seatNote: "Expected ≥343 (House of Commons)",
+    // Bloc rows, one NPP each, as for the UK.
+    nppMin: 20,
+    nppNote: "Expected ≥20 Commons party blocs (one NPP each, not one per seat)",
+    officialMin: 320,
+    demographicsCount: 13,
+    stateMetricsFilter: { countryId: "CA" },
+    stateMetricsCount: 13,
+    legislationTypesMin: 1,
+    extras: [(db) => checkGovernmentFormation("CA", db)],
   },
   // Eastern bloc Tier-1 (1953/1979 Cold-War presets) — one-party planned economies
   // promoted to full-autonomous economy-preview (product decision 2026-07-25).

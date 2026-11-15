@@ -9,7 +9,7 @@
 
 import React, { type RefObject } from "react";
 import { useTranslations } from "next-intl";
-import Link from "next/link";
+import Link from "@/components/navbar/NavigationLink";
 import Image from "next/image";
 import { Avatar } from "@/components/Avatar";
 import { bypassNextImageOptimization } from "@/lib/images/bypassImageOptimization";

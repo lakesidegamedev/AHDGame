@@ -2,6 +2,9 @@ import type { Db } from "mongodb";
 import type { State } from "@/lib/db/types/state";
 import type { FederalBudget, StateBudget } from "@/lib/db/types/budget";
 import { NATIONAL_SCOPE_IDS } from "@/lib/constants/nationalScope";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
 
 /** Budget categories the engine consumes as spending channels (P2+/P3+). */
 const SPENDING_CHANNEL_CATEGORIES = [
@@ -53,7 +56,7 @@ export interface SpendingRollup {
 }
 
 /**
- * Cross-country normalization anchor (#0887 RC2). Every channel HALF_SAT
+ * Cross-country normalization anchor. Every channel HALF_SAT
  * (PS_SPEND_HALF_SAT=900, SOCIAL_SPEND_HALF_SAT=2700, …) was calibrated in
  * ticket #826 against LIVE US per-capita dollars, when the US sim GDP/capita
  * was ≈$24k. Budgets are stored in each country's own currency at its own sim
@@ -61,7 +64,7 @@ export interface SpendingRollup {
  * local per-capita spend lands on arbitrary points of the same saturation
  * curve: UK ~11% response across its whole playable range, JP pinned at ~100%.
  * Normalizing by GDP/capita converts spend into fiscal EFFORT (share of average
- * income), then × this reference re-expresses it in the #826-calibrated units —
+ * income), then × this reference re-expresses it in the calibrated units -
  * US responses are unchanged by construction, and every other country lands on
  * the same effort curve. The per-capita bill-cost ramp (costs scale with
  * GDP/capita) makes each policy option's response stable across eras too.
@@ -91,13 +94,11 @@ const publicCapitalSpend = (byCat: Record<string, number>): number =>
  */
 export async function spendingProvider(db: Db): Promise<SpendingRollup> {
   const [states, federalBudgets, stateBudgets] = await Promise.all([
-    db
-      .collection<State>("states")
+    statesCollection(db)
       .find({})
       .project<Pick<State, "_id" | "countryId" | "population">>({ countryId: 1, population: 1 })
       .toArray(),
-    db
-      .collection<FederalBudget>("federalBudget")
+    federalBudgetCollection(db)
       .find({})
       .project<Pick<FederalBudget, "_id" | "countryId" | "spending" | "gdp">>({
         countryId: 1,
@@ -105,8 +106,7 @@ export async function spendingProvider(db: Db): Promise<SpendingRollup> {
         gdp: 1,
       })
       .toArray(),
-    db
-      .collection<StateBudget>("stateBudgets")
+    stateBudgetsCollection(db)
       .find({})
       .project<Pick<StateBudget, "_id" | "spending">>({ spending: 1 })
       .toArray(),
@@ -130,7 +130,7 @@ export async function spendingProvider(db: Db): Promise<SpendingRollup> {
     const pop = countryPop.get(cid) ?? 0;
     if (pop <= 0) continue;
     const gdpPerCapita = num(fb.gdp) / pop;
-    // No usable GDP → factor 1 (raw local per-capita, the pre-#0887 behavior).
+    // No usable GDP → factor 1 (raw local per-capita, the uncalibrated behavior).
     if (gdpPerCapita > 0) normFactorByCountry.set(cid, US_REFERENCE_GDP_PER_CAPITA / gdpPerCapita);
     const byCat = fb.spending?.byCategory ?? {};
     federalCapitalPerCapita.set(cid, publicCapitalSpend(byCat) / pop);

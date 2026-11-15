@@ -9,10 +9,19 @@ import { ensureIndex } from "./helpers";
  * `expiresAt = createdAt + TX_TTL_TURNS × turnLengthMinutes × 60_000`
  * (default 168 turns ≈ 7 days). The index itself just honors that stamp.
  */
-/** Shared with the live-world migration so the definitions cannot drift (#2693). */
+/** Shared with the live-world migration so the definitions cannot drift. */
 export const FINANCIAL_TX_LOG_COUNTERPARTY_INDEX = {
   keys: { counterpartyId: 1, _id: -1 },
   options: { name: "financialTxLog_counterpartyId_id", sparse: true, background: true },
+} as const;
+
+/**
+ * Backs the ledger listing order (turn, then write time, newest first) and its
+ * cursor. Shared with the live-world migration so the definitions cannot drift.
+ */
+export const FINANCIAL_TX_LOG_TURN_ORDER_INDEX = {
+  keys: { turn: -1, createdAt: -1, _id: -1 },
+  options: { name: "financialTxLog_turn_createdAt_id", background: true },
 } as const;
 
 export async function seedFinancialTxLogIndexes(db: Db, log: (msg: string) => void) {
@@ -26,11 +35,9 @@ export async function seedFinancialTxLogIndexes(db: Db, log: (msg: string) => vo
     log
   );
 
-  // NOTE (refs #3240): no explicit index for cursor-based pagination on _id.
-  // MongoDB rejects any _id index spec other than {_id: 1} (a previous
-  // {_id: -1} "financialTxLog_id_desc" attempt logged "Index creation failed"
-  // on every bootstrap). _id is always indexed; descending iteration
-  // (sort {_id: -1}) walks the default _id index backwards for free.
+  // No explicit _id index needed: MongoDB rejects any _id spec other than
+  // {_id: 1}, but _id is always indexed and descending iteration walks it
+  // backwards for free.
 
   await ensureIndex(
     db,
@@ -78,6 +85,14 @@ export async function seedFinancialTxLogIndexes(db: Db, log: (msg: string) => vo
     "financialTxLog",
     { type: 1, _id: -1 },
     { name: "financialTxLog_type_id", background: true },
+    log
+  );
+
+  await ensureIndex(
+    db,
+    "financialTxLog",
+    FINANCIAL_TX_LOG_TURN_ORDER_INDEX.keys,
+    FINANCIAL_TX_LOG_TURN_ORDER_INDEX.options,
     log
   );
 

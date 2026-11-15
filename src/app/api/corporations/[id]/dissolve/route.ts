@@ -6,7 +6,7 @@ import { requireBasicAuth } from "@/lib/api/requireAuth";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { formatFundsCompact } from "@/lib/utils/formatters";
 import { resolveCorporation, requireCeo } from "@/lib/api/corporations/resolveQuery";
-import type { Bond, Character, Corporation, CorporateSector, CentralBank } from "@/lib/db/types";
+import type { Character, CorporateSector } from "@/lib/db/types";
 import type { ImperialCharacter } from "@/lib/db/types/imperialCharacter";
 import { logWireEvent, wireHeadlineCorpDissolved } from "@/lib/wireEvent";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
@@ -44,10 +44,21 @@ import { reserveSectorsForRestore } from "@/lib/corporations/securedConstruction
 import { withCorporationSettlementLock } from "@/lib/corporations/settlementLock";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { allocateShareholderPool } from "@/lib/bonds/corporateBondDefault";
-import { payFundShareholderRows } from "@/lib/corporations/payFundShareholders";
+import {
+  payFundShareholderRows,
+  payNppShareholderRows,
+} from "@/lib/corporations/payFundShareholders";
 import { writeOffFundHoldingsInDissolvedCorporation } from "@/lib/indexFunds/fundHoldingWriteOff";
 import { getBankId } from "@/lib/centralBank/helpers";
 import { writeGovBudgetLocal } from "@/lib/currency/govBudgetFields";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
+import { corporationVotesCollection } from "@/lib/db/repositories/corporationVotes";
+import type { Document } from "mongodb";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -112,9 +123,9 @@ export async function POST(_request: Request, { params }: RouteParams) {
       return errorResponse(400, dissolutionAgeBlockedMessage(ageBlock.turnsRemaining));
     }
 
-    // Bug #0597: Allow quick dissolve for public corps where the CEO is the
-    // only real shareholder (all other shares are public float). In this case
-    // there is no other shareholder to object, so a vote is unnecessary.
+    // Public corps where the CEO is the only real shareholder (all other
+    // shares are public float) can quick-dissolve: no other shareholder
+    // exists to object, so a vote is unnecessary.
     const realShareholders = (corporation.shareholders ?? []).filter(
       (s) => s.characterId || s.imperialCharacterId || s.corporationId
     );
@@ -123,7 +134,7 @@ export async function POST(_request: Request, { params }: RouteParams) {
       realShareholders[0].characterId?.toString() === corporation.ceoId.toString();
 
     if (!corporation.isPrivate && !ceoIsOnlyRealShareholder) {
-      const passedVote = await db.collection("corporationVotes").findOne({
+      const passedVote = await corporationVotesCollection<Document>(db).findOne({
         corporationId: corporation._id,
         type: "dissolution",
         status: "passed",
@@ -136,7 +147,7 @@ export async function POST(_request: Request, { params }: RouteParams) {
       }
     }
 
-    const outstandingBonds = await db.collection<Bond>("bonds").countDocuments({
+    const outstandingBonds = await bondsCollection(db).countDocuments({
       corporationId: corporation._id,
       matured: false,
     });
@@ -155,8 +166,7 @@ export async function POST(_request: Request, { params }: RouteParams) {
       "dissolutionInProgressAt",
       now,
       async () => {
-        const sectors = await db
-          .collection<CorporateSector>("corporateSectors")
+        const sectors = await corporateSectorsCollection(db)
           .find({ corporationId: corporation._id })
           .toArray();
         if (!(await reserveSectorsForRestore(db, sectors))) {
@@ -178,8 +188,7 @@ export async function POST(_request: Request, { params }: RouteParams) {
         // snapshotting; cross-corp equity is distributed in-kind below (NOT
         // cashed at market price — that was the money-mint).
         const [heldBonds, fxByCurrency] = await Promise.all([
-          db
-            .collection<Bond>("bonds")
+          bondsCollection(db)
             .find({ "holders.corporationId": corporation._id, matured: false })
             .toArray(),
           loadFxRatesByCurrency(db),
@@ -216,7 +225,7 @@ export async function POST(_request: Request, { params }: RouteParams) {
           // restoring float, orphaning the units: the issuer kept totalIssued
           // on its books but had zero outstanding units, so coupons stopped and
           // nothing settled at maturity (the "bonds disappeared" report).
-          await db.collection<Bond>("bonds").updateOne(
+          await bondsCollection(db).updateOne(
             { _id: bond._id },
             {
               $pull: { holders: { corporationId: corporation._id } },
@@ -251,17 +260,15 @@ export async function POST(_request: Request, { params }: RouteParams) {
             : 0;
         const capitalInc = assetLiquidationInc + sectorSalvageInc;
         if (capitalInc > 0) {
-          await db
-            .collection<Corporation>("corporations")
-            .updateOne(
-              { _id: corporation._id },
-              { $inc: { liquidCapital: capitalInc }, $set: { updatedAt: now } }
-            );
+          await corporationsCollection(db).updateOne(
+            { _id: corporation._id },
+            { $inc: { liquidCapital: capitalInc }, $set: { updatedAt: now } }
+          );
         }
 
-        const refreshedCorporation = await db
-          .collection<Corporation>("corporations")
-          .findOne({ _id: corporation._id });
+        const refreshedCorporation = await corporationsCollection(db).findOne({
+          _id: corporation._id,
+        });
         if (!refreshedCorporation) {
           return errorResponse(404, "Corporation not found");
         }
@@ -311,8 +318,7 @@ export async function POST(_request: Request, { params }: RouteParams) {
           const [shareholderChars, imperialShareholderChars, corpShareholderDocs] =
             await Promise.all([
               regularShareholderIds.length > 0
-                ? db
-                    .collection<Character>("characters")
+                ? charactersCollection(db)
                     .find(
                       { _id: { $in: regularShareholderIds } },
                       { projection: { _id: 1, name: 1, countryId: 1 } }
@@ -320,8 +326,7 @@ export async function POST(_request: Request, { params }: RouteParams) {
                     .toArray()
                 : [],
               imperialShareholderIds.length > 0
-                ? db
-                    .collection<ImperialCharacter>("imperialCharacters")
+                ? imperialCharactersCollection(db)
                     .find(
                       { _id: { $in: imperialShareholderIds } },
                       { projection: { _id: 1, name: 1, countryId: 1 } }
@@ -329,8 +334,7 @@ export async function POST(_request: Request, { params }: RouteParams) {
                     .toArray()
                 : [],
               corpShareholderIds.length > 0
-                ? db
-                    .collection<Corporation>("corporations")
+                ? corporationsCollection(db)
                     .find(
                       { _id: { $in: corpShareholderIds } },
                       {
@@ -433,10 +437,10 @@ export async function POST(_request: Request, { params }: RouteParams) {
           }
 
           if (characterOps.length > 0) {
-            await db.collection<Character>("characters").bulkWrite(characterOps);
+            await charactersCollection(db).bulkWrite(characterOps);
           }
           if (imperialOps.length > 0) {
-            await db.collection<ImperialCharacter>("imperialCharacters").bulkWrite(imperialOps);
+            await imperialCharactersCollection(db).bulkWrite(imperialOps);
           }
 
           // ── Corporate equity shareholder payouts (→ liquidCapital) ───────
@@ -485,7 +489,7 @@ export async function POST(_request: Request, { params }: RouteParams) {
                 };
               });
             if (equityOps.length > 0) {
-              await db.collection<Corporation>("corporations").bulkWrite(equityOps);
+              await corporationsCollection(db).bulkWrite(equityOps);
             }
           }
 
@@ -497,12 +501,10 @@ export async function POST(_request: Request, { params }: RouteParams) {
               corpHomeCurrency,
               corpFxRate
             );
-            await db
-              .collection<CentralBank>("centralBanks")
-              .updateOne(
-                { _id: cbId },
-                { $inc: { reserveBalance: floatLocal }, $set: { updatedAt: now } }
-              );
+            await centralBanksCollection(db).updateOne(
+              { _id: cbId },
+              { $inc: { reserveBalance: floatLocal }, $set: { updatedAt: now } }
+            );
 
             dissolutionTxEntries.push({
               type: "corp_dissolution_distribution",
@@ -526,12 +528,11 @@ export async function POST(_request: Request, { params }: RouteParams) {
             });
           }
 
-          // ── Index-fund shareholders → fund cash (₳); drop the stale holding ──
-          // #3451: previously a fund holder's slice was drained from the corp
-          // but distributed to no one. Fund cash is ₳ (same as the pool), no FX.
+          // Index-fund shareholders get fund cash (₳); the pool is ₳, no FX.
           if (allocation.fundRows.length > 0) {
             await payFundShareholderRows(db, allocation.fundRows, refreshedCorporation._id, now);
           }
+          await payNppShareholderRows(db, allocation.nppRows, now);
 
           // Corp outflow row mirrors the gross pool drained from the dissolving corp.
           dissolutionTxEntries.push({
@@ -572,9 +573,7 @@ export async function POST(_request: Request, { params }: RouteParams) {
           deletedAt: now,
         });
 
-        await db
-          .collection<Corporation>("corporations")
-          .deleteOne({ _id: refreshedCorporation._id });
+        await corporationsCollection(db).deleteOne({ _id: refreshedCorporation._id });
         await recordCorporationExit(db, refreshedCorporation, {
           reason: "voluntary_closure",
           successorIds: disposal.recipientIds,

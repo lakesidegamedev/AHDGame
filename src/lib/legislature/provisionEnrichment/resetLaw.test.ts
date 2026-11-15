@@ -41,13 +41,14 @@ describe("resolveResetLawProvision", () => {
   } as ResetLawProvision;
 
   it("uses the enacted rules for the displayed demographic reaction", () => {
-    expect(resolveResetLawProvision(provision).archetypeApprovals).toEqual(
+    expect(resolveResetLawProvision(provision).bucketApprovals).toEqual(
       v2EnactmentApproval([provision], provision.reviewedOption.country)
     );
   });
 
   it("exposes every snapshotted metric and the proposal-time budget comparison", () => {
     expect(resolveResetLawProvision(provision)).toMatchObject({
+      economic: -5,
       metricEffects: [
         { metric: "Effective health coverage", favorableNormalizedDelta: 0.42 },
         { metric: "Care affordability", favorableNormalizedDelta: 0.42 },
@@ -61,6 +62,17 @@ describe("resolveResetLawProvision", () => {
         transitionCost: 4_000_000,
       },
     });
+  });
+
+  it.each(["national", "regional"] as const)("exposes both privacy leans on %s bills", (scope) => {
+    const display = resolveResetLawProvision({
+      ...provision,
+      familyId: "L46",
+      scope,
+      choice: "far_right",
+      reviewedOption: { ...provision.reviewedOption, familyId: "L46", scope, choice: "far_right" },
+    });
+    expect(display).toMatchObject({ economic: 1.5, social: -2.5 });
   });
 
   it("preserves retained annual claims independently of the new program allocation", () => {

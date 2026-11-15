@@ -49,6 +49,16 @@ describe("referendum webhook builders", () => {
     expect(e.title).toContain("Referendum Requested");
   });
 
+  it("names the region's own executive title", () => {
+    const e = buildReferendumRequestedEmbed({
+      region: "Quebec",
+      kind: "independence",
+      executiveTitle: "Premier",
+    });
+    expect(e.description).toContain("The Premier of Quebec");
+    expect(e.description).not.toContain("First Minister");
+  });
+
   it("grant vs decline differ in wording and color", () => {
     const grant = buildReferendumDecisionEmbed({
       region: "Scotland",
@@ -139,6 +149,22 @@ describe("referendum webhook builders", () => {
     expect(sco.title).toMatch(/Scotland Becomes Independent/i);
     const wal = buildSecessionCompleteEmbed({ region: "Wales", regionId: "WAL" });
     expect(wal.color).not.toBe(sco.color);
+  });
+
+  it("names Ottawa and Canada when Quebec leaves", () => {
+    const consent = buildIndependenceConsentBillEmbed({
+      region: "Quebec",
+      passed: true,
+      national: "Ottawa",
+    });
+    expect(consent.title).toBe("Ottawa Consents: Quebec (Independence) Bill Passes");
+    const done = buildSecessionCompleteEmbed({
+      region: "Quebec",
+      regionId: "CA_QC",
+      parent: "Canada",
+    });
+    expect(done.description).toContain("formally left Canada");
+    expect(done.description).not.toContain("United Kingdom");
   });
 });
 

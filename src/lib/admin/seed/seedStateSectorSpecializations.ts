@@ -6,6 +6,8 @@ import {
   type StateSectorSpecialization,
 } from "@/lib/constants/corporations";
 import { JP_SECTOR_SPECIALIZATION } from "@/lib/countries/jp/economy";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 const US_OVERRIDES: Record<string, StateSectorSpecialization> = {
   AL: { primary: "manufacturing", secondary: "defense" },
@@ -182,7 +184,8 @@ function byKeyword(state: State): StateSectorSpecialization | null {
 }
 
 export function inferStateSectorSpecialization(state: State): StateSectorSpecialization {
-  if (state.countryId === "US" && US_OVERRIDES[state._id]) return US_OVERRIDES[state._id];
+  if (countryHasFeature("usAdmin", state.countryId) && US_OVERRIDES[state._id])
+    return US_OVERRIDES[state._id];
   const explicit = REGIONAL_OVERRIDES[`${state.countryId}:${state._id}`];
   if (explicit) return explicit;
   return byKeyword(state) ?? COUNTRY_DEFAULTS[state.countryId] ?? rotateFallback(state._id);
@@ -194,10 +197,10 @@ export async function seedStateSectorSpecializations(
   log: (msg: string) => void
 ) {
   if (reset) {
-    await db.collection<State>("states").updateMany({}, { $unset: { sectorSpecializations: "" } });
+    await statesCollection(db).updateMany({}, { $unset: { sectorSpecializations: "" } });
   }
 
-  const states = await db.collection<State>("states").find({}).toArray();
+  const states = await statesCollection(db).find({}).toArray();
   if (states.length === 0) {
     log("seedStateSectorSpecializations: no states found - run regional seeders first");
     return;
@@ -220,7 +223,7 @@ export async function seedStateSectorSpecializations(
     };
   });
 
-  await db.collection<State>("states").bulkWrite(ops);
+  await statesCollection(db).bulkWrite(ops);
 
   const byPrimary = new Map<OperatingSectorType, number>();
   for (const state of states) {

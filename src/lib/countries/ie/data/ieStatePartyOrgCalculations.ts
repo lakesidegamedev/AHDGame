@@ -5,35 +5,25 @@ import {
   IE_REGION_VOTE_SHARES_1989,
   IE_REGION_VOTE_SHARES_1953,
 } from "@/lib/seeds/ie/ieRegionVoteShares";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { organizationFromVoteShare } from "@/lib/parties/rules/voteShareOrganization";
 
 /**
  * Calculate IE state party organization levels from estimated regional vote
  * shares. Picks the per-preset polling table:
- *   - `2019-default` (default) — 2024 General Election regional estimates
- *     (FF/FG/SF/Lab/Green).
- *   - `1991-default` — 1989 General Election regional estimates
- *     (FF/FG/Lab/WP/PD; SF abstentionist + no Dáil seats, Greens not yet
- *     significant).
- *   - `1953-default` — 1954 General Election regional estimates (FF/FG/Lab —
- *     the entire seeded 1953 IE roster).
- *
- * Before the 1953 table existed, `1953-default` fell through to the 2024
- * dataset (#3780). All three 1953 parties resolve by name there, so IE was
- * never presence-blocked the way DE was — but a 1954 world was calibrated to a
- * fragmented 2024 field (FF 19-26, FG 18-23) instead of FF ~43 / FG ~32.
+ *   - `2019-default` , 2024 General Election regional estimates.
+ *   - `1991-default` , 1989 General Election regional estimates.
+ *   - `1953-default` , 1954 General Election regional estimates, matching the
+ *     seeded 1953 IE roster.
  *
  * Organizations scale from vote share, matching the JP / DE / CN pattern:
  * - 0% vote → 5 org (minimal presence)
  * - 50% vote → 70 org (dominant party)
  *
  * Slug → sequentialId is resolved at runtime against the live
- * `politicalParties` collection so preset-filtered seeds (SF / Greens under
- * 2019-only; WP / PD under 1991-only) are picked up correctly without
+ * `politicalParties` collection so preset-filtered seeds are picked up without
  * hardcoded ordering assumptions.
  */
-
-const MIN_ORG = 5;
-const MAX_ORG = 70;
 
 const IE_PARTY_SLUG_TO_NAME: Record<string, string> = {
   ff: "Fianna Fáil",
@@ -45,19 +35,13 @@ const IE_PARTY_SLUG_TO_NAME: Record<string, string> = {
   pd: "Progressive Democrats",
 };
 
-function calculateIEPartyOrg(voteShare: number): number {
-  const scaled = MIN_ORG + (voteShare / 50) * (MAX_ORG - MIN_ORG);
-  return Math.min(Math.max(Math.round(scaled), MIN_ORG), MAX_ORG);
-}
-
 /**
  * Resolve each IE party slug to the matching `sequentialId` in the DB.
  * Robust to preset filtering — only returns mappings for parties that
  * actually exist under the active preset.
  */
 export async function buildIEPartySlugToSeqId(db: Db): Promise<Record<string, string>> {
-  const parties = await db
-    .collection<PoliticalParty>("politicalParties")
+  const parties = await politicalPartiesCollection(db)
     .find({ countryId: "IE" })
     .project<{ name: string; sequentialId: number }>({ name: 1, sequentialId: 1 })
     .toArray();
@@ -93,7 +77,7 @@ export async function calculateIEStatePartyOrgs(
     for (const [partySlug, voteShare] of Object.entries(partyVotes)) {
       const partySeqId = slugToSeqId[partySlug];
       if (!partySeqId) continue;
-      const org = calculateIEPartyOrg(voteShare);
+      const org = organizationFromVoteShare(voteShare);
 
       orgs.push({
         _id: `${regionId}_${partySeqId}`,

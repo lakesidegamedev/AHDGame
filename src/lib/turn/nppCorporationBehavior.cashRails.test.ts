@@ -34,6 +34,7 @@ import type { CeoArchetype } from "@/lib/npp/ceoArchetype";
 import type { Corporation, CorporateSector, UnownedSector } from "@/lib/db/types";
 import { CAPACITY_ANCHOR_YEAR } from "@/lib/constants/capacityEconomy";
 import { computeUnownedHeadroomUnits } from "@/lib/market/unownedHeadroom";
+import { getNppCashFloorAnchor } from "./npp/nppCashReserve";
 
 const noPrices: CommodityPriceRatioFn = () => null;
 const noState = new Set<string>();
@@ -110,7 +111,7 @@ function decide(liquidCapital: number, archetype: CeoArchetype, ordinaryEntryEli
 
 describe("NPP cash rails at 1953 scale", () => {
   it("pays a dividend at a cash level the old ₳2,000,000 floor froze", () => {
-    // cautious floor = max(SAFE_CASH_FLOOR_MIN, CASH_FLOOR × 1.5) = ₳375,000.
+    // cautious floor = max(SAFE_CASH_FLOOR_MIN, CASH_FLOOR × 1.5) = ₳300,000.
     // Under the old constants that was max(1,000,000, 3,000,000) = ₳3,000,000,
     // so this corp, profitable at a 30% margin, paid nothing.
     const decision = decide(1_000_000, "cautious");
@@ -119,7 +120,7 @@ describe("NPP cash rails at 1953 scale", () => {
 
   it("keeps the safety rail from clamping the floor back up", () => {
     // THE INERT-CHANGE GUARD. aggressive floor = max(SAFE_CASH_FLOOR_MIN,
-    // CASH_FLOOR × 0.6) = max(125,000, 150,000) = ₳150,000. If
+    // CASH_FLOOR × 0.6) = max(100,000, 120,000) = ₳120,000. If
     // SAFE_CASH_FLOOR_MIN were still ₳1,000,000 the MAX() would return that
     // instead and this corp would be frozen exactly as before.
     const decision = decide(200_000, "aggressive");
@@ -134,6 +135,21 @@ describe("NPP cash rails at 1953 scale", () => {
     expect(decision.newSectors).toBeUndefined();
   });
 
+  it("sets the floor per archetype at the loosened constants", () => {
+    const floor = (a: CeoArchetype) =>
+      getNppCashFloorAnchor("2019-default", ceoArchetypeModifiers(a).cashFloorMult);
+    expect(floor("aggressive")).toBe(120_000);
+    expect(floor("innovator")).toBe(200_000);
+    expect(floor("costCutter")).toBe(240_000);
+    expect(floor("cautious")).toBe(300_000);
+  });
+
+  it("no longer treats cash between the old and new aggressive floor as a crisis", () => {
+    // 140,000 sat under the old 150,000 aggressive floor and above the new 120,000.
+    const decision = decide(140_000, "aggressive");
+    expect(decision.updates.logisticsBudget).not.toBe(3_000);
+  });
+
   it("cuts discretionary budgets immediately when cash is below the floor", () => {
     const decision = decide(50_000, "aggressive");
 
@@ -144,7 +160,7 @@ describe("NPP cash rails at 1953 scale", () => {
 
   it("lets a mid-size corp reach the expansion gate", () => {
     // cautious expansion needs surplus > EXPANSION_MIN_CASH × 1.5 = ₳937,500
-    // on top of the ₳375,000 floor. Under the old constants that was ₳7,500,000
+    // on top of the ₳300,000 floor. Under the old constants that was ₳7,500,000
     // of surplus over a ₳3,000,000 floor, unreachable for most of the cohort.
     const decision = decide(4_000_000, "cautious", true);
     expect(decision.newSectors).toHaveLength(1);

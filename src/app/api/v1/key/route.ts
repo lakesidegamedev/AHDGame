@@ -5,6 +5,8 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { checkRateLimit, rateLimitHeaders, rateLimitResponse } from "@/lib/api/rateLimit";
 import { requireUserApiKey, type UserApiScope } from "@/lib/api/userApiAuth";
 import { withNoStore } from "@/lib/api/withNoStore";
+import { userApiKeysCollection } from "@/lib/db/repositories/userApiKeys";
+import type { Document } from "mongodb";
 
 /**
  * Operation classes unlocked by each key scope. `read` covers every GET under
@@ -37,7 +39,7 @@ async function handleGET(request: Request) {
     // Re-read the caller's own key document for display metadata. Explicit
     // projection: tokenHash, userId internals, and rotation linkage stay out.
     const db = await getDb();
-    const keyDoc = await db.collection("userApiKeys").findOne(
+    const keyDoc = await userApiKeysCollection<Document>(db).findOne(
       { _id: new ObjectId(apiAuth.keyId), revokedAt: null },
       {
         projection: {

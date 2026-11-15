@@ -3,6 +3,7 @@ import { SignJWT } from "jose";
 import type { Db } from "mongodb";
 import { getAuthCookieOptions, getJwtSecret } from "@/lib/auth";
 import { AUTH_COOKIE_NAME } from "@/lib/authCookieName";
+import { unifiedSessionsCollection } from "@/lib/db/repositories/unifiedSessions";
 
 type CookieStore = Readonly<{
   set(name: string, value: string, options: Awaited<ReturnType<typeof getAuthCookieOptions>>): void;
@@ -27,14 +28,14 @@ export async function issueUnifiedGameSession(input: {
   const sid = randomUUID();
   const now = Math.floor(Date.now() / 1000);
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60_000);
-  const sessions = input.db.collection<{
+  const sessions = unifiedSessionsCollection<{
     _id: string;
     userId: string;
     issuerSubject: string;
     createdAt: Date;
     expiresAt: Date;
     revokedAt: Date | null;
-  }>("unifiedSessions");
+  }>(input.db);
   await sessions.insertOne({
     _id: sid,
     userId: input.sourceId,

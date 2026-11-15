@@ -1,19 +1,20 @@
 import type { CountryGameState } from "@/lib/db/types";
 import { getDb } from "@/lib/mongodb";
-import { getCurrentTurnAndCtx } from "@/lib/turn/perpetualElections/engine";
+import { getCurrentTurnAndCtx } from "@/lib/elections/scheduling/engine";
 import type { CountryElections } from "../contract";
 import type { CountryElectionPhaseEntry } from "@/lib/turn/countryPhases";
 import {
   easternBlocElectionsLive,
   ensureRegionalDelegateElections,
   seatsFromRegionField,
-} from "@/lib/turn/perpetualElections/shared";
+} from "@/lib/elections/scheduling/shared";
 import { bgElectionSeatsForPreset } from "./rules/assemblyTransition";
 import { getElectionMethod } from "@/lib/elections/electionMethod";
 import { bindBgFoundingCampaigns } from "./foundingCampaignBinding1990";
 import { bgAssemblyCohortCanSpawn, bgGrandAssemblyRegularAnchor } from "./rules/assemblyClock1991";
 import { loadBgGrandAssemblyClock } from "./grandAssemblyClock1991";
 import { buildBg1991AssemblySpawn } from "./assemblyClock1991";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
 
 export function bgAssemblySeatMapForPreset(
   regions: Parameters<typeof seatsFromRegionField>[0],
@@ -41,7 +42,7 @@ export async function ensureBGElections(now: Date, inFlightTurn?: number): Promi
   const { ctx, currentTurn } = await getCurrentTurnAndCtx(db);
   const country =
     ctx.preset === "1991-default"
-      ? await db.collection<CountryGameState>("countryGameStates").findOne(
+      ? await countryGameStatesCollection(db).findOne(
           { _id: "BG" },
           {
             projection: {
@@ -94,18 +95,15 @@ export async function ensureBGElections(now: Date, inFlightTurn?: number): Promi
 /**
  * Bulgaria's elections.
  *
- * ⚠️ SERVER ONLY. The spawners reach `getDb`.
+ * SERVER ONLY: the spawners reach `getDb`.
  *
- * ⚠️ NO `spawn`. Bulgaria has no row in
- * `SPAWN_ELECTIONS_REGISTRY`; these phases run through
- * `COUNTRY_ELECTION_PHASES`, in this order. Adding a `spawn` would run them a
- * second time each turn. The BG spawner lives here and uses shared election
- * helpers without moving the other countries' phases.
+ * No `spawn`: BG has no entry in `SPAWN_ELECTIONS_REGISTRY`, so these phases
+ * run via `COUNTRY_ELECTION_PHASES`. Adding `spawn` would run them twice per
+ * turn.
  *
- * ⚠️ NO `seats`. There is no seat table for Bulgaria anywhere;
- * apportionment is read from the live regions, the way East Germany's
- * Volkskammer and Brazil's Senate are. An empty `byChamber` would describe a
- * chamber with no seats rather than one whose seats live elsewhere.
+ * No `seats`: there is no seat table; apportionment is read from live regions,
+ * like East Germany's Volkskammer and Brazil's Senate. An empty `byChamber`
+ * would describe a chamber with seats elsewhere.
  */
 const phases: CountryElectionPhaseEntry[] = [
   { name: "bgNationalAssemblyElections", fn: ensureBGElections },

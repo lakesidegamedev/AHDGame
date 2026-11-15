@@ -7,9 +7,15 @@ import type { Character, Corporation, ShareListing, ShareOrder } from "@/lib/db/
 import type { IndexFund } from "@/lib/db/types/indexFund";
 import { fetchBordersByUserIds } from "@/lib/db/patreonBorders";
 import { computeAccountedShares } from "@/lib/corporations/shareInvariant";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import type { Document } from "mongodb";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
 
 /**
- * Shareholder display context: CEO + every named holder class (#587).
+ * Shareholder display context: CEO + every named holder class.
  *
  * Characters, imperial characters, holding corporations, NPPs, and index
  * funds each resolve through their own lookup so the shareholder tab can
@@ -35,7 +41,7 @@ export async function loadShareholderContext(db: Db, corporation: Corporation) {
   const isImperialCeo = corporation.ceoType === "imperial";
   const isNppCeo = corporation.ceoType === "npp";
   const ceoPromise = isImperialCeo
-    ? db.collection("imperialCharacters").findOne(
+    ? imperialCharactersCollection<Document>(db).findOne(
         { _id: corporation.ceoId },
         {
           projection: {
@@ -49,7 +55,7 @@ export async function loadShareholderContext(db: Db, corporation: Corporation) {
         }
       )
     : isNppCeo
-      ? db.collection("npps").findOne(
+      ? nppsCollection<Document>(db).findOne(
           { _id: corporation.ceoId },
           {
             projection: {
@@ -61,7 +67,7 @@ export async function loadShareholderContext(db: Db, corporation: Corporation) {
             },
           }
         )
-      : db.collection<Character>("characters").findOne(
+      : charactersCollection(db).findOne(
           { _id: corporation.ceoId },
           {
             projection: {
@@ -85,8 +91,7 @@ export async function loadShareholderContext(db: Db, corporation: Corporation) {
   ] = await Promise.all([
     ceoPromise,
     shareholderIds.length > 0
-      ? db
-          .collection<Character>("characters")
+      ? charactersCollection(db)
           .find(
             { _id: { $in: shareholderIds } },
             {
@@ -104,8 +109,7 @@ export async function loadShareholderContext(db: Db, corporation: Corporation) {
           .toArray()
       : Promise.resolve([] as Character[]),
     imperialShareholderIds.length > 0
-      ? db
-          .collection("imperialCharacters")
+      ? imperialCharactersCollection<Document>(db)
           .find(
             { _id: { $in: imperialShareholderIds } },
             {
@@ -123,8 +127,7 @@ export async function loadShareholderContext(db: Db, corporation: Corporation) {
           .toArray()
       : Promise.resolve([]),
     corporationShareholderIds.length > 0
-      ? db
-          .collection<Corporation>("corporations")
+      ? corporationsCollection(db)
           .find(
             { _id: { $in: corporationShareholderIds } },
             { projection: { _id: 1, name: 1, sequentialId: 1, logoUrl: 1 } }
@@ -132,16 +135,12 @@ export async function loadShareholderContext(db: Db, corporation: Corporation) {
           .toArray()
       : Promise.resolve([] as Corporation[]),
     nppShareholderIds.length > 0
-      ? db
-          .collection<{ _id: ObjectId; name: string }>("npps")
+      ? nppsCollection<{ _id: ObjectId; name: string }>(db)
           .find({ _id: { $in: nppShareholderIds } }, { projection: { _id: 1, name: 1 } })
           .toArray()
       : Promise.resolve([] as { _id: ObjectId; name: string }[]),
     fundShareholderIds.length > 0
-      ? db
-          .collection<Pick<IndexFund, "_id" | "name" | "slug" | "scope" | "countryId">>(
-            "indexFunds"
-          )
+      ? indexFundsCollection<Pick<IndexFund, "_id" | "name" | "slug" | "scope" | "countryId">>(db)
           .find(
             { _id: { $in: fundShareholderIds } },
             { projection: { _id: 1, name: 1, slug: 1, scope: 1, countryId: 1 } }
@@ -268,7 +267,7 @@ export interface ShareholderListInputs {
 }
 
 /**
- * Shareholder response rows, with the CEO absorbing unaccounted shares (#587).
+ * Shareholder response rows, with the CEO absorbing unaccounted shares.
  *
  * The share invariant reconciles listed/ordered shares against the ledger;
  * any remainder is attributed to the CEO rather than vanishing from the tab.

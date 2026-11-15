@@ -12,14 +12,8 @@ import type { GeneralElectionViewModel } from "@/lib/elections/generalViewModel"
 
 /**
  * Per-state drivers for the presidential general: registration influence and
- * persuasion drivers for one state at a time.
- *
- * This used to render its own full `BattlegroundMap` directly above the page's
- * `PresidentialMapWithStateDetail` — two large US maps of the same race, one
- * after the other, with a code comment conceding "the two coexist". The EV map
- * is the canonical one (it carries the electoral votes that decide the race),
- * so the second map is gone and the state picker below drives these panels
- * instead. Every unique feature of the old shell is kept.
+ * persuasion drivers for one state at a time. Driven by the state picker below
+ * the canonical EV map, which is the only US map of this race on the page.
  */
 export function GeneralElectionShellClient({
   viewModel,

@@ -110,7 +110,10 @@ describe("probeCountryOffices", () => {
 describe("probeStatePartyLeadership", () => {
   it("stays pinned to every production office (drift guard without importing the shell)", () => {
     expect([...STATE_PARTY_PROBE_POSITIONS]).toEqual(["chair", "viceChair", "treasurer"]);
-    const source = readFileSync(join(process.cwd(), "src/lib/statePartyElections.ts"), "utf8");
+    const source = readFileSync(
+      join(process.cwd(), "src/lib/elections/party/statePartyElections.ts"),
+      "utf8"
+    );
     const match = source.match(/ALL_POSITIONS[^=]*=\s*\[([\s\S]*?)\]/);
     expect(match, "ALL_POSITIONS declaration not found").toBeTruthy();
     for (const position of STATE_PARTY_PROBE_POSITIONS) {

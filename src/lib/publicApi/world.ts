@@ -4,6 +4,8 @@ import { getCountryHistoryCollection } from "@/lib/db/collections";
 import type { CountryHistoryEvent } from "@/lib/db/types/countryHistoryEvent";
 import type { ConflictDoc } from "@/lib/db/types/conflict";
 import type { BattleReportDoc } from "@/lib/db/types/battleReport";
+import { conflictsCollection } from "@/lib/db/repositories/conflicts";
+import { battleReportsCollection } from "@/lib/db/repositories/battleReports";
 
 export async function queryCountryHistory(
   db: Db,
@@ -77,8 +79,7 @@ export async function queryConflicts(
   }
 
   // conflictId (sequential per-iteration public number) is the natural sort.
-  const conflicts = await db
-    .collection<ConflictDoc>("conflicts")
+  const conflicts = await conflictsCollection(db)
     .find(filter)
     .sort({ conflictId: -1 })
     .limit(limit)
@@ -112,8 +113,7 @@ export async function queryConflicts(
 export async function queryBattleReports(db: Db, countryId: string, limit = 50) {
   const clamped = Math.min(Math.max(limit, 1), 200);
   const cid = countryId as CountryId;
-  const reports = await db
-    .collection<BattleReportDoc>("battleReports")
+  const reports = await battleReportsCollection(db)
     .find({ $or: [{ declarerCountry: cid }, { targetCountry: cid }] })
     .sort({ turn: -1 })
     .limit(clamped)

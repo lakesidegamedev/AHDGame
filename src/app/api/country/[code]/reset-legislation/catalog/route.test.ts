@@ -106,4 +106,24 @@ describe("reset legislation catalog route", () => {
     });
     expect(body.metrics[0].description).not.toContain("laborParticipation");
   });
+
+  it("offers Japan's old tax types in a world seeded before its law book", async () => {
+    db.collection("legislationTypes")
+      .find()
+      .toArray.mockResolvedValue([{ _id: "jp_consumption_tax" }, { _id: "jp_income_tax_rate" }]);
+    const response = await GET(
+      new Request("http://localhost/api/country/jp/reset-legislation/catalog"),
+      { params: Promise.resolve({ code: "jp" }) }
+    );
+
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as {
+      taxes: { id: string; existingLegislationTypeId: string }[];
+    };
+    const typeOf = (id: string) =>
+      body.taxes.find((tax) => tax.id === id)?.existingLegislationTypeId;
+    expect(typeOf("T05")).toBe("jp_consumption_tax");
+    expect(typeOf("T01_middle")).toBe("jp_income_tax_rate__income_middle");
+    expect(typeOf("T06")).toBe("jp.tax.tariffs");
+  });
 });

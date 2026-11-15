@@ -113,6 +113,33 @@
       }
     },
     "sectorInvestment": {
+      "fundedAdvice": {
+        "title": "Funded buyer demand",
+        "titleTurn": "Funded buyer demand, turn {turn, number, ::group-off}",
+        "unknown": "Not measured",
+        "caption": "Orders and deliveries in commodity units per day",
+        "outputMarket": "Output / market",
+        "funded": "Funded",
+        "delivered": "Delivered",
+        "unfilled": "Unfilled",
+        "buildings": "Buildings to fill gap",
+        "fullMix": "Room with buyers for every output: {count} buildings",
+        "partialOutput": "A zero all-output count does not mean no buildings are useful. New buildings can still fill another output's gap, and may be profitable if those sales cover the full running costs. Their other output may go unsold. Use the separate output counts above to judge that tradeoff.",
+        "deliveryNote": "Delivered means completed purchases by buyers in this market, from all eligible suppliers. It is not this company's production. Outputs sell separately, and other sector types can also supply some products.",
+        "allOutputRoom": "All-output room",
+        "buildingNote": "Building counts allow for known idle capacity and queued builds, using this plant mix and current productivity. Each output count rounds up to fill its remaining gap; the last building may partly overproduce. The all-output count rounds down. These are shared market estimates, not a cash, staffing, inputs or profit recommendation. Automatic sizing separately requires operating history. Different strategies or research can change these counts.",
+        "foundingRoom": "{state} has measured demand room for {plants}, after known idle capacity and queued builds. This is shared market room, not reserved sales.",
+        "foundingLimited": "{state} has measured room for {plants} with buyers for every output. Other output gaps are shown separately above. You can still build to compete for sales, but some output may remain unsold.",
+        "regional": "Regional",
+        "national": "National",
+        "scopeNote": "Units per day. National figures include regional buyers; do not add the rows. Only markets this output can serve are shown. International orders are not included in this domestic estimate.",
+        "salesNote": "Unfilled orders are not guaranteed sales at your price. Existing idle capacity and queued builds can reach these buyers first. Mixed-output plants may sell one product while another remains unsold.",
+        "limits": "Funded demand and expansion limits",
+        "someUnfilled": "Funded buyers remain unfilled for at least one output. The table shows each market separately. Automatic sizing also allows for existing capacity, queued builds and every output in this plant's mix.",
+        "someUnknown": "Some funded demand figures have not been measured for this market yet. Missing figures do not mean there are no buyers.",
+        "noneUnfilled": "No unfilled funded domestic orders were recorded for these outputs in this turn. This is not an estimate of international demand or sales you could win from competitors.",
+        "noLocalCompetitors": "No competitors of this sector type are listed in this region. This does not establish buyer demand or exclude competitors in a shared national market."
+      },
       "advertisingCampaignsCounted": "Advertising campaigns counted: {units}/day ({factor} media output factor)",
       "advertisingCampaignsLabel": "Advertising campaigns counted",
       "advertisingCampaignsValue": "{units}/day ({factor} factor)",
@@ -220,7 +247,7 @@
         "demand": "Measured buyers and queued builds leave room for less than one additional facility."
       },
       "mixedOrQueuedDemand": "Some outputs have no measured unmet demand, or existing unused capacity and queued builds already cover the available buyers. Extra capacity can leave part of the output unsold.",
-      "reserveOverrideHelp": "Spending below the reserve can leave your plants without the cash to pay wages and buy inputs, so they run at a fraction of their output until the cash recovers.",
+      "reserveOverrideHelp": "Lines whose sales cover their running costs keep running on low cash. Spending below the reserve can slow lines that do not pay for themselves and new lines that have not sold yet, until the cash recovers.",
       "buildPastReserve": "Build anyway"
     },
     "bankConsole": {
@@ -1088,6 +1115,9 @@
       "heldByCashHelp": "You sold everything you made, but your company could not pay for the whole run, so your {sites} are held below their plan, not ramping up. Add cash or cut costs to run the full plan."
     },
     "commodityMarket": {
+      "supplyOfferedPerDay": "offered per day",
+      "supplyIncludesStock": "includes unsold stock",
+      "supplyOfferedExplanation": "Supply is what producers put up for sale each turn: the stock they could not sell earlier plus what they plan to make now. Stock that stays unsold is counted again every turn, so this can be well above what is actually produced. Producer rankings below use capacity and consumer rankings use estimated plant inputs, so they will not add up to this figure.",
       "substitutionOrders": "plus {units} substitution orders",
       "substitutionOrdersExplanation": "Households placed these after their first choice sold out. They are not counted as demand here, so they do not make this good read as short."
     },

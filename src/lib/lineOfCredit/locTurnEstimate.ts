@@ -6,7 +6,7 @@
 
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { FOREX_ACTIVE_CURRENCIES } from "@/lib/constants/currencies";
-import type { Character, Corporation } from "@/lib/db/types";
+import type { Character } from "@/lib/db/types";
 import type { Db } from "mongodb";
 import {
   computeLocBorrowerComposite,
@@ -31,6 +31,7 @@ import {
   loadCentralBankPricingAdjustment,
   resolveCentralBankPricingAdjustment,
 } from "@/lib/monetaryPolicy/centralBankPricing";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 const DEFAULT_PRIME = 2.5;
 const MAX_SIM_TURNS = 50_000;
@@ -81,12 +82,10 @@ export async function estimateTurnsToPayOffLocIdealized(
   );
   const incomeScore = incomeScoreFromPerTurnCurrency(incomeGuess);
 
-  const corp = await db
-    .collection<Corporation>("corporations")
-    .findOne(
-      { ceoId: character._id, countryId: character.countryId },
-      { projection: { creditCompositeSnapshot: 1 } }
-    );
+  const corp = await corporationsCollection(db).findOne(
+    { ceoId: character._id, countryId: character.countryId },
+    { projection: { creditCompositeSnapshot: 1 } }
+  );
 
   const homeBankId = getBankId(getCountryIdForCurrency(home));
   const primeHome = primeByCountryId.get(homeBankId) ?? DEFAULT_PRIME;

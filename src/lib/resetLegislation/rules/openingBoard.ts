@@ -2,6 +2,7 @@ import type { OpeningLawReference } from "../openingLaw";
 import { POST_LAUNCH_FAMILY_IDS } from "./postLaunchReferences";
 import type { ResetCountry } from "../fundingOwner";
 import type { UkTerritorialTaxOpening } from "@/lib/countries/uk/resetLegislation/ukTerritorialTax1991";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 export interface ResetLawOpeningBoard {
   _id: string;
@@ -30,7 +31,7 @@ export function buildResetLawOpeningBoard(input: {
   if (input.regionId === "") throw new Error("Law opening board has an empty region id");
   const scope = input.regionId === undefined ? "national" : "regional";
   if (
-    (input.countryId === "UK" && scope === "regional") !==
+    (countryHasFeature("ukSeeds", input.countryId) && scope === "regional") !==
     (input.ukTerritorialTax !== undefined)
   ) {
     throw new Error("UK regional law opening requires its territorial tax fixture");

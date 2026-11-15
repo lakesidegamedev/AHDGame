@@ -8,6 +8,7 @@ import type { WikiPage } from "@/lib/db/types";
 import { getGameStamp } from "@/lib/wiki/gameConfig";
 import { revalidatePath } from "next/cache";
 import { ObjectId } from "mongodb";
+import { wikiPagesCollection } from "@/lib/db/repositories/wikiPages";
 
 // POST /api/admin/wiki — Creates and immediately publishes a new wiki page, bypassing the review queue.
 // Auth: requireModerator (admins and moderators may publish directly)
@@ -23,7 +24,7 @@ export async function POST(request: Request) {
     }
 
     const db = await getDb();
-    const wikiPages = db.collection<WikiPage>("wikiPages");
+    const wikiPages = wikiPagesCollection(db);
 
     // Check slug uniqueness
     const existing = await wikiPages.findOne({ slug: parsed.data.slug });

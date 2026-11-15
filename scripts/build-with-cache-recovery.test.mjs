@@ -1,8 +1,17 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, mkdirSync, writeFileSync, existsSync, readFileSync, rmSync } from "node:fs";
+import {
+  mkdtempSync,
+  mkdirSync,
+  writeFileSync,
+  existsSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { runBuild } from "./build-with-cache-recovery.mjs";
 import { clearCompilerCache } from "./clear-railway-build-cache.mjs";
 
@@ -28,13 +37,14 @@ function fixture(t) {
     process.stdout.write('build complete');
   `
   );
-  const invoke = (env = {}) =>
+  const invoke = (env = {}, options = {}) =>
     runBuild({
       cwd,
       env: { ...process.env, RAILWAY_ENVIRONMENT_NAME: "test", ...env },
       args: [join(cwd, "fake-build.cjs")],
       stdout: { write() {} },
       stderr: { write() {} },
+      ...options,
     });
   return {
     cwd,
@@ -77,14 +87,14 @@ test("the second build failure stays failed and cannot trigger another retry", a
   assert.equal((await h.invoke({ FAIL: "always", DIAGNOSTIC: panic })).code, 7);
   assert.equal(h.attempts(), 2);
 });
-test("automatic recovery is limited to Railway", async (t) => {
+test("automatic recovery works on self-hosted builds without Railway variables", async (t) => {
   const h = fixture(t);
   assert.equal(
     (await h.invoke({ FAIL: "first", DIAGNOSTIC: panic, RAILWAY_ENVIRONMENT_NAME: "" })).code,
-    7
+    0
   );
-  assert.equal(h.attempts(), 1);
-  assert.equal(h.marker("turbopack"), true);
+  assert.equal(h.attempts(), 2);
+  assert.equal(h.marker("turbopack"), false);
 });
 test("explicit recovery clears compiler contents only", (t) => {
   const h = fixture(t);
@@ -94,15 +104,19 @@ test("explicit recovery clears compiler contents only", (t) => {
   assert.equal(h.marker("fetch-cache"), true);
 });
 
-test("a signalled compiler is not retried even with a persistence diagnostic", async (t) => {
-  const h = fixture(t);
-  writeFileSync(
-    join(h.cwd, "fake-build.cjs"),
-    `process.stderr.write(${JSON.stringify(panic)}); process.kill(process.pid, 'SIGTERM');`
-  );
-  assert.equal((await h.invoke()).signal, "SIGTERM");
-  assert.equal(h.marker("turbopack"), true);
-});
+test(
+  "a signalled compiler is not retried even with a persistence diagnostic",
+  { skip: process.platform === "win32" },
+  async (t) => {
+    const h = fixture(t);
+    writeFileSync(
+      join(h.cwd, "fake-build.cjs"),
+      `process.stderr.write(${JSON.stringify(panic)}); process.kill(process.pid, 'SIGTERM');`
+    );
+    assert.equal((await h.invoke()).signal, "SIGTERM");
+    assert.equal(h.marker("turbopack"), true);
+  }
+);
 
 test("missing compiler process fails without clearing cache", async (t) => {
   const h = fixture(t);
@@ -120,7 +134,11 @@ test("explicit recovery refuses symlinked compiler directories", async (t) => {
   mkdirSync(outside);
   writeFileSync(join(outside, "marker"), "keep");
   rmSync(join(h.cwd, ".next/cache/turbopack"), { recursive: true });
-  symlinkSync(outside, join(h.cwd, ".next/cache/turbopack"));
+  symlinkSync(
+    outside,
+    join(h.cwd, ".next/cache/turbopack"),
+    process.platform === "win32" ? "junction" : "dir"
+  );
   assert.throws(() => clearCompilerCache(h.cwd), /Not a compiler-cache directory/);
   assert.equal(existsSync(join(outside, "marker")), true);
 });
@@ -144,10 +162,17 @@ for (const fail of ["never", "first", "always"]) {
       "#!/usr/bin/env node\nrequire('node:fs').writeFileSync('postbuilt','yes');",
       { mode: 0o755 }
     );
+    if (process.platform === "win32") {
+      writeFileSync(
+        join(h.cwd, "node_modules/.bin/tsx.cmd"),
+        "@node -e \"require('node:fs').writeFileSync('postbuilt','yes')\""
+      );
+    }
     const result = spawnSync("npm", ["run", "build"], {
       cwd: h.cwd,
       env: { ...process.env, RAILWAY_ENVIRONMENT_NAME: "test", FAIL: fail, DIAGNOSTIC: panic },
       encoding: "utf8",
+      shell: process.platform === "win32",
     });
     assert.equal(result.status, fail === "always" ? 7 : 0, result.stderr);
     assert.equal(h.attempts(), fail === "never" ? 1 : 2);
@@ -191,7 +216,7 @@ test("the CLI forwards caller-supplied Next build flags", async (t) => {
   const result = spawnSync(
     process.execPath,
     [
-      new URL("./build-with-cache-recovery.mjs", import.meta.url).pathname,
+      fileURLToPath(new URL("./build-with-cache-recovery.mjs", import.meta.url)),
       "--webpack",
       "--debug-prerender",
     ],
@@ -204,4 +229,87 @@ test("the CLI forwards caller-supplied Next build flags", async (t) => {
     "--debug-prerender",
   ]);
   assert.equal(h.marker("turbopack"), true);
+});
+
+test("failed output and both compile attempts survive cache recovery in a persistent log", async (t) => {
+  const h = fixture(t);
+  const result = await h.invoke({ FAIL: "first", DIAGNOSTIC: panic, RAILWAY_ENVIRONMENT_NAME: "" });
+  const log = readFileSync(result.logPath, "utf8");
+  assert.match(log, /range end index 123/);
+  assert.match(log, /build complete/);
+  assert.match(log, /"stage":"compile-1","event":"failed"/);
+  assert.match(log, /"stage":"cache-recovery","event":"success"/);
+  assert.match(log, /"stage":"compile-2","event":"success"/);
+  assert.match(log, /"stage":"build","event":"success"/);
+});
+
+test("log directory override retains failures and does not dump environment credentials", async (t) => {
+  const h = fixture(t);
+  const logDir = join(h.cwd, "host-logs");
+  const result = await h.invoke({
+    AHD_BUILD_LOG_DIR: logDir,
+    SENTRY_AUTH_TOKEN: "fixture-secret",
+    FAIL: "always",
+    DIAGNOSTIC: "compile failed",
+  });
+  assert.equal(result.code, 7);
+  assert.equal(result.logPath.startsWith(logDir), true);
+  const log = readFileSync(result.logPath, "utf8");
+  assert.match(log, /compile failed/);
+  assert.match(log, /"stage":"build","event":"failed"/);
+  assert.doesNotMatch(log, /fixture-secret/);
+});
+
+for (const pruneCode of [0, 9]) {
+  test(`image packaging records map cleanup and preserves prune exit ${pruneCode}`, async (t) => {
+    const h = fixture(t);
+    mkdirSync(join(h.cwd, ".next/server"));
+    writeFileSync(join(h.cwd, ".next/server/page.js.map"), "map");
+    writeFileSync(join(h.cwd, ".next/server/page.js"), "code");
+    const result = await h.invoke(
+      {},
+      {
+        packageImage: true,
+        pruneCommand: process.execPath,
+        pruneArgs: ["-e", `console.log('prune output'); process.exit(${pruneCode})`],
+      }
+    );
+    assert.equal(result.code, pruneCode);
+    assert.equal(existsSync(join(h.cwd, ".next/server/page.js.map")), false);
+    assert.equal(readFileSync(join(h.cwd, ".next/server/page.js"), "utf8"), "code");
+    const log = readFileSync(result.logPath, "utf8");
+    assert.match(log, /"stage":"remove-source-maps","event":"success"/);
+    assert.match(log, /prune output/);
+    assert.match(
+      log,
+      new RegExp(
+        `"stage":"prune-production-dependencies","event":"${pruneCode ? "failed" : "success"}"`
+      )
+    );
+    assert.match(log, new RegExp(`"stage":"build","event":"${pruneCode ? "failed" : "success"}"`));
+  });
+}
+
+test("failed compile never runs image packaging", async (t) => {
+  const h = fixture(t);
+  const result = await h.invoke(
+    { FAIL: "always", DIAGNOSTIC: "compile failed" },
+    { packageImage: true }
+  );
+  assert.equal(result.code, 7);
+  assert.doesNotMatch(
+    readFileSync(result.logPath, "utf8"),
+    /remove-source-maps|prune-production-dependencies/
+  );
+});
+
+test("map cleanup errors identify the failed stage and stop before pruning", async (t) => {
+  const h = fixture(t);
+  const logDir = join(h.cwd, "host-logs");
+  rmSync(join(h.cwd, ".next"), { recursive: true });
+  await assert.rejects(h.invoke({ AHD_BUILD_LOG_DIR: logDir }, { packageImage: true }), /ENOENT/);
+  const log = readFileSync(join(logDir, readdirSync(logDir)[0]), "utf8");
+  assert.match(log, /"stage":"remove-source-maps","event":"failed","code":"ENOENT"/);
+  assert.match(log, /"stage":"build","event":"failed"/);
+  assert.doesNotMatch(log, /prune-production-dependencies/);
 });

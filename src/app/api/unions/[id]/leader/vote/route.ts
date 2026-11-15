@@ -31,6 +31,15 @@ import {
   tallyUnionLeaderVotes,
 } from "@/lib/unions/unionLeadershipVote";
 import { resolveUnionOwner } from "@/lib/unions/unionOwnerDisplay";
+import { isSameCountry } from "@/lib/api/sameCountry";
+import { isUnionsBanned } from "@/lib/labour/unionLaws";
+import { isUnionProsecutionBarred } from "@/lib/unions/unionProsecutionBar";
+import type { CountryId } from "@/lib/constants/countries";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { unionsCollection } from "@/lib/db/repositories/unions";
+import { unionLeaderVotesCollection } from "@/lib/db/repositories/unionLeaderVotes";
+import { unionOrganizersCollection } from "@/lib/db/repositories/unionOrganizers";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -53,18 +62,17 @@ async function handleGET(_request: Request, { params }: RouteParams) {
 
     const db = await getDb();
     const unionObjectId = new ObjectId(id);
-    const union = await db.collection<Union>("unions").findOne({ _id: unionObjectId });
+    const union = await unionsCollection(db).findOne({ _id: unionObjectId });
     if (!union) {
       return errorResponse(404, "Union not found");
     }
 
     const [votesRaw, organizerDocs, user, weights, leader] = await Promise.all([
-      db.collection<UnionLeaderVote>("unionLeaderVotes").find({ unionId: unionObjectId }).toArray(),
+      unionLeaderVotesCollection(db).find({ unionId: unionObjectId }).toArray(),
       // The full roster, not just a count. Legacy organizers carry no `strength`
       // field and are dropped from the weight map, but they still belong on the
       // membership list, so read the documents rather than reusing the map.
-      db
-        .collection<UnionOrganizer>("unionOrganizers")
+      unionOrganizersCollection(db)
         .find(
           { unionId: unionObjectId },
           { projection: { characterId: 1, strength: 1, organizeCount: 1 } }
@@ -113,24 +121,33 @@ async function handleGET(_request: Request, { params }: RouteParams) {
     let myVotingPower = 0;
     if (user?.character) {
       myVotingPower = weights.get(user.character._id.toString()) ?? 0;
-      canVote = myVotingPower > 0 && isUnionLeadershipElectionOpen(union);
+      // Same refusals the vote command applies, so the ballot is never live
+      // for a voter every click would be refused for.
+      canVote =
+        myVotingPower > 0 &&
+        isUnionLeadershipElectionOpen(union) &&
+        isSameCountry(user.character, { countryId: union.countryId as CountryId }) &&
+        !(await isUnionsBanned(db, union.countryId as CountryId)) &&
+        !(await isUnionProsecutionBarred(db, user.character._id));
       const myVoteDoc = votes.find(
         (v) => v.voterCharacterId.toString() === user.character!._id.toString()
       );
       myVote = myVoteDoc?.candidateCharacterId.toString() ?? null;
     }
 
-    const candidateCountryFilter: Filter<Character> =
-      union.countryId === "US"
-        ? { $or: [{ countryId: "US" as const }, { countryId: { $exists: false } }] }
-        : { countryId: union.countryId };
+    const candidateCountryFilter: Filter<Character> = countryHasFeature("usApi", union.countryId)
+      ? { $or: [{ countryId: "US" as const }, { countryId: { $exists: false } }] }
+      : { countryId: union.countryId };
+    // The vote command accepts a seated president even after they moved away,
+    // so reaffirming them must stay possible from the ballot.
     const candidates = canVote
-      ? await db
-          .collection<Character>("characters")
+      ? await charactersCollection(db)
           .find(
             {
               $and: [
-                candidateCountryFilter,
+                incumbentId && ObjectId.isValid(incumbentId)
+                  ? { $or: [candidateCountryFilter, { _id: new ObjectId(incumbentId) }] }
+                  : candidateCountryFilter,
                 {
                   $or: [
                     { unionLeaderOf: null },
@@ -147,9 +164,7 @@ async function handleGET(_request: Request, { params }: RouteParams) {
           .toArray()
       : [];
 
-    // Roster with influence. Organizing was previously a black box: the page
-    // showed a headcount and your own weight, so you could not tell who else
-    // held sway in the union or how far behind you were.
+    // Roster with influence: shows who else holds sway in the union and how far behind you are.
     const totalBankedStrength = organizerDocs.reduce(
       (sum, organizer) => sum + Math.max(0, organizer.strength ?? 0),
       0
@@ -246,7 +261,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       return errorResponse(404, "Character not found");
     }
 
-    const union = await db.collection<Union>("unions").findOne({ _id: new ObjectId(id) });
+    const union = await unionsCollection(db).findOne({ _id: new ObjectId(id) });
     if (!union) {
       return errorResponse(404, "Union not found");
     }

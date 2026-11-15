@@ -1,38 +1,24 @@
 /**
- * Unified reset + bootstrap orchestrator — single entry point for fresh-world
- * setup. Called by:
+ * Unified reset + bootstrap orchestrator - single entry point for fresh-world setup.
+ * Used by CLI (`reset-and-bootstrap.ts`, `bootstrap-full.ts`) and the admin reset API.
  *
- *  - CLI: `scripts/reset-and-bootstrap.ts` (existing world)
- *  - CLI: `scripts/bootstrap-full.ts` (empty database, via runBootstrap helper)
- *  - Admin API: `src/app/api/admin/reset/route.ts`
+ * Pins the canonical sequence so every entry point produces equivalent worlds given the
+ * same options (CLI and admin previously diverged on `resetReference`).
  *
- * Before this orchestrator existed, the CLI and admin paths each composed
- * `resetGameWorld` + `bootstrapGameWorld` with slightly different defaults —
- * notably `resetReference` was false on CLI and true in admin, so the two
- * produced subtly different "fresh worlds". This function pins the canonical
- * sequence so every entry point is equivalent given the same options.
+ * Sequence - teardown, build, finalize. Each phase owns one job; no phase seeds what
+ * another already seeds.
  *
- * Sequence — teardown, build, finalize. Each phase owns one job and no phase
- * seeds what another already seeds; that separation is the point, because the
- * three used to overlap and the world was seeded twice per reset.
- *
- *   0. Seal — maintenance mode + `isActive: false`, BEFORE anything is deleted.
- *   1. resetGameWorld — wipes runtime collections, retires/deletes characters,
- *      stamps the new clock. Seeds nothing.
- *   2. bootstrapGameWorld — seeds the entire world, initializes gameState,
- *      spawns starting elections + officials (or stops at seed-only).
- *   2b. finalizeResetGameWorld — the cleanup steps that need a seeded world:
- *      default-party top-up, party/charter/statePartyOrg cleanup, demographics
- *      reset, orphan region-row purge, IMF placeholder, adminLog.
- *   3. If `seedOnly: true`, run seedHistoricalOfficials *after* the seeders so
- *      party sequentialIds match — bootstrap's own historical seed only fires
- *      on the non-seedOnly path.
- *   4. runSeedDiagnostic (conformance) while sealed, then re-assert the seal.
- *      When conformance has no criticals, captureSeedBaseline snapshots macros.
+ *   0. Seal - maintenance mode + `isActive: false`, BEFORE any deletion.
+ *   1. resetGameWorld - wipes runtime collections, retires/deletes characters, stamps clock.
+ *   2. bootstrapGameWorld - seeds the world, inits gameState, spawns elections + officials
+ *      (or stops at seed-only).
+ *   2b. finalizeResetGameWorld - cleanup requiring a seeded world: default-party top-up,
+ *      party cleanup, demographics reset, orphan purges, IMF placeholder, adminLog.
+ *   3. If `seedOnly`, run seedHistoricalOfficials AFTER seeders so sequentialIds match.
+ *   4. runSeedDiagnostic while sealed, re-assert seal; captureSeedBaseline on success.
  *      Diagnostic failure never aborts the reset.
  *
- * See `docs/reset-and-seed-contract.md` and `seedManifest.ts` for the
- * companion classification of which collections each phase touches.
+ * See `seedManifest.ts` for per-phase collection map.
  */
 
 import {
@@ -62,12 +48,20 @@ import {
   resetSelectionPreflight,
   resetSystemSelectionsFrom,
 } from "@/lib/resetVersions/rules";
-import { getValidatedEnv } from "@/lib/env";
-import { assertResetDatabaseMatchesApplication } from "@/lib/admin/resetPreflight";
+import { getValidatedEnv } from "@/lib/config/validatedEnv";
+import {
+  assertResetDatabaseMatchesApplication,
+  assertSeedContractForReset,
+} from "@/lib/admin/resetPreflight";
 import { resetPoliticalMetricsRuntimeState } from "@/lib/admin/seed/resetPoliticalMetricsRuntimeState";
 import { resetMacroMetricsRuntimeState } from "@/lib/admin/seed/resetMacroMetricsRuntimeState";
 import { resetStateRuntimeFields } from "@/lib/admin/seed/resetStateRuntimeFields";
 import { clearReferenceForRebuild } from "@/lib/admin/seed/referenceRebuildClear";
+import { runResidueScan } from "@/lib/admin/resetContract/residueScan";
+import { formatResidueViolation } from "@/lib/admin/resetContract/rules/residueScan";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { seedDiagnosticsCollection } from "@/lib/db/repositories/seedDiagnostics";
+import type { Document } from "mongodb";
 
 export interface ResetAndBootstrapOptions {
   /** 1991 only: leave political offices vacant for player-created parties. */
@@ -104,16 +98,11 @@ export interface ResetAndBootstrapOptions {
   /**
    * Start the world in a live pre-iteration "founding" phase: chambers seed
    * VACANT and a cycle-0 founding election seats every political nation before
-   * the real game begins (date pinned to the era start meanwhile). Threaded to
-   * `resetGameWorld` (state stamp + priors seed) and `bootstrapGameWorld`
-   * (priors seed, the founding spawn sweep, and skipping the JP Sangiin inline
-   * bootstrap).
+   * the real game begins (date pinned to era start meanwhile).
    *
-   * LEAVE UNSET to get the preset's intended default
-   * (`presetDefaultsToFoundingPhase` — 1953/1979, and 1991 when partyless). Pass an
-   * explicit boolean to force it on or off. Forced ON is still ignored for
-   * `seedOnly` / `mode: "vacant"` runs, which never spawn the founding races
-   * and so would pin the calendar to the era start forever.
+   * Leave unset to get the preset's default. Explicit boolean forces it on or
+   * off; forced ON is ignored for `seedOnly` / `mode: "vacant"` runs, which
+   * never spawn founding races and would pin the calendar to era start forever.
    */
   preIteration?: boolean;
   /** Skip the operator conformance audit for isolated local player worlds. */
@@ -132,6 +121,8 @@ export interface ResetSeedReadiness {
   status: "healthy" | "blocked" | "not-checked";
   criticalChecks: SeedDiagnosticCheck[];
   baselineCaptured: boolean;
+  /** Old-world state the post-reset residue scan found; the world stays paused. */
+  residueViolations: string[];
   error?: string;
 }
 
@@ -220,9 +211,12 @@ export async function resetAndBootstrapGameWorld(
     );
   }
 
+  // A preset with missing, copied or out-of-scale seed data never starts.
+  assertSeedContractForReset(preset);
+
   // Reject a staged but unsupported v2 reset before the seal changes the
   // running world. A failed preflight must leave v1 playable.
-  const selectedState = await db.collection<GameState>("gameState").findOne(
+  const selectedState = await gameStateCollection(db).findOne(
     { _id: "current" },
     {
       projection: {
@@ -245,13 +239,10 @@ export async function resetAndBootstrapGameWorld(
 
   // 0) Seal the world BEFORE anything is destroyed.
   //
-  //    Both halves of this used to happen far too late. `enableMaintenanceMode`
-  //    was step 4 — after reset AND bootstrap had both finished — and
-  //    `isActive: false` was not written until resetGameWorld's final gameState
-  //    update, roughly 150s into a 415s reset. So the 208-collection runtime
-  //    wipe and the entire first country-seed pass ran against a world the turn
-  //    cron still considered active (`cron.ts` gates on `isActive` alone) and
-  //    that players could still load pages on.
+  //    Both maintenance mode and `isActive: false` must land before the runtime
+  //    wipe and the first country-seed pass; otherwise they run against a world
+  //    the turn cron still considers active (`cron.ts` gates on `isActive`
+  //    alone) and that players can still load pages on.
   //
   //    ⚠️ Maintenance mode gates PAGE routes only — `src/proxy.ts` returns early
   //    for `/api/*`, so this stops players reaching the UI, not the API. The
@@ -270,18 +261,18 @@ export async function resetAndBootstrapGameWorld(
   //    existing doc untouched — so the world would run forever on a gameState
   //    with no currentTurn, preset, or startingYear. A database with no
   //    gameState has no turn cron to stop anyway.
-  await db
-    .collection<GameState>("gameState")
-    .updateOne({ _id: "current" }, { $set: { isActive: false, updatedAt: new Date() } });
+  await gameStateCollection(db).updateOne(
+    { _id: "current" },
+    { $set: { isActive: false, updatedAt: new Date() } }
+  );
   collect("World sealed for reset — maintenance mode on, turn processing stopped");
 
   // 0b) Open the run's audit row NOW, before anything is destroyed.
   //
-  //     This row used to be written in finalize, so a run that died in teardown
-  //     or build left the world sealed and half-built with nothing recorded —
-  //     the admin's live SSE log was the only evidence, and it dies with the
-  //     browser tab. `adminLogs` is manifest category `preserved`, so the row
-  //     survives the teardown it is recording.
+  //     Written up front so a run that dies in teardown or build still leaves
+  //     a record; the live SSE log dies with the browser tab. `adminLogs` is
+  //     manifest category `preserved`, so the row survives the teardown it is
+  //     recording.
   const run = createResetRunRecord(collect);
   let phaseReached = "seal";
   let aborted = false;
@@ -289,24 +280,23 @@ export async function resetAndBootstrapGameWorld(
     status: "not-checked",
     criticalChecks: [],
     baselineCaptured: false,
+    residueViolations: [],
   };
+  // Every document a reset keeps must predate this; every one it writes cannot.
+  const resetStartedAt = new Date();
   let finalized: Awaited<ReturnType<typeof finalizeResetGameWorld>> | null = null;
   const recordRunLog = options.recordRunLog !== false;
   if (recordRunLog) await openResetRunLog(db, run, { preset, mode, adminUsername });
 
   try {
     // 1) TEARDOWN. Wipes runtime state, retires or deletes characters, stamps the
-    //    new clock. It does NOT seed: it used to call `seedAllCountryData` itself
-    //    and step 2 then seeded the identical world a second time, measured at
-    //    exactly 2.00x the write count on every collection that call touches.
+    //    new clock. Does NOT seed; step 2 seeds.
     //
-    //    We never seed historical officials here either — the bootstrap seeders
-    //    re-create the default parties, so officials must follow them for party
-    //    sequentialIds to line up.
+    //    Never seed historical officials here: the bootstrap seeders re-create
+    //    default parties, so officials must follow for party sequentialIds to
+    //    line up.
     //
-    //    `log` matters more than it looks: this phase used to run silently, so the
-    //    SSE stream showed nothing until step 2 began. Its lines arrive tagged
-    //    `[reset]` (see ResetGameWorldOptions.log).
+    //    `log` matters: its lines arrive tagged `[reset]` for the SSE stream.
     phaseReached = "teardown";
     const reset = await resetGameWorld(db, {
       deleteProfiles,
@@ -367,17 +357,12 @@ export async function resetAndBootstrapGameWorld(
       run,
     });
 
-    // 2b) FINALIZE. The steps that need a fully-seeded world: default-party
-    //     top-up, the party / charter / statePartyOrg cleanup, the demographics
-    //     reset, the orphan region-row purge, the IMF placeholder, and the
-    //     adminLog row. These used to live inside `resetGameWorld`, which is why
-    //     it had to seed the world first. Two of them were being silently
-    //     discarded there by bootstrap's own drops; their counts are honest for
-    //     the first time here, so they are merged back into `reset.details` and
-    //     the response shape is unchanged.
-    //
-    //     CONTAINED: a finalize failure leaves a seeded world, so it degrades the
-    //     run to `partial` rather than throwing away a build that succeeded.
+    // 2b) FINALIZE. Steps that need a fully-seeded world: default-party top-up,
+    // party/charter/statePartyOrg cleanup, demographics reset, orphan region purge,
+    // IMF placeholder, adminLog row. Counts merge into reset.details for an
+    // unchanged response shape.
+    // CONTAINED: a finalize failure leaves a seeded world, so the run degrades to
+    // `partial` rather than discarding a successful build.
     phaseReached = "finalize";
     finalized = await run.step("finalize", "finalizeResetGameWorld", () =>
       finalizeResetGameWorld(db, {
@@ -432,12 +417,10 @@ export async function resetAndBootstrapGameWorld(
       if (run.status(false) !== "succeeded") {
         throw new Error("Cannot certify metrics v2 after a partial reset");
       }
-      const freshState = await db
-        .collection<GameState>("gameState")
-        .findOne(
-          { _id: "current" },
-          { projection: { resetWorldId: 1, currentTurn: 1, metricsSystemVersion: 1 } }
-        );
+      const freshState = await gameStateCollection(db).findOne(
+        { _id: "current" },
+        { projection: { resetWorldId: 1, currentTurn: 1, metricsSystemVersion: 1 } }
+      );
       if (
         freshState?.metricsSystemVersion !== "v2" ||
         typeof freshState.resetWorldId !== "string" ||
@@ -452,7 +435,7 @@ export async function resetAndBootstrapGameWorld(
         freshState.resetWorldId,
         freshState.currentTurn
       );
-      const stamped = await db.collection<GameState>("gameState").updateOne(
+      const stamped = await gameStateCollection(db).updateOne(
         {
           _id: "current",
           resetWorldId: freshState.resetWorldId,
@@ -471,7 +454,7 @@ export async function resetAndBootstrapGameWorld(
       if (run.status(false) !== "succeeded") {
         throw new Error("Cannot certify legislation v2 after a partial reset");
       }
-      const freshState = await db.collection<GameState>("gameState").findOne(
+      const freshState = await gameStateCollection(db).findOne(
         { _id: "current" },
         {
           projection: {
@@ -499,7 +482,7 @@ export async function resetAndBootstrapGameWorld(
         freshState.resetWorldId,
         freshState.currentTurn
       );
-      const stamped = await db.collection<GameState>("gameState").updateOne(
+      const stamped = await gameStateCollection(db).updateOne(
         {
           _id: "current",
           resetWorldId: freshState.resetWorldId,
@@ -518,7 +501,7 @@ export async function resetAndBootstrapGameWorld(
       if (run.status(false) !== "succeeded") {
         throw new Error("Cannot certify Cabinet v2 after a partial reset");
       }
-      const freshState = await db.collection<GameState>("gameState").findOne(
+      const freshState = await gameStateCollection(db).findOne(
         { _id: "current" },
         {
           projection: {
@@ -547,7 +530,7 @@ export async function resetAndBootstrapGameWorld(
         freshState.resetWorldId,
         freshState.currentTurn
       );
-      const stamped = await db.collection<GameState>("gameState").updateOne(
+      const stamped = await gameStateCollection(db).updateOne(
         {
           _id: "current",
           resetWorldId: freshState.resetWorldId,
@@ -566,7 +549,7 @@ export async function resetAndBootstrapGameWorld(
       if (run.status(false) !== "succeeded") {
         throw new Error("Cannot certify demographics v2 after a partial reset");
       }
-      const freshState = await db.collection<GameState>("gameState").findOne(
+      const freshState = await gameStateCollection(db).findOne(
         { _id: "current" },
         {
           projection: {
@@ -590,7 +573,7 @@ export async function resetAndBootstrapGameWorld(
         freshState.resetWorldId,
         freshState.currentTurn
       );
-      const stamped = await db.collection<GameState>("gameState").updateOne(
+      const stamped = await gameStateCollection(db).updateOne(
         {
           _id: "current",
           resetWorldId: freshState.resetWorldId,
@@ -617,6 +600,33 @@ export async function resetAndBootstrapGameWorld(
             `${Object.keys(candidates.byCountry).length} player countries`
         );
       }
+    }
+
+    // Residue scan, before the world can run a turn and before any baseline is
+    // captured. A violation keeps the run partial and the turn system refuses to
+    // start until a clean reset replaces gameConfig.lastReset.
+    phaseReached = "residue scan";
+    try {
+      const violations = await runResidueScan(db, {
+        resetStartedAt,
+        expectedTurn: reset.world?.currentTurn ?? 1,
+        resetWorldId: reset.world?.resetWorldId ?? null,
+        referenceReplaced: resetReference,
+      });
+      for (const violation of violations) {
+        const line = formatResidueViolation(violation);
+        readiness.residueViolations.push(line);
+        run.recordFailure("residue", violation.check, line);
+      }
+      collect(
+        violations.length === 0
+          ? "Residue scan: nothing from the previous world remains"
+          : `Residue scan: ${violations.length} violation(s); the world stays paused`
+      );
+    } catch (err) {
+      const line = `residue scan failed: ${err instanceof Error ? err.message : String(err)}`;
+      readiness.residueViolations.push(line);
+      run.recordFailure("residue", "residueScan", line);
     }
 
     // 4) Seal the freshly-reset world behind maintenance mode, then run the
@@ -687,7 +697,7 @@ export async function resetAndBootstrapGameWorld(
             preset,
             trigger: "post-reset",
           });
-          await db.collection("seedDiagnostics").insertOne(errorReport as never);
+          await seedDiagnosticsCollection<Document>(db).insertOne(errorReport as never);
         } catch {
           // Persistence of the error report is best-effort.
         }
@@ -724,6 +734,7 @@ export async function resetAndBootstrapGameWorld(
         logs,
         deleteProfiles,
         adminUsername,
+        residueViolations: readiness.residueViolations.length,
       });
   }
 }

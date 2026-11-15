@@ -6,9 +6,11 @@ import {
 } from "@/lib/campaigns/campaignCurrency";
 import { isCampaignEligibleElection } from "@/lib/campaigns/isCampaignEligible";
 import { getGameStatePresetOrDefault } from "@/lib/db/collections/gameState";
-import type { Campaign, CampaignFieldOffice, Election } from "@/lib/db/types";
-import { FIELD_OFFICES_COLLECTION } from "./commands";
+import type { Campaign, CampaignFieldOffice } from "@/lib/db/types";
 import { getFieldOfficeCostAnchor, getFieldOfficeRules } from "./rules";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
+import { campaignFieldOfficesCollection } from "@/lib/db/repositories/campaignFieldOffices";
 
 export interface FieldOfficeUpkeepResult {
   campaignsCharged: number;
@@ -17,17 +19,10 @@ export interface FieldOfficeUpkeepResult {
 }
 
 /**
- * Per-turn field-office upkeep. Runs right after the campaign turn so this
- * turn's income is already in the treasury.
- *
- * - Offices whose campaign is gone, archived, or whose race is no longer
- *   active are swept. Campaign deletion happens in half a dozen resolution
- *   paths; sweeping here keeps every one of them correct without touching
- *   them.
- * - A campaign that cannot pay closes its newest offices first (the ones that
- *   have done the least work) until the rest are affordable.
- * - `fieldOfficeCount` is rewritten from the surviving rows, so any drift from
- *   a crashed open/close heals within a turn.
+ * Per-turn field-office upkeep, run after the campaign turn so income is in.
+ * Sweeps offices whose campaign is gone or race inactive; closes newest
+ * offices first when a campaign cannot pay; rewrites fieldOfficeCount from
+ * surviving rows to heal any drift.
  */
 export async function processFieldOfficeUpkeep(db: Db): Promise<FieldOfficeUpkeepResult> {
   const result: FieldOfficeUpkeepResult = {
@@ -35,7 +30,7 @@ export async function processFieldOfficeUpkeep(db: Db): Promise<FieldOfficeUpkee
     officesClosedInsolvent: 0,
     officesSwept: 0,
   };
-  const officesCol = db.collection<CampaignFieldOffice>(FIELD_OFFICES_COLLECTION);
+  const officesCol = campaignFieldOfficesCollection<CampaignFieldOffice>(db);
   const offices = await officesCol
     .find({}, { projection: { campaignId: 1, electionId: 1, openedTurn: 1, createdAt: 1 } })
     .toArray();
@@ -48,12 +43,10 @@ export async function processFieldOfficeUpkeep(db: Db): Promise<FieldOfficeUpkee
     ...new Map(offices.map((o) => [o.electionId.toString(), o.electionId])).values(),
   ];
   const [campaigns, elections, rates, priceLevel, preset] = await Promise.all([
-    db
-      .collection<Campaign>("campaigns")
+    campaignsCollection(db)
       .find({ _id: { $in: campaignIds } }, { projection: { funds: 1, status: 1 } })
       .toArray(),
-    db
-      .collection<Election>("elections")
+    electionsCollection(db)
       .find(
         { _id: { $in: electionIds } },
         { projection: { status: 1, countryId: 1, electionType: 1, russianPresidentialRound: 1 } }
@@ -133,7 +126,7 @@ export async function processFieldOfficeUpkeep(db: Db): Promise<FieldOfficeUpkee
 
   if (close.length > 0) await officesCol.deleteMany({ _id: { $in: close } });
   if (campaignOps.length > 0) {
-    await db.collection<Campaign>("campaigns").bulkWrite(campaignOps, { ordered: false });
+    await campaignsCollection(db).bulkWrite(campaignOps, { ordered: false });
   }
   return result;
 }

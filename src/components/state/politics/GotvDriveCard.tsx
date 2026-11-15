@@ -4,19 +4,9 @@ import Link from "next/link";
 import { regionPartyUrl } from "@/lib/urls";
 
 /**
- * Read-only summary of the viewer-party's GOTV budget for this state.
- *
- * Phase 2 surfaces the *current* percentage; mutation lives canonically
- * on the State Party page (`/country/[code]/region/[id]/party/[partyId]`).
- * Per Phase 2 D2, Phase 2 deep-links to that page rather than duplicating
- * the budget form.
- *
- * Renders an "Adjust on State Party page" CTA when the viewer is a member
- * of a party with a state-party row here; renders nothing else if they're
- * unaffiliated or have no row in this state (the card hides per the
- * orchestrator's render guard).
- *
- * See plan §"Phase 2 — Task 2.1" + Phase 2 D2.
+ * Read-only summary of the viewer party's GOTV budget for this state.
+ * Mutation lives on the State Party page; this card deep-links there instead
+ * of duplicating the budget form.
  */
 export function GotvDriveCard({
   countryCode,

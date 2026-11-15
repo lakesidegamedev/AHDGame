@@ -7,6 +7,7 @@ import { withNoStore } from "@/lib/api/withNoStore";
 import type { GameState } from "@/lib/db/types";
 import { getDb } from "@/lib/mongodb";
 import { loadSingleplayerGuide } from "@/lib/singleplayerGuideServer";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export const dynamic = "force-dynamic";
 
@@ -50,7 +51,7 @@ export async function POST(request: Request) {
         : "singleplayerConfig.guide.inboxOpenedAt";
     const db = await getDb();
     // Set once: a repeat visit must not move the original timestamp.
-    await db.collection<GameState>("gameState").updateOne(
+    await gameStateCollection(db).updateOne(
       {
         _id: "current",
         "singleplayerConfig.guide": { $exists: true },

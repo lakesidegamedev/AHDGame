@@ -3,6 +3,9 @@ import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
 import { finalizeResetGameWorld } from "@/lib/admin/finalizeResetGameWorld";
 import type { ResetGameWorldResult } from "@/lib/admin/resetGameWorld";
 import { getPresetById } from "@/lib/constants/historicalSeats";
+import { jpRegions1991 } from "@/lib/countries/jp/data/jpRegions1991";
+import { censusCachedStateLean } from "@/lib/demographics/cachedStateLean";
+import type { CensusGroupView } from "@/lib/db/types";
 
 /**
  * These behaviours used to live in `resetGameWorld` and are tested here because
@@ -79,31 +82,25 @@ describe("finalizeResetGameWorld", () => {
   });
 
   it("fills missing region caches after restoring the new world's demographic defaults", async () => {
+    const regionId = jpRegions1991[0]._id;
     const demo = {
-      _id: "JP_TEST",
+      _id: regionId,
       countryId: "JP",
       categoryWeights: { jp: 100 },
-      groups: { voters: { population: 100, turnout: 60, economicLean: -2, socialLean: 3 } },
-    };
-    for (const name of [
-      "demographicDefaults",
-      "stateDemographics",
-      "states",
-      "demographicCategories",
-    ])
-      db.collection(name);
+      groups: {},
+    } as unknown as CensusGroupView;
+    const expected = censusCachedStateLean(demo, {
+      countryId: "JP",
+      stateId: regionId,
+      preset: "1991-default",
+    });
+    expect(expected).not.toBeNull();
+    for (const name of ["demographicDefaults", "stateDemographics", "states"]) db.collection(name);
     db.collectionMocks.demographicDefaults.find().toArray.mockResolvedValue([demo]);
     db.collectionMocks.stateDemographics.find().toArray.mockResolvedValue([demo]);
     db.collectionMocks.states
       .find()
-      .toArray.mockResolvedValue([{ _id: "JP_TEST", countryId: "JP" }]);
-    db.collectionMocks.demographicCategories.find().toArray.mockResolvedValue([
-      {
-        _id: "jp",
-        groups: [{ id: "voters", defaultEconomicLean: -2, defaultSocialLean: 3 }],
-        defaultWeight: 100,
-      },
-    ]);
+      .toArray.mockResolvedValue([{ _id: regionId, countryId: "JP" }]);
     const result = await finalizeResetGameWorld(db as never, {
       preset: "1991-default",
       teardown: TEARDOWN,
@@ -114,11 +111,11 @@ describe("finalizeResetGameWorld", () => {
       [
         {
           updateOne: {
-            filter: { _id: "JP_TEST", countryId: "JP" },
+            filter: { _id: regionId, countryId: "JP" },
             update: {
               $set: {
-                cachedEconomicLean: -2,
-                cachedSocialLean: 3,
+                cachedEconomicLean: expected!.economicLean,
+                cachedSocialLean: expected!.socialLean,
                 demographicsLastUpdated: expect.any(Date),
               },
             },
@@ -131,7 +128,7 @@ describe("finalizeResetGameWorld", () => {
       db.collectionMocks.states.bulkWrite.mock.invocationCallOrder[0]
     );
     expect(result.finalizeLog).toContain(
-      "Regional leans: 1 filled; 0 missing demographics; 0 missing weighted categories"
+      "Regional leans: 1 filled; 0 missing demographics; 0 with no census electorate"
     );
   });
 

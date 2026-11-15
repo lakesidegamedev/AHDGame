@@ -2,12 +2,14 @@ import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError } from "@/lib/api/errors";
-import type { ElectedOfficial, Character } from "@/lib/db/types";
+import type { ElectedOfficial } from "@/lib/db/types";
 import {
   getPMAppointmentVotesCollection,
   getNoConfidenceVotesCollection,
 } from "@/lib/db/collections/governmentFormation";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 /**
  * GET /api/admin/heal/confidence-votes
@@ -30,16 +32,14 @@ export async function GET() {
     for (const vote of activeAppointments) {
       const countryConfig = COUNTRY_CONFIGS[vote.countryId as CountryId];
       const lowerChamberKey = countryConfig?.legislature.lowerChamber.key ?? "commons";
-      const allMPs = await db
-        .collection<ElectedOfficial>("electedOfficials")
+      const allMPs = await electedOfficialsCollection(db)
         .find({ officeType: lowerChamberKey, countryId: vote.countryId })
         .toArray();
 
       const mpCharIds = allMPs
         .map((m) => m.characterId)
         .filter((id): id is import("mongodb").ObjectId => id != null);
-      const playerChars = await db
-        .collection<Character>("characters")
+      const playerChars = await charactersCollection(db)
         .find({ _id: { $in: mpCharIds }, userId: { $exists: true } })
         .project<{ _id: import("mongodb").ObjectId }>({ _id: 1 })
         .toArray();
@@ -118,8 +118,7 @@ export async function POST() {
     for (const vote of activeVotes) {
       const countryConfig = COUNTRY_CONFIGS[vote.countryId as CountryId];
       const lowerChamberKey = countryConfig?.legislature.lowerChamber.key ?? "commons";
-      const allMPs = await db
-        .collection<ElectedOfficial>("electedOfficials")
+      const allMPs = await electedOfficialsCollection(db)
         .find({ officeType: lowerChamberKey, countryId: vote.countryId, isNPP: true })
         .toArray();
 

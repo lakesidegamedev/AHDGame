@@ -3,13 +3,14 @@ import { scaleDeep } from "../docScale";
 /** Split amounts, keep rates and settlement dates, and rebind current program identities. */
 export function splitRegionalFinance(
   source: Record<string, unknown>,
-  countryId: string,
+  from: { countryId: string; fromCountryId: string; regionId: string },
   regionId: string,
   weight: number
 ): Record<string, unknown> {
   const settlements = source.programSettlements as
     Record<string, Record<string, unknown>> | undefined;
-  const rekey = (id: string) => id.replace(`:UK:${countryId}:`, `:${countryId}:${regionId}:`);
+  const rekey = (id: string) =>
+    id.replace(`:${from.fromCountryId}:${from.regionId}:`, `:${from.countryId}:${regionId}:`);
   return {
     ...(source.stateId !== undefined ? { stateId: regionId } : {}),
     ...(source.regionId !== undefined ? { regionId } : {}),

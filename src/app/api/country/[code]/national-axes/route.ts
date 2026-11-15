@@ -10,6 +10,7 @@ import {
   assembleNationalPolicyRecords,
   nationalLawCountryQuery,
 } from "@/lib/policy/nationalPolicyRecords";
+import { enactedLawsCollection } from "@/lib/db/repositories/enactedLaws";
 
 // GET /api/country/[code]/national-axes - National Ideology axes (equal-weight
 // average over implemented national laws), the 5 most recent axis movers, and
@@ -30,8 +31,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
 
     // Replay enacted-law history (oldest first) for the movers feed and the
     // drift sparkline. Coverage is "since first recorded law" — see axesTimeline.
-    const laws = await db
-      .collection<EnactedLaw>("enactedLaws")
+    const laws = await enactedLawsCollection(db)
       .find({
         scope: "national",
         ...nationalLawCountryQuery(countryId),

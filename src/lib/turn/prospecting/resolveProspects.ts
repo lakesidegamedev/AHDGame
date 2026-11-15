@@ -25,6 +25,8 @@ import {
   PROSPECT_FINDER_RIGHTS_TERM_TURNS,
   PROSPECT_FINDER_RIGHTS_GRANTOR,
 } from "@/lib/constants/prospecting";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { governmentTendersCollection } from "@/lib/db/repositories/governmentTenders";
 
 export interface ResolveProspectsResult {
   surveysResolved: number;
@@ -40,22 +42,21 @@ const MIN_FINDER_SHARE = 0.001;
 /** Factory that turns a seed string into a deterministic [0,1) stream. */
 type RngFactory = (seed: string) => () => number;
 
-/**
+/*
  * Resolve every active prospecting survey whose `completesTurn <= turn`.
  *
- * Determinism: each survey draws from its own seeded stream keyed on the survey
- * id + turn, so resolution order and neighbouring surveys never affect the
- * outcome (replay-safe, matches the "never Math.random in turn paths" rule).
- * Tests inject `rngFactory` to force a success/failure.
+ * Determinism: each survey draws from its own seeded stream keyed on the
+ * survey id + turn, so resolution order and neighbouring surveys never affect
+ * the outcome (replay-safe; Math.random is banned in turn paths). Tests inject
+ * `rngFactory` to force a success/failure.
  *
  * Success grows the state's per-resource capacity by
- * currentCap × uniform(0.03,0.08) × rdMult, hard-capped at 20% of current
- * capacity. Capacity docs are NEVER created here: if the cap doc or the
- * resource entry has vanished (or is 0), the survey still resolves but adds
- * nothing (fail-safe), consistent with the rdInnovation convention.
+ * currentCap x uniform(0.03,0.08) x rdMult, hard-capped at 20% of current
+ * capacity. Capacity docs are NEVER created here: if the cap doc or resource
+ * entry is missing or 0, the survey resolves but adds nothing (fail-safe),
+ * matching the rdInnovation convention.
  *
- * Emits notifications only; the survey cost was charged at launch, so this phase
- * emits nothing financial.
+ * Emits notifications only; survey cost was charged at launch.
  */
 export async function resolveProspects(
   db: Db,
@@ -98,8 +99,7 @@ export async function resolveProspects(
     .map((s) => s.corporationId as ObjectId);
   const corpById = new Map<string, Corporation>();
   if (corpIds.length > 0) {
-    const corps = await db
-      .collection<Corporation>("corporations")
+    const corps = await corporationsCollection(db)
       .find({ _id: { $in: corpIds } }, { projection: { userId: 1, name: 1 } })
       .toArray();
     for (const c of corps) corpById.set(c._id.toString(), c);
@@ -152,7 +152,7 @@ export async function resolveProspects(
 
     surveyBulk.push({
       updateOne: {
-        filter: { _id: survey._id },
+        filter: { _id: survey._id, status: "active" },
         update: {
           $set: {
             status: success ? "succeeded" : "failed",
@@ -182,6 +182,11 @@ export async function resolveProspects(
     }
   }
 
+  // Close the surveys before granting anything. A failure after this point
+  // loses at most this turn's gains; the other order re-rolls the same surveys
+  // next turn and grants capacity again on every retry.
+  if (surveyBulk.length > 0) await surveysCol.bulkWrite(surveyBulk);
+
   // Apply capacity growth (one updateOne per state with all resource $incs).
   const capBulk: AnyBulkWriteOperation<StateResourceCapacity>[] = [];
   for (const [key, inc] of capIncByKey) {
@@ -202,7 +207,6 @@ export async function resolveProspects(
     capByKey,
     capIncByKey
   );
-  if (surveyBulk.length > 0) await surveysCol.bulkWrite(surveyBulk);
   if (notifications.length > 0) await createNotifications(notifications);
 
   return result;
@@ -239,8 +243,7 @@ async function grantFinderRights(
         { projection: { stateId: 1, countryId: 1, resource: 1, share: 1, tenderId: 1 } }
       )
       .toArray(),
-    db
-      .collection<GovernmentTender>("governmentTenders")
+    governmentTendersCollection<GovernmentTender>(db)
       .find(
         {
           "terms.type": "extraction",

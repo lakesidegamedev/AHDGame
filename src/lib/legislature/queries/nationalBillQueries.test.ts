@@ -462,6 +462,56 @@ describe("voteShiftPreview — what Aye and Nay would do to the viewer", () => {
       nay: { economic: 0.5, social: -0.5 },
     });
   });
+
+  it.each([
+    ["senate", "active_other", "senate"],
+    ["house", "active", "house"],
+    ["senate", "active_both", "house"],
+  ])(
+    "whip counts read the %s-stage whips for a %s bill (queries chamber %s)",
+    async (currentChamber, status, expectedChamber) => {
+      const billId = new ObjectId();
+      const bill = { ...activeBill(billId), currentChamber, status };
+      const db = createMockDb();
+      db.collection("bills");
+      db.collectionMocks["bills"]!.findOne.mockResolvedValue(bill);
+      db.collectionMocks["bills"]!.find.mockReturnValue(emptyCursor());
+      for (const name of [
+        "politicalParties",
+        "legislationTypes",
+        "billWhips",
+        "npps",
+        "users",
+        "gameState",
+        "governmentFormations",
+        "cabinetMembers",
+      ]) {
+        db.collection(name);
+        db.collectionMocks[name]!.find.mockReturnValue(emptyCursor());
+      }
+      db.collection("characters");
+      db.collectionMocks["characters"]!.findOne.mockResolvedValue(viewer);
+      db.collectionMocks["characters"]!.find.mockReturnValue({
+        project: () => ({ toArray: async () => [viewer] }),
+        toArray: async () => [viewer],
+      });
+      db.collection("electedOfficials");
+      db.collectionMocks["electedOfficials"]!.find.mockReturnValue({
+        toArray: async () => [official],
+        project: () => ({ toArray: async () => [official] }),
+      });
+
+      await getNationalBillDetail(db as unknown as Db, billId.toString(), {
+        isAdmin: false,
+        userId,
+      } as never);
+
+      const nationalWhipQueries = db.collectionMocks["billWhips"]!.find.mock.calls.map(
+        (call: unknown[]) => call[0] as { issuedBy?: string; chamber?: string }
+      ).filter((filter) => filter.issuedBy === "nationalParty" && filter.chamber);
+      expect(nationalWhipQueries.some((f) => f.chamber === expectedChamber)).toBe(true);
+    }
+  );
 });
 
 describe("Russian runtime bill tallies", () => {

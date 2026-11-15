@@ -1,0 +1,101 @@
+{
+  "config": {
+    "governmentType": "presidential",
+    "regionLabel": "Zone",
+    "legislature": {
+      "name": "National Assembly",
+      "lowerChamber": {
+        "key": "house",
+        "name": "House of Representatives",
+        "shortName": "House",
+        "seats": 360,
+        "description": "360 representatives elected from single-member constituencies across the Nigerian federation."
+      },
+      "upperChamber": {
+        "key": "senate",
+        "name": "Senate",
+        "shortName": "Senate",
+        "seats": 109,
+        "description": "109 senators elected from constituencies across the Nigerian federation for four-year terms.",
+        "elected": true
+      }
+    },
+    "officeTypes": [
+      {
+        "key": "president",
+        "label": "President",
+        "labelPlural": "Presidents",
+        "isExecutive": true,
+        "isSubNational": false
+      },
+      {
+        "key": "vicePresident",
+        "label": "Vice President",
+        "labelPlural": "Vice Presidents",
+        "isExecutive": true,
+        "isSubNational": false
+      },
+      {
+        "key": "senate",
+        "label": "Senator",
+        "labelPlural": "Senators",
+        "chamberKey": "senate",
+        "isExecutive": false,
+        "isSubNational": false
+      },
+      {
+        "key": "house",
+        "label": "Representative",
+        "labelPlural": "Representatives",
+        "chamberKey": "house",
+        "isExecutive": false,
+        "isSubNational": false
+      },
+      {
+        "key": "regionalCouncil",
+        "label": "Assembly Member",
+        "labelPlural": "Assembly Members",
+        "isExecutive": false,
+        "isSubNational": true
+      },
+      {
+        "key": "governor",
+        "label": "Governor",
+        "labelPlural": "Governors",
+        "isExecutive": false,
+        "isSubNational": true
+      },
+      {
+        "key": "centralBankChair",
+        "label": "Governor of the CBN",
+        "labelPlural": "Governors of the CBN",
+        "isExecutive": false,
+        "isSubNational": false
+      }
+    ],
+    "lowerElectionSystem": { "snapElectionsAllowed": false },
+    "upperElectionSystem": { "snapElectionsAllowed": false }
+  },
+  "eraOverrides": {
+    "1953-default": {
+      "legislature": {
+        "name": "National Assembly",
+        "lowerChamber": {
+          "key": "house",
+          "name": "House of Representatives",
+          "shortName": "House",
+          "seats": 136,
+          "description": "136 representatives of the Federal House under the Lyttelton Constitution (1954)."
+        },
+        "upperChamber": {
+          "key": "senate",
+          "name": "Senate",
+          "shortName": "Senate",
+          "seats": 109,
+          "description": "Senators elected from constituencies across the Nigerian federation.",
+          "elected": true
+        }
+      }
+    }
+  }
+}

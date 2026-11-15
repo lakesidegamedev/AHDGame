@@ -132,10 +132,7 @@ export default function SupplyAgreementsSection({
   corpId,
 }: {
   corpId: string;
-  /**
-   * Home country of the corp. Retained for call-site compatibility; the buyer
-   * search is now global (any player-run corp), so it no longer scopes search.
-   */
+  /** Home country of the corp. Retained for call-site compatibility; the buyer search is global and no longer scopes by it. */
   countryId?: string;
 }) {
   const { showToast } = useToast();

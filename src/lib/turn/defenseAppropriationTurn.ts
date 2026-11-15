@@ -12,13 +12,13 @@ import {
 } from "@/lib/military/appropriation";
 import { resolveSeedRosterUpkeep } from "@/lib/military/seedRosterUpkeepPin";
 import { resolveDefenseLineFrom } from "./defenseEnvelope";
-import type { FederalBudget } from "@/lib/db/types/budget";
 import type { MilitaryUnit } from "@/lib/db/types/militaryUnit";
 import {
   getDefenseAppropriation,
   applyAppropriationSettlementWithOverdraft,
 } from "@/lib/db/collections/defenseAppropriation";
 import { applyReadinessDrift } from "./militaryForceEffects";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 export class DefenseAppropriationContentionError extends Error {
   readonly retryable = true;
@@ -31,22 +31,14 @@ export class DefenseAppropriationContentionError extends Error {
 
 /**
  * Per-turn defence account sweep: accrue this turn's slice of the enacted defence line,
- * fund as much of the standing force's upkeep as the balance and overdraft allow, draw any
- * overdraft as national debt, and persist the arrears ratio that suppresses readiness.
+ * fund upkeep as balance and overdraft allow, draw overdraft as national debt, and
+ * persist the arrears ratio that suppresses readiness.
  *
- * Runs for EVERY country with units, defence seat or not. That follows `applyReinforcement`,
- * which covers all nations because simulated ones must sustain their forces too, and
- * deliberately NOT `applyMilitaryForceEffects`, whose first act is to return early with no
- * seat: a country whose army is fed manpower every turn but never charged for it would be a
- * standing asymmetry between the two sweeps.
+ * Runs for EVERY country with units, seat or not, to match `applyReinforcement`.
+ * Readiness drift lives here so seatless nations are charged and drifted consistently,
+ * and the consumer reads the ratio this step just computed.
  *
- * Readiness drift runs from HERE for the same reason. It used to sit inside
- * `applyMilitaryForceEffects` and inherited that step's seat gate, so the eleven seatless
- * nations were charged upkeep and booked arrears that nothing ever collected on — an unfunded
- * French army held full readiness indefinitely. Drifting here also means the consumer reads
- * the ratio this step just computed, instead of depending on two turn steps staying adjacent.
- *
- * Returns null when there is nothing to do — no units, or this turn already accrued.
+ * Returns null when there is nothing to do (no units, or already accrued this turn).
  */
 export async function applyDefenseAppropriation(
   db: Db,
@@ -78,7 +70,7 @@ export async function applyDefenseAppropriation(
   let settlement: AppropriationSettlement | null = null;
   let settled = false;
   for (let attempt = 0; attempt < 3; attempt += 1) {
-    const budget = await db.collection<FederalBudget>("federalBudget").findOne({ countryId });
+    const budget = await federalBudgetCollection(db).findOne({ countryId });
     if (!budget) return null;
     // An unmigrated budget must be seeded before settling. The seed is idempotent;
     // reload so the CAS includes the persisted pot value.

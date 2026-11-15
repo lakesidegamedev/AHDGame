@@ -55,6 +55,12 @@ import { WAL_ECONOMY } from "@/lib/countries/wal/economy";
 import { BLR_ECONOMY } from "@/lib/countries/blr/economy";
 import { UKR_ECONOMY } from "@/lib/countries/ukr/economy";
 import { BAL_ECONOMY } from "@/lib/countries/bal/economy";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { CA_ECONOMY } from "@/lib/countries/ca/economy";
+import { QC_ECONOMY } from "@/lib/countries/qc/economy";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
+import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
+import { governorExecutiveOrdersCollection } from "@/lib/db/repositories/governorExecutiveOrders";
 
 /**
  * Shared national policy-record assembly — extracted verbatim from
@@ -109,6 +115,8 @@ export const LEGISLATION_COUNTRY_SCOPES: Record<
   DD: DD_ECONOMY.legislationScope,
   SCO: SCO_ECONOMY.legislationScope,
   WAL: WAL_ECONOMY.legislationScope,
+  CA: CA_ECONOMY.legislationScope,
+  QC: QC_ECONOMY.legislationScope,
 };
 
 /**
@@ -136,7 +144,7 @@ function getCountryLegislationTypeQuery(countryId: CountryId) {
   return { countryScope };
 }
 
-function matchesCountryLegislationType(
+export function matchesCountryLegislationType(
   countryId: CountryId,
   legislationType: LegislationType
 ): boolean {
@@ -161,8 +169,7 @@ export async function loadCountryLegislationTypes(
   db: Db,
   countryId: CountryId
 ): Promise<CountryLegislationTypes> {
-  const dbLegislationTypes = await db
-    .collection<LegislationType>("legislationTypes")
+  const dbLegislationTypes = await legislationTypesCollection(db)
     .find(getCountryLegislationTypeQuery(countryId))
     .toArray();
   const legislationTypeMap = new Map<string, LegislationType>();
@@ -436,8 +443,7 @@ export async function assembleNationalPolicyRecords(
 ): Promise<NationalPolicyAssembly> {
   const types = await loadCountryLegislationTypes(db, countryId);
   const nationalStateId = NATIONAL_POLICY_STATE_IDS[countryId];
-  const policies = await db
-    .collection<StatePolicyRecord>("statePolicies")
+  const policies = await statePoliciesCollection<StatePolicyRecord>(db)
     .find({
       scope: "national",
       $or: [
@@ -450,7 +456,7 @@ export async function assembleNationalPolicyRecords(
     })
     .toArray();
   const budgetId = countryId === COUNTRY_CONFIGS.US.id ? "federal" : countryId;
-  const budget = await db.collection<FederalBudget>("federalBudget").findOne({ _id: budgetId });
+  const budget = await federalBudgetCollection(db).findOne({ _id: budgetId });
 
   const recordsByCanonicalId = mergePolicyRecordsByCanonicalId(policies);
   backfillNationalTaxPolicyRecords({
@@ -461,8 +467,7 @@ export async function assembleNationalPolicyRecords(
   });
 
   // Surface active presidential executive orders for the federal scope.
-  const activeOrders = await db
-    .collection<GovernorExecutiveOrder>("governorExecutiveOrders")
+  const activeOrders = await governorExecutiveOrdersCollection(db)
     .find({ countryId, stateId: nationalStateId, status: "active" })
     .toArray();
   const activeOrderById = new Map(activeOrders.map((o) => [o._id!.toString(), o]));

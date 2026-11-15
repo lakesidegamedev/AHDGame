@@ -3,17 +3,15 @@
  *
  * A company with capacity, no cash and no recent sales can never restart on
  * its own: no cash means no run, no run means no sales, and the sales advance
- * (salesAdvanceRules) borrows only against last turn's sales. A probe breaks
- * that loop. The plant runs a small share of its capacity, financed as
- * intra-turn credit against what that output is worth at today's market price
- * in its own book, and repaid from the probe's own sales in the same
- * settlement. Whatever the sales do not cover stays owed as an ordinary
- * producer payable, so no money is created.
+ * borrows only against last turn's sales. A probe runs a small share of
+ * capacity as intra-turn credit against that output's book value at today's
+ * market price, repaid from the probe's own sales. Anything not covered stays
+ * owed as an ordinary producer payable, so no money is created.
  *
- * A plant probes only when the probe pays for itself at market prices (its
- * inputs at their expected price, expectedInputUnitPrice) and some other buyer
- * has funded demand for its output at that price. A plant whose probes keep
- * failing stops after RESTART_PROBE_MAX_FAILURES turns in a row.
+ * A plant probes only when the probe pays for itself at market prices (inputs
+ * at expectedInputUnitPrice) and some other buyer has funded demand for its
+ * output. A plant whose probes keep failing stops after
+ * RESTART_PROBE_MAX_FAILURES turns in a row.
  *
  * Pure: plain data in, plain data out. Anchor units throughout.
  */

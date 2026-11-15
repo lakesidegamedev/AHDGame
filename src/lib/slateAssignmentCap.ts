@@ -1,31 +1,19 @@
 /**
  * How many candidates one party may put on a single race, and the shared
- * accounting every caller uses to decide whether another one fits.
+ * accounting callers use to decide whether another fits.
  *
- * The cap is one pool covering players and NPPs together: a chair choosing a
- * player spends the same slot a chair choosing an NPP would. Three callers
- * need the same answer and must not drift apart, so they all come here:
+ * One pool covers players and NPPs together. Three callers must agree: the
+ * slate assignment route, the turn's filing pass, and the Slate tab.
  *
- *  - the slate assignment route, rejecting a fourth assignment up front;
- *  - the turn's filing pass, which will not put a fourth candidate on a
- *    ballot and trims a race that is already over;
- *  - the Slate tab, which shows the chair how many slots are left.
+ * Consumes a slot: a live slate row (invited/considering/accepted/filed,
+ * including ones carried forward from a template), or an active NPP candidacy
+ * created by party-fill (no slate row).
  *
- * What consumes a slot:
- *  - a live slate row (invited / considering / accepted / filed), whether the
- *    chair created it this cycle or `materializeSlateAssignmentsFromTemplate`
- *    carried it forward from the last one;
- *  - an active NPP candidacy the turn loop's own party-fill created, which
- *    has no slate row behind it.
+ * Does not: a declined or withdrawn slate row, or a player who filed their own
+ * candidacy (charging the slate would let self-filers shrink the chair's
+ * board).
  *
- * What does not:
- *  - a declined or withdrawn slate row, which releases its slot for reuse;
- *  - a player who filed their own candidacy. Players reach a ballot without
- *    a chair's permission, so charging the party's slate for it would let one
- *    self-filing member shrink the chair's board.
- *
- * Slots are counted per candidate, so a `filed` row and the candidacy it
- * produced are one slot rather than two.
+ * Slots count per candidate: a filed row and its candidacy are one slot.
  */
 import type { SlateCandidateStatus } from "@/lib/db/types";
 

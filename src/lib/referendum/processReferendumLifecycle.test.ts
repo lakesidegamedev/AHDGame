@@ -159,6 +159,34 @@ describe("processReferendumLifecycle", () => {
 
   const dualBills = { westminsterBillId: BILL_ID, dailBillId: BILL_ID2 };
 
+  it("keeps a failed conversion retryable and still attempts the other regions", async () => {
+    const refs = ["WAL", "SCO", "NIR"].map((regionId) =>
+      refDoc({
+        _id: new ObjectId(),
+        regionId,
+        status: "actuating",
+        westminsterBillId: BILL_ID,
+        kind: regionId === "NIR" ? "reunification" : "independence",
+      })
+    );
+    setup(db, refs);
+    db.collection("bills").findOne.mockResolvedValue({ status: "signed" });
+    vi.mocked(runReferendumActuation).mockRejectedValueOnce(new Error("slate conflict"));
+    const result = await processReferendumLifecycle(db as unknown as Db, 200);
+    expect(runReferendumActuation).toHaveBeenCalledTimes(3);
+    expect(result).toMatchObject({
+      processed: 2,
+      failures: [{ regionId: "WAL", error: "slate conflict" }],
+    });
+    expect(result?.transitions.map((transition) => transition.referendumId)).not.toContain(
+      String(refs[0]._id)
+    );
+    setup(db, [refs[0]]);
+    expect(await processReferendumLifecycle(db as unknown as Db, 201)).toMatchObject({
+      processed: 1,
+    });
+  });
+
   it("actuating → completed when BOTH consent bills pass", async () => {
     setup(db, [refDoc({ status: "actuating", kind: "reunification", ...dualBills })]);
     db.collection("bills").findOne.mockResolvedValue({ status: "signed" });
@@ -465,14 +493,12 @@ describe("request and snapshot lifecycle edge cases", () => {
   ] as const)("handles an NPP request at turn %i", async (turn, expected) => {
     const db = createMockDb();
     setup(db, [refDoc({ status: "requested", requestedTurn: 100 })]);
-    db.collection("governmentFormations").findOne.mockResolvedValue({
-      status: "formed",
-      pmNppId: new ObjectId(),
-      pmCharacterId: null,
-    });
-    db.collection("governorOfficeState").findOne.mockResolvedValue({
-      westminsterStances: { SCO: { policy: "pro" } },
-    });
+    db.collection("governmentFormations").find.mockReturnValue(
+      cursorOf([{ _id: "UK", status: "formed", pmNppId: new ObjectId(), pmCharacterId: null }])
+    );
+    db.collection("governorOfficeState").find.mockReturnValue(
+      cursorOf([{ countryId: "UK", westminsterStances: { SCO: { policy: "pro" } } }])
+    );
     await processReferendumLifecycle(db as unknown as Db, turn);
     if (expected)
       expect(grantReferendum).toHaveBeenCalledWith(
@@ -484,13 +510,29 @@ describe("request and snapshot lifecycle edge cases", () => {
   it("leaves a human PM's request for their decision", async () => {
     const db = createMockDb();
     setup(db, [refDoc({ status: "requested" })]);
-    db.collection("governmentFormations").findOne.mockResolvedValue({
-      status: "formed",
-      pmNppId: null,
-      pmCharacterId: new ObjectId(),
-    });
+    db.collection("governmentFormations").find.mockReturnValue(
+      cursorOf([{ _id: "UK", status: "formed", pmNppId: null, pmCharacterId: new ObjectId() }])
+    );
     await processReferendumLifecycle(db as unknown as Db, 200);
     expect(grantReferendum).not.toHaveBeenCalled();
+  });
+  it("lets each country's NPP ministry decide its own request", async () => {
+    const db = createMockDb();
+    setup(db, [
+      refDoc({ status: "requested", requestedTurn: 100, countryId: "CA", regionId: "CA_QC" }),
+    ]);
+    db.collection("governmentFormations").find.mockReturnValue(
+      cursorOf([
+        { _id: "UK", status: "formed", pmNppId: null, pmCharacterId: new ObjectId() },
+        { _id: "CA", status: "formed", pmNppId: new ObjectId(), pmCharacterId: null },
+      ])
+    );
+    db.collection("governorOfficeState").find.mockReturnValue(cursorOf([]));
+    await processReferendumLifecycle(db as unknown as Db, 124);
+    expect(grantReferendum).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ countryId: "CA", action: "decline", isPM: true })
+    );
   });
   it("does not report an opening when its stale snapshot loses the write", async () => {
     const db = createMockDb();

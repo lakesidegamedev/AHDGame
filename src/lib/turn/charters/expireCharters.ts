@@ -1,6 +1,7 @@
 import type { Db } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import type { PartyCharter } from "@/lib/db/types";
+import { partyChartersCollection } from "@/lib/db/repositories/partyCharters";
 
 /**
  * Phase 6 — per-turn sweep that transitions charters past their deadline
@@ -26,7 +27,7 @@ export async function expireCharters(
   dbOverride?: Db
 ): Promise<ExpireChartersResult> {
   const db = dbOverride ?? (await getDb());
-  const charters = db.collection<PartyCharter>("partyCharters");
+  const charters = partyChartersCollection(db);
 
   // Turn-first: expire when the processed turn reaches the deadline turn, so a
   // paused game freezes the countdown. `now` (game clock) drives the Date

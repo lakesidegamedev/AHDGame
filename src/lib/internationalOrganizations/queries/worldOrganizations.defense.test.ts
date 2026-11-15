@@ -4,6 +4,7 @@ import type { Db } from "mongodb";
 vi.mock("@/lib/internationalOrganizations/service", () => ({
   loadOrganizationSummaries: vi.fn(),
   ensureFoundingMembershipsAndLeadership: vi.fn().mockResolvedValue(undefined),
+  loadOrganizationDef: vi.fn().mockResolvedValue(null),
 }));
 vi.mock("@/lib/turn/currentTurn", () => ({ getCurrentTurn: vi.fn().mockResolvedValue(200) }));
 vi.mock("@/lib/countryAccess", () => ({

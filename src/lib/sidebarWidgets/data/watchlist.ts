@@ -1,6 +1,5 @@
 import { ObjectId, type Db } from "mongodb";
 import type { User } from "@/lib/db/types/user";
-import type { Corporation } from "@/lib/db/types/corporation";
 import type { CorporationHistory } from "@/lib/db/types/corporationHistory";
 import type { CommodityPrice, CommodityPriceHistory } from "@/lib/db/types";
 import type { CurrencyCode } from "@/lib/constants/currencyCodes";
@@ -8,6 +7,11 @@ import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencyCodes";
 import { COMMODITY_LABELS, type CommodityType } from "@/lib/constants/commoditiesCore";
 import { getGameStateCore } from "@/lib/gameState";
 import { widgetWatchlist, type WatchKind } from "../watchlist";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { usersCollection } from "@/lib/db/repositories/users";
+import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
+import { corporationHistoryCollection } from "@/lib/db/repositories/corporationHistory";
+import { commodityPriceHistoryCollection } from "@/lib/db/repositories/commodityPriceHistory";
 
 export interface WatchlistRow {
   kind: WatchKind;
@@ -38,9 +42,10 @@ function percentChange(current: number, previous: number | undefined): number | 
  * sequentialId, commodity prices by commodity, and both histories by id and turn.
  */
 export async function loadWatchlist(db: Db, userId: string): Promise<WatchlistWidgetData> {
-  const user = await db
-    .collection<User>("users")
-    .findOne({ _id: new ObjectId(userId) }, { projection: { widgetWatchlist: 1 } });
+  const user = await usersCollection(db).findOne(
+    { _id: new ObjectId(userId) },
+    { projection: { widgetWatchlist: 1 } }
+  );
   const items = widgetWatchlist(user?.widgetWatchlist);
   if (items.length === 0) return { rows: [] };
 
@@ -50,8 +55,7 @@ export async function loadWatchlist(db: Db, userId: string): Promise<WatchlistWi
   const [state, corps, prices] = await Promise.all([
     getGameStateCore(db),
     corpIds.length
-      ? db
-          .collection<Corporation>("corporations")
+      ? corporationsCollection(db)
           .find(
             { sequentialId: { $in: corpIds } },
             {
@@ -69,8 +73,7 @@ export async function loadWatchlist(db: Db, userId: string): Promise<WatchlistWi
           .toArray()
       : [],
     commodities.length
-      ? db
-          .collection<CommodityPrice>("commodityPrices")
+      ? commodityPricesCollection(db)
           .find(
             { commodity: { $in: commodities as CommodityType[] } },
             { projection: { commodity: 1, globalPrice: 1, basePrice: 1 } }
@@ -82,8 +85,7 @@ export async function loadWatchlist(db: Db, userId: string): Promise<WatchlistWi
 
   const [corpHistory, priceHistory] = await Promise.all([
     corps.length && previousTurn > 0
-      ? db
-          .collection<CorporationHistory>("corporationHistory")
+      ? corporationHistoryCollection(db)
           .find(
             { corporationId: { $in: corps.map((corp) => corp._id) }, turn: previousTurn },
             { projection: { corporationId: 1, sharePrice: 1 } }
@@ -91,8 +93,7 @@ export async function loadWatchlist(db: Db, userId: string): Promise<WatchlistWi
           .toArray()
       : [],
     prices.length && previousTurn > 0
-      ? db
-          .collection<CommodityPriceHistory>("commodityPriceHistory")
+      ? commodityPriceHistoryCollection(db)
           .find(
             { commodity: { $in: prices.map((p) => p.commodity) }, turn: previousTurn },
             { projection: { commodity: 1, globalPrice: 1 } }

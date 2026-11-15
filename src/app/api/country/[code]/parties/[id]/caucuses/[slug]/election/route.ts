@@ -6,7 +6,7 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { isInNewCharacterCooldown } from "@/lib/auth/newCharacterCooldown";
 import { getLeadershipEligibility } from "@/lib/parties/leadershipTenure";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
-import { NATIONAL_ELECTION_DURATION_TURNS } from "@/lib/nationalPartyElections";
+import { NATIONAL_ELECTION_DURATION_TURNS } from "@/lib/elections/party/nationalPartyElections";
 import { findPartyBySequentialId } from "@/lib/db/partyLookup";
 import { findCaucusBySlug } from "@/lib/db/caucusLookup";
 import { getBannedCharacterIds } from "@/lib/utils/bannedCharacters";
@@ -16,10 +16,19 @@ import type {
   CaucusChairElection,
   CaucusChairVote,
   CaucusMembership,
-  Character,
   GameState,
   NationalPartyElection,
 } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { usersCollection } from "@/lib/db/repositories/users";
+import type { Document } from "mongodb";
+import { nationalPartyElectionsCollection } from "@/lib/db/repositories/nationalPartyElections";
+import { caucusesCollection } from "@/lib/db/repositories/caucuses";
+import { caucusChairVotesCollection } from "@/lib/db/repositories/caucusChairVotes";
+import { caucusMembershipsCollection } from "@/lib/db/repositories/caucusMemberships";
+import { caucusChairElectionsCollection } from "@/lib/db/repositories/caucusChairElections";
+import { caucusChairCandidatesCollection } from "@/lib/db/repositories/caucusChairCandidates";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string; slug: string }>;
@@ -62,29 +71,25 @@ export async function GET(_request: Request, { params }: RouteParams) {
       return errorResponse(403, "Only party members may view caucus elections.");
     }
 
-    let activeElection = await db.collection<CaucusChairElection>("caucusChairElections").findOne({
+    let activeElection = await caucusChairElectionsCollection(db).findOne({
       caucusId: caucus._id,
       status: "voting",
     });
     const [latestElection, memberships] = await Promise.all([
-      db
-        .collection<CaucusChairElection>("caucusChairElections")
+      caucusChairElectionsCollection(db)
         .find({ caucusId: caucus._id, status: { $in: ["completed", "cancelled"] } })
         .sort({ endTime: -1 })
         .limit(1)
         .toArray(),
-      db
-        .collection<CaucusMembership>("caucusMemberships")
+      caucusMembershipsCollection(db)
         .find({ caucusId: caucus._id, memberType: "character", status: "active" })
         .toArray(),
     ]);
 
     if (!activeElection && latestElection.length === 0) {
       const [gameState, activeNationalChairElection] = await Promise.all([
-        db
-          .collection<GameState>("gameState")
-          .findOne({ _id: "current" }, { projection: { currentTurn: 1 } }),
-        db.collection<NationalPartyElection>("nationalPartyElections").findOne({
+        gameStateCollection(db).findOne({ _id: "current" }, { projection: { currentTurn: 1 } }),
+        nationalPartyElectionsCollection(db).findOne({
           partyId,
           countryId,
           position: "chair",
@@ -116,13 +121,11 @@ export async function GET(_request: Request, { params }: RouteParams) {
         updatedAt: new Date(),
       };
       await Promise.all([
-        db.collection<CaucusChairElection>("caucusChairElections").insertOne(inserted),
-        db
-          .collection("caucuses")
-          .updateOne(
-            { _id: caucus._id },
-            { $set: { nextElectionTurn: endTurn, updatedAt: new Date() } }
-          ),
+        caucusChairElectionsCollection(db).insertOne(inserted),
+        caucusesCollection<Document>(db).updateOne(
+          { _id: caucus._id },
+          { $set: { nextElectionTurn: endTurn, updatedAt: new Date() } }
+        ),
       ]);
       activeElection = inserted;
     }
@@ -132,10 +135,13 @@ export async function GET(_request: Request, { params }: RouteParams) {
     const isActiveMember =
       !!authUser.character && memberIds.includes(authUser.character._id.toString());
     let canParticipate = isActiveMember;
-    if (isActiveMember && authUser.character) {
-      const userDoc = await db
-        .collection("users")
-        .findOne({ _id: new ObjectId(authUser.userId) }, { projection: { createdAt: 1 } });
+    // Founding races waive the cooldown and tenure gates, as the vote and enter
+    // routes do, so the ballot must not be disabled for brand-new members.
+    if (isActiveMember && authUser.character && !activeElection?.founding) {
+      const userDoc = await usersCollection<Document>(db).findOne(
+        { _id: new ObjectId(authUser.userId) },
+        { projection: { createdAt: 1 } }
+      );
       const cooldown = isInNewCharacterCooldown({
         userCreatedAt: userDoc?.createdAt ?? new Date(0),
         characterCreatedAt: authUser.character.createdAt,
@@ -171,12 +177,10 @@ export async function GET(_request: Request, { params }: RouteParams) {
     }
 
     const [allCandidatesRaw, voteCounts, userVote] = await Promise.all([
-      db
-        .collection<CaucusChairCandidate>("caucusChairCandidates")
+      caucusChairCandidatesCollection(db)
         .find({ electionId: election._id, status: "active" })
         .toArray(),
-      db
-        .collection<CaucusChairVote>("caucusChairVotes")
+      caucusChairVotesCollection(db)
         .aggregate<{ candidateId: ObjectId; count: number }>([
           { $match: voteMatch },
           { $group: { _id: "$candidateId", count: { $sum: 1 } } },
@@ -184,7 +188,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
         ])
         .toArray(),
       authUser.character && election.status === "voting"
-        ? db.collection<CaucusChairVote>("caucusChairVotes").findOne({
+        ? caucusChairVotesCollection(db).findOne({
             electionId: election._id,
             voterId: authUser.character._id,
           })
@@ -197,8 +201,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     const characterIds = candidates.map((entry) => entry.characterId);
     const characters =
       characterIds.length > 0
-        ? await db
-            .collection<Character>("characters")
+        ? await charactersCollection(db)
             .find({ _id: { $in: characterIds } })
             .toArray()
         : [];

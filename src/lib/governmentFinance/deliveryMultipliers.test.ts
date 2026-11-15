@@ -59,8 +59,8 @@ describe("resolveDepartmentDeliveryMultipliers", () => {
         department: account({
           program: {
             programId: "program",
-            legislationTypeId: "us_public_health",
-            policyOptionId: "public_health_opt_1",
+            legislationTypeId: "us.health.prevention.primary",
+            policyOptionId: "l4",
             status: "operating",
             annualDemand: 100,
             periodDemand: 10,

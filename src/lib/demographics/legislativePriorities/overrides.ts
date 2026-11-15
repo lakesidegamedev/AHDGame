@@ -16,10 +16,14 @@ import {
   isPriorityTarget,
   parsePrioritySelection,
   resolvePrioritySelection,
+  priorityOptionsFor,
   priorityWorldContext,
   type PriorityLaw,
 } from "./rules";
 import type { PriorityTarget } from "./schema";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
+import { demographicDefaultsCollection } from "@/lib/db/repositories/demographicDefaults";
 
 export function priorityOverrideId({ countryId, regionId, bucketId }: PriorityTarget): string {
   return `${countryId}:${regionId}:${bucketId}`;
@@ -33,8 +37,7 @@ export async function loadPriorityLaws(
 ): Promise<PriorityLaw[]> {
   const countryScope = countryId.toLowerCase();
   if (countryScope !== "us" && countryScope !== "uk" && countryScope !== "jp") return [];
-  const laws = await db
-    .collection<LegislationType>("legislationTypes")
+  const laws = await legislationTypesCollection(db)
     .find(
       { countryScope, ...(ids ? { _id: { $in: ids } } : {}) },
       {
@@ -44,18 +47,19 @@ export async function loadPriorityLaws(
           countryScope: 1,
           "policyOptions.id": 1,
           "policyOptions.name": 1,
+          "taxSlider.waypoints": 1,
         },
       }
     )
     .toArray();
   return laws
-    .filter((law) => law.policyOptions?.length)
     .map((law) => ({
       _id: law._id,
       name: law.name,
       countryScope: law.countryScope,
-      policyOptions: (law.policyOptions ?? []).map(({ id, name }) => ({ id, name })),
-    }));
+      policyOptions: priorityOptionsFor(law),
+    }))
+    .filter((law) => law.policyOptions.length);
 }
 
 export async function getPriorityEditorData(db: Db, target: PriorityTarget) {
@@ -84,18 +88,14 @@ export async function getPriorityEditorData(db: Db, target: PriorityTarget) {
 /** Editor/restoration defaults use exactly the region page's year and bucket leans. */
 export async function loadPriorityDefaults(db: Db, target: PriorityTarget) {
   const [world, defaults] = await Promise.all([
-    db
-      .collection<GameState>("gameState")
-      .findOne(
-        { _id: "current" },
-        { projection: { preset: 1, currentYear: 1, startingYear: 1, eraSystemEnabled: 1 } }
-      ),
-    db
-      .collection<StateDemographics>("demographicDefaults")
-      .findOne(
-        { _id: target.regionId },
-        { projection: { layer1PositionOverrides: 1, layer1TurnoutOverrides: 1 } }
-      ),
+    gameStateCollection(db).findOne(
+      { _id: "current" },
+      { projection: { preset: 1, currentYear: 1, startingYear: 1 } }
+    ),
+    demographicDefaultsCollection(db).findOne(
+      { _id: target.regionId },
+      { projection: { layer1PositionOverrides: 1, layer1TurnoutOverrides: 1 } }
+    ),
   ]);
   const context = priorityWorldContext(world);
   const profile = getBucketProfileForRegion(

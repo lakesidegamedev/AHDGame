@@ -13,7 +13,6 @@ export interface QueueCounts {
   playerReports?: number;
   wikiReview?: number;
   suspicious?: number;
-  feedback?: number;
 }
 
 export interface AdminBadgeCounts {
@@ -66,13 +65,6 @@ export const QUEUE_DESTINATIONS: {
     tab: "players",
     sub: "suspicious",
     dotClass: "bg-warning",
-  },
-  {
-    key: "feedback",
-    label: "Feedback (legacy)",
-    tab: "support",
-    sub: "feedback",
-    dotClass: "bg-muted",
   },
 ];
 
@@ -145,13 +137,6 @@ export function useAdminBadgeCounts(): AdminBadgeCounts {
         if (typeof high === "number") update({ suspicious: high });
       })
       .catch(quietly("suspicious"));
-
-    fetch("/api/admin/feedback?status=open&limit=1", { credentials: "same-origin" })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data) => {
-        if (data && typeof data.total === "number") update({ feedback: data.total });
-      })
-      .catch(quietly("feedback"));
 
     return () => {
       cancelled = true;

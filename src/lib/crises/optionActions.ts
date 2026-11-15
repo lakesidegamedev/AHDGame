@@ -8,7 +8,6 @@ import type {
   BargainingCampaign,
   Character,
   CollectiveAgreement,
-  Corporation,
   CorporateSector,
   Union,
 } from "@/lib/db/types";
@@ -41,7 +40,6 @@ import {
 } from "@/lib/unions/bargaining";
 import { clampWageLevel, WAGE_LEVEL_MAX } from "@/lib/labour/laborCost";
 import { logWireEvent } from "@/lib/wireEvent";
-import type { FederalBudget } from "@/lib/db/types/budget";
 import { spendFromTreasury } from "@/lib/budget/treasurySpend";
 import { computeAidOutcome } from "@/lib/crises/aidScaling";
 import { applyCrisisEffects } from "@/lib/crises/applyEffects";
@@ -65,6 +63,19 @@ import { loadConflictState, saveConflictState } from "@/lib/livingConflict/drive
 import { applyConflictOutcome } from "@/lib/livingConflict/engine";
 import type { MacroMetricsDoc } from "@/lib/db/types/macroMetrics";
 import type { PoliticalMetricsDoc } from "@/lib/db/types/politicalMetrics";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { billsCollection } from "@/lib/db/repositories/bills";
+import { crisesCollection } from "@/lib/db/repositories/crises";
+import { unionsCollection } from "@/lib/db/repositories/unions";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { politicalMetricsCollection } from "@/lib/db/repositories/politicalMetrics";
+import { docketCasesCollection } from "@/lib/db/repositories/docketCases";
+import { bargainingCampaignsCollection } from "@/lib/db/repositories/bargainingCampaigns";
+import { collectiveAgreementsCollection } from "@/lib/db/repositories/collectiveAgreements";
 
 /** Crisis actions name an operating lane; rows store its identity. */
 function laneFilter(sectorType: string) {
@@ -118,8 +129,7 @@ async function executiveNationalize(ctx: CrisisActionContext, sectorType: string
   const country = ctx.countryId as CountryId;
   const label = sectorLabelFor(sectorType);
 
-  const sectors = await db
-    .collection<CorporateSector>("corporateSectors")
+  const sectors = await corporateSectorsCollection(db)
     .find({ countryId: ctx.countryId as CountryId, ...laneFilter(sectorType) })
     .toArray();
   if (sectors.length === 0) {
@@ -130,8 +140,7 @@ async function executiveNationalize(ctx: CrisisActionContext, sectorType: string
   // One eligibility snapshot for every distinct owner (shared with the route).
   const corpIdByKey = new Map<string, ObjectId>();
   for (const s of sectors) corpIdByKey.set(String(s.corporationId), s.corporationId);
-  const corps = await db
-    .collection<Corporation>("corporations")
+  const corps = await corporationsCollection(db)
     .find({ _id: { $in: [...corpIdByKey.values()] } })
     .toArray();
   const eligibility = await resolveCorpEligibilityBatch(db, country, corps, ctx.currentTurn);
@@ -221,9 +230,9 @@ async function spawnNationalizationChallenge(
   }
 ): Promise<void> {
   const { db } = ctx;
-  // SCOTUS is US-only (spec #3581). A challenge in any other country has no
+  // SCOTUS is US-only. A challenge in any other country has no
   // bench to hear it.
-  if (ctx.countryId !== "US") {
+  if (!countryHasFeature("usLib", ctx.countryId)) {
     console.warn(
       `[crisis] scotusChallenge skipped: SCOTUS docket is US-only (country ${ctx.countryId}).`
     );
@@ -235,9 +244,7 @@ async function spawnNationalizationChallenge(
   const startingYear = gameState?.startingYear ?? getStartingYearForPreset(preset);
 
   // `yearFiringAtOrAfterTurn` is the inverse of the rule `scotusDocketTurn`
-  // actually applies, kept beside `yearToTurn` so the two cannot drift apart
-  // again: this was an inline re-derivation, and it went on inverting the
-  // raw-turn rule after the docket moved to the calendar turn (#1208). Annual
+  // applies, kept beside `yearToTurn` so the two cannot drift apart. Annual
   // granularity means the case can still land up to a year out.
   const CHALLENGE_DELAY_TURNS = 4;
   const targetTurn = ctx.currentTurn + CHALLENGE_DELAY_TURNS;
@@ -275,8 +282,8 @@ async function spawnNationalizationChallenge(
           // No specific taken sectors: keep a benign deregulatory ruling so a
           // divergence still has a real, safe, enactable consequence.
           effect: {
-            legislationTypeId: "us_minimum_wage",
-            policyOptionId: "minimum_wage_opt_5",
+            legislationTypeId: "us.economy.workerSecurity.primary",
+            policyOptionId: "l0",
             effectDirection: -1 as const,
           },
         }),
@@ -289,7 +296,7 @@ async function spawnNationalizationChallenge(
     updatedAt: now,
   };
 
-  await db.collection<DocketCase>("docketCases").insertOne(docketCase);
+  await docketCasesCollection(db).insertOne(docketCase);
 }
 
 // ── 3. Emergency nationalization bill ──────────────────────────────────────
@@ -322,9 +329,10 @@ async function emergencyNationalizeBill(
   const now = new Date();
   const VOTING_DURATION_HOURS = 24;
 
-  const sponsor = await db
-    .collection<Character>("characters")
-    .findOne({ _id: ctx.characterId }, { projection: { name: 1 } });
+  const sponsor = await charactersCollection(db).findOne(
+    { _id: ctx.characterId },
+    { projection: { name: 1 } }
+  );
 
   const provision: NationalizeProvision = {
     type: "nationalize",
@@ -361,7 +369,7 @@ async function emergencyNationalizeBill(
     updatedAt: now,
   };
 
-  await db.collection<Omit<Bill, "_id">>("bills").insertOne(bill);
+  await billsCollection<Omit<Bill, "_id">>(db).insertOne(bill);
   await logWireEvent(
     "crisis_outcome",
     `EMERGENCY BILL: ${ctx.countryId} moves to nationalize the ${label} industry`
@@ -397,9 +405,10 @@ async function concessionBill(
   const now = new Date();
   const VOTING_DURATION_HOURS = 24;
 
-  const sponsor = await db
-    .collection<Character>("characters")
-    .findOne({ _id: ctx.characterId }, { projection: { name: 1 } });
+  const sponsor = await charactersCollection(db).findOne(
+    { _id: ctx.characterId },
+    { projection: { name: 1 } }
+  );
 
   const bill: Omit<Bill, "_id"> = {
     countryId: country,
@@ -429,32 +438,27 @@ async function concessionBill(
     updatedAt: now,
   };
 
-  await db.collection<Omit<Bill, "_id">>("bills").insertOne(bill);
+  await billsCollection<Omit<Bill, "_id">>(db).insertOne(bill);
   await logWireEvent("crisis_outcome", `BILL INTRODUCED: ${ctx.countryId} moves on "${title}"`);
 }
 
 // ── 4. Government-brokered bargaining ──────────────────────────────────────
 
 /**
- * The dispute a scripted sector-wide strike is actually about, opened so the
- * government has something to broker (#127).
+ * Opens the dispute a scripted sector-wide strike is about, so the government
+ * has something to broker.
  *
- * A nationwide steel strike is authored by the crisis, not produced by a
- * player or NPP bargaining campaign, so there was frequently no
- * `bargainingCampaigns` row in `dispute` for the struck sector at all — and
- * the "Bring both sides to the table" option then logged and returned while
- * still paying out its approval effect. The most diplomatic presidential path
- * was mechanically inert.
+ * A nationwide strike is authored by the crisis, not by a player or NPP
+ * bargaining campaign, so there is often no `bargainingCampaigns` row in
+ * `dispute` for the struck sector, and a broker option would log and return
+ * while still paying out its approval effect. This does not fabricate a
+ * settlement: it opens a real campaign from live conditions via
+ * `openBargainingCampaignFromLiveConditions`, records an offer from each side,
+ * and moves it to `dispute`, so downstream mediator odds, settlement terms and
+ * escalation run on the ordinary path.
  *
- * This does not fabricate a settlement: it opens a real campaign against a
- * real employer from live conditions (same `openBargainingCampaignFromLiveConditions`
- * the union and NPP surfaces use, so the mandate is computed from actual
- * locals, treasury, labour tightness and law support), records a genuine offer
- * from each side, and moves it to `dispute`. Everything downstream — mediator
- * odds, settlement terms, escalation — runs on the ordinary path.
- *
- * Returns null when the world genuinely cannot support one, in which case the
- * caller keeps the old log-and-return behaviour.
+ * Returns null when the world genuinely cannot support one; the caller then
+ * keeps the log-and-return behaviour.
  */
 async function openCrisisDispute(
   ctx: CrisisActionContext,
@@ -465,8 +469,7 @@ async function openCrisisDispute(
 
   // Employers already tied up in an open campaign are skipped — reopening
   // against them would collide with the duplicate-campaign guard.
-  const busy = await db
-    .collection<BargainingCampaign>("bargainingCampaigns")
+  const busy = await bargainingCampaignsCollection(db)
     .find(
       { unionId: { $in: unions.map((u) => u._id) }, status: { $in: ["negotiating", "dispute"] } },
       { projection: { employerCorporationId: 1 } }
@@ -477,8 +480,7 @@ async function openCrisisDispute(
   for (const union of unions) {
     // Largest local first: a national strike should be brokered with the
     // industry's biggest employer, not whichever row sorts first.
-    const locals = await db
-      .collection<CorporateSector>("corporateSectors")
+    const locals = await corporateSectorsCollection(db)
       .find(
         { countryId: union.countryId, sectorType: union.sectorType },
         { projection: { corporationId: 1, workers: 1, wageLevel: 1 } }
@@ -512,9 +514,9 @@ async function openCrisisDispute(
       if (!opened.ok || typeof opened.campaignId !== "string") continue;
 
       // The opener returns an API result, not the document, so re-read it.
-      const fresh = await db
-        .collection<BargainingCampaign>("bargainingCampaigns")
-        .findOne({ _id: new ObjectId(opened.campaignId) });
+      const fresh = await bargainingCampaignsCollection(db).findOne({
+        _id: new ObjectId(opened.campaignId),
+      });
       if (!fresh) continue;
 
       const now = new Date();
@@ -534,9 +536,7 @@ async function openCrisisDispute(
       const disputed = moveCampaignToDispute(countered, ctx.currentTurn, now);
       if ("ok" in disputed) continue;
 
-      await db
-        .collection<BargainingCampaign>("bargainingCampaigns")
-        .replaceOne({ _id: disputed._id }, disputed);
+      await bargainingCampaignsCollection(db).replaceOne({ _id: disputed._id }, disputed);
       console.log(
         `[crisis] openBargaining: opened a ${sectorType} dispute in ${ctx.countryId} for the government to broker`
       );
@@ -560,8 +560,7 @@ async function openBargaining(ctx: CrisisActionContext, sectorType: string): Pro
   const { db } = ctx;
   const label = sectorLabelFor(sectorType);
 
-  const unions = await db
-    .collection<Union>("unions")
+  const unions = await unionsCollection(db)
     .find({ countryId: ctx.countryId as CountryId, ...laneFilter(sectorType) })
     .toArray();
   if (unions.length === 0) {
@@ -569,9 +568,10 @@ async function openBargaining(ctx: CrisisActionContext, sectorType: string): Pro
     return;
   }
 
-  const existing = await db
-    .collection<BargainingCampaign>("bargainingCampaigns")
-    .findOne({ unionId: { $in: unions.map((u) => u._id) }, status: "dispute" });
+  const existing = await bargainingCampaignsCollection(db).findOne({
+    unionId: { $in: unions.map((u) => u._id) },
+    status: "dispute",
+  });
   const campaign = existing ?? (await openCrisisDispute(ctx, unions, sectorType));
   if (!campaign) {
     console.warn(
@@ -626,8 +626,7 @@ async function settleWageFloor(ctx: CrisisActionContext, sectorType: string): Pr
   const country = ctx.countryId as CountryId;
   const label = sectorLabelFor(sectorType);
 
-  const sectors = await db
-    .collection<CorporateSector>("corporateSectors")
+  const sectors = await corporateSectorsCollection(db)
     .find(
       { countryId: ctx.countryId as CountryId, ...laneFilter(sectorType) },
       { projection: { _id: 1, corporationId: 1 } }
@@ -638,9 +637,10 @@ async function settleWageFloor(ctx: CrisisActionContext, sectorType: string): Pr
     return;
   }
 
-  const union = await db
-    .collection<Union>("unions")
-    .findOne({ countryId: ctx.countryId as CountryId, ...laneFilter(sectorType) });
+  const union = await unionsCollection(db).findOne({
+    countryId: ctx.countryId as CountryId,
+    ...laneFilter(sectorType),
+  });
   const now = new Date();
   const SETTLEMENT_TERM_TURNS = 48;
 
@@ -663,7 +663,7 @@ async function settleWageFloor(ctx: CrisisActionContext, sectorType: string): Pr
     updatedAt: now,
   };
 
-  await db.collection<CollectiveAgreement>("collectiveAgreements").insertOne(agreement);
+  await collectiveAgreementsCollection(db).insertOne(agreement);
   await logWireEvent(
     "crisis_outcome",
     `SETTLEMENT: ${ctx.countryId} concedes a ${label} wage floor, ending the strike`
@@ -707,7 +707,7 @@ async function spawnFollowUpCrisis(
   // One live copy per country. Two satellites both tolerating reform could each
   // cascade the same follow-up into one third country, stacking identical
   // active crises with their full effect load.
-  const already = await db.collection<Crisis>("crises").findOne(
+  const already = await crisesCollection(db).findOne(
     {
       templateKey: action.templateKey,
       status: "active",
@@ -760,9 +760,9 @@ async function vietnamSupport(ctx: CrisisActionContext): Promise<void> {
   }
 
   const state = await getVietnamEscalation(db);
-  const budget = await db
-    .collection<FederalBudget>("federalBudget")
-    .findOne({ countryId: ctx.countryId as CountryId });
+  const budget = await federalBudgetCollection(db).findOne({
+    countryId: ctx.countryId as CountryId,
+  });
   const gdp =
     budget?.gdpSmoothed && budget.gdpSmoothed > 0 ? budget.gdpSmoothed : (budget?.gdp ?? 0);
 
@@ -853,7 +853,7 @@ async function moveLivingConflictTrajectory(ctx: CrisisActionContext): Promise<v
   const regional = action.regionalEffects;
   if (!regional) return;
   if (regional.independenceDesireDelta) {
-    const metrics = ctx.db.collection<MacroMetricsDoc>("macroMetrics");
+    const metrics = macroMetricsCollection<MacroMetricsDoc>(ctx.db);
     const doc = await metrics.findOne({ _id: regional.regionId });
     if (doc?.independenceDesire) {
       await metrics.updateOne(
@@ -871,7 +871,7 @@ async function moveLivingConflictTrajectory(ctx: CrisisActionContext): Promise<v
     }
   }
   if (regional.devolutionSatisfactionDelta) {
-    const metrics = ctx.db.collection<PoliticalMetricsDoc>("politicalMetrics");
+    const metrics = politicalMetricsCollection(ctx.db);
     const doc = await metrics.findOne({ _id: regional.regionId });
     const values = doc?.values;
     const currentSatisfaction = values?.["governance.localAutonomy"];

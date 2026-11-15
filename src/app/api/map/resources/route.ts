@@ -11,6 +11,8 @@ import { ZOD_COUNTRY_ENUM, type CountryId } from "@/lib/constants/countries";
 import type { StateResourceCapacity } from "@/lib/db/types/stateResourceCapacity";
 import type { ExtractionContract } from "@/lib/db/types/extractionContract";
 import { activeExtractionContractFilter } from "@/lib/db/collections/extractionContracts";
+import { stateResourceCapacityCollection } from "@/lib/db/repositories/stateResourceCapacity";
+import { extractionContractsCollection } from "@/lib/db/repositories/extractionContracts";
 
 const countryIdSchema = z.enum(ZOD_COUNTRY_ENUM);
 
@@ -32,9 +34,8 @@ export async function GET(request: Request) {
     const db = await getDb();
 
     const [capacityDocs, contracts] = await Promise.all([
-      db.collection<StateResourceCapacity>("stateResourceCapacity").find({ countryId }).toArray(),
-      db
-        .collection<ExtractionContract>("extractionContracts")
+      stateResourceCapacityCollection(db).find({ countryId }).toArray(),
+      extractionContractsCollection(db)
         .find({ countryId, resource, ...activeExtractionContractFilter() })
         .toArray(),
     ]);

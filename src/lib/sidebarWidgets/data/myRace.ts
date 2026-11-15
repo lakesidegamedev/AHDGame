@@ -5,6 +5,10 @@ import type { CountryId } from "@/lib/constants/countries";
 import { getRegionalBillAssentTitleForState } from "@/lib/constants/countryOfficesClient";
 import { formatElectionTypeLabel } from "@/lib/utils/electionLabels";
 import { loadViewerCharacter, loadWidgetGameState, turnsUntil } from "./viewerContext";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
 
 export interface MyRaceWidgetData {
   electionId: string;
@@ -28,7 +32,7 @@ export interface MyRaceWidgetData {
   countryId?: string | null;
 }
 
-const NATIONAL_TYPES = new Set(["president", "primeMinister", "uachtaran"]);
+const NATIONAL_TYPES = new Set(["president", "special_president", "primeMinister", "uachtaran"]);
 
 /**
  * The viewer's current race: the same candidacy, vote tally and label the
@@ -41,16 +45,14 @@ export async function loadMyRace(
 ): Promise<MyRaceWidgetData | null> {
   const character = await loadViewerCharacter(db, viewer);
   if (!character) return null;
-  const candidacy = await db
-    .collection<ElectionCandidate>("electionCandidates")
-    .findOne(
-      { characterId: character._id, status: "active" },
-      { sort: { enteredAt: -1 }, projection: { electionId: 1 } }
-    );
+  const candidacy = await electionCandidatesCollection(db).findOne(
+    { characterId: character._id, status: "active" },
+    { sort: { enteredAt: -1 }, projection: { electionId: 1 } }
+  );
   if (!candidacy) return null;
 
   const [election, tally, campaign, gameState] = await Promise.all([
-    db.collection<Election>("elections").findOne(
+    electionsCollection(db).findOne(
       { _id: candidacy.electionId, status: { $in: ["upcoming", "active"] } },
       {
         projection: {
@@ -64,18 +66,14 @@ export async function loadMyRace(
         },
       }
     ),
-    db
-      .collection<ElectionVoteTally>("electionVoteTallies")
-      .findOne(
-        { electionId: candidacy.electionId },
-        { projection: { totalVotes: 1, seatsEstimate: 1 } }
-      ),
-    db
-      .collection<Campaign>("campaigns")
-      .findOne(
-        { candidateId: character._id, electionId: candidacy.electionId },
-        { projection: { _id: 1 } }
-      ),
+    electionVoteTalliesCollection(db).findOne(
+      { electionId: candidacy.electionId },
+      { projection: { totalVotes: 1, seatsEstimate: 1 } }
+    ),
+    campaignsCollection(db).findOne(
+      { candidateId: character._id, electionId: candidacy.electionId },
+      { projection: { _id: 1 } }
+    ),
     loadWidgetGameState(db, viewer),
   ]);
   if (!election || (election.status !== "upcoming" && election.status !== "active")) return null;
@@ -99,9 +97,10 @@ export async function loadMyRace(
     const leaderDoc =
       isMe || !ObjectId.isValid(leaderKey)
         ? null
-        : await db
-            .collection<ElectionCandidate>("electionCandidates")
-            .findOne({ _id: new ObjectId(leaderKey) }, { projection: { characterName: 1 } });
+        : await electionCandidatesCollection(db).findOne(
+            { _id: new ObjectId(leaderKey) },
+            { projection: { characterName: 1 } }
+          );
     leader = {
       name: isMe ? "" : (leaderDoc?.characterName ?? ""),
       pct: (leaderVotes / cast) * 100,

@@ -1,10 +1,9 @@
 /**
  * GET /api/admin/tier1-readiness-matrix
  *
- * Admin diagnostic — publishes the 1953 proposed Tier-1 readiness matrix
- * (#3723): autonomous/player verdicts, capability blockers with follow-up
- * issue refs, and visible reclassifications applied to the world entity
- * manifest. Deterministic / DB-free.
+ * Admin diagnostic: the proposed Tier-1 readiness matrix, including
+ * autonomous/player verdicts, capability blockers, and reclassifications
+ * applied to the world entity manifest. Deterministic, DB-free.
  *
  * Auth: requireAdmin
  * Errors: 403

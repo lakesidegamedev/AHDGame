@@ -62,7 +62,7 @@ export interface StateMetricMarginInput {
   transitionProgress?: number | null;
   stateMetrics?: StateMetrics | null;
   countryId?: string | null;
-  /** Live era year (null while eraSystemEnabled is off) — inactive metrics contribute 0. */
+  /** Live era year — inactive metrics contribute 0. */
   year?: number | null;
   /**
    * SP4 §4a: political signals for LAW_COUNTRY_IDS regions, resolved from the

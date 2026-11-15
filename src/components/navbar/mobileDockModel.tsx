@@ -1,7 +1,7 @@
 "use client";
 
 import React, { type ReactNode } from "react";
-import Link from "next/link";
+import Link from "@/components/navbar/NavigationLink";
 import { useTranslations } from "next-intl";
 import { CountryFlag } from "@/components/CountryFlag";
 import { type CountryId } from "@/lib/constants/countriesCore";

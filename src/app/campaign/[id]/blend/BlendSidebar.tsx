@@ -49,12 +49,10 @@ function Block({ children, first }: { children: React.ReactNode; first?: boolean
  * has, could not be reached on a phone at all.
  */
 /**
- * Who is on the ticket, and the control to name them.
+ * Ticket composition and the control to name a running mate.
  *
- * Exported because the sidebar it came from is `hidden lg:block`. Naming a
- * running mate was reachable on a desktop and nowhere else, which only stopped
- * being survivable once the election page's own copy of this control went: a
- * player on a phone then had no way to name one at all.
+ * Exported because the parent sidebar is `hidden lg:block`, so this control
+ * must also render outside it for mobile users to name a running mate.
  */
 export function RunningMateBlock({
   vm,

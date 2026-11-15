@@ -12,48 +12,37 @@ import type { FinancialTxLogEntry } from "@/lib/db/types/financialTxLog";
  * Phase 1 double-emit shim: derive a shadow ledger entry from a single-entry
  * financialTxLog row.
  *
- * Each tx row is ONE directed movement from the subject's perspective, so it
- * produces one 2-leg entry:
- *   - primary leg  = the subject's real account (amount = row amount)
- *   - contra leg   = the real counterparty account when derivable (two-sided
- *                    rows), otherwise a mint:/sink: bucket (single-sided rows).
+ * Each tx row is ONE directed movement, producing one 2-leg entry:
+ *   - primary leg = the subject's real account (amount = row amount)
+ *   - contra leg  = the real counterparty account when derivable (two-sided
+ *                   rows), otherwise a mint:/sink: bucket (single-sided rows).
  *
- * The contra leg is deliberately booked against `mint:unattributed` /
- * `sink:unattributed` for single-sided rows - that bucket IS the Phase 3
- * coverage backlog, ranked by anchor value in the reconciler report. Proper
- * per-reason attribution and true two-sided linkage is Phase 3 work; the shim
- * exists so the reconciler's per-entry conservation check (Invariant #1) runs
- * green over the derivable subset from day one.
- *
- * See docs/plans/2026-07-05-shadow-ledger-plan.md §3 (Phase 1).
+ * Single-sided rows book against `mint:unattributed` / `sink:unattributed` on
+ * purpose; that bucket IS the Phase 3 coverage backlog. The shim exists so the
+ * reconciler's per-entry conservation check runs over the derivable subset.
  */
 
 const UNATTRIBUTED_REASON = "unattributed";
 
 /**
- * Phase 3 coverage sweep - semantic mint/sink reasons for single-sided rows.
+ * Semantic mint/sink reasons for single-sided rows.
  *
  * A single-entry tx row has no counterparty account, so the shim books its
- * balancing contra leg against a system `mint:`/`sink:` bucket. Phase 1/2 booked
- * ALL of these against the generic `unattributed` bucket, which is what the
- * reconciler's Phase-3 backlog ranks. Assigning a semantic reason moves the top
- * flows out of that backlog and gives the money-supply check a meaningful,
- * per-reason breakdown.
+ * balancing contra leg against a system `mint:`/`sink:` bucket. Assigning a
+ * semantic reason moves the top flows out of `unattributed` and gives the
+ * money-supply check a per-reason breakdown.
  *
- * Reasons are deliberately SHARED across the two sides of a real transfer so the
- * money-supply reconciler nets them per currency instead of double-reporting:
- *   - a sovereign coupon/maturity payout (`gov_*_payment`, sink) pairs with the
- *     holders' `bond_coupon`/`bond_maturity` receipts (mint) → `bond_settlement`
- *     / `bond_coupon_settlement`;
+ * Reasons are SHARED across both sides of a real transfer so the money-supply
+ * reconciler nets them per currency instead of double-reporting:
+ *   - a sovereign coupon/maturity payout (`gov_*_payment`, sink) pairs with
+ *     holders' `bond_coupon`/`bond_maturity` receipts (mint) →
+ *     `bond_settlement` / `bond_coupon_settlement`;
  *   - a corporation's `corp_tax_paid` (sink) pairs with the government's
  *     `gov_tax_revenue` receipt (mint) → `taxation`.
- * `corp_revenue` is a genuine one-directional inflow from the (unmodeled) demand
- * side of the sim, so it has no matching sink - it is honestly a `sector_revenue`
- * mint rather than an attributed transfer.
+ * `corp_revenue` is a genuine one-directional inflow from the unmodeled demand
+ * side, so it has no matching sink: a `sector_revenue` mint.
  *
- * Everything not listed here keeps falling through to `unattributed`, which is
- * the remaining Phase-3 backlog. See docs/plans/2026-07-05-shadow-ledger-plan.md
- * §3 (Phase 3) and docs/plans/2026-07-06-shadow-ledger-phase3-backlog.md.
+ * Anything not listed falls through to `unattributed`.
  */
 const REASON_BY_TX_TYPE: Partial<Record<FinancialTxLogEntry["type"], string>> = {
   corp_sector_founding: "sector_founding_cash",
@@ -175,40 +164,32 @@ const REASON_BY_TX_TYPE: Partial<Record<FinancialTxLogEntry["type"], string>> = 
   loc_repay: "credit_principal",
   loc_interest: "credit_interest",
   index_fund_subscribe: "fund_subscription",
-  // #992 tranche 4: queue-paid NPP redemptions mirror like any holder redeem
-  // when currencies match; this is only the fail-closed fallback for a
-  // cross-currency pair, never the common path.
+  // Queue-paid NPP redemptions mirror like any holder redeem when currencies
+  // match; this is only the fail-closed fallback for a cross-currency pair.
   index_fund_redeem: "fund_redemption",
   index_fund_dividend: "fund_distribution",
   npp_investment_income: "npp_investment_income",
-  // #992 tranche 3: the fund's retained dividend slice. Single-sided by
-  // construction (the corp evidences net-of-dividend revenue), so this is an
-  // attributed mint completing earnings to gross - never `unattributed`.
+  // The fund's retained dividend slice: single-sided by construction (the
+  // corp evidences net-of-dividend revenue), so this is an attributed mint
+  // completing earnings to gross, never unattributed.
   dividend_reinvest: "fund_dividend_retained",
   // #992 tranche 3: cross-fund moves mirror via meta, so the reason is only
   // the fail-closed fallback (cross-currency pair or missing meta).
   fund_transfer: "fund_transfer",
-  // A bond sale is the reverse of a purchase (cash from the bond position
-  // asset). Share one reason so sales net against purchases per currency.
-  // #992 tranche 6: the fund-subject purchase/sale rows land here too,
-  // single-sided (the bond position is unmodeled) and never mirrored.
+  // A bond sale is the reverse of a purchase (cash from the bond position asset). Share one reason so sales net against purchases per currency. Fund-subject purchase/sale rows land here too, single-sided (bond position is unmodeled) and never mirrored.
   bond_sell: "bond_principal_investment",
-  // #992 tranche 3: capital seeding a new entity. The charter corp debit and
-  // the wind-up sponsor return are single-sided by construction (the debit
-  // covers seed + fee while the fund receives the seed alone), and the
-  // charter path now books the fund's seed receipt as its own fund-subject
-  // row under this same type - so both directions share ONE reason and the
-  // money-supply check nets a seeding against its return per currency instead
-  // of pooling both in `unattributed`. (The spin-off incorporation fee debit
-  // shares the type; it is likewise a seeding flow.)
+  // Capital seeding a new entity. The charter corp debit and the wind-up
+  // sponsor return are single-sided by construction (the debit covers seed +
+  // fee while the fund receives the seed alone), and the charter path books
+  // the fund's seed receipt as its own fund-subject row under this same type,
+  // so both directions share ONE reason and the money-supply check nets a
+  // seeding against its return per currency instead of pooling both in
+  // `unattributed`.
   corp_capital_seed: "seed_capital",
-  // #992 tranche 4: order-book escrow. The debit is a reservation, not
-  // destruction - the standing escrow reads as a named sink bucket (same
-  // convention as capacity_capex), and the refund shares the reason so a
-  // placement nets against its own cancel per currency instead of pooling in
-  // `unattributed`. Applies to character/corporation escrow rows as well as
-  // the new fund-subject ones: both directions were already emitted, only the
-  // attribution was missing.
+  // Order-book escrow. The debit is a reservation, not destruction: the
+  // standing escrow reads as a named sink bucket (same convention as
+  // capacity_capex), and the refund shares the reason so a placement nets
+  // against its own cancel per currency instead of pooling in `unattributed`.
   stock_order_escrow: "order_escrow",
   stock_order_refund: "order_escrow",
   corp_escrow_funding: "escrow_transfer",
@@ -221,12 +202,9 @@ const REASON_BY_TX_TYPE: Partial<Record<FinancialTxLogEntry["type"], string>> = 
   office_income: "public_salary",
   savings_interest: "deposit_interest",
   fundraise_credit: "political_fundraising",
-  // Equity transfers whose contra is an unmodeled asset account (public
-  // float, fund holdings). #992 tranches 5-6: fund-subject buy rows (cron
-  // float buys) and sell rows (redemption-liquidity sales, order-fill seller
-  // legs) evidence the fund cash side directly under this shared reason, so
-  // a buy nets against its own sale per currency instead of pooling in
-  // `unattributed`. Fund-subject rows never mirror.
+  // Equity transfers whose contra is an unmodeled asset account (public float, fund holdings).
+  // Fund-subject buy and sell rows share this reason so a buy nets against its own sale
+  // per currency instead of pooling in `unattributed`. Fund-subject rows never mirror.
   stock_trade_buy: "equity_transfer",
   stock_trade_sell: "equity_transfer",
 };
@@ -245,13 +223,10 @@ export function reasonForTxType(txType: FinancialTxLogEntry["type"]): string {
 const FUND_MIRROR_TX_TYPES: ReadonlySet<string> = new Set([
   "index_fund_subscribe",
   "index_fund_redeem",
-  // #992 tranche 3: cross-fund buyer rows carry the seller in meta; the
-  // sponsor fee receipt and the wind-up seed return carry the fund in meta.
-  // Each fires only with matching meta.fundId + meta.fundCurrency, so genuine
-  // sector-revenue corp_revenue rows and the charter corp_capital_seed row
-  // (which carries fundId but deliberately no fundCurrency: the corp debit
-  // covers seed + charter fee while the fund receives seed alone) never
-  // mirror.
+  // Cross-fund buyer rows carry the seller in meta; the sponsor fee receipt and
+  // the wind-up seed return carry the fund in meta. Each fires only with
+  // matching meta.fundId + meta.fundCurrency, so corp_revenue rows and the
+  // charter corp_capital_seed row (fundId without fundCurrency) never mirror.
   "fund_transfer",
   "corp_revenue",
   "corp_capital_seed",
@@ -273,11 +248,9 @@ const FUND_MIRROR_TX_TYPES: ReadonlySet<string> = new Set([
  */
 export function fundMirrorAccount(tx: DerivableTx): string | null {
   if (!FUND_MIRROR_TX_TYPES.has(tx.type)) return null;
-  // #992 tranche 3: a fund-subject row already evidences the fund side, so
-  // mirroring it would book the fund twice (base primary plus mirror
-  // primary cancel out and the fund delta vanishes). fund_transfer is the
-  // exception: its subject is the buyer fund while meta carries the seller,
-  // so the mirror is the seller's side, not a duplicate.
+  // A fund-subject row already evidences the fund side, so mirroring
+  // would double-book the fund. fund_transfer is the exception: its
+  // subject is the buyer fund, so the mirror is the seller's side.
   if (tx.subjectType === "fund" && tx.type !== "fund_transfer") return null;
   const meta = tx.meta;
   const fundId = meta?.fundId;

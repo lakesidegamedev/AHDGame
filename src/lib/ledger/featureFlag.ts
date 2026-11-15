@@ -1,13 +1,13 @@
 import { getDb } from "@/lib/mongodb";
 import type { GameConfig } from "@/lib/db/types";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 /**
- * `ledgerShadow` — master flag for the shadow double-entry ledger.
+ * `ledgerShadow`, master flag for the shadow double-entry ledger.
  *
- * OFF by default in prod seeds (Phases 1-2 ship dark); ON in the sim harness
+ * OFF by default in prod seeds; ON in the sim harness
  * (scripts/sim/runWorld.ts) where the reconciler on a known-clean world is the
- * acceptance test. Absent/undefined = off. See
- * docs/plans/2026-07-05-shadow-ledger-plan.md §3.
+ * acceptance test. Absent/undefined = off.
  */
 
 let cached: { value: boolean; at: number } | null = null;
@@ -35,9 +35,10 @@ export async function isLedgerShadowEnabled(
   let value = false;
   try {
     const db = await getDb();
-    const config = await db
-      .collection<GameConfig>("gameConfig")
-      .findOne({ _id: "default" }, { projection: { ledgerShadow: 1 } });
+    const config = await gameConfigCollection(db).findOne(
+      { _id: "default" },
+      { projection: { ledgerShadow: 1 } }
+    );
     value = config?.ledgerShadow === true;
   } catch {
     value = false;

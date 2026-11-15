@@ -7,22 +7,13 @@ import type { CountryEraOverride } from "../../contract";
  *
  *     npx tsx scripts/countries/gen-country-eras.ts UK --force
  *
- * ⚠ DIFFERENCES ONLY. Everything not named here comes from the base modules.
+ * ⚠ DIFFERENCES ONLY. Unlisted fields come from base modules.
  *
- * No per-era orders of battle: this era falls back to the base set rather
- * than inventing an empty one.
- *
- * ⚠️ `usdExchangeRate` IS SET HERE BECAUSE NO 1991 ERA SET IT. The field is the
- * anchor value of ONE unit of this country's stored seed currency, and its base
- * value is a modern 1.0. `ukRegions1991` authors regional GDP in GBP millions,
- * so the anchor must be the reciprocal of `INITIAL_RATES_1991` (0.57 GBP/USD) — the
- * same table `seedExchangeRates` writes into the `exchangeRates` collection.
- * Left unset, the UK read as a $433B economy against a real ~$1.03T.
- *
- * The conversion follows the seed's stored GDP denomination. Native-currency
- * output uses the opening quote; output already in the shared unit stays at 1.
- * Soviet and Nigerian native-currency seeds now use that same rule after their
- * source denomination and national totals were reconciled.
+ * `usdExchangeRate` is the anchor value of one unit of stored seed
+ * currency. `ukRegions1991` authors GDP in GBP millions, so this must be
+ * the reciprocal of `INITIAL_RATES_1991` (0.57 GBP/USD) to match the
+ * `exchangeRates` table. Left at 1.0, UK GDP reads roughly a quarter of
+ * reality.
  */
 export const UK_1991: CountryEraOverride = {
   preset: "1991-default",

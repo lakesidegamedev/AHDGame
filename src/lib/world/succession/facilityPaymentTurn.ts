@@ -8,23 +8,22 @@ import { resolveCorpLiquidCurrencyCode } from "@/lib/currency/corporationCapital
 import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { planFacilityPayments } from "./rules/facilityPayments";
+import { type FederationFacilityClaimRecord } from "./facilityClaimLedger";
+import { type FederationFiscalAccount } from "./materializeFiscalAccounts";
 import {
-  FEDERATION_FACILITY_CLAIMS_COLLECTION,
-  type FederationFacilityClaimRecord,
-} from "./facilityClaimLedger";
-import {
-  FEDERATION_FISCAL_ACCOUNTS_COLLECTION,
-  type FederationFiscalAccount,
-} from "./materializeFiscalAccounts";
-import {
-  FEDERATION_SETTLEMENT_APPLICATIONS_COLLECTION,
-  WORLD_ENTITY_STATES_COLLECTION,
   type FederationSettlementApplicationRecord,
   type RuntimeWorldEntityState,
   validateAppliedEntityStates,
 } from "./runtimeEntities";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { macroCountriesCollection } from "@/lib/db/repositories/macroCountries";
+import { federationSettlementApplicationsCollection } from "@/lib/db/repositories/federationSettlementApplications";
+import { federationFiscalAccountsCollection } from "@/lib/db/repositories/federationFiscalAccounts";
+import { federationFacilityClaimsCollection } from "@/lib/db/repositories/federationFacilityClaims";
+import { worldEntityStatesCollection } from "@/lib/db/repositories/worldEntityStates";
+import { federationFacilityPaymentTurnsCollection } from "@/lib/db/repositories/federationFacilityPaymentTurns";
 
-const FEDERATION_FACILITY_PAYMENT_TURNS_COLLECTION = "federationFacilityPaymentTurns";
 interface PaymentFirm {
   _id: ObjectId;
   countryId?: string;
@@ -72,28 +71,22 @@ export async function materializeFacilityPaymentTurn(input: {
     !Number.isFinite(now.getTime())
   )
     throw new Error("Facility payment needs an active transaction and valid turn");
-  const receipts = db.collection<FederationFacilityPaymentTurn>(
-    FEDERATION_FACILITY_PAYMENT_TURNS_COLLECTION
-  );
+  const receipts = federationFacilityPaymentTurnsCollection<FederationFacilityPaymentTurn>(db);
   const receiptId = `${applicationId}:${turn}`;
   const previous = await receipts.findOne({ _id: receiptId }, { session });
   if (previous) return previous;
-  const application = await db
-    .collection<FederationSettlementApplicationRecord>(
-      FEDERATION_SETTLEMENT_APPLICATIONS_COLLECTION
-    )
-    .findOne({ _id: applicationId, status: "applied", presetId: "1991-default" }, { session });
+  const application =
+    await federationSettlementApplicationsCollection<FederationSettlementApplicationRecord>(
+      db
+    ).findOne({ _id: applicationId, status: "applied", presetId: "1991-default" }, { session });
   // New settlements activate after this phase and first service claims next turn.
   if (!application || application.appliedOnTurn >= turn)
     throw new Error("Facility payment requires an earlier applied settlement");
-  const entities = await db
-    .collection<RuntimeWorldEntityState>(WORLD_ENTITY_STATES_COLLECTION)
+  const entities = await worldEntityStatesCollection<RuntimeWorldEntityState>(db)
     .find({ applicationId }, { session })
     .toArray();
   validateAppliedEntityStates(application.presetId, [application], entities);
-  const claimCollection = db.collection<FederationFacilityClaimRecord>(
-    FEDERATION_FACILITY_CLAIMS_COLLECTION
-  );
+  const claimCollection = federationFacilityClaimsCollection<FederationFacilityClaimRecord>(db);
   const claims = await claimCollection
     .find({ applicationId, status: "payable" }, { session })
     .toArray();
@@ -112,15 +105,13 @@ export async function materializeFacilityPaymentTurn(input: {
     return receipt;
   }
   const debtorIds = [...new Set(claims.map((claim) => claim.debtorEntityId))].sort();
-  const accounts = await db
-    .collection<FederationFiscalAccount>(FEDERATION_FISCAL_ACCOUNTS_COLLECTION)
+  const accounts = await federationFiscalAccountsCollection<FederationFiscalAccount>(db)
     .find(
       { applicationId, entityId: { $in: debtorIds }, kind: "background-successor" },
       { session }
     )
     .toArray();
-  const macros = await db
-    .collection<SuccessorCash>("macroCountries")
+  const macros = await macroCountriesCollection<SuccessorCash>(db)
     .find(
       {
         _id: { $in: debtorIds },
@@ -141,8 +132,7 @@ export async function materializeFacilityPaymentTurn(input: {
   const firmIds = [...new Set(claims.map((claim) => claim.corporationId))];
   if (firmIds.some((id) => !ObjectId.isValid(id)))
     throw new Error("Facility claim has an invalid firm identity");
-  const firms = await db
-    .collection<PaymentFirm>("corporations")
+  const firms = await corporationsCollection<PaymentFirm>(db)
     .find(
       { _id: { $in: firmIds.map((id) => new ObjectId(id)) } },
       {
@@ -197,8 +187,7 @@ export async function materializeFacilityPaymentTurn(input: {
         .filter((code): code is CurrencyCode => !!code)
     ),
   ];
-  const rates = await db
-    .collection<{ currencyCode: CurrencyCode; rate: number }>("exchangeRates")
+  const rates = await exchangeRatesCollection<{ currencyCode: CurrencyCode; rate: number }>(db)
     .find({ currencyCode: { $in: codes } }, { session, projection: { currencyCode: 1, rate: 1 } })
     .toArray();
   const rateByCode = new Map(rates.map((rate) => [rate.currencyCode, rate.rate]));
@@ -286,13 +275,13 @@ export async function materializeFacilityPaymentTurn(input: {
   }));
   if (
     macroWrites.length &&
-    (await db.collection<SuccessorCash>("macroCountries").bulkWrite(macroWrites, { session }))
+    (await macroCountriesCollection<SuccessorCash>(db).bulkWrite(macroWrites, { session }))
       .matchedCount !== macroWrites.length
   )
     throw new Error("Successor cash changed during compensation");
   if (
     firmWrites.length &&
-    (await db.collection<PaymentFirm>("corporations").bulkWrite(firmWrites, { session }))
+    (await corporationsCollection<PaymentFirm>(db).bulkWrite(firmWrites, { session }))
       .matchedCount !== firmWrites.length
   )
     throw new Error("Creditor cash changed during compensation");
@@ -310,15 +299,13 @@ export async function processFederationFacilityPaymentTurn(
   turn: number,
   now: Date
 ): Promise<number> {
-  const applications = await db
-    .collection<FederationSettlementApplicationRecord>(
-      FEDERATION_SETTLEMENT_APPLICATIONS_COLLECTION
-    )
-    .find(
-      { presetId: "1991-default", status: "applied", appliedOnTurn: { $lt: turn } },
-      { projection: { _id: 1 } }
-    )
-    .toArray();
+  const applications =
+    await federationSettlementApplicationsCollection<FederationSettlementApplicationRecord>(db)
+      .find(
+        { presetId: "1991-default", status: "applied", appliedOnTurn: { $lt: turn } },
+        { projection: { _id: 1 } }
+      )
+      .toArray();
   for (const application of applications)
     await runRequiredTransaction(
       (session) =>

@@ -41,13 +41,14 @@ import {
 } from "@/lib/military/warEntryPolicy";
 import type { OrganizationLegislation } from "@/lib/db/types/internationalOrganization";
 import type { GovernmentFormation } from "@/lib/db/types/governmentFormation";
-import type { NPP } from "@/lib/db/types";
 import {
   planOrganizationWarDeclarationFromDb,
   type OrganizationWarPlanningContext,
 } from "@/lib/internationalOrganizations/warDeclarationPlanning";
 import { enactAutomaticOrganizationWar } from "@/lib/internationalOrganizations/enactAutomaticWarDeclaration";
 import { loadPolicyHeadSponsors } from "@/lib/internationalOrganizations/policyHeadSponsors";
+import { getNppsCollection } from "@/lib/db/collections/npps";
+import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
 
 async function getPolicyHeadSponsor(
   db: Db,
@@ -56,14 +57,15 @@ async function getPolicyHeadSponsor(
   const playerHead = await getHeadOfGovernmentCharacter(db, countryId);
   if (playerHead) return { ...playerHead, isNpp: false };
 
-  const formation = await db
-    .collection<GovernmentFormation>("governmentFormations")
-    .findOne({ _id: countryId, status: "formed" });
+  const formation = await governmentFormationsCollection(db).findOne({
+    _id: countryId,
+    status: "formed",
+  });
   const headNppId = formation?.presidentNppId ?? formation?.pmNppId ?? null;
   if (!headNppId) return null;
-  const npp = await db
-    .collection<NPP>("npps")
-    .findOne({ _id: headNppId }, { projection: { _id: 1, name: 1, party: 1 } });
+  const npp = await (
+    await getNppsCollection(db)
+  ).findOne({ _id: headNppId }, { projection: { _id: 1, name: 1, party: 1 } });
   return npp ? { _id: npp._id, name: npp.name, party: npp.party, isNpp: true } : null;
 }
 
@@ -84,19 +86,14 @@ export async function applyResolutionEffect(
   currentTurn: number,
   expiresTurn?: number,
   /**
-   * The roster that can be ASKED TO LEGISLATE about this resolution: for
+   * The roster that can be asked to legislate on this resolution: for
    * `join_conflict`, the legislating roll (player-enabled members plus, in
    * active mode, modelled members with a formed NPP government).
    *
-   * Separate from `members`, which is every modelled member: an effect that binds
-   * a country (sanctions, aid) is not the same set as one that asks a country to
-   * legislate. `join_conflict` needs the wider player + NPP legislating roll;
-   * `declare_war` receives the player ballot and classifies NPP members itself.
-   *
-   * It is also NOT the ballot. An NPP-governed member holds no vote on an entry
-   * resolution — a silence under unanimity is a veto — and is still handed the
-   * war the bloc voted for. Callers for other resolution types pass the ballot,
-   * which for those coincides with this roll.
+   * Distinct from `members` and from the ballot: `join_conflict` needs the wider
+   * player + NPP roll, `declare_war` receives the player ballot and classifies
+   * NPP members itself, and an NPP-governed member is handed the war under
+   * unanimity without voting.
    */
   votingMemberIds: CountryId[] = [],
   foundingContext: Pick<OrgFoundingContext, "europeanIntegration"> = {},
@@ -185,16 +182,6 @@ export async function applyResolutionEffect(
         currentTurn,
         context: warPlanningContext,
       });
-      if (!plan.conflictsEnabled) {
-        await recordOrgHistoryEvent(
-          db,
-          resolution.proposingCountryId,
-          currentTurn,
-          `${resolution.organizationId}'s declaration lapsed because conflicts are disabled.`,
-          { organizationId: resolution.organizationId, legislationId: resolution._id.toString() }
-        );
-        return false;
-      }
       if (!plan.targetEnabled) {
         await recordOrgHistoryEvent(
           db,

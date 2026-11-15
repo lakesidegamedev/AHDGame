@@ -1,17 +1,5 @@
 /**
- * Sector-type dossier copy.
- *
- * The Sectors tab used to be one flat table of every site a corporation owns,
- * with the sector type reduced to a coloured word on each row. A corp running
- * mines, newsrooms and power stations read as one undifferentiated list, and
- * nothing on the page said what any of those businesses actually DO.
- *
- * This file holds the static half of the fix: a briefing per type naming the
- * business and what moves its margin (SECTOR_TYPE_BRIEFING), and two proposed
- * controls that are not built yet (SECTOR_TYPE_PROPOSED_ACTIONS). Nothing here
- * is persisted, read by the turn, or allowed to change a number, exactly like
- * facilityVocabulary. The live half (counts, revenue, utilisation) is computed
- * in `sectorTypeMetrics` from the sectors themselves.
+ * Sector-type dossier copy: a briefing per type naming the business and what moves its margin, plus proposed controls that are not built yet. Nothing here is persisted, read by the turn, or allowed to change a number. Live metrics are computed in `sectorTypeMetrics`.
  *
  * COPY RULE (project standing): plain language, short, no dashes.
  */

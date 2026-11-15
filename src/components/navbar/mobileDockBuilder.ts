@@ -118,7 +118,7 @@ export function buildMobileDock({
   const link = makeDesktopLink(t);
   const stateHref = homeState ? regionUrl(homeState.countryId, homeState.id) : null;
   const onState = !!stateHref && pathActive(pathname, stateHref);
-  const companyHref = myCorporationId ? `/corporation/${myCorporationId}` : null;
+  const companyHref = myCorporationId != null ? "/api/corporations/mine" : null;
   const nationName = countryName(pageCountry);
   const nationHref = countryUrl(pageCountry);
 
@@ -129,8 +129,8 @@ export function buildMobileDock({
           label: t("dock.company"),
           icon: { kind: "pixel", name: "briefcase" },
           href: companyHref,
-          active: pathActive(pathname, companyHref),
-          activePrefixes: [companyHref],
+          active: pathActive(pathname, `/corporation/${myCorporationId}`),
+          activePrefixes: [`/corporation/${myCorporationId}`],
         }
       : {
           id: "market",

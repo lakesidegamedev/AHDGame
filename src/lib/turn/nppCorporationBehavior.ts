@@ -30,7 +30,7 @@ import {
   type NppFoundingCashWitness,
 } from "@/lib/turn/npp/foundingCashLedger";
 import type { Db, ObjectId } from "mongodb";
-import type { Corporation, CorporateSector, GameState, ExchangeRate, State } from "@/lib/db/types";
+import type { Corporation, CorporateSector, ExchangeRate, State } from "@/lib/db/types";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { currencyForCountry } from "@/lib/currency/sectorFxSpread";
 import { netPerTurnDebtServiceAnchor } from "@/lib/bonds/corpBondCashflows";
@@ -55,7 +55,6 @@ export {
   STRATEGY_SHIFT_PROFIT_SEEK_ADVANTAGE,
   strategyPriceScore,
 } from "@/lib/turn/npp/strategyRetooling";
-import type { NPP } from "@/lib/db/types/npp";
 import type { UnownedSector } from "@/lib/db/types/unownedSector";
 import { ceoArchetypeModifiers } from "@/lib/turn/ceoArchetype";
 import {
@@ -86,7 +85,7 @@ import { loadGroupDominanceSectorResolver } from "@/lib/corporations/groupDomina
 import type { BuildCapexTxInput } from "@/lib/corporations/capexTxLog";
 
 import { buildNppNationalShareResolver } from "@/lib/turn/npp/nationalDominancePricing";
-import { resolvePresetIdFromGameState } from "@/lib/world/countryReadinessContract";
+import { resolvePresetIdFromGameState } from "@/lib/world/presetId";
 import { buildNppPriceSignals } from "@/lib/turn/npp/priceSignals";
 import type { RelocationPrimeBank } from "@/lib/corporations/issueRelocationBond";
 import { loadNppBankRateSnapshot } from "@/lib/turn/npp/bankRateSnapshot";
@@ -145,6 +144,12 @@ import {
   corpTechCashFloorLocal,
 } from "@/lib/corporations/dailyGrossRevenue";
 import type { TechUnlockLedgerInput } from "@/lib/corporations/techTree/techUnlockLedger";
+import { loadTechDiffusionSnapshot } from "@/lib/corporations/techTree/diffusion";
+import {
+  presetUsesTechDiffusion,
+  type TechDiffusionSnapshot,
+} from "@/lib/constants/techTree/diffusion";
+import { loadFrontierResearchByLane } from "@/lib/corporations/techTree/frontierResearch";
 import { loadNppPlacementSignals } from "@/lib/turn/npp/fragileMarketSupply";
 import {
   buildMarketSaturationIndex,
@@ -187,6 +192,16 @@ import {
 } from "@/lib/turn/npp/nppCorporationTuning";
 import { SETTLEMENT_HISTORY_EXCLUDED } from "@/lib/banking/settlementHistory";
 import { createReinvestPoolLookup } from "@/lib/turn/npp/reinvestCandidatePool";
+import { getCorporationsCollection } from "@/lib/db/collections/corporations";
+import { getCorporateSectorsCollection } from "@/lib/db/collections/corporateSectors";
+import { getNppsCollection } from "@/lib/db/collections/npps";
+import { getGameStateCollection } from "@/lib/db/collections/gameState";
+import { getStatesCollection } from "@/lib/db/collections/states";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
+import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
+import { producerMarketOutcomesCollection } from "@/lib/db/repositories/producerMarketOutcomes";
 
 export {
   NPP_GROWTH_MIN_SHORTAGE,
@@ -225,8 +240,9 @@ export async function processNppCorporationDecisions(
         (corp) => (corp.ceoType === "npp" && corp.suspended !== true) || isAutopilotRun(corp)
       )
     : (
-        await db
-          .collection<Corporation>("corporations")
+        await (
+          await getCorporationsCollection(db)
+        )
           .find(
             {
               $or: [
@@ -268,19 +284,15 @@ export async function processNppCorporationDecisions(
   // All four reads depend only on the NPP cohort. Start them together rather
   // than making the decision phase wait for each collection in sequence.
   const [allSectors, ceoNpps, commodityPriceDocs, unownedSectors] = await Promise.all([
-    db
-      // full-read(corporateSectors): buildQueue and plantsPnl drive NPP build and divest decisions
-      .collection<CorporateSector>("corporateSectors")
-      .find({ corporationId: { $in: corpIds } })
-      .toArray(),
+    // full-read(corporateSectors): buildQueue and plantsPnl drive NPP build and divest decisions
+    (await getCorporateSectorsCollection(db)).find({ corporationId: { $in: corpIds } }).toArray(),
     ceoNppIds.length > 0
-      ? db
-          .collection<NPP>("npps")
+      ? (await getNppsCollection(db))
           .find({ _id: { $in: ceoNppIds } }, { projection: { personality: 1 } })
           .toArray()
       : Promise.resolve([]),
-    db.collection<CommodityPrice>("commodityPrices").find({}).toArray(),
-    db.collection<UnownedSector>("unownedSectors").find({}).toArray(),
+    commodityPricesCollection(db).find({}).toArray(),
+    unownedSectorsCollection(db).find({}).toArray(),
   ]);
   const { archetypeByNppId, sectorsByCorp, priceByCommodity } = buildNppCorporationDecisionIndexes(
     ceoNpps,
@@ -305,8 +317,7 @@ export async function processNppCorporationDecisions(
   // NPPs cannot auto-expand into state-controlled buckets; players still may.
   const [nationalCorpIds, globalSectors, strategyGate] = await Promise.all([
     loadNationalCorpIds(db),
-    db
-      .collection<CorporateSector>("corporateSectors")
+    (await getCorporateSectorsCollection(db))
       .find(
         {},
         {
@@ -323,6 +334,8 @@ export async function processNppCorporationDecisions(
             corporationId: 1,
             nationalizedAtTurn: 1,
             mothballed: 1,
+            // Where each method already runs, for technology diffusion.
+            strategyId: 1,
             capitalStock: 1,
             // Physical saturation per cell: see rules/marketSaturation.
             demandThrottleFactor: 1,
@@ -335,18 +348,18 @@ export async function processNppCorporationDecisions(
       )
       .toArray(),
     // Cohort-wide kill switch, read once. Absent means ON.
-    db.collection<GameState>("gameState").findOne(
+    (await getGameStateCollection(db)).findOne(
       { _id: "current" },
       {
         projection: {
           nppCorpStrategyEnabled: 1,
           frontierEntryExperimentEnabled: 1,
-          subsidiaryCorporationsEnabled: 1,
           worldEpochId: 1,
           producerOpening: 1,
           currentYear: 1,
           startingYear: 1,
           currentTurn: 1,
+          preset: 1,
         },
       }
     ),
@@ -451,12 +464,12 @@ export async function processNppCorporationDecisions(
   let shortageGrowthFinanceConfig: ShortageGrowthFinanceConfig | null = null;
   let bankRates: RelocationPrimeBank[] | undefined;
   if (plantsEnabled) {
-    const gsPlants = await db
-      .collection<GameState>("gameState")
-      .findOne(
-        { _id: "current" },
-        { projection: { currentYear: 1, startingYear: 1, currentTurn: 1, preset: 1 } }
-      );
+    const gsPlants = await (
+      await getGameStateCollection(db)
+    ).findOne(
+      { _id: "current" },
+      { projection: { currentYear: 1, startingYear: 1, currentTurn: 1, preset: 1 } }
+    );
     const plantsYear =
       gsPlants?.currentYear ??
       (gsPlants?.startingYear ?? STARTING_YEAR) +
@@ -469,38 +482,36 @@ export async function processNppCorporationDecisions(
     const primeByCountry = bankSnapshot.primeByCountry;
     const colByState = await loadNppCostOfLivingByState(db);
     const nationalShareOf = buildNppNationalShareResolver(globalSectors);
-    const nppGameConfig = await db
-      .collection<
-        {
-          commandEconomyEnabled?: boolean;
-          producerConversionPaceShare?: number;
-          producerFundedRestartStage?: number;
-          wholePlantsStage?: number;
-          producerCaptiveDeliveryStage?: number;
-          nppStateServiceHeadroomStage?: number;
-          nppDividendAfterTaxStage?: number;
-          nppGrowthPerProductFillStage?: number;
-        } & ShortageGrowthFinanceConfigInput
-      >("gameConfig")
-      .findOne(
-        { _id: "default" as never },
-        {
-          projection: {
-            commandEconomyEnabled: 1,
-            producerConversionPaceShare: 1,
-            producerFundedRestartStage: 1,
-            wholePlantsStage: 1,
-            producerCaptiveDeliveryStage: 1,
-            nppStateServiceHeadroomStage: 1,
-            nppShortageGrowthFinanceStage: 1,
-            nppDividendAfterTaxStage: 1,
-            nppGrowthPerProductFillStage: 1,
-            nppShortageGrowthFinanceCandidateLimit: 1,
-            nppShortageGrowthFinanceMaxPaybackTurns: 1,
-            nppShortageGrowthFinanceMaxExposureProfitTurns: 1,
-          },
-        }
-      );
+    const nppGameConfig = await gameConfigCollection<
+      {
+        commandEconomyEnabled?: boolean;
+        producerConversionPaceShare?: number;
+        producerFundedRestartStage?: number;
+        wholePlantsStage?: number;
+        producerCaptiveDeliveryStage?: number;
+        nppStateServiceHeadroomStage?: number;
+        nppDividendAfterTaxStage?: number;
+        nppGrowthPerProductFillStage?: number;
+      } & ShortageGrowthFinanceConfigInput
+    >(db).findOne(
+      { _id: "default" as never },
+      {
+        projection: {
+          commandEconomyEnabled: 1,
+          producerConversionPaceShare: 1,
+          producerFundedRestartStage: 1,
+          wholePlantsStage: 1,
+          producerCaptiveDeliveryStage: 1,
+          nppStateServiceHeadroomStage: 1,
+          nppShortageGrowthFinanceStage: 1,
+          nppDividendAfterTaxStage: 1,
+          nppGrowthPerProductFillStage: 1,
+          nppShortageGrowthFinanceCandidateLimit: 1,
+          nppShortageGrowthFinanceMaxPaybackTurns: 1,
+          nppShortageGrowthFinanceMaxExposureProfitTurns: 1,
+        },
+      }
+    );
     conversionPaceShare = nppGameConfig?.producerConversionPaceShare ?? 0;
     fundedRestartStage = nppGameConfig?.producerFundedRestartStage ?? 0;
     shortageGrowthFinanceConfig = resolveShortageGrowthFinanceConfig(nppGameConfig);
@@ -517,8 +528,9 @@ export async function processNppCorporationDecisions(
         priceByCommodity.get(commodity)?.stateDemand?.[stateId] ?? null,
       commodityCountryDemandOf: countryDemandResolver(
         priceByCommodity,
-        await db
-          .collection<State>("states")
+        await (
+          await getStatesCollection(db)
+        )
           .find({}, { projection: { _id: 1, countryId: 1 } })
           .toArray()
       ),
@@ -548,14 +560,26 @@ export async function processNppCorporationDecisions(
   const entryDiagnostics: NppMarketEntryDiagnostic[] = [];
 
   // Resolve the world's current decade once for NPP tech-tree auto-picks.
+  // World frontier research per lane, one aggregate for the cohort: opens the
+  // 2049 breakthrough methods to NPP retooling and founding.
   let techCurrentYear = 0;
+  let sectorResearchByLane: ReadonlyMap<string, number> | undefined;
+  // Diffusion worlds: readiness by country, and the method operators taken
+  // from the sector rows already in hand.
+  let techDiffusion: TechDiffusionSnapshot | undefined;
   if (techTreesEnabled) {
-    const gs = await db
-      .collection<GameState>("gameState")
-      .findOne(
+    const [gs, researchByLane, diffusion] = await Promise.all([
+      (await getGameStateCollection(db)).findOne(
         { _id: "current" },
         { projection: { currentYear: 1, startingYear: 1, currentTurn: 1 } }
-      );
+      ),
+      loadFrontierResearchByLane(db, techTreesEnabled),
+      presetUsesTechDiffusion(strategyGate?.preset)
+        ? loadTechDiffusionSnapshot(db, { sectors: globalSectors })
+        : undefined,
+    ]);
+    sectorResearchByLane = researchByLane;
+    techDiffusion = diffusion;
     const startingYear = gs?.startingYear ?? STARTING_YEAR;
     techCurrentYear =
       gs?.currentYear ??
@@ -576,7 +600,7 @@ export async function processNppCorporationDecisions(
   // Local-per-₳ rates for every live currency, loaded once. NPP money constants
   // are all ₳; `liquidCapital` is not. See `NppCorpDecisionContext.fxRate`.
   const fxByCurrency = new Map<string, number>();
-  for (const rate of await db.collection<ExchangeRate>("exchangeRates").find({}).toArray()) {
+  for (const rate of await exchangeRatesCollection(db).find({}).toArray()) {
     if (rate.currencyCode && typeof rate.rate === "number" && rate.rate > 0) {
       fxByCurrency.set(rate.currencyCode, rate.rate);
     }
@@ -621,6 +645,8 @@ export async function processNppCorporationDecisions(
             (strategyGate?.startingYear ?? STARTING_YEAR) +
               Math.floor(((strategyGate?.currentTurn ?? turn) - 1) / TURNS_PER_YEAR),
           techTreesEnabled,
+          sectorResearchByLane,
+          techDiffusion,
         }
       : undefined;
   // Founding never lands a plant its state cannot supply: the recipe it would
@@ -655,13 +681,12 @@ export async function processNppCorporationDecisions(
     transitionFirstFundedTurn != null &&
     strategyGate?.worldEpochId
       ? (
-          await db
-            .collection<{
-              worldEpoch: string;
-              turn: number;
-              recipePressure?: Record<string, number>;
-              bookPressure?: Record<string, number>;
-            }>("producerMarketOutcomes")
+          await producerMarketOutcomesCollection<{
+            worldEpoch: string;
+            turn: number;
+            recipePressure?: Record<string, number>;
+            bookPressure?: Record<string, number>;
+          }>(db)
             .find(
               { worldEpoch: strategyGate.worldEpochId, turn: { $lte: turn } },
               {
@@ -699,7 +724,6 @@ export async function processNppCorporationDecisions(
       : undefined;
   const groupMembership = await loadGroupDirectionMembership(
     db,
-    strategyGate?.subsidiaryCorporationsEnabled === true,
     nppCorps,
     preloaded?.groupMembership
   );
@@ -807,6 +831,8 @@ export async function processNppCorporationDecisions(
       labourWagesEnabled,
       currentYear: techCurrentYear > 0 ? techCurrentYear : undefined,
       techTreesEnabled,
+      sectorResearchByLane,
+      techDiffusion,
       frontierEntry: autopilot ? undefined : frontierEntryTurn,
       engineSix: engineSixByCountry.get(corp.countryId) === true,
       transitionFirstFundedTurn,

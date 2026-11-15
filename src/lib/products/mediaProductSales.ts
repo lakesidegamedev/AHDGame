@@ -5,6 +5,7 @@
 import type { Db } from "mongodb";
 import type { MediaProductProject } from "./mediaProduct";
 import type { MediaProductDeliveryAttribution } from "./rules/mediaProductSales";
+import { mediaProductProjectsV1Collection } from "@/lib/db/repositories/mediaProductProjectsV1";
 
 export {
   attributeMediaProductSales,
@@ -60,7 +61,7 @@ export async function persistMediaProductSales(
       },
     };
   });
-  await db.collection<MediaProductProject>("mediaProductProjectsV1").bulkWrite(operations, {
+  await mediaProductProjectsV1Collection<MediaProductProject>(db).bulkWrite(operations, {
     ordered: false,
   });
 }

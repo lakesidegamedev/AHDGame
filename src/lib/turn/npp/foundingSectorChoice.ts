@@ -1,20 +1,11 @@
 /**
  * Sector choice for an NPP founding a new corporation.
  *
- * Founding used to pick a sector uniformly at random. Across a run that spread
- * new companies evenly over all sectors whatever the market needed, on top of a
- * seed that already gives every country one company per sector. In the 1991
- * world the result was a market whose sector mix ignored where the shortages
- * and profits were.
- *
- * The choice is now weighted: a sector whose outputs are short in the founder's
- * market (the same price-ratio signal expansion uses) is more likely, and a
- * sector already crowded with companies in that country is less likely. Every
- * sector keeps a floor weight, so founding stays varied.
- *
- * A sector one firm dominates is also pulled up (see rules/sectorConcentration):
- * a new company there is a rival the sector lacks. The caller passes the boost;
- * it is 1 everywhere else.
+ * Weighted rather than uniform: sectors short of output in the founder's market
+ * (the price-ratio signal expansion uses) are more likely, sectors already
+ * crowded in that country less likely. Every sector keeps a floor weight so
+ * founding stays varied. A sector one firm dominates is pulled up: a new
+ * company there is a rival it lacks; the caller passes that boost (1 elsewhere).
  *
  * Pure: no database, clock or randomness. The caller passes one uniform roll.
  */

@@ -1,8 +1,8 @@
 import type { Db } from "mongodb";
-import type { Bond } from "@/lib/db/types/bond";
-import type { FederalBudget } from "@/lib/db/types/budget";
 import { federalSurplus, type SurplusInputs } from "./federalSurplus";
 import { sovereignBondOutstanding, sovereignDebtTerms } from "@/lib/bonds/sovereignPrincipal";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
 
 /**
  * Stored fiscal fields that must agree with their definitions at every close:
@@ -14,14 +14,12 @@ import { sovereignBondOutstanding, sovereignDebtTerms } from "@/lib/bonds/sovere
  *
  * `surplus` is a cache of sibling fields and can drift intra-turn while writers
  * interleave, which is why the hygiene pass below reconciles it. `debt.principal`
- * is maintained incrementally by the bond-ledger writers (issuance, maturity,
- * default resolution, merger, secession) and is NEVER derived from
- * `treasuryBalance`: treasury cash is a separate position, and a country may
- * hold cash assets and bond debt at the same time (refs #1975).
+ * is maintained incrementally by the bond-ledger writers and is NEVER derived
+ * from `treasuryBalance`: treasury cash is a separate position, and a country may
+ * hold cash and bond debt at the same time.
  *
- * This check must run at the END of a turn. Live `updatedAt` values show budget
- * writes landing well after the corporation phase, so a check placed there
- * reports the state before the culprit acts.
+ * This check must run at the END of a turn, since budget writes land well after
+ * the corporation phase.
  *
  * Tolerance is 1 unit: these are whole-currency amounts in the billions, so
  * sub-unit float noise is not a breach.
@@ -99,24 +97,19 @@ export interface InvariantReconciliation {
 /**
  * Reconcile every federal budget whose stored fiscal values drifted this turn.
  *
- * `surplus` drifts because every writer does its own read-modify-write. That was
- * diagnosed and then left as a log line, on the reasoning that display surfaces
- * derive the value anyway. They do not all derive it: the stored `surplus` gates
- * a player's treasury transfer against the debt ceiling, sizes quarterly
- * sovereign bond issuance, and feeds national metrics, the central-bank page and
- * the public API history. A stale cache there is wrong money, not noise.
+ * `surplus` drifts because every writer does its own read-modify-write. The stored
+ * value cannot be left stale: it gates treasury transfers against the debt
+ * ceiling, sizes quarterly sovereign bond issuance, and feeds national metrics,
+ * the central-bank page and the public API history.
  *
  * `debt.principal` is reconciled against the bond ledger, never the treasury
- * balance: the pass sums haircut-adjusted active non-defaulted sovereign face
- * per country and re-points any drifted stock at that sum (refreshing the
- * debt-service terms off the corrected stock). Cash movements cannot move it.
+ * balance: the pass sums haircut-adjusted active non-defaulted sovereign face per
+ * country and re-points any drifted stock at that sum. Cash movements cannot move
+ * it.
  *
- * So this writes rather than warns. It runs once, after every phase, when the
- * authoritative fields have all landed. The consequential in-turn readers derive
- * directly as well, because a turn phase can read the stored value before this
- * runs.
- *
- * Never throws: a hygiene pass must not be able to fail a turn.
+ * This writes rather than warns, and runs once after every phase when the
+ * authoritative fields have all landed. Never throws: a hygiene pass must not
+ * fail a turn.
  */
 export async function reconcileFederalBudgetInvariants(
   db: Db,
@@ -125,8 +118,7 @@ export async function reconcileFederalBudgetInvariants(
   const result: InvariantReconciliation = { checked: 0, corrected: 0, skipped: 0 };
   try {
     const [budgets, bonds] = await Promise.all([
-      db
-        .collection<FederalBudget>("federalBudget")
+      federalBudgetCollection(db)
         .find(
           {},
           {
@@ -147,14 +139,13 @@ export async function reconcileFederalBudgetInvariants(
           }
         )
         .toArray(),
-      db
-        .collection<Bond>("bonds")
+      bondsCollection(db)
         .find(
           { issuerType: "sovereign", matured: false, defaulted: false },
           // The outstanding helper re-checks the query-filtered fields, so
           // they must be projected: a doc arriving without `issuerType`
           // reads as non-sovereign and contributes 0, which would re-point
-          // every stored principal at zero (refs #1975).
+          // every stored principal at zero.
           {
             projection: {
               countryId: 1,
@@ -229,7 +220,7 @@ export async function reconcileFederalBudgetInvariants(
     }
 
     if (ops.length > 0) {
-      await db.collection<FederalBudget>("federalBudget").bulkWrite(ops, { ordered: false });
+      await federalBudgetCollection(db).bulkWrite(ops, { ordered: false });
       result.corrected = ops.length;
       console.info(
         `[BudgetInvariant] turn ${turn}: reconciled ${result.corrected} of ${result.checked} ` +

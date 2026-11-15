@@ -7,13 +7,16 @@ import * as corporations from "./corporations";
 import * as corporationsClient from "./corporationsClient";
 import * as commodities from "./commodities";
 import * as commoditiesCore from "./commoditiesCore";
+import * as currencies from "./currencies";
+import * as currencyCodes from "./currencyCodes";
 
 /**
  * Guard for the slim constants modules.
  *
- * A client module that only needs a label or a lane type must import the slim
- * module; importing the full constants file drags its price, margin and
- * dominance tables into every page that renders one label. The two slim modules
+ * A client module that only needs a label, a lane type or a currency symbol must
+ * import the slim module; importing the full constants file drags its price, margin and
+ * dominance tables (or every country economy file, for currencies) into every
+ * page that renders one label. The slim modules
  * re-export their contents through the full modules, so a rewrite cannot change
  * values.
  */
@@ -46,6 +49,12 @@ const MODULES = [
     slimModule: "@/lib/constants/commoditiesCore",
     slimNames: new Set(Object.keys(commoditiesCore)),
     fullNames: new Set(Object.keys(commodities)),
+  },
+  {
+    fullModule: "@/lib/constants/currencies",
+    slimModule: "@/lib/constants/currencyCodes",
+    slimNames: new Set(Object.keys(currencyCodes)),
+    fullNames: new Set(Object.keys(currencies)),
   },
 ];
 

@@ -1,0 +1,167 @@
+{
+  "config": {
+    "id": "JP",
+    "name": "Japan",
+    "code": "JP",
+    "status": "active",
+    "flagEmoji": "🇯🇵",
+    "regionLabel": "Region",
+    "regionLabelPlural": "Regions",
+    "executiveTitle": "Prime Minister",
+    "executiveRealmPhrase": "Japan",
+    "executiveLabel": "Naikaku Sōri Daijin Kantei",
+    "executivePath": "/country/jp/executive",
+    "governmentType": "parliamentaryMonarchy",
+    "governmentTypeLabel": "Constitutional Monarchy",
+    "descriptor": "A parliamentary constitutional monarchy where the Prime Minister leads government through confidence in the House of Representatives, alongside the House of Councillors and elected regional governments.",
+    "heroImage": "https://flagcdn.com/w640/jp.png",
+    "overviewPath": "/country/jp",
+    "mapPath": "/country/jp/map",
+    "currencyCode": "JPY",
+    "centralGovernmentLabel": "National Transfers",
+    "exchangeName": "Nikkei",
+    "financeMinisterCabinetId": "finance_minister",
+    "majorPartyIds": ["ldp", "cdp"],
+    "partyCreationNPPs": { "statesRequired": 2, "lockHomeState": false, "nppsPerState": 1 },
+    "legislature": {
+      "name": "Kokkai",
+      "path": "/country/jp/legislature",
+      "bicameral": true,
+      "lowerChamber": {
+        "key": "shugiin",
+        "name": "Shūgiin",
+        "shortName": "Shūgiin",
+        "seats": 465,
+        "description": "465 members elected by FPTP from regional constituencies. Invests confidence in the Cabinet."
+      },
+      "upperChamber": {
+        "key": "sangiin",
+        "name": "Sangiin",
+        "shortName": "Sangiin",
+        "seats": 248,
+        "description": "248 councillors elected on staggered 6-year terms. Half are contested every 3 years. Cannot be dissolved.",
+        "elected": true
+      }
+    },
+    "subNationalChamber": {
+      "key": "regionalCouncil",
+      "name": "Regional Council",
+      "shortName": "Regional Council",
+      "regionalModel": true
+    },
+    "officeTypes": [
+      {
+        "key": "primeMinister",
+        "label": "Prime Minister",
+        "isExecutive": true,
+        "isSubNational": false,
+        "labelPlural": "Prime Ministers"
+      },
+      {
+        "key": "shugiin",
+        "label": "Member of the House of Representatives",
+        "chamberKey": "shugiin",
+        "isExecutive": false,
+        "isSubNational": false,
+        "labelPlural": "Members of the House of Representatives"
+      },
+      {
+        "key": "sangiin",
+        "label": "Member of the House of Councillors",
+        "chamberKey": "sangiin",
+        "isExecutive": false,
+        "isSubNational": false,
+        "labelPlural": "Members of the House of Councillors"
+      },
+      {
+        "key": "regionalCouncil",
+        "label": "Regional Councillor",
+        "chamberKey": "regionalCouncil",
+        "isExecutive": false,
+        "isSubNational": true,
+        "labelPlural": "Regional Councillors"
+      },
+      {
+        "key": "governor",
+        "label": "Governor",
+        "isExecutive": false,
+        "isSubNational": true,
+        "labelPlural": "Governors"
+      },
+      {
+        "key": "centralBankChair",
+        "label": "Governor of the Bank of Japan",
+        "isExecutive": false,
+        "isSubNational": false,
+        "labelPlural": "Governors of the Bank of Japan"
+      }
+    ],
+    "electionSystems": {
+      "lowerChamber": "pr_hareQuota",
+      "upperChamber": "pr_hareQuota",
+      "subNationalChamber": "pr_hareQuota",
+      "headOfGovernment": "parliamentary",
+      "headOfState": "ceremonial"
+    },
+    "lowerElectionSystem": { "snapElectionsAllowed": true },
+    "upperElectionSystem": { "snapElectionsAllowed": false },
+    "centralBank": {
+      "name": "Bank of Japan",
+      "abbreviation": "BoJ",
+      "heroImage": "/api/images/hero/bank-of-japan",
+      "defaultPrimeRate": 1
+    },
+    "usdExchangeRate": 0.00943
+  },
+  "eraOverrides": {
+    "1991-default": {
+      "legislature": {
+        "name": "Kokkai",
+        "path": "/country/jp/legislature",
+        "bicameral": true,
+        "lowerChamber": {
+          "key": "shugiin",
+          "name": "Shūgiin",
+          "shortName": "Shūgiin",
+          "seats": 512,
+          "description": "512 members elected from multi-member constituencies under the pre-1994 system."
+        },
+        "upperChamber": {
+          "key": "sangiin",
+          "name": "Sangiin",
+          "shortName": "Sangiin",
+          "seats": 252,
+          "description": "252 councillors elected on staggered 6-year terms. Half are contested every 3 years. Cannot be dissolved.",
+          "elected": true
+        }
+      },
+      "usdExchangeRate": 0.007434944237918215
+    },
+    "1953-default": {
+      "majorPartyIds": ["ryo", "jsp"],
+      "legislature": {
+        "name": "Kokkai",
+        "path": "/country/jp/legislature",
+        "bicameral": true,
+        "lowerChamber": {
+          "key": "shugiin",
+          "name": "Shūgiin",
+          "shortName": "Shūgiin",
+          "seats": 466,
+          "description": "466 members elected in the April 1953 general election from regional constituencies."
+        },
+        "upperChamber": {
+          "key": "sangiin",
+          "name": "Sangiin",
+          "shortName": "Sangiin",
+          "seats": 248,
+          "description": "248 councillors elected on staggered 6-year terms. Half are contested every 3 years. Cannot be dissolved.",
+          "elected": true
+        }
+      },
+      "usdExchangeRate": 1
+    }
+  },
+  "nationalAddressName": "Policy Speech",
+  "regionalAssentOfficeKey": "governor"
+}

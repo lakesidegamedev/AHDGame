@@ -1,29 +1,27 @@
 /**
- * Per-turn synthetic-actor driver (issue #1993).
+ * Per-turn synthetic-actor driver.
  *
  * Shell module: takes a Db, performs a bounded set of player-only actions
  * through the REAL production seams, and never throws. runWorld calls it once
  * per turn after `processTurn` in synthetic mode only; pure-NPP runs never
  * call it, so their passive-lifecycle behavior is byte-identical.
  *
- * Per-turn budget (hard caps, first success wins per step):
+ * Per-turn budgets (first success wins per step):
  * - Crisis: at most one `submitCrisisDecision` on the first open interaction
  *   the synthetic head of state is authorized for.
  * - Survey: at most 3 `launchGovernmentProspect` attempts for the synthetic DD
- *   finance minister; stops at the first acceptance.
+ *   finance minister.
  * - Chair: at most one `acceptCentralBankChairSelection` when the US bank
  *   holds a pending appointment for the synthetic nominee.
  *
  * Every step is individually guarded: a missing population, an ineligible
- * minister, a closed window, or any production error is a quiet no-op (one
- * log line), never a turn failure. The manifest's turn-derived evidence
- * counters (`crisisDecidedInteractions`, `wealthListRows`, `playerFoundedCorps`)
- * are what prove these steps ran — this driver never claims coverage itself.
+ * minister, a closed window, or a production error is a quiet no-op (one log
+ * line), never a turn failure. The manifest's turn-derived counters are the
+ * evidence these steps ran; this driver never claims coverage itself.
  */
 
 import { ObjectId, type Db } from "mongodb";
 import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
-import type { CentralBank } from "@/lib/db/types/centralBank";
 import { getBankId } from "@/lib/centralBank/helpers";
 import { acceptCentralBankChairSelection } from "@/lib/turn/centralBankChairSelection";
 import {
@@ -33,6 +31,12 @@ import {
 } from "@/lib/crises/interactionEngine";
 import { launchGovernmentProspect } from "@/lib/extraction/commands/launchGovernmentProspect";
 import { buildSyntheticActorPlan } from "./syntheticActors";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { crisesCollection } from "@/lib/db/repositories/crises";
+import type { Document } from "mongodb";
+import { crisisInteractionsCollection } from "@/lib/db/repositories/crisisInteractions";
+import { stateResourceCapacityCollection } from "@/lib/db/repositories/stateResourceCapacity";
 
 export interface DriveSyntheticActorsOptions {
   seed: string;
@@ -68,11 +72,14 @@ async function driveCrisisDecision(
     plan.actors.find((a) => a.role === "us-president"),
     plan.actors.find((a) => a.role === "crisis-decider"),
   ].filter((a) => a !== undefined);
-  const interactions = (await db.collection("crisisInteractions").find({}).toArray()).slice(0, 5);
+  const interactions = (await crisisInteractionsCollection<Document>(db).find({}).toArray()).slice(
+    0,
+    5
+  );
   for (const decider of ordered) {
-    const character = await db
-      .collection("characters")
-      .findOne({ _id: new ObjectId(decider.characterIdHex) });
+    const character = await charactersCollection(db).findOne({
+      _id: new ObjectId(decider.characterIdHex),
+    });
     if (!character?.userId) continue;
     const roles = await resolveCharacterRoles(db, {
       _id: character._id as ObjectId,
@@ -99,7 +106,7 @@ async function driveCrisisDecision(
       )
         continue;
       const crisis = interaction.crisisId
-        ? await db.collection("crises").findOne({ _id: interaction.crisisId })
+        ? await crisesCollection<Document>(db).findOne({ _id: interaction.crisisId })
         : null;
       const countryId =
         (crisis?.countryId as string | undefined) ?? (character.countryId as string);
@@ -129,18 +136,17 @@ async function driveDdSurvey(
   const plan = buildSyntheticActorPlan(seed);
   const minister = plan.actors.find((a) => a.role === "dd-finance-minister");
   if (!minister) return;
-  const character = await db
-    .collection("characters")
-    .findOne({ _id: new ObjectId(minister.characterIdHex) });
+  const character = await charactersCollection(db).findOne({
+    _id: new ObjectId(minister.characterIdHex),
+  });
   if (!character?.userId) return;
   if (!COUNTRY_CONFIGS.DD?.financeMinisterCabinetId) return;
-  const caps = (await db
-    .collection("stateResourceCapacity")
-    .find({ countryId: "DD" })
-    .toArray()) as unknown as Array<{
-    stateId: string;
-    resources?: Record<string, number>;
-  }>;
+  const caps = await stateResourceCapacityCollection<Document>(db)
+    .find<{
+      stateId: string;
+      resources?: Record<string, number>;
+    }>({ countryId: "DD" })
+    .toArray();
   const attempts: Array<{ stateId: string; resource: string }> = [];
   for (const cap of caps) {
     for (const [resource, amount] of Object.entries(cap.resources ?? {})) {
@@ -185,7 +191,7 @@ async function driveChairAccept(
   const plan = buildSyntheticActorPlan(seed);
   const nominee = plan.actors.find((a) => a.role === "us-fed-nominee");
   if (!nominee) return;
-  const bank = await db.collection<CentralBank>("centralBanks").findOne({ _id: getBankId("US") });
+  const bank = await centralBanksCollection(db).findOne({ _id: getBankId("US") });
   const pending = bank?.chairSelectionPending as { characterId?: ObjectId } | undefined;
   if (!pending?.characterId?.equals(new ObjectId(nominee.characterIdHex))) return;
   const result = await acceptCentralBankChairSelection(

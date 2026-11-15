@@ -8,13 +8,13 @@ import type { CountyCountryId } from "./rules";
 import { countyPopulationTotal } from "./rules";
 import type { Db } from "mongodb";
 import type { County } from "@/lib/db/types/county";
+import { countiesCollection } from "@/lib/db/repositories/counties";
 export async function loadCountyPopulationMap(
   db: Db,
   stateId: string,
   countryId: CountyCountryId = "US"
 ): Promise<Map<string, number>> {
-  const rows = await db
-    .collection<County>("counties")
+  const rows = await countiesCollection(db)
     .find({ countryId, stateId }, { projection: { _id: 1, population: 1 } })
     .toArray();
   if (!rows.length) throw new Error(`County populations not initialized for ${stateId}`);

@@ -11,6 +11,7 @@ import {
   VIETNAM_UNTIL_YEAR,
   vietnamTemplateKeyForLevel,
 } from "./vietnamEscalation";
+import { crisesCollection } from "@/lib/db/repositories/crises";
 
 /**
  * Chained crisis families.
@@ -53,9 +54,7 @@ export function chainTemplateKeyForLevel(family: string, level: number): string 
 
 /** True when a crisis of this family is already live (or already spawned this turn). */
 async function familyIsActive(db: Db, family: string): Promise<boolean> {
-  const live = await db
-    .collection<Crisis>("crises")
-    .findOne({ "chain.family": family, status: "active" });
+  const live = await crisesCollection(db).findOne({ "chain.family": family, status: "active" });
   return live !== null;
 }
 
@@ -182,7 +181,7 @@ export async function openVietnamChain(
     // never announced by it, so announce here. Dynamically imported: the turn
     // module imports this one, and a static import back would close the cycle.
     const { announceCrisisStart } = await import("@/lib/turn/crisisTurn");
-    const crisis = await db.collection<Crisis>("crises").findOne({ _id: id });
+    const crisis = await crisesCollection(db).findOne({ _id: id });
     if (crisis) await announceCrisisStart(db, crisis);
   };
 
@@ -197,22 +196,4 @@ export async function openVietnamChain(
   await announceVietnamChainStart(opened.level);
 
   return { started: true, crisisIds, level: opened.level };
-}
-
-/**
- * Open the Vietnam family once the world reaches its era window.
- *
- * Called every turn. Delegates to `openVietnamChain`, which owns the whole
- * start: the opening rung, both commitment decisions and the press coverage.
- * The generic auto-spawner cannot do any of this. It rewrites `countryIds` to a
- * single nation, a Vietnam rung is addressed to BOTH superpowers at once, and it
- * has no notion of a family that must open exactly once.
- */
-export async function processVietnamChainOpening(
-  db: Db,
-  currentTurn: number,
-  currentYear: number | null | undefined
-): Promise<{ spawned: number }> {
-  const result = await openVietnamChain(db, currentTurn, currentYear);
-  return { spawned: result.crisisIds.length };
 }

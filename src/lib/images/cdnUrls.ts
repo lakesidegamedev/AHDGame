@@ -53,9 +53,6 @@ export const CDN_HERO_SLUGS = [
   "imf-logo",
 ] as const;
 
-/** Hero banner slugs served by `/api/images/hero/[slug]` (and direct CDN use). */
-export type HeroSlug = (typeof CDN_HERO_SLUGS)[number] | `commodity-${string}`;
-
 const CDN_MAPS_BASE = `${CDN_BASE}/static/maps`;
 
 /** Regional GeoJSON files served from R2. Upload via `scripts/upload-geo-maps-to-r2.mjs`. */

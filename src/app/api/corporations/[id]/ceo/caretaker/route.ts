@@ -1,11 +1,10 @@
 /**
- * POST   /api/corporations/[id]/ceo/caretaker  — install an NPP caretaker CEO
- * DELETE /api/corporations/[id]/ceo/caretaker  — dismiss the caretaker, reclaim
+ * POST   /api/corporations/[id]/ceo/caretaker  - install an NPP caretaker CEO
+ * DELETE /api/corporations/[id]/ceo/caretaker  - dismiss the caretaker, reclaim
  *
- * Player-appointed caretaker CEO (NPP-autonomy V2.1). Only the sitting human CEO
- * (the corp owner, via `requireCeo`) may install or dismiss a caretaker, and the
- * country's NPP-autonomy level must be active for this country
- * (`nppAutonomyAtLeast(v1)` — true for autonomy countries at v1, player
+ * Only the sitting human CEO (via `requireCeo`) may install or dismiss.
+ * Country's NPP-autonomy level must be active for this country
+ * (`nppAutonomyAtLeast(v1)` - true for autonomy countries at v1, player
  * countries at v2). Auth: requireBasicAuth + requireCeo. Errors: 401, 403, 400.
  */
 
@@ -24,6 +23,7 @@ import {
   type CaretakerAppointmentError,
 } from "@/lib/corporations/caretakerCeo";
 import { z } from "zod";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -164,12 +164,10 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       return errorResponse(400, "This corporation does not have a caretaker CEO.");
     }
 
-    const update = await db
-      .collection("corporations")
-      .updateOne(
-        { _id: corporation._id, "caretakerCeo.underlyingUserId": corporation.userId },
-        { $set: { "caretakerCeo.mandate": parsed.data.mandate, updatedAt: new Date() } }
-      );
+    const update = await corporationsCollection(db).updateOne(
+      { _id: corporation._id, "caretakerCeo.underlyingUserId": corporation.userId },
+      { $set: { "caretakerCeo.mandate": parsed.data.mandate, updatedAt: new Date() } }
+    );
     if (update.modifiedCount !== 1) {
       return errorResponse(409, "Caretaker changed. Refresh and try again.");
     }

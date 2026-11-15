@@ -1,31 +1,17 @@
 /**
  * 1991 household income vintages for countries whose base metric bundle is
- * dated to another era (#3370 NG, #3371 TR, #3376 CN, #3393 AT/ES/FI/FR/GR/IT/SE;
- * parent #3316).
+ * dated to another era (NG, TR, CN, AT, ES, FI, FR, GR, IT, SE).
  *
  * The base bundles keep their authored REGIONAL SHAPE; only the national
  * level is replaced. The level is derived from the same 1991 regional GDP and
  * population the seed writes, so income, GDP and FX share one currency
  * vintage (circulating naira, 1991 renminbi, pre-2005 old lira).
  *
- * Provenance of the superseded levels, kept for history:
- *   - NG: base bundle is 2022-23 nominal NGN, previously scaled by the US
- *     1991/2019 anchor ratio (0.46), opening at about 579k NGN per household,
- *     87x GDP per resident. The authored 1991 NG anchor of 210,000 NGN was
- *     not reused: it is about 32x GDP per resident in the same naira.
- *   - CN: base bundle is approximate 2023 NBS household CNY, previously
- *     scaled by the same US ratio, opening at about 48k CNY, 26x GDP per
- *     resident. The authored 1991 CN anchor of 9,000 CNY was not reused: it
- *     sits above the NBS 1991 urban household mean.
- *   - TR: base bundle is roughly 1979 nominal lira with no 1991 replacement,
- *     opening at about 127k TRL, 1.2% of 1991 GDP per resident.
- *   - AT, ES, FI, FR, GR, IT, SE (#3393): base bundles are roughly 1979
- *     nominal legacy currency with no 1991 replacement, opening at 0.18x
- *     (GR) to 0.70x (AT) of 1991 GDP per resident. Their only authored
- *     income anchor is the 1953 overlay level (anciens francs for FR, old
- *     markka for FI, the overlay's USD for IT), read flat into 1991, so every
- *     region scored 0 or 100. GDP is WDI 1991 converted to the legacy unit,
- *     never euro (fiscalAnchors1991.ts).
+ * Superseded levels opened wildly off 1991 GDP per resident (NG 87x, CN 26x,
+ * TR 1.2%, legacy-EUR countries 0.18x to 0.70x). Their only other anchor was
+ * the 1953 overlay, read flat into 1991, so every region scored 0 or 100.
+ * GDP is WDI 1991 converted to the legacy unit, never euro
+ * (fiscalAnchors1991.ts).
  */
 
 import type { CountryId } from "@/lib/constants/countries";
@@ -96,7 +82,7 @@ export const INCOME_1991_PROXIES: Record<
       "Household size 5.0 from the 1990 census; household share below private consumption " +
       "share of GDP; Gini about 0.44 per the late-1980s household income surveys.",
   },
-  // #3393. One method for all seven, every input a primary 1991 series:
+  // One method for all seven, every input a primary 1991 series:
   //   householdSize: Eurostat cens_91hpnper (1991 census round, private
   //     households by size; persons / households with 7+ counted as 7).
   //   householdIncomeShare: WDI NE.CON.PRVT.ZS 1991, household final
@@ -228,7 +214,7 @@ export const INCOME_1991_VINTAGE_YEAR = 1991;
  * values, so scoring switches anchors only for data that carries it.
  *
  * Keyed on the preset's start year, not on 1991 alone: a 1979 world seeds the
- * ~1979 bundle and now has its own dated anchor (#3398), while a 1953 world
+ * ~1979 bundle and now has its own dated anchor, while a 1953 world
  * keeps the 1953 overlay and a 2019 world the legacy bundle, so both still
  * clear the stamp. Countries with no vintage at that year return null.
  */

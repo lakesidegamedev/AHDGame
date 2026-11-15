@@ -1,29 +1,14 @@
 /**
  * Post-bootstrap finalize pass for a world reset.
  *
- * `resetGameWorld` tears the old world down; `bootstrapGameWorld` builds the new
- * one. Everything here is the third phase: the steps that need a FULLY SEEDED
- * world and therefore cannot live in the teardown.
+ * `resetGameWorld` tears down; `bootstrapGameWorld` builds. These steps need a
+ * FULLY SEEDED world, so they must run after bootstrap, not before: run earlier
+ * they would operate on the outgoing preset's data and be discarded by
+ * bootstrap's own drops.
  *
- * They used to live in `resetGameWorld`, which called `seedAllCountryData`
- * itself so they had something to operate on. That call was the double-seed —
- * `resetAndBootstrapGameWorld` runs `bootstrapGameWorld` immediately afterwards,
- * which seeds the identical world a second time, and the reset-path call passed
- * a no-op logger so the duplicate pass logged nothing. Measured at exactly 2.00x
- * the write count on every collection `seedAllCountryData` touches.
- *
- * ⚠️ Deleting that call meant these steps had to move, not just shift: run
- * BEFORE bootstrap they would operate on the OUTGOING preset's data and then be
- * discarded by bootstrap's own drops. Two of them were in fact already being
- * discarded that way, and their counts in the reset result and the adminLog
- * described work that never survived — `demographicsReset`,
- * `customPartiesDeleted` and `partyOrgRecordsDeleted` are honest for the first
- * time here.
- *
- * ⚠️ `partyCharters` is the one to watch. It is NOT in `runSeed`'s drop list and
- * its cleanup keys on surviving default parties' `sequentialId`s. Run before
- * bootstrap it compared against PRE-drop ids, i.e. the wrong ones; run here it
- * compares against the ids the new world actually has.
+ * `partyCharters` is the one to watch. It is not in `runSeed`'s drop list and
+ * its cleanup keys on surviving default parties' `sequentialId`s, so it must run
+ * after bootstrap or it compares against pre-drop ids.
  */
 
 import {
@@ -35,6 +20,8 @@ import type { Collection, Db, Document, ObjectId } from "mongodb";
 import type { PoliticalParty, StateDemographics, StatePartyOrg } from "@/lib/db/types";
 import type { PartySeed } from "@/lib/seeds/reference/politicalParties";
 import { getPresetById } from "@/lib/constants/historicalSeats";
+import { loadResetPartySeedCatalog } from "@/lib/admin/resetPartySeedCatalog";
+import { resetSurvivingPartiesToSeed } from "@/lib/admin/resetContract/resetSurvivingParties";
 import { ensureDefaultParties, presetMismatchedPartyNames } from "@/lib/seeds/ensureDefaultParties";
 import { getAllCountryAccess } from "@/lib/countryAccess";
 import { realignPartyCountersToExisting, resetPartyCounters } from "@/lib/db/sequentialId";
@@ -42,6 +29,15 @@ import { ensureImfInstitutionPlaceholder } from "@/lib/imf/ensureImfInstitutionP
 import type { ResetGameWorldResult } from "@/lib/admin/resetGameWorld";
 import { backfillMissingRegionLeans } from "./seed/backfillMissingRegionLeans";
 import { purgeAbsentCountryRegions } from "./seed/purgeAbsentCountryRegions";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
+import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
+import { partyChartersCollection } from "@/lib/db/repositories/partyCharters";
+import { partyBudgetCollection } from "@/lib/db/repositories/partyBudget";
+import { demographicDefaultsCollection } from "@/lib/db/repositories/demographicDefaults";
+import { regionDemographicsCollection } from "@/lib/db/repositories/regionDemographics";
 
 export interface FinalizeResetOptions {
   /** 1991 only: leave political offices vacant for player-created parties. */
@@ -66,67 +62,7 @@ export interface FinalizeResetResult {
   adminDetails: string;
 }
 
-/**
- * Every authored default-party seed the reset's era cleanup judges against.
- *
- * A party is removed as preset-mismatched only when NO seed active in the new
- * preset carries its name, so every roster bootstrap can seed must be listed
- * here. The 1991 successor rosters and the 2019 rosters were missing: Bulgaria's
- * Movement for Rights and Freedoms, seeded for 1991 by the successor roster,
- * shares its name with a 2027-only seed and was deleted on every 1991 reset.
- */
-export async function loadResetPartySeedCatalog(): Promise<PartySeed[]> {
-  const { ukParties } = await import("@/lib/seeds/uk/ukParties");
-  const { politicalParties: usParties } = await import("@/lib/seeds/reference/politicalParties");
-  const { deParties } = await import("@/lib/seeds/de/deParties");
-  const { jpParties } = await import("@/lib/countries/jp/data/jpParties");
-  const { brParties } = await import("@/lib/seeds/br/brParties");
-  const { ieParties } = await import("@/lib/seeds/ie/ieParties");
-  const { frParties } = await import("@/lib/seeds/fr/frParties");
-  const { itParties } = await import("@/lib/seeds/it/itParties");
-  const { esParties } = await import("@/lib/seeds/es/esParties");
-  const { seParties } = await import("@/lib/seeds/se/seParties");
-  const { trParties } = await import("@/lib/seeds/tr/trParties");
-  const { huParties } = await import("@/lib/seeds/hu/huParties");
-  const { roParties } = await import("@/lib/seeds/ro/roParties");
-  const { ngParties } = await import("@/lib/seeds/ng/ngParties");
-  const { ruParties } = await import("@/lib/seeds/ru/ruParties");
-  const { ddParties } = await import("@/lib/seeds/dd/ddParties");
-  const { plParties } = await import("@/lib/seeds/pl/plParties");
-  const { yuParties } = await import("@/lib/seeds/yu/yuParties");
-  const { csParties } = await import("@/lib/seeds/cs/csParties");
-  const { bgParties } = await import("@/lib/seeds/bg/bgParties");
-  const { blrParties } = await import("@/lib/seeds/blr/blrParties");
-  const { balParties } = await import("@/lib/seeds/bal/balParties");
-  const { SUCCESSOR_PARTIES_1991 } = await import("@/lib/seeds/reference/successorParties1991");
-  const { PARTY_ROSTERS_2019 } = await import("@/lib/seeds/partyRosters2019");
-  return [
-    ...usParties,
-    ...ukParties,
-    ...deParties,
-    ...jpParties,
-    ...brParties,
-    ...ieParties,
-    ...frParties,
-    ...itParties,
-    ...esParties,
-    ...seParties,
-    ...trParties,
-    ...huParties,
-    ...roParties,
-    ...ngParties,
-    ...ruParties,
-    ...ddParties,
-    ...plParties,
-    ...yuParties,
-    ...csParties,
-    ...bgParties,
-    ...blrParties,
-    ...balParties,
-    ...Object.values(SUCCESSOR_PARTIES_1991).flat(),
-    ...Object.values(PARTY_ROSTERS_2019).flat(),
-  ];
-}
+export { loadResetPartySeedCatalog };
 
 /** Delete rows whose (countryId, partyId) pair names no surviving default party. */
 export async function deleteRowsOfRemovedParties(
@@ -183,19 +119,15 @@ export async function finalizeResetGameWorld(
   }
 
   let demographicsReset = 0;
-  const defaultDemographics = await db
-    .collection<StateDemographics>("demographicDefaults")
-    .find({})
-    .toArray();
+  const defaultDemographics = await demographicDefaultsCollection(db).find({}).toArray();
 
   if (defaultDemographics.length > 0) {
     for (const defaultDemo of defaultDemographics) {
-      await db.collection<StateDemographics>("stateDemographics").updateOne(
+      await stateDemographicsCollection(db).updateOne(
         { _id: defaultDemo._id },
         {
           $set: {
             categoryWeights: defaultDemo.categoryWeights,
-            groups: defaultDemo.groups,
             lastUpdated: now,
           },
         },
@@ -205,9 +137,9 @@ export async function finalizeResetGameWorld(
     }
   }
 
-  const leanBackfill = await backfillMissingRegionLeans(db, now);
+  const leanBackfill = await backfillMissingRegionLeans(db, now, preset);
   log(
-    `Regional leans: ${leanBackfill.written} filled; ${leanBackfill.missingDemographics} missing demographics; ${leanBackfill.missingCategories} missing weighted categories`
+    `Regional leans: ${leanBackfill.written} filled; ${leanBackfill.missingDemographics} missing demographics; ${leanBackfill.missingCategories} with no census electorate`
   );
 
   const presetConfig = getPresetById(preset);
@@ -216,30 +148,28 @@ export async function finalizeResetGameWorld(
   let customPartiesResult;
 
   if (deleteAllParties) {
-    customPartiesResult = await db.collection<PoliticalParty>("politicalParties").deleteMany({});
+    customPartiesResult = await politicalPartiesCollection(db).deleteMany({});
     await resetPartyCounters(db);
     // Phase 6 reset: drop ALL charter rows so stale ratified / migrated
     // charters can't immunize newly-resequenced parties from cleanup, and
     // so the migration script can re-run idempotently on the fresh seed.
-    await db.collection("partyCharters").deleteMany({});
+    await partyChartersCollection<Document>(db).deleteMany({});
   } else {
-    customPartiesResult = await db
-      .collection<PoliticalParty>("politicalParties")
-      .deleteMany({ isDefault: { $ne: true } });
+    customPartiesResult = await politicalPartiesCollection(db).deleteMany({
+      isDefault: { $ne: true },
+    });
     // Phase 6 reset: drop charters tied to the deleted custom parties.
     // Default parties don't carry charter rows (they bypass the system
     // per D5), so this is safe to run unconditionally — a default-only
     // DB will simply match nothing.
-    const survivingPartyIds = await db
-      .collection<PoliticalParty>("politicalParties")
+    const survivingPartyIds = await politicalPartiesCollection(db)
       .find({ isDefault: true })
       .project<{ sequentialId: number; countryId: string }>({ sequentialId: 1, countryId: 1 })
       .toArray();
     const survivingKeys = new Set(
       survivingPartyIds.map((p) => `${p.countryId}:${String(p.sequentialId)}`)
     );
-    const allCharters = (await db
-      .collection("partyCharters")
+    const allCharters = (await partyChartersCollection<Document>(db)
       .find({})
       .project({ _id: 1, partyId: 1, countryId: 1 })
       .toArray()) as Array<{ _id: ObjectId; partyId: string | null; countryId: string }>;
@@ -252,10 +182,10 @@ export async function finalizeResetGameWorld(
       )
       .map((c) => c._id);
     if (staleIds.length > 0) {
-      await db.collection("partyCharters").deleteMany({ _id: { $in: staleIds } });
+      await partyChartersCollection<Document>(db).deleteMany({ _id: { $in: staleIds } });
     }
 
-    await db.collection<PoliticalParty>("politicalParties").updateMany(
+    await politicalPartiesCollection(db).updateMany(
       { isDefault: true },
       {
         $set: {
@@ -322,9 +252,7 @@ export async function finalizeResetGameWorld(
         name,
         isDefault: true,
       }));
-      const deletedMismatched = await db
-        .collection<PoliticalParty>("politicalParties")
-        .deleteMany({ $or: orFilter });
+      const deletedMismatched = await politicalPartiesCollection(db).deleteMany({ $or: orFilter });
       if (deletedMismatched.deletedCount > 0) {
         // Was a bare console.log with a hand-written "[reset]" prefix, so it
         // reached the container's stdout but never the admin's stream. The sink
@@ -335,9 +263,9 @@ export async function finalizeResetGameWorld(
       }
     }
 
-    const existingDefaultCount = await db
-      .collection<PoliticalParty>("politicalParties")
-      .countDocuments({ isDefault: true });
+    const existingDefaultCount = await politicalPartiesCollection(db).countDocuments({
+      isDefault: true,
+    });
 
     if (existingDefaultCount === 0) {
       await resetPartyCounters(db);
@@ -351,38 +279,50 @@ export async function finalizeResetGameWorld(
     }
 
     await ensureDefaultParties(db, preset);
+
+    // Every surviving default party returns to seed values, keeping only identity.
+    const restored = await resetSurvivingPartiesToSeed(
+      db,
+      preset,
+      await loadResetPartySeedCatalog()
+    );
+    log(
+      `Reset ${restored.parties} surviving default part(ies) to seed values; removed ${restored.chartersRemoved} charter(s)` +
+        (restored.unseeded.length > 0
+          ? `; no seed for ${restored.unseeded.length}: ${restored.unseeded.slice(0, 5).join(", ")}`
+          : "")
+    );
   }
 
   let partyOrgCleanupResult;
   if (deleteAllParties) {
-    partyOrgCleanupResult = await db.collection<StatePartyOrg>("statePartyOrg").deleteMany({});
+    partyOrgCleanupResult = await statePartyOrgCollection(db).deleteMany({});
   } else {
-    const defaultParties = await db
-      .collection<PoliticalParty>("politicalParties")
+    const defaultParties = await politicalPartiesCollection(db)
       .find({ isDefault: true })
       .project<{ sequentialId: number; countryId: string }>({ sequentialId: 1, countryId: 1 })
       .toArray();
     const defaultPartyIds = defaultParties.map((p) => String(p.sequentialId));
 
-    partyOrgCleanupResult = await db
-      .collection<StatePartyOrg>("statePartyOrg")
-      .deleteMany({ partyId: { $nin: defaultPartyIds } });
+    partyOrgCleanupResult = await statePartyOrgCollection(db).deleteMany({
+      partyId: { $nin: defaultPartyIds },
+    });
     // `partyId` is a per-country sequence number, so the filter above keeps a
     // row for a removed party whenever another country has a party with the
     // same number. Settle the (country, party) pair for the org rows and the
     // party budgets `seedPartyBudgets` wrote before the era cleanup ran.
     const defaultPartyKeys = new Set(defaultParties.map((p) => `${p.countryId}:${p.sequentialId}`));
     const strandedOrgRows = await deleteRowsOfRemovedParties(
-      db.collection("statePartyOrg"),
+      statePartyOrgCollection<Document>(db),
       defaultPartyKeys
     );
     partyOrgCleanupResult = {
       ...partyOrgCleanupResult,
       deletedCount: partyOrgCleanupResult.deletedCount + strandedOrgRows,
     };
-    await deleteRowsOfRemovedParties(db.collection("partyBudget"), defaultPartyKeys);
+    await deleteRowsOfRemovedParties(partyBudgetCollection<Document>(db), defaultPartyKeys);
 
-    await db.collection<StatePartyOrg>("statePartyOrg").updateMany(
+    await statePartyOrgCollection(db).updateMany(
       { partyId: { $in: defaultPartyIds } },
       {
         $set: {
@@ -405,26 +345,17 @@ export async function finalizeResetGameWorld(
   }
 
   // Orphan region-keyed row purge. `unownedSectors` and `regionDemographics` are
-  // manifest `reference` collections, so the runtime sweep never touches them,
-  // and both seeders are upsert-only fills that iterate the CURRENT `states`
-  // roster — neither can remove a row for a region the new preset does not seed.
-  // A preset switch therefore strands every row from the outgoing region scheme.
-  //
-  // Confirmed live after a 1979 → 1953 reset: 238 orphan `unownedSectors` rows,
-  // including `BY`/`BY_BEL` — `BY` is not a CountryId at all (it is Bavaria, a DE
-  // state id), the exact stale-id shape that crashed the corporation turn in
-  // #3523 — plus DD/PL/YU/HU/BG/CS rows still on the 1979 region scheme
-  // (DD_BER/DD_NOR/DD_SOU, PL_CEN/PL_SOU/PL_NOR, YU_NW/YU_CEN/YU_SOU, …). Three
-  // orphan DD `regionDemographics` rows also double-counted DD's population
-  // (36.8M against a real 18.4M) because population sums over the collection.
+  // manifest `reference` collections the runtime sweep never touches, and their
+  // seeders are upsert-only fills over the CURRENT `states` roster, so a preset
+  // switch strands every row from the outgoing region scheme. Stale ids of this
+  // shape have crashed the corporation turn.
   //
   // Runs after every region seeder above, so `states` is the final roster.
   // `regionDemographics._id` IS the region id (matches `states._id`);
   // `unownedSectors` keys on `stateId`. Guarded on a non-empty roster so a
-  // half-failed seed can never empty either collection.
-  // Region rows for countries the new preset does not seed at all (Ukraine,
-  // Belarus and the Baltic republics in a 1991 world, where they are Soviet
-  // regions) go first, so the orphan sweep below sees the final roster.
+  // half-failed seed can never empty either collection. Region rows for
+  // countries the new preset does not seed at all go first, so the orphan
+  // sweep below sees the final roster.
   const absentPurge = await purgeAbsentCountryRegions(db, preset);
   const absentPurged = Object.values(absentPurge.deleted).reduce((a, b) => a + b, 0);
   if (absentPurged > 0) {
@@ -433,8 +364,7 @@ export async function finalizeResetGameWorld(
     );
   }
   const seededStateIds = (
-    await db
-      .collection<{ _id: string }>("states")
+    await statesCollection<{ _id: string }>(db)
       .find({}, { projection: { _id: 1 } })
       .toArray()
   ).map((s) => s._id as string);
@@ -442,15 +372,15 @@ export async function finalizeResetGameWorld(
   let orphanRegionDemographicsDeleted = 0;
   if (seededStateIds.length > 0) {
     orphanUnownedSectorsDeleted = (
-      await db.collection("unownedSectors").deleteMany({ stateId: { $nin: seededStateIds } })
+      await unownedSectorsCollection<Document>(db).deleteMany({ stateId: { $nin: seededStateIds } })
     ).deletedCount;
     orphanRegionDemographicsDeleted =
       // Typed on `_id: string` — this collection keys on the region id, not the
       // default ObjectId, so an untyped handle rejects the string `$nin`.
       (
-        await db
-          .collection<{ _id: string }>("regionDemographics")
-          .deleteMany({ _id: { $nin: seededStateIds } })
+        await regionDemographicsCollection<{ _id: string }>(db).deleteMany({
+          _id: { $nin: seededStateIds },
+        })
       ).deletedCount;
     if (orphanUnownedSectorsDeleted > 0 || orphanRegionDemographicsDeleted > 0) {
       logCollector(
@@ -474,11 +404,9 @@ export async function finalizeResetGameWorld(
     logCollector(`IMF Corp already present (sequentialId=${imfResult.sequentialId ?? "?"}).`);
   }
 
-  // The audit row is OPENED by the orchestrator at the seal and CLOSED with
-  // this string. It used to be inserted right here, which is precisely why a
-  // reset that died in teardown or build left no trace at all — this code never
-  // ran. The message text is unchanged, and it is no longer gated on
-  // `adminUsername`: that gate meant a script-driven reset was never audited.
+  // The audit row is opened by the orchestrator at the seal and closed with
+  // this string, so a reset dying in teardown or build still leaves a trace.
+  // Not gated on adminUsername so script-driven resets are audited too.
   if (noStartingParties) {
     await clearStartingPolitics(db, preset);
     log("Starting parties: none; final political cleanup complete, economic ownership preserved");

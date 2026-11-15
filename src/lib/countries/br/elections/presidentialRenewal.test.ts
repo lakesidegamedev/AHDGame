@@ -10,7 +10,7 @@ import type { GovernmentFormation } from "@/lib/db/types/governmentFormation";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
 
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
-vi.mock("@/lib/turn/perpetualElections/shared", () => ({
+vi.mock("@/lib/elections/scheduling/shared", () => ({
   countryElectionsLive: vi.fn().mockResolvedValue(false),
   ensureRegionalDelegateElections: vi.fn(),
   ensureRegionalGovernorElections: vi.fn(),
@@ -19,8 +19,8 @@ vi.mock("@/lib/turn/perpetualElections/shared", () => ({
 vi.mock("@/lib/nppAutonomy/featureFlag", () => ({
   isNppAutonomyActive: vi.fn().mockResolvedValue(true),
 }));
-vi.mock("@/lib/turn/perpetualElections/engine", async (importActual) => ({
-  ...(await importActual<typeof import("@/lib/turn/perpetualElections/engine")>()),
+vi.mock("@/lib/elections/scheduling/engine", async (importActual) => ({
+  ...(await importActual<typeof import("@/lib/elections/scheduling/engine")>()),
   getCurrentTurnAndCtx: vi.fn().mockResolvedValue({
     currentTurn: 1,
     ctx: { preset: "1991-default", startingYear: 1991 },
@@ -37,7 +37,7 @@ vi.mock("@/lib/analytics/officeTransitionAnalytics", () => ({
   captureOfficeTransition: vi.fn().mockResolvedValue(undefined),
 }));
 import { clearCabinetOnTransition } from "@/lib/cabinetTransition";
-import { getCurrentTurnAndCtx } from "@/lib/turn/perpetualElections/engine";
+import { getCurrentTurnAndCtx } from "@/lib/elections/scheduling/engine";
 import { ensureBRPresidentialElection } from "./perpetual";
 import { resolveBrazilPresidentialElection } from "../resolvePresidentialElection";
 

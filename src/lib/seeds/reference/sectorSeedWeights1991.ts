@@ -1,32 +1,12 @@
 /**
- * 1991-era national sector weights, per country.
- *
- * Numbers are rough percentage-of-GDP allocations across the 17 game sectors.
- * Sources are mixed and intended to capture the 1991 economic structure,
- * not modern composition:
- *   US: BEA Industry Accounts 1990-1992 (manufacturing 16%, finance/insurance/real
- *       estate 18%, retail/wholesale 12%, government services 14%, FIRE
- *       weighting lower than current).
- *   UK: ONS 1991 GVA composition (manufacturing 19%, finance 8%, retail 9%,
- *       construction 8%, defence-heavy industrial base).
- *   DE: Bundesbank 1991 (manufacturing 25%, automobiles & chemical 18%,
- *       reunification reconstruction lifted construction; tech was electronics-
- *       and engineering-based, not platform software).
- *   JP: 1990 prefectural GDP (auto 12%, manufacturing 18%, real estate 9% but
- *       cratering, financial 12% in bubble aftermath, construction 9%).
- *   CN: NBS 1991 (manufacturing 30%, agriculture 26%, construction 6%, extraction
- *       8%, tertiary sector ~30%; SOE-dominated economy).
- *   BR: IBGE 1991 (agriculture 14%, manufacturing 27%, extraction 9%, energy 8%;
- *       early-1990s deindustrialization not yet underway).
- *   IE: CSO 1991 (agriculture 9% — still high pre-Celtic-Tiger, manufacturing 24%,
- *       financial 7%, technology near-zero pre-FDI boom).
- *   NG: 1990 estimates (oil-heavy extraction 30%, agriculture 27%, manufacturing 8%).
- *
- * These weights are intentionally less tech/finance-heavy than the current-era
- * defaults in `sectorSeedWeights.ts`. `getStateSectorWeights1991` selects this
- * bundle when the active preset is `1991-default`.
+ * 1991-era national sector weights, per country. Rough percentage-of-GDP
+ * allocations across the 17 game sectors, capturing 1991 structure (less
+ * tech/finance-heavy than current-era defaults in `sectorSeedWeights.ts`).
+ * `getStateSectorWeights1991` selects this bundle for the `1991-default` preset.
  */
 
+import { CA_ECONOMY } from "@/lib/countries/ca/economy";
+import { QC_ECONOMY } from "@/lib/countries/qc/economy";
 import { OPERATING_SECTOR_TYPES } from "@/lib/constants/corporations";
 import type { OperatingSectorType } from "@/lib/constants/corporations";
 import type { CountryId } from "@/lib/constants/countries";
@@ -100,6 +80,8 @@ export const COUNTRY_SECTOR_WEIGHTS_1991: Record<CountryId, SectorWeightMap> = {
   FI: FI_ECONOMY.sectorWeights.byEra["1991"],
   TR: TR_ECONOMY.sectorWeights.byEra["1991"],
   DD: DD_ECONOMY.sectorWeights.byEra["1991"],
+  CA: CA_ECONOMY.sectorWeights.byEra["1991"],
+  QC: QC_ECONOMY.sectorWeights.byEra["1991"],
 };
 
 /**

@@ -4,13 +4,8 @@ import type { Corporation } from "@/lib/db/types";
 import type { MarketContext } from "@/lib/market/marketContext";
 import { resolveFormalizedGroups } from "@/lib/corporations/groups/groupMembership";
 import type { CorporationLookups } from "./types";
-export async function configureGroupSupply(
-  db: Db,
-  market: MarketContext,
-  subsidiaries: boolean,
-  enabled: boolean
-) {
-  market.groupSupplyEnabled = subsidiaries && market.plantsEnabled && enabled;
+export async function configureGroupSupply(db: Db, market: MarketContext, enabled: boolean) {
+  market.groupSupplyEnabled = market.plantsEnabled && enabled;
   return market.groupSupplyEnabled
     ? resolveFormalizedGroups(db, { includeReserved: true })
     : undefined;

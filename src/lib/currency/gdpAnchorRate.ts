@@ -1,47 +1,29 @@
 /**
  * ONE resolver for "how many ₳ is one unit of a country's stored GDP worth".
  *
- * WHAT THE FIELD MEANS. `CountryConfig.usdExchangeRate` is NOT a foreign-exchange
- * quote. It is the denomination normalizer for `State.gdp` and the national
- * budget seed: those are stored in whatever unit the era's regional seed file
- * authored them in, and this field converts that unit into ₳ (which tracks the
- * US dollar OF THE ERA). It coincides with the FX rate only when the seed
- * happens to be authored in true local currency:
+ * `CountryConfig.usdExchangeRate` is NOT an FX quote: it converts `State.gdp`
+ * and the national budget seed (authored in each era's seed-file unit) into
+ * ₳. It equals FX only when the seed happens to be in true local currency
+ * (JP 2019 agrees; UK 2019 seeds in dollars so 1.0 is correct, not 0.75; IT/JP/CN/NG
+ * 1953 seeds in USD millions so their rate is 1.0).
  *
- *   - JP 2019: `usdExchangeRate` 0.00943 = 1/106, and `INITIAL_RATES.JP` is
- *     106 JPY/₳. They agree — jpRegions gdp really is in yen.
- *   - UK 2019: `usdExchangeRate` is 1.0 but `INITIAL_RATES.UK` is 0.75 GBP/₳.
- *     They disagree by 33% because ukRegions/UK's £2.9T budget seed is authored
- *     in DOLLARS (real 2019 UK GDP was ~£2.2T = ~$2.9T). 1.0 is correct here and
- *     0.75 would inflate the UK by a third.
- *   - IT/JP/CN/NG 1953: authored in USD millions (refs #3498), so their 1953
- *     rate is 1.0 even though `INITIAL_RATES_1953` has 625 / 360 / 2.46 / 0.357.
+ * The `exchangeRates` collection is NOT a drop-in replacement; market FX here
+ * would silently rescale every world's GDP. What was genuinely duplicated is
+ * the ERA DIMENSION: callers must pass the active world preset so stored
+ * local GDP is not scaled with another era's denomination basis. Without a
+ * preset, the base config is used.
  *
- * So the `exchangeRates` collection is NOT a drop-in replacement for this field
- * (refs #3778 §2) — reading market FX here would silently rescale every modern
- * world's GDP and sector markets. What WAS genuinely duplicated is the ERA
- * DIMENSION: eight runtime call sites resolved the rate off the BASE config with
- * no preset, so a 1953 world was normalized with 1979/2019 numbers. That is the
- * bug this module closes; it is the single place the rule is written down.
- *
- * ERA AWARENESS. `getCountryConfig(id, preset)` layers
- * `ERA_COUNTRY_CONFIG_OVERRIDES[preset]` over the base config. The
- * authored era tables carry `usdExchangeRate` entries, including original
- * local-currency successor GDP in 1991. Era tests protect the distinct seed
- * denominations; passing a preset selects its authored basis. Callers without
- * a preset retain the base config. Readers must pass the active world preset
- * so stored local GDP is not scaled with another era's denomination basis.
- *
- * @see src/lib/constants/countries.ts — the 1953 override table and its sources
- * @see src/lib/constants/sectorSeedEra.ts — the seed-time sibling of this module
+ * @see src/lib/constants/countries.ts
+ * @see src/lib/constants/sectorSeedEra.ts
  */
 
 import { getAuditRequestContext } from "@/lib/observability/context";
 import type { Db } from "mongodb";
 import { getCountryConfig, type CountryId } from "@/lib/constants/countries";
-import { resolvePresetIdFromGameState } from "@/lib/world/countryReadinessContract";
+import { resolvePresetIdFromGameState } from "@/lib/world/presetId";
 import type { GameState } from "@/lib/db/types";
 import { getEraUnitScale } from "@/lib/constants/sectorSeedEra";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /**
  * ₳ per one unit of `countryId`'s stored GDP under `preset`.
@@ -81,9 +63,10 @@ const phasePresets = new WeakMap<Db, Map<string, Promise<string>>>();
 const PHASE_PRESET_ENTRIES = 8;
 
 async function readWorldPreset(db: Db): Promise<string> {
-  const gameState = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { projection: { preset: 1 } });
+  const gameState = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { projection: { preset: 1 } }
+  );
   return resolvePresetIdFromGameState(gameState);
 }
 

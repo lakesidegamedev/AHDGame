@@ -3,6 +3,7 @@ import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import { parseNppId } from "@/lib/utils/profileUrls";
 import type { NPP } from "@/lib/db/types";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -22,7 +23,7 @@ export default async function LegacyNPPPage({ params }: PageProps) {
   if (!ObjectId.isValid(parsed.value)) notFound();
 
   const db = await getDb();
-  const npp = await db.collection<NPP>("npps").findOne({ _id: new ObjectId(parsed.value) });
+  const npp = await nppsCollection(db).findOne({ _id: new ObjectId(parsed.value) });
 
   if (!npp) notFound();
 

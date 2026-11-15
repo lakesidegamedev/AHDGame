@@ -3,21 +3,15 @@ import type { CountryMapConfig } from "@/lib/commodity-map/commodityMapRegistry"
 /**
  * Germany's map configuration.
  *
- * ⚠ THIS COULD NOT COME FROM THE SNAPSHOT, WHICH IS WHY IT IS HERE AS SOURCE.
- * The entry carries `featureIdExtractor`, an arrow function, and JSON cannot
- * hold a function -- the emitter recorded the shape as `function-valued` with a
- * null value. A generator reading that null and emitting it produced
- * `Type 'null' is not assignable to type 'CountryMapConfig'`, which is the
- * correct failure: the data was never in the fixture to begin with. So the
- * block is RELOCATED rather than regenerated, and
- * `commodityMapRegistry.ts` forwards to it.
+ * ⚠️ SOURCE, NOT GENERATED: the entry carries `featureIdExtractor`, an
+ * arrow function, which JSON cannot hold. The snapshot records the shape
+ * as function-valued with a null value, so this block is relocated by hand
+ * and `commodityMapRegistry.ts` forwards to it.
  *
- * ⚠ THE EXTRACTOR EXISTS BECAUSE THE GEOJSON IDS ARE NOT REGION IDS. The
- * deutschlandGeoJSON features carry `properties.RS`, the Regionalschluessel,
- * and `geo.id` is not reliably that -- hence a custom extractor rather than the
- * default id path. `RS_TO_DE_STATE` travels with it for the same reason: it is
- * the other half of one mapping, and splitting them would leave a table in the
- * shared registry whose only reader lives in this folder.
+ * ⚠️ THE EXTRACTOR EXISTS BECAUSE GEOJSON IDS ARE NOT REGION IDS:
+ * deutschlandGeoJSON features carry `properties.RS` (Regionalschluessel),
+ * and `geo.id` is not reliably that. `RS_TO_DE_STATE` is the other half of
+ * the same mapping and travels with it, since its only reader lives here.
  */
 const RS_TO_DE_STATE: Record<string, string> = {
   "01": "SH",

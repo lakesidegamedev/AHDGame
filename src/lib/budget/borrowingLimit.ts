@@ -1,4 +1,5 @@
 import type { CountryId } from "@/lib/constants/countries";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 /**
  * East Germany's authored M10B borrowing limit was only 20% of seed GDP and
@@ -14,6 +15,7 @@ export function effectiveBorrowingLimit(input: {
   storedCeiling: number;
 }): number {
   const stored = Number.isFinite(input.storedCeiling) ? Math.max(0, input.storedCeiling) : 0;
-  if (input.countryId !== "DD" || !Number.isFinite(input.gdp) || input.gdp <= 0) return stored;
+  if (!countryHasFeature("ddLib", input.countryId) || !Number.isFinite(input.gdp) || input.gdp <= 0)
+    return stored;
   return Math.max(stored, input.gdp * DD_MIN_BORROWING_LIMIT_TO_GDP);
 }

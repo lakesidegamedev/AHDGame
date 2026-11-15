@@ -18,7 +18,7 @@ import type {
   BriefingParticipationPlan,
 } from "@/lib/campaigns/dto/campaignView";
 import type { ParticipationSummary } from "@/lib/demographics/v2/rules";
-import type { CandidateNationalLedger } from "@/lib/electionEngine/factorLedger";
+import type { CandidateNationalLedger } from "@/lib/elections/engine/factorLedger";
 import { buildGeneralElectionViewModel } from "@/lib/elections/generalViewModel";
 import { allocateElectoralVotes } from "@/lib/turn/electionCalculations";
 import { electoralMajorityFor } from "@/lib/elections/presidentialResolutionDisplay";
@@ -150,11 +150,10 @@ export function buildDelegatePath(
 }
 
 /**
- * Presidential-general tipping path. Aggregates the tally's per-unit vote
- * totals to the state level, then reuses the general-election view model to
- * pick the closest states, and the EV allocator for the owner's current EV
- * standing. Colours / names on the view-model candidates are irrelevant here
- * (we consume only margins + the five-closest list), so they are stubbed.
+ * Presidential-general tipping path. Aggregates per-unit vote totals to the
+ * state level, reuses the general-election view model for closest states, and
+ * the EV allocator for the owner's standing. Candidate colours and names on the
+ * view model are unused, so they are stubbed.
  */
 export function buildTippingPath(input: {
   totalVotesByUnit: Record<string, Record<string, number>>;

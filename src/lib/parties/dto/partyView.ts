@@ -65,7 +65,7 @@ export interface PartyData {
   suppressionEstimatedSpend: number;
   suppressionTargetCategory: string | null;
   suppressionTargetGroup: string | null;
-  /** Voter-registration drive budget (player suggestion #81). */
+  /** Voter-registration drive budget. */
   registrationBudgetPercent: number;
   registrationEstimatedSpend: number;
   transferReserveAmount: number;
@@ -95,7 +95,7 @@ export interface PartyData {
   psInvestmentBudget: number;
   /**
    * @deprecated The "% of treasury" phantom-PS stream was removed in the
-   * 2026-06-25 PS-building rebalance; the engine no longer reads this. Retained
+   * the PS-building rebalance; the engine no longer reads this. Retained
    * on the DTO for backward compatibility only.
    */
   totalBonusActions: number;
@@ -111,7 +111,7 @@ export interface PartyData {
   /**
    * Regime status for parties in countries with `governmentType: "onePartyState"`
    * (currently CN). `null` in non-one-party countries. See
-   * `docs/design/ruling-party-confidence.md` for the three-tier model.
+   * the ruling-party confidence design for the three-tier model.
    */
   regimeStatus?: "ruling" | "approved" | "banned" | null;
   countryId: CountryId;
@@ -135,7 +135,7 @@ export interface PartyData {
   /** How national leadership elections are decided */
   leadershipElectionMethod?: "party" | "committee" | "influence";
   /**
-   * Membership gate (suggestion #72). "open" (or absent) — joins take effect
+   * Membership gate. "open" (or absent), joins take effect
    * immediately. "approval" — joins file a pending request for a party leader
    * to accept or decline.
    */

@@ -75,12 +75,6 @@ vi.mock("@/lib/turn/currentTurn", async (importOriginal) => {
 const mockCheckWikiDisabled = vi.fn();
 vi.mock("@/lib/api/wikiGuard", () => ({ checkWikiDisabled: mockCheckWikiDisabled }));
 
-const mockIsRpgStatsEnabled = vi.fn();
-vi.mock("@/lib/stats/featureFlag", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/lib/stats/featureFlag")>();
-  return { ...actual, isRpgStatsEnabled: mockIsRpgStatsEnabled };
-});
-
 const mockIsLabourFullMode = vi.fn();
 vi.mock("@/lib/labour/featureFlag", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/labour/featureFlag")>();
@@ -134,7 +128,6 @@ beforeEach(() => {
   mockGetGameState.mockResolvedValue(null);
   mockGetCurrentTurn.mockResolvedValue(1);
   mockCheckWikiDisabled.mockResolvedValue(null);
-  mockIsRpgStatsEnabled.mockResolvedValue(true);
   mockIsLabourFullMode.mockResolvedValue(true);
 });
 

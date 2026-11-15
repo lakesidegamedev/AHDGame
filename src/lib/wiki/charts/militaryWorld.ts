@@ -22,7 +22,7 @@ import {
   type TensionPressures,
 } from "@/lib/coldwar/tension";
 import { advanceChannel, contestTarget } from "@/lib/navair/channels";
-import { MARINE_LANDING_THRESHOLD } from "@/lib/navair/frontSupport";
+import { MARINE_SUSTAINMENT_SEA_CONTROL } from "@/lib/navair/frontSupport";
 import { BLOCKADE, blockadeAffinityMultiplier } from "@/lib/navair/blockade";
 import { collectiveDurationReduction } from "@/lib/crises/rules/collectiveReduction";
 import { ALIGNMENT_GATES, joinGateForPoleCount } from "@/lib/constants/alignmentEras";
@@ -200,7 +200,7 @@ const seaControl: WikiChartBuilder = () => {
     yLabel: "Sea control",
     series: [{ name: "Your sea control", points: pts }],
     markers: [
-      { y: MARINE_LANDING_THRESHOLD, label: "Marines can land" },
+      { y: MARINE_SUSTAINMENT_SEA_CONTROL, label: "Marines fully supplied" },
       { x: leaveTurn, label: "Fleet leaves station" },
     ],
     caption:

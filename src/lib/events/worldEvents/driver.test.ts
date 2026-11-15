@@ -56,17 +56,11 @@ describe("processWorldEventsTurn (World Events v1 Phase 1 scheduler)", () => {
     db.collection("countryModifiers");
   });
 
-  it("is a no-op when worldEventsEnabled is false (default)", async () => {
-    const result = await processWorldEventsTurn(db as never, 100, { worldEventsEnabled: false });
-    expect(result).toEqual({ offered: 0, skipped: 0, globalHostEventsOffered: 0 });
-    expect(db.collectionMocks.eventDefinitions!.find).not.toHaveBeenCalled();
-  });
-
   it("is a no-op when there are no schedule-bearing approved definitions", async () => {
     db.collectionMocks.eventDefinitions!.find.mockReturnValue({
       toArray: vi.fn().mockResolvedValue([]),
     });
-    const result = await processWorldEventsTurn(db as never, 100, { worldEventsEnabled: true });
+    const result = await processWorldEventsTurn(db as never, 100);
     expect(result.offered).toBe(0);
   });
 
@@ -79,7 +73,7 @@ describe("processWorldEventsTurn (World Events v1 Phase 1 scheduler)", () => {
     db.collectionMocks.eventInstances!.findOne.mockResolvedValue(null);
     db.collectionMocks.eventCooldownLedger!.findOne.mockResolvedValue(null);
 
-    const result = await processWorldEventsTurn(db as never, 100, { worldEventsEnabled: true });
+    const result = await processWorldEventsTurn(db as never, 100);
 
     expect(result.offered).toBeGreaterThan(0);
     expect(db.collectionMocks.eventInstances!.insertOne).toHaveBeenCalled();
@@ -96,14 +90,12 @@ describe("processWorldEventsTurn (World Events v1 Phase 1 scheduler)", () => {
     db.collectionMocks.eventCooldownLedger!.findOne.mockResolvedValue(null);
 
     const pastWindow = await processWorldEventsTurn(db as never, 100, {
-      worldEventsEnabled: true,
       currentYear: 1970,
     });
     expect(pastWindow.offered).toBe(0);
     expect(db.collectionMocks.eventInstances!.insertOne).not.toHaveBeenCalled();
 
     const inWindow = await processWorldEventsTurn(db as never, 100, {
-      worldEventsEnabled: true,
       currentYear: 1960,
     });
     expect(inWindow.offered).toBeGreaterThan(0);
@@ -117,7 +109,7 @@ describe("processWorldEventsTurn (World Events v1 Phase 1 scheduler)", () => {
     // Every country already has a pending instance.
     db.collectionMocks.eventInstances!.findOne.mockResolvedValue({ _id: new ObjectId() });
 
-    const result = await processWorldEventsTurn(db as never, 100, { worldEventsEnabled: true });
+    const result = await processWorldEventsTurn(db as never, 100);
 
     expect(result.offered).toBe(0);
     expect(db.collectionMocks.eventInstances!.insertOne).not.toHaveBeenCalled();
@@ -134,7 +126,7 @@ describe("processWorldEventsTurn (World Events v1 Phase 1 scheduler)", () => {
     db.collectionMocks.eventInstances!.findOne.mockResolvedValue(null);
     db.collectionMocks.eventCooldownLedger!.findOne.mockResolvedValue(null);
 
-    await processWorldEventsTurn(db as never, 100, { worldEventsEnabled: true });
+    await processWorldEventsTurn(db as never, 100);
 
     const insertedScopeIds = db.collectionMocks.eventInstances!.insertOne.mock.calls.map((call) =>
       (call[0].scopeId as ObjectId).toHexString()
@@ -159,7 +151,7 @@ describe("processWorldEventsTurn (World Events v1 Phase 1 scheduler)", () => {
     db.collectionMocks.eventInstances!.findOne.mockResolvedValue(null);
     db.collectionMocks.eventCooldownLedger!.findOne.mockResolvedValue(null);
 
-    await processWorldEventsTurn(db as never, 100, { worldEventsEnabled: true });
+    await processWorldEventsTurn(db as never, 100);
 
     const ukScopeIdHex = countryScopeId("UK").toHexString();
     const ukInserts = db.collectionMocks.eventInstances!.insertOne.mock.calls.filter(
@@ -199,7 +191,7 @@ describe("processWorldEventsTurn (World Events v1 Phase 1 scheduler)", () => {
       toArray: vi.fn().mockResolvedValue([]),
     });
 
-    await processWorldEventsTurn(db as never, 100, { worldEventsEnabled: true });
+    await processWorldEventsTurn(db as never, 100);
 
     expect(db.collectionMocks.eventCooldownLedger!.updateOne.mock.calls).toEqual(
       expect.arrayContaining([
@@ -247,7 +239,7 @@ describe("processWorldEventsTurn (World Events v1 Phase 1 scheduler)", () => {
         toArray: vi.fn().mockResolvedValue([]),
       });
 
-      await processWorldEventsTurn(db as never, 100, { worldEventsEnabled: true });
+      await processWorldEventsTurn(db as never, 100);
 
       expect(createCrisisFromTemplate).toHaveBeenCalledWith(
         db,
@@ -292,7 +284,7 @@ describe("processWorldEventsTurn (World Events v1 Phase 1 scheduler)", () => {
       toArray: vi.fn().mockResolvedValue([]),
     });
 
-    await processWorldEventsTurn(db as never, 100, { worldEventsEnabled: true });
+    await processWorldEventsTurn(db as never, 100);
 
     expect(createCrisisFromTemplate).toHaveBeenCalledWith(
       db,
@@ -344,9 +336,7 @@ describe("processWorldEventsTurn — global host events (World Events v1 Phase 3
   const dueOlympicsTurn = 12;
 
   it("is skipped when not on the recurring cadence — no DB lookup at all", async () => {
-    const result = await processWorldEventsTurn(db as never, dueOlympicsTurn + 1, {
-      worldEventsEnabled: true,
-    });
+    const result = await processWorldEventsTurn(db as never, dueOlympicsTurn + 1);
     expect(result.globalHostEventsOffered).toBe(0);
     expect(db.collectionMocks.eventDefinitions!.findOne).not.toHaveBeenCalled();
   });
@@ -362,9 +352,7 @@ describe("processWorldEventsTurn — global host events (World Events v1 Phase 3
       activeCountries.length;
     const expectedHost = activeCountries[expectedHostIndex]!;
 
-    const result = await processWorldEventsTurn(db as never, dueOlympicsTurn, {
-      worldEventsEnabled: true,
-    });
+    const result = await processWorldEventsTurn(db as never, dueOlympicsTurn);
 
     expect(result.globalHostEventsOffered).toBe(1);
     expect(db.collectionMocks.eventInstances!.insertOne).toHaveBeenCalledTimes(1);
@@ -379,9 +367,7 @@ describe("processWorldEventsTurn — global host events (World Events v1 Phase 3
     db.collectionMocks.eventDefinitions!.findOne.mockResolvedValue(def);
     db.collectionMocks.eventInstances!.findOne.mockResolvedValue({ _id: new ObjectId() });
 
-    const result = await processWorldEventsTurn(db as never, dueOlympicsTurn, {
-      worldEventsEnabled: true,
-    });
+    const result = await processWorldEventsTurn(db as never, dueOlympicsTurn);
 
     expect(result.globalHostEventsOffered).toBe(0);
     expect(db.collectionMocks.eventInstances!.insertOne).not.toHaveBeenCalled();

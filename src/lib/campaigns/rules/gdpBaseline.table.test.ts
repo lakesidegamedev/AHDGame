@@ -102,6 +102,9 @@ import { ddRegions1953 } from "@/lib/seeds/dd/ddRegions1953";
 // takes the 2019-default fallback (`seedRURegions`).
 import { ruRegions } from "@/lib/seeds/ru/ruRegions";
 import { ruRegions1953 } from "@/lib/seeds/ru/ruRegions1953";
+// SCO and WAL ship one latent bundle each, inserted on secession.
+import { scoRegions } from "@/lib/countries/sco/data/scoRegions";
+import { walRegions } from "@/lib/countries/wal/data/walRegions";
 import {
   gdpBaselinePerCapita,
   getGdpBaselineTable,
@@ -224,6 +227,16 @@ const BUNDLES: Record<GdpBaselineCountry, Record<EraId, RegionRow[]>> = {
     "2023": ruRegions,
     "2027": ruRegions,
   },
+  // One latent bundle each (no per-era seeding), so every era uses it; only
+  // 2019 is recomputed and the rest are asserted as repeats.
+  SCO: Object.fromEntries(ERAS.map((era) => [era, scoRegions])) as unknown as Record<
+    EraId,
+    RegionRow[]
+  >,
+  WAL: Object.fromEntries(ERAS.map((era) => [era, walRegions])) as unknown as Record<
+    EraId,
+    RegionRow[]
+  >,
 };
 
 /**
@@ -244,6 +257,10 @@ const BUNDLES: Record<GdpBaselineCountry, Record<EraId, RegionRow[]>> = {
 const NON_DERIVABLE_ERAS: Partial<Record<GdpBaselineCountry, { eras: EraId[]; repeats: EraId }>> = {
   DD: { eras: ["1991", "1999", "2007", "2019", "2023", "2027"], repeats: "1979" },
   RU: { eras: ["1991"], repeats: "2019" },
+  // No authored national GDP to reconcile against: every pre-2019 and later era
+  // repeats the one bundle's 2019 cell.
+  SCO: { eras: ERAS.filter((era) => era !== "2019"), repeats: "2019" },
+  WAL: { eras: ERAS.filter((era) => era !== "2019"), repeats: "2019" },
 };
 
 function derivableEras(country: GdpBaselineCountry): EraId[] {
@@ -279,6 +296,8 @@ const EXPECTED_BUNDLE_PRESET: Partial<Record<GdpBaselineCountry, Partial<Record<
       "2023": "2019-default",
       "2027": "2019-default",
     },
+    SCO: Object.fromEntries(ERAS.filter((e) => e !== "2019").map((e) => [e, "2019-default"])),
+    WAL: Object.fromEntries(ERAS.filter((e) => e !== "2019").map((e) => [e, "2019-default"])),
   };
 
 function expectedBundlePreset(country: GdpBaselineCountry, era: EraId): string {
@@ -373,6 +392,17 @@ describe("gdpBaseline table derivation (issue #798)", () => {
     const scalar = getIncomeGdpScalar(region.gdp ?? 0, region.population, "DD", "1953-default");
     expect(scalar).toBeGreaterThanOrEqual(0.9);
     expect(scalar).toBeLessThanOrEqual(1.5);
+  });
+
+  it("prices SCO and WAL in every era, the rows whose absence aborted a turn", () => {
+    const table = getGdpBaselineTable();
+    expect(table.SCO["2019"]).toBe(29_963);
+    expect(table.WAL["2019"]).toBe(23_344);
+    for (const country of ["SCO", "WAL"] as const) {
+      for (const era of ERAS) {
+        expect(() => gdpBaselinePerCapita(country, `${era}-default`)).not.toThrow();
+      }
+    }
   });
 
   it("pins absolute values for the cross-era anchors", () => {

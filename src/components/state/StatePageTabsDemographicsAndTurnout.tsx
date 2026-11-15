@@ -3,18 +3,16 @@
 import { describeMediaPull } from "@/lib/mediaEditorial/opinionPullCopy";
 import { useState, type ReactNode } from "react";
 import { type CountryId } from "@/lib/constants/countriesCore";
-import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 import { REGION_CENSUS_LABELS } from "@/lib/constants/regionCensusLabels";
 import { LocalTime } from "@/components/time/LocalTime";
 import { LivePopulationPanel } from "@/components/demographics/LivePopulationPanel";
 import { ElectorateDossier } from "./demographics/ElectorateDossier";
 import type { BucketProfileSection } from "@/lib/demographics/bucketProfile";
-import type { DemographicCategory } from "@/lib/db/types";
 import type { RegionPartyPosition } from "@/lib/demographics/preferredParty";
 import type {
   SerializedStateDemographics,
   Layer1Config,
-  ArchetypeRegionCensus,
+  IntlRegionCensus,
 } from "./StatePageTabsTypes";
 
 interface TurnoutData {
@@ -188,19 +186,17 @@ function KpiStrip({
   economicLean,
   socialLean,
   avgTurnout,
-  categoryCount,
   mediaPullLine,
 }: {
   population: number | null;
   economicLean: number | null;
   socialLean: number | null;
   avgTurnout: number | null;
-  categoryCount: number;
   mediaPullLine?: string | null;
 }) {
   return (
     <>
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         <KpiCell label="Population">
           {population !== null ? fmtPopulation(population) : "—"}
         </KpiCell>
@@ -227,7 +223,6 @@ function KpiStrip({
           )}
         </KpiCell>
         <KpiCell label="Turnout">{avgTurnout !== null ? `${avgTurnout.toFixed(1)}%` : "—"}</KpiCell>
-        <KpiCell label="Demographic categories">{categoryCount}</KpiCell>
       </div>
       {mediaPullLine && <p className="text-xs text-muted">{mediaPullLine}</p>}
     </>
@@ -236,16 +231,13 @@ function KpiStrip({
 
 function computeKpiProps({
   demographics,
-  categories,
   turnoutData,
+  population,
 }: {
   demographics: SerializedStateDemographics | null;
-  categories: DemographicCategory[];
   turnoutData: TurnoutResponse | null;
+  population: number | null;
 }) {
-  const population = demographics
-    ? Object.values(demographics.groups).reduce((s, g) => s + (g.population ?? 0), 0)
-    : null;
   const economicLean =
     demographics && typeof demographics.cachedEconomicLean === "number"
       ? demographics.cachedEconomicLean
@@ -255,9 +247,8 @@ function computeKpiProps({
       ? demographics.cachedSocialLean
       : null;
   const avgTurnout = computeAvgTurnout(turnoutData);
-  const categoryCount = categories.length;
   const mediaPullLine = describeMediaPull(demographics?.mediaOpinionPull);
-  return { population, economicLean, socialLean, avgTurnout, categoryCount, mediaPullLine };
+  return { population, economicLean, socialLean, avgTurnout, mediaPullLine };
 }
 
 // ─── census card with integrated turnout ─────────────────────────────────────
@@ -579,39 +570,33 @@ type ViewMode = "chart" | "table" | "combined";
 export function DemographicsAndTurnoutTab({
   stateId,
   demographics,
-  categories,
   censusData,
   turnoutData,
   countryId,
   regionParties = [],
   bucketProfile = null,
+  population = null,
   isAdmin = false,
 }: {
   stateId: string;
   demographics: SerializedStateDemographics | null;
-  categories: DemographicCategory[];
-  censusData: Layer1Config | ArchetypeRegionCensus | null;
+  censusData: Layer1Config | IntlRegionCensus | null;
   /**
    * Per-bucket electorate profile, computed server-side from the same granular
    * units the vote engine uses. Null when the region has no Layer-1 substrate,
-   * in which case the archetype fallback below still renders.
+   * in which case the fallback below still renders.
    */
   bucketProfile?: BucketProfileSection[] | null;
   isAdmin?: boolean;
+  /** Census population of the region. */
+  population?: number | null;
   turnoutData: TurnoutResponse | null;
   countryId?: string;
   regionParties?: RegionPartyPosition[];
 }) {
   const [viewMode, setViewMode] = useState<ViewMode>("combined");
-  const kpi = computeKpiProps({ demographics, categories, turnoutData });
-  // Archetype-based view applies to every country whose demographicProfileId
-  // is `<cc>_archetypes` (UK, JP, DE, IE, CN, BR). Single config-driven gate; no
-  // caller has to pass a per-country boolean.
+  const kpi = computeKpiProps({ demographics, turnoutData, population });
   const upperCountryId = countryId?.toUpperCase() as CountryId | undefined;
-  const profileId = upperCountryId
-    ? COUNTRY_CLIENT_CONFIGS[upperCountryId]?.demographicProfileId
-    : undefined;
-  const isArchetypeBased = /^[a-z]{2}_archetypes$/.test(profileId ?? "");
 
   if (!censusData && !demographics) {
     // Census-share / polling demographics are unconfigured — but the LIVE cohort
@@ -665,9 +650,9 @@ export function DemographicsAndTurnoutTab({
     }));
   };
 
-  // Archetype-based census cards (UK, JP, DE, IE, CN, BR, DD) — labels resolved
+  // International census cards (UK, JP, DE, IE, CN, BR, DD) — labels resolved
   // per country from REGION_CENSUS_LABELS.
-  if (isArchetypeBased && censusData && "ethnicity" in censusData) {
+  if (censusData && "ethnicity" in censusData) {
     const data = censusData as unknown as Record<string, Record<string, number>>;
     const labels = upperCountryId ? REGION_CENSUS_LABELS[upperCountryId] : undefined;
 
@@ -1026,10 +1011,9 @@ export function DemographicsAndTurnoutTab({
     );
   }
 
-  // Fallback: an archetype-profile country with demographics stored but no
-  // Layer-1 census file yet. Renders the live panel and an explicit notice so
+  // Fallback: a region with demographics stored but no Layer-1 census file yet. Renders the live panel and an explicit notice so
   // the tab is never blank and never claims data it does not have.
-  if (isArchetypeBased && demographics) {
+  if (demographics) {
     return (
       <div className="space-y-3">
         {countryId && <LivePopulationPanel stateId={stateId} countryId={countryId} />}

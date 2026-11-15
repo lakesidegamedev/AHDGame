@@ -17,14 +17,11 @@ interface UnionFundTreasuryPanelProps {
 }
 
 /**
- * Put personal money into the union treasury, and say plainly what the treasury
- * is for.
+ * Put personal money into the union treasury.
  *
- * Player ticket #1112 asked what the treasury is and how to get more of it, and
- * #1121 asked outright how to send money to a union while building one. Dues
- * were the only inflow, and they are charged on a membership the union has to
- * win first, so a fresh union sat at zero with no way to pay for the drive that
- * would earn it members. This is the bootstrap.
+ * Dues are the only other inflow and are charged on membership the union has
+ * to win first, so a fresh union sits at zero with no way to pay for the drive
+ * that earns members. This is the bootstrap.
  */
 export function UnionFundTreasuryPanel({
   unionId,

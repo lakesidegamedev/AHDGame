@@ -1,11 +1,11 @@
 import { withSessionDb, afterCommit } from "@/lib/db/sessionDb";
 /**
- * Domain logic for a UK First Minister requesting an independence /
- * reunification referendum. Mirrors the changeDevolutionPolicy contract:
+ * Domain logic for a regional head of government requesting an independence /
+ * reunification referendum for a region in the sovereignty registry. Mirrors the changeDevolutionPolicy contract:
  * validate inputs + eligibility + AP, write the referendum doc, decrement AP,
  * return a thin status/body for the API route.
  *
- * See docs/superpowers/specs/2026-06-16-independence-process-design.md.
+ * See the independence-process design.
  */
 import type { Db } from "mongodb";
 import type { MacroMetricsDoc } from "@/lib/db/types/macroMetrics";
@@ -14,10 +14,12 @@ import type { GovernorOfficeState } from "@/lib/db/types/governorOfficeState";
 import type { Referendum, ReferendumKind, ReferendumStatus } from "@/lib/db/types/referendum";
 import { getReferendumCollection } from "@/lib/db/collections/referendum";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
-import { isUKDevolutionRegion } from "@/lib/constants/devolution";
 import { REQUEST_AP_COST, referendumRequestEligibility } from "@/lib/constants/referendum";
 import { announceReferendumRequested } from "@/lib/referendum/referendumWebhooks";
 import { recordWireEvent } from "@/lib/referendum/wire";
+import { sovereigntyRegionIn } from "@/lib/referendum/rules/sovereigntyRegions";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { governorOfficeStateCollection } from "@/lib/db/repositories/governorOfficeState";
 
 /** Non-terminal statuses that count as "a referendum is in progress". */
 const ACTIVE_STATUSES: ReferendumStatus[] = [
@@ -58,18 +60,25 @@ async function requestReferendumInTransaction(
   const stateId = input.stateId.toUpperCase();
   const adminOverride = input.adminOverride === true;
 
-  if (countryId !== "UK") return { status: 400, body: { error: "Referendums are UK-only." } };
-  if (!isUKDevolutionRegion(stateId)) {
+  const region = sovereigntyRegionIn(countryId, stateId);
+  if (!region) {
     return { status: 400, body: { error: "Region cannot hold an independence referendum." } };
+  }
+  if (!region.actuates) {
+    return {
+      status: 400,
+      body: { error: "This region's referendum cannot be held until its successor state exists." },
+    };
   }
 
   const currentTurn = await getCurrentTurn(db);
   const refs = getReferendumCollection(db);
 
   // A shared office write serializes requests even when an admin pays no AP.
-  await db
-    .collection<GovernorOfficeState>("governorOfficeState")
-    .updateOne({ countryId, stateId }, { $inc: { referendumRequestRevision: 1 } });
+  await governorOfficeStateCollection(db).updateOne(
+    { countryId, stateId },
+    { $inc: { referendumRequestRevision: 1 } }
+  );
   const active = await refs.findOne({ regionId: stateId, status: { $in: ACTIVE_STATUSES } });
   const lastTerminal = await refs
     .find({
@@ -82,7 +91,7 @@ async function requestReferendumInTransaction(
     .toArray();
 
   // SP5: independenceDesire lives top-level on macroMetrics.
-  const metric = await db.collection<MacroMetricsDoc>("macroMetrics").findOne({ _id: stateId });
+  const metric = await macroMetricsCollection<MacroMetricsDoc>(db).findOne({ _id: stateId });
   const desire = metric?.independenceDesire?.value ?? 0;
 
   const elig = referendumRequestEligibility({
@@ -94,21 +103,19 @@ async function requestReferendumInTransaction(
   if (active) return { status: 400, body: { error: "A referendum is already in progress." } };
   if (!elig.eligible && !adminOverride) return { status: 400, body: { error: elig.reason } };
 
-  const office = await db
-    .collection<GovernorOfficeState>("governorOfficeState")
-    .findOne({ countryId, stateId });
+  const office = await governorOfficeStateCollection(db).findOne({ countryId, stateId });
   if (!office) return { status: 400, body: { error: "Office state row missing." } };
   if (!adminOverride && (office.gubernatorialActions ?? 0) < REQUEST_AP_COST) {
     return { status: 400, body: { error: "Insufficient office action points." } };
   }
 
-  const kind: ReferendumKind = stateId === "NIR" ? "reunification" : "independence";
+  const kind: ReferendumKind = region.kind;
   const now = new Date();
   const doc: Referendum = {
     countryId,
     regionId: stateId,
     kind,
-    targetCountryId: stateId === "NIR" ? "IE" : null,
+    targetCountryId: region.targetCountryId,
     status: "requested",
     requestedTurn: currentTurn,
     grantedTurn: null,
@@ -126,12 +133,10 @@ async function requestReferendumInTransaction(
     updatedAt: now,
   };
   if (!adminOverride) {
-    const debit = await db
-      .collection<GovernorOfficeState>("governorOfficeState")
-      .updateOne(
-        { countryId, stateId, gubernatorialActions: { $gte: REQUEST_AP_COST } },
-        { $inc: { gubernatorialActions: -REQUEST_AP_COST }, $set: { updatedAt: now } }
-      );
+    const debit = await governorOfficeStateCollection(db).updateOne(
+      { countryId, stateId, gubernatorialActions: { $gte: REQUEST_AP_COST } },
+      { $inc: { gubernatorialActions: -REQUEST_AP_COST }, $set: { updatedAt: now } }
+    );
     if (debit.modifiedCount === 0)
       return { status: 400, body: { error: "Insufficient office action points." } };
   }
@@ -147,7 +152,7 @@ async function requestReferendumInTransaction(
     regionId: stateId,
     turn: currentTurn,
     kind: "requested",
-    summary: `The First Minister requested a ${
+    summary: `The ${region.executiveTitle} requested a ${
       kind === "reunification" ? "reunification" : "independence"
     } referendum.`,
   }).catch(() => {});

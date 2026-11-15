@@ -9,17 +9,12 @@ import { eligiblePoleVictor } from "@/lib/military/rules/warResolution";
  *
  * This must be a turn sweep. A side can arrive at a pole on turn 5 and then file no
  * further offensive; battle resolution will never run again merely because turn 24
- * arrived. The stamp written on arrival is the durable wake-up condition. The caller
- * supplies the conflict gate from its existing game-state snapshot so this adds no
- * redundant game-state round trip to the hourly turn.
+ * arrived. The stamp written on arrival is the durable wake-up condition.
  */
 export async function resolveMatureWarPoles(
   db: Db,
-  currentTurn: number,
-  conflictsEnabled: boolean
+  currentTurn: number
 ): Promise<{ finalized: number }> {
-  if (!conflictsEnabled) return { finalized: 0 };
-
   const candidates = await getConflictsCollection(db)
     .find({
       type: { $ne: "cold_war" },

@@ -4,6 +4,11 @@ import type { GameConfig } from "@/lib/db/types/gameConfig";
 import type { CountryId } from "@/lib/constants/countries";
 import { commandEconomySoeSectors, isCommandEconomy } from "@/lib/constants/commandEconomy";
 import { getStartingYearForPreset } from "@/lib/constants/turnTime";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { federationSettlementApplicationsCollection } from "@/lib/db/repositories/federationSettlementApplications";
 
 export interface CommandEconomyCountryReport {
   countryId: CountryId;
@@ -32,7 +37,7 @@ export interface CommandEconomySeedReport {
 }
 
 /**
- * Post-seed assertion for command economies (ticket #1014 follow-up).
+ * Post-seed assertion for command economies.
  *
  * The seeders that split a command country into one SOE per commanding-height sector
  * (`seedRuBudgets`, `seedCnBudgets`, `seedDdBudgets`, the Warsaw-Pact block) all read
@@ -59,9 +64,10 @@ export async function verifyCommandEconomySeed(
 ): Promise<CommandEconomySeedReport> {
   const empty: CommandEconomySeedReport = { checked: false, countries: [], issues: [], fatal: [] };
 
-  const gameConfig = await db
-    .collection<GameConfig>("gameConfig")
-    .findOne({ _id: "default" }, { projection: { commandEconomyEnabled: 1 } });
+  const gameConfig = await gameConfigCollection(db).findOne(
+    { _id: "default" },
+    { projection: { commandEconomyEnabled: 1 } }
+  );
   if (gameConfig?.commandEconomyEnabled !== true) return empty;
 
   const startingYear = getStartingYearForPreset(preset);
@@ -71,8 +77,7 @@ export async function verifyCommandEconomySeed(
   const seededCountryIds = [
     ...new Set(
       (
-        await db
-          .collection<State>("states")
+        await statesCollection(db)
           .find({}, { projection: { countryId: 1 } })
           .toArray()
       ).map((s) => s.countryId as CountryId)
@@ -83,8 +88,7 @@ export async function verifyCommandEconomySeed(
   // state is seeded without state enterprises.
   const dissolved = new Set(
     (
-      await db
-        .collection<{ _id: string; sourceEntityId: string }>("federationSettlementApplications")
+      await federationSettlementApplicationsCollection<{ _id: string; sourceEntityId: string }>(db)
         .find({ presetId: preset, status: "applied" }, { projection: { sourceEntityId: 1 } })
         .toArray()
     ).map((row) => row.sourceEntityId)
@@ -101,17 +105,16 @@ export async function verifyCommandEconomySeed(
     if (!isCommandEconomy(countryId, startingYear, true)) continue;
 
     const [soes, sectors, primaryCorp] = await Promise.all([
-      db
-        .collection<Corporation>("corporations")
+      corporationsCollection(db)
         .find({ countryId, soe: { $exists: true } }, { projection: { soe: 1 } })
         .toArray(),
-      db
-        .collection<CorporateSector>("corporateSectors")
+      corporateSectorsCollection(db)
         .find({ countryId }, { projection: { corporationId: 1 } })
         .toArray(),
-      db
-        .collection<Corporation>("corporations")
-        .findOne({ countryId, isPrimaryNationalCorporation: true }, { projection: { _id: 1 } }),
+      corporationsCollection(db).findOne(
+        { countryId, isPrimaryNationalCorporation: true },
+        { projection: { _id: 1 } }
+      ),
     ]);
 
     const haveSectors = new Set(

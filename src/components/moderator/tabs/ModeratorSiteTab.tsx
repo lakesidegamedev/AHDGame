@@ -3,18 +3,21 @@
 import { RegistrationControlsPanel } from "@/components/admin/players/RegistrationControlsPanel";
 import { TurnPausePanel } from "@/components/moderator/TurnPausePanel";
 
-export function ModeratorSiteTab() {
+export function ModeratorSiteTab({ canChange = true }: { canChange?: boolean }) {
   return (
     <div className="space-y-4">
       <div className="rounded-xl border border-card-border bg-card p-4 shadow-sm">
         <h2 className="text-base font-semibold">Site controls</h2>
         <p className="mt-1 text-sm text-muted">
-          High-blast-radius operational toggles. All actions here are recorded in the admin log.
+          High-blast-radius operational toggles.{" "}
+          {canChange
+            ? "All actions here are recorded in the admin log."
+            : "Status only. Changing these settings needs an admin."}
         </p>
       </div>
 
-      <TurnPausePanel />
-      <RegistrationControlsPanel />
+      <TurnPausePanel canChange={canChange} />
+      <RegistrationControlsPanel canChange={canChange} />
     </div>
   );
 }

@@ -1,5 +1,5 @@
 /** @vitest-environment happy-dom */
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { NextIntlClientProvider } from "next-intl";
 import messages from "../../../../../messages/en/elections.json";
@@ -12,7 +12,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-it("preserves a selected US ideology category when the census preview arrives", async () => {
+it("keeps a selected category when the census preview arrives", async () => {
   let finishPreview!: (response: unknown) => void;
   const pending = new Promise((resolve) => {
     finishPreview = resolve;
@@ -33,27 +33,28 @@ it("preserves a selected US ideology category when the census preview arrives", 
       <CanvassingPanel countryId="US" />
     </NextIntlClientProvider>
   );
-  const category = (await screen.findByRole("combobox")) as HTMLSelectElement;
-  fireEvent.change(category, { target: { value: "ideology" } });
+  await screen.findByRole("combobox");
   finishPreview({
     ok: true,
     json: async () => ({
       stateId: "GA",
       targets: [
         { dimension: "race", bucket: "white" },
-        { dimension: "income", bucket: "middle" },
+        { dimension: "education", bucket: "college" },
       ],
       preview: null,
     }),
   });
-  await screen.findByRole("option", { name: "income" });
-  expect(category.value).toBe("ideology");
-  expect([...category.options].map((option) => option.value)).toContain("ideology");
+  await screen.findByRole("option", { name: "Education" });
+  const category = screen.getByRole("combobox") as HTMLSelectElement;
+  fireEvent.change(category, { target: { value: "education" } });
+  expect(category.value).toBe("education");
+  expect([...category.options].map((option) => option.value)).not.toContain("ideology");
 });
 
 describe("country target vocabulary", () => {
   it.each(["UK", "JP", "DE", "IE", "CN", "BR", "DD"])(
-    "unions %s voter groups with native census dimensions",
+    "offers only %s census buckets",
     async (countryId) => {
       vi.stubGlobal(
         "fetch",
@@ -74,12 +75,12 @@ describe("country target vocabulary", () => {
           <CanvassingPanel countryId={countryId} />
         </NextIntlClientProvider>
       );
-      await screen.findByRole("option", { name: "education" });
-      const categories = screen.getAllByRole("combobox")[0] as HTMLSelectElement;
-      expect([...categories.options].map((option) => option.value)).toContain(
-        `${countryId.toLowerCase()}_voterGroups`
+      const categories = (await screen.findAllByRole("combobox"))[0] as HTMLSelectElement;
+      await waitFor(() =>
+        expect([...categories.options].map((option) => option.value).filter(Boolean)).toEqual([
+          "education",
+        ])
       );
-      expect([...categories.options].map((option) => option.value)).toContain("education");
     }
   );
 });

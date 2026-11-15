@@ -24,6 +24,7 @@ import { describe, it, expect, vi } from "vitest";
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { Db } from "mongodb";
+import * as householdRules from "@/lib/market/producerMarket/householdRules";
 import { createInMemoryDb } from "@/lib/test-utils/inMemoryDb";
 import type { CommodityType } from "@/lib/constants/commodities";
 import type { CorporationLookups } from "../types";
@@ -235,6 +236,7 @@ async function runLookups() {
 
 type Golden = {
   shadow?: unknown;
+  historicalShadow?: unknown;
   clearing?: unknown;
   lookups?: unknown;
 };
@@ -281,6 +283,20 @@ describe("corporation turn golden capture", () => {
     expect(capture.totalRevenueGenerated).toBeGreaterThan(0);
   });
 
+  it("preserves the historical shadow when replaying the old household allocation", async () => {
+    const original = householdRules.householdPurchaseOrders;
+    const historical = vi
+      .spyOn(householdRules, "householdPurchaseOrders")
+      .mockImplementation((input) => original({ ...input, fairShare: false }));
+    try {
+      expect(await runShadow()).toEqual(readGolden().historicalShadow);
+    } finally {
+      historical.mockRestore();
+    }
+  });
+
+  // Proportional household sharing deliberately changes the persisted shadow.
+  // Keep the old policy pinned above and the new policy pinned independently here.
   it("reproduces the recorded producer-market shadow exactly", async () => {
     const capture = await runShadow();
     if (process.env.UPDATE_TURN_GOLDEN === "1") {

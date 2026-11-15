@@ -26,7 +26,7 @@ export type AcquisitionOutcome = "merge" | "subsidiary";
  * whole target corporation for `priceAnchor` (₳). The target's CEO accepts or
  * rejects. On accept, the target is absorbed into the acquirer and its
  * shareholders are cashed out (see executeAgreedAcquisition). Stored in the
- * `acquisitionOffers` collection. Gated by the `corpDealsEnabled` game flag.
+ * `acquisitionOffers` collection.
  */
 export interface AcquisitionOffer {
   _id: ObjectId;

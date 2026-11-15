@@ -1,5 +1,10 @@
+import { migration as successorTaxTypes } from "./entries/2026-11-09-successor-tax-types";
 import { migration as incomeTaxTiers } from "./entries/2026-10-16-income-tax-tiers";
 import { migration as backfillMechanicalLawTypes } from "./entries/2026-10-21-backfill-mechanical-law-types";
+import { migration as crisisV2Indexes } from "./entries/2026-11-08-crisis-v2-indexes";
+import { migration as crisisV2LeverIndexes } from "./entries/2026-11-09-crisis-v2-lever-indexes";
+import { migration as crisisV2ConsequenceIndexes } from "./entries/2026-11-10-crisis-v2-consequence-indexes";
+import { migration as crisisV2PopulationOrderIndexes } from "./entries/2026-11-11-crisis-v2-population-order-indexes";
 import { migration as bankMoneyMoveUnprojectedIndex } from "./entries/2026-10-23-bank-money-move-unprojected-index";
 import { migration as turnGrowthIndexes } from "./entries/2026-10-26-turn-growth-indexes";
 import { migration as playerReadIndexes } from "./entries/2026-10-27-player-read-indexes";
@@ -33,10 +38,16 @@ import { migration as productVentureIndexes } from "./entries/2026-10-08-product
 import { migration as campaignFieldOfficeIndexes } from "./entries/2026-10-09-campaign-field-office-indexes";
 import { migration as marketCapTickIndexes } from "./entries/2026-10-09-market-cap-tick-indexes";
 import { migration as supplyAgreementStatusIndex } from "./entries/2026-10-10-supply-agreement-status-index";
+import { migration as navairBasingIndex } from "./entries/2026-11-10-navair-basing-index";
 import { migration as subhourWikiCadence } from "./entries/2026-10-09-subhour-wiki-cadence";
 import { runMigrations, type RunSummary } from "./runner";
+import { migration as jpLawLeanEffects } from "./entries/2026-11-09-jp-law-lean-effects";
+import { migration as financialTxLogTurnOrderIndex } from "./entries/2026-11-10-financial-tx-log-turn-order-index";
+import { migration as bucketApprovalsRename } from "./entries/2026-11-11-bucket-approvals-rename";
+import { migration as regionGroupDriftToBuckets } from "./entries/2026-11-11-region-group-drift-to-buckets";
 import { migration as scotusCareerAchievements } from "./entries/2026-10-16-scotus-career-achievements";
 import type { Migration } from "./types";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /**
  * Small, audited allowlist of migrations that must accompany application boot.
@@ -51,6 +62,7 @@ export const REQUIRED_STARTUP_MIGRATIONS: readonly Migration[] = [
   // The Competition, Subsidiary Limits and Foreign Investment Acts must exist
   // before the merger gate reads them, or every new country fails open.
   backfillMechanicalLawTypes,
+  successorTaxTypes,
   // Ownership and achievement definitions must exist before the next reset or settlement.
   contestAccountHistory,
   governmentContractBidding,
@@ -60,13 +72,13 @@ export const REQUIRED_STARTUP_MIGRATIONS: readonly Migration[] = [
   repairOrphanIndexFundState,
   providerIdentityIndexes,
   centralBankPricingPhaseIn,
-  // #2688: without these, every per-turn telemetry upsert scans its collection,
+  // Without these, every per-turn telemetry upsert scans its collection,
   // a cost that grows each turn until the index exists.
   longHorizonTelemetryIndexes,
   // Sign in with Apple writes `appleId`; its unique index must exist before
   // the first Apple login can race a duplicate account into existence.
   appleProviderIdentityIndex,
-  // #2049 (player ticket 1368): the UK appoint path allows a departmental minister to take
+  // The UK appoint path allows a departmental minister to take
   // a central title, but the legacy one-seat-per-character unique index
   // rejects that insert until this swap runs, so the DPM appointment failed
   // with a spurious conflict error on worlds that never ran it.
@@ -95,6 +107,7 @@ export const REQUIRED_STARTUP_MIGRATIONS: readonly Migration[] = [
   campaignFieldOfficeIndexes,
   marketCapTickIndexes,
   supplyAgreementStatusIndex,
+  navairBasingIndex,
   corporateFundPositions,
   subhourWikiCadence,
   // NPP engine 6 on the hosted world ships with the build that carries it;
@@ -106,6 +119,15 @@ export const REQUIRED_STARTUP_MIGRATIONS: readonly Migration[] = [
   bankMoneyMoveUnprojectedIndex,
   // Unused text indexes on the turn's two busiest logs cost index writes every turn.
   dropLogTextIndexes,
+  // Japanese laws carry lean effects in code; the live law types need them stored or
+  // passed bills still move no regional lean. Idempotent, existing jp_* docs only.
+  jpLawLeanEffects,
+  // Character and NPP group approvals move to the field this build reads;
+  // until they do, every approval reads as empty in elections and polls.
+  bucketApprovalsRename,
+  // Regional voter drift moves to the census overlay this build reads; until it
+  // does, every region's leans read as the seeded census.
+  regionGroupDriftToBuckets,
 ];
 
 /** Index metadata can disappear on reset even when migration markers survive. */
@@ -128,6 +150,13 @@ export const REQUIRED_STARTUP_INDEX_MIGRATIONS: readonly Migration[] = [
   // Turn-phase probes on bonds and money moves stay bounded by live work.
   turnGrowthIndexes,
   playerReadIndexes,
+  crisisV2Indexes,
+  crisisV2LeverIndexes,
+  crisisV2ConsequenceIndexes,
+  crisisV2PopulationOrderIndexes,
+  // The ledger listing sorts by turn, write time and id; without this index Mongo
+  // sorts the whole filtered log in memory on every page.
+  financialTxLogTurnOrderIndex,
 ];
 
 export async function runRequiredStartupMigrations(db: Db): Promise<RunSummary> {
@@ -150,9 +179,9 @@ export async function runRequiredStartupMigrations(db: Db): Promise<RunSummary> 
     dryRun: false,
   });
   const summaries = [initial, indexes];
-  const state = await db
-    .collection<{ _id: string; preset?: string; currentTurn?: number }>("gameState")
-    .findOne({ _id: "current" }, { projection: { preset: 1, currentTurn: 1 } });
+  const state = await gameStateCollection<{ _id: string; preset?: string; currentTurn?: number }>(
+    db
+  ).findOne({ _id: "current" }, { projection: { preset: 1, currentTurn: 1 } });
   // A reset preserves historical markers but removes opening pool rows.
   // Bootstrap only the new 1991 world; never refill an existing cash pool.
   if (state?.preset === "1991-default" && state.currentTurn === 1) {

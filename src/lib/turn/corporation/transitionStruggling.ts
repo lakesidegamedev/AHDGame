@@ -1,15 +1,11 @@
 /**
- * Funded-market transition relief for sectors that struggle after the switch
- * (owner decision 2026-10-21): during the transition window, any non-state
- * sector that lost money or sold nothing on a funded turn is marked, which
- * gives it the same relief as a sector classed over-built at opening (free
- * conversion at book value, no idle upkeep while mothballed). A human owner is
- * told when sectors of theirs are newly marked, at most once every
- * TRANSITION_RENOTICE_TURNS turns, with a link to the company page where every
- * marked sector can be mothballed or converted in one click. Nothing changes a
- * sector without the player.
- *
- * One bulkWrite for the marks and one notification batch.
+ * Funded-market transition relief for struggling sectors: during the
+ * transition window, any non-state sector that lost money or sold nothing on
+ * a funded turn is marked, giving it the same relief as an over-built sector
+ * (free conversion at book value, no idle upkeep while mothballed). Owners
+ * are notified at most once every TRANSITION_RENOTICE_TURNS turns, linking
+ * to the company page where marked sectors can be mothballed or converted.
+ * Nothing changes a sector without the player.
  */
 import type { AnyBulkWriteOperation, Db, ObjectId } from "mongodb";
 import type { CorporateSector, Corporation } from "@/lib/db/types";
@@ -25,6 +21,7 @@ import {
 } from "@/lib/market/producerMarket/transitionRules";
 import { isStateOwned } from "@/lib/nationalization/nationalCorporation";
 import { createNotifications, type NotificationInput } from "@/lib/notifications";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 /** The player behind a corporation, or null for an NPP-run company with no human owner. */
 function humanOwner(corp: Corporation): ObjectId | null {
@@ -138,7 +135,7 @@ export async function markStrugglingTransitionSectors(
     });
   }
 
-  if (ops.length > 0) await db.collection<CorporateSector>("corporateSectors").bulkWrite(ops);
+  if (ops.length > 0) await corporateSectorsCollection(db).bulkWrite(ops);
   if (notices.length > 0) await createNotifications(notices);
   return { marked: reasons.size, owners: notices.length };
 }

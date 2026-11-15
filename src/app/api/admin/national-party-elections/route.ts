@@ -14,7 +14,7 @@ import {
   processCompletedNationalElections,
   createMissingNationalElections,
   NATIONAL_ELECTION_DURATION_TURNS,
-} from "@/lib/nationalPartyElections";
+} from "@/lib/elections/party/nationalPartyElections";
 import { getGameTime } from "@/lib/time/gameTime";
 
 const batchSchema = z.object({

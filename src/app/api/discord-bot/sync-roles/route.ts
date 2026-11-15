@@ -3,7 +3,7 @@ import { getDb } from "@/lib/mongodb";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { requireBotToken } from "@/lib/api/requireBotToken";
 import { checkRateLimit, rateLimitResponse, BOT_FINANCIAL_LIMITS } from "@/lib/api/rateLimit";
-import type { Character, User, PoliticalParty, Corporation, ElectedOfficial } from "@/lib/db/types";
+import type { User, PoliticalParty, ElectedOfficial } from "@/lib/db/types";
 import { COUNTRY_ORDER, type CountryId } from "@/lib/constants/countries";
 import {
   getHeadOfGovernmentCharacterId,
@@ -15,6 +15,12 @@ import {
   loadFxRatesByCurrency,
 } from "@/lib/currency/corporationCapital";
 import { buildSyncRoleTokens } from "./buildSyncRoles";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 // GET /api/discord-bot/sync-roles — Returns the Discord roles a user should hold based on their in-game party, office, and investment status.
 // Auth: requireAdminOrApiKey
@@ -42,13 +48,13 @@ export async function GET(request: Request) {
     const db = await getDb();
 
     // Find user by Discord ID
-    const user = await db.collection<User>("users").findOne({ discordId });
+    const user = await usersCollection(db).findOne({ discordId });
     if (!user) {
       return NextResponse.json({ found: false, roles: [] });
     }
 
     // Find character
-    const character = await db.collection<Character>("characters").findOne({ userId: user._id });
+    const character = await charactersCollection(db).findOne({ userId: user._id });
     if (!character) {
       return NextResponse.json({ found: false, roles: [] });
     }
@@ -59,9 +65,10 @@ export async function GET(request: Request) {
     let partyColor: string | null = null;
     const charCountryId = character.countryId ?? "US";
     if (character.party && character.party !== "independent") {
-      const party = await db
-        .collection<PoliticalParty>("politicalParties")
-        .findOne({ sequentialId: Number(character.party), countryId: charCountryId });
+      const party = await politicalPartiesCollection(db).findOne({
+        sequentialId: Number(character.party),
+        countryId: charCountryId,
+      });
       if (party) {
         partySlug = String(party.sequentialId);
         partyName = party.name;
@@ -74,8 +81,7 @@ export async function GET(request: Request) {
     }
 
     // Check investor status and compute portfolio value + ranking
-    const allCorps = await db
-      .collection<Corporation>("corporations")
+    const allCorps = await corporationsCollection(db)
       .find({})
       .project<{
         _id: import("mongodb").ObjectId;
@@ -135,9 +141,10 @@ export async function GET(request: Request) {
      * currentOffice, so query it independently. The token stacks on top of any
      * elected-office token (handled inside buildSyncRoleTokens).
      */
-    const chairBank = await db
-      .collection("centralBanks")
-      .findOne({ chairCharacterId: character._id }, { projection: { _id: 1 } });
+    const chairBank = await centralBanksCollection(db).findOne(
+      { chairCharacterId: character._id },
+      { projection: { _id: 1 } }
+    );
     const isCentralBankChair = chairBank != null;
 
     const country = (character.countryId ?? "US") as CountryId;
@@ -149,8 +156,7 @@ export async function GET(request: Request) {
      * (electedOfficials for presidential, governmentFormations.pmCharacterId
      * for parliamentary/one-party systems).
      */
-    const officeRows = await db
-      .collection<ElectedOfficial>("electedOfficials")
+    const officeRows = await electedOfficialsCollection(db)
       .find({ characterId: character._id })
       .project<{ officeType: string }>({ officeType: 1 })
       .toArray();
@@ -210,8 +216,7 @@ export async function POST(request: Request) {
     const db = await getDb();
 
     // Find all users with Discord linked
-    const linkedUsers = await db
-      .collection<User>("users")
+    const linkedUsers = await usersCollection(db)
       .find({ discordId: { $exists: true, $ne: "" } })
       .project<{ _id: import("mongodb").ObjectId; discordId: string }>({
         _id: 1,
@@ -227,16 +232,14 @@ export async function POST(request: Request) {
     const discordIdMap = new Map(linkedUsers.map((u) => [u._id.toString(), u.discordId]));
 
     // Fetch all characters for linked users
-    const characters = await db
-      .collection<Character>("characters")
+    const characters = await charactersCollection(db)
       .find({ userId: { $in: userIds } })
       .toArray();
 
     // Fetch all corporations (for CEO and investor checks) + FX rates for
     // anchor-normalized cross-corp wealth summation (v0.2.6).
     const [corporations, bulkFxByCurrency] = await Promise.all([
-      db
-        .collection<Corporation>("corporations")
+      corporationsCollection(db)
         .find({})
         .project<{
           _id: import("mongodb").ObjectId;
@@ -289,8 +292,7 @@ export async function POST(request: Request) {
     bulkSorted.forEach(([id], idx) => bulkInvestorRankMap.set(id, idx + 1));
 
     // Build chair-character set once so each character's chair role check is O(1).
-    const chairBanks = await db
-      .collection("centralBanks")
+    const chairBanks = await centralBanksCollection(db)
       .find({ chairCharacterId: { $ne: null } }, { projection: { chairCharacterId: 1 } })
       .toArray();
     const chairCharIds = new Set(
@@ -313,8 +315,7 @@ export async function POST(request: Request) {
       }
     }
     const parties = partyLookups.length
-      ? await db
-          .collection<PoliticalParty>("politicalParties")
+      ? await politicalPartiesCollection(db)
           .find({
             $or: partyLookups.map((l) => ({
               countryId: l.countryId,
@@ -342,8 +343,7 @@ export async function POST(request: Request) {
      * vestigial character.currentOffice. Load every player-held row once and
      * index by characterId so each character's office lookup is O(1).
      */
-    const officeRows = await db
-      .collection<ElectedOfficial>("electedOfficials")
+    const officeRows = await electedOfficialsCollection(db)
       .find({ characterId: { $ne: null } })
       .project<{ characterId: import("mongodb").ObjectId; officeType: string }>({
         characterId: 1,

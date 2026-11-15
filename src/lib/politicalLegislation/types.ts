@@ -13,21 +13,11 @@ import type { PoliticalMetricCategoryId, PoliticalMetricId } from "../politicalM
  * instead. Deriving the union from the list means a new member is one edit, and
  * the tables demand their row at the same moment.
  */
-export const LAW_COUNTRY_IDS = ["US", "UK", "RU", "DD"] as const;
+export const LAW_COUNTRY_IDS = ["US", "UK", "RU", "DD", "DE", "CA", "JP", "CN"] as const;
 export type LawCountryId = (typeof LAW_COUNTRY_IDS)[number];
 
-/**
- * Countries that PRICE v2 laws without carrying a catalogue of their own.
- *
- * A reunified Germany holds a law book of rescoped `dd.*` laws but authors no
- * legislation of its own, so it needs a cost anchor and nothing else. Widening
- * `LawCountryId` to include it looked equivalent and is not: that type keys the
- * exhaustive `Record<LawCountryId, ...>` tables for the catalogue, the budget
- * keys, the seed tax rates and the calibration baselines, so adding a member
- * silently demands a full law catalogue for a country that has none. Anchors are
- * their own axis.
- */
-export type CostAnchorCountryId = LawCountryId | "DE";
+/** Countries the cost engine can price for. Every law-book country has an anchor. */
+export type CostAnchorCountryId = LawCountryId;
 
 export interface LawLevel {
   name: string;
@@ -65,7 +55,7 @@ export interface PoliticalLaw {
    * metricId/slug camelCase; the countryId FIELD stays uppercase.
    */
   id: string;
-  countryId: LawCountryId;
+  countryId: CostAnchorCountryId;
   kind: "primary" | "secondary" | "tax";
   /**
    * primary: exactly one entry, weight 1, metricId matching the id.
@@ -83,13 +73,17 @@ export interface PoliticalLaw {
   /** §7 authored 1953 enacted level. Program laws only; tax laws omit. */
   baselineLevel?: 0 | 1 | 2 | 3 | 4;
   /**
-   * Era existence window, inclusive at both ends. Absent = always active.
+   * Era filing window. `from` is the first year a bill may file the law;
+   * `until`, when set, is the first year it may not. A window controls FILING
+   * only: an enacted law stays in force, keeps its budget line and keeps its
+   * effects after `until`. Before `from` the law is hidden from every filing
+   * path and has no seeded record. Absent = always fileable.
    * Political laws carry their OWN windows rather than joining LEGISLATION_ERA,
    * so the era-gate invariant (new-generation ids never appear in the legacy era
    * catalogs, where a tagging sweep could silently zero their budget lines)
-   * stays intact — see eraGate.test.ts.
+   * stays intact. See eraGate.test.ts.
    */
-  window?: { from: number; to: number | null };
+  window?: { from: number; until?: number };
   /**
    * Year-anchored day-one enacted level, ascending by year. Absent = the scalar
    * baselineLevel applies at every year. Interpolated then rounded to a whole

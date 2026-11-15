@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { Input } from "@/components/ui";
-import { COUNTRY_CURRENCY_MAP, CURRENCY_SYMBOLS } from "@/lib/constants/currencies";
+import { COUNTRY_CURRENCY_MAP, CURRENCY_SYMBOLS } from "@/lib/constants/currencyCodes";
 import { parseMoneyAmountInput } from "@/lib/utils/parseMoneyAmountInput";
 import { partyApiUrl } from "@/lib/urls";
 import { getMessageStyle } from "@/lib/utils/formatters";

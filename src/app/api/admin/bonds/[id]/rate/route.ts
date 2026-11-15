@@ -11,7 +11,7 @@ import { getDb } from "@/lib/mongodb";
 import { requireAdmin } from "@/lib/api/requireAdmin";
 import { parseJsonBody } from "@/lib/api/validate";
 import { handleRouteError, notFound, errorResponse } from "@/lib/api/errors";
-import type { Bond } from "@/lib/db/types";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
 
 const schema = z.object({ couponRate: z.number().min(0).max(100) });
 
@@ -25,9 +25,10 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     if (!parsed.success) return errorResponse(parsed.status, parsed.error);
 
     const db = await getDb();
-    const result = await db
-      .collection<Bond>("bonds")
-      .updateOne({ _id: new ObjectId(id) }, { $set: { couponRate: parsed.data.couponRate } });
+    const result = await bondsCollection(db).updateOne(
+      { _id: new ObjectId(id) },
+      { $set: { couponRate: parsed.data.couponRate } }
+    );
     if (result.matchedCount === 0) throw notFound("Bond not found");
 
     return NextResponse.json({ success: true });

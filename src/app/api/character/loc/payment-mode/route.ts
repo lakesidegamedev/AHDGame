@@ -17,8 +17,8 @@ import { LOC_PAYMENT_MODE_COOLDOWN_TURNS } from "@/lib/lineOfCredit/locMath";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { ZOD_ACTIVE_CURRENCY_ENUM } from "@/lib/constants/currencies";
 import type { CurrencyCode } from "@/lib/constants/currencies";
-import type { Character } from "@/lib/db/types";
 import type { LocPaymentMode } from "@/lib/db/types/character";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const bodySchema = z.object({
   currency: z.enum(ZOD_ACTIVE_CURRENCY_ENUM),
@@ -94,7 +94,7 @@ export async function POST(request: Request) {
     }
 
     const now = new Date();
-    await db.collection<Character>("characters").updateOne(
+    await charactersCollection(db).updateOne(
       { _id: character._id },
       {
         $set: {

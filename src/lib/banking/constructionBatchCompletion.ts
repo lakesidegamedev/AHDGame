@@ -13,9 +13,11 @@
  */
 import type { Db } from "mongodb";
 import type { BankLoan } from "@/lib/db/types/bank";
-import { MONEY_MOVE_COLLECTION, type MoneyMoveRecordLeg } from "./moneyMove";
+import { type MoneyMoveRecordLeg } from "./moneyMove";
 import { reviveObjectIds } from "./settlementEncoding";
 import type { TransitionProjection } from "./rules/boundary";
+import { bankLoansCollection } from "@/lib/db/repositories/bankLoans";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
 
 interface JournalProjection {
   applied?: boolean;
@@ -54,7 +56,7 @@ const totalLoansInc = (p: JournalProjection) =>
  * Anything it does not fully recognise is left exactly as it was.
  */
 export async function completeRefusedDebitBatch(db: Db, key: string): Promise<boolean> {
-  const journal = db.collection<BatchRecord>(MONEY_MOVE_COLLECTION);
+  const journal = bankMoneyMovesCollection<BatchRecord>(db);
   const record = await journal.findOne({ _id: key });
   if (
     !record ||
@@ -85,8 +87,7 @@ export async function completeRefusedDebitBatch(db: Db, key: string): Promise<bo
   const loanIds = projections
     .filter((p) => p.projection.collection === "bankLoans")
     .map((p) => reviveObjectIds(p.projection.filter)?._id);
-  const loans = await db
-    .collection<BankLoan>("bankLoans")
+  const loans = await bankLoansCollection(db)
     .find({ _id: { $in: loanIds } } as never)
     .toArray();
   const loanById = new Map(loans.map((loan) => [String(loan._id), loan]));

@@ -6,20 +6,12 @@ import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
 import { getGameState } from "@/lib/gameState";
 
 /**
- * Central bank governance: who sets the policy rate.
- *
- * Historically the Bank of England had no operational independence — the
- * Chancellor set Bank Rate until May 1997, when the incoming government
- * handed rate-setting to the Bank and created the MPC. So a UK world whose
- * era START predates 1997 opens with the Treasury in control, and Parliament
- * can legislate independence (or a post-1997 world can legislate it away)
- * through a `central_bank_independence` bill provision.
- *
- * The default is keyed on the era START year, not the live year: a 1991
- * world that plays past 1997 does NOT flip automatically, because a transfer
- * of monetary power is a statute, and the calendar must never legislate on
- * the players' behalf (gravity, not rails). An explicit
- * `bank.governmentControlled` written by legislation always wins.
+ * Who sets the policy rate. The UK opened with Treasury control before
+ * independence; Parliament can legislate independence or its removal. The
+ * default keys on the era START year, not the live year: a transfer of
+ * monetary power is a statute, so the calendar must not flip it on players'
+ * behalf. An explicit `bank.governmentControlled` from legislation always
+ * wins.
  */
 export const BOE_INDEPENDENCE_YEAR = 1997;
 

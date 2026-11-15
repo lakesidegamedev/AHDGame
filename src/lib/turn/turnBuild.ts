@@ -1,3 +1,5 @@
+import { serverEnv } from "@/lib/config/read";
+
 /**
  * The deployed source a turn ran on. Stamped on every turn log so turn
  * timings can be attributed to the exact release that produced them, instead
@@ -16,7 +18,7 @@ export interface TurnBuild {
 
 /** Read the deployed commit from the hosting environment, if it is known. */
 export function currentTurnBuild(
-  env: Record<string, string | undefined> = process.env
+  env: Record<string, string | undefined> = serverEnv()
 ): TurnBuild | undefined {
   const raw = env.RAILWAY_GIT_COMMIT_SHA ?? env.BUILD_GIT_COMMIT_SHA;
   const commit = raw?.trim().toLowerCase();

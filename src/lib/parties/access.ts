@@ -53,7 +53,7 @@ export function canViewNationalTreasuryInsights(
 /**
  * Who may reach the national NPP Management surface (Influence Actions
  * and NPP Move): chair, vice-chair, admins, and committee-confirmed
- * campaigners (suggestion #269).
+ * campaigners.
  *
  * Campaigners reach this surface only after the National Committee
  * confirms the chair's nomination, and the chair can fire them back out
@@ -201,7 +201,7 @@ export function resolveSpenderScope(
  * campaigner inclusions.
  *
  * NPP Move (`relocate_state`) moved out of this set with suggestion
- * #269 — it is NPP Management, which confirmed campaigners now hold.
+ *, it is NPP Management, which confirmed campaigners now hold.
  */
 export function canRelocateOrRecruit(
   party: PoliticalParty,

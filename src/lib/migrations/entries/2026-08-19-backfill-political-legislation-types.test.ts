@@ -74,7 +74,7 @@ describe("migration: backfill-political-legislation-types", () => {
     // Guards the category itself, not just the docs: BILL_CATEGORIES must still
     // carry "tax" and it must map to the policyDomain the projection writes.
     expect(BILL_CATEGORIES).toContain("tax");
-    const projected = getProjectedPoliticalLegislationTypes(WORLD_YEAR);
+    const projected = getProjectedPoliticalLegislationTypes();
     const usStateTax = projected.filter(
       (t) =>
         t.countryScope === "us" &&
@@ -95,7 +95,7 @@ describe("migration: backfill-political-legislation-types", () => {
   });
 
   it("is a no-op when every projected type already exists", async () => {
-    wire(getProjectedPoliticalLegislationTypes(WORLD_YEAR).map((t) => String(t._id)));
+    wire(getProjectedPoliticalLegislationTypes().map((t) => String(t._id)));
     const res = await migration.execute(db as unknown as Db, { dryRun: false });
     expect(db.collectionMocks.legislationTypes.bulkWrite).not.toHaveBeenCalled();
     expect(res.documentsInserted).toBe(0);

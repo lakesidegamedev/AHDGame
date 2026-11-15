@@ -9,9 +9,8 @@ interface BondRow {
   issuerName: string;
   countryId: string | null;
   /**
-   * Canonical bond denomination (`bond.currencyCode`, post-Task-18B). Used to
-   * render per-row `faceValue` with the right currency symbol — pre-fix the
-   * admin panel slapped `$` on every value regardless of actual denomination.
+   * Canonical bond denomination; used to render per-row faceValue with the
+   * right currency symbol.
    */
   currencyCode: string | null;
   issuerType: string;

@@ -15,7 +15,17 @@
 const NATIONWIDE_DIRECT_EXECUTIVE_ELECTION_TYPES: ReadonlySet<string> = new Set([
   "president", // US
   "uachtaran", // IE
+  "special_president", // vacancy fill for a directly elected presidency
 ]);
+
+/**
+ * True for the regular presidential race and the special election that fills a
+ * vacant presidency. Both are nationwide, seat the president, and are reserved
+ * for players in a player-enabled country.
+ */
+export function isPresidentialElectionType(electionType: string): boolean {
+  return electionType === "president" || electionType === "special_president";
+}
 
 /**
  * Returns true when the given election is a directly-elected nationwide

@@ -37,7 +37,6 @@ describe("DELETE dismiss a general", () => {
     db.collection("militaryFormations");
     db.collection("militaryUnits");
     db.collectionMocks.gameState.findOne.mockResolvedValue({
-      conflictsEnabled: true,
       currentTurn: 40,
     });
     db.collectionMocks.cabinetMembers.findOne.mockResolvedValue({
@@ -169,7 +168,6 @@ describe("DELETE dismiss a general", () => {
 
   it("403s a non-holder non-admin", async () => {
     db.collectionMocks.gameState.findOne.mockResolvedValue({
-      conflictsEnabled: false,
       currentTurn: 40,
     });
     vi.mocked(requireAuth).mockResolvedValue({
@@ -182,9 +180,8 @@ describe("DELETE dismiss a general", () => {
     expect(db.collectionMocks.characterGenerals.updateOne).not.toHaveBeenCalled();
   });
 
-  it("dismisses a general when conflicts is disabled", async () => {
+  it("dismisses a general", async () => {
     db.collectionMocks.gameState.findOne.mockResolvedValue({
-      conflictsEnabled: false,
       currentTurn: 40,
     });
     const { DELETE } = await import(ROUTE);

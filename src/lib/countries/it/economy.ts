@@ -4,21 +4,10 @@ import type { OperatingSectorType } from "@/lib/constants/corporations";
 import type { LegalStructureId } from "@/lib/constants/legalStructures";
 
 /**
- * IT's money.
- *
- * ⚠ GENERATED FROM `__snapshots__/it.pre-move.json`, NOT TRANSCRIBED.
- * Regenerate with:
- *
- *     npx tsx scripts/countries/gen-country-economy.ts IT --force
- *
- * ⚠ THE EXCHANGE RATE IS NOT HERE, DELIBERATELY. Currency IDENTITY is this
- * country's fact and moved; a rate is a fact about a PAIR of countries in a
- * YEAR, and belongs beside the rates it must stay consistent with. Moving one
- * into a country folder would give it a value whose meaning only exists relative
- * to the table it left.
- *
- * ⚠ EVERY FIGURE BELOW IS IN LOCAL CURRENCY and is not comparable to another
- * country's. Do not reconcile one toward its neighbours.
+ * IT's money. GENERATED FROM `__snapshots__/it.pre-move.json`; regenerate with:
+ * npx tsx scripts/countries/gen-country-economy.ts IT --force
+ * Exchange rate is deliberately NOT here: a rate is a fact about a country pair in a year and lives beside the rate table.
+ * Every figure is in LOCAL currency (ITL) and is not comparable to other countries'.
  */
 
 const currencyCode = "ITL" as CurrencyCode;

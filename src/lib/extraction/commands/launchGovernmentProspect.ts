@@ -1,4 +1,5 @@
 import { getEraContext } from "@/lib/era/context";
+import { depositProspectCostMultiplier } from "@/lib/energyTransition/prospecting";
 import { createHash } from "node:crypto";
 import { ObjectId, type Db, type Filter } from "mongodb";
 import type { StateBudget } from "@/lib/db/types/budget";
@@ -22,6 +23,9 @@ import {
   PROSPECT_MAX_ACTIVE_PER_INITIATOR,
   prospectCostAnchor,
 } from "@/lib/constants/prospecting";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
+import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
+import { governorOfficeStateCollection } from "@/lib/db/repositories/governorOfficeState";
 
 export interface GovernmentProspectCosts {
   costAnchor: number;
@@ -108,9 +112,10 @@ export async function launchGovernmentProspect(
   let fundedPaymentKey = fundedClaim?.fundingKey;
   let fundedSurveyId = fundedClaim?._id;
   if (fundedClaim && fundedPaymentKey) {
-    const prior = await db
-      .collection<{ _id: string }>("bankMoneyMoves")
-      .findOne({ _id: fundedPaymentKey }, { projection: { _id: 1 } });
+    const prior = await bankMoneyMovesCollection<{ _id: string }>(db).findOne(
+      { _id: fundedPaymentKey },
+      { projection: { _id: 1 } }
+    );
     if (prior) {
       const resumed = await resumeSettlement(db, fundedPaymentKey);
       if (resumed.status === "rejected") {
@@ -176,7 +181,11 @@ export async function launchGovernmentProspect(
   let priorSuccessCount =
     fundedClaim?.priorSuccessCount ??
     (await surveysCol.countDocuments({ stateId, resource, status: "succeeded" }));
-  let costAnchor = fundedClaim?.costAnchor ?? prospectCostAnchor(priorSuccessCount);
+  // Energy transition worlds: a worked-out deposit costs more to survey from 2035.
+  let costAnchor =
+    fundedClaim?.costAnchor ??
+    prospectCostAnchor(priorSuccessCount) *
+      depositProspectCostMultiplier(cap, resource, await getEraContext(db));
   const countryCode = COUNTRY_CURRENCY_MAP[countryId] as CurrencyCode | undefined;
   const fxByCurrency = await loadFxRatesByCurrency(db);
   let cashCurrency: CurrencyCode = (fundedClaim?.currencyCode ??
@@ -371,26 +380,22 @@ export async function launchGovernmentProspect(
 
   if (level === "national") {
     // NO pre-check. `treasuryBalance` is the SIGNED national cash position,
-    // separate from the bond-ledger `debt.principal` (refs #1975), so
-    // a `balance < cost` guard refused every survey for a country already
-    // carrying a cash hole. `spendFromTreasury` is built to
-    // borrow — it splits the spend into fromSurplus and addedToDebt — and the
-    // rest of the app spends into debt the same way.
+    // separate from the bond-ledger `debt.principal`, so a `balance < cost`
+    // guard refused every survey for a country already in a cash hole.
+    // `spendFromTreasury` borrows by splitting into fromSurplus and addedToDebt.
     await spendFromTreasury(db, countryId, costLocal);
   } else {
     // Spend 1 gubernatorial action point atomically.
-    const apSpend = await db
-      .collection<GovernorOfficeState>("governorOfficeState")
-      .updateOne(
-        { countryId, stateId, gubernatorialActions: { $gte: 1 } },
-        { $inc: { gubernatorialActions: -1 }, $set: { updatedAt: now } }
-      );
+    const apSpend = await governorOfficeStateCollection(db).updateOne(
+      { countryId, stateId, gubernatorialActions: { $gte: 1 } },
+      { $inc: { gubernatorialActions: -1 }, $set: { updatedAt: now } }
+    );
     if (apSpend.modifiedCount === 0) {
       return { ok: false, status: 402, error: "Insufficient office action points." };
     }
     // Book the spend to the persistent state-budget prospecting line so it
     // survives the annual fiscal recompute (mirror of revenue.resourceRoyalties).
-    await db.collection<StateBudget>("stateBudgets").updateOne(
+    await stateBudgetsCollection(db).updateOne(
       { _id: stateId, countryId },
       {
         $inc: { "spending.resourceProspecting": costLocal, "spending.total": costLocal },

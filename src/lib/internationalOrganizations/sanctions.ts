@@ -2,8 +2,7 @@ import { ObjectId, type Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import type { CommodityType } from "@/lib/constants/commodities";
 import type { TradeEmbargo } from "@/lib/db/types/tradeEmbargo";
-
-const EMBARGO_COLLECTION = "tradeEmbargoes";
+import { tradeEmbargoesCollection } from "@/lib/db/repositories/tradeEmbargoes";
 
 /**
  * Build the org-origin embargo documents a passed sanctions resolution enacts:
@@ -55,13 +54,14 @@ export async function applyOrganizationSanctions(
 ): Promise<number> {
   const embargoes = buildOrganizationSanctionEmbargoes(params);
   if (embargoes.length === 0) return 0;
-  await db.collection<TradeEmbargo>(EMBARGO_COLLECTION).insertMany(embargoes);
+  await tradeEmbargoesCollection<TradeEmbargo>(db).insertMany(embargoes);
   return embargoes.length;
 }
 
 /** Lift all embargoes a sanctions resolution enacted (on repeal/termination). */
 export async function liftOrganizationSanctions(db: Db, resolutionId: ObjectId): Promise<void> {
-  await db
-    .collection<TradeEmbargo>(EMBARGO_COLLECTION)
-    .deleteMany({ origin: "organization", sourceResolutionId: resolutionId });
+  await tradeEmbargoesCollection<TradeEmbargo>(db).deleteMany({
+    origin: "organization",
+    sourceResolutionId: resolutionId,
+  });
 }

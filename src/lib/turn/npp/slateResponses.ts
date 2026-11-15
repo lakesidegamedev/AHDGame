@@ -1,22 +1,13 @@
 /**
- * Per-turn slate processing.
+ * Per-turn slate processing, two idempotent coupled passes:
  *
- * Two coupled passes:
+ * 1) processSlateResponses: resolves each invited/legacy-considering
+ *    SlateCandidate via decideNPPSlateResponse and writes accepted/declined.
  *
- * 1) `processSlateResponses(ctx)` — for every `invited` (and any legacy
- *    `considering`) SlateCandidate, runs the deterministic resolver
- *    (`decideNPPSlateResponse`), which decides on the NPP's compliance, and
- *    writes the result (`accepted` / `declined`) back to the slate row.
- *
- * 2) `fileAcceptedSlateRows(ctx)` — for every `accepted` SlateCandidate that
- *    hasn't yet been converted, inserts a corresponding `ElectionCandidate`
- *    on the parent election and marks the slate row `filed`. Called from
- *    `processElectionEntry` AFTER incumbent defenders re-file but BEFORE the
- *    generic party-pool fallback so Slate challengers can still create a
- *    same-party primary against the sitting NPP.
- *
- * Both passes are idempotent — re-running the same turn is a no-op once
- * everything that can transition has transitioned.
+ * 2) fileAcceptedSlateRows: converts each accepted, unfiled SlateCandidate
+ *    into an ElectionCandidate and marks the row filed. Called from
+ *    processElectionEntry after incumbent defenders re-file but before the
+ *    party-pool fallback, so Slate challengers can form a same-party primary.
  */
 
 import { ObjectId } from "mongodb";
@@ -31,7 +22,7 @@ import type {
 } from "@/lib/db/types";
 import type { NPPContext } from "./context";
 import { decideNPPSlateResponse } from "./slateResponse";
-import { DEFAULT_CANDIDATE_SUPPORT } from "@/lib/electionEngine/electionFormulaFactors";
+import { DEFAULT_CANDIDATE_SUPPORT } from "@/lib/elections/engine/electionFormulaFactors";
 import {
   materializeSlateAssignmentsFromTemplate,
   prefetchSlateTemplates,
@@ -39,13 +30,23 @@ import {
 import { isElectionTypeEntryBlocked } from "@/lib/elections/nationwideExecutive";
 import { isPrimaryClosed } from "@/lib/elections/electionDeadlineFilters";
 import { isSpecialCommonsElection } from "@/lib/utils/electionLabels";
-import { removeWithdrawnCandidateFromTally } from "@/lib/electionEngine/tallyCleaner";
+import {
+  commonsChamberForOffice,
+  commonsChamberForSpecial,
+} from "@/lib/elections/rules/commonsByElectionChambers";
+import { removeWithdrawnCandidateFromTally } from "@/lib/elections/engine/tallyCleaner";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { SLATE_ASSIGNMENT_CAP, isLiveSlateStatus } from "@/lib/slateAssignmentCap";
 import {
   canFieldExecutiveCandidate,
   canFieldLegislativeCandidate,
 } from "@/lib/turn/onePartyConstraints";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
+import type { Document } from "mongodb";
+import { slateCandidatesCollection } from "@/lib/db/repositories/slateCandidates";
+import { recruitmentSlatesCollection } from "@/lib/db/repositories/recruitmentSlates";
 
 interface SlateResponseSummary {
   rowsConsidered: number;
@@ -90,8 +91,7 @@ export async function syncPersistentSlateAssignments(ctx: NPPContext): Promise<n
     (id) => new ObjectId(id)
   );
   const partyIds = Array.from(new Set(pairs.map((p) => String(p.party.sequentialId))));
-  const existingSlates = await db
-    .collection<RecruitmentSlate>("recruitmentSlates")
+  const existingSlates = await recruitmentSlatesCollection(db)
     .find({
       electionId: { $in: electionIds },
       partyId: { $in: partyIds },
@@ -105,8 +105,7 @@ export async function syncPersistentSlateAssignments(ctx: NPPContext): Promise<n
   const slateIdsWithRows = new Set<string>();
   if (existingSlates.length > 0) {
     const slateObjectIds = existingSlates.map((s) => s._id);
-    const counts = await db
-      .collection<SlateCandidate>("slateCandidates")
+    const counts = await slateCandidatesCollection(db)
       .aggregate<{ _id: ObjectId; count: number }>([
         { $match: { slateId: { $in: slateObjectIds } } },
         { $group: { _id: "$slateId", count: { $sum: 1 } } },
@@ -136,8 +135,7 @@ export async function syncPersistentSlateAssignments(ctx: NPPContext): Promise<n
   ) => `${countryId}:${partyId}:${state ?? ""}:${electionType}`;
   const slateCountries = Array.from(new Set(pairs.map((p) => p.election.countryId ?? "US")));
   const tuplesWithSlate = new Set<string>();
-  const slatesForTemplates = await db
-    .collection<RecruitmentSlate>("recruitmentSlates")
+  const slatesForTemplates = await recruitmentSlatesCollection(db)
     .find(
       { countryId: { $in: slateCountries as RecruitmentSlate["countryId"][] } },
       { projection: { countryId: 1, partyId: 1, state: 1, electionType: 1 } }
@@ -194,8 +192,7 @@ export async function syncPersistentSlateAssignments(ctx: NPPContext): Promise<n
 export async function processSlateResponses(ctx: NPPContext): Promise<SlateResponseSummary> {
   const { db, now, nppMap } = ctx;
 
-  const invitedRows = await db
-    .collection<SlateCandidate>("slateCandidates")
+  const invitedRows = await slateCandidatesCollection(db)
     .find({ status: { $in: ["invited", "considering"] }, candidateType: "npp" })
     .toArray();
   if (invitedRows.length === 0) {
@@ -206,8 +203,7 @@ export async function processSlateResponses(ctx: NPPContext): Promise<SlateRespo
   const slateIds = Array.from(new Set(invitedRows.map((r) => r.slateId.toString()))).map(
     (id) => new ObjectId(id)
   );
-  const slates = await db
-    .collection<RecruitmentSlate>("recruitmentSlates")
+  const slates = await recruitmentSlatesCollection(db)
     .find({ _id: { $in: slateIds } })
     .toArray();
   const slateById = new Map(slates.map((s) => [s._id.toString(), s]));
@@ -280,7 +276,7 @@ export async function processSlateResponses(ctx: NPPContext): Promise<SlateRespo
   }
 
   if (bulkOps.length > 0) {
-    await db.collection<SlateCandidate>("slateCandidates").bulkWrite(bulkOps);
+    await slateCandidatesCollection(db).bulkWrite(bulkOps);
   }
 
   return {
@@ -400,8 +396,7 @@ export async function trimOverCapSlates(ctx: NPPContext): Promise<SlateTrimSumma
   if (elections.length === 0) return summary;
   const tallyCache = new Map<string, ElectionVoteTally | null>();
 
-  const rows = await db
-    .collection<SlateCandidate>("slateCandidates")
+  const rows = await slateCandidatesCollection(db)
     .find({ electionId: { $in: elections.map((election) => election._id) } })
     .toArray();
   const liveRowsByRace = new Map<string, SlateCandidate[]>();
@@ -445,7 +440,7 @@ export async function trimOverCapSlates(ctx: NPPContext): Promise<SlateTrimSumma
         }
         const tombstones = liveRows.filter((row) => row.candidateId.toString() === holderId);
         if (tombstones.length > 0) {
-          await db.collection<SlateCandidate>("slateCandidates").bulkWrite(
+          await slateCandidatesCollection(db).bulkWrite(
             tombstones.map((row) => ({
               updateOne: {
                 filter: { _id: row._id },
@@ -478,34 +473,31 @@ export async function trimOverCapSlates(ctx: NPPContext): Promise<SlateTrimSumma
   return summary;
 }
 
-/**
- * Insert ElectionCandidate rows for every accepted slate row that has not
- * yet been filed. Called from `processElectionEntry` after incumbent-defense
- * runs but before the generic party-pool fallback, so accepted slate rows can
- * still create a same-party primary against a defending NPP.
+/*
+ * Insert ElectionCandidate rows for every accepted slate row that has not yet
+ * been filed. Called from `processElectionEntry` after incumbent-defense runs
+ * but before the generic party-pool fallback, so accepted slate rows can still
+ * create a same-party primary against a defending NPP.
  *
- * Ticket #1181 — two changes to how a row that cannot file is handled:
+ * A row that cannot file is still tombstoned as `withdrawn`, but carries a
+ * `refusalReason` so the slate view can render it instead of hiding it. A
+ * silent failure would be indistinguishable from an assignment that never
+ * saved.
  *
- * 1. The chair outranks the autopilot. When the party's challenger slot in the
- *    race is held by an NPP the generic party-pool fallback picked (i.e. one
- *    with no chair-issued slate row of their own), that candidacy is withdrawn
- *    and the chair's pick files in its place. A slot held by a defending
- *    incumbent, or by another chair-issued slate candidate, still wins.
- * 2. Every row this pass gives up on records WHY. It is still tombstoned as
- *    `withdrawn`, but with a `refusalReason`, and the slate view now renders
- *    reason-carrying tombstones instead of hiding them — previously the row
- *    just disappeared and the chair had no way to tell a silent failure from
- *    an assignment that never saved.
+ * The chair outranks the autopilot: when the party's challenger slot holds an
+ * NPP picked by the generic party-pool fallback (no chair-issued slate row of
+ * its own), that candidacy is withdrawn and the chair's pick files instead. A
+ * slot held by a defending incumbent or another chair-issued slate candidate
+ * still wins.
  *
- * Returns counts so the caller can avoid double-filling slots that the
- * slate already covered.
+ * Returns counts so the caller can avoid double-filling slots the slate
+ * already covered.
  */
 export async function fileAcceptedSlateRows(ctx: NPPContext): Promise<SlateFilingSummary> {
   const { db, now, nppMap, candidatesByElection } = ctx;
 
   const accepted = (
-    await db
-      .collection<SlateCandidate>("slateCandidates")
+    await slateCandidatesCollection(db)
       .find({ status: "accepted", candidateType: "npp", filedAt: null })
       .toArray()
   ).sort(
@@ -522,8 +514,7 @@ export async function fileAcceptedSlateRows(ctx: NPPContext): Promise<SlateFilin
   const electionIds = Array.from(new Set(accepted.map((r) => r.electionId.toString()))).map(
     (s) => new ObjectId(s)
   );
-  const elections = await db
-    .collection<Election>("elections")
+  const elections = await electionsCollection(db)
     .find({ _id: { $in: electionIds } })
     .toArray();
   const electionById = new Map(elections.map((e) => [e._id.toString(), e]));
@@ -532,8 +523,7 @@ export async function fileAcceptedSlateRows(ctx: NPPContext): Promise<SlateFilin
   );
   const activeCandidacies =
     candidateIds.length > 0
-      ? await db
-          .collection<ElectionCandidate>("electionCandidates")
+      ? await electionCandidatesCollection(db)
           .find({ characterId: { $in: candidateIds }, status: "active" })
           .toArray()
       : [];
@@ -553,8 +543,7 @@ export async function fileAcceptedSlateRows(ctx: NPPContext): Promise<SlateFilin
   // Every slate row on the races this pass touches, serving two questions:
   // which candidates hold a chair-issued row (as opposed to turn-loop
   // carry-forward), and what each party already holds against the cap.
-  const slateRowsForElections = await db
-    .collection<SlateCandidate>("slateCandidates")
+  const slateRowsForElections = await slateCandidatesCollection(db)
     .find({ electionId: { $in: electionIds } })
     .toArray();
 
@@ -637,17 +626,16 @@ export async function fileAcceptedSlateRows(ctx: NPPContext): Promise<SlateFilin
         queueSkipped(row, "ineligible_region");
         continue;
       }
-      // Commons by-elections (#860) fill only vacated seats and resolve
-      // additively: a sitting MP holding an in-state Commons seat is never
-      // filed into a special_commons race, since a sitting winner would
-      // double-seat. Seatless challengers file normally below. Seat data comes
-      // from the shared context load, so this adds no per-row round trip.
+      // Commons by-elections fill only vacated seats: skip sitting MPs already
+      // holding an in-state Commons seat to avoid double-seating.
       if (isSpecialCommonsElection(election.electionType)) {
         const offices = ctx.officialsByNPP.get(candidateKey) ?? [];
+        const chamber = commonsChamberForSpecial(election.electionType);
         const holdsInStateCommonsSeat = offices.some(
           (office) =>
-            office.officeType === "commons" &&
-            (office.countryId ?? electionCountry) === "UK" &&
+            chamber !== null &&
+            commonsChamberForOffice(office.officeType, office.countryId ?? electionCountry) ===
+              chamber &&
             office.state === election.state
         );
         if (holdsInStateCommonsSeat) {
@@ -702,9 +690,10 @@ export async function fileAcceptedSlateRows(ctx: NPPContext): Promise<SlateFilin
         candidacies[0] ??
         null;
       if (activeCandidacy && activeCandidacy.electionId.toString() === election._id.toString()) {
-        await db
-          .collection<SlateCandidate>("slateCandidates")
-          .updateOne({ _id: row._id }, { $set: { status: "filed", filedAt: now, updatedAt: now } });
+        await slateCandidatesCollection(db).updateOne(
+          { _id: row._id },
+          { $set: { status: "filed", filedAt: now, updatedAt: now } }
+        );
         filed += 1;
         continue;
       }
@@ -713,7 +702,7 @@ export async function fileAcceptedSlateRows(ctx: NPPContext): Promise<SlateFilin
         // already filed elsewhere, the next filing pass moves them out of the
         // old race before seating them in the newly assigned one so the chair's
         // latest instruction wins without waiting for manual cleanup.
-        await db.collection<ElectionCandidate>("electionCandidates").updateOne(
+        await electionCandidatesCollection(db).updateOne(
           { _id: activeCandidacy._id },
           {
             $set: {
@@ -748,15 +737,14 @@ export async function fileAcceptedSlateRows(ctx: NPPContext): Promise<SlateFilin
         (candidate) => !activeIncumbents.includes(candidate)
       );
 
-      // Race capacity. A party may field at most SLATE_ASSIGNMENT_CAP
-      // candidates here, players and NPPs drawing on one pool, so a chair can
-      // build a slate several deep rather than one pick at a time.
+      // Race capacity. A party may field at most SLATE_ASSIGNMENT_CAP candidates
+      // here, players and NPPs drawing on one pool, so a chair can build a slate
+      // several deep rather than one pick at a time.
       //
-      // #1181 survives as the tie-break for a race that is genuinely full: a
-      // slot held by an NPP the generic party-pool fallback picked, who is
-      // neither defending a seat nor holding a chair-issued row, yields so the
-      // chair's instruction is not silently discarded. Below the cap nobody has
-      // to give way and both simply stand, which is what the primary is for.
+      // When a race is genuinely full, an NPP slot filled by the generic
+      // party-pool fallback (neither defending a seat nor holding a chair-issued
+      // row) yields so the chair's instruction is not discarded. Below the cap
+      // nobody gives way and both simply stand, which is what the primary is for.
       const pendingDisplacements: ElectionCandidate[] = [];
       if (!entitledHolders(election, row.partyId).has(candidateKey)) {
         const displaceable = activeChallengers.filter((candidate) =>
@@ -787,9 +775,7 @@ export async function fileAcceptedSlateRows(ctx: NPPContext): Promise<SlateFilin
         isNPP: true,
         nppId: npp._id,
       };
-      await db
-        .collection<ElectionCandidate>("electionCandidates")
-        .insertOne(candidateDoc as ElectionCandidate);
+      await electionCandidatesCollection(db).insertOne(candidateDoc as ElectionCandidate);
 
       // Mirror the new candidate into the in-memory map so the rest of
       // processElectionEntry sees the slot as filled.
@@ -813,9 +799,10 @@ export async function fileAcceptedSlateRows(ctx: NPPContext): Promise<SlateFilin
         }
       }
 
-      await db
-        .collection<SlateCandidate>("slateCandidates")
-        .updateOne({ _id: row._id }, { $set: { status: "filed", filedAt: now, updatedAt: now } });
+      await slateCandidatesCollection(db).updateOne(
+        { _id: row._id },
+        { $set: { status: "filed", filedAt: now, updatedAt: now } }
+      );
       filed += 1;
     } catch (error) {
       // Never let one bad row abort the whole filing pass — leave it accepted
@@ -829,7 +816,7 @@ export async function fileAcceptedSlateRows(ctx: NPPContext): Promise<SlateFilin
   }
 
   if (skippedRows.length > 0) {
-    await db.collection<SlateCandidate>("slateCandidates").bulkWrite(
+    await slateCandidatesCollection(db).bulkWrite(
       skippedRows.map(({ rowId, reason }) => ({
         updateOne: {
           filter: { _id: rowId },
@@ -852,17 +839,14 @@ export async function fileAcceptedSlateRows(ctx: NPPContext): Promise<SlateFilin
 /**
  * Withdraw one NPP candidacy from a race and clean up after it.
  *
- * Three callers: the filing pass, taking a slot from an auto-picked NPP so a
- * chair's pick can stand on a full race (#1181), the trim pass, bringing a
- * race that is over the cap back inside it, and engine 6.4 primary
- * consolidation (electionEntry.ts). Mirrors the slate-withdraw cleanup used by
- * `reconcileSlateMoves` and the slate DELETE route: mark the candidacy
- * withdrawn, scrub the vote tally, archive the campaign, and drop the NPP from
- * the turn's in-memory candidacy state so nothing re-files them.
+ * Mark the candidacy withdrawn, scrub the vote tally, archive the campaign,
+ * and drop the NPP from the turn's in-memory candidacy state so nothing
+ * re-files them. Mirrors the cleanup in `reconcileSlateMoves` and the slate
+ * DELETE route.
  *
  * `candidatesByElection` carries persisted candidate ids. Candidates inserted
- * earlier in this turn receive their final `_id` before the batched upsert, so
- * the withdrawal can update that row directly instead of re-reading it first.
+ * earlier this turn receive their final `_id` before the batched upsert, so
+ * the withdrawal can update that row directly.
  */
 export async function withdrawCandidacyFromRace(
   ctx: NPPContext,
@@ -871,7 +855,7 @@ export async function withdrawCandidacyFromRace(
   tallyCache?: Map<string, ElectionVoteTally | null>
 ): Promise<boolean> {
   const { db, now } = ctx;
-  const result = await db.collection<ElectionCandidate>("electionCandidates").updateOne(
+  const result = await electionCandidatesCollection(db).updateOne(
     {
       _id: inMemoryCandidate._id,
       electionId: election._id,
@@ -887,7 +871,7 @@ export async function withdrawCandidacyFromRace(
     inMemoryCandidate._id.toString(),
     tallyCache
   );
-  await db.collection("campaigns").updateOne(
+  await campaignsCollection<Document>(db).updateOne(
     {
       electionId: election._id,
       candidateId: inMemoryCandidate.characterId,

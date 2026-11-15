@@ -2,6 +2,7 @@ import type { NationalBudgetSeedConfig } from "./budgets";
 import { MODERN_2019_NATIONALS, type Modern2019CountryId } from "./modernRegions2019";
 import { modernMetrics2019 } from "./modernMetrics2019";
 import { easternBlocPolicyConfig } from "@/lib/seeds/shared/easternBlocLegislation";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 /**
  * Observed 2019 general-government shares and gross debt. The four EU rows
@@ -111,17 +112,16 @@ export const MODERN_NATIONAL_BUDGETS_2019: NationalBudgetSeedConfig[] = (
     ])
   );
   const growth = modernMetrics2019(countryId)[0]!.economic.gdpGrowth.value;
-  const taxPolicyIds =
-    countryId === "RU"
-      ? {
-          incomeTax: "ru.tax.incomeTax",
-          domesticCorporateTax: "ru.tax.domesticCorporateTax",
-          foreignCorporateTax: "ru.tax.foreignCorporateTax",
-          payrollTax: "ru.tax.payrollTax",
-          tariffs: "ru.tax.tariffs",
-          salesTax: "ru.tax.salesTax",
-        }
-      : easternBlocPolicyConfig(countryId.toLowerCase()).taxPolicyIds;
+  const taxPolicyIds = countryHasFeature("ruSeeds", countryId)
+    ? {
+        incomeTax: "ru.tax.incomeTax",
+        domesticCorporateTax: "ru.tax.domesticCorporateTax",
+        foreignCorporateTax: "ru.tax.foreignCorporateTax",
+        payrollTax: "ru.tax.payrollTax",
+        tariffs: "ru.tax.tariffs",
+        salesTax: "ru.tax.salesTax",
+      }
+    : easternBlocPolicyConfig(countryId.toLowerCase()).taxPolicyIds;
   return {
     budgetId: countryId,
     countryId,

@@ -3,6 +3,7 @@ import { getDb } from "@/lib/mongodb";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { requireBotToken } from "@/lib/api/requireBotToken";
 import type { GameConfig } from "@/lib/db/types";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 // GET /api/discord-bot/channel-config — Returns the Discord channel IDs for news and suggestions webhooks.
 // Resolves channel IDs from the webhook URLs stored in gameConfig (set via the admin panel).
@@ -15,12 +16,10 @@ export async function GET(request: Request) {
     }
 
     const db = await getDb();
-    const config = await db
-      .collection<GameConfig>("gameConfig")
-      .findOne(
-        { _id: "default" },
-        { projection: { discordNewsWebhookUrl: 1, discordSuggestionsWebhookUrl: 1 } }
-      );
+    const config = await gameConfigCollection(db).findOne(
+      { _id: "default" },
+      { projection: { discordNewsWebhookUrl: 1, discordSuggestionsWebhookUrl: 1 } }
+    );
 
     const newsChannelId = await resolveChannelId(config?.discordNewsWebhookUrl);
     const suggestionsChannelId = await resolveChannelId(config?.discordSuggestionsWebhookUrl);

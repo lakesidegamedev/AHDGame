@@ -8,10 +8,10 @@ import { requireBasicAuth } from "@/lib/api/requireAuth";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { rejectDuringTurn } from "@/lib/api/rejectDuringTurn";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
-import type { Corporation } from "@/lib/db/types";
 import { resolveFundBySlugOrId } from "@/lib/indexFunds/fundQueries";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { beginWindUp } from "@/lib/indexFunds/sponsorship/windUp";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 interface RouteParams {
   params: Promise<{ slug: string }>;
@@ -37,9 +37,7 @@ export async function POST(_request: Request, { params }: RouteParams) {
     if (!fund.sponsorCorporationId)
       return errorResponse(400, "This is a system fund. It has no sponsor and cannot be wound up.");
 
-    const sponsor = await db
-      .collection<Corporation>("corporations")
-      .findOne({ _id: fund.sponsorCorporationId });
+    const sponsor = await corporationsCollection(db).findOne({ _id: fund.sponsorCorporationId });
     if (!sponsor || !sponsor.userId || sponsor.userId.toString() !== auth.user.userId)
       return errorResponse(403, "Only the sponsoring corporation's CEO can wind up this fund.");
 

@@ -4,13 +4,12 @@
  *
  * NOT a region shard, and deliberately outside `REGION_SHARDS`. Every entry
  * there is drawn by unioning regions whose OWNER is read from `states`, and
- * `states` holds only the full-autonomous countries — NVN and SVN are
- * sphere-macro, so ownership could never resolve for them without promoting both
- * to full countries. These are static features instead, claimed outright by
- * `mapFeatureIds`, exactly as Thailand claims 764 and Laos claims 418.
+ * `states` holds only full-autonomous countries; NVN and SVN are sphere-macro,
+ * so ownership could never resolve without promoting both to full countries.
+ * These are static features instead, claimed outright by `mapFeatureIds`.
  *
- * The partition is a latitude rather than a set of provinces, which is why there
- * is no source subdivision file to assemble from the way Germany has its Länder.
+ * The partition is a latitude rather than provinces, so there is no source
+ * subdivision file to assemble from.
  */
 export const VIETNAM_GEO_URL = "/vietnam-regions.json";
 

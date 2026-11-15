@@ -1,26 +1,14 @@
 /**
- * Savings commands: deposit, withdraw, transfer the holder, accrue and credit
- * interest, resolve a failed holder. Each is a pure decision over the account
- * snapshot and the context the caller loaded, returning one balanced
- * transition for the settlement journal.
+ * Savings commands: deposit, withdraw, holder transfer, accrue/credit interest,
+ * and resolve a failed holder. Each is a pure decision over the account
+ * snapshot and the loaded context, returning one balanced transition for the
+ * settlement journal.
  *
- * The money model these commands enforce:
- *
- * - A deposit moves cash from the owner's wallet into the account. When the
- *   holder is a bank, the cash lands in that bank's vault and the bank's
- *   player-deposit liability rises by the same amount. When the holder is the
- *   central bank, the cash leaves circulation into the household pool.
- * - A withdrawal is the mirror. A bank that cannot cover it is refused before
- *   anything moves.
- * - A holder transfer moves the BACKING, never the balance: the whole balance
- *   leaves the old holder's cash and lands in the new holder's, and each
- *   holder's liability changes by the same amount. The owner's displayed
- *   balance is unchanged by construction.
- * - Interest at a bank is paid from the bank's vault into the account;
- *   interest at the central bank is currency creation, recorded as a mint.
- * - Resolving a failed bank transfers every account it holds back to the
- *   central bank, funded by the estate, the insurance fund and the treasury
- *   in that order; the owner's balance is unchanged.
+ * Key invariants:
+ * - Holder transfer moves the BACKING, never the owner's displayed balance.
+ * - Bank interest comes from the vault; central-bank interest is a mint.
+ * - Failed-bank resolution returns every account to the central bank, funded
+ *   by estate, then insurance fund, then treasury; balances are unchanged.
  */
 
 import type { SavingsHolder } from "@/lib/db/types/bank";
@@ -135,7 +123,7 @@ function holderCashTarget(
 /**
  * Refusal when a central-bank holder's household pool cannot cover a payout.
  * Without it an oversized withdrawal reached the guarded debit and failed with
- * a raw ledger message (ticket 1364).
+ * a raw ledger message.
  */
 function centralBankPayoutRefusal(
   holder: HolderSnapshot,

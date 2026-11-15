@@ -2,7 +2,7 @@ import { loadSovereignRiskDisclosures } from "@/lib/bonds/sovereignRiskDisclosur
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { handleRouteError } from "@/lib/api/errors";
-import type { Bond, Corporation } from "@/lib/db/types";
+import type { Corporation } from "@/lib/db/types";
 import { BOND_UNIT_FACE_VALUE, BOND_MATURITY_LABELS } from "@/lib/db/types/bond";
 import type { BondMaturityTurns } from "@/lib/db/types/bond";
 import { getGameState } from "@/lib/gameState";
@@ -22,6 +22,9 @@ import type { CurrencyCode } from "@/lib/constants/currencies";
 import { corpCapitalToAnchor, loadFxRatesByCurrency } from "@/lib/currency/corporationCapital";
 import { calculateBondYieldToMaturityPercent } from "@/lib/constants/bonds";
 import { conditionalJson } from "@/lib/api/conditionalJson";
+import { parsePreviewRows, topBondsForPreview } from "@/lib/market/overviewPreview";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /**
  * GET /api/bonds
@@ -51,8 +54,7 @@ export async function GET(request: Request) {
     // Get all non-matured bonds + FX rates (needed to anchor-normalize the
     // cross-currency `totalOutstanding` summary — A24).
     const [bonds, fxByCurrency] = await Promise.all([
-      db
-        .collection<Bond>("bonds")
+      bondsCollection(db)
         .find(
           { matured: false },
           {
@@ -100,8 +102,7 @@ export async function GET(request: Request) {
       countryId: CountryId;
       type: string;
     }
-    const corporations = await db
-      .collection<Corporation>("corporations")
+    const corporations = await corporationsCollection(db)
       .find({ _id: { $in: corpIds.map((id) => new ObjectId(id)) } })
       .project<CorpProjection>({
         _id: 1,
@@ -199,8 +200,9 @@ export async function GET(request: Request) {
 
     // Per-user (enabled-country filtered) — ETag/304 saves egress on unchanged
     // polls; not shared-cached to avoid cross-country-access leakage.
+    const previewRows = parsePreviewRows(url.searchParams.get("preview"));
     return conditionalJson(request, {
-      bonds: bondListings,
+      bonds: previewRows ? topBondsForPreview(bondListings, previewRows) : bondListings,
       totalOutstanding: totalOutstandingAnchor,
     });
   } catch (error) {

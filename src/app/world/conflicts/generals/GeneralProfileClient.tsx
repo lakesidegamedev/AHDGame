@@ -282,7 +282,6 @@ export function GeneralProfileClient({
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
             {[
               { l: "Rank", v: rank(g.level), c: MIL_COLOR.text },
-              { l: "Branch", v: prof.branch, c: MIL_COLOR.text },
               { l: "Level", v: `Lv ${g.level}`, c: MIL_COLOR.gold },
               {
                 l: "Skill pts",
@@ -741,7 +740,7 @@ export function GeneralProfileClient({
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                   {[
                     {
-                      title: `Commissioned · ${prof.branch}`,
+                      title: "Commissioned",
                       outcome: "SERVICE",
                       c: MIL_COLOR.textMuted,
                     },

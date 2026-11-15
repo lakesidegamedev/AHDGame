@@ -1,5 +1,6 @@
 import { getDb } from "@/lib/mongodb";
 import type { GameState, TurnLog } from "@/lib/db/types";
+import { turnLogsCollection } from "@/lib/db/repositories/turnLogs";
 
 /** Turn logs at or below the persisted turn counter for the current game iteration. */
 export function buildCompletedTurnFilter(gameState: GameState): Record<string, unknown> {
@@ -25,8 +26,7 @@ export function buildCompletedTurnFilter(gameState: GameState): Record<string, u
 /** Wall-clock time of the most recent completed turn log for this game iteration. */
 export async function getLatestCompletedTurnRealTime(gameState: GameState): Promise<Date | null> {
   const db = await getDb();
-  const latestTurn = await db
-    .collection<TurnLog>("turnLogs")
+  const latestTurn = await turnLogsCollection(db)
     .find(buildCompletedTurnFilter(gameState), { projection: { realTime: 1, createdAt: 1 } })
     .sort({ realTime: -1, createdAt: -1 })
     .limit(1)

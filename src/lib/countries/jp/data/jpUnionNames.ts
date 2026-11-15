@@ -4,20 +4,14 @@ import { uniform } from "@/lib/seeds/reference/uniformUnionName";
 /**
  * Japan's sector-to-union names, by era.
  *
- * Moved out of `src/lib/seeds/reference/unionNames.ts`, which now forwards each
- * era map to the const below. Values unchanged.
+ * ERA MAPS ARE CUMULATIVE ONLY DOWNWARD FROM MODERN. `NAMES_2007` is
+ * `{ ...NAMES_MODERN, JP: ... }`, so naming JP replaces the whole modern JP
+ * map rather than merging. That is why 2007 and 1999 respread the map they
+ * descend from; dropping the spread silently drops unstated sector unions.
  *
- * ⚠ THE ERA MAPS ARE CUMULATIVE, BUT ONLY DOWNWARD FROM MODERN, AND THE
- * SPREAD IS SHALLOW AT THE COUNTRY LEVEL. `NAMES_2007` is `{ ...NAMES_MODERN,
- * JP: ... }`: naming JP at all replaces the whole modern JP map, it does not
- * merge into it. That is why 2007 and 1999 respread the map they descend from
- * here -- drop that spread and every sector the era does not restate silently
- * loses its union rather than inheriting one.
- *
- * 1991, 1979 and 1953 do NOT respread, deliberately: each is a different labour
- * settlement (Rengo was only founded in 1989, and 1953 is the single-federation
- * Sohyo era), so they are authored whole. Sectors they omit fall back to
- * `genericUnionName` at lookup, which is preferred over inventing a union.
+ * 1991, 1979 and 1953 do NOT respread: each is a distinct labour settlement
+ * (Rengo founded 1989; 1953 is the Sohyo era), so they are authored whole.
+ * Omitted sectors fall back to `genericUnionName` at lookup.
  */
 
 export const JP_UNION_NAMES_MODERN: Partial<Record<OperatingSectorType, string>> = {

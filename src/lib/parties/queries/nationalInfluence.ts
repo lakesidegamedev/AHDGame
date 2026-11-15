@@ -11,6 +11,10 @@ import {
 } from "@/lib/npp/actionPoints";
 import { resolvePartyTier } from "@/lib/parties/partyTier";
 import type { Db } from "mongodb";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 
 const NATIONAL_PARTY_MANAGEMENT_ACTIONS = [
   "boost_favorability",
@@ -30,8 +34,7 @@ export async function getNationalPartyInfluenceView(
   const activeElections =
     statesWithNpps.length === 0
       ? []
-      : await db
-          .collection<Election>("elections")
+      : await electionsCollection(db)
           .find({
             countryId,
             state: { $in: statesWithNpps },
@@ -43,8 +46,7 @@ export async function getNationalPartyInfluenceView(
   const candidates =
     electionIds.length === 0
       ? []
-      : await db
-          .collection<ElectionCandidate>("electionCandidates")
+      : await electionCandidatesCollection(db)
           .find({ electionId: { $in: electionIds }, status: "active" })
           .toArray();
 
@@ -57,14 +59,12 @@ export async function getNationalPartyInfluenceView(
   const [characters, npps] = await Promise.all([
     charIds.length === 0
       ? Promise.resolve([] as Character[])
-      : db
-          .collection<Character>("characters")
+      : charactersCollection(db)
           .find({ _id: { $in: charIds } })
           .toArray(),
     nppIds.length === 0
       ? Promise.resolve([] as NPP[])
-      : db
-          .collection<NPP>("npps")
+      : nppsCollection(db)
           .find({ _id: { $in: nppIds } })
           .toArray(),
   ]);

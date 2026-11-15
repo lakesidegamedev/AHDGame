@@ -53,8 +53,9 @@ describe("fundGeneration", () => {
     ({
       _id: id,
       name: "Test State",
-      countryId: "US",
+      countryId: id.split("-")[0],
       population,
+      gdp: population / 1_000,
     }) as State;
 
   const createParty = (sequentialId: number, countryId: string = "US"): PoliticalParty =>

@@ -7,6 +7,9 @@ vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
 vi.mock("@/lib/notifications", () => ({
   createNotifications: vi.fn().mockResolvedValue(undefined),
 }));
+vi.mock("@/lib/achievements/triggers", () => ({
+  checkOfficeHeldAchievements: vi.fn().mockResolvedValue(undefined),
+}));
 vi.mock("@/lib/congress/leadershipElections", () => ({
   triggerLeadershipElectionsAfterChamberVote: vi.fn().mockResolvedValue(undefined),
 }));
@@ -26,6 +29,7 @@ beforeEach(async () => {
 describe("processPresidentialSuccession", () => {
   it("promotes VP character to President when president office is vacant", async () => {
     const vpCharId = new ObjectId();
+    const vpUserId = new ObjectId();
 
     db.collectionMocks["electedOfficials"]!.findOne.mockResolvedValueOnce({
       _id: new ObjectId(),
@@ -45,7 +49,7 @@ describe("processPresidentialSuccession", () => {
 
     db.collectionMocks["characters"]!.findOne.mockResolvedValue({
       _id: vpCharId,
-      userId: new ObjectId(),
+      userId: vpUserId,
       name: "Jane VP",
       party: "democrat",
     });
@@ -53,6 +57,9 @@ describe("processPresidentialSuccession", () => {
     const result = await processPresidentialSuccession(db as never);
 
     expect(result).toBe(true);
+    // The successor earns the President achievement without an election
+    const { checkOfficeHeldAchievements } = await import("@/lib/achievements/triggers");
+    expect(checkOfficeHeldAchievements).toHaveBeenCalledWith(vpUserId, vpCharId, "president");
     // President gets VP's data
     expect(db.collectionMocks["electedOfficials"]!.updateOne).toHaveBeenCalledWith(
       {

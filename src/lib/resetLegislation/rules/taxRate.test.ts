@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { legislationTypes } from "@/lib/seeds/reference/legislationTypes";
 import { US_LAWS } from "@/lib/countries/us/data/usLaws";
 import { UK_LAWS } from "@/lib/countries/uk/data/ukLaws";
+import { JP_LAWS } from "@/lib/countries/jp/data/jpLaws";
 import { US_STATE_TAX_LAWS } from "@/lib/countries/us/data/usStateTaxLaws";
 import { projectLawToLegislationType } from "@/lib/politicalLegislation/project";
 import { resetTaxes } from "../taxCatalog";
@@ -14,6 +15,7 @@ describe("exact reset tax-rate choices", () => {
       ...legislationTypes,
       ...US_LAWS.map(projectLawToLegislationType),
       ...UK_LAWS.map(projectLawToLegislationType),
+      ...JP_LAWS.map(projectLawToLegislationType),
       ...US_STATE_TAX_LAWS.map(projectLawToLegislationType),
     ]);
     for (const tax of resetTaxes) {

@@ -1,69 +1,9 @@
 /**
- * Fundraise costs FUNDRAISE_ACTION_COST action points and requires donors.
- * fundraiseYieldAnchor scales the yield with donor level, political influence,
- * and the fundraising stat. Hosts own currency conversion and persistence.
- *
- * Campaign costs tiered action points plus a GDP-scaled fund cost and gains
- * political influence with diminishing returns. quoteCampaignAction is the
- * single source of truth both the UI quote and execution call; missing stats
- * or missing home-state economics reject instead of falling back to neutral
- * values.
- *
- * Advertise costs tiered action points plus a GDP-scaled fund cost and gains
- * favorability with diminishing returns. quoteAdvertiseAction is the single
- * source of truth both the UI quote and execution call; missing stats or
- * missing home-state economics reject instead of falling back to neutral
- * values. Hosts own currency conversion, atomic resource checks and
- * persistence.
- *
- * BuildDonorBase costs level-scaled action points plus a GDP-scaled fund cost
- * (discounted by the fundraising stat) and gains one donor level.
- * quoteBuildDonorBaseAction is the single source of truth both the UI quote
- * and execution call; missing stats or missing home-state economics reject
- * instead of falling back to neutral values.
- *
- * ConvertCash costs flat action points and converts personal cash to campaign
- * funds at a fixed rate with amount-scaled infamy. quoteConvertCashAction is
- * the single source of truth the default effect, the execute shell, the AI
- * advisor and the UI previews call; a missing or non-positive amount rejects
- * with a typed reason instead of pricing zero.
- *
- * Polls cost flat action points plus an intellect-scaled fund cost.
- * quotePollAction is the single source of truth the poll API route (quote,
- * affordability and atomic debit), the poll page display, the action effect
- * and canPerformAction all call; a missing intellect stat rejects instead of
- * falling back to the unscaled base. Hosts own currency conversion, atomic
- * resource checks and persistence.
- *
- * Rest costs zero action points, spends no funds and is always eligible.
- * quoteRestAction is the single source of truth the action effect,
- * canPerformAction, the turn dashboard cost map and the AI advisor call;
- * it has no actor, target, flag, cap, rounding or error cases. Hosts own
- * AP charging and persistence.
- *
- * Fundraise costs flat action points and credits the stat-scaled donor yield
- * with no fund cost. quoteFundraiseAction is the single source of truth the
- * action effect, canPerformAction, the UI card, the AI advisor and the
- * client-status projection call; a zero donor base rejects with the execute
- * reason instead of pricing a yield that cannot be earned. Missing influence
- * or stats keep the historical neutral fallbacks the effect always applied,
- * so pre-stat characters quote exactly what they are credited.
- *
- * Debate Prep costs flat action points for a fixed chance to +1 the Debate
- * skill. quoteDebatePrepAction is the single source of truth the execute
- * shell (eligibility gate), canPerformAction, the action definition and the
- * UI card all call; a disabled stat system or missing stat block rejects
- * instead of charging for a roll that cannot land. The roll itself stays in
- * `../stats/debatePrep` (injected rng, already pure); the quote owns the
- * chance constant both sides compare against. Hosts own the rng, the flag
- * read and persistence.
- *
- * Era price level (#2119): every money quote and fund-cost helper below takes a
- * trailing `priceLevel` scalar — the between-era deflator resolved at the SHELL
- * boundary (`campaigns/rules/priceLevel.ts` + `gameConfig.campaignEraPriceLevelEnabled`)
- * — and multiplies it into the anchor result. It defaults to 1, so omitting it
- * (every pre-#2119 caller) is byte-identical to today; the pure formulas never
- * read the flag themselves.
+ * Per-action rule docs. Each action's quote* function is the single source
+ * of truth shared by the UI, execution, canPerformAction and the AI advisor;
+ * missing stats or home-state economics reject instead of falling back to
+ * neutral values. Money rules take a trailing `priceLevel` scalar (era
+ * deflator); it defaults to 1 and the pure formulas never read the flag.
  */
 import { statMultiplier } from "../stats/statMultiplier";
 import {
@@ -96,9 +36,9 @@ export interface FundraiseActor {
  * scaled by state influence multiplier (1.0x at 0% to 2.0x at 100%).
  * L0/0%: $50K, L50/50%: $225K, L75/100%: $400K.
  *
- * `priceLevel` (issue #2119) is the between-era deflator resolved at the shell
- * from the world's era; it defaults to 1, so a caller that omits it — every
- * pre-#2119 call site — gets today's arithmetic byte-for-byte.
+ * `priceLevel` is the between-era deflator resolved at the shell
+ * from the world's era; it defaults to 1, so a caller that omits it, such as
+ * an older call site, gets today's arithmetic byte-for-byte.
  */
 export function calculateFundraisingAmount(
   donorBaseLevel: number,
@@ -113,12 +53,11 @@ export function calculateFundraisingAmount(
 
 /**
  * Canonical per-use Fundraise yield in ANCHOR units, including the fundraising
- * stat multiplier. The single source of truth: the Fundraise action effect
- * and every UI that quotes the yield must call this, or the quote and the
- * credit drift apart (ticket 1107).
+ * stat multiplier. Single source of truth: the action effect and every UI
+ * quoting the yield must call this, or quote and credit drift apart.
  *
- * `priceLevel` (issue #2119): the shell passes the world-era price level so a
- * 1953 world's yield deflates with its costs. Omitted/1 is today's behavior.
+ * `priceLevel`: the world-era price level so an older world's yield deflates
+ * with its costs. Omitted/1 is today's behavior.
  */
 export function fundraiseYieldAnchor(actor: FundraiseActor, priceLevel = 1): number {
   const base = calculateFundraisingAmount(
@@ -165,14 +104,13 @@ export const CAMPAIGN_MAX_INFLUENCE = 100;
 export const ADVERTISE_BASE_FUND_COST = 100_000;
 
 /**
- * Shared fund-cost multiplier for actions that spend money.
- * multiplier = (1 + tier × 0.2) × gdpScalar × priceLevel
+ * Shared fund-cost multiplier for money-spending actions.
+ * multiplier = (1 + tier * 0.2) * gdpScalar * priceLevel
  * gdpScalar = clamp(gdpPerCapita / countryBaseline, 0.85, 2.0)
- * gdpMillions: state GDP stored in millions (e.g. 289_500 = $289.5B)
+ * gdpMillions: state GDP in millions (e.g. 289_500 = $289.5B)
  *
- * `priceLevel` (issue #2119) is the between-era deflator resolved at the shell
- * from the world's era; it defaults to 1 so every pre-#2119 call site is
- * unchanged. Passing 1 explicitly is identical to omitting it.
+ * `priceLevel` is the between-era deflator resolved at the shell from the
+ * world's era; defaults to 1 (modern). Passing 1 equals omitting it.
  */
 export function getFundMultiplier(
   tier: number,
@@ -183,9 +121,11 @@ export function getFundMultiplier(
   // modern-era baseline; runtime money paths pass the world's gameState.preset.
   preset?: string,
   // Optional (never defaulted): the resolved era price level; 1 = modern.
-  priceLevel = 1
+  priceLevel = 1,
+  // Optional: live national GDP per capita; omitted = era table baseline.
+  nationalGdpPerCapita?: number
 ): number {
-  const baseline = getGdpBaseline(countryId, preset);
+  const baseline = getGdpBaseline(countryId, preset, nationalGdpPerCapita);
   const gdpPerCapita = (gdpMillions * 1_000_000) / population;
   const gdpScalar = Math.max(0.85, Math.min(2.0, gdpPerCapita / baseline));
   return (1 + tier * 0.2) * gdpScalar * priceLevel;
@@ -220,7 +160,7 @@ export function getAdvertiseActionCost(favorability: number): number {
 /**
  * Fund cost for the Campaign action.
  * Base $20,000 × tier, scaled by state GDP per capita relative to country baseline
- * and (when threaded) the world-era price level (#2119).
+ * and (when threaded) the world-era price level.
  * GDP is stored in millions of dollars (e.g. CT = 289,500 → $289.5B).
  */
 export function getCampaignFundCost(
@@ -231,7 +171,9 @@ export function getCampaignFundCost(
   // Optional (never defaulted): see getFundMultiplier.
   preset?: string,
   // Optional (never defaulted): resolved era price level; 1 = modern.
-  priceLevel = 1
+  priceLevel = 1,
+  // Optional: live national GDP per capita; omitted = era table baseline.
+  nationalGdpPerCapita?: number
 ): number {
   const tier = getCampaignActionCost(influence); // 1-5
   const multiplier = getFundMultiplier(
@@ -239,7 +181,9 @@ export function getCampaignFundCost(
     stateGdpMillions,
     statePopulation,
     countryId,
-    preset
+    preset,
+    1,
+    nationalGdpPerCapita
   );
   return Math.round(
     Math.round((CAMPAIGN_BASE_FUND_COST * tier * multiplier) / 1_000) * 1_000 * priceLevel
@@ -248,8 +192,8 @@ export function getCampaignFundCost(
 
 /**
  * Fund cost for the Advertise action.
- * Base $100,000 scaled by favorability tier, state GDP per capita and (when
- * threaded) the world-era price level (#2119).
+ * Base $100,000 scaled by favorability tier, state GDP per capita and the
+ * world-era price level.
  */
 export function getAdvertiseFundCost(
   favorability: number,
@@ -259,10 +203,20 @@ export function getAdvertiseFundCost(
   // Optional (never defaulted): see getFundMultiplier.
   preset?: string,
   // Optional (never defaulted): resolved era price level; 1 = modern.
-  priceLevel = 1
+  priceLevel = 1,
+  // Optional: live national GDP per capita; omitted = era table baseline.
+  nationalGdpPerCapita?: number
 ): number {
   const tier = getAdvertiseActionCost(favorability) - 5; // tier index 0-4
-  const multiplier = getFundMultiplier(tier, stateGdpMillions, statePopulation, countryId, preset);
+  const multiplier = getFundMultiplier(
+    tier,
+    stateGdpMillions,
+    statePopulation,
+    countryId,
+    preset,
+    1,
+    nationalGdpPerCapita
+  );
   return Math.round(
     Math.round((ADVERTISE_BASE_FUND_COST * multiplier) / 1_000) * 1_000 * priceLevel
   );
@@ -322,6 +276,8 @@ export interface CampaignQuoteTarget {
    * pass the world's `gameState.preset`.
    */
   preset?: string | null;
+  /** Live national GDP per capita for the baseline; absent = era table. */
+  nationalGdpPerCapita?: number | null;
 }
 
 /**
@@ -351,6 +307,8 @@ export interface AdvertiseQuoteTarget {
    * pass the world's `gameState.preset`.
    */
   preset?: string | null;
+  /** Live national GDP per capita for the baseline; absent = era table. */
+  nationalGdpPerCapita?: number | null;
 }
 
 /**
@@ -367,7 +325,7 @@ export function quoteCampaignAction(
   actor: CampaignQuoteActor,
   target?: CampaignQuoteTarget | null,
   // Optional (never defaulted): the resolved era price level from the shell
-  // (#2119); 1 = modern, byte-identical to today.
+  //; 1 = modern, byte-identical to today.
   priceLevel = 1
 ): CampaignQuote {
   const influence = actor.politicalInfluence;
@@ -403,6 +361,7 @@ export function quoteCampaignAction(
   }
   const { gdpMillions, population, countryId } = target;
   const preset = target.preset ?? undefined;
+  const nationalGdpPerCapita = target.nationalGdpPerCapita ?? undefined;
   if (typeof gdpMillions !== "number" || !Number.isFinite(gdpMillions) || gdpMillions < 0) {
     return {
       ok: false,
@@ -420,8 +379,15 @@ export function quoteCampaignAction(
   }
   // Intellect softens the campaign cost-scaling curve (higher → cheaper).
   const fundCostAnchor = Math.round(
-    getCampaignFundCost(influence, gdpMillions, population, countryId, preset, priceLevel) /
-      statMultiplier(intellect)
+    getCampaignFundCost(
+      influence,
+      gdpMillions,
+      population,
+      countryId,
+      preset,
+      priceLevel,
+      nationalGdpPerCapita
+    ) / statMultiplier(intellect)
   );
   // Charisma scales the diminishing-returns gain (gentle ±20%).
   const influenceGain = campaignInfluenceGain(influence, statMultiplier(charisma));
@@ -442,7 +408,7 @@ export function quoteAdvertiseAction(
   actor: AdvertiseQuoteActor,
   target?: AdvertiseQuoteTarget | null,
   // Optional (never defaulted): the resolved era price level from the shell
-  // (#2119); 1 = modern, byte-identical to today.
+  //; 1 = modern, byte-identical to today.
   priceLevel = 1
 ): AdvertiseQuote {
   const favorability = actor.favorability;
@@ -465,6 +431,7 @@ export function quoteAdvertiseAction(
   }
   const { gdpMillions, population, countryId } = target;
   const preset = target.preset ?? undefined;
+  const nationalGdpPerCapita = target.nationalGdpPerCapita ?? undefined;
   if (typeof gdpMillions !== "number" || !Number.isFinite(gdpMillions) || gdpMillions < 0) {
     return {
       ok: false,
@@ -486,7 +453,8 @@ export function quoteAdvertiseAction(
     population,
     countryId,
     preset,
-    priceLevel
+    priceLevel,
+    nationalGdpPerCapita
   );
   // Charisma scales the diminishing-returns gain (gentle ±20%).
   const favorabilityGain = advertiseFavorabilityGain(favorability, statMultiplier(charisma));
@@ -518,7 +486,7 @@ export const BUILD_DONOR_BASE_LEVEL_GAIN = 1;
 /**
  * Fund cost for the BuildDonorBase action (0–75 level range).
  * Linear base: $3K + $1.5K/level, scaled by state GDP per capita (0.85–2.0×) vs
- * country baseline and (when threaded) the world-era price level (#2119).
+ * country baseline and (when threaded) the world-era price level.
  * Early levels are cheap (~$3K); L75 costs ~$116K (before GDP scaling).
  * Total 0→75 ≈ $4.4M at national-average GDP.
  */
@@ -530,10 +498,12 @@ export function getBuildDonorBaseFundCost(
   // Optional (never defaulted): see getFundMultiplier.
   preset?: string,
   // Optional (never defaulted): resolved era price level; 1 = modern.
-  priceLevel = 1
+  priceLevel = 1,
+  // Optional: live national GDP per capita; omitted = era table baseline.
+  nationalGdpPerCapita?: number
 ): number {
   const baseCost = BUILD_DONOR_BASE_FUND + donorBaseLevel * BUILD_DONOR_BASE_FUND_PER_LEVEL;
-  const baseline = getGdpBaseline(countryId, preset);
+  const baseline = getGdpBaseline(countryId, preset, nationalGdpPerCapita);
   const gdpPerCapita = (stateGdpMillions * 1_000_000) / statePopulation;
   const gdpScalar = Math.max(0.85, Math.min(2.0, gdpPerCapita / baseline));
   return Math.round(Math.round((baseCost * gdpScalar) / 1_000) * 1_000 * priceLevel);
@@ -576,6 +546,8 @@ export interface BuildDonorBaseQuoteTarget {
    * pass the world's `gameState.preset`.
    */
   preset?: string | null;
+  /** Live national GDP per capita for the baseline; absent = era table. */
+  nationalGdpPerCapita?: number | null;
 }
 
 /**
@@ -592,7 +564,7 @@ export function quoteBuildDonorBaseAction(
   actor: BuildDonorBaseQuoteActor,
   target?: BuildDonorBaseQuoteTarget | null,
   // Optional (never defaulted): the resolved era price level from the shell
-  // (#2119); 1 = modern, byte-identical to today.
+  //; 1 = modern, byte-identical to today.
   priceLevel = 1
 ): BuildDonorBaseQuote {
   const level = actor.donorBaseLevel;
@@ -615,6 +587,7 @@ export function quoteBuildDonorBaseAction(
   }
   const { gdpMillions, population, countryId } = target;
   const preset = target.preset ?? undefined;
+  const nationalGdpPerCapita = target.nationalGdpPerCapita ?? undefined;
   if (typeof gdpMillions !== "number" || !Number.isFinite(gdpMillions) || gdpMillions < 0) {
     return {
       ok: false,
@@ -632,8 +605,15 @@ export function quoteBuildDonorBaseAction(
   }
   // Fundraising softens the donor-network cost curve (higher → cheaper).
   const fundCostAnchor = Math.round(
-    getBuildDonorBaseFundCost(level, gdpMillions, population, countryId, preset, priceLevel) /
-      statMultiplier(fundraising)
+    getBuildDonorBaseFundCost(
+      level,
+      gdpMillions,
+      population,
+      countryId,
+      preset,
+      priceLevel,
+      nationalGdpPerCapita
+    ) / statMultiplier(fundraising)
   );
   return {
     ok: true,
@@ -643,17 +623,12 @@ export function quoteBuildDonorBaseAction(
   };
 }
 
-// ── ConvertCash (Game1724 slice) ────────────────────────────────────────────
-// Conversion, infamy and quote math moved verbatim from `../actions`, the
-// execute shell and the AI advisor so the default effect, the atomic debit,
-// the recommendation preview and the UI previews share one implementation.
-// Balance is unchanged: the numbers below are the historical formulas, only
-// the owner moved. The strict entry point is quoteConvertCashAction; the
-// lenient helpers (calculateConvertCashInfamy/convertCashConversion) stay for
-// callers that only need one leg. Host-currency balance selection (which
-// personal bucket the debit targets, forex conversion at the write boundary)
-// stays with the host shell: the quote prices LOCAL amounts and never touches
-// persistence.
+// ConvertCash: conversion, infamy and quote math shared by the default
+// effect, atomic debit, AI advisor and UI previews.
+// Entry point: quoteConvertCashAction (strict). Lenient helpers
+// calculateConvertCashInfamy / convertCashConversion serve single-leg callers.
+// The quote prices LOCAL amounts and never touches persistence; host-currency
+// balance selection and forex stay with the host shell.
 
 /** Action points charged per ConvertCash use: flat, independent of amount. */
 export const CONVERT_CASH_ACTION_COST = 2;
@@ -761,7 +736,7 @@ export function getPollBaseFundCost(tier: PollTier): number {
 /**
  * Fund cost for one poll of the given tier, in ANCHOR units.
  * Intellect lowers polling cost (gentle ±20%), matching the historical
- * `../actions` effect math exactly. `priceLevel` (#2119) applies the world-era
+ * `../actions` effect math exactly. `priceLevel` applies the world-era
  * deflator; 1 (the default) is today's behavior.
  */
 export function getPollFundCost(tier: PollTier, intellect: number, priceLevel = 1): number {
@@ -786,18 +761,12 @@ export interface PollQuoteActor {
 export type PollQuote =
   { ok: true; apCost: number; fundCostAnchor: number } | { ok: false; error: string };
 
-// ── Fundraise (Game1724 slice) ──────────────────────────────────────────────
-// Eligibility, AP cost and yield math moved verbatim from `../actions` (the
-// effect, the donor gate and the flat cost) so the UI card, the action
-// effect, canPerformAction, the AI advisor and the client-status projection
-// share one implementation. Balance is unchanged: flat 3 AP, the $50K +
-// $2K/level base with the influence multiplier, and the fundraising-stat
-// scaling are the historical numbers, only the owner moved. The strict entry
-// point is quoteFundraiseAction; fundraiseYieldAnchor stays for the
-// anchor→local converters and isFundraiseEligible stays for UI blocked-state
-// probes that never had yield context. Unlike the GDP-scaled slices there is
-// no target, no cap and no rounding beyond the yield's own Math.round: the
-// quote prices ANCHOR units and hosts own the anchor→local conversion.
+// Fundraise rules: eligibility, AP cost and yield math live here so the UI
+// card, action effect, canPerformAction, AI advisor and client-status
+// projection share one implementation. Flat 3 AP; the $50K + $2K/level base
+// with influence multiplier and fundraising-stat scaling are intentional.
+// The quote prices ANCHOR units; hosts own the anchor to local conversion.
+// No target, cap or extra rounding beyond yield Math.round.
 
 /** Rejection when the character has no donor base. Mirrors the execute gate. */
 export const FUNDRAISE_NO_DONOR_ERROR =
@@ -889,18 +858,10 @@ export function quoteRestAction(): RestQuote {
   return { ok: true, apCost: REST_ACTION_COST, fundCostAnchor: 0 };
 }
 
-// ── DebatePrep (Game1724 slice) ───────────────────────────────────────────────
-// Cost, chance and eligibility math moved verbatim from `../actions` (base
-// cost, description), `../stats/statsConstants` (cost and chance constants)
-// and the execute shell (flag + stat-block gates) so the UI card, the action
-// definition, canPerformAction and the execute gate share one implementation.
-// Balance is unchanged: flat 1 AP and the fixed success chance are the
-// historical numbers, only the owner moved. The strict entry point is
-// quoteDebatePrepAction. The attempt roll itself stays in
-// `../stats/debatePrep` (injected rng, deterministically testable); the quote
-// re-exports the chance constant the roll compares against so the advertised
-// odds and the resolved odds cannot drift (the card previously advertised
-// 10% while the roll resolved 15%).
+// DebatePrep shared implementation: the UI card, action definition,
+// canPerformAction and execute gate must all use these constants so
+// advertised odds and resolved odds cannot drift.
+// The attempt roll itself lives in `../stats/debatePrep`.
 
 /** Action points charged per Debate Prep attempt: flat, win or lose. */
 export { DEBATE_PREP_ACTION_COST };
@@ -910,9 +871,6 @@ export { DEBATE_PREP_SUCCESS_CHANCE };
 
 /** Debate skill points gained on a successful Debate Prep attempt. */
 export const DEBATE_PREP_DEBATE_GAIN = 1;
-
-/** Rejection when the RPG stat system flag is off. Mirrors the execute gate. */
-export const DEBATE_PREP_DISABLED_ERROR = "The stat system is not currently enabled.";
 
 /** Rejection when the character has no allocated stat block. Mirrors the execute gate. */
 export const DEBATE_PREP_UNALLOCATED_ERROR = "Allocate your stats before using Debate Prep.";
@@ -926,16 +884,6 @@ export const DEBATE_PREP_UNALLOCATED_ERROR = "Allocate your stats before using D
 export interface DebatePrepQuoteActor {
   debate?: number | null;
   hasStats?: boolean;
-}
-
-/**
- * Host-supplied context the rules cannot read themselves: the async RPG-stats
- * feature flag. Omitted (or true) skips the flag leg for callers that cannot
- * know it (canPerformAction, UI quotes); the execute shell always passes the
- * resolved value. Explicit false rejects, mirroring the execute gate.
- */
-export interface DebatePrepQuoteOptions {
-  rpgStatsEnabled?: boolean;
 }
 
 /**
@@ -955,13 +903,7 @@ export type DebatePrepQuote =
     }
   | { ok: false; error: string };
 
-export function quoteDebatePrepAction(
-  actor: DebatePrepQuoteActor,
-  options?: DebatePrepQuoteOptions
-): DebatePrepQuote {
-  if (options?.rpgStatsEnabled === false) {
-    return { ok: false, error: DEBATE_PREP_DISABLED_ERROR };
-  }
+export function quoteDebatePrepAction(actor: DebatePrepQuoteActor): DebatePrepQuote {
   if (!actor.hasStats) {
     return { ok: false, error: DEBATE_PREP_UNALLOCATED_ERROR };
   }

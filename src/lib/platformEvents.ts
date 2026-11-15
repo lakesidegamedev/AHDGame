@@ -1,3 +1,5 @@
+import { servicesConfig } from "@/lib/config/services";
+
 export type PlatformEventType = "turn:completed" | "turn:failed";
 
 export interface PlatformEvent {
@@ -19,8 +21,8 @@ export async function publishPlatformEvent(
   event: PlatformEvent,
   options: PublishOptions = {}
 ): Promise<boolean> {
-  const url = options.url ?? process.env.PLATFORM_EVENT_URL;
-  const token = options.token ?? process.env.PLATFORM_EVENT_TOKEN;
+  const url = options.url ?? servicesConfig.platformEventUrl();
+  const token = options.token ?? servicesConfig.platformEventToken();
   if (!url || !token) return false;
   const fetchImpl = options.fetchImpl ?? fetch;
   const attempts = options.attempts ?? 3;

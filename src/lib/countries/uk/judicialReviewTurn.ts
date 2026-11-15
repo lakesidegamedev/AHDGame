@@ -6,16 +6,21 @@
 import type { Db } from "mongodb";
 import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
+import { getFullSimulationCountryIds } from "@/lib/country/countryTier";
 import { enactRulingBill } from "@/lib/scotus/enactRulingBill";
 import { createSystemNewsPost } from "@/lib/news";
 import type { PolicyProvision } from "@/lib/db/types/legislation";
 import type { PoliticalParty } from "@/lib/db/types";
-import { rollUkJrSurpriseSpawn } from "@/lib/uk/judicialReview/surpriseSpawn";
+import type { GovernmentFormation } from "@/lib/db/types/governmentFormation";
+import { rollUkJrSurpriseSpawn } from "@/lib/countries/uk/judicialReview/surpriseSpawn";
 import {
   UK_JR_SURPRISE_TEMPLATES,
   type JrCaseEffect,
   type JrCaseAxis,
-} from "@/lib/uk/judicialReview/surpriseTemplates";
+} from "@/lib/countries/uk/judicialReview/surpriseTemplates";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
+import { ukJudicialReviewCasesCollection } from "@/lib/db/repositories/ukJudicialReviewCases";
 
 export interface UkJrSurpriseCaseRecord {
   _id: ObjectId;
@@ -39,28 +44,22 @@ export interface UkJrSurpriseTurnResult {
  * Negative = left, positive = right — same convention as SCOTUS surprise.
  */
 async function resolveUkProxyCourtLean(db: Db, axis: JrCaseAxis): Promise<-1 | 0 | 1> {
-  const formation = await db
-    .collection("governmentFormations")
-    .findOne(
-      { countryId: "UK", status: "formed" },
-      { projection: { rulingPartyId: 1, partyId: 1 } }
-    );
-  const partyId =
-    (formation as { rulingPartyId?: string; partyId?: string } | null)?.rulingPartyId ??
-    (formation as { rulingPartyId?: string; partyId?: string } | null)?.partyId;
+  const formation = await governmentFormationsCollection(db).findOne(
+    { _id: "UK", status: "formed" },
+    { projection: { governingPartyId: 1 } }
+  );
+  const partyId = formation?.governingPartyId ?? null;
 
   let economic = 0;
   let social = 0;
   if (partyId) {
     const seq = Number(partyId);
-    const party = await db
-      .collection<PoliticalParty>("politicalParties")
-      .findOne(
-        Number.isFinite(seq)
-          ? { countryId: "UK", sequentialId: seq }
-          : { countryId: "UK", _id: partyId as unknown as ObjectId },
-        { projection: { economicPosition: 1, socialPosition: 1 } }
-      );
+    const party = await politicalPartiesCollection(db).findOne(
+      Number.isFinite(seq)
+        ? { countryId: "UK", sequentialId: seq }
+        : { countryId: "UK", _id: partyId as unknown as ObjectId },
+      { projection: { economicPosition: 1, socialPosition: 1 } }
+    );
     if (party) {
       economic = party.economicPosition ?? 0;
       social = party.socialPosition ?? 0;
@@ -84,11 +83,14 @@ export async function processUkJrSurpriseTurn(
   if (!rollUkJrSurpriseSpawn(spawnRandomDraw)) {
     return { spawned: false };
   }
+  // Rulings enact uk_* laws and post UK news: only where the UK is simulated.
+  if (!(await getFullSimulationCountryIds(database)).includes("UK")) {
+    return { spawned: false };
+  }
 
   const usedKeys = new Set(
     (
-      await database
-        .collection<UkJrSurpriseCaseRecord>("ukJudicialReviewCases")
+      await ukJudicialReviewCasesCollection<UkJrSurpriseCaseRecord>(database)
         .find({ countryId: "UK" }, { projection: { templateKey: 1 } })
         .toArray()
     ).map((c) => c.templateKey)
@@ -132,7 +134,7 @@ export async function processUkJrSurpriseTurn(
   }
 
   const now = new Date();
-  await database.collection<UkJrSurpriseCaseRecord>("ukJudicialReviewCases").insertOne({
+  await ukJudicialReviewCasesCollection<UkJrSurpriseCaseRecord>(database).insertOne({
     _id: new ObjectId(),
     countryId: "UK",
     templateKey: template.templateKey,

@@ -32,7 +32,7 @@ vi.mock("@/lib/db/collections", () => ({
   getCharactersCollection: vi.fn(),
 }));
 
-vi.mock("@/lib/env", () => ({
+vi.mock("@/lib/config/validatedEnv", () => ({
   getValidatedEnv: vi.fn(() => ({ AUTH_SECRET: "test-secret" })),
 }));
 

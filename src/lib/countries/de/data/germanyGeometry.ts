@@ -1,10 +1,9 @@
 /**
  * The German Länder region geometry, keyed by region code. The single source for
- * the world overlay's Germany — region identity is the code; which country it
+ * the world overlay's Germany , region identity is the code; which country it
  * renders under is read live from `states.countryId`. In unified eras all 16
- * codes belong to `DE` (one merged Germany blob); in 1979 the five eastern codes
- * belong to `DD` (a separate East Germany blob). No date logic in the map — the
- * British-Isles model, applied to Germany.
+ * codes belong to `DE`; in 1979 the five eastern codes belong to `DD`. No date
+ * logic in the map.
  *
  * The geometry file is built by `scripts/maps/build-germany-geo.mjs` from
  * `de-laender.json` (each feature tagged `properties.regionCode`; Bremen `HB`→
@@ -14,9 +13,7 @@
  */
 export const GERMANY_GEO_URL = "/germany-regions.json";
 
-// West Germany (FRG, DE in 1979). West Berlin (`BE`) is its own region/shape so the
-// /country/de/map nation map can draw it; on the WORLD overlay the BE feature is
-// folded to Brandenburg's owner (so Berlin renders East in 1979) — see WorldMapSVG.
+// West Germany (FRG, DE in 1979). West Berlin (`BE`) is its own region/shape so the /country/de/map nation map can draw it; on the WORLD overlay the BE feature is folded to Brandenburg's owner (so Berlin renders East in 1979). See WorldMapSVG.
 export const WEST_DE_REGION_CODES = [
   "BW",
   "BY",

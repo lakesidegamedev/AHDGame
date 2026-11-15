@@ -97,19 +97,19 @@ function StaffBody({ data, onNavigate }: { data: StaffQueuesWidgetData; onNaviga
       id: "wiki",
       label: t("wikiReview"),
       count: data.wikiReview,
-      href: data.admin ? "/admin?tab=content&sub=wiki-review" : "/moderator?tab=content",
+      href: "/control/community/wiki-review",
     },
     {
       id: "alts",
       label: t("altClusters"),
       count: data.altClusters,
-      href: data.admin ? "/admin?tab=players&sub=alts" : "/moderator?tab=players",
+      href: data.admin ? "/control/safety/alts" : "/control/players/users",
     },
     {
       id: "reports",
       label: t("playerReports"),
       count: data.playerReports,
-      href: data.admin ? "/admin?tab=support&sub=player-reports" : "/moderator?tab=content",
+      href: "/control/support/player-reports",
     },
   ];
   return (

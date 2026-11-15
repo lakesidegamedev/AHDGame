@@ -2,9 +2,9 @@ export const globalResponseCrisesContent = `# Global Response Crises
 
 Your country has a seat in a crisis that will not be over in a day: Vietnam, Berlin, Congo, a pandemic, a nuclear alert. You get a decision card and a window to answer it. Whatever you pick is remembered, the damage it causes outlasts the window, and the sum of everyone's choices moves [global tension](/wiki/cold-war-tension), your treasury, your standing with other governments and sometimes whether a real war breaks out.
 
-## Reading World Conflicts
+## Reading the conflicts view
 
-Open the system at [World Conflicts](/world/conflicts). The page separates three things:
+Open the system at [World Crises](/world/crises?view=conflicts), which also lists the shooting wars and the International Response Desk. The page separates three things:
 
 - **Global tension** shows how dangerous the whole international system is.
 - **Response campaigns** show the active situations and their current stage.
@@ -14,7 +14,7 @@ They affect each other but are not the same. A proxy campaign can exist before i
 
 ## Answering a window
 
-The head of state of a country with a role in the campaign picks an option from the card on **World Crises** or your actions page. The International Response Desk on **World Conflicts** lists every open campaign. A card marked "National" means your government owns its own choice. The effects still spread past your border. Each country with a role answers separately, and one government's response does not close another's window. The same response cannot be applied twice, even if you submit it twice.
+The head of state of a country with a role in the campaign picks an option from the card on **World Crises** or your actions page. The International Response Desk lists every open campaign. A card marked "National" means your government owns its own choice. The effects still spread past your border. Each country with a role answers separately, and one government's response does not close another's window. The same response cannot be applied twice, even if you submit it twice.
 
 | Item | Value |
 | --- | --- |
@@ -31,7 +31,7 @@ An option can need military readiness, logistics, domestic support, intelligence
 
 Briefings are not equal. Your role and intelligence confidence decide how narrow your risk estimate is; nobody sees the exact figure. Covert options hide your choice from other governments, and they are cheaper, but each carries an authored chance of exposure when the window resolves, and an exposed covert choice is shown to everyone. Use them when you can afford the reveal.
 
-Cheap holds are often right early. In Vietnam, costs and political damage scale with the rung, so a deep commitment late is much more expensive than the same choice early. [Crisis Interaction](/wiki/crisis-interaction) supplies the decision cards these windows run on, and chained campaigns advance through its decision system.
+Cheap holds are often right early. In Vietnam, costs and political damage scale with the rung, so a deep commitment late is much more expensive than the same choice early. Each campaign is also a crisis with a stage, a severity and spread to linked countries, as described in [Crises](/wiki/crisis-interaction) and [Crisis Responses](/wiki/crisis-responses).
 
 ## What the game remembers
 

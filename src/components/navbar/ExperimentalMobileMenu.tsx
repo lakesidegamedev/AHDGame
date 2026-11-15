@@ -10,7 +10,7 @@
 import { buildCampaignNavItems, isCampaignNavActive } from "./campaignNav";
 import React from "react";
 import { useTranslations } from "next-intl";
-import Link from "next/link";
+import Link from "@/components/navbar/NavigationLink";
 import Image from "next/image";
 import { UniversalSearch } from "@/components/UniversalSearch";
 import { Avatar } from "@/components/Avatar";
@@ -46,6 +46,7 @@ import { MOBILE_MENU_PANEL_CLASS } from "@/components/navbar/dropdownStyles";
 import { bypassNextImageOptimization } from "@/lib/images/bypassImageOptimization";
 import { captureProductEvent } from "@/lib/analytics/capture";
 import { Chevron, NavIcon, isNavActive } from "./experimentalNavPrimitives";
+import { WorldNavBadge } from "./WorldNavBadge";
 import type {
   AdminCharacter,
   CharacterProfile,
@@ -56,6 +57,7 @@ import type {
   NavLinkRef,
 } from "./experimentalNavTypes";
 import { campaignManagerHref } from "@/lib/campaignManager/links";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 export interface ExperimentalMobileMenuProps {
   navigationVariant?: "a" | "b";
@@ -548,6 +550,7 @@ export function ExperimentalMobileMenu({
                                 }`}
                               >
                                 {item.labelKey ? t(item.labelKey) : item.label}
+                                <WorldNavBadge count={item.badge} />
                               </Link>
                             ))}
                           </CollapsibleNavSection>
@@ -593,7 +596,7 @@ export function ExperimentalMobileMenu({
                             {t("menus.nation.myParty")} · {currentParty.name}
                           </Link>
                         )}
-                        {userCountry === "US" && (
+                        {countryHasFeature("usUi", userCountry) && (
                           <Link
                             href="/political-operations"
                             onClick={onClose}

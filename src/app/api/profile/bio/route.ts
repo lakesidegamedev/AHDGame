@@ -6,6 +6,7 @@ import { requireBasicAuth } from "@/lib/api/requireAuth";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { parseJsonBody } from "@/lib/api/validate";
 import { profileBioSchema } from "@/lib/api/schemas/settings";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 // PATCH /api/profile/bio — Updates the authenticated character's profile bio text
 // Auth: requireBasicAuth
@@ -26,12 +27,10 @@ export async function PATCH(request: Request) {
     const trimmed = parsed.data.bio;
 
     const db = await getDb();
-    const result = await db
-      .collection("characters")
-      .updateOne(
-        { userId: new ObjectId(user.userId) },
-        { $set: { bio: trimmed, updatedAt: new Date() } }
-      );
+    const result = await charactersCollection(db).updateOne(
+      { userId: new ObjectId(user.userId) },
+      { $set: { bio: trimmed, updatedAt: new Date() } }
+    );
 
     if (result.matchedCount === 0) {
       return errorResponse(404, "Character not found");

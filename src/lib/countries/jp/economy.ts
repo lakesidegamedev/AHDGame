@@ -7,25 +7,9 @@ import type { LegislationType } from "@/lib/db/types";
 import type { CountryEconomy } from "../contract";
 
 /**
- * Japan's economy and fiscal constants. Phase D4.
- *
- * ⚠️⚠️ BALANCE SURFACE. Most of what follows is economy constants: GDP and
- * population anchors, sector weights, tax rates, cost scales. CLAUDE.md is
- * explicit that a balance change needs a GitHub issue and a scripts/sim/ report
- * before it merges. This phase is a MOVE, so every number below must equal the
- * pre-move snapshot exactly. If a value ever appears to need adjusting, that is
- * not a refactor -- stop and escalate.
- *
- * ⚠️ GENERATED FROM THE PRE-MOVE SNAPSHOT, NOT TRANSCRIBED. Hand-copying a
- * fourteen-digit GDP anchor is precisely how a balance change arrives disguised
- * as a refactor.
- *
- * ⚠️ EXCHANGE RATES ARE NOT HERE, and their absence is deliberate. INITIAL_RATES
- * and its 1953/1979/1991 variants live in the SAME FILE as COUNTRY_CURRENCY_MAP,
- * which does move -- but a rate is a fact BETWEEN two currencies, so a
- * per-country copy drifts the moment either side changes. Bucket B in
- * a relational table. Same reasoning for the two SOE ID-range tables in budgets.ts,
- * which allocate non-overlapping numeric ranges ACROSS countries.
+ * Japan's economy and fiscal constants.
+ * Balance surface: changes require an issue and scripts/sim/ report; these values must match the snapshot.
+ * Exchange rates are relational and deliberately not here.
  */
 
 /** JPY. The rates that convert it are relational and stay put. */
@@ -166,18 +150,9 @@ const treasuryPsRate: { national: number; state: number } = {
  * because the reference is legal TypeScript; only running it fails.
  */
 /**
- * Whether Japan's authored 1953 GDP figures are denominated in USD or in yen.
- *
- * Forwarded from `GDP_DENOMINATION_1953` in
- * `src/lib/seeds/reference/gdpDenomination.ts`.
- *
- * ⚠ 1953 ONLY. That registry is the era table and holds no other preset, so
- * this says nothing about how Japan's 1979 or modern series are denominated.
- * A later era needing its own answer gets its own const, not a widened one.
- *
- * ⚠ "usd" IS LOAD-BEARING. Japan's authored 1953 macro series are already in
- * USD, so the seeder must NOT convert them again at the JPY rate. Flipping this
- * to "local" silently multiplies Japan's 1953 GDP by roughly the yen rate.
+ * Denomination of Japan's 1953 GDP figures: "usd" means the authored series are
+ * already USD, so the seeder must not convert at the JPY rate. Flipping this to
+ * "local" would multiply 1953 GDP by roughly the yen rate. Applies to 1953 only.
  */
 export const JP_GDP_DENOMINATION_1953 = "usd";
 
@@ -241,11 +216,8 @@ export const JP_REGIONAL_GRANT_FIELD = "nationalGrant";
 /**
  * Median-income band used to score the household-income metric.
  *
- * Forwarded from `src/lib/utils/metricScoring.ts`.
- *
- * ⚠ IN YEN. 5,500,000 to 2,000,000 is a yen band, which is why it is three
- * orders of magnitude above the US entry in the same table. The scorer reads
- * each country's band against that country's own local-currency income.
+ * IN YEN: values are ~3 orders of magnitude above the US entry because the
+ * scorer reads each country's band against its own local-currency income.
  */
 export const JP_MEDIAN_INCOME_BAND = { best: 5_500_000, worst: 2_000_000 };
 
@@ -266,18 +238,9 @@ export const JP_GRANT_MULTIPLIER = 0.018;
 export const JP_EXTRA_OVERRIDE_CATEGORIES = ["infrastructure", "social"] as const;
 
 /**
- * Default per-region tax rates applied when Japan's regions are seeded.
- *
- * Forwarded from `generateStateBudgets` in `src/lib/seeds/reference/budgets.ts`.
- *
- * ⚠ ZERO IS A RATE, NOT A GAP. Japanese prefectures levy no regional income
- * or sales tax -- those are national -- so the zeros say "this tier does not tax
- * that base", which is different from "not yet authored". Filling them in gives
- * Japan a second income tax on top of the national one.
- *
- * ⚠ FOREIGN MIRRORS DOMESTIC AT SEED, by the day-one parity rule. The two
- * are separate fields so legislators can diverge them later through the foreign
- * corporate tax bills; they start equal deliberately.
+ * Zeros are real rates, not missing values: Japanese prefectures levy no regional
+ * income or sales tax, so filling them in adds a second tax. Foreign mirrors
+ * domestic at seed by design; legislators may diverge them later.
  */
 export const JP_DEFAULT_REGIONAL_TAX_RATES = {
   incomeTax: 0,

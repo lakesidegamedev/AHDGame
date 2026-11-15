@@ -1,18 +1,8 @@
 /**
- * What a player calls the thing they just built.
- *
- * Under `marketSystemMode >= "plants"` a sector is a set of physical sites you
- * buy capacity in. The engine calls every one of them a "plant" because the
- * mode, the fields and the migrations all needed ONE word. Players do not talk
- * that way: nobody opens a telecom plant or a retail plant. They open a network
- * hub and a store.
- *
- * So the engine keeps its word and the interface gets this one. Nothing here is
- * persisted, read by the turn, or allowed to change a number. It is display
- * copy keyed by sector type, in one place so the eighteen surfaces that say it
- * cannot drift into eighteen different words.
- *
- * COPY RULE (project standing): plain language, short, no dashes, no jargon.
+ * Display-only vocabulary for facility names, keyed by sector type. The
+ * engine calls every site a "plant"; players open stores, hubs, and so on.
+ * Nothing here is persisted or read by the turn or allowed to change a
+ * number. Centralized so display copy cannot drift across surfaces.
  */
 
 import type { OperatingSectorType } from "@/lib/constants/corporations";

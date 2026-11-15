@@ -116,11 +116,9 @@ export const COUNTRY_SECTOR_WEIGHTS_1979: Record<string, SectorWeightMap> = {
   // ───────────────────────────────────────────────────────────────────────────
   //  WARSAW-PACT SATELLITES — 1979
   //
-  //  These eight were previously ABSENT from this map entirely. On a miss
-  //  `getCountrySectorWeights1979` returns an even 1/N across all 17 sectors,
-  //  so a 1979 Poland got a perfectly flat economy — no Silesian coal, no
-  //  shipyards, and technology/media/financial weighted the same as heavy
-  //  manufacturing. The 1953 bundle has all eight; only 1979 was missing them.
+  //  All eight must be present: on a miss `getCountrySectorWeights1979` returns
+  //  an even 1/N across all 17 sectors, a flat economy with no Silesian coal or
+  //  shipyards and technology/media/financial weighted like heavy manufacturing.
   //
   //  Common shape vs 1953: agriculture roughly halved by two decades of
   //  collectivisation and industrial migration, manufacturing and chemicals up,

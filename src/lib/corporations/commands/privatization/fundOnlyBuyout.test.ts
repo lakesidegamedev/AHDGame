@@ -98,7 +98,7 @@ describe("executeFundOnlyBuyout", () => {
     expect(setDoc.totalShares).toBe(9_990_000);
     expect(setDoc.shareholders).toHaveLength(1);
     expect(setDoc.shareholders[0].characterId).toBe(CEO_ID);
-    // #2114: approved-but-unissued float is void once private; a surviving
+    // Approved-but-unissued float is void once private; a surviving
     // flag would block future share proposals as "awaiting market placement".
     expect(updateOne.mock.calls[0][1].$unset.pendingShareIssuance).toBe("");
   });
@@ -399,6 +399,24 @@ describe("executeFundOnlyBuyout", () => {
       expect(corpUpdateOne).toHaveBeenCalledTimes(1); // finalize only
       expect(corpUpdateOne.mock.calls[0][1].$set.isPrivate).toBe(true);
     });
+  });
+
+  it("moves no money when an NPP holds shares alongside the fund", async () => {
+    const { db, updateOne } = makeDb({ funds: [], afterCorp: null });
+    const corp = makeCorp({
+      shareholders: [
+        { characterId: CEO_ID, shares: 9_980_000 },
+        { fundId: FUND_ID, shares: 10_000 },
+        { nppId: new ObjectId(), shares: 10_000 },
+      ],
+    });
+
+    const result = await executeFundOnlyBuyout(db, corp as never, 1000);
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.status).toBe(409);
+    expect(sellFundHoldingShares).not.toHaveBeenCalled();
+    expect(updateOne).not.toHaveBeenCalled();
   });
 
   it("aborts if a non-CEO holder is still present after buyback (drift guard)", async () => {

@@ -1,29 +1,23 @@
 import { personalNetWorth } from "@/lib/portfolio/rules/netWorth";
 import type { Db, ObjectId } from "mongodb";
 import type { Bond, Character, Corporation } from "@/lib/db/types";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { BOND_UNIT_FACE_VALUE } from "@/lib/db/types/bond";
 import { COUNTRY_CURRENCY_MAP, type CurrencyCode } from "@/lib/constants/currencies";
 import { getTotalPersonalWealth } from "@/lib/currency/characterFunds";
 import { computeLocDebtInternal } from "@/lib/lineOfCredit/netWorth";
 import { corpLiquidCapitalToAnchor, fxRateForCorpFromMap } from "@/lib/currency/corporationCapital";
 import { getPublicShareQuote } from "@/lib/corporations/marketQuote";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import { indexFundPositionsCollection } from "@/lib/db/repositories/indexFundPositions";
 
 /**
  * ONE definition of a character's net worth, in ₳.
  *
- * There were two: the live wealth-list route and the persisted per-turn
- * snapshot each carried their own ~60-line copy. The snapshot is what
- * `wealthChange24h` / `rankChange24h` are computed against, so any difference
- * between the two makes the leaderboard disagree with its own change column —
- * silently, and for every affected player (#592).
- *
- * They had already drifted on the share price: the route resolved it through
- * `getPublicShareQuote` (which falls back to `DEFAULT_SHARE_PRICE`) while the
- * snapshot read `corp.sharePrice ?? 0`. Today every corporation without a real
- * price stores an explicit `0`, so both skip the holding and the outputs agree
- * — the divergence is latent rather than live. It becomes live the moment one
- * corporation has no `sharePrice` field at all. This module resolves the price
- * the market-facing way, once.
+ * The live wealth-list route and the persisted per-turn snapshot must agree,
+ * since `wealthChange24h` / `rankChange24h` compute against the snapshot;
+ * divergence silently makes the leaderboard disagree with its own change
+ * column. Price resolves the market-facing way via `getPublicShareQuote`.
  */
 
 /** Per-character valuation components, all in ₳. */
@@ -47,16 +41,67 @@ export function roundCurrency(value: number): number {
  * Σ share holdings per character, in ₳. A non-positive quote skips the holding
  * rather than valuing it at zero, so an unpriced corporation cannot drag a
  * portfolio down.
+ *
+ * `totalShares` is optional so direct-only fixtures stay valid; it is needed
+ * (and must be positive) only for a corporation whose stakes are looked through.
  */
 export type CorpWealthSlice = Pick<
   Corporation,
   "_id" | "sharePrice" | "shareholders" | "liquidCurrencyCode"
->;
+> &
+  Partial<Pick<Corporation, "totalShares">>;
 
 export type BondWealthSlice = Pick<
   Bond,
   "_id" | "holders" | "marketPrice" | "currencyCode" | "countryId"
 >;
+
+/** Fields a wealth loader must project so corporate stakes can be looked through. */
+export const CORP_WEALTH_PROJECTION = {
+  _id: 1,
+  sharePrice: 1,
+  shareholders: 1,
+  liquidCurrencyCode: 1,
+  totalShares: 1,
+} as const;
+
+/**
+ * Add every corporation a loaded corporation holds shares in (subsidiaries,
+ * and theirs in turn). Loaders only fetch corporations a character holds or
+ * runs, so a subsidiary held only by its parent would never be priced. A
+ * corporation's stake is recorded on the issuer's shareholders with the
+ * holder's corporationId. One query reads every corporation that has a
+ * corporate shareholder; the chain is then walked in memory, and it stops when
+ * a round adds nothing, so cycles terminate.
+ */
+export async function withHeldStakeIssuers(
+  db: Db,
+  corporations: readonly CorpWealthSlice[]
+): Promise<CorpWealthSlice[]> {
+  const byId = new Map<string, CorpWealthSlice>(corporations.map((c) => [c._id.toString(), c]));
+  const corporateHeld = await corporationsCollection(db)
+    .find(
+      { "shareholders.corporationId": { $exists: true } },
+      { projection: CORP_WEALTH_PROJECTION }
+    )
+    .toArray();
+  let holders = new Set<string>(byId.keys());
+  while (holders.size > 0) {
+    const next = new Set<string>();
+    for (const issuer of corporateHeld) {
+      const id = issuer._id.toString();
+      if (byId.has(id)) continue;
+      const heldByWalked = (issuer.shareholders ?? []).some(
+        (sh) => sh.corporationId && holders.has(sh.corporationId.toString())
+      );
+      if (!heldByWalked) continue;
+      byId.set(id, issuer);
+      next.add(id);
+    }
+    holders = next;
+  }
+  return [...byId.values()];
+}
 
 export function sumStockValueByCharacter(
   corporations: readonly CorpWealthSlice[],
@@ -69,11 +114,95 @@ export function sumStockValueByCharacter(
     if (price <= 0) continue;
     const corpFxRate = fxRateForCorpFromMap(corp, fxByCurrency);
     for (const sh of corp.shareholders ?? []) {
-      if (!sh.characterId) continue;
+      if (sh.shares <= 0 || !sh.characterId) continue;
       const charId = sh.characterId.toString();
-      if (!characterIdSet.has(charId) || sh.shares <= 0) continue;
+      if (!characterIdSet.has(charId)) continue;
       const holdingValue = corpLiquidCapitalToAnchor(sh.shares * price, corp, corpFxRate);
       byCharId.set(charId, (byCharId.get(charId) ?? 0) + holdingValue);
+    }
+  }
+  for (const [charId, value] of sumLookThroughStockValueByCharacter(
+    corporations,
+    characterIdSet,
+    fxByCurrency
+  )) {
+    byCharId.set(charId, (byCharId.get(charId) ?? 0) + value);
+  }
+  return byCharId;
+}
+
+/**
+ * ₳ value of the shares a character's corporations hold in other corporations,
+ * per character: each holder corporation's stakes (and what those issuers hold
+ * in turn) valued at the issuer's share price, scaled by the character's share
+ * of the holder. Direct holdings are NOT included; add this to the direct sum.
+ * This is the single look-through rule, used by the wealth ranking and by the
+ * per-turn portfolio history so the two cannot disagree.
+ *
+ * `corporations` must contain every holder and every issuer in the chain (see
+ * `withHeldStakeIssuers`), and each holder needs `totalShares`.
+ */
+export function sumLookThroughStockValueByCharacter(
+  corporations: readonly CorpWealthSlice[],
+  characterIdSet: ReadonlySet<string>,
+  fxByCurrency: ReadonlyMap<CurrencyCode, number>
+): Map<string, number> {
+  const byCharId = new Map<string, number>();
+  const byId = new Map(corporations.map((c) => [c._id.toString(), c]));
+  // Stakes by holding corporation: the issuer's shareholder row names the holder.
+  const stakesByHolder = new Map<string, { issuer: CorpWealthSlice; shares: number }[]>();
+  for (const corp of corporations) {
+    if (getPublicShareQuote(corp) <= 0) continue;
+    for (const sh of corp.shareholders ?? []) {
+      if (sh.shares <= 0 || !sh.corporationId) continue;
+      const holderId = sh.corporationId.toString();
+      const list = stakesByHolder.get(holderId) ?? [];
+      list.push({ issuer: corp, shares: sh.shares });
+      stakesByHolder.set(holderId, list);
+    }
+  }
+  if (stakesByHolder.size === 0) return byCharId;
+
+  // ₳ value of everything a corporation owns in other corporations, including
+  // what those corporations own in turn, at each issuer's share price.
+  // shortcut: a cycle's memoised value depends on where the walk entered it; fine
+  // for a ranking, upgrade if cross-holding loops become common.
+  const memo = new Map<string, number>();
+  const visiting = new Set<string>();
+  const heldStakeValue = (holderId: string): number => {
+    const cached = memo.get(holderId);
+    if (cached !== undefined) return cached;
+    if (visiting.has(holderId)) return 0;
+    visiting.add(holderId);
+    let total = 0;
+    for (const { issuer, shares } of stakesByHolder.get(holderId) ?? []) {
+      const price = getPublicShareQuote(issuer);
+      if (price <= 0) continue;
+      total += corpLiquidCapitalToAnchor(
+        shares * price,
+        issuer,
+        fxRateForCorpFromMap(issuer, fxByCurrency)
+      );
+      const issuerShares = issuer.totalShares ?? 0;
+      if (issuerShares > 0) {
+        total += (shares / issuerShares) * heldStakeValue(issuer._id.toString());
+      }
+    }
+    visiting.delete(holderId);
+    memo.set(holderId, total);
+    return total;
+  };
+
+  for (const [holderId, holder] of byId) {
+    const holderShares = holder.totalShares ?? 0;
+    if (holderShares <= 0 || !stakesByHolder.has(holderId)) continue;
+    const lookThrough = heldStakeValue(holderId);
+    if (lookThrough <= 0) continue;
+    for (const sh of holder.shareholders ?? []) {
+      if (!sh.characterId || sh.shares <= 0) continue;
+      const charId = sh.characterId.toString();
+      if (!characterIdSet.has(charId)) continue;
+      byCharId.set(charId, (byCharId.get(charId) ?? 0) + (sh.shares / holderShares) * lookThrough);
     }
   }
   return byCharId;
@@ -147,8 +276,9 @@ export async function loadFundValueByCharacter(
   characterIdSet: ReadonlySet<string>
 ): Promise<Map<string, number>> {
   if (characterIds.length === 0) return new Map();
-  const positions = await db
-    .collection<FundPositionSlice & { holderKind: string }>("indexFundPositions")
+  const positions = await indexFundPositionsCollection<FundPositionSlice & { holderKind: string }>(
+    db
+  )
     .find(
       { holderKind: "character", characterId: { $in: [...characterIds] }, units: { $gt: 0 } },
       { projection: { fundId: 1, characterId: 1, units: 1 } }
@@ -156,8 +286,7 @@ export async function loadFundValueByCharacter(
     .toArray();
   if (positions.length === 0) return new Map();
   const fundIds = [...new Map(positions.map((p) => [p.fundId.toString(), p.fundId])).values()];
-  const funds = await db
-    .collection<{ _id: ObjectId; quotedNav?: number }>("indexFunds")
+  const funds = await indexFundsCollection<{ _id: ObjectId; quotedNav?: number }>(db)
     .find({ _id: { $in: fundIds } }, { projection: { quotedNav: 1 } })
     .toArray();
   const navByFundId = new Map(funds.map((f) => [f._id.toString(), f.quotedNav ?? 0]));

@@ -16,8 +16,8 @@ vi.mock("@/lib/api/requestLog", () => ({ logRequest: vi.fn() }));
 vi.mock("@/lib/utils/statePartyElectionValidation", () => ({
   validateStatePartyElectionAccess: vi.fn(),
 }));
-vi.mock("@/lib/statePartyElections", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/lib/statePartyElections")>();
+vi.mock("@/lib/elections/party/statePartyElections", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/elections/party/statePartyElections")>();
   return { ...actual, notifyCandidacyDeclared: vi.fn() };
 });
 vi.mock("@/lib/time/gameTime", () => ({

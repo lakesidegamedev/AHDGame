@@ -9,20 +9,18 @@
  * Auto-install NPP caretakers on corporations left CEO-less by a HARD DEPARTURE.
  *
  * When a human CEO retires, relocates, resigns, loses residency, is deleted, or
- * is evicted as a banned shareholder, those paths set `ceoVacant: true`. Nothing
- * previously installed a replacement, so the corp bled 10%/turn of its sectors to
- * the unowned pool (`vacantCeoSectorShed`) until it was hollowed out — the
- * "placeholder CEO doesn't work" players reported.
+ * is evicted as a banned shareholder, those paths set `ceoVacant: true`. Without
+ * a replacement the corp bleeds 10%/turn of its sectors to the unowned pool
+ * (`vacantCeoSectorShed`) until hollowed out.
  *
  * This pass runs each turn BEFORE the vacant/inactive sheds and installs a free
- * in-country NPP as operating CEO (`ceoType:"npp"`), so the corp runs through the
- * already-clamped NPP corp brain instead of dying. It is gated per country at
- * `nppAutonomyAtLeast(countryId, "v2")` — the same comingle tier that enables the
- * manual caretaker for player countries.
+ * in-country NPP as operating CEO (`ceoType:"npp"`), so the corp runs through
+ * the already-clamped NPP corp brain instead of dying. Gated per country at
+ * `nppAutonomyAtLeast(countryId, "v2")`.
  *
- * IMPORTANT — scope: only `ceoVacant` corps are covered. Mere CEO *inactivity*
- * never sets `ceoVacant` (it is handled separately by `inactiveCeoSectorShed`),
- * so a still-seated but idle CEO is deliberately NOT auto-caretaken here.
+ * Scope: only `ceoVacant` corps. Mere CEO *inactivity* never sets `ceoVacant`
+ * (handled by `inactiveCeoSectorShed`), so an idle-but-seated CEO is NOT
+ * auto-caretaken here.
  */
 
 import type { Db } from "mongodb";

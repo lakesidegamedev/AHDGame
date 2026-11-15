@@ -86,11 +86,53 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+it("does not call a mixed funded shortage oversupply when conservative sizing is zero", () => {
+  renderDialog(vi.fn(), {
+    ...plants,
+    measuredDemandGapUnits: 0,
+    buildDemandTurn: 778,
+    buildDemand: [
+      { commodity: "network_services", scope: "national", funded: 100, delivered: 0, unmet: 100 },
+      { commodity: "software", scope: "national", funded: 3, delivered: 3, unmet: 0 },
+    ],
+  });
+  expect(screen.getByText(/Funded buyers remain unfilled/)).toBeTruthy();
+  expect(screen.queryByText(/buyers are already taking all they need/)).toBeNull();
+});
+
 it("shows fluctuation and idle-capacity warnings even when an order fits today's estimate", () => {
   renderDialog();
   expect(screen.getByText("Demand today is not guaranteed sales tomorrow")).toBeTruthy();
   expect(screen.getByText(/Existing idle or parked plants may restart first/)).toBeTruthy();
   expect(screen.getByText(/not demand reserved for your company/)).toBeTruthy();
+});
+
+it("does not cap funded building counts by the retired unclaimed-share pool", () => {
+  const size = plantSizeUnits("telecommunications");
+  renderDialog(
+    vi.fn(),
+    {
+      ...plants,
+      headroomUnits: 0,
+      measuredDemandGapUnits: size * 4,
+      buildDemand: [
+        {
+          commodity: "network_services",
+          scope: "national",
+          funded: 100,
+          delivered: 0,
+          unmet: 100,
+          capacityUnits: size * 4,
+        },
+      ],
+    },
+    "telecommunications"
+  );
+  expect(screen.getByText("Room with buyers for every output: 4 buildings")).toBeTruthy();
+  expect(screen.queryByText(/share is fully claimed/i)).toBeNull();
+  const pane = screen.getByRole("region", { name: "Funded buyer demand" }).parentElement;
+  expect(pane?.className).toContain("overscroll-contain");
+  expect(document.body.style.overflow).toBe("hidden");
 });
 
 describe("BuildCapacityDialog plant size", () => {

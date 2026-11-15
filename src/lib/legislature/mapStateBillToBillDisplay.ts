@@ -39,8 +39,8 @@ export function mapStateBillToBillDisplay(
       effectTargetLabel: p.effectTargetsWeighted?.[0]?.metricId
         ? `${p.legislationTypeName ?? "Policy"}: ${p.effectTargetsWeighted[0].metricId}`
         : undefined,
-      economic: undefined,
-      social: undefined,
+      economic: p.economic,
+      social: p.social,
     })) ?? undefined;
 
   const nowForCheck = new Date();

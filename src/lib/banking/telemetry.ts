@@ -15,6 +15,7 @@
 import * as Sentry from "@sentry/nextjs";
 import { AsyncLocalStorage } from "node:async_hooks";
 import type { Db } from "mongodb";
+import { bankingTelemetryCollection } from "@/lib/db/repositories/bankingTelemetry";
 
 export const BANKING_TELEMETRY_COLLECTION = "bankingTelemetry";
 
@@ -99,13 +100,11 @@ function flushBatch(batch: BankingTelemetryBatch): void {
   if (Object.keys(increments).length === 0) return;
   swallow(
     () =>
-      batch.db
-        .collection<BankingTelemetryDoc>(BANKING_TELEMETRY_COLLECTION)
-        .updateOne(
-          { _id: batch.turn },
-          { $inc: increments, $set: { updatedAt: new Date() } },
-          { upsert: true }
-        ),
+      bankingTelemetryCollection<BankingTelemetryDoc>(batch.db).updateOne(
+        { _id: batch.turn },
+        { $inc: increments, $set: { updatedAt: new Date() } },
+        { upsert: true }
+      ),
     "bankingTelemetry.batch"
   );
 }
@@ -136,13 +135,11 @@ export function countBankingEvent(db: Db, turn: number, counter: BankingCounter,
   if (addToCurrentBatch(db, turn, `counters.${counter}`, by)) return;
   swallow(
     () =>
-      db
-        .collection<BankingTelemetryDoc>(BANKING_TELEMETRY_COLLECTION)
-        .updateOne(
-          { _id: turn },
-          { $inc: { [`counters.${counter}`]: by }, $set: { updatedAt: new Date() } },
-          { upsert: true }
-        ),
+      bankingTelemetryCollection<BankingTelemetryDoc>(db).updateOne(
+        { _id: turn },
+        { $inc: { [`counters.${counter}`]: by }, $set: { updatedAt: new Date() } },
+        { upsert: true }
+      ),
     "bankingTelemetry.count"
   );
 }
@@ -156,7 +153,7 @@ export function recordBankingStage(db: Db, turn: number, stage: BankingStage, ms
   if (batchedMs && batchedRuns) return;
   swallow(
     () =>
-      db.collection<BankingTelemetryDoc>(BANKING_TELEMETRY_COLLECTION).updateOne(
+      bankingTelemetryCollection<BankingTelemetryDoc>(db).updateOne(
         { _id: turn },
         {
           $inc: { [`stageMs.${stage}`]: roundedMs, [`stageRuns.${stage}`]: 1 },
@@ -188,8 +185,7 @@ export async function timedBankingStage<T>(
 
 /** The telemetry documents for the most recent `turns` turns, newest first. */
 export async function loadBankingTelemetry(db: Db, turns = 12): Promise<BankingTelemetryDoc[]> {
-  return db
-    .collection<BankingTelemetryDoc>(BANKING_TELEMETRY_COLLECTION)
+  return bankingTelemetryCollection<BankingTelemetryDoc>(db)
     .find({})
     .sort({ _id: -1 })
     .limit(Math.max(1, turns))

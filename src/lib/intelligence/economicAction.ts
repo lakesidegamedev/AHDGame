@@ -1,7 +1,7 @@
 import type { Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
-import type { Corporation } from "@/lib/db/types/corporation";
 import { BOOKS_EXPOSED_TURNS } from "./config";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export interface EconomicActionResult {
   corporationsExposed: number;
@@ -32,7 +32,7 @@ export async function applyEconomicAction(
 ): Promise<EconomicActionResult> {
   // Accessed directly, matching every other corporations caller in the repo:
   // there is no getter module for this collection.
-  const corporations = db.collection<Corporation>("corporations");
+  const corporations = corporationsCollection(db);
   const target = await corporations
     .find({ countryId: targetCountryId, isPrivate: { $ne: true } })
     .sort({ liquidCapital: -1 })

@@ -4,12 +4,10 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { requireBasicAuth } from "@/lib/api/requireAuth";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { resolveCorporation, requireCeo } from "@/lib/api/corporations/resolveQuery";
-import {
-  MANUFACTURING_PRODUCT_PROJECTS_V2,
-  type ManufacturingProductProject,
-} from "@/lib/products/manufacturingProject";
+import { type ManufacturingProductProject } from "@/lib/products/manufacturingProject";
 import { marketAtLeast, getMarketSystemMode } from "@/lib/market/featureFlag";
-import type { GameConfig } from "@/lib/db/types/gameConfig";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { manufacturingProductProjectsV2Collection } from "@/lib/db/repositories/manufacturingProductProjectsV2";
 
 interface RouteParams {
   params: Promise<{ id: string; projectId: string }>;
@@ -32,31 +30,29 @@ export async function POST(_request: Request, { params }: RouteParams) {
     const corporation = resolved.corporation;
     const ceoError = requireCeo(corporation, auth.user.userId);
     if (ceoError) return ceoError;
-    const config = await db
-      .collection<GameConfig>("gameConfig")
-      .findOne(
-        { _id: "default" },
-        { projection: { marketSystemMode: 1, productLinesV2Enabled: 1 } }
-      );
+    const config = await gameConfigCollection(db).findOne(
+      { _id: "default" },
+      { projection: { marketSystemMode: 1, productLinesV2Enabled: 1 } }
+    );
     if (
       config?.productLinesV2Enabled !== true ||
       !marketAtLeast(await getMarketSystemMode(config), "plants")
     ) {
       return errorResponse(409, "Manufacturing product lines are not enabled");
     }
-    const result = await db
-      .collection<ManufacturingProductProject>(MANUFACTURING_PRODUCT_PROJECTS_V2)
-      .updateOne(
-        {
-          _id: projectId,
-          corporationId: corporation._id.toString(),
-          activeCorporationId: corporation._id.toString(),
-        },
-        {
-          $set: { stage: "retired" },
-          $unset: { activeCorporationId: "" },
-        }
-      );
+    const result = await manufacturingProductProjectsV2Collection<ManufacturingProductProject>(
+      db
+    ).updateOne(
+      {
+        _id: projectId,
+        corporationId: corporation._id.toString(),
+        activeCorporationId: corporation._id.toString(),
+      },
+      {
+        $set: { stage: "retired" },
+        $unset: { activeCorporationId: "" },
+      }
+    );
     if (result.matchedCount === 0) {
       return errorResponse(404, "Active product project not found");
     }

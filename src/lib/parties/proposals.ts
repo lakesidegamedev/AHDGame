@@ -1,11 +1,10 @@
-import type { AnyBulkWriteOperation, Db, ObjectId } from "mongodb";
+import type { AnyBulkWriteOperation, Db, Document, ObjectId } from "mongodb";
 import type {
   CommitteeProposal,
   CommitteeProposalVote,
   PositionShiftAxis,
 } from "@/lib/db/types/committeeProposal";
 import type {
-  Character,
   NationalCommitteeElection,
   NationalPartyElection,
   NationalPartyVote,
@@ -25,6 +24,7 @@ import { selectMergeNppCull } from "@/lib/npp/mergeNppCap";
 import { selectNationalMergeNppCull } from "@/lib/npp/rules/mergeNationalCap";
 import { getPartyNppCapacity } from "@/lib/npp/partyCapacity";
 import { notifyGovernorOfSenateVacancy } from "@/lib/governors/senateVacancy";
+import { applyOptionalCountryScope } from "@/lib/elections/party/nationalPartyElectionScope";
 import {
   deriveOrganizationShares,
   resolveOrganizationUnits,
@@ -34,21 +34,32 @@ import {
   POSITION_SHIFT_COOLDOWN_TURNS,
   PROPOSAL_COOLDOWN_TURNS,
 } from "./proposalConstants";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
+import { nationalPartyElectionsCollection } from "@/lib/db/repositories/nationalPartyElections";
+import { nationalPartyVotesCollection } from "@/lib/db/repositories/nationalPartyVotes";
+import { nationalCommitteeElectionsCollection } from "@/lib/db/repositories/nationalCommitteeElections";
+import { stateRegistrationPoolCollection } from "@/lib/db/repositories/stateRegistrationPool";
+import { committeeProposalsCollection } from "@/lib/db/repositories/committeeProposals";
 
 // ─── Pure helpers ────────────────────────────────────────────────────────────
 
 /**
- * Given vote counts and committee size, returns whether the proposal
- * has passed, been rejected, or is still open.
+ * Given vote counts and committee size, returns whether the proposal has
+ * passed, been rejected, or is still open.
  *
- * Per the 2026-05-22 amendments-via-CommitteeProposal redesign:
- *   - Pass requires `yes >= ceil(REQUIRED_YES_FRACTION * committeeSize)`
+ *   - Pass requires `yes >= ceil(REQUIRED_YES_FRACTION * committeeSize)`,
  *     where committeeSize counts only FILLED voter-set slots.
- *   - Reject early when the remaining un-voted slots cannot lift `yes`
- *     to the threshold even if every undecided voter votes yes.
- *   - On `expired: true`, abstainers are treated as nay — the final
- *     verdict is `passed` iff `yesCount >= yesNeeded`, otherwise
- *     `rejected`.
+ *   - Reject early when remaining un-voted slots cannot lift `yes` to the
+ *     threshold even if every undecided voter votes yes.
+ *   - On `expired: true`, abstainers count as nay: `passed` iff
+ *     `yesCount >= yesNeeded`, otherwise `rejected`.
  */
 export function checkResolution(
   yesCount: number,
@@ -91,7 +102,7 @@ export function getEligibleVoterSet(party: PoliticalParty): Set<string> {
 
 async function applyRenameEffect(db: Db, proposal: CommitteeProposal): Promise<void> {
   if (!proposal.rename) throw new Error("Not a rename proposal");
-  await db.collection<PoliticalParty>("politicalParties").updateOne(
+  await politicalPartiesCollection(db).updateOne(
     { _id: proposal.partyId },
     {
       $set: {
@@ -107,7 +118,7 @@ async function applyRenameEffect(db: Db, proposal: CommitteeProposal): Promise<v
  * Maps a `positionShift.axis` value to the field name on
  * `PoliticalParty` that stores the current position. Only the two axes
  * the engines read are mappable; `foreignPolicy` / `culture` were
- * retired in ticket #1032 and have no field left to write.
+ * retired in and have no field left to write.
  */
 const POSITION_SHIFT_FIELD_BY_AXIS = {
   economic: "economicPosition",
@@ -122,13 +133,13 @@ function isLiveAxis(axis: string): axis is PositionShiftAxis {
 export async function applyPositionShiftEffect(db: Db, proposal: CommitteeProposal): Promise<void> {
   if (!proposal.positionShift) throw new Error("Not a positionShift proposal");
   const { axis, direction } = proposal.positionShift;
-  // Retired axes (ticket #1032) can no longer be proposed, but a proposal
-  // created before the retirement could still be sitting open. There is no
-  // field left to move, so treat it as a no-op rather than throwing and
-  // wedging the proposal-resolution phase for the whole party.
+  // Retired axes can no longer be proposed, but a proposal created before
+  // the retirement could still be open. There is no field left to move, so
+  // treat it as a no-op rather than throwing and wedging the
+  // proposal-resolution phase for the whole party.
   if (!isLiveAxis(axis)) return;
   const field = POSITION_SHIFT_FIELD_BY_AXIS[axis];
-  const party = await db.collection<PoliticalParty>("politicalParties").findOne(
+  const party = await politicalPartiesCollection(db).findOne(
     { _id: proposal.partyId },
     {
       projection: {
@@ -139,7 +150,7 @@ export async function applyPositionShiftEffect(db: Db, proposal: CommitteePropos
   );
   if (!party) throw new Error("Party not found");
   // Recover from rows where a prior buggy applyPositionShiftEffect wrote NaN
-  // (pre-2026-05-22 redesign would compute `clampPosition(undefined, 1)
+  // (an earlier redesign would compute `clampPosition(undefined, 1)
   // = NaN` and persist it). Without the `Number.isFinite` guard, every
   // subsequent positionShift on the same axis would re-read NaN, compute
   // NaN, and re-write NaN — the proposal "passed" but the visible
@@ -148,9 +159,10 @@ export async function applyPositionShiftEffect(db: Db, proposal: CommitteePropos
   const currentRaw = party[field];
   const current = typeof currentRaw === "number" && Number.isFinite(currentRaw) ? currentRaw : 0;
   const newValue = clampPosition(current, direction);
-  await db
-    .collection<PoliticalParty>("politicalParties")
-    .updateOne({ _id: proposal.partyId }, { $set: { [field]: newValue, updatedAt: new Date() } });
+  await politicalPartiesCollection(db).updateOne(
+    { _id: proposal.partyId },
+    { $set: { [field]: newValue, updatedAt: new Date() } }
+  );
 }
 
 export async function applyElectionMethodEffect(
@@ -158,7 +170,7 @@ export async function applyElectionMethodEffect(
   proposal: CommitteeProposal
 ): Promise<void> {
   if (!proposal.electionMethod) throw new Error("Not an electionMethod proposal");
-  const parties = db.collection<PoliticalParty>("politicalParties");
+  const parties = politicalPartiesCollection(db);
   const party = await parties.findOne(
     { _id: proposal.partyId },
     { projection: { sequentialId: 1, countryId: 1 } }
@@ -182,15 +194,13 @@ export async function applyElectionMethodEffect(
 
   const partyId = String(party.sequentialId);
   const countryId = party.countryId ?? "US";
-  const activeElections = await db
-    .collection<NationalPartyElection>("nationalPartyElections")
+  const activeElections = await nationalPartyElectionsCollection(db)
     .find({ partyId, countryId, status: "voting" })
     .toArray();
   if (activeElections.length === 0) return;
 
   const electionIds = activeElections.map((election) => election._id);
-  const votes = await db
-    .collection<NationalPartyVote>("nationalPartyVotes")
+  const votes = await nationalPartyVotesCollection(db)
     .find({
       electionId: { $in: electionIds },
       voterPartyInfluence: { $exists: false },
@@ -201,8 +211,7 @@ export async function applyElectionMethodEffect(
   const voterIds = [
     ...new Map(votes.map((vote) => [vote.voterId.toString(), vote.voterId])).values(),
   ];
-  const voters = await db
-    .collection<Character>("characters")
+  const voters = await charactersCollection(db)
     .find({ _id: { $in: voterIds } }, { projection: { partyInfluence: 1 } })
     .toArray();
   const influenceByVoter = new Map(
@@ -214,7 +223,7 @@ export async function applyElectionMethodEffect(
     ])
   );
 
-  await db.collection<NationalPartyVote>("nationalPartyVotes").bulkWrite(
+  await nationalPartyVotesCollection(db).bulkWrite(
     votes.map((vote) => ({
       updateOne: {
         filter: {
@@ -241,18 +250,17 @@ export async function applyElectionDurationEffect(
   // 1. Persist the custom duration on the party doc — controls FUTURE
   //    election spawns in createMissingNationalElections /
   //    createMissingCommitteeElections.
-  await db
-    .collection<PoliticalParty>("politicalParties")
-    .updateOne(
-      { _id: proposal.partyId },
-      { $set: { customElectionDurationTurns: newDurationTurns, updatedAt: now } }
-    );
+  await politicalPartiesCollection(db).updateOne(
+    { _id: proposal.partyId },
+    { $set: { customElectionDurationTurns: newDurationTurns, updatedAt: now } }
+  );
 
   // 2. Look up the party so we can scope election queries by
   //    sequentialId + countryId — that's the shape election rows store.
-  const party = await db
-    .collection<PoliticalParty>("politicalParties")
-    .findOne({ _id: proposal.partyId }, { projection: { sequentialId: 1, countryId: 1 } });
+  const party = await politicalPartiesCollection(db).findOne(
+    { _id: proposal.partyId },
+    { projection: { sequentialId: 1, countryId: 1 } }
+  );
   if (!party || party.sequentialId === undefined) return;
   const partyKey = String(party.sequentialId);
   const countryKey = party.countryId ?? "US";
@@ -264,8 +272,7 @@ export async function applyElectionDurationEffect(
   //    startTurn / startTime preserves candidacies and votes; only the
   //    close-time moves. Skip rows where the new duration would close
   //    the election immediately (shrink guard).
-  const officerRows = await db
-    .collection<NationalPartyElection>("nationalPartyElections")
+  const officerRows = await nationalPartyElectionsCollection(db)
     .find({ partyId: partyKey, countryId: countryKey, status: "voting" })
     .toArray();
 
@@ -294,12 +301,11 @@ export async function applyElectionDurationEffect(
     ];
   });
   if (officerOps.length > 0) {
-    await db.collection<NationalPartyElection>("nationalPartyElections").bulkWrite(officerOps);
+    await nationalPartyElectionsCollection(db).bulkWrite(officerOps);
   }
 
   // 5. Stretch in-flight committee elections with identical logic.
-  const committeeRows = await db
-    .collection<NationalCommitteeElection>("nationalCommitteeElections")
+  const committeeRows = await nationalCommitteeElectionsCollection(db)
     .find({ partyId: partyKey, countryId: countryKey, status: "voting" })
     .toArray();
 
@@ -328,17 +334,14 @@ export async function applyElectionDurationEffect(
     ];
   });
   if (committeeOps.length > 0) {
-    await db
-      .collection<NationalCommitteeElection>("nationalCommitteeElections")
-      .bulkWrite(committeeOps);
+    await nationalCommitteeElectionsCollection(db).bulkWrite(committeeOps);
   }
 }
 
 /**
- * Toggles `PoliticalParty.transactionApprovalMode` to the value carried
- * by the proposal. Used by the 2026-05-22 treasury-two-person-approval
- * workflow to switch a party between "single" (auto-approve) and
- * "double" (Treasurer + Chair/VC) modes.
+ * Sets `PoliticalParty.transactionApprovalMode` to the proposal's mode,
+ * switching a party between "single" (auto-approve) and "double"
+ * (Treasurer + Chair/VC) approval.
  */
 export async function applyTransactionApprovalModeEffect(
   db: Db,
@@ -347,7 +350,7 @@ export async function applyTransactionApprovalModeEffect(
   if (!proposal.transactionApprovalMode) {
     throw new Error("Not a transactionApprovalMode proposal");
   }
-  await db.collection<PoliticalParty>("politicalParties").updateOne(
+  await politicalPartiesCollection(db).updateOne(
     { _id: proposal.partyId },
     {
       $set: {
@@ -377,37 +380,31 @@ export async function applyRemoveOfficeHolderEffect(
   const now = new Date();
 
   if (role === "chair") {
-    await db
-      .collection<PoliticalParty>("politicalParties")
-      .updateOne(
-        { _id: proposal.partyId, chairId: targetCharacterId },
-        { $set: { chairId: null, updatedAt: now } }
-      );
+    await politicalPartiesCollection(db).updateOne(
+      { _id: proposal.partyId, chairId: targetCharacterId },
+      { $set: { chairId: null, updatedAt: now } }
+    );
     // Re-sync any coalitions this party leads — their stored chair-
     // character must follow the lead party's actual chairId or the
     // coalition page renders the removed character as chair.
     const { syncCoalitionChairsForParty } = await import("@/lib/coalitions/syncCoalitionChair");
     await syncCoalitionChairsForParty(db, proposal.partyId, now);
   } else if (role === "viceChair") {
-    await db
-      .collection<PoliticalParty>("politicalParties")
-      .updateOne(
-        { _id: proposal.partyId, viceChairId: targetCharacterId },
-        { $set: { viceChairId: null, updatedAt: now } }
-      );
+    await politicalPartiesCollection(db).updateOne(
+      { _id: proposal.partyId, viceChairId: targetCharacterId },
+      { $set: { viceChairId: null, updatedAt: now } }
+    );
   } else if (role === "treasurer") {
     // Vacate the treasurer seat. Unlike chair there is no coalition sync;
     // treasurerId: null is already a handled state (leave-party, admin
     // appointment, and banned-user cleanup all vacate it), and the chair
     // can re-appoint or a fresh election can refill it.
-    await db
-      .collection<PoliticalParty>("politicalParties")
-      .updateOne(
-        { _id: proposal.partyId, treasurerId: targetCharacterId },
-        { $set: { treasurerId: null, updatedAt: now } }
-      );
+    await politicalPartiesCollection(db).updateOne(
+      { _id: proposal.partyId, treasurerId: targetCharacterId },
+      { $set: { treasurerId: null, updatedAt: now } }
+    );
   } else if (role === "campaigner") {
-    await db.collection<PoliticalParty>("politicalParties").updateOne(
+    await politicalPartiesCollection(db).updateOne(
       { _id: proposal.partyId, campaignerIds: targetCharacterId },
       {
         $pull: { campaignerIds: targetCharacterId } as Record<string, unknown>,
@@ -416,7 +413,7 @@ export async function applyRemoveOfficeHolderEffect(
     );
   } else {
     // committeeMember
-    await db.collection<PoliticalParty>("politicalParties").updateOne(
+    await politicalPartiesCollection(db).updateOne(
       { _id: proposal.partyId, committeeIds: targetCharacterId },
       {
         $pull: { committeeIds: targetCharacterId } as Record<string, unknown>,
@@ -447,27 +444,26 @@ export async function applyCampaignerAppointmentEffect(
   if (!proposal.campaignerAppointment) throw new Error("Not a campaignerAppointment proposal");
   const { targetCharacterId } = proposal.campaignerAppointment;
 
-  const party = await db
-    .collection<PoliticalParty>("politicalParties")
-    .findOne(
-      { _id: proposal.partyId },
-      { projection: { campaignerIds: 1, sequentialId: 1, countryId: 1 } }
-    );
+  const party = await politicalPartiesCollection(db).findOne(
+    { _id: proposal.partyId },
+    { projection: { campaignerIds: 1, sequentialId: 1, countryId: 1 } }
+  );
   if (!party) return;
 
   const current = party.campaignerIds ?? [];
   if (current.some((id) => id.equals(targetCharacterId))) return;
   if (current.length >= MAX_NATIONAL_CAMPAIGNERS) return;
 
-  const character = await db
-    .collection<Character>("characters")
-    .findOne({ _id: targetCharacterId }, { projection: { party: 1, countryId: 1 } });
+  const character = await charactersCollection(db).findOne(
+    { _id: targetCharacterId },
+    { projection: { party: 1, countryId: 1 } }
+  );
   if (!character) return;
   if (character.party !== String(party.sequentialId) || character.countryId !== party.countryId) {
     return;
   }
 
-  await db.collection<PoliticalParty>("politicalParties").updateOne(
+  await politicalPartiesCollection(db).updateOne(
     { _id: proposal.partyId },
     {
       $addToSet: { campaignerIds: targetCharacterId } as Record<string, unknown>,
@@ -489,7 +485,7 @@ export async function applyCampaignerAppointmentEffect(
 export function isPositionShiftLocked(
   party: Pick<PoliticalParty, "positionShiftCooldowns">,
   // Only live axes can be proposed, so only they can be locked. Retired
-  // axes (ticket #1032) have no cooldown entry left to consult.
+  // axes have no cooldown entry left to consult.
   axis: PositionShiftAxis,
   currentTurn: number
 ): boolean {
@@ -524,8 +520,6 @@ export function isProposalTypeLocked(
  * affected axis; all other types lock their type-keyed cooldown. Called
  * from `attemptResolution` after the effect applies and before the
  * proposal is marked resolved.
- *
- * Per the 2026-05-22 amendments-via-CommitteeProposal redesign.
  */
 export async function setProposalCooldown(
   db: Db,
@@ -535,7 +529,7 @@ export async function setProposalCooldown(
   if (proposal.type === "positionShift") {
     const axis = proposal.positionShift?.axis;
     if (!axis) return;
-    await db.collection<PoliticalParty>("politicalParties").updateOne(
+    await politicalPartiesCollection(db).updateOne(
       { _id: proposal.partyId },
       {
         $set: {
@@ -550,7 +544,7 @@ export async function setProposalCooldown(
   // re-nominate the moment a slot opens (or a nomination is voted down).
   if (proposal.type === "campaignerAppointment") return;
   // rename / merge / electionMethod / electionDuration
-  await db.collection<PoliticalParty>("politicalParties").updateOne(
+  await politicalPartiesCollection(db).updateOne(
     { _id: proposal.partyId },
     {
       $set: {
@@ -569,12 +563,40 @@ export async function processMergeProposal(
   currentTurn: number
 ): Promise<void> {
   if (!proposal.merge) throw new Error("Not a merge proposal");
+  return mergePartyInto(db, proposal.partyId, proposal.merge.targetPartyId, currentTurn);
+}
 
+/** How a merger is admitted. Committee mergers use the defaults. */
+export interface MergePartyOptions {
+  /**
+   * Require live geographic contact and preserved territory. A party folded
+   * by party renewal joins its ideological neighbour wherever it sits.
+   */
+  requireAdjacency?: boolean;
+  /**
+   * Cull incoming NPPs over the per-region and national recruitment caps. A
+   * fold keeps every NPP so no seat-holder is deleted by the move.
+   */
+  enforceNppCap?: boolean;
+}
+
+/**
+ * Absorb `sourcePartyId` into `targetPartyId`: members, treasury, state org,
+ * NPPs, live candidacies, elected seats and coalition slots move to the
+ * target, and the source is marked defunct.
+ */
+export async function mergePartyInto(
+  db: Db,
+  sourcePartyId: ObjectId,
+  targetPartyId: ObjectId,
+  currentTurn: number,
+  options: MergePartyOptions = {}
+): Promise<void> {
+  const requireAdjacency = options.requireAdjacency !== false;
+  const enforceNppCap = options.enforceNppCap !== false;
   const [proposingParty, targetParty] = await Promise.all([
-    db.collection<PoliticalParty>("politicalParties").findOne({ _id: proposal.partyId }),
-    db
-      .collection<PoliticalParty>("politicalParties")
-      .findOne({ _id: proposal.merge.targetPartyId }),
+    politicalPartiesCollection(db).findOne({ _id: sourcePartyId }),
+    politicalPartiesCollection(db).findOne({ _id: targetPartyId }),
   ]);
   if (!proposingParty) throw new Error("Proposing party not found");
   if (!targetParty) throw new Error("Target party not found");
@@ -588,18 +610,23 @@ export async function processMergeProposal(
       // Another merger may have completed between the initial lookup and claim.
       // Use fresh party status, balances and membership after admission.
       const [proposingParty, targetParty] = await Promise.all([
-        db.collection<PoliticalParty>("politicalParties").findOne({ _id: proposal.partyId }),
-        db
-          .collection<PoliticalParty>("politicalParties")
-          .findOne({ _id: proposal.merge!.targetPartyId }),
+        politicalPartiesCollection(db).findOne({ _id: sourcePartyId }),
+        politicalPartiesCollection(db).findOne({ _id: targetPartyId }),
       ]);
-      if (!proposingParty || !targetParty) {
+      if (
+        !proposingParty ||
+        !targetParty ||
+        proposingParty._id.equals(targetParty._id) ||
+        proposingParty.isDefunct ||
+        targetParty.isDefunct ||
+        proposingParty.countryId !== targetParty.countryId
+      ) {
         throw new MergeEligibilityError(
           "A merger requires two active parties in the same country."
         );
       }
       // Check before moving anyone: incoming members must not validate their own merger.
-      await assertMergeEligibility(db, proposingParty, targetParty);
+      if (requireAdjacency) await assertMergeEligibility(db, proposingParty, targetParty);
 
       const proposingStrId = String(proposingParty.sequentialId);
       const targetStrId = String(targetParty.sequentialId);
@@ -608,14 +635,13 @@ export async function processMergeProposal(
 
       // Captured before step 1 re-points them: their live candidacies move in 4d.
       const absorbedCharacterIds = (
-        await db
-          .collection("characters")
+        await charactersCollection(db)
           .find({ party: proposingStrId, countryId }, { projection: { _id: 1 } })
           .toArray()
       ).map((c) => c._id as ObjectId);
 
       // 1. Transfer characters — move party membership, halve partyInfluence
-      await db.collection("characters").updateMany({ party: proposingStrId, countryId }, [
+      await charactersCollection(db).updateMany({ party: proposingStrId, countryId }, [
         {
           $set: {
             party: targetStrId,
@@ -636,18 +662,16 @@ export async function processMergeProposal(
 
       // 3. Transfer national treasury
       if (proposingParty.treasury > 0) {
-        await db
-          .collection<PoliticalParty>("politicalParties")
-          .updateOne(
-            { _id: targetParty._id },
-            { $inc: { treasury: proposingParty.treasury }, $set: { updatedAt: now } }
-          );
+        await politicalPartiesCollection(db).updateOne(
+          { _id: targetParty._id },
+          { $inc: { treasury: proposingParty.treasury }, $set: { updatedAt: now } }
+        );
       }
 
       // 4. Merge state org. Organization percentages are cached bucket shares, so
       // transfer half of the absorbed party's durable units rather than mutating
       // the percentage directly.
-      const statePartyOrgCol = db.collection<StatePartyOrg>("statePartyOrg");
+      const statePartyOrgCol = statePartyOrgCollection(db);
       const proposingOrgs = await statePartyOrgCol
         .find({ partyId: proposingStrId, countryId })
         .toArray();
@@ -746,16 +770,25 @@ export async function processMergeProposal(
       //     0..100 reg invariant is preserved (the merged party's lean is lost, not
       //     inherited), then delete the rows so the defunct party stops surfacing in
       //     state Org/Reg views.
-      for (const org of proposingOrgs) {
-        const reg = typeof org.registration === "number" ? org.registration : 0;
-        if (reg > 0) {
-          await db
-            .collection<StateRegistrationPool>("stateRegistrationPool")
-            .updateOne(
-              { _id: `${countryId}_${org.stateId}` },
-              { $inc: { unregistered: reg }, $set: { updatedAt: now } }
-            );
+      const registrationReleases = proposingOrgs.flatMap(
+        (org): AnyBulkWriteOperation<StateRegistrationPool>[] => {
+          const reg = typeof org.registration === "number" ? org.registration : 0;
+          return reg > 0
+            ? [
+                {
+                  updateOne: {
+                    filter: { _id: `${countryId}_${org.stateId}` },
+                    update: { $inc: { unregistered: reg }, $set: { updatedAt: now } },
+                  },
+                },
+              ]
+            : [];
         }
+      );
+      if (registrationReleases.length > 0) {
+        await stateRegistrationPoolCollection(db).bulkWrite(registrationReleases, {
+          ordered: false,
+        });
       }
       await statePartyOrgCol.deleteMany({ partyId: proposingStrId, countryId });
 
@@ -812,83 +845,83 @@ export async function processMergeProposal(
       //     are hard-deleted so a merge can't stack a region past the limit a fresh
       //     recruit would face. Retired NPPs carry no cap weight and always re-point
       //     to the target for historical continuity.
-      const proposingActiveNpps = await db
-        .collection<NPP>("npps")
+      const proposingActiveNpps = await nppsCollection(db)
         .find(
           { party: proposingStrId, countryId, retiredAt: null },
           { projection: { homeState: 1, politicalInfluence: 1, favorability: 1 } }
         )
         .toArray();
 
-      // Surviving party's POST-merge org per state (re-read after step 4 merged it).
-      const targetOrgs = await db
-        .collection<StatePartyOrg>("statePartyOrg")
-        .find({ partyId: targetStrId, countryId })
-        .toArray();
-      const targetOrgByState = new Map<string, number>(
-        targetOrgs.map((o) => [o.stateId, o.organization ?? 0])
-      );
-
-      // Surviving party's existing active NPP count per state — these consume slots
-      // before any incoming NPP does.
-      const targetActiveNpps = await db
-        .collection<NPP>("npps")
-        .find({ party: targetStrId, countryId, retiredAt: null }, { projection: { homeState: 1 } })
-        .toArray();
-      const targetActiveCountByState = new Map<string, number>();
-      for (const n of targetActiveNpps) {
-        targetActiveCountByState.set(
-          n.homeState,
-          (targetActiveCountByState.get(n.homeState) ?? 0) + 1
+      const selectCull = async (): Promise<ObjectId[]> => {
+        // Surviving party's POST-merge org per state (re-read after step 4 merged it).
+        const targetOrgs = await statePartyOrgCollection(db)
+          .find({ partyId: targetStrId, countryId })
+          .toArray();
+        const targetOrgByState = new Map<string, number>(
+          targetOrgs.map((o) => [o.stateId, o.organization ?? 0])
         );
-      }
 
-      const { keep, cull } = selectMergeNppCull({
-        proposingNpps: proposingActiveNpps,
-        targetActiveCountByState,
-        targetOrgByState,
-      });
-      // Members have already moved in step 1, so this counts the combined party's
-      // distinct, non-banned active players at resolution, not at proposal time.
-      const { maxNpps } = await getPartyNppCapacity(db, countryId, targetStrId, now);
-      const toRank = (n: NPP) => ({
-        id: n._id.toString(),
-        politicalInfluence: n.politicalInfluence,
-        favorability: n.favorability,
-      });
-      const nationalCull = new Set(
-        selectNationalMergeNppCull({
-          survivingNpps: targetActiveNpps.map((n) => ({ id: n._id.toString() })),
-          incomingNpps: keep.map(toRank),
-          maxNpps,
-        })
-      );
-      const cullIds = [
-        ...cull.map((n) => n._id),
-        ...keep.filter((n) => nationalCull.has(n._id.toString())).map((n) => n._id),
-      ];
+        // Surviving party's existing active NPP count per state — these consume slots
+        // before any incoming NPP does.
+        const targetActiveNpps = await nppsCollection(db)
+          .find(
+            { party: targetStrId, countryId, retiredAt: null },
+            { projection: { homeState: 1 } }
+          )
+          .toArray();
+        const targetActiveCountByState = new Map<string, number>();
+        for (const n of targetActiveNpps) {
+          targetActiveCountByState.set(
+            n.homeState,
+            (targetActiveCountByState.get(n.homeState) ?? 0) + 1
+          );
+        }
+
+        const { keep, cull } = selectMergeNppCull({
+          proposingNpps: proposingActiveNpps,
+          targetActiveCountByState,
+          targetOrgByState,
+        });
+        // Members have already moved in step 1, so this counts the combined party's
+        // distinct, non-banned active players at resolution, not at proposal time.
+        const { maxNpps } = await getPartyNppCapacity(db, countryId, targetStrId, now);
+        const toRank = (n: NPP) => ({
+          id: n._id.toString(),
+          politicalInfluence: n.politicalInfluence,
+          favorability: n.favorability,
+        });
+        const nationalCull = new Set(
+          selectNationalMergeNppCull({
+            survivingNpps: targetActiveNpps.map((n) => ({ id: n._id.toString() })),
+            incomingNpps: keep.map(toRank),
+            maxNpps,
+          })
+        );
+        return [
+          ...cull.map((n) => n._id),
+          ...keep.filter((n) => nationalCull.has(n._id.toString())).map((n) => n._id),
+        ];
+      };
+      const cullIds = enforceNppCap ? await selectCull() : [];
 
       // Re-point every absorbed NPP that survives (kept active + all retired) to the
       // target in a single pass; the cull set is excluded.
-      await db
-        .collection<NPP>("npps")
-        .updateMany(
-          { party: proposingStrId, countryId, _id: { $nin: cullIds } },
-          { $set: { party: targetStrId } }
-        );
+      await nppsCollection(db).updateMany(
+        { party: proposingStrId, countryId, _id: { $nin: cullIds } },
+        { $set: { party: targetStrId } }
+      );
 
       // Hard-delete the over-cap overflow and cascade-clean their references so no
       // seat or candidacy row points at a deleted NPP (mirrors the admin NPP delete
       // cascade; senate vacancies notify the governor as in the party-delete route).
       if (cullIds.length > 0) {
-        const heldOfficials = await db
-          .collection<ElectedOfficial>("electedOfficials")
+        const heldOfficials = await electedOfficialsCollection(db)
           .find({ nppId: { $in: cullIds } })
           .toArray();
         if (heldOfficials.length > 0) {
-          await db
-            .collection<ElectedOfficial>("electedOfficials")
-            .deleteMany({ _id: { $in: heldOfficials.map((o) => o._id) } });
+          await electedOfficialsCollection(db).deleteMany({
+            _id: { $in: heldOfficials.map((o) => o._id) },
+          });
           for (const o of heldOfficials) {
             if (o.officeType === "senate") {
               await notifyGovernorOfSenateVacancy(db, o.state, o.senateClass);
@@ -897,10 +930,10 @@ export async function processMergeProposal(
         }
         // Live NPP candidacies also use characterId; do not leave a deleted NPP
         // on the ballot or permit its campaign to continue accumulating votes.
-        await db.collection("electionCandidates").deleteMany({
+        await electionCandidatesCollection<Document>(db).deleteMany({
           $or: [{ nppId: { $in: cullIds } }, { characterId: { $in: cullIds } }],
         });
-        await db.collection("campaigns").updateMany(
+        await campaignsCollection<Document>(db).updateMany(
           { candidateId: { $in: cullIds }, status: { $ne: "archived" } },
           {
             $set: {
@@ -911,12 +944,12 @@ export async function processMergeProposal(
             },
           }
         );
-        await db.collection<NPP>("npps").deleteMany({ _id: { $in: cullIds } });
+        await nppsCollection(db).deleteMany({ _id: { $in: cullIds } });
       }
 
       // 4d. Live candidacies follow their candidates. A candidacy keeps the party
       //     it was filed under, so one left on the absorbed party seats its winner
-      //     back into the dead party when the race resolves (ticket 1376). NPP
+      //     back into the dead party when the race resolves. NPP
       //     candidacies carry the NPP's id as `characterId`. Selected by member
       //     rather than by country because legacy candidacies have no countryId.
       const cullIdSet = new Set(cullIds.map((id) => id.toString()));
@@ -925,13 +958,11 @@ export async function processMergeProposal(
         ...proposingActiveNpps.map((n) => n._id).filter((id) => !cullIdSet.has(id.toString())),
       ];
       if (movedCandidateIds.length > 0) {
-        await db
-          .collection("electionCandidates")
-          .updateMany(
-            { party: proposingStrId, status: "active", characterId: { $in: movedCandidateIds } },
-            { $set: { party: targetStrId } }
-          );
-        await db.collection("campaigns").updateMany(
+        await electionCandidatesCollection<Document>(db).updateMany(
+          { party: proposingStrId, status: "active", characterId: { $in: movedCandidateIds } },
+          { $set: { party: targetStrId } }
+        );
+        await campaignsCollection<Document>(db).updateMany(
           {
             party: proposingStrId,
             candidateId: { $in: movedCandidateIds },
@@ -944,12 +975,10 @@ export async function processMergeProposal(
       // 5. Transfer elected seats — re-point all of the absorbed party's elected
       //    officials (any chamber) to the target so its legislative seats move with
       //    it. Country-scoped: `party` (sequentialId) is not globally unique.
-      await db
-        .collection<ElectedOfficial>("electedOfficials")
-        .updateMany(
-          { party: proposingStrId, countryId },
-          { $set: { party: targetStrId, updatedAt: now } }
-        );
+      await electedOfficialsCollection(db).updateMany(
+        { party: proposingStrId, countryId },
+        { $set: { party: targetStrId, updatedAt: now } }
+      );
 
       // 6. Collapse the absorbed party out of any coalitions — transfer its slot to
       //    the target and strip dangling invites/requests addressed to it.
@@ -959,7 +988,7 @@ export async function processMergeProposal(
       // 7. Rebuild the parliamentary seat snapshot from the re-pointed officials and
       //    updated coalition membership. Only when the country tracks a government
       //    formation (parliamentary systems); presidential systems read seats live.
-      const govCol = db.collection<GovernmentFormation>("governmentFormations");
+      const govCol = governmentFormationsCollection(db);
       const gov = await govCol.findOne({ _id: countryId });
       if (gov) {
         const govSet: Record<string, unknown> = {};
@@ -981,12 +1010,13 @@ export async function processMergeProposal(
       }
 
       // 8. Recount target party member count after transfer
-      const newMemberCount = await db
-        .collection("characters")
-        .countDocuments({ party: targetStrId, countryId: targetParty.countryId });
+      const newMemberCount = await charactersCollection(db).countDocuments({
+        party: targetStrId,
+        countryId: targetParty.countryId,
+      });
 
       // 9. Defunct the proposing party — clear leadership and mark dissolved
-      await db.collection<PoliticalParty>("politicalParties").updateOne(
+      await politicalPartiesCollection(db).updateOne(
         { _id: proposingParty._id },
         {
           $set: {
@@ -1004,13 +1034,23 @@ export async function processMergeProposal(
         }
       );
 
+      // 9b. Close the absorbed party's in-flight internal races, which would
+      //     otherwise seat a chair or committee of a party that no longer exists.
+      const openRaces = applyOptionalCountryScope(
+        { partyId: proposingStrId, status: "voting" },
+        countryId
+      );
+      const cancelRace = { $set: { status: "cancelled", updatedAt: now } };
+      await Promise.all([
+        nationalPartyElectionsCollection<Document>(db).updateMany(openRaces, cancelRace),
+        nationalCommitteeElectionsCollection<Document>(db).updateMany(openRaces, cancelRace),
+      ]);
+
       // 10. Update target party member count
-      await db
-        .collection<PoliticalParty>("politicalParties")
-        .updateOne(
-          { _id: targetParty._id },
-          { $set: { memberCount: newMemberCount, updatedAt: now } }
-        );
+      await politicalPartiesCollection(db).updateOne(
+        { _id: targetParty._id },
+        { $set: { memberCount: newMemberCount, updatedAt: now } }
+      );
     }
   );
 }
@@ -1025,12 +1065,10 @@ async function markResolved(
 ): Promise<void> {
   // The claim in attemptResolution is the real single-resolver guarantee; the
   // status filter here keeps a stale resolver from overwriting a manual repair.
-  await db
-    .collection("committeeProposals")
-    .updateOne(
-      { _id: id, status: "open" },
-      { $set: { status, resolvedAtTurn: turn, updatedAt: new Date() } }
-    );
+  await committeeProposalsCollection<Document>(db).updateOne(
+    { _id: id, status: "open" },
+    { $set: { status, resolvedAtTurn: turn, updatedAt: new Date() } }
+  );
 }
 
 /**
@@ -1040,6 +1078,18 @@ async function markResolved(
  * in `passed` or `rejected` regardless of whether the threshold is
  * mathematically locked yet.
  */
+async function markProposalTerminal(
+  db: Db,
+  proposal: CommitteeProposal,
+  status: "expired" | "rejected",
+  currentTurn: number
+): Promise<void> {
+  await committeeProposalsCollection(db).updateOne(
+    { _id: proposal._id, status: "open" },
+    { $set: { status, resolvedAtTurn: currentTurn, updatedAt: new Date() } }
+  );
+}
+
 export async function attemptResolution(
   db: Db,
   proposal: CommitteeProposal,
@@ -1048,13 +1098,16 @@ export async function attemptResolution(
 ): Promise<void> {
   if (proposal.status !== "open") return;
 
-  const proposingParty = await db
-    .collection<PoliticalParty>("politicalParties")
-    .findOne(
-      { _id: proposal.partyId },
-      { projection: { committeeIds: 1, chairId: 1, viceChairId: 1, treasurerId: 1 } }
-    );
-  if (!proposingParty) return;
+  const proposingParty = await politicalPartiesCollection(db).findOne(
+    { _id: proposal.partyId },
+    { projection: { committeeIds: 1, chairId: 1, viceChairId: 1, treasurerId: 1 } }
+  );
+  if (!proposingParty) {
+    // A deleted party can never come back, so an unresolvable row must not sit
+    // open forever blocking the duplicate-proposal guard.
+    await markProposalTerminal(db, proposal, "expired", currentTurn);
+    return;
+  }
 
   // removeOfficeHolder excludes the target from both the voter set AND
   // the denominator (procedural fairness — you don't get to vote on
@@ -1077,15 +1130,21 @@ export async function attemptResolution(
   // Decide the outcome on reads alone; nothing below writes until the claim.
   let outcome: "passed" | "rejected" | "open" = proposingOutcome;
   if (proposal.type === "merge" && proposingOutcome !== "rejected") {
-    if (!proposal.merge) return;
+    if (!proposal.merge) {
+      await markProposalTerminal(db, proposal, "expired", currentTurn);
+      return;
+    }
 
-    const targetParty = await db
-      .collection<PoliticalParty>("politicalParties")
-      .findOne(
-        { _id: proposal.merge.targetPartyId },
-        { projection: { committeeIds: 1, chairId: 1, viceChairId: 1, treasurerId: 1 } }
-      );
-    if (!targetParty) return;
+    const targetParty = await politicalPartiesCollection(db).findOne(
+      { _id: proposal.merge.targetPartyId },
+      { projection: { committeeIds: 1, chairId: 1, viceChairId: 1, treasurerId: 1 } }
+    );
+    if (!targetParty) {
+      // The merge target is gone; the merge can never execute and the open row
+      // would otherwise lock the proposing party's merge lane forever.
+      await markProposalTerminal(db, proposal, "expired", currentTurn);
+      return;
+    }
 
     const targetSize = getEligibleVoterSet(targetParty).size;
     const tYes = (proposal.targetVotes ?? []).filter((v) => v.vote === "yes").length;
@@ -1109,7 +1168,7 @@ export async function attemptResolution(
   // released: an effect that failed half-way must not be silently retried, so
   // a claimed-but-open proposal stays open with resolutionError set for an
   // operator to finish by hand.
-  const coll = db.collection<CommitteeProposal>("committeeProposals");
+  const coll = committeeProposalsCollection(db);
   const claimed = await coll.updateOne(
     {
       _id: proposal._id,
@@ -1192,7 +1251,7 @@ export async function castVote(
   const now = new Date();
   const newVote: CommitteeProposalVote = { voterId, vote, votedAt: now };
 
-  const coll = db.collection<CommitteeProposal>("committeeProposals");
+  const coll = committeeProposalsCollection(db);
   // Two atomic writes, ordered so the "one entry per voter" invariant holds
   // under every interleaving. The push only lands when the voter is absent from
   // the array; if it did not match, the voter is already present (or the
@@ -1229,9 +1288,7 @@ export async function castVote(
     );
   }
 
-  const updated = await db
-    .collection<CommitteeProposal>("committeeProposals")
-    .findOne({ _id: proposalId });
+  const updated = await committeeProposalsCollection(db).findOne({ _id: proposalId });
   if (!updated) return null;
 
   await attemptResolution(db, updated, currentTurn);
@@ -1242,21 +1299,16 @@ export async function castVote(
 
 /**
  * Resolves all open proposals whose voting window has closed. At expiry,
- * abstainers count as nay (see `checkResolution`) — so a proposal that
- * sat with 4/9 yes / 0 no / 5 abstentions for the full 24 turns
- * resolves as `rejected` (4 < ceil(0.6 × 9) = 6).
+ * abstainers count as nay (see `checkResolution`), so a proposal with
+ * 4/9 yes / 0 no / 5 abstentions resolves as `rejected` (4 < ceil(0.6 × 9) = 6).
  *
- * Replaces the legacy "mark all expired with no effect-application"
- * behavior. Per the 2026-05-22 redesign, proposals always land in
- * `passed` or `rejected` — the `"expired"` status literal stays in
- * the type union for legacy data compatibility but no new proposal
- * lands there.
+ * Proposals always land in `passed` or `rejected`; the `"expired"` status
+ * literal stays in the type union only for legacy data compatibility.
  *
  * Returns count resolved (regardless of pass / reject).
  */
 export async function expireOpenProposals(db: Db, currentTurn: number): Promise<number> {
-  const expired = await db
-    .collection<CommitteeProposal>("committeeProposals")
+  const expired = await committeeProposalsCollection(db)
     .find({ status: "open", expiresAtTurn: { $lte: currentTurn } })
     .toArray();
   let resolved = 0;

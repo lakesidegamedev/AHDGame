@@ -4,8 +4,11 @@ import { useId, useState } from "react";
 import Link from "next/link";
 import { ChevronDown } from "lucide-react";
 import type { CountryId } from "@/lib/constants/countriesCore";
-import type { ActiveModifier } from "@/lib/utils/approvalModifiers";
-import { netModifierEffect, prioritizeModifiers } from "@/lib/utils/approvalModifiers";
+import {
+  netModifierEffect,
+  prioritizeModifiers,
+  type ActiveModifier,
+} from "@/lib/approval/activeModifier";
 import { regionApprovalUrl } from "@/lib/urls";
 import { computeRegionalConditionMargin } from "@/lib/states/conditions/marginEffects";
 

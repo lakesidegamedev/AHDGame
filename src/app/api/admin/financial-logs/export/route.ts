@@ -9,8 +9,9 @@ import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
-import { buildTxLogFilter } from "@/lib/financialTxLog/queryLogs";
+import { buildTxLogFilter, TX_LOG_SORT } from "@/lib/financialTxLog/queryLogs";
 import type { FinancialTxLogEntry } from "@/lib/db/types/financialTxLog";
+import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
 
 const MAX_EXPORT_ROWS = 50_000;
 
@@ -57,10 +58,9 @@ export async function GET(request: Request) {
     // Stream rows out via the cursor instead of toArray() so we don't pin
     // 50k docs in memory. CSV writer concatenates into chunks but stays
     // bounded by the row cap.
-    const cursor = db
-      .collection<FinancialTxLogEntry>("financialTxLog")
+    const cursor = financialTxLogCollection(db)
       .find(built.filter)
-      .sort({ _id: -1 })
+      .sort(TX_LOG_SORT)
       .limit(MAX_EXPORT_ROWS);
 
     const lines: string[] = [CSV_COLUMNS.join(",")];

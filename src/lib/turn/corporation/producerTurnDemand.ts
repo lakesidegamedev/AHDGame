@@ -61,6 +61,13 @@ import {
   type RouteOffer,
   type RouteOrder,
 } from "@/lib/market/producerMarket/routeRules";
+import { importTariffTable, type ImportTariffTable } from "@/lib/market/producerMarket/tariffRules";
+import {
+  backgroundOrderEligibility,
+  backgroundTradeLines,
+  type BackgroundEconomy,
+} from "@/lib/market/producerMarket/backgroundTradeRules";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /**
  * Funded-market demand for one producer turn: every plant prepared from its
@@ -92,6 +99,8 @@ export async function buildProducerTurnDemand(
     householdIncomeFloor?: number;
     /** Each country's plant-economy share at its first funded turn (see heldShares). */
     openingShareByCountry?: ReadonlyMap<string, number>;
+    /** Background countries trading their macro economy (#5702); absent or empty: none. */
+    backgroundEconomies?: readonly BackgroundEconomy[];
   }
 ) {
   const { worldEpoch, carry } = input;
@@ -264,8 +273,7 @@ export async function buildProducerTurnDemand(
   input.stage?.("demand.households");
   // 3. Public buyers: the existing budget outlay times the plant economy's
   //    share of GDP, so only the plant market's slice of a budget is spent here.
-  const states = await db
-    .collection<{ _id: unknown; countryId?: string; gdp?: number }>("states")
+  const states = await statesCollection<{ _id: unknown; countryId?: string; gdp?: number }>(db)
     .find({}, { projection: { countryId: 1, gdp: 1 } })
     .toArray();
   const stateWeightsByCountry = new Map<string, Map<string, number>>();
@@ -512,14 +520,21 @@ export async function buildProducerTurnDemand(
     referencePrice: refPrice,
     priceHeadroom: PRICE_HEADROOM,
     ...(demandCurve ? { demandCurve } : {}),
-  }).map((h) => ({
-    ...h,
-    ...tagCountry(walletCountry.get(h.accountId)),
-    products: h.products.map((p) => ({
-      ...p,
-      book: shadowBook(p.book, p.commodity, walletCountry.get(h.accountId) ?? ""),
-    })),
-  }));
+  }).map((h) => {
+    // Climate heat raises the energy share of a hot region's basket.
+    const energyDemand = (h.stateId && lookups.climateEnergyDemandByState?.get(h.stateId)) || 1;
+    return {
+      ...h,
+      ...tagCountry(walletCountry.get(h.accountId)),
+      products: h.products.map((p) => ({
+        ...p,
+        ...(p.commodity === "energy" && energyDemand !== 1
+          ? { weight: p.weight * energyDemand }
+          : {}),
+        book: shadowBook(p.book, p.commodity, walletCountry.get(h.accountId) ?? ""),
+      })),
+    };
+  });
   const publicBuyerOrders = publicOrders(
     carriedFunding.map((f) => ({
       accountId: publicAccountId(f.countryId),
@@ -571,12 +586,19 @@ export async function buildProducerTurnDemand(
     (c) => refPrice(c as CommodityType, ""),
     PRICE_HEADROOM
   ).map((o) => ({ ...o, id: `marketing:${o.accountId}` }));
+  // Background countries (#5702): their macro supply and demand as offers and
+  // orders on the world book, priced like every other buyer's references.
+  const background = backgroundTradeLines({
+    economies: input.backgroundEconomies ?? [],
+    referencePrice: (c) => refPrice(c as CommodityType, ""),
+    priceHeadroom: PRICE_HEADROOM,
+    unitsPerTurnDivisor: TURNS_PER_DAY,
+  });
+  const backgroundOffers = background.offers;
+  const backgroundOrders = background.orders;
   const routes = lookups.tradeRoutes;
-  let eligibleOffersByOrder: Record<string, readonly string[]> | undefined;
-  if (routes) {
-    const open = (c: string, from: string, to: string) =>
-      routes.affinityFor(c as CommodityType, from as never, to as never) > 0;
-    const offers: RouteOffer[] = producers.flatMap((p) =>
+  const worldRouteOffers = (): RouteOffer[] => [
+    ...producers.flatMap((p) =>
       p.plan.outputs
         .filter((o) => o.book === "world")
         .map((o) => ({
@@ -584,7 +606,30 @@ export async function buildProducerTurnDemand(
           commodity: o.commodity,
           sellerCountry: planCountry.get(p.plan.id) ?? "",
         }))
+    ),
+    ...backgroundOffers.map((o) => ({
+      id: o.id,
+      commodity: o.commodity,
+      sellerCountry: o.countryId ?? "",
+    })),
+  ];
+  // A background order never buys its own country's offer, so it always names
+  // its sellers: every other country's world offer on an open route.
+  if (backgroundOrders.length > 0) {
+    const eligible = backgroundOrderEligibility(
+      backgroundOrders,
+      worldRouteOffers(),
+      routes
+        ? (c, from, to) => routes.affinityFor(c as CommodityType, from as never, to as never) > 0
+        : null
     );
+    for (const o of backgroundOrders) o.eligibleOfferIds = eligible.get(o.id) ?? [];
+  }
+  let eligibleOffersByOrder: Record<string, readonly string[]> | undefined;
+  if (routes) {
+    const open = (c: string, from: string, to: string) =>
+      routes.affinityFor(c as CommodityType, from as never, to as never) > 0;
+    const offers: RouteOffer[] = worldRouteOffers();
     const orders: RouteOrder[] = [
       ...producers.flatMap((p) =>
         p.plan.inputs
@@ -628,18 +673,47 @@ export async function buildProducerTurnDemand(
       restrict(o, listFor(o.commodity, corpCountry.get(o.accountId) ?? ""));
   }
 
+  // Import tariffs (producerTariffStage): one rate per open route that can
+  // carry a sale this turn. Needs the funded book's country tags.
+  let importTariffs: ImportTariffTable | undefined;
+  if (routes && (env.tariffStage ?? 0) >= 1 && (env.fundedBookStage ?? 0) >= 1) {
+    const sellerCountriesByCommodity = new Map<string, Set<string>>();
+    for (const o of worldRouteOffers()) {
+      const set = sellerCountriesByCommodity.get(o.commodity) ?? new Set<string>();
+      set.add(o.sellerCountry);
+      sellerCountriesByCommodity.set(o.commodity, set);
+    }
+    importTariffs = importTariffTable({
+      sellerCountriesByCommodity,
+      buyerCountries: new Set([
+        ...planCountry.values(),
+        ...walletCountry.values(),
+        ...funding.map((f) => f.countryId),
+        ...investmentFunding.map((f) => f.countryId),
+        ...backgroundOffers.flatMap((o) => (o.countryId ? [o.countryId] : [])),
+        ...backgroundOrders.flatMap((o) => (o.countryId ? [o.countryId] : [])),
+      ]),
+      importCostMultiplier: (c, from, to) =>
+        routes.importCostMultiplierFor(c as CommodityType, from as never, to as never),
+      open: (c, from, to) => routes.affinityFor(c as CommodityType, from as never, to as never) > 0,
+    });
+  }
+
   const references = Object.fromEntries(
     COMMODITY_TYPES.map((c) => [c, refPrice(c, "")] as const).filter(
       (e): e is readonly [CommodityType, number] => e[1] != null
     )
   );
   return {
+    backgroundOffers,
+    backgroundOrders,
     skippedSectors,
     preparedSectors,
     walletScopes,
     accounts,
     cashByCorp,
     eligibleOffersByOrder,
+    importTariffs,
     firstWalletByCorp,
     funding,
     /** Per public buyer: each line's order id, fresh outlay and full budget (fresh + carried-in). */

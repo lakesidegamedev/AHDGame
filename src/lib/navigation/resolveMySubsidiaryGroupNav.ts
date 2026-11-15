@@ -4,10 +4,9 @@ import { resolveFormalizedGroups } from "@/lib/corporations/groups/groupMembersh
 /** Match the Group page's live ownership and formalization checks, including unsold shares. */
 export async function resolveMySubsidiaryGroupNav(
   db: Db,
-  corporationId: ObjectId | null,
-  subsidiariesEnabled: boolean
+  corporationId: ObjectId | null
 ): Promise<boolean> {
-  if (!subsidiariesEnabled || !corporationId) return false;
+  if (!corporationId) return false;
   const groups = await resolveFormalizedGroups(db, { includeReserved: true });
   const rootId = groups.rootByCorpId.get(corporationId.toString());
   return !!rootId && (groups.membersByRootId.get(rootId)?.length ?? 0) >= 2;

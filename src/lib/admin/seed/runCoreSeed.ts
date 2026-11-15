@@ -1,16 +1,14 @@
 import { statePopulationUpdate } from "./rules/statePopulationUpdate";
 import { ObjectId, type Db } from "mongodb";
 import {
+  assertKnownSeedPreset,
   selectPresetBundle,
-  eraForPreset,
-  getPresetFallbacks,
-  resetPresetFallbacks,
+  strictEraForPreset,
 } from "@/lib/seeds/presetSelector";
 import { selectStatesBundleForPreset } from "./seedStates";
 import { policies } from "@/lib/seeds/reference/policies";
 import { gameConfig } from "@/lib/seeds/reference/gameConfig";
 import { STALE_PER_WORLD_GAME_CONFIG_UNSET, coreGameConfigUpdate } from "./coreGameConfigUpdate";
-import { demographicCategories } from "@/lib/seeds/demographicCategories";
 import { registerAndGenerate, stateCensusData } from "@/lib/seeds/stateDemographics";
 import { stateCensusData1953 } from "@/lib/seeds/stateCensusData1953";
 import { stateCensusData1979 } from "@/lib/seeds/stateCensusData1979";
@@ -51,7 +49,6 @@ import type {
   State,
   Policy,
   GameConfig,
-  DemographicCategory,
   StateDemographics,
   StateDemographicTurnout,
   PoliticalParty,
@@ -60,8 +57,25 @@ import type {
   LegislationType,
   Achievement,
   User,
-  Character,
 } from "@/lib/db/types";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
+import type { Document } from "mongodb";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
+import { usersCollection } from "@/lib/db/repositories/users";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
+import { stateDemographicTurnoutCollection } from "@/lib/db/repositories/stateDemographicTurnout";
+import { stateBaselinesCollection } from "@/lib/db/repositories/stateBaselines";
+import { achievementsCollection } from "@/lib/db/repositories/achievements";
+import { characterAchievementsCollection } from "@/lib/db/repositories/characterAchievements";
+import { formulaGrantsCollection } from "@/lib/db/repositories/formulaGrants";
+import { demographicDefaultsCollection } from "@/lib/db/repositories/demographicDefaults";
+import { policiesCollection } from "@/lib/db/repositories/policies";
 
 /**
  * What `runSeed`'s reset branch deletes, and how far.
@@ -168,15 +182,6 @@ export const RESET_DROP_COLLECTIONS: ReadonlyArray<{
     scope: "global",
     note: "US-only by construction — seedBudgets drops and rebuilds it.",
   },
-  {
-    name: "demographicCategories",
-    scope: "global",
-    note:
-      "⚠️ Looks global and is not, quite: `_id` is a category KEY, and 20 country " +
-      "seeders each upsert their own. Only the ONE row the shared constant owns " +
-      "(`voterGroups`) belongs to runSeed, so the delete is scoped to that " +
-      "constant's ids rather than the collection.",
-  },
 ];
 
 export {
@@ -249,9 +254,7 @@ export async function runSeed(
     log = console.log,
   } = options;
 
-  // Fresh record per run — the module-level list would otherwise accumulate
-  // across runs in a long-lived process and report another run's gaps.
-  resetPresetFallbacks();
+  assertKnownSeedPreset(preset);
 
   // Build US state-party-org rows scaled to the preset's presidential-margin
   // baseline (2019 → 2020 results, 1991 → 1988 results). `seedRegistrationLanes`
@@ -260,42 +263,36 @@ export async function runSeed(
   const statePartyOrg = generateStatePartyOrg(preset);
 
   // Seed achievements if empty (runs regardless of main seed status)
-  const achievementCount = await db.collection("achievements").countDocuments();
+  const achievementCount = await achievementsCollection<Document>(db).countDocuments();
   let achievementDocs: Array<Achievement & { _id: ObjectId }>;
   if (achievementCount === 0) {
     achievementDocs = getAchievementDocsForSeed();
-    await db.collection<Achievement>("achievements").insertMany(achievementDocs);
-    await db
-      .collection("achievements")
+    await achievementsCollection(db).insertMany(achievementDocs);
+    await achievementsCollection<Document>(db)
       .createIndex({ slug: 1 }, { unique: true })
       .catch(() => {});
-    await db
-      .collection("characterAchievements")
+    await characterAchievementsCollection<Document>(db)
       .createIndex({ characterId: 1, achievementId: 1 }, { unique: true })
       .catch(() => {});
-    await db
-      .collection("characterAchievements")
+    await characterAchievementsCollection<Document>(db)
       .createIndex({ achievementId: 1 })
       .catch(() => {});
     log(`Seeded ${achievementDocs.length} achievements`);
   } else {
-    achievementDocs = (await db
-      .collection<Achievement>("achievements")
-      .find({})
-      .toArray()) as Array<Achievement & { _id: ObjectId }>;
+    achievementDocs = (await achievementsCollection(db).find({}).toArray()) as Array<
+      Achievement & { _id: ObjectId }
+    >;
   }
 
   // Grant all achievements to admin characters (runs every seed)
   if (achievementDocs.length > 0) {
-    const adminUsers = await db
-      .collection<User>("users")
+    const adminUsers = await usersCollection(db)
       .find({ $or: [{ isAdmin: true }, { role: "admin" }] })
       .toArray();
     const adminUserIds = adminUsers.map((u) => u._id);
     const adminCharacters =
       adminUserIds.length > 0
-        ? await db
-            .collection<Character>("characters")
+        ? await charactersCollection(db)
             .find({ userId: { $in: adminUserIds } })
             .toArray()
         : [];
@@ -303,7 +300,7 @@ export async function runSeed(
     for (const char of adminCharacters) {
       for (const a of achievementDocs) {
         try {
-          await db.collection("characterAchievements").insertOne({
+          await characterAchievementsCollection<Document>(db).insertOne({
             _id: new ObjectId(),
             characterId: char._id,
             achievementId: a._id,
@@ -324,10 +321,10 @@ export async function runSeed(
 
   // Check if already seeded (states collection has data and reset not requested)
   if (!reset) {
-    const stateCount = await db.collection("states").countDocuments();
-    const nationalBudgetCount = await db.collection("federalBudget").countDocuments();
-    const stateBudgetCount = await db.collection("stateBudgets").countDocuments();
-    const formulaGrantCount = await db.collection("formulaGrants").countDocuments();
+    const stateCount = await statesCollection<Document>(db).countDocuments();
+    const nationalBudgetCount = await federalBudgetCollection(db).countDocuments();
+    const stateBudgetCount = await stateBudgetsCollection<Document>(db).countDocuments();
+    const formulaGrantCount = await formulaGrantsCollection<Document>(db).countDocuments();
     const budgetsSeeded = nationalBudgetCount > 0 && stateBudgetCount > 0 && formulaGrantCount > 0;
 
     if (stateCount > 0 && budgetsSeeded) {
@@ -349,7 +346,6 @@ export async function runSeed(
     // Scoped to the US, because that is all `runSeed` rebuilds. See
     // RESET_DROP_COLLECTIONS for the measured cost of doing this globally.
     const usStateIds = statesBundle.map((st) => st._id as string);
-    const ownedCategoryIds = demographicCategories.map((c) => c._id);
     let deleted = 0;
     for (const entry of RESET_DROP_COLLECTIONS) {
       const filter =
@@ -357,9 +353,7 @@ export async function runSeed(
           ? { countryId: US_COUNTRY_ID }
           : entry.scope === "stateIds"
             ? { _id: { $in: usStateIds } }
-            : entry.name === "demographicCategories"
-              ? { _id: { $in: ownedCategoryIds } }
-              : {};
+            : {};
       try {
         const res = await db
           .collection(entry.name)
@@ -378,9 +372,10 @@ export async function runSeed(
     // per-world markers the turn engine stamped onto it, so the operational
     // half of the document (maintenance, webhooks, feature gates) survives.
     try {
-      await db
-        .collection<GameConfig>("gameConfig")
-        .updateOne({ _id: gameConfig._id }, { $unset: STALE_PER_WORLD_GAME_CONFIG_UNSET });
+      await gameConfigCollection(db).updateOne(
+        { _id: gameConfig._id },
+        { $unset: STALE_PER_WORLD_GAME_CONFIG_UNSET }
+      );
     } catch (error) {
       throw new Error("RESET cleanup failed while clearing per-world gameConfig markers", {
         cause: error,
@@ -398,7 +393,7 @@ export async function runSeed(
 
   for (const state of statesBundle) {
     const update = statePopulationUpdate(state, reset);
-    await db.collection<State>("states").updateOne({ _id: state._id }, update, { upsert: true });
+    await statesCollection(db).updateOne({ _id: state._id }, update, { upsert: true });
   }
   log(`Seeded ${statesBundle.length} states (${preset})`);
 
@@ -413,19 +408,9 @@ export async function runSeed(
 
   // Policies
   for (const policy of policies) {
-    await db
-      .collection<Policy>("policies")
-      .updateOne({ _id: policy._id }, { $set: policy }, { upsert: true });
+    await policiesCollection(db).updateOne({ _id: policy._id }, { $set: policy }, { upsert: true });
   }
   log(`Seeded ${policies.length} policies`);
-
-  // Demographic categories
-  for (const category of demographicCategories) {
-    await db
-      .collection<DemographicCategory>("demographicCategories")
-      .updateOne({ _id: category._id }, { $set: category }, { upsert: true });
-  }
-  log(`Seeded ${demographicCategories.length} demographic categories`);
 
   // State demographics — era-aware. The preset's census bundle is generated
   // through the Layer-1 pipeline with that era's composition (turnout rates,
@@ -434,7 +419,7 @@ export async function runSeed(
   // 1991 worlds now seed from independent 1991 Layer-1 census data.
   const { calculateStateLeanForCache } = await import("@/lib/demographics/cachedStateLean");
   const is1991 = preset === "1991-default";
-  const era = eraForPreset(preset);
+  const era = strictEraForPreset(preset);
   const censusBundle = selectPresetBundle(
     preset,
     {
@@ -449,36 +434,39 @@ export async function runSeed(
     },
     "runCoreSeed:stateCensusData1953"
   );
-  const { isLayer1PositionsEnabled } = await import("@/lib/seeds/layer1PositionsFlag");
-  const layer1Positions = await isLayer1PositionsEnabled();
   const { loadEraFullOverride } = await import("@/lib/seeds/loadEraPositionOverride");
-  const override = layer1Positions ? ((await loadEraFullOverride(era)) ?? undefined) : undefined;
+  const override = (await loadEraFullOverride(era)) ?? undefined;
   let seededDemographicsCount = 0;
   for (const [censusStateId, censusConfig] of Object.entries(censusBundle)) {
     const sd = registerAndGenerate(censusStateId, censusConfig, era, {
-      layer1Positions,
+      layer1Positions: true,
       positions: override?.positions,
       turnout: override?.turnout,
     });
-    const calculatedLean = calculateStateLeanForCache(sd, demographicCategories, {
+    const calculatedLean = calculateStateLeanForCache(sd, [], {
       countryId: "US",
       stateId: sd._id,
       preset,
       demographicDefaults: sd,
     });
+    const { groups: _groups, ...storedDemographics } = sd;
     const cachedDemographics = {
-      ...sd,
+      ...storedDemographics,
       cachedEconomicLean: calculatedLean.economicLean,
       cachedSocialLean: calculatedLean.socialLean,
     };
     seededDemographicsCount++;
-    await db
-      .collection<StateDemographics>("stateDemographics")
-      .updateOne({ _id: sd._id }, { $set: cachedDemographics }, { upsert: true });
-    await db
-      .collection<StateDemographics>("demographicDefaults")
-      .updateOne({ _id: sd._id }, { $set: cachedDemographics }, { upsert: true });
-    await db.collection<State>("states").updateOne(
+    await stateDemographicsCollection(db).updateOne(
+      { _id: sd._id },
+      { $set: cachedDemographics },
+      { upsert: true }
+    );
+    await demographicDefaultsCollection(db).updateOne(
+      { _id: sd._id },
+      { $set: cachedDemographics },
+      { upsert: true }
+    );
+    await statesCollection(db).updateOne(
       { _id: sd._id },
       {
         $set: {
@@ -514,7 +502,7 @@ export async function runSeed(
     ),
   };
   for (const sid of usStateIds) {
-    await db.collection<StateDemographicTurnout>("stateDemographicTurnout").updateOne(
+    await stateDemographicTurnoutCollection(db).updateOne(
       { _id: sid },
       {
         $set: {
@@ -530,7 +518,7 @@ export async function runSeed(
   log(`Seeded ${usStateIds.length} US stateDemographicTurnout docs`);
 
   // Game config — persist seedYear so landing/login can read the active era
-  // without a separate admin step. era is already in scope from eraForPreset(preset).
+  // without a separate admin step. era is already in scope from strictEraForPreset(preset).
   //
   // D14 PROTECTION — on a NON-reset seed, `marketSystemMode` is deliberately
   // excluded from the `$set` and moved to `$setOnInsert`.
@@ -561,9 +549,11 @@ export async function runSeed(
   // operator intent to protect, so it takes the reference tier, and the stamps
   // naming whoever chose the old world's tier go with it.
   const seedYear = parseInt(era, 10);
-  await db
-    .collection<GameConfig>("gameConfig")
-    .updateOne({ _id: gameConfig._id }, coreGameConfigUpdate(reset, seedYear), { upsert: true });
+  await gameConfigCollection(db).updateOne(
+    { _id: gameConfig._id },
+    coreGameConfigUpdate(reset, seedYear),
+    { upsert: true }
+  );
   log("Seeded game config");
 
   // Political parties — sort by seedOrder to guarantee deterministic sequentialId assignment
@@ -574,15 +564,17 @@ export async function runSeed(
   for (const party of sortedParties) {
     const { seedOrder: _seedOrder, ...partyData } = party;
     // Check if party already exists by name + country
-    const existing = await db
-      .collection<PoliticalParty>("politicalParties")
-      .findOne({ name: party.name, countryId: party.countryId });
+    const existing = await politicalPartiesCollection(db).findOne({
+      name: party.name,
+      countryId: party.countryId,
+    });
 
     if (existing) {
       // Update existing party (preserve _id and sequentialId)
-      await db
-        .collection<PoliticalParty>("politicalParties")
-        .updateOne({ _id: existing._id }, { $set: { ...partyData, updatedAt: now } });
+      await politicalPartiesCollection(db).updateOne(
+        { _id: existing._id },
+        { $set: { ...partyData, updatedAt: now } }
+      );
     } else {
       // Insert new party with generated _id and sequentialId
       const sequentialId = await getNextSequentialId(db, "party", party.countryId);
@@ -594,27 +586,24 @@ export async function runSeed(
         createdAt: now,
         updatedAt: now,
       };
-      await db.collection<PoliticalParty>("politicalParties").insertOne(doc);
+      await politicalPartiesCollection(db).insertOne(doc);
     }
   }
   log(`Seeded ${politicalParties.length} political parties`);
 
   // State party org
   for (const org of statePartyOrg) {
-    await db
-      .collection<StatePartyOrg>("statePartyOrg")
-      .updateOne(
-        { _id: org._id },
-        { $set: { ...org, updatedAt: now }, $setOnInsert: { createdAt: now } },
-        { upsert: true }
-      );
+    await statePartyOrgCollection(db).updateOne(
+      { _id: org._id },
+      { $set: { ...org, updatedAt: now }, $setOnInsert: { createdAt: now } },
+      { upsert: true }
+    );
   }
   log(`Seeded ${statePartyOrg.length} state party org entries`);
 
   // Congressional districts (US House redistricting model). Seeded after states
   // + parties + state-party-org so apportionment (state.houseDistricts) and
-  // registration pools are available. Idempotent; cosmetic until the
-  // redistrictingEnabled flag is turned on.
+  // registration pools are available. Idempotent.
   const districtResult = await seedCongressionalDistricts(db, { now, log });
   log(`Seeded ${districtResult.seeded} congressional districts`);
 
@@ -663,9 +652,11 @@ export async function runSeed(
     // Align the US decay targets with the authored metric values (both eras).
     const overlay = getRegionMetricPresets("US", String(raw._id), preset);
     const baseline = overlay ? applyMetricPresetToBaseline(adjusted, overlay) : adjusted;
-    await db
-      .collection<StateMetricBaseline>("stateBaselines")
-      .updateOne({ _id: baseline._id }, { $set: baseline }, { upsert: true });
+    await stateBaselinesCollection(db).updateOne(
+      { _id: baseline._id },
+      { $set: baseline },
+      { upsert: true }
+    );
   }
   log(`Seeded ${stateBaselines.length} state baselines (preset: ${preset})`);
 
@@ -675,31 +666,20 @@ export async function runSeed(
     "immigration", // Split into border_security_enforcement + legal_immigration_visas
     "medicare", // Redundant with federal_healthcare_funding and drug_pricing_medicare
   ];
-  const deleteResult = await db
-    .collection<LegislationType>("legislationTypes")
-    .deleteMany({ _id: { $in: DEPRECATED_TYPE_IDS } });
+  const deleteResult = await legislationTypesCollection(db).deleteMany({
+    _id: { $in: DEPRECATED_TYPE_IDS },
+  });
   if (deleteResult.deletedCount > 0) {
     log(`Deleted ${deleteResult.deletedCount} deprecated legislation types`);
   }
 
-  // Old-seed exclusion sweep (political-legislation spec §6): on the 1953
-  // deploy preset the OLD US/UK/RU/DD catalogs stop seeding; the projected
-  // new-generation catalogs seed instead (a missing countryScope = legacy US).
-  const { getProjectedPoliticalLegislationTypes, isPoliticalLegislationPreset } =
-    await import("./seedPoliticalLegislation");
-  const politicalLegislation = isPoliticalLegislationPreset(preset);
-  const { isOldLegislationTypeExcluded } = await import("@/lib/politicalMetrics/pipelinePreset");
-  const baseSeedTypes = politicalLegislation
-    ? legislationTypes.filter((lt) => !isOldLegislationTypeExcluded(lt))
-    : legislationTypes;
+  const { getProjectedPoliticalLegislationTypes } = await import("./seedPoliticalLegislation");
   const allLegislationTypes = [
-    ...baseSeedTypes.map((lt) => ({ ...lt, source: "seed" as const })),
-    ...(politicalLegislation
-      ? getProjectedPoliticalLegislationTypes(politicalSeedYear).map((lt) => ({
-          ...lt,
-          source: "seed" as const,
-        }))
-      : []),
+    ...legislationTypes.map((lt) => ({ ...lt, source: "seed" as const })),
+    ...getProjectedPoliticalLegislationTypes(politicalSeedYear).map((lt) => ({
+      ...lt,
+      source: "seed" as const,
+    })),
     ...adminLegislationTypes.map((lt) => ({
       ...lt,
       source: "admin" as const,
@@ -707,7 +687,7 @@ export async function runSeed(
     })),
   ];
   if (allLegislationTypes.length > 0) {
-    await db.collection<LegislationType>("legislationTypes").bulkWrite(
+    await legislationTypesCollection(db).bulkWrite(
       allLegislationTypes.map((lt) => ({
         updateOne: { filter: { _id: lt._id }, update: { $set: lt }, upsert: true },
       })),
@@ -715,10 +695,8 @@ export async function runSeed(
     );
   }
   log(
-    `Seeded ${baseSeedTypes.length} seed + ${adminLegislationTypes.length} admin legislation types` +
-      (politicalLegislation
-        ? ` + ${allLegislationTypes.length - baseSeedTypes.length - adminLegislationTypes.length} projected political laws`
-        : "")
+    `Seeded ${legislationTypes.length} seed + ${adminLegislationTypes.length} admin legislation types` +
+      ` + ${allLegislationTypes.length - legislationTypes.length - adminLegislationTypes.length} projected political laws`
   );
 
   // Budgets — preset-aware. `seedBudgets` filters its FY1991 vs FY2020 config
@@ -744,10 +722,7 @@ export async function runSeed(
   await seedTradeLanes(db, log, preset);
 
   // Opening alignments between the era's blocs, for the countries this preset
-  // contains. Deliberately NOT gated on `intOrgAlignmentEnabled`: this is the
-  // one alignment write that runs with the feature off, so enabling the gate on
-  // a live world reveals a populated map rather than blank rows. Idempotent —
-  // an existing row is never clobbered.
+  // contains. Idempotent: an existing row is never clobbered.
   const alignmentCountries = getPresetById(preset)?.countries ?? COUNTRY_ORDER;
   const alignmentsSeeded = await seedCountryAlignments(db, preset, alignmentCountries);
   log(`Country alignments seeded: ${alignmentsSeeded}`);
@@ -768,45 +743,27 @@ export async function runSeed(
   }
 
   // Indexes
-  await db
-    .collection("users")
+  await usersCollection<Document>(db)
     .createIndex({ email: 1 }, { unique: true })
     .catch(() => {});
-  await db
-    .collection("users")
+  await usersCollection<Document>(db)
     .createIndex({ username: 1 }, { unique: true })
     .catch(() => {});
   // Non-unique: multiple characters per userId are allowed in test mode and for admins.
   // The application enforces limits via activeCharacterCount on the user document.
-  await db
-    .collection("characters")
+  await charactersCollection(db)
     .createIndex({ userId: 1 })
     .catch(() => {});
-  await db
-    .collection("characters")
+  await charactersCollection(db)
     .createIndex({ homeState: 1 })
     .catch(() => {});
-  await db
-    .collection("states")
+  await statesCollection<Document>(db)
     .createIndex({ region: 1 })
     .catch(() => {});
-  await db
-    .collection("statePartyOrg")
+  await statePartyOrgCollection<Document>(db)
     .createIndex({ stateId: 1 })
     .catch(() => {});
   log("Indexes ensured");
-
-  // Which seed lanes had no bundle for this era and silently took 2019 data.
-  // Reported as one list at the end rather than a line beside each call: the
-  // useful artifact is the SHAPE of the gap for this preset, which is what
-  // decides whether a lane is worth authoring next.
-  const fallbacks = getPresetFallbacks();
-  if (fallbacks.length > 0) {
-    const lanes = [...new Set(fallbacks.map((f) => f.label))].sort();
-    log(
-      `⚠ ${lanes.length} seed lane(s) had no "${preset}" bundle and used 2019 data: ${lanes.join(", ")}`
-    );
-  }
 
   return {
     seeded: true,
@@ -866,13 +823,11 @@ export async function runRegionDerivedStage(
   // `reference` so teardown does not sweep it, and a pin left from the previous world
   // would otherwise hold this one to the old world's numbers, which is a worse version
   // of the bug the pin exists to fix. See `seedRosterUpkeepPin.ts`.
-  await db
-    .collection("gameConfig")
-    .updateOne(
-      { _id: "default" as unknown as never },
-      { $set: { seedRosterUpkeep: captureSeedRosterUpkeepPin(preset) } },
-      { upsert: true }
-    );
+  await gameConfigCollection<Document>(db).updateOne(
+    { _id: "default" as unknown as never },
+    { $set: { seedRosterUpkeep: captureSeedRosterUpkeepPin(preset) } },
+    { upsert: true }
+  );
   clearSeedRosterUpkeepPinCache();
 
   // Replacement-manpower pool at 25% of each nation's ceiling. Population is

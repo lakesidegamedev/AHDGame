@@ -1,21 +1,17 @@
 /**
  * What to tell a player who opens the board while the question is frozen.
  *
- * The dossier serves an OPEN crisis only, and rightly so: every value on it is
- * about a board somebody can still act on. A frozen crisis has no board. It does
- * have an answer to "what happened to it", though, and before this the page
- * said "no settlement crisis is open" in the one case a player most wants
- * explained.
+ * The dossier serves an OPEN crisis only, because every value on it is about a
+ * board somebody can still act on. A frozen crisis has no board, but does have
+ * an answer to "what happened to it".
  *
- * Deliberately NOT part of `DossierView`. Widening that interface to carry a
- * frozen variant would put an optional-everything shape in front of every
- * consumer of a board that is normally live; this is a separate, small read for
- * a separate, small state.
+ * Deliberately NOT part of `DossierView`: widening that interface would put an
+ * optional-everything shape in front of every consumer of a normally-live
+ * board. This is a separate, small read for a separate, small state.
  */
 import type { Db } from "mongodb";
 import { getSettlementCrisesCollection } from "@/lib/db/collections";
 import { getConflictsCollection } from "@/lib/db/collections/conflicts";
-import { isSettlementCrisisEnabled } from "../featureFlag";
 
 export interface SettlementWarNotice {
   /** The war's public number, for `/world/conflicts/<n>`. Null if it has none. */
@@ -30,12 +26,6 @@ export interface SettlementWarNotice {
 }
 
 export async function loadGermanQuestionWarNotice(db: Db): Promise<SettlementWarNotice | null> {
-  // Gated like every other read in the feature. With the flag off the turn phase
-  // does not tick, so a frozen crisis is inert — and a page still narrating a war
-  // that can never resolve the question is worse than saying nothing. Checked
-  // first so the common "feature is off" case costs one query, not two.
-  if (!(await isSettlementCrisisEnabled())) return null;
-
   const crises = await getSettlementCrisesCollection(db);
   const crisis = await crises.findOne({ status: "frozen" });
   if (!crisis?.conflictId) return null;

@@ -11,8 +11,10 @@
 // dashboard.
 
 import type { Db } from "mongodb";
-import { defectWarnings, HEAL_RUNS_COLLECTION } from "./runner";
+import { defectWarnings } from "./runner";
 import type { Defect, DefectStatus, EnvStatus, HealEnv, HealRun } from "./types";
+import { healRunsCollection } from "@/lib/db/repositories/healRuns";
+import { worldOutOfScope } from "./worldScope";
 
 /**
  * How the caller reaches each environment. The MCP and the CLI each know a
@@ -22,8 +24,7 @@ import type { Defect, DefectStatus, EnvStatus, HealEnv, HealRun } from "./types"
 export type EnvResolver = (env: HealEnv) => Promise<Db | null>;
 
 async function lastRunFor(db: Db, defectId: string, env: HealEnv): Promise<EnvStatus["lastRun"]> {
-  const run = await db
-    .collection<HealRun>(HEAL_RUNS_COLLECTION)
+  const run = await healRunsCollection<HealRun>(db)
     .find({ defectId, env })
     .sort({ startedAt: -1 })
     .limit(1)
@@ -63,6 +64,16 @@ async function statusForEnv(
   if (!db) return { env, configured: false, affected: null, state: "unconfigured" };
 
   try {
+    const outOfScope = await worldOutOfScope(db, defect);
+    if (outOfScope) {
+      return {
+        env,
+        configured: true,
+        affected: 0,
+        state: "clean",
+        lastRun: await lastRunFor(db, defect.id, env),
+      };
+    }
     const detect = await defect.detect(db, { env, dryRun: true, now });
     return {
       env,

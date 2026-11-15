@@ -1,5 +1,5 @@
 /**
- * Coverage-backed advertising agreements (issues #2235/#2125 slice).
+ * Coverage-backed advertising agreements.
  *
  * A buyer allocates part of its `marketingBudget` to a named Media and
  * Entertainment supplier. The allocation partitions the budget: it is never

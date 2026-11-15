@@ -7,11 +7,18 @@ import type {
   ElectionVoteTally,
   ElectedOfficial,
 } from "@/lib/db/types";
-import { seatPresidentialExecutive } from "@/lib/turn/election/presidentExecutiveSeating";
+import { seatPresidentialExecutive } from "@/lib/elections/resolution/presidentExecutiveSeating";
 import { captureElectionResultSnapshot } from "@/lib/elections/liveResults/captureResultSnapshot";
-import { initElectionVoteTally } from "@/lib/electionEngine/tallyManagement";
+import { initElectionVoteTally } from "@/lib/elections/engine/tallyManagement";
 import { MS_PER_TURN } from "@/lib/constants/turnTime";
 import { brazilPresidentialRules, decideBrazilPresidency } from "./rules/presidential";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
+import type { Document } from "mongodb";
 
 const followupId = (source: string) =>
   new ObjectId(
@@ -26,17 +33,17 @@ export async function resolveBrazilPresidentialElection(
   turn: number
 ): Promise<boolean> {
   if (tally?.finalized && !tally.executiveSeatingPending) {
-    await db.collection("campaigns").deleteMany({ electionId: election._id });
+    await campaignsCollection<Document>(db).deleteMany({ electionId: election._id });
     await captureElectionResultSnapshot(db, election, now);
     return true;
   }
-  const game = await db
-    .collection<{ _id: string; preset: string }>("gameState")
-    .findOne({ _id: "current" }, { projection: { preset: 1 } });
+  const game = await gameStateCollection<{ _id: string; preset: string }>(db).findOne(
+    { _id: "current" },
+    { projection: { preset: 1 } }
+  );
   if (!game?.preset) throw new Error("Brazil presidency requires the active preset");
   const mode = election.brazilPresidentialMode ?? brazilPresidentialRules(game.preset).mode;
-  const candidates = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const candidates = await electionCandidatesCollection(db)
     .find({
       electionId: election._id,
       ...(tally?.brazilPresidentialResult ? {} : { status: "active" }),
@@ -46,8 +53,7 @@ export async function resolveBrazilPresidentialElection(
   if (mode === "indirect" && !tally?.brazilPresidentialResult) {
     // The game models Congress as the college. Federal-state delegations are
     // not represented; do not label this count a popular ballot.
-    const legislators = await db
-      .collection<ElectedOfficial>("electedOfficials")
+    const legislators = await electedOfficialsCollection(db)
       .find(
         { countryId: "BR", officeType: { $in: ["chamber", "senate"] } },
         { projection: { party: 1, seatsHeld: 1, characterId: 1, nppId: 1 } }
@@ -72,7 +78,7 @@ export async function resolveBrazilPresidentialElection(
   if (!tally) {
     await initElectionVoteTally(election._id, candidates, "BR", { byParty: {}, recordedAt: now });
   }
-  await db.collection<ElectionVoteTally>("electionVoteTallies").updateOne(
+  await electionVoteTalliesCollection(db).updateOne(
     { electionId: election._id },
     {
       $set: {
@@ -90,12 +96,10 @@ export async function resolveBrazilPresidentialElection(
     );
     if (finalists.some((c) => !c)) throw new Error("Brazil runoff lost a certified finalist");
     // Release the old active candidacies before opening the fresh ballot.
-    await db
-      .collection<ElectionCandidate>("electionCandidates")
-      .updateMany(
-        { electionId: election._id, status: "active" },
-        { $set: { status: "withdrawn", withdrawnAt: now } }
-      );
+    await electionCandidatesCollection(db).updateMany(
+      { electionId: election._id, status: "active" },
+      { $set: { status: "withdrawn", withdrawnAt: now } }
+    );
     const nextCandidates = finalists.map((c) => ({
       ...c!,
       _id: followupId(String(c!._id)),
@@ -104,18 +108,18 @@ export async function resolveBrazilPresidentialElection(
       enteredAt: now,
     }));
     for (const candidate of nextCandidates)
-      await db
-        .collection<ElectionCandidate>("electionCandidates")
-        .updateOne({ _id: candidate._id }, { $setOnInsert: candidate }, { upsert: true });
-    const existingTally = await db
-      .collection<ElectionVoteTally>("electionVoteTallies")
-      .findOne({ electionId });
+      await electionCandidatesCollection(db).updateOne(
+        { _id: candidate._id },
+        { $setOnInsert: candidate },
+        { upsert: true }
+      );
+    const existingTally = await electionVoteTalliesCollection(db).findOne({ electionId });
     if (!existingTally)
       await initElectionVoteTally(electionId, nextCandidates, "BR", {
         byParty: {},
         recordedAt: now,
       });
-    await db.collection<Election>("elections").updateOne(
+    await electionsCollection(db).updateOne(
       { _id: electionId },
       {
         $setOnInsert: {
@@ -149,14 +153,12 @@ export async function resolveBrazilPresidentialElection(
       now,
       turn,
     });
-    await db
-      .collection<ElectionCandidate>("electionCandidates")
-      .updateMany(
-        { electionId: election._id, status: "active" },
-        { $set: { status: "withdrawn", withdrawnAt: now } }
-      );
+    await electionCandidatesCollection(db).updateMany(
+      { electionId: election._id, status: "active" },
+      { $set: { status: "withdrawn", withdrawnAt: now } }
+    );
   }
-  await db.collection<ElectionVoteTally>("electionVoteTallies").updateOne(
+  await electionVoteTalliesCollection(db).updateOne(
     { electionId: election._id },
     {
       $set: {
@@ -167,7 +169,7 @@ export async function resolveBrazilPresidentialElection(
       },
     }
   );
-  await db.collection("campaigns").deleteMany({ electionId: election._id });
+  await campaignsCollection<Document>(db).deleteMany({ electionId: election._id });
   await captureElectionResultSnapshot(db, election, now);
   return true;
 }

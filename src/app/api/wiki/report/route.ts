@@ -11,6 +11,7 @@ import { logRequest } from "@/lib/api/requestLog";
 import { clientIpFromRequest } from "@/lib/utils/network";
 import { getWikiReportsCollection } from "@/lib/db/collections";
 import type { WikiReport } from "@/lib/db/types";
+import { servicesConfig } from "@/lib/config/services";
 
 const RELAY_TIMEOUT_MS = 3000;
 
@@ -19,7 +20,7 @@ const RELAY_TIMEOUT_MS = 3000;
  * 3s timeout; failures are swallowed so the player still gets 200.
  */
 function relayWikiReport(payload: Record<string, unknown>): void {
-  const endpoint = process.env.WIKI_REPORT_ENDPOINT?.trim();
+  const endpoint = servicesConfig.wikiReportEndpoint()?.trim();
   if (!endpoint) return;
 
   const controller = new AbortController();
@@ -75,7 +76,7 @@ export async function POST(request: Request) {
       ip,
       userId: user?.userId ? new ObjectId(user.userId) : undefined,
       createdAt: now,
-      relayAttempted: Boolean(process.env.WIKI_REPORT_ENDPOINT?.trim()),
+      relayAttempted: Boolean(servicesConfig.wikiReportEndpoint()?.trim()),
     };
 
     const db = await getDb();

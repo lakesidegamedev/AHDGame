@@ -1,5 +1,5 @@
 import type { CountryId } from "@/lib/constants/countries";
-import { oneRowPerTurn } from "@/lib/electionEngine/rules/turnSlice";
+import { oneRowPerTurn } from "@/lib/elections/rules/turnSlice";
 import type { Db, Filter } from "mongodb";
 import { ObjectId } from "mongodb";
 import type {
@@ -13,6 +13,13 @@ import type {
 } from "@/lib/db/types";
 import { computeElectionPhase } from "@/lib/elections/phases";
 import { getGameTime, type GameTimeContext } from "@/lib/time/gameTime";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { primarySnapshotsCollection } from "@/lib/db/repositories/primarySnapshots";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://ahousedividedgame.com";
 
@@ -60,15 +67,15 @@ function hasResolvedResult(status: Election["status"]): boolean {
 }
 
 /**
- * Per-candidate vote breakdown for one race, drawn from the tally the list query
- * already loaded. Surfaced only when the caller opts in with `results=true`, so a
- * bot can pull detailed seat-by-seat numbers for a whole country in ONE call
- * rather than a `/elections/[id]` request per race (ticket #1229). The heavy
- * time-series (turn-by-turn snapshots, primary snapshots) is deliberately left
- * behind `/elections/[id]` — this is the standings, not the full history.
+ * Per-candidate vote breakdown for one race, drawn from the tally the list
+ * query already loaded. Surfaced only when the caller opts in with
+ * `results=true`, so a bot can pull seat-by-seat numbers for a whole country
+ * in ONE call rather than one `/elections/[id]` request per race. The heavy
+ * time-series is deliberately left behind `/elections/[id]`: this is the
+ * standings, not the full history.
  *
- * Shares are computed off the total on the row, so they sum to ~100 even before
- * the result is finalised; `finalized` says whether the count is done.
+ * Shares are computed off the total on the row, so they sum to ~100 even
+ * before finalisation; `finalized` says whether the count is done.
  */
 type PublicCandidateStats = Pick<Character | NPP, "favorability" | "politicalInfluence">;
 
@@ -84,21 +91,16 @@ function isMultiSeatRace(election: Pick<Election, "totalSeats">): boolean {
 }
 
 /**
- * Favorability and political influence for each candidate, keyed by the
+ * Favorability and political influence per candidate, keyed by the
  * `electionCandidates` ROW id.
  *
- * The key is the whole difficulty. Vote tallies are keyed by the candidate row
- * `_id` — `initElectionVoteTally` seeds `totalVotes[c._id]`, and the primary
- * resolver writes `candidateNames[c._id]` — NOT by `characterId`. The stats
- * themselves live on the character, or on the NPP for a non-party candidate. So
- * the candidate row is the hop between the two id spaces, and a map keyed by
- * character id joins against nothing: every stat would read `null` in
- * production while mocked tests keyed to characters still pass.
+ * Vote tallies key by candidate row `_id`, NOT by `characterId`. The stats live
+ * on the character, or the NPP for a non-party candidate, so the row is the hop
+ * between the two id spaces. A map keyed by character id joins against nothing:
+ * every stat reads `null` in production while tests keyed to characters pass.
  *
- * Rows are many-to-one onto an identity, not one-to-one: entering a race
- * withdraws the prior row and inserts a fresh one, so one character can own
- * several rows in the same race. Stats are resolved per identity and then
- * projected onto every row that identity holds.
+ * Rows are many-to-one onto an identity (entering a race withdraws the prior row
+ * and inserts a fresh one), so resolve per identity and project onto every row.
  */
 async function loadCandidateStats(
   db: Db,
@@ -119,15 +121,13 @@ async function loadCandidateStats(
   const projection = { _id: 1, favorability: 1, politicalInfluence: 1 } as const;
   const [characters, npps] = await Promise.all([
     characterIds.length > 0
-      ? db
-          .collection<Character>("characters")
+      ? charactersCollection(db)
           .find({ _id: { $in: characterIds } })
           .project<Pick<Character, "_id" | "favorability" | "politicalInfluence">>(projection)
           .toArray()
       : Promise.resolve([]),
     nppIds.length > 0
-      ? db
-          .collection<NPP>("npps")
+      ? nppsCollection(db)
           .find({ _id: { $in: nppIds } })
           .project<Pick<NPP, "_id" | "favorability" | "politicalInfluence">>(projection)
           .toArray()
@@ -274,22 +274,16 @@ export async function queryElectionList(
   const query: Record<string, unknown> = { countryId: country };
   if (state) query.state = state;
 
-  const elections = await db
-    .collection<Election>("elections")
-    .find(query)
-    .sort({ startTime: -1 })
-    .toArray();
+  const elections = await electionsCollection(db).find(query).sort({ startTime: -1 }).toArray();
 
   if (elections.length === 0) return { found: false, elections: [] };
 
   const electionIds = elections.map((e) => e._id);
   const [allCandidates, allTallies] = await Promise.all([
-    db
-      .collection<ElectionCandidate>("electionCandidates")
+    electionCandidatesCollection(db)
       .find({ electionId: { $in: electionIds } })
       .toArray(),
-    db
-      .collection<ElectionVoteTally>("electionVoteTallies")
+    electionVoteTalliesCollection(db)
       .find({ electionId: { $in: electionIds } })
       .toArray(),
   ]);
@@ -298,8 +292,7 @@ export async function queryElectionList(
   const partySeqIds = [...new Set(allCandidates.map((c) => c.party))].map(Number).filter(Boolean);
   const parties =
     partySeqIds.length > 0
-      ? await db
-          .collection<PoliticalParty>("politicalParties")
+      ? await politicalPartiesCollection(db)
           .find({
             sequentialId: { $in: partySeqIds },
             countryId: country,
@@ -396,9 +389,7 @@ export async function queryElectionList(
 export async function queryElectionDetail(db: Db, electionId: string) {
   let election: Election | null = null;
   try {
-    election = await db
-      .collection<Election>("elections")
-      .findOne({ _id: new ObjectId(electionId) });
+    election = await electionsCollection(db).findOne({ _id: new ObjectId(electionId) });
   } catch {
     return null;
   }
@@ -407,13 +398,9 @@ export async function queryElectionDetail(db: Db, electionId: string) {
   const electionOid = election._id;
 
   const [allCandidateRows, tally, snapshots] = await Promise.all([
-    db
-      .collection<ElectionCandidate>("electionCandidates")
-      .find({ electionId: electionOid })
-      .toArray(),
-    db.collection<ElectionVoteTally>("electionVoteTallies").findOne({ electionId: electionOid }),
-    db
-      .collection<PrimarySnapshot>("primarySnapshots")
+    electionCandidatesCollection(db).find({ electionId: electionOid }).toArray(),
+    electionVoteTalliesCollection(db).findOne({ electionId: electionOid }),
+    primarySnapshotsCollection(db)
       .find({ electionId: electionOid })
       .sort({ recordedAt: 1 })
       .limit(144)
@@ -430,7 +417,7 @@ export async function queryElectionDetail(db: Db, electionId: string) {
   // Resolve prior-cycle election to find incumbent
   const priorElection =
     election.cycle && election.cycle > 1
-      ? await db.collection<Election>("elections").findOne({
+      ? await electionsCollection(db).findOne({
           seatId: election.seatId,
           cycle: election.cycle - 1,
           status: { $in: ["completed", "resolved"] },
@@ -458,8 +445,7 @@ export async function queryElectionDetail(db: Db, electionId: string) {
     .filter(Boolean);
   const parties =
     partySeqIds.length > 0
-      ? await db
-          .collection<PoliticalParty>("politicalParties")
+      ? await politicalPartiesCollection(db)
           .find({
             sequentialId: { $in: partySeqIds },
             countryId: (election as unknown as Record<string, unknown>).countryId ?? "US",
@@ -593,8 +579,7 @@ export async function queryElectionArchives(
   };
   if (type) filter.electionType = type;
 
-  const elections = await db
-    .collection<Election>("elections")
+  const elections = await electionsCollection(db)
     .find(filter)
     .sort({ endTime: -1 })
     .limit(limit)
@@ -604,12 +589,10 @@ export async function queryElectionArchives(
 
   const electionIds = elections.map((e) => e._id);
   const [allCandidates, allTallies] = await Promise.all([
-    db
-      .collection<ElectionCandidate>("electionCandidates")
+    electionCandidatesCollection(db)
       .find({ electionId: { $in: electionIds } })
       .toArray(),
-    db
-      .collection<ElectionVoteTally>("electionVoteTallies")
+    electionVoteTalliesCollection(db)
       .find({ electionId: { $in: electionIds } })
       .toArray(),
   ]);

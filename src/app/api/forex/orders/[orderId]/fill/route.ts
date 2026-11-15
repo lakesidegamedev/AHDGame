@@ -28,6 +28,11 @@ import { runWithOptionalTransaction } from "@/lib/db/runWithOptionalTransaction"
 import { newCharacterTransferBarrierResponse } from "@/lib/api/newCharacterTransferBarrier";
 import type { CurrencyOrder, GameConfig, GameState, TradeHistoryEntry } from "@/lib/db/types";
 import { recordAudit } from "@/lib/audit/recordAudit";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { currencyOrdersCollection } from "@/lib/db/repositories/currencyOrders";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { tradeHistoryCollection } from "@/lib/db/repositories/tradeHistory";
 
 interface RouteParams {
   params: Promise<{ orderId: string }>;
@@ -75,9 +80,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       restoreFillClaim,
       reverseLandedFillLegs,
     } = await import("@/lib/forex/fillRecovery");
-    let order = await db
-      .collection<CurrencyOrder>("currencyOrders")
-      .findOne({ _id: new ObjectId(orderId) });
+    let order = await currencyOrdersCollection(db).findOne({ _id: new ObjectId(orderId) });
 
     if (!order) throw notFound("Order not found");
     if (order.type !== "limit") throw badRequest("Only limit orders can be peer-filled");
@@ -86,9 +89,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       // or undone first; a live one is never stolen.
       const recovery = await recoverFillClaim(db, order._id);
       if (recovery.outcome === "completed" || recovery.outcome === "rolled-back") {
-        const reread = await db
-          .collection<CurrencyOrder>("currencyOrders")
-          .findOne({ _id: order._id });
+        const reread = await currencyOrdersCollection(db).findOne({ _id: order._id });
         if (!reread) throw notFound("Order not found");
         order = reread;
       }
@@ -100,10 +101,11 @@ export async function POST(request: Request, { params }: RouteParams) {
       throw forbidden("Cannot fill your own order");
     }
 
-    const gs = await db.collection<GameState>("gameState").findOne({ _id: "current" });
-    const gameConfig = await db
-      .collection<GameConfig>("gameConfig")
-      .findOne({ _id: "default" }, { projection: { commandEconomyEnabled: 1 } });
+    const gs = await gameStateCollection(db).findOne({ _id: "current" });
+    const gameConfig = await gameConfigCollection(db).findOne(
+      { _id: "default" },
+      { projection: { commandEconomyEnabled: 1 } }
+    );
     const blocked = nonConvertibleTradeCurrency(
       [order.fromCurrency, order.toCurrency],
       gs?.currentYear,
@@ -267,18 +269,16 @@ export async function POST(request: Request, { params }: RouteParams) {
     };
     await runWithOptionalTransaction(
       async (session) => {
-        const claimedOrder = await db
-          .collection<CurrencyOrder>("currencyOrders")
-          .findOneAndUpdate(
-            claimFilter,
-            { $set: { status: "processing", updatedAt: now } },
-            { returnDocument: "before", session }
-          );
+        const claimedOrder = await currencyOrdersCollection(db).findOneAndUpdate(
+          claimFilter,
+          { $set: { status: "processing", updatedAt: now } },
+          { returnDocument: "before", session }
+        );
         if (!claimedOrder) {
           throw badRequest("Order was already filled by another trader");
         }
 
-        const fillerResult = await db.collection("characters").updateOne(
+        const fillerResult = await charactersCollection(db).updateOne(
           {
             _id: auth.user.character._id,
             [`currencyBalances.personal.${order.toCurrency}`]: { $gte: fillerTotalCost },
@@ -290,16 +290,18 @@ export async function POST(request: Request, { params }: RouteParams) {
           throw badRequest(`Insufficient ${order.toCurrency} balance`);
         }
 
-        const posterResult = await db
-          .collection("characters")
-          .updateOne({ _id: order.characterId }, { $inc: posterCreditInc }, { session });
+        const posterResult = await charactersCollection(db).updateOne(
+          { _id: order.characterId },
+          { $inc: posterCreditInc },
+          { session }
+        );
         if (posterResult.matchedCount === 0) {
           throw notFound("Order owner not found");
         }
 
         await distributeSpreadFees(session);
 
-        const fillResult = await db.collection<CurrencyOrder>("currencyOrders").updateOne(
+        const fillResult = await currencyOrdersCollection(db).updateOne(
           { _id: order._id, status: "processing" },
           {
             $set: { status: newStatus, updatedAt: now },
@@ -311,7 +313,7 @@ export async function POST(request: Request, { params }: RouteParams) {
           throw badRequest("Order was already filled by another trader");
         }
 
-        await db.collection<TradeHistoryEntry>("tradeHistory").insertOne(tradeHistoryEntry, {
+        await tradeHistoryCollection(db).insertOne(tradeHistoryEntry, {
           session,
         });
       },
@@ -339,9 +341,7 @@ export async function POST(request: Request, { params }: RouteParams) {
           if (!applied.flipWon) {
             // A concurrent recovery flipped this same intent first. Re-read
             // for the true state rather than reporting the race as a failure.
-            const current = await db
-              .collection<CurrencyOrder>("currencyOrders")
-              .findOne({ _id: order._id });
+            const current = await currencyOrdersCollection(db).findOne({ _id: order._id });
             if (!current || current.processingFillKey === fillIntent.key) {
               throw badRequest("Order was already filled by another trader");
             }

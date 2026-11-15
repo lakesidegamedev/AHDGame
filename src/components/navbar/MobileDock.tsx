@@ -11,7 +11,7 @@
  */
 
 import React, { useEffect, useLayoutEffect, useRef, type ReactNode } from "react";
-import Link from "next/link";
+import Link from "@/components/navbar/NavigationLink";
 import { useTranslations } from "next-intl";
 import { captureProductEvent } from "@/lib/analytics/capture";
 import { PixelNavIcon } from "./PixelNavIcon";

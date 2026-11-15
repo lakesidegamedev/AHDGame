@@ -5,6 +5,9 @@ import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import type { StatePartyOrg, PoliticalParty, State } from "@/lib/db/types";
 import { getPartyHex } from "@/lib/utils/politics";
 import { getPartyIdString } from "@/lib/db/partyLookup";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string }>;
@@ -25,7 +28,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     const db = await getDb();
 
     // Verify state exists
-    const state = await db.collection<State>("states").findOne({ _id: stateId, countryId });
+    const state = await statesCollection(db).findOne({ _id: stateId, countryId });
     if (!state) {
       return errorResponse(404, "State not found");
     }
@@ -33,17 +36,13 @@ export async function GET(_request: Request, { params }: RouteParams) {
     // Fetch parties filtered by country to avoid cross-country sequential ID
     // collisions. Exclude defunct (merged-away) parties — their tombstone is
     // retained for history but must not appear as an active org-building party.
-    const parties = await db
-      .collection<PoliticalParty>("politicalParties")
+    const parties = await politicalPartiesCollection(db)
       .find({ countryId, isDefunct: { $ne: true } })
       .sort({ isDefault: -1, memberCount: -1, name: 1 })
       .toArray();
 
     // Fetch existing party org records for this state
-    const existingPartyOrg = await db
-      .collection<StatePartyOrg>("statePartyOrg")
-      .find({ stateId })
-      .toArray();
+    const existingPartyOrg = await statePartyOrgCollection(db).find({ stateId }).toArray();
 
     // Create a map for quick lookup of existing org records
     const orgMap = new Map(existingPartyOrg.map((po) => [po.partyId, po]));

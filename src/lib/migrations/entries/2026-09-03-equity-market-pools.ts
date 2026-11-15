@@ -1,26 +1,26 @@
 import type { Db } from "mongodb";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import type { EquityMarketPool } from "@/lib/db/types";
-import { EQUITY_MARKET_POOLS_COLLECTION } from "@/lib/db/types/equityMarketPool";
 import { EQUITY_POOL_M2_SHARE } from "@/lib/equities/marketPool";
 import type { Migration, MigrationContext, MigrationResult } from "../types";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { moneySupplySnapshotsCollection } from "@/lib/db/repositories/moneySupplySnapshots";
+import { equityMarketPoolsCollection } from "@/lib/db/repositories/equityMarketPools";
 
 /** Seed the real cash counterpart to existing corporation public-float inventory. */
 async function seedEquityMarketPools(db: Db, ctx: MigrationContext): Promise<MigrationResult> {
   const [rateRows, corporationCurrencies, latestSnapshot] = await Promise.all([
-    db
-      .collection<{ currencyCode?: string }>("exchangeRates")
+    exchangeRatesCollection<{ currencyCode?: string }>(db)
       .find({}, { projection: { currencyCode: 1 } })
       .toArray(),
-    db
-      .collection<{ liquidCurrencyCode?: string }>("corporations")
+    corporationsCollection<{ liquidCurrencyCode?: string }>(db)
       .aggregate<{ _id: string | null }>([
         { $match: { isPrivate: { $ne: true }, hiddenFromExchange: { $ne: true } } },
         { $group: { _id: "$liquidCurrencyCode" } },
       ])
       .toArray(),
-    db
-      .collection<{ turn: number }>("moneySupplySnapshots")
+    moneySupplySnapshotsCollection<{ turn: number }>(db)
       .find({}, { projection: { turn: 1 }, sort: { turn: -1 }, limit: 1 })
       .toArray(),
   ]);
@@ -31,8 +31,7 @@ async function seedEquityMarketPools(db: Db, ctx: MigrationContext): Promise<Mig
   const m2ByCurrency = new Map<string, number>();
   const snapshotTurn = latestSnapshot[0]?.turn;
   if (snapshotTurn != null) {
-    const rows = await db
-      .collection<{ currencyCode: string; m2?: number }>("moneySupplySnapshots")
+    const rows = await moneySupplySnapshotsCollection<{ currencyCode: string; m2?: number }>(db)
       .find({ turn: snapshotTurn }, { projection: { currencyCode: 1, m2: 1 } })
       .toArray();
     for (const row of rows) {
@@ -42,8 +41,7 @@ async function seedEquityMarketPools(db: Db, ctx: MigrationContext): Promise<Mig
 
   const existing = new Set(
     (
-      await db
-        .collection<EquityMarketPool>(EQUITY_MARKET_POOLS_COLLECTION)
+      await equityMarketPoolsCollection<EquityMarketPool>(db)
         .find({}, { projection: { _id: 1 } })
         .toArray()
     ).map((pool) => String(pool._id))
@@ -80,7 +78,7 @@ async function seedEquityMarketPools(db: Db, ctx: MigrationContext): Promise<Mig
     };
   }
   if (docs.length > 0) {
-    await db.collection<EquityMarketPool>(EQUITY_MARKET_POOLS_COLLECTION).insertMany(docs);
+    await equityMarketPoolsCollection<EquityMarketPool>(db).insertMany(docs);
   }
   return {
     documentsScanned: currencies.size,

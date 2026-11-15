@@ -1,5 +1,5 @@
 /**
- * Major / Minor party tier system (D5, 2026-06-18).
+ * Major / Minor party tier system.
  *
  * A party's tier drives its national Political-Strength cap and a player-facing
  * badge. Custom parties start Minor; default parties are seeded per country/era.

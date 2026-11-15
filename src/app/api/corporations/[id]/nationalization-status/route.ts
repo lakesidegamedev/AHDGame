@@ -12,6 +12,8 @@ import { resolveCorporation } from "@/lib/api/corporations/resolveQuery";
 import { handleRouteError } from "@/lib/api/errors";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { buildCorpNationalizationStatus } from "@/lib/nationalization/corpNationalizationStatus";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { nationalizationAuctionsCollection } from "@/lib/db/repositories/nationalizationAuctions";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -39,7 +41,7 @@ export const GET = withNoStore(async function GET(_request: Request, { params }:
           ?.filter((holder) => holder.corporationId && holder.shares > 0)
           .map((holder) => holder.corporationId!) ?? [];
       if (!hasExposure && heldByCorps.length > 0) {
-        hasExposure = !!(await db.collection<Corporation>("corporations").findOne(
+        hasExposure = !!(await corporationsCollection(db).findOne(
           {
             _id: { $in: heldByCorps },
             ceoId: actor._id,
@@ -52,9 +54,10 @@ export const GET = withNoStore(async function GET(_request: Request, { params }:
     let canBid = false;
     if (status.auction) {
       const auction = actor
-        ? await db
-            .collection<NationalizationAuction>("nationalizationAuctions")
-            .findOne({ corporationId: resolved.corporation._id, status: "open" })
+        ? await nationalizationAuctionsCollection(db).findOne({
+            corporationId: resolved.corporation._id,
+            status: "open",
+          })
         : null;
       if (
         actor &&
@@ -72,8 +75,7 @@ export const GET = withNoStore(async function GET(_request: Request, { params }:
           : (actor.cashOnHand ?? 0);
         canBid = personalBalance >= Math.max(1, minimumBid - priorPersonal);
         if (!canBid) {
-          const corporations = await db
-            .collection<Corporation>("corporations")
+          const corporations = await corporationsCollection(db)
             .find({ ceoId: actor._id, ceoVacant: { $ne: true } })
             .project<Pick<Corporation, "_id" | "liquidCapital" | "liquidCurrencyCode">>({
               _id: 1,

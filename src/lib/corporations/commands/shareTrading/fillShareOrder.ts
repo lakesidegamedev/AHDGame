@@ -74,6 +74,12 @@ import { assertCeoAcquisitionWithinCap } from "@/lib/corporations/ceoShareAcquis
 import { CURRENCY_SYMBOLS } from "@/lib/constants/currencies";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { rejectDuringTurn } from "@/lib/api/rejectDuringTurn";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import { shareOrdersCollection } from "@/lib/db/repositories/shareOrders";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 interface RouteParams {
   params: Promise<{ id: string; orderId: string }>;
@@ -117,15 +123,12 @@ export async function fillShareOrder(request: Request, { params }: RouteParams) 
       return errorResponse(400, "Invalid order ID");
     }
 
-    const loadedOrder = await db
-      .collection<ShareOrder>("shareOrders")
-      .findOne({ _id: new ObjectId(orderId) });
+    const loadedOrder = await shareOrdersCollection(db).findOne({ _id: new ObjectId(orderId) });
 
     if (!loadedOrder) return errorResponse(404, "Order not found");
     // Repair a stranded legacy claim and recover the stamped prior attempt
-    // (money first, then audit) before validating: a stuck `filled` order
-    // is fillable again here, and a prior attempt crashed mid-money
-    // converges its balances before this fill reads them.
+    // (money first, then audit) before validating: a stuck `filled` order is
+    // fillable again, and a crashed prior attempt converges balances first.
     const prepared = await prepareShareFillClaim(db, loadedOrder);
     if (prepared.order.lastShareFillKey) {
       await recoverShareFillMoneyByFillKey(db, prepared.order.lastShareFillKey);
@@ -152,9 +155,7 @@ export async function fillShareOrder(request: Request, { params }: RouteParams) 
     }
 
     // Resolve filler identity (regular or imperial)
-    const userDoc = await db
-      .collection<User>("users")
-      .findOne({ _id: new ObjectId(auth.user.userId) });
+    const userDoc = await usersCollection(db).findOne({ _id: new ObjectId(auth.user.userId) });
     const isImperialFiller =
       userDoc?.activeCharacterType === "imperial" && !!userDoc?.activeImperialCharacterId;
 
@@ -165,7 +166,7 @@ export async function fillShareOrder(request: Request, { params }: RouteParams) 
     let fillerCreated: { createdTurn?: number | null; createdAt?: Date | string | null };
 
     if (isImperialFiller) {
-      const imperial = await db.collection<ImperialCharacter>("imperialCharacters").findOne({
+      const imperial = await imperialCharactersCollection(db).findOne({
         _id: userDoc!.activeImperialCharacterId!,
         userId: new ObjectId(auth.user.userId),
       });
@@ -181,7 +182,7 @@ export async function fillShareOrder(request: Request, { params }: RouteParams) 
       const characterQuery = userDoc?.activeCharacterId
         ? { _id: userDoc.activeCharacterId, userId: new ObjectId(auth.user.userId) }
         : { userId: new ObjectId(auth.user.userId) };
-      const character = await db.collection<Character>("characters").findOne(characterQuery);
+      const character = await charactersCollection(db).findOne(characterQuery);
       if (!character) {
         return errorResponse(404, "Character not found");
       }
@@ -209,9 +210,10 @@ export async function fillShareOrder(request: Request, { params }: RouteParams) 
 
     // Self-dealing guard: CEO cannot fill their own corporation's buy order
     if (order.type === "buy" && order.placerCorporationId) {
-      const buyingCorp = await db
-        .collection<Corporation>("corporations")
-        .findOne({ _id: order.placerCorporationId }, { projection: { ceoId: 1 } });
+      const buyingCorp = await corporationsCollection(db).findOne(
+        { _id: order.placerCorporationId },
+        { projection: { ceoId: 1 } }
+      );
       if (buyingCorp?.ceoId?.toString() === fillerId.toString()) {
         return errorResponse(
           400,
@@ -270,7 +272,7 @@ export async function fillShareOrder(request: Request, { params }: RouteParams) 
     const currentTurn = await getCurrentTurn(db);
     const sellerFund =
       order.type === "sell" && order.placerFundId
-        ? await db.collection<IndexFund>("indexFunds").findOne({ _id: order.placerFundId })
+        ? await indexFundsCollection(db).findOne({ _id: order.placerFundId })
         : null;
     if (order.type === "sell" && order.placerFundId && !sellerFund) {
       return errorResponse(404, "Liquidity-provider fund not found");
@@ -340,9 +342,10 @@ export async function fillShareOrder(request: Request, { params }: RouteParams) 
       null;
 
     if (order.type === "sell" && fillAsCorporation) {
-      const buyingCorp = await db
-        .collection<Corporation>("corporations")
-        .findOne({ ceoId: fillerId, ceoVacant: { $ne: true } });
+      const buyingCorp = await corporationsCollection(db).findOne({
+        ceoId: fillerId,
+        ceoVacant: { $ne: true },
+      });
       if (!buyingCorp) {
         return errorResponse(
           403,
@@ -371,9 +374,10 @@ export async function fillShareOrder(request: Request, { params }: RouteParams) 
       buyingCorpForSellFill = buyingCorp;
     } else if (order.type === "buy") {
       if (order.placerCorporationId) {
-        buyOrderBuyerCorp = await db
-          .collection<Corporation>("corporations")
-          .findOne({ _id: order.placerCorporationId }, { projection: { _id: 1, name: 1 } });
+        buyOrderBuyerCorp = await corporationsCollection(db).findOne(
+          { _id: order.placerCorporationId },
+          { projection: { _id: 1, name: 1 } }
+        );
         if (!buyOrderBuyerCorp) {
           return errorResponse(404, "Buying corporation not found");
         }
@@ -385,8 +389,7 @@ export async function fillShareOrder(request: Request, { params }: RouteParams) 
           : sh.characterId?.toString() === fillerId.toString()
       );
       const fillerOwnedShares = fillerEntry?.shares ?? 0;
-      const openSellOrders = await db
-        .collection<ShareOrder>("shareOrders")
+      const openSellOrders = await shareOrdersCollection(db)
         .find({
           corporationId: corporation._id,
           characterId: fillerId,
@@ -408,11 +411,9 @@ export async function fillShareOrder(request: Request, { params }: RouteParams) 
       }
     }
 
-    // Pin every audit-plan figure before the claim (issue #1672). Seller
-    // proceeds, display names, and the corp-filler FX estimate are pure reads,
-    // so hoisting them ahead of the claim changes no money behavior; the
-    // resume plan then carries the exact first-attempt figures and recovery
-    // never reprices from post-fill state.
+    // Pin audit-plan figures before the claim so the resume plan carries
+    // the exact first-attempt values and recovery never reprices from
+    // post-fill state. These reads are pure, so hoisting changes no money behavior.
     const buyingCurrency = (
       buyingCorpForSellFill
         ? (resolveCorpLiquidCurrencyCode(buyingCorpForSellFill) ?? "USD")
@@ -428,18 +429,19 @@ export async function fillShareOrder(request: Request, { params }: RouteParams) 
       if (order.placerFundId) {
         pinnedSellerName = sellerFund?.name ?? "Index fund";
       } else if (order.placerCorporationId) {
-        const sellerCorp = await db
-          .collection<Corporation>("corporations")
-          .findOne({ _id: order.placerCorporationId });
+        const sellerCorp = await corporationsCollection(db).findOne({
+          _id: order.placerCorporationId,
+        });
         const sellerFxRate = await getCorpFxRate(db, sellerCorp ?? {});
         pinnedSellerName = sellerCorp?.name ?? "Unknown corporation";
         pinnedSellerAmount = anchorToCorpLiquidCapital(total, sellerCorp ?? {}, sellerFxRate);
         pinnedSellerCurrency = (resolveCorpLiquidCurrencyCode(sellerCorp ?? {}) ??
           "USD") as CurrencyCode;
       } else {
-        const seller = await db
-          .collection<Character>("characters")
-          .findOne({ _id: orderCharacterId }, { projection: { countryId: 1, name: 1 } });
+        const seller = await charactersCollection(db).findOne(
+          { _id: orderCharacterId },
+          { projection: { countryId: 1, name: 1 } }
+        );
         pinnedSellerName = seller?.name ?? "Unknown character";
         pinnedSellerCurrency = seller ? getHomeCurrency(seller as Character) : fillerHomeCurrency;
         let sellerFxRate = 1.0;
@@ -559,7 +561,7 @@ export async function fillShareOrder(request: Request, { params }: RouteParams) 
       })
     );
 
-    const claimedOrder = await db.collection<ShareOrder>("shareOrders").findOneAndUpdate(
+    const claimedOrder = await shareOrdersCollection(db).findOneAndUpdate(
       {
         ...buildShareFillClaimFilter(order._id, shares),
         sharesRemaining: order.sharesRemaining,
@@ -598,9 +600,10 @@ export async function fillShareOrder(request: Request, { params }: RouteParams) 
       if (order.lastShareFillKey === undefined) {
         restoreUpdate.$unset = { ...restoreUpdate.$unset, lastShareFillKey: "" };
       }
-      await db
-        .collection<ShareOrder>("shareOrders")
-        .updateOne({ _id: order._id, activeShareFillKey: fillKey }, restoreUpdate);
+      await shareOrdersCollection(db).updateOne(
+        { _id: order._id, activeShareFillKey: fillKey },
+        restoreUpdate
+      );
     };
 
     const sellerCharacterAvgCost = orderCharacterId
@@ -626,11 +629,10 @@ export async function fillShareOrder(request: Request, { params }: RouteParams) 
         // Pinned pre-claim by the audit-plan hoist above (same FX estimate the
         // legacy path computed here).
         const costInBuyerCapital = corpFillCostInBuyerCapital;
-        // All money moves through the keyed share-fill money flow (issue
-        // #1672): corp debit, seller/inventory debit, buyer credit, and
-        // seller proceeds run as compare-and-set steps under the attempt
-        // key, so a crash between any two converges on retry instead of
-        // leaving the filler debited with the seller unpaid.
+        // All money moves through the keyed share-fill money flow as
+        // compare-and-set steps under the attempt key, so a crash between
+        // any two legs converges on retry instead of leaving the filler
+        // debited with the seller unpaid.
         const moneyPlan: ShareFillMoneyPlan = {
           version: 1,
           fillKey,

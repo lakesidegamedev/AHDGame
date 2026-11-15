@@ -12,7 +12,9 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { getGameState } from "@/lib/gameState";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
-import type { Character, CorporationPrivatizationVote } from "@/lib/db/types";
+import type { CorporationPrivatizationVote } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { corporationPrivatizationVotesCollection } from "@/lib/db/repositories/corporationPrivatizationVotes";
 
 interface RouteParams {
   params: Promise<{ id: string; voteId: string }>;
@@ -53,16 +55,17 @@ export async function POST(request: Request, { params }: RouteParams) {
     if (!resolved.ok) return resolved.response;
     const { corporation } = resolved;
 
-    const vote = await db
-      .collection<CorporationPrivatizationVote>("corporationPrivatizationVotes")
-      .findOne({ _id: new ObjectId(voteId), corporationId: corporation._id });
+    const vote = await corporationPrivatizationVotesCollection(db).findOne({
+      _id: new ObjectId(voteId),
+      corporationId: corporation._id,
+    });
     if (!vote) {
       return errorResponse(404, "Vote not found");
     }
 
-    const voterCharacter = await db
-      .collection<Character>("characters")
-      .findOne({ userId: new ObjectId(auth.user.userId) });
+    const voterCharacter = await charactersCollection(db).findOne({
+      userId: new ObjectId(auth.user.userId),
+    });
     if (!voterCharacter) {
       return errorResponse(404, "Character not found");
     }
@@ -84,9 +87,10 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     if (result.autoResolve) {
       const forexEnabled = await isForexEnabled();
-      const freshVote = await db
-        .collection<CorporationPrivatizationVote>("corporationPrivatizationVotes")
-        .findOne({ _id: vote._id, status: "open" });
+      const freshVote = await corporationPrivatizationVotesCollection(db).findOne({
+        _id: vote._id,
+        status: "open",
+      });
       if (freshVote) {
         await resolvePrivatizationVote({
           db,

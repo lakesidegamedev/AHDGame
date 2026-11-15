@@ -40,31 +40,30 @@ describe("resolveMySubsidiaryGroupNav", () => {
   it.each([parent, child])(
     "shows a formalized Group for either parent or member (%s)",
     async (id) => {
-      expect(await resolveMySubsidiaryGroupNav(fixture().db, id, true)).toBe(true);
+      expect(await resolveMySubsidiaryGroupNav(fixture().db, id)).toBe(true);
     }
   );
   it("hides standalone and missing corporations", async () => {
     const { db } = fixture();
-    expect(await resolveMySubsidiaryGroupNav(db, outsider, true)).toBe(false);
-    expect(await resolveMySubsidiaryGroupNav(db, new ObjectId(), true)).toBe(false);
+    expect(await resolveMySubsidiaryGroupNav(db, outsider)).toBe(false);
+    expect(await resolveMySubsidiaryGroupNav(db, new ObjectId())).toBe(false);
   });
   it.each([parent, child])("hides ownership without formalization (%s)", async (id) => {
-    expect(await resolveMySubsidiaryGroupNav(fixture(false).db, id, true)).toBe(false);
+    expect(await resolveMySubsidiaryGroupNav(fixture(false).db, id)).toBe(false);
   });
   it("hides a former Group after voting control is lost", async () => {
     const { db } = fixture(true, 50);
-    expect(await resolveMySubsidiaryGroupNav(db, parent, true)).toBe(false);
-    expect(await resolveMySubsidiaryGroupNav(db, child, true)).toBe(false);
+    expect(await resolveMySubsidiaryGroupNav(db, parent)).toBe(false);
+    expect(await resolveMySubsidiaryGroupNav(db, child)).toBe(false);
   });
   it("preserves control while shares are reserved on an open sale", async () => {
     const { db } = fixture(true, 40, 20);
-    expect(await resolveMySubsidiaryGroupNav(db, parent, true)).toBe(true);
-    expect(await resolveMySubsidiaryGroupNav(db, child, true)).toBe(true);
+    expect(await resolveMySubsidiaryGroupNav(db, parent)).toBe(true);
+    expect(await resolveMySubsidiaryGroupNav(db, child)).toBe(true);
   });
-  it("does no ownership reads without a corporation or while subsidiaries are disabled", async () => {
+  it("does no ownership reads without a corporation", async () => {
     const { db, collection } = fixture();
-    expect(await resolveMySubsidiaryGroupNav(db, null, true)).toBe(false);
-    expect(await resolveMySubsidiaryGroupNav(db, child, false)).toBe(false);
+    expect(await resolveMySubsidiaryGroupNav(db, null)).toBe(false);
     expect(collection).not.toHaveBeenCalled();
   });
 });

@@ -61,5 +61,3 @@ export const CN_CABINET_POSITIONS = [
     order: 15,
   },
 ] as const;
-
-export type CNCabinetPositionId = (typeof CN_CABINET_POSITIONS)[number]["id"];

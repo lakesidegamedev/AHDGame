@@ -1,6 +1,6 @@
 /** Cancel and refund boundary-related construction before changing ownership or currency. */
 import { ObjectId, type Db, type AnyBulkWriteOperation } from "mongodb";
-import type { Corporation, CorporateSector, GameState } from "@/lib/db/types";
+import type { CorporateSector, GameState } from "@/lib/db/types";
 import { boundSession } from "@/lib/db/sessionDb";
 import { cancelFinancedConstruction } from "@/lib/banking/constructionCancellation";
 import {
@@ -20,11 +20,23 @@ import {
 import { emitBuildCapexTxBulk, type BuildCapexTxInput } from "@/lib/corporations/capexTxLog";
 import { unownedPoolCredit } from "@/lib/market/unownedPoolDraw";
 import { getEraUnitScale } from "@/lib/constants/sectorSeedEra";
-import { resolvePresetIdFromGameState } from "@/lib/world/countryReadinessContract";
+import { resolvePresetIdFromGameState } from "@/lib/world/presetId";
 import { quoteConversionConstructionRefund } from "./rules/constructionRefund";
 import { cancelConversionUnderwriting } from "@/lib/banking/cancelConversionUnderwriting";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { loadWholePlantsOn } from "@/lib/corporations/wholePlants/stage";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
+import type { Document } from "mongodb";
+import { infraProjectsCollection } from "@/lib/db/repositories/infraProjects";
 
-async function cancelSecuredBuild(db: Db, sector: CorporateSector, turn: number) {
+async function cancelSecuredBuild(
+  db: Db,
+  sector: CorporateSector,
+  turn: number,
+  wholePlants: boolean
+) {
   let claim = sector.constructionFinancing!;
   if (claim.status === "awaiting_approval") {
     const rejected = await rejectConstructionFinance(
@@ -60,9 +72,10 @@ async function cancelSecuredBuild(db: Db, sector: CorporateSector, turn: number)
       borrower: borrower.snapshot,
     });
     if (!settled.ok) throw new Error(settled.error);
-    const updated = await db
-      .collection<CorporateSector>("corporateSectors")
-      .findOne({ _id: sector._id }, { projection: { constructionFinancing: 1 } });
+    const updated = await corporateSectorsCollection(db).findOne(
+      { _id: sector._id },
+      { projection: { constructionFinancing: 1 } }
+    );
     claim = updated!.constructionFinancing!;
   }
   if (claim.status === "building" && !(await releaseCompletedConstructionFunding(db, claim)))
@@ -74,6 +87,7 @@ async function cancelSecuredBuild(db: Db, sector: CorporateSector, turn: number)
     borrowerId: sector.corporationId,
     turn,
     fullRefund: true,
+    wholePlants,
   });
   if (!cancelled.ok) throw new Error(cancelled.error);
 }
@@ -81,16 +95,16 @@ async function cancelSecuredBuild(db: Db, sector: CorporateSector, turn: number)
 export async function refundConversionConstruction(
   db: Db,
   regionId: string,
-  turn: number
+  turn: number,
+  incomingCorporationIds: ObjectId[] = []
 ): Promise<void> {
   if (!boundSession(db)) throw new Error("Conversion refunds require a transaction");
-  const corporations = await db
-    .collection<Corporation>("corporations")
-    .find({ headquartersState: regionId })
+  const wholePlants = await loadWholePlantsOn(db);
+  const corporations = await corporationsCollection(db)
+    .find({ $or: [{ headquartersState: regionId }, { _id: { $in: incomingCorporationIds } }] })
     .toArray();
   const ids = corporations.map((corp) => corp._id);
-  const sectors = await db
-    .collection<CorporateSector>("corporateSectors")
+  const sectors = await corporateSectorsCollection(db)
     .find(
       { $or: [{ stateId: regionId }, { corporationId: { $in: ids } }] },
       {
@@ -99,6 +113,7 @@ export async function refundConversionConstruction(
           stateId: 1,
           countryId: 1,
           sectorType: 1,
+          strategyId: 1,
           industryModel: 1,
           mediaDiscriminator: 1,
           buildQueue: 1,
@@ -107,19 +122,24 @@ export async function refundConversionConstruction(
           capitalStock: 1,
           capacityBookAnchor: 1,
           operatingCapacityTurn: 1,
+          buildDeliverySettledTurn: 1,
+          plantCount: 1,
+          plantUnitRemainder: 1,
+          plantWearUnits: 1,
+          activeCapacityPercent: 1,
+          mothballed: 1,
         },
       }
     )
     .toArray();
-  const owners = await db
-    .collection<Corporation>("corporations")
+  const owners = await corporationsCollection(db)
     .find({ _id: { $in: sectors.map((sector) => sector.corporationId) } })
     .toArray();
   const byId = new Map(owners.map((corp) => [String(corp._id), corp]));
   // Foreign sector owners keep their unrelated corporate underwriting; only their local builds cancel.
   await cancelConversionUnderwriting(db, ids, turn);
   const fx = await loadFxRatesByCurrency(db);
-  const gameState = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+  const gameState = await gameStateCollection(db).findOne({ _id: "current" });
   const era = getEraUnitScale(resolvePresetIdFromGameState(gameState));
   const sectorOps: AnyBulkWriteOperation<CorporateSector>[] = [];
   const refunds = new Map<string, number>();
@@ -134,7 +154,7 @@ export async function refundConversionConstruction(
     )
     .map((sector) => sector._id);
   if (pendingIds.length) {
-    const unlisted = await db.collection<CorporateSector>("corporateSectors").updateMany(
+    const unlisted = await corporateSectorsCollection(db).updateMany(
       {
         _id: { $in: pendingIds },
         constructionPropertyTransition: { $exists: false },
@@ -161,7 +181,7 @@ export async function refundConversionConstruction(
       hasOrder ||
       (claim.cancellation && !claim.cancellation.cleanupCompleted)
     ) {
-      await cancelSecuredBuild(db, sector, turn);
+      await cancelSecuredBuild(db, sector, turn, wholePlants);
     } else if (claim.status === "building" && !claim.fundingCleanupCompleted) {
       // A fully delivered plant is existing collateral, not a pending order to refund.
       if (!(await releaseCompletedConstructionFunding(db, claim)))
@@ -169,8 +189,7 @@ export async function refundConversionConstruction(
     }
   };
   for (const sector of sectors) await settleSecured(sector);
-  const currentSectors = await db
-    .collection<CorporateSector>("corporateSectors")
+  const currentSectors = await corporateSectorsCollection(db)
     .find(
       { _id: { $in: sectors.map((sector) => sector._id) } },
       {
@@ -179,6 +198,7 @@ export async function refundConversionConstruction(
           stateId: 1,
           countryId: 1,
           sectorType: 1,
+          strategyId: 1,
           industryModel: 1,
           mediaDiscriminator: 1,
           buildQueue: 1,
@@ -186,6 +206,12 @@ export async function refundConversionConstruction(
           capitalStock: 1,
           capacityBookAnchor: 1,
           operatingCapacityTurn: 1,
+          buildDeliverySettledTurn: 1,
+          plantCount: 1,
+          plantUnitRemainder: 1,
+          plantWearUnits: 1,
+          activeCapacityPercent: 1,
+          mothballed: 1,
         },
       }
     )
@@ -198,7 +224,7 @@ export async function refundConversionConstruction(
       throw new Error("Financed cancellation did not retire its order");
     const owner = byId.get(String(sector.corporationId));
     if (!owner) throw new Error("Construction owner is missing");
-    const quote = quoteConversionConstructionRefund(sector, turn);
+    const quote = quoteConversionConstructionRefund(sector, turn, wholePlants);
     const code = resolveCorpLiquidCurrencyCode(owner);
     const rate = code ? fx.get(code) : 1;
     if (!(rate && rate > 0))
@@ -253,12 +279,12 @@ export async function refundConversionConstruction(
       });
   }
   if (sectorOps.length) {
-    const result = await db.collection<CorporateSector>("corporateSectors").bulkWrite(sectorOps);
+    const result = await corporateSectorsCollection(db).bulkWrite(sectorOps);
     if (result.matchedCount !== sectorOps.length)
       throw new Error("Construction queues changed during conversion");
   }
   if (refunds.size)
-    await db.collection<Corporation>("corporations").bulkWrite(
+    await corporationsCollection(db).bulkWrite(
       [...refunds].map(([id, amount]) => ({
         updateOne: {
           filter: { _id: new ObjectId(id) },
@@ -266,9 +292,9 @@ export async function refundConversionConstruction(
         },
       }))
     );
-  if (poolOps.length) await db.collection("unownedSectors").bulkWrite(poolOps);
+  if (poolOps.length) await unownedSectorsCollection<Document>(db).bulkWrite(poolOps);
   if (logs.length) await emitBuildCapexTxBulk(db, logs);
   // Infrastructure construction reserves a budget envelope, not prepaid cash.
   // Cancelling releases that commitment; there is no cash debit to refund.
-  await db.collection("infraProjects").deleteMany({ regionId, status: "construction" });
+  await infraProjectsCollection<Document>(db).deleteMany({ regionId, status: "construction" });
 }

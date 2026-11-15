@@ -1,18 +1,18 @@
 /**
- * SEED INDEPENDENCE — DO NOT DERIVE FROM ANOTHER ERA.
- * Each era seed is self-contained. This file MUST NOT import and transform
- * another era's region data. All values are authored for 1953 directly.
+ * SEED INDEPENDENCE: do not derive from another era.
+ * Each era seed is self-contained. This file must not import and transform
+ * another era's region data; all values are authored for 1953 directly.
  * Type-only imports are allowed.
  *
  * Irish regions for the 1953-default preset (de Valera's last Fianna Fáil
- * government 1951–54; Catholic social conservatism; massive emigration crisis;
- * Marshall Aid era austerity). The 8 game regions are structurally stable;
+ * government 1951-54; Catholic social conservatism; emigration crisis;
+ * Marshall Aid austerity). The 8 game regions are structurally stable;
  * era-specific values are ~1951-census population (Republic only: 2.96M),
- * ~1953 regional GDP (GBP millions, nominal), and the **147-seat** Dáil
- * Éireann distribution under the 1948 redistribution (14th Dáil 1954).
+ * ~1953 regional GDP (GBP millions, nominal), and the 147-seat Dáil
+ * Éireann distribution under the 1948 redistribution.
  *
- * The `stateSenateSeats` value mirrors the 60-seat Seanad Éireann (era-invariant
- * in this model per the 1979 seed convention) distributed across the 8 regions.
+ * `stateSenateSeats` mirrors the 60-seat Seanad Éireann distributed across
+ * the 8 regions.
  */
 import type { State } from "@/lib/db/types";
 

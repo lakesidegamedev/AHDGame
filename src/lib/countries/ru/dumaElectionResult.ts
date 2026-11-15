@@ -5,13 +5,6 @@
  */
 import { russianDumaElectoralLaw } from "./rules/dumaElectoralLaw";
 import { ObjectId, type ClientSession, type Db } from "mongodb";
-import type {
-  CountryGameState,
-  Election,
-  ElectionCandidate,
-  ElectionVoteTally,
-  GameState,
-} from "@/lib/db/types";
 import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
 import { resolveRussianDumaCohort, type RussianDumaCohortBallot } from "./rules/assemblyCohort";
 import { loadRussianDumaCertificationInputs } from "./dumaCertificationInputs";
@@ -21,6 +14,12 @@ import {
   russianDumaRootFilter,
 } from "./dumaConvocationAuthority";
 import { hasAuthorizedPostSovietTransition } from "./rules/postSovietTransition";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
+import { russianDumaElectionResultsCollection } from "@/lib/db/repositories/russianDumaElectionResults";
 
 export const RUSSIAN_DUMA_RESULTS_COLLECTION = "russianDumaElectionResults";
 export interface RussianDumaResultRecord {
@@ -62,7 +61,7 @@ export async function materializeRussianDumaElectionResult(input: {
     !Number.isFinite(now.getTime())
   )
     throw new Error("Duma certification needs an active transaction, turn and time");
-  const results = db.collection<RussianDumaResultRecord>(RUSSIAN_DUMA_RESULTS_COLLECTION);
+  const results = russianDumaElectionResultsCollection<RussianDumaResultRecord>(db);
   const previous = await results.findOne({ _id: cohortId.toHexString() }, { session });
   if (previous) {
     if (
@@ -73,11 +72,12 @@ export async function materializeRussianDumaElectionResult(input: {
       throw new Error("Russian Duma result identity changed");
     return previous;
   }
-  const game = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { session, projection: { preset: 1 } });
+  const game = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { session, projection: { preset: 1 } }
+  );
   if (game?.preset !== "1991-default") throw new Error("No first-Duma mandate in this world");
-  const countries = db.collection<CountryGameState>("countryGameStates");
+  const countries = countryGameStatesCollection(db);
   const country = await countries.findOne(
     { _id: "RU" },
     {
@@ -105,7 +105,7 @@ export async function materializeRussianDumaElectionResult(input: {
     throw new Error("The first-Duma constitutional mandate changed");
   const authority = await loadRussianDumaAuthority({ db, session, country, root: cohortId, turn });
   if (!authority) throw new Error("Duma campaign authority changed");
-  const elections = db.collection<Election>("elections");
+  const elections = electionsCollection(db);
   const cohort = await elections
     .find(
       { countryId: "RU", "russianDumaRound.cohortId": cohortId },
@@ -148,7 +148,7 @@ export async function materializeRussianDumaElectionResult(input: {
       convocationNumber: authority.number,
     });
   const electionIds = cohort.map((row) => row._id);
-  const tallies = db.collection<ElectionVoteTally>("electionVoteTallies");
+  const tallies = electionVoteTalliesCollection(db);
   const result = resolveRussianDumaCohort(ballots);
   const outcomes = new Map(
     result.constituencyResults.map((row) => [row.electionId, row.decision.outcome])
@@ -181,13 +181,11 @@ export async function materializeRussianDumaElectionResult(input: {
   // Release the global active-candidacy index for future and repeat ballots.
   // The immutable result above retains the nominees and counted votes.
   const expectedActive = candidates.filter((row) => row.status === "active").length;
-  const retired = await db
-    .collection<ElectionCandidate>("electionCandidates")
-    .updateMany(
-      { electionId: { $in: electionIds }, status: "active" },
-      { $set: { status: "withdrawn", withdrawnAt: now } },
-      { session }
-    );
+  const retired = await electionCandidatesCollection(db).updateMany(
+    { electionId: { $in: electionIds }, status: "active" },
+    { $set: { status: "withdrawn", withdrawnAt: now } },
+    { session }
+  );
   if (retired.matchedCount !== expectedActive)
     throw new Error("Duma candidacies changed during certification");
   // Take a write conflict on the bound mandate without activating the Assembly.

@@ -5,21 +5,11 @@
  */
 import { createHash } from "node:crypto";
 import { ObjectId, type ClientSession, type Db } from "mongodb";
-import type {
-  Character,
-  Election,
-  ElectionCandidate,
-  ElectedOfficial,
-  ElectionVoteTally,
-  NPP,
-  GameState,
-  State,
-  StateRegistrationPool,
-} from "@/lib/db/types";
+import type { Election, ElectionCandidate, ElectedOfficial } from "@/lib/db/types";
 import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
 import { MS_PER_TURN } from "@/lib/constants/turnTime";
-import { scalePoolToRegistered } from "@/lib/electionEngine/rules/registration";
-import { HU_1991_COUNTS_COLLECTION, type Hu1991AssemblyRecord } from "./assemblyCount1991";
+import { scalePoolToRegistered } from "@/lib/elections/rules/registration";
+import { type Hu1991AssemblyRecord } from "./assemblyCount1991";
 import { HU_1991_CONSTITUENCIES } from "./data/electoralDistricts1991";
 import {
   countHu1991ByElection,
@@ -33,7 +23,23 @@ import {
   projectHu1991Runoff,
   type Hu1991RegionalCampaign,
 } from "./rules/campaignBallots1991";
-import { TALLY_WITH_LATEST_SNAPSHOT_ONLY } from "@/lib/electionEngine/tallyProjections";
+import { TALLY_WITH_LATEST_SNAPSHOT_ONLY } from "@/lib/elections/engine/tallyProjections";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
+import type { Document } from "mongodb";
+import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
+import { notificationsCollection } from "@/lib/db/repositories/notifications";
+import { stateRegistrationPoolCollection } from "@/lib/db/repositories/stateRegistrationPool";
+import { hu1991AssemblyOfficeArchivesCollection } from "@/lib/db/repositories/hu1991AssemblyOfficeArchives";
+import { hu1991AssemblyCountsCollection } from "@/lib/db/repositories/hu1991AssemblyCounts";
+import { hu1991ConstituencyByElectionsCollection } from "@/lib/db/repositories/hu1991ConstituencyByElections";
 export const HU_1991_BY_ELECTIONS_COLLECTION = "hu1991ConstituencyByElections";
 export interface Hu1991ByElectionRecord {
   _id: string;
@@ -75,27 +81,21 @@ async function cancelByElection(
   now: Date
 ): Promise<void> {
   const ids = job.electionIds.map((id) => new ObjectId(id));
-  await db
-    .collection<Hu1991ByElectionRecord>(HU_1991_BY_ELECTIONS_COLLECTION)
-    .updateOne(
-      { _id: job._id, completedAtTurn: { $exists: false } },
-      { $set: { completedAtTurn: turn } },
-      { session }
-    );
-  await db
-    .collection<Election>("elections")
-    .updateMany(
-      { _id: { $in: ids } },
-      { $set: { status: "cancelled", resolving: false, updatedAt: now } },
-      { session }
-    );
-  await db
-    .collection<ElectionCandidate>("electionCandidates")
-    .updateMany(
-      { electionId: { $in: ids }, status: "active" },
-      { $set: { status: "withdrawn", withdrawnAt: now } },
-      { session }
-    );
+  await hu1991ConstituencyByElectionsCollection<Hu1991ByElectionRecord>(db).updateOne(
+    { _id: job._id, completedAtTurn: { $exists: false } },
+    { $set: { completedAtTurn: turn } },
+    { session }
+  );
+  await electionsCollection(db).updateMany(
+    { _id: { $in: ids } },
+    { $set: { status: "cancelled", resolving: false, updatedAt: now } },
+    { session }
+  );
+  await electionCandidatesCollection(db).updateMany(
+    { electionId: { $in: ids }, status: "active" },
+    { $set: { status: "withdrawn", withdrawnAt: now } },
+    { session }
+  );
 }
 async function materializeHu1991ByElectionOpening(input: {
   db: Db;
@@ -105,18 +105,17 @@ async function materializeHu1991ByElectionOpening(input: {
 }): Promise<string[]> {
   const { db, session, turn, now } = input;
   assertTransaction(session, turn, now);
-  const game = await db
-    .collection<GameState>("gameState")
-    .findOne(
-      { _id: "current" },
-      { session, projection: { preset: 1, huAssemblyReformedAtYear: 1 } }
-    );
+  const game = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { session, projection: { preset: 1, huAssemblyReformedAtYear: 1 } }
+  );
   if (game?.preset !== "1991-default") return [];
-  const parent = await db
-    .collection<Hu1991AssemblyRecord>(HU_1991_COUNTS_COLLECTION)
-    .findOne({ seatedAtTurn: { $exists: true } }, { session, sort: { seatedAtTurn: -1 } });
+  const parent = await hu1991AssemblyCountsCollection<Hu1991AssemblyRecord>(db).findOne(
+    { seatedAtTurn: { $exists: true } },
+    { session, sort: { seatedAtTurn: -1 } }
+  );
   if (!parent?.settled || parent.seatedAtTurn == null) return [];
-  const journal = db.collection<Hu1991ByElectionRecord>(HU_1991_BY_ELECTIONS_COLLECTION);
+  const journal = hu1991ConstituencyByElectionsCollection<Hu1991ByElectionRecord>(db);
   const modernChamber = game.huAssemblyReformedAtYear != null;
   const superseded = await journal
     .find(
@@ -134,20 +133,16 @@ async function materializeHu1991ByElectionOpening(input: {
       { $set: { completedAtTurn: turn } },
       { session }
     );
-    await db
-      .collection<Election>("elections")
-      .updateMany(
-        { _id: { $in: ids } },
-        { $set: { status: "cancelled", resolving: false, updatedAt: now } },
-        { session }
-      );
-    await db
-      .collection<ElectionCandidate>("electionCandidates")
-      .updateMany(
-        { electionId: { $in: ids }, status: "active" },
-        { $set: { status: "withdrawn", withdrawnAt: now } },
-        { session }
-      );
+    await electionsCollection(db).updateMany(
+      { _id: { $in: ids } },
+      { $set: { status: "cancelled", resolving: false, updatedAt: now } },
+      { session }
+    );
+    await electionCandidatesCollection(db).updateMany(
+      { electionId: { $in: ids }, status: "active" },
+      { $set: { status: "withdrawn", withdrawnAt: now } },
+      { session }
+    );
   }
   if (modernChamber) return [];
   const prior = await journal.findOne(
@@ -160,7 +155,7 @@ async function materializeHu1991ByElectionOpening(input: {
     return [];
   }
   if (turn + 4 >= parent.seatedAtTurn + 192) return [];
-  const ordinary = await db.collection<Election>("elections").findOne(
+  const ordinary = await electionsCollection(db).findOne(
     {
       countryId: "HU",
       electionType: "nationalAssembly",
@@ -175,8 +170,7 @@ async function materializeHu1991ByElectionOpening(input: {
   );
   if (ordinary) return [];
   if (prior?.completedAtTurn != null && turn < prior.completedAtTurn + 2) return [];
-  const officials = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const officials = await electedOfficialsCollection(db)
     .find(
       {
         countryId: "HU",
@@ -212,15 +206,13 @@ async function materializeHu1991ByElectionOpening(input: {
       districtIds.map((id) => HU_1991_CONSTITUENCIES.find((row) => row.id === id)!.regionId)
     ),
   ];
-  const states = await db
-    .collection<State>("states")
+  const states = await statesCollection(db)
     .find(
       { countryId: "HU" },
       { session, projection: { population: 1, votingEligiblePopulation: 1 } }
     )
     .toArray();
-  const pools = await db
-    .collection<StateRegistrationPool>("stateRegistrationPool")
+  const pools = await stateRegistrationPoolCollection(db)
     .find({ countryId: "HU" }, { session, projection: { stateId: 1, unregistered: 1 } })
     .toArray();
   const regionalRegister = Object.fromEntries(
@@ -246,8 +238,7 @@ async function materializeHu1991ByElectionOpening(input: {
         .map((row) => row.ownerId)
     ),
   ];
-  const npcs = await db
-    .collection<NPP>("npps")
+  const npcs = await nppsCollection(db)
     .find(
       {
         _id: { $in: npcOwners.map((id) => new ObjectId(id)) },
@@ -321,13 +312,11 @@ async function materializeHu1991ByElectionOpening(input: {
     }
   }
   const ids = polls.map((row) => row._id.toHexString());
-  const claim = await db
-    .collection<Hu1991AssemblyRecord>(HU_1991_COUNTS_COLLECTION)
-    .updateOne(
-      { _id: parent._id, byElectionGeneration: parent.byElectionGeneration ?? { $exists: false } },
-      { $set: { byElectionGeneration: generation } },
-      { session }
-    );
+  const claim = await hu1991AssemblyCountsCollection<Hu1991AssemblyRecord>(db).updateOne(
+    { _id: parent._id, byElectionGeneration: parent.byElectionGeneration ?? { $exists: false } },
+    { $set: { byElectionGeneration: generation } },
+    { session }
+  );
   if (claim.modifiedCount !== 1)
     throw new Error("Hungarian by-election opening changed concurrently");
   await journal.insertOne(
@@ -347,12 +336,9 @@ async function materializeHu1991ByElectionOpening(input: {
     },
     { session }
   );
-  await db.collection<Election>("elections").insertMany(polls, { session });
-  if (candidates.length)
-    await db
-      .collection<ElectionCandidate>("electionCandidates")
-      .insertMany(candidates, { session });
-  await db.collection<ElectionVoteTally>("electionVoteTallies").insertMany(
+  await electionsCollection(db).insertMany(polls, { session });
+  if (candidates.length) await electionCandidatesCollection(db).insertMany(candidates, { session });
+  await electionVoteTalliesCollection(db).insertMany(
     polls.map((poll) => ({
       _id: stableId(`${receiptId}:tally:${poll.state}`),
       electionId: poll._id,
@@ -372,12 +358,10 @@ async function materializeHu1991ByElectionOpening(input: {
 }
 export async function openHu1991ByElections(db: Db, turn: number, now: Date): Promise<string[]> {
   // Worlds without a certified native Assembly need no transaction or by-election.
-  const parent = await db
-    .collection<Hu1991AssemblyRecord>(HU_1991_COUNTS_COLLECTION)
-    .findOne(
-      { seatedAtTurn: { $exists: true } },
-      { projection: { _id: 1 }, sort: { seatedAtTurn: -1 } }
-    );
+  const parent = await hu1991AssemblyCountsCollection<Hu1991AssemblyRecord>(db).findOne(
+    { seatedAtTurn: { $exists: true } },
+    { projection: { _id: 1 }, sort: { seatedAtTurn: -1 } }
+  );
   if (!parent) return [];
   return runRequiredTransaction((session) =>
     materializeHu1991ByElectionOpening({ db, session, turn, now })
@@ -393,27 +377,28 @@ async function materializeHu1991ByElectionResolution(input: {
 }): Promise<number> {
   const { db, session, receiptId, turn, now } = input;
   assertTransaction(session, turn, now);
-  const journal = db.collection<Hu1991ByElectionRecord>(HU_1991_BY_ELECTIONS_COLLECTION);
+  const journal = hu1991ConstituencyByElectionsCollection<Hu1991ByElectionRecord>(db);
   const job = await journal.findOne({ _id: receiptId }, { session });
   if (!job || job.completedAtTurn != null) return 0;
-  const chamberLock = await db
-    .collection<{ _id: string; hu1991MandateGeneration?: number }>("governmentFormations")
-    .updateOne({ _id: "HU" }, { $inc: { hu1991MandateGeneration: 1 } }, { session });
+  const chamberLock = await governmentFormationsCollection<{
+    _id: string;
+    hu1991MandateGeneration?: number;
+  }>(db).updateOne({ _id: "HU" }, { $inc: { hu1991MandateGeneration: 1 } }, { session });
   if (chamberLock.matchedCount !== 1) throw new Error("Hungarian chamber authority is missing");
-  const parent = await db
-    .collection<Hu1991AssemblyRecord>(HU_1991_COUNTS_COLLECTION)
-    .findOne({ _id: job.parentReceiptId }, { session });
+  const parent = await hu1991AssemblyCountsCollection<Hu1991AssemblyRecord>(db).findOne(
+    { _id: job.parentReceiptId },
+    { session }
+  );
   if (!parent?.settled || parent.seatedAtTurn == null)
     throw new Error("Hungarian by-election lost its certified parent");
-  const latestParent = await db
-    .collection<Hu1991AssemblyRecord>(HU_1991_COUNTS_COLLECTION)
-    .findOne(
-      { seatedAtTurn: { $exists: true } },
-      { session, sort: { seatedAtTurn: -1 }, projection: { _id: 1 } }
-    );
-  const game = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { session, projection: { huAssemblyReformedAtYear: 1 } });
+  const latestParent = await hu1991AssemblyCountsCollection<Hu1991AssemblyRecord>(db).findOne(
+    { seatedAtTurn: { $exists: true } },
+    { session, sort: { seatedAtTurn: -1 }, projection: { _id: 1 } }
+  );
+  const game = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { session, projection: { huAssemblyReformedAtYear: 1 } }
+  );
   const currentChamber =
     game?.huAssemblyReformedAtYear == null && latestParent?._id === job.parentReceiptId;
   if (!currentChamber || turn >= job.termEndTurn) {
@@ -421,8 +406,7 @@ async function materializeHu1991ByElectionResolution(input: {
     return job.electionIds.length;
   }
 
-  const polls = await db
-    .collection<Election>("elections")
+  const polls = await electionsCollection(db)
     .find({ _id: { $in: job.activeElectionIds.map((id) => new ObjectId(id)) } }, { session })
     .toArray();
   if (
@@ -442,12 +426,10 @@ async function materializeHu1991ByElectionResolution(input: {
     )
   )
     throw new Error("Hungarian by-election binding changed");
-  const allCandidates = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const allCandidates = await electionCandidatesCollection(db)
     .find({ electionId: { $in: job.electionIds.map((id) => new ObjectId(id)) } }, { session })
     .toArray();
-  const tallies = await db
-    .collection<ElectionVoteTally>("electionVoteTallies")
+  const tallies = await electionVoteTalliesCollection(db)
     .find(
       { electionId: { $in: polls.map((row) => row._id) } },
       { session, projection: TALLY_WITH_LATEST_SNAPSHOT_ONLY }
@@ -597,12 +579,10 @@ async function materializeHu1991ByElectionResolution(input: {
       },
       { session }
     );
-    await db.collection<Election>("elections").insertMany(renewed, { session });
+    await electionsCollection(db).insertMany(renewed, { session });
     if (renewedCandidates.length) {
-      await db
-        .collection<ElectionCandidate>("electionCandidates")
-        .insertMany(renewedCandidates, { session });
-      await db.collection<ElectionCandidate>("electionCandidates").updateMany(
+      await electionCandidatesCollection(db).insertMany(renewedCandidates, { session });
+      await electionCandidatesCollection(db).updateMany(
         {
           _id: {
             $in: firstCandidates
@@ -613,7 +593,7 @@ async function materializeHu1991ByElectionResolution(input: {
         { $set: { status: "withdrawn", withdrawnAt: now } },
         { session }
       );
-      await db.collection("campaigns").bulkWrite(
+      await campaignsCollection<Document>(db).bulkWrite(
         renewedCandidates.map((row) => ({
           updateMany: {
             filter: {
@@ -630,7 +610,7 @@ async function materializeHu1991ByElectionResolution(input: {
         { session }
       );
     }
-    await db.collection<ElectionVoteTally>("electionVoteTallies").insertMany(
+    await electionVoteTalliesCollection(db).insertMany(
       renewed.map((poll) => ({
         _id: stableId(`${job._id}:runoff-tally:${poll.state}`),
         electionId: poll._id,
@@ -650,8 +630,7 @@ async function materializeHu1991ByElectionResolution(input: {
   }
   // Candidate custody and every seat are checked together before inserting a
   // replacement. No list compensation or occupied mandate is reallocated.
-  const held = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const held = await electedOfficialsCollection(db)
     .find(
       { countryId: "HU", officeType: "assemblyDelegate" },
       {
@@ -669,8 +648,7 @@ async function materializeHu1991ByElectionResolution(input: {
   const winnerPeople = Object.entries(count.winners).flatMap(([districtId, id]) =>
     id ? [{ districtId, person: nominations.people.find((row) => row.id === id)! }] : []
   );
-  const npcs = await db
-    .collection<NPP>("npps")
+  const npcs = await nppsCollection(db)
     .find(
       {
         _id: {
@@ -684,8 +662,7 @@ async function materializeHu1991ByElectionResolution(input: {
       { session, projection: { party: 1, currentOffice: 1 } }
     )
     .toArray();
-  const players = await db
-    .collection<Character>("characters")
+  const players = await charactersCollection(db)
     .find(
       {
         _id: {
@@ -758,37 +735,31 @@ async function materializeHu1991ByElectionResolution(input: {
       officials.some((official) => official.constituencyId === row.constituencyId)
   );
   if (tombstones.length) {
-    const originals = await db
-      .collection<ElectedOfficial>("electedOfficials")
+    const originals = await electedOfficialsCollection(db)
       .find({ _id: { $in: tombstones.map((row) => row._id) } }, { session })
       .toArray();
-    await db
-      .collection<{
-        _id: string;
-        receiptId: string;
-        countryId: "HU";
-        turn: number;
-        official: ElectedOfficial;
-      }>("hu1991AssemblyOfficeArchives")
-      .insertMany(
-        originals.map((official) => ({
-          _id: `${job._id}:vacancy:${official._id.toHexString()}`,
-          receiptId: job._id,
-          countryId: "HU",
-          turn,
-          official,
-        })),
-        { session }
-      );
-    await db
-      .collection<ElectedOfficial>("electedOfficials")
-      .deleteMany(
-        { _id: { $in: tombstones.map((row) => row._id) }, characterId: null, nppId: null },
-        { session }
-      );
+    await hu1991AssemblyOfficeArchivesCollection<{
+      _id: string;
+      receiptId: string;
+      countryId: "HU";
+      turn: number;
+      official: ElectedOfficial;
+    }>(db).insertMany(
+      originals.map((official) => ({
+        _id: `${job._id}:vacancy:${official._id.toHexString()}`,
+        receiptId: job._id,
+        countryId: "HU",
+        turn,
+        official,
+      })),
+      { session }
+    );
+    await electedOfficialsCollection(db).deleteMany(
+      { _id: { $in: tombstones.map((row) => row._id) }, characterId: null, nppId: null },
+      { session }
+    );
   }
-  if (officials.length)
-    await db.collection<ElectedOfficial>("electedOfficials").insertMany(officials, { session });
+  if (officials.length) await electedOfficialsCollection(db).insertMany(officials, { session });
   const ownerSeats = new Map<string, { isNpc: boolean; regionId: string; seats: number }>();
   for (const official of officials) {
     const ownerId = (official.isNPP ? official.nppId! : official.characterId!).toHexString();
@@ -831,7 +802,7 @@ async function materializeHu1991ByElectionResolution(input: {
   }
   const notices = players.filter((player) => ownerSeats.has(player._id.toHexString()));
   if (notices.length)
-    await db.collection<Character>("characters").bulkWrite(
+    await charactersCollection(db).bulkWrite(
       notices.map((player) => {
         const official = officials.find((row) => row.characterId?.equals(player._id))!;
         return {
@@ -855,7 +826,7 @@ async function materializeHu1991ByElectionResolution(input: {
       { session }
     );
   if (notices.length)
-    await db.collection("notifications").insertMany(
+    await notificationsCollection<Document>(db).insertMany(
       notices.map((player) => ({
         _id: stableId(`${job._id}:notice:${player._id.toHexString()}`),
         userId: player.userId,
@@ -869,21 +840,17 @@ async function materializeHu1991ByElectionResolution(input: {
       })),
       { session }
     );
-  await db
-    .collection<Election>("elections")
-    .updateMany(
-      { _id: { $in: job.electionIds.map((id) => new ObjectId(id)) } },
-      { $set: { status: "resolved", resolving: false, updatedAt: now } },
-      { session }
-    );
-  await db
-    .collection<ElectionCandidate>("electionCandidates")
-    .updateMany(
-      { electionId: { $in: job.electionIds.map((id) => new ObjectId(id)) }, status: "active" },
-      { $set: { status: "withdrawn", withdrawnAt: now } },
-      { session }
-    );
-  await db.collection<ElectionVoteTally>("electionVoteTallies").bulkWrite(
+  await electionsCollection(db).updateMany(
+    { _id: { $in: job.electionIds.map((id) => new ObjectId(id)) } },
+    { $set: { status: "resolved", resolving: false, updatedAt: now } },
+    { session }
+  );
+  await electionCandidatesCollection(db).updateMany(
+    { electionId: { $in: job.electionIds.map((id) => new ObjectId(id)) }, status: "active" },
+    { $set: { status: "withdrawn", withdrawnAt: now } },
+    { session }
+  );
+  await electionVoteTalliesCollection(db).bulkWrite(
     job.electionIds.map((id) => {
       const local = allCandidates.filter((row) => row.electionId.toHexString() === id);
       const localSeats = officials.filter((row) =>

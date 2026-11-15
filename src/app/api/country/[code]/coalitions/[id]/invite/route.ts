@@ -7,11 +7,13 @@ import { handleRouteError, badRequest, forbidden, notFound, errorResponse } from
 import { createNotification } from "@/lib/notifications";
 import type { Coalition } from "@/lib/db/types/coalition";
 import type { PoliticalParty } from "@/lib/db/types/party";
-import type { Character } from "@/lib/db/types/character";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { canInviteToCoalition, isBannedParty } from "@/lib/turn/onePartyConstraints";
 import { getCountryState } from "@/lib/countryState";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { coalitionsCollection } from "@/lib/db/repositories/coalitions";
 
 const inviteSchema = z.object({
   partySequentialId: z.number().int().positive(),
@@ -48,9 +50,10 @@ export async function POST(
     const db = await getDb();
 
     // Find coalition
-    const coalition = await db
-      .collection<Coalition>("coalitions")
-      .findOne({ sequentialId: Number(id), countryId });
+    const coalition = await coalitionsCollection(db).findOne({
+      sequentialId: Number(id),
+      countryId,
+    });
     if (!coalition) {
       throw notFound("Coalition not found.");
     }
@@ -61,9 +64,10 @@ export async function POST(
     }
 
     // Find target party
-    const targetParty = await db
-      .collection<PoliticalParty>("politicalParties")
-      .findOne({ sequentialId: parsed.data.partySequentialId, countryId });
+    const targetParty = await politicalPartiesCollection(db).findOne({
+      sequentialId: parsed.data.partySequentialId,
+      countryId,
+    });
     if (!targetParty) {
       throw notFound("Target party not found.");
     }
@@ -74,9 +78,10 @@ export async function POST(
     const runtimeConfig = { governmentType: runtime.governmentType };
     if (runtime.governmentType === "onePartyState") {
       const invitingPartySeqId = parseInt(character.party ?? "0", 10);
-      const invitingParty = await db
-        .collection<PoliticalParty>("politicalParties")
-        .findOne({ sequentialId: invitingPartySeqId, countryId });
+      const invitingParty = await politicalPartiesCollection(db).findOne({
+        sequentialId: invitingPartySeqId,
+        countryId,
+      });
       if (!canInviteToCoalition(runtimeConfig, invitingParty)) {
         throw forbidden("Only the ruling party may invite parties to a coalition in this country.");
       }
@@ -100,7 +105,7 @@ export async function POST(
 
     const now = new Date();
 
-    await db.collection<Coalition>("coalitions").updateOne(
+    await coalitionsCollection(db).updateOne(
       { _id: coalition._id },
       {
         $push: {
@@ -116,9 +121,10 @@ export async function POST(
 
     // Notify the target party's national chair
     if (targetParty.chairId) {
-      const targetChar = await db
-        .collection<Character>("characters")
-        .findOne({ _id: targetParty.chairId }, { projection: { userId: 1 } });
+      const targetChar = await charactersCollection(db).findOne(
+        { _id: targetParty.chairId },
+        { projection: { userId: 1 } }
+      );
       if (targetChar) {
         await createNotification({
           userId: targetChar.userId,

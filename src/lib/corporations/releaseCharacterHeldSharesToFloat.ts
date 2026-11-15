@@ -4,8 +4,8 @@
  * releaseCharacterHeldSharesToFloat. Unrelated holders are untouched.
  */
 import type { Db, ObjectId } from "mongodb";
-import type { Corporation } from "@/lib/db/types";
 import { casReleaseIssuerFloat } from "./releaseSharesConservation";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export interface ReleaseCharacterHeldSharesResult {
   /** Total shares credited to issuers' public floats. */
@@ -65,7 +65,7 @@ export async function releaseCharacterHeldSharesToFloat(
   const exclude = opts?.excludeCorporationIds ?? [];
   const excludeSet = new Set(exclude.map((id) => id.toString()));
 
-  const corps = db.collection<Corporation>("corporations");
+  const corps = corporationsCollection(db);
 
   const query: { "shareholders.characterId": { $in: ObjectId[] }; _id?: { $nin: ObjectId[] } } = {
     "shareholders.characterId": { $in: uniqueIds },

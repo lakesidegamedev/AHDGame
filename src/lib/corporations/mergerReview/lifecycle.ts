@@ -9,12 +9,14 @@
  */
 
 import { ObjectId, type Db } from "mongodb";
-import type { Corporation } from "@/lib/db/types";
 import type { MergerReview, PendingDivestiture } from "@/lib/db/types/mergerReview";
 import type { CountryId } from "@/lib/constants/countries";
 import { createNotification } from "@/lib/notifications";
 import { recordAudit } from "@/lib/audit/recordAudit";
-import { creditTreasuryProceedsFromAnchor } from "@/lib/nationalization/treasury";
+import {
+  collectFundedCorporationPayment,
+  creditTreasuryProceedsFromAnchor,
+} from "@/lib/nationalization/treasury";
 import { atomicallyDebitCorpLiquidCapital } from "@/lib/financialTxLog/atomicCashGuard";
 import { emitTx } from "@/lib/financialTxLog/emit";
 import {
@@ -24,7 +26,6 @@ import {
   resolveCorpLiquidCurrencyCode,
 } from "@/lib/currency/corporationCapital";
 import type { CurrencyCode } from "@/lib/constants/currencies";
-import { MERGER_REVIEWS } from "./gate";
 import { controlledGroupIds, settleDivestitureIfSatisfied } from "./divestiture";
 import { loadIndustryBasis } from "../corpMarketShare";
 import { getMarketSystemModeForDb, marketAtLeast } from "@/lib/market/featureFlag";
@@ -35,6 +36,8 @@ import {
   type MergerReviewDecision,
 } from "./constants";
 import { SETTLEMENT_HISTORY_EXCLUDED } from "@/lib/banking/settlementHistory";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { mergerReviewsCollection } from "@/lib/db/repositories/mergerReviews";
 
 export type LifecycleResult<T = object> =
   { ok: false; error: string; status: number } | ({ ok: true } & T);
@@ -45,8 +48,7 @@ async function notifyParties(
   title: string,
   message: string
 ): Promise<void> {
-  const corps = await db
-    .collection<Corporation>("corporations")
+  const corps = await corporationsCollection(db)
     .find({ _id: { $in: [review.acquirerCorporationId, review.targetCorporationId] } })
     .project<{ _id: ObjectId; userId?: ObjectId }>({ userId: 1 })
     .toArray();
@@ -100,9 +102,10 @@ export async function decideMergerReview(
 
   // Atomic claim on the pending→decided transition, so two officeholders (or a
   // decision racing the deadline sweep) cannot both resolve it.
-  const claim = await db
-    .collection<MergerReview>(MERGER_REVIEWS)
-    .updateOne({ _id: review._id, status: "pending" }, { $set: set });
+  const claim = await mergerReviewsCollection<MergerReview>(db).updateOne(
+    { _id: review._id, status: "pending" },
+    { $set: set }
+  );
   if (claim.matchedCount === 0)
     return { ok: false, error: "This review has already been decided", status: 409 };
 
@@ -153,8 +156,7 @@ export async function resolveDueMergerReviews(
   db: Db,
   currentTurn: number
 ): Promise<{ resolved: number }> {
-  const due = await db
-    .collection<MergerReview>(MERGER_REVIEWS)
+  const due = await mergerReviewsCollection<MergerReview>(db)
     .find({ status: "pending", decideByTurn: { $lte: currentTurn } })
     .toArray();
   let resolved = 0;
@@ -185,12 +187,10 @@ export async function attachMergerRemedy(
     thresholdPercent: review.thresholdPercent,
     countryId: review.countryId,
   };
-  await db
-    .collection<Corporation>("corporations")
-    .updateOne(
-      { _id: acquirerId },
-      { $set: { pendingDivestiture: obligation, updatedAt: new Date() } }
-    );
+  await corporationsCollection(db).updateOne(
+    { _id: acquirerId },
+    { $set: { pendingDivestiture: obligation, updatedAt: new Date() } }
+  );
 }
 
 /**
@@ -206,8 +206,7 @@ export async function fineOverdueDivestitures(
   db: Db,
   currentTurn: number
 ): Promise<{ fined: number; totalAnchor: number }> {
-  const corps = await db
-    .collection<Corporation>("corporations")
+  const corps = await corporationsCollection(db)
     .find(
       { "pendingDivestiture.dueTurn": { $lt: currentTurn } },
       { projection: SETTLEMENT_HISTORY_EXCLUDED }
@@ -253,23 +252,38 @@ export async function fineOverdueDivestitures(
     );
     if (fineLocal <= 0) continue;
 
-    const debit = await atomicallyDebitCorpLiquidCapital(db, corp._id, fineLocal, {
-      corporateObligation: true,
+    const fundedPaid = await collectFundedCorporationPayment(db, {
+      countryId: obligation.countryId as CountryId,
+      corpId: corp._id,
+      corpCurrency: (resolveCorpLiquidCurrencyCode(corp) ?? "USD") as CurrencyCode,
+      amountLocal: fineLocal,
+      key: `merger-overdue-fine:${corp._id.toString()}:${obligation.reviewId.toString()}:${obligation.sectorType}:${currentTurn}`,
+      now,
+      flow: "regulatory_fine",
+      site: "mergerReview:fineOverdueDivestitures",
     });
-    if (!debit.ok) continue; // Cannot pay this turn; the order stands and it is retried next turn.
+    if (fundedPaid === 0) continue;
+    if (fundedPaid === null) {
+      const debit = await atomicallyDebitCorpLiquidCapital(db, corp._id, fineLocal, {
+        corporateObligation: true,
+      });
+      if (!debit.ok) continue; // Cannot pay this turn; the order stands and it is retried next turn.
+    }
 
     // The fine was DEBITED in the corporation's currency, but the reviewing
     // country's treasury keeps its books in its OWN currency. Credit the ₳
     // amount converted for the receiving country, not the payer's local figure
     // — otherwise a cross-border acquirer over- or under-pays the government by
-    // the exchange-rate difference (#808).
-    await creditTreasuryProceedsFromAnchor(
-      db,
-      obligation.countryId as CountryId,
-      corpLiquidCapitalToAnchor(fineLocal, corp, fxRate),
-      now,
-      { flow: "regulatory_fine" }
-    );
+    // the exchange-rate difference.
+    if (fundedPaid === null) {
+      await creditTreasuryProceedsFromAnchor(
+        db,
+        obligation.countryId as CountryId,
+        corpLiquidCapitalToAnchor(fineLocal, corp, fxRate),
+        now,
+        { flow: "regulatory_fine" }
+      );
+    }
     await emitTx(db, {
       type: "corp_fine",
       turn: currentTurn,

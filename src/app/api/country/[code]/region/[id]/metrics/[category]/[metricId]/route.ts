@@ -13,7 +13,7 @@ import type { StatePolicy } from "@/lib/db/types/statePolicy";
 import { getMetricHistory } from "@/lib/metricHistory";
 import { computeNationalMetricTickRate, computeStateTickRates } from "@/lib/api/stateTickRates";
 import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
-import { isUKDevolutionRegion } from "@/lib/constants/devolution";
+import { isSovereigntyRegion } from "@/lib/referendum/rules/sovereigntyRegions";
 import {
   NATIONAL_SCOPE,
   NATIONAL_SCOPE_IDS,
@@ -24,6 +24,9 @@ import { getNeutralFederalSalesTaxRate, getNeutralStateSalesTaxRate } from "@/li
 import { getMetricDefinition } from "@/lib/constants/metricDefinitions";
 import { pushesValueUp } from "@/lib/utils/policyDirection";
 import { MIRROR_CONTROLLED_METRIC_IDS } from "@/lib/metricEngine/fiscalMirror";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
+import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
 
 type AffectingPolicy = {
   name: string;
@@ -118,9 +121,7 @@ export async function GET(
     // National scope IDs (federal, uk_national, jp_national, …) are lowercase by convention
     const idLower = id.toLowerCase();
     const stateId = NATIONAL_SCOPE[idLower] ? idLower : id;
-    // Direction of "improvement" depends on the metric: for lower-is-better
-    // metrics an improving policy moves the value DOWN. Used to keep the
-    // affecting-policy "Pushing up/down" badge consistent with the tick rate.
+    // Lower-is-better metrics improve by moving DOWN; keep policy push badge consistent.
     const isHigherBetter =
       getMetricDefinition(category as MetricCategoryId, metricId)?.isHigherBetter ?? true;
 
@@ -133,7 +134,7 @@ export async function GET(
         await Promise.all([
           findMergedRegionMetricsForDisplay(db, { _id: stateId }),
           findMergedRegionMetricsManyForDisplay(db, {}),
-          db.collection<StatePolicy>("statePolicies").find({ stateId }).toArray(),
+          statePoliciesCollection(db).find({ stateId }).toArray(),
           getMetricHistory(db, stateId, category as MetricCategoryId, metricId),
           computeNationalMetricTickRate(db, stateId, category as MetricCategoryId, metricId),
         ]);
@@ -165,8 +166,7 @@ export async function GET(
 
       // Affecting policies from national scope
       const uniqueLegTypeIds = [...new Set(nationalPoliciesArr.map((p) => p.legislationTypeId))];
-      const legTypes = await db
-        .collection<LegislationType>("legislationTypes")
+      const legTypes = await legislationTypesCollection(db)
         .find({ _id: { $in: uniqueLegTypeIds } })
         .toArray();
       const legTypeMap = new Map(legTypes.map((lt) => [lt._id, lt]));
@@ -241,15 +241,14 @@ export async function GET(
     // is scoped to this country's state ids instead of loading every region
     // metric doc in the world. countryId on StateMetrics is optional/legacy,
     // so scoping by _id set is the reliable filter.
-    const allStates = await db
-      .collection<State>("states")
+    const allStates = await statesCollection(db)
       .find({}, { projection: { countryId: 1 } })
       .toArray();
     const sameCountryIds = allStates
       .filter((state) => state.countryId === countryId)
       .map((state) => state._id);
     const [stateDoc, metrics, allMetrics] = await Promise.all([
-      db.collection<State>("states").findOne({ _id: stateId, countryId }),
+      statesCollection(db).findOne({ _id: stateId, countryId }),
       findMergedRegionMetricsForDisplay(db, { _id: stateId, countryId }),
       findMergedRegionMetricsManyForDisplay(db, { _id: { $in: sameCountryIds } }),
     ]);
@@ -269,7 +268,7 @@ export async function GET(
       metricVal === undefined &&
       category === "governance" &&
       metricId === "independenceDesire" &&
-      isUKDevolutionRegion(stateId)
+      isSovereigntyRegion(stateId)
     ) {
       metricVal = { value: 50, trend: 0 };
     }
@@ -302,8 +301,7 @@ export async function GET(
     // Fetch the state's own policies plus every national-scope doc in one query; pick the
     // one matching this state's country (fall back to the US federal bucket).
     const nationalScopeIds = Object.keys(NATIONAL_SCOPE);
-    const allPolicyDocs = await db
-      .collection<StatePolicy>("statePolicies")
+    const allPolicyDocs = await statePoliciesCollection(db)
       .find({ stateId: { $in: [stateId, ...nationalScopeIds] } })
       .toArray();
     const statePoliciesArr = allPolicyDocs.filter((p) => p.stateId === stateId);
@@ -319,8 +317,7 @@ export async function GET(
       })),
     ];
     const uniqueLegTypeIds = [...new Set(allActivePolicies.map((p) => p.legislationTypeId))];
-    const legTypes = await db
-      .collection<LegislationType>("legislationTypes")
+    const legTypes = await legislationTypesCollection(db)
       .find({ _id: { $in: uniqueLegTypeIds } })
       .toArray();
     const legTypeMap = new Map(legTypes.map((lt) => [lt._id, lt]));

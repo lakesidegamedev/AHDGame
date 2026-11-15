@@ -16,6 +16,8 @@ import {
 import { ObjectId } from "mongodb";
 import { getGameState } from "@/lib/gameState";
 import { isBillWhipInCurrentPhase } from "@/lib/congress/billWhipPhase";
+import { billsCollection } from "@/lib/db/repositories/bills";
+import { billWhipsCollection } from "@/lib/db/repositories/billWhips";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string; slug: string }>;
@@ -119,8 +121,7 @@ export async function GET(request: Request, { params }: RouteParams) {
 
     const { config } = await loadRuntimeCountryOffices(db, countryId, gameStateForBills?.preset);
     const activeBills = selectedStateId
-      ? await db
-          .collection<Bill>("bills")
+      ? await billsCollection(db)
           .find({
             $and: [
               {
@@ -153,8 +154,7 @@ export async function GET(request: Request, { params }: RouteParams) {
             ],
           })
           .toArray()
-      : await db
-          .collection<Bill>("bills")
+      : await billsCollection(db)
           .find({
             $and: [
               {
@@ -206,8 +206,7 @@ export async function GET(request: Request, { params }: RouteParams) {
           .toArray();
 
     const billIds = activeBills.map((bill) => bill._id);
-    const existingWhips = await db
-      .collection<BillWhip>("billWhips")
+    const existingWhips = await billWhipsCollection(db)
       .find({
         targetType: "bill",
         targetId: { $in: billIds },

@@ -27,6 +27,8 @@ import {
   recapDeadlineExpired,
   type CapitalStanding,
 } from "./capitalAdequacy";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { bankLoansCollection } from "@/lib/db/repositories/bankLoans";
 
 /**
  * Outstanding household tranches per bank, keyed by bank corp id hex.
@@ -39,8 +41,7 @@ async function loadBookTranches(db: Db, bankIds: ObjectId[]): Promise<Map<string
   const byBank = new Map<string, BookTranche[]>();
   if (bankIds.length === 0) return byBank;
 
-  const loans = await db
-    .collection<BankLoan>("bankLoans")
+  const loans = await bankLoansCollection(db)
     .find({
       bankCorporationId: { $in: bankIds },
       borrowerType: "npcBulk",
@@ -81,8 +82,7 @@ const ZERO: SupervisionSummary = {
 export async function processBankSupervision(db: Db, turn: number): Promise<SupervisionSummary> {
   const summary: SupervisionSummary = { ...ZERO, errors: [] };
 
-  const corps = await db
-    .collection<Corporation>("corporations")
+  const corps = await corporationsCollection(db)
     .find({ "bankCharter.status": "active" })
     .project<
       Pick<
@@ -141,7 +141,7 @@ export async function processBankSupervision(db: Db, turn: number): Promise<Supe
         continue;
       }
 
-      await db.collection<Corporation>("corporations").updateOne(
+      await corporationsCollection(db).updateOne(
         { _id: corp._id, "bankCharter.status": "active" },
         {
           $set: {
@@ -210,18 +210,14 @@ async function revokeForUndercapitalization(
   turn: number
 ): Promise<boolean> {
   const now = new Date();
-  // Revoked, not "failed". The bank did not run out of money to pay depositors
-  // — the supervisor pulled the licence of a bank that would not recapitalize.
+  // Revoked, not "failed": the supervisor pulled the licence of a bank that
+  // would not recapitalize; it did not run out of money to pay depositors.
   //
-  // The old path just stamped `status = revoked`, which stranded the bank's
-  // whole balance sheet: an investment bank's value sits in its prop book and
-  // its cash reserves, and neither field is the corporation's `liquidCapital`.
-  // Flatten the marked prop book back into cash first, then use the shared
-  // revoke path. `revokeCharter` runs the deposit-book waterfall: household
-  // deposits go back to the money supply out of this cash, player pointers flip
-  // to the central bank, and only the residual above the deposit book, capped
-  // at book equity, reaches the shareholder. Depositors are not punished for
-  // the owner ignoring a deadline; they are simply paid first.
+  // An investment bank's value sits in its prop book and cash reserves, neither
+  // of which is the corporation's `liquidCapital`, so flatten the prop book to
+  // cash first, then use the shared revoke path. `revokeCharter` runs the
+  // deposit-book waterfall: depositors are paid first, and only the residual,
+  // capped at book equity, reaches the shareholder.
   const unwoundPropBook = await unwindPropBookToCashReserves(db, corp, turn);
   if (unwoundPropBook === null) return false;
   const revoked = await revokeCharter(db, corp._id, "undercapitalized");

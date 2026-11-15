@@ -6,6 +6,8 @@
  * character lookup, no election-risk auto-fail gate).
  */
 
+import { getGovernmentFormationsCollection } from "@/lib/db/collections/governmentFormation";
+import { isCaretakerActive } from "@/lib/elections/rules/caretaker";
 import { getNationalDocId } from "@/lib/constants/nationalScope";
 import type { Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
@@ -18,7 +20,6 @@ import {
 } from "@/lib/congress/billProposalLimits";
 import { snapshotBillPolicyProvisions } from "@/lib/congress/billProposal";
 import { getNationalBudgetId } from "@/lib/bonds/sovereign";
-import type { FederalBudget } from "@/lib/db/types/budget";
 import {
   resolveTaxSliderProvisionFields,
   taxSliderNotchRate,
@@ -34,6 +35,10 @@ import type { BillStatus } from "@/lib/db/types/legislation";
 import type { GameState } from "@/lib/db/types/gameState";
 import { RESET_V2_READY } from "@/lib/resetVersions/availability";
 import { resetSystemVersionsForCountry } from "@/lib/resetVersions/rules";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { billsCollection } from "@/lib/db/repositories/bills";
 
 const VOTING_DURATION_HOURS = NPP_BILL_VOTING_DURATION_HOURS;
 
@@ -79,7 +84,7 @@ export async function proposeNppNationalBill(
   // ── One-party-state banned-party guard ─────────────────────────────────────
   const [runtimeState, resetState] = await Promise.all([
     getCountryState(db, countryId),
-    db.collection<GameState>("gameState").findOne(
+    gameStateCollection(db).findOne(
       { _id: "current" },
       {
         projection: {
@@ -95,15 +100,25 @@ export async function proposeNppNationalBill(
     return { ok: false, reason: "Autonomous legacy bills are disabled under legislation v2." };
   }
   if (runtimeState.governmentType === "onePartyState" && npp.party) {
-    const sponsorParty = await db
-      .collection<PoliticalParty>("politicalParties")
-      .findOne({ sequentialId: parseInt(npp.party, 10), countryId });
+    const sponsorParty = await politicalPartiesCollection(db).findOne({
+      sequentialId: parseInt(npp.party, 10),
+      countryId,
+    });
     // RUNTIME shape, not `config` — the static config never learns about a
     // conversion, so it would silently disable this guard for a runtime-converted
     // one-party state. Matches the NPP bench-vote gate in `turn/npp/billVoting`.
     if (isBannedParty({ governmentType: runtimeState.governmentType }, sponsorParty)) {
       return { ok: false, reason: "Banned parties cannot propose legislation." };
     }
+  }
+
+  // ── Caretaker government: no new major bills ───────────────────────────────
+  const caretakerGov = await getGovernmentFormationsCollection(db).findOne(
+    { _id: countryId },
+    { projection: { status: 1, caretaker: 1 } }
+  );
+  if (caretakerGov && isCaretakerActive(caretakerGov)) {
+    return { ok: false, reason: "The government is in caretaker mode." };
   }
 
   // ── Chamber key for the sponsor official ──────────────────────────────────
@@ -130,15 +145,16 @@ export async function proposeNppNationalBill(
     social: option.social,
   };
 
-  // Tax-slider laws (ruling #16): the selection carries only a DIRECTION —
+  // Tax-slider laws: the selection carries only a DIRECTION -
   // resolve the concrete rate (one notch) against the live budget and run the
   // same server-side validation players go through. Bounds-blocked or
   // sub-step moves simply skip this sponsorship attempt.
   if (legType.taxSlider && selection.taxSliderDirection) {
     const budgetId = getNationalBudgetId(countryId);
-    const budget = await db
-      .collection<FederalBudget>("federalBudget")
-      .findOne({ _id: budgetId }, { projection: { taxRates: 1 } });
+    const budget = await federalBudgetCollection(db).findOne(
+      { _id: budgetId },
+      { projection: { taxRates: 1 } }
+    );
     const currentRate =
       (budget?.taxRates as Record<string, number> | undefined)?.[legType.taxSlider.taxType] ??
       legType.taxSlider.baselineRate;
@@ -243,7 +259,7 @@ export async function proposeNppNationalBill(
   };
 
   try {
-    const result = await db.collection<Omit<Bill, "_id">>("bills").insertOne(bill);
+    const result = await billsCollection<Omit<Bill, "_id">>(db).insertOne(bill);
     return { ok: true, billId: result.insertedId.toString() };
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);

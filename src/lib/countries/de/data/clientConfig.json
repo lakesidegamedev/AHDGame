@@ -1,0 +1,136 @@
+{
+  "config": {
+    "id": "DE",
+    "name": "Germany",
+    "code": "DE",
+    "status": "active",
+    "flagEmoji": "🇩🇪",
+    "regionLabel": "Land",
+    "regionLabelPlural": "Länder",
+    "executiveTitle": "Chancellor",
+    "executiveLabel": "Federal Chancellery",
+    "executivePath": "/country/de/executive",
+    "governmentType": "parliamentaryRepublic",
+    "governmentTypeLabel": "Parliamentary Republic",
+    "descriptor": "A federal parliamentary republic where the Chancellor leads government through a Bundestag majority, elected via mixed-member proportional representation.",
+    "heroImage": "https://flagcdn.com/w640/de.png",
+    "overviewPath": "/country/de",
+    "mapPath": "/country/de/map",
+    "currencyCode": "EUR",
+    "centralGovernmentLabel": "Federal Grants",
+    "exchangeName": "DAX",
+    "financeMinisterCabinetId": "finance_minister",
+    "regionalBillAssentTitle": "Minister-President",
+    "majorPartyIds": ["spd", "cdu"],
+    "partyCreationNPPs": { "statesRequired": 2, "lockHomeState": false, "nppsPerState": 1 },
+    "legislature": {
+      "name": "Bundestag",
+      "path": "/country/de/legislature",
+      "bicameral": false,
+      "lowerChamber": {
+        "key": "bundestag",
+        "name": "Bundestag",
+        "shortName": "Bundestag",
+        "seats": 630,
+        "description": "630 members elected via mixed-member proportional representation (2023 reform)."
+      },
+      "upperChamber": {
+        "key": "bundesrat",
+        "name": "Bundesrat",
+        "shortName": "Bundesrat",
+        "seats": 69,
+        "description": "69 members representing the 16 German Länder."
+      }
+    },
+    "subNationalChamber": {
+      "key": "landtag",
+      "name": "Landtag",
+      "shortName": "Landtag",
+      "regionalModel": true
+    },
+    "officeTypes": [
+      {
+        "key": "chancellor",
+        "label": "Chancellor",
+        "isExecutive": true,
+        "isSubNational": false,
+        "labelPlural": "Chancellors"
+      },
+      {
+        "key": "bundestag",
+        "label": "Member of Bundestag",
+        "chamberKey": "bundestag",
+        "isExecutive": false,
+        "isSubNational": false,
+        "labelPlural": "Members of Bundestag"
+      },
+      {
+        "key": "ministerPresident",
+        "label": "Minister-President",
+        "isExecutive": false,
+        "isSubNational": true,
+        "labelPlural": "Minister-Presidents"
+      },
+      {
+        "key": "landtag",
+        "label": "Mitglied des Landtags",
+        "chamberKey": "landtag",
+        "isExecutive": false,
+        "isSubNational": true,
+        "labelPlural": "Mitglieder des Landtags"
+      },
+      {
+        "key": "centralBankChair",
+        "label": "President of the ECB",
+        "isExecutive": false,
+        "isSubNational": false,
+        "labelPlural": "Presidents of the ECB"
+      }
+    ],
+    "electionSystems": {
+      "lowerChamber": "ams",
+      "subNationalChamber": "pr_sainteLague",
+      "subNationalExecutive": "fptp",
+      "headOfGovernment": "parliamentary",
+      "headOfState": "ceremonial"
+    },
+    "lowerElectionSystem": { "snapElectionsAllowed": true },
+    "centralBank": {
+      "name": "European Central Bank",
+      "abbreviation": "ECB",
+      "heroImage": "/api/images/hero/ecb",
+      "defaultPrimeRate": 3,
+      "sharedBankId": "ECB",
+      "centralBankIntorgId": "EU"
+    },
+    "usdExchangeRate": 1
+  },
+  "eraOverrides": {
+    "1991-default": { "usdExchangeRate": 1.1764705882352942 },
+    "1953-default": {
+      "legislature": {
+        "name": "Bundestag",
+        "path": "/country/de/legislature",
+        "bicameral": true,
+        "lowerChamber": {
+          "key": "bundestag",
+          "name": "Bundestag",
+          "shortName": "Bundestag",
+          "seats": 487,
+          "description": "487 members of the 2nd Bundestag (1953) elected via mixed-member proportional representation."
+        },
+        "upperChamber": {
+          "key": "bundesrat",
+          "name": "Bundesrat",
+          "shortName": "Bundesrat",
+          "seats": 69,
+          "description": "Members representing the West German Länder (appointed by state governments)."
+        }
+      },
+      "usdExchangeRate": 0.23809523809523808
+    }
+  },
+  "eraNames": { "1953-default": "West Germany", "1979-default": "West Germany" },
+  "nationalAddressName": "Government Declaration",
+  "regionalAssentOfficeKey": "ministerPresident"
+}

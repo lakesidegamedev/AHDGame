@@ -5,13 +5,14 @@
  */
 import { ObjectId, type Db } from "mongodb";
 import type { GameState } from "@/lib/db/types/gameState";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export async function ensureDemographicWorldEpoch(
   db: Db,
   known?: Pick<GameState, "worldEpochId">
 ): Promise<string> {
   if (known?.worldEpochId) return known.worldEpochId;
-  const states = db.collection<GameState>("gameState");
+  const states = gameStateCollection(db);
   const current = await states.findOne({ _id: "current" }, { projection: { worldEpochId: 1 } });
   if (!current) throw new Error("Population receipts require an initialized world");
   if (current.worldEpochId) return current.worldEpochId;

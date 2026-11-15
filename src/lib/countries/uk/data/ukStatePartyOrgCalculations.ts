@@ -4,6 +4,8 @@ import { UK_REGION_POLLING_2024 } from "@/lib/countries/uk/data/ukRegionPolling2
 import { UK_REGION_POLLING_1992 } from "@/lib/countries/uk/data/ukRegionPolling1992";
 import { UK_REGION_POLLING_1951 } from "@/lib/countries/uk/data/ukRegionPolling1951";
 import type { StatePartyOrg, PoliticalParty } from "@/lib/db/types";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { organizationFromVoteShare } from "@/lib/parties/rules/voteShareOrganization";
 
 /**
  * Calculate UK state party organization levels from era polling data
@@ -17,13 +19,10 @@ import type { StatePartyOrg, PoliticalParty } from "@/lib/db/types";
  * - 50% vote → 70 org (dominant party)
  */
 
-const MIN_ORG = 5;
-const MAX_ORG = 70;
-
 /**
- * UK party slug → display name. Used to resolve a party slug to its
- * `politicalParties.name` for runtime sequentialId lookup. Slugs match
- * the ids used in ukRegionPolling2020.ts and getMajorPartiesForRegion.
+ * UK party slug to display name, resolved to politicalParties.name for
+ * runtime sequentialId lookup. Slugs match the ids in ukRegionPolling2020.ts
+ * and getMajorPartiesForRegion.
  */
 const UK_PARTY_SLUG_TO_NAME: Record<string, string> = {
   uk_labour: "Labour Party",
@@ -40,17 +39,6 @@ const UK_PARTY_SLUG_TO_NAME: Record<string, string> = {
 };
 
 /**
- * Calculate initial organization level from vote share.
- * @param voteShare - Party's vote share in region (0-100%)
- * @returns Organization level (5-70)
- */
-function calculateUKPartyOrg(voteShare: number): number {
-  // Scale linearly: 0% → MIN_ORG, 50% → MAX_ORG
-  const scaled = MIN_ORG + (voteShare / 50) * (MAX_ORG - MIN_ORG);
-  return Math.min(Math.max(Math.round(scaled), MIN_ORG), MAX_ORG);
-}
-
-/**
  * Build a runtime slug → sequentialId map by reading politicalParties from
  * the DB. Resolves to whatever sequentialId each party actually has rather
  * than assuming insertion order — robust to preset filtering and
@@ -58,8 +46,7 @@ function calculateUKPartyOrg(voteShare: number): number {
  * preset switches).
  */
 export async function buildUKPartySlugToSeqId(db: Db): Promise<Record<string, string>> {
-  const parties = await db
-    .collection<PoliticalParty>("politicalParties")
+  const parties = await politicalPartiesCollection(db)
     .find({ countryId: "UK" })
     .project<{ name: string; sequentialId: number }>({ name: 1, sequentialId: 1 })
     .toArray();
@@ -74,20 +61,16 @@ export async function buildUKPartySlugToSeqId(db: Db): Promise<Record<string, st
 }
 
 /**
- * Generate all UK state party org entries from polling data.
- * Creates entries for each region × party combination present in the polling
- * data AND in the DB. Async — accepts a Db so slug → sequentialId can be
- * resolved from the live `politicalParties` collection (parties filtered out
- * by `validForPresets` for the active preset are skipped automatically).
+ * Generate UK state party org entries for each region x party present in the
+ * polling data and in the DB. Resolves slug -> sequentialId from the live
+ * politicalParties collection; parties gated out by validForPresets for the
+ * active preset are skipped.
  *
- * `preset` selects the polling table: `1953-default` uses
- * `UK_REGION_POLLING_1951` (Con/Lab duopoly, historic Liberals, no SNP);
- * `1991-default` and `1979-default` use `UK_REGION_POLLING_1992` (UUP dominant
- * in NIR, no Reform UK, lower SF share — for 1979 the 1992 table is the
- * closest authored election until a dedicated 1979 table exists);
- * `2027-default` uses `UK_REGION_POLLING_2024` (Labour landslide, Reform UK
- * second in most English regions, SNP at 30% in Scotland); anything
- * else (including the default `2019-default`) uses `UK_REGION_POLLING_2020`.
+ * Preset to polling table:
+ *   1953-default: UK_REGION_POLLING_1951
+ *   1979-default, 1991-default: UK_REGION_POLLING_1992
+ *   2027-default: UK_REGION_POLLING_2024
+ *   anything else (incl. 2019-default): UK_REGION_POLLING_2020
  */
 export async function calculateUKStatePartyOrgs(
   db: Db,
@@ -110,10 +93,10 @@ export async function calculateUKStatePartyOrgs(
       if (!partySeqId) continue; // party not in DB (e.g. UUP under 2019 preset)
       // Every party in the polling table gets a row in every region. The
       // formerly-regional parties (SNP/Plaid/DUP/SF/UUP) poll 0 outside their
-      // historic home nation, so they land on the MIN_ORG floor with a 0
+      // historic home nation, so they land on the organization floor with a 0
       // registration share — present and organisable, but starting from
       // nothing rather than barred outright.
-      const org = calculateUKPartyOrg(voteShare);
+      const org = organizationFromVoteShare(voteShare);
 
       orgs.push({
         _id: `${regionId}_${partySeqId}`,

@@ -39,7 +39,7 @@ describe("v2 voter reaction persistence", () => {
       expect(JSON.stringify(plus.update)).not.toContain('"$round"');
       const impacts = v2EnactmentApproval([provision], country);
       for (const [bucket, amount] of Object.entries(impacts)) {
-        const field = `archetypeApprovals.${bucket}`;
+        const field = `bucketApprovals.${bucket}`;
         expect(plus.update[0].$set[field].$min[1].$max[1].$add[1]).toBe(amount);
         expect(minus.update[0].$set[field].$min[1].$max[1].$add[1]).toBe(-amount);
       }

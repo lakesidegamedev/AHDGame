@@ -1,26 +1,21 @@
-import type { StateDemographics } from "@/lib/db/types";
+import type { CensusGroupView } from "@/lib/db/types";
 
 /**
  * Ireland planning region demographic composition using the 8 IE voter archetypes.
  *
  * Each region defines the population share of each archetype (summing to 100%)
- * plus baseline lean and turnout values. Regional character is expressed
- * through the population mix, not archetype-specific lean variation.
+ * plus baseline lean and turnout. Regional character comes from the population
+ * mix, not archetype-specific lean variation.
  *
  * `categoryWeights: { ie_voterGroups: 100 }` references the profile defined
- * in ieDemographicCategories.ts.
- *
- * Mix calibration is based on:
- * - 2020 and 2024 Dáil Éireann election results by constituency
- * - Reliable polling (Ireland Thinks, Red C Research)
- * - 2022 CSO regional demographic profiles
+ * in the country Layer-1 model.
  *
  * Design principle: Dublin has more urban_professional, young_urban, and
  * new_irish; rural regions have more rural_traditional, retirees, and
  * small_business; the Border region has a markedly higher border_communities
  * share.
  */
-export const ieRegionDemographics: StateDemographics[] = [
+export const ieRegionDemographics: CensusGroupView[] = [
   // ── Leinster ───────────────────────────────────────────────────────────────
 
   // Dublin: Ireland's capital and economic hub — tech FDI, finance, young

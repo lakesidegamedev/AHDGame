@@ -215,3 +215,32 @@ describe("GET /api/auth/google/callback — new-user signup gates", () => {
     expect(cookieState.map.has(AUTH_COOKIE_NAME)).toBe(false);
   });
 });
+
+describe("GET /api/auth/google/callback: thrown login error", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    cookieState.reset({
+      google_oauth_mode: "login",
+      google_oauth_state: "state-1",
+    });
+    process.env.GOOGLE_CLIENT_ID = "test-client";
+    process.env.GOOGLE_CLIENT_SECRET = "test-secret";
+    process.env.GOOGLE_REDIRECT_URI = "https://ahousedividedgame.com/api/auth/google/callback";
+    exchangeGoogleCode.mockResolvedValue({ access_token: "tok", id_token: "id" });
+    fetchGoogleUser.mockResolvedValue(googleUser);
+  });
+  afterEach(() => vi.restoreAllMocks());
+
+  it("turns a thrown login error into the handled error redirect", async () => {
+    getDb.mockResolvedValue({
+      collection: () => ({ findOne: vi.fn().mockRejectedValue(new Error("db down")) }),
+    });
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const { GET } = await import("./route");
+    const res = await GET(
+      new Request("https://ahousedividedgame.com/api/auth/google/callback?code=abc&state=state-1")
+    );
+    expect(res.status).toBe(307);
+    expect(res.headers.get("location")).toContain("reason=exchange_failed");
+  });
+});

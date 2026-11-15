@@ -2,7 +2,7 @@
 // DELETE /api/country/[code]/executive/cabinet/[positionId]/battle/declare?theaterId=<id>
 // Declare (or withdraw) an offensive at a theater against a specific enemy nation.
 // Resolves on the next turn tick. Auth: the theater commander where one is designated,
-// otherwise the defense holder; admin always. Gated by conflictsEnabled + defense seat.
+// otherwise the defense holder; admin always. Gated by the defense seat.
 // Errors: 400, 401, 403, 404, 409.
 import { NextResponse } from "next/server";
 import { z } from "zod";

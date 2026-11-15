@@ -16,18 +16,15 @@ import type { DevolutionPolicy } from "@/lib/db/types/governorOfficeState";
 export const UK_DEVOLUTION_REGIONS: ReadonlySet<string> = new Set(["SCO", "WAL", "NIR"]);
 
 /**
- * Metrics owned EXCLUSIVELY by a dedicated per-turn drift engine. The generic
- * per-turn writers (metric engine, policy-effects decay) iterate metric
- * DEFINITIONS, so a field that stays registered in `metricDefinitions` for
- * display/scoring would otherwise be co-written every turn and fight the drift
- * engine to a standstill. Those writers must skip anything listed here.
+ * Metrics owned EXCLUSIVELY by a per-turn drift engine. Generic per-turn
+ * writers (metric engine, policy-effects decay) iterate `metricDefinitions`,
+ * so a field left registered for display/scoring would otherwise be co-written
+ * and fight the drift engine. Those writers must skip anything listed here.
  *
  * Keyed as `${categoryId}.${metricId}`.
  *
- * - `governance.independenceDesire` → owned by
- *   `src/lib/turn/independenceDesireDrift.ts`. (The metric-engine node was
- *   removed in the first ownership fix; this set closes the policy-effects
- *   second writer — see docs/design/uk-independence-desire-ownership-fix.md.)
+ * - `governance.independenceDesire` -> owned by
+ *   `src/lib/turn/independenceDesireDrift.ts`.
  */
 export const DRIFT_OWNED_METRICS: ReadonlySet<string> = new Set(["governance.independenceDesire"]);
 
@@ -103,27 +100,39 @@ export function highDesireElectionBonus(desire: number): number {
 
 // ─── UI label resolution ─────────────────────────────────────────────────────
 
+/** Quebec speaks of sovereignty, federalists and autonomists. */
+const QUEBEC_POLICY_LABELS: Record<DevolutionPolicy, string> = {
+  anti: "Federalist",
+  pro: "Autonomist",
+  independence: "Pro-Sovereignty",
+};
+
 /**
  * Human-readable label for the metric in a given region. SCO/WAL render
- * "Independence Desire"; NIR renders "Reunification Desire". The stored
- * field is the same on both — only the display string differs.
+ * "Independence Desire", NIR "Reunification Desire" and Quebec "Sovereignty
+ * Desire". The stored field is the same everywhere.
  */
 export function getIndependenceMetricLabel(stateId: string): string {
-  return stateId.toUpperCase() === "NIR" ? "Reunification Desire" : "Independence Desire";
+  const id = stateId.toUpperCase();
+  if (id === "NIR") return "Reunification Desire";
+  if (id === "CA_QC") return "Sovereignty Desire";
+  return "Independence Desire";
 }
 
 /**
  * Human-readable label for a Devolution Policy option in a given region.
- * NIR's `"independence"` reads "Irish Reunification"; everywhere else
- * uses "Independence". `"anti"` and `"pro"` are region-agnostic.
+ * NIR's `"independence"` reads "Irish Reunification" and Quebec uses its own
+ * vocabulary; everywhere else uses the devolution labels.
  */
 export function getDevolutionPolicyLabel(stateId: string, policy: DevolutionPolicy): string {
+  const id = stateId.toUpperCase();
+  if (id === "CA_QC") return QUEBEC_POLICY_LABELS[policy];
   switch (policy) {
     case "anti":
       return "Anti-Devolution";
     case "pro":
       return "Pro-Devolution";
     case "independence":
-      return stateId.toUpperCase() === "NIR" ? "Irish Reunification" : "Pro-Independence";
+      return id === "NIR" ? "Irish Reunification" : "Pro-Independence";
   }
 }

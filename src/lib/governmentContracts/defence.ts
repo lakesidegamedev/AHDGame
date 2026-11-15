@@ -9,6 +9,7 @@ import { selfDealingDisclosure } from "@/lib/military/defenceSelfDealing";
 import { ObjectId, type Db } from "mongodb";
 import type { AuthUserWithCharacter } from "@/lib/auth";
 import type { DefenceContract } from "@/lib/db/types/defenceContract";
+import { getCorporationsCollection } from "@/lib/db/collections/corporations";
 import { assignedFactoriesForSector } from "@/lib/db/collections/defenceContracts";
 import {
   awardFactoryAllocation,
@@ -22,6 +23,8 @@ import { lockContractPlant, releaseContractPlant } from "./plantSlots";
 import { validateBid, ContractError } from "./eligibility";
 import { tenders } from "./persistence";
 import type { GovernmentTender, ContractBid } from "./types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { defenceContractsCollection } from "@/lib/db/repositories/defenceContracts";
 
 export async function activateDefenceBid(
   db: Db,
@@ -31,7 +34,7 @@ export async function activateDefenceBid(
   turn: number,
   now: Date
 ) {
-  const col = db.collection<DefenceContract>("defenceContracts");
+  const col = defenceContractsCollection(db);
   const existing = await col.findOne({ _id: new ObjectId(t.contractId) });
   if (existing) {
     await finishAward(db, t, existing);
@@ -129,6 +132,17 @@ export async function activateDefenceBid(
       throw e;
     }
   }
+  // A resumed award can outlive its winner. Reopen the tender rather than
+  // convert the reservation into a contract for a company that is gone.
+  if (
+    !(await (
+      await getCorporationsCollection(db)
+    ).countDocuments({ _id: prepared.corporationId }, { limit: 1 }))
+  ) {
+    await releaseContractPlant(db, sectorId, t._id, t.awardLeaseKey ?? t._id);
+    await resetUnconvertedAward(db, t);
+    throw new ContractError("The winning corporation no longer exists. The tender is open again.");
+  }
   if (
     !(await convertDefenceReservation(
       db,
@@ -171,7 +185,7 @@ async function resetUnconvertedAward(db: Db, t: GovernmentTender) {
 }
 async function finishAward(db: Db, t: GovernmentTender, contract: DefenceContract) {
   if (contract.selfDealing?.ministerCharacterId)
-    await db.collection("characters").updateOne(
+    await charactersCollection(db).updateOne(
       {
         _id: contract.selfDealing.ministerCharacterId,
         governmentContractDisclosures: { $ne: t._id },

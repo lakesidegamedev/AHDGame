@@ -11,7 +11,7 @@ import { incomeTierForTaxKey, incomeTaxRate } from "@/lib/budget/rules/incomeTax
 import type { Db } from "mongodb";
 import { getNationalBudgetId } from "@/lib/bonds/sovereign";
 import type { CountryId } from "@/lib/constants/countries";
-import type { FederalBudget, StateBudget } from "@/lib/db/types/budget";
+import type { StateBudget } from "@/lib/db/types/budget";
 import type { LegislationType } from "@/lib/db/types/legislation";
 
 const GRID_EPS = 1e-9;
@@ -54,16 +54,11 @@ export function validateTaxSliderProposal(
  * the DELTA — clamp((currentRate − proposedRate) / scale, −5, +5) with
  * scale = (maxRate − minRate) / 10. Cuts read rightward (+), hikes leftward (−).
  */
-export function taxSliderNpcEconomic(
-  taxSlider: NonNullable<LegislationType["taxSlider"]>,
-  currentRate: number,
-  proposedRate: number
-): number {
-  const scale = (taxSlider.maxRate - taxSlider.minRate) / 10;
-  if (scale <= 0) return 0;
-  const force = (currentRate - proposedRate) / scale;
-  return Math.max(-5, Math.min(5, force));
-}
+export { taxSliderNpcEconomic } from "@/lib/resetLegislation/rules/taxPosition";
+import { taxSliderNpcEconomic } from "@/lib/resetLegislation/rules/taxPosition";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 
 export type ResolvedTaxSliderFields =
   | {
@@ -131,12 +126,10 @@ export async function resolveTaxSliderProvisionFields(
     if (!stateId) {
       return { ok: false, error: "A state is required for state tax legislation." };
     }
-    const stateBudget = await db
-      .collection<StateBudget>("stateBudgets")
-      .findOne(
-        { _id: stateId, countryId: countryId.toUpperCase() as CountryId },
-        { projection: { taxRates: 1 } }
-      );
+    const stateBudget = await stateBudgetsCollection(db).findOne(
+      { _id: stateId, countryId: countryId.toUpperCase() as CountryId },
+      { projection: { taxRates: 1 } }
+    );
     currentRate =
       (incomeTierForTaxKey(slider.taxType) && stateBudget?.taxRates
         ? incomeTaxRate(stateBudget.taxRates, incomeTierForTaxKey(slider.taxType)!)
@@ -144,9 +137,10 @@ export async function resolveTaxSliderProvisionFields(
       slider.baselineRate;
   } else {
     const budgetId = getNationalBudgetId(countryId as CountryId);
-    const budget = await db
-      .collection<FederalBudget>("federalBudget")
-      .findOne({ _id: budgetId }, { projection: { taxRates: 1 } });
+    const budget = await federalBudgetCollection(db).findOne(
+      { _id: budgetId },
+      { projection: { taxRates: 1 } }
+    );
     currentRate =
       (incomeTierForTaxKey(slider.taxType) && budget?.taxRates
         ? incomeTaxRate(budget.taxRates, incomeTierForTaxKey(slider.taxType)!)
@@ -205,7 +199,7 @@ export async function stampTaxSliderProvisions<T extends StampableProvision>(
       out.push(p);
       continue;
     }
-    const lt = await db.collection<LegislationType>("legislationTypes").findOne({ _id: ltId });
+    const lt = await legislationTypesCollection(db).findOne({ _id: ltId });
     if (lt && isLegacyIncomeTax(lt))
       return { ok: false, error: "Choose a separate low, medium, or high income-tax provision." };
     if (!lt?.taxSlider) {

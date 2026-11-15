@@ -1,6 +1,6 @@
 import { referenceValuation } from "./referenceValuation";
 /**
- * Offer-layer guard over the durable acquisition settlement (issue #2017).
+ * Offer-layer guard over the durable acquisition settlement.
  *
  * `resolveAcquisitionOfferStatus` (withdraw/reject) must compensate a running
  * settlement before closing the offer, and `acceptAcquisitionOffer` must close

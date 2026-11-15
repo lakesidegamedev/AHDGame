@@ -3,16 +3,11 @@ import type { CountryId } from "../../constants/countries";
 /**
  * State-level non-party registration buckets.
  *
- * The registration pool in each state sums to 100% across:
- *   sum of all StatePartyOrg.registration[partyId] for parties in this country
- *   + StateRegistrationPool.independent
- *   + StateRegistrationPool.unregistered
- *   = 100
+ * Invariant: in each state, sum of StatePartyOrg.registration[partyId] for
+ * parties in the country + independent + unregistered = 100.
  *
- * Phase 1: schema added; no documents created yet (bootstrap backfill
- *   deferred to Phase 1.5 / Phase 2 prerequisite per plan D1).
- * Phase 3+: drift / decay / Reg actions mutate `independent` and
- *   `unregistered` per the politics turn-order contract.
+ * Drift, decay, and Reg actions mutate `independent` and `unregistered` per the
+ * politics turn-order contract.
  *
  * See docs/design/political-system-reg-support.md §4.3 for the full model.
  */

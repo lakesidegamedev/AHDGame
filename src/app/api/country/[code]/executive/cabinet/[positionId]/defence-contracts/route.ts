@@ -3,11 +3,6 @@
 //
 // Auth: defence cabinet holder or admin, on the country's own defence seat.
 //
-// Deliberately NOT gated on `conflictsEnabled`. Procurement is base military/economy — the
-// recruit and upgrade routes are ungated for the same reason — and an arsenal that only
-// filled while the conflicts subsystem was on would leave every unit hollow on worlds that
-// have it off.
-//
 // Errors: 400, 401, 403, 404, 409
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
@@ -18,7 +13,6 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { getCabinetMembersCollection } from "@/lib/db/collections/cabinetMembers";
 import { DEFENSE_POSITION_BY_COUNTRY } from "@/lib/constants/military";
-import type { Corporation } from "@/lib/db/types/corporation";
 import {
   terminationBasis,
   terminationFee,
@@ -40,6 +34,10 @@ import { getGameState } from "@/lib/gameState";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
 import { resolveDefenseLineFrom } from "@/lib/turn/defenseEnvelope";
 import { getDefenceContractAvailability } from "@/lib/db/collections/defenceProcurementAllocations";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { defenceContractsCollection } from "@/lib/db/repositories/defenceContracts";
+import type { Document } from "mongodb";
 
 interface RouteParams {
   params: Promise<{ code: string; positionId: string }>;
@@ -110,9 +108,7 @@ export async function DELETE(request: Request, { params }: RouteParams) {
 
     // Scoped to the caller's own country: without this a defence minister could cancel
     // another nation's contracts by id.
-    const contract = await db
-      .collection<DefenceContract>("defenceContracts")
-      .findOne({ _id: objectId, countryId });
+    const contract = await defenceContractsCollection(db).findOne({ _id: objectId, countryId });
     if (!contract) {
       return errorResponse(404, "No such contract");
     }
@@ -138,9 +134,7 @@ export async function DELETE(request: Request, { params }: RouteParams) {
       }
     }
 
-    const corp = await db
-      .collection<Corporation>("corporations")
-      .findOne({ _id: contract.corporationId });
+    const corp = await corporationsCollection(db).findOne({ _id: contract.corporationId });
 
     // Only a convenience termination is a conflict question. Withdrawing an unanswered offer
     // and dropping a plant that has not built anything for three turns are things a minister
@@ -240,9 +234,10 @@ export async function DELETE(request: Request, { params }: RouteParams) {
         ],
       }).catch(() => null);
       feePaid = move?.status === "applied" || move?.status === "replayed";
-      await db
-        .collection("defenceContracts")
-        .updateOne({ _id: objectId }, { $set: { "termination.feePaid": feePaid } });
+      await defenceContractsCollection<Document>(db).updateOne(
+        { _id: objectId },
+        { $set: { "termination.feePaid": feePaid } }
+      );
     }
 
     // Disclosure and its price, the same answer the game gives to a self-dealt award: not a
@@ -250,12 +245,10 @@ export async function DELETE(request: Request, { params }: RouteParams) {
     // but the voters find out and the minister wears it.
     if (basis === "convenience" && guard.user.character) {
       if (favorabilityPenalty > 0) {
-        await db
-          .collection("characters")
-          .updateOne(
-            { _id: guard.user.character._id },
-            { $inc: { favorability: -favorabilityPenalty } }
-          );
+        await charactersCollection(db).updateOne(
+          { _id: guard.user.character._id },
+          { $inc: { favorability: -favorabilityPenalty } }
+        );
       }
       await createSystemNewsPost(
         terminationDisclosure({

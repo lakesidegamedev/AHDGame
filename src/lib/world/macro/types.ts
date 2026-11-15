@@ -2,6 +2,11 @@ import type { CrisisEconomicExposure } from "@/lib/livingConflict/rules/economic
 import type { CommodityType, ExtractableResource } from "@/lib/constants/commodities";
 import type { OperatingSectorType } from "@/lib/constants/corporations";
 import type { WorldEntityId } from "@/lib/world/worldEntityManifest";
+import type { BackgroundFiscalState } from "./rules/backgroundBudget";
+import type { NationalIndexState } from "./rules/nationalIndex";
+import type { NationalPoliticsState } from "./rules/nationalPolitics";
+import type { MacroForeignPolicyState } from "./rules/foreignPolicy";
+import type { BriefMemory } from "@/lib/country/background/rules/countryBriefs";
 
 /** Aggregate sector slice for a sphere-macro (Tier-2) country. */
 export interface MacroSectorState {
@@ -24,9 +29,25 @@ export interface MacroMarketContribution {
 }
 
 /**
+ * A background country's realised trade in the funded producer market,
+ * read back by the kernel so capacity follows what actually sold.
+ */
+export interface MacroFundedTrade {
+  /** Funded turn this record last folded in. */
+  turn: number;
+  /** Lagged share of offered export value that sold, 0-1. */
+  exportFill: number;
+  /** Lagged share of import demand value that was bought, 0-1. */
+  importFill: number;
+  /** The lagged fills before `turn`, so a retried turn recomputes the same record. */
+  prior: { exportFill: number; importFill: number } | null;
+  /** That turn's trade, anchor value. */
+  last: { offeredValue: number; soldValue: number; requestedValue: number; boughtValue: number };
+}
+
+/**
  * Market vs planned aggregate archetype.
- * Planned economies use COMECON-style leakage into the shared world market and
- * never seed market corporations (#3719).
+ * Planned economies leak into the shared world market and never seed market corporations.
  */
 export type MacroEconomicSystem = "market" | "planned";
 
@@ -35,7 +56,7 @@ export type MacroEconomicSystem = "market" | "planned";
  * seeds are authored per era and must not inherit modern-preset bundles.
  */
 export interface MacroCountryDataQuality {
-  provenance: "authored-1953" | "estimated-background" | "succession-derived";
+  provenance: "authored-1953" | "authored-2027" | "estimated-background" | "succession-derived";
   economicSystem: MacroEconomicSystem;
   /** Required fields that were absent or non-positive at seed time. */
   missingFields: string[];
@@ -72,9 +93,41 @@ export interface MacroCountryState {
   tradeExposure: number;
   /** Optional shock multiplier applied on the next kernel tick (default 1). */
   shockModifier: number;
+  /**
+   * Stability times shock the last tick applied to market production (default
+   * 1). Fiscal GDP and the national index scale capacity output by the same
+   * factor so a shock hits supply, tax base and index together.
+   */
+  realizedOutputFactor?: number;
+  /**
+   * Annual real trend growth (0.02 = 2% a year). Absent: the economy does not
+   * grow, which is how every pre-2027 macro document behaves. Applied per
+   * kernel tick for the turns elapsed, never as a per-turn compounding of the
+   * annual rate (see `rules/growth.ts`).
+   */
+  trendGrowth?: number;
   resources: Partial<Record<ExtractableResource, number>>;
   sectors: Partial<Record<OperatingSectorType, MacroSectorState>>;
   contribution: MacroMarketContribution;
+  /** Funded-market trade, background countries on a funded world only; absent otherwise. */
+  fundedTrade?: MacroFundedTrade;
+  /**
+   * 2027 background countries only: national government, approval and
+   * elections. Written by the kernel tick; absent until the first one.
+   */
+  nationalPolitics?: NationalPoliticsState;
+  /** 2027 background countries only: the macro-derived national budget state. */
+  nationalFiscal?: BackgroundFiscalState;
+  /** 2027 background countries only: the investable national index level. */
+  nationalIndex?: NationalIndexState;
+  /**
+   * 2027 background countries only: the scripted foreign policy (stance,
+   * tariffs, sanctions, war calls, trade-balance pressure). Written by the
+   * kernel tick.
+   */
+  foreignPolicy?: MacroForeignPolicyState;
+  /** 2027 background countries only: what the country briefs last saw (see `countryBriefs`). */
+  briefMemory?: BriefMemory;
   dataQuality: MacroCountryDataQuality;
   lastMacroTickTurn: number | null;
   createdAt: Date;

@@ -4,25 +4,28 @@ import type { Db } from "@/lib/mongodb";
 import type { Campaign, Election, ElectionCandidate } from "@/lib/db/types";
 import { getCalendarDayInTimezone, shouldApplyDailyReset } from "@/lib/time/dailyReset";
 import { presidentialRulesetFor } from "@/lib/elections/presidentialRuleset";
+import { getElectionsCollection } from "@/lib/db/collections/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
 
 /**
  * Refill each active presidential ticket's shared running-mate surrogate action
  * pool to the ruleset cap once per Eastern-time calendar day.
  *
- * Mirrors `resetVicePresidentActions` exactly: a per-turn sweep gated by the
- * daily boundary, so a ticket gets `vpSurrogateActionCap` surrogate actions each
- * day rather than every turn. Scoped to presidential campaigns whose ticket has
- * a resolved running mate; the pool has no meaning otherwise. The cap is read
- * from `presidentialRulesetFor(election)` so a race frozen to an older ruleset
- * keeps its own cap (rules-freeze seam).
+ * A per-turn sweep gated by the daily boundary, so a ticket gets
+ * `vpSurrogateActionCap` surrogate actions each day rather than every turn.
+ * Scoped to presidential campaigns with a resolved running mate; the pool has
+ * no meaning otherwise. The cap comes from `presidentialRulesetFor(election)`
+ * so a race frozen to an older ruleset keeps its own cap.
  */
 export async function resetRunningMateSurrogateActions(
   db: Db
 ): Promise<{ surrogatePoolsReset: number }> {
   const todayEastern = getCalendarDayInTimezone(new Date());
 
-  const presidentialElections = await db
-    .collection<Election>("elections")
+  const presidentialElections = await (
+    await getElectionsCollection(db)
+  )
     .find({ electionType: "president", status: "active" })
     .project<Pick<Election, "_id" | "rulesetVersion">>({ _id: 1, rulesetVersion: 1 })
     .toArray();
@@ -37,8 +40,7 @@ export async function resetRunningMateSurrogateActions(
   }
   const electionIds = presidentialElections.map((election) => election._id);
 
-  const ticketsWithMate = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const ticketsWithMate = await electionCandidatesCollection(db)
     .find({
       electionId: { $in: electionIds },
       status: "active",
@@ -53,8 +55,7 @@ export async function resetRunningMateSurrogateActions(
     .toArray();
   if (ticketsWithMate.length === 0) return { surrogatePoolsReset: 0 };
 
-  const campaigns = await db
-    .collection<Campaign>("campaigns")
+  const campaigns = await campaignsCollection(db)
     .find({
       status: { $ne: "archived" },
       $or: ticketsWithMate.map((ticket) => ({
@@ -89,7 +90,7 @@ export async function resetRunningMateSurrogateActions(
   }
 
   if (bulkOps.length > 0) {
-    await db.collection<Campaign>("campaigns").bulkWrite(bulkOps);
+    await campaignsCollection(db).bulkWrite(bulkOps);
   }
 
   return { surrogatePoolsReset: bulkOps.length };

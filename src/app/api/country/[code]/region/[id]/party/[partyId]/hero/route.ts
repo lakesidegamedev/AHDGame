@@ -8,6 +8,8 @@ import type { State, StatePartyOrg } from "@/lib/db/types";
 import { findPartyBySequentialId, getStatePartyOrgDocumentId } from "@/lib/db/partyLookup";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 const heroSchema = z.object({
   heroImageUrl: z
@@ -49,7 +51,7 @@ export async function POST(
     const authData = auth.user;
 
     const db = await getDb();
-    const state = await db.collection<State>("states").findOne({ _id: stateId, countryId });
+    const state = await statesCollection(db).findOne({ _id: stateId, countryId });
     if (!state) {
       return errorResponse(404, "State not found");
     }
@@ -60,7 +62,7 @@ export async function POST(
     }
 
     const orgId = getStatePartyOrgDocumentId(stateId, party);
-    const statePartyOrg = await db.collection<StatePartyOrg>("statePartyOrg").findOne({
+    const statePartyOrg = await statePartyOrgCollection(db).findOne({
       _id: orgId,
     });
 
@@ -77,9 +79,7 @@ export async function POST(
       return errorResponse(403, "Only the state party chair can update the hero image");
     }
 
-    await db
-      .collection<StatePartyOrg>("statePartyOrg")
-      .updateOne({ _id: orgId }, { $set: { heroImageUrl } });
+    await statePartyOrgCollection(db).updateOne({ _id: orgId }, { $set: { heroImageUrl } });
 
     return NextResponse.json({ message: "Hero image updated successfully" });
   } catch (error) {

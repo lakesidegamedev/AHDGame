@@ -10,21 +10,22 @@ import { leadershipRoleLabel } from "@/lib/congress/leadership/electionRoleMap";
 import { computeCongressLeadershipTally } from "@/lib/congress/governmentVoteBreakdown";
 import { claimStatusTransition } from "@/lib/turn/atomicClaim";
 import type {
-  Character,
   CongressLeader,
   SpeakerElection,
   SpeakerNomination,
   PoliticalParty,
 } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { congressLeadersCollection } from "@/lib/db/repositories/congressLeaders";
+import { speakerElectionsCollection } from "@/lib/db/repositories/speakerElections";
+import { speakerNominationsCollection } from "@/lib/db/repositories/speakerNominations";
 
 export async function resolveSpeakerElection(
   db: Db,
   _partyMap: Map<string, PoliticalParty>,
   force = false
 ): Promise<boolean> {
-  const election = await db
-    .collection<SpeakerElection>("speakerElections")
-    .findOne({ _id: "current" });
+  const election = await speakerElectionsCollection(db).findOne({ _id: "current" });
   if (!election || election.status !== "voting") return false;
   if (!force) {
     const gameTime = await getGameTime();
@@ -33,17 +34,17 @@ export async function resolveSpeakerElection(
   }
 
   const now = new Date();
-  const candidacies = await db
-    .collection<SpeakerNomination>("speakerNominations")
+  const candidacies = await speakerNominationsCollection(db)
     .find({ status: { $in: ["open", "voting"] } })
     .sort({ votesFor: -1 })
     .toArray();
 
   if (candidacies.length === 0) {
     await vacateCongressLeadershipRole(db, "speaker_of_the_house", now);
-    await db
-      .collection<SpeakerElection>("speakerElections")
-      .updateOne({ _id: "current" }, { $set: { status: "closed", updatedAt: now } });
+    await speakerElectionsCollection(db).updateOne(
+      { _id: "current" },
+      { $set: { status: "closed", updatedAt: now } }
+    );
     return true;
   }
 
@@ -60,16 +61,15 @@ export async function resolveSpeakerElection(
     (a, b) => b.count - a.count || a.nom.createdAt.getTime() - b.nom.createdAt.getTime()
   );
   const winner = countedCandidacies[0]!.nom;
-  await db
-    .collection<SpeakerNomination>("speakerNominations")
-    .updateOne({ _id: winner._id }, { $set: { status: "confirmed", updatedAt: now } });
-  await db
-    .collection<SpeakerNomination>("speakerNominations")
-    .updateMany(
-      { _id: { $ne: winner._id }, status: { $in: ["open", "voting"] } },
-      { $set: { status: "failed", updatedAt: now } }
-    );
-  await db.collection<CongressLeader>("congressLeaders").updateOne(
+  await speakerNominationsCollection(db).updateOne(
+    { _id: winner._id },
+    { $set: { status: "confirmed", updatedAt: now } }
+  );
+  await speakerNominationsCollection(db).updateMany(
+    { _id: { $ne: winner._id }, status: { $in: ["open", "voting"] } },
+    { $set: { status: "failed", updatedAt: now } }
+  );
+  await congressLeadersCollection(db).updateOne(
     { role: "speaker_of_the_house" },
     {
       $set: {
@@ -101,9 +101,10 @@ export async function resolveSpeakerElection(
   if (claimed) {
     const roleLabel = leadershipRoleLabel("speaker_of_the_house");
     const nomineeAvatarUrl = (
-      await db
-        .collection<Character>("characters")
-        .findOne({ _id: winner.nomineeId }, { projection: { avatarUrl: 1 } })
+      await charactersCollection(db).findOne(
+        { _id: winner.nomineeId },
+        { projection: { avatarUrl: 1 } }
+      )
     )?.avatarUrl;
     sendCountryGameEvent("US", {
       title: `Leadership Election Result — ${roleLabel}`,

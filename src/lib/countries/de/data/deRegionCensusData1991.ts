@@ -1,21 +1,17 @@
 /**
- * Germany Region Census Profiles — 1991 (post-reunification) era.
+ * Germany region census profiles, 1991 (post-reunification) default.
  *
- * 1991-default companion to {@link deRegionCensusData} (the 2019 profiles).
- * Selected at render time via the preset registry when the world runs under
- * the `1991-default` reset preset.
+ * Companion to {@link deRegionCensusData} (2019 profiles); selected via
+ * the preset registry under the `1991-default` reset preset.
  *
- * Sources / methodology (approximate, % of adult population):
- *   - West Länder: 1987 Volkszählung (Bundesrepublik) + Statistisches
- *     Bundesamt Mikrozensus 1991.
- *   - East Länder + Berlin: 1990/91 post-reunification estimates (very low
- *     migrant share — former GDR contract-worker populations were small and
- *     mostly counted under "other"; the GDR vocational system pushed
- *     `berufsausbildung` high and tertiary attainment low).
+ * Approximate, % of adult population. West Länder: 1987 Volkszählung plus
+ * 1991 Mikrozensus. East Länder + Berlin: 1990/91 post-reunification
+ * estimates (small migrant share; GDR vocational system -> high
+ * `berufsausbildung`, low tertiary attainment).
  *
- * Directional vs the 2019 profiles: higher `german` share everywhere, lower
- * `hochschulabschluss`, lower migrant share; the eastern Länder
- * (BB/MV/SN/ST/TH) and Berlin reflect 1991 reunification reality.
+ * Directional vs 2019: higher `german` share everywhere, lower
+ * `hochschulabschluss`, lower migrant share; eastern Länder and Berlin
+ * reflect 1991 reunification reality.
  */
 
 import type { DERegionLayer1 } from "@/lib/seeds/de/deRegionCensusData";

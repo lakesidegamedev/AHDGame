@@ -14,9 +14,9 @@ export function fitOpeningFiscalEnvelope(input: {
   stateGrants: number;
   maximumDeficitGdpShare: number;
   /**
-   * Scale up as well as down, landing exactly on the deficit limit. For an
-   * authored composition whose absolute figures no longer match the opening
-   * revenue, so the mix is kept and the size is set by receipts.
+   * Scale up as well as down to land exactly on the deficit limit, so
+   * authored compositions whose absolute figures no longer match opening
+   * revenue keep their mix while receipts set the size.
    */
   fillEnvelope?: boolean;
 }): { byCategory: Record<string, number>; stateGrants: number } {

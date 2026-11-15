@@ -1,5 +1,6 @@
 import type { Db, ObjectId } from "mongodb";
 import type { Corporation, CorporationPrivatizationVote } from "@/lib/db/types";
+import { corporationPrivatizationVotesCollection } from "@/lib/db/repositories/corporationPrivatizationVotes";
 
 /**
  * Returns true if there is currently an open privatization vote for this corp.
@@ -7,9 +8,10 @@ import type { Corporation, CorporationPrivatizationVote } from "@/lib/db/types";
  * vote is in progress (anti-gaming).
  */
 export async function hasOpenPrivatizationVote(db: Db, corporationId: ObjectId): Promise<boolean> {
-  const vote = await db
-    .collection<CorporationPrivatizationVote>("corporationPrivatizationVotes")
-    .findOne({ corporationId, status: "open" }, { projection: { _id: 1 } });
+  const vote = await corporationPrivatizationVotesCollection(db).findOne(
+    { corporationId, status: "open" },
+    { projection: { _id: 1 } }
+  );
   return vote !== null;
 }
 

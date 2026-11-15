@@ -79,6 +79,7 @@ const PENDING_BASELINE: readonly string[] = [
   "BG",
   "BLR",
   "BR",
+  "CA",
   "CS",
   "ES",
   "FI",
@@ -87,12 +88,11 @@ const PENDING_BASELINE: readonly string[] = [
   "HU",
   "IT",
   "PL",
+  "QC",
   "RO",
-  "SCO",
   "SE",
   "TR",
   "UKR",
-  "WAL",
   "YU",
 ];
 

@@ -1,18 +1,16 @@
 /**
- * Ireland Region Census Profiles — Layer 1 demographic breakdown per planning
- * region. Mirrors the structure of the UK/JP/DE census files.
+ * Ireland Region Census Profiles: Layer 1 demographic breakdown per planning
+ * region. This module owns the {@link IERegionLayer1} shape.
  *
- * This module owns the {@link IERegionLayer1} shape. The `2019-default`
- * profiles below are authored in a later task; the `1991-default` companion
- * lives in `ieRegionCensusData1991.ts`. The preset registry
- * (`getRegionCensusData`) selects between them at render time.
+ * Presets: `1991-default` lives in ieRegionCensusData1991.ts; the registry
+ * (`getRegionCensusData`) selects between eras at render time.
  *
  * Fields (% of adult population):
- *   ethnicity    — CSO usual-residence ethnicity / place of birth groupings
- *   age          — Adult (18+) distribution
- *   education    — Highest level of education completed
- *   income       — Relative household-income tiers (era-neutral)
- *   urbanization — City / town / rural split
+ *   ethnicity    CSO usual-residence ethnicity / place of birth groupings
+ *   age          Adult (18+) distribution
+ *   education    Highest level of education completed
+ *   income       Relative household-income tiers (era-neutral)
+ *   urbanization City / town / rural split
  */
 
 export interface IERegionLayer1 {

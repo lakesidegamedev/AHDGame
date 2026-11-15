@@ -1,25 +1,12 @@
 /**
- * 1990 JP Region Vote Shares
+ * 1990 JP regional vote share (%) from the 1990 Shugiin general election,
+ * mapped to the game's 8 regions. Used by `calculateJPStatePartyOrgs` for
+ * the `1991-default` preset.
  *
- * Vote share percentages approximated from the 1990 Shugiin (House of
- * Representatives) general election, mapped to the game's 8 regions.
- * Used by `calculateJPStatePartyOrgs` when the active preset is
- * `1991-default`.
- *
- * Key differences from the 2021 dataset:
- *   - CDP doesn't exist yet (founded 2017). The opposition is JSP
- *     (Japan Socialist Party, 1945-1996).
- *   - DPFP doesn't exist yet (founded 2018). The 1991 centrist analogue
- *     is DSP (Democratic Socialist Party, 1960-1994).
- *   - Ishin doesn't exist yet (founded 2010). No `ishin` entry; Kansai
- *     vote share redistributes to LDP / JSP / Komeito / DSP.
- *   - Komeito refers to the pre-1994 organisation; same `komeito` slug
- *     used for engine compatibility.
- *
- * National 1990 result: LDP 46.1, JSP 24.4, Komeito 8.0, JCP 8.0,
- * DSP 4.8, Shaminren/Independents ~9. Regional weighting reflects
- * known strongholds (LDP rural, JSP industrial, Komeito Tokyo/Osaka
- * metros, JCP urban centres).
+ * Parties reflect 1990, not 2021: opposition is JSP (not CDP), centrist
+ * analogue is DSP (not DPFP), and no `ishin` entry exists; Kansai share
+ * redistributes to LDP/JSP/Komeito/DSP. Komeito uses the `komeito` slug
+ * for engine compatibility.
  */
 
 export const JP_REGION_VOTE_SHARES_1990: Record<string, Record<string, number>> = {

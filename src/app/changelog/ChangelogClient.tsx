@@ -16,6 +16,7 @@ import { MonthDivider } from "./components/MonthDivider";
 import { AdminVersionBlock } from "./components/AdminVersionBlock";
 import { classifyItem, parseAdminChangelog } from "./changelogUtils";
 import { HeroImage } from "@/components/HeroImage";
+import { CHANGELOG_HERO_SRC } from "@/app/changelog/heroImage";
 import { HeroStatsStrip } from "@/components/ui";
 import { LocalTime } from "@/components/time/LocalTime";
 import { NPP_ENGINE_VERSION } from "@/lib/nppAutonomy/engineVersion";
@@ -113,7 +114,7 @@ export function ChangelogClient({ publicPosts }: ChangelogClientProps) {
       <header className="relative mb-8 overflow-hidden rounded-2xl border border-card-border bg-card shadow-lg">
         <div className="relative h-[175px] w-full sm:h-[220px]">
           <HeroImage
-            src="/api/images/hero/changelog"
+            src={CHANGELOG_HERO_SRC}
             alt="DEC VT100 terminal"
             fill
             className="object-cover object-[center_55%]"

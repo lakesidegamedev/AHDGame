@@ -3,8 +3,8 @@ import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError } from "@/lib/api/errors";
 import { getDb } from "@/lib/mongodb";
 import { loadLatestWatchtowerSection } from "@/lib/ledger/report";
-import { LEDGER_RECONCILIATIONS_COLLECTION } from "@/lib/ledger/reconcile";
 import type { LedgerReconciliation } from "@/lib/ledger/types";
+import { ledgerReconciliationsCollection } from "@/lib/db/repositories/ledgerReconciliations";
 
 /**
  * Shadow-ledger reconciliation feed for the ops-dashboard Watchtower / daily
@@ -23,8 +23,7 @@ export async function GET(request: Request): Promise<NextResponse> {
     const db = await getDb();
     const section = await loadLatestWatchtowerSection(db);
 
-    const trend = await db
-      .collection<LedgerReconciliation>(LEDGER_RECONCILIATIONS_COLLECTION)
+    const trend = await ledgerReconciliationsCollection<LedgerReconciliation>(db)
       .find(
         {},
         {

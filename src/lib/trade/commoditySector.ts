@@ -2,10 +2,9 @@ import { SECTOR_SUPPLY, type CommodityType } from "@/lib/constants/commodities";
 import type { OperatingSectorType } from "@/lib/constants/corporations";
 
 /**
- * The operating lane that primarily produces each commodity — the highest
- * supply-rate producer in SECTOR_SUPPLY. Used to map a commodity's import flow
- * to the importer's tariff on that sector type (the tariff→flow drag). Derived
- * once at module load so it stays in sync with the supply recipes.
+ * The highest supply-rate sector for each commodity in SECTOR_SUPPLY. Maps a
+ * commodity's import flow to the importer's tariff on that sector. Derived at
+ * module load to stay in sync with the supply recipes.
  */
 export const PRIMARY_SECTOR_BY_COMMODITY: Partial<Record<CommodityType, OperatingSectorType>> =
   (() => {

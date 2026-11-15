@@ -23,7 +23,12 @@ import {
 import type { SourcingNetworkDoc } from "@/lib/logistics/sourcingLedger";
 import { TURNS_PER_DAY } from "@/lib/constants/corporations";
 import { ownSiteSupplySummary } from "@/lib/corporations/rules/ownSiteSupplySummary";
-import type { Corporation, CorporateSector, GameConfig, GameState } from "@/lib/db/types";
+import type { CorporateSector, GameConfig, GameState } from "@/lib/db/types";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { sourcingNetworkLoadCollection } from "@/lib/db/repositories/sourcingNetworkLoad";
 
 export const internalSupplyPolicySchema = z
   .object({
@@ -53,29 +58,21 @@ export async function internalSupplyPolicy(request: Request, { params }: Params)
     if (denied) return denied;
     const mode = await getMarketSystemMode();
     const [config, world] = await Promise.all([
-      db.collection<GameConfig>("gameConfig").findOne(
+      gameConfigCollection(db).findOne(
         { _id: "default" },
         {
           projection: { groupSupplyCoordinationEnabled: 1, producerMarketLiveFromTurn: 1 },
         }
       ),
-      db
-        .collection<GameState>("gameState")
-        .findOne(
-          { _id: "current" },
-          { projection: { subsidiaryCorporationsEnabled: 1, currentTurn: 1 } }
-        ),
+      gameStateCollection(db).findOne({ _id: "current" }, { projection: { currentTurn: 1 } }),
     ]);
     const groupCoordinationActive =
-      mode === "plants" &&
-      config?.groupSupplyCoordinationEnabled === true &&
-      world?.subsidiaryCorporationsEnabled === true;
+      mode === "plants" && config?.groupSupplyCoordinationEnabled === true;
     // Funded worlds settle own-company fills as free transfers, so a discount has nothing to act on.
     const liveFrom = config?.producerMarketLiveFromTurn;
     const fundedMarket = typeof liveFrom === "number" && (world?.currentTurn ?? 0) >= liveFrom;
     const available = marketAtLeast(mode, "plants") && !groupCoordinationActive;
-    const owners = await db
-      .collection<Corporation>("corporations")
+    const owners = await corporationsCollection(db)
       .find(
         {},
         { projection: { _id: 1, totalShares: 1, shareholders: 1, internalSupplyPolicy: 1 } }
@@ -95,7 +92,7 @@ export async function internalSupplyPolicy(request: Request, { params }: Params)
     const inherited =
       effective?.root !== undefined && effective.root !== corporation._id.toString();
     // Funded worlds send own output to own sites first unless the company
-    // explicitly chose the open market (issue 5505), so an unset policy reads
+    // explicitly chose the open market, so an unset policy reads
     // as own sites first there. Elsewhere the unset default stays the market.
     const unsetPolicy: InternalSupplyPolicy = fundedMarket
       ? FUNDED_DEFAULT_SUPPLY_POLICY
@@ -105,8 +102,7 @@ export async function internalSupplyPolicy(request: Request, { params }: Params)
         ? unsetPolicy
         : effective.policy;
     if (request.method === "GET") {
-      const sectors = await db
-        .collection<CorporateSector>("corporateSectors")
+      const sectors = await corporateSectorsCollection(db)
         .find(
           { corporationId: corporation._id },
           {
@@ -149,9 +145,10 @@ export async function internalSupplyPolicy(request: Request, { params }: Params)
           reserved[key] = (reserved[key] ?? 0) + (units ?? 0);
         discountCostAnchor += s.internalSupplyReceipt.discountCostAnchor ?? 0;
       }
-      const network = await db
-        .collection<SourcingNetworkDoc>("sourcingNetworkLoad")
-        .findOne({}, { sort: { turn: -1 }, projection: { turn: 1, ownRouteDelivered: 1 } });
+      const network = await sourcingNetworkLoadCollection<SourcingNetworkDoc>(db).findOne(
+        {},
+        { sort: { turn: -1 }, projection: { turn: 1, ownRouteDelivered: 1 } }
+      );
       const routeIdentity = ownRouteIdentity(corporation._id.toString(), effective);
       const ownHauls = (network?.ownRouteDelivered ?? [])
         .filter(
@@ -196,12 +193,10 @@ export async function internalSupplyPolicy(request: Request, { params }: Params)
       return errorResponse(409, "The wholly owning parent sets this group's supply policy");
     const parsed = await parseJsonBody(request, internalSupplyPolicySchema);
     if (!parsed.success) return errorResponse(parsed.status, parsed.error);
-    const write = await db
-      .collection<Corporation>("corporations")
-      .updateOne(
-        { _id: corporation._id, userId: corporation.userId, ceoVacant: { $ne: true } },
-        { $set: { internalSupplyPolicy: parsed.data, updatedAt: new Date() } }
-      );
+    const write = await corporationsCollection(db).updateOne(
+      { _id: corporation._id, userId: corporation.userId, ceoVacant: { $ne: true } },
+      { $set: { internalSupplyPolicy: parsed.data, updatedAt: new Date() } }
+    );
     if (write.matchedCount !== 1)
       return errorResponse(409, "CEO authority changed; reload before saving");
     return NextResponse.json(

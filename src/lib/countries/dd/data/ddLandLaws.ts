@@ -15,7 +15,6 @@ import type { PoliticalLaw } from "@/lib/politicalLegislation/types";
 
 /** 1953 Länder / Bezirke ids used by the live 1953-default world. */
 export const DD_LAND_STATE_IDS = ["BEO", "MV", "BB", "ST", "SN", "TH"] as const;
-export type DdLandStateId = (typeof DD_LAND_STATE_IDS)[number];
 
 export const DD_LAND_LAWS: PoliticalLaw[] = [
   {

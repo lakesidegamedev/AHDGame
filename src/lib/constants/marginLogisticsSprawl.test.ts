@@ -6,7 +6,7 @@ import {
   type StateMetricValues,
 } from "./corporations";
 
-// Ticket 1401: logistics sectors never pay the sprawl penalty on their own
+// Logistics sectors never pay the sprawl penalty on their own
 // margin, but they still count toward the corporation's sector total.
 
 const NEUTRAL_METRICS: StateMetricValues = {

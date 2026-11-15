@@ -11,6 +11,7 @@ import { getGameTime } from "@/lib/time/gameTime";
 import { castProposalVoteSchema } from "@/lib/api/schemas/parties";
 import { castVote, getEligibleVoterSet } from "@/lib/parties/proposals";
 import type { CommitteeProposal } from "@/lib/db/types";
+import { committeeProposalsCollection } from "@/lib/db/repositories/committeeProposals";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string; proposalId: string }>;
@@ -52,9 +53,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       return errorResponse(400, "Invalid proposal ID");
     }
 
-    const proposal = await db
-      .collection<CommitteeProposal>("committeeProposals")
-      .findOne({ _id: proposalObjectId });
+    const proposal = await committeeProposalsCollection(db).findOne({ _id: proposalObjectId });
     if (!proposal) return errorResponse(404, "Proposal not found");
     if (proposal.status !== "open") {
       return errorResponse(400, "This proposal is no longer open");
@@ -104,9 +103,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     await castVote(db, proposalObjectId, characterId, vote, side, currentTurn);
 
     // Re-fetch to get the updated proposal for the response
-    const updated = await db
-      .collection<CommitteeProposal>("committeeProposals")
-      .findOne({ _id: proposalObjectId });
+    const updated = await committeeProposalsCollection(db).findOne({ _id: proposalObjectId });
 
     return NextResponse.json({
       success: true,

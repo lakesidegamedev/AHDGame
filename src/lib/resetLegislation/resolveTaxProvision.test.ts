@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import type { Db } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
 import type { LegislationType } from "@/lib/db/types/legislation";
+import { successorTaxTypes } from "./successorTaxTypes";
 import { resolveResetTaxProvisionFields } from "./resolveTaxProvision";
 
 describe("resolveResetTaxProvisionFields", () => {
@@ -15,11 +16,47 @@ describe("resolveResetTaxProvisionFields", () => {
     });
   });
 
+  it.each(["SCO", "WAL"] as const)("resolves %s rates from its own budget", async (country) => {
+    const prefix = country === "SCO" ? "sco" : "wls";
+    const instrument = successorTaxTypes.find(
+      (type) => type._id === `${prefix}.tax.foreignCorporateTax`
+    )!;
+    db.collection("federalBudget").findOne.mockResolvedValue({
+      taxRates: { foreignCorporateTax: 23 },
+    });
+    const result = await resolveResetTaxProvisionFields(
+      db as unknown as Db,
+      instrument,
+      25,
+      undefined,
+      country,
+      "national"
+    );
+    expect(result).toMatchObject({
+      ok: true,
+      fields: { proposedRate: 25, economic: expect.any(Number) },
+    });
+    expect(db.collectionMocks.federalBudget.findOne.mock.calls[0]![0]).toMatchObject({
+      _id: country,
+    });
+    const other = country === "SCO" ? "WAL" : "SCO";
+    expect(
+      await resolveResetTaxProvisionFields(
+        db as unknown as Db,
+        instrument,
+        25,
+        undefined,
+        other,
+        "national"
+      )
+    ).toMatchObject({ ok: false });
+  });
+
   it("resolves a reviewed legacy tax to an exact rate", async () => {
     const result = await resolveResetTaxProvisionFields(
       db as unknown as Db,
       {
-        _id: "jp_foreign_corporation_tax",
+        _id: "jp.tax.foreignCorporateTax",
         taxRateChange: { scope: "federal", taxType: "foreignCorporateTax" },
         policyOptions: [
           { id: "zero", name: "0%", rate: 0 },
@@ -43,11 +80,31 @@ describe("resolveResetTaxProvisionFields", () => {
     });
   });
 
-  it("rejects catalog entries whose stored tax metadata targets another budget field", async () => {
+  it("resolves the old Japanese tax type a saved world still holds", async () => {
     const result = await resolveResetTaxProvisionFields(
       db as unknown as Db,
       {
         _id: "jp_foreign_corporation_tax",
+        taxRateChange: { scope: "federal", taxType: "foreignCorporateTax" },
+        policyOptions: [
+          { id: "zero", name: "0%", rate: 0 },
+          { id: "maximum", name: "65%", rate: 65 },
+        ],
+      } as LegislationType,
+      25,
+      undefined,
+      "JP",
+      "national"
+    );
+
+    expect(result).toMatchObject({ ok: true, fields: { proposedRate: 25 } });
+  });
+
+  it("rejects catalog entries whose stored tax metadata targets another budget field", async () => {
+    const result = await resolveResetTaxProvisionFields(
+      db as unknown as Db,
+      {
+        _id: "jp.tax.foreignCorporateTax",
         taxRateChange: { scope: "federal", taxType: "incomeTax" },
         policyOptions: [
           { id: "zero", name: "0%", rate: 0 },

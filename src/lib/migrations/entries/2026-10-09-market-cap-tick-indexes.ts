@@ -1,5 +1,7 @@
 import type { Db } from "mongodb";
 import type { Migration } from "../types";
+import { marketCapTicksCollection } from "@/lib/db/repositories/marketCapTicks";
+import type { Document } from "mongodb";
 
 export const migration: Migration = {
   id: "2026-10-09-market-cap-tick-indexes",
@@ -7,18 +9,14 @@ export const migration: Migration = {
   idempotent: true,
   async execute(db: Db, ctx) {
     if (!ctx.dryRun) {
-      await db
-        .collection("marketCapTicks")
-        .createIndex(
-          { exchange: 1, at: 1 },
-          { name: "marketCapTicks_exchange_at", background: true }
-        );
-      await db
-        .collection("marketCapTicks")
-        .createIndex(
-          { exchange: 1, turn: 1, at: 1 },
-          { name: "marketCapTicks_exchange_turn_at", background: true }
-        );
+      await marketCapTicksCollection<Document>(db).createIndex(
+        { exchange: 1, at: 1 },
+        { name: "marketCapTicks_exchange_at", background: true }
+      );
+      await marketCapTicksCollection<Document>(db).createIndex(
+        { exchange: 1, turn: 1, at: 1 },
+        { name: "marketCapTicks_exchange_turn_at", background: true }
+      );
     }
     return {
       documentsScanned: 0,

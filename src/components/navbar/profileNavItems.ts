@@ -39,7 +39,7 @@ export function buildProfileNavItems({
       id: "corporation",
       label: "My Corporation",
       labelKey: "menus.world.myCorporation",
-      href: `/corporation/${myCorporationId}`,
+      href: "/api/corporations/mine",
       show: myCorporationId != null,
     },
     {

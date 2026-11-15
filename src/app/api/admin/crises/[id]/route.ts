@@ -14,6 +14,9 @@ import { parseJsonBody } from "@/lib/api/validate";
 import { handleRouteError, notFound, errorResponse } from "@/lib/api/errors";
 import { logWireEvent } from "@/lib/wireEvent";
 import type { Crisis } from "@/lib/db/types/crisis";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import type { Document } from "mongodb";
+import { crisesCollection } from "@/lib/db/repositories/crises";
 
 const PatchSchema = z.object({
   action: z.literal("resolve"),
@@ -31,20 +34,18 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     if (!parsed.success) return errorResponse(parsed.status, parsed.error);
 
     const db = await getDb();
-    const crisis = await db.collection<Crisis>("crises").findOne({ _id: new ObjectId(id) });
+    const crisis = await crisesCollection(db).findOne({ _id: new ObjectId(id) });
     if (!crisis) throw notFound("Crisis not found");
 
-    const gameState = await db
-      .collection("gameState")
-      .findOne({ _id: "current" as unknown as ObjectId });
+    const gameState = await gameStateCollection<Document>(db).findOne({
+      _id: "current" as unknown as ObjectId,
+    });
     const currentTurn: number = (gameState as { currentTurn?: number } | null)?.currentTurn ?? 0;
 
-    await db
-      .collection<Crisis>("crises")
-      .updateOne(
-        { _id: new ObjectId(id) },
-        { $set: { status: "resolved", endTurn: currentTurn, resolvedAt: new Date() } }
-      );
+    await crisesCollection(db).updateOne(
+      { _id: new ObjectId(id) },
+      { $set: { status: "resolved", endTurn: currentTurn, resolvedAt: new Date() } }
+    );
 
     if (crisis.wireMessageOnEnd) {
       await logWireEvent("crisis_end", crisis.wireMessageOnEnd, {
@@ -67,7 +68,7 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
     if (!ObjectId.isValid(id)) return errorResponse(400, "Invalid ID");
 
     const db = await getDb();
-    const result = await db.collection("crises").deleteOne({ _id: new ObjectId(id) });
+    const result = await crisesCollection<Document>(db).deleteOne({ _id: new ObjectId(id) });
     if (result.deletedCount === 0) throw notFound("Crisis not found");
 
     return NextResponse.json({ success: true });

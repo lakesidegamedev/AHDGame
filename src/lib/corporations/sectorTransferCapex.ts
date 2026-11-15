@@ -1,30 +1,26 @@
 /**
  * Plant-state transfer rules for sector ownership changes (P3b).
  *
- * Under the plants tier a sector doc carries real, paid-for capital state:
- * `capitalStock` (built capacity), `buildQueue` (capacity paid for but not yet
- * online), `mothballed`, and `plantsStartTurn` (the governor ramp anchor).
+ * Under the plants tier a sector carries real, paid-for capital state:
+ * `capitalStock`, `buildQueue`, `mothballed`, and `plantsStartTurn`.
  * `constructionInProgressAnchor` is derived from `buildQueue` by sectorTurn.
  *
- * Every path that moves a sector between corps falls into one of two shapes:
+ * Every path that moves a sector between corps is one of three shapes:
  *
- *   - REASSIGN — the doc itself is re-pointed at a new `corporationId`. The
- *     plant state rides along for free; nothing here is needed.
- *   - MERGE — the incoming doc is folded into a sector the receiver already
- *     operates in that (state, sectorType) and then DELETED. Without an
- *     explicit fold, every field above is destroyed: the buyer pays a
- *     book/NPV price that included in-flight construction and receives
- *     nothing, and the paid orders disappear from the world's balance
- *     sheet. {@link mergeSectorPlantFields} is that fold.
- *
- * A third shape, CARVE, splits one sector into two (privatization spin-outs):
- * {@link carveSectorPlantFields} allocates capacity by the whole facility
- * counts assigned to each owner. The divisible revenue and worker legs retain
- * their requested transaction fraction.
+ *   - REASSIGN: doc re-pointed at a new `corporationId`; plant state rides
+ *     along, nothing here needed.
+ *   - MERGE: incoming doc folded into an existing (state, sectorType) sector
+ *     and DELETED. Without an explicit fold, every field above is destroyed:
+ *     the buyer pays for in-flight construction and receives nothing.
+ *     {@link mergeSectorPlantFields} is that fold.
+ *   - CARVE: splits one sector (privatization spin-outs);
+ *     {@link carveSectorPlantFields} allocates capacity by whole facility
+ *     counts, while divisible revenue and worker legs keep the requested
+ *     transaction fraction.
  *
  * FX CONTRACT: `costPaidAnchor` is already ₳. Callers re-denominate `revenue`
- * and `currentGrowthCost` when a sector crosses corp currencies; they must not
- * re-denominate paid build orders. Nothing in this module touches an FX rate.
+ * and `currentGrowthCost` when a sector crosses corp currencies, but must not
+ * re-denominate paid build orders. Nothing here touches an FX rate.
  */
 import { mergedActiveCapacityPercent } from "@/lib/corporations/investment/rules";
 import type { CorporateSector, SectorBuildOrder } from "@/lib/db/types/corporation";
@@ -275,17 +271,16 @@ export function identitySectorPlantFields(sector: SectorPlantFields): SectorPlan
 
 /**
  * Slice `fraction` of a sector's plant state off for a carve (privatization
- * spin-out), leaving `1 − fraction` behind on the source row.
+ * spin-out), leaving `1 - fraction` behind.
  *
- * Capacity and its paid basis follow the fraction of canonical whole
- * facilities assigned to this leg. Build orders remain divisible and follow
- * the requested transaction fraction in BOTH legs,
- * `unitsOrdered` and `costPaidAnchor`, so each half's CIP is derived from its
- * own queue and the two halves still conserve the order's paid cost.
+ * Capacity and paid basis follow the fraction of canonical whole facilities
+ * assigned to this leg. Build orders are divisible and follow the requested
+ * transaction fraction in BOTH legs, `unitsOrdered` and `costPaidAnchor`, so
+ * each half's CIP derives from its own queue and the two halves conserve paid
+ * cost.
  *
- * `plantsStartTurn` and `mothballed` are COPIED, not split: the ramp anchor and
- * the idle flag describe the plant's history and operating state, and both
- * halves inherit the same history.
+ * `plantsStartTurn` and `mothballed` are COPIED, not split: they describe
+ * plant history and operating state, so both halves inherit them.
  */
 export function carveSectorPlantFields(
   sector: SectorPlantFields,

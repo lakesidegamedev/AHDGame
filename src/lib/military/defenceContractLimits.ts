@@ -14,7 +14,7 @@ export const DEFENCE_CONTRACT_SUPPLIER_SHARE = 1 / 3;
  * corporation's cash (the Lockheed over-award). State-owned industry is the buying
  * country: command economies seed one National Corporation per sector, so applying the
  * private cap there leaves two thirds of the window unspendable and every other plant
- * on that SOE unused (ticket #1134).
+ * on that SOE unused.
  */
 export function defenceSupplierCapShare(stateOwned: boolean): number {
   return stateOwned ? 1 : DEFENCE_CONTRACT_SUPPLIER_SHARE;

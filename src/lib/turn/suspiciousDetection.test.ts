@@ -93,6 +93,40 @@ describe("buildSharedAuthArtifactFlags", () => {
     expect(fp?.evidence.accountCount).toBe(3);
   });
 
+  it("does NOT escalate when 3 accounts are joined only by disjoint fingerprint pairs", () => {
+    const now = new Date("2026-11-03T12:00:00.000Z");
+    const ids = [51, 52, 53].map((n) => new ObjectId(`507f1f77bcf86cd7994390${n}`));
+    const chars = [61, 62, 63].map((n) => new ObjectId(`507f1f77bcf86cd7994390${n}`));
+    const flags = buildSharedAuthArtifactFlags(
+      now,
+      ids.map((u, i) => ({ _id: chars[i], userId: u })),
+      [
+        {
+          _id: ids[0],
+          username: "self",
+          lastFingerprint: "fpHoldA",
+          fingerprintHistory: ["fpHoldA", "fpHoldB"],
+        },
+        {
+          _id: ids[1],
+          username: "pairA",
+          lastFingerprint: "fpHoldA",
+          fingerprintHistory: ["fpHoldA"],
+        },
+        {
+          _id: ids[2],
+          username: "pairB",
+          lastFingerprint: "fpHoldB",
+          fingerprintHistory: ["fpHoldB"],
+        },
+      ]
+    );
+    const fp = flags.get(chars[0].toString())?.find((f) => f.type === "shared_fingerprint");
+    // Three accounts are linked, but no single fingerprint is held by more than two.
+    expect(fp?.evidence.accountCount).toBe(3);
+    expect(fp?.severity).toBe("medium");
+  });
+
   it("ignores an exact fingerprint held by more accounts than the commonness ceiling", () => {
     const now = new Date("2026-11-03T12:00:00.000Z");
     const n = FINGERPRINT_COMMONNESS_CEILING + 1;

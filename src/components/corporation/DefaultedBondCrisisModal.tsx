@@ -2,7 +2,7 @@
 
 import { apiErrorText } from "@/lib/errors/catalog";
 import { useCallback, useEffect, useState } from "react";
-import { Button, Skeleton } from "@/components/ui";
+import { Button } from "@/components/ui";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import {
   BOND_MATURITY_LABELS,
@@ -235,27 +235,6 @@ export default function DefaultedBondCrisisModal({
           until the penalty window ends. Resolve the default using one of the options below.
         </p>
 
-        {loading && (
-          <div className="mt-4 min-h-[480px] space-y-4">
-            <div className="space-y-2 rounded-lg border border-card-border bg-card-muted p-3">
-              {[1, 2, 3, 4].map((i) => (
-                <div key={i} className="flex justify-between gap-2">
-                  <Skeleton className="h-3.5 w-32" />
-                  <Skeleton className="h-3.5 w-20" />
-                </div>
-              ))}
-            </div>
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="space-y-2 rounded-lg border border-card-border p-3">
-                <Skeleton className="h-4 w-24" />
-                <Skeleton className="h-3 w-full" />
-                <Skeleton className="h-3 w-4/5" />
-                <Skeleton className="h-9 w-36" />
-              </div>
-            ))}
-          </div>
-        )}
-
         {error && (
           <div className="mt-4 rounded-lg border border-error/30 bg-error/10 p-3 text-body-sm text-error">
             {error}
@@ -327,25 +306,17 @@ export default function DefaultedBondCrisisModal({
                 </p>
                 <Button
                   variant="primary"
-                  disabled={!data.cash.canPay || submitting !== null}
+                  disabled={submitting !== null}
                   isLoading={submitting === "cash"}
                   onClick={handleCash}
                 >
-                  {data.cash.canPay
-                    ? `Pay ${formatAmount(data.cash.cost)}`
-                    : `Insufficient cash (need ${formatAmount(data.cash.cost)})`}
+                  {`Pay ${formatAmount(data.cash.cost)}`}
                 </Button>
               </div>
             )}
             {data.refinance.canRefinance && !data.refinance.imfRestructuring && (
               <div className="rounded-lg border border-secondary/30 bg-secondary/5 p-3">
                 <div className="font-medium text-foreground mb-2">2. Refinance</div>
-                {data.refinance.imfRestructuring ? (
-                  <p className="text-body-xs text-warning mb-2 rounded-md border border-warning/40 bg-warning/10 px-2 py-1.5">
-                    This corporation is under <span className="font-medium">IMF restructuring</span>
-                    . Refinancing defaulted bonds is not available until that program ends (admin).
-                  </p>
-                ) : null}
                 <p className="text-muted text-body-xs mb-2">
                   Roll defaulted bondholders into a new {formatAmount(data.refinance.requiredFace)}{" "}
                   bond at par, clearing the default and restoring holders&apos; claim to face value.
@@ -388,17 +359,11 @@ export default function DefaultedBondCrisisModal({
                 </select>
                 <Button
                   variant="secondary"
-                  disabled={!data.refinance.canRefinance || submitting !== null}
+                  disabled={submitting !== null}
                   isLoading={submitting === "refinance"}
                   onClick={handleRefinance}
                 >
-                  {data.refinance.canRefinance
-                    ? "Issue refinance bond"
-                    : data.refinance.imfRestructuring
-                      ? "Unavailable (IMF restructuring)"
-                      : data.refinance.refinanceCount >= data.refinance.maxRefinances
-                        ? `Refinance limit reached (${data.refinance.maxRefinances} used)`
-                        : `Cannot issue (max ${formatAmount(data.refinance.maxAllowedFace)} under limits)`}
+                  Issue refinance bond
                 </Button>
               </div>
             )}
@@ -417,36 +382,24 @@ export default function DefaultedBondCrisisModal({
                     Repays bondholders: {formatAmount(data.restructure.cost)} (100% of defaulted
                     principal)
                   </div>
-                  {data.restructure.feasible ? (
-                    <>
-                      <div>
-                        Sectors liquidated: {data.restructure.sectorsToLiquidate} of{" "}
-                        {data.restructure.totalSectors} (raises{" "}
-                        {formatAmount(data.restructure.proceeds)})
-                      </div>
-                      <div>
-                        Liquid capital after: {formatAmount(data.restructure.residualLiquidCapital)}
-                      </div>
-                    </>
-                  ) : (
-                    <div className="text-warning">
-                      Not enough sector value to cover the default: even selling every sector raises
-                      only {formatAmount(data.restructure.totalSalvageAvailable)}. Use Dissolve
-                      &amp; settle instead.
-                    </div>
-                  )}
+                  <div>
+                    Sectors liquidated: {data.restructure.sectorsToLiquidate} of{" "}
+                    {data.restructure.totalSectors} (raises{" "}
+                    {formatAmount(data.restructure.proceeds)})
+                  </div>
+                  <div>
+                    Liquid capital after: {formatAmount(data.restructure.residualLiquidCapital)}
+                  </div>
                 </div>
                 <Button
                   variant="secondary"
-                  disabled={!data.restructure.feasible || submitting !== null}
+                  disabled={submitting !== null}
                   isLoading={submitting === "restructure"}
                   onClick={handleRestructure}
                 >
-                  {data.restructure.feasible
-                    ? `Restructure (sell ${data.restructure.sectorsToLiquidate} sector${
-                        data.restructure.sectorsToLiquidate === 1 ? "" : "s"
-                      })`
-                    : "Insufficient sector value"}
+                  {`Restructure (sell ${data.restructure.sectorsToLiquidate} sector${
+                    data.restructure.sectorsToLiquidate === 1 ? "" : "s"
+                  })`}
                 </Button>
               </div>
             )}

@@ -7,7 +7,6 @@ import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { parseObjectId } from "@/lib/utils/objectId";
 import { parseJsonBody } from "@/lib/api/validate";
 import { characterTransferSchema } from "@/lib/api/schemas/settings";
-import type { Character } from "@/lib/db/types";
 import { getCharacterByUserId } from "@/lib/db/characterLookup";
 import { requirePlayerTransfersEnabled } from "@/lib/api/requirePlayerTransfers";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
@@ -22,6 +21,7 @@ import {
   getNewCharacterTransferBarrier,
   NEW_CHARACTER_TRANSFER_BARRIER_TURNS,
 } from "@/lib/character/newCharacterTransferBarrier";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -78,7 +78,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       return errorResponse(400, "You cannot transfer funds to yourself");
     }
 
-    const target = await db.collection<Character>("characters").findOne({ _id: targetObjectId });
+    const target = await charactersCollection(db).findOne({ _id: targetObjectId });
     if (!target) {
       return errorResponse(404, "Target character not found");
     }
@@ -104,11 +104,10 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     const campaignFundsField = forexEnabled ? "currencyBalances.campaign" : "funds";
 
-    // Exactly-once on every topology (issue #1672): keyed idempotent legs
-    // reconcile a crash between the debit and the credit instead of
-    // destroying or duplicating money. A replayed key returns duplicate.
-    // Let the keyed debit check funds. A precheck here would reject a replay
-    // after the first attempt debited the sender but before it credited the target.
+    // Keyed idempotent legs make transfer exactly-once: a crash between
+    // debit and credit reconciles on replay instead of duplicating or losing
+    // money. Skip a funds precheck here, since it would reject a replay whose
+    // debit already landed.
     const { duplicate: transferDuplicate } = await transferCharacterCampaignFunds(db, {
       senderId: sender._id,
       targetId: targetObjectId,
@@ -117,7 +116,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       idempotencyKey: parsed.data.idempotencyKey,
     });
     if (transferDuplicate) {
-      const freshSender = await db.collection<Character>("characters").findOne({ _id: sender._id });
+      const freshSender = await charactersCollection(db).findOne({ _id: sender._id });
       if (freshSender) {
         Object.assign(sender, freshSender);
       }

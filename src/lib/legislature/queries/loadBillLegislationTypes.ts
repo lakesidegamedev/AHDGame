@@ -2,6 +2,7 @@ import type { Db } from "mongodb";
 import type { Bill, LegislationType } from "@/lib/db/types";
 import { isPolicyProvision } from "@/lib/db/types/legislation";
 import { getEquivalentLegislationTypeIds } from "@/lib/legislationTypeAliases";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 
 /** Load only the catalog rows referenced by a page of bills. */
 export async function loadBillLegislationTypes(
@@ -18,8 +19,7 @@ export async function loadBillLegislationTypes(
   }
   if (ids.size === 0) return new Map();
 
-  const legislationTypes = await db
-    .collection<LegislationType>("legislationTypes")
+  const legislationTypes = await legislationTypesCollection(db)
     .find({ _id: { $in: [...ids] } })
     .toArray();
   return new Map(legislationTypes.map((legislationType) => [legislationType._id, legislationType]));

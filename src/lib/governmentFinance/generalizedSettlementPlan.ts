@@ -16,6 +16,7 @@ import {
 } from "./departmentCatalog";
 import { createEmptyDepartmentAccount, createEmptyUsHealthDepartmentAccount } from "./departments";
 import { resolvePolicyOptionJurisdiction } from "@/lib/legislature/jurisdiction";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 export interface ActiveLawCostInput {
   law: EnactedLaw;
@@ -117,7 +118,7 @@ export function buildCountryDepartmentSettlementPlan(
     }
     if (!openings[department.id]) {
       openings[department.id] =
-        input.countryId === "US" && department.id === "us_health_department"
+        countryHasFeature("usLib", input.countryId) && department.id === "us_health_department"
           ? createEmptyUsHealthDepartmentAccount()
           : createEmptyDepartmentAccount(department);
       createdDepartmentIds.push(department.id);

@@ -50,12 +50,8 @@ describe("resolveInfraEnvelope", () => {
     expect(await resolveInfraEnvelope(fakeDb(null), "US")).toBe(0);
   });
 
-  // DE's actual budgetCategory for its rail/reconstruction laws is "transport"
-  // (deLegislationTypes.ts: de_rail_transport, de_digital_infrastructure), not
-  // "transportation"/"infrastructure" — the 1953 baseline was renamed
-  // "infrastructure" → "transport" to match it (fiscal-scale audit,
-  // 2026-07-28). Without this fallback, DE's envelope would silently drop to
-  // the bare GDP fallback once "infrastructure" stopped being an authored key.
+  // DE books rail and reconstruction spending under "transport", so the
+  // envelope falls back to it when "transportation"/"infrastructure" are absent.
   it("falls back to 'transport' (DE's actual category) when transportation/infrastructure are absent", async () => {
     const approp = 350_000_000_000;
     expect(

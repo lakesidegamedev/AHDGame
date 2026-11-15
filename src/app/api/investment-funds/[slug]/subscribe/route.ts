@@ -46,6 +46,12 @@ import { logIndexFundSubscribeActivity } from "@/lib/indexFunds/fundTxLog";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { subscribeIndexFundSchema } from "@/lib/api/schemas/indexFunds";
 import { recordAudit } from "@/lib/audit/recordAudit";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import type { Document } from "mongodb";
+import { indexFundPositionsCollection } from "@/lib/db/repositories/indexFundPositions";
+
+class FundQuoteMovedError extends Error {}
 
 // POST /api/investment-funds/[slug]/subscribe - Subscribe (buy) fund units
 // Auth: logged-in user with a character
@@ -158,7 +164,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
       let subscribeSpreadCharged = 0;
       let subscribeConversion: ExplicitPayConversion | undefined;
       if (forexEnabled) {
-        const gs = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+        const gs = await gameStateCollection(db).findOne({ _id: "current" });
         if (payCurrency && payCurrency !== fundCurrency) {
           const convertResult = await convertForExplicitPay(db, {
             character,
@@ -236,14 +242,20 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
           positionCredited = true;
 
           // Increment fund unit supply and cash anchor.
-          await db.collection("indexFunds").updateOne(
-            { _id: fund._id },
+          // A national fund is re-marked each tick; the units were priced at the
+          // quote read above, so a moved NAV must not take this credit.
+          const credit = await indexFundsCollection<Document>(db).updateOne(
+            {
+              _id: fund._id,
+              ...(fund.nationalIndex ? { quotedNav: fund.quotedNav } : {}),
+            },
             {
               $inc: { unitSupply: units, cashAnchor: totalCostAnchor },
               $set: { updatedAt: new Date() },
             },
             mongoOpts
           );
+          if (credit?.matchedCount === 0) throw new FundQuoteMovedError();
           fundCredited = true;
 
           // Record the subscription transaction.
@@ -274,7 +286,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
           // Reverse in the exact reverse of the apply order.
           if (fundCredited) {
             await compensate(async () => {
-              await db.collection("indexFunds").updateOne(
+              await indexFundsCollection<Document>(db).updateOne(
                 { _id: fund._id },
                 {
                   $inc: { unitSupply: -units, cashAnchor: -totalCostAnchor },
@@ -285,7 +297,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
           }
           if (positionCredited) {
             await compensate(async () => {
-              const positions = db.collection("indexFundPositions");
+              const positions = indexFundPositionsCollection<Document>(db);
               if (!priorPosition) {
                 await positions.deleteOne({
                   fundId: fund._id,
@@ -369,6 +381,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
         } catch (error) {
           // The debit was rolled back or compensated; undo the conversion too.
           await reverseExplicitPayConversionOrCapture(db, subscribeConversion, "funds.subscribe");
+          if (error instanceof FundQuoteMovedError) {
+            return errorResponse(409, "The fund price just moved. Please try again.");
+          }
           throw error;
         }
 

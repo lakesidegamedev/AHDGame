@@ -21,17 +21,20 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined,
   reporter: "html",
   use: {
-    baseURL: process.env.PLAYWRIGHT_BASE_URL ?? "[REDACTED]",
+    baseURL: process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:3000",
     trace: "on-first-retry",
     screenshot: "only-on-failure",
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
-  webServer: process.env.CI
-    ? {
-        command: "npm run build && npm run start",
-        url: "[REDACTED]",
-        reuseExistingServer: !process.env.CI,
-        timeout: 120_000,
-      }
-    : undefined,
+  // The nightly workflow builds and starts the server itself (E2E_SERVER_READY),
+  // so only a bare CI run lets Playwright build and start one.
+  webServer:
+    process.env.CI && !process.env.E2E_SERVER_READY
+      ? {
+          command: "npm run build && npm run start",
+          url: "http://localhost:3000",
+          reuseExistingServer: false,
+          timeout: 600_000,
+        }
+      : undefined,
 });

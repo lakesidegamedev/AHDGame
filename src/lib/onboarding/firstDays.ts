@@ -2,6 +2,10 @@ import type { Db, ObjectId } from "mongodb";
 import type { Character } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import { formatElectionTypeLabel } from "@/lib/utils/electionLabels";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import type { Document } from "mongodb";
+import { actionLogsCollection } from "@/lib/db/repositories/actionLogs";
 
 /**
  * The first-days panel: three goals a new character can act on immediately,
@@ -85,17 +89,15 @@ export async function loadFirstDays(
   if (!isInFirstDays(character, now.getTime())) return null;
 
   const [campaigns, candidacies, elections] = await Promise.all([
-    db
-      .collection("actionLogs")
-      .countDocuments(
-        { characterId: character._id, actionType: "campaign" },
-        { limit: FIRST_DAYS_CAMPAIGN_GOAL }
-      ),
-    db
-      .collection("electionCandidates")
-      .countDocuments({ characterId: character._id }, { limit: 1 }),
-    db
-      .collection<ElectionRow>("elections")
+    actionLogsCollection<Document>(db).countDocuments(
+      { characterId: character._id, actionType: "campaign" },
+      { limit: FIRST_DAYS_CAMPAIGN_GOAL }
+    ),
+    electionCandidatesCollection<Document>(db).countDocuments(
+      { characterId: character._id },
+      { limit: 1 }
+    ),
+    electionsCollection<ElectionRow>(db)
       .find(
         {
           countryId: character.countryId,
@@ -123,7 +125,9 @@ export async function loadFirstDays(
       id: e._id.toString(),
       label: formatElectionTypeLabel(e.electionType, character.countryId as CountryId),
       closesInHours: Number.isNaN(end) ? null : Math.floor((end - now.getTime()) / 3_600_000),
-      candidates: await db.collection("electionCandidates").countDocuments({ electionId: e._id }),
+      candidates: await electionCandidatesCollection<Document>(db).countDocuments({
+        electionId: e._id,
+      }),
     }))
   );
 

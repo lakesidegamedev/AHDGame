@@ -31,7 +31,6 @@ function seedDb(db: MockDb, overrides: { gameState?: Record<string, unknown> } =
     currentTurn: 40,
     nextScheduledTurn: null,
     pausedAt: null,
-    liveElectionResultsEnabled: true,
     ...overrides.gameState,
   });
   db.collectionMocks.elections!.findOne.mockResolvedValue({
@@ -168,14 +167,8 @@ describe("GET /api/elections/[id]/results", () => {
     expect(body.election.finalHour.progress).toBeLessThan(0.6);
   });
 
-  it("403s for non-admins while the gate is off", async () => {
-    seedDb(db, { gameState: { liveElectionResultsEnabled: false } });
-    const res = await call();
-    expect(res.status).toBe(403);
-  });
-
-  it("lets admins through while the gate is off", async () => {
-    seedDb(db, { gameState: { liveElectionResultsEnabled: false } });
+  it("reports admin status to admins", async () => {
+    seedDb(db);
     const { getAuthUser } = await import("@/lib/auth");
     vi.mocked(getAuthUser).mockResolvedValue({
       userId: "u1",

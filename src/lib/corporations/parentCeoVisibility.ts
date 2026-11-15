@@ -6,6 +6,7 @@ import {
   corporationWithReservedHoldings,
   loadReservedCorporatePositionsByTarget,
 } from "./reservedCorporateHoldings";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /** The caller supplies only rows whose ordinary private redaction would apply. */
 export async function parentCeoVisibleCorporationIds(
@@ -26,8 +27,7 @@ export async function parentCeoVisibleCorporationIds(
   });
   if (!parents.length) return new Set();
   const ids = [...new Map(parents.map((row) => [row.parentId.toString(), row.parentId])).values()];
-  const parentRows = await db
-    .collection<Corporation>("corporations")
+  const parentRows = await corporationsCollection(db)
     .find({ _id: { $in: ids } })
     .project({ userId: 1, ceoVacant: 1 })
     .toArray();

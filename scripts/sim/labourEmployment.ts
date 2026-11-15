@@ -118,8 +118,6 @@ async function collectSnapshot(): Promise<Snapshot> {
           isProcessing: 1,
           currentYear: 1,
           startingYear: 1,
-          departmentFinanceEnabled: 1,
-          regionalLegislationFinanceEnabled: 1,
         },
       }
     );
@@ -144,8 +142,8 @@ async function collectSnapshot(): Promise<Snapshot> {
     const regions = states.filter((s) => !NATIONAL_SCOPE_IDS.has(s._id));
     profilingPolicies = true;
     const laws = await loadEmploymentLawBook(db, state.currentTurn, regions, {
-      national: state.departmentFinanceEnabled === true,
-      regional: state.regionalLegislationFinanceEnabled === true,
+      national: true,
+      regional: true,
       year: state.currentYear,
       baselineYear: state.startingYear,
     });

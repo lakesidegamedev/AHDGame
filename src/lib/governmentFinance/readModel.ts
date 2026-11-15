@@ -1,6 +1,5 @@
 import type { DepartmentAccount } from "@/lib/db/types/budget";
 import type { DeliveryMultiplierResolution } from "./deliveryMultiplier";
-import { PUBLIC_HEALTH_CAPACITY_TYPE, US_PUBLIC_HEALTH_PROGRAM_ID } from "./departments";
 import type { LegislationType } from "@/lib/db/types/legislation";
 import type { DepartmentDefinition } from "./departmentCatalog";
 import type { LawFundingControl } from "@/lib/resetLegislation/rules/fundingControl";
@@ -177,74 +176,5 @@ export function buildDepartmentFinanceReadModel(input: {
       ? { lastAllocationChangedTurn: input.account.lastAllocationChangedTurn }
       : {}),
     programs,
-  };
-}
-
-export function buildPublicHealthProgramReadModel(input: {
-  enabled: boolean;
-  departmentName: string;
-  account?: DepartmentAccount;
-  delivery: DeliveryMultiplierResolution;
-}): DepartmentProgramReadModel {
-  const base = {
-    enabled: input.enabled,
-    departmentName: input.departmentName,
-    programName: "Public Health Workforce Expansion",
-  } as const;
-  if (!input.enabled) {
-    return {
-      ...base,
-      status: "not_started",
-      explanation: "Department program accounting is not enabled for this world.",
-    };
-  }
-
-  const program = input.account?.programs[US_PUBLIC_HEALTH_PROGRAM_ID];
-  const capacity = input.account?.capacityPools[PUBLIC_HEALTH_CAPACITY_TYPE];
-  if (!input.account || !program || !capacity) {
-    return {
-      ...base,
-      status: "not_started",
-      explanation: "No current-turn program settlement is available.",
-      outcome: {
-        label: "Public Health Preparedness",
-        deliveredShare: input.delivery.multiplier,
-        reason: input.delivery.reason,
-      },
-    };
-  }
-
-  return {
-    ...base,
-    status: program.status,
-    explanation:
-      "Authorization permits the program. Funding, operating capacity, coverage, and ramp determine this turn's delivered share.",
-    annualDemand: program.annualDemand,
-    authorityThisTurn: program.authorityThisTurn,
-    availableBalance: Math.max(0, input.account.balance - input.account.encumbered),
-    encumbered: input.account.encumbered,
-    outlaid: program.outlaid,
-    arrears: program.arrears,
-    ratios: {
-      funding: program.fundingRatio,
-      capacity: program.capacityRatio,
-      coverage: program.coverageRatio,
-      ramp: program.rampFactor,
-      implementation: program.implementationFactor,
-    },
-    bindingConstraint: program.bindingConstraint,
-    capacity: {
-      availableThroughput: capacity.availableThroughput,
-      maintenanceDemand: capacity.maintenanceDemand,
-      workforce: capacity.sourceBreakdown.workforce,
-      facilities: capacity.sourceBreakdown.facilities,
-      systems: capacity.sourceBreakdown.systems,
-      efficiency: capacity.sourceBreakdown.efficiency,
-    },
-    outcome: {
-      label: "Public Health Preparedness",
-      deliveredShare: input.delivery.multiplier,
-      reason: input.delivery.reason,
-    },
   };
 }

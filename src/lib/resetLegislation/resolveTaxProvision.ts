@@ -2,7 +2,7 @@ import { incomeTierForTaxKey, incomeTaxRate } from "@/lib/budget/rules/incomeTax
 import type { Db } from "mongodb";
 import { getNationalBudgetId } from "@/lib/bonds/sovereign";
 import type { CountryId } from "@/lib/constants/countries";
-import type { FederalBudget, StateBudget } from "@/lib/db/types/budget";
+import type { StateBudget } from "@/lib/db/types/budget";
 import type { LegislationType } from "@/lib/db/types/legislation";
 import {
   resolveTaxSliderProvisionFields,
@@ -12,8 +12,10 @@ import {
   type ResolvedTaxSliderFields,
 } from "@/lib/politicalLegislation/taxSlider";
 import type { ResetCountry } from "./fundingOwner";
-import { resetTaxesFor, type TaxScope } from "./taxCatalog";
+import { resetTaxForLegislationType, resetTaxesFor, type TaxScope } from "./taxCatalog";
 import { taxRateBoundsFromExistingOptions, validateExactTaxRate } from "./rules/taxRate";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
 
 /**
  * Resolve an exact-rate tax provision offered by the reviewed legislation
@@ -30,8 +32,9 @@ export async function resolveResetTaxProvisionFields(
   scope: TaxScope,
   regionId?: string
 ): Promise<ResolvedTaxSliderFields> {
-  const definition = resetTaxesFor(countryId, scope).find(
-    (tax) => tax.existingLegislationTypeId === legislationType._id
+  const definition = resetTaxForLegislationType(
+    resetTaxesFor(countryId, scope),
+    legislationType._id
   );
   if (!definition) {
     return { ok: false, error: "This tax instrument is unavailable in this jurisdiction." };
@@ -123,12 +126,10 @@ async function loadCurrentRate(
   if (scope === "regional") {
     const normalizedRegionId = regionId?.trim().toUpperCase();
     if (!normalizedRegionId) return null;
-    const budget = await db
-      .collection<StateBudget>("stateBudgets")
-      .findOne(
-        { _id: normalizedRegionId, countryId: countryId as StateBudget["countryId"] },
-        { projection: { taxRates: 1 } }
-      );
+    const budget = await stateBudgetsCollection(db).findOne(
+      { _id: normalizedRegionId, countryId: countryId as StateBudget["countryId"] },
+      { projection: { taxRates: 1 } }
+    );
     const tier = incomeTierForTaxKey(taxType);
     const rate =
       tier && budget?.taxRates
@@ -137,9 +138,10 @@ async function loadCurrentRate(
     return typeof rate === "number" && Number.isFinite(rate) ? rate : null;
   }
 
-  const budget = await db
-    .collection<FederalBudget>("federalBudget")
-    .findOne({ _id: getNationalBudgetId(countryId as CountryId) }, { projection: { taxRates: 1 } });
+  const budget = await federalBudgetCollection(db).findOne(
+    { _id: getNationalBudgetId(countryId as CountryId) },
+    { projection: { taxRates: 1 } }
+  );
   const tier = incomeTierForTaxKey(taxType);
   const rate =
     tier && budget?.taxRates

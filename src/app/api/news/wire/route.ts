@@ -10,7 +10,7 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { handleRouteError } from "@/lib/api/errors";
-import type { Corporation, Bond, NewsPost, State } from "@/lib/db/types";
+import type { NewsPost, State } from "@/lib/db/types";
 import { formatSectorTypeSlugsInText } from "@/lib/utils/formatSectorTypeSlugsInText";
 import { OPERATING_SECTOR_TYPE_LABELS } from "@/lib/constants/corporations";
 import { BOND_MATURITY_LABELS, type BondMaturityTurns } from "@/lib/db/types/bond";
@@ -18,6 +18,11 @@ import type { WireEvent } from "@/lib/wireEvent";
 
 import type { WireItem } from "@/lib/news/types";
 import { withPublicNewsVisibility } from "@/lib/news/publicModeration";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { newsPostsCollection } from "@/lib/db/repositories/newsPosts";
+import { wireEventsCollection } from "@/lib/db/repositories/wireEvents";
 
 // Re-export for any consumer that still imports types from the route file.
 // New consumers should import from "@/lib/news/types".
@@ -45,22 +50,20 @@ export async function GET() {
 
     // Primary: wireEvents + system news. Fallback collections for bootstrapping.
     const [wireEvents, systemNews, wireEventCount] = await Promise.all([
-      db
-        .collection<WireEvent>("wireEvents")
+      wireEventsCollection<WireEvent>(db)
         .find({ timestamp: { $gte: since } })
         .sort({ timestamp: -1 })
         .limit(50)
         .toArray(),
 
-      db
-        .collection<NewsPost>("newsPosts")
+      newsPostsCollection(db)
         .find(withPublicNewsVisibility({ isSystem: true, createdAt: { $gte: since } }))
         .sort({ createdAt: -1 })
         .limit(20)
         .project({ content: 1, category: 1, createdAt: 1 })
         .toArray(),
 
-      db.collection<WireEvent>("wireEvents").countDocuments({ timestamp: { $gte: since } }),
+      wireEventsCollection<WireEvent>(db).countDocuments({ timestamp: { $gte: since } }),
     ]);
 
     const items: WireItem[] = [];
@@ -78,23 +81,20 @@ export async function GET() {
 
     // Only use collection-based fallback if wireEvents is sparse (bootstrapping)
     if (wireEventCount < 5) {
-      const stateRows = await db
-        .collection<State>("states")
+      const stateRows = await statesCollection(db)
         .find({})
         .project<Pick<State, "_id" | "name">>({ _id: 1, name: 1 })
         .toArray();
       const stateNameById = new Map(stateRows.map((s) => [s._id, s.name]));
       const [recentCorps, recentBonds, recentDividendCorps] = await Promise.all([
-        db
-          .collection<Corporation>("corporations")
+        corporationsCollection(db)
           .find({ createdAt: { $gte: since } })
           .sort({ createdAt: -1 })
           .limit(20)
           .project({ name: 1, type: 1, headquartersState: 1, createdAt: 1, sequentialId: 1 })
           .toArray(),
 
-        db
-          .collection<Bond>("bonds")
+        bondsCollection(db)
           .find({ createdAt: { $gte: since } })
           .sort({ createdAt: -1 })
           .limit(20)
@@ -107,8 +107,7 @@ export async function GET() {
           })
           .toArray(),
 
-        db
-          .collection<Corporation>("corporations")
+        corporationsCollection(db)
           .find({ lastDividendChange: { $gte: since } })
           .sort({ lastDividendChange: -1 })
           .limit(20)
@@ -119,8 +118,7 @@ export async function GET() {
       // Resolve corporation names for bonds
       const bondCorpIds = recentBonds.map((b) => b.corporationId);
       const bondCorps = bondCorpIds.length
-        ? await db
-            .collection<Corporation>("corporations")
+        ? await corporationsCollection(db)
             .find({ _id: { $in: bondCorpIds } })
             .project({ name: 1, sequentialId: 1 })
             .toArray()

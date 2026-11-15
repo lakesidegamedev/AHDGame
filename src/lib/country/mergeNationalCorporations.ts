@@ -3,46 +3,31 @@
  * survivor's.
  *
  * A country's state-enterprise layer is country-keyed (`countryOwnerId`), so the
- * region sweep in `transferRegion` never sees it: the absorbed state's PRIMARY
- * National Corporation and every split-off survive the merge as a second, ghost
- * NatCorp family — still flagged `isPrimaryNationalCorporation: true`, still
- * holding its sectors, still the `corporationId` on its sovereign bonds. The
- * live German reunification left exactly that: two primaries under the survivor,
- * merges and new nationalizations resolving "the primary" by insertion order
- * (the ghost), and coupon money flowing to a corp of a country that no longer
- * existed. This module is the missing consolidation step.
+ * region sweep in `transferRegion` never sees it. Left alone, the absorbed
+ * primary would survive as a ghost with `isPrimaryNationalCorporation: true`,
+ * holding sectors and still the `corporationId` on its sovereign bonds.
  *
- * THE SURVIVOR'S PRIMARY WINS. One country has exactly one primary (spec §24.1);
- * where both sides have one, the survivor's keeps the flag and the absorbed
- * side's is demoted and dissolved. Everything the absorbed tree owns folds into
- * it:
+ * The survivor's primary wins (one primary per country, spec §24.1). The absorbed
+ * primary is demoted and dissolved; everything it owns folds in:
  *
- *  - SECTORS move to the survivor split-off that already claims the same sector
- *    type (keeping the one-NatCorp-per-type invariant), else to the survivor
- *    primary — the same per-type routing `resolveNationalCorporationForSector`
- *    applies to every future taking. The empty shells then dissolve.
- *  - SOVEREIGN BONDS re-stamp `corporationId` + `issuerName` onto the survivor
- *    primary — the same assumption-of-debt `mergeNationalFisc` performs on the
- *    country fields; without this the coupon cost keeps accruing to the ghost.
- *  - Corp-held stakes (privatization golden shares, cross-holdings) re-stamp to
- *    the survivor primary, so state-held positions survive the shell.
+ *  - SECTORS move to the survivor split-off of the same type (the same routing
+ *    `resolveNationalCorporationForSector` applies), else to the primary.
+ *  - SOVEREIGN BONDS re-stamp `corporationId` + `issuerName` onto the primary.
+ *  - Corp-held stakes re-stamp to the primary.
  *
- * IDEMPOTENT by filters: a re-run finds no corporations still keyed to the
- * absorbed country and writes nothing. Safe to place anywhere in the merge
- * pipeline; it runs after the regions have crossed so corps followed across by
- * `evacuateRegionPolitics` are already at rest.
+ * Idempotent by filters: a re-run finds no corporations still keyed to the
+ * absorbed country. Runs after regions cross so corps are already at rest.
  *
- * The absorbed shells are DELETED, not stamped-retired: a corporation has no
- * `dissolvedTurn` machinery (that is a country concept), and a flagged primary
- * left in place would keep answering "who is the primary" lookups. History that
- * needs the old ids keeps them in `nationalizationLedger` provenance and bond
- * `originalIssuerName`, same as the existing merge modules.
+ * Absorbed shells are DELETED, not stamped-retired: corporations have no
+ * `dissolvedTurn` machinery, and a flagged primary left in place would keep
+ * answering primary lookups. Old ids survive in `nationalizationLedger` and bond
+ * `originalIssuerName`.
  */
 import { recordCorporationExit } from "@/lib/corporations/exits/recordCorporationExit";
 import type { Db } from "mongodb";
 import { ObjectId } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
-import type { Corporation, CorporateSector } from "@/lib/db/types";
+import type { CorporateSector } from "@/lib/db/types";
 import { ensurePrimaryNationalCorporation } from "@/lib/nationalization/nationalCorporation";
 import { stampSubjectDeleted } from "@/lib/financialTxLog/stampDeleted";
 import { cleanupShareMarketActivityForCorporations } from "@/lib/corporations/cleanupShareMarketActivity";
@@ -51,6 +36,9 @@ import {
   releaseConstructionPropertyTransition,
   reserveSectorsForTransition,
 } from "@/lib/corporations/securedConstructionProperty";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 export interface MergeNationalCorporationsArgs {
   fromCountryId: CountryId;
@@ -72,9 +60,9 @@ export async function mergeNationalCorporations(
 ): Promise<MergeNationalCorporationsResult> {
   const { fromCountryId, toCountryId } = args;
   const now = new Date();
-  const corps = db.collection<Corporation>("corporations");
-  const sectors = db.collection<CorporateSector>("corporateSectors");
-  const bonds = db.collection("bonds");
+  const corps = corporationsCollection(db);
+  const sectors = corporateSectorsCollection(db);
+  const bonds = bondsCollection(db);
 
   // The survivor's primary exists (or is created) FIRST, so there is always a
   // fold target even when the survivor had no NatCorp tree at all.
@@ -222,8 +210,8 @@ export async function mergeNationalCorporations(
   }
 
   // Hold the property lock through bond/share/title settlement and shell
-  // deletion. Sectors that were merged into no shell keep their marker until
-  // their final corporate owner and assumed liabilities are established.
+  // deletion. Merged-into sectors keep their marker until the final corporate
+  // owner and assumed liabilities are established.
   await Promise.all(
     absorbedSectors
       .filter((sector) => movedSectorIds.has(sector._id.toHexString()))

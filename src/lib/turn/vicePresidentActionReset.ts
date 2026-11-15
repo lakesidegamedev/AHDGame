@@ -1,8 +1,8 @@
 // src/lib/turn/vicePresidentActionReset.ts
 import type { Db } from "@/lib/mongodb";
-import type { ElectedOfficial } from "@/lib/db/types";
 import { VP_ACTION_ACCRUAL_TURNS, VP_ACTION_CAP } from "@/lib/constants/vicePresidentActions";
 import { isOfficePoolAccrualTurn } from "@/lib/actions/officePoolAccrual";
+import { getElectedOfficialsCollection } from "@/lib/db/collections/electedOfficials";
 
 /**
  * Accrue the seated vice-president's self-serve action pool (player
@@ -22,7 +22,9 @@ export async function resetVicePresidentActions(
   if (!isOfficePoolAccrualTurn(currentTurn, VP_ACTION_ACCRUAL_TURNS)) {
     return { vpActionsRegenerated: 0 };
   }
-  const result = await db.collection<ElectedOfficial>("electedOfficials").updateMany(
+  const result = await (
+    await getElectedOfficialsCollection(db)
+  ).updateMany(
     {
       officeType: "vicePresident",
       vpActionsRemaining: { $lt: VP_ACTION_CAP },

@@ -2,17 +2,16 @@ import type { AnyBulkWriteOperation, ClientSession, Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import type { PlayableResidence, SuccessionResidencePlan } from "./rules/residency";
 import type { PrivateFirmSuccessionPlan } from "./rules/privateFacilities";
+import { type FederationFacilityClaimRecord } from "./facilityClaimLedger";
 import {
-  FEDERATION_FACILITY_CLAIMS_COLLECTION,
-  type FederationFacilityClaimRecord,
-} from "./facilityClaimLedger";
-import {
-  FEDERATION_SETTLEMENT_APPLICATIONS_COLLECTION,
-  WORLD_ENTITY_STATES_COLLECTION,
   type FederationSettlementApplicationRecord,
   type RuntimeWorldEntityState,
   validateAppliedEntityStates,
 } from "./runtimeEntities";
+import { federationRelocationsCollection } from "@/lib/db/repositories/federationRelocations";
+import { federationFacilityClaimsCollection } from "@/lib/db/repositories/federationFacilityClaims";
+import { worldEntityStatesCollection } from "@/lib/db/repositories/worldEntityStates";
+import { federationSettlementApplicationsCollection } from "@/lib/db/repositories/federationSettlementApplications";
 
 export const FEDERATION_RELOCATIONS_COLLECTION = "federationRelocations";
 
@@ -52,14 +51,12 @@ export async function publishFederationRelocations(input: {
   const { db, applicationId, residents, firms, firmOrigins, now, session } = input;
   if (!applicationId.trim() || !Number.isFinite(now.getTime()))
     throw new Error("Federation relocation needs an application and time");
-  const application = await db
-    .collection<FederationSettlementApplicationRecord>(
-      FEDERATION_SETTLEMENT_APPLICATIONS_COLLECTION
-    )
-    .findOne({ _id: applicationId, status: "applied" }, { session });
+  const application =
+    await federationSettlementApplicationsCollection<FederationSettlementApplicationRecord>(
+      db
+    ).findOne({ _id: applicationId, status: "applied" }, { session });
   if (!application) throw new Error("Federation relocation awaits its applied settlement");
-  const states = await db
-    .collection<RuntimeWorldEntityState>(WORLD_ENTITY_STATES_COLLECTION)
+  const states = await worldEntityStatesCollection<RuntimeWorldEntityState>(db)
     .find({ applicationId }, { session })
     .toArray();
   validateAppliedEntityStates(application.presetId, [application], states);
@@ -118,8 +115,7 @@ export async function publishFederationRelocations(input: {
     });
   const expectedClaims = firms.flatMap((plan) => plan.claims);
   if (expectedClaims.length) {
-    const storedClaims = await db
-      .collection<FederationFacilityClaimRecord>(FEDERATION_FACILITY_CLAIMS_COLLECTION)
+    const storedClaims = await federationFacilityClaimsCollection<FederationFacilityClaimRecord>(db)
       .find({ applicationId }, { session })
       .toArray();
     const byId = new Map(storedClaims.map((claim) => [claim.claimId, claim]));
@@ -159,14 +155,14 @@ export async function publishFederationRelocations(input: {
         });
     }
     if (updates.length) {
-      const changed = await db
-        .collection<FederationFacilityClaimRecord>(FEDERATION_FACILITY_CLAIMS_COLLECTION)
-        .bulkWrite(updates, { session });
+      const changed = await federationFacilityClaimsCollection<FederationFacilityClaimRecord>(
+        db
+      ).bulkWrite(updates, { session });
       if (changed.matchedCount !== updates.length)
         throw new Error("Continuing facility compensation changed during activation");
     }
   }
-  const collection = db.collection<FederationRelocationRecord>(FEDERATION_RELOCATIONS_COLLECTION);
+  const collection = federationRelocationsCollection<FederationRelocationRecord>(db);
   if (records.length === 0) return [];
   await collection.bulkWrite(
     records.map((intended) => ({

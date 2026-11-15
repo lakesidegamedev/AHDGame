@@ -1,27 +1,10 @@
 /**
- * Italy Region Census Profiles — Layer 1 (1953, First Republic).
+ * Italy Region Census Profiles, 1953.
  *
- * SEED INDEPENDENCE — DO NOT DERIVE FROM ANOTHER ERA.
- * Anchored on 1951 Census of Italy. NOT imported/transformed from itRegionCensusData.ts.
+ * SEED INDEPENDENCE: anchored on the 1951 Census of Italy, authored independently.
+ * Do not derive from another era.
  *
- * Key 1953 anchors (vs 1979):
- * - Education: MUCH HIGHER primary_or_below — illiteracy still ~12% nationally
- *   (30%+ in South); laurea (degree) attainment <4%. Elementary school was the
- *   peak for most Italians.
- * - Urbanization: LOWER urban — the rural→urban migration northward (from
- *   the Mezzogiorno to Turin/Milan) had barely begun by 1953; it accelerated
- *   through 1955-65.
- * - Ethnicity: effectively monoethnic (pre-immigration era); `immigrant` near-zero.
- * - Age: somewhat younger — baby boom post-WWII; high South fertility.
- * - Income: MORE compressed and LOW — Italy's economic miracle hadn't started
- *   (GDP only passing prewar levels ~1950); South deeply impoverished.
- *
- * Dimension keys match ITRegionLayer1:
- *   ethnicity: italian | immigrant | other
- *   education: primary_or_below | secondary | vocational | university
- *   age: young | mid | mature | senior
- *   income: low | middle | high
- *   urbanization: urban | suburban | rural
+ * Every dimension sums to 100.
  */
 
 import type { ITRegionLayer1 } from "@/lib/seeds/it/itRegionCensusData";

@@ -1,5 +1,6 @@
 import type { Db, ObjectId } from "mongodb";
 import type { CorporationHistory } from "@/lib/db/types";
+import { corporationHistoryCollection } from "@/lib/db/repositories/corporationHistory";
 
 export type CorpHistoryDividendRow = Pick<
   CorporationHistory,
@@ -28,8 +29,7 @@ export async function fetchLatestCorpHistoryDividendRows(
 ): Promise<Map<string, CorpHistoryDividendRow>> {
   if (corporationIds.length === 0) return new Map();
 
-  const rows = await db
-    .collection<CorporationHistory>("corporationHistory")
+  const rows = await corporationHistoryCollection(db)
     .aggregate<{
       _id: ObjectId;
       lastIncome: number;
@@ -39,8 +39,7 @@ export async function fetchLatestCorpHistoryDividendRows(
     }>([
       { $match: { corporationId: { $in: corporationIds } } },
       // Sort on the group key first so the {corporationId, turn} index serves
-      // match, sort and $first as a DISTINCT_SCAN (one entry per corporation)
-      // instead of walking the whole history by turn (#2693).
+      // match, sort and $first as a DISTINCT_SCAN instead of walking all history by turn.
       { $sort: { corporationId: 1, turn: -1 } },
       {
         $group: {

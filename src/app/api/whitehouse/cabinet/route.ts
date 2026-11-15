@@ -12,7 +12,6 @@ import type {
   PoliticalParty,
   UnifiedCabinetMember,
 } from "@/lib/db/types";
-import type { Character } from "@/lib/db/types/character";
 import { bulkFetchCharacterNames } from "@/lib/db/characterLookup";
 import { getCabinetPositionGroup, getCabinetPositions } from "@/lib/constants/cabinetMechanics";
 import { resolveCabinetRoster } from "@/lib/cabinet/rosterEra";
@@ -24,6 +23,11 @@ import { getGameState } from "@/lib/gameState";
 import { actingAppointmentsEnabled } from "@/lib/cabinet/actingEligibility";
 import { ACTING_TENURE_TURNS } from "@/lib/cabinet/actingScope";
 import { getActingChargesCollection } from "@/lib/db/collections/actingAppointmentCharges";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { cabinetMembersCollection } from "@/lib/db/repositories/cabinetMembers";
+import { cabinetNominationsCollection } from "@/lib/db/repositories/cabinetNominations";
 
 // GET /api/whitehouse/cabinet — Returns all cabinet positions with current members, pending nominations, and the caller's senator/president status.
 // Country-scoped via ?country= (default US).
@@ -40,21 +44,20 @@ export async function GET(request: Request) {
 
     const [cabinetMembers, nominations, presidentOfficial, myCharacter, parties] =
       await Promise.all([
-        db.collection<UnifiedCabinetMember>("cabinetMembers").find({ countryId }).toArray(),
-        db
-          .collection<CabinetNomination>("cabinetNominations")
+        cabinetMembersCollection<UnifiedCabinetMember>(db).find({ countryId }).toArray(),
+        cabinetNominationsCollection(db)
           .find({ countryId, status: { $in: ["active", "proposed"] } })
           .sort({ proposedAt: -1 })
           .toArray(),
-        db
-          .collection<ElectedOfficial>("electedOfficials")
-          .findOne({ countryId, officeType: "president", characterId: { $ne: null } }),
+        electedOfficialsCollection(db).findOne({
+          countryId,
+          officeType: "president",
+          characterId: { $ne: null },
+        }),
         authUser
-          ? db
-              .collection<Character>("characters")
-              .findOne({ userId: new ObjectId(authUser.userId) })
+          ? charactersCollection(db).findOne({ userId: new ObjectId(authUser.userId) })
           : Promise.resolve(null),
-        db.collection<PoliticalParty>("politicalParties").find({ countryId }).toArray(),
+        politicalPartiesCollection(db).find({ countryId }).toArray(),
       ]);
 
     // Build party lookup map using composite key for safety
@@ -68,7 +71,7 @@ export async function GET(request: Request) {
     const charMap = await bulkFetchCharacterNames(db, characterIds, { includeAvatar: true });
 
     const senatorOfficial = myCharacter
-      ? await db.collection<ElectedOfficial>("electedOfficials").findOne({
+      ? await electedOfficialsCollection(db).findOne({
           characterId: myCharacter._id,
           countryId,
           officeType: "senate",
@@ -142,9 +145,7 @@ export async function GET(request: Request) {
               avatarUrl: member.characterId
                 ? charMap.get(member.characterId.toString())?.avatarUrl
                 : undefined,
-              // The real flag. This used to report `isNPP`, which both hid
-              // genuine acting holders and mislabelled NPP-held seats as
-              // acting. `isNPP` is already reported separately above.
+              // Use `acting`, not `isNPP`: `isNPP` hides genuine acting holders and mislabels NPP-held seats. `isNPP` is reported separately above.
               acting: member.acting === true,
               actingExpiresOnTurn: member.actingExpiresOnTurn ?? null,
               confirmedAt: (member.confirmedAt ?? member.createdAt).toISOString(),

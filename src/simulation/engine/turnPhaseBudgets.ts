@@ -24,21 +24,24 @@
 export const DEFAULT_PHASE_ROUND_TRIP_BUDGET = 500;
 
 /**
- * Initial values were measured on a seeded 1953 world (turns 33-41,
- * 2026-09-06), then given roughly 2x headroom for the larger production world.
- * Six entries below were reconciled against production turnLogs for
- * successful turns 1063-1117 (55 turns, 2026-09-25). Their budgets sit about
- * 1.2x the observed phase p95; cadence-gated phases use executed turns only.
- * Sample counts and caveats are in the 1.10.0 dev changelog.
+ * Budgets are ~1.2x the observed phase p95 on production turnLogs, with headroom
+ * for the larger production world. Cadence-gated phases count executed turns only.
  */
 export const PHASE_ROUND_TRIP_BUDGETS: Readonly<Record<string, number>> = {
   // One expiry update, one projected read, two batched releases and one completion update.
   governmentContractExpiry: 10,
+  // Four batched reads, one briefs upsert, one memory write, and a wire event plus a
+  // news post per brief (at most a handful a tick). Idle turns cost none.
+  countryBriefs: 60,
   // Live turns 233-235 measured 41/9 commands including telemetry and cursor
   // reads. Debt-scan wrap adds at most one command; keep modest headroom.
   playerIncomeTax: 45,
   incomeTaxBases: 10,
   russianCouncilComposition: 100,
+  // Every country bill lifecycle in play, each bounded by its own open bills.
+  countryBillLifecycle: 3000,
+  // Every election spawner for the countries in play, each idempotent and gated on its own anchor.
+  countryElections: 3000,
   corporationTurn: 4500,
   ministerialOrders: 2000,
   indexFunds: 18000,
@@ -62,13 +65,21 @@ export const PHASE_ROUND_TRIP_BUDGETS: Readonly<Record<string, number>> = {
   inflationRecalc: 600,
   primaryResolution: 2000,
   voteAccumulation: 4500,
-  bankingTurn: 1000,
+  // A fresh 2027 world measured 1,095 on turns 2-4 (bankMoneyMoves 456,
+  // corporations 198, bankLoans 141). The journal share is each settlement's
+  // own claim, leg stamps and completion, the crash-safety writes, not a
+  // per-row read, so it grows with the bank count rather than batching away.
+  bankingTurn: 1300,
   recomputeSharePrices: 1000,
   electionResolution: 2000,
   primarySnapshots: 800,
   politicalMetricsDynamics: 600,
   demographicEffects: 600,
   crisisTurn: 600,
+  // Detectors read their inputs and streaks each turn; per-crisis work is batched.
+  crisisV2Turn: 200,
+  // Three race documents, one batched corporation read and a handful of guarded writes.
+  frontierRaces: 40,
   autoCrisisTurn: 600,
   nppCorporateAttacks: 600,
   stateOwnershipConcentration: 400,

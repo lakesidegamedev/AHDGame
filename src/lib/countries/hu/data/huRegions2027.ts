@@ -1,22 +1,11 @@
 import type { State } from "@/lib/db/types";
 
-/** Hungary regions (2027) — Third-Republic democracy. The latest national
- *  anchors available for this future preset are the KSH 1 Jan 2026 population
- *  (9.488M) and revised 2025 annual GDP (HUF 87,045.554 billion).
- *  https://www.ksh.hu/stadat_files/nep/hu/nep0002.html
- *  https://www.ksh.hu/stadat_files/gdp/en/gdp0094.html
- *  These six regional figures are proportional estimates from the earlier
- *  authored distribution, reconciled exactly to those national anchors; they
- *  are not published KSH regional observations. GDP is millions of forint.
- *
- *  Same six macro-region ids as 1953/1979 (Budapest / Pest / Western incl.
- *  Central Transdanubia / Southern Transdanubia / Northern Hungary /
- *  Great Plain), so the Layer-1 census keys keep resolving.
- *  houseDistricts = Orszaggyules seats apportioned by population, largest
- *  remainder (sum = 199, the post-2014 unicameral total); stateSenateSeats = 0
- *  (no upper chamber since the Presidential Council was abolished in 1989).
- *  The 106 single-member + 93 list split is election logic, not regional data.
- */
+/* Hungary regions (2027). Anchored to KSH 1 Jan 2026 population (9.488M)
+ * and revised 2025 GDP (HUF 87,045.554 billion). Regional figures are
+ * proportional estimates, not published KSH observations. GDP in millions HUF.
+ * Same six macro-region ids as 1953/1979 so census keys resolve.
+ * houseDistricts = Orszaggyules seats by population, largest remainder (sum 199).
+ * stateSenateSeats = 0, no upper chamber. */
 export const huRegions2027: State[] = [
   {
     _id: "HU_BUD",

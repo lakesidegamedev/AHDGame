@@ -13,13 +13,7 @@ import {
 } from "@/lib/db/collections/navairChannels";
 import { advanceChannels, channelKey, type ContestInput } from "./channels";
 import { detectionFromPresence } from "./detection";
-import {
-  basingStatus,
-  berthCapacity,
-  berthDemand,
-  overcrowdPenalty,
-  supplyCeiling,
-} from "./basing";
+import { basingStatus } from "./basing";
 import { cv, baseCv, alive } from "./engineCore";
 import { resolveEngagement, engagementControlBonus } from "./engagement";
 import { defaultMissionFor } from "./missions";
@@ -28,6 +22,8 @@ import type { NavairUnit, RegionChannels, EngagementOutcome } from "./types";
 import type { CountryId } from "@/lib/constants/countries";
 import type { RegionCode } from "@/lib/military/types";
 import { FIGHTING_CONFLICT_STATUSES } from "@/lib/military/conflictLifecycle";
+import { loadNavairBasing } from "@/lib/db/collections/navairBasing";
+import { planSupply } from "./rules/supply";
 
 /**
  * The naval and air pass, run once per turn for the whole world.
@@ -75,18 +71,18 @@ interface WarContext {
 async function buildWarContext(db: Db): Promise<WarContext> {
   // Projection passed as a find option rather than via the cursor's .project(), which is
   // this codebase's house style and does not require a cursor implementation of it.
-  const conflicts = (await getConflictsCollection(db)
-    .find(
+  const conflicts = await getConflictsCollection(db)
+    .find<{
+      _id?: unknown;
+      sideA?: { countries?: string[] };
+      sideB?: { countries?: string[] };
+      region?: RegionCode;
+      extendedRegions?: RegionCode[];
+    }>(
       { status: { $in: [...FIGHTING_CONFLICT_STATUSES] } },
       { projection: { "sideA.countries": 1, "sideB.countries": 1, region: 1, extendedRegions: 1 } }
     )
-    .toArray()) as unknown as Array<{
-    _id?: unknown;
-    sideA?: { countries?: string[] };
-    sideB?: { countries?: string[] };
-    region?: RegionCode;
-    extendedRegions?: RegionCode[];
-  }>;
+    .toArray();
 
   const hostility = new Map<string, Set<string>>();
   const link = (a: string, b: string) => {
@@ -179,9 +175,9 @@ export function stationOf(
  * contest last turn's positions.
  */
 export async function processNavairTurn(db: Db, turn: number): Promise<NavairTurnResult> {
-  const units = (await getMilitaryUnitsCollection(db)
-    .find({ domain: { $in: ["naval", "air"] } })
-    .toArray()) as unknown as NavairUnit[];
+  const units = await getMilitaryUnitsCollection(db)
+    .find<NavairUnit>({ domain: { $in: ["naval", "air"] } })
+    .toArray();
 
   if (!units.length) {
     return {
@@ -197,10 +193,11 @@ export async function processNavairTurn(db: Db, turn: number): Promise<NavairTur
     };
   }
 
-  const [war, blocs, channels] = await Promise.all([
+  const [war, blocs, channels, agreements] = await Promise.all([
     buildWarContext(db),
     loadMilitaryBlocs(db),
     loadNavairChannels(db),
+    loadNavairBasing(db),
   ]);
   const { hostility, frontRegions, theaterRegion, conflicts: warSides } = war;
 
@@ -234,11 +231,9 @@ export async function processNavairTurn(db: Db, turn: number): Promise<NavairTur
   }
 
   // ── standing missions for formations nobody commands ────────────────────────
-  // Most of the world is run by nobody: NPC countries, players who have not opened the
-  // war room, and every formation that existed before this subsystem did. Without this,
-  // every navy in the game carries a null mission, no blockade or engagement ever fires,
-  // and naval combat value falls through to the flying-weights fallback. A stored mission
-  // is never overwritten: this fills a blank, it does not overrule a commander.
+  // Without a mission, no blockade or engagement fires and naval combat value
+  // falls back to flying weights. A stored mission is never overwritten: this
+  // fills a blank, it does not overrule a commander.
   let missionsAssigned = 0;
   for (const [region, here] of byRegion) {
     const hostileNavalHere = new Set(
@@ -267,17 +262,21 @@ export async function processNavairTurn(db: Db, turn: number): Promise<NavairTur
   // ── supply at station, before anything reads combat value ───────────────────
   // Combat value is scaled by supply, so an unsupplied fleet must be unsupplied BEFORE
   // the contest is scored, not after.
-  for (const [region, here] of byRegion) {
-    for (const countryId of new Set(here.map((u) => u.countryId))) {
-      const mine = here.filter((u) => u.countryId === countryId);
-      const enemies = hostility.get(countryId) ?? new Set<string>();
-      const status = basingStatus(region, countryId, blocs, enemies);
-      const capacity = berthCapacity(region, status, 0);
-      const crowding = overcrowdPenalty(berthDemand(mine), capacity);
-      const airlift = mine.some((u) => u.domain === "air" && u.mission === "AIRLIFT");
-      for (const u of mine) u.supply = supplyCeiling(u, status, crowding, airlift);
-    }
-  }
+  const stationed = [...byRegion.values()].flat();
+  const supplyContext = {
+    blocs,
+    agreements,
+    enemies: Object.fromEntries(
+      [...hostility].map(([country, enemies]) => [country, [...enemies]])
+    ),
+  };
+  const advice = planSupply(stationed, supplyContext);
+  const supportByUnit = new Map(stationed.map((u, i) => [String(u._id), advice[i]]));
+  stationed.forEach((u, i) => {
+    // Supply can change even when the formation has no new orders or damage.
+    if ((u.supply ?? 100) !== advice[i].supply) touchedByMission.add(u);
+    u.supply = advice[i].supply;
+  });
 
   // ── surface actions ─────────────────────────────────────────────────────────
   // Resolved BEFORE the contest is scored, so a fleet that was sunk or crippled this
@@ -396,6 +395,7 @@ export async function processNavairTurn(db: Db, turn: number): Promise<NavairTur
   let formationsRepaired = 0;
   for (const u of units) {
     const before = u.integrity ?? 100;
+    const supplyBeforeRepair = u.supply;
 
     // A formation too damaged to fight withdraws to home water to mend, unless a
     // commander deliberately stationed it where it is. `WITHDRAW_INTEGRITY` is the same
@@ -417,18 +417,27 @@ export async function processNavairTurn(db: Db, turn: number): Promise<NavairTur
     const station = u.station as RegionCode | null | undefined;
     if (!station) continue;
 
-    const basing = basingStatus(
-      station,
-      u.countryId,
-      blocs,
-      hostility.get(u.countryId) ?? new Set<string>()
-    );
+    const support =
+      before <= 0 || withdrawing
+        ? planSupply([u], supplyContext)[0]
+        : supportByUnit.get(String(u._id));
+    const basing =
+      support?.access === "Home"
+        ? "home"
+        : support?.access === "Agreed access"
+          ? "allied"
+          : basingStatus(
+              station,
+              u.countryId,
+              blocs,
+              hostility.get(u.countryId) ?? new Set<string>()
+            );
 
     // A hull at zero never passed the `alive` gate above, so it was never stationed and
     // the sustain pass never gave it a supply figure. Without this its repair would be
     // scaled by a reading from whenever it was last seaworthy.
     if (before <= 0 || withdrawing) {
-      u.supply = supplyCeiling(u, basing, 0, false);
+      u.supply = support?.supply ?? 100;
     }
 
     // A withdrawn formation is in a yard by definition, whatever its last standing order
@@ -443,7 +452,7 @@ export async function processNavairTurn(db: Db, turn: number): Promise<NavairTur
     // The move home is persisted even on a turn that mends nothing. A formation that
     // withdrew and then fought recovers no condition, so keying the write on the repair
     // alone silently dropped the station change and left it at the front.
-    if (mended || u.station !== stationBefore) touched.add(u);
+    if (mended || u.station !== stationBefore || u.supply !== supplyBeforeRepair) touched.add(u);
   }
 
   for (const u of touchedByMission) touched.add(u);

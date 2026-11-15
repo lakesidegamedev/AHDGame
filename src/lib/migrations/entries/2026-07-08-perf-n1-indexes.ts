@@ -2,11 +2,10 @@ import { createPlannedIndexes, type IndexPlan } from "../indexPlans";
 import type { Migration } from "../types";
 const INDEXES: IndexPlan[] = [
   {
-    // Nationalization eligibility (targetEligibility.ts) checks for defaulted,
-    // unmatured bonds per corporation on every candidate pass; the bond payoff
-    // / restructure / hostile-takeover paths filter the same way. The existing
-    // bonds indexes lead with holders.characterId / issuerType, so these
-    // lookups collection-scan (#2817).
+    // Nationalization eligibility checks for defaulted, unmatured bonds per
+    // corporation on every candidate pass; bond payoff, restructure, and
+    // hostile-takeover paths filter the same way. Existing bonds indexes lead
+    // with holders.characterId / issuerType, so these lookups collection-scan.
     collection: "bonds",
     keys: { corporationId: 1, matured: 1, defaulted: 1 },
     options: { name: "bonds_corporation_matured_defaulted", background: true },

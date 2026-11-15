@@ -1,8 +1,12 @@
 import { ObjectId } from "mongodb";
 import type { Db } from "@/lib/mongodb";
 import type { CountryId } from "@/lib/constants/countries";
-import type { Character, ElectedOfficial, NPP, PoliticalParty } from "@/lib/db/types";
+import type { ElectedOfficial, NPP, PoliticalParty } from "@/lib/db/types";
 import { buildVotesByParty, type VoteByParty } from "@/lib/congress/billVoting";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export type { VoteByParty };
 
@@ -37,15 +41,13 @@ export async function buildVoterPartyAndWeightMaps(
 
   const [characters, npps] = await Promise.all([
     charOids.length > 0
-      ? db
-          .collection<Character>("characters")
+      ? charactersCollection(db)
           .find({ _id: { $in: charOids } })
           .project({ _id: 1, party: 1 })
           .toArray()
       : [],
     nppOids.length > 0
-      ? db
-          .collection<NPP>("npps")
+      ? nppsCollection(db)
           .find({ _id: { $in: nppOids } })
           .project({ _id: 1, party: 1 })
           .toArray()
@@ -69,8 +71,7 @@ export async function buildVoterPartyAndWeightMaps(
 
   const officials =
     orClauses.length > 0
-      ? await db
-          .collection<ElectedOfficial>("electedOfficials")
+      ? await electedOfficialsCollection(db)
           .find({
             countryId,
             officeType: Array.isArray(lowerChamberKey) ? { $in: lowerChamberKey } : lowerChamberKey,
@@ -119,10 +120,7 @@ export async function computeParliamentaryGovernmentTally(
     return { votesFor: 0, votesAgainst: 0, voteByParty: [] };
   }
 
-  const parties = await db
-    .collection<PoliticalParty>("politicalParties")
-    .find({ countryId })
-    .toArray();
+  const parties = await politicalPartiesCollection(db).find({ countryId }).toArray();
   const partyMap = new Map(parties.map((p) => [String(p.sequentialId), p]));
 
   const keys = Object.keys(votes);
@@ -295,10 +293,7 @@ export async function computeCongressLeadershipTally(
     return { votesFor: 0, votesAgainst: 0, voteByParty: [] };
   }
 
-  const parties = await db
-    .collection<PoliticalParty>("politicalParties")
-    .find({ countryId: "US" })
-    .toArray();
+  const parties = await politicalPartiesCollection(db).find({ countryId: "US" }).toArray();
   const partyMap = new Map(parties.map((p) => [String(p.sequentialId), p]));
 
   const keys = Object.keys(votes);

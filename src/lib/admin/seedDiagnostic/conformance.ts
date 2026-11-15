@@ -3,6 +3,7 @@
  * Epsilon-level tolerances; nothing has run yet at post-reset turn 1.
  */
 
+import { supportsNoStartingParties } from "@/lib/admin/startingPartiesPresets";
 import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
 import {
   STARTING_POLITICAL_COLLECTIONS,
@@ -55,6 +56,24 @@ import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
 import { getScotusPresetSeed } from "@/lib/scotus/presetData";
 import type { ScotusPresetSeed } from "@/lib/scotus/presetData/types";
 import { TURNS_PER_YEAR } from "@/lib/constants/turnTime";
+import { isBackgroundInPreset } from "@/lib/world/eraRoster";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import type { Document } from "mongodb";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
+import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
+import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
+import { stateDemographicTurnoutCollection } from "@/lib/db/repositories/stateDemographicTurnout";
+import { demographicDefaultsCollection } from "@/lib/db/repositories/demographicDefaults";
+import { supremeCourtSeatsCollection } from "@/lib/db/repositories/supremeCourtSeats";
+import { docketCasesCollection } from "@/lib/db/repositories/docketCases";
+import { strategicSectorDesignationsCollection } from "@/lib/db/repositories/strategicSectorDesignations";
 
 /** Readiness check names that are expected-empty pre-founding / pre-seat. */
 const PRE_FOUNDING_READINESS = new Set(["NPPs", "ElectedOfficials", "GovernmentFormation"]);
@@ -149,7 +168,7 @@ async function checkGameStateClock(
   expect: SeedExpectations,
   worldsimBootstrap: boolean
 ): Promise<SeedDiagnosticCheck[]> {
-  const gs = await db.collection("gameState").findOne({ _id: "current" as never });
+  const gs = await gameStateCollection<Document>(db).findOne({ _id: "current" as never });
   const checks: SeedDiagnosticCheck[] = [];
   if (!gs) {
     return [
@@ -265,9 +284,9 @@ export async function checkSectors(
 ): Promise<SeedDiagnosticCheck[]> {
   const checks: SeedDiagnosticCheck[] = [];
   const countries = expect.seededCountryIds;
-  const config = await db
-    .collection<{ _id: string; commandEconomyEnabled?: boolean }>("gameConfig")
-    .findOne({ _id: "default" }, { projection: { commandEconomyEnabled: 1 } });
+  const config = await gameConfigCollection<{ _id: string; commandEconomyEnabled?: boolean }>(
+    db
+  ).findOne({ _id: "default" }, { projection: { commandEconomyEnabled: 1 } });
   const budgetYears = new Map<string, number>(
     getNationalBudgetSeedConfigsForPreset(expect.preset).map((budget) => [
       budget.countryId,
@@ -286,37 +305,49 @@ export async function checkSectors(
       budgetYear !== undefined &&
       commandEconomySoeSectors(countryId).length > 0 &&
       scheduledMarketizationLevel(countryId, budgetYear) < COMMAND_CEILING;
-    const unownedCount = await db.collection("unownedSectors").countDocuments({ countryId });
+    // Background countries (#5702) keep their regions but run no sectors, so
+    // seedUnownedSectors deliberately writes no pool for them.
+    const backgroundCountry = isBackgroundInPreset(expect.preset, countryId);
+    const unownedCount = await unownedSectorsCollection<Document>(db).countDocuments({ countryId });
     checks.push(
-      commandSoeSeed
+      backgroundCountry
         ? ok(
             `sectors.${countryId}.unowned`,
             countryId,
             "unownedSectors.count",
-            "optional with country-owned SOE production",
+            "none for a background country",
             unownedCount,
-            "command-band production is validated in the country-owned SOE pool"
+            "background countries run outside the full simulation and seed no sector pool"
           )
-        : unownedCount > 0
+        : commandSoeSeed
           ? ok(
               `sectors.${countryId}.unowned`,
               countryId,
               "unownedSectors.count",
-              ">0",
-              unownedCount
+              "optional with country-owned SOE production",
+              unownedCount,
+              "command-band production is validated in the country-owned SOE pool"
             )
-          : critical(
-              `sectors.${countryId}.unowned`,
-              countryId,
-              "unownedSectors.count",
-              ">0",
-              unownedCount
-            )
+          : unownedCount > 0
+            ? ok(
+                `sectors.${countryId}.unowned`,
+                countryId,
+                "unownedSectors.count",
+                ">0",
+                unownedCount
+              )
+            : critical(
+                `sectors.${countryId}.unowned`,
+                countryId,
+                "unownedSectors.count",
+                ">0",
+                unownedCount
+              )
     );
 
-    const strategicCount = await db
-      .collection("strategicSectorDesignations")
-      .countDocuments({ countryId });
+    const strategicCount = await strategicSectorDesignationsCollection<Document>(db).countDocuments(
+      { countryId }
+    );
     const expectedStrategic = DEFAULT_STRATEGIC_SECTORS[countryId as CountryId]?.length ?? 0;
     checks.push(
       strategicCount >= expectedStrategic
@@ -354,22 +385,19 @@ export async function checkSectors(
       revenue: row.revenue,
     });
     const rows = (
-      await db
-        .collection<LaneRow>("unownedSectors")
+      await unownedSectorsCollection<LaneRow>(db)
         .find({ countryId })
         .project<LaneRow>({ sectorType: 1, industryModel: 1, mediaDiscriminator: 1, revenue: 1 })
         .toArray()
     ).map(toLaneRow);
     let productiveRows = rows;
     if (commandSoeSeed) {
-      const owners = await db
-        .collection<{ _id: ObjectId }>("corporations")
+      const owners = await corporationsCollection<{ _id: ObjectId }>(db)
         .find({ countryOwnerId: countryId }, { projection: { _id: 1 } })
         .toArray();
       const owned = owners.length
         ? (
-            await db
-              .collection<LaneRow>("corporateSectors")
+            await corporateSectorsCollection<LaneRow>(db)
               .find(
                 { countryId, corporationId: { $in: owners.map((owner) => owner._id) } },
                 {
@@ -440,7 +468,7 @@ async function checkRegions(db: Db, expect: SeedExpectations): Promise<SeedDiagn
   const checks: SeedDiagnosticCheck[] = [];
   // Structural region checks for every seeded country (not just readiness set).
   for (const countryId of expect.seededCountryIds) {
-    const regionCount = await db.collection("states").countDocuments({ countryId });
+    const regionCount = await statesCollection<Document>(db).countDocuments({ countryId });
     const expectedCount = expectedRegionCount(countryId, expect.preset);
 
     if (expectedCount != null) {
@@ -485,8 +513,7 @@ async function checkRegions(db: Db, expect: SeedExpectations): Promise<SeedDiagn
       );
     }
 
-    const states = await db
-      .collection<{ _id: string; population?: number }>("states")
+    const states = await statesCollection<{ _id: string; population?: number }>(db)
       .find({ countryId })
       .project({ _id: 1, population: 1 })
       .toArray();
@@ -494,8 +521,7 @@ async function checkRegions(db: Db, expect: SeedExpectations): Promise<SeedDiagn
       .filter((state) => !NATIONAL_SCOPE_IDS.has(String(state._id)))
       .map((state) => String(state._id));
     if (regionIds.length > 0) {
-      const metrics = await db
-        .collection<{ _id: string }>("macroMetrics")
+      const metrics = await macroMetricsCollection<{ _id: string }>(db)
         .find({ countryId })
         .project({ _id: 1 })
         .toArray();
@@ -545,12 +571,12 @@ async function checkPolitical(
   if (expect.preset === "1991-default") {
     for (const prefix of ["pl", "cs", "hu", "ro", "bg", "yu"] as const) {
       const stateId = `${prefix}_national`;
-      const policyCount = await db.collection("statePolicies").countDocuments({
+      const policyCount = await statePoliciesCollection<Document>(db).countDocuments({
         stateId,
         scope: "national",
       });
       checks.push(classifyNationalPolicyCount(prefix, policyCount));
-      const democracy = await db.collection("statePolicies").findOne({
+      const democracy = await statePoliciesCollection<Document>(db).findOne({
         stateId,
         legislationTypeId: `${prefix}_political_system`,
       });
@@ -652,7 +678,7 @@ async function checkPartyRosters(
 
   for (const countryId of electionCountries) {
     if (!seeded.has(countryId)) continue; // not part of this preset's world
-    const count = await db.collection("politicalParties").countDocuments({ countryId });
+    const count = await politicalPartiesCollection<Document>(db).countDocuments({ countryId });
     checks.push(
       emptyCountries === null || emptyCountries.has(countryId)
         ? check(
@@ -688,8 +714,7 @@ async function checkPartyEra(db: Db, expect: SeedExpectations): Promise<SeedDiag
     const seeds = partySeedsForPreset(countryId, expect.preset);
     if (seeds.length > 0) rosters.set(countryId, new Set(seeds.map((seed) => seed.name)));
   }
-  const persisted = await db
-    .collection<{ countryId: string; name: string }>("politicalParties")
+  const persisted = await politicalPartiesCollection<{ countryId: string; name: string }>(db)
     .find({ isDefault: true, countryId: { $in: [...rosters.keys()] } })
     .project<{ countryId: string; name: string }>({ countryId: 1, name: 1 })
     .toArray();
@@ -733,9 +758,9 @@ async function checkDemographics(db: Db, expect: SeedExpectations): Promise<Seed
   );
 
   for (const countryId of expect.seededCountryIds) {
-    const regionCount = await db.collection("states").countDocuments({ countryId });
+    const regionCount = await statesCollection<Document>(db).countDocuments({ countryId });
     const expectedDemo = expectedRegionCount(countryId, expect.preset) ?? regionCount;
-    const demoCount = await db.collection("stateDemographics").countDocuments({ countryId });
+    const demoCount = await stateDemographicsCollection<Document>(db).countDocuments({ countryId });
 
     if (expectedDemo > 0) {
       checks.push(
@@ -766,7 +791,9 @@ async function checkDemographics(db: Db, expect: SeedExpectations): Promise<Seed
       );
     }
 
-    const defaultsCount = await db.collection("demographicDefaults").countDocuments({ countryId });
+    const defaultsCount = await demographicDefaultsCollection<Document>(db).countDocuments({
+      countryId,
+    });
     checks.push(
       defaultsCount > 0
         ? ok(
@@ -784,9 +811,10 @@ async function checkDemographics(db: Db, expect: SeedExpectations): Promise<Seed
             defaultsCount
           )
     );
-    const turnoutCount = await db
-      .collection<{ _id: string; countryId?: string | null }>("stateDemographicTurnout")
-      .countDocuments(seedTurnoutScopeFilter(countryId));
+    const turnoutCount = await stateDemographicTurnoutCollection<{
+      _id: string;
+      countryId?: string | null;
+    }>(db).countDocuments(seedTurnoutScopeFilter(countryId));
     checks.push(
       turnoutCount > 0
         ? ok(
@@ -841,7 +869,7 @@ async function checkRuntimeCleanliness(db: Db): Promise<SeedDiagnosticCheck[]> {
 
 async function checkConfig(db: Db, worldsimBootstrap: boolean): Promise<SeedDiagnosticCheck[]> {
   const checks: SeedDiagnosticCheck[] = [];
-  const config = await db.collection("gameConfig").findOne({ _id: "default" as never });
+  const config = await gameConfigCollection<Document>(db).findOne({ _id: "default" as never });
   checks.push(
     config
       ? ok("config.gameConfig", "global", "gameConfig", "present", "present")
@@ -946,18 +974,19 @@ export async function checkScotusSeed(db: Db, preset: string): Promise<SeedDiagn
   const expectedVacancies = seed.seats.filter(
     (seat) => seat.historicalOccupants.length === 0
   ).length;
-  const persistedSeats = await db
-    .collection("supremeCourtSeats")
-    .countDocuments({ countryId: "US" });
-  const persistedVacancies = await db.collection("supremeCourtSeats").countDocuments({
+  const persistedSeats = await supremeCourtSeatsCollection<Document>(db).countDocuments({
+    countryId: "US",
+  });
+  const persistedVacancies = await supremeCourtSeatsCollection<Document>(db).countDocuments({
     countryId: "US",
     justiceMode: null,
     justiceCharacterId: null,
     justiceNppId: null,
   });
-  const persistedDocket = await db
-    .collection("docketCases")
-    .countDocuments({ countryId: "US", preset });
+  const persistedDocket = await docketCasesCollection<Document>(db).countDocuments({
+    countryId: "US",
+    preset,
+  });
 
   const proceduralFallback =
     seed.provenance?.docket.mode === "procedural-only-fallback"
@@ -1052,14 +1081,16 @@ export async function runConformanceChecks(
   db: Db,
   opts?: { preset?: string; trigger?: string }
 ): Promise<{ checks: SeedDiagnosticCheck[]; expect: SeedExpectations }> {
-  const gs = await db.collection("gameState").findOne({ _id: "current" as never });
+  const gs = await gameStateCollection<Document>(db).findOne({ _id: "current" as never });
   const preset =
     opts?.preset ?? (typeof gs?.preset === "string" ? gs.preset : null) ?? DEFAULT_SEED_PRESET;
   const expect = buildSeedExpectations(preset);
   const worldsimBootstrap = opts?.trigger === "worldsim-post-bootstrap";
   const noStartingParties =
     preset === "2019-no-parties" ||
-    (preset === "1991-default" && gs?.preset === preset && gs?.startingPartiesMode === "none");
+    (supportsNoStartingParties(preset) &&
+      gs?.preset === preset &&
+      gs?.startingPartiesMode === "none");
 
   const countries = noStartingParties ? await startingPoliticalCountries(db, preset) : [];
   const emptyCountries = countries === null ? null : new Set(countries);
@@ -1104,8 +1135,7 @@ async function checkEmptyPoliticalStart(
 ): Promise<SeedDiagnosticCheck[]> {
   const checks: SeedDiagnosticCheck[] = [];
   const countryFilter = startingCountryFilter(countries, true);
-  const npps = await db
-    .collection("npps")
+  const npps = await nppsCollection<Document>(db)
     .find(countryFilter)
     .project<{ _id: ObjectId }>({ _id: 1 })
     .toArray();

@@ -1,5 +1,5 @@
 import type { Db } from "mongodb";
-import type { CorporateSector, StateMetrics, UnownedSector } from "@/lib/db/types";
+import type { StateMetrics, UnownedSector } from "@/lib/db/types";
 import type { CorporationType } from "@/lib/constants/corporations";
 import { GROWTH_RATE_TURNS_PER_YEAR } from "@/lib/constants/corporations";
 import {
@@ -11,6 +11,9 @@ import { getMarketSystemModeForDb, marketAtLeast } from "@/lib/market/featureFla
 import { unownedHeadroomUnitsOf } from "@/lib/corporations/marketShare";
 import { unownedHeadroomUnitsPerAnchor } from "@/lib/market/unownedHeadroom";
 import { loadWorldEraUnitScale } from "@/lib/currency/gdpAnchorRate";
+import { getCorporateSectorsCollection } from "@/lib/db/collections/corporateSectors";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
 
 const FALLBACK_GROWTH_RATE = 1; // % per game year (same unit as corporate growthRate)
 
@@ -25,46 +28,18 @@ const FALLBACK_DEMAND_GROWTH_RATE = 1;
 /**
  * Grow each unowned sector's pool one turn.
  *
- * ─── Pre-plants: revenue compounds off CORPORATE growth ────────────────────
- * An unowned sector's ₳ `revenue` grows at half the average `growthRate` of the
- * same-type same-state corporate sectors (1% fallback). That is a nameplate
- * chasing another nameplate: the more corps grow, the more "unowned market"
- * spontaneously appears for them to grow into.
- *
- * ─── Plants (§5 dynamics): headroom tracks the ECONOMY, not the corps ──────
- * Under plants an unowned sector is not a revenue line waiting to be claimed —
- * it is UNMET DEMAND, measured in capacity units, and it is the denominator of
- * market share and the pool every founding build draws from. Compounding it off
- * corporate growth there is actively wrong in two ways:
- *
- *   1. It is circular. Corps expand into headroom; headroom then grows BECAUSE
- *      they expanded. A world can never saturate a market, because serving
- *      demand creates demand. Under plants that circularity also feeds the
- *      build economy directly: unlimited headroom means unlimited profitable
- *      capacity, and the capacity decision stops having a downside.
- *   2. It is phantom. The revenue it compounds is backed by nothing — no
- *      household income, no state output. It was tolerable while unowned
- *      revenue was only a scoreboard; it is not once it prices builds.
- *
- * So under plants the pool tracks the state's own economy instead: headroom
- * grows at the state's `economic.gdpGrowth` (annual %, converted to this turn's
- * share), which is the per-state growth signal already maintained by the metric
- * engine and the cheapest honest one this phase can reach. Demand grows because
- * the economy grew — a supply-side decision to build cannot manufacture the
- * demand that justifies it.
- *
- * `revenue` is written in lockstep from the post-growth units (legacy readers,
- * admin surfaces and every non-plants code path still read it), so the two views
- * never disagree.
- *
- * State-controlled (nationalized) buckets stay frozen in both modes.
+ * Under plants the pool is unmet demand measured in capacity units and the
+ * denominator of market share. Growing it off corporate growth would be
+ * circular (serving demand creates demand) and phantom (backed by nothing).
+ * It instead tracks the state's economic.gdpGrowth, so demand grows because
+ * the economy grew. `revenue` is written in lockstep from the post-growth
+ * units. State-controlled buckets stay frozen.
  */
 export async function processUnownedSectorGrowth(db: Db): Promise<number> {
   const [unownedSectors, corpSectors, nationalCorpIds, plantsEnabled, eraUnitScale] =
     await Promise.all([
-      db.collection<UnownedSector>("unownedSectors").find({}).toArray(),
-      db
-        .collection<CorporateSector>("corporateSectors")
+      unownedSectorsCollection(db).find({}).toArray(),
+      (await getCorporateSectorsCollection(db))
         .find(
           {},
           {
@@ -121,8 +96,7 @@ export async function processUnownedSectorGrowth(db: Db): Promise<number> {
   // read over a collection already keyed by stateId.
   const gdpGrowthByState = new Map<string, number>();
   if (plantsEnabled) {
-    const metricDocs = await db
-      .collection<StateMetrics>("macroMetrics")
+    const metricDocs = await macroMetricsCollection(db)
       .find({}, { projection: { "economic.gdpGrowth": 1 } })
       .toArray();
     for (const doc of metricDocs) {
@@ -202,6 +176,6 @@ export async function processUnownedSectorGrowth(db: Db): Promise<number> {
     };
   });
 
-  await db.collection<UnownedSector>("unownedSectors").bulkWrite(ops);
+  await unownedSectorsCollection(db).bulkWrite(ops);
   return ops.length;
 }

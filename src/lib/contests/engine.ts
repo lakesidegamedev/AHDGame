@@ -9,7 +9,6 @@ import * as Sentry from "@sentry/nextjs";
 import type {
   Bill,
   Character,
-  Corporation,
   ElectedOfficial,
   Election,
   ElectionCandidate,
@@ -69,6 +68,23 @@ import { payContestPrize } from "./prize";
 import { loadCharacterNetWorths, loadExternalInflows } from "./netWorth";
 import { announceContestResults, type SettledRoundResult } from "./announce";
 import { getContestRoundsCollection } from "./collection";
+import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { billsCollection } from "@/lib/db/repositories/bills";
+import { usersCollection } from "@/lib/db/repositories/users";
+import { corporationHistoryCollection } from "@/lib/db/repositories/corporationHistory";
+import { stateBillsCollection } from "@/lib/db/repositories/stateBills";
+import { governmentApprovalsCollection } from "@/lib/db/repositories/governmentApprovals";
+import { playerEndorsementsCollection } from "@/lib/db/repositories/playerEndorsements";
+import { stateApprovalHistoryCollection } from "@/lib/db/repositories/stateApprovalHistory";
+import { altLinksCollection } from "@/lib/db/repositories/altLinks";
 
 type PlayerCharacter = Pick<
   Character,
@@ -92,8 +108,7 @@ const contestRounds = getContestRoundsCollection;
 
 /** Live player characters whose accounts are not banned. */
 async function loadPlayers(db: Db): Promise<Map<string, PlayerCharacter>> {
-  const characters = await db
-    .collection<Character>("characters")
+  const characters = await charactersCollection(db)
     .find(
       { isSynthetic: { $ne: true } },
       {
@@ -111,8 +126,7 @@ async function loadPlayers(db: Db): Promise<Map<string, PlayerCharacter>> {
     )
     .toArray();
   const userIds = characters.map((c) => c.userId).filter(Boolean);
-  const banned = await db
-    .collection<User>("users")
+  const banned = await usersCollection(db)
     .find({ _id: { $in: userIds }, isBanned: true }, { projection: { _id: 1 } })
     .toArray();
   const bannedIds = new Set(banned.map((u) => u._id.toString()));
@@ -134,8 +148,7 @@ interface CorpRow {
 
 /** Player-run private corporations with their latest market cap snapshot. */
 async function loadCorpRows(db: Db, world: ContestWorld): Promise<Map<string, CorpRow>> {
-  const corps = await db
-    .collection<Corporation>("corporations")
+  const corps = await corporationsCollection(db)
     .find(
       { ceoType: "character", ownershipState: { $ne: "stateOwned" } },
       { projection: { _id: 1, name: 1, ceoId: 1 } }
@@ -144,8 +157,7 @@ async function loadCorpRows(db: Db, world: ContestWorld): Promise<Map<string, Co
   const playerCorps = corps.filter((c) => c.ceoId && world.players.has(c.ceoId.toString()));
   if (playerCorps.length === 0) return new Map();
 
-  const history = await db
-    .collection<CorporationHistory>("corporationHistory")
+  const history = await corporationHistoryCollection(db)
     .find(
       {
         corporationId: { $in: playerCorps.map((c) => c._id) },
@@ -190,8 +202,7 @@ async function loadInjections(
 ): Promise<Map<string, number>> {
   const totals = new Map<string, number>();
   if (corporationIds.length === 0) return totals;
-  const rows = await db
-    .collection("financialTxLog")
+  const rows = await financialTxLogCollection(db)
     .find(
       {
         type: "corp_capital_injection",
@@ -215,8 +226,7 @@ type ApprovalSnapshot = Pick<GovernmentApproval, "approvalRating"> &
   Partial<Pick<GovernmentApproval, "history" | "headOfGovernmentSinceTurn">>;
 
 async function loadApprovals(db: Db): Promise<Map<string, ApprovalSnapshot>> {
-  const docs = await db
-    .collection<GovernmentApproval>("governmentApprovals")
+  const docs = await governmentApprovalsCollection(db)
     .find(
       {},
       { projection: { _id: 1, approvalRating: 1, history: 1, headOfGovernmentSinceTurn: 1 } }
@@ -248,8 +258,7 @@ interface PartyRow {
 
 /** Parties by id, or every party when no ids are given. */
 async function loadParties(db: Db, partyIds?: string[]): Promise<Map<string, PartyRow>> {
-  const docs = await db
-    .collection<PoliticalParty>("politicalParties")
+  const docs = await politicalPartiesCollection(db)
     .find(partyIds ? { _id: { $in: partyIds.map((id) => new ObjectId(id)) } } : {}, {
       projection: { _id: 1, name: 1, chairId: 1, memberCount: 1 },
     })
@@ -276,15 +285,13 @@ async function loadEnactedBillCounts(
 ): Promise<Map<string, number>> {
   const window = { $gt: since, $lte: until };
   const [national, state] = await Promise.all([
-    db
-      .collection<Bill>("bills")
+    billsCollection(db)
       .find(
         { status: "signed", enactedAt: window, sponsorId: { $ne: null } },
         { projection: { sponsorId: 1 } }
       )
       .toArray(),
-    db
-      .collection<StateBill>("stateBills")
+    stateBillsCollection(db)
       .find({ enactedAt: window, sponsorId: { $ne: null } }, { projection: { sponsorId: 1 } })
       .toArray(),
   ]);
@@ -309,8 +316,7 @@ async function loadWeekAgoCaps(
   const caps = new Map<string, number>();
   if (corporationIds.length === 0) return caps;
   const weekAgo = world.now.getTime() - CONTEST_ROUND_MS;
-  const rows = await db
-    .collection<CorporationHistory>("corporationHistory")
+  const rows = await corporationHistoryCollection(db)
     .find(
       {
         corporationId: { $in: corporationIds.map((id) => new ObjectId(id)) },
@@ -341,8 +347,7 @@ interface StateExecutiveRow {
  * getRegionalExecutive decides.
  */
 async function loadStateExecutives(db: Db): Promise<Map<string, StateExecutiveRow>> {
-  const officials = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const officials = await electedOfficialsCollection(db)
     .find(
       { officeType: { $in: REGIONAL_EXECUTIVE_OFFICES } },
       { projection: { countryId: 1, state: 1, officeType: 1, characterId: 1, electedAt: 1 } }
@@ -370,12 +375,10 @@ async function loadStateApprovals(
 ): Promise<Map<string, { approval: number; name: string }>> {
   if (stateIds.length === 0) return new Map();
   const [approvals, states] = await Promise.all([
-    db
-      .collection<StateApprovalHistory>("stateApprovalHistory")
+    stateApprovalHistoryCollection(db)
       .find({ _id: { $in: stateIds } }, { projection: { _id: 1, countryId: 1, approvalRating: 1 } })
       .toArray(),
-    db
-      .collection<State>("states")
+    statesCollection(db)
       .find({ _id: { $in: stateIds } }, { projection: { _id: 1, name: 1 } })
       .toArray(),
   ]);
@@ -411,8 +414,7 @@ async function loadKingmakerCalls(
   world: ContestWorld,
   round: Pick<ContestRound, "startTurn" | "startedAt">
 ): Promise<Map<string, number>> {
-  const elections = await db
-    .collection<Election>("elections")
+  const elections = await electionsCollection(db)
     .find(
       {
         status: { $in: ["completed", "resolved"] },
@@ -424,8 +426,7 @@ async function loadKingmakerCalls(
   if (elections.length === 0) return new Map();
 
   const electionIds = elections.map((e) => e._id);
-  const endorsements = await db
-    .collection<PlayerEndorsement>("playerEndorsements")
+  const endorsements = await playerEndorsementsCollection(db)
     .find(
       { electionId: { $in: electionIds }, characterId: { $in: playerObjectIds(world) } },
       {
@@ -436,15 +437,13 @@ async function loadKingmakerCalls(
   if (endorsements.length === 0) return new Map();
 
   const [candidates, officials] = await Promise.all([
-    db
-      .collection<ElectionCandidate>("electionCandidates")
+    electionCandidatesCollection(db)
       .find(
         { _id: { $in: endorsements.map((e) => e.candidateId) } },
         { projection: { _id: 1, characterId: 1, isNPP: 1, nppId: 1 } }
       )
       .toArray(),
-    db
-      .collection<ElectedOfficial>("electedOfficials")
+    electedOfficialsCollection(db)
       .find(
         {
           electedAt: { $gt: round.startedAt, $lte: world.now },
@@ -702,10 +701,9 @@ const HISTORY_BASELINE_KINDS: ReadonlySet<ContestKind> = new Set([
 ]);
 
 /**
- * A corporation round opened on a turn with no history snapshots (an
- * economy-only reset wipes them) has an empty field and stayed empty all week
- * (#5374). Take the baselines on the first turn that has snapshots instead;
- * growth then counts from that turn.
+ * A corporation round opened with no history snapshots (e.g. an economy-only
+ * reset wipes them) has an empty field forever. Take baselines on the first
+ * turn that has snapshots; growth counts from that turn.
  */
 async function fillLateBaselines(
   db: Db,
@@ -1028,13 +1026,11 @@ async function referralStandings(
   playersByUser: ReadonlyMap<string, PlayerCharacter>,
   since: Date
 ): Promise<ContestStanding[]> {
-  const fresh = await db
-    .collection<Character>("characters")
+  const fresh = await charactersCollection(db)
     .find({ createdAt: { $gte: since } }, { projection: { userId: 1 } })
     .toArray();
   if (fresh.length === 0) return [];
-  const referees = await db
-    .collection<User>("users")
+  const referees = await usersCollection(db)
     .find(
       { _id: { $in: fresh.map((c) => c.userId) }, referredBy: { $exists: true } },
       { projection: { _id: 1, referredBy: 1, isBanned: 1 } }
@@ -1045,8 +1041,7 @@ async function referralStandings(
   ];
   if (referrerIds.length === 0) return [];
 
-  const links = await db
-    .collection<AltLink>("altLinks")
+  const links = await altLinksCollection(db)
     .find(
       {
         confidence: { $gte: REFERRAL_ALT_LINK_THRESHOLD },
@@ -1242,9 +1237,9 @@ async function runIterationReferrals(
  */
 export async function awardIterationReferralsNow(db: Db, awardedBy: string, now = new Date()) {
   const [gameState, players] = await Promise.all([
-    db
-      .collection<GameState>("gameState")
-      .findOne({ _id: "current" } as never, { projection: { iteration: 1, currentTurn: 1 } }),
+    gameStateCollection(db).findOne({ _id: "current" } as never, {
+      projection: { iteration: 1, currentTurn: 1 },
+    }),
     loadPlayers(db),
   ]);
   const world: ContestWorld = {
@@ -1302,7 +1297,7 @@ export async function runContests(
 ): Promise<ContestRunSummary> {
   const summary: ContestRunSummary = { settled: 0, voided: 0, refreshed: 0, opened: 0 };
   const [gameState, players] = await Promise.all([
-    db.collection<GameState>("gameState").findOne({ _id: "current" } as never, {
+    gameStateCollection(db).findOne({ _id: "current" } as never, {
       projection: { preset: 1, iteration: 1, worldEpochStartedAt: 1 },
     }),
     loadPlayers(db),
@@ -1428,9 +1423,9 @@ export async function ensureContestsOpen(db: Db, now: Date = new Date()): Promis
       kind: { $in: [...CONTEST_KINDS] },
     });
     if (active >= CONTEST_KINDS.length) return;
-    const gameState = await db
-      .collection<GameState>("gameState")
-      .findOne({ _id: "current" } as never, { projection: { currentTurn: 1 } });
+    const gameState = await gameStateCollection(db).findOne({ _id: "current" } as never, {
+      projection: { currentTurn: 1 },
+    });
     await runContests(db, gameState?.currentTurn ?? 0, now);
   } catch (err) {
     Sentry.captureException(err, { tags: { area: "contests", step: "ensureOpen" } });

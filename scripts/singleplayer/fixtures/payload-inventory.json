@@ -3,6 +3,7 @@
   "mustKeep": [
     "server.js",
     "launch.mjs",
+    "singleplayer-capabilities.json",
     "package.json",
     ".next/static",
     ".next/server",

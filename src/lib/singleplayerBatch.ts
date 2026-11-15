@@ -9,6 +9,13 @@ import {
   checkSingleplayerTurnAllowed,
   type SingleplayerTurnOutcome,
 } from "@/lib/singleplayerTurn";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import type { Document } from "mongodb";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { notificationsCollection } from "@/lib/db/repositories/notifications";
+import { countryHistoryCollection } from "@/lib/db/repositories/countryHistory";
 
 /**
  * Multi-turn advance for a normal singleplayer world.
@@ -495,10 +502,10 @@ export function createDbBatchPorts(db: Db): BatchPorts {
 
     async snapshot() {
       const [state, character, elections] = await Promise.all([
-        db
-          .collection("gameState")
-          .findOne({ _id: "current" } as never, { projection: { currentTurn: 1 } }),
-        db.collection("characters").findOne(
+        gameStateCollection<Document>(db).findOne({ _id: "current" } as never, {
+          projection: { currentTurn: 1 },
+        }),
+        charactersCollection(db).findOne(
           { userId, retiredAt: { $exists: false } },
           {
             projection: {
@@ -512,8 +519,7 @@ export function createDbBatchPorts(db: Db): BatchPorts {
             },
           }
         ),
-        db
-          .collection("elections")
+        electionsCollection<Document>(db)
           .find(
             { status: { $in: ["upcoming", "active"] } },
             { projection: { status: 1, electionType: 1, state: 1, countryId: 1 } }
@@ -521,8 +527,7 @@ export function createDbBatchPorts(db: Db): BatchPorts {
           .toArray(),
       ]);
       const candidacies = character
-        ? await db
-            .collection("electionCandidates")
+        ? await electionCandidatesCollection<Document>(db)
             .find(
               { characterId: character._id, status: "active" },
               { projection: { electionId: 1 } }
@@ -552,8 +557,7 @@ export function createDbBatchPorts(db: Db): BatchPorts {
     },
 
     async notesSince(since) {
-      const docs = await db
-        .collection("notifications")
+      const docs = await notificationsCollection<Document>(db)
         .find({ userId, createdAt: { $gte: since }, archivedAt: { $exists: false } })
         .sort({ createdAt: 1 })
         .limit(500)
@@ -566,8 +570,7 @@ export function createDbBatchPorts(db: Db): BatchPorts {
     },
 
     async historyBetween(countryId, afterTurn, throughTurn) {
-      const docs = await db
-        .collection("countryHistory")
+      const docs = await countryHistoryCollection<Document>(db)
         .find({ countryId, turn: { $gt: afterTurn, $lte: throughTurn } })
         .sort({ turn: 1 })
         .limit(WORLD_EVENT_LIMIT)

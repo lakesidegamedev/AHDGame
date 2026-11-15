@@ -5,6 +5,9 @@ import { getDb } from "@/lib/mongodb";
 import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError, badRequest, notFound } from "@/lib/api/errors";
 import { parseJsonBody } from "@/lib/api/validate";
+import { roadmapItemsCollection } from "@/lib/db/repositories/roadmapItems";
+import type { Document } from "mongodb";
+import { roadmapCategoriesCollection } from "@/lib/db/repositories/roadmapCategories";
 
 const updateCategorySchema = z.object({
   name: z.string().optional(),
@@ -44,9 +47,10 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     }
 
     const db = await getDb();
-    const result = await db
-      .collection("roadmapCategories")
-      .updateOne({ _id: new ObjectId(id) }, { $set: update });
+    const result = await roadmapCategoriesCollection<Document>(db).updateOne(
+      { _id: new ObjectId(id) },
+      { $set: update }
+    );
 
     if (result.matchedCount === 0) {
       return NextResponse.json(notFound("Category not found").toJson(), { status: 404 });
@@ -72,17 +76,18 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
     }
 
     const db = await getDb();
-    const cat = await db.collection("roadmapCategories").findOne({ _id: new ObjectId(id) });
+    const cat = await roadmapCategoriesCollection<Document>(db).findOne({ _id: new ObjectId(id) });
     if (!cat) {
       return NextResponse.json(notFound("Category not found").toJson(), { status: 404 });
     }
 
     // Unset category/subcategory from items using this category
-    await db
-      .collection("roadmapItems")
-      .updateMany({ category: cat.name }, { $unset: { category: "", subcategory: "" } });
+    await roadmapItemsCollection<Document>(db).updateMany(
+      { category: cat.name },
+      { $unset: { category: "", subcategory: "" } }
+    );
 
-    await db.collection("roadmapCategories").deleteOne({ _id: new ObjectId(id) });
+    await roadmapCategoriesCollection<Document>(db).deleteOne({ _id: new ObjectId(id) });
 
     return NextResponse.json({ ok: true });
   } catch (err) {

@@ -44,7 +44,7 @@ const PAGE_LABELS: Record<string, string> = {
   "/actions": "Actions",
   "/profile": "Profile",
   "/settings": "Settings",
-  "/admin": "Admin Panel",
+  "/control": "Control Panel",
   "/wiki": "Wiki",
   "/whitehouse": "White House",
   "/whitehouse/cabinet": "Cabinet",

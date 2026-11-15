@@ -19,7 +19,10 @@ import {
 } from "./treasuryLedger";
 import type { BankingTransition, TransitionProjection } from "@/lib/banking/rules/boundary";
 import { resumeSettlement, settleTransition } from "@/lib/banking/settlementJournal";
-import { MONEY_MOVE_COLLECTION, type MoneyMoveRecordLeg } from "@/lib/banking/moneyMove";
+import { type MoneyMoveRecordLeg } from "@/lib/banking/moneyMove";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
 
 /**
  * Opt-in government-side witness for an event-driven caller whose own rows do
@@ -29,6 +32,8 @@ import { MONEY_MOVE_COLLECTION, type MoneyMoveRecordLeg } from "@/lib/banking/mo
 export interface TreasuryWitness {
   flow: TreasuryCashFlow;
   key?: string;
+  /** Applies the credit at most once: a replay under the same key matches no treasury and moves nothing. */
+  onceKey?: string;
   site?: string;
   /** Internal marker set after the funded cash receipt has landed. */
   fundedTransitionLanded?: boolean;
@@ -126,7 +131,7 @@ function fundedTreasuryExpenseTransition(input: {
  *
  * Every nationalization/SOE/privatization cash flow funnels through here as a
  * cash-only `$inc` (concurrent-safe). `debt.principal` belongs to the bond
- * ledger (see bonds/sovereignPrincipal.ts) and is correctly left alone (#1975).
+ * ledger (see bonds/sovereignPrincipal.ts) and is correctly left alone.
  * Returns whether a treasury matched, so callers witness only cash that landed.
  */
 async function incTreasuryBalance(
@@ -162,17 +167,36 @@ async function incTreasuryBalance(
     }
     return result.status === "applied" || result.status === "replayed";
   }
-  const result = await db
-    .collection<FederalBudget>("federalBudget")
-    .updateOne({ countryId }, { $inc: { treasuryBalance: delta }, $set: { updatedAt: now } });
+  const receipt = witness?.onceKey ? `appliedRecoveryCredits.${witness.onceKey}` : null;
+  const result = await federalBudgetCollection(db).updateOne(
+    receipt ? { countryId, [receipt]: { $exists: false } } : { countryId },
+    {
+      $inc: { treasuryBalance: delta },
+      $set: { updatedAt: now, ...(receipt ? { [receipt]: now } : {}) },
+    }
+  );
   return (result?.matchedCount ?? 0) > 0;
+}
+
+/** The country's Treasury account identity, for receipts that must freeze the exact document. */
+async function loadTreasuryAccount(
+  db: Db,
+  countryId: CountryId
+): Promise<{ _id: FederalBudget["_id"] }> {
+  const treasury = await federalBudgetCollection(db).findOne(
+    { countryId },
+    { projection: { _id: 1 } }
+  );
+  if (!treasury) throw new Error(`Treasury for ${countryId} is unavailable`);
+  return treasury;
 }
 
 /** Resolve the denomination of the persisted treasury, including 2027 EUR budgets. */
 export async function loadTreasuryCurrency(db: Db, countryId: CountryId): Promise<CurrencyCode> {
-  const budget = await db
-    .collection<FederalBudget>("federalBudget")
-    .findOne({ countryId }, { projection: { countryId: 1, currencyCode: 1 } });
+  const budget = await federalBudgetCollection(db).findOne(
+    { countryId },
+    { projection: { countryId: 1, currencyCode: 1 } }
+  );
   return resolveCountryCurrencyCode(budget ?? { countryId }) ?? "USD";
 }
 
@@ -229,14 +253,12 @@ export async function settleFundedTreasuryCompensation(
   newlySettled: boolean;
 }> {
   const settlementKey = `treasury-nationalization-compensation:${input.key}`;
-  const prior = await db
-    .collection<{
-      _id: string;
-      status?: string;
-      legs?: { kind: string; amount: number; collection?: string; path?: string }[];
-      event?: { meta?: { payoutAnchor?: number } };
-    }>("bankMoneyMoves")
-    .findOne({ _id: settlementKey }, { projection: { status: 1, legs: 1, event: 1 } });
+  const prior = await bankMoneyMovesCollection<{
+    _id: string;
+    status?: string;
+    legs?: { kind: string; amount: number; collection?: string; path?: string }[];
+    event?: { meta?: { payoutAnchor?: number } };
+  }>(db).findOne({ _id: settlementKey }, { projection: { status: 1, legs: 1, event: 1 } });
   if (prior) {
     const wasApplied = prior.status === "applied";
     const settled = await resumeSettlement(db, settlementKey);
@@ -305,9 +327,10 @@ export async function settleFundedTreasuryCompensation(
   );
   if (!(treasuryAmountLocal > 0) || !(donorAmountLocal > 0))
     throw new Error("Funded compensation rounded to a non-positive cash leg");
-  const budget = await db
-    .collection<{ countryId: string; currencyCode?: CurrencyCode | null }>("federalBudget")
-    .findOne({ countryId: input.countryId }, { projection: { countryId: 1, currencyCode: 1 } });
+  const budget = await federalBudgetCollection<{
+    countryId: string;
+    currencyCode?: CurrencyCode | null;
+  }>(db).findOne({ countryId: input.countryId }, { projection: { countryId: 1, currencyCode: 1 } });
   if (!budget) throw new Error("Funded compensation Treasury account is missing");
   const budgetFilter: Record<string, unknown> = { countryId: budget.countryId };
   if (Object.prototype.hasOwnProperty.call(budget, "currencyCode"))
@@ -399,14 +422,12 @@ export async function settleFundedTreasuryCompensation(
     throw new Error(settled.error ?? "Funded compensation settlement is incomplete");
   }
   if (!newlySettled) {
-    const original = await db
-      .collection<{
-        _id: string;
-        status?: string;
-        legs?: { kind: string; amount: number; collection?: string; path?: string }[];
-        event?: { meta?: { payoutAnchor?: number } };
-      }>("bankMoneyMoves")
-      .findOne({ _id: transition.key }, { projection: { status: 1, legs: 1, event: 1 } });
+    const original = await bankMoneyMovesCollection<{
+      _id: string;
+      status?: string;
+      legs?: { kind: string; amount: number; collection?: string; path?: string }[];
+      event?: { meta?: { payoutAnchor?: number } };
+    }>(db).findOne({ _id: transition.key }, { projection: { status: 1, legs: 1, event: 1 } });
     const frozenDebit = original?.legs?.find(
       (leg) =>
         leg.kind === "debit" &&
@@ -490,7 +511,7 @@ export async function creditTreasuryProceeds(
  * corporation in the CORPORATION's currency; handing that same figure to
  * `creditTreasuryProceeds`, which expects country-local units, silently treats
  * (say) 50,000 GBP as 50,000 USD, so a cross-border payer over- or under-pays
- * the government by the whole exchange-rate difference (#808).
+ * the government by the whole exchange-rate difference.
  *
  * Returns the local amount credited.
  */
@@ -510,6 +531,231 @@ export async function creditTreasuryProceedsFromAnchor(
     await witnessTreasuryLeg(db, witness, countryId, amount, now, "proceedsFromAnchor");
   }
   return amount;
+}
+
+/** Flows whose payer's own rows evidence the cash, so the Treasury leg adds no witness of its own. */
+export type PayerEvidencedProceedsFlow =
+  "incorporation_fee" | "founding_confidence_premium" | "index_fund_charter_fee";
+
+type PairedProceedsFlow =
+  | "privatization_ipo"
+  | "privatization_auction_proceeds"
+  | "nationalization_compensation"
+  | PayerEvidencedProceedsFlow;
+
+function isWitnessedProceedsFlow(
+  flow: PairedProceedsFlow
+): flow is Extract<PairedProceedsFlow, TreasuryCashFlow> {
+  return (
+    flow !== "incorporation_fee" &&
+    flow !== "founding_confidence_premium" &&
+    flow !== "index_fund_charter_fee"
+  );
+}
+
+/**
+ * Credit Treasury proceeds whose payer already parted with the cash outside
+ * the Treasury ledger (a bid escrow, an IPO float that no buyer funds). Under
+ * the funded Treasury ledger the credit settles as one durable receipt: the
+ * spendable-cash credit, the named mint that is its source leg, and the signed
+ * fiscal projection, keyed so a retry cannot pay twice. With the funded ledger
+ * off it is the plain proceeds credit.
+ *
+ * Pass `amountAnchor` when the figure is in anchor units, `amountLocal` when it
+ * is already in the country's own currency. Returns the local amount credited.
+ */
+export async function creditTreasuryProceedsPaired(
+  db: Db,
+  input: {
+    countryId: CountryId;
+    now: Date;
+    flow: PairedProceedsFlow;
+    key: string;
+    site: string;
+    amountLocal?: number;
+    amountAnchor?: number;
+    ledger?: TreasuryCashOptions;
+  }
+): Promise<number> {
+  const options = await resolveTreasuryCashOptions(db, input.ledger);
+  const context = options.context;
+  const funded = context?.treasuryCashLedgerEnabled === true;
+  const currencyOf = async (): Promise<CurrencyCode> =>
+    context?.treasuryCurrencies.get(input.countryId) ??
+    (await loadTreasuryCurrency(db, input.countryId));
+  let amount = input.amountLocal ?? 0;
+  if (input.amountAnchor !== undefined) {
+    const currency = await currencyOf();
+    amount = writeGovBudgetLocal(
+      input.amountAnchor,
+      currency,
+      await getCurrencyFxRate(db, currency)
+    );
+  }
+  amount = Math.round(amount);
+  if (!(amount > 0)) return 0;
+  if (!funded || !context) {
+    // Fee flows are already evidenced by the payer's own rows, so the plain credit must not witness them again.
+    await creditTreasuryProceeds(
+      db,
+      input.countryId,
+      amount,
+      input.now,
+      isWitnessedProceedsFlow(input.flow) ? { flow: input.flow, ledger: input.ledger } : undefined
+    );
+    return amount;
+  }
+
+  const currency = await currencyOf();
+  const rate = treasuryAnchorValuation({
+    countryId: input.countryId,
+    currencyCode: currency,
+    preset: context.preset,
+    observedRate: context.rates.get(currency),
+  }).anchorRate;
+  const valuation = { currencyCode: currency, localPerAnchor: rate };
+  const treasury = await loadTreasuryAccount(db, input.countryId);
+  const settled = await settleTransition(db, {
+    key: `treasury-proceeds:${input.key}`,
+    kind: "treasury_paired_proceeds",
+    turn: context.turn,
+    currency,
+    legs: [
+      {
+        kind: "credit",
+        amount,
+        valuation,
+        collection: "federalBudget",
+        filter: { _id: treasury._id, countryId: input.countryId },
+        path: "treasuryCashLocal",
+        note: "Deliver the proceeds to spendable Treasury cash",
+      },
+      {
+        kind: "mint",
+        amount,
+        valuation,
+        note: "Source of cash the payer already gave up outside the Treasury ledger",
+      },
+    ],
+    projections: [
+      {
+        collection: "federalBudget",
+        filter: { _id: treasury._id },
+        update: { $inc: { treasuryBalance: amount }, $set: { updatedAt: input.now } },
+        note: "Update signed fiscal position after the paired proceeds",
+      },
+    ],
+    event: {
+      kind: "monetary.executed",
+      command: input.site,
+      subjectType: "government",
+      subjectId: input.countryId,
+      amount,
+      meta: { flow: input.flow },
+    },
+  });
+  if (settled.status !== "applied" && settled.status !== "replayed") {
+    throw new Error(settled.error ?? "Paired Treasury proceeds are incomplete");
+  }
+  if (settled.error) throw new Error(settled.error);
+  return amount;
+}
+
+/**
+ * Collect a corporation's payment (a fine or assessment) into spendable
+ * Treasury cash as one durable receipt: the guarded corporation debit, the
+ * Treasury credit and the signed fiscal projection settle together under `key`.
+ * Returns `null` when the funded Treasury ledger is off (the caller keeps its
+ * legacy path), `0` when the corporation cannot cover the payment (nothing
+ * moved) and the Treasury amount credited otherwise.
+ */
+export async function collectFundedCorporationPayment(
+  db: Db,
+  input: {
+    countryId: CountryId;
+    corpId: ObjectId;
+    corpCurrency: CurrencyCode;
+    amountLocal: number;
+    key: string;
+    now: Date;
+    flow: "regulatory_fine";
+    site: string;
+    ledger?: TreasuryCashOptions;
+  }
+): Promise<number | null> {
+  const options = await resolveTreasuryCashOptions(db, input.ledger);
+  const context = options.context;
+  if (!context?.treasuryCashLedgerEnabled) return null;
+  const amount = Math.round(input.amountLocal);
+  if (!(amount > 0)) return 0;
+
+  const treasuryCurrency =
+    context.treasuryCurrencies.get(input.countryId) ??
+    COUNTRY_CURRENCY_MAP[input.countryId] ??
+    "USD";
+  const corporationRate = context.rates.get(input.corpCurrency) ?? 1;
+  const treasuryRate = treasuryAnchorValuation({
+    countryId: input.countryId,
+    currencyCode: treasuryCurrency,
+    preset: context.preset,
+    observedRate: context.rates.get(treasuryCurrency),
+  }).anchorRate;
+  const treasuryAmount = roundSavingsAmount(
+    (amount / corporationRate) * treasuryRate,
+    treasuryCurrency
+  );
+  if (!(treasuryAmount > 0)) return 0;
+  const treasury = await loadTreasuryAccount(db, input.countryId);
+
+  const key = `treasury-corporation-payment:${input.key}`;
+  const settled = await settleTransition(db, {
+    key,
+    kind: "treasury_corporation_payment",
+    turn: context.turn,
+    currency: input.corpCurrency,
+    legs: [
+      {
+        kind: "debit",
+        amount,
+        valuation: { currencyCode: input.corpCurrency, localPerAnchor: corporationRate },
+        collection: "corporations",
+        filter: { _id: input.corpId, liquidCapital: { $gte: amount } },
+        path: "liquidCapital",
+        note: "Take the fine or assessment from the corporation's actual cash",
+      },
+      {
+        kind: "credit",
+        amount: treasuryAmount,
+        valuation: { currencyCode: treasuryCurrency, localPerAnchor: treasuryRate },
+        collection: "federalBudget",
+        filter: { _id: treasury._id, countryId: input.countryId },
+        path: "treasuryCashLocal",
+        note: "Deliver the payment to spendable Treasury cash",
+      },
+    ],
+    projections: [
+      {
+        collection: "federalBudget",
+        filter: { _id: treasury._id },
+        update: { $inc: { treasuryBalance: treasuryAmount }, $set: { updatedAt: input.now } },
+        note: "Update signed fiscal position after the funded corporation payment",
+      },
+    ],
+    event: {
+      kind: "monetary.executed",
+      command: input.site,
+      subjectType: "corporation",
+      subjectId: input.corpId.toString(),
+      amount: treasuryAmount,
+      meta: { flow: input.flow },
+    },
+  });
+  if (settled.status === "replayed" && !settled.error) return treasuryAmount;
+  if (settled.status === "rejected" && (await refusedBeforeAnyCashMoved(db, key))) return 0;
+  if (settled.status !== "applied") {
+    throw new Error(settled.error ?? "Funded corporation payment is incomplete");
+  }
+  return treasuryAmount;
 }
 
 /**
@@ -680,12 +926,10 @@ export async function drawFromTreasury(
   if (amount <= 0) return { ok: true, amount: 0 };
 
   const debited = await incTreasuryBalance(db, input.countryId, -amount, now);
-  const credited = await db
-    .collection<Corporation>("corporations")
-    .updateOne(
-      { _id: input.corpId },
-      { $inc: { liquidCapital: amount }, $set: { updatedAt: now } }
-    );
+  const credited = await corporationsCollection(db).updateOne(
+    { _id: input.corpId },
+    { $inc: { liquidCapital: amount }, $set: { updatedAt: now } }
+  );
   await witnessTreasuryTransfer(db, ledger, "soe_treasury_draw", input, now, {
     treasury: debited ? -amount : 0,
     corporation: (credited?.matchedCount ?? 0) > 0 ? amount : 0,
@@ -734,10 +978,7 @@ export async function remitToTreasury(
     }).anchorRate;
     const amountAnchor = amount / corporationRate;
     const treasuryAmount = roundSavingsAmount(amountAnchor * treasuryRate, treasuryCurrency);
-    const treasury = await db
-      .collection<FederalBudget>("federalBudget")
-      .findOne({ countryId: input.countryId }, { projection: { _id: 1 } });
-    if (!treasury) throw new Error(`Treasury for ${input.countryId} is unavailable`);
+    const treasury = await loadTreasuryAccount(db, input.countryId);
     const settled = await settleTransition(db, {
       key,
       kind: "soe_profit_remittance",
@@ -794,12 +1035,10 @@ export async function remitToTreasury(
   }
 
   if (amount <= 0) return 0;
-  const debited = await db
-    .collection<Corporation>("corporations")
-    .updateOne(
-      { _id: input.corpId },
-      { $inc: { liquidCapital: -amount }, $set: { updatedAt: now } }
-    );
+  const debited = await corporationsCollection(db).updateOne(
+    { _id: input.corpId },
+    { $inc: { liquidCapital: -amount }, $set: { updatedAt: now } }
+  );
   const credited = await incTreasuryBalance(db, input.countryId, amount, now);
   await witnessTreasuryTransfer(db, options, "soe_remittance", input, now, {
     corporation: (debited?.matchedCount ?? 0) > 0 ? -amount : 0,
@@ -836,8 +1075,7 @@ export async function loadSoeRemittanceReceipts(
   corpIds: readonly ObjectId[]
 ): Promise<Map<string, SoeRemittanceReceipt>> {
   if (corpIds.length === 0) return new Map();
-  const rows = await db
-    .collection<SoeRemittanceReceipt>(MONEY_MOVE_COLLECTION)
+  const rows = await bankMoneyMovesCollection<SoeRemittanceReceipt>(db)
     .find(
       { _id: { $in: corpIds.map((id) => soeRemittanceKey(turn, id)) } },
       {
@@ -946,11 +1184,11 @@ async function resumeSoeRemittanceReceipt(
  * the same key. Partial receipts and malformed transitions do not qualify.
  */
 async function refusedBeforeAnyCashMoved(db: Db, key: string): Promise<boolean> {
-  const receipt = await db
-    .collection<{ _id: string; status?: string; legs?: MoneyMoveRecordLeg[] }>(
-      MONEY_MOVE_COLLECTION
-    )
-    .findOne({ _id: key }, { projection: { status: 1, legs: 1 } });
+  const receipt = await bankMoneyMovesCollection<{
+    _id: string;
+    status?: string;
+    legs?: MoneyMoveRecordLeg[];
+  }>(db).findOne({ _id: key }, { projection: { status: 1, legs: 1 } });
   const legs = receipt?.legs ?? [];
   return (
     receipt?.status === "rejected" &&

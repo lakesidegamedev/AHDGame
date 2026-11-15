@@ -131,3 +131,24 @@ describe("mapStateBillToBillDisplay — voteShiftPreview", () => {
     expect(result.voteShiftPreview).toBeNull();
   });
 });
+
+describe("regional bill political positions", () => {
+  it("preserves both axes for the shared bill cards", () => {
+    const result = mapStateBillToBillDisplay(
+      buildBill({
+        provisions: [
+          {
+            legislationTypeName: "Privacy protection",
+            proposed: { name: "Private enforcement" },
+            effectDirection: 0,
+            directionLabel: "Center",
+            economic: 1.5,
+            social: -2.5,
+          },
+        ],
+      }),
+      { chamber: "senate", canVote: false }
+    );
+    expect(result.provisions?.[0]).toMatchObject({ economic: 1.5, social: -2.5 });
+  });
+});

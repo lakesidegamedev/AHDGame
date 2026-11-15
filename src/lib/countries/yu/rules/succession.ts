@@ -1,9 +1,8 @@
 /**
- * Historically the SFRY had ceased to exist by 27 April 1992, when Serbia and
- * Montenegro established the Federal Republic of Yugoslavia. With four turns
- * per month, the last April turn opens this game's settlement decision window.
- * It does not itself retire the federation in alternate-history campaigns.
- * https://hudoc.echr.coe.int/app/conversion/pdf/?id=001-107425&library=ECHR
+ * The SFRY ceased to exist on 27 April 1992, when Serbia and Montenegro formed
+ * the Federal Republic of Yugoslavia. With four turns per month, the last April
+ * turn opens the settlement decision window. It does not itself retire the
+ * federation in alternate-history campaigns.
  */
 const YU_SFRY_DISSOLUTION_CALENDAR_TURN = 64;
 

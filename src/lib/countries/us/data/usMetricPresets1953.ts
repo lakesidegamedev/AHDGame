@@ -98,9 +98,8 @@ const NATIONAL_1953: Record<string, number> = {
   "economic.foodSecurity": 82, // post-rationing; cheap food
   "economic.exportDependency": 20, // Marshall Plan pushed exports; still domestic-focused
   "economic.manufacturingCompetitiveness": 85, // peak US industrial dominance (40% world output)
-  // Right-lane approval badges (economic_freedom ≥75 & burden <35) — sit just
-  // below so day-one US does not freefire the Phase-B mirrors; still historically
-  // freer than most peers and reachable via deregulatory bills.
+  // Right-lane approval badges: economic_freedom ≥75 & burden <35 sit just
+  // below so day-one US does not freefire the Phase-B mirrors.
   "economic.regulatoryBurden": 40, // New Deal agencies; Eisenhower moderate
   "economic.economicFreedom": 70, // free enterprise but strong antitrust, union power
   "education.highSchoolGradRate": 52, // ~52% graduated HS in 1953 cohort

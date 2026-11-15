@@ -34,7 +34,9 @@ const REF_ID = "507f1f77bcf86cd799439011";
 
 function setRef(db: MockDb, doc: unknown) {
   db.collectionMocks["referendums"] = db.collection("referendums");
-  db.collectionMocks["referendums"].findOne.mockResolvedValue(doc);
+  db.collectionMocks["referendums"].findOne.mockResolvedValue(
+    doc && typeof doc === "object" ? { countryId: "UK", ...doc } : doc
+  );
 }
 
 describe("grantReferendum", () => {
@@ -134,5 +136,17 @@ describe("grantReferendum", () => {
       action: "grant",
     });
     expect(r.status).toBe(400);
+  });
+
+  it("will not let one country's Prime Minister decide another's referendum", async () => {
+    setRef(db, { _id: REF_ID, status: "requested", regionId: "SCO" });
+    const r = await grantReferendum(db as unknown as Db, {
+      countryId: "CA",
+      referendumId: REF_ID,
+      isPM: true,
+      action: "grant",
+    });
+    expect(r.status).toBe(404);
+    expect(db.collectionMocks["referendums"].updateOne).not.toHaveBeenCalled();
   });
 });

@@ -1,22 +1,19 @@
 /**
- * SEED INDEPENDENCE — DO NOT DERIVE FROM ANOTHER ERA.
- * Each era seed is self-contained. This file MUST NOT import and transform
+ * SEED INDEPENDENCE: DO NOT DERIVE FROM ANOTHER ERA.
+ * Each era seed is self-contained; this file must not import and transform
  * another era's region data. All values are authored for 1953 directly.
  * Type-only imports are allowed.
  *
- * German Bundesländer for the 1953-default preset (2nd Bundestag — the
- * Adenauer CDU landslide; Wirtschaftswunder early phase). FRG ONLY — no eastern
- * Länder. The Saarland was a French protectorate until 1957 and sent no deputies
- * to the Bundestag in 1953 (placeholder kept for structural model integrity).
- * West Berlin sent 22 observer deputies (non-voting).
+ * German Bundesländer for the 1953-default preset (2nd Bundestag, FRG only,
+ * no eastern Länder). Saarland was a French protectorate until 1957 and sent
+ * no deputies (placeholder kept for structural model integrity). West Berlin
+ * sent 22 non-voting observer deputies.
  *
  * Population: 1950 census. GDP: per-Land RELATIVE shares in ~1953 nominal DEM
- * millions. The absolute national total is the FY1953 budget's ~138B DEM
- * (budgets.ts) — the historically correct figure (~$33B at 4.2 DEM/USD) — to
- * which `reconcileStateGdp` scales Σ Land gdp at seed time, so these authored
- * magnitudes need not sum to the national GDP on their own.
- * House seats: 2nd Bundestag (1953) total 487 seats, distributed proportionally
- * by Land population (excl. Saarland; Berlin = observer status, ~22 seats).
+ * millions; the absolute national total is the FY1953 budget's ~138B DEM,
+ * which reconcileStateGdp scales to at seed time, so magnitudes need not sum
+ * to national GDP. House seats: 2nd Bundestag 487 total, proportional by Land
+ * population (excl. Saarland; Berlin observers ~22 seats).
  */
 import type { State } from "@/lib/db/types";
 

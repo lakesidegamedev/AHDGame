@@ -11,6 +11,12 @@ import { buildActiveNationalBillFilter } from "@/lib/legislature/nationalBillSco
 import { NPP_BILL_VOTING_DURATION_HOURS } from "./constants";
 import { RESET_V2_READY } from "@/lib/resetVersions/availability";
 import { resetSystemVersionsForCountry } from "@/lib/resetVersions/rules";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { billsCollection } from "@/lib/db/repositories/bills";
+import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
+import { tariffsCollection } from "@/lib/db/repositories/tariffs";
 
 export type NppTradeBillIntent = "raise_tariff" | "lower_tariff";
 
@@ -37,7 +43,7 @@ export async function proposeNppForeignPolicyBill(
   }
 
   const [gameState, government] = await Promise.all([
-    db.collection<GameState>("gameState").findOne(
+    gameStateCollection(db).findOne(
       { _id: "current" },
       {
         projection: {
@@ -49,7 +55,7 @@ export async function proposeNppForeignPolicyBill(
         },
       }
     ),
-    db.collection<GovernmentFormation>("governmentFormations").findOne({ _id: countryId }),
+    governmentFormationsCollection(db).findOne({ _id: countryId }),
   ]);
   if (!government || government.status !== "formed") {
     return { ok: false, reason: "No formed government can introduce the trade bill." };
@@ -59,7 +65,7 @@ export async function proposeNppForeignPolicyBill(
   }
 
   const lowerOfficeType = getLowerChamberOfficeType(countryId, gameState?.preset);
-  const official = await db.collection<ElectedOfficial>("electedOfficials").findOne(
+  const official = await electedOfficialsCollection(db).findOne(
     {
       countryId,
       officeType: lowerOfficeType,
@@ -71,14 +77,15 @@ export async function proposeNppForeignPolicyBill(
   if (!official?.nppId) {
     return { ok: false, reason: "The governing party has no seated NPP bill sponsor." };
   }
-  const sponsor = await db
-    .collection<NPP>("npps")
-    .findOne({ _id: official.nppId }, { projection: { name: 1, party: 1 } });
+  const sponsor = await nppsCollection(db).findOne(
+    { _id: official.nppId },
+    { projection: { name: 1, party: 1 } }
+  );
   if (!sponsor) {
     return { ok: false, reason: "The selected legislative sponsor no longer exists." };
   }
 
-  const existingBill = await db.collection<Bill>("bills").findOne({
+  const existingBill = await billsCollection(db).findOne({
     ...buildActiveNationalBillFilter(countryId, NATIONAL_TERMINAL_STATUSES as BillStatus[]),
     "provisions.type": "tariff",
     "provisions.scopeType": "origin_country",
@@ -88,7 +95,7 @@ export async function proposeNppForeignPolicyBill(
     return { ok: false, reason: "A targeted tariff bill is already before the legislature." };
   }
 
-  const currentTariff = await db.collection<Tariff>("tariffs").findOne({
+  const currentTariff = await tariffsCollection(db).findOne({
     countryId,
     scopeType: "origin_country",
     targetOriginCountryId: targetCountryId,
@@ -143,7 +150,7 @@ export async function proposeNppForeignPolicyBill(
   };
 
   try {
-    const result = await db.collection<Omit<Bill, "_id">>("bills").insertOne(bill);
+    const result = await billsCollection<Omit<Bill, "_id">>(db).insertOne(bill);
     return { ok: true, billId: result.insertedId.toString() };
   } catch (error) {
     return {

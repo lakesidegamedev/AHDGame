@@ -1,6 +1,5 @@
 import type { Db, ObjectId } from "mongodb";
-import { MONEY_MOVE_COLLECTION } from "@/lib/banking/moneyMove";
-import type { Character, CentralBank, Corporation } from "@/lib/db/types";
+import type { Character, Corporation } from "@/lib/db/types";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { FOREX_ACTIVE_CURRENCIES, getCountryIdForCurrency } from "@/lib/constants/currencies";
 import { getBankId } from "@/lib/centralBank/helpers";
@@ -31,6 +30,11 @@ import { loadBankingPolicy } from "@/lib/banking/policy";
 import { savingsReadsAuthoritative } from "@/lib/banking/rules/policy";
 import { loadCentralBankPricingAdjustment } from "@/lib/monetaryPolicy/centralBankPricing";
 import { getGameState } from "@/lib/gameState";
+import { getCorporationsCollection } from "@/lib/db/collections/corporations";
+import { getCharactersCollection } from "@/lib/db/collections/characters";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
 
 const DEFAULT_PRIME = 2.5;
 
@@ -70,8 +74,9 @@ async function loadCeoComposites(
 ): Promise<Map<string, CorpComposite | null>> {
   const out = new Map<string, CorpComposite | null>();
   if (chars.length === 0) return out;
-  const corps = await db
-    .collection<Corporation>("corporations")
+  const corps = await (
+    await getCorporationsCollection(db)
+  )
     .find(
       { ceoId: { $in: chars.map((char) => char._id) } },
       { projection: { ceoId: 1, countryId: 1, creditCompositeSnapshot: 1 } }
@@ -123,8 +128,7 @@ export async function processLineOfCreditTurn(
   const gameState = await getGameState(db);
   const centralBankPricing = await loadCentralBankPricingAdjustment(db, turn);
   const rates = await loadExchangeRatesMap(db);
-  const banks = await db
-    .collection<CentralBank>("centralBanks")
+  const banks = await centralBanksCollection(db)
     .find({})
     .project({ _id: 1, primeRate: 1 })
     .toArray();
@@ -141,8 +145,9 @@ export async function processLineOfCreditTurn(
     return resolvePrimeForCurrency(primeByCountryId, currency);
   };
 
-  const chars = await db
-    .collection<Character>("characters")
+  const chars = await (
+    await getCharactersCollection(db)
+  )
     .find({ lineOfCredit: { $exists: true } })
     .toArray();
 
@@ -159,8 +164,7 @@ export async function processLineOfCreditTurn(
   // always found nothing. settleLocPlan still claims each key itself.
   const startedKeys = new Set(
     (
-      await db
-        .collection<{ _id: string; kind: string }>(MONEY_MOVE_COLLECTION)
+      await bankMoneyMovesCollection<{ _id: string; kind: string }>(db)
         .find(
           {
             _id: { $in: chars.map((char) => `loc:service:${turn}:${char._id}`) },
@@ -211,12 +215,10 @@ export async function processLineOfCreditTurn(
 
     const corp = composites.has(char._id.toHexString())
       ? composites.get(char._id.toHexString())
-      : await db
-          .collection<Corporation>("corporations")
-          .findOne(
-            { ceoId: char._id, countryId: char.countryId },
-            { projection: { creditCompositeSnapshot: 1 } }
-          );
+      : await corporationsCollection(db).findOne(
+          { ceoId: char._id, countryId: char.countryId },
+          { projection: { creditCompositeSnapshot: 1 } }
+        );
 
     const primeHome = resolvePrime(home);
 

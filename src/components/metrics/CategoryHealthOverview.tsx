@@ -31,16 +31,10 @@ export function CategoryHealthOverview({
   onSelect,
   scopeNote,
 }: CategoryHealthOverviewProps) {
-  const {
-    preset,
-    eraSystemEnabled,
-    currentYear,
-    startingYear,
-    incomeBandIndexByCountry,
-    incomeStartVintages,
-  } = useWorldFlags();
+  const { preset, currentYear, startingYear, incomeBandIndexByCountry, incomeStartVintages } =
+    useWorldFlags();
   // Live year for era-aware score bands; null while the flag is off (legacy path).
-  const eraYear = eraSystemEnabled ? currentYear : null;
+  const eraYear = currentYear;
   const incomeIndex = eraYear != null ? (incomeBandIndexByCountry?.[countryId] ?? null) : null;
   return (
     <div className="rounded-xl border border-card-border bg-card p-5 shadow-card">

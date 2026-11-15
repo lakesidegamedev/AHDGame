@@ -5,6 +5,7 @@ import type { PoliticalParty } from "@/lib/db/types/party";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { isCountryEnabledForPlayers } from "@/lib/countryAccess";
 import { getSiteUrl } from "@/lib/siteMetadata";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -24,12 +25,10 @@ export async function generateMetadata({
 
   const db = await getDb();
   if (!(await isCountryEnabledForPlayers(db, countryId))) return {};
-  const party = await db
-    .collection<PoliticalParty>("politicalParties")
-    .findOne(
-      { sequentialId, countryId },
-      { projection: { name: 1, abbreviation: 1, logoUrl: 1, heroImageUrl: 1 } }
-    );
+  const party = await politicalPartiesCollection(db).findOne(
+    { sequentialId, countryId },
+    { projection: { name: 1, abbreviation: 1, logoUrl: 1, heroImageUrl: 1 } }
+  );
   if (!party) return {};
 
   const title = `${party.name} | A House Divided`;

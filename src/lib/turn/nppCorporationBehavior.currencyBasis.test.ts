@@ -231,7 +231,7 @@ describe("NPP decisions in a non-anchor currency", () => {
     // Local cash that LOOKS like plenty against ₳ constants (30M) but is only
     // ~83k ₳ once converted — below the ₳ cash floor + min-cash gate.
     //
-    // Sized to fail against SAFE_CASH_FLOOR_MIN (₳125,000), the MAX() rail, so
+    // Sized to fail against SAFE_CASH_FLOOR_MIN (₳100,000), the MAX() rail, so
     // this stays a test of the CURRENCY BASIS and not of the floor's calibration:
     // no archetype multiplier can scale the floor below that rail, so the
     // assertion holds whatever the cash constants are re-based to next.

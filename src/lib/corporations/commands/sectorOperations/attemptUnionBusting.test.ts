@@ -88,7 +88,7 @@ function mockDb({
       if (name === "corporations") {
         return { updateOne: corpUpdateOne };
       }
-      // Union-ban gate (player suggestion #93): no ban in these scenarios.
+      // Union-ban gate: no ban in these scenarios.
       if (name === "federalBudget") {
         return { findOne: vi.fn().mockResolvedValue({ unionsBanned: false }) };
       }
@@ -112,7 +112,7 @@ function mockDb({
         return { findOne: vi.fn().mockResolvedValue(null) };
       }
       // The pulse and the union notice fire at the country the WORKFORCE is in,
-      // which is the state's (ticket #1271). These fixtures keep the sector and
+      // which is the state's. These fixtures keep the sector and
       // its state in the same country, so every existing expectation is
       // unchanged.
       if (name === "states") {
@@ -405,7 +405,7 @@ describe("attemptUnionBusting — union ban gate (player suggestion #93)", () =>
   });
 
   it("asks the law of the country the bust will actually land in", async () => {
-    // Ticket #1271. The gate and the backlash must answer to the same country.
+    // The gate and the backlash must answer to the same country.
     // A plant whose stored country went stale when its region changed hands
     // would otherwise be cleared under the OLD country's law and then have its
     // backlash fired at the new one: the CEO pays for a bust that is moot where
@@ -431,7 +431,7 @@ describe("attemptUnionBusting — union ban gate (player suggestion #93)", () =>
     expect(result.ok).toBe(true);
   });
 
-  // Ticket #1271. The backlash belongs to the country the WORKFORCE is in. Busting
+  // The backlash belongs to the country the WORKFORCE is in. Busting
   // a union in a foreign plant used to fire the pulse and the union notice at the
   // corporation's own domicile, hitting the wrong country's labour movement.
   it("fires the pulse and the union notice at the HOST country, not the corp's", async () => {

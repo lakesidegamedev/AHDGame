@@ -2,18 +2,10 @@ import { parentPort } from "worker_threads";
 import { processTurn } from "@/lib/turnSystem";
 
 /*
- * Worker bootstrap for #9 (turn isolation).
- *
- * Lives in its own V8 isolate spawned by runTurnInWorker. Receives one
- * { type: "run", source } message, runs processTurn, posts the result back,
- * and exits. All per-turn allocations die when the worker process exits, so
- * the parent process's heap stays flat regardless of which Map / cache /
- * cursor inside processTurn would otherwise have retained memory.
- *
- * Design doc: docs/plans/archive/2026-05/2026-05-25-turn-worker-thread.md
- *
- * Phase 1 (current): file is bundled but no production caller invokes it
- * yet. Phase 2 will switch cron.ts to runTurnInWorker.
+ * Worker bootstrap: runs in its own V8 isolate spawned by runTurnInWorker.
+ * Receives one { type: "run", source } message, runs processTurn, posts the
+ * result back, and exits. All per-turn allocations die with the worker, so
+ * the parent heap stays flat regardless of what processTurn would retain.
  */
 
 if (!parentPort) {

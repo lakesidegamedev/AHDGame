@@ -12,27 +12,19 @@ import type { NodeId } from "../types";
 import type { StateMetricBaseline } from "@/lib/db/types/statePolicy";
 
 /**
- * Legislative metric simulation — HEALTHCARE category, 240 turns.
+ * Legislative metric simulation, HEALTHCARE category, 240 turns.
  *
- * Law: "Federal Healthcare Access Act" (us_federal_healthcare_funding), single-payer
- * option (effectDirection +1). Per its §4.7 design it does NOT directly tag the
- * outcome nodes (avoids double-count); instead it (a) drives the `uninsuredRate`
- * ROOT down and (b) raises healthcare spending — both lift the engine outcome nodes.
- *
- * We run an identical CONTROL (no law, baseline spend) beside the LAW run and assert
- * the law moves each metric in its EXPECTED direction, stays in bounds, and converges.
- * The spend levels use REAL per-capita magnitudes (HEALTH_SPEND_HALF_SAT=4000
- * recalibration, ticket #826 item 14 follow-up): control = ~$5,798/capita (the
- * policy-default realistic baseline); enacted = $7,968/capita, i.e. baseline plus
- * this bill's own per-capita cost delta from its "moderate/center" option ($2,480,
- * src/lib/seeds/reference/legislationTypes.ts us_federal_healthcare_funding) to its
- * single-payer option ($4,650) — a +$2,170/capita swing, well within the $0-$9,484
- * achievable range.
+ * Law: the national health insurance (fr_health_insurance), most
+ * generous option (effectDirection +1). It drives the `uninsuredRate` root down,
+ * and the run raises healthcare spending; both should lift the outcome nodes.
+ * A CONTROL run (no law, baseline spend) sits beside the LAW run. Spend levels are
+ * real per-capita magnitudes against HEALTH_SPEND_HALF_SAT=4000: control
+ * ~$5,798/capita, enacted $7,968/capita, inside the achievable $0 to $9,484 range.
  */
 const TURNS = 240;
 const TPY = 48;
 
-const law = legislationTypes.find((l) => l._id === "us_federal_healthcare_funding");
+const law = legislationTypes.find((l) => l._id === "fr_health_insurance");
 const singlePayer = law?.policyOptions?.find((o) => o.effectDirection === 1);
 
 const baselineDoc: StateMetricBaseline = {
@@ -68,9 +60,9 @@ const HIGHER_BETTER: NodeId[] = [
 ];
 const LOWER_BETTER: NodeId[] = ["healthcare.preventableMortality"];
 
-describe("legislation sim — healthcare (Federal Healthcare Access Act, 240 turns)", () => {
+describe("legislation sim: healthcare (national health insurance, 240 turns)", () => {
   it("the seed law and its single-payer option exist", () => {
-    expect(law, "us_federal_healthcare_funding present in registry").toBeTruthy();
+    expect(law, "fr_health_insurance present in registry").toBeTruthy();
     expect(singlePayer, "a single-payer (effectDirection +1) option exists").toBeTruthy();
   });
 
@@ -101,7 +93,7 @@ describe("legislation sim — healthcare (Federal Healthcare Access Act, 240 tur
   it("prints the 240-turn trajectory report", () => {
     console.log(
       reportTrajectory(
-        "Healthcare — Federal Healthcare Access Act (single-payer)",
+        "Healthcare: national health insurance (most generous option)",
         ["healthcare.uninsuredRate", ...HIGHER_BETTER, ...LOWER_BETTER],
         control,
         enacted
@@ -143,9 +135,10 @@ describe("legislation sim — healthcare (Federal Healthcare Access Act, 240 tur
       expect(Number.isFinite(v), `${n.id} finite`).toBe(true);
       expect(v, `${n.id} >= lower bound`).toBeGreaterThanOrEqual(n.bounds[0]);
       expect(v, `${n.id} <= upper bound`).toBeLessThanOrEqual(n.bounds[1]);
-      // converged: the last game-year of motion is small
+      // converged: the last game-year of motion is under 5% of the node's range
       const tail = enacted.trajectory[n.id].slice(-TPY);
-      expect(Math.max(...tail) - Math.min(...tail), `${n.id} converged`).toBeLessThan(1.0);
+      const tolerance = 0.05 * (n.bounds[1] - n.bounds[0]);
+      expect(Math.max(...tail) - Math.min(...tail), `${n.id} converged`).toBeLessThan(tolerance);
     }
   });
 });

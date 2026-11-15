@@ -1,27 +1,24 @@
 /**
- * Per-sector inventory of unsold storable output (supply-dislocation
- * remediation phase 3; design-realization-legs section 6, v1 flat-cost model).
+ * Per-sector inventory of unsold storable output.
  *
- * Before this, the `(1 - soldFraction)` unsold remainder of a sector's output
- * simply evaporated each turn (~6.5M units/day world-wide at t202). With the
- * per-sector `stockpileUnsold` toggle ON, the unsold remainder of each
- * STORABLE output becomes sector inventory instead, and inventory sells down
- * in later turns when the market clears the sector's fresh output in full — a
- * glut becomes an asset realized later, not lost money.
+ * With the `stockpileUnsold` toggle ON, the `(1 - soldFraction)` unsold
+ * remainder of each STORABLE output becomes sector inventory instead of
+ * evaporating, and sells down in later turns when the market clears fresh
+ * output in full: a glut becomes an asset realized later, not lost money.
  *
- * v1 economics, per the confirmed design decisions (2026-07-10):
- * - Player toggle, default OFF (sell-all = existing behavior; NPP corps do not
- *   stockpile).
- * - Storable outputs only: spoilage reuses COMMODITY_SPOILAGE_PER_TURN, so
+ * Economics:
+ * - Player toggle, default OFF (sell-all is existing behavior; NPP corps do
+ *   not stockpile).
+ * - Storable outputs only; spoilage reuses COMMODITY_SPOILAGE_PER_TURN, so
  *   services can never stockpile and raw materials carry cheaply.
- * - Flat carrying cost per turn as a share of inventory value. Carry plus
- *   spoilage make indefinite hoarding lose money against selling; the
- *   freight/warehousing-coupled cost is the designed v2 and this function is
- *   deliberately swappable without a schema change.
- * - Sell-down only when the sector's fresh output FULLY cleared this turn
- *   (demand exhausted the offer), capped at a fraction of the pile per turn.
- *   Drained units are valued at the sector's mix price with no bonus legs —
- *   old stock does not earn this turn's premiums.
+ * - Flat carrying cost per turn as a share of inventory value; carry plus
+ *   spoilage make indefinite hoarding lose money against selling. The
+ *   freight-coupled cost is v2 and this function is deliberately swappable
+ *   without a schema change.
+ * - Sell-down only when the sector's fresh output FULLY cleared this turn,
+ *   capped at a fraction of the pile per turn. Drained units are valued at
+ *   the sector's mix price with no bonus legs: old stock does not earn this
+ *   turn's premiums.
  *
  * Pure module: sectorTurn feeds it and persists the result; the net cash
  * effect rides the sector's normal revenue/cost rails (taxed and aggregated
@@ -108,18 +105,15 @@ function unitShares(
   return parts;
 }
 
-/**
- * Per-commodity ₳ anchor for a pile whose units were not measured exactly.
+/*
+ * Per-commodity anchor for a pile whose units were not measured exactly.
  * `outputUnitsByCommodity` only exists for a manufacturing product project, so
  * every extraction sector falls back to this.
  *
- * `mixPriceAnchor` is ₳ per blended OUTPUT unit (1 / Σ(rate/base)), which prices
- * the sector's current mix, not one commodity. The pile is stored per
- * commodity, so each held unit must carry its own commodity's base price. The
- * era unit scale implied by the mix price (Σ(rate/base) × mixPrice) and the
- * mix's Σrate keep `base × scale / Σrate` equal to `mixPriceAnchor` for any
- * single-commodity mix, so a pile matching the current output keeps exactly the
- * valuation it has today.
+ * Each held unit must carry its own commodity's base price, while
+ * `mixPriceAnchor` is a blended per-output-unit price. The era unit scale and
+ * the mix's sum of rates keep `base * scale / sumRate` equal to
+ * `mixPriceAnchor` for any single-commodity mix.
  *
  * Returns null for a commodity with no base price, leaving the caller to fall
  * back to the blended mix price.

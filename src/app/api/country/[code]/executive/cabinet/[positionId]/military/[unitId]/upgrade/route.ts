@@ -9,11 +9,7 @@ import { requireAuth } from "@/lib/api/requireAuth";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { getCabinetMembersCollection } from "@/lib/db/collections/cabinetMembers";
-import {
-  refundMinisterialAction,
-  resolveMinisterialRemaining,
-  spendMinisterialAction,
-} from "@/lib/cabinet/ministerialActionPool";
+import { officeActionPool } from "@/lib/resetCabinet/actionPool";
 import { getMilitaryUnitsCollection } from "@/lib/db/collections/militaryUnits";
 import { DEFENSE_POSITION_BY_COUNTRY, getUnitArchetype } from "@/lib/constants/military";
 import { unitUpgradePrice } from "@/lib/military/procurement";
@@ -75,16 +71,18 @@ export async function POST(_request: Request, { params }: RouteParams) {
     }
 
     // Shared UK pool: both offices of a dual holder spend one balance (issue #2049).
-    const actions = await resolveMinisterialRemaining(db, countryId, member!);
+    const gameState = await getGameState();
+    const pool = officeActionPool(db, gameState, countryId, member!);
+    const actions = await pool.remaining();
     if (actions < 1) {
       return errorResponse(400, "No ministerial actions remaining");
     }
 
-    const spend = await spendMinisterialAction(db, countryId, member!);
+    const spend = await pool.spend();
     if (!spend.ok) {
       return errorResponse(409, "No ministerial actions remaining");
     }
-    const refundAction = () => refundMinisterialAction(db, countryId, member!);
+    const refundAction = () => pool.refund();
 
     // Modernising is a purchase, not a free reclassification. Priced off the unit's own
     // build cost through the same GDP-share model recruiting uses, so the two are
@@ -93,7 +91,6 @@ export async function POST(_request: Request, { params }: RouteParams) {
     // Budget is resolved BEFORE anything moves: `moveTreasury` does not upsert, so
     // without a usable doc the charge would silently vanish and the upgrade would be
     // free — which is the defect this route is being changed to fix.
-    const gameState = await getGameState();
     const healedBudget = await ensureFederalBudget(
       db,
       countryId,

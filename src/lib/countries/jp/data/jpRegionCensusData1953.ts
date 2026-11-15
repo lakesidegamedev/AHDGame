@@ -1,20 +1,15 @@
 /**
- * Japan Region Census Profiles — 1953 era.
+ * Japan Region Census Profiles, 1953 era.
  *
- * 1953-default companion to {@link jpRegionCensusData} (the 2019 profiles).
- * Anchored on 1950 Population Census of Japan and 1955 follow-up.
+ * Companion to {@link jpRegionCensusData} (2019 profiles). Anchored on the 1950
+ * Population Census of Japan and the 1955 follow-up.
  *
- * Era anchors (post-occupation / Korean War boom tail): the Allied occupation
- * ended April 1952; GDP was roughly 1/5 of 1979 in real terms; the rural-to-
- * urban migration that would build the 1960s miracle had barely begun —
- * 61% of the population was still in agriculture in 1950; university
- * advancement was ~5-8% nationally, heavily concentrated in Tokyo and Osaka;
- * the baby boom of 1947–49 (dankai no sedai) had produced a very young
- * population but those cohorts are under 10 and not yet in the adult pool;
- * the adult age structure is therefore older than 1979 (WWII killed 2-3 million
- * young men aged 18-35, leaving an older skew). The zainichi Korean community
- * existed but was smaller than 1979's. All income tiers era-neutral (no
- * yen thresholds).
+ * Era shape: Allied occupation ended 1952; real GDP ~1/5 of 1979; rural-to-urban
+ * migration barely begun (61% in agriculture in 1950); university advancement
+ * ~5-8%, concentrated in Tokyo and Osaka; dankai cohorts under 10, not yet in
+ * the adult pool; WWII losses of 2-3 million young men leave an older age skew;
+ * zainichi Korean community smaller than 1979's. Income tiers are era-neutral
+ * (no yen thresholds).
  */
 
 import type { JPRegionLayer1 } from "./jpRegionCensusData";

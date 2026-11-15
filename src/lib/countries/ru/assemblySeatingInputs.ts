@@ -4,15 +4,7 @@
  * missing or incompatible winners as explicit vacancies in the seating plan.
  */
 import { type ClientSession, type Db, ObjectId } from "mongodb";
-import type {
-  Character,
-  NPP,
-  CountryGameState,
-  ElectedOfficial,
-  State,
-  GameState,
-  Election,
-} from "@/lib/db/types";
+import type { NPP } from "@/lib/db/types";
 import type { UnifiedCabinetMember } from "@/lib/db/types/unifiedCabinetMember";
 import { TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import { calendarTurn } from "@/lib/utils/gameDate";
@@ -24,14 +16,19 @@ import {
   russianFirstAssemblyTermEndTurn,
   russianFirstAssemblyOfficeCompatible,
 } from "./rules/assemblyOwnerEligibility";
-import {
-  RUSSIAN_DUMA_RESULTS_COLLECTION,
-  type RussianDumaResultRecord,
-} from "./dumaElectionResult";
-import {
-  RUSSIAN_COUNCIL_RESULTS_COLLECTION,
-  type RussianCouncilResultRecord,
-} from "./councilElectionResult";
+import { type RussianDumaResultRecord } from "./dumaElectionResult";
+import { type RussianCouncilResultRecord } from "./councilElectionResult";
+import { GAME_STATE_PRE_ITERATION_FIELDS } from "@/lib/db/collections/gameState";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
+import { cabinetMembersCollection } from "@/lib/db/repositories/cabinetMembers";
+import { russianCouncilElectionResultsCollection } from "@/lib/db/repositories/russianCouncilElectionResults";
+import { russianDumaElectionResultsCollection } from "@/lib/db/repositories/russianDumaElectionResults";
 function currentOfficeType(office: NPP["currentOffice"] | string) {
   return typeof office === "string" ? office : office?.type;
 }
@@ -41,12 +38,10 @@ export async function loadRussianAssemblySeatingInputs(
   turn: number,
   options: { activeAssembly?: boolean } = {}
 ) {
-  const game = await db
-    .collection<GameState>("gameState")
-    .findOne(
-      { _id: "current" },
-      { session, projection: { preset: 1, preIteration: 1, preIterationTurns: 1 } }
-    );
+  const game = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { session, projection: GAME_STATE_PRE_ITERATION_FIELDS }
+  );
   if (
     game?.preset !== "1991-default" ||
     ru1993LegislatureStage(
@@ -57,7 +52,7 @@ export async function loadRussianAssemblySeatingInputs(
     ) !== "federalAssembly"
   )
     return null;
-  const country = await db.collection<CountryGameState>("countryGameStates").findOne(
+  const country = await countryGameStatesCollection(db).findOne(
     { _id: "RU" },
     {
       session,
@@ -85,26 +80,24 @@ export async function loadRussianAssemblySeatingInputs(
     return null;
   const dumaRoot = country.ruFirstDumaElectionCohortId;
   const councilRoot = country.ruFirstCouncilElectionCohortId;
-  const duma = await db
-    .collection<RussianDumaResultRecord>(RUSSIAN_DUMA_RESULTS_COLLECTION)
-    .findOne(
-      {
-        countryId: "RU",
-        preset: "1991-default",
-        $or: [{ cohortId: dumaRoot }, { rootCohortId: dumaRoot }],
-      },
-      { session, sort: { generation: -1 } }
-    );
-  const council = await db
-    .collection<RussianCouncilResultRecord>(RUSSIAN_COUNCIL_RESULTS_COLLECTION)
-    .findOne(
-      {
-        countryId: "RU",
-        preset: "1991-default",
-        $or: [{ cohortId: councilRoot }, { rootCohortId: councilRoot }],
-      },
-      { session, sort: { generation: -1 } }
-    );
+  const duma = await russianDumaElectionResultsCollection<RussianDumaResultRecord>(db).findOne(
+    {
+      countryId: "RU",
+      preset: "1991-default",
+      $or: [{ cohortId: dumaRoot }, { rootCohortId: dumaRoot }],
+    },
+    { session, sort: { generation: -1 } }
+  );
+  const council = await russianCouncilElectionResultsCollection<RussianCouncilResultRecord>(
+    db
+  ).findOne(
+    {
+      countryId: "RU",
+      preset: "1991-default",
+      $or: [{ cohortId: councilRoot }, { rootCohortId: councilRoot }],
+    },
+    { session, sort: { generation: -1 } }
+  );
   if (!duma || !council) return null;
   for (const [receipt, root] of [
     [duma, dumaRoot],
@@ -136,8 +129,7 @@ export async function loadRussianAssemblySeatingInputs(
       nominees: nominees(council.nominees),
     },
   });
-  const boundPolls = await db
-    .collection<Election>("elections")
+  const boundPolls = await electionsCollection(db)
     .find(
       {
         countryId: "RU",
@@ -242,8 +234,7 @@ export async function loadRussianAssemblySeatingInputs(
     .map((row) => new ObjectId(row.ownerId));
   const npps = certified.owners.filter((row) => row.isNpc).map((row) => new ObjectId(row.ownerId));
   const characters = chars.length
-    ? await db
-        .collection<Character>("characters")
+    ? await charactersCollection(db)
         .find(
           { _id: { $in: chars } },
           {
@@ -255,8 +246,7 @@ export async function loadRussianAssemblySeatingInputs(
         .toArray()
     : [];
   const profiles = npps.length
-    ? await db
-        .collection<NPP>("npps")
+    ? await nppsCollection(db)
         .find(
           { _id: { $in: npps } },
           {
@@ -272,8 +262,7 @@ export async function loadRussianAssemblySeatingInputs(
     ...(npps.length ? [{ nppId: { $in: npps } }] : []),
   ];
   // Actual office and cabinet records are authoritative even if a mirror is stale.
-  const offices = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const offices = await electedOfficialsCollection(db)
     .find({ $or: [{ countryId: "RU" }, ...identities] }, { session, batchSize: 10000 })
     .toArray();
   if (
@@ -282,8 +271,7 @@ export async function loadRussianAssemblySeatingInputs(
   )
     throw new Error("Assembly handover cannot overwrite unjournaled chamber offices");
   const cabinet = identities.length
-    ? await db
-        .collection<UnifiedCabinetMember>("cabinetMembers")
+    ? await cabinetMembersCollection<UnifiedCabinetMember>(db)
         .find(
           { $or: identities },
           { session, batchSize: 1000, projection: { characterId: 1, nppId: 1, countryId: 1 } }
@@ -373,8 +361,7 @@ export async function loadRussianAssemblySeatingInputs(
   const allocation: Record<string, number> = {};
   for (const row of duma.ballots.filter((row) => row.tier === "constituency"))
     allocation[row.regionId] = (allocation[row.regionId] ?? 0) + 1;
-  const regions = await db
-    .collection<State>("states")
+  const regions = await statesCollection(db)
     .find({ countryId: "RU" }, { session, batchSize: 1000, projection: { _id: 1 } })
     .toArray();
   if (

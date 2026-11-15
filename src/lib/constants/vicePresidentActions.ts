@@ -1,7 +1,7 @@
 import { getCalendarDayInTimezone } from "@/lib/time/dailyReset";
 
 /**
- * Vice-president self-serve action pool (player suggestion #67).
+ * Vice-president self-serve action pool.
  *
  * The VP office is otherwise passive between elections; this gives the seated
  * VP a small, self-directed toolkit. The pool mirrors the cabinet

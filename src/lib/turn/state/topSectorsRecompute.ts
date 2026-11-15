@@ -1,31 +1,26 @@
 /**
- * Per-turn recompute of `State.topSectorsCache` — the top-3 corporate
- * sectors by aggregate per-turn revenue for each state.
+ * Per-turn recompute of `State.topSectorsCache`: top-3 corporate sectors by
+ * aggregate per-turn revenue per state.
  *
- * Reads `corporateSectors` (state-scoped, see schema in `db/types/corporation.ts`),
- * groups by `(stateId, sectorType)`, sums `revenue`, sorts descending,
- * and writes the top `TOP_N` per state into `states.topSectorsCache`.
+ * Groups `corporateSectors` by `(stateId, sectorType)`, sums `revenue`,
+ * sorts descending, and writes the top `TOP_N` per state.
  *
- * Each cache entry is tagged with `specializationBonus`:
- *   - `"primary"` when the sector matches `State.sectorSpecializations.primary`
- *     (+10pp regional margin bonus the state grants this sector)
- *   - `"secondary"` when it matches `.secondary` (+5pp)
- *   - `null` otherwise
+ * Cache entries are tagged with `specializationBonus`: `"primary"` (+10pp
+ * regional margin) when the sector matches `sectorSpecializations.primary`,
+ * `"secondary"` (+5pp) for secondary, `null` otherwise.
  *
- * Called from `stateEffectsAndNationalAggregation` in
- * `turnPhaseRegistry.ts` so the State Overview tab's Economy card has
- * fresh data on every page load without paying an aggregation cost
- * on each request.
- *
- * Empty / no-activity states get an empty `sectors` array; the
- * Overview falls back to `sectorSpecializations.{primary, secondary}`
- * for display when the cache is empty.
+ * Called from `stateEffectsAndNationalAggregation` so the Overview Economy
+ * card has fresh data without per-request aggregation. Empty states get an
+ * empty `sectors` array and the UI falls back to `sectorSpecializations`.
  */
 
 import type { Db } from "mongodb";
 import type { CorporationType } from "@/lib/constants/corporations";
 import type { State } from "@/lib/db/types";
 import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import type { Document } from "mongodb";
 
 /** How many top sectors to surface per state. */
 const TOP_N = 3;
@@ -53,8 +48,7 @@ export async function processTopSectorsRecompute(
 ): Promise<TopSectorsRecomputeResult> {
   // Single aggregation that groups every sector instance by (state, type).
   // `revenue` is the per-turn revenue stored on each `corporateSectors` row.
-  const rows = await db
-    .collection("corporateSectors")
+  const rows = await corporateSectorsCollection<Document>(db)
     .aggregate<AggRow>([
       {
         $group: {
@@ -101,8 +95,7 @@ export async function processTopSectorsRecompute(
   // every state that has at least one active sector. States without
   // activity keep their existing cache (or no cache) — the Overview
   // fallback handles those.
-  const states = await db
-    .collection<State>("states")
+  const states = await statesCollection(db)
     .find({}, { projection: { _id: 1, sectorSpecializations: 1 } })
     .toArray();
 
@@ -153,7 +146,7 @@ export async function processTopSectorsRecompute(
   }
 
   if (ops.length > 0) {
-    await db.collection<State>("states").bulkWrite(ops, { ordered: false });
+    await statesCollection(db).bulkWrite(ops, { ordered: false });
   }
 
   return result;

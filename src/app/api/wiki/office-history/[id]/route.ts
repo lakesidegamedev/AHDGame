@@ -12,6 +12,7 @@ import {
   isoDateToUtcNoon,
   assertTenureFields,
 } from "@/lib/wiki/officeHistoryValidation";
+import { manualOfficeHistoryCollection } from "@/lib/db/repositories/manualOfficeHistory";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -78,9 +79,10 @@ export async function PATCH(request: Request, { params }: RouteContext) {
     if (Object.keys(unset).length > 0) update.$unset = unset;
 
     const db = await getDb();
-    const result = await db
-      .collection<ManualOfficeHistoryEntry>("manualOfficeHistory")
-      .updateOne({ _id: new ObjectId(id) }, update);
+    const result = await manualOfficeHistoryCollection(db).updateOne(
+      { _id: new ObjectId(id) },
+      update
+    );
     if (result.matchedCount === 0) throw notFound("Office history entry not found");
 
     return NextResponse.json({ success: true });
@@ -104,9 +106,7 @@ export async function DELETE(_request: Request, { params }: RouteContext) {
     if (!ObjectId.isValid(id)) throw badRequest("Invalid id");
 
     const db = await getDb();
-    const result = await db
-      .collection<ManualOfficeHistoryEntry>("manualOfficeHistory")
-      .deleteOne({ _id: new ObjectId(id) });
+    const result = await manualOfficeHistoryCollection(db).deleteOne({ _id: new ObjectId(id) });
     if (result.deletedCount === 0) throw notFound("Office history entry not found");
 
     return NextResponse.json({ success: true });

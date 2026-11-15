@@ -15,6 +15,59 @@ const row = (result: ReturnType<typeof settleProducerMarket>, key: string) =>
   (result.countryBooks ?? []).find((r) => `${r.countryId}:${r.commodity}` === key);
 
 describe("funded demand measurement (#5450)", () => {
+  it("measures regional orders against the same shared cash without changing settlement", () => {
+    const input = {
+      turn: 1,
+      accounts: [
+        { id: "buyer", cash: 100 },
+        { id: "seller", cash: 0 },
+      ],
+      offers: [
+        {
+          id: "health",
+          accountId: "seller",
+          commodity: "healthcare_services",
+          book: "state:SCO",
+          countryId: "UK",
+          stateId: "SCO",
+          units: 40,
+          unitPrice: 2,
+        },
+      ],
+      orders: [
+        {
+          id: "a",
+          accountId: "buyer",
+          commodity: "healthcare_services",
+          book: "state:SCO",
+          countryId: "UK",
+          stateId: "SCO",
+          units: 60,
+          maximumUnitPrice: 2,
+        },
+        {
+          id: "b",
+          accountId: "buyer",
+          commodity: "network_services",
+          book: "world",
+          countryId: "UK",
+          stateId: "SCO",
+          units: 60,
+          maximumUnitPrice: 2,
+        },
+      ],
+    };
+    const { countryBooks, regionalBooks, ...economic } = settleProducerMarket({
+      ...input,
+      trackCountryBooks: true,
+    });
+    expect(economic).toEqual(settleProducerMarket(input));
+    expect(regionalBooks).toEqual([
+      { stateId: "SCO", commodity: "healthcare_services", funded: 50, filled: 40 },
+      { stateId: "SCO", commodity: "network_services", funded: 0, filled: 0 },
+    ]);
+    expect(countryBooks?.find((r) => r.commodity === "healthcare_services")?.funded).toBe(50);
+  });
   it("separates a large unfunded order from what the buyer could pay for", () => {
     const result = settleProducerMarket({
       turn: 1,

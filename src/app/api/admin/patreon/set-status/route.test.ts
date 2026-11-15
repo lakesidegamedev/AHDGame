@@ -6,6 +6,9 @@ import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
 vi.mock("@/lib/api/requireAdmin", () => ({ requireAdmin: vi.fn() }));
 vi.mock("@/lib/adminLog", () => ({ createAdminLog: vi.fn() }));
+vi.mock("@/lib/audit/grants/recordGrant", () => ({
+  withAuditedGrant: vi.fn(async (_db: unknown, _input: unknown, apply: () => unknown) => apply()),
+}));
 vi.mock("@/lib/patreon/service", () => ({ applyPatreonStatus: vi.fn() }));
 
 describe("POST /api/admin/patreon/set-status", () => {
@@ -45,7 +48,7 @@ describe("POST /api/admin/patreon/set-status", () => {
     const { applyPatreonStatus } = await import("@/lib/patreon/service");
     vi.mocked(requireAdmin).mockResolvedValue({
       ok: true,
-      admin: { username: "admin" },
+      admin: { userId: "a".repeat(24), username: "admin" },
     } as never);
 
     db.collectionMocks.users.findOne.mockResolvedValue({
@@ -86,7 +89,7 @@ describe("POST /api/admin/patreon/set-status", () => {
     const { requireAdmin } = await import("@/lib/api/requireAdmin");
     vi.mocked(requireAdmin).mockResolvedValue({
       ok: true,
-      admin: { username: "admin" },
+      admin: { userId: "a".repeat(24), username: "admin" },
     } as never);
 
     db.collectionMocks.users.findOne.mockResolvedValue(null);

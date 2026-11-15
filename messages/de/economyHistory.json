@@ -1,0 +1,23 @@
+{
+  "economyHistory": {
+    "title": "Nationale Entwicklung",
+    "recorded": "jeder erfasste Zug",
+    "blurb": "Bevölkerung, BIP und BIP pro Kopf in {currency}, aus allen Regionen zusammengeführt.",
+    "metric": {
+      "population": "Bevölkerung",
+      "gdp": "BIP",
+      "gdpPerCapita": "BIP pro Kopf"
+    },
+    "unit": {
+      "people": "Einwohner",
+      "localCurrency": "Landeswährung"
+    },
+    "change": "{change} im Zeitraum",
+    "error": "Die nationale Entwicklung konnte für dieses Land nicht geladen werden.",
+    "retry": "Erneut versuchen",
+    "empty": "Noch nicht genug erfasste Geschichte. Pro abgeschlossenem Zug wird ein Punkt gespeichert, daher füllt sich dieses Diagramm mit der Zeit.",
+    "chartLabel": "{metric} über {turns} erfasste Züge",
+    "turn": "Zug {turn}",
+    "turnAxis": "Z{turn}"
+  }
+}

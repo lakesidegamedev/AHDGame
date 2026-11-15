@@ -44,13 +44,14 @@ import {
   PETITION_DECISION_TURNS,
   WAIVER_TURNS,
 } from "./rules";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { indexListingPetitionsCollection } from "@/lib/db/repositories/indexListingPetitions";
 
 export const INDEX_LISTING_PETITIONS = "indexListingPetitions";
 
 /** Corporations holding a waiver the listing screen must honour this turn. */
 export async function loadActiveWaiverIds(db: Db, currentTurn: number): Promise<Set<string>> {
-  const granted = await db
-    .collection<IndexListingPetition>(INDEX_LISTING_PETITIONS)
+  const granted = await indexListingPetitionsCollection<IndexListingPetition>(db)
     .find(
       { status: "granted", waiverUntilTurn: { $gte: currentTurn } },
       { projection: { corporationId: 1 } }
@@ -63,9 +64,10 @@ export async function findPendingPetition(
   db: Db,
   corporationId: ObjectId
 ): Promise<IndexListingPetition | null> {
-  return db
-    .collection<IndexListingPetition>(INDEX_LISTING_PETITIONS)
-    .findOne({ corporationId, status: "pending" });
+  return indexListingPetitionsCollection<IndexListingPetition>(db).findOne({
+    corporationId,
+    status: "pending",
+  });
 }
 
 export async function findActiveWaiver(
@@ -73,9 +75,11 @@ export async function findActiveWaiver(
   corporationId: ObjectId,
   currentTurn: number
 ): Promise<IndexListingPetition | null> {
-  return db
-    .collection<IndexListingPetition>(INDEX_LISTING_PETITIONS)
-    .findOne({ corporationId, status: "granted", waiverUntilTurn: { $gte: currentTurn } });
+  return indexListingPetitionsCollection<IndexListingPetition>(db).findOne({
+    corporationId,
+    status: "granted",
+    waiverUntilTurn: { $gte: currentTurn },
+  });
 }
 
 export type FilePetitionResult =
@@ -179,7 +183,7 @@ export async function fileListingPetition(opts: {
   };
 
   try {
-    await db.collection<IndexListingPetition>(INDEX_LISTING_PETITIONS).insertOne(petition);
+    await indexListingPetitionsCollection<IndexListingPetition>(db).insertOne(petition);
   } catch (e) {
     // The debit already happened, so put it back rather than leaving the corp
     // out of pocket for a petition that does not exist.
@@ -265,9 +269,9 @@ export async function fileListingPetition(opts: {
     if (settled.status !== "applied" && settled.status !== "replayed") {
       // Nothing was charged when the settlement refused, so the petition goes too.
       if (settled.status === "rejected") {
-        await db
-          .collection<IndexListingPetition>(INDEX_LISTING_PETITIONS)
-          .deleteOne({ _id: petition._id });
+        await indexListingPetitionsCollection<IndexListingPetition>(db).deleteOne({
+          _id: petition._id,
+        });
         return {
           ok: false,
           status: 400,
@@ -285,7 +289,7 @@ export async function fileListingPetition(opts: {
   } else {
     // `contributionAnchor` is in ₳; `creditTreasuryProceeds` expects the
     // country's own units, so crediting it raw banked an unconverted figure
-    // for every non-anchor currency (#808, same unit confusion).
+    // for every non-anchor currency (same unit confusion).
     const countryId = corporation.countryId as CountryId;
     const credited = await creditTreasuryProceedsFromAnchor(
       db,
@@ -380,9 +384,8 @@ export async function measurePetitioner(
   worstShortfallRatio: number | null;
   hasUnwaivableFailure: boolean;
 } | null> {
-  const corps = (await db
-    .collection<Corporation>("corporations")
-    .find(
+  const corps = await corporationsCollection(db)
+    .find<IndexFundCandidate>(
       { countryId: petition.countryId, isPrivate: { $ne: true } },
       {
         projection: {
@@ -402,7 +405,7 @@ export async function measurePetitioner(
         },
       }
     )
-    .toArray()) as unknown as IndexFundCandidate[];
+    .toArray();
 
   // The pool is that country's broad index: the same peers the size bar would
   // be measured against if a fund rebalanced this turn.
@@ -450,7 +453,7 @@ async function closePetition(
   }
 ): Promise<void> {
   const now = new Date();
-  await db.collection<IndexListingPetition>(INDEX_LISTING_PETITIONS).updateOne(
+  await indexListingPetitionsCollection<IndexListingPetition>(db).updateOne(
     { _id: petition._id, status: "pending" },
     {
       $set: {
@@ -513,8 +516,7 @@ export async function resolveDueListingPetitions(
   db: Db,
   currentTurn: number
 ): Promise<{ granted: number; refused: number }> {
-  const due = await db
-    .collection<IndexListingPetition>(INDEX_LISTING_PETITIONS)
+  const due = await indexListingPetitionsCollection<IndexListingPetition>(db)
     .find({ status: "pending", deadlineAtTurn: { $lte: currentTurn } })
     .toArray();
 

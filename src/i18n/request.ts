@@ -47,6 +47,7 @@ const NAMESPACES = [
   // client catalog on 2026-10-24.
   "governmentConfidence",
   "legislation",
+  "economyHistory",
 ] as const;
 
 async function loadCatalog(locale: string): Promise<Messages> {

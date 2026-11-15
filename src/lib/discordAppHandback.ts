@@ -1,18 +1,17 @@
 import { isStoreAppUserAgent } from "@/lib/displayMode";
 
 /**
- * The Android AHDClient hands Discord's consent page to the system, so the
- * Discord app (or the phone's browser) can use the player's existing Discord
- * login. Discord then redirects to our callback. When the Discord app opens
- * that link, the verified App Link brings it back into the app. When a browser
- * follows the redirect instead, browsers never pass a redirect to an app, so
- * the callback loads in the browser, which has none of the OAuth cookies the
- * app's webview set, and sign-in failed with "Session expired" (ticket 1461).
+ * The Android client hands Discord's consent page to the system so the Discord
+ * app (or browser) can use the player's existing Discord login. Discord then
+ * redirects to our callback. When the Discord app opens that link, the
+ * verified App Link brings it back into the app. A browser never passes a
+ * redirect to an app, so the callback instead loads in the browser, which has
+ * none of the OAuth cookies the app's webview set.
  *
  * Sign-ins started in the app carry this prefix in their OAuth state. A
  * callback that arrives in a browser without the OAuth cookies but with this
- * prefix gets a page that hands the same callback URL back to the app, where
- * the webview still holds the state cookie that authorizes it.
+ * prefix gets a page that hands the same callback URL back to the app, whose
+ * webview still holds the state cookie that authorizes it.
  */
 const APP_STATE_PREFIX = "app-";
 

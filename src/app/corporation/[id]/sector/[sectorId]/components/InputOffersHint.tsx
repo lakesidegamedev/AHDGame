@@ -7,11 +7,18 @@ import type { SupplyListingView } from "@/lib/db/types/supplyListing";
 import type { CommodityFlow } from "../types";
 
 /**
- * Points a sector at the supply offers for its costliest input. Renders
- * nothing while loading, when supply agreements are off, or when nobody is
- * selling, so it never adds a dead end to the panel.
+ * Points a sector at the supply offers for one input: the costliest by default,
+ * or a short one on its own row (`variant="short"`). Renders nothing while
+ * loading, when supply agreements are off, or when nobody is selling, so it
+ * never adds a dead end to the panel.
  */
-export default function InputOffersHint({ flow }: { flow: CommodityFlow }) {
+export default function InputOffersHint({
+  flow,
+  variant = "costliest",
+}: {
+  flow: CommodityFlow;
+  variant?: "costliest" | "short";
+}) {
   const [sellers, setSellers] = useState(0);
 
   useEffect(() => {
@@ -32,15 +39,23 @@ export default function InputOffersHint({ flow }: { flow: CommodityFlow }) {
   }, [flow.commodity]);
 
   if (sellers === 0) return null;
+  const link = (
+    <Link
+      href={`/commodity/${flow.commodity}/offers`}
+      className="text-foreground underline decoration-card-border underline-offset-2 hover:decoration-foreground"
+    >
+      {sellers} {sellers === 1 ? "seller" : "sellers"} offering
+    </Link>
+  );
+  if (variant === "short")
+    return (
+      <span data-short-input-offers={flow.commodity} className="text-body-xs text-muted">
+        {link}
+      </span>
+    );
   return (
     <p className="mt-2 text-body-xs text-muted">
-      {flow.label} is your costliest input.{" "}
-      <Link
-        href={`/commodity/${flow.commodity}/offers`}
-        className="text-foreground underline decoration-card-border underline-offset-2 hover:decoration-foreground"
-      >
-        {sellers} {sellers === 1 ? "seller" : "sellers"} offering
-      </Link>
+      {flow.label} is your costliest input. {link}
     </p>
   );
 }

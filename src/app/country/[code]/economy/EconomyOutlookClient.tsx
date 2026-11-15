@@ -10,7 +10,7 @@ import { Skeleton } from "@/components/ui";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { type CountryId } from "@/lib/constants/countriesCore";
 import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
-import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
+import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencyCodes";
 import { getEconomyIdentity } from "@/lib/constants/economyIdentity";
 import { deriveEconomicOutlook } from "@/lib/economy/outlook";
 import type { CountryEconomyOutlook } from "@/lib/economy/queries/countryEconomyOutlook";
@@ -25,6 +25,12 @@ import { MarketsStrip } from "@/components/economy/MarketsStrip";
 // fold, so the panel (and its commodity and SOE tables) loads with its section.
 const PlannedEconomyPanel = dynamic(
   () => import("@/components/economy/PlannedEconomyPanel").then((m) => m.PlannedEconomyPanel),
+  { ssr: false }
+);
+// The multi-turn history chart fetches its own series and sits below the fold,
+// so it loads after the masthead and pulse strip rather than with first paint.
+const NationalHistoryPanel = dynamic(
+  () => import("@/components/economy/NationalHistoryPanel").then((m) => m.NationalHistoryPanel),
   { ssr: false }
 );
 
@@ -177,6 +183,8 @@ export function EconomyOutlookClient() {
                 </div>
               </div>
             </div>
+
+            <NationalHistoryPanel countryId={countryId} />
           </>
         )}
       </main>

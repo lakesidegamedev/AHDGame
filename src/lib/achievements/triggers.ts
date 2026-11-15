@@ -9,6 +9,13 @@ import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import type { ActionType } from "@/lib/db/types/gameState";
 import { awardAchievement, awardAchievements } from "./index";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import type { Document } from "mongodb";
+import { billsCollection } from "@/lib/db/repositories/bills";
+import { actionLogsCollection } from "@/lib/db/repositories/actionLogs";
+import { newsPostsCollection } from "@/lib/db/repositories/newsPosts";
+import { userSubscriptionsCollection } from "@/lib/db/repositories/userSubscriptions";
 
 export async function checkActionAchievements(
   userId: ObjectId,
@@ -20,14 +27,13 @@ export async function checkActionAchievements(
     const db = await getDb();
 
     const [actionCounts, totalActionCount] = await Promise.all([
-      db
-        .collection("actionLogs")
+      actionLogsCollection<Document>(db)
         .aggregate<{ _id: string; count: number }>([
           { $match: { characterId, actionType } },
           { $group: { _id: "$actionType", count: { $sum: 1 } } },
         ])
         .toArray(),
-      db.collection("actionLogs").countDocuments({ characterId }),
+      actionLogsCollection<Document>(db).countDocuments({ characterId }),
     ]);
 
     const countForType = actionCounts.find((a) => a._id === actionType)?.count ?? 0;
@@ -46,9 +52,10 @@ export async function checkActionAchievements(
     } else if (actionType === "rest") {
       if (countForType >= 1) checks.push({ slug: "rested", required: 1 });
     } else if (actionType === "poll" || actionType === "pollLarge") {
-      const pollCount = await db
-        .collection("actionLogs")
-        .countDocuments({ characterId, actionType: { $in: ["poll", "pollLarge"] } });
+      const pollCount = await actionLogsCollection<Document>(db).countDocuments({
+        characterId,
+        actionType: { $in: ["poll", "pollLarge"] },
+      });
       if (pollCount >= 5) checks.push({ slug: "pollster", required: 5 });
     }
     if (totalActionCount >= 100) checks.push({ slug: "century_club", required: 100 });
@@ -119,9 +126,9 @@ export async function checkElectionEntryAchievements(
     const db = await getDb();
     const slugs: string[] = [];
 
-    const totalCandidacies = await db
-      .collection("electionCandidates")
-      .countDocuments({ characterId });
+    const totalCandidacies = await electionCandidatesCollection<Document>(db).countDocuments({
+      characterId,
+    });
     if (totalCandidacies >= 1) slugs.push("first_candidate");
 
     const typeSlugs: Record<string, string> = {
@@ -137,6 +144,29 @@ export async function checkElectionEntryAchievements(
   } catch (error) {
     console.error("[achievements] checkElectionEntryAchievements error:", error);
   }
+}
+
+/** Elections this character has won, from their career log. */
+export async function countElectionWins(characterId: ObjectId): Promise<number> {
+  const db = await getDb();
+  const [row] = await charactersCollection(db)
+    .aggregate<{ wins: number }>([
+      { $match: { _id: characterId } },
+      {
+        $project: {
+          wins: {
+            $size: {
+              $filter: {
+                input: { $ifNull: ["$careerHistory", []] },
+                cond: { $eq: ["$$this.type", "elected"] },
+              },
+            },
+          },
+        },
+      },
+    ])
+    .toArray();
+  return row?.wins ?? 0;
 }
 
 export async function checkElectionWinAchievements(
@@ -156,8 +186,9 @@ export async function checkElectionWinAchievements(
     const slug = typeSlugs[electionType];
     if (slug) slugs.push(slug);
 
-    const db = await getDb();
-    const wins = await db.collection("electedOfficials").countDocuments({ characterId });
+    // Wins are counted from the career log, not from seats held now: a
+    // re-elected single-seat winner holds one row and an ex-holder none.
+    const wins = await countElectionWins(characterId);
     if (wins >= 3) slugs.push("three_terms");
 
     await awardAchievements(userId, slugs, characterId);
@@ -188,11 +219,11 @@ export async function checkInfluenceAchievements(
   try {
     const db = await getDb();
     const [influenceCount, barnstormCount] = await Promise.all([
-      db.collection("actionLogs").countDocuments({
+      actionLogsCollection<Document>(db).countDocuments({
         characterId,
         actionType: { $in: ["supportPlayer", "attackPlayer", "barnstorm"] },
       }),
-      db.collection("actionLogs").countDocuments({ characterId, actionType: "barnstorm" }),
+      actionLogsCollection<Document>(db).countDocuments({ characterId, actionType: "barnstorm" }),
     ]);
 
     const slugs: string[] = [];
@@ -210,9 +241,9 @@ export async function checkSubscriberAchievements(
 ): Promise<void> {
   try {
     const db = await getDb();
-    const count = await db
-      .collection("userSubscriptions")
-      .countDocuments({ subscribedToCharacterId: characterId });
+    const count = await userSubscriptionsCollection<Document>(db).countDocuments({
+      subscribedToCharacterId: characterId,
+    });
     const slugs: string[] = [];
     if (count >= 5) slugs.push("popular");
     if (count >= 20) slugs.push("celebrity");
@@ -240,7 +271,7 @@ export async function checkBillSponsoredAchievements(
 ): Promise<void> {
   try {
     const db = await getDb();
-    const count = await db.collection("bills").countDocuments({ sponsorId: characterId });
+    const count = await billsCollection<Document>(db).countDocuments({ sponsorId: characterId });
     if (count >= 1) await awardAchievement(userId, "first_bill", characterId);
   } catch (error) {
     console.error("[achievements] checkBillSponsoredAchievements error:", error);
@@ -253,9 +284,10 @@ export async function checkNewsPostAchievements(
 ): Promise<void> {
   try {
     const db = await getDb();
-    const count = await db
-      .collection("newsPosts")
-      .countDocuments({ authorId: characterId, parentId: null });
+    const count = await newsPostsCollection<Document>(db).countDocuments({
+      authorId: characterId,
+      parentId: null,
+    });
     if (count >= 1) await awardAchievement(userId, "first_post", characterId);
   } catch (error) {
     console.error("[achievements] checkNewsPostAchievements error:", error);
@@ -268,9 +300,10 @@ export async function checkNewsReplyAchievements(
 ): Promise<void> {
   try {
     const db = await getDb();
-    const count = await db
-      .collection("newsPosts")
-      .countDocuments({ authorId: characterId, parentId: { $ne: null } });
+    const count = await newsPostsCollection<Document>(db).countDocuments({
+      authorId: characterId,
+      parentId: { $ne: null },
+    });
     if (count >= 5) await awardAchievement(userId, "commenter", characterId);
   } catch (error) {
     console.error("[achievements] checkNewsReplyAchievements error:", error);

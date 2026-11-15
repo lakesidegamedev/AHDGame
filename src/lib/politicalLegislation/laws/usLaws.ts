@@ -1,9 +1,8 @@
 /**
- * Forwarder. Moved to the United States' country folder.
+ * Forwarder. Re-exports from the United States' country folder, so there is
+ * exactly one definition and existing importers are untouched.
  *
- * ⚠️ A FORWARDER HOLDS NO COPY. It re-exports, so there is exactly one
- * definition; existing importers are untouched.
-
- * ⚠️ 5,321 lines of authored United States legislation. Exempt from the 2,000-line architecture cap by EXACT path, so `us/data/` had to be exempted before this moved.
+ * The forwarded file is 5,321 lines of authored legislation, exempt from the
+ * 2,000-line architecture cap by exact path.
  */
 export * from "@/lib/countries/us/data/usLaws";

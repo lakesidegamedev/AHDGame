@@ -1,27 +1,21 @@
 /**
- * China Region Census Profiles - 2027 (post-peak-population China).
+ * China region census profiles, 2027 (post-peak-population China).
  *
- * 2027-default companion to {@link cnRegionCensusData2023}. Every value is
- * independently authored for 2027 as a literal, using the 2023 bundle as the
- * visible base plus the documented projection assumptions below. This file
- * does not import or scale any other era file.
+ * 2027 companion to {@link cnRegionCensusData2023}. Every value is
+ * independently authored as a literal; this file does not import or scale
+ * any other era file.
  *
- * Base: 2023 bundle (2020 National Population Census read forward to 2023).
  * Projection assumptions 2023 to 2027:
  * - Urban share rises 2 points in every region (NBS: urbanization passes
- *   66 pct nationally and keeps climbing about 1 point per year). Rural
- *   falls to compensate; suburban mostly flat.
- * - Senior share rises 2 points in every region (2022 to 2026 natural
- *   decrease about 2 million per year; one-child cohort structure plus
- *   record-low births). Young and mid fall to compensate.
+ *   66 pct nationally, climbing about 1 point per year). Rural falls to
+ *   compensate; suburban mostly flat.
+ * - Senior share rises 2 points in every region (natural decrease about
+ *   2 million per year; one-child cohort structure plus record-low births).
+ *   Young and mid fall to compensate.
  * - University share rises 1 point (higher-ed massification continues).
  *   Primary-or-below and secondary fall to compensate.
- * - Ethnic composition and relative income tiers are held at 2023 values
- *   (broadly stable per NBS nationality groupings over short horizons).
- *
- * Sources:
- * https://www.stats.gov.cn/english/ (NBS statistical communiques)
- * https://data.stats.gov.cn/ (NBS national data portal)
+ * - Ethnic composition and relative income tiers held at 2023 values
+ *   (stable per NBS nationality groupings over short horizons).
  */
 import type { CNRegionLayer1 } from "@/lib/seeds/cn/cnRegionCensusData";
 

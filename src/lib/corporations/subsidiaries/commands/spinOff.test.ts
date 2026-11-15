@@ -7,11 +7,13 @@ import { CEO_INITIAL_SHARES } from "@/lib/constants/corporations";
 
 vi.mock("@/lib/financialTxLog/emit", () => ({ emitTx: vi.fn().mockResolvedValue(undefined) }));
 vi.mock("@/lib/nationalization/treasury", () => ({
-  creditTreasuryProceeds: vi.fn(async (_db, _country, amount: number) => Math.round(amount)),
+  creditTreasuryProceedsPaired: vi.fn(async (_db, input: { amountLocal: number }) =>
+    Math.round(input.amountLocal)
+  ),
 }));
 
 import { emitTx } from "@/lib/financialTxLog/emit";
-import { creditTreasuryProceeds } from "@/lib/nationalization/treasury";
+import { creditTreasuryProceedsPaired } from "@/lib/nationalization/treasury";
 import { spinOff } from "./spinOff";
 import { autoGrantedNodeIds } from "@/lib/constants/techTree";
 
@@ -130,9 +132,10 @@ describe("spinOff", () => {
     expect(result.ok).toBe(true);
 
     // The fee is government revenue, not destroyed money.
-    const credited = vi.mocked(creditTreasuryProceeds).mock.calls[0];
-    expect(credited[1]).toBe("US");
-    const feeToTreasury = credited[2] as number;
+    const credited = vi.mocked(creditTreasuryProceedsPaired).mock.calls[0][1];
+    expect(credited.countryId).toBe("US");
+    expect(credited.flow).toBe("incorporation_fee");
+    const feeToTreasury = credited.amountLocal as number;
     expect(feeToTreasury).toBeGreaterThan(0);
 
     const legs = vi.mocked(emitTx).mock.calls.map((c) => c[1]);

@@ -55,40 +55,25 @@ export type {
 } from "./shareFillMoneyLegs";
 
 /**
- * Keyed money legs for peer order-book fills (issue #1672).
+ * Keyed money legs for peer order-book fills.
  *
- * The audit slice (shareFillAudit.ts) made audit rows convergent but left
- * every money write on legacy debit-first-plus-compensation: a crash between
- * the filler debit and the seller credit left the filler down with the
- * seller unpaid (`in_progress` for ops), a crash between the seller share
- * debit and the buyer credit stranded shares, and the buy-fill escrow
- * release had the same window. This module moves those legs onto the
- * established keyed-step primitives (claim receipt, stored immutable plan,
+ * Debit-first-plus-compensation leaves crash windows where the filler is debited but
+ * the seller unpaid, seller shares stranded, or escrow release partial. This module uses keyed-step primitives (claim receipt, stored immutable plan,
  * compare-and-set step claims, deterministic keys, orphan recovery):
  *
- * - One money receipt per fill attempt, keyed
- *   `share-fill-money:<fillKey>` (derived from the audit attempt key, so a
- *   restart from only the fill key recovers). The resume plan is persisted
- *   on the receipt before any money moves; a same-key retry rebuilds its
- *   steps from the STORED plan, never from live caller input.
- * - Every leg is a compare-and-set write carrying its subkey: balance debits
- *   gate `$gte` + `$ne: key` in one atomic update, cap-table debits gate
- *   `$elemMatch` sufficiency + `$ne: key`, credits use the inc/push/inc
- *   triple under one subkey so a retry converges instead of double-moving.
- * - `runMoneyFlowSteps` reverses the applied prefix with keyed inverses
- *   before settling, so the receipt never rests partial: the
- *   filler-debited-then-crash, seller-shares-stranded, and escrow-release
- *   windows close without guessing and without double-moving money/shares.
- * - On success the primitive flips the audit receipt's `moneyCommitted`
- *   (pinning the post-debit filler balance for the audit rows), so the
- *   existing audit recovery and the orphan driver converge money first,
- *   audit second.
+ * - One money receipt per fill attempt keyed `share-fill-money:<fillKey>`. The resume plan
+ *   is persisted before any money moves; a same-key retry rebuilds steps from the STORED
+ *   plan, never live caller input.
+ * - Every leg is a compare-and-set write carrying its subkey: balance debits gate `$gte`
+ *   + `$ne: key` atomically, cap-table debits gate `$elemMatch` + `$ne: key`, credits use
+ *   the inc/push/inc triple so retries converge instead of double-moving.
+ * - `runMoneyFlowSteps` reverses the applied prefix with keyed inverses before settling,
+ *   so the receipt never rests partial.
+ * - On success the primitive flips the audit receipt's `moneyCommitted`, so audit and
+ *   orphan recovery converge money first, audit second.
  *
- * Error mapping preserves the legacy route surface: insufficient filler
- * funds stays a 400 `Insufficient funds`, lost seller-share races stay 409,
- * exhausted liquidity-provider inventory stays 409. Anything later is
- * pathological (the legacy path had no recovery there either) and throws
- * for `handleRouteError`.
+ * Error mapping preserves the legacy surface: insufficient funds -> 400, lost share races
+ * -> 409, exhausted LP inventory -> 409. Later failures throw for `handleRouteError`.
  */
 
 /** Step build shared by first attempt and crash recovery (always from the stored plan). */
@@ -183,8 +168,7 @@ export function buildShareFillMoneySteps(
     }
   } else {
     // Buy-fill: the filler sells, the placer buys, escrow releases to the filler.
-    // 1. Filler share debit. Guard failure with an empty prefix settles
-    // `failed` and maps to the legacy 409 (no longer enough shares).
+    // Guard failure settles `failed` and maps to the legacy 409 (not enough shares).
     if (!plan.sellerDebit) throw new Error("share-fill-money:buy-fill-needs-filler-debit");
     const fillerSharesStep = makeCapDebitStep(
       db,
@@ -447,29 +431,22 @@ export const SHARE_FILL_MONEY_ORPHAN_MIN_AGE_MS = 5 * 60 * 1000;
 
 /**
  * Per-world rotation cursor for the money orphan scan. A head-of-queue scan
- * re-reads the same stuck prefix every pass: persistently incomplete
- * receipts (a step builder that keeps throwing, a guard that never clears)
- * never settle, so later receipts behind a full page of them are never
- * examined. The scan therefore resumes after the last key it examined,
- * wrapping to the head when it runs past the tail, so repeated bounded
- * passes visit every receipt once per cycle.
+ * re-reads the same stuck prefix every pass, so later receipts behind a full
+ * page of persistently incomplete ones are never examined. The scan resumes
+ * after the last key it examined, wrapping to the head at the tail, so repeated
+ * bounded passes visit every receipt once per cycle.
  *
- * Keyed by stable MongoClient identity plus databaseName, never by Db
- * handle and never module-global state: production `getDb()` calls
- * `client.db(dbName)` on every invocation and the driver returns a NEW Db
- * wrapper each time, so a `WeakMap<Db, ...>` would reset rotation on every
- * cron tick and re-read the same stuck prefix forever. Db handles without a
- * client identity (in-memory test fakes) fall back to per-handle cursors.
- * Keyset pagination (`_id` bounds on a sorted scan) survives rows settling
- * between passes: a settled row simply drops out of the filter while the
- * cursor stays a valid lower bound.
+ * Keyed by stable MongoClient identity plus databaseName, never by Db handle:
+ * production `getDb()` returns a NEW Db wrapper per call, so a `WeakMap<Db,...>`
+ * would reset rotation on every cron tick. Db handles without a client identity
+ * (in-memory test fakes) fall back to per-handle cursors. Keyset pagination
+ * (`_id` bounds on a sorted scan) survives rows settling between passes.
  *
  * Never key by URI or connection string: those are secrets and must not be
  * retained in module state or logged.
  *
- * This mirrors `orphanCursorsFor` in shareFillAudit.ts with its own module
- * state on purpose: shareFillAudit.ts already imports this module, so
- * importing its cursor helper back would widen the existing cycle.
+ * Mirrors `orphanCursorsFor` in shareFillAudit.ts with its own module state on
+ * purpose: importing its cursor helper back would widen an existing cycle.
  */
 interface ShareFillMoneyOrphanCursor {
   moneyAfter?: string;

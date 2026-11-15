@@ -2,9 +2,11 @@ import { describe, expect, it } from "vitest";
 import { ALIGNMENT_ERAS, polesForYear } from "@/lib/constants/alignmentEras";
 import { ALIGNMENT_ROSTER, existsAt } from "@/lib/constants/alignmentRoster";
 import { AUTHORED_ALIGNMENT, PRESET_YEAR } from "@/lib/constants/alignmentSeeds";
+import { getStartingYearForPreset, SEED_PRESET_IDS } from "@/lib/constants/turnTime";
 import { axisFor } from "./project";
 import { JOIN_SHARE, LEAVE_SHARE } from "./membershipEligibility";
 import { resolveOpeningShares } from "./seedAlignment";
+import { SeedContractError } from "@/lib/seeds/contract/seedContractError";
 
 const COLD = ALIGNMENT_ERAS.find((e) => e.key === "cold-war")!;
 
@@ -47,9 +49,35 @@ describe("resolveOpeningShares — derived", () => {
   });
 });
 
+describe("every shipping start is covered", () => {
+  // A hand-kept year map stopped at 2023 and skipped 1999 and 2007, so those
+  // worlds seeded no organisation members and every nation at the default lean.
+  it.each(SEED_PRESET_IDS)("%s has its starting year", (preset) => {
+    expect(PRESET_YEAR[preset]).toBe(getStartingYearForPreset(preset));
+  });
+
+  it("2027 reads its own authored rows", () => {
+    expect(AUTHORED_ALIGNMENT["2027-default"]).toBeDefined();
+    const sy = resolveOpeningShares({ key: "SY", preset: "2027-default" });
+    expect(sy.provenance).toBe("authored");
+    expect(sy.shares).not.toEqual(
+      resolveOpeningShares({ key: "SY", preset: "2023-default" }).shares
+    );
+  });
+
+  it("a start without its own rows refuses to borrow another start's", () => {
+    expect(() => resolveOpeningShares({ key: "CN", preset: "1999-default" })).toThrow(
+      SeedContractError
+    );
+    expect(() => resolveOpeningShares({ key: "CN", preset: "2007-default" })).toThrow(
+      SeedContractError
+    );
+  });
+});
+
 describe("resolveOpeningShares — invariants", () => {
   it("normalises every entity in every start", () => {
-    for (const preset of Object.keys(PRESET_YEAR)) {
+    for (const preset of Object.keys(PRESET_YEAR).filter((p) => AUTHORED_ALIGNMENT[p])) {
       const year = PRESET_YEAR[preset];
       const poles = polesForYear(year);
       for (const entry of ALIGNMENT_ROSTER) {
@@ -87,7 +115,7 @@ describe("resolveOpeningShares — invariants", () => {
 
   it("reports a provenance for every present entity", () => {
     const seen = new Set<string>();
-    for (const preset of Object.keys(PRESET_YEAR)) {
+    for (const preset of Object.keys(PRESET_YEAR).filter((p) => AUTHORED_ALIGNMENT[p])) {
       for (const entry of ALIGNMENT_ROSTER) {
         if (!existsAt(entry.key, PRESET_YEAR[preset])) continue;
         seen.add(resolveOpeningShares({ key: entry.key, preset }).provenance);

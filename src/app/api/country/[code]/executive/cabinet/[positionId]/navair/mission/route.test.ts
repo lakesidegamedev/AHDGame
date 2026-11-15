@@ -34,7 +34,6 @@ describe("navair mission route", () => {
     db.collection("cabinetMembers");
     db.collection("militaryUnits");
     db.collectionMocks.gameState.findOne.mockResolvedValue({
-      conflictsEnabled: true,
       currentTurn: 40,
     });
     db.collectionMocks.cabinetMembers.findOne.mockResolvedValue({
@@ -58,16 +57,6 @@ describe("navair mission route", () => {
     const [filter, update] = db.collectionMocks.militaryUnits.updateOne.mock.calls[0];
     expect(filter).toEqual({ _id: UNIT_ID });
     expect(update.$set).toMatchObject({ mission: "SEA_CONTROL" });
-  });
-
-  it("keeps mission mutations blocked while conflicts is disabled", async () => {
-    db.collectionMocks.gameState.findOne.mockResolvedValue({ conflictsEnabled: false });
-    const { POST } = await import(ROUTE);
-    const res = await POST(post({ unitId: String(UNIT_ID), mission: "SEA_CONTROL" }), call);
-
-    expect(res.status).toBe(404);
-    expect(db.collectionMocks.militaryUnits.findOne).not.toHaveBeenCalled();
-    expect(db.collectionMocks.militaryUnits.updateOne).not.toHaveBeenCalled();
   });
 
   /**

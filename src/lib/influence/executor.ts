@@ -24,13 +24,20 @@ import {
 } from "./calculator";
 import { INFLUENCE_ACTIONS, INFLUENCE_LIMITS } from "./constants";
 import { activeNppElectionCandidacyFilter } from "@/lib/elections/nppCandidacyQuery";
-import { removeWithdrawnCandidateFromTally } from "@/lib/electionEngine/tallyCleaner";
+import { removeWithdrawnCandidateFromTally } from "@/lib/elections/engine/tallyCleaner";
 import {
   getEndorsementDecisionPhase,
   isSelfEndorsementCandidate,
   nppCanPlausiblyEndorseElection,
   upsertNppEndorsement,
 } from "@/lib/nppEndorsements";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { nppRelationshipsCollection } from "@/lib/db/repositories/nppRelationships";
+import { nppInfluenceAttemptsCollection } from "@/lib/db/repositories/nppInfluenceAttempts";
 
 export interface ExecuteInfluenceInput {
   characterId: ObjectId;
@@ -93,13 +100,11 @@ export async function validateInfluenceAttempt(
     return { valid: false, error: "This NPP has retired from politics." };
   }
 
-  const gameState = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+  const gameState = await gameStateCollection(db).findOne({ _id: "current" });
   const currentTurn = gameState?.currentTurn || 1;
 
   const relationshipKey = `${character._id.toString()}_${npp._id.toString()}`;
-  const relationship = await db
-    .collection<NPPRelationship>("nppRelationships")
-    .findOne({ _id: relationshipKey });
+  const relationship = await nppRelationshipsCollection(db).findOne({ _id: relationshipKey });
 
   if (relationship) {
     const turnsSinceLastAttempt = currentTurn - relationship.lastAttemptTurn;
@@ -112,12 +117,10 @@ export async function validateInfluenceAttempt(
     }
   }
 
-  const attemptsThisTurn = await db
-    .collection<NPPInfluenceAttempt>("nppInfluenceAttempts")
-    .countDocuments({
-      characterId: character._id,
-      turn: currentTurn,
-    });
+  const attemptsThisTurn = await nppInfluenceAttemptsCollection(db).countDocuments({
+    characterId: character._id,
+    turn: currentTurn,
+  });
 
   if (attemptsThisTurn >= INFLUENCE_LIMITS.MAX_ATTEMPTS_PER_TURN) {
     return {
@@ -135,9 +138,9 @@ export async function validateInfluenceAttempt(
   }
 
   if (actionConfig.nppMustBeCandidate && context.electionId) {
-    const nppCandidate = await db
-      .collection<ElectionCandidate>("electionCandidates")
-      .findOne(activeNppElectionCandidacyFilter(new ObjectId(context.electionId), npp._id));
+    const nppCandidate = await electionCandidatesCollection(db).findOne(
+      activeNppElectionCandidacyFilter(new ObjectId(context.electionId), npp._id)
+    );
     if (!nppCandidate) {
       return { valid: false, error: "This NPP is not a candidate in the selected election." };
     }
@@ -152,10 +155,8 @@ export async function executeInfluence(
   const [db, forexEnabled] = await Promise.all([getDb(), isForexEnabled()]);
   const actionConfig = INFLUENCE_ACTIONS[input.influenceType];
 
-  const character = await db
-    .collection<Character>("characters")
-    .findOne({ _id: input.characterId });
-  const npp = await db.collection<NPP>("npps").findOne({ _id: input.nppId });
+  const character = await charactersCollection(db).findOne({ _id: input.characterId });
+  const npp = await nppsCollection(db).findOne({ _id: input.nppId });
 
   if (!character) {
     return {
@@ -209,13 +210,11 @@ export async function executeInfluence(
     };
   }
 
-  const gameState = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+  const gameState = await gameStateCollection(db).findOne({ _id: "current" });
   const currentTurn = gameState?.currentTurn || 1;
 
   const relationshipKey = `${character._id.toString()}_${npp._id.toString()}`;
-  const relationship = await db
-    .collection<NPPRelationship>("nppRelationships")
-    .findOne({ _id: relationshipKey });
+  const relationship = await nppRelationshipsCollection(db).findOne({ _id: relationshipKey });
 
   const calculation = calculateInfluenceChance({
     character,
@@ -250,7 +249,7 @@ export async function executeInfluence(
   // and $inc — both must guard on the canonical local balance field.
   const totalFundCostLocal = forexEnabled ? totalFundCost * homeFxRate : totalFundCost;
   const campaignFundsField = forexEnabled ? "currencyBalances.campaign" : "funds";
-  const debitResult = await db.collection<Character>("characters").updateOne(
+  const debitResult = await charactersCollection(db).updateOne(
     {
       _id: character._id,
       actions: { $gte: totalActionCost },
@@ -280,7 +279,7 @@ export async function executeInfluence(
   }
 
   if (relationship) {
-    await db.collection<NPPRelationship>("nppRelationships").updateOne(
+    await nppRelationshipsCollection(db).updateOne(
       { _id: relationshipKey },
       {
         $set: {
@@ -295,7 +294,7 @@ export async function executeInfluence(
       }
     );
   } else {
-    await db.collection<NPPRelationship>("nppRelationships").insertOne({
+    await nppRelationshipsCollection(db).insertOne({
       _id: relationshipKey,
       characterId: character._id,
       nppId: npp._id,
@@ -308,7 +307,7 @@ export async function executeInfluence(
     });
   }
 
-  await db.collection<NPP>("npps").updateOne(
+  await nppsCollection(db).updateOne(
     { _id: npp._id },
     {
       $set: {
@@ -337,7 +336,7 @@ export async function executeInfluence(
     createdAt: now,
   };
 
-  await db.collection<NPPInfluenceAttempt>("nppInfluenceAttempts").insertOne(attemptRecord);
+  await nppInfluenceAttemptsCollection(db).insertOne(attemptRecord);
 
   if (outcome === "success") {
     await applyInfluenceEffects(input, npp, character);
@@ -365,25 +364,26 @@ async function applyInfluenceEffects(
   switch (input.influenceType) {
     case "endorse_candidate": {
       if (!input.context.electionId || !input.context.candidateId) break;
-      const candidate = await db.collection<ElectionCandidate>("electionCandidates").findOne({
+      const candidate = await electionCandidatesCollection(db).findOne({
         _id: new ObjectId(input.context.candidateId),
         status: "active",
       });
       if (candidate) {
         const [election, candidateCountAtDecision] = await Promise.all([
-          db.collection<Election>("elections").findOne({ _id: candidate.electionId }),
-          db
-            .collection<ElectionCandidate>("electionCandidates")
-            .countDocuments({ electionId: candidate.electionId, status: "active" }),
+          electionsCollection(db).findOne({ _id: candidate.electionId }),
+          electionCandidatesCollection(db).countDocuments({
+            electionId: candidate.electionId,
+            status: "active",
+          }),
         ]);
         if (
           election &&
           !isSelfEndorsementCandidate(npp, candidate) &&
           nppCanPlausiblyEndorseElection(npp, election)
         ) {
-          const gameState = await db
-            .collection<{ _id: string; currentTurn?: number }>("gameState")
-            .findOne({ _id: "current" }, { projection: { currentTurn: 1 } });
+          const gameState = await gameStateCollection<{ _id: string; currentTurn?: number }>(
+            db
+          ).findOne({ _id: "current" }, { projection: { currentTurn: 1 } });
           await upsertNppEndorsement(db, {
             npp,
             candidate,
@@ -407,12 +407,10 @@ async function applyInfluenceEffects(
 
       const electionObjId = new ObjectId(input.context.electionId);
       const filter = activeNppElectionCandidacyFilter(electionObjId, npp._id);
-      const withdrawCandidate = await db
-        .collection<ElectionCandidate>("electionCandidates")
-        .findOne(filter);
+      const withdrawCandidate = await electionCandidatesCollection(db).findOne(filter);
       if (!withdrawCandidate) break;
 
-      const updateResult = await db.collection<ElectionCandidate>("electionCandidates").updateOne(
+      const updateResult = await electionCandidatesCollection(db).updateOne(
         { _id: withdrawCandidate._id },
         {
           $set: {
@@ -459,8 +457,8 @@ export async function getInfluenceOptions(
 }> {
   const db = await getDb();
 
-  const character = await db.collection<Character>("characters").findOne({ _id: characterId });
-  const npp = await db.collection<NPP>("npps").findOne({ _id: nppId });
+  const character = await charactersCollection(db).findOne({ _id: characterId });
+  const npp = await nppsCollection(db).findOne({ _id: nppId });
 
   if (!character || !npp) {
     return {
@@ -478,11 +476,9 @@ export async function getInfluenceOptions(
     : { rate: 1 };
 
   const relationshipKey = `${characterId.toString()}_${nppId.toString()}`;
-  const relationship = await db
-    .collection<NPPRelationship>("nppRelationships")
-    .findOne({ _id: relationshipKey });
+  const relationship = await nppRelationshipsCollection(db).findOne({ _id: relationshipKey });
 
-  const gameState = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+  const gameState = await gameStateCollection(db).findOne({ _id: "current" });
   const currentTurn = gameState?.currentTurn || 1;
 
   let cooldownTurnsRemaining = 0;
@@ -493,12 +489,10 @@ export async function getInfluenceOptions(
     }
   }
 
-  const attemptsThisTurn = await db
-    .collection<NPPInfluenceAttempt>("nppInfluenceAttempts")
-    .countDocuments({
-      characterId,
-      turn: currentTurn,
-    });
+  const attemptsThisTurn = await nppInfluenceAttemptsCollection(db).countDocuments({
+    characterId,
+    turn: currentTurn,
+  });
 
   const options = Object.values(INFLUENCE_ACTIONS).map((config) => {
     const calculation = calculateInfluenceChance({

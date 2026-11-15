@@ -131,13 +131,12 @@ export function sumCorporateSectorPerTurnIncome(
 
 /**
  * Sum annual gross revenue across all sectors for a corporation, in ₳.
- * Revenue only — does not subtract maintenance, growth costs, or taxes.
+ * Revenue only, does not subtract maintenance, growth costs, or taxes.
  *
  * Each sector's revenue is stored in its HOST-state currency, not the owner's
  * home currency (see {@link resolveSectorHostCurrencyCode}), so every sector is
- * converted with its own host code/rate. Converting a foreign-owned sector with
- * the corp's currency, as this used to, quoted a yen sector's revenue as dollars
- * and massively overstated the per-issuance bond cap (issue #5399).
+ * converted with its own host code/rate. Using the corp's currency instead
+ * massively overstates the per-issuance bond cap.
  */
 export function sumCorporateSectorAnnualRevenue(
   sectors: CorporateSector[],
@@ -200,7 +199,7 @@ export interface CorporateCreditComputationInput {
   currentTurn: number;
   bondDefaultCreditPenaltyUntilTurn: number | null | undefined;
   previousCompositeScore?: number;
-  /** The composite the turn already wrote; used verbatim (ticket #1138). */
+  /** The composite the turn already wrote; used verbatim. */
   persistedCompositeScore?: number;
   /**
    * CEO's share ownership as a fraction of totalShares (0–1).
@@ -213,7 +212,7 @@ export interface CorporateCreditComputationInput {
   /**
    * Fraction of shares held by index funds (0–1), from
    * `indexFundOwnershipFraction`. At or above INDEX_INCLUSION_THRESHOLD this
-   * earns a one-notch upgrade (suggestion #62). Private corps are exempt for
+   * earns a one-notch upgrade. Private corps are exempt for
    * the same reason they are exempt from the concentration penalty: they have
    * no float for a fund to hold.
    */

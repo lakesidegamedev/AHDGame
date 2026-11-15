@@ -1,4 +1,5 @@
 import type { Migration } from "../types";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export const migration: Migration = {
   id: "2026-10-04-bank-prop-forex-fee-index",
@@ -6,12 +7,10 @@ export const migration: Migration = {
   idempotent: true,
   execute: async (db, ctx) => {
     if (!ctx.dryRun)
-      await db
-        .collection("corporations")
-        .createIndex(
-          { "bankPropForexFee.turn": 1 },
-          { name: "corporations_bankPropForexFee_turn", sparse: true }
-        );
+      await corporationsCollection(db).createIndex(
+        { "bankPropForexFee.turn": 1 },
+        { name: "corporations_bankPropForexFee_turn", sparse: true }
+      );
     return {
       documentsUpdated: 0,
       notes: [

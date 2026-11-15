@@ -2,11 +2,12 @@ import { errorResponse } from "@/lib/api/errors";
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import {
-  CLIENT_DIAGNOSTICS_COLLECTION,
   CLIENT_DIAGNOSTICS_MAX_BYTES,
   clientDiagnosticSchema,
   toClientDiagnosticDocument,
 } from "@/lib/clientDiagnostics";
+import { clientDiagnosticsCollection } from "@/lib/db/repositories/clientDiagnostics";
+import type { Document } from "mongodb";
 
 export const dynamic = "force-dynamic";
 let windowStartedAt = 0;
@@ -39,11 +40,9 @@ export async function POST(request: Request) {
   const parsed = clientDiagnosticSchema.safeParse(raw);
   if (!parsed.success) return errorResponse(400, "Invalid report");
   try {
-    await (
-      await getDb()
-    )
-      .collection(CLIENT_DIAGNOSTICS_COLLECTION)
-      .insertOne(toClientDiagnosticDocument(parsed.data));
+    await clientDiagnosticsCollection<Document>(await getDb()).insertOne(
+      toClientDiagnosticDocument(parsed.data)
+    );
   } catch {
     return errorResponse(500, "Unable to store report");
   }

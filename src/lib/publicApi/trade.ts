@@ -1,11 +1,15 @@
 import { ObjectId, type Db, type Filter } from "mongodb";
-import type { Bill, Corporation, Tariff } from "@/lib/db/types";
+import type { Bill, Tariff } from "@/lib/db/types";
 import type { TradeEmbargo } from "@/lib/db/types/tradeEmbargo";
 import type { TariffScopeType } from "@/lib/db/types/tariff";
 import type { CountryId } from "@/lib/constants/countries";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { resolveLegislatedEmbargoes } from "@/lib/trade/reconcileEmbargoes";
 import { NATIONAL_TERMINAL_STATUSES } from "@/lib/congress/billProposalLimits";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { billsCollection } from "@/lib/db/repositories/bills";
+import { tariffsCollection } from "@/lib/db/repositories/tariffs";
+import { tradeEmbargoesCollection } from "@/lib/db/repositories/tradeEmbargoes";
 
 export const PUBLIC_TARIFF_SCOPES = [
   "economy_wide",
@@ -28,8 +32,7 @@ export async function queryTariffs(
   if (params.targetCountry) filter.targetOriginCountryId = params.targetCountry;
   if (params.scope) filter.scopeType = params.scope;
   const limit = Math.min(Math.max(params.limit ?? 100, 1), 200);
-  const tariffs = await db
-    .collection<Tariff>("tariffs")
+  const tariffs = await tariffsCollection(db)
     .find(filter)
     .sort({ countryId: 1, scopeType: 1, createdAt: 1 })
     .limit(limit)
@@ -43,8 +46,7 @@ export async function queryTariffs(
     ),
   ];
   const corporations = corporationIds.length
-    ? await db
-        .collection<Corporation>("corporations")
+    ? await corporationsCollection(db)
         .find(
           { _id: { $in: corporationIds.map((id) => new ObjectId(id)) } },
           { projection: { name: 1, sequentialId: 1 } }
@@ -88,8 +90,7 @@ export async function queryTradeEmbargoes(
   const countryFilter = params.country
     ? [{ $or: [{ sourceCountry: params.country }, { targetCountry: params.country }] }]
     : [];
-  const stored = await db
-    .collection<TradeEmbargo>("tradeEmbargoes")
+  const stored = await tradeEmbargoesCollection(db)
     .find({
       origin: { $in: ["minister", "organization"] },
       $and: [
@@ -99,8 +100,7 @@ export async function queryTradeEmbargoes(
     } as Filter<TradeEmbargo>)
     .toArray();
 
-  const signedBills = await db
-    .collection<Bill>("bills")
+  const signedBills = await billsCollection(db)
     .find(
       {
         status: "signed",
@@ -156,8 +156,7 @@ export async function queryTradeEmbargoes(
 }
 
 async function queryPendingEmbargoBills(db: Db, country?: CountryId) {
-  const bills = await db
-    .collection<Bill>("bills")
+  const bills = await billsCollection(db)
     .find(
       {
         status: { $nin: NATIONAL_TERMINAL_STATUSES },

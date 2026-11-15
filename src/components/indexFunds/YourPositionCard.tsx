@@ -6,14 +6,13 @@ import { legacyAdjustedDisplayUnits } from "@/lib/indexFunds/unitAccounting";
 /**
  * Compact "your position" card shown above the trade panel. P&L is derived
  * from the player's units × current NAV minus their recorded cost basis
- * (units × avg NAV). When the player holds no units, the card shows the
- * empty state instead of zero-filled numbers so the message reads as "you
- * have no position" rather than "your P&L is exactly zero".
+ * (units × avg NAV). With no units, the empty state renders instead of
+ * zero-filled numbers so it reads as "no position", not "P&L is zero".
  *
- * #857 grandfather: legacy units redeem rate-free, so every ₳ figure here uses
- * `legacyAdjustedDisplayUnits` in place of raw `units`. Without it the currency
- * layer's × rate step over-states a legacy holder's value ~100×, showing money
- * they can never redeem (the recurring source of ticket #857 confusion).
+ * Legacy units redeem rate-free, so every ₳ figure uses
+ * `legacyAdjustedDisplayUnits` in place of raw `units`. Without it the
+ * currency layer's × rate step over-states a legacy holder's value ~100×,
+ * showing money they can never redeem.
  */
 export function YourPositionCard({
   units,

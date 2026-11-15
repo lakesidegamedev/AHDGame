@@ -37,7 +37,6 @@ describe("POST department allocation", () => {
     } as never);
     vi.mocked(getGameState).mockResolvedValue({
       currentTurn: 42,
-      departmentFinanceEnabled: true,
     } as never);
 
     db.collection("cabinetMembers");

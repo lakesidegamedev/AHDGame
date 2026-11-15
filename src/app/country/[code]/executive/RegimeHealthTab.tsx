@@ -1,20 +1,9 @@
 "use client";
 
 /**
- * Regime Health tab body — leader-only diagnostic surface.
- *
- * Fetches /api/country/[code]/regime/leader (gated on isSittingLeader)
- * and renders:
- *   - Both scalars as raw numbers + band labels
- *   - The current escalation stage + dwell counters
- *   - The active decision (if any) with click-to-resolve buttons
- *   - Reform-action buttons with cooldown awareness
- *   - Convention panel (announce / draft / status)
- *   - Recent stage transitions
- *
- * On 403 (not the leader) the tab renders an "Only the sitting leader
- * can view this" empty state — the public Regime Stability panel on
- * the country overview is the non-leader fallback.
+ * Leader-only diagnostic tab, fed by the gated /regime/leader route. A 403
+ * renders an empty state; the public Regime Stability panel is the
+ * non-leader fallback.
  */
 import { apiErrorText } from "@/lib/errors/catalog";
 import { useCallback, useEffect, useState } from "react";

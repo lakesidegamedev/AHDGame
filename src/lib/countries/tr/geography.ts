@@ -9,6 +9,7 @@ import { trRegions1991 } from "./data/trRegions1991";
 import { trRegions1953 } from "./data/trRegions1953";
 import { trRegions2013 } from "./data/trRegions2013";
 import { trRegionsModern } from "./data/trRegionsModern";
+import { modernRegionalPopulation2027 } from "@/lib/seeds/reference/modernRegionalPopulation2027";
 import { trStateMetrics } from "./data/trStateMetrics";
 import {
   TR_ADJACENCY_MAP,
@@ -22,21 +23,11 @@ import {
 } from "./geographyFacts";
 
 /**
- * Where Turkey is, and who lives there.
- *
- * ⚠ HEAVY. Every era of census, metric and region data is imported as a VALUE. A
- * registry that needs one string imports `./geographyFacts` instead, which has
- * no value imports at all -- `countryContinents.ts` once held `JP: "Asia"` at
- * zero cost, was repointed at a heavy module, and began pulling 108 KB into
- * every client bundle that read a continent.
- *
- * ⚠ EVERY BUNDLE IS REFERENCED, NEVER INLINED, and `===` is what proves it. An
- * early revision of Japan's geography generated copies from the snapshot; deep
- * equality passed and Japan had two sources for every region.
- *
- * Modern aliases project a dated national profile to 2019/2023/2027.
- * Historical census entries preserve their prior fallback identity, while
- * historical metric entries preserve the prior no-overlay behavior.
+ * HEAVY: every era of census/metric/region data is a VALUE import.
+ * Registries that need one string import ./geographyFacts (no value imports),
+ * to avoid pulling this into every client bundle that reads a continent.
+ * Bundles are referenced, never inlined; `===` proves it, since generated copies
+ * can pass deep equality while creating duplicate sources.
  */
 
 const regionNames: Record<string, string> = Object.fromEntries(
@@ -79,7 +70,7 @@ const regionBundles = {
   "2007-default": trRegions2013,
   "2019-default": trRegionsModern,
   "2023-default": trRegionsModern,
-  "2027-default": trRegionsModern,
+  "2027-default": modernRegionalPopulation2027("TR", trRegionsModern),
 };
 
 export const TR_GEOGRAPHY: CountryGeography = {

@@ -26,6 +26,7 @@ import {
   type ResetSystem,
   type ResetSystemVersion,
 } from "@/lib/resetVersions/rules";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /**
  * Unified admin control surface for the game's feature gates. Reads/writes the
@@ -40,31 +41,11 @@ import {
 export const FEATURE_GATE_BOOLEAN_KEYS = [
   "forexEnabled",
   "playerRandomEventsEnabled",
-  "crisisInteractionEnabled",
   "livingConflictsEnabled",
   "autoDisastersEnabled",
-  "crisisAidBillsEnabled",
-  "demographicsLayer1PositionsEnabled",
-  "granularElectorateEnabled",
-  "rpgStatsEnabled",
-  "autoSectorSeedEnabled",
-  "extractionAutoStrategyEnabled",
-  "redistrictingEnabled",
   "sectorTechTreesEnabled",
   "eraSystemEnabled",
-  "liveElectionResultsEnabled",
-  "legislationDemographicEffectsV2Enabled",
-  "onboardingChecklistEnabled",
-  "macroGrowthV1",
-  "embargoTradeExposureEnabled",
-  "granularPollEnabled",
-  "seasonRecapEnabled",
-  "intOrgAlignmentEnabled",
   "nppCorpStrategyEnabled",
-  "settlementCrisisEnabled",
-  "departmentFinanceEnabled",
-  "lawAdministrationEnabled",
-  "regionalLegislationFinanceEnabled",
 ] as const;
 
 type FeatureGateBooleanKey = (typeof FEATURE_GATE_BOOLEAN_KEYS)[number];
@@ -81,7 +62,12 @@ type FeatureGateBooleanKey = (typeof FEATURE_GATE_BOOLEAN_KEYS)[number];
  * For these keys, absent and `true` both read enabled; only an explicit `false`
  * disables.
  */
-export const FEATURE_GATE_DEFAULT_ON: ReadonlySet<string> = new Set(["nppCorpStrategyEnabled"]);
+export const FEATURE_GATE_DEFAULT_ON: ReadonlySet<string> = new Set([
+  "nppCorpStrategyEnabled",
+  "livingConflictsEnabled",
+  "autoDisastersEnabled",
+  "eraSystemEnabled",
+]);
 
 export const FEATURE_GATE_VERSION_SYSTEMS = RESET_SYSTEMS;
 
@@ -128,7 +114,7 @@ interface FeatureGatesState {
 
 async function readState(): Promise<FeatureGatesState> {
   const db = await getDb();
-  const doc = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+  const doc = await gameStateCollection(db).findOne({ _id: "current" });
 
   const booleans = Object.fromEntries(
     FEATURE_GATE_BOOLEAN_KEYS.map((k) => {
@@ -192,7 +178,7 @@ export const POST = withAdminRoute(async (auth, request: Request) => {
   const resetChange = parsed.data.kind === "reset-system-version" ? parsed.data : null;
   let resetFilter: Record<string, unknown> = { _id: "current" };
   if (resetChange) {
-    const gameState = await db.collection<GameState>("gameState").findOne(
+    const gameState = await gameStateCollection(db).findOne(
       { _id: "current" },
       {
         projection: {
@@ -287,7 +273,7 @@ export const POST = withAdminRoute(async (auth, request: Request) => {
   const update: Record<string, unknown> = { $set: set };
   if (Object.keys(unset).length > 0) update.$unset = unset;
 
-  const result = await db.collection<GameState>("gameState").updateOne(resetFilter, update);
+  const result = await gameStateCollection(db).updateOne(resetFilter, update);
   if (resetChange && result.matchedCount === 0) {
     return errorResponse(
       409,

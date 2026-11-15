@@ -9,11 +9,14 @@ import { getDb } from "@/lib/mongodb";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { COUNTRY_CONFIGS, isParliamentarySystem, type CountryId } from "@/lib/constants/countries";
 import { getGovernmentFormationsCollection } from "@/lib/db/collections/governmentFormation";
-import type { Character, ParliamentaryGovernment, PoliticalParty } from "@/lib/db/types";
+import type { ParliamentaryGovernment, PoliticalParty } from "@/lib/db/types";
 import {
   resolveGoverningPartyIdsFromDocuments,
   resolveOppositionLeader,
 } from "@/lib/turn/parliamentaryGovernment";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { parliamentaryGovernmentsCollection } from "@/lib/db/repositories/parliamentaryGovernments";
 
 export async function GET(_request: Request, { params }: { params: Promise<{ code: string }> }) {
   try {
@@ -35,9 +38,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
     // while governmentFormations still has the correct PM/seatsByParty.
     const [govFormation, govDoc] = await Promise.all([
       getGovernmentFormationsCollection(db).findOne({ _id: countryId }),
-      db
-        .collection<ParliamentaryGovernment>("parliamentaryGovernments")
-        .findOne({ _id: countryId }),
+      parliamentaryGovernmentsCollection(db).findOne({ _id: countryId }),
     ]);
 
     // governmentFormations is authoritative for parliamentary head-of-government
@@ -51,7 +52,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
       ? (govFormation?.pmCharacterId ?? null)
       : (govDoc?.pmCharacterId ?? null);
     let hogChar = pmCharacterId
-      ? await db.collection<Character>("characters").findOne({ _id: pmCharacterId })
+      ? await charactersCollection(db).findOne({ _id: pmCharacterId })
       : null;
 
     // Keep legacy and presidential callers working when there is no canonical
@@ -61,7 +62,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
       !formationHasPmField &&
       (govDoc === null || !Object.prototype.hasOwnProperty.call(govDoc, "pmCharacterId"));
     if (!hogChar && (!isParliamentarySystem(config) || noCanonicalPmField)) {
-      hogChar = await db.collection<Character>("characters").findOne({
+      hogChar = await charactersCollection(db).findOne({
         countryId,
         "currentOffice.type": executiveKey,
       });
@@ -73,9 +74,10 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
       const partySeqId = hogChar.party ? Number.parseInt(hogChar.party, 10) : Number.NaN;
       let partyLabel: string | null = hogChar.party || null;
       if (!Number.isNaN(partySeqId)) {
-        const partyDoc = await db
-          .collection<PoliticalParty>("politicalParties")
-          .findOne({ sequentialId: partySeqId, countryId });
+        const partyDoc = await politicalPartiesCollection(db).findOne({
+          sequentialId: partySeqId,
+          countryId,
+        });
         if (partyDoc) partyLabel = partyDoc.name;
       }
 
@@ -107,8 +109,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
         .map((k) => Number.parseInt(k, 10))
         .filter((n) => !Number.isNaN(n));
       const partyDocs = partySeqNums.length
-        ? await db
-            .collection<PoliticalParty>("politicalParties")
+        ? await politicalPartiesCollection(db)
             .find({ countryId, sequentialId: { $in: partySeqNums } })
             .toArray()
         : [];
@@ -123,9 +124,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
       );
 
       if (result) {
-        const oppositionChar = await db
-          .collection<Character>("characters")
-          .findOne({ _id: result.chairId });
+        const oppositionChar = await charactersCollection(db).findOne({ _id: result.chairId });
 
         if (oppositionChar) {
           oppositionLeader = {

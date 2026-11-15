@@ -1,17 +1,11 @@
 import type { CommodityType } from "../../constants/commodities";
 
 /**
- * Per-turn commodity flow ledger row — Tier 2 ("ledger") of the structural
- * market rework (audit t806, Fix 3 phase D0; see
- * docs/plans/2026-07-03-market-structural-plan.md).
- *
- * One document per commodity per turn, written by the commodity-price phase
+ * Per-turn commodity flow ledger row, written by the commodity-price phase
  * when `marketSystemMode >= "ledger"`. This is a SHADOW of the current
- * abstract model: it records the flows the engine already implies (units
- * supplied/demanded, what would clear, what goes unmet or unsold) without
- * changing any behaviour. Later ledger phases (inventory, throughput
- * coupling) read and extend it; cross-border flows live in
- * `tradeFlowSnapshots` and are deliberately not duplicated here.
+ * abstract model: it records flows the engine already implies without
+ * changing any behaviour. Cross-border flows live in `tradeFlowSnapshots` and
+ * are deliberately not duplicated here.
  */
 export interface CommodityFlow {
   /**

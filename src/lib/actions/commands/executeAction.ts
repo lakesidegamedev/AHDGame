@@ -1,24 +1,21 @@
 /**
- * Shared action-execution core.
+ * Shared action-execution core, used by both the HTTP route (human players)
+ * and the autonomous NPP brain so they share one implementation of a
+ * political action's effects and persistence.
  *
- * Extracted from `src/app/api/actions/execute/route.ts` so that the HTTP route
- * (human players) and the autonomous NPP brain (`src/lib/nppAutonomy/`) drive
- * the SAME implementation of a political action's effects + persistence, rather
- * than the route and `nppActionProcessing.ts` each re-implementing the math.
+ * The route keeps request concerns (auth, rate-limit, validation, character
+ * resolution, response shaping). This core owns state resolution, forex
+ * boundary handling, the per-count apply loop, and, only on the player path,
+ * action logging and achievement triggers. The NPP path passes
+ * `actor.userId = null` to skip the player-only bookkeeping.
  *
- * The route keeps request concerns (auth, rate-limit, batch/convert validation,
- * character resolution, response shaping). This core owns: state resolution,
- * forex boundary handling, the per-count apply loop, and — only when an actual
- * user is driving (player path) — action logging + achievement triggers. The
- * NPP path passes `actor.userId = null` to skip the player-only bookkeeping and
- * does its own.
- *
- * Currency convention (unchanged from the route): `effect.fundsChange` and
- * `effect.cashOnHandChange` are ANCHOR units; campaign/personal balances are
- * stored LOCAL. Conversion happens at the `$set` boundary via `campaignRate`
- * (the frozen world currency basis ; campaign funds never touch live forex).
+ * Currency convention: `effect.fundsChange` and `effect.cashOnHandChange` are
+ * ANCHOR units; campaign/personal balances are stored LOCAL. Conversion
+ * happens at the `$set` boundary via `campaignRate` (campaign funds never
+ * touch live forex).
  */
 
+import { loadNationalGdpPerCapita } from "@/lib/campaigns/nationalGdpBasis";
 import { loadCampaignCurrencyRates } from "@/lib/campaigns/campaignCurrency";
 
 import { ObjectId, type Db, type Filter } from "mongodb";
@@ -36,7 +33,6 @@ import {
 } from "@/lib/actions";
 import { rollDebatePrep } from "@/lib/stats/debatePrep";
 import { USE_GROWTH_INCREMENT } from "@/lib/stats/statsConstants";
-import { isRpgStatsEnabled } from "@/lib/stats/featureFlag";
 import type { ActionType, Character, State, ActionLog } from "@/lib/db/types";
 import { getGameState } from "@/lib/gameState";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
@@ -49,6 +45,11 @@ import type { GameConfig } from "@/lib/db/types/gameConfig";
 import { resolveCampaignPriceLevel } from "@/lib/campaigns/rules/priceLevel";
 import { fundPoliticalMediaOrder } from "@/lib/politicalMedia/journal";
 import { applySlantToAdvertise, loadStateSlant } from "@/lib/mediaEditorial/slant";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { actionLogsCollection } from "@/lib/db/repositories/actionLogs";
+import type { Document } from "mongodb";
 
 function clampAddExpression(fieldPath: string, delta: number, min: number, max: number) {
   return {
@@ -152,7 +153,7 @@ async function executeCharacterActionImpl(
   const gameState = await getGameState();
   timing.dbReadMs += Date.now() - dbStartedAt;
   dbStartedAt = Date.now();
-  const gameConfig = await db.collection<GameConfig>("gameConfig").findOne(
+  const gameConfig = await gameConfigCollection(db).findOne(
     { _id: "default" },
     {
       projection: {
@@ -200,26 +201,22 @@ async function executeCharacterActionImpl(
   const needsHomeState =
     !action.requiresState &&
     (actionType === "campaign" || actionType === "advertise" || actionType === "buildDonorBase");
+  // GDP-scaled costs measure the home region against the live national figure.
+  const nationalGdpPerCapita = needsHomeState
+    ? await loadNationalGdpPerCapita(db, character.countryId ?? "US")
+    : undefined;
 
   const stateId = action.requiresState ? targetState : needsHomeState ? character.homeState : null;
 
   let state: State | null = null;
   if (stateId) {
     dbStartedAt = Date.now();
-    state = await db
-      .collection<State>("states")
-      .findOne({ _id: stateId, countryId: character.countryId });
+    state = await statesCollection(db).findOne({ _id: stateId, countryId: character.countryId });
     timing.dbReadMs += Date.now() - dbStartedAt;
     if (action.requiresState && !state) {
       return { ok: false, error: "Invalid state", status: 400 };
     }
   }
-
-  // Debate Prep eligibility needs the RPG-stats flag, which the rules cannot
-  // read themselves (async host state). Resolve once up front — the flag is
-  // world state, not per-iteration state — and hand the resolved value to both
-  // the shared validation and the gate below so all three read one source.
-  const rpgStatsEnabled = actionType === "debatePrep" ? await isRpgStatsEnabled() : undefined;
 
   let lastMessage = "";
   let updatedCharacter: Character | null = null;
@@ -258,7 +255,7 @@ async function executeCharacterActionImpl(
       homeFxRate: campaignRate,
       preset: gameState?.preset,
       priceLevel,
-      rpgStatsEnabled,
+      nationalGdpPerCapita,
     });
     if (!validation.canPerform) {
       if (completed > 0) {
@@ -287,15 +284,15 @@ async function executeCharacterActionImpl(
       }
     }
 
-    // Debate Prep: gated behind the RPG-stats flag and requires an allocated
-    // stat block (Debate lives in stats). Single source of truth: the same
-    // rules quote canPerformAction above validates through, so the gate and
-    // the validation reject with the same reason.
+    // Debate Prep requires an allocated stat block (Debate lives in stats).
+    // Single source of truth: the same rules quote canPerformAction above
+    // validates through, so the gate and the validation reject with the same
+    // reason.
     if (actionType === "debatePrep") {
-      const quote = quoteDebatePrepAction(
-        { debate: current.stats?.debate, hasStats: !!current.stats },
-        { rpgStatsEnabled }
-      );
+      const quote = quoteDebatePrepAction({
+        debate: current.stats?.debate,
+        hasStats: !!current.stats,
+      });
       if (!quote.ok) {
         if (completed > 0) {
           stoppedReason = quote.error;
@@ -349,9 +346,10 @@ async function executeCharacterActionImpl(
       effect = action.effect(current, state || undefined, {
         formatFunds: fundsFormatter,
         // GDP-baseline era for cost math: the world's reset preset, so
-        // historical worlds price in their own denomination (issue #798).
+        // historical worlds price in their own denomination.
         preset: gameState?.preset,
         priceLevel,
+        nationalGdpPerCapita,
       });
     }
 
@@ -522,9 +520,11 @@ async function executeCharacterActionImpl(
     }
 
     dbStartedAt = Date.now();
-    const updated = await db
-      .collection<Character>("characters")
-      .findOneAndUpdate(updateFilter, [{ $set: pipelineSet }], { returnDocument: "after" });
+    const updated = await charactersCollection(db).findOneAndUpdate(
+      updateFilter,
+      [{ $set: pipelineSet }],
+      { returnDocument: "after" }
+    );
     timing.dbUpdateMs += Date.now() - dbStartedAt;
     if (!updated) {
       const error =
@@ -573,7 +573,7 @@ async function executeCharacterActionImpl(
       // actionLogs scans and award lookups for every action in a batch.
       const userOid = actor.userId;
       dbStartedAt = Date.now();
-      const actionLogResult = await db.collection("actionLogs").insertOne(actionLog);
+      const actionLogResult = await actionLogsCollection<Document>(db).insertOne(actionLog);
       timing.actionLogMs += Date.now() - dbStartedAt;
       auditEntries.push({
         source: "api",

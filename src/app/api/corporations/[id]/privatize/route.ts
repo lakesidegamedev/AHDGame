@@ -13,8 +13,8 @@ import {
   wireHeadlineCorpPrivatized,
   wireHeadlineCorpPrivatizationVoteOpened,
 } from "@/lib/wireEvent";
-import type { Character } from "@/lib/db/types";
 import { notifyVoteEventRaw } from "@/lib/corporations/votes/voteNotifications";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -49,9 +49,7 @@ export async function POST(_request: Request, { params }: RouteParams) {
     const ceoCheck = requireCeo(corporation, auth.user.userId);
     if (ceoCheck) return ceoCheck;
 
-    const character = await db
-      .collection<Character>("characters")
-      .findOne({ _id: corporation.ceoId });
+    const character = await charactersCollection(db).findOne({ _id: corporation.ceoId });
     if (!character) {
       return errorResponse(404, "CEO character not found");
     }

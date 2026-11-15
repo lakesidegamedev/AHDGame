@@ -3,14 +3,8 @@ import type { GeoFeature } from "@/components/maps/RegionalGeoMap";
 /**
  * Which of a host country's regions an advance has taken.
  *
- * This is ONLY the ordering/selection logic — the geometry is loaded by
- * `useRegionGeometry` and drawn by `RegionalGeoMap`, the same pair every other
- * country map in the app uses. Nothing here fetches, projects or emits paths.
- *
- * The persisted state of a war is a single number (ConflictDoc.control); this turns
- * it into a SET OF REGION CODES, which `RegionalGeoMap` then colours.
- *
- * Spec: docs/superpowers/specs/2026-07-26-occupation-territory-design.md
+ * Only ordering and selection: geometry is loaded and drawn elsewhere.
+ * Turns ConflictDoc.control (a single number) into a set of region codes.
  */
 
 /** Outer rings of a feature, in lon/lat. Holes are irrelevant to area ordering. */

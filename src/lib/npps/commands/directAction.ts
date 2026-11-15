@@ -5,7 +5,6 @@ import { isForexEnabled } from "@/lib/currency/featureFlag";
 import { runWithOptionalTransaction } from "@/lib/db/runWithOptionalTransaction";
 import type {
   CapitalActionLog,
-  Character,
   Election,
   ElectionCandidate,
   GameState,
@@ -27,6 +26,14 @@ import { evaluateRequestedEndorsement } from "@/lib/npps/queries/directAction";
 import { isSameCountry } from "@/lib/api/sameCountry";
 import { statMultiplier } from "@/lib/stats/statMultiplier";
 import { NEUTRAL_STAT } from "@/lib/stats/statsConstants";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { nppEndorsementsCollection } from "@/lib/db/repositories/nppEndorsements";
+import { nppRelationshipsCollection } from "@/lib/db/repositories/nppRelationships";
+import { capitalActionLogsCollection } from "@/lib/db/repositories/capitalActionLogs";
 
 export class DirectActionBalanceConflictError extends Error {}
 
@@ -61,8 +68,8 @@ export async function applyNppDirectAction(
   const forexEnabled = await isForexEnabled();
   const relationshipKey = `${characterId.toString()}_${nppId.toString()}`;
   const [npp, characterDoc, relationshipDoc, gameStateDoc] = await Promise.all([
-    db.collection<NPP>("npps").findOne({ _id: nppId }),
-    db.collection<Character>("characters").findOne(
+    nppsCollection(db).findOne({ _id: nppId }),
+    charactersCollection(db).findOne(
       { _id: characterId },
       {
         projection: {
@@ -76,10 +83,8 @@ export async function applyNppDirectAction(
         },
       }
     ),
-    db.collection<NPPRelationship>("nppRelationships").findOne({ _id: relationshipKey }),
-    db
-      .collection<GameState>("gameState")
-      .findOne({ _id: "current" }, { projection: { currentTurn: 1 } }),
+    nppRelationshipsCollection(db).findOne({ _id: relationshipKey }),
+    gameStateCollection(db).findOne({ _id: "current" }, { projection: { currentTurn: 1 } }),
   ]);
 
   if (!npp) return { error: "NPP not found", status: 404 } as const;
@@ -124,7 +129,7 @@ export async function applyNppDirectAction(
   }
 
   if (action === "request_endorsement") {
-    const candidacy = await db.collection<ElectionCandidate>("electionCandidates").findOne({
+    const candidacy = await electionCandidatesCollection(db).findOne({
       _id: new ObjectId(candidacyId!),
       characterId,
       status: "active",
@@ -133,9 +138,7 @@ export async function applyNppDirectAction(
       return { error: "Selected candidacy is not active.", status: 400 } as const;
     }
 
-    const election = await db
-      .collection<Election>("elections")
-      .findOne({ _id: candidacy.electionId });
+    const election = await electionsCollection(db).findOne({ _id: candidacy.electionId });
     if (!election) {
       return { error: "Selected candidacy is not active.", status: 400 } as const;
     }
@@ -191,7 +194,7 @@ export async function applyNppDirectAction(
     session?: ClientSession,
     onActionSpent?: () => void
   ): Promise<{ actions: number; funds: number }> => {
-    const characterUpdate = await db.collection<Character>("characters").findOneAndUpdate(
+    const characterUpdate = await charactersCollection(db).findOneAndUpdate(
       {
         _id: characterId,
         actions: { $gte: plan.actionCost },
@@ -213,7 +216,7 @@ export async function applyNppDirectAction(
 
     onActionSpent?.();
 
-    await db.collection<NPPRelationship>("nppRelationships").updateOne(
+    await nppRelationshipsCollection(db).updateOne(
       { _id: relationshipKey },
       {
         $set: {
@@ -235,20 +238,20 @@ export async function applyNppDirectAction(
     const context: CapitalActionLog["context"] = {};
     if (plan.sideEffects.createEndorsement) {
       const candidacyOid = new ObjectId(plan.sideEffects.createEndorsement.candidacyId);
-      const candidacy = await db
-        .collection<ElectionCandidate>("electionCandidates")
-        .findOne({ _id: candidacyOid, status: "active" }, session ? { session } : undefined);
+      const candidacy = await electionCandidatesCollection(db).findOne(
+        { _id: candidacyOid, status: "active" },
+        session ? { session } : undefined
+      );
       if (candidacy) {
         const [election, candidateCountAtDecision] = await Promise.all([
-          db
-            .collection<Election>("elections")
-            .findOne({ _id: candidacy.electionId }, session ? { session } : undefined),
-          db
-            .collection<ElectionCandidate>("electionCandidates")
-            .countDocuments(
-              { electionId: candidacy.electionId, status: "active" },
-              session ? { session } : undefined
-            ),
+          electionsCollection(db).findOne(
+            { _id: candidacy.electionId },
+            session ? { session } : undefined
+          ),
+          electionCandidatesCollection(db).countDocuments(
+            { electionId: candidacy.electionId, status: "active" },
+            session ? { session } : undefined
+          ),
         ]);
 
         if (election) {
@@ -273,7 +276,7 @@ export async function applyNppDirectAction(
       plan.sideEffects.favorabilityDelta !== undefined ||
       plan.sideEffects.politicalInfluenceDelta !== undefined
     ) {
-      await db.collection<NPP>("npps").updateOne(
+      await nppsCollection(db).updateOne(
         { _id: nppId },
         {
           $set: {
@@ -286,7 +289,7 @@ export async function applyNppDirectAction(
       );
     }
 
-    await db.collection<CapitalActionLog>("capitalActionLogs").insertOne(
+    await capitalActionLogsCollection(db).insertOne(
       {
         _id: new ObjectId(),
         characterId,
@@ -315,13 +318,12 @@ export async function applyNppDirectAction(
     async () => {
       const rollbackSnapshot: DirectActionRollbackSnapshot = { relationship: relationshipDoc };
       if (plan.sideEffects.createEndorsement) {
-        const candidacy = await db.collection<ElectionCandidate>("electionCandidates").findOne({
+        const candidacy = await electionCandidatesCollection(db).findOne({
           _id: new ObjectId(plan.sideEffects.createEndorsement.candidacyId),
         });
         if (candidacy) {
           rollbackSnapshot.endorsementElectionId = candidacy.electionId;
-          rollbackSnapshot.endorsements = await db
-            .collection<NPPEndorsement>("nppEndorsements")
+          rollbackSnapshot.endorsements = await nppEndorsementsCollection(db)
             .find({ nppId, electionId: candidacy.electionId })
             .toArray();
         }
@@ -334,7 +336,7 @@ export async function applyNppDirectAction(
         });
       } catch (error) {
         if (actionSpent) {
-          await db.collection<Character>("characters").updateOne(
+          await charactersCollection(db).updateOne(
             { _id: characterId },
             {
               $inc: {
@@ -345,21 +347,21 @@ export async function applyNppDirectAction(
           );
         }
         if (rollbackSnapshot.relationship) {
-          await db
-            .collection<NPPRelationship>("nppRelationships")
-            .replaceOne({ _id: relationshipKey }, rollbackSnapshot.relationship, {
+          await nppRelationshipsCollection(db).replaceOne(
+            { _id: relationshipKey },
+            rollbackSnapshot.relationship,
+            {
               upsert: true,
-            });
+            }
+          );
         } else {
-          await db
-            .collection<NPPRelationship>("nppRelationships")
-            .deleteOne({ _id: relationshipKey });
+          await nppRelationshipsCollection(db).deleteOne({ _id: relationshipKey });
         }
         if (
           plan.sideEffects.favorabilityDelta !== undefined ||
           plan.sideEffects.politicalInfluenceDelta !== undefined
         ) {
-          await db.collection<NPP>("npps").updateOne(
+          await nppsCollection(db).updateOne(
             { _id: nppId },
             {
               $set: {
@@ -371,14 +373,12 @@ export async function applyNppDirectAction(
           );
         }
         if (rollbackSnapshot.endorsementElectionId) {
-          await db.collection<NPPEndorsement>("nppEndorsements").deleteMany({
+          await nppEndorsementsCollection(db).deleteMany({
             nppId,
             electionId: rollbackSnapshot.endorsementElectionId,
           });
           if ((rollbackSnapshot.endorsements?.length ?? 0) > 0) {
-            await db
-              .collection<NPPEndorsement>("nppEndorsements")
-              .insertMany(rollbackSnapshot.endorsements!);
+            await nppEndorsementsCollection(db).insertMany(rollbackSnapshot.endorsements!);
           }
         }
         throw error;

@@ -1589,7 +1589,7 @@ describe("spillover measurement tags", () => {
       outputs: [output(commodity, price)],
       outputStock: [{ commodity, book: "world", units, quoteUnitCost: 1 }],
     });
-  const run = () =>
+  const run = (historicalAllocation = false) =>
     advanceProducerEconomy({
       turn: 1,
       accounts: [
@@ -1609,6 +1609,7 @@ describe("spillover measurement tags", () => {
       households: [
         {
           accountId: "hh-a",
+          fairShare: !historicalAllocation,
           countryId: "US",
           spendFraction: 1,
           products: [
@@ -1619,6 +1620,7 @@ describe("spillover measurement tags", () => {
         },
         {
           accountId: "hh-b",
+          fairShare: !historicalAllocation,
           countryId: "DE",
           spendFraction: 1,
           products: [
@@ -1644,13 +1646,14 @@ describe("spillover measurement tags", () => {
           )
         : value;
 
-  it("leaves every settlement number byte-identical to the untagged settlement", () => {
+  it("preserves the historical financial digest when replaying historical allocation", () => {
     // Digest of this fixture's full result (accounts, payables, producers,
     // trade receipt, prices, order outcomes, spillover, country books) from
     // the settlement before spillover was tagged. The tags are measurement
     // only, so with them and planning diagnostics removed the settlement
-    // numbers must not change by a byte. Keep the original financial digest.
-    const json = JSON.stringify(untagged(run()));
+    // numbers must not change by a byte. Household allocation deliberately changed
+    // later; replay its old order policy here and keep the original digest.
+    const json = JSON.stringify(untagged(run(true)));
     expect(createHash("sha256").update(json).digest("hex")).toBe(
       "8b7485b3de05658f83b615512cc96e9980d1a615ac1708b7ccd2ef65a603827d"
     );

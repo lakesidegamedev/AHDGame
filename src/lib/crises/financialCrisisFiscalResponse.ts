@@ -1,6 +1,6 @@
 import type { Db } from "mongodb";
 import type { CrisisDecisionOption } from "@/lib/db/types/crisis";
-import type { FederalBudget, Character } from "@/lib/db/types";
+import type { FederalBudget } from "@/lib/db/types";
 import type { SovereignCrisisDecision } from "@/lib/db/types/sovereignCrisisDecision";
 import { getOfficeTypeConfig, type CountryId } from "@/lib/constants/countries";
 import { TURNS_PER_YEAR } from "@/lib/constants/turnTime";
@@ -14,6 +14,12 @@ import { financialAusteritySpending } from "@/lib/livingConflict/rules/financial
 import { loadBankingPolicy } from "@/lib/banking/policy";
 import { buildInitialLegislativePhases } from "@/lib/sovereignDefault/legislative/buildPhases";
 import type { CrisisActionContext } from "./optionActions";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
+import { sovereignCrisisDecisionsCollection } from "@/lib/db/repositories/sovereignCrisisDecisions";
+import { financialCrisisFiscalActionsCollection } from "@/lib/db/repositories/financialCrisisFiscalActions";
 
 export type FinancialFiscalResponse =
   "stimulus" | "austerity" | "restructure" | "sovereign_support";
@@ -34,18 +40,17 @@ export async function prepareFinancialFiscalResponse(
   )
     return;
   if (response === "restructure") {
-    const decision = await db
-      .collection<SovereignCrisisDecision>("sovereignCrisisDecisions")
-      .findOne({ countryCode: countryId, state: "open" });
+    const decision = await sovereignCrisisDecisionsCollection(db).findOne({
+      countryCode: countryId,
+      state: "open",
+    });
     if (!decision)
       throw badRequest(
         "Restructuring requires an open sovereign funding crisis and parliamentary ratification."
       );
     return;
   }
-  const budget = await db
-    .collection<FederalBudget>("federalBudget")
-    .findOne({ countryId: countryId as CountryId });
+  const budget = await federalBudgetCollection(db).findOne({ countryId: countryId as CountryId });
   if (!budget?.spending || !budget.revenue) throw badRequest("The national budget is unavailable.");
   if (response === "stimulus" || response === "sovereign_support") {
     const amount = financialInterventionAmount(
@@ -58,9 +63,9 @@ export async function prepareFinancialFiscalResponse(
       !(await sovereignSupportRecipient(db, countryId, currency))
     )
       throw badRequest("No stressed sovereign shares the treasury currency.");
-    const centralBank = await db
-      .collection("centralBanks")
-      .findOne({ _id: getBankId(countryId as CountryId) as never });
+    const centralBank = await centralBanksCollection(db).findOne({
+      _id: getBankId(countryId as CountryId) as never,
+    });
     const availableCash = treasuryCashLedgerEnabled
       ? (budget.treasuryCashLocal ?? 0)
       : budget.treasuryBalance;
@@ -76,11 +81,9 @@ export async function applyFinancialFiscalResponse(
   response: FinancialFiscalResponse
 ): Promise<void> {
   const key = [ctx.crisis._id, ctx.interaction._id, ctx.countryId, response].join(":");
-  if (
-    await ctx.db.collection<{ _id: string }>("financialCrisisFiscalActions").findOne({ _id: key })
-  )
+  if (await financialCrisisFiscalActionsCollection<{ _id: string }>(ctx.db).findOne({ _id: key }))
     return;
-  if (await ctx.db.collection<{ _id: string }>("bankMoneyMoves").findOne({ _id: key }))
+  if (await bankMoneyMovesCollection<{ _id: string }>(ctx.db).findOne({ _id: key }))
     throw new Error("Fiscal intervention is pending settlement recovery");
   const treasuryCashLedgerEnabled =
     response === "stimulus" || response === "sovereign_support"
@@ -89,14 +92,12 @@ export async function applyFinancialFiscalResponse(
   if (response === "restructure") {
     // The global responder proposes; the existing lower/upper chamber pipeline
     // alone can authorize an actual haircut and creditor cascade.
-    const actor = await ctx.db
-      .collection<Character>("characters")
-      .findOne({ _id: ctx.characterId });
+    const actor = await charactersCollection(ctx.db).findOne({ _id: ctx.characterId });
     const office = actor?.currentOffice?.type;
     const config = office ? getOfficeTypeConfig(ctx.countryId as CountryId, office) : undefined;
     if (actor?.countryId !== ctx.countryId || !config?.isExecutive || config.isSubNational)
       throw badRequest("Only the national executive can propose sovereign restructuring.");
-    const decisions = ctx.db.collection<SovereignCrisisDecision>("sovereignCrisisDecisions");
+    const decisions = sovereignCrisisDecisionsCollection(ctx.db);
     const now = Date.now();
     const phases = buildInitialLegislativePhases(ctx.countryId as CountryId, now, ctx.currentTurn);
     const existing = await decisions.findOne({ financialCrisisActionId: key });
@@ -118,13 +119,11 @@ export async function applyFinancialFiscalResponse(
       if (result.modifiedCount !== 1)
         throw badRequest("No open sovereign funding decision remains.");
     }
-    await ctx.db
-      .collection<FederalBudget>("federalBudget")
-      .updateOne(
-        { countryId: ctx.countryId as CountryId, sovereignCrisisState: "crisisPending" },
-        { $set: { sovereignCrisisState: "crisisResolving" } }
-      );
-    await ctx.db.collection<{ _id: string }>("financialCrisisFiscalActions").insertOne({
+    await federalBudgetCollection(ctx.db).updateOne(
+      { countryId: ctx.countryId as CountryId, sovereignCrisisState: "crisisPending" },
+      { $set: { sovereignCrisisState: "crisisResolving" } }
+    );
+    await financialCrisisFiscalActionsCollection<{ _id: string }>(ctx.db).insertOne({
       _id: key,
       response,
       countryId: ctx.countryId,
@@ -139,20 +138,20 @@ export async function applyFinancialFiscalResponse(
     ctx.option,
     treasuryCashLedgerEnabled
   );
-  const budget = await ctx.db
-    .collection<FederalBudget>("federalBudget")
-    .findOne({ countryId: ctx.countryId as CountryId });
+  const budget = await federalBudgetCollection(ctx.db).findOne({
+    countryId: ctx.countryId as CountryId,
+  });
   if (!budget) throw new Error("National budget disappeared");
   const currency = resolveCountryCurrencyCode(budget)!;
   if (!currency) throw new Error("National budget currency disappeared");
   const centralBankId = getBankId(ctx.countryId as CountryId);
   const centralBank =
     response === "stimulus" || response === "sovereign_support"
-      ? await ctx.db
-          .collection<{ _id: string; monetaryAuthorityId?: string }>("centralBanks")
-          .findOne({
+      ? await centralBanksCollection<{ _id: string; monetaryAuthorityId?: string }>(ctx.db).findOne(
+          {
             _id: centralBankId,
-          })
+          }
+        )
       : null;
   if ((response === "stimulus" || response === "sovereign_support") && !centralBank)
     throw new Error("Monetary authority disappeared");
@@ -298,7 +297,7 @@ export async function applyFinancialFiscalResponse(
 
 async function sovereignSupportRecipient(db: Db, donor: string, currency: string | undefined) {
   if (!currency) return null;
-  return db.collection<FederalBudget>("federalBudget").findOne(
+  return federalBudgetCollection(db).findOne(
     {
       countryId: { $ne: donor as CountryId },
       currencyCode: currency as FederalBudget["currencyCode"],

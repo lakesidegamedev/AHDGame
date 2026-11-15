@@ -13,6 +13,8 @@ import type { CommodityFlow } from "@/lib/db/types/commodityFlow";
 import type { CommodityType } from "@/lib/constants/commodities";
 import { COMMODITY_ICONS, COMMODITY_LABELS, COMMODITY_UNITS } from "@/lib/constants/commodities";
 import type { CommodityHistoryPoint, CommodityHistorySeries } from "@/lib/corporations/types";
+import { corporationHistoryCollection } from "@/lib/db/repositories/corporationHistory";
+import { commodityFlowsCollection } from "@/lib/db/repositories/commodityFlows";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -63,8 +65,7 @@ export async function GET(request: Request, { params }: RouteParams) {
 
     const MAX_CHART_POINTS = 500;
 
-    const history = await db
-      .collection<CorporationHistory>("corporationHistory")
+    const history = await corporationHistoryCollection(db)
       .aggregate<
         Pick<CorporationHistory, "turn" | "createdAt" | "commodityOutput" | "commodityOutputBasis">
       >([
@@ -123,8 +124,7 @@ export async function GET(request: Request, { params }: RouteParams) {
     const minTurn = history[0].turn;
     const maxTurn = history[history.length - 1].turn;
 
-    const flows = await db
-      .collection<CommodityFlow>("commodityFlows")
+    const flows = await commodityFlowsCollection(db)
       .find({
         commodity: { $in: commodities },
         turn: { $gte: minTurn, $lte: maxTurn },

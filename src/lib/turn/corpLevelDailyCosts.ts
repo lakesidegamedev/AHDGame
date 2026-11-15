@@ -8,20 +8,16 @@
  * Corp-level daily operating costs used by the exchange snapshot, in the corp's
  * own currency.
  *
- * These are the corp-wide lines that sit ABOVE the sectors: they are subtracted
- * once, not per sector. Sector maintenance and growth costs are not here, since
- * they already net out inside each sector's profit.
+ * These are the corp-wide lines ABOVE the sectors: subtracted once, not per
+ * sector. Sector maintenance and growth costs are excluded; they net out
+ * inside each sector's profit.
  *
- * R&D is the line the snapshot used to omit. 365 corporations carry a positive
- * `rdBudget` totalling roughly 1.18B per turn (turn 366), so leaving it out
- * overstated both the taxable income this feeds and the Income column the stock
- * list renders, against a corporation page that has always charged it
- * (corporationDetail.ts).
+ * R&D is included here because the snapshot feeds taxable income and the
+ * Income column, matching what the corporation page already charges.
  *
- * STILL NOT INCLUDED, deliberately: the dominance regulatory burden (per sector,
- * and it needs a national market-share lookup the snapshot does not build) and
- * both pension legs (per scheme). Those remain corporation-page only. This is a
- * known, bounded narrowing rather than an oversight.
+ * Deliberately NOT included: the dominance regulatory burden (per sector,
+ * needs a national market-share lookup) and both pension legs (per scheme).
+ * Those remain corporation-page only. Known, bounded narrowing.
  */
 export interface CorpLevelCostInputs {
   marketingBudget?: number;

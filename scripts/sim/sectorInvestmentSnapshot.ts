@@ -162,7 +162,6 @@ export function buildExtractionStrategyObservation(
     ]),
     gameState: projectRow(gameState ?? {}, [
       "currentTurn",
-      "extractionAutoStrategyEnabled",
       "lastExtractionAutoStrategyTurn",
       "nppEntryViabilityMode",
     ]),
@@ -305,7 +304,6 @@ export async function snapshotSectorInvestment(
       {
         projection: {
           currentTurn: 1,
-          extractionAutoStrategyEnabled: 1,
           lastExtractionAutoStrategyTurn: 1,
           nppEntryViabilityMode: 1,
         },

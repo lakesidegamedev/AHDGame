@@ -10,6 +10,7 @@ import {
   hu1991FilingMessages,
 } from "@/lib/countries/hu/playerFiling1991";
 import { NextResponse } from "next/server";
+import { isSpecialCommonsElection, officeKeyForElectionType } from "@/lib/utils/electionLabels";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
@@ -26,8 +27,8 @@ import { getCountryState } from "@/lib/countryState";
 import { resolveElectionRouteParam } from "@/lib/elections/electionParamResolution";
 import { findBlockingActiveCandidacy } from "@/lib/elections/activeCandidacy";
 import { findVoluntaryWithdrawals } from "@/lib/elections/voluntaryWithdrawal";
-import { DEFAULT_CANDIDATE_SUPPORT } from "@/lib/electionEngine/electionFormulaFactors";
-import { removeWithdrawnCandidateFromTally } from "@/lib/electionEngine/tallyCleaner";
+import { DEFAULT_CANDIDATE_SUPPORT } from "@/lib/elections/engine/electionFormulaFactors";
+import { removeWithdrawnCandidateFromTally } from "@/lib/elections/engine/tallyCleaner";
 import { createInitialCampaign } from "@/lib/campaigns/createInitialCampaign";
 import { isCampaignEligibleElection } from "@/lib/campaigns/isCampaignEligible";
 import { getGameTime } from "@/lib/time/gameTime";
@@ -52,6 +53,13 @@ import {
   ensureJapanShugiinFilingIndexes,
   japanShugiinDistrictPartyKey,
 } from "@/lib/countries/jp/elections/shugiinFilingIndexes";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import type { Document } from "mongodb";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
+import { slateCandidatesCollection } from "@/lib/db/repositories/slateCandidates";
 
 const hu1991EntryBody = z
   .object({
@@ -126,11 +134,11 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     const hu1991 = isHu1991AssemblyCampaign(election) || election.hungarianModernByElection != null;
     const hu2014 =
-      election.countryId === "HU" &&
+      countryHasFeature("huApi", election.countryId) &&
       election.electionType === "nationalAssembly" &&
       election.hungarianModernAssembly?.ruleVersion === "mixed-2011-v1";
     const japanMixed =
-      election.countryId === "JP" &&
+      countryHasFeature("jpApi", election.countryId) &&
       (election.electionType === "shugiin" || election.electionType === "snap_shugiin") &&
       election.japanShugiinRules?.ruleVersion === "mixed-1994-v1";
     const bgFounding = isBgFoundingCampaign(election);
@@ -179,7 +187,7 @@ export async function POST(request: Request, { params }: RouteParams) {
           const partySequentialId = Number.parseInt(character.party ?? "", 10);
           const registeredParty =
             Number.isSafeInteger(partySequentialId) && partySequentialId > 0
-              ? await db.collection<PoliticalParty>("politicalParties").findOne({
+              ? await politicalPartiesCollection(db).findOne({
                   countryId: "JP",
                   sequentialId: partySequentialId,
                 })
@@ -201,7 +209,7 @@ export async function POST(request: Request, { params }: RouteParams) {
           );
         }
         if (japanDistrictId && character.party !== "independent") {
-          const occupied = await db.collection<ElectionCandidate>("electionCandidates").findOne({
+          const occupied = await electionCandidatesCollection(db).findOne({
             electionId: electionObjectId,
             party: character.party,
             constituencyId: japanDistrictId,
@@ -214,7 +222,7 @@ export async function POST(request: Request, { params }: RouteParams) {
             );
         }
         if (japanShugiinListOrder != null) {
-          const occupied = await db.collection<ElectionCandidate>("electionCandidates").findOne({
+          const occupied = await electionCandidatesCollection(db).findOne({
             electionId: electionObjectId,
             party: character.party,
             japanShugiinListOrder,
@@ -267,12 +275,10 @@ export async function POST(request: Request, { params }: RouteParams) {
     );
     const executiveTermSnapshot: Pick<Character, "careerHistory" | "executiveTermsServed"> | null =
       isNationwideExecutive
-        ? await db
-            .collection<Character>("characters")
-            .findOne(
-              { _id: character._id },
-              { projection: { careerHistory: 1, executiveTermsServed: 1 } }
-            )
+        ? await charactersCollection(db).findOne(
+            { _id: character._id },
+            { projection: { careerHistory: 1, executiveTermsServed: 1 } }
+          )
         : null;
 
     // All candidates must declare during the primary phase
@@ -348,9 +354,10 @@ export async function POST(request: Request, { params }: RouteParams) {
       const characterPartySeqId = Number.parseInt(character.party ?? "0", 10);
       const characterParty =
         Number.isFinite(characterPartySeqId) && characterPartySeqId > 0
-          ? await db
-              .collection<PoliticalParty>("politicalParties")
-              .findOne({ countryId: electionCountry, sequentialId: characterPartySeqId })
+          ? await politicalPartiesCollection(db).findOne({
+              countryId: electionCountry,
+              sequentialId: characterPartySeqId,
+            })
           : null;
 
       if (!canFieldLegislativeCandidate(electionRuntimeConfig, characterParty)) {
@@ -430,13 +437,10 @@ export async function POST(request: Request, { params }: RouteParams) {
       );
     }
 
-    // A sitting Commons MP already holds a seat that is not on the ballot in a
-    // by-election (#860): the race fills only vacated seats, and seating a
-    // holder would double-seat them (additive resolution never sweeps).
-    // Resign the seat first, then stand as a challenger.
+    // A sitting Commons MP in this state already holds a seat not on the by-election ballot; seating them would double-seat them (additive resolution never sweeps). The race fills only vacated seats.
     if (
-      election.electionType === "special_commons" &&
-      heldOffice?.type === "commons" &&
+      isSpecialCommonsElection(election.electionType) &&
+      heldOffice?.type === officeKeyForElectionType(election.electionType) &&
       "state" in heldOffice &&
       heldOffice.state === election.state
     ) {
@@ -448,7 +452,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     // Check if character is already in this race (any party, including different from current)
-    const existingCandidate = await db.collection<ElectionCandidate>("electionCandidates").findOne({
+    const existingCandidate = await electionCandidatesCollection(db).findOne({
       electionId: electionObjectId,
       characterId: character._id,
       status: "active",
@@ -466,21 +470,17 @@ export async function POST(request: Request, { params }: RouteParams) {
     if (existingCandidate) {
       // If they have an active candidacy under a different party, withdraw it first
       if (existingCandidate.party !== character.party && !councilFiling) {
-        await db
-          .collection("electionCandidates")
-          .updateOne(
-            { _id: existingCandidate._id },
-            { $set: { status: "withdrawn", withdrawnAt: new Date() } }
-          );
+        await electionCandidatesCollection<Document>(db).updateOne(
+          { _id: existingCandidate._id },
+          { $set: { status: "withdrawn", withdrawnAt: new Date() } }
+        );
         await removeWithdrawnCandidateFromTally(
           db,
           existingCandidate.electionId,
           existingCandidate._id.toString()
         );
-        // The candidate is still in the race under the new party: carry the
-        // campaign across with its funds/levels instead of leaving it filed
-        // under the old party (ticket #1313).
-        await db.collection("campaigns").updateOne(
+        // Party switch mid-race: carry the campaign and its funds/levels to the new party.
+        await campaignsCollection<Document>(db).updateOne(
           {
             electionId: electionObjectId,
             candidateId: character._id,
@@ -494,9 +494,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       }
     }
 
-    // Withdrawing bars re-entry into the same election (ticket #1391). The
-    // Hungarian and Bulgarian district filings are exempt: they reactivate the
-    // withdrawn row so a candidate can refile until filing closes.
+    // Withdrawing bars re-entry, except HU/BG district filings which reactivate the withdrawn row.
     if (!existingCandidate && !hu1991 && !bgFounding) {
       const withdrew = await findVoluntaryWithdrawals(db, character._id, [electionObjectId]);
       if (withdrew.size > 0) {
@@ -518,15 +516,8 @@ export async function POST(request: Request, { params }: RouteParams) {
       );
     }
 
-    // Carry over per-cycle throttle / one-shot gates from a prior candidacy in this
-    // same election. Withdrawing and re-entering used to insert a fresh row with
-    // these unset, which reset the one-rally-per-turn throttle (`lastRallyTurn`) and
-    // the one-per-cycle home-state surge gate (`primarySurgeUsed`/`primarySurgeBoost`)
-    // — letting a candidate re-fire a rally and re-trigger the surge every cycle. The
-    // turn processor clears these at primary resolution, so carrying them forward only
-    // affects a withdraw/re-enter within the same live primary.
-    const priorCandidacy = await db
-      .collection<ElectionCandidate>("electionCandidates")
+    // Carry per-cycle gates (lastRallyTurn, primarySurgeUsed/Boost) from a prior candidacy so withdraw/re-enter cannot re-fire a rally or re-trigger the surge. Cleared at primary resolution.
+    const priorCandidacy = await electionCandidatesCollection(db)
       .find({ electionId: electionObjectId, characterId: character._id })
       .sort({ enteredAt: -1 })
       .limit(1)
@@ -612,22 +603,20 @@ export async function POST(request: Request, { params }: RouteParams) {
           );
         result = { insertedId: filed.insertedId };
       } else if (hu2014) {
-        const existingNominee = await db
-          .collection<ElectionCandidate>("electionCandidates")
-          .findOne({
-            electionId: electionObjectId,
-            countryId: "HU",
-            party: character.party,
-            constituencyId: huDistrictId,
-            status: "active",
-          });
+        const existingNominee = await electionCandidatesCollection(db).findOne({
+          electionId: electionObjectId,
+          countryId: "HU",
+          party: character.party,
+          constituencyId: huDistrictId,
+          status: "active",
+        });
         if (existingNominee) {
           logRequest("POST", path, 409, Date.now() - start);
           return errorResponse(409, "Your party already has a candidate in this constituency.");
         }
-        result = await db.collection("electionCandidates").insertOne(candidateDoc);
+        result = await electionCandidatesCollection<Document>(db).insertOne(candidateDoc);
       } else {
-        result = await db.collection("electionCandidates").insertOne(candidateDoc);
+        result = await electionCandidatesCollection<Document>(db).insertOne(candidateDoc);
       }
     } catch (error) {
       if (isActiveJapanShugiinNominationDuplicateKey(error)) {
@@ -638,9 +627,10 @@ export async function POST(request: Request, { params }: RouteParams) {
         );
       }
       if (isActiveElectionCandidateDuplicateKey(error)) {
-        const activeCandidate = await db
-          .collection<ElectionCandidate>("electionCandidates")
-          .findOne({ characterId: character._id, status: "active" });
+        const activeCandidate = await electionCandidatesCollection(db).findOne({
+          characterId: character._id,
+          status: "active",
+        });
 
         if (activeCandidate?.electionId.equals(electionObjectId)) {
           logRequest("POST", path, 400, Date.now() - start);
@@ -668,14 +658,14 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     // Keep the slate board in sync for manually assigned player rows so the
     // party can see when a slated candidate has actually filed into the race.
-    const slateCandidatesCollection = db.collection("slateCandidates") as {
+    const slateCandidatesHandle = slateCandidatesCollection<Document>(db) as {
       updateOne?: (
         filter: Record<string, unknown>,
         update: Record<string, unknown>
       ) => Promise<unknown>;
     };
-    if (typeof slateCandidatesCollection.updateOne === "function") {
-      await slateCandidatesCollection.updateOne(
+    if (typeof slateCandidatesHandle.updateOne === "function") {
+      await slateCandidatesHandle.updateOne(
         {
           electionId: electionObjectId,
           candidateType: "character",

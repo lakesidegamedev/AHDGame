@@ -7,6 +7,7 @@ import { requireBasicAuth } from "@/lib/api/requireAuth";
 import { handleRouteError } from "@/lib/api/errors";
 import { resolveCorporation } from "@/lib/api/corporations/resolveQuery";
 import { bulkFetchCharacterNames, getCharacterByUserId } from "@/lib/db/characterLookup";
+import { shareOrdersCollection } from "@/lib/db/repositories/shareOrders";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -30,8 +31,7 @@ export async function getShareOrdersView(_request: Request, { params }: RoutePar
 
     const character = await getCharacterByUserId(db, auth.user.userId);
 
-    const allOrders = await db
-      .collection<ShareOrder>("shareOrders")
+    const allOrders = await shareOrdersCollection(db)
       .find({
         corporationId: corporation._id,
         status: "open",

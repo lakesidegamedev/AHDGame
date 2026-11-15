@@ -30,7 +30,7 @@ import { loadCommandEconomyBlockedCountries } from "@/lib/economy/queries/comman
 import { computeMergerConcentration } from "./concentration";
 import { resolveMergerAuthority } from "./authority";
 import { acquisitionsBarredByDivestiture, assertMergerClearance } from "./gate";
-import { getMechanicalLawLevels } from "@/lib/mechanicalLaws/levels";
+import { getMechanicalLawLevel, getMechanicalLawLevels } from "@/lib/mechanicalLaws/levels";
 
 const ACQ = new ObjectId();
 const TGT = new ObjectId();
@@ -64,6 +64,7 @@ describe("assertMergerClearance", () => {
     vi.clearAllMocks();
     vi.mocked(loadCommandEconomyBlockedCountries).mockResolvedValue(new Set());
     vi.mocked(getEnactedLevel).mockResolvedValue(2); // threshold 60
+    vi.mocked(getMechanicalLawLevel).mockResolvedValue(2);
     vi.mocked(getMechanicalLawLevels).mockResolvedValue({
       competition: 2,
       subsidiaryLimits: 0,
@@ -107,13 +108,29 @@ describe("assertMergerClearance", () => {
   });
 
   it("is inert at enforcement level 0 — no authority to refer to", async () => {
-    vi.mocked(getEnactedLevel).mockResolvedValue(0);
+    vi.mocked(getMechanicalLawLevel).mockResolvedValue(0);
     const { db, insertOne } = makeDb();
     const r = await assertMergerClearance(db, acquirer(), target(), "agreedAcquisition", 100);
     expect(r.ok).toBe(true);
     expect(insertOne).not.toHaveBeenCalled();
     // The expensive concentration rollup must not even run.
     expect(vi.mocked(computeMergerConcentration)).not.toHaveBeenCalled();
+  });
+
+  it("reads a book country's competition level through the mechanical law reader", async () => {
+    vi.mocked(getMechanicalLawLevel).mockResolvedValue(1);
+    const { db, insertOne } = makeDb();
+    const r = await assertMergerClearance(
+      db,
+      makeCorp({ countryId: "DE" }),
+      makeCorp({ _id: TGT, name: "TargetCo", countryId: "DE" }),
+      "agreedAcquisition",
+      100
+    );
+    expect(vi.mocked(getMechanicalLawLevel)).toHaveBeenCalledWith(db, "DE", "competition");
+    expect(vi.mocked(getEnactedLevel)).not.toHaveBeenCalled();
+    expect(r.ok).toBe(true);
+    expect(insertOne).not.toHaveBeenCalled();
   });
 
   it("refers a foreign takeover under screening even below the concentration threshold", async () => {

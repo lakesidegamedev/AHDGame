@@ -15,6 +15,13 @@ import {
 import { updatePartyPresence } from "@/lib/turn/partyOrg/presence";
 import { findPartyBySequentialId } from "@/lib/db/partyLookup";
 import { cleanupCaucusParticipationForCharacters } from "@/lib/caucus/cleanupCaucusParticipationForCharacters";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import type { Document } from "mongodb";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { coalitionsCollection } from "@/lib/db/repositories/coalitions";
+import { congressLeadersCollection } from "@/lib/db/repositories/congressLeaders";
+import { partyChartersCollection } from "@/lib/db/repositories/partyCharters";
 
 export interface StripPartyMembershipResult {
   charactersUpdated: number;
@@ -33,8 +40,7 @@ async function vacateCongressionalLeadershipForCharacters(
 ): Promise<void> {
   if (characters.length === 0) return;
   try {
-    const held = await db
-      .collection<CongressLeader>("congressLeaders")
+    const held = await congressLeadersCollection(db)
       .find({ characterId: { $in: characters.map((c) => c._id) } })
       .toArray();
     if (held.length === 0) return;
@@ -68,7 +74,7 @@ export async function stripPartyMembershipForBannedUser(
   db: Db,
   userId: ObjectId
 ): Promise<StripPartyMembershipResult> {
-  const characters = await db.collection<Character>("characters").find({ userId }).toArray();
+  const characters = await charactersCollection(db).find({ userId }).toArray();
 
   let charactersUpdated = 0;
   const now = new Date();
@@ -98,7 +104,7 @@ export async function stripPartyMembershipForBannedUser(
 
     const countryId = char.countryId ?? "US";
 
-    await db.collection<Character>("characters").updateOne(
+    await charactersCollection(db).updateOne(
       { _id: char._id },
       {
         $set: {
@@ -111,9 +117,10 @@ export async function stripPartyMembershipForBannedUser(
       }
     );
 
-    await db
-      .collection("electedOfficials")
-      .updateMany({ characterId: char._id }, { $set: { party: "independent", updatedAt: now } });
+    await electedOfficialsCollection<Document>(db).updateMany(
+      { characterId: char._id },
+      { $set: { party: "independent", updatedAt: now } }
+    );
 
     await withdrawFromMismatchedPrimaries(char._id, "independent");
     await cleanupPartyPositionsOnSwitch(char._id, oldParty, "independent", countryId);
@@ -121,7 +128,7 @@ export async function stripPartyMembershipForBannedUser(
     const politicalParty = await findPartyBySequentialId(db, oldParty, countryId);
 
     if (politicalParty) {
-      await db.collection<PoliticalParty>("politicalParties").updateOne(
+      await politicalPartiesCollection(db).updateOne(
         { _id: politicalParty._id },
         {
           $inc: { memberCount: -1 },
@@ -131,12 +138,10 @@ export async function stripPartyMembershipForBannedUser(
 
       const isChair = politicalParty.chairId?.toString() === char._id.toString();
       if (isChair) {
-        await db
-          .collection("coalitions")
-          .updateMany(
-            { chairPartyId: politicalParty._id },
-            { $set: { chairCharacterId: null, updatedAt: now } }
-          );
+        await coalitionsCollection<Document>(db).updateMany(
+          { chairPartyId: politicalParty._id },
+          { $set: { chairCharacterId: null, updatedAt: now } }
+        );
       }
     }
 
@@ -162,7 +167,7 @@ export async function stripPartyMembershipForBannedUser(
       .computeCharterDeadline;
     const replacementDeadline = computeCharterDeadline(now);
     for (const characterId of bannedCharacterIds) {
-      await db.collection<PartyCharter>("partyCharters").updateMany(
+      await partyChartersCollection(db).updateMany(
         {
           status: "pending-signatures",
           "signatures.characterId": characterId,

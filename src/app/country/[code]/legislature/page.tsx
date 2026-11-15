@@ -9,6 +9,8 @@ import { getLiveLowerChamberSeats } from "@/lib/legislature/lowerChamberSeats";
 import { bgAssemblyName } from "@/lib/countries/bg/rules/assemblyTransition";
 import { getCountryConfigForRuntime } from "@/lib/constants/countries";
 import LegislatureClient from "./LegislatureClient";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
 
 export const dynamic = "force-dynamic";
 
@@ -20,18 +22,16 @@ async function bgLegislaturePresentation(): Promise<{ name: string; seats: numbe
   const db = await getDb();
   const [preset, country, seats] = await Promise.all([
     getGameStatePreset(db),
-    db
-      .collection<{
-        _id: string;
-        bgOrdinaryAssemblySinceTurn?: number;
-        bgGrandAssemblyContinuationSinceTurn?: number;
-        bgConstitution1991SinceTurn?: number;
-        bgGrandAssemblyDissolutionSinceTurn?: number;
-      }>("countryGameStates")
-      .findOne(
-        { _id: "BG" },
-        { projection: { bgOrdinaryAssemblySinceTurn: 1, bgGrandAssemblyContinuationSinceTurn: 1 } }
-      ),
+    countryGameStatesCollection<{
+      _id: string;
+      bgOrdinaryAssemblySinceTurn?: number;
+      bgGrandAssemblyContinuationSinceTurn?: number;
+      bgConstitution1991SinceTurn?: number;
+      bgGrandAssemblyDissolutionSinceTurn?: number;
+    }>(db).findOne(
+      { _id: "BG" },
+      { projection: { bgOrdinaryAssemblySinceTurn: 1, bgGrandAssemblyContinuationSinceTurn: 1 } }
+    ),
     getLiveLowerChamberSeats(db, "BG"),
   ]);
   return {
@@ -48,16 +48,14 @@ async function ruLegislaturePresentation(): Promise<{
   const db = await getDb();
   const [preset, country] = await Promise.all([
     getGameStatePreset(db),
-    db
-      .collection<{
-        _id: string;
-        ruSovietSuccessionSinceTurn?: number;
-        ruProvisionalCongressSeats?: number;
-        ruPresidencySinceTurn?: number;
-        ruCongressDissolvedSinceTurn?: number;
-        ruFederalAssemblySinceTurn?: number;
-      }>("countryGameStates")
-      .findOne({ _id: "RU" }),
+    countryGameStatesCollection<{
+      _id: string;
+      ruSovietSuccessionSinceTurn?: number;
+      ruProvisionalCongressSeats?: number;
+      ruPresidencySinceTurn?: number;
+      ruCongressDissolvedSinceTurn?: number;
+      ruFederalAssemblySinceTurn?: number;
+    }>(db).findOne({ _id: "RU" }),
   ]);
   const config = getCountryConfigForRuntime("RU", preset, country);
   const generic = preset === "1991-default";
@@ -72,14 +70,14 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const id = code.toUpperCase() as CountryId;
   const config = COUNTRY_CONFIGS[id];
   if (!config) return { title: "Legislature not found | A House Divided" };
-  if (id === "BG") {
+  if (countryHasFeature("bgUi", id)) {
     const { name, seats } = await bgLegislaturePresentation();
     return {
       title: `${name} | A House Divided`,
       description: `Bulgaria ${name}, ${seats} deputies`,
     };
   }
-  if (id === "RU") {
+  if (countryHasFeature("ruUi", id)) {
     const { name, seats } = await ruLegislaturePresentation();
     return {
       title: `${name} | A House Divided`,
@@ -96,10 +94,12 @@ export default async function LegislaturePage({ params }: PageProps) {
   const { code } = await params;
   const id = code.toUpperCase() as CountryId;
   if (!COUNTRY_CONFIGS[id]) notFound();
-  const bgName = id === "BG" ? (await bgLegislaturePresentation()).name : undefined;
-  const ru = id === "RU" ? await ruLegislaturePresentation() : undefined;
+  const bgName = countryHasFeature("bgUi", id)
+    ? (await bgLegislaturePresentation()).name
+    : undefined;
+  const ru = countryHasFeature("ruUi", id) ? await ruLegislaturePresentation() : undefined;
   const hungarianElectoralDecisions =
-    id === "HU" && (await getGameStatePreset(await getDb())) === "1991-default";
+    countryHasFeature("huUi", id) && (await getGameStatePreset(await getDb())) === "1991-default";
   return (
     <>
       <NationalPartyBillAction countryId={id} />
@@ -110,10 +110,12 @@ export default async function LegislaturePage({ params }: PageProps) {
         generic={ru?.generic}
         hungarianElectoralDecisions={hungarianElectoralDecisions}
         bulgarianConstitutionalDecision={
-          id === "BG" && (await getGameStatePreset(await getDb())) === "1991-default"
+          countryHasFeature("bgUi", id) &&
+          (await getGameStatePreset(await getDb())) === "1991-default"
         }
         romanianElectoralDecision={
-          id === "RO" && (await getGameStatePreset(await getDb())) === "1991-default"
+          countryHasFeature("roUi", id) &&
+          (await getGameStatePreset(await getDb())) === "1991-default"
         }
       />
     </>

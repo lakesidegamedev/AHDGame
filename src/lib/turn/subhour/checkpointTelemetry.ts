@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { Db } from "mongodb";
 import { getDb } from "@/lib/mongodb";
+import { checkpointRunsCollection } from "@/lib/db/repositories/checkpointRuns";
 
 export type CheckpointKind = "markets" | "half-hour";
 export type CheckpointOutcome = "running" | "clean" | "degraded" | "aborted" | "skipped";
@@ -45,7 +46,7 @@ export async function trackCheckpoint<T extends TickResult>(
   let recorded = false;
   try {
     database = db ?? (await getDb());
-    const collection = database.collection<CheckpointRun>("checkpointRuns");
+    const collection = checkpointRunsCollection<CheckpointRun>(database);
     if (!initialized.has(database)) {
       await collection.createIndex(
         { startedAt: 1 },
@@ -61,13 +62,11 @@ export async function trackCheckpoint<T extends TickResult>(
   async function finish(fields: Partial<CheckpointRun>) {
     if (!recorded || !database) return;
     try {
-      await database
-        .collection<CheckpointRun>("checkpointRuns")
-        .updateOne(
-          { _id: record._id },
-          { $set: { ...fields, completedAt: new Date(), durationMs: Date.now() - started } },
-          { maxTimeMS: 2000 }
-        );
+      await checkpointRunsCollection<CheckpointRun>(database).updateOne(
+        { _id: record._id },
+        { $set: { ...fields, completedAt: new Date(), durationMs: Date.now() - started } },
+        { maxTimeMS: 2000 }
+      );
     } catch (error) {
       console.error("[checkpoint-telemetry] completion could not be recorded", error);
     }

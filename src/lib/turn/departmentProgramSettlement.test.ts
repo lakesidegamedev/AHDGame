@@ -93,22 +93,10 @@ describe("processDepartmentProgramSettlement", () => {
     });
   });
 
-  it("is inert while the flag is off", async () => {
-    const memory = seedDb();
-    const result = await processDepartmentProgramSettlement(memory as unknown as Db, 10, {});
-    expect(result).toMatchObject({ enabled: false, programsSettled: 0 });
-    const budget = await (memory as unknown as Db)
-      .collection<FederalBudget>("federalBudget")
-      .findOne({ countryId: "US" });
-    expect(budget?.departmentAccounts).toBeUndefined();
-  });
-
   it("accrues and settles without touching treasury, then replays as a no-op", async () => {
     const memory = seedDb();
     const db = memory as unknown as Db;
-    const first = await processDepartmentProgramSettlement(db, 10, {
-      departmentProgramSliceEnabled: true,
-    });
+    const first = await processDepartmentProgramSettlement(db, 10, {});
     expect(first).toMatchObject({
       enabled: true,
       programsSettled: 1,
@@ -124,9 +112,7 @@ describe("processDepartmentProgramSettlement", () => {
         ?.implementationFactor
     ).toBe(0.4);
 
-    const replay = await processDepartmentProgramSettlement(db, 10, {
-      departmentProgramSliceEnabled: true,
-    });
+    const replay = await processDepartmentProgramSettlement(db, 10, {});
     expect(replay).toMatchObject({ enabled: true, programsSettled: 0 });
     const afterReplay = await db
       .collection<FederalBudget>("federalBudget")
@@ -147,9 +133,7 @@ describe("processDepartmentProgramSettlement", () => {
       commandEconomyEnabled: false,
     });
 
-    const result = await processDepartmentProgramSettlement(db, 10, {
-      departmentFinanceEnabled: true,
-    });
+    const result = await processDepartmentProgramSettlement(db, 10, {});
 
     expect(result).toMatchObject({ programsSettled: 1, authorityAccrued: 0 });
     const after = await db.collection<FederalBudget>("federalBudget").findOne({ countryId: "US" });
@@ -161,16 +145,14 @@ describe("processDepartmentProgramSettlement", () => {
   it("winds down when the selected law is no longer active", async () => {
     const memory = seedDb();
     const db = memory as unknown as Db;
-    await processDepartmentProgramSettlement(db, 10, { departmentProgramSliceEnabled: true });
+    await processDepartmentProgramSettlement(db, 10, {});
     vi.mocked(calculateFederalLawAnnualCosts).mockResolvedValue({
       items: [],
       activeLaws: [],
       eraYear: null,
       commandEconomyEnabled: false,
     });
-    const result = await processDepartmentProgramSettlement(db, 11, {
-      departmentProgramSliceEnabled: true,
-    });
+    const result = await processDepartmentProgramSettlement(db, 11, {});
     expect(result.programsSettled).toBe(1);
     const after = await db.collection<FederalBudget>("federalBudget").findOne({ countryId: "US" });
     expect(

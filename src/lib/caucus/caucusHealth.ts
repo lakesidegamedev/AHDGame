@@ -13,6 +13,15 @@ import type {
 import type { CountryId } from "@/lib/constants/countries";
 import { CAUCUS_NPP_RETENTION_MIN_RELATIONSHIP } from "@/lib/constants/partyOrg";
 import { buildWhipDefianceSnapshots } from "@/lib/partyWhips/whipDefiance";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { caucusesCollection } from "@/lib/db/repositories/caucuses";
+import { billWhipsCollection } from "@/lib/db/repositories/billWhips";
+import { caucusChairVotesCollection } from "@/lib/db/repositories/caucusChairVotes";
+import { caucusMembershipsCollection } from "@/lib/db/repositories/caucusMemberships";
+import { nppRelationshipsCollection } from "@/lib/db/repositories/nppRelationships";
+import { caucusChairElectionsCollection } from "@/lib/db/repositories/caucusChairElections";
+import { caucusChairCandidatesCollection } from "@/lib/db/repositories/caucusChairCandidates";
 
 const CAUCUS_RECENT_WINDOW_TURNS = 12;
 const CAUCUS_WARNING_BUFFER = 10;
@@ -183,10 +192,7 @@ export async function buildPartyCaucusHealthSnapshot(
   partyId: string
 ): Promise<PartyCaucusHealthSnapshot> {
   const caucuses = (
-    await db
-      .collection<Caucus>("caucuses")
-      .find({ countryId, partyId, disbandedAt: null })
-      .toArray()
+    await caucusesCollection(db).find({ countryId, partyId, disbandedAt: null }).toArray()
   ).sort((a, b) => a.name.localeCompare(b.name));
 
   if (caucuses.length === 0) {
@@ -213,15 +219,13 @@ export async function buildPartyCaucusHealthSnapshot(
   const recentWindowStart = new Date(Date.now() - CAUCUS_RECENT_WINDOW_TURNS * 60 * 60 * 1000);
 
   const [memberships, elections, chairs, rawWhips] = await Promise.all([
-    db
-      .collection<CaucusMembership>("caucusMemberships")
+    caucusMembershipsCollection(db)
       .find({
         caucusId: { $in: caucusIds },
         status: { $in: ["active", "left", "removed"] },
       })
       .toArray(),
-    db
-      .collection<CaucusChairElection>("caucusChairElections")
+    caucusChairElectionsCollection(db)
       .find({
         caucusId: { $in: caucusIds },
         status: { $in: ["voting", "completed"] },
@@ -229,12 +233,10 @@ export async function buildPartyCaucusHealthSnapshot(
       .toArray(),
     chairIds.length === 0
       ? Promise.resolve([] as Character[])
-      : db
-          .collection<Character>("characters")
+      : charactersCollection(db)
           .find({ _id: { $in: chairIds } })
           .toArray(),
-    db
-      .collection<BillWhip>("billWhips")
+    billWhipsCollection(db)
       .find({ countryId, partyId, issuedBy: "caucus", caucusId: { $in: caucusIds } })
       .sort({ createdAt: -1 })
       .toArray(),
@@ -253,8 +255,7 @@ export async function buildPartyCaucusHealthSnapshot(
   const [relationships, npps, characters, candidates, voteCounts] = await Promise.all([
     chairIds.length === 0 || activeNppIds.length === 0
       ? Promise.resolve([] as NPPRelationship[])
-      : db
-          .collection<NPPRelationship>("nppRelationships")
+      : nppRelationshipsCollection(db)
           .find({
             characterId: { $in: chairIds },
             nppId: { $in: activeNppIds },
@@ -262,20 +263,17 @@ export async function buildPartyCaucusHealthSnapshot(
           .toArray(),
     allNppIds.length === 0
       ? Promise.resolve([] as NPP[])
-      : db
-          .collection<NPP>("npps")
+      : nppsCollection(db)
           .find({ _id: { $in: allNppIds } })
           .toArray(),
     allCharacterIds.length === 0
       ? Promise.resolve([] as Character[])
-      : db
-          .collection<Character>("characters")
+      : charactersCollection(db)
           .find({ _id: { $in: allCharacterIds } })
           .toArray(),
     elections.length === 0
       ? Promise.resolve([] as CaucusChairCandidate[])
-      : db
-          .collection<CaucusChairCandidate>("caucusChairCandidates")
+      : caucusChairCandidatesCollection(db)
           .find({
             electionId: { $in: elections.map((election) => election._id) },
             status: "active",
@@ -283,8 +281,7 @@ export async function buildPartyCaucusHealthSnapshot(
           .toArray(),
     elections.length === 0
       ? Promise.resolve([] as Array<{ electionId: ObjectId; totalVotes: number }>)
-      : db
-          .collection<CaucusChairVote>("caucusChairVotes")
+      : caucusChairVotesCollection(db)
           .aggregate<{ electionId: ObjectId; totalVotes: number }>([
             {
               $match: {

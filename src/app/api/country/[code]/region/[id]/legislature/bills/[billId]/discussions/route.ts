@@ -12,6 +12,7 @@ import { createBillDiscussion } from "@/lib/legislature/discussions/discussionCo
 import { getBillDiscussionsForViewer } from "@/lib/legislature/discussions/discussionQueries";
 import type { BillDiscussionScope } from "@/lib/legislature/discussions/types";
 import type { StateBill } from "@/lib/db/types";
+import { stateBillsCollection } from "@/lib/db/repositories/stateBills";
 
 const createSchema = z.object({ content: z.string().min(1).max(1000).trim() });
 
@@ -30,9 +31,7 @@ async function resolveScope(
 
   // Existence + region match (matches the vote route's `{ _id, stateId }` filter so
   // legacy docs without `countryId` still resolve). Soft cross-country guard below.
-  const bill = await db
-    .collection<StateBill>("stateBills")
-    .findOne({ _id: new ObjectId(billId), stateId });
+  const bill = await stateBillsCollection(db).findOne({ _id: new ObjectId(billId), stateId });
   if (!bill) return { error: "Bill not found", status: 404 };
   if (bill.countryId && bill.countryId !== countryId) {
     return { error: "Bill not found", status: 404 };

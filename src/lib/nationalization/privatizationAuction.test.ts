@@ -22,7 +22,7 @@ vi.mock("./nationalCorporation", () => ({
   isStateOwned: (c: { countryOwnerId?: string; ownershipState?: string }) =>
     !!c.countryOwnerId || c.ownershipState === "stateOwned",
 }));
-vi.mock("./treasury", () => ({ creditTreasuryProceeds: vi.fn().mockResolvedValue(0) }));
+vi.mock("./treasury", () => ({ creditTreasuryProceedsPaired: vi.fn().mockResolvedValue(0) }));
 vi.mock("@/lib/wireEvent", () => ({
   logWireEvent: vi.fn(),
   wireHeadlineCorpPrivatized: vi.fn().mockReturnValue("headline"),
@@ -499,18 +499,19 @@ describe("resolveNationalizationAuction", () => {
     });
 
     const { resolveNationalizationAuction } = await import("./privatizationAuction");
-    const { creditTreasuryProceeds } = await import("./treasury");
+    const { creditTreasuryProceedsPaired } = await import("./treasury");
     const { refundCharacterCash } = await import("@/lib/financialTxLog/atomicCashGuard");
 
     const result = await resolveNationalizationAuction(db as unknown as Db, auction as never, 50);
 
     expect(result).toBe("sold");
-    expect(vi.mocked(creditTreasuryProceeds)).toHaveBeenCalledWith(
+    expect(vi.mocked(creditTreasuryProceedsPaired)).toHaveBeenCalledWith(
       db,
-      "US",
-      5000,
-      expect.any(Date),
-      expect.objectContaining({ flow: "privatization_auction_proceeds" })
+      expect.objectContaining({
+        countryId: "US",
+        amountLocal: 5000,
+        flow: "privatization_auction_proceeds",
+      })
     );
     // Loser refunded; winner not.
     expect(vi.mocked(refundCharacterCash)).toHaveBeenCalledWith(db, loserId, "USD", 3000, false);

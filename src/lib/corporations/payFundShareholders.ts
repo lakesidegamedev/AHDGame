@@ -2,24 +2,28 @@ import { ObjectId, type ClientSession, type Db, type UpdateFilter } from "mongod
 import type { IndexFund } from "@/lib/db/types";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import type { FinancialTxLogEntry } from "@/lib/db/types/financialTxLog";
-import type { FundShareholderPayoutRow } from "@/lib/bonds/corporateBondDefault";
+import type {
+  FundShareholderPayoutRow,
+  NppShareholderPayoutRow,
+} from "@/lib/bonds/corporateBondDefault";
+import { getNppsCollection } from "@/lib/db/collections/npps";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
 
 /**
- * Pay index-fund shareholders their ₳ slice of a wound-down corporation's payout
- * pool, and drop each fund's now-stale holding of that (deleted) corp.
+ * Pay index-fund shareholders their ₳ slice of a wound-down corporation's
+ * payout pool, and drop each fund's now-stale holding of that (deleted) corp.
  *
- * Why (#3451): `allocateShareholderPool` counts fund shares in the denominator
- * but, before this, emitted no fund row — so a fund's slice was drained from the
- * payer yet distributed to no one (a conservation leak). This closes it for the
- * two flows that pay out a full shareholder pool and then delete the corp:
- * voluntary dissolution and nationalization's whole-corp payShareholders.
+ * `allocateShareholderPool` counts fund shares in the denominator, so without
+ * this a fund's slice would be drained from the payer yet distributed to no
+ * one. Applies to the two flows that pay out a full shareholder pool and then
+ * delete the corp: voluntary dissolution and nationalization's whole-corp
+ * payShareholders.
  *
- * Pool payouts are already ₳ and fund cash (`cashAnchor`) is ₳, so there is no
- * FX conversion. The fund credit is the real, conserving move; when the caller
- * passes `ledger`, each credit is additionally booked as a fund-subject tx row
- * (#992 tranche 3) using the same flow-appropriate type the other holder
- * buckets emit, so the shadow ledger sees the fund side as a two-sided
- * transfer instead of an uninstrumented inflow.
+ * Pool payouts are already ₳ and fund cash (`cashAnchor`) is ₳, so no FX
+ * conversion is needed. The fund credit is the real, conserving move; when the
+ * caller passes `ledger`, each credit is additionally booked as a fund-subject
+ * tx row using the same flow-appropriate type the other holder buckets emit,
+ * so the shadow ledger sees the fund side as a two-sided transfer.
  */
 export interface FundPayoutLedgerContext {
   turn: number;
@@ -46,8 +50,7 @@ export async function payFundShareholderRows(
     ledger && fundRows.length > 0
       ? new Map(
           (
-            await db
-              .collection<IndexFund>("indexFunds")
+            await indexFundsCollection(db)
               .find(
                 {
                   _id: {
@@ -63,7 +66,7 @@ export async function payFundShareholderRows(
   let totalPaidAnchor = 0;
   for (const row of fundRows) {
     if (row.payout <= 0) continue;
-    await db.collection<IndexFund>("indexFunds").updateOne(
+    await indexFundsCollection(db).updateOne(
       { _id: new ObjectId(row.fundId) },
       {
         $inc: { cashAnchor: row.payout },
@@ -103,4 +106,36 @@ export async function payFundShareholderRows(
     });
   }
   return { totalPaidAnchor, txEntries };
+}
+
+/** NPP personal balance that receives ₳-denominated pool payouts. */
+export const NPP_ANCHOR_BALANCE_PATH = "currencyBalances.personal.USD";
+
+/**
+ * Pay NPP shareholders their ₳ slice of a wound-down corporation's payout pool.
+ * Like fund rows, NPP shares sit in the pool's denominator, so an unpaid slice
+ * would leave the payer and reach no one. The pool is ₳, credited to the NPP's
+ * personal USD balance (the anchor account) without conversion.
+ */
+export async function payNppShareholderRows(
+  db: Db,
+  nppRows: readonly NppShareholderPayoutRow[] | undefined,
+  now: Date,
+  options?: { session?: ClientSession }
+): Promise<{ totalPaidAnchor: number }> {
+  const rows = (nppRows ?? []).filter((row) => row.payout > 0);
+  const ops = rows.map((row) => ({
+    updateOne: {
+      filter: { _id: new ObjectId(row.nppId) },
+      update: {
+        $inc: { [NPP_ANCHOR_BALANCE_PATH]: row.payout },
+        $set: { updatedAt: now },
+      },
+    },
+  }));
+  if (ops.length === 0) return { totalPaidAnchor: 0 };
+  await (
+    await getNppsCollection(db)
+  ).bulkWrite(ops, options?.session ? { session: options.session } : undefined);
+  return { totalPaidAnchor: rows.reduce((sum, row) => sum + row.payout, 0) };
 }

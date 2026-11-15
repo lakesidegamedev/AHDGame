@@ -55,6 +55,37 @@ describe("whole-order conversion construction refunds", () => {
       set: { capitalStock: 200, capacityBookAnchor: 2000 },
     });
   });
+  it("uses the delivery watermark when production has advanced further", () => {
+    const quote = quoteConversionConstructionRefund(
+      sector({
+        operatingCapacityTurn: 19,
+        buildDeliverySettledTurn: 14,
+      }),
+      20
+    );
+    expect(quote.set.capitalStock).toBe(200);
+    expect(quote.set.capacityBookAnchor).toBe(2000);
+  });
+  it("does not create fractional plants when reversing construction credit", () => {
+    const quote = quoteConversionConstructionRefund(
+      sector({
+        sectorType: "energy",
+        capitalStock: 250,
+        plantCount: 1,
+        plantUnitRemainder: 40,
+        plantWearUnits: 0,
+        activeCapacityPercent: 50,
+      }),
+      15,
+      true
+    );
+    expect(quote.set).toMatchObject({
+      capitalStock: 250,
+      plantCount: 1,
+      plantUnitRemainder: 0,
+      operatingCapacityUnits: 125,
+    });
+  });
   it.each([NaN, -1, Infinity])("rejects invalid order cost %s", (costPaidAnchor) => {
     expect(() =>
       quoteConversionConstructionRefund(sector({ buildQueue: [{ ...order, costPaidAnchor }] }), 15)

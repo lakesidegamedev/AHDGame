@@ -144,12 +144,8 @@ describe("Turkey modern Layer-1 source proxy profile", () => {
     for (const regionId of ids) {
       const row = stateRows.get(regionId)!;
       expect(row.countryId).toBe("TR");
-      const groups = row.groups as Record<string, { population: number }>;
-      expect(Object.values(groups).reduce((n, group) => n + group.population, 0)).toBeCloseTo(
-        100,
-        1
-      );
-      expect(groups).toHaveProperty("kemalist_secular");
+      expect(row).not.toHaveProperty("groups");
+      expect(row).toHaveProperty("categoryWeights");
     }
   });
 });

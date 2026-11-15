@@ -6,7 +6,7 @@ import {
   indexFundOwnershipFraction,
   qualifiesForIndexInclusionBenefit,
 } from "@/lib/corporations/indexOwnership";
-import { resolvePresetIdFromGameState } from "@/lib/world/countryReadinessContract";
+import { resolvePresetIdFromGameState } from "@/lib/world/presetId";
 import { getEraFounderShares } from "@/lib/constants/sectorSeedEra";
 import { caretakerReappointCooldownRemaining } from "@/lib/corporations/caretakerCeo";
 import {
@@ -43,6 +43,9 @@ import { buildShareholderList, loadShareholderContext } from "./corporationDetai
 import { buildPhysicalPnl } from "./corporationDetail/physicalPnl";
 import { isStateOwned } from "@/lib/nationalization/nationalCorporation";
 import { unplacedIpoShares } from "@/lib/corporations/rules/dividendShares";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { shareOrdersCollection } from "@/lib/db/repositories/shareOrders";
+import { shareListingsCollection } from "@/lib/db/repositories/shareListings";
 
 export async function loadCorporationDetailView(args: {
   db: Db;
@@ -54,8 +57,7 @@ export async function loadCorporationDetailView(args: {
 
   const refDataPromise = getTurnReferenceData(db, currentTurn);
   // Funded-market transition window, for the sector rows' transition panel.
-  const openingPromise = db
-    .collection<GameState>("gameState")
+  const openingPromise = gameStateCollection(db)
     .findOne({ _id: "current" }, { projection: { worldEpochId: 1, producerOpening: 1 } })
     .then((g) =>
       g?.producerOpening && g.producerOpening.worldEpoch === g.worldEpochId
@@ -71,12 +73,8 @@ export async function loadCorporationDetailView(args: {
       : Promise.resolve(null);
 
   const [openListingsForInvariant, openSellOrdersForInvariant] = await Promise.all([
-    db
-      .collection<ShareListing>("shareListings")
-      .find({ corporationId: corporation._id, status: "open" })
-      .toArray(),
-    db
-      .collection<ShareOrder>("shareOrders")
+    shareListingsCollection(db).find({ corporationId: corporation._id, status: "open" }).toArray(),
+    shareOrdersCollection(db)
       .find({
         corporationId: corporation._id,
         type: "sell",
@@ -146,10 +144,8 @@ export async function loadCorporationDetailView(args: {
     commodityPrices,
   });
 
-  // Realization-vs-nameplate reconciliation (#2958): derived from the corp's
-  // own latest history snapshot; applied uniformly as the fallback for
-  // sectors without an exact persisted realizedRevenue (#3001/#3002).
-  // See realizationRatio.ts.
+  // Fallback realization ratio from the corp's latest history snapshot for
+  // sectors without a persisted realizedRevenue. See realizationRatio.ts.
   const revenueRealizationRatio = await computeRevenueRealizationRatio(
     db,
     corporation,
@@ -429,7 +425,7 @@ export async function loadCorporationDetailView(args: {
       // uses that live recompute, but the shown rating should be the announced one.
       creditRatingSnapshot: corporation.creditRatingSnapshot ?? undefined,
       creditCompositeSnapshot: corporation.creditCompositeSnapshot ?? undefined,
-      // Suggestion #62: index-fund ownership and whether it has reached the
+      // Index-fund ownership and whether it has reached the
       // level that earns the credit notch and the price premium. Surfaced so
       // inclusion is a visible, chaseable goal rather than an invisible buff.
       indexOwnershipPercent: Math.round(indexFundOwnershipFraction(corporation) * 1000) / 10,

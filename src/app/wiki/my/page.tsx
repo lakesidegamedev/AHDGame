@@ -6,8 +6,11 @@ import { getDb } from "@/lib/mongodb";
 import { wikiPublicPageMetadata } from "@/lib/siteMetadata";
 import { corporationWikiSlug, partyWikiSlug, playerWikiSlug } from "@/lib/wiki/playerPages";
 import { WIKI_CREATE_COOLDOWN_HOURS } from "@/lib/wiki/createCooldown";
-import type { Corporation, PoliticalParty, WikiPage } from "@/lib/db/types";
+import type { PoliticalParty, WikiPage } from "@/lib/db/types";
 import { ClaimButton } from "./ClaimButton";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { wikiPagesCollection } from "@/lib/db/repositories/wikiPages";
 
 export const metadata: Metadata = wikiPublicPageMetadata({
   title: "My wiki pages | A House Divided",
@@ -38,11 +41,11 @@ export default async function MyWikiPage() {
   const db = await getDb();
 
   const [corp, party] = await Promise.all([
-    db.collection<Corporation>("corporations").findOne({
+    corporationsCollection(db).findOne({
       ceoId: character._id,
       userId: character.userId,
     }),
-    db.collection<PoliticalParty>("politicalParties").findOne({
+    politicalPartiesCollection(db).findOne({
       $or: [
         { chairId: character._id },
         { viceChairId: character._id },
@@ -57,7 +60,7 @@ export default async function MyWikiPage() {
     corp && typeof corp.sequentialId === "number" ? corporationWikiSlug(corp.sequentialId) : null;
   const partySlug = party ? partyWikiSlug(party.countryId, party.sequentialId) : null;
 
-  const wikiPages = db.collection<WikiPage>("wikiPages");
+  const wikiPages = wikiPagesCollection(db);
   const [playerPage, corpPage, partyPage] = await Promise.all([
     playerSlug ? wikiPages.findOne({ slug: playerSlug }) : Promise.resolve(null),
     corpSlug ? wikiPages.findOne({ slug: corpSlug }) : Promise.resolve(null),

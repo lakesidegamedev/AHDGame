@@ -1,7 +1,7 @@
 /** Viewer-scoped, read-only discovery. Batch inputs before evaluating every candidate. */
 import { ObjectId, type Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
-import type { Corporation, CorporateSector, DefenceContract, FederalBudget } from "@/lib/db/types";
+import type { CorporateSector, DefenceContract } from "@/lib/db/types";
 import { isNppOwned } from "@/lib/corporations/nppOwned";
 import { isStateOwned } from "@/lib/nationalization/nationalCorporation";
 import { getGameState } from "@/lib/gameState";
@@ -20,6 +20,11 @@ import { loadDefencePriceRatios } from "@/lib/military/defencePriceRatios";
 import { isProcurementBlocked } from "@/lib/military/procurementGate";
 import { hasCurrentTenderCapacity } from "./rules/viewerCapacity";
 import type { GovernmentTender } from "./types";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { defenceProcurementAllocationsCollection } from "@/lib/db/repositories/defenceProcurementAllocations";
+import { defenceContractsCollection } from "@/lib/db/repositories/defenceContracts";
 export async function viewerTenderIds(
   db: Db,
   countryId: CountryId,
@@ -30,8 +35,7 @@ export async function viewerTenderIds(
 ): Promise<string[]> {
   if (!ObjectId.isValid(userId) || !rows.length) return [];
   const corps = (
-    await db
-      .collection<Corporation>("corporations")
+    await corporationsCollection(db)
       .find(
         {
           userId: new ObjectId(userId),
@@ -56,8 +60,7 @@ export async function viewerTenderIds(
       .toArray()
   ).filter((c) => !isNppOwned(c));
   if (!corps.length) return [];
-  const sectors = await db
-    .collection<CorporateSector>("corporateSectors")
+  const sectors = await corporateSectorsCollection(db)
     .find(
       { corporationId: { $in: corps.map((c) => c._id) } },
       { projection: { corporationId: 1, stateId: 1, sectorType: 1, strategyId: 1, revenue: 1 } }
@@ -67,7 +70,7 @@ export async function viewerTenderIds(
   const [game, budget, ratios, allocations, contracts, gate] = defence.length
     ? await Promise.all([
         getGameState(db),
-        db.collection<FederalBudget>("federalBudget").findOne(
+        federalBudgetCollection(db).findOne(
           { countryId },
           {
             projection: {
@@ -79,10 +82,10 @@ export async function viewerTenderIds(
           }
         ),
         loadDefencePriceRatios(db),
-        db
-          .collection<{ _id: string; supplierAmounts?: Record<string, number> }>(
-            "defenceProcurementAllocations"
-          )
+        defenceProcurementAllocationsCollection<{
+          _id: string;
+          supplierAmounts?: Record<string, number>;
+        }>(db)
           .find(
             {
               _id: {
@@ -96,8 +99,7 @@ export async function viewerTenderIds(
             { projection: { supplierAmounts: 1 } }
           )
           .toArray(),
-        db
-          .collection<DefenceContract>("defenceContracts")
+        defenceContractsCollection(db)
           .find(
             {
               sectorId: { $in: sectors.map((s) => s._id) },

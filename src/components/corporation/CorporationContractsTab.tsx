@@ -94,6 +94,29 @@ export default function CorporationContractsTab({
   });
 
   const resource = (c: ExtractionContractRow) => COMMODITY_LABELS[c.resource] ?? c.resource;
+  const resourceCell = (c: ExtractionContractRow) => (
+    <Td className="text-foreground">
+      {resource(c)}
+      {c.tenderId && (
+        <Link
+          className="mt-1 block text-xs text-primary"
+          href={`/country/${c.countryId.toLowerCase()}/government-contracts?tab=awarded&type=extraction&tender=${c.tenderId}`}
+        >
+          {t("awardRecord")}
+        </Link>
+      )}
+    </Td>
+  );
+  const stateCell = (c: ExtractionContractRow) => (
+    <Td className="text-muted">
+      <Link
+        href={`/country/${c.countryId.toLowerCase()}/region/${c.stateId}?tab=resources`}
+        className="text-primary"
+      >
+        {c.stateId}
+      </Link>
+    </Td>
+  );
   // Share of the term already run, only when the contract says when it began
   // and how long it lasts; past expiry it reads full.
   const termUsed = (c: ExtractionContractRow) => {
@@ -153,25 +176,8 @@ export default function CorporationContractsTab({
               <tbody>
                 {offers.map((c) => (
                   <tr key={c._id}>
-                    <Td className="text-foreground">
-                      {resource(c)}
-                      {c.tenderId && (
-                        <Link
-                          className="mt-1 block text-xs text-primary"
-                          href={`/country/${c.countryId.toLowerCase()}/government-contracts?tab=awarded&type=extraction&tender=${c.tenderId}`}
-                        >
-                          {t("awardRecord")}
-                        </Link>
-                      )}
-                    </Td>
-                    <Td className="text-muted">
-                      <Link
-                        href={`/country/${c.countryId.toLowerCase()}/region/${c.stateId}?tab=resources`}
-                        className="text-primary"
-                      >
-                        {c.stateId}
-                      </Link>
-                    </Td>
+                    {resourceCell(c)}
+                    {stateCell(c)}
                     <Td align="right">{(c.share * 100).toFixed(1)}%</Td>
                     <Td align="right">
                       {c.signingFeeAnchor != null
@@ -234,25 +240,8 @@ export default function CorporationContractsTab({
                   const term = termUsed(c);
                   return (
                     <tr key={c._id}>
-                      <Td className="text-foreground">
-                        {resource(c)}
-                        {c.tenderId && (
-                          <Link
-                            className="mt-1 block text-xs text-primary"
-                            href={`/country/${c.countryId.toLowerCase()}/government-contracts?tab=awarded&type=extraction&tender=${c.tenderId}`}
-                          >
-                            {t("awardRecord")}
-                          </Link>
-                        )}
-                      </Td>
-                      <Td className="text-muted">
-                        <Link
-                          href={`/country/${c.countryId.toLowerCase()}/region/${c.stateId}?tab=resources`}
-                          className="text-primary"
-                        >
-                          {c.stateId}
-                        </Link>
-                      </Td>
+                      {resourceCell(c)}
+                      {stateCell(c)}
                       <Td align="right">{(c.share * 100).toFixed(1)}%</Td>
                       <Td align="right">{royalty(c)}</Td>
                       <Td align="right" className="text-muted">
@@ -310,25 +299,8 @@ export default function CorporationContractsTab({
               <tbody>
                 {past.map((c) => (
                   <tr key={c._id}>
-                    <Td className="text-foreground">
-                      {resource(c)}
-                      {c.tenderId && (
-                        <Link
-                          className="mt-1 block text-xs text-primary"
-                          href={`/country/${c.countryId.toLowerCase()}/government-contracts?tab=awarded&type=extraction&tender=${c.tenderId}`}
-                        >
-                          {t("awardRecord")}
-                        </Link>
-                      )}
-                    </Td>
-                    <Td className="text-muted">
-                      <Link
-                        href={`/country/${c.countryId.toLowerCase()}/region/${c.stateId}?tab=resources`}
-                        className="text-primary"
-                      >
-                        {c.stateId}
-                      </Link>
-                    </Td>
+                    {resourceCell(c)}
+                    {stateCell(c)}
                     <Td align="right">{(c.share * 100).toFixed(1)}%</Td>
                     <Td align="right" numeric={false}>
                       <ContractStatusText status={effectiveContractStatus(c)} />

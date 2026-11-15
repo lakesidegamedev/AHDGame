@@ -13,13 +13,16 @@ import {
   openHu1994ElectoralProposal,
   Hu1994ElectoralConflict,
 } from "@/lib/countries/hu/electoralProposals1994";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import type { Document } from "mongodb";
 
 const bodySchema = z.object({ kind: z.literal("threshold1994") }).strict();
 type Context = { params: Promise<{ code: string }> };
 
 export async function GET(_request: Request, { params }: Context) {
   try {
-    if ((await params).code.toUpperCase() !== "HU")
+    if (!countryHasFeature("huApi", (await params).code.toUpperCase()))
       return errorResponse(404, "No Hungarian electoral decision here");
     const auth = await requireBasicAuth();
     if (!auth.ok) return auth.response;
@@ -38,7 +41,7 @@ export async function GET(_request: Request, { params }: Context) {
 
 export async function POST(request: Request, { params }: Context) {
   try {
-    if ((await params).code.toUpperCase() !== "HU")
+    if (!countryHasFeature("huApi", (await params).code.toUpperCase()))
       return errorResponse(404, "No Hungarian electoral decision here");
     const auth = await requireBasicAuth();
     if (!auth.ok) return auth.response;
@@ -52,7 +55,7 @@ export async function POST(request: Request, { params }: Context) {
       return errorResponse(409, "No electoral decision in this era");
     const character = await getCharacterByUserId(db, auth.user.userId);
     const official = character
-      ? await db.collection("electedOfficials").findOne(
+      ? await electedOfficialsCollection<Document>(db).findOne(
           {
             characterId: character._id,
             countryId: "HU",

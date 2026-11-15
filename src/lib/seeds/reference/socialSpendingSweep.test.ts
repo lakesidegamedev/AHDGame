@@ -1,10 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { LegislationType } from "@/lib/db/types";
 import { legislationTypes } from "./legislationTypes";
-import { deLegislationTypes } from "../de/deLegislationTypes";
-import { cnLegislationTypes } from "../cn/cnLegislationTypes";
 import { ieLegislationTypes } from "../ie/ieLegislationTypes";
-import { jpLegislationTypes } from "@/lib/countries/jp/data/jpLegislationTypes";
 
 /**
  * §4.7 social spending sweep guard (P3a). The income/poverty cluster is
@@ -50,12 +47,8 @@ const MECHANISM_KEEP_LIST = new Set<string>([
   "uk_universal_credit",
   "uk_regional_housing_support",
   "jp_pension",
-  "de_pension_system",
-  "de_unemployment_welfare",
   // STRUCTURE / PRICE / COMPOSITION mechanisms (not budget-driven):
-  "cn_common_prosperity", // redistribution structure → inequality
   "jp_gender_equality", // pay-equity price mechanism → medianIncome
-  "de_asylum_policy", // population-composition mechanism → povertyRate
 ]);
 
 /**
@@ -67,11 +60,8 @@ const MECHANISM_KEEP_LIST = new Set<string>([
  * derives cohesion from inequality/unemployment/polarization only).
  */
 const P3D_KEEP_LIST = new Map<string, Set<string>>([
-  ["de_family_policy", new Set(["socialMobility"])], // kita pipeline
   ["uk_childcare", new Set(["socialMobility"])], // early-childhood pipeline
   ["uk_regional_labour", new Set(["socialMobility"])], // training/job-ladder programs
-  ["de_immigration_policy", new Set(["socialCohesion"])], // composition mechanism
-  ["de_integration_programs", new Set(["socialCohesion"])], // integration sub-allocation
   ["jp_regional_social_services", new Set(["socialCohesion"])], // community-services sub-allocation
 ]);
 
@@ -97,13 +87,7 @@ function clusterHits(lt: LegislationType): string[] {
 }
 
 describe("§4.7 social spending sweep (income/poverty cluster)", () => {
-  const all = [
-    ...legislationTypes,
-    ...deLegislationTypes,
-    ...cnLegislationTypes,
-    ...ieLegislationTypes,
-    ...jpLegislationTypes,
-  ];
+  const all = [...legislationTypes, ...ieLegislationTypes];
 
   it("no social-budget FUNDING law targets a cluster readout", () => {
     const offenders: string[] = [];

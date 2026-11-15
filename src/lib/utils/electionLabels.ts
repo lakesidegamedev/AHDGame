@@ -11,6 +11,7 @@
 
 import type { CountryId } from "@/lib/constants/countries";
 import { getOfficeTypeForChamber } from "@/lib/legislature/chamberOfficeType";
+import { SPECIAL_COMMONS_TYPES } from "@/lib/elections/rules/commonsByElectionChambers";
 
 /** Human-readable label for each election type. Fallback to the raw string. */
 export const ELECTION_TYPE_LABEL_MAP: Record<string, string> = {
@@ -20,6 +21,7 @@ export const ELECTION_TYPE_LABEL_MAP: Record<string, string> = {
   stateSenate: "State Senate",
   governor: "Governor",
   special_governor: "Governor By-Election",
+  special_president: "Special Presidential Election",
   president: "President",
   // UK offices
   commons: "Parliamentary",
@@ -31,6 +33,8 @@ export const ELECTION_TYPE_LABEL_MAP: Record<string, string> = {
   snap_holyrood: "Snap Scottish Parliament",
   senedd: "Senedd",
   snap_senedd: "Snap Senedd",
+  qcAssembly: "National Assembly",
+  snap_qcAssembly: "Snap National Assembly",
   // DE offices
   bundestag: "Bundestag",
   snap_bundestag: "Snap Bundestag",
@@ -73,6 +77,10 @@ export const ELECTION_TYPE_LABEL_MAP: Record<string, string> = {
   congresoDiputados: "Congress of Deputies",
   riksdag: "Riksdag",
   milletMeclisi: "Grand National Assembly",
+  caCommons: "House of Commons",
+  snap_caCommons: "Snap House of Commons",
+  special_caCommons: "Commons By-Election",
+  provincialLegislature: "Provincial Legislature",
 };
 
 /** Short labels used in win/loss notifications (space-constrained contexts). */
@@ -82,6 +90,7 @@ export const ELECTION_TYPE_SHORT_LABEL: Record<string, string> = {
   stateSenate: "State Senate",
   governor: "Governor",
   special_governor: "Gov. By-Election",
+  special_president: "Special Pres. Election",
   president: "President",
   commons: "Parliamentary",
   snap_commons: "Snap Commons",
@@ -129,6 +138,11 @@ export const ELECTION_TYPE_SHORT_LABEL: Record<string, string> = {
   congresoDiputados: "Congreso",
   riksdag: "Riksdag",
   milletMeclisi: "Meclis",
+  caCommons: "Commons",
+  snap_caCommons: "Snap Commons",
+  special_caCommons: "Commons By-Election",
+  provincialLegislature: "Provincial",
+  qcAssembly: "Assembly",
 };
 
 /**
@@ -190,7 +204,9 @@ export const MULTI_SEAT_TYPES: ReadonlySet<string> = new Set([
   "snap_holyrood",
   "senedd",
   "snap_senedd",
-  // Commons by-elections (#860): multi-seat proportional like a regular
+  "qcAssembly",
+  "snap_qcAssembly",
+  // Commons by-elections: multi-seat proportional like a regular
   // Commons race, but resolved ADDITIVELY (see generalResolution) — the sweep
   // that clears a region's delegation never runs for this type.
   "special_commons",
@@ -211,16 +227,21 @@ export const MULTI_SEAT_TYPES: ReadonlySet<string> = new Set([
   "localCouncil",
   // Beta-country parliamentary lower chambers (FR/IT/ES/SE/TR): multi-seat
   // regional PR (Largest Remainder), seats per region = the region doc's
-  // `houseDistricts` (issue #3239).
+  // `houseDistricts`.
   "assembleeNationale",
   "cameraDeputati",
   "congresoDiputados",
   "riksdag",
   "milletMeclisi",
-  // AT/FI/GR lower chambers (unfrozen in the 1953 preflight pass): multi-seat
-  // regional PR like their FR/IT/ES siblings. Without this their first
-  // resolved election runs the single-winner path, which deletes the region's
-  // whole seeded delegation and seats one winner (the BR #3252 collapse).
+  "caCommons",
+  "snap_caCommons",
+  // Resolved additively, like `special_commons`.
+  "special_caCommons",
+  // CA provincial and territorial legislatures: one multi-seat race per region.
+  "provincialLegislature",
+  // AT/FI/GR lower chambers: multi-seat regional PR like their FR/IT/ES
+  // siblings. Without this their first resolved election runs the
+  // single-winner path, which deletes the whole seeded delegation.
   "nationalrat",
   "eduskunta",
   "vouli",
@@ -235,11 +256,11 @@ export const MULTI_SEAT_TYPES: ReadonlySet<string> = new Set([
   "senado",
   // BR/NG lower chamber ("Chamber of Deputies" / "House of Representatives"):
   // multi-member proportional constituencies. Without this it resolved
-  // single-seat, collapsing the whole chamber to one winner (issue #3252).
+  // single-seat, collapsing the whole chamber to one winner.
   "chamber",
   // RU Supreme Soviet chambers + republic soviets: multi-seat regional PR
   // (Largest Remainder). Without this they'd resolve single-seat, collapsing
-  // each delegation to one winner (the BR #3252 failure mode).
+  // each delegation to one winner (the BR failure mode).
   "supremeSovietDeputy",
   "nationalitiesDeputy",
   "republicSupremeSoviet",
@@ -261,17 +282,16 @@ export const MULTI_SEAT_TYPES: ReadonlySet<string> = new Set([
   "chamberOfDeputies",
   "federalAssembly",
   "sejmDeputy",
+  "nationsDeputy",
   "assemblyDeputy",
   "assemblyDelegate",
-  // DD Volkskammer regional races (5 bloc parties: SED/CDU/LDPD/NDPD/DBD):
-  // multi-seat regional PR like the Sejm/People's Chamber family above.
-  // Without this, `allocateSeats` fell through to the single-winner branch
-  // and seated exactly one deputy per region regardless of `totalSeats` —
-  // the founding cycle's six races (totalSeats summing to 500) seated 6
-  // deputies total instead of 500 (issue #3896).
+  // DD Volkskammer regional races (5 bloc parties): multi-seat regional PR
+  // like the Sejm/People's Chamber family above. Without this, `allocateSeats`
+  // fell through to the single-winner branch and seated one deputy per region
+  // regardless of `totalSeats`.
   "volkskammerDeputy",
   // DD Land assemblies — same multi-seat PR shape; without this each Land
-  // would collapse to a single Landtag deputy (ticket #1044).
+  // would collapse to a single Landtag deputy.
   "landAssembly",
 ]);
 
@@ -290,6 +310,8 @@ const SNAP_TO_REGULAR: Readonly<Record<string, string>> = {
   snap_commons: "commons",
   snap_holyrood: "holyrood",
   snap_senedd: "senedd",
+  snap_qcAssembly: "qcAssembly",
+  snap_caCommons: "caCommons",
   snap_bundestag: "bundestag",
   snap_shugiin: "shugiin",
 };
@@ -302,6 +324,8 @@ const SNAP_TO_REGULAR: Readonly<Record<string, string>> = {
  */
 const SPECIAL_TO_REGULAR: Readonly<Record<string, string>> = {
   special_commons: "commons",
+  special_caCommons: "caCommons",
+  special_president: "president",
 };
 
 /** By-election types that fill seats of `regularType` (e.g. `commons`). */
@@ -364,12 +388,12 @@ export function isByElectionType(electionType: string): boolean {
 }
 
 /**
- * True for Commons by-election races (#860). These resolve ADDITIVELY: they
- * fill only the vacated seats they claim and must never run the regional
- * delegation sweep that regular multi-seat races use.
+ * True for Commons by-election races. These resolve ADDITIVELY: they fill only
+ * the vacated seats they claim and must never run the regional delegation sweep
+ * that regular multi-seat races use.
  */
 export function isSpecialCommonsElection(electionType: string): boolean {
-  return electionType === "special_commons";
+  return SPECIAL_COMMONS_TYPES.includes(electionType);
 }
 
 /**

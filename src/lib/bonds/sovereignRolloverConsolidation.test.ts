@@ -225,6 +225,69 @@ describe("sovereign rollover consolidation (maturity wall)", () => {
   });
 });
 
+describe("sovereign rollover consolidation (repeated cycles)", () => {
+  const COUNT = 30;
+  const CYCLES = 6;
+  const TERM = 48;
+
+  /** Settle every live bond due on `turn`, paying its whole face to the pool. */
+  async function settleDue(memory: InMemoryDb, turn: number): Promise<number> {
+    const due = (memory.collection("bonds").docs as unknown as Bond[]).filter(
+      (bond) => !bond.matured && bond.maturityTurn === turn
+    );
+    for (const bond of due) {
+      const result = await settleFundedSovereignBondMaturity(memory as unknown as Db, {
+        bond,
+        turn,
+        dueTurn: turn,
+        currencyCode: "USD",
+        treasuryLocalPerAnchor: 1,
+        nonBankRepaymentLocal: bond.totalIssued,
+        holderLegs: [
+          {
+            collection: "bondMarketPools",
+            filter: { _id: "USD" },
+            path: "cashLocal",
+            amount: bond.totalIssued,
+            currencyCode: "USD",
+            localPerAnchor: 1,
+            note: "Pay the pool float",
+          },
+        ],
+        now: NOW,
+        consolidateRollover: true,
+      });
+      expect(result?.status).toBe("applied");
+    }
+    return due.length;
+  }
+
+  it("keeps the live bond count bounded across many maturity cycles", async () => {
+    const { memory, due, holderId } = wall(COUNT);
+    await settleWall(memory, due, holderId, true);
+    const liveCount = () =>
+      (memory.collection("bonds").docs as unknown as Bond[]).filter((bond) => !bond.matured).length;
+    const liveFace = () =>
+      (memory.collection("bonds").docs as unknown as Bond[])
+        .filter((bond) => !bond.matured)
+        .reduce((sum, bond) => sum + bond.totalIssued, 0);
+
+    const first = liveCount();
+    // Prime-rate novation and the market rollover coupon: at most two series.
+    expect(first).toBeLessThanOrEqual(2);
+    const faceAfterFirst = liveFace();
+    for (let cycle = 1; cycle <= CYCLES; cycle++) {
+      const turn = DUE_TURN + TERM * cycle;
+      const settled = await settleDue(memory, turn);
+      expect(settled).toBeGreaterThan(0);
+      expect(settled).toBeLessThanOrEqual(2);
+      expect(liveCount()).toBeLessThanOrEqual(2);
+      // Refinancing replaces face for face: no growth, no loss.
+      expect(liveFace()).toBe(faceAfterFirst);
+    }
+  });
+});
+
 describe("sovereignRolloverBondUpsert", () => {
   const identity = {
     countryId: "US" as const,

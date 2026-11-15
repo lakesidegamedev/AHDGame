@@ -1,0 +1,95 @@
+{
+  "config": {
+    "id": "UKR",
+    "name": "Ukraine",
+    "code": "UKR",
+    "status": "coming-soon",
+    "flagEmoji": "🇺🇦",
+    "regionLabel": "Region",
+    "regionLabelPlural": "Regions",
+    "executiveTitle": "First Secretary",
+    "executiveRealmPhrase": "Ukraine",
+    "executiveLabel": "Soviet",
+    "executivePath": "/country/ua/executive",
+    "governmentType": "onePartyState",
+    "governmentTypeLabel": "One Party State",
+    "descriptor": "A one-party Soviet republic governed by the Communist Party of Ukraine through its Supreme Soviet; the Union's second economy, built on Donbas coal, Dnieper metallurgy and the grain of the steppe.",
+    "heroImage": "https://flagcdn.com/w640/ukr.png",
+    "overviewPath": "/country/ua",
+    "mapPath": "/country/ua/map",
+    "currencyCode": "SUR",
+    "centralGovernmentLabel": "Central Plan",
+    "exchangeName": "GOSPLAN URSR",
+    "exchangeKind": "stateRegister",
+    "financeMinisterCabinetId": "minister_of_finance",
+    "rulingPartyId": 1,
+    "majorPartyIds": ["kpu"],
+    "partyCreationNPPs": { "statesRequired": 1, "lockHomeState": true, "nppsPerState": 2 },
+    "legislature": {
+      "name": "Supreme Soviet",
+      "path": "/country/ua/legislature",
+      "bicameral": false,
+      "lowerChamber": {
+        "key": "supremeSoviet",
+        "name": "Supreme Soviet",
+        "shortName": "Soviet",
+        "seats": 435,
+        "description": "Deputies of the Ukrainian SSR Supreme Soviet, elected to single-list terms under the Communist Party."
+      },
+      "upperChamber": {
+        "key": "presidium",
+        "name": "Presidium",
+        "shortName": "Presidium",
+        "seats": 21,
+        "description": "The Presidium of the Supreme Soviet - a standing organ acting between sessions.",
+        "elected": false
+      }
+    },
+    "officeTypes": [
+      {
+        "key": "firstSecretary",
+        "label": "First Secretary",
+        "isExecutive": true,
+        "isSubNational": false,
+        "labelPlural": "First Secretaries"
+      },
+      {
+        "key": "chairmanOfPresidium",
+        "label": "Chairman of the Presidium",
+        "isExecutive": true,
+        "isSubNational": false,
+        "isHeadOfState": true,
+        "labelPlural": "Chairmen of the Presidium"
+      },
+      {
+        "key": "sovietDeputy",
+        "label": "Deputy",
+        "chamberKey": "supremeSoviet",
+        "isExecutive": false,
+        "isSubNational": false,
+        "labelPlural": "Deputies"
+      },
+      {
+        "key": "centralBankChair",
+        "label": "Gosbank Chair",
+        "isExecutive": false,
+        "isSubNational": false,
+        "labelPlural": "Gosbank Chairs"
+      }
+    ],
+    "electionSystems": {
+      "lowerChamber": "fptp",
+      "headOfGovernment": "parliamentary",
+      "headOfState": "ceremonial"
+    },
+    "lowerElectionSystem": { "snapElectionsAllowed": false },
+    "centralBank": {
+      "name": "State Bank (Gosbank)",
+      "abbreviation": "Gosbank",
+      "heroImage": "https://flagcdn.com/w640/ukr.png",
+      "defaultPrimeRate": 3
+    },
+    "usdExchangeRate": 1.35
+  },
+  "eraOverrides": { "1953-default": { "usdExchangeRate": 0.1111111111111111 } }
+}

@@ -1,4 +1,5 @@
 import { clamp } from "@/lib/numeric/rules";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 /** Portable, game-calibrated health access proxies until service ledgers exist. */
 export interface LiveHealthProxyInput {
   countryId: "US" | "UK" | "JP" | "IE" | "SCO" | "WAL";
@@ -36,7 +37,7 @@ export function liveHealthProxies(input: LiveHealthProxyInput): LiveHealthProxyR
     return null;
   }
   if (
-    input.countryId === "US" &&
+    countryHasFeature("usSeeds", input.countryId) &&
     (!valid(input.uninsuredPercent) || input.uninsuredPercent < 0 || input.uninsuredPercent > 100)
   ) {
     return null;
@@ -48,7 +49,9 @@ export function liveHealthProxies(input: LiveHealthProxyInput): LiveHealthProxyR
     75,
     100
   );
-  const eligibility = input.countryId === "US" ? clamp(100 - input.uninsuredPercent!, 0, 100) : 100;
+  const eligibility = countryHasFeature("usSeeds", input.countryId)
+    ? clamp(100 - input.uninsuredPercent!, 0, 100)
+    : 100;
   return {
     effectiveCoverage: Math.min(eligibility, serviceReach),
     treatmentDelayIndex: clamp(

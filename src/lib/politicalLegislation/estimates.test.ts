@@ -5,7 +5,6 @@ import { UK_LAWS } from "./laws/ukLaws";
 import { US_STATE_TAX_LAWS } from "./laws/usStateTaxLaws";
 import { attachPoliticalLegislationEstimates } from "./estimates";
 import { projectLawToLegislationType } from "./project";
-import { jpLegislationTypes } from "@/lib/countries/jp/data/jpLegislationTypes";
 import { getCatalog } from "./catalog";
 
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
@@ -121,14 +120,21 @@ describe("attachPoliticalLegislationEstimates", () => {
     expect(ukLegacy[0].estimates).toBeUndefined();
   });
 
-  it("attaches exact-rate metadata to reviewed legacy JP tax instruments", async () => {
+  it("attaches exact-rate metadata to reviewed legacy tax instruments", async () => {
     db.collectionMocks.federalBudget.findOne = vi.fn().mockResolvedValue({
       taxRates: { foreignCorporateTax: 23 },
       taxBases: { foreignCorporateProfits: 900_000_000 },
     });
-    const foreignCorporateTax = jpLegislationTypes.find(
-      (type) => type._id === "jp_foreign_corporation_tax"
-    )!;
+    const foreignCorporateTax = {
+      _id: "xx_foreign_corporation_tax",
+      countryScope: "jp",
+      nationalOnly: true,
+      taxRateChange: { scope: "national", taxType: "foreignCorporateTax" },
+      policyOptions: [0, 23, 65].map((rate) => ({
+        id: `xx_foreign_corporation_tax_${rate}`,
+        rate,
+      })),
+    };
 
     const [doc] = await attachPoliticalLegislationEstimates(
       db as unknown as Db,

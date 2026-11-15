@@ -1,19 +1,17 @@
 /**
  * Attacks and market splits as CAPACITY transfers (plants tier).
  *
- * Under `marketSystemMode >= "plants"` a sector's `revenue` is RESTATED from
- * `capitalStock × mixPrice` by the turn processor every turn. Any other writer
- * that `$inc`s `revenue` is therefore either erased on the next turn (the
- * attacker never keeps what it took) or, worse, double-counted for one turn
- * against capacity that never moved. The attack/split paths were exactly that:
- * two revenue `$inc`s and a revenue-seeded new sector.
+ * Under `marketSystemMode >= "plants"` the turn processor RESTATES a
+ * sector's `revenue` from `capitalStock × mixPrice` every turn. Any other
+ * writer that `$inc`s `revenue` is erased next turn (attacker never keeps
+ * what it took) or double-counted for one turn against unmoved capacity.
  *
- * This module holds the plants translation shared by the two player routes and
- * the NPP attack runner, so the three can never disagree:
+ * This module holds the plants translation shared by the two player routes
+ * and the NPP attack runner, so the three can never disagree:
  *
- *   1. the ₳ capture the existing (unchanged) capture math produces is turned
- *      into CAPACITY UNITS at the DEFENDER's production mix — the defender is
- *      the side losing physical plant, so its mix is the one that prices it;
+ *   1. the ₳ capture the existing capture math produces is turned into
+ *      CAPACITY UNITS at the DEFENDER's production mix, since the defender
+ *      is the side losing physical plant;
  *   2. the defender loses all of those units;
  *   3. the attacker receives only {@link ATTACK_CAPTURE_EFFICIENCY} of them;
  *   4. the attacker pays at least the build price of what it receives, times
@@ -21,7 +19,7 @@
  *      substitute for building.
  *
  * Nothing here runs below the plants tier: every caller keeps its legacy ₳
- * revenue path byte-identical behind a mode check.
+ * revenue path behind a mode check.
  */
 
 import type { CorporationType } from "@/lib/constants/corporations";
@@ -51,31 +49,19 @@ export function resolveWorldYear(
 /**
  * The ₳ quantity an attack is SIZED against, under plants.
  *
- * Every attack path (player route, NPP runner) used the defender's `revenue`
- * for three separate jobs: the minimum-target threshold, the contested amount,
- * and the attack price. Under plants `revenue` is what the market actually
- * cleared against the plant, scaled by the ramp — so it is not a measure of what
- * is there to take. Two failures followed, in opposite directions:
+ * Under plants `revenue` is the cleared amount scaled by the ramp, not a measure
+ * of what is there to take. A mothballed factory reports revenue 0, making it
+ * un-attackable via the thresholds and free to seize via a zero attack cost.
  *
- *   - a MOTHBALLED factory reports revenue 0, so it fell under every threshold
- *     and every `actualCapture <= 0` abort. A player could park capacity in
- *     mothball and it became permanently un-attackable while still counting as
- *     plant on the balance sheet and still restartable at will.
- *   - the same zero made `calculateAttackCostAnchor` return 0, so on any path
- *     that did let the attack through, seizing that capacity was FREE.
+ * The basis is therefore the CAPACITY NAMEPLATE: built `capitalStock` priced
+ * through its strategy mix. That is what `sectorTurn` restates `revenue` from
+ * before fill and ramp, so it is commensurable with the legacy basis, ₳-only, and
+ * stable across bad market turns.
  *
- * The basis under plants is therefore the CAPACITY NAMEPLATE: the sector's built
- * `capitalStock` priced through its own strategy mix. That is precisely the
- * quantity `sectorTurn` restates `revenue` from before fill and ramp are applied,
- * so it is commensurable with the legacy basis, it is currency-free ₳ (no FX
- * enters), and it does not move when the market has a bad turn.
+ * Undelivered build orders are EXCLUDED: an attack seizes plant that exists.
  *
- * Undelivered build orders are deliberately EXCLUDED: an attack seizes plant
- * that exists, not a construction contract the defender has paid for and not yet
- * received. Those stay with the defender.
- *
- * Returns `null` below plants, and for a sector with no capacity at all — both
- * mean "use the legacy revenue basis", which is the byte-identical path.
+ * Returns `null` below plants or for a sector with no capacity, meaning use the
+ * legacy revenue basis.
  */
 export function attackCapacityBasisAnchor(
   sector: {
@@ -107,29 +93,26 @@ export function attackCapacityBasisAnchor(
 }
 
 /**
- * P5 — the PAID BASIS that moves with captured capacity.
+ * The PAID BASIS that moves with captured capacity.
  *
- * Book value is now what a corp actually SPENT on the capacity it holds, so an
- * attack has to move that basis alongside the units or the two sides stop
- * adding up: a defender that keeps its whole basis over fewer units books its
- * survivors at more than they cost (an exit mint), and an attacker that gains
- * units with no basis at all books free plant at zero (an exit theft).
+ * Book value is what a corp actually spent on the capacity it holds, so an
+ * attack must move it alongside the units or the books stop balancing: a
+ * defender keeping its whole basis over fewer units books survivors above
+ * cost (an exit mint), and an attacker gaining units with no basis books free
+ * plant at zero (an exit theft).
  *
- * The rule is per-unit and symmetric. The defender loses
- * `unitsTaken / stock` of its basis; the attacker gains the share matching
- * `unitsReceived`. The difference — the `1 − ATTACK_CAPTURE_EFFICIENCY` that
- * the capture destroys — is basis DESTROYED with the plant it priced, which is
- * the same statement the units already make.
+ * The rule is per-unit and symmetric: the defender loses `unitsTaken / stock`
+ * of its basis, the attacker gains the share matching `unitsReceived`. The
+ * `1 - ATTACK_CAPTURE_EFFICIENCY` difference is basis destroyed with the
+ * plant it priced, matching the units.
  *
- * The attacker's own attack payment is deliberately NOT added: the plants
- * attack price is floored at `build price × ATTACK_BUILD_PRICE_PREMIUM`, i.e.
- * ABOVE list, so booking it would make conquest a way to write capacity UP.
- * Attacking is a way to get plant you could not build, not a way to inflate
- * what you can sell it for.
+ * The attacker's attack payment is deliberately NOT added: the attack price is
+ * floored above `build price × ATTACK_BUILD_PRICE_PREMIUM`, so booking it
+ * would make conquest a way to write capacity UP.
  *
- * Returns `null` on either leg when the source carries no recorded basis (a
- * legacy row, or one the turn processor has not stamped yet). Callers must then
- * write NOTHING for that leg and let the list-price fallback stand — an `$inc`
+ * Returns `null` on either leg when the source carries no recorded basis
+ * (legacy row, or one the turn processor has not stamped yet). Callers must
+ * write NOTHING for that leg and let the list-price fallback stand; an `$inc`
  * against an absent field would materialise it and destroy the fallback.
  */
 export function capacityCaptureBookTransfer(args: {
@@ -159,26 +142,19 @@ export function capacityCaptureBookTransfer(args: {
 }
 
 /**
- * The two `$set` fragments an owned-sector capture writes for the P5 paid basis
- * — one for the defender, one for the attacker's receiving sector.
+ * The two `$set` fragments an owned-sector capture writes for the paid basis.
  *
- * Written as absolute `$set`s, never `$inc`s: `capacityBookAnchor` is
- * OPTIONAL, and an `$inc` on a row that has none would materialise the field
- * and permanently replace the list-price fallback with a number that only
- * counts this one transaction.
+ * Absolute `$set`s, never `$inc`s: `capacityBookAnchor` is OPTIONAL, and an
+ * `$inc` on a row without one materialises the field and permanently
+ * replaces the list-price fallback.
  *
- * DEFENDER: touched only when it already carries a basis. A defender with none
- * keeps the fallback, which is `remaining stock × list price` — already exactly
- * pro-rata, because the stock itself went down.
+ * DEFENDER: stamped only if it already carries a basis; otherwise the
+ * `remaining stock × list price` fallback is already pro-rata.
  *
- * ATTACKER: always stamped, because doing nothing there is the mint. An
- * attacker with no basis would fall back to `(old + gained) × list`, booking
- * capacity it took by force at full list price. It is stamped at its own
- * pre-attack fallback (its pre-plants capacity really did cost list — identity
- * B) plus the basis that travelled with the captured plant.
+ * ATTACKER: always stamped, since doing nothing is the mint. It gets its own
+ * pre-attack fallback plus the basis that travelled with the captured plant.
  *
- * Returns empty fragments when the defender carries no basis AND has no stock
- * to price — there is then nothing meaningful to move.
+ * Returns empty fragments when the defender has no basis and no stock.
  */
 export function capacityCaptureBookUpdates(args: {
   defender: {
@@ -328,12 +304,9 @@ export function capacityCaptureUnits(
  * Only the era-indexed base build price is used, not the situational
  * multipliers `computeBuildCost` applies (dominance, prime rate, acumen, tech,
  * host cost of living). Those describe the difficulty of COMMISSIONING a plant
- * where you are standing; none of them describe seizing one that already
- * exists, and several of them (acumen, tech) would hand the strongest attackers
- * a discount on the very lever meant to keep attacking expensive. The premium
- * is set above 1 with those multipliers assumed neutral, and the floor is a
- * `max`, so a build cheapened by acumen/tech can dip under the attack price —
- * which is the intended ordering.
+ * where you are standing; none describe seizing one that already exists, and
+ * several (acumen, tech) would hand the strongest attackers a discount on the
+ * very lever meant to keep attacking expensive.
  */
 export function attackCostAnchorUnderPlants(args: {
   legacyCostAnchor: number;

@@ -988,6 +988,7 @@ describe("stockExchangeSnapshot", () => {
         .mockReturnValueOnce(createMockChain([]))
         .mockReturnValueOnce(createMockChain([])) // exchangeRates (loadValuationFxRates)
         .mockReturnValueOnce(createMockChain([])) // gameState preset (loadValuationFxRates)
+        .mockReturnValueOnce(createMockChain([])) // corporations held by corporations (withHeldStakeIssuers)
         .mockReturnValueOnce(createMockChain([])) // indexFundPositions (loadFundValueByCharacter)
         .mockReturnValueOnce(
           createMockChain([

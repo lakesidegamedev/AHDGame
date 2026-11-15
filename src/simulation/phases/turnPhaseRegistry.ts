@@ -4,17 +4,18 @@ import { refreshIncomeTaxShares } from "@/lib/budget/incomeTaxShares";
 import { expireGovernmentTenders } from "@/lib/governmentContracts/reservations";
 import { refreshOpenDefenceTenderMaxima } from "@/lib/governmentContracts/commands";
 import { getEraContext } from "@/lib/era/context";
-import { processStatePartyElections } from "@/lib/statePartyElections";
-import { processNationalPartyElections } from "@/lib/nationalPartyElections";
-import { processNationalCommitteeElections } from "@/lib/nationalCommitteeElections";
+import { processStatePartyElections } from "@/lib/elections/party/statePartyElections";
+import { processNationalPartyElections } from "@/lib/elections/party/nationalPartyElections";
+import { processNationalCommitteeElections } from "@/lib/elections/party/nationalCommitteeElections";
 import { processNPPTurn } from "@/lib/turn/nppBehavior";
+import { processPartyRenewal } from "@/lib/parties/partyRenewal";
 import { processChallengerGeneration } from "@/lib/turn/npp/challengerSupply";
 import { processNppBillSponsorship } from "@/lib/turn/npp/billSponsorship";
 import { processBillLifecycle } from "@/lib/billLifecycle";
 import { processStateBillTimers } from "@/lib/turn/billLifecycle/regionalEngine";
 import { processCabinetNominationLifecycle } from "@/lib/cabinetNominationLifecycle";
 import { processFomcNominationLifecycle } from "@/lib/fomcNominationLifecycle";
-import { processScotusTurn } from "@/lib/turn/scotusTurn";
+import { processScotusTurn, scotusSwitches } from "@/lib/turn/scotusTurn";
 import { processUkJrSurpriseTurn } from "@/lib/turn/ukJrSurpriseTurn";
 import { processUkLeadershipChallengeTurn } from "@/lib/turn/ukLeadershipChallengeTurn";
 import { processUkPartyConferenceTurn } from "@/lib/turn/ukPartyConferenceTurn";
@@ -32,12 +33,12 @@ import { processFundGeneration } from "@/lib/turn/fundGeneration";
 import { processPartyActionGeneration } from "@/lib/turn/partyActionGeneration";
 import { processPartyTierTurn } from "@/lib/turn/partyTierTurn";
 import { processCampaignTurn } from "@/lib/turn/campaignTurn";
-import { processPlayerRandomEventsTurn } from "@/lib/events/pree/driver";
+import { preeConfigFlags, processPlayerRandomEventsTurn } from "@/lib/events/pree/driver";
 import { sweepExpiredCountryModifiers } from "@/lib/events/substrate/countryModifiers";
 import { processWorldEventsTurn } from "@/lib/events/worldEvents/driver";
-import { processCampaignSpendReset } from "@/lib/turn/elections/campaignSpendReset";
+import { processCampaignSpendReset } from "@/lib/elections/campaigns/campaignSpendReset";
 import { resolveGeneralElections } from "@/lib/turn/electionResolution";
-import { closeDueContingentHouseVotes } from "@/lib/turn/election/contingentHouseVoteClose";
+import { closeDueContingentHouseVotes } from "@/lib/elections/resolution/contingentHouseVoteClose";
 import { processPostConversionElections } from "@/lib/turn/postConversionElections";
 import {
   resolvePrimariesIfNeeded,
@@ -48,7 +49,7 @@ import {
   advanceElectionTimers,
   ensurePerpetualElections,
   cleanupStaleElectionCandidates,
-} from "@/lib/turn/perpetualElections";
+} from "@/lib/elections/scheduling";
 import {
   resolveExpiredLeadershipElections,
   vacateLeadershipForLostSeats,
@@ -72,8 +73,8 @@ import { processPriorityRegionDecay } from "@/lib/turn/politicalStrength/priorit
 import {
   processSupportDecay,
   processClearResolvedSupport,
-} from "@/lib/turn/elections/supportDecay";
-import { processSupportAccrualTick } from "@/lib/turn/elections/supportAccrual";
+} from "@/lib/elections/campaigns/supportDecay";
+import { processSupportAccrualTick } from "@/lib/elections/campaigns/supportAccrual";
 import { resolveExpiredDisbandVotes } from "@/lib/turn/coalitionDisbandCheck";
 import {
   COUNTRY_BILL_PHASES,
@@ -82,7 +83,12 @@ import {
   runParliamentaryGovernmentPhases,
   runParliamentaryVacancyWatcher,
 } from "@/lib/turn/countryPhases";
-import { getRegisteredCountryIds } from "@/lib/country/registeredCountries";
+import { getFullSimulationCountryIds } from "@/lib/country/countryTier";
+import { runCountryBillEntries, selectCountryBillEntries } from "@/lib/turn/countryBillPhase";
+import {
+  runCountryElectionEntries,
+  selectCountryElectionEntries,
+} from "@/lib/turn/countryElectionPhase";
 import type { CountryId } from "@/lib/constants/countries";
 import { runNppGovernmentPhases } from "@/lib/nppAutonomy/processNppGovernment";
 import { TURNS_PER_YEAR, STARTING_YEAR } from "@/lib/constants/turnTime";
@@ -136,9 +142,9 @@ import { processExpiredBannedShareholders } from "@/lib/account/processExpiredBa
 import { processInactiveShareholderShares } from "@/lib/account/processInactiveShareholderShares";
 import { processInactiveCeoCorpShares } from "@/lib/account/processInactiveCeoCorpShares";
 import { processPartyInfluenceTurn } from "@/lib/turn/partyInfluenceTurn";
-import { processPresidentialSuccession } from "@/lib/turn/presidentialSuccession";
+import { processSuccessionsAndFills } from "@/lib/elections/resolution/executiveSuccessionFill";
 import { processImpeachmentLifecycle } from "@/lib/turn/impeachmentLifecycle";
-import { processByElectionWatcher } from "@/lib/turn/byElections";
+import { processByElectionsWithFill } from "@/lib/elections/resolution/byElectionFill";
 import { processCommonsByElectionWatcher } from "@/lib/turn/commonsByElections";
 import { detectPreIterationComplete } from "@/lib/turn/preIterationLifecycle";
 import { processActivityLogging } from "@/lib/turn/activityLogging";
@@ -157,12 +163,9 @@ import { processBankingTurnV2 } from "@/simulation/engine/v2/bankingTurn";
 import { runIndexFundCronV2 } from "@/simulation/engine/v2/indexFunds";
 import type { TurnPhaseAdapter } from "@/simulation/engine/types";
 
-/** Registered election spawners have no dependency on corporate settlement. */
-export function independentCountryElectionPhases(): ReadonlySet<string> {
-  return new Set(
-    Object.values(COUNTRY_ELECTION_PHASES).flatMap((entries) => (entries ?? []).map((e) => e.name))
-  );
-}
+/** The country election spawners have no dependency on corporate settlement. */
+export const independentCountryElectionPhases = (): ReadonlySet<string> =>
+  new Set(["countryElections"]);
 
 export function getTurnPhaseRegistry(): TurnPhaseAdapter[] {
   return [
@@ -239,20 +242,13 @@ export function getTurnPhaseRegistry(): TurnPhaseAdapter[] {
           phaseResults,
           warnings,
         } = context;
-        // When an admin pauses corporation actions, the corporate turn phase
-        // (sector revenue, operating income, dividends, market-cap/history
-        // snapshots) is skipped entirely, this is what makes the admin toggle's
-        // "corporate phases will be skipped during turn processing" promise true.
-        // Bond servicing (processBondTurn) is intentionally NOT skipped here: it
-        // settles existing contractual coupons/maturities, including sovereign
-        // bonds held by players, which are not "corporation actions".
-        //
-        // That is still true of SETTLEMENT, but processBondTurn now gates its own
-        // default DETECTION on this same flag (ticket #1198). Paying a coupon out
-        // of a corp whose revenue this pause just switched off is contractual;
-        // liquidating it for the resulting cash hole is the pause's own doing.
-        // Corporation #624 was defaulted twice that way. See Phase 3 in
-        // `bondTurn.ts` for the full argument.
+        // Skipping the corporate turn phase is what makes the admin pause
+        // toggle's "corporate phases will be skipped" promise true. Bond
+        // servicing (processBondTurn) is NOT skipped: it settles contractual coupons/maturities,
+        // which are not corporation actions. processBondTurn still gates its own
+        // default detection on this same flag: liquidating a corp for a cash hole the
+        // pause itself created is not contractual. See `bondTurn.ts` for the full
+        // argument.
         const corpActionsPaused = gameState.corporationActionsPaused === true;
         // Skip the disaster spawner while corporate actions are paused: the
         // corporation turn (which applies the onset margin penalty) is skipped
@@ -270,8 +266,7 @@ export function getTurnPhaseRegistry(): TurnPhaseAdapter[] {
         // Global cold-war tension relaxes toward its standing-pressure floor.
         // Deliberately OUTSIDE the corpActionsPaused gate: tension is world
         // politics, not a corporation action, and pausing the economy should
-        // not freeze the temperature of the Cold War. Gated internally on
-        // gameState.coldWarEnabled; a world with the subsystem off is a no-op.
+        // not freeze the temperature of the Cold War.
         await runtime.runPhase("coldWarTension", () =>
           processColdWarTensionTurn(context.db, newTurn, gameState)
         );
@@ -282,8 +277,7 @@ export function getTurnPhaseRegistry(): TurnPhaseAdapter[] {
         // after auto-seed and BEFORE the corporation turn so a newly-adopted
         // focused mining strategy is in effect when this turn's supply/revenue
         // is computed. Reads the prior turn's commodity S/D (one-turn lag, same
-        // as auto-seed); writes only sector strategy fields. Inert unless
-        // gameState.extractionAutoStrategyEnabled.
+        // as auto-seed); writes only sector strategy fields.
         const extractionAutoStrategyResult = await runtime.runPhase("extractionAutoStrategy", () =>
           processExtractionAutoStrategy(context.db, newTurn, gameState)
         );
@@ -356,15 +350,10 @@ export function getTurnPhaseRegistry(): TurnPhaseAdapter[] {
           processNppUnionBehavior(context.db, newTurn)
         );
 
-        // Decolonization. The sovereignty-transition engine in
-        // src/lib/world/transitions had NO turn-path caller at all, so the
-        // colonial map never changed: Ghana 1957, Somalia and the Congo 1960,
-        // Algeria 1962, Guyana 1966 and South Yemen 1967 all fall inside a
-        // 1953 world's 1000-turn span and none of them happened. Runs on the
-        // in-game year boundary only.
-        // Authoritative turn-context year, not the persisted gameState year which
-        // is only stamped at turn end and would fire boundary transitions one
-        // turn late (#2059).
+        // Decolonization. Runs on the in-game year boundary only.
+        // Source year is the authoritative turn-context year, not the persisted
+        // gameState year which is stamped at turn end and would fire boundary
+        // transitions one turn late.
         await runtime.runPhase("decolonization", () =>
           processDecolonizationTurn(context.db, newTurn, currentYear)
         );
@@ -417,10 +406,10 @@ export function getTurnPhaseRegistry(): TurnPhaseAdapter[] {
             totalRevenueGenerated: corpTurnResults.totalRevenueGenerated,
             totalIncomeGenerated: corpTurnResults.totalIncomeGenerated,
           };
-          // Clearing book invariant breaches (issue #2054) join the turn
-          // warning channel here, so the completed-turn health snapshot
-          // counts them. The includes-guard keeps a retried or replayed
-          // corporation phase from recording the same breach twice.
+          // Clearing book invariant breaches join the turn warning channel
+          // here, so the completed-turn health snapshot counts them. The
+          // includes-guard keeps a retried or replayed corporation phase from
+          // recording the same breach twice.
           for (const warning of corpTurnResults.turnWarnings ?? []) {
             if (!warnings.includes(warning)) warnings.push(warning);
           }
@@ -533,11 +522,8 @@ export function getTurnPhaseRegistry(): TurnPhaseAdapter[] {
         // unless prospectingEnabled. Emits notifications only; the survey cost
         // was charged at launch.
         if (await isProspectingEnabled(config)) {
-          // getEraContext, NOT gameState.currentYear: currentYear is set on every
-          // world regardless of `eraSystemEnabled`, so passing it directly
-          // applied era scaling in worlds with the era clock OFF, and left
-          // duration (which DOES go through getEraContext at launch) gated
-          // differently from success and yield.
+          // getEraContext, NOT gameState.currentYear: duration goes through
+          // getEraContext at launch, so success and yield use the same year.
           const prospectEraYear = (await getEraContext(context.db)).year;
           const prospectResult = await runtime.runPhase("prospectingResolution", () =>
             resolveProspects(context.db, newTurn, context.realNow, undefined, prospectEraYear)
@@ -642,18 +628,21 @@ export function getTurnPhaseRegistry(): TurnPhaseAdapter[] {
             (phaseResults as Record<string, unknown>).federationFacilityCompensation = {
               applicationsServiced: compensated,
             };
+        } else {
+          await runtime.markPhaseSkipped(
+            "federationFacilityCompensation",
+            "upstreamAbort",
+            "Skipped because bondTurn did not produce a result."
+          );
         }
 
-        // Collect a staged procurement-windfall assessment after bond coupons
-        // and maturities land, while preserving the supplier's operating reserve.
-        // This runs before share-price recomputation so the balance sheet and
-        // price snapshot agree in the same turn.
+        // Collect the staged procurement windfall after bond coupons land, before
+        // share-price recomputation so balance sheet and price snapshot agree.
         const windfallRecovery = await runtime.runPhase("defenceWindfallRecovery", () =>
           processDefenceWindfallRecoveryTurn(context.db, newTurn, context.realNow)
         );
-        if (windfallRecovery) {
+        if (windfallRecovery)
           (phaseResults as Record<string, unknown>).defenceWindfallRecovery = windfallRecovery;
-        }
 
         // Extraction-contract settlement, runs AFTER commodityPrices because
         // the per-turn royalty is priced off this turn's market. No-op unless
@@ -691,8 +680,8 @@ export function getTurnPhaseRegistry(): TurnPhaseAdapter[] {
           // Currency income comes only from this turn's corporationTurn result.
           // When that phase ran but left no result (it failed, or a crash resume
           // skipped it), the income is unknown, not zero: stop before auto-pay
-          // can size anything from an empty map (#3429). A paused corporation
-          // turn really earned nothing.
+          // can size anything from an empty map. A paused corporation turn truly
+          // earned nothing.
           if (gameState.forexEnabled === true && !corpActionsPaused && !corpTurnResults) {
             throw new Error(
               "lineOfCreditTurn needs this turn's corporationTurn currency income, which is unavailable"
@@ -979,6 +968,13 @@ export function getTurnPhaseRegistry(): TurnPhaseAdapter[] {
             speakerVotesCast: nppResult.speakerVotes,
           };
         }
+
+        // Party renewal (#5704): after a national general election, NPP-run
+        // parties may splinter, found or fold. Gated by the game-state flag.
+        const renewalResult = await runtime.runPhase("nppPartyRenewal", () =>
+          processPartyRenewal(db, newTurn)
+        );
+        if (renewalResult) phaseResults.nppPartyRenewal = renewalResult;
       },
     },
     {
@@ -988,11 +984,11 @@ export function getTurnPhaseRegistry(): TurnPhaseAdapter[] {
         // Registered countries only: the registry is keyed on the static country
         // list, and a country dissolved by a merge would otherwise keep running
         // its bill lifecycle (and, for one-party entries, its legitimacy and
-        // escalation drift) for ever.
-        const registeredForBills = new Set(await getRegisteredCountryIds(db));
-        const countryBillPhaseEntries = Object.entries(COUNTRY_BILL_PHASES).filter(([id]) =>
-          registeredForBills.has(id as CountryId)
-        );
+        // escalation drift) for ever. Background countries are skipped too:
+        // their bill-lifecycle phases never start.
+        const billCountries = new Set(await getFullSimulationCountryIds(db));
+        const billEntries = selectCountryBillEntries(COUNTRY_BILL_PHASES, billCountries);
+        const countryBillResults = new Map<string, unknown>();
         const billLifecycleContext = {
           db,
           currentTurn: newTurn,
@@ -1002,20 +998,17 @@ export function getTurnPhaseRegistry(): TurnPhaseAdapter[] {
           runtime.runPhase("billLifecycle", () =>
             processBillLifecycle(realNow, billLifecycleContext)
           ),
-          ...countryBillPhaseEntries.map(([, entry]) =>
-            runtime.runPhase(entry.phaseName, () => entry.fn(realNow, billLifecycleContext))
+          runtime.runPhase("countryBillLifecycle", () =>
+            runCountryBillEntries(billEntries, realNow, billLifecycleContext, countryBillResults)
           ),
           runtime.runPhase("stateBillTimers", () =>
             processStateBillTimers(realNow, undefined, billLifecycleContext)
           ),
           runtime.runPhase("cabinetNominations", () => processCabinetNominationLifecycle(realNow)),
-          // SCOTUS (#3598): runs in the same parallel group as cabinetNominations
-          // (a like-shaped Senate-confirmation lifecycle) and BEFORE
-          // socialAxisDrift below, a diverged case's synthesized enactment
-          // writes statePolicies this same turn, and socialAxisDrift reads
-          // whatever statePolicies rows the bill phases just wrote.
+          // SCOTUS: parallel with cabinetNominations; must precede socialAxisDrift
+          // so a diverged case's synthesized statePolicies are visible same turn.
           runtime.runPhase("scotusTurn", () =>
-            processScotusTurn(gameState.currentTurn, realNow, db)
+            processScotusTurn(gameState.currentTurn, realNow, db, scotusSwitches(context.config))
           ),
           // UK JR surprise flavor, same parallel group as SCOTUS; UK-only
           // mild uk_* enactments tagged uk_judicial_review_surprise.
@@ -1025,31 +1018,26 @@ export function getTurnPhaseRegistry(): TurnPhaseAdapter[] {
           // FOMC seat confirmations, a like-shaped Senate-confirmation lifecycle,
           // appended last so the index math above is unchanged.
           runtime.runPhase("fomcNominations", () => processFomcNominationLifecycle(realNow)),
-          // UK party-leadership challenges (#861): expire stale gatherings and
-          // resolve closed ballots. UK-gated no-op elsewhere; appended last so
-          // the index math above is unchanged.
+          // UK party-leadership challenges: expire stale gatherings and resolve
+          // closed ballots. UK-gated no-op elsewhere; appended last so the index
+          // math above is unchanged.
           runtime.runPhase("ukLeadershipChallenges", () =>
             processUkLeadershipChallengeTurn(db, gameState.currentTurn, realNow)
           ),
-          // UK party conferences (#862): annual schedule/open/ratify/complete
-          // lifecycle per party. UK-gated no-op elsewhere; appended after the
-          // leadership phase so the index math above is unchanged.
+          // UK party conferences: annual schedule/open/ratify/complete per party.
+          // UK-gated no-op elsewhere; appended last so the index math above is
+          // unchanged.
           runtime.runPhase("ukPartyConferences", () =>
             processUkPartyConferenceTurn(db, gameState.currentTurn, realNow)
           ),
         ]);
-        const countryBillResultsStart = 1;
-        const stateBillResultIndex = countryBillResultsStart + countryBillPhaseEntries.length;
+        const stateBillResultIndex = 2;
         const cabinetNominationResultIndex = stateBillResultIndex + 1;
         const scotusTurnResultIndex = cabinetNominationResultIndex + 1;
         const ukJrSurpriseResultIndex = scotusTurnResultIndex + 1;
         const billLifecycleResult = billPhaseResults[0] as Awaited<
           ReturnType<typeof processBillLifecycle>
         > | null;
-        const countryBillResults = billPhaseResults.slice(
-          countryBillResultsStart,
-          stateBillResultIndex
-        );
         const stateBillTimersResult = billPhaseResults[stateBillResultIndex] as Awaited<
           ReturnType<typeof processStateBillTimers>
         > | null;
@@ -1099,16 +1087,15 @@ export function getTurnPhaseRegistry(): TurnPhaseAdapter[] {
         phaseResults.scotusTurn = scotusTurnResult ?? {
           tenure: { seatsAdvanced: 0, seatsVacatedByHistory: 0, seatsVacatedByHazard: 0 },
           docket: { casesFired: 0, casesAffirmed: 0, casesDiverged: 0 },
-          surpriseCase: { spawned: false },
+          surpriseCase: { spawned: false, decided: 0 },
           nominations: { nominationsProcessed: 0, confirmed: 0, rejected: 0 },
         };
         phaseResults.ukJrSurpriseTurn = ukJrSurpriseResult ?? { spawned: false };
 
         const phaseResultsRecord = phaseResults as Record<string, unknown>;
-        countryBillPhaseEntries.forEach(([, entry], index) => {
-          const result = countryBillResults[index] ?? null;
-          phaseResultsRecord[entry.phaseName] = result ?? entry.emptyResult;
-        });
+        for (const entry of billEntries)
+          phaseResultsRecord[entry.phaseName] =
+            countryBillResults.get(entry.phaseName) ?? entry.emptyResult;
 
         const resetLawReconciliation = await runtime.runPhase(
           "resetLawEnactmentReconciliation",
@@ -1178,10 +1165,9 @@ export function getTurnPhaseRegistry(): TurnPhaseAdapter[] {
         if (executiveEndorsementsResult) {
           phaseResults.executiveEndorsements = executiveEndorsementsResult;
         }
-        // Player endorsements must not outlive their issuer's party alignment
-        // (ticket #1179). Same placement rationale as governor/executive above:
-        // withdraw BEFORE campaignTurn so the defector's per-turn action grant
-        // to the old party's candidate stops this very turn.
+        // Sweep BEFORE campaignTurn: player endorsements must not outlive
+        // the issuer's party alignment, so the defector's per-turn action
+        // grant to the old party's candidate stops this very turn.
         const playerEndorsementSweepResult = await runtime.runPhase(
           "playerEndorsementPartySweep",
           async () => {
@@ -1221,8 +1207,7 @@ export function getTurnPhaseRegistry(): TurnPhaseAdapter[] {
         const playerRandomEventsResult = await runtime.runPhase("playerRandomEvents", () =>
           processPlayerRandomEventsTurn(db, newTurn, {
             playerRandomEventsEnabled: gameState.playerRandomEventsEnabled,
-            rpgStatsEnabled: gameState.rpgStatsEnabled,
-            treasuryCashLedgerEnabled: context.config?.treasuryCashLedgerEnabled === true,
+            ...preeConfigFlags(context.config),
             currentYear: eventsCurrentYear,
           })
         );
@@ -1232,8 +1217,8 @@ export function getTurnPhaseRegistry(): TurnPhaseAdapter[] {
 
         // World Events v1 Phase 0 substrate maintenance: expire temporary
         // sectorDemandModifier docs. No scheduler yet (Phase 1), this only
-        // keeps countryModifiers from growing unbounded regardless of the
-        // worldEventsEnabled flag (cheap no-op collection when nothing wrote to it).
+        // keeps countryModifiers from growing unbounded (cheap no-op
+        // collection when nothing wrote to it).
         const worldEventsMaintenanceResult = await runtime.runPhase("worldEventsMaintenance", () =>
           sweepExpiredCountryModifiers(db, newTurn)
         );
@@ -1244,12 +1229,9 @@ export function getTurnPhaseRegistry(): TurnPhaseAdapter[] {
         // World Events v1 Phase 1: deterministic scheduler producer. Runs
         // right after the maintenance sweep so a definition that just
         // expired its cooldown modifier can be offered again the same turn.
-        // No-op (flag off / no scheduled definitions) is the default.
+        // No-op when there are no scheduled definitions.
         const worldEventsSchedulerResult = await runtime.runPhase("worldEventsScheduler", () =>
-          processWorldEventsTurn(db, newTurn, {
-            worldEventsEnabled: gameState.worldEventsEnabled,
-            currentYear: eventsCurrentYear,
-          })
+          processWorldEventsTurn(db, newTurn, { currentYear: eventsCurrentYear })
         );
         if (worldEventsSchedulerResult) {
           phaseResults.worldEventsScheduler = worldEventsSchedulerResult;
@@ -1363,83 +1345,14 @@ export function getTurnPhaseRegistry(): TurnPhaseAdapter[] {
           );
         }
         const govResult = await runtime.runPhase("parliamentaryGovernmentFormation", async () => {
-          const { processBg1991ConstitutionalMandate } =
-            await import("@/lib/countries/bg/constitutionalProposals1991");
-          const { processBg1991ConstitutionalNpcProposal } =
-            await import("@/lib/countries/bg/constitutionalNpcProposals1991");
-          const { processBg1991AssemblyDissolution } =
-            await import("@/lib/countries/bg/assemblyDissolution1991");
-          await processBg1991ConstitutionalMandate(db, context.gameState, newTurn, gameNow);
-          await processBg1991AssemblyDissolution(db, context.gameState, newTurn, gameNow);
-          await processBg1991ConstitutionalNpcProposal(db, context.gameState, newTurn, gameNow);
-          const { processBgAssemblyTransition } = await import("@/lib/turn/bgAssemblyTransition");
-          await processBgAssemblyTransition(db, context.gameState, newTurn, gameNow);
-          const { advanceBg1991ListVacancies } =
-            await import("@/lib/countries/bg/listVacancies1991");
-          await advanceBg1991ListVacancies(db, context.gameState, newTurn, gameNow);
-          const { openBgGrandConstituencyByElections } =
-            await import("@/lib/countries/bg/constituencyByElections1991");
-          await openBgGrandConstituencyByElections(db, context.gameState, newTurn, gameNow);
-          const { processRoParliamentTransition } =
-            await import("@/lib/turn/roParliamentTransition");
-          const { processRo1992ElectoralMandate } =
-            await import("@/lib/countries/ro/electoralProposals1992");
-          await processRo1992ElectoralMandate(db, context.gameState, newTurn, gameNow);
-          const { processRo1992ElectoralNpcProposal } =
-            await import("@/lib/countries/ro/electoralNpcProposals1992");
-          await processRo1992ElectoralNpcProposal(db, context.gameState, newTurn, gameNow);
-          await processRoParliamentTransition(db, context.gameState, newTurn, gameNow);
-          const { processFederationRatifications } =
-            await import("@/lib/turn/federationRatifications");
-          const { processRatifiedFederationSettlements } =
-            await import("@/lib/turn/federationSettlements");
-          const { processFederationNpcMandates } = await import("@/lib/turn/federationNpcMandates");
-          await processFederationNpcMandates(db, context.gameState.preset, currentYear, gameNow);
-          await processFederationRatifications(db, context.gameState.preset, newTurn);
-          await processRatifiedFederationSettlements(
-            db,
-            context.gameState.preset,
-            newTurn,
-            currentYear,
-            gameNow
-          );
-          const { processYuDissolution } = await import("@/lib/turn/yuDissolution");
-          await processYuDissolution(db, context.gameState, newTurn, gameNow);
-          const { processRussianConstitutionalNpcProposals } =
-            await import("@/lib/countries/ru/constitutionalNpcProposals");
-          await processRussianConstitutionalNpcProposals(db, context.gameState, newTurn, gameNow);
-          const { processRussianConstitutionalMandates } =
-            await import("@/lib/countries/ru/constitutionalProposals");
-          await processRussianConstitutionalMandates(db, context.gameState, newTurn, gameNow);
-          const { processRussianDuma1995Mandate } =
-            await import("@/lib/countries/ru/dumaElectoralProposals1995");
-          await processRussianDuma1995Mandate(db, context.gameState, newTurn, gameNow);
-          const { processHu1994ElectoralMandate } =
-            await import("@/lib/countries/hu/electoralProposals1994");
-          await processHu1994ElectoralMandate(db, context.gameState, newTurn, gameNow);
-          const { processHu1994ElectoralNpcProposal } =
-            await import("@/lib/countries/hu/electoralNpcProposals1994");
-          await processHu1994ElectoralNpcProposal(db, context.gameState, newTurn, gameNow);
-          const { processHu2011ElectoralMandate } =
-            await import("@/lib/countries/hu/electoralProposals2011");
-          await processHu2011ElectoralMandate(db, context.gameState, newTurn, gameNow);
-          const { processHu2011ElectoralNpcProposal } =
-            await import("@/lib/countries/hu/electoralNpcProposals2011");
-          await processHu2011ElectoralNpcProposal(db, context.gameState, newTurn, gameNow);
-          const { openRussianPresidentialElection } =
-            await import("@/lib/countries/ru/presidentialElectionOpening");
-          await openRussianPresidentialElection({
+          const { runCountryTurnHooks } = await import("@/lib/turn/countryTurnHooks");
+          await runCountryTurnHooks({
             db,
             game: context.gameState,
             turn: newTurn,
+            year: currentYear,
             now: gameNow,
           });
-          const { processRuPresidencyTransition } =
-            await import("@/lib/countries/ru/ruPresidencyTransition");
-          await processRuPresidencyTransition(db, context.gameState, newTurn, gameNow);
-          const { processRuLegislatureTransition } =
-            await import("@/lib/countries/ru/ruLegislatureTransition");
-          await processRuLegislatureTransition(db, context.gameState, newTurn, gameNow);
           return runPostElectionGovernmentPhases(db, gameNow, generalResolved ?? 0, newTurn);
         });
         const govFormedMap = govResult?.governmentFormed ?? {};
@@ -1530,18 +1443,16 @@ export function getTurnPhaseRegistry(): TurnPhaseAdapter[] {
         // the turn that completes the phase still suppresses (resume next turn).
         const foundingActive = context.gameState.preIteration?.active === true;
 
-        // Registered countries only — a dissolved country's spawners are
-        // harmless today (they iterate regions it no longer has) but every one
-        // of them still runs queries every turn, and any spawner that ever
-        // grows a config-driven fallback would resurrect ghost races.
-        let countryElectionPhasePromises: Promise<unknown>[] = [];
+        // Registered countries only: a dissolved country's spawners still run queries every turn, and a config-driven fallback could resurrect ghost races.
+        const countryElections: Promise<unknown>[] = [];
         if (!foundingActive) {
-          const registeredForElections = new Set(await getRegisteredCountryIds(db));
-          countryElectionPhasePromises = Object.entries(COUNTRY_ELECTION_PHASES)
-            .filter(([id]) => registeredForElections.has(id as CountryId))
-            .flatMap(([, entries]) =>
-              entries.map(({ name, fn }) => runtime.runPhase(name, () => fn(gameNow, newTurn)))
-            );
+          const inPlay = new Set(await getFullSimulationCountryIds(db));
+          const entries = selectCountryElectionEntries(COUNTRY_ELECTION_PHASES, inPlay);
+          countryElections.push(
+            runtime.runPhase("countryElections", () =>
+              runCountryElectionEntries(entries, gameNow, newTurn)
+            )
+          );
         }
 
         // Vacate any majority-gated leadership office whose holder has left the
@@ -1560,7 +1471,7 @@ export function getTurnPhaseRegistry(): TurnPhaseAdapter[] {
                   ensurePerpetualElections(gameNow, newTurn)
                 ),
               ]),
-          ...countryElectionPhasePromises,
+          ...countryElections,
           runtime.runPhase("leadershipElections", () => resolveExpiredLeadershipElections(db)),
           runtime.runPhase("staleCandidateCleanup", () => cleanupStaleElectionCandidates(gameNow)),
           runtime.runPhase("internationalOrganizations", () =>
@@ -1573,7 +1484,7 @@ export function getTurnPhaseRegistry(): TurnPhaseAdapter[] {
         // being elected, so there are no "mid-term" vacancies to backfill.
         if (!foundingActive) {
           await runtime.runPhase("byElectionWatcher", () =>
-            processByElectionWatcher(db, newTurn, gameNow)
+            processByElectionsWithFill(db, newTurn, gameNow, context.config)
           );
           // Immediately after the governor watcher: same settled seat state,
           // separate country scope (UK Commons), separate election type.
@@ -1617,7 +1528,9 @@ export function getTurnPhaseRegistry(): TurnPhaseAdapter[] {
         await runtime.runPhase("impeachmentLifecycle", () =>
           processImpeachmentLifecycle(db, newTurn, gameNow)
         );
-        await runtime.runPhase("presidentialSuccession", () => processPresidentialSuccession(db));
+        await runtime.runPhase("presidentialSuccession", () =>
+          processSuccessionsAndFills(db, newTurn, gameNow)
+        );
       },
     },
     {
@@ -1658,15 +1571,9 @@ export function getTurnPhaseRegistry(): TurnPhaseAdapter[] {
         }
 
         const { runIndexFundCron } = await import("@/lib/indexFunds/fundCron");
-        // Was a bare await with no runtime.runPhase() wrapper, the ONLY phase in
-        // the entire registry invisible to TurnPhaseTelemetryMap (confirmed: every
-        // other adapter uses runPhase/markPhaseSkipped). Found via the headless sim
-        // harness: turnLogs.phaseStatuses showed the last tracked phase
-        // (gameHealthSnapshot, the entry right before this one) ending ~11s into a
-        // turn that took ~108s total, the missing ~97s was entirely this phase,
-        // with zero telemetry trace and zero Sentry slow-phase reporting in
-        // production either. Wrapping it fixes both: visibility here, AND
-        // production's existing >30s slow-phase alerting now covers this phase too.
+        // Must go through runtime.runPhase so the phase is visible to
+        // TurnPhaseTelemetryMap and production slow-phase alerting. A bare
+        // await here leaves it untracked.
         const result = await runtime.runPhase(
           "indexFunds",
           selectPhaseImplementation(context.engine, "indexFunds", {
@@ -1732,12 +1639,9 @@ export function getTurnPhaseRegistry(): TurnPhaseAdapter[] {
         }
       },
     },
-    // --- Shadow ledger (registered LAST) --------------------------------------
-    // Snapshot the authoritative money balances AFTER every value-affecting
-    // phase has run, then reconcile this turn's shadow ledger entries against
-    // the snapshot diff. Shadow-only and flag-gated (`ledgerShadow`, off in prod
-    // seeds, on in the sim harness), zero game-behavior impact. See
-    // docs/plans/2026-07-05-shadow-ledger-plan.md §2/§3.
+    // Shadow ledger (registered LAST): snapshot money balances after all
+    // value-affecting phases, then reconcile shadow entries against the diff.
+    // Shadow-only, flag-gated (`ledgerShadow`), zero game-behavior impact.
     {
       key: "ledgerBalanceSnapshot",
       async execute(context, runtime) {
@@ -1772,9 +1676,8 @@ export function getTurnPhaseRegistry(): TurnPhaseAdapter[] {
           );
           return;
         }
-        // Stamp the turn's banking mode from the already-loaded turn config:
-        // zero extra round trips, and the persisted doc carries per-turn
-        // banking history for the #992 evidence gate.
+        // Stamp banking mode from the already-loaded turn config: no extra
+        // round trips, and the persisted doc carries per-turn banking history.
         const report = await runtime.runPhase("ledgerReconcile", () =>
           reconcileTurn(db, newTurn, { savingsAccountsMode: config?.savingsAccountsMode ?? null })
         );

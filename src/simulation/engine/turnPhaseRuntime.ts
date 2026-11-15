@@ -41,6 +41,15 @@ import {
   type ResumeResultOutcome,
 } from "./turnPhaseResumeResults";
 import { TurnMustStopError } from "@/lib/turn/turnMustStop";
+import {
+  TurnLockLostError,
+  isTurnLockLost,
+  markTurnLockLost,
+  turnLockFenceActive,
+  turnLockFenceFilter,
+} from "@/lib/turn/turnLockHolder";
+import { describeTurnError, maybeInjectTurnFault } from "@/lib/turn/faultInjection";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /**
  * Phases that only READ state to produce a derivative/historical record
@@ -122,8 +131,8 @@ export function createTurnPhaseRuntime(input: {
    */
   alreadyApplied?: Set<string>;
   /**
-   * How the dead holder left each applied phase, plus the stored results of
-   * completed phases a later phase consumes (#3429). Absent on a normal turn.
+   * How the dead holder left each applied phase, plus stored results of
+   * completed phases a later phase consumes. Absent on a normal turn.
    */
   resumed?: CrashedTurnPhaseState;
   /**
@@ -136,10 +145,8 @@ export function createTurnPhaseRuntime(input: {
   /** Recovery-only boundary: defer work whose prerequisites have not settled. */
   blockedByFailure?: (phaseName: string) => boolean;
   /**
-   * The turn number being processed (`context.newTurn` in `turnSystem.ts`) —
-   * used to build the `"turn:<n>:<phase>"` audit traceId (forensics plan
-   * §3.1, T2.7). Optional so existing unit tests that don't care about the
-   * audit spine don't have to thread it through; defaults to 0.
+   * Turn number for the `"turn:<n>:<phase>"` audit traceId. Optional so tests
+   * that don't exercise the audit spine can omit it; defaults to 0.
    */
   turn?: number;
   /** Sandbox tooling hook. Omitted by production turn execution. */
@@ -172,7 +179,7 @@ export function createTurnPhaseRuntime(input: {
   // Nested work may bypass its own ancestors, but never a different runtime's
   // drain. Keep this context beside the invocation ids it identifies.
   const phaseInvocationChain = new AsyncLocalStorage<readonly number[]>();
-  // #3385: a timeout cannot cancel the phase function, which keeps issuing
+  // A timeout cannot cancel the phase function, which keeps issuing
   // writes. Every timed-out phase stays here until its function settles, and no
   // new phase starts (nor does the turn complete or release its lock) until the
   // set is empty. A function that never settles therefore halts the turn with
@@ -243,8 +250,8 @@ export function createTurnPhaseRuntime(input: {
           : (options.message ?? current.message),
     };
     // A result-carrying completion is recorded in memory only after its marker
-    // and result land together. Otherwise a later whole-map write (the failure
-    // path) could persist "completed" with no result (#3429).
+    // and result land together, so a later whole-map write cannot persist
+    // completed with no result.
     const stagedCompletion = phaseRequiresResumeResult(phase) && status === "completed";
     if (!stagedCompletion || lockless) phaseStatuses[phase] = next;
     if (lockless) {
@@ -263,7 +270,18 @@ export function createTurnPhaseRuntime(input: {
     if (status === "running") currentPhaseRef.current = phase;
 
     // Result-carrying completions must land atomically with their saved output.
-    if (status !== "running" && !isAbnormal && !windowElapsed && !stagedCompletion) return;
+    // With the lock fence on (turn resilience stage 1) every completion lands at
+    // once: a coalesced completion that never flushes leaves a finished step
+    // looking interrupted after a process death, and recovery cannot tell it
+    // from one that was in flight.
+    if (
+      status !== "running" &&
+      !isAbnormal &&
+      !windowElapsed &&
+      !stagedCompletion &&
+      !turnLockFenceActive()
+    )
+      return;
     lastFlushAtMs = now.getTime();
 
     const setFields: Record<string, unknown> = {
@@ -279,10 +297,15 @@ export function createTurnPhaseRuntime(input: {
       setFields[`processingPhaseResults.${phase}`] = options.result;
     }
 
-    const persisted = await db
-      .collection<GameState>("gameState")
-      .updateOne({ _id: "current", isProcessing: true }, { $set: setFields });
+    const persisted = await gameStateCollection(db).updateOne(
+      { _id: "current", isProcessing: true, ...turnLockFenceFilter() },
+      { $set: setFields }
+    );
     if (status === "running" && persisted.matchedCount === 0) {
+      if (turnLockFenceActive()) {
+        markTurnLockLost();
+        throw new TurnLockLostError(`phase "${phase}" could not start`);
+      }
       throw new Error(`Cannot start phase "${phase}": processing lock no longer matches`);
     }
     if (stagedCompletion) phaseStatuses[phase] = next;
@@ -298,6 +321,7 @@ export function createTurnPhaseRuntime(input: {
 
   async function runPhase<T>(name: string, fn: () => Promise<T>): Promise<T | null> {
     const timeoutMs = phaseTimeoutMs(name);
+    if (isTurnLockLost()) throw new TurnLockLostError(`before phase "${name}"`);
     if (stopError) throw stopError;
     // A combined predicate can reject an ordinary cadence or singleplayer
     // phase as well as a simulation profile. Record the known conditional
@@ -307,21 +331,14 @@ export function createTurnPhaseRuntime(input: {
       await markPhaseSkipped(name, "conditional", "skipped: phase eligibility predicate");
       return null;
     }
-    // RESUME GATE. This turn is a re-entry into a turn a previous process began and
-    // did not finish, and `alreadyApplied` names the phases that must not run again:
-    // the ones it recorded as completed, plus the single phase it was inside when it
-    // died. Running either would double-apply writes that already landed.
-    //
-    // Before this existed the whole turn was CONSUMED on recovery, so one redeploy
-    // landing mid-turn discarded every remaining phase, roughly 150 of them, including
-    // every election, metric and settlement the turn had not reached yet. Skipping the
-    // handful that already ran and continuing is strictly better: the cost of a deploy
-    // falls from a whole turn to the one phase that was interrupted.
+    // RESUME GATE. Re-entry into an unfinished turn: `alreadyApplied` names
+    // phases that must not run again (completed, plus the interrupted one) because
+    // running them would double-apply writes that already landed.
     //
     // A skipped phase returns nothing, so a phase whose result a later phase reads
-    // hands back the bounded copy it stored with its completed status (#3429). An
-    // interrupted phase, or a completed one without a valid copy, returns null and
-    // records why; `requirePhaseResult` turns that into an explicit failure.
+    // hands back the bounded copy stored with its completed status. An interrupted
+    // phase, or a completed one without a valid copy, returns null and records why;
+    // `requirePhaseResult` turns that into an explicit failure.
     if (
       name !== "playerIncomeTax" &&
       name !== "incomeTaxBases" &&
@@ -393,6 +410,20 @@ export function createTurnPhaseRuntime(input: {
         reject(new Error(`Phase "${name}" timed out after ${timeoutMs / 1000}s`));
       }, timeoutMs);
     });
+    // A heartbeat that matches nothing means another process took the lock (or
+    // marked it abandoned). Stop the turn now; its phase function cannot be
+    // cancelled, but no further phase, status or completion write follows.
+    let rejectLockLost: (e: Error) => void = () => {};
+    const lockLostPromise = new Promise<never>((_, reject) => {
+      rejectLockLost = reject;
+    });
+    lockLostPromise.catch(() => {});
+    const onHeartbeatResult = (res: { matchedCount: number }) => {
+      if (turnLockFenceActive() && res.matchedCount === 0) {
+        markTurnLockLost();
+        rejectLockLost(new TurnLockLostError(`heartbeat during phase "${name}"`));
+      }
+    };
     let heartbeatTimer = setInterval(() => {
       // Heartbeats renew the lock only. An in-flight heartbeat may finish after
       // a terminal status write and must never revive that phase as running.
@@ -406,9 +437,12 @@ export function createTurnPhaseRuntime(input: {
         setFields[`processingPhaseStatuses.${name}.substeps`] = substeps;
         setFields[`processingPhaseStatuses.${name}.updatedAt`] = now;
       }
-      void db
-        .collection<GameState>("gameState")
-        .updateOne({ _id: "current", isProcessing: true }, { $set: setFields })
+      void gameStateCollection(db)
+        .updateOne(
+          { _id: "current", isProcessing: true, ...turnLockFenceFilter() },
+          { $set: setFields }
+        )
+        .then(onHeartbeatResult)
         .catch((err) => {
           console.warn(`[Turn] Failed to refresh heartbeat for phase "${name}"`, err);
           Sentry.captureException(err, {
@@ -439,9 +473,12 @@ export function createTurnPhaseRuntime(input: {
           setFields[`processingPhaseStatuses.${name}.substeps`] = substeps;
           setFields[`processingPhaseStatuses.${name}.updatedAt`] = now;
         }
-        void db
-          .collection<GameState>("gameState")
-          .updateOne({ _id: "current", isProcessing: true }, { $set: setFields })
+        void gameStateCollection(db)
+          .updateOne(
+            { _id: "current", isProcessing: true, ...turnLockFenceFilter() },
+            { $set: setFields }
+          )
+          .then(onHeartbeatResult)
           .catch((err) => {
             console.warn(`[Turn] Failed to refresh heartbeat for draining phase "${name}"`, err);
             Sentry.captureException(err, {
@@ -484,6 +521,7 @@ export function createTurnPhaseRuntime(input: {
         async () => {
           await setPhaseStatus(name, "running");
           beginPhaseProfiling(name);
+          maybeInjectTurnFault(name, null);
           Sentry.addBreadcrumb({
             category: "turn.phase",
             message: `Phase "${name}" started`,
@@ -597,15 +635,21 @@ export function createTurnPhaseRuntime(input: {
         }
         return result;
       }
-      void setPhaseStatus(name, "completed", completionTelemetry).catch((err) =>
+      const completedWrite = setPhaseStatus(name, "completed", completionTelemetry).catch((err) =>
         console.warn(`[Turn] Failed to mark phase "${name}" completed`, err)
       );
+      if (turnLockFenceActive()) await completedWrite;
       return result;
     }
 
     try {
-      return await completePhase(await Promise.race([work, timeoutPromise]));
+      return await completePhase(await Promise.race([work, timeoutPromise, lockLostPromise]));
     } catch (err) {
+      if (err instanceof TurnLockLostError) {
+        discardPhaseSubsteps(name);
+        stopError = err;
+        throw err;
+      }
       if (err instanceof TurnPhaseCompletionPersistError) {
         // Writes landed, so this is not a phase failure to log and continue past.
         // The in-memory status stays "running"; the turn aborts and a resume
@@ -638,10 +682,11 @@ export function createTurnPhaseRuntime(input: {
           reason: message,
         });
       }
+      const storedMessage = describeTurnError(err);
       const persistFailure = (substeps: TurnPhaseTelemetry["substeps"] | undefined) =>
         setPhaseStatus(name, "failed", {
           reason: err instanceof TurnMustStopError ? "mustStop" : "other",
-          message,
+          message: storedMessage,
           ...(substeps ? { substeps } : {}),
         }).catch((setErr) => console.warn(`[Turn] Failed to mark phase "${name}" failed`, setErr));
       const initialFailureWrite = persistFailure(

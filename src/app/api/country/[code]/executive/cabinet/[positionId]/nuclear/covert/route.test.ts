@@ -51,7 +51,6 @@ beforeEach(() => {
   db.collection("politicalMetrics");
   db.collection("newsPosts");
   db.collectionMocks.gameState.findOne.mockResolvedValue({
-    coldWarEnabled: true,
     currentYear: 1955,
     currentTurn: 42,
     startingYear: 1953,
@@ -86,13 +85,6 @@ describe("GET nuclear/covert", () => {
     expect(res.status).toBe(404);
     // Nothing else attached: the surface must not exist for anyone else.
     expect(await res.json()).toMatchObject({ eligible: false });
-  });
-
-  it("404s while the Cold War subsystem is off", async () => {
-    db.collectionMocks.gameState.findOne.mockResolvedValue({ coldWarEnabled: false });
-    const { GET } = await import(`${BASE}/route`);
-    const res = await GET(get(), call);
-    expect(res.status).toBe(404);
   });
 
   it("403s a non-holder non-admin", async () => {

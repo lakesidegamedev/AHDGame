@@ -2,14 +2,21 @@ import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError } from "@/lib/api/errors";
-import type { Bond, Corporation } from "@/lib/db/types";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import type { Document } from "mongodb";
+import { indexFundPositionsCollection } from "@/lib/db/repositories/indexFundPositions";
+import { indexFundTransactionsCollection } from "@/lib/db/repositories/indexFundTransactions";
+import { indexFundRedemptionQueueCollection } from "@/lib/db/repositories/indexFundRedemptionQueue";
+import { indexFundSnapshotsCollection } from "@/lib/db/repositories/indexFundSnapshots";
+import { migrationsRunCollection } from "@/lib/db/repositories/migrationsRun";
 
 async function releaseFundHeldShares(db: Awaited<ReturnType<typeof getDb>>): Promise<{
   corporations: number;
   shares: number;
 }> {
-  const corporations = await db
-    .collection<Corporation>("corporations")
+  const corporations = await corporationsCollection(db)
     .find({ "shareholders.fundId": { $exists: true } }, { projection: { _id: 1, shareholders: 1 } })
     .toArray();
 
@@ -34,7 +41,7 @@ async function releaseFundHeldShares(db: Awaited<ReturnType<typeof getDb>>): Pro
   }
 
   if (ops.length > 0) {
-    await db.collection<Corporation>("corporations").bulkWrite(ops);
+    await corporationsCollection(db).bulkWrite(ops);
   }
 
   return { corporations: ops.length, shares: releasedShares };
@@ -44,8 +51,7 @@ async function releaseFundHeldBonds(db: Awaited<ReturnType<typeof getDb>>): Prom
   bonds: number;
   units: number;
 }> {
-  const bonds = await db
-    .collection<Bond>("bonds")
+  const bonds = await bondsCollection(db)
     .find({ "holders.fundId": { $exists: true } }, { projection: { _id: 1, holders: 1 } })
     .toArray();
 
@@ -70,7 +76,7 @@ async function releaseFundHeldBonds(db: Awaited<ReturnType<typeof getDb>>): Prom
   }
 
   if (ops.length > 0) {
-    await db.collection<Bond>("bonds").bulkWrite(ops);
+    await bondsCollection(db).bulkWrite(ops);
   }
 
   return { bonds: ops.length, units: releasedUnits };
@@ -90,15 +96,15 @@ export async function DELETE() {
     ]);
 
     const [fundResult, posResult, txnResult, snapResult, redeemResult] = await Promise.all([
-      db.collection("indexFunds").deleteMany({}),
-      db.collection("indexFundPositions").deleteMany({}),
-      db.collection("indexFundTransactions").deleteMany({}),
-      db.collection("indexFundSnapshots").deleteMany({}),
-      db.collection("indexFundRedemptionQueue").deleteMany({}),
+      indexFundsCollection<Document>(db).deleteMany({}),
+      indexFundPositionsCollection<Document>(db).deleteMany({}),
+      indexFundTransactionsCollection<Document>(db).deleteMany({}),
+      indexFundSnapshotsCollection<Document>(db).deleteMany({}),
+      indexFundRedemptionQueueCollection<Document>(db).deleteMany({}),
     ]);
 
     // Also remove the bootstrap migration markers so re-enabling re-seeds.
-    await db.collection<{ _id: string }>("migrationsRun").deleteMany({
+    await migrationsRunCollection<{ _id: string }>(db).deleteMany({
       _id: {
         $in: [
           "2026-06-01-index-fund-foundation",

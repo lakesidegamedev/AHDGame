@@ -1,27 +1,24 @@
 /**
- * Brazil Layer-1 demographic model — census-consuming build.
+ * Brazil Layer-1 demographic model, census-consuming build.
  *
  * Architecture:
  *   - dims: ["ethnicity","age","education","income","urbanization"]
  *   - census: real per-region IBGE data from brRegionCensusData*.ts
  *   - composition: maps each of the 8 BR archetypes to census dim/key weights
  *   - positions: per-era, reflecting documented Brazilian political history
- *     (1979 = late military dictatorship / abertura, 1991 = early PT/PSDB era,
- *      1999 = Cardoso Plano Real, 2007 = Lula commodity boom,
- *      2019 = Bolsonaro realignment, 2023 = Lula return + polarization)
- *   - region/archetype leans EMERGE from census × positions — never hand-calibrated
+ *   - region/archetype leans EMERGE from census × positions, never hand-calibrated
  *
  * 1979 CAVEAT: Brazil was under military dictatorship until 1985; the first
  * direct presidential election was in 1989. The 1979 positions model the
  * late-regime / abertura context, not a competitive democratic election. Leans
- * are modest and should be read as attitudinal tendencies during the transition,
- * NOT as electoral outcomes.
+ * are modest attitudinal tendencies during the transition, NOT electoral
+ * outcomes.
  *
  * Era-fact anchors validated in br.test.ts:
- *   1999: NORDESTE economically LEFT vs SUL economically RIGHT (nascent PT base)
+ *   1999: NORDESTE LEFT vs SUL RIGHT (nascent PT base)
  *   2007: NORDESTE strongly LEFT (Bolsa Família / Lula peak); CENTRO_OESTE RIGHT
  *   2019: NORDESTE strongly LEFT; SUL + CENTRO_OESTE strongly RIGHT (Bolsonaro)
- *   2023: NORDESTE LEFT; SUL RIGHT (confirmed — Lula 2022 vs Bolsonaro mirror)
+ *   2023: NORDESTE LEFT; SUL RIGHT (Lula 2022 vs Bolsonaro mirror)
  */
 
 import { convertLayer1Census } from "@/lib/seeds/international/convertLayer1Census";
@@ -236,7 +233,7 @@ const COMPOSITION: Record<GroupId, CountryLayer1Model["composition"][string]> = 
   },
 };
 
-// ── Default leans (archetype priors, from brDemographicCategories.ts) ──────────
+// ── Default leans (archetype priors, from the country Layer-1 model) ──────────
 
 const DEFAULT_LEANS: Record<GroupId, { economicLean: number; socialLean: number }> = {
   evangelical_conservative: { economicLean: 1, socialLean: 4 },
@@ -249,49 +246,8 @@ const DEFAULT_LEANS: Record<GroupId, { economicLean: number; socialLean: number 
   young_progressive: { economicLean: -2, socialLean: -3 },
 };
 
-// ── Per-era positions: how each census key leaned in that political era ─────────
-//
-// Scale: economicLean -5 (redistribution/left) to +5 (free market/right)
-//        socialLean   -5 (progressive/liberal) to +5 (traditional/conservative)
-//
-// Historical basis:
-//
-// 1979: MILITARY DICTATORSHIP (Figueiredo regime, abertura era).
-//   No competitive presidential elections; ARENA vs MDB. Low income / non-white /
-//   rural = no clear democratic lean; opposition (MDB) appealed to urban educated
-//   professionals and organized labour. Regime supported by high-income elites and
-//   rural landlords. Positions are modest — this is attitudinal context, not votes.
-//
-// 1991: EARLY PT / PSDB ERA (Collor / Itamar).
-//   First post-dictatorship elections (Collor 1989, defeated Lula). PT is emerging
-//   as the organized-labour / urban-left party. PSDB = modernizing centre. Cardoso
-//   at Finance; hyperinflation still the dominant issue. Low income ≠ automatic PT
-//   yet — PT needs more cycles to build Nordeste base. Income HIGH = PDS/PPR right.
-//
-// 1999: CARDOSO PLANO REAL (2nd term).
-//   Hyperinflation beaten; inequality near historic peak (Gini ~0.60). PT is now
-//   clearly the left alternative (Lula 2nd round 1998 loss). Nordeste poor = PT-
-//   leaning; São Paulo urban middle = PSDB. Rural agribusiness = centre-right.
-//
-// 2007: LULA COMMODITY BOOM (2nd term).
-//   Bolsa Família established (2003-04); minimum wage rising; commodity supercycle.
-//   PT dominates Nordeste (Bolsa Família epicenter). Income LOW now = strongly
-//   economic LEFT (direct transfer dependence). Centro-Oeste agribusiness = RIGHT.
-//   Urban middle growing but PT still leads Sudeste. No strong social-left turn yet.
-//
-// 2019: BOLSONARO REALIGNMENT.
-//   Cultural / moral cleavage now rivals the economic one. Evangelical vote = right.
-//   Nordeste: Haddad 72.6% (2nd round 2018) → economic LEFT. Sul: Bolsonaro ~76%
-//   → economic RIGHT + social RIGHT. Centro-Oeste: Bolsonaro ~73%. Sudeste: split
-//   (SP right, RJ right; MG swing). Education: superior still somewhat left
-//   (PSOL/PT) but split by market liberals. Income high = right (austerity, pension
-//   reform). Low income in Nordeste = left; in frontier Norte = split.
-//
-// 2023: LULA RETURN / POST-BOLSONARO.
-//   Lula won 2022 narrowly (50.9%). Polarization entrenched. Nordeste left; Sul +
-//   Centro-Oeste right; Sudeste narrowly left (SP city left, interior right).
-//   Social left gaining among young urban; evangelical = still strong right.
-
+// Per-era positions. Scale: economicLean -5 (redistribution/left) to +5 (free
+// market/right); socialLean -5 (progressive) to +5 (traditional).
 type DimPositions = Record<string, DemographicPosition>;
 type EraPositions = Record<string, DimPositions>;
 
@@ -490,25 +446,11 @@ const POSITIONS_2007: EraPositions = {
   },
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// 2019 — BOLSONARO REALIGNMENT
-// Cultural / moral / security cleavage now matches the economic one.
-// Bolsonaro won 2018 (55.1% 2nd round). Haddad (PT) won Nordeste 72.6%.
-//
-// Education note: in Brazil, `fundamental` education (≤8 years) is the majority
-// of voters and is a HETEROGENEOUS group. In the NORDESTE, low-education voters
-// are Bolsa Família recipients who voted overwhelmingly for Haddad on economic
-// grounds. In the Sul/CO frontier, low-education workers are evangelical and
-// voted Bolsonaro. Education alone cannot resolve this — income + urbanization
-// are the key discriminating dims. We therefore set `fundamental.socialLean`
-// modestly: it is traditional (positive) but not extreme, because the Nordeste
-// poor are traditional on family matters but NOT the evangelical-right bloc.
-// The evangelical signal emerges more strongly from urbanization.suburban
-// (periferias with church networks) and income.low in high-urban frontier regions.
-//
-// Income LOW is STRONGLY economic-left (Bolsa Família dependent = direct economic
-// stake in redistribution). This is the primary axis for the Nordeste result.
-// ─────────────────────────────────────────────────────────────────────────────
+// 2019 Bolsonaro realignment. Cultural, moral, and security cleavages
+// track the economic one. Education alone cannot resolve the split:
+// fundamental-education voters diverge by region and income (Nordeste poor
+// traditional on family but economically left; Sul/CO evangelical workers
+// right). Income + urbanization are the key discriminating dims.
 const POSITIONS_2019: EraPositions = {
   ethnicity: {
     // In 2019, ethnicity maps directly onto the Bolsonaro/Haddad split.

@@ -55,7 +55,7 @@ describe("PUT general assignments", () => {
       sideA: { label: "NATO", countries: ["US"], kind: "coalition", backer: "west" },
       sideB: { label: "PLA", countries: ["CN"], kind: "state", backer: "east" },
     });
-    db.collectionMocks.gameState.findOne.mockResolvedValue({ conflictsEnabled: true });
+    db.collectionMocks.gameState.findOne.mockResolvedValue({});
     db.collectionMocks.militaryCommands.findOne.mockResolvedValue({
       countryId: "US",
       commands: [
@@ -228,13 +228,6 @@ describe("PUT general assignments", () => {
     const res = await PUT(req({ conflictAssignments: [assignment()] }), call);
 
     expect(res.status).toBe(200);
-  });
-
-  it("404s when conflicts is disabled", async () => {
-    db.collectionMocks.gameState.findOne.mockResolvedValue({ conflictsEnabled: false });
-    const { PUT } = await import(ROUTE);
-    const res = await PUT(req({ conflictAssignments: [assignment()] }), call);
-    expect(res.status).toBe(404);
   });
 
   it("400s an invalid country", async () => {

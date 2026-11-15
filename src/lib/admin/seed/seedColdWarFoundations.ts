@@ -18,6 +18,15 @@ import {
   historicalWarheads,
   seedNuclearPrograms,
 } from "@/lib/admin/seed/seedNuclearPrograms";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { crisesCollection } from "@/lib/db/repositories/crises";
+import type { Document } from "mongodb";
+import { nationalDoctrineCollection } from "@/lib/db/repositories/nationalDoctrine";
+import { livingConflictsCollection } from "@/lib/db/repositories/livingConflicts";
+import { macroCountriesCollection } from "@/lib/db/repositories/macroCountries";
+import { coldWarTensionCollection } from "@/lib/db/repositories/coldWarTension";
+import { nuclearProgramsCollection } from "@/lib/db/repositories/nuclearPrograms";
 
 const NUCLEAR_DELIVERY_DOCTRINE_KEY = keyOf("strat", 5);
 
@@ -64,8 +73,7 @@ export async function seedColdWarFoundations(
 ): Promise<ColdWarFoundationResult> {
   const baselines = nuclearProgramBaselines(year);
   const programIds = baselines.map((program) => program._id);
-  const existingPrograms = await db
-    .collection<NuclearProgram>("nuclearPrograms")
+  const existingPrograms = await nuclearProgramsCollection(db)
     .find({}, { projection: { _id: 1, adopted: 1, warheads: 1 } })
     .toArray();
   const existingProgramByCountry = new Map(
@@ -77,8 +85,7 @@ export async function seedColdWarFoundations(
   });
 
   const conflictDefs = allLivingConflictDefs();
-  const existingConflicts = await db
-    .collection<LivingConflictState>("livingConflicts")
+  const existingConflicts = await livingConflictsCollection<LivingConflictState>(db)
     .find(
       { defKey: { $in: conflictDefs.map((definition) => definition.key) } },
       { projection: { defKey: 1, phaseLevel: 1, campaign: 1 } }
@@ -89,11 +96,11 @@ export async function seedColdWarFoundations(
     (definition) => !existingConflictKeys.has(definition.key)
   );
   const tensionExists =
-    (await db
-      .collection<TensionSeedDocument>("coldWarTension")
-      .findOne({ _id: "current" }, { projection: { _id: 1 } })) != null;
-  const existingDoctrines = await db
-    .collection("nationalDoctrine")
+    (await coldWarTensionCollection<TensionSeedDocument>(db).findOne(
+      { _id: "current" },
+      { projection: { _id: 1 } }
+    )) != null;
+  const existingDoctrines = await nationalDoctrineCollection<Document>(db)
     .find({ countryId: { $in: programIds } }, { projection: { countryId: 1, adopted: 1 } })
     .toArray();
   const doctrineByCountry = new Map(
@@ -125,18 +132,16 @@ export async function seedColdWarFoundations(
   for (const countryId of programIds) {
     const doctrine = doctrineByCountry.get(countryId);
     if (!doctrine) {
-      await db.collection("nationalDoctrine").insertOne({
+      await nationalDoctrineCollection<Document>(db).insertOne({
         countryId,
         adopted: { ...DEFAULT_ADOPTED, [NUCLEAR_DELIVERY_DOCTRINE_KEY]: turn },
         points: DEFAULT_POINTS,
       });
     } else if (doctrine.adopted?.[NUCLEAR_DELIVERY_DOCTRINE_KEY] == null) {
-      await db
-        .collection("nationalDoctrine")
-        .updateOne(
-          { countryId, [`adopted.${NUCLEAR_DELIVERY_DOCTRINE_KEY}`]: { $exists: false } },
-          { $set: { [`adopted.${NUCLEAR_DELIVERY_DOCTRINE_KEY}`]: turn } }
-        );
+      await nationalDoctrineCollection<Document>(db).updateOne(
+        { countryId, [`adopted.${NUCLEAR_DELIVERY_DOCTRINE_KEY}`]: { $exists: false } },
+        { $set: { [`adopted.${NUCLEAR_DELIVERY_DOCTRINE_KEY}`]: turn } }
+      );
     }
   }
 
@@ -145,12 +150,10 @@ export async function seedColdWarFoundations(
     const populations: Record<string, number> = {};
     if (opts.presetId === "2027-default") {
       const [regions, macroCountries] = await Promise.all([
-        db
-          .collection<{ countryId: string; population?: number }>("states")
+        statesCollection<{ countryId: string; population?: number }>(db)
           .find({}, { projection: { countryId: 1, population: 1 } })
           .toArray(),
-        db
-          .collection<{ entityId: string; population?: number }>("macroCountries")
+        macroCountriesCollection<{ entityId: string; population?: number }>(db)
           .find({ retiredAt: null }, { projection: { entityId: 1, population: 1 } })
           .toArray(),
       ]);
@@ -168,7 +171,7 @@ export async function seedColdWarFoundations(
       // aggregate rather than counting the same residents twice.
       Object.assign(populations, playablePopulations);
     }
-    await db.collection<LivingConflictState>("livingConflicts").bulkWrite(
+    await livingConflictsCollection<LivingConflictState>(db).bulkWrite(
       missingConflicts.map((definition) => ({
         updateOne: {
           filter: { defKey: definition.key },
@@ -187,7 +190,7 @@ export async function seedColdWarFoundations(
   }
   const legacyConflicts = existingConflicts.filter((conflict) => conflict.campaign == null);
   if (legacyConflicts.length > 0) {
-    await db.collection<LivingConflictState>("livingConflicts").bulkWrite(
+    await livingConflictsCollection<LivingConflictState>(db).bulkWrite(
       legacyConflicts.map((conflict) => ({
         updateOne: {
           filter: { defKey: conflict.defKey, campaign: { $exists: false } },
@@ -198,7 +201,7 @@ export async function seedColdWarFoundations(
   }
 
   if (!tensionExists) {
-    const activeCrises = await db.collection("crises").countDocuments({ status: "active" });
+    const activeCrises = await crisesCollection<Document>(db).countDocuments({ status: "active" });
     const escalationLevel =
       existingConflicts.find((conflict) => conflict.defKey === "vietnam")?.phaseLevel ?? 0;
     const warheadsByCountry = new Map(
@@ -218,7 +221,7 @@ export async function seedColdWarFoundations(
       conflicts: conflictWars.map(conflictWarPressureInput),
     });
     const pressureFloor = tensionPressureBreakdown(pressureSnapshot.pressures).floor;
-    await db.collection<TensionSeedDocument>("coldWarTension").updateOne(
+    await coldWarTensionCollection<TensionSeedDocument>(db).updateOne(
       { _id: "current" },
       {
         $setOnInsert: {
@@ -233,11 +236,10 @@ export async function seedColdWarFoundations(
     );
   }
 
-  await db.collection<GameState>("gameState").updateOne(
+  await gameStateCollection(db).updateOne(
     { _id: "current" },
     {
       $set: {
-        conflictsEnabled: true,
         coldWarEnabled: true,
         livingConflictsEnabled: true,
         livingConflictsEnabledBy: "system:release-1.3",

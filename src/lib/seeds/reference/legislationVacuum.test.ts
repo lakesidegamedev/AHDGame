@@ -16,10 +16,10 @@ describe("policy-vacuum seeding — national enacted laws (budgets.ts)", () => {
     }
   });
 
-  it("a 2019 preset still seeds broadly but drops post-2019 windows (cn_common_prosperity 2021)", () => {
+  it("a 2019 preset still seeds broadly but drops post-2019 windows (ie_ai_liability_act 2027)", () => {
     const laws2019 = generateDefaultEnactedLaws("2019-default");
     expect(laws2019.length).toBeGreaterThan(0);
-    expect(laws2019.some((l) => l.legislationTypeId === "cn_common_prosperity")).toBe(false);
+    expect(laws2019.some((l) => l.legislationTypeId === "ie_ai_liability_act")).toBe(false);
   });
 });
 
@@ -33,22 +33,11 @@ describe("policy-vacuum seeding — default policies (basePolicies.ts)", () => {
     }
   });
 
-  it("drops the CN post-2013 windowed types at 1991 (belt&road/cyber/AI/common-prosperity)", async () => {
-    const records = await getBasePolicies("1991-default");
-    const ids = new Set(records.map((r) => r.legislationTypeId));
-    expect(ids.has("cn_belt_and_road")).toBe(false);
-    expect(ids.has("cn_common_prosperity")).toBe(false);
-    // A pre-1991 CN windowed type IS present (hukou 1958, gaokao 1977).
-    expect(ids.has("cn_gaokao_reform")).toBe(true);
-  });
-
-  it("2019-default drops cn_common_prosperity (windowed 2021) from base policies", async () => {
+  it("2019-default drops ie_ai_liability_act (windowed 2027) from base policies", async () => {
     const ids2019 = new Set(
       (await getBasePolicies("2019-default")).map((r) => r.legislationTypeId)
     );
-    expect(ids2019.has("cn_common_prosperity")).toBe(false);
-    // A pre-2019 CN windowed type is still present (gaokao 1977).
-    expect(ids2019.has("cn_gaokao_reform")).toBe(true);
+    expect(ids2019.has("ie_ai_liability_act")).toBe(false);
   });
 
   it("seeds no other era's policy block in a 2019 world", async () => {

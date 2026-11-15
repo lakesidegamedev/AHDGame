@@ -9,6 +9,7 @@ import { parseJsonBody } from "@/lib/api/validate";
 import { z } from "zod";
 import type { User } from "@/lib/db/types";
 import { isR2Enabled, deleteFileByUrl } from "@/lib/r2";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -44,9 +45,10 @@ export async function DELETE(_request: Request, { params }: RouteContext) {
 
     // Look up author username for audit log
     const db = await getDb();
-    const authorUser = await db
-      .collection<User>("users")
-      .findOne({ _id: ad.userId }, { projection: { username: 1 } });
+    const authorUser = await usersCollection(db).findOne(
+      { _id: ad.userId },
+      { projection: { username: 1 } }
+    );
 
     await createModAuditLog({
       moderatorId: moderator.userId,
@@ -99,9 +101,10 @@ export async function PATCH(request: Request, { params }: RouteContext) {
 
     // Look up author username for audit log
     const db = await getDb();
-    const authorUser = await db
-      .collection<User>("users")
-      .findOne({ _id: ad.userId }, { projection: { username: 1 } });
+    const authorUser = await usersCollection(db).findOne(
+      { _id: ad.userId },
+      { projection: { username: 1 } }
+    );
 
     await createModAuditLog({
       moderatorId: moderator.userId,

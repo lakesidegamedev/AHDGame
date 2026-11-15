@@ -1,33 +1,23 @@
 /**
  * United Kingdom Region Census Profiles, 2027 era.
  *
- * 2027-default companion to {@link ukRegionCensusData2023} (the 2023
- * profiles). All values are independently authored literals for 2027, NOT
- * scaled or derived from any other era's data in code. They continue the
- * 2023 structure with small documented projection drifts.
+ * 2027-default companion to {@link ukRegionCensusData2023}. All values are
+ * independently authored literals for 2027, NOT scaled or derived from any
+ * other era's data in code.
  *
- * 2027 projection assumptions (2023 bundle as the visible baseline):
- * - Ethnicity: net migration stays high through 2024-26 (ONS long-term
- *   international migration estimates), so `other` rises 1 point in most
- *   regions and London's White British share slips below half. Sources: ONS
- *   Census 2021 and Scotland's Census 2022 as the base, ONS "Long-term
- *   international migration" (https://www.ons.gov.uk/peoplepopulationandcommunity/populationandmigration/internationalmigration).
- * - Age: every region ages about 1 point from `young`/`mid` into `senior`,
- *   fastest in the coastal retirement belt (South West, Wales, East of
- *   England). Source: ONS 2021-based interim national population
- *   projections (https://www.ons.gov.uk/peoplepopulationandcommunity/populationandmigration/populationprojections).
- * - Education: graduate expansion continues, so `degree_plus` rises 2
- *   points funded from `no_qualifications` and `gcse_equivalent`. Source:
- *   ONS Annual Population Survey qualification tables.
- * - Income: era-neutral relative tiers (no GBP thresholds). Real pay
- *   recovery after the 2022-23 squeeze moves about 1 point from `low` to
- *   `high`. Source: ONS "Regional labour market statistics".
- * - Urbanization: structural and held constant from 2023.
+ * 2027 projection assumptions:
+ * - Ethnicity: high net migration lifts `other` about 1 point in most regions;
+ *   London's White British share slips below half.
+ * - Age: every region shifts about 1 point from `young`/`mid` to `senior`,
+ *   fastest in the coastal retirement belt.
+ * - Education: `degree_plus` rises about 2 points, funded from
+ *   `no_qualifications` and `gcse_equivalent`.
+ * - Income: era-neutral relative tiers (no GBP thresholds); real pay recovery
+ *   moves about 1 point from `low` to `high`.
+ * - Urbanization: structural, held constant from 2023.
  *
- * NOTE: the shared Layer-1 model registry (`src/lib/seeds/international/`)
- * is outside this change's editable scope, so this bundle is consumed by
- * country-local tests for now. Wiring it into the Layer-1 era map is a
- * follow-up in shared code.
+ * Consumed by country-local tests only; not yet wired into the shared Layer-1
+ * era map in `src/lib/seeds/international/`.
  */
 
 import type { UKRegionLayer1 } from "@/lib/countries/uk/data/ukRegionCensusData";

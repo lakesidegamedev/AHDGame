@@ -15,8 +15,20 @@ function mockDb() {
         return {
           find: vi.fn().mockReturnValue({
             toArray: vi.fn().mockResolvedValue([
-              { _id: "HD", name: "East China", countryId: "CN" },
-              { _id: "HB", name: "North China", countryId: "CN" },
+              {
+                _id: "HD",
+                name: "East China",
+                countryId: "CN",
+                cachedEconomicLean: 1,
+                cachedSocialLean: -1,
+              },
+              {
+                _id: "HB",
+                name: "North China",
+                countryId: "CN",
+                cachedEconomicLean: 1,
+                cachedSocialLean: -1,
+              },
             ]),
           }),
         };

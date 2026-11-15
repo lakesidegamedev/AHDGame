@@ -1,4 +1,5 @@
 import { ObjectId, type Db } from "mongodb";
+import { isBackgroundInPreset } from "@/lib/world/eraRoster";
 import type { Corporation, State } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import { ALL_COUNTRY_IDS } from "@/lib/constants/countries";
@@ -34,6 +35,9 @@ import { TR_IDENTITY } from "@/lib/countries/tr/identity";
 import { GR_IDENTITY } from "@/lib/countries/gr/identity";
 import { AT_IDENTITY } from "@/lib/countries/at/identity";
 import { FI_IDENTITY } from "@/lib/countries/fi/identity";
+import { CA_IDENTITY } from "@/lib/countries/ca/identity";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /** Provisional: how many NPP retail banks each eligible country seeds. */
 export const NPC_BANKS_PER_COUNTRY = 2;
@@ -91,7 +95,8 @@ export function npcBankSeedKey(countryId: CountryId, index: number): string {
 }
 
 /**
- * Era-appropriate generic bank names. No real institutions or people.
+ * Era-appropriate generic bank names. Modern worlds replace these with real
+ * banks at creation (see corporations/names/realNames).
  * Country flavor is generic phrasing only (First / Commercial / Provincial).
  */
 export function generateNpcBankName(
@@ -109,7 +114,7 @@ const DEFAULT_HISTORICAL_NAMES = ["Meridian Commercial Bank", "Harbourline Savin
 const DEFAULT_MODERN_NAMES = ["Meridian Banking Group", "Harbourline Financial"] as const;
 
 /**
- * Per-country display flavor. Patterns only; never real bank brands.
+ * Per-country display flavor for the generic names.
  * Absent countries fall back to the defaults above.
  */
 export const COUNTRY_HISTORICAL_NAMES: Partial<Record<CountryId, readonly string[]>> = {
@@ -121,6 +126,7 @@ export const COUNTRY_HISTORICAL_NAMES: Partial<Record<CountryId, readonly string
   IT: IT_IDENTITY.historicalNames,
   ES: ES_IDENTITY.historicalNames,
   IE: IE_IDENTITY.historicalNames,
+  CA: CA_IDENTITY.historicalNames,
   BR: BR_IDENTITY.historicalNames,
   NG: NG_IDENTITY.historicalNames,
   SE: SE_IDENTITY.historicalNames,
@@ -139,6 +145,7 @@ export const COUNTRY_MODERN_NAMES: Partial<Record<CountryId, readonly string[]>>
   IT: IT_IDENTITY.modernNames,
   ES: ES_IDENTITY.modernNames,
   IE: IE_IDENTITY.modernNames,
+  CA: CA_IDENTITY.modernNames,
   BR: BR_IDENTITY.modernNames,
   NG: NG_IDENTITY.modernNames,
   SE: SE_IDENTITY.modernNames,
@@ -216,12 +223,10 @@ export async function seedNpcBanks(
   const capitals = Object.values(NPP_CAPITAL_STATES).filter((id): id is string => !!id);
   const batch = options.batchReads
     ? await Promise.all([
-        db
-          .collection<State>("states")
+        statesCollection(db)
           .find({ _id: { $in: capitals } }, { projection: { countryId: 1 } })
           .toArray(),
-        db
-          .collection<NpcBankCorporation>("corporations")
+        corporationsCollection<NpcBankCorporation>(db)
           .find(
             { npcBankSeedKey: { $exists: true } },
             {
@@ -237,6 +242,11 @@ export async function seedNpcBanks(
   const requirements = new Map<CurrencyCode, number>();
 
   for (const countryId of ALL_COUNTRY_IDS) {
+    // Background countries (#5702) run no corporations, banks included.
+    if (isBackgroundInPreset(preset, countryId)) {
+      result.skippedIneligible += NPC_BANKS_PER_COUNTRY;
+      continue;
+    }
     const hqState = NPP_CAPITAL_STATES[countryId];
     if (!hqState) {
       result.skippedIneligible += NPC_BANKS_PER_COUNTRY;
@@ -258,9 +268,7 @@ export async function seedNpcBanks(
     // spawn that fails with `State "…" not found`.
     const hqDoc = batch
       ? states.get(hqState)
-      : await db
-          .collection<State>("states")
-          .findOne({ _id: hqState }, { projection: { countryId: 1 } });
+      : await statesCollection(db).findOne({ _id: hqState }, { projection: { countryId: 1 } });
     if (!hqDoc || hqDoc.countryId !== countryId) {
       const reason: NpcBankHqExclusionReason = !hqDoc
         ? "no-state-in-preset"
@@ -294,9 +302,10 @@ export async function seedNpcBanks(
       const key = npcBankSeedKey(countryId, index);
       const existing = batch
         ? existingKeys.has(key)
-        : await db
-            .collection<NpcBankCorporation>("corporations")
-            .findOne({ npcBankSeedKey: key }, { projection: { _id: 1 } });
+        : await corporationsCollection<NpcBankCorporation>(db).findOne(
+            { npcBankSeedKey: key },
+            { projection: { _id: 1 } }
+          );
       if (existing) {
         result.skippedExisting += 1;
         continue;
@@ -312,16 +321,15 @@ export async function seedNpcBanks(
       const name = generateNpcBankName(countryId, index, historicalEra);
 
       // Name+country fallback if a prior run wrote the corp without the key.
-      const byName = await db
-        .collection<Corporation>("corporations")
-        .findOne(
-          { name, countryId, ceoType: "npp", type: "financial" },
-          { projection: { _id: 1, bankCharter: 1 } }
-        );
+      const byName = await corporationsCollection(db).findOne(
+        { name, countryId, ceoType: "npp", type: "financial" },
+        { projection: { _id: 1, bankCharter: 1 } }
+      );
       if (byName) {
-        await db
-          .collection("corporations")
-          .updateOne({ _id: byName._id }, { $set: { npcBankSeedKey: key, updatedAt: new Date() } });
+        await corporationsCollection(db).updateOne(
+          { _id: byName._id },
+          { $set: { npcBankSeedKey: key, updatedAt: new Date() } }
+        );
         if (byName.bankCharter?.status !== "active") {
           const issued = await issueCharterWithFlag(db, byName._id, currency);
           if (!issued) result.charterFailures += 1;
@@ -333,15 +341,17 @@ export async function seedNpcBanks(
       try {
         const spawned = await spawnNppCorporation(db, {
           name,
+          realName: "bank",
           type: "financial",
           countryId,
           headquartersState: hqState,
           startingCapital,
         });
         const corpId = new ObjectId(spawned.corporationId);
-        await db
-          .collection("corporations")
-          .updateOne({ _id: corpId }, { $set: { npcBankSeedKey: key, updatedAt: new Date() } });
+        await corporationsCollection(db).updateOne(
+          { _id: corpId },
+          { $set: { npcBankSeedKey: key, updatedAt: new Date() } }
+        );
 
         const issued = await issueCharterWithFlag(db, corpId, currency);
         if (!issued) {
@@ -349,7 +359,7 @@ export async function seedNpcBanks(
           log(`[seedNpcBanks] ${countryId} slot ${index}: corp created but charter failed`);
         } else {
           result.created += 1;
-          log(`[seedNpcBanks] ${countryId}: created "${name}" (${key})`);
+          log(`[seedNpcBanks] ${countryId}: created "${spawned.name}" (${key})`);
         }
       } catch (err) {
         result.charterFailures += 1;
@@ -399,8 +409,7 @@ async function issueCharterWithFlag(
  * Hold-reserve / lend-the-book behavior comes from bankingTurn's NPC flows.
  */
 export async function runNpcBankPolicy(db: Db, _turn: number): Promise<NpcBankPolicySummary> {
-  const corps = await db
-    .collection<Corporation>("corporations")
+  const corps = await corporationsCollection(db)
     .find(
       {
         ceoType: "npp",

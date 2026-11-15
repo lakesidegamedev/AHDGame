@@ -105,9 +105,8 @@ export default function SnapshotTab({
     };
   }, [corpId, modViewEnabled]);
 
-  // Rate-aware ₳ normalization, the same approach as the Charts tab: use the
-  // FX rate recorded at write time so old snapshots don't drift with today's
-  // rate (#2958); fall back to the live rate for pre-fxRateAtWrite rows.
+  // Use the FX rate recorded at write time so old snapshots don't drift
+  // with today's rate; fall back to the live rate for pre-fxRateAtWrite rows.
   const toAnchor = useCallback(
     (val: number, code?: string, fxRateAtWrite?: number) => {
       if (!code) return val;

@@ -10,14 +10,13 @@ import { getDb } from "@/lib/mongodb";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
-import type {
-  Corporation,
-  CorporateSector,
-  FederalBudget,
-  PendingNationalization,
-} from "@/lib/db/types";
+import type { Corporation, CorporateSector, PendingNationalization } from "@/lib/db/types";
 import type { NationalizationTrigger } from "@/lib/nationalization/eligibility";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { pendingNationalizationsCollection } from "@/lib/db/repositories/pendingNationalizations";
 
 const CURABLE: ReadonlySet<NationalizationTrigger> = new Set(["strategic", "monopoly"]);
 
@@ -38,14 +37,14 @@ export async function GET(_request: Request, { params }: RouteParams) {
 
     // Signed national treasury balance (local currency) — the unified pool that
     // takings, draws, and privatization proceeds move. Negative ⇒ national debt.
-    const fb = await db
-      .collection<FederalBudget>("federalBudget")
-      .findOne({ countryId }, { projection: { treasuryBalance: 1, "debt.principal": 1 } });
+    const fb = await federalBudgetCollection(db).findOne(
+      { countryId },
+      { projection: { treasuryBalance: 1, "debt.principal": 1 } }
+    );
     const treasuryReserve = fb?.treasuryBalance ?? -(fb?.debt?.principal ?? 0);
     const currencyCode = COUNTRY_CURRENCY_MAP[countryId] ?? "USD";
 
-    const rows = await db
-      .collection<PendingNationalization>("pendingNationalizations")
+    const rows = await pendingNationalizationsCollection(db)
       .find({ countryId, status: "pending" })
       .toArray();
 
@@ -53,8 +52,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     const sectorIds = rows.map((r) => r.targetSectorId).filter(Boolean) as ObjectId[];
     const sectorById = new Map<string, CorporateSector>();
     if (sectorIds.length > 0) {
-      const sectors = await db
-        .collection<CorporateSector>("corporateSectors")
+      const sectors = await corporateSectorsCollection(db)
         .find({ _id: { $in: sectorIds } })
         .toArray();
       for (const s of sectors) sectorById.set(String(s._id), s);
@@ -70,8 +68,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     }
     const corpNames = new Map<string, string>();
     if (corpIds.size > 0) {
-      const corps = await db
-        .collection<Corporation>("corporations")
+      const corps = await corporationsCollection(db)
         .find({ _id: { $in: Array.from(corpIds).map((id) => new ObjectId(id)) } })
         .project<{ _id: Corporation["_id"]; name: string }>({ _id: 1, name: 1 })
         .toArray();

@@ -624,3 +624,27 @@ describe("settlementRow", () => {
     expect(row.justification).toBeNull();
   });
 });
+
+describe("buildRecordExtras — naval and air marine line", () => {
+  const support = (seaControl: number) => ({
+    airSuperiority: 50,
+    seaControl,
+    casWeight: 0,
+    interdiction: 0,
+  });
+
+  it("reports marines as supplied at the sustainment line, not as a landing option", () => {
+    const x = buildRecordExtras(
+      input({ tier: "command", ownSide: "A", navairSupport: support(40) })
+    );
+    expect(x.navalAir?.marinesSustained).toBe(true);
+    expect(x.navalAir).not.toHaveProperty("canLandMarines");
+  });
+
+  it("reports marines as cut off below the sustainment line", () => {
+    const x = buildRecordExtras(
+      input({ tier: "command", ownSide: "A", navairSupport: support(39) })
+    );
+    expect(x.navalAir?.marinesSustained).toBe(false);
+  });
+});

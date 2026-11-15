@@ -2,11 +2,6 @@
  * Run report: why a funded plant runs where it does, read from the same rules
  * the turn uses to plan it, and what will happen next turn.
  *
- * The sector page used to call any capacity above a sold-out plant's plan
- * "Ramping up". On the live world (turn 673) about 94% of the capacity under
- * that label was held down by the loss brake (each unit sold for less than its
- * materials), and a plant that shipped its whole output to its own sites read
- * as sold out on the page but was judged by the planner at its asking price.
  * The report runs the planner's own rule on the planner's own receipt, so the
  * reason the page gives and the plan the turn makes cannot disagree.
  *
@@ -54,11 +49,13 @@ export interface RunReport {
   turnsToFull: number | null;
   /** What last turn's run was cut by, if anything. */
   cutBy: string[];
-  /** ₳ per unit, from last turn's receipt. Own-site deliveries are valued at the asking price. */
+  /** ₳ per unit sold, from last turn's receipt. Own-site deliveries are valued at the asking price. */
   unitPrice: number | null;
   unitMaterials: number | null;
   unitWages: number | null;
   unitSite: number | null;
+  /** Share of what was made that did not sell, 0-1. The unit costs above already carry its bill. */
+  unsoldShare?: number;
   /** True when some output went to the company's own sites and is valued at the ask. */
   ownSiteValued: boolean;
 }
@@ -146,6 +143,7 @@ export function buildRunReport(
     unitMaterials: signals.unitMaterials,
     unitWages: signals.unitWages,
     unitSite: signals.unitSite,
+    unsoldShare: signals.unsoldShare,
     ownSiteValued,
   };
 }

@@ -1,18 +1,8 @@
 /**
- * UK Commons by-election electorate carve (epic #856, ticket #860 — Cluster A).
- *
- * Decision of record (ops-knowledge `uk-rework-design-2026-08-25`): a by-election
- * contests ONLY the vacated seat(s). AHD models regions with a seat count, not
- * individual constituencies, so the by-election runs over the REGIONAL electorate
- * SCALED DOWN to the population share of the vacated seat(s):
- *
- *     carveFraction = vacatedSeats / totalRegionSeats
- *
- * The regional demographic composition is preserved (same relative group mix and
- * leans); only the size of the vote pool is reduced. That reduced electorate is
- * then run through the normal vote engine. No per-district demographics required.
- *
- * Pure and decoupled from the DB; callers pass the region's groups.
+ * A by-election contests only the vacated seat(s). Regions carry a seat count,
+ * not constituencies, so the by-election runs over the regional electorate
+ * scaled to vacatedSeats / totalRegionSeats, preserving the demographic mix.
+ * Pure; callers pass the region's groups.
  */
 
 export interface CarveGroup {

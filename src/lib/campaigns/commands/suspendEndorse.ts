@@ -22,11 +22,18 @@ import { loadPartyGroupFavorability } from "@/lib/governorOffice/address/partyGr
 import type { CountryId } from "@/lib/constants/countries";
 import { ObjectId, type Db } from "mongodb";
 import { CAMPAIGN_ACTIVITY_HISTORY_CAP } from "@/lib/campaigns/constants/activityHistory";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
+import { playerEndorsementsCollection } from "@/lib/db/repositories/playerEndorsements";
 
 async function getCurrentTurn(db: Db): Promise<number> {
-  const gameState = await db
-    .collection<{ _id: string; currentTurn?: number }>("gameState")
-    .findOne({ _id: "current" });
+  const gameState = await gameStateCollection<{ _id: string; currentTurn?: number }>(db).findOne({
+    _id: "current",
+  });
   return gameState?.currentTurn ?? 0;
 }
 
@@ -38,7 +45,7 @@ export async function suspendCampaignAndEndorse(params: {
 }) {
   const { db, campaignId, endorsedElectionCandidateId, user } = params;
 
-  const campaign = await db.collection<Campaign>("campaigns").findOne({ _id: campaignId });
+  const campaign = await campaignsCollection(db).findOne({ _id: campaignId });
   if (!campaign) {
     throw notFound("Campaign not found");
   }
@@ -54,7 +61,7 @@ export async function suspendCampaignAndEndorse(params: {
     throw forbidden("Only the presidential nominee can suspend the campaign and endorse.");
   }
 
-  const election = await db.collection<Election>("elections").findOne({ _id: campaign.electionId });
+  const election = await electionsCollection(db).findOne({ _id: campaign.electionId });
   if (!election) {
     throw notFound("Election not found");
   }
@@ -75,7 +82,7 @@ export async function suspendCampaignAndEndorse(params: {
     throw badRequest("Suspend and endorse is only available during the general election.");
   }
 
-  const ownCandidate = await db.collection<ElectionCandidate>("electionCandidates").findOne({
+  const ownCandidate = await electionCandidatesCollection(db).findOne({
     electionId: campaign.electionId,
     characterId: campaign.candidateId,
     status: "active",
@@ -87,7 +94,7 @@ export async function suspendCampaignAndEndorse(params: {
     throw badRequest("Your campaign is already suspended.");
   }
 
-  const endorsedCandidate = await db.collection<ElectionCandidate>("electionCandidates").findOne({
+  const endorsedCandidate = await electionCandidatesCollection(db).findOne({
     _id: endorsedElectionCandidateId,
     electionId: campaign.electionId,
     status: "active",
@@ -101,7 +108,7 @@ export async function suspendCampaignAndEndorse(params: {
 
   const now = new Date();
   const turnNumber = await getCurrentTurn(db);
-  await db.collection<ElectionCandidate>("electionCandidates").updateOne(
+  await electionCandidatesCollection(db).updateOne(
     { _id: ownCandidate._id },
     {
       $set: {
@@ -115,16 +122,13 @@ export async function suspendCampaignAndEndorse(params: {
   );
 
   // Register the suspend-endorse as a counted player endorsement so it feeds the
-  // endorsee's endorsement tally + per-turn campaign-action grant (ticket #948) —
-  // in addition to the one-time strength/org transfer below. Mirrors the normal
-  // /endorse route: deactivate any prior active endorsement by this character for
-  // this election, then insert one keyed by the endorsed candidate ROW id.
-  await db
-    .collection<PlayerEndorsement>("playerEndorsements")
-    .updateMany(
-      { characterId: ownCandidate.characterId, electionId: campaign.electionId, isActive: true },
-      { $set: { isActive: false, withdrawnAt: now } }
-    );
+  // endorsee's endorsement tally and per-turn campaign-action grant, in addition
+  // to the one-time strength/org transfer. Mirrors /endorse: deactivate any prior
+  // active endorsement by this character, then insert one keyed to the endorsed row.
+  await playerEndorsementsCollection(db).updateMany(
+    { characterId: ownCandidate.characterId, electionId: campaign.electionId, isActive: true },
+    { $set: { isActive: false, withdrawnAt: now } }
+  );
   const suspendEndorsement: PlayerEndorsement = {
     _id: new ObjectId(),
     characterId: ownCandidate.characterId,
@@ -136,7 +140,7 @@ export async function suspendCampaignAndEndorse(params: {
     createdAt: now,
   };
   try {
-    await db.collection<PlayerEndorsement>("playerEndorsements").insertOne(suspendEndorsement);
+    await playerEndorsementsCollection(db).insertOne(suspendEndorsement);
   } catch (error) {
     // Idempotent: a concurrent write already left an active endorsement in place.
     if (!isActivePlayerEndorsementDuplicateKey(error)) {
@@ -171,28 +175,30 @@ export async function suspendCampaignAndEndorse(params: {
   });
 
   // Transfer campaign strength
-  const ownCampaignDoc = await db.collection<Campaign>("campaigns").findOne({
+  const ownCampaignDoc = await campaignsCollection(db).findOne({
     _id: campaignId,
   });
   if (ownCampaignDoc && (ownCampaignDoc.campaignStrength ?? 0) > 0) {
     const cs = ownCampaignDoc.campaignStrength ?? 0;
     const transfer = Math.floor(cs * transferFraction);
-    await db
-      .collection<Campaign>("campaigns")
-      .updateOne({ _id: ownCampaignDoc._id }, { $inc: { campaignStrength: -transfer } });
+    await campaignsCollection(db).updateOne(
+      { _id: ownCampaignDoc._id },
+      { $inc: { campaignStrength: -transfer } }
+    );
     // Find the endorsed candidate's campaign by candidateId
-    const endorsedCampaign = await db.collection<Campaign>("campaigns").findOne({
+    const endorsedCampaign = await campaignsCollection(db).findOne({
       electionId: campaign.electionId,
       candidateId: new ObjectId(endorsedLookupKey),
     });
     if (endorsedCampaign) {
-      await db
-        .collection<Campaign>("campaigns")
-        .updateOne({ _id: endorsedCampaign._id }, { $inc: { campaignStrength: transfer } });
+      await campaignsCollection(db).updateOne(
+        { _id: endorsedCampaign._id },
+        { $inc: { campaignStrength: transfer } }
+      );
     }
   }
 
-  await db.collection<Campaign>("campaigns").updateOne(
+  await campaignsCollection(db).updateOne(
     { _id: campaignId },
     {
       $push: {
@@ -266,15 +272,17 @@ async function resolveAffinityCandidate(
   input: { isNPP: boolean; positionId: ObjectId; party: string }
 ): Promise<AffinityCandidate | null> {
   if (input.isNPP) {
-    const npp = await db
-      .collection<NPP>("npps")
-      .findOne({ _id: input.positionId }, { projection: { policies: 1 } });
+    const npp = await nppsCollection(db).findOne(
+      { _id: input.positionId },
+      { projection: { policies: 1 } }
+    );
     if (!npp) return null;
     return { charEP: npp.policies.economic, charSP: npp.policies.social, party: input.party };
   }
-  const character = await db
-    .collection<Character>("characters")
-    .findOne({ _id: input.positionId }, { projection: { policies: 1 } });
+  const character = await charactersCollection(db).findOne(
+    { _id: input.positionId },
+    { projection: { policies: 1 } }
+  );
   if (!character) return null;
   return {
     charEP: character.policies.economic,

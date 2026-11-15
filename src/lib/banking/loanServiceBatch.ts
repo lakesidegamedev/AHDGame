@@ -1,27 +1,23 @@
 /**
  * One journaled money move for a whole loan book.
  *
- * Servicing a bank's loans one at a time claims a journal key per loan and
- * pays the full delivery chain per loan: the claim, the debit, the credit, the
- * loan record and an acknowledgement for each of them. That is roughly a dozen
- * and a half database round trips per loan, which is what made a dead bank's
- * book the slowest stage of a production turn.
+ * Servicing loans one at a time claims a journal key per loan and pays the
+ * full delivery chain per loan (claim, debit, credit, loan record, ack):
+ * roughly a dozen and a half database round trips per loan, which made a dead
+ * bank's book the slowest stage of a production turn.
  *
- * The same book expressed as one move is N borrower debits (one per borrower,
- * summed across that borrower's loans), one summed credit and one projection
- * per loan. The journal still lands every loan record exactly once and under
- * the same turn stamp, but the cash legs cost a handful of writes for the
- * whole book.
+ * The same book as one move is N borrower debits (one per borrower, summed
+ * across that borrower's loans), one summed credit and one projection per
+ * loan. The journal still lands every loan record exactly once under the same
+ * turn stamp, but the cash legs cost a handful of writes for the whole book.
  *
- * The decisions are taken before the move, from the same running balance the
- * serial pass used: a borrower's second loan sees what the first one left.
- * That is why the debits can be summed and still leave the same money in the
- * same places.
+ * Decisions are taken before the move from the same running balance the
+ * serial pass used: a borrower's second loan sees what the first one left,
+ * which is why debits can be summed and leave the same money in the same
+ * places.
  *
- * The two counters that used to ride on every loan's own projection, the
- * bank's cached loan total and the insurer's measured recoveries, fold into
- * one increment each, so the batch carries no write per loan beyond the loan
- * record itself.
+ * The bank's cached loan total and the insurer's measured recoveries each
+ * fold into one increment instead of one write per loan.
  */
 
 import type { Db, ObjectId } from "mongodb";

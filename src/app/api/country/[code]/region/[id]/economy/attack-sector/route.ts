@@ -26,6 +26,12 @@ import {
   type SplitResolution,
 } from "@/lib/corporations/commands/plantSectorSplitAttempt";
 import { emitTx } from "@/lib/financialTxLog/emit";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 const attackSectorSchema = z.object({ sectorId: z.string().length(24) });
 
@@ -50,7 +56,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
 
     const db = await getDb();
-    const gameState = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+    const gameState = await gameStateCollection(db).findOne({ _id: "current" });
     if (gameState?.corporationActionsPaused) {
       return errorResponse(403, "Corporation actions are currently paused");
     }
@@ -74,7 +80,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
     const targetSectorId = new ObjectId(parsed.data.sectorId);
 
-    const state = await db.collection<State>("states").findOne({ _id: stateId, countryId });
+    const state = await statesCollection(db).findOne({ _id: stateId, countryId });
     if (!state) return errorResponse(404, "State not found");
 
     const blockedCountries = await loadCommandEconomyBlockedCountries(db, [countryId]);
@@ -85,17 +91,15 @@ export async function POST(request: Request, { params }: RouteParams) {
       );
     }
 
-    const userDoc = await db
-      .collection<User>("users")
-      .findOne({ _id: new ObjectId(auth.user.userId) });
+    const userDoc = await usersCollection(db).findOne({ _id: new ObjectId(auth.user.userId) });
     let attacker: Corporation | null = null;
     if (userDoc?.activeCharacterType === "imperial" && userDoc.activeImperialCharacterId) {
-      const imperial = await db.collection<ImperialCharacter>("imperialCharacters").findOne({
+      const imperial = await imperialCharactersCollection(db).findOne({
         _id: userDoc.activeImperialCharacterId,
         userId: new ObjectId(auth.user.userId),
       });
       if (imperial) {
-        attacker = await db.collection<Corporation>("corporations").findOne({
+        attacker = await corporationsCollection(db).findOne({
           ceoId: imperial._id,
           ceoType: "imperial",
           ceoVacant: { $ne: true },
@@ -104,18 +108,20 @@ export async function POST(request: Request, { params }: RouteParams) {
     } else {
       const character = await getCharacterByUserId(db, auth.user.userId);
       if (character) {
-        attacker = await db
-          .collection<Corporation>("corporations")
-          .findOne({ ceoId: character._id, ceoVacant: { $ne: true } });
+        attacker = await corporationsCollection(db).findOne({
+          ceoId: character._id,
+          ceoVacant: { $ne: true },
+        });
       }
     }
     if (!attacker) {
       return errorResponse(400, "You don't own a corporation");
     }
 
-    const targetSector = await db
-      .collection<CorporateSector>("corporateSectors")
-      .findOne({ _id: targetSectorId, stateId });
+    const targetSector = await corporateSectorsCollection(db).findOne({
+      _id: targetSectorId,
+      stateId,
+    });
     if (!targetSector) {
       return errorResponse(404, "Sector not found");
     }
@@ -123,11 +129,9 @@ export async function POST(request: Request, { params }: RouteParams) {
       return errorResponse(400, "Cannot attack your own sector");
     }
 
-    const defender = await db
-      .collection<Corporation>("corporations")
-      .findOne({ _id: targetSector.corporationId });
+    const defender = await corporationsCollection(db).findOne({ _id: targetSector.corporationId });
     if (!defender) {
-      await db.collection<CorporateSector>("corporateSectors").deleteOne({ _id: targetSector._id });
+      await corporateSectorsCollection(db).deleteOne({ _id: targetSector._id });
       return errorResponse(
         404,
         "That corporation has been dissolved. Its sector record was removed; refresh this market."
@@ -175,9 +179,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     const result: SplitResolution = attempt.resolution;
     const sectorLabel = OPERATING_SECTOR_TYPE_LABELS[result.sectorType] ?? result.sectorType;
-    // Suggestion #324: say what moved in value terms too, so the defender can
-    // tell plants seized from cash, revenue, or profit. The $ below is the
-    // transferred plants' book value, not revenue or profit.
+    // The $ value below is the transferred plants' book value, not revenue or profit.
     const outcomeText = result.succeeded
       ? `${attacker.name} seized ${result.plantsTransferred.toLocaleString("en-US")} whole plants (~$${Math.round(result.bookValueTransferredAnchor).toLocaleString("en-US")} book value) from ${result.defenderCorporationName}'s ${sectorLabel} sector in ${state.name}.`
       : `${attacker.name} failed to split ${result.defenderCorporationName}'s ${sectorLabel} sector in ${state.name}.`;

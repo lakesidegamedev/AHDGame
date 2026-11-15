@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { formatStatePresenceCost, statePresenceNextCost } from "./statePresenceCost";
-import { STATE_ORG_COST_FUNDS, stateOrgLevelCost } from "@/lib/electionEngine/constants";
+import { STATE_ORG_COST_FUNDS, stateOrgLevelCost } from "@/lib/elections/engine/constants";
 
 describe("statePresenceNextCost", () => {
   it("is the base price for a state nobody has built in", () => {

@@ -2,6 +2,7 @@ import type { Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import type { EconomicModelState } from "@/lib/constants/economicModels";
 import { NATIONAL_SCOPE, getNationalDocId } from "@/lib/constants/nationalScope";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 
 /**
  * Per-country lagged economic model, read from the national-scope macro docs.
@@ -21,8 +22,7 @@ export async function loadEconomicModelsByCountry(
   ];
   const out = new Map<string, EconomicModelState>();
   if (docIds.length === 0) return out;
-  const docs = await db
-    .collection<{ _id: string; economicModel?: EconomicModelState }>("macroMetrics")
+  const docs = await macroMetricsCollection<{ _id: string; economicModel?: EconomicModelState }>(db)
     .find({ _id: { $in: docIds } }, { projection: { economicModel: 1 } })
     .toArray();
   for (const d of docs) {

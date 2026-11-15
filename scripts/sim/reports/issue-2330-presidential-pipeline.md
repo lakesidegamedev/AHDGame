@@ -20,7 +20,7 @@ records the negative incumbent effect and conserves the referendum's float vote
 pool. Subsequent lean bonuses and integer rounding operate after that shift, so
 the comparison does not assert identical final integer totals.
 
-Run `npx vitest run src/lib/electionEngine/economicReferendum.test.ts
+Run `npx vitest run src/lib/elections/engine/economicReferendum.test.ts
 src/lib/presidentialElectionEngine.registration.test.ts --maxWorkers=2`.
 The two suites pass all 38 tests, including the eight paired pipeline cases.
 Combined repository qualification and merged delivery remain required.

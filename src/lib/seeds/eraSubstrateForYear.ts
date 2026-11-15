@@ -1,47 +1,23 @@
 /**
- * The complete Layer-1 substrate — census marginals, positions, turnout rates —
- * resolved at the live in-game year rather than the frozen seed preset.
+ * The complete Layer-1 substrate (census marginals, positions, turnout rates)
+ * resolved at the live in-game year rather than the frozen seed preset. This is
+ * what the granular vote path consumes. It never lerps a sparse override table;
+ * it lerps the fully-resolved substrate, building the whole substrate at each
+ * bracketing anchor and blending those.
  *
- * This is what the granular vote path consumes. It follows the program's
- * standing rule (never lerp a sparse override table; lerp the fully-resolved
- * substrate) by building the whole substrate at each bracketing anchor and
- * blending those.
+ * Census marginals interpolate freely: a country genuinely gets older, more
+ * educated and more diverse regardless of game events, and no mechanism owns
+ * that drift. Positions come from `eraPositionsForYear.ts`.
  *
- * WHAT INTERPOLATES AND WHAT DOES NOT
- * -----------------------------------
- * Census marginals interpolate freely: a country genuinely does get older,
- * more educated and more diverse whether or not anything happens in the game,
- * and no mechanism owns that drift. Positions come from
- * `eraPositionsForYear.ts`, which carries regional character forward and
- * subtracts what the era checkpoints already own — see that module for why
- * both corrections are load-bearing.
+ * Anchors can have different shapes, correctly, so leaves interpolate with union
+ * semantics: a region or bucket present in only one anchor keeps that anchor's
+ * value instead of vanishing or throwing. This is the caller-level decision
+ * `lerpNumericTree` reserves for callers; the lerp itself stays strict.
  *
- * IDENTITY CHANGES ACROSS ANCHORS
- * -------------------------------
- * A tree lerp requires both anchors to have the same shape, and two authored
- * anchors genuinely do not, in ways that are correct rather than mistakes:
- *
- *  - **Germany, 1979 → 1991.** The census gains BB/MV/SN/ST/TH. Those regions
- *    did not exist in the Federal Republic before reunification, so there is
- *    nothing to blend from.
- *  - **Japan, 1953 → 1979.** `positions.education` drops `primary_or_below`.
- *    The bucket was retired, not renamed.
- *
- * Both are handled by union semantics at the leaf level: a region or bucket
- * present in only ONE anchor holds that anchor's value instead of vanishing or
- * throwing. This is exactly the "caller-level decision" `lerpNumericTree`'s
- * doc comment reserves for callers — the lerp itself stays strict, and the
- * judgment about what an absent key MEANS lives here, where the domain is
- * known.
- *
- * FAILURE POLICY
- * --------------
- * Nothing in here may throw into the vote path. `deriveCellsForState` catches
- * and degrades to `null`, which silently costs a state its entire granular
- * electorate on election night. Any structural surprise therefore falls back
- * to the discrete anchor bundle and records the fallback via
- * `recordEraInterpolationFallback`, so the gap is countable instead of
- * invisible.
+ * Nothing here may throw into the vote path: `deriveCellsForState` catches and
+ * degrades to `null`, silently costing a state its granular electorate. Any
+ * structural surprise falls back to the discrete anchor bundle and is recorded
+ * via `recordEraInterpolationFallback` so the gap is countable.
  */
 import type { EraId } from "./presetSelector";
 import { presetForEra } from "./presetSelector";

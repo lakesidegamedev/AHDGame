@@ -780,6 +780,52 @@ describe("GET /api/corporations/[id]/expand-suggestions entry verdict (plants)",
     expect(row.roomScope).toBe(data.countrySharedDemand ? "country" : "state");
   });
 
+  it("publishes funded national construction demand and its measured regional subset", async () => {
+    seedPlantsMarket({ worldEpochId: "funded" });
+    await corpOverride({ type: "construction" });
+    db.collection("producerMarketOutcomes").findOne.mockResolvedValue({
+      turn: 10,
+      books: [{ countryId: "US", commodity: "construction_services", funded: 100, filled: 10 }],
+      regionalBuildBooks: [],
+    });
+    const response = await GET(makeRequest("sectorType=construction&mode=unowned"), ctx());
+    const data = await response.json();
+    expect(response.status).toBe(200);
+    expect(data.countrySharedDemand).toBe(true);
+    expect(data.suggestions[0]).toMatchObject({
+      roomScope: "country",
+      buildDemandTurn: 10,
+      buildDemand: [
+        { commodity: "construction_services", scope: "regional", unmet: 0 },
+        { commodity: "construction_services", scope: "national", unmet: 90 },
+      ],
+    });
+  });
+
+  it("does not rank mixed Telecom output as thousands of fully sellable hubs when software is filled", async () => {
+    seedPlantsMarket({ worldEpochId: "funded" });
+    await corpOverride({ type: "telecommunications" });
+    db.collection("producerMarketOutcomes").findOne.mockResolvedValue({
+      turn: 10,
+      books: [
+        { countryId: "US", commodity: "software", funded: 442352, filled: 483414 },
+        { countryId: "US", commodity: "network_services", funded: 101859, filled: 0 },
+      ],
+      regionalBuildBooks: [],
+    });
+    const response = await GET(makeRequest("sectorType=telecommunications&mode=unowned"), ctx());
+    expect(response.status).toBe(200);
+    const data = await response.json();
+    expect(data.suggestions[0].roomToBuildUnits).toBe(0);
+    expect(data.countryDemandEstimates[0].headroomUnits).toBe(0);
+    expect(
+      data.suggestions[0].buildDemand.find(
+        (r: { commodity: string; scope: string }) =>
+          r.commodity === "network_services" && r.scope === "national"
+      ).capacityUnits
+    ).toBeGreaterThan(0);
+  });
+
   it("refuses with insufficient_capital when cash is short of the founding charge", async () => {
     seedPlantsMarket();
     await corpOverride({ liquidCapital: 0 });

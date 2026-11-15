@@ -1,46 +1,37 @@
 import type { Db } from "mongodb";
 import type { StatePartyOrg } from "@/lib/db/types";
 import type { Migration, MigrationResult } from "../types";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import type { Document } from "mongodb";
 
 /**
  * Re-key `statePartyOrg` rows whose compound `_id` drifted from their
- * `{stateId, partyId}` fields, and add the unique index that keeps them
- * aligned. Ticket #1256.
+ * `{stateId, partyId}` fields, and add the unique index that keeps them aligned.
  *
- * The collection has two row identities: the `_id` string
- * `{stateId}_{partyId}` and the `{countryId, stateId, partyId}` field triple.
- * Live code reads both ways. A party renumber (country merge rewrites
- * `statePartyOrg.partyId` but not its `_id`), a region fuse (re-points
- * `stateId` in place), or a one-off writer can leave the `_id` naming a
- * different party or region than the fields — after a German reunification,
- * SED's org sat on `_id NW_7` while `_id NW_1` held SPD's numbers, so the
- * state page and the party page disagreed and Build Org poached from the wrong
- * row.
+ * The collection has two row identities: the `_id` string `{stateId}_{partyId}`
+ * and the `{countryId, stateId, partyId}` field triple. Live code reads both
+ * ways, and a party renumber, region fuse, or one-off writer can leave the `_id`
+ * naming a different party or region than the fields.
  *
- * THE FIELDS ARE AUTHORITATIVE: the country-scoped queries, the Build Org
- * poach pass and the state org breakdown all join on `{countryId, stateId,
- * partyId}`. The `_id` is re-derived from them, never the reverse — a row
- * whose fields are missing (no `stateId`) is left alone rather than guessed.
+ * The FIELDS ARE AUTHORITATIVE: country-scoped queries, the Build Org poach pass
+ * and the state org breakdown all join on the triple. The `_id` is re-derived
+ * from them, never the reverse. A row missing `stateId`/`partyId` is left alone
+ * rather than guessed.
  *
- * Re-keying is delete-then-insert (`_id` is immutable in MongoDB). When two
- * drifted rows compete for one canonical key, the earliest-created wins; the
- * other is DELETED, because two rows for one (state, party) pair is the
- * corruption this migration exists to end — the duplicate would otherwise
- * resurface on the next poach. Their org values are NOT summed: the loser of a
- * re-key is by construction a misattributed remnant (e.g. an old seq-id
- * shadow), and adding its number to the survivor would inflate the state's org
- * pool out of nothing.
+ * Re-keying is delete-then-insert (`_id` is immutable). When two drifted rows
+ * compete for one canonical key, the earliest-created wins; the other is
+ * DELETED, since two rows for one (state, party) pair is the corruption being
+ * fixed. Their org values are NOT summed: the loser is a misattributed remnant
+ * and adding it would inflate the state's org pool out of nothing.
  *
- * One collision is NOT a takeover: when the canonical key is held by a
- * WELL-KEYED row of ANOTHER party (SPD's own `_id NW_1`, which the drifted
- * SED row wants because SED's pre-renumber seq id was also 1), that row is
- * live data the migration has no mandate to touch. The drifted row keeps its
- * stale key rather than stealing someone else's; the ensure-heal on the write
- * paths handles the pair one row at a time, where the live row is known.
+ * One collision is NOT a takeover: if the canonical key is held by a WELL-KEYED
+ * row of ANOTHER party, that row is live data and is left untouched. The drifted
+ * row keeps its stale key; the ensure-heal on write paths handles the pair one
+ * row at a time.
  */
 async function rekeyDriftedStatePartyOrgIds(db: Db, dryRun: boolean): Promise<MigrationResult> {
   const notes: string[] = [];
-  const col = db.collection<StatePartyOrg>("statePartyOrg");
+  const col = statePartyOrgCollection(db);
 
   const all = await col.find({}).toArray();
 
@@ -140,7 +131,7 @@ async function rekeyDriftedStatePartyOrgIds(db: Db, dryRun: boolean): Promise<Mi
   // The unique index is the recurrence guard: two rows for one
   // (country, state, party) can never exist again. Any future drift writer
   // throws instead of silently misattributing org.
-  await db.collection("statePartyOrg").createIndex(
+  await statePartyOrgCollection<Document>(db).createIndex(
     { countryId: 1, stateId: 1, partyId: 1 },
     {
       unique: true,

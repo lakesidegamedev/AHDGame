@@ -4,9 +4,12 @@ import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import type { Campaign } from "@/lib/db/types/campaign";
 import type { Election } from "@/lib/db/types/election";
-import type { Character } from "@/lib/db/types/character";
 import type { NPP } from "@/lib/db/types/npp";
 import { getSiteUrl } from "@/lib/siteMetadata";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -45,27 +48,28 @@ export async function generateMetadata({
   if (!ObjectId.isValid(id)) return {};
 
   const db = await getDb();
-  const campaign = await db
-    .collection<Campaign>("campaigns")
-    .findOne(
-      { _id: new ObjectId(id) },
-      { projection: { electionId: 1, candidateId: 1, candidateIsNPP: 1 } }
-    );
+  const campaign = await campaignsCollection(db).findOne(
+    { _id: new ObjectId(id) },
+    { projection: { electionId: 1, candidateId: 1, candidateIsNPP: 1 } }
+  );
   if (!campaign) return {};
 
   const [election, candidate, npp] = await Promise.all([
-    db
-      .collection<Election>("elections")
-      .findOne({ _id: campaign.electionId }, { projection: { electionType: 1, state: 1 } }),
+    electionsCollection(db).findOne(
+      { _id: campaign.electionId },
+      { projection: { electionType: 1, state: 1 } }
+    ),
     campaign.candidateIsNPP
       ? Promise.resolve(null)
-      : db
-          .collection<Character>("characters")
-          .findOne({ _id: campaign.candidateId }, { projection: { name: 1, avatarUrl: 1 } }),
+      : charactersCollection(db).findOne(
+          { _id: campaign.candidateId },
+          { projection: { name: 1, avatarUrl: 1 } }
+        ),
     campaign.candidateIsNPP
-      ? db
-          .collection<NPP>("npps")
-          .findOne({ _id: campaign.candidateId }, { projection: { name: 1, avatarUrl: 1 } })
+      ? nppsCollection(db).findOne(
+          { _id: campaign.candidateId },
+          { projection: { name: 1, avatarUrl: 1 } }
+        )
       : Promise.resolve(null),
   ]);
 

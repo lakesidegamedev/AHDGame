@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { forbidden } from "@/lib/api/errors";
+import { runtimeConfig } from "@/lib/config/runtime";
 
 /**
  * Origin/Referer validation for state-changing, human-only endpoints.
@@ -31,7 +32,7 @@ function allowedOriginHosts(): Set<string> {
   const hosts = new Set<string>();
   const base = hostOf(process.env.NEXT_PUBLIC_BASE_URL ?? null);
   if (base) hosts.add(base);
-  for (const raw of (process.env.ALLOWED_ORIGINS ?? "").split(",")) {
+  for (const raw of (runtimeConfig.allowedOrigins() ?? "").split(",")) {
     const trimmed = raw.trim();
     if (!trimmed) continue;
     // Accept either a bare host or a full URL.

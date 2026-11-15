@@ -24,6 +24,12 @@ import {
 import { supportsCorporationWideSupplyAgreement } from "@/lib/market/commodityMarketScope";
 import { buyerCommodityUse } from "@/lib/corporations/supplyExchange/rules/deliveryReach";
 import type { State } from "@/lib/db/types/state";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { supplyAgreementsCollection } from "@/lib/db/repositories/supplyAgreements";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -61,16 +67,16 @@ export async function GET(_request: Request, { params }: RouteParams) {
     if (ceoError) return ceoError;
     const corp = resolved.corporation;
     const corpId = corp._id;
-    const agreements = await db
-      .collection<SupplyAgreement>("supplyAgreements")
+    const agreements = await supplyAgreementsCollection(db)
       .find({ $or: [{ supplierCorpId: corpId }, { buyerCorpId: corpId }] })
       .sort({ updatedAt: -1 })
       .toArray();
     const noticeTurn = agreements.some((agreement) => agreement.status === "active")
       ? ((
-          await db
-            .collection<GameState>("gameState")
-            .findOne({ _id: "current" }, { projection: { currentTurn: 1 } })
+          await gameStateCollection(db).findOne(
+            { _id: "current" },
+            { projection: { currentTurn: 1 } }
+          )
         )?.currentTurn ?? 0)
       : 0;
     const counterpartyIds = [
@@ -83,8 +89,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     ];
     const counterparties =
       counterpartyIds.length > 0
-        ? await db
-            .collection("corporations")
+        ? await corporationsCollection(db)
             .find({
               _id: { $in: counterpartyIds.map((counterpartyId) => new ObjectId(counterpartyId)) },
             })
@@ -115,8 +120,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     > = {};
     if (marketAtLeast(await getMarketSystemModeForDb(db), "plants")) {
       const [sectors, world, config] = await Promise.all([
-        db
-          .collection<CorporateSector>("corporateSectors")
+        corporateSectorsCollection(db)
           .find(
             { corporationId: corp._id },
             {
@@ -140,12 +144,14 @@ export async function GET(_request: Request, { params }: RouteParams) {
             }
           )
           .toArray(),
-        db
-          .collection<GameState>("gameState")
-          .findOne({ _id: "current" }, { projection: { currentTurn: 1, currentYear: 1 } }),
-        db
-          .collection<GameConfig>("gameConfig")
-          .findOne({ _id: "default" }, { projection: { commandEconomyEnabled: 1 } }),
+        gameStateCollection(db).findOne(
+          { _id: "current" },
+          { projection: { currentTurn: 1, currentYear: 1 } }
+        ),
+        gameConfigCollection(db).findOne(
+          { _id: "default" },
+          { projection: { commandEconomyEnabled: 1 } }
+        ),
       ]);
       const context = {
         sectors,
@@ -174,8 +180,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
       const stateIds = supplyAgreementSectorStates(sectors);
       const stateNameById = new Map<string, string>();
       if (stateIds.length > 0) {
-        const states = await db
-          .collection<State>("states")
+        const states = await statesCollection(db)
           .find({ _id: { $in: stateIds } }, { projection: { name: 1 } })
           .toArray();
         for (const state of states) stateNameById.set(state._id, state.name);

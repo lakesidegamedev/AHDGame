@@ -2,8 +2,9 @@ import type { Db } from "mongodb";
 import { ObjectId } from "mongodb";
 
 import type { ElectionCandidate, ExecutiveEndorsement } from "@/lib/db/types";
-import type { VoteTurnMemo } from "@/lib/electionEngine/tallyManagement";
-import { loadCandidateEnrichmentPreload } from "@/lib/electionEngine/candidateEnrichment";
+import type { VoteTurnMemo } from "@/lib/elections/engine/tallyManagement";
+import { loadCandidateEnrichmentPreload } from "@/lib/elections/engine/candidateEnrichment";
+import { executiveEndorsementsCollection } from "@/lib/db/repositories/executiveEndorsements";
 
 export async function hydrateVoteTurnMemo(
   db: Db,
@@ -14,8 +15,7 @@ export async function hydrateVoteTurnMemo(
   const [candidatePreload, executiveEndorsements] = await Promise.all([
     loadCandidateEnrichmentPreload(db, candidates, electionIds),
     electionIds.length > 0
-      ? db
-          .collection<ExecutiveEndorsement>("executiveEndorsements")
+      ? executiveEndorsementsCollection(db)
           .find({ electionId: { $in: electionIds }, isActive: true })
           .project<Pick<ExecutiveEndorsement, "electionId" | "candidateId">>({
             electionId: 1,

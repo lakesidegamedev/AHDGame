@@ -39,6 +39,13 @@ describe("GET /api/game/legislation-types media ownership availability", () => {
     getDbMock.mockResolvedValue(db);
   });
 
+  it("normalizes Wales to its persisted wls legislation scope", async () => {
+    await GET(new Request("http://localhost/api/game/legislation-types?country=wal&nocache=1"));
+    expect(db.collectionMocks.legislationTypes.find).toHaveBeenCalledWith(
+      expect.objectContaining({ countryScope: "wls" })
+    );
+  });
+
   it("keeps existing law choices and avoids market reads when disabled", async () => {
     db.collectionMocks.gameState.findOne.mockResolvedValue({
       _id: "current",

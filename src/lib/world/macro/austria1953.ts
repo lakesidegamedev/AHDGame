@@ -55,10 +55,6 @@ export const AUSTRIA_1953_SPEC: MacroCountrySeedSpec = {
   },
 };
 
-export function buildAustria1953Seed(now = new Date()): MacroCountryState {
-  return buildMacroCountryFromSpec(AUSTRIA_1953_SPEC, now, { markInitialTick: false });
-}
-
 export function getAustria1953MacroCountry(now = new Date()): MacroCountryState {
   return buildMacroCountryFromSpec(AUSTRIA_1953_SPEC, now, { markInitialTick: true });
 }

@@ -46,6 +46,48 @@ const receipt = (over: Record<string, unknown> = {}) =>
   }) as unknown as CorporateSector["producerSettlement"];
 
 describe("run report", () => {
+  it("spreads the whole bill over units sold, so the unit margin matches realized profit when some units go unsold", () => {
+    // 100 made, 88 sold at 1000 each. Costs: 200 materials + 100 wages + 40 site on the 100 made.
+    const r = buildRunReport(
+      receipt({
+        plannedRunShare: 1,
+        plannedUnits: 100,
+        producedUnits: 100,
+        offeredUnits: 100,
+        soldUnits: 88,
+        revenue: 88_000,
+        inputsConsumed: 20_000,
+        labourPaid: 10_000,
+        otherOperatingPaid: 4_000,
+        products: [],
+      }),
+      673,
+      LIVE
+    )!;
+    const unitCost = r.unitMaterials! + r.unitWages! + r.unitSite!;
+    expect(r.unitPrice).toBeCloseTo(1000);
+    expect(unitCost).toBeCloseTo(34_000 / 88);
+    // Profit per sold unit equals total profit / units sold, not the per-made figure.
+    expect(r.unitPrice! - unitCost).toBeCloseTo((88_000 - 34_000) / 88);
+    expect(r.unsoldShare).toBeCloseTo(0.12);
+  });
+
+  it("reports nothing unsold when every unit made sold", () => {
+    const r = buildRunReport(
+      receipt({
+        producedUnits: 10,
+        offeredUnits: 10,
+        soldUnits: 10,
+        revenue: 5000,
+        inputsConsumed: 1000,
+        products: [],
+      }),
+      673,
+      LIVE
+    )!;
+    expect(r.unsoldShare).toBe(0);
+  });
+
   it("calls an own-site iron mine whose materials cost more than its ask losing, not ramping (ticket 1765)", () => {
     const r = buildRunReport(receipt(), 673, LIVE)!;
     expect(r.reason).toBe("losing");

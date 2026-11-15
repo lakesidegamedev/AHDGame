@@ -1,22 +1,11 @@
 /**
- * Typed client-side view of the `/api/country/[code]/executive` response
- * fields consumed by the legislature pages (UK/DE/JP/IE/devolved), plus the
- * mapping for the "Dissolve Parliament" (snap election) UI.
+ * Typed client-side view of the executive endpoint fields consumed by the
+ * legislature pages, plus the "Dissolve Parliament" UI mapping.
  *
- * Server semantics (src/app/api/country/[code]/executive/route.ts):
- * - `isPrimeMinister` — the viewer's character is the sitting PM
- *   (`govFormation.pmCharacterId` matches the viewer's character).
- * - `snapElectionsAllowed` — `supportsSnapElections(config) && isPrimeMinister`,
- *   i.e. "this viewer may call a snap election in this country". It is a
- *   composite permission flag, NOT a pure viewer-identity flag. The per-term
- *   limit and cooldown are reported separately (`snapElectionsRemaining`,
- *   `snapCooldownTurnsRemaining`) and gate the button's disabled state.
- *
- * Mapping `snapElectionsAllowed` onto "viewer is the sitting PM" (issue #2810)
- * silently conflated the two: a sitting PM in a country whose config disables
- * snap elections would read as "not the PM", and any server-side relaxation of
- * the composite flag would have shown the dissolve UI to non-PMs. Keep the two
- * concepts separate and gate the dissolve UI on both.
+ * `snapElectionsAllowed` is a composite permission flag:
+ * `supportsSnapElections(config) && isPrimeMinister`. It is not a pure
+ * viewer-identity flag. Keep it separate from `isPrimeMinister` and gate the
+ * dissolve UI on both.
  */
 import type {
   AppointmentVotePayload,

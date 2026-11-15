@@ -1,11 +1,10 @@
 import type { CountryId } from "@/lib/constants/countries";
 
 /**
- * Warsaw Pact satellite states as playable/simulated countries in this game
- * (the Soviet Union itself is "RU"). Used to scope the Prague-Spring-style
- * liberalization crisis family and its cascade follow-ups. Kept as its own
- * module so both `templates.ts` and `optionActions.ts` can read it without a
- * cycle.
+ * Warsaw Pact satellite states as playable/simulated countries (the Soviet
+ * Union itself is "RU"). Scopes the Prague-Spring-style liberalization crisis
+ * family and its cascade follow-ups. Own module to avoid a cycle between
+ * `templates.ts` and `optionActions.ts`.
  */
 export const WARSAW_PACT_SATELLITE_COUNTRY_IDS: CountryId[] = ["PL", "DD", "CS", "BG", "HU", "RO"];
 

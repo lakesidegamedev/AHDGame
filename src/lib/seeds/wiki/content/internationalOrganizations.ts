@@ -111,6 +111,10 @@ When a binding organization's member is declared on, every other member with a g
 
 The foreign minister of a country can found a new organization with a name, short name, id, description, charter, leadership title and category, at no fee. A Bloc also creates a new alignment pole in the founder's chosen colour, which the founder starts committed to. Bloc members can spend the pooled fund on influence, use aid to hold members, and risk defections when a member's alignment slips. Custom organizations vote, lead and legislate exactly like built-in ones.
 
+## Treaty terms and trade
+
+Some newer treaty organizations pass **terms** as a directive. The terms last 240 turns and are renewed by passing them again. The Critical Minerals Club and the Arctic Agreement terms also change trade between their members on the goods they name: more of the surplus flows between members and imports cost slightly less. See [International Trade](/wiki/trade-system) for the numbers.
+
 ## Using it as foreign minister
 
 - **Open the page.** World, then International Organizations, then pick an organization to see members, leader, charter, active resolutions with live tallies, and history.
@@ -126,5 +130,5 @@ Tips:
 - An FTA needs only its two parties, so you do not need the whole organization to agree.
 - Lead an organization to get the influence and agenda actions even when you hold no other international office.
 
-Live in every world. Which organizations exist depends on the era: the EU is founded in 1993, the Warsaw Pact runs from 1952 to 1991, COMECON from 1949 to 1991, and the Non-Aligned Movement from 1961. NATO and the Warsaw Pact act as Blocs only in worlds that begin in the Cold War, and tribute from non-voting clients applies only in worlds that begin in 1953. Last checked 2026-10-29, version 1.18.0. Exact rules: [Bloc Alignment and Spheres (design)](https://docs.lakesidegames.net/design/bloc-alignment-and-spheres.html). Ballot and ratification rules are described on this page and on [Declaring War](/wiki/declaring-war).
+Live in every world. Which organizations exist depends on the era: the EU is founded in 1993, the Warsaw Pact runs from 1952 to 1991, COMECON from 1949 to 1991, and the Non-Aligned Movement from 1961. NATO and the Warsaw Pact act as Blocs only in worlds that begin in the Cold War, and tribute from non-voting clients applies only in worlds that begin in 1953. Last checked 2026-11-10, version 1.20.0. Exact rules: [Bloc Alignment and Spheres (design)](https://docs.lakesidegames.net/design/bloc-alignment-and-spheres.html). Ballot and ratification rules are described on this page and on [Declaring War](/wiki/declaring-war).
 `;

@@ -8,7 +8,7 @@ import {
 /**
  * The Warsaw-Pact six are deliberately outside `FOREX_ACTIVE_COUNTRIES` —
  * `seedExchangeRates` never writes them a row, because they are budget-only
- * economies (refs #3778 §1). But `COUNTRY_CURRENCY_MAP` still gives their
+ * economies. But `COUNTRY_CURRENCY_MAP` still gives their
  * corporations a real `liquidCurrencyCode`, so every FX helper that branches on
  * "has a code" took the convert path, found no rate document, and silently
  * returned 1.0 — reading 1 złoty as ₳1.

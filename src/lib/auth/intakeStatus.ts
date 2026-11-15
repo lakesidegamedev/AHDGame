@@ -2,18 +2,16 @@ import type { Db } from "mongodb";
 import type { GameConfig } from "@/lib/db/types";
 import { normalizeMaintenanceMode } from "@/lib/maintenanceStatus";
 import { isSingleplayer } from "@/lib/singleplayer";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 /**
  * Whether a newcomer can sign up, and whether a signed-in account can create a
  * character, right now.
  *
  * The mutation routes (`POST /api/auth/register`, the OAuth callbacks,
- * `POST /api/auth/character`) each enforce these gates server-side. The pages
- * in front of them used to know only part of it: the register page reacted to
- * full maintenance but not to closed registration, and `/create-character`
- * checked nothing, so a player filled in every step and learned at submit that
- * creation was closed. Every page now reads this one derivation before it
- * renders a form, so what a page offers and what its route accepts agree.
+ * `POST /api/auth/character`) each enforce these gates server-side. Every page
+ * reads this one derivation before it renders a form, so what a page offers
+ * and what its route accepts agree.
  */
 export type RegistrationClosedReason = "maintenance" | "registration_closed";
 export type CharacterCreationClosedReason = "maintenance";
@@ -69,7 +67,7 @@ export function computeIntakeStatus(config: IntakeConfig | null | undefined): In
 
 /** Reads the gates fresh from `gameConfig`. One small projected findOne. */
 export async function loadIntakeStatus(db: Db): Promise<IntakeStatus> {
-  const config = await db.collection<GameConfig>("gameConfig").findOne(
+  const config = await gameConfigCollection(db).findOne(
     { _id: "default" },
     {
       projection: { maintenanceMode: 1, registrationEnabled: 1, maintenanceExpectedEnd: 1 },
