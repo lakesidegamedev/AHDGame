@@ -8,7 +8,7 @@ import {
   generateDefaultEnactedLaws,
   getInitialNationalBudgetsForPreset,
 } from "@/lib/seeds/reference/budgets";
-import { SECTOR_MARKET_GDP_FRACTION, SECTOR_TYPE_COUNT } from "@/lib/constants/corporations";
+import { OPERATING_SECTOR_TYPES } from "@/lib/constants/corporations";
 import { isFiscalYearEnd, calculateFiscalYear } from "./fiscalYear";
 
 // ─── Test data ─────────────────────────────────────────────────────────────────
@@ -38,6 +38,9 @@ const ALL_STATES = [...US_STATES, ...UK_STATES];
 
 // ─── 1. UK healthcare sectors ≤ 80% market share ──────────────────────────────
 
+// Mirrors the sizing basis in seeds/reference/budgets.ts.
+const UK_HEALTHCARE_MARKET_GDP_FRACTION = 100;
+
 describe("UK healthcare sector market share", () => {
   const seedData = generateCountryOwnedSeedData(ALL_STATES, "2019-default");
   const ukEntry = seedData.find((d) => d.corporation.countryOwnerId === "UK");
@@ -50,7 +53,8 @@ describe("UK healthcare sector market share", () => {
 
   it("total NHS revenue ≤ 80% of total UK healthcare market", () => {
     const totalUkGdp = UK_STATES.reduce((sum, s) => sum + s.gdp, 0);
-    const totalHealthcareMarket = (totalUkGdp * SECTOR_MARKET_GDP_FRACTION) / SECTOR_TYPE_COUNT;
+    const totalHealthcareMarket =
+      (totalUkGdp * UK_HEALTHCARE_MARKET_GDP_FRACTION) / OPERATING_SECTOR_TYPES.length;
 
     const totalNhsRevenue = ukEntry!.sectors.reduce((sum, s) => sum + s.revenue, 0);
 

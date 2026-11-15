@@ -228,7 +228,7 @@ export const GAME_STATE_RESET_PRESERVED_FIELD_REASONS: Readonly<Record<string, s
  * the new world.
  *
  * Confirmed live on a 1953 world reset from a 2010s world: `lastCensusYear: 2010`,
- * `lastAutoSeedTurn: 944`, `lastBundestagReconciledCycle: 6`, `currentEraId: "2010s"`.
+ * `lastExtractionAutoStrategyTurn: 944`, `lastBundestagReconciledCycle: 6`, `currentEraId: "2010s"`.
  *
  * Keys are `$unset`, not `$set` to a default: absent is the documented "never
  * fired yet" state for every one of these guards, and re-deriving them is the
@@ -255,8 +255,6 @@ export const STALE_PROGRESS_GAME_STATE_UNSET: Readonly<Record<string, "">> = Obj
   // UI summary of the last census's seat deltas — belongs to the census above,
   // and would otherwise show the dead world's reapportionment on the new one.
   lastCensus: "",
-  // Retired cadence field; cleared so an old world's value does not linger.
-  lastAutoSeedTurn: "",
   // Same cadence-guard shape for the extraction auto-strategy phase.
   lastExtractionAutoStrategyTurn: "",
   // Germany AMS reconciliation high-water mark: `lastReconciled >= cycle` returns

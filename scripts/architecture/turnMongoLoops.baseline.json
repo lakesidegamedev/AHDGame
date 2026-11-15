@@ -1611,20 +1611,6 @@
     },
     {
       "file": "src/lib/nationalization/nationalizeSectorWide.ts",
-      "operation": "deleteOne",
-      "owner": "nationalizeSectorWide",
-      "expression": "db.collection<UnownedSector>(\"unownedSectors\").deleteOne({ _id: u._id })",
-      "fingerprint": "6d079f21778fb07aba0cfebdd67eaf06db5cc62a734f8be820e942e7e1059757"
-    },
-    {
-      "file": "src/lib/nationalization/nationalizeSectorWide.ts",
-      "operation": "updateOne",
-      "owner": "nationalizeSectorWide",
-      "expression": "db.collection<UnownedSector>(\"unownedSectors\").updateOne({ _id: u._id }, { $set: { revenue: Math.round((u.revenue ?? 0) * (1 - f)), ...(plantsEnabled && typeof u.headroomUnits === \"number\" ? { headroomUnits: u.headroomUnits * (1 - f) } : {}), updatedAt: now, }, })",
-      "fingerprint": "d381e9ccac838088771e4cabfc531c447a0bcfa9d544809474d003f8fafb0043"
-    },
-    {
-      "file": "src/lib/nationalization/nationalizeSectorWide.ts",
       "operation": "updateOne",
       "owner": "nationalizeSectorWide",
       "expression": "sectors.updateOne({ _id: ns._id }, { $inc: { revenue: captureLocal, ...(captureUnits > 0 ? { capitalStock: captureUnits } : {}), }, $set: { ...(captureUnits > 0 ? seedPlantLedger({ ...params, strategyId: ns.strategyId }, (ns.capitalStock ?? 0) + captureUnits) : {}), nationalizedAtTurn: params.consequence.turn, nationalizationTransitionMultiplier: transitionMultiplier, sectorNationalizationScope: params.scope, sectorNationalizationCarveFraction: f, updatedAt: now, }, })",
@@ -3239,13 +3225,6 @@
       "owner": "autoResolveLingeringDefaults",
       "expression": "db .collection<Bond>(\"bonds\") .find({ corporationId: corp._id, matured: false, defaulted: true })",
       "fingerprint": "ad957dc7f5052aef4177fdd3326b3fe94d38b5c905e949b395555c597b4ac6ce"
-    },
-    {
-      "file": "src/lib/corporations/restoreSectorsToUnowned.ts",
-      "operation": "findOneAndUpdate",
-      "owner": "restoreSectorsToUnowned",
-      "expression": "db.collection<UnownedSector>(\"unownedSectors\").findOneAndUpdate({ stateId: delta.stateId, sectorType: delta.sectorType, ...(delta.industryModel != null || delta.sectorType === \"manufacturing\" ? { industryModel: delta.industryModel ?? null } : {}), mediaDiscriminator: delta.mediaDiscriminator ?? null, }, [ { $set: { stateId: { $ifNull: [\"$stateId\", delta.stateId] }, countryId: { $ifNull: [\"$countryId\", delta.countryId] }, sectorType: { $ifNull: [\"$sectorType\", delta.sectorType] }, ...(delta.industryModel != null || delta.sectorType === \"manufacturing\" ? { industryModel: { $ifNull: [\"$industryModel\", delta.industryModel ?? null] } } : {}), mediaDiscriminator: { $ifNull: [\"$mediaDiscriminator\", delta.mediaDiscriminator ?? null], }, createdAt: { $ifNull: [\"$createdAt\", now] }, updatedAt: now, [creditField]: { $let: { vars: { currentValue: creditBaseExpr, recentRestores: { $filter: { input: { $ifNull: [\"$recentCorporateSectorRestores\", []] }, as: \"restore\", cond: { $or: [ { $eq: [\"$$restore.pendingSourceDelete\", true] }, { $gte: [\"$$restore.restoredAt\", retryWindowStart] }, ], }, }, }, }, in: { $let: { vars: { recentRestoreIds: { $map: { input: \"$$recentRestores\", as: \"restore\", in: \"$$restore.sectorId\", }, }, }, in: { $cond: [ { $in: [restoreToken, \"$$recentRestoreIds\"] }, \"$$currentValue\", { $add: [\"$$currentValue\", creditAmount] }, ], }, }, }, }, }, recentCorporateSectorRestores: { $let: { vars: { recentRestores: { $filter: { input: { $ifNull: [\"$recentCorporateSectorRestores\", []] }, as: \"restore\", cond: { $or: [ { $eq: [\"$$restore.pendingSourceDelete\", true] }, { $gte: [\"$$restore.restoredAt\", retryWindowStart] }, ], }, }, }, }, in: { $let: { vars: { recentRestoreIds: { $map: { input: \"$$recentRestores\", as: \"restore\", in: \"$$restore.sectorId\", }, }, }, in: { $cond: [ { $in: [restoreToken, \"$$recentRestoreIds\"] }, \"$$recentRestores\", { $concatArrays: [ \"$$recentRestores\", [{ sectorId: restoreToken, restoredAt: now }], ], }, ], }, }, }, }, }, }, }, { $set: unownedPoolTrailingSet(delta.sectorType as CorporationType, plantsEnabled, eraUnitScale, delta.industryModel, delta.mediaDiscriminator), }, ], { upsert: true, returnDocument: \"before\" })",
-      "fingerprint": "623590315529485b765fcff2f620f695b0dd7c0dfb4b0900a5b807f39629fcdb"
     },
     {
       "file": "src/lib/turn/bondTurnHelpers.ts",

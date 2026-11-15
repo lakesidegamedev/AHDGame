@@ -205,9 +205,7 @@ export function decideNppFounding({
       // first-rejecting-gate outcome the branch takes.
       noteFoundingCapacityOutcome(foundingOutcome, {
         affordable:
-          buildUnits > 0 &&
-          !unmetBlocksEntry &&
-          entryCapital - foundingCost >= effectiveCashFloor,
+          buildUnits > 0 && !unmetBlocksEntry && entryCapital - foundingCost >= effectiveCashFloor,
         creditPath:
           exceptionalShortageEntry &&
           starterUnits > 0 &&

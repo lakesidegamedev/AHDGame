@@ -68,8 +68,8 @@ import type { ManufacturingProductProject } from "@/lib/products/manufacturingPr
 
 import { labourAtLeast, isLabourSystemMode } from "@/lib/labour/modes";
 
+import { bucketKey } from "@/lib/market/marketBuckets";
 import {
-  bucketKey,
   computeStateControlledBuckets,
   loadNationalCorpIds,
 } from "@/lib/nationalization/stateControlledBuckets";
@@ -929,13 +929,6 @@ export async function processNppCorporationDecisions(
           currency: corpCurrency,
           buildContext: {
             destinationCurrency: currencyForCountry(intent.sector.countryId ?? corp.countryId),
-            bucket: {
-              stateId: intent.sector.stateId,
-              countryId: intent.sector.countryId ?? corp.countryId,
-              sectorType: intent.sector.sectorType,
-              industryModel: intent.sector.industryModel ?? null,
-              mediaDiscriminator: intent.sector.mediaDiscriminator ?? null,
-            },
             eraUnitScale: plants?.eraUnitScale ?? 1,
             growthUnits: intent.growthUnits,
           },

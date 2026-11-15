@@ -4,11 +4,7 @@ import { makeNppCorpDecision } from "./nppCorporationBehavior";
 import { ceoArchetypeModifiers } from "./ceoArchetype";
 import { groupOperator } from "@/lib/corporations/groups/operator";
 import type { Corporation, CorporateSector } from "@/lib/db/types";
-import {
-  candidate,
-  candidatesByCountry,
-  demandSignals,
-} from "./npp/__fixtures__/marketCandidates";
+import { candidate, candidatesByCountry, demandSignals } from "./npp/__fixtures__/marketCandidates";
 import { foundingStarterUnits } from "@/lib/corporations/foundingPlant";
 import type { GroupDirection } from "@/lib/corporations/groups/managementTypes";
 

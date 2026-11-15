@@ -10,7 +10,6 @@ import {
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
-export { bucketKey } from "@/lib/market/marketBuckets";
 import { bucketKey } from "@/lib/market/marketBuckets";
 
 /** The `_id` strings of every National Corporation (countryOwnerId set). Few rows. */
@@ -62,35 +61,6 @@ export function computeStateControlledBuckets(
     if (sr > 0 && hasNationalized.has(key) && sr >= (otherRev.get(key) ?? 0)) controlled.add(key);
   }
   return controlled;
-}
-
-/**
- * Buckets where the National Corporation is the **only** corporate holder — no
- * private or NPC corp shares the (state, sectorType) cell, so a new private
- * entrant would dilute a market the state runs alone.
- */
-export function computeNatCorpSoleOwnerBuckets(
-  corpSectors: Pick<
-    CorporateSector,
-    "stateId" | "sectorType" | "industryModel" | "mediaDiscriminator" | "corporationId"
-  >[],
-  nationalCorpIds: ReadonlySet<string>
-): Set<string> {
-  const holdersByBucket = new Map<string, Set<string>>();
-  for (const s of corpSectors) {
-    const key = bucketKey(s.stateId, s.sectorType, s.industryModel, s.mediaDiscriminator);
-    const holders = holdersByBucket.get(key) ?? new Set<string>();
-    holders.add(s.corporationId.toString());
-    holdersByBucket.set(key, holders);
-  }
-  const sole = new Set<string>();
-  for (const [key, holders] of holdersByBucket) {
-    if (holders.size === 1) {
-      const only = [...holders][0];
-      if (nationalCorpIds.has(only)) sole.add(key);
-    }
-  }
-  return sole;
 }
 
 /**
@@ -159,27 +129,6 @@ export function computeCapturedMarketMergeBuckets(
   return merge;
 }
 
-/** Union of bill-nationalized buckets and nat-corp sole-owner captures. */
-export function computeSeedProtectedBuckets(
-  corpSectors: Pick<
-    CorporateSector,
-    | "stateId"
-    | "sectorType"
-    | "industryModel"
-    | "mediaDiscriminator"
-    | "revenue"
-    | "corporationId"
-    | "nationalizedAtTurn"
-  >[],
-  nationalCorpIds: ReadonlySet<string>
-): Set<string> {
-  const protectedBuckets = computeStateControlledBuckets(corpSectors, nationalCorpIds);
-  for (const key of computeNatCorpSoleOwnerBuckets(corpSectors, nationalCorpIds)) {
-    protectedBuckets.add(key);
-  }
-  return protectedBuckets;
-}
-
 type CorpSectorBucketFields = Pick<
   CorporateSector,
   | "stateId"
@@ -210,15 +159,6 @@ async function loadCorpSectorBucketFields(db: Db): Promise<CorpSectorBucketField
       }
     )
     .toArray();
-}
-
-/** Load bucket keys where unowned seeding routes to the National Corporation. */
-export async function loadSeedProtectedBucketKeys(db: Db): Promise<Set<string>> {
-  const [corpSectors, nationalCorpIds] = await Promise.all([
-    loadCorpSectorBucketFields(db),
-    loadNationalCorpIds(db),
-  ]);
-  return computeSeedProtectedBuckets(corpSectors, nationalCorpIds);
 }
 
 type OwnedSectorMergeFields = Pick<

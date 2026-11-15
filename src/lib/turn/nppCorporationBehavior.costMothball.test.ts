@@ -21,11 +21,7 @@ import { CAPACITY_ANCHOR_YEAR } from "@/lib/constants/capacityEconomy";
 import type { Corporation, CorporateSector } from "@/lib/db/types";
 import type { PlacementSignals } from "./npp/marketSignals";
 import type { MarketCandidate } from "./npp/marketCandidates";
-import {
-  candidate,
-  candidatesByCountry,
-  demandSignals,
-} from "./npp/__fixtures__/marketCandidates";
+import { candidate, candidatesByCountry, demandSignals } from "./npp/__fixtures__/marketCandidates";
 import { foundingStarterUnits } from "@/lib/corporations/foundingPlant";
 
 const noState = new Set<string>();

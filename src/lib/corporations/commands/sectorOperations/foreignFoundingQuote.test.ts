@@ -80,18 +80,6 @@ describe("foreign-host founding quote equals charge", () => {
       db.seed("macroMetrics", [
         { _id: stateId, countryId, economic: { costOfLiving: { value: 137.3 } } },
       ]);
-      db.seed("unownedSectors", [
-        {
-          _id: new ObjectId(),
-          stateId,
-          countryId,
-          sectorType: "manufacturing",
-          industryModel: null,
-          mediaDiscriminator: null,
-          revenue: 1_000_000,
-          headroomUnits: 100_000,
-        },
-      ]);
       const { getDb } = await import("@/lib/mongodb");
       vi.mocked(getDb).mockResolvedValue(db as unknown as Db);
       const { requireBasicAuth } = await import("@/lib/api/requireAuth");

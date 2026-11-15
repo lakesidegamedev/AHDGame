@@ -406,7 +406,7 @@ describe("physical saturation gate (live turn 250 incident)", () => {
 
 describe("founding type discipline (live turn 262)", () => {
   const find = (
-    pool: Map<string, UnownedSector[]>,
+    pool: Map<string, MarketCandidate[]>,
     signals?: Parameters<typeof findBestMarketCandidate>[10],
     healthcarePrice = 3
   ) =>
@@ -530,8 +530,8 @@ describe("candidate ranking is memoized, not re-derived per comparison", () => {
   // The reference ranking recomputes a candidate's score on every comparison,
   // which is what the scan did before: market size times the state's shortage
   // score, with the HQ bonus. The memoized scan must land on the same pick.
-  const referencePick = (candidates: UnownedSector[], hqState: string) => {
-    const scoreOf = (candidate: UnownedSector) => {
+  const referencePick = (candidates: MarketCandidate[], hqState: string) => {
+    const scoreOf = (candidate: MarketCandidate) => {
       const shortage = sectorShortageScore(
         getOperatingSectorType(
           candidate.sectorType,

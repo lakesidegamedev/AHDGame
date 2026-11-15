@@ -113,9 +113,9 @@ interface EconomySector {
   totalMarket: number;
   ownedRevenue: number;
   /** Unmet demand in this market, output units per day. */
-  headroomUnits?: number | null;
+  roomToBuildUnits?: number | null;
   /** "country" when that room is one figure shared across the whole country. */
-  headroomScope?: "state" | "country" | null;
+  roomToBuildScope?: "state" | "country" | null;
   owners: SectorOwner[];
 }
 
@@ -595,16 +595,16 @@ export function StateEconomy({ stateId, countryId }: { stateId: string; countryI
             </span>
           </div>
           <div>
-            <Tooltip content={roomToBuildNote(sector.headroomScope)}>
+            <Tooltip content={roomToBuildNote(sector.roomToBuildScope)}>
               <span className="block w-fit cursor-help border-b border-dashed border-card-border/70 text-sm font-semibold text-foreground">
                 Room to build
               </span>
             </Tooltip>
             <span
               className="text-sm font-bold text-foreground tabular-nums"
-              title={`${formatUnits(sector.headroomUnits)} ${CAPACITY_UNIT_LABEL} of unmet demand`}
+              title={`${formatUnits(sector.roomToBuildUnits)} ${CAPACITY_UNIT_LABEL} of unmet demand`}
             >
-              {roomInPlantsLabel(sector.headroomUnits, { sectorType: sector.type })}
+              {roomInPlantsLabel(sector.roomToBuildUnits, { sectorType: sector.type })}
             </span>
           </div>
           <div>
@@ -911,7 +911,7 @@ export function StateEconomy({ stateId, countryId }: { stateId: string; countryI
                               </span>{" "}
                               +{" "}
                               <span className="font-medium text-foreground">
-                                {data.attackMsCost} MS
+                                {data.attackMsCost ?? 0} MS
                               </span>
                             </span>
                             {owner.attackEstimatedCapture != null &&
@@ -928,12 +928,12 @@ export function StateEconomy({ stateId, countryId }: { stateId: string; countryI
                             onClick={() => handleAttackSector(owner.sectorId)}
                             disabled={
                               attackingId === owner.sectorId ||
-                              data.userMarketingStrength < data.attackMsCost
+                              data.userMarketingStrength < (data.attackMsCost ?? 0)
                             }
                             className="shrink-0 rounded border border-error/30 bg-error/10 px-3 py-1 text-xs font-medium text-error transition-colors hover:bg-error/20 disabled:opacity-40"
                             title={
-                              data.userMarketingStrength < data.attackMsCost
-                                ? `Need ${data.attackMsCost} MS, have ${formatMarketingStrength(data.userMarketingStrength)}`
+                              data.userMarketingStrength < (data.attackMsCost ?? 0)
+                                ? `Need ${data.attackMsCost ?? 0} MS, have ${formatMarketingStrength(data.userMarketingStrength)}`
                                 : "Attack this sector to capture market share"
                             }
                           >
@@ -962,22 +962,22 @@ export function StateEconomy({ stateId, countryId }: { stateId: string; countryI
 
         {/* Room to build: demand in this market that nobody is currently
             serving, in units/day, the figure a player sizes a build against. */}
-        {(sector.headroomUnits ?? 0) > 0 && (
+        {(sector.roomToBuildUnits ?? 0) > 0 && (
           <div className="rounded-xl border border-card-border bg-card overflow-hidden">
             {/* Header */}
             <div className="flex items-center justify-between px-4 pt-4 pb-3">
               <span className="font-semibold text-sm text-foreground">Room to build</span>
               <div className="text-right">
                 <div className="text-xl font-bold tabular-nums leading-none text-foreground">
-                  {plantsOfRoom(sector.headroomUnits, { sectorType: sector.type }) >= 1
-                    ? plantsOfRoom(sector.headroomUnits, {
+                  {plantsOfRoom(sector.roomToBuildUnits, { sectorType: sector.type }) >= 1
+                    ? plantsOfRoom(sector.roomToBuildUnits, {
                         sectorType: sector.type,
                       }).toLocaleString("en-US")
                     : "<1"}
                 </div>
                 <div
                   className="text-body-sm font-medium text-muted mt-0.5"
-                  title={`${formatUnits(sector.headroomUnits)} ${CAPACITY_UNIT_LABEL} of unmet demand`}
+                  title={`${formatUnits(sector.roomToBuildUnits)} ${CAPACITY_UNIT_LABEL} of unmet demand`}
                 >
                   {`new ${facilityPlural(sector.type)}`}
                 </div>
@@ -986,9 +986,9 @@ export function StateEconomy({ stateId, countryId }: { stateId: string; countryI
 
             {data.plantsMode && (
               <p className="px-4 pb-3 text-xs leading-snug text-muted">
-                {sector.headroomScope === "country"
-                  ? `Buyers across this country want more than they are getting, enough to keep ${roomInPlantsLabel(sector.headroomUnits, { sectorType: sector.type })} busy, after plants already under construction. Every state in the country shares this figure.`
-                  : `Buyers in ${data.stateName} want more than they are getting, enough to keep ${roomInPlantsLabel(sector.headroomUnits, { sectorType: sector.type })} busy, after plants already under construction.`}
+                {sector.roomToBuildScope === "country"
+                  ? `Buyers across this country want more than they are getting, enough to keep ${roomInPlantsLabel(sector.roomToBuildUnits, { sectorType: sector.type })} busy, after plants already under construction. Every state in the country shares this figure.`
+                  : `Buyers in ${data.stateName} want more than they are getting, enough to keep ${roomInPlantsLabel(sector.roomToBuildUnits, { sectorType: sector.type })} busy, after plants already under construction.`}
               </p>
             )}
 
@@ -1013,8 +1013,8 @@ export function StateEconomy({ stateId, countryId }: { stateId: string; countryI
             available when there is no untapped-market card to carry it. */}
         {data.plantsMode &&
           data.userCorporationId &&
-          sector.headroomUnits != null &&
-          sector.headroomUnits <= 0 && (
+          sector.roomToBuildUnits != null &&
+          sector.roomToBuildUnits <= 0 && (
             <div className="rounded-xl border border-card-border bg-card px-4 py-3">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="min-w-0">

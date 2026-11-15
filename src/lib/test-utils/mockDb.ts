@@ -232,7 +232,7 @@ export function createAsyncIterableCursor<T>(docs: T[]) {
  * pass for a batched seeder. Assert on what the code actually calls.
  *
  * Usage:
- *   const ops = bulkOps(db.collectionMocks.unownedSectors.bulkWrite);
+ *   const ops = bulkOps(db.collectionMocks.corporateSectors.bulkWrite);
  */
 export function bulkOps(
   mockFn: AnyMockFn

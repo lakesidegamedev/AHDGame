@@ -13,11 +13,7 @@ import {
 import { ceoArchetypeModifiers } from "@/lib/npp/ceoArchetype";
 import type { CeoArchetype } from "@/lib/npp/ceoArchetype";
 import type { Corporation, CorporateSector } from "@/lib/db/types";
-import {
-  candidate,
-  candidatesByCountry,
-  demandSignals,
-} from "./npp/__fixtures__/marketCandidates";
+import { candidate, candidatesByCountry, demandSignals } from "./npp/__fixtures__/marketCandidates";
 import type { MarketCandidate } from "./npp/marketCandidates";
 import { foundingStarterUnits } from "@/lib/corporations/foundingPlant";
 import { CAPACITY_ANCHOR_YEAR } from "@/lib/constants/capacityEconomy";

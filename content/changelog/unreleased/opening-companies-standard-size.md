@@ -7,7 +7,7 @@ summary: >-
   its first companies are.
 tags: [economy, seeds, reset, companies]
 badges: [minor]
-areas: [engine, backend, admin]
+areas: [engine, backend]
 ---
 
 ## What changed

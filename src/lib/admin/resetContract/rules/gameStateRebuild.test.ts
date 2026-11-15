@@ -25,8 +25,8 @@ describe("planGameStateRebuild", () => {
   });
 
   it("unsets forced fields that the outgoing document does not carry", () => {
-    expect(planGameStateRebuild([], [], [], ["lastAutoSeedTurn"]).unset).toEqual([
-      "lastAutoSeedTurn",
+    expect(planGameStateRebuild([], [], [], ["lastExtractionAutoStrategyTurn"]).unset).toEqual([
+      "lastExtractionAutoStrategyTurn",
     ]);
   });
 

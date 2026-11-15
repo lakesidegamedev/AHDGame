@@ -10,7 +10,7 @@ import type { ExchangeRate } from "@/lib/db/types";
 import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { getMarketSystemModeForDb, marketAtLeast } from "@/lib/market/featureFlag";
-import { computeSectorImpliedUnits } from "@/lib/market/unownedHeadroom";
+import { computeSectorImpliedUnits } from "@/lib/market/sectorImpliedUnits";
 import {
   mergeSectorPlantFields,
   readSectorPlantFields,

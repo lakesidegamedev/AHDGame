@@ -1,0 +1,28 @@
+import type { OperatingSectorType, MediaDiscriminator } from "@/lib/constants/corporations";
+import { COMMODITY_BASE_PRICES } from "@/lib/constants/commodities";
+import { getStrategyForOperatingModel } from "@/lib/constants/sectorStrategies";
+import { impliedOutputUnits } from "@/lib/market/capital";
+
+/** Strategy whose supply mix is used when a sector has no strategy of its own. */
+const DEFAULT_STRATEGY_ID = "standard";
+
+/**
+ * Revenue to implied output units on a specific strategy's supply mix.
+ * An absent or unknown strategy resolves to the sector type's standard mix.
+ */
+export function computeSectorImpliedUnits(
+  sectorType: OperatingSectorType,
+  revenue: number,
+  strategyId: string | null | undefined,
+  unitScale: number,
+  industryModel?: string | null,
+  mediaDiscriminator?: MediaDiscriminator | null
+): number {
+  const strategy = getStrategyForOperatingModel(
+    sectorType,
+    strategyId ?? DEFAULT_STRATEGY_ID,
+    industryModel,
+    mediaDiscriminator
+  );
+  return impliedOutputUnits(revenue, strategy.supply, COMMODITY_BASE_PRICES, unitScale);
+}

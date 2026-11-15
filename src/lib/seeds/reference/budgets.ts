@@ -38,7 +38,7 @@ import {
 } from "@/lib/constants/corporations";
 import type { CorporationType } from "@/lib/constants/corporations";
 import { getEraUnitScale } from "@/lib/constants/sectorSeedEra";
-import { computeSectorImpliedUnits } from "@/lib/market/unownedHeadroom";
+import { computeSectorImpliedUnits } from "@/lib/market/sectorImpliedUnits";
 import {
   commandEconomySoeSectors,
   scheduledMarketizationLevel,
@@ -3742,7 +3742,8 @@ export function generateCountryOwnedSeedData(
     // NHS captures ~80 % of the UK healthcare market in game-unit terms.
     const NHS_MARKET_SHARE = 0.8;
     const totalUkGdp = ukStates.reduce((sum, state) => sum + state.gdp, 0);
-    const totalHealthcareMarket = (totalUkGdp * UK_HEALTHCARE_MARKET_GDP_FRACTION) / OPERATING_SECTOR_TYPES.length;
+    const totalHealthcareMarket =
+      (totalUkGdp * UK_HEALTHCARE_MARKET_GDP_FRACTION) / OPERATING_SECTOR_TYPES.length;
     const requiredRevenue = Math.round(totalHealthcareMarket * NHS_MARKET_SHARE);
 
     // Derive the multiplier that bridges game-scale operating income → real budget revenue.

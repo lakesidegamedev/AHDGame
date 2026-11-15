@@ -154,11 +154,6 @@ export function RecommendationCard({
                 {recommendation.action.targetSectorType && (
                   <span className="text-muted">· {recommendation.action.targetSectorType}</span>
                 )}
-                {recommendation.action.targetUnownedRevenue != null && (
-                  <span className="text-success font-medium">
-                    · {formatAmount(recommendation.action.targetUnownedRevenue)} unowned
-                  </span>
-                )}
                 <Link
                   href={recommendation.link}
                   className="ml-auto text-primary hover:underline font-medium"

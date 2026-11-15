@@ -4,10 +4,7 @@
  * (unmet demand, saturation, input fill) decides which candidates are worth
  * entering.
  */
-import {
-  enumerateCandidateBuckets,
-  type MarketBucket,
-} from "@/lib/market/marketBuckets";
+import { enumerateCandidateBuckets, type MarketBucket } from "@/lib/market/marketBuckets";
 
 /** A market bucket tagged with the country that owns its region. */
 export interface MarketCandidate extends MarketBucket {

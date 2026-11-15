@@ -2,10 +2,7 @@
 import * as Sentry from "@sentry/nextjs";
 import { type ObjectId, type AnyBulkWriteOperation, type Document, type Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
-import {
-  appendNppReinvestCapexRows,
-  buildNppFoundedSectorInserts,
-} from "./capacityWriteback";
+import { appendNppReinvestCapexRows, buildNppFoundedSectorInserts } from "./capacityWriteback";
 import type { BuildCapexTxInput } from "@/lib/corporations/capexTxLog";
 import type { PlacementSignals } from "./marketSignals";
 import type { Corporation } from "@/lib/db/types";

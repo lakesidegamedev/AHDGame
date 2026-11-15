@@ -12,10 +12,7 @@ import { CORPORATION_TYPES } from "./corporations";
 import { SECTOR_STRATEGIES } from "./sectorStrategies";
 import { COMMODITY_BASE_PRICES, eraScaledBasePrices, COMMODITY_TYPES } from "./commodities";
 import { impliedOutputUnits, seedCapitalStock } from "@/lib/market/capital";
-import {
-  computeUnownedHeadroomUnits,
-  unownedHeadroomUnitsPerAnchor,
-} from "@/lib/market/unownedHeadroom";
+import { computeSectorImpliedUnits } from "@/lib/market/sectorImpliedUnits";
 
 /**
  * The era unit-basis scale (getEraUnitScale) re-expresses plants-tier capacity
@@ -133,11 +130,11 @@ describe("real-terms invariance of the unit basis", () => {
     }
   });
 
-  it("headroom units follow the same law, so market denominators are comparable", () => {
+  it("implied units follow the same law, so unit denominators are comparable", () => {
     for (const type of CORPORATION_TYPES) {
-      const modern = computeUnownedHeadroomUnits(type, 250_000, 1);
+      const modern = computeSectorImpliedUnits(type, 250_000, null, 1);
       if (!(modern > 0)) continue;
-      const era = computeUnownedHeadroomUnits(type, 250_000 * nominal1953, SCALE_1953);
+      const era = computeSectorImpliedUnits(type, 250_000 * nominal1953, null, SCALE_1953);
       expect(era).toBeCloseTo(modern, 6);
     }
   });
@@ -162,19 +159,6 @@ describe("eraScaledBasePrices", () => {
 });
 
 describe("identities that must NOT move with the scale", () => {
-  it("units-per-anchor and its reciprocal stay exact inverses at any scale", () => {
-    // The pool's two legs (revenue, headroomUnits) are restated through this
-    // pair; if it stopped being an exact inverse the legs would drift.
-    for (const scale of [1, SCALE_1953]) {
-      for (const type of CORPORATION_TYPES) {
-        const perAnchor = unownedHeadroomUnitsPerAnchor(type, scale);
-        if (!(perAnchor > 0)) continue;
-        const revenue = 123_456.789;
-        expect((revenue * perAnchor) / perAnchor).toBeCloseTo(revenue, 6);
-      }
-    }
-  });
-
   it("retool rescale ratios are scale-free (the era factor cancels)", () => {
     // capacityRescaleRatio computes RPU_from / RPU_to internally at scale 1;
     // verify the ratio equals what the era-scaled RPUs would produce.

@@ -50,7 +50,7 @@ export async function GET(request: Request) {
 
     const states: Record<string, FreightDemandEntry> = {};
 
-    // Show every state. `openMarket` stays 0: no stored market exists to report.
+    // Show every state, even those with no freight activity yet.
     for (const stateId of stateIds) {
       const capacity = Number(stateSupply[stateId] ?? 0);
       states[stateId] = {
@@ -58,7 +58,6 @@ export async function GET(request: Request) {
         special: 0,
         total: 0,
         capacity,
-        openMarket: 0,
       };
     }
 
@@ -74,7 +73,6 @@ export async function GET(request: Request) {
           special,
           total: bulk + special,
           capacity: prev?.capacity ?? capacity,
-          openMarket: prev?.openMarket ?? 0,
         };
       }
     }

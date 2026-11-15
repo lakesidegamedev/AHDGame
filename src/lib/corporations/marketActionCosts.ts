@@ -1,4 +1,4 @@
-import { ATTACK_OWNED_COST_FRACTION, SPLIT_COST_FRACTION } from "@/lib/constants/corporations";
+import { ATTACK_OWNED_COST_FRACTION } from "@/lib/constants/corporations";
 import { readCorpEconomicAnchor } from "@/lib/currency/corpEconomyFields";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 
@@ -14,10 +14,6 @@ export function calculateAttackCostFromLocalRevenue(
   return calculateAttackCostAnchor(
     readCorpEconomicAnchor(targetRevenueLocal, currencyCode, fxRate)
   );
-}
-
-export function calculateSplitCostAnchor(unownedRevenueAnchor: number): number {
-  return Math.round(Math.max(0, unownedRevenueAnchor) * SPLIT_COST_FRACTION);
 }
 
 export function calculateSplitMsCost(splitEscalation: number | null | undefined): number {

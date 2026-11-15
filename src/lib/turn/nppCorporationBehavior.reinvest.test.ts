@@ -24,6 +24,7 @@ import { ceoArchetypeModifiers } from "./ceoArchetype";
 import type { Corporation, CorporateSector } from "@/lib/db/types";
 import { candidate, candidatesByCountry } from "./npp/__fixtures__/marketCandidates";
 import type { MarketCandidate } from "./npp/marketCandidates";
+import type { LocalShareLookup } from "./npp/reinvestCandidatePool";
 import {
   CAPACITY_ANCHOR_YEAR,
   CAPACITY_BUILD_TURNS,
@@ -37,7 +38,6 @@ import { getNationalDominanceGrowthCostMultiplier } from "@/lib/constants/corpor
 const noPrices: CommodityPriceRatioFn = () => null;
 const noState = new Set<string>();
 const TURN = 200;
-
 
 const plantsCtx: NppPlantsContext = {
   enabled: true,
@@ -100,7 +100,7 @@ function decide(
     prices?: CommodityPriceRatioFn;
     retailExpansionPaused?: boolean;
     challengerBoostOf?: (sectorType: string, ownCorporationId: string) => number;
-    localShareOf?: (sector: CorporateSector) => number;
+    localShareOf?: LocalShareLookup;
   } = {}
 ) {
   return makeNppCorpDecision(
@@ -564,11 +564,7 @@ describe("NPP capacity reinvestment — conservation and pricing", () => {
     // reaching it silently reinstates the bug. The cash leg must travel only as
     // `liquidCapitalDelta`. Covers spending, founding and no-op paths.
     const spends = decide(corp(), [sector()], [pool()], plantsCtx);
-    const noop = decide(
-      corp({ liquidCapital: 0 }),
-      [sector()],
-      [pool()]
-    );
+    const noop = decide(corp({ liquidCapital: 0 }), [sector()], [pool()]);
 
     for (const d of [spends, noop]) {
       expect(d.updates).not.toHaveProperty("liquidCapital");

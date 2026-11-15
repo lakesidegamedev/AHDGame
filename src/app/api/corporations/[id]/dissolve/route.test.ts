@@ -37,13 +37,12 @@ beforeEach(() => {
   db.collection("characters");
   db.collection("corporateSectors");
   db.collection("exchangeRates");
-  db.collection("unownedSectors");
   db.collection("corporationExits");
   db.collection("corporationHistory");
 });
 
 describe("POST /api/corporations/[id]/dissolve", () => {
-  it("restores sector revenue in anchor units and deletes the sectors", async () => {
+  it("deletes the sectors without crediting any market pool", async () => {
     const corpId = new ObjectId();
     const sectorId = new ObjectId();
 
@@ -100,7 +99,6 @@ describe("POST /api/corporations/[id]/dissolve", () => {
     db.collectionMocks.exchangeRates.find.mockReturnValue({
       toArray: async () => [{ currencyCode: "GBP", rate: 2 }],
     });
-    db.collectionMocks.unownedSectors.findOneAndUpdate.mockResolvedValue(null);
     db.collectionMocks.corporateSectors.deleteMany.mockResolvedValue({ deletedCount: 1 });
     db.collectionMocks.corporations.deleteOne.mockResolvedValue({ deletedCount: 1 });
 
@@ -112,7 +110,7 @@ describe("POST /api/corporations/[id]/dissolve", () => {
 
     expect(response.status).toBe(200);
     expect(data.success).toBe(true);
-    expect(db.collectionMocks.unownedSectors.findOneAndUpdate).toHaveBeenCalledTimes(1);
+    expect(db.collectionMocks.unownedSectors).toBeUndefined();
     const sectorDeleteFilter = db.collectionMocks.corporateSectors.deleteMany.mock.calls[0][0];
     expect(sectorDeleteFilter._id.$in).toEqual([sectorId]);
     expect(sectorDeleteFilter["constructionPropertyTransition.kind"]).toBe("restore");

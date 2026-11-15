@@ -354,7 +354,6 @@ describe("computeSectorMarketPosition share bounds", () => {
       siblingCorps: [],
       siblingsSectors: sectors,
       siblingFxByCurrency: new Map(),
-      unownedDoc: null,
     });
   };
 

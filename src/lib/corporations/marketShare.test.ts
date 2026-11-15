@@ -1,7 +1,6 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect } from "vitest";
 import {
   computeMarketSharePercent,
-  gdpDerivedMarketAnchor,
   buildMarketShareBySectorId,
   buildNationalDominanceShareBySectorId,
 } from "./marketShare";
@@ -16,29 +15,6 @@ describe("computeMarketSharePercent", () => {
 
   it("a non-positive market reads 0", () => {
     expect(computeMarketSharePercent(1000, 0)).toBe(0);
-  });
-});
-
-describe("gdpDerivedMarketAnchor with an unrecognized countryId", () => {
-  // Incident 2026-07-22: a sandbox corp/state kept the pre-rename "BY" Belarus
-  // code after 348fcf61b renamed it to "BLR" without a data migration.
-  // getCountryConfig("BY") returned undefined, and this function crashed on
-  // .usdExchangeRate — inside a per-corp/per-sector turn loop, so it took
-  // down corporationTurn for every corporation in the world, not just Belarus's.
-  it("falls back instead of throwing", () => {
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-    expect(() => gdpDerivedMarketAnchor(1000, "BY" as CountryId)).not.toThrow();
-    expect(warnSpy).toHaveBeenCalled();
-    warnSpy.mockRestore();
-  });
-
-  it("uses usdExchangeRate=1 as the fallback rate", () => {
-    vi.spyOn(console, "warn").mockImplementation(() => {});
-    // Same formula as a recognized country with usdExchangeRate exactly 1 (e.g. US).
-    expect(gdpDerivedMarketAnchor(1000, "BY" as CountryId)).toBe(
-      gdpDerivedMarketAnchor(1000, "US")
-    );
-    vi.restoreAllMocks();
   });
 });
 

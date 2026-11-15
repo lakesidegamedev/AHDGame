@@ -503,11 +503,10 @@ export async function buildRegionEconomyResponse({
       totalMarket: effectiveTotalMarket,
       ownedRevenue: Math.round(ownedRevenue),
       // Room to build: buyers here not being served, less capacity already
-      // under construction. Not the legacy unowned pool (a market can be
-      // short with an empty pool).
-      headroomUnits: room?.units ?? null,
+      // under construction.
+      roomToBuildUnits: room?.units ?? null,
       // "country" when the figure above is shared by every state in the country.
-      headroomScope: room?.scope ?? null,
+      roomToBuildScope: room?.scope ?? null,
       owners: redactedOwners,
     };
   });

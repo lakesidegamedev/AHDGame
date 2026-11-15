@@ -18,9 +18,7 @@ import {
 import type { CorporationType } from "@/lib/constants/corporations";
 import type { CorporateSector, SectorBuildOrder } from "@/lib/db/types";
 import { isStateOwned } from "@/lib/nationalization/nationalCorporation";
-import {
-  type ReinvestCandidate,
-} from "@/lib/turn/npp/reinvestCandidatePool";
+import { type ReinvestCandidate } from "@/lib/turn/npp/reinvestCandidatePool";
 import {
   autopilotCapexBudgetLocal,
   AUTOPILOT_CAPEX_SIZING_SLACK,
@@ -48,7 +46,7 @@ import {
   NPP_REINVEST_MAX_SECTORS_PER_TURN,
   NPP_REINVEST_MAINTENANCE_CASH_SHARE,
 } from "@/lib/turn/npp/nppCorporationTuning";
-import { bucketKey } from "@/lib/nationalization/stateControlledBuckets";
+import { bucketKey } from "@/lib/market/marketBuckets";
 import {
   hasProtectedConstructionProperty,
   unprotectedConstructionPropertyFilter,
@@ -204,7 +202,7 @@ export function decideNppCapacityReinvestment({
         competitorCountOf: rivalCount,
         cashToAnchor,
         readCashLocal: () => cashLocal,
-        localShareOf: (sector) => (ctx.localShareOf?.(sector) ?? 0),
+        localShareOf: (sector) => ctx.localShareOf?.(sector) ?? 0,
         push: (observation) => capacityObservations.push(observation),
       });
 
@@ -408,10 +406,7 @@ export function decideNppCapacityReinvestment({
             !isMarketSaturated(placementSignals?.marketSaturationOf?.(sector)))) &&
         (sector.sectorType !== "extraction" || extractionHeadroom > 0);
       // Existing plants pay the same dominance-tolled list price as players.
-      const growthShare =
-        capitalStock > 0
-          ? (ctx.localShareOf?.(sector) ?? 0)
-          : 0;
+      const growthShare = capitalStock > 0 ? (ctx.localShareOf?.(sector) ?? 0) : 0;
       const perUnitGrowthLocal = canGrow
         ? toCorpLocal(
             computeBuildCost({
@@ -504,12 +499,7 @@ export function decideNppCapacityReinvestment({
           : null;
       if (evidenceGate) {
         growthUnits = 0;
-        observeReinvestCandidate(
-          evidenceGate,
-          sector,
-          replacementUnits,
-          null
-        );
+        observeReinvestCandidate(evidenceGate, sector, replacementUnits, null);
       }
       // Autopilot builds only where the plant already earns, the market has
       // room and the order repays itself; a refused growth leg still lets the
@@ -529,12 +519,7 @@ export function decideNppCapacityReinvestment({
           growthUnits = 0;
           // Recorded even when the replacement leg still places, so a refused
           // growth leg is never invisible in the capacity funnel.
-          observeReinvestCandidate(
-            autopilotGate,
-            sector,
-            replacementUnits,
-            null
-          );
+          observeReinvestCandidate(autopilotGate, sector, replacementUnits, null);
         }
       }
       const rawUnits = replacementUnits + growthUnits;
@@ -548,12 +533,7 @@ export function decideNppCapacityReinvestment({
           : rawUnits;
       if (!(units > 0)) {
         if (!autopilotGate && !evidenceGate) {
-          observeReinvestCandidate(
-            "below_minimum_order",
-            sector,
-            units,
-            null
-          );
+          observeReinvestCandidate("below_minimum_order", sector, units, null);
         }
         continue;
       }
@@ -634,12 +614,7 @@ export function decideNppCapacityReinvestment({
       // A zero or negative charge is not a buildable quote: observe it as a
       // sizing rejection, the same outcome as sizing to non-positive units.
       if (!(costLocal > 0)) {
-        observeReinvestCandidate(
-          "below_minimum_order",
-          sector,
-          units,
-          null
-        );
+        observeReinvestCandidate("below_minimum_order", sector, units, null);
         continue;
       }
       // Autopilot's per-turn capex ceiling, shared by every growth order in
