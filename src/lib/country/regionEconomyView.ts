@@ -1,7 +1,4 @@
-import {
-  getOperatingSectorType,
-  getStrategyForOperatingModel,
-} from "@/lib/constants/sectorStrategies";
+import { getStrategy } from "@/lib/constants/sectorStrategies";
 import { NextResponse } from "next/server";
 import { loadWorkforceSkillByState } from "@/lib/politicalLegislation/workforceSkillLoader";
 import { ObjectId } from "mongodb";
@@ -25,16 +22,7 @@ import {
   resolveSectorHostCurrencyCode,
 } from "@/lib/currency/corporationCapital";
 import { readCorpEconomicAnchor } from "@/lib/currency/corpEconomyFields";
-import {
-  OPERATING_SECTOR_TYPES,
-  OPERATING_SECTOR_TYPE_LABELS,
-  operatingSectorIdentity,
-  type OperatingSectorType,
-  ATTACK_OWNED_CONTESTED_FRACTION,
-  calculateWorkers,
-  getDominanceAttackEaseMultiplier,
-  getUnderdogAttackAmplifier,
-} from "@/lib/constants/corporations";
+import { OPERATING_SECTOR_TYPES, OPERATING_SECTOR_TYPE_LABELS, type OperatingSectorType, ATTACK_OWNED_CONTESTED_FRACTION, calculateWorkers, getDominanceAttackEaseMultiplier, getUnderdogAttackAmplifier } from "@/lib/constants/corporations";
 import { roundMarketingStrength } from "@/lib/utils/formatters";
 import {
   calculateAttackCostAnchor,
@@ -100,8 +88,6 @@ export async function buildRegionEconomyResponse({
       projection: {
         _id: 1,
         type: 1,
-        industryModel: 1,
-        mediaDiscriminator: 1,
         marketingStrength: 1,
         liquidCapital: 1,
         liquidCurrencyCode: 1,
@@ -139,11 +125,7 @@ export async function buildRegionEconomyResponse({
 
     if (corp) {
       userCorporationId = corp._id.toString();
-      userCorporationSectorType = getOperatingSectorType(
-        corp.type,
-        corp.industryModel,
-        corp.mediaDiscriminator
-      );
+      userCorporationSectorType = corp.type;
       userMarketingStrength = corp.marketingStrength ?? 0;
       userLiquidCapitalAnchor = corpLiquidCapitalToAnchor(
         corp.liquidCapital ?? 0,
@@ -204,10 +186,7 @@ export async function buildRegionEconomyResponse({
   // Get all corporate sectors in this state
   const sectors = await corporateSectorsCollection(db).find({ stateId }).toArray();
 
-  // Keyed by operating lane: the vehicles and entertainment markets are their own rows.
-  const laneOf = (
-    row: Pick<CorporateSector, "sectorType" | "industryModel" | "mediaDiscriminator">
-  ) => getOperatingSectorType(row.sectorType, row.industryModel, row.mediaDiscriminator);
+  const laneOf = (row: Pick<CorporateSector, "sectorType">) => row.sectorType;
   const plantsMode = marketAtLeast(await getMarketSystemModeForDb(db), "plants");
 
   // Get corporation details for each sector
@@ -474,14 +453,7 @@ export async function buildRegionEconomyResponse({
     // less capacity already under construction.
     let room: { units: number; scope: "state" | "country" } | null = null;
     if (buildRoom) {
-      const identity = operatingSectorIdentity(sectorType);
-      const supplyMix =
-        getStrategyForOperatingModel(
-          identity.sectorType,
-          "standard",
-          identity.industryModel,
-          identity.mediaDiscriminator
-        ).supply ?? {};
+      const supplyMix = getStrategy(sectorType, "standard").supply ?? {};
       const countryShared = supplyMixSharesCountryDemand(supplyMix, buildRoom?.funded);
       room = {
         units: buildRoomUnits(

@@ -226,9 +226,7 @@ export async function buildSectorDetailPlantsTier({
     | "defense"
     | "telecommunications"
     | "logistics"
-    | "extraction"
-    | "manufacturing_vehicles"
-    | "media_entertainment";
+    | "extraction";
   techCurrentYear: number;
   effectiveSupply: Partial<
     Record<
@@ -482,20 +480,13 @@ export async function buildSectorDetailPlantsTier({
       (ceo as { stats?: { businessAcumen?: number } } | null)?.stats?.businessAcumen ??
       NEUTRAL_STAT;
     const techBuildEffects = techTreesEnabled
-      ? getSectorTechEffects(
-          techCorpView,
-          sectorType,
-          sector.industryModel,
-          sector.mediaDiscriminator
-        )
+      ? getSectorTechEffects(techCorpView, sectorType)
       : null;
     const techBuildCostMultiplier = techBuildEffects?.growthCostMultiplier ?? 1;
     const techDominanceShield = techBuildEffects
       ? upkeptDominanceShield(
           techCorpView,
           sectorType,
-          sector.industryModel,
-          sector.mediaDiscriminator,
           techCurrentYear,
           governorConfig?.strengthUpkeepStage
         )
@@ -703,7 +694,6 @@ export async function buildSectorDetailPlantsTier({
       strategies: getSectorStrategies(
         sectorType,
         governorConfig?.mediaOperatingModelsEnabled === true,
-        sector.mediaDiscriminator,
         sectorDetailPreset
       ),
       isAvailable: (candidate) =>
@@ -721,13 +711,7 @@ export async function buildSectorDetailPlantsTier({
           stateResources === undefined ? undefined : (stateResources ?? {})
         ),
       rescaleRatio: (toStrategyId) =>
-        capacityRescaleRatio(
-          sectorType,
-          sector.strategyId,
-          toStrategyId,
-          sector.industryModel,
-          sector.mediaDiscriminator
-        ),
+        capacityRescaleRatio(sectorType, sector.strategyId, toStrategyId),
       priceRatioFor: marketRatioFor,
       balanceFor: marketBookFor,
       basePrices: eraScaledBasePrices(sectorDetailUnitScale),

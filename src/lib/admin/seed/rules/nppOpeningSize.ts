@@ -4,16 +4,12 @@
  * competitor is sized from regional GDP.
  */
 import { plantSizeUnits } from "@/lib/constants/facilityQuantum";
-import {
-  operatingSectorIdentity,
-  type OperatingSectorType,
-} from "@/lib/constants/corporationsClient";
+import { type OperatingSectorType } from "@/lib/constants/corporationsClient";
 
 /** Standard plants per opening NPP corporation; equals a new player company. */
 export const OPENING_PLANT_COUNT = 1;
 
 /** Opening capacity in output units/day for one NPP corporation in `lane`. */
 export function nppOpeningUnits(lane: OperatingSectorType): number {
-  const id = operatingSectorIdentity(lane);
-  return OPENING_PLANT_COUNT * plantSizeUnits(lane, id.industryModel, id.mediaDiscriminator);
+  return OPENING_PLANT_COUNT * plantSizeUnits(lane);
 }

@@ -14,7 +14,6 @@ export function businessProfileView(
           name: data.corporation.name,
           id: data.corporation.sequentialId ? String(data.corporation.sequentialId) : null,
           type: data.corporation.type,
-          industryModel: data.corporation.industryModel,
         }
       : null,
     isInvestor: data.isInvestor,

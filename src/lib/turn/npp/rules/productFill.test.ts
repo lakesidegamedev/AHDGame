@@ -12,7 +12,7 @@ import { plantPressure } from "@/lib/market/producerMarket/shortageGrowthRules";
 import { ceoArchetypeModifiers } from "../../ceoArchetype";
 import { makeNppCorpDecision } from "../makeCorpDecision";
 import { getNppCashFloorAnchor } from "../nppCashReserve";
-import { bestProductSellThrough, gateFill } from "./productFill";
+import { bestProductSellThrough, gateFill, wholeSellThrough } from "./productFill";
 
 // A defense-like plant: ordnance (short) sells out, chemicals sit half
 // unsold or go to the company's own sites.
@@ -172,5 +172,13 @@ describe("NPP reinvestment gate with per-product fill", () => {
     const sellOut = [{ offeredUnits: 100, soldUnits: 100 }];
     expect(decide(0, sellOut, 100)).toBeGreaterThan(0);
     expect(decide(1, sellOut, 100)).toBe(decide(0, sellOut, 100));
+  });
+});
+
+describe("wholeSellThrough", () => {
+  it("is what the whole run sold, whichever product sold best", () => {
+    expect(wholeSellThrough(1_000, 240)).toBeCloseTo(0.24, 10);
+    expect(wholeSellThrough(1_000, 1_500)).toBe(1);
+    expect(wholeSellThrough(0, 100)).toBe(0);
   });
 });

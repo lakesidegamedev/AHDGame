@@ -34,7 +34,7 @@ import {
 import { loadRdDevelopmentProjects } from "@/lib/corporations/rdDevelopmentFunding";
 import { readCorpEconomicAnchor, writeCorpEconomicLocal } from "@/lib/currency/corpEconomyFields";
 import { getCorpFxRate } from "@/lib/currency/corporationCapital";
-import { SECTOR_STRATEGIES, getOperatingSectorType } from "@/lib/constants/sectorStrategies";
+import { SECTOR_STRATEGIES } from "@/lib/constants/sectorStrategies";
 import {
   TECH_DECADES,
   TECH_TREE,
@@ -122,14 +122,10 @@ export async function GET(_request: Request, { params }: RouteParams) {
     const startingYear = gameState?.startingYear ?? STARTING_YEAR;
     const currentYear =
       gameState?.currentYear ?? startingYear + Math.floor((currentTurn - 1) / TURNS_PER_YEAR);
-    const operatingSectorType = getOperatingSectorType(
-      corporation.type,
-      corporation.industryModel
-    ) as Corporation["type"];
+    const operatingSectorType = corporation.type as Corporation["type"];
 
     const corpView: TechCorpView = {
       type: corporation.type,
-      industryModel: corporation.industryModel,
       unlockedTechNodeIds: corporation.unlockedTechNodeIds,
       techDecadeLane: corporation.techDecadeLane,
       frontierProgrammes: corporation.frontierProgrammes,

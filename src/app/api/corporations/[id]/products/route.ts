@@ -35,7 +35,6 @@ type ManufacturingPlantSector = Pick<
   | "_id"
   | "corporationId"
   | "sectorType"
-  | "industryModel"
   | "strategyId"
   | "capacityBookAnchor"
   | "capitalStock"
@@ -66,7 +65,6 @@ function manufacturingPlant(sector: ManufacturingPlantSector): ManufacturingPlan
     sectorId: sector._id.toString(),
     corporationId: sector.corporationId.toString(),
     sectorType: sector.sectorType,
-    industryModel: sector.industryModel,
     strategyId: sector.strategyId,
     capitalStock: sector.capitalStock ?? 0,
     plantCount: sector.plantCount ?? 0,
@@ -121,7 +119,6 @@ export async function GET(_request: Request, { params }: RouteParams) {
         _id: 1,
         corporationId: 1,
         sectorType: 1,
-        industryModel: 1,
         strategyId: 1,
         capitalStock: 1,
         capacityBookAnchor: 1,

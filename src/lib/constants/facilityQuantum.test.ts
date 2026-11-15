@@ -24,7 +24,7 @@ describe("plantSizeUnits", () => {
   it("keeps each facility's nameplate near the target daily revenue", () => {
     // Authored values are legible roundings of target / RPU. The band is wide
     // enough for the rounding and deliberately floors at 1 for sectors whose
-    // single unit already exceeds the target (automobiles). When this fails, a
+    // single unit already exceeds the target. When this fails, a
     // strategy or base-price change moved the sector's RPU — re-round the
     // authored entry on purpose rather than loosening the band.
     for (const type of CORPORATION_TYPES) {
@@ -52,28 +52,15 @@ describe("facilitiesFromUnits", () => {
     expect(facilitiesFromUnits("energy", 250)).toBe(1);
     expect(facilitiesFromUnits("energy", 749)).toBe(2);
     expect(facilitiesFromUnits("energy", 2500)).toBe(10);
-    expect(facilitiesFromUnits("manufacturing_vehicles", 3.7)).toBe(3);
-  });
-
-  it("retains the automobile quantum for a manufacturing vehicle model", () => {
-    expect(plantSizeUnits("manufacturing", "vehicles")).toBe(
-      plantSizeUnits("manufacturing_vehicles")
-    );
-    expect(facilitiesFromUnits("manufacturing", 3.7, "vehicles")).toBe(3);
-    expect(revenuePerCapacityUnit("manufacturing", 1, "vehicles")).toBe(
-      revenuePerCapacityUnit("manufacturing_vehicles", 1)
-    );
+    expect(facilitiesFromUnits("manufacturing", 51)).toBe(2);
   });
 });
 
 describe("plantSizeForSector", () => {
-  it("sizes a vehicle recipe on a plain manufacturing sector as a vehicle plant", () => {
+  it("sizes a vehicle recipe on a manufacturing sector as a one-unit vehicle plant", () => {
     for (const strategyId of ["vehicle_assembly", "vehicle_heavy_machinery"]) {
       const sector = { sectorType: "manufacturing", strategyId };
-      expect(plantSizeForSector(sector)).toBe(plantSizeUnits("manufacturing_vehicles"));
-      expect(plantSizeForSector(sector)).toBe(
-        plantSizeForSector({ sectorType: "manufacturing", industryModel: "vehicles" })
-      );
+      expect(plantSizeForSector(sector)).toBe(1);
       // 41.7 vehicle units are 41 vehicle plants, not 1 steel plant.
       expect(plantsFromUnitsForSector(sector, 41.7)).toBe(41);
     }
@@ -81,28 +68,25 @@ describe("plantSizeForSector", () => {
     expect(plantSizeForSector({ sectorType: "manufacturing" })).toBe(25);
   });
 
-  it("maps every manufacturing recipe that makes vehicles to the vehicle plant size", () => {
+  it("gives every manufacturing recipe that makes only vehicles the one-unit vehicle plant", () => {
     for (const strategy of SECTOR_STRATEGIES.manufacturing) {
-      if (!((strategy.supply.vehicles ?? 0) > 0)) continue;
-      expect(plantSizeForSector({ sectorType: "manufacturing", strategyId: strategy.id })).toBe(
-        plantSizeUnits("manufacturing_vehicles")
-      );
+      const outputs = Object.keys(strategy.supply);
+      if (!(outputs.length === 1 && outputs[0] === "vehicles")) continue;
+      expect(plantSizeForSector({ sectorType: "manufacturing", strategyId: strategy.id })).toBe(1);
     }
   });
 
-  it("prices a vehicle-recipe plant like a vehicle-model plant", () => {
-    const rpu = revenuePerCapacityUnitForStrategy("manufacturing", "vehicle_assembly", 1);
-    const nameplate =
-      rpu * plantSizeForSector({ sectorType: "manufacturing", strategyId: "vehicle_assembly" });
-    expect(nameplate).toBe(
-      revenuePerCapacityUnitForStrategy("manufacturing", "standard", 1, "vehicles") *
-        plantSizeUnits("manufacturing_vehicles")
-    );
+  it("keeps a vehicle-recipe plant's nameplate near the target daily revenue", () => {
+    for (const strategyId of ["vehicle_assembly", "vehicle_heavy_machinery"]) {
+      const rpu = revenuePerCapacityUnitForStrategy("manufacturing", strategyId, 1);
+      expect(rpu).toBeGreaterThan(FACILITY_TARGET_DAILY_REVENUE_ANCHOR);
+      expect(plantSizeForSector({ sectorType: "manufacturing", strategyId })).toBe(1);
+    }
   });
 
   it("gives bulk updates a per-document size that matches the per-sector helper", () => {
     expect(plantSizeMongoExpr({ sectorType: "energy" })).toBe(250);
-    expect(plantSizeMongoExpr({ sectorType: "manufacturing", industryModel: "vehicles" })).toBe(1);
+    expect(plantSizeMongoExpr({ sectorType: "technology" })).toBe(25);
     expect(plantSizeMongoExpr({ sectorType: "manufacturing" })).toEqual({
       $switch: {
         branches: [

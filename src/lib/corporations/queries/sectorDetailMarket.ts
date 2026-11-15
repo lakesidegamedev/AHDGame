@@ -34,7 +34,6 @@ import {
   type EffectiveStrategyRates,
   STRATEGY_TRANSITION_TURNS,
   STRATEGY_TRANSITION_MARGIN_PENALTY,
-  getOperatingSectorType,
 } from "@/lib/constants/sectorStrategies";
 import {
   getForeignTariffMarginModifier,
@@ -364,11 +363,7 @@ export function computeSectorMarginSection(args: {
     metrics,
     commodityMarginMod,
     homeLocationBonus,
-    getOperatingSectorType(
-      corporation.type,
-      corporation.industryModel,
-      corporation.mediaDiscriminator
-    ),
+    corporation.type,
     totalCorpSectors,
     macroEcon,
     corporation.logisticsStrength ?? 0,

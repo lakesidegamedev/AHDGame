@@ -611,8 +611,6 @@ export async function resetGameWorld(
       $unset: {
         ...STALE_PER_WORLD_GAME_CONFIG_UNSET,
         ...STALE_MARKET_MODE_STAMP_UNSET,
-        fresh1991VehicleModelSeed: "",
-        fresh1991MediaTaxonomySeed: "",
         // A scheduled economy pause is anchored to the outgoing world's turn
         // counter. Kept, it would freeze the new world (back at turn 1) until
         // the old world's resume turn arrived.

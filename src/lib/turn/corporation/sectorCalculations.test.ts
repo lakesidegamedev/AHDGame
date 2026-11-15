@@ -116,7 +116,6 @@ vi.mock("@/lib/constants/sectorStrategies", async (importOriginal) => {
   return {
     ...actual,
     getEffectiveStrategyRates: mockEffectiveRates,
-    getEffectiveStrategyRatesForOperatingModel: mockEffectiveRates,
   };
 });
 

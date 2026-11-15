@@ -4,7 +4,6 @@
  */
 
 import { supportsNoStartingParties } from "@/lib/admin/startingPartiesPresets";
-import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
 import type { OperatingSectorType } from "@/lib/constants/corporationsClient";
 import {
   STARTING_POLITICAL_COLLECTIONS,
@@ -317,8 +316,6 @@ export async function checkSectors(
         ? (
             await corporateSectorsCollection<{
               sectorType?: string;
-              industryModel?: string | null;
-              mediaDiscriminator?: string | null;
               strategyId?: string | null;
               capitalStock?: number;
             }>(db)
@@ -331,8 +328,6 @@ export async function checkSectors(
                 {
                   projection: {
                     sectorType: 1,
-                    industryModel: 1,
-                    mediaDiscriminator: 1,
                     capitalStock: 1,
                   },
                 }
@@ -341,11 +336,7 @@ export async function checkSectors(
           )
             .filter((row) => Number(row.capitalStock) > 0 && row.sectorType !== "extraction")
             .map((row) => ({
-              lane: getOperatingSectorType(
-                row.sectorType as string,
-                row.industryModel,
-                row.mediaDiscriminator
-              ) as OperatingSectorType,
+              lane: row.sectorType as string as OperatingSectorType,
               capacityUnits: Number(row.capitalStock),
             }))
         : [];
@@ -398,16 +389,10 @@ export async function checkSectors(
     // at one standard plant per lane.
     type LaneRow = {
       sectorType?: string;
-      industryModel?: string | null;
-      mediaDiscriminator?: string | null;
       revenue?: number;
     };
-    // Shares are per operating lane, so the vehicles and entertainment lanes
-    // are measured against the weight tables that size them.
     const toLaneRow = (row: LaneRow) => ({
-      sectorType: row.sectorType
-        ? getOperatingSectorType(row.sectorType, row.industryModel, row.mediaDiscriminator)
-        : row.sectorType,
+      sectorType: row.sectorType,
       revenue: row.revenue,
     });
     let productiveRows: Array<{ sectorType?: string; revenue?: number }> = [];
@@ -423,8 +408,6 @@ export async function checkSectors(
                 {
                   projection: {
                     sectorType: 1,
-                    industryModel: 1,
-                    mediaDiscriminator: 1,
                     revenue: 1,
                   },
                 }

@@ -14,7 +14,6 @@ import type { OperatingSectorType } from "@/lib/constants/corporations";
 
 export const DE_UNION_NAMES_MODERN: Partial<Record<OperatingSectorType, string>> = {
   manufacturing: "IG Metall",
-  manufacturing_vehicles: "IG Metall",
   chemical_industries: "IG BCE",
   construction: "IG BAU",
   energy: "IG BCE",
@@ -26,7 +25,6 @@ export const DE_UNION_NAMES_MODERN: Partial<Record<OperatingSectorType, string>>
   technology: "IG Metall",
   financial: "ver.di",
   telecommunications: "ver.di",
-  media_entertainment: "ver.di",
   defense: "IG Metall",
   agriculture: "IG BAU",
   real_estate: "IG BAU",
@@ -39,7 +37,6 @@ export const DE_UNION_NAMES_1999: Partial<Record<OperatingSectorType, string>> =
   retail: "Gewerkschaft Handel, Banken und Versicherungen",
   financial: "Gewerkschaft Handel, Banken und Versicherungen",
   media: "IG Medien",
-  media_entertainment: "IG Medien",
   telecommunications: "Deutsche Postgewerkschaft",
 };
 
@@ -56,12 +53,10 @@ export const DE_UNION_NAMES_1991: Partial<Record<OperatingSectorType, string>> =
 export const DE_UNION_NAMES_1979: Partial<Record<OperatingSectorType, string>> = {
   ...DE_UNION_NAMES_1991,
   media: "IG Druck und Papier",
-  media_entertainment: "Deutsche Angestellten-Gewerkschaft",
 };
 
 export const DE_UNION_NAMES_1953: Partial<Record<OperatingSectorType, string>> = {
   manufacturing: "IG Metall",
-  manufacturing_vehicles: "IG Metall",
   chemical_industries: "IG Chemie-Papier-Keramik",
   construction: "IG Bau-Steine-Erden",
   energy: "IG Bergbau",
@@ -73,7 +68,6 @@ export const DE_UNION_NAMES_1953: Partial<Record<OperatingSectorType, string>> =
   technology: "IG Metall",
   financial: "Gewerkschaft Handel, Banken und Versicherungen",
   telecommunications: "Deutsche Postgewerkschaft",
-  media_entertainment: "Deutsche Angestellten-Gewerkschaft",
   defense: "IG Metall",
   agriculture: "Gewerkschaft Gartenbau, Land- und Forstwirtschaft",
   real_estate: "IG Bau-Steine-Erden",

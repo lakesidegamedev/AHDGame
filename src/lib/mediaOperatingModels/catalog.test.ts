@@ -9,11 +9,11 @@ import {
 import { getMediaOperatingModelStrategies } from "@/lib/constants/sectorStrategies";
 
 describe("media operating model catalog", () => {
-  it("lists only the current media and entertainment sector lanes", () => {
-    expect(MEDIA_OPERATING_MODELS).toHaveLength(12);
-    expect(
-      [...new Set(MEDIA_OPERATING_MODELS.flatMap((model) => model.sectorTypes))].sort()
-    ).toEqual(["media", "media_entertainment"]);
+  it("lists only the media sector", () => {
+    expect(MEDIA_OPERATING_MODELS).toHaveLength(9);
+    expect([...new Set(MEDIA_OPERATING_MODELS.flatMap((model) => model.sectorTypes))]).toEqual([
+      "media",
+    ]);
   });
 
   it("keeps streaming outside the 1953 opening world and on the current tech lanes", () => {
@@ -21,7 +21,6 @@ describe("media operating model catalog", () => {
     expect(streaming?.availableFromYear).toBeGreaterThan(1953);
     expect(streaming?.technologies).toEqual({
       media: { decade: "2009", nodeName: "Streaming Platforms" },
-      media_entertainment: { decade: "2009", nodeName: "Streaming Distribution" },
     });
   });
 
@@ -38,9 +37,6 @@ describe("media operating model catalog", () => {
 
   it("uses explicit catalogued models when they are available for the sector and year", () => {
     expect(effectiveMediaOperatingModelId("broadcast_tv", "media", 1950)).toBe("broadcast_tv");
-    expect(effectiveMediaOperatingModelId("film_studio", "media_entertainment", 1910)).toBe(
-      "film_studio"
-    );
     expect(effectiveMediaOperatingModelId("streaming_platform", "media", 2005)).toBe(
       "streaming_platform"
     );
@@ -48,7 +44,6 @@ describe("media operating model catalog", () => {
 
   it("returns undefined for non-media, unmapped, mismatched, unavailable, or unknown-year inputs", () => {
     expect(effectiveMediaOperatingModelId("newspaper", "manufacturing", 1953)).toBeUndefined();
-    expect(effectiveMediaOperatingModelId("film_studio", "media", 1953)).toBeUndefined();
     expect(effectiveMediaOperatingModelId("streaming_platform", "media", 2004)).toBeUndefined();
     expect(effectiveMediaOperatingModelId("legacy_broadcast", "media", 1919)).toBeUndefined();
     expect(effectiveMediaOperatingModelId("retired_strategy", "media", 2000)).toBeUndefined();
@@ -58,7 +53,7 @@ describe("media operating model catalog", () => {
   it("points every paid technology prerequisite at a node in its existing sector lane", () => {
     for (const model of MEDIA_OPERATING_MODELS) {
       for (const [sectorType, technology] of Object.entries(model.technologies)) {
-        const node = TECH_TREE[sectorType as "media" | "media_entertainment"].find(
+        const node = TECH_TREE[sectorType as "media"].find(
           (candidate) =>
             candidate.decadeId === technology.decade && candidate.name === technology.nodeName
         );
@@ -98,23 +93,13 @@ describe("post-2005 media operating models", () => {
       "creator_network"
     );
     expect(effectiveMediaOperatingModelId("ai_generated_media", "media", 2027)).toBeUndefined();
-    expect(
-      effectiveMediaOperatingModelId("immersive_media", "media_entertainment", 2027)
-    ).toBeUndefined();
   });
 
-  it("opens AI-generated media in 2030 and immersive media in 2040", () => {
+  it("opens AI-generated media in 2030", () => {
     expect(effectiveMediaOperatingModelId("ai_generated_media", "media", 2029)).toBeUndefined();
     expect(effectiveMediaOperatingModelId("ai_generated_media", "media", 2030)).toBe(
       "ai_generated_media"
     );
-    expect(
-      effectiveMediaOperatingModelId("immersive_media", "media_entertainment", 2039)
-    ).toBeUndefined();
-    expect(effectiveMediaOperatingModelId("immersive_media", "media_entertainment", 2040)).toBe(
-      "immersive_media"
-    );
-    expect(effectiveMediaOperatingModelId("immersive_media", "media", 2045)).toBeUndefined();
   });
 });
 
@@ -128,9 +113,6 @@ describe("post-2005 media model economics", () => {
     for (const id of ["social_platform", "creator_network", "ai_generated_media"]) {
       expect(strategy("media", id).requiresTechUnlock).toBe(true);
       expect(strategy("media", id).supply.advertising).toBeGreaterThan(0);
-    }
-    for (const id of ["creator_network", "ai_generated_media", "immersive_media"]) {
-      expect(strategy("media_entertainment", id).supply.advertising).toBeGreaterThan(0);
     }
   });
 

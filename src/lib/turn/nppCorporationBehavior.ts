@@ -151,9 +151,10 @@ import {
   buildMarketSaturationIndex,
   canFoundAsBuilder,
   cellUnmetDemandUnits,
+  depositBoundSupplyMix,
   marketSaturationOf,
 } from "@/lib/turn/npp/rules/marketSaturation";
-import { getOperatingSectorType, getStrategy } from "@/lib/constants/sectorStrategies";
+import { getStrategy } from "@/lib/constants/sectorStrategies";
 import { isStateScopedCommodity } from "@/lib/market/rules/commodityMarketScope";
 import {
   resolveNppMarketEntryCredit,
@@ -323,11 +324,6 @@ export async function processNppCorporationDecisions(
             stateId: 1,
             countryId: 1,
             sectorType: 1,
-            // Lane identity: without these an entertainment or vehicles sector
-            // keys as plain media/manufacturing, so its bucket never reads as
-            // covered or state-controlled.
-            industryModel: 1,
-            mediaDiscriminator: 1,
             revenue: 1,
             corporationId: 1,
             nationalizedAtTurn: 1,
@@ -381,12 +377,7 @@ export async function processNppCorporationDecisions(
   const saturationByCell = new Map<string, number | null>();
   placementSignals.marketSaturationOf = (cell, excluding) => {
     if (excluding) return marketSaturationOf(saturationIndex, cell, excluding, fundedWorldEpoch);
-    const key = bucketKey(
-      cell.stateId,
-      cell.sectorType,
-      cell.industryModel,
-      cell.mediaDiscriminator
-    );
+    const key = bucketKey(cell.stateId, cell.sectorType);
     const cached = saturationByCell.get(key);
     if (cached !== undefined) return cached;
     const value = marketSaturationOf(saturationIndex, cell);
@@ -424,29 +415,35 @@ export async function processNppCorporationDecisions(
     cell: Parameters<NonNullable<PlacementSignals["unmetDemandUnitsOf"]>>[0],
     options: Parameters<NonNullable<PlacementSignals["unmetDemandUnitsOf"]>>[1]
   ) => {
-    const memoKey = `${cell.countryId}|${cell.stateId}|${cell.sectorType}|${cell.industryModel ?? ""}|${cell.mediaDiscriminator ?? ""}|${options?.strategyId ?? ""}|${options?.aggregate ?? "mean"}`;
+    const memoKey = `${cell.countryId}|${cell.stateId}|${cell.sectorType}|${options?.strategyId ?? ""}|${options?.aggregate ?? "mean"}`;
     const cached = gapMemo.get(memoKey);
     if (cached) return cached;
     // The mix the new plant would actually run: its founding strategy, else the
     // sector default (getStrategy falls back to it).
-    const supplyMix = getStrategy(
-      getOperatingSectorType(cell.sectorType, cell.industryModel, cell.mediaDiscriminator),
-      options?.strategyId ?? ""
-    ).supply;
+    const fullMix = getStrategy(cell.sectorType, options?.strategyId ?? "").supply;
+    const supplyMix = depositBoundSupplyMix(
+      fullMix,
+      cell,
+      placementSignals.extractionResourceHeadroomOf
+    );
+    // A mine whose state holds none of the mix's resources has no room at all.
+    const noDepositLeft = Object.keys(fullMix).length > 0 && Object.keys(supplyMix).length === 0;
     const value = {
-      unmet: cellUnmetDemandUnits({
-        supplyMix,
-        aggregate: options?.aggregate,
-        gapFor: (commodity) => {
-          const doc = priceByCommodity.get(commodity);
-          if (!doc) return null;
-          const [supply, demand] = isStateScopedCommodity(commodity)
-            ? [doc.stateSupply?.[cell.stateId], doc.stateDemand?.[cell.stateId]]
-            : [doc.nationalSupply?.[cell.countryId], doc.nationalDemand?.[cell.countryId]];
-          if (typeof supply !== "number" || typeof demand !== "number") return null;
-          return Math.max(0, demand - supply);
-        },
-      }),
+      unmet: noDepositLeft
+        ? 0
+        : cellUnmetDemandUnits({
+            supplyMix,
+            aggregate: options?.aggregate,
+            gapFor: (commodity) => {
+              const doc = priceByCommodity.get(commodity);
+              if (!doc) return null;
+              const [supply, demand] = isStateScopedCommodity(commodity)
+                ? [doc.stateSupply?.[cell.stateId], doc.stateDemand?.[cell.stateId]]
+                : [doc.nationalSupply?.[cell.countryId], doc.nationalDemand?.[cell.countryId]];
+              if (typeof supply !== "number" || typeof demand !== "number") return null;
+              return Math.max(0, demand - supply);
+            },
+          }),
       claimKey: demandClaimKeyOf(cell),
     };
     gapMemo.set(memoKey, value);
@@ -666,11 +663,7 @@ export async function processNppCorporationDecisions(
   // per state and lane for the whole cohort; nothing in the pass moves it.
   const foundingInputByCell = new Map<string, number | null>();
   placementSignals.foundingInputAvailabilityOf = (candidate) => {
-    const lane = getOperatingSectorType(
-      candidate.sectorType,
-      candidate.industryModel,
-      candidate.mediaDiscriminator
-    );
+    const lane = candidate.sectorType;
     const key = `${candidate.stateId}|${lane}`;
     const cached = foundingInputByCell.get(key);
     if (cached !== undefined) return cached;

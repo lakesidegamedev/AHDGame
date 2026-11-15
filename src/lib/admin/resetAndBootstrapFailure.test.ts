@@ -331,24 +331,6 @@ describe("resetAndBootstrapGameWorld — failure handling", () => {
     expect(closeUpdate().$set["resetRun.status"]).toBe("failed");
   });
 
-  it("refuses a 1991 reset without a reference rebuild before sealing or touching the database", async () => {
-    // Teardown clears the 1991 taxonomy markers, and the taxonomy seeds only
-    // run on a reference rebuild, so this combination would bootstrap legacy
-    // automobile and entertainment markets into a 1991 world.
-    const { resetAndBootstrapGameWorld } = await import("./resetAndBootstrapGameWorld");
-    const { resetGameWorld } = await import("@/lib/admin/resetGameWorld");
-    await expect(
-      resetAndBootstrapGameWorld({
-        db: db as unknown as Db,
-        preset: "1991-default",
-        startingParties: "none",
-        resetReference: false,
-      })
-    ).rejects.toThrow("must rebuild reference data");
-    expect(Object.keys(db.collectionMocks)).toHaveLength(0);
-    expect(vi.mocked(resetGameWorld)).not.toHaveBeenCalled();
-  });
-
   it("rejects unsupported empty starts before sealing or touching the database", async () => {
     const { resetAndBootstrapGameWorld } = await import("./resetAndBootstrapGameWorld");
     await expect(

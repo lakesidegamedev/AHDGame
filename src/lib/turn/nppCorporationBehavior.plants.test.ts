@@ -210,8 +210,6 @@ describe("NPP expansion under plants — price parity", () => {
       {
         stateId: "CA",
         sectorType: "manufacturing",
-        industryModel: null,
-        mediaDiscriminator: null,
         units: EXPECTED_UNITS,
         countryId: "US",
       },

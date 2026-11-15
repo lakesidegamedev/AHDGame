@@ -2,13 +2,7 @@ import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import { handleRouteError } from "@/lib/api/errors";
-import {
-  OPERATING_SECTOR_TYPES,
-  OPERATING_SECTOR_TYPE_LABELS,
-  isOperatingSectorType,
-  operatingSectorFilter,
-  type OperatingSectorType,
-} from "@/lib/constants/corporations";
+import { OPERATING_SECTOR_TYPES, OPERATING_SECTOR_TYPE_LABELS, isOperatingSectorType, type OperatingSectorType } from "@/lib/constants/corporations";
 import {
   COUNTRY_CONFIGS,
   COUNTRY_ORDER,
@@ -24,7 +18,6 @@ import {
 import { readCorpEconomicAnchor } from "@/lib/currency/corpEconomyFields";
 import { loadCountryPresentationOverrides } from "@/lib/country/countryIdentity";
 import { loadWorldPreset } from "@/lib/currency/gdpAnchorRate";
-import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
@@ -36,7 +29,6 @@ export type SectorSort = "revenue" | "type" | "state" | "country" | "margin" | "
 type SectorRow = {
   id: string;
   sectorType: OperatingSectorType;
-  mediaDiscriminator?: string | null;
   sectorTypeLabel: string;
   stateId: string;
   stateName: string;
@@ -174,7 +166,7 @@ export async function GET(request: Request) {
     } else {
       // Owned or forSale — query corporateSectors
       const corpFilter: Record<string, unknown> = {};
-      if (sectorTypeFilter) Object.assign(corpFilter, operatingSectorFilter(sectorTypeFilter));
+      if (sectorTypeFilter) Object.assign(corpFilter, { sectorType: sectorTypeFilter });
       Object.assign(corpFilter, countryScopedFilter);
       if (view === "forSale") {
         corpFilter.forSale = { $ne: null };
@@ -184,8 +176,6 @@ export async function GET(request: Request) {
         .find(corpFilter, {
           projection: {
             sectorType: 1,
-            industryModel: 1,
-            mediaDiscriminator: 1,
             stateId: 1,
             countryId: 1,
             corporationId: 1,
@@ -245,12 +235,8 @@ export async function GET(request: Request) {
 
         rows.push({
           id: s._id.toString(),
-          sectorType: getOperatingSectorType(s.sectorType, s.industryModel, s.mediaDiscriminator),
-          mediaDiscriminator: s.mediaDiscriminator ?? null,
-          sectorTypeLabel:
-            OPERATING_SECTOR_TYPE_LABELS[
-              getOperatingSectorType(s.sectorType, s.industryModel, s.mediaDiscriminator)
-            ],
+          sectorType: s.sectorType,
+          sectorTypeLabel: OPERATING_SECTOR_TYPE_LABELS[s.sectorType],
           stateId: s.stateId,
           stateName: st?.name ?? s.stateId,
           countryId: hostCountryId,

@@ -48,7 +48,7 @@ Every turn, the game processes each corporation through these phases:
 
 The headline founding fee is **₳1,000,000** in modern money, and the new corporation starts with **₳1,000,000** in liquid capital. A 1953 world deflates both figures to that era's money (1979, 1991 and modern worlds use the figures above), outside the US the amount is converted into local currency at the world's base exchange rate, and the founding dialog always shows the exact amount before you confirm. Low investor confidence can add up to **25%** to the fee, paid to the country treasury; the corporation's starting capital is never reduced. You can optionally raise the starting treasury as high as **₳50,000,000**; everything above the ₳1,000,000 baseline is deducted from your personal cash on top of the fee.
 
-At founding you choose from **17 sector lines**: the 15 corporation types, plus the vehicles line of manufacturing and the entertainment line of media:
+At founding you choose from the **15 corporation types**:
 
 | Type | Label |
 | --- | --- |
@@ -59,12 +59,10 @@ At founding you choose from **17 sector lines**: the 15 corporation types, plus 
 | media | Media |
 | manufacturing | Manufacturing |
 | retail | Retail |
-| manufacturing_vehicles | Automobiles (manufacturing, vehicles line) |
 | agriculture | Agriculture |
 | real_estate | Real Estate |
 | defense | Defense |
 | telecommunications | Telecommunications |
-| media_entertainment | Entertainment (media, entertainment line) |
 | logistics | Logistics |
 | extraction | Extraction & Mining |
 | chemical_industries | Chemical Industries |
@@ -363,7 +361,7 @@ Combined daily spending on marketing, logistics, R&D, and CEO salary cannot exce
 
 Marketing Strength (MS) is your corporation's **economic-warfare currency**. It is not a sales stat: it does not raise demand, clear more of your output, improve your margin, or move your share price. What it decides is who takes market share from whom.
 
-MS grows each turn from what you actually **spend on delivered advertising**, not from the budget you set. Your marketing budget is placed as advertising demand with the media and entertainment sectors, you pay only for the advertising that fills, unfilled budget stays in your treasury, and it is the delivered spend that feeds MS. When advertising fills only part of what is asked for, strength accrues more slowly than the budget figure suggests. A budget you cannot fund next turn places no demand at all.
+MS grows each turn from what you actually **spend on delivered advertising**, not from the budget you set. Your marketing budget is placed as advertising demand with the media sector, you pay only for the advertising that fills, unfilled budget stays in your treasury, and it is the delivered spend that feeds MS. When advertising fills only part of what is asked for, strength accrues more slowly than the budget figure suggests. A budget you cannot fund next turn places no demand at all.
 
 - Base: 1 MS per turn (any delivered spend at all)
 - Scaled: grows with the log of delivered spend
@@ -468,14 +466,12 @@ Computer-run corporations may automatically retool a sector onto a better strate
 | Agriculture | Vertical Farming, Precision Agriculture, Traditional, Industrial, Sustainable | 5 |
 | Chemical Industries | Specialty Chemicals, Industrial Chemicals, Fertilizer Production, Pharmaceuticals, Plastics & Polymers | 5 |
 | Healthcare | Telehealth Network, Standard, Hospital Networks, Outpatient & Preventive | 4 |
-| Manufacturing (vehicles) | Autonomous Vehicles, Standard, EV Focus, Heavy Machinery | 4 |
 | Financial | Algorithmic Trading, Standard, Fintech, Traditional Banking | 4 |
 | Media | Streaming Media, Standard, Digital-First, Legacy Broadcast | 4 |
 | Defense | Directed-Energy Systems, Standard, Cyber Warfare, Heavy Armor, Munitions & Arms Export, Naval Systems, Missile & Rocket Systems, Aerospace Systems | 8 |
 | Real Estate | PropTech Platforms, Standard, Commercial Development, Green Building | 4 |
 | Construction | Modular Construction, General Contracting, Infrastructure Buildout, plus a research-gated Factory-built Modular Construction method from 2019 | 4 |
 | Telecommunications | 5G / 6G Networks, Standard, Wireline Network, 5G/Infrastructure, Cloud Services | 5 |
-| Media (entertainment) | Live-Service Platforms, Standard, Streaming/Digital, Live/Venue | 4 |
 | Retail | E-Commerce Fulfillment, Standard, E-Commerce, Brick & Mortar | 4 |
 | Logistics | Autonomous Freight, Standard, Freight Only, Automated Logistics, Full-Service | 5 |
 | Extraction & Mining | Diversified, Iron & Metals Mining, Oil & Gas, Natural Gas Focus, Rare Earth Minerals Mining, Coal Mining, Timber & Forestry | 7 |

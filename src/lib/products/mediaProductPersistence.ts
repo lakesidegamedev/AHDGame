@@ -130,12 +130,7 @@ export async function processMediaProductProjectsV1(input: {
         sectorQuality: input.sectorQualityBySectorId.get(project.sectorId) ?? null,
         relevantTechnologyUnlocked: (() => {
           if (!kind.technologyNodeName || !corporation) return false;
-          const sectorType =
-            project.operatingSectorType ??
-            (kind.modelId === "film_studio" || kind.modelId === "music_label"
-              ? "media_entertainment"
-              : "media");
-          const node = TECH_TREE[sectorType].find(
+          const node = TECH_TREE.media.find(
             (candidate) => candidate.name === kind.technologyNodeName
           );
           return node !== undefined && corporation.unlockedTechNodeIds?.includes(node.id) === true;
@@ -385,8 +380,6 @@ export async function startNppMediaProductsV1(input: {
       corporationId,
       activeDevelopmentCorporationId: corporationId,
       sectorId: selected.sectorId,
-      operatingSectorType:
-        sector.mediaDiscriminator === "entertainment" ? "media_entertainment" : "media",
       kindId: selected.kind.id,
       title: `${selected.kind.label} ${input.currentYear}`,
       allocationShare: 0.25,

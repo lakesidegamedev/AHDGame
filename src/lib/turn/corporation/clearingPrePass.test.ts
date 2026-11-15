@@ -131,9 +131,9 @@ describe("runClearingPrePass with clearing enabled", () => {
   );
 
   it.each([
-    { sectorType: "manufacturing", industryModel: "vehicles", commodity: "steel" },
-    { sectorType: "media", mediaDiscriminator: "entertainment", commodity: "energy" },
-  ] as const)("reserves the actual $sectorType model's $commodity demand", (identity) => {
+    { sectorType: "manufacturing", commodity: "steel" },
+    { sectorType: "media", commodity: "energy" },
+  ] as const)("reserves the actual $sectorType recipe's $commodity demand", (identity) => {
     const { sector, lookups } = makeSectorWorld();
     Object.assign(sector, identity, { capitalStock: 100 });
     const result = runClearingPrePass(
@@ -167,9 +167,9 @@ describe("runClearingPrePass with clearing enabled", () => {
   });
 
   it.each([
-    { sectorType: "manufacturing", industryModel: "vehicles", commodity: "steel" },
-    { sectorType: "media", mediaDiscriminator: "entertainment", commodity: "energy" },
-  ] as const)("delivers own-group $commodity to the actual $sectorType model", (identity) => {
+    { sectorType: "manufacturing", commodity: "steel" },
+    { sectorType: "media", commodity: "energy" },
+  ] as const)("delivers own-group $commodity to the actual $sectorType recipe", (identity) => {
     const { corp, sector, lookups } = makeSectorWorld();
     Object.assign(corp, { internalSupplyPolicy: { priority: "own", discount: 0.1 } });
     Object.assign(sector, identity, { capitalStock: 100, stateId: "NY", countryId: "US" });
@@ -177,8 +177,6 @@ describe("runClearingPrePass with clearing enabled", () => {
       ...sector,
       _id: "supplier-sector",
       sectorType: identity.commodity === "energy" ? "energy" : "manufacturing",
-      industryModel: undefined,
-      mediaDiscriminator: undefined,
       producedUnits: 100,
     };
     Object.assign(lookups, {
@@ -606,7 +604,6 @@ describe("runClearingPrePass with clearing enabled", () => {
     const clear = (productBrand: number, premiumEnabled: boolean) => {
       const { lookups, sector } = makeSectorWorld();
       Object.assign(sector, {
-        industryModel: "vehicles",
         capitalStock: 200,
         plantCount: 1,
         operatingCapacityUnits: 200,
@@ -676,7 +673,6 @@ describe("runClearingPrePass with clearing enabled", () => {
       const sector = lookups.sectorsByCorp.get("corp1")![0];
       Object.assign(sector, {
         sectorType: "manufacturing",
-        industryModel: "vehicles",
         strategyId: "standard",
         capitalStock: 200,
         plantCount: 1,

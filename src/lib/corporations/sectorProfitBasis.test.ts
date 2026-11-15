@@ -138,7 +138,6 @@ describe("sectorBookValueAnchor (D11)", () => {
     const modelled = sectorBookValueAnchor(
       {
         sectorType: "manufacturing",
-        industryModel: "vehicles",
         capitalStock: 250_000,
         strategyId: "standard",
       },

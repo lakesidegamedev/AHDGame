@@ -345,7 +345,6 @@ describe("commandEconomySoeSectors — Warsaw-Pact satellites (command-economy s
       "chemical_industries",
       "healthcare",
       "retail",
-      "manufacturing_vehicles",
       "technology",
       "energy",
       "agriculture",
@@ -353,7 +352,6 @@ describe("commandEconomySoeSectors — Warsaw-Pact satellites (command-economy s
       "construction",
       "defense",
       "telecommunications",
-      "media_entertainment",
       "logistics",
       "extraction",
     ]);

@@ -25,19 +25,7 @@ import { getEraFounderShares, getEraNominalScale } from "@/lib/constants/sectorS
 import { autoGrantedNodeIds } from "@/lib/constants/techTree";
 import { resolveGameYear } from "@/lib/era/era";
 import { getStartingYearForPreset } from "@/lib/constants/turnTime";
-import {
-  OPERATING_SECTOR_TYPES,
-  operatingSectorIdentity,
-  type CorporationType,
-  type ManufacturingIndustryModel,
-  type MediaDiscriminator,
-  DEFAULT_SHARE_PRICE,
-  CEO_INITIAL_SHARES,
-  DEFAULT_PROFIT_MARGIN,
-  DEFAULT_SECTOR_STARTING_REVENUE,
-  DEFAULT_SECTOR_STARTING_WORKERS,
-  type OperatingSectorType,
-} from "@/lib/constants/corporations";
+import { OPERATING_SECTOR_TYPES, type CorporationType, DEFAULT_SHARE_PRICE, CEO_INITIAL_SHARES, DEFAULT_PROFIT_MARGIN, DEFAULT_SECTOR_STARTING_REVENUE, DEFAULT_SECTOR_STARTING_WORKERS, type OperatingSectorType } from "@/lib/constants/corporations";
 import {
   COUNTRY_CURRENCY_MAP,
   getSeedCurrencyCode,
@@ -62,7 +50,6 @@ import {
 import { witnessCorporationStartingGrant } from "@/lib/corporations/startingGrantLedger";
 import { getMarketSystemModeForDb, marketAtLeast } from "@/lib/market/featureFlag";
 import { capacityRescaleRatio, revenuePerCapacityUnit } from "@/lib/constants/capacityEconomy";
-import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
 import { JP_GEOGRAPHY } from "@/lib/countries/jp/geography";
 import { US_NPP_CAPITAL_STATE } from "@/lib/countries/us/geographyFacts";
 import { UK_NPP_CAPITAL_STATE } from "@/lib/countries/uk/geographyFacts";
@@ -158,8 +145,6 @@ export interface SpawnNppCorporationInput {
   name: string;
   /** Sector type of the corporation and its founding sector */
   type: CorporationType;
-  industryModel?: ManufacturingIndustryModel | null;
-  mediaDiscriminator?: MediaDiscriminator | null;
   /** Country where the corporation is headquartered */
   countryId: CountryId;
   /** State code where the corporation is headquartered and operates */
@@ -216,7 +201,6 @@ export interface SpawnNppCorporationResult {
   sequentialId: number;
   name: string;
   type: CorporationType;
-  industryModel?: ManufacturingIndustryModel | null;
   countryId: CountryId;
   headquartersState: string;
   /** In the corp's local currency (`liquidCurrencyCode`), as persisted. */
@@ -239,8 +223,6 @@ function pickBrandColor(inputColor?: string): string {
 export interface CreateNppCorporationShellInput {
   name: string;
   type: CorporationType;
-  industryModel: ManufacturingIndustryModel | null;
-  mediaDiscriminator: MediaDiscriminator | null;
   countryId: CountryId;
   headquartersState: string;
   currencyCode: CurrencyCode;
@@ -318,8 +300,6 @@ export async function createNppCorporationShell(
   const {
     name: requestedName,
     type,
-    industryModel,
-    mediaDiscriminator,
     countryId,
     headquartersState,
     currencyCode,
@@ -334,11 +314,7 @@ export async function createNppCorporationShell(
   // Choose the CEO: prefer an existing NPP without a corp (balanced across
   // active parties + independents); only create a new NPP when none is free.
   // NPP engine 6: at v6 a free NPP with a good record in this lane wins.
-  const sectorLane = await nppCeoSelectionLane(
-    db,
-    countryId,
-    getOperatingSectorType(type, industryModel, mediaDiscriminator)
-  );
+  const sectorLane = await nppCeoSelectionLane(db, countryId, type);
   const affiliations = await gatherNppCorpCeoAffiliations(db, countryId, {
     withTrackRecords: sectorLane != null,
   });
@@ -390,7 +366,7 @@ export async function createNppCorporationShell(
   );
   const worldYear =
     (techGameState ? resolveGameYear(techGameState) : null) ?? getStartingYearForPreset(preset);
-  const operatingLane = getOperatingSectorType(type, industryModel, mediaDiscriminator);
+  const operatingLane = type;
   const techGrantIds = autoGrantedNodeIds(operatingLane, worldYear);
   const name = await resolveNppCorporationName(db, {
     requestedName,
@@ -442,8 +418,6 @@ export async function createNppCorporationShell(
     name,
     tickerSymbol,
     type,
-    ...(industryModel ? { industryModel } : {}),
-    ...(mediaDiscriminator ? { mediaDiscriminator } : {}),
     ceoId: npp._id,
     ceoType: "npp",
     ceoVacant: false,
@@ -504,8 +478,6 @@ export interface GrantNppSectorInput {
   /** Country the state belongs to (the sector's host). */
   countryId: CountryId;
   type: CorporationType;
-  industryModel: ManufacturingIndustryModel | null;
-  mediaDiscriminator: MediaDiscriminator | null;
   /** Opening revenue in ₳ on the standard strategy basis. */
   startingRevenue: number;
   /** Opening capacity in output units/day on the standard strategy basis. */
@@ -530,8 +502,6 @@ async function grantNppSector(
     stateId,
     countryId,
     type,
-    industryModel,
-    mediaDiscriminator,
     startingRevenue,
     profitMargin,
     plantsEnabled,
@@ -546,13 +516,7 @@ async function grantNppSector(
   const startingCapacityUnitsStandard = plantsEnabled ? standardUnits : 0;
   const startingCapacityUnits = plantsEnabled
     ? startingCapacityUnitsStandard *
-      capacityRescaleRatio(
-        type,
-        "standard",
-        input.initialStrategyId,
-        industryModel,
-        mediaDiscriminator
-      )
+      capacityRescaleRatio(type, "standard", input.initialStrategyId)
     : 0;
 
   // ─── Currency: `corporateSectors.revenue` is stored in the sector's HOST-state
@@ -585,8 +549,6 @@ async function grantNppSector(
     countryId,
     stateId,
     sectorType: type,
-    ...(industryModel ? { industryModel } : {}),
-    ...(mediaDiscriminator ? { mediaDiscriminator } : {}),
     // Plants births grow via build orders, never via the growth slider.
     targetGrowthRate: plantsEnabled ? 0 : 3, // Moderate growth
     currentGrowthRate: 0,
@@ -604,8 +566,6 @@ async function grantNppSector(
           ...seedPlantLedger(
             {
               sectorType: type,
-              industryModel,
-              mediaDiscriminator,
               strategyId: input.initialStrategyId,
             },
             startingCapacityUnits
@@ -648,8 +608,6 @@ export async function spawnNppCorporation(
     tickerSymbol: customTicker,
     nppPartyId,
   } = input;
-  const industryModel = input.industryModel ?? null;
-  const mediaDiscriminator = input.mediaDiscriminator ?? null;
   if (
     input.maximumStartingRevenue !== undefined &&
     (!Number.isFinite(input.maximumStartingRevenue) || input.maximumStartingRevenue <= 0)
@@ -691,13 +649,8 @@ export async function spawnNppCorporation(
   // is converted to the sector's HOST-state currency exactly once, at the
   // `corporateSectors` insert.
   const plantsEnabled = marketAtLeast(await getMarketSystemModeForDb(db), "plants");
-  const lane = getOperatingSectorType(type, industryModel, mediaDiscriminator);
-  const revenuePerUnit = revenuePerCapacityUnit(
-    type,
-    eraUnitScale,
-    industryModel,
-    mediaDiscriminator
-  );
+  const lane = type;
+  const revenuePerUnit = revenuePerCapacityUnit(type, eraUnitScale);
   // Every opening corporation gets the same standard plants for its lane. An
   // explicit admin revenue or a deposit ceiling can only change that size.
   let startingRevenue: number;
@@ -721,8 +674,6 @@ export async function spawnNppCorporation(
     await createNppCorporationShell(db, {
       name,
       type,
-      industryModel,
-      mediaDiscriminator,
       countryId,
       headquartersState,
       currencyCode,
@@ -741,8 +692,6 @@ export async function spawnNppCorporation(
     stateId: headquartersState,
     countryId,
     type,
-    industryModel,
-    mediaDiscriminator,
     startingRevenue,
     startingCapacityUnitsStandard: startingUnits,
     profitMargin,
@@ -757,7 +706,6 @@ export async function spawnNppCorporation(
     sequentialId,
     name: corpDoc.name,
     type,
-    ...(industryModel ? { industryModel } : {}),
     countryId,
     headquartersState,
     startingCapital,
@@ -782,8 +730,6 @@ export async function batchSpawnNppCorporations(
     /** Explicit model identities, used by fresh model-aware seeds. */
     sectorMarkets?: Array<{
       type: CorporationType;
-      industryModel?: ManufacturingIndustryModel | null;
-      mediaDiscriminator?: MediaDiscriminator | null;
     }>;
     /** Starting capital per corp (default: 2M local currency) */
     startingCapital?: number;
@@ -820,16 +766,11 @@ export async function batchSpawnNppCorporations(
 
   const sectorMarkets: Array<{
     type: CorporationType;
-    industryModel?: ManufacturingIndustryModel | null;
-    mediaDiscriminator?: MediaDiscriminator | null;
   }> =
     options?.sectorMarkets ??
     (options?.sectorTypes ?? OPERATING_SECTOR_TYPES).map((lane) => {
-      const identity = operatingSectorIdentity(lane);
       return {
-        type: identity.sectorType,
-        industryModel: identity.industryModel,
-        mediaDiscriminator: identity.mediaDiscriminator,
+        type: lane,
       };
     });
   const perSectorCount = Math.max(1, Math.floor(options?.perSectorCount ?? 1));
@@ -841,8 +782,8 @@ export async function batchSpawnNppCorporations(
       .toArray()
   ).map((corp) => corp.name);
 
-  for (const { type, industryModel, mediaDiscriminator } of sectorMarkets) {
-    const lane = getOperatingSectorType(type, industryModel, mediaDiscriminator);
+  for (const { type } of sectorMarkets) {
+    const lane = type;
     for (let i = 0; i < perSectorCount; i++) {
       // Generate a thematic name based on sector and country — passing the
       // growing results list (including same-sector prior spawns this loop)
@@ -857,8 +798,6 @@ export async function batchSpawnNppCorporations(
           name,
           realName: "sector",
           type,
-          industryModel,
-          mediaDiscriminator,
           countryId,
           headquartersState: hqState,
           startingCapital: options?.startingCapital,

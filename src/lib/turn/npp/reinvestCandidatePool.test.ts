@@ -2,13 +2,11 @@ import { describe, expect, it } from "vitest";
 import { buildLocalRevenueShareLookup } from "./reinvestCandidatePool";
 import { computeMarketSharePercent } from "@/lib/corporations/marketShare";
 
-const sector = (stateId: string, sectorType: string, revenue: number, industryModel?: string) =>
+const sector = (stateId: string, sectorType: string, revenue: number) =>
   ({
     stateId,
     sectorType,
     revenue,
-    industryModel: industryModel ?? null,
-    mediaDiscriminator: null,
   }) as never;
 
 describe("buildLocalRevenueShareLookup", () => {

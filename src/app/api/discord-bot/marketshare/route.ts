@@ -5,12 +5,7 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { requireBotToken } from "@/lib/api/requireBotToken";
 import { checkRateLimit, rateLimitResponse, BOT_FINANCIAL_LIMITS } from "@/lib/api/rateLimit";
 import type { CorporateSector, State, User } from "@/lib/db/types";
-import {
-  OPERATING_SECTOR_TYPE_LABELS,
-  isOperatingSectorType,
-  operatingSectorFilter,
-  OPERATING_SECTOR_TYPES,
-} from "@/lib/constants/corporations";
+import { OPERATING_SECTOR_TYPE_LABELS, isOperatingSectorType, OPERATING_SECTOR_TYPES } from "@/lib/constants/corporations";
 
 import { COUNTRY_ORDER, type CountryId } from "@/lib/constants/countries";
 import { COUNTRY_CURRENCY_MAP, type CurrencyCode } from "@/lib/constants/currencies";
@@ -67,7 +62,7 @@ export async function GET(request: Request) {
       );
     }
     const sectorType = requestedType;
-    const laneFilter = operatingSectorFilter(sectorType);
+    const laneFilter = { sectorType: sectorType };
 
     if (countryParam && !COUNTRY_IDS.includes(countryParam)) {
       return errorResponse(400, `Invalid country. Options: ${COUNTRY_IDS.join(", ")}`);

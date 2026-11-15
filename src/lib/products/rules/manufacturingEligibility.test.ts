@@ -20,8 +20,8 @@ describe("manufacturing product eligibility", () => {
     {
       sectorId: "auto-1",
       corporationId: "corp-1",
-      sectorType: "manufacturing_vehicles",
-      strategyId: "standard",
+      sectorType: "manufacturing",
+      strategyId: "vehicle_assembly",
       capitalStock: 250,
       plantCount: 1,
       mothballed: false,
@@ -69,7 +69,6 @@ describe("manufacturing product eligibility", () => {
     const convertedVehiclePlant = {
       ...plants[1],
       sectorType: "manufacturing",
-      industryModel: "vehicles" as const,
     };
 
     expect(isLegalManufacturingProductForPlant("passenger_car", convertedVehiclePlant)).toBe(true);
@@ -85,7 +84,6 @@ describe("manufacturing product eligibility", () => {
     const evPlant = {
       ...plants[1],
       sectorType: "manufacturing",
-      industryModel: "vehicles" as const,
       strategyId: "ev",
     };
 
@@ -111,7 +109,6 @@ describe("vehicle lines on ordinary manufacturing", () => {
     sectorId: "p1",
     corporationId: "c1",
     sectorType: "manufacturing",
-    industryModel: null,
     strategyId,
     capitalStock: 100,
     plantCount: 4,

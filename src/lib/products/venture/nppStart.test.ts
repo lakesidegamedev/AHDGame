@@ -244,7 +244,6 @@ describe("line weighting", () => {
       _id: new ObjectId(),
       corporationId: c._id,
       sectorType: "manufacturing",
-      industryModel: undefined,
       strategyId: "standard",
       countryId: "us",
       capitalStock: 1_000_000,
@@ -256,7 +255,6 @@ describe("line weighting", () => {
     const vehicleSector = {
       ...sector,
       _id: new ObjectId(),
-      industryModel: "vehicles",
     } as unknown as CorporateSector;
     const sectors = new Map([[c._id.toString(), [sector, vehicleSector]]]);
     const vehicleShare = (ratio: number) => {

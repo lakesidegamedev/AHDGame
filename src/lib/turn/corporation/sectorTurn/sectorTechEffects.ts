@@ -31,19 +31,8 @@ export function resolveSectorTechEffects(
   const base = techTreesEnabled
     ? withSunsetPenalty(
         currentYear != null
-          ? getSectorTechEffectsForYear(
-              corp,
-              sector.sectorType,
-              currentYear,
-              sector.industryModel,
-              sector.mediaDiscriminator
-            )
-          : getSectorTechEffects(
-              corp,
-              sector.sectorType,
-              sector.industryModel,
-              sector.mediaDiscriminator
-            ),
+          ? getSectorTechEffectsForYear(corp, sector.sectorType, currentYear)
+          : getSectorTechEffects(corp, sector.sectorType),
         operatingSectorType,
         sector.strategyId,
         currentYear

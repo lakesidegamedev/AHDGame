@@ -16,24 +16,18 @@
  *
  * Pure: identities and capacity in, a `$set` fragment out.
  */
-import {
-  operatingSectorIdentity,
-  type MediaDiscriminator,
-  type OperatingSectorType,
-} from "@/lib/constants/corporations";
+import { type OperatingSectorType } from "@/lib/constants/corporations";
 import {
   rescaleBuildQueueForStrategyChange,
   revenuePerCapacityUnitForStrategy,
 } from "@/lib/constants/capacityEconomy";
-import { getOperatingSectorType, SECTOR_STRATEGIES } from "@/lib/constants/sectorStrategies";
+import { SECTOR_STRATEGIES } from "@/lib/constants/sectorStrategies";
 import { rescaleOtherOpexAnchorForRetool } from "@/lib/corporations/physicalPnl";
 import { seedPlantLedger } from "@/lib/corporations/plantLedger";
 import type { CorporateSector, SectorBuildOrder } from "@/lib/db/types";
 
 export interface ConversionSource {
   sectorType: CorporateSector["sectorType"];
-  industryModel?: string | null;
-  mediaDiscriminator?: MediaDiscriminator | null;
   strategyId?: string | null;
   capitalStock?: number | null;
   buildQueue?: SectorBuildOrder[] | null;
@@ -55,30 +49,13 @@ export function industryConversionFields(
   toLane: OperatingSectorType,
   requestedStrategyId?: string | null
 ): ConversionResult {
-  const fromLane = getOperatingSectorType(
-    from.sectorType,
-    from.industryModel,
-    from.mediaDiscriminator
-  );
+  const fromLane = from.sectorType;
   if (fromLane === toLane)
     return { ok: false, reason: "Choose a different industry, or retool within this one." };
   const toStrategyId = conversionStrategyId(toLane, requestedStrategyId);
   if (!toStrategyId) return { ok: false, reason: "That industry has no production method." };
-  const to = operatingSectorIdentity(toLane);
-  const rpuFrom = revenuePerCapacityUnitForStrategy(
-    from.sectorType,
-    from.strategyId,
-    1,
-    from.industryModel,
-    from.mediaDiscriminator
-  );
-  const rpuTo = revenuePerCapacityUnitForStrategy(
-    to.sectorType,
-    toStrategyId,
-    1,
-    to.industryModel,
-    to.mediaDiscriminator
-  );
+  const rpuFrom = revenuePerCapacityUnitForStrategy(from.sectorType, from.strategyId, 1);
+  const rpuTo = revenuePerCapacityUnitForStrategy(toLane, toStrategyId, 1);
   const ratio = rpuFrom / rpuTo;
   if (!(rpuFrom > 0) || !(rpuTo > 0) || !Number.isFinite(ratio) || !(ratio > 0))
     return { ok: false, reason: "This sector's capacity cannot be valued for conversion." };
@@ -88,9 +65,7 @@ export function industryConversionFields(
       ? Math.max(0, from.capitalStock) * ratio
       : 0;
   const set: Record<string, unknown> = {
-    sectorType: to.sectorType,
-    industryModel: to.industryModel,
-    mediaDiscriminator: to.mediaDiscriminator,
+    sectorType: toLane,
     strategyId: toStrategyId,
     capitalStock: stock,
     ...seedPlantLedger({ ...to, strategyId: toStrategyId }, stock),

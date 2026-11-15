@@ -27,13 +27,11 @@ import { migration as appleProviderIdentityIndex } from "./entries/2026-09-30-ap
 import { migration as ukDualMinistryRoleSlot } from "./entries/2026-09-17-uk-dual-ministry-role-slot";
 import { migration as politicalMediaOrderIndexes } from "./entries/2026-10-04-political-media-order-indexes";
 import { migration as bankTreasuryTradeIndexes } from "./entries/2026-10-04-bank-treasury-trade-indexes";
-import { migration as mediaDiscriminatorMarketIndexes } from "./entries/2026-10-04-media-discriminator-market-indexes";
 import { migration as constructionServiceLeaseIndex } from "./entries/2026-10-04-construction-service-lease-index";
 import { migration as mediaProductProjectsV1Index } from "./entries/2026-10-04-media-product-projects-v1-index";
 import { migration as manufacturingProductProjectsV2Index } from "./entries/2026-10-04-manufacturing-product-projects-v2-index";
 import { migration as underwritingRecoveryIndexes } from "./entries/2026-10-04-underwriting-recovery-indexes";
 import { migration as advertisingAgreementIndexes } from "./entries/2026-10-05-advertising-agreement-indexes";
-import { migration as foldAutomobileEntertainmentTypes } from "./entries/2026-10-05-fold-automobile-entertainment-types";
 import { migration as productVentureIndexes } from "./entries/2026-10-08-product-venture-indexes";
 import { migration as campaignFieldOfficeIndexes } from "./entries/2026-10-09-campaign-field-office-indexes";
 import { migration as marketCapTickIndexes } from "./entries/2026-10-09-market-cap-tick-indexes";
@@ -88,11 +86,6 @@ export const REQUIRED_STARTUP_MIGRATIONS: readonly Migration[] = [
   bankTreasuryTradeIndexes,
   bankPropForexFeeIndex,
   bankFailurePoliticsIndex,
-  // Model-aware unique keys must be in place before a fresh canonical seed can
-  // create a vehicles market beside generic manufacturing.
-  // This supersedes the narrower industry-model indexes. Recreating those
-  // after media lanes are seeded can reject valid news/entertainment pairs.
-  mediaDiscriminatorMarketIndexes,
   constructionServiceLeaseIndex,
   mediaProductProjectsV1Index,
   // The active-project uniqueness guard must exist before project creation.
@@ -100,9 +93,6 @@ export const REQUIRED_STARTUP_MIGRATIONS: readonly Migration[] = [
   // Original funding leases must remain discoverable even when underwriting is disabled.
   underwritingRecoveryIndexes,
   advertisingAgreementIndexes,
-  // The retired automobile and entertainment types are unreadable by this
-  // build, so their stored rows must be re-keyed before the first turn.
-  foldAutomobileEntertainmentTypes,
   productVentureIndexes,
   campaignFieldOfficeIndexes,
   marketCapTickIndexes,
@@ -136,7 +126,6 @@ export const REQUIRED_STARTUP_INDEX_MIGRATIONS: readonly Migration[] = [
   bankTreasuryTradeIndexes,
   bankPropForexFeeIndex,
   bankFailurePoliticsIndex,
-  mediaDiscriminatorMarketIndexes,
   constructionServiceLeaseIndex,
   mediaProductProjectsV1Index,
   manufacturingProductProjectsV2Index,

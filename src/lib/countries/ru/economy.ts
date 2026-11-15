@@ -27,14 +27,13 @@ const baselineMonetary = {
   neutralPrimeRate: 3,
 };
 const sectorWeightsBase = {
-  manufacturing: 20,
+  manufacturing: 25,
   energy: 12,
   extraction: 10,
   defense: 10,
   agriculture: 12,
   chemical_industries: 8,
   construction: 7,
-  manufacturing_vehicles: 5,
   logistics: 4,
   healthcare: 4,
   retail: 3,
@@ -96,14 +95,13 @@ export const RU_ECONOMY: CountryEconomy = {
     base: sectorWeightsBase,
     byEra: {
       "1991": {
-        manufacturing: 20,
+        manufacturing: 25,
         energy: 12,
         extraction: 10,
         defense: 10,
         agriculture: 12,
         chemical_industries: 8,
         construction: 7,
-        manufacturing_vehicles: 5,
         logistics: 4,
         healthcare: 4,
         retail: 3,

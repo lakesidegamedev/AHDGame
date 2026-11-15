@@ -16,7 +16,7 @@ function c(
   return { id, label, detail, qualityDelta, chargeFraction, delayTurns };
 }
 
-const SCREEN_LINES = ["film", "television_series", "streaming_original", "cable_program"] as const;
+const SCREEN_LINES = ["television_series", "streaming_original", "cable_program"] as const;
 const NEWS_LINES = ["newspaper_edition", "radio_program"] as const;
 const VEHICLE_LINES = ["passenger_car", "truck", "commercial_vehicle"] as const;
 const ELECTRONIC_LINES = [
@@ -32,7 +32,7 @@ const MEDIA_VENTURE_EVENTS: readonly VentureEventDef[] = [
     domain: "media",
     title: "Your lead talent walks",
     body: "The lead has left over a pay dispute. Production can recast, renegotiate, or continue without them.",
-    lineIds: [...SCREEN_LINES, "music_release"],
+    lineIds: [...SCREEN_LINES],
     choices: [
       c(
         "recast",
@@ -70,7 +70,7 @@ const MEDIA_VENTURE_EVENTS: readonly VentureEventDef[] = [
     domain: "media",
     title: "A rival title takes your slot",
     body: "A competitor has booked the same release window with a similar title.",
-    lineIds: [...SCREEN_LINES, "music_release", "book"],
+    lineIds: [...SCREEN_LINES, "book"],
     choices: [
       c("move", "Move the date", "Adds 12 turns. No other cost.", 0, 0, 12),
       c(
@@ -154,7 +154,7 @@ const MEDIA_VENTURE_EVENTS: readonly VentureEventDef[] = [
     domain: "media",
     title: "Production equipment fails",
     body: "Key equipment has broken down mid-production.",
-    lineIds: [...SCREEN_LINES, "music_release", "radio_program"],
+    lineIds: [...SCREEN_LINES, "radio_program"],
     choices: [
       c("rush_replace", "Rush a replacement", "Costs 9% of the budget. No delay.", 0, 0.09, 0),
       c("wait_repair", "Wait for repair", "Adds 9 turns. No extra cost.", 0, 0, 9),
@@ -214,7 +214,7 @@ const MEDIA_VENTURE_EVENTS: readonly VentureEventDef[] = [
     domain: "media",
     title: "A creative dispute stalls work",
     body: "Your creative leads disagree on direction and work has slowed.",
-    lineIds: [...SCREEN_LINES, "music_release", "book"],
+    lineIds: [...SCREEN_LINES, "book"],
     choices: [
       c(
         "mediate",
@@ -234,7 +234,7 @@ const MEDIA_VENTURE_EVENTS: readonly VentureEventDef[] = [
     domain: "media",
     title: "A licensing claim arrives",
     body: "A rights holder says part of the work needs a license.",
-    lineIds: ["music_release", "film", "streaming_original"],
+    lineIds: ["streaming_original"],
     choices: [
       c("license", "Buy the license", "Costs 9% of the budget. Quality unchanged.", 0, 0.09, 0),
       c("replace", "Replace the material", "Adds 8 turns. Quality drops 2 points.", -2, 0, 8),
@@ -247,7 +247,7 @@ const MEDIA_VENTURE_EVENTS: readonly VentureEventDef[] = [
     domain: "media",
     title: "An invitation to a festival",
     body: "A festival wants to premiere the title.",
-    lineIds: ["film", "music_release", "book", "streaming_original"],
+    lineIds: ["book", "streaming_original"],
     choices: [
       c(
         "attend",

@@ -23,7 +23,6 @@ import {
   TYPE_SWITCH_PENALTY_TURNS,
 } from "@/lib/constants/corporations";
 import {
-  getOperatingSectorType,
   STRATEGY_TRANSITION_TURNS,
   STRATEGY_TRANSITION_MARGIN_PENALTY,
 } from "@/lib/constants/sectorStrategies";
@@ -63,8 +62,6 @@ export interface MarginStackInput {
     | "countryId"
     | "headquartersState"
     | "type"
-    | "industryModel"
-    | "mediaDiscriminator"
     | "secondaryType"
     | "typeSwitchTurn"
     | "countryOwnerId"
@@ -76,8 +73,6 @@ export interface MarginStackInput {
     | "_id"
     | "stateId"
     | "sectorType"
-    | "mediaDiscriminator"
-    | "industryModel"
     | "strategyId"
     | "transitionFromStrategyId"
     | "transitionStartTurn"
@@ -202,11 +197,7 @@ export function accumulateMarginModifiers(input: MarginStackInput): MarginStackR
     politicalBoard,
     marginLevelTrimPp,
   } = input;
-  const operatingSectorType = getOperatingSectorType(
-    sector.sectorType,
-    sector.industryModel,
-    sector.mediaDiscriminator
-  );
+  const operatingSectorType = sector.sectorType;
 
   // P3.5 SEAM — active-disaster penalties are split at their source
   // (disasterMarginPenalty.ts) into a financial leg and a physical leg.
@@ -323,11 +314,7 @@ export function accumulateMarginModifiers(input: MarginStackInput): MarginStackR
   // specialized private firm.
   const sectorTypeMatchMod = isStateOwned(corp)
     ? 0
-    : getSectorTypeMatchModifier(
-        operatingSectorType,
-        getOperatingSectorType(corp.type, corp.industryModel, corp.mediaDiscriminator),
-        corp.secondaryType
-      );
+    : getSectorTypeMatchModifier(operatingSectorType, corp.type, corp.secondaryType);
   // Logistical sprawl: -0.5% per 2 sectors over 15 for a single-type corp
   // (-1.0% per pair if dual-type). Logistics spending raises the threshold
   // (15 at LS 0, 30 at LS 200) and halves the rate at LS 200. SOEs are exempt

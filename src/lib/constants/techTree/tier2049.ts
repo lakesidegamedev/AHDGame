@@ -369,56 +369,6 @@ export const TIER_2049_SECTOR: Record<OperatingSectorType, NodeSpec[]> = {
       effects: [{ kind: "marketingStrength", flat: 100 }],
     },
   ],
-  manufacturing_vehicles: [
-    {
-      name: "Structural Battery Bodies",
-      description: "The car body itself stores the power.",
-      effects: [
-        { kind: "inputEfficiency", pct: 0.125 },
-        { kind: "growthCostReduction", pct: 0.09 },
-      ],
-    },
-    {
-      name: "Lithium-Free Chemistries",
-      description: "New cells run on common, cheap elements.",
-      effects: [{ kind: "inputEfficiency", pct: 0.1 }],
-    },
-    {
-      name: "Mobility Subscriptions",
-      description: "Households pay for travel, not for cars.",
-      effects: [{ kind: "marketingStrength", flat: 80 }],
-    },
-    {
-      name: "Printed Vehicle Platforms",
-      description: "Whole chassis are printed to order near the buyer.",
-      effects: [{ kind: "growthCostReduction", pct: 0.11 }],
-    },
-    {
-      name: "Grid-Linked Fleets",
-      description: "Parked fleets act as one giant battery.",
-      effects: [{ kind: "inputEfficiency", pct: 0.085 }],
-    },
-    {
-      name: "Full Autonomy Stacks",
-      description: "Driving software needs no human backup anywhere.",
-      effects: [{ kind: "inputEfficiency", pct: 0.1 }],
-    },
-    {
-      name: "Lights-Out Assembly",
-      description: "Cars are built start to finish without workers.",
-      effects: [{ kind: "growthCostReduction", pct: 0.11 }],
-    },
-    {
-      name: "Superconducting Motors",
-      description: "Motors with almost no losses stretch every charge.",
-      effects: [{ kind: "inputEfficiency", pct: 0.1 }],
-    },
-    {
-      name: "Closed-Loop Vehicle Recovery",
-      description: "Old vehicles are broken down into new ones.",
-      effects: [{ kind: "logisticsStrength", flat: 34 }],
-    },
-  ],
   technology: [
     {
       name: "Brain-Computer Links",
@@ -772,56 +722,6 @@ export const TIER_2049_SECTOR: Record<OperatingSectorType, NodeSpec[]> = {
       name: "Guaranteed Latency Markets",
       description: "Industry buys guaranteed response times by the second.",
       effects: [{ kind: "growthCostReduction", pct: 0.09 }],
-    },
-  ],
-  media_entertainment: [
-    {
-      name: "Living Worlds",
-      description: "Persistent worlds grow and change with every player.",
-      effects: [
-        { kind: "laborCostReduction", pct: 0.14 },
-        { kind: "growthCostReduction", pct: 0.105 },
-      ],
-    },
-    {
-      name: "Endless Generated Series",
-      description: "Series never end, written fresh for each viewer.",
-      effects: [{ kind: "laborCostReduction", pct: 0.12 }],
-    },
-    {
-      name: "Licensed Digital Stars",
-      description: "Synthetic stars tour every venue at once.",
-      effects: [{ kind: "growthCostReduction", pct: 0.09 }],
-    },
-    {
-      name: "Holographic Arenas",
-      description: "Live shows play to arenas in many cities at once.",
-      effects: [{ kind: "marketingStrength", flat: 100 }],
-    },
-    {
-      name: "Fan-Made Universes",
-      description: "Fans build and sell stories inside official worlds.",
-      effects: [{ kind: "laborCostReduction", pct: 0.12 }],
-    },
-    {
-      name: "Companion Characters",
-      description: "Characters stay with each fan for years.",
-      effects: [{ kind: "growthCostReduction", pct: 0.09 }],
-    },
-    {
-      name: "Universal Releases",
-      description: "Every title launches worldwide in every language.",
-      effects: [{ kind: "laborCostReduction", pct: 0.12 }],
-    },
-    {
-      name: "Mood-Matched Scores",
-      description: "Music shifts with the listener's mood in real time.",
-      effects: [{ kind: "growthCostReduction", pct: 0.09 }],
-    },
-    {
-      name: "Neural Sensory Play",
-      description: "Interfaces add touch and feeling to premium sessions.",
-      effects: [{ kind: "laborCostReduction", pct: 0.12 }],
     },
   ],
   logistics: [

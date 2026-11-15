@@ -22,10 +22,7 @@ import {
   eraScaledBasePrices,
   type CommodityType,
 } from "@/lib/constants/commodities";
-import {
-  getEffectiveStrategyRatesForOperatingModel,
-  getOperatingSectorType,
-} from "@/lib/constants/sectorStrategies";
+import { getEffectiveStrategyRates } from "@/lib/constants/sectorStrategies";
 import {
   getSectorTechEffectsForYear,
   NEUTRAL_TECH_EFFECTS,
@@ -313,21 +310,11 @@ export function prepareProducerPhysicalSector(input: {
     lookups.labourDemandWageIndexByState?.get(sector.stateId),
     countryId
   );
-  const operatingType = getOperatingSectorType(
-    sector.sectorType,
-    sector.industryModel,
-    sector.mediaDiscriminator
-  );
+  const operatingType = sector.sectorType;
   const transitionTech = withEnergyTransition(
     env.techTreesEnabled && currentYear != null
       ? withSunsetPenalty(
-          getSectorTechEffectsForYear(
-            corp,
-            sector.sectorType,
-            currentYear,
-            sector.industryModel,
-            sector.mediaDiscriminator
-          ),
+          getSectorTechEffectsForYear(corp, sector.sectorType, currentYear),
           operatingType,
           sector.strategyId,
           currentYear
@@ -340,14 +327,12 @@ export function prepareProducerPhysicalSector(input: {
   );
   // Automation levies are paid to the treasury at settlement, not folded into input rates.
   const tech = transitionTech;
-  const recipe = getEffectiveStrategyRatesForOperatingModel(
+  const recipe = getEffectiveStrategyRates(
     sector.sectorType,
     sector.strategyId ?? "standard",
     sector.transitionFromStrategyId,
     sector.transitionStartTurn,
     currentTurn,
-    sector.industryModel,
-    sector.mediaDiscriminator,
     lookups.preset,
     lookups.hardwareInputReliefStartTurn,
     { advertisingInput: env.advertisingInput === true }

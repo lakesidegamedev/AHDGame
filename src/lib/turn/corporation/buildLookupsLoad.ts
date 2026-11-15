@@ -299,7 +299,6 @@ export async function loadCorporationLookupInputs({
             corporationId: 1,
             activeDevelopmentCorporationId: 1,
             sectorId: 1,
-            operatingSectorType: 1,
             kindId: 1,
             title: 1,
             allocationShare: 1,

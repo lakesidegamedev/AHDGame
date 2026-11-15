@@ -5,7 +5,6 @@ import {
   mothballSectorRequest,
   type MothballAction,
 } from "@/lib/corporations/mothballSectorClient";
-import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
 import { useGameEvents } from "@/hooks/useGameEvents";
 
 import { InlineError } from "@/components/ui/InlineError";
@@ -1426,11 +1425,7 @@ export default function CorporationDetailPage() {
                         sectors={sectors}
                         isCeo={isCeo}
                         corpId={id}
-                        corporationType={getOperatingSectorType(
-                          corporation.type,
-                          corporation.industryModel,
-                          corporation.mediaDiscriminator
-                        )}
+                        corporationType={corporation.type}
                         corporationSecondaryType={corporation.secondaryType}
                         liquidCapital={corporation.liquidCapital}
                         liquidCurrencyCode={corporation.liquidCurrencyCode}

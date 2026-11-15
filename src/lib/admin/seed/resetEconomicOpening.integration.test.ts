@@ -126,11 +126,7 @@ describe("1991 reset economic acceptance", () => {
 
   it("refills a missing competitor without skipping or duplicating the rest of its country", async () => {
     const before = await db.collection("corporations").countDocuments({ ceoType: "npp" });
-    for (const market of [
-      { type: "retail" },
-      { type: "manufacturing", industryModel: "vehicles" },
-      { type: "media", mediaDiscriminator: "entertainment" },
-    ]) {
+    for (const market of [{ type: "retail" }, { type: "manufacturing" }, { type: "media" }]) {
       const missing = await db
         .collection("corporations")
         .findOne({ countryId: "US", ceoType: "npp", ...market });

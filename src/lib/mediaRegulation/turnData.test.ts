@@ -33,7 +33,6 @@ describe("loadUSMediaOutletDelivery", () => {
         stateId: "CA",
         corporationId: { toString: () => "corp-3" },
         sectorType: "media",
-        mediaDiscriminator: "entertainment",
         strategyId: "live_service",
         producedUnits: 100,
         soldFraction: 1,
@@ -62,7 +61,6 @@ describe("loadUSMediaOutletDelivery", () => {
       producedUnits: 1,
       soldByCommodity: 1,
       outputUnitsByCommodity: 1,
-      mediaDiscriminator: 1,
     });
     // The entertainment lane sells advertising since the entertainment
     // commodity was removed, so it is an outlet too (and is not derated).

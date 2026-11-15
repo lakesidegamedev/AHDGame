@@ -33,13 +33,7 @@ export async function loadNationalCorpIds(db: Db): Promise<Set<string>> {
 export function computeStateControlledBuckets(
   corpSectors: Pick<
     CorporateSector,
-    | "stateId"
-    | "sectorType"
-    | "industryModel"
-    | "mediaDiscriminator"
-    | "revenue"
-    | "corporationId"
-    | "nationalizedAtTurn"
+    "stateId" | "sectorType" | "revenue" | "corporationId" | "nationalizedAtTurn"
   >[],
   nationalCorpIds: ReadonlySet<string>
 ): Set<string> {
@@ -47,7 +41,7 @@ export function computeStateControlledBuckets(
   const otherRev = new Map<string, number>();
   const hasNationalized = new Set<string>();
   for (const s of corpSectors) {
-    const key = bucketKey(s.stateId, s.sectorType, s.industryModel, s.mediaDiscriminator);
+    const key = bucketKey(s.stateId, s.sectorType);
     const rev = Number.isFinite(s.revenue) ? (s.revenue as number) : 0;
     if (nationalCorpIds.has(s.corporationId.toString())) {
       stateRev.set(key, (stateRev.get(key) ?? 0) + rev);
@@ -73,14 +67,7 @@ export function computeStateControlledBuckets(
 export function computeCapturedMarketMergeBuckets(
   corpSectors: Pick<
     CorporateSector,
-    | "stateId"
-    | "sectorType"
-    | "industryModel"
-    | "mediaDiscriminator"
-    | "countryId"
-    | "revenue"
-    | "corporationId"
-    | "nationalizedAtTurn"
+    "stateId" | "sectorType" | "countryId" | "revenue" | "corporationId" | "nationalizedAtTurn"
   >[],
   nationalCorpIds: ReadonlySet<string>,
   enactedTakings: ReadonlyMap<string, EnactedSectorTaking> = new Map()
@@ -91,7 +78,7 @@ export function computeCapturedMarketMergeBuckets(
   const countryByBucket = new Map<string, string>();
   const sectorTypeByBucket = new Map<string, string>();
   for (const s of corpSectors) {
-    const key = bucketKey(s.stateId, s.sectorType, s.industryModel, s.mediaDiscriminator);
+    const key = bucketKey(s.stateId, s.sectorType);
     if (s.countryId) countryByBucket.set(key, s.countryId);
     sectorTypeByBucket.set(key, s.sectorType);
   }
@@ -99,7 +86,7 @@ export function computeCapturedMarketMergeBuckets(
   const hasNatNationalized = new Set<string>();
   const hasPrivate = new Set<string>();
   for (const s of corpSectors) {
-    const key = bucketKey(s.stateId, s.sectorType, s.industryModel, s.mediaDiscriminator);
+    const key = bucketKey(s.stateId, s.sectorType);
     if (nationalCorpIds.has(s.corporationId.toString())) {
       if (s.nationalizedAtTurn != null) hasNatNationalized.add(key);
     } else {
@@ -131,14 +118,7 @@ export function computeCapturedMarketMergeBuckets(
 
 type CorpSectorBucketFields = Pick<
   CorporateSector,
-  | "stateId"
-  | "sectorType"
-  | "industryModel"
-  | "mediaDiscriminator"
-  | "countryId"
-  | "revenue"
-  | "corporationId"
-  | "nationalizedAtTurn"
+  "stateId" | "sectorType" | "countryId" | "revenue" | "corporationId" | "nationalizedAtTurn"
 >;
 
 async function loadCorpSectorBucketFields(db: Db): Promise<CorpSectorBucketFields[]> {
@@ -149,8 +129,6 @@ async function loadCorpSectorBucketFields(db: Db): Promise<CorpSectorBucketField
         projection: {
           stateId: 1,
           sectorType: 1,
-          industryModel: 1,
-          mediaDiscriminator: 1,
           countryId: 1,
           revenue: 1,
           corporationId: 1,
@@ -166,8 +144,6 @@ type OwnedSectorMergeFields = Pick<
   | "_id"
   | "stateId"
   | "sectorType"
-  | "industryModel"
-  | "mediaDiscriminator"
   | "countryId"
   | "revenue"
   | "workers"
@@ -184,8 +160,6 @@ async function loadOwnedSectorMergeFields(db: Db): Promise<OwnedSectorMergeField
           _id: 1,
           stateId: 1,
           sectorType: 1,
-          industryModel: 1,
-          mediaDiscriminator: 1,
           countryId: 1,
           revenue: 1,
           workers: 1,
@@ -225,7 +199,7 @@ export async function healCapturedMarkets(
 
   const toMergeOwned = ownedSectors.filter(
     (s) =>
-      mergeBuckets.has(bucketKey(s.stateId, s.sectorType, s.industryModel, s.mediaDiscriminator)) &&
+      mergeBuckets.has(bucketKey(s.stateId, s.sectorType)) &&
       !nationalCorpIds.has(s.corporationId.toString())
   );
 
@@ -242,11 +216,7 @@ export async function healCapturedMarkets(
     );
   }
 
-  const sampleKeys = [
-    ...toMergeOwned.map((s) =>
-      bucketKey(s.stateId, s.sectorType, s.industryModel, s.mediaDiscriminator)
-    ),
-  ].slice(0, 12);
+  const sampleKeys = [...toMergeOwned.map((s) => bucketKey(s.stateId, s.sectorType))].slice(0, 12);
 
   return {
     dryRun,

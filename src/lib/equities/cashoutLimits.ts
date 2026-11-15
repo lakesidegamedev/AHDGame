@@ -118,8 +118,6 @@ export async function loadCorpBookBasisById(
           projection: {
             corporationId: 1,
             sectorType: 1,
-            industryModel: 1,
-            mediaDiscriminator: 1,
             strategyId: 1,
             capitalStock: 1,
             capacityBookAnchor: 1,

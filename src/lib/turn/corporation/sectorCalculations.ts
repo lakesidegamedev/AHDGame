@@ -24,7 +24,6 @@ import { getLegalStructureForCorp } from "@/lib/corporations/legalStructure";
 import { getControllingCorporateParent } from "@/lib/corporations/corporateOwnership";
 import { activeParentDividendFloorPct } from "@/lib/corporations/subsidiaries/helpers";
 import { COUNTRY_CURRENCY_MAP, SECTOR_FX_SPREAD } from "@/lib/constants/currencies";
-import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
 import { MARKET_DISABLED, type MarketContext } from "@/lib/market/marketContext";
 import {
   computeCorporateCreditAtTurn,
@@ -1715,9 +1714,7 @@ export function processSectors(
     const corpPrimeRate =
       (lookups.primeRateByCountry.get(corp.countryId) ??
         getCountryConfig(corp.countryId).centralBank.defaultPrimeRate) / 100;
-    const riskPremium = getSectorRiskPremium(
-      getOperatingSectorType(corp.type, corp.industryModel, corp.mediaDiscriminator)
-    );
+    const riskPremium = getSectorRiskPremium(corp.type);
     const growthNumer = corpGrowthNumerByCorpId.get(id) ?? 0;
     const growthDenom = corpGrowthDenomByCorpId.get(id) ?? 0;
     const activeBankCharter = corp.bankCharter?.status === "active" ? corp.bankCharter : null;

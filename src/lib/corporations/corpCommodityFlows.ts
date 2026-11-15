@@ -39,9 +39,8 @@ import {
 import type { CommodityType, ExtractableResource } from "@/lib/constants/commodities";
 import { OPERATING_SECTOR_TYPE_LABELS } from "@/lib/constants/corporations";
 import {
-  getEffectiveStrategyRatesForOperatingModel,
+  getEffectiveStrategyRates,
   plannedEconomyMediaSupplyFactor,
-  getOperatingSectorType,
 } from "@/lib/constants/sectorStrategies";
 import { isPlannedEconomy } from "@/lib/constants/commandEconomy";
 import { freshMilitaryDiversion } from "@/lib/military/arsenal";
@@ -149,8 +148,6 @@ export type FlowSector = Pick<
   | "strategyId"
   | "transitionFromStrategyId"
   | "transitionStartTurn"
-  | "industryModel"
-  | "mediaDiscriminator"
 > & {
   _id?: CorporateSector["_id"];
   /**
@@ -249,14 +246,12 @@ export function computeSectorCommodityUnits(
   // D12: a mothballed plant is cold — it supplies nothing and buys nothing.
   if (plantsEnabled && sector.mothballed === true) return { supply, demand, inMix };
 
-  const rates = getEffectiveStrategyRatesForOperatingModel(
+  const rates = getEffectiveStrategyRates(
     sector.sectorType,
     sector.strategyId ?? "standard",
     sector.transitionFromStrategyId,
     sector.transitionStartTurn,
     currentTurn,
-    sector.industryModel,
-    sector.mediaDiscriminator,
     context.preset,
     context.hardwareInputReliefStartTurn
   );
@@ -267,11 +262,7 @@ export function computeSectorCommodityUnits(
   const usesStrategySupply =
     Boolean(sector.strategyId && sector.strategyId !== "standard") ||
     Boolean(sector.transitionFromStrategyId);
-  const operatingType = getOperatingSectorType(
-    sector.sectorType,
-    sector.industryModel,
-    sector.mediaDiscriminator
-  );
+  const operatingType = sector.sectorType;
   const ledgerSupplyRates: Partial<Record<CommodityType, number>> = usesStrategySupply
     ? rates.supply
     : Object.fromEntries(
@@ -346,11 +337,7 @@ export function computeSectorCommodityUnits(
           // advertising book), so omitting it overstated media tenfold.
           embargoSupplyFactor:
             embargoSupplyFactorFor(sector) *
-            plannedEconomyMediaSupplyFactor(
-              sector.sectorType,
-              plannedEconomy,
-              sector.mediaDiscriminator
-            ),
+            plannedEconomyMediaSupplyFactor(sector.sectorType, plannedEconomy),
         })
       : null;
   // Utilization scales INPUT demand: a plant running at 60% of nameplate

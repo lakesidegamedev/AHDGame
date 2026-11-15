@@ -52,13 +52,6 @@ import { SectorTypeDossier } from "./SectorTypeDossier";
 import { SectorStrategyPanel } from "./SectorStrategyPanel";
 import type { SectorTypeMetricContext } from "./sectorTypeMetrics";
 import { DenseSection, InlineStatus, Segmented, SmallButton, signTone } from "./dense/DenseKit";
-import { getOperatingSectorLabel, getOperatingSectorType } from "@/lib/constants/sectorStrategies";
-
-export function sectorIdentity(
-  sector: Pick<SectorDetail, "sectorType" | "industryModel" | "mediaDiscriminator">
-): string {
-  return `${sector.sectorType}:${sector.industryModel ?? ""}:${sector.mediaDiscriminator ?? ""}`;
-}
 
 interface SectorsTabProps {
   sectors: SectorDetail[];
@@ -239,17 +232,13 @@ export default function SectorsTab({
       string,
       {
         sectorType: string;
-        industryModel: string | null;
-        mediaDiscriminator: string | null;
         count: number;
       }
     >();
     for (const sector of sectors) {
-      const value = sectorIdentity(sector);
+      const value = sector.sectorType;
       const group = groups.get(value) ?? {
         sectorType: sector.sectorType,
-        industryModel: sector.industryModel ?? null,
-        mediaDiscriminator: sector.mediaDiscriminator ?? null,
         count: 0,
       };
       group.count += 1;
@@ -261,13 +250,7 @@ export default function SectorsTab({
         value,
         ...group,
         label:
-          getOperatingSectorLabel(
-            group.sectorType,
-            group.industryModel,
-            group.mediaDiscriminator
-          ) ??
-          OPERATING_SECTOR_TYPE_LABELS[group.sectorType as OperatingSectorType] ??
-          group.sectorType,
+          OPERATING_SECTOR_TYPE_LABELS[group.sectorType as OperatingSectorType] ?? group.sectorType,
       }));
   }, [sectors]);
 
@@ -291,18 +274,12 @@ export default function SectorsTab({
   // onward is a compile-time string. An unowned or unknown type simply gets no
   // dossier, while the table above still filters.
   const selectedSectorGroup = sectorTypes.find((group) => group.value === activeTypeFilter) ?? null;
-  const operatingDossierType = selectedSectorGroup
-    ? getOperatingSectorType(
-        selectedSectorGroup.sectorType,
-        selectedSectorGroup.industryModel,
-        selectedSectorGroup.mediaDiscriminator
-      )
-    : null;
+  const operatingDossierType = selectedSectorGroup ? selectedSectorGroup.sectorType : null;
   const dossierType = operatingDossierType
     ? (OPERATING_SECTOR_TYPES.find((t) => t === operatingDossierType) ?? null)
     : null;
   const dossierSectors = useMemo(
-    () => (activeTypeFilter ? sectors.filter((s) => sectorIdentity(s) === activeTypeFilter) : []),
+    () => (activeTypeFilter ? sectors.filter((s) => s.sectorType === activeTypeFilter) : []),
     [sectors, activeTypeFilter]
   );
   const metricContext: SectorTypeMetricContext = {
@@ -314,8 +291,7 @@ export default function SectorsTab({
   // Sectors under the current filter, dossier or not, so the header count and
   // the heading both describe what the table is actually showing.
   const filteredTypeSectors = useMemo(
-    () =>
-      activeTypeFilter ? sectors.filter((s) => sectorIdentity(s) === activeTypeFilter) : sectors,
+    () => (activeTypeFilter ? sectors.filter((s) => s.sectorType === activeTypeFilter) : sectors),
     [sectors, activeTypeFilter]
   );
   const dossierPlural = dossierType ? facilityPlural(dossierType) : "";
@@ -336,7 +312,7 @@ export default function SectorsTab({
           (s.displayName ?? "").toLowerCase().includes(q)
       );
     }
-    if (activeTypeFilter) list = list.filter((s) => sectorIdentity(s) === activeTypeFilter);
+    if (activeTypeFilter) list = list.filter((s) => s.sectorType === activeTypeFilter);
     return sortSectors(list, sortKey, sortDir);
   }, [sectors, filterText, activeTypeFilter, sortKey, sortDir]);
 

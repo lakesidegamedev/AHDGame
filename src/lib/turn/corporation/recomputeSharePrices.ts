@@ -18,7 +18,6 @@ import {
   getSectorRiskPremium,
   STOCK_SPLIT_PRICE_SMOOTHING_TURNS,
 } from "@/lib/constants/corporations";
-import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
 import { getCountryConfig } from "@/lib/constants/countries";
 import { buildCorporationLookups } from "./buildLookups";
 import {
@@ -291,9 +290,7 @@ export async function recomputeSharePricesAfterBondTurn(
       (lookups.primeRateSmoothedByCountry.get(corp.countryId) ??
         lookups.primeRateByCountry.get(corp.countryId) ??
         countryPrimeRate) / 100;
-    const riskPremium = getSectorRiskPremium(
-      getOperatingSectorType(corp.type, corp.industryModel, corp.mediaDiscriminator)
-    );
+    const riskPremium = getSectorRiskPremium(corp.type);
 
     // hist.sectorNPV is stored in local currency (converted by marketCapSnapshot);
     // normalize to ₳ to match the formula's anchor space.

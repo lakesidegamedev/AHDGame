@@ -148,7 +148,6 @@ describe("NPP input-squeeze strategy shift (section 2e)", () => {
   it("does not start a corrective retool on a sector mothballed by this decision", () => {
     const cold = sector({
       sectorType: "media",
-      mediaDiscriminator: "entertainment",
       strategyId: "legacy_broadcast",
       soldFraction: 1,
       pnlLossTurns: 12,
@@ -176,14 +175,12 @@ describe("NPP input-squeeze strategy shift (section 2e)", () => {
   it("can correct another running sector when one sector is mothballed", () => {
     const cold = sector({
       sectorType: "media",
-      mediaDiscriminator: "entertainment",
       strategyId: "legacy_broadcast",
       soldFraction: 1,
       pnlLossTurns: 12,
     });
     const running = sector({
       sectorType: "media",
-      mediaDiscriminator: "entertainment",
       strategyId: "legacy_broadcast",
       soldFraction: 1,
       pnlLossTurns: 0,
@@ -200,7 +197,6 @@ describe("NPP input-squeeze strategy shift (section 2e)", () => {
   it("corrects one obsolete recipe only in the corporation's normal cohort", () => {
     const a = sector({
       sectorType: "media",
-      mediaDiscriminator: "entertainment",
       strategyId: "legacy_broadcast",
     });
     const b = sector({ ...a, _id: new ObjectId() });

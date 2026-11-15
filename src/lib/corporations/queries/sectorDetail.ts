@@ -38,8 +38,7 @@ import type { CountryId } from "@/lib/constants/countries";
 import type { GameConfig } from "@/lib/db/types";
 import { resolveMinWageRatioByCountry } from "@/lib/labour/minimumWageLaws";
 import {
-  getEffectiveStrategyRatesForOperatingModel,
-  getOperatingSectorType,
+  getEffectiveStrategyRates,
   plannedEconomyMediaSupplyFactor,
 } from "@/lib/constants/sectorStrategies";
 import { isPlannedEconomy } from "@/lib/constants/commandEconomy";
@@ -202,11 +201,7 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
     const ftaCoverage = buildFtaCoverageLookup(allSectorsRaw, corpByIdForLookup, activeFtaPairs);
 
     // Extract raw state metric values for display context and modifier computation
-    const sectorType = getOperatingSectorType(
-      sector.sectorType,
-      sector.industryModel,
-      sector.mediaDiscriminator
-    ) as OperatingSectorType;
+    const sectorType = sector.sectorType as OperatingSectorType;
     // Ownership margin terms (SOE efficiency, expropriation risk, economic-model
     // fit): the turn applies them inside the stack, so the breakdown names them.
     const ownerCountryId = corporation.countryOwnerId;
@@ -304,14 +299,12 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
         lane: sectorType,
         preset: sectorDetailPreset,
       });
-    const effectiveRates = getEffectiveStrategyRatesForOperatingModel(
+    const effectiveRates = getEffectiveStrategyRates(
       sectorType,
       sector.strategyId ?? "standard",
       sector.transitionFromStrategyId,
       sector.transitionStartTurn,
       currentTurn,
-      sector.industryModel,
-      sector.mediaDiscriminator,
       sectorDetailPreset,
       gameState?.hardwareInputReliefStartTurn
     );
@@ -607,21 +600,15 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
         countryId: sectorCountryId,
         stateName: state?.name ?? sector.stateId,
         sectorType: sector.sectorType,
-        mediaDiscriminator: sector.mediaDiscriminator ?? null,
         mediaAdvertisingCampaignFactor: plannedEconomyMediaSupplyFactor(
           sector.sectorType,
           isPlannedEconomy(
             sectorCountryId,
             gameState?.currentYear,
             governorConfig?.commandEconomyEnabled === true
-          ),
-          sector.mediaDiscriminator
+          )
         ),
-        industryModel: sector.industryModel ?? null,
-        sectorLabel:
-          sector.sectorType === "manufacturing" && sector.industryModel === "vehicles"
-            ? "Vehicle manufacturing"
-            : OPERATING_SECTOR_TYPE_LABELS[sectorType],
+        sectorLabel: OPERATING_SECTOR_TYPE_LABELS[sectorType],
         displayName: sector.displayName ?? null,
         targetGrowthRate: sector.targetGrowthRate ?? 0,
         currentGrowthRate: sector.currentGrowthRate ?? sector.growthRate ?? 0,
@@ -651,17 +638,7 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
         // (0 when the Kaitz floor doesn't bind this sector).
         wageLevel: sector.wageLevel ?? 1,
         payVsMedian:
-          Math.round(
-            (sectorWageLevel(
-              getOperatingSectorType(
-                sector.sectorType,
-                sector.industryModel,
-                sector.mediaDiscriminator
-              )
-            ) /
-              MEDIAN_SECTOR_WAGE_LEVEL) *
-              100
-          ) / 100,
+          Math.round((sectorWageLevel(sector.sectorType) / MEDIAN_SECTOR_WAGE_LEVEL) * 100) / 100,
         minWageUplift:
           Math.round((minWageFloorMultiplier(sector.sectorType, minWageKaitz) - 1) * 1000) / 1000,
         // v3 Phase 5/6 (labourSystemMode ≥ "unions"): NPC unionization
@@ -799,8 +776,6 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
           techCurrentYear,
           techCorpView,
           sectorType: sector.sectorType,
-          industryModel: sector.industryModel,
-          mediaDiscriminator: sector.mediaDiscriminator,
         }),
         profit: Math.round(sectorAmountInCorpCurrency(profit)),
         // Rates displayed to the player are whichever side (domestic/foreign) actually applies

@@ -10,11 +10,7 @@
 
 import type { Corporation, CorporateSector } from "@/lib/db/types";
 import type { MarketCandidate } from "@/lib/turn/npp/marketCandidates";
-import type {
-  CorporationType,
-  OperatingSectorType,
-  ManufacturingIndustryModel,
-} from "@/lib/constants/corporations";
+import type { CorporationType, OperatingSectorType } from "@/lib/constants/corporations";
 import type { CountryId } from "@/lib/constants/countries";
 import { adjacentStates } from "@/lib/constants/stateAdjacency";
 import { foundingStarterUnits } from "@/lib/corporations/foundingPlant";
@@ -31,7 +27,6 @@ import {
   type CommodityType,
   type ExtractableResource,
 } from "@/lib/constants/commodities";
-import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
 import { clampProductionPolicy } from "@/lib/utils/productionPolicy";
 import { isInputStarved } from "@/lib/turn/npp/rules/inputAvailability";
 import { isStateShortfallCommodity } from "@/lib/turn/npp/rules/stateShortfallSignal";
@@ -64,8 +59,8 @@ export const ESSENTIAL_SHORTAGE_SCORE = 1.6;
  * concentration rule: each has a measured shortage and a known supply
  * response path. Advertising and freight need more producer breadth,
  * fertilizers need dedicated chemical capacity, and rare earths need
- * focused extraction in states with deposit headroom. Healthcare and
- * entertainment services are produced only by their own sector types, so a
+ * focused extraction in states with deposit headroom. Healthcare
+ * services are produced only by their own sector type, so a
  * chronic all-NPP shortage has no other builder pool; each sector lists
  * every commodity it answers, scanned in order.
  */
@@ -73,7 +68,6 @@ export const FRAGILE_MARKET_COMMODITIES_BY_SECTOR: Readonly<
   Partial<Record<OperatingSectorType, readonly CommodityType[]>>
 > = {
   media: ["advertising"],
-  media_entertainment: ["advertising"],
   healthcare: ["healthcare_services"],
   chemical_industries: ["fertilizers"],
   logistics: ["freight"],
@@ -221,8 +215,6 @@ export interface PlacementSignals {
     cell: {
       stateId: string;
       sectorType: string;
-      industryModel?: string | null;
-      mediaDiscriminator?: string | null;
     },
     excluding?: SaturationSectorLike
   ) => number | null;
@@ -235,8 +227,6 @@ export interface PlacementSignals {
       stateId: string;
       countryId: string;
       sectorType: string;
-      industryModel?: string | null;
-      mediaDiscriminator?: string | null;
     },
     options?: { strategyId?: string | null; aggregate?: "mean" | "max" }
   ) => number | null;
@@ -250,8 +240,6 @@ export interface PlacementSignals {
       stateId: string;
       countryId: string;
       sectorType: string;
-      industryModel?: string | null;
-      mediaDiscriminator?: string | null;
     },
     units: number
   ) => void;
@@ -326,30 +314,16 @@ export function buildActiveMarketBuckets(sectors: readonly CorporateSector[]): S
   return new Set(
     sectors
       .filter((sector) => sector.mothballed !== true)
-      .map((sector) =>
-        bucketKey(
-          sector.stateId,
-          sector.sectorType,
-          sector.industryModel,
-          sector.mediaDiscriminator
-        )
-      )
+      .map((sector) => bucketKey(sector.stateId, sector.sectorType))
   );
 }
 
 export function markMarketsActive(
   signals: PlacementSignals,
-  sectors:
-    | readonly Pick<
-        CorporateSector,
-        "stateId" | "sectorType" | "industryModel" | "mediaDiscriminator"
-      >[]
-    | undefined
+  sectors: readonly Pick<CorporateSector, "stateId" | "sectorType">[] | undefined
 ): void {
   for (const sector of sectors ?? []) {
-    signals.activeMarketBuckets?.add(
-      bucketKey(sector.stateId, sector.sectorType, sector.industryModel, sector.mediaDiscriminator)
-    );
+    signals.activeMarketBuckets?.add(bucketKey(sector.stateId, sector.sectorType));
   }
 }
 
@@ -412,11 +386,7 @@ export function hasEnterableHeadroom(
       corp.headquartersState,
       corp.type,
       corp.secondaryType,
-      new Set(
-        sectors.map((sec) =>
-          bucketKey(sec.stateId, sec.sectorType, sec.industryModel, sec.mediaDiscriminator)
-        )
-      ),
+      new Set(sectors.map((sec) => bucketKey(sec.stateId, sec.sectorType))),
       candidatesByCountry,
       stateControlled,
       () => null,
@@ -425,7 +395,6 @@ export function hasEnterableHeadroom(
       signals,
       frontier,
       undefined,
-      corp.industryModel,
       true
     ) !== null
   );
@@ -471,7 +440,6 @@ export function findBestMarketCandidate(
   signals?: PlacementSignals,
   preferredStateIds?: ReadonlySet<string>,
   stats?: CandidateExclusionStats,
-  primaryIndustryModel?: string | null,
   openMarketFallback: boolean = false
 ): MarketCandidate | null {
   const countryCandidates = candidatesByCountry.get(countryId);
@@ -480,16 +448,14 @@ export function findBestMarketCandidate(
   // Candidates are every region x lane of the country; none is stored. A
   // bucket the corp already occupies or a state controls is out. "Market size"
   // for ranking and candidacy is the room the goods market still has: unmet
-  // demand net of capacity already ordered or founded this pass. For EXTRACTION
-  // it is the state's unclaimed DEPOSIT instead: a mine's output is a traded
-  // commodity, so its founding value is deposit richness x how short that
-  // commodity is, not local consumption. The deposit signal is
-  // `extractionHeadroomOf`. Without a demand signal wired (isolated callers) a
-  // demand-side bucket reads as open and the shortage score alone ranks it.
-  const marketSizeOf = (us: MarketCandidate) =>
-    us.sectorType === "extraction"
-      ? (signals?.extractionHeadroomOf?.(us.stateId) ?? 0)
-      : marketRoomUnits(signals, us);
+  // demand net of capacity already ordered or founded this pass. EXTRACTION
+  // reads the same room for the resources its state can mine, and additionally
+  // needs an unclaimed deposit (`extractionHeadroomOf`): a deposit caps a mine,
+  // it never justifies one. Without a demand signal wired (isolated callers) a
+  // bucket reads as open and the shortage score alone ranks it.
+  const hasDeposit = (us: MarketCandidate) =>
+    us.sectorType !== "extraction" || (signals?.extractionHeadroomOf?.(us.stateId) ?? 0) > 0;
+  const marketSizeOf = (us: MarketCandidate) => (hasDeposit(us) ? marketRoomUnits(signals, us) : 0);
 
   const candidates: MarketCandidate[] = [];
   if (stats) {
@@ -501,26 +467,18 @@ export function findBestMarketCandidate(
     stats.inputStarvedExcluded = 0;
   }
   for (const us of countryCandidates) {
-    if (
-      existingBuckets.has(
-        bucketKey(us.stateId, us.sectorType, us.industryModel, us.mediaDiscriminator)
-      )
-    ) {
+    if (existingBuckets.has(bucketKey(us.stateId, us.sectorType))) {
       if (stats) stats.occupiedExcluded! += 1;
       continue;
     }
     if (!(marketSizeOf(us) > 0)) {
       if (stats) {
-        if (us.sectorType === "extraction") stats.depositExcluded! += 1;
+        if (!hasDeposit(us)) stats.depositExcluded! += 1;
         else stats.noRoomExcluded! += 1;
       }
       continue;
     }
-    if (
-      stateControlled.has(
-        bucketKey(us.stateId, us.sectorType, us.industryModel, us.mediaDiscriminator)
-      )
-    ) {
+    if (stateControlled.has(bucketKey(us.stateId, us.sectorType))) {
       if (stats) stats.stateControlledExcluded! += 1;
       continue;
     }
@@ -558,23 +516,9 @@ export function findBestMarketCandidate(
     if (!signals?.preferEmptyMarkets || !activeMarketBuckets) return list;
     const uncovered = list.filter(
       (candidate) =>
-        !activeMarketBuckets.has(
-          bucketKey(
-            candidate.stateId,
-            candidate.sectorType,
-            candidate.industryModel,
-            candidate.mediaDiscriminator
-          )
-        ) &&
-        // Extraction is deposit-gated (candidacy above), not unit-sized, so
-        // it bypasses the demand-room facility-size floor.
-        (candidate.sectorType === "extraction" ||
-          !plantsEnabled ||
-          marketSizeOf(candidate) >=
-            foundingStarterUnits(
-              candidate.sectorType as CorporationType,
-              candidate.industryModel as ManufacturingIndustryModel | null | undefined
-            ))
+        !activeMarketBuckets.has(bucketKey(candidate.stateId, candidate.sectorType)) &&
+        (!plantsEnabled ||
+          marketSizeOf(candidate) >= foundingStarterUnits(candidate.sectorType as CorporationType))
     );
     return uncovered.length > 0 ? uncovered : list;
   };
@@ -588,7 +532,7 @@ export function findBestMarketCandidate(
   const shortageOf = (c: MarketCandidate) =>
     remembered(facts?.shortage, factKey(c), () =>
       sectorShortageScore(
-        getOperatingSectorType(c.sectorType, c.industryModel, c.mediaDiscriminator),
+        c.sectorType,
         countryId,
         depositAwarePriceRatioOf(c.sectorType, c.stateId, signals, (commodity, cid) => {
           const stateRatio = signals?.statePriceRatioOf?.(commodity, c.stateId);
@@ -597,8 +541,7 @@ export function findBestMarketCandidate(
       )
     );
   const score = (c: MarketCandidate) => {
-    // Extraction ranks on deposit x shortage (via marketSizeOf); demand-side
-    // sectors on demand-headroom x shortage.
+    // Every sector ranks on demand-room x shortage.
     let s = marketSizeOf(c) * shortageOf(c);
     if (c.stateId === hqState) s *= HQ_STATE_SCORE_BONUS;
     return s;
@@ -625,7 +568,7 @@ export function findBestMarketCandidate(
   const fragileScore = (c: MarketCandidate): number => {
     if (signals?.fragileMarketCountryEligible?.(c.countryId) === false) return 0;
     const commodity = fragileMarketCommodityForSector(
-      getOperatingSectorType(c.sectorType, c.industryModel, c.mediaDiscriminator),
+      c.sectorType,
       c.countryId,
       candidatePriceRatioOf(c),
       fragileSupplyGate(c.sectorType, c.stateId, signals)
@@ -653,7 +596,7 @@ export function findBestMarketCandidate(
   const peakShortageOf = (c: MarketCandidate): number =>
     remembered(facts?.peakShortage, factKey(c), () =>
       sectorPeakShortageScore(
-        getOperatingSectorType(c.sectorType, c.industryModel, c.mediaDiscriminator),
+        c.sectorType,
         countryId,
         depositAwarePriceRatioOf(c.sectorType, c.stateId, signals, (commodity, cid) =>
           isStateShortfallCommodity(commodity)
@@ -676,8 +619,7 @@ export function findBestMarketCandidate(
     )
   );
 
-  const isPrimary = (c: MarketCandidate) =>
-    c.sectorType === primaryType && (c.industryModel ?? null) === (primaryIndustryModel ?? null);
+  const isPrimary = (c: MarketCandidate) => c.sectorType === primaryType;
   const inType = (c: MarketCandidate) =>
     isPrimary(c) || (secondaryType != null && c.sectorType === secondaryType);
 

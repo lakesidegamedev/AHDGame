@@ -1,7 +1,5 @@
 import {
   Building2,
-  Car,
-  Clapperboard,
   Cpu,
   Factory,
   FlaskConical,
@@ -27,7 +25,6 @@ const SECTOR_ICON: Partial<Record<OperatingSectorType, LucideIcon>> = {
   technology: Cpu,
   healthcare: HeartPulse,
   logistics: Truck,
-  manufacturing_vehicles: Car,
   agriculture: Wheat,
   financial: Landmark,
   defense: Shield,
@@ -35,7 +32,6 @@ const SECTOR_ICON: Partial<Record<OperatingSectorType, LucideIcon>> = {
   construction: HardHat,
   real_estate: Building2,
   media: Newspaper,
-  media_entertainment: Clapperboard,
   extraction: Pickaxe,
   retail: ShoppingCart,
   chemical_industries: FlaskConical,

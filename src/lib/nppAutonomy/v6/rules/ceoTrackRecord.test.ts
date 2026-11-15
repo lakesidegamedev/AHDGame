@@ -63,19 +63,6 @@ describe("NPP engine 6 CEO track record", () => {
     expect(samples).toEqual([{ nppId: "ceo", lane: "energy", relMarginPp: 15 }]);
   });
 
-  it("keys vehicle makers by their operating lane", () => {
-    const vehicles = { sectorType: "manufacturing" as const, industryModel: "vehicles" };
-    const samples = computeCeoSamples(
-      [{ _id: "a", ceoType: "npp", ceoId: "ceo" }],
-      new Map([
-        ["a", [sector("a", 12, vehicles)]],
-        ["b", [sector("b", 10, vehicles)]],
-        ["c", [sector("c", 50, { sectorType: "manufacturing" })]],
-      ])
-    );
-    expect(samples).toEqual([{ nppId: "ceo", lane: "manufacturing_vehicles", relMarginPp: 2 }]);
-  });
-
   it("folds samples into a bounded, replay-safe record", () => {
     const first = applyCeoSample(undefined, 10, 24);
     expect(first).toEqual({ turns: CEO_RECORD_CADENCE_TURNS, relMarginPp: 10, lastTurn: 24 });

@@ -13,7 +13,7 @@ import { getDb } from "@/lib/mongodb";
 import { requireBasicAuth } from "@/lib/api/requireAuth";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { resolveCorporation, requireCeo } from "@/lib/api/corporations/resolveQuery";
-import { isOperatingSectorType, operatingSectorIdentity } from "@/lib/constants/corporations";
+import { isOperatingSectorType } from "@/lib/constants/corporations";
 import { enumerateCandidateBuckets, laneIdentities } from "@/lib/market/marketBuckets";
 import type {
   CorporateSector,
@@ -23,7 +23,7 @@ import type {
   State,
   GameConfig,
 } from "@/lib/db/types";
-import { getEffectiveStrategyRatesForOperatingModel } from "@/lib/constants/sectorStrategies";
+import { getEffectiveStrategyRates } from "@/lib/constants/sectorStrategies";
 import { getEraUnitScale } from "@/lib/constants/sectorSeedEra";
 import { resolveCountryPrimeRates } from "@/lib/corporations/sectorGrowthCost";
 import { NEUTRAL_STAT } from "@/lib/stats/statsConstants";
@@ -120,8 +120,8 @@ export async function GET(request: Request, { params }: RouteParams) {
     const resolved = await resolveCorporation(db, id);
     if (!resolved.ok) return resolved.response;
     const { corporation } = resolved;
-    const { sectorType, industryModel, mediaDiscriminator } = operatingSectorIdentity(lane);
-    const marketFilter = { sectorType, industryModel, mediaDiscriminator };
+    const sectorType = lane;
+    const marketFilter = { sectorType };
 
     const ceoCheck = requireCeo(corporation, auth.user.userId);
     if (ceoCheck) return ceoCheck;
@@ -159,20 +159,18 @@ export async function GET(request: Request, { params }: RouteParams) {
 
     // Funded markets use the same per-output sizing as local expansion below.
     // The legacy weighted appetite remains only for worlds without funded books.
-    const supplyMix = getEffectiveStrategyRatesForOperatingModel(
+    const supplyMix = getEffectiveStrategyRates(
       sectorType,
       "standard",
       null,
       null,
       currentTurn,
-      industryModel,
-      mediaDiscriminator,
       resolvePresetIdFromGameState(gameStateDoc),
       gameStateDoc?.hardwareInputReliefStartTurn
     ).supply;
     const buildRoom = await loadBuildRoomContext(db);
     const candidateOutputMultiplier = buildAdviceOutputMultiplier({
-      sector: { sectorType, industryModel, mediaDiscriminator },
+      sector: { sectorType },
       supply: supplyMix,
       owner: corporation,
       techEnabled: gameStateDoc?.sectorTechTreesEnabled === true,
@@ -355,8 +353,7 @@ export async function GET(request: Request, { params }: RouteParams) {
         gameStateDoc?.currentYear ??
         STARTING_YEAR + Math.floor((Math.max(1, currentTurn) - 1) / TURNS_PER_YEAR);
       const worldPreset = resolvePresetIdFromGameState(gameStateDoc);
-      const identity = { sectorType, industryModel, mediaDiscriminator };
-      const techEffects = await loadFoundingTechEffects(db, corporation, identity, currentYear);
+      const techEffects = await loadFoundingTechEffects(db, corporation, sectorType, currentYear);
 
       const ceoChar = corporation.ceoId
         ? await charactersCollection(db).findOne(
@@ -366,7 +363,7 @@ export async function GET(request: Request, { params }: RouteParams) {
         : null;
 
       const baseQuoteInputs: FoundingQuoteInputs = {
-        identity,
+        sectorType,
         preset: worldPreset,
         currentYear,
         eraUnitScale: getEraUnitScale(worldPreset),
@@ -389,8 +386,6 @@ export async function GET(request: Request, { params }: RouteParams) {
         fetchCorporationNationalSectorSharesByCountry(db, {
           corporationId: corporation._id,
           sectorType,
-          industryModel,
-          mediaDiscriminator,
           countryIds: uniqueCountryIds as CountryId[],
         }),
         resolveCountryPrimeRates(db, uniqueCountryIds as CountryId[]),

@@ -28,8 +28,6 @@ function makeInterleavingDb(): { db: Db; createIndex: ReturnType<typeof vi.fn> }
         corporationId: 1,
         stateId: 1,
         sectorType: 1,
-        industryModel: 1,
-        mediaDiscriminator: 1,
       },
       unique: true,
     },

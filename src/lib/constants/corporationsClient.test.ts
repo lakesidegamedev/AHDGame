@@ -10,12 +10,9 @@ describe("corporationsClient", () => {
     expect(full.OPERATING_SECTOR_TYPE_LABELS).toBe(slim.OPERATING_SECTOR_TYPE_LABELS);
   });
 
-  it("pins the load-bearing lane order and the shared clock constants", () => {
-    // Seeded state-enterprise ids and specialization rotations derive from a
-    // lane's position, so the specialized lanes must keep their slots.
-    expect(slim.OPERATING_SECTOR_TYPES[6]).toBe("manufacturing_vehicles");
-    expect(slim.OPERATING_SECTOR_TYPES[14]).toBe("media_entertainment");
-    expect(slim.OPERATING_SECTOR_TYPES).toHaveLength(17);
+  it("pins the sector count and the shared clock constants", () => {
+    expect(slim.OPERATING_SECTOR_TYPES).toHaveLength(15);
+    expect(slim.OPERATING_SECTOR_TYPES).toEqual(slim.CORPORATION_TYPES);
 
     expect(slim.TURNS_PER_DAY).toBe(24);
     expect(slim.GROWTH_RATE_TURNS_PER_YEAR).toBe(48);
@@ -33,15 +30,13 @@ describe("corporationsClient", () => {
 });
 
 describe("OPERATING_SECTOR_CHOICES", () => {
-  it("lists every operating lane once, with specialized lanes under their parent type", async () => {
+  it("lists every sector type once with its label", async () => {
     const { OPERATING_SECTOR_CHOICES, OPERATING_SECTOR_TYPES } =
       await import("./corporationsClient");
     const keys = OPERATING_SECTOR_CHOICES.map((c) => c.key);
     expect([...keys].sort()).toEqual([...OPERATING_SECTOR_TYPES].sort());
-    expect(keys.indexOf("manufacturing_vehicles")).toBe(keys.indexOf("manufacturing") + 1);
-    expect(keys.indexOf("media_entertainment")).toBe(keys.indexOf("media") + 1);
     const label = (k: string) => OPERATING_SECTOR_CHOICES.find((c) => c.key === k)?.label;
-    expect(label("manufacturing_vehicles")).toBe("Manufacturing: Automobiles");
-    expect(label("media_entertainment")).toBe("Media: Entertainment");
+    expect(label("manufacturing")).toBe("Manufacturing");
+    expect(label("media")).toBe("Media");
   });
 });

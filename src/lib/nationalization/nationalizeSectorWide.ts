@@ -47,7 +47,6 @@ import {
 import { SECTOR_SCOPE_LABELS, type SectorScope } from "./sectorScope";
 import { loadWorldEraUnitScale } from "@/lib/currency/gdpAnchorRate";
 import { seedPlantLedger, splitWholePlantCount } from "@/lib/corporations/plantLedger";
-import { getCorporateSectorLaneQuery } from "@/lib/corporations/sectorLocation";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
@@ -56,8 +55,6 @@ export { SECTOR_SCOPE_LABELS, type SectorScope };
 export interface NationalizeSectorWideParams {
   countryId: CountryId;
   sectorType: CorporationType;
-  industryModel?: Corporation["industryModel"];
-  mediaDiscriminator?: Corporation["mediaDiscriminator"];
   /** Fraction carved from each in-scope holder, 0 < f ≤ 1. */
   carveFraction: number;
   scope: SectorScope;
@@ -98,18 +95,8 @@ export async function nationalizeSectorWide(
 
   const sectors = corporateSectorsCollection(db);
   const corps = corporationsCollection(db);
-  const sectorLane = getCorporateSectorLaneQuery({
-    sectorType: params.sectorType,
-    industryModel: params.industryModel,
-    mediaDiscriminator: params.mediaDiscriminator,
-  });
-  const dest = await resolveNationalCorporationForSector(
-    db,
-    params.countryId,
-    params.sectorType,
-    params.industryModel,
-    params.mediaDiscriminator
-  );
+  const sectorLane = { sectorType: params.sectorType };
+  const dest = await resolveNationalCorporationForSector(db, params.countryId, params.sectorType);
   // Snapshot the SOCI escalation multiplier at taking time so the transition
   // shock is fixed to today's concentration, not retroactively deepened later.
   const transitionMultiplier = sociMultiplier(
@@ -263,9 +250,6 @@ export async function nationalizeSectorWide(
               params.sectorType,
               sweepCurrentYear ?? CAPACITY_ANCHOR_YEAR,
               sweepEraUnitScale,
-              // `null` deliberately, matching the `null` strategy the units were
-              // derived at on the line above: both legs must read the same mix
-              // or the units and the price they are multiplied by disagree.
               null
             ),
         };
@@ -304,8 +288,6 @@ export async function nationalizeSectorWide(
         countryId: params.countryId,
         stateId,
         sectorType: params.sectorType,
-        ...(params.industryModel ? { industryModel: params.industryModel } : {}),
-        ...(params.mediaDiscriminator ? { mediaDiscriminator: params.mediaDiscriminator } : {}),
         revenue: transferRevenue,
         // CREATE shape: the carved plant state IS the new row's plant state.
         // `plantsStartTurn` rides across from the donor rather than being reset —

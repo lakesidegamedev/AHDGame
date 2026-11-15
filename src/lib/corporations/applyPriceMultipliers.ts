@@ -10,7 +10,6 @@ import type { SentimentPulse } from "@/lib/db/types/sentimentPulse";
 import { computeSentimentMultiplier, getHqConfidenceSentiment } from "./sentimentEngine";
 import { computeOrderFlowMultiplier } from "./orderFlowEngine";
 import { loadActiveFtaPairs } from "@/lib/tariffs/ftaOverrides";
-import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
@@ -72,8 +71,6 @@ export async function applyPriceMultipliers(db?: Db): Promise<ApplyPriceMultipli
             countryId: 1,
             headquartersState: 1,
             type: 1,
-            industryModel: 1,
-            mediaDiscriminator: 1,
             secondaryType: 1,
             fundamentalSharePrice: 1,
             sharePrice: 1,
@@ -94,8 +91,6 @@ export async function applyPriceMultipliers(db?: Db): Promise<ApplyPriceMultipli
             corporationId: 1,
             countryId: 1,
             sectorType: 1,
-            industryModel: 1,
-            mediaDiscriminator: 1,
           },
         }
       )
@@ -109,11 +104,7 @@ export async function applyPriceMultipliers(db?: Db): Promise<ApplyPriceMultipli
   const operatingSectorTypesByCorpId = new Map<string, Set<string>>();
   for (const sector of sectors) {
     const corpId = sector.corporationId.toString();
-    const operatingType = getOperatingSectorType(
-      sector.sectorType,
-      sector.industryModel,
-      sector.mediaDiscriminator
-    );
+    const operatingType = sector.sectorType;
     const sectorKeys = operatingSectorKeysByCorpId.get(corpId) ?? new Set<string>();
     sectorKeys.add(`${sector.countryId}:${operatingType}`);
     operatingSectorKeysByCorpId.set(corpId, sectorKeys);
@@ -128,9 +119,7 @@ export async function applyPriceMultipliers(db?: Db): Promise<ApplyPriceMultipli
     const corpId = corp._id.toString();
     const sectorTypes = [
       ...(operatingSectorTypesByCorpId.get(corpId) ?? new Set<string>()),
-      ...(corp.type
-        ? [getOperatingSectorType(corp.type, corp.industryModel, corp.mediaDiscriminator)]
-        : []),
+      ...(corp.type ? [corp.type] : []),
       ...(corp.secondaryType ? [corp.secondaryType] : []),
     ];
     const operatingSectorKeys = operatingSectorKeysByCorpId.get(corpId) ?? new Set<string>();

@@ -1,4 +1,3 @@
-import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
 import { outputVolumeOnBasis, resolveOutputBasis } from "./rules/outputVolume";
 import type { Db } from "mongodb";
 import type { ConflictDoc } from "@/lib/db/types/conflict";
@@ -108,8 +107,6 @@ export async function sectorRevenueTaxProvider(db: Db, turn = 0): Promise<Sector
           | "growthRate"
           | "corporationId"
           | "sectorType"
-          | "industryModel"
-          | "mediaDiscriminator"
           | "countryId"
         >
       >({
@@ -129,8 +126,6 @@ export async function sectorRevenueTaxProvider(db: Db, turn = 0): Promise<Sector
         currentGrowthRate: 1,
         // P3c: the environment tier derives the carbon mix from operating lanes.
         sectorType: 1,
-        industryModel: 1,
-        mediaDiscriminator: 1,
         // Legacy fallback for pre-split sectors — without this projection,
         // undefined × revenue poisons the weighted average with NaN.
         growthRate: 1,
@@ -225,11 +220,7 @@ export async function sectorRevenueTaxProvider(db: Db, turn = 0): Promise<Sector
       ...(hostRealized !== undefined ? { hostRealizedRevenue: hostRealized } : {}),
       ...(outputVolume !== null ? { outputVolume } : {}),
       currentGrowthRate: growth,
-      sectorType: getOperatingSectorType(
-        sector.sectorType,
-        sector.industryModel,
-        sector.mediaDiscriminator
-      ),
+      sectorType: sector.sectorType,
     });
     ownedByState.set(sector.stateId, list);
   }

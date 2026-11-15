@@ -825,7 +825,7 @@ async function main() {
     // /api/admin/corporations/spawn-npp-all in production) — never automatic
     // during turn processing. Mirror that same admin tool here, once, so a
     // pure-NPP sim world actually has a corporate sector for NPPs to invest
-    // in. Three corps per sector (17 sectors) per country, NPP CEO + 49%
+    // in. Three corps per sector (15 sectors) per country, NPP CEO + 49%
     // public float each, for real intra-sector competition — market-share
     // dynamics ratio all competing corps against a shared, bounded market
     // (marketShare.ts), so this models competition rather than inflating

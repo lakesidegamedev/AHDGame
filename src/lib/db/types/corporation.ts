@@ -15,11 +15,7 @@ import type {
   MediaProductAdvertisingReceipt,
   MediaProductDevelopmentReceipt,
 } from "@/lib/products/mediaProduct";
-import type {
-  CorporationType,
-  ManufacturingIndustryModel,
-  MediaDiscriminator,
-} from "../../constants/corporations";
+import type { CorporationType } from "../../constants/corporations";
 import type { CountryId } from "../../constants/countries";
 import type { CurrencyCode } from "../../constants/currencies";
 import type { ProductAdvertisingDenominationWitness } from "@/lib/products/rules/productAdvertising";
@@ -290,12 +286,7 @@ export interface Corporation {
   tickerSymbol?: string;
   description?: string;
   type: CorporationType;
-  /** Specialized model identity when the primary type is manufacturing. */
-  industryModel?: ManufacturingIndustryModel | null;
-  /** Preserves entertainment's legacy operating identity inside media. */
-  mediaDiscriminator?: MediaDiscriminator | null;
   /** Optional secondary sector focus, halves sector match bonus, doubles base sprawl threshold */
-  /** Secondary specialization: an operating lane (a type, or the vehicles/entertainment lane). */
   secondaryType?: OperatingSectorType | null;
   /** Turn when primary/secondary type was last switched (for penalty duration) */
   typeSwitchTurn?: number | null;

@@ -195,8 +195,9 @@ const BASE_SECTOR_STRATEGIES: Record<OperatingSectorType, SectorStrategy[]> = {
     {
       id: "standard",
       name: "Standard",
-      description: "Balanced steel and building materials production from iron and coal inputs.",
-      supply: { steel: 0.4, building_materials: 0.2 },
+      description:
+        "Balanced steel, building materials and vehicles production from iron and coal inputs.",
+      supply: { steel: 0.4, building_materials: 0.2, vehicles: 0.5 },
       demand: {
         energy: 0.18,
         iron: 0.13,
@@ -228,8 +229,7 @@ const BASE_SECTOR_STRATEGIES: Record<OperatingSectorType, SectorStrategy[]> = {
       // Market recovery phase 1 (2026-10-18): inputs trimmed to reach the 15-25% base margin band.
       demand: { rare_earth: 0.138, iron: 0.1, energy: 0.184, chemicals: 0.092, plastics: 0.1 },
     },
-    // Vehicle lines folded in from the retired automobiles sector. Recipes
-    // match the vehicle-model "standard" and "heavy_machinery" strategies.
+    // Vehicle lines for manufacturing plants retooled to build cars and trucks.
     {
       id: "vehicle_assembly",
       name: "Vehicle Assembly",
@@ -579,77 +579,6 @@ const BASE_SECTOR_STRATEGIES: Record<OperatingSectorType, SectorStrategy[]> = {
         food: 0.023,
         vehicles: 0.015,
         plastics: 0.04,
-      },
-    },
-  ],
-
-  // ── Automobiles ───────────────────────────────────────────────────────
-  manufacturing_vehicles: [
-    {
-      id: "autonomous_driving",
-      requiresTechUnlock: true,
-      minDecade: "2029",
-      name: "Autonomous Vehicles",
-      description:
-        "Self-driving vehicle production with an onboard software layer. Heavy electronics and software demand.",
-      supply: { vehicles: 0.5, software: 0.08 },
-      demand: { electronics: 0.2, steel: 0.1, energy: 0.15, software: 0.1, advertising: 0.04 },
-    },
-    {
-      id: "standard",
-      name: "Standard",
-      // Combustion-engine lines retire with the 2049 tier in favor of electric
-      // and autonomous vehicles.
-      sunsetDecade: "2049",
-      successorIds: ["ev", "autonomous_driving"],
-      description: "Traditional automotive manufacturing with internal combustion focus.",
-      supply: { vehicles: 0.5 },
-      demand: {
-        steel: 0.21,
-        iron: 0.08,
-        electronics: 0.13,
-        energy: 0.1,
-        freight: 0.08,
-        real_estate_services: 0.02,
-        plastics: 0.08,
-      },
-    },
-    {
-      id: "ev",
-      requiresTechUnlock: true,
-      minDecade: "2009",
-      name: "EV Focus",
-      description:
-        "Electric vehicle production. Heavy battery and electronics demand, reduced steel needs.",
-      // Redistributed electronics demand 0.30→0.22 toward rare_earth 0.10→0.14 (battery
-      // cathodes), software 0.10→0.16 (vehicle OS/firmware), and added steel 0.10
-      // for chassis and body panels. Reflects real EV Bill of Materials more accurately
-      // and reduces electronics D/S pressure from EV ramp-up.
-      supply: { vehicles: 0.45 },
-      // Market recovery phase 1 (2026-10-18): inputs trimmed to reach the 15-25% base margin band.
-      demand: {
-        electronics: 0.151,
-        rare_earth: 0.101,
-        energy: 0.109,
-        software: 0.109,
-        steel: 0.084,
-        plastics: 0.08,
-      },
-    },
-    {
-      id: "heavy_machinery",
-      name: "Heavy Machinery",
-      description:
-        "Industrial vehicles, trucks, and construction equipment. Steel-intensive, robust margins.",
-      supply: { vehicles: 0.55 },
-      // Market recovery phase 1 (2026-10-18): inputs trimmed to reach the 15-25% base margin band.
-      demand: {
-        steel: 0.231,
-        iron: 0.12,
-        energy: 0.104,
-        freight: 0.08,
-        plastics: 0.05,
-        advertising: 0.05,
       },
     },
   ],
@@ -1147,62 +1076,6 @@ const BASE_SECTOR_STRATEGIES: Record<OperatingSectorType, SectorStrategy[]> = {
       // Added network_services supply 0.30. Reduced energy 0.20→0.18 (efficiency gains).
       supply: { software: 0.35, network_services: 0.3 },
       demand: { energy: 0.18, electronics: 0.15, real_estate_services: 0.04 },
-    },
-  ],
-
-  // ── Entertainment ─────────────────────────────────────────────────────
-  media_entertainment: [
-    {
-      id: "personalised_media",
-      requiresTechUnlock: true,
-      minDecade: "2039",
-      name: "Personalised Entertainment",
-      description:
-        "Shows and games assembled for each viewer as they watch. Strong ad output, paid for with heavy software, energy and network demand.",
-      supply: { advertising: 0.62 },
-      demand: { software: 0.18, energy: 0.12, network_services: 0.11, electronics: 0.04 },
-    },
-    {
-      id: "live_service",
-      requiresTechUnlock: true,
-      minDecade: "2019",
-      name: "Live-Service Platforms",
-      description:
-        "Always-on games and experiences with ongoing revenue: high advertising output on software and networks.",
-      supply: { advertising: 0.5 },
-      demand: { software: 0.18, network_services: 0.1, energy: 0.06 },
-    },
-    {
-      id: "standard",
-      name: "Standard",
-      description: "Mixed media_entertainment: studios, venues, and digital content.",
-      supply: { advertising: 0.6 },
-      demand: { software: 0.15, electronics: 0.1, energy: 0.06, real_estate_services: 0.03 },
-    },
-    {
-      id: "streaming",
-      minDecade: "2009",
-      name: "Streaming/Digital",
-      description:
-        "Digital-first entertainment platforms. Co-produces software, energy-intensive streaming.",
-      supply: { advertising: 0.5, software: 0.1 },
-      demand: { software: 0.2, energy: 0.1, real_estate_services: 0.02 },
-    },
-    {
-      id: "live_venue",
-      name: "Live/Venue",
-      description:
-        "Concert halls, theaters, and live events. Higher advertising output, physical infrastructure needs.",
-      // Reduced construction_services 0.12→0.08 to ease input stacking on a scarce commodity.
-      supply: { advertising: 0.75 },
-      demand: {
-        construction_services: 0.08,
-        building_materials: 0.06,
-        energy: 0.1,
-        freight: 0.08,
-        real_estate_services: 0.05,
-        food: 0.08,
-      },
     },
   ],
 

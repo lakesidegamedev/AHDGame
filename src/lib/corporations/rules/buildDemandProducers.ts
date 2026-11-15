@@ -1,16 +1,13 @@
 /** Convert current sector capacity into comparable output for build advice. */
 import type { Corporation, CorporateSector } from "@/lib/db/types";
-import {
-  getEffectiveStrategyRatesForOperatingModel,
-  getOperatingSectorType,
-} from "@/lib/constants/sectorStrategies";
+import { getEffectiveStrategyRates } from "@/lib/constants/sectorStrategies";
 import { getSectorTechEffects } from "@/lib/constants/techTree";
 import type { CommodityType } from "@/lib/constants/commodities";
 import { deliveredFraction } from "../buildDelivery";
 import { productionProductivityMultiplier } from "./productionProductivity";
 
 export function buildAdviceOutputMultiplier(input: {
-  sector: Pick<CorporateSector, "sectorType" | "industryModel" | "mediaDiscriminator">;
+  sector: Pick<CorporateSector, "sectorType">;
   supply: Partial<Record<CommodityType, number>>;
   owner?: Corporation;
   techEnabled: boolean;
@@ -24,16 +21,7 @@ export function buildAdviceOutputMultiplier(input: {
     supply: input.supply,
     outputRateMult:
       input.techEnabled && owner
-        ? getSectorTechEffects(
-            owner,
-            getOperatingSectorType(
-              sector.sectorType,
-              sector.industryModel,
-              sector.mediaDiscriminator
-            ),
-            sector.industryModel,
-            sector.mediaDiscriminator
-          ).outputRateMult
+        ? getSectorTechEffects(owner, sector.sectorType).outputRateMult
         : undefined,
     currentTurn: input.turn,
     preset: input.preset,
@@ -50,14 +38,12 @@ export function buildDemandProducer(input: {
   hardwareInputReliefStartTurn?: number;
 }) {
   const { sector, turn } = input;
-  const supply = getEffectiveStrategyRatesForOperatingModel(
+  const supply = getEffectiveStrategyRates(
     sector.sectorType,
     sector.strategyId ?? "standard",
     sector.transitionFromStrategyId,
     sector.transitionStartTurn,
     turn,
-    sector.industryModel,
-    sector.mediaDiscriminator,
     input.preset,
     input.hardwareInputReliefStartTurn
   ).supply;

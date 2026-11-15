@@ -72,7 +72,7 @@ export const foundCorporationSchema = z.object({
           message: "Ticker contains prohibited language",
         })
     ),
-  /** Operating lane to found in: a corporation type, or the vehicles/entertainment lane. */
+  /** Corporation type to found in. */
   type: z.enum(OPERATING_SECTOR_TYPES),
   /**
    * Shape only. The real bounds are era-scaled and therefore not knowable

@@ -22,12 +22,4 @@ describe("indexCandidateBuckets", () => {
     expect(us.every((c) => c.countryId === "US")).toBe(true);
     expect(new Set(us.map((c) => c.key)).size).toBe(us.length);
   });
-
-  it("keeps manufacturing models and media lanes in distinct buckets", () => {
-    const keys = indexCandidateBuckets(new Map([["US", ["CA"]]]))
-      .get("US")!
-      .map((c) => c.key);
-    expect(keys).toContain("CA:manufacturing:vehicles");
-    expect(keys).toContain("CA:media:generic:entertainment");
-  });
 });

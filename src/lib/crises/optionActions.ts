@@ -14,13 +14,7 @@ import type {
 import type { NationalizeProvision } from "@/lib/db/types/legislation";
 import type { DocketCase } from "@/lib/db/types/scotus";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
-import {
-  OPERATING_SECTOR_TYPE_LABELS,
-  type CorporationType,
-  type OperatingSectorType,
-  operatingSectorFilter,
-  type ManufacturingIndustryModel,
-} from "@/lib/constants/corporations";
+import { OPERATING_SECTOR_TYPE_LABELS, type CorporationType, type OperatingSectorType } from "@/lib/constants/corporations";
 import { getNationalDocId } from "@/lib/constants/nationalScope";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
 import { getStartingYearForPreset } from "@/lib/constants/turnTime";
@@ -79,10 +73,8 @@ import { collectiveAgreementsCollection } from "@/lib/db/repositories/collective
 
 /** Crisis actions name an operating lane; rows store its identity. */
 function laneFilter(sectorType: string) {
-  return operatingSectorFilter(sectorType) as {
+  return { sectorType: sectorType } as {
     sectorType: CorporationType;
-    industryModel?: ManufacturingIndustryModel | null;
-    mediaDiscriminator?: "entertainment" | null;
   };
 }
 

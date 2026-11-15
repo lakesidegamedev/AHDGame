@@ -27,8 +27,6 @@ describe("seedCoreIndexes", () => {
           corporationId: 1,
           stateId: 1,
           sectorType: 1,
-          industryModel: 1,
-          mediaDiscriminator: 1,
         },
         unique: true,
       },

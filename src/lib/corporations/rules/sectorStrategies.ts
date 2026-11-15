@@ -3,12 +3,7 @@ import {
   ADVERTISING_INPUT_STANDARD_1991_DEMAND,
   ADVERTISING_INPUT_VARIANT_DEMAND,
 } from "@/lib/constants/sectorStrategyAdvertisingOverlay";
-import {
-  isCorporationType,
-  operatingSectorTypeFor,
-  type ManufacturingIndustryModel,
-  type OperatingSectorType,
-} from "@/lib/constants/corporationsClient";
+import type { OperatingSectorType } from "@/lib/constants/corporationsClient";
 import type { CommodityType } from "@/lib/constants/commodities";
 import { hardwareInputMultiplier } from "./hardwareInputRelief";
 import {
@@ -48,9 +43,9 @@ const UNKNOWN_SECTOR_STRATEGY: SectorStrategy = {
  * costs remain on the ordinary strategy demand and physical-cost rails.
  */
 export function getMediaOperatingModelStrategies(sectorType: string): SectorStrategy[] {
-  if (sectorType !== "media" && sectorType !== "media_entertainment") return [];
-  const lane = sectorType as MediaOperatingModelSector;
-  const strategies = SECTOR_STRATEGIES[sectorType as OperatingSectorType];
+  if (sectorType !== "media") return [];
+  const lane: MediaOperatingModelSector = "media";
+  const strategies = SECTOR_STRATEGIES[lane];
   const baseline = strategies.find((strategy) => strategy.id === "standard");
   if (!baseline) return [];
 
@@ -144,74 +139,15 @@ export function getStrategy(
 export function getSectorStrategies(
   sectorType: string,
   mediaOperatingModelsEnabled = false,
-  mediaDiscriminator?: string | null,
   preset?: string
 ): SectorStrategy[] {
-  const operatingType = getOperatingSectorType(sectorType, undefined, mediaDiscriminator);
-  if (!Object.hasOwn(SECTOR_STRATEGIES, operatingType)) return [];
-  const strategies = SECTOR_STRATEGIES[operatingType as OperatingSectorType].map((strategy) =>
-    strategyForPreset(operatingType, strategy, preset)
+  if (!Object.hasOwn(SECTOR_STRATEGIES, sectorType)) return [];
+  const strategies = SECTOR_STRATEGIES[sectorType as OperatingSectorType].map((strategy) =>
+    strategyForPreset(sectorType, strategy, preset)
   );
   return mediaOperatingModelsEnabled
-    ? [...strategies, ...getMediaOperatingModelStrategies(operatingType)]
+    ? [...strategies, ...getMediaOperatingModelStrategies(sectorType)]
     : strategies;
-}
-
-/**
- * Resolve the operating lane a persisted sector runs under. Unknown persisted
- * types pass through unchanged so callers can report them.
- */
-export function getOperatingSectorType(
-  sectorType: OperatingSectorType,
-  industryModel?: ManufacturingIndustryModel | string | null,
-  mediaDiscriminator?: string | null
-): OperatingSectorType;
-export function getOperatingSectorType(
-  sectorType: string,
-  industryModel?: ManufacturingIndustryModel | string | null,
-  mediaDiscriminator?: string | null
-): string;
-export function getOperatingSectorType(
-  sectorType: string,
-  industryModel?: ManufacturingIndustryModel | string | null,
-  mediaDiscriminator?: string | null
-): string {
-  if (!isCorporationType(sectorType)) return sectorType;
-  return operatingSectorTypeFor(sectorType, industryModel, mediaDiscriminator);
-}
-
-/**
- * Player-facing label for a persisted sector's operating model. Folded
- * vehicle and entertainment lanes are named for the canonical sector they now
- * belong to, not the retired type.
- */
-export function getOperatingSectorLabel(
-  sectorType: string,
-  industryModel?: string | null,
-  mediaDiscriminator?: string | null
-): string | null {
-  const operating = getOperatingSectorType(sectorType, industryModel, mediaDiscriminator);
-  if (operating === "manufacturing_vehicles") return "Vehicle manufacturing";
-  if (operating === "media_entertainment") return "Entertainment media";
-  return null;
-}
-
-/**
- * Resolve a strategy for a persisted sector and its optional manufacturing
- * production model. Vehicle models reuse the unchanged automobile recipes.
- */
-export function getStrategyForOperatingModel(
-  sectorType: string,
-  strategyId: string,
-  industryModel?: string | null,
-  mediaDiscriminator?: string | null,
-  preset?: string
-): SectorStrategy {
-  return getStrategy(
-    getOperatingSectorType(sectorType, industryModel, mediaDiscriminator),
-    strategyId,
-    preset
-  );
 }
 
 /**
@@ -226,15 +162,13 @@ export function getEffectiveStrategyRates(
   transitionFromStrategyId: string | undefined | null,
   transitionStartTurn: number | undefined | null,
   currentTurn: number,
-  mediaDiscriminator?: string | null,
   preset?: string,
   hardwareInputReliefStartTurn?: number | null,
   options?: StrategyOptions
 ): EffectiveStrategyRates {
-  const operatingType = getOperatingSectorType(sectorType, undefined, mediaDiscriminator);
   const relieve = (strategy: SectorStrategy): SectorStrategy => {
     const multiplier = hardwareInputMultiplier(
-      operatingType,
+      sectorType,
       strategy.id,
       currentTurn,
       hardwareInputReliefStartTurn
@@ -246,7 +180,7 @@ export function getEffectiveStrategyRates(
     }
     return { ...strategy, demand };
   };
-  const target = relieve(getStrategy(operatingType, strategyId, preset, options));
+  const target = relieve(getStrategy(sectorType, strategyId, preset, options));
 
   // No transition in progress → return target directly
   if (!transitionFromStrategyId || transitionStartTurn == null) {
@@ -269,39 +203,13 @@ export function getEffectiveStrategyRates(
     };
   }
 
-  const source = relieve(getStrategy(operatingType, transitionFromStrategyId, preset, options));
+  const source = relieve(getStrategy(sectorType, transitionFromStrategyId, preset, options));
 
   // Interpolate each commodity rate
   const supply = blendRates(source.supply, target.supply, progress);
   const demand = blendRates(source.demand, target.demand, progress);
 
   return { supply, demand, isTransitioning: true };
-}
-
-/** Resolve a strategy transition through the sector's optional production model. */
-export function getEffectiveStrategyRatesForOperatingModel(
-  sectorType: string,
-  strategyId: string,
-  transitionFromStrategyId: string | undefined | null,
-  transitionStartTurn: number | undefined | null,
-  currentTurn: number,
-  industryModel?: string | null,
-  mediaDiscriminator?: string | null,
-  preset?: string,
-  hardwareInputReliefStartTurn?: number | null,
-  options?: StrategyOptions
-): EffectiveStrategyRates {
-  return getEffectiveStrategyRates(
-    getOperatingSectorType(sectorType, industryModel, mediaDiscriminator),
-    strategyId,
-    transitionFromStrategyId,
-    transitionStartTurn,
-    currentTurn,
-    mediaDiscriminator,
-    preset,
-    hardwareInputReliefStartTurn,
-    options
-  );
 }
 
 /** Linearly blend two rate maps. Commodities in either map are included. */
@@ -326,25 +234,11 @@ function blendRates(
   return result;
 }
 
-/**
- * True only for the news and broadcast media lane. A `media` row with the
- * `entertainment` discriminator runs the entertainment lane's economics, so the
- * media derate never reaches it. The discriminator is a required argument at
- * every call site so the ledger and the clearing offer cannot drift apart.
- */
-export function isNewsMediaLane(
-  sectorType: string,
-  mediaDiscriminator: string | null | undefined
-): boolean {
-  return getOperatingSectorType(sectorType, undefined, mediaDiscriminator) === "media";
-}
-
-/** The derate for one sector: 1 for everything outside the news media lane. */
+/** The derate for one sector: 1 for everything outside media. */
 export function plannedEconomyMediaSupplyFactor(
   sectorType: OperatingSectorType,
-  plannedEconomy: boolean,
-  mediaDiscriminator: string | null | undefined
+  plannedEconomy: boolean
 ): number {
-  if (!isNewsMediaLane(sectorType, mediaDiscriminator)) return 1;
+  if (sectorType !== "media") return 1;
   return plannedEconomy ? PLANNED_ECONOMY_MEDIA_SUPPLY_FACTOR : MARKET_ECONOMY_MEDIA_SUPPLY_FACTOR;
 }

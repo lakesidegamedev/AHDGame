@@ -5,7 +5,7 @@ import { ObjectId } from "mongodb";
 import type { CommodityType } from "@/lib/constants/commodities";
 import type { Corporation, CorporateSector } from "@/lib/db/types";
 import { buildMarketContext } from "@/lib/market/marketContext";
-import { getEffectiveStrategyRatesForOperatingModel } from "@/lib/constants/sectorStrategies";
+import { getEffectiveStrategyRates } from "@/lib/constants/sectorStrategies";
 import { processSector, type SectorTurnEnv } from "@/lib/turn/corporation/sectorTurn";
 import type { CorporationLookups } from "@/lib/turn/corporation/types";
 const CORP_ID = new ObjectId("000000000000000000000001");
@@ -117,13 +117,7 @@ export function scenario(overrides: Partial<CorporateSector> = {}) {
   env.lookups.engineSixCountries = new Set(["US"]);
   env.market.explicitPlantCostsEnabled = true;
   env.market.contractProductionTargetBySectorId = new Map();
-  const rates = getEffectiveStrategyRatesForOperatingModel(
-    "technology",
-    "software",
-    undefined,
-    undefined,
-    1000
-  );
+  const rates = getEffectiveStrategyRates("technology", "software", undefined, undefined, 1000);
   for (const commodity of new Set([...Object.keys(rates.supply), ...Object.keys(rates.demand)])) {
     env.lookups.globalCommodityBalances.set(commodity as CommodityType, {
       supply: 1000,

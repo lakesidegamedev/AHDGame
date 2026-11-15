@@ -1,10 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { producerRecipe } from "./recipeRules";
 import { COMMODITY_BASE_PRICES } from "@/lib/constants/commodities";
-import {
-  getEffectiveStrategyRatesForOperatingModel,
-  SECTOR_STRATEGIES,
-} from "@/lib/constants/sectorStrategies";
+import { getEffectiveStrategyRates, SECTOR_STRATEGIES } from "@/lib/constants/sectorStrategies";
 import { OPERATING_SECTOR_TYPES } from "@/lib/constants/corporations";
 
 describe("physical producer recipes", () => {
@@ -14,14 +11,12 @@ describe("physical producer recipes", () => {
         for (const strategy of SECTOR_STRATEGIES[lane]) {
           if (strategy.minDecade != null && Number(strategy.minDecade) > Number(preset.slice(0, 4)))
             continue;
-          const rates = getEffectiveStrategyRatesForOperatingModel(
+          const rates = getEffectiveStrategyRates(
             lane,
             strategy.id,
             undefined,
             undefined,
             0,
-            undefined,
-            undefined,
             preset
           );
           for (const eraUnitScale of [1, 3.75]) {

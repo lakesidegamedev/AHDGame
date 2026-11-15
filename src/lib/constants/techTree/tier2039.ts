@@ -373,58 +373,6 @@ export const TIER_2039_SECTOR: Record<OperatingSectorType, NodeSpec[]> = {
       effects: [{ kind: "marketingStrength", flat: 95 }],
     },
   ],
-  manufacturing_vehicles: [
-    {
-      name: "Solid-State Battery Lines",
-      description:
-        "Mass solid-state cells raise range and margin and unlock the Solid-State Vehicles method.",
-      effects: [
-        { kind: "unlockStrategy", strategyId: "solid_state_vehicles" },
-        { kind: "inputEfficiency", pct: 0.12 },
-        { kind: "growthCostReduction", pct: 0.085 },
-      ],
-    },
-    {
-      name: "Sodium-Ion Packs",
-      description: "Cheap cells cut dependence on scarce metals.",
-      effects: [{ kind: "inputEfficiency", pct: 0.095 }],
-    },
-    {
-      name: "Fleet Software Subscriptions",
-      description: "Owners pay monthly for driving features.",
-      effects: [{ kind: "marketingStrength", flat: 75 }],
-    },
-    {
-      name: "Gigacast Platforms",
-      description: "Whole underbodies are cast in a single piece.",
-      effects: [{ kind: "growthCostReduction", pct: 0.105 }],
-    },
-    {
-      name: "Bidirectional Charging",
-      description: "Parked cars sell power back to the grid.",
-      effects: [{ kind: "inputEfficiency", pct: 0.08 }],
-    },
-    {
-      name: "Autonomy Data Engines",
-      description: "Fleet data trains driving software faster.",
-      effects: [{ kind: "inputEfficiency", pct: 0.095 }],
-    },
-    {
-      name: "Robotic Final Assembly",
-      description: "Robots fit interiors and wiring.",
-      effects: [{ kind: "growthCostReduction", pct: 0.105 }],
-    },
-    {
-      name: "Magnet-Free Motors",
-      description: "Motors that need no rare earth magnets.",
-      effects: [{ kind: "inputEfficiency", pct: 0.095 }],
-    },
-    {
-      name: "Battery Second Life",
-      description: "Used packs are resold as grid storage.",
-      effects: [{ kind: "logisticsStrength", flat: 32 }],
-    },
-  ],
   technology: [
     {
       name: "Agent Platforms",
@@ -786,60 +734,6 @@ export const TIER_2039_SECTOR: Record<OperatingSectorType, NodeSpec[]> = {
       name: "Network Slicing Markets",
       description: "Guaranteed network slices sell to industry.",
       effects: [{ kind: "growthCostReduction", pct: 0.085 }],
-    },
-  ],
-  media_entertainment: [
-    {
-      name: "Personalized Storytelling",
-      description: "Stories assembled per viewer unlock the Personalized Entertainment method.",
-      effects: [
-        { kind: "unlockStrategy", strategyId: "personalised_media" },
-        { kind: "laborCostReduction", pct: 0.13 },
-        { kind: "growthCostReduction", pct: 0.1 },
-      ],
-    },
-    {
-      name: "Generated Game Worlds",
-      description: "Agents build whole worlds to order.",
-      effects: [{ kind: "laborCostReduction", pct: 0.11 }],
-    },
-    {
-      name: "Live Synthetic Performers",
-      description: "Licensed digital performers work any venue.",
-      effects: [{ kind: "growthCostReduction", pct: 0.085 }],
-    },
-    {
-      name: "Mixed Reality Venues",
-      description: "Physical venues are layered with digital shows. Unlocks Immersive Media.",
-      effects: [
-        { kind: "unlockStrategy", strategyId: "immersive_media" },
-        { kind: "marketingStrength", flat: 95 },
-      ],
-    },
-    {
-      name: "Creator Content Markets",
-      description: "Creators sell content inside the platform.",
-      effects: [{ kind: "laborCostReduction", pct: 0.11 }],
-    },
-    {
-      name: "Agentic Characters",
-      description: "Characters remember and respond to each fan.",
-      effects: [{ kind: "growthCostReduction", pct: 0.085 }],
-    },
-    {
-      name: "Instant Localization",
-      description: "Every release ships in every language.",
-      effects: [{ kind: "laborCostReduction", pct: 0.11 }],
-    },
-    {
-      name: "Adaptive Soundtracks",
-      description: "Music is scored live to each scene and viewer.",
-      effects: [{ kind: "growthCostReduction", pct: 0.085 }],
-    },
-    {
-      name: "Full-Body Haptics",
-      description: "Feedback suits sell premium sessions.",
-      effects: [{ kind: "laborCostReduction", pct: 0.11 }],
     },
   ],
   logistics: [

@@ -192,7 +192,6 @@ describe("updateCorporationSettings — tech unlock drop on primary type switch 
       ok: true,
       corporation: makeCorp({
         type: "manufacturing",
-        industryModel: "vehicles",
         unlockedTechNodeIds: ["corp-1940-1", "manufacturing-1950-1", "manufacturing-1950-2"],
         techDecadeLane: { "1950": "sector" },
         techDecadeChosenTurn: { "1950": 16 },
@@ -222,6 +221,5 @@ describe("updateCorporationSettings — tech unlock drop on primary type switch 
     expect(updateArg.$set.unlockedTechNodeIds).not.toContain("chemical_industries-1950-1");
     expect(updateArg.$unset?.["techDecadeLane.1950"]).toBe("");
     expect(updateArg.$unset?.["techDecadeChosenTurn.1950"]).toBe("");
-    expect(updateArg.$unset?.industryModel).toBe("");
   });
 });

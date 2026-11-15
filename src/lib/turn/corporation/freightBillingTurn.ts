@@ -117,8 +117,6 @@ export function buildFreightBillingBySector(args: {
             strategyId: sector.strategyId,
             transitionFromStrategyId: sector.transitionFromStrategyId,
             transitionStartTurn: sector.transitionStartTurn,
-            industryModel: sector.industryModel,
-            mediaDiscriminator: sector.mediaDiscriminator,
             revenueAnchor: readCorpEconomicAnchor(sector.revenue, hostCode, hostRate),
             producedUnits: sector.producedUnits,
             capacityUnits: sector.operatingCapacityUnits ?? sector.capitalStock,

@@ -12,10 +12,6 @@ import { useCurrency } from "@/contexts/CurrencyContext";
 import { Factory, Hammer, PauseCircle, PlayCircle, ShieldCheck, X } from "lucide-react";
 import type { CommodityFlow, PlantsData } from "../types";
 import type { OperatingSectorType } from "@/lib/constants/corporationsClient";
-import type {
-  ManufacturingIndustryModel,
-  MediaDiscriminator,
-} from "@/lib/constants/corporationsClient";
 import {
   capitalizeFacility,
   facilityPlural,
@@ -42,9 +38,6 @@ interface PlantPanelProps {
   freightState?: { observedLoad: number; capacity: number; turn: number | null };
   /** Drives the facility noun. A retail sector says "stores", not "plants". */
   sectorType: OperatingSectorType;
-  /** Manufacturing production model, e.g. "vehicles", which sets the facility size. */
-  industryModel?: ManufacturingIndustryModel | null;
-  mediaDiscriminator?: MediaDiscriminator | null;
   mediaAdvertisingCampaignFactor?: number;
   /** The national industry union covering this workforce, vacant or led. */
   unionId?: string | null;
@@ -79,8 +72,6 @@ export default function PlantPanel({
   marketSupplies = [],
   freightState,
   sectorType,
-  industryModel,
-  mediaDiscriminator,
   mediaAdvertisingCampaignFactor = 1,
   unionId,
   unionName,
@@ -101,8 +92,6 @@ export default function PlantPanel({
   // dialog and the persisted ledger, so a vehicle recipe counts vehicle plants.
   const plantSizing = {
     sectorType,
-    industryModel,
-    mediaDiscriminator,
     strategyId: plants.strategyId,
   };
   const unitsPerPlant = plantSizeForSector(plantSizing);
@@ -133,7 +122,7 @@ export default function PlantPanel({
   const staffingShortfall =
     workersDesired > 0 && plants.workers < workersDesired ? 1 - plants.workers / workersDesired : 0;
   const mediaAdvertisingSupply =
-    sectorType === "media" && mediaDiscriminator !== "entertainment"
+    sectorType === "media"
       ? marketSupplies.find((supply) => supply.commodity === "advertising")
       : undefined;
   const primaryMediaSupply =
@@ -153,9 +142,7 @@ export default function PlantPanel({
     ),
   });
   const countedCampaigns =
-    sectorType === "media" && mediaDiscriminator !== "entertainment" && hasRun
-      ? (mediaAdvertisingSupply?.units ?? 0)
-      : null;
+    sectorType === "media" && hasRun ? (mediaAdvertisingSupply?.units ?? 0) : null;
 
   return (
     <div
@@ -288,11 +275,7 @@ export default function PlantPanel({
                   {fmtUnits(primaryMediaSupply.units)} {primaryMediaSupply.unit}/day
                   {mediaLedgerShare != null ? ` (${fmtPct(mediaLedgerShare)} of today's run)` : ""}
                 </p>
-                <p className="mt-1 text-muted">
-                  {mediaDiscriminator === "entertainment"
-                    ? t("mediaEntertainmentExplanation")
-                    : t("mediaAdvertisingExplanation")}
-                </p>
+                <p className="mt-1 text-muted">{t("mediaAdvertisingExplanation")}</p>
               </div>
             )}
             {countedCampaigns != null && (

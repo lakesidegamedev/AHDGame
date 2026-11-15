@@ -1,6 +1,5 @@
 import { activeCapacityFraction } from "@/lib/corporations/investment/rules";
 import type { CorporationType } from "@/lib/constants/corporations";
-import type { MediaDiscriminator } from "@/lib/constants/corporations";
 import {
   COMMODITY_BASE_PRICES,
   commodityMixWeight,
@@ -10,7 +9,7 @@ import {
   type CommodityType,
 } from "@/lib/constants/commodities";
 import {
-  getEffectiveStrategyRatesForOperatingModel,
+  getEffectiveStrategyRates,
   plannedEconomyMediaSupplyFactor,
 } from "@/lib/constants/sectorStrategies";
 import { retoolOperatingCapacityRatio } from "@/lib/corporations/retooling/rules";
@@ -22,8 +21,6 @@ import { isPlannedEconomy } from "@/lib/constants/commandEconomy";
  */
 export type SupplyAgreementCapacitySector = {
   sectorType: CorporationType;
-  industryModel?: string | null;
-  mediaDiscriminator?: MediaDiscriminator | null;
   capitalStock?: number | null;
   strategyId?: string | null;
   transitionFromStrategyId?: string | null;
@@ -79,19 +76,35 @@ export function supplyAgreementSectorStates(
  * Split out so a caller that prices several commodities for the same sector
  * resolves it once instead of once per commodity.
  */
+/**
+ * Usable daily output of `commodity` across a supplier's plants, in the same
+ * units `volumeCap` is denominated in. Shared by the player propose route and
+ * the NPP matcher so the two cannot drift.
+ *
+ * Mothballed plants contribute nothing. Scaling goes through
+ * `plantsCapacityScaledUnits` (production policy, natcorp, embargo) then the
+ * canonical mix split, identical to clearing and the world supply ledger. The
+ * capacity variant is required here because the input is NAMEPLATE capacity,
+ * which has never been through `sectorTurn` and so does not yet carry the
+ * production-policy output curve.
+ */
+/**
+ * A sector's effective output mix: the recipe after transition blending and the
+ * hardware input relief, exactly as the capacity and achievable legs price it.
+ * Split out so a caller that prices several commodities for the same sector
+ * resolves it once instead of once per commodity.
+ */
 export function supplierCommoditySupplyMix(
   sector: SupplyAgreementCapacitySector,
   turn: number
 ): Partial<Record<CommodityType, number>> {
   return (
-    getEffectiveStrategyRatesForOperatingModel(
+    getEffectiveStrategyRates(
       sector.sectorType,
       sector.strategyId ?? "standard",
       sector.transitionFromStrategyId,
       sector.transitionStartTurn,
-      turn,
-      sector.industryModel,
-      sector.mediaDiscriminator
+      turn
     ).supply ?? {}
   );
 }
@@ -137,11 +150,7 @@ export function supplierScaledCapacityUnits(args: {
       productionPolicyLevel: sector.productionPolicyLevel,
       embargoSupplyFactor:
         embargoSupplyFactorFor(sector) *
-        plannedEconomyMediaSupplyFactor(
-          sector.sectorType,
-          plannedEconomy,
-          sector.mediaDiscriminator
-        ),
+        plannedEconomyMediaSupplyFactor(sector.sectorType, plannedEconomy),
     }) ?? 0
   );
 }
@@ -196,14 +205,12 @@ export function computeSupplierCommodityAchievableUnits(args: {
 }): number | null {
   let units = 0;
   for (const sector of supplyAgreementSectorsInScope(args.sectors, args.stateId)) {
-    const rates = getEffectiveStrategyRatesForOperatingModel(
+    const rates = getEffectiveStrategyRates(
       sector.sectorType,
       sector.strategyId ?? "standard",
       sector.transitionFromStrategyId,
       sector.transitionStartTurn,
-      args.turn,
-      sector.industryModel,
-      sector.mediaDiscriminator
+      args.turn
     );
     const plannedEconomy = isPlannedEconomy(
       sector.countryId,
@@ -218,11 +225,7 @@ export function computeSupplierCommodityAchievableUnits(args: {
       isNatcorp: args.isNatcorp,
       embargoSupplyFactor:
         embargoSupplyFactorFor(sector) *
-        plannedEconomyMediaSupplyFactor(
-          sector.sectorType,
-          plannedEconomy,
-          sector.mediaDiscriminator
-        ),
+        plannedEconomyMediaSupplyFactor(sector.sectorType, plannedEconomy),
     });
     if (scaled === null) return null;
     units += scaled * weight;

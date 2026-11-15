@@ -34,8 +34,6 @@ describe("collectSeedIndexPlan (#2699)", () => {
         corporationId: 1,
         stateId: 1,
         sectorType: 1,
-        industryModel: 1,
-        mediaDiscriminator: 1,
       },
       options: { unique: true },
     });

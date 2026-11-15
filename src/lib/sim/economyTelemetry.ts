@@ -1,4 +1,3 @@
-import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
 import { resolveCampaignPriceLevel } from "@/lib/campaigns/rules/priceLevel";
 import { collectForexActivity } from "@/lib/sim/forexActivity";
 import type { ForexActivityRecord } from "@/lib/sim/rules/forexActivity";
@@ -653,8 +652,6 @@ async function collectCoverage(db: Db): Promise<CoverageTelemetry> {
             countryId: 1,
             stateId: 1,
             sectorType: 1,
-            industryModel: 1,
-            mediaDiscriminator: 1,
             soldFraction: 1,
           },
         }
@@ -697,9 +694,7 @@ async function collectCoverage(db: Db): Promise<CoverageTelemetry> {
       typeof s.stateId === "string" &&
       typeof s.sectorType === "string"
     ) {
-      present.add(
-        `${s.stateId}:${getOperatingSectorType(s.sectorType, s.industryModel, s.mediaDiscriminator)}`
-      );
+      present.add(`${s.stateId}:${s.sectorType}`);
     }
   }
   const universe = US_STATES.length * OPERATING_SECTOR_TYPES.length;

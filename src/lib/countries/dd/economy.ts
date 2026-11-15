@@ -20,10 +20,9 @@ const baselineMonetary = {
   neutralPrimeRate: 5,
 };
 const sectorWeightsBase = {
-  manufacturing: 24,
+  manufacturing: 31,
   chemical_industries: 10,
   energy: 9,
-  manufacturing_vehicles: 7,
   agriculture: 9,
   construction: 7,
   extraction: 6,
@@ -33,7 +32,7 @@ const sectorWeightsBase = {
   retail: 3,
   real_estate: 2,
   technology: 2,
-  media_entertainment: 1,
+  media: 1,
 };
 // No REP_ECON row; the folder omits `repEcon` rather than defaulting it.
 // No COST_SCALE_ANCHORS row; the folder omits `costScaleAnchors` rather than defaulting it.
@@ -80,7 +79,7 @@ export const DD_ECONOMY: CountryEconomy = {
     base: sectorWeightsBase,
     byEra: {
       "1953": {
-        manufacturing: 28,
+        manufacturing: 30,
         chemical_industries: 8,
         extraction: 8,
         defense: 12,
@@ -89,17 +88,15 @@ export const DD_ECONOMY: CountryEconomy = {
         construction: 6,
         logistics: 4,
         healthcare: 4,
-        manufacturing_vehicles: 2,
         technology: 1,
         retail: 2,
-        media: 1,
+        media: 2,
         financial: 1,
         real_estate: 1,
         telecommunications: 1,
-        media_entertainment: 1,
       },
       "1979": {
-        manufacturing: 25,
+        manufacturing: 26,
         chemical_industries: 15,
         extraction: 12,
         energy: 10,
@@ -111,17 +108,14 @@ export const DD_ECONOMY: CountryEconomy = {
         logistics: 4,
         telecommunications: 1,
         technology: 1,
-        manufacturing_vehicles: 1,
         real_estate: 0,
         financial: 0,
-        media: 1,
-        media_entertainment: 1,
+        media: 2,
       },
       "1991": {
-        manufacturing: 24,
+        manufacturing: 31,
         chemical_industries: 10,
         energy: 9,
-        manufacturing_vehicles: 7,
         agriculture: 9,
         construction: 7,
         extraction: 6,
@@ -131,7 +125,7 @@ export const DD_ECONOMY: CountryEconomy = {
         retail: 3,
         real_estate: 2,
         technology: 2,
-        media_entertainment: 1,
+        media: 1,
       },
     },
   },

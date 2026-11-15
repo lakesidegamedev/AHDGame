@@ -255,22 +255,13 @@ export async function securedSiteMergeRefusal(
     | "corporationId"
     | "stateId"
     | "sectorType"
-    | "industryModel"
-    | "mediaDiscriminator"
     | "constructionFinancing"
     | "constructionPropertyTransition"
   >[],
   toId: ObjectId,
   /** How the caller pairs a moving site with the survivor it merges into. */
-  mergeKey: (
-    sector: Pick<CorporateSector, "stateId" | "sectorType" | "industryModel" | "mediaDiscriminator">
-  ) => string = (sector) =>
-    [
-      sector.stateId,
-      sector.sectorType,
-      sector.industryModel ?? "",
-      sector.mediaDiscriminator ?? "",
-    ].join("|")
+  mergeKey: (sector: Pick<CorporateSector, "stateId" | "sectorType">) => string = (sector) =>
+    [sector.stateId, sector.sectorType].join("|")
 ): Promise<string | null> {
   const moving = sectors.filter((sector) => !sector.corporationId.equals(toId));
   if (moving.length === 0) return null;
@@ -287,8 +278,6 @@ export async function securedSiteMergeRefusal(
           stateId: 1,
           countryId: 1,
           sectorType: 1,
-          industryModel: 1,
-          mediaDiscriminator: 1,
           constructionFinancing: 1,
           constructionPropertyTransition: 1,
         },

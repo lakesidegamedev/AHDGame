@@ -5,7 +5,7 @@ import type {
   NppCorpDecision,
 } from "@/lib/turn/npp/corpDecisionTypes";
 import type { MarketCandidate } from "@/lib/turn/npp/marketCandidates";
-import type { CorporationType, ManufacturingIndustryModel } from "@/lib/constants/corporations";
+import type { CorporationType } from "@/lib/constants/corporations";
 import { marketRoomUnits, type PlacementSignals } from "@/lib/turn/npp/marketSignals";
 import type { SectorBuildOrder } from "@/lib/db/types";
 import { foundingStarterUnits, sectorEntryFeeAnchor } from "@/lib/corporations/foundingPlant";
@@ -31,7 +31,6 @@ import {
 } from "@/lib/turn/npp/entryDiagnostics";
 import type { FoundingCapacityOutcome } from "@/lib/turn/npp/capacityDecisionTelemetry";
 import type { Corporation } from "@/lib/db/types";
-import type { MediaDiscriminator } from "@/lib/constants/corporations";
 
 /** Prices and, when affordable, founds a new sector; returns the updated cash and entry state. */
 export function decideNppFounding({
@@ -58,12 +57,7 @@ export function decideNppFounding({
   foundingBlockEntered: boolean;
   plants: NppPlantsContext | undefined;
   foundingTarget: MarketCandidate | null;
-  nationalShare: (
-    countryId: string,
-    sectorType: CorporationType,
-    industryModel?: string | null,
-    mediaDiscriminator?: string | null
-  ) => number;
+  nationalShare: (countryId: string, sectorType: CorporationType) => number;
   liquidCapital: number;
   exceptionalShortageEntry: boolean;
   borrowAllowed: boolean;
@@ -80,8 +74,6 @@ export function decideNppFounding({
     stateId: string;
     countryId: string;
     sectorType: CorporationType;
-    industryModel?: ManufacturingIndustryModel | null;
-    mediaDiscriminator?: MediaDiscriminator | null;
     revenue: number;
     profitMargin: number;
     strategyId?: string;
@@ -98,19 +90,13 @@ export function decideNppFounding({
   if (foundingBlockEntered && foundingTarget !== null) {
     if (plants?.enabled) {
       // NPPs and players found sectors on the same priced-capacity terms.
-      const starterUnits = foundingStarterUnits(
-        foundingTarget.sectorType as CorporationType,
-        foundingTarget.industryModel as "vehicles" | null | undefined,
-        foundingTarget.mediaDiscriminator
-      );
+      const starterUnits = foundingStarterUnits(foundingTarget.sectorType as CorporationType);
       // Per-unit founding price. computeBuildCost is linear in units, so a
       // one-unit quote scales exactly while retaining its itemized breakdown.
       const foundingUnitQuote =
         starterUnits > 0
           ? computeBuildCost({
               sectorType: foundingTarget.sectorType as CorporationType,
-              industryModel: foundingTarget.industryModel,
-              mediaDiscriminator: foundingTarget.mediaDiscriminator,
               units: 1,
               // Greenfield entry uses the sector-type default strategy.
               strategyId: null,
@@ -120,9 +106,7 @@ export function decideNppFounding({
               marketSharePercent: 0,
               nationalMarketSharePercent: nationalShare(
                 foundingTarget.countryId,
-                foundingTarget.sectorType as CorporationType,
-                foundingTarget.industryModel,
-                foundingTarget.mediaDiscriminator
+                foundingTarget.sectorType as CorporationType
               ),
               primeRate: plants.primeRateOf(foundingTarget.countryId),
               // NPP CEOs have no Character Business Acumen; neutral is honest.
@@ -151,25 +135,21 @@ export function decideNppFounding({
       const affordableUnits =
         perUnitFoundingLocal > 0 ? Math.floor(deployBudgetLocal / perUnitFoundingLocal) : 0;
       const isExtraction = foundingTarget.sectorType === "extraction";
-      // Extraction founds against a DEPOSIT, not local demand: its output is a
-      // traded commodity sold wherever the commodity is short, so it has no
-      // demand cap. Cash and a per-mine facility ceiling bound it instead; the
-      // state deposit haircut caps real output and the reinvestment growth leg
-      // deepens it over turns. Demand-side entrants are capped by what the
-      // bucket still wants, net of capacity already ordered or founded this
-      // pass, for the mix they would run. A critical-shortage entry reads its
-      // deepest leg so a balanced co-product cannot dilute the shortage
-      // (rules/marketSaturation).
-      const unmetUnits =
-        isExtraction || !placementSignals?.unmetDemandUnitsOf
-          ? null
-          : marketRoomUnits(placementSignals, foundingTarget, {
-              strategyId: foundingStrategyId,
-              aggregate: exceptionalShortageEntry ? "max" : "mean",
-            });
+      // Every entrant, mines included, is capped by what the bucket still wants,
+      // net of capacity already ordered or founded this pass, for the mix it
+      // would run. A critical-shortage entry reads its deepest leg so a
+      // balanced co-product cannot dilute the shortage (rules/marketSaturation).
+      // A mine's deposit and a per-mine facility ceiling only bound that size
+      // further; they are never the reason to found.
+      const unmetUnits = !placementSignals?.unmetDemandUnitsOf
+        ? null
+        : marketRoomUnits(placementSignals, foundingTarget, {
+            strategyId: foundingStrategyId,
+            aggregate: exceptionalShortageEntry ? "max" : "mean",
+          });
       const unmetSizing = foundingUnmetSizing({ unmetUnits, starterUnits });
       const sizeCap = isExtraction
-        ? starterUnits * NPP_EXTRACTION_FOUNDING_MAX_FACILITIES
+        ? Math.min(unmetSizing.sizeCap, starterUnits * NPP_EXTRACTION_FOUNDING_MAX_FACILITIES)
         : unmetSizing.sizeCap;
       const unmetBlocksEntry = unmetSizing.blocksEntry;
       const sizedUnits =
@@ -199,8 +179,7 @@ export function decideNppFounding({
       // a flat nominal band and cannot know what a build in this sector costs;
       // without this an NPP would commit to a plant it cannot pay for and drive
       // itself under the cash floor. Demand-side sectors also require the market
-      // have room for the facility; extraction is deposit-gated (candidacy)
-      // rather than headroom-gated, so it skips that check.
+      // have room for the facility.
       // Named (not inlined) so the capacity observation below records the same
       // first-rejecting-gate outcome the branch takes.
       noteFoundingCapacityOutcome(foundingOutcome, {
@@ -228,19 +207,11 @@ export function decideNppFounding({
         // Nameplate priced off the units built, as the player founding path does.
         const nameplateAnchor =
           buildUnits *
-          revenuePerCapacityUnit(
-            foundingTarget.sectorType as CorporationType,
-            plants.eraUnitScale,
-            foundingTarget.industryModel,
-            foundingTarget.mediaDiscriminator
-          );
+          revenuePerCapacityUnit(foundingTarget.sectorType as CorporationType, plants.eraUnitScale);
         newSectors.push({
           stateId: foundingTarget.stateId,
           countryId: foundingTarget.countryId,
           sectorType: foundingTarget.sectorType,
-          industryModel: (foundingTarget.industryModel ??
-            null) as ManufacturingIndustryModel | null,
-          mediaDiscriminator: foundingTarget.mediaDiscriminator,
           strategyId: foundingStrategyId,
           // Written in the corp's own currency, because that is what
           // `sectorTurn` reads it as (`readCorpEconomicAnchor` on the way in,
@@ -264,9 +235,6 @@ export function decideNppFounding({
         demandClaims.push({
           stateId: foundingTarget.stateId,
           sectorType: foundingTarget.sectorType as CorporationType,
-          industryModel: (foundingTarget.industryModel ??
-            null) as ManufacturingIndustryModel | null,
-          mediaDiscriminator: foundingTarget.mediaDiscriminator,
           units: buildUnits,
           countryId: foundingTarget.countryId,
         });
@@ -316,22 +284,10 @@ export function decideNppFounding({
           stateId: foundingTarget.stateId,
           countryId: foundingTarget.countryId,
           sectorType: foundingTarget.sectorType,
-          industryModel: (foundingTarget.industryModel ??
-            null) as ManufacturingIndustryModel | null,
-          mediaDiscriminator: foundingTarget.mediaDiscriminator,
           strategyId: foundingStrategyId,
           revenue: Math.round(
-            foundingStarterUnits(
-              foundingTarget.sectorType as CorporationType,
-              foundingTarget.industryModel as "vehicles" | null | undefined,
-              foundingTarget.mediaDiscriminator
-            ) *
-              revenuePerCapacityUnit(
-                foundingTarget.sectorType as CorporationType,
-                1,
-                foundingTarget.industryModel,
-                foundingTarget.mediaDiscriminator
-              )
+            foundingStarterUnits(foundingTarget.sectorType as CorporationType) *
+              revenuePerCapacityUnit(foundingTarget.sectorType as CorporationType, 1)
           ),
           profitMargin: 35,
         });

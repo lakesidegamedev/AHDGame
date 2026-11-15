@@ -93,7 +93,6 @@ describe("POST /api/admin/heal/duplicate-sectors", () => {
         corporationId: corpId.toString(),
         stateId: "LON",
         sectorType: "energy",
-        industryModel: null,
         count: 2,
       },
     ]);

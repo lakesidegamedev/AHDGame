@@ -12,8 +12,7 @@ import type { StateResourceCapacity } from "@/lib/db/types/stateResourceCapacity
 import { chooseSeedExtractionSite } from "@/lib/extraction/rules/seedPlacement";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import type { Corporation } from "@/lib/db/types";
-import { OPERATING_SECTOR_TYPES, operatingSectorIdentity } from "@/lib/constants/corporations";
-import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
+import { OPERATING_SECTOR_TYPES } from "@/lib/constants/corporations";
 import { getEraUnitScale } from "@/lib/constants/sectorSeedEra";
 import {
   getPresetEnablementCountries,
@@ -138,11 +137,8 @@ export async function seedNppCorporations(
 
   // One market per operating lane, stored under its canonical identity.
   const sectorMarkets = OPERATING_SECTOR_TYPES.map((lane) => {
-    const identity = operatingSectorIdentity(lane);
     return {
-      type: identity.sectorType,
-      industryModel: identity.industryModel,
-      mediaDiscriminator: identity.mediaDiscriminator,
+      type: lane,
     };
   });
 
@@ -155,19 +151,13 @@ export async function seedNppCorporations(
         : null;
     const existing = await corporationsCollection(db)
       .find({ ceoType: "npp", countryId })
-      .project<Pick<Corporation, "type" | "industryModel" | "mediaDiscriminator">>({
+      .project<Pick<Corporation, "type">>({
         type: 1,
-        industryModel: 1,
-        mediaDiscriminator: 1,
       })
       .toArray();
     let countrySpawned = 0;
     for (const market of sectorMarkets) {
-      const present = existing.filter(
-        (corp) =>
-          getOperatingSectorType(corp.type, corp.industryModel, corp.mediaDiscriminator) ===
-          getOperatingSectorType(market.type, market.industryModel, market.mediaDiscriminator)
-      ).length;
+      const present = existing.filter((corp) => corp.type === market.type).length;
       const missing = Math.max(0, perSectorCount - present);
       if (missing === 0) continue;
       const extractionCap =
@@ -188,7 +178,7 @@ export async function seedNppCorporations(
       });
       if (spawned.length !== missing) {
         throw new Error(
-          `NPP seed incomplete: ${countryId}/${market.type}/${market.industryModel ?? "standard"} expected ${missing} competitors, created ${spawned.length}`
+          `NPP seed incomplete: ${countryId}/${market.type} expected ${missing} competitors, created ${spawned.length}`
         );
       }
       countrySpawned += spawned.length;

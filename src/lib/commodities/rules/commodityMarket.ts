@@ -11,10 +11,7 @@ import {
 } from "@/lib/constants/commoditiesCore";
 import type { OperatingSectorType } from "@/lib/constants/corporations";
 import type { CountryId } from "@/lib/constants/countries";
-import {
-  getEffectiveStrategyRatesForOperatingModel,
-  getOperatingSectorType,
-} from "@/lib/constants/sectorStrategies";
+import { getEffectiveStrategyRates } from "@/lib/constants/sectorStrategies";
 import {
   energyProductivityMultiplier,
   plantUtilizationForInputs,
@@ -836,8 +833,6 @@ export interface SectorUnitsOut {
 export function computeRawSupplyDemand(
   sectors: {
     sectorType: string;
-    industryModel?: string | null;
-    mediaDiscriminator?: string | null;
     revenue: number;
     stateId: string;
     /** Optional owner used to attribute this sector's realized ledger supply. */
@@ -1074,7 +1069,7 @@ export function computeRawSupplyDemand(
   };
   const outputDemandDeltasByState = new Map<string, Map<CommodityType, number>>();
   const recordOutputDemandDelta = (
-    sector: { countryId?: string; stateId: string; mediaDiscriminator?: string | null },
+    sector: { countryId?: string; stateId: string },
     sectorType: OperatingSectorType,
     commodity: CommodityType,
     outputUnits: number
@@ -1098,11 +1093,7 @@ export function computeRawSupplyDemand(
 
   for (const sector of sectors) {
     // Persisted types are strings here; an unknown one simply has no recipe.
-    const st = getOperatingSectorType(
-      sector.sectorType,
-      sector.industryModel,
-      sector.mediaDiscriminator
-    ) as OperatingSectorType;
+    const st = sector.sectorType as OperatingSectorType;
 
     // Ensure state map exists (no base stabilizer — state level is fully dynamic)
     if (!byState.has(sector.stateId)) {
@@ -1125,14 +1116,12 @@ export function computeRawSupplyDemand(
     const hasStrategy = sector.strategyId && sector.strategyId !== "standard";
     const strategyRates =
       hasStrategy || sector.transitionFromStrategyId
-        ? getEffectiveStrategyRatesForOperatingModel(
+        ? getEffectiveStrategyRates(
             st,
             sector.strategyId ?? "standard",
             sector.transitionFromStrategyId,
             sector.transitionStartTurn,
             currentTurn ?? 0,
-            sector.industryModel,
-            sector.mediaDiscriminator,
             preset,
             hardwareInputReliefStartTurn
           )
@@ -1301,14 +1290,12 @@ export function computeRawSupplyDemand(
     const demandRates =
       strategyRates ??
       (eraForPreset(preset ?? DEFAULT_SEED_PRESET) === "1991"
-        ? getEffectiveStrategyRatesForOperatingModel(
+        ? getEffectiveStrategyRates(
             st,
             "standard",
             null,
             null,
             currentTurn ?? 0,
-            sector.industryModel,
-            sector.mediaDiscriminator,
             preset,
             hardwareInputReliefStartTurn
           )
@@ -1329,7 +1316,7 @@ export function computeRawSupplyDemand(
     }
 
     // World Events v1 Phase 1: temporary world-event sector demand bump
-    // (e.g. royal-event's tourism bump, modeled on the media entertainment
+    // (e.g. royal-event's tourism bump, modeled on the media
     // sector — see worldEvents/handlers/royalEvent.ts). Additive with the
     // retail GDP multiplier above, not a replacement for it.
     if (sectorDemandModifierPct && sector.countryId) {

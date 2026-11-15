@@ -16,11 +16,7 @@ import {
   getSectorTechEffectsForYear,
   type TechCorpView,
 } from "@/lib/constants/techTree";
-import type {
-  ManufacturingIndustryModel,
-  MediaDiscriminator,
-  OperatingSectorType,
-} from "@/lib/constants/corporations";
+import type { OperatingSectorType } from "@/lib/constants/corporations";
 import {
   DOMINANCE_SHIELD_UPKEEP_CAP,
   STRENGTH_UPKEEP_STAGE,
@@ -54,8 +50,6 @@ export async function loadStrengthUpkeepStage(db: Db): Promise<number> {
 export function upkeptDominanceShield(
   corp: TechCorpView,
   sectorType: OperatingSectorType,
-  industryModel: ManufacturingIndustryModel | null | undefined,
-  mediaDiscriminator: MediaDiscriminator | null | undefined,
   currentYear: number | null | undefined,
   stage: number | null | undefined
 ): number {
@@ -64,12 +58,10 @@ export function upkeptDominanceShield(
     typeof currentYear !== "number" ||
     !Number.isFinite(currentYear)
   ) {
-    return getSectorTechEffects(corp, sectorType, industryModel, mediaDiscriminator)
-      .dominanceShield;
+    return getSectorTechEffects(corp, sectorType).dominanceShield;
   }
   return Math.min(
     DOMINANCE_SHIELD_UPKEEP_CAP,
-    getSectorTechEffectsForYear(corp, sectorType, currentYear, industryModel, mediaDiscriminator)
-      .dominanceShield
+    getSectorTechEffectsForYear(corp, sectorType, currentYear).dominanceShield
   );
 }

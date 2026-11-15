@@ -14,17 +14,17 @@ function seedEntry(corpId: ObjectId, stateIds: string[]): CountryOwnedSeedData {
   return {
     corporation: {
       _id: corpId,
-      name: "East German Automobiles Enterprise",
+      name: "East German Manufacturing Enterprise",
       countryId: "DD",
       countryOwnerId: "DD",
-      type: "manufacturing_vehicles",
+      type: "manufacturing",
     },
     sectors: stateIds.map((stateId) => ({
       _id: new ObjectId(),
       corporationId: corpId,
       countryId: "DD",
       stateId,
-      sectorType: "manufacturing_vehicles",
+      sectorType: "manufacturing",
       revenue: 100,
     })),
   } as unknown as CountryOwnedSeedData;
@@ -72,7 +72,7 @@ describe("upsertCountryOwnedCorpEntries", () => {
     expect(filter).toMatchObject({
       countryId: "DD",
       stateId: "BEO",
-      sectorType: "manufacturing_vehicles",
+      sectorType: "manufacturing",
     });
     expect(update).toEqual({ $set: { corporationId: CANONICAL_SOE } });
     // The stale enterprise AND the bare issuer are both candidates to move off.

@@ -11,12 +11,7 @@
  *
  * Pure: sectors, last results and a price signal in, one choice or null out.
  */
-import {
-  OPERATING_SECTOR_TYPES,
-  operatingSectorIdentity,
-  type OperatingSectorType,
-} from "@/lib/constants/corporations";
-import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
+import { OPERATING_SECTOR_TYPES, type OperatingSectorType } from "@/lib/constants/corporations";
 import { freeTransitionConversion } from "@/lib/market/producerMarket/transitionRules";
 import type { CorporateSector } from "@/lib/db/types";
 
@@ -52,7 +47,7 @@ export function chooseTransitionConversion(input: {
   const lanesInState = new Map<string, Set<string>>();
   for (const s of input.sectors) {
     const lanes = lanesInState.get(s.stateId) ?? new Set<string>();
-    lanes.add(getOperatingSectorType(s.sectorType, s.industryModel, s.mediaDiscriminator));
+    lanes.add(s.sectorType);
     lanesInState.set(s.stateId, lanes);
   }
   const losing = input.sectors
@@ -72,11 +67,7 @@ export function chooseTransitionConversion(input: {
     );
   for (const sector of losing) {
     const country = String(sector.countryId ?? "");
-    const ownLane = getOperatingSectorType(
-      sector.sectorType,
-      sector.industryModel,
-      sector.mediaDiscriminator
-    );
+    const ownLane = sector.sectorType;
     const taken = lanesInState.get(sector.stateId) ?? new Set<string>();
     // Output shortage discounted by the scarcity of what the lane has to buy.
     const netOf = (lane: OperatingSectorType) => {
@@ -89,7 +80,7 @@ export function chooseTransitionConversion(input: {
     for (const lane of OPERATING_SECTOR_TYPES) {
       // Extraction depends on local deposits the rule cannot see; leave it to players.
       if (lane === ownLane || taken.has(lane)) continue;
-      if (operatingSectorIdentity(lane).sectorType === "extraction") continue;
+      if (lane === "extraction") continue;
       if (input.allowedLanes && !input.allowedLanes.has(lane)) continue;
       const score = input.shortageOf(lane, country);
       const net = netOf(lane);

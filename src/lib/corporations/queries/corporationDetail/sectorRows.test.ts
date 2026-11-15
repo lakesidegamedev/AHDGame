@@ -11,8 +11,6 @@ const mediaSector = (over: Partial<FlowSector> = {}): FlowSector => ({
   strategyId: "standard",
   transitionFromStrategyId: null,
   transitionStartTurn: null,
-  industryModel: null,
-  mediaDiscriminator: null,
   producedUnits: 1_000,
   capacityUnits: 1_000,
   ...over,
@@ -67,7 +65,7 @@ describe("mediaAdvertisingOutputForSector", () => {
     ).toEqual({ units: 250, factor: 0.25 });
   });
 
-  it("keeps a news-media zero visible and excludes entertainment media", () => {
+  it("keeps a news-media zero visible", () => {
     expect(
       mediaAdvertisingOutputForSector(mediaSector({ producedUnits: 0 }), 10, {
         plantsEnabled: true,
@@ -75,10 +73,5 @@ describe("mediaAdvertisingOutputForSector", () => {
         commandEconomyEnabled: true,
       })
     ).toEqual({ units: 0, factor: 0.1 });
-    expect(
-      mediaAdvertisingOutputForSector(mediaSector({ mediaDiscriminator: "entertainment" }), 10, {
-        plantsEnabled: true,
-      })
-    ).toBeNull();
   });
 });

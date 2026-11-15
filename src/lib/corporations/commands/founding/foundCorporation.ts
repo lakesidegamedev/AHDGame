@@ -22,16 +22,7 @@ import { randomBrandColor } from "@/lib/corporations/brandColor";
 import type { Character, Corporation, State, User } from "@/lib/db/types";
 import { getNextSequentialId } from "@/lib/db/sequentialId";
 import { openCeoTenure } from "@/lib/corporations/ceoHistory";
-import {
-  CORPORATION_FOUNDING_COST,
-  MIN_CORPORATION_STARTING_CAPITAL,
-  MAX_CORPORATION_STARTING_CAPITAL,
-  CORPORATION_STARTING_CAPITAL,
-  OPERATING_SECTOR_TYPE_LABELS,
-  CEO_INITIAL_SHARES,
-  MIN_SHARE_PRICE,
-  operatingSectorIdentity,
-} from "@/lib/constants/corporations";
+import { CORPORATION_FOUNDING_COST, MIN_CORPORATION_STARTING_CAPITAL, MAX_CORPORATION_STARTING_CAPITAL, CORPORATION_STARTING_CAPITAL, OPERATING_SECTOR_TYPE_LABELS, CEO_INITIAL_SHARES, MIN_SHARE_PRICE } from "@/lib/constants/corporations";
 import { logWireEvent, wireHeadlineCorpFounded, wireHeadlineCorpIpo } from "@/lib/wireEvent";
 import { computeIpoIssuance } from "@/lib/corporations/ipoIssuance";
 import {
@@ -121,7 +112,7 @@ export async function foundCorporation({
     secondaryType,
     ipo,
   } = request;
-  const { sectorType: type, industryModel, mediaDiscriminator } = operatingSectorIdentity(lane);
+  const type = lane;
 
   // Block founding in command-economy countries (USSR etc.). Reads the
   // marketization dial rather than a static config flag, so a country
@@ -528,8 +519,6 @@ export async function foundCorporation({
     tickerSymbol,
     description: undefined,
     type,
-    ...(industryModel ? { industryModel } : {}),
-    ...(mediaDiscriminator ? { mediaDiscriminator } : {}),
     ...(secondaryType ? { secondaryType } : {}),
     countryId: character.countryId,
     ceoId: character._id,

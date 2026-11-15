@@ -84,13 +84,12 @@ describe.runIf(process.env.AHD_SIM_REPORT === "1" && REAL_MONGO_ENABLED)(
       const { getRegionCensusData } = await import("@/lib/seeds/regionCensusData");
       const preset = "1991-default";
 
-      const bootstrap = (fresh: boolean) =>
+      const bootstrap = () =>
         bootstrapGameWorld({
           db,
           preset,
           resetReference: true,
           log: () => {},
-          ...(fresh ? { fresh1991VehicleModelSeed: true, fresh1991MediaTaxonomySeed: true } : {}),
         });
 
       async function snapshot(): Promise<WorldSnapshot> {
@@ -160,7 +159,7 @@ describe.runIf(process.env.AHD_SIM_REPORT === "1" && REAL_MONGO_ENABLED)(
         null;
       // Fresh: an empty database, as a new world.
       const startedAt = Date.now();
-      await bootstrap(true);
+      await bootstrap();
       const freshSeed = await snapshot();
       const fresh = evaluateScenario({
         seed: freshSeed,
@@ -191,7 +190,7 @@ describe.runIf(process.env.AHD_SIM_REPORT === "1" && REAL_MONGO_ENABLED)(
           _id: { $in: staleIds },
         })
       ).toBe(STALE.length);
-      await bootstrap(false);
+      await bootstrap();
       const staleSeed = await snapshot();
       const staleReset = evaluateScenario({
         seed: staleSeed,

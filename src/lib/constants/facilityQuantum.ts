@@ -23,8 +23,6 @@
  */
 
 import type { OperatingSectorType } from "@/lib/constants/corporations";
-import type { MediaDiscriminator } from "@/lib/constants/corporations";
-import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
 
 /**
  * The daily nameplate revenue one facility should represent, in modern ₳.
@@ -41,7 +39,6 @@ const FACILITY_SIZE_UNITS: Record<OperatingSectorType, number> = {
   chemical_industries: 60,
   healthcare: 5,
   retail: 80,
-  manufacturing_vehicles: 1,
   technology: 25,
   energy: 250,
   agriculture: 60,
@@ -49,46 +46,29 @@ const FACILITY_SIZE_UNITS: Record<OperatingSectorType, number> = {
   construction: 3,
   defense: 8,
   telecommunications: 12,
-  media_entertainment: 50,
   logistics: 5,
   extraction: 250,
 };
 
 /**
- * Strategies whose output is priced like a different lane than the sector
- * type they run under. A manufacturing sector on a vehicle recipe makes
- * vehicles, its capacity unit carries a vehicle RPU, and its plants must be
- * vehicle plants, whether or not it carries `industryModel: "vehicles"`.
- * `facilityQuantum.test.ts` fails if a strategy that supplies vehicles is
- * missing here.
+ * Strategies whose recipe prices capacity far from the sector type's default
+ * mix, so one plant of them holds a different number of capacity units. A
+ * manufacturing sector on a vehicle recipe carries a vehicle RPU, and its
+ * plants are vehicle plants. `facilityQuantum.test.ts` fails if a strategy
+ * that supplies vehicles as its main output is missing here.
  */
-const STRATEGY_PLANT_LANE: Partial<Record<string, Record<string, OperatingSectorType>>> = {
+const STRATEGY_PLANT_SIZE_UNITS: Partial<Record<string, Record<string, number>>> = {
   manufacturing: {
-    vehicle_assembly: "manufacturing_vehicles",
-    vehicle_heavy_machinery: "manufacturing_vehicles",
+    vehicle_assembly: 1,
+    vehicle_heavy_machinery: 1,
   },
 };
 
 /** What a sector needs to say how big one of its plants is. */
 export interface PlantSizingSector {
   sectorType: string;
-  industryModel?: string | null;
-  mediaDiscriminator?: string | null;
-  /** The strategy the sector runs now. Decides the lane for retooled recipes. */
+  /** The strategy the sector runs now. Decides the size for retooled recipes. */
   strategyId?: string | null;
-}
-
-/** The lane whose plant size a sector uses: its operating model, then its recipe. */
-export function plantLaneForSector(sector: PlantSizingSector): OperatingSectorType {
-  const operatingType = getOperatingSectorType(
-    sector.sectorType,
-    sector.industryModel,
-    sector.mediaDiscriminator
-  ) as OperatingSectorType;
-  const byStrategy = sector.strategyId
-    ? STRATEGY_PLANT_LANE[operatingType]?.[sector.strategyId]
-    : undefined;
-  return byStrategy ?? operatingType;
 }
 
 /**
@@ -97,26 +77,28 @@ export function plantLaneForSector(sector: PlantSizingSector): OperatingSectorTy
  * ledger, tables) sizes them here so they can never disagree.
  */
 export function plantSizeForSector(sector: PlantSizingSector): number {
-  return FACILITY_SIZE_UNITS[plantLaneForSector(sector)] ?? 1;
+  const byStrategy = sector.strategyId
+    ? STRATEGY_PLANT_SIZE_UNITS[sector.sectorType]?.[sector.strategyId]
+    : undefined;
+  return byStrategy ?? FACILITY_SIZE_UNITS[sector.sectorType as OperatingSectorType] ?? 1;
 }
 
 /**
  * Plant size as a Mongo aggregation expression reading each document's own
- * `$strategyId`, for bulk updates that span sectors of one lane on different
- * recipes. A plain number when no recipe in the lane changes the size.
+ * `$strategyId`, for bulk updates that span sectors of one type on different
+ * recipes. A plain number when no recipe of the type changes the size.
  */
 export function plantSizeMongoExpr(
   sector: Omit<PlantSizingSector, "strategyId">
 ): number | Record<string, unknown> {
-  const laneSize = plantSizeForSector(sector);
-  const lane = plantLaneForSector(sector);
-  const branches = Object.entries(STRATEGY_PLANT_LANE[lane] ?? {})
-    .map(([strategyId, strategyLane]) => ({
+  const typeSize = plantSizeForSector(sector);
+  const branches = Object.entries(STRATEGY_PLANT_SIZE_UNITS[sector.sectorType] ?? {})
+    .map(([strategyId, size]) => ({
       case: { $eq: ["$strategyId", strategyId] },
-      then: FACILITY_SIZE_UNITS[strategyLane] ?? 1,
+      then: size,
     }))
-    .filter((branch) => branch.then !== laneSize);
-  return branches.length > 0 ? { $switch: { branches, default: laneSize } } : laneSize;
+    .filter((branch) => branch.then !== typeSize);
+  return branches.length > 0 ? { $switch: { branches, default: typeSize } } : typeSize;
 }
 
 /**
@@ -153,23 +135,14 @@ export function sectorPlantCount(sector: PlantReadingSector): number {
 }
 
 /**
- * Lane-only plant size, for callers that have no sector yet (a founding
+ * Type-only plant size, for callers that have no sector yet (a founding
  * plant, a fresh seed on the standard recipe). Prefer `plantSizeForSector`.
  */
-export function plantSizeUnits(
-  sectorType: OperatingSectorType,
-  industryModel?: string | null,
-  mediaDiscriminator?: MediaDiscriminator | null
-): number {
-  return plantSizeForSector({ sectorType, industryModel, mediaDiscriminator });
+export function plantSizeUnits(sectorType: OperatingSectorType): number {
+  return plantSizeForSector({ sectorType });
 }
 
-/** Lane-only plant count. Prefer `plantsFromUnitsForSector`. */
-export function facilitiesFromUnits(
-  sectorType: OperatingSectorType,
-  units: number,
-  industryModel?: string | null,
-  mediaDiscriminator?: MediaDiscriminator | null
-): number {
-  return plantsFromUnitsForSector({ sectorType, industryModel, mediaDiscriminator }, units);
+/** Type-only plant count. Prefer `plantsFromUnitsForSector`. */
+export function facilitiesFromUnits(sectorType: OperatingSectorType, units: number): number {
+  return plantsFromUnitsForSector({ sectorType }, units);
 }

@@ -33,7 +33,6 @@ import {
 } from "./constants";
 import { fetchSectorMarketSharePercent } from "@/lib/corporations/marketShare";
 import { pickOrCreateNppCeoForNewCorp } from "@/lib/corporations/subsidiaries/nppCeoSelection";
-import { operatingSectorTypeFor } from "@/lib/constants/corporations";
 import { getDefaultLegalStructureId } from "@/lib/corporations/legalStructure";
 import { loadWorldEraUnitScale } from "@/lib/currency/gdpAnchorRate";
 import {
@@ -263,11 +262,7 @@ export async function privatizeAsset(
       params.countryId,
       headquartersState,
       undefined,
-      operatingSectorTypeFor(
-        firstSector.sectorType,
-        firstSector.industryModel,
-        firstSector.mediaDiscriminator
-      )
+      firstSector.sectorType
     );
     ceoUserId = SYSTEM_USER;
     ceoVacant = false;
@@ -364,7 +359,6 @@ export async function privatizeAsset(
       countryId: sector.countryId,
       stateId: sector.stateId,
       sectorType: sector.sectorType,
-      industryModel: sector.industryModel,
       targetGrowthRate: sector.targetGrowthRate,
       currentGrowthRate: sector.currentGrowthRate,
       currentGrowthCost: Math.round(sector.currentGrowthCost * fraction),

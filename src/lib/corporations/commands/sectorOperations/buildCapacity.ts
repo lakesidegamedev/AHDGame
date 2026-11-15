@@ -774,7 +774,6 @@ export async function placeCapacityBuild(
       corporationId: corporation._id,
       countryId,
       sectorType: sector.sectorType,
-      industryModel: sector.industryModel,
     }),
     fetchSectorCompetitorCount(db, sector, corporation._id),
   ]);
@@ -801,17 +800,10 @@ export async function placeCapacityBuild(
   // corp's primary type exactly as `expandSector` scopes its own discount.
   const techView = {
     type: corporation.type,
-    industryModel: corporation.industryModel,
-    mediaDiscriminator: corporation.mediaDiscriminator,
     unlockedTechNodeIds: corporation.unlockedTechNodeIds,
     techDecadeLane: corporation.techDecadeLane,
   };
-  const techBuildEffects = getSectorTechEffects(
-    techView,
-    sector.sectorType,
-    sector.industryModel,
-    sector.mediaDiscriminator
-  );
+  const techBuildEffects = getSectorTechEffects(techView, sector.sectorType);
   const techBuildCostMultiplier = techBuildEffects?.growthCostMultiplier ?? 1;
   // Strength upkeep: from its shield stage the dominance shield counts only
   // current and previous decade techs and is capped at 50%.
@@ -819,8 +811,6 @@ export async function placeCapacityBuild(
     ? upkeptDominanceShield(
         techView,
         sector.sectorType,
-        sector.industryModel,
-        sector.mediaDiscriminator,
         currentYear,
         await loadStrengthUpkeepStage(db)
       )
@@ -840,8 +830,6 @@ export async function placeCapacityBuild(
 
   const cost = computeBuildCost({
     sectorType: sector.sectorType,
-    industryModel: sector.industryModel,
-    mediaDiscriminator: sector.mediaDiscriminator,
     units,
     // Price capacity at the product this sector actually makes, not the sector-type default, which would misapply the rare-earth subsidy.
     strategyId: sector.strategyId ?? null,

@@ -15,7 +15,6 @@ import { uniform } from "@/lib/seeds/reference/uniformUnionName";
 
 export const ES_UNION_NAMES_MODERN: Partial<Record<OperatingSectorType, string>> = {
   manufacturing: "CCOO Industry Federation",
-  manufacturing_vehicles: "CCOO Industry Federation",
   chemical_industries: "CCOO Industry Federation",
   construction: "CCOO Construction Federation",
   energy: "CCOO Energy Federation",
@@ -27,7 +26,6 @@ export const ES_UNION_NAMES_MODERN: Partial<Record<OperatingSectorType, string>>
   technology: "CCOO Industry Federation",
   financial: "CCOO Finance Federation",
   telecommunications: "CCOO Communications Federation",
-  media_entertainment: "CCOO Culture Federation",
   defense: "CCOO Industry Federation",
   agriculture: "CCOO Agriculture Federation",
   real_estate: "CCOO Construction Federation",

@@ -34,7 +34,7 @@ const RESPONSE_EFFECTS: Record<WarEmergencyResponseId, WarEmergencyResponseEffec
     civilLiberties: -2,
     sectors: [
       { sectorType: "retail", pct: -8, durationTurns: 8 },
-      { sectorType: "media_entertainment", pct: -5, durationTurns: 8 },
+      { sectorType: "media", pct: -5, durationTurns: 8 },
       { sectorType: "manufacturing", pct: 6, durationTurns: 8 },
       { sectorType: "defense", pct: 8, durationTurns: 8 },
     ],
@@ -113,7 +113,7 @@ const RESPONSE_EFFECTS: Record<WarEmergencyResponseId, WarEmergencyResponseEffec
     civilLiberties: -7,
     sectors: [
       { sectorType: "retail", pct: -8, durationTurns: 10 },
-      { sectorType: "media_entertainment", pct: -10, durationTurns: 10 },
+      { sectorType: "media", pct: -10, durationTurns: 10 },
       { sectorType: "manufacturing", pct: 8, durationTurns: 10 },
       { sectorType: "defense", pct: 10, durationTurns: 10 },
     ],

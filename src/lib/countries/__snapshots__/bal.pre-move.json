@@ -80,7 +80,7 @@
   "COUNTRY_SECTOR_WEIGHTS_1953": {
     "shape": "country-first",
     "value": {
-      "manufacturing": 22,
+      "manufacturing": 23,
       "extraction": 8,
       "defense": 10,
       "agriculture": 15,
@@ -90,12 +90,10 @@
       "construction": 6,
       "healthcare": 5,
       "retail": 3,
-      "media": 2,
+      "media": 5,
       "real_estate": 2,
       "telecommunications": 2,
       "financial": 1,
-      "manufacturing_vehicles": 1,
-      "media_entertainment": 3,
       "technology": 2
     }
   },
@@ -1354,7 +1352,6 @@
         "chemical_industries": "All-Union Central Council of Trade Unions",
         "healthcare": "All-Union Central Council of Trade Unions",
         "retail": "All-Union Central Council of Trade Unions",
-        "manufacturing_vehicles": "All-Union Central Council of Trade Unions",
         "technology": "All-Union Central Council of Trade Unions",
         "energy": "All-Union Central Council of Trade Unions",
         "agriculture": "All-Union Central Council of Trade Unions",
@@ -1362,7 +1359,6 @@
         "construction": "All-Union Central Council of Trade Unions",
         "defense": "All-Union Central Council of Trade Unions",
         "telecommunications": "All-Union Central Council of Trade Unions",
-        "media_entertainment": "All-Union Central Council of Trade Unions",
         "logistics": "All-Union Central Council of Trade Unions",
         "extraction": "All-Union Central Council of Trade Unions"
       },
@@ -1373,7 +1369,6 @@
         "chemical_industries": "All-Union Central Council of Trade Unions",
         "healthcare": "All-Union Central Council of Trade Unions",
         "retail": "All-Union Central Council of Trade Unions",
-        "manufacturing_vehicles": "All-Union Central Council of Trade Unions",
         "technology": "All-Union Central Council of Trade Unions",
         "energy": "All-Union Central Council of Trade Unions",
         "agriculture": "All-Union Central Council of Trade Unions",
@@ -1381,7 +1376,6 @@
         "construction": "All-Union Central Council of Trade Unions",
         "defense": "All-Union Central Council of Trade Unions",
         "telecommunications": "All-Union Central Council of Trade Unions",
-        "media_entertainment": "All-Union Central Council of Trade Unions",
         "logistics": "All-Union Central Council of Trade Unions",
         "extraction": "All-Union Central Council of Trade Unions"
       },
@@ -1392,7 +1386,6 @@
         "chemical_industries": "Baltic Trade Union Confederation",
         "healthcare": "Baltic Trade Union Confederation",
         "retail": "Baltic Trade Union Confederation",
-        "manufacturing_vehicles": "Baltic Trade Union Confederation",
         "technology": "Baltic Trade Union Confederation",
         "energy": "Baltic Trade Union Confederation",
         "agriculture": "Baltic Trade Union Confederation",
@@ -1400,7 +1393,6 @@
         "construction": "Baltic Trade Union Confederation",
         "defense": "Baltic Trade Union Confederation",
         "telecommunications": "Baltic Trade Union Confederation",
-        "media_entertainment": "Baltic Trade Union Confederation",
         "logistics": "Baltic Trade Union Confederation",
         "extraction": "Baltic Trade Union Confederation"
       },
@@ -1411,7 +1403,6 @@
         "chemical_industries": "Baltic Trade Union Confederation",
         "healthcare": "Baltic Trade Union Confederation",
         "retail": "Baltic Trade Union Confederation",
-        "manufacturing_vehicles": "Baltic Trade Union Confederation",
         "technology": "Baltic Trade Union Confederation",
         "energy": "Baltic Trade Union Confederation",
         "agriculture": "Baltic Trade Union Confederation",
@@ -1419,7 +1410,6 @@
         "construction": "Baltic Trade Union Confederation",
         "defense": "Baltic Trade Union Confederation",
         "telecommunications": "Baltic Trade Union Confederation",
-        "media_entertainment": "Baltic Trade Union Confederation",
         "logistics": "Baltic Trade Union Confederation",
         "extraction": "Baltic Trade Union Confederation"
       },
@@ -1430,7 +1420,6 @@
         "chemical_industries": "Baltic Trade Union Confederation",
         "healthcare": "Baltic Trade Union Confederation",
         "retail": "Baltic Trade Union Confederation",
-        "manufacturing_vehicles": "Baltic Trade Union Confederation",
         "technology": "Baltic Trade Union Confederation",
         "energy": "Baltic Trade Union Confederation",
         "agriculture": "Baltic Trade Union Confederation",
@@ -1438,7 +1427,6 @@
         "construction": "Baltic Trade Union Confederation",
         "defense": "Baltic Trade Union Confederation",
         "telecommunications": "Baltic Trade Union Confederation",
-        "media_entertainment": "Baltic Trade Union Confederation",
         "logistics": "Baltic Trade Union Confederation",
         "extraction": "Baltic Trade Union Confederation"
       },
@@ -1449,7 +1437,6 @@
         "chemical_industries": "Baltic Trade Union Confederation",
         "healthcare": "Baltic Trade Union Confederation",
         "retail": "Baltic Trade Union Confederation",
-        "manufacturing_vehicles": "Baltic Trade Union Confederation",
         "technology": "Baltic Trade Union Confederation",
         "energy": "Baltic Trade Union Confederation",
         "agriculture": "Baltic Trade Union Confederation",
@@ -1457,7 +1444,6 @@
         "construction": "Baltic Trade Union Confederation",
         "defense": "Baltic Trade Union Confederation",
         "telecommunications": "Baltic Trade Union Confederation",
-        "media_entertainment": "Baltic Trade Union Confederation",
         "logistics": "Baltic Trade Union Confederation",
         "extraction": "Baltic Trade Union Confederation"
       },
@@ -1468,7 +1454,6 @@
         "chemical_industries": "Baltic Trade Union Confederation",
         "healthcare": "Baltic Trade Union Confederation",
         "retail": "Baltic Trade Union Confederation",
-        "manufacturing_vehicles": "Baltic Trade Union Confederation",
         "technology": "Baltic Trade Union Confederation",
         "energy": "Baltic Trade Union Confederation",
         "agriculture": "Baltic Trade Union Confederation",
@@ -1476,7 +1461,6 @@
         "construction": "Baltic Trade Union Confederation",
         "defense": "Baltic Trade Union Confederation",
         "telecommunications": "Baltic Trade Union Confederation",
-        "media_entertainment": "Baltic Trade Union Confederation",
         "logistics": "Baltic Trade Union Confederation",
         "extraction": "Baltic Trade Union Confederation"
       },
@@ -1487,7 +1471,6 @@
         "chemical_industries": "Baltic Trade Union Confederation",
         "healthcare": "Baltic Trade Union Confederation",
         "retail": "Baltic Trade Union Confederation",
-        "manufacturing_vehicles": "Baltic Trade Union Confederation",
         "technology": "Baltic Trade Union Confederation",
         "energy": "Baltic Trade Union Confederation",
         "agriculture": "Baltic Trade Union Confederation",
@@ -1495,7 +1478,6 @@
         "construction": "Baltic Trade Union Confederation",
         "defense": "Baltic Trade Union Confederation",
         "telecommunications": "Baltic Trade Union Confederation",
-        "media_entertainment": "Baltic Trade Union Confederation",
         "logistics": "Baltic Trade Union Confederation",
         "extraction": "Baltic Trade Union Confederation"
       }
@@ -1885,7 +1867,7 @@
   "COUNTRY_SECTOR_WEIGHTS_1979": {
     "shape": "country-first",
     "value": {
-      "manufacturing": 26,
+      "manufacturing": 28,
       "agriculture": 13,
       "energy": 9,
       "chemical_industries": 8,
@@ -1897,9 +1879,7 @@
       "extraction": 4,
       "technology": 3,
       "telecommunications": 2,
-      "media_entertainment": 2,
-      "media": 1,
-      "manufacturing_vehicles": 2,
+      "media": 3,
       "financial": 0,
       "real_estate": 0
     }

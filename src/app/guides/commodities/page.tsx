@@ -74,7 +74,7 @@ export default function CommoditiesGuidePage() {
             </Callout>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               {[
-                ["Steel", "Manufacturing, Construction, Automobiles"],
+                ["Steel", "Manufacturing, Construction"],
                 ["Electronics", "Technology, Defense, Healthcare, Telecom"],
                 ["Energy (Elec.)", "Energy sector"],
                 ["Industrial Chemicals", "Chemical Industries"],
@@ -87,8 +87,8 @@ export default function CommoditiesGuidePage() {
                 ["Real Estate Services", "Real Estate"],
                 ["Software", "Technology, Telecom, Financial (Fintech)"],
                 ["Financial Services", "Financial sector"],
-                ["Advertising", "Media, Entertainment"],
-                ["Vehicles", "Automobiles, Defense"],
+                ["Advertising", "Media"],
+                ["Vehicles", "Manufacturing, Defense"],
                 ["Consumer Goods", "Retail"],
                 ["Freight", "Logistics"],
                 ["Consulting Services", "Logistics"],
@@ -291,20 +291,22 @@ effective D/S = raw D/S up to 3x, softened beyond 3x
                 </thead>
                 <tbody className="divide-y divide-card-border/60">
                   {[
-                    ["Manufacturing", "Steel / Building Materials", "0.40 / 0.20"],
+                    [
+                      "Manufacturing",
+                      "Steel / Building Materials / Vehicles",
+                      "0.40 / 0.20 / 0.50",
+                    ],
                     ["Technology", "Electronics / Software", "0.35 / 0.35"],
                     ["Energy", "Electricity", "0.60"],
                     ["Chemical Industries", "Industrial Chemicals", "0.50"],
                     ["Healthcare", "Healthcare Services", "0.50"],
                     ["Agriculture", "Food", "0.50"],
-                    ["Automobiles", "Vehicles", "0.50"],
                     ["Financial", "Financial Services", "0.50"],
                     ["Media", "Advertising", "0.50"],
                     ["Defense", "Vehicles / Electronics", "0.20 / 0.15"],
                     ["Real Estate", "Real Estate Services", "0.45"],
                     ["Construction", "Construction Services", "0.45"],
                     ["Telecommunications", "Software", "0.20"],
-                    ["Entertainment", "Advertising", "0.20"],
                     ["Retail", "Consumer Goods", "0.50"],
                     ["Logistics", "Freight / Consulting Services", "0.45 / 0.25"],
                     [
@@ -356,10 +358,6 @@ effective D/S = raw D/S up to 3x, softened beyond 3x
                       "Pharmaceuticals 0.15, Electronics 0.15, Software 0.12, Energy 0.05",
                     ],
                     ["Agriculture", "Fertilizers 0.15, Vehicles 0.10, Energy 0.10, Freight 0.08"],
-                    [
-                      "Automobiles",
-                      "Steel 0.25, Electronics 0.15, Iron 0.10, Energy 0.10, Freight 0.08",
-                    ],
                     ["Financial", "Software 0.20, Consulting 0.10, Electronics 0.05"],
                     ["Media", "Software 0.15, Electronics 0.10, Consulting 0.06"],
                     [
@@ -378,7 +376,6 @@ effective D/S = raw D/S up to 3x, softened beyond 3x
                       "Telecommunications",
                       "Electronics 0.25, Energy 0.10, Construction 0.08, Building Materials 0.06",
                     ],
-                    ["Entertainment", "Software 0.15, Electronics 0.10, Energy 0.06"],
                     ["Logistics", "Energy 0.20, Vehicles 0.20, Software 0.10"],
                     ["Extraction", "Energy 0.20, Vehicles 0.15, Freight 0.10, Chemicals 0.08"],
                   ].map(([sector, inputs]) => (
@@ -412,8 +409,8 @@ effective D/S = raw D/S up to 3x, softened beyond 3x
   × bounded price elasticity`}</FormulaBlock>
             <p className="text-sm text-muted leading-relaxed">
               Consumer purchases also create final demand for food, energy, vehicles, electronics,
-              healthcare, entertainment, and other household goods and services. Those purchases are
-              counted once by households, not duplicated as a Retail-sector input proxy.
+              healthcare, and other household goods and services. Those purchases are counted once
+              by households, not duplicated as a Retail-sector input proxy.
             </p>
             <Callout label="Retail can saturate.">
               Excess stores lower seller fill and revenue. Shortages raise prices and create room
@@ -526,9 +523,9 @@ Examples:
                 strategies: [
                   {
                     name: "Standard",
-                    supply: "Steel 0.40, Building Materials 0.20",
+                    supply: "Steel 0.40, Building Materials 0.20, Vehicles 0.50",
                     demand: "Energy, Iron, Coal, Electronics, Freight",
-                    note: "Balanced; two commodities supplied",
+                    note: "Balanced; three commodities supplied",
                   },
                   {
                     name: "Heavy Metals",
@@ -541,6 +538,18 @@ Examples:
                     supply: "Electronics 0.30, Steel 0.20",
                     demand: "Rare Earth, Iron, Energy, Chemicals",
                     note: "Adds electronics supply; demands rare earth",
+                  },
+                  {
+                    name: "Vehicle Assembly",
+                    supply: "Vehicles 0.50",
+                    demand: "Steel 0.18, Electronics 0.11, Iron, Energy, Freight",
+                    note: "Retool a plant to build cars; steel and electronics heavy",
+                  },
+                  {
+                    name: "Trucks and Heavy Machinery",
+                    supply: "Vehicles 0.55",
+                    demand: "Steel 0.22, Iron 0.12, Energy, Freight",
+                    note: "Highest vehicle output; most steel-intensive",
                   },
                 ],
               },
@@ -633,29 +642,6 @@ Examples:
                     supply: "Healthcare Services 0.45",
                     demand: "Pharmaceuticals 0.12, Software 0.16, Consulting",
                     note: "Lower output; lighter facilities; software-heavy",
-                  },
-                ],
-              },
-              {
-                sector: "Automobiles",
-                strategies: [
-                  {
-                    name: "Standard",
-                    supply: "Vehicles 0.50",
-                    demand: "Steel 0.25, Electronics 0.15, Iron, Energy, Freight",
-                    note: "ICE-focused; steel-intensive",
-                  },
-                  {
-                    name: "EV Focus",
-                    supply: "Vehicles 0.45",
-                    demand: "Electronics 0.30, Rare Earth, Energy, Software",
-                    note: "No steel or iron; very electronics and rare earth heavy",
-                  },
-                  {
-                    name: "Heavy Machinery",
-                    supply: "Vehicles 0.55",
-                    demand: "Steel 0.35, Iron, Energy, Freight",
-                    note: "Highest vehicle output; most steel-intensive",
                   },
                 ],
               },
@@ -800,29 +786,6 @@ Examples:
                 ],
               },
               {
-                sector: "Entertainment",
-                strategies: [
-                  {
-                    name: "Standard",
-                    supply: "Advertising 0.20",
-                    demand: "Software 0.15, Electronics 0.10, Energy",
-                    note: "Mixed studios, venues, and digital content",
-                  },
-                  {
-                    name: "Streaming/Digital",
-                    supply: "Advertising 0.15, Software 0.10",
-                    demand: "Software 0.20, Energy 0.10",
-                    note: "Digital-first; co-produces software",
-                  },
-                  {
-                    name: "Live/Venue",
-                    supply: "Advertising 0.25",
-                    demand: "Construction Services 0.12, Energy, Freight, Building Materials",
-                    note: "Highest advertising output; physical infrastructure needs",
-                  },
-                ],
-              },
-              {
                 sector: "Retail",
                 strategies: [
                   {
@@ -958,7 +921,7 @@ Examples:
                 ],
                 [
                   "Extraction is the upstream lever.",
-                  "Iron Ore, Coal, Crude Oil, and Rare Earth Minerals flow into Manufacturing, Energy, Technology, Chemicals, and Automobiles. A global shortage of rare earth minerals hits defense, tech, and EV automobiles simultaneously. An extraction sector benefits from that shortage; everyone else suffers.",
+                  "Iron Ore, Coal, Crude Oil, and Rare Earth Minerals flow into Manufacturing, Energy, Technology, and Chemicals. A global shortage of rare earth minerals hits defense, tech, and EV manufacturing simultaneously. An extraction sector benefits from that shortage; everyone else suffers.",
                 ],
                 [
                   "Technology and Defense are in commodity competition.",
@@ -970,7 +933,7 @@ Examples:
                 ],
                 [
                   "Renewables and EV both demand rare earth.",
-                  "Renewables Focus (Energy) and EV Focus (Automobiles) both depend heavily on rare earth minerals (0.10 and 0.10 rates respectively). If both strategies are widely adopted, rare earth becomes one of the most contested commodities in the game. Extraction is the only supplier.",
+                  "Renewables Focus (Energy) and vehicle strategies in Manufacturing both depend heavily on rare earth minerals (0.10 and 0.10 rates respectively). If both strategies are widely adopted, rare earth becomes one of the most contested commodities in the game. Extraction is the only supplier.",
                 ],
                 [
                   "Retail smooths out sector imbalances.",

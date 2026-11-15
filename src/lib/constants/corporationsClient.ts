@@ -50,53 +50,15 @@ export const CORPORATION_TYPES = [
 
 export type CorporationType = (typeof CORPORATION_TYPES)[number];
 
-/** Specialized production models that belong to the manufacturing taxonomy. */
-export type ManufacturingIndustryModel = "vehicles";
-
-/** The entertainment operating lane inside canonical media. */
-export type MediaDiscriminator = "entertainment";
-
 /**
- * Operating lanes that carry their own economics inside a corporation type.
- * Recipes, prices, tech, plant sizes and seed weights for vehicle makers and
- * entertainment houses are keyed by these lanes. Stored rows never hold a lane
- * key: they hold the corporation type plus `industryModel` or
- * `mediaDiscriminator` (see operatingSectorIdentity).
+ * Every economic profile a sector can run under. Recipes, prices, tech, plant
+ * sizes and seed weights are keyed by these. The order is load-bearing:
+ * seeded state-enterprise ids, specialization rotations and seeded random
+ * picks derive from a type's position.
  */
-export const SPECIALIZED_OPERATING_LANES = [
-  "manufacturing_vehicles",
-  "media_entertainment",
-] as const;
+export const OPERATING_SECTOR_TYPES = CORPORATION_TYPES;
 
-export type SpecializedOperatingLane = (typeof SPECIALIZED_OPERATING_LANES)[number];
-
-/**
- * Every economic profile a sector can run under: a corporation type or a
- * specialized lane. The order is load-bearing: seeded state-enterprise ids,
- * specialization rotations and seeded random picks derive from a lane's
- * position, so the lanes sit where their economics always sat. Append only.
- */
-export const OPERATING_SECTOR_TYPES = [
-  "financial",
-  "media",
-  "manufacturing",
-  "chemical_industries",
-  "healthcare",
-  "retail",
-  "manufacturing_vehicles",
-  "technology",
-  "energy",
-  "agriculture",
-  "real_estate",
-  "construction",
-  "defense",
-  "telecommunications",
-  "media_entertainment",
-  "logistics",
-  "extraction",
-] as const satisfies readonly (CorporationType | SpecializedOperatingLane)[];
-
-export type OperatingSectorType = (typeof OPERATING_SECTOR_TYPES)[number];
+export type OperatingSectorType = CorporationType;
 
 export const CORPORATION_TYPE_LABELS: Record<CorporationType, string> = {
   financial: "Financial",
@@ -116,96 +78,20 @@ export const CORPORATION_TYPE_LABELS: Record<CorporationType, string> = {
   extraction: "Extraction & Mining",
 };
 
-/** Labels for operating lanes; the specialized lanes name their line of business. */
-export const OPERATING_SECTOR_TYPE_LABELS: Record<OperatingSectorType, string> = {
-  ...CORPORATION_TYPE_LABELS,
-  manufacturing_vehicles: "Automobiles",
-  media_entertainment: "Entertainment",
-};
+/** Labels for operating sector types. */
+export const OPERATING_SECTOR_TYPE_LABELS: Record<OperatingSectorType, string> =
+  CORPORATION_TYPE_LABELS;
 
-const LANE_PARENT: Record<SpecializedOperatingLane, CorporationType> = {
-  manufacturing_vehicles: "manufacturing",
-  media_entertainment: "media",
-};
-
-/**
- * Sector choices for founding and CEO settings forms. A specialized lane sits
- * directly after its parent type and is labelled as part of it, so the list
- * never presents Automobiles or Entertainment as separate corporation types.
- */
+/** Sector choices for founding and CEO settings forms. */
 export const OPERATING_SECTOR_CHOICES: ReadonlyArray<{ key: OperatingSectorType; label: string }> =
-  CORPORATION_TYPES.flatMap((type) => [
-    { key: type as OperatingSectorType, label: CORPORATION_TYPE_LABELS[type] },
-    ...SPECIALIZED_OPERATING_LANES.filter((lane) => LANE_PARENT[lane] === type).map((lane) => ({
-      key: lane as OperatingSectorType,
-      label: `${CORPORATION_TYPE_LABELS[type]}: ${OPERATING_SECTOR_TYPE_LABELS[lane]}`,
-    })),
-  ]);
-
-/** The persisted identity of an operating lane. */
-export interface OperatingSectorIdentity {
-  sectorType: CorporationType;
-  industryModel: ManufacturingIndustryModel | null;
-  mediaDiscriminator: MediaDiscriminator | null;
-}
+  CORPORATION_TYPES.map((type) => ({ key: type, label: CORPORATION_TYPE_LABELS[type] }));
 
 export function isCorporationType(value: unknown): value is CorporationType {
   return typeof value === "string" && (CORPORATION_TYPES as readonly string[]).includes(value);
 }
 
 export function isOperatingSectorType(value: unknown): value is OperatingSectorType {
-  return typeof value === "string" && (OPERATING_SECTOR_TYPES as readonly string[]).includes(value);
-}
-
-/** Resolve the operating lane a persisted sector (or corporation) runs under. */
-export function operatingSectorTypeFor(
-  sectorType: CorporationType,
-  industryModel?: string | null,
-  mediaDiscriminator?: string | null
-): OperatingSectorType {
-  if (sectorType === "manufacturing" && industryModel === "vehicles") {
-    return "manufacturing_vehicles";
-  }
-  if (sectorType === "media" && mediaDiscriminator === "entertainment") {
-    return "media_entertainment";
-  }
-  return sectorType;
-}
-
-/** The fields a row stores for an operating lane. */
-export function operatingSectorIdentity(lane: OperatingSectorType): OperatingSectorIdentity {
-  if (lane === "manufacturing_vehicles") {
-    return { sectorType: "manufacturing", industryModel: "vehicles", mediaDiscriminator: null };
-  }
-  if (lane === "media_entertainment") {
-    return { sectorType: "media", industryModel: null, mediaDiscriminator: "entertainment" };
-  }
-  return { sectorType: lane, industryModel: null, mediaDiscriminator: null };
-}
-
-/**
- * Mongo filter fields selecting exactly one operating lane's rows. A plain
- * type matches rows with no model or discriminator (null matches absent).
- * Unknown values pass through as a bare sector type.
- */
-export function operatingSectorFilter(lane: OperatingSectorType): OperatingSectorIdentity;
-export function operatingSectorFilter(lane: string): {
-  sectorType: string;
-  industryModel?: ManufacturingIndustryModel | null;
-  mediaDiscriminator?: MediaDiscriminator | null;
-};
-export function operatingSectorFilter(lane: string): {
-  sectorType: string;
-  industryModel?: ManufacturingIndustryModel | null;
-  mediaDiscriminator?: MediaDiscriminator | null;
-} {
-  if (!isOperatingSectorType(lane)) return { sectorType: lane };
-  return operatingSectorIdentity(lane);
-}
-
-/** The corporation type an operating lane belongs to. */
-export function corporationTypeOfLane(lane: OperatingSectorType): CorporationType {
-  return operatingSectorIdentity(lane).sectorType;
+  return isCorporationType(value);
 }
 
 /**
