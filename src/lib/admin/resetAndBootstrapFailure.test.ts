@@ -491,6 +491,15 @@ describe("resetAndBootstrapGameWorld — failure handling", () => {
     expect(captureSeedBaseline).toHaveBeenCalled();
   });
 
+  it("clears an idle turn fence left by the replaced world before the residue scan", async () => {
+    const { STALE_TURN_FENCE_RESET } = await import("./resetAndBootstrapGameWorld");
+    await run();
+    expect(db.collectionMocks.gameState?.updateOne).toHaveBeenCalledWith(
+      { _id: "current", isProcessing: { $ne: true }, processingTargetTurn: { $ne: null } },
+      { $set: STALE_TURN_FENCE_RESET }
+    );
+  });
+
   it("opens the fresh world on the funded market", async () => {
     const { openResetWorldFunded } = await import("@/lib/admin/resetFundedOpening");
     const result = await run();

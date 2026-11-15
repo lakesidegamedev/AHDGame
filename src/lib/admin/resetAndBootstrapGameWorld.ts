@@ -67,6 +67,23 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { seedDiagnosticsCollection } from "@/lib/db/repositories/seedDiagnostics";
 import type { Document } from "mongodb";
 
+/** Turn-runner fence fields an idle fresh world must not inherit. */
+export const STALE_TURN_FENCE_RESET = Object.freeze({
+  processingTargetTurn: null,
+  processingStartedAt: null,
+  processingHeartbeatAt: null,
+  processingHolderId: null,
+  processingAbandonedAt: null,
+  processingPhase: null,
+  processingPhaseStatuses: null,
+  processingPhaseResults: null,
+  processingHoldReason: null,
+  processingHeldPhases: null,
+  processingHeldAt: null,
+  processingEngine: null,
+  processingEngineVersion: null,
+});
+
 export interface ResetAndBootstrapOptions {
   /** 1991 only: leave political offices vacant for player-created parties. */
   startingParties?: StartingPartiesMode;
@@ -646,6 +663,12 @@ export async function resetAndBootstrapGameWorld(
     // Residue scan, before the world can run a turn and before any baseline is
     // captured. A violation keeps the run partial and the turn system refuses to
     // start until a clean reset replaces gameConfig.lastReset.
+    // An idle turn fence left by a failed turn in the replaced world targets a turn
+    // the fresh world never reaches. A held lock (`isProcessing`) is left alone.
+    await gameStateCollection<Document>(db).updateOne(
+      { _id: "current" as never, isProcessing: { $ne: true }, processingTargetTurn: { $ne: null } },
+      { $set: STALE_TURN_FENCE_RESET }
+    );
     phaseReached = "residue scan";
     try {
       const violations = await runResidueScan(db, {

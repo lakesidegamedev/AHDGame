@@ -96,6 +96,8 @@ const TURN_GUARDS = [
   "lastExtractionAutoStrategyTurn",
   "coldWarEndedTurn",
   "buildDeliverySettledTurn",
+  // A turn fence from the replaced world would make the fresh world's turn runner recover it.
+  "processingTargetTurn",
 ] as const;
 
 export interface ResidueScanContext {
