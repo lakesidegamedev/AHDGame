@@ -157,6 +157,23 @@ describe("buyListedSector — transaction log types", () => {
     expect(buyerTx?.type).toBe("corp_sector_purchase");
     expect(sellerTx?.type).toBe("corp_sector_sale");
   });
+
+  it("returns 409 while a turn is processing and writes nothing", async () => {
+    await wireCommonMocks();
+    db.collection("gameState");
+    db.collectionMocks.gameState.findOne.mockResolvedValue({
+      _id: "current",
+      currentTurn: 5,
+      isProcessing: true,
+      processingStartedAt: new Date(),
+      processingHeartbeatAt: new Date(),
+    });
+
+    const res = await buyListedSector(makeRequest(), { params });
+    expect(res.status).toBe(409);
+    expect(db.collectionMocks.corporateSectors.updateOne).not.toHaveBeenCalled();
+    expect(db.collectionMocks.corporations.updateOne).not.toHaveBeenCalled();
+  });
 });
 
 describe("buyListedSector — mid-build transfer moves the queue (P3b)", () => {
