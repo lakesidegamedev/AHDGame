@@ -24,6 +24,7 @@ import { notifyCharacterStatsUpdated } from "@/lib/characterStatsSync";
 import { formatCurrencyFaceAmount } from "@/lib/currency/formatCurrencyFaceAmount";
 import { eraIdForYear } from "@/lib/seeds/eraInterpolation";
 import { eraForPreset } from "@/lib/seeds/presetSelector";
+import { hasGdpBaseline } from "@/lib/campaigns/rules/gdpBaseline";
 import { getActionImage } from "@/lib/images/actionImages";
 import { apiErrorText } from "@/lib/errors/catalog";
 import { CARDS } from "./actionsConstants";
@@ -354,18 +355,28 @@ export function useActionsController({
       worldFlags.campaignPriceLevel,
       worldFlags.preset
     );
-    const quoteTarget = homeState
-      ? {
-          gdpMillions: homeState.gdp,
-          population: homeState.population,
-          countryId: character.countryId,
-          // Same era baseline the server executes with (see executeAction):
-          // without this a 1953-world card would quote modern-era costs.
-          preset: worldFlags.preset,
-          // Live national figure the server prices against; absent until flags load.
-          nationalGdpPerCapita: worldFlags.nationalGdpPerCapita[character.countryId ?? "US"],
-        }
+    const homeCountryId = character.countryId ?? "US";
+    const liveNationalGdpPerCapita = homeState
+      ? worldFlags.nationalGdpPerCapita[homeCountryId]
       : undefined;
+    // Countries without an era-table row (CA and the other newer countries)
+    // can only be priced against the live national figure. Until world flags
+    // load it is absent, and quoting would throw from the era table, so hold
+    // the quote the same way as while home-state data is still loading.
+    const canPriceHome = liveNationalGdpPerCapita !== undefined || hasGdpBaseline(homeCountryId);
+    const quoteTarget =
+      homeState && canPriceHome
+        ? {
+            gdpMillions: homeState.gdp,
+            population: homeState.population,
+            countryId: character.countryId,
+            // Same era baseline the server executes with (see executeAction):
+            // without this a 1953-world card would quote modern-era costs.
+            preset: worldFlags.preset,
+            // Live national figure the server prices against; absent until flags load.
+            nationalGdpPerCapita: liveNationalGdpPerCapita,
+          }
+        : undefined;
     // Same rules quotes the server executes. When a quote rejects (maxed stat,
     // unallocated stats, or home-state economics still loading), the AP cost
     // stays displayable from the stat alone while the fund cost reports 0:

@@ -6,10 +6,7 @@ import { useEffect, useId, useState } from "react";
 import Image from "next/image";
 import { useTranslations } from "next-intl";
 import { Modal } from "@/components/ui/Modal";
-import {
-  OPERATING_SECTOR_TYPE_LABELS,
-  OPERATING_SECTOR_TYPES,
-} from "@/lib/constants/corporationsClient";
+import { OPERATING_SECTOR_CHOICES } from "@/lib/constants/corporationsClient";
 import {
   CORPORATION_RENAME_COST,
   CORPORATION_RENAME_MS_PENALTY,
@@ -145,9 +142,9 @@ export function CeoCorporationSettingsModal({
                   }}
                   className="w-full rounded-sm border border-card-border bg-background px-3 py-2 text-sm focus:border-primary/60 focus:outline-none"
                 >
-                  {OPERATING_SECTOR_TYPES.map((t) => (
-                    <option key={t} value={t}>
-                      {OPERATING_SECTOR_TYPE_LABELS[t]}
+                  {OPERATING_SECTOR_CHOICES.map(({ key, label }) => (
+                    <option key={key} value={key}>
+                      {label}
                     </option>
                   ))}
                 </select>
@@ -170,11 +167,13 @@ export function CeoCorporationSettingsModal({
                   className="w-full rounded-sm border border-card-border bg-background px-3 py-2 text-sm focus:border-primary/60 focus:outline-none"
                 >
                   <option value="">None</option>
-                  {OPERATING_SECTOR_TYPES.filter((t) => t !== editPrimaryType).map((t) => (
-                    <option key={t} value={t}>
-                      {OPERATING_SECTOR_TYPE_LABELS[t]}
-                    </option>
-                  ))}
+                  {OPERATING_SECTOR_CHOICES.filter(({ key }) => key !== editPrimaryType).map(
+                    ({ key, label }) => (
+                      <option key={key} value={key}>
+                        {label}
+                      </option>
+                    )
+                  )}
                 </select>
                 <p className="text-xs text-muted mt-1">
                   Sectors of this type earn 2.5% more margin. It doubles the sprawl penalty once you

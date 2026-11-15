@@ -99,7 +99,7 @@ describe("country route transport recovery", () => {
     const reset = vi.fn();
     render(<CountryError error={new TypeError("Cannot read properties of null")} reset={reset} />);
 
-    expect(await screen.findByRole("heading", { name: "Something went wrong" })).toBeTruthy();
+    expect(await screen.findByRole("heading", { name: "This page hit a problem" })).toBeTruthy();
     await waitFor(() => expect(mocks.capture).toHaveBeenCalledTimes(1));
     expect(mocks.refresh).not.toHaveBeenCalled();
     expect(reset).not.toHaveBeenCalled();
@@ -127,7 +127,7 @@ describe("country route transport recovery", () => {
       <CountryError error={new TypeError("Cannot read properties of null")} reset={reset} />
     );
 
-    expect(screen.getByRole("heading", { name: "Something went wrong" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "This page hit a problem" })).toBeTruthy();
     expect(mocks.capture).toHaveBeenCalledTimes(1);
 
     view.unmount();

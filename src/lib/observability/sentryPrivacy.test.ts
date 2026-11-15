@@ -61,7 +61,7 @@ describe("Sentry v11 privacy baseline", () => {
         expect(runtimes[runtime]).not.toHaveProperty("enableLogs");
       });
 
-      it("scrubs user identity from error events", async () => {
+      it("keeps only the opaque account id from user identity", async () => {
         const event: Sentry.ErrorEvent = {
           type: undefined,
           user: { id: "account-1", email: "someone@example.com" },
@@ -74,7 +74,7 @@ describe("Sentry v11 privacy baseline", () => {
           },
         };
         const sent = await runtimes[runtime].beforeSend!(event, {});
-        expect(sent?.user).toBeUndefined();
+        expect(sent?.user).toEqual({ id: "account-1" });
         expect(sent?.request).toEqual({ url: "https://example.test/api/thing" });
       });
     });
