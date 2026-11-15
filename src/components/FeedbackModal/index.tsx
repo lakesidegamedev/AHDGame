@@ -17,6 +17,8 @@ interface FeedbackModalProps {
   autoCaptureFailed?: boolean;
   /** Preselect bug vs suggestion flow. FAB passes "bug". Navbar quick-suggest stays default. */
   initialType?: FeedbackModalType;
+  /** Pre-filled title and description, e.g. from an error screen. */
+  prefill?: { title: string; description: string; category?: string };
 }
 
 interface FeedbackState {
@@ -36,12 +38,12 @@ interface FeedbackState {
   error: string | null;
 }
 
-function createInitialFeedbackState(): FeedbackState {
+function createInitialFeedbackState(prefill?: FeedbackModalProps["prefill"]): FeedbackState {
   return {
-    category: "",
+    category: prefill?.category ?? "",
     gameSystem: "",
-    title: "",
-    description: "",
+    title: prefill?.title ?? "",
+    description: prefill?.description ?? "",
     impact: "",
     priority: "",
     stepsToReproduce: "",
@@ -105,10 +107,11 @@ export function FeedbackModal({
   initialScreenshotDataUrl,
   autoCaptureFailed,
   initialType = "suggestion",
+  prefill,
 }: FeedbackModalProps) {
   const isBugMode = initialType === "bug";
   const { getContextSnapshot } = useFeedback();
-  const [state, dispatch] = useReducer(feedbackReducer, undefined, createInitialFeedbackState);
+  const [state, dispatch] = useReducer(feedbackReducer, prefill, createInitialFeedbackState);
   const {
     category,
     gameSystem,

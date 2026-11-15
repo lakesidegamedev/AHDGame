@@ -19,6 +19,7 @@ export { SectionLabel } from "./SectionLabel";
 export { LoadingSpinner } from "./LoadingSpinner";
 export { type PageErrorCode } from "./PageError";
 export { ErrorPageContent, type RouteErrorProps } from "./ErrorPageContent";
+export { ErrorPanel, type ErrorPanelProps, type ErrorPanelLink } from "./ErrorPanel";
 export { MobileSelect } from "./MobileSelect";
 export {
   HeroStatsStrip,
