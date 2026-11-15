@@ -430,8 +430,6 @@ export interface GameState {
   processingEngine?: "v1" | "v2" | null;
   /** Behaviour version of the in-flight turn's engine (e.g. "2.0.0"); stamped with `processingEngine`. */
   processingEngineVersion?: string | null;
-  /** Turn on which the auto-sector seeding last fired. Guards the 48-turn interval. */
-  lastAutoSeedTurn?: number;
   /**
    * Safety rollout for the realized-viability check on autonomous NPP mine
    * founding. Absent resolves to observe so existing worlds collect evidence

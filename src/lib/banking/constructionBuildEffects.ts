@@ -1,19 +1,16 @@
-/** Freeze build fees and market ownership before loan funding is admitted. */
+/** Freeze build fees before loan funding is admitted. */
 import { ObjectId, type Db, type Document } from "mongodb";
-import type { CorporateSector, UnownedSector } from "@/lib/db/types";
+import type { CorporateSector } from "@/lib/db/types";
 import {
   CURRENCY_ANCHOR_COUNTRY,
   SPREAD_FEE_FOREX_REVENUE_RATIO,
   SPREAD_FEE_RESERVE_RATIO,
   type CurrencyCode,
 } from "@/lib/constants/currencies";
-import { COUNTRY_ORDER } from "@/lib/constants/countries";
 import { getBankId } from "@/lib/centralBank/helpers";
-import { unownedPoolDrawdown, type UnownedPoolBucket } from "@/lib/market/unownedPoolDraw";
 import { oid, type BankingTransition, type TransitionLeg } from "./rules/boundary";
 import type { ConstructionBuildEffects } from "./rules/constructionBuild";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
-import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
 
 export async function prepareConstructionBuildEffects(input: {
   db: Db;
@@ -26,36 +23,12 @@ export async function prepareConstructionBuildEffects(input: {
   currency: CurrencyCode;
   feeLocal: number;
   destinationCurrency: CurrencyCode | null;
-  bucket: UnownedPoolBucket;
-  units: number;
-  eraUnitScale: number;
 }): Promise<{ ok: true; value: ConstructionBuildEffects } | { ok: false; error: string }> {
   if (!input.enabled) return { ok: false, error: "Construction finance is not enabled" };
   const { db, sector, claimId, feeLocal } = input;
-  if (
-    input.bucket.stateId !== sector.stateId ||
-    input.bucket.sectorType !== sector.sectorType ||
-    (input.bucket.industryModel ?? null) !== (sector.industryModel ?? null) ||
-    (input.bucket.mediaDiscriminator ?? null) !== (sector.mediaDiscriminator ?? null)
-  )
-    return { ok: false, error: "The construction market identity changed" };
-  const countryId = COUNTRY_ORDER.find((candidate) => candidate === input.bucket.countryId);
-  if (!countryId) return { ok: false, error: "Construction market country is unavailable" };
-  const industryModel = input.bucket.industryModel ?? null;
-  const mediaDiscriminator = input.bucket.mediaDiscriminator ?? null;
-  if (industryModel !== null && industryModel !== "vehicles")
-    return { ok: false, error: "Construction market model is unavailable" };
   if (!Number.isFinite(feeLocal) || feeLocal < 0 || !ObjectId.isValid(input.borrowerId))
     return { ok: false, error: "Construction fees are invalid" };
   const now = new Date();
-  if (!Number.isSafeInteger(input.units) || input.units < 0)
-    return { ok: false, error: "Construction market units are invalid" };
-  const pipeline =
-    input.units > 0
-      ? unownedPoolDrawdown(input.bucket, input.units, now, input.eraUnitScale)
-      : null;
-  if (input.units > 0 && !pipeline)
-    return { ok: false, error: "Construction market units are invalid" };
   const legs: TransitionLeg[] = [];
   if (feeLocal > 0) {
     const sourceCountry = CURRENCY_ANCHOR_COUNTRY[input.currency];
@@ -117,30 +90,6 @@ export async function prepareConstructionBuildEffects(input: {
         note: "Destroy the remaining construction FX fee",
       });
   }
-  const pool = pipeline
-    ? await unownedSectorsCollection(db).findOneAndUpdate(
-        {
-          stateId: input.bucket.stateId,
-          sectorType: input.bucket.sectorType,
-          industryModel,
-          mediaDiscriminator,
-        },
-        {
-          $setOnInsert: {
-            ...input.bucket,
-            countryId,
-            industryModel,
-            mediaDiscriminator,
-            headroomUnits: 0,
-            revenue: 0,
-            createdAt: now,
-            updatedAt: now,
-          },
-        },
-        { upsert: true, returnDocument: "after" }
-      )
-    : null;
-  if (pipeline && !pool) return { ok: false, error: "Construction market bucket is unavailable" };
   const transition: BankingTransition = {
     key: `construction:${claimId}:build-effects`,
     kind: "construction_build_effects",
@@ -148,21 +97,11 @@ export async function prepareConstructionBuildEffects(input: {
     currency: input.currency,
     legs,
     projections: [
-      ...(pool && pipeline
-        ? [
-            {
-              collection: "unownedSectors",
-              filter: { _id: oid(String(pool._id)) },
-              pipelineUpdate: pipeline as Document[],
-              note: "Claim this build's market headroom once",
-            },
-          ]
-        : []),
       {
         collection: "corporateSectors",
         filter: { _id: oid(String(sector._id)), "constructionFinancing.claimId": claimId },
         update: { $set: { "constructionFinancing.effectsPaid": true } },
-        note: "Publish fees and pool delivery before paid queue publication",
+        note: "Publish fees before paid queue publication",
       },
     ],
     event: { kind: "loan.disbursed", command: "construction.effects", subjectId: input.loanId },
@@ -172,16 +111,6 @@ export async function prepareConstructionBuildEffects(input: {
     value: {
       transition,
       feeLocal,
-      ...(pool
-        ? {
-            pool: {
-              id: String(pool._id),
-              bucket: input.bucket,
-              eraUnitScale: input.eraUnitScale,
-              units: input.units,
-            },
-          }
-        : {}),
       quotedAt: now,
     },
   };

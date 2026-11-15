@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { ObjectId } from "mongodb";
-import type { Corporation, CorporateSector, UnownedSector } from "@/lib/db/types";
+import type { Corporation, CorporateSector } from "@/lib/db/types";
+import {
+  candidate,
+  candidatesByCountry,
+  uniformDemandSignals,
+} from "./__fixtures__/marketCandidates";
 import { CAPACITY_ANCHOR_YEAR } from "@/lib/constants/capacityEconomy";
 import { AUTOPILOT_MODIFIERS } from "@/lib/corporations/autopilot";
 import { ceoArchetypeModifiers } from "../ceoArchetype";
@@ -62,17 +67,7 @@ function fixture(profitPerTurn: number, autopilot: boolean) {
         buildQueue: [],
       }) as unknown as CorporateSector
   );
-  const pools = specs.map(
-    ([sectorType, stateId]) =>
-      ({
-        _id: new ObjectId(),
-        countryId: "US",
-        stateId,
-        sectorType,
-        revenue: 1,
-        headroomUnits: 1_000_000,
-      }) as UnownedSector
-  );
+  const pools = specs.map(([sectorType, stateId]) => candidate({ sectorType, stateId } as never));
   return { corp, sectors, pools };
 }
 
@@ -87,10 +82,11 @@ function run(profitPerTurn: number, autopilot: boolean) {
       modifiers: autopilot ? AUTOPILOT_MODIFIERS : ceoArchetypeModifiers("cautious"),
       strategyLoopEnabled: false,
     },
-    new Map([["US", pools]]),
+    candidatesByCountry(pools),
     new Set(),
     () => 2,
-    PLANTS
+    PLANTS,
+    uniformDemandSignals(1_000_000)
   );
   return { decision, sectors, corp };
 }
@@ -152,7 +148,7 @@ describe("evaluateAutopilotGrowthGate", () => {
     corpEarningsLocal: 1,
     growthUnits: 5,
     growthCostLocal: 5 * 10 * AUTOPILOT_PAYBACK_HORIZON_TURNS,
-    demandHeadroomUnits: 100,
+    unmetDemandUnits: 100,
   };
   it("passes at exactly the payback horizon", () => {
     expect(evaluateAutopilotGrowthGate(base)).toBeNull();
@@ -171,7 +167,7 @@ describe("evaluateAutopilotGrowthGate", () => {
     );
   });
   it("requires demand headroom", () => {
-    expect(evaluateAutopilotGrowthGate({ ...base, demandHeadroomUnits: 0 })).toBe(
+    expect(evaluateAutopilotGrowthGate({ ...base, unmetDemandUnits: 0 })).toBe(
       "autopilot_demand_headroom"
     );
   });

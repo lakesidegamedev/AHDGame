@@ -908,7 +908,7 @@ describe("resetGameWorld", () => {
       currentTurn: 944,
       startingYear: 2019,
       lastCensusYear: 2010,
-      lastAutoSeedTurn: 944,
+      lastExtractionAutoStrategyTurn: 944,
       lastBundestagReconciledCycle: 6,
       currentEraId: "2010s",
       lastEraCrossedYear: 2010,
@@ -946,12 +946,11 @@ describe("resetGameWorld", () => {
 
     // Each of these left a real, confirmed regression on a live 1953 world:
     //  - lastCensusYear 2010 → no census fires until game-year 2020
-    //  - lastAutoSeedTurn 944 vs currentTurn 1 → auto sector seeding never fires
+    //  - lastExtractionAutoStrategyTurn 944 vs currentTurn 1 → the extraction auto-strategy never fires
     //  - lastBundestagReconciledCycle 6 → German AMS skipped for cycles 0-6
     for (const key of [
       "lastCensusYear",
       "lastCensus",
-      "lastAutoSeedTurn",
       "lastExtractionAutoStrategyTurn",
       "lastBundestagReconciledCycle",
       "lastCabinetYearProcessed",

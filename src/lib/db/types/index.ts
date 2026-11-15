@@ -311,7 +311,6 @@ export type {
   EndSubsidyProvision,
 } from "./legislation";
 export type { DiscordBotFund } from "./discordBotFund";
-export type { UnownedSector } from "./unownedSector";
 export type { RegionalBudget } from "./regionalBudget";
 export * from "./patreon";
 export type { ImperialCharacter } from "./imperialCharacter";

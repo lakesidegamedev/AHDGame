@@ -374,7 +374,8 @@ describe("economy-only reset end to end", () => {
     ).toBe(0);
     expect(await db.collection("corporations").countDocuments({})).toBe(freshCorporations);
     expect(await db.collection("corporateSectors").countDocuments({})).toBe(freshSectors);
-    expect(await db.collection("unownedSectors").countDocuments({})).toBeGreaterThan(0);
+    // The retired market collection is dropped, not rebuilt.
+    expect(await db.collection("unownedSectors").countDocuments({})).toBe(0);
     expect(await db.collection("stockExchangeSnapshots").countDocuments({})).toBeGreaterThan(0);
   });
 

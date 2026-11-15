@@ -35,8 +35,6 @@ export interface CorpMarketSharePosition {
   rank: number;
   /** Number of corporations (incl. the focal corp) active in this industry. */
   competitors: number;
-  /** Share held by unowned / state-residual capacity, 0–100. */
-  unownedPercent: number;
 }
 
 /** One industry's national rollup: every corp's basis plus the market total. */
@@ -99,7 +97,7 @@ export async function loadIndustryBasis(
   for (const sectorType of types) {
     const typeSectors = sectorsInScope.filter((s) => s.sectorType === sectorType);
 
-    // National market = sum of real revenue produced across the country's states. No unowned pool, no GDP floor: the denominator is what every producer actually earns.
+    // The denominator is the revenue every producer actually earns across the country's states.
     const anchorByCorp = new Map<string, number>();
     let totalMarket = 0;
     for (const sec of typeSectors) {
@@ -128,11 +126,7 @@ export async function computeCorpMarketShare(
   db: Db,
   corporation: Pick<Corporation, "_id" | "countryId">,
   corpSectors: Pick<CorporateSector, "sectorType">[],
-  /**
-   * Plants tier: aggregate the national rollup on the capacity-unit basis
-   * (owned capitalStock vs unowned headroomUnits) instead of ₳ revenue. Omit
-   * for legacy revenue behavior.
-   */
+  /** @deprecated Ignored. Share is revenue-basis in every tier. */
   plantsEnabled: boolean = false
 ): Promise<CorpMarketSharePosition[]> {
   const focalId = corporation._id.toString();
@@ -145,14 +139,10 @@ export async function computeCorpMarketShare(
     if (!basis) continue;
     const { basisByCorp, anchorByCorp, basisMarket } = basis;
 
-    let totalOwned = 0;
-    for (const a of basisByCorp.values()) totalOwned += a;
-
     const ranked = [...basisByCorp.entries()].sort((a, b) => b[1] - a[1]);
     const rankIdx = ranked.findIndex(([id]) => id === focalId);
     const focalAnchor = anchorByCorp.get(focalId) ?? 0;
     const focalBasis = basisByCorp.get(focalId) ?? 0;
-    const unownedRevenue = Math.max(0, basisMarket - totalOwned);
 
     positions.push({
       sectorType,
@@ -162,8 +152,6 @@ export async function computeCorpMarketShare(
         Math.round(computeMarketSharePercent(focalBasis, basisMarket) * 100) / 100,
       rank: rankIdx >= 0 ? rankIdx + 1 : ranked.length + 1,
       competitors: ranked.length,
-      unownedPercent:
-        Math.round(computeMarketSharePercent(unownedRevenue, basisMarket) * 100) / 100,
     });
   }
 

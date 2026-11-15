@@ -15,16 +15,17 @@ import {
 } from "./nppCorporationBehavior";
 import { ceoArchetypeModifiers } from "@/lib/npp/ceoArchetype";
 import type { NppStrategyState } from "@/lib/turn/npp/corpStrategy";
-import type { Corporation, CorporateSector, UnownedSector } from "@/lib/db/types";
+import type { Corporation, CorporateSector } from "@/lib/db/types";
+import { candidate, candidatesByCountry, demandSignals } from "./npp/__fixtures__/marketCandidates";
+import type { MarketCandidate } from "./npp/marketCandidates";
+import { foundingStarterUnits } from "@/lib/corporations/foundingPlant";
 import { CAPACITY_ANCHOR_YEAR } from "@/lib/constants/capacityEconomy";
-import { computeUnownedHeadroomUnits } from "@/lib/market/unownedHeadroom";
 
 const noPrices: CommodityPriceRatioFn = () => null;
 const noState = new Set<string>();
 const TURN = 1000;
 
-const POOL_REVENUE_ANCHOR = 40_000_000;
-const POOL_UNITS = computeUnownedHeadroomUnits("manufacturing", POOL_REVENUE_ANCHOR, 1);
+const ROOM_UNITS = foundingStarterUnits("manufacturing") * 40;
 
 const plantsCtx: NppPlantsContext = {
   enabled: true,
@@ -35,15 +36,8 @@ const plantsCtx: NppPlantsContext = {
   costOfLivingOf: () => null,
 };
 
-function pool(): UnownedSector {
-  return {
-    _id: new ObjectId(),
-    stateId: "NY",
-    countryId: "US",
-    sectorType: "manufacturing",
-    revenue: POOL_REVENUE_ANCHOR,
-    headroomUnits: POOL_UNITS,
-  } as unknown as UnownedSector;
+function pool(): MarketCandidate {
+  return candidate({ stateId: "NY" });
 }
 
 function corp(overrides: Partial<Corporation> = {}): Corporation {
@@ -92,10 +86,11 @@ function decide(strategy?: NppStrategyState, over: Partial<Corporation> = {}) {
       // strategy rather than the switching logic.
       strategyEligible: false,
     },
-    new Map<string, UnownedSector[]>([["US", [pool()]]]),
+    candidatesByCountry([pool()]),
     noState,
     noPrices,
-    plantsCtx
+    plantsCtx,
+    demandSignals({ "NY:manufacturing": ROOM_UNITS })
   );
 }
 

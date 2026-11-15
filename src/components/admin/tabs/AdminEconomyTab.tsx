@@ -114,13 +114,6 @@ const InflationAdminPanel = dynamic(
     })),
   { ssr: false }
 );
-const SectorSeedAdminPanel = dynamic(
-  () =>
-    import("@/components/admin/economy/SectorSeedAdminPanel").then((m) => ({
-      default: m.SectorSeedAdminPanel,
-    })),
-  { ssr: false }
-);
 
 const CommandEconomyAdminPanel = dynamic(
   () =>
@@ -146,7 +139,6 @@ export type EconomySubTab =
   | "npp-economy"
   | "index-funds"
   | "financial-ledger"
-  | "sector-seed"
   | "command-economy";
 
 interface AdminEconomyTabProps {
@@ -178,7 +170,6 @@ export function AdminEconomyTab({ activeSub }: AdminEconomyTabProps) {
         )}
         {activeSub === "index-funds" && <IndexFundsAdminPanel />}
         {activeSub === "financial-ledger" && <FinancialLedgerAdminPanel />}
-        {activeSub === "sector-seed" && <SectorSeedAdminPanel />}
       </div>
     </>
   );

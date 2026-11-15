@@ -1,31 +1,29 @@
 import { describe, it, expect } from "vitest";
-import { ObjectId } from "mongodb";
 import {
-  findBestUnownedSector,
+  findBestMarketCandidate as findBestMarketCandidateRaw,
   HQ_STATE_SCORE_BONUS,
+  hasEnterableHeadroom,
   markMarketsActive,
   sectorShortageScore,
 } from "./marketSignals";
 import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
-import type { UnownedSector } from "@/lib/db/types/unownedSector";
+import type { MarketCandidate } from "./marketCandidates";
+import { candidateWithRoom, roomOf, withCandidateRoom } from "./__fixtures__/marketCandidates";
 import type { CommodityType } from "@/lib/constants/commodities";
-import type { CountryId } from "@/lib/constants/countries";
 
 const us = (
   sectorType: string,
   stateId: string,
-  revenue = 100_000,
+  room = 100_000,
   industryModel?: string
-): UnownedSector =>
-  ({
-    _id: new ObjectId(),
-    stateId,
-    countryId: "US" as CountryId,
-    sectorType: sectorType as UnownedSector["sectorType"],
-    ...(industryModel ? { industryModel } : {}),
-    revenue,
-    headroomUnits: revenue,
-  }) as UnownedSector;
+): MarketCandidate =>
+  candidateWithRoom({ sectorType, stateId, industryModel: industryModel ?? null } as never, room);
+
+const findBestMarketCandidate: typeof findBestMarketCandidateRaw = (...args) => {
+  const withSignals = [...args] as unknown as Parameters<typeof findBestMarketCandidateRaw>;
+  withSignals[10] = withCandidateRoom(args[10]);
+  return findBestMarketCandidateRaw(...withSignals);
+};
 
 const ratios =
   (map: Partial<Record<CommodityType, number>>) =>
@@ -37,7 +35,7 @@ describe("state-resolution placement signals (supply dislocation, t202)", () => 
     const pool = new Map([
       ["US", [us("manufacturing", "AZ", 100_000), us("manufacturing", "TX", 10_000_000)]],
     ]);
-    const pick = findBestUnownedSector(
+    const pick = findBestMarketCandidate(
       "US",
       "CA",
       "manufacturing",
@@ -61,7 +59,7 @@ describe("state-resolution placement signals (supply dislocation, t202)", () => 
     // shortage; the HQ state (PA) is at base. The old unconditional HQ pick
     // returned PA regardless — the shortage signal must now win.
     const pool = new Map([["US", [us("manufacturing", "PA"), us("manufacturing", "NY")]]]);
-    const pick = findBestUnownedSector(
+    const pick = findBestMarketCandidate(
       "US",
       "PA",
       "manufacturing",
@@ -79,7 +77,7 @@ describe("state-resolution placement signals (supply dislocation, t202)", () => 
 
   it("the HQ state still wins a tie (score bonus, not a hard pick)", () => {
     const pool = new Map([["US", [us("manufacturing", "NY"), us("manufacturing", "PA")]]]);
-    const pick = findBestUnownedSector(
+    const pick = findBestMarketCandidate(
       "US",
       "PA",
       "manufacturing",
@@ -100,7 +98,7 @@ describe("state-resolution placement signals (supply dislocation, t202)", () => 
     // Legacy callers pass no signals; ranking still runs and HQ still gets its
     // preference on equal candidates.
     const pool = new Map([["US", [us("manufacturing", "NY"), us("manufacturing", "PA")]]]);
-    const pick = findBestUnownedSector(
+    const pick = findBestMarketCandidate(
       "US",
       "PA",
       "manufacturing",
@@ -119,7 +117,7 @@ describe("state-resolution placement signals (supply dislocation, t202)", () => 
     // NY candidate is dropped outright — a depositless extraction sector clamps
     // at zero output forever.
     const pool = new Map([["US", [us("extraction", "NY"), us("extraction", "TX")]]]);
-    const pick = findBestUnownedSector(
+    const pick = findBestMarketCandidate(
       "US",
       "NY",
       "extraction",
@@ -137,7 +135,7 @@ describe("state-resolution placement signals (supply dislocation, t202)", () => 
 
   it("extraction ranks by deposit headroom between viable states", () => {
     const pool = new Map([["US", [us("extraction", "MN"), us("extraction", "WV")]]]);
-    const pick = findBestUnownedSector(
+    const pick = findBestMarketCandidate(
       "US",
       "WV",
       "extraction",
@@ -160,7 +158,7 @@ describe("state-resolution placement signals (supply dislocation, t202)", () => 
     // value is its DEPOSIT x commodity shortage, not local demand, so a rich
     // deposit in a short commodity is now a valid founding target.
     const pool = new Map([["US", [us("extraction", "WY", 0), us("extraction", "NJ", 0)]]]);
-    const pick = findBestUnownedSector(
+    const pick = findBestMarketCandidate(
       "US",
       "NJ",
       "extraction",
@@ -178,7 +176,7 @@ describe("state-resolution placement signals (supply dislocation, t202)", () => 
 
   it("returns null when every extraction candidate is depositless", () => {
     const pool = new Map([["US", [us("extraction", "NY"), us("extraction", "NJ")]]]);
-    const pick = findBestUnownedSector(
+    const pick = findBestMarketCandidate(
       "US",
       "NY",
       "extraction",
@@ -199,7 +197,7 @@ describe("state-resolution placement signals (supply dislocation, t202)", () => 
     // shortage. PA has an explicit at-base state price. NY should inherit the
     // country shortage and beat PA plus its HQ bonus.
     const pool = new Map([["US", [us("manufacturing", "PA"), us("manufacturing", "NY")]]]);
-    const pick = findBestUnownedSector(
+    const pick = findBestMarketCandidate(
       "US",
       "PA",
       "manufacturing",
@@ -222,7 +220,7 @@ describe("empty-market coverage treatment", () => {
       ["US", [us("manufacturing", "TX", 10_000_000), us("manufacturing", "AZ", 100_000)]],
     ]);
     const activeMarketBuckets = new Set(["TX:manufacturing"]);
-    const pick = findBestUnownedSector(
+    const pick = findBestMarketCandidate(
       "US",
       "CA",
       "manufacturing",
@@ -242,7 +240,7 @@ describe("empty-market coverage treatment", () => {
 
   it("does not redirect into an uncovered cell smaller than one facility", () => {
     const pool = new Map([["US", [us("manufacturing", "TX", 10_000), us("media", "AZ", 20)]]]);
-    const pick = findBestUnownedSector(
+    const pick = findBestMarketCandidate(
       "US",
       "CA",
       "manufacturing",
@@ -270,7 +268,7 @@ describe("empty-market coverage treatment", () => {
     const pool = new Map([
       ["US", [us("manufacturing", "MI", 10_000_000), us("manufacturing", "MI", 1, "vehicles")]],
     ]);
-    const pick = findBestUnownedSector(
+    const pick = findBestMarketCandidate(
       "US",
       "MI",
       "manufacturing",
@@ -306,7 +304,7 @@ describe("empty-market coverage treatment", () => {
       ["US", [us("manufacturing", "PA", 0), us("manufacturing", "NY", 100_000)]],
     ]);
     const stats = {};
-    const pick = findBestUnownedSector(
+    const pick = findBestMarketCandidate(
       "US",
       "PA",
       "manufacturing",
@@ -325,7 +323,7 @@ describe("empty-market coverage treatment", () => {
     expect(pick).toBeNull();
     expect(stats).toMatchObject({
       occupiedExcluded: 0,
-      emptyPoolExcluded: 1,
+      noRoomExcluded: 1,
       stateControlledExcluded: 1,
       depositExcluded: 0,
     });
@@ -336,7 +334,7 @@ describe("empty-market coverage treatment", () => {
       ["US", [us("manufacturing", "PA", 0), us("manufacturing", "NY", 100_000)]],
     ]);
     const stats = {};
-    const pick = findBestUnownedSector(
+    const pick = findBestMarketCandidate(
       "US",
       "PA",
       "manufacturing",
@@ -355,7 +353,7 @@ describe("empty-market coverage treatment", () => {
     expect(pick).toMatchObject({ stateId: "NY", sectorType: "manufacturing" });
     expect(stats).toMatchObject({
       occupiedExcluded: 0,
-      emptyPoolExcluded: 1,
+      noRoomExcluded: 1,
       stateControlledExcluded: 0,
       depositExcluded: 0,
     });
@@ -368,7 +366,7 @@ describe("physical saturation gate (live turn 250 incident)", () => {
       ["US", [us("logistics", "TN", 10_000_000), us("logistics", "KY", 100_000)]],
     ]);
     const stats = {};
-    const pick = findBestUnownedSector(
+    const pick = findBestMarketCandidate(
       "US",
       "TN",
       "logistics",
@@ -389,7 +387,7 @@ describe("physical saturation gate (live turn 250 incident)", () => {
 
   it("finds nothing when every cell is saturated", () => {
     const pool = new Map([["US", [us("logistics", "TN")]]]);
-    const pick = findBestUnownedSector(
+    const pick = findBestMarketCandidate(
       "US",
       "TN",
       "logistics",
@@ -408,11 +406,11 @@ describe("physical saturation gate (live turn 250 incident)", () => {
 
 describe("founding type discipline (live turn 262)", () => {
   const find = (
-    pool: Map<string, UnownedSector[]>,
-    signals?: Parameters<typeof findBestUnownedSector>[10],
+    pool: Map<string, MarketCandidate[]>,
+    signals?: Parameters<typeof findBestMarketCandidate>[10],
     healthcarePrice = 3
   ) =>
-    findBestUnownedSector(
+    findBestMarketCandidate(
       "US",
       "NY",
       "manufacturing",
@@ -443,7 +441,7 @@ describe("type discipline with the coverage treatment", () => {
     const pool = new Map([
       ["US", [us("manufacturing", "TX", 100_000), us("media", "AZ", 100_000)]],
     ]);
-    const pick = findBestUnownedSector(
+    const pick = findBestMarketCandidate(
       "US",
       "TX",
       "manufacturing",
@@ -477,15 +475,15 @@ describe("type discipline with the coverage treatment", () => {
       undefined,
       null,
     ] as const;
-    expect(findBestUnownedSector(...args)).toBeNull();
-    expect(findBestUnownedSector(...args, true)?.sectorType).toBe("media");
+    expect(findBestMarketCandidate(...args)).toBeNull();
+    expect(findBestMarketCandidate(...args, true)?.sectorType).toBe("media");
   });
 });
 
 describe("cross-type founding needs a readable shortage", () => {
   it("an unreadable gap is not a shortage once the signal is wired", () => {
     const pool = new Map([["US", [us("healthcare", "NY")]]]);
-    const pick = findBestUnownedSector(
+    const pick = findBestMarketCandidate(
       "US",
       "NY",
       "manufacturing",
@@ -505,7 +503,7 @@ describe("cross-type founding needs a readable shortage", () => {
 describe("essential-shortage valve only where no same-type builder exists", () => {
   const pool = new Map([["US", [us("manufacturing", "PA"), us("logistics", "NY")]]]);
   const pick = (hasSameType: boolean) =>
-    findBestUnownedSector(
+    findBestMarketCandidate(
       "US",
       "PA",
       "manufacturing",
@@ -532,8 +530,8 @@ describe("candidate ranking is memoized, not re-derived per comparison", () => {
   // The reference ranking recomputes a candidate's score on every comparison,
   // which is what the scan did before: market size times the state's shortage
   // score, with the HQ bonus. The memoized scan must land on the same pick.
-  const referencePick = (candidates: UnownedSector[], hqState: string) => {
-    const scoreOf = (candidate: UnownedSector) => {
+  const referencePick = (candidates: MarketCandidate[], hqState: string) => {
+    const scoreOf = (candidate: MarketCandidate) => {
       const shortage = sectorShortageScore(
         getOperatingSectorType(
           candidate.sectorType,
@@ -544,7 +542,7 @@ describe("candidate ranking is memoized, not re-derived per comparison", () => {
         (commodity) => (candidate.stateId === "NY" ? (commodity === "freight" ? 2 : 1.4) : 1)
       );
       return (
-        candidate.revenue * shortage * (candidate.stateId === hqState ? HQ_STATE_SCORE_BONUS : 1)
+        roomOf(candidate) * shortage * (candidate.stateId === hqState ? HQ_STATE_SCORE_BONUS : 1)
       );
     };
     return [...candidates].sort((a, b) => scoreOf(b) - scoreOf(a))[0];
@@ -558,7 +556,7 @@ describe("candidate ranking is memoized, not re-derived per comparison", () => {
       us("logistics", "OH", 120_000),
     ];
     const pool = new Map([["US", candidates]]);
-    const pick = findBestUnownedSector(
+    const pick = findBestMarketCandidate(
       "US",
       "PA",
       "logistics",
@@ -586,7 +584,7 @@ describe("candidate ranking is memoized, not re-derived per comparison", () => {
     );
     const pool = new Map([["US", candidates]]);
     const lookups = new Map<string, number>();
-    findBestUnownedSector(
+    findBestMarketCandidate(
       "US",
       "PA",
       "logistics",
@@ -619,7 +617,7 @@ describe("input-aware founding candidacy", () => {
       ["US", [us("manufacturing", "WI", 10_000_000), us("manufacturing", "OH", 100_000)]],
     ]);
     const stats = {};
-    const pick = findBestUnownedSector(
+    const pick = findBestMarketCandidate(
       "US",
       "WI",
       "manufacturing",
@@ -640,7 +638,7 @@ describe("input-aware founding candidacy", () => {
 
   it("a missing reading never blocks", () => {
     const pool = new Map([["US", [us("manufacturing", "WI")]]]);
-    const pick = findBestUnownedSector(
+    const pick = findBestMarketCandidate(
       "US",
       "WI",
       "manufacturing",
@@ -654,5 +652,33 @@ describe("input-aware founding candidacy", () => {
       { foundingInputAvailabilityOf: () => null }
     );
     expect(pick?.stateId).toBe("WI");
+  });
+});
+
+describe("hasEnterableHeadroom without stored markets", () => {
+  const corp = {
+    countryId: "US",
+    headquartersState: "PA",
+    type: "manufacturing",
+    secondaryType: null,
+    industryModel: null,
+  } as never;
+
+  it("is false when the country lists no candidate bucket", () => {
+    expect(hasEnterableHeadroom(corp, [], new Map(), new Set(), true, 1)).toBe(false);
+  });
+
+  it("is true when a candidate bucket still has unmet demand", () => {
+    const pool = new Map([["US", [us("manufacturing", "NY", 5_000)]]]);
+    expect(hasEnterableHeadroom(corp, [], pool, new Set(), true, 1, withCandidateRoom())).toBe(
+      true
+    );
+  });
+
+  it("is false when every candidate reads no unmet demand", () => {
+    const pool = new Map([["US", [us("manufacturing", "NY", 0)]]]);
+    expect(hasEnterableHeadroom(corp, [], pool, new Set(), true, 1, withCandidateRoom())).toBe(
+      false
+    );
   });
 });

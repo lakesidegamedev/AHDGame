@@ -2,20 +2,12 @@
  * National sector-mix aggregation for the Economic Outlook surfaces.
  *
  * Read-path only: aggregates each (state, sectorType) market across a country.
- * Below plants it uses the host-state FX basis and the legacy owned-plus-unowned
- * revenue path. Under plants, market size is built plant capacity plus latent
- * output demand from the commodity ledger; authored unowned-sector rows do not
- * set the industry denominator. No writes.
+ * Market size is built plant capacity plus latent output demand from the
+ * commodity ledger. No stored market rows exist. No writes.
  */
 
 import type { Db } from "mongodb";
-import type {
-  CommodityPrice,
-  CorporateSector,
-  GameState,
-  State,
-  UnownedSector,
-} from "@/lib/db/types";
+import type { CommodityPrice, CorporateSector, GameState, State } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import {
   OPERATING_SECTOR_TYPES,
@@ -35,19 +27,16 @@ import {
   fxRateForSectorHostFromMap,
 } from "@/lib/currency/corporationCapital";
 import { readCorpEconomicAnchor } from "@/lib/currency/corpEconomyFields";
-import { effectiveMarketAnchor, gdpDerivedMarketAnchor } from "@/lib/corporations/marketShare";
 import { loadWorldPreset } from "@/lib/currency/gdpAnchorRate";
 import { defaultSupplyRates, unitYieldForSupply } from "@/lib/constants/capacityEconomy";
 import {
   getEffectiveStrategyRatesForOperatingModel,
   getOperatingSectorType,
 } from "@/lib/constants/sectorStrategies";
-import { getMarketSystemModeForDb, marketAtLeast } from "@/lib/market/featureFlag";
 import { withFundedNationalBalances } from "@/lib/market/producerMarket/loadFundedCountryBooks";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
-import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
 import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
 
 export interface CountrySectorMixEntry {
@@ -462,29 +451,23 @@ export async function aggregateCountrySectorMix(
   db: Db,
   countryId: CountryId
 ): Promise<CountrySectorMixEntry[]> {
-  const [states, sectors, fxByCurrency, preset, marketMode, worldState, storedPrices] =
-    await Promise.all([
-      statesCollection(db)
-        .find({ countryId })
-        .project<Pick<State, "_id" | "name" | "gdp">>({ name: 1, gdp: 1 })
-        .toArray(),
-      corporateSectorsCollection(db).find({ countryId }).toArray(),
-      loadFxRatesByCurrency(db),
-      loadWorldPreset(db),
-      getMarketSystemModeForDb(db),
-      gameStateCollection(db).findOne(
-        { _id: "current" },
-        { projection: { currentTurn: 1, worldEpochId: 1 } }
-      ),
-      commodityPricesCollection(db).find({}).toArray(),
-    ]);
+  const [states, sectors, fxByCurrency, preset, worldState, storedPrices] = await Promise.all([
+    statesCollection(db)
+      .find({ countryId })
+      .project<Pick<State, "_id" | "name" | "gdp">>({ name: 1, gdp: 1 })
+      .toArray(),
+    corporateSectorsCollection(db).find({ countryId }).toArray(),
+    loadFxRatesByCurrency(db),
+    loadWorldPreset(db),
+    gameStateCollection(db).findOne(
+      { _id: "current" },
+      { projection: { currentTurn: 1, worldEpochId: 1 } }
+    ),
+    commodityPricesCollection(db).find({}).toArray(),
+  ]);
   // The national gap reads the funded country book of the prices' turn when
   // there is one: stored nationalDemand misses buyers with no state.
   const prices = await withFundedNationalBalances(db, storedPrices, worldState?.worldEpochId);
-  const plantsMode = marketAtLeast(marketMode, "plants");
-  const unownedDocs = plantsMode
-    ? []
-    : await unownedSectorsCollection(db).find({ countryId }).toArray();
   const eraUnitScale = getEraUnitScale(preset);
   const currentTurn =
     typeof worldState?.currentTurn === "number" && Number.isFinite(worldState.currentTurn)
@@ -504,8 +487,6 @@ export async function aggregateCountrySectorMix(
   const bucketKey = (stateId: string, type: OperatingSectorType, industryModel?: string | null) =>
     `${stateId}::${type}::${industryModel ?? ""}`;
   const ownedByBucket = new Map<string, number>();
-  const growthSumByType = new Map<OperatingSectorType, number>();
-  const growthCountByType = new Map<OperatingSectorType, number>();
   const plantsMarketInputs: PlantsSectorMarketInput[] = [];
   for (const s of sectors) {
     const anchor = readCorpEconomicAnchor(s.revenue, hostCode, hostRate);
@@ -520,7 +501,7 @@ export async function aggregateCountrySectorMix(
       bucketKey(s.stateId, type, s.industryModel),
       (ownedByBucket.get(bucketKey(s.stateId, type, s.industryModel)) ?? 0) + anchor
     );
-    if (plantsMode) {
+    {
       plantsMarketInputs.push({
         type,
         industryModel: s.industryModel,
@@ -535,42 +516,24 @@ export async function aggregateCountrySectorMix(
         mothballed: s.mothballed,
       });
     }
-    const growth = s.currentGrowthRate ?? s.targetGrowthRate ?? s.growthRate ?? 0;
-    growthSumByType.set(type, (growthSumByType.get(type) ?? 0) + growth);
-    growthCountByType.set(type, (growthCountByType.get(type) ?? 0) + 1);
   }
-  const unownedByBucket = new Map<string, number>();
-  for (const u of unownedDocs) {
-    const operatingType = getOperatingSectorType(
-      u.sectorType,
-      u.industryModel,
-      u.mediaDiscriminator
-    );
-    const type = operatingType;
-    const key = bucketKey(u.stateId, type, u.industryModel);
-    unownedByBucket.set(key, (unownedByBucket.get(key) ?? 0) + (u.revenue ?? 0));
-  }
-
-  const plantsMarket = plantsMode
-    ? buildPlantsMarketAggregation({
-        countryId,
-        sectors: plantsMarketInputs,
-        states: states.map((state) => ({ stateId: state._id, gdp: state.gdp ?? 0 })),
-        prices,
-        eraUnitScale,
-        currentTurn,
-        bucketKey,
-      })
-    : null;
+  const plantsMarket = buildPlantsMarketAggregation({
+    countryId,
+    sectors: plantsMarketInputs,
+    states: states.map((state) => ({ stateId: state._id, gdp: state.gdp ?? 0 })),
+    prices,
+    eraUnitScale,
+    currentTurn,
+    bucketKey,
+  });
 
   // Index each market bucket once. This also includes physical plant-market
-  // buckets created by latent commodity demand, which may have no owned or
-  // unowned row in that state.
+  // buckets created by latent commodity demand, which may have no owned row in
+  // that state.
   const marketBucketKeys = new Set<string>([
     ...ownedByBucket.keys(),
-    ...unownedByBucket.keys(),
-    ...(plantsMarket?.ownedByBucket.keys() ?? []),
-    ...(plantsMarket?.marketByBucket.keys() ?? []),
+    ...plantsMarket.ownedByBucket.keys(),
+    ...plantsMarket.marketByBucket.keys(),
   ]);
   const bucketKeysByStateAndType = indexBucketKeysByStateAndType(marketBucketKeys);
 
@@ -582,37 +545,25 @@ export async function aggregateCountrySectorMix(
       const keys = bucketKeysByStateAndType.get(`${state._id}::${type}`) ?? [
         bucketKey(state._id, type),
       ];
-      let owned = keys.reduce((sum, key) => sum + (ownedByBucket.get(key) ?? 0), 0);
-      const gdpFallback = gdpDerivedMarketAnchor(state.gdp ?? 0, countryId, preset);
-      let market: number;
-      if (!plantsMode) {
-        const unowned = keys.reduce((sum, key) => sum + (unownedByBucket.get(key) ?? 0), 0);
-        market = effectiveMarketAnchor(owned, unowned, gdpFallback);
-      } else {
-        owned = keys.reduce((sum, key) => sum + (plantsMarket?.ownedByBucket.get(key) ?? 0), 0);
-        market = keys.reduce((sum, key) => sum + (plantsMarket?.marketByBucket.get(key) ?? 0), 0);
-      }
+      const owned = keys.reduce((sum, key) => sum + (plantsMarket.ownedByBucket.get(key) ?? 0), 0);
+      const market = keys.reduce(
+        (sum, key) => sum + (plantsMarket.marketByBucket.get(key) ?? 0),
+        0
+      );
       totalMarket += market;
       totalOwned += owned;
       if (market > 0 && (largest == null || market > largest.market)) {
         largest = { stateId: state._id, stateName: state.name, market };
       }
     }
-    const gCount = growthCountByType.get(type) ?? 0;
     return {
       type,
       label: OPERATING_SECTOR_TYPE_LABELS[type],
       totalMarketAnchor: Math.round(totalMarket),
       ownedPercent: totalMarket > 0 ? Math.round((totalOwned / totalMarket) * 1000) / 10 : 0,
       largestState: largest ? { stateId: largest.stateId, stateName: largest.stateName } : null,
-      // `currentGrowthRate` is intentionally zero in plants: capacity moves
-      // through paid build orders, not the legacy growth slider. A displayed
-      // 0.00% therefore looks like a measured national contraction/expansion
-      // when it is actually "not applicable".
-      avgGrowth:
-        !plantsMode && gCount > 0
-          ? Math.round(((growthSumByType.get(type) ?? 0) / gCount) * 100) / 100
-          : null,
+      // Capacity moves through paid build orders, so there is no growth slider mean.
+      avgGrowth: null,
     };
   });
 }

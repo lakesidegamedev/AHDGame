@@ -9,15 +9,13 @@
  * read → grow → write round-trips and cancels); plants exposes it.
  *
  * The invariant these tests pin: `revenue` is written in local currency, while
- * the ₳ quantity `startingRevenue` — which also drives the capacity grant and
- * the unowned-pool drawdown, both of which are ₳/unit based — is unchanged.
+ * the ₳ quantity `startingRevenue`, which also drives the capacity grant, is
+ * unchanged.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { Db } from "mongodb";
 import { ObjectId } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
-import { DEFAULT_SECTOR_STARTING_REVENUE } from "@/lib/constants/corporations";
-import { computeUnownedHeadroomUnits } from "@/lib/market/unownedHeadroom";
 // Load the spawn module graph at collection time. A cold import inside the
 // first test can outlast its budget under load.
 import { spawnNppCorporation } from "./spawnNppCorporation";
@@ -54,17 +52,11 @@ vi.mock("./nppCorpCeoSelection", () => ({
   buildCeoAffiliations: vi.fn().mockReturnValue([]),
   chooseNppCorpCeo: vi.fn().mockReturnValue({ kind: "new", party: null }),
 }));
-vi.mock("@/lib/admin/seed/seedUnownedSectors", () => ({
-  computeUnownedSeedRevenue: vi.fn().mockReturnValue(0),
-}));
 vi.mock("@/lib/market/featureFlag", () => ({
   getMarketSystemModeForDb: vi.fn().mockResolvedValue("capital"),
   marketAtLeast: vi.fn().mockReturnValue(false),
 }));
 
-const POOL_REVENUE = 40_000_000;
-/** ₳ quantity the spawn captures: a quarter of the pool, floored at the starter. */
-const CAPTURE_ANCHOR = Math.max(Math.round(POOL_REVENUE * 0.25), DEFAULT_SECTOR_STARTING_REVENUE);
 const JPY_RATE = 360;
 
 describe("spawnNppCorporation — sector revenue denomination", () => {
@@ -77,7 +69,6 @@ describe("spawnNppCorporation — sector revenue denomination", () => {
       "npps",
       "corporations",
       "corporateSectors",
-      "unownedSectors",
       "politicalParties",
       "exchangeRates",
     ]) {
@@ -95,14 +86,6 @@ describe("spawnNppCorporation — sector revenue denomination", () => {
       countryId,
       name: stateId,
       gdp: 1_000_000_000,
-    });
-    db.collectionMocks.unownedSectors!.findOne.mockResolvedValue({
-      _id: new ObjectId(),
-      stateId,
-      countryId,
-      sectorType: "manufacturing",
-      revenue: POOL_REVENUE,
-      headroomUnits: computeUnownedHeadroomUnits("manufacturing", POOL_REVENUE, 1),
     });
     db.collectionMocks.exchangeRates!.findOne.mockResolvedValue(
       fxRate == null ? null : { currencyCode: "X", rate: fxRate }
@@ -122,11 +105,6 @@ describe("spawnNppCorporation — sector revenue denomination", () => {
         string,
         unknown
       >,
-      poolSet: (
-        db.collectionMocks.unownedSectors!.updateOne.mock.calls[0][1] as {
-          $set: Record<string, number>;
-        }
-      ).$set,
     };
   }
 
@@ -136,38 +114,39 @@ describe("spawnNppCorporation — sector revenue denomination", () => {
 
   it("writes revenue in the host-state currency, not ₳", async () => {
     setup("JP", "KAN", JPY_RATE);
-    const { sector } = await spawn("JP", "KAN");
-    expect(sector.revenue).toBe(Math.round(CAPTURE_ANCHOR * JPY_RATE));
+    const { sector, result } = await spawn("JP", "KAN");
+    expect(result.startingRevenue).toBeGreaterThan(0);
+    expect(sector.revenue).toBe(Math.round(result.startingRevenue * JPY_RATE));
   });
 
   it("round-trips back to the ₳ figure a reader expects", async () => {
     setup("JP", "KAN", JPY_RATE);
-    const { sector } = await spawn("JP", "KAN");
+    const { sector, result } = await spawn("JP", "KAN");
     const { readCorpEconomicAnchor } = await import("@/lib/currency/corpEconomyFields");
     expect(readCorpEconomicAnchor(sector.revenue as number, "JPY", JPY_RATE)).toBeCloseTo(
-      CAPTURE_ANCHOR,
+      result.startingRevenue,
       0
     );
   });
 
-  it("leaves the ₳ quantities — pool drawdown and the returned figure — untouched", async () => {
+  it("opens a small economy and a large one at the same ₳ size", async () => {
     setup("JP", "KAN", JPY_RATE);
-    const { poolSet, result } = await spawn("JP", "KAN");
-    // The unowned pool is ₳-native by convention; the conversion happens at the
-    // sector-row boundary only.
-    expect(poolSet.revenue).toBe(Math.max(0, POOL_REVENUE - CAPTURE_ANCHOR));
-    expect(result.startingRevenue).toBe(CAPTURE_ANCHOR);
+    const small = await spawn("JP", "KAN");
+    vi.clearAllMocks();
+    setup("US", "CA", 1);
+    const large = await spawn("US", "CA");
+    expect(small.result.startingRevenue).toBe(large.result.startingRevenue);
   });
 
   it("is a no-op for an anchor-rate country (USD ≈ 1)", async () => {
     setup("US", "CA", 1);
-    const { sector } = await spawn("US", "CA");
-    expect(sector.revenue).toBe(CAPTURE_ANCHOR);
+    const { sector, result } = await spawn("US", "CA");
+    expect(sector.revenue).toBe(result.startingRevenue);
   });
 
   it("passes through unchanged when no FX rate is on file", async () => {
     setup("US", "CA", null);
-    const { sector } = await spawn("US", "CA");
-    expect(sector.revenue).toBe(CAPTURE_ANCHOR);
+    const { sector, result } = await spawn("US", "CA");
+    expect(sector.revenue).toBe(result.startingRevenue);
   });
 });

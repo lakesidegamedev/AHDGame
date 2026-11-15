@@ -41,7 +41,7 @@ import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
 import { shareOrdersCollection } from "@/lib/db/repositories/shareOrders";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
-import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
+import { statesCollection } from "@/lib/db/repositories/states";
 import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
 import { corporationHistoryCollection } from "@/lib/db/repositories/corporationHistory";
 import { commodityFlowsCollection } from "@/lib/db/repositories/commodityFlows";
@@ -235,7 +235,7 @@ export async function snapshotEconomicVitalSigns(
     groupMembership,
     exchangeRates,
     ringFencedCorps,
-    unownedSectors,
+    states,
     entryFunnel,
     eraUnitScale,
     historyDocs,
@@ -337,7 +337,9 @@ export async function snapshotEconomicVitalSigns(
         }
       )
       .toArray(),
-    unownedSectorsCollection(db).find({}).toArray(),
+    statesCollection(db)
+      .find({}, { projection: { _id: 1, countryId: 1 } })
+      .toArray(),
     nppMarketEntryFunnelsCollection<NppMarketEntryFunnel>(db).findOne({ _id: `turn:${turn}` }),
     loadWorldEraUnitScale(db),
     // Narrow projection on purpose: the full snapshot carries per-cell arrays.
@@ -474,7 +476,7 @@ export async function snapshotEconomicVitalSigns(
     ringFenced,
     anchorRates: Object.fromEntries(fxByCurrency),
     commodityParticipants,
-    unownedSectors,
+    states,
     entryFunnel,
     eraUnitScale,
     sovereignDemand,

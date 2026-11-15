@@ -116,54 +116,6 @@ the registry — they're invoked manually during incident response. (A
 follow-up will move them under `scripts/migrations/incidents/<category>/`
 to keep the deploy registry directory uncluttered.)
 
----
-
-## Unowned-sector repair tools
-
-Sector abandon, quick dissolve, and bond-default dissolve were all found to
-delete `corporateSectors` without crediting `unownedSectors` after the
-persistent unowned-pool rollout. The production code fix now restores those
-revenues automatically; these scripts are for auditing and repairing any live
-rows that were already lost before the fix shipped.
-
-```bash
-# Read-only audit of a single state+sector
-npx tsx scripts/migrations/inspect-dropped-sector-unowned-loss.ts --state=MN --sector=energy
-
-# Audit with a screenshot-derived repair candidate
-npx tsx scripts/migrations/inspect-dropped-sector-unowned-loss.ts \
-  --state=MN --sector=energy --previous-total-market=7480000 --missing-share-percent=20.64
-
-# Batch audit known candidates from a manifest
-npx tsx scripts/migrations/inspect-dropped-sector-unowned-loss.ts \
-  --manifest=scripts/migrations/dropped-sector-unowned-loss.example.json
-
-# Dry-run repair of a known case
-npx tsx scripts/migrations/heal-dropped-sector-unowned-loss.ts \
-  --state=MN --sector=energy --previous-total-market=7480000 --missing-share-percent=20.64
-
-# Apply the repair
-npx tsx scripts/migrations/heal-dropped-sector-unowned-loss.ts \
-  --state=MN --sector=energy --previous-total-market=7480000 --missing-share-percent=20.64 --apply
-
-# Batch dry-run/apply
-npx tsx scripts/migrations/heal-dropped-sector-unowned-loss.ts \
-  --manifest=scripts/migrations/dropped-sector-unowned-loss.example.json
-```
-
-Notes:
-
-- These scripts default to `MONGODB_URI_LIVE`. Pass `--db=local` to use
-  `MONGODB_URI`.
-- `inspect-dropped-sector-unowned-loss.ts` also reports the number of
-  `corporation_dissolved` wire events since the April 11, 2026 unowned-sector
-  rollout so historical exposure is visible even when exact reconstruction is
-  not.
-- Plain sector abandon leaves no durable audit row, and dissolved corporations
-  are hard-deleted, so historical cases without external evidence still require
-  manual reconstruction. The manifest flow is the safe path for confirmed
-  screenshot-derived repairs.
-
 ## v0.2.6 corp economy + bond stamp migrations
 
 Three one-shot migrations for the v0.2.6 corp-economic local-currency cutover.

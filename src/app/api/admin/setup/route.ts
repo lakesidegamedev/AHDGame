@@ -38,7 +38,6 @@ import {
   seedJpBudgets,
   seedSeats,
   seedPartyBudgets,
-  seedUnownedSectors,
   seedStateSectorSpecializations,
   seedIndexes,
   seedCountyMapData,
@@ -61,7 +60,6 @@ import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParti
 import { electionsCollection } from "@/lib/db/repositories/elections";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
-import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
 import { seatsCollection } from "@/lib/db/repositories/seats";
 import { partyBudgetCollection } from "@/lib/db/repositories/partyBudget";
 import { policiesCollection } from "@/lib/db/repositories/policies";
@@ -85,7 +83,6 @@ export async function GET() {
       demographicsCount,
       seatsCount,
       partyBudgetCount,
-      unownedSectorCount,
     ] = await Promise.all([
       statesCollection<Document>(db).countDocuments({ countryId: "US" }),
       statesCollection<Document>(db).countDocuments({ countryId: "UK" }),
@@ -98,7 +95,6 @@ export async function GET() {
       stateDemographicsCollection<Document>(db).countDocuments(),
       seatsCollection<Document>(db).countDocuments(),
       partyBudgetCollection<Document>(db).countDocuments(),
-      unownedSectorsCollection<Document>(db).countDocuments(),
     ]);
 
     const checks = {
@@ -111,7 +107,6 @@ export async function GET() {
       demographics: demographicsCount > 0,
       seats: seatsCount > 0,
       partyBudgets: partyBudgetCount > 0,
-      unownedSectors: unownedSectorCount > 0,
       electedOfficials: officialsCount > 0,
       elections: electionsCount > 0,
     };
@@ -137,7 +132,6 @@ export async function GET() {
         demographics: demographicsCount,
         seats: seatsCount,
         partyBudgets: partyBudgetCount,
-        unownedSectors: unownedSectorCount,
       },
     });
   } catch (error) {
@@ -186,7 +180,6 @@ export async function POST(request: Request) {
       await seedBudgets(db, false, log, preset);
       await seedSeats(db, false, log, preset);
       await seedPartyBudgets(db, false, log);
-      await seedUnownedSectors(db, log, 1, preset);
     }
 
     if (countryHasFeature("ukApi", scope) || seedAll) {
@@ -211,7 +204,6 @@ export async function POST(request: Request) {
       await seedUkBudgets(db, false, log, preset);
       await seedSeats(db, false, log, preset);
       await seedPartyBudgets(db, false, log);
-      await seedUnownedSectors(db, log, 1, preset);
       await seedUKElections(log);
     }
 
@@ -227,7 +219,6 @@ export async function POST(request: Request) {
       await seedJpBudgets(db, false, log, preset);
       await seedSeats(db, false, log, preset);
       await seedPartyBudgets(db, false, log);
-      await seedUnownedSectors(db, log, 1, preset);
     }
 
     await seedStateSectorSpecializations(db, false, log);

@@ -8,7 +8,9 @@ import { reconcileLedger } from "@/lib/ledger/reconcile";
 import { resetLedgerShadowFlagCache } from "@/lib/ledger/featureFlag";
 import type { LedgerEntry } from "@/lib/ledger/types";
 import { processNppCorporationDecisions } from "@/lib/turn/nppCorporationBehavior";
-import { computeUnownedHeadroomUnits } from "@/lib/market/unownedHeadroom";
+import { getStrategy } from "@/lib/constants/sectorStrategies";
+import { foundingStarterUnits } from "@/lib/corporations/foundingPlant";
+import { COMMODITY_BASE_PRICES, type CommodityType } from "@/lib/constants/commodities";
 import { glutStaggerEligible } from "./cohort";
 import {
   applyCorporationCashWrites,
@@ -77,17 +79,24 @@ function fixture(row: (typeof cases)[number], mode = "plants", shadow = true) {
       soldFraction: 1,
     },
   ]);
-  memory.seed("unownedSectors", [
-    {
+  // The market is the goods market: a region of the corp's country and a
+  // national gap in what manufacturing sells, with no stored market document.
+  memory.seed("states", [{ _id: row.stateId, countryId: row.countryId, gdp: 1 }]);
+  const mix = getStrategy("manufacturing", "").supply;
+  const gapUnits = foundingStarterUnits("manufacturing") * 80;
+  memory.seed(
+    "commodityPrices",
+    (Object.keys(mix) as CommodityType[]).map((commodity) => ({
       _id: new ObjectId(),
-      stateId: row.stateId,
-      countryId: row.countryId,
-      sectorType: "manufacturing",
-      mediaDiscriminator: null,
-      revenue: 40000000,
-      headroomUnits: computeUnownedHeadroomUnits("manufacturing", 40000000, 1),
-    },
-  ]);
+      commodity,
+      turn: TURN - 1,
+      currentPrice: COMMODITY_BASE_PRICES[commodity],
+      nationalDemand: { [row.countryId]: gapUnits },
+      nationalSupply: { [row.countryId]: 0 },
+      stateDemand: { [row.stateId]: gapUnits },
+      stateSupply: { [row.stateId]: 0 },
+    }))
+  );
   return { memory, db, id };
 }
 it.each(cases)(

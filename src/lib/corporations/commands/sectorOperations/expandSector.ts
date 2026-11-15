@@ -21,7 +21,6 @@ import type {
   SectorBuildOrder,
   State,
   StateMetrics,
-  UnownedSector,
 } from "@/lib/db/types";
 import {
   DEFAULT_PROFIT_MARGIN,
@@ -43,7 +42,6 @@ import {
   type MarketEntryFacts,
 } from "@/lib/corporations/rules/marketEntry";
 import { loadFoundingTechEffects } from "@/lib/corporations/foundingTechEffects";
-import { unownedPoolDrawdown } from "@/lib/market/unownedPoolDraw";
 import { getMarketSystemModeForDb, marketAtLeast } from "@/lib/market/featureFlag";
 import { resolveCountryPrimeRate } from "@/lib/corporations/sectorGrowthCost";
 import { NEUTRAL_STAT } from "@/lib/stats/statsConstants";
@@ -77,7 +75,6 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
-import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
 
 /** HTTP status for each entry refusal. */
 const MARKET_ENTRY_STATUS: Record<MarketEntryBlockReason, number> = {
@@ -483,30 +480,6 @@ export async function expandSector(request: Request, { params }: RouteParams) {
     }
 
     if (plantsEnabled && starterUnits > 0) {
-      // Entering a market CONSUMES unowned headroom: market share is
-      // owned / (owned + headroom), so creating starter capacity without
-      // drawing the pool counts the same demand twice and inflates world
-      // capacity across found-and-abandon cycles. Headroom, revenue and the
-      // upsert must move together; both clamp at 0 so a small pool cannot go
-      // negative. The pool row is stamped with the HOST country, matching
-      // every other country read here; using the corp's domicile makes the
-      // row unreachable to the country the capacity is physically in.
-      const starterDrawdown = unownedPoolDrawdown(
-        { stateId, countryId: state.countryId, sectorType, industryModel, mediaDiscriminator },
-        starterUnits,
-        now,
-        eraUnitScale
-      );
-      if (starterDrawdown) {
-        await unownedSectorsCollection(db).updateOne(
-          { stateId, sectorType, industryModel, mediaDiscriminator },
-          starterDrawdown,
-          {
-            upsert: true,
-          }
-        );
-      }
-
       // Shadow-ledger debit leg for the starter build — the cash → CIP reclass,
       // logged at the CIP amount only (the entry fee is an expense, not
       // construction spend, and the FX spread is a routed transaction fee).

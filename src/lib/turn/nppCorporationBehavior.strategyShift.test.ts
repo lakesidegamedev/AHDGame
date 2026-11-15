@@ -21,7 +21,8 @@ import { ceoArchetypeModifiers } from "./ceoArchetype";
 import { SECTOR_STRATEGIES, STRATEGY_COOLDOWN_TURNS } from "@/lib/constants/sectorStrategies";
 import { capacityRescaleRatio } from "@/lib/constants/capacityEconomy";
 import type { CommodityType } from "@/lib/constants/commodities";
-import type { Corporation, CorporateSector, UnownedSector } from "@/lib/db/types";
+import type { Corporation, CorporateSector } from "@/lib/db/types";
+import type { MarketCandidate } from "./npp/marketCandidates";
 import type { NppPlantsContext } from "./nppCorporationBehavior";
 
 const noState = new Set<string>();
@@ -81,7 +82,7 @@ function decide(
       now: new Date(),
       modifiers: ceoArchetypeModifiers("cautious"),
     },
-    new Map<string, UnownedSector[]>(),
+    new Map<string, MarketCandidate[]>(),
     noState,
     ratios,
     plants

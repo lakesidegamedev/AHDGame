@@ -13,7 +13,6 @@ import { invalidateGameTimeCache } from "@/lib/time/gameTime";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import type { Document } from "mongodb";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
-import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
 import { adminLogsCollection } from "@/lib/db/repositories/adminLogs";
 
 const EMPTY_COLLECTIONS = [
@@ -83,15 +82,11 @@ export async function preview1991BootstrapRecovery(db: Db, runId: string) {
       `Recovery runtime is not empty: ${occupied.map(([name, count]) => `${name}=${count}`).join(", ")}`
     );
   }
-  const unownedSectors = await unownedSectorsCollection<Document>(db).countDocuments();
-  if (unownedSectors > 10000)
-    throw new BootstrapRecoveryConflict("Stale market pool exceeds recovery cap");
   return {
     ready: true as const,
     runId,
     preset: "1991-default" as const,
     startingParties: "none" as const,
-    unownedSectors,
   };
 }
 
@@ -130,10 +125,7 @@ export async function recover1991Bootstrap(
       createdAt: new Date(),
       recovery: { runId: options.runId, status: "running" },
     });
-    // This pool survived the reference/runtime split. All economic owners and
-    // player runtime were verified empty above; bootstrap rebuilds the pool.
-    const cleared = await unownedSectorsCollection<Document>(db).deleteMany({});
-    log(`Recovery cleared ${cleared.deletedCount} stale unowned markets; teardown is not repeated`);
+    log("Recovery rebuilds the world without repeating teardown");
     const clock = await gameStateCollection<Document>(db).updateOne(
       {
         _id: "current" as never,

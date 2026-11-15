@@ -7,7 +7,6 @@ import type {
   CommodityPrice,
   Character,
   GameState,
-  UnownedSector,
   BankLoan,
 } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
@@ -24,10 +23,7 @@ import {
   explainOwnSupplyReach,
 } from "@/lib/corporations/queries/sectorDetailOwnSupply";
 import type { SourcingNetworkDoc } from "@/lib/logistics/sourcingLedger";
-import {
-  buildNationalDominanceShareBySectorId,
-  unownedHeadroomUnitsOf,
-} from "@/lib/corporations/marketShare";
+import { buildNationalDominanceShareBySectorId } from "@/lib/corporations/marketShare";
 import { buildMarketContext } from "@/lib/market/marketContext";
 import { supportsCostPlusPricing, validCostPlusBasis } from "@/lib/market/costPlusPricing/rules";
 import { resolveCountryPrimeRate } from "@/lib/corporations/sectorGrowthCost";
@@ -127,7 +123,6 @@ export async function buildSectorDetailPlantsTier({
   marketShare,
   siblingsSectors,
   metrics,
-  unownedDoc,
   sectorRevenueAnchor,
   thisRevenueShare,
   sectorFederalRate,
@@ -372,7 +367,6 @@ export async function buildSectorDetailPlantsTier({
   marketShare: number;
   siblingsSectors: WithId<CorporateSector>[];
   metrics: StateMetricValues;
-  unownedDoc: WithId<UnownedSector> | null;
   sectorRevenueAnchor: number;
   thisRevenueShare: number;
   sectorFederalRate: number;
@@ -460,7 +454,6 @@ export async function buildSectorDetailPlantsTier({
       buildNationalDominanceShareBySectorId({
         sectors: allSectorsRaw,
         stateById: new Map(allStates.map((candidate) => [candidate._id, candidate])),
-        unownedSectors: [],
         exchangeRatesByCurrency: siblingFxByCurrency,
       }).get(sector._id.toString()) ?? 0;
     // Same governor bounds the turn processor resolves (turn/corporation
@@ -802,23 +795,11 @@ export async function buildSectorDetailPlantsTier({
         corporation,
         corporationFxRate
       ),
-      headroomUnits: unownedHeadroomUnitsOf(
-        sectorType,
-        unownedDoc?.headroomUnits,
-        unownedDoc?.revenue ?? 0,
-        sectorDetailUnitScale
-      ),
       demandGapUnits,
       measuredDemandGapUnits,
       buildDemand: sizedDemand,
       buildDemandTurn: fundedBuild?.turn,
-      // Every producer's capacity in this cell (the focal sector included),
-      // so "Unclaimed share" reads the same pool `headroomUnits` measures.
       retoolHint,
-      ownedCellCapacityUnits: siblingsSectors.reduce((sum, s) => {
-        const units = s.operatingCapacityUnits ?? s.capitalStock;
-        return sum + (typeof units === "number" && Number.isFinite(units) && units > 0 ? units : 0);
-      }, 0),
       workers: sector.workers ?? calculateWorkers(sectorRevenueAnchor, metrics.workforceSkill),
       investment: {
         operatingReserveAnchor,

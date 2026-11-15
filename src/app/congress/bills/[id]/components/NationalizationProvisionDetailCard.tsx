@@ -37,12 +37,6 @@ export function NationalizationProvisionDetailCard({
             </span>
           </div>
         )}
-        {s.unownedSliceRevenuePerTurn > 0 && s.scope !== "corporations" && (
-          <div className="mt-1 text-[11px] text-muted">
-            + {natMoney(s.unownedSliceRevenuePerTurn, s.currency)}/turn of unowned market taken
-            free.
-          </div>
-        )}
         {s.affectedCorps.length > 0 && (
           <ul className="mt-2 max-h-40 space-y-0.5 overflow-y-auto">
             {s.affectedCorps.map((c) => (

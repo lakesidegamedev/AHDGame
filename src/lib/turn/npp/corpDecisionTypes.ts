@@ -125,12 +125,10 @@ export interface NppCorpDecisionContext {
   /** Player-appointed caretaker mandate. NPP-owned corporations are always active. */
   caretakerMandate?: "active" | "passive";
   /**
-   * Unowned-pool lookup shared across the whole cohort. The index it builds is a
-   * pure function of the pool snapshot, which every corporation's decision in
-   * one turn reads unchanged, so it is built once instead of once per
-   * corporation. Absent builds a private one.
+   * Local revenue share lookup shared across the whole cohort, built once per
+   * turn from the sector snapshot. Absent reads as no local share.
    */
-  reinvestPoolFor?: import("./reinvestCandidatePool").ReinvestPoolLookup;
+  localShareOf?: import("./reinvestCandidatePool").LocalShareLookup;
 }
 
 /** A composable sector write emitted by the NPP corporation decision engine. */
@@ -185,7 +183,8 @@ export interface NppCorpDecision {
     starterOrder?: SectorBuildOrder;
   }>;
   divestedSectorIds?: ObjectId[];
-  unownedDraws?: Array<{
+  /** Capacity this decision founds, claimed against the market's unmet demand once applied. */
+  demandClaims?: Array<{
     stateId: string;
     sectorType: CorporationType;
     industryModel?: ManufacturingIndustryModel | null;
@@ -210,7 +209,7 @@ export interface NppCorpDecision {
     order: SectorBuildOrder;
     costLocal: number;
     cashContributionLimitLocal: number;
-    /** New-market portion of this order; replacements do not consume unowned headroom. */
+    /** New-market portion of this order; replacements claim no unmet demand. */
     growthUnits: number;
     priority: number;
     fill: number;

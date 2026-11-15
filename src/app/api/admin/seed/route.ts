@@ -36,7 +36,6 @@ import {
   seedUkBudgets,
   seedSeats,
   seedPartyBudgets,
-  seedUnownedSectors,
   seedUnions,
   seedStateResourceCapacity,
   seedStateSectorSpecializations,
@@ -133,7 +132,6 @@ const US_TARGETS = [
   // bootstrap and reset, and therefore unreachable on a world already running.
   ...INDEX_TARGET_IDS,
   "seats",
-  "unownedSectors",
   "unions",
   "partyBudgets",
   "stateResourceCapacity",
@@ -214,7 +212,6 @@ const NG_TARGETS = [
   "ngGovernmentFormation",
   "ngBudgets",
   "seats",
-  "unownedSectors",
   "unions",
   "partyBudgets",
   "stateResourceCapacity",
@@ -305,8 +302,6 @@ export async function GET() {
         // itself in the seeder UI the moment it is registered.
         ...Object.fromEntries(INDEX_MODULE_REGISTRY.map((m) => [m.id, m.description])),
         seats: "Permanent seat documents for all races (US + UK)",
-        unownedSectors:
-          "Unowned sector revenue docs (10% of GDP-derived market per state x type, insert-only)",
         unions:
           "Vacant-head player unions (one per country × sector type) with era-appropriate names",
         partyBudgets:
@@ -473,9 +468,6 @@ export async function POST(request: Request) {
       if (targets.includes(mod.id)) await mod.run(db, log);
     }
     if (targets.includes("seats")) await seedSeats(db, reset, log, preset);
-    // `reset` (hard re-seed) refreshes existing market docs so they track the
-    // current preset's GDP; a soft fill stays insert-only to preserve live pools.
-    if (targets.includes("unownedSectors")) await seedUnownedSectors(db, log, 1, preset, reset);
     if (targets.includes("unions")) await seedUnions(db, log, preset, reset);
     if (targets.includes("partyBudgets")) await seedPartyBudgets(db, reset, log);
     if (targets.includes("stateResourceCapacity"))

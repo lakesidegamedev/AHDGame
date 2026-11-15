@@ -12,7 +12,6 @@ import { badRequest } from "@/lib/api/errors";
 import type { Corporation, CorporateSector, State } from "@/lib/db/types";
 import type { NationalizationTaking } from "@/lib/db/types/corporationSector";
 import { splitCompensationBySector } from "./compensationSplit";
-import type { UnownedSector } from "@/lib/db/types/unownedSector";
 import type { ImperialCharacter } from "@/lib/db/types/imperialCharacter";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
@@ -21,20 +20,10 @@ import {
   corpLiquidCapitalToAnchor,
   getCorpFxRate,
   loadFxRatesByCurrency,
-  resolveSectorHostCurrencyCode,
-  fxRateForSectorHostFromMap,
   fxRateForCorpFromMap,
   resolveCorpLiquidCurrencyCode,
 } from "@/lib/currency/corporationCapital";
-import { readCorpEconomicAnchor } from "@/lib/currency/corpEconomyFields";
-import type { CorporationType } from "@/lib/constants/corporations";
-import {
-  unownedHeadroomUnitsPerAnchor,
-  unownedPoolCreditBaseExpr,
-  unownedPoolLeadingField,
-  unownedPoolTrailingSet,
-} from "@/lib/market/unownedHeadroom";
-import { revenuePerCapacityUnitForStrategy } from "@/lib/constants/capacityEconomy";
+import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
 import { buildPersonalBalanceInc, getHomeCurrency } from "@/lib/currency/characterFunds";
 import { sumBondPrincipalAnchor } from "@/lib/bonds/bondPrincipalSum";
@@ -121,16 +110,12 @@ import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
-import { statesCollection } from "@/lib/db/repositories/states";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
-import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
 export {
   settleFundedWholeCorpLiquidation,
   settleFundedWholeCorpShareholderPool,
 } from "./fundedOwnershipSettlement";
-
-const UNOWNED_RELEASE_RETRY_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 
 /**
  * Politics inputs the caller supplies; the money fields (valuation, compensation,
@@ -353,241 +338,40 @@ async function absorbSectorIntoNatCorp(
 }
 
 /**
- * Release one FOREIGN sector (held outside the nationalizing country) to the open
- * unowned market: a country cannot hold assets under another jurisdiction, so a
- * whole-corp taking divests them rather than absorbing them into the domestic
- * National Corporation. The sector revenue (the donor's local currency) is
- * converted to the ₳-native unowned unit and merged into the `(stateId,
- * sectorType)` unowned pool (upsert + `$inc`); the donor row is then removed.
- * No transition haircut — the asset is released to the market, not operated by
- * the state. Mirrors the shed path's CorporateSector→unowned conversion.
+ * Settle one FOREIGN sector (held outside the nationalizing country) of a seized
+ * corporation. The country cannot hold assets under another jurisdiction, so the
+ * host country's own state enterprise for that lane takes the plants through the
+ * normal absorption path. When the host has no state enterprise for the lane the
+ * row is dissolved: the whole-corporation buyout already paid for it, and
+ * capacity nobody operates simply stops.
  */
-export async function releaseForeignSectorToUnowned(
+async function settleForeignSector(
   db: Db,
   sector: CorporateSector,
-  currencyCode: CurrencyCode | string | undefined,
-  fxRate: number,
   now: Date,
+  absorbedAtTurn: number,
   plantsEnabled: boolean,
-  eraUnitScale: number,
-  transitionKey: string
+  transitionKey: string,
+  constructionTransfers: ConstructionBorrowerTransferPlan
 ): Promise<void> {
-  // PLANTS RETURNS CAPACITY, NOT FILL-DEPENDENT REVENUE.
-  //
-  // (1) Under plants, `revenue` is what the market cleared, so a sector at 40%
-  // utilization would hand the pool 40% of the market it occupied and the rest
-  // would vanish. (2) A MOTHBALLED sector reports revenue 0 with stock intact,
-  // so the old `revenueAnchor > 0` gate skipped the pool write and fell through
-  // to the unconditional `deleteOne` below: the state paid book compensation for
-  // a plant it then deleted.
-  //
-  // The released quantity is therefore the sector's CAPACITY: built stock plus
-  // undelivered build orders, priced through the sector's OWN strategy mix into
-  // the pool's default-mix units, exactly as `restoreSectorsToUnowned` does it so
-  // the two release paths cannot disagree. Both legs are ₳-native.
-  //
-  // Below plants `plantsEnabled` is false and the ₳ revenue leg, gated on
-  // `revenueAnchor > 0`, is unchanged.
-  const stock =
-    typeof sector.capitalStock === "number" && Number.isFinite(sector.capitalStock)
-      ? Math.max(0, sector.capitalStock)
-      : 0;
-  const queuedUnits = plantsEnabled
-    ? (Array.isArray(sector.buildQueue) ? sector.buildQueue : []).reduce(
-        (sum, order) =>
-          sum +
-          (order != null && Number.isFinite(order.unitsOrdered) && order.unitsOrdered > 0
-            ? order.unitsOrdered
-            : 0),
-        0
-      )
-    : 0;
-  const capacityAnchor = plantsEnabled
-    ? Math.max(
-        0,
-        Math.round(
-          (stock + queuedUnits) *
-            revenuePerCapacityUnitForStrategy(
-              sector.sectorType as CorporationType,
-              sector.strategyId,
-              eraUnitScale,
-              sector.industryModel,
-              sector.mediaDiscriminator
-            )
-        )
-      )
-    : 0;
-  const revenueAnchor = plantsEnabled
-    ? capacityAnchor
-    : Math.max(0, Math.round(readCorpEconomicAnchor(sector.revenue ?? 0, currencyCode, fxRate)));
-  if (revenueAnchor > 0) {
-    // Pipeline update (not $inc + $setOnInsert): `headroomUnits` is DERIVED from
-    // revenue and must be recomputed from the POST-increment figure in the same
-    // write, or the pool's plants-mode denominator keeps describing the prior
-    // revenue. $inc would start from 0 on a doc missing the field and understate the
-    // pool permanently; deriving from the new total is self-healing. $setOnInsert is
-    // unavailable inside a pipeline, hence the $ifNull identity seeding.
-    // TIER-AWARE LEADING LEG: credit whichever leg leads for the tier and let
-    // `unownedPoolTrailingSet` restate the other, mirroring
-    // `restoreSectorsToUnowned`, so the two release paths cannot disagree.
-    // Leading unconditionally rebuilt the unit pool from revenue that still carried
-    // drawn-down demand, resurrecting consumed headroom.
-    const unitsPerAnchor = unownedHeadroomUnitsPerAnchor(
-      sector.sectorType as CorporationType,
-      eraUnitScale,
-      sector.industryModel,
-      sector.mediaDiscriminator
+  const hostCountryId = sector.countryId as CountryId;
+  const hostEnterprise = await findStateEnterpriseForLane(db, hostCountryId, sector);
+  if (hostEnterprise) {
+    const hostMultiplier = sociMultiplier(await readStateOwnershipConcentration(db, hostCountryId));
+    await absorbSectorIntoNatCorp(
+      db,
+      sector,
+      hostEnterprise._id,
+      absorbedAtTurn,
+      now,
+      hostMultiplier,
+      plantsEnabled,
+      transitionKey,
+      undefined,
+      constructionTransfers,
+      undefined
     );
-    const sectorType = sector.sectorType as CorporationType;
-    const creditField = unownedPoolLeadingField(plantsEnabled);
-    // The delta in the leading leg's own units. `revenueAnchor` is ₳ either way;
-    // under plants it converts through the pool's default mix, the same
-    // conversion `restoreSectorsToUnowned` applies to its capacity leg.
-    const creditAmount = plantsEnabled ? revenueAnchor * unitsPerAnchor : revenueAnchor;
-    // Readers filter the new pool row by country, so it takes the state's country,
-    // not the sector's stored one. `$ifNull` leaves an existing row's country alone.
-    const releaseState = await statesCollection(db).findOne(
-      { _id: sector.stateId },
-      { projection: { countryId: 1 } }
-    );
-    const releaseCountryId = releaseState?.countryId ?? sector.countryId;
-    const restoreToken = sector._id.toHexString();
-    const retryWindowStart = new Date(now.getTime() - UNOWNED_RELEASE_RETRY_WINDOW_MS);
-    await unownedSectorsCollection(db).findOneAndUpdate(
-      {
-        stateId: sector.stateId,
-        sectorType: sector.sectorType,
-        ...(sector.industryModel != null || sector.sectorType === "manufacturing"
-          ? { industryModel: sector.industryModel ?? null }
-          : {}),
-        mediaDiscriminator: sector.mediaDiscriminator ?? null,
-      },
-      [
-        {
-          $set: {
-            _id: { $ifNull: ["$_id", new ObjectId()] },
-            stateId: { $ifNull: ["$stateId", sector.stateId] },
-            countryId: { $ifNull: ["$countryId", releaseCountryId] },
-            sectorType: { $ifNull: ["$sectorType", sector.sectorType] },
-            ...(sector.industryModel != null || sector.sectorType === "manufacturing"
-              ? { industryModel: { $ifNull: ["$industryModel", sector.industryModel ?? null] } }
-              : {}),
-            mediaDiscriminator: {
-              $ifNull: ["$mediaDiscriminator", sector.mediaDiscriminator ?? null],
-            },
-            createdAt: { $ifNull: ["$createdAt", now] },
-            [creditField]: {
-              $let: {
-                vars: {
-                  currentValue: unownedPoolCreditBaseExpr(
-                    sectorType,
-                    plantsEnabled,
-                    eraUnitScale,
-                    sector.industryModel
-                  ),
-                  recentRestores: {
-                    $filter: {
-                      input: { $ifNull: ["$recentCorporateSectorRestores", []] },
-                      as: "restore",
-                      cond: {
-                        $or: [
-                          { $eq: ["$$restore.pendingSourceDelete", true] },
-                          { $gte: ["$$restore.restoredAt", retryWindowStart] },
-                        ],
-                      },
-                    },
-                  },
-                },
-                in: {
-                  $let: {
-                    vars: {
-                      recentRestoreIds: {
-                        $map: {
-                          input: "$$recentRestores",
-                          as: "restore",
-                          in: "$$restore.sectorId",
-                        },
-                      },
-                    },
-                    in: {
-                      $cond: [
-                        { $in: [restoreToken, "$$recentRestoreIds"] },
-                        "$$currentValue",
-                        { $add: ["$$currentValue", creditAmount] },
-                      ],
-                    },
-                  },
-                },
-              },
-            },
-            recentCorporateSectorRestores: {
-              $let: {
-                vars: {
-                  recentRestores: {
-                    $filter: {
-                      input: { $ifNull: ["$recentCorporateSectorRestores", []] },
-                      as: "restore",
-                      cond: {
-                        $or: [
-                          { $eq: ["$$restore.pendingSourceDelete", true] },
-                          { $gte: ["$$restore.restoredAt", retryWindowStart] },
-                        ],
-                      },
-                    },
-                  },
-                },
-                in: {
-                  $let: {
-                    vars: {
-                      recentRestoreIds: {
-                        $map: {
-                          input: "$$recentRestores",
-                          as: "restore",
-                          in: "$$restore.sectorId",
-                        },
-                      },
-                    },
-                    in: {
-                      $cond: [
-                        { $in: [restoreToken, "$$recentRestoreIds"] },
-                        "$$recentRestores",
-                        {
-                          $concatArrays: [
-                            "$$recentRestores",
-                            [
-                              {
-                                sectorId: restoreToken,
-                                restoredAt: now,
-                                pendingSourceDelete: true,
-                                operationKey: transitionKey,
-                              },
-                            ],
-                          ],
-                        },
-                      ],
-                    },
-                  },
-                },
-              },
-            },
-            updatedAt: now,
-          },
-        },
-        {
-          $set: unownedPoolTrailingSet(
-            sectorType,
-            plantsEnabled,
-            eraUnitScale,
-            sector.industryModel,
-            sector.mediaDiscriminator
-          ),
-        },
-      ],
-      { upsert: true, returnDocument: "before" }
-    );
-    // The returned preimage acknowledges the atomic pool update. The stable
-    // source-sector receipt makes a retry a no-op if a crash lands before the
-    // guarded source deletion below.
+    return;
   }
   const removed = await corporateSectorsCollection(db).deleteOne({
     _id: sector._id,
@@ -595,53 +379,30 @@ export async function releaseForeignSectorToUnowned(
   });
   if (removed.deletedCount !== 1)
     throw badRequest("The sector transition reservation was lost during release");
-  if (revenueAnchor > 0) {
-    const acknowledged = await unownedSectorsCollection(db).findOneAndUpdate(
-      {
-        stateId: sector.stateId,
-        sectorType: sector.sectorType,
-        ...(sector.industryModel != null || sector.sectorType === "manufacturing"
-          ? { industryModel: sector.industryModel ?? null }
-          : {}),
-        recentCorporateSectorRestores: {
-          $elemMatch: {
-            sectorId: sector._id.toHexString(),
-            operationKey: transitionKey,
-            pendingSourceDelete: true,
-          },
-        },
-      },
-      [
-        {
-          $set: {
-            recentCorporateSectorRestores: {
-              $map: {
-                input: { $ifNull: ["$recentCorporateSectorRestores", []] },
-                as: "restore",
-                in: {
-                  $cond: [
-                    {
-                      $and: [
-                        { $eq: ["$$restore.sectorId", sector._id.toHexString()] },
-                        { $eq: ["$$restore.operationKey", transitionKey] },
-                        { $eq: ["$$restore.pendingSourceDelete", true] },
-                      ],
-                    },
-                    { $mergeObjects: ["$$restore", { pendingSourceDelete: false }] },
-                    "$$restore",
-                  ],
-                },
-              },
-            },
-            updatedAt: now,
-          },
-        },
-      ],
-      { returnDocument: "before" }
-    );
-    if (!acknowledged)
-      throw new Error("The unowned pool did not acknowledge the completed sector release");
-  }
+}
+
+/**
+ * The host country's existing state enterprise for a sector's lane: the lane's
+ * own split-off, else the primary National Corporation that absorbs every lane
+ * without one. Never created on demand.
+ */
+async function findStateEnterpriseForLane(
+  db: Db,
+  countryId: CountryId,
+  sector: Pick<CorporateSector, "sectorType" | "industryModel" | "mediaDiscriminator">
+): Promise<Corporation | null> {
+  const operatingSectorType = getOperatingSectorType(
+    sector.sectorType,
+    sector.industryModel,
+    sector.mediaDiscriminator
+  );
+  const corps = corporationsCollection(db);
+  const assigned = await corps.findOne({
+    countryOwnerId: countryId,
+    assignedSectorTypes: operatingSectorType,
+  });
+  if (assigned) return assigned;
+  return corps.findOne({ countryOwnerId: countryId, isPrimaryNationalCorporation: true });
 }
 
 // ── Single-sector absorption ──────────────────────────────────────────────────
@@ -1312,8 +1073,8 @@ export async function nationalizeWholeCorp(
   //       fans across split-offs + primary; each MERGES into the NatCorp's
   //       existing (state, type) holding so a repeat can't collide on the unique
   //       index). FOREIGN sectors (operated outside this country) cannot be held
-  //       under another jurisdiction — they are released to the open unowned
-  //       market. A sector with no countryId defaults to domestic (legacy-safe).
+  //       under another jurisdiction: the host country's state enterprise takes
+  //       them, or they are dissolved when it has none. A sector with no countryId defaults to domestic (legacy-safe).
   const domesticSectors = targetSectors.filter(
     (s) => !s.countryId || s.countryId === params.countryId
   );
@@ -1368,17 +1129,14 @@ export async function nationalizeWholeCorp(
   }
   await settleConstructionBorrowerTransfers(db, constructionTransfers);
   for (const s of foreignSectors) {
-    // A foreign sector's revenue is stored in ITS host-state currency, not the
-    // (donor) corp's — convert to the ₳-native unowned pool at the host rate.
-    await releaseForeignSectorToUnowned(
+    await settleForeignSector(
       db,
       s,
-      resolveSectorHostCurrencyCode(s, target),
-      fxRateForSectorHostFromMap(s, target, fxByCurrency),
       now,
+      params.consequence.turn,
       corpPlantsEnabled,
-      corpEraUnitScale,
-      transitionKeyBySectorId.get(s._id.toHexString())!
+      transitionKeyBySectorId.get(s._id.toHexString())!,
+      constructionTransfers
     );
   }
 

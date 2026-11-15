@@ -143,11 +143,11 @@ export const roadConditionNode: RegistryNode = {
     const payload = ctx.providers["sectorRevenueTax"] as
       | {
           owned: Array<{ revenue: number; sectorType?: string }>;
-          unowned: Array<{ revenue: number; sectorType?: string }>;
+          background: Array<{ revenue: number; sectorType?: string }>;
         }
       | undefined;
     const freightTerm = payload
-      ? freightLogisticsAdequacyTerm([...payload.owned, ...payload.unowned])
+      ? freightLogisticsAdequacyTerm([...payload.owned, ...payload.background])
       : 0;
     // War takes the roads BOTH ways: it lowers the level funding can hold, and it
     // destroys faster than neglect does. Lowering the floor alone is far too gentle
@@ -275,10 +275,12 @@ export const powerGridReliabilityNode: RegistryNode = {
     const payload = ctx.providers["sectorRevenueTax"] as
       | {
           owned: Array<{ revenue: number; sectorType?: string }>;
-          unowned: Array<{ revenue: number; sectorType?: string }>;
+          background: Array<{ revenue: number; sectorType?: string }>;
         }
       | undefined;
-    const energyTerm = payload ? gridEnergyAdequacyTerm([...payload.owned, ...payload.unowned]) : 0;
+    const energyTerm = payload
+      ? gridEnergyAdequacyTerm([...payload.owned, ...payload.background])
+      : 0;
     const target = 97 + (spendResp(ctx) / 100) * 2.7 + (renewables - 25) * 0.004 + energyTerm;
     return maintenanceDecay(base, target, 0.02 / (1 - 0.9));
   },

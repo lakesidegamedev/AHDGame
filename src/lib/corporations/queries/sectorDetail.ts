@@ -165,7 +165,6 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
       siblingCorps,
       siblingsSectors,
       siblingFxByCurrency,
-      unownedDoc,
       allStates,
       commodityPrices,
       sectorAmountAnchor,
@@ -244,29 +243,20 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
     };
     // Note: margin modifiers will be computed after commodity data is available
 
-    // Market position: totals, market share, competitors, unowned pool ,
+    // Market position: totals, market share, competitors,
     // see computeSectorMarketPosition.
     const sectorDetailPreset = resolvePresetIdFromGameState(gameState);
     const sectorDetailUnitScale = getEraUnitScale(sectorDetailPreset);
-    const {
-      effectiveMarket,
-      marketShare,
-      competitors,
-      attackExposure,
-      unownedRevenue,
-      unownedPercent,
-      siblingRevenueAnchorById,
-    } = computeSectorMarketPosition({
-      state,
-      sector,
-      sectorCountryId,
-      corporation,
-      siblingCorps,
-      siblingsSectors,
-      siblingFxByCurrency,
-      unownedDoc,
-      preset: sectorDetailPreset,
-    });
+    const { effectiveMarket, marketShare, competitors, attackExposure } =
+      computeSectorMarketPosition({
+        state,
+        sector,
+        sectorCountryId,
+        corporation,
+        siblingCorps,
+        siblingsSectors,
+        siblingFxByCurrency,
+      });
 
     const stateCountryMap = new Map<string, string>(
       allStates.map((s) => [String(s._id), s.countryId])
@@ -540,7 +530,6 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
         marketShare,
         siblingsSectors,
         metrics,
-        unownedDoc,
         sectorRevenueAnchor,
         thisRevenueShare,
         sectorFederalRate,
@@ -566,15 +555,8 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
             sectorHostFxRate,
             sectorHostLiquidCode,
             sector,
-            sectorType,
             sectorCountryId,
-            allTariffs,
-            activeFtaPairs,
-            unownedRevenue,
-            effectiveMarket,
             mods,
-            siblingsSectors,
-            siblingRevenueAnchorById,
             plantsMode: plantsEnabled,
           })
         : null;
@@ -849,8 +831,6 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
         competitors,
         // Splits need the plants economy; below it the server refuses every attempt.
         attackExposure: plantsEnabled ? attackExposure : null,
-        unownedRevenue: Math.round(unownedRevenue),
-        unownedPercent,
       },
       isCeo,
       parentDirection,
@@ -882,7 +862,6 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
               viewerCorporation?._id.toString() !== corporation._id.toString() &&
               !corporation.countryOwnerId &&
               !corporation.suspended,
-            canSplit: !plantsEnabled,
           }
         : null,
       forSaleInfo,

@@ -6,7 +6,7 @@
  * reachable on the corporation's stagger slot once tenure has elapsed, or on
  * first sight.
  *
- * Expensive inputs for evaluation (headroom scans over unowned pools) are only
+ * Expensive inputs for evaluation (room scans over every candidate bucket) are only
  * worth computing when evaluation can run. Pure: no db, clock, random or env.
  */
 

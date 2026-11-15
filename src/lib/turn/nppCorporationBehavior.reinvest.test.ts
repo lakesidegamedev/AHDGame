@@ -21,13 +21,15 @@ import {
   type NppPlantsContext,
 } from "./nppCorporationBehavior";
 import { ceoArchetypeModifiers } from "./ceoArchetype";
-import type { Corporation, CorporateSector, UnownedSector } from "@/lib/db/types";
+import type { Corporation, CorporateSector } from "@/lib/db/types";
+import { candidate, candidatesByCountry } from "./npp/__fixtures__/marketCandidates";
+import type { MarketCandidate } from "./npp/marketCandidates";
+import type { LocalShareLookup } from "./npp/reinvestCandidatePool";
 import {
   CAPACITY_ANCHOR_YEAR,
   CAPACITY_BUILD_TURNS,
   computeBuildCost,
 } from "@/lib/constants/capacityEconomy";
-import { computeUnownedHeadroomUnits } from "@/lib/market/unownedHeadroom";
 import { CAPITAL_DEPRECIATION_PER_TURN } from "@/lib/market/capital";
 import { foundingStarterUnits } from "@/lib/corporations/foundingPlant";
 import type { PlacementSignals } from "@/lib/turn/npp/marketSignals";
@@ -36,9 +38,6 @@ import { getNationalDominanceGrowthCostMultiplier } from "@/lib/constants/corpor
 const noPrices: CommodityPriceRatioFn = () => null;
 const noState = new Set<string>();
 const TURN = 200;
-
-const POOL_REVENUE = 40_000_000;
-const POOL_UNITS = computeUnownedHeadroomUnits("manufacturing", POOL_REVENUE, 1);
 
 const plantsCtx: NppPlantsContext = {
   enabled: true,
@@ -49,17 +48,9 @@ const plantsCtx: NppPlantsContext = {
   costOfLivingOf: () => null,
 };
 
-/** The pool for the bucket the corp's OWN manufacturing sector sits in. */
-function pool(overrides: Partial<UnownedSector> = {}): UnownedSector {
-  return {
-    _id: new ObjectId(),
-    stateId: "CA",
-    countryId: "US",
-    sectorType: "manufacturing",
-    revenue: POOL_REVENUE,
-    headroomUnits: POOL_UNITS,
-    ...overrides,
-  } as unknown as UnownedSector;
+/** The candidate bucket the corp's OWN manufacturing sector sits in. */
+function pool(overrides: Partial<MarketCandidate> = {}): MarketCandidate {
+  return candidate({ stateId: "CA", ...overrides });
 }
 
 function corp(overrides: Partial<Corporation> = {}): Corporation {
@@ -100,7 +91,7 @@ function sector(overrides: Partial<CorporateSector> = {}): CorporateSector {
 function decide(
   c: Corporation,
   sectors: CorporateSector[],
-  pools: UnownedSector[],
+  pools: MarketCandidate[],
   plants: NppPlantsContext | null = plantsCtx,
   extra: {
     fxRate?: number;
@@ -109,6 +100,7 @@ function decide(
     prices?: CommodityPriceRatioFn;
     retailExpansionPaused?: boolean;
     challengerBoostOf?: (sectorType: string, ownCorporationId: string) => number;
+    localShareOf?: LocalShareLookup;
   } = {}
 ) {
   return makeNppCorpDecision(
@@ -121,8 +113,9 @@ function decide(
       modifiers: ceoArchetypeModifiers("cautious"),
       retailExpansionPaused: extra.retailExpansionPaused,
       challengerBoostOf: extra.challengerBoostOf,
+      localShareOf: extra.localShareOf,
     },
-    new Map<string, UnownedSector[]>([["US", pools]]),
+    candidatesByCountry(pools),
     extra.stateControlled ?? noState,
     extra.prices ?? noPrices,
     plants ?? undefined,
@@ -177,8 +170,9 @@ describe("NPP capacity reinvestment — a selling-out, fully-utilized plant grow
     const decision = decide(corp(), [s], [pool()]);
     const order = pushedOrder(queueWrites(decision)[0]);
     const replacement = (s.producedUnits ?? 0) * CAPITAL_DEPRECIATION_PER_TURN;
-    // Growth builds from nothing — no draw against the unowned pool.
-    expect(decision.unownedDraws).toBeUndefined();
+    // Only the growth leg is claimed against the bucket's unmet demand.
+    expect(decision.demandClaims).toHaveLength(1);
+    expect(decision.demandClaims![0].units).toBeCloseTo(order.unitsOrdered - replacement, 6);
     // The growth leg is a real chunk of what the plant runs, not a token facility.
     expect(order.unitsOrdered - replacement).toBeGreaterThanOrEqual(
       foundingStarterUnits("manufacturing")
@@ -371,7 +365,7 @@ describe("NPP capacity reinvestment — a selling-out, fully-utilized plant grow
     const order = pushedOrder(queueWrites(decision)[0]);
     const replacement = 1_000 * CAPITAL_DEPRECIATION_PER_TURN;
     expect(order.unitsOrdered).toBeCloseTo(replacement, 6);
-    expect(decision.unownedDraws).toBeUndefined();
+    expect(decision.demandClaims).toBeUndefined();
   });
 
   it("does not grow extraction when the state's deposits have no headroom", () => {
@@ -379,7 +373,7 @@ describe("NPP capacity reinvestment — a selling-out, fully-utilized plant grow
     const decision = decide(
       corp({ type: "extraction" }),
       [s],
-      [pool({ sectorType: "extraction", headroomUnits: 0, revenue: 0 })],
+      [pool({ sectorType: "extraction" })],
       plantsCtx,
       { placementSignals: { extractionHeadroomOf: () => 0 } }
     );
@@ -399,7 +393,7 @@ describe("NPP capacity reinvestment — a selling-out, fully-utilized plant grow
     const decision = decide(
       corp({ type: "extraction" }),
       [s],
-      [pool({ sectorType: "extraction", headroomUnits: 0, revenue: 0 })]
+      [pool({ sectorType: "extraction" })]
     );
 
     const order = pushedOrder(queueWrites(decision)[0]);
@@ -485,7 +479,7 @@ describe("NPP capacity reinvestment — does not fire", () => {
     });
     const decision = decide(corp(), [losing], [pool()]);
 
-    expect(decision.unownedDraws).toBeUndefined();
+    expect(decision.demandClaims).toBeUndefined();
   });
 
   // SUPERSEDED. This used to assert "an SOE MAY build into its own nationalized
@@ -511,16 +505,16 @@ describe("NPP capacity reinvestment — does not fire", () => {
 });
 
 describe("NPP capacity reinvestment — conservation and pricing", () => {
-  it("builds growth from nothing — never draws the unowned pool", () => {
+  it("builds growth from nothing and claims only the growth leg, never the replacement", () => {
     const s = sector();
     const decision = decide(corp(), [s], [pool()]);
     const order = pushedOrder(queueWrites(decision)[0]);
-    // Growth is a plant top-up, priced and paid like a player's buildCapacity;
-    // it does not consume the unowned pool.
-    expect(decision.unownedDraws).toBeUndefined();
     const growth = Math.floor((s.producedUnits ?? 0) * NPP_GROWTH_MAX_STEP_OF_RUN);
     const replacement = (s.producedUnits ?? 0) * CAPITAL_DEPRECIATION_PER_TURN;
     expect(order.unitsOrdered).toBeCloseTo(growth + replacement, 6);
+    expect(decision.demandClaims).toEqual([
+      expect.objectContaining({ stateId: "CA", sectorType: "manufacturing", units: growth }),
+    ]);
   });
 
   it("prices the build at the non-founding list price in the corp's own currency", () => {
@@ -532,18 +526,21 @@ describe("NPP capacity reinvestment — conservation and pricing", () => {
       liquidCurrencyCode: "JPY",
       liquidCapital: OPENING,
     } as Partial<Corporation>);
-    const decision = decide(c, [s], [pool()], plantsCtx, { fxRate });
+    const decision = decide(c, [s], [pool()], plantsCtx, {
+      fxRate,
+      localShareOf: () => 12.5,
+    });
 
     const order = pushedOrder(queueWrites(decision)[0]);
     const units = order.unitsOrdered;
-    const bucketTotal = (s.capitalStock ?? 0) + POOL_UNITS;
+    const localSharePercent = 12.5;
     const expectedAnchor = computeBuildCost({
       strategyId: null,
       eraUnitScale: 1,
       sectorType: "manufacturing",
       units,
       year: CAPACITY_ANCHOR_YEAR,
-      marketSharePercent: (100 * (s.capitalStock ?? 0)) / bucketTotal,
+      marketSharePercent: localSharePercent,
       primeRate: 0,
       founding: false,
     }).totalAnchor;
@@ -567,11 +564,7 @@ describe("NPP capacity reinvestment — conservation and pricing", () => {
     // reaching it silently reinstates the bug. The cash leg must travel only as
     // `liquidCapitalDelta`. Covers spending, founding and no-op paths.
     const spends = decide(corp(), [sector()], [pool()], plantsCtx);
-    const noop = decide(
-      corp({ liquidCapital: 0 }),
-      [sector()],
-      [pool({ headroomUnits: 0, revenue: 0 })]
-    );
+    const noop = decide(corp({ liquidCapital: 0 }), [sector()], [pool()]);
 
     for (const d of [spends, noop]) {
       expect(d.updates).not.toHaveProperty("liquidCapital");
@@ -585,17 +578,13 @@ describe("NPP capacity reinvestment — conservation and pricing", () => {
   });
 });
 
-describe("NPP capacity reinvestment — a full bucket no longer blocks growth", () => {
-  // THE 96-TURN ZERO-BUILD REGRESSION, fixed at the root. A bucket an incumbent
-  // fills has ~zero unowned headroom, and nothing ever puts it back: depreciation
-  // destroys owned capacity without returning it to the pool. The old growth leg
-  // was gated and sized off that pool, so the plants that most needed to grow
-  // never could (237 of 238 eligible NPP sectors refused, ZERO build queues at
-  // turn 135 of the A/B). Growth no longer reads the pool at all — a profitable,
-  // fully-utilized, selling-out plant grows from nothing, headroom or not.
-  const emptyPools: Array<[string, UnownedSector[]]> = [
-    ["an exhausted pool", [pool({ headroomUnits: 0, revenue: 0 })]],
-    ["no pool doc for the bucket at all", []],
+describe("NPP capacity reinvestment — an unlisted or empty bucket does not block growth", () => {
+  // Growth is sized off the plant's own sell-through, not off the bucket: a
+  // profitable, fully-utilized, selling-out plant grows whether or not the
+  // bucket reads any unmet demand or is listed as a candidate at all.
+  const emptyPools: Array<[string, MarketCandidate[]]> = [
+    ["no unmet demand in the bucket", [pool()]],
+    ["no candidate bucket at all", []],
   ];
 
   for (const [label, pools] of emptyPools) {
@@ -607,8 +596,8 @@ describe("NPP capacity reinvestment — a full bucket no longer blocks growth", 
       const replacement = (s.producedUnits ?? 0) * CAPITAL_DEPRECIATION_PER_TURN;
       const growth = Math.floor((s.producedUnits ?? 0) * NPP_GROWTH_MAX_STEP_OF_RUN);
       expect(pushedOrder(writes[0]).unitsOrdered).toBeCloseTo(replacement + growth, 6);
-      // Built from nothing — nothing is drawn from the pool.
-      expect(decision.unownedDraws).toBeUndefined();
+      // Built from nothing; only the growth leg is claimed.
+      expect(decision.demandClaims).toHaveLength(1);
     });
   }
 
@@ -616,12 +605,12 @@ describe("NPP capacity reinvestment — a full bucket no longer blocks growth", 
     // 20% idle: utilization below the growth gate, so no growth — just
     // maintenance sized off the capacity it actually RUNS, not idle nameplate.
     const s = sector({ capitalStock: 1_000, producedUnits: 800, soldUnits: 800 });
-    const decision = decide(corp(), [s], [pool({ headroomUnits: 0, revenue: 0 })]);
+    const decision = decide(corp(), [s], [pool()]);
     expect(pushedOrder(queueWrites(decision)[0]).unitsOrdered).toBeCloseTo(
       800 * CAPITAL_DEPRECIATION_PER_TURN,
       10
     );
-    expect(decision.unownedDraws).toBeUndefined();
+    expect(decision.demandClaims).toBeUndefined();
   });
 });
 
@@ -631,7 +620,7 @@ describe("NPP capacity reinvestment — the two cash rails", () => {
   const maintOnly = () => sector({ capitalStock: 1_000, producedUnits: 800, soldUnits: 800 });
   /** Cost of the maintenance-only build the under-utilized fixture places. */
   function maintenanceCost(): number {
-    const decision = decide(corp(), [maintOnly()], [pool({ headroomUnits: 0, revenue: 0 })]);
+    const decision = decide(corp(), [maintOnly()], [pool()]);
     return decision.reinvestments![0].costAnchor;
   }
 
@@ -641,7 +630,7 @@ describe("NPP capacity reinvestment — the two cash rails", () => {
     // re-qualify. 317 of 395 NPP corps sat here at turn 135 of the A/B.
     const cost = maintenanceCost();
     const c = corp({ liquidCapital: cost * 10 }); // way under CASH_FLOOR
-    const decision = decide(c, [maintOnly()], [pool({ headroomUnits: 0, revenue: 0 })]);
+    const decision = decide(c, [maintOnly()], [pool()]);
     expect(queueWrites(decision)).toHaveLength(1);
     expect((c.liquidCapital ?? 0) + decision.liquidCapitalDelta).toBeGreaterThan(0);
   });
@@ -651,7 +640,7 @@ describe("NPP capacity reinvestment — the two cash rails", () => {
     const decision = decide(
       corp({ liquidCapital: cost * 3 }), // cost is a THIRD of cash — too much
       [maintOnly()],
-      [pool({ headroomUnits: 0, revenue: 0 })]
+      [pool()]
     );
     expect(queueWrites(decision)).toHaveLength(0);
   });
@@ -659,7 +648,7 @@ describe("NPP capacity reinvestment — the two cash rails", () => {
   it("exposes a priced NPP finance intent without writing an unfunded order or cash debit", () => {
     const cost = maintenanceCost();
     const c = corp({ liquidCapital: cost * 3 });
-    const decision = decide(c, [maintOnly()], [pool({ headroomUnits: 0, revenue: 0 })]);
+    const decision = decide(c, [maintOnly()], [pool()]);
 
     expect(queueWrites(decision)).toHaveLength(0);
     expect(decision.reinvestments).toBeUndefined();
@@ -710,7 +699,7 @@ describe("NPP capacity reinvestment — the two cash rails", () => {
     // maintenance. Growth never blocks the replacement it is bundled with.
     const cost = maintenanceCost();
     const c = corp({ liquidCapital: cost * 10 }); // below CASH_FLOOR
-    const decision = decide(c, [sector()], [pool({ headroomUnits: 0, revenue: 0 })]);
+    const decision = decide(c, [sector()], [pool()]);
     expect(queueWrites(decision)).toHaveLength(1);
     expect((c.liquidCapital ?? 0) + decision.liquidCapitalDelta).toBeGreaterThan(0);
   });
@@ -775,7 +764,7 @@ describe("NPP capacity reinvestment — a multi-turn world keeps building", () =
           now: new Date(),
           modifiers: ceoArchetypeModifiers("cautious"),
         },
-        new Map<string, UnownedSector[]>([["US", [pool({ headroomUnits: 0, revenue: 0 })]]]),
+        candidatesByCountry([pool()]),
         noState,
         noPrices,
         plantsCtx
@@ -813,7 +802,7 @@ describe("NPP capacity reinvestment — non-plants worlds are unchanged", () => 
     const decision = decide(corp(), [sector()], [pool()], null);
     expect(queueWrites(decision)).toHaveLength(0);
     expect(decision.reinvestments).toBeUndefined();
-    expect(decision.unownedDraws).toBeUndefined();
+    expect(decision.demandClaims).toBeUndefined();
   });
 
   it("is identical with an explicitly disabled plants context", () => {

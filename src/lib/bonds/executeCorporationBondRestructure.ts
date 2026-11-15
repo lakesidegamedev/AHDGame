@@ -63,7 +63,7 @@ export interface CorporationRestructureResult {
  * there) and keeps the corp alive. Shared by the CEO-initiated route and the
  * turn-tick auto-restructure that closes the "default then close the tab"
  * loophole. The caller MUST hold the corporation settlement lock; writes are
- * sequential (restoreSectorsToUnowned is not transaction-safe), mirroring
+ * sequential (deleteDisposedSectors is not transaction-safe), mirroring
  * {@link import("./executeCorporationBondDefaultDissolution")}.
  *
  * Throws {@link badRequest} when there are no defaulted bonds or when even
@@ -256,7 +256,7 @@ export async function executeCorporationBondRestructure(
 
   // 2. Liquidate the selected sectors (idempotent, not transaction-safe, must
   //    run outside any transaction). NPP operators take over most of each
-  //    plant's capacity; the rest returns to the unowned market.
+  //    plant's capacity; the rest stops producing.
   if (sectorsToLiquidate.length > 0) {
     await disposeLeavingSectors(db, refreshed, sectorsToLiquidate, now);
   }

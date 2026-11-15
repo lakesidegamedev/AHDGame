@@ -10,7 +10,6 @@ import {
   getEffectiveStrategyRatesForOperatingModel,
   getSectorStrategies,
 } from "./sectorStrategies";
-import { attackCostAnchorUnderPlants } from "@/lib/corporations/capacityCapture";
 import { sectorEntryFeeAnchor } from "@/lib/corporations/foundingPlant";
 import { getEraNominalAmount } from "./sectorSeedEra";
 
@@ -90,34 +89,21 @@ describe("1991 reset calibration does not change other era presets", () => {
   it.each([
     [1953, 3],
     [2019, 15],
-  ] as const)(
-    "preserves %i construction, founding and capture list prices",
-    (year, revenueDays) => {
-      for (const sectorType of CORPORATION_TYPES) {
-        const rpu = revenuePerCapacityUnitForStrategy(sectorType, "standard", 1);
-        expect(capacityPricePerUnit(sectorType, year, 1, "standard")).toBeCloseTo(
-          rpu * revenueDays,
-          8
-        );
-        expect(
-          attackCostAnchorUnderPlants({
-            legacyCostAnchor: 0,
-            unitsReceived: 10,
-            sectorType,
-            strategyId: "standard",
-            year,
-            eraUnitScale: 1,
-          })
-        ).toBe(Math.round(10 * rpu * revenueDays * 1.15));
-        const base = { sectorType, strategyId: "standard", year, eraUnitScale: 1, units: 10 };
-        expect(computeBuildCost({ ...base, founding: true }).totalAnchor).toBeCloseTo(
-          10 * rpu * revenueDays * 0.1,
-          8
-        );
-        expect(computeBuildCost(base).totalAnchor).toBeCloseTo(10 * rpu * revenueDays * 0.8, 8);
-      }
+  ] as const)("preserves %i construction and founding list prices", (year, revenueDays) => {
+    for (const sectorType of CORPORATION_TYPES) {
+      const rpu = revenuePerCapacityUnitForStrategy(sectorType, "standard", 1);
+      expect(capacityPricePerUnit(sectorType, year, 1, "standard")).toBeCloseTo(
+        rpu * revenueDays,
+        8
+      );
+      const base = { sectorType, strategyId: "standard", year, eraUnitScale: 1, units: 10 };
+      expect(computeBuildCost({ ...base, founding: true }).totalAnchor).toBeCloseTo(
+        10 * rpu * revenueDays * 0.1,
+        8
+      );
+      expect(computeBuildCost(base).totalAnchor).toBeCloseTo(10 * rpu * revenueDays * 0.8, 8);
     }
-  );
+  });
 
   it.each(["1953-default", "2019-default"])(
     "preserves %s input recipes, transitions, menus and entry fees",

@@ -365,7 +365,7 @@ export async function processPoliticalMetricsDynamics(
           providers: {
             sectorRevenueTax: {
               owned: sectorTax.ownedByState.get(String(doc._id)) ?? [],
-              unowned: sectorTax.unownedByState.get(String(doc._id)) ?? [],
+              background: sectorTax.backgroundByState.get(String(doc._id)) ?? [],
               federalSalesTax:
                 sectorTax.federalSalesTaxByCountry.get(countryId) ??
                 getNeutralFederalSalesTaxRate(countryId),

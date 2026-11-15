@@ -5,7 +5,6 @@ import { partitionByGdp } from "./apportion";
 import { extractionAllocationWeights } from "./rules/extraction";
 import type { FanoutContext } from "./fanoutDriver";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
-import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
 type FanoutSector = CorporateSector & { capacityBase?: number; outputBase?: number };
 
 /** Freeze one placement plan so reserve allocation and sector relocation agree. */
@@ -23,14 +22,9 @@ export async function planSectorFanout(db: Db, ctx: FanoutContext, turn: number)
     industryModel: 1,
     mediaDiscriminator: 1,
   } as const;
-  const [owned, unowned] = await Promise.all([
-    corporateSectorsCollection<FanoutSector>(db)
-      .find({ stateId: ctx.regionId }, { projection })
-      .toArray(),
-    unownedSectorsCollection<FanoutSector>(db)
-      .find({ stateId: ctx.regionId }, { projection })
-      .toArray(),
-  ]);
+  const owned = await corporateSectorsCollection<FanoutSector>(db)
+    .find({ stateId: ctx.regionId }, { projection })
+    .toArray();
   const assign = (rows: FanoutSector[]) =>
     partitionByGdp(
       rows,
@@ -39,15 +33,8 @@ export async function planSectorFanout(db: Db, ctx: FanoutContext, turn: number)
     );
   const buckets = assign(owned);
   ctx.sectorLocations = Object.fromEntries(
-    (
-      [
-        ["corporateSectors", buckets],
-        ["unownedSectors", assign(unowned)],
-      ] as const
-    ).flatMap(([collection, group]) =>
-      Object.entries(group).flatMap(([id, rows]) =>
-        rows.map((row) => [`${collection}:${String(row._id)}`, id])
-      )
+    Object.entries(buckets).flatMap(([id, rows]) =>
+      rows.map((row) => [`corporateSectors:${String(row._id)}`, id])
     )
   );
   ctx.resourceWeights = extractionAllocationWeights(

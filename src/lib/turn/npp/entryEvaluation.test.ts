@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { ObjectId } from "mongodb";
-import type { Corporation, CorporateSector, UnownedSector } from "@/lib/db/types";
+import type { Corporation, CorporateSector } from "@/lib/db/types";
+import { candidate } from "./__fixtures__/marketCandidates";
+import type { MarketCandidate } from "./marketCandidates";
 import type { CorporationType } from "@/lib/constants/corporations";
-import { computeUnownedHeadroomUnits } from "@/lib/market/unownedHeadroom";
 import { evaluateNppEntry } from "./entryEvaluation";
 import type { CommodityPriceRatioFn } from "./marketSignals";
 import type { FoundingRecipeWorld } from "./foundingRecipeChoice";
@@ -22,21 +23,13 @@ function corp(overrides: Partial<Corporation> = {}): Corporation {
   } as unknown as Corporation;
 }
 
-function pool(sectorType: CorporationType = "manufacturing", stateId = "NY"): UnownedSector {
-  const revenue = 80_000_000;
-  return {
-    _id: new ObjectId(),
-    stateId,
-    countryId: "US",
-    sectorType,
-    revenue,
-    headroomUnits: computeUnownedHeadroomUnits(sectorType, revenue, 1),
-  } as unknown as UnownedSector;
+function pool(sectorType: CorporationType = "manufacturing", stateId = "NY"): MarketCandidate {
+  return candidate({ stateId, sectorType });
 }
 
 function evaluate(args: {
   corporation: Corporation;
-  pools?: UnownedSector[];
+  pools?: MarketCandidate[];
   sectors?: CorporateSector[];
   profitable?: boolean;
   marginPct?: number;
@@ -48,7 +41,7 @@ function evaluate(args: {
   allowExpansion?: boolean;
   wideEligible?: boolean;
 }) {
-  const byCountry = new Map<string, UnownedSector[]>();
+  const byCountry = new Map<string, MarketCandidate[]>();
   for (const item of args.pools ?? [pool()]) {
     const list = byCountry.get(item.countryId) ?? [];
     list.push(item);
@@ -57,7 +50,7 @@ function evaluate(args: {
   return evaluateNppEntry({
     corp: args.corporation,
     sectors: args.sectors ?? [],
-    unownedByCountry: byCountry,
+    candidatesByCountry: byCountry,
     stateControlled: new Set<string>(),
     priceRatioOf: args.prices ?? (() => 1),
     placementSignals: undefined,

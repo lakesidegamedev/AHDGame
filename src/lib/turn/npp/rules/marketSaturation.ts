@@ -17,7 +17,7 @@
  */
 
 import type { CommodityType } from "@/lib/constants/commodities";
-import { bucketKey } from "@/lib/nationalization/stateControlledBuckets";
+import { bucketKey } from "@/lib/market/marketBuckets";
 import { sectorDemandGapUnits } from "@/lib/market/sectorDemandGap";
 import { COMMODITY_BASE_PRICES, commodityMixWeight } from "@/lib/constants/commodities";
 import { nppDemandThrottle, type FundedReceiptLike } from "./fundedSellThrough";
@@ -165,9 +165,8 @@ export function isMarketSaturated(level: number | null | undefined): boolean {
 }
 
 /**
- * Share of a cell's measured unmet demand one AI founding may build for. The
- * entrant was sized off the unowned pool's headroom, which overstates what a
- * market still wants: on live turn 257, 47 of 54 AI foundings entered cells
+ * Share of a cell's measured unmet demand one AI founding may build for.
+ * Building for the whole gap overstates what a market still wants: on live turn 257, 47 of 54 AI foundings entered cells
  * whose plants sold out, and the young AI plants then made up 141 of the 263
  * plants running under a fifth of capacity, because a sold-out market that is
  * only slightly short cannot absorb a full-size new plant. Half leaves room for

@@ -18,12 +18,10 @@ vi.mock("@/lib/bonds/marketPool", () => ({
 vi.mock("@/lib/turn/nppBondCash", () => ({
   payNppBondReturns: vi.fn().mockResolvedValue(undefined),
 }));
-vi.mock("@/lib/corporations/restoreSectorsToUnowned", () => ({
-  restoreSectorsToUnowned: vi.fn().mockResolvedValue({
+vi.mock("@/lib/corporations/deleteDisposedSectors", () => ({
+  deleteDisposedSectors: vi.fn().mockResolvedValue({
     sectorsProcessed: 0,
     sectorsDeleted: 0,
-    poolsUpdated: 0,
-    totalRevenueRestored: 0,
   }),
 }));
 vi.mock("@/lib/financialTxLog/emit", () => ({
@@ -90,7 +88,7 @@ describe("executeCorporationBondRestructure", () => {
   it("liquidates the minimum highest-value sectors and cures bonds as a restructure", async () => {
     const { executeCorporationBondRestructure } =
       await import("./executeCorporationBondRestructure");
-    const { restoreSectorsToUnowned } = await import("@/lib/corporations/restoreSectorsToUnowned");
+    const { deleteDisposedSectors } = await import("@/lib/corporations/deleteDisposedSectors");
 
     const result = await executeCorporationBondRestructure(
       db as unknown as Db,
@@ -103,8 +101,8 @@ describe("executeCorporationBondRestructure", () => {
 
     // need = 1000 - 0 = 1000. Greedy over [B 850, A 680, C 340]: B(850) then A → 1530 ≥ 1000.
     // So sectors B and A are sold; C is kept.
-    expect(restoreSectorsToUnowned).toHaveBeenCalledTimes(1);
-    const liquidated = vi.mocked(restoreSectorsToUnowned).mock.calls[0]![1] as { _id: ObjectId }[];
+    expect(deleteDisposedSectors).toHaveBeenCalledTimes(1);
+    const liquidated = vi.mocked(deleteDisposedSectors).mock.calls[0]![1] as { _id: ObjectId }[];
     const liquidatedIds = liquidated.map((s) => s._id.toString()).sort();
     expect(liquidatedIds).toEqual([idA.toString(), idB.toString()].sort());
 

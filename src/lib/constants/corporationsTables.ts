@@ -1,6 +1,6 @@
 import type { StateMetrics } from "@/lib/db/types";
 import type { StateMetricMarginContribution } from "@/lib/corporations/stateMetricMarginTypes";
-import { OPERATING_SECTOR_TYPES, type OperatingSectorType } from "./corporationsClient";
+import type { OperatingSectorType } from "./corporationsClient";
 
 export {
   getSectorTypeMatchModifier,
@@ -387,41 +387,6 @@ export const ACUMEN_RATE_SENSITIVITY_SLOPE = 0.06;
 export const GROWTH_TREND_STEP_PER_TURN = 0.5;
 
 /**
- * Each state's total sector market size = stateGDP (in millions) × this fraction / sector count.
- * GDP is stored as millions (e.g. CA = 3,598,500 meaning $3.6T).
- * With fraction = 100: CA each sector ≈ $27.7M, Wyoming ≈ $311K, London ≈ $3.9M.
- */
-export const SECTOR_MARKET_GDP_FRACTION = 100;
-
-/**
- * Scale factor applied only during seed generation (seedUnownedSectors).
- * Does not affect live game calculations. At equal weight (1/17 ≈ 5.88%),
- * produces exactly 4.5× the old SECTOR_MARKET_GDP_FRACTION / 17 baseline.
- */
-export const SECTOR_SEED_SCALE = 450;
-
-/**
- * Cost to split unowned market = unownedRevenue × this fraction.
- * E.g. 5% of a $1M unowned sector = $50K per split.
- */
-export const SPLIT_COST_FRACTION = 0.05;
-
-/**
- * Base fraction of unowned market captured per split (before MS bonus).
- * E.g. 5% of unowned sector captured at 0 MS.
- */
-export const SPLIT_BASE_CAPTURE_FRACTION = 0.05;
-
-/**
- * Bonus multiplier when splitting unowned (target has 0 MS).
- * Unowned sectors have no defense, so capture is more favorable.
- */
-export const UNOWNED_CAPTURE_BONUS_MULTIPLIER = 1.25;
-
-/** Divisor for marketing strength in capture formula */
-export const MS_CAPTURE_DIVISOR = 100;
-
-/**
  * Attack owned sector: cash cost = target revenue × this fraction.
  * E.g. 10% of a $1M sector = $100K to attack.
  */
@@ -433,9 +398,6 @@ export const ATTACK_OWNED_COST_FRACTION = 0.1;
  * E.g. 10% contested, you have 100 MS vs 50 MS → you capture 100/150 × 10% = 6.67% of their revenue.
  */
 export const ATTACK_OWNED_CONTESTED_FRACTION = 0.1;
-
-/** Number of operating lanes (for market size division) */
-export const SECTOR_TYPE_COUNT = OPERATING_SECTOR_TYPES.length;
 
 /**
  * Cost to expand growth by 1% = sector revenue × this multiplier.

@@ -25,7 +25,7 @@ const words = (s: string) => s.split(/\s+/).filter(Boolean);
 
 const EXPLICIT: Record<string, Subsystem> = Object.fromEntries([
   ...words(
-    "corporationTurn topSectorsRecompute unownedSectorGrowth stateOwnershipConcentration extractionAutoStrategy autoSectorSeed prospectingResolution expireCharters contractSettlement commandEconomy defenceWindfallRecovery"
+    "corporationTurn topSectorsRecompute stateOwnershipConcentration extractionAutoStrategy prospectingResolution expireCharters contractSettlement commandEconomy defenceWindfallRecovery"
   ).map((p) => [p, "Corporations & sectors"]),
   ...words(
     "incomeTaxBases playerIncomeTax indexFunds bondTurn resetTreasuryCash stockExchangeSnapshot recomputeSharePrices bankingTurn lineOfCreditTurn fundGeneration portfolioSnapshot corpPortfolioSnapshot investorRankingSnapshot savingsInterestTurn bankSupervision bankSolvencyTurn pensionTurn frontierRaces treasuryTurn forexTurn ledgerReconcile ledgerPreForexSnapshot ledgerBalanceSnapshot moneySupplySnapshot interestRateSnapshot wealthListSnapshot inactiveShareholderShareRelease bannedShareholderRelease settlement npcBankPolicyTurn savingsShadowTurn brettonWoodsTurn fomcMeetings fomcNominations centralBankChairTurn centralBankChairSelection centralBankChairExecutiveRemoval investorConfidenceDecay"

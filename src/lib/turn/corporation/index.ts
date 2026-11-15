@@ -22,8 +22,8 @@ import {
   type JournalContext,
 } from "./resume/journal";
 import { resilienceStageOf } from "./resume/rules";
-import { shedVacantCeoSectorsToUnowned } from "./vacantCeoSectorShed";
-import { shedInactiveCeoSectorsToUnowned } from "./inactiveCeoSectorShed";
+import { shedVacantCeoSectors } from "./vacantCeoSectorShed";
+import { shedInactiveCeoSectors } from "./inactiveCeoSectorShed";
 import { installCaretakersForVacantCorps } from "./autoCaretakerVacantCorps";
 import { loadEngineSixCountries } from "./engineSixCountries";
 import { runNppCeoCareerPasses } from "./nppCeoPay";
@@ -675,13 +675,13 @@ export async function processCorporationTurn(
     journal,
     "vacantCeoShed",
     "refuse",
-    () => shedVacantCeoSectorsToUnowned(db, lookups, now, market.plantsEnabled)
+    () => shedVacantCeoSectors(db, lookups, now, market.plantsEnabled)
   );
   const inactiveShedResult = await runJournaledStepWithOutput(
     journal,
     "inactiveCeoShed",
     "refuse",
-    () => shedInactiveCeoSectorsToUnowned(db, lookups, now, market.plantsEnabled)
+    () => shedInactiveCeoSectors(db, lookups, now, market.plantsEnabled)
   );
   if (vacantShedResult.corporateSectorsUpdated > 0) {
     corpAuditEntries.push({

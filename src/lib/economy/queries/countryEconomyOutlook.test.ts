@@ -32,7 +32,6 @@ beforeEach(async () => {
     "exchangeRates",
     "stockExchangeSnapshots",
     "corporateSectors",
-    "unownedSectors",
     "corporations",
   ].forEach((n) => db.collection(n));
   const { getDb } = await import("@/lib/mongodb");
@@ -117,7 +116,6 @@ beforeEach(async () => {
     listings: [{ marketCap: 2_000_000_000_000 }, { marketCap: 2_200_000_000_000 }],
   });
   mockFind("corporateSectors", []);
-  mockFind("unownedSectors", []);
   mockFind("corporations", []);
 });
 

@@ -61,7 +61,6 @@ function makeDb(opts: {
   exchangeRates?: unknown[];
   centralBanks?: unknown[];
   enactedLaws?: unknown[];
-  unownedSectors?: unknown[];
   counts?: Record<string, number>;
   countByFilter?: Array<{ name: string; match: (filter: unknown) => boolean; count: number }>;
   failCollections?: string[];
@@ -107,7 +106,6 @@ function makeDb(opts: {
   getColl("exchangeRates").find.mockReturnValue(cursorOf(opts.exchangeRates ?? []));
   getColl("centralBanks").find.mockReturnValue(cursorOf(opts.centralBanks ?? []));
   getColl("enactedLaws").find.mockReturnValue(cursorOf(opts.enactedLaws ?? []));
-  getColl("unownedSectors").find.mockReturnValue(cursorOf(opts.unownedSectors ?? []));
   getColl("seedDiagnostics").find.mockReturnValue(cursorOf([]));
 
   const db = {
@@ -447,7 +445,7 @@ describe("runConformanceChecks", () => {
     const { checks } = await runConformanceChecks(db, { preset: "1953-default" });
     expect(checks.find((c) => c.id === "budget.BLR.exists")).toBeUndefined();
     expect(checks.find((c) => c.id === "budget.BAL.exists")).toBeUndefined();
-    expect(checks.find((c) => c.id === "sectors.BLR.unowned")).toBeUndefined();
+    expect(checks.find((c) => c.id === "sectors.BLR.openingSize")).toBeUndefined();
   });
 
   // Regression guard for #3875: FR spawns founding elections under
@@ -503,64 +501,6 @@ describe("runConformanceChecks", () => {
     const { checks } = await runConformanceChecks(db, { preset: "1991-default" });
     const fr = checks.find((c) => c.id === "parties.FR.roster");
     expect(fr?.severity).toBe("ok");
-  });
-
-  it("marks weightDist ok when shares sum to 1 and max ≤ 0.6", async () => {
-    const { db, collections } = makeDb({
-      gameState: {
-        _id: "current",
-        preset: "1953-default",
-        startingYear: 1953,
-        currentTurn: 1,
-        currentYear: 1953,
-        iteration: { type: "Alpha", number: 1 },
-      },
-      gameConfig: { _id: "default", maintenanceMode: true },
-      unownedSectors: [
-        { sectorType: "manufacturing", revenue: 400 },
-        { sectorType: "agriculture", revenue: 600 },
-      ],
-    });
-    collections.unownedSectors!.countDocuments.mockResolvedValue(2);
-    collections.strategicSectorDesignations = collections.unownedSectors!;
-    // strategic countDocuments also needs a collection — ensure lazy create returns 1
-    const strat = {
-      findOne: vi.fn().mockResolvedValue(null),
-      find: vi.fn().mockReturnValue(cursorOf([])),
-      countDocuments: vi.fn().mockResolvedValue(1),
-      insertOne: vi.fn(),
-      deleteMany: vi.fn(),
-      distinct: vi.fn().mockResolvedValue([]),
-    };
-    (db.collection as ReturnType<typeof vi.fn>).mockImplementation((name: string) => {
-      if (name === "unownedSectors") return collections.unownedSectors!;
-      if (name === "strategicSectorDesignations") return strat;
-      if (name === "gameState") return collections.gameState!;
-      if (name === "gameConfig") return collections.gameConfig!;
-      if (name === "federalBudget") return collections.federalBudget!;
-      if (name === "states") return collections.states!;
-      if (name === "exchangeRates") return collections.exchangeRates!;
-      if (name === "centralBanks") return collections.centralBanks!;
-      if (name === "enactedLaws") return collections.enactedLaws!;
-      if (name === "seedDiagnostics") return collections.seedDiagnostics!;
-      return {
-        findOne: vi.fn().mockResolvedValue(null),
-        find: vi.fn().mockReturnValue(cursorOf([])),
-        countDocuments: vi.fn().mockResolvedValue(0),
-        insertOne: vi.fn(),
-        deleteMany: vi.fn(),
-        distinct: vi.fn().mockResolvedValue([]),
-        // The readiness report sums seats instead of counting rows; this
-        // catch-all has to answer that too or it throws before the sector
-        // checks this case is actually about.
-        aggregate: vi.fn().mockReturnValue({ toArray: async () => [{ seats: 0 }] }),
-      };
-    });
-
-    const { checks } = await runConformanceChecks(db, { preset: "1953-default" });
-    const weight = checks.find((c) => c.id === "sectors.US.weightDist");
-    expect(weight?.severity).toBe("ok");
-    expect(String(weight?.expected)).toMatch(/sum≈1/);
   });
 
   it("detects stale gdpCostFraction when seed law does not define it", async () => {

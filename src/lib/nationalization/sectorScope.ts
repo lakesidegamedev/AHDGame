@@ -5,15 +5,15 @@
  * bundle. The engine in `nationalizeSectorWide.ts` re-exports these.
  */
 
-/** Which pools a sector-wide taking sweeps. */
+/** Which holders a sector-wide taking sweeps. `unowned` only survives on already-enacted laws and sweeps nothing. */
 export type SectorScope = "all" | "corporations" | "unowned" | "npp_unowned";
 
 /** Human-friendly labels for each sweep scope (SSOT for editor + bill view). */
 export const SECTOR_SCOPE_LABELS: Record<SectorScope, string> = {
-  all: "All holders + unowned market",
+  all: "All holders",
   corporations: "Corporations only",
-  unowned: "Unowned market only",
-  // #89: sweep NPP-run corporations and the unowned market, but leave
-  // player-run (ceoType "character") corporations untouched.
-  npp_unowned: "NPP-run corps + unowned market (keeps player corps)",
+  unowned: "Unowned market (retired, takes nothing)",
+  // Sweeps NPP-run corporations only; player-run (ceoType "character")
+  // corporations stay untouched.
+  npp_unowned: "NPP-run corps only (keeps player corps)",
 };

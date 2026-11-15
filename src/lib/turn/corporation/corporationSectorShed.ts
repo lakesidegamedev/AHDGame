@@ -2,48 +2,27 @@ import type { Db } from "mongodb";
 import { applyPlantChange } from "@/lib/corporations/wholePlants/rules";
 import { plantSizeForSector } from "@/lib/constants/facilityQuantum";
 import { ObjectId } from "mongodb";
-import type { Corporation, CorporateSector, UnownedSector } from "@/lib/db/types";
-import type { CountryId } from "@/lib/constants/countries";
-import {
-  resolveSectorHostCurrencyCode,
-  fxRateForSectorHostFromMap,
-} from "@/lib/currency/corporationCapital";
-import { readCorpEconomicAnchor } from "@/lib/currency/corpEconomyFields";
-import {
-  bucketKey,
-  computeStateControlledBuckets,
-} from "@/lib/nationalization/stateControlledBuckets";
-import type { CorporationType, OperatingSectorType } from "@/lib/constants/corporations";
-import { revenuePerCapacityUnitForStrategy } from "@/lib/constants/capacityEconomy";
-import {
-  unownedHeadroomUnitsPerAnchor,
-  unownedPoolCreditBaseExpr,
-  unownedPoolTrailingSet,
-} from "@/lib/market/unownedHeadroom";
+import type { Corporation } from "@/lib/db/types";
 import type { CorporationLookups } from "./types";
 import { seedPlantLedger } from "@/lib/corporations/plantLedger";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import type { Document } from "mongodb";
-import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
 
-// PLANTS-GATED: under plants the shed moves `capitalStock` units into the
-// unowned pool's `headroomUnits`; the revenue writes below run only below the
-// plants tier. Corp units and pool units are converted through the ₳ nameplate
-// because each is priced at its own mix.
+// PLANTS-GATED: under plants the shed removes `capitalStock` units; the revenue
+// writes below run only below the plants tier. Shed capacity simply ceases, it
+// is not handed to any pool: capacity is created only by paid orders and seeds.
 export interface SectorShedResult {
   corporateSectorsUpdated: number;
-  unownedSectorsUpdated: number;
   totalRevenueShed: number;
   /**
-   * Capacity units shed to the unowned headroom pool. Always 0 below the
-   * plants tier, where the shed moves ₳ revenue instead.
+   * Capacity units shed. Always 0 below the plants tier, where the shed moves
+   * revenue instead.
    */
   totalCapacityUnitsShed?: number;
 }
 
 /**
- * Sheds `rate` of each sector's revenue + workers from the given corps to the
- * unowned-sector pool. Mutates `lookups.sectorsByCorp` entries in place so any
+ * Sheds `rate` of each sector's revenue + workers from the given corps. Mutates `lookups.sectorsByCorp` entries in place so any
  * downstream turn-step in the same pipeline sees the reduced values.
  *
  * Caller must filter `sheddingCorps` to the right candidate set. `reasonLabel`
@@ -52,10 +31,9 @@ export interface SectorShedResult {
  * ─── UNDER PLANTS THIS SHEDS CAPACITY, NOT REVENUE ────────────────────────
  * At `marketSystemMode >= "plants"` the turn processor restates
  * `sector.revenue` from `capitalStock × mixPrice` every turn, so a revenue
- * `$inc` is undone next tick: the corp keeps its capacity while the pool is
- * credited anyway, minting market-share per turn. Under plants the shed
- * instead removes `rate × capitalStock` plant from the corp and credits the
- * same demand-side headroom to the pool, never touching revenue.
+ * `$inc` is undone next tick and the corp keeps its capacity. Under plants the
+ * shed instead removes `rate × capitalStock` plant from the corp, never
+ * touching revenue.
  */
 export async function shedSectorsForCorps(
   db: Db,
@@ -70,7 +48,6 @@ export async function shedSectorsForCorps(
   if (sheddingCorps.length === 0) {
     return {
       corporateSectorsUpdated: 0,
-      unownedSectorsUpdated: 0,
       totalRevenueShed: 0,
       totalCapacityUnitsShed: 0,
     };
@@ -83,32 +60,6 @@ export async function shedSectorsForCorps(
   }
 
   const sheddingIds = new Set(sheddingCorps.map((c) => c._id.toString()));
-
-  // Don't re-seed unowned market in a sector the state has nationalized — a private
-  // holder that shed capacity there would otherwise spawn an unowned pool that
-  // re-fragments the state monopoly (the shed still shrinks the corp; the freed
-  // capacity simply isn't released back to the market in a nationalized bucket).
-  const nationalCorpIds = new Set(
-    lookups.corporations.filter((c) => c.countryOwnerId != null).map((c) => c._id.toString())
-  );
-  const stateControlled = computeStateControlledBuckets(
-    [...lookups.sectorsByCorp.values()].flat(),
-    nationalCorpIds
-  );
-
-  const unownedDeltas = new Map<
-    string,
-    {
-      stateId: string;
-      sectorType: string;
-      industryModel: string | null;
-      mediaDiscriminator: CorporateSector["mediaDiscriminator"];
-      countryId: CountryId;
-      revenue: number;
-      /** Capacity units freed to the pool (plants only; 0 otherwise). */
-      units: number;
-    }
-  >();
 
   const sectorOps: {
     updateOne: {
@@ -224,54 +175,6 @@ export async function shedSectorsForCorps(
           },
         });
 
-        if (
-          shedUnits > 0 &&
-          !stateControlled.has(
-            bucketKey(s.stateId, s.sectorType, s.industryModel, s.mediaDiscriminator)
-          )
-        ) {
-          // Corp units and pool units are BOTH "output units/day", but each is
-          // priced by its own mix: the corp's at its live `strategyId`, the pool
-          // at the sector type's default mix (unowned docs carry no strategy).
-          // Route through the ₳ nameplate so the two are commensurable — the
-          // same round trip `impliedOutputUnits` performs, and currency-free on
-          // both legs (RPU and the base prices are ₳-native, so no FX enters).
-          const nameplateAnchor =
-            shedUnits *
-            revenuePerCapacityUnitForStrategy(
-              s.sectorType as CorporationType,
-              s.strategyId,
-              lookups.eraUnitScale,
-              s.industryModel,
-              s.mediaDiscriminator
-            );
-          const poolUnits =
-            nameplateAnchor *
-            unownedHeadroomUnitsPerAnchor(
-              s.sectorType as CorporationType,
-              lookups.eraUnitScale,
-              s.industryModel,
-              s.mediaDiscriminator
-            );
-          const industryModel = s.industryModel ?? null;
-          const mediaDiscriminator = s.mediaDiscriminator ?? null;
-          const key = `${s.stateId}\0${s.sectorType}\0${industryModel ?? ""}\0${mediaDiscriminator ?? ""}`;
-          // Host country, not a hardcoded one: the pool row this creates carries
-          // a countryId every reader filters on (ticket #1271).
-          const countryId = (lookups.stateCountryMap.get(s.stateId) ?? s.countryId) as CountryId;
-          const prev = unownedDeltas.get(key);
-          if (prev) prev.units += poolUnits;
-          else
-            unownedDeltas.set(key, {
-              stateId: s.stateId,
-              sectorType: s.sectorType,
-              industryModel,
-              mediaDiscriminator,
-              countryId,
-              revenue: 0,
-              units: poolUnits,
-            });
-        }
         continue;
       }
 
@@ -291,46 +194,12 @@ export async function shedSectorsForCorps(
           },
         },
       });
-
-      if (
-        shedRev > 0 &&
-        !stateControlled.has(
-          bucketKey(s.stateId, s.sectorType, s.industryModel, s.mediaDiscriminator)
-        )
-      ) {
-        // shedRev is in the sector's host-state currency; convert to the
-        // ₳-native unowned pool at the host rate, not the owning corp's.
-        const shedRevAnchor = readCorpEconomicAnchor(
-          shedRev,
-          resolveSectorHostCurrencyCode(s, null),
-          fxRateForSectorHostFromMap(s, null, lookups.exchangeRatesByCurrency)
-        );
-        const industryModel = s.industryModel ?? null;
-        const mediaDiscriminator = s.mediaDiscriminator ?? null;
-        const key = `${s.stateId}\0${s.sectorType}\0${industryModel ?? ""}\0${mediaDiscriminator ?? ""}`;
-        // The pool row this shed creates carries a countryId every reader filters
-        // on, so use the country the STATE is in, never a hardcoded one.
-        const countryId = (lookups.stateCountryMap.get(s.stateId) ?? s.countryId) as CountryId;
-        const prev = unownedDeltas.get(key);
-        if (prev) prev.revenue += shedRevAnchor;
-        else
-          unownedDeltas.set(key, {
-            stateId: s.stateId,
-            sectorType: s.sectorType,
-            industryModel,
-            mediaDiscriminator,
-            countryId,
-            revenue: shedRevAnchor,
-            units: 0,
-          });
-      }
     }
   }
 
   if (sectorOps.length === 0) {
     return {
       corporateSectorsUpdated: 0,
-      unownedSectorsUpdated: 0,
       totalRevenueShed: 0,
       totalCapacityUnitsShed: 0,
     };
@@ -339,111 +208,8 @@ export async function shedSectorsForCorps(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   await corporateSectorsCollection<Document>(db).bulkWrite(sectorOps as any[]);
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const unownedOps: any[] = [];
-
-  for (const {
-    stateId,
-    sectorType,
-    industryModel,
-    mediaDiscriminator,
-    countryId,
-    revenue,
-    units,
-  } of unownedDeltas.values()) {
-    if (plantsEnabled) {
-      // Units are AUTHORITATIVE on the pool under plants, and `revenue` is the
-      // derived display/legacy-reader value — the mirror image of the owned
-      // side, where `capitalStock` is authoritative and revenue is restated
-      // from it. Written as an update PIPELINE (not `$inc`) for the same
-      // self-healing reason `restoreSectorsToUnowned` uses one: a doc that
-      // predates the `headroomUnits` backfill has no base to increment, so the
-      // base is derived from its revenue first, then the shed is added, then
-      // revenue is re-derived from the new total. Nothing accumulates from a
-      // missing field, and the two fields cannot drift.
-      unownedOps.push({
-        updateOne: {
-          filter: {
-            stateId,
-            sectorType,
-            ...(industryModel != null || sectorType === "manufacturing" ? { industryModel } : {}),
-            mediaDiscriminator,
-          },
-          update: [
-            {
-              $set: {
-                stateId: { $ifNull: ["$stateId", stateId] },
-                countryId: { $ifNull: ["$countryId", countryId] },
-                sectorType: { $ifNull: ["$sectorType", sectorType] },
-                ...(industryModel != null || sectorType === "manufacturing"
-                  ? { industryModel: { $ifNull: ["$industryModel", industryModel] } }
-                  : {}),
-                mediaDiscriminator: { $ifNull: ["$mediaDiscriminator", mediaDiscriminator] },
-                createdAt: { $ifNull: ["$createdAt", now] },
-                updatedAt: now,
-                headroomUnits: {
-                  $add: [
-                    unownedPoolCreditBaseExpr(
-                      sectorType as OperatingSectorType,
-                      true,
-                      lookups.eraUnitScale,
-                      industryModel,
-                      mediaDiscriminator
-                    ),
-                    units,
-                  ],
-                },
-              },
-            },
-            {
-              $set: unownedPoolTrailingSet(
-                sectorType as OperatingSectorType,
-                true,
-                lookups.eraUnitScale,
-                industryModel,
-                mediaDiscriminator
-              ),
-            },
-          ],
-          upsert: true,
-        },
-      });
-      continue;
-    }
-
-    unownedOps.push({
-      updateOne: {
-        filter: {
-          stateId,
-          sectorType,
-          ...(industryModel != null || sectorType === "manufacturing" ? { industryModel } : {}),
-          mediaDiscriminator,
-        },
-        update: {
-          $inc: { revenue },
-          $set: { updatedAt: now },
-          $setOnInsert: {
-            _id: new ObjectId(),
-            stateId,
-            countryId,
-            sectorType: sectorType as UnownedSector["sectorType"],
-            ...(industryModel != null || sectorType === "manufacturing" ? { industryModel } : {}),
-            mediaDiscriminator,
-            createdAt: now,
-          },
-        },
-        upsert: true,
-      },
-    });
-  }
-
-  if (unownedOps.length > 0) {
-    await unownedSectorsCollection<Document>(db).bulkWrite(unownedOps);
-  }
-
   return {
     corporateSectorsUpdated: sectorOps.length,
-    unownedSectorsUpdated: unownedOps.length,
     totalRevenueShed,
     totalCapacityUnitsShed,
   };

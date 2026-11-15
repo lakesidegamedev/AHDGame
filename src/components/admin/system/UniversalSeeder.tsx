@@ -128,11 +128,6 @@ const SEED_TARGETS: SeedTarget[] = [
     description: "Ensures party budget documents exist for all default parties",
   },
   {
-    id: "unownedSectors",
-    label: "Unowned sectors",
-    description: "Corporate sectors not owned by any corporation (market baseline)",
-  },
-  {
     id: "stateSectorSpecializations",
     label: "State sector bonuses",
     description:

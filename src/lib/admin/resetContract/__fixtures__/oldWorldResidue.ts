@@ -140,7 +140,7 @@ export const OLD_WORLD_GAME_STATE: Record<string, unknown> = {
   isActive: true,
   resetWorldId: "old-world",
   lastCensusYear: 2010,
-  lastAutoSeedTurn: 944,
+  lastExtractionAutoStrategyTurn: 944,
   lastStatehoodYear: 1979,
   lastMilitaryBranchYearProcessed: 1979,
   lastBundestagReconciledCycle: 6,

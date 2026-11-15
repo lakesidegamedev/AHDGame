@@ -141,7 +141,7 @@ export async function applyFanout(db: Db, scope: FanoutScope, ctx: FanoutContext
       }>;
       if (docs.length === 0) return 0;
       const buckets =
-        ctx.sectorLocations && ["corporateSectors", "unownedSectors"].includes(scope.collection)
+        ctx.sectorLocations && scope.collection === "corporateSectors"
           ? Object.fromEntries(
               ctx.seeds.map((seed) => [
                 seed._id,

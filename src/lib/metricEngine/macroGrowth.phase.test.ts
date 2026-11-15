@@ -62,7 +62,6 @@ function seedWorld(db: MockDb, usGdp = 5_000_000): void {
     { _id: "CN", countryId: "CN", taxRates: { salesTax: 0 }, stateOwnershipConcentration: 0.1 },
   ]);
   setupCollection("corporateSectors", []);
-  setupCollection("unownedSectors", []);
   setupCollection("corporations", []);
   setupCollection("exchangeRates", []);
   setupCollection("stateBudgets", [

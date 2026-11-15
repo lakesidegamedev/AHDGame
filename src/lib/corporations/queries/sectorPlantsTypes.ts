@@ -135,13 +135,11 @@ export interface SectorPlantsSection {
     /** Max fractional deviation the governor still allows. */
     cap: number;
   };
-  /** Unclaimed market share, in sector units. This is not measured buyer demand. */
-  headroomUnits: number;
   /**
    * Weighted expansion appetite across the output mix, including latent demand.
    * It can remain positive while one output has no unmet demand. It is not an
    * all-output sell-through limit. Use measuredDemandGapUnits for automatic
-   * sizing; headroomUnits measures claimable market share.
+   * sizing.
    *
    * 0 while `roomHeldByOwnIdle`: this sector's own idle capacity reaches the
    * market before any new build would.
@@ -172,13 +170,6 @@ export interface SectorPlantsSection {
     /** Capacity units retired at the end of the last turn. */
     retiredUnits: number;
   };
-  /**
-   * Share of this market nobody has built into, in percent: the unowned pool
-   * over owned capacity plus that pool. The same pool `headroomUnits` bounds a
-   * build by, so the two numbers the panel shows side by side reconcile.
-   * Absent when owned capacity is unknown.
-   */
-  unclaimedSharePct?: number;
   /**
    * Set when the demand throttle holds this plant down because the valuable
    * part of its output is oversupplied and another strategy for the same

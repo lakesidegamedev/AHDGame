@@ -17,14 +17,12 @@ describe("industry-model market indexes", () => {
       }),
     } as unknown as Db;
     await migration.execute(db, { dryRun: false });
-    expect(calls.slice(0, 3)).toEqual([
+    expect(calls.slice(0, 2)).toEqual([
       "create:corporateSectors:corporationId,stateId,sectorType,industryModel",
-      "create:unownedSectors:stateId,sectorType,industryModel",
       "create:unions:countryId,sectorType,industryModel",
     ]);
-    expect(calls.slice(3)).toEqual([
+    expect(calls.slice(2)).toEqual([
       "drop:corporateSectors_corporationId_stateId_sectorType:corporateSectors_corporationId_stateId_sectorType",
-      "drop:stateId_1_sectorType_1:stateId_1_sectorType_1",
       "drop:unions_country_sectorType_seeded_unique:unions_country_sectorType_seeded_unique",
     ]);
   });
@@ -38,6 +36,6 @@ describe("industry-model market indexes", () => {
     const result = await migration.execute(db, { dryRun: true });
     expect(createIndex).not.toHaveBeenCalled();
     expect(dropIndex).not.toHaveBeenCalled();
-    expect(result.notes).toHaveLength(6);
+    expect(result.notes).toHaveLength(4);
   });
 });

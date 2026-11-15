@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { ObjectId } from "mongodb";
-import type { Corporation, CorporateSector, SectorBuildOrder, UnownedSector } from "@/lib/db/types";
+import type { Corporation, CorporateSector, SectorBuildOrder } from "@/lib/db/types";
+import { candidate, candidatesByCountry } from "./npp/__fixtures__/marketCandidates";
+import type { MarketCandidate } from "./npp/marketCandidates";
 import type { CommodityType } from "@/lib/constants/commodities";
 import { COMMODITY_BASE_PRICES, computeMarketPrice } from "@/lib/constants/commodities";
 import { CAPACITY_ANCHOR_YEAR } from "@/lib/constants/capacityEconomy";
@@ -55,14 +57,10 @@ describe("NPP chronic-shortage capacity response", () => {
         soldUnits: 100,
         buildQueue: [],
       } as unknown as CorporateSector;
-      const pool = {
-        _id: new ObjectId(),
+      const pool = candidate({
         stateId: "NY",
-        countryId: "US",
-        sectorType,
-        revenue: 100_000_000,
-        headroomUnits: 1_000,
-      } as unknown as UnownedSector;
+        sectorType: sectorType as MarketCandidate["sectorType"],
+      });
       const demand = 300;
       let scarcityMult = 1;
 
@@ -91,7 +89,7 @@ describe("NPP chronic-shortage capacity response", () => {
             modifiers: ceoArchetypeModifiers("cautious"),
             strategyLoopEnabled: false,
           },
-          new Map([["US", [pool]]]),
+          candidatesByCountry([pool]),
           new Set(),
           (candidate: CommodityType) => (candidate === commodity ? marketPrice / basePrice : 1),
           plants

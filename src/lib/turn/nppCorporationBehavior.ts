@@ -21,8 +21,8 @@ import {
   computeSectorConcentration,
 } from "@/lib/turn/npp/rules/sectorConcentration";
 import { makeNppCorpDecision } from "@/lib/turn/npp/makeCorpDecision";
-import { stateServiceHeadroomOn } from "@/lib/turn/npp/rules/stateServiceHeadroom";
-import { liftStateServiceHeadroom } from "@/lib/turn/npp/stateServiceHeadroomShell";
+import { addDemandClaim, netUnmetDemandUnits } from "@/lib/turn/npp/rules/demandClaims";
+import { demandClaimKeyOf, loadInFlightDemandClaims } from "@/lib/turn/npp/demandClaimsShell";
 import { strategyStateNeedsPersist } from "@/lib/turn/npp/rules/strategyCadence";
 export { makeNppCorpDecision } from "@/lib/turn/npp/makeCorpDecision";
 import {
@@ -38,6 +38,7 @@ import {
   buildActiveMarketBuckets,
   createPlacementSectorFacts,
   markMarketsActive,
+  type PlacementSignals,
 } from "@/lib/turn/npp/marketSignals";
 
 export {
@@ -55,11 +56,9 @@ export {
   STRATEGY_SHIFT_PROFIT_SEEK_ADVANTAGE,
   strategyPriceScore,
 } from "@/lib/turn/npp/strategyRetooling";
-import type { UnownedSector } from "@/lib/db/types/unownedSector";
 import { ceoArchetypeModifiers } from "@/lib/turn/ceoArchetype";
 import {
   buildNppCorporationDecisionIndexes,
-  indexOpenUnownedSectors,
   nppDecisionCohortIds,
 } from "@/lib/turn/npp/decisionSnapshotIndexes";
 
@@ -69,8 +68,8 @@ import type { ManufacturingProductProject } from "@/lib/products/manufacturingPr
 
 import { labourAtLeast, isLabourSystemMode } from "@/lib/labour/modes";
 
+import { bucketKey } from "@/lib/market/marketBuckets";
 import {
-  bucketKey,
   computeStateControlledBuckets,
   loadNationalCorpIds,
 } from "@/lib/nationalization/stateControlledBuckets";
@@ -107,10 +106,7 @@ import {
 import type { NppCorpUpdateOp } from "./npp/nppCashWrite";
 import type { NppReinvestmentCashWitness } from "./npp/reinvestmentCashLedger";
 
-import {
-  drawFoundedCapacityFromPools,
-  flushNppCapacityWriteback,
-} from "@/lib/turn/npp/capacityWriteback";
+import { flushNppCapacityWriteback } from "@/lib/turn/npp/capacityWriteback";
 import { loadWorldEraUnitScale } from "@/lib/currency/gdpAnchorRate";
 
 import { loadNppBehaviorConfig } from "@/lib/turn/npp/behaviorConfig";
@@ -168,7 +164,6 @@ import { createRelocationCreditBatch } from "@/simulation/engine/v2/relocationCr
 
 import { createFrontierEntryTurnState } from "@/lib/turn/npp/frontierEntryCandidate";
 import type {
-  NppCorpDecision,
   NppCorpDecisionContext,
   NppPlantsContext,
   NppSectorUpdateDoc,
@@ -187,11 +182,11 @@ import {
   NPP_GROWTH_MAX_STEP_OF_RUN,
   NPP_SHORTAGE_ENTRIES_PER_TURN,
   NPP_FOUNDING_DEPLOY_FRACTION,
-  NPP_FOUNDING_HEADROOM_SHARE,
   DEFAULT_ARCHETYPE,
 } from "@/lib/turn/npp/nppCorporationTuning";
 import { SETTLEMENT_HISTORY_EXCLUDED } from "@/lib/banking/settlementHistory";
-import { createReinvestPoolLookup } from "@/lib/turn/npp/reinvestCandidatePool";
+import { buildLocalRevenueShareLookup } from "@/lib/turn/npp/reinvestCandidatePool";
+import { indexCandidateBuckets, indexStateIdsByCountry } from "@/lib/turn/npp/marketCandidates";
 import { getCorporationsCollection } from "@/lib/db/collections/corporations";
 import { getCorporateSectorsCollection } from "@/lib/db/collections/corporateSectors";
 import { getNppsCollection } from "@/lib/db/collections/npps";
@@ -199,7 +194,7 @@ import { getGameStateCollection } from "@/lib/db/collections/gameState";
 import { getStatesCollection } from "@/lib/db/collections/states";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
-import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
+import { statesCollection } from "@/lib/db/repositories/states";
 import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
 import { producerMarketOutcomesCollection } from "@/lib/db/repositories/producerMarketOutcomes";
 
@@ -209,7 +204,6 @@ export {
   NPP_GROWTH_MAX_STEP_OF_RUN,
   NPP_SHORTAGE_ENTRIES_PER_TURN,
   NPP_FOUNDING_DEPLOY_FRACTION,
-  NPP_FOUNDING_HEADROOM_SHARE,
 };
 
 export async function processNppCorporationDecisions(
@@ -283,7 +277,7 @@ export async function processNppCorporationDecisions(
   const { corporationIds: corpIds, ceoNppIds } = nppDecisionCohortIds(nppCorps);
   // All four reads depend only on the NPP cohort. Start them together rather
   // than making the decision phase wait for each collection in sequence.
-  const [allSectors, ceoNpps, commodityPriceDocs, unownedSectors] = await Promise.all([
+  const [allSectors, ceoNpps, commodityPriceDocs, states] = await Promise.all([
     // full-read(corporateSectors): buildQueue and plantsPnl drive NPP build and divest decisions
     (await getCorporateSectorsCollection(db)).find({ corporationId: { $in: corpIds } }).toArray(),
     ceoNppIds.length > 0
@@ -292,7 +286,9 @@ export async function processNppCorporationDecisions(
           .toArray()
       : Promise.resolve([]),
     commodityPricesCollection(db).find({}).toArray(),
-    unownedSectorsCollection(db).find({}).toArray(),
+    statesCollection(db)
+      .find({}, { projection: { _id: 1, countryId: 1 } })
+      .toArray(),
   ]);
   const { archetypeByNppId, sectorsByCorp, priceByCommodity } = buildNppCorporationDecisionIndexes(
     ceoNpps,
@@ -305,14 +301,16 @@ export async function processNppCorporationDecisions(
   const placementSignals = await loadNppPlacementSignals(db, turn, allSectors, statePriceRatioOf);
   placementSignals.stateDemandOf = stateDemandOf;
   placementSignals.stateInputAvailabilityOf = stateInputAvailabilityOf;
-  // The whole cohort ranks the same unowned snapshot, so the price-derived
+  // The whole cohort ranks the same candidate buckets, so the price-derived
   // shortage scores are resolved once for the turn instead of per corp. Market
-  // size stays live inside the scan: founding draws move it during the pass.
+  // room stays live inside the scan: founding claims move it during the pass.
   placementSignals.sectorFacts = createPlacementSectorFacts();
 
-  const { open: openUnowned, blocked } = await partitionOpenMarkets(db, unownedSectors);
-
-  const { unownedByCountry, unownedIndex } = indexOpenUnownedSectors(openUnowned);
+  // Every region of a country that permits private enterprise, crossed with
+  // every lane, is a candidate market. Nothing about a bucket is stored.
+  const { open: openStates, blocked } = await partitionOpenMarkets(db, states);
+  const candidatesByCountry = indexCandidateBuckets(indexStateIdsByCountry(openStates));
+  const countryOfState = new Map(states.map((state) => [state._id, state.countryId]));
 
   // NPPs cannot auto-expand into state-controlled buckets; players still may.
   const [nationalCorpIds, globalSectors, strategyGate] = await Promise.all([
@@ -415,26 +413,50 @@ export async function processNppCorporationDecisions(
   }
   placementSignals.hasSameTypeNppIn = (countryId, sectorType) =>
     sameTypeNpp.has(`${countryId}|${sectorType}`);
-  placementSignals.unmetDemandUnitsOf = (cell, options) => {
+  // Capacity already ordered (build queues) or claimed earlier in this pass. The
+  // measured gap only moves when plants come online, so unmet demand is read net
+  // of it; otherwise two corporations would found into a gap that fits one plant.
+  const demandClaims = await loadInFlightDemandClaims(db, countryOfState);
+  // The measured gap and the claim key depend only on the bucket, the recipe and
+  // the price books, none of which move during the pass; claims are read live.
+  const gapMemo = new Map<string, { unmet: number | null; claimKey: string }>();
+  const readGap = (
+    cell: Parameters<NonNullable<PlacementSignals["unmetDemandUnitsOf"]>>[0],
+    options: Parameters<NonNullable<PlacementSignals["unmetDemandUnitsOf"]>>[1]
+  ) => {
+    const memoKey = `${cell.countryId}|${cell.stateId}|${cell.sectorType}|${cell.industryModel ?? ""}|${cell.mediaDiscriminator ?? ""}|${options?.strategyId ?? ""}|${options?.aggregate ?? "mean"}`;
+    const cached = gapMemo.get(memoKey);
+    if (cached) return cached;
     // The mix the new plant would actually run: its founding strategy, else the
     // sector default (getStrategy falls back to it).
     const supplyMix = getStrategy(
       getOperatingSectorType(cell.sectorType, cell.industryModel, cell.mediaDiscriminator),
       options?.strategyId ?? ""
     ).supply;
-    return cellUnmetDemandUnits({
-      supplyMix,
-      aggregate: options?.aggregate,
-      gapFor: (commodity) => {
-        const doc = priceByCommodity.get(commodity);
-        if (!doc) return null;
-        const [supply, demand] = isStateScopedCommodity(commodity)
-          ? [doc.stateSupply?.[cell.stateId], doc.stateDemand?.[cell.stateId]]
-          : [doc.nationalSupply?.[cell.countryId], doc.nationalDemand?.[cell.countryId]];
-        if (typeof supply !== "number" || typeof demand !== "number") return null;
-        return Math.max(0, demand - supply);
-      },
-    });
+    const value = {
+      unmet: cellUnmetDemandUnits({
+        supplyMix,
+        aggregate: options?.aggregate,
+        gapFor: (commodity) => {
+          const doc = priceByCommodity.get(commodity);
+          if (!doc) return null;
+          const [supply, demand] = isStateScopedCommodity(commodity)
+            ? [doc.stateSupply?.[cell.stateId], doc.stateDemand?.[cell.stateId]]
+            : [doc.nationalSupply?.[cell.countryId], doc.nationalDemand?.[cell.countryId]];
+          if (typeof supply !== "number" || typeof demand !== "number") return null;
+          return Math.max(0, demand - supply);
+        },
+      }),
+      claimKey: demandClaimKeyOf(cell),
+    };
+    gapMemo.set(memoKey, value);
+    return value;
+  };
+  placementSignals.claimDemandUnits = (cell, units) =>
+    addDemandClaim(demandClaims, readGap(cell, undefined).claimKey, units);
+  placementSignals.unmetDemandUnitsOf = (cell, options) => {
+    const { unmet, claimKey } = readGap(cell, options);
+    return netUnmetDemandUnits(unmet, demandClaims.get(claimKey));
   };
 
   // Rival index for capacity-decision telemetry, off the already-loaded
@@ -450,10 +472,8 @@ export async function processNppCorporationDecisions(
     }))
   );
 
-  // One unowned-pool index for the whole cohort; each corporation's reinvest
-  // decision reads it and the draws the loop applies stay visible through the
-  // shared row objects, exactly as the per-corporation copies did.
-  const reinvestPoolFor = createReinvestPoolLookup(unownedByCountry);
+  // Local revenue share per sector, built once for the cohort's reinvest pricing.
+  const localShareOf = buildLocalRevenueShareLookup(globalSectors);
 
   const manufacturingProductProjectState = await loadNppProductProjectsV2(db, nppCorps);
   const plantsEnabled = manufacturingProductProjectState.plantsEnabled;
@@ -489,7 +509,6 @@ export async function processNppCorporationDecisions(
         producerFundedRestartStage?: number;
         wholePlantsStage?: number;
         producerCaptiveDeliveryStage?: number;
-        nppStateServiceHeadroomStage?: number;
         nppDividendAfterTaxStage?: number;
         nppGrowthPerProductFillStage?: number;
       } & ShortageGrowthFinanceConfigInput
@@ -502,7 +521,6 @@ export async function processNppCorporationDecisions(
           producerFundedRestartStage: 1,
           wholePlantsStage: 1,
           producerCaptiveDeliveryStage: 1,
-          nppStateServiceHeadroomStage: 1,
           nppShortageGrowthFinanceStage: 1,
           nppDividendAfterTaxStage: 1,
           nppGrowthPerProductFillStage: 1,
@@ -546,13 +564,7 @@ export async function processNppCorporationDecisions(
     };
     const groupResolver = await loadGroupDominanceSectorResolver(db, turn);
     if (groupResolver) plants.groupDominanceSectorsOf = groupResolver;
-    // Local service pools that never refill: read their headroom from the
-    // state book instead (rules/stateServiceHeadroom). Off = no read, no lift.
-    if (stateServiceHeadroomOn(nppGameConfig?.nppStateServiceHeadroomStage)) {
-      await liftStateServiceHeadroom(db, unownedByCountry, placementSignals, plants.eraUnitScale);
-    }
   }
-  const unownedDraws: NonNullable<NppCorpDecision["unownedDraws"]> = [];
   // Capacity-decision observations, aggregated in memory and flushed once for
   // the whole cohort below: no per-row turn queries, no new reads.
   const capacityObservations: CapacityDecisionObservation[] = [];
@@ -840,7 +852,7 @@ export async function processNppCorporationDecisions(
       fundedWorldEpoch,
       conversionBudgetOf:
         conversionPaceShare > 0 ? (countryId) => conversionBudgets.get(countryId) : undefined,
-      reinvestPoolFor,
+      localShareOf,
       fundedRestartPressureOf: recipePressureByKey
         ? (sectorType, strategyId) => recipePressureByKey.get(recipeKey(sectorType, strategyId))
         : undefined,
@@ -849,7 +861,7 @@ export async function processNppCorporationDecisions(
     };
     let decision = makeNppCorpDecision(
       decisionContext,
-      unownedByCountry,
+      candidatesByCountry,
       stateControlled,
       priceRatioOf,
       plants,
@@ -866,7 +878,7 @@ export async function processNppCorporationDecisions(
           retry: (creditLocal) =>
             makeNppCorpDecision(
               { ...decisionContext, shortageEntryCreditLocal: creditLocal },
-              unownedByCountry,
+              candidatesByCountry,
               stateControlled,
               priceRatioOf,
               plants,
@@ -884,7 +896,7 @@ export async function processNppCorporationDecisions(
           retry: (creditLocal) =>
             makeNppCorpDecision(
               { ...decisionContext, shortageEntryCreditLocal: creditLocal },
-              unownedByCountry,
+              candidatesByCountry,
               stateControlled,
               priceRatioOf,
               plants,
@@ -917,13 +929,6 @@ export async function processNppCorporationDecisions(
           currency: corpCurrency,
           buildContext: {
             destinationCurrency: currencyForCountry(intent.sector.countryId ?? corp.countryId),
-            bucket: {
-              stateId: intent.sector.stateId,
-              countryId: intent.sector.countryId ?? corp.countryId,
-              sectorType: intent.sector.sectorType,
-              industryModel: intent.sector.industryModel ?? null,
-              mediaDiscriminator: intent.sector.mediaDiscriminator ?? null,
-            },
             eraUnitScale: plants?.eraUnitScale ?? 1,
             growthUnits: intent.growthUnits,
           },
@@ -947,9 +952,7 @@ export async function processNppCorporationDecisions(
       decision,
       corporation: corp,
       capexRows,
-      unownedDraws,
-      unownedIndex,
-      eraUnitScale: plants?.eraUnitScale ?? 1,
+      claimDemandUnits: placementSignals.claimDemandUnits,
       currencyCode: corpCurrency,
       rate: corpFxRate,
       shadowEnabled: ledgerShadow,
@@ -1094,10 +1097,6 @@ export async function processNppCorporationDecisions(
     }
   }
 
-  await drawFoundedCapacityFromPools(db, unownedDraws, {
-    eraUnitScale: plants?.eraUnitScale ?? 1,
-    now,
-  });
   const reinvestmentCashWitnesses = await flushNppCapacityWriteback(db, {
     turn,
     now,

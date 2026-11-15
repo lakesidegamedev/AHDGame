@@ -11,7 +11,7 @@ import { Skeleton } from "@/components/ui";
 import BackButton from "@/components/BackButton";
 import { getExchangeForCountry } from "@/lib/constants/exchangeRegistry";
 import type { CountryId } from "@/lib/constants/countriesCore";
-import { COUNTRY_CURRENCY_MAP, type CurrencyCode } from "@/lib/constants/currencies";
+import type { CurrencyCode } from "@/lib/constants/currencies";
 import { regionApiSubUrl, regionUrl } from "@/lib/urls";
 import type { StateResources, ExtractionCapacityRow, ResourceOpportunity } from "./types";
 import { MAX_GROWTH_RATE, MIN_GROWTH_RATE } from "@/lib/constants/corporationsClient";
@@ -146,9 +146,6 @@ export default function SectorDetailPage() {
     attacking,
     attackMsg,
     attackError,
-    splitting,
-    splitMsg,
-    splitError,
     policyDraft,
     policySaving,
     policyMessage,
@@ -634,39 +631,6 @@ export default function SectorDetailPage() {
     }
   };
 
-  const handleSplitSector = async (strength: "full" | "half" = "full") => {
-    if (!attackInfo || !sector) return;
-    dispatch({ type: "SET_SPLITTING", value: true });
-    dispatch({ type: "SET_SPLIT_ERROR", value: "" });
-    dispatch({ type: "SET_SPLIT_MSG", value: "" });
-    try {
-      // attackInfo.countryId is already the correct CountryId value; fall back to "US" for legacy records
-      const splitCountryId = attackInfo.countryId ?? "US";
-      const res = await fetch(
-        regionApiSubUrl(splitCountryId, attackInfo.stateId, "economy/attack"),
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            sectorType: sector.sectorType,
-            splitStrength: strength,
-          }),
-        }
-      );
-      const result = await res.json();
-      if (res.ok) {
-        dispatch({ type: "SET_SPLIT_MSG", value: result.message });
-        fetchData();
-      } else {
-        dispatch({ type: "SET_SPLIT_ERROR", value: apiErrorText(result, "Split failed") });
-      }
-    } catch {
-      dispatch({ type: "SET_SPLIT_ERROR", value: "Network error" });
-    } finally {
-      dispatch({ type: "SET_SPLITTING", value: false });
-    }
-  };
-
   if (loading) {
     return (
       <div className="min-h-screen bg-background pb-16">
@@ -703,7 +667,6 @@ export default function SectorDetailPage() {
   const exchange = exchangeName ? sector.countryId! : "global";
   const exchangeLabel = exchangeName ?? "Global";
   const corpHref = `/corporation/${corporation.sequentialId ?? corporation._id}`;
-  const sectorCurrencyCode = COUNTRY_CURRENCY_MAP[sectorCountryId] ?? "USD";
 
   return (
     <div className="min-h-screen bg-background pb-16">
@@ -845,11 +808,9 @@ export default function SectorDetailPage() {
                 room={
                   plants
                     ? {
-                        headroomUnits: plants.headroomUnits,
                         demandGapUnits: plants.demandGapUnits,
                         measuredDemandGapUnits: plants.measuredDemandGapUnits,
                         roomHeldByOwnIdle: plants.roomHeldByOwnIdle,
-                        unclaimedSharePct: plants.unclaimedSharePct,
                       }
                     : null
                 }
@@ -870,30 +831,17 @@ export default function SectorDetailPage() {
                   onBuy={handleBuySector}
                 />
               )}
-              {/* Splitting is retired under plants (capacity is the growth
-                  lever there); attacking survives as the PVP. With split gone
-                  the panel is worth rendering only when attack is available,
-                  otherwise a CEO viewing their own sector gets an empty card. */}
-              {attackInfo && (!isCeo || (!plantsEnabled && attackInfo.splitCost > 0)) && (
+              {/* Attacking is the PVP; the panel only renders when it is available. */}
+              {attackInfo && !isCeo && (
                 <AttackPanel
                   attackInfo={attackInfo}
-                  plantsMode={plantsEnabled}
                   targetName={sector.displayName ?? corporation.name}
                   showAttack={!isCeo && !corporation.isStateOwned}
-                  showSplit={!plantsEnabled}
                   openPlannerOnMount={searchParams.get("split") === "1"}
                   attacking={attacking}
                   attackError={attackError}
                   attackMsg={attackMsg}
                   onAttack={handleAttackSector}
-                  splitting={splitting}
-                  splitError={splitError}
-                  splitMsg={splitMsg}
-                  onSplit={handleSplitSector}
-                  sectorCurrencyCode={sectorCurrencyCode}
-                  targetCurrencyCode={
-                    (corporation.liquidCurrencyCode as CurrencyCode | null) ?? null
-                  }
                 />
               )}
             </div>
@@ -1036,11 +984,9 @@ export default function SectorDetailPage() {
               room={
                 plants
                   ? {
-                      headroomUnits: plants.headroomUnits,
                       demandGapUnits: plants.demandGapUnits,
                       measuredDemandGapUnits: plants.measuredDemandGapUnits,
                       roomHeldByOwnIdle: plants.roomHeldByOwnIdle,
-                      unclaimedSharePct: plants.unclaimedSharePct,
                     }
                   : null
               }
