@@ -125,7 +125,7 @@ export async function POST(request: Request) {
     timings.coreMs += Date.now() - stageStartedAt;
 
     if (!result.ok) {
-      return finish(errorResponse(result.status, result.error));
+      return finish(errorResponse(result.status, result.error, { code: result.code }));
     }
 
     return finish(

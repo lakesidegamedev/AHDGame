@@ -78,6 +78,7 @@ describe("executeCharacterAction — debate prep gate", () => {
       ok: false,
       error: "Allocate your stats before using Debate Prep.",
       status: 400,
+      code: "quote_rejected",
     });
     expect(findOneAndUpdate).not.toHaveBeenCalled();
   });
