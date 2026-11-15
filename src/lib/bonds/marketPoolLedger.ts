@@ -13,6 +13,9 @@ import { accountId, mintSinkAccount } from "@/lib/ledger/accounts";
 import type { LedgerEntryInput } from "@/lib/ledger/types";
 import { emitLedgerEntries } from "@/lib/ledger/emit";
 import { ledgerTurnFromClock } from "@/lib/ledger/ledgerTurn";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 export interface BondPoolLedgerContext {
   turn: number;
@@ -27,19 +30,20 @@ export async function loadBondPoolLedgerContext(
   turn?: number
 ): Promise<BondPoolLedgerContext | null> {
   try {
-    const config = await db
-      .collection<{ _id: string; ledgerShadow?: boolean }>("gameConfig")
-      .findOne({ _id: "default" }, { projection: { ledgerShadow: 1 } });
+    const config = await gameConfigCollection<{ _id: string; ledgerShadow?: boolean }>(db).findOne(
+      { _id: "default" },
+      { projection: { ledgerShadow: 1 } }
+    );
     if (config?.ledgerShadow !== true) return null;
     const [rates, state] = await Promise.all([
-      db
-        .collection<{ currencyCode: string; rate: number }>("exchangeRates")
+      exchangeRatesCollection<{ currencyCode: string; rate: number }>(db)
         .find({}, { projection: { currencyCode: 1, rate: 1 } })
         .toArray(),
       turn === undefined
-        ? db
-            .collection<{ _id: string; currentTurn: number }>("gameState")
-            .findOne({ _id: "current" }, { projection: { currentTurn: 1 } })
+        ? gameStateCollection<{ _id: string; currentTurn: number }>(db).findOne(
+            { _id: "current" },
+            { projection: { currentTurn: 1 } }
+          )
         : Promise.resolve(null),
     ]);
     const resolvedTurn =

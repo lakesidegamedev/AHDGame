@@ -9,7 +9,7 @@
  */
 
 import type { Db } from "mongodb";
-import type { Corporation, CorporateSector, ExchangeRate, GameConfig } from "@/lib/db/types";
+import type { CorporateSector, ExchangeRate, GameConfig } from "@/lib/db/types";
 import type { CommodityPrice } from "@/lib/db/types/commodityPrice";
 import type { ExtractableResource } from "@/lib/constants/commodities";
 import { EXTRACTABLE_RESOURCES } from "@/lib/constants/commodities";
@@ -25,6 +25,12 @@ import {
   resolveCorpLiquidCurrencyCode,
 } from "@/lib/currency/corporationCapital";
 import { SETTLEMENT_HISTORY_EXCLUDED } from "@/lib/banking/settlementHistory";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
+import { prospectingSurveysCollection } from "@/lib/db/repositories/prospectingSurveys";
 
 /** Price ratio at or above this: the resource is short enough to survey. */
 export const NPP_PROSPECT_SHORTAGE_RATIO = 1.15;
@@ -94,13 +100,13 @@ export function pickNppProspect(args: {
 }
 
 export async function processNppProspecting(db: Db, turn: number, now: Date): Promise<number> {
-  const cfg = await db
-    .collection<GameConfig>("gameConfig")
-    .findOne({ _id: "default" }, { projection: { prospectingEnabled: 1 } });
+  const cfg = await gameConfigCollection(db).findOne(
+    { _id: "default" },
+    { projection: { prospectingEnabled: 1 } }
+  );
   if (cfg?.prospectingEnabled !== true) return 0;
 
-  const nppCorps = await db
-    .collection<Corporation>("corporations")
+  const nppCorps = await corporationsCollection(db)
     .find(
       { ceoType: "npp", type: "extraction", suspended: { $ne: true } },
       { projection: SETTLEMENT_HISTORY_EXCLUDED }
@@ -109,8 +115,7 @@ export async function processNppProspecting(db: Db, turn: number, now: Date): Pr
   if (nppCorps.length === 0) return 0;
 
   const corpIds = nppCorps.map((c) => c._id);
-  const sectors = await db
-    .collection<CorporateSector>("corporateSectors")
+  const sectors = await corporateSectorsCollection(db)
     .find(
       { corporationId: { $in: corpIds }, sectorType: "extraction" },
       {
@@ -133,7 +138,7 @@ export async function processNppProspecting(db: Db, turn: number, now: Date): Pr
     sectorsByCorp.set(key, list);
   }
 
-  const priceDocs = await db.collection<CommodityPrice>("commodityPrices").find({}).toArray();
+  const priceDocs = await commodityPricesCollection(db).find({}).toArray();
   const priceByCommodity = new Map<string, CommodityPrice>();
   for (const doc of priceDocs) {
     const existing = priceByCommodity.get(doc.commodity);
@@ -143,16 +148,17 @@ export async function processNppProspecting(db: Db, turn: number, now: Date): Pr
   }
 
   const fxByCurrency = new Map<string, number>();
-  for (const rate of await db.collection<ExchangeRate>("exchangeRates").find({}).toArray()) {
+  for (const rate of await exchangeRatesCollection(db).find({}).toArray()) {
     if (rate.currencyCode && typeof rate.rate === "number" && rate.rate > 0) {
       fxByCurrency.set(rate.currencyCode, rate.rate);
     }
   }
 
-  const surveys = await db
-    .collection<{ stateId: string; resource: ExtractableResource; status: string }>(
-      "prospectingSurveys"
-    )
+  const surveys = await prospectingSurveysCollection<{
+    stateId: string;
+    resource: ExtractableResource;
+    status: string;
+  }>(db)
     .find({ status: "succeeded" }, { projection: { stateId: 1, resource: 1 } })
     .toArray();
   const successCounts = new Map<string, number>();

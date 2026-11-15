@@ -1,6 +1,7 @@
 import type { ClientSession, Db } from "mongodb";
 import type { WorldEntityManifestEntry } from "@/lib/world/worldEntityManifest";
 import type { MacroCountryState } from "@/lib/world/macro/types";
+import { macroCountriesCollection } from "@/lib/db/repositories/macroCountries";
 
 /** Insert the aggregate economies for newly sovereign background successors.
  * This is part of the same settlement transaction that archives their former
@@ -33,6 +34,6 @@ export async function materializeFederationSuccessorMacros(input: {
     })
   )
     throw new Error("Federation successor macro inventory is incomplete or invalid");
-  await db.collection<MacroCountryState>("macroCountries").insertMany([...countries], { session });
+  await macroCountriesCollection<MacroCountryState>(db).insertMany([...countries], { session });
   return countries.length;
 }

@@ -28,8 +28,8 @@ export function billRequiresExecutiveAction(
   if (!countryId) return true;
   // Presidential systems route passed bills to the president's desk;
   // parliamentary/one-party systems enact directly. Keying on country id
-  // ("US only") silently skipped the signature stage for other presidential
-  // countries — NG bills enacted instantly with no sign/veto (ticket #923).
+  // ("US only") would silently skip the signature stage for other
+  // presidential countries.
   if (!(hasPresidentialExecutive ?? COUNTRY_CONFIGS[countryId].governmentType === "presidential"))
     return false;
   // International-org actions (legacy internationalAction OR the new provision)

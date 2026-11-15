@@ -3,6 +3,7 @@ import type { WikiPage } from "@/lib/db/types";
 import { gameStartingStateContent } from "@/lib/seeds/wiki/content/gameStartingState";
 import { cabinetGuideContent } from "@/lib/seeds/wiki/content/cabinetGuide";
 import { plantsCorpGuideContent } from "@/lib/seeds/wiki/content/plantsCorpGuide";
+import { wikiPagesCollection } from "@/lib/db/repositories/wikiPages";
 
 const CODE_BACKED_WIKI_CONTENT: Record<string, string> = {
   "game-starting-state": gameStartingStateContent,
@@ -16,8 +17,7 @@ const CODE_BACKED_WIKI_CONTENT: Record<string, string> = {
  */
 async function transformWikiLinks(markdown: string): Promise<string> {
   const db = await getDb();
-  const pages = await db
-    .collection<WikiPage>("wikiPages")
+  const pages = await wikiPagesCollection(db)
     .find({ status: "published" })
     .project({ title: 1, slug: 1 })
     .toArray();
@@ -47,7 +47,7 @@ async function transformWikiLinks(markdown: string): Promise<string> {
  */
 export async function loadWikiContent(slug: string): Promise<string | null> {
   const db = await getDb();
-  const dbPage = await db.collection<WikiPage>("wikiPages").findOne({
+  const dbPage = await wikiPagesCollection(db).findOne({
     slug,
     status: "published",
     private: { $ne: true },

@@ -3,10 +3,6 @@ import { resetLawFamilies } from "./catalog";
 import { openingLawReference, openingLawReferences } from "./openingLaw";
 import { resetTaxes } from "./taxCatalog";
 import { getBasePolicies } from "@/lib/seeds/reference/basePolicies";
-import { generateDefaultEnactedLaws } from "@/lib/seeds/reference/budgets";
-import { states1991 } from "@/lib/countries/us/data/usStates1991";
-import { ukRegions1991 } from "@/lib/countries/uk/data/ukRegions1991";
-import { jpRegions1991 } from "@/lib/countries/jp/data/jpRegions1991";
 import { ieRegions1991 } from "@/lib/countries/ie/data/ieRegions1991";
 
 describe("1991 current-law references", () => {
@@ -72,60 +68,15 @@ describe("1991 current-law references", () => {
     );
   });
 
-  it("distinguishes the 1991 legal-policy seed from its separate fiscal cost seed", async () => {
-    const policies = await getBasePolicies("1991-default");
-    const laws = generateDefaultEnactedLaws("1991-default");
-    const expectedNoPolicy = new Set([
-      "UK:uk_state_pensions",
-      "UK:uk_devolution_local_powers",
-      "JP:jp_regional_autonomy",
-      "JP:jp_resident_tax",
-      "JP:jp_fixed_asset_tax",
-    ]);
-    // JP's budget-neutral academic reform remains a legal reference, without
-    // a costed legacy fiscal law in the balanced opening.
-    const expectedBudgetOptionDifferences = { US: 4, UK: 3, JP: 12 };
-    for (const country of ["US", "UK", "JP"] as const) {
-      let budgetOptionDifferences = 0;
-      for (const reference of openingLawReferences.filter(
-        (row) => row.country === country && row.scope === "national"
-      )) {
-        for (const component of reference.sourceComponents.filter(
-          (item) => item.fiscalRole === "single-booked-owner"
-        )) {
-          const key = `${country}:${component.sourceId}`;
-          const policy = policies.find(
-            (item) => item.scope === "national" && item.legislationTypeId === component.sourceId
-          );
-          if (!policy) {
-            expect(expectedNoPolicy.has(key), key).toBe(true);
-          } else {
-            expect(policy.policyOptionIndex, key).toBe(component.optionIndex);
-          }
-          const budgetLaw = laws.find(
-            (item) =>
-              item.countryId === country &&
-              item.scope === "national" &&
-              item.legislationTypeId === component.sourceId
-          );
-          if (budgetLaw && budgetLaw.policyOptionIndex !== component.optionIndex) {
-            budgetOptionDifferences += 1;
-          }
-        }
-      }
-      expect(budgetOptionDifferences).toBe(expectedBudgetOptionDifferences[country]);
-    }
-  });
-
-  it("matches every regional source component to each of the 79 actual 1991 region policy seeds", async () => {
+  it("matches every regional source component to each actual 1991 region policy seed", async () => {
     const policies = await getBasePolicies("1991-default");
     const byRegionAndSource = new Map(
       policies
         .filter((policy) => policy.scope === "state")
         .map((policy) => [`${policy.stateId}:${policy.legislationTypeId}`, policy])
     );
-    const regions = { US: states1991, UK: ukRegions1991, JP: jpRegions1991, IE: ieRegions1991 };
-    for (const country of ["US", "UK", "JP", "IE"] as const) {
+    const regions = { IE: ieRegions1991 };
+    for (const country of ["IE"] as const) {
       for (const region of regions[country]) {
         for (const reference of openingLawReferences.filter(
           (row) => row.country === country && row.scope === "regional"

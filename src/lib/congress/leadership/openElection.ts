@@ -1,18 +1,13 @@
 /**
  * Shared opener for the US Congress leadership races (House and Senate).
  *
- * Both admin `start_election` handlers used to inline this logic, and they
- * drifted: each `$set` only `endsAt`, never `endsOnTurn`. Because
- * `isLeadershipElectionClosed` PREFERS `endsOnTurn`, a stale value left on the
- * doc by the previous race survived the upsert and made the freshly opened
- * election read as already closed — it resolved on the very next GET, re-crowned
- * the auto-nominated incumbent and re-posted the victory webhook, so the button
- * appeared to do nothing. Writing both anchors in one place is what keeps them
- * from drifting apart again.
+ * Must write both `endsAt` and `endsOnTurn` together:
+ * `isLeadershipElectionClosed` prefers `endsOnTurn`, so a stale value on the
+ * doc makes a freshly opened election read as already closed and resolve
+ * immediately. Writing both anchors in one place keeps them from drifting.
  *
  * Mirrors `speaker/openSpeakerElection.ts` and
- * `bundestagspraesident/openElection.ts`; those chambers have their own
- * singleton collections and keep their own openers.
+ * `bundestagspraesident/openElection.ts`; those chambers keep their own openers.
  */
 import { ObjectId } from "mongodb";
 import type { Db } from "@/lib/mongodb";
@@ -36,6 +31,9 @@ import type {
   SenateLeadershipElectionRole,
   SenateLeadershipNomination,
 } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { congressLeadersCollection } from "@/lib/db/repositories/congressLeaders";
 
 export const LEADERSHIP_ELECTION_DURATION_MS = 24 * 60 * 60 * 1000; // 24 hours = 24 turns
 
@@ -136,20 +134,19 @@ export async function openCongressLeadershipElection(
     chamber === "senate"
       ? senateElectionRoleToLeader(role as SenateLeadershipElectionRole)
       : houseElectionRoleToLeader(role as HouseLeadershipElectionRole);
-  const incumbent = await db
-    .collection<CongressLeader>("congressLeaders")
-    .findOne({ role: leaderRole });
+  const incumbent = await congressLeadersCollection(db).findOne({ role: leaderRole });
   if (!incumbent?.characterId) return true;
 
-  const seat = await db.collection<ElectedOfficial>("electedOfficials").findOne({
+  const seat = await electedOfficialsCollection(db).findOne({
     officeType: chamber,
     characterId: incumbent.characterId,
   });
   if (!seat) return true;
 
-  const char = await db
-    .collection<Character>("characters")
-    .findOne({ _id: incumbent.characterId }, { projection: { party: 1, homeState: 1 } });
+  const char = await charactersCollection(db).findOne(
+    { _id: incumbent.characterId },
+    { projection: { party: 1, homeState: 1 } }
+  );
   // Congressional leadership races are player-only, so an incumbent without a
   // character document is never seeded onto the ballot.
   if (!char) return true;

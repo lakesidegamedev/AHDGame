@@ -23,13 +23,15 @@ import type {
   NgChamberLeadershipElection,
   NgChamberLeadershipNomination,
   NgChamberLeadershipRole,
-  Character,
-  ElectedOfficial,
   PoliticalParty,
 } from "@/lib/db/types";
-import { NG_ROLE_CONFIG, NG_ELECTION_COLLECTION, NG_NOMINATION_COLLECTION } from "./config";
+import { NG_ROLE_CONFIG } from "./config";
 import { getNgChamberComposition } from "./composition";
 import { resolveNgChamberLeadershipElection } from "./resolveElection";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { ngChamberLeadershipElectionsCollection } from "@/lib/db/repositories/ngChamberLeadershipElections";
+import { ngChamberLeadershipNominationsCollection } from "@/lib/db/repositories/ngChamberLeadershipNominations";
 
 const ELECTION_DURATION_MS = 24 * 60 * 60 * 1000; // 24 hours — parity with DE/US
 
@@ -55,12 +57,12 @@ export async function handleNgChamberLeadershipAction(ctx: ActionContext): Promi
   const { db, partyMap, role, authUser, nominationId } = ctx;
   const cfg = NG_ROLE_CONFIG[role];
 
-  const character = await db
-    .collection<Character>("characters")
-    .findOne({ userId: new ObjectId(authUser.userId) });
+  const character = await charactersCollection(db).findOne({
+    userId: new ObjectId(authUser.userId),
+  });
   if (!character) return { success: false, error: "No character", status: 400 };
 
-  const myOfficial = await db.collection<ElectedOfficial>("electedOfficials").findOne({
+  const myOfficial = await electedOfficialsCollection(db).findOne({
     characterId: character._id,
     officeType: cfg.memberOfficeType,
     countryId: "NG",
@@ -73,9 +75,9 @@ export async function handleNgChamberLeadershipAction(ctx: ActionContext): Promi
     };
   }
 
-  const election = await db
-    .collection<NgChamberLeadershipElection>(NG_ELECTION_COLLECTION)
-    .findOne({ _id: role });
+  const election = await ngChamberLeadershipElectionsCollection<NgChamberLeadershipElection>(
+    db
+  ).findOne({ _id: role });
   const gameTime = await getGameTime();
   const isVoting =
     election?.status === "voting" &&
@@ -103,14 +105,14 @@ export async function handleNgChamberLeadershipAction(ctx: ActionContext): Promi
         status: 403,
       };
     }
-    const existing = await db
-      .collection<NgChamberLeadershipNomination>(NG_NOMINATION_COLLECTION)
-      .findOne({ role, nomineeId: character._id, status: { $in: ["open", "voting"] } });
+    const existing = await ngChamberLeadershipNominationsCollection<NgChamberLeadershipNomination>(
+      db
+    ).findOne({ role, nomineeId: character._id, status: { $in: ["open", "voting"] } });
     if (existing) {
       return { success: false, error: "You already have an open nomination.", status: 409 };
     }
     const now = new Date();
-    await db.collection<NgChamberLeadershipNomination>(NG_NOMINATION_COLLECTION).insertOne({
+    await ngChamberLeadershipNominationsCollection<NgChamberLeadershipNomination>(db).insertOne({
       _id: new ObjectId(),
       role,
       nomineeId: character._id,
@@ -134,12 +136,12 @@ export async function handleNgChamberLeadershipAction(ctx: ActionContext): Promi
     if (!isVoting) {
       return { success: false, error: "No active election to withdraw from.", status: 409 };
     }
-    const result = await db
-      .collection<NgChamberLeadershipNomination>(NG_NOMINATION_COLLECTION)
-      .updateOne(
-        { role, nomineeId: character._id, status: { $in: ["open", "voting"] } },
-        { $set: { status: "cancelled", updatedAt: new Date() } }
-      );
+    const result = await ngChamberLeadershipNominationsCollection<NgChamberLeadershipNomination>(
+      db
+    ).updateOne(
+      { role, nomineeId: character._id, status: { $in: ["open", "voting"] } },
+      { $set: { status: "cancelled", updatedAt: new Date() } }
+    );
     if (result.matchedCount === 0) {
       return { success: false, error: "No open nomination to withdraw.", status: 404 };
     }
@@ -163,9 +165,9 @@ export async function handleNgChamberLeadershipAction(ctx: ActionContext): Promi
     const oid = parseObjectId(nominationId);
     if (!oid) return { success: false, error: "Invalid nomination id.", status: 400 };
     const charKey = character._id.toString();
-    const nom = await db
-      .collection<NgChamberLeadershipNomination>(NG_NOMINATION_COLLECTION)
-      .findOne({ _id: oid, role });
+    const nom = await ngChamberLeadershipNominationsCollection<NgChamberLeadershipNomination>(
+      db
+    ).findOne({ _id: oid, role });
     if (!nom || (nom.status !== "open" && nom.status !== "voting")) {
       return { success: false, error: "Nomination not accepting votes.", status: 404 };
     }
@@ -175,7 +177,7 @@ export async function handleNgChamberLeadershipAction(ctx: ActionContext): Promi
     }
     const now = new Date();
     // Move this voter's vote off any prior nomination in this race (one vote per voter).
-    await db.collection<NgChamberLeadershipNomination>(NG_NOMINATION_COLLECTION).updateMany(
+    await ngChamberLeadershipNominationsCollection<NgChamberLeadershipNomination>(db).updateMany(
       { role, [`votes.${charKey}`]: { $exists: true } },
       {
         $inc: { votesFor: -1 },
@@ -183,7 +185,7 @@ export async function handleNgChamberLeadershipAction(ctx: ActionContext): Promi
         $set: { updatedAt: now },
       }
     );
-    await db.collection<NgChamberLeadershipNomination>(NG_NOMINATION_COLLECTION).updateOne(
+    await ngChamberLeadershipNominationsCollection<NgChamberLeadershipNomination>(db).updateOne(
       { _id: oid },
       {
         $inc: { votesFor: 1 },
@@ -202,9 +204,9 @@ async function handleStartElection(ctx: ActionContext): Promise<ActionResult> {
   if (!authUser.isAdmin) {
     return { success: false, error: "Admin only.", status: 403 };
   }
-  const existing = await db
-    .collection<NgChamberLeadershipElection>(NG_ELECTION_COLLECTION)
-    .findOne({ _id: role });
+  const existing = await ngChamberLeadershipElectionsCollection<NgChamberLeadershipElection>(
+    db
+  ).findOne({ _id: role });
   if (existing?.status === "voting") {
     return { success: false, error: "An election is already in progress.", status: 409 };
   }
@@ -220,13 +222,11 @@ async function handleStartElection(ctx: ActionContext): Promise<ActionResult> {
   const endsAt = new Date(now.getTime() + ELECTION_DURATION_MS);
   const endsOnTurn = (await getGameTime()).currentTurn + ELECTION_DURATION_MS / 3_600_000;
   // Clear any stale nominations from a prior cycle.
-  await db
-    .collection<NgChamberLeadershipNomination>(NG_NOMINATION_COLLECTION)
-    .updateMany(
-      { role, status: { $in: ["open", "voting"] } },
-      { $set: { status: "failed", updatedAt: now } }
-    );
-  await db.collection<NgChamberLeadershipElection>(NG_ELECTION_COLLECTION).updateOne(
+  await ngChamberLeadershipNominationsCollection<NgChamberLeadershipNomination>(db).updateMany(
+    { role, status: { $in: ["open", "voting"] } },
+    { $set: { status: "failed", updatedAt: now } }
+  );
+  await ngChamberLeadershipElectionsCollection<NgChamberLeadershipElection>(db).updateOne(
     { _id: role },
     {
       $set: {

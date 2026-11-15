@@ -1,10 +1,12 @@
+import { runtimeConfig } from "@/lib/config/runtime";
+
 /** Read at module-import time (server-side only). */
 function getGameIteration(): string | undefined {
-  return process.env.GAME_ITERATION || undefined;
+  return runtimeConfig.gameIteration() || undefined;
 }
 
 function getGameStartDate(): string | undefined {
-  return process.env.GAME_START_DATE || undefined;
+  return runtimeConfig.gameStartDate() || undefined;
 }
 
 export function getGameStamp(): { gameIteration?: string; gameStartDate?: string } {

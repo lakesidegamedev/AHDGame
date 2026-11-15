@@ -14,7 +14,7 @@ import { processRoParliamentTransition } from "@/lib/turn/roParliamentTransition
 import { roRegions1991 } from "./data/roRegions1991";
 import { RO_1992_DEPUTIES_BY_REGION, RO_1992_SENATORS_BY_REGION } from "./rules/parliament1992";
 vi.mock("@/lib/news", () => ({ generateElectionNews: vi.fn().mockResolvedValue(undefined) }));
-vi.mock("@/lib/turn/election/electionNotifications", () => ({
+vi.mock("@/lib/elections/resolution/electionNotifications", () => ({
   sendBatchedElectionResults: vi.fn().mockResolvedValue(undefined),
 }));
 vi.mock("@/lib/audit/recordAudit", () => ({ recordAuditBulk: vi.fn(), recordAudit: vi.fn() }));

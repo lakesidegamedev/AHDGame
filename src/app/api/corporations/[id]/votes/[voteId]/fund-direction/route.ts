@@ -15,20 +15,13 @@ import { totalVotingPower } from "@/lib/corporations/superShares";
 import type { Db } from "mongodb";
 import type { Corporation } from "@/lib/db/types";
 import type { CorporationVote } from "@/lib/db/types/corporationVote";
+import { corporationVotesCollection } from "@/lib/db/repositories/corporationVotes";
 
 /**
- * Fund stewardship instructions.
- *
- * A unit holder controlling half a fund's units directs how it votes the shares
- * it holds. Without this surface the resolver had no instruction to read, so
- * every fund fell through to mirror-or-abstain and buying units was never a
- * route to corporate influence.
- *
- * GET  lists the funds the caller can direct on this vote, with any instruction
- *      already given.
- * POST records or replaces one instruction.
- * DELETE withdraws it, which returns the fund to mirror-or-abstain rather than
- *      making it vote the other way.
+ * Fund stewardship: a holder controlling half a fund's units directs how it
+ * votes its shares. GET lists directable funds with any instruction given;
+ * POST records or replaces one; DELETE withdraws it, returning the fund to
+ * mirror-or-abstain (it does not flip the vote).
  */
 
 const DirectSchema = z.object({
@@ -53,7 +46,7 @@ async function loadContext(id: string, voteId: string) {
   const resolved = await resolveCorporation(db, id);
   if (!resolved.ok) return { ok: false as const, response: resolved.response };
 
-  const vote = await db.collection<CorporationVote>("corporationVotes").findOne({
+  const vote = await corporationVotesCollection(db).findOne({
     _id: new ObjectId(voteId),
     corporationId: resolved.corporation._id,
   });
@@ -126,7 +119,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     const now = new Date();
-    await db.collection<CorporationVote>("corporationVotes").updateOne({ _id: vote._id }, [
+    await corporationVotesCollection(db).updateOne({ _id: vote._id }, [
       {
         $set: {
           fundDirections: {
@@ -185,7 +178,7 @@ export async function DELETE(request: Request, { params }: RouteParams) {
     // Only the character who gave the instruction can withdraw it. A director
     // who has since lost control cannot withdraw either, but their instruction
     // is already ignored at resolve time.
-    const result = await db.collection<CorporationVote>("corporationVotes").updateOne(
+    const result = await corporationVotesCollection(db).updateOne(
       { _id: vote._id },
       {
         $pull: {
@@ -211,7 +204,7 @@ export async function DELETE(request: Request, { params }: RouteParams) {
  * a decisive direction would sit open until someone loaded the vote page.
  */
 async function resolveIfReady(db: Db, voteId: ObjectId, corporation: Corporation) {
-  const updated = await db.collection<CorporationVote>("corporationVotes").findOne({ _id: voteId });
+  const updated = await corporationVotesCollection(db).findOne({ _id: voteId });
   if (!updated || updated.status !== "open") return;
 
   const gameState = await getGameState();

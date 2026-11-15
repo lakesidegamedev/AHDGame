@@ -1,5 +1,6 @@
 import { type CountryId } from "@/lib/constants/countriesCore";
 import { isCountryId } from "@/lib/country/countryIds";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 export function toCountryId(raw: string | null | undefined): CountryId | null {
   if (!raw) return null;
@@ -25,7 +26,11 @@ export function resolveCountryContext(args: {
 
   const queryCountry = toCountryId(args.queryCountryId);
   if (queryCountry) {
-    return { pageCountry: queryCountry, userCountry, isUKContext: queryCountry === "UK" };
+    return {
+      pageCountry: queryCountry,
+      userCountry,
+      isUKContext: countryHasFeature("ukLib", queryCountry),
+    };
   }
 
   // Country codes are 2 letters (US/UK/JP…) or 3 for the seceded nations
@@ -34,7 +39,7 @@ export function resolveCountryContext(args: {
   if (countryPathMatch) {
     const id = toCountryId(countryPathMatch[1]);
     if (id) {
-      return { pageCountry: id, userCountry, isUKContext: id === "UK" };
+      return { pageCountry: id, userCountry, isUKContext: countryHasFeature("ukLib", id) };
     }
   }
 
@@ -47,9 +52,13 @@ export function resolveCountryContext(args: {
     return {
       pageCountry: initialPageCountry,
       userCountry,
-      isUKContext: initialPageCountry === "UK",
+      isUKContext: countryHasFeature("ukLib", initialPageCountry),
     };
   }
 
-  return { pageCountry: userCountry, userCountry, isUKContext: userCountry === "UK" };
+  return {
+    pageCountry: userCountry,
+    userCountry,
+    isUKContext: countryHasFeature("ukLib", userCountry),
+  };
 }

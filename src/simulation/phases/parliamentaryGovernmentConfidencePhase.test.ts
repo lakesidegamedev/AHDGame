@@ -1,8 +1,8 @@
 import { describe, it, expect, vi } from "vitest";
 import type { Db, Document } from "mongodb";
 import { createInMemoryDb } from "@/lib/test-utils/inMemoryDb";
-vi.mock("@/lib/country/registeredCountries", () => ({
-  getRegisteredCountryIds: vi.fn().mockResolvedValue(["UK", "JP", "DE"]),
+vi.mock("@/lib/country/countryTier", () => ({
+  getFullSimulationCountryIds: vi.fn().mockResolvedValue(["UK", "JP", "DE"]),
 }));
 vi.mock("@/lib/db/collections/gameState", () => ({
   getGameStatePreset: vi.fn().mockResolvedValue("1991-default"),
@@ -10,7 +10,7 @@ vi.mock("@/lib/db/collections/gameState", () => ({
 vi.mock("@/lib/turn/parliamentaryGovernment", () => ({
   getParliamentaryCountryIds: vi.fn().mockReturnValue(["UK", "JP", "DE"]),
 }));
-vi.mock("@/lib/uk/confidence/confidenceGaugeStore", () => ({
+vi.mock("@/lib/countries/uk/confidence/confidenceGaugeStore", () => ({
   tickParliamentaryGovernmentConfidence: vi.fn(async (db: Db) => {
     await db
       .collection<Document & { _id: string }>("governmentFormations")

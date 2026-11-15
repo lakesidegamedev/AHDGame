@@ -4,7 +4,7 @@ import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
 
 const standingsMock = vi.fn();
 const coalitionsMock = vi.fn();
-vi.mock("@/lib/turn/election/contingentHouseVoteStandings", () => ({
+vi.mock("@/lib/elections/resolution/contingentHouseVoteStandings", () => ({
   loadHouseVoteStandings: (...args: unknown[]) => standingsMock(...args),
   loadPartyCoalitions: (...args: unknown[]) => coalitionsMock(...args),
 }));

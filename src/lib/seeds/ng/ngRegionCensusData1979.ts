@@ -1,28 +1,8 @@
 /**
- * Nigeria Region Census Profiles — Layer 1 (1979, the Second Republic).
+ * Nigeria Region Census Profiles, 1979 (Second Republic).
  *
- * SEED INDEPENDENCE — DO NOT DERIVE FROM ANOTHER ERA.
- * Authored for ~1979 directly. NOT imported/transformed from ngRegionCensusData.ts.
- * Primary sources: 1963 Nigeria Census (last reliable before 1991); USAID
- * estimates; World Bank Nigeria country reports 1978–80.
- *
- * Era context (1979-default):
- * - Olusegun Obasanjo's military government transitions to Shehu Shagari's
- *   civilian Second Republic (presidential elections October 1979).
- * - Oil boom: Nigeria is the world's 6th-largest oil producer; petrodollar
- *   revenue transforming Lagos, Port Harcourt, and Kano.
- * - Universal Primary Education (UPE) programme launched 1976 — enrolment
- *   tripling but quality patchy; secondary and tertiary still very limited.
- * - Urbanization rising fast (rural–urban migration driven by oil wealth):
- *   ~27% urban nationally, vs ~8% in 1953.
- * - Population ~75M (est.); still very young (median age ~17).
- *
- * Key 1979 vs 1953 changes:
- * - Education HIGHER: UPE driving basic literacy up (from ~20% to ~34%);
- *   secondary still rare; tertiary tiny
- * - Urbanization HIGHER: Lagos ~2.5M; Port Harcourt, Kano booming
- * - Income HIGHER in SOUTH_SOUTH (oil money); North still very poor
- * - Age: still extremely young; slight ageing vs 1953
+ * Authored for 1979 directly; do not derive from another era.
+ * Sources: 1963 Nigeria Census, USAID estimates, World Bank reports 1978-80.
  *
  * Keys match NGRegionLayer1 in ngRegionCensusData.ts.
  * Each dimension sums to 100.

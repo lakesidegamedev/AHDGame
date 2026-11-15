@@ -9,6 +9,14 @@ import {
   getHeadOfGovernmentOfficeKey,
   type CountryId,
 } from "@/lib/constants/countries";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
+import { countryStateCollection } from "@/lib/db/repositories/countryState";
+import { countryLeaderStatesCollection } from "@/lib/db/repositories/countryLeaderStates";
 
 export const migration: Migration = {
   id: "2026-10-04-government-accountability",
@@ -17,28 +25,24 @@ export const migration: Migration = {
   idempotent: true,
   async execute(db, { dryRun }) {
     const [formations, presidents, runtimes, game, parties] = await Promise.all([
-      db
-        .collection<GovernmentFormation>("governmentFormations")
-        .find({ status: "formed" })
-        .toArray(),
-      db
-        .collection<ElectedOfficial>("electedOfficials")
+      governmentFormationsCollection(db).find({ status: "formed" }).toArray(),
+      electedOfficialsCollection(db)
         .find(
           { officeType: "president" },
           { projection: { countryId: 1, party: 1, characterId: 1, nppId: 1, characterName: 1 } }
         )
         .toArray(),
-      db
-        .collection<{ _id: CountryId; governmentType: string; hasLeaderConfidenceModel?: boolean }>(
-          "countryState"
-        )
+      countryStateCollection<{
+        _id: CountryId;
+        governmentType: string;
+        hasLeaderConfidenceModel?: boolean;
+      }>(db)
         .find({})
         .toArray(),
-      db
-        .collection<{ _id: string; currentTurn?: number; preset?: string }>("gameState")
-        .findOne({ _id: "current" }),
-      db
-        .collection<PoliticalParty>("politicalParties")
+      gameStateCollection<{ _id: string; currentTurn?: number; preset?: string }>(db).findOne({
+        _id: "current",
+      }),
+      politicalPartiesCollection(db)
         .find({
           isDefault: false,
           createdTurn: { $exists: false },
@@ -49,8 +53,7 @@ export const migration: Migration = {
     const turn = game?.currentTurn ?? 0;
     type Actor = { _id: ObjectId; party?: string };
     const [characters, npps] = await Promise.all([
-      db
-        .collection<Actor>("characters")
+      charactersCollection<Actor>(db)
         .find(
           {
             _id: {
@@ -63,8 +66,7 @@ export const migration: Migration = {
           { projection: { party: 1 } }
         )
         .toArray(),
-      db
-        .collection<Actor>("npps")
+      nppsCollection<Actor>(db)
         .find(
           {
             _id: {
@@ -110,16 +112,17 @@ export const migration: Migration = {
       if (Object.keys(repair).length) {
         repaired++;
         if (!dryRun)
-          await db
-            .collection<GovernmentFormation>("governmentFormations")
-            .updateOne({ _id: gov._id, status: "formed" }, { $set: repair });
+          await governmentFormationsCollection(db).updateOne(
+            { _id: gov._id, status: "formed" },
+            { $set: repair }
+          );
       }
       if (gov.pmNppId && runtime?.hasLeaderConfidenceModel) {
         const reference = { kind: "npp" as const, id: gov.pmNppId };
         if (
-          !(await db
-            .collection<{ _id: string }>("countryLeaderStates")
-            .findOne({ _id: leaderStateId(gov.countryId, reference) }))
+          !(await countryLeaderStatesCollection<{ _id: string }>(db).findOne({
+            _id: leaderStateId(gov.countryId, reference),
+          }))
         ) {
           initialized++;
           if (!dryRun)
@@ -140,7 +143,7 @@ export const migration: Migration = {
       // already-earned maturity, and begin observing younger parties now.
       const matureAtTurn = Number.isFinite(age) && age >= 48 * 3600000 ? turn : turn + 48;
       if (!dryRun)
-        await db.collection<PoliticalParty>("politicalParties").updateOne(
+        await politicalPartiesCollection(db).updateOne(
           {
             _id: party._id,
             createdTurn: { $exists: false },

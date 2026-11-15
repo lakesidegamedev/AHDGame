@@ -37,7 +37,7 @@ vi.mock("next/link", () => ({
 
 async function openStaffMenu() {
   fireEvent.click(screen.getByRole("button", { name: /staff/i }));
-  await screen.findByRole("menuitem", { name: "Admin Panel" });
+  await screen.findByRole("menuitem", { name: "Control Panel" });
 }
 
 describe("StaffDropdown singleplayer owner entry", () => {
@@ -53,7 +53,7 @@ describe("StaffDropdown singleplayer owner entry", () => {
     await openStaffMenu();
     expect(screen.queryByRole("menuitem", { name: "Local World" })).toBeNull();
     // Hosted console links are unaffected.
-    expect(screen.getByRole("menuitem", { name: "Admin Panel" })).toBeTruthy();
+    expect(screen.getByRole("menuitem", { name: "Control Panel" })).toBeTruthy();
   });
 
   it("renders nothing for a singleplayer guest without owner status", () => {

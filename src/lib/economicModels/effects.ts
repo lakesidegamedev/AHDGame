@@ -22,11 +22,9 @@ export function effectStrength(model?: EconomicModelState): number {
 }
 
 /**
- * §7.1 diminishing-returns term on the concentration / spending-efficiency boosts.
- * Activation is now binary (`effectStrength` ∈ {0,1}), so this no longer damps an
- * intensity→effect→intensity spiral (there is none — the boost is constant once
- * active). At full strength `saturation(1) = 0.5` simply sets the full-strength
- * magnitude: a primary GDP-weight boost of 0.5·0.5 = +25%, not the raw +50%.
+ * Diminishing-returns term on the concentration boost. Activation is binary
+ * (effectStrength 0 or 1), so saturation(1) = 0.5 sets the full-strength
+ * magnitude: a primary GDP-weight boost of 0.5 * 0.5 = +25%.
  */
 const CONCENTRATION_DIMINISH = 0.5;
 export function saturation(I: number): number {

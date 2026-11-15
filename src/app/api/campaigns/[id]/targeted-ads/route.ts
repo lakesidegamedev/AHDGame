@@ -6,12 +6,15 @@ import { requireAuthWithCharacter } from "@/lib/api/requireAuth";
 import { badRequest, handleRouteError, errorResponse } from "@/lib/api/errors";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { getDb } from "@/lib/mongodb";
-import type { State, Character, NPP } from "@/lib/db/types";
+import type { State, NPP } from "@/lib/db/types";
 import {
   loadTargetedAdContext,
   purchaseTargetedAds,
   quoteTargetedAds,
 } from "@/lib/campaignTargeting/commands";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -33,17 +36,18 @@ export async function GET(request: NextRequest, { params }: Params) {
     const ownerHome =
       context.candidate.isNPP && context.candidate.nppId
         ? (
-            await db
-              .collection<NPP>("npps")
-              .findOne({ _id: context.candidate.nppId }, { projection: { homeState: 1 } })
+            await nppsCollection(db).findOne(
+              { _id: context.candidate.nppId },
+              { projection: { homeState: 1 } }
+            )
           )?.homeState
         : (
-            await db
-              .collection<Character>("characters")
-              .findOne({ _id: context.candidate.characterId }, { projection: { homeState: 1 } })
+            await charactersCollection(db).findOne(
+              { _id: context.candidate.characterId },
+              { projection: { homeState: 1 } }
+            )
           )?.homeState;
-    const regions = await db
-      .collection<State>("states")
+    const regions = await statesCollection(db)
       .find(
         {
           countryId: context.election.countryId,

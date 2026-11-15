@@ -1,18 +1,8 @@
 /**
- * China Region Census Profiles — 2023 (post-COVID, peak-population China).
+ * China Region Census Profiles, 2023 (post-COVID, peak-population China).
  *
- * 2023-default companion to {@link cnRegionCensusData} (the 2019 profiles).
- *
- * Era anchor: 2020 National Population Census (NBS), read forward to 2023.
- * Every value below is independently authored from historical knowledge of
- * each macro-region in that year — NOT derived by scaling any other era's file.
- *
- * Era character: ~66% urban nationally; national population has peaked and
- * begun to decline; the one-child cohort structure produces a heavy senior
- * share, most extreme in the Northeast where decades of out-migration and
- * rock-bottom fertility compound it; higher-ed massification means roughly a
- * quarter of coastal adults hold degrees; record graduate unemployment amid
- * the property slump. Income uses era-neutral relative tiers.
+ * Every value is independently authored, not scaled from another era.
+ * Income uses era-neutral relative tiers.
  */
 
 import type { CNRegionLayer1 } from "@/lib/seeds/cn/cnRegionCensusData";

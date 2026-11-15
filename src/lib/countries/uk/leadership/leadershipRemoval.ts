@@ -1,15 +1,13 @@
 /**
- * UK party-specific leadership removal (epic #856, ticket #861 — Cluster B).
+ * UK party-specific leadership removal.
  *
  * Distinct from the government confidence gauge: this is confidence in the PM
- * *as party leader* — a leadership contest, not a general election. The process
- * is a DATA-DRIVEN per-party ruleset, and the ruleset is CHANGEABLE BY THE
- * PARTY'S INTERNAL COMMITTEE (a 1922-style committee / NEC analogue). Controlling
- * the committee lets a faction rewrite these rules to protect or expose the
- * leader — so this module only EVALUATES a ruleset; amending it = storing a
- * different ruleset. Defaults for LAB / CON are starting configs, not hardcoded law.
- *
- * See ops-knowledge `uk-rework-design-2026-08-25`.
+ * as party leader, a leadership contest, not a general election. The process
+ * is a DATA-DRIVEN per-party ruleset, and the ruleset is changeable by the
+ * party's internal committee. Controlling the committee lets a faction rewrite
+ * these rules to protect or expose the leader, so this module only EVALUATES a
+ * ruleset; amending it means storing a different ruleset. Defaults for LAB and
+ * CON are starting configs, not hardcoded law.
  */
 
 /** Who votes in a leadership ballot once a challenge is triggered. */

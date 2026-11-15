@@ -67,27 +67,10 @@ describe("applyFanout", () => {
     for (const d of docs) expect(d.modifiers.voterGroups.urban_progressives).toBe(4);
   });
 
-  it("apportionShares differentiates each sub-region's archetype split, preserving leans", async () => {
-    const grp = (population: number, eco: number) => ({
-      population,
-      economicLean: eco,
-      socialLean: 0,
-      turnout: 60,
-    });
-    // Aggregate Scotland split (sums to 100); only population shares apportion.
+  it("stateDemographics copies the aggregate verbatim; sub-region census carries the differences", async () => {
     const groups = {
-      post_industrial_workers: grp(17, -2),
-      urban_progressives: grp(13, -3),
-      suburban_homeowners: grp(9, 2),
-      young_renters: grp(11, -1),
-      rural_traditionalists: grp(9, 3),
-      retirees: grp(12, 1),
-      public_sector: grp(7, -3),
-      moderate_centrists: grp(9, 0),
-      populist_right: grp(4, 1),
-      green_activists: grp(4, -4),
-      small_business: grp(3, 3),
-      new_britons: grp(2, -2),
+      alpha: { population: 60, economicLean: -2, socialLean: 0, turnout: 60 },
+      beta: { population: 40, economicLean: 3, socialLean: 1, turnout: 55 },
     };
     seedAggregate(db, "stateDemographics", {
       _id: "SCO",
@@ -101,29 +84,15 @@ describe("applyFanout", () => {
     await applyFanout(db as unknown as Db, scopeFor("stateDemographics"), ctx);
     const docs = insertedDocs(db, "stateDemographics") as Array<{
       _id: string;
-      groups: Record<string, { population: number; economicLean: number }>;
+      groups: typeof groups;
       cachedEconomicLean?: number;
-      cachedSocialLean?: number;
     }>;
     expect(docs).toHaveLength(7);
-    const byId = Object.fromEntries(docs.map((d) => [d._id, d]));
+    expect(docs.map((d) => d._id).sort()).toEqual(scoRegions.map((r) => r._id).sort());
     for (const d of docs) {
-      // Each region still sums to 100 and inherits the aggregate's leans.
-      const sum = Object.values(d.groups).reduce((s, g) => s + g.population, 0);
-      expect(sum).toBe(100);
-      expect(d.groups.post_industrial_workers.economicLean).toBe(-2);
-      // Stale aggregate-level cached leans are dropped (groups now differ).
-      expect(d.cachedEconomicLean).toBeUndefined();
-      expect(d.cachedSocialLean).toBeUndefined();
+      expect(d.groups).toEqual(groups);
+      expect(d.cachedEconomicLean).toBe(-1.4);
     }
-    // GLA (post-industrial) carries more workers than affluent LOT, and the
-    // aggregate brackets them (genuine differentiation, not a verbatim copy).
-    expect(byId.GLA.groups.post_industrial_workers.population).toBeGreaterThan(
-      byId.LOT.groups.post_industrial_workers.population
-    );
-    expect(byId.GLA.groups.post_industrial_workers.population).toBeGreaterThan(17);
-    expect(byId.LOT.groups.post_industrial_workers.population).toBeLessThan(17);
-    expect(db.collectionMocks["stateDemographics"]!.deleteOne).toHaveBeenCalledWith({ _id: "SCO" });
   });
 
   it("scaleNumeric scales magnitudes by GDP weight, copies per-capita verbatim", async () => {

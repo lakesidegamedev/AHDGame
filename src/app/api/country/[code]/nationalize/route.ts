@@ -27,6 +27,8 @@ import { nationalizeSector, nationalizeWholeCorp } from "@/lib/nationalization/o
 import { isStateOwned } from "@/lib/nationalization/nationalCorporation";
 import { isWithinRenationalizeCooldown } from "@/lib/nationalization/privatizationShares";
 import { generateStockExchangeSnapshots } from "@/lib/turn/stockExchangeSnapshot";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 interface RouteParams {
   params: Promise<{ code: string }>;
@@ -78,7 +80,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       return errorResponse(400, "Invalid sector ID");
     }
 
-    const corps = db.collection<Corporation>("corporations");
+    const corps = corporationsCollection(db);
 
     // Resolve the target corporation (whole-corp directly, or the sector's owner).
     let targetCorp: Corporation | null = null;
@@ -86,9 +88,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     if (corporationId) {
       targetCorp = await corps.findOne({ _id: new ObjectId(corporationId) });
     } else if (sectorId) {
-      targetSector = await db
-        .collection<CorporateSector>("corporateSectors")
-        .findOne({ _id: new ObjectId(sectorId) });
+      targetSector = await corporateSectorsCollection(db).findOne({ _id: new ObjectId(sectorId) });
       if (targetSector) {
         targetCorp = await corps.findOne({ _id: targetSector.corporationId });
       }
@@ -140,10 +140,8 @@ export async function POST(request: Request, { params }: RouteParams) {
       return errorResponse(403, "That corporation is not headquartered in your country.");
     }
 
-    // Owner classification + eligibility (shared with the eligible-targets route
-    // via resolveCorpEligibility so the two never drift). The executive-reach rule
-    // below is unchanged; eligibility only makes `elig.triggers` accurate so the
-    // consequence framing reflects WHY the corp is eligible.
+    // Shared with the eligible-targets route via resolveCorpEligibility so the two
+    // never drift; `elig.triggers` drives the consequence framing.
     const { ownerKind, result: elig } = await resolveCorpEligibility(
       db,
       countryId,

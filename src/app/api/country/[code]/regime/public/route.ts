@@ -2,15 +2,11 @@
  * GET /api/country/[code]/regime/public
  *
  * Public read-only view of the country's regime-escalation state.
- * Returns the popular-legitimacy *band* (not the raw scalar), the
- * current stage, the under-strain flag, and the last few stage
- * transitions for the country-history feed.
+ * Returns the popular-legitimacy band (not the raw scalar), the current
+ * stage, the under-strain flag, and the last few stage transitions.
  *
  * Returns `{ active: false }` for non-OPS countries so the UI panel
- * can render nothing without needing a separate "is this country
- * OPS?" lookup.
- *
- * No auth — same disclosure level as the country overview page.
+ * can render nothing without a separate OPS lookup.
  */
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";

@@ -133,6 +133,16 @@ produces a diagnostic receipt; rerun only with changed input or a stated
 investigation. Reuse evidence only while its relevant inputs remain unchanged.
 Record required gate results and normal post-deployment observation separately.
 
+## Code comments
+
+Explain why, not history. A comment states a constraint, an invariant or a non-obvious reason the code is shaped as it is.
+
+- No dates, issue or ticket numbers, or change narration ("previously", "used to", "the owner decided") in code comments. That belongs in the commit, the PR and the changelog.
+- Keep comments short. A block over 12 lines is a sign the code needs a clearer name, a smaller function or a doc page instead.
+- Prefer a clear name over a comment that explains a vague one.
+
+`npm run architecture:contracts` enforces this with a ratchet (`scripts/architecture/commentRatchet.baseline.json`): a file may not gain overlong comment blocks or narrative comment lines, and a new file may not add any. After cleaning comments, run `npm run comment:ratchet:lower` and commit the lower baseline. The baseline can only go down.
+
 ## Name the mechanic at the top of the file
 
 Files under `src/lib` that implement a game mechanic open with a short JSDoc block, before the imports, that names the mechanic in the words a player uses and states the two or three facts a player asks about (what it is, what it depends on, what it affects), citing the exported symbol that implements it. Keep it to two to five lines of plain English in the present tense, with every fact taken from the code in that file. The search index embeds file text, so this header is what makes the file findable for a player question.
@@ -162,16 +172,19 @@ Disclose a conflict when your change could directly help or hurt:
 
 - a character you play,
 - a corporation you own, run, or hold shares in, or
-- anything else you control in game, such as a party you lead or a government you head.
+- a party you lead, a government you head, a nation you lead or hold office in, or anything else you control in game.
 
-"Directly" means the change targets something you hold, or does more for it than for comparable players. If you are unsure, disclose.
+"Directly" means the change targets something you hold, or does more for it than for comparable players. A rule that applies to a whole category still counts: a change to wartime seizure affects you if you lead a nation at war, and a change to mining affects you if you own a mining corporation. If you are unsure, disclose.
+
+Economy and turn PRs also carry an `Affects:` line in the conflict section saying who the change helps or hurts. That line is required even when you have no conflict, so reviewers can check the answer.
 
 To disclose, tick the conflict box in the PR template and say what the link is. You do not have to name your character or corporation in the public PR: tell a maintainer privately and write "disclosed privately" in the PR instead.
 
 The required `custom-rules` check enforces two things on contributor PRs:
 
 - The "Conflict of interest" section stays in the description with exactly one box ticked.
-- A change to economy or turn-processing code (markets, banking, trade, budgets, corporations, the turn engine and the other folders listed in `scripts/ci/pr_governance.py`) needs a maintainer's approving review on the PR's current commit before it can merge. Pushing a new commit needs a fresh approval.
+- A change to economy or turn-processing code (markets, banking, trade, budgets, corporations, the turn engine and the other folders listed in `scripts/ci/pr_governance.py`) needs a maintainer's approving review before it can merge. Test files do not count. An approval keeps counting after later pushes as long as those pushes do not change economy code again; a push that does needs a fresh approval.
+- Trusted contributors, listed in `scripts/ci/pr_governance.py`, skip the economy approval on PRs where they declare no conflict. A trusted contributor's conflicted PR still needs a maintainer, and changes to CI or governance files always do.
 
 A disclosure does not block a PR. It tells the reviewer to weigh the change on its merits and against other players' positions, and a conflicted PR is never merged on its author's word alone. Staff contributors follow the same rule.
 

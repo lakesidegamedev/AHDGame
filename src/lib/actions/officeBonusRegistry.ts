@@ -17,7 +17,7 @@ import {
  * The turn engine only ever read (1), so every office key that exists solely in
  * (2) — `volkskammerDeputy`, `supremeSovietDeputy`, `sejmDeputy`, `dail`,
  * `deputy`, `member`, … — silently resolved to a 0 bonus. Non-US legislators
- * received no per-turn generation for holding their seat (ticket #974).
+ * received no per-turn generation for holding their seat.
  *
  * These helpers make (2) the fallback for (1): an explicit `gameConfig` entry
  * still wins (so admins keep their override), but an office the config has never

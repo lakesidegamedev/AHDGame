@@ -169,7 +169,7 @@ export interface CommodityFlow {
   ownSite?: { units: number; share: number; valueAnchor: number };
   /**
    * Supply rows, CEO only: why part of this output went unsold last turn, from
-   * the plant's ask against what buyers in its book paid (#5450).
+   * the plant's ask against what buyers in its book paid.
    */
   unsold?: UnsoldReading;
   /**
@@ -278,8 +278,8 @@ export interface PricingData {
   /** Ramped clearing multiplier applied to realized revenue last turn. */
   clearingFactor: number | null;
   /**
-   * Corp's established price-identity norm (brand loyalty, Package A). Owner/CEO
-   * only, drives the gouging warning. Absent ⇒ feature off or non-owner viewer.
+   * Corp's established price-identity norm, owner/CEO only, drives the gouging
+   * warning. Absent: feature off or non-owner viewer.
    */
   brandPostureNorm?: number | null;
 }
@@ -316,9 +316,18 @@ export interface AvailableStrategy {
    */
   capacityRescaleRatio?: number;
   capacityAfterRetool?: number | null;
+  /**
+   * Retool fee for switching to this strategy, in ₳. Below the sector-wide
+   * `retoolCost` when converting off a retired method onto a named successor.
+   */
+  retoolCost?: number;
+  /** Multiplier on the base retool fee: 1, or the sunset conversion discount. */
+  retoolCostMultiplier?: number;
   /** Strategy is gated by decade or an unlocked tech node. */
   locked?: boolean;
   lockReason?: string | null;
+  /** For a diffusion lock: the year the method reaches the sector's country. */
+  lockOpensYear?: number | null;
   minDecade?: string | null;
 }
 
@@ -468,23 +477,6 @@ export interface Competitor {
   isNpp?: boolean;
 }
 
-export interface SplitSizeInfo {
-  splitCost: number;
-  splitMsCost: number;
-  splitEstimatedCapture: number;
-  /** Estimated net income: capture × current effective margin. Approximate for competitor sectors. */
-  splitEstimatedNetIncome: number;
-  /** Projected market share after this capture. */
-  projectedMarketShare: number;
-  /** True when the projected share would cross the 50% dominance threshold. */
-  exceedsDominanceThreshold: boolean;
-  /** Per-strength cost/capture breakdown. Present on pages loaded after the split-strength feature. */
-  splitStrengths?: {
-    full: SplitStrengthInfo;
-    half: SplitStrengthInfo;
-  };
-}
-
 export interface SplitStrengthInfo {
   splitCost: number;
   splitMsCost: number;
@@ -533,18 +525,15 @@ export interface Market {
 }
 
 /**
- * Why the money figures (revenue, profit, margin, wages, the whole plants
- * money/plant panel) are or are not on screen. Sent on every response so a
- * withheld value renders as a labelled "Hidden" state instead of a bare ", "
- * that reads as a real $0.
+ * Why the money figures (revenue, profit, margin, wages, the plants money
+ * panel) are or are not on screen. Sent on every response so a withheld value
+ * renders as a labelled "Hidden" state instead of a bare ", " that reads as
+ * a real $0.
  *
- * - `visible`      the viewer is the owning CEO or an admin: nothing withheld.
+ * - `visible`      the viewer is the owning CEO or an admin.
  * - `private-corp` a signed-in non-owner looking at a PRIVATE corp.
- * - `public-rival` a signed-in non-owner looking at a PUBLIC corp (competitors
- *                  cannot see each other's live sector financials).
- * - `signed-out`   nobody is authenticated on this device, the single most
- *                  common cause of "my own sector shows dashes": you are not
- *                  logged in as the owner here.
+ * - `public-rival` a signed-in non-owner looking at a PUBLIC corp.
+ * - `signed-out`   nobody is authenticated on this device.
  */
 export type FinancialVisibilityReason = "visible" | "private-corp" | "public-rival" | "signed-out";
 
@@ -700,9 +689,9 @@ export interface PlantsData {
   fillRate: number | null;
   idleCauses: PlantIdleCause[];
   /**
-   * Labels of this sector's outputs that sell only in the state where they are
-   * made (construction, freight, healthcare, real estate). A shortage
-   * elsewhere cannot lift demand for these (ticket 1700).
+   * Labels of outputs that sell only in the state where they are made
+   * (construction, freight, healthcare, real estate). A shortage elsewhere
+   * cannot lift demand for these.
    */
   localMarketOutputs?: string[];
   mothballed: boolean;
@@ -797,8 +786,8 @@ export interface PlantsData {
     upkeepAnchor: number;
     complianceAnchor: number;
     /**
-     * The policy/tech modifier stack as money, POSITIVE = credit (ticket 1122).
-     * Optional because payloads predating the field omit it.
+     * The policy/tech modifier stack as money, positive = credit. Optional
+     * because older payloads omit it.
      */
     policyAnchor?: number;
     /** The same stack in percentage points of revenue. */

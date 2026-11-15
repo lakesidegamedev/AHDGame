@@ -1,3 +1,4 @@
+import { accountFieldsRefusal } from "@/lib/auth/accountFields/mode";
 import { NextResponse } from "next/server";
 import { isPlaceholderEmail } from "@/lib/auth/placeholderEmail";
 import { authMigrationFenceAbsentFilter } from "@/lib/auth/sourceFence";
@@ -13,6 +14,16 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { recordAudit } from "@/lib/audit/recordAudit";
 import { consumeEmailChange } from "@/lib/emailChange";
 import { sendEmail } from "@/lib/email";
+import { EMAIL_DEFAULT_BASE_URL, renderBrandedEmail } from "@/lib/emailTemplate";
+import {
+  CENTRAL_WRITE_UNAVAILABLE_MESSAGE,
+  bridgeAccountFromUser,
+  centralRestoreAccount,
+  centralWriteFirst,
+  getCentralLoginMode,
+  shadowMirrorWrite,
+} from "@/lib/auth/centralLogin";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 const NO_STORE = { headers: { "Cache-Control": "private, no-store" } };
 const INVALID_LINK =
@@ -27,6 +38,9 @@ function isDuplicateKey(error: unknown): boolean {
 // Errors: 400, 409, 429
 export async function POST(request: Request) {
   try {
+    const accountFieldsBlock = accountFieldsRefusal("email");
+    if (accountFieldsBlock) return accountFieldsBlock;
+
     const clientIp = await getClientIp();
     const limit = await durableRateLimit(clientIp, AUTH_LIMITS.maxRequests, AUTH_LIMITS.windowMs);
     if (!limit.ok) return rateLimitResponse(limit.retryAfter);
@@ -50,13 +64,32 @@ export async function POST(request: Request) {
     }
 
     const db = await getDb();
-    const usersCollection = db.collection<User>("users");
+    const usersCollectionHandle = usersCollection(db);
+
+    // The account email changes here, so this is the credential write to mirror.
+    const centralMode = getCentralLoginMode();
+    const accountBefore =
+      centralMode === "off"
+        ? null
+        : await usersCollectionHandle.findOne({ _id: change.userId, email: change.previousEmail });
+    const emailWrite = accountBefore
+      ? ({
+          op: "account-upsert",
+          account: bridgeAccountFromUser(accountBefore, {
+            email: change.newEmail,
+            emailVerified: true,
+          }),
+        } as const)
+      : null;
+    if (emailWrite && !(await centralWriteFirst(emailWrite))) {
+      return errorResponse(503, CENTRAL_WRITE_UNAVAILABLE_MESSAGE, NO_STORE);
+    }
 
     let matched: number;
     try {
       // CAS on the address the request was made from: a second change that
       // landed in between wins, and this stale link does nothing.
-      const updated = await usersCollection.updateOne(
+      const updated = await usersCollectionHandle.updateOne(
         {
           _id: change.userId,
           email: change.previousEmail,
@@ -67,6 +100,9 @@ export async function POST(request: Request) {
       );
       matched = updated.matchedCount;
     } catch (error) {
+      if (accountBefore) {
+        await centralRestoreAccount(accountBefore);
+      }
       if (isDuplicateKey(error)) {
         return errorResponse(409, "That email is already used by another account.", NO_STORE);
       }
@@ -74,6 +110,9 @@ export async function POST(request: Request) {
     }
 
     if (matched !== 1) {
+      if (accountBefore) {
+        await centralRestoreAccount(accountBefore);
+      }
       recordAudit({
         source: "api",
         category: "auth",
@@ -86,6 +125,7 @@ export async function POST(request: Request) {
     }
 
     invalidateCachedUser(change.userId.toHexString());
+    if (emailWrite) shadowMirrorWrite(emailWrite);
 
     recordAudit({
       source: "api",
@@ -100,12 +140,15 @@ export async function POST(request: Request) {
       await sendEmail({
         to: change.previousEmail,
         subject: "Your A House Divided email was changed",
-        text:
-          "The email on your A House Divided account was just changed to a new address.\n\n" +
-          "If this was not you, contact support on Discord right away.",
-        html:
-          "<p>The email on your A House Divided account was just changed to a new address.</p>" +
-          "<p>If this was not you, contact support on Discord right away.</p>",
+        ...renderBrandedEmail({
+          preheader: "The email on your A House Divided account was changed.",
+          heading: "Your email was changed",
+          paragraphs: [
+            "The email on your A House Divided account was just changed to a new address.",
+            "If this was not you, contact support on Discord right away.",
+          ],
+          baseUrl: process.env.NEXT_PUBLIC_BASE_URL || EMAIL_DEFAULT_BASE_URL,
+        }),
       });
     }
 

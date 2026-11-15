@@ -2,26 +2,19 @@ import type { OperatingSectorType } from "@/lib/constants/corporations";
 import type { RepresentingUnionEffects } from "@/lib/unions/unionLookups";
 
 /**
- * Phase 1, 2 of the Labour/Unions system: make labor an explicit cost that can
- * move with a wage slider, automation, unions, and minimum wage, without
- * changing baseline outcomes.
+ * Labour is an explicit cost that can move with a wage slider, automation,
+ * unions, and minimum wage, without changing baseline outcomes.
  *
- * The key property is **baseline invariance**: labor is carved OUT of the
- * sector's existing maintenance (which already implicitly includes it), never
- * added on top. At `wageLevel === 1` with no union premium and no minimum-wage
- * floor, total maintenance, and therefore profit, is exactly what it was
- * before the labour system existed, for ANY labor share. Only deviations move
- * the economy. This is what lets the refactor ship behind a flag with golden
- * masters staying green.
+ * Baseline invariance: labor is carved OUT of the sector's existing
+ * maintenance (which already implicitly includes it), never added on top. At
+ * `wageLevel === 1` with no union premium and no minimum-wage floor, total
+ * maintenance and profit match pre-labour behavior for ANY labor share; only
+ * deviations move the economy.
  *
- * Labor is decomposed into **workers × wage-per-worker** so that:
- *   - High-skill sectors (few workers via the revenue/skill worker formula)
- *     get a high implied wage-per-worker, e.g. technology pays a lot to a few.
- *   - Low-skill sectors (many workers) get a low wage-per-worker, e.g. retail.
- * This decomposition is what minimum wage (a floor on wage-per-worker) and the
- * UI (implied wage vs. state median income) act on.
- *
- * See docs/plans/2026-06-30-labour-system.md.
+ * Labor is decomposed as workers × wage-per-worker: high-skill sectors get a
+ * high implied wage for few workers, low-skill sectors a low wage for many.
+ * Minimum wage (a floor on wage-per-worker) and the UI (implied wage vs state
+ * median income) act on this decomposition.
  */
 
 /** Per-turn labour context threaded into sector profit calculations. */
@@ -171,27 +164,12 @@ export function clampWageLevel(value: number): number {
 }
 
 /**
- * Baseline labor share of revenue by sector, "how labor-intensive is this
- * industry." People-are-the-product sectors are high; capital/materials-heavy
- * sectors are low. Combined with the worker count (which already falls as skill
- * rises) this yields realistic wage-per-worker spreads: technology = high share
- * over few workers (high pay each); retail = moderate share over many workers
- * (low pay each); extraction = low share over a moderate crew.
- *
- * Service sectors (technology, financial, healthcare, real estate) are the
- * heaviest payroll, roughly 30 to 40% of realized revenue after the 1991 era
- * multiplier. Under the explicit plant cost model labour is billed on top of
- * inputs and overhead, so these shares set the base margin of those sectors
- * directly. The ceiling is the 1991 starter-plant cushion in
- * `openingPlantScenario`: a founder's plant must still clear its floor.
- *
- * Legacy (non-explicit) cost modes carve labour out of maintenance, where these
- * values are profit-invariant at wageLevel=1 and only set the wage lever's bite.
- * Under explicit plant costs they are billed directly and DO set margins. The
- * market recovery phase 1 (2026-10-18) recalibrated this table so every
- * standard strategy earns 15-25% at base prices before policy bonuses; it
- * replaces the temporary stage 1 service relief. The bench that produced these
- * values is src/lib/economy/repricer/baseMargins.ts.
+ * Baseline labor share of revenue by sector. Combined with worker count (which
+ * falls as skill rises), this yields realistic wage-per-worker spreads. Under
+ * explicit plant costs labour is billed on top of inputs, so these values set
+ * each sector's base margin directly; the ceiling is the 1991 starter-plant
+ * cushion in `openingPlantScenario`. Under legacy cost modes labour is carved
+ * from maintenance and only affects the wage lever's bite.
  */
 export const SECTOR_LABOR_INTENSITY: Record<OperatingSectorType, number> = {
   technology: 0.35,
@@ -440,21 +418,12 @@ export function labourWageIncomePassthrough(delta: number): number {
 }
 
 /**
- * v2-3a jobs coupling, wage half (gated on labourSystemMode ≥ "macro"): a
- * CHANGE in `labourWageIndex` also feeds a one-time labor-demand-elasticity
- * bump into `unemploymentNode`, paying workers more makes labor more
- * expensive, so (all else equal) fewer get hired. Same Δ-not-level reasoning
- * as `labourWageIncomePassthrough`: `unemploymentRate` is itself a value
- * series carried forward turn to turn (`prevSimBaseline`), so a LEVEL term
- * held constant would march it to its registry bound and pin there (no
- * mean-reversion mechanism counteracts a sustained additive offset there,
- * unlike the Okun term's gap-closure dynamic), the Δ form is a one-time
- * bump that stops once the wage change stops happening. Explicitly capped
- * per turn (independent of the node's own registry bounds) per the design's
- * "most coupling-prone, needs explicit damping" call-out. This is the SAME
- * `economic.labourWageIndexDelta` signal v2-2 reads, wage Δ this turn
- * nudges medianIncome up and unemployment up together (the income/jobs
- * tension the design names), not two unrelated signals.
+ * Wage term coupled into `unemploymentNode` (labourSystemMode >= "macro").
+ *
+ * Uses a CHANGE in `labourWageIndex` (a one-time bump), not a level: the
+ * unemployment rate is carried forward turn to turn, so a sustained
+ * additive offset would march it to its bound and pin there.
+ * Explicitly capped per turn for damping.
  */
 export const LABOUR_UNEMPLOYMENT_WAGE_K = 1.5; // pp of unemployment per 1.0 index-point Δ
 export const LABOUR_UNEMPLOYMENT_WAGE_CAP_PP = 1.5;
@@ -465,24 +434,17 @@ export function labourUnemploymentWagePressure(delta: number): number {
 }
 
 /**
- * v2-3b jobs coupling, automation half (gated on labourSystemMode ≥
- * "macro"): a CHANGE in the per-state `automationIndex` feeds its own
- * one-time bump into `unemploymentNode`, summed with the wage term above.
- * Sign is INVERTED relative to the wage term: the automation index is LOWER
- * when more automated (1.0 = none, down toward `1 − TECH_LABOR_REDUCTION_CAP`
- * at full automation), so a DROP in the index (delta < 0, automation just
- * came online) should RAISE unemployment, not lower it.
+ * Automation term: a DROP in `automationIndex` (lower = more automated,
+ * 1.0 = none, toward `1 - TECH_LABOR_REDUCTION_CAP`) RAISES unemployment,
+ * so sign is inverted relative to the wage term. One-time bump per state,
+ * summed with the wage term.
  *
- * Coefficient is a deliberately independent knob from
- * `LABOUR_UNEMPLOYMENT_WAGE_K`, not a copy of it: automation is a one-sided
- * corp investment with no offsetting income benefit to workers (unlike a
- * wage hike, which trades some jobs for higher pay for those who keep
- * theirs: the v2-3a tension), and "fewer effective jobs" reads as a more
- * direct, structural headcount effect than the softer wage-elasticity story.
- * Calibrated against the per-tech unlock size (nodes.ts grants 0.05, 0.1 pct
- * per node): typical single-tech deltas land well under the cap; only an
- * implausible single-turn jump from no automation to the
- * `TECH_LABOR_REDUCTION_CAP` ceiling would hit it.
+ * Coefficient is an independent knob from `LABOUR_UNEMPLOYMENT_WAGE_K`:
+ * automation is a one-sided corp investment with no offsetting worker income,
+ * so "fewer jobs" reads as a more direct structural effect than wage
+ * elasticity. Typical single-tech unlock deltas stay well under the cap;
+ * only an implausible jump from no automation to the
+ * `TECH_LABOR_REDUCTION_CAP` ceiling hits it.
  */
 export const LABOUR_UNEMPLOYMENT_AUTOMATION_K = 2.5; // pp of unemployment per 1.0 index-point Δ
 export const LABOUR_UNEMPLOYMENT_AUTOMATION_CAP_PP = 1.5;

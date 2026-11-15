@@ -198,10 +198,7 @@ async function main() {
       for (const [name, rows] of saved) if (rows.length) await db.collection(name).insertMany(rows);
       await db
         .collection("gameState")
-        .updateOne(
-          { _id: "current" as never },
-          { $set: { livingConflictsEnabled: true, crisisInteractionEnabled: true } }
-        );
+        .updateOne({ _id: "current" as never }, { $set: { livingConflictsEnabled: true } });
       await saveConflictState(db, emptyConflictState(def.key));
       const opening = await driveConflictTurn(db, def, participants, 1, 1991);
       assert.equal(opening.state.phaseLevel, 1);

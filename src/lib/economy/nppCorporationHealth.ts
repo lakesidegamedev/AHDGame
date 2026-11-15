@@ -1,21 +1,17 @@
 /**
- * NPP corporation health — the regression metric for GitHub issue #2122
- * ("Investigate why NPP-run corporations underperform").
+ * NPP corporation health: the per-sector cash-negative share for NPP-led
+ * corporations, plus aggregate binding-gate/constraint counts that name which
+ * gate bound.
  *
- * The issue's evidence says the failure is NOT uniform: NPP-led corps dominate
- * the rent sectors (logistics/technology/telecom) and bleed out in the thin
- * ones (retail 54% cash-negative, chemical_industries 48%, while
- * construction/energy/defense stay positive). The hypothesis is the
- * reinvest/divest brain, not general incompetence. This module is the
- * worldsim-measurable half of that: the per-sector CASH-NEGATIVE SHARE for
- * NPP-led corporations, plus the aggregate binding-gate/binding-constraint
- * counts that name WHICH gate bound.
+ * The failure this measures is not uniform: NPP-led corps dominate rent
+ * sectors (logistics/technology/telecom) and bleed out in thin ones (retail,
+ * chemical_industries), pointing at the reinvest/divest brain rather than
+ * general incompetence.
  *
  * Pure: plain data in, plain data out. No db, no clock, no randomness, no
- * environment. The caller (an admin route) loads the corporations, restates
- * each `liquidCapital` to ₳ anchor units, passes the NPP CEO id set, and hands
- * over the persisted operator diagnostics. Empty input yields nulls, never
- * fabricated zeros.
+ * environment. The caller loads corporations, restates `liquidCapital` to
+ * anchor units, passes the NPP CEO id set, and hands over persisted operator
+ * diagnostics. Empty input yields nulls, never fabricated zeros.
  */
 
 import type { CorporationType, OperatingSectorType } from "@/lib/constants/corporations";

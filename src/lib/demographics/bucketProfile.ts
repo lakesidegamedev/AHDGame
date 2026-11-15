@@ -8,15 +8,9 @@ import type { LegislativePriorities } from "./legislativePriorities/rules";
 /**
  * Per-bucket view of a region's electorate, for the demographics tab.
  *
- * The tab used to list voter ARCHETYPES — composite groups that are an
- * authoring format, not the thing the vote engine counts. The engine counts
- * Layer-1 cells, so a player reading the archetype table was reading a
- * projection of the electorate rather than the electorate. Every number here
- * comes off the same units the vote path uses.
- *
- * A bucket's share/lean/turnout is the share-weighted aggregate of the units
- * that carry it, using the unit's own `bucketWeights` — the same weights the
- * engine folds leans through, so the tab and the engine cannot disagree.
+ * Every number here comes off the same Layer-1 units the vote path counts,
+ * using each unit's own `bucketWeights`, so the tab and the engine cannot
+ * disagree.
  */
 
 export interface BucketRow {
@@ -106,4 +100,29 @@ export function getBucketProfileForRegion(
     .filter((s): s is BucketProfileSection => s !== null);
 
   return sections.length > 0 ? sections : null;
+}
+
+/**
+ * Turnout-weighted mean lean of a region, read off one dimension's buckets
+ * (every dimension partitions the same electorate). Zeros when the profile
+ * has no voters.
+ */
+export function bucketProfileLean(sections: readonly BucketProfileSection[]): {
+  economicLean: number;
+  socialLean: number;
+} {
+  const section = sections[0];
+  if (!section) return { economicLean: 0, socialLean: 0 };
+  let w = 0;
+  let econ = 0;
+  let soc = 0;
+  for (const b of section.buckets) {
+    const voters = b.sharePct * b.turnout;
+    w += voters;
+    econ += voters * b.economicLean;
+    soc += voters * b.socialLean;
+  }
+  return w > 0
+    ? { economicLean: econ / w, socialLean: soc / w }
+    : { economicLean: 0, socialLean: 0 };
 }

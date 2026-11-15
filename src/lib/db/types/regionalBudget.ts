@@ -29,27 +29,24 @@ export interface RegionalBudget {
   /**
    * DE Gewerbesteuer revenue at the Land level. Computed from the per-Land
    * Hebesatz policy (`de_trade_tax`) × Steuermesszahl (0.035) × Land
-   * domestic-corporate-profit base. Added 2026-05-26 with the DE legislation
-   * overhaul (PR1 deferred-item fix).
+   * domestic-corporate-profit base.
    */
   tradeTaxRevenue?: number;
 
   // Revenue sources — CN (optional, only set for CN regions)
-  /** CN Enterprise Income Tax local share (40% of EIT collected in-region, from cn_enterprise_income_tax) */
+  /** CN Enterprise Income Tax local share (40% of EIT collected in-region, from the enacted corporate tax) */
   eitShare?: number;
   /** CN central transfer grant from national government (Finance Minister allocation or equal split) */
   centralTransferGrant?: number;
   /**
    * CN Provincial Resource Tax revenue at the region level. Computed from the
    * per-region `cn_provincial_resource_tax` policy rate × regional GDP ×
-   * resource-extraction proxy (3% of GDP). Added 2026-05-27 with the CN
-   * legislation overhaul (PR5 deferred-item fix).
+   * resource-extraction proxy (3% of GDP).
    */
   resourceTaxRevenue?: number;
   /**
-   * CN standing Business Tax (营业税) revenue — the dominant 1991 Chinese local
-   * tax. Computed from regional GDP × consumption ratio × rate. Always
-   * collected (not enactment-gated). Added 2026-06-08 with the CN fiscal rescale.
+   * CN standing Business Tax (营业税) revenue, always collected (not enactment-gated)
+   * and computed from regional GDP x consumption ratio x rate.
    */
   businessTaxRevenue?: number;
 

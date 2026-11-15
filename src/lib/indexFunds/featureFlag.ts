@@ -1,5 +1,6 @@
 import { getDb } from "@/lib/mongodb";
 import type { GameConfig } from "@/lib/db/types";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 export const INDEX_FUNDS_DISABLED_MESSAGE = "Index funds are not enabled yet.";
 export const INDEX_FUNDS_PARTIAL_MESSAGE =
@@ -22,9 +23,10 @@ export async function getIndexFundsMode(
     legacyEnabled = preloadedConfig?.indexFundsEnabled;
   } else {
     const db = await getDb();
-    const config = await db
-      .collection<GameConfig>("gameConfig")
-      .findOne({ _id: "default" }, { projection: { indexFundsMode: 1, indexFundsEnabled: 1 } });
+    const config = await gameConfigCollection(db).findOne(
+      { _id: "default" },
+      { projection: { indexFundsMode: 1, indexFundsEnabled: 1 } }
+    );
     mode = config?.indexFundsMode;
     legacyEnabled = config?.indexFundsEnabled;
   }

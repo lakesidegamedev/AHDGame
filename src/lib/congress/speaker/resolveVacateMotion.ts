@@ -9,6 +9,7 @@ import {
 import { computeCongressLeadershipTally } from "@/lib/congress/governmentVoteBreakdown";
 import { openSpeakerElection } from "./openSpeakerElection";
 import { autoVoteNppsForVacateMotion } from "./autoVoteNppsForVacate";
+import { speakerVacateMotionsCollection } from "@/lib/db/repositories/speakerVacateMotions";
 
 /** Absolute majority of the chamber needed to carry a motion to vacate. */
 export function vacateThreshold(totalSeats: number): number {
@@ -32,7 +33,7 @@ export async function resolveSpeakerVacateMotion(
   house: HouseComposition,
   force = false
 ): Promise<boolean> {
-  const motions = db.collection<SpeakerVacateMotion>("speakerVacateMotions");
+  const motions = speakerVacateMotionsCollection(db);
   const motion = await motions.findOne({ _id: "current" });
   if (!motion || motion.status !== "voting") return false;
 

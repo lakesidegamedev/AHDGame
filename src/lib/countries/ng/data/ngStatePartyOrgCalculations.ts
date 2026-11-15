@@ -4,14 +4,8 @@ import type { StatePartyOrg, PoliticalParty } from "@/lib/db/types";
 /**
  * Calculate NG state party organization levels from estimated zonal vote shares.
  *
- * Preset rosters:
- *   - `1953-default` — NCNC / AG / NPC (late-colonial regional triad)
- *   - `2019-default` — APC / PDP / LP / NNPP / APGA
- *   - `1991-default` — SDP / NRC (aborted Third Republic two-party system)
- *
- * Organizations scale from vote share:
- * - 0% vote → 5 org (minimal presence)
- * - 50% vote → 70 org (dominant party)
+ * Organizations scale from vote share: 0% → 5 org (minimal presence),
+ * 50% → 70 org (dominant party).
  *
  * Slug → sequentialId is resolved at runtime against the live
  * `politicalParties` collection so preset-filtered seeds are picked up
@@ -49,6 +43,7 @@ import {
   NG_REGION_VOTE_SHARES_1991,
   NG_REGION_VOTE_SHARES_2019,
 } from "@/lib/seeds/ng/ngRegionVoteShares";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 function calculateNGPartyOrg(voteShare: number): number {
   const scaled = MIN_ORG + (voteShare / 50) * (MAX_ORG - MIN_ORG);
@@ -61,8 +56,7 @@ function calculateNGPartyOrg(voteShare: number): number {
  * actually exist under the active preset.
  */
 export async function buildNGPartySlugToSeqId(db: Db): Promise<Record<string, string>> {
-  const parties = await db
-    .collection<PoliticalParty>("politicalParties")
+  const parties = await politicalPartiesCollection(db)
     .find({ countryId: "NG" })
     .project<{ name: string; sequentialId: number }>({ name: 1, sequentialId: 1 })
     .toArray();

@@ -1,9 +1,12 @@
 import { ObjectId, type Db } from "mongodb";
-import type { Campaign, Character, ElectionCandidate } from "@/lib/db/types";
+import type { Campaign, ElectionCandidate } from "@/lib/db/types";
 import {
   pickViewerRaceCampaign,
   type RaceCampaignRow,
 } from "@/lib/campaigns/rules/viewerRaceCampaign";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
 
 /**
  * The viewer's own campaign in one race: as candidate, appointed manager or
@@ -19,16 +22,14 @@ export async function findViewerRaceCampaignId(
   if (!ObjectId.isValid(userId)) return null;
   const userOid = new ObjectId(userId);
 
-  const owned = await db
-    .collection<Character>("characters")
+  const owned = await charactersCollection(db)
     .find({ userId: userOid }, { projection: { _id: 1 } })
     .toArray();
   const ownedIds = owned.map((c) => c._id);
 
   const mateRows =
     ownedIds.length > 0
-      ? await db
-          .collection<ElectionCandidate>("electionCandidates")
+      ? await electionCandidatesCollection(db)
           .find(
             { electionId, status: "active", runningMateId: { $in: ownedIds } },
             { projection: { characterId: 1 } }
@@ -37,8 +38,7 @@ export async function findViewerRaceCampaignId(
       : [];
   const mateTicketIds = mateRows.map((r) => r.characterId);
 
-  const campaigns = await db
-    .collection<Campaign>("campaigns")
+  const campaigns = await campaignsCollection(db)
     .find(
       {
         electionId,

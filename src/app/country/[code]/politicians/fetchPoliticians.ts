@@ -3,6 +3,10 @@ import { type CountryId } from "@/lib/constants/countries";
 import { getOfficeLabel } from "@/lib/utils/officeTitle";
 import type { Character, NPP, PoliticalParty } from "@/lib/db/types";
 import type { PoliticianData } from "@/lib/politicians/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export interface PoliticiansResult {
   politicians: PoliticianData[];
@@ -35,8 +39,7 @@ export async function fetchPoliticians(countryId: CountryId): Promise<Politician
   const countryFilter = { countryId };
 
   const [characters, npps] = await Promise.all([
-    db
-      .collection<Character>("characters")
+    charactersCollection(db)
       .aggregate<PoliticianCharacter>([
         { $match: countryFilter },
         {
@@ -75,8 +78,7 @@ export async function fetchPoliticians(countryId: CountryId): Promise<Politician
         },
       ])
       .toArray(),
-    db
-      .collection<NPP>("npps")
+    nppsCollection(db)
       .find({ retiredAt: null, ...countryFilter })
       .project({
         _id: 1,
@@ -101,12 +103,10 @@ export async function fetchPoliticians(countryId: CountryId): Promise<Politician
     ),
   ];
   const [stateNameDocs, partyDocs] = await Promise.all([
-    db
-      .collection<{ _id: string; name: string }>("states")
+    statesCollection<{ _id: string; name: string }>(db)
       .find({ _id: { $in: allHomeStateIds } }, { projection: { name: 1 } })
       .toArray(),
-    db
-      .collection<PoliticalParty>("politicalParties")
+    politicalPartiesCollection(db)
       .find({ countryId }, { projection: { sequentialId: 1, name: 1, color: 1, countryId: 1 } })
       .toArray(),
   ]);
@@ -138,10 +138,7 @@ export async function fetchPoliticians(countryId: CountryId): Promise<Politician
       politicalInfluence: character.politicalInfluence || 0,
       nationalInfluence: character.nationalInfluence ?? 0,
       favorability: character.favorability ?? 50,
-      // LOCAL home-currency balance (canonical source of truth) — fixes
-      // in-game bug #0553 where the politicians-list card displayed the
-      // stale anchor mirror (e.g. -$2.4M for a character with $208K real
-      // balance under floating FX).
+      // Local home-currency balance; the canonical source, not the FX-mirrored anchor value.
       funds: character.currencyBalances?.campaign ?? character.funds ?? 0,
       isNPP: false,
       isAdmin: character._userIsAdmin === true || character._userRole === "admin",

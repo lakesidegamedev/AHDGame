@@ -1,9 +1,9 @@
 import type { Db } from "mongodb";
-import type { GameState } from "@/lib/db/types/gameState";
 import { eraFromYear } from "@/lib/era/era";
 import { getNewlyActivatedMetrics } from "@/lib/era/metricCatalog";
 import { createSystemNewsPost } from "@/lib/news";
 import { sendNewsEvent, DISCORD_COLORS } from "@/lib/discordWebhooks";
+import { getGameStateCollection } from "@/lib/db/collections/gameState";
 
 export interface EraCrossingResult {
   ran: boolean;
@@ -14,19 +14,15 @@ export interface EraCrossingResult {
 }
 
 /**
- * Decade-era crossing fires in Week 1 of years ending in 0, exactly like the
- * census (`shouldRunCensus`): `currentYear` increments at year rollover, so
- * the first turn it becomes ≡0 mod 10 IS Week 1; `lastEraCrossedYear` guards
- * re-fire. No preset start year (1953/1979/1991/2019) is ≡0 mod 10, so
- * nothing fires at bootstrap.
+ * Decade-era crossing fires in Week 1 of years ending in 0, same as the census
+ * (`shouldRunCensus`): `currentYear` increments at year rollover, so the first
+ * turn it becomes ≡0 mod 10 IS Week 1; `lastEraCrossedYear` guards re-fire. No
+ * preset start year is ≡0 mod 10, so nothing fires at bootstrap.
  *
- * The whole phase is gated on `eraSystemEnabled` — while the era system is
- * disabled, no marker is stamped and no news posts (and scoring stays legacy
- * via getEraContext). When the flag is enabled mid-decade, the phase quietly
- * self-heals `currentEraId` on the next turn without posting a "decade
- * begins" wire item; news only fires on a real decade rollover. Scoring never
- * reads the stamp (it computes from currentYear), so a missed stamp cannot
- * skew math.
+ * A mid-decade start self-heals `currentEraId` on the next turn without
+ * posting a wire item; news only fires on a real decade rollover. Scoring
+ * never reads the stamp (it computes from currentYear), so a missed stamp
+ * cannot skew math.
  */
 export function shouldCrossEra(
   currentYear: number,
@@ -46,13 +42,17 @@ export async function runEraCrossing(
   db: Db,
   currentYearOverride?: number
 ): Promise<EraCrossingResult> {
-  const gameState = await db.collection<GameState>("gameState").findOne(
+  const gameState = await (
+    await getGameStateCollection(db)
+  ).findOne(
     { _id: "current" },
     {
       projection: { currentYear: 1, lastEraCrossedYear: 1, currentEraId: 1, eraSystemEnabled: 1 },
     }
   );
-  if (!gameState?.eraSystemEnabled) return { ran: false };
+  if (!gameState) return { ran: false };
+  // Emergency kill switch. The system ships on, so only an explicit false stops it.
+  if (gameState.eraSystemEnabled === false) return { ran: false };
 
   // Prefer the turn context's authoritative year: the persisted
   // gameState.currentYear is only stamped at turn end (#2059).
@@ -62,12 +62,12 @@ export async function runEraCrossing(
   const era = eraFromYear(currentYear);
 
   if (shouldCrossEra(currentYear, gameState.lastEraCrossedYear)) {
-    await db
-      .collection<GameState>("gameState")
-      .updateOne(
-        { _id: "current" },
-        { $set: { currentEraId: era.id, lastEraCrossedYear: currentYear, updatedAt: new Date() } }
-      );
+    await (
+      await getGameStateCollection(db)
+    ).updateOne(
+      { _id: "current" },
+      { $set: { currentEraId: era.id, lastEraCrossedYear: currentYear, updatedAt: new Date() } }
+    );
 
     await createSystemNewsPost(buildEraCrossingContent(era.label), "general", {
       title: `The ${era.label} Begin`,
@@ -79,9 +79,9 @@ export async function runEraCrossing(
   // Mid-decade enable: stamp the marker quietly (no news, no crossing-guard
   // update) so the flags route / admin panel show the right era immediately.
   if (gameState.currentEraId !== era.id) {
-    await db
-      .collection<GameState>("gameState")
-      .updateOne({ _id: "current" }, { $set: { currentEraId: era.id, updatedAt: new Date() } });
+    await (
+      await getGameStateCollection(db)
+    ).updateOne({ _id: "current" }, { $set: { currentEraId: era.id, updatedAt: new Date() } });
     return { ran: true, eraId: era.id, year: currentYear, healed: true };
   }
 
@@ -110,17 +110,18 @@ export async function runMetricActivation(
   db: Db,
   currentYearOverride?: number
 ): Promise<MetricActivationResult> {
-  const gameState = await db.collection<GameState>("gameState").findOne(
+  const gameState = await (
+    await getGameStateCollection(db)
+  ).findOne(
     { _id: "current" },
     {
       projection: {
         currentYear: 1,
         lastMetricActivationYear: 1,
-        eraSystemEnabled: 1,
       },
     }
   );
-  if (!gameState?.eraSystemEnabled) return { posted: [] };
+  if (!gameState) return { posted: [] };
 
   // Prefer the turn context's authoritative year: the persisted
   // gameState.currentYear is only stamped at turn end (#2059).
@@ -130,12 +131,12 @@ export async function runMetricActivation(
   const lastYear = gameState.lastMetricActivationYear;
   if (lastYear === undefined || !Number.isFinite(lastYear)) {
     // Quiet self-heal: stamp without posting (no mid-game news burst).
-    await db
-      .collection<GameState>("gameState")
-      .updateOne(
-        { _id: "current" },
-        { $set: { lastMetricActivationYear: currentYear, updatedAt: new Date() } }
-      );
+    await (
+      await getGameStateCollection(db)
+    ).updateOne(
+      { _id: "current" },
+      { $set: { lastMetricActivationYear: currentYear, updatedAt: new Date() } }
+    );
     return { posted: [], healed: true };
   }
 
@@ -153,11 +154,11 @@ export async function runMetricActivation(
     posted.push(event.news.title);
   }
 
-  await db
-    .collection<GameState>("gameState")
-    .updateOne(
-      { _id: "current" },
-      { $set: { lastMetricActivationYear: currentYear, updatedAt: new Date() } }
-    );
+  await (
+    await getGameStateCollection(db)
+  ).updateOne(
+    { _id: "current" },
+    { $set: { lastMetricActivationYear: currentYear, updatedAt: new Date() } }
+  );
   return { posted };
 }

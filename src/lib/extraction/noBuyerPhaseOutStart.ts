@@ -1,5 +1,6 @@
 import type { Db } from "mongodb";
 import type { GameConfig } from "@/lib/db/types";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 /**
  * Start turn of the no-buyer extraction phase-out for this world.
@@ -19,11 +20,9 @@ export async function resolveNoBuyerPhaseOutStartTurn(
   if (!config) return undefined;
   const stamped = config.extractionNoBuyerPhaseOutStartTurn;
   if (typeof stamped === "number" && Number.isFinite(stamped)) return stamped;
-  await db
-    .collection<GameConfig>("gameConfig")
-    .updateOne(
-      { _id: "default", extractionNoBuyerPhaseOutStartTurn: { $exists: false } },
-      { $set: { extractionNoBuyerPhaseOutStartTurn: turn } }
-    );
+  await gameConfigCollection(db).updateOne(
+    { _id: "default", extractionNoBuyerPhaseOutStartTurn: { $exists: false } },
+    { $set: { extractionNoBuyerPhaseOutStartTurn: turn } }
+  );
   return turn;
 }

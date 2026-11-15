@@ -16,14 +16,12 @@ import { runAltDigest } from "@/lib/altDetection/digest";
 
 export const POST = withAdminRoute(async (_auth, request: Request) => {
   const db = await getDb();
-  // Deep link to the Alts admin sub-tab (`src/components/admin/tabs/AdminTabsConfig.tsx`),
-  // same `?tab=players&sub=alts` convention used elsewhere (e.g.
-  // `AuditExplorer.tsx`'s cross-link). Best-effort — an invalid
+  // Deep link to the Alt detection tool in the control panel. Best-effort — an invalid
   // `request.url` (shouldn't happen in a real Next.js request) just omits
   // the link rather than failing the trigger.
   let adminUrl: string | undefined;
   try {
-    adminUrl = new URL("/admin?tab=players&sub=alts", request.url).toString();
+    adminUrl = new URL("/control/safety/alts", request.url).toString();
   } catch {
     adminUrl = undefined;
   }

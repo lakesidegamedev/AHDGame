@@ -7,12 +7,14 @@ import { pushDevices } from "./devices";
 import { buildPushPreview, shouldPush } from "./policy";
 import { providerConfigured, sendNativePush } from "./providers";
 import type { PushDevice } from "./types";
+import { usersCollection } from "@/lib/db/repositories/users";
+import { notificationsCollection } from "@/lib/db/repositories/notifications";
 
 async function deliverDevice(db: Db, device: PushDevice): Promise<void> {
   const devices = await pushDevices(db);
   const owned = { _id: device._id, revision: device.revision };
   const now = new Date();
-  const user = await db.collection<User>("users").findOne(
+  const user = await usersCollection(db).findOne(
     { _id: device.userId },
     {
       projection: { notificationPreferences: 1 },
@@ -22,8 +24,7 @@ async function deliverDevice(db: Db, device: PushDevice): Promise<void> {
     await devices.deleteOne(owned);
     return;
   }
-  const notifications = await db
-    .collection<Notification>("notifications")
+  const notifications = await notificationsCollection(db)
     .find(
       {
         userId: device.userId,

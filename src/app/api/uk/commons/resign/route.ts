@@ -3,7 +3,7 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { getDb } from "@/lib/mongodb";
 import { requireAuthWithCharacter } from "@/lib/api/requireAuth";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
-import { resignCommonsSeat } from "@/lib/uk/elections/commonsSeatCommands";
+import { resignCommonsSeat } from "@/lib/countries/uk/elections/commonsSeatCommands";
 
 const NO_STORE = { "Cache-Control": "no-store, no-transform" };
 

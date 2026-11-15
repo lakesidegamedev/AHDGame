@@ -1,7 +1,7 @@
 /** A contractual cancellation refund pays secured principal before owner cash. */
 import { ObjectId, type Db } from "mongodb";
 import type { BankLoan } from "@/lib/db/types/bank";
-import type { Corporation, CorporateSector } from "@/lib/db/types/corporation";
+import type { CorporateSector } from "@/lib/db/types/corporation";
 import { ensureFund } from "./insurance";
 import { acquireConstructionLoanLock, releaseConstructionLoanLock } from "./constructionLoanLock";
 import {
@@ -18,6 +18,9 @@ import {
   cancellationPayoutTransition,
   type ConstructionCancellationQuote,
 } from "./rules/constructionRecovery";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { bankLoansCollection } from "@/lib/db/repositories/bankLoans";
 
 const complete = (result: SettlementResult) =>
   !result.error && ["applied", "replayed"].includes(result.status);
@@ -37,7 +40,7 @@ export async function cancelFinancedConstruction(input: {
 }): Promise<Result> {
   if (!input.enabled) return { ok: false, error: "Construction finance is not enabled" };
   const { db, sectorId, borrowerId, turn } = input;
-  const sectors = db.collection<CorporateSector>("corporateSectors");
+  const sectors = corporateSectorsCollection(db);
   const sector = await sectors.findOne(
     { _id: sectorId, corporationId: borrowerId },
     {
@@ -93,9 +96,7 @@ export async function cancelFinancedConstruction(input: {
     if (cleared.matchedCount !== 1) return { ok: false, error: "Cancellation recovery changed" };
     claim = { ...claim, cancellation: undefined };
   }
-  const loan = await db
-    .collection<BankLoan>("bankLoans")
-    .findOne({ _id: new ObjectId(claim.loanId) });
+  const loan = await bankLoansCollection(db).findOne({ _id: new ObjectId(claim.loanId) });
   if (
     !loan?.constructionCollateral ||
     loan.constructionCollateral.claimId !== claim.claimId ||
@@ -134,9 +135,10 @@ export async function cancelFinancedConstruction(input: {
   if (!owned) return { ok: false, error: "Another receipt owns the construction loan" };
   let quote = claim.cancellation;
   if (!quote) {
-    const bank = await db
-      .collection<Corporation>("corporations")
-      .findOne({ _id: loan.bankCorporationId }, { projection: { bankCharter: 1 } });
+    const bank = await corporationsCollection(db).findOne(
+      { _id: loan.bankCorporationId },
+      { projection: { bankCharter: 1 } }
+    );
     const charter = bank?.bankCharter;
     const liveEpoch =
       charter?.charteredTurn === claim.charteredTurn &&
@@ -281,7 +283,7 @@ export async function cancelFinancedConstruction(input: {
           },
         }
       ),
-      db.collection<BankLoan>("bankLoans").findOne({ _id: loan._id }),
+      bankLoansCollection(db).findOne({ _id: loan._id }),
     ]);
     if (!updatedSector?.constructionFinancing || !updatedLoan)
       return { ok: false, error: "Missing conversion refund receipt" };
@@ -322,8 +324,7 @@ export async function recoverConstructionCancellations(
   db: Db,
   turn: number
 ): Promise<Array<{ key: string; error: string }>> {
-  const sectors = await db
-    .collection<CorporateSector>("corporateSectors")
+  const sectors = await corporateSectorsCollection(db)
     .find(
       {
         "constructionFinancing.cancellation.turn": { $lt: turn },

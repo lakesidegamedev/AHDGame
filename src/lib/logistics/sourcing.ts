@@ -1,10 +1,8 @@
 /**
- * Landed-price sourcing pass — RECORD-ONLY (interstate-logistics plan Rev 4,
- * build-order step 3).
+ * Landed-price sourcing pass. RECORD-ONLY.
  *
- * For each shipped commodity, each state with unmet local demand ranks every
- * candidate seller (same-country states with spare supply, plus foreign
- * countries with national spare) by landed price:
+ * For each shipped commodity, each state with unmet local demand ranks
+ * candidates by landed price:
  *
  *   landed = seller's ask + shipping (per hop, by freight class) + tariff
  *
@@ -12,17 +10,13 @@
  * spare, and the origin state's shared freight capacity. Intra-state fill is
  * free and consumes no capacity.
  *
- * This pass MUTATES NOTHING in the price model. It reads copies of the state
- * and country balances and returns a flow ledger; supply/demand, prices and the
- * aggregate trade clearing behave exactly as before. The ledger is observable
- * evidence for tuning the constants below before money wiring (step 5) flips on.
+ * MUTATES NOTHING in the price model: reads copies of balances and returns a
+ * flow ledger. Supply, demand, prices and trade clearing behave as before.
  *
- * Asks are LAST TURN's stored state/national prices (plan open question 1:
- * fixed asks, one pass, predictable). For planned economies the stored national
- * price already carries the administered value, so administered asks come for
- * free. Capacity is consumed in buyer fill order rather than by a global
- * least-attractive-first ordering — acceptable for a record-only v1, revisit
- * with money wiring if the dark ledger shows order artifacts.
+ * Asks are last turn's stored prices: fixed, one pass, predictable. For
+ * planned economies stored national prices already carry the administered
+ * value. Capacity is consumed in buyer fill order rather than globally; revisit
+ * with money wiring if the ledger shows order artifacts.
  */
 
 import type { CommodityType } from "@/lib/constants/commodities";
@@ -61,24 +55,21 @@ export { FREIGHT_TEU_PER_UNIT_HOP } from "./freightClass";
 /**
  * Freight (TEU) consumed per commodity unit per state-line crossing, by class.
  * Special care hauls fewer goods per TEU-equivalent, hence the higher factor.
- *
- * Calibrated 10× up from the 0.004/0.012 v1 seeds (ticket #1039): live
- * sourcingNetworkLoad showed interstate haul using only ~6% of NY freight
- * supply, so the Logistics map read as a ~4 TEU state market. Commodity unit
- * counts and freight TEU supply already share {@link getEraUnitScale}, so this
- * ratio is era-invariant — see {@link freightTeuPerUnitHop}.
+ * Calibrated so interstate haul is visible on the Logistics map rather than
+ * reading as a tiny state market. Commodity unit counts and freight TEU
+ * supply share {@link getEraUnitScale}, so this ratio is era-invariant; see
+ * {@link freightTeuPerUnitHop}.
  */
 /**
  * Price weight per commodity unit per state-line crossing, by class.
  *
- * This deliberately remains at the original v1 calibration while
- * {@link FREIGHT_TEU_PER_UNIT_HOP} keeps ticket #1039's 10x capacity weight.
- * The two signals measure different things: the capacity weight makes a haul
- * visible on the Logistics map, while this weight converts the freight-market
- * price into a shipping charge buyers can compare with the cargo price.
- * Coupling them made the capacity calibration multiply every shipping bill by
- * ten and priced low-value cargo out before the network could become capacity
- * bound (production market audit, turn 322).
+ * Deliberately kept at the original v1 calibration while
+ * {@link FREIGHT_TEU_PER_UNIT_HOP} carries the capacity weight. The capacity
+ * weight makes a haul visible on the Logistics map; this weight converts the
+ * freight-market price into a shipping charge buyers can compare with the
+ * cargo price. Coupling them made the capacity calibration multiply every
+ * shipping bill and priced low-value cargo out before the network could
+ * become capacity bound.
  */
 export const FREIGHT_PRICE_TEU_PER_UNIT_HOP: Record<FreightClass, number> = {
   bulk: 0.001,
@@ -127,15 +118,10 @@ export const GRID_WHEELING_PER_HOP_FRACTION = 0.02;
  * How far a state's haulage may be pushed past its nominal shared capacity
  * before nothing more moves, and what the overflow costs.
  *
- * The capacity gate used to be a hard wall: once a state's freight capacity ran
- * dry, the remaining units simply did not ship and the seller ate them with no
- * signal. Measured on prod at t225 that wall was a large part of why 60.4% of
- * world production sat in a state that did not need it while 28.7% of world
- * demand went unmet. Freight should be a COST, not a wall (owner decision
- * 2026-08-19): past nominal capacity the network still moves goods, at a
- * surcharge that rises with how far past capacity it is being pushed, and the
- * buyer's tolerance ceiling is what finally stops the flow. That keeps a real
- * economic limit on long hauls while removing the silent hard stop.
+ * Past nominal capacity the network still moves goods, at a surcharge that
+ * rises with how far past capacity it is pushed; the buyer's tolerance
+ * ceiling is what finally stops the flow. Freight is a COST, not a hard wall,
+ * so a state can still ship even when its own capacity is exhausted.
  */
 export const FREIGHT_CONGESTION_OVERFLOW = 0.5;
 /**
@@ -265,7 +251,7 @@ export interface SourcingCommoditySummary {
 }
 
 /**
- * Exact delivered trade between two countries for one commodity (#2333).
+ * Exact delivered trade between two countries for one commodity.
  * `exporter === importer` is same-country interstate haulage. Accumulated at
  * the accept site, so the itemization floor on `flows` cannot drop small legs.
  * Money fields are in the sourcing pass's price units (the stored commodity
@@ -288,10 +274,10 @@ export interface SourcingPairAggregate {
 }
 
 /**
- * Buyer-intent outcome for one destination country and commodity (#2333).
- * The unmet-by-reason counters follow exactly the accounting of the global
- * {@link SourcingCommoditySummary}: a request refused by one seller's capacity
- * is counted at that gate even if another seller later serves it.
+ * Buyer-intent outcome for one destination country and commodity.
+ * Unmet-by-reason counters match the global {@link SourcingCommoditySummary}:
+ * a request refused at one seller's gate counts there even if another seller
+ * later serves it.
  */
 export interface SourcingDestinationAggregate {
   commodity: CommodityType;
@@ -302,7 +288,7 @@ export interface SourcingDestinationAggregate {
   supplyUnits: number;
   /**
    * Spare offered to foreign buyers: national supply minus demand (floored at
-   * 0), plus state spare the country's own buyers passed over (#4504).
+   * 0), plus state spare the country's own buyers passed over.
    */
   foreignOfferUnits: number;
   localUnits: number;
@@ -386,32 +372,21 @@ export interface SourcingResult {
    * transit, so delivered != dispatched and the arithmetic does not close.
    *
    * The sell side needs this number. Clearing is country-scoped while freight
-   * settles state by state, and with neither side knowing about the other a
-   * seller is credited with output no network could ever deliver: measured on
-   * prod at t225, 60.4% of world production was made in a state that did not
-   * need it while 28.7% of world demand went unmet.
+   * settles state by state, so without it a seller is credited with output no
+   * network could deliver.
    */
   unplacedSupplyByState: Map<CommodityType, Map<string, number>>;
   /**
-   * Canonical freight billing v1 (markets plan Phase 4): shipping money per
-   * DESTINATION state and commodity, from accepted domestic hauled flows only.
+   * Shipping money per DESTINATION state and commodity, from accepted domestic
+   * hauled flows only. charge = units x shippingPerUnit plus the congestion
+   * surcharge those units paid, accumulated at the accept site so itemization
+   * floor on `flows` cannot drift the aggregate.
    *
-   * charge = units x shippingPerUnit (freightPrice x priceTeuPerUnitHop x hops
-   * x route multiplier) plus the congestion surcharge those units actually
-   * paid. Accumulated at the accept site, like {@link landedPremiumByDestState},
-   * so the itemization floor on `flows` cannot make the aggregate drift.
+   * Excluded so the transfer identity holds exactly: refused hauls (no units
+   * moved), grid legs (wheeled off seller ask), imports (no origin network).
    *
-   * Deliberately excluded, so the transfer identity below holds exactly:
-   *  - refused hauls (capacity- or tolerance-bound): no units moved, so no TEU
-   *    is billed;
-   *  - grid legs: wheeling is priced off the seller's ask, not the freight
-   *    market, and the haulage fleet earns nothing from the wire;
-   *  - imports: no origin-state freight network is modeled for foreign
-   *    sellers, so billing the sea leg would create money with no earner.
-   *
-   * Identity: the sum over this map equals the sum over
-   * {@link haulRevenueByOriginState}. Billing is a transfer to the origin
-   * state's freight network, never a sink.
+   * Identity: sum over this map equals sum over
+   * {@link haulRevenueByOriginState}. Transfer, never a sink.
    */
   freightChargesByDestState: Map<string, Map<CommodityType, number>>;
   /**
@@ -436,12 +411,12 @@ export interface SourcingResult {
    * A buyer who walked away over the landed price is a PRICE failure and is
    * deliberately excluded: it belongs to `toleranceBoundUnits`, and calling it
    * a delivery failure tells the seller to spend on trucks that would not have
-   * sold the unit anyway (ticket #1180).
+   * sold the unit anyway.
    */
   deliveryLimitedSupplyByState: Map<CommodityType, Map<string, number>>;
-  /** Exact country-pair delivered trade, for the research trade panel (#2333). */
+  /** Exact country-pair delivered trade, for the research trade panel. */
   pairAggregates: SourcingPairAggregate[];
-  /** Exact per-destination-country buyer-intent outcome (#2333). */
+  /** Exact per-destination-country buyer-intent outcome. */
   destinationAggregates: SourcingDestinationAggregate[];
 }
 
@@ -820,7 +795,7 @@ export function runSourcingPass(inputs: SourcingInputs): SourcingResult {
     // Units of an origin state's spare that a willing, in-tolerance buyer wanted
     // and that state's own freight network could not haul. Accumulated at the
     // capacity gate below, where the origin IS known, rather than inferred from
-    // world totals afterwards (ticket #1180).
+    // world totals afterwards.
     const capacityBoundByOriginState = new Map<string, number>();
     // Same rejected requests expressed in TEU. At the end of the commodity
     // pass this is reduced to cargo that is still unplaced, matching the
@@ -1377,11 +1352,8 @@ export function runSourcingPass(inputs: SourcingInputs): SourcingResult {
           if (cand.originType === "state") destination.interStateUnits += take;
           else destination.importUnits += take;
 
-          // Delivered-units + extra-cost accumulation for money wiring, regardless
-          // of the itemization floor below (that floor only caps the doc's flow
-          // list; the aggregates must stay exact).
-          // The share an owner hauled on its own trucks adds no freight cost
-          // to the buyer (stage 2 only; zero otherwise).
+          // Aggregates stay exact; the itemization floor only caps the doc's flow list.
+          // An owner's own trucks add no freight cost to the buyer (stage 2 only).
           const marketOwnShare =
             !cand.ownRoute && teuConsumed > 0 ? ownCapacityTeu / teuConsumed : 0;
           if (!cand.ownRoute) {
@@ -1479,17 +1451,16 @@ export function runSourcingPass(inputs: SourcingInputs): SourcingResult {
     serveBuyers(sortedStates, false);
     ownFreight.release(commodity, "market");
 
-    // The national pool above is supply minus demand, fixed before anyone
-    // buys. When a country's own buyers take cheaper imports (or cannot reach
-    // their own states), the domestic spare they passed over is still held
-    // by its states but was never offered abroad, so it went unplaced while
-    // foreign buyers stayed short (#4504). The first pass's fair shares also
-    // reserve pool for buyers a cheaper seller then filled, and nothing
-    // released those reservations (#4524). So offer the unused pool plus the
-    // displaced spare, fair-shared again, to the buyers still unmet. Exports
-    // drew from both the pool and the states, so the held spare already
-    // contains the unused pool: displaced is only what states hold beyond it,
-    // and the offer is never counted twice.
+    // The national pool is supply minus demand, fixed before anyone buys.
+    // When a country's own buyers take imports, the domestic spare they passed
+    // over stays held by its states but was never offered abroad, so it goes
+    // unplaced while foreign buyers stay short. The first pass's fair shares
+    // also reserve pool for buyers a cheaper seller then filled, and nothing
+    // released those reservations. So offer the unused pool plus the displaced
+    // spare, fair-shared again, to buyers still unmet. Exports drew from both
+    // the pool and the states, so held spare already contains the unused pool:
+    // displaced is only what states hold beyond it, and the offer is never
+    // counted twice.
     if (sortedStates.some(({ stateId }) => (unmetByState.get(stateId) ?? 0) > 0)) {
       initialForeignSpareByCountry.clear();
       foreignAllocatedByBuyer.clear();
@@ -1516,18 +1487,9 @@ export function runSourcingPass(inputs: SourcingInputs): SourcingResult {
     // the freight seam. Kept unrounded; the price turn rounds on persist.
     unplacedSupplyByState.set(commodity, new Map(spareByState));
 
-    // Split that spare by REASON, per state, from the capacity gate's own
-    // record of which origin could not haul (ticket #1180).
-    //
-    // The previous rule divided world residual unmet demand by world spare and
-    // stamped that one ratio on every state. It could not be right: the ratio
-    // carries no local information, so a state with idle trucks and a plain
-    // glut was blamed at exactly the same rate as a state whose network was
-    // genuinely full. Measured on prod at t361 it read 0.98947 in NJ, NY, OH,
-    // TX and CA alike, which lit the freight pill on essentially every physical
-    // sector in the world and told all of them to build freight they did not
-    // need. It also counted tolerance-bound demand, buyers refusing the landed
-    // price, as a delivery failure, which is the opposite instruction.
+    // Split spare capacity by reason and state: only origin capacity that
+    // could not haul elsewhere counts, so states with idle trucks are not
+    // blamed like genuinely full networks.
     const deliveryLimited = new Map<string, number>();
     for (const [stateId, spare] of spareByState) {
       // Bounded by what is actually left over: capacity-bound units the state
@@ -1546,12 +1508,12 @@ export function runSourcingPass(inputs: SourcingInputs): SourcingResult {
     }
     deliveryLimitedSupplyByState.set(commodity, deliveryLimited);
 
-    // The owner's own slice of that state figure. A route owner's goods leave a
-    // state on its own routes first and then in its seller share of every
-    // market haul, so what it shipped is known exactly. The state's stuck units
-    // are then spread over what every seller still holds unshipped: listed
-    // owners by their own count, everyone else as the remainder. Owners not
-    // listed here have no entry and keep the state figure.
+    // The owner's own slice of that state figure. A route owner's goods leave
+    // a state on its own routes first, then in its seller share of each market
+    // haul, so its shipped units are known exactly. The state's stuck units
+    // are spread over what each seller still holds unshipped: listed owners by
+    // their own count, everyone else as the remainder. Owners not listed keep
+    // the state figure.
     if (marketStage && isHauledClass(freightClass)) {
       const byOwnerState = new Map<string, Map<string, number>>();
       for (const [stateId, owners] of ownFreightMarketSupply!.get(commodity) ?? []) {

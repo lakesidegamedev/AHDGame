@@ -1,6 +1,6 @@
-export const iteration1Content = `**Iterations:** *Alpha 1 (not documented)*  ·  [[Beta 1]] *(concluded)*  ·  [[Beta 2]] *(concluded)*  ·  **Iteration 1** *(concluded)*
+export const iteration1Content = `**Iterations:** *Alpha 1 (not documented)*  ·  [[Beta 1]] *(concluded)*  ·  [[Beta 2]] *(concluded)*  ·  **Iteration 1** *(concluded)*  ·  [[Iteration 2]] *(concluded)*
 
-*[[Beta 1]] and [[Beta 2]] are preserved snapshots of the two public betas. Iteration 1 is the chronicle of the world that followed, from its 1953 opening into 1979. It has since concluded, and the live world is now Iteration 2.*
+*[[Beta 1]] and [[Beta 2]] are preserved snapshots of the two public betas. Iteration 1 is the chronicle of the world that followed, from its 1953 opening into 1979. It has since concluded. [[Iteration 2]], a 1991 world, followed it and has also concluded; the live world now begins in 2027.*
 
 ---
 
@@ -392,5 +392,5 @@ All three recorded wars are now resolved, and the latest supply-chain disruption
 
 ---
 
-*Drafted and updated from read-only live database snapshots through turn 1,302 on 2026-10-02, in-game year 1979. Iteration 1 has since concluded; the live world is now Iteration 2.*
+*Drafted and updated from read-only live database snapshots through turn 1,302 on 2026-10-02, in-game year 1979. Iteration 1 has since concluded; it was followed by [[Iteration 2]].*
 `;

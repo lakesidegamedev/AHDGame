@@ -1,32 +1,25 @@
 /**
  * How many capacity units one nameable FACILITY is.
  *
- * The engine's capacity unit is "one output unit per day", and its ₳ value is
- * the sector's RPU — which for cheap-commodity mixes is tiny (an energy unit
- * nameplates ~₳92/day, extraction ~₳89) and for expensive ones huge (an
- * automobile unit ~₳50,000/day). The interface inherited that unit raw, so the
- * build dialog sold "power stations" worth ₳92 a day and a player had to order
- * hundreds of them before the money meant anything. The noun was attached to
- * something 1/280th the size of the thing it names.
+ * The engine's capacity unit is "one output unit per day", valued at the
+ * sector's RPU, which ranges from ~₳92/day (energy) to ~₳50,000/day (autos).
+ * Exposed raw, the build dialog would sell "power stations" worth ₳92/day and
+ * require hundreds to matter. This table fixes the QUANTUM, not the economics:
+ * one facility = `plantSizeUnits(type)` units, sized so a facility's nameplate
+ * lands near {@link FACILITY_TARGET_DAILY_REVENUE_ANCHOR} of daily revenue
+ * whatever the sector's mix prices at. The build dialog counts and prices in
+ * facilities; the API, engine, storage and market share stay in units. Nothing
+ * here is persisted or read by the turn.
  *
- * This table fixes the QUANTUM, not the economics: one facility =
- * `plantSizeUnits(type)` capacity units, sized so a facility's nameplate lands
- * near {@link FACILITY_TARGET_DAILY_REVENUE_ANCHOR} of daily revenue whatever
- * the sector's mix prices at. The build dialog counts and prices in
- * facilities; the API, the engine, storage and market share stay in units.
- * Nothing here is persisted or read by the turn.
- *
- * ERA-INVARIANT BY CONSTRUCTION. Under the era unit basis
- * (`getEraUnitScale`), a 1953 world's RPU and its "meaningful daily revenue"
- * both shrink by the same nominal ratio, so units-per-facility — their
- * quotient — is the same number in every era. One authored table serves all
- * worlds; do not add an era dimension here.
+ * ERA-INVARIANT BY CONSTRUCTION: under `getEraUnitScale`, a 1953 world's RPU
+ * and its "meaningful daily revenue" shrink by the same nominal ratio, so
+ * units-per-facility, their quotient, is the same in every era. One table
+ * serves all worlds; do not add an era dimension.
  *
  * VALUES ARE AUTHORED, NOT COMPUTED, so a base-price tuning pass cannot
- * silently resize every facility in the game. `facilityQuantum.test.ts` pins
- * each entry to within tolerance of the target formula and fails when a
- * strategy/price change drifts a sector's RPU far enough that its facility
- * size stops being honest — at which point the author re-rounds it on purpose.
+ * silently resize every facility. `facilityQuantum.test.ts` pins each entry to
+ * within tolerance of the target formula and fails when a strategy/price change
+ * drifts a sector's RPU far enough that its facility size stops being honest.
  */
 
 import type { OperatingSectorType } from "@/lib/constants/corporations";

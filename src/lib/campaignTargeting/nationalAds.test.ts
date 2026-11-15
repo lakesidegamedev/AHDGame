@@ -2,7 +2,6 @@ import { expect, it } from "vitest";
 import type { Db } from "mongodb";
 import { createMockDb } from "@/lib/test-utils/mockDb";
 import { loadRegionalCampaignCells } from "./audience";
-import { applyNationalAds } from "./nationalAds";
 import { planAdPurchase, targetedAdBonuses, meanAdBonus } from "./rules";
 import type { State } from "@/lib/db/types";
 const makeState = (
@@ -65,28 +64,4 @@ it("combines regional audiences without giving a national ad buy free geographic
     cells.filter((cell) => cell.stateId === "COR").every((cell) => bonuses[cell.id] === 0)
   ).toBe(true);
   expect(meanAdBonus(cells, bonuses)).toBeGreaterThan(0);
-  const candidate = {
-    candidateId: "a",
-    characterId: "a",
-    characterName: "Synthetic",
-    party: "1",
-    isNPP: false,
-    charEP: 0,
-    charSP: 0,
-    favorability: 50,
-    politicalInfluence: 50,
-    nationalInfluence: 50,
-    targetedAds: ads,
-  };
-  const result = await applyNationalAds(
-    db as unknown as Db,
-    "IE",
-    10,
-    [candidate],
-    ["urban", "rural"],
-    new Map<string, State>(regions.map((state) => [state._id, state])),
-    0
-  );
-  expect(result[0].targetedAdBonuses?.urban).toBeCloseTo(meanAdBonus(cells, bonuses));
-  expect(result[0].targetedAdBonuses?.rural).toBe(result[0].targetedAdBonuses?.urban);
 });

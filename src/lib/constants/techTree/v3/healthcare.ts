@@ -473,4 +473,94 @@ export const HEALTHCARE_V3: V3LaneContent = {
       ],
     },
   ],
+  "2039": [
+    {
+      name: "Agentic Care Coordination",
+      description: "Agents book, follow up and chase results for every patient.",
+      effects: [{ kind: "laborCostReduction", pct: 0.06 }],
+    },
+    {
+      name: "Health Outcome Subscriptions",
+      description: "Members pay a yearly fee to stay well rather than paying per visit.",
+      effects: [
+        { kind: "plantOutput", pct: 0.018 },
+        { kind: "marketingStrength", flat: 16 },
+      ],
+    },
+    {
+      name: "Clinical AI Certification",
+      description: "Certified clinical models clear new regulation ahead of rivals.",
+      effects: [{ kind: "dominanceShield", pct: 0.13 }],
+    },
+    {
+      name: "Autonomous Hospital Services",
+      description: "Robots run pharmacy, supply and cleaning around the clinical staff.",
+      effects: [
+        { kind: "laborCostReduction", pct: 0.1 },
+        { kind: "inputCost", commodity: "pharmaceuticals", pct: 0.1 },
+      ],
+    },
+    {
+      name: "Engineered Cure Programs",
+      description: "One-time engineered cures price against a lifetime of avoided treatment.",
+      effects: [
+        { kind: "plantOutput", pct: 0.03 },
+        { kind: "outputRate", commodity: "healthcare_services", pct: 0.07 },
+      ],
+    },
+    {
+      name: "National Biomanufacturing Partnerships",
+      description:
+        "Standing government contracts for vaccine and biologic capacity guarantee funding.",
+      effects: [
+        { kind: "dominanceShield", pct: 0.24 },
+        { kind: "expansionDiscount", pct: 0.16 },
+      ],
+    },
+  ],
+  "2049": [
+    {
+      name: "Autonomous Care Pathways",
+      description: "Agents run each patient's care from first symptom to recovery.",
+      effects: [{ kind: "laborCostReduction", pct: 0.065 }],
+    },
+    {
+      name: "Healthspan Memberships",
+      description: "Members pay a yearly fee for added healthy years, not for treatment.",
+      effects: [
+        { kind: "plantOutput", pct: 0.019 },
+        { kind: "marketingStrength", flat: 17 },
+      ],
+    },
+    {
+      name: "Gene Therapy Licensing",
+      description: "Certified editing platforms clear new gene therapy rules ahead of rivals.",
+      effects: [{ kind: "dominanceShield", pct: 0.14 }],
+    },
+    {
+      name: "Robotic Care Campuses",
+      description: "Robots run surgery prep, pharmacy and wards around a small clinical team.",
+      effects: [
+        { kind: "laborCostReduction", pct: 0.1 },
+        { kind: "inputCost", commodity: "pharmaceuticals", pct: 0.11 },
+      ],
+    },
+    {
+      name: "One-Dose Cure Portfolios",
+      description: "Single-dose gene cures price against a lifetime of avoided treatment.",
+      effects: [
+        { kind: "plantOutput", pct: 0.03 },
+        { kind: "outputRate", commodity: "healthcare_services", pct: 0.075 },
+      ],
+    },
+    {
+      name: "Planetary Biodefense Contracts",
+      description:
+        "Standing contracts to answer any pandemic within weeks guarantee long-term funding.",
+      effects: [
+        { kind: "dominanceShield", pct: 0.25 },
+        { kind: "expansionDiscount", pct: 0.17 },
+      ],
+    },
+  ],
 };

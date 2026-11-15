@@ -1,0 +1,110 @@
+{
+  "config": {
+    "id": "AT",
+    "name": "Austria",
+    "code": "AT",
+    "status": "coming-soon",
+    "flagEmoji": "🇦🇹",
+    "regionLabel": "Region",
+    "regionLabelPlural": "Regions",
+    "executiveTitle": "Chancellor",
+    "executiveRealmPhrase": "Austria",
+    "executiveLabel": "Ballhausplatz",
+    "executivePath": "/country/at/executive",
+    "governmentType": "parliamentaryRepublic",
+    "governmentTypeLabel": "Parliamentary Republic",
+    "descriptor": "A parliamentary republic where a Chancellor governs at the confidence of the unicameral 183-seat Nationalrat; constitutionally neutral since 1955 and outside both alliances.",
+    "heroImage": "https://flagcdn.com/w640/at.png",
+    "overviewPath": "/country/at",
+    "mapPath": "/country/at/map",
+    "currencyCode": "ATS",
+    "centralGovernmentLabel": "Federal Budget",
+    "financeMinisterCabinetId": "minister_of_finance",
+    "majorPartyIds": ["at_spo", "at_ovp"],
+    "partyCreationNPPs": { "statesRequired": 2, "lockHomeState": false, "nppsPerState": 1 },
+    "legislature": {
+      "name": "Nationalrat",
+      "path": "/country/at/legislature",
+      "bicameral": false,
+      "lowerChamber": {
+        "key": "nationalrat",
+        "name": "Nationalrat",
+        "shortName": "Nationalrat",
+        "seats": 183,
+        "description": "183 deputies elected by proportional representation for four-year terms."
+      },
+      "upperChamber": {
+        "key": "bundesrat",
+        "name": "Bundesrat",
+        "shortName": "Bundesrat",
+        "seats": 61,
+        "description": "61 members delegated by the nine Landtage in proportion to Land population; a suspensive-veto chamber outside the confidence loop."
+      }
+    },
+    "officeTypes": [
+      {
+        "key": "primeMinister",
+        "label": "Chancellor",
+        "isExecutive": true,
+        "isSubNational": false,
+        "labelPlural": "Chancellors"
+      },
+      {
+        "key": "president",
+        "label": "President",
+        "isExecutive": true,
+        "isSubNational": false,
+        "isHeadOfState": true,
+        "labelPlural": "Presidents"
+      },
+      {
+        "key": "deputy",
+        "label": "Deputy",
+        "chamberKey": "nationalrat",
+        "isExecutive": false,
+        "isSubNational": false,
+        "labelPlural": "Deputies"
+      },
+      {
+        "key": "centralBankChair",
+        "label": "Governor of the Oesterreichische Nationalbank",
+        "isExecutive": false,
+        "isSubNational": false,
+        "labelPlural": "Governors of the Oesterreichische Nationalbank"
+      }
+    ],
+    "electionSystems": {
+      "lowerChamber": "pr_hareQuota",
+      "headOfGovernment": "parliamentary",
+      "headOfState": "ceremonial"
+    },
+    "lowerElectionSystem": { "snapElectionsAllowed": true },
+    "centralBank": {
+      "name": "Oesterreichische Nationalbank",
+      "abbreviation": "OeNB",
+      "heroImage": "https://flagcdn.com/w640/at.png",
+      "defaultPrimeRate": 5.5
+    },
+    "usdExchangeRate": 0.075
+  },
+  "eraOverrides": {
+    "2027-default": { "usdExchangeRate": 1.0923913043478262 },
+    "1991-default": { "usdExchangeRate": 0.08564638036984938 },
+    "1953-default": {
+      "descriptor": "A parliamentary republic where a Chancellor governs at the confidence of the unicameral 165-seat Nationalrat, while Allied occupation zones still divide the country.",
+      "legislature": {
+        "name": "Nationalrat",
+        "path": "/country/at/legislature",
+        "bicameral": false,
+        "lowerChamber": {
+          "key": "nationalrat",
+          "name": "Nationalrat",
+          "shortName": "Nationalrat",
+          "seats": 165,
+          "description": "165 deputies of the Nationalrat (the pre-1971 chamber size), elected by proportional representation under the ÖVP–SPÖ grand coalition."
+        }
+      },
+      "usdExchangeRate": 0.038461538461538464
+    }
+  }
+}

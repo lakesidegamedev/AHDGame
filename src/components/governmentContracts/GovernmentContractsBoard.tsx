@@ -1,4 +1,6 @@
 "use client";
+import { regionUrl } from "@/lib/urls";
+
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -353,7 +355,7 @@ function ExtractionScope({
       <p>{t("capacityBasis")}</p>
       <Link
         className="inline-block text-primary"
-        href={`/country/${row.countryId.toLowerCase()}/region/${row.terms.stateId}?tab=resources`}
+        href={`${regionUrl(row.countryId.toLowerCase(), row.terms.stateId)}?tab=resources`}
       >
         {t("regionResources")}
       </Link>

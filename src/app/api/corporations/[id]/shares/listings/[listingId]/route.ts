@@ -9,6 +9,7 @@ import { isForexEnabled } from "@/lib/currency/featureFlag";
 import { cancelShareListingAndRefund } from "@/lib/corporations/cancelShareListing";
 import type { ShareListing } from "@/lib/db/types";
 import { rejectDuringTurn } from "@/lib/api/rejectDuringTurn";
+import { shareListingsCollection } from "@/lib/db/repositories/shareListings";
 
 interface RouteParams {
   params: Promise<{ id: string; listingId: string }>;
@@ -42,9 +43,7 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
       return errorResponse(400, "Invalid listing ID");
     }
 
-    const listing = await db
-      .collection<ShareListing>("shareListings")
-      .findOne({ _id: new ObjectId(listingId) });
+    const listing = await shareListingsCollection(db).findOne({ _id: new ObjectId(listingId) });
 
     if (!listing) {
       return errorResponse(404, "Listing not found");

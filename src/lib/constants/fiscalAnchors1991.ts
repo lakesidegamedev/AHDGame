@@ -1,44 +1,24 @@
 /**
  * 1991 national accounts and fiscal anchors for the eight Western European
- * economies whose seeds were authored in 1979 local currency (#3034): FR, IT,
- * ES, SE, TR, GR, AT, FI.
+ * economies whose seeds were authored in 1979 local currency: FR, IT, ES, SE, TR,
+ * GR, AT, FI.
  *
- * Pure data, no imports, so the currency table, the budget seeds and the
- * regional bundles all read ONE sourced set. Every number below is either
- * copied from a named public series or derived from one by the stated
- * conversion. Nothing is estimated.
+ * Pure data, no imports, so the currency table, the budget seeds and the regional
+ * bundles all read ONE sourced set. Every number is either copied from a named
+ * public series or derived by the stated conversion; nothing is estimated.
  *
- * SOURCES (retrieved 2026-10-05, World Bank release dated 2026-07-13)
- *   GDP, current LCU:   World Bank WDI NY.GDP.MKTP.CN, year 1991
- *   GDP, current US$:   World Bank WDI NY.GDP.MKTP.CD, year 1991
- *   FX, LCU per US$:    World Bank WDI PA.NUS.FCRF (period average), year 1991
- *   Real growth, CPI:   World Bank WDI NY.GDP.MKTP.KD.ZG, FP.CPI.TOTL.ZG, year 1991
- *   Gov expenditure:    IMF World Economic Outlook, general government total
- *                       expenditure, % of GDP (datamapper G_X_G01_GDP_PT), 1991
- *   Gov gross debt:     IMF World Economic Outlook, general government gross
- *                       debt, % of GDP (datamapper GGXWDG_NGDP), 1991
- *   https://api.worldbank.org/v2/country/FRA;ITA;ESP;SWE;TUR;GRC;AUT;FIN/indicator/NY.GDP.MKTP.CN?date=1991&format=json
- *   https://api.worldbank.org/v2/country/FRA;ITA;ESP;SWE;TUR;GRC;AUT;FIN/indicator/PA.NUS.FCRF?date=1991&format=json
- *   https://api.worldbank.org/v2/country/FRA;ITA;ESP;SWE;TUR;GRC;AUT;FIN/indicator/NY.GDP.MKTP.CD?date=1991&format=json
- *   https://www.imf.org/external/datamapper/api/v1/G_X_G01_GDP_PT
- *   https://www.imf.org/external/datamapper/api/v1/GGXWDG_NGDP
+ * Sources: World Bank WDI GDP (current LCU/CD, KD.ZG, FP.CPI.TOTL.ZG) and FX
+ * (PA.NUS.FCRF, 1991 period average); IMF WEO government expenditure and gross debt
+ * as % of GDP, 1991.
  *
- * DERIVATIONS
- *   - WDI reports euro-area members in euro and Turkey in the 2005 new lira.
- *     The game's currencies are the legacy ones, so GDP is converted with the
- *     irrevocable conversion rates (Council Regulation (EC) 2866/98 for FRF,
- *     ITL, ESP, ATS, FIM; Council Regulation (EC) 1175/2000 for GRD) and the
- *     1,000,000 old to 1 new lira redenomination (Law 5083 of 2004) for TRL.
- *   - The rate is WDI's own 1991 period average. It is the same unit the
- *     legacy-currency GDP above is expressed in, so legacyGdp / rate
- *     reproduces WDI's US$ GDP (verified in fiscalAnchors1991.test.ts).
- *   - Annual average, not January: it is the convention of the sibling 1991
- *     tables (UK, JP, DE, IE, CN) and the only one that makes local GDP over
- *     the rate equal the published dollar GDP. Turkey is the case where the two
- *     differ most (about 66 percent inflation through the year).
- *   - Sweden's and Turkey's general-government gross debt, and Turkey's general
- *     government expenditure, are not in the IMF series for 1991. Those fields
- *     are null and the seed keeps its authored fiscal ratio for them.
+ * Derivation: WDI reports euro-area members in euro and Turkey in the 2005 new
+ * lira. GDP is converted to the game's legacy currencies with the irrevocable EU
+ * conversion rates (Reg. 2866/98, 1175/2000) and Law 5083 for TRL. The FX rate is
+ * the 1991 annual average, the convention of the sibling 1991 tables and the only
+ * one that makes local GDP over the rate equal published dollar GDP.
+ *
+ * Sweden's and Turkey's gross debt and Turkey's expenditure are absent from the IMF
+ * series for 1991: those fields are null and the seed keeps its authored ratio.
  */
 
 export type FiscalAnchorCountry1991 = "FR" | "IT" | "ES" | "SE" | "TR" | "GR" | "AT" | "FI";

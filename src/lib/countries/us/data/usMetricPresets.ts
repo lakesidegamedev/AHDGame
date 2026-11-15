@@ -1,17 +1,9 @@
 /**
- * Per-state, per-era HAND-AUTHORED values for the United States' new overhaul ROOT metrics.
- * Consumed via `getRegionMetricPresets` and overlaid by the US seeder (runCoreSeed path) AFTER
- * `applyEra1991Adjustments`. The preset is the SINGLE SOURCE OF TRUTH for these metrics in both
- * eras; `uniformMetricDefault` is a fallback only.
- *
- * BOTH eras are authored, per the 2026-06-15 decision. With 51 regions (50 states + DC) the
- * authoring is composed from a NATIONAL baseline + a regional ARCHETYPE delta (every state is
- * assigned one) + per-state OVERRIDES for outliers — so every state resolves to a full, authored
- * 45-metric set without 51 bespoke blocks. 2019 = the contemporary US of the seed era; 1991 =
- * post-Cold-War "peace dividend" (Gulf War year) amid the 1990-91 recession and the 1991-93 crime
- * peak: a larger manufacturing base (pre-NAFTA/pre-China-WTO), Cold-War-peak military, near-zero
- * renewables, higher uninsuredness (pre-ACA/pre-SCHIP), lower public debt (~60% vs ~107%), and
- * lower nominal house prices (before the long housing boom).
+ * Per-state, per-era hand-authored US overhaul ROOT metric values.
+ * Single source of truth for both eras; uniformMetricDefault only
+ * a fallback. Overlaid by the US seeder after era adjustments.
+ * Composed as national baseline + regional archetype delta + per-state
+ * overrides so all 51 regions resolve to a full authored set.
  */
 
 /** A per-region map of metricPath → numeric value (only the metrics the US authors). */

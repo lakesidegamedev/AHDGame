@@ -6,9 +6,8 @@ import type { RaceFilter } from "./rules";
  * and `party` set the Find a Race filter. Plain data in and out, so server
  * pages, redirects and client links build the same URLs.
  *
- * The status bar and navbars import this module, so it stays a leaf with type
- * imports only: parsing (zod) lives in `linkParams.ts`, the opening filter in
- * `openingFilter.ts`.
+ * The status bar and navbars import this module, so it stays dependency-free.
+ * Parsing lives in `linkParams.ts`, the opening filter in `openingFilter.ts`.
  */
 
 export type CmLinkStage = RaceFilter["stage"];
@@ -35,6 +34,10 @@ export interface CmLinkFilter {
 const PARAM_ORDER = ["country", "race", "type", "stage", "region", "year", "party"] as const;
 
 export function campaignManagerHref(p: CmLinkParams): string {
+  const scopedRegion = p.region?.toUpperCase().match(/^([A-Z]{2,3})_([A-Z]{2,3})$/);
+  if (scopedRegion && (!p.country || p.country.toUpperCase() === scopedRegion[1])) {
+    p = { ...p, country: scopedRegion[1], region: scopedRegion[2] };
+  }
   const qs = PARAM_ORDER.filter((k) => p[k] !== undefined)
     .map((k) => `${k}=${encodeURIComponent(String(p[k]))}`)
     .join("&");

@@ -13,6 +13,8 @@ import { flushServerPosthog } from "@/lib/analytics/serverPosthog";
 import { z } from "zod";
 import type { Bill, ElectedOfficial } from "@/lib/db/types";
 import { VETO_MESSAGE_MIN_LENGTH, VETO_MESSAGE_MAX_LENGTH } from "@/lib/constants/governorOffice";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { billsCollection } from "@/lib/db/repositories/bills";
 
 const actionSchema = z
   .object({
@@ -58,17 +60,20 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
     // Scope the president check to the bill's own country so the route works
     // for any presidential country (legacy US bills may lack countryId).
-    const bill = await db
-      .collection<Bill>("bills")
-      .findOne({ _id: billOid }, { projection: { countryId: 1 } });
+    const bill = await billsCollection(db).findOne(
+      { _id: billOid },
+      { projection: { countryId: 1 } }
+    );
     if (!bill) {
       return errorResponse(404, "Bill not found");
     }
     const billCountryId = bill.countryId ?? "US";
 
-    const presidentOfficial = await db
-      .collection<ElectedOfficial>("electedOfficials")
-      .findOne({ officeType: "president", countryId: billCountryId, characterId: { $ne: null } });
+    const presidentOfficial = await electedOfficialsCollection(db).findOne({
+      officeType: "president",
+      countryId: billCountryId,
+      characterId: { $ne: null },
+    });
     if (!presidentOfficial?.characterId) {
       return errorResponse(400, "No President in office");
     }

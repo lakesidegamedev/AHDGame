@@ -9,6 +9,8 @@ import {
   type BillDiscussionScope,
   type BillDiscussionListResult,
 } from "./types";
+import { billDiscussionsCollection } from "@/lib/db/repositories/billDiscussions";
+import { billDiscussionReactionsCollection } from "@/lib/db/repositories/billDiscussionReactions";
 
 interface ViewerOptions {
   user: AuthUserWithCharacter | null;
@@ -32,7 +34,7 @@ export async function getBillDiscussionsForViewer(
   if (scope.kind === "state") filter.stateId = scope.stateId.toUpperCase();
   if (!isAdmin) filter["moderation.hidden"] = { $ne: true };
 
-  const coll = db.collection<BillDiscussion>("billDiscussions");
+  const coll = billDiscussionsCollection(db);
   const total = await coll.countDocuments(filter);
   const totalPages = Math.max(1, Math.ceil(total / BILL_DISCUSSIONS_PAGE_SIZE));
 
@@ -54,8 +56,7 @@ export async function getBillDiscussionsForViewer(
   // Viewer's own reactions on the posts in this page.
   const reactionByPost = new Map<string, "agree" | "disagree">();
   if (viewerUserId && docs.length) {
-    const rows = await db
-      .collection<BillDiscussionReaction>("billDiscussionReactions")
+    const rows = await billDiscussionReactionsCollection(db)
       .find({ discussionId: { $in: docs.map((d) => d._id) }, userId: new ObjectId(viewerUserId) })
       .toArray();
     for (const r of rows) reactionByPost.set(r.discussionId.toString(), r.reaction);

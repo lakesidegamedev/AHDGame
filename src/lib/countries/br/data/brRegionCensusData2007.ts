@@ -1,17 +1,15 @@
 /**
- * Brazil Region Census Profiles — 2007 era.
+ * Brazil Region Census Profiles - 2007 era.
  *
- * 2007-default companion to {@link brRegionCensusData} (the 2019 profiles).
- * Anchored on IBGE PNAD 2007 (% of adult population), authored independently
- * from historical knowledge of the era — not derived by scaling any other
- * era's profiles.
+ * Companion to {@link brRegionCensusData} (2019 profiles).
+ * Anchored on IBGE PNAD 2007 (% of adult population).
  *
- * Era anchors: Lula-era commodity boom. Bolsa Família and a rising minimum
- * wage are lifting the Nordeste's bottom tier into a new lower-middle
- * ("classe C"); the Centro-Oeste agro boom (soy, cattle, sugarcane) pulls in
- * workers and capital. Self-classification keeps shifting branco → pardo.
- * University enrollment is expanding (ProUni, private faculdades) but
- * attainment among adults still lags. Income uses era-neutral relative tiers.
+ * Era anchors: Lula-era commodity boom. Bolsa Familia and a rising minimum
+ * wage lift the Nordeste's bottom tier into a new lower-middle class;
+ * Centro-Oeste agro boom pulls in workers and capital. Self-classification
+ * keeps shifting branco -> pardo. University enrollment expanding (ProUni,
+ * private faculdades) but adult attainment still lags. Income uses
+ * era-neutral relative tiers.
  */
 
 import type { BRRegionLayer1 } from "@/lib/seeds/br/brRegionCensusData";

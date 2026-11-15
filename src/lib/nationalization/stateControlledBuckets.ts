@@ -1,5 +1,5 @@
 import type { Db } from "mongodb";
-import type { Corporation, CorporateSector, UnownedSector } from "@/lib/db/types";
+import type { CorporateSector, UnownedSector } from "@/lib/db/types";
 import { absorbOwnedSectorIntoNatCorp, absorbUnownedDocIntoNatCorp } from "./seedToNatCorp";
 import {
   enactedLawAllowsCorpMerge,
@@ -7,6 +7,9 @@ import {
   sectorTakingKey,
   type EnactedSectorTaking,
 } from "./enactedSectorTaking";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
 
 /**
  * `(stateId:sectorType)` key for a market bucket. Shared format across the
@@ -26,8 +29,7 @@ export function bucketKey(
 
 /** The `_id` strings of every National Corporation (countryOwnerId set). Few rows. */
 export async function loadNationalCorpIds(db: Db): Promise<Set<string>> {
-  const natCorps = await db
-    .collection<Corporation>("corporations")
+  const natCorps = await corporationsCollection(db)
     .find({ countryOwnerId: { $exists: true } }, { projection: { _id: 1, countryOwnerId: 1 } })
     .toArray();
   return new Set(natCorps.filter((c) => c.countryOwnerId != null).map((c) => c._id.toString()));
@@ -206,8 +208,7 @@ type CorpSectorBucketFields = Pick<
 >;
 
 async function loadCorpSectorBucketFields(db: Db): Promise<CorpSectorBucketFields[]> {
-  return db
-    .collection<CorporateSector>("corporateSectors")
+  return corporateSectorsCollection(db)
     .find(
       {},
       {
@@ -271,8 +272,7 @@ type OwnedSectorMergeFields = Pick<
 >;
 
 async function loadOwnedSectorMergeFields(db: Db): Promise<OwnedSectorMergeFields[]> {
-  return db
-    .collection<CorporateSector>("corporateSectors")
+  return corporateSectorsCollection(db)
     .find(
       {},
       {
@@ -312,8 +312,7 @@ export async function healCapturedMarkets(
   const [corpSectors, enactedTakings, unownedSectors, ownedSectors] = await Promise.all([
     loadCorpSectorBucketFields(db),
     loadSectorWideTakingAuthority(db, nationalCorpIds),
-    db
-      .collection<UnownedSector>("unownedSectors")
+    unownedSectorsCollection(db)
       .find(
         {},
         {

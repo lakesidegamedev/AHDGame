@@ -47,7 +47,6 @@ import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { computeIpoIssuance } from "@/lib/corporations/ipoIssuance";
 import { CEO_INITIAL_SHARES } from "@/lib/constants/corporations";
 import { getCentralBankScope } from "@/lib/centralBank/helpers";
-import type { CentralBank } from "@/lib/db/types/centralBank";
 import { isNominationWindowOpen } from "@/lib/turn/centralBankChairSelection";
 import {
   fnv1aHex,
@@ -68,6 +67,19 @@ import {
   PRIVATE_PROBE_FOUNDING_CAPITAL,
   PROBE_FOUNDER_CASH,
 } from "./actorProbes";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import type { Document } from "mongodb";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { usersCollection } from "@/lib/db/repositories/users";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { crisisInteractionsCollection } from "@/lib/db/repositories/crisisInteractions";
+import { statePartyCandidatesCollection } from "@/lib/db/repositories/statePartyCandidates";
+import { statePartyElectionsCollection } from "@/lib/db/repositories/statePartyElections";
+import { wealthListHistoryCollection } from "@/lib/db/repositories/wealthListHistory";
 
 /** Database-name prefix every sandbox sim world uses (`ahd_sim_<seed>`). */
 export const SIM_SANDBOX_DB_PREFIX = "ahd_sim_";
@@ -119,9 +131,9 @@ export async function assertSandboxDb(db: Db): Promise<void> {
         `database (expected prefix "${SIM_SANDBOX_DB_PREFIX}").`
     );
   }
-  const config = await db
-    .collection<{ _id: string; simSandbox?: boolean }>("gameConfig")
-    .findOne({ _id: "default" });
+  const config = await gameConfigCollection<{ _id: string; simSandbox?: boolean }>(db).findOne({
+    _id: "default",
+  });
   if (config?.simSandbox !== true) {
     throw new Error(
       `Refusing to seed synthetic actors into database "${name}": gameConfig.simSandbox ` +
@@ -231,12 +243,10 @@ async function refuseCorporateIndexCollisions(
   const seqs = corps.map((c) => c.sequentialId);
   const ownIds = new Set(corps.map((c) => c._id.toHexString()));
   const [tickerHits, seqHits] = await Promise.all([
-    db
-      .collection("corporations")
+    corporationsCollection(db)
       .find({ tickerSymbol: { $in: tickers } })
       .toArray(),
-    db
-      .collection("corporations")
+    corporationsCollection(db)
       .find({ sequentialId: { $in: seqs } })
       .toArray(),
   ]);
@@ -375,22 +385,23 @@ export async function materializeSyntheticActors(
   const member = actor("us-state-party-member");
   const memberCharacterId = new ObjectId(member.characterIdHex);
   const electionWindow = 24;
-  const persistedParties = (await db.collection("politicalParties").find({}).toArray()) as Array<{
+  const persistedParties = (await politicalPartiesCollection<Document>(db)
+    .find({})
+    .toArray()) as Array<{
     countryId?: string;
     sequentialId?: number | string;
   }>;
   const livePartyKeys = new Set(
     persistedParties.map((p) => `${p.countryId ?? "US"}:${String(p.sequentialId)}`)
   );
-  const persistedOrgs = (await db
-    .collection("statePartyOrg")
-    .find({})
-    .toArray()) as unknown as Array<{
-    _id: string;
-    stateId: string;
-    partyId: string;
-    countryId?: string;
-  }>;
+  const persistedOrgs = await statePartyOrgCollection<Document>(db)
+    .find<{
+      _id: string;
+      stateId: string;
+      partyId: string;
+      countryId?: string;
+    }>({})
+    .toArray();
   const seatedOrgs = persistedOrgs
     .filter(
       (org) =>
@@ -398,7 +409,9 @@ export async function materializeSyntheticActors(
     )
     .sort((a, b) => (a._id < b._id ? -1 : a._id > b._id ? 1 : 0));
   const targetOrg =
-    seatedOrgs.find((org) => (org.countryId ?? "US") === "US") ?? seatedOrgs[0] ?? null;
+    seatedOrgs.find((org) => countryHasFeature("usTurn", org.countryId ?? "US")) ??
+    seatedOrgs[0] ??
+    null;
 
   const statePartyElections: Array<Record<string, unknown>> = [];
   const statePartyCandidates: Array<Record<string, unknown>> = [];
@@ -406,7 +419,7 @@ export async function materializeSyntheticActors(
   if (targetOrg) {
     const orgCountryId = (targetOrg.countryId ?? "US") as CountryId;
     for (const position of ["chair"] as const) {
-      const existing = await db.collection("statePartyElections").findOne({
+      const existing = await statePartyElectionsCollection<Document>(db).findOne({
         stateId: targetOrg.stateId,
         partyId: targetOrg.partyId,
         countryId: orgCountryId,
@@ -670,7 +683,7 @@ async function queueSyntheticFedNomination(
 ): Promise<number> {
   const { turn, now, nominator, nominee } = args;
   const { bankId, memberCountries } = await getCentralBankScope(db, "US");
-  const bank = await db.collection<CentralBank>("centralBanks").findOne({ _id: bankId });
+  const bank = await centralBanksCollection(db).findOne({ _id: bankId });
   if (!bank) return 0;
   const nomineeId = new ObjectId(nominee.characterIdHex);
   const nominations = (bank.nominations ?? []) as Array<{
@@ -681,13 +694,13 @@ async function queueSyntheticFedNomination(
   // character in a member country who does not hold the executive office.
   if (!isNominationWindowOpen(bank, turn)) return 0;
   if (nominations.length >= 3) return 0;
-  const target = await db.collection("characters").findOne({ _id: nomineeId });
+  const target = await charactersCollection<Document>(db).findOne({ _id: nomineeId });
   if (!target?.userId) return 0;
   if (!memberCountries.includes((target.countryId ?? "US") as CountryId)) return 0;
   const execOffice = COUNTRY_CONFIGS.US?.officeTypes.find((o) => o.isExecutive);
   const targetOfficeType = (target.currentOffice as { type?: string } | undefined)?.type;
   if (execOffice && targetOfficeType === execOffice.key) return 0;
-  await db.collection("centralBanks").bulkWrite([
+  await centralBanksCollection(db).bulkWrite([
     {
       updateOne: {
         filter: { _id: bankId },
@@ -730,27 +743,27 @@ export async function readActorPopulation(
 ): Promise<ActorPopulationSnapshot> {
   const simUsernamePrefix = escapeRegExp(SIM_ACTOR_USERNAME_PREFIX);
   const [characters, users, syntheticCharacters, syntheticUsers] = await Promise.all([
-    db.collection("characters").countDocuments({}),
-    db.collection("users").countDocuments({}),
-    db.collection("characters").countDocuments({ isSynthetic: true }),
-    db.collection("users").countDocuments({ username: { $regex: `^${simUsernamePrefix}` } }),
+    charactersCollection<Document>(db).countDocuments({}),
+    usersCollection<Document>(db).countDocuments({}),
+    charactersCollection<Document>(db).countDocuments({ isSynthetic: true }),
+    usersCollection<Document>(db).countDocuments({ username: { $regex: `^${simUsernamePrefix}` } }),
   ]);
-  const syntheticIds = await db
-    .collection("characters")
+  const syntheticIds = await charactersCollection<Document>(db)
     .find({ isSynthetic: true }, { projection: { _id: 1 } })
     .toArray();
   const syntheticIdSet = syntheticIds.map((d) => d._id);
   const [statePartyCandidates, crisisDecidedInteractions, wealthListRows, playerFoundedCorps] =
     await Promise.all([
-      db.collection("statePartyCandidates").countDocuments({}),
-      db
-        .collection("crisisInteractions")
-        .countDocuments({ resolutionPath: { $exists: true, $ne: [] } }),
-      db.collection("wealthListHistory").countDocuments({}),
+      statePartyCandidatesCollection<Document>(db).countDocuments({}),
+      crisisInteractionsCollection<Document>(db).countDocuments({
+        resolutionPath: { $exists: true, $ne: [] },
+      }),
+      wealthListHistoryCollection<Document>(db).countDocuments({}),
       syntheticIdSet.length > 0
-        ? db
-            .collection("corporations")
-            .countDocuments({ ceoType: "character", ceoId: { $in: syntheticIdSet } })
+        ? corporationsCollection(db).countDocuments({
+            ceoType: "character",
+            ceoId: { $in: syntheticIdSet },
+          })
         : Promise.resolve(0),
     ]);
   const counts: ActorPopulationCounts = {

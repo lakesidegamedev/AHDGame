@@ -1,20 +1,10 @@
 import { creditIncomeAfterTax, type IncomeCredit } from "@/lib/budget/incomePayout";
 /**
- * Dividend Pass-Through for Index Funds
+ * Dividend pass-through for index funds.
  *
- * When a corporation in which an index fund holds shares pays dividends, the
- * fund receives the dividend on its shareholder entry. Per the plan, 75% is
- * reinvested (added to fund cash for future public-float absorption) and 25%
- * is passed through to unit holders proportionally.
- *
- * This module provides helpers for:
- *   1. Calculating the 75/25 split.
- *   2. Distributing the 25% pass-through to unit holders in proportion to their
- *      unit holdings.
- *   3. Logging the dividend transaction.
- *
- * Called from the turn-processing dividend pipeline when a fund-held
- * corporation pays dividends.
+ * When a fund-held corporation pays dividends, the fund receives them.
+ * Per plan: 75% is reinvested into fund cash, 25% is passed through to
+ * unit holders proportionally.
  */
 
 import {
@@ -48,6 +38,12 @@ import {
   logIndexFundDividendBulk,
 } from "@/lib/indexFunds/fundTxLog";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import type { Document } from "mongodb";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
 
 /**
  * ₳ → fund-currency rate for a holder payout, matching what redeem applies.
@@ -127,7 +123,7 @@ export async function processIndexFundDividend(
   }
 
   // Credit the reinvestment portion (75%) to fund cash.
-  await db.collection("indexFunds").updateOne(
+  await indexFundsCollection<Document>(db).updateOne(
     { _id: fundId },
     {
       $inc: { cashAnchor: split.reinvestAnchor },
@@ -146,9 +142,10 @@ export async function processIndexFundDividend(
   const turn = options?.turn ?? (await getCurrentTurn(db));
   const now = new Date();
 
-  const corporation = await db
-    .collection<Corporation>("corporations")
-    .findOne({ _id: corporationId }, { projection: { name: 1 } });
+  const corporation = await corporationsCollection(db).findOne(
+    { _id: corporationId },
+    { projection: { name: 1 } }
+  );
   const corporationName = corporation?.name;
 
   const characterIds = positions
@@ -163,8 +160,7 @@ export async function processIndexFundDividend(
     .filter((p) => p.holderKind === "corporation" && p.corporationId)
     .map((p) => p.corporationId!);
   const holderCorps = holderCorpIds.length
-    ? await db
-        .collection<Corporation>("corporations")
+    ? await corporationsCollection(db)
         .find(
           { _id: { $in: holderCorpIds } },
           { projection: { name: 1, liquidCurrencyCode: 1, countryId: 1 } }
@@ -181,20 +177,17 @@ export async function processIndexFundDividend(
   }[] = [];
   const [characterDocs, imperialDocs, nppDocs] = await Promise.all([
     characterIds.length > 0
-      ? db
-          .collection<Character>("characters")
+      ? charactersCollection(db)
           .find({ _id: { $in: characterIds } }, { projection: { _id: 1, name: 1 } })
           .toArray()
       : Promise.resolve([] as Pick<Character, "_id" | "name">[]),
     imperialIds.length > 0
-      ? db
-          .collection<ImperialCharacter>("imperialCharacters")
+      ? imperialCharactersCollection(db)
           .find({ _id: { $in: imperialIds } }, { projection: { _id: 1, name: 1 } })
           .toArray()
       : Promise.resolve([] as Pick<ImperialCharacter, "_id" | "name">[]),
     nppIds.length
-      ? db
-          .collection<{ _id: ObjectId; countryId: CountryId }>("npps")
+      ? nppsCollection<{ _id: ObjectId; countryId: CountryId }>(db)
           .find({ _id: { $in: nppIds } }, { projection: { _id: 1, countryId: 1 } })
           .toArray()
       : Promise.resolve([]),
@@ -363,7 +356,7 @@ export async function processIndexFundDividend(
     }
   }
 
-  if (corpOps.length > 0) await db.collection("corporations").bulkWrite(corpOps);
+  if (corpOps.length > 0) await corporationsCollection(db).bulkWrite(corpOps);
   await payFundHolderIncome(
     db,
     `fund:${fundId}:${corporationId}:${options?.payoutKey ?? "default"}`,
@@ -374,13 +367,13 @@ export async function processIndexFundDividend(
   );
   if (nppOps.length > 0) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await db.collection("npps").bulkWrite(nppOps as any);
+    await nppsCollection<Document>(db).bulkWrite(nppOps as any);
   }
 
   const undistributedPassThrough =
     Math.round(Math.max(0, split.passThroughAnchor - distributedAnchor) * 100) / 100;
   if (undistributedPassThrough > 0) {
-    await db.collection("indexFunds").updateOne(
+    await indexFundsCollection<Document>(db).updateOne(
       { _id: fundId },
       {
         $inc: { cashAnchor: undistributedPassThrough },
@@ -523,8 +516,7 @@ export async function processIndexFundDividendsBatch(
   }
   const [corpDocs, charDocs, impDocs, nppDocs] = await Promise.all([
     corpIds.length
-      ? db
-          .collection<Corporation>("corporations")
+      ? corporationsCollection(db)
           .find(
             { _id: { $in: corpIds } },
             { projection: { name: 1, countryId: 1, liquidCurrencyCode: 1 } }
@@ -532,20 +524,17 @@ export async function processIndexFundDividendsBatch(
           .toArray()
       : Promise.resolve([] as Corporation[]),
     charIds.length
-      ? db
-          .collection<Character>("characters")
+      ? charactersCollection(db)
           .find({ _id: { $in: charIds } }, { projection: { _id: 1, name: 1 } })
           .toArray()
       : Promise.resolve([] as Pick<Character, "_id" | "name">[]),
     impIds.length
-      ? db
-          .collection<ImperialCharacter>("imperialCharacters")
+      ? imperialCharactersCollection(db)
           .find({ _id: { $in: impIds } }, { projection: { _id: 1, name: 1 } })
           .toArray()
       : Promise.resolve([] as Pick<ImperialCharacter, "_id" | "name">[]),
     nppIds.length
-      ? db
-          .collection<{ _id: ObjectId; countryId: CountryId }>("npps")
+      ? nppsCollection<{ _id: ObjectId; countryId: CountryId }>(db)
           .find({ _id: { $in: nppIds } }, { projection: { _id: 1, countryId: 1 } })
           .toArray()
       : Promise.resolve([]),
@@ -705,7 +694,7 @@ export async function processIndexFundDividendsBatch(
         // emitted after the loop: one row instead of one per paying
         // corporation. The credited balance is unchanged (it was already
         // aggregated per NPP) and so is every account total; only the
-        // per-corporation split of anonymous NPP rows is dropped (#2693).
+        // per-corporation split of anonymous NPP rows is dropped.
         const rowKey = `${accrual.fundId.toString()}:${position.nppId.toString()}`;
         const row = nppDividendRows.get(rowKey);
         if (row) {
@@ -806,41 +795,15 @@ export async function processIndexFundDividendsBatch(
 
   /* eslint-disable @typescript-eslint/no-explicit-any */
   await Promise.all([
-    corporateOps.length ? db.collection("corporations").bulkWrite(corporateOps) : Promise.resolve(),
-    fundOps.length ? db.collection("indexFunds").bulkWrite(fundOps as any[]) : Promise.resolve(),
-    nppOps.length ? db.collection("npps").bulkWrite(nppOps as any[]) : Promise.resolve(),
+    corporateOps.length ? corporationsCollection(db).bulkWrite(corporateOps) : Promise.resolve(),
+    fundOps.length
+      ? indexFundsCollection<Document>(db).bulkWrite(fundOps as any[])
+      : Promise.resolve(),
+    nppOps.length ? nppsCollection<Document>(db).bulkWrite(nppOps as any[]) : Promise.resolve(),
   ]);
   /* eslint-enable @typescript-eslint/no-explicit-any */
   await logIndexFundDividendBulk(db, holderTxEntries);
   await insertFundTransactionsBulk(db, fundTxDocs);
-}
-
-/**
- * Find all funds that hold shares in a given corporation.
- * Used by the turn-processing dividend pipeline to determine which funds
- * should receive pass-through from a corporation's dividend payment.
- */
-export async function findFundsHoldingCorporation(
-  db: Db,
-  corporationId: ObjectId
-): Promise<{ fundId: ObjectId; sharesHeld: number }[]> {
-  const { FUND_COLLECTION } = await import("@/lib/indexFunds/fundQueries");
-  const activeFunds = await db
-    .collection<IndexFund>(FUND_COLLECTION)
-    .find({
-      status: "active",
-      "holdings.corporationId": corporationId,
-    })
-    .project<{ _id: ObjectId; holdings: IndexFund["holdings"] }>({ _id: 1, holdings: 1 })
-    .toArray();
-
-  return activeFunds.flatMap((fund) => {
-    const holding = fund.holdings.find(
-      (h) => h.corporationId.toString() === corporationId.toString()
-    );
-    if (!holding || holding.shares <= 0) return [];
-    return [{ fundId: fund._id, sharesHeld: holding.shares }];
-  });
 }
 
 /** Aggregate each recipient/currency before the atomic source payout. */

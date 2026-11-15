@@ -493,14 +493,12 @@ describe("request and snapshot lifecycle edge cases", () => {
   ] as const)("handles an NPP request at turn %i", async (turn, expected) => {
     const db = createMockDb();
     setup(db, [refDoc({ status: "requested", requestedTurn: 100 })]);
-    db.collection("governmentFormations").findOne.mockResolvedValue({
-      status: "formed",
-      pmNppId: new ObjectId(),
-      pmCharacterId: null,
-    });
-    db.collection("governorOfficeState").findOne.mockResolvedValue({
-      westminsterStances: { SCO: { policy: "pro" } },
-    });
+    db.collection("governmentFormations").find.mockReturnValue(
+      cursorOf([{ _id: "UK", status: "formed", pmNppId: new ObjectId(), pmCharacterId: null }])
+    );
+    db.collection("governorOfficeState").find.mockReturnValue(
+      cursorOf([{ countryId: "UK", westminsterStances: { SCO: { policy: "pro" } } }])
+    );
     await processReferendumLifecycle(db as unknown as Db, turn);
     if (expected)
       expect(grantReferendum).toHaveBeenCalledWith(
@@ -512,13 +510,29 @@ describe("request and snapshot lifecycle edge cases", () => {
   it("leaves a human PM's request for their decision", async () => {
     const db = createMockDb();
     setup(db, [refDoc({ status: "requested" })]);
-    db.collection("governmentFormations").findOne.mockResolvedValue({
-      status: "formed",
-      pmNppId: null,
-      pmCharacterId: new ObjectId(),
-    });
+    db.collection("governmentFormations").find.mockReturnValue(
+      cursorOf([{ _id: "UK", status: "formed", pmNppId: null, pmCharacterId: new ObjectId() }])
+    );
     await processReferendumLifecycle(db as unknown as Db, 200);
     expect(grantReferendum).not.toHaveBeenCalled();
+  });
+  it("lets each country's NPP ministry decide its own request", async () => {
+    const db = createMockDb();
+    setup(db, [
+      refDoc({ status: "requested", requestedTurn: 100, countryId: "CA", regionId: "CA_QC" }),
+    ]);
+    db.collection("governmentFormations").find.mockReturnValue(
+      cursorOf([
+        { _id: "UK", status: "formed", pmNppId: null, pmCharacterId: new ObjectId() },
+        { _id: "CA", status: "formed", pmNppId: new ObjectId(), pmCharacterId: null },
+      ])
+    );
+    db.collection("governorOfficeState").find.mockReturnValue(cursorOf([]));
+    await processReferendumLifecycle(db as unknown as Db, 124);
+    expect(grantReferendum).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ countryId: "CA", action: "decline", isPM: true })
+    );
   });
   it("does not report an opening when its stale snapshot loses the write", async () => {
     const db = createMockDb();

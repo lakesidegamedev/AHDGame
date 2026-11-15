@@ -1,74 +1,11 @@
 import type { ElectionDetail } from "./ElectionDetailTypes";
 import type { CountryId } from "@/lib/constants/countries";
 import { formatElectionTypeLabel } from "@/lib/utils/electionLabels";
+import { US_STATE_NAMES } from "@/lib/constants/usStateNames";
 
 const SENATE_CLASS_ROMAN: Record<number, string> = { 1: "I", 2: "II", 3: "III" };
 
-export const US_STATE_NAMES: Record<string, string> = {
-  AL: "Alabama",
-  AK: "Alaska",
-  AZ: "Arizona",
-  AR: "Arkansas",
-  CA: "California",
-  CO: "Colorado",
-  CT: "Connecticut",
-  DE: "Delaware",
-  FL: "Florida",
-  GA: "Georgia",
-  HI: "Hawaii",
-  ID: "Idaho",
-  IL: "Illinois",
-  IN: "Indiana",
-  IA: "Iowa",
-  KS: "Kansas",
-  KY: "Kentucky",
-  LA: "Louisiana",
-  ME: "Maine",
-  MD: "Maryland",
-  MA: "Massachusetts",
-  MI: "Michigan",
-  MN: "Minnesota",
-  MS: "Mississippi",
-  MO: "Missouri",
-  MT: "Montana",
-  NE: "Nebraska",
-  NV: "Nevada",
-  NH: "New Hampshire",
-  NJ: "New Jersey",
-  NM: "New Mexico",
-  NY: "New York",
-  NC: "North Carolina",
-  ND: "North Dakota",
-  OH: "Ohio",
-  OK: "Oklahoma",
-  OR: "Oregon",
-  PA: "Pennsylvania",
-  RI: "Rhode Island",
-  SC: "South Carolina",
-  SD: "South Dakota",
-  TN: "Tennessee",
-  TX: "Texas",
-  UT: "Utah",
-  VT: "Vermont",
-  VA: "Virginia",
-  WA: "Washington",
-  WV: "West Virginia",
-  WI: "Wisconsin",
-  WY: "Wyoming",
-  // UK Regions
-  LON: "London",
-  SEE: "South East England",
-  SWE: "South West England",
-  EAE: "East of England",
-  EMI: "East Midlands",
-  WMI: "West Midlands",
-  YHU: "Yorkshire and the Humber",
-  NWE: "North West England",
-  NEE: "North East England",
-  WAL: "Wales",
-  SCO: "Scotland",
-  NIR: "Northern Ireland",
-};
+export { US_STATE_NAMES };
 
 /** Adjective form of UK region names for use in election titles. */
 export const UK_REGION_DESCRIPTOR: Record<string, string> = {
@@ -108,6 +45,8 @@ export function electionTitle(e: ElectionDetail): string {
       return "Gubernatorial Race";
     case "president":
       return "Presidential Race";
+    case "special_president":
+      return "Special Presidential Election";
     case "commons": {
       const descriptor = UK_REGION_DESCRIPTOR[e.state] ?? US_STATE_NAMES[e.state] ?? e.state;
       const seats = e.totalSeats && e.totalSeats > 1 ? ` · ${e.totalSeats} seats` : "";
@@ -154,7 +93,9 @@ export function electionTitle(e: ElectionDetail): string {
  * and the route metadata all read from here.
  */
 export function electionPageTitle(e: ElectionDetail, electionYear: number | null): string {
-  const national = ["president", "commons", "uachtaran"].includes(e.electionType);
+  const national = ["president", "special_president", "commons", "uachtaran"].includes(
+    e.electionType
+  );
   if (national) return `${electionYear} ${electionTitle(e)}`;
   return `${electionYear} ${US_STATE_NAMES[e.state] ?? e.regionName ?? e.state} ${electionTitle(e)}`;
 }

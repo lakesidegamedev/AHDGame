@@ -13,6 +13,11 @@ import type { AlignmentPoleId } from "@/lib/constants/alignmentEras";
 import type { InternationalOrganizationDef } from "@/lib/constants/internationalOrganizations";
 import { getTrucesCollection, trucePairId } from "@/lib/military/truce";
 import { opposedBelligerents } from "@/lib/military/occupation";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { governmentApprovalsCollection } from "@/lib/db/repositories/governmentApprovals";
+import { militaryUnitsCollection } from "@/lib/db/repositories/militaryUnits";
+import { countryAlignmentsCollection } from "@/lib/db/repositories/countryAlignments";
+import { sphereMembershipsCollection } from "@/lib/db/repositories/sphereMemberships";
 
 type WarEntryOrganization = Pick<
   InternationalOrganizationDef,
@@ -174,13 +179,13 @@ export async function assessWarEntryPoliticalPressure(params: {
 }): Promise<WarEntryPoliticalPressure> {
   const { db, countryId, organizationId, organization, stake, currentTurn } = params;
   const [alignment, sphere, approval, budget, units] = await Promise.all([
-    db.collection<CountryAlignment>("countryAlignments").findOne({ entityId: countryId }),
-    db.collection<PersistedSphereMembership>("sphereMemberships").findOne({ entityId: countryId }),
-    db.collection<GovernmentApproval>("governmentApprovals").findOne({ _id: countryId }),
-    db
-      .collection<{ countryId: CountryId; debtToGdpRatio?: number }>("federalBudget")
-      .findOne({ countryId }),
-    db.collection<MilitaryUnit>("militaryUnits").find({ countryId }).toArray(),
+    countryAlignmentsCollection(db).findOne({ entityId: countryId }),
+    sphereMembershipsCollection<PersistedSphereMembership>(db).findOne({ entityId: countryId }),
+    governmentApprovalsCollection(db).findOne({ _id: countryId }),
+    federalBudgetCollection<{ countryId: CountryId; debtToGdpRatio?: number }>(db).findOne({
+      countryId,
+    }),
+    militaryUnitsCollection(db).find({ countryId }).toArray(),
   ]);
 
   const customPole = organization?.alignment?.poleId;

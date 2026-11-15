@@ -36,8 +36,8 @@ const currentConfig = {
   permanentHeadOfState: false,
   featureFlags: {
     forexEnabled: false,
-    crisisAidBillsEnabled: true,
-    worldEventsEnabled: true,
+    playerRandomEventsEnabled: true,
+    sectorTechTreesEnabled: true,
   },
 };
 
@@ -72,8 +72,8 @@ describe("PATCH /api/singleplayer/operator/config", () => {
         permanentHeadOfState: false,
         featureFlags: {
           forexEnabled: true,
-          crisisAidBillsEnabled: true,
-          worldEventsEnabled: true,
+          playerRandomEventsEnabled: true,
+          sectorTechTreesEnabled: true,
         },
       }
     );
@@ -83,8 +83,8 @@ describe("PATCH /api/singleplayer/operator/config", () => {
       autonomyLevel: "v4",
       featureFlags: {
         forexEnabled: true,
-        crisisAidBillsEnabled: true,
-        worldEventsEnabled: true,
+        playerRandomEventsEnabled: true,
+        sectorTechTreesEnabled: true,
       },
     });
   });

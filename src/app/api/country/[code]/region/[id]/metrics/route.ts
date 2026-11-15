@@ -4,7 +4,6 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { getDb } from "@/lib/mongodb";
 import { COUNTRY_CONFIGS, getCountryConfig, type CountryId } from "@/lib/constants/countries";
 import type { State, StateApprovalHistory, GameState } from "@/lib/db/types";
-import type { StateDemographics } from "@/lib/db/types/demographics";
 import { resolveGameYear } from "@/lib/era/era";
 import { getActiveAddressApprovalModifiers } from "@/lib/governorOffice/address/activeAddressModifiers";
 import type { RegionalBudget } from "@/lib/db/types/regionalBudget";
@@ -14,6 +13,8 @@ import {
   computeStateApprovalBase,
   computeNationalAveragesFromMetrics,
   buildFlatMetrics,
+  loadElectorateGroups,
+  weightingFor,
 } from "@/lib/utils/governmentApproval";
 import {
   isPoliticalApprovalCountry,
@@ -27,6 +28,11 @@ import {
   NATIONAL_SCOPE_IDS,
   getNationalDocId,
 } from "@/lib/constants/nationalScope";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { regionalBudgetsCollection } from "@/lib/db/repositories/regionalBudgets";
+import { stateApprovalHistoryCollection } from "@/lib/db/repositories/stateApprovalHistory";
+import { loadNationalApproval } from "@/lib/country/nationalApproval";
 
 // GET /api/country/[code]/region/[id]/metrics — Return all state metrics including government approval and tick rates
 // Auth: public
@@ -45,6 +51,9 @@ export async function GET(
 
     // Accept region codes (e.g. "PA", "LON", "ON") or national scope IDs
     const isNational = NATIONAL_SCOPE_IDS.has(stateId);
+    if (isNational && NATIONAL_SCOPE[stateId] !== countryId) {
+      return errorResponse(404, "Region not found for this country");
+    }
 
     const db = await getDb();
 
@@ -55,13 +64,13 @@ export async function GET(
     const [state, metrics, budgetDoc] = await Promise.all([
       isNational
         ? Promise.resolve(null)
-        : db.collection<State>("states").findOne({ _id: stateId, countryId }),
+        : statesCollection(db).findOne({ _id: stateId, countryId }),
       // SP5: merged two-store view.
       isNational
         ? findMergedRegionMetrics(db, { _id: stateId })
         : findMergedRegionMetrics(db, { _id: stateId, countryId }),
       hasSubNationalChamber
-        ? db.collection<RegionalBudget>("regionalBudgets").findOne({ _id: stateId, countryId })
+        ? regionalBudgetsCollection(db).findOne({ _id: stateId, countryId })
         : Promise.resolve(null),
     ]);
 
@@ -81,8 +90,8 @@ export async function GET(
       await Promise.all([
         nationalDocId ? findMergedRegionMetrics(db, { _id: nationalDocId }) : Promise.resolve(null),
         isNational ? Promise.resolve({}) : computeStateTickRates(db, stateId, resolvedCountryId),
-        db.collection<StateApprovalHistory>("stateApprovalHistory").findOne({ _id: stateId }),
-        db.collection<GameState>("gameState").findOne({ _id: "current" }),
+        stateApprovalHistoryCollection(db).findOne({ _id: stateId }),
+        gameStateCollection(db).findOne({ _id: "current" }),
         findMergedRegionMetricsMany(db, { countryId: resolvedCountryId }),
       ]);
 
@@ -108,55 +117,77 @@ export async function GET(
     const currentTurn = gameStateDoc?.currentTurn ?? 0;
     const preset = gameStateDoc?.preset ?? null;
     // Live year for era-aware scoring; null while the flag is off (legacy path).
-    const year = gameStateDoc?.eraSystemEnabled ? resolveGameYear(gameStateDoc) : null;
-    const addressModifiers = await getActiveAddressApprovalModifiers(
-      db,
-      resolvedCountryId,
-      stateId,
-      currentTurn
-    );
+    const year = gameStateDoc ? resolveGameYear(gameStateDoc) : null;
+    const nationalApproval = isNational
+      ? await loadNationalApproval(resolvedCountryId, {
+          allStates: await statesCollection(db)
+            .find({ countryId: resolvedCountryId }, { projection: { _id: 1, population: 1 } })
+            .toArray(),
+          allMetrics: countryMetricsRaw.filter((row) => !NATIONAL_SCOPE_IDS.has(String(row._id))),
+          nationalAverages: approvalAverages,
+          preset,
+          year,
+        })
+      : null;
+    const addressModifiers = isNational
+      ? []
+      : await getActiveAddressApprovalModifiers(db, resolvedCountryId, stateId, currentTurn);
     // P6d: this region's demographic groups, so the displayed approval matches
     // the electorate-weighted value the per-turn snapshot stores.
-    const demographicsDoc = await db
-      .collection<StateDemographics>("stateDemographics")
-      .findOne({ _id: stateId, countryId: resolvedCountryId }, { projection: { groups: 1 } });
-    const regionGroups = Object.values(demographicsDoc?.groups ?? {});
-    const weighting = regionGroups.length > 0 ? { groups: regionGroups } : undefined;
+    const groupsByState = isNational
+      ? null
+      : await loadElectorateGroups(db, { _id: stateId, countryId: resolvedCountryId });
+    const weighting = groupsByState
+      ? weightingFor(groupsByState, resolvedCountryId, stateId)
+      : undefined;
     // SP4: playable countries score from the hybrid political base.
     let metricModifiers;
     let baseOverride: number | undefined;
-    if (isPoliticalApprovalCountry(resolvedCountryId, true)) {
+    if (!isNational && isPoliticalApprovalCountry(resolvedCountryId, true)) {
       const bases = await loadPoliticalApprovalBases(db, resolvedCountryId);
       baseOverride = bases?.byRegion.get(stateId) ?? BASE_APPROVAL;
       metricModifiers = bases?.modifiersByRegion?.get(stateId);
     }
     const governmentApprovalBase =
+      nationalApproval?.governmentApprovalBase ??
       baseOverride ??
       computeStateApprovalBase(metrics, approvalAverages, weighting, preset ?? undefined);
-    const governmentApproval = calculateStateApproval(
-      metrics,
-      approvalAverages,
-      addressModifiers,
-      weighting,
-      preset,
-      year,
-      baseOverride,
-      metricModifiers
-    );
-    const governmentApprovalModifiers = [
-      ...(
-        metricModifiers ?? evaluateModifiers(flat, { preset, countryId: resolvedCountryId, year })
-      ).map((m) => ({
-        ...m,
-        marginEffect:
-          m.marginEffect ?? (m.source === "address" ? 0 : marginEffectForModifier(m.effect, m.id)),
-      })),
-      ...addressModifiers.map((m) => ({
-        ...m,
-        marginEffect:
-          m.marginEffect ?? (m.source === "address" ? 0 : marginEffectForModifier(m.effect, m.id)),
-      })),
-    ];
+    const governmentApproval =
+      nationalApproval?.governmentApproval ??
+      calculateStateApproval(
+        metrics,
+        approvalAverages,
+        addressModifiers,
+        weighting,
+        preset,
+        year,
+        baseOverride,
+        metricModifiers
+      );
+    const governmentApprovalModifiers = nationalApproval
+      ? nationalApproval.modifiers.map((m) => ({
+          ...m,
+          marginEffect:
+            m.marginEffect ??
+            (m.source === "address" ? 0 : marginEffectForModifier(m.effect, m.id)),
+        }))
+      : [
+          ...(
+            metricModifiers ??
+            evaluateModifiers(flat, { preset, countryId: resolvedCountryId, year })
+          ).map((m) => ({
+            ...m,
+            marginEffect:
+              m.marginEffect ??
+              (m.source === "address" ? 0 : marginEffectForModifier(m.effect, m.id)),
+          })),
+          ...addressModifiers.map((m) => ({
+            ...m,
+            marginEffect:
+              m.marginEffect ??
+              (m.source === "address" ? 0 : marginEffectForModifier(m.effect, m.id)),
+          })),
+        ];
 
     // Shape regional budget data for parliamentary countries. Keep the shared
     // UK keys for legacy consumers, but surface JP/DE revenue fields too so
@@ -207,7 +238,7 @@ export async function GET(
         governmentApproval,
         governmentApprovalBase,
         governmentApprovalModifiers,
-        approvalHistory: approvalHistoryDoc?.history ?? [],
+        approvalHistory: nationalApproval?.history ?? approvalHistoryDoc?.history ?? [],
         tickRates,
         budget,
       },

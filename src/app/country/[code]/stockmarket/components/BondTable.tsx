@@ -8,7 +8,7 @@ import { useCurrency } from "@/contexts/CurrencyContext";
 import { Tooltip } from "@/components/ui";
 import { CorporationLogo } from "@/components/corporation/CorporationLogo";
 import type { BondListing } from "../types";
-import { getCountryFlagUrlForEra } from "@/lib/constants";
+import { getCountryFlagUrlForEra } from "@/lib/constants/flags";
 import { useActivePreset } from "@/contexts/RegisteredCountriesContext";
 import { bypassNextImageOptimization } from "@/lib/images/bypassImageOptimization";
 

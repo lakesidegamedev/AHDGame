@@ -1,18 +1,9 @@
 /**
- * Austria (AT) Layer-1 demographic model — census-consuming. Mirrors the TR/GR
+ * Austria (AT) Layer-1 demographic model, census-consuming. Mirrors the TR/GR
  * models.
  *
  * economicLean: -5 (socialist/left) … +5 (market/right)
  * socialLean:   -5 (progressive/secular) … +5 (Catholic/traditional)
- *
- * 1979 anchor: the late-Kreisky consensus republic — the socialist Lager at
- * its absolute-majority peak, a Catholic-conservative ÖVP countryside, a small
- * national-liberal third camp, and the Sozialpartnerschaft milieus of workers,
- * farmers and business.
- *
- * 1953 anchor: the occupied Second Republic — grand-coalition Lager loyalty
- * near-total, the VdU absorbing amnestied nationals, the KPÖ propped up in the
- * Soviet zone; society Catholic, rural and reconstruction-focused.
  */
 import { convertLayer1Census } from "@/lib/seeds/international/convertLayer1Census";
 import type { CountryLayer1Model, DemographicPosition } from "@/lib/seeds/international/types";

@@ -10,6 +10,16 @@ import {
   calculatePoliticalInfluenceDecay,
 } from "@shared/constants/formulas";
 
+// National GDP per capita is a database read; pin it to the era baseline so
+// these tests keep exercising the pre-existing scalar of exactly 1.0.
+vi.mock("@/lib/campaigns/nationalGdpBasis", async () => {
+  const { gdpBaselinePerCapita } = await import("@/lib/campaigns/rules/gdpBaseline");
+  return {
+    loadNationalGdpPerCapita: vi.fn(async (_db: unknown, countryId: string) =>
+      gdpBaselinePerCapita(countryId)
+    ),
+  };
+});
 vi.mock("@/lib/api/requireAuth", () => ({
   requireBasicAuth: vi.fn(),
 }));

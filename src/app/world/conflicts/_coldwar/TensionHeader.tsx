@@ -20,6 +20,12 @@ const BAND_COLOR: Record<TensionBand, string> = {
 
 const EVENTS_SHOWN = 6;
 
+const BLOC_PAIR_LABEL: Record<NonNullable<ColdWarDials["blocTension"]>[number]["pair"], string> = {
+  "us-cn": "US-LED VS CHINA-LED",
+  "us-nonAligned": "US-LED VS NON-ALIGNED",
+  "cn-nonAligned": "CHINA-LED VS NON-ALIGNED",
+};
+
 export interface TensionEventView {
   turn: number;
   label: string;
@@ -146,7 +152,10 @@ export function TensionHeader({
   events: TensionEventView[];
   powers: NuclearPowerView[];
   pressures: TensionPressureView;
-  dials: Pick<ColdWarDials, "source" | "procurementMultiplier" | "detenteGoodwillPenalty">;
+  dials: Pick<
+    ColdWarDials,
+    "source" | "procurementMultiplier" | "detenteGoodwillPenalty" | "blocTension"
+  >;
 }) {
   const t = useTranslations("worldConflicts.tension");
   const color = BAND_COLOR[band];
@@ -389,6 +398,16 @@ export function TensionHeader({
                 color="#d5a95a"
                 help="The strategic detente dial begins penalizing goodwill above tension 35. It is displayed across the Cold War boards; authored crisis outcomes and stand-down actions define the actual state changes."
               />
+              {dials.blocTension?.map((pair) => (
+                <EffectCard
+                  key={pair.pair}
+                  label={BLOC_PAIR_LABEL[pair.pair]}
+                  value={`${Math.round(pair.value)} ${pair.band}`}
+                  detail="tension between the two blocs"
+                  color={BAND_COLOR[pair.band]}
+                  help="From 2027 each pair of blocs carries its own tension. A standing rivalry sets its floor, and wars and sanctions between members of the two blocs raise it. Readiness and procurement answer to whichever is hotter, world tension or the hottest pair."
+                />
+              ))}
             </div>
           </div>
         </div>

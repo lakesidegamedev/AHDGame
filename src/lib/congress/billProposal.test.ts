@@ -235,7 +235,7 @@ describe("validateBillProvisions: reset version isolation", () => {
     db.collectionMocks.legislationTypes.find.mockReturnValue({
       toArray: async () => [
         {
-          _id: "jp_foreign_corporation_tax",
+          _id: "jp.tax.foreignCorporateTax",
           name: "Foreign Corporation Tax Act",
           countryScope: "jp",
           policyDomain: "tax",
@@ -257,7 +257,7 @@ describe("validateBillProvisions: reset version isolation", () => {
       db as unknown as Db,
       [
         {
-          legislationTypeId: "jp_foreign_corporation_tax",
+          legislationTypeId: "jp.tax.foreignCorporateTax",
           proposedRate: 27.25,
           effectDirection: 0,
         },
@@ -270,7 +270,7 @@ describe("validateBillProvisions: reset version isolation", () => {
     if (result.ok) {
       expect(result.policyProvisions).toEqual([
         expect.objectContaining({
-          legislationTypeId: "jp_foreign_corporation_tax",
+          legislationTypeId: "jp.tax.foreignCorporateTax",
           proposedRate: 27.25,
           policyOptionId: "rate:27.25",
           currentPolicyOptionNameSnapshot: "Rate: 23%",
@@ -306,7 +306,7 @@ describe("validateBillProvisions: reset version isolation", () => {
     db.collectionMocks.legislationTypes.find.mockReturnValue({
       toArray: async () => [
         {
-          _id: "jp_foreign_corporation_tax",
+          _id: "jp.tax.foreignCorporateTax",
           name: "Foreign Corporation Tax Act",
           countryScope: "jp",
           policyDomain: "tax",
@@ -327,12 +327,12 @@ describe("validateBillProvisions: reset version isolation", () => {
       db as unknown as Db,
       [
         {
-          legislationTypeId: "jp_foreign_corporation_tax",
+          legislationTypeId: "jp.tax.foreignCorporateTax",
           proposedRate: 27.25,
           effectDirection: 0,
         },
         {
-          legislationTypeId: "jp_foreign_corporation_tax",
+          legislationTypeId: "jp.tax.foreignCorporateTax",
           proposedRate: 28,
           effectDirection: 0,
         },

@@ -141,10 +141,7 @@ async function main() {
       // No copied gameConfig, outbound endpoints, users or real player identities.
       await db
         .collection("gameState")
-        .updateOne(
-          { _id: "current" as never },
-          { $set: { livingConflictsEnabled: true, crisisInteractionEnabled: true } }
-        );
+        .updateOne({ _id: "current" as never }, { $set: { livingConflictsEnabled: true } });
       await db.collection("characters").insertMany(leaders);
       const roles = new Map(
         await Promise.all(

@@ -14,10 +14,10 @@ import { parseJsonBody } from "@/lib/api/validate";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
-import type { Corporation } from "@/lib/db/types";
 import { isStateOwned } from "@/lib/nationalization/nationalCorporation";
 import { corporationQueryFromParamId } from "@/lib/api/corporations/resolveQuery";
 import { requireSeatedCeo } from "@/lib/nationalization/ceoRouteGuard";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 // `amount` is the per-turn R&D budget to set (0 disables recurring spend).
 const schema = z.object({ kind: z.literal("rd"), amount: z.number().min(0) });
@@ -54,7 +54,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     const db = await getDb();
-    const corps = db.collection<Corporation>("corporations");
+    const corps = corporationsCollection(db);
     const target = await corps.findOne({ ...idQuery, countryOwnerId: countryId });
     if (!target || !isStateOwned(target)) {
       return errorResponse(404, "National Corporation not found for this country.");

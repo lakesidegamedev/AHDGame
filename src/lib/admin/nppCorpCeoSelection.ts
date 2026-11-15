@@ -1,19 +1,17 @@
 /**
  * Pure selection logic for choosing the CEO of a newly spawned NPP corporation.
  *
- * Prefers reusing an existing NPP that does not already run a corp, distributing
- * corp ownership evenly across participating affiliations (active non-defunct
+ * Prefers reusing an existing NPP that does not already run a corp,
+ * distributing corp ownership evenly across affiliations (active non-defunct
  * parties + `"independent"`). Only when no eligible NPP exists anywhere does it
- * fall back to creating a brand-new `"independent"` NPP.
+ * fall back to creating a new `"independent"` NPP.
  *
- * This module performs no I/O — the caller gathers the per-affiliation counts and
- * free-NPP candidates from the database and passes them in, which keeps the
- * branching logic exhaustively unit-testable.
+ * No I/O: the caller gathers per-affiliation counts and free-NPP candidates,
+ * keeping this exhaustively unit-testable.
  *
- * NPP engine 6: when the caller passes the company's operating lane (v6 only),
- * a free NPP with a good CEO record in that lane is preferred over the party
- * balance. Without a lane, or when nobody has a good record, the rule above
- * applies unchanged.
+ * When the caller passes the company's operating lane, a free NPP with a good
+ * CEO record in that lane is preferred over the party balance; otherwise the
+ * rule above applies unchanged.
  */
 
 import type { OperatingSectorType } from "@/lib/constants/corporations";

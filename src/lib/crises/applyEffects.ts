@@ -1,13 +1,21 @@
 import { operatingSectorFilter } from "@/lib/constants/corporations";
-import { type Db, type Filter, ObjectId } from "mongodb";
+import { type Db, ObjectId } from "mongodb";
 import type { CrisisEffect } from "@/lib/db/types/crisis";
 import { isMacroMetricPath } from "@/lib/macroMetrics/paths";
-import type { PoliticalMetricsDoc } from "@/lib/db/types/politicalMetrics";
 import { boardDeltaForLegacyEffect } from "@/lib/politicalLegislation/legacyEffectBridge";
-import { applyBoardDelta } from "@/lib/politicalLegislation/boardWrite";
+import {
+  applyBoardValueDeltasByRegion,
+  type BoardDelta,
+} from "@/lib/politicalLegislation/boardWrite";
 import type { CharacterStats, StatKey } from "@/lib/stats/statsConstants";
 import { STAT_MIN, STAT_MAX } from "@/lib/stats/statsConstants";
 import { resolveCrisisMetricPath } from "@/lib/crises/rules/metricPath";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import type { Document } from "mongodb";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { governmentApprovalsCollection } from "@/lib/db/repositories/governmentApprovals";
 
 /**
  * Clamp a stat value to the legal [STAT_MIN, STAT_MAX] range.
@@ -73,7 +81,7 @@ async function applyInflationEffects(
   const delta = effects.reduce((sum, e) => sum + e.value, 0);
   if (affectedCountries.length === 0 || delta === 0) return;
 
-  await db.collection("federalBudget").updateMany(
+  await federalBudgetCollection(db).updateMany(
     { countryId: { $in: affectedCountries } },
     {
       $inc: { "economicFactors.inflationRate": delta },
@@ -108,12 +116,10 @@ async function applyMetricEffects(
   const writes: Array<Promise<unknown>> = [];
   if (Object.keys(macroInc).length > 0) {
     writes.push(
-      db
-        .collection("macroMetrics")
-        .updateMany(
-          { _id: { $in: targetStateIds.map((id) => id as unknown as import("mongodb").ObjectId) } },
-          { $inc: macroInc, $set: { lastUpdated: new Date() } }
-        )
+      macroMetricsCollection<Document>(db).updateMany(
+        { _id: { $in: targetStateIds.map((id) => id as unknown as import("mongodb").ObjectId) } },
+        { $inc: macroInc, $set: { lastUpdated: new Date() } }
+      )
     );
   }
   // Political effects move the BOARD, as a VALUE shift.
@@ -132,22 +138,17 @@ async function applyMetricEffects(
   //
   // The paths are stripped of their trailing `.value` because the bridge takes
   // "category.metricId" — the legacy `$inc` shape carries a third segment.
+  const politicalDeltas: BoardDelta[] = [];
   for (const [path, delta] of Object.entries(politicalInc)) {
     const [category, metricId] = path.split(".");
     const hit = boardDeltaForLegacyEffect(category, metricId, delta);
     if (!hit) continue;
-    for (const stateId of targetStateIds) {
-      writes.push(
-        applyBoardDelta(
-          db,
-          { _id: stateId } as Filter<PoliticalMetricsDoc>,
-          hit.familyId,
-          hit.scoreDelta,
-          "value"
-        )
-      );
-    }
+    politicalDeltas.push({ familyId: hit.familyId, scoreDelta: hit.scoreDelta });
   }
+  if (politicalDeltas.length > 0)
+    writes.push(
+      applyBoardValueDeltasByRegion(db, new Map(targetStateIds.map((id) => [id, politicalDeltas])))
+    );
 
   await Promise.all(writes);
 }
@@ -160,7 +161,7 @@ async function applyApprovalEffects(
   const approvalDelta = effects.reduce((sum, e) => sum + e.value, 0);
 
   if (affectedCountries.length > 0) {
-    await db.collection("governmentApprovals").updateMany(
+    await governmentApprovalsCollection<Document>(db).updateMany(
       {
         _id: { $in: affectedCountries.map((id) => id as unknown as import("mongodb").ObjectId) },
       },
@@ -179,7 +180,7 @@ async function applyProfitMarginEffects(
     if (effect.sectorType) Object.assign(filter, operatingSectorFilter(effect.sectorType));
     if (effect.strategyId) filter.strategyId = effect.strategyId;
 
-    await db.collection("corporateSectors").updateMany(filter, [
+    await corporateSectorsCollection<Document>(db).updateMany(filter, [
       {
         $set: {
           profitMargin: {
@@ -212,8 +213,7 @@ async function applyStatEffects(
   if (statKeys.length === 0 || characterIds.length === 0) return;
 
   // Pull current stats, apply drops, write back
-  const chars = await db
-    .collection<{ _id: ObjectId; stats?: CharacterStats }>("characters")
+  const chars = await charactersCollection<{ _id: ObjectId; stats?: CharacterStats }>(db)
     .find({ _id: { $in: characterIds } }, { projection: { _id: 1, stats: 1 } })
     .toArray();
 
@@ -241,6 +241,6 @@ async function applyStatEffects(
   }
 
   if (ops.length > 0) {
-    await db.collection("characters").bulkWrite(ops);
+    await charactersCollection(db).bulkWrite(ops);
   }
 }

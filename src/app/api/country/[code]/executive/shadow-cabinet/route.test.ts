@@ -8,7 +8,7 @@ vi.mock("@/lib/countryState", () => ({ getCountryState: vi.fn() }));
 vi.mock("@/lib/parliament/oppositionLeader", () => ({
   resolveOppositionLeaderForCountry: vi.fn(),
 }));
-vi.mock("@/lib/uk/cabinetEligibility", () => ({ getEligibleCabinetCharacters: vi.fn() }));
+vi.mock("@/lib/countries/uk/cabinetEligibility", () => ({ getEligibleCabinetCharacters: vi.fn() }));
 
 function makeRequest(method: "POST" | "DELETE", body: Record<string, unknown>) {
   return new Request("http://localhost/api/country/UK/executive/shadow-cabinet", {
@@ -57,7 +57,7 @@ describe("shadow-cabinet route", () => {
       partyDoc: { _id: oppositionPartyId, name: "Labour", sequentialId: 2 },
     } as never);
 
-    const { getEligibleCabinetCharacters } = await import("@/lib/uk/cabinetEligibility");
+    const { getEligibleCabinetCharacters } = await import("@/lib/countries/uk/cabinetEligibility");
     vi.mocked(getEligibleCabinetCharacters).mockResolvedValue([
       {
         _id: eligibleCharId.toString(),
@@ -165,5 +165,21 @@ describe("shadow-cabinet route", () => {
     expect(res.status).toBe(200);
     const [, update] = db.collectionMocks.politicalParties.updateOne.mock.calls[0]!;
     expect(update.$unset).toEqual({ "shadowCabinet.chancellor": "" });
+  });
+  it("does not grant a player an NPC opposition leader's authority", async () => {
+    db.collection("politicalParties");
+    const { resolveOppositionLeaderForCountry } = await import("@/lib/parliament/oppositionLeader");
+    vi.mocked(resolveOppositionLeaderForCountry).mockResolvedValue({
+      chairId: null,
+      nppId: new ObjectId(),
+      partyDoc: { _id: oppositionPartyId, name: "Opposition", sequentialId: 2 },
+    } as never);
+    const { POST } = await import("./route");
+    const response = await POST(
+      makeRequest("POST", { positionId: "chancellor", characterId: eligibleCharId.toString() }),
+      { params: Promise.resolve({ code: "CA" }) }
+    );
+    expect(response.status).toBe(403);
+    expect(db.collectionMocks.politicalParties?.updateOne).not.toHaveBeenCalled();
   });
 });

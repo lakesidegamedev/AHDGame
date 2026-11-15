@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useToast } from "@/contexts/ToastContext";
 import { regionPartyApiUrl } from "@/lib/urls";
-import { COUNTRY_CURRENCY_MAP, CURRENCY_SYMBOLS } from "@/lib/constants/currencies";
+import { COUNTRY_CURRENCY_MAP, CURRENCY_SYMBOLS } from "@/lib/constants/currencyCodes";
 import { parseMoneyAmountInput } from "@/lib/utils/parseMoneyAmountInput";
 import type { TreasuryPresetId } from "@/lib/treasury/partyTreasuryPresets";
 import { apiErrorText } from "@/lib/errors/catalog";

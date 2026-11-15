@@ -2,6 +2,7 @@ import type { Db } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import type { PartyStrengthPressure } from "@/lib/db/types";
 import { PRESSURE_DECAY_PER_TURN } from "./strengthConstants";
+import { partyStrengthPressureCollection } from "@/lib/db/repositories/partyStrengthPressure";
 
 /**
  * Per-geography PS pressure decay phase.
@@ -28,7 +29,7 @@ export async function processPressureDecay(
   injectedDb?: Db
 ): Promise<PressureDecayResult> {
   const db = injectedDb ?? (await getDb());
-  const col = db.collection<PartyStrengthPressure>("partyStrengthPressure");
+  const col = partyStrengthPressureCollection(db);
 
   const result: PressureDecayResult = {
     rowsScanned: 0,

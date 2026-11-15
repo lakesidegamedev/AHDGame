@@ -24,6 +24,7 @@ import type {
   ResultsElectionMeta,
   ResultsUnit,
 } from "@/lib/elections/liveResults/types";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 export const FALLBACK_COLOR = "#9CA3AF";
 
@@ -219,7 +220,7 @@ export function hasNight(data: ElectionResultsResponse | null | undefined): bool
   return (
     data != null &&
     data.election.electionType === "president" &&
-    data.election.countryId === "US" &&
+    countryHasFeature("usUi", data.election.countryId) &&
     data.election.night != null
   );
 }
@@ -238,7 +239,8 @@ export function isNightWindow(election: {
   endTurn: number | null;
   gameState: { currentTurn?: number | null } | null;
 }): boolean {
-  if (election.countryId !== "US" || election.electionType !== "president") return false;
+  if (!countryHasFeature("usUi", election.countryId) || election.electionType !== "president")
+    return false;
   if (election.isUpcoming || election.inPrimary || election.isEnded) return false;
   const turn = election.gameState?.currentTurn;
   if (election.endTurn == null || turn == null) return false;

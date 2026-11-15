@@ -1,34 +1,28 @@
 /**
  * Per-phase Mongo round-trip profiler.
  *
- * Turn time in production is dominated by round-trip latency, not CPU: Mongo
- * is remote, so every command costs milliseconds of network before any work
- * happens. That makes wall clock a poor guide when profiling locally, where a
- * round trip is ~0.05ms and a phase doing thousands of serial queries looks
- * fast. Round-trip COUNT is latency-independent, so it ranks phases the same
- * way locally as it does on production.
+ * Round-trip COUNT ranks turn phases the same locally as in production,
+ * unlike wall clock: local Mongo is ~0.05ms/call, so a phase doing thousands
+ * of serial queries looks fast locally but is dominated by latency in prod.
  *
- * This counts commands per turn phase by bracketing each phase in
- * `runPhase` (src/simulation/engine/turnPhaseRuntime.ts) and attributing every
- * command the driver reports to whichever phase is open. Attribution is
- * approximate by nature — a phase that awaits concurrent work can overlap the
- * next — but it is more than accurate enough to find the N+1s, which stand out
- * by an order of magnitude.
+ * Counts commands per turn phase, bracketed by `runPhase` (turnPhaseRuntime)
+ * and attributed to whichever phase is open. Attribution is approximate (a
+ * phase awaiting concurrent work can overlap the next) but well within the
+ * order-of-magnitude gaps that reveal N+1s.
  *
- * It reports the phase and the collection, not the call site. Capturing a
- * stack here does not work: this runs inside the driver's event emitter, so
- * every frame is driver internals with no application code on it. Take the
- * phase+collection pair and grep for that collection within the phase.
+ * Reports phase and collection, not call site: this runs inside the driver's
+ * event emitter, so stack frames are all driver internals. Grep for the
+ * collection within the phase instead.
  *
- * Round trips and documents are counted when command monitoring is enabled.
- * The map increments are cheap, but the driver also materializes reply objects
- * for monitoring, so normal worldsims leave diagnostics off. Unmeasured phases
- * omit counts and budget status. Only the BSON byte accounting and
- * the printed report sit behind AHD_TURN_ROUNDTRIP_PROFILE=1, because sizing
- * every returned document is far too expensive for the hot path.
+ * Counting is gated on command monitoring. Normal worldsims leave
+ * diagnostics off since the driver materializes reply objects. Only the BSON
+ * byte accounting and printed report sit behind
+ * AHD_TURN_ROUNDTRIP_PROFILE=1, since sizing each document is too expensive
+ * for the hot path.
  */
 
 import { getAuditRequestContext } from "@/lib/observability/context";
+import { workerConfig } from "@/lib/config/worker";
 
 /**
  * Per phase: how many commands were issued, and how many documents came back.
@@ -99,7 +93,7 @@ function state(): ProfilerState {
  */
 export function roundTripProfilingEnabled(): boolean {
   const s = state();
-  if (s.enabled === null) s.enabled = process.env.AHD_TURN_ROUNDTRIP_PROFILE === "1";
+  if (s.enabled === null) s.enabled = workerConfig.roundTripProfile();
   return s.enabled;
 }
 
@@ -438,7 +432,7 @@ function formatMb(bytes: number): string {
  * bucket hides.
  */
 function reportPhaseLimit(fallback: number): number {
-  const raw = Number(process.env.AHD_TURN_ROUNDTRIP_TOP);
+  const raw = Number(workerConfig.roundTripTop());
   return Number.isFinite(raw) && raw > 0 ? raw : fallback;
 }
 

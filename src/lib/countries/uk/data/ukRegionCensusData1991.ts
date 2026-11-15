@@ -1,18 +1,12 @@
 /**
- * United Kingdom Region Census Profiles — 1991 era.
+ * UK Region Census Profiles, 1991 era.
  *
- * 1991-default companion to {@link ukRegionCensusData} (the 2019 profiles).
- * Selected at render time via the preset registry under the `1991-default`
- * reset preset.
+ * 1991-default companion to {@link ukRegionCensusData}, selected via the
+ * preset registry under the `1991-default` reset preset.
  *
- * Sources / methodology (approximate, % of adult population): 1991 UK Census
- * (the first to ask an ethnic-group question). Outside London the population
- * was overwhelmingly White British; tertiary attainment was far lower than
- * today and "no qualifications" much higher. Income uses era-neutral relative
- * tiers (no £ thresholds).
- *
- * Directional vs the 2019 profiles: higher `white_british`, lower
- * `degree_plus`, higher `no_qualifications`.
+ * Approximate % of adult population, from the 1991 UK Census (first to ask
+ * ethnic group). Income uses era-neutral relative tiers, no GBP thresholds.
+ * vs 2019: higher white_british and no_qualifications, lower degree_plus.
  */
 
 import type { UKRegionLayer1 } from "@/lib/countries/uk/data/ukRegionCensusData";

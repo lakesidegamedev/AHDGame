@@ -1,27 +1,19 @@
 /**
- * P1 units telemetry ("buildable sectors"): the units-denominated twin of the
- * dollar realization chain, so a sector's trace can be read in physical output
- * instead of only in ₳.
+ * Units telemetry: the units-denominated twin of the dollar realization chain.
  *
- * The dollar chain is
- *   realizedRevenue = nameplateRevenue × productionLegs × salesLegs
- * where the PRODUCTION legs gate how much the sector can physically make this
- * turn (production policy, nationalization transition, extraction capacity
- * haircut, input throughput, capital utilization, strike) and the SALES legs
- * only decide what the output fetches or how much of it clears (the
- * clearing/price leg, the embargo export strip).
+ * Dollar chain: realizedRevenue = nameplateRevenue × productionLegs × salesLegs
+ * where production legs gate physical output and sales legs decide clearing
+ * and price.
  *
- * Splitting the chain there gives the identity this helper pins:
- *   producedUnits = impliedOutputUnits(nameplateRevenue) × productionFactor
+ * The identity pinned here:
+ *   producedUnits   = impliedOutputUnits(nameplateRevenue) × productionFactor
  *   realizedRevenue = producedUnits × mixPrice × salesLegs
- * with mixPrice = nameplateRevenue / impliedOutputUnits(nameplateRevenue),
- * the same Σ rate/basePrice mix the capital tier already prices output with.
+ * with mixPrice = nameplateRevenue / impliedOutputUnits(nameplateRevenue).
  * Both are DAILY, currency-free counts.
  *
- * `soldUnits` is producedUnits × soldFraction when the clearing pre-pass ran,
- * else producedUnits. The embargo leg is deliberately NOT folded into
- * soldUnits: it strips revenue, not clearing volume, and lives on the dollar
- * side of the identity above.
+ * `soldUnits` = producedUnits × soldFraction when the clearing pre-pass ran,
+ * else producedUnits. The embargo leg is NOT folded in: it strips revenue, not
+ * clearing volume, and stays on the dollar side.
  *
  * Telemetry only: never read back into the economy.
  */

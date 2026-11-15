@@ -31,6 +31,10 @@ import {
 } from "@/lib/elections/primaryViewModel";
 import { loadPrimaryPartyData, type PrimaryDetailViewer } from "@/lib/elections/primaryPartyDetail";
 import { NppAbbr } from "@/components/elections/NppAbbr";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { playerEndorsementsCollection } from "@/lib/db/repositories/playerEndorsements";
 
 // Presidential primary standings can change every turn and after live player
 // actions (endorsements, surge, in-state campaigning), so cached route output
@@ -50,20 +54,16 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const sequentialId = Number(partyId);
   let party: PoliticalParty | null = null;
   if (Number.isFinite(sequentialId)) {
-    party = await db
-      .collection<PoliticalParty>("politicalParties")
-      .findOne(
-        { countryId: "US", sequentialId },
-        { projection: { name: 1, abbreviation: 1, logoUrl: 1 } }
-      );
+    party = await politicalPartiesCollection(db).findOne(
+      { countryId: "US", sequentialId },
+      { projection: { name: 1, abbreviation: 1, logoUrl: 1 } }
+    );
   }
   if (!party) {
-    party = await db
-      .collection<PoliticalParty>("politicalParties")
-      .findOne(
-        { countryId: "US", abbreviation: partyId },
-        { projection: { name: 1, abbreviation: 1, logoUrl: 1 } }
-      );
+    party = await politicalPartiesCollection(db).findOne(
+      { countryId: "US", abbreviation: partyId },
+      { projection: { name: 1, abbreviation: 1, logoUrl: 1 } }
+    );
   }
   if (!party) return {};
 
@@ -100,7 +100,7 @@ const STATE_IDS = [...new Set(ELECTORAL_VOTE_UNITS.map((u) => u.stateId))];
 async function loadPrimaryData(partySlug: string, viewer: PrimaryDetailViewer | null) {
   const db = await getDb();
 
-  const election = await db.collection<Election>("elections").findOne({
+  const election = await electionsCollection(db).findOne({
     electionType: "president",
     countryId: "US",
     status: "active",
@@ -151,7 +151,7 @@ export default async function PartyPrimaryPage({ params, searchParams }: PagePro
   // The viewer's own endorsement in this race, which only this page shows.
   let viewerEndorsedCandidateId: string | null = null;
   if (viewerChar) {
-    const activeEnd = await db.collection<PlayerEndorsement>("playerEndorsements").findOne({
+    const activeEnd = await playerEndorsementsCollection(db).findOne({
       characterId: viewerChar._id,
       electionId: election._id,
       isActive: true,
@@ -239,9 +239,7 @@ export default async function PartyPrimaryPage({ params, searchParams }: PagePro
     let winnerId: string | null = null;
     const tooltip: string[] = [];
     if (hasVoted) {
-      // Scope to live candidates for the same reason the per-state page does
-      // (#974): the tally keeps rows for withdrawn candidates, which otherwise
-      // surface as an "Unknown — x%" line and skew every other share.
+      // Scope to live candidates: the tally keeps rows for withdrawn candidates, which surface as Unknown and skew every other share.
       const ranked = Object.entries(stateVotes)
         .filter(([cid, v]) => v > 0 && candidateMap.has(cid))
         .sort(([, a], [, b]) => b - a);
@@ -362,7 +360,6 @@ export default async function PartyPrimaryPage({ params, searchParams }: PagePro
       id: c._id.toString(),
       name: c.characterName ?? "Unknown",
       color: colorForCandidate(c._id.toString()),
-      archetype: undefined,
     })),
     // Counted results where a contest has run, the projection only where it
     // has not. Feeding the raw projection here kept the carve-up showing a
@@ -484,7 +481,7 @@ export default async function PartyPrimaryPage({ params, searchParams }: PagePro
         </div>
       )}
 
-      {viewerChar?.countryId === "US" && (
+      {countryHasFeature("usUi", viewerChar?.countryId) && (
         <div className="mb-4 rounded-xl border border-card-border bg-card p-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="min-w-0">

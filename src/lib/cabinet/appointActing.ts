@@ -28,7 +28,10 @@ import {
   type ActingChargeKey,
 } from "@/lib/db/collections/actingAppointmentCharges";
 import { getCabinetMembersCollection } from "@/lib/db/collections/cabinetMembers";
-import type { CabinetNomination, ElectedOfficial, Character } from "@/lib/db/types";
+import type { CabinetNomination, ElectedOfficial } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { cabinetNominationsCollection } from "@/lib/db/repositories/cabinetNominations";
 
 const actingSchema = z.object({
   // Validated against the country's own roster below, not here: a bare id
@@ -90,14 +93,16 @@ export async function appointActingCabinetMember(
       return errorResponse(400, "This cabinet position does not exist in the current era");
     }
 
-    const presidentOfficial = await db
-      .collection<ElectedOfficial>("electedOfficials")
-      .findOne({ countryId, officeType: "president", characterId: { $ne: null } });
+    const presidentOfficial = await electedOfficialsCollection(db).findOne({
+      countryId,
+      officeType: "president",
+      characterId: { $ne: null },
+    });
     if (!presidentOfficial?.characterId) {
       return errorResponse(400, "No President in office");
     }
 
-    const myCharacter = await db.collection<Character>("characters").findOne({
+    const myCharacter = await charactersCollection(db).findOne({
       userId: new ObjectId(authUser.userId),
     });
     if (!myCharacter || !presidentOfficial.characterId.equals(myCharacter._id)) {
@@ -105,7 +110,7 @@ export async function appointActingCabinetMember(
     }
 
     const appointeeOid = new ObjectId(characterId);
-    const appointee = await db.collection<Character>("characters").findOne({ _id: appointeeOid });
+    const appointee = await charactersCollection(db).findOne({ _id: appointeeOid });
     if (!appointee) {
       return errorResponse(404, "Character not found");
     }
@@ -155,7 +160,7 @@ export async function appointActingCabinetMember(
 
     // Keep the historical votes, but only this presidency can bar an acting pick.
     // A failed office-compatibility check is not a Senate defeat.
-    const rejected = await db.collection<CabinetNomination>("cabinetNominations").findOne({
+    const rejected = await cabinetNominationsCollection(db).findOne({
       countryId,
       positionId,
       nomineeCharacterId: appointeeOid,

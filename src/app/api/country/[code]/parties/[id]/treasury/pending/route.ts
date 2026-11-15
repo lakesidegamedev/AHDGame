@@ -1,3 +1,4 @@
+import { vacateBannedOfficerSeats } from "@/lib/parties/bannedOfficers";
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
@@ -12,7 +13,11 @@ import {
   isPendingTransactionComplete,
   listOpenPendingTransactions,
 } from "@/lib/parties/pendingTreasuryTransactions";
-import type { Character, State } from "@/lib/db/types";
+import { isLeadershipElectionFreezeActive } from "@/lib/parties/leadershipElectionFreeze";
+import { getGameTime } from "@/lib/time/gameTime";
+import type { State } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string }>;
@@ -40,6 +45,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
 
     const db = await getDb();
     const party = await findPartyBySequentialId(db, partyId, countryId);
+    await vacateBannedOfficerSeats(db, party);
     if (!party) return errorResponse(404, "Party not found");
 
     const rows = await listOpenPendingTransactions(db, party._id, countryId);
@@ -59,15 +65,13 @@ export async function GET(_request: Request, { params }: RouteParams) {
     const [characterDocs, stateDocs] = await Promise.all([
       characterIds.size === 0
         ? Promise.resolve([] as Array<{ _id: ObjectId; name: string }>)
-        : db
-            .collection<Character>("characters")
+        : charactersCollection(db)
             .find({ _id: { $in: Array.from(characterIds).map((id) => new ObjectId(id)) } })
             .project<{ _id: ObjectId; name: string }>({ name: 1 })
             .toArray(),
       stateIds.size === 0
         ? Promise.resolve([] as Array<{ _id: string; name: string }>)
-        : db
-            .collection<State>("states")
+        : statesCollection(db)
             .find({ _id: { $in: Array.from(stateIds) }, countryId })
             .project<{ _id: string; name: string }>({ name: 1 })
             .toArray(),
@@ -81,6 +85,11 @@ export async function GET(_request: Request, { params }: RouteParams) {
     const myCharOid = authResult.user.character._id;
     const myChar = myCharOid.toString();
 
+    // The approve route refuses during the leadership handover freeze, so the
+    // buttons should not be offered either.
+    const { currentTurn } = await getGameTime();
+    const freezeActive = await isLeadershipElectionFreezeActive(db, party, currentTurn);
+
     const items = rows.map((r) => {
       // The viewer's slot for THIS row — null if they can't approve at
       // all (not an officer, or a Request Funds row they themselves
@@ -91,7 +100,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
       // still reads as a guard rather than a restatement.
       const slotAlreadyFilled = viewerSlot == null ? true : !!r[approvalFieldForSlot(viewerSlot)];
       const rowComplete = isPendingTransactionComplete(r);
-      const canApprove = viewerSlot != null && !slotAlreadyFilled && !rowComplete;
+      const canApprove = viewerSlot != null && !slotAlreadyFilled && !rowComplete && !freezeActive;
       const canCancel = r.proposedBy.toString() === myChar;
 
       const mode = r.approvalModeAtPropose ?? "double";

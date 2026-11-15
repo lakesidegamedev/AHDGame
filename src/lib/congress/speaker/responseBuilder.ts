@@ -9,7 +9,6 @@ import type {
   SpeakerElection,
   SpeakerNomination,
   SpeakerVacateMotion,
-  Character,
   ElectedOfficial,
   NPP,
   PoliticalParty,
@@ -30,6 +29,13 @@ import {
   isPartyEligible,
   POLICY_BY_ROLE,
 } from "@/lib/congress/leadership/rolePolicy";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { congressLeadersCollection } from "@/lib/db/repositories/congressLeaders";
+import { speakerElectionsCollection } from "@/lib/db/repositories/speakerElections";
+import { speakerNominationsCollection } from "@/lib/db/repositories/speakerNominations";
+import { speakerVacateMotionsCollection } from "@/lib/db/repositories/speakerVacateMotions";
 
 export interface BuildSpeakerResponseInput {
   db: Db;
@@ -48,13 +54,13 @@ export async function buildSpeakerResponse(
   let myParty: string | null = null;
 
   if (authUser) {
-    const char = await db.collection<Character>("characters").findOne({
+    const char = await charactersCollection(db).findOne({
       userId: new ObjectId(authUser.userId),
     });
     myCharacterId = char?._id?.toString() ?? null;
     myParty = char?.party ?? null;
     if (myCharacterId) {
-      const official = await db.collection<ElectedOfficial>("electedOfficials").findOne({
+      const official = await electedOfficialsCollection(db).findOne({
         characterId: new ObjectId(myCharacterId),
         officeType: "house",
       });
@@ -62,9 +68,7 @@ export async function buildSpeakerResponse(
     }
   }
 
-  const election = await db
-    .collection<SpeakerElection>("speakerElections")
-    .findOne({ _id: "current" });
+  const election = await speakerElectionsCollection(db).findOne({ _id: "current" });
   const electionStatus = election?.status ?? "none";
   // Use the game clock so the voting-window flag matches turn-based resolution.
   const gameTime = await getGameTime();
@@ -73,27 +77,21 @@ export async function buildSpeakerResponse(
     !!election &&
     !isLeadershipElectionClosed(election, gameTime.currentTurn, gameTime.effectiveNow);
 
-  const leaderDoc = await db
-    .collection<CongressLeader>("congressLeaders")
-    .findOne({ role: "speaker_of_the_house" });
+  const leaderDoc = await congressLeadersCollection(db).findOne({ role: "speaker_of_the_house" });
 
   let currentSpeaker: SpeakerDisplay | null = null;
   if (leaderDoc?.characterId) {
     const p = partyMap.get(leaderDoc.party ?? "");
-    const char = await db
-      .collection<Character>("characters")
-      .findOne(
-        { _id: leaderDoc.characterId },
-        { projection: { avatarUrl: 1, homeState: 1, sequentialId: 1, userId: 1 } }
-      );
+    const char = await charactersCollection(db).findOne(
+      { _id: leaderDoc.characterId },
+      { projection: { avatarUrl: 1, homeState: 1, sequentialId: 1, userId: 1 } }
+    );
     const npp = char
       ? null
-      : await db
-          .collection<NPP>("npps")
-          .findOne(
-            { _id: leaderDoc.characterId },
-            { projection: { homeState: 1, avatarUrl: 1, sequentialId: 1 } }
-          );
+      : await nppsCollection(db).findOne(
+          { _id: leaderDoc.characterId },
+          { projection: { homeState: 1, avatarUrl: 1, sequentialId: 1 } }
+        );
     const speakerBorder = char?.userId
       ? (await fetchBordersByUserIds(db, [char.userId])).get(char.userId.toString())
       : undefined;
@@ -113,15 +111,13 @@ export async function buildSpeakerResponse(
     };
   }
 
-  const nomDocs = await db
-    .collection<SpeakerNomination>("speakerNominations")
+  const nomDocs = await speakerNominationsCollection(db)
     .find(isVoting ? { status: { $in: ["open", "voting"] } } : { status: "confirmed" })
     .sort({ votesFor: -1, createdAt: 1 })
     .toArray();
 
   const nomineeIds = nomDocs.map((n) => n.nomineeId);
-  const nomineeChars = await db
-    .collection<Character>("characters")
+  const nomineeChars = await charactersCollection(db)
     .find(
       { _id: { $in: nomineeIds } },
       { projection: { _id: 1, avatarUrl: 1, sequentialId: 1, userId: 1 } }
@@ -141,8 +137,7 @@ export async function buildSpeakerResponse(
   const foundCharIds = new Set(nomineeChars.map((c) => c._id.toString()));
   const nppNomineeIds = nomineeIds.filter((id) => !foundCharIds.has(id.toString()));
   if (nppNomineeIds.length > 0) {
-    const nppDocs = await db
-      .collection<NPP>("npps")
+    const nppDocs = await nppsCollection(db)
       .find(
         { _id: { $in: nppNomineeIds } },
         { projection: { _id: 1, avatarUrl: 1, sequentialId: 1 } }
@@ -214,9 +209,7 @@ export async function buildSpeakerResponse(
 
   // Motion to vacate the chair. Open only when a Speaker is seated and the
   // window hasn't closed; any seated House member may file/vote.
-  const motionDoc = await db
-    .collection<SpeakerVacateMotion>("speakerVacateMotions")
-    .findOne({ _id: "current" });
+  const motionDoc = await speakerVacateMotionsCollection(db).findOne({ _id: "current" });
   const motionOpen =
     motionDoc?.status === "voting" &&
     !isLeadershipElectionClosed(motionDoc, gameTime.currentTurn, gameTime.effectiveNow);

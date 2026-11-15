@@ -7,6 +7,9 @@ import {
   nppVacateMotionVote,
   type VacateVoteValue,
 } from "./nppVacateVote";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { speakerVacateMotionsCollection } from "@/lib/db/repositories/speakerVacateMotions";
 
 /**
  * Give every unvoted NPP bloc a graded ballot on the motion to vacate.
@@ -41,8 +44,7 @@ export async function autoVoteNppsForVacateMotion(
   // a plain countryId too, so a row missing it carries no seat weight and its
   // ballot would be discarded. Widening this without widening the tally would
   // just write votes that never count.
-  const officials = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const officials = await electedOfficialsCollection(db)
     .find({ countryId: "US", officeType: "house", isNPP: true })
     .project<Pick<ElectedOfficial, "nppId">>({ nppId: 1 })
     .toArray();
@@ -53,8 +55,7 @@ export async function autoVoteNppsForVacateMotion(
   if (nppIdList.length === 0) return votes;
 
   const [nppDocs, speakerContext] = await Promise.all([
-    db
-      .collection<NPP>("npps")
+    nppsCollection(db)
       .find({ _id: { $in: nppIdList } })
       .project<Pick<NPP, "_id" | "party" | "policies">>({ _id: 1, party: 1, policies: 1 })
       .toArray(),
@@ -104,13 +105,14 @@ export async function autoVoteNppsForVacateMotion(
 
   if (ops.length === 0) return votes;
 
-  await db.collection<SpeakerVacateMotion>("speakerVacateMotions").bulkWrite(ops);
+  await speakerVacateMotionsCollection(db).bulkWrite(ops);
 
   // Re-read rather than assuming every op applied: a guard may have rejected
   // one, and the tally that follows must run on what the motion actually holds.
-  const updated = await db
-    .collection<SpeakerVacateMotion>("speakerVacateMotions")
-    .findOne({ _id: "current" }, { projection: { votes: 1 } });
+  const updated = await speakerVacateMotionsCollection(db).findOne(
+    { _id: "current" },
+    { projection: { votes: 1 } }
+  );
 
   return updated?.votes ?? votes;
 }

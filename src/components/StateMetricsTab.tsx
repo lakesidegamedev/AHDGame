@@ -203,7 +203,7 @@ interface StateBudgetSummary {
 }
 
 function USBudgetPanel({ budget, countryId }: { budget: StateBudgetSummary; countryId: string }) {
-  const netBalance = budget.surplus !== 0 ? budget.surplus : budget.balance;
+  const netBalance = budget.surplus;
   const balanceColor = netBalance < 0 ? "text-error" : "text-success";
   const currencySymbol = getCurrencyPrefix(countryId);
 

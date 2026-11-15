@@ -72,9 +72,24 @@ function profileDb(rows: Record<string, Row[]>): Db {
         };
         return cursor;
       },
-      aggregate: () => ({ toArray: async () => [] }),
+      aggregate: () => ({
+        toArray: async () => (name === "states" ? groupStatesByCountry(rows.states ?? []) : []),
+      }),
     }),
   } as unknown as Db;
+}
+
+/** The national GDP read groups states by country; answer it from the fixture rows. */
+function groupStatesByCountry(states: Row[]): Row[] {
+  const byCountry = new Map<string, { gdp: number; population: number }>();
+  for (const state of states) {
+    const key = String(state.countryId ?? "US");
+    const total = byCountry.get(key) ?? { gdp: 0, population: 0 };
+    total.gdp += Number(state.gdp ?? 0);
+    total.population += Number(state.population ?? 0);
+    byCountry.set(key, total);
+  }
+  return [...byCountry].map(([_id, total]) => ({ _id, ...total }));
 }
 
 describe("successor-country profile server rendering", () => {

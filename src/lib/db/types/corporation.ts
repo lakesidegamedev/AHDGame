@@ -22,7 +22,6 @@ import type {
 } from "../../constants/corporations";
 import type { CountryId } from "../../constants/countries";
 import type { CurrencyCode } from "../../constants/currencies";
-import type { ExtractableResource } from "../../constants/commodities";
 import type { ProductAdvertisingDenominationWitness } from "@/lib/products/rules/productAdvertising";
 
 export interface Shareholder {
@@ -118,10 +117,8 @@ export interface ShareOrder {
   escrowAnchor?: number;
   status: "open" | "filled" | "cancelled";
   /**
-   * Idempotency key of the latest fill attempt stamped atomically by the
-   * order-claim write (issue #1672). Lets the next fill on this order resume
-   * a crashed attempt's audit rows instead of leaving them missing. Restored
-   * alongside the claim snapshot when a live attempt compensates.
+   * Idempotency key of the latest fill attempt, stamped atomically by the
+   * order-claim write. Lets the next fill resume a crashed attempt's audit rows.
    */
   lastShareFillKey?: string;
   /** Serializes an order's money settlement, cancellation, and holding-lot claim. */
@@ -211,7 +208,7 @@ export interface CorpAutopilotAdvisory {
   subject?: string;
 }
 
-export interface CorporationAutopilot {
+interface CorporationAutopilot {
   enabledTurn: number;
   advisories?: CorpAutopilotAdvisory[];
   /** Last turn the owner was notified about each advisory kind (throttle). */
@@ -271,7 +268,7 @@ export interface CorporationCeoPay {
 }
 
 export interface Corporation {
-  /** Unified producer market (#4322): creditor claims, written only once the new market settles. */
+  /** Unified producer market: creditor claims, written only once the new market settles. */
   producerPayables?: import("./producerEconomy").ProducerPayablesState;
   /** Frozen migration fallback for unrecorded legacy personal cost basis. */
   stockHoldingRolloutAnchorPrice?: number;
@@ -436,13 +433,12 @@ export interface Corporation {
     amountLocal: number;
   };
   /**
-   * Crash-recovery plan for an in-flight bank-charter transfer
-   * (transferCharter.ts, issue #2014). Stamped on the absorbed shell before
-   * its charter slot is claimed, cleared once every satellite record is
-   * re-keyed. A surviving marker after a crash tells the next attempt where
-   * the charter went and which currency the depositor pointers use, so the
-   * retry resumes instead of reporting "no transfer required" over split
-   * records. Dies with the shell when the merge completes.
+   * Crash-recovery plan for an in-flight bank-charter transfer. Stamped on the
+   * absorbed shell before its charter slot is claimed, cleared once every
+   * satellite record is re-keyed. A marker surviving a crash tells the next
+   * attempt where the charter went and which currency the depositor pointers
+   * use, so the retry resumes instead of reporting "no transfer required" over
+   * split records. Dies with the shell when the merge completes.
    */
   bankCharterTransfer?: {
     /** Corporation the charter is moving (or moved) to. */
@@ -450,23 +446,21 @@ export interface Corporation {
     /** Charter currency, for the legacy savingsHolder pointer path. */
     currency: CurrencyCode;
     /**
-     * Unique token of the attempt that stamped this plan (PR #2016). Created
-     * once, claimed atomically, and required by every resume, release,
-     * cleanup, re-key, and plan-clear decision so concurrent transfers of one
-     * shell to different acquirers cannot mistake each other's writes for
-     * their own. Absent on plans stamped before tokens existed: those are
-     * never resumed once the charter has left the shell.
+     * Unique token per stamping attempt, claimed atomically and required by all
+     * resume, release, cleanup, re-key, and plan-clear decisions so concurrent
+     * transfers of one shell cannot mistake each other's writes for their own.
+     * Absent on plans stamped before tokens existed: never resumed once the
+     * charter has left the shell.
      */
     attemptId?: string;
     /**
-     * Charter copies that may have been orphaned by superseded attempts and
-     * still need removal (review of PR #2016). Each supersession appends the
-     * replaced plan's owner plus the fingerprint it may have claimed; every
-     * owner and every same-pair joiner drains the list with
-     * fingerprint-guarded removals before claiming, so a crash between the
-     * plan compare-and-swap and the cleanup cannot strand a ghost bank. The
-     * list is append-only across supersessions (deduplicated) so chained
-     * adopts keep every pending cleanup, and it dies with the plan on clear.
+     * Charter copies possibly orphaned by superseded attempts that still need
+     * removal. Each supersession appends the replaced plan's owner plus the
+     * fingerprint it may have claimed; every owner and same-pair joiner drains the
+     * list with fingerprint-guarded removals before claiming, so a crash between
+     * the plan compare-and-swap and cleanup cannot strand a ghost bank. The list is
+     * append-only (deduplicated) across supersessions and dies with the plan on
+     * clear.
      */
     orphans?: {
       /** Corporation that may hold the orphaned copy. */
@@ -517,6 +511,24 @@ export interface Corporation {
   federalTaxArrearsAnchorByCountry?: Partial<Record<CountryId, number>>;
   /** Latest turn that added a tax payable for each country. */
   federalTaxArrearsLastTurnByCountry?: Partial<Record<CountryId, number>>;
+  /**
+   * Court-ordered compensation recoveries this corporation owes, keyed by
+   * `<sectorId>_<takenAtTurn>`, until each one is fully settled.
+   */
+  pendingCompensationRecoveries?: Record<
+    string,
+    {
+      sectorId: ObjectId;
+      takenAtTurn: number;
+      countryId: string;
+      anchor: number;
+      /** `debited` once the cash has left the corporation and awaits the treasury credit. */
+      stage: "pending" | "debited";
+      paidAnchor?: number;
+      /** Held on the state corporation while a spin-out is under way; the corporation that ends up owning the asset takes it over. */
+      spinOut?: boolean;
+    }
+  >;
   /**
    * Currency denomination of liquidCapital.
    * Set during forex migration to the corp's home currency.
@@ -663,19 +675,17 @@ export interface Corporation {
    */
   financialDistressSinceTurn?: number;
   /**
-   * Turn an NPP-run corp's effective cash (liquidCapital + positive share
-   * escrow, anchor-converted) first went negative, uncured. Stamped/cleared
-   * each turn by processNppInsolventCorpDissolution; when it stays set for
-   * PERSISTENT_INSOLVENCY_GRACE_TURNS the corp is wound down (#3237). Only
-   * ever set on ceoType "npp" corps, player corps use
-   * financialDistressSinceTurn + the nationalization grace window instead.
+   * Turn an NPP corp's effective cash (liquidCapital + positive share escrow,
+   * anchor-converted) first went negative, uncured. Stamped/cleared each turn;
+   * if still set after PERSISTENT_INSOLVENCY_GRACE_TURNS the corp is wound down.
+   * Only set on `ceoType: "npp"` corps; player corps use
+   * financialDistressSinceTurn instead.
    */
   nppInsolventSinceTurn?: number;
   /**
-   * Append-only log of CEO tenures. The open tenure (endTurn absent) is the
-   * sitting CEO. Used to block a former CEO from buying the corp's bonds within
-   * EX_CEO_BOND_PURCHASE_BLOCK_TURNS turns of leaving. See the CEO ⊥ bondholder
-   * invariant design.
+   * Append-only log of CEO tenures. An open tenure (no endTurn) is the sitting
+   * CEO. Blocks a former CEO from buying corp bonds for
+   * EX_CEO_BOND_PURCHASE_BLOCK_TURNS after leaving.
    */
   ceoHistory?: CeoTenure[];
   /** Whether the corporation is suspended from turn processing */
@@ -687,12 +697,11 @@ export interface Corporation {
   /** Character being offered the CEO position (pending acceptance) */
   pendingCeoCharacterId?: ObjectId;
   /**
-   * Set while an NPP caretaker runs this player-owned corp (NPP-autonomy V2.1).
-   * The autonomy brain operates the corp through `ceoType:"npp"` + `ceoId` (the
-   * NPP), but `userId` deliberately stays the appointing owner for private-data
-   * access and immediate reclaim. Operational commands reject NPP-run corps, so
-   * retained ownership is not retained operational control. Stores the displaced
-   * human CEO so dismissal restores them. Absent ⇒ the corp is not caretaker-run.
+   * Set while an NPP caretaker runs this player-owned corp. The autonomy brain
+   * operates via `ceoType: "npp"` + `ceoId`, but `userId` stays the appointing
+   * owner for private-data access and immediate reclaim. Operational commands
+   * reject NPP-run corps. Stores the displaced human CEO for restoration on
+   * dismissal. Absent => not caretaker-run.
    */
   caretakerCeo?: {
     /**
@@ -713,18 +722,13 @@ export interface Corporation {
     mandate?: "active" | "passive";
   };
   /**
-   * Turn until which a new caretaker may NOT be installed, stamped when the owner
-   * reclaims control (dismisses a caretaker). Enforces a reappointment cooldown
-   * (CARETAKER_REAPPOINT_COOLDOWN_TURNS) so caretaker rule can't be flipped on and
-   * off turn-to-turn. Absent / in the past ⇒ no cooldown active.
+   * Turn until which a new caretaker may not be installed, stamped when the owner
+   * reclaims control. Enforces CARETAKER_REAPPOINT_COOLDOWN_TURNS. Absent or
+   * in the past means no cooldown.
    */
   caretakerCooldownUntilTurn?: number;
   /**
-   * Owner-enabled autopilot. Unlike a caretaker, the player stays CEO: the corp
-   * keeps `ceoType:"character"` and every manual command still works. Each turn
-   * the cautious NPP brain runs budgets, dividends, capacity and divestment, and
-   * records the moves it judged worthwhile but will not make itself as
-   * `advisories` for the owner. Absent means the player runs the corp.
+   * Owner-enabled autopilot. The player stays CEO: `ceoType:"character"` and manual commands still work. Each turn the cautious NPP brain runs budgets, dividends, capacity and divestment, and records moves it judged worthwhile but will not make as `advisories`. Absent means the player runs the corp.
    */
   autopilot?: CorporationAutopilot;
   /** Owner limits on the NPP operator running this corporation. */
@@ -969,7 +973,7 @@ export interface Corporation {
   /** Turn after which another privatization vote may be opened (set when a vote fails or expires). */
   privatizationCooldownUntilTurn?: number;
   /**
-   * Dual-class supershare vote multiplier (S#33). Present once the corp adopts
+   * Dual-class supershare vote multiplier. Present once the corp adopts
    * supershares (at IPO or by `adopt_supershares` vote); each of the founder's
    * supershares counts as this many votes in shareholder votes. Absent =
    * single-class, one share one vote. See lib/corporations/superShares.
@@ -995,6 +999,25 @@ export interface Corporation {
    * Audit / future cooldown anchor; absent on corps that have unlocked nothing.
    */
   techDecadeChosenTurn?: Record<string, number>;
+  /**
+   * rdScore this corporation has spent on frontier research: nodes of the
+   * 2039 tier onward plus frontier programmes. Summed per lane it is the world
+   * research that opens breakthrough methods (lib/constants/techTree/breakthrough).
+   * Never decremented except to reverse a failed unlock. Absent ⇒ 0.
+   */
+  frontierResearchSpent?: number;
+  /**
+   * Frontier programmes bought after the last authored tier, by kind
+   * (lib/constants/techTree/frontier). Their effects apply to the primary
+   * sector every turn and never expire. Absent ⇒ none.
+   */
+  frontierProgrammes?: { output?: number; input?: number };
+  /**
+   * Frontier race methods held (lib/frontierRaces): "winner" for the first to
+   * finish a programme, "licence" for a loser once the sunset delay has run.
+   * Each adds plant output to the primary sector. Absent => none.
+   */
+  frontierMethods?: Record<string, "winner" | "licence">;
   /** Legal structure of this corporation (e.g. "us_c_corp"). Absent = country default. */
   legalStructure?: import("../../constants/legalStructures").LegalStructureId;
   /** Turn after which the legal structure may be changed again (instant-change cooldown for private corps). */

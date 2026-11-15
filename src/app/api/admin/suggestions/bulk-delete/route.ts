@@ -7,6 +7,8 @@ import { adminSuggestionBulkDeleteSchema } from "@/lib/api/schemas/admin";
 import { createNotification } from "@/lib/notifications";
 import { getSuggestionsCollection } from "@/lib/db/collections/suggestions";
 import { getSuggestionCommentsCollection } from "@/lib/db/collections/suggestionComments";
+import { suggestionReadsCollection } from "@/lib/db/repositories/suggestionReads";
+import type { Document } from "mongodb";
 
 // POST /api/admin/suggestions/bulk-delete — Delete multiple suggestions.
 // Auth: requireAdmin
@@ -25,7 +27,7 @@ export async function POST(request: Request) {
     const db = await getDb();
     const coll = getSuggestionsCollection(db);
     const commentsColl = getSuggestionCommentsCollection(db);
-    const readsColl = db.collection("suggestionReads");
+    const readsColl = suggestionReadsCollection<Document>(db);
 
     const suggestions = await coll.find({ issueNumber: { $in: issueNumbers } }).toArray();
     if (suggestions.length === 0) {

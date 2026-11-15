@@ -33,6 +33,7 @@ import {
 import { MECHANICAL_LAW_COMPLIANCE_TURNS } from "@/lib/mechanicalLaws/rules";
 import { executeForcedDivestiture } from "@/lib/mechanicalLaws/forcedDivestiture";
 import { createNotifications, type NotificationInput } from "@/lib/notifications";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /** Most forced sales carried out in one turn; the rest wait a turn. */
 const MAX_FORCED_SALES_PER_TURN = 20;
@@ -163,7 +164,7 @@ export async function processAntitrustCompliance(
     if (turn >= order.dueTurn) due.push({ target: corp, finding: order });
   }
 
-  if (ops.length > 0) await db.collection<Corporation>("corporations").bulkWrite(ops);
+  if (ops.length > 0) await corporationsCollection(db).bulkWrite(ops);
 
   const settled: AnyBulkWriteOperation<Corporation>[] = [];
   for (const { target, finding } of due.slice(0, MAX_FORCED_SALES_PER_TURN)) {
@@ -199,7 +200,7 @@ export async function processAntitrustCompliance(
     }
   }
 
-  if (settled.length > 0) await db.collection<Corporation>("corporations").bulkWrite(settled);
+  if (settled.length > 0) await corporationsCollection(db).bulkWrite(settled);
 
   const breakups = await processBreakupCases(db, {
     corporations: lookups.corporations,

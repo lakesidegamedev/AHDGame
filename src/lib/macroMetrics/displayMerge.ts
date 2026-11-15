@@ -22,6 +22,7 @@ import type { PoliticalMetricsDoc } from "@/lib/db/types/politicalMetrics";
 import type { PoliticalMetricId } from "@/lib/politicalMetrics/types";
 import { legacyPoliticalHalfFromBoard } from "@/lib/politicalLegislation/legacyProjection";
 import { findMergedRegionMetrics, findMergedRegionMetricsMany } from "./merge";
+import { politicalMetricsCollection } from "@/lib/db/repositories/politicalMetrics";
 
 /** The merged legacy doc for one region, with its board projected over it. */
 export async function findMergedRegionMetricsForDisplay(
@@ -30,9 +31,7 @@ export async function findMergedRegionMetricsForDisplay(
 ): Promise<StateMetrics | null> {
   const [merged, board] = await Promise.all([
     findMergedRegionMetrics(db, filter),
-    db
-      .collection<PoliticalMetricsDoc>("politicalMetrics")
-      .findOne(filter as Filter<PoliticalMetricsDoc>),
+    politicalMetricsCollection(db).findOne(filter as Filter<PoliticalMetricsDoc>),
   ]);
   return applyBoardProjection(merged, board);
 }
@@ -44,8 +43,7 @@ export async function findMergedRegionMetricsManyForDisplay(
 ): Promise<StateMetrics[]> {
   const [merged, boards] = await Promise.all([
     findMergedRegionMetricsMany(db, filter),
-    db
-      .collection<PoliticalMetricsDoc>("politicalMetrics")
+    politicalMetricsCollection(db)
       .find(filter as Filter<PoliticalMetricsDoc>)
       .toArray(),
   ]);

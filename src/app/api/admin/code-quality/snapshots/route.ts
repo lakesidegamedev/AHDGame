@@ -5,6 +5,8 @@ import { requireAdminOrApiKey } from "@/lib/api/requireAdminOrApiKey";
 import { parseJsonBody } from "@/lib/api/validate";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { z } from "zod";
+import { codeQualitySnapshotsCollection } from "@/lib/db/repositories/codeQualitySnapshots";
+import type { Document } from "mongodb";
 
 const snapshotSchema = z.object({
   environment: z.enum(["localhost", "staging", "production"]),
@@ -58,8 +60,7 @@ export const GET = withAdminAuth(async (_auth, request: Request) => {
     const filter: Record<string, unknown> = {};
     if (environment) filter.environment = environment;
 
-    const snapshots = await db
-      .collection("codeQualitySnapshots")
+    const snapshots = await codeQualitySnapshotsCollection<Document>(db)
       .find(filter)
       .sort({ timestamp: -1 })
       .limit(limit)
@@ -82,7 +83,7 @@ export async function POST(request: Request) {
     }
 
     const db = await getDb();
-    await db.collection("codeQualitySnapshots").insertOne({
+    await codeQualitySnapshotsCollection<Document>(db).insertOne({
       ...parsed.data,
       timestamp: new Date(),
     });

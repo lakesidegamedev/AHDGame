@@ -55,10 +55,9 @@ export function orderIterations(
 }
 
 /**
- * Office-history turns are stored RAW, so a world with a founding phase needs
- * its clock here or every career date reads a game year ahead of the status bar
- * (#1208). Omitted
- * clock is the identity, which is what the existing tests assert.
+ * Office-history turns are stored RAW, so a founding-phase world needs its
+ * clock here or career dates read a game year ahead. An omitted clock is the
+ * identity, as tests assert.
  */
 export function weekYearFromTurn(
   turn: number,

@@ -236,4 +236,48 @@ describe("POST /api/investment-funds/[slug]/redeem", () => {
     expect(await response.json()).toMatchObject({ pending: true });
     expect(undoLiquidity).toHaveBeenCalledTimes(1);
   });
+
+  describe("national index fund", () => {
+    async function useNationalFund() {
+      const { resolveFundBySlugOrId } = await import("@/lib/indexFunds/fundQueries");
+      vi.mocked(resolveFundBySlugOrId).mockResolvedValue({
+        _id: fundId,
+        slug: "test",
+        name: "Test Fund",
+        status: "active",
+        quotedNav: 1,
+        anchorCurrencyCode: "USD",
+        unitSupply: 1000,
+        cashAnchor: 1000,
+        holdings: [],
+        nationalIndex: { entityId: "FR" },
+      } as never);
+    }
+
+    it("conditions the supply burn and cash debit on the quoted NAV", async () => {
+      await useNationalFund();
+      const response = await redeem(10);
+
+      expect(response.status).toBe(200);
+      const filters = db.collectionMocks["indexFunds"]!.updateOne.mock.calls.map(
+        (c) => c[0] as Record<string, unknown>
+      );
+      expect(filters).toHaveLength(2);
+      for (const filter of filters) expect(filter).toMatchObject({ quotedNav: 1 });
+    });
+
+    it("refuses with 409 and pays nothing when a mark moved the NAV", async () => {
+      await useNationalFund();
+      db.collectionMocks["indexFunds"]!.updateOne.mockResolvedValueOnce({ matchedCount: 0 });
+      db.collectionMocks["indexFunds"]!.findOne.mockResolvedValueOnce({ quotedNav: 1.1 });
+
+      const response = await redeem(10);
+
+      expect(response.status).toBe(409);
+      expect(await response.json()).toMatchObject({ error: expect.stringContaining("price") });
+      expect(db.collectionMocks["characters"]!.updateOne).not.toHaveBeenCalled();
+      // Position debit is restored; no supply burn landed to reverse.
+      expect(db.collectionMocks["indexFundPositions"]!.updateOne).toHaveBeenCalledTimes(1);
+    });
+  });
 });

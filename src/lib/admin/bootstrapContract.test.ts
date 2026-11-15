@@ -22,6 +22,12 @@ import fs from "fs";
 import path from "path";
 import { resetAndBootstrapGameWorld } from "@/lib/admin/resetAndBootstrapGameWorld";
 
+// Seed data is checked by the seed contract suite; this suite covers orchestration.
+vi.mock("@/lib/seeds/contract/checkSeedContract", () => ({
+  assertSeedContract: vi.fn(),
+  checkSeedContract: vi.fn(() => []),
+}));
+
 // ── Helper: fields the sovereign-default migration used to stamp. ──────────
 const SOVEREIGN_DEFAULT_FIELDS = [
   "sovereignCrisisState",

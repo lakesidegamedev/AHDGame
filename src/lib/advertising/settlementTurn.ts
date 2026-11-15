@@ -1,24 +1,14 @@
 /**
- * Advertising settlement turn shell (issue #2235 slice).
+ * Advertising settlement: runs after sector bulk writes, attributes already-settled
+ * marketing spend across active agreements plus spot, and persists one settlement
+ * document per corporation for the product lifecycle and UI.
  *
- * Runs inside the corporation turn, after the sector bulk writes, and before
- * the product lifecycle phase. It attributes each buyer's ALREADY-SETTLED
- * marketing spend across its active advertising agreements plus spot, values
- * the effective delivered advertising with the pure rules, and persists one
- * settlement document per spending corporation for the product lifecycle and
- * the UI to read.
+ * This phase never touches cash, revenue, demand, or prices: it writes only
+ * advertisingAgreements lifecycle transitions and advertisingSettlements upserts,
+ * so no code path here can move money.
  *
- * Cash safety: this phase never touches corporations, corporateSectors, cash,
- * revenue, demand, or prices. It writes only advertisingAgreements lifecycle
- * transitions (expiry, served notices, per-agreement settlement stats) and
- * advertisingSettlements upserts. No double charge and no revenue mint hold
- * by construction: there is no code path here that can move money.
- *
- * Standalone-Mongo design: one bulk agreement read, one bulk operating-model
- * read, and at most two bulkWrites plus the gated lifecycle finalization. No
- * sessions, no transactions. Settlement upserts key on {corporationId, turn}
- * and agreement stats $set absolute values, so a replayed turn recomputes
- * identical values and overlapping writers converge instead of doubling.
+ * Upserts key on {corporationId, turn} and agreement stats use absolute $set values,
+ * so a replayed turn converges instead of doubling.
  */
 import type { AnyBulkWriteOperation, Db } from "mongodb";
 import type { Corporation } from "@/lib/db/types";
@@ -32,8 +22,6 @@ import {
 } from "@/lib/currency/corporationCapital";
 import { readCorpEconomicAnchor } from "@/lib/currency/corpEconomyFields";
 import {
-  ADVERTISING_AGREEMENTS_COLLECTION,
-  ADVERTISING_SETTLEMENTS_COLLECTION,
   isAgreementSettling,
   type AdvertisingAgreement,
   type AdvertisingSettlement,
@@ -52,6 +40,8 @@ import {
 } from "./rules/coverage";
 import { hasTermEnded, normalizeAgreementTerm } from "./rules/term";
 import { finalizeAdvertisingAgreementLifecycle, pruneAdvertisingSettlements } from "./persistence";
+import { advertisingSettlementsCollection } from "@/lib/db/repositories/advertisingSettlements";
+import { advertisingAgreementsCollection } from "@/lib/db/repositories/advertisingAgreements";
 
 export interface ProcessAdvertisingTurnArgs {
   /** Resolved `mediaOperatingModelsEnabled`; false performs zero DB access. */
@@ -129,9 +119,7 @@ export async function processAdvertisingTurn(
     return { enabled: true, ...ZERO_RESULT, effectiveAnchorByCorpId: new Map() };
   }
 
-  const agreementCollection = db.collection<AdvertisingAgreement>(
-    ADVERTISING_AGREEMENTS_COLLECTION
-  );
+  const agreementCollection = advertisingAgreementsCollection<AdvertisingAgreement>(db);
   const allLive = await agreementCollection
     .find({ status: { $in: ["active", "cancelling"] } } as never)
     .toArray();
@@ -298,9 +286,7 @@ export async function processAdvertisingTurn(
   }
 
   if (settlementOps.length > 0) {
-    await db
-      .collection<AdvertisingSettlement>(ADVERTISING_SETTLEMENTS_COLLECTION)
-      .bulkWrite(settlementOps);
+    await advertisingSettlementsCollection<AdvertisingSettlement>(db).bulkWrite(settlementOps);
   }
   if (agreementOps.length > 0) {
     await agreementCollection.bulkWrite(agreementOps);

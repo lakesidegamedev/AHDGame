@@ -18,51 +18,19 @@
  *
  * The harness mirrors the real game pipeline:
  *   getDeModel(era) → deriveCountryGroupLean/Populations/Turnout
- *   → StateDemographics → calculateStateLean → getDisplayLean
+ *   → turnout-weighted region lean → getDisplayLean
  */
 
 import { describe, it, expect } from "vitest";
 import { getDeModel, deLayer1Model, deGroupIds } from "./de";
-import {
-  deriveCountryGroupPopulations,
-  deriveCountryGroupLean,
-  deriveCountryGroupTurnout,
-} from "./derive";
-import { deDemographicCategories } from "@/lib/seeds/de/deDemographicCategories";
-import { calculateStateLean, getDisplayLean } from "@/lib/utils/demographics";
-import type { StateDemographics } from "@/lib/db/types";
+import { modelRegionLean } from "./modelRegionLean";
+import { getDisplayLean } from "@/lib/utils/demographics";
 import type { EraId } from "@/lib/seeds/presetSelector";
 
 // ── Helper ────────────────────────────────────────────────────────────────────
 
 function getRegionDisplayLean(region: string, era: EraId): number {
-  const model = getDeModel(era);
-  const censusConfig = model.census[region];
-  if (!censusConfig) throw new Error(`No census for region ${region} in era ${era}`);
-
-  const pops = deriveCountryGroupPopulations(model, censusConfig);
-
-  const groups: StateDemographics["groups"] = {};
-  for (const gid of deGroupIds) {
-    const lean = deriveCountryGroupLean(model, gid, censusConfig);
-    const turnout = deriveCountryGroupTurnout(model, gid);
-    groups[gid] = {
-      population: pops[gid] ?? 0,
-      economicLean: lean.economicLean,
-      socialLean: lean.socialLean,
-      turnout,
-    };
-  }
-
-  const demographics: StateDemographics = {
-    _id: region,
-    countryId: "DE",
-    categoryWeights: { de_voterGroups: 100 },
-    groups,
-    lastUpdated: new Date(),
-  };
-
-  const { economicLean, socialLean } = calculateStateLean(demographics, deDemographicCategories);
+  const { economicLean, socialLean } = modelRegionLean(getDeModel(era), region);
   return getDisplayLean(economicLean, socialLean);
 }
 

@@ -55,6 +55,11 @@ export interface EmploymentInput {
   outputGap?: number;
   medianIncome?: number;
   policy?: EmploymentPolicy;
+  /**
+   * 2027 world: workers displaced by automation whom the wider economy has
+   * since found work for. Added to background labour demand.
+   */
+  absorbedJobs?: number;
   previous?: EmploymentState;
 }
 
@@ -67,10 +72,8 @@ export interface EmploymentResult {
 const EMPLOYMENT_RECOVERY_HALF_LIFE_YEARS = 0.5;
 /**
  * Turns for half of a company's open positions to be filled at average skill.
- * Half a turn fills about three quarters of openings a turn where jobseekers
- * exist; at 2 turns, growing plants after the 2026-10-29 reset kept adding
- * jobs faster than they were filled while their states sat at 15% to 25%
- * unemployment.
+ * Half a turn fills about three quarters of openings a turn. At 2 turns,
+ * vacancies outpaced filling while unemployment sat at 15% to 25%.
  */
 const CORPORATE_VACANCY_HALF_LIFE_TURNS = 0.5;
 export const OUTPUT_GAP_UNEMPLOYMENT_COEFFICIENT = 0.4;
@@ -204,7 +207,9 @@ export function advanceEmployment(input: EmploymentInput): EmploymentResult {
   const publicJobs = income > 0 ? nonnegative(policy.publicEmploymentAnnual) / income : 0;
   const backgroundTarget = Math.max(
     0,
-    supply * (1 - cyclicalRate / 100 - referenceShare) + publicJobs
+    supply * (1 - cyclicalRate / 100 - referenceShare) +
+      publicJobs +
+      nonnegative(input.absorbedJobs)
   );
   const rate =
     1 -
@@ -237,7 +242,7 @@ export function advanceEmployment(input: EmploymentInput): EmploymentResult {
   // A company with a posted opening and jobseekers available fills it within a
   // few turns. Only the background economy drifts back at the slow recovery
   // rate; filling company openings at that rate left plants short for months
-  // while the same state had double-digit unemployment (ticket 1628).
+  // while the same state had double-digit unemployment.
   const corporateFill = 1 - Math.pow(0.5, (0.5 + skill / 100) / CORPORATE_VACANCY_HALF_LIFE_TURNS);
   const corporateHires = Math.min(corporateVacancies * corporateFill, matchable);
   const backgroundHires = Math.min(

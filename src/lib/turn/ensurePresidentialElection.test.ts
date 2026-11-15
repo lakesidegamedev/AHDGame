@@ -54,7 +54,7 @@ describe("ensurePresidentialElection", () => {
     };
     await mountDb(elections, gameState)();
 
-    const { ensurePresidentialElection } = await import("./perpetualElections");
+    const { ensurePresidentialElection } = await import("@/lib/elections/scheduling");
     const result = await ensurePresidentialElection(new Date("2026-01-01T00:00:00Z"));
 
     expect(result).toEqual({
@@ -103,7 +103,7 @@ describe("ensurePresidentialElection", () => {
     };
     await mountDb(elections, gameState)();
 
-    const { ensurePresidentialElection } = await import("./perpetualElections");
+    const { ensurePresidentialElection } = await import("@/lib/elections/scheduling");
     await expect(ensurePresidentialElection(new Date("2026-01-01T00:00:00Z"))).rejects.toThrow(
       /Failed to read back/
     );
@@ -145,7 +145,7 @@ describe("ensurePresidentialElection", () => {
     };
     await mountDb(elections, gameState)();
 
-    const { ensurePresidentialElection } = await import("./perpetualElections");
+    const { ensurePresidentialElection } = await import("@/lib/elections/scheduling");
     const result = await ensurePresidentialElection(new Date("2026-01-01T00:00:00Z"));
 
     expect(result).toEqual({

@@ -257,17 +257,13 @@ async function main() {
           privateBankingEnabled: true,
           bankPropTradingEnabled: true,
           bankContagionEnabled: true,
-          crisisInteractionEnabled: true,
           householdConsumptionEnabled: true,
         },
       }
     );
     await db
       .collection("gameState")
-      .updateOne(
-        { _id: "current" as never },
-        { $set: { livingConflictsEnabled: true, crisisInteractionEnabled: true } }
-      );
+      .updateOne({ _id: "current" as never }, { $set: { livingConflictsEnabled: true } });
     for (const actor of Object.values(actors))
       await db.collection("characters").replaceOne({ _id: actor._id }, actor, { upsert: true });
     await db

@@ -2,6 +2,7 @@ import { ObjectId, type Db } from "mongodb";
 import type { AuthUserWithCharacter } from "@/lib/auth";
 import { executeNationalPartyInfluence, INFLUENCE_ACTIONS } from "@/lib/influence";
 import type { InfluenceType, PoliticalParty } from "@/lib/db/types";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 const NATIONAL_PARTY_MANAGEMENT_ACTIONS: InfluenceType[] = [
   "boost_favorability",
@@ -88,9 +89,7 @@ export async function executeNationalPartyInfluenceQueue(
     }
   }
 
-  const updatedParty = await db
-    .collection<PoliticalParty>("politicalParties")
-    .findOne({ _id: party._id });
+  const updatedParty = await politicalPartiesCollection(db).findOne({ _id: party._id });
 
   return {
     results,

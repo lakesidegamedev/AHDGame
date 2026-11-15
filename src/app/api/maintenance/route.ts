@@ -3,6 +3,7 @@ import { handleRouteError } from "@/lib/api/errors";
 import { getDb } from "@/lib/mongodb";
 import type { GameConfig } from "@/lib/db/types";
 import { normalizeMaintenanceMode } from "@/lib/maintenanceStatus";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 // In-memory cache for maintenance status (TTL 10s) — reduces load on gameConfig reads.
 // Maintenance status rarely changes, so brief caching is safe.
@@ -36,7 +37,7 @@ export async function GET() {
     }
 
     const db = await getDb();
-    const config = await db.collection<GameConfig>("gameConfig").findOne(
+    const config = await gameConfigCollection(db).findOne(
       { _id: "default" },
       {
         projection: {

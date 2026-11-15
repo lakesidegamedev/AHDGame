@@ -22,6 +22,12 @@ import { getGameTime } from "@/lib/time/gameTime";
 import { hasTurnBackedWindowClosed } from "@/lib/time/turnBackedWindow";
 import { getLeadershipEligibility } from "@/lib/parties/leadershipTenure";
 import { CANONICAL_VOTING_ELECTION_SORT } from "@/lib/elections/canonicalVotingElection";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { usersCollection } from "@/lib/db/repositories/users";
+import type { Document } from "mongodb";
+import { nationalPartyElectionsCollection } from "@/lib/db/repositories/nationalPartyElections";
+import { nationalPartyCandidatesCollection } from "@/lib/db/repositories/nationalPartyCandidates";
+import { nationalPartyVotesCollection } from "@/lib/db/repositories/nationalPartyVotes";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string }>;
@@ -98,12 +104,10 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     // Filter by countryId to avoid cross-country sequential ID collisions
-    const election = await db
-      .collection<NationalPartyElection>("nationalPartyElections")
-      .findOne(
-        { partyId, countryId: partyCountryId, position, status: "voting" },
-        { sort: CANONICAL_VOTING_ELECTION_SORT }
-      );
+    const election = await nationalPartyElectionsCollection(db).findOne(
+      { partyId, countryId: partyCountryId, position, status: "voting" },
+      { sort: CANONICAL_VOTING_ELECTION_SORT }
+    );
 
     if (!election) {
       logRequest("POST", path, 400, Date.now() - start);
@@ -120,9 +124,10 @@ export async function POST(request: Request, { params }: RouteParams) {
     // elections (the accelerated 12-turn chair race at iteration start) so
     // brand-new players can vote immediately.
     if (!election.founding) {
-      const userDoc = await db
-        .collection("users")
-        .findOne({ _id: new ObjectId(authUser.userId) }, { projection: { createdAt: 1 } });
+      const userDoc = await usersCollection<Document>(db).findOne(
+        { _id: new ObjectId(authUser.userId) },
+        { projection: { createdAt: 1 } }
+      );
       const cooldown = isInNewCharacterCooldown({
         userCreatedAt: userDoc?.createdAt ?? new Date(0),
         characterCreatedAt: authUser.character.createdAt,
@@ -160,9 +165,11 @@ export async function POST(request: Request, { params }: RouteParams) {
       }
     }
 
-    const candidate = await db
-      .collection<NationalPartyCandidate>("nationalPartyCandidates")
-      .findOne({ electionId: election._id, characterId: candidateObjectId, status: "active" });
+    const candidate = await nationalPartyCandidatesCollection(db).findOne({
+      electionId: election._id,
+      characterId: candidateObjectId,
+      status: "active",
+    });
 
     if (!candidate) {
       logRequest("POST", path, 400, Date.now() - start);
@@ -174,9 +181,10 @@ export async function POST(request: Request, { params }: RouteParams) {
     // For partyInfluence-weighted elections, snapshot the voter's partyInfluence at vote time
     let voterPartyInfluence: number | undefined;
     if (party.leadershipElectionMethod === "influence") {
-      const char = await db
-        .collection("characters")
-        .findOne({ _id: authUser.character._id }, { projection: { partyInfluence: 1 } });
+      const char = await charactersCollection(db).findOne(
+        { _id: authUser.character._id },
+        { projection: { partyInfluence: 1 } }
+      );
       voterPartyInfluence = (char?.partyInfluence as number | undefined) ?? 0;
     }
 
@@ -184,7 +192,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     if (voterPartyInfluence !== undefined) voteSet.voterPartyInfluence = voterPartyInfluence;
 
     try {
-      await db.collection<NationalPartyVote>("nationalPartyVotes").updateOne(
+      await nationalPartyVotesCollection(db).updateOne(
         { electionId: election._id, voterId: authUser.character._id },
         {
           $set: voteSet,
@@ -195,12 +203,10 @@ export async function POST(request: Request, { params }: RouteParams) {
     } catch (error) {
       if (!isNationalPartyVoteDuplicateKey(error)) throw error;
 
-      await db
-        .collection<NationalPartyVote>("nationalPartyVotes")
-        .updateOne(
-          { electionId: election._id, voterId: authUser.character._id },
-          { $set: voteSet }
-        );
+      await nationalPartyVotesCollection(db).updateOne(
+        { electionId: election._id, voterId: authUser.character._id },
+        { $set: voteSet }
+      );
     }
 
     logRequest("POST", path, 200, Date.now() - start);

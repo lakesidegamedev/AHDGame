@@ -1,5 +1,5 @@
 /**
- * UK party conferences — portable rules core (epic #856, ticket #862).
+ * UK party conferences , portable rules core.
  *
  * Pure data in / plain data out. The shell (`conferenceCommands`, API
  * routes, the turn processor) loads documents, calls these helpers, and
@@ -120,7 +120,7 @@ export function resolvePlatformRatification(input: RatificationInput): Ratificat
  * Committee-motion decision: same bar as ratification with the smaller
  * committee quorum floor. Bounds/cooldown enforcement happens on apply in
  * the shell, not here: a motion can PASS its vote and still VOID when the
- * #861 cooldown fired since it was proposed.
+ * cooldown fired since it was proposed.
  */
 export function resolveConferenceMotion(input: RatificationInput): RatificationResult {
   const total = input.votesFor + input.votesAgainst;

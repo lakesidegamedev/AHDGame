@@ -2,17 +2,11 @@ import type { State } from "@/lib/db/types";
 
 /**
  * German Bundesländer, 1991 post-reunification snapshot.
- *
- * Population: 1991 mid-year Land population estimates (Destatis).
- * GDP: 1991 Land GDP in millions of DM (treated as game-EUR-equivalent for
- *   consistency with the modern bundle's currency).
- *   Source: Statistische Ämter des Bundes und der Länder, Volkswirtschaftliche
- *   Gesamtrechnungen 1991 (eastern Länder shown as separate units post-3-Oct-1990).
- * Bundestag Wahlkreise: 1990 allocation (328 direct mandates expanded by the
- *   then-applied list overhang). Modern 299-seat allocation used here for game
+ * Population and GDP: 1991 Land estimates (GDP in millions of DM, treated as
+ *   game-EUR-equivalent for consistency with the modern bundle).
+ * houseDistricts: 1990 Wahlkreise (328 direct mandates); 299 used for game
  *   consistency.
  * stateSenateSeats: Landtag seat counts as of late-1990/1991 elections.
- *   Eastern Länder reconstituted Oct 1990; new Landtag sessions seated.
  */
 export const deRegions1991: State[] = [
   {

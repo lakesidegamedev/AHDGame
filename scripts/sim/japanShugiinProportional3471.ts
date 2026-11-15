@@ -5,7 +5,7 @@
 import assert from "node:assert/strict";
 import { JP_SHUGIIN_1994_CONSTITUENCIES } from "@/lib/countries/jp/data/jpShugiinConstituencies1994";
 import { countJapanMixedShugiin } from "@/lib/countries/jp/rules/mixedShugiinCount";
-import { allocateSeats, sntvSeats } from "@/lib/turn/election/seatAllocation";
+import { allocateSeats, sntvSeats } from "@/lib/elections/resolution/seatAllocation";
 
 function sumSeats(seats: Readonly<Record<string, number>>): number {
   return Object.values(seats).reduce((sum, count) => sum + count, 0);

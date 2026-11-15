@@ -4,7 +4,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { CommonsVacancyPanel } from "./CommonsVacancyPanel";
-import type { CommonsVacancyStatus } from "@/lib/uk/elections/commonsVacancyStatus";
+import type { CommonsVacancyStatus } from "@/lib/countries/uk/elections/commonsVacancyStatus";
 
 function statusPayload(over: Partial<CommonsVacancyStatus> = {}): CommonsVacancyStatus {
   return {

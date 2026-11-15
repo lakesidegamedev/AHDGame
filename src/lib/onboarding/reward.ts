@@ -6,6 +6,9 @@ import { getHomeCurrency } from "@/lib/currency/characterFunds";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
 import { emitTx } from "@/lib/financialTxLog/emit";
 import { onboardingRewardLocalAmount } from "./rules";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 /**
  * One-time payout for completing all seven onboarding checklist steps,
@@ -60,9 +63,7 @@ export async function grantOnboardingReward(
   preset?: string
 ): Promise<OnboardingRewardResult> {
   const [gameConfig, forexEnabled] = await Promise.all([
-    db
-      .collection<GameConfig>("gameConfig")
-      .findOne({ _id: "default" }, { projection: { startingFunds: 1 } }),
+    gameConfigCollection(db).findOne({ _id: "default" }, { projection: { startingFunds: 1 } }),
     isForexEnabled(),
   ]);
   const amount = Math.round(
@@ -74,7 +75,7 @@ export async function grantOnboardingReward(
   // currencies (EUR: DE + IE) convert identically (see grantCashBuilder.ts).
   const anchorCountry = getCountryIdForCurrency(homeCurrency);
   const rateDoc = forexEnabled
-    ? await db.collection<ExchangeRate>("exchangeRates").findOne({ _id: anchorCountry })
+    ? await exchangeRatesCollection(db).findOne({ _id: anchorCountry })
     : null;
   // A zero/negative stored rate would credit ₳0 usable currency while the
   // funds mirror and anchorAmount still say full value; treat it like an
@@ -93,7 +94,7 @@ export async function grantOnboardingReward(
   }
 
   const now = new Date();
-  const result = await db.collection<Character>("characters").updateOne(
+  const result = await charactersCollection(db).updateOne(
     { _id: character._id, "onboarding.rewardGrantedAt": { $exists: false } },
     {
       $inc: inc,

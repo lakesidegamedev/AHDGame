@@ -4,6 +4,7 @@ import type { CountryId } from "@/lib/constants/countries";
 import type { BankCharter } from "@/lib/db/types/bank";
 import { loadWorldEraUnitScale } from "@/lib/currency/gdpAnchorRate";
 import type { BankingLawDoc, RateCorridor } from "@/lib/banking/separationLaw";
+import { bankingLawsCollection } from "@/lib/db/repositories/bankingLaws";
 
 /**
  * Provisional Regulation Q corridor defaults - flagged for user review.
@@ -49,9 +50,10 @@ function isHistoricalEra(eraUnitScale: number): boolean {
  * Per-country `bankingLaws.depositCorridor` override wins; else era default.
  */
 export async function getDepositRateCorridor(db: Db, countryId: CountryId): Promise<RateCorridor> {
-  const law = await db
-    .collection<BankingLawDoc>("bankingLaws")
-    .findOne({ _id: countryId }, { projection: { depositCorridor: 1 } });
+  const law = await bankingLawsCollection<BankingLawDoc>(db).findOne(
+    { _id: countryId },
+    { projection: { depositCorridor: 1 } }
+  );
   if (law?.depositCorridor) {
     return law.depositCorridor;
   }
@@ -64,9 +66,10 @@ export async function getDepositRateCorridor(db: Db, countryId: CountryId): Prom
  * Per-country `bankingLaws.lendingCorridor` override wins; else era default.
  */
 export async function getLendingRateCorridor(db: Db, countryId: CountryId): Promise<RateCorridor> {
-  const law = await db
-    .collection<BankingLawDoc>("bankingLaws")
-    .findOne({ _id: countryId }, { projection: { lendingCorridor: 1 } });
+  const law = await bankingLawsCollection<BankingLawDoc>(db).findOne(
+    { _id: countryId },
+    { projection: { lendingCorridor: 1 } }
+  );
   if (law?.lendingCorridor) {
     return law.lendingCorridor;
   }
@@ -76,9 +79,10 @@ export async function getLendingRateCorridor(db: Db, countryId: CountryId): Prom
 
 /** Both corridors for a country (one era-scale read when both fall back). */
 export async function getRateCorridors(db: Db, countryId: CountryId): Promise<RateCorridors> {
-  const law = await db
-    .collection<BankingLawDoc>("bankingLaws")
-    .findOne({ _id: countryId }, { projection: { depositCorridor: 1, lendingCorridor: 1 } });
+  const law = await bankingLawsCollection<BankingLawDoc>(db).findOne(
+    { _id: countryId },
+    { projection: { depositCorridor: 1, lendingCorridor: 1 } }
+  );
 
   if (law?.depositCorridor && law?.lendingCorridor) {
     return { deposit: law.depositCorridor, lending: law.lendingCorridor };

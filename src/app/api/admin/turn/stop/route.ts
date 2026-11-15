@@ -1,15 +1,15 @@
 import { NextResponse } from "next/server";
-import { requireModerator } from "@/lib/api/requireModerator";
+import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { stopTurnSystem } from "@/lib/turnSystem";
 import { createAdminLog } from "@/lib/adminLog";
 
 // POST /api/admin/turn/stop — Pauses the turn system so no new turns are processed until restarted.
-// Auth: requireModerator (admin or moderator)
+// Auth: requireAdmin
 // Errors: 403
 export async function POST() {
   try {
-    const auth = await requireModerator();
+    const auth = await requireAdmin();
     if (!auth.ok) return auth.response;
 
     const result = await stopTurnSystem();
@@ -21,8 +21,8 @@ export async function POST() {
     await createAdminLog({
       category: "system",
       action: "turn_system_stopped",
-      username: auth.user.username,
-      adminUsername: auth.user.username,
+      username: auth.admin.username,
+      adminUsername: auth.admin.username,
       details: result.message,
     });
 

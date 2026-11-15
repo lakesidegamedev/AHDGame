@@ -106,7 +106,7 @@ describe("ensurePerpetualElections US era statehood gate", () => {
   it("spawns only territorial governor races for Alaska and Hawaii under the 1953 preset", async () => {
     const inserted = await mountUsWorld("1953-default");
 
-    const { ensurePerpetualElections } = await import("./perpetualElections");
+    const { ensurePerpetualElections } = await import("@/lib/elections/scheduling");
     await ensurePerpetualElections(NOW, 1);
 
     const usRaces = inserted.filter((e) => (e.countryId ?? "US") === "US");
@@ -126,7 +126,7 @@ describe("ensurePerpetualElections US era statehood gate", () => {
     // Guard against over-gating: the 2019 apportionment map contains AK and HI.
     const inserted = await mountUsWorld("2019-default");
 
-    const { ensurePerpetualElections } = await import("./perpetualElections");
+    const { ensurePerpetualElections } = await import("@/lib/elections/scheduling");
     await ensurePerpetualElections(NOW, 1);
 
     const usRaces = inserted.filter((e) => (e.countryId ?? "US") === "US");
@@ -144,7 +144,7 @@ describe("ensurePerpetualElections US era statehood gate", () => {
       currentYear: 1962,
     });
 
-    const { ensurePerpetualElections } = await import("./perpetualElections");
+    const { ensurePerpetualElections } = await import("@/lib/elections/scheduling");
     await ensurePerpetualElections(NOW, 1);
 
     const usRaces = inserted.filter((e) => (e.countryId ?? "US") === "US");
@@ -178,7 +178,7 @@ describe("ensurePerpetualElections US era statehood gate", () => {
       ],
     });
 
-    const { ensurePerpetualElections } = await import("./perpetualElections");
+    const { ensurePerpetualElections } = await import("@/lib/elections/scheduling");
     await ensurePerpetualElections(NOW, 1);
 
     expect(inserted.some((e) => e.state === "AK" && e.electionType === "stateSenate")).toBe(true);
@@ -196,7 +196,7 @@ describe("ensurePerpetualElections US era statehood gate", () => {
       currentYear: 1962,
     });
 
-    const { ensurePerpetualElections } = await import("./perpetualElections");
+    const { ensurePerpetualElections } = await import("@/lib/elections/scheduling");
     await ensurePerpetualElections(NOW, 1);
 
     const akHouse = inserted.find((e) => e.state === "AK" && e.electionType === "house");
@@ -209,7 +209,7 @@ describe("ensurePerpetualElections US era statehood gate", () => {
       currentYear: 1955,
     });
 
-    const { ensurePerpetualElections } = await import("./perpetualElections");
+    const { ensurePerpetualElections } = await import("@/lib/elections/scheduling");
     await ensurePerpetualElections(NOW, 1);
 
     const usRaces = inserted.filter((e) => (e.countryId ?? "US") === "US");

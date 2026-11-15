@@ -10,6 +10,7 @@ import { findCaucusBySlug } from "@/lib/db/caucusLookup";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import type { CaucusPolicyPosition, Character } from "@/lib/db/types";
 import { isSameCountry } from "@/lib/api/sameCountry";
+import { caucusPolicyPositionsCollection } from "@/lib/db/repositories/caucusPolicyPositions";
 
 const updateSchema = z.object({
   topic: z.string().trim().min(2).max(80).optional(),
@@ -89,9 +90,10 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     if (parsed.data.weight !== undefined) updates.weight = parsed.data.weight;
     if (parsed.data.sortOrder !== undefined) updates.sortOrder = parsed.data.sortOrder;
 
-    const result = await db
-      .collection<CaucusPolicyPosition>("caucusPolicyPositions")
-      .updateOne({ _id: new ObjectId(positionId), caucusId: caucus._id }, { $set: updates });
+    const result = await caucusPolicyPositionsCollection(db).updateOne(
+      { _id: new ObjectId(positionId), caucusId: caucus._id },
+      { $set: updates }
+    );
     if (result.matchedCount === 0) {
       return errorResponse(404, "Position not found");
     }
@@ -118,9 +120,10 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
     if ("error" in ctx) return ctx.error;
     const { db, caucus } = ctx;
 
-    const result = await db
-      .collection<CaucusPolicyPosition>("caucusPolicyPositions")
-      .deleteOne({ _id: new ObjectId(positionId), caucusId: caucus._id });
+    const result = await caucusPolicyPositionsCollection(db).deleteOne({
+      _id: new ObjectId(positionId),
+      caucusId: caucus._id,
+    });
     if (result.deletedCount === 0) {
       return errorResponse(404, "Position not found");
     }

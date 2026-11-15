@@ -7,7 +7,6 @@ import type { AlignmentStatus } from "@/lib/alignment/project";
 import type { LedgerRow, WorldAlignmentView } from "@/lib/alignment/queries/worldAlignment";
 import { ShareBar, POLE_TEXT } from "@/components/alignment/ShareBar";
 import { alignmentColor } from "@/lib/constants/alignmentColors";
-import { CrisisDesk } from "./components/CrisisDesk";
 
 /** Band label + the semantic token it renders in. */
 const BAND: Record<AlignmentStatus, { label: string; text: string }> = {
@@ -59,22 +58,6 @@ export function ColdWarLedgerClient({ view }: { view: WorldAlignmentView }) {
     { key: "non-aligned", label: "Non-aligned" },
     { key: "in-play", label: "In play" },
   ];
-
-  if (!view.enabled) {
-    return (
-      <main className="mx-auto max-w-6xl space-y-6 px-4 py-8 sm:px-6 lg:px-8">
-        <Header view={view} />
-        <CrisisDesk crises={view.crises} />
-        <div className="rounded-lg border border-card-border bg-card p-6 text-center shadow-card">
-          <p className="text-body text-muted">
-            Bloc alignment is switched off for this world. An administrator can enable it from
-            Feature Gates; opening positions are already seeded, so the ledger fills in as soon as
-            it is on.
-          </p>
-        </div>
-      </main>
-    );
-  }
 
   return (
     <main className="mx-auto max-w-6xl space-y-6 px-4 py-8 sm:px-6 lg:px-8">

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { ObjectId, type AnyBulkWriteOperation } from "mongodb";
 import type { Election } from "@/lib/db/types";
-import { buildHouseSeatHealOps } from "./perpetualElections";
+import { buildHouseSeatHealOps } from "@/lib/elections/scheduling";
 
 /**
  * Ticket #1190. The decennial census reapportions `state.houseDistricts` and

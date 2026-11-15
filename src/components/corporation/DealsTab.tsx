@@ -32,7 +32,6 @@ interface DealSummary {
 interface DealsResponse {
   enabled: boolean;
   /** Whether this world lets an acquirer keep the target as a subsidiary. */
-  subsidiaryAvailable?: boolean;
   incoming: DealSummary[];
   outgoing: DealSummary[];
 }
@@ -176,7 +175,7 @@ export default function DealsTab({
           action: "propose",
           targetCorporationId: selectedTarget.id,
           priceAnchor: money.toAnchor(Number(price)),
-          outcome: keepAsSubsidiary && data?.subsidiaryAvailable ? "subsidiary" : "merge",
+          outcome: keepAsSubsidiary ? "subsidiary" : "merge",
         }),
       });
       const d = await res.json();
@@ -414,19 +413,11 @@ export default function DealsTab({
                 />
                 Merge
               </label>
-              <label
-                className="flex items-center gap-1"
-                title={
-                  data.subsidiaryAvailable
-                    ? undefined
-                    : "Subsidiary corporations are not enabled in this world."
-                }
-              >
+              <label className="flex items-center gap-1">
                 <input
                   type="radio"
                   name="acquisition-outcome"
                   checked={keepAsSubsidiary}
-                  disabled={!data.subsidiaryAvailable}
                   onChange={() => setKeepAsSubsidiary(true)}
                 />
                 Keep as subsidiary

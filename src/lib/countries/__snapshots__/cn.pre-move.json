@@ -4217,7 +4217,7 @@
         "corporateProfitRatio": 0.06,
         "centralTransferPerCapita": 35,
         "defaultTaxRate": 25,
-        "primaryTaxLegislationKey": "cn_enterprise_income_tax",
+        "primaryTaxLegislationKey": "cn.tax.domesticCorporateTax",
         "resourceTaxLegislationKey": "cn_provincial_resource_tax",
         "resourceExtractionRatio": 0.03,
         "businessTaxConsumptionRatio": 0.5,
@@ -4233,7 +4233,6 @@
         "viceChair": "Deputy General Secretary",
         "committee": "Secretariat"
       },
-      "demographicProfileId": "cn_archetypes",
       "hasLeaderConfidenceModel": true,
       "mapOverlay": "partyOrg",
       "centralBank": {
@@ -4469,7 +4468,7 @@
           "corporateProfitRatio": 0.06,
           "centralTransferPerCapita": 2.77,
           "defaultTaxRate": 25,
-          "primaryTaxLegislationKey": "cn_enterprise_income_tax",
+          "primaryTaxLegislationKey": "cn.tax.domesticCorporateTax",
           "resourceTaxLegislationKey": "cn_provincial_resource_tax",
           "resourceExtractionRatio": 0.03,
           "businessTaxConsumptionRatio": 0.5,

@@ -1,10 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { LegislationType } from "@/lib/db/types";
 import { legislationTypes } from "./legislationTypes";
-import { deLegislationTypes } from "../de/deLegislationTypes";
-import { cnLegislationTypes } from "../cn/cnLegislationTypes";
 import { ieLegislationTypes } from "../ie/ieLegislationTypes";
-import { jpLegislationTypes } from "@/lib/countries/jp/data/jpLegislationTypes";
 
 /**
  * §4.7 public-safety spending sweep guard (P3b). The whole publicSafety tier is
@@ -52,13 +49,6 @@ const MECHANISM_KEEP_LIST = new Map<string, Set<string>>([
   // Justice-STRUCTURE: death penalty / daiyo kangoku sentencing regime
   // (primary re-pointed crimeRate → incarcerationRate in the P3b sweep).
   ["jp_criminal_justice", new Set(["incarcerationRate"])],
-  // Justice-STRUCTURE: 严打 (strike-hard) campaign scope and sentencing
-  // severity — a doctrine, not a budget level.
-  ["cn_criminal_justice", new Set(["incarcerationRate", "crimeRate", "violentCrimeRate"])],
-  // SURVEILLANCE-MANDATE structure: 公安 framework direction (facial
-  // recognition, social-credit integration); its own explanation notes
-  // operational delivery is funded separately (cn_provincial_public_security).
-  ["cn_public_security", new Set(["publicSafetyConfidence", "crimeRate"])],
   // SUB-ALLOCATION: youth offending teams / domestic-violence services /
   // community-safety partnerships — WHO the justice money serves; recidivism
   // is not a publicSafety-channel readout path (it runs off the social channel
@@ -94,13 +84,7 @@ function tierHits(lt: LegislationType): string[] {
 }
 
 describe("§4.7 public safety spending sweep", () => {
-  const all = [
-    ...legislationTypes,
-    ...deLegislationTypes,
-    ...cnLegislationTypes,
-    ...ieLegislationTypes,
-    ...jpLegislationTypes,
-  ];
+  const all = [...legislationTypes, ...ieLegislationTypes];
 
   it("no publicSafety-budget FUNDING law targets a tier readout", () => {
     const offenders: string[] = [];

@@ -2,6 +2,7 @@ import type { Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import type { EnactedLaw } from "@/lib/db/types/budget";
 import { nationalLawCountryQuery } from "@/lib/policy/nationalPolicyRecords";
+import { enactedLawsCollection } from "@/lib/db/repositories/enactedLaws";
 
 /** Which level of government may issue extraction contracts in a country. */
 export type ContractAuthority = "national" | "both" | "state";
@@ -32,8 +33,7 @@ export async function getResourceContractAuthority(
   db: Db,
   countryId: CountryId
 ): Promise<ContractAuthority> {
-  const law = await db
-    .collection<EnactedLaw>("enactedLaws")
+  const law = await enactedLawsCollection(db)
     .find({
       scope: "national",
       legislationTypeId: RESOURCE_EXTRACTION_AUTHORITY_LAW_ID,

@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { ObjectId } from "mongodb";
 import type { ElectionCandidate, PoliticalParty, PrimarySnapshot } from "@/lib/db/types";
 import { buildPollingData, computeSeatEstimates } from "./buildPollingData";
-import { allocateSeats } from "@/lib/turn/election/seatAllocation";
+import { allocateSeats } from "@/lib/elections/resolution/seatAllocation";
 
 // Minimal fixtures — buildPollingData only reads the fields set here.
 function makeCandidate(overrides: Partial<ElectionCandidate>): ElectionCandidate {

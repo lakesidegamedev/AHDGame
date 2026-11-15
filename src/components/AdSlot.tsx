@@ -80,9 +80,9 @@ function PlayerAdBanner({ onNoAd }: PlayerAdBannerProps) {
         ) : (
           img
         )}
-        <p className="mt-0.5 text-right text-[10px] text-muted opacity-50">
-          Player ad · {ad.characterName}
-        </p>
+        {/* text-muted at full opacity: the 50% variant measured 2.3:1 on the
+            card surface, an axe contrast failure at 10px. */}
+        <p className="mt-0.5 text-right text-[10px] text-muted">Player ad · {ad.characterName}</p>
       </div>
     </div>
   );

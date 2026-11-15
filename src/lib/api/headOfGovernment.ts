@@ -11,6 +11,9 @@ import { getGameStatePreset } from "@/lib/db/collections/gameState";
 import { getCountryState, primeCountryStates } from "@/lib/countryState";
 import type { ElectedOfficial } from "@/lib/db/types/officials";
 import type { ParliamentaryGovernment } from "@/lib/db/types/parliamentaryGovernment";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { parliamentaryGovernmentsCollection } from "@/lib/db/repositories/parliamentaryGovernments";
 
 /**
  * Head-of-government resolution for diplomatic auth and viewer-role lookups.
@@ -46,7 +49,7 @@ export async function getHeadOfGovernmentCharacterId(
       const formation = await getGovernmentFormationsCollection(db).findOne({ _id: countryId });
       return formation?.pmCharacterId ?? null;
     }
-    const row = await db.collection<ElectedOfficial>("electedOfficials").findOne({
+    const row = await electedOfficialsCollection(db).findOne({
       countryId,
       officeType: "president",
       characterId: { $ne: null },
@@ -57,9 +60,7 @@ export async function getHeadOfGovernmentCharacterId(
   const formation = await getGovernmentFormationsCollection(db).findOne({ _id: countryId });
   if (formation) return formation.pmCharacterId ?? null;
 
-  const legacy = await db
-    .collection<ParliamentaryGovernment>("parliamentaryGovernments")
-    .findOne({ _id: countryId as string });
+  const legacy = await parliamentaryGovernmentsCollection(db).findOne({ _id: countryId as string });
   return legacy?.pmCharacterId ?? null;
 }
 
@@ -105,8 +106,7 @@ export async function getHeadOfGovernmentCharacterIds(
           .toArray()
       : Promise.resolve([]),
     presidentCountries.length
-      ? db
-          .collection<ElectedOfficial>("electedOfficials")
+      ? electedOfficialsCollection(db)
           .find({
             countryId: { $in: presidentCountries },
             officeType: "president",
@@ -128,8 +128,7 @@ export async function getHeadOfGovernmentCharacterIds(
     (countryId) => !separatePmCountries.has(countryId) && !formationByCountry.has(countryId)
   );
   const legacyGovernments = legacyCountries.length
-    ? await db
-        .collection<ParliamentaryGovernment>("parliamentaryGovernments")
+    ? await parliamentaryGovernmentsCollection(db)
         .find({ _id: { $in: legacyCountries } })
         .toArray()
     : [];
@@ -169,9 +168,10 @@ export async function getHeadOfGovernmentCharacter(
 ): Promise<{ _id: ObjectId; name: string } | null> {
   const characterId = await getHeadOfGovernmentCharacterId(db, countryId);
   if (!characterId) return null;
-  const character = await db
-    .collection<{ _id: ObjectId; name?: string }>("characters")
-    .findOne({ _id: characterId }, { projection: { name: 1 } });
+  const character = await charactersCollection<{ _id: ObjectId; name?: string }>(db).findOne(
+    { _id: characterId },
+    { projection: { name: 1 } }
+  );
   if (!character) return null;
   return { _id: characterId, name: character.name ?? "Head of Government" };
 }
@@ -193,8 +193,7 @@ export async function findCountryHeadedBy(
   const fmHit = formations.find((f) => f.pmCharacterId?.toString() === idStr);
   if (fmHit) return fmHit.countryId;
 
-  const legacy = await db
-    .collection<ParliamentaryGovernment>("parliamentaryGovernments")
+  const legacy = await parliamentaryGovernmentsCollection(db)
     .find({ pmCharacterId: { $ne: null } })
     .toArray();
   const legacyHit = legacy.find((l) => l.pmCharacterId?.toString() === idStr);
@@ -203,7 +202,7 @@ export async function findCountryHeadedBy(
   // One lookup instead of a per-country getCountryState + findOne walk: a
   // character holds at most one presidency, so find the row first and only
   // then confirm that country is presidential.
-  const row = await db.collection<ElectedOfficial>("electedOfficials").findOne({
+  const row = await electedOfficialsCollection(db).findOne({
     officeType: "president",
     characterId,
     countryId: { $in: COUNTRY_ORDER },

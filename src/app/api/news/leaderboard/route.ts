@@ -5,6 +5,10 @@ import { fetchBordersByUserIds } from "@/lib/db/patreonBorders";
 import { getAuthUser } from "@/lib/auth";
 import { getEnabledCountryIds } from "@/lib/countryAccess";
 import { withPublicNewsVisibility } from "@/lib/news/publicModeration";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { newsPostsCollection } from "@/lib/db/repositories/newsPosts";
+import type { Document } from "mongodb";
+import { userSubscriptionsCollection } from "@/lib/db/repositories/userSubscriptions";
 
 export interface LeaderboardEntry {
   characterId: string;
@@ -33,8 +37,7 @@ export async function GET() {
     const db = await getDb();
 
     // Aggregate news post stats per author (top-level posts only)
-    const postStats = await db
-      .collection("newsPosts")
+    const postStats = await newsPostsCollection<Document>(db)
       .aggregate<{ _id: string; totalLikes: number; postCount: number }>([
         {
           $match: withPublicNewsVisibility({
@@ -58,8 +61,7 @@ export async function GET() {
     );
 
     // Aggregate subscriber counts per character
-    const subStats = await db
-      .collection("userSubscriptions")
+    const subStats = await userSubscriptionsCollection<Document>(db)
       .aggregate<{ _id: string; subscriberCount: number }>([
         {
           $group: {
@@ -89,7 +91,7 @@ export async function GET() {
       characterFilter.countryId = { $in: enabledCountries };
     }
 
-    const characters = await db.collection("characters").find(characterFilter).toArray();
+    const characters = await charactersCollection(db).find(characterFilter).toArray();
 
     const userIds = characters.map((c) => c.userId).filter(Boolean);
     const borderMap = await fetchBordersByUserIds(db, userIds);
@@ -113,9 +115,7 @@ export async function GET() {
       };
     });
 
-    // Return all entries (frontend will sort). Global leaderboard (no per-user
-    // fields); cache at the edge instead of recomputing two full-collection
-    // $group aggregations per request. (#2818)
+    // Global leaderboard (no per-user fields); cache at edge instead of recomputing two full-collection $group aggregations per request.
     return NextResponse.json(
       { entries },
       {

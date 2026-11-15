@@ -9,6 +9,7 @@ import { notificationPreferenceActionSchema } from "@/lib/api/schemas/notificati
 import type { User } from "@/lib/db/types";
 import type { NotificationType, NotificationSnoozedEntry } from "@/lib/db/types/notifications";
 import { ObjectId } from "mongodb";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 // GET /api/notifications/preferences — Returns the authenticated user's notification mute and snooze preferences, expiring stale snoozes
 // Auth: requireBasicAuth
@@ -21,7 +22,7 @@ export const GET = withNoStore(async () => {
 
     const db = await getDb();
     const userId = new ObjectId(user.userId);
-    const dbUser = await db.collection<User>("users").findOne({ _id: userId });
+    const dbUser = await usersCollection(db).findOne({ _id: userId });
     if (!dbUser) return errorResponse(404, "User not found");
 
     const prefs = dbUser.notificationPreferences ?? {};
@@ -31,12 +32,10 @@ export const GET = withNoStore(async () => {
     const activeSnoozed = (prefs.snoozedTypes ?? []).filter((s) => new Date(s.until) > now);
 
     if (activeSnoozed.length !== (prefs.snoozedTypes ?? []).length) {
-      await db
-        .collection<User>("users")
-        .updateOne(
-          { _id: userId },
-          { $set: { "notificationPreferences.snoozedTypes": activeSnoozed } }
-        );
+      await usersCollection(db).updateOne(
+        { _id: userId },
+        { $set: { "notificationPreferences.snoozedTypes": activeSnoozed } }
+      );
     }
 
     return NextResponse.json({
@@ -71,17 +70,15 @@ export async function PUT(request: Request) {
 
     const db = await getDb();
     const userId = new ObjectId(user.userId);
-    const dbUser = await db.collection<User>("users").findOne({ _id: userId });
+    const dbUser = await usersCollection(db).findOne({ _id: userId });
     if (!dbUser) return errorResponse(404, "User not found");
 
     const prefs = dbUser.notificationPreferences ?? {};
     if (parsed.data.action === "mail") {
-      await db
-        .collection<User>("users")
-        .updateOne(
-          { _id: userId },
-          { $set: { "notificationPreferences.muteMail": parsed.data.muted } }
-        );
+      await usersCollection(db).updateOne(
+        { _id: userId },
+        { $set: { "notificationPreferences.muteMail": parsed.data.muted } }
+      );
       return NextResponse.json({
         success: true,
         muteMail: parsed.data.muted,
@@ -110,7 +107,7 @@ export async function PUT(request: Request) {
       snoozedTypes = snoozedTypes.filter((s) => s.type !== type);
     }
 
-    await db.collection<User>("users").updateOne(
+    await usersCollection(db).updateOne(
       { _id: userId },
       {
         $set: {

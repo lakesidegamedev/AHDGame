@@ -15,6 +15,7 @@ export function MonetaryFlagship({
   debtPrincipal,
   sovereignBondsOutstanding,
   sovereignBondProfile,
+  sovereignBondMaturities,
   onUpdate,
 }: {
   countryCode: string;
@@ -26,6 +27,7 @@ export function MonetaryFlagship({
   debtPrincipal: number;
   sovereignBondsOutstanding: number;
   sovereignBondProfile: Record<number, number> | null;
+  sovereignBondMaturities?: number[];
   onUpdate: () => void;
 }) {
   const [tab, setTab] = useState<"dossier" | "debtfx">("dossier");
@@ -64,6 +66,7 @@ export function MonetaryFlagship({
           positionId={positionId}
           canAct={canAct}
           sovereignBondProfile={sovereignBondProfile}
+          sovereignBondMaturities={sovereignBondMaturities}
           debtPrincipal={debtPrincipal}
           sovereignBondsOutstanding={sovereignBondsOutstanding}
           onUpdate={onUpdate}

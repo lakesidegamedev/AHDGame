@@ -81,11 +81,9 @@ export function CongressLeadershipTab({
     fetchData();
   }, [fetchData]);
 
-  // Viewer's own party, so the Whip Room can be used from this screen instead
-  // of navigating away to the party page mid-leadership-election (ticket #974
-  // QoL request). Both whip panels self-gate on the `canWhip` flag their
-  // endpoints return, so rendering this for any party member is safe — a
-  // non-chair simply sees the whip actions disabled.
+  // Viewer's own party, so the Whip Room can be used here instead of
+  // navigating away. Both whip panels self-gate on `canWhip`, so rendering for
+  // any party member is safe; non-chairs see actions disabled.
   const [viewerParty, setViewerParty] = useState<{ id: string; color: string } | null>(null);
   useEffect(() => {
     let cancelled = false;

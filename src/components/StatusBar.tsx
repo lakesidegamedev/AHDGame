@@ -256,7 +256,7 @@ export function StatusBar({
   // client-routed session every world-state flag it carries is frozen for the
   // whole visit — a settlement crisis that closed on the tick left "The German
   // Question" in the World menu until a hard reload. Same latent staleness for
-  // `conflictsEnabled` and `unionsEnabled`; those just change far more rarely.
+  // `unionsEnabled`; that just changes far more rarely.
   const prevTurnRef = useRef<number | null>(null);
   useEffect(() => {
     const turn = gameState?.currentTurn;
@@ -295,9 +295,7 @@ export function StatusBar({
 
   const getTimeUntilNextTurn = () => {
     if (!gameState?.nextScheduledTurn) return null;
-    // The next-turn countdown targets the wall-clock cron schedule, not a
-    // game-clock deadline — so we use formatRealTimeCountdown rather than
-    // useGameClock. See docs/plans/archive/2026-05/2026-05-20-clock-mismatch-design.md.
+    // Countdown targets the wall-clock cron schedule, not a game-clock deadline, so use formatRealTimeCountdown.
     const text = formatRealTimeCountdown(gameState.nextScheduledTurn, gameState.pausedAt ?? null);
     if (text === "Ended") return "Processing...";
     return text;
@@ -381,12 +379,17 @@ export function StatusBar({
         <div
           className={`flex min-w-0 items-center overflow-hidden ${isMinimalLayout ? "gap-x-0" : isFullLayout ? "shrink-0 flex-wrap gap-x-3 gap-y-1 sm:flex-nowrap sm:gap-x-4" : "flex-1 flex-wrap gap-x-3 gap-y-1 sm:flex-nowrap sm:gap-x-4"}`}
         >
-          <Link
-            href="/profile"
-            className="truncate max-w-[140px] sm:max-w-none text-sm font-medium text-muted hover:text-foreground transition-colors"
-          >
-            {stats?.name ?? " "}
-          </Link>
+          {/* Only players have a character name. Rendering this link with a
+              blank label gave anonymous visitors an unnamed link (axe "link
+              has no discernible name") on every public page. */}
+          {stats?.name ? (
+            <Link
+              href="/profile"
+              className="truncate max-w-[140px] sm:max-w-none text-sm font-medium text-muted hover:text-foreground transition-colors"
+            >
+              {stats.name}
+            </Link>
+          ) : null}
 
           {/* Pipe separator — minimal only */}
           {isMinimalLayout && gameState && (

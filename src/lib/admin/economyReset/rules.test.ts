@@ -390,6 +390,7 @@ function source(overrides: Partial<EconomyResetSource> = {}): EconomyResetSource
     wipeCounts: { corporations: 3, bankLoans: 1 },
     partialWipeCounts: { bonds: 1 },
     reseedCounts: { commodityPrices: 27, exchangeRates: 23 },
+    retiredLawEvidence: [],
     campaignRates: { USD: 1 },
     anchorRates: { USD: 1 },
     characters: [
@@ -611,6 +612,21 @@ describe("plan builder", () => {
       "collected-income-tax-in-flight:3",
       "euro-topology-mismatch:DE:DEM",
       "open-money-flow-receipts:1",
+    ]);
+  });
+
+  it("blocks while a kept collection still names a retired law id", () => {
+    const plan = buildEconomyResetPlan(
+      source({
+        retiredLawEvidence: [
+          { collection: "enactedLaws", id: "e1", lawIds: ["b", "a"] },
+          { collection: "bills", id: "b1", lawIds: ["a"] },
+        ],
+      })
+    );
+    expect(plan.blockers).toEqual([
+      "retired-law-id:bills:b1:a",
+      "retired-law-id:enactedLaws:e1:a+b",
     ]);
   });
 });

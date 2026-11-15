@@ -56,7 +56,7 @@ The host is a draw, not a bid. You cannot win it or lose it by playing well. One
 
 ## When tension turns daily life into a crisis
 
-Four events are wartime society crises, and they are real crises with a decision card, not wire-only cards. They open through [Crisis Interaction](/wiki/crisis-interaction) while the world's [tension gauge](/wiki/cold-war-tension) is high enough, and active wars in [Conflicts & the Military System](/wiki/conflicts-overview) raise the tension that unlocks them. They arrive one at a time every 3 to 6 turns, a staggered sequence and not all at once. Each lasts 12 turns and starts with a drag on one sector: retail down 4 for panic buying, financial down 8 for a bank run, retail down 18 for civil defense fever, media down 4 for protests. Keeping tension down keeps them away.
+Four events are wartime society crises, and they are real crises with a decision card, not wire-only cards. They open through [Crises](/wiki/crisis-interaction) while the world's [tension gauge](/wiki/cold-war-tension) is high enough, and active wars in [Conflicts & the Military System](/wiki/conflicts-overview) raise the tension that unlocks them. They arrive one at a time every 3 to 6 turns, a staggered sequence and not all at once. Each lasts 12 turns and starts with a drag on one sector: retail down 4 for panic buying, financial down 8 for a bank run, retail down 18 for civil defense fever, media down 4 for protests. Keeping tension down keeps them away.
 
 | Item | Value |
 | --- | --- |

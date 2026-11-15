@@ -1,9 +1,9 @@
 import { ObjectId, type Db } from "mongodb";
+import { isBackgroundInPreset } from "@/lib/world/eraRoster";
 import { writeSplitMetricsBulk } from "@/lib/macroMetrics/split";
 import {
   State,
   PoliticalParty,
-  DemographicCategory,
   StateDemographics,
   StateDemographicTurnout,
   StateMetrics,
@@ -17,6 +17,18 @@ import type { PartySeed } from "@/lib/seeds/reference/politicalParties";
 import { getNextSequentialId } from "@/lib/db/sequentialId";
 import { resolveSeedPartyTier } from "@/lib/seeds/defaultPartyTiers";
 import { getGameStatePresetOrDefault, DEFAULT_SEED_PRESET } from "@/lib/db/collections/gameState";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
+import type { Document } from "mongodb";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
+import { stateDemographicTurnoutCollection } from "@/lib/db/repositories/stateDemographicTurnout";
+import { stateBaselinesCollection } from "@/lib/db/repositories/stateBaselines";
 
 const NG_REGION_IDS = [
   "NORTH_WEST",
@@ -34,35 +46,16 @@ export async function seedNGRegions(
   preset: string
 ) {
   if (reset) {
-    await db.collection("states").deleteMany({ countryId: "NG" });
+    await statesCollection<Document>(db).deleteMany({ countryId: "NG" });
   }
-  const { ngRegions } = await import("@/lib/seeds/ng/ngRegions");
-  const { ngRegions1953 } = await import("@/lib/seeds/ng/ngRegions1953");
-  const { ngRegions1979 } = await import("@/lib/seeds/ng/ngRegions1979");
-  const { ngRegions1991 } = await import("@/lib/seeds/ng/ngRegions1991");
-  const { ngRegions1999 } = await import("@/lib/seeds/ng/ngRegions1999");
-  const { ngRegions2007 } = await import("@/lib/seeds/ng/ngRegions2007");
-  const { ngRegions2023 } = await import("@/lib/seeds/ng/ngRegions2023");
+  const { regionTableFor } = await import("@/lib/seeds/contract/regionTables");
   const { selectPresetBundle } = await import("@/lib/seeds/presetSelector");
-  const bundle = selectPresetBundle(
-    preset,
-    {
-      "1953-default": ngRegions1953,
-      "2019-default": ngRegions,
-      "1979-default": ngRegions1979,
-      "1991-default": ngRegions1991,
-      "1999-default": ngRegions1999,
-      "2007-default": ngRegions2007,
-      "2023-default": ngRegions2023,
-    },
-    "seedNG:ngRegions1953"
-  );
+  const bundle = selectPresetBundle(preset, regionTableFor("NG"), "regions:NG");
   const regionOps = bundle.map((region) => {
     const { _id, ...regionData } = region;
     return { updateOne: { filter: { _id }, update: { $set: regionData }, upsert: true } };
   });
-  if (regionOps.length > 0)
-    await db.collection<State>("states").bulkWrite(regionOps, { ordered: false });
+  if (regionOps.length > 0) await statesCollection(db).bulkWrite(regionOps, { ordered: false });
   log(`Seeded ${bundle.length} NG regions (${preset})`);
 }
 
@@ -73,9 +66,9 @@ export async function seedNGParties(db: Db, log: (msg: string) => void, preset?:
 
   let activePreset = preset;
   if (!activePreset) {
-    const gameState = await db
-      .collection<{ preset?: string }>("gameState")
-      .findOne({ _id: "current" as unknown as undefined });
+    const gameState = await gameStateCollection<{ preset?: string }>(db).findOne({
+      _id: "current" as unknown as undefined,
+    });
     activePreset = gameState?.preset ?? DEFAULT_SEED_PRESET;
   }
 
@@ -90,14 +83,16 @@ export async function seedNGParties(db: Db, log: (msg: string) => void, preset?:
   const now = new Date();
   for (const party of filtered) {
     const { seedOrder: _seedOrder, ...partyData } = party;
-    const existing = await db
-      .collection<PoliticalParty>("politicalParties")
-      .findOne({ name: party.name, countryId: party.countryId });
+    const existing = await politicalPartiesCollection(db).findOne({
+      name: party.name,
+      countryId: party.countryId,
+    });
 
     if (existing) {
-      await db
-        .collection<PoliticalParty>("politicalParties")
-        .updateOne({ _id: existing._id }, { $set: { ...partyData, updatedAt: now } });
+      await politicalPartiesCollection(db).updateOne(
+        { _id: existing._id },
+        { $set: { ...partyData, updatedAt: now } }
+      );
     } else {
       const sequentialId = await getNextSequentialId(db, "party", party.countryId);
       const doc: PoliticalParty = {
@@ -109,7 +104,7 @@ export async function seedNGParties(db: Db, log: (msg: string) => void, preset?:
         createdAt: now,
         updatedAt: now,
       } as PoliticalParty;
-      await db.collection<PoliticalParty>("politicalParties").insertOne(doc);
+      await politicalPartiesCollection(db).insertOne(doc);
     }
   }
   log(`Seeded ${filtered.length}/${ngParties.length} NG parties for preset ${activePreset}`);
@@ -122,17 +117,8 @@ export async function seedNGDemographics(
   preset: string
 ) {
   if (reset) {
-    await db.collection("demographicCategories").deleteMany({ _id: "ng_voterGroups" as never });
-    await db.collection("stateDemographics").deleteMany({ countryId: "NG" });
-    await db.collection("stateDemographicTurnout").deleteMany({ countryId: "NG" });
-  }
-
-  const { ngDemographicCategories } = await import("@/lib/seeds/ng/ngDemographicCategories");
-  for (const cat of ngDemographicCategories) {
-    const { _id, ...catData } = cat;
-    await db
-      .collection<DemographicCategory>("demographicCategories")
-      .updateOne({ _id }, { $set: catData }, { upsert: true });
+    await stateDemographicsCollection<Document>(db).deleteMany({ countryId: "NG" });
+    await stateDemographicTurnoutCollection<Document>(db).deleteMany({ countryId: "NG" });
   }
 
   const { ngRegionDemographics: ngRegionDemographicsStatic } =
@@ -142,47 +128,43 @@ export async function seedNGDemographics(
     ? await import("@/lib/seeds/reference/stateDemographics1991")
     : { applyEra1991DemographicAdjustments: <T>(x: T): T => x };
 
-  const { isLayer1PositionsEnabled } = await import("@/lib/seeds/layer1PositionsFlag");
-  const useLayer1 = await isLayer1PositionsEnabled();
   let ngRegionDemographics: typeof ngRegionDemographicsStatic = ngRegionDemographicsStatic;
-  if (useLayer1) {
-    const { getCountryLayer1Model, buildModelRegionDemographics } =
-      await import("@/lib/seeds/international");
-    const { eraForPreset } = await import("@/lib/seeds/presetSelector");
-    const { loadFullOverride } = await import("@/lib/seeds/loadEraPositionOverride");
-    const era = eraForPreset(preset);
-    const model = getCountryLayer1Model("NG", era);
-    if (model) {
-      const full = await loadFullOverride("NG", era);
-      if (full) log(`[NG] Applying model override for era ${era}`);
-      ngRegionDemographics = buildModelRegionDemographics(
-        model,
-        full?.positions ?? undefined,
-        full ? { turnout: full.turnout } : undefined
-      );
-      log(
-        `[NG] Using Layer-1-derived demographics (${ngRegionDemographics.length} regions, era ${era})`
-      );
-    }
+  const { getCountryLayer1Model, buildModelRegionDemographics } =
+    await import("@/lib/seeds/international");
+  const { strictEraForPreset } = await import("@/lib/seeds/presetSelector");
+  const { loadFullOverride } = await import("@/lib/seeds/loadEraPositionOverride");
+  const era = strictEraForPreset(preset);
+  const model = getCountryLayer1Model("NG", era);
+  if (model) {
+    const full = await loadFullOverride("NG", era);
+    if (full) log(`[NG] Applying model override for era ${era}`);
+    ngRegionDemographics = buildModelRegionDemographics(
+      model,
+      full?.positions ?? undefined,
+      full ? { turnout: full.turnout } : undefined
+    );
+    log(
+      `[NG] Using Layer-1-derived demographics (${ngRegionDemographics.length} regions, era ${era})`
+    );
   }
   for (const raw of ngRegionDemographics) {
     const demo = is1991 ? applyEra1991DemographicAdjustments(raw, "NG") : raw;
-    const { _id, ...demoData } = demo;
-    await db
-      .collection<StateDemographics>("stateDemographics")
-      .updateOne({ _id }, { $set: demoData }, { upsert: true });
+    const { _id, groups: _groups, ...demoData } = demo;
+    await stateDemographicsCollection(db).updateOne({ _id }, { $set: demoData }, { upsert: true });
   }
 
   const { ngDemographicTurnout } = await import("@/lib/seeds/ng/ngDemographicTurnout");
   for (const turnout of ngDemographicTurnout) {
     const { _id, ...turnoutData } = turnout;
-    await db
-      .collection<StateDemographicTurnout>("stateDemographicTurnout")
-      .updateOne({ _id }, { $set: turnoutData }, { upsert: true });
+    await stateDemographicTurnoutCollection(db).updateOne(
+      { _id },
+      { $set: turnoutData },
+      { upsert: true }
+    );
   }
 
   log(
-    `Seeded NG demographics (preset: ${preset}, ${ngDemographicCategories.length} categories, ${ngRegionDemographics.length} regions, ${ngDemographicTurnout.length} turnout)`
+    `Seeded NG demographics (preset: ${preset}, ${ngRegionDemographics.length} regions, ${ngDemographicTurnout.length} turnout)`
   );
 }
 
@@ -193,7 +175,7 @@ export async function seedNGStateMetrics(
   preset: string
 ) {
   if (reset) {
-    await db.collection("macroMetrics").deleteMany({
+    await macroMetricsCollection<Document>(db).deleteMany({
       _id: { $in: NG_REGION_IDS } as never,
     });
   }
@@ -238,7 +220,7 @@ export async function seedNGBaselines(
   preset: string
 ) {
   if (reset) {
-    await db.collection("stateBaselines").deleteMany({
+    await stateBaselinesCollection<Document>(db).deleteMany({
       _id: { $in: NG_REGION_IDS } as never,
     });
   }
@@ -270,9 +252,11 @@ export async function seedNGBaselines(
     const overlay = getRegionMetricPresets("NG", String(raw._id), preset);
     const baseline = overlay ? applyMetricPresetToBaseline(adjusted, overlay) : adjusted;
     const { _id, ...baselineData } = baseline;
-    await db
-      .collection<StateMetricBaseline>("stateBaselines")
-      .updateOne({ _id }, { $set: { ...baselineData, countryId: "NG" } }, { upsert: true });
+    await stateBaselinesCollection(db).updateOne(
+      { _id },
+      { $set: { ...baselineData, countryId: "NG" } },
+      { upsert: true }
+    );
   }
   log(`Seeded ${ngStateBaselines.length} NG baselines (preset: ${preset})`);
 }
@@ -281,13 +265,11 @@ export async function seedNGGovernmentFormation(db: Db, log: (msg: string) => vo
   const { ngGovernmentFormation } = await import("@/lib/seeds/ng/ngGovernmentFormation");
   const now = new Date();
   const { _id, ...formationData } = ngGovernmentFormation;
-  await db
-    .collection<GovernmentFormation>("governmentFormations")
-    .updateOne(
-      { _id },
-      { $set: { ...formationData, createdAt: now, updatedAt: now } },
-      { upsert: true }
-    );
+  await governmentFormationsCollection(db).updateOne(
+    { _id },
+    { $set: { ...formationData, createdAt: now, updatedAt: now } },
+    { upsert: true }
+  );
   log("Seeded NG government formation document");
 }
 
@@ -298,7 +280,7 @@ export async function seedNGStatePartyOrg(
   preset?: string
 ) {
   if (reset) {
-    await db.collection("statePartyOrg").deleteMany({ countryId: "NG" });
+    await statePartyOrgCollection<Document>(db).deleteMany({ countryId: "NG" });
   }
 
   let activePreset = preset;
@@ -311,9 +293,11 @@ export async function seedNGStatePartyOrg(
   const now = new Date();
   for (const org of orgs) {
     const { _id, ...orgData } = org;
-    await db
-      .collection<StatePartyOrg>("statePartyOrg")
-      .updateOne({ _id }, { $set: { ...orgData, updatedAt: now } }, { upsert: true });
+    await statePartyOrgCollection(db).updateOne(
+      { _id },
+      { $set: { ...orgData, updatedAt: now } },
+      { upsert: true }
+    );
   }
   log(`Seeded ${orgs.length} NG state party org records (preset: ${activePreset})`);
 }
@@ -339,8 +323,7 @@ export async function ensureMissingNGStatePartyOrgRows(
   const orgs = await calculateNGStatePartyOrgs(db, activePreset);
 
   const ids = orgs.map((o) => o._id);
-  const existing = await db
-    .collection<StatePartyOrg>("statePartyOrg")
+  const existing = await statePartyOrgCollection(db)
     /* eslint-disable @typescript-eslint/no-explicit-any */
     .find({ _id: { $in: ids as any } } as any)
     /* eslint-enable @typescript-eslint/no-explicit-any */
@@ -351,13 +334,11 @@ export async function ensureMissingNGStatePartyOrgRows(
   if (missing.length > 0) {
     for (const org of missing) {
       const { _id, ...orgData } = org;
-      await db
-        .collection<StatePartyOrg>("statePartyOrg")
-        .updateOne(
-          { _id },
-          { $set: { ...orgData, updatedAt: now }, $setOnInsert: { createdAt: now } },
-          { upsert: true }
-        );
+      await statePartyOrgCollection(db).updateOne(
+        { _id },
+        { $set: { ...orgData, updatedAt: now }, $setOnInsert: { createdAt: now } },
+        { upsert: true }
+      );
     }
     log(`Inserted ${missing.length} missing NG state party org row(s) (preset: ${activePreset})`);
   }
@@ -376,30 +357,35 @@ export async function seedNGGovernors(
   preset: string
 ) {
   if (reset) {
-    const officials = await db
-      .collection<ElectedOfficial>("electedOfficials")
+    const officials = await electedOfficialsCollection(db)
       .find({ countryId: "NG", officeType: "governor", isNPP: true })
       .project<{ nppId?: ObjectId }>({ nppId: 1 })
       .toArray();
     const nppIds = officials.map((o) => o.nppId).filter((id): id is ObjectId => id != null);
 
-    await db
-      .collection<ElectedOfficial>("electedOfficials")
-      .deleteMany({ countryId: "NG", officeType: "governor", isNPP: true });
+    await electedOfficialsCollection(db).deleteMany({
+      countryId: "NG",
+      officeType: "governor",
+      isNPP: true,
+    });
 
     if (nppIds.length > 0) {
-      await db
-        .collection<NPP>("npps")
-        .updateMany(
-          { _id: { $in: nppIds }, "currentOffice.type": "governor" },
-          { $set: { retiredAt: new Date(), currentOffice: null, updatedAt: new Date() } }
-        );
+      await nppsCollection(db).updateMany(
+        { _id: { $in: nppIds }, "currentOffice.type": "governor" },
+        { $set: { retiredAt: new Date(), currentOffice: null, updatedAt: new Date() } }
+      );
     }
     log(
       `Reset: deleted ${officials.length} NG Governor NPP officials, retired ${nppIds.length} NPPs`
     );
   }
 
+  // A background Nigeria (#5702) seats no NPP governors. The reset above still
+  // clears any left by a previous world.
+  if (isBackgroundInPreset(preset, "NG")) {
+    log(`Skipped NG Governors (${preset}): background country`);
+    return;
+  }
   const { NG_GOVERNORS_2019, NG_GOVERNORS_1991, NG_GOVERNORS_1953 } =
     await import("@/lib/constants/historicalSeats");
   const { seedFromSeats } = await import("@/lib/npp/seedHistorical");

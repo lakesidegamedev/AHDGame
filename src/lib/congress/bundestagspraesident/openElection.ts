@@ -22,10 +22,14 @@ import {
 import type {
   BundestagspraesidentElection,
   BundestagspraesidentNomination,
-  Character,
   CongressLeader,
   ElectedOfficial,
 } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { congressLeadersCollection } from "@/lib/db/repositories/congressLeaders";
+import { bundestagspraesidentNominationsCollection } from "@/lib/db/repositories/bundestagspraesidentNominations";
+import { bundestagspraesidentElectionsCollection } from "@/lib/db/repositories/bundestagspraesidentElections";
 
 const ELECTION_DURATION_MS = 24 * 60 * 60 * 1000; // 24 hours — parity with US Speaker
 
@@ -39,25 +43,21 @@ export async function triggerBundestagspraesidentElectionAfterReconcile(
   db: Db,
   now: Date
 ): Promise<void> {
-  const existing = await db
-    .collection<BundestagspraesidentElection>("bundestagspraesidentElections")
-    .findOne({ _id: "current" });
+  const existing = await bundestagspraesidentElectionsCollection(db).findOne({ _id: "current" });
   const currentTurn = (await getGameTime()).currentTurn;
   if (existing?.status === "voting" && !isLeadershipElectionClosed(existing, currentTurn, now)) {
     return; // already running — leave it
   }
 
   // Clear any stale nominations from a prior cycle.
-  await db
-    .collection<BundestagspraesidentNomination>("bundestagspraesidentNominations")
-    .updateMany(
-      { status: { $in: ["open", "voting"] } },
-      { $set: { status: "failed", updatedAt: now } }
-    );
+  await bundestagspraesidentNominationsCollection(db).updateMany(
+    { status: { $in: ["open", "voting"] } },
+    { $set: { status: "failed", updatedAt: now } }
+  );
 
   const endsAt = new Date(now.getTime() + ELECTION_DURATION_MS);
   const endsOnTurn = currentTurn + ELECTION_DURATION_MS / 3_600_000;
-  await db.collection<BundestagspraesidentElection>("bundestagspraesidentElections").updateOne(
+  await bundestagspraesidentElectionsCollection(db).updateOne(
     { _id: "current" },
     {
       $set: {
@@ -83,43 +83,39 @@ export async function triggerBundestagspraesidentElectionAfterReconcile(
     majorityBloc: bundestag.majorityBloc,
   });
 
-  const incumbent = await db
-    .collection<CongressLeader>("congressLeaders")
-    .findOne({ role: "speaker_of_the_bundestag" });
+  const incumbent = await congressLeadersCollection(db).findOne({
+    role: "speaker_of_the_bundestag",
+  });
 
   if (incumbent?.characterId) {
-    const hasSeat = await db.collection<ElectedOfficial>("electedOfficials").findOne({
+    const hasSeat = await electedOfficialsCollection(db).findOne({
       officeType: "bundestag",
       characterId: incumbent.characterId,
       countryId: "DE",
     });
     if (hasSeat) {
-      const char = await db
-        .collection<Character>("characters")
-        .findOne(
-          { _id: incumbent.characterId },
-          { projection: { party: 1, homeState: 1, name: 1 } }
-        );
+      const char = await charactersCollection(db).findOne(
+        { _id: incumbent.characterId },
+        { projection: { party: 1, homeState: 1, name: 1 } }
+      );
       const incumbentParty = char?.party ?? incumbent.party ?? null;
       if (incumbentParty && isPartyEligible(policy, incumbentParty, chamberCtx)) {
-        await db
-          .collection<BundestagspraesidentNomination>("bundestagspraesidentNominations")
-          .insertOne({
-            _id: new ObjectId(),
-            nomineeId: incumbent.characterId,
-            nomineeName: incumbent.characterName,
-            nomineeParty: incumbentParty,
-            nomineeCountryId: "DE",
-            nomineeState: char?.homeState ?? hasSeat.state ?? undefined,
-            nominatedById: incumbent.characterId,
-            nominatedByName: "Incumbent",
-            status: "voting",
-            votesFor: 0,
-            votesAgainst: 0,
-            votes: {},
-            createdAt: now,
-            updatedAt: now,
-          });
+        await bundestagspraesidentNominationsCollection(db).insertOne({
+          _id: new ObjectId(),
+          nomineeId: incumbent.characterId,
+          nomineeName: incumbent.characterName,
+          nomineeParty: incumbentParty,
+          nomineeCountryId: "DE",
+          nomineeState: char?.homeState ?? hasSeat.state ?? undefined,
+          nominatedById: incumbent.characterId,
+          nominatedByName: "Incumbent",
+          status: "voting",
+          votesFor: 0,
+          votesAgainst: 0,
+          votes: {},
+          createdAt: now,
+          updatedAt: now,
+        });
       }
     }
   }

@@ -89,7 +89,7 @@ export interface ExchangeRate {
   /** Turn the chair last changed `forexSpreadStrength` (cooldown gate). */
   forexSpreadStrengthLastChangedTurn?: number;
   /**
-   * Bretton Woods monetary regime (issue #7). Absent = `"pegged"`, which is
+   * Bretton Woods monetary regime. Absent = `"pegged"`, which is
    * what every currency without a transition already behaved as, so legacy
    * worlds read identically. Written by the Bretton Woods exit phase; read by
    * `forexTurn` (band + drift) and

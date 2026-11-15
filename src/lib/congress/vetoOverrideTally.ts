@@ -1,14 +1,14 @@
 /**
  * Shared seat-weighted tallying for US presidential veto overrides.
  *
- * A veto override requires a 2/3 supermajority of the *seats* in each chamber.
- * Officials are stored one document per holder, but a single document (an NPP /
- * aggregated bloc, or a player holding a multi-seat delegation) can represent many
- * seats. Every total and tally here is weighted by `seatsHeld` so thresholds are
- * measured against real chamber size, not document counts (Bug #0952).
+ * A veto override requires a 2/3 supermajority of the seats in each chamber.
+ * Officials are stored one document per holder, but a single document (an NPP
+ * bloc, or a player holding a multi-seat delegation) can represent many seats.
+ * Every total and tally here is weighted by `seatsHeld` so thresholds measure
+ * real chamber size, not document counts.
  *
- * Used by both the turn-time override resolver (billLifecycle) and the read-time
- * bill-detail DTO so the displayed numbers and the enactment decision agree.
+ * Used by both the turn-time override resolver and the read-time bill-detail
+ * DTO so displayed numbers and the enactment decision agree.
  */
 import type { ScopedVoteOfficial } from "@/lib/congress/billVoting";
 

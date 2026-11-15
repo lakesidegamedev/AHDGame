@@ -18,25 +18,15 @@ import type {
 export const ELECTION_RESULT_SNAPSHOT_VERSION = 1 as const;
 
 /**
- * A frozen election-night result, written once when a race resolves.
+ * A frozen election-night result, written once when a race resolves. The snapshot
+ * is the authority for any finished race: live results rebuild electoral weights
+ * from era-gated apportionment and read party names/colours live, so a re-rendered
+ * old race would show totals and branding never in force when it was decided.
  *
- * Why this exists: the live results endpoint rebuilds electoral-vote weights
- * from `loadApportionment(db, preset, gameState.currentYear)` and reads party
- * names and colours live. Both drift. Apportionment is era-gated — DC gains
- * three electoral votes from 1961, Maine splits by district from 1972,
- * Nebraska from 1992, and states are admitted over time — so a race from an
- * earlier decade, re-rendered today, shows a total and a votes-to-win line that
- * were never in force when it was decided. A party that later renames,
- * recolours or winds up rewrites its own history the same way.
- *
- * The snapshot is therefore the authority for any race the game has finished
- * with. It stores only what is settled: the per-unit results, the candidate
- * roster with the party identity as it stood, the electoral-college totals, and
- * the national aggregation.
- *
- * Fields that are per-request or per-viewer are deliberately absent and are
- * recomputed on every read: `currentTurn`, `finalHour`, `isAdmin` and
- * `lastUpdated`. Freezing those would serve one reader another reader's page.
+ * Stores only settled data: per-unit results, candidate roster with party identity
+ * as it stood, electoral-college totals, and national aggregation. Per-request or
+ * per-viewer fields (`currentTurn`, `finalHour`, `isAdmin`, `lastUpdated`) are
+ * deliberately absent and recomputed on every read.
  */
 export interface ElectionResultSnapshot {
   _id: ObjectId;

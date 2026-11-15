@@ -5,6 +5,8 @@ import { requireBasicAuth } from "@/lib/api/requireAuth";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { generateUserApiToken, type UserApiScope } from "@/lib/api/userApiAuth";
 import { getDb } from "@/lib/mongodb";
+import { userApiKeysCollection } from "@/lib/db/repositories/userApiKeys";
+import type { Document } from "mongodb";
 
 /** Old key stays valid for this long after rotation, so callers can swap over. */
 const ROTATION_GRACE_MS = 24 * 60 * 60 * 1000;
@@ -33,7 +35,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     const now = new Date();
 
     // Only the owner can rotate, and only a key that is currently active.
-    const existing = await db.collection("userApiKeys").findOne({
+    const existing = await userApiKeysCollection<Document>(db).findOne({
       _id: new ObjectId(id),
       userId: new ObjectId(auth.user.userId),
       revokedAt: null,
@@ -48,7 +50,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     const revokeAt = new Date(now.getTime() + ROTATION_GRACE_MS);
 
     // Insert the replacement key, linked back to the one it rotates.
-    const inserted = await db.collection("userApiKeys").insertOne({
+    const inserted = await userApiKeysCollection<Document>(db).insertOne({
       userId: new ObjectId(auth.user.userId),
       name: existing.name,
       scope,
@@ -65,12 +67,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
     // Schedule the old key for revocation after the grace window. Re-scope the
     // update to the owner so a leaked id cannot retire someone else's key.
-    await db
-      .collection("userApiKeys")
-      .updateOne(
-        { _id: existing._id, userId: new ObjectId(auth.user.userId) },
-        { $set: { revokeAt, rotatedAt: now, rotatedTo: inserted.insertedId, updatedAt: now } }
-      );
+    await userApiKeysCollection<Document>(db).updateOne(
+      { _id: existing._id, userId: new ObjectId(auth.user.userId) },
+      { $set: { revokeAt, rotatedAt: now, rotatedTo: inserted.insertedId, updatedAt: now } }
+    );
 
     return NextResponse.json({
       token,

@@ -11,6 +11,7 @@ import { navCustomization } from "@/lib/navigation/navCustomization";
 import { widgetLayout } from "@/lib/sidebarWidgets/widgetCatalog";
 import { widgetWatchlist } from "@/lib/sidebarWidgets/watchlist";
 import type { User } from "@/lib/db/types";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 // PATCH /api/settings/experimental-features: Opts the authenticated user in or out of
 // experimental features, and saves desktop and mobile navigation, drawer presentation and widget preferences
@@ -46,7 +47,7 @@ export async function PATCH(request: Request) {
     } = parsed.data;
 
     const db = await getDb();
-    await db.collection<User>("users").updateOne(
+    await usersCollection(db).updateOne(
       { _id: new ObjectId(user.userId) },
       {
         $set: {

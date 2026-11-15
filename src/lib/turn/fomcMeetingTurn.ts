@@ -6,7 +6,6 @@
 import { ObjectId, type Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import type { CentralBank, FomcSeat, FomcBallot, FomcNomination } from "@/lib/db/types/centralBank";
-import type { FederalBudget } from "@/lib/db/types/budget";
 import type { StateMetrics } from "@/lib/db/types/stateMetrics";
 import type { Character } from "@/lib/db/types";
 import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
@@ -29,6 +28,12 @@ import {
 } from "@/lib/monetaryGovernance/governanceShell";
 import { loadExecutionPolicies } from "@/lib/monetaryGovernance/executionPolicy";
 import { decideGovernance } from "@/lib/monetaryGovernance/rules/machine";
+import { getFederalBudgetCollection } from "@/lib/db/collections/federalBudget";
+import { getCharactersCollection } from "@/lib/db/collections/characters";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { fomcNominationsCollection } from "@/lib/db/repositories/fomcNominations";
 
 function finiteOr(value: unknown, fallback: number): number {
   return typeof value === "number" && Number.isFinite(value) ? value : fallback;
@@ -43,14 +48,14 @@ async function loadMacroContext(
 ): Promise<FomcMacroContext> {
   const targetInflation = getInflationTarget(countryId, currentYear);
 
-  const budget = await db
-    .collection<FederalBudget>("federalBudget")
-    .findOne({ _id: getNationalBudgetId(countryId) });
+  const budget = await (
+    await getFederalBudgetCollection(db)
+  ).findOne({ _id: getNationalBudgetId(countryId) });
   const inflationRate = finiteOr(budget?.economicFactors?.inflationRate, targetInflation);
 
   const nationalDocId = getNationalDocId(countryId);
   const nationalMetrics = nationalDocId
-    ? await db.collection<StateMetrics>("macroMetrics").findOne({ _id: nationalDocId })
+    ? await macroMetricsCollection(db).findOne({ _id: nationalDocId })
     : null;
   const gdpGrowth = finiteOr(nationalMetrics?.economic?.gdpGrowth?.value, NPP_CHAIR_TARGET_GROWTH);
 
@@ -75,8 +80,9 @@ async function findNominationExecutives(
   const execKey = COUNTRY_CONFIGS[countryId]?.officeTypes.find((o) => o.isExecutive)?.key;
   if (!execKey) return [];
 
-  const chars = await db
-    .collection<Character>("characters")
+  const chars = await (
+    await getCharactersCollection(db)
+  )
     .find({ countryId, userId: { $exists: true }, "currentOffice.type": execKey })
     .project<Pick<Character, "name" | "userId">>({ name: 1, userId: 1 })
     .toArray();
@@ -84,12 +90,9 @@ async function findNominationExecutives(
 }
 
 /**
- * Tell the world a committee board has gone understaffed (ticket #1238).
- *
- * Vacant seats are by design (#1195: the engine never seats a machine
- * candidate; the President nominates and the Senate confirms). The notice
- * encourages filling open seats. The chair fallback applies only when no
- * governor is seated.
+ * Notify that a committee board has vacant seats. Vacants are by design:
+ * the engine never seats a machine candidate. The chair fallback applies only
+ * when no governor is seated.
  */
 async function notifyFomcVacancy(
   db: Db,
@@ -151,7 +154,7 @@ export async function castFomcBallot(
   now: Date,
   currentYear: number | null = null
 ): Promise<CastBallotResult> {
-  const bank = await db.collection<CentralBank>("centralBanks").findOne({ _id: bankId });
+  const bank = await centralBanksCollection(db).findOne({ _id: bankId });
   const meeting = bank?.activeFomcMeeting;
   const board = bank?.fomcBoard ?? [];
   const refuse = (reason: "no-meeting" | "not-seated" | "already-voted"): CastBallotResult => {
@@ -176,9 +179,9 @@ export async function castFomcBallot(
   const seat = board.find((s) => s.occupantType === "player" && s.characterId?.equals(characterId));
   const clockMs = now.getTime();
   const jurisdiction = await resolveJurisdiction(db, bank.countryId);
-  const config = await db
-    .collection<{ _id: string; commandEconomyEnabled?: boolean }>("gameConfig")
-    .findOne({ _id: "default" }, { projection: { commandEconomyEnabled: 1 } });
+  const config = await gameConfigCollection<{ _id: string; commandEconomyEnabled?: boolean }>(
+    db
+  ).findOne({ _id: "default" }, { projection: { commandEconomyEnabled: 1 } });
   const policies = await loadExecutionPolicies(
     db,
     [jurisdiction.anchorCountryId],
@@ -213,7 +216,7 @@ export async function castFomcBallot(
 
   const set = materializeTransitionSet(bank, decision.transition, now);
   set.updatedAt = now;
-  await db.collection<CentralBank>("centralBanks").updateOne({ _id: bankId }, { $set: set });
+  await centralBanksCollection(db).updateOne({ _id: bankId }, { $set: set });
   for (const event of decision.transition.events) emitBankingAuditEvent(event, db);
   const resolved = decision.next.activeMeeting == null;
   const moved = decision.transition.events.some(
@@ -241,15 +244,15 @@ export async function setFomcMotion(
   now: Date,
   currentYear: number | null = null
 ): Promise<SetFomcMotionResult> {
-  const bank = await db.collection<CentralBank>("centralBanks").findOne({ _id: bankId });
+  const bank = await centralBanksCollection(db).findOne({ _id: bankId });
   const meeting = bank?.activeFomcMeeting;
   if (!bank || !meeting || meeting.status !== "voting") {
     return { ok: false, reason: "no-meeting", message: "No meeting is currently taking votes." };
   }
   const jurisdiction = await resolveJurisdiction(db, bank.countryId);
-  const config = await db
-    .collection<{ _id: string; commandEconomyEnabled?: boolean }>("gameConfig")
-    .findOne({ _id: "default" }, { projection: { commandEconomyEnabled: 1 } });
+  const config = await gameConfigCollection<{ _id: string; commandEconomyEnabled?: boolean }>(
+    db
+  ).findOne({ _id: "default" }, { projection: { commandEconomyEnabled: 1 } });
   const policies = await loadExecutionPolicies(
     db,
     [jurisdiction.anchorCountryId],
@@ -293,7 +296,7 @@ export async function setFomcMotion(
   set.updatedAt = now;
   // Guard against a ballot landing between read and write: only swap the
   // motion on the same meeting while it is still voting.
-  const res = await db.collection<CentralBank>("centralBanks").updateOne(
+  const res = await centralBanksCollection(db).updateOne(
     {
       _id: bankId,
       "activeFomcMeeting.meetingId": meeting.meetingId,
@@ -347,9 +350,9 @@ export async function processFomcMeetings(
     seatsReplaced: 0,
   };
 
-  const gameConfig = await db
-    .collection<{ _id: string; commandEconomyEnabled?: boolean }>("gameConfig")
-    .findOne({ _id: "default" }, { projection: { commandEconomyEnabled: 1 } });
+  const gameConfig = await gameConfigCollection<{ _id: string; commandEconomyEnabled?: boolean }>(
+    db
+  ).findOne({ _id: "default" }, { projection: { commandEconomyEnabled: 1 } });
   const commandEconomyEnabled = gameConfig?.commandEconomyEnabled === true;
 
   // Advance the cost-of-capital EMA for EVERY bank, every turn — including
@@ -357,8 +360,7 @@ export async function processFomcMeetings(
   // share-price formula reads primeRateSmoothed; leaving a bank out would pin
   // its market's discount rate at whatever the EMA last was.
   {
-    const allBanks = await db
-      .collection<CentralBank>("centralBanks")
+    const allBanks = await centralBanksCollection(db)
       .find({}, { projection: { primeRate: 1, primeRateSmoothed: 1 } })
       .toArray();
     const emaOps = allBanks
@@ -377,12 +379,11 @@ export async function processFomcMeetings(
         };
       });
     if (emaOps.length > 0) {
-      await db.collection<CentralBank>("centralBanks").bulkWrite(emaOps);
+      await centralBanksCollection(db).bulkWrite(emaOps);
     }
   }
 
-  const candidates = await db
-    .collection<CentralBank>("centralBanks")
+  const candidates = await centralBanksCollection(db)
     .find({ fomcBoard: { $exists: true, $ne: [] } })
     .toArray();
 
@@ -419,8 +420,7 @@ export async function processFomcMeetings(
     const macro = await loadMacroContext(db, bank, countryId, currentYear);
     let hasActiveNomination = false;
     if (board.some((s) => s.occupantType === "vacant")) {
-      const activeNominations = await db
-        .collection<FomcNomination>("fomcNominations")
+      const activeNominations = await fomcNominationsCollection(db)
         .find({ bankId: bank._id, status: "active" })
         .project<{ _id: ObjectId }>({ _id: 1 })
         .toArray();
@@ -470,7 +470,7 @@ export async function processFomcMeetings(
     }
     set.updatedAt = now;
 
-    await db.collection<CentralBank>("centralBanks").updateOne({ _id: bank._id }, { $set: set });
+    await centralBanksCollection(db).updateOne({ _id: bank._id }, { $set: set });
   }
 
   return result;

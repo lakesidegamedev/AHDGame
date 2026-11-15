@@ -7,6 +7,7 @@ import {
   lowerChamberMajorityThreshold,
 } from "./lowerChamberSeats";
 import { getCountryConfig } from "@/lib/constants/countries";
+import { caRegions2027 } from "@/lib/countries/ca/data/caRegions2027";
 import {
   JP_SHUGIIN_1994_DISTRICT_SEATS,
   JP_SHUGIIN_1994_LIST_SEATS,
@@ -41,6 +42,17 @@ describe("getLiveLowerChamberSeats", () => {
   it.each([630, 571, 531])("shrinks Commons to its surviving %s seats", async (seats) => {
     db.collection("states").find.mockReturnValue(cursorOf([{ houseDistricts: seats }]));
     expect(await getLiveLowerChamberSeats(db as unknown as Db, "UK")).toBe(seats);
+  });
+  it("shrinks Canada's Commons to the 265 seats left when Quebec secedes", async () => {
+    const full = caRegions2027.map((r) => ({ houseDistricts: r.houseDistricts }));
+    db.collection("states").find.mockReturnValue(cursorOf(full));
+    expect(await getLiveLowerChamberSeats(db as unknown as Db, "CA")).toBe(343);
+    const rest = caRegions2027
+      .filter((r) => r._id !== "CA_QC")
+      .map((r) => ({ houseDistricts: r.houseDistricts }));
+    db.collection("states").find.mockReturnValue(cursorOf(rest));
+    expect(await getLiveLowerChamberSeats(db as unknown as Db, "CA")).toBe(265);
+    expect(lowerChamberMajorityThreshold(265)).toBe(133);
   });
   it("retains the known two-seat UK seed discrepancy", async () => {
     db.collection("states").find.mockReturnValue(cursorOf([{ houseDistricts: 648 }]));
@@ -219,6 +231,17 @@ describe("getLiveUpperChamberSeats", () => {
     const lords = getCountryConfig("UK").legislature.upperChamber?.seats;
     expect(await getLiveUpperChamberSeats(db as unknown as Db, "UK")).toBe(lords);
     expect(lords).not.toBe(488);
+  });
+
+  it("seats Canada's 105 senators by province and drops Quebec's 24 on secession", async () => {
+    const senate = (rows: typeof caRegions2027) =>
+      cursorOf(rows.map((r) => ({ stateSenateSeats: r.stateSenateSeats })));
+    db.collection("states").find.mockReturnValue(senate(caRegions2027));
+    expect(await getLiveUpperChamberSeats(db as unknown as Db, "CA")).toBe(105);
+    db.collection("states").find.mockReturnValue(
+      senate(caRegions2027.filter((r) => r._id !== "CA_QC"))
+    );
+    expect(await getLiveUpperChamberSeats(db as unknown as Db, "CA")).toBe(81);
   });
 
   it("sums region stateSenateSeats for SE 1953 First Chamber", async () => {

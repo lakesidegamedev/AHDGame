@@ -4,7 +4,6 @@ import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import { handleRouteError } from "@/lib/api/errors";
 import { requireCorporationActionsEnabled } from "@/lib/api/requireCorporationActions";
-import { requireCorpDealsEnabled } from "@/lib/api/requireCorpDeals";
 import { requireCeo, resolveCorporation } from "@/lib/api/corporations/resolveQuery";
 import { getGameState } from "@/lib/gameState";
 import { getAuthUser } from "@/lib/auth";
@@ -17,12 +16,7 @@ import {
   redactPrivateCorporation,
   redactPrivateSectorRow,
 } from "@/lib/corporations/redaction";
-import type {
-  CorporationPrivatizationVote,
-  Corporation,
-  CorporationHistory,
-  WikiPage,
-} from "@/lib/db/types";
+import type { CorporationPrivatizationVote, CorporationHistory, WikiPage } from "@/lib/db/types";
 import { corporationWikiSlug } from "@/lib/wiki/playerPages";
 import {
   booksAreExposed,
@@ -41,6 +35,11 @@ import { FINANCIAL_DISTRESS_GRACE_TURNS } from "@/lib/nationalization/constants"
 import { isContractIssuanceEnabled } from "@/lib/extraction/featureFlag";
 import { buildCorpNationalizationThreat } from "@/lib/nationalization/corpNationalizationThreat";
 import { marketAtLeast, getMarketSystemMode } from "@/lib/market/featureFlag";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { corporationHistoryCollection } from "@/lib/db/repositories/corporationHistory";
+import { wikiPagesCollection } from "@/lib/db/repositories/wikiPages";
+import { corporationPrivatizationVotesCollection } from "@/lib/db/repositories/corporationPrivatizationVotes";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -65,7 +64,7 @@ export const GET = withNoStore(async function GET(request: Request, { params }: 
       // Private supply-agreements gate — a governor-set gameConfig flag ("default"
       // doc), surfaced on the corp payload so the CEO panel can show/hide without
       // an extra round-trip.
-      db.collection<GameConfig>("gameConfig").findOne(
+      gameConfigCollection(db).findOne(
         { _id: "default" },
         {
           projection: {
@@ -86,9 +85,7 @@ export const GET = withNoStore(async function GET(request: Request, { params }: 
       getAuthUser().catch(() => null),
     ]);
     const currentTurn = gameState?.currentTurn ?? 0;
-    // Global, non-sensitive feature flag — surfaced on the corp payload so the
-    // page can show/hide the Tech tab without an extra round-trip.
-    const techTreesEnabled = gameState?.sectorTechTreesEnabled === true;
+    const techTreesEnabled = true;
     const supplyAgreementsEnabled = config?.supplyAgreementsEnabled === true;
     // Extraction-contract gate — surfaced on the corp payload so the Contracts
     // tab (offers / active contracts) can show/hide without an extra round-trip.
@@ -103,7 +100,7 @@ export const GET = withNoStore(async function GET(request: Request, { params }: 
       !!authUser &&
       !requireCeo(corporation, authUser.userId) &&
       !(await requireCorporationActionsEnabled(db));
-    const canManageAcquisitions = canManageCorporation && !(await requireCorpDealsEnabled(db));
+    const canManageAcquisitions = canManageCorporation;
     const mediaEditorialEnabled = config?.mediaEditorialEnabled === true;
     const mediaOperatingModelsEnabled = config?.mediaOperatingModelsEnabled === true;
     const mediaProductSlatesEnabled =
@@ -139,9 +136,10 @@ export const GET = withNoStore(async function GET(request: Request, { params }: 
       );
     (detail.corporation as Record<string, unknown>).canEditEditorialStance = canEditEditorialStance;
     if (mediaEditorialEnabled && hasMediaSector) {
-      const editorial = await db
-        .collection<Corporation>("corporations")
-        .findOne({ _id: corporation._id }, { projection: { editorialStance: 1 } });
+      const editorial = await corporationsCollection(db).findOne(
+        { _id: corporation._id },
+        { projection: { editorialStance: 1 } }
+      );
       if (editorial?.editorialStance) corporation.editorialStance = editorial.editorialStance;
     }
 
@@ -150,27 +148,25 @@ export const GET = withNoStore(async function GET(request: Request, { params }: 
     // Surface any open privatization vote so the corp page can mount the panel.
     // Must be nested inside `corporation` — the page sets state from data.corporation,
     // so a top-level openPrivatizationVoteId would be silently ignored.
-    const openVote = await db
-      .collection<CorporationPrivatizationVote>("corporationPrivatizationVotes")
-      .findOne({ corporationId: corporation._id, status: "open" }, { projection: { _id: 1 } });
+    const openVote = await corporationPrivatizationVotesCollection(db).findOne(
+      { corporationId: corporation._id, status: "open" },
+      { projection: { _id: 1 } }
+    );
 
     const openPrivatizationVoteId = openVote?._id?.toString() ?? null;
     (detail.corporation as Record<string, unknown>).openPrivatizationVoteId =
       openPrivatizationVoteId;
 
-    // Wiki-link gate (#2347): the hero links to `/wiki/corp-<sequentialId>`,
-    // but that page only renders PUBLISHED, non-private pages — anything else
-    // is a Not Found. Surface availability so the hero can hide the link (or
-    // offer the CEO the create flow) instead of linking into a 404.
+    // The hero links to `/wiki/corp-<sequentialId>`, but that page only renders
+    // PUBLISHED, non-private pages. Surface availability so the hero can hide
+    // the link or offer a create flow instead of linking into a 404.
     const wikiSlug =
       corporation.sequentialId != null ? corporationWikiSlug(corporation.sequentialId) : null;
     const wikiPagePublished = wikiSlug
-      ? (await db
-          .collection<WikiPage>("wikiPages")
-          .findOne(
-            { slug: wikiSlug, status: "published", private: { $ne: true } },
-            { projection: { _id: 1 } }
-          )) != null
+      ? (await wikiPagesCollection(db).findOne(
+          { slug: wikiSlug, status: "published", private: { $ne: true } },
+          { projection: { _id: 1 } }
+        )) != null
       : false;
     (detail.corporation as Record<string, unknown>).wikiPagePublished = wikiPagePublished;
 
@@ -224,12 +220,10 @@ export const GET = withNoStore(async function GET(request: Request, { params }: 
     const parentInfo = (detail.corporation as Record<string, unknown>).parentCorporation as
       { _id: string } | null | undefined;
     if (authUser?.userId && parentInfo?._id && ObjectId.isValid(parentInfo._id)) {
-      const parentCorp = await db
-        .collection<Corporation>("corporations")
-        .findOne(
-          { _id: new ObjectId(parentInfo._id) },
-          { projection: { userId: 1, ceoVacant: 1 } }
-        );
+      const parentCorp = await corporationsCollection(db).findOne(
+        { _id: new ObjectId(parentInfo._id) },
+        { projection: { userId: 1, ceoVacant: 1 } }
+      );
       viewerIsControllingParentCeo =
         parentCorp != null &&
         !parentCorp.ceoVacant &&
@@ -318,12 +312,10 @@ export const GET = withNoStore(async function GET(request: Request, { params }: 
         // Fetch the quarterly history snapshot (most recent turn <= fogSourceTurn).
         const historySnap =
           fogSourceTurn > 0
-            ? await db
-                .collection<CorporationHistory>("corporationHistory")
-                .findOne(
-                  { corporationId: corporation._id, turn: { $lte: fogSourceTurn } },
-                  { sort: { turn: -1 } }
-                )
+            ? await corporationHistoryCollection(db).findOne(
+                { corporationId: corporation._id, turn: { $lte: fogSourceTurn } },
+                { sort: { turn: -1 } }
+              )
             : null;
 
         const factor = getFogFactor(corporation._id.toString(), currentTurn);
@@ -362,25 +354,18 @@ export const GET = withNoStore(async function GET(request: Request, { params }: 
           corpObj.liquidCapital = Math.round(corpObj.liquidCapital * factor);
         }
 
-        // Plants tier: the physical figures are financials too. Capacity,
-        // output, sales and construction-in-progress get the same quarterly
-        // perturbation the money lines do — otherwise a rival reads exact
-        // capacity off a corp whose revenue is deliberately blurred, and the
-        // blur is worthless (revenue is derived from capacity under plants).
+        // Plants tier: physical figures are financials too. Capacity, output,
+        // sales and construction-in-progress get the same quarterly perturbation as
+        // money lines, else a rival reads exact capacity while revenue is fogged.
         //
-        // The exact FILL RATE is stripped entirely rather than perturbed. It
-        // is a ratio, so a uniform fog leaves it untouched, and it is the one
-        // number that tells an attacker the incumbent cannot defend. Outsiders
-        // keep only the coarse band.
+        // Fill rate is stripped, not perturbed: it is a ratio, so uniform fog leaves
+        // it exact, and it reveals the incumbent cannot defend. Outsiders keep only
+        // the coarse band.
         //
-        // C3: `buildQueueSummary` is DROPPED rather than perturbed. It carries
-        // the raw `unitsOrdered` for every outstanding order, sitting next to a
-        // fogged corp-level `unitsOnOrder` — so summing the raw per-sector rows
-        // and dividing recovers the fog factor itself, and with it every other
-        // fogged number on the payload. It also publishes exact delivery turns,
-        // which is future capacity intel the money fog has no analogue for.
-        // Insiders (CEO, controlling parent, admin) never reach this branch and
-        // keep the full queue.
+        // buildQueueSummary is dropped, not perturbed: its raw per-order unitsOrdered
+        // sits next to the fogged corp-level unitsOnOrder, so summing rows recovers the
+        // fog factor and every other fogged number. It also leaks exact delivery turns.
+        // Insiders (CEO, controlling parent, admin) skip this branch and keep it.
         const foggedSectors = detail.sectors as Record<string, unknown>[] | undefined;
         if (Array.isArray(foggedSectors)) {
           for (const row of foggedSectors) {

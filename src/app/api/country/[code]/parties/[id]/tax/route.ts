@@ -8,6 +8,9 @@ import { findPartyBySequentialId } from "@/lib/db/partyLookup";
 import type { PoliticalParty } from "@/lib/db/types";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { adminLogsCollection } from "@/lib/db/repositories/adminLogs";
+import type { Document } from "mongodb";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string }>;
@@ -66,7 +69,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     const now = new Date();
 
     // Update the tax rate
-    await db.collection<PoliticalParty>("politicalParties").updateOne(
+    await politicalPartiesCollection(db).updateOne(
       { _id: party._id },
       {
         $set: {
@@ -77,7 +80,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     );
 
     // Log the action
-    await db.collection("adminLogs").insertOne({
+    await adminLogsCollection<Document>(db).insertOne({
       category: "system",
       action: "tax_rate_changed",
       username: authUser.username,

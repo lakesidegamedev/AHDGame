@@ -1,6 +1,7 @@
 import type { Db, ObjectId } from "mongodb";
 import type { User } from "@/lib/db/types";
 import { escapeRegex } from "@/lib/utils/escapeRegex";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 // Letters (any script), digits, spaces, and basic punctuation. Em dashes and
 // en dashes are deliberately excluded per site copy rules; plain hyphens are fine.
@@ -45,7 +46,7 @@ export async function nameCollidesWithUser(
   excludeUserId?: ObjectId
 ): Promise<boolean> {
   const exact = new RegExp(`^${escapeRegex(name)}$`, "i");
-  const other = await db.collection<User>("users").findOne(
+  const other = await usersCollection(db).findOne(
     {
       $and: [
         { $or: [{ username: exact }, { displayName: exact }] },

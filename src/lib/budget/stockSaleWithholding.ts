@@ -1,11 +1,5 @@
 import { ObjectId, type Db, type ClientSession } from "mongodb";
-import type {
-  Character,
-  FederalBudget,
-  StateBudget,
-  ExchangeRate,
-  GameState,
-} from "@/lib/db/types";
+import type { Character, StateBudget, ExchangeRate, GameState } from "@/lib/db/types";
 import { getHomeCurrency } from "@/lib/currency/characterFunds";
 import { getNationalBudgetId } from "@/lib/bonds/sovereign";
 import {
@@ -20,6 +14,12 @@ import {
   type CapitalGainsTaxRates,
 } from "./rules/capitalGainsTax";
 import { incomeTaxRate } from "./rules/incomeTaxTiers";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 export type StockSeller = { id: ObjectId; collection: "characters" | "imperialCharacters" };
 export const stockSellerKey = (seller: StockSeller) =>
@@ -33,7 +33,7 @@ export async function loadStockWithholdingContexts(
   options?: { income?: boolean; session?: ClientSession }
 ) {
   if (!sellers.length) return new Map<string, StockWithholdingContext>();
-  const state = await db.collection<GameState>("gameState").findOne(
+  const state = await gameStateCollection(db).findOne(
     { _id: "current" },
     {
       session: options?.session,
@@ -49,8 +49,7 @@ export async function loadStockWithholdingContexts(
     return contexts;
   const reads = [
     () =>
-      db
-        .collection<Character>("characters")
+      charactersCollection(db)
         .find(
           { _id: { $in: sellers.filter((s) => s.collection === "characters").map((s) => s.id) } },
           {
@@ -67,8 +66,7 @@ export async function loadStockWithholdingContexts(
         )
         .toArray(),
     () =>
-      db
-        .collection<Character>("imperialCharacters")
+      imperialCharactersCollection<Character>(db)
         .find(
           {
             _id: {
@@ -89,21 +87,18 @@ export async function loadStockWithholdingContexts(
         )
         .toArray(),
     () =>
-      db
-        .collection<FederalBudget>("federalBudget")
+      federalBudgetCollection(db)
         .find(
           {},
           { session: options?.session, projection: { countryId: 1, taxRates: 1, currencyCode: 1 } }
         )
         .toArray(),
     () =>
-      db
-        .collection<StateBudget>("stateBudgets")
+      stateBudgetsCollection(db)
         .find({}, { session: options?.session, projection: { countryId: 1, taxRates: 1 } })
         .toArray(),
     () =>
-      db
-        .collection<ExchangeRate>("exchangeRates")
+      exchangeRatesCollection(db)
         .find({}, { session: options?.session, projection: { currencyCode: 1, rate: 1 } })
         .toArray(),
   ] as const;

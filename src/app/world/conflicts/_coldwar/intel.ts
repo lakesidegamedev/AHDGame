@@ -1,7 +1,7 @@
 import type { Side } from "./proxyWar";
 
 /** One enemy clandestine operation in a nation (Soviet op for West; CIA op for East). */
-export type IntelOp = { id: string; icon: string; name: string; detail: string; inf: number };
+type IntelOp = { id: string; icon: string; name: string; detail: string; inf: number };
 
 /** A watch-list nation. `playerBase`/`oppBase` are the viewer's vs the rival's
  *  baseline influence; `ops` are the rival operations the viewer can expose. */
@@ -18,17 +18,12 @@ export type IntelNation = {
 
 export type ExposedMap = Record<string, boolean>;
 
-// ── pure mechanic (identical both sides; unit-tested) ──────────────────────────
-export const DEPLOY_COST = 2;
-export const EXPOSE_COST = 1;
-export const RECRUIT_COST = 1;
 export const RECRUIT_GAIN = 8;
-export const DISINFO_COST = 2;
 export const DISINFO_GAIN = 12;
 export const CYCLE_GAIN = 3;
 export const AGENTS_START = 8;
 export const AGENTS_MAX = 12;
-export const STANDING_PER_OP = 6;
+const STANDING_PER_OP = 6;
 
 /** Rival influence in a nation: baseline + every operation not yet exposed. */
 export function oppInf(nation: IntelNation, exposed: ExposedMap): number {
@@ -56,7 +51,7 @@ export function standing(exposedTotal: number): number {
 }
 
 // ── per-side data + copy + chrome ──────────────────────────────────────────────
-export type IntelAccent = {
+type IntelAccent = {
   /** Label text color. */
   text: string;
   /** Number / recruit-effect color. */

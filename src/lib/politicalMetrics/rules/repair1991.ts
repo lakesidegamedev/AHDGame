@@ -1,7 +1,7 @@
 import type { PoliticalMetricId, PoliticalMetricsCountryId } from "../types";
 import { NATIONAL_BASELINES_1979 } from "../seeds/nationalBaselines1979";
 import { NATIONAL_BASELINES_1991 } from "../seeds/nationalBaselines1991";
-import { REGIONAL_TEXTURE_1991 } from "../seeds/regionalTexture1991";
+import { getRegionalTexture1991 } from "../seeds/regionalTexture1991";
 
 export const POLITICAL_OPENING_1991_VERSION = "1991-v1-2026-10-05";
 export const RESET_RUNTIME_FIELDS = [
@@ -30,7 +30,7 @@ export function planPoliticalOpening1991(doc: RepairPoliticalBoard): {
   const cc = doc.countryId as PoliticalMetricsCountryId;
   const values = {} as Record<PoliticalMetricId, number>;
   const residuals = doc.residuals ? { ...doc.residuals } : undefined;
-  const texture = REGIONAL_TEXTURE_1991[cc]?.[doc._id] ?? {};
+  const texture = getRegionalTexture1991()[cc]?.[doc._id] ?? {};
   for (const [key, baseline] of Object.entries(NATIONAL_BASELINES_1991[cc])) {
     const id = key as PoliticalMetricId;
     const before = doc.values[id];

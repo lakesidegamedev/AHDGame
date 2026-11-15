@@ -6,19 +6,10 @@ import {
 } from "@/lib/politicalStrength/strengthConstants";
 
 /**
- * Political Strength reserve card. Replaces the legacy `+5 actions/hour ·
- * Cap: 100` display with the Phase 3 reserve model: current/cap, gain
- * breakdown, a fill indicator, and a help affordance explaining the
- * reserve / pressure mechanic.
- *
- * Used on both the National Party Hub and the State Party Hub. Both pages
- * are client components that already pass party / state-party data fetched
- * server-side.
- *
- * Acceptance: addresses Phase 3 §"Acceptance Criteria" — PS UI explains
- * the reserve/pressure model clearly enough that players can tell how full
- * their reserve is relative to the hard cap and why repeated same-state
- * actions get more expensive.
+ * Political Strength reserve card: current/cap, gain breakdown, fill
+ * indicator, and help affordance explaining the reserve/pressure mechanic.
+ * Used on both National and State Party Hubs; both are client components fed
+ * server-side party data.
  */
 export function PsStrengthCard({
   current,

@@ -5,6 +5,7 @@ import { requireBotToken } from "@/lib/api/requireBotToken";
 import { checkRateLimit, rateLimitResponse, BOT_READ_LIMITS } from "@/lib/api/rateLimit";
 import type { NewsPost } from "@/lib/db/types";
 import { withPublicNewsVisibility } from "@/lib/news/publicModeration";
+import { newsPostsCollection } from "@/lib/db/repositories/newsPosts";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://ahousedividedgame.com";
 const CONTENT_PREVIEW_LENGTH = 200;
@@ -38,8 +39,7 @@ export async function GET(request: Request) {
 
     const db = await getDb();
 
-    const posts = await db
-      .collection<NewsPost>("newsPosts")
+    const posts = await newsPostsCollection(db)
       .find(withPublicNewsVisibility(query))
       .sort({ createdAt: -1 })
       .limit(limit)

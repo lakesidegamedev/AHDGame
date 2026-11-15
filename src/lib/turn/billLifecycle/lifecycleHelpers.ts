@@ -7,9 +7,13 @@ import { ObjectId } from "mongodb";
 import { clotureVotesRequired } from "./clotureRules";
 import { createNotifications } from "@/lib/notifications";
 import { didPass } from "@/lib/billLifecycleHelpers";
-import type { Bill, BillStatus, Character, ElectedOfficial } from "@/lib/db/types";
+import type { Bill, BillStatus, ElectedOfficial } from "@/lib/db/types";
 import { getCountryConfig, type CountryId } from "@/lib/constants/countries";
 import { getChamberKeyForOfficeType } from "@/lib/legislature/chamberOfficeType";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
+import type { Document } from "mongodb";
 
 type LifecycleDb = Awaited<ReturnType<typeof import("@/lib/mongodb").getDb>>;
 
@@ -28,10 +32,9 @@ function chamberNameForOfficeType(countryId: string, officeType: string): string
 }
 
 /**
- * When a bill has been filibustered, it requires 3/5 of the votes cast (for +
- * against + abstain) to be "for" rather than a simple majority. Quorum-based
- * rather than seat-based: senators who never vote don't count against the bill,
- * but an abstention still raises the bar (#3199).
+ * A filibustered bill needs 3/5 of votes cast (for + against + abstain) to be
+ * "for", not a simple majority. Quorum-based, not seat-based: non-voters don't
+ * count against the bill, but abstentions raise the bar.
  */
 export async function didPassWithFilibusterCheck(
   db: LifecycleDb,
@@ -42,9 +45,10 @@ export async function didPassWithFilibusterCheck(
 ): Promise<boolean> {
   if (!bill.filibusterInvocations?.length) return didPass(votesFor, votesAgainst);
 
-  const filibusterPolicy = await db
-    .collection("statePolicies")
-    .findOne({ stateId: "federal", legislationTypeId: "senate_filibuster_rules" });
+  const filibusterPolicy = await statePoliciesCollection<Document>(db).findOne({
+    stateId: "federal",
+    legislationTypeId: "senate_filibuster_rules",
+  });
   if (filibusterPolicy && filibusterPolicy.effectDirection === -1) {
     return didPass(votesFor, votesAgainst);
   }
@@ -60,7 +64,7 @@ export async function notifyPresidentBillAwaitingSignature(
   db: LifecycleDb,
   bill: Pick<Bill, "_id" | "title" | "countryId">
 ): Promise<void> {
-  const presidentOfficial = await db.collection<ElectedOfficial>("electedOfficials").findOne({
+  const presidentOfficial = await electedOfficialsCollection(db).findOne({
     countryId: bill.countryId ?? "US",
     officeType: "president",
     characterId: { $ne: null },
@@ -68,9 +72,10 @@ export async function notifyPresidentBillAwaitingSignature(
   });
   if (!presidentOfficial?.characterId) return;
 
-  const presidentChar = await db
-    .collection<Character>("characters")
-    .findOne({ _id: presidentOfficial.characterId }, { projection: { userId: 1 } });
+  const presidentChar = await charactersCollection(db).findOne(
+    { _id: presidentOfficial.characterId },
+    { projection: { userId: 1 } }
+  );
   if (!presidentChar?.userId) return;
 
   await createNotifications([
@@ -93,8 +98,7 @@ export async function notifyChambersVoteOpen(
   bill: Bill,
   chamberType: string
 ): Promise<void> {
-  const officials = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const officials = await electedOfficialsCollection(db)
     // ⚠️ `countryId` was missing. The US, BR and others all share the house/senate
     // office-type keys (the collision `npp/billVoting.ts` works around per bill), so
     // this notified legislators in EVERY country that used the same key. Pre-existing,
@@ -113,8 +117,7 @@ export async function notifyChambersVoteOpen(
     .map((o) => o.characterId)
     .filter((id): id is ObjectId => id instanceof ObjectId);
 
-  const chars = await db
-    .collection<Character>("characters")
+  const chars = await charactersCollection(db)
     .find({ _id: { $in: charIds } }, { projection: { _id: 1, userId: 1 } })
     .toArray();
 
@@ -147,8 +150,7 @@ export async function notifyBillsVoteOpen(
       ])
     ).values(),
   ];
-  const officials = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const officials = await electedOfficialsCollection(db)
     .find(
       {
         $or: chamberFilters,
@@ -166,8 +168,7 @@ export async function notifyBillsVoteOpen(
         .map((id) => [id.toString(), id])
     ).values(),
   ];
-  const characters = await db
-    .collection<Character>("characters")
+  const characters = await charactersCollection(db)
     .find({ _id: { $in: characterIds } }, { projection: { _id: 1, userId: 1 } })
     .toArray();
   const characterById = new Map(
@@ -220,8 +221,7 @@ export async function notifySponsor(
 
   if (notifyIds.length === 0) return;
 
-  const chars = await db
-    .collection<Character>("characters")
+  const chars = await charactersCollection(db)
     .find({ _id: { $in: notifyIds } }, { projection: { _id: 1, userId: 1 } })
     .toArray();
 

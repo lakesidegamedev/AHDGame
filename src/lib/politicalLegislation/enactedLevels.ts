@@ -8,6 +8,7 @@ import type { Db } from "mongodb";
 import type { StatePolicy } from "@/lib/db/types/statePolicy";
 import { getCatalog, getLaw } from "./catalog";
 import type { LawCountryId } from "./types";
+import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
 
 /**
  * National enacted levels for every program law of a country: lawId → 0–4.
@@ -15,8 +16,7 @@ import type { LawCountryId } from "./types";
  */
 export async function getEnactedLevels(db: Db, countryId: string): Promise<Map<string, number>> {
   const laws = getCatalog(countryId).filter((law) => law.kind !== "tax");
-  const records = await db
-    .collection<StatePolicy>("statePolicies")
+  const records = await statePoliciesCollection(db)
     .find(
       { scope: "national", legislationTypeId: { $in: laws.map((law) => law.id) } },
       { projection: { legislationTypeId: 1, policyOptionIndex: 1 } }
@@ -50,14 +50,12 @@ export async function getEnactedLevel(
 ): Promise<number> {
   const law = getLaw(lawId);
   if (!law || law.kind === "tax") return 0;
-  const record = await db
-    .collection<StatePolicy>("statePolicies")
-    .findOne(
-      regionId
-        ? { scope: "state", stateId: regionId, legislationTypeId: lawId }
-        : { scope: "national", legislationTypeId: lawId },
-      { projection: { policyOptionIndex: 1 } }
-    );
+  const record = await statePoliciesCollection(db).findOne(
+    regionId
+      ? { scope: "state", stateId: regionId, legislationTypeId: lawId }
+      : { scope: "national", legislationTypeId: lawId },
+    { projection: { policyOptionIndex: 1 } }
+  );
   if (typeof record?.policyOptionIndex === "number") {
     return Math.max(0, Math.min(4, record.policyOptionIndex));
   }

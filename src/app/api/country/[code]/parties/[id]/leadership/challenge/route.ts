@@ -8,7 +8,7 @@ import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { findPartyBySequentialId } from "@/lib/db/partyLookup";
 import { isSameCountry } from "@/lib/api/sameCountry";
 import { getGameTime } from "@/lib/time/gameTime";
-import { initiateLeadershipChallenge } from "@/lib/uk/leadership/leadershipCommands";
+import { initiateLeadershipChallenge } from "@/lib/countries/uk/leadership/leadershipCommands";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string }>;

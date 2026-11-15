@@ -1,4 +1,5 @@
 import { timingSafeEqual } from "node:crypto";
+import { servicesConfig } from "@/lib/config/services";
 
 /**
  * Check if the request is authorized as a cron job.
@@ -11,7 +12,7 @@ import { timingSafeEqual } from "node:crypto";
  * @returns true if the request has valid cron auth
  */
 export function requireCron(request: Request): boolean {
-  const secret = process.env.CRON_SECRET;
+  const secret = servicesConfig.cronSecret();
   if (!secret) return false;
 
   const auth = request.headers.get("authorization");

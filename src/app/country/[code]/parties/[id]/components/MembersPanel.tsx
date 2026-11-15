@@ -1,4 +1,5 @@
 "use client";
+import { displayCanadianRegionCode } from "@/lib/countries/ca/regionCodes";
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
@@ -142,7 +143,9 @@ export function MembersPanel({ party }: { party: PartyData }) {
                         )}
                       </div>
                     </td>
-                    <td className="px-6 py-3 text-muted">{m.homeState}</td>
+                    <td className="px-6 py-3 text-muted">
+                      {displayCanadianRegionCode(m.homeState)}
+                    </td>
                     <td className="px-6 py-3">
                       {m.currentOffice ? (
                         <span className="text-foreground">

@@ -20,10 +20,8 @@ export interface SlateRaceTitleInput {
 }
 
 /**
- * Title for one race on the slate board, e.g. "Senate Race · Class I". A
- * by-election reads by its game name ("Commons By-Election") rather than its
- * storage key, which rendered as "Special Commons Race" and was hard to tell
- * apart from the region's regular race (ticket 1379).
+ * Title for one race on the slate board, e.g. "Senate Race · Class I".
+ * By-elections use their game name, not the storage key.
  */
 export function formatSlateRaceTitle(item: SlateRaceTitleInput): string {
   if (isByElectionType(item.electionType)) {

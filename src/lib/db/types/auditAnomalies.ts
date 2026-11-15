@@ -43,5 +43,3 @@ export interface AuditAnomalyScan {
   flaggedRows: number;
   findings: AuditAnomalyFinding[];
 }
-
-export type AuditAnomalyScanInput = Omit<AuditAnomalyScan, "_id">;

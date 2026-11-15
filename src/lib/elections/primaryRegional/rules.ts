@@ -1,29 +1,19 @@
 /**
- * Regional variation in presidential primaries.
+ * Regional variation in presidential primaries (general elections untouched).
  *
- * Almost every lever in the primary vote weight is national: reach, approval,
- * party fit, party influence, the NPP penalty, mood and momentum are the same
- * number in every state, so each candidate's ratio to their rivals carried
- * straight through to every state's share. Rivals in one party also sit on the
- * same side of both axes, so the per-state ideology term barely told them
- * apart. The result was a primary map that read the same coast to coast.
+ * Without it, every primary vote-weight lever is national, so candidates'
+ * ratios carried identically to every state's share and the map read the same
+ * coast to coast.
  *
- * Three levers, all presidential-primary only (general elections are not
- * touched):
+ * Three levers:
+ * 1. A fixed per-state swing per candidate, a log-normal multiplier from a
+ *    hash of race, state and candidate. Pure function of the ids, so a race
+ *    replays identically with no rng.
+ * 2. Sharper ideology: group appeal raised to a power above one so fit
+ *    differentiates more.
+ * 3. A home-division pull across the candidate's census division.
  *
- * 1. A fixed per-state swing per candidate: a log-normal multiplier drawn from
- *    a hash of the race, the state and the candidate. It is a pure function of
- *    those ids, so a race always replays identically (singleplayer reloads, the
- *    projection and the live wave agree) and no rng has to be threaded through.
- * 2. Ideology counts for more: each demographic group's appeal is raised to a
- *    power above one before the group's vote is split, which widens the gap
- *    between a candidate who fits a state's primary voters and one who does
- *    not.
- * 3. A home-region pull: a candidate does a little better across their home
- *    state's census division, not only in the home state itself.
- *
- * Plain data in, plain data out: no database, clock, environment or
- * `Math.random`.
+ * Plain data in, plain data out: no db, clock, environment or Math.random.
  */
 
 /** Spread of the per-state swing: the log-normal sigma. 0.15 is about ±15% at one sigma. */

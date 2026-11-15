@@ -212,7 +212,7 @@ describe("createTurnPhaseRuntime", () => {
     expect(result).toBeNull();
     expect(currentPhaseRef.current).toBe("bondTurn");
     expect(phaseStatuses.bondTurn.status).toBe("failed");
-    expect(phaseStatuses.bondTurn.message).toBe("coupon mismatch");
+    expect(phaseStatuses.bondTurn.message).toMatch(/^coupon mismatch\n\s*at /);
     expect(warnings).toEqual(["bondTurn: coupon mismatch"]);
   });
 

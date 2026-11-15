@@ -44,29 +44,15 @@ export const REFERENCE_MIX_INTENSITY = 1.4;
 /**
  * Per-capita environment spend at which the channel reaches half its max response.
  *
- * Recalibrated (spend-response pass, ticket #826 item 14 follow-up, coordinated
- * across all 6 spend-response categories). US environment spend is 100%
- * bill-driven (no federal/state `budget.byCategory.environment` baseline line
- * exists in src/lib/seeds/reference/budgets.ts) — the realistic per-capita range
- * comes from src/lib/seeds/reference/legislationTypes.ts's environment bills:
- *   - us_clean_energy: withPerCapitaCosts [464, 340, 216, 124, 62, 23, 0]
- *   - us_conservation: withPerCapitaCosts [155, 116, 77, 46, 23, 8, 0]
- *   - us_state_environment (state-only): withPerCapitaCosts [124, 93, 54, 31, 15, 6, 0]
- * Default 2019 enacted positions (src/lib/seeds/reference/basePolicies.ts:
- * us_clean_energy economic=1 → $62/cap, us_conservation economic=0 → $46/cap,
- * no default for us_state_environment) give a realistic BASELINE of ~$108/capita
- * federal-only. MAX achievable (all three bills at their most-interventionist
- * option) is ~$743/capita (464 + 155 + 124).
+ * US environment spend is 100% bill-driven (no `budget.byCategory.environment`
+ * baseline line exists), so the realistic per-capita range comes from the
+ * environment bills in legislationTypes.ts. Default 2019 enacted positions give a
+ * BASELINE of ~$108/capita; MAX achievable is ~$743/capita.
  *
- * Old half-sat=1.5 saturated the response to ~98.6% at baseline and ~99.8% at
- * max (confirmed live: airQuality simBaseline 69-99.8 and carbonEmissions
- * simBaseline 5.3-7.1 across WA/NY/TX/CA/MS, both pinned near their best-bound
- * anchors) — a policy bill moving spend within its real range barely moved the
- * metric. half-sat=200 restores real slope: ~35% response at the $108 baseline,
- * ~79% at the $743 ceiling. Cross-checked against DE's structural
- * baselineSpendingByCategory.environment ($40B / 84.4M pop ≈ $474/capita,
- * src/lib/seeds/reference/budgets.ts) → ~70% response, still short of full
- * saturation, confirming hundreds-of-dollars-per-capita is the right scale.
+ * half-sat=200 gives ~35% response at the $108 baseline and ~79% at the $743
+ * ceiling. A lower value saturated the response at baseline, so a policy bill
+ * moving spend within its real range barely moved the metric. DE's structural
+ * baseline (~$474/capita) sits at ~70% response, still short of full saturation.
  */
 export const ENV_SPEND_HALF_SAT = 200;
 
@@ -137,7 +123,7 @@ export const airQualityNode: RegistryNode = {
   inertia: 0.85,
   // 2dp storage — slow carbon drift AND cabinet effects (≤0.05/turn) step below a
   // 1dp half-grain, where policy-delta preservation reabsorbs them every turn
-  // (the P2c rounding-plateau class; bug #0800).
+  // (the P2c rounding-plateau class).
   decimals: 2,
   compute: (ctx) => {
     const carbon = ctx.current["environment.carbonEmissions"] ?? 12;

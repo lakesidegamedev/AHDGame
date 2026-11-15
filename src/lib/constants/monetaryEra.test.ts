@@ -40,7 +40,7 @@ describe("getEraMonetaryBaseline", () => {
   });
 
   it("does not treat realized high inflation as a 1953 policy target (BR, FI)", () => {
-    // Ticket 1124: BR 10%/12% was authored from Vargas realized CPI. The
+    // BR 10%/12% was authored from Vargas realized CPI. The
     // Taylor rule then *tried* for 10%, and the era-blind 6% FX ceiling
     // structurally weakened BRL even on-target. Pin the policy target.
     expect(getEraMonetaryBaseline("BR", 1953)).toMatchObject({

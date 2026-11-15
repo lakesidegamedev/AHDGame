@@ -13,25 +13,17 @@ export type PeaceNegotiatorResult =
 /**
  * May this character negotiate peace for this country?
  *
- * Head of government OR the foreign seat holder, with NO precedence between them —
- * mirroring how the declare-war route treats `isHog || isDefence`. Peace and war are
- * the same kind of decision and should not have different authority shapes.
+ * Head of government OR the foreign seat holder, with no precedence between them,
+ * mirroring the declare-war route's `isHog || isDefence` gate. Deliberately not
+ * `requireForeignMinister`, which gives a seated minister exclusivity and refuses
+ * the head of government.
  *
- * Deliberately NOT `requireForeignMinister`, which gives a seated minister
- * exclusivity and refuses the head of government outright. Ten
- * international-organization routes want that behaviour and keep it; peace does not.
+ * `via` names which of the two authorized the actor. No route branches on it; it
+ * exists so a test can assert the head-of-government path was taken while a
+ * minister held the seat.
  *
- * `via` names which of the two authorized the actor. No route branches on it — it
- * exists so a test can assert that "the head of government acted WHILE a minister
- * held the seat" went through the head-of-government path, which is the whole point
- * of this helper and is otherwise indistinguishable from the minister acting.
- *
- * Admins bypass, matching the declare-war route's `!auth.user.isAdmin && …` gate.
- * Without it the two would disagree: both executive shells show the Foreign Affairs
- * tab to admins, so an admin would get a working declaration button beside a peace
- * form that 403s.
- *
- * Spec: docs/superpowers/specs/2026-08-05-executive-foreign-affairs-tab-design.md
+ * Admins bypass, matching the declare-war route, so an admin never sees a working
+ * declaration button beside a peace form that 403s.
  */
 export async function requirePeaceNegotiator(
   db: Db,

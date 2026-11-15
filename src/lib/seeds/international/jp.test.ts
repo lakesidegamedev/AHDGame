@@ -18,51 +18,19 @@
  *
  * The test harness mirrors the real game pipeline:
  *   getJpModel(era) → deriveCountryGroupLean/Populations/Turnout
- *   → StateDemographics → calculateStateLean → getDisplayLean
+ *   → turnout-weighted region lean → getDisplayLean
  */
 
 import { describe, it, expect } from "vitest";
 import { getJpModel, jpLayer1Model, jpGroupIds } from "./jp";
-import {
-  deriveCountryGroupPopulations,
-  deriveCountryGroupLean,
-  deriveCountryGroupTurnout,
-} from "./derive";
-import { jpDemographicCategories } from "@/lib/countries/jp/data/jpDemographicCategories";
-import { calculateStateLean, getDisplayLean } from "@/lib/utils/demographics";
-import type { StateDemographics } from "@/lib/db/types";
+import { modelRegionLean } from "./modelRegionLean";
+import { getDisplayLean } from "@/lib/utils/demographics";
 import type { EraId } from "@/lib/seeds/presetSelector";
 
 // ── Helper ────────────────────────────────────────────────────────────────────
 
 function getRegionDisplayLean(region: string, era: EraId): number {
-  const model = getJpModel(era);
-  const censusConfig = model.census[region];
-  if (!censusConfig) throw new Error(`No census for region ${region} in era ${era}`);
-
-  const pops = deriveCountryGroupPopulations(model, censusConfig);
-
-  const groups: StateDemographics["groups"] = {};
-  for (const gid of jpGroupIds) {
-    const lean = deriveCountryGroupLean(model, gid, censusConfig);
-    const turnout = deriveCountryGroupTurnout(model, gid);
-    groups[gid] = {
-      population: pops[gid] ?? 0,
-      economicLean: lean.economicLean,
-      socialLean: lean.socialLean,
-      turnout,
-    };
-  }
-
-  const demographics: StateDemographics = {
-    _id: region,
-    countryId: "JP",
-    categoryWeights: { jp_voterGroups: 100 },
-    groups,
-    lastUpdated: new Date(),
-  };
-
-  const { economicLean, socialLean } = calculateStateLean(demographics, jpDemographicCategories);
+  const { economicLean, socialLean } = modelRegionLean(getJpModel(era), region);
   return getDisplayLean(economicLean, socialLean);
 }
 

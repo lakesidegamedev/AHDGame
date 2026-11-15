@@ -82,10 +82,8 @@ export function ChairCard({
   const colorClass = infamy > 25 ? "text-error" : infamy > 10 ? "text-warning" : "text-foreground";
   const barClass = infamy > 25 ? "bg-error" : infamy > 10 ? "bg-warning" : "bg-foreground/50";
 
-  // A leftover NPP caretaker (chairMode still "npp" after persistPendingProposal
-  // clears chairCharacterId) must not hide the pending offer. Ticket #1072 put
-  // Accept/Decline on this vacant branch; ticket #1144 is the same offer with
-  // the caretaker still rendered, so the nominee never saw the buttons.
+  // A leftover NPP caretaker (chairMode "npp" after chairCharacterId is
+  // cleared) must still show the pending offer, including its buttons.
   return (
     <CentralBankSection title={chairTitle} level="aside">
       {chairSelectionPending ? (

@@ -5,6 +5,7 @@ import { getDb } from "@/lib/mongodb";
 import { errorResponse } from "@/lib/api/errors";
 import { parseJsonBody } from "@/lib/api/validate";
 import type { GameState } from "@/lib/db/types";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 const bodySchema = z.object({ enabled: z.boolean() });
 
@@ -14,9 +15,10 @@ const bodySchema = z.object({ enabled: z.boolean() });
  */
 export const GET = withAdminRoute(async (_auth) => {
   const db = await getDb();
-  const doc = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { projection: { nppAutonomyEnabled: 1 } });
+  const doc = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { projection: { nppAutonomyEnabled: 1 } }
+  );
 
   return NextResponse.json({ nppAutonomyEnabled: doc?.nppAutonomyEnabled === true });
 });
@@ -47,14 +49,12 @@ export const POST = withAdminRoute(async (auth, request: Request) => {
     set.nppAutonomyEnabledAt = now;
   }
 
-  await db
-    .collection<GameState>("gameState")
-    .updateOne(
-      { _id: "current" },
-      parsed.data.enabled
-        ? { $set: set }
-        : { $set: set, $unset: { nppAutonomyEnabledBy: "", nppAutonomyEnabledAt: "" } }
-    );
+  await gameStateCollection(db).updateOne(
+    { _id: "current" },
+    parsed.data.enabled
+      ? { $set: set }
+      : { $set: set, $unset: { nppAutonomyEnabledBy: "", nppAutonomyEnabledAt: "" } }
+  );
 
   return NextResponse.json({ success: true, nppAutonomyEnabled: parsed.data.enabled });
 });

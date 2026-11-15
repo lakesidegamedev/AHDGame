@@ -38,6 +38,16 @@ import {
   loadValuationFxRates,
 } from "@/lib/currency/corporationCapital";
 import { computeCorporationLiabilityValueAnchor } from "@/lib/corporations/netWorth";
+import { getCharactersCollection } from "@/lib/db/collections/characters";
+import { getCorporationsCollection } from "@/lib/db/collections/corporations";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { indexFundPositionsCollection } from "@/lib/db/repositories/indexFundPositions";
+import { portfolioHistoryCollection } from "@/lib/db/repositories/portfolioHistory";
+import type { Document } from "mongodb";
+import { corporationPortfolioHistoryCollection } from "@/lib/db/repositories/corporationPortfolioHistory";
 import { sumLookThroughStockValueByCharacter } from "@/lib/wealth/computeCharacterWealth";
 
 /**
@@ -57,16 +67,14 @@ export async function snapshotPortfolioValues(
   // Fetch exchange rates for accurate cross-currency wealth conversion
   const exchangeRates = forexEnabled
     ? (Object.fromEntries(
-        (await db.collection<ExchangeRate>("exchangeRates").find({}).toArray()).map((r) => [
-          r.currencyCode,
-          r.rate,
-        ])
+        (await exchangeRatesCollection(db).find({}).toArray()).map((r) => [r.currencyCode, r.rate])
       ) as Partial<Record<CurrencyCode, number>>)
     : undefined;
 
   // Fetch all characters for personal wealth lookup
-  const characters = await db
-    .collection<Character>("characters")
+  const characters = await (
+    await getCharactersCollection(db)
+  )
     .find({})
     .project({
       _id: 1,
@@ -94,8 +102,7 @@ export async function snapshotPortfolioValues(
   );
 
   // Fetch imperial characters for personal wealth
-  const imperialCharacters = await db
-    .collection<ImperialCharacter>("imperialCharacters")
+  const imperialCharacters = await imperialCharactersCollection(db)
     .find({})
     .project({ _id: 1, cashOnHand: 1, currencyBalances: 1, countryId: 1 })
     .toArray();
@@ -111,8 +118,7 @@ export async function snapshotPortfolioValues(
   }
 
   const [corporations, bonds, charFxByCurrency] = await Promise.all([
-    db
-      .collection<Corporation>("corporations")
+    (await getCorporationsCollection(db))
       .find({ "shareholders.0": { $exists: true } })
       .project<Corporation>({
         shareholders: 1,
@@ -122,8 +128,7 @@ export async function snapshotPortfolioValues(
         totalShares: 1,
       })
       .toArray(),
-    db
-      .collection<Bond>("bonds")
+    bondsCollection(db)
       .find({ matured: false, "holders.0": { $exists: true } })
       .project<Bond>({ holders: 1, marketPrice: 1, currencyCode: 1, countryId: 1 })
       .toArray(),
@@ -282,10 +287,12 @@ export async function snapshotPortfolioValues(
   // Index-fund positions. `quotedNav` and every other fund leg are ₳, so
   // units x NAV needs no conversion. Omitting funds meant a player who held
   // nothing else showed a flat portfolio line while their wealth moved.
-  const fundPositions = await db
-    .collection<{ fundId: ObjectId; holderKind: string; characterId?: ObjectId; units?: number }>(
-      "indexFundPositions"
-    )
+  const fundPositions = await indexFundPositionsCollection<{
+    fundId: ObjectId;
+    holderKind: string;
+    characterId?: ObjectId;
+    units?: number;
+  }>(db)
     .find(
       { holderKind: "character", characterId: { $exists: true }, units: { $gt: 0 } },
       { projection: { fundId: 1, characterId: 1, units: 1 } }
@@ -295,8 +302,7 @@ export async function snapshotPortfolioValues(
   if (fundPositions.length > 0) {
     const navByFundId = new Map<string, number>(
       (
-        await db
-          .collection<{ _id: ObjectId; quotedNav?: number; status?: string }>("indexFunds")
+        await indexFundsCollection<{ _id: ObjectId; quotedNav?: number; status?: string }>(db)
           .find(
             { _id: { $in: [...new Set(fundPositions.map((p) => p.fundId))] } },
             { projection: { quotedNav: 1, status: 1 } }
@@ -374,7 +380,7 @@ export async function snapshotPortfolioValues(
     })
   );
 
-  await db.collection("portfolioHistory").insertMany(docs as PortfolioHistory[]);
+  await portfolioHistoryCollection<Document>(db).insertMany(docs as PortfolioHistory[]);
   return docs.length;
 }
 
@@ -398,13 +404,10 @@ export async function snapshotCorporationPortfolioValues(turn: number): Promise<
   const db = await getDb();
   const now = new Date();
 
-  // Every corp gets a snapshot so that corps holding only liquidCapital (no
-  // stocks/bonds) still have Net Worth history. Previously this query scoped
-  // to corps with shareholder rows, which silently dropped cash-only corps
-  // from the chart entirely.
+  // Every corp gets a snapshot so cash-only corps (no stocks/bonds) still have Net
+  // Worth history.
   const [allCorps, bonds, fxByCurrency, reserved, fundPositions] = await Promise.all([
-    db
-      .collection<Corporation>("corporations")
+    (await getCorporationsCollection(db))
       .find({})
       .project<Corporation>({
         _id: 1,
@@ -418,8 +421,7 @@ export async function snapshotCorporationPortfolioValues(turn: number): Promise<
         imfFacilityPrincipalOutstanding: 1,
       })
       .toArray(),
-    db
-      .collection<Bond>("bonds")
+    bondsCollection(db)
       .find({ matured: false })
       .project<Bond>({
         holders: 1,
@@ -433,8 +435,7 @@ export async function snapshotCorporationPortfolioValues(turn: number): Promise<
       .toArray(),
     loadValuationFxRates(db),
     loadReservedCorporatePositionsByTarget(db),
-    db
-      .collection<IndexFundPosition>("indexFundPositions")
+    indexFundPositionsCollection(db)
       .find(
         { holderKind: "corporation", units: { $gt: 0 } },
         { projection: { corporationId: 1, fundId: 1, units: 1 } }
@@ -443,8 +444,7 @@ export async function snapshotCorporationPortfolioValues(turn: number): Promise<
   ]);
 
   const funds = fundPositions.length
-    ? await db
-        .collection<IndexFund>("indexFunds")
+    ? await indexFundsCollection(db)
         .find(
           { _id: { $in: fundPositions.map((p) => p.fundId) } },
           { projection: { quotedNav: 1, status: 1 } }
@@ -622,8 +622,6 @@ export async function snapshotCorporationPortfolioValues(turn: number): Promise<
     })
   );
 
-  await db
-    .collection<CorporationPortfolioHistory>("corporationPortfolioHistory")
-    .insertMany(docs as CorporationPortfolioHistory[]);
+  await corporationPortfolioHistoryCollection(db).insertMany(docs as CorporationPortfolioHistory[]);
   return docs.length;
 }

@@ -56,7 +56,7 @@ const phases = (statuses: Record<string, string>) =>
 
 describe("completedTurnStatus", () => {
   it("keeps advisory warnings without reporting a committed turn as failed", () => {
-    expect(completedTurnStatus(["corporationTurn: clearing invariant breach"])).toEqual({
+    expect(completedTurnStatus(["corporationTurn: clearing invariant breach"])).toMatchObject({
       success: true,
       outcome: "clean",
       failedPhases: [],
@@ -66,7 +66,7 @@ describe("completedTurnStatus", () => {
   });
 
   it("reports a warning-free committed turn as clean", () => {
-    expect(completedTurnStatus([])).toEqual({
+    expect(completedTurnStatus([])).toMatchObject({
       success: true,
       outcome: "clean",
       failedPhases: [],
@@ -84,7 +84,7 @@ describe("completedTurnStatus", () => {
         decolonization: "skipped",
       })
     );
-    expect(status).toEqual({
+    expect(status).toMatchObject({
       success: true,
       outcome: "degraded",
       failedPhases: ["resetMetricRefresh"],
@@ -100,6 +100,43 @@ describe("completedTurnStatus", () => {
     );
     expect(status.outcome).toBe("degraded");
     expect(status.abortedPhases).toEqual(["treasuryTurn"]);
+  });
+
+  it("is not a success when a money-moving step was interrupted and skipped", () => {
+    const status = completedTurnStatus([], phases({ corporationTurn: "completed" }), ["bondTurn"]);
+    expect(status.success).toBe(false);
+    expect(status.outcome).toBe("incomplete");
+    expect(status.incompleteSteps).toEqual(["bondTurn"]);
+  });
+
+  it("is not a success when a step never ran", () => {
+    const status = completedTurnStatus([], phases({ billLifecycle: "notReached" }));
+    expect(status.success).toBe(false);
+    expect(status.stepAccounting.neverRan).toEqual(["billLifecycle"]);
+  });
+
+  it("accounts for ran, already done and interrupted steps", () => {
+    const status = completedTurnStatus([], {
+      a: { status: "completed" },
+      b: { status: "skipped", resumeCarried: "completed" },
+      c: { status: "failed", resumeCarried: "interrupted" },
+    } as unknown as TurnPhaseTelemetryMap);
+    expect(status.stepAccounting).toEqual({
+      ran: ["a"],
+      skippedAlreadyDone: ["b"],
+      interruptedNotRerun: ["c"],
+      neverRan: [],
+    });
+    expect(status.success).toBe(true);
+  });
+
+  it("does not call a resumed turn degraded because finished steps were skipped", () => {
+    const status = completedTurnStatus([], {
+      fundGeneration: { status: "skipped", reason: "upstreamAbort", resumeCarried: "completed" },
+      bondTurn: { status: "completed" },
+    } as unknown as TurnPhaseTelemetryMap);
+    expect(status.outcome).toBe("clean");
+    expect(status.abortedPhases).toEqual([]);
   });
 
   it("treats conditionally skipped phases as clean", () => {

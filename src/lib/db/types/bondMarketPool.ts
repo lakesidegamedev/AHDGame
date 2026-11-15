@@ -24,10 +24,9 @@ export type BondMarketPoolFlowKind =
   | "sweepOut";
 
 /**
- * The counterparty for every bond trade that used to hit an infinite "AI
- * market maker". One pool per currency. `publicFloat` on a bond is the number
- * of units this pool holds of that issue; this document is the cash side of
- * the same balance sheet.
+ * The counterparty for every bond trade against the AI market maker. One pool
+ * per currency. `publicFloat` on a bond is the number of units this pool holds
+ * of that issue; this document is the cash side of the same balance sheet.
  *
  * Cash is in the pool's own currency (LOCAL, never anchor). A buy from the
  * float credits `cashLocal`; a sale to the float debits it and is refused when

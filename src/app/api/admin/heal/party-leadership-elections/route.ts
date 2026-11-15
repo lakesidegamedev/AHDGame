@@ -12,11 +12,19 @@ import type {
   NationalPartyCandidate,
   NationalCommitteeElection,
   NationalCommitteeCandidate,
-  Character,
   PoliticalParty,
   State,
 } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nationalPartyElectionsCollection } from "@/lib/db/repositories/nationalPartyElections";
+import { statePartyCandidatesCollection } from "@/lib/db/repositories/statePartyCandidates";
+import { nationalPartyCandidatesCollection } from "@/lib/db/repositories/nationalPartyCandidates";
+import { nationalCommitteeCandidatesCollection } from "@/lib/db/repositories/nationalCommitteeCandidates";
+import { statePartyElectionsCollection } from "@/lib/db/repositories/statePartyElections";
+import { nationalCommitteeElectionsCollection } from "@/lib/db/repositories/nationalCommitteeElections";
 
 interface OrphanedCandidate {
   candidateId: string;
@@ -31,10 +39,6 @@ interface OrphanedCandidate {
   characterPartyName: string;
 }
 
-/**
- * GET /api/admin/heal/party-leadership-elections
- * Diagnose candidates in party elections who are no longer members of that party
- */
 export async function GET() {
   try {
     const auth = await requireAdmin();
@@ -44,8 +48,7 @@ export async function GET() {
     const orphaned: OrphanedCandidate[] = [];
 
     // Build state → countryId lookup
-    const allStates = await db
-      .collection<State>("states")
+    const allStates = await statesCollection(db)
       .find({})
       .project<{ _id: string; countryId: CountryId }>({ _id: 1, countryId: 1 })
       .toArray();
@@ -54,7 +57,7 @@ export async function GET() {
       stateCountryMap.get(stateId) ?? "US";
 
     // Get all parties for lookup - key by country:sequentialId
-    const parties = await db.collection<PoliticalParty>("politicalParties").find({}).toArray();
+    const parties = await politicalPartiesCollection(db).find({}).toArray();
     const partyByCountryAndSeqId = new Map<string, PoliticalParty>();
     for (const p of parties) {
       partyByCountryAndSeqId.set(`${p.countryId}:${p.sequentialId}`, p);
@@ -99,22 +102,18 @@ export async function GET() {
     };
 
     // 1. Check state party elections
-    const activeStateElections = await db
-      .collection<StatePartyElection>("statePartyElections")
+    const activeStateElections = await statePartyElectionsCollection(db)
       .find({ status: "voting" })
       .toArray();
 
     for (const election of activeStateElections) {
       const countryId = getCountryFromState(election.stateId);
-      const candidates = await db
-        .collection<StatePartyCandidate>("statePartyCandidates")
+      const candidates = await statePartyCandidatesCollection(db)
         .find({ electionId: election._id, status: "active" })
         .toArray();
 
       for (const candidate of candidates) {
-        const character = await db
-          .collection<Character>("characters")
-          .findOne({ _id: candidate.characterId });
+        const character = await charactersCollection(db).findOne({ _id: candidate.characterId });
 
         if (character) {
           const charCountryId = (character.countryId ?? "US") as CountryId;
@@ -137,22 +136,18 @@ export async function GET() {
     }
 
     // 2. Check national party elections
-    const activeNationalElections = await db
-      .collection<NationalPartyElection>("nationalPartyElections")
+    const activeNationalElections = await nationalPartyElectionsCollection(db)
       .find({ status: "voting" })
       .toArray();
 
     for (const election of activeNationalElections) {
       const electionCountryId = election.countryId ?? "US";
-      const candidates = await db
-        .collection<NationalPartyCandidate>("nationalPartyCandidates")
+      const candidates = await nationalPartyCandidatesCollection(db)
         .find({ electionId: election._id, status: "active" })
         .toArray();
 
       for (const candidate of candidates) {
-        const character = await db
-          .collection<Character>("characters")
-          .findOne({ _id: candidate.characterId });
+        const character = await charactersCollection(db).findOne({ _id: candidate.characterId });
 
         if (character) {
           const charCountryId = (character.countryId ?? "US") as CountryId;
@@ -177,22 +172,18 @@ export async function GET() {
     }
 
     // 3. Check national committee elections
-    const activeCommitteeElections = await db
-      .collection<NationalCommitteeElection>("nationalCommitteeElections")
+    const activeCommitteeElections = await nationalCommitteeElectionsCollection(db)
       .find({ status: "voting" })
       .toArray();
 
     for (const election of activeCommitteeElections) {
       const electionCountryId = election.countryId ?? "US";
-      const candidates = await db
-        .collection<NationalCommitteeCandidate>("nationalCommitteeCandidates")
+      const candidates = await nationalCommitteeCandidatesCollection(db)
         .find({ electionId: election._id, status: "active" })
         .toArray();
 
       for (const candidate of candidates) {
-        const character = await db
-          .collection<Character>("characters")
-          .findOne({ _id: candidate.characterId });
+        const character = await charactersCollection(db).findOne({ _id: candidate.characterId });
 
         if (character) {
           const charCountryId = (character.countryId ?? "US") as CountryId;
@@ -229,10 +220,6 @@ export async function GET() {
   }
 }
 
-/**
- * POST /api/admin/heal/party-leadership-elections
- * Withdraw candidates from party elections who are no longer members of that party
- */
 export async function POST() {
   try {
     const auth = await requireAdmin();
@@ -243,8 +230,7 @@ export async function POST() {
     let fixed = 0;
 
     // Build state → countryId lookup
-    const allStates = await db
-      .collection<State>("states")
+    const allStates = await statesCollection(db)
       .find({})
       .project<{ _id: string; countryId: CountryId }>({ _id: 1, countryId: 1 })
       .toArray();
@@ -253,7 +239,7 @@ export async function POST() {
       stateCountryMap.get(stateId) ?? "US";
 
     // Get all parties for lookup - key by country:sequentialId
-    const parties = await db.collection<PoliticalParty>("politicalParties").find({}).toArray();
+    const parties = await politicalPartiesCollection(db).find({}).toArray();
     const partyByCountryAndSeqId = new Map<string, PoliticalParty>();
     for (const p of parties) {
       partyByCountryAndSeqId.set(`${p.countryId}:${p.sequentialId}`, p);
@@ -286,32 +272,26 @@ export async function POST() {
     };
 
     // 1. Fix state party elections
-    const activeStateElections = await db
-      .collection<StatePartyElection>("statePartyElections")
+    const activeStateElections = await statePartyElectionsCollection(db)
       .find({ status: "voting" })
       .toArray();
 
     for (const election of activeStateElections) {
       const countryId = getCountryFromState(election.stateId);
-      const candidates = await db
-        .collection<StatePartyCandidate>("statePartyCandidates")
+      const candidates = await statePartyCandidatesCollection(db)
         .find({ electionId: election._id, status: "active" })
         .toArray();
 
       for (const candidate of candidates) {
-        const character = await db
-          .collection<Character>("characters")
-          .findOne({ _id: candidate.characterId });
+        const character = await charactersCollection(db).findOne({ _id: candidate.characterId });
 
         if (character) {
           const charCountryId = (character.countryId ?? "US") as CountryId;
           if (isPartyMismatch(character.party, charCountryId, election.partyId, countryId)) {
-            await db
-              .collection<StatePartyCandidate>("statePartyCandidates")
-              .updateOne(
-                { _id: candidate._id },
-                { $set: { status: "withdrawn", withdrawnAt: now } }
-              );
+            await statePartyCandidatesCollection(db).updateOne(
+              { _id: candidate._id },
+              { $set: { status: "withdrawn", withdrawnAt: now } }
+            );
             fixed++;
           }
         }
@@ -319,34 +299,28 @@ export async function POST() {
     }
 
     // 2. Fix national party elections
-    const activeNationalElections = await db
-      .collection<NationalPartyElection>("nationalPartyElections")
+    const activeNationalElections = await nationalPartyElectionsCollection(db)
       .find({ status: "voting" })
       .toArray();
 
     for (const election of activeNationalElections) {
       const electionCountryId = election.countryId ?? "US";
-      const candidates = await db
-        .collection<NationalPartyCandidate>("nationalPartyCandidates")
+      const candidates = await nationalPartyCandidatesCollection(db)
         .find({ electionId: election._id, status: "active" })
         .toArray();
 
       for (const candidate of candidates) {
-        const character = await db
-          .collection<Character>("characters")
-          .findOne({ _id: candidate.characterId });
+        const character = await charactersCollection(db).findOne({ _id: candidate.characterId });
 
         if (character) {
           const charCountryId = (character.countryId ?? "US") as CountryId;
           if (
             isPartyMismatch(character.party, charCountryId, election.partyId, electionCountryId)
           ) {
-            await db
-              .collection<NationalPartyCandidate>("nationalPartyCandidates")
-              .updateOne(
-                { _id: candidate._id },
-                { $set: { status: "withdrawn", withdrawnAt: now } }
-              );
+            await nationalPartyCandidatesCollection(db).updateOne(
+              { _id: candidate._id },
+              { $set: { status: "withdrawn", withdrawnAt: now } }
+            );
             fixed++;
           }
         }
@@ -354,34 +328,28 @@ export async function POST() {
     }
 
     // 3. Fix national committee elections
-    const activeCommitteeElections = await db
-      .collection<NationalCommitteeElection>("nationalCommitteeElections")
+    const activeCommitteeElections = await nationalCommitteeElectionsCollection(db)
       .find({ status: "voting" })
       .toArray();
 
     for (const election of activeCommitteeElections) {
       const electionCountryId = election.countryId ?? "US";
-      const candidates = await db
-        .collection<NationalCommitteeCandidate>("nationalCommitteeCandidates")
+      const candidates = await nationalCommitteeCandidatesCollection(db)
         .find({ electionId: election._id, status: "active" })
         .toArray();
 
       for (const candidate of candidates) {
-        const character = await db
-          .collection<Character>("characters")
-          .findOne({ _id: candidate.characterId });
+        const character = await charactersCollection(db).findOne({ _id: candidate.characterId });
 
         if (character) {
           const charCountryId = (character.countryId ?? "US") as CountryId;
           if (
             isPartyMismatch(character.party, charCountryId, election.partyId, electionCountryId)
           ) {
-            await db
-              .collection<NationalCommitteeCandidate>("nationalCommitteeCandidates")
-              .updateOne(
-                { _id: candidate._id },
-                { $set: { status: "withdrawn", withdrawnAt: now } }
-              );
+            await nationalCommitteeCandidatesCollection(db).updateOne(
+              { _id: candidate._id },
+              { $set: { status: "withdrawn", withdrawnAt: now } }
+            );
             fixed++;
           }
         }

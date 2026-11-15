@@ -4,6 +4,7 @@ import { getGameState } from "@/lib/gameState";
 import type { Db } from "mongodb";
 import { captureBillStatusChanged } from "@/lib/analytics/billStatusAnalytics";
 import { flushServerPosthog } from "@/lib/analytics/serverPosthog";
+import { billsCollection } from "@/lib/db/repositories/bills";
 
 /**
  * Enact a newly validated bill for permanent head-of-state singleplayer.
@@ -12,7 +13,7 @@ import { flushServerPosthog } from "@/lib/analytics/serverPosthog";
  */
 export async function enactSingleplayerDecree(db: Db, bill: Bill): Promise<boolean> {
   const now = new Date();
-  const claimed = await db.collection<Bill>("bills").updateOne(
+  const claimed = await billsCollection(db).updateOne(
     { _id: bill._id, status: "active" },
     {
       $set: {

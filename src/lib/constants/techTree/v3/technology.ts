@@ -429,4 +429,88 @@ export const TECHNOLOGY_V3: V3LaneContent = {
       ],
     },
   ],
+  "2039": [
+    {
+      name: "Power-Aware Scheduling",
+      description: "Jobs move to the hours and sites where power is cheapest.",
+      effects: [{ kind: "inputCost", commodity: "energy", pct: 0.09 }],
+    },
+    {
+      name: "Enterprise Agent Licensing",
+      description: "Agent seats sold per process run price like staff, not software.",
+      effects: [{ kind: "plantOutput", pct: 0.018 }],
+    },
+    {
+      name: "Trusted Compute Certification",
+      description:
+        "Certified secure supply chains keep chip and model sales open under export rules.",
+      effects: [{ kind: "tariffShield", pct: 0.13 }],
+    },
+    {
+      name: "Self-Building Systems",
+      description: "Agent teams design, build and run software with a small review layer.",
+      effects: [
+        { kind: "laborCostReduction", pct: 0.1 },
+        { kind: "outputRate", commodity: "software", pct: 0.1 },
+      ],
+    },
+    {
+      name: "Lifelong Assistants",
+      description: "Assistants people keep for years carry pricing power no app ever had.",
+      effects: [
+        { kind: "plantOutput", pct: 0.03 },
+        { kind: "marketingStrength", flat: 34 },
+      ],
+    },
+    {
+      name: "Sovereign AI Utilities",
+      description: "Running national AI infrastructure makes the firm a strategic asset.",
+      effects: [
+        { kind: "dominanceShield", pct: 0.23 },
+        { kind: "expansionDiscount", pct: 0.16 },
+      ],
+    },
+  ],
+  "2049": [
+    {
+      name: "Self-Powering Compute",
+      description: "Data centers run on their own fusion and storage.",
+      effects: [{ kind: "inputCost", commodity: "energy", pct: 0.1 }],
+    },
+    {
+      name: "Cognitive Seat Licensing",
+      description: "Neural assistant seats are priced like expert staff, not software.",
+      effects: [{ kind: "plantOutput", pct: 0.019 }],
+    },
+    {
+      name: "Neural Data Certification",
+      description:
+        "Certified neural privacy keeps interface sales open under the strictest data rules.",
+      effects: [{ kind: "tariffShield", pct: 0.14 }],
+    },
+    {
+      name: "Self-Evolving Platforms",
+      description: "Platforms redesign and upgrade themselves under a small review board.",
+      effects: [
+        { kind: "laborCostReduction", pct: 0.1 },
+        { kind: "outputRate", commodity: "software", pct: 0.1 },
+      ],
+    },
+    {
+      name: "Mind-Linked Companions",
+      description: "Assistants linked to the user's thoughts carry unmatched pricing power.",
+      effects: [
+        { kind: "plantOutput", pct: 0.03 },
+        { kind: "marketingStrength", flat: 36 },
+      ],
+    },
+    {
+      name: "Planetary Compute Utilities",
+      description: "Running compute for whole regions makes the firm a strategic asset.",
+      effects: [
+        { kind: "dominanceShield", pct: 0.24 },
+        { kind: "expansionDiscount", pct: 0.17 },
+      ],
+    },
+  ],
 };

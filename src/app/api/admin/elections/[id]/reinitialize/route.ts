@@ -1,16 +1,14 @@
 /**
  * POST /api/admin/elections/[id]/reinitialize
- * Admin: Full nuclear reset of a presidential election.
+ * Admin: full reset of a presidential election.
  *
- * Deletes all candidates, vote tallies, and campaigns tied to this election,
- * then resets it to a fresh active state with new timers anchored to NOW.
+ * Deletes candidates, vote tallies, and campaigns for this election, then
+ * resets it to an active state with timers anchored to now.
  *
- * The election cycle (and therefore year title) is computed from the current
- * game turn so the election aligns with the correct LARP presidential year:
- *   - If the current game year is a presidential year → use it
- *   - Otherwise → use the next upcoming presidential year
- *
- * Default durations: 72h primary + 48h campaign = 120h total.
+ * The cycle (and year title) is derived from the current game turn so the
+ * election aligns with the correct presidential year: use the current year if
+ * it is presidential, else the next upcoming presidential year. Default
+ * durations: 72h primary + 48h campaign = 120h total.
  */
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
@@ -19,7 +17,13 @@ import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import type { Election, GameState } from "@/lib/db/types";
 import { STARTING_YEAR, TURNS_PER_YEAR } from "@/lib/constants/turnTime";
-import { DEFAULT_DURATIONS } from "@/lib/turn/perpetualElections";
+import { DEFAULT_DURATIONS } from "@/lib/elections/scheduling";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import type { Document } from "mongodb";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -56,7 +60,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     const db = await getDb();
-    const election = await db.collection<Election>("elections").findOne({ _id: electionObjectId });
+    const election = await electionsCollection(db).findOne({ _id: electionObjectId });
 
     if (!election) {
       return errorResponse(404, "Election not found");
@@ -66,7 +70,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     // ── Determine correct LARP election year from current game turn ──────────
-    const gameState = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+    const gameState = await gameStateCollection(db).findOne({ _id: "current" });
     const currentTurn = gameState?.currentTurn ?? 1;
     const startingYear = gameState?.startingYear ?? STARTING_YEAR;
     const currentGameYear = startingYear + Math.floor((currentTurn - 1) / TURNS_PER_YEAR);
@@ -75,9 +79,9 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     // ── Wipe all associated data ─────────────────────────────────────────────
     const [candidatesResult, talliesResult, campaignsResult] = await Promise.all([
-      db.collection("electionCandidates").deleteMany({ electionId: electionObjectId }),
-      db.collection("electionVoteTallies").deleteMany({ electionId: electionObjectId }),
-      db.collection("campaigns").deleteMany({ electionId: electionObjectId }),
+      electionCandidatesCollection<Document>(db).deleteMany({ electionId: electionObjectId }),
+      electionVoteTalliesCollection<Document>(db).deleteMany({ electionId: electionObjectId }),
+      campaignsCollection<Document>(db).deleteMany({ electionId: electionObjectId }),
     ]);
 
     // ── Reset election document ──────────────────────────────────────────────
@@ -87,7 +91,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       now.getTime() + (DEFAULT_PRIMARY_HOURS + DEFAULT_CAMPAIGN_HOURS) * 3_600_000
     );
 
-    await db.collection<Election>("elections").updateOne(
+    await electionsCollection(db).updateOne(
       { _id: electionObjectId },
       {
         $set: {

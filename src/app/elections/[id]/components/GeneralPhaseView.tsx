@@ -19,11 +19,12 @@ import { GeneralVoteCharts, type LineSeries } from "./ElectionDetailCharts";
 import { buildGeneralColors } from "@/lib/utils/politics";
 import { states as referenceStates } from "@/lib/seeds/reference/states";
 import type { ElectionDetail } from "./ElectionDetailTypes";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 /** Static US state-id → display-name map sourced from the reference seed.
  *  Built once at module load — pure data, no runtime cost per render. */
 const US_STATE_NAME_BY_ID: Record<string, string> = Object.fromEntries(
-  referenceStates.filter((s) => s.countryId === "US").map((s) => [s._id, s.name])
+  referenceStates.filter((s) => countryHasFeature("usUi", s.countryId)).map((s) => [s._id, s.name])
 );
 
 const MapLoadingSkeleton = () => (
@@ -93,14 +94,15 @@ export function GeneralPhaseView({
   // "Live Tally" copy — parliamentary lower-chamber elections allocate seats
   // by demographic reach (projected), while presidential / FPTP-per-seat
   // races show a running tally.
-  const isUS = election.countryId === "US";
-  const isProjectedGeneral = election.countryId !== "US";
+  const isUS = countryHasFeature("usUi", election.countryId);
+  const isProjectedGeneral = !countryHasFeature("usUi", election.countryId);
 
   // The running-mate selector is offered for any president-with-VP-ticket
   // country (US, Brazil, Nigeria) — not just the US. Ceremonial presidencies
   // without a VP office (Ireland, China) never show it. See ticket #0957.
   const showRunningMateSelector =
-    election.countryId !== "RU" && countryHasPresidentialRunningMate(election.countryId);
+    !countryHasFeature("ruUi", election.countryId) &&
+    countryHasPresidentialRunningMate(election.countryId);
 
   // Persuasion-driver inputs — shared by the presidential shell and the
   // state-race card. All fields are already on the client DTO (support is
@@ -108,9 +110,12 @@ export function GeneralPhaseView({
   const { candidates: persuasionCandidates, inputs: persuasionInputs } =
     persuasionDriverProps(election);
   const isPresidentialGeneral =
-    election.countryId !== "RU" && election.electionType === "president" && !localInPrimary;
+    !countryHasFeature("ruUi", election.countryId) &&
+    election.electionType === "president" &&
+    !localInPrimary;
 
-  const isPresidentialRace = election.countryId !== "RU" && election.electionType === "president";
+  const isPresidentialRace =
+    !countryHasFeature("ruUi", election.countryId) && election.electionType === "president";
   const hasTrendData = (election.generalVotes?.turnSnapshots?.length ?? 0) > 0;
   const hasStateVotes = Object.keys(election.generalVotes?.stateVoteData ?? {}).length > 0;
 

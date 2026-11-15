@@ -9,11 +9,11 @@ import { BLEND, BLEND_LABEL } from "@/components/blend/tokens";
  * Endorse or un-endorse one presidential candidate, from the stage's field list.
  *
  * Same route and rules as the general screen's ticket button: one endorsement
- * per player per race, never your own candidate, and the route says no (with a
- * reason, shown under the button) for a closed race or, during a primary, a
- * candidate outside your party. Renders nothing for a reader with no character,
- * for the reader's own candidacy, and for a candidate the reader could not
- * endorse (unless they already have, so it can be undone).
+ * per player per race, never your own candidate, and the route rejects a closed
+ * race or, during a primary, a candidate outside your party (with a reason shown
+ * under the button). Renders nothing for a reader with no character, the reader's
+ * own candidacy, or a candidate the reader could not endorse unless already
+ * endorsed so it can be undone.
  */
 export function EndorseControl({
   electionId,

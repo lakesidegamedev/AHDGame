@@ -10,6 +10,7 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { resolveCorporation, requireCeo } from "@/lib/api/corporations/resolveQuery";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import type { CorporateSector } from "@/lib/db/types";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 interface RouteParams {
   params: Promise<{ id: string; sectorId: string }>;
@@ -41,9 +42,10 @@ export async function unlistSectorForSale(_request: Request, { params }: RoutePa
       return errorResponse(400, "Invalid sector ID");
     }
 
-    const sector = await db
-      .collection<CorporateSector>("corporateSectors")
-      .findOne({ _id: new ObjectId(sectorId), corporationId: corporation._id });
+    const sector = await corporateSectorsCollection(db).findOne({
+      _id: new ObjectId(sectorId),
+      corporationId: corporation._id,
+    });
 
     if (!sector) {
       return errorResponse(404, "Sector not found");
@@ -53,7 +55,7 @@ export async function unlistSectorForSale(_request: Request, { params }: RoutePa
       return errorResponse(400, "Sector is not currently listed for sale");
     }
 
-    const unlisted = await db.collection<CorporateSector>("corporateSectors").updateOne(
+    const unlisted = await corporateSectorsCollection(db).updateOne(
       {
         _id: sector._id,
         corporationId: corporation._id,

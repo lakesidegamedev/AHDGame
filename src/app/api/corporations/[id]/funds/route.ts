@@ -2,12 +2,12 @@ import { withNoStore } from "@/lib/api/withNoStore";
 import { getAuthUser } from "@/lib/auth";
 import { fundCreationEligibility } from "@/lib/indexFunds/sponsorship/eligibility";
 import { fundBankCharter } from "@/lib/indexFunds/sponsorship/rules/eligibility";
-import type { Corporation } from "@/lib/db/types";
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { handleRouteError } from "@/lib/api/errors";
 import { requireCeo, resolveCorporation } from "@/lib/api/corporations/resolveQuery";
 import { listFundsBySponsor } from "@/lib/indexFunds/fundQueries";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -30,8 +30,7 @@ export const GET = withNoStore(async function GET(_request: Request, { params }:
       !!auth && !requireCeo(sponsor, auth.userId) && !(await fundCreationEligibility(db, sponsor));
     const stockChoices =
       canCreate && fundBankCharter(sponsor.bankCharter)
-        ? await db
-            .collection<Corporation>("corporations")
+        ? await corporationsCollection(db)
             .find(
               {
                 countryId: sponsor.countryId,

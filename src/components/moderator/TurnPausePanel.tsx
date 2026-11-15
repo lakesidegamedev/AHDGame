@@ -14,7 +14,7 @@ interface GameState {
   corporationActionsPaused: boolean;
 }
 
-export function TurnPausePanel() {
+export function TurnPausePanel({ canChange = true }: { canChange?: boolean }) {
   const [state, setState] = useState<GameState | null>(null);
   const [loading, setLoading] = useState(true);
   const [busyKey, setBusyKey] = useState<"turns" | "corp" | null>(null);
@@ -121,15 +121,17 @@ export function TurnPausePanel() {
           {running ? "Running" : "Paused"}
         </span>
       </div>
-      <button
-        type="button"
-        onClick={toggleTurns}
-        disabled={busyKey !== null}
-        className="inline-flex h-9 items-center gap-2 rounded-lg px-4 text-sm font-medium text-white transition-colors disabled:opacity-50"
-        style={{ background: running ? "var(--warning)" : "var(--success)" }}
-      >
-        {busyKey === "turns" ? "Updating..." : running ? "Pause turns" : "Resume turns"}
-      </button>
+      {canChange && (
+        <button
+          type="button"
+          onClick={toggleTurns}
+          disabled={busyKey !== null}
+          className="inline-flex h-9 items-center gap-2 rounded-lg px-4 text-sm font-medium text-white transition-colors disabled:opacity-50"
+          style={{ background: running ? "var(--warning)" : "var(--success)" }}
+        >
+          {busyKey === "turns" ? "Updating..." : running ? "Pause turns" : "Resume turns"}
+        </button>
+      )}
       {state && (
         <div className="mt-3 space-y-1 text-xs text-muted">
           <p>
@@ -181,19 +183,21 @@ export function TurnPausePanel() {
             {corpRunning ? "Active" : "Paused"}
           </span>
         </div>
-        <button
-          type="button"
-          onClick={toggleCorp}
-          disabled={busyKey !== null}
-          className="inline-flex h-9 items-center gap-2 rounded-lg px-4 text-sm font-medium text-white transition-colors disabled:opacity-50"
-          style={{ background: corpRunning ? "var(--warning)" : "var(--success)" }}
-        >
-          {busyKey === "corp"
-            ? "Updating..."
-            : corpRunning
-              ? "Pause corp actions"
-              : "Resume corp actions"}
-        </button>
+        {canChange && (
+          <button
+            type="button"
+            onClick={toggleCorp}
+            disabled={busyKey !== null}
+            className="inline-flex h-9 items-center gap-2 rounded-lg px-4 text-sm font-medium text-white transition-colors disabled:opacity-50"
+            style={{ background: corpRunning ? "var(--warning)" : "var(--success)" }}
+          >
+            {busyKey === "corp"
+              ? "Updating..."
+              : corpRunning
+                ? "Pause corp actions"
+                : "Resume corp actions"}
+          </button>
+        )}
       </div>
 
       {message && (

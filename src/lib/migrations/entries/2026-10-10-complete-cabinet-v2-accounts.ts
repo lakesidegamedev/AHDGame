@@ -11,6 +11,9 @@ import { RESET_V2_COUNTRIES, resetSystemVersionsForCountry } from "@/lib/resetVe
 import { RESET_V2_READY } from "@/lib/resetVersions/availability";
 import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
 import type { Migration } from "../types";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { resetDepartmentAccountsCollection } from "@/lib/db/repositories/resetDepartmentAccounts";
+import { resetNationalTreasuriesCollection } from "@/lib/db/repositories/resetNationalTreasuries";
 
 export const migration: Migration = {
   id: "2026-10-10-complete-cabinet-v2-accounts",
@@ -20,7 +23,7 @@ export const migration: Migration = {
   async execute(db, ctx) {
     return runRequiredTransaction(
       async (session) => {
-        const states = db.collection<GameState>("gameState");
+        const states = gameStateCollection(db);
         const state = await states.findOne({ _id: "current" }, { session });
         const countries = RESET_V2_COUNTRIES.filter(
           (country) =>
@@ -47,9 +50,9 @@ export const migration: Migration = {
           if (locked.matchedCount !== 1) throw new Error("Cabinet repair lost the world guard");
         }
         const accountsCollection =
-          db.collection<ResetDepartmentAccountSnapshot>("resetDepartmentAccounts");
+          resetDepartmentAccountsCollection<ResetDepartmentAccountSnapshot>(db);
         const treasuryCollection =
-          db.collection<ResetNationalTreasurySnapshot>("resetNationalTreasuries");
+          resetNationalTreasuriesCollection<ResetNationalTreasurySnapshot>(db);
         const accounts = await accountsCollection
           .find({ worldId: state.resetWorldId, countryId: { $in: countries } }, { session })
           .toArray();

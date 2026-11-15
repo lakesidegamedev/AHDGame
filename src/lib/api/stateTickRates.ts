@@ -24,13 +24,19 @@ import type { MacroMetricsDoc } from "@/lib/db/types/macroMetrics";
 import type { PoliticalMetricId } from "@/lib/politicalMetrics/types";
 import { politicalValueForLegacyMetric } from "@/lib/politicalLegislation/marginAdapter";
 import { legacyValueFromPoliticalScore } from "@/lib/politicalMetrics/derive/legacyInversion";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
+import { politicalMetricsCollection } from "@/lib/db/repositories/politicalMetrics";
 
 const DECAY_FACTOR = getPolicyDecayFactor();
 
 /**
- * Graded synthetic per-turn display rate for an effectTargetsWeighted target (Bug #0962).
- * Mirrors the decay path's magnitude (effectiveIntensity × rangeScale) so the metric-detail
- * forward projection matches what the turn actually applies. Center option → 0.
+ * Graded synthetic per-turn display rate for an effectTargetsWeighted target.
+ * Mirrors the decay path's magnitude (effectiveIntensity x rangeScale) so the
+ * forward projection matches the actual turn. Center option returns 0.
  */
 export function syntheticTickRate(params: {
   options: IntensityOption[];
@@ -40,7 +46,7 @@ export function syntheticTickRate(params: {
   isHigherBetter: boolean;
   minValue: number;
   maxValue: number;
-  /** Current metric value — the operating scale for large-range metrics (Bug #0962). */
+  /** Current metric value, the operating scale for large-range metrics. */
   referenceValue: number;
 }): number {
   const {
@@ -56,7 +62,7 @@ export function syntheticTickRate(params: {
   const intensity = effectiveIntensity(optionIntensity(options, optionIndex));
   if (intensity === 0) return 0;
   const effectSign = isHigherBetter ? 1 : -1;
-  // This projects the DECAY path, so use the normalized national decay scope (#0962)
+  // This projects the DECAY path, so use the normalized national decay scope
   // to match what the turn applies — state laws (scope 1) are unchanged.
   return (
     intensity *
@@ -124,13 +130,12 @@ export async function computeStateTickRates(
       ({ politicalDoc, allPolicyDocs, stateDoc, stateMetricsDoc } = preloaded);
     } else {
       const result = await Promise.all([
-        db.collection<PoliticalMetricsDoc>("politicalMetrics").findOne({ _id: stateId }),
-        db
-          .collection<StatePolicy>("statePolicies")
+        politicalMetricsCollection(db).findOne({ _id: stateId }),
+        statePoliciesCollection(db)
           .find({ stateId: { $in: [stateId, ...nationalScopeIds] } })
           .toArray(),
-        db.collection<State>("states").findOne({ _id: stateId, countryId }),
-        // Current metric values give the operating scale for large-range metrics (#0962).
+        statesCollection(db).findOne({ _id: stateId, countryId }),
+        // Current metric values give the operating scale for large-range metrics.
         findMergedRegionMetrics(db, { _id: stateId }),
       ]);
       [politicalDoc, allPolicyDocs, stateDoc, stateMetricsDoc] = result;
@@ -143,8 +148,8 @@ export async function computeStateTickRates(
       : [];
 
     // National policies apply their per-region share to each region. This per-country
-    // multiplier scopes the TICK path (matching processStatePolicyEffects); the decay
-    // projection re-normalizes it via nationalDecayScope inside syntheticTickRate (#0962).
+    // multiplier scopes the TICK path; the decay projection re-normalizes it via
+    // nationalDecayScope in syntheticTickRate.
     const nationalScopeMultiplier = getFederalMultiplier(countryId);
     const activePolicies = [
       ...statePolicies.map((p: StatePolicy) => ({ ...p, scopeMultiplier: 1.0 as number })),
@@ -162,8 +167,7 @@ export async function computeStateTickRates(
       legTypeMap = new Map(preloaded.legTypeMap);
     } else {
       const legTypes = uniqueLegTypeIds.length
-        ? await db
-            .collection<LegislationType>("legislationTypes")
+        ? await legislationTypesCollection(db)
             .find({ _id: { $in: uniqueLegTypeIds } })
             .toArray()
         : [];
@@ -199,7 +203,7 @@ export async function computeStateTickRates(
           target.metricId
         );
 
-        // Current value = the operating scale for large-range metrics (#0962). When the
+        // Current value = the operating scale for large-range metrics. When the
         // state has no stored value, fall back to minValue (≈0 for the currency metrics),
         // which yields ~0 rate and is harmlessly skipped — never the midpoint, which for a
         // 10M-capped metric would re-introduce an absurd scale.
@@ -218,9 +222,8 @@ export async function computeStateTickRates(
           boardValue ??
           (typeof storedValue === "number" ? storedValue : (metricDef?.minValue ?? 0));
 
-        // Graded synthetic rate (Bug #0962): matches the decay path's magnitude so
-        // the forward projection reflects "Maximum" vs "Moderate" and scales for
-        // large-range metrics.
+        // Graded synthetic rate must match the decay path's magnitude so the forward
+        // projection reflects "Maximum" vs "Moderate" and scales for large-range metrics.
         const rate = syntheticTickRate({
           options,
           optionIndex: optIdx,
@@ -320,9 +323,8 @@ export async function computeAllNationalMetricTickRates(
   if (!countryId) return {};
 
   const [countryStates, sectorDocs] = await Promise.all([
-    db.collection<State>("states").find({ countryId }).toArray(),
-    db
-      .collection<CorporateSector>("corporateSectors")
+    statesCollection(db).find({ countryId }).toArray(),
+    corporateSectorsCollection(db)
       .find({ countryId }, { projection: { stateId: 1 } })
       .toArray(),
   ]);
@@ -332,23 +334,19 @@ export async function computeAllNationalMetricTickRates(
   const nationalScopeId = getNationalDocId(countryId);
   const policyScopeIds = [...stateIds, ...(nationalScopeId ? [nationalScopeId] : [])];
   const [politicalDocs, policyDocs, macroDocs] = await Promise.all([
-    db
-      .collection<PoliticalMetricsDoc>("politicalMetrics")
+    politicalMetricsCollection(db)
       .find({ _id: { $in: stateIds } })
       .toArray(),
-    db
-      .collection<StatePolicy>("statePolicies")
+    statePoliciesCollection(db)
       .find({ stateId: { $in: policyScopeIds } })
       .toArray(),
-    db
-      .collection<MacroMetricsDoc>("macroMetrics")
+    macroMetricsCollection<MacroMetricsDoc>(db)
       .find({ _id: { $in: stateIds } })
       .toArray(),
   ]);
   const legislationTypeIds = [...new Set(policyDocs.map((policy) => policy.legislationTypeId))];
   const legislationTypes = legislationTypeIds.length
-    ? await db
-        .collection<LegislationType>("legislationTypes")
+    ? await legislationTypesCollection(db)
         .find({ _id: { $in: legislationTypeIds } })
         .toArray()
     : [];
@@ -412,10 +410,9 @@ export async function computeNationalMetricTickRate(
 
   const useGdpWeight = category === "economic" && metricId === "gdpGrowth";
   const [countryStates, sectorDocs] = await Promise.all([
-    db.collection<State>("states").find({ countryId }).toArray(),
+    statesCollection(db).find({ countryId }).toArray(),
     useGdpWeight
-      ? db
-          .collection<CorporateSector>("corporateSectors")
+      ? corporateSectorsCollection(db)
           .find({}, { projection: { stateId: 1 } })
           .toArray()
       : Promise.resolve([] as CorporateSector[]),

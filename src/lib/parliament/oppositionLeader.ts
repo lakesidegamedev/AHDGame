@@ -17,10 +17,14 @@ import {
   resolveGoverningPartyIdsFromDocuments,
   resolveOppositionLeader,
 } from "@/lib/turn/parliamentaryGovernment";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { parliamentaryGovernmentsCollection } from "@/lib/db/repositories/parliamentaryGovernments";
 
 export interface ResolvedOppositionLeader {
-  /** Character id of the Leader of the Opposition (party or coalition chair). */
-  chairId: ObjectId;
+  /** Player party or coalition chair; null when a seated NPC leads the opposition. */
+  chairId: ObjectId | null;
+  nppId?: ObjectId;
   /** The single opposition party, or a coalition's largest member. May be null. */
   partyDoc: PoliticalParty | null;
 }
@@ -31,7 +35,7 @@ export interface ResolvedOppositionLeader {
  * This mirrors exactly what the executive hub does when it renders the
  * Opposition Leader plaque: union the governing bloc via
  * `resolveGoverningPartyIdsFromDocuments`, then select the largest non-governing
- * party/coalition that has a resolvable chair via `resolveOppositionLeader`.
+ * party/coalition with a chair or a supported NPC representative via `resolveOppositionLeader`.
  * Gated on a governing party existing (matching the hub's `if (govPartyId)`),
  * so a country with no formed government surfaces no Opposition Leader.
  */
@@ -74,12 +78,9 @@ export async function resolveOppositionLeaderForCountry(
 
   const [govFormation, parlGov, lowerOfficials, partyDocs] = await Promise.all([
     getGovernmentFormationsCollection(db).findOne({ _id: countryId }),
-    db.collection<ParliamentaryGovernment>("parliamentaryGovernments").findOne({ _id: countryId }),
-    db
-      .collection<ElectedOfficial>("electedOfficials")
-      .find({ officeType: lowerChamberKey, countryId })
-      .toArray(),
-    db.collection<PoliticalParty>("politicalParties").find({ countryId }).toArray(),
+    parliamentaryGovernmentsCollection(db).findOne({ _id: countryId }),
+    electedOfficialsCollection(db).find({ officeType: lowerChamberKey, countryId }).toArray(),
+    politicalPartiesCollection(db).find({ countryId }).toArray(),
   ]);
 
   // Seat composition from the lower chamber — identical to the hub's tally.

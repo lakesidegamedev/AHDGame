@@ -1,28 +1,12 @@
 import type { CountryEraOverride } from "../../contract";
 
 /**
- * Presidential Russian Federation for the 2027 preset. The 17-19 September
- * 2021 State Duma election is the latest completed parliamentary election:
- * 450 seats — United Russia 324, KPRF 57, A Just Russia - For Truth 27,
- * LDPR 21, New People 13. Official results: the Central Election
- * Commission portal http://www.vybory.izbirkom.ru/ .
- *
- * The Duma elects 225 deputies in single-member constituencies and 225 by
- * party list with a 5% threshold. The game has one mixed-member method
- * (`ams`); it approximates Russia's parallel mixed system until a dedicated
- * method exists. The difference is explicit here so election replay can
- * test it. The presidency is directly elected by two-round majority vote;
- * the game has no runoff method, so it reads `fptp` like France's. The
- * Federation Council (178 members, two delegated per federal subject) is
- * not popularly elected, so it reads `elected: false` and carries no
- * election system. `headOfStateSelection` is cleared (direct election
- * replaces the base `legislatureAppointment`), as is the one-party
- * `rulingPartyId`.
- *
- * usdExchangeRate is USD per ruble implied by the 2024 anchors: World Bank
- * nominal GDP USD 2,173,836M (https://data.worldbank.org/country/russian-federation)
- * over Rosstat 2024 GDP RUB 201,152,000M (revised; first estimate
- * RUB 200,039,500M).
+ * Russia 2027 preset. Duma: 225 single-member + 225 party-list with 5%
+ * threshold; approximated by the `ams` mixed-member method until a
+ * parallel system exists. Presidency uses `fptp` since there is no
+ * runoff method. Federation Council is not popularly elected.
+ *`usdExchangeRate` is USD per ruble from 2024 World Bank GDP over
+ * Rosstat RUB GDP.
  */
 export const RU_2027: CountryEraOverride = {
   preset: "2027-default",

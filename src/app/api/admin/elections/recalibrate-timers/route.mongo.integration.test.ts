@@ -19,7 +19,7 @@ const uri = process.env.FEDERATION_TEST_MONGO_URI;
 const ref = new Date("2026-01-01T00:00:00Z");
 
 describe.skipIf(!uri)(
-  "Admin timer repair retains Bulgarian, Hungarian and Russian native custody on isolated Mongo",
+  "Admin timer repair retains native and Canadian calendar custody on isolated Mongo",
   () => {
     let client: MongoClient;
     beforeAll(async () => {
@@ -250,6 +250,133 @@ describe.skipIf(!uri)(
         }
         expect(await db.collection("electionCandidates").find().toArray()).toEqual(candidates);
         expect(await db.collection("electionVoteTallies").find().toArray()).toEqual(tallies);
+      } finally {
+        await db.dropDatabase();
+      }
+    });
+    it("preserves Canadian provincial dates, snap terms and US calendars through repeated repairs", async () => {
+      const db = client.db(`ahd_test_ca_timer_${new ObjectId().toHexString()}`);
+      try {
+        vi.mocked(getDb).mockResolvedValue(db);
+        const game = {
+          _id: "current",
+          currentTurn: 1,
+          currentYear: 2027,
+          preset: "2027-default",
+          startingYear: 2027,
+          lastTurnProcessed: ref,
+        };
+        vi.mocked(getGameState).mockResolvedValue(game as never);
+        await db.collection<{ _id: string; currentTurn: number }>("gameState").insertOne(game);
+        const { CA_PROVINCIAL_LEGISLATURES } =
+          await import("@/lib/countries/ca/data/caProvincialLegislatures");
+        const { canonicalTurnsForCycle } = await import("@/lib/elections/canonicalCycle");
+        const ctx = { preset: "2027-default", startingYear: 2027 };
+        const polls = Object.entries(CA_PROVINCIAL_LEGISLATURES).map(([state, l]) => ({
+          _id: new ObjectId(),
+          countryId: "CA",
+          electionType: "provincialLegislature",
+          state,
+          cycle: 1,
+          electionYear: l.nextElectionYear,
+          status: "active",
+          startTurn: 1,
+          primaryEndTurn: (l.nextElectionYear - 2026) * 48 - 24,
+          endTurn: (l.nextElectionYear - 2026) * 48,
+          totalSeats: l.seats,
+          startTime: ref,
+          primaryEndTime: ref,
+          endTime: ref,
+          createdAt: ref,
+          updatedAt: ref,
+        }));
+        const us = ["NH", "NJ", "KY"].map((state) => ({
+          ...polls[0],
+          _id: new ObjectId(),
+          countryId: "US",
+          electionType: "governor",
+          state,
+          totalSeats: 1,
+          ...canonicalTurnsForCycle({
+            electionType: "governor",
+            countryId: "US",
+            state,
+            cycle: 1,
+            ctx,
+          }),
+        }));
+        await db.collection("elections").insertMany([...polls, ...us]);
+        const official = {
+          _id: new ObjectId(),
+          countryId: "US",
+          state: "NH",
+          officeType: "governor",
+        };
+        await db.collection("electedOfficials").insertOne(official);
+        for (let retry = 0; retry < 2; retry++) {
+          expect((await POST()).status).toBe(200);
+          for (const expected of [...polls, ...us]) {
+            const saved = await db.collection("elections").findOne({ _id: expected._id });
+            expect(saved).toMatchObject({
+              cycle: 1,
+              startTurn: 1,
+              primaryEndTurn: expected.primaryEndTurn,
+              endTurn: expected.endTurn,
+            });
+          }
+        }
+        game.currentTurn = 61;
+        vi.mocked(getGameState).mockResolvedValue(game as never);
+        await db
+          .collection("gameState")
+          .updateOne({ _id: "current" } as never, { $set: { currentTurn: 61 } });
+        const snap = {
+          ...polls[0],
+          _id: new ObjectId(),
+          countryId: "CA",
+          electionType: "snap_caCommons",
+          state: "CA_ON",
+          cycle: 4,
+          status: "resolved",
+          endTurn: 60,
+          endTime: new Date(ref.getTime() - 3600000),
+        };
+        const term = {
+          ...polls[0],
+          _id: new ObjectId(),
+          electionType: "caCommons",
+          state: "CA_ON",
+          cycle: 5,
+          shiftedScheduleEndTurn: 252,
+          primaryEndTurn: 228,
+          endTurn: 252,
+        };
+        const legacy = { ...term, _id: new ObjectId(), state: "CA_QC", cycle: 2 };
+        const { shiftedScheduleEndTurn: _stamp, ...unstamped } = legacy;
+        void _stamp;
+        await db
+          .collection("elections")
+          .insertMany([snap, { ...snap, _id: new ObjectId(), state: "CA_QC" }, term, unstamped]);
+        for (let retry = 0; retry < 2; retry++) {
+          expect((await POST()).status).toBe(200);
+          expect(await db.collection("elections").findOne({ _id: term._id })).toMatchObject({
+            cycle: 5,
+            endTurn: 252,
+            primaryEndTurn: 228,
+            shiftedScheduleEndTurn: 252,
+          });
+          expect(await db.collection("elections").findOne({ _id: unstamped._id })).toMatchObject({
+            cycle: 2,
+            endTurn: 252,
+            primaryEndTurn: 228,
+          });
+        }
+        expect(await db.collection("electedOfficials").findOne({ _id: official._id })).toEqual(
+          official
+        );
+        expect(
+          (await db.collection("gameState").findOne({ _id: "current" } as never))?.currentTurn
+        ).toBe(61);
       } finally {
         await db.dropDatabase();
       }

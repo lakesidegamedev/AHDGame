@@ -1,25 +1,18 @@
 /**
  * Versioned, host-independent entry point for the authoritative player-action
- * rules (issue #1724). AHDGame owns these rules; the Game server, AHDClient
- * local SP and AHDNative local SP consume this module instead of carrying
- * their own cost, eligibility and effect formulas.
+ * rules. Hosts consume this module rather than carrying their own cost,
+ * eligibility and effect formulas.
  *
- * One function, {@link quoteAction}, prices every action in the catalog from
- * plain inputs: AP cost, fund cost, effect deltas and a typed rejection. The
- * UI display and the execution shell both call it (directly, or through the
- * per-action quote it dispatches to), so a displayed quote and the actual
- * debit cannot drift. No Mongo, ObjectId, clock, RNG, network or environment
- * access: the resolved era price level, the world preset and every raw stat
- * are explicit inputs. Atomic resource checks, persistence, currency
- * conversion, audit and notifications stay with the host shell.
+ * {@link quoteAction} prices every action from plain inputs (AP cost, fund
+ * cost, effect deltas, typed rejection). UI and execution both call it, so a
+ * displayed quote and the actual debit cannot drift. No Mongo, ObjectId, clock,
+ * RNG, or environment access: era price level, preset and raw stats are
+ * explicit inputs. Resource checks, persistence, currency, audit and
+ * notifications stay with the host.
  *
- * Versioning contract. `RULES_VERSION` is the formula/API version of this
- * entry point, independent of the content revision (authored data) and the
- * save schema. Bump the major for a breaking input/output shape change, the
- * minor for a balance or formula change or a new action, and the patch for a
- * behavior-neutral fix. Consumers pin an exact version and the cross-host
- * drift check compares it. Existing SP saves keep their stored values; a new
- * ruleset only prices actions taken after the host adopts it.
+ * `RULES_VERSION` is the formula/API version, independent of content and save
+ * schema. Bump major for shape changes, minor for balance/formula/new actions,
+ * patch for behavior-neutral fixes. Consumers pin an exact version.
  */
 import {
   quoteAdvertiseAction,
@@ -78,6 +71,8 @@ export interface SharedActionTarget {
   population?: number | null;
   countryId?: string | null;
   preset?: string | null;
+  /** Live national GDP per capita for the cost baseline; absent = era table. */
+  nationalGdpPerCapita?: number | null;
 }
 
 export interface SharedActionContext {
@@ -85,8 +80,6 @@ export interface SharedActionContext {
   priceLevel?: number;
   /** ConvertCash only: amount of personal cash in LOCAL home currency. */
   convertAmount?: number | null;
-  /** DebatePrep only: whether the stat system is enabled in this world. */
-  rpgStatsEnabled?: boolean;
 }
 
 export interface SharedActionQuoteInput {
@@ -228,13 +221,10 @@ export function quoteAction(input: SharedActionQuoteInput): SharedActionQuote {
       return accept(actionType, q.apCost, q.fundCostAnchor, { fundsChangeAnchor: 0 });
     }
     case "debatePrep": {
-      const q = quoteDebatePrepAction(
-        {
-          hasStats: stats != null && typeof stats.debate === "number",
-          debate: stats?.debate ?? undefined,
-        },
-        { rpgStatsEnabled: input.context?.rpgStatsEnabled }
-      );
+      const q = quoteDebatePrepAction({
+        hasStats: stats != null && typeof stats.debate === "number",
+        debate: stats?.debate ?? undefined,
+      });
       if (!q.ok) return reject(actionType, q.error);
       return accept(actionType, q.apCost, 0, {
         fundsChangeAnchor: 0,

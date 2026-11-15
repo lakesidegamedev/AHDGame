@@ -10,6 +10,9 @@ import {
   getBargainingMediationAvailability,
   isCollectiveAgreementActive,
 } from "@/lib/unions/bargaining";
+import { unionsCollection } from "@/lib/db/repositories/unions";
+import { bargainingCampaignsCollection } from "@/lib/db/repositories/bargainingCampaigns";
+import { collectiveAgreementsCollection } from "@/lib/db/repositories/collectiveAgreements";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -30,14 +33,12 @@ export async function GET(_request: Request, { params }: RouteParams) {
     if (ceoError) return ceoError;
     const corporationId = resolved.corporation._id;
     const [campaigns, agreements, currentTurn] = await Promise.all([
-      db
-        .collection<BargainingCampaign>("bargainingCampaigns")
+      bargainingCampaignsCollection(db)
         .find({ employerCorporationId: corporationId })
         .sort({ updatedAt: -1 })
         .limit(50)
         .toArray(),
-      db
-        .collection<CollectiveAgreement>("collectiveAgreements")
+      collectiveAgreementsCollection(db)
         .find({ employerCorporationId: corporationId, status: "active" })
         .sort({ expiresAtTurn: 1 })
         .toArray(),
@@ -48,8 +49,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
       (unionId) => unionObjectIds.find((candidate) => candidate.toString() === unionId)!
     );
     const unions = unionIds.length
-      ? await db
-          .collection<Union>("unions")
+      ? await unionsCollection(db)
           .find({ _id: { $in: unionIds } }, { projection: { name: 1 } })
           .toArray()
       : [];

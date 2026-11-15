@@ -1,4 +1,5 @@
 "use client";
+import { displayCanadianRegionCode } from "@/lib/countries/ca/regionCodes";
 
 import type { StatePartyRow } from "@/lib/states/buildStatePartyRows";
 import { orgTier, toneColor, orgFill, leanLabelFromValue } from "./orgTier";
@@ -118,7 +119,7 @@ export function StatePartyTable({
                       className="inline-flex h-6 w-7 items-center justify-center rounded text-[10px] font-bold text-white"
                       style={{ backgroundColor: orgFill(r.organization) }}
                     >
-                      {r.regionId}
+                      {displayCanadianRegionCode(r.regionId)}
                     </span>
                     <span className="font-medium">{r.name}</span>
                     {r.isTarget && (

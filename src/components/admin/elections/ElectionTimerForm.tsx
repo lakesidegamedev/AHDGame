@@ -1,6 +1,6 @@
 "use client";
 
-import { US_STATES } from "@/lib/constants";
+import { US_STATES } from "@/lib/countries/us/usStateCodes";
 import { UK_REGIONS } from "@/lib/constants/uk";
 import { JP_REGIONS } from "@/lib/constants/japan";
 import { deRegions } from "@/lib/seeds/de/deRegions";
@@ -13,6 +13,7 @@ import type {
   CountrySelection,
 } from "./electionsAdminTypes";
 import { sortByRegionLabel } from "@/lib/regionOptions";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 const JP_REGION_IDS = JP_REGIONS.map((r) => r.id);
 
@@ -167,31 +168,31 @@ export function ElectionTimerForm({
               className={selectClass}
             >
               <option value="">All</option>
-              {selectedCountry === "US" &&
+              {countryHasFeature("usUi", selectedCountry) &&
                 sortByRegionLabel(US_STATES, (s) => s).map((s) => (
                   <option key={s} value={s}>
                     {s}
                   </option>
                 ))}
-              {selectedCountry === "UK" &&
+              {countryHasFeature("ukUi", selectedCountry) &&
                 sortByRegionLabel(UK_REGIONS, (r) => r.name).map((r) => (
                   <option key={r.id} value={r.id}>
                     {r.name}
                   </option>
                 ))}
-              {selectedCountry === "JP" &&
+              {countryHasFeature("jpUi", selectedCountry) &&
                 sortByRegionLabel(JP_REGION_IDS, (id) => id).map((id) => (
                   <option key={id} value={id}>
                     {id}
                   </option>
                 ))}
-              {selectedCountry === "DE" &&
+              {countryHasFeature("deUi", selectedCountry) &&
                 sortByRegionLabel(deRegions, (r) => r.name).map((r) => (
                   <option key={r._id} value={r._id}>
                     {r.name}
                   </option>
                 ))}
-              {selectedCountry === "CN" &&
+              {countryHasFeature("cnUi", selectedCountry) &&
                 sortByRegionLabel(cnRegions, (r) => r.name).map((r) => (
                   <option key={r._id} value={r._id}>
                     {r.name}

@@ -1,22 +1,17 @@
 /**
- * NPP engine 6.2: an NPP candidate's campaign action rallies its own race (v6).
+ * An NPP candidate's first campaign action in a cycle becomes a rally for its
+ * own race when the race is rally-eligible, instead of a plain influence gain.
+ * Costs the same action points and funds, gives up the influence gain, and
+ * moves Support by exactly what a player rally in the same race family moves
+ * (same value, 60/40 split, same drip).
  *
- * Below v6 an NPP's campaign action raises its general political influence and
- * nothing reaches the race it is running in: NPPs have no campaign document,
- * so the rally that moves a player candidate's Support never fires for them,
- * and their Support sits at the neutral 50.
- *
- * At v6 the first campaign action of a cycle by an NPP that is an active
- * candidate in a rally-eligible race becomes a rally for that race instead. It
- * costs the action points and funds the campaign action already costs, gives
- * up that action's influence gain, and moves Support by exactly what a player
- * rally in the same race family moves it (same value, same 60/40 split, same
- * drip). Players may rally once a turn; an NPP rallies at most once per
- * action cycle, which is once every four turns.
+ * NPPs have no campaign document, so the player rally path never fires for
+ * them. Players may rally once a turn; an NPP at most once per action cycle
+ * (every four turns).
  */
 import type { ObjectId } from "mongodb";
-import { SUPPORT_RALLY_FULL_VALUE } from "@/lib/electionEngine/electionFormulaFactors";
-import { buildRallyAccrualEntry } from "@/lib/turn/elections/supportAccrual";
+import { SUPPORT_RALLY_FULL_VALUE } from "@/lib/elections/engine/electionFormulaFactors";
+import { buildRallyAccrualEntry } from "@/lib/elections/campaigns/supportAccrual";
 import type { NppRaceSignal } from "@/lib/npp/actionSignals";
 
 export interface NppRallyWrite {

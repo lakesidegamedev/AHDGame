@@ -13,6 +13,12 @@ import {
   type MetricLawProgram,
   type MetricLawSettlement,
 } from "./rules/lawDelivery";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
+import { regionalBudgetsCollection } from "@/lib/db/repositories/regionalBudgets";
+import { resetLawProgramsCollection } from "@/lib/db/repositories/resetLawPrograms";
+import { resetDepartmentAccountsCollection } from "@/lib/db/repositories/resetDepartmentAccounts";
+import { resetLawOpeningBoardsCollection } from "@/lib/db/repositories/resetLawOpeningBoards";
 
 export async function loadMetricLawDelivery(
   db: Db,
@@ -34,11 +40,10 @@ export async function loadMetricLawDelivery(
     ...new Set(input.countryIds ?? regions.map((region) => region.countryId)),
   ].filter(isResetV2Country);
   if (!countries.length) return empty;
-  const us = regions.filter((r) => r.countryId === "US").map((r) => r._id);
-  const other = regions.filter((r) => r.countryId !== "US").map((r) => r._id);
+  const us = regions.filter((r) => countryHasFeature("usSeeds", r.countryId)).map((r) => r._id);
+  const other = regions.filter((r) => !countryHasFeature("usSeeds", r.countryId)).map((r) => r._id);
   const [replacements, accounts, boards, regional, states] = await Promise.all([
-    db
-      .collection<ResetLawProgramDocument>("resetLawPrograms")
+    resetLawProgramsCollection<ResetLawProgramDocument>(db)
       .find(
         { worldId, country: { $in: countries }, effectiveTurn: { $lte: turn } },
         {
@@ -57,8 +62,7 @@ export async function loadMetricLawDelivery(
         }
       )
       .toArray(),
-    db
-      .collection<ResetDepartmentAccountSnapshot>("resetDepartmentAccounts")
+    resetDepartmentAccountsCollection<ResetDepartmentAccountSnapshot>(db)
       .find(
         { worldId, countryId: { $in: countries } },
         {
@@ -73,8 +77,7 @@ export async function loadMetricLawDelivery(
         }
       )
       .toArray(),
-    db
-      .collection<ResetLawOpeningBoard>("resetLawOpeningBoards")
+    resetLawOpeningBoardsCollection<ResetLawOpeningBoard>(db)
       .find(
         { worldId, countryId: { $in: countries } },
         {
@@ -99,8 +102,7 @@ export async function loadMetricLawDelivery(
       )
       .toArray(),
     other.length
-      ? db
-          .collection<RegionalBudget>("regionalBudgets")
+      ? regionalBudgetsCollection(db)
           .find(
             { _id: { $in: other }, countryId: { $in: countries } },
             { projection: { _id: 1, countryId: 1, programSettlements: 1 } }
@@ -108,8 +110,7 @@ export async function loadMetricLawDelivery(
           .toArray()
       : Promise.resolve([]),
     us.length
-      ? db
-          .collection<StateBudget>("stateBudgets")
+      ? stateBudgetsCollection(db)
           .find(
             { _id: { $in: us }, countryId: "US" },
             { projection: { _id: 1, countryId: 1, regionalProgramSettlements: 1 } }

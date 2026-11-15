@@ -244,10 +244,7 @@ export function ForcePanel({ view }: { view: ForcePanelView }) {
               war resolves.
             </>
           ) : view.tier === "command" && (view.concluded || view.archiveOpensTurn != null) ? (
-            // Command sight of a concluded war still under fog. Every formation has
-            // gone home, so the live-war line about reading the enemy off the
-            // strength ratio describes a front that no longer exists. A war awaiting
-            // terms has no opening turn yet: its window starts when it resolves.
+            // Command sight of a concluded war still under fog: all formations are home, so the live-war strength-ratio line describes a front that no longer exists. A war awaiting terms has no opening turn yet; its window starts when it resolves.
             <>
               The fighting is over and every formation has returned to reserve. Your own
               side&rsquo;s rosters stay yours; the opposing side&rsquo;s composition{" "}

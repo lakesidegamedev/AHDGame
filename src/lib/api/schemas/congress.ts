@@ -98,7 +98,7 @@ const policyProvisionSchema = z.object({
   effectDirection: z.number(),
   economic: z.number().optional(),
   social: z.number().optional(),
-  // Tax-slider laws (ruling #16): the slider-chosen rate. Server-side
+  // Tax-slider laws: the slider-chosen rate. Server-side
   // validation (bounds/grid/min-step vs the CURRENT rate) runs in the route.
   proposedRate: z.number().optional(),
 });
@@ -244,12 +244,8 @@ const electoralLawProvisionSchema = z.object({
  * Central bank independence: `grant` hands rate-setting to the bank, `revoke`
  * returns it to the head of government and the finance seat. The economy-only
  * category rule and the shared-bank (ECB) refusal live in
- * `validateBillProvisions`, which is the single gate both proposal paths run
- * through — this schema only has to let the provision through the door.
- *
- * Without it the provision matched no member of the `proposeBillSchema` union,
- * so every bill carrying one was rejected by the body parser with a union error
- * before the validator, the UI, or the enactment path ever saw it (#1250).
+ * `validateBillProvisions`, the single gate both proposal paths run through;
+ * this schema only lets the provision through the door.
  */
 const centralBankIndependenceProvisionSchema = z.object({
   type: z.literal("central_bank_independence"),
@@ -268,7 +264,7 @@ const euroAdoptionProvisionSchema = z.object({
 const unionLawProvisionSchema = z.object({
   type: z.literal("union_law"),
   bias: z.number().min(-50).max(50),
-  // Union ban (player suggestion #93): when present the provision is a
+  // Union ban: when present the provision is a
   // ban/repeal action instead of a bias law — see UnionLawProvision.
   banAction: z.enum(["ban", "repeal_ban"]).optional(),
 });

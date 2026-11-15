@@ -1,22 +1,19 @@
 /**
- * Why part of an output went unsold last turn (issue #5448 / #5450).
+ * Why part of an output went unsold last turn.
  *
- * The sector page showed a sold share and nothing else, so a player could not
- * tell a price problem from a demand problem. The settled receipt has the ask,
- * the offered and the delivered units; the market outcome has what buyers in
- * each book paid. Their comparison names the cause:
+ * Compares the receipt's ask, offered and delivered units against what buyers
+ * in each book paid:
  *
- * - `ask_above_market`: buyers in the book paid less than the ask, so they
- *   bought from cheaper sellers first.
- * - `shared_at_market`: the ask matched what buyers paid, and the buyers at
- *   that price were split between every seller asking it.
+ * - `ask_above_market`: buyers paid less than the ask, so they bought from
+ *   cheaper sellers first.
+ * - `shared_at_market`: the ask matched what buyers paid, and buyers at that
+ *   price were split between every seller asking it.
  * - `buyers_exhausted`: the ask was below what buyers paid, yet units were
  *   left: every buyer who would pay that much was already supplied.
  * - `no_buyers`: nothing traded in the book at all.
- * - `buyers_elsewhere`: the plant's own market ran out of buyers (or had none)
- *   while the good is still short in markets the plant cannot sell into: another
- *   state for a local service, another country's book for a traded good. The
- *   live world shows this is the most common cause (#5450, turn 645 reading).
+ * - `buyers_elsewhere`: the plant's own market ran out of buyers while the
+ *   good is still short in markets it cannot sell into: another state for a
+ *   local service, another country's book for a traded good.
  *
  * Routing and production constraints are not inferred here: a plant that could
  * not make its output does not offer it, so it never shows as unsold.

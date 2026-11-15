@@ -33,7 +33,7 @@ vi.mock("@/lib/turn/lineOfCreditTurn", () => ({
     .mockResolvedValue({ charactersProcessed: 0, paymentsInternal: 0 }),
 }));
 vi.mock("@/lib/turn/campaignTurn", () => ({ processCampaignTurn: vi.fn() }));
-vi.mock("@/lib/turn/perpetualElections", () => ({
+vi.mock("@/lib/elections/scheduling", () => ({
   advanceElectionTimers: vi.fn(),
   ensurePerpetualElections: vi.fn(),
   ensureUKElections: vi.fn(),
@@ -68,13 +68,13 @@ vi.mock("@/lib/turn/billLifecycle/regionalEngine", () => ({ processStateBillTime
 vi.mock("@/lib/cabinetNominationLifecycle", () => ({
   processCabinetNominationLifecycle: vi.fn(),
 }));
-vi.mock("@/lib/statePartyElections", () => ({
+vi.mock("@/lib/elections/party/statePartyElections", () => ({
   processStatePartyElections: vi.fn(),
 }));
-vi.mock("@/lib/nationalPartyElections", () => ({
+vi.mock("@/lib/elections/party/nationalPartyElections", () => ({
   processNationalPartyElections: vi.fn(),
 }));
-vi.mock("@/lib/nationalCommitteeElections", () => ({
+vi.mock("@/lib/elections/party/nationalCommitteeElections", () => ({
   processNationalCommitteeElections: vi.fn(),
 }));
 vi.mock("@/lib/turn/nppBehavior", () => ({
@@ -224,17 +224,18 @@ describe("processTurn() — full turn flow", () => {
     vi.mocked(demographicTurnout.processPartyGOTV).mockResolvedValue({ budgets: [] } as never);
     vi.mocked(demographicTurnout.processPlayerCanvassing).mockResolvedValue(undefined as never);
 
-    const statePartyElections = await import("@/lib/statePartyElections");
+    const statePartyElections = await import("@/lib/elections/party/statePartyElections");
     vi.mocked(statePartyElections.processStatePartyElections).mockResolvedValue({
       electionsCompleted: 0,
     } as never);
 
-    const nationalPartyElections = await import("@/lib/nationalPartyElections");
+    const nationalPartyElections = await import("@/lib/elections/party/nationalPartyElections");
     vi.mocked(nationalPartyElections.processNationalPartyElections).mockResolvedValue(
       undefined as never
     );
 
-    const nationalCommitteeElections = await import("@/lib/nationalCommitteeElections");
+    const nationalCommitteeElections =
+      await import("@/lib/elections/party/nationalCommitteeElections");
     vi.mocked(nationalCommitteeElections.processNationalCommitteeElections).mockResolvedValue(
       undefined as never
     );
@@ -281,7 +282,7 @@ describe("processTurn() — full turn flow", () => {
       totalActionsGenerated: 0,
     } as never);
 
-    const perpetual = await import("@/lib/turn/perpetualElections");
+    const perpetual = await import("@/lib/elections/scheduling");
     vi.mocked(perpetual.advanceElectionTimers).mockResolvedValue(undefined as never);
     vi.mocked(perpetual.ensurePerpetualElections).mockResolvedValue(undefined as never);
     vi.mocked(perpetual.cleanupStaleElectionCandidates).mockResolvedValue(undefined as never);
@@ -604,7 +605,7 @@ describe("processTurn() — full turn flow", () => {
       const result = await processTurn();
       expect(result.success).toBe(false);
       const { processCampaignTurn } = await import("@/lib/turn/campaignTurn");
-      const { advanceElectionTimers } = await import("@/lib/turn/perpetualElections");
+      const { advanceElectionTimers } = await import("@/lib/elections/scheduling");
       const { processBillLifecycle } = await import("@/lib/billLifecycle");
       const { processLineOfCreditTurn } = await import("@/lib/turn/lineOfCreditTurn");
       expect(processCampaignTurn).toHaveBeenCalledOnce();
@@ -631,7 +632,7 @@ describe("processTurn() — full turn flow", () => {
     await processTurn();
 
     const { advanceElectionTimers, ensurePerpetualElections } =
-      await import("@/lib/turn/perpetualElections");
+      await import("@/lib/elections/scheduling");
 
     expect(advanceElectionTimers).toHaveBeenCalledTimes(1);
     expect(ensurePerpetualElections).toHaveBeenCalledTimes(1);
@@ -741,7 +742,7 @@ describe("processTurn() — full turn flow", () => {
 
   it("calls resolveGeneralElections after advanceElectionTimers", async () => {
     const callOrder: string[] = [];
-    const perpetual = await import("@/lib/turn/perpetualElections");
+    const perpetual = await import("@/lib/elections/scheduling");
     const electionRes = await import("@/lib/turn/electionResolution");
 
     vi.mocked(perpetual.advanceElectionTimers).mockImplementation(async () => {

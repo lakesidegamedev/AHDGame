@@ -15,9 +15,9 @@ const pct = (share: number) => `${Math.round(share * 100)}%`;
 /**
  * Shown while the demand throttle holds a plant down because the valuable part
  * of its output is oversupplied, and another strategy for this sector would
- * sell into a shortage in the same market (ticket 1370 follow-up).
+ * sell into a shortage in the same market.
  *
- * COPY RULE (project standing): plain language, concrete numbers, no dashes.
+ * COPY RULE: plain language, concrete numbers, no dashes.
  */
 export default function RetoolHintBanner({ hint, isCeo, onOpenStrategy }: RetoolHintBannerProps) {
   const current = COMMODITY_LABELS[hint.currentMain.commodity] ?? hint.currentMain.commodity;

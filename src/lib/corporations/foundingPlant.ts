@@ -2,17 +2,13 @@ import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
 /**
  * First-plant founding: one facility quantum + era-scaled entry fee.
  *
- * Under plants, entering a market is a FIRST BUILD. The starter used to be
- * sized from DEFAULT_SECTOR_STARTING_REVENUE ($1M/day modern nameplate), which
- * in a 1953 world became ~thousands of facilities and priced new corps out of
- * every market. One facility (`plantSizeUnits`) is the honest "first plant".
+ * Entering a market is a first build, so use one facility (`plantSizeUnits`)
+ * rather than a revenue-derived facility count, which breaks era scaling.
+ * The entry fee (SECTOR_EXPANSION_BASE_COST) is a modern constant and must be
+ * era-deflated to match corp treasuries.
  *
- * The entry fee (SECTOR_EXPANSION_BASE_COST) is a modern-calibrated ₳ constant;
- * corp treasuries deflate with the era, so the fee must too or even the permit
- * alone exceeds a baseline 1953 treasury.
- *
- * expandSector, expand-suggestions, and NPP founding MUST call these helpers so
- * the quote and the charge cannot drift.
+ * expandSector, expand-suggestions, and NPP founding MUST call these helpers
+ * so the quote and the charge cannot drift.
  */
 
 import { eraForPreset } from "@/lib/seeds/presetSelector";

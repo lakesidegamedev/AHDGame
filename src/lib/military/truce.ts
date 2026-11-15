@@ -1,6 +1,7 @@
 import type { Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import { TRUCE_TURNS } from "@/lib/db/types/peaceOffer";
+import { trucesCollection } from "@/lib/db/repositories/truces";
 
 export interface TruceDoc {
   /** `trucePairId` — the two country ids sorted and joined. */
@@ -9,10 +10,8 @@ export interface TruceDoc {
   expiresTurn: number;
 }
 
-const COLLECTION = "truces";
-
 export function getTrucesCollection(db: Db) {
-  return db.collection<TruceDoc>(COLLECTION);
+  return trucesCollection<TruceDoc>(db);
 }
 
 /**

@@ -7,6 +7,7 @@ import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { buildTxLogFilter, queryTxLog } from "@/lib/financialTxLog/queryLogs";
 import type { GameState } from "@/lib/db/types";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export async function GET(request: Request) {
   try {
@@ -20,9 +21,7 @@ export async function GET(request: Request) {
     const db = await getDb();
     const [result, gameState] = await Promise.all([
       queryTxLog(db, built.filter, built.limit),
-      db
-        .collection<GameState>("gameState")
-        .findOne({ _id: "current" }, { projection: { currentTurn: 1 } }),
+      gameStateCollection(db).findOne({ _id: "current" }, { projection: { currentTurn: 1 } }),
     ]);
     // Expose currentTurn so the admin panel's window-preset dropdown can
     // resolve "Last 168 turns" → turnMin without an extra fetch.

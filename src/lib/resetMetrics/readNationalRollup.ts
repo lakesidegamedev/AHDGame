@@ -8,6 +8,8 @@ import {
   type ResetMetricSnapshot,
 } from "./rules/snapshot";
 import type { OpeningMetricObservation } from "./rules/openingObservation";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { resetMetricSnapshotsCollection } from "@/lib/db/repositories/resetMetricSnapshots";
 
 /**
  * Read and validate the regional owner boards used by the national v2 view.
@@ -19,8 +21,7 @@ export async function readNationalMetricRollup(
 ): Promise<Record<string, OpeningMetricObservation> | null> {
   if (nationalBoard.scope !== "national") return null;
   const [regionalBoards, states] = await Promise.all([
-    db
-      .collection<ResetMetricSnapshot>("resetMetricSnapshots")
+    resetMetricSnapshotsCollection<ResetMetricSnapshot>(db)
       .find(
         {
           worldId: nationalBoard.worldId,
@@ -41,8 +42,7 @@ export async function readNationalMetricRollup(
         }
       )
       .toArray(),
-    db
-      .collection<State>("states")
+    statesCollection(db)
       .find(
         { countryId: nationalBoard.countryId },
         {

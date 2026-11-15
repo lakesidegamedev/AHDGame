@@ -9,7 +9,6 @@
 
 import type { Db, ObjectId } from "mongodb";
 import type { Corporation } from "@/lib/db/types";
-import type { CentralBank } from "@/lib/db/types/centralBank";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { getCountryIdForCurrency } from "@/lib/constants/currencies";
 import { getBankId } from "@/lib/centralBank/helpers";
@@ -20,6 +19,8 @@ import { getBankDepositCeiling } from "@/lib/banking/capacityAllocation";
 import { resolveCorpLiquidCurrencyCode } from "@/lib/currency/corporationCapital";
 import { getCurrentTurn } from "@/lib/currentTurn";
 import type { BankCharterSnapshot, BankingSnapshot } from "@/lib/banking/rules/boundary";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export type { BankingSnapshot } from "@/lib/banking/rules/boundary";
 
@@ -73,9 +74,7 @@ export async function loadBankingSnapshot(
   corporationId: ObjectId,
   options: { withCapacityCeiling?: boolean; turn?: number } = {}
 ): Promise<LoadedBankingSnapshot | null> {
-  const corporation = await db
-    .collection<Corporation>("corporations")
-    .findOne({ _id: corporationId });
+  const corporation = await corporationsCollection(db).findOne({ _id: corporationId });
   if (!corporation) return null;
 
   const charter = corporation.bankCharter;
@@ -87,9 +86,7 @@ export async function loadBankingSnapshot(
   const [policy, reserveRatio, centralBank, turn, capacityCeiling] = await Promise.all([
     loadBankingPolicy(db),
     getReserveRequirement(db, currency),
-    db
-      .collection<CentralBank>("centralBanks")
-      .findOne({ _id: centralBankId }, { projection: { primeRate: 1 } }),
+    centralBanksCollection(db).findOne({ _id: centralBankId }, { projection: { primeRate: 1 } }),
     options.turn !== undefined ? Promise.resolve(options.turn) : getCurrentTurn(db),
     options.withCapacityCeiling && charter
       ? getBankDepositCeiling(db, corporation)

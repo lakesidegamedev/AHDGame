@@ -1,6 +1,8 @@
 import type { Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import type { ReadinessCheck } from "@/lib/constants/countryReadinessExpectations";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
 
 /**
  * Every country expects a `governmentFormations` doc keyed by its country id.
@@ -20,9 +22,11 @@ export async function checkGovernmentFormation(
   db: Db,
   options: { createdOnFirstTurn?: boolean } = {}
 ): Promise<ReadinessCheck> {
-  const gov = await db
-    .collection<{ _id: string; status?: string; cycle?: number }>("governmentFormations")
-    .findOne({ _id: countryId });
+  const gov = await governmentFormationsCollection<{
+    _id: string;
+    status?: string;
+    cycle?: number;
+  }>(db).findOne({ _id: countryId });
   if (gov) {
     return {
       name: "GovernmentFormation",
@@ -42,9 +46,9 @@ export async function checkGovernmentFormation(
   // reset world sits on turn 1 with no turn processed, which is exactly when the
   // row cannot exist yet.
   if (options.createdOnFirstTurn) {
-    const gs = await db
-      .collection<{ currentTurn?: number }>("gameState")
-      .findOne({ _id: "current" as never });
+    const gs = await gameStateCollection<{ currentTurn?: number }>(db).findOne({
+      _id: "current" as never,
+    });
     const turn = typeof gs?.currentTurn === "number" ? gs.currentTurn : 1;
     if (turn <= 1) {
       return {

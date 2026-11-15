@@ -24,9 +24,8 @@ import {
   RequiredTransactionCleanupError,
   runRequiredTransaction,
 } from "@/lib/db/runRequiredTransaction";
-
-const USERS_COLLECTION = "users";
-const PROOFS_COLLECTION = "authSourceOwnershipProofs";
+import { authSourceOwnershipProofsCollection } from "@/lib/db/repositories/authSourceOwnershipProofs";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 const OBSERVATION_WINDOW_MS = 30_000;
 const PROOF_LIFETIME_MS = 270_000;
@@ -365,7 +364,7 @@ export function createSourceOwnershipProofStore(
     const startedAt = performance.now();
 
     const accountObjectId = new ObjectId(sourceAccountId);
-    const users = db.collection(USERS_COLLECTION);
+    const users = usersCollection<Document>(db);
     const original = (await users.findOne(
       { _id: accountObjectId },
       {
@@ -491,7 +490,7 @@ export function createSourceOwnershipProofStore(
             throw new SourceOwnershipProofError("ownership anchor not confirmed");
           }
           assertWithinWindow(startedAt);
-          await db.collection<Document & { _id: string }>(PROOFS_COLLECTION).insertOne(
+          await authSourceOwnershipProofsCollection<Document & { _id: string }>(db).insertOne(
             {
               _id: proofId,
               version: 1,
@@ -551,17 +550,15 @@ export function createSourceOwnershipProofStore(
     }
     checkExactKeys(input, ["proofId"]);
     const proofId = checkUuid(input.proofId);
-    const cursor = db
-      .collection(PROOFS_COLLECTION)
-      .aggregate(
-        [{ $match: { _id: proofId } }, { $project: { _id: 0, doc: "$$ROOT", sourceNow: "$$NOW" } }],
-        {
-          readConcern: { level: "majority" },
-          readPreference: ReadPreference.primary,
-          timeoutMS: READ_TIMEOUT_MS,
-          maxTimeMS: READ_TIMEOUT_MS,
-        }
-      );
+    const cursor = authSourceOwnershipProofsCollection<Document>(db).aggregate(
+      [{ $match: { _id: proofId } }, { $project: { _id: 0, doc: "$$ROOT", sourceNow: "$$NOW" } }],
+      {
+        readConcern: { level: "majority" },
+        readPreference: ReadPreference.primary,
+        timeoutMS: READ_TIMEOUT_MS,
+        maxTimeMS: READ_TIMEOUT_MS,
+      }
+    );
     const rows = (await cursor.toArray()) as unknown[];
     const first = rows[0] as { doc?: unknown; sourceNow?: unknown } | undefined;
     if (!first || typeof first !== "object") return null;

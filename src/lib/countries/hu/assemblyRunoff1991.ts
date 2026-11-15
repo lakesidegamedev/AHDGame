@@ -5,14 +5,20 @@
  */
 import { createHash } from "node:crypto";
 import { ObjectId, type ClientSession, type Db } from "mongodb";
-import type { Election, ElectionCandidate, ElectionVoteTally } from "@/lib/db/types";
+import type { Election, ElectionCandidate } from "@/lib/db/types";
 import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
 import { MS_PER_TURN } from "@/lib/constants/turnTime";
-import { TALLY_WITH_LATEST_SNAPSHOT_ONLY } from "@/lib/electionEngine/tallyProjections";
-import { HU_1991_COUNTS_COLLECTION, type Hu1991AssemblyRecord } from "./assemblyCount1991";
+import { TALLY_WITH_LATEST_SNAPSHOT_ONLY } from "@/lib/elections/engine/tallyProjections";
+import { type Hu1991AssemblyRecord } from "./assemblyCount1991";
 import { hu1991RunoffCampaigns } from "./rules/assemblyCampaign1991";
 import { projectHu1991Runoff } from "./rules/campaignBallots1991";
 import { countHuMixed1991 } from "./rules/mixedElection1991";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
+import type { Document } from "mongodb";
+import { hu1991AssemblyCountsCollection } from "@/lib/db/repositories/hu1991AssemblyCounts";
 
 function stableId(key: string): ObjectId {
   return new ObjectId(createHash("sha256").update(key).digest("hex").slice(0, 24));
@@ -34,7 +40,7 @@ async function materializeHu1991RunoffOpening(input: {
     !Number.isFinite(now.getTime())
   )
     throw new Error("Hungarian runoff opening needs an active transaction, cycle, turn and time");
-  const journal = db.collection<Hu1991AssemblyRecord>(HU_1991_COUNTS_COLLECTION);
+  const journal = hu1991AssemblyCountsCollection<Hu1991AssemblyRecord>(db);
   const receipt = await journal.findOne({ _id: `HU:mixed1989:${cycle}` }, { session });
   if (!receipt || receipt.seatedAtTurn != null || receipt.count.kind !== "pending") return [];
   const activeIds =
@@ -44,8 +50,7 @@ async function materializeHu1991RunoffOpening(input: {
   const namespace = generation === 1 ? receipt._id : `${receipt._id}:generation:${generation}`;
   const planned = hu1991RunoffCampaigns(receipt.count, receipt.nominations);
   const allowed = new Set(planned.flatMap((row) => row.candidateIds));
-  const roots = await db
-    .collection<Election>("elections")
+  const roots = await electionsCollection(db)
     .find(
       {
         _id: { $in: receipt.electionIds.map((id) => new ObjectId(id)) },
@@ -59,8 +64,7 @@ async function materializeHu1991RunoffOpening(input: {
     roots.some((row) => row.hungarianAssemblyRound?.receiptId !== receipt._id)
   )
     throw new Error("Hungarian first-round custody changed");
-  const candidates = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const candidates = await electionCandidatesCollection(db)
     .find(
       {
         status: "active",
@@ -142,12 +146,10 @@ async function materializeHu1991RunoffOpening(input: {
     { session }
   );
   if (updated.modifiedCount !== 1) throw new Error("Hungarian runoff opening changed concurrently");
-  await db.collection<Election>("elections").insertMany(polls, { session });
+  await electionsCollection(db).insertMany(polls, { session });
   if (renewedCandidates.length) {
-    await db
-      .collection<ElectionCandidate>("electionCandidates")
-      .insertMany(renewedCandidates, { session });
-    await db.collection<ElectionCandidate>("electionCandidates").updateMany(
+    await electionCandidatesCollection(db).insertMany(renewedCandidates, { session });
+    await electionCandidatesCollection(db).updateMany(
       { _id: { $in: candidates.map((row) => row._id) }, status: "active" },
       {
         $set: { status: "withdrawn", withdrawnAt: now },
@@ -156,7 +158,7 @@ async function materializeHu1991RunoffOpening(input: {
     );
     // Campaign balances are carried on their existing rows. No new financial
     // account or second copy of the unspent campaign funds is created.
-    await db.collection("campaigns").bulkWrite(
+    await campaignsCollection<Document>(db).bulkWrite(
       renewedCandidates.map((row) => ({
         updateMany: {
           filter: {
@@ -174,7 +176,7 @@ async function materializeHu1991RunoffOpening(input: {
       { session }
     );
   }
-  await db.collection<ElectionVoteTally>("electionVoteTallies").insertMany(
+  await electionVoteTalliesCollection(db).insertMany(
     polls.map((election) => ({
       _id: stableId(`${namespace}:runoff-tally:${election.state}`),
       electionId: election._id,
@@ -212,7 +214,7 @@ async function materializeHu1991RunoffCount(input: {
     throw new Error(
       "Hungarian runoff certification needs an active transaction, cycle, turn and time"
     );
-  const journal = db.collection<Hu1991AssemblyRecord>(HU_1991_COUNTS_COLLECTION);
+  const journal = hu1991AssemblyCountsCollection<Hu1991AssemblyRecord>(db);
   const receipt = await journal.findOne({ _id: `HU:mixed1989:${cycle}` }, { session });
   if (
     !receipt ||
@@ -229,8 +231,7 @@ async function materializeHu1991RunoffCount(input: {
       ? receipt._id
       : `${receipt._id}:generation:${receipt.runoffGeneration}`;
   const ids = activeIds.map((id) => new ObjectId(id));
-  const elections = await db
-    .collection<Election>("elections")
+  const elections = await electionsCollection(db)
     .find(
       { _id: { $in: ids } },
       { session, projection: { state: 1, status: 1, endTurn: 1, hungarianAssemblyRound: 1 } }
@@ -249,12 +250,10 @@ async function materializeHu1991RunoffCount(input: {
     )
   )
     throw new Error("Hungarian renewed cohort binding changed");
-  const tallies = await db
-    .collection<ElectionVoteTally>("electionVoteTallies")
+  const tallies = await electionVoteTalliesCollection(db)
     .find({ electionId: { $in: ids } }, { session, projection: TALLY_WITH_LATEST_SNAPSHOT_ONLY })
     .toArray();
-  const candidates = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const candidates = await electionCandidatesCollection(db)
     .find(
       { electionId: { $in: ids } },
       {

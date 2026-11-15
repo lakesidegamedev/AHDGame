@@ -4,7 +4,7 @@ Nine seats, appointed by the President and confirmed by the Senate, and a Court 
 
 ## Who sits on the bench
 
-Each seat is held by a player, an NPP or a scripted historical justice, or is vacant. Each era with a Court begins with its Original Roster. When an original justice reaches their authored departure year, the seat becomes vacant. Replacements are not automatic: the President nominates and the Senate confirms every one, by simple majority with the same seat-weighted vote as cabinet confirmation (see [Confirmation Process](/wiki/confirmation-process)). Whips shape NPP senators' votes on nominees (see [Voting & Whips](/wiki/voting-and-whips)).
+Each seat is held by a player, an NPP or a scripted fictional justice, or is vacant. Each era with a Court begins with its Original Roster. When an original justice reaches their authored departure year, the seat becomes vacant. Replacements are not automatic: the President nominates and the Senate confirms every one, by simple majority with the same seat-weighted vote as cabinet confirmation (see [Confirmation Process](/wiki/confirmation-process)). Whips shape NPP senators' votes on nominees (see [Voting & Whips](/wiki/voting-and-whips)).
 
 After the first appointment, a sitting justice can leave mid-term, whether player or NPP. The President and the occupant are notified when a seat opens. The Court does not keep a confirmed player forever.
 

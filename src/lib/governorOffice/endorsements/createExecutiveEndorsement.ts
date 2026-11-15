@@ -1,7 +1,6 @@
 import type { Db, ObjectId } from "mongodb";
 import { ObjectId as MongoObjectId } from "mongodb";
 import type {
-  Character,
   ExecutiveEndorsement,
   GovernorOfficeState,
   Election,
@@ -11,8 +10,13 @@ import { getExecutiveEndorseableElectionTypes, type CountryId } from "@/lib/cons
 import { GOVERNOR_ENDORSEMENT_ACTION_COST } from "@/lib/constants/governorOffice";
 import { getNationalStateId } from "@/lib/policy/nationalStateId";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
-import { applyEndorsementSupportBump } from "@/lib/turn/elections/supportEvents";
+import { applyEndorsementSupportBump } from "@/lib/elections/campaigns/supportEvents";
 import { partiesMatchInCountry } from "@/lib/parties/partyMatch";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { governorOfficeStateCollection } from "@/lib/db/repositories/governorOfficeState";
+import { executiveEndorsementsCollection } from "@/lib/db/repositories/executiveEndorsements";
 
 export interface CreateExecutiveEndorsementInput {
   countryId: CountryId;
@@ -39,7 +43,7 @@ export async function createExecutiveEndorsement(
 ): Promise<{ status: number; body: { endorsementId?: string; error?: string } }> {
   const { countryId, character, electionId, candidateId } = input;
 
-  const election = await db.collection<Election>("elections").findOne({ _id: electionId });
+  const election = await electionsCollection(db).findOne({ _id: electionId });
   if (!election || election.status !== "active") {
     return { status: 400, body: { error: "Election is not active." } };
   }
@@ -55,17 +59,19 @@ export async function createExecutiveEndorsement(
     };
   }
 
-  const candidate = await db
-    .collection<ElectionCandidate>("electionCandidates")
-    .findOne({ _id: candidateId, electionId });
+  const candidate = await electionCandidatesCollection(db).findOne({
+    _id: candidateId,
+    electionId,
+  });
   if (!candidate || candidate.status !== "active") {
     return { status: 400, body: { error: "Candidate is not active." } };
   }
   let candidateParty = candidate.party;
   if (!candidate.isNPP && candidate.characterId) {
-    const candChar = await db
-      .collection<Character>("characters")
-      .findOne({ _id: candidate.characterId }, { projection: { party: 1 } });
+    const candChar = await charactersCollection(db).findOne(
+      { _id: candidate.characterId },
+      { projection: { party: 1 } }
+    );
     if (candChar?.party) candidateParty = candChar.party;
   }
   const sameParty = await partiesMatchInCountry(db, countryId, character.party, candidateParty);
@@ -74,7 +80,7 @@ export async function createExecutiveEndorsement(
   }
 
   // One active endorsement per (leader, race).
-  const existing = await db.collection<ExecutiveEndorsement>("executiveEndorsements").findOne({
+  const existing = await executiveEndorsementsCollection(db).findOne({
     countryId,
     endorsedByCharacterId: character._id,
     electionId,
@@ -89,7 +95,7 @@ export async function createExecutiveEndorsement(
 
   // Office AP spend on the national pseudo-stateId row.
   const nationalStateId = getNationalStateId(countryId);
-  const spend = await db.collection<GovernorOfficeState>("governorOfficeState").updateOne(
+  const spend = await governorOfficeStateCollection(db).updateOne(
     {
       countryId,
       stateId: nationalStateId,
@@ -121,7 +127,7 @@ export async function createExecutiveEndorsement(
     createdAtTurn: currentTurn,
     createdAt: new Date(),
   };
-  await db.collection<ExecutiveEndorsement>("executiveEndorsements").insertOne(doc);
+  await executiveEndorsementsCollection(db).insertOne(doc);
 
   // B3 — endorsement landing bumps the endorsed candidate's Support.
   // Use candidate.characterId rather than the param `candidateId`

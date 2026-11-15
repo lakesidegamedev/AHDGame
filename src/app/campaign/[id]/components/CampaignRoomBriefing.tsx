@@ -12,16 +12,14 @@ interface CampaignRoomBriefingProps {
 }
 
 /**
- * Owner-only campaign-room briefing, in the Blend treatment. Renders the
- * read-only strategic digest the server composed on `campaign.briefing`: the
- * path to victory, and where the coalition is weak. The parent gates this on
- * owner access, so a non-owner never reaches it; it also no-ops defensively if
- * the block is absent.
+ * Owner-only campaign-room briefing in the Blend treatment. Renders the
+ * read-only strategic digest the server composed on `campaign.briefing`.
+ * The parent gates this on owner access; also no-ops defensively if the block
+ * is absent.
  *
- * It deliberately restates nothing the page already shows. The operations
- * levers are rendered interactively above, with the next tier's price on the
- * row that buys it, and the cash runway rides on the war-chest vital beside
- * the balance and burn rate it was quoting back.
+ * Restates nothing the page already shows: the operations levers are rendered
+ * interactively above, and the cash runway rides on the war-chest vital beside
+ * the balance and burn rate.
  */
 export function CampaignRoomBriefing({ campaign }: CampaignRoomBriefingProps) {
   const briefing = campaign.briefing;

@@ -2,26 +2,18 @@
  * Japan's region directory: the eight game regions, the prefectures inside
  * them, and the card image for each.
  *
- * Relocated from `src/lib/constants/japan.ts`, which now forwards here. It was
- * classified bucket D (relocate) for D7 and missed, so it stayed the one file
- * outside the folder still holding Japan data of its own.
- *
  * ⚠ THIS IS THE SOURCE OF THE REGION NAMES. `JP_GEOGRAPHY.regionNames`
- * derives from `JP_REGIONS` rather than repeating it. Both used to spell out
- * all eight, with equal values and nothing keeping them in step -- a second
- * source in the exact state the folder work exists to remove: correct on the
- * day it was written, silent the first time one side is edited.
+ * derives from `JP_REGIONS` rather than repeating it; do not reintroduce a
+ * second copy.
  *
- * ⚠ KEEP THIS FILE FREE OF VALUE IMPORTS. Client components read
- * `JP_REGIONS` through the shim (character creation, the admin election
- * filters, the country map). A value import here ships whatever it pulls to the
- * browser; `clientSafeLeafModules.test.ts` enforces it.
+ * ⚠ KEEP THIS FILE FREE OF VALUE IMPORTS. Client components read `JP_REGIONS`
+ * through the shim; a value import here ships whatever it pulls to the
+ * browser. `clientSafeLeafModules.test.ts` enforces it.
  *
- * ⚠ `population`, `shugiinDistricts` and `sangiinSeats` ARE DISPLAY
- * FIGURES, not the seat tables. The authoritative counts live in the seat
- * arrays (`JP_SHUGIIN_*`) and in the config's chambers; these describe a region
- * on a card. Do not reconcile a discrepancy by editing this file -- fix, or
- * read, the seat tables instead.
+ * ⚠ `population`, `shugiinDistricts` and `sangiinSeats` ARE DISPLAY FIGURES,
+ * not the seat tables. Authoritative counts live in the seat arrays
+ * (`JP_SHUGIIN_*`) and the config's chambers. Do not reconcile a discrepancy
+ * by editing this file.
  */
 
 // ── Regions ──────────────────────────────────────────────────────────────────

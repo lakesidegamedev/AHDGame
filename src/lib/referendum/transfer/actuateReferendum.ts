@@ -27,6 +27,9 @@ import { transferRegion } from "./transferRegion";
 import { secedeRegion } from "@/lib/referendum/secede/secedeRegion";
 import { isCountryEnabledForPlayers } from "@/lib/countryAccess";
 import { enterCountryForPlayers } from "@/lib/world/playerHandoff";
+import { billsCollection } from "@/lib/db/repositories/bills";
+import { independenceCopy } from "@/lib/referendum/rules/sovereigntyRegions";
+import { getCountryConfig, type CountryId } from "@/lib/constants/countries";
 
 /** Province grouping for NI under Ireland. */
 const NIR_PROVINCE = "Ulster";
@@ -43,12 +46,10 @@ async function withdrawActiveConsentBills(db: Db, ref: Referendum): Promise<void
     (x): x is NonNullable<typeof x> => x != null
   );
   if (ids.length === 0) return;
-  await db
-    .collection<Bill>("bills")
-    .updateMany(
-      { _id: { $in: ids }, status: "active" },
-      { $set: { status: "withdrawn", updatedAt: new Date() } }
-    );
+  await billsCollection(db).updateMany(
+    { _id: { $in: ids }, status: "active" },
+    { $set: { status: "withdrawn", updatedAt: new Date() } }
+  );
 }
 
 /**
@@ -118,10 +119,10 @@ async function runReferendumActuationInTransaction(
   if (ref.kind === "independence") {
     // Gate: the single Westminster consent bill must be signed for actuation.
     const bill = ref.westminsterBillId
-      ? await db.collection<Bill>("bills").findOne({ _id: ref.westminsterBillId })
+      ? await billsCollection(db).findOne({ _id: ref.westminsterBillId })
       : null;
     if (bill == null || (bill.status !== "signed" && bill.enactedAt == null)) {
-      return { ok: false, error: "Westminster consent bill is not signed." };
+      return { ok: false, error: "The independence consent bill is not signed." };
     }
     const res = await secedeRegion(db, {
       regionId: ref.regionId,
@@ -148,7 +149,7 @@ async function runReferendumActuationInTransaction(
       turn: currentTurn,
       kind: "seceded",
       side: "yes",
-      summary: `${ref.regionId} became an independent country.`,
+      summary: `${independenceCopy(ref.regionId, (id) => getCountryConfig(id as CountryId)?.name).region} became an independent country.`,
     }).catch(() => {});
     return { ok: true, report: res.report };
   }
@@ -161,8 +162,7 @@ async function runReferendumActuationInTransaction(
   );
   if (ref.westminsterBillId == null)
     return { ok: false, error: "Westminster consent is required." };
-  const consentBills = await db
-    .collection<Bill>("bills")
+  const consentBills = await billsCollection(db)
     .find({ _id: { $in: consentIds } })
     .toArray();
   if (

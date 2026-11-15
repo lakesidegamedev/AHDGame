@@ -4,7 +4,7 @@
  * avoids applying voter registration twice, without changing other races' inputs.
  */
 import type { Election } from "@/lib/db/types";
-import type { AccumulateVoteTurnPreload } from "@/lib/electionEngine/types";
+import type { AccumulateVoteTurnPreload } from "@/lib/elections/engine/types";
 import { isRussianDumaNationalList } from "./rules/assemblyScope";
 
 export function usesRussianDumaNationalElectorate(election: Election): boolean {

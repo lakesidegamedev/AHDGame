@@ -25,21 +25,17 @@ export async function joinSide(
   if (roster.includes(countryId)) return;
   roster.push(countryId);
 
-  // Stamp WHEN this country entered and WHERE the front stood at the time. Both
-  // halves are load-bearing for war approval: the exhaustion clock must run from
-  // a country's own entry rather than the war's start, and war effort is scored
-  // from the front as it stood on arrival so a late joiner does not inherit the
-  // record its side built before it got there. `treatyEntries` cannot serve —
-  // it is written only for treaty-pulled allies, so a country that declares into
-  // an existing war has no entry there at all.
+  // Stamp WHEN this country entered and WHERE the front stood. Both halves
+  // are load-bearing for war approval: exhaustion clock runs from own entry,
+  // and war effort is scored from the front on arrival so late joiners do not
+  // inherit their side's prior record. `treatyEntries` cannot serve: only
+  // written for treaty-pulled allies, not declarers into an existing war.
   //
-  // Written as two updates, not one. The roster is a list of country codes, so
-  // `$addToSet` dedupes it on its own. An entry is an object, and `$addToSet`
-  // compares objects whole — two callers enrolling the same country in one turn
-  // from separately loaded copies of this document would each clear the
-  // in-memory check above and write a second stamp that differs only by turn or
-  // control. Filtering on the country instead makes the database, rather than
-  // the caller's copy, the thing that enforces one stamp per country.
+  // Two updates, not one. `$addToSet` dedupes the country-code roster, but an
+  // entry object compares whole, so two callers enrolling the same country
+  // could each pass the in-memory check and insert a second stamp. Filtering
+  // on `joinTurns.countryId` in the update makes the database enforce one
+  // stamp per country.
   const entry = { countryId, turn: currentTurn, control: conflict.control };
   if (!conflict.joinTurns?.some((existing) => existing.countryId === countryId)) {
     conflict.joinTurns = [...(conflict.joinTurns ?? []), entry];

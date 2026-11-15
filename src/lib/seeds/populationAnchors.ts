@@ -18,9 +18,8 @@ type PresetBundles = Partial<Record<ResetPresetId, AnchorBundle>>;
 
 /**
  * Country → preset → { regionId → { medianAge, birthRate } } pyramid drivers. New
- * countries/eras register here. Mirrors `CENSUS_BUNDLES` in regionCensusData.ts;
- * `selectPresetBundle` falls back to `2019-default` so a country with only a 2019
- * bundle never throws for a 1991 world.
+ * countries/eras register here. Mirrors `CENSUS_BUNDLES` in regionCensusData.ts. A
+ * preset without its own anchors gets none.
  */
 export const POPULATION_ANCHOR_BUNDLES: Partial<Record<CountryId, PresetBundles>> = {
   IE: IE_GEOGRAPHY.populationAnchors,
@@ -33,8 +32,8 @@ export const POPULATION_ANCHOR_BUNDLES: Partial<Record<CountryId, PresetBundles>
 };
 
 /**
- * Per-region era anchor (medianAge + birthRate). Falls back to the 2019 bundle when a
- * preset is absent; null when the country has no bundle or the region has no entry.
+ * Per-region era anchor (medianAge + birthRate); null when the preset has no anchors for
+ * the country or the region has no entry.
  */
 export function getRegionPopulationAnchor(
   countryId: CountryId,

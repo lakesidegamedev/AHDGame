@@ -1,36 +1,29 @@
 /**
- * Sovereign-default NPC algorithm — calibrated tunables.
+ * Sovereign-default NPC algorithm: calibrated tunables.
  *
- * Kept separate from the broader sovereignDefault/constants.ts so the
- * Phase 10 calibration loop can iterate without polluting unrelated
- * subsystem tunables. Values are first-draft per design Section 6.3 and
- * are deliberately conservative — NPC defaults are rare and the algorithm
- * exists primarily as a safety net.
+ * Kept separate from sovereignDefault/constants.ts so the calibration loop
+ * can iterate without polluting unrelated subsystem tunables. Values are
+ * deliberately conservative: NPC defaults are rare and the algorithm
+ * exists primarily as a safety net. Imported by `scoreNpcOption.ts`.
  *
  * Calibration provenance:
  *   - Baseline preferences (bailout > restructure > monetize > repudiate):
- *     reflects real-world frequency. Bailouts and restructures are far
- *     more common historically than outright repudiation.
- *   - Government modifiers: democracies favor bailout/restructure (rule
- *     of law, IMF relationships, market reputation matter). Authoritarians
- *     more willing to repudiate/monetize (less accountability for
- *     consequences).
- *   - Ideology modifiers: technocrats favor restructure (Brady-bond style
- *     orderly workout); populists/nationalists favor repudiate
- *     (anti-creditor rhetoric); conservatives favor bailout (preserve
- *     creditor reputation); socialists mixed (anti-IMF + pro-monetize).
- *   - State modifiers (D/GDP > 2.0 → +0.15 repudiate bump, doubled at
- *     3.0): reflects diminishing returns to debt-sustainability — at
- *     extreme D/GDP the only credible path is haircut/repudiation. Reserve
- *     currency monetize bump captures the "inflate-our-way-out" privilege
- *     historically available to USD/JPY/etc. issuers.
- *   - Recent-default penalty (-0.3 repudiate / -0.15 bailout for first
- *     100 turns): countries that just defaulted face additional reputation
- *     damage if they default again immediately, and IMF is reluctant to
- *     re-bail.
- *
- * Constants here are imported by `scoreNpcOption.ts`. The full algorithm
- * is documented in design Section 6.
+ *     reflects real-world frequency; bailouts and restructures are far more
+ *     common historically than outright repudiation.
+ *   - Government modifiers: democracies favor bailout/restructure (rule of
+ *     law, IMF relationships, market reputation); authoritarians are more
+ *     willing to repudiate/monetize (less accountability for consequences).
+ *   - Ideology modifiers: technocrats favor restructure (orderly workout);
+ *     populists/nationalists favor repudiate (anti-creditor rhetoric);
+ *     conservatives favor bailout (preserve creditor reputation);
+ *     socialists mixed (anti-IMF + pro-monetize).
+ *   - State modifiers (D/GDP > 2.0 gives +0.15 repudiate, doubled at 3.0):
+ *     at extreme D/GDP the only credible path is haircut/repudiation.
+ *     Reserve-currency monetize bump captures the inflate-our-way-out
+ *     privilege available to USD/JPY issuers.
+ *   - Recent-default penalty (-0.3 repudiate / -0.15 bailout for first 100
+ *     turns): a country that just defaulted faces extra reputation damage
+ *     if it defaults again immediately, and the IMF is reluctant to re-bail.
  */
 
 import type { SovereignResolutionChoice } from "@/lib/db/types/budget";

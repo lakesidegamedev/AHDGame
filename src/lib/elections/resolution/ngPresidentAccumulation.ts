@@ -1,0 +1,183 @@
+/**
+ * Per-zone vote accumulation for NG presidential elections. Called each turn
+ * for an active NG presidential race; writes per-geopolitical-zone tallies into
+ * `totalVotesByUnit` so `decideNGPresidentOutcome` can apply the
+ * federal-character spread rule at resolution.
+ *
+ * Within each zone, the turn's vote pool splits among candidates in proportion
+ * to their party's seeded `statePartyOrg` in that zone, weighted by zone
+ * population. This yields the per-zone vote shares the spread rule needs and is
+ * intentionally simpler than the US swing-flow engine. Standing targeted ads
+ * add the shared, bounded demographic audience bonus to organization weights;
+ * without ads, the original organization weights remain.
+ */
+import { ObjectId } from "mongodb";
+import type { Db } from "@/lib/mongodb";
+import type { State, StatePartyOrg, ElectionVoteTally, ElectionCandidate } from "@/lib/db/types";
+import { loadRegionalCampaignCells } from "@/lib/campaignTargeting/audience";
+import {
+  combinedAds,
+  targetedAdBonuses,
+  meanAdBonus,
+  organizationAdWeight,
+  NG_CAMPAIGN_TURNOUT_RATE,
+} from "@/lib/campaignTargeting/rules";
+import { NG_ZONES } from "@/lib/elections/presidential/nigeriaPresidentialElectionEngine";
+import { planTurnSlice } from "@/lib/elections/rules/turnSlice";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+
+/** Approximate NG presidential turnout (share of population voting). */
+const NG_TURNOUT_RATE = NG_CAMPAIGN_TURNOUT_RATE;
+/** Fraction of the turnout pool that accrues each campaign turn. */
+const NG_PER_TURN_FRACTION = 0.1;
+
+export async function accumulateNGPresidentVoteTurn(
+  db: Db,
+  electionId: ObjectId,
+  now: Date,
+  /** Game turn being processed; guards a stalled turn's re-run (see below). */
+  turnNumber?: number,
+  /** "early": the half-hour results tick banks half of this turn's slice. */
+  options?: { slice?: "early" }
+): Promise<void> {
+  const tallies = electionVoteTalliesCollection(db);
+  const tally = await tallies.findOne({ electionId });
+  if (!tally || tally.finalized) return;
+  // Per-turn idempotency: this engine keeps no per-turn snapshot, so the tally
+  // remembers the last turn it accrued. A re-run of a stalled turn (lock
+  // cleared, same turn number) must not add a second 10% slice. A split turn
+  // marks its early half with `lastAccruedSlice`; the rest clears the mark.
+  const hasTurn = typeof turnNumber === "number";
+  const slicePlan = hasTurn
+    ? planTurnSlice(
+        tally.lastAccruedTurn === turnNumber ? [tally.lastAccruedSlice] : [],
+        options?.slice
+      )
+    : { fraction: 1 };
+  if (!slicePlan) return;
+
+  const candidateParties = tally.candidateParties ?? {};
+  const candidateIds = Object.keys(candidateParties);
+  if (candidateIds.length === 0) return;
+
+  const states = await statesCollection(db)
+    .find(
+      { countryId: "NG" },
+      { projection: { _id: 1, countryId: 1, population: 1, votingEligiblePopulation: 1 } }
+    )
+    .toArray();
+  const popByZone = new Map(states.map((s) => [s._id as string, s.population ?? 0]));
+
+  const orgRows = await statePartyOrgCollection(db).find({ countryId: "NG" }).toArray();
+  // (zoneId → (partyId → organization))
+  const orgByZoneParty = new Map<string, Map<string, number>>();
+  for (const row of orgRows) {
+    const m = orgByZoneParty.get(row.stateId) ?? new Map<string, number>();
+    m.set(row.partyId, row.organization);
+    orgByZoneParty.set(row.stateId, m);
+  }
+
+  const candidates = await electionCandidatesCollection(db)
+    .find(
+      { electionId, status: "active", isNPP: { $ne: true } },
+      { projection: { characterId: 1, targetedAds: 1 } }
+    )
+    .toArray();
+  const owners = candidates.length
+    ? await charactersCollection(db)
+        .find(
+          { _id: { $in: candidates.map((candidate) => candidate.characterId) } },
+          { projection: { policies: 1, targetedAds: 1 } }
+        )
+        .toArray()
+    : [];
+  const ownersById = new Map(owners.map((owner) => [owner._id.toString(), owner]));
+  const advertised = candidates.flatMap((candidate) => {
+    const owner = ownersById.get(candidate.characterId.toString());
+    const ads = combinedAds(candidate.targetedAds, owner?.targetedAds);
+    return owner && ads.length ? [{ id: candidate._id.toString(), owner, ads }] : [];
+  });
+  const cellsByZone =
+    advertised.length && turnNumber != null
+      ? await loadRegionalCampaignCells(db, states)
+      : new Map();
+
+  const newByUnit: Record<string, Record<string, number>> = { ...tally.totalVotesByUnit };
+  const newTotals: Record<string, number> = { ...tally.totalVotes };
+
+  for (const zone of NG_ZONES) {
+    const population = popByZone.get(zone);
+    if (!population || population <= 0) continue;
+    const pool = population * NG_TURNOUT_RATE * NG_PER_TURN_FRACTION * slicePlan.fraction;
+    const zoneOrg = orgByZoneParty.get(zone);
+
+    // Weight = the candidate's party org in this zone (floored).
+    const weights = new Map<string, number>();
+    let totalWeight = 0;
+    for (const candidateId of candidateIds) {
+      const party = candidateParties[candidateId];
+      const org = zoneOrg?.get(party) ?? 0;
+      const advertiser = advertised.find((candidate) => candidate.id === candidateId);
+      const cells = cellsByZone.get(`NG:${zone}`);
+      const bonus =
+        advertiser && cells && turnNumber != null
+          ? meanAdBonus(
+              cells,
+              targetedAdBonuses(
+                cells,
+                {
+                  economicLean: advertiser.owner.policies.economic,
+                  socialLean: advertiser.owner.policies.social,
+                },
+                advertiser.ads,
+                zone,
+                turnNumber
+              )
+            )
+          : 0;
+      const weight = organizationAdWeight(org, bonus);
+      weights.set(candidateId, weight);
+      totalWeight += weight;
+    }
+    if (totalWeight <= 0) continue;
+
+    const zoneUnit = { ...(newByUnit[zone] ?? {}) };
+    for (const candidateId of candidateIds) {
+      const inc = Math.round((pool * (weights.get(candidateId) ?? 0)) / totalWeight);
+      if (inc <= 0) continue;
+      zoneUnit[candidateId] = (zoneUnit[candidateId] ?? 0) + inc;
+      newTotals[candidateId] = (newTotals[candidateId] ?? 0) + inc;
+    }
+    newByUnit[zone] = zoneUnit;
+  }
+
+  // Land only on the accrual state read above, so a concurrent run that
+  // already banked this turn (or this half) leaves nothing to match.
+  await tallies.updateOne(
+    {
+      electionId,
+      finalized: { $ne: true },
+      ...(hasTurn
+        ? slicePlan.slicePart === "rest"
+          ? { lastAccruedTurn: turnNumber, lastAccruedSlice: "early" as const }
+          : { lastAccruedTurn: { $ne: turnNumber } }
+        : {}),
+    },
+    {
+      $set: {
+        totalVotesByUnit: newByUnit,
+        totalVotes: newTotals,
+        ...(hasTurn ? { lastAccruedTurn: turnNumber } : {}),
+        ...(slicePlan.slicePart === "early" ? { lastAccruedSlice: "early" as const } : {}),
+        updatedAt: now,
+      },
+      ...(hasTurn && slicePlan.slicePart !== "early"
+        ? { $unset: { lastAccruedSlice: "" as const } }
+        : {}),
+    }
+  );
+}

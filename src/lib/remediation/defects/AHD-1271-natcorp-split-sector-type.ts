@@ -1,21 +1,14 @@
-// AHD-1271 (c): secondary National Corporations stamped `type: "financial"`.
+// Secondary National Corporations were stamped `type: "financial"`.
 //
-// `buildNationalCorporationDoc` defaults `type` to "financial", which is right
-// for the PRIMARY National Corporation — a country's sovereign issuer really is
-// a financial entity — and wrong for the producing split-offs
-// `splitOffSectorType` carves out of it. That path passed `name`,
-// `assignedSectorTypes` and the primary flag but never `type`, so every state
-// enterprise a country created inherited the issuer's default.
+// `buildNationalCorporationDoc` defaults `type` to "financial", which is
+// right for the PRIMARY National Corporation (a sovereign issuer) but wrong
+// for the producing split-offs `splitOffSectorType` carves out. That path
+// passed `name`, `assignedSectorTypes` and the primary flag but never `type`.
 //
-// This is not cosmetic. `corporation.type` is the sector a corp builds into when
+// Not cosmetic: `corporation.type` is the sector a corp builds into when
 // none is named (`expandSector`, `buildCapacity`) and one of the keys
-// `applyPriceMultipliers` reads, so a German Manufacturing Enterprise whose
-// `type` says financial expands into the financial sector.
-//
-// On live it hit the ten enterprises a reunified Germany carved out after the
-// merge: Manufacturing, Retail, Agriculture, Logistics, Media, Technology,
-// Telecommunications, Real Estate, Healthcare and Automobiles, each holding its
-// own sixteen plants and each reporting itself as a financial firm.
+// `applyPriceMultipliers` reads, so a Manufacturing Enterprise whose `type`
+// says financial expands into the financial sector.
 //
 // Half A (code): `splitOffSectorType` stamps `type` from the sector it claims.
 // Half B (this heal): restate `type` from `assignedSectorTypes` on the corps
@@ -31,6 +24,8 @@ import type {
   HealResult,
   VerifyResult,
 } from "../types";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import type { Document } from "mongodb";
 
 export const DEFECT_ID = "AHD-1271-natcorp-split-sector-type";
 
@@ -69,19 +64,14 @@ function holdsResearch(corp: SplitOffCorp): boolean {
 /**
  * State-owned split-offs whose `type` contradicts the single sector they claim.
  *
- * The PRIMARY National Corporation is excluded by filter, not by inference: it
- * legitimately carries `type: "financial"` with no assigned sector, and
- * rewriting it would break the sovereign issuer lookup. A corp claiming more
- * than one sector type is also skipped — `type` is a single value and there is
- * no correct answer to pick, so those are reported instead.
+ * The PRIMARY National Corporation is excluded by filter: it legitimately carries
+ * `type: "financial"` with no assigned sector, and rewriting it would break the
+ * sovereign issuer lookup. Corps claiming more than one sector type are skipped
+ * (no correct answer to pick) and reported instead.
  *
- * SCOPED BY `countryOwnerId`, which in practice means National Corporations and
- * nothing else: that field is written only by `buildNationalCorporationDoc`, the
- * seed, the command-economy reconcile and `mergeCountry`. A seized private firm
- * is state-owned through the OTHER half of the codebase's predicate
- * (`ownershipState: "stateOwned"`), which this filter does not include, and none
- * of those paths write `assignedSectorTypes` anyway. Every row is named in the
- * plan for the operator to read before approving.
+ * SCOPED BY `countryOwnerId`, which in practice means National Corporations only;
+ * seized private firms are state-owned via `ownershipState: "stateOwned"`, which
+ * this filter does not include. Every row is named in the plan for operator review.
  */
 async function findMistyped(db: Db): Promise<{
   rows: SplitOffCorp[];
@@ -91,8 +81,7 @@ async function findMistyped(db: Db): Promise<{
   playerSwitched: SplitOffCorp[];
   nonEnumClaim: SplitOffCorp[];
 }> {
-  const corps = await db
-    .collection<SplitOffCorp>("corporations")
+  const corps = await corporationsCollection<SplitOffCorp>(db)
     .find(
       {
         countryOwnerId: { $type: "string" },
@@ -254,7 +243,7 @@ async function apply(db: Db, healPlan: HealPlan, ctx: HealContext): Promise<Heal
     if (!approved.has(String(corp._id))) continue;
     const want = corp.assignedSectorTypes?.[0];
     if (!want) continue;
-    const res = await db.collection("corporations").updateOne(
+    const res = await corporationsCollection<Document>(db).updateOne(
       // The stale type is part of the filter, so a concurrent correction wins.
       { _id: corp._id, type: corp.type, assignedSectorTypes: [want] } as Record<string, unknown>,
       { $set: { type: want, updatedAt: now } }

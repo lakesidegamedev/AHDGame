@@ -1,7 +1,6 @@
 import type { Db } from "mongodb";
 import { ObjectId } from "mongodb";
 import type {
-  Corporation,
   NationalizeProvision,
   PrivatizeProvision,
   DesignateStrategicSectorProvision,
@@ -11,6 +10,7 @@ import { OPERATING_SECTOR_TYPES, type OperatingSectorType } from "@/lib/constant
 import { CARVE_FRACTION_MIN, CARVE_FRACTION_MAX } from "./constants";
 import { isStateOwned } from "./nationalCorporation";
 import { isPrivateEnterpriseBlocked } from "@/lib/economy/queries/privateEnterpriseGate";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 type NatProvision = NationalizeProvision | PrivatizeProvision | DesignateStrategicSectorProvision;
 
@@ -39,7 +39,7 @@ export async function validateNationalizationProvisions(
     return fail("A state-ownership bill must contain at least one provision.");
   }
 
-  const corps = db.collection<Corporation>("corporations");
+  const corps = corporationsCollection(db);
   const out: NatProvision[] = [];
 
   for (const raw of rawProvisions) {

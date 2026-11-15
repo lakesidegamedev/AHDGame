@@ -10,13 +10,13 @@ import { handleRouteError, badRequest, errorResponse } from "@/lib/api/errors";
 import { checkRateLimit, rateLimitResponse, SAVINGS_WALLET_LIMITS } from "@/lib/api/rateLimit";
 import { parseJsonBody } from "@/lib/api/validate";
 import { z } from "zod";
-import type { Character } from "@/lib/db/types";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
 import { isLineOfCreditEnabled } from "@/lib/lineOfCredit/featureFlag";
 import { getGameState } from "@/lib/gameState";
 import { insertLocLedgerEntry } from "@/lib/lineOfCredit/ledger";
 import { ZOD_ACTIVE_CURRENCY_ENUM } from "@/lib/constants/currencies";
 import type { CurrencyCode } from "@/lib/constants/currencies";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const openSchema = z.object({
   currency: z.enum(ZOD_ACTIVE_CURRENCY_ENUM),
@@ -75,7 +75,7 @@ export async function POST(request: Request) {
     }
 
     const now = new Date();
-    await db.collection<Character>("characters").updateOne(
+    await charactersCollection(db).updateOne(
       { _id: character._id },
       {
         $set: {
@@ -92,7 +92,7 @@ export async function POST(request: Request) {
 
     const gameState = await getGameState();
     const turn = gameState?.currentTurn ?? 0;
-    const after = await db.collection<Character>("characters").findOne({ _id: character._id });
+    const after = await charactersCollection(db).findOne({ _id: character._id });
     if (after?.lineOfCredit) {
       await insertLocLedgerEntry(db, {
         characterId: character._id,

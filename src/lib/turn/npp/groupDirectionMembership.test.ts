@@ -15,27 +15,24 @@ const db = {} as Db;
 const npp = { ceoType: "npp", groupDirection: { objective: "profit" } } as Corporation;
 it("resolves existing NPP direction authority without a Group supply flag", async () => {
   vi.clearAllMocks();
-  await loadGroupDirectionMembership(db, true, [npp]);
+  await loadGroupDirectionMembership(db, [npp]);
   expect(resolveFormalizedGroups).toHaveBeenCalledExactlyOnceWith(db, { includeReserved: true });
 });
-it("does no group reads for disabled subsidiaries, an empty cohort, no directions, player autopilot or caretakers", async () => {
+it("does no group reads for an empty cohort, no directions, player autopilot or caretakers", async () => {
   vi.clearAllMocks();
-  for (const [enabled, corps] of [
-    [false, [npp]],
-    [true, []],
-    [true, [{ ceoType: "npp" }]],
-    [true, [{ ...npp, ceoType: "character", autopilot: { enabledTurn: 1 } }]],
-    [true, [{ ...npp, caretakerCeo: {} }]],
-  ] as [boolean, Corporation[]][]) {
-    expect(await loadGroupDirectionMembership(db, enabled, corps)).toBeUndefined();
+  for (const corps of [
+    [],
+    [{ ceoType: "npp" }],
+    [{ ...npp, ceoType: "character", autopilot: { enabledTurn: 1 } }],
+    [{ ...npp, caretakerCeo: {} }],
+  ] as Corporation[][]) {
+    expect(await loadGroupDirectionMembership(db, corps)).toBeUndefined();
   }
   expect(resolveFormalizedGroups).not.toHaveBeenCalled();
 });
 it("reuses one preloaded ownership snapshot for any number of NPP directions", async () => {
   vi.clearAllMocks();
   const preloaded = { rootByCorpId: new Map(), membersByRootId: new Map() } as GroupMembership;
-  expect(await loadGroupDirectionMembership(db, true, Array(100).fill(npp), preloaded)).toBe(
-    preloaded
-  );
+  expect(await loadGroupDirectionMembership(db, Array(100).fill(npp), preloaded)).toBe(preloaded);
   expect(resolveFormalizedGroups).not.toHaveBeenCalled();
 });

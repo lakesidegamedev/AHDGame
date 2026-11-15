@@ -25,8 +25,11 @@
 import type { Db, ObjectId } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import { OPERATING_SECTOR_TYPE_LABELS, type CorporationType } from "@/lib/constants/corporations";
-import type { Character, Union, UnionOrganizer } from "@/lib/db/types";
+import type { Union, UnionOrganizer } from "@/lib/db/types";
 import { createNotifications, type NotificationInput } from "@/lib/notifications";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { unionsCollection } from "@/lib/db/repositories/unions";
+import { unionOrganizersCollection } from "@/lib/db/repositories/unionOrganizers";
 
 export interface UnionBustingNoticeInput {
   countryId: CountryId;
@@ -59,15 +62,15 @@ export async function notifyUnionOfBustingAttempt(
   input: UnionBustingNoticeInput
 ): Promise<number> {
   try {
-    const union = await db
-      .collection<Union>("unions")
-      .findOne({ countryId: input.countryId, sectorType: input.sectorType as CorporationType });
+    const union = await unionsCollection(db).findOne({
+      countryId: input.countryId,
+      sectorType: input.sectorType as CorporationType,
+    });
     if (!union) return 0;
 
     // NPP-led unions have no player to tell, but their organizers still might.
     const presidentId = union.ownerType === "npp" ? null : union.ownerId;
-    const organizers = await db
-      .collection<UnionOrganizer>("unionOrganizers")
+    const organizers = await unionOrganizersCollection(db)
       .find({ unionId: union._id, strength: { $gt: 0 } }, { projection: { characterId: 1 } })
       .toArray();
 
@@ -77,8 +80,7 @@ export async function notifyUnionOfBustingAttempt(
     ];
     if (characterIds.length === 0) return 0;
 
-    const characters = await db
-      .collection<Character>("characters")
+    const characters = await charactersCollection(db)
       .find({ _id: { $in: characterIds } }, { projection: { userId: 1 } })
       .toArray();
 

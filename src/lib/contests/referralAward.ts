@@ -12,6 +12,9 @@ import { applyPatreonStatus } from "@/lib/patreon/service";
 import { createNotification } from "@/lib/notifications";
 import { getContestRoundsCollection } from "./collection";
 import { REFERRAL_AWARD_WINNERS, referralGrantDecision } from "./rules";
+import { usersCollection } from "@/lib/db/repositories/users";
+import type { Document } from "mongodb";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 export class ReferralAwardError extends Error {}
 
@@ -42,8 +45,7 @@ export async function awardReferralContest(
 
   // Standings are already ranked, alt-filtered and limited to live players.
   const placed = active.standings.filter((s) => s.score > 0).slice(0, REFERRAL_AWARD_WINNERS);
-  const users = await db
-    .collection<User>("users")
+  const users = await usersCollection(db)
     .find(
       { _id: { $in: placed.map((s) => new ObjectId(s.subjectId)) } },
       {
@@ -93,14 +95,13 @@ export async function awardReferralContest(
   }
 
   // The last winners had their iteration; it ends now unless they won again.
-  const previous = await db
-    .collection<User>("users")
+  const previous = await usersCollection(db)
     .find({ supporterProvider: "contest" }, { projection: { _id: 1 } })
     .toArray();
   const toRevoke = previous.filter((u) => !winnerIds.has(u._id.toString())).map((u) => u._id);
   let revoked = 0;
   if (toRevoke.length > 0) {
-    const res = await db.collection<User>("users").updateMany(
+    const res = await usersCollection(db).updateMany(
       { _id: { $in: toRevoke }, supporterProvider: "contest" },
       {
         $set: { patreonTier: null, supporterProvider: null, patreonExpiresAt: now },
@@ -175,10 +176,11 @@ export async function awardReferralContest(
       }
     ),
     // Keep the staff referral tracker's own counter in step with the contest.
-    db
-      .collection<GameConfig>("gameConfig")
-      .updateOne({ _id: "default" }, { $set: { referralContestStartedAt: now } }),
-    db.collection("users").updateMany({}, { $set: { referralContestCount: 0 } }),
+    gameConfigCollection(db).updateOne(
+      { _id: "default" },
+      { $set: { referralContestStartedAt: now } }
+    ),
+    usersCollection<Document>(db).updateMany({}, { $set: { referralContestCount: 0 } }),
   ]);
 
   return {

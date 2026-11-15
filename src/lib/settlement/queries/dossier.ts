@@ -48,6 +48,13 @@ import { computeFiscalImpact } from "@/lib/budget/fiscalImpact";
 import type { SettlementPaymentMode } from "@/lib/db/types/settlementPlay";
 import { loadSettlementActorContext } from "../actorContext";
 import { resolvePersonalFunds } from "../playCost";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
 
 export interface DossierPaymentView {
   mode: SettlementPaymentMode;
@@ -258,10 +265,10 @@ const signedMag = (hundredths: number) =>
 
 /** Escalation authority copy, verbatim from the source design. */
 function escalateGateFor(seatId: string): string {
-  if (seatId === "DD") {
+  if (countryHasFeature("ddLib", seatId)) {
     return "Only Washington and Moscow hold the escalation authority. East Berlin can raise the temperature with coercive plays, but it cannot take the bloc to the ladder.";
   }
-  if (seatId === "UK") {
+  if (countryHasFeature("ukLib", seatId)) {
     return "Escalation on the ladder is a superpower decision — London can reinforce and protest, not mobilise the alliance.";
   }
   return "This seat has no escalation authority. Coercive plays still add heat to the ladder.";
@@ -274,17 +281,17 @@ function escalateGateFor(seatId: string): string {
  * will move it again, so this counts rather than quoting either number.
  */
 async function bundestagSubtitle(db: Db): Promise<string> {
-  const formation = await db
-    .collection<GovernmentFormation>("governmentFormations")
-    .findOne({ _id: "DE" }, { projection: { seatsByParty: 1 } });
+  const formation = await governmentFormationsCollection(db).findOne(
+    { _id: "DE" },
+    { projection: { seatsByParty: 1 } }
+  );
 
   const seatsByParty = formation?.seatsByParty ?? {};
   const entries = Object.entries(seatsByParty).sort((a, b) => b[1] - a[1]);
   const total = entries.reduce((sum, [, seats]) => sum + seats, 0);
   if (total === 0) return "Bonn";
 
-  const parties = await db
-    .collection<PoliticalParty>("politicalParties")
+  const parties = await politicalPartiesCollection(db)
     .find(
       { countryId: "DE", sequentialId: { $in: entries.map(([id]) => Number(id)) } },
       { projection: { sequentialId: 1, name: 1, abbreviation: 1 } }
@@ -302,9 +309,7 @@ async function bundestagSubtitle(db: Db): Promise<string> {
 
 /** The Länder card's live subtitle — how many state governments there are. */
 async function laenderSubtitle(db: Db): Promise<string> {
-  const count = await db
-    .collection<State>("states")
-    .countDocuments({ countryId: "DE", regionType: "state" });
+  const count = await statesCollection(db).countDocuments({ countryId: "DE", regionType: "state" });
   return `${count} state governments · Bundesrat bloc`;
 }
 
@@ -382,15 +387,16 @@ export async function loadGermanQuestionDossier(
   characterId: ObjectId
 ): Promise<DossierView | null> {
   const ctx = await loadSettlementActorContext(db, characterId);
-  if (!ctx || !ctx.crisisId) return null;
+  if (!ctx.crisisId) return null;
 
   const crises = await getSettlementCrisesCollection(db);
   const crisis = await crises.findOne({ status: "open" });
   if (!crisis) return null;
 
-  const gameState = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { projection: { currentTurn: 1, nextScheduledTurn: 1 } });
+  const gameState = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { projection: { currentTurn: 1, nextScheduledTurn: 1 } }
+  );
   const turn = gameState?.currentTurn ?? 0;
 
   const rules = settlementRulesFor(crisis);
@@ -464,22 +470,11 @@ export async function loadGermanQuestionDossier(
   const capForInstitution = (id: string) =>
     personalNetCapFor(Math.max(1, participantsByInstitution.get(id)?.size ?? 0));
 
-  // PROJECTED, not read off the stamps.
-  //
-  // `appliedPoints` is null until the settlement phase resolves the turn, so
-  // summing it reported the live turn as "scaled to +0.0" every time and made
-  // the panel claim a scaling that had not happened. The board reports what the
-  // tick WILL enforce; the wire is the side that reports what was already
-  // written.
-  //
-  // Reading stamps where they exist would be no more accurate: the resolver
-  // makes them sum to exactly the figure this projection computes, so the two
-  // agree on every batch the resolver actually produced. They diverge only on
-  // rows whose stamps could not have come from it.
-  //
+  // PROJECTED, not read off the stamps. `appliedPoints` is null until the
+  // settlement phase resolves, so the board reports what the tick WILL enforce.
+  // Stamps agree with this projection wherever the resolver produced them.
   // Run THROUGH THE RESOLVER, never a second copy of the apportionment, so the
-  // panel, the institution cards and the turn phase cannot disagree. A local
-  // clamp would be a second copy and would miss the largest-remainder split.
+  // panel and turn phase cannot disagree.
   const projected = resolvePlayBatch(personal);
   const byId = new Map(personal.map((p) => [String(p._id), p]));
   const netByInstitution = new Map<string, number>();
@@ -513,12 +508,10 @@ export async function loadGermanQuestionDossier(
   const seatState = seat ? crisis.seats.find((s) => s.id === seat.id) : undefined;
   const budget = seat && seatState ? seatBudgetFor(seatState, seat.id) : null;
   const treasury = seat
-    ? await db
-        .collection<FederalBudget>("federalBudget")
-        .findOne(
-          { countryId: seat.id as FederalBudget["countryId"] },
-          { projection: { treasuryBalance: 1 } }
-        )
+    ? await federalBudgetCollection(db).findOne(
+        { countryId: seat.id as FederalBudget["countryId"] },
+        { projection: { treasuryBalance: 1 } }
+      )
     : null;
 
   const [bundestagSub, laenderSub] = await Promise.all([
@@ -541,12 +534,10 @@ export async function loadGermanQuestionDossier(
   // renders disabled here instead of looking live and being refused by the
   // route. `resolvePersonalFunds` short-circuits the FX lookup for free plays,
   // so this costs at most one rate read for the whole board.
-  const character = await db
-    .collection<Character>("characters")
-    .findOne(
-      { _id: characterId },
-      { projection: { actions: 1, funds: 1, currencyBalances: 1, countryId: 1 } }
-    );
+  const character = await charactersCollection(db).findOne(
+    { _id: characterId },
+    { projection: { actions: 1, funds: 1, currencyBalances: 1, countryId: 1 } }
+  );
   const personalCost = new Map<string, { local: number; balance: number }>();
   if (character) {
     for (const play of personalCatalogue) {

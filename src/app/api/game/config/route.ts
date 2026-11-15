@@ -3,6 +3,7 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { getDb } from "@/lib/mongodb";
 import type { GameConfig } from "@/lib/db/types";
 import { toPublicGameConfig } from "@/lib/gameConfig/publicGameConfig";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 // GET /api/game/config — Returns the public game configuration including starting stats and tunable constants.
 // Auth: public
@@ -10,7 +11,7 @@ import { toPublicGameConfig } from "@/lib/gameConfig/publicGameConfig";
 export async function GET() {
   try {
     const db = await getDb();
-    const config = await db.collection<GameConfig>("gameConfig").findOne({ _id: "default" });
+    const config = await gameConfigCollection(db).findOne({ _id: "default" });
 
     if (!config) {
       return errorResponse(404, "Game config not found. Run npm run seed first.");

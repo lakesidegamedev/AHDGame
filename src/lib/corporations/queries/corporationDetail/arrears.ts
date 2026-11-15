@@ -9,6 +9,7 @@ import type { CurrencyCode } from "@/lib/constants/currencies";
 import { resolveCorpLiquidCurrencyCode } from "@/lib/currency/corporationCapital";
 import { producerPayableReceiptKeys } from "@/lib/market/producerMarket/payablesRules";
 import { summarizeArrears, type ArrearsReceipt } from "./rules/arrears";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
 
 export async function loadArrearsView(args: {
   db: Db;
@@ -27,8 +28,7 @@ export async function loadArrearsView(args: {
   const id = corporation._id.toString();
   const producerEpoch = corporation.producerPayables?.worldEpoch;
   const producerKeys = producerPayableReceiptKeys(id);
-  const receipts = await db
-    .collection<ArrearsReceipt & { _id: string }>("bankMoneyMoves")
+  const receipts = await bankMoneyMovesCollection<ArrearsReceipt & { _id: string }>(db)
     .find(
       {
         _id: {

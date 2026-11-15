@@ -13,11 +13,13 @@ import {
 import { BILL_CATEGORIES, CATEGORY_TO_POLICY_DOMAINS } from "@shared/constants/legislation";
 import { LEGISLATION_TYPES_CACHE_TAG } from "@/lib/legislation/cacheTag";
 import { getEraContext } from "@/lib/era/context";
-import { isLegislationTypeActive, isNewThisEra } from "@/lib/era/legislationCatalog";
+import { isLegislationTypeFileable, isNewThisEra } from "@/lib/era/legislationCatalog";
 import { attachPoliticalLegislationEstimates } from "@/lib/politicalLegislation/estimates";
 import { marketAtLeast } from "@/lib/market/featureFlag";
 import { isMediaOwnershipBillAvailable } from "@/lib/mediaRegulation/rules";
 import { loadUSMediaOutletDelivery } from "@/lib/mediaRegulation/turnData";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 // Legislation types are near-static — written only by admin seed / law-type
 // edit routes, never by gameplay or turn processing. We cache the read with a
@@ -37,11 +39,8 @@ async function fetchLegislationTypes(
     if (domains?.length) query.policyDomain = { $in: domains };
   }
 
-  // Filter by country scope - only show legislation types for the specified country.
-  // Any country scopes to its own `countryScope`; US (and a blank/unknown country)
-  // additionally catches legacy types with no countryScope. Previously a hardcoded
-  // allowlist meant seeded countries missing from it (NG, and others) fell through
-  // with NO country filter, leaking every country's laws into the picker (#912).
+  // Non-US countries scope to their own countryScope; US (and blank/unknown)
+  // also catches legacy types with no countryScope.
   if (country && country !== "us") {
     query.countryScope = country === "wal" ? "wls" : country;
   } else {
@@ -82,8 +81,7 @@ async function fetchLegislationTypes(
     }
   }
 
-  const cursor = db
-    .collection<LegislationType>("legislationTypes")
+  const cursor = legislationTypesCollection(db)
     .find(query)
     .sort({ policyDomain: 1, subCategory: 1 });
   if (minimal)
@@ -153,7 +151,7 @@ export async function GET(request: Request) {
       eraYear == null
         ? types
         : types
-            .filter((t) => isLegislationTypeActive(String(t._id), eraYear))
+            .filter((t) => isLegislationTypeFileable(String(t._id), eraYear))
             .map((t) => ({ ...t, eraNew: isNewThisEra(String(t._id), eraYear) }));
     const usLawPicker = country == null || country === "us";
     let mediaOwnershipBillAvailable = true;
@@ -194,12 +192,10 @@ export async function GET(request: Request) {
       MINIMUM_WAGE_LAW_TYPE_IDS.includes(String(t._id))
     );
     const wageFloorConfig = minimumWageLawListed
-      ? await db
-          .collection<GameConfig>("gameConfig")
-          .findOne(
-            { _id: "default" },
-            { projection: { minimumWageLawStage: 1, labourSystemMode: 1 } }
-          )
+      ? await gameConfigCollection(db).findOne(
+          { _id: "default" },
+          { projection: { minimumWageLawStage: 1, labourSystemMode: 1 } }
+        )
       : null;
     const body =
       minimumWageLawOn(wageFloorConfig?.minimumWageLawStage) &&

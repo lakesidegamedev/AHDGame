@@ -4,9 +4,7 @@ import { computeCareerScore, careerRecordTotals, CAREER_SCORE_VERSION } from "./
 import { loadCareerLegislation, loadCareerContests, loadCareerLoans } from "./careerEvidence";
 import { ObjectId, type Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
-import type { Character, ExchangeRate } from "@/lib/db/types";
-import type { Corporation } from "@/lib/db/types/corporation";
-import type { Bond } from "@/lib/db/types/bond";
+import type { ExchangeRate } from "@/lib/db/types";
 import { BOND_UNIT_FACE_VALUE } from "@/lib/db/types/bond";
 import type { IndexFund, IndexFundPosition } from "@/lib/db/types/indexFund";
 import type { RetiredCharacter } from "@/lib/db/types/retiredCharacter";
@@ -31,6 +29,15 @@ import type {
   LegacyRankBy,
   LegacyScoreBreakdown,
 } from "./legacyLeaderboardTypes";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import { usersCollection } from "@/lib/db/repositories/users";
+import { characterAchievementsCollection } from "@/lib/db/repositories/characterAchievements";
+import type { Document } from "mongodb";
+import { indexFundPositionsCollection } from "@/lib/db/repositories/indexFundPositions";
+import { retiredCharactersCollection } from "@/lib/db/repositories/retiredCharacters";
 
 function sameIteration(a: GameIteration | null, b: GameIteration | null): boolean {
   if (!a || !b) return false;
@@ -129,8 +136,7 @@ export async function getLegacyLeaderboardData(
     contestsByCharacter,
     loans,
   ] = await Promise.all([
-    db
-      .collection<Character>("characters")
+    charactersCollection(db)
       .find(
         { userId: { $exists: true }, isSynthetic: { $ne: true } },
         {
@@ -152,8 +158,7 @@ export async function getLegacyLeaderboardData(
         }
       )
       .toArray(),
-    db
-      .collection<RetiredCharacter>("retiredCharacters")
+    retiredCharactersCollection(db)
       .find(
         { "snapshot.isSynthetic": { $ne: true } },
         {
@@ -174,8 +179,7 @@ export async function getLegacyLeaderboardData(
         }
       )
       .toArray(),
-    db
-      .collection("characterAchievements")
+    characterAchievementsCollection<Document>(db)
       .aggregate<{ _id: unknown; count: number }>([
         {
           $lookup: {
@@ -199,22 +203,19 @@ export async function getLegacyLeaderboardData(
       .toArray(),
     fetchExchangeRateMap(db),
     loadValuationFxRates(db),
-    db
-      .collection<Corporation>("corporations")
+    corporationsCollection(db)
       .find(
         { "shareholders.0": { $exists: true } },
         { projection: { _id: 1, shareholders: 1, sharePrice: 1, liquidCurrencyCode: 1 } }
       )
       .toArray(),
-    db
-      .collection<Bond>("bonds")
+    bondsCollection(db)
       .find(
         { "holders.0": { $exists: true } },
         { projection: { _id: 1, holders: 1, marketPrice: 1, currencyCode: 1 } }
       )
       .toArray(),
-    db
-      .collection<IndexFundPosition>("indexFundPositions")
+    indexFundPositionsCollection(db)
       .find({ holderKind: "character" }, { projection: { fundId: 1, characterId: 1, units: 1 } })
       .toArray(),
     loadCareerLegislation(db),
@@ -252,8 +253,7 @@ export async function getLegacyLeaderboardData(
     const fundIds = [
       ...new Map(fundPositions.map((p) => [p.fundId.toString(), p.fundId])).values(),
     ];
-    const funds = await db
-      .collection<IndexFund>("indexFunds")
+    const funds = await indexFundsCollection(db)
       .find({ _id: { $in: fundIds } }, { projection: { _id: 1, quotedNav: 1 } })
       .toArray();
     const navByFund = new Map(funds.map((f) => [f._id.toString(), f.quotedNav]));
@@ -271,13 +271,12 @@ export async function getLegacyLeaderboardData(
   for (const c of activeCharacters) referencedUserIds.set(String(c.userId), c.userId);
   for (const r of retired) referencedUserIds.set(String(r.userId), r.userId);
 
-  const users = await db
-    .collection<{
-      _id: ObjectId;
-      isBanned?: boolean;
-      legacyDisplayCharacterId?: string;
-      activeCharacterId?: ObjectId;
-    }>("users")
+  const users = await usersCollection<{
+    _id: ObjectId;
+    isBanned?: boolean;
+    legacyDisplayCharacterId?: string;
+    activeCharacterId?: ObjectId;
+  }>(db)
     .find(
       { _id: { $in: [...referencedUserIds.values()] } },
       { projection: { isBanned: 1, legacyDisplayCharacterId: 1, activeCharacterId: 1 } }

@@ -8,6 +8,8 @@ import { parseJsonBody } from "@/lib/api/validate";
 import { createAdminLog } from "@/lib/adminLog";
 import { getRegistrationIpMatchCandidates, normalizeIp } from "@/lib/utils/ipNormalize";
 import type { BannedIp, User } from "@/lib/db/types";
+import { usersCollection } from "@/lib/db/repositories/users";
+import { bannedIpsCollection } from "@/lib/db/repositories/bannedIps";
 
 const postSchema = z.union([
   z.object({
@@ -31,14 +33,10 @@ export async function GET() {
     if (!auth.ok) return auth.response;
 
     const db = await getDb();
-    const rows = await db
-      .collection<BannedIp>("bannedIps")
-      .find({})
-      .sort({ bannedAt: -1 })
-      .toArray();
+    const rows = await bannedIpsCollection(db).find({}).sort({ bannedAt: -1 }).toArray();
 
     const ips = rows.map((r) => r.ip);
-    const usersColl = db.collection<User>("users");
+    const usersColl = usersCollection(db);
     const counts: Record<string, number> = {};
     await Promise.all(
       ips.map(async (ip) => {
@@ -93,7 +91,7 @@ export async function POST(request: Request) {
     const isAllowance = doc.allowRegistration === true;
 
     try {
-      const result = await db.collection<BannedIp>("bannedIps").insertOne(doc as BannedIp);
+      const result = await bannedIpsCollection(db).insertOne(doc as BannedIp);
       await createAdminLog({
         category: "system",
         action: isAllowance ? "ip_allowance_added" : "ip_ban_added",

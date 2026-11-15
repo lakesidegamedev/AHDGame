@@ -152,7 +152,7 @@ describe("buildCountryDirectory", () => {
       counts: { ...EMPTY, coldWarDefcon: 3 },
     });
     const nation = groupRows(atWar, "Nation").find((r) => r.label === "Cold War");
-    expect(nation?.href).toBe("/world/conflicts");
+    expect(nation?.href).toBe("/world/crises?view=conflicts");
     expect(nation?.figure).toBe("DEFCON 3");
   });
 

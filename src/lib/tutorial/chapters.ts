@@ -29,23 +29,22 @@ import {
 } from "@/lib/tutorial/coachSteps";
 
 /**
- * Tutorial chapters — the content the guided tour is assembled from.
+ * Tutorial chapters: the content the guided tour is assembled from.
  *
- * A chapter is one answer to "what do you want to do", plus the always-on
- * `core` chapter and the returning-player `whats-new` chapter. The player's
- * plan (see tutorialPlan.ts) picks which chapters run and in what order; this
- * module turns that into a flat, country-resolved list of steps for the coach
- * and a chapter summary for the selector and the /tutorial hub.
- *
- * Chapters are the single source of chapter structure: the welcome-flow cards,
- * the hub, and the coach's chapter rail all read the same registry.
+ * Each chapter answers "what do you want to do", plus the always-on `core`
+ * and returning-player `whats-new` chapters. The plan in `tutorialPlan.ts`
+ * picks which chapters run and in what order; this module turns that into a
+ * flat, country-resolved step list for the coach and a summary for the
+ * selector and the /tutorial hub. The welcome-flow cards, hub, and coach rail
+ * all read this same registry, so it is the single source of chapter
+ * structure.
  *
  * Copy fields (`title`, `body`, `hint`, `next`, `blurb`, `readMore.label`)
- * hold message keys under the "tutorial" namespace, not literal text. The
- * rendering components resolve them with useTranslations("tutorial"), passing
- * the country context (countryName, region, legislatureName) as ICU values, so
- * the English source lives in messages/en/tutorial.json alongside every other
- * locale. Ids, links, anchors, and signals stay literal here.
+ * are message keys under the "tutorial" namespace, not literal text.
+ * Components resolve them with `useTranslations("tutorial")`, passing
+ * country context (countryName, region, legislatureName) as ICU values, with
+ * the English source in messages/en/tutorial.json. Ids, links, anchors, and
+ * signals stay literal.
  */
 
 export interface TutorialChapter {
@@ -68,20 +67,12 @@ export interface TutorialChapter {
 /* ------------------------------------------------------------------ */
 
 /**
- * Curated highlights of the current world, one edition per world launch. Keep
- * each edition to about six cards and write a NEW edition for each launch (copy
- * lives in the tutorial catalogs); it does not derive from the changelog at run
- * time. The edition is picked from the world's preset (see world.ts), so a world
- * that has not been reset yet keeps the cards that are true for it.
+ * Curated "what changed" cards per world launch. Write a new edition for each
+ * launch; these do not derive from the changelog at runtime. The edition is
+ * picked from the world's preset, so an unreset world keeps the cards true for it.
  *
- *   "1991":    against the 1953 world. Sources: changelog 1.12.0 and the 1991
- *              explorer's "versus 1953" list.
- *   "general": the 1.0.0 launch cards, for every other preset.
- *
- * Runs for everyone, but placement differs (see chapterIdsForPlan): first for a
- * returning player, because it is the only reason they opened the tutorial, and
- * last for a new one, who needs the fundamentals before "what changed" means
- * anything.
+ * Placement differs by player: first for a returning player (it is their reason
+ * to open the tutorial), last for a new one who needs the fundamentals first.
  */
 function whatsNewSteps(ctx: CoachCountryContext): CoachStep[] {
   return ctx.world.edition === "1991" ? whatsNew1991Steps(ctx) : whatsNewGeneralSteps(ctx);

@@ -1,25 +1,9 @@
 import type { CountryEraOverride } from "../../contract";
 
-/**
- * Poland, 2027: the Third-Republic parliamentary republic resting on the
- * latest completed parliamentary election, the October 2023 Sejm and Senate
- * vote. The National Electoral Commission portal records PiS 194, Civic
- * Coalition (KO) 157, Third Way 65, Left 26 and Confederation 18 in the
- * 460-seat Sejm; the KO-Third Way-Left majority formed Donald Tusk's
- * cabinet in December 2023.
- * https://sejmsenat2023.pkw.gov.pl/sejmsenat2023/
- * The latest completed election of any kind is the June 2025 presidential
- * runoff, won by Karol Nawrocki (50.89%) over Rafal Trzaskowski (49.11%),
- * in office from August 2025 for a five-year term.
- * https://prezydent2025.pkw.gov.pl/prezydent2025/
- *
- * The Sejm is elected by proportional representation (d'Hondt in law;
- * `pr_hareQuota` is the game's closest proportional method, the same
- * approximation the 1991 override uses) and the Senate by first-past-the
- * post in 100 single-member constituencies. The presidency is filled by
- * direct popular vote, which `headOfStateSelection` cannot express (its
- * union covers only one-party sync and legislature appointment), so the
- * field is left undefined exactly as the 1991 override leaves it.
+/*
+ * Poland 2027: Third-Republic parliamentary republic on the 2023 Sejm/Senate election result.
+ * Sejm: proportional (d'Hondt; approximated with pr_hareQuota). Senate: FPTP in 100 SMDs.
+ * Presidency: direct popular vote, which headOfStateSelection cannot express, so left undefined.
  */
 export const PL_2027: CountryEraOverride = {
   preset: "2027-default",

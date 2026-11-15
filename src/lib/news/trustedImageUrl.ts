@@ -1,3 +1,5 @@
+import { servicesConfig } from "@/lib/config/services";
+
 /**
  * Accept only URLs we issued for news hero images (Blob or local dev uploads).
  * Prevents arbitrary remote URLs in stored posts.
@@ -16,7 +18,7 @@ export function isTrustedNewsImageUrl(url: string): boolean {
     }
     // Cloudflare R2 — custom domain or *.r2.dev
     if (u.protocol === "https:") {
-      const r2PublicUrl = process.env.CLOUDFLARE_R2_PUBLIC_URL?.replace(/\/$/, "");
+      const r2PublicUrl = servicesConfig.r2PublicUrl()?.replace(/\/$/, "");
       if (r2PublicUrl && url.startsWith(r2PublicUrl + "/")) {
         return true;
       }

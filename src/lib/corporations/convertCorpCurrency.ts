@@ -14,6 +14,10 @@ import {
   reserveSectorsForTransition,
   releaseConstructionPropertyTransition,
 } from "@/lib/corporations/securedConstructionProperty";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { shareOrdersCollection } from "@/lib/db/repositories/shareOrders";
+import { shareListingsCollection } from "@/lib/db/repositories/shareListings";
 
 export type ConvertCorpCurrencyResult = ConvertCorpCurrencySuccess | ConvertCorpCurrencyError;
 
@@ -146,10 +150,7 @@ export async function convertCorpCurrency(
   // refuse the denomination change without first mutating unrelated accounts.
   const sectors =
     sectorSnapshot ??
-    (await db
-      .collection<CorporateSector>("corporateSectors")
-      .find({ corporationId: corp._id })
-      .toArray());
+    (await corporateSectorsCollection(db).find({ corporationId: corp._id }).toArray());
   if (hasProtectedConstructionPropertyIn(sectors)) {
     return {
       ok: false,
@@ -181,8 +182,7 @@ export async function convertCorpCurrency(
   //    MUST run before the currency field is rewritten. Any failure here aborts
   //    the conversion: a stale-currency open order on a converted corp would
   //    leak player escrow across a currency boundary at next fill / cancel.
-  const openOrders = await db
-    .collection<ShareOrder>("shareOrders")
+  const openOrders = await shareOrdersCollection(db)
     .find({ corporationId: corp._id, status: "open" })
     .toArray();
   let ordersCancelled = 0;
@@ -203,8 +203,7 @@ export async function convertCorpCurrency(
 
   // 2. Cancel open share listings (and refund pending-offer escrows) — same
   //    ordering rationale as orders. Also abort-on-failure.
-  const openListings = await db
-    .collection<ShareListing>("shareListings")
+  const openListings = await shareListingsCollection(db)
     .find({ corporationId: corp._id, status: "open" })
     .toArray();
   let listingsCancelled = 0;
@@ -223,20 +222,7 @@ export async function convertCorpCurrency(
     listingsCancelled++;
   }
 
-  // 3 + 4. Convert corp-economic money fields AND sector revenue atomically.
-  //    `corp.liquidCurrencyCode` is the "source of truth" for how downstream
-  //    code reads every other money field on the corp and its sectors. Partial
-  //    failure (corp flipped but sectors not, or vice versa) produces drift
-  //    that turn processing can't detect — so we wrap both writes in a single
-  //    MongoDB transaction. On replica-set deployments (Atlas / prod) this is
-  //    a hard atomicity guarantee; on standalone dev mongod (no replica set)
-  //    we fall back to sequential writes and tolerate the existing
-  //    partial-failure risk (consistent with other cross-collection writes
-  //    in the codebase — see CLAUDE.md §Cross-collection consistency).
-  //
-  //    `ceoSalary` is optional on the Corporation type — preserve that: only
-  //    `$set` it when the corp already had a value, otherwise leave the
-  //    field absent (writing 0 is behaviorally equivalent but changes doc shape).
+  // Convert corp money fields and sector revenue atomically. `liquidCurrencyCode` is the source of truth for how downstream code reads money fields, so partial failure drifts undetectably: wrap both writes in one transaction. On standalone mongod, fall back to sequential writes. Preserve `ceoSalary` being optional: only `$set` when already present.
   const round2 = (v: number) => Math.round(v * 100) / 100;
   const round4 = (v: number) => Math.round(v * 10000) / 10000;
   const corpSet: Record<string, unknown> = {
@@ -273,26 +259,20 @@ export async function convertCorpCurrency(
     revertCorpSet.ceoSalary = corp.ceoSalary;
   }
 
-  // ─── WHAT AN FX FLIP MAY AND MAY NOT TOUCH ──────────────────────────────
+  // Fields an FX flip may and may not touch.
   // `revenue` and `currentGrowthCost` are LOCAL-currency fields, so a change of
   // the owner's currency re-denominates them. The capacity fields are not:
-  //   - `capitalStock` is a count of output units/day — currency-free.
+  //   - `capitalStock` is a count of output units/day: currency-free.
   //   - `buildQueue[].costPaidAnchor` and `constructionInProgressAnchor` are
-  //     ₳-ANCHORED by definition (see SectorBuildOrder / CorporateSector), i.e.
-  //     already currency-independent. Rescaling either by the FX cross would
-  //     silently restate cash already spent and inflate every subsequent CIP
-  //     figure and 0.75 cancellation refund by that cross rate. They are
-  //     deliberately absent from this write and must stay absent.
+  //     already currency-independent (see SectorBuildOrder / CorporateSector).
+  //     Rescaling either would silently restate cash already spent and inflate
+  //     every later CIP figure and 0.75 cancellation refund by the cross rate.
+  //     They must stay absent from this write.
   //
-  // Under plants `revenue` is DERIVED (`capitalStock × mixPrice`, restated by
-  // the turn processor each turn in the sector's HOST currency, not the
-  // owner's), so rescaling it here is both pointless and a write to a field the
-  // engine owns. Gated off at that tier; unchanged below it.
-  // PLANTS-GATED: `revenue` is rescaled only BELOW the plants tier. At plants
-  // and above the turn processor restates it every turn from `capitalStock x
-  // mixPrice` in the sector's HOST currency, which the owner's currency change
-  // does not touch, so rescaling here would be both pointless and a write to a
-  // field the engine owns. `currentGrowthCost` is still rescaled in every mode.
+  // PLANTS-GATED: above the plants tier the turn processor restates `revenue`
+  // every turn from `capitalStock x mixPrice` in the sector's HOST currency,
+  // so rescaling here would write a field the engine owns. It is rescaled only
+  // below the plants tier. `currentGrowthCost` is rescaled in every mode.
   const plantsEnabled = marketAtLeast(await getMarketSystemModeForDb(db), "plants");
   const sectorOps: AnyBulkWriteOperation<CorporateSector>[] = sectors.map((s, index) => ({
     updateOne: {
@@ -338,7 +318,7 @@ export async function convertCorpCurrency(
   ) => {
     let corpWriteApplied = false;
     try {
-      const corpWrite = await db.collection<Corporation>("corporations").updateOne(
+      const corpWrite = await corporationsCollection(db).updateOne(
         {
           _id: corp._id,
           primaryUnderwritingIncomingFunding: { $exists: false },
@@ -353,9 +333,7 @@ export async function convertCorpCurrency(
       }
       corpWriteApplied = true;
       if (sectorOps.length > 0) {
-        const bulkResult = await db
-          .collection<CorporateSector>("corporateSectors")
-          .bulkWrite(sectorOps, sessionOpts);
+        const bulkResult = await corporateSectorsCollection(db).bulkWrite(sectorOps, sessionOpts);
         // A matchedCount shortfall means sectors exist in the DB that we fetched
         // but the bulkWrite didn't touch — the corp's liquidCurrencyCode would be
         // flipped while those sectors retain old-currency revenue values, inflating
@@ -382,14 +360,14 @@ export async function convertCorpCurrency(
         try {
           // An ordered bulkWrite can apply an arbitrary prefix before throwing.
           // Restore every fetched sector, not just the reported matched count.
-          await db.collection<CorporateSector>("corporateSectors").bulkWrite(restoreSectorOps);
+          await corporateSectorsCollection(db).bulkWrite(restoreSectorOps);
         } catch (revertError) {
           revertErrors.push(revertError);
           Sentry.captureException(revertError as Error);
         }
       }
       try {
-        await db.collection<Corporation>("corporations").updateOne(
+        await corporationsCollection(db).updateOne(
           { _id: corp._id },
           {
             $set: revertCorpSet,

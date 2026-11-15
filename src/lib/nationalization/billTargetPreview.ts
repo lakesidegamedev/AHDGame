@@ -5,7 +5,7 @@
 // cooldown skip — see spec §13.4).
 import { operatingSectorFilter, type OperatingSectorType } from "@/lib/constants/corporations";
 import type { Db, ObjectId } from "mongodb";
-import type { CentralBank, Character, Corporation, CorporateSector, State } from "@/lib/db/types";
+import type { Corporation, CorporateSector, State } from "@/lib/db/types";
 import type { UnownedSector } from "@/lib/db/types/unownedSector";
 import type { CountryId } from "@/lib/constants/countries";
 
@@ -21,6 +21,12 @@ import { isWithinRenationalizeCooldown } from "./privatizationShares";
 import { resolveCorpEligibility } from "./targetEligibility";
 import type { SectorScope } from "./nationalizeSectorWide";
 import { loadWorldEraUnitScale } from "@/lib/currency/gdpAnchorRate";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
 
 export interface SectorPreviewAffectedCorp {
   corporationId: string;
@@ -64,7 +70,7 @@ export async function computeSectorNationalizationPreview(
   const countryCurrency = (COUNTRY_CURRENCY_MAP[countryId] ?? "USD") as CurrencyCode;
 
   const [centralBanks, fxByCurrency, marketMode, previewGameState] = await Promise.all([
-    db.collection<CentralBank>("centralBanks").find({}).toArray(),
+    centralBanksCollection(db).find({}).toArray(),
     loadFxRatesByCurrency(db),
     getMarketSystemModeForDb(db),
     getGameState(db),
@@ -85,8 +91,7 @@ export async function computeSectorNationalizationPreview(
 
   // ── Corp-held pool ──
   if (scope !== "unowned" && f > 0) {
-    const sectors = await db
-      .collection<CorporateSector>("corporateSectors")
+    const sectors = await corporateSectorsCollection(db)
       .find({ countryId, ...laneFilter })
       .toArray();
     const byCorp = new Map<string, CorporateSector[]>();
@@ -96,8 +101,7 @@ export async function computeSectorNationalizationPreview(
     }
     // One fetch for every corp holding a sector in this pool; this was a
     // findOne per corp inside the loop below.
-    const corpDocs = await db
-      .collection<Corporation>("corporations")
+    const corpDocs = await corporationsCollection(db)
       .find({ _id: { $in: [...byCorp.values()].map((s) => s[0].corporationId) } })
       .toArray();
     const corpById = new Map(corpDocs.map((c) => [String(c._id), c]));
@@ -148,8 +152,7 @@ export async function computeSectorNationalizationPreview(
 
   // ── Unowned market pool (free) ──
   if (scope !== "corporations" && f > 0) {
-    const unowned = await db
-      .collection<UnownedSector>("unownedSectors")
+    const unowned = await unownedSectorsCollection(db)
       .find({ countryId, ...laneFilter })
       .toArray();
     for (const u of unowned) unownedSliceRevenue += Math.round((u.revenue ?? 0) * f);
@@ -207,8 +210,7 @@ export async function computeNationalizationTargetDetail(
 ): Promise<NationalizationTargetDetail> {
   const elig = await resolveCorpEligibility(db, countryId, corp, currentTurn);
 
-  const sectors = await db
-    .collection<CorporateSector>("corporateSectors")
+  const sectors = await corporateSectorsCollection(db)
     .find({ corporationId: corp._id })
     .project<{
       sectorType: CorporateSector["sectorType"];
@@ -230,8 +232,7 @@ export async function computeNationalizationTargetDetail(
   const stateIds = [...new Set(sectors.map((s) => s.stateId).concat(corp.headquartersState))];
   const stateDocs =
     stateIds.length > 0
-      ? await db
-          .collection<State>("states")
+      ? await statesCollection(db)
           .find({ _id: { $in: stateIds } }, { projection: { _id: 1, name: 1 } })
           .toArray()
       : [];
@@ -240,9 +241,10 @@ export async function computeNationalizationTargetDetail(
 
   let ceoName: string | null = null;
   if (!corp.ceoVacant && corp.ceoId) {
-    const ceo = await db
-      .collection<Character>("characters")
-      .findOne({ _id: corp.ceoId }, { projection: { name: 1 } });
+    const ceo = await charactersCollection(db).findOne(
+      { _id: corp.ceoId },
+      { projection: { name: 1 } }
+    );
     ceoName = ceo?.name ?? null;
   }
 
@@ -334,9 +336,7 @@ export async function computeNationalizationProvisionDetail(
     return { kind: "sector", sector };
   }
   if (provision.targetCorporationId) {
-    const corp = await db
-      .collection<Corporation>("corporations")
-      .findOne({ _id: provision.targetCorporationId });
+    const corp = await corporationsCollection(db).findOne({ _id: provision.targetCorporationId });
     if (corp && corp.countryId === countryId && !isStateOwned(corp)) {
       const corpDetail = await computeNationalizationTargetDetail(db, countryId, corp, currentTurn);
       return { kind: "corp", corp: corpDetail };

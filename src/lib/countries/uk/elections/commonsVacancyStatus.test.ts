@@ -5,7 +5,7 @@
  */
 import { describe, expect, it } from "vitest";
 import { ObjectId } from "mongodb";
-import { createFakeCommonsDb } from "@/lib/uk/elections/commonsTestDb";
+import { createFakeCommonsDb } from "@/lib/countries/uk/elections/commonsTestDb";
 import { loadCommonsVacancyStatus } from "./commonsVacancyStatus";
 import { COMMONS_BY_ELECTION_TOTAL_TURNS } from "@/lib/turn/commonsByElections";
 

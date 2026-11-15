@@ -1,22 +1,19 @@
 /**
- * Sector tech-tree node content (v2 — branching lanes).
+ * Sector tech-tree node content (v2, branching lanes).
  *
  * Each decade tier forks into two lanes:
- *  - **generic** (Corporate): shared across all 17 sectors, authored once below;
+ *  - **generic** (Corporate): shared across all sectors, authored once below;
  *  - **sector** (Specialist): unique to each sector type.
  *
- * Each lane has 9 unique nodes per decade (slots 1-9), plus v3 slots 10-15. The CEO commits to ONE lane per
- * decade (first unlock commits); switching requires abandoning that decade. Some
- * nodes carry an `unlockStrategy` effect that makes a production method
- * (SECTOR_STRATEGIES entry) available — modern methods stay locked until then.
+ * Each lane has 9 unique nodes per decade, plus v3 slots 10-15. The CEO commits
+ * to ONE lane per decade (first unlock commits); switching abandons that decade.
+ * Some nodes carry an `unlockStrategy` effect that makes a production method
+ * available; modern methods stay locked until then.
  *
- * Cost model: rdScore cost on the first six decades is ~1/6 of v1
- * (40/55/70/85/100/120); later decades continue the table. Unlocking also
- * debits cash as a fraction of the corp's daily gross revenue
+ * Unlocking costs rdScore and a fraction of daily gross revenue
  * (TECH_NODE_CASH_REVENUE_FRACTION, optionally overridden per node).
  *
- * Tier ART is shared per (lane, sector, decade) — resolved in ./images.ts, not
- * stored on the node.
+ * Tier ART is shared per (lane, sector, decade), resolved in ./images.ts.
  */
 
 import { OPERATING_SECTOR_TYPES, type OperatingSectorType } from "../corporations";
@@ -24,6 +21,8 @@ import type { TechEffect } from "./effects";
 import { TECH_DECADES } from "./decades";
 import { SECTOR_EARLY_FILL } from "./earlySectorFill";
 import { CORPORATE_V3, SECTOR_V3 } from "./v3";
+import { TIER_2039_CORPORATE, TIER_2039_SECTOR } from "./tier2039";
+import { TIER_2049_CORPORATE, TIER_2049_SECTOR } from "./tier2049";
 
 export type TechLane = "generic" | "sector";
 
@@ -63,7 +62,7 @@ export interface NodeSpec {
 }
 
 /** rdScore cost per decade tier, 20% below the v2 curve (6/8/10/14/16/22/30/38/48/60). */
-const DECADE_COST: Record<string, number> = {
+export const DECADE_COST: Record<string, number> = {
   "1940": 5,
   "1950": 6,
   "1960": 8,
@@ -74,6 +73,8 @@ const DECADE_COST: Record<string, number> = {
   "2009": 30,
   "2019": 38,
   "2029": 48,
+  "2039": 60,
+  "2049": 75,
 };
 
 /**
@@ -1521,8 +1522,11 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       },
       {
         name: "Social Distribution",
-        description: "Social sharing amplifies reach.",
-        effects: [{ kind: "marketingStrength", flat: 60 }],
+        description: "Social sharing amplifies reach and unlocks the Social Platform model.",
+        effects: [
+          { kind: "unlockStrategy", strategyId: "social_platform" },
+          { kind: "marketingStrength", flat: 60 },
+        ],
       },
       {
         name: "Cloud Production",
@@ -1538,8 +1542,11 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       },
       {
         name: "Influencer Networks",
-        description: "Creator partnerships extend reach.",
-        effects: [{ kind: "marketingStrength", flat: 70 }],
+        description: "Creator partnerships extend reach and unlock the Creator Network model.",
+        effects: [
+          { kind: "unlockStrategy", strategyId: "creator_network" },
+          { kind: "marketingStrength", flat: 70 },
+        ],
       },
       {
         name: "Short-Form Video",
@@ -1563,8 +1570,9 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
     "2029": [
       {
         name: "AI-Generated Content",
-        description: "Generative pipelines slash production cost.",
+        description: "Generative pipelines slash production cost and unlock AI-Generated Media.",
         effects: [
+          { kind: "unlockStrategy", strategyId: "ai_generated_media" },
           { kind: "laborCostReduction", pct: 0.12 },
           { kind: "growthCostReduction", pct: 0.1 },
         ],
@@ -3828,8 +3836,12 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       },
       {
         name: "Creator Platforms",
-        description: "Creator ecosystems scale content cheaply.",
-        effects: [{ kind: "marketingStrength", flat: 60 }],
+        description:
+          "Creator ecosystems scale content cheaply and unlock the Creator Network model.",
+        effects: [
+          { kind: "unlockStrategy", strategyId: "creator_network" },
+          { kind: "marketingStrength", flat: 60 },
+        ],
       },
     ],
     "2029": [
@@ -3848,8 +3860,11 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       },
       {
         name: "Generative Game Content",
-        description: "AI-built worlds slash production cost.",
-        effects: [{ kind: "growthCostReduction", pct: 0.08 }],
+        description: "AI-built worlds slash production cost and unlock AI-Generated Media.",
+        effects: [
+          { kind: "unlockStrategy", strategyId: "ai_generated_media" },
+          { kind: "growthCostReduction", pct: 0.08 },
+        ],
       },
       {
         name: "Holographic Entertainment",
@@ -7102,6 +7117,18 @@ const SECTOR_EXTRA2: Partial<Record<OperatingSectorType, Record<string, NodeSpec
   },
 };
 
+// ─── Tiers authored as one block per tier (2039 onward) ───────────────────────
+// Slots 1-9 for every lane in a single module per tier; slots 10-15 stay in ./v3.
+const LATE_TIER_CORPORATE: Record<string, NodeSpec[]> = {
+  "2039": TIER_2039_CORPORATE,
+  "2049": TIER_2049_CORPORATE,
+};
+
+const LATE_TIER_SECTOR: Record<string, Record<OperatingSectorType, NodeSpec[]>> = {
+  "2039": TIER_2039_SECTOR,
+  "2049": TIER_2049_SECTOR,
+};
+
 function specToNode(
   spec: NodeSpec,
   id: string,
@@ -7148,13 +7175,17 @@ function specToNodeV3(
 function buildTreeForSector(sectorType: OperatingSectorType): TechTreeNode[] {
   const nodes: TechTreeNode[] = [];
   for (const decade of TECH_DECADES) {
-    const cost = DECADE_COST[decade.id] ?? 12;
+    const cost = DECADE_COST[decade.id];
+    if (cost === undefined) {
+      throw new Error(`Tech tree: no DECADE_COST entry for tier "${decade.id}"`);
+    }
     // Base 5 (slots 1–5) + extend each branch: slots 6,7 then slots 8,9 so each
     // sub-path is a chain of four (2→4→6→8 and 3→5→7→9).
     const corpSpecs = [
       ...(CORPORATE[decade.id] ?? []),
       ...(CORPORATE_EXTRA[decade.id] ?? []),
       ...(CORPORATE_EXTRA2[decade.id] ?? []),
+      ...(LATE_TIER_CORPORATE[decade.id] ?? []),
     ];
     corpSpecs.forEach((spec, i) => {
       nodes.push(specToNode(spec, corpNodeId(decade.id, i + 1), decade.id, "generic", i + 1, cost));
@@ -7171,6 +7202,7 @@ function buildTreeForSector(sectorType: OperatingSectorType): TechTreeNode[] {
       ...(SECTOR_EARLY_FILL[sectorType]?.[decade.id] ?? []),
       ...(SECTOR_EXTRA[sectorType]?.[decade.id] ?? []),
       ...(SECTOR_EXTRA2[sectorType]?.[decade.id] ?? []),
+      ...(LATE_TIER_SECTOR[decade.id]?.[sectorType] ?? []),
     ];
     sectorSpecs.forEach((spec, i) => {
       nodes.push(

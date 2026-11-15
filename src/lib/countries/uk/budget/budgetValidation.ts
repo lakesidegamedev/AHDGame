@@ -1,8 +1,8 @@
 import { UK_LAWS } from "@/lib/politicalLegislation/laws/ukLaws";
 
 /**
- * Pure validation for a UK Budget (epic #856, ticket #858).
- * No DB, no side effects — reused by the API and the vote path.
+ * Pure validation for a UK Budget.
+ * No DB, no side effects; reused by the API and the vote path.
  */
 
 /** Real UK tax lever ids (e.g. "uk.tax.incomeTax"). */

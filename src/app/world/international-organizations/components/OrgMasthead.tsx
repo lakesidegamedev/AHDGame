@@ -17,16 +17,7 @@ function viewerCountry(viewer: OrgViewerInfo | null): CountryId | null {
   return homeCountryOf(viewer);
 }
 
-export function OrgMasthead({
-  org,
-  viewer,
-  alignmentEnabled = false,
-}: {
-  org: OrgSummary;
-  viewer: OrgViewerInfo | null;
-  /** Gates the Influence tab. Fail-closed: absent means off. */
-  alignmentEnabled?: boolean;
-}) {
+export function OrgMasthead({ org, viewer }: { org: OrgSummary; viewer: OrgViewerInfo | null }) {
   const { identity, def, derived } = org;
   const pathname = usePathname();
   const base = orgHref(org);
@@ -59,14 +50,12 @@ export function OrgMasthead({
     org.pendingMembershipProposals.length +
     org.pendingLeadershipElections.length;
 
-  // Influence appears only when bloc alignment is switched on — a world with the
-  // gate off must show no trace of the feature. Once on it shows for EVERY org,
-  // including those with no channel this era, which explain why rather than
-  // appearing and disappearing between eras.
+  // Influence shows for EVERY org, including those with no channel this era,
+  // which explain why rather than appearing and disappearing between eras.
   const subTabs: { seg: "overview" | "flagship" | "influence"; label: string }[] = [
     { seg: "overview", label: "Overview" },
     { seg: "flagship", label: ORGANIZATION_CATEGORY_META[def.category].flagshipLabel },
-    ...(alignmentEnabled ? [{ seg: "influence" as const, label: "Influence" }] : []),
+    { seg: "influence", label: "Influence" },
   ];
 
   return (
@@ -212,22 +201,11 @@ export function OrgMasthead({
 }
 
 /**
- * What the fund takes in each year, and from whom.
- *
- * Dues and tribute are separate lines because they are separate bargains: the
- * voting members set the dues they pay, while members without a vote pay a fixed
- * tribute they have no say in. Showing only the dues understated an armed bloc's
- * real income badly — in 1953 NATO's tribute payers out-earn its voters — and
- * showed a total nobody was actually charged.
- *
- * These two follow the viewer's display-currency preference; the BALANCE beside
- * them deliberately does not. A balance is an account — you cannot spend dollars
- * out of the Warsaw Pact's fund, and the commit input has to be in the units the
- * API accepts — but an annual income figure is informational, and ₽2.26bn means
- * nothing to a player with no stake in the rouble.
- *
- * Orgs that levy no tribute (the UN, the Commonwealth, anything outside a 1953
- * world) keep the single-line form rather than carrying a permanent zero.
+ * Annual fund income: dues and tribute are separate lines because they are
+ * separate bargains (voting members set dues; tribute payers have no say),
+ * shown in the viewer's display currency. The BALANCE beside it stays in the
+ * fund's own currency because it is an account and the commit input must match
+ * the API. Orgs with no tribute (e.g. UN, Commonwealth) show a single line.
  */
 function fundIncomeSummary(
   fund: OrgSummary["fund"],

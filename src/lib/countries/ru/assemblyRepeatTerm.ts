@@ -5,12 +5,10 @@
  */
 import type { ClientSession, Db } from "mongodb";
 import type { CountryGameState } from "@/lib/db/types";
-import {
-  RUSSIAN_ASSEMBLY_SEATINGS_COLLECTION,
-  type RussianAssemblySeatingRecord,
-} from "./assemblySeating";
+import { type RussianAssemblySeatingRecord } from "./assemblySeating";
 import { loadRussianDumaAuthority, russianDumaBoundRoot } from "./dumaConvocationAuthority";
 import { validateRussianAssemblyRepeatTerm } from "./rules/assemblyTermBinding";
+import { russianAssemblySeatingsCollection } from "@/lib/db/repositories/russianAssemblySeatings";
 export async function loadRussianAssemblyRepeatTerm(input: {
   db: Db;
   session?: ClientSession;
@@ -50,18 +48,16 @@ export async function loadRussianAssemblyRepeatTerm(input: {
       throw new Error("Duma repeat exceeds its original convocation term");
     if (
       previous?.seatedOnTurn != null &&
-      !(await db
-        .collection<RussianAssemblySeatingRecord>(RUSSIAN_ASSEMBLY_SEATINGS_COLLECTION)
-        .findOne(
-          {
-            countryId: "RU",
-            preset: "1991-default",
-            dumaRootCohortId: record.cohortId,
-            dumaResultId: previous._id,
-            seatedOnTurn: previous.seatedOnTurn,
-          },
-          { session, projection: { _id: 1 } }
-        ))
+      !(await russianAssemblySeatingsCollection<RussianAssemblySeatingRecord>(db).findOne(
+        {
+          countryId: "RU",
+          preset: "1991-default",
+          dumaRootCohortId: record.cohortId,
+          dumaResultId: previous._id,
+          seatedOnTurn: previous.seatedOnTurn,
+        },
+        { session, projection: { _id: 1 } }
+      ))
     )
       throw new Error("Duma predecessor seating needs its actual receipt");
     return {
@@ -72,9 +68,7 @@ export async function loadRussianAssemblyRepeatTerm(input: {
   const dumaRootId = country.ruFirstDumaElectionCohortId?.toHexString();
   const councilRootId = country.ruFirstCouncilElectionCohortId?.toHexString();
   const seated = country.ruFederalAssemblySinceTurn != null;
-  const journals = db.collection<RussianAssemblySeatingRecord>(
-    RUSSIAN_ASSEMBLY_SEATINGS_COLLECTION
-  );
+  const journals = russianAssemblySeatingsCollection<RussianAssemblySeatingRecord>(db);
   const root =
     seated && dumaRootId && councilRootId
       ? await journals.findOne(

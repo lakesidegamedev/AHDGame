@@ -1,6 +1,7 @@
 import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import type { NotificationType, Notification } from "@/lib/db/types";
+import { notificationsCollection } from "@/lib/db/repositories/notifications";
 
 export interface NotificationInput {
   userId: ObjectId;
@@ -50,7 +51,7 @@ export async function createNotification(opts: NotificationInput): Promise<void>
   if (!hasRecipient(opts)) return;
   try {
     const db = await getDb();
-    await db.collection<Omit<Notification, "_id">>("notifications").insertOne(toDoc(opts));
+    await notificationsCollection<Omit<Notification, "_id">>(db).insertOne(toDoc(opts));
   } catch (err) {
     // Non-fatal — log but don't crash the caller
     console.error("[createNotification] Failed:", err);
@@ -70,9 +71,7 @@ export async function createNotifications(inputs: NotificationInput[]): Promise<
   if (deliverable.length === 0) return;
   try {
     const db = await getDb();
-    await db
-      .collection<Omit<Notification, "_id">>("notifications")
-      .insertMany(deliverable.map(toDoc));
+    await notificationsCollection<Omit<Notification, "_id">>(db).insertMany(deliverable.map(toDoc));
   } catch (err) {
     console.error("[createNotifications] Failed:", err);
   }

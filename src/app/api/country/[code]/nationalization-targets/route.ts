@@ -11,12 +11,12 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { COUNTRY_CURRENCY_MAP, type CurrencyCode } from "@/lib/constants/currencies";
-import type { Corporation } from "@/lib/db/types";
 import { getCharacterByUserId } from "@/lib/db/characterLookup";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { isSittingLeader } from "@/lib/governorOffice/isSittingLeader";
 import { isStateOwned } from "@/lib/nationalization/nationalCorporation";
 import { resolveCorpEligibilityBatch } from "@/lib/nationalization/targetEligibility";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 interface RouteParams {
   params: Promise<{ code: string }>;
@@ -50,8 +50,7 @@ export async function GET(request: Request, { params }: RouteParams) {
     const fallbackCurrency = (COUNTRY_CURRENCY_MAP[countryId] ?? "USD") as CurrencyCode;
 
     // Candidate pool: corps HQ'd here that are not already state-owned.
-    const candidates = await db
-      .collection<Corporation>("corporations")
+    const candidates = await corporationsCollection(db)
       .find({ countryId, countryOwnerId: { $exists: false } })
       .toArray();
 

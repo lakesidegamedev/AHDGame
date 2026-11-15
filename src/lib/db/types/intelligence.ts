@@ -2,7 +2,7 @@ import type { ObjectId } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 
 /** The three domains an operation can work in. Political is deliberately absent. */
-export type IntelligenceDomain = "strategic" | "military" | "economic";
+export type IntelligenceDomain = "strategic" | "military" | "economic" | "cyber";
 
 /** Did the operation do what it set out to do. */
 export type OperationOutcome = "success" | "miss";
@@ -110,6 +110,10 @@ export interface IntelligenceOpLog {
   budgetSpent: number;
   slotsSpent: number;
   effectSummary: string;
+  /** Cyber launch rows only: one launch per pair and turn, held by a unique index. */
+  launchKey?: string;
+  /** Cyber stand-down rows only: the turn the truce between the pair lapses. */
+  truceUntilTurn?: number;
   turn: number;
   createdAt: Date;
 }

@@ -1,5 +1,6 @@
 import { fundingResponse } from "../spendingChannel";
 import type { RegistryNode } from "../types";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 /**
  * Social-tier nodes — P3a ships the income/poverty cluster's social side
@@ -11,37 +12,16 @@ import type { RegistryNode } from "../types";
  */
 
 /**
- * Recalibration (ticket #826 item 14 follow-up, 6-category spend-response
- * pass): the `{spending: "social"}` channel is a SHARED constant read by 6
- * call-sites across 4 files (social.ts x2 below, plus publicSafety.ts
- * recidivismRate, governance.ts rentenStabilitaet + militaryReadiness, and
- * economic.ts povertyRate — see spendingProvider.ts CHANNEL_SOURCE_KEYS,
- * which pools "social"/"welfare"/"socialSecurity" byCategory keys).
+ * Saturation half-point for the `{spending: "social"}` channel, shared by 6
+ * call sites across social.ts, publicSafety.ts, governance.ts, and
+ * economic.ts (pooled via CHANNEL_SOURCE_KEYS: social/welfare/socialSecurity).
  *
- * Real per-capita range this channel actually sees (US, the only country
- * with live production data + a bill touching this channel):
- *  - Federal seed baseline: NATIONAL_BUDGET_SEED_CONFIGS US socialSecurity
- *    $900B / population 333,000,000 = $2,702.70/capita
- *    (src/lib/seeds/reference/budgets.ts). US state budgets carry no
- *    social/welfare/socialSecurity byCategory line at all, so this federal
- *    pool IS the whole channel today.
- *  - The only US lever: `us_social_security` (legislationTypes.ts,
- *    budgetCategory "socialSecurity", nationalOnly) — its 7 policyOptions'
- *    annualCostPerCapita run [5303, 4167, 3637, 3182, 2652, 1515, 0] from
- *    Universal Expansion (left) to Abolition (right). Real achievable range
- *    is therefore $0-$5,303/capita, with the unlegislated seed default
- *    ($2,702.70) sitting almost exactly on the "moderate" $3,182 option.
- *
- * Old halfSat=1.5 saturated this at ~99.94% response at the seed baseline
- * and ~99.97% at the richest expansion bill — a ~0.03-point spread across
- * the entire real range, i.e. every consuming node (childPoverty,
- * incomeInequality, recidivismRate, rentenStabilitaet, militaryReadiness,
- * economic.povertyRate) saw a near-fixed offset regardless of policy choice
- * (this is the ticket's root cause). New halfSat=2700 (~= the $2,702.70
- * federal baseline) puts the response at ~50% at the unlegislated default
- * and gives real separation across the achievable range: Abolition ($0) =
- * 0%, Reform Act ($1,515) = 35.9%, seed baseline ($2,702.70) = 50.03%,
- * Universal Expansion ($5,303) = 66.26%.
+ * The channel sees $0-$5,303/capita (US socialSecurity lever across its 7
+ * policyOptions; unlegislated seed default is $2,702.70/capita). 2700 puts the
+ * unlegislated default at ~50% response and gives real separation across the
+ * range (Abolition ≈ 0%, Universal Expansion ≈ 66%). A smaller halfSat
+ * saturated almost the whole range, leaving every consuming node with a
+ * near-fixed offset regardless of policy choice.
  */
 export const SOCIAL_SPEND_HALF_SAT = 2700;
 
@@ -163,11 +143,11 @@ export const socialMobilityNode: RegistryNode = {
   decimals: 2, // 2dp: cabinet effects (≤0.05/turn) are reabsorbed at a coarser grain — bug #0800
   compute: (ctx) => {
     const grad = ctx.current["education.highSchoolGradRate"] ?? 88;
-    // #909: reads the merged universityEnrollment. Its equilibrium differs by
+    // Reads the merged universityEnrollment. Its equilibrium differs by
     // country (US anchors 55 — the former collegeEnrollment center — GCSE
     // countries anchor 40), so the deviation term is centered per country and
     // stays ~0 at seed (parity with the old collegeEnrollment read).
-    const uniCenter = ctx.countryId === "US" ? 55 : 40;
+    const uniCenter = countryHasFeature("usLib", ctx.countryId) ? 55 : 40;
     const uni = ctx.current["education.universityEnrollment"] ?? uniCenter;
     const gini = ctx.current["social.incomeInequality"] ?? 42;
     const povLag = ctx.prev["economic.povertyRate"] ?? 13;

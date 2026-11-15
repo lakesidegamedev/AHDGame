@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { TUTORIAL_CHAPTERS, chapterBlurb } from "@/lib/tutorial/chapters";
 import { tutorialWorldFromFlags } from "@/lib/tutorial/world";
 import { useWorldFlags } from "@/hooks/useWorldFlags";
+import { useHasSession } from "@/contexts/AuthDataContext";
 import {
   chapterIdsForPlan,
   isTutorialChapterId,
@@ -39,7 +40,13 @@ export function TutorialHubClient() {
   const [data, setData] = useState<PlanResponse | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
 
+  // The plan belongs to the signed-in player. A signed-out visitor gets a 401
+  // and an "could not load" message for data they do not have yet; skip the
+  // request instead and keep the chapter list readable.
+  const hasSession = useHasSession();
+
   const load = useCallback(async () => {
+    if (!hasSession) return;
     try {
       const res = await fetch("/api/tutorial/plan", { credentials: "same-origin" });
       if (!res.ok) {
@@ -50,7 +57,7 @@ export function TutorialHubClient() {
     } catch {
       setLoadFailed(true);
     }
-  }, []);
+  }, [hasSession]);
 
   // Initial load, plus a refresh on focus: the chooser writes through the same
   // endpoint, so coming back to this tab should show the new plan.

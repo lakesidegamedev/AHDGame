@@ -9,8 +9,7 @@ import type { StrategicSectorDesignation } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import type { OperatingSectorType } from "@/lib/constants/corporations";
 import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
-
-const COLLECTION = "strategicSectorDesignations";
+import { strategicSectorDesignationsCollection } from "@/lib/db/repositories/strategicSectorDesignations";
 
 export async function designateStrategicSector(
   db: Db,
@@ -22,7 +21,7 @@ export async function designateStrategicSector(
     sourceRef?: string;
   }
 ): Promise<void> {
-  await db.collection<StrategicSectorDesignation>(COLLECTION).updateOne(
+  await strategicSectorDesignationsCollection<StrategicSectorDesignation>(db).updateOne(
     { countryId: args.countryId, sectorType: args.sectorType },
     {
       $set: {
@@ -45,7 +44,10 @@ export async function removeStrategicSectorDesignation(
   countryId: CountryId,
   sectorType: OperatingSectorType
 ): Promise<void> {
-  await db.collection<StrategicSectorDesignation>(COLLECTION).deleteOne({ countryId, sectorType });
+  await strategicSectorDesignationsCollection<StrategicSectorDesignation>(db).deleteOne({
+    countryId,
+    sectorType,
+  });
 }
 
 /** The set of sector types designated strategic for a country. */
@@ -53,8 +55,7 @@ export async function getDesignatedSectorTypes(
   db: Db,
   countryId: CountryId
 ): Promise<Set<OperatingSectorType>> {
-  const docs = await db
-    .collection<StrategicSectorDesignation>(COLLECTION)
+  const docs = await strategicSectorDesignationsCollection<StrategicSectorDesignation>(db)
     .find({ countryId }, { projection: { sectorType: 1 } })
     .toArray();
   return new Set(docs.map((d) => d.sectorType));

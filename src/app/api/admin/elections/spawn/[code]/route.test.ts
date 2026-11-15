@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@/lib/api/requireAdmin", () => ({ requireAdmin: vi.fn() }));
-vi.mock("@/lib/turn/perpetualElections", async () => {
-  const actual = await vi.importActual<typeof import("@/lib/turn/perpetualElections")>(
-    "@/lib/turn/perpetualElections"
+vi.mock("@/lib/elections/scheduling", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/elections/scheduling")>(
+    "@/lib/elections/scheduling"
   );
   return {
     ...actual,

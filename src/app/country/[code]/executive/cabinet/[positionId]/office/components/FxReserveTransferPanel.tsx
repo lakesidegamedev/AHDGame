@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import { Button } from "@/components/ui";
 import type { CountryId } from "@/lib/constants/countriesCore";
-import { COUNTRY_CURRENCY_MAP, CURRENCY_SYMBOLS } from "@/lib/constants/currencies";
+import { COUNTRY_CURRENCY_MAP, CURRENCY_SYMBOLS } from "@/lib/constants/currencyCodes";
 import { apiErrorText } from "@/lib/errors/catalog";
 
 interface Props {

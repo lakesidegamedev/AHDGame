@@ -17,16 +17,57 @@ import type { PortfolioId } from "./departmentCatalog";
 import { JURISDICTION_MODES } from "@/lib/legislature/jurisdiction";
 
 const INITIAL_COUNTRY_SCOPES = new Set(["us", "uk", "jp"]);
+
+const PUBLIC_HEALTH_LAW_ID = "us.health.prevention.primary";
+/** The one level that carries a department program. */
+const PUBLIC_HEALTH_PROGRAM_OPTION_ID = "l4";
+
+const PUBLIC_HEALTH_ADMINISTRATION: LegislationAdministration = {
+  primaryPortfolioId: "health",
+  primaryDepartmentId: "us_health_department",
+  responsiblePositionId: "secretary_of_health",
+  lawKind: "service_program",
+  implementationMode: "direct",
+  allowedJurisdictionModes: ["national_direct"],
+  defaultJurisdictionMode: "national_direct",
+  jurisdictionMode: "national_direct",
+  appropriationClass: "operating",
+  fundingSemantics: "appropriation_included",
+  capacityDemand: { public_health_operations: 100 },
+  rampProfileId: "standard",
+  policyFamilyId: PUBLIC_HEALTH_LAW_ID,
+};
+
+const PUBLIC_HEALTH_PROGRAM_IMPLEMENTATION: PolicyOptionImplementation = {
+  programId: "us_public_health_workforce",
+  fundingSemantics: "appropriation_included",
+  appropriationClass: "operating",
+  obligationPriority: 6,
+  capacityType: "public_health_operations",
+  outcome: { category: "healthcare", metricId: "publicHealthPreparedness" },
+};
+
+function withAuthoredPublicHealth(type: LegislationType): LegislationType {
+  if (type._id !== PUBLIC_HEALTH_LAW_ID) return type;
+  return {
+    ...type,
+    administration: PUBLIC_HEALTH_ADMINISTRATION,
+    policyOptions: type.policyOptions?.map((option) =>
+      option.id === PUBLIC_HEALTH_PROGRAM_OPTION_ID
+        ? { ...option, implementation: PUBLIC_HEALTH_PROGRAM_IMPLEMENTATION }
+        : option
+    ),
+  };
+}
 const REGIONAL_MARKERS = ["_state_", "_regional_", "resident_tax", "fixed_asset_tax"];
 const OPTION_JURISDICTION_MODES = new Map<string, JurisdictionMode>([
-  ["us_federal_education_funding:federal_education_funding_opt_4", "grant_supported_regional"],
-  ["us_federal_education_funding:federal_education_funding_opt_5", "regional_discretion"],
-  ["us_federal_education_funding:federal_education_funding_opt_6", "regional_discretion"],
-  ["us_school_standards:school_standards_opt_2", "concurrent"],
-  ["us_school_standards:school_standards_opt_3", "regional_discretion"],
-  ["us_federal_healthcare_funding:federal_healthcare_funding_opt_5", "grant_supported_regional"],
-  ["us_transportation:transportation_opt_4", "regional_discretion"],
-  ["us_conservation:conservation_opt_5", "regional_discretion"],
+  ["us.education.universalSchooling.primary:l1", "grant_supported_regional"],
+  ["us.education.universalSchooling.primary:l0", "regional_discretion"],
+  ["us.education.standards.primary:l1", "concurrent"],
+  ["us.education.standards.primary:l2", "regional_discretion"],
+  ["us.health.universalCare.primary:l0", "grant_supported_regional"],
+  ["us.infrastructure.transit.primary:l1", "regional_discretion"],
+  ["us.environment.stewardship.primary:l0", "regional_discretion"],
   ["resource_extraction_authority:concurrent_licensing", "concurrent"],
   ["resource_extraction_authority:state_licensing", "regional_discretion"],
 ]);
@@ -256,7 +297,7 @@ export function buildLawAdministration(type: LegislationType): LegislationAdmini
 }
 
 export function withLawAdministration(types: LegislationType[]): LegislationType[] {
-  return types.map((type) => {
+  return types.map(withAuthoredPublicHealth).map((type) => {
     // Unscoped legislation types are legacy US records throughout the existing
     // policy pipeline. Materialize them too so enabling administration does not
     // make long-lived US laws suddenly unproposable.

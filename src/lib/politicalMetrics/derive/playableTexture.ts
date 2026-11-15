@@ -1,45 +1,31 @@
 /**
- * Playable-region texture derivation for the 1953 preset (issue #704).
+ * Playable-region texture derivation for the 1953 preset.
  *
  * Playable countries (US/UK/RU/DD) seed from a single NATIONAL baseline per
- * family, so every region opens byte-identical except for the sparse
- * hand-authored REGIONAL_MODIFIERS_1953 table (24 of 63 families touched).
- * Non-playables instead seed per-region derived boards, which is why the four
- * countries players actually play are the flat ones.
- *
- * Replacing the authored NATIONAL_BASELINES_1953 levels wholesale with
- * deriveCountryBoard output is NOT an option: the derived levels are a
- * mechanical inversion of outcome metrics (US household income derives to 0.0
- * against an authored 72). So this module keeps the authored LEVEL and derives
- * only the per-region TEXTURE: each region's deviation from its
- * population-weighted country mean per family, computed from the same
- * legacy regional seeds (plus the same era overlays) the metric seeders apply.
+ * family, so every region would open identical except for the sparse
+ * hand-authored REGIONAL_MODIFIERS_1953 table. Replacing those authored levels
+ * with deriveCountryBoard output is NOT viable: the derived levels are a
+ * mechanical inversion of outcome metrics. So this module keeps the authored
+ * LEVEL and derives only the per-region TEXTURE: each region's deviation from
+ * its population-weighted country mean per family.
  *
  * Pipeline per country, per family:
- *   1. derive every region's board (deriveCountryBoard, year 1953, the
- *      1953-gated party roster lean). Families with no derivable source
- *      (today: the defense block, which has no legacy layer and no playable
- *      tier-4 row) carry no signal, so their deviation is 0.
+ *   1. derive every region's board; families with no derivable source carry
+ *      no signal and get deviation 0.
  *   2. subtract the population-weighted country mean, so the texture sums to
  *      zero and the authored national level survives reseeding exactly.
  *   3. zero entries where REGIONAL_MODIFIERS_1953 has a hand-authored value:
- *      deliberate history (Mississippi society.integration -18) wins outright
- *      and must not be diluted by a mechanical category average. Zeroed cells
- *      stay exactly zero through every later step.
- *   4. center the surviving subset to its own population-weighted zero mean
- *      (zeroed cells contribute nothing, so the full-population mean is zero
- *      too), then proportionally scale the family vector so the largest
- *      deviation is +/-TEXTURE_BOUND. Scaling, never clamping: clamping one
- *      tail would shift the mean the previous step just fixed.
- *   5. round to 1 decimal (the emitted board precision) and drop exact zeros.
- *
- * SCOPE: 1953-default only. The playable anchor table carries a single 1953
- * anchor, so any other preset's texture would sit unused.
+ *      deliberate history wins outright. Zeroed cells stay zero through every
+ *      later step.
+ *   4. center the surviving subset to its own population-weighted zero mean,
+ *      then proportionally scale the family vector so the largest deviation is
+ *      +/-TEXTURE_BOUND. Scaling, never clamping: clamping would shift the mean.
+ *   5. round to 1 decimal and drop exact zeros.
  *
  * OFFLINE USE ONLY. Feeds the codegen script whose output is committed and
- * reviewed (scripts/debug/derive-playable-region-texture-1953.ts --emit) plus
- * the determinism/staleness gate in regionalTexture1953.test.ts. Pure and
- * synchronous: committed seeds in, plain numbers out. Never reads live data.
+ * reviewed, plus the determinism/staleness gate in
+ * regionalTexture1953.test.ts. Pure and synchronous: committed seeds in, plain
+ * numbers out. Never reads live data.
  */
 import { deriveCountryBoard } from "./deriveFamilies";
 import { countryLeanFromParties, type CountryLean } from "./countryLean";
@@ -47,6 +33,7 @@ import { applyMetricPresetToMetrics, getRegionMetricPresets } from "@/lib/seeds/
 import { applyEra1953Adjustments } from "@/lib/seeds/reference/stateMetricsEra1953";
 import { stateMetrics1953 } from "@/lib/seeds/reference/stateMetrics1953";
 import { states1953 } from "@/lib/seeds/reference/states1953";
+import type { StateMetrics } from "@/lib/db/types";
 import { ukStateMetrics } from "@/lib/seeds/uk/ukStateMetrics";
 import { ukRegions1953 } from "@/lib/seeds/uk/ukRegions1953";
 import { ruStateMetrics } from "@/lib/seeds/ru/ruStateMetrics";
@@ -57,8 +44,21 @@ import { politicalParties } from "@/lib/seeds/reference/politicalParties";
 import { ukParties } from "@/lib/seeds/uk/ukParties";
 import { ruParties } from "@/lib/seeds/ru/ruParties";
 import { ddParties } from "@/lib/seeds/dd/ddParties";
+import { deStateMetrics } from "@/lib/countries/de/data/deStateMetrics";
+import { deRegions1953 } from "@/lib/countries/de/data/deRegions1953";
+import { deParties } from "@/lib/countries/de/data/deParties";
+import { jpStateMetrics } from "@/lib/countries/jp/data/jpStateMetrics";
+import { jpRegions1953 } from "@/lib/countries/jp/data/jpRegions1953";
+import { jpParties } from "@/lib/countries/jp/data/jpParties";
+import { cnStateMetrics } from "@/lib/countries/cn/data/cnStateMetrics";
+import { cnRegions1953 } from "@/lib/countries/cn/data/cnRegions1953";
+import { cnParties } from "@/lib/countries/cn/data/cnParties";
 import { REGIONAL_MODIFIERS_1953 } from "../seeds/regionalModifiers1953";
-import type { PoliticalMetricId, PoliticalMetricsCountryId } from "../types";
+import {
+  POLITICAL_METRIC_COUNTRY_IDS,
+  type PoliticalMetricId,
+  type PoliticalMetricsCountryId,
+} from "../types";
 
 /** The only preset this texture is derived for (single-1953-anchor table). */
 export const PLAYABLE_TEXTURE_PRESET = "1953-default";
@@ -93,7 +93,7 @@ export interface TextureCountryDiagnostic {
 }
 
 /** `{ category: { metricId: { value } } }` → `{ "category.metricId": value }`. */
-function flatten(doc: Record<string, unknown>): Record<string, number> {
+function flatten(doc: object): Record<string, number> {
   const flat: Record<string, number> = {};
   for (const [category, metrics] of Object.entries(doc)) {
     if (typeof metrics !== "object" || metrics == null) continue;
@@ -105,11 +105,14 @@ function flatten(doc: Record<string, unknown>): Record<string, number> {
   return flat;
 }
 
-const BASE_DOCS: Record<PoliticalMetricsCountryId, Array<Record<string, unknown>>> = {
-  US: stateMetrics1953 as unknown as Array<Record<string, unknown>>,
-  UK: ukStateMetrics as unknown as Array<Record<string, unknown>>,
-  RU: ruStateMetrics as unknown as Array<Record<string, unknown>>,
-  DD: ddStateMetrics1953 as unknown as Array<Record<string, unknown>>,
+const BASE_DOCS: Record<PoliticalMetricsCountryId, readonly StateMetrics[]> = {
+  US: stateMetrics1953,
+  UK: ukStateMetrics,
+  RU: ruStateMetrics,
+  DD: ddStateMetrics1953,
+  DE: deStateMetrics.filter((m) => deRegions1953.some((r) => r._id === m._id)),
+  JP: jpStateMetrics.filter((m) => jpRegions1953.some((r) => r._id === m._id)),
+  CN: cnStateMetrics.filter((m) => cnRegions1953.some((r) => r._id === m._id)),
 };
 
 const PARTY_ROSTERS: Record<PoliticalMetricsCountryId, readonly unknown[]> = {
@@ -117,6 +120,9 @@ const PARTY_ROSTERS: Record<PoliticalMetricsCountryId, readonly unknown[]> = {
   UK: ukParties,
   RU: ruParties,
   DD: ddParties,
+  DE: deParties,
+  JP: jpParties,
+  CN: cnParties,
 };
 
 const REGION_SEEDS: Record<
@@ -127,6 +133,9 @@ const REGION_SEEDS: Record<
   UK: ukRegions1953,
   RU: ruRegions1953,
   DD: ddRegions1953,
+  DE: deRegions1953,
+  JP: jpRegions1953,
+  CN: cnRegions1953,
 };
 
 /**
@@ -134,15 +143,16 @@ const REGION_SEEDS: Record<
  * era adjustments applied (as seedUKStateMetrics does); the other bundles
  * already carry them. Keyed record, not a country-literal branch.
  */
-const LEGACY_DOC_BUILDERS: Record<
-  PoliticalMetricsCountryId,
-  (raw: Record<string, unknown>) => Record<string, unknown>
-> = {
-  US: (raw) => raw,
-  UK: (raw) => applyEra1953Adjustments(raw as never) as unknown as Record<string, unknown>,
-  RU: (raw) => raw,
-  DD: (raw) => raw,
-};
+const LEGACY_DOC_BUILDERS: Record<PoliticalMetricsCountryId, (raw: StateMetrics) => StateMetrics> =
+  {
+    US: (raw) => raw,
+    UK: applyEra1953Adjustments,
+    RU: (raw) => raw,
+    DD: (raw) => raw,
+    DE: (raw) => raw,
+    JP: (raw) => raw,
+    CN: (raw) => raw,
+  };
 
 /**
  * The authoritative legacy regional seed for one region at 1953-default:
@@ -152,12 +162,12 @@ const LEGACY_DOC_BUILDERS: Record<
  */
 function legacyFlatFor(
   countryId: PoliticalMetricsCountryId,
-  raw: Record<string, unknown>
+  raw: StateMetrics
 ): Record<string, number> {
   let doc = LEGACY_DOC_BUILDERS[countryId](raw);
   const overlay = getRegionMetricPresets(countryId, String(raw._id), PLAYABLE_TEXTURE_PRESET);
   if (overlay) {
-    doc = applyMetricPresetToMetrics(doc as never, overlay) as unknown as Record<string, unknown>;
+    doc = applyMetricPresetToMetrics(doc, overlay);
   }
   return flatten(doc);
 }
@@ -289,7 +299,7 @@ export function derivePlayableTexture1953(): {
 } {
   const texture = {} as PlayableTexture;
   const diagnostics: TextureCountryDiagnostic[] = [];
-  for (const countryId of ["US", "UK", "RU", "DD"] as const) {
+  for (const countryId of POLITICAL_METRIC_COUNTRY_IDS) {
     const { texture: t, diagnostic } = deriveOneCountry(countryId);
     texture[countryId] = t;
     diagnostics.push(diagnostic);

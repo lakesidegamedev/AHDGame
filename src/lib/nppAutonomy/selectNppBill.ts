@@ -163,32 +163,20 @@ export function buildConditionsSignal(params: {
 // ── Platform fit ──────────────────────────────────────────────────────────────
 
 /**
- * Score how well a legislation type + policy option vector aligns with the
- * NPP's own policy positions. Returns a value in [0, 1], 1 = the option sits
- * exactly on the NPP's ideological point, 0 = as far as the -5..5 plane allows.
+ * Score how well a legislation type + policy option align with the NPP's own
+ * policy positions. Returns [0, 1], 1 = exact match, 0 = furthest apart on
+ * the -5..5 plane.
  *
- * This is a magnitude-aware nearest-point match (Euclidean distance on the
- * shared economic/social -5..5 plane), not a direction-only projection. A
- * prior direction-only formula normalized away the option's magnitude
- * (dividing by hypot(option.economic, option.social)), so every option
- * sharing the NPP's sign on a domain scored *identically* regardless of how
- * extreme it was — and whenever the NPP had no lean at all on a ladder's
- * active axis (economic:0 is the norm for e.g. every US defense option; only
- * social varies), *all* options tied. The deterministic first-wins tie-break
- * in bestPlatformFit/bestFitAmong then always picked whichever option was
- * seeded earliest in policyOptions — which for domain ladders ordered
- * weakest-to-strongest is the "abolish it" extreme. That is the mechanism
- * behind the incident where a near-neutral (economic:0.1, social:0) US NPP
- * autonomously repealed the Armed Forces Establishment Act and the Defense
- * Production and Research Act for "Skeleton Force" / "No Defense Industry
- * Policy" — both $0-cost options — deleting roughly a third of the federal
- * budget within about a year of the 1953 start (see selectNppBill.defenseGutting.test.ts).
+ * Must be magnitude-aware nearest-point (Euclidean distance), NOT a
+ * direction-only projection. A direction-only score normalizes away the
+ * option's magnitude, so every option sharing the NPP's sign scores identically
+ * and every option ties when the NPP is neutral on the varying axis. The
+ * deterministic first-wins tie-break then picks whichever option was seeded
+ * earliest, which for weakest-to-strongest ladders is the extreme "abolish it"
+ * end.
  *
- * Distance-based matching fixes this without foreclosing genuine
- * demilitarization/deregulation ("gravity, not rails"): an NPP whose own
- * position is itself near a ladder's extreme still matches that extreme
- * option best; a neutral or weakly-leaning NPP is pulled toward the ladder's
- * moderate/status-quo option instead of an array-order accident.
+ * Distance still lets a genuinely extreme NPP match an extreme option; a
+ * neutral or weakly-leaning NPP is pulled to the moderate/status-quo option.
  */
 function platformFitForOption(npp: NPP, option: LegislationPolicyOption): number {
   const economic = npp.policies?.economic ?? 0;
@@ -430,32 +418,11 @@ function relativeCost(
 
 /**
  * Fiscal-restraint pick for cost-bearing category ladders (health, defense,
- * education, infrastructure, welfare, …) - the spending-shaped legislation
- * that actually drives these countries' budgets but sits outside
- * `FISCAL_TIGHTENING_DOMAINS` (that set only covers the fiscal/tax/budget
- * domain strings, not per-category policyDomains). Without this, an austere
- * fiscal stance had literally no lever on the ladders that mattered: the
- * governing agenda's "raise" pull (a weak metric wants more spending) always
- * won by default, with nothing on the other side ever pulling back - the
- * mechanism behind the measured debt ratchet (ahd_sim_g53v4: YU/HU/PL/BG/RO
- * all read "expansionary" at 93-115% debt/GDP because their dominant cost
- * driver - health/defense ladders - never consulted the fiscal stance at
- * all).
- *
- * Domain-agnostic by design: it keys off each option's own cost field, not
- * `policyDomain` or `effectDirection` (whose sign convention differs by
- * ladder shape - a tax ladder's "cut" and a spending ladder's "cut" don't
- * share a sign), so it reaches any cost-bearing ladder without needing a
- * per-domain allowlist that goes stale as new legislation is authored.
- *
- * "Gravity, not rails": returns null (no restraint) for ladders with no real
- * cost spread - including the pre-existing `armedForcesLadder` regression
- * fixture, which carries no cost fields at all - and otherwise pulls
- * proportionally FROM the ladder's own middle rung TOWARD its cheapest rung
- * as `intensity` climbs, rather than snapping straight to the floor: a
- * barely-austere government (intensity just past the 0.25 stance threshold)
- * barely moves off center, a severely-distressed one (intensity 1) reaches
- * the cheapest option.
+ * education, infrastructure, welfare, ...) whose spending drives budgets but
+ * is not covered by `FISCAL_TIGHTENING_DOMAINS`. Domain-agnostic: keys off each
+ * option's own cost field. Returns null when a ladder has no real cost spread;
+ * otherwise pulls proportionally from the middle rung toward the cheapest as
+ * `intensity` climbs.
  */
 export interface FiscalRestraintPick {
   option: LegislationPolicyOption | null;

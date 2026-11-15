@@ -3,16 +3,14 @@
  *
  * PER-PAIR, and necessarily so. There is no general rule that turns one
  * country's offices into another's: the mapping is a statement about two
- * specific constitutions, and inventing a generic one (match on `chamberKey`,
- * say) would silently seat a Land First Secretary in whatever the target
- * happened to call its second chamber.
+ * specific constitutions, and a generic rule (match on `chamberKey`, say)
+ * would silently seat a Land First Secretary in whatever the target happened
+ * to call its second chamber.
  *
  * `null` means the office RETIRES. East Germany's Chairman of the Council of
- * State is a head of state, and the Federal Republic has no counterpart seat to
- * put them in, so the office ends with the country. An office absent from the
- * table retires for the same reason: silence is not a mapping.
- *
- * Spec: docs/superpowers/specs/2026-08-29-reunification-merge-design.md
+ * State is a head of state, and the Federal Republic has no counterpart seat,
+ * so the office ends with the country. An office absent from the table retires
+ * for the same reason: silence is not a mapping.
  */
 export type OfficeRemap = Record<string, string | null>;
 

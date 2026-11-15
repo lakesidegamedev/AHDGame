@@ -1,19 +1,18 @@
 /**
  * The savings account model, and the projections other systems read from it.
  *
- * One authoritative record per owner and currency (see
- * `src/lib/db/types/savingsAccount.ts`). Everything below is a pure function
- * over plain account data:
+ * One authoritative record per owner and currency. Everything below is a pure
+ * function over plain account data:
  *
  * - `bankLiabilityProjection`: what each bank owes its player depositors,
- *   which is what the balance sheet, the reserve requirement, insurance and
- *   the failure waterfall consume once real-liability reads are on.
+ *   consumed by the balance sheet, reserve requirement, insurance and the
+ *   failure waterfall.
  * - `centralBankPoolProjection`: what the central bank owes on the accounts
  *   it holds, per currency.
- * - `legacyProjection`: the character-document fields that keep every
- *   existing reader working during the migration.
+ * - `legacyProjection`: the character-document fields that keep existing
+ *   readers working during the migration.
  * - `reconcileAccounts`: the invariant that one owner has one account per
- *   currency and that the projections agree with the accounts.
+ *   currency and that projections agree with accounts.
  *
  * Nothing here touches the database or the clock.
  */

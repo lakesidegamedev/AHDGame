@@ -15,7 +15,7 @@ export type CountryRequirementLevel = (typeof COUNTRY_REQUIREMENT_LEVELS)[number
  * Background countries have different runtime obligations even though they
  * share one user-facing completeness level.
  */
-export type CountryBackgroundMode = "npp" | "latent" | "absent";
+export type CountryBackgroundMode = "npp" | "background" | "latent" | "absent";
 
 export type CountryContentStatus = "complete" | "gaps";
 
@@ -101,7 +101,9 @@ export function countryRequirementLevelForEraTier(tier: CountryEraTier): Country
 export function countryBackgroundModeForEraTier(
   tier: CountryEraTier
 ): CountryBackgroundMode | null {
-  if (tier === "npp" || tier === "latent" || tier === "absent") return tier;
+  if (tier === "npp" || tier === "background" || tier === "latent" || tier === "absent") {
+    return tier;
+  }
   return null;
 }
 

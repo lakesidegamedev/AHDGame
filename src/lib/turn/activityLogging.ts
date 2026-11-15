@@ -4,8 +4,14 @@
 // Wrapped in runPhase — errors log to Sentry but do not halt turn processing.
 
 import { ObjectId, type Db } from "mongodb";
-import type { ActionLog, Character, GameConfig } from "@/lib/db/types";
+import type { ActionLog, GameConfig } from "@/lib/db/types";
 import type { ActivityAction, ActivityLogTurnSummary } from "@/lib/db/types/activityLog";
+import { getCharactersCollection } from "@/lib/db/collections/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
+import type { Document } from "mongodb";
+import { usersCollection } from "@/lib/db/repositories/users";
+import { activityLogCollection } from "@/lib/db/repositories/activityLog";
+import { actionLogsCollection } from "@/lib/db/repositories/actionLogs";
 
 export interface ActivityLoggingResult {
   summariesInserted: number;
@@ -25,7 +31,7 @@ export async function processActivityLogging(
   // which is newTurn - 1 (the turn before the one being processed now).
   const actionTurn = newTurn - 1;
 
-  const logs = await db.collection<ActionLog>("actionLogs").find({ turn: actionTurn }).toArray();
+  const logs = await actionLogsCollection(db).find({ turn: actionTurn }).toArray();
 
   if (logs.length === 0) return { summariesInserted: 0 };
 
@@ -44,8 +50,9 @@ export async function processActivityLogging(
 
   // Batch-fetch characters for name, userId, countryId, and current actions (post-refresh)
   const characterIds = [...byCharacter.keys()].map((id) => new ObjectId(id));
-  const characters = await db
-    .collection<Character>("characters")
+  const characters = await (
+    await getCharactersCollection(db)
+  )
     .find(
       { _id: { $in: characterIds } },
       { projection: { _id: 1, name: 1, userId: 1, countryId: 1, actions: 1 } }
@@ -55,8 +62,7 @@ export async function processActivityLogging(
 
   // Batch-fetch usernames
   const userIds = characters.map((c) => c.userId);
-  const users = await db
-    .collection("users")
+  const users = await usersCollection<Document>(db)
     .find({ _id: { $in: userIds } }, { projection: { _id: 1, username: 1 } })
     .toArray();
   const userMap = new Map(users.map((u) => [u._id.toString(), u.username as string]));
@@ -69,7 +75,7 @@ export async function processActivityLogging(
   if (targetStateIds.length > 0) {
     // State _id values are strings (e.g. "CA", "TX"), not ObjectIds
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const states = (await (db.collection("states") as any)
+    const states = (await (statesCollection<Document>(db) as any)
       .find({ _id: { $in: targetStateIds } }, { projection: { _id: 1, name: 1 } })
       .toArray()) as Array<{ _id: string; name: string }>;
     for (const s of states) {
@@ -127,6 +133,6 @@ export async function processActivityLogging(
 
   if (summaries.length === 0) return { summariesInserted: 0 };
 
-  await db.collection("activityLog").insertMany(summaries);
+  await activityLogCollection<Document>(db).insertMany(summaries);
   return { summariesInserted: summaries.length };
 }

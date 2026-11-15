@@ -24,6 +24,8 @@ import {
   getBranchCapacityShare,
   computeDepositCeiling,
 } from "@/lib/banking/rules/capacity";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 export type SetBranchCapacityShareResult =
   { ok: true; branchCapacityShare: number } | { ok: false; error: string };
@@ -61,8 +63,7 @@ export async function getBankDepositCeiling(db: Db, corp: Corporation): Promise<
   if (!isDepositTakingCharter(charter)) return 0;
 
   const [sectors, eraUnitScale] = await Promise.all([
-    db
-      .collection<CorporateSector>("corporateSectors")
+    corporateSectorsCollection(db)
       .find(
         { corporationId: corp._id, sectorType: "financial" },
         { projection: { capitalStock: 1, revenue: 1, strategyId: 1, sectorType: 1 } }
@@ -122,8 +123,7 @@ export async function abandonBankImpact(
   )
     return null;
   const [sectors, eraUnitScale] = await Promise.all([
-    db
-      .collection<CorporateSector>("corporateSectors")
+    corporateSectorsCollection(db)
       .find(
         { corporationId: corp._id, sectorType: "financial" },
         { projection: { capitalStock: 1, revenue: 1, strategyId: 1, sectorType: 1 } }
@@ -158,11 +158,9 @@ export function commodityProductionCapacityScale(
 ): number {
   if (!privateBankingEnabled || charter?.status !== "active") return 1;
   // Only a DEPOSIT-TAKING charter runs a branch network, so only it pays for
-  // one. This used to apply to every active charter with no type check, which
-  // meant an investment bank surrendered up to half its financial sector's
-  // commodity output to branches that are legally barred from taking a deposit.
-  // It was a pure loss with no corresponding business, and the single cheapest
-  // thing making the charter unviable.
+  // one. Applying it to a non-deposit charter (e.g. an investment bank) would
+  // surrender up to half its financial sector's commodity output to branches it
+  // is legally barred from running.
   if (!charterMay(charter, "branchNetwork")) return 1;
   return Math.max(0, 1 - getBranchCapacityShare(charter));
 }
@@ -190,13 +188,13 @@ export async function setBranchCapacityShare(
     };
   }
 
-  const corp = await db.collection<Corporation>("corporations").findOne({ _id: corporationId });
+  const corp = await corporationsCollection(db).findOne({ _id: corporationId });
   if (!corp) return { ok: false, error: "Corporation not found" };
   if (corp.bankCharter?.status !== "active") {
     return { ok: false, error: "Corporation has no active bank charter" };
   }
 
-  const updated = await db.collection<Corporation>("corporations").updateOne(
+  const updated = await corporationsCollection(db).updateOne(
     { _id: corporationId, "bankCharter.status": "active" },
     {
       $set: {

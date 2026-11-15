@@ -19,10 +19,9 @@ import { redenominateTransferredSavings } from "@/lib/savings/redenominateTransf
  * missing (refuse rather than persist order-of-magnitude-wrong balances).
  */
 import { retainsCompletedSecuredCurrency } from "./rules/securedCurrency";
-import type { CorporateSector } from "@/lib/db/types/corporation";
 import type { Db, Filter } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
-import type { Corporation, Character } from "@/lib/db/types";
+import type { Character } from "@/lib/db/types";
 import { type CurrencyCode } from "@/lib/constants/currencies";
 import { type FxScalePair, loadFxScalePair } from "@/lib/country/mergeFxScale";
 import { convertCorpCurrency } from "@/lib/corporations/convertCorpCurrency";
@@ -30,7 +29,11 @@ import { closeCharacterSavings } from "@/lib/savings/closeCharacterSavings";
 import { ensureSavingsAccount } from "@/lib/savings/accountsShell";
 import { loadBankingPolicy } from "@/lib/banking/policy";
 import { getCurrentTurn } from "@/lib/currentTurn";
-import type { SavingsAccount } from "@/lib/db/types/savingsAccount";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { savingsAccountsCollection } from "@/lib/db/repositories/savingsAccounts";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 export async function convertTransferredResidentsCurrency(
   db: Db,
@@ -55,13 +58,11 @@ export async function convertTransferredResidentsCurrency(
   // Corps that followed the region into the new country re-denominate to its
   // currency (NPP-relocated corps that stayed in the source country are excluded
   // — their HQ is no longer in this region).
-  const corps = await db
-    .collection<Corporation>("corporations")
+  const corps = await corporationsCollection(db)
     .find({ headquartersState: regionId, countryId: toCountryId })
     .toArray();
   const securedSectors = strict
-    ? await db
-        .collection<CorporateSector>("corporateSectors")
+    ? await corporateSectorsCollection(db)
         .find(
           { corporationId: { $in: corps.map((corp) => corp._id) } },
           {
@@ -95,9 +96,10 @@ export async function convertTransferredResidentsCurrency(
   // evacuate path deletes them, so this matches nothing on a referendum
   // transfer) hold their treasuries in the old currency. One multiplicative
   // pass per region: the region moves exactly once, so this cannot re-run.
-  await db
-    .collection("statePartyOrg")
-    .updateMany({ stateId: regionId }, { $mul: { treasury: scale }, $set: { updatedAt: now } });
+  await statePartyOrgCollection(db).updateMany(
+    { stateId: regionId },
+    { $mul: { treasury: scale }, $set: { updatedAt: now } }
+  );
 
   // Old-currency savings accounts close BEFORE the wallet conversion: the
   // conversion below re-denominates the legacy fields, and an account left open
@@ -108,14 +110,12 @@ export async function convertTransferredResidentsCurrency(
     userId: { $ne: null },
     currencyBalances: { $type: "object" },
   } as unknown as Filter<Character>;
-  const residents = await db
-    .collection<Character>("characters")
+  const residents = await charactersCollection(db)
     .find(residentFilter, { projection: { _id: 1 } })
     .toArray();
   const residentIds = residents.map((resident) => resident._id);
   if (residentIds.length > 0) {
-    const openAccounts = await db
-      .collection<SavingsAccount>("savingsAccounts")
+    const openAccounts = await savingsAccountsCollection(db)
       .find(
         {
           ownerType: "character",
@@ -139,7 +139,7 @@ export async function convertTransferredResidentsCurrency(
   // One pipeline update computed from each document's live balances: players act
   // while the turn runs, so a wallet read earlier and written back whole would
   // erase any spend, trade or credit that landed in between.
-  await db.collection<Character>("characters").updateMany(residentFilter, [
+  await charactersCollection(db).updateMany(residentFilter, [
     {
       $set: {
         "currencyBalances.campaign": {
@@ -184,13 +184,12 @@ export async function convertTransferredResidentsCurrency(
   // asking the player to open one.
   const policy = await loadBankingPolicy(db);
   if (policy.savingsAccounts === "authoritative") {
-    const holders = await db
-      .collection<Character>("characters")
+    const holders = await charactersCollection(db)
       .find(
         {
           ...residentFilter,
           [`currencyBalances.savings.${newCurrency}`]: { $gt: 0 },
-        } as unknown as Filter<Character>,
+        } as Filter<Character>,
         { projection: { _id: 1 } }
       )
       .toArray();

@@ -4,15 +4,16 @@
  * owners and legacy officeholders keep their existing records.
  */
 import type { Db } from "mongodb";
-import type { ElectedOfficial } from "@/lib/db/types";
 import type { CycleAnchorContext } from "@/lib/elections/cycleAnchorContext";
 import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
 import { MS_PER_TURN } from "@/lib/constants/turnTime";
-import { BG_FOUNDING_COUNTS_COLLECTION, type BgFoundingAssemblyRecord } from "./foundingCount1990";
+import { type BgFoundingAssemblyRecord } from "./foundingCount1990";
 import {
   bgGrandAssemblyRegularAnchor,
   bgFoundingMandateTermAnchor,
 } from "./rules/assemblyClock1991";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { bgFoundingAssemblyCountsCollection } from "@/lib/db/repositories/bgFoundingAssemblyCounts";
 
 export async function loadBgGrandAssemblyClock(
   db: Db,
@@ -21,7 +22,7 @@ export async function loadBgGrandAssemblyClock(
   now: Date
 ): Promise<number | undefined> {
   if (ctx.preset !== "1991-default" || ctx.preIterationActive) return undefined;
-  const journal = db.collection<BgFoundingAssemblyRecord>(BG_FOUNDING_COUNTS_COLLECTION);
+  const journal = bgFoundingAssemblyCountsCollection<BgFoundingAssemblyRecord>(db);
   const filter = { _id: "BG:founding1990:0", seatedAtTurn: { $exists: true } };
   const options = { projection: { seatedAtTurn: 1, grandTermEndTurn: 1 } };
   const receipt = await journal.findOne(filter, options);
@@ -37,7 +38,7 @@ export async function loadBgGrandAssemblyClock(
       if (current.grandTermEndTurn != null)
         return bgGrandAssemblyRegularAnchor({ ...ctx, nativeAnchorTurn: current.grandTermEndTurn });
       const endTurn = bgFoundingMandateTermAnchor(historicalEndTurn, current.seatedAtTurn!);
-      await db.collection<ElectedOfficial>("electedOfficials").updateMany(
+      await electedOfficialsCollection(db).updateMany(
         {
           countryId: "BG",
           officeType: "assemblyDeputy",

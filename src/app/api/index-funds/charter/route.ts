@@ -11,11 +11,11 @@ import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { parseJsonBody } from "@/lib/api/validate";
 import { corporationQueryFromParamId, requireCeo } from "@/lib/api/corporations/resolveQuery";
-import type { Corporation } from "@/lib/db/types";
 import { isOperatingSectorType } from "@/lib/constants/corporations";
 import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { charterFund } from "@/lib/indexFunds/sponsorship/charterFund";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 const schema = z.object({
   sponsorCorporationId: z.string(),
@@ -62,7 +62,7 @@ export async function POST(request: Request) {
 
     const query = corporationQueryFromParamId(body.sponsorCorporationId);
     if (!query) return errorResponse(400, "Invalid corporation id");
-    const sponsor = await db.collection<Corporation>("corporations").findOne(query);
+    const sponsor = await corporationsCollection(db).findOne(query);
     if (!sponsor) return errorResponse(404, "Corporation not found");
 
     const ceoCheck = requireCeo(sponsor, auth.user.userId);

@@ -7,23 +7,21 @@
  * move no political metric and no budget line; game code reads their level.
  * Ladders run from permissive (level 0, right) to strict (level 4, left).
  *
- * The four countries with a new-generation law book already carry their own
- * competition law; they get the other two laws here. Player copy is
+ * Countries whose law book carries a competition law get only the other two
+ * laws here. Player copy is
  * era-neutral: no real statute names, no years.
  */
 import type { LegislationPolicyOption, LegislationType } from "@/lib/db/types/legislation";
+import { ANTITRUST_LAW_BY_COUNTRY } from "@/lib/corporations/mergerReview/constants";
 import { BANKING_SEPARATION_SPECS } from "@/lib/seeds/shared/bankingSeparationLegislation";
 import type { MechanicalLawKey } from "./rules";
 
 type CountryScope = NonNullable<LegislationType["countryScope"]>;
 
 /** Country scopes whose competition law lives in the new-generation catalog. */
-export const NEW_GENERATION_COMPETITION_SCOPES: ReadonlySet<CountryScope> = new Set<CountryScope>([
-  "us",
-  "uk",
-  "ru",
-  "dd",
-]);
+export const NEW_GENERATION_COMPETITION_SCOPES: ReadonlySet<CountryScope> = new Set(
+  Object.keys(ANTITRUST_LAW_BY_COUNTRY).map((id) => id.toLowerCase() as CountryScope)
+);
 
 export const MECHANICAL_LAW_ID_SUFFIX: Record<MechanicalLawKey, string> = {
   competition: "_competition_law",
@@ -192,8 +190,8 @@ export const mechanicalLegislationTypes: LegislationType[] = BANKING_SEPARATION_
 export const MECHANICAL_TYPE_IDS: readonly string[] = mechanicalLegislationTypes.map((t) => t._id);
 
 /**
- * Ids that must survive the old-catalog exclusion in the four new-generation
- * countries (whose legacy legislation is otherwise dropped wholesale).
+ * Ids that must survive the old-catalog exclusion in the law book countries
+ * (whose legacy legislation is otherwise dropped wholesale).
  */
 export const MECHANICAL_RETAINED_IDS: readonly string[] = mechanicalLegislationTypes
   .filter((t) => t.countryScope != null && NEW_GENERATION_COMPETITION_SCOPES.has(t.countryScope))

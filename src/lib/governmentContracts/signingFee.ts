@@ -4,7 +4,7 @@
  */
 import type { Db } from "mongodb";
 import { createHash } from "node:crypto";
-import type { Corporation, ExtractionContract, StateBudget, FederalBudget } from "@/lib/db/types";
+import type { Corporation, ExtractionContract, StateBudget } from "@/lib/db/types";
 import {
   getCorpFxRate,
   anchorToCorpLiquidCapital,
@@ -22,6 +22,10 @@ import {
 } from "@/lib/banking/rules/boundary";
 import { signingFeeCredit } from "./rules/signingFee";
 import { ContractError } from "./eligibility";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
+import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
+import { extractionContractsCollection } from "@/lib/db/repositories/extractionContracts";
 const logId = (key: string) => oid(createHash("sha256").update(key).digest("hex").slice(0, 24));
 export async function settleTenderSigningFee(
   db: Db,
@@ -34,7 +38,7 @@ export async function settleTenderSigningFee(
 ): Promise<{ ok: boolean; error?: string }> {
   if (!contract.tenderId)
     throw new ContractError("Only a winning tender may use this signing fee command.", 400);
-  const col = db.collection<ExtractionContract>("extractionContracts");
+  const col = extractionContractsCollection(db);
   const amount = contract.signingFeeAnchor ?? 0;
   if (!allowNewSettlement && amount === 0 && !contract.signingFeeSettled)
     throw new ContractError("Extraction contract issuance is disabled.");
@@ -42,9 +46,10 @@ export async function settleTenderSigningFee(
     if (!contract.signingFeeAttemptKey)
       throw new Error("Tender signing fee is missing its frozen settlement identity.");
     const key = "extraction-signing-fee:" + contract.signingFeeAttemptKey;
-    const prior = await db
-      .collection<{ _id: string }>("bankMoneyMoves")
-      .findOne({ _id: key }, { projection: { _id: 1 } });
+    const prior = await bankMoneyMovesCollection<{ _id: string }>(db).findOne(
+      { _id: key },
+      { projection: { _id: 1 } }
+    );
     let result;
     if (prior) result = await resumeSettlement(db, key);
     else {
@@ -56,17 +61,16 @@ export async function settleTenderSigningFee(
       const sourceLocal = anchorToCorpLiquidCapital(amount, corp, sourceRate);
       const stateBudget =
         contract.grantedByLevel === "state"
-          ? await db
-              .collection<StateBudget>("stateBudgets")
-              .findOne(
-                { _id: contract.stateId, countryId: contract.countryId },
-                { projection: { _id: 1 } }
-              )
+          ? await stateBudgetsCollection(db).findOne(
+              { _id: contract.stateId, countryId: contract.countryId },
+              { projection: { _id: 1 } }
+            )
           : null;
       const national = contract.grantedByLevel === "national" || !stateBudget;
-      const nationalBudget = await db
-        .collection<FederalBudget>("federalBudget")
-        .findOne({ countryId: contract.countryId }, { projection: { currencyCode: 1 } });
+      const nationalBudget = await federalBudgetCollection(db).findOne(
+        { countryId: contract.countryId },
+        { projection: { currencyCode: 1 } }
+      );
       let destinationCurrency = (nationalBudget?.currencyCode ??
         COUNTRY_CURRENCY_MAP[contract.countryId]) as CurrencyCode;
       let destinationRate = await getCurrencyFxRate(db, destinationCurrency);

@@ -149,6 +149,16 @@ describe("growth split math", () => {
     expect(half.gdp).toBeGreaterThan(1000);
     expect(half.gdp).toBeLessThan(fullGdp);
   });
+
+  it("moves the nominal level by the price factor as well", () => {
+    const real = growthHalfStepForRegion({ gdp: 1000, outputGap: 4, gdpGrowth: 5 }, 0.5);
+    const priced = growthHalfStepForRegion(
+      { gdp: 1000, outputGap: 4, gdpGrowth: 5, inflationRate: 6 },
+      0.5
+    );
+    expect(priced.gdp / real.gdp).toBeCloseTo(1.06 ** (1 / (2 * TURNS_PER_YEAR)), 9);
+    expect(priced.gdpGrowth).toBe(5);
+  });
 });
 
 describe("growth half step and the turn", () => {
@@ -163,7 +173,12 @@ describe("growth half step and the turn", () => {
     expect(stats).toMatchObject({ regions: 2, nationals: 1, budgets: 1, alreadyStepped: 0 });
 
     const s1 = await memory.collection("states").findOne({ _id: "s1" });
-    const s1Expected = growthHalfStepForRegion({ gdp: 1000, outputGap: 4, gdpGrowth: 3.1 });
+    const s1Expected = growthHalfStepForRegion({
+      gdp: 1000,
+      outputGap: 4,
+      gdpGrowth: 3.1,
+      inflationRate: 3,
+    });
     expect(s1?.gdp).toBe(s1Expected.gdp);
     expect(s1?.outputGap).toBe(s1Expected.outputGap);
     expect(s1?.subhourStep).toEqual({ turn: TURN, fraction: 0.5 });

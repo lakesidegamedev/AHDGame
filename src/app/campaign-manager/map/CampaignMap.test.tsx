@@ -130,6 +130,75 @@ function renderMap(filter: Partial<RaceFilter> = {}, selectedKey: string | null 
 }
 
 describe("CampaignMap", () => {
+  it("explains why Canadian map coverage is unavailable for a historical preset", async () => {
+    geoResult = null;
+    renderWithElectionsMessages(
+      <CampaignMap
+        countryId="CA"
+        preset="1991-default"
+        countryName="Canada"
+        regionNoun="Region"
+        races={[]}
+        selectedRace={null}
+        onSelectRegion={vi.fn()}
+        filter={{ type: "caCommons", stage: "all", regionId: "ALL", query: "", regionNames: {} }}
+      />
+    );
+    expect(
+      await screen.findByText("Local boundary coverage is unavailable for this starting period.")
+    ).toBeTruthy();
+  });
+
+  it("switches Canadian riding and census-division layers without borrowing federal districts", async () => {
+    geoResult = {
+      ...geo,
+      clipUnitsToRegions: true,
+      regions: {
+        CA_NT: { n: "Northwest Territories", d: "M0,0H10V10Z", bb: [0, 0, 10, 10], nb: [] },
+      },
+      units: null,
+      unitLayerByType: { caCommons: "federal-ridings", provincialLegislature: "census-divisions" },
+      unitLayers: {
+        "federal-ridings": {
+          units: { CA_NT: [{ id: "CA-FED-2023-61001", n: "Federal riding", d: "M0,0H10V10Z" }] },
+          unitLabelPlural: "Federal ridings",
+        },
+        "census-divisions": {
+          units: { CA_NT: [{ id: "CA-CD-2021-6101", n: "Census division", d: "M0,0H5V5Z" }] },
+          unitLabelPlural: "Census divisions",
+        },
+      },
+    };
+    const shared = {
+      countryId: "CA",
+      preset: "2027-default",
+      countryName: "Canada",
+      regionNoun: "Province or territory",
+      races: [],
+      selectedRace: null,
+      onSelectRegion: vi.fn(),
+    };
+    const filter = {
+      type: "caCommons",
+      stage: "all" as const,
+      regionId: "CA_NT",
+      query: "",
+      regionNames: { CA_NT: "Northwest Territories" },
+    };
+    const { rerender } = renderWithElectionsMessages(<CampaignMap {...shared} filter={filter} />);
+    expect(await screen.findByRole("button", { name: "Federal riding" })).toBeTruthy();
+    expect(
+      screen
+        .getByRole("button", { name: "Federal riding" })
+        .parentElement?.getAttribute("clip-path")
+    ).toMatch(/^url\(#campaign-region-/);
+    expect(screen.getByText("1 Federal ridings")).toBeTruthy();
+    rerender(<CampaignMap {...shared} filter={{ ...filter, type: "provincialLegislature" }} />);
+    expect(await screen.findByRole("button", { name: "Census division" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Federal riding" })).toBeNull();
+    expect(screen.getByText("1 Census divisions")).toBeTruthy();
+  });
+
   it("shades each region by its race and zooms on click", async () => {
     const { onSelectRegion } = renderMap();
     const london = await screen.findByRole("button", { name: /London/ });
@@ -289,6 +358,9 @@ describe("CampaignMap pan and zoom", () => {
       renderMap();
     });
     await screen.findByRole("button", { name: /London/ });
+    // The wheel listener attaches in a passive effect that can still be queued
+    // when the map first appears; flush it before dispatching.
+    await act(async () => {});
     const svg = screen.getByRole("group", { name: /map/ });
     const wheel = createEvent.wheel(svg, { deltaY: -100, clientX: 50, clientY: 50 });
     fireEvent(svg, wheel);
@@ -310,4 +382,55 @@ describe("CampaignMap pan and zoom", () => {
     fireEvent.click(london);
     expect(onSelectRegion).toHaveBeenCalledWith("LON");
   });
+});
+
+it("shows the historical unsupported reason instead of only a generic geography notice", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(
+      async () =>
+        new Response(
+          JSON.stringify({
+            viewBox: "0 0 1 1",
+            resultStatus: "unsupported",
+            geometryAvailable: false,
+            notice: "No riding placement was recorded.",
+            subdivisions: [],
+          })
+        )
+    )
+  );
+  const done = buildRaceIndex(
+    [
+      election({
+        id: "unsupported-history",
+        electionType: "commons",
+        state: "LON",
+        countryId: "UK",
+        status: "resolved",
+        isEnded: true,
+        inGeneral: false,
+        cands: [{ id: "a", name: "A", party: "1", share: 100 }],
+      }),
+    ],
+    { ...ctx, includeFinal: true }
+  );
+  renderWithElectionsMessages(
+    <CampaignMap
+      countryId="UK"
+      countryName="United Kingdom"
+      regionNoun="Region"
+      races={done}
+      filter={{
+        type: "commons",
+        stage: "final",
+        regionId: "LON",
+        query: "",
+        regionNames: { LON: "London" },
+      }}
+      selectedRace={done[0]}
+      onSelectRegion={() => {}}
+    />
+  );
+  expect(await screen.findByText("No riding placement was recorded.")).toBeTruthy();
 });

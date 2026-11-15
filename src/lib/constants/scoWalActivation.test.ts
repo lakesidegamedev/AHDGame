@@ -26,7 +26,10 @@ describe("SCO/WAL activation lifecycle (SP2a)", () => {
 
   it("surfaces once activated (active row) — appended after COUNTRY_ORDER, no dupes", async () => {
     db.collection("countryGameStates").find.mockReturnValue(
-      cursorOf([{ _id: "SCO", status: "active", enabledForPlayers: true }])
+      cursorOf([
+        { _id: "CA", status: "beta" },
+        { _id: "SCO", status: "active", enabledForPlayers: true },
+      ])
     );
     const ids = await getRegisteredCountryIds(db as unknown as Db);
     expect(ids).toContain("SCO");

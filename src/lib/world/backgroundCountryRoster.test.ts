@@ -115,4 +115,27 @@ describe("background country expansion", () => {
       });
     }
   });
+
+  it.each(["1953-default", "1991-default", "2019-default", "2023-default"])(
+    "keeps Canada on the %s map as a background economy before it joins the roster",
+    (preset) => {
+      const entries = getWorldEntityPresetManifest(preset).entries.filter(
+        (entry) => entry.entityId === "CA"
+      );
+      expect(entries).toHaveLength(1);
+      expect(entries[0]).toMatchObject({
+        simulationTier: "background-macro",
+        status: "sovereign",
+        mapFeatureIds: ["124"],
+      });
+      expect(entries[0]!.countryId ?? null).toBeNull();
+    }
+  );
+
+  it("runs Canada as a full country once the 2027 roster includes it", () => {
+    const entry = getWorldEntityPresetManifest("2027-default").entries.find(
+      (row) => row.entityId === "CA"
+    );
+    expect(entry).toMatchObject({ countryId: "CA", simulationTier: "full-autonomous" });
+  });
 });

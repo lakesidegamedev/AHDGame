@@ -21,7 +21,7 @@
 import type { CountryId } from "@/lib/constants/countries";
 
 /**
- * The 28 countries in `COUNTRY_BILL_PHASES`, PLUS the United States.
+ * The 29 countries in `COUNTRY_BILL_PHASES`, PLUS the United States.
  *
  * The US lifecycle is invoked directly from `billLifecycle.ts` and is therefore
  * absent from that table — a bare table lookup silently excludes the game's most
@@ -32,6 +32,8 @@ export const BILL_LIFECYCLE_COUNTRY_IDS: ReadonlySet<CountryId> = new Set<Countr
   "UK",
   "SCO",
   "WAL",
+  "CA",
+  "QC",
   "DE",
   "JP",
   "IE",

@@ -25,6 +25,7 @@ import { loadAlignmentTopology } from "@/lib/alignment/topology";
 import type { AlignmentTopology } from "@/lib/alignment/rules/customBlocs";
 import { foundCustomBlocPole } from "@/lib/alignment/rules/customBlocs";
 import { applyEraCrossing } from "@/lib/alignment/crossing";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export async function createInternationalOrganization(params: {
   db: Db;
@@ -81,9 +82,10 @@ export async function createInternationalOrganization(params: {
   let topology: AlignmentTopology | null = null;
   const memberships = await getOrganizationMembershipsCollection(db);
   if (input.category === "bloc") {
-    const gameState = await db
-      .collection<GameState>("gameState")
-      .findOne({ _id: "current" }, { projection: { currentYear: 1, startingYear: 1 } });
+    const gameState = await gameStateCollection(db).findOne(
+      { _id: "current" },
+      { projection: { currentYear: 1, startingYear: 1 } }
+    );
     const year = (gameState ? resolveGameYear(gameState) : null) ?? new Date().getFullYear();
     topology = await loadAlignmentTopology(db, year);
     const rivalIds = [

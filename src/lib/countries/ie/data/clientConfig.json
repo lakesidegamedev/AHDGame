@@ -1,0 +1,154 @@
+{
+  "config": {
+    "id": "IE",
+    "name": "Ireland",
+    "code": "IE",
+    "status": "active",
+    "flagEmoji": "🇮🇪",
+    "regionLabel": "Region",
+    "regionLabelPlural": "Regions",
+    "executiveTitle": "Taoiseach",
+    "executiveRealmPhrase": "Ireland",
+    "executiveLabel": "Government Buildings",
+    "executivePath": "/country/ie/executive",
+    "governmentType": "parliamentaryRepublic",
+    "governmentTypeLabel": "Parliamentary Republic",
+    "descriptor": "A parliamentary republic where the Taoiseach leads government through a Dáil majority, elected by proportional representation using the Single Transferable Vote across multi-seat constituencies.",
+    "heroImage": "https://flagcdn.com/w640/ie.png",
+    "overviewPath": "/country/ie",
+    "mapPath": "/country/ie/map",
+    "currencyCode": "IEP",
+    "centralGovernmentLabel": "Exchequer Grants",
+    "exchangeName": "ISEQ",
+    "financeMinisterCabinetId": "minister_for_finance",
+    "regionalBillAssentTitle": "Cathaoirleach",
+    "majorPartyIds": ["fine_gael", "fianna_fail"],
+    "partyCreationNPPs": { "statesRequired": 2, "lockHomeState": false, "nppsPerState": 1 },
+    "executiveTermLimit": {
+      "officeKey": "uachtaran",
+      "maxTermsPerCharacter": 2,
+      "blocksRunningMateSelection": false
+    },
+    "legislature": {
+      "name": "Oireachtas",
+      "path": "/country/ie/legislature",
+      "bicameral": false,
+      "lowerChamber": {
+        "key": "dail",
+        "name": "Dáil Éireann",
+        "shortName": "Dáil",
+        "seats": 160,
+        "description": "160 TDs elected by proportional representation using the Single Transferable Vote across multi-seat constituencies."
+      },
+      "upperChamber": {
+        "key": "seanad",
+        "name": "Seanad Éireann",
+        "shortName": "Seanad",
+        "seats": 60,
+        "description": "60 senators - 43 elected from vocational panels, 11 nominated by the Taoiseach, 6 from universities."
+      }
+    },
+    "subNationalChamber": {
+      "key": "localCouncil",
+      "name": "Local Council",
+      "shortName": "Council",
+      "regionalModel": true
+    },
+    "officeTypes": [
+      {
+        "key": "taoiseach",
+        "label": "Taoiseach",
+        "isExecutive": true,
+        "isSubNational": false,
+        "labelPlural": "Taoisigh"
+      },
+      {
+        "key": "tanaiste",
+        "label": "Tánaiste",
+        "isExecutive": true,
+        "isSubNational": false,
+        "labelPlural": "Tánaistí"
+      },
+      {
+        "key": "uachtaran",
+        "label": "Uachtarán",
+        "isExecutive": true,
+        "isSubNational": false,
+        "isHeadOfState": true,
+        "labelPlural": "Uachtaráin"
+      },
+      {
+        "key": "dail",
+        "label": "Teachta Dála",
+        "chamberKey": "dail",
+        "isExecutive": false,
+        "isSubNational": false,
+        "labelPlural": "Teachtaí Dála"
+      },
+      {
+        "key": "centralBankChair",
+        "label": "Governor of the Central Bank of Ireland",
+        "isExecutive": false,
+        "isSubNational": false,
+        "labelPlural": "Governors of the Central Bank of Ireland"
+      },
+      {
+        "key": "localCouncil",
+        "label": "Councillor",
+        "chamberKey": "localCouncil",
+        "isExecutive": false,
+        "isSubNational": true,
+        "labelPlural": "Councillors"
+      },
+      {
+        "key": "governor",
+        "label": "Cathaoirleach",
+        "isExecutive": false,
+        "isSubNational": true,
+        "labelPlural": "Cathaoirligh"
+      }
+    ],
+    "electionSystems": {
+      "lowerChamber": "pr_hareQuota",
+      "upperChamber": "pr_hareQuota",
+      "subNationalChamber": "pr_hareQuota",
+      "headOfGovernment": "parliamentary",
+      "headOfState": "fptp"
+    },
+    "lowerElectionSystem": { "snapElectionsAllowed": true },
+    "centralBank": {
+      "name": "Central Bank of Ireland",
+      "abbreviation": "CBI",
+      "heroImage": "/api/images/hero/ecb",
+      "defaultPrimeRate": 3
+    },
+    "usdExchangeRate": 1
+  },
+  "eraOverrides": {
+    "1991-default": { "usdExchangeRate": 1.6095348846567064 },
+    "1953-default": {
+      "legislature": {
+        "name": "Oireachtas",
+        "path": "/country/ie/legislature",
+        "bicameral": false,
+        "lowerChamber": {
+          "key": "dail",
+          "name": "Dáil Éireann",
+          "shortName": "Dáil",
+          "seats": 147,
+          "description": "147 TDs elected by PR-STV across multi-seat constituencies (1948 redistribution)."
+        },
+        "upperChamber": {
+          "key": "seanad",
+          "name": "Seanad Éireann",
+          "shortName": "Seanad",
+          "seats": 60,
+          "description": "60 senators - 43 elected from vocational panels, 11 nominated by the Taoiseach, 6 from universities."
+        }
+      },
+      "usdExchangeRate": 2.801120448179272
+    }
+  },
+  "nationalAddressName": "Address to the Oireachtas",
+  "regionalAssentOfficeKey": "governor"
+}

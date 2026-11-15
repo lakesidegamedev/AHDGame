@@ -24,11 +24,11 @@ import type {
   LegislationType,
   Election,
   ElectionCandidate,
-  Character,
   PoliticalParty,
 } from "@/lib/db/types";
 import type { DevolutionPolicy } from "@/lib/db/types/governorOfficeState";
-import { highDesireElectionBonus, isUKDevolutionRegion } from "@/lib/constants/devolution";
+import { highDesireElectionBonus } from "@/lib/constants/devolution";
+import { sovereigntyRegionIn } from "@/lib/referendum/rules/sovereigntyRegions";
 import { referendumRequestEligibility } from "@/lib/constants/referendum";
 import { getReferendumCollection } from "@/lib/db/collections/referendum";
 import type { ReferendumPanelData } from "./tabs/devolution/ReferendumPanel";
@@ -52,6 +52,20 @@ import { formatElectionTypeLabel } from "@/lib/utils/electionLabels";
 import { buildPartyIdResolver } from "@/lib/parties/partyMatch";
 import { officePoolTopUpStatus } from "@/lib/actions/officePoolTopUpRules";
 import { resolveRegionOfficeBannerImage } from "@/lib/constants/regionBanner";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
+import { stateBillsCollection } from "@/lib/db/repositories/stateBills";
+import { governorExecutiveOrdersCollection } from "@/lib/db/repositories/governorExecutiveOrders";
+import { governorAddressesCollection } from "@/lib/db/repositories/governorAddresses";
+import { governorEndorsementsCollection } from "@/lib/db/repositories/governorEndorsements";
+import { governorLegislationQueueCollection } from "@/lib/db/repositories/governorLegislationQueue";
 
 interface Props {
   params: Promise<{ code: string; id: string }>;
@@ -63,9 +77,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const countryId = code.toUpperCase() as CountryId;
   if (!COUNTRY_CONFIGS[countryId]) return {};
   const db = await getDb();
-  const state = await db
-    .collection<State>("states")
-    .findOne({ _id: id.toUpperCase(), countryId: countryId });
+  const state = await statesCollection(db).findOne({ _id: id.toUpperCase(), countryId: countryId });
   if (!state) return {};
   return {
     title: `${getRegionalBillAssentTitleForState(countryId, state._id)}'s Office · ${state.name} · A House Divided`,
@@ -86,7 +98,7 @@ export default async function GovernorOfficePage({ params }: Props) {
   // Neither read depends on the other: the state document names the office, and
   // office access is resolved from (country, state, viewer).
   const [state, access] = await Promise.all([
-    db.collection<State>("states").findOne({ _id: stateId, countryId: countryId }),
+    statesCollection(db).findOne({ _id: stateId, countryId: countryId }),
     resolveOfficeAccess(db, countryId, stateId, auth.character._id),
   ]);
   if (!state) notFound();
@@ -123,9 +135,8 @@ export default async function GovernorOfficePage({ params }: Props) {
   const subNationalOffice = getSubNationalLegislatureKey(countryId);
   const voteScope = subNationalOffice ? { countryId, officeType: subNationalOffice } : null;
   const allowedRaceTypes = getEndorseableElectionTypes(countryId);
-  // One batch for every independent read on this page. These used to run as a
-  // dozen consecutive waves after the chamber roster resolved, each paying its
-  // own round trip on a page the telemetry ranks in the slowest 20.
+  // One batch for every independent read on this page; fetching them
+  // separately costs many round trips on a slow page.
   const [
     holderChar,
     holderPartyDoc,
@@ -144,21 +155,19 @@ export default async function GovernorOfficePage({ params }: Props) {
     officePageGameTime,
   ] = await Promise.all([
     officeHolder?.characterId
-      ? db
-          .collection<Character>("characters")
-          .findOne({ _id: officeHolder.characterId }, { projection: { avatarUrl: 1 } })
+      ? charactersCollection(db).findOne(
+          { _id: officeHolder.characterId },
+          { projection: { avatarUrl: 1 } }
+        )
       : Promise.resolve(null),
     hasHolderParty
-      ? db
-          .collection<PoliticalParty>("politicalParties")
-          .findOne(
-            { sequentialId: Number(officeHolder?.party), countryId },
-            { projection: { name: 1, abbreviation: 1, color: 1 } }
-          )
+      ? politicalPartiesCollection(db).findOne(
+          { sequentialId: Number(officeHolder?.party), countryId },
+          { projection: { name: 1, abbreviation: 1, color: 1 } }
+        )
       : Promise.resolve(null),
     getOfficeState(db, countryId, stateId),
-    db
-      .collection<StateBill>("stateBills")
+    stateBillsCollection(db)
       .find(
         { stateId, status: "passed" },
         {
@@ -179,13 +188,11 @@ export default async function GovernorOfficePage({ params }: Props) {
       )
       .sort({ passedAt: 1 })
       .toArray(),
-    db
-      .collection<GovernorExecutiveOrder>("governorExecutiveOrders")
+    governorExecutiveOrdersCollection(db)
       .find({ countryId, stateId, status: "active" })
       .sort({ issuedAtTurn: -1 })
       .toArray(),
-    db
-      .collection<GovernorExecutiveOrder>("governorExecutiveOrders")
+    governorExecutiveOrdersCollection(db)
       .find({
         countryId,
         stateId,
@@ -194,9 +201,8 @@ export default async function GovernorOfficePage({ params }: Props) {
       .sort({ issuedAtTurn: -1 })
       .limit(10)
       .toArray(),
-    db.collection<GameState>("gameState").findOne({ _id: "current" }),
-    db
-      .collection<LegislationType>("legislationTypes")
+    gameStateCollection(db).findOne({ _id: "current" }),
+    legislationTypesCollection(db)
       .find({
         nationalOnly: { $ne: true },
         taxRateChange: { $exists: false },
@@ -209,14 +215,12 @@ export default async function GovernorOfficePage({ params }: Props) {
         "policyOptions.name": 1,
       })
       .toArray(),
-    db
-      .collection<GovernorAddress>("governorAddresses")
+    governorAddressesCollection(db)
       .find({ countryId, stateId })
       .sort({ deliveredAtTurn: -1 })
       .limit(1)
       .toArray(),
-    db
-      .collection<ElectedOfficial>("electedOfficials")
+    electedOfficialsCollection(db)
       .find({
         state: stateId,
         officeType: subNationalOffice,
@@ -230,8 +234,7 @@ export default async function GovernorOfficePage({ params }: Props) {
         seatsHeld: 1,
       })
       .toArray(),
-    db
-      .collection<Election>("elections")
+    electionsCollection(db)
       .find({
         state: stateId,
         countryId,
@@ -239,11 +242,8 @@ export default async function GovernorOfficePage({ params }: Props) {
         electionType: { $in: allowedRaceTypes },
       })
       .toArray(),
-    db
-      .collection<Election>("elections")
-      .findOne({ electionType: "president", countryId, status: "active" }),
-    db
-      .collection<GovernorEndorsement>("governorEndorsements")
+    electionsCollection(db).findOne({ electionType: "president", countryId, status: "active" }),
+    governorEndorsementsCollection(db)
       .find({
         countryId,
         stateId,
@@ -251,8 +251,7 @@ export default async function GovernorOfficePage({ params }: Props) {
         isActive: true,
       })
       .toArray(),
-    db
-      .collection<PoliticalParty>("politicalParties")
+    politicalPartiesCollection(db)
       .find({ countryId })
       .project<{ sequentialId: number; name: string; color: string; logoUrl?: string }>({
         sequentialId: 1,
@@ -293,8 +292,7 @@ export default async function GovernorOfficePage({ params }: Props) {
   const electionIds = stateElections.map((e) => e._id);
   const [stateCandidates, resolvePartyId] = await Promise.all([
     electionIds.length
-      ? db
-          .collection<ElectionCandidate>("electionCandidates")
+      ? electionCandidatesCollection(db)
           .find({ electionId: { $in: electionIds }, status: "active" })
           .toArray()
       : Promise.resolve([]),
@@ -308,8 +306,7 @@ export default async function GovernorOfficePage({ params }: Props) {
     ...new Set(stateCandidates.filter((c) => !c.isNPP && c.characterId).map((c) => c.characterId!)),
   ];
   const playerCharacters = playerCharacterIds.length
-    ? await db
-        .collection<Character>("characters")
+    ? await charactersCollection(db)
         .find({ _id: { $in: playerCharacterIds } })
         .project<{ _id: ObjectId; party?: string }>({ _id: 1, party: 1 })
         .toArray()
@@ -380,9 +377,11 @@ export default async function GovernorOfficePage({ params }: Props) {
   const electionTitleById = new Map(availableRaces.map((r) => [r.electionId, r.title]));
 
   // Legislation queue: pending entry + eligible NPPs (same-party state-legislators).
-  const pendingQueue = await db
-    .collection<GovernorQueuedBill>("governorLegislationQueue")
-    .findOne({ countryId, stateId, status: "pending" });
+  const pendingQueue = await governorLegislationQueueCollection(db).findOne({
+    countryId,
+    stateId,
+    status: "pending",
+  });
 
   // In-flight governor bill — once the queue fires, the StateBill carries
   // `proposedByGovernor` and we keep the office's "your bill" slot occupied
@@ -390,7 +389,7 @@ export default async function GovernorOfficePage({ params }: Props) {
   // hits a terminal status (enacted / failed / override_failed / signed).
   // Tied to the office (per-state), not the specific governor character, so a
   // successor sees in-flight bills inherited from their predecessor.
-  const inFlightGovernorBill = await db.collection<StateBill>("stateBills").findOne(
+  const inFlightGovernorBill = await stateBillsCollection(db).findOne(
     {
       stateId,
       countryId,
@@ -429,8 +428,9 @@ export default async function GovernorOfficePage({ params }: Props) {
     };
     referendum: ReferendumPanelData;
   } | null = null;
-  if (countryId === COUNTRY_CONFIGS.UK.id && isUKDevolutionRegion(stateId)) {
-    const snapshot = (await loadIndependenceDesireSnapshots(db)).find(
+  const sovereignty = sovereigntyRegionIn(countryId, stateId);
+  if (sovereignty) {
+    const snapshot = (await loadIndependenceDesireSnapshots(db, sovereignty.countryId)).find(
       (row) => row.stateId === stateId
     );
     if (snapshot) {
@@ -468,8 +468,11 @@ export default async function GovernorOfficePage({ params }: Props) {
               cooldownReadyAtTurn: displayRef.cooldownReadyAtTurn,
             }
           : null,
-        eligible: eligibility.eligible,
-        eligibilityReason: eligibility.reason,
+        // A region without a successor state keeps its mood but cannot ask.
+        eligible: sovereignty.actuates && eligibility.eligible,
+        eligibilityReason: sovereignty.actuates
+          ? eligibility.reason
+          : "A referendum cannot be held until an independent state can be formed.",
       };
 
       devolutionProps = {
@@ -493,8 +496,7 @@ export default async function GovernorOfficePage({ params }: Props) {
 
   let eligibleNpps: Array<{ _id: string; name: string }> = [];
   if (officeParty) {
-    const stateSenators = await db
-      .collection<ElectedOfficial>("electedOfficials")
+    const stateSenators = await electedOfficialsCollection(db)
       .find({
         officeType: getSubNationalLegislatureKey(countryId),
         state: stateId,
@@ -503,14 +505,12 @@ export default async function GovernorOfficePage({ params }: Props) {
       .toArray();
     const nppIds = stateSenators.map((s) => s.nppId).filter((x): x is ObjectId => !!x);
     const npps = nppIds.length
-      ? await db
-          .collection<NPP>("npps")
+      ? await nppsCollection(db)
           .find({ _id: { $in: nppIds }, party: officeParty, retiredAt: null })
           .toArray()
       : [];
     const blocking = npps.length
-      ? await db
-          .collection<StateBill>("stateBills")
+      ? await stateBillsCollection(db)
           .find({
             sponsorNppId: { $in: npps.map((n) => n._id) },
             status: { $nin: STATE_TERMINAL_STATUSES },

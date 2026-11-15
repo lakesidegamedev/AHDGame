@@ -5,12 +5,14 @@ import { handleRouteError, badRequest, forbidden, notFound, errorResponse } from
 import { createNotification } from "@/lib/notifications";
 import type { Coalition } from "@/lib/db/types/coalition";
 import type { PoliticalParty } from "@/lib/db/types/party";
-import type { Character } from "@/lib/db/types/character";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { canInviteToCoalition, isBannedParty } from "@/lib/turn/onePartyConstraints";
 import { getCountryState } from "@/lib/countryState";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { canActAsChair } from "@/lib/parties/actingChair";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { coalitionsCollection } from "@/lib/db/repositories/coalitions";
 
 // POST /api/coalitions/[id]/join — Request to join a coalition
 export async function POST(
@@ -42,9 +44,10 @@ export async function POST(
     const db = await getDb();
 
     // Find user's party
-    const party = await db
-      .collection<PoliticalParty>("politicalParties")
-      .findOne({ sequentialId: Number(character.party), countryId });
+    const party = await politicalPartiesCollection(db).findOne({
+      sequentialId: Number(character.party),
+      countryId,
+    });
     if (!party) {
       throw notFound("Your party could not be found.");
     }
@@ -77,9 +80,10 @@ export async function POST(
     }
 
     // Find the target coalition
-    const coalition = await db
-      .collection<Coalition>("coalitions")
-      .findOne({ sequentialId: Number(id), countryId });
+    const coalition = await coalitionsCollection(db).findOne({
+      sequentialId: Number(id),
+      countryId,
+    });
     if (!coalition) {
       throw notFound("Coalition not found.");
     }
@@ -91,16 +95,17 @@ export async function POST(
     }
 
     // Check if the party already has a pending join request to ANY coalition
-    const existingRequest = await db
-      .collection<Coalition>("coalitions")
-      .findOne({ countryId, "joinRequests.partyId": party._id });
+    const existingRequest = await coalitionsCollection(db).findOne({
+      countryId,
+      "joinRequests.partyId": party._id,
+    });
     if (existingRequest) {
       throw badRequest("Your party already has a pending join request to another coalition.");
     }
 
     const now = new Date();
 
-    await db.collection<Coalition>("coalitions").updateOne(
+    await coalitionsCollection(db).updateOne(
       { _id: coalition._id },
       {
         $push: {
@@ -116,9 +121,10 @@ export async function POST(
 
     // Notify the coalition chair
     const chairChar = coalition.chairCharacterId
-      ? await db
-          .collection<Character>("characters")
-          .findOne({ _id: coalition.chairCharacterId }, { projection: { userId: 1 } })
+      ? await charactersCollection(db).findOne(
+          { _id: coalition.chairCharacterId },
+          { projection: { userId: 1 } }
+        )
       : null;
     if (chairChar) {
       await createNotification({

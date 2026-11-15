@@ -7,6 +7,11 @@ import { getBankId } from "@/lib/centralBank/helpers";
 import { withSessionDb } from "@/lib/db/sessionDb";
 import { loadBankingPolicy } from "@/lib/banking/policy";
 import { redenominateSavings } from "./rules/redenomination";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { savingsAccountsCollection } from "@/lib/db/repositories/savingsAccounts";
 
 /** Move claims, their backing and the UI projection atomically. Closed source
  * records protect the original migration receipt from recreating the deposit.
@@ -22,8 +27,7 @@ export async function redenominateTransferredSavings(
 ): Promise<void> {
   if (oldCurrency === newCurrency) return;
   await withSessionDb(db, async (tx) => {
-    const owners = await tx
-      .collection<Character>("characters")
+    const owners = await charactersCollection(tx)
       .find(
         {
           homeState: regionId,
@@ -36,8 +40,7 @@ export async function redenominateTransferredSavings(
     const policy = await loadBankingPolicy(tx);
     const accounts =
       policy.savingsAccounts === "authoritative"
-        ? await tx
-            .collection<SavingsAccount>("savingsAccounts")
+        ? await savingsAccountsCollection(tx)
             .find({
               ownerType: "character",
               ownerId: { $in: owners.map((owner) => owner._id) },
@@ -57,9 +60,10 @@ export async function redenominateTransferredSavings(
       );
     const openingTurn = needsOpeningTurn
       ? (
-          await tx
-            .collection<{ _id: string; currentTurn: number }>("gameState")
-            .findOne({ _id: "current" }, { projection: { currentTurn: 1 } })
+          await gameStateCollection<{ _id: string; currentTurn: number }>(tx).findOne(
+            { _id: "current" },
+            { projection: { currentTurn: 1 } }
+          )
         )?.currentTurn
       : undefined;
     const characterWrites: AnyBulkWriteOperation<Character>[] = [];
@@ -206,11 +210,11 @@ export async function redenominateTransferredSavings(
         },
       }));
     if (bankWrites.length) {
-      const moved = await tx.collection("corporations").bulkWrite(bankWrites);
+      const moved = await corporationsCollection(tx).bulkWrite(bankWrites);
       if (moved.matchedCount !== bankWrites.length)
         throw new Error("Bank-held savings backing is unavailable.");
     }
-    const debit = await tx.collection<{ _id: string }>("centralBanks").updateOne(
+    const debit = await centralBanksCollection<{ _id: string }>(tx).updateOne(
       {
         _id: sourceBank,
         externalBroadMoney: { $gte: sourceBacking },
@@ -221,17 +225,13 @@ export async function redenominateTransferredSavings(
       }
     );
     if (debit.matchedCount !== 1) throw new Error("Source savings backing is unavailable.");
-    const credit = await tx
-      .collection<{ _id: string }>("centralBanks")
-      .updateOne(
-        { _id: targetBank },
-        { $inc: { externalBroadMoney: targetBacking, householdSavingsLiability: targetLiability } }
-      );
+    const credit = await centralBanksCollection<{ _id: string }>(tx).updateOne(
+      { _id: targetBank },
+      { $inc: { externalBroadMoney: targetBacking, householdSavingsLiability: targetLiability } }
+    );
     if (credit.matchedCount !== 1) throw new Error("Destination savings bank is unavailable.");
     if (accountWrites.length) {
-      const result = await tx
-        .collection<SavingsAccount>("savingsAccounts")
-        .bulkWrite(accountWrites);
+      const result = await savingsAccountsCollection(tx).bulkWrite(accountWrites);
       const updates = accountWrites.filter((write) => "updateOne" in write).length;
       if (
         result.matchedCount !== updates ||
@@ -239,7 +239,7 @@ export async function redenominateTransferredSavings(
       )
         throw new Error("Savings accounts changed during conversion.");
     }
-    const written = await tx.collection<Character>("characters").bulkWrite(characterWrites);
+    const written = await charactersCollection(tx).bulkWrite(characterWrites);
     if (written.matchedCount !== characterWrites.length)
       throw new Error("Savings owners changed during conversion.");
   });

@@ -12,23 +12,9 @@ export async function getMilitaryCommands(db: Db, countryId: string): Promise<Mi
   const doc = await getMilitaryCommandsCollection(db).findOne({
     countryId: countryId as CountryId,
   });
-  // Back-compat: commands stored before commandingGeneralId existed default their
-  // lead to the first commander — the convention the roster used to render
-  // implicitly. Without this the client would echo `undefined` back to the PUT,
-  // whose schema requires the field, and every save would 400.
-  //
-  // Only an *absent* field defaults. An explicit null means the lead was
-  // deliberately cleared, and `??` would resurrect it on every load.
-  //
-  // A general may lead only ONE command (the CG's page resolves theirs by first
-  // match). Enforced on write by the commands PUT — but two sources can hand us a
-  // duplicate the Secretary never chose:
-  //   - the back-compat default above, when two legacy commands share a first
-  //     commander, and
-  //   - data saved before that rule existed.
-  // Either way the client would echo the duplicate back and every save would 400,
-  // leaving the Secretary unable to change anything. Later claims are dropped here
-  // so the state that loads is always a state that can be saved.
+  // Absent commandingGeneralId defaults to the first commander; explicit null stays null.
+  // A general may lead only one command (enforced on write); duplicates from legacy
+  // data must be dropped here or saves echo back a 400.
   const seenLead = new Set<string>();
   return (doc?.commands ?? []).map((c) => {
     const derived =

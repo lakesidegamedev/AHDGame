@@ -334,7 +334,7 @@ describe("restoreSectorsToUnowned", () => {
     });
   });
 
-  // Ticket #1271. The pool row this credits CARRIES a countryId and every reader
+  // The pool row this credits CARRIES a countryId and every reader
   // filters on it, so it has to be the country the STATE is in. A sector whose
   // stored country went stale when its region changed hands would otherwise
   // return its capacity to a market the country it sits in cannot see.

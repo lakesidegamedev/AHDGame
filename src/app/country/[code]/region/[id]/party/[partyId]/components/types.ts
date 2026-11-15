@@ -51,9 +51,7 @@ export interface StatePartyData {
   /** Chair-set per-turn USD budget for explicit PS investment. 0 = off. */
   psInvestmentBudget: number;
   /**
-   * @deprecated The "% of treasury" phantom-PS stream was removed in the
-   * 2026-06-25 PS-building rebalance; the engine no longer reads this. Retained
-   * for backward compatibility only.
+   * @deprecated Unused by the engine. Retained for backward compatibility only.
    */
   /** Whether the party has a player or elected official in this state.
    *  Required for PS-spend Org actions (`hasPresence: false` blocks Build Org). */

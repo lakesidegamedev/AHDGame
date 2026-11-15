@@ -3,25 +3,22 @@
  *
  * The forex phase reads all macro indicators from centralBanks to avoid
  * multi-collection reads during rate computation. This mirror copies
- * FederalBudget.economicFactors.tradeGrowth -> CentralBank.tradeGrowth
- * once per turn during national aggregation (Group 12).
+ * FederalBudget.economicFactors.tradeGrowth -> CentralBank.tradeGrowth once per
+ * turn during national aggregation.
  *
- * **Currency (v0.2.6):** `tradeGrowth` is a percentage -- unit-agnostic -- so the
- * per-country mirror copies the value verbatim. Both sides of the copy live in
- * the same country's namespace (federal budget <-> central bank), so no FX
- * conversion is required even though the budget is denominated in country
- * currency.
- *
- * See docs/design/currency-exchange.md "CentralBank Schema Addition".
+ * `tradeGrowth` is a percentage (unit-agnostic), so the mirror copies the value
+ * verbatim. Both sides live in the same country's namespace (federal budget <->
+ * central bank), so no FX conversion is needed even though the budget is in
+ * country currency.
  */
 
 import type { Db } from "mongodb";
-import type { FederalBudget } from "@/lib/db/types/budget";
-import type { CentralBank } from "@/lib/db/types/centralBank";
 import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
 import { getPresetMonetaryScope } from "@/lib/monetaryPolicy/presetMonetaryScope";
 import { getGameStatePresetOrDefault } from "@/lib/db/collections/gameState";
 import { getNationalBudgetId } from "@/lib/bonds/sovereign";
+import { getFederalBudgetCollection } from "@/lib/db/collections/federalBudget";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 export interface TradeGrowthMirrorResult {
   countriesUpdated: number;
@@ -49,8 +46,9 @@ export async function mirrorTradeGrowth(db: Db): Promise<TradeGrowthMirrorResult
   // Batch-fetch all relevant budgets
   const budgets =
     budgetIdSet.size > 0
-      ? await db
-          .collection<FederalBudget>("federalBudget")
+      ? await (
+          await getFederalBudgetCollection(db)
+        )
           .find(
             { _id: { $in: Array.from(budgetIdSet) } },
             { projection: { "economicFactors.tradeGrowth": 1 } }
@@ -83,7 +81,7 @@ export async function mirrorTradeGrowth(db: Db): Promise<TradeGrowthMirrorResult
   }
 
   if (bulkOps.length > 0) {
-    await db.collection<CentralBank>("centralBanks").bulkWrite(bulkOps as never);
+    await centralBanksCollection(db).bulkWrite(bulkOps as never);
   }
 
   return { countriesUpdated: bulkOps.length };

@@ -15,6 +15,11 @@ import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { requirePlayerTransfersEnabled } from "@/lib/api/requirePlayerTransfers";
 import { emitTreasuryTransaction } from "@/lib/treasury/emit";
 import { isSameCountry } from "@/lib/api/sameCountry";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { adminLogsCollection } from "@/lib/db/repositories/adminLogs";
+import type { Document } from "mongodb";
+import { activityLogCollection } from "@/lib/db/repositories/activityLog";
+import { caucusesCollection } from "@/lib/db/repositories/caucuses";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string; slug: string }>;
@@ -94,23 +99,24 @@ export async function POST(request: Request, { params }: RouteParams) {
     };
 
     const applyTransferInTransaction = async (session: ClientSession) => {
-      const debitResult = await db
-        .collection<Caucus>("caucuses")
-        .updateOne({ _id: caucus._id, treasury: { $gte: amount } }, caucusDebit, { session });
+      const debitResult = await caucusesCollection(db).updateOne(
+        { _id: caucus._id, treasury: { $gte: amount } },
+        caucusDebit,
+        { session }
+      );
 
       if (debitResult.matchedCount === 0) {
         throw badRequest(`Insufficient caucus funds. Available: $${treasury.toLocaleString()}`);
       }
 
-      await db
-        .collection<PoliticalParty>("politicalParties")
-        .updateOne({ _id: party._id }, partyCredit, { session });
+      await politicalPartiesCollection(db).updateOne({ _id: party._id }, partyCredit, { session });
     };
 
     const applyTransferWithoutTransaction = async () => {
-      const debitResult = await db
-        .collection<Caucus>("caucuses")
-        .updateOne({ _id: caucus._id, treasury: { $gte: amount } }, caucusDebit);
+      const debitResult = await caucusesCollection(db).updateOne(
+        { _id: caucus._id, treasury: { $gte: amount } },
+        caucusDebit
+      );
 
       if (debitResult.matchedCount === 0) {
         return errorResponse(
@@ -120,11 +126,9 @@ export async function POST(request: Request, { params }: RouteParams) {
       }
 
       try {
-        await db
-          .collection<PoliticalParty>("politicalParties")
-          .updateOne({ _id: party._id }, partyCredit);
+        await politicalPartiesCollection(db).updateOne({ _id: party._id }, partyCredit);
       } catch (error) {
-        await db.collection<Caucus>("caucuses").updateOne(
+        await caucusesCollection(db).updateOne(
           { _id: caucus._id },
           {
             $inc: { treasury: amount },
@@ -159,7 +163,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       }
     }
 
-    await db.collection("adminLogs").insertOne({
+    await adminLogsCollection<Document>(db).insertOne({
       category: "system",
       action: "funds_transferred",
       username: authUser.username,
@@ -206,7 +210,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       now,
     });
 
-    void db.collection("activityLog").insertOne({
+    void activityLogCollection<Document>(db).insertOne({
       type: "fund_event",
       timestamp: now,
       userId: new ObjectId(authUser.userId),

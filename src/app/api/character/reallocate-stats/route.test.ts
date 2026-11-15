@@ -6,7 +6,6 @@ import { STAT_KEYS, type CharacterStats } from "@/lib/stats/statsConstants";
 
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
 vi.mock("@/lib/api/requireAuth", () => ({ requireHumanSession: vi.fn() }));
-vi.mock("@/lib/stats/featureFlag", () => ({ isRpgStatsEnabled: vi.fn() }));
 
 const userId = new ObjectId();
 const characterId = new ObjectId();
@@ -55,17 +54,6 @@ describe("POST /api/character/reallocate-stats", () => {
       ok: true,
       user: { userId: userId.toHexString() },
     } as Awaited<ReturnType<typeof requireHumanSession>>);
-
-    const { isRpgStatsEnabled } = await import("@/lib/stats/featureFlag");
-    vi.mocked(isRpgStatsEnabled).mockResolvedValue(true);
-  });
-
-  it("returns 403 when the stat system is disabled", async () => {
-    const { isRpgStatsEnabled } = await import("@/lib/stats/featureFlag");
-    vi.mocked(isRpgStatsEnabled).mockResolvedValue(false);
-
-    const res = await callRoute(makeRequest(legalBuild()));
-    expect(res.status).toBe(403);
   });
 
   it("returns 400 for an illegal allocation (wrong point total)", async () => {

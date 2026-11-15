@@ -7,6 +7,9 @@ import type {
   PartyAnalyticsOrgSection,
   PartyAnalyticsStateMetric,
 } from "./types";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { partyBudgetCollection } from "@/lib/db/repositories/partyBudget";
 
 interface StateOrgBudgetSummary {
   stateId: string;
@@ -52,10 +55,7 @@ export async function buildPartyOrgAnalytics(
   countryId: CountryId,
   partyId: string
 ): Promise<PartyAnalyticsOrgSection> {
-  const statePartyOrgs = await db
-    .collection<StatePartyOrg>("statePartyOrg")
-    .find({ countryId, partyId })
-    .toArray();
+  const statePartyOrgs = await statePartyOrgCollection(db).find({ countryId, partyId }).toArray();
 
   if (statePartyOrgs.length === 0) {
     return {
@@ -70,12 +70,10 @@ export async function buildPartyOrgAnalytics(
 
   const stateIds = statePartyOrgs.map((org) => org.stateId);
   const [states, budgets] = await Promise.all([
-    db
-      .collection<State>("states")
+    statesCollection(db)
       .find({ _id: { $in: stateIds }, countryId })
       .toArray(),
-    db
-      .collection<PartyBudget>("partyBudget")
+    partyBudgetCollection(db)
       .find({ countryId, partyId, scope: "state", stateId: { $in: stateIds } })
       .toArray(),
   ]);
@@ -127,14 +125,12 @@ export async function buildStatePartyOrgAnalytics(
   partyId: string,
   stateId: string
 ): Promise<PartyAnalyticsStateMetric | null> {
-  const statePartyOrg = await db
-    .collection<StatePartyOrg>("statePartyOrg")
-    .findOne({ countryId, partyId, stateId });
+  const statePartyOrg = await statePartyOrgCollection(db).findOne({ countryId, partyId, stateId });
   if (!statePartyOrg) return null;
 
   const [state, budget] = await Promise.all([
-    db.collection<State>("states").findOne({ _id: stateId, countryId }),
-    db.collection<PartyBudget>("partyBudget").findOne({
+    statesCollection(db).findOne({ _id: stateId, countryId }),
+    partyBudgetCollection(db).findOne({
       countryId,
       partyId,
       scope: "state",

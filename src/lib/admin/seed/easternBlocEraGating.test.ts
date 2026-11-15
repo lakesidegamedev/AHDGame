@@ -60,14 +60,12 @@ const fakeRegion = {
   gdp: 100_000_000_000,
 } as unknown as State;
 
-// Minimal config: one region, no parties/categories/metrics/baselines. Enough to
+// Minimal config: one region, no parties/metrics/baselines. Enough to
 // observe whether the seeder proceeds past its era guard (region upsert) or not.
 const cfg: EasternBlocSeedConfig = {
   countryId: "HU",
-  categoryId: "hu_voterGroups",
   regions: [fakeRegion],
   parties: [],
-  categories: [],
   metrics: [],
   baselines: [],
 };

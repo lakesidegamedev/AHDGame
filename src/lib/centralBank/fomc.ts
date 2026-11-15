@@ -108,10 +108,9 @@ export function boardCanCarryMotions(board: readonly FomcSeat[]): boolean {
 }
 
 /**
- * Ballots that still belong to a seated governor. A seat that went vacant
- * mid-meeting (term expiry, removal) can leave its auto ballot behind; that
- * ballot must not count, or the tally shows more votes than there are members
- * (ticket #1463).
+ * Ballots that still belong to a seated governor. Auto ballots can outlive a
+ * seat vacated mid-meeting (term expiry, removal); counting them would show
+ * more votes than seated members.
  */
 export function seatedBallots<B extends { seatId: string }>(
   ballots: readonly B[],

@@ -1,0 +1,92 @@
+{
+  "config": {
+    "governmentType": "parliamentaryRepublic",
+    "regionLabel": "Land",
+    "regionalBillAssentTitle": "Minister-President",
+    "legislature": {
+      "name": "Bundestag",
+      "lowerChamber": {
+        "key": "bundestag",
+        "name": "Bundestag",
+        "shortName": "Bundestag",
+        "seats": 630,
+        "description": "630 members elected via mixed-member proportional representation (2023 reform)."
+      },
+      "upperChamber": {
+        "key": "bundesrat",
+        "name": "Bundesrat",
+        "shortName": "Bundesrat",
+        "seats": 69,
+        "description": "69 members representing the 16 German Länder."
+      }
+    },
+    "subNationalChamber": {
+      "key": "landtag",
+      "name": "Landtag",
+      "shortName": "Landtag",
+      "regionalModel": true
+    },
+    "officeTypes": [
+      {
+        "key": "chancellor",
+        "label": "Chancellor",
+        "labelPlural": "Chancellors",
+        "isExecutive": true,
+        "isSubNational": false
+      },
+      {
+        "key": "bundestag",
+        "label": "Member of Bundestag",
+        "labelPlural": "Members of Bundestag",
+        "chamberKey": "bundestag",
+        "isExecutive": false,
+        "isSubNational": false
+      },
+      {
+        "key": "ministerPresident",
+        "label": "Minister-President",
+        "labelPlural": "Minister-Presidents",
+        "isExecutive": false,
+        "isSubNational": true
+      },
+      {
+        "key": "landtag",
+        "label": "Mitglied des Landtags",
+        "labelPlural": "Mitglieder des Landtags",
+        "chamberKey": "landtag",
+        "isExecutive": false,
+        "isSubNational": true
+      },
+      {
+        "key": "centralBankChair",
+        "label": "President of the ECB",
+        "labelPlural": "Presidents of the ECB",
+        "isExecutive": false,
+        "isSubNational": false
+      }
+    ],
+    "lowerElectionSystem": { "snapElectionsAllowed": true }
+  },
+  "eraOverrides": {
+    "1953-default": {
+      "legislature": {
+        "name": "Bundestag",
+        "lowerChamber": {
+          "key": "bundestag",
+          "name": "Bundestag",
+          "shortName": "Bundestag",
+          "seats": 487,
+          "description": "487 members of the 2nd Bundestag (1953) elected via mixed-member proportional representation."
+        },
+        "upperChamber": {
+          "key": "bundesrat",
+          "name": "Bundesrat",
+          "shortName": "Bundesrat",
+          "seats": 69,
+          "description": "Members representing the West German Länder (appointed by state governments)."
+        }
+      }
+    }
+  },
+  "regionalAssentOfficeKey": "ministerPresident"
+}

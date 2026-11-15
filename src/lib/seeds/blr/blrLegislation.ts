@@ -13,23 +13,18 @@ const blrTaxAndSystemLegislation = makeEasternBlocLegislation({
 });
 
 /**
- * Byelorussia spending legislation (1953 baseline) — gdp/population MUST match
+ * Byelorussia spending legislation (1953 baseline). gdp/population MUST match
  * the "BLR" makeEasternBlocBudget1953 call in src/lib/seeds/reference/budgets.ts
- * (SUR 140B against 8.1M), the same discipline the other bloc members follow and
- * the thing src/lib/seeds/reference/easternBlocSpending1953.test.ts checks.
+ * (SUR 140B against 8.1M), as easternBlocSpending1953.test.ts enforces.
  *
- * Note the deliberate mismatch with blrRegions1953.ts: the region seed sums to
- * 7.7M people and SUR 50,000M of regional product, because those are republican
- * figures on the RSFSR regional scale, while the budget block is the union
- * fiscal-scale base for the republic. Do not "reconcile" one to the other by
- * editing this file — the numbers here exist only to price the spending ladder
- * against the budget seed.
+ * Deliberately mismatched with blrRegions1953.ts (7.7M / SUR 50,000M) because
+ * that region seed is the canonical republican figure on the RSFSR scale, while
+ * this block prices the spending ladder against the union fiscal base. Do not
+ * reconcile the two by editing this file.
  *
- * Unlike the satellites, Byelorussia is a union republic, so its investment
- * programme is the all-union five-year plan rather than a national one: the
- * Fifth Five-Year Plan (1951-55), whose Byelorussian chapter is overwhelmingly
- * war reconstruction — Minsk rebuilt from the foundations, MAZ and MTZ stood up,
- * and the Soligorsk potash basin opened.
+ * Byelorussia is a union republic, so its investment programme is the all-union
+ * Fifth Five-Year Plan (1951-55), overwhelmingly war reconstruction: Minsk
+ * rebuilt, MAZ and MTZ stood up, Soligorsk potash opened.
  */
 const blrSpendingLegislation = makeEasternBlocSpendingLegislation({
   prefix: "blr",

@@ -58,26 +58,16 @@ export interface CalendarClock {
 }
 
 /**
- * Convert a raw `currentTurn` into the DISPLAY calendar turn, honoring the
- * pre-iteration clock. During the pre-iteration (`preIterationActive`) the
- * calendar is pinned to the era start (turn 1) even though the raw turn counter
- * advances; afterward the raw turn is shifted back by `preIterationTurns` so the
- * calendar resumes at the era start the moment the real game begins.
+ * Convert a raw `currentTurn` into the display calendar turn, honoring the
+ * pre-iteration clock. While pre-iteration is active the calendar pins to turn
+ * 1; afterward the raw turn shifts back by `preIterationTurns` so the calendar
+ * resumes at the era start. Absent clock fields means identity.
  *
- * On normal (non-pre-iteration) worlds both fields are absent → identity, so
- * `calendarTurn(t) === t`.
- *
- * Which callers route through this is decided by what the value MEANS, not by
- * display versus logic:
- *
- * - A calendar YEAR or DATE goes through here. That covers display (the status
- *   bar, crisis dates, career histories) and equally content authored against a
- *   year: the SCOTUS docket's `decisionYear`, a justice's `departureYear`, an
- *   era checkpoint's window. Firing those off the raw turn is what decided the
- *   1962 docket in a world reading 1961 (#1208).
- * - A COUNT of turns does not. Election scheduling, `durationTurns`, a tenure
- *   hazard measuring turns served: these are spans and offsets on the raw
- *   counter, and shifting them here would move the thing being measured.
+ * Route values that MEAN a calendar year or date through here: display, and
+ * content authored against a year (docket `decisionYear`, justice
+ * `departureYear`, era windows). Do not route turn COUNTS through here
+ * (election scheduling, `durationTurns`, tenure hazard spans): shifting them
+ * would move the thing being measured.
  */
 export function calendarTurn(rawTurn: number, clock?: CalendarClock): number {
   if (clock?.preIterationActive) return 1;

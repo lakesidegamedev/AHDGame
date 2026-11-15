@@ -161,7 +161,6 @@ export default function MetricsPage() {
   const runtimeGovType = runtime?.governmentType ?? config.governmentType;
   const {
     preset,
-    eraSystemEnabled,
     currentYear,
     loaded: flagsLoaded,
     failed: flagsFailed,
@@ -169,7 +168,7 @@ export default function MetricsPage() {
     resetV2Countries,
   } = useWorldFlags();
   // Live year for era-aware score bands; null while the flag is off (legacy path).
-  const eraYear = eraSystemEnabled ? currentYear : null;
+  const eraYear = currentYear;
 
   const identity = getStatsIdentity(country);
   const currencySymbol = getCurrencyPrefix(country);

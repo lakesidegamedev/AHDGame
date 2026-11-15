@@ -69,13 +69,13 @@ describe("needsNonLawCalibration", () => {
   const envelope = { baselineSpendingByCategory: { welfare: 10 } };
 
   it("calibrates a non-law-book country with a seeded envelope, once per version", () => {
-    expect(needsNonLawCalibration(envelope as never, "DE")).toBe(true);
+    expect(needsNonLawCalibration(envelope as never, "FR")).toBe(true);
     const current = {
       ...envelope,
       nonLawSpendingGdpShareBaseline: 0,
       nonLawSpendingCalibration: NON_LAW_CALIBRATION_VERSION,
     };
-    expect(needsNonLawCalibration(current as never, "DE")).toBe(false);
+    expect(needsNonLawCalibration(current as never, "FR")).toBe(false);
   });
 
   it("recalibrates a share stored by an earlier version", () => {

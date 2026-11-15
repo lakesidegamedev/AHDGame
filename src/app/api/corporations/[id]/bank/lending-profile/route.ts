@@ -27,7 +27,7 @@ import {
   type CreditBandId,
 } from "@/lib/banking/creditBands";
 import { MAX_NPC_FLOW_PER_TURN_FRACTION } from "@/lib/banking/rules/loans";
-import type { Corporation } from "@/lib/db/types";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -102,12 +102,10 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     const profile = parsed.data.profile;
     const previous = getLendingProfile(corporation.bankCharter?.lendingProfile).id;
-    const updated = await db
-      .collection<Corporation>("corporations")
-      .updateOne(
-        { _id: corporation._id, "bankCharter.status": "active" },
-        { $set: { "bankCharter.lendingProfile": profile, updatedAt: new Date() } }
-      );
+    const updated = await corporationsCollection(db).updateOne(
+      { _id: corporation._id, "bankCharter.status": "active" },
+      { $set: { "bankCharter.lendingProfile": profile, updatedAt: new Date() } }
+    );
     if (updated.matchedCount !== 1) {
       return errorResponse(400, "Failed to set the lending profile.");
     }

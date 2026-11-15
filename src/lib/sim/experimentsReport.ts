@@ -4,7 +4,6 @@ import type { Db } from "mongodb";
 import type { PoliticalParty } from "@/lib/db/types/party";
 import type { NPP } from "@/lib/db/types/npp";
 import type { ElectedOfficial } from "@/lib/db/types";
-import type { Corporation } from "@/lib/db/types";
 import type { GameState } from "@/lib/db/types/gameState";
 import {
   collectBalanceMetrics,
@@ -23,6 +22,17 @@ import {
   readLongHorizonTelemetryReport,
   type LongHorizonTelemetryReport,
 } from "@/lib/telemetry/longHorizon/telemetry";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import type { Document } from "mongodb";
+import { parliamentSeatsHistoryCollection } from "@/lib/db/repositories/parliamentSeatsHistory";
+import { corporationCountryHistoryCollection } from "@/lib/db/repositories/corporationCountryHistory";
+import { simRunsCollection } from "@/lib/db/repositories/simRuns";
+import { partyHistoryCollection } from "@/lib/db/repositories/partyHistory";
 
 // Static sim-harness parameters — the "conditions we specified" for a run.
 // Source-of-truth lives in scripts/sim/runWorld.ts (country allowlist,
@@ -145,7 +155,7 @@ export interface RunConfig {
   mcpVersion?: string;
   requestedConfig?: Record<string, unknown>;
   effectiveConfigInitial?: Record<string, unknown>;
-  /** Pinned-source identity (#1966): requested pin plus the exact executed
+  /** Pinned-source identity: requested pin plus the exact executed
    * path/SHA recorded by runWorld. Proves which code produced the report. */
   source?: {
     worktree?: string | null;
@@ -312,8 +322,7 @@ function deriveGovernmentTimeline(seats: SeatsTimelinePoint[]): GovernmentContro
 
 async function collectWealthLeaders(db: Db, parties: PartyInfo[]): Promise<WealthLeader[]> {
   void parties; // name-join happens in the front-end via the `parties` directory.
-  const npps = await db
-    .collection<NPP>("npps")
+  const npps = await nppsCollection(db)
     .find(
       { retiredAt: null },
       {
@@ -342,16 +351,13 @@ async function collectWealthLeaders(db: Db, parties: PartyInfo[]): Promise<Wealt
 
   // Attribution — only for the top NPPs, so these are tiny scoped queries.
   const [officials, ceoCorps, stockCorps] = await Promise.all([
-    db
-      .collection<ElectedOfficial>("electedOfficials")
+    electedOfficialsCollection(db)
       .find({ nppId: { $in: topIds } }, { projection: { nppId: 1, officeType: 1 } })
       .toArray(),
-    db
-      .collection<Corporation>("corporations")
+    corporationsCollection(db)
       .find({ ceoType: "npp", ceoId: { $in: topIds } }, { projection: { ceoId: 1, name: 1 } })
       .toArray(),
-    db
-      .collection<Corporation>("corporations")
+    corporationsCollection(db)
       .find({ "shareholders.nppId": { $in: topIds } }, { projection: { shareholders: 1 } })
       .toArray(),
   ]);
@@ -398,8 +404,7 @@ async function collectWealthLeaders(db: Db, parties: PartyInfo[]): Promise<Wealt
 }
 
 async function collectTopCorporations(db: Db): Promise<TopCorporation[]> {
-  const corps = await db
-    .collection<Corporation>("corporations")
+  const corps = await corporationsCollection(db)
     .find(
       { countryOwnerId: { $exists: false }, suspended: { $ne: true } },
       {
@@ -436,8 +441,7 @@ async function collectTopCorporations(db: Db): Promise<TopCorporation[]> {
   const ceoIds = ranked.map((r) => r.corp.ceoId).filter((id): id is NonNullable<typeof id> => !!id);
   const ceoNpps =
     ceoIds.length > 0
-      ? await db
-          .collection<NPP>("npps")
+      ? await nppsCollection(db)
           .find({ _id: { $in: ceoIds } }, { projection: { name: 1 } })
           .toArray()
       : [];
@@ -470,33 +474,29 @@ export async function collectExperimentsReport(
     gameConfigDoc,
     simRunDoc,
   ] = await Promise.all([
-    db
-      .collection("parliamentSeatsHistory")
+    parliamentSeatsHistoryCollection<Document>(db)
       .find({}, { projection: { _id: 0, createdAt: 0 } })
       .sort({ turn: 1 })
       .toArray(),
-    db
-      .collection("partyHistory")
+    partyHistoryCollection<Document>(db)
       .find({}, { projection: { _id: 0, createdAt: 0 } })
       .sort({ turn: 1 })
       .toArray(),
-    db
-      .collection("corporationCountryHistory")
+    corporationCountryHistoryCollection<Document>(db)
       .find({}, { projection: { _id: 0, createdAt: 0 } })
       .sort({ turn: 1 })
       .toArray(),
-    db
-      .collection<PoliticalParty>("politicalParties")
+    politicalPartiesCollection(db)
       .find(
         {},
         { projection: { sequentialId: 1, countryId: 1, name: 1, abbreviation: 1, color: 1 } }
       )
       .toArray(),
     collectBalanceMetrics(db),
-    db.collection<GameState>("gameState").findOne({ _id: "current" }),
-    db.collection("gameConfig").findOne({ _id: "default" as never }),
+    gameStateCollection(db).findOne({ _id: "current" }),
+    gameConfigCollection<Document>(db).findOne({ _id: "default" as never }),
     options.runId
-      ? db.collection<Record<string, unknown>>("simRuns").findOne(
+      ? simRunsCollection<Record<string, unknown>>(db).findOne(
           {
             dbName: db.databaseName,
             $or: [{ runId: options.runId }, { _id: options.runId as never }],

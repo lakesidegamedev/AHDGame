@@ -1,9 +1,9 @@
 /**
- * Market-tier realization legs: clearing, throughput, and capital (#588).
+ * Market-tier realization legs: clearing, throughput, and capital.
  *
  * Pure computation split out of processSector. Below plants these legs are
- * unchanged byte-for-byte; under plants they feed the revenue governor and
- * the P1 production chain. No reads or writes here, only the turn inputs.
+ * unchanged; under plants they feed the revenue governor and the P1 production
+ * chain. No reads or writes here, only the turn inputs.
  */
 import { capacityHaircutFactor } from "@/lib/extraction/capacityHaircut";
 import { computePriceRealization } from "@/lib/market/priceRealization";

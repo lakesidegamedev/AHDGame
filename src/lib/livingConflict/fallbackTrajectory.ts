@@ -8,6 +8,7 @@ import type { CrisisOptionAction } from "@/lib/db/types/crisis";
 import type { LivingConflictState } from "./types";
 import { livingConflictDef } from "./registry";
 import { applyConflictOutcome, evaluateConflictTransitions } from "./engine";
+import { livingConflictsCollection } from "@/lib/db/repositories/livingConflicts";
 
 type Trajectory = Extract<CrisisOptionAction, { kind: "livingConflictTrajectory" }>;
 
@@ -18,7 +19,7 @@ export async function applyLivingConflictFallback(
 ): Promise<void> {
   const def = livingConflictDef(action.conflictKey);
   if (!def) throw new Error(`Unknown living conflict: ${action.conflictKey}`);
-  const conflicts = db.collection<LivingConflictState>("livingConflicts");
+  const conflicts = livingConflictsCollection<LivingConflictState>(db);
   const current = await conflicts.findOne({ defKey: def.key });
   if (!current?.hasOpened) return;
   if (!current.fallbackResolutionIds?.includes(sourceId)) {

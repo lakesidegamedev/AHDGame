@@ -1,3 +1,4 @@
+import { canonicalRegionId } from "@/lib/constants/countriesCore";
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { getAuthUserWithCharacter } from "@/lib/auth";
@@ -6,7 +7,6 @@ import { getCountryConfig, type CountryId } from "@/lib/constants/countries";
 import { loadCountryNameOverrides } from "@/lib/country/countryIdentity";
 import { getGameStatePreset } from "@/lib/db/collections/gameState";
 import { ObjectId } from "mongodb";
-import type { Election, State } from "@/lib/db/types";
 import { campaignManagerCountry, presidentialRedirect } from "@/lib/campaignManager/links";
 import { parseCampaignManagerParams } from "@/lib/campaignManager/linkParams";
 import {
@@ -14,6 +14,9 @@ import {
   type CountryRuntimeState,
 } from "@/lib/campaignManager/countryView";
 import CampaignManagerClient from "./CampaignManagerClient";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
 
 export const metadata: Metadata = { title: "Campaign Manager" };
 
@@ -37,12 +40,10 @@ export default async function CampaignManagerPage({
   const { race, filter, country: countryParam } = parseCampaignManagerParams(await searchParams);
   // Links that know only a race id land here; the presidency has its own page.
   const linked = race
-    ? await db
-        .collection<Election>("elections")
-        .findOne(
-          { _id: new ObjectId(race.split(":")[0]) },
-          { projection: { _id: 1, electionType: 1, seatId: 1, countryId: 1 } }
-        )
+    ? await electionsCollection(db).findOne(
+        { _id: new ObjectId(race.split(":")[0]) },
+        { projection: { _id: 1, electionType: 1, seatId: 1, countryId: 1 } }
+      )
     : null;
   const elsewhere = presidentialRedirect(linked);
   if (elsewhere) redirect(elsewhere);
@@ -50,15 +51,16 @@ export default async function CampaignManagerPage({
   // Any country's races can be viewed: a linked race opens in its own country.
   const wanted = campaignManagerCountry(homeCountryId, linked, countryParam) as CountryId;
   const countryId = getCountryConfig(wanted) ? wanted : homeCountryId;
+  if (filter.regionId && filter.regionId !== "ALL")
+    filter.regionId = canonicalRegionId(countryId, filter.regionId);
   const [regions, preset, countryState, nameOverrides] = await Promise.all([
-    db
-      .collection<State>("states")
+    statesCollection(db)
       .find({ countryId }, { projection: { _id: 1, name: 1 } })
       .toArray(),
     getGameStatePreset(db),
-    db
-      .collection<{ _id: string } & NonNullable<CountryRuntimeState>>("countryGameStates")
-      .findOne({ _id: countryId }),
+    countryGameStatesCollection<{ _id: string } & NonNullable<CountryRuntimeState>>(db).findOne({
+      _id: countryId,
+    }),
     loadCountryNameOverrides(db),
   ]);
   const view = campaignManagerCountryView(countryId, preset, countryState, nameOverrides);
@@ -69,8 +71,9 @@ export default async function CampaignManagerPage({
   return (
     <CampaignManagerClient
       // A new country is a new page: type, region and selection start over.
-      key={countryId}
+      key={`${countryId}:${preset}`}
       countryId={countryId}
+      preset={preset}
       countryName={view.countryName}
       regionNoun={view.regionNoun}
       regionNounPlural={view.regionNounPlural}

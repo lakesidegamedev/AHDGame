@@ -1,19 +1,10 @@
 /**
  * Era-authored region bundles, and the count derived from them.
  *
- * Split out of `seedDiagnostic/expectations.ts` to break an import cycle. That
- * module also hosts `seededCountryIdsForPreset`, which needs the enablement
- * accessors in `seedCountryGameStates`, which in turn imports the readiness
- * contract — so a readiness module reaching in here for a region count closed
- * the loop:
- *
- *   countryReadinessContract -> readinessExpectations
- *     -> seedDiagnostic/expectations -> seedCountryGameStates
- *       -> countryReadinessContract
- *
- * Nothing here needs any of that. The map is pure data and the accessor is pure
- * arithmetic over it, so both sides can depend on this module without either
- * depending on the other.
+ * Kept separate from `seedDiagnostic/expectations.ts` to break an import cycle:
+ * that module pulls in `seededCountryIdsForPreset` -> `seedCountryGameStates`
+ * -> the readiness contract, which reaches back for a region count. Nothing
+ * here needs any of that, so both sides can depend on this module.
  */
 import type { CountryId } from "@/lib/constants/countries";
 import { DEFAULT_LEGACY_COUNTRY_ID } from "@/lib/constants/countries";

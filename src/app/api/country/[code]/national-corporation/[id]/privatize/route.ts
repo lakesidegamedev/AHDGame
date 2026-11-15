@@ -11,7 +11,6 @@ import { parseJsonBody } from "@/lib/api/validate";
 import { handleRouteError, isUnexpectedError, errorResponse } from "@/lib/api/errors";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
-import type { Corporation } from "@/lib/db/types";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { assertTreasuryAuthority } from "@/lib/nationalization/authority";
 import { isStateOwned } from "@/lib/nationalization/nationalCorporation";
@@ -23,6 +22,7 @@ import {
 import { executivePrivatizeSchema } from "@/lib/api/schemas/nationalization";
 import { corporationQueryFromParamId } from "@/lib/api/corporations/resolveQuery";
 import { generateStockExchangeSnapshots } from "@/lib/turn/stockExchangeSnapshot";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string }>;
@@ -82,9 +82,10 @@ export async function POST(request: Request, { params }: RouteParams) {
       );
     }
 
-    const source = await db
-      .collection<Corporation>("corporations")
-      .findOne({ ...idQuery, countryOwnerId: countryId });
+    const source = await corporationsCollection(db).findOne({
+      ...idQuery,
+      countryOwnerId: countryId,
+    });
     if (!source || !isStateOwned(source)) {
       return errorResponse(404, "National Corporation not found for this country.");
     }

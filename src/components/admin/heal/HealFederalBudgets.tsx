@@ -4,7 +4,7 @@ import { HealPanelActions, HealPanelMessage } from "./HealPanelParts";
 
 import { useState } from "react";
 import type { CountryId } from "@/lib/constants/countriesCore";
-import { COUNTRY_CURRENCY_MAP, CURRENCY_SYMBOLS } from "@/lib/constants/currencies";
+import { COUNTRY_CURRENCY_MAP, CURRENCY_SYMBOLS } from "@/lib/constants/currencyCodes";
 import { apiErrorText } from "@/lib/errors/catalog";
 
 interface NationalDiagnostic {

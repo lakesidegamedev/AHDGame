@@ -155,6 +155,32 @@ describe("computeNationalMetrics", () => {
     expect(setOps["governance.budgetBalance"]).toEqual({ value: -2 });
     expect(setOps["governance.debtToGdp"]).toEqual({ value: 87 });
   });
+
+  it("measures budget balance against the same smoothed GDP as the debt ratio", async () => {
+    const states = [{ _id: "TOK", countryId: "JP", population: 10_000_000, gdp: 1_000_000 }];
+    const metrics = [{ _id: "TOK", economic: { unemploymentRate: { value: 5.0 } } }];
+    const federalBudgets = [
+      {
+        _id: "jp_national",
+        countryId: "JP",
+        surplus: -200,
+        gdp: 10_000,
+        gdpSmoothed: 8_000,
+        debtToGdpRatio: 0.87,
+        revenue: { total: 1000 },
+        spending: { total: 1200 },
+      },
+    ];
+
+    const db = makeDb(states, metrics, federalBudgets);
+    await computeNationalMetrics(db as unknown as Db);
+
+    const setOps = Object.assign(
+      {},
+      ...db._updateOne.mock.calls.map((c: unknown[]) => (c[1] as { $set: object }).$set)
+    ) as Record<string, { value: number }>;
+    expect(setOps["governance.budgetBalance"]).toEqual({ value: -2.5 });
+  });
 });
 
 // ── GDP-weighted aggregation for gdpGrowth ───────────────────────────────────

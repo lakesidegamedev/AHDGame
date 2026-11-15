@@ -1,6 +1,6 @@
 import type { Db } from "@/lib/mongodb";
 import { ObjectId } from "mongodb";
-import type { Character, ElectedOfficial, NPP, PoliticalParty } from "@/lib/db/types";
+import type { ElectedOfficial, NPP, PoliticalParty } from "@/lib/db/types";
 import type { Impeachment, ImpeachmentVoteValue } from "@/lib/db/types/impeachment";
 import { getExecutiveOfficialFilter } from "@/lib/elections/executiveOfficeFilters";
 import { governorOfficialFilter } from "@/lib/db/electedOfficialScope";
@@ -9,6 +9,11 @@ import {
   impeachmentStageChamberOfficeType,
 } from "./impeachmentTally";
 import { resolvePartyTier } from "@/lib/parties/partyTier";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { impeachmentsCollection } from "@/lib/db/repositories/impeachments";
 
 /**
  * Per-axis stance distance (on the shared -5..+5 economic/social axes) within
@@ -120,14 +125,14 @@ export async function loadImpeachmentFallbackContext(
   impeachment: Impeachment
 ): Promise<ImpeachmentFallbackContext> {
   const [target, targetChar, parties] = await Promise.all([
-    db
-      .collection<ElectedOfficial>("electedOfficials")
-      .findOne(targetOfficialFilter(impeachment), { projection: { party: 1 } }),
-    db
-      .collection<Character>("characters")
-      .findOne({ _id: impeachment.targetCharacterId }, { projection: { policies: 1 } }),
-    db
-      .collection<PoliticalParty>("politicalParties")
+    electedOfficialsCollection(db).findOne(targetOfficialFilter(impeachment), {
+      projection: { party: 1 },
+    }),
+    charactersCollection(db).findOne(
+      { _id: impeachment.targetCharacterId },
+      { projection: { policies: 1 } }
+    ),
+    politicalPartiesCollection(db)
       .find({ countryId: impeachment.countryId })
       .project<Pick<PoliticalParty, "sequentialId" | "tier" | "isDefault">>({
         sequentialId: 1,
@@ -182,13 +187,12 @@ export async function autoVoteNppsForImpeachmentStage(
     impeachment.stage === "house" ? "houseVotesAbstain" : "senateVotesAbstain";
   const votes = { ...(impeachment[voteField] ?? {}) };
 
-  const target = await db
-    .collection<ElectedOfficial>("electedOfficials")
-    .findOne(targetOfficialFilter(impeachment), { projection: { party: 1 } });
+  const target = await electedOfficialsCollection(db).findOne(targetOfficialFilter(impeachment), {
+    projection: { party: 1 },
+  });
   const targetParty = target?.party;
 
-  const officials = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const officials = await electedOfficialsCollection(db)
     .find({
       ...impeachmentChamberOfficialFilter(
         impeachment.countryId,
@@ -210,15 +214,15 @@ export async function autoVoteNppsForImpeachmentStage(
     .filter((id): id is ObjectId => id instanceof ObjectId);
   const [nppDocs, targetChar] = await Promise.all([
     nppIdList.length > 0
-      ? db
-          .collection<NPP>("npps")
+      ? nppsCollection(db)
           .find({ _id: { $in: nppIdList } })
           .project<Pick<NPP, "_id" | "policies">>({ _id: 1, policies: 1 })
           .toArray()
       : Promise.resolve([] as Array<Pick<NPP, "_id" | "policies">>),
-    db
-      .collection<Character>("characters")
-      .findOne({ _id: impeachment.targetCharacterId }, { projection: { policies: 1 } }),
+    charactersCollection(db).findOne(
+      { _id: impeachment.targetCharacterId },
+      { projection: { policies: 1 } }
+    ),
   ]);
   const stanceByNppId = new Map(
     nppDocs.map((n) => [
@@ -233,8 +237,7 @@ export async function autoVoteNppsForImpeachmentStage(
   const partyNumIds = collectPartyIds(officials, targetParty);
   const majorPartyIds = new Set<string>();
   if (partyNumIds.length > 0) {
-    const parties = await db
-      .collection<PoliticalParty>("politicalParties")
+    const parties = await politicalPartiesCollection(db)
       .find({ countryId: impeachment.countryId, sequentialId: { $in: partyNumIds } })
       .project<Pick<PoliticalParty, "sequentialId" | "tier" | "isDefault">>({
         sequentialId: 1,
@@ -269,7 +272,7 @@ export async function autoVoteNppsForImpeachmentStage(
     });
     const tallyField =
       choice === "aye" ? votesForField : choice === "nay" ? votesAgainstField : votesAbstainField;
-    const result = await db.collection<Impeachment>("impeachments").updateOne(
+    const result = await impeachmentsCollection(db).updateOne(
       {
         _id: impeachment._id,
         stage: impeachment.stage,

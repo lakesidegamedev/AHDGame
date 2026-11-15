@@ -33,15 +33,10 @@ export function tradeConvergenceK(
  * Dampened trade convergence (whole-market). Mutates `byCountry` in place so
  * each country's EFFECTIVE supply/demand moves toward balance by a fraction `k`
  * of the trade it actually did: an exporter's local supply is reduced by
- * `k × exports` (its glut is partly absorbed abroad) and an importer's local
- * demand is reduced by `k × imports` (its shortage is partly met by imports).
+ * `k × exports`, an importer's local demand by `k × imports`.
  *
- * The mutation propagates to every consumer of the national balances — price,
- * sector margins, inflation cost-push, and stored values — so trade relief is
- * felt market-wide, not only in price.
- *
- * `k = 0` is a no-op (exact regression guard). Effective supply/demand are
- * clamped at 0 so an oversized `k` can never produce a negative balance.
+ * `k = 0` is a no-op. Effective supply/demand are clamped at 0 so an oversized
+ * `k` can never produce a negative balance.
  *
  * Clearing must have been computed on the ORIGINAL (pre-dampening) balances.
  */

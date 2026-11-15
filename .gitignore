@@ -21,6 +21,8 @@ savant-protocol
 # Testing
 /coverage
 /test-results
+# Lighthouse audit output (reports are regenerated, not checked in)
+/scripts/perf/lighthouse/results/
 /playwright-report
 /blob-report
 /.cache/
@@ -135,3 +137,4 @@ scripts/.*-backup.json
 # Local copies of Claude Design mockups pulled down for reference while
 # implementing them. Generated artefacts, not source.
 .design-ref/
+smoke-timings.json

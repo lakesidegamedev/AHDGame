@@ -2,16 +2,11 @@ import type { CommodityType } from "@/lib/constants/commodities";
 import { safeUnitScale } from "@/lib/constants/capacityEconomy";
 
 /**
- * Capital tier — Fix 4 v1 of the structural market rework
- * (marketSystemMode >= "capital", audit t806; see
- * docs/plans/2026-07-03-market-structural-plan.md).
- *
- * Sectors own productive **capacity** (output units/day) that depreciates
- * every turn. The growth slider stops being a pure revenue mint and becomes
- * **investment**: it builds capacity, and a sector that stops investing
- * slowly loses the ability to produce. Realized output is gated by capacity
- * exactly the way geological capacity gates extraction — output above what
- * your capital can make is not realized as revenue.
+ * Capital tier: sectors own productive capacity (output units/day) that
+ * depreciates every turn. The growth slider becomes investment, building
+ * capacity; a sector that stops investing loses the ability to produce.
+ * Realized output is gated by capacity the way geological capacity gates
+ * extraction, so output above capacity is not realized as revenue.
  */
 
 /**
@@ -59,35 +54,23 @@ export const MARKET_REALIZATION_DEVIATION_CAP = 0.15;
 export const MARKET_REALIZATION_RAMP_TURNS = 240;
 
 /**
- * Capital book anchor — a depreciated high-water mark on a sector's going-concern
- * value (sectorNPV), used as a tangible-book floor under capital mode.
+ * Capital book anchor, a depreciated high-water mark on a sector's
+ * going-concern value (sectorNPV), used as a tangible-book floor under capital
+ * mode.
  *
- * Under capital, a sector converts current earnings into productive `capitalStock`
- * (a real asset), but tangible book only credits sectorNPV — a perpetuity on
- * *current* profit that collapses when profit is transiently depressed during the
- * transition, valuing a corp that owns real capacity as if it owns nothing. The
- * anchor is seeded at the current NPV on first exposure (so the flip is a no-op),
- * ratchets UP with NPV, and decays only slowly (per-turn depreciation) when NPV
- * falls — so valuation reflects durable owned capacity through a profit dip
- * without ever exceeding the sector's own historical peak (no over-crediting).
+ * Under capital, tangible book only credits sectorNPV, a perpetuity on current
+ * profit that collapses when profit dips, valuing a corp with real capacity as
+ * if it owns nothing. The anchor is seeded at current NPV on first exposure (so
+ * the flip is a no-op), ratchets UP with NPV, and decays slowly when NPV falls,
+ * so valuation reflects durable capacity through a dip without exceeding the
+ * sector's historical peak.
  *
- * The slow decay alone was not enough. At 0.05%/turn the anchor's half-life is
- * ~1,400 turns, so a value written early in a sector's life persists essentially
- * for ever even after the sector's real earnings collapse. Measured in prod: an
- * extraction sector carried an anchor ~35x its live NPV, inflating its share
- * price ~17x and masking that it was operationally insolvent. So the anchor is
- * also bounded to a multiple of CURRENT NPV: smoothing a transient profit dip is
- * legitimate, carrying a book many times current earnings for ever is a ghost.
- * Above the cap the anchor snaps down to reality; a genuine recovery re-ratchets
- * it up with NPV.
- *
- * The 5x cap still left anchors up to 5x current NPV standing indefinitely (~25%
- * of prod market cap was not backed by current profit). So below NPV the anchor
- * also converges: each turn it closes a fixed share of its gap to current NPV
- * (`convergencePerTurn`), taking whichever of that and depreciation is lower. A
- * transient dip is still smoothed over several turns; a stale peak fades over a
- * year. Rising NPV re-ratchets instantly, and the lower anchor feeds the share
- * price through the existing per-turn price cap, so no price jump results.
+ * Slow decay alone was not enough: at 0.05%/turn the half-life is ~1,400 turns,
+ * so a stale anchor could dwarf live NPV and mask insolvency. Above a multiple
+ * of current NPV the anchor snaps down to reality. Below NPV it also converges
+ * each turn, closing `convergencePerTurn` of its gap (whichever is lower of
+ * convergence and depreciation). Rising NPV re-ratchets instantly; the existing
+ * per-turn price cap prevents a price jump.
  */
 export function advanceCapitalBookAnchor(args: {
   prevAnchor: number | null | undefined;
@@ -114,26 +97,17 @@ export function advanceCapitalBookAnchor(args: {
 }
 
 /**
- * The deviation cap WIDENS as the ramp completes, and is released entirely at
- * full ramp.
+ * The deviation cap widens as the ramp completes, released entirely at full ramp.
  *
- * A fixed ±CAP was a launch-safety device that never turned itself off: with a
- * constant 0.15 the governor floors a fully-halted plant at 85% of its
- * nameplate revenue for ever, which makes the whole physical layer (capacity,
- * production, sales) cosmetic beyond ±15% no matter how long the world has run.
- * The ramp λ already fades the governor in; the cap has to fade out with it.
+ * A fixed cap would floor a fully-halted plant at a fraction of nameplate revenue
+ * forever, making the physical layer cosmetic. The ramp already fades the governor
+ * in, so the cap must fade out with it:
  *
  *   capEffective(λ) = λ >= 1 ? ∞ : cap / (1 − λ)
  *
- * Properties, all deliberate:
- *   - λ = 0 (flip turn): the blend returns the baseline verbatim regardless, so
- *     flip-day identity is preserved exactly (1e-6 suite).
- *   - λ = 0.5 (half ramp): the bound on the BLENDED deviation is
- *     λ · capEffective = cap — i.e. the mid-ramp world is exactly as tightly
- *     governed as the old constant-cap world was.
- *   - λ < 0.5: the blended deviation bound is below `cap` (tighter than before).
- *   - λ = 1 (fully ramped): unbounded → the governor is inert and the physical
- *     result stands on its own.
+ * Key invariants: at λ = 0 the baseline is returned verbatim (flip-day identity);
+ * at λ = 0.5 the blended bound equals the old constant cap; at λ = 1 the governor
+ * is inert.
  */
 export function governorEffectiveCap(cap: number, lambda: number): number {
   if (!(lambda < 1)) return Number.POSITIVE_INFINITY;
@@ -216,21 +190,17 @@ export function governorAnchorTurn(
 export const MARKET_GOVERNOR_GLIDE_TURNS = 24;
 
 /**
- * Proportional governor glide (gameConfig `marketGovernorGlideMode:
- * "proportional"`).
+ * Proportional governor glide (marketGovernorGlideMode: "proportional").
  *
- * The floor glide below only lifts a sector once `progress` passes its own
- * ramp share, so on the 1991 world (seeded sectors about 70% through their own
- * 240-turn ramp) most of the economy did nothing for 17 turns and then moved in
- * the last seven. The proportional glide moves EVERY sector the same fraction
- * of its remaining gap each turn instead:
+ * Unlike the floor glide, which only lifts a sector once `progress` passes
+ * its own ramp share, this moves every sector the same fraction of its
+ * remaining gap each turn:
  *
  *   λ = 1 − (1 − max(ownλ, floor)) × (1 − progress)
  *
- * `floor` is the floor glide's share frozen at the switch-over turn, so a
- * sector that the floor glide had already lifted does not fall back. On the
- * start turn (progress 0) λ equals the sector's share under the old glide, so
- * the switch-over is a no-op; after `glideTurns` turns λ is 1 for everyone.
+ * `floor` is the floor glide's share frozen at switch-over, so already-
+ * lifted sectors do not fall back. At progress 0 λ equals the old glide
+ * (switch is a no-op); after `glideTurns` λ is 1 for everyone.
  */
 export interface GovernorGlide {
   currentTurn: number;
@@ -304,21 +274,13 @@ export function governorGlideAnchorTurn(
 }
 
 /**
- * Same governor, applied to a revenue AMOUNT rather than a factor.
+ * Softened market realization for a revenue AMOUNT, not a factor.
  *
- * The difference is the whole point of the split: for a factor, `<= 0` means
- * "no signal, use the baseline". For an amount, `0` is a perfectly meaningful
- * value — a halted, unstaffed or output-less plant earns nothing. Routing
- * amounts through the factor variant paid a fully-halted sector its entire
- * baseline revenue with none of the costs (a ~6x profit pump), and made the
- * boundary discontinuous: one epsilon of production earned 85% of nameplate
- * while exactly zero production earned 100%.
- *
- * Here `market <= 0` is taken literally and blended like any other amount, so
- * the halt is continuous and, at full ramp (cap released), lands on exactly 0.
- * A non-positive BASELINE still has no anchor to govern against, so the market
- * amount passes through unchanged. The result is floored at 0 — the governor
- * must never mint negative revenue.
+ * For a factor, `<= 0` means "no signal, use the baseline". For an amount, 0
+ * is meaningful (a halted plant earns nothing), so `market <= 0` is blended
+ * literally and the halt is continuous, landing on exactly 0 at full ramp.
+ * A non-positive baseline passes the market amount through unchanged. Result
+ * is floored at 0: the governor must never mint negative revenue.
  */
 export function softenedMarketRealizationAmount(
   baselineAmount: number,

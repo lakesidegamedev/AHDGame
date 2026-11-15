@@ -271,20 +271,14 @@ export default function SectorsTab({
       }));
   }, [sectors]);
 
-  // A type chip does two jobs, and they have different preconditions.
+  // A type chip does two jobs with different preconditions.
   //
-  // Filtering the table only needs the type to be one this corporation owns.
-  // `sectorType` is a plain string on the wire, and a sector can carry a type
-  // that predates a rename — the rail already falls back to the raw value for
-  // its label, exactly like facilityVocabulary and getTypeColor do. Those
-  // chips still have to filter, or they are dead controls.
-  //
-  // Validating against what is owned also stops a stale value from surviving:
-  // abandoning the last sector of the open division would otherwise leave
-  // `filterType` naming a type that no longer exists and filter the table down
-  // to nothing with no explanation. Deliberately not healed in an effect —
-  // clearing state synchronously from one cascades a render every pass, and
-  // the derived value is already correct.
+  // Filtering only needs the type to be one this corporation owns. `sectorType`
+  // is a plain string that can predate a rename, and the rail falls back to the
+  // raw value for its label, so those chips must still filter or they are dead.
+  // Validating against ownership also stops a stale `filterType` from surviving
+  // and filtering the table to nothing. Not healed in an effect: clearing state
+  // synchronously cascades renders, and the derived value is already correct.
   const activeTypeFilter =
     filterType && sectorTypes.some((t) => t.value === filterType) ? filterType : "";
 
@@ -659,11 +653,8 @@ export default function SectorsTab({
                 // revenue & workers are stripped for outsider-viewed private
                 // corps (redactPrivateSectorRow); avoid NaN totals and show n/a.
                 const financialsRedacted = sortedSectors.some((s) => s.revenue == null);
-                // Same realized-preferring basis every sector ROW renders
-                // (SectorRow `financialRevenue ?? revenue`, #3001/#3002). This
-                // total used to sum raw nameplate `revenue`, so the Total line
-                // did not equal the column above it for any corp whose realized
-                // revenue differs from nameplate (ticket #1122).
+                // Use the same realized-preferring basis as the SectorRows above, so the
+                // Total line matches the column (not raw nameplate revenue).
                 const totalRev = sumSectorDisplayRevenue(sortedSectors);
                 const totalProfit = sortedSectors.reduce(
                   (sum, s) => sum + sectorDisplayProfit(s),

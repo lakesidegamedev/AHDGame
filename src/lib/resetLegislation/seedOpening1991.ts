@@ -14,6 +14,10 @@ import {
   type ResetRegionalOpeningBoard,
 } from "@/lib/resetFinance/rules/regionalOpeningBoard";
 import type { ResetOpeningCountry } from "@/lib/resetFinance/opening1991";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
+import { resetLawOpeningBoardsCollection } from "@/lib/db/repositories/resetLawOpeningBoards";
+import { resetRegionalOpeningBoardsCollection } from "@/lib/db/repositories/resetRegionalOpeningBoards";
 
 export async function seedOpeningLawBoards1991(
   db: Db,
@@ -27,8 +31,19 @@ export async function seedOpeningLawBoards1991(
   const expectedRegional = buildOpeningRegionalBoards1991(worldId, sourceTurn).filter((board) =>
     countries.includes(board.countryId as ResetOpeningCountry)
   );
-  const seededRegions = await db
-    .collection<State>("states")
+  return persistLawOpening(db, worldId, sourceTurn, countries, expected, expectedRegional, true);
+}
+
+export async function persistLawOpening(
+  db: Db,
+  worldId: string,
+  sourceTurn: number,
+  countries: readonly (ResetOpeningCountry | "CA")[],
+  expected: readonly ResetLawOpeningBoard[],
+  expectedRegional: readonly ResetRegionalOpeningBoard[],
+  verifyHistoricalUk = false
+): Promise<ResetSystemSeedReceipt> {
+  const seededRegions = await statesCollection(db)
     .find({ countryId: { $in: [...countries] } }, { projection: { _id: 1, countryId: 1 } })
     .toArray();
   const actualIds = seededRegions.map((region) => `${region.countryId}:${region._id}`).sort();
@@ -37,30 +52,30 @@ export async function seedOpeningLawBoards1991(
     .map((board) => board._id)
     .sort();
   if (JSON.stringify(actualIds) !== JSON.stringify(expectedIds)) {
-    throw new Error("The seeded 1991 regions do not match the v2 current-law crosswalk");
+    throw new Error("The seeded regions do not match the v2 current-law crosswalk");
   }
   if (
     JSON.stringify(actualIds) !== JSON.stringify(expectedRegional.map((board) => board._id).sort())
   ) {
-    throw new Error("The seeded 1991 regions do not match v2 regional fiscal claims");
+    throw new Error("The seeded regions do not match v2 regional fiscal claims");
   }
-  const ukBudgetRows = countries.includes("UK")
-    ? await db
-        .collection<StateBudget>("stateBudgets")
-        .find(
-          { countryId: "UK" },
-          {
-            projection: {
-              stateId: 1,
-              countryId: 1,
-              "revenue.propertyTax": 1,
-              "revenue.domesticCorporateTax": 1,
-              "revenue.foreignCorporateTax": 1,
-            },
-          }
-        )
-        .toArray()
-    : [];
+  const ukBudgetRows =
+    verifyHistoricalUk && countries.includes("UK")
+      ? await stateBudgetsCollection(db)
+          .find(
+            { countryId: "UK" },
+            {
+              projection: {
+                stateId: 1,
+                countryId: 1,
+                "revenue.propertyTax": 1,
+                "revenue.domesticCorporateTax": 1,
+                "revenue.foreignCorporateTax": 1,
+              },
+            }
+          )
+          .toArray()
+      : [];
   const expectedUk = expected.filter((board) => board.ukTerritorialTax);
   const actualUkByRegion = new Map(ukBudgetRows.map((budget) => [budget.stateId, budget]));
   if (ukBudgetRows.length !== expectedUk.length || actualUkByRegion.size !== expectedUk.length) {
@@ -81,7 +96,7 @@ export async function seedOpeningLawBoards1991(
       throw new Error(`The seeded UK 1991 regional tax proxy differs for ${board.regionId}`);
     }
   }
-  const collection = db.collection<ResetLawOpeningBoard>("resetLawOpeningBoards");
+  const collection = resetLawOpeningBoardsCollection<ResetLawOpeningBoard>(db);
   await collection.bulkWrite(
     expected.map((board) => ({
       replaceOne: { filter: { _id: board._id }, replacement: board, upsert: true },
@@ -101,6 +116,7 @@ export async function seedOpeningLawBoards1991(
           sourceTurn: 1,
           ukTerritorialTax: 1,
           references: 1,
+          modeledOpening: 1,
         },
       }
     )
@@ -112,7 +128,7 @@ export async function seedOpeningLawBoards1991(
   ) {
     throw new Error("The persisted 1991 v2 current-law crosswalk failed readback verification");
   }
-  const regionalCollection = db.collection<ResetRegionalOpeningBoard>("resetRegionalOpeningBoards");
+  const regionalCollection = resetRegionalOpeningBoardsCollection<ResetRegionalOpeningBoard>(db);
   await regionalCollection.bulkWrite(
     expectedRegional.map((board) => ({
       replaceOne: { filter: { _id: board._id }, replacement: board, upsert: true },

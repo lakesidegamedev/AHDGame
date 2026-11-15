@@ -1,15 +1,16 @@
 /**
- * Per-region, per-era HAND-AUTHORED values for Ireland's new overhaul ROOT metrics
+ * Per-region, per-era HAND-AUTHORED values for Ireland's overhaul ROOT metrics
  * (`UNIFORM_METRIC_PATHS`). Consumed via `getRegionMetricPresets`
  * (src/lib/seeds/metricPresets.ts) and overlaid by `seedIEStateMetrics` /
- * `seedIEBaselines` AFTER `applyEra1991Adjustments`, so the preset is the SINGLE SOURCE
- * OF TRUTH for these metrics in both eras. `uniformMetricDefault` is a fallback only.
+ * `seedIEBaselines` AFTER `applyEra1991Adjustments`, so the preset is the SINGLE
+ * SOURCE OF TRUTH for these metrics in both eras. `uniformMetricDefault` is a
+ * fallback only.
  *
- * BOTH eras are authored (national baseline + per-region tilts), per the 2026-06-15
- * decision: for these new metrics the seed values are themselves `uniformMetricDefault`
- * formula outputs, so deriving 2019 from the seed just preserved the derived values this
- * work set out to replace. Authoring 2019 changes the formula-derived seed values — live
- * 2019 worlds need a (dry-run-first) backfill migration to match.
+ * BOTH eras are authored (national baseline + per-region tilts): for these new
+ * metrics the seed values are themselves `uniformMetricDefault` formula outputs,
+ * so deriving 2019 from the seed would just preserve the derived values this
+ * work set out to replace. Live 2019 worlds need a (dry-run-first) backfill
+ * migration to match authored values.
  */
 
 /** A per-region map of metricPath → numeric value (only the metrics IE authors). */

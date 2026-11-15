@@ -1,5 +1,6 @@
 ﻿"use client";
 
+import { useHasSession } from "@/contexts/AuthDataContext";
 import { InlineError } from "@/components/ui/InlineError";
 import { apiErrorText } from "@/lib/errors/catalog";
 import { useState, useEffect, useCallback, useRef } from "react";
@@ -8,6 +9,7 @@ import Link from "next/link";
 import { fetchJson } from "@/lib/observability/fetchJson";
 import { PartyChip } from "@/app/congress/components/CongressShared";
 import ImpeachmentPanel from "./ImpeachmentPanel";
+import { ExecutiveStatusBanner } from "./ExecutiveStatusBanner";
 import { useToast } from "@/contexts/ToastContext";
 import { Skeleton, CardSkeleton, TabRowSkeleton, ListRowSkeleton } from "@/components/ui";
 import {
@@ -16,7 +18,6 @@ import {
   MastheadStat,
 } from "@/components/national/InstitutionMasthead";
 import type { InstitutionIdentity } from "@/lib/constants/institutionIdentity";
-import { useConflictsEnabled } from "@/contexts/AuthDataContext";
 import { getExecutiveSurface } from "@/lib/constants/executiveSurface";
 import { getExecutiveSeal } from "@/lib/constants/executiveSeals";
 import { type CountryId, type GovernmentType } from "@/lib/constants/countriesCore";
@@ -145,23 +146,17 @@ export default function WhiteHouseClient({
   const [submitting, setSubmitting] = useState(false);
   const [resignLoading, setResignLoading] = useState(false);
   const [billActionId, setBillActionId] = useState<string | null>(null);
-  // Seeded from `?tab=`, so a link can open a specific tab. Follows the pattern
-  // `CentralBankClient` and `CongressClient` already use. Initial state only: once
-  // the page is open, clicking a tab keeps working exactly as before without
-  // rewriting the URL.
-  //
-  // GATED THE SAME WAY THE NAV IS, for the reason the sibling shell spells out: the
-  // `address` and `orders` bodies carry no guard of their own because `activeTab`
-  // used to be reachable only by clicking a button the viewer could see. The
-  // viewer's own flags are not loaded yet on the first render, so the seed is
-  // re-checked once `data` arrives.
+  // Seeded from `?tab=` so a link can open a specific tab (matches
+  // CentralBankClient/CongressClient). Initial state only: clicking a tab does
+  // not rewrite the URL. The seed is re-gated once `data` arrives, since viewer
+  // flags are not loaded on first render and the `address`/`orders` bodies carry
+  // no guard of their own.
   const [activeTab, setActiveTab] = useState<TabKey>(() => {
     const requested = searchParams.get("tab");
     return isTabKey(requested) && (requested === "overview" || requested === "endorsements")
       ? requested
       : "overview";
   });
-  const conflictsEnabled = useConflictsEnabled();
   const clock = useGameClock();
   const [approval, setApproval] = useState<number | null>(null);
   const [approvalHistory, setApprovalHistory] = useState<
@@ -192,26 +187,31 @@ export default function WhiteHouseClient({
     };
   }, [countryId]);
 
+  // Only the President can list enrolled bills; everyone else, including a
+  // signed-out visitor, gets a 401 that surfaces as a console error. Fetch the
+  // public office data always, and the bill queue only when a session exists.
+  const hasSession = useHasSession();
+
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
       const countryParam = `?country=${countryId.toLowerCase()}`;
       const [whRes, billsRes] = await Promise.all([
         fetch(`/api/whitehouse${countryParam}`),
-        fetch(`/api/whitehouse/bills${countryParam}`),
+        hasSession ? fetch(`/api/whitehouse/bills${countryParam}`) : Promise.resolve(null),
       ]);
       if (whRes.ok) {
         const whData = await whRes.json();
         setData(whData);
       }
-      if (billsRes.ok) {
+      if (billsRes?.ok) {
         const b = await billsRes.json();
         setBills(b.bills ?? []);
       }
     } finally {
       setLoading(false);
     }
-  }, [countryId]);
+  }, [countryId, hasSession]);
 
   useEffect(() => {
     fetchData();
@@ -544,6 +544,8 @@ export default function WhiteHouseClient({
           }
         />
 
+        <ExecutiveStatusBanner status={data.executiveStatus} />
+
         {data.president && (
           <ImpeachmentPanel
             countryId={countryId}
@@ -580,7 +582,7 @@ export default function WhiteHouseClient({
               Endorsements
             </TabButton>
           )}
-          {(data.isPresident || data.isAdmin) && conflictsEnabled && (
+          {(data.isPresident || data.isAdmin) && (
             <TabButton active={activeTab === "foreign"} onClick={() => setActiveTab("foreign")}>
               Foreign affairs
             </TabButton>
@@ -600,10 +602,7 @@ export default function WhiteHouseClient({
         {activeTab === "orders" && <WhiteHouseOrdersTab countryId={countryId} />}
         {activeTab === "endorsements" && <WhiteHouseEndorsementsTab countryId={countryId} />}
 
-        {/* Guards repeated on the BODY, not just the button: activeTab is component
-            state, so a flag flipping off while this tab is open would otherwise
-            leave it rendered. */}
-        {activeTab === "foreign" && (data.isPresident || data.isAdmin) && conflictsEnabled && (
+        {activeTab === "foreign" && (data.isPresident || data.isAdmin) && (
           <ForeignAffairsTab
             countryId={countryId as CountryId}
             canAct={data.isPresident || data.isAdmin}

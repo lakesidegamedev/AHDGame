@@ -6,6 +6,7 @@ import { createPortal } from "react-dom";
 import { netModifierEffect, type ActiveModifier } from "@/lib/approval/activeModifier";
 import { computeRegionalConditionMargin } from "@/lib/states/conditions/marginEffects";
 import { buildModifierTitle } from "@/components/approval/modifierTitle";
+import { ApprovalEffectIcon } from "@/components/approval/ApprovalEffectIcon";
 
 interface ApprovalTooltipProps {
   /** Final approval (with modifiers applied). */
@@ -30,55 +31,6 @@ interface TriggerRect {
   bottom: number;
   left: number;
   width: number;
-}
-
-function EffectIcon({ effect }: { effect: number }) {
-  // The war block can render at zero while the fighting is live. A flat bar
-  // rather than the falling arrow: it is neither costing nor earning approval.
-  if (effect === 0) {
-    return (
-      <svg
-        className="h-3 w-3 text-slate-500 shrink-0"
-        viewBox="0 0 20 20"
-        fill="currentColor"
-        aria-hidden
-      >
-        <path d="M5.75 10.75a.75.75 0 010-1.5h8.5a.75.75 0 010 1.5h-8.5z" />
-      </svg>
-    );
-  }
-  if (effect > 0) {
-    return (
-      <svg
-        className="h-3 w-3 text-emerald-500 shrink-0"
-        viewBox="0 0 20 20"
-        fill="currentColor"
-        aria-hidden
-      >
-        <path
-          fillRule="evenodd"
-          d="M10 3a.75.75 0 01.75.75v10.5a.75.75 0 01-1.5 0V3.75A.75.75 0 0110 3z"
-          clipRule="evenodd"
-        />
-        <path d="M5.75 8.25a.75.75 0 010-1.5h8.5a.75.75 0 010 1.5h-8.5z" />
-      </svg>
-    );
-  }
-  return (
-    <svg
-      className="h-3 w-3 text-rose-500 shrink-0"
-      viewBox="0 0 20 20"
-      fill="currentColor"
-      aria-hidden
-    >
-      <path
-        fillRule="evenodd"
-        d="M10 3a.75.75 0 01.75.75v10.5a.75.75 0 01-1.5 0V3.75A.75.75 0 0110 3z"
-        clipRule="evenodd"
-      />
-      <path d="M5.75 11.75a.75.75 0 010-1.5h8.5a.75.75 0 010 1.5h-8.5z" />
-    </svg>
-  );
 }
 
 export function ApprovalTooltip({
@@ -176,7 +128,7 @@ export function ApprovalTooltip({
               title={buildModifierTitle(m)}
             >
               <span className="flex items-center gap-1.5 text-muted">
-                <EffectIcon effect={m.effect} />
+                <ApprovalEffectIcon sizeClass="h-3 w-3" effect={m.effect} />
                 {m.label}
               </span>
               <span className="font-medium text-success tabular-nums">+{m.effect}</span>
@@ -195,7 +147,7 @@ export function ApprovalTooltip({
               title={buildModifierTitle(m)}
             >
               <span className="flex items-center gap-1.5 text-muted">
-                <EffectIcon effect={m.effect} />
+                <ApprovalEffectIcon sizeClass="h-3 w-3" effect={m.effect} />
                 {m.label}
               </span>
               <span className="font-medium text-error tabular-nums">{m.effect}</span>
@@ -214,7 +166,7 @@ export function ApprovalTooltip({
               title={buildModifierTitle(m)}
             >
               <span className="flex items-center gap-1.5 text-muted">
-                <EffectIcon effect={m.effect} />
+                <ApprovalEffectIcon sizeClass="h-3 w-3" effect={m.effect} />
                 {m.label}
               </span>
               <span className="font-medium text-muted tabular-nums">{m.effect}</span>

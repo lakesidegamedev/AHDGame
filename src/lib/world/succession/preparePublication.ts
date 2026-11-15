@@ -2,16 +2,15 @@ import type { ClientSession, Db } from "mongodb";
 import { hashSettlementPayload } from "./settlementIntent";
 import type { FederationPublicationPlan } from "./publicationPlan";
 import {
-  FEDERATION_SETTLEMENT_APPLICATIONS_COLLECTION,
-  WORLD_ENTITY_STATES_COLLECTION,
   type FederationSettlementApplicationRecord,
   type RuntimeWorldEntityState,
   overlayRuntimeWorldEntities,
   validateAppliedEntityStates,
 } from "./runtimeEntities";
-
-const FEDERATION_PUBLICATION_PREPARATIONS_COLLECTION = "federationPublicationPreparations";
-const FEDERATION_PREPARED_EFFECTS_COLLECTION = "federationPreparedEffects";
+import { worldEntityStatesCollection } from "@/lib/db/repositories/worldEntityStates";
+import { federationPreparedEffectsCollection } from "@/lib/db/repositories/federationPreparedEffects";
+import { federationPublicationPreparationsCollection } from "@/lib/db/repositories/federationPublicationPreparations";
+import { federationSettlementApplicationsCollection } from "@/lib/db/repositories/federationSettlementApplications";
 
 export type FederationPreparedEffectKind =
   | "entity-state"
@@ -126,11 +125,10 @@ export async function prepareFederationPublication(
       `${plan.receipt.presetId}:${plan.receipt.settlementId}:${plan.receipt.revision}`
   )
     throw new Error("Federation publication needs a valid candidate receipt and time");
-  const applied = await db
-    .collection<FederationSettlementApplicationRecord>(
-      FEDERATION_SETTLEMENT_APPLICATIONS_COLLECTION
-    )
-    .findOne(
+  const applied =
+    await federationSettlementApplicationsCollection<FederationSettlementApplicationRecord>(
+      db
+    ).findOne(
       {
         presetId: plan.receipt.presetId,
         sourceEntityId: plan.receipt.sourceEntityId,
@@ -154,9 +152,8 @@ export async function prepareFederationPublication(
     effectsHash: hashSettlementPayload(effects.map(({ _id, valueHash }) => [_id, valueHash])),
     createdAt: now,
   };
-  const preparations = db.collection<FederationPublicationPreparation>(
-    FEDERATION_PUBLICATION_PREPARATIONS_COLLECTION
-  );
+  const preparations =
+    federationPublicationPreparationsCollection<FederationPublicationPreparation>(db);
   await preparations.updateOne(
     { _id: intended._id },
     { $setOnInsert: intended },
@@ -171,9 +168,7 @@ export async function prepareFederationPublication(
     JSON.stringify(stored.effectIds) !== JSON.stringify(intended.effectIds)
   )
     throw new Error("Federation publication key conflicts with another plan");
-  const collection = db.collection<FederationPreparedEffect>(
-    FEDERATION_PREPARED_EFFECTS_COLLECTION
-  );
+  const collection = federationPreparedEffectsCollection<FederationPreparedEffect>(db);
   // Approval hashes omit absent fields; preserve that representation in BSON.
   if (effects.length)
     await collection.bulkWrite(
@@ -201,7 +196,7 @@ export async function prepareFederationPublication(
   // Runtime entity rows are inert until the complete applied receipt exists.
   // Staging them here permits standalone Mongo retries without making a
   // partial federation visible as sovereign.
-  const states = db.collection<RuntimeWorldEntityState>(WORLD_ENTITY_STATES_COLLECTION);
+  const states = worldEntityStatesCollection<RuntimeWorldEntityState>(db);
   if (plan.entityStates.length)
     await states.bulkWrite(
       plan.entityStates.map((state) => ({
@@ -225,12 +220,13 @@ export async function verifyPreparedFederationPublication(
   applicationId: string,
   session?: ClientSession
 ): Promise<FederationPreparedEffect[]> {
-  const preparation = await db
-    .collection<FederationPublicationPreparation>(FEDERATION_PUBLICATION_PREPARATIONS_COLLECTION)
-    .findOne({ _id: applicationId, status: "prepared" }, { session });
+  const preparation =
+    await federationPublicationPreparationsCollection<FederationPublicationPreparation>(db).findOne(
+      { _id: applicationId, status: "prepared" },
+      { session }
+    );
   if (!preparation) throw new Error("Federation publication has no prepared inventory");
-  const effects = await db
-    .collection<FederationPreparedEffect>(FEDERATION_PREPARED_EFFECTS_COLLECTION)
+  const effects = await federationPreparedEffectsCollection<FederationPreparedEffect>(db)
     .find({ applicationId }, { session })
     .toArray();
   effects.sort((a, b) => a._id.localeCompare(b._id));
@@ -248,8 +244,7 @@ export async function verifyPreparedFederationPublication(
   )
     throw new Error("Federation prepared inventory is incomplete or altered");
   const entityEffects = effects.filter((effect) => effect.kind === "entity-state");
-  const states = await db
-    .collection<RuntimeWorldEntityState>(WORLD_ENTITY_STATES_COLLECTION)
+  const states = await worldEntityStatesCollection<RuntimeWorldEntityState>(db)
     .find({ applicationId }, { session })
     .toArray();
   const stateById = new Map(states.map((state) => [state._id, state]));

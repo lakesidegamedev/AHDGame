@@ -1,33 +1,18 @@
 /**
  * Joint-product run share (gameConfig.producerJointRunStage).
  *
- * A plant with two or more products makes them in fixed proportions, but the
- * run signals read one receipt summed over every line. A glut in a cheap line
- * then sets the run for the whole plant: a standard chemical plant holding
- * unsold chemicals plans its run from that stock and cuts plastics with it,
- * although every unit of plastics sold. Summed units also let a glutted line's
- * held stock cancel another line's unmet demand.
+ * The plant's run signals read one receipt summed over every line, so a glut in
+ * a cheap line sets the run for the whole plant and can cut a sold-out line's
+ * output. Instead, each line is planned on its own slice of the receipt, and the
+ * plant runs at the highest line plan whose lines' value per unit of output at
+ * last turn's realised prices covers running cost per unit. Running above a
+ * line's plan sends that line's extra output to stock, which earns nothing, so
+ * profit falls past that point: it is the joint product optimum on last turn's
+ * prices.
  *
- * Here each product line is planned on its own slice of the receipt (the same
- * rule the plant uses, with the line's units and a unit share of the running
- * costs), and the plant runs at the highest line plan that still pays. Running
- * above a line's plan sends that line's extra output to stock, which earns
- * nothing this turn, so a run level only counts the lines that plan at least
- * that high. The plant takes the highest line plan where those lines' value per
- * unit of output, at last turn's realised prices, covers the plant's running
- * cost per unit (inputs, wages and site bills, the same cost the loss test
- * reads). Profit falls with the run past that point, so it is the joint
- * product optimum on last turn's prices.
- *
- * Stage 2 (producerJointRunStage >= 2) reads the margin, not the average: the
- * cold upkeep on idle capacity is owed whether the plant runs or not, so it is
- * left out of the running cost the gate compares against, and each line's own
- * plan holds its sold-out run on the same test (as the one-product plan already
- * does). Inputs, wages and the site bill that follow the run still count, so
- * the extra run pays for itself at last turn's prices. The run never falls
- * below the summed plan, so the rule only ever keeps a plant running that the summed signal
- * would cut: one-product plants and plants whose every line is glutted plan
- * exactly as before, and pacing applies to the result unchanged.
+ * Stage 2 (producerJointRunStage >= 2) reads the margin: cold upkeep on idle
+ * capacity is owed regardless of running, so it is excluded from the running
+ * cost the gate compares against.
  *
  * Pure: last receipt and a per-line plan rule in, run share out.
  */

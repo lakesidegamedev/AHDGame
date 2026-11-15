@@ -1,4 +1,5 @@
 "use client";
+import { displayCanadianRegionCode } from "@/lib/countries/ca/regionCodes";
 
 import { useEffect, useRef, useState } from "react";
 import { Input } from "@/components/ui";
@@ -181,7 +182,7 @@ export function FounderPicker({
                   >
                     <span className="font-medium">{r.name}</span>
                     <span className="text-xs text-muted">
-                      {r.homeState}
+                      {displayCanadianRegionCode(r.homeState)}
                       {r.currentOffice ? ` · ${r.currentOffice}` : ""}
                     </span>
                     {alreadyFounder && (

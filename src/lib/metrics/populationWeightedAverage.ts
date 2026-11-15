@@ -1,12 +1,9 @@
 /**
  * Population-weighted mean of a metric across a country's regions.
  *
- * The denominator is the population of the regions that actually CARRY the
- * metric, never the country total. Dividing a partial numerator by a total
- * denominator under-reports the average whenever coverage is incomplete, and
- * the two national surfaces previously disagreed on exactly this point: the
- * Economy page divided by covered population, the Metrics page by the country
- * total. They agree today only because coverage happens to be complete.
+ * The denominator is the population of regions that CARRY the metric, never
+ * the country total. Dividing a partial numerator by a total denominator
+ * under-reports the average whenever coverage is incomplete.
  */
 export interface WeightedRow {
   value?: number;

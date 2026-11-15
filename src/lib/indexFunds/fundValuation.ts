@@ -1,5 +1,7 @@
 import { ObjectId, type Db } from "mongodb";
 import type { IndexFundRedemptionQueueEntry, ShareOrder } from "@/lib/db/types";
+import { shareOrdersCollection } from "@/lib/db/repositories/shareOrders";
+import { indexFundRedemptionQueueCollection } from "@/lib/db/repositories/indexFundRedemptionQueue";
 
 type IdLike = ObjectId | { toString(): string };
 
@@ -27,8 +29,7 @@ export async function loadOpenOrdersEscrowByFundId(
     status: "open",
   };
 
-  const rows = await db
-    .collection<ShareOrder>("shareOrders")
+  const rows = await shareOrdersCollection(db)
     .aggregate<{ _id: string; totalEscrowAnchor: number }>([
       { $match: match },
       {
@@ -68,8 +69,7 @@ export async function loadQueuedRedemptionUnitsByFundId(
     match.fundId = { $in: fundObjectIds };
   }
 
-  const rows = await db
-    .collection<IndexFundRedemptionQueueEntry>("indexFundRedemptionQueue")
+  const rows = await indexFundRedemptionQueueCollection(db)
     .aggregate<{ _id: string; units: number }>([
       { $match: match },
       { $group: { _id: { $toString: "$fundId" }, units: { $sum: "$units" } } },
@@ -95,8 +95,7 @@ export async function loadQueuedRedemptionLiabilityByFundId(
     match.fundId = { $in: fundObjectIds };
   }
 
-  const rows = await db
-    .collection<IndexFundRedemptionQueueEntry>("indexFundRedemptionQueue")
+  const rows = await indexFundRedemptionQueueCollection(db)
     .aggregate<{ _id: string; liabilityAnchor: number }>([
       { $match: match },
       {

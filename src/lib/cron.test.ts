@@ -314,11 +314,11 @@ describe("cron jobs", () => {
       await initializeCronJobs();
       await initializeCronJobs(); // Call twice to test stop logic
 
-      // Seven cron jobs: turn processing, backup turn, stuck turn-lock recovery
+      // Eight cron jobs: turn processing, backup turn, stuck turn-lock recovery
       // sweep, stock exchange refresh, fog of war, player random events sweep,
-      // and the share-fill recovery sweep. All share the same mocked handle,
-      // so stop() is called once per active job on re-init.
-      expect(mockCronJob.stop).toHaveBeenCalledTimes(7);
+      // the share-fill recovery sweep and the stale-lock watchdog. All share the
+      // same mocked handle, so stop() is called once per active job on re-init.
+      expect(mockCronJob.stop).toHaveBeenCalledTimes(8);
     });
 
     it("logs initialization message", async () => {

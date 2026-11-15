@@ -5,6 +5,7 @@ import { getDb } from "@/lib/mongodb";
 import { requireAdmin } from "@/lib/api/requireAdmin";
 import { parseBoundedIntParam } from "@/lib/api/validate";
 import type { ModAuditLogEntry } from "@/lib/db/types";
+import { modAuditLogCollection } from "@/lib/db/repositories/modAuditLog";
 
 // GET /api/admin/moderators/audit-log — View moderator audit log with filtering and pagination.
 // Auth: requireAdmin
@@ -32,8 +33,7 @@ export async function GET(request: Request) {
     }
 
     const db = await getDb();
-    const entries = await db
-      .collection<ModAuditLogEntry>("modAuditLog")
+    const entries = await modAuditLogCollection(db)
       .find(filter)
       .sort({ _id: -1 })
       .limit(limit + 1)

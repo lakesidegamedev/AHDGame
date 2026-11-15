@@ -82,12 +82,6 @@ function eraYearForPreset(preset: string | null | undefined): string | null {
   return year && /^\d{4}$/.test(year) ? year : null;
 }
 
-/**
- * Country-scoped unions page: the labour roster for one nation, reached from
- * the Nation dropdown's Economy group. Shows each seeded union with its
- * historically named organization, sector, leadership, membership pressure,
- * wage demand, and treasury.
- */
 export function UnionsClient() {
   const displayNameFor = useCountryDisplayName();
   const { code } = useParams<{ code: string }>();

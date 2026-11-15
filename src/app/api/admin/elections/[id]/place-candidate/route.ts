@@ -10,16 +10,15 @@ import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { parseJsonBody } from "@/lib/api/validate";
 import { z } from "zod";
-import type {
-  Election,
-  ElectionCandidate,
-  Character,
-  NPP,
-  ElectionVoteTally,
-  Campaign,
-} from "@/lib/db/types";
+import type { Election, ElectionCandidate, NPP, ElectionVoteTally, Campaign } from "@/lib/db/types";
 import { isCampaignEligibleElection } from "@/lib/campaigns/isCampaignEligible";
-import { DEFAULT_CANDIDATE_SUPPORT } from "@/lib/electionEngine/electionFormulaFactors";
+import { DEFAULT_CANDIDATE_SUPPORT } from "@/lib/elections/engine/electionFormulaFactors";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
 
 const placeCandidateSchema = z
   .object({
@@ -60,7 +59,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     const db = await getDb();
     const now = new Date();
 
-    const election = await db.collection<Election>("elections").findOne({
+    const election = await electionsCollection(db).findOne({
       _id: electionObjectId,
     });
 
@@ -83,7 +82,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     if (characterId) {
       const charIdObj = new ObjectId(characterId);
-      const char = await db.collection<Character>("characters").findOne({ _id: charIdObj });
+      const char = await charactersCollection(db).findOne({ _id: charIdObj });
       if (!char) {
         return errorResponse(404, "Character not found");
       }
@@ -91,7 +90,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       charId = charIdObj;
     } else if (nppId) {
       const nppIdObjParsed = new ObjectId(nppId);
-      const npp = await db.collection<NPP>("npps").findOne({ _id: nppIdObjParsed });
+      const npp = await nppsCollection(db).findOne({ _id: nppIdObjParsed });
       if (!npp) {
         return errorResponse(404, "NPP not found");
       }
@@ -102,7 +101,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       return errorResponse(400, "Invalid request");
     }
 
-    const existing = await db.collection<ElectionCandidate>("electionCandidates").findOne({
+    const existing = await electionCandidatesCollection(db).findOne({
       electionId: electionObjectId,
       status: "active",
       ...(charId ? { characterId: charId } : { nppId: nppIdObj }),
@@ -112,13 +111,11 @@ export async function POST(request: Request, { params }: RouteParams) {
       return errorResponse(400, `${characterName} is already in this race`);
     }
 
-    const partyAlreadyHasCandidate = await db
-      .collection<ElectionCandidate>("electionCandidates")
-      .findOne({
-        electionId: electionObjectId,
-        status: "active",
-        party,
-      });
+    const partyAlreadyHasCandidate = await electionCandidatesCollection(db).findOne({
+      electionId: electionObjectId,
+      status: "active",
+      party,
+    });
 
     if (partyAlreadyHasCandidate) {
       return errorResponse(
@@ -141,7 +138,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       nppId: nppIdObj,
     };
 
-    await db.collection<ElectionCandidate>("electionCandidates").insertOne(candidateDoc);
+    await electionCandidatesCollection(db).insertOne(candidateDoc);
 
     const candidateId = candidateDoc._id.toString();
 
@@ -191,12 +188,11 @@ export async function POST(request: Request, { params }: RouteParams) {
         createdAt: now,
         updatedAt: now,
       };
-      await db.collection<Campaign>("campaigns").insertOne(campaignDoc);
+      await campaignsCollection(db).insertOne(campaignDoc);
     }
 
     // Find any withdrawn candidates from the same party to transfer votes from
-    const withdrawnSameParty = await db
-      .collection<ElectionCandidate>("electionCandidates")
+    const withdrawnSameParty = await electionCandidatesCollection(db)
       .find({
         electionId: electionObjectId,
         party,
@@ -205,9 +201,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       .toArray();
 
     // Get current vote tally
-    const tally = await db
-      .collection<ElectionVoteTally>("electionVoteTallies")
-      .findOne({ electionId: electionObjectId });
+    const tally = await electionVoteTalliesCollection(db).findOne({ electionId: electionObjectId });
 
     if (tally && withdrawnSameParty.length > 0) {
       // Transfer votes from withdrawn candidates to new candidate
@@ -230,12 +224,10 @@ export async function POST(request: Request, { params }: RouteParams) {
           for (const unitId in tally.totalVotesByUnit) {
             const unitVotes = tally.totalVotesByUnit[unitId][withdrawnId] || 0;
             if (unitVotes > 0) {
-              await db
-                .collection<ElectionVoteTally>("electionVoteTallies")
-                .updateOne(
-                  { electionId: electionObjectId },
-                  { $inc: { [`totalVotesByUnit.${unitId}.${candidateId}`]: unitVotes } }
-                );
+              await electionVoteTalliesCollection(db).updateOne(
+                { electionId: electionObjectId },
+                { $inc: { [`totalVotesByUnit.${unitId}.${candidateId}`]: unitVotes } }
+              );
             }
             unsetTotalVotesByUnit[`totalVotesByUnit.${unitId}.${withdrawnId}`] = "";
           }
@@ -243,7 +235,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       }
 
       // Update tally with new candidate and transferred votes
-      await db.collection<ElectionVoteTally>("electionVoteTallies").updateOne(
+      await electionVoteTalliesCollection(db).updateOne(
         { electionId: electionObjectId },
         {
           $set: {
@@ -256,7 +248,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       );
     } else {
       // No votes to transfer, just add new candidate
-      await db.collection<ElectionVoteTally>("electionVoteTallies").updateOne(
+      await electionVoteTalliesCollection(db).updateOne(
         { electionId: electionObjectId },
         {
           $set: {

@@ -5,6 +5,7 @@ const DIAGNOSTIC_FIELDS = new Set<keyof FederalRevenue>([
   "taxLikeRevenue",
   "taxLikeRevenueAfterCap",
   "revenueCapReduction",
+  "automationLevy",
 ]);
 
 const NON_TAX_FIELDS = new Set<keyof FederalRevenue>(["healthcareIncome", "other"]);

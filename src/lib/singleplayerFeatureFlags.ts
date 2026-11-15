@@ -20,48 +20,37 @@ export interface SingleplayerFeatureFlagOption {
 const LABELS: Record<SingleplayerFeatureFlagKey, string> = {
   forexEnabled: "Foreign exchange",
   playerRandomEventsEnabled: "Player random events",
-  crisisInteractionEnabled: "Crisis decisions",
   autoDisastersEnabled: "Automatic crises and disasters",
-  crisisAidBillsEnabled: "Crisis aid bills",
-  rpgStatsEnabled: "Character stats",
-  autoSectorSeedEnabled: "Automatic sector seeding",
   sectorTechTreesEnabled: "Sector technology trees",
-  onboardingChecklistEnabled: "Onboarding checklist",
-  worldEventsEnabled: "World events",
-  legislationDemographicEffectsV2Enabled: "Legislation demographic effects",
-  granularPollEnabled: "Granular polls",
-  demographicsLayer1PositionsEnabled: "Detailed demographic positions",
   eraSystemEnabled: "Era progression",
-  conflictsEnabled: "International conflicts",
   coldWarEnabled: "Cold War systems",
-  redistrictingEnabled: "US House redistricting",
-  subsidiaryCorporationsEnabled: "Subsidiary corporations",
-  embargoTradeExposureEnabled: "Embargo trade exposure",
-  liveElectionResultsEnabled: "Live election results",
-  extractionAutoStrategyEnabled: "Extraction strategy automation",
-  seasonRecapEnabled: "Season recap",
-  corpDealsEnabled: "Corporate deals",
-  intOrgAlignmentEnabled: "International alignment",
   nppCorpStrategyEnabled: "Autonomous corporate strategy",
   livingConflictsEnabled: "Living conflicts",
-  nppOffensiveInitiationEnabled: "Autonomous offensive initiation",
-  nppOffensiveJoinEnabled: "Autonomous offensive participation",
-  intelligenceMilitarySabotageEnabled: "Military sabotage effects",
-  nppIntelligenceOperationsEnabled: "Autonomous intelligence operations",
-  granularElectorateEnabled: "Granular electorate",
-  macroGrowthV1: "Macro growth convergence",
-  settlementCrisisEnabled: "Settlement crises",
-  departmentProgramSliceEnabled: "Department programs",
-  departmentFinanceEnabled: "Department finance",
-  lawAdministrationEnabled: "Law administration",
-  regionalLegislationFinanceEnabled: "Regional legislation finance",
-  canonicalPoliticalMetricsEnabled: "Canonical political metrics",
+  nppTurnoverEnabled: "Politician aging and retirement",
+  nppPartyRenewalEnabled: "Party renewal",
 };
 
-const descriptions: Partial<Record<SingleplayerFeatureFlagKey, string>> = {
-  autoSectorSeedEnabled: "Periodically seed unowned sectors.",
-  nppOffensiveInitiationEnabled: "Let autonomous countries start wars.",
-  nppOffensiveJoinEnabled: "Let autonomous countries join offensives.",
+const DESCRIPTIONS: Record<SingleplayerFeatureFlagKey, string> = {
+  forexEnabled:
+    "Currencies trade against each other, so exchange rates move with trade and policy and affect prices abroad.",
+  playerRandomEventsEnabled:
+    "Your politician can run into random events such as scandals, windfalls and personal setbacks.",
+  autoDisastersEnabled:
+    "Natural disasters and economic crises can strike on their own and force a response from governments.",
+  sectorTechTreesEnabled:
+    "Industries research new technology over time, which changes what they produce and what it costs.",
+  eraSystemEnabled:
+    "The world moves through historical eras as the years pass, changing rules and available options.",
+  coldWarEnabled:
+    "Superpower rivalry shapes alliances, arms spending and proxy conflicts in eras where it applies.",
+  nppCorpStrategyEnabled:
+    "Computer-run companies decide for themselves where to invest, expand and compete.",
+  livingConflictsEnabled:
+    "Wars and border disputes start, escalate and end on their own as the world changes.",
+  nppTurnoverEnabled:
+    "Computer-run politicians grow old, retire and die, and are replaced by younger members of their party.",
+  nppPartyRenewalEnabled:
+    "Computer-run parties can split, new parties can form in empty political ground, and parties under 2% fold.",
 };
 
 /**
@@ -82,7 +71,7 @@ export const SINGLEPLAYER_FEATURE_FLAGS: readonly SingleplayerFeatureFlagOption[
   .map(([key, defaultEnabled]) => ({
     key,
     label: LABELS[key],
-    description: descriptions[key] ?? `Enable ${LABELS[key].toLowerCase()} in this local world.`,
+    description: DESCRIPTIONS[key],
     defaultEnabled,
   }));
 

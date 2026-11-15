@@ -10,7 +10,7 @@
 import { MongoClient, type ObjectId } from "mongodb";
 import * as dotenv from "dotenv";
 import { computePartySeatQuotas } from "@/lib/redistricting/districtedResolution";
-import { getMultiSeatMinShare } from "@/lib/turn/election/rules/seatEligibility";
+import { getMultiSeatMinShare } from "@/lib/elections/rules/seatEligibility";
 
 dotenv.config({ path: ".env.local" });
 

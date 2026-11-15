@@ -24,30 +24,24 @@
  */
 
 import { buildGranularElectorateSubstrate } from "@/lib/demographics/granularElectorate";
-import { resolveTurnout } from "@/lib/electionEngine/resolvedTurnout";
 import { turnoutForElection } from "@/lib/campaignTargeting/rules";
 import type { CampaignProjectionContext } from "@/lib/campaignTargeting/audience";
 
-import type {
-  DemographicCategory,
-  PrimaryStateAction,
-  StateDemographics,
-  State,
-} from "@/lib/db/types";
+import type { PrimaryStateAction, StateDemographics, State } from "@/lib/db/types";
 import {
   distributeVotesByGroupLevelAllocation,
   type EnrichedCandidate,
-} from "@/lib/electionEngine";
+} from "@/lib/elections/engine";
 import {
   PRIMARY_CAMPAIGN_STAGGER_TICK_RATE,
   homeStateSurgeMultiplier,
   stateAttackMultiplier,
   stateFavorabilityDeltas,
   NPP_STAGGER_EXTRA_MULTIPLIER,
-} from "@/lib/electionEngine/constants";
-import { supportMoodMultiplier } from "@/lib/electionEngine/electionFormulaFactors";
+} from "@/lib/elections/engine/constants";
+import { supportMoodMultiplier } from "@/lib/elections/engine/electionFormulaFactors";
 import {
-  shiftDemographicsForPrimary,
+  shiftElectorateForPrimary,
   applyPrimaryTurnoutRetention,
 } from "@/lib/campaigns/shiftPrimaryElectorate";
 
@@ -88,7 +82,8 @@ export interface ProjectPrimaryInput {
    * `loadPrimaryFieldOffices`. Must match the live wave's. Omitted → none.
    */
   fieldOffices?: (candidateId: string, stateId: string) => number;
-  campaignContext?: CampaignProjectionContext;
+  /** Census inputs for every projected region; a region with no census is skipped. */
+  campaignContext: CampaignProjectionContext;
   /** Intra-party candidates (already enriched: policies, fav, NPI, etc.) */
   candidates: EnrichedCandidate[];
   /** Raw ElectionCandidate data for primaryCampaignState / primaryCampaignTicks / home state */
@@ -114,19 +109,8 @@ export interface ProjectPrimaryInput {
   /** State meta + demographics keyed by stateId */
   stateMap: Map<string, State>;
   demographicsMap: Map<string, StateDemographics>;
-  /** Demographic category dictionary (state-independent) */
-  categories: DemographicCategory[];
   /** Per-state party-org lookup: key = `${stateId}_${partyId}` -> organization */
   statePartyOrgs: Map<string, number>;
-  /**
-   * Per-state live turnout by group id, from `resolveTurnout`.
-   *
-   * This is the channel party GOTV, player canvassing and turnout suppression
-   * all write, and the stagger has always read it. Omitted → the distribution
-   * falls back to stored and default turnout, which is exactly the behaviour
-   * every caller had before this field existed.
-   */
-  liveTurnouts?: Record<string, Record<string, number>>;
   /**
    * Live state-action rows for this race. The projection applies the same
    * vote-suppression rule the stagger will, so the board does not show a lead
@@ -169,7 +153,6 @@ export function projectPrimaryByState(input: ProjectPrimaryInput): ProjectionRes
     stateIds,
     stateMap,
     demographicsMap,
-    categories,
     statePartyOrgs,
     stateOrgByStateAndCandidate,
     homeStateByCandidate,
@@ -215,46 +198,32 @@ export function projectPrimaryByState(input: ProjectPrimaryInput): ProjectionRes
       continue;
     }
 
+    const context = input.campaignContext;
+    const turnoutDoc = turnoutForElection(context.turnoutByState.get(stateId), context);
+    const substrate = buildGranularElectorateSubstrate({
+      ...context,
+      countryId,
+      stateId,
+      turnoutDoc,
+      statePopulation: state.population,
+      demographics: rawDemographics,
+      enriched: candidates,
+      demographicDefaults: context.defaultsByState.get(stateId),
+    });
+    if (!substrate) {
+      byState[stateId] = {};
+      stateWinners[stateId] = null;
+      continue;
+    }
+    const effectiveCandidates = substrate.enriched;
+    const liveTurnouts = applyPrimaryTurnoutRetention(
+      substrate.liveTurnouts,
+      substrate.electorate,
+      partyPosition
+    );
     // Shift the electorate toward the party's ideological position — primary
     // voters are more ideologically extreme than the general electorate.
-    let baseDemographics = rawDemographics;
-    let effectiveCategories = categories;
-    let effectiveCandidates = candidates;
-    let liveTurnouts = input.liveTurnouts?.[stateId];
-    if (input.campaignContext) {
-      const context = input.campaignContext;
-      const turnoutDoc = turnoutForElection(context.turnoutByState.get(stateId), context);
-      const generalTurnouts = resolveTurnout(
-        state.population,
-        rawDemographics,
-        categories,
-        turnoutDoc,
-        context
-      ).byGroup;
-      const substrate = buildGranularElectorateSubstrate({
-        ...context,
-        countryId,
-        stateId,
-        turnoutDoc,
-        statePopulation: state.population,
-        demographics: rawDemographics,
-        categories,
-        liveTurnouts: generalTurnouts,
-        enriched: candidates,
-        demographicDefaults: context.defaultsByState.get(stateId),
-      });
-      if (substrate) {
-        baseDemographics = substrate.demographics;
-        effectiveCategories = substrate.categories;
-        effectiveCandidates = substrate.enriched;
-        liveTurnouts = applyPrimaryTurnoutRetention(
-          substrate.liveTurnouts,
-          substrate.demographics,
-          partyPosition
-        );
-      }
-    }
-    const demographics = shiftDemographicsForPrimary(baseDemographics, partyPosition);
+    const electorate = shiftElectorateForPrimary(substrate.electorate, partyPosition);
 
     // Party-org map for this state — all intra-party candidates see the same
     // value for their party (mobilization scalar, not a differentiator).
@@ -275,8 +244,7 @@ export function projectPrimaryByState(input: ProjectPrimaryInput): ProjectionRes
       effectivePool,
       totalPool,
       state.population,
-      demographics,
-      effectiveCategories,
+      electorate,
       partyOrgForState,
       {
         // Intra-party primary: every candidate is in the same party so the

@@ -2,6 +2,7 @@ import type { Db } from "mongodb";
 import type { State } from "@/lib/db/types";
 import { getNationalBudgetSeedConfigsForPreset } from "@/lib/seeds/reference/budgets";
 import { apportionRegionPopulation } from "./rules/apportionRegionPopulation";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 const LEGACY_REGION_COUNTRIES = [
   "IE",
@@ -36,8 +37,7 @@ export async function reconcileModernRegionPopulation(
   for (const countryId of LEGACY_REGION_COUNTRIES) {
     const target = budgets.get(countryId);
     if (target == null) continue;
-    const regions = await db
-      .collection<State>("states")
+    const regions = await statesCollection(db)
       .find({ countryId }, { projection: { _id: 1, population: 1 } })
       .toArray();
     if (regions.length === 0) continue;
@@ -47,7 +47,7 @@ export async function reconcileModernRegionPopulation(
       regions.map((region) => ({ id: region._id, population: region.population ?? 0 })),
       target
     );
-    await db.collection<State>("states").bulkWrite(
+    await statesCollection(db).bulkWrite(
       apportioned.map((region) => ({
         updateOne: {
           filter: { _id: region.id },

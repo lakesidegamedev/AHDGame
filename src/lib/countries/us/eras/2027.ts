@@ -1,21 +1,16 @@
 import type { CountryEraOverride } from "../../contract";
 
-/**
- * US, 2027.
- *
- * ⚠ GENERATED from `__snapshots__/us.pre-move.json`. Regenerate with:
- *
- *     npx tsx scripts/countries/gen-country-eras.ts US --force
- *
- * ⚠ DIFFERENCES ONLY. Everything not named here comes from the base modules.
- *
- * No config override: this era uses US's base configuration. The field
- * is ABSENT rather than an empty object, because `getCountryConfig` merges
- * shallowly and `config: {}` reads as an override that supplies nothing.
- *
- * No per-era orders of battle: this era falls back to the base set rather
- * than inventing an empty one.
- */
+/** Regional capacity follows this era's authored state legislatures. */
 export const US_2027: CountryEraOverride = {
   preset: "2027-default",
+  config: {
+    subNationalChamber: {
+      key: "stateSenate",
+      name: "State Senate",
+      shortName: "State Senate",
+      seats: 1973,
+      description: "Each state's elected legislature, which sets state law and budgets.",
+      elected: true,
+    },
+  },
 };

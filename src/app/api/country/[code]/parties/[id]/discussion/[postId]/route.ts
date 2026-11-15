@@ -5,6 +5,7 @@ import { requireModerator } from "@/lib/api/requireModerator";
 import { getDb } from "@/lib/mongodb";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import type { PartyDiscussionPost } from "@/lib/db/types";
+import { partyDiscussionPostsCollection } from "@/lib/db/repositories/partyDiscussionPosts";
 
 // DELETE /api/country/[code]/parties/[id]/discussion/[postId]
 // Auth: mod or admin only
@@ -32,7 +33,7 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
     if (!character) return errorResponse(403, "Character required");
 
     const db = await getDb();
-    const col = db.collection<PartyDiscussionPost>("partyDiscussionPosts");
+    const col = partyDiscussionPostsCollection(db);
     const post = await col.findOne({ _id: new ObjectId(postId), countryId, partyId: id });
 
     if (!post || post.deletedAt) {

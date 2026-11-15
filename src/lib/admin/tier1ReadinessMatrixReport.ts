@@ -1,5 +1,5 @@
 /**
- * Admin diagnostics read model for the 1953 Tier-1 readiness matrix (#3723).
+ * Admin diagnostics read model for the 1953 Tier-1 readiness matrix.
  *
  * Mirrors the seed-diagnostic / npp-v1-readiness style: a pure report builder
  * consumed by an admin GET route.

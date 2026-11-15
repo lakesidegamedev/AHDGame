@@ -10,10 +10,10 @@ import { parseJsonBody } from "@/lib/api/validate";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
-import type { Corporation } from "@/lib/db/types";
 import { isStateOwned } from "@/lib/nationalization/nationalCorporation";
 import { assertTreasuryAuthority } from "@/lib/nationalization/authority";
 import { corporationQueryFromParamId } from "@/lib/api/corporations/resolveQuery";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 const schema = z.object({ cap: z.number().min(0) });
 
@@ -57,17 +57,19 @@ export async function POST(request: Request, { params }: RouteParams) {
       );
     }
 
-    const target = await db
-      .collection<Corporation>("corporations")
-      .findOne({ ...idQuery, countryOwnerId: countryId });
+    const target = await corporationsCollection(db).findOne({
+      ...idQuery,
+      countryOwnerId: countryId,
+    });
     if (!target || !isStateOwned(target)) {
       return errorResponse(404, "National Corporation not found for this country.");
     }
 
     const treasuryDrawCap = Math.max(0, Math.round(parsed.data.cap));
-    await db
-      .collection<Corporation>("corporations")
-      .updateOne({ _id: target._id }, { $set: { treasuryDrawCap, updatedAt: new Date() } });
+    await corporationsCollection(db).updateOne(
+      { _id: target._id },
+      { $set: { treasuryDrawCap, updatedAt: new Date() } }
+    );
 
     return NextResponse.json({ success: true, treasuryDrawCap });
   } catch (error) {

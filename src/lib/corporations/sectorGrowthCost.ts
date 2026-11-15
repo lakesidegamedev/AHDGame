@@ -5,14 +5,12 @@ import { getCountryConfig } from "@/lib/constants/countries";
 import { getBankId } from "@/lib/centralBank/helpers";
 import type { CountryId } from "@/lib/constants/countries";
 import { NEUTRAL_STAT } from "@/lib/stats/statsConstants";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 /**
- * Pure growth-cost calculation for a sector. `growthRatePct` is the growth rate
- * **per game year** (48 turns); the return value is the *daily* (24-turn) cost of
- * holding that rate, which is what callers divide by `TURNS_PER_DAY` to charge
- * per turn. Mirrors the inline math previously in setSectorGrowth.ts.
- * `acumen` is the CEO's Business Acumen stat (defaults to neutral): a skilled CEO
- * grows more cheaply and absorbs less of a high prime rate.
+ * Growth rate is per game year (48 turns); return value is the daily (24-turn)
+ * cost that callers divide by TURNS_PER_DAY to charge per turn. `acumen` is
+ * the CEO's Business Acumen (defaults neutral).
  */
 export function growthCostFor(
   revenue: number,
@@ -36,9 +34,7 @@ export function growthCostFor(
  */
 export async function resolveCountryPrimeRate(db: Db, countryId: CountryId): Promise<number> {
   // getBankId: shared-bank members (IE → ECB) have no doc under their own id.
-  const centralBank = await db
-    .collection<CentralBank>("centralBanks")
-    .findOne({ _id: getBankId(countryId) });
+  const centralBank = await centralBanksCollection(db).findOne({ _id: getBankId(countryId) });
   return centralBank?.primeRate ?? getCountryConfig(countryId).centralBank.defaultPrimeRate;
 }
 
@@ -54,8 +50,7 @@ export async function resolveCountryPrimeRates(
     uniqueCountryIds.map((countryId) => [countryId, getBankId(countryId)])
   );
   const bankIds = [...new Set(bankIdByCountry.values())];
-  const banks = await db
-    .collection<CentralBank>("centralBanks")
+  const banks = await centralBanksCollection(db)
     .find({ _id: { $in: bankIds } })
     .project<Pick<CentralBank, "_id" | "primeRate">>({ _id: 1, primeRate: 1 })
     .toArray();

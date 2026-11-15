@@ -5,22 +5,29 @@
  */
 import { ObjectId, type Db } from "mongodb";
 import type { Crisis, CrisisDecisionOption, CrisisInteraction } from "@/lib/db/types/crisis";
-import type { FederalBudget, EnactedLaw } from "@/lib/db/types/budget";
-import type { GameState } from "@/lib/db/types/gameState";
+import type { FederalBudget } from "@/lib/db/types/budget";
 import type { State } from "@/lib/db/types/state";
 import type { LivingConflictState } from "./types";
 import { NATIONAL_SCOPE_IDS } from "@/lib/constants/nationalScope";
 import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
 import { ensureDemographicWorldEpoch } from "@/lib/demographics/worldEpoch";
+import { completeCrisisPopulationOrders } from "./crisisPopulationOutbox";
 import {
   REFUGEE_ADMISSION_LAW_IDS,
   refugeeAdmissionAuthorization,
   refugeeServiceCostsByCountry,
+  type RefugeeAdmissionAuthorization,
   type RefugeeReceptionOrder,
   type RefugeeReceptionResult,
 } from "./rules/refugeeReception";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { enactedLawsCollection } from "@/lib/db/repositories/enactedLaws";
+import { crisisInteractionsCollection } from "@/lib/db/repositories/crisisInteractions";
+import { livingConflictsCollection } from "@/lib/db/repositories/livingConflicts";
+import { refugeeReceptionHistoryCollection } from "@/lib/db/repositories/refugeeReceptionHistory";
 
-const REFUGEE_RECEPTION_HISTORY = "refugeeReceptionHistory";
 interface RefugeeReceptionHistory extends RefugeeReceptionResult {
   batchId: string;
   createdAt: Date;
@@ -32,18 +39,14 @@ async function ensureRefugeeReceptionIndexes(db: Db): Promise<void> {
   let ready = indexReadiness.get(db);
   if (!ready) {
     ready = (async () => {
-      await db
-        .collection<CrisisInteraction>("crisisInteractions")
-        .createIndex(
-          { populationOrderEpochId: 1, populationOrdersPending: 1 },
-          { name: "crisis_population_orders_pending" }
-        );
-      await db
-        .collection<RefugeeReceptionHistory>(REFUGEE_RECEPTION_HISTORY)
-        .createIndex(
-          { worldEpochId: 1, serviceEndTurn: 1, destinationCountryId: 1 },
-          { name: "refugee_services_world_country_expiry" }
-        );
+      await crisisInteractionsCollection(db).createIndex(
+        { populationOrderEpochId: 1, populationOrdersPending: 1 },
+        { name: "crisis_population_orders_pending" }
+      );
+      await refugeeReceptionHistoryCollection<RefugeeReceptionHistory>(db).createIndex(
+        { worldEpochId: 1, serviceEndTurn: 1, destinationCountryId: 1 },
+        { name: "refugee_services_world_country_expiry" }
+      );
     })().catch((error) => {
       indexReadiness.delete(db);
       throw error;
@@ -51,6 +54,33 @@ async function ensureRefugeeReceptionIndexes(db: Db): Promise<void> {
     indexReadiness.set(db, ready);
   }
   await ready;
+}
+
+/** The host's enacted asylum and border laws, folded into an admission multiplier. */
+export async function loadRefugeeAdmissionAuthorization(
+  db: Db,
+  countryId: string
+): Promise<RefugeeAdmissionAuthorization> {
+  const laws = await enactedLawsCollection(db)
+    .find(
+      {
+        scope: "national",
+        repealedAt: { $exists: false },
+        legislationTypeId: { $in: [...REFUGEE_ADMISSION_LAW_IDS] },
+        ...(countryId === COUNTRY_CONFIGS.US.id
+          ? { $or: [{ countryId }, { countryId: { $exists: false } }] }
+          : { countryId }),
+      },
+      { projection: { legislationTypeId: 1, policyOptionIndex: 1, enactedAt: 1 } }
+    )
+    .toArray();
+  return refugeeAdmissionAuthorization(
+    laws.map((law) => ({
+      legislationTypeId: law.legislationTypeId,
+      policyOptionIndex: law.policyOptionIndex,
+      enactedAt: law.enactedAt instanceof Date ? law.enactedAt.getTime() : Number.NaN,
+    }))
+  );
 }
 
 export async function prepareRefugeeReceptionOrder(
@@ -77,8 +107,8 @@ export async function prepareRefugeeReceptionOrder(
     spec.serviceDurationTurns > 480
   )
     throw new Error("Invalid authored refugee reception");
-  const [gameState, states, conflict, budget, laws] = await Promise.all([
-    db.collection<GameState>("gameState").findOne(
+  const [gameState, states, conflict, budget, authorization] = await Promise.all([
+    gameStateCollection(db).findOne(
       { _id: "current" },
       {
         projection: {
@@ -86,46 +116,26 @@ export async function prepareRefugeeReceptionOrder(
           currentTurn: 1,
           isProcessing: 1,
           processingTargetTurn: 1,
-          livingConflictsEnabled: 1,
         },
       }
     ),
-    db
-      .collection<State>("states")
+    statesCollection(db)
       .find(
         { countryId: countryId as State["countryId"] },
         { projection: { _id: 1, population: 1 } }
       )
       .toArray(),
-    db
-      .collection<LivingConflictState>("livingConflicts")
-      .findOne(
-        { defKey: spec.conflictKey },
-        { projection: { hasOpened: 1, status: 1, tracks: 1 } }
-      ),
-    db
-      .collection<FederalBudget>("federalBudget")
-      .findOne(
-        { countryId: countryId as FederalBudget["countryId"] },
-        { projection: { gdp: 1, gdpSmoothed: 1 } }
-      ),
-    db
-      .collection<EnactedLaw>("enactedLaws")
-      .find(
-        {
-          scope: "national",
-          repealedAt: { $exists: false },
-          legislationTypeId: { $in: [...REFUGEE_ADMISSION_LAW_IDS] },
-          ...(countryId === COUNTRY_CONFIGS.US.id
-            ? { $or: [{ countryId }, { countryId: { $exists: false } }] }
-            : { countryId }),
-        },
-        { projection: { legislationTypeId: 1, policyOptionIndex: 1, enactedAt: 1 } }
-      )
-      .toArray(),
+    livingConflictsCollection<LivingConflictState>(db).findOne(
+      { defKey: spec.conflictKey },
+      { projection: { hasOpened: 1, status: 1, tracks: 1 } }
+    ),
+    federalBudgetCollection(db).findOne(
+      { countryId: countryId as FederalBudget["countryId"] },
+      { projection: { gdp: 1, gdpSmoothed: 1 } }
+    ),
+    loadRefugeeAdmissionAuthorization(db, countryId),
   ]);
-  if (gameState?.livingConflictsEnabled !== true) return undefined;
-  if (!Number.isSafeInteger(gameState.currentTurn) || gameState.currentTurn < 1)
+  if (!gameState || !Number.isSafeInteger(gameState.currentTurn) || gameState.currentTurn < 1)
     throw new Error("Refugee reception requires a valid game clock");
   const population = states
     .filter((state) => !NATIONAL_SCOPE_IDS.has(state._id))
@@ -145,13 +155,6 @@ export async function prepareRefugeeReceptionOrder(
     gameState.isProcessing === true
       ? (gameState.processingTargetTurn ?? gameState.currentTurn) + 1
       : 1
-  );
-  const authorization = refugeeAdmissionAuthorization(
-    laws.map((law) => ({
-      legislationTypeId: law.legislationTypeId,
-      policyOptionIndex: law.policyOptionIndex,
-      enactedAt: law.enactedAt instanceof Date ? law.enactedAt.getTime() : Number.NaN,
-    }))
   );
   authorization.displacementActive =
     conflict?.hasOpened === true &&
@@ -182,13 +185,10 @@ export async function prepareRefugeeReceptionOrder(
 export async function loadPendingRefugeeReceptions(
   db: Db,
   worldEpochId: string,
-  turn: number,
-  enabled: boolean
+  turn: number
 ): Promise<RefugeeReceptionOrder[]> {
-  if (!enabled) return [];
   await ensureRefugeeReceptionIndexes(db);
-  const interactions = await db
-    .collection<CrisisInteraction>("crisisInteractions")
+  const interactions = await crisisInteractionsCollection(db)
     .find(
       {
         populationOrderEpochId: worldEpochId,
@@ -221,7 +221,7 @@ export async function materializeRefugeeReceptionResults(
 ): Promise<void> {
   if (!results.length) return;
   await ensureRefugeeReceptionIndexes(db);
-  await db.collection<RefugeeReceptionHistory>(REFUGEE_RECEPTION_HISTORY).bulkWrite(
+  await refugeeReceptionHistoryCollection<RefugeeReceptionHistory>(db).bulkWrite(
     results.map((result) => ({
       updateOne: {
         filter: { _id: result._id, batchId },
@@ -231,8 +231,7 @@ export async function materializeRefugeeReceptionResults(
     })),
     { ordered: true }
   );
-  const recorded = await db
-    .collection<RefugeeReceptionHistory>(REFUGEE_RECEPTION_HISTORY)
+  const recorded = await refugeeReceptionHistoryCollection<RefugeeReceptionHistory>(db)
     .find(
       {
         _id: { $in: results.map((result) => result._id) },
@@ -243,8 +242,12 @@ export async function materializeRefugeeReceptionResults(
     .toArray();
   if (recorded.length !== results.length)
     throw new Error("Refugee reception history write was not confirmed");
-  const completed = await db.collection<CrisisInteraction>("crisisInteractions").bulkWrite(
-    results.map((result) => ({
+  const crisisResults = results.filter((result) => result.origin === "crisis");
+  await completeCrisisPopulationOrders(db, { civilianLoss: [], reception: crisisResults });
+  const interactionResults = results.filter((result) => result.origin !== "crisis");
+  if (interactionResults.length === 0) return;
+  const completed = await crisisInteractionsCollection(db).bulkWrite(
+    interactionResults.map((result) => ({
       updateOne: {
         filter: {
           _id: new ObjectId(result.interactionId),
@@ -262,12 +265,12 @@ export async function materializeRefugeeReceptionResults(
     })),
     { ordered: true }
   );
-  if (completed.matchedCount !== results.length)
+  if (completed.matchedCount !== interactionResults.length)
     throw new Error("Refugee reception response completion was not confirmed");
-  await db.collection<CrisisInteraction>("crisisInteractions").updateMany(
+  await crisisInteractionsCollection(db).updateMany(
     {
       _id: {
-        $in: [...new Set(results.map((result) => result.interactionId))].map(
+        $in: [...new Set(interactionResults.map((result) => result.interactionId))].map(
           (id) => new ObjectId(id)
         ),
       },
@@ -280,12 +283,10 @@ export async function materializeRefugeeReceptionResults(
 
 /** One world read and one projected obligation read, shared by the national budget sweep. */
 export async function loadRefugeeServiceCosts(db: Db): Promise<Record<string, number>> {
-  const world = await db
-    .collection<GameState>("gameState")
-    .findOne(
-      { _id: "current" },
-      { projection: { worldEpochId: 1, currentTurn: 1, isProcessing: 1, processingTargetTurn: 1 } }
-    );
+  const world = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { projection: { worldEpochId: 1, currentTurn: 1, isProcessing: 1, processingTargetTurn: 1 } }
+  );
   if (!world?.worldEpochId) return {};
   const turn =
     world.isProcessing === true
@@ -293,8 +294,7 @@ export async function loadRefugeeServiceCosts(db: Db): Promise<Record<string, nu
       : world.currentTurn;
   if (!Number.isSafeInteger(turn) || turn < 1)
     throw new Error("Refugee service costing requires a valid turn");
-  const obligations = await db
-    .collection<RefugeeReceptionHistory>(REFUGEE_RECEPTION_HISTORY)
+  const obligations = await refugeeReceptionHistoryCollection<RefugeeReceptionHistory>(db)
     .find(
       {
         worldEpochId: world.worldEpochId,

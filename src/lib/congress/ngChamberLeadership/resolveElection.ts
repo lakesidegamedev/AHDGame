@@ -11,14 +11,16 @@ import { sendCountryGameEvent, DISCORD_COLORS } from "@/lib/discordWebhooks";
 import { leadershipRoleLabel } from "@/lib/congress/leadership/electionRoleMap";
 import { claimStatusTransition } from "@/lib/turn/atomicClaim";
 import type {
-  Character,
   NgChamberLeadershipElection,
   NgChamberLeadershipNomination,
   NgChamberLeadershipRole,
   NgChamberLeadershipResolution,
-  ElectedOfficial,
 } from "@/lib/db/types";
-import { NG_ROLE_CONFIG, NG_ELECTION_COLLECTION, NG_NOMINATION_COLLECTION } from "./config";
+import { NG_ROLE_CONFIG, NG_ELECTION_COLLECTION } from "./config";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { ngChamberLeadershipNominationsCollection } from "@/lib/db/repositories/ngChamberLeadershipNominations";
+import { ngChamberLeadershipElectionsCollection } from "@/lib/db/repositories/ngChamberLeadershipElections";
 
 export async function resolveNgChamberLeadershipElection(
   db: Db,
@@ -26,9 +28,9 @@ export async function resolveNgChamberLeadershipElection(
   force = false
 ): Promise<boolean> {
   const cfg = NG_ROLE_CONFIG[role];
-  const election = await db
-    .collection<NgChamberLeadershipElection>(NG_ELECTION_COLLECTION)
-    .findOne({ _id: role });
+  const election = await ngChamberLeadershipElectionsCollection<NgChamberLeadershipElection>(
+    db
+  ).findOne({ _id: role });
   if (!election || election.status === "cancelled") return false;
   if (election.status === "closed" && (!election.resolution || election.resolution.completedAt)) {
     return false;
@@ -41,11 +43,11 @@ export async function resolveNgChamberLeadershipElection(
 
   let resolution: NgChamberLeadershipResolution;
   if (election.status === "voting") {
-    const candidacies = await db
-      .collection<NgChamberLeadershipNomination>(NG_NOMINATION_COLLECTION)
-      .find({ role, status: { $in: ["open", "voting"] } })
-      .sort({ votesFor: -1 })
-      .toArray();
+    const candidacies =
+      await ngChamberLeadershipNominationsCollection<NgChamberLeadershipNomination>(db)
+        .find({ role, status: { $in: ["open", "voting"] } })
+        .sort({ votesFor: -1 })
+        .toArray();
     const candidate = candidacies[0];
     resolution = {
       id: new ObjectId(),
@@ -76,10 +78,11 @@ export async function resolveNgChamberLeadershipElection(
   const now = resolution.resolvedAt;
   const winner = resolution.winner;
   if (winner) {
-    await db
-      .collection<NgChamberLeadershipNomination>(NG_NOMINATION_COLLECTION)
-      .updateOne({ _id: winner._id, role }, { $set: { status: "confirmed", updatedAt: now } });
-    await db.collection<NgChamberLeadershipNomination>(NG_NOMINATION_COLLECTION).updateMany(
+    await ngChamberLeadershipNominationsCollection<NgChamberLeadershipNomination>(db).updateOne(
+      { _id: winner._id, role },
+      { $set: { status: "confirmed", updatedAt: now } }
+    );
+    await ngChamberLeadershipNominationsCollection<NgChamberLeadershipNomination>(db).updateMany(
       {
         role,
         _id: { $ne: winner._id },
@@ -89,7 +92,7 @@ export async function resolveNgChamberLeadershipElection(
       { $set: { status: "failed", updatedAt: now } }
     );
 
-    const officials = db.collection<ElectedOfficial>("electedOfficials");
+    const officials = electedOfficialsCollection(db);
     const prior = await officials.findOne(
       { officeType: cfg.officerOfficeType, countryId: "NG" },
       { projection: { _id: 1, electedAt: 1 } }
@@ -140,9 +143,10 @@ export async function resolveNgChamberLeadershipElection(
   if (completed && winner) {
     const roleLabel = leadershipRoleLabel(role);
     const nomineeAvatarUrl = (
-      await db
-        .collection<Character>("characters")
-        .findOne({ _id: winner.nomineeId }, { projection: { avatarUrl: 1 } })
+      await charactersCollection(db).findOne(
+        { _id: winner.nomineeId },
+        { projection: { avatarUrl: 1 } }
+      )
     )?.avatarUrl;
     sendCountryGameEvent("NG", {
       title: `Leadership Election Result: ${roleLabel}`,

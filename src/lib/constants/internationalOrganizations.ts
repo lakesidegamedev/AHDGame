@@ -31,6 +31,8 @@ import { WAL_CABINET_SEAT_IDS } from "@/lib/countries/wal/institutionsFacts";
 import { BLR_CABINET_SEAT_IDS } from "@/lib/countries/blr/institutionsFacts";
 import { UKR_CABINET_SEAT_IDS } from "@/lib/countries/ukr/institutionsFacts";
 import { BAL_CABINET_SEAT_IDS } from "@/lib/countries/bal/institutionsFacts";
+import { CA_CABINET_SEAT_IDS } from "@/lib/countries/ca/institutionsFacts";
+import { QC_CABINET_SEAT_IDS } from "@/lib/countries/qc/institutionsFacts";
 
 /**
  * The built-in organizations seeded at game start. Player-created orgs use
@@ -38,7 +40,18 @@ import { BAL_CABINET_SEAT_IDS } from "@/lib/countries/bal/institutionsFacts";
  * (string) — runtime validation distinguishes the two.
  */
 export type BuiltInInternationalOrganizationId =
-  "EU" | "NATO" | "UN" | "COMMONWEALTH" | "WARSAW_PACT" | "NON_ALIGNED" | "COMECON";
+  | "EU"
+  | "NATO"
+  | "UN"
+  | "COMMONWEALTH"
+  | "WARSAW_PACT"
+  | "NON_ALIGNED"
+  | "COMECON"
+  | "CRITICAL_MINERALS_CLUB"
+  | "CLIMATE_ADAPTATION_PACT"
+  | "AI_SAFETY_ACCORD"
+  | "ARCTIC_AGREEMENT"
+  | "SPACE_TRAFFIC_RULES";
 
 /**
  * Identifier for any international organization — either a built-in literal
@@ -172,30 +185,22 @@ export const GDP_MILLIONS_TO_USD = 1_000_000;
  */
 export const DEFAULT_ORG_DUES_RATE_ANNUAL = 0.00006;
 
-/**
- * Annual tribute, as a share of GDP, owed by members who cannot vote — per
- * organisation, because the two blocs do not levy the same rate.
+/*
+ * Annual tribute, as a share of GDP, owed by members who cannot vote, per
+ * organisation because the two blocs levy different rates.
  *
- * Fixed rather than member-voted on purpose: tribute payers have no say, so
- * letting the voting members set it would be taxation without representation
- * dressed up as a mechanic.
+ * Fixed rather than member-voted: tribute payers have no say, so letting
+ * voters set it would be taxation without representation.
  *
- * Scope and rate live in ONE table so an organisation cannot be added to the
- * system without being given a price. Membership of anything not listed here
- * costs nothing.
+ * One table so an organisation cannot be added without a price. Membership
+ * of anything not listed costs nothing.
  *
  * WHY THE PACT PAYS MORE. The playable countries are US, UK, DD and RU, so
- * every other member of either bloc is a tribute payer. Measured against the
- * 1953 seed that leaves NATO collecting from France, Italy, Turkey and Greece
- * ($74.2B combined) and the Pact from Poland, Hungary, Romania, Bulgaria and
- * Czechoslovakia ($33.5B) — a 2.2x client-wealth gap from a comparable number
- * of clients. A flat rate would hand the West a structurally deeper pool for
- * nothing it did; half again as much narrows NATO's lead to about 1.5x.
- *
- * It deliberately does NOT equalise. Parity needs roughly 1.1% a year, and
- * taking that much from economies already the poorer of the two buys balance
- * with a fiction. A bloc extracting harder from a weaker periphery, and still
- * ending up with less, is the truer shape.
+ * every other member of either bloc is a tribute payer; the client-wealth gap
+ * favours the West. A flat rate would hand NATO a structurally deeper pool for
+ * nothing; the higher Pact rate narrows NATO's lead to about 1.5x. It
+ * deliberately does NOT equalise: parity would mean extracting more from the
+ * poorer economies, buying balance with a fiction.
  */
 export const ORG_TRIBUTE_RATES_ANNUAL: Readonly<
   Partial<Record<BuiltInInternationalOrganizationId, number>>
@@ -365,40 +370,18 @@ export const INTERNATIONAL_ORGANIZATIONS: Record<
     // a seedable 1991 country (bootstrap gates the bloc to 1953/1979).
     foundingMembersByEra: {
       /**
-       * The real UN of 1953: 60 states, of which 58 exist as entities here —
-       * plus Italy and Ireland, seated by design decision (see below).
+       * The real UN of 1953: 60 states, of which 58 exist as entities here plus
+       * Italy and Ireland, seated by design decision.
        *
-       * The 51 founders of 1945 plus the nine admitted before the Cold War
-       * froze admissions — Afghanistan, Iceland, Sweden and Thailand in 1946,
-       * Pakistan and Yemen in 1947, Burma in 1948, Israel in 1949, Indonesia in
-       * 1950. Nothing then joined until December 1955, which is why so many
-       * obvious names are missing below.
+       * Two founders have no seat: the Byelorussian and Ukrainian SSRs held their
+       * own seats, but Ukraine is inside the soviet-union shard and Byelorussia is
+       * a dependency (seating it would give the USSR two votes).
        *
-       * TWO FOUNDERS HAVE NO SEAT HERE. The Byelorussian and Ukrainian SSRs
-       * each held their own General Assembly seat, a Soviet negotiating win at
-       * Yalta. Ukraine has no entity at all (it is drawn inside the
-       * soviet-union shard), and Byelorussia is modelled as a dependency of RU
-       * rather than a sovereign — seating a dependency would give the USSR two
-       * votes through the back door, which is exactly what the real arrangement
-       * was, but not something the membership model expresses.
+       * The China seat is held by CN, though historically it was the Republic of
+       * China on Taiwan.
        *
-       * THE CHINA SEAT is CN here, though in 1953 it was held by the Republic
-       * of China on Taiwan — the PRC did not take it until 1971. Left as CN
-       * because that is the existing seating and changing it is a separate
-       * decision about what TW is for.
-       *
-       * ABSENT ON PURPOSE, all admitted December 1955 or later: Spain, Austria,
-       * Finland, Portugal, Hungary, Romania, Bulgaria, Albania, Jordan, Laos,
-       * Cambodia, Nepal, Ceylon and Libya (1955); Japan (1956); Nigeria (1960);
-       * Mongolia (1961); Bhutan and Oman (1971); both Germanies (1973); both
-       * Vietnams (1977); Liechtenstein (1990); Korea, North and South (1991);
-       * San Marino (1992); Monaco and Andorra (1993); Switzerland (2002). The
-       * Vatican has never joined.
-       *
-       * Italy and Ireland belong to that 1955 cohort too and ARE seated anyway,
-       * by decision. If a further divergence is ever wanted, add it here with
-       * the same note — the rule is that a departure from history is written
-       * down as one, never left looking like an oversight.
+       * Members admitted December 1955 or later are omitted on purpose. Departures
+       * from history are written down as such, never left looking like oversights.
        */
       "1953-default": [
         // Permanent members and Europe
@@ -623,6 +606,94 @@ export const INTERNATIONAL_ORGANIZATIONS: Record<
       "Members coordinate national economic plans, specialise production across the community, and settle mutual trade through clearing arrangements under a common secretariat.",
     category: "economic",
   },
+  // Post-2027 treaty organisations. Each founds empty in its year and countries
+  // accede by choice. Their terms are a treaty directive (`orgDirectives.ts`)
+  // that lapses after five years unless the members renew it.
+  CRITICAL_MINERALS_CLUB: {
+    id: "CRITICAL_MINERALS_CLUB",
+    name: "Critical Minerals Club",
+    shortName: "Minerals Club",
+    description:
+      "A club of producer and consumer states that pool stockpiles of lithium, cobalt, rare earths and other critical minerals and guarantee supply to one another.",
+    logoPath: "/orgs/critical-minerals-club.svg",
+    foundingMembers: [],
+    foundedYear: 2028,
+    leadership: {
+      title: "Secretary-General of the Minerals Club",
+      termTurns: DEFAULT_LEADERSHIP_TERM_TURNS,
+    },
+    charter:
+      "Members share mineral stockpiles in a shortage, coordinate purchases and agree not to embargo one another. Its terms run five years and lapse unless members renew them.",
+    category: "economic",
+  },
+  CLIMATE_ADAPTATION_PACT: {
+    id: "CLIMATE_ADAPTATION_PACT",
+    name: "Climate Adaptation Finance Pact",
+    shortName: "Adaptation Pact",
+    description:
+      "A finance pact that pools money for sea walls, drainage, heat shelters and drought-proof farming in the member states most exposed to a warming climate.",
+    logoPath: "/orgs/climate-adaptation-pact.svg",
+    foundingMembers: [],
+    foundedYear: 2029,
+    leadership: {
+      title: "Chair of the Adaptation Fund",
+      termTurns: DEFAULT_LEADERSHIP_TERM_TURNS,
+    },
+    charter:
+      "Members pay into a common adaptation fund and agree shared standards for flood and heat defences. Its terms run five years and lapse unless members renew them.",
+    category: "economic",
+  },
+  AI_SAFETY_ACCORD: {
+    id: "AI_SAFETY_ACCORD",
+    name: "AI Safety Accord",
+    shortName: "AI Accord",
+    description:
+      "An accord on the testing, incident reporting and limits of advanced artificial intelligence, with a shared evaluation body.",
+    logoPath: "/orgs/ai-safety-accord.svg",
+    foundingMembers: [],
+    foundedYear: 2030,
+    leadership: {
+      title: "Director of the AI Safety Board",
+      termTurns: DEFAULT_LEADERSHIP_TERM_TURNS,
+    },
+    charter:
+      "Members test advanced AI systems before release, report serious incidents to one another and refuse to deploy systems the evaluation body finds unsafe. Its terms run five years and lapse unless members renew them.",
+    category: "economic",
+  },
+  ARCTIC_AGREEMENT: {
+    id: "ARCTIC_AGREEMENT",
+    name: "Arctic Agreement",
+    shortName: "Arctic",
+    description:
+      "An agreement on shipping lanes, fishing, resource claims and search and rescue in a melting Arctic.",
+    logoPath: "/orgs/arctic-agreement.svg",
+    foundingMembers: [],
+    foundedYear: 2032,
+    leadership: {
+      title: "Chair of the Arctic Council",
+      termTurns: DEFAULT_LEADERSHIP_TERM_TURNS,
+    },
+    charter:
+      "Members settle claims through talks, share search and rescue and agree common rules for shipping and drilling in Arctic waters. Its terms run five years and lapse unless members renew them.",
+    category: "economic",
+  },
+  SPACE_TRAFFIC_RULES: {
+    id: "SPACE_TRAFFIC_RULES",
+    name: "Space Traffic Rules",
+    shortName: "Space Traffic",
+    description:
+      "A treaty body that tracks satellites and debris, coordinates orbits and sets rules against weapons tests that litter orbit.",
+    logoPath: "/orgs/space-traffic-rules.svg",
+    foundingMembers: [],
+    foundedYear: 2034,
+    leadership: {
+      title: "Director of Space Traffic Coordination",
+      termTurns: DEFAULT_LEADERSHIP_TERM_TURNS,
+    },
+    charter:
+      "Members share tracking data, give notice of launches and manoeuvres, and refrain from tests that create lasting debris. Its terms run five years and lapse unless members renew them.",
+    category: "economic",
+  },
 };
 
 export const INTERNATIONAL_ORGANIZATION_ORDER: BuiltInInternationalOrganizationId[] = [
@@ -633,6 +704,11 @@ export const INTERNATIONAL_ORGANIZATION_ORDER: BuiltInInternationalOrganizationI
   "WARSAW_PACT",
   "NON_ALIGNED",
   "COMECON",
+  "CRITICAL_MINERALS_CLUB",
+  "CLIMATE_ADAPTATION_PACT",
+  "AI_SAFETY_ACCORD",
+  "ARCTIC_AGREEMENT",
+  "SPACE_TRAFFIC_RULES",
 ];
 
 export function getOrganizationDef(
@@ -682,10 +758,9 @@ export const FOREIGN_AFFAIRS_POSITION_BY_COUNTRY: Record<CountryId, string | nul
   CN: CN_CABINET_SEAT_IDS.foreignAffairs,
   NG: NG_CABINET_SEAT_IDS.foreignAffairs,
   // The eastern bloc and RU reuse DD_CABINET_POSITIONS, which defines a real
-  // `minister_of_foreign_affairs`. These were null — the same defect #980 fixed for
-  // CN/IE/NG, left standing for eight more countries: a player foreign minister here
-  // was never recognized, and only the head-of-government fallback could act. Note
-  // the same cabinets also hold `minister_of_foreign_trade`, which is NOT this seat.
+  // `minister_of_foreign_affairs`. These must not be null: a player foreign
+  // minister would otherwise go unrecognized and only the head-of-government
+  // fallback could act. Note `minister_of_foreign_trade` is NOT this seat.
   HU: HU_CABINET_SEAT_IDS.foreignAffairs,
   PL: PL_CABINET_SEAT_IDS.foreignAffairs,
   RO: RO_CABINET_SEAT_IDS.foreignAffairs,
@@ -714,6 +789,8 @@ export const FOREIGN_AFFAIRS_POSITION_BY_COUNTRY: Record<CountryId, string | nul
   // completeness test below carries them as named exceptions so this stays visible.
   SCO: SCO_CABINET_SEAT_IDS.foreignAffairs,
   WAL: WAL_CABINET_SEAT_IDS.foreignAffairs,
+  CA: CA_CABINET_SEAT_IDS.foreignAffairs,
+  QC: QC_CABINET_SEAT_IDS.foreignAffairs,
 };
 
 /**
@@ -756,4 +833,6 @@ export const TRADE_MINISTER_POSITION_BY_COUNTRY: Record<CountryId, string | null
   // completeness test below carries them as named exceptions so this stays visible.
   SCO: SCO_CABINET_SEAT_IDS.tradeMinister,
   WAL: WAL_CABINET_SEAT_IDS.tradeMinister,
+  CA: CA_CABINET_SEAT_IDS.tradeMinister,
+  QC: QC_CABINET_SEAT_IDS.tradeMinister,
 };

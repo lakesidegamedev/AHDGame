@@ -64,14 +64,14 @@ describe("RealEconomyPanel", () => {
   it("non-playables keep the metric ranking links", () => {
     render(
       <RealEconomyPanel
-        countryId="JP"
+        countryId="FR"
         realEconomy={realEconomy}
         gdpPerCapita={2600}
-        formatIncome={(v) => `¥${v}`}
+        formatIncome={(v) => `€${v}`}
       />
     );
     const rankingLinks = screen.getAllByRole("link", { name: /rankings/ });
-    expect(rankingLinks[0].getAttribute("href")).toBe("/country/jp/metrics");
+    expect(rankingLinks[0].getAttribute("href")).toBe("/country/fr/metrics");
   });
 
   it("encodes polarity, not bare direction: falling unemployment reads good", () => {

@@ -7,7 +7,7 @@ import { useToast } from "@/contexts/ToastContext";
 import { regionPartyApiUrl } from "@/lib/urls";
 import { usePsSpendScope } from "@/components/state/politics/orgActions/usePsSpendScope";
 import { useActionPreview } from "@/components/state/politics/orgActions/useActionPreview";
-import { COUNTRY_CURRENCY_MAP, CURRENCY_SYMBOLS } from "@/lib/constants/currencies";
+import { COUNTRY_CURRENCY_MAP, CURRENCY_SYMBOLS } from "@/lib/constants/currencyCodes";
 import { apiErrorText } from "@/lib/errors/catalog";
 
 type BuildOrgPreview =

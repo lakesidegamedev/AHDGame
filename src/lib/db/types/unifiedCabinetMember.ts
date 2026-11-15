@@ -33,7 +33,7 @@ export interface UnifiedCabinetMember extends IterationStampFields {
   appointedByNppId?: ObjectId;
   appointedAt: Date;
   /**
-   * Game-clock turn the appointment was seated (#1994). Stamped by the
+   * Game-clock turn the appointment was seated. Stamped by the
    * autonomous fill path (`formNppCabinet`); absent on legacy docs and on
    * player/caretaker appointments, which never consult it. Drives the
    * reshuffle-guard minimum tenure so a new minister is not judged before its
@@ -63,7 +63,7 @@ export interface UnifiedCabinetMember extends IterationStampFields {
   /** Turn the holder last bought +1 action with main AP (once per turn). */
   lastMinisterialActionTopUpTurn?: number;
   /**
-   * Role slot for UK dual-ministry rules (issue #2049): one "departmental"
+   * Role slot for UK dual-ministry rules: one "departmental"
    * plus one "central" row per player. Absent on legacy rows and outside the
    * UK, where a missing slot keeps the one-seat-per-character semantics.
    */

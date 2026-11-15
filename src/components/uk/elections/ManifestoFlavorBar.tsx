@@ -2,9 +2,9 @@
  * UK manifesto authoring bar during the Commons campaign window.
  *
  * Party leaders pick up to 3 pledges from the curated catalog and save/lock
- * them for the election (epic #856, ticket #857). Non-leaders and locked
- * manifestos render read-only. The vote-share effect is gated separately by
- * UK_MANIFESTO_VOTE_EFFECT, so this is safe to surface before the effect is on.
+ * them for the election. Non-leaders and locked manifestos render read-only.
+ * The vote-share effect is gated separately by UK_MANIFESTO_VOTE_EFFECT, so
+ * this is safe to surface before the effect is on.
  */
 "use client";
 

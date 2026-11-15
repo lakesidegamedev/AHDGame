@@ -13,9 +13,12 @@ import { getBankId } from "@/lib/centralBank/helpers";
 import { getCountryIdForCurrency } from "@/lib/constants/currencies";
 import { getCurrentTurn } from "@/lib/currentTurn";
 import { settleTransition, resumeSettlement } from "@/lib/banking/settlementJournal";
-import { MONEY_MOVE_COLLECTION } from "@/lib/banking/moneyMove";
 import { toAccountSnapshot } from "./snapshot";
 import { savingsClosureTransition } from "./rules/closure";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { savingsAccountsCollection } from "@/lib/db/repositories/savingsAccounts";
 
 export async function closeCharacterSavings(
   db: Db,
@@ -35,9 +38,8 @@ export async function closeCharacterSavings(
   const [policy, turn, owner, accounts] = await Promise.all([
     loadBankingPolicy(db),
     getCurrentTurn(db),
-    db.collection("characters").findOne({ _id: ownerId }, { projection: { _id: 1 } }),
-    db
-      .collection<SavingsAccount>("savingsAccounts")
+    charactersCollection(db).findOne({ _id: ownerId }, { projection: { _id: 1 } }),
+    savingsAccountsCollection(db)
       .find({
         ownerType: "character",
         ownerId,
@@ -78,12 +80,13 @@ async function closeSavingsAccount(
     throw new Error("Savings balance requires reconciliation before character deletion");
   const holderMissing =
     isBankHolder(original.holder) &&
-    !(await db
-      .collection("corporations")
-      .findOne({ _id: new ObjectId(original.holder) }, { projection: { _id: 1 } }));
+    !(await corporationsCollection(db).findOne(
+      { _id: new ObjectId(original.holder) },
+      { projection: { _id: 1 } }
+    ));
   if (holderMissing && (context.ownerExists || !context.allowMissingHolderWriteOff))
     throw new Error("Recover savings from the missing bank before deleting the character");
-  const accountsCollection = db.collection<SavingsAccount>("savingsAccounts");
+  const accountsCollection = savingsAccountsCollection(db);
   if (original.closureClaimedTurn === undefined) {
     const claimed = await accountsCollection.updateOne(
       { _id: original._id, version: original.version, status: "open" },
@@ -96,9 +99,10 @@ async function closeSavingsAccount(
   if (!account || account.status !== "frozen" || account.closureClaimedTurn === undefined)
     throw new Error("Savings closure claim is unavailable");
   const key = `savings-close:${account._id}:${account.version}`;
-  const recorded = await db
-    .collection<{ _id: string }>(MONEY_MOVE_COLLECTION)
-    .findOne({ _id: key }, { projection: { _id: 1 } });
+  const recorded = await bankMoneyMovesCollection<{ _id: string }>(db).findOne(
+    { _id: key },
+    { projection: { _id: 1 } }
+  );
   if (recorded) {
     const resumed = await resumeSettlement(db, key);
     if (resumed.status !== "applied" && resumed.status !== "replayed")

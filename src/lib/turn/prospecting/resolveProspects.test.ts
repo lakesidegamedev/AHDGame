@@ -106,6 +106,27 @@ describe("resolveProspects", () => {
     expect(notif[0].type).toBe("prospect_succeeded");
   });
 
+  it("closes the survey before growing capacity, so a later failure cannot re-grant", async () => {
+    const survey = makeSurvey();
+    setFind(db, "prospectingSurveys", [survey]);
+    setFind(db, "stateResourceCapacity", [
+      { _id: new ObjectId(), stateId: "TX", countryId: "US", resources: { oil: 10_000 } },
+    ]);
+    setFind(db, "corporations", []);
+    db.collectionMocks["stateResourceCapacity"]!.bulkWrite.mockRejectedValueOnce(
+      new Error("write failed")
+    );
+
+    const resolveProspects = await loadFn();
+    await expect(resolveProspects(db as unknown as Db, 13, NOW, fixedRng([0, 0]))).rejects.toThrow(
+      "write failed"
+    );
+
+    const surveyBulk = db.collectionMocks["prospectingSurveys"]!.bulkWrite.mock.calls[0][0];
+    expect(surveyBulk[0].updateOne.filter).toEqual({ _id: survey._id, status: "active" });
+    expect(surveyBulk[0].updateOne.update.$set.status).toBe("succeeded");
+  });
+
   it("marks a failed survey and grows no capacity", async () => {
     const survey = makeSurvey({ rdScoreAtStart: 0 });
     setFind(db, "prospectingSurveys", [survey]);

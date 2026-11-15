@@ -1,7 +1,7 @@
 /**
  * Media business models describe which outputs a firm sells and when the model
- * is historically available. `mediaOperatingModelOutputRates` converts a
- * model's value shares into the existing commodity-rate format.
+ * is historically available. `mediaOperatingModelOutputRates` converts value
+ * shares into the commodity-rate format.
  */
 
 import type { CommodityType } from "@/lib/constants/commodities";
@@ -14,7 +14,11 @@ export type MediaOperatingModelId =
   | "film_studio"
   | "music_label"
   | "publishing_house"
-  | "streaming_platform";
+  | "streaming_platform"
+  | "social_platform"
+  | "creator_network"
+  | "ai_generated_media"
+  | "immersive_media";
 
 /** Operating lanes inside media that can run a business model. */
 export type MediaOperatingModelSector = "media" | "media_entertainment";
@@ -122,6 +126,72 @@ export const MEDIA_OPERATING_MODELS: readonly MediaOperatingModelDefinition[] = 
     technologies: {
       media: { decade: "2009", nodeName: "Streaming Platforms" },
       media_entertainment: { decade: "2009", nodeName: "Streaming Distribution" },
+    },
+  },
+  // The incumbent model of the 2027 world: cheap to run on software and devices, with
+  // reach bought through engagement rather than production.
+  {
+    id: "social_platform",
+    name: "Social Platform",
+    sectorTypes: ["media"],
+    availableFromYear: 2008,
+    outputProducts: ["advertising"],
+    recipes: {
+      media: { inputStrategyId: "digital_first", outputStrategyId: "streaming_media" },
+    },
+    technologies: { media: { decade: "2009", nodeName: "Social Distribution" } },
+  },
+  // Independent creators paid through a shared network: labour-heavy like print, sold
+  // like streaming.
+  {
+    id: "creator_network",
+    name: "Creator Network",
+    sectorTypes: ["media", "media_entertainment"],
+    availableFromYear: 2015,
+    outputProducts: ["advertising"],
+    recipes: {
+      media: { inputStrategyId: "standard", outputStrategyId: "streaming_media" },
+      media_entertainment: { inputStrategyId: "live_service", outputStrategyId: "standard" },
+    },
+    technologies: {
+      media: { decade: "2019", nodeName: "Influencer Networks" },
+      media_entertainment: { decade: "2019", nodeName: "Creator Platforms" },
+    },
+  },
+  // Generated at scale: few staff, heavy compute, energy and network bills.
+  {
+    id: "ai_generated_media",
+    name: "AI-Generated Media",
+    sectorTypes: ["media", "media_entertainment"],
+    availableFromYear: 2030,
+    outputProducts: ["advertising"],
+    recipes: {
+      media: { inputStrategyId: "personalised_media", outputStrategyId: "personalised_media" },
+      media_entertainment: {
+        inputStrategyId: "personalised_media",
+        outputStrategyId: "personalised_media",
+      },
+    },
+    technologies: {
+      media: { decade: "2029", nodeName: "AI-Generated Content" },
+      media_entertainment: { decade: "2029", nodeName: "Generative Game Content" },
+    },
+  },
+  // Headsets, haptics and mixed reality venues: premium audiences, dear hardware.
+  {
+    id: "immersive_media",
+    name: "Immersive Media",
+    sectorTypes: ["media_entertainment"],
+    availableFromYear: 2040,
+    outputProducts: ["advertising"],
+    recipes: {
+      media_entertainment: {
+        inputStrategyId: "personalised_media",
+        outputStrategyId: "live_venue",
+      },
+    },
+    technologies: {
+      media_entertainment: { decade: "2039", nodeName: "Mixed Reality Venues" },
     },
   },
 ];

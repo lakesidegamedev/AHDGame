@@ -13,6 +13,7 @@ import {
   isPoliticalApprovalCountry,
   loadPoliticalApprovalBases,
 } from "@/lib/politicalLegislation/politicalApprovalProvider";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 export interface MapApprovalState {
   approval: number;
@@ -45,7 +46,7 @@ export async function computeApprovalMap(
   const [allMetrics, allStates, groupsByState, eraContext] = await Promise.all([
     // SP5: merged two-store view.
     findMergedRegionMetricsMany(db, { countryId }),
-    db.collection<State>("states").find({ countryId }).toArray(),
+    statesCollection(db).find({ countryId }).toArray(),
     loadElectorateGroups(db, { countryId }),
     getEraContext(db),
   ]);

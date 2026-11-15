@@ -6,6 +6,7 @@ import {
   COHORT_REGION_SOURCE_1991,
   type CohortAdultCounts,
 } from "../reference/cohortAgeSources1991";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 export type CohortAgeShares = { young: number; mid: number; mature: number; senior: number };
 
@@ -29,7 +30,7 @@ function sharesOf(counts: CohortAdultCounts): CohortAgeShares {
 export function cohortAgeSource1991(countryId: string, regionId: string): string | null {
   const override = COHORT_REGION_SOURCE_1991[regionId];
   if (override) return override.countryId === countryId ? override.source : null;
-  if (countryId === "RU" && regionId.startsWith("SU_")) return null;
+  if (countryHasFeature("ruSeeds", countryId) && regionId.startsWith("SU_")) return null;
   return COHORT_NATIONAL_SOURCE_1991[countryId] ?? null;
 }
 
@@ -39,7 +40,7 @@ export function cohortAgeShares1991(
   preset: string
 ): CohortAgeShares | null {
   if (preset !== "1991-default") return null;
-  if (countryId === "FR" || countryId === "ES") {
+  if (countryHasFeature("frSeeds", countryId) || countryHasFeature("esSeeds", countryId)) {
     const profile = COHORT_AGE_PROFILES_1991[countryId];
     if (!(profile.regionIds as readonly string[]).includes(regionId)) return null;
     return sharesOf(profile.adultCounts);

@@ -6,6 +6,7 @@ import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { canManageOffice } from "@/lib/governorOffice/access";
 import { cancelQueue } from "@/lib/governorOffice/legislation/cancelQueue";
 import type { GovernorQueuedBill } from "@/lib/db/types";
+import { governorLegislationQueueCollection } from "@/lib/db/repositories/governorLegislationQueue";
 
 // DELETE /api/country/[code]/region/[id]/office/legislation/queue/[queueId]
 export async function DELETE(
@@ -30,9 +31,7 @@ export async function DELETE(
     if (!canManage) return errorResponse(403, "Not authorized for this office");
 
     const oid = new ObjectId(queueId);
-    const queueEntry = await db
-      .collection<GovernorQueuedBill>("governorLegislationQueue")
-      .findOne({ _id: oid });
+    const queueEntry = await governorLegislationQueueCollection(db).findOne({ _id: oid });
     if (!queueEntry) return errorResponse(404, "Not found");
     // The pending queue entry belongs to the office, not the individual who
     // created it, so any authorized officer of this office may cancel it.

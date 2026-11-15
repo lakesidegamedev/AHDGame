@@ -12,7 +12,6 @@
 
 import type { Db, ObjectId } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
-import type { FederalBudget } from "@/lib/db/types/budget";
 import type { SovereignCrisisDecision } from "@/lib/db/types/sovereignCrisisDecision";
 import { getNationalBudgetId } from "@/lib/bonds/sovereign";
 import { loadCountrySovereignSnapshot } from "../snapshotLoader";
@@ -21,6 +20,8 @@ import { MONETIZE_GATE_INFLATION } from "../constants";
 import { chooseResolution } from "./chooseResolution";
 import { getExecutiveLeaderProfile } from "./getExecutiveLeaderProfile";
 import type { NpcCountryState } from "./types";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { sovereignCrisisDecisionsCollection } from "@/lib/db/repositories/sovereignCrisisDecisions";
 
 const RESERVE_CURRENCY_CODES = new Set(["USD", "EUR", "JPY", "GBP", "CHF"]);
 
@@ -49,7 +50,7 @@ export async function npcExecutiveAutoPropose(
   }
 
   const budgetId = getNationalBudgetId(countryCode);
-  const budget = await db.collection<FederalBudget>("federalBudget").findOne({ _id: budgetId });
+  const budget = await federalBudgetCollection(db).findOne({ _id: budgetId });
   if (!budget) return { ok: false, reason: "no-budget" };
 
   const snapshot = await loadCountrySovereignSnapshot(db, countryCode, input.currentTurn);
@@ -75,7 +76,7 @@ export async function npcExecutiveAutoPropose(
   // transition the budget into "crisisResolving". Constrain on state="open"
   // so a parallel evaluation (next turn) can't double-fire.
   const phases = buildInitialLegislativePhases(countryCode, realtimeMs, input.currentTurn);
-  const result = await db.collection<SovereignCrisisDecision>("sovereignCrisisDecisions").updateOne(
+  const result = await sovereignCrisisDecisionsCollection(db).updateOne(
     { _id: decisionId, state: "open" },
     {
       $set: {
@@ -91,9 +92,10 @@ export async function npcExecutiveAutoPropose(
     return { ok: false, reason: "decision-not-open" };
   }
 
-  await db
-    .collection<FederalBudget>("federalBudget")
-    .updateOne({ _id: budgetId }, { $set: { sovereignCrisisState: "crisisResolving" } });
+  await federalBudgetCollection(db).updateOne(
+    { _id: budgetId },
+    { $set: { sovereignCrisisState: "crisisResolving" } }
+  );
 
   return { ok: true, choice };
 }

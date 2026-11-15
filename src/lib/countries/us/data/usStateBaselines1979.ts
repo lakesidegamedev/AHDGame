@@ -1,56 +1,33 @@
 /**
- * 1979-era adjustments for `StateMetricBaseline` documents. Mirrors the
- * field-level anchors in `stateMetrics1979.ts` so freshly-seeded 1979
- * worlds have baselines aligned with the era-floored metric values
- * (zero decay pressure at game start).
+ * 1979-era adjustments for StateMetricBaseline docs. Aligns freshly-seeded
+ * 1979 worlds with era-floored metric values (stateMetrics1979.ts), so decay
+ * pressure at game start is zero. Applied at seed time when preset is
+ * 1979-default. Pure: deep-clone plus field-level shift, no DB or Date.
  *
- * Applied at seed time by each country's `seedXBaselines` function
- * (and `runCoreSeed` for US) when the active preset is `1979-default`.
+ * Field rules (each guarded by a presence check):
+ * - infrastructure.broadbandAccess -> 0 (no internet in 1979).
+ * - mediaInformation.socialMediaSentiment -> 0 (no platforms).
+ * - mediaInformation.disinformationRisk -> clamped <=10 (pre-cable, pre-viral).
+ * - mediaInformation.mediaPolarization -> -15 (clamped 5..30; less cable-partisan).
+ * - mediaInformation.pressFreedom -> +5 (clamped 45..90; pre-tabloid wars).
+ * - mediaInformation.newsTrust -> +10 (clamped 45..85; pre-cable fragmentation).
+ * - economic.medianIncome -> x0.25 (~25% of 2019 nominal).
+ * - economic.costOfLiving -> x0.25.
+ * - economic.povertyRate -> +3pp (clamped 10..30; stagflation eroding wages).
+ * - economic.gdpGrowth -> +0.5pp (clamped -1..8).
+ * - healthcare.lifeExpectancy -> -6 (clamped 45..76; US ~73.9 in 1979).
+ * - healthcare.uninsuredRate -> +8pp (clamped 10..55; pre-ACA employer-dominant).
+ * - publicSafety.crimeRate -> x1.4 (near peak; US peaked ~1980-1991).
+ * - publicSafety.violentCrimeRate -> x1.5.
+ * - publicSafety.incarcerationRate -> x0.5 (mass incarceration began 1980s).
+ * - population.urbanizationRate -> x0.88.
+ * - population.medianAge -> -5 (clamped 18..38; boomers in workforce).
+ * - population.populationGrowth -> +0.3pp (clamped 0.2..3.0).
+ * - governance.debtToGdp -> x0.5 (clamped 10..80; pre-Reagan/Thatcher deficits).
  *
- * Pattern mirrors `stateBaselines1953.ts` — deep-clone + field-level
- * shift, not a separately-curated baseline file. Pure: no DB, no Date.
- *
- * Field-level rules (each guarded by a presence check):
- *
- *   - infrastructure.broadbandAccess → 0 (internet did not exist in 1979).
- *   - mediaInformation.socialMediaSentiment → 0 (no platforms).
- *   - mediaInformation.disinformationRisk → clamped ≤10 (pre-cable-news,
- *     pre-viral; state propaganda exists but no amplification network).
- *   - mediaInformation.mediaPolarization → −15 (clamped 5..30; less
- *     cable/partisan echo chambers than 2019).
- *   - mediaInformation.pressFreedom → +5 (clamped 45..90; pre-tabloid
- *     wars, relatively trusted press corps).
- *   - mediaInformation.newsTrust → +10 (clamped 45..85; Watergate
- *     cynicism fading; pre-cable fragmentation).
- *   - economic.medianIncome → ×0.25 (1979 US nominal ~$15,900 vs 2019
- *     ~$65,000; ratio ≈25%).
- *   - economic.costOfLiving → ×0.25.
- *   - economic.povertyRate → +3pp (clamped 10..30; stagflation eroding
- *     real wages before Reagan-era cuts).
- *   - economic.gdpGrowth → +0.5pp (clamped −1..8; structurally higher
- *     despite 1979 stagflation).
- *   - healthcare.lifeExpectancy → −6 (clamped 45..76; US 1979 ≈ 73.9;
- *     developing-world countries lower).
- *   - healthcare.uninsuredRate → +8pp (clamped 10..55; employer-sponsored
- *     dominant, Medicare/Medicaid smaller than post-ACA; no ACA).
- *   - publicSafety.crimeRate → ×1.4 (1979 near peak — US crime peaked
- *     ~1980-1991; higher than the 2019 equilibrium).
- *   - publicSafety.violentCrimeRate → ×1.5.
- *   - publicSafety.incarcerationRate → ×0.5 (mass incarceration began
- *     in the 1980s; 1979 rates much lower than 2019).
- *   - population.urbanizationRate → ×0.88 (slightly less urban than 2019).
- *   - population.medianAge → −5 (clamped 18..38; baby boomers in
- *     workforce; high birth rates in developing countries).
- *   - population.populationGrowth → +0.3pp (clamped 0.2..3.0).
- *   - governance.debtToGdp → ×0.5 (clamped 10..80; US ≈33%, JP ≈30%,
- *     DE ≈26% — pre-Reagan/Thatcher structural deficits).
- *
- * Key differences from 1953:
- *   - medianIncome ×0.25 (vs 1953 ×0.06) — closer to modern
- *   - lifeExpectancy −6 (vs −10) — closer to modern
- *   - crimeRate ×1.4 (vs ×0.65) — 1979 was ABOVE modern baseline
- *   - incarcerationRate ×0.5 (vs ×0.35) — mass incarceration emerging
- *   - urbanizationRate ×0.88 (vs ×0.75) — more urbanised than 1953
+ * Contrast with 1953: income x0.25 vs x0.06, lifeExpectancy -6 vs -10,
+ * crimeRate x1.4 vs x0.65 (1979 was ABOVE modern), incarceration x0.5 vs
+ * x0.35, urbanization x0.88 vs x0.75.
  */
 
 import { clamp } from "@/lib/numeric/rules";

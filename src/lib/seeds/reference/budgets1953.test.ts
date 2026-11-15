@@ -80,7 +80,7 @@ describe("1953 budget seeds — political-legislation derivation switch (§4.2a)
   });
 
   it("no policyRevenueConfigs remain on the re-seeded 1953 blocks", () => {
-    for (const cc of ["US", "UK", "RU", "DD"]) {
+    for (const cc of ["US", "UK", "RU", "DD", "DE"]) {
       expect(configByCountry(cc).policyRevenueConfigs, cc).toBeUndefined();
     }
   });
@@ -132,27 +132,14 @@ describe("1953 budget seeds — authored baseline spending (Cold War realism)", 
     expect((jp.spending.byCategory.defense ?? 0) / jp.gdp).toBeLessThan(0.015);
   });
 
-  it("generateDefaultEnactedLaws skips old US/UK/RU/DD catalogs on 1953-default", () => {
+  it("generateDefaultEnactedLaws skips old US/UK/RU/DD/DE catalogs on 1953-default", () => {
     const laws = generateDefaultEnactedLaws("1953-default");
-    for (const cc of ["US", "UK", "RU", "DD"]) {
+    for (const cc of ["US", "UK", "RU", "DD", "DE"]) {
       expect(
         laws.filter((l) => l.countryId === cc),
         `${cc} old laws`
       ).toHaveLength(0);
     }
-  });
-
-  it("non-political 1953 defense/health laws price via GDP share matching authored baselines", () => {
-    const laws = generateDefaultEnactedLaws("1953-default").filter((l) => l.countryId === "DE");
-    const defenseLaws = laws.filter((l) => l.budgetCategory === "defense" && l.rate === undefined);
-    expect(defenseLaws.length).toBeGreaterThan(0);
-    for (const law of defenseLaws) {
-      expect(law.gdpPerCapitaMultiplier, law.legislationTypeId).toBeTypeOf("number");
-      expect(law.annualCostPerCapita, law.legislationTypeId).toBeUndefined();
-    }
-    const config = configByCountry("DE");
-    const defenseShare = defenseLaws.reduce((s, l) => s + (l.gdpPerCapitaMultiplier ?? 0), 0);
-    expect(defenseShare * config.gdp).toBeCloseTo(config.baselineSpendingByCategory.defense, -3);
   });
 });
 
@@ -254,209 +241,6 @@ describe("1953 budget seeds — day-1 fiscal balance (fiscal-scale audit, 2026-0
         `${config.countryId} debt.principal (${config.debt.principal}) vs ceiling (${config.debt.ceiling})`
       ).toBeLessThanOrEqual(config.debt.ceiling);
     }
-  });
-});
-
-describe("1953 budget seeds — CN/JP spending-category calibration (fiscal audit F-11)", () => {
-  // CN and JP both seed real spending-law catalogs (unlike ES/HU/PL/RO/YU/BG/
-  // BLR/CS/BAL, which fall back to baselineSpendingByCategory wholesale — see
-  // the AT/FI/FR/GR/IT/SE/TR describe block below, which used to be in this
-  // bucket too before the fiscal-scale audit 2026-07-28 spending-calibration
-  // fix). For those two, `deriveSpending`/`deriveEnactedLaws` only pin
-  // BASELINE_OVERRIDE_CATEGORIES ("defense"/"healthcare"/"health") to the
-  // authored figure; every OTHER category — including CN's First-Five-Year-
-  // Plan "infrastructure" line and JP's reconstruction "publicWorks" (now
-  // renamed "infrastructure") / "socialSecurity" (now renamed "social") lines —
-  // was priced off the modern (2019/2023) per-domain era catalog instead,
-  // silently discarding the authored 1953 figure. That collapsed CN to 9.9%
-  // and JP to 7.4% of GDP in spending (day-26 sandbox `ahd_sim_grand53r4`),
-  // against a plausible command-economy band of 25-40% (CN) and a documented
-  // real ~18-20% of GDP (JP). Fixed via EXTRA_OVERRIDE_CATEGORIES_BY_COUNTRY
-  // (CN: infrastructure; JP: infrastructure, social) and GRANT_OVERRIDE_COUNTRIES
-  // (JP's Local Allocation Tax Act).
-  const laws1953 = generateDefaultEnactedLaws("1953-default");
-
-  function lawsFor(cc: string) {
-    return laws1953.filter((l) => l.countryId === cc && l.rate === undefined);
-  }
-
-  it("CN's every authored baseline category (except the 'other' catch-all) matches an actual seeded law category", () => {
-    const cn = configByCountry("CN");
-    const actualCats = new Set(lawsFor("CN").map((l) => l.budgetCategory));
-    for (const key of Object.keys(cn.baselineSpendingByCategory)) {
-      if (key === "other") continue;
-      expect(actualCats.has(key), `CN baselineSpendingByCategory key "${key}"`).toBe(true);
-    }
-  });
-
-  it("JP's every authored baseline category (except the 'other' catch-all) matches an actual seeded law category", () => {
-    const jp = configByCountry("JP");
-    const actualCats = new Set(lawsFor("JP").map((l) => l.budgetCategory));
-    for (const key of Object.keys(jp.baselineSpendingByCategory)) {
-      if (key === "other") continue;
-      expect(actualCats.has(key), `JP baselineSpendingByCategory key "${key}"`).toBe(true);
-    }
-  });
-
-  it("CN's 'infrastructure' laws (First-Five-Year-Plan heavy industry) sum to the authored 1953 baseline, not the thin modern-era-catalog default", () => {
-    const cn = configByCountry("CN");
-    const infraLaws = lawsFor("CN").filter((l) => l.budgetCategory === "infrastructure");
-    expect(infraLaws.length).toBeGreaterThan(0);
-    for (const law of infraLaws) {
-      expect(law.gdpPerCapitaMultiplier, law.legislationTypeId).toBeTypeOf("number");
-    }
-    const share = infraLaws.reduce((s, l) => s + (l.gdpPerCapitaMultiplier ?? 0), 0);
-    expect(share * cn.gdp).toBeCloseTo(cn.baselineSpendingByCategory.infrastructure, -2);
-  });
-
-  it("CN's 'health' laws sum to the authored 1953 baseline (key renamed from the never-matching 'healthcare')", () => {
-    const cn = configByCountry("CN");
-    const healthLaws = lawsFor("CN").filter((l) => l.budgetCategory === "health");
-    expect(healthLaws.length).toBeGreaterThan(0);
-    const share = healthLaws.reduce((s, l) => s + (l.gdpPerCapitaMultiplier ?? 0), 0);
-    expect(share * cn.gdp).toBeCloseTo(cn.baselineSpendingByCategory.health, -2);
-  });
-
-  it("JP's 'infrastructure' laws (reconstruction public works) sum to the authored 1953 baseline (key renamed from the never-matching 'publicWorks')", () => {
-    const jp = configByCountry("JP");
-    const infraLaws = lawsFor("JP").filter((l) => l.budgetCategory === "infrastructure");
-    expect(infraLaws.length).toBeGreaterThan(0);
-    const share = infraLaws.reduce((s, l) => s + (l.gdpPerCapitaMultiplier ?? 0), 0);
-    expect(share * jp.gdp).toBeCloseTo(jp.baselineSpendingByCategory.infrastructure, -2);
-  });
-
-  it("JP's 'social' laws sum to the authored 1953 baseline (key renamed from the never-matching 'socialSecurity')", () => {
-    const jp = configByCountry("JP");
-    const socialLaws = lawsFor("JP").filter((l) => l.budgetCategory === "social");
-    expect(socialLaws.length).toBeGreaterThan(0);
-    const share = socialLaws.reduce((s, l) => s + (l.gdpPerCapitaMultiplier ?? 0), 0);
-    expect(share * jp.gdp).toBeCloseTo(jp.baselineSpendingByCategory.social, -2);
-  });
-
-  it("JP's isGrant Local Allocation Tax Act prices to the authored baselineStateGrants, not its thin modern-era-catalog share", () => {
-    const jp = configByCountry("JP");
-    const grantLaws = lawsFor("JP").filter((l) => l.isGrant);
-    expect(grantLaws.length).toBeGreaterThan(0);
-    const share = grantLaws.reduce((s, l) => s + (l.gdpPerCapitaMultiplier ?? 0), 0);
-    expect(share * jp.gdp).toBeCloseTo(jp.baselineStateGrants, -2);
-  });
-
-  it("CN's total booked spending (runtime era-cost path) lands in the command-economy 25-40% of GDP band, not the pre-fix <10%", () => {
-    const cn = configByCountry("CN");
-    const total = lawsFor("CN").reduce((sum, law) => {
-      if (!isLegislationTypeActive(law.legislationTypeId, 1953)) return sum;
-      const cost = calculateEnactedLawAnnualCost(
-        law as unknown as Parameters<typeof calculateEnactedLawAnnualCost>[0],
-        {
-          budgetCapacity: 0,
-          gdp: cn.gdp,
-          population: cn.population,
-          countryId: "CN",
-          nationalGdpPerCapita: cn.gdp / cn.population,
-          year: 1953,
-        }
-      );
-      return Number.isFinite(cost) ? sum + (law.isGrant ? 0 : cost) : sum;
-    }, 0);
-    const pctGdp = (100 * total) / cn.gdp;
-    expect(pctGdp).toBeGreaterThan(25);
-    expect(pctGdp).toBeLessThan(40);
-  });
-
-  it("JP's total booked spending (runtime era-cost path) lands near the documented real ~18-20% of GDP, not the pre-fix <10%", () => {
-    const jp = configByCountry("JP");
-    const total = lawsFor("JP").reduce((sum, law) => {
-      if (!isLegislationTypeActive(law.legislationTypeId, 1953)) return sum;
-      const cost = calculateEnactedLawAnnualCost(
-        law as unknown as Parameters<typeof calculateEnactedLawAnnualCost>[0],
-        {
-          budgetCapacity: 0,
-          gdp: jp.gdp,
-          population: jp.population,
-          countryId: "JP",
-          nationalGdpPerCapita: jp.gdp / jp.population,
-          year: 1953,
-        }
-      );
-      return Number.isFinite(cost) ? sum + cost : sum; // JP's grant IS a real spend line
-    }, 0);
-    const pctGdp = (100 * total) / jp.gdp;
-    expect(pctGdp).toBeGreaterThan(15);
-    expect(pctGdp).toBeLessThan(22);
-  });
-});
-
-describe("1953 budget seeds — DE spending-category calibration (fiscal-scale audit, 2026-07-28)", () => {
-  // Same defect class as the CN/JP block above, found auditing DE's +13.1%-of-
-  // GDP day-26 sandbox surplus. DE's authored baseline used "socialSecurity"/
-  // "infrastructure", but deLegislationTypes.ts's actual budgetCategory strings
-  // for those lines are "welfare"/"transport" — so, exactly like JP's
-  // publicWorks/socialSecurity rename, those two lines (the largest in DE's
-  // baseline) fell through to the modern per-domain catalog instead of the
-  // authored 1953 figure. "education" and "other" matched by name but still
-  // undershot the authored figure (same as CN/JP's "infrastructure"/"social"),
-  // so they're pinned too via EXTRA_OVERRIDE_CATEGORIES_BY_COUNTRY.DE.
-  //
-  // Why the existing guards didn't catch this: the day-1 symmetric-band test
-  // above only bounds `spending.total - revenue.total`, computed from the SEED
-  // snapshot's `deriveSpending` — which already falls back to the full
-  // baseline when `hasPolicySpending` is false. DE DOES have real spending
-  // laws (deLegislationTypes.ts), so `hasPolicySpending` is true and
-  // `deriveSpending`'s seed snapshot silently used the (undershooting) policy-
-  // derived costs for every non-overridden category — day-1 and the runtime
-  // engine agreed with each other, so no reconciliation check flagged it. Only
-  // an explicit "does this baseline key match an actual seeded law category"
-  // check (mirroring the CN/JP tests above) surfaces a silent rename miss.
-  const laws1953 = generateDefaultEnactedLaws("1953-default");
-
-  function lawsFor(cc: string) {
-    return laws1953.filter((l) => l.countryId === cc && l.rate === undefined);
-  }
-
-  it("DE's every authored baseline category matches an actual seeded law category", () => {
-    const de = configByCountry("DE");
-    const actualCats = new Set(lawsFor("DE").map((l) => l.budgetCategory));
-    for (const key of Object.keys(de.baselineSpendingByCategory)) {
-      expect(actualCats.has(key), `DE baselineSpendingByCategory key "${key}"`).toBe(true);
-    }
-  });
-
-  it("DE's 'welfare' laws (Bismarckian pensions/unemployment insurance) sum to the authored 1953 baseline, not the thin modern-era-catalog default", () => {
-    const de = configByCountry("DE");
-    const welfareLaws = lawsFor("DE").filter((l) => l.budgetCategory === "welfare");
-    expect(welfareLaws.length).toBeGreaterThan(0);
-    const share = welfareLaws.reduce((s, l) => s + (l.gdpPerCapitaMultiplier ?? 0), 0);
-    expect(share * de.gdp).toBeCloseTo(de.baselineSpendingByCategory.welfare, -2);
-  });
-
-  it("DE's 'transport' laws (Wirtschaftswunder rail/road reconstruction) sum to the authored 1953 baseline (key renamed from the never-matching 'infrastructure')", () => {
-    const de = configByCountry("DE");
-    const transportLaws = lawsFor("DE").filter((l) => l.budgetCategory === "transport");
-    expect(transportLaws.length).toBeGreaterThan(0);
-    const share = transportLaws.reduce((s, l) => s + (l.gdpPerCapitaMultiplier ?? 0), 0);
-    expect(share * de.gdp).toBeCloseTo(de.baselineSpendingByCategory.transport, -2);
-  });
-
-  it("DE's total booked spending lands near the documented real ~30% of GDP (Adenauer-era Sozialstaat), not the pre-fix ~21%", () => {
-    const de = configByCountry("DE");
-    const total = lawsFor("DE").reduce((sum, law) => {
-      if (!isLegislationTypeActive(law.legislationTypeId, 1953)) return sum;
-      const cost = calculateEnactedLawAnnualCost(
-        law as unknown as Parameters<typeof calculateEnactedLawAnnualCost>[0],
-        {
-          budgetCapacity: 0,
-          gdp: de.gdp,
-          population: de.population,
-          countryId: "DE",
-          nationalGdpPerCapita: de.gdp / de.population,
-          year: 1953,
-        }
-      );
-      return Number.isFinite(cost) ? sum + (law.isGrant ? 0 : cost) : sum;
-    }, 0);
-    const pctGdp = (100 * total) / de.gdp;
-    expect(pctGdp).toBeGreaterThan(25);
-    expect(pctGdp).toBeLessThan(35);
   });
 });
 

@@ -20,6 +20,7 @@ import {
 import { nationalApprovalFromRegions } from "./rules/nationalApproval";
 import type { PoliticalApprovalBases } from "@/lib/politicalLegislation/politicalApprovalProvider";
 import type { CountryId } from "@/lib/constants/countries";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /**
  * Inputs a caller may already hold, passed in to avoid re-querying them.
@@ -37,8 +38,7 @@ export interface RecomputeInputs {
 }
 
 async function gatherInputs(db: Db, countryId: CountryId): Promise<RecomputeInputs> {
-  const allStates = await db
-    .collection<State>("states")
+  const allStates = await statesCollection(db)
     .find({ countryId }, { projection: { _id: 1, population: 1 } })
     .toArray();
   // SP5: merged two-store view. Scoped to the country for the same reason

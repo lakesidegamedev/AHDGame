@@ -1,11 +1,8 @@
 /**
  * Per-lever cabinet setting cooldowns.
  *
- * Each policy control on a cabinet office (tier, regional target, envoy
- * country, aid priority) has its own 24-turn stamp. A shared lastChangedTurn
- * used to lock every control after any one of them changed, so a Health,
- * Education, and Welfare secretary who set Healthcare Model could not retarget
- * the Public Health Campaign until the cooldown expired.
+ * Each policy control has its own 24-turn stamp so changing one control does
+ * not lock the others.
  */
 
 export const SETTING_CHANGE_COOLDOWN_TURNS = 24;

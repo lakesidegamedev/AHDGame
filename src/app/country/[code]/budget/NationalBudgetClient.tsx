@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useGameEvents } from "@/hooks/useGameEvents";
 import { useParams } from "next/navigation";
@@ -464,6 +465,13 @@ export function NationalBudgetClient() {
             />
           }
         />
+
+        <p className="text-sm text-muted-foreground">
+          <Link href="/frontier-races" className="underline">
+            Frontier programme races
+          </Link>
+          : fund a 2040s programme for the nation from the treasury.
+        </p>
 
         <FiscalMechanicsNote
           sym={moneyPrefix}

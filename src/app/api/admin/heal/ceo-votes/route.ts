@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError } from "@/lib/api/errors";
-import type { Corporation } from "@/lib/db/types";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporationCeoVotesCollection } from "@/lib/db/repositories/corporationCeoVotes";
 
 interface CeoVote {
   corporationId: unknown;
@@ -22,8 +23,7 @@ export async function GET() {
     const db = await getDb();
 
     // Find corporations with vacant CEO position
-    const vacantCorps = await db
-      .collection<Corporation>("corporations")
+    const vacantCorps = await corporationsCollection(db)
       .find({ ceoVacant: true })
       .project({ _id: 1, name: 1, sequentialId: 1, pendingCeoCharacterId: 1 })
       .toArray();
@@ -31,9 +31,9 @@ export async function GET() {
     // Count votes for each vacant corporation
     const diagnostics = await Promise.all(
       vacantCorps.map(async (corp) => {
-        const voteCount = await db
-          .collection<CeoVote>("corporationCeoVotes")
-          .countDocuments({ corporationId: corp._id });
+        const voteCount = await corporationCeoVotesCollection<CeoVote>(db).countDocuments({
+          corporationId: corp._id,
+        });
 
         return {
           id: corp._id.toString(),
@@ -71,8 +71,7 @@ export async function POST() {
     const now = new Date();
 
     // Find corporations with vacant CEO position
-    const vacantCorps = await db
-      .collection<Corporation>("corporations")
+    const vacantCorps = await corporationsCollection(db)
       .find({ ceoVacant: true })
       .project({ _id: 1, name: 1, sequentialId: 1 })
       .toArray();
@@ -88,12 +87,12 @@ export async function POST() {
     const corpIds = vacantCorps.map((c) => c._id);
 
     // Delete all CEO votes for these corporations
-    const deleteResult = await db
-      .collection<CeoVote>("corporationCeoVotes")
-      .deleteMany({ corporationId: { $in: corpIds } });
+    const deleteResult = await corporationCeoVotesCollection<CeoVote>(db).deleteMany({
+      corporationId: { $in: corpIds },
+    });
 
     // Clear pendingCeoCharacterId for these corporations
-    const updateResult = await db.collection<Corporation>("corporations").updateMany(
+    const updateResult = await corporationsCollection(db).updateMany(
       { _id: { $in: corpIds }, pendingCeoCharacterId: { $exists: true } },
       {
         $unset: { pendingCeoCharacterId: "" },

@@ -250,9 +250,7 @@ export default function IndustrialRelationsSection({ corpId }: { corpId: string 
             // A dispute stays answerable: industrial action is pressure to
             // move the package, so the employer must be able to table a better
             // one without waiting for the union to fold.
-            const canCounter =
-              (campaign.status === "negotiating" || campaign.status === "dispute") &&
-              offer.proposedBy === "union";
+            const canCounter = canAccept;
             const mediation = campaign.mediation;
             return (
               <article

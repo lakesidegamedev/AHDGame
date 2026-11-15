@@ -19,7 +19,6 @@ import {
   settleBankSovereignClaims,
 } from "@/lib/banking/bankSovereignClaims";
 import { resumeSettlement, settleTransition } from "@/lib/banking/settlementJournal";
-import { readForcedRolloverFaceLocal } from "@/lib/bonds/forcedSovereignRollover";
 import {
   freezeFundedSovereignBondMaturityQuote,
   marketSovereignRolloverCoupon,
@@ -30,6 +29,10 @@ import type { CountryId } from "@/lib/constants/countries";
 import type { BankSovereignClaim } from "@/lib/db/types/budget";
 import type { SovereignMaturityLiveTargets } from "@/lib/bonds/sovereignMaturityPayoutTargets";
 import type { SovereignMaturityPlan } from "@/lib/bonds/sovereignMaturityWave";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
 
 export interface SovereignBondMaturitySettlementInput {
   db: Db;
@@ -79,10 +82,11 @@ export async function settleSovereignBondMaturityBond(
     bond,
     anchorRate: treasuryValuation.anchorRate,
     treasuryCashLedgerEnabled: true,
+    ledgerShadow: true,
   });
   const bondIdHex = bond._id.toHexString();
   if (newClaims.length > 0 || bankUnits > 0 || budgetsWithBankClaims.has(budgetId)) {
-    const budgetWithClaims = await db.collection<FederalBudget>("federalBudget").findOne(
+    const budgetWithClaims = await federalBudgetCollection(db).findOne(
       { _id: budgetId },
       {
         projection: {
@@ -138,7 +142,10 @@ export async function settleSovereignBondMaturityBond(
     fundedSettlement?.status === "partial" ||
     (fundedSettlement?.status === "replayed" && fundedSettlement.error)
   )
-    fundedSettlement = await resumeSettlement(db, fundedSettlement.key);
+    fundedSettlement = {
+      ...fundedSettlement,
+      ...(await resumeSettlement(db, fundedSettlement.key)),
+    };
   if (
     !fundedSettlement ||
     (fundedSettlement.status !== "applied" &&
@@ -146,12 +153,10 @@ export async function settleSovereignBondMaturityBond(
   )
     return null;
 
-  // A forced rollover moved the pool's face to a replacement bond, so that
-  // face was never paid out of Treasury cash. The settlement already knows
-  // that face; only a resumed receipt has to read it back.
-  const forcedRolloverFaceLocal =
-    fundedSettlement.forcedRolloverFaceLocal ?? (await readForcedRolloverFaceLocal(db, bond));
-  const paidLocal = nonBankRepaymentLocal - forcedRolloverFaceLocal;
+  // Book face and funded cash use different scales after public-float novation.
+  const paidLocal = fundedSettlement.cashPaidLocal;
+  if (paidLocal === undefined || !Number.isFinite(paidLocal) || paidLocal < 0)
+    throw new Error("Completed sovereign maturity is missing its funded cash amount");
 
   return [
     ...maturityEntries,
@@ -168,7 +173,7 @@ export async function settleSovereignBondMaturityBond(
         bondId: bond._id.toHexString(),
         units: paidLocal / BOND_UNIT_FACE_VALUE,
         couponRate: bond.couponRate,
-        treasuryCashMovement: true,
+        treasuryCashMovement: false,
         ...treasuryValuation,
       },
     },
@@ -212,9 +217,10 @@ async function fundBankMaturityClaims(
   const { bond, dueClaims, budget, countryId, budgetId, bondCcy, turn, now, consolidateRollover } =
     input;
   const claimId = `sovereign-maturity:${bond._id.toHexString()}:${bond.maturityTurn}`;
-  const stored = await db
-    .collection<Bond>("bonds")
-    .findOne({ _id: bond._id }, { projection: { sovereignMaturityClaim: 1, matured: 1 } });
+  const stored = await bondsCollection(db).findOne(
+    { _id: bond._id },
+    { projection: { sovereignMaturityClaim: 1, matured: 1 } }
+  );
   const quote = stored?.sovereignMaturityClaim;
   if (!stored || stored.matured || quote?.id !== claimId) return null;
   const alreadyPaid = new Set(quote.paidBankClaimIds ?? []);
@@ -225,11 +231,10 @@ async function fundBankMaturityClaims(
       ObjectId.isValid(claim.bankId)
   );
   if (candidates.length === 0) return null;
-  const banks = await db
-    .collection<{
-      _id: ObjectId;
-      bankSovereignEscrows?: Record<string, { amountLocal?: number }>;
-    }>("corporations")
+  const banks = await corporationsCollection<{
+    _id: ObjectId;
+    bankSovereignEscrows?: Record<string, { amountLocal?: number }>;
+  }>(db)
     .find(
       { _id: { $in: [...new Set(candidates.map((c) => c.bankId))].map((h) => new ObjectId(h)) } },
       {
@@ -248,7 +253,7 @@ async function fundBankMaturityClaims(
   if (unfunded.length === 0) return null;
   // A funding attempt a crash left half-applied is finished first; the sweep
   // resumes it under the same prefix, and opening another would double fund.
-  const open = await db.collection<{ _id: string }>("bankMoneyMoves").countDocuments({
+  const open = await bankMoneyMovesCollection<{ _id: string }>(db).countDocuments({
     $or: unfunded.map((claim) => ({ _id: { $regex: `^${escapeRegex(claim.id)}:funding:` } })),
     status: "partial",
   });
@@ -296,7 +301,7 @@ async function fundBankMaturityClaims(
     });
     if (refunded.status === "refused") return null;
   }
-  return db.collection<FederalBudget>("federalBudget").findOne(
+  return federalBudgetCollection(db).findOne(
     { _id: budgetId },
     {
       projection: {

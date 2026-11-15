@@ -21,6 +21,8 @@ describe("processColdWarTensionTurn", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(readStandingPressureSnapshot).mockResolvedValue({
+      wars: [{ sideACountries: ["US"], sideBCountries: ["CN"], intensity: 70 }],
+      nuclearCountries: new Set(["US", "CN"]),
       totalWarheads: 1214,
       warSummary: {
         nuclearWarIntensity: 70,
@@ -44,12 +46,12 @@ describe("processColdWarTensionTurn", () => {
 
   it("runs the turn from the shared live standing-pressure snapshot", async () => {
     const db = createMockDb();
-    const gameState = { coldWarEnabled: true, livingConflictsEnabled: false };
+    const gameState = {};
 
     await processColdWarTensionTurn(db as unknown as Db, 436, gameState);
 
     expect(syncLimitedWarPressureClocks).toHaveBeenCalledWith(db, 436);
-    expect(readStandingPressureSnapshot).toHaveBeenCalledWith(db, gameState, 436);
+    expect(readStandingPressureSnapshot).toHaveBeenCalledWith(db, 436);
     expect(runTensionTurn).toHaveBeenCalledWith(db, 436, {
       escalationLevel: 1,
       activeCrises: 6,
@@ -58,6 +60,35 @@ describe("processColdWarTensionTurn", () => {
       nuclearWarCount: 1,
       nuclearWarMinimumPressure: 48,
       otherWarIntensity: 0,
+    });
+  });
+
+  it("adds bloc-pair floors from 2027, read from alignments and embargoes", async () => {
+    const db = createMockDb();
+    db.collection("countryAlignments");
+    db.collection("tradeEmbargoes");
+    db.collectionMocks.countryAlignments!.find.mockReturnValue({
+      toArray: async () => [
+        { entityId: "BR", shares: { WASHINGTON: 20, BEIJING: 10 }, nonAligned: 70 },
+      ],
+    } as never);
+    db.collectionMocks.tradeEmbargoes!.find.mockReturnValue({
+      toArray: async () => [
+        { sourceCountry: "US", targetCountry: "BR" },
+        { sourceCountry: "US", targetCountry: "BR" },
+      ],
+    } as never);
+
+    await processColdWarTensionTurn(db as unknown as Db, 900, {
+      currentYear: 2027,
+    });
+
+    const floors = vi.mocked(runTensionTurn).mock.calls[0][3];
+    // A nuclear war across the US-China pair, one embargo pair against the middle.
+    expect(floors).toEqual({
+      "us-cn": 30 + 70 * 0.25 + 15,
+      "us-nonAligned": 10 + 1.5,
+      "cn-nonAligned": 8,
     });
   });
 });

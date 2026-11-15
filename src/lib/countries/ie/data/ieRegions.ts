@@ -3,20 +3,13 @@ import type { State } from "@/lib/db/types";
 /**
  * Ireland NUTS III planning regions as State-compatible documents.
  *
- * The 8 planning regions are the playable sub-national units. Each region
- * contributes seats to Dáil Éireann (lower house, 160 total) using PR-STV
- * (approximated here as rcv). Seanad Éireann (upper, 60 seats) is split
- * across regions via stateSenateSeats.
- *
- * - `population` — 2023 CSO estimates (people).
- * - `gdp` — regional GDP in millions of EUR.
- * - `houseDistricts` — Dáil seats allocated to the region
- *     (must sum to 160 across all 8 regions).
- * - `stateSenateSeats` — Seanad seats allocated to the region
- *     (must sum to 60 across all 8 regions, with some rounding).
- * - `region` — traditional province grouping used for regional filters.
- * - `votingSystem` — rcv (PR-STV approximation for Irish multi-seat
- *     constituencies).
+ * Units and invariants:
+ * - population: people (2023 CSO estimates).
+ * - gdp: millions of EUR.
+ * - houseDistricts: Dail seats for the region; must sum to 160.
+ * - stateSenateSeats: Seanad seats; must sum to 60 (with rounding).
+ * - region: province grouping used for filters.
+ * - votingSystem: rcv approximates PR-STV.
  */
 export const ieRegions: State[] = [
   // ── Leinster ───────────────────────────────────────────────────────────────

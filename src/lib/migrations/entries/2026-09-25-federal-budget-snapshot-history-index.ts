@@ -1,5 +1,7 @@
 import type { Db } from "mongodb";
 import type { Migration } from "../types";
+import { federalBudgetSnapshotsCollection } from "@/lib/db/repositories/federalBudgetSnapshots";
+import type { Document } from "mongodb";
 
 export const migration: Migration = {
   id: "2026-09-25-federal-budget-snapshot-history-index",
@@ -8,9 +10,10 @@ export const migration: Migration = {
   async execute(db: Db, ctx) {
     const indexName = "federalBudgetSnapshots_country_turn";
     if (!ctx.dryRun) {
-      await db
-        .collection("federalBudgetSnapshots")
-        .createIndex({ countryId: 1, turn: -1 }, { name: indexName });
+      await federalBudgetSnapshotsCollection<Document>(db).createIndex(
+        { countryId: 1, turn: -1 },
+        { name: indexName }
+      );
     }
     return {
       documentsScanned: 0,

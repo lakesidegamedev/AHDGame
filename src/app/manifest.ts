@@ -11,15 +11,18 @@ export default function manifest(): MetadataRoute.Manifest {
     theme_color: "#6366f1",
     orientation: "portrait-primary",
     icons: [
+      // The install icon keeps the full 500px artwork. It lives in /public
+      // rather than app/icon.png so the favicon route stays a 7 KB thumbnail
+      // instead of shipping 177 KB of PNG on every page load.
       {
-        src: "/icon.png",
-        sizes: "any",
+        src: "/icons/icon-500.png",
+        sizes: "500x500",
         type: "image/png",
         purpose: "any",
       },
       {
-        src: "/icon.png",
-        sizes: "any",
+        src: "/icons/icon-500.png",
+        sizes: "500x500",
         type: "image/png",
         purpose: "maskable",
       },

@@ -1,6 +1,4 @@
 import type { Db, ObjectId } from "mongodb";
-import type { ElectedOfficial } from "@/lib/db/types/officials";
-import type { Bill, NPP } from "@/lib/db/types";
 import {
   getLowerChamberOfficeType,
   getUpperChamberOfficeType,
@@ -8,14 +6,14 @@ import {
 import { getGovernmentFormationsCollection } from "@/lib/db/collections/governmentFormation";
 import { earliestFederationDecisionYear } from "@/lib/world/succession/availability";
 import { openDefaultFederationPoliticalProposal } from "@/lib/world/succession/defaultProposal";
-import {
-  FEDERATION_POLITICAL_PROPOSALS_COLLECTION,
-  type FederationPoliticalProposalRecord,
-} from "@/lib/world/succession/politicalProposal";
-import {
-  FEDERATION_SETTLEMENT_APPLICATIONS_COLLECTION,
-  type FederationSettlementApplicationRecord,
-} from "@/lib/world/succession/runtimeEntities";
+import { type FederationPoliticalProposalRecord } from "@/lib/world/succession/politicalProposal";
+import { type FederationSettlementApplicationRecord } from "@/lib/world/succession/runtimeEntities";
+import { getElectedOfficialsCollection } from "@/lib/db/collections/electedOfficials";
+import { getNppsCollection } from "@/lib/db/collections/npps";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { billsCollection } from "@/lib/db/repositories/bills";
+import { federationSettlementApplicationsCollection } from "@/lib/db/repositories/federationSettlementApplications";
+import { federationPoliticalProposalsCollection } from "@/lib/db/repositories/federationPoliticalProposals";
 
 const SOURCES = ["CS", "YU", "RU"] as const;
 
@@ -37,9 +35,10 @@ export async function processFederationNpcMandates(
   // the year rolls over, the year this phase is handed can run ahead of it, so
   // judge eligibility on the stored year too; otherwise the proposal throws
   // and takes the whole government formation phase down with it.
-  const stored = await db
-    .collection<{ _id: string; currentYear?: number }>("gameState")
-    .findOne({ _id: "current" }, { projection: { currentYear: 1 } });
+  const stored = await gameStateCollection<{ _id: string; currentYear?: number }>(db).findOne(
+    { _id: "current" },
+    { projection: { currentYear: 1 } }
+  );
   const year = Number.isSafeInteger(stored?.currentYear)
     ? (stored?.currentYear as number)
     : currentYear;
@@ -49,24 +48,19 @@ export async function processFederationNpcMandates(
   });
   if (eligible.length === 0) return 0;
   const [proposals, applications, officials, governments] = await Promise.all([
-    db
-      .collection<FederationPoliticalProposalRecord>(FEDERATION_POLITICAL_PROPOSALS_COLLECTION)
+    federationPoliticalProposalsCollection<FederationPoliticalProposalRecord>(db)
       .find(
         { presetId: "1991-default", sourceEntityId: { $in: eligible } },
         { projection: { sourceEntityId: 1, revision: 1, status: 1, billId: 1 } }
       )
       .toArray(),
-    db
-      .collection<FederationSettlementApplicationRecord>(
-        FEDERATION_SETTLEMENT_APPLICATIONS_COLLECTION
-      )
+    federationSettlementApplicationsCollection<FederationSettlementApplicationRecord>(db)
       .find(
         { presetId: "1991-default", sourceEntityId: { $in: eligible }, status: "applied" },
         { projection: { sourceEntityId: 1 } }
       )
       .toArray(),
-    db
-      .collection<ElectedOfficial>("electedOfficials")
+    (await getElectedOfficialsCollection(db))
       .find(
         { countryId: { $in: eligible } },
         { projection: { countryId: 1, officeType: 1, characterId: 1, nppId: 1 } }
@@ -89,16 +83,14 @@ export async function processFederationNpcMandates(
     .map((proposal) => proposal.billId);
   const [undecidedBills, leaders] = await Promise.all([
     rejectedBillIds.length
-      ? db
-          .collection<Bill>("bills")
+      ? billsCollection(db)
           .find(
             { _id: { $in: rejectedBillIds }, status: "failed", votesFor: 0, votesAgainst: 0 },
             { projection: { _id: 1 } }
           )
           .toArray()
       : [],
-    db
-      .collection<NPP>("npps")
+    (await getNppsCollection(db))
       .find(
         {
           _id: {

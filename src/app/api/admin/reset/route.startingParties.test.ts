@@ -18,7 +18,7 @@ vi.mock("@/lib/admin/resetAndBootstrapGameWorld", () => ({
 }));
 vi.mock("@/lib/seeds/presetSelector", () => ({
   isKnownPreset: (preset: string) =>
-    ["1991-default", "2019-default", "2019-no-parties"].includes(preset),
+    ["2027-default", "1991-default", "2019-default", "2019-no-parties"].includes(preset),
 }));
 
 import { POST } from "./route";
@@ -43,6 +43,25 @@ describe("admin reset starting parties", () => {
   });
 
   for (const stream of [false, true]) {
+    it.each(["default", "no-npps", "none"])(
+      `accepts 2027 %s (${stream ? "stream" : "JSON"})`,
+      async (startingParties) => {
+        const res = await POST(
+          request("2027-default", stream, { bootstrap: true, startingParties })
+        );
+        expect(res.status).toBe(200);
+        await res.text();
+        expect(mocks.reset).toHaveBeenCalledWith(
+          expect.objectContaining({ preset: "2027-default", startingParties })
+        );
+      }
+    );
+    it(`rejects No NPPs on another era (${stream ? "stream" : "JSON"})`, async () => {
+      expect(
+        (await POST(request("1991-default", stream, { startingParties: "no-npps" }))).status
+      ).toBe(400);
+      expect(mocks.db).not.toHaveBeenCalled();
+    });
     it(`passes the no-parties choice with the 1991 data preset (${stream ? "stream" : "JSON"})`, async () => {
       const res = await POST(
         request("1991-default", stream, { bootstrap: true, startingParties: "none" })

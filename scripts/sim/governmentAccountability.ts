@@ -1,13 +1,14 @@
 /** Deterministic paired mechanisms, using the production vote allocator. No database. */
+import { electorateFromFixture } from "@/lib/demographics/electorateFixture";
 import { writeFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import assert from "node:assert/strict";
-import { distributeVotesBySwingFlow } from "@/lib/electionEngine/voteDistributionSwingFlow";
-import type { EnrichedCandidate, DistributeVotesOptions } from "@/lib/electionEngine/types";
+import { distributeVotesBySwingFlow } from "@/lib/elections/engine/voteDistributionSwingFlow";
+import type { EnrichedCandidate, DistributeVotesOptions } from "@/lib/elections/engine/types";
 import type { CountryId } from "@/lib/constants/countries";
 import type {
   DemographicCategory,
-  StateDemographics,
+  CensusGroupView,
   StatePartyOrg,
   StateRegistrationPool,
 } from "@/lib/db/types";
@@ -62,7 +63,7 @@ function share(
     politicalInfluence: 60,
     nationalInfluence: 60,
     support: 50,
-    archetypeApprovals: {},
+    bucketApprovals: {},
     infamy: 0,
   })) as EnrichedCandidate[];
   const demo = {
@@ -74,7 +75,7 @@ function share(
       left: { population: lean, turnout: 60, economicLean: -1.5, socialLean: -1 },
       right: { population: 100 - lean, turnout: 60, economicLean: 1.5, socialLean: 1 },
     },
-  } as StateDemographics;
+  } as CensusGroupView;
   const options: DistributeVotesOptions = {
     isGeneralElection: true,
     countryId: family.country,
@@ -94,8 +95,7 @@ function share(
     60000,
     60000,
     100000,
-    demo,
-    categories,
+    electorateFromFixture(demo, categories),
     new Map([
       [partyIds[0], 50],
       [partyIds[1], 50],

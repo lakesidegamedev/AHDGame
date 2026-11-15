@@ -1,28 +1,21 @@
 /**
- * Faction split — auto-fires when the regime escalates to Stage 3
- * (internal challenge).
+ * Faction split, auto-fired at regime Stage 3 (internal challenge).
  *
- * Mechanics:
- *   1. Read the country's ruling-party officials.
- *   2. Score each on distance from the party line, blended toward their
- *      caucus's mean so a faction leaves as a faction (see
- *      `./factionDivergence`).
- *   3. Pick max(3, ceil(15% of officials)) defectors by highest
- *      divergence. Stable order via character id when divergences tie.
- *   4. Spawn a new approved party with the per-country
- *      `factionDefectionName`, positioned at the defectors' own centre of
- *      gravity rather than at the position of the party they just left.
- *   5. Re-assign each defector's `party` field to the new sequentialId.
+ * Scores officials on distance from the party line, blended toward their
+ * caucus mean so a faction leaves as a faction (see `./factionDivergence`).
+ * Defects max(3, ceil(15% of officials)) by highest divergence, ties broken
+ * by character id for stable order. Spawns a new approved party at the
+ * defectors' centre of gravity, named via `factionDefectionName`, and
+ * reassigns each defector's `party` to its sequentialId.
  *
- * Per the spec: the defection list is published in the country-history
- * entry (the wider Stage 3 transition handles that — this module just
- * spawns the party + reassigns officials).
+ * The country-history entry listing defectors is written by the wider Stage 3
+ * transition; this module only spawns the party and reassigns officials.
  */
 import { ObjectId, type Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
 import { getCountryState } from "@/lib/countryState";
-import type { Character, ElectedOfficial, NPP, PoliticalParty } from "@/lib/db/types";
+import type { ElectedOfficial, NPP, PoliticalParty } from "@/lib/db/types";
 import { getNextSequentialId } from "@/lib/db/sequentialId";
 import { vacateDepartedLeadership } from "@/lib/parties/vacateDepartedLeadership";
 import { recomputePartyMemberCount } from "@/lib/parties/recomputePartyMemberCount";
@@ -50,6 +43,11 @@ export interface OfficialAlignment {
  */
 export { pickDefectors } from "./rules/factionDefection";
 import { pickDefectors } from "./rules/factionDefection";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { caucusMembershipsCollection } from "@/lib/db/repositories/caucusMemberships";
 
 export interface FactionSplitResult {
   newPartySequentialId: number;
@@ -81,15 +79,14 @@ export async function fireFactionSplit(
   if (runtime.rulingPartyId === null) return null;
 
   // Find the ruling party (carries default ideology + isDefault flag we'll inherit)
-  const rulingParty = await db.collection<PoliticalParty>("politicalParties").findOne({
+  const rulingParty = await politicalPartiesCollection(db).findOne({
     countryId,
     sequentialId: runtime.rulingPartyId,
   });
   if (!rulingParty) return null;
 
   // Find all officials affiliated with the ruling party by sequentialId-as-string
-  const officials = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const officials = await electedOfficialsCollection(db)
     .find({ countryId, party: String(rulingParty.sequentialId) })
     .toArray();
   if (officials.length === 0) return null;
@@ -120,19 +117,16 @@ export async function fireFactionSplit(
   const characterIds = eligible.flatMap((o) => (o.characterId ? [o.characterId] : []));
   const nppIds = eligible.flatMap((o) => (!o.characterId && o.nppId ? [o.nppId] : []));
   const [defectorChars, defectorNpps, memberships] = await Promise.all([
-    db
-      .collection<Character>("characters")
+    charactersCollection(db)
       .find({ _id: { $in: characterIds } }, { projection: { _id: 1, policies: 1 } })
       .toArray(),
-    db
-      .collection<NPP>("npps")
+    nppsCollection(db)
       .find(
         { _id: { $in: nppIds } },
         { projection: { _id: 1, "policies.economic": 1, "policies.social": 1 } }
       )
       .toArray(),
-    db
-      .collection<CaucusMembership>("caucusMemberships")
+    caucusMembershipsCollection(db)
       .find(
         {
           countryId,
@@ -220,34 +214,32 @@ export async function fireFactionSplit(
     createdAt: now,
     updatedAt: now,
   };
-  await db.collection<PoliticalParty>("politicalParties").insertOne(newParty);
+  await politicalPartiesCollection(db).insertOne(newParty);
 
   // Re-assign each defector character's party affiliation.
   const defectorIds = defectors.flatMap((d) => (d.characterId ? [d.characterId] : []));
   const defectorNppIds = defectors.flatMap((d) => (!d.characterId && d.nppId ? [d.nppId] : []));
-  await db
-    .collection<Character>("characters")
-    .updateMany({ _id: { $in: defectorIds } }, { $set: { party: String(newSeq), updatedAt: now } });
+  await charactersCollection(db).updateMany(
+    { _id: { $in: defectorIds } },
+    { $set: { party: String(newSeq), updatedAt: now } }
+  );
   // Also update their ElectedOfficials rows so the legislature reflects
   // the new affiliation immediately.
-  await db
-    .collection<ElectedOfficial>("electedOfficials")
-    .updateMany(
-      { countryId, characterId: { $in: defectorIds } },
-      { $set: { party: String(newSeq) } }
-    );
+  await electedOfficialsCollection(db).updateMany(
+    { countryId, characterId: { $in: defectorIds } },
+    { $set: { party: String(newSeq) } }
+  );
 
-  await db
-    .collection<NPP>("npps")
-    .updateMany(
-      { _id: { $in: defectorNppIds } },
-      { $set: { party: String(newSeq), updatedAt: now } }
-    );
-  await db
-    .collection<ElectedOfficial>("electedOfficials")
-    .updateMany({ countryId, nppId: { $in: defectorNppIds } }, { $set: { party: String(newSeq) } });
+  await nppsCollection(db).updateMany(
+    { _id: { $in: defectorNppIds } },
+    { $set: { party: String(newSeq), updatedAt: now } }
+  );
+  await electedOfficialsCollection(db).updateMany(
+    { countryId, nppId: { $in: defectorNppIds } },
+    { $set: { party: String(newSeq) } }
+  );
 
-  // #0701 split-cleanup — a defector may have been the ruling party's chair,
+  // split-cleanup, a defector may have been the ruling party's chair,
   // vice chair, or treasurer. Vacate those slots so the ruling party no
   // longer lists leaders who defected. Excludes the new party (whose
   // leadership starts null anyway).

@@ -17,6 +17,7 @@ export const DEFENCE_STRATEGY_COMPONENT: Record<string, UnitDomain[]> = {
   heavy_armor: ["ground"],
   munitions: ["ground"],
   directed_energy: ["air"],
+  drone_swarm: ["air"],
   /**
    * Intentionally empty. `cyber` supplies electronics and software — capability, not materiel.
    * Giving it an arsenal bucket would create a store no unit could ever draw from, which is

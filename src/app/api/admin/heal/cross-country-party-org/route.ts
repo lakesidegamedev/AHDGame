@@ -6,6 +6,9 @@ import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError } from "@/lib/api/errors";
 import { getDb } from "@/lib/mongodb";
 import type { StatePartyOrg, PoliticalParty, State } from "@/lib/db/types";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 interface MismatchedRecord {
   _id: string;
@@ -29,9 +32,9 @@ export async function GET() {
 
     // Get all parties and states to build lookup maps
     const [parties, states, allPartyOrg] = await Promise.all([
-      db.collection<PoliticalParty>("politicalParties").find({}).toArray(),
-      db.collection<State>("states").find({}).toArray(),
-      db.collection<StatePartyOrg>("statePartyOrg").find({}).toArray(),
+      politicalPartiesCollection(db).find({}).toArray(),
+      statesCollection(db).find({}).toArray(),
+      statePartyOrgCollection(db).find({}).toArray(),
     ]);
 
     // Key by country:sequentialId since sequential IDs are per-country
@@ -101,9 +104,9 @@ export async function POST() {
 
     // Get all parties and states to build lookup maps
     const [parties, states, allPartyOrg] = await Promise.all([
-      db.collection<PoliticalParty>("politicalParties").find({}).toArray(),
-      db.collection<State>("states").find({}).toArray(),
-      db.collection<StatePartyOrg>("statePartyOrg").find({}).toArray(),
+      politicalPartiesCollection(db).find({}).toArray(),
+      statesCollection(db).find({}).toArray(),
+      statePartyOrgCollection(db).find({}).toArray(),
     ]);
 
     // Key by country:sequentialId since sequential IDs are per-country
@@ -148,9 +151,7 @@ export async function POST() {
     }
 
     // Delete the mismatched records
-    const result = await db
-      .collection<StatePartyOrg>("statePartyOrg")
-      .deleteMany({ _id: { $in: idsToDelete } });
+    const result = await statePartyOrgCollection(db).deleteMany({ _id: { $in: idsToDelete } });
 
     return NextResponse.json({
       success: true,

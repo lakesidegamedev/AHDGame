@@ -3,27 +3,21 @@ import type { StatePartyOrg, PoliticalParty } from "@/lib/db/types";
 /**
  * Defense constants for default-party anti-decay protection.
  *
- * NOTE — as of the 2026-05-20 cap-cleanup pass, **no per-party Org floor
- * is enforced at runtime**. Any party can be chipped from any Org level
- * all the way to 0 via the Build Org rival-poach. The tier bands and helpers below are
- * retained as inert scaffolding for analytics / future re-introduction
- * of a tunable defense system; nothing on the action paths reads them.
- *
- * See [docs/design/political-system-reg-support.md §6](../../../../docs/design/political-system-reg-support.md)
- * for the original design (tier bands, calibration). The pool-sum
- * invariant + 0-clamp at action time are the only structural ceilings.
+ * NOTE, no per-party Org floor is enforced at runtime: any party can be
+ * chipped from any Org level to 0 via the Build Org rival-poach. The tier
+ * bands and helpers below are inert scaffolding for analytics / future
+ * re-introduction of a tunable defense system; nothing on action paths
+ * reads them. The pool-sum invariant + 0-clamp at action time are the only
+ * structural ceilings.
  */
 
 /** Tier classification of a state by the home-default party's Org%. */
 export type DefenseTier = "strong" | "solid" | "lean" | "competitive";
 
 /**
- * Tier-scaled minimum Org% floor — INERT after 2026-05-20.
- *
- * Originally enforced as a per-party floor at Contest time; no longer
- * read by any action path. Kept as documentation of the historical band
- * thresholds (and for any analytics dashboard that wants to surface
- * "what tier is this state at?").
+ * Tier-scaled minimum Org% floor. INERT: not read by any action path.
+ * Kept to document the historical band thresholds; analytics may use it to
+ * surface a state's tier.
  */
 export const DEFENSE_ORG_FLOOR: Record<DefenseTier, number> = {
   strong: 18,
@@ -58,20 +52,16 @@ export function deriveDefenseTier(homeDefaultOrgPct: number): DefenseTier {
 }
 
 /**
- * Resolve the home default party for a state. Returns the highest-Org
- * party in that state with `politicalParties.isDefault === true`, or
- * `null` if no default party has any presence in this state.
+ * Resolve the home default party for a state: the highest-Org party in that
+ * state with `politicalParties.isDefault === true`, or `null` if no default
+ * party has presence in the state.
  *
- * In countries where multiple default parties exist (UK Lab + Con; DE
- * SPD + CDU/CSU + Greens + FDP; JP LDP + opposition), this picks
- * whichever default has the highest Org% in this specific state.
+ * Where multiple default parties exist, picks whichever default has the
+ * highest Org% in this specific state. Ties break to the alphabetically lowest
+ * `partyId` (deterministic).
  *
- * Tie-breaking: alphabetically lowest `partyId` (deterministic).
- *
- * NOTE — `partyId` mapping: `StatePartyOrg.partyId` is the party's
- * `sequentialId` cast to string, NOT `_id` (the design doc sketch shows
- * `String(p._id)` but the codebase indexes by `sequentialId` per
- * `getRegionPartyOrg` / `getRegionOfficials`; same fix as Phase 1 Pass 1).
+ * NOTE: `StatePartyOrg.partyId` is the party's `sequentialId` cast to string,
+ * NOT `_id`; matches `getRegionPartyOrg` / `getRegionOfficials`.
  */
 export function resolveHomeDefaultParty(
   parties: PoliticalParty[],

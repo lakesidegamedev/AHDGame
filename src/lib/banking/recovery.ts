@@ -20,7 +20,7 @@
 import * as Sentry from "@sentry/nextjs";
 import type { Db, Document, Filter, ObjectId } from "mongodb";
 import type { Corporation } from "@/lib/db/types";
-import { MONEY_MOVE_COLLECTION, type MoneyMoveRecordLeg } from "@/lib/banking/moneyMove";
+import { type MoneyMoveRecordLeg } from "@/lib/banking/moneyMove";
 import { resumeSettlement, unfinishedSettlementFilter } from "@/lib/banking/settlementJournal";
 import { resolveFailedBankDepositors } from "@/lib/banking/insurance";
 import { revokeCharter } from "@/lib/banking/charter";
@@ -36,6 +36,8 @@ import { recoverConstructionSales } from "./constructionSale";
 import { listDefaultedConstructionCollateral } from "./constructionForeclosure";
 import { recoverConstructionCancellations } from "./constructionCancellation";
 import { resumePrimaryUnderwritingLeases } from "./underwritingSettlement";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
 
 export interface BankingRecoverySummary {
   turn: number;
@@ -181,8 +183,7 @@ export async function recoverBankingSettlements(
   // Estates first: their settlements are resumed inside the resolution
   // itself, under the estate's own claim, and a record the estate owns must
   // not be resumed beside it.
-  const claimed = await db
-    .collection<Corporation>("corporations")
+  const claimed = await corporationsCollection(db)
     .find({
       "bankCharter.resolutionClaimedTurn": { $lt: turn },
       "bankCharter.depositorsResolvedTurn": { $exists: false },
@@ -206,8 +207,7 @@ export async function recoverBankingSettlements(
     }
   }
 
-  const partial = await db
-    .collection<UnfinishedMoveRow>(MONEY_MOVE_COLLECTION)
+  const partial = await bankMoneyMovesCollection<UnfinishedMoveRow>(db)
     .find(
       { ...unfinishedSettlementFilter(), turn: { $lt: turn } },
       {

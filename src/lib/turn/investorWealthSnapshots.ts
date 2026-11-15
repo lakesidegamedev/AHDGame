@@ -37,6 +37,16 @@ import {
   withHeldStakeIssuers,
   loadFundValueByCharacter,
 } from "@/lib/wealth/computeCharacterWealth";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { usersCollection } from "@/lib/db/repositories/users";
+import { investorRankingSnapshotsCollection } from "@/lib/db/repositories/investorRankingSnapshots";
+import { wealthListHistoryCollection } from "@/lib/db/repositories/wealthListHistory";
+import type { Document } from "mongodb";
+import { wealthListSnapshotsCollection } from "@/lib/db/repositories/wealthListSnapshots";
 
 /**
  * Generate pre-computed global investor rankings.
@@ -53,8 +63,7 @@ export async function generateInvestorRankingSnapshot(currentTurn: number, db?: 
   // would have their holdings summed as if the numeric values were identical
   // units, and JP-corp-heavy portfolios would rank dramatically ahead of
   // comparable USD-equivalent wealth.
-  const corporations = await database
-    .collection<Corporation>("corporations")
+  const corporations = await corporationsCollection(database)
     .find({})
     .project<{
       _id: ObjectId;
@@ -98,8 +107,7 @@ export async function generateInvestorRankingSnapshot(currentTurn: number, db?: 
   const topCharacterIds = sortedInvestors.map(([id]) => new ObjectId(id));
   const characters =
     topCharacterIds.length > 0
-      ? await database
-          .collection<Character>("characters")
+      ? await charactersCollection(database)
           .find({ _id: { $in: topCharacterIds } })
           .project<{ _id: ObjectId; name: string }>({ _id: 1, name: 1 })
           .toArray()
@@ -122,7 +130,7 @@ export async function generateInvestorRankingSnapshot(currentTurn: number, db?: 
 
   // Exclude _id from $set — MongoDB rejects updates that modify the immutable _id field
   // when the document already exists (e.g. persists across game resets).
-  await database.collection<InvestorRankingSnapshot>("investorRankingSnapshots").updateOne(
+  await investorRankingSnapshotsCollection(database).updateOne(
     { _id: "global" },
     {
       $set: {
@@ -171,8 +179,7 @@ export async function generateWealthListSnapshots(currentTurn: number, db?: Db):
   const exchangeRates = forexEnabled
     ? (Object.fromEntries(
         (
-          await database
-            .collection<ExchangeRate>("exchangeRates")
+          await exchangeRatesCollection(database)
             .find({})
             .project<Pick<ExchangeRate, "_id" | "currencyCode" | "rate">>({
               currencyCode: 1,
@@ -184,8 +191,7 @@ export async function generateWealthListSnapshots(currentTurn: number, db?: Db):
     : undefined;
 
   // Fetch all characters
-  const characters = await database
-    .collection<Character>("characters")
+  const characters = await charactersCollection(database)
     .find({})
     .project<
       Pick<
@@ -219,8 +225,7 @@ export async function generateWealthListSnapshots(currentTurn: number, db?: Db):
   const userIds = [...new Set(characters.map((c) => c.userId.toString()))].map(
     (id) => new ObjectId(id)
   );
-  const users = await database
-    .collection<User>("users")
+  const users = await usersCollection(database)
     .find({ _id: { $in: userIds } })
     .project<Pick<User, "_id" | "isBanned" | "discordId" | "discordAvatar" | "googleAvatar">>({
       _id: 1,
@@ -245,13 +250,11 @@ export async function generateWealthListSnapshots(currentTurn: number, db?: Db):
   // sum across corps and bonds of any currency, so each value must be
   // anchor-normalized via `fxByCurrency` before accumulation (v0.2.6).
   const [states, corporations, bonds, fxByCurrency] = await Promise.all([
-    database
-      .collection<State>("states")
+    statesCollection(database)
       .find({ _id: { $in: [...new Set(activeCharacters.map((c) => c.homeState))] } })
       .project<Pick<State, "_id" | "name">>({ _id: 1, name: 1 })
       .toArray(),
-    database
-      .collection<Corporation>("corporations")
+    corporationsCollection(database)
       .find({
         $or: [
           { "shareholders.characterId": { $in: characterIds } },
@@ -284,8 +287,7 @@ export async function generateWealthListSnapshots(currentTurn: number, db?: Db):
         totalShares: 1,
       })
       .toArray(),
-    database
-      .collection<Bond>("bonds")
+    bondsCollection(database)
       .find({ matured: false, "holders.characterId": { $in: characterIds } })
       .project<Pick<Bond, "_id" | "holders" | "marketPrice" | "currencyCode" | "countryId">>({
         _id: 1,
@@ -380,7 +382,7 @@ export async function generateWealthListSnapshots(currentTurn: number, db?: Db):
     snapshots.push({ _id: ex.apiKey, turn: currentTurn, entries: exchangeEntries, createdAt: now });
   }
 
-  const collection = database.collection<WealthListSnapshot>("wealthListSnapshots");
+  const collection = wealthListSnapshotsCollection(database);
 
   // Archive current snapshots to history (for 24h lookups), then upsert new ones
   const historyOps: Array<{
@@ -430,7 +432,7 @@ export async function generateWealthListSnapshots(currentTurn: number, db?: Db):
   }
 
   if (historyOps.length > 0) {
-    await database.collection("wealthListHistory").bulkWrite(historyOps as never);
+    await wealthListHistoryCollection<Document>(database).bulkWrite(historyOps as never);
   }
   if (snapshotOps.length > 0) {
     await collection.bulkWrite(snapshotOps as never);

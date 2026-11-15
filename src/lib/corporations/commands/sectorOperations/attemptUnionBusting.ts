@@ -25,6 +25,9 @@ import { loadWorldEraUnitScale } from "@/lib/currency/gdpAnchorRate";
 import { notifyUnionOfBustingAttempt } from "@/lib/unions/unionBustingNotice";
 import { emitTx } from "@/lib/financialTxLog/emit";
 import { resolveCorpLiquidCurrencyCode } from "@/lib/currency/corporationCapital";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 export type AttemptUnionBustingResult =
   | {
@@ -84,27 +87,26 @@ export async function attemptUnionBusting(
     };
   }
   const sectorObjectId = new ObjectId(sectorId);
-  const sector = await db
-    .collection<CorporateSector>("corporateSectors")
-    .findOne({ _id: sectorObjectId, corporationId: corporation._id });
+  const sector = await corporateSectorsCollection(db).findOne({
+    _id: sectorObjectId,
+    corporationId: corporation._id,
+  });
   if (!sector) {
     return { ok: false, status: 404, error: "Sector not found" };
   }
   // ONE COUNTRY, RESOLVED ONCE, used by the ban gate below and by the backlash
   // at the end. It is the country the WORKFORCE is in, which is the state's, not
-  // wherever the corporation is domiciled (ticket #1271: the precedence
-  // `getSectorOperatingCountryId` sets, and the shape `buildCapacity` and
-  // `expandSector` carried). Resolving it in two places asked the same question
-  // twice and could get two answers: on a plant whose stored country went stale
-  // when its region changed hands, the gate would clear a bust under the old
-  // country's law and then fire the backlash at the new one, letting a CEO pay
-  // for a bust that is moot where it actually lands.
-  const bustingState = await db
-    .collection<State>("states")
-    .findOne({ _id: sector.stateId }, { projection: { countryId: 1 } });
+  // wherever the corporation is domiciled. Resolving it in two places could get
+  // two answers: on a plant whose stored country went stale when its region
+  // changed hands, the gate would clear a bust under the old country's law and
+  // then fire the backlash at the new one.
+  const bustingState = await statesCollection(db).findOne(
+    { _id: sector.stateId },
+    { projection: { countryId: 1 } }
+  );
   const countryId = bustingState?.countryId ?? sector.countryId ?? corporation.countryId;
 
-  // Union ban (player suggestion #93): busting is moot while unions are
+  // Union ban: busting is moot while unions are
   // outlawed — unionization is already decaying to 0 by law and strikes
   // can't trigger, so don't let a CEO pay for nothing.
   if (await isUnionsBanned(db, countryId)) {
@@ -173,12 +175,14 @@ export async function attemptUnionBusting(
   try {
     await runWithOptionalTransaction(
       async (session) => {
-        const sectorUpdate = await db
-          .collection<CorporateSector>("corporateSectors")
-          .updateOne(sectorFilter, sectorSet, { session });
+        const sectorUpdate = await corporateSectorsCollection(db).updateOne(
+          sectorFilter,
+          sectorSet,
+          { session }
+        );
         if (sectorUpdate.modifiedCount === 0) throw new Error("COOLDOWN_ACTIVE");
 
-        const corpUpdate = await db.collection<Corporation>("corporations").updateOne(
+        const corpUpdate = await corporationsCollection(db).updateOne(
           {
             _id: corporation._id,
             liquidCapital: { $gte: cashCost },
@@ -190,13 +194,14 @@ export async function attemptUnionBusting(
         if (corpUpdate.modifiedCount === 0) throw new Error("INSUFFICIENT_FUNDS");
       },
       async () => {
-        const sectorUpdate = await db
-          .collection<CorporateSector>("corporateSectors")
-          .updateOne(sectorFilter, sectorSet);
+        const sectorUpdate = await corporateSectorsCollection(db).updateOne(
+          sectorFilter,
+          sectorSet
+        );
         if (sectorUpdate.modifiedCount === 0) throw new Error("COOLDOWN_ACTIVE");
 
         try {
-          const corpUpdate = await db.collection<Corporation>("corporations").updateOne(
+          const corpUpdate = await corporationsCollection(db).updateOne(
             {
               _id: corporation._id,
               liquidCapital: { $gte: cashCost },
@@ -205,16 +210,12 @@ export async function attemptUnionBusting(
             { $inc: { liquidCapital: -cashCost }, $set: { updatedAt: now } }
           );
           if (corpUpdate.modifiedCount === 0) {
-            await db
-              .collection<CorporateSector>("corporateSectors")
-              .updateOne({ _id: sectorObjectId }, revertSector);
+            await corporateSectorsCollection(db).updateOne({ _id: sectorObjectId }, revertSector);
             throw new Error("INSUFFICIENT_FUNDS");
           }
         } catch (error) {
           if ((error as Error).message !== "INSUFFICIENT_FUNDS") {
-            await db
-              .collection<CorporateSector>("corporateSectors")
-              .updateOne({ _id: sectorObjectId }, revertSector);
+            await corporateSectorsCollection(db).updateOne({ _id: sectorObjectId }, revertSector);
           }
           throw error;
         }

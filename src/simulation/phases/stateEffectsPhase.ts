@@ -4,11 +4,13 @@
  * it back into the registry array at the exact same position, so phase
  * registration ORDER — which is behavior — is unchanged.
  */
+import type { CountryId } from "@/lib/constants/countries";
+import { loadCountryTiers } from "@/lib/country/countryTier";
 import { substepMarker } from "@/lib/observability/phaseSubsteps";
 import { processStatePolicyEffects } from "@/lib/policyEffects";
 import { processAllStateDemographics } from "@/lib/demographicEffects";
 import { processEraCheckpointsTurn } from "@/lib/turn/eraCheckpointTurn";
-import { processArchetypeApprovalDecay } from "@/lib/turn/archetypeApprovalDecay";
+import { processBucketApprovalDecay } from "@/lib/turn/bucketApprovalDecay";
 import { processUnownedSectorGrowth } from "@/lib/turn/unownedSectorGrowth";
 import { processMetricDecay } from "@/lib/turn/metricDecay";
 import { processSubsidyBudget } from "@/lib/turn/subsidyBudgetTurn";
@@ -24,6 +26,9 @@ import { processRURegionalBudgets } from "@/lib/turn/ruRegionalBudget";
 import { processPoliticalMetricsDynamics } from "@/lib/turn/politicalMetricsDynamics";
 import { syncAllPartyChairHeadsOfState } from "@/lib/turn/partyChairHeadOfState";
 import { processCrisisTurn } from "@/lib/turn/crisisTurn";
+import { notifyCrisisChanges } from "@/lib/crises/inboxAlerts";
+import { processCrisisV2Turn } from "@/lib/turn/crisisV2Turn";
+import { processFrontierRaces } from "@/lib/frontierRaces/service";
 import { processMinisterialOrders } from "@/lib/turn/ministerialOrderProcessing";
 import { processNavairTurn } from "@/lib/navair/turn";
 import { processIntelligenceTurn } from "@/lib/turn/intelligenceTurn";
@@ -75,6 +80,8 @@ import { regionalBudgetPhaseDue, resolveRegionalBudgetCadence } from "./regional
 import type { LegislationType } from "@/lib/db/types/legislation";
 import { RESET_V2_READY } from "@/lib/resetVersions/availability";
 import { RESET_V2_COUNTRIES, resetSystemVersionsForCountry } from "@/lib/resetVersions/rules";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 
 export const stateEffectsAndNationalAggregationPhase: TurnPhaseAdapter = {
   key: "stateEffectsAndNationalAggregation",
@@ -85,39 +92,37 @@ export const stateEffectsAndNationalAggregationPhase: TurnPhaseAdapter = {
     // ~2.4 MB / 1,030-document collection into JS twice in the same turn.
     let legislationTypesPromise: Promise<LegislationType[]> | undefined;
     const getLegislationTypes = () => {
-      legislationTypesPromise ??= db
-        .collection<LegislationType>("legislationTypes")
+      legislationTypesPromise ??= legislationTypesCollection(db)
         // full-read(legislationTypes): both policy processors evaluate every authored effect
         .find({})
         .toArray();
       return legislationTypesPromise;
     };
-    // S4 (2026-07-16 core-sim audit): crisisTurn, ministerialOrders, and
-    // policyEffects all write the SAME stateMetrics "<category>.<metric>.value"
-    // field paths — crisisTurn and ministerialOrders via $inc, policyEffects
-    // via a read-modify-write that ends in $set. When these ran concurrently
-    // inside the Promise.all below, a $inc landing between policyEffects'
-    // read and its $set was silently overwritten (lost update), making turn
-    // outcomes nondeterministic: crisis shocks or cabinet-order effects could
-    // vanish, or clobber bill effects, depending on scheduling.
-    //
-    // Serialize ONLY these writers; everything else stays parallel.
-    // Chosen order: crisisTurn → ministerialOrders → policyEffects.
-    //  - crisisTurn and ministerialOrders are pure $inc writers (commutative
-    //    with each other), kept in their previous registry order.
-    //  - policyEffects runs LAST because it is the read-modify-write: running
-    //    it after the $inc shocks means its read observes the crisis- and
-    //    order-adjusted values, so bill effects and baseline decay apply ON
-    //    TOP of the shocked state — the intended semantics ($inc deltas were
-    //    always meant to compose with, not race, the policy recompute).
-    // Write mechanics ($set vs $inc) are deliberately unchanged in this fix.
+    // These three write the same stateMetrics "<category>.<metric>.value" paths:
+    // crisisTurn and ministerialOrders via $inc, policyEffects via read-modify-write
+    // ending in $set. Concurrent, an $inc between policyEffects' read and $set is
+    // silently overwritten (lost update). Serialize ONLY these writers.
+    // Order: crisisTurn -> ministerialOrders -> policyEffects. The $inc writers are
+    // commutative; policyEffects runs LAST so its read observes the shocked values
+    // and bill effects apply on top, the intended semantics.
     const serializedStateMetricsPrerequisites = (async () => {
-      // Pass the authoritative turn-context year: the persisted
-      // gameState.currentYear is only stamped at turn end, so reloading it
-      // inside would gate year-boundary openings one turn late (#2059).
-      const crisisResult = await runtime.runPhase("crisisTurn", () =>
-        processCrisisTurn(db, newTurn, currentYear)
+      // Pass the authoritative turn-context year: gameState.currentYear is only
+      // stamped at turn end, so reading it here would gate year-boundary openings
+      // one turn late.
+      const crisisResult = await runtime.runPhase("crisisTurn", async () => {
+        const processed = await processCrisisTurn(db, newTurn, currentYear);
+        // A failed inbox alert must never fail the crisis phase.
+        await notifyCrisisChanges(db, newTurn).catch((err) =>
+          console.error("[crisisTurn] inbox alerts failed:", err)
+        );
+        return processed;
+      });
+      // Same stateMetrics writers as crisisTurn, so it stays inside this chain.
+      const crisisV2Result = await runtime.runPhase("crisisV2Turn", () =>
+        processCrisisV2Turn(db, newTurn)
       );
+      // Winners and licences write approval through the same state writers.
+      await runtime.runPhase("frontierRaces", () => processFrontierRaces(db, newTurn));
       // Intelligence upkeep resolves before navair, so a later phase's sabotage
       // lands on the dispositions this turn actually fights on. Note the honest
       // limit: navair RECOMPUTES sea control and air superiority from live units
@@ -141,6 +146,7 @@ export const stateEffectsAndNationalAggregationPhase: TurnPhaseAdapter = {
       return {
         intelligenceResult,
         crisisResult,
+        crisisV2Result,
         navairResult,
         ministerialOrdersResult,
       };
@@ -148,6 +154,10 @@ export const stateEffectsAndNationalAggregationPhase: TurnPhaseAdapter = {
     // Regional budgets alternate turns (see regionalBudgetCadence.ts). A phase
     // that is not due is marked skipped so turn logs and turndiag still list it.
     const regionalBudgetCadence = resolveRegionalBudgetCadence();
+    // Background countries (#5702) have no regional government to fund. One
+    // tier read serves every regional phase, taken only once one of them is due.
+    let countryTiersPromise: ReturnType<typeof loadCountryTiers> | undefined;
+    const countryTiers = () => (countryTiersPromise ??= loadCountryTiers(db));
     const runRegionalBudgetPhase = <T>(name: string, fn: () => Promise<T>): Promise<T | null> =>
       regionalBudgetPhaseDue(name, newTurn, regionalBudgetCadence)
         ? runtime.runPhase(name, fn)
@@ -158,9 +168,34 @@ export const stateEffectsAndNationalAggregationPhase: TurnPhaseAdapter = {
               `skipped: regional budgets run every ${regionalBudgetCadence} turns`
             )
             .then(() => null);
+    // A single-country regional phase: skipped like a cadence miss when that
+    // country is background, so it neither runs nor counts round trips.
+    const runCountryRegionalBudgetPhase = <T>(
+      name: string,
+      countryId: CountryId,
+      fn: () => Promise<T>
+    ): Promise<T | null> =>
+      regionalBudgetPhaseDue(name, newTurn, regionalBudgetCadence)
+        ? countryTiers().then((tiers) =>
+            tiers.tierOf(countryId) === "background"
+              ? runtime
+                  .markPhaseSkipped(
+                    name,
+                    "conditional",
+                    `skipped: ${countryId} is a background country`
+                  )
+                  .then(() => null)
+              : runtime.runPhase(name, fn)
+          )
+        : runRegionalBudgetPhase(name, fn);
     const ukRegionalBudgetPromise = runRegionalBudgetPhase("regionalBudgetProcessing", async () => {
+      const tiers = await countryTiers();
       const countries = (await getRegisteredCountryIds(db)).filter(
-        (id): id is "UK" | "SCO" | "WAL" => id === "UK" || id === "SCO" || id === "WAL"
+        (id): id is "UK" | "SCO" | "WAL" =>
+          (countryHasFeature("ukTurn", id) ||
+            countryHasFeature("scoTurn", id) ||
+            countryHasFeature("walTurn", id)) &&
+          tiers.tierOf(id) !== "background"
       );
       let regionsProcessed = 0;
       for (const country of countries) {
@@ -168,7 +203,7 @@ export const stateEffectsAndNationalAggregationPhase: TurnPhaseAdapter = {
           db,
           newTurn,
           regionalBudgetCadence,
-          gameState.regionalLegislationFinanceEnabled === true,
+          true,
           resetSystemVersionsForCountry(gameState, RESET_V2_READY, country).legislation === "v2",
           typeof gameState.resetWorldId === "string" ? gameState.resetWorldId : undefined,
           country
@@ -181,7 +216,7 @@ export const stateEffectsAndNationalAggregationPhase: TurnPhaseAdapter = {
       processJPRegionalBudgets(
         db,
         newTurn,
-        gameState.regionalLegislationFinanceEnabled === true,
+        true,
         regionalBudgetCadence,
         resetSystemVersionsForCountry(gameState, RESET_V2_READY, "JP").legislation === "v2",
         typeof gameState.resetWorldId === "string" ? gameState.resetWorldId : undefined
@@ -201,9 +236,9 @@ export const stateEffectsAndNationalAggregationPhase: TurnPhaseAdapter = {
       return { ...prerequisiteResults, policyResult };
     })();
     const [
-      { crisisResult, navairResult, ministerialOrdersResult, policyResult },
+      { crisisResult, crisisV2Result, navairResult, ministerialOrdersResult, policyResult },
       demoEffectResult,
-      archetypeDecayResult,
+      bucketDecayResult,
       unownedResult,
       ,
       ,
@@ -218,8 +253,8 @@ export const stateEffectsAndNationalAggregationPhase: TurnPhaseAdapter = {
     ] = await Promise.all([
       policyEffectsPromise,
       // Era checkpoints (src/lib/demographics/eraCheckpoints.ts) write the SAME
-      // stateDemographics.groups.<id>.<axis> fields processAllStateDemographics
-      // does, so it runs strictly AFTER that call completes (never concurrently
+      // demographicDefaults layer-1 overlays processAllStateDemographics
+      // reads, so it runs strictly AFTER that call completes (never concurrently
       // in this Promise.all) to avoid the same lost-update race the S4 comment
       // above documents for the state-metrics writers. Its own result isn't
       // destructured (mirrors the append-only results below); only
@@ -237,20 +272,19 @@ export const stateEffectsAndNationalAggregationPhase: TurnPhaseAdapter = {
         }
         return result;
       }),
-      runtime.runPhase("archetypeApprovalDecay", () => processArchetypeApprovalDecay()),
+      runtime.runPhase("bucketApprovalDecay", () => processBucketApprovalDecay()),
       runtime.runPhase("unownedSectorGrowth", () => processUnownedSectorGrowth(db)),
       runtime.runPhase("metricDecay", () => processMetricDecay()),
       runtime.runPhase("subsidyBudget", () => processSubsidyBudget(db)),
       ukRegionalBudgetPromise,
       jpRegionalBudgetPromise,
       // Covers every country on the Laender revenue-sharing model, not just DE.
-      // DD joined when the unified Germany was left with no processor at all:
-      // this step was scoped to DE, which has held zero states since the shell
-      // dissolved on turn 550 (#1323). The phase key keeps its original name for
-      // the same reason `cnPresidentSync` below does.
+      // DD joined after the unified Germany had no processor at all. The phase
+      // key keeps its original name for backward compatibility.
       runRegionalBudgetPhase("deRegionalBudgetProcessing", async () => {
+        const tiers = await countryTiers();
         const results = await Promise.all(
-          LAENDER_MODEL_COUNTRIES.map((id) =>
+          LAENDER_MODEL_COUNTRIES.filter((id) => tiers.tierOf(id) !== "background").map((id) =>
             processLaenderRegionalBudgets(db, id, newTurn, gameState.preset)
           )
         );
@@ -266,7 +300,7 @@ export const stateEffectsAndNationalAggregationPhase: TurnPhaseAdapter = {
       runRegionalBudgetPhase("cnRegionalBudgetProcessing", () =>
         processAllOnePartyRegionalBudgets(db, newTurn, gameState.preset)
       ),
-      runRegionalBudgetPhase("ruRegionalBudgetProcessing", () =>
+      runCountryRegionalBudgetPhase("ruRegionalBudgetProcessing", "RU", () =>
         processRURegionalBudgets(db, newTurn)
       ),
       runtime.runPhase("politicalMetricsDynamics", async () => {
@@ -302,13 +336,12 @@ export const stateEffectsAndNationalAggregationPhase: TurnPhaseAdapter = {
       runtime.runPhase("vicePresidentActionReset", () => resetVicePresidentActions(db, newTurn)),
       // Appended (result intentionally not destructured): refill each active
       // presidential ticket's shared running-mate surrogate action pool once per
-      // Eastern-time day (the VP pool now accrues per turn; this one is unchanged).
+      // Eastern-time day. The VP pool accrues per turn instead.
       runtime.runPhase("runningMateSurrogateActionReset", () =>
         resetRunningMateSurrogateActions(db)
       ),
-      // Appended (result intentionally not destructured): accrue seated
-      // Justices' self-serve action pool, +1 every JUSTICE_ACTION_ACCRUAL_TURNS
-      // (#3598, mirrors vicePresidentActionReset above).
+      // Appended (result intentionally not destructured): accrue seated Justices'
+      // self-serve action pool, +1 every JUSTICE_ACTION_ACCRUAL_TURNS.
       runtime.runPhase("justiceActionReset", () => resetJusticeActions(db, newTurn)),
     ]);
     phaseResults.policyEffects = { statesProcessed: policyResult ?? 0 };
@@ -345,17 +378,18 @@ export const stateEffectsAndNationalAggregationPhase: TurnPhaseAdapter = {
         }
       : null;
     phaseResults.crisisTurn = { crisisesProcessed: crisisResult ?? 0 };
+    phaseResults.crisisV2Turn = crisisV2Result ?? null;
     phaseResults.ministerialOrders = ministerialOrdersResult ?? null;
     (phaseResults as Record<string, unknown>).navairOperations = navairResult ?? null;
     phaseResults.topSectorsRecompute = topSectorsResult ?? null;
 
-    if (archetypeDecayResult) {
-      phaseResults.archetypeApprovalDecay = {
-        charactersProcessed: archetypeDecayResult.charactersProcessed,
-        nppsProcessed: archetypeDecayResult.nppsProcessed,
+    if (bucketDecayResult) {
+      phaseResults.bucketApprovalDecay = {
+        charactersProcessed: bucketDecayResult.charactersProcessed,
+        nppsProcessed: bucketDecayResult.nppsProcessed,
       };
       console.log(
-        `[Turn] Archetype approval decay: ${archetypeDecayResult.charactersProcessed} characters, ${archetypeDecayResult.nppsProcessed} NPPs`
+        `[Turn] Bucket approval decay: ${bucketDecayResult.charactersProcessed} characters, ${bucketDecayResult.nppsProcessed} NPPs`
       );
     }
 
@@ -406,9 +440,8 @@ export const stateEffectsAndNationalAggregationPhase: TurnPhaseAdapter = {
 
     // Decade-era crossing: stamps gameState.currentEraId + posts wire news
     // in Week 1 of years ending in 0 (same trigger cadence as the census —
-    // the decade rolls over once, both fire). Whole phase is gated on
-    // eraSystemEnabled; on mid-decade enable it self-heals the marker
-    // quietly (healed: true, no news).
+    // the decade rolls over once, both fire). A mid-decade start
+    // self-heals the marker quietly (healed: true, no news).
     const eraCrossingResult = await runtime.runPhase("eraCrossing", () =>
       runEraCrossing(db, currentYear)
     );
@@ -431,7 +464,7 @@ export const stateEffectsAndNationalAggregationPhase: TurnPhaseAdapter = {
 
     // Cabinet year crossing: seat unlocks/renames/retirements vs the live
     // year. State reconcile (succession auto-transfer) always runs when year
-    // data exists; news is gated on eraSystemEnabled inside. First run
+    // data exists. First run
     // self-heals quietly (no news burst).
     const cabinetYearResult = await runtime.runPhase("cabinetYearCrossing", () =>
       runCabinetYearCrossing(db, currentYear)
@@ -702,17 +735,9 @@ export const stateEffectsAndNationalAggregationPhase: TurnPhaseAdapter = {
       );
     }
 
-    // Durable long-horizon provenance (#2099/#2100), resolved once per turn
-    // and shared by the macro and approval telemetry writers, then the metric,
-    // approval and interest-rate history snapshots. Three round trips for the
-    // context; a null result (phase failure) skips telemetry while the
-    // operational snapshots still run.
-    //
-    // These stay inside the lock because game logic reads what they write.
-    // Pure reporting (party history, research telemetry, the health snapshot)
-    // runs after the lock is released: see postLockReportingPhases.ts.
-    // auditAnomalyScan and suspiciousDetection likewise run after the turn
-    // commits (#2694, src/lib/turn/postTurnScans.ts), in that order.
+    // Durable long-horizon provenance, resolved once per turn and shared by
+    // telemetry writers and history snapshots. Stays inside the lock because
+    // game logic reads what it writes; pure reporting runs after lock release.
     const longHorizonCtx = await runtime.runPhase("longHorizonContext", () =>
       resolveLongHorizonContext(db, newTurn)
     );

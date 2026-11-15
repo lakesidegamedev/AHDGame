@@ -15,7 +15,9 @@ import {
   INITIAL_RATES_2019_TRANSITION,
   getInitialRates,
   getInitialRatesForYear,
+  getRuntimeInitialRates,
 } from "./currencies";
+import { SeedContractError } from "@/lib/seeds/contract/seedContractError";
 
 describe("forex year anchors", () => {
   it("returns the authored table unchanged at every anchor year", () => {
@@ -31,13 +33,19 @@ describe("forex year anchors", () => {
     expect(getInitialRates("1979-default")).toBe(INITIAL_RATES_1979);
     expect(getInitialRates("1991-default")).toBe(INITIAL_RATES_1991);
     expect(getInitialRates("2019-default")).toBe(INITIAL_RATES_2019_TRANSITION);
-    // Unknown and alias presets still resolve to the modern table.
-    expect(getInitialRates("empty")).toBe(INITIAL_RATES);
-    expect(getInitialRates("2019-no-parties")).toBe(INITIAL_RATES);
+    // The 2019 world's variants read the 2019 table.
+    expect(getInitialRates("empty")).toBe(INITIAL_RATES_2019_TRANSITION);
+    expect(getInitialRates("2019-no-parties")).toBe(INITIAL_RATES_2019_TRANSITION);
   });
 
-  it("stops seeding a 1999 world with 2019 money", () => {
-    const rates1999 = getInitialRates("1999-default");
+  it("refuses to seed a preset without its own table", () => {
+    for (const preset of ["1999-default", "2007-default", "2023-default", "custom"]) {
+      expect(() => getInitialRates(preset), preset).toThrow(SeedContractError);
+    }
+  });
+
+  it("keeps running worlds on interpolated anchors instead of 2019 money", () => {
+    const rates1999 = getRuntimeInitialRates("1999-default");
     const ng = rates1999.NG;
     expect(ng).toBeDefined();
     // The bug: 1550 (a 2019 rate) for a 1999 world.
@@ -74,8 +82,8 @@ describe("forex year anchors", () => {
     expect(getInitialRatesForYear(1900)).toBe(INITIAL_RATES_1953);
     expect(getInitialRatesForYear(2023)).toBe(INITIAL_RATES);
     expect(getInitialRatesForYear(2200)).toBe(INITIAL_RATES);
-    // 2023 therefore stays exactly as it was before this change.
-    expect(getInitialRates("2023-default")).toBe(INITIAL_RATES);
+    // A running 2023 world therefore keeps the modern anchors.
+    expect(getRuntimeInitialRates("2023-default")).toBe(INITIAL_RATES);
   });
 
   it("never drops a country that only one anchor authors", () => {

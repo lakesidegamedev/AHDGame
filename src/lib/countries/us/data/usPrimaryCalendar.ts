@@ -2,23 +2,18 @@ import type { AllocationMethod } from "@/lib/primaryDelegateAllocation";
 import type { PrimaryCalendarFamily, PrimaryWave } from "@/lib/constants/primaryCalendar";
 
 /**
- * The United States' presidential primary calendar and delegate tables.
+ * US presidential primary calendar and delegate tables. All of it describes
+ * the United States, not engine mechanics: PRIMARY_WAVES, DEM_2020_DELEGATES,
+ * GOP_2020_DELEGATES, EV_2020_BASELINE, BUILTIN_PARTY_FAMILY.
  *
- * \u26a0\ufe0f THIS IS DATA ABOUT ONE COUNTRY, AND IT LOOKED LIKE ENGINE CONFIGURATION.
- * `PRIMARY_WAVES` is the 2020 US calendar -- the Iowa caucus, the New Hampshire
- * primary, Super Tuesday. `DEM_2020_DELEGATES`, `GOP_2020_DELEGATES` and
- * `EV_2020_BASELINE` are keyed by state, and `BUILTIN_PARTY_FAMILY` maps DEM and
- * REP. None of it describes a mechanic; all of it describes the United States.
+ * The staggered-primary engine stays in `constants/primaryCalendar.ts`
+ * (PrimaryWaveSchedule, getPrimaryWaveSchedule, getWaveForTurnsRemaining,
+ * getDelegateMajority, resolvePartyFamily), and re-exports everything below
+ * so no consumer moved.
  *
- * The staggered-primary ENGINE stays in `constants/primaryCalendar.ts`:
- * `PrimaryWaveSchedule`, `getPrimaryWaveSchedule`, `getWaveForTurnsRemaining`,
- * `getDelegateMajority` and `resolvePartyFamily` are read by
- * `primaryStaggerPhase` and `conventionResolution`, which default to `"US"` but
- * are not about it. That file re-exports everything below, so no consumer moved.
- *
- * \u26a0\ufe0f THE TYPE IMPORTS POINT BACK AT THE ENGINE AND THAT IS FINE. Type-only
- * imports are erased, so this is not a runtime cycle. A VALUE import back out of
- * `constants/primaryCalendar.ts` would be one, and would fail on module-init
+ * Type imports point back at the engine and that is fine: type-only imports
+ * are erased, so this is not a runtime cycle. A VALUE import back out of
+ * `constants/primaryCalendar.ts` would be one and would fail on module-init
  * order rather than at build time.
  */
 

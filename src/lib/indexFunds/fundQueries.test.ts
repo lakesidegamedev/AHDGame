@@ -114,3 +114,61 @@ describe("creditFundPosition", () => {
     expect(JSON.stringify(updatePipeline)).toContain("60");
   });
 });
+
+describe("updateFundNavsBulk", () => {
+  async function seeded() {
+    const { createInMemoryDb } = await import("@/lib/test-utils/inMemoryDb");
+    const memory = createInMemoryDb();
+    const ids = [new ObjectId(), new ObjectId(), new ObjectId()];
+    const doc = (_id: ObjectId) => ({
+      _id,
+      quotedNav: 100,
+      backingRatio: 1,
+      unitSupply: 10,
+      cashAnchor: 500,
+      holdings: [],
+      updatedAt: new Date(0),
+    });
+    memory.seed("indexFunds", ids.map(doc) as never);
+    return { memory, ids };
+  }
+
+  it("stores the same fields as one updateFundNav call per fund", async () => {
+    const { updateFundNav, updateFundNavsBulk } = await import("./fundQueries");
+    const updates = [
+      { quotedNav: 101.5, backingRatio: 1.02 },
+      { quotedNav: 99, backingRatio: 0.97, unitSupply: 12 },
+      { quotedNav: 100 },
+    ];
+    const single = await seeded();
+    for (const [i, update] of updates.entries())
+      await updateFundNav(single.memory as never, single.ids[i]!, update);
+    const bulk = await seeded();
+    await updateFundNavsBulk(
+      bulk.memory as never,
+      updates.map((update, i) => ({ fundId: bulk.ids[i]!, update }))
+    );
+    const strip = (docs: Array<Record<string, unknown>>) =>
+      docs.map(({ _id: _ignored, updatedAt, ...rest }) => ({
+        ...rest,
+        touched: (updatedAt as Date).getTime() > 0,
+      }));
+    expect(strip(bulk.memory.collection("indexFunds").docs)).toEqual(
+      strip(single.memory.collection("indexFunds").docs)
+    );
+  });
+
+  it("is a single bulk command and skips the call for an empty batch", async () => {
+    const { countRoundTrips } = await import("@/lib/test-utils/roundTripCounter");
+    const { updateFundNavsBulk } = await import("./fundQueries");
+    const { memory, ids } = await seeded();
+    const trips = countRoundTrips(memory);
+    await updateFundNavsBulk(memory as never, []);
+    expect(trips.total()).toBe(0);
+    await updateFundNavsBulk(
+      memory as never,
+      ids.map((fundId) => ({ fundId, update: { quotedNav: 1 } }))
+    );
+    expect(trips.count("indexFunds")).toBe(1);
+  });
+});

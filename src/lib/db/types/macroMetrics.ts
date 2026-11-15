@@ -62,13 +62,3 @@ export interface MacroMetricsDoc {
   economicModel?: EconomicModelState;
   lastUpdated: Date;
 }
-
-/**
- * Per-region macro history series (the economic/population slice formerly in
- * stateMetricHistory): `{ _id, "economic": { gdpGrowth: [{turn,value},…] } }`.
- * Kept loose like MetricHistoryDoc — paths mirror the doc paths.
- */
-export interface MacroMetricsHistoryDoc {
-  _id: string;
-  [key: string]: unknown;
-}

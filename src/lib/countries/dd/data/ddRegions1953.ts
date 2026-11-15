@@ -1,28 +1,11 @@
 import type { State } from "@/lib/db/types";
 
 /**
- * East Germany (GDR) regions as State-compatible documents — 1953.
- *
- * SEED INDEPENDENCE — DO NOT DERIVE FROM ANOTHER ERA.
- * Authored for ~1953 directly. NOT imported/transformed from ddRegions.ts.
- *
- * Context: The GDR (Deutsche Demokratische Republik) was founded October 1949.
- * By 1953 it had a population of ~18.4M (not yet depleted by Republikflucht peak).
- * June 17, 1953 uprising (East Berlin workers' revolt) was suppressed by Soviet tanks.
- * Economy: centrally planned, still rebuilding from WWII; NMP ≈ 44B Ostmark.
- *
- * REGION CODES — the same eastern-Länder codes as the 1979 bundle (`BEO` East
- * Berlin + the shared `MV BB ST SN TH`), so both Cold-War eras render from the
- * same ownership-driven Länder geometry. Historically the Länder were dissolved
- * into Bezirke in mid-1952; the Länder remain the gameplay units, with the
- * Bezirke as flavor. The shared codes belong to `DE` only in unified eras — see
- * `seedDD.ts` for the divided-era ownership rules.
- *
- * houseDistricts = Volkskammer seats (nominal, single National Front list;
- * sum = 500). stateSenateSeats = Landtag (landAssembly) seats per Land
- * (sum = 80) — the sub-national chamber Land First Secretaries queue state
- * bills through. gdp in millions of Mark der DDR (per-Land shares of the
- * ~44B NMP).
+ * GDR regions for 1953. Authored directly for this era; do not derive from
+ * another era's bundle. Codes reuse the eastern-Länder set shared with the 1979
+ * bundle (Länder are gameplay units; Bezirke are flavor). Codes belong to DE
+ * only in unified eras. houseDistricts = Volkskammer seats (nominal, sum 500),
+ * stateSenateSeats = Landtag seats (sum 80), gdp in millions of Mark der DDR.
  */
 export const ddRegions1953: State[] = [
   // ── Berlin (the capital, SED stronghold, June 17 epicentre) ─────────────────

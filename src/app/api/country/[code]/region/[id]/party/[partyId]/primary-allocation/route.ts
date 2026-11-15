@@ -14,6 +14,11 @@ import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { getGameTime } from "@/lib/time/gameTime";
 import { primaryOpenFilter } from "@/lib/elections/electionDeadlineFilters";
 import { z } from "zod";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { adminLogsCollection } from "@/lib/db/repositories/adminLogs";
+import type { Document } from "mongodb";
 
 const schema = z.object({
   method: z.union([z.literal("PR"), z.literal("WTA"), z.null()]),
@@ -54,7 +59,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     const db = await getDb();
 
-    const state = await db.collection<State>("states").findOne({ _id: stateId, countryId });
+    const state = await statesCollection(db).findOne({ _id: stateId, countryId });
     if (!state) {
       return errorResponse(404, "State not found");
     }
@@ -66,9 +71,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     const partyKey = getPartyIdString(party);
     const statePartyKey = getStatePartyOrgDocumentId(stateId, party);
-    const stateParty = await db
-      .collection<StatePartyOrg>("statePartyOrg")
-      .findOne({ _id: statePartyKey });
+    const stateParty = await statePartyOrgCollection(db).findOne({ _id: statePartyKey });
 
     // Chair/vice-chair/treasurer/national-chair/admin may change allocation.
     // Same auth surface as the tax route for the state party.
@@ -89,7 +92,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     // Admins may override — their action is logged separately. The goal is to
     // prevent a chair from flipping allocation mid-primary to game outcomes.
     const { currentTurn, effectiveNow } = await getGameTime();
-    const activePresPrimary = await db.collection<Election>("elections").findOne({
+    const activePresPrimary = await electionsCollection(db).findOne({
       countryId,
       electionType: "president",
       status: "active",
@@ -104,7 +107,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     const now = new Date();
 
-    await db.collection<StatePartyOrg>("statePartyOrg").updateOne(
+    await statePartyOrgCollection(db).updateOne(
       { _id: statePartyKey },
       method === null
         ? {
@@ -147,7 +150,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       { upsert: true }
     );
 
-    await db.collection("adminLogs").insertOne({
+    await adminLogsCollection<Document>(db).insertOne({
       category: "system",
       action: "primary_allocation_changed",
       username: authUser.username,

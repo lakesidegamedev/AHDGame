@@ -7,6 +7,7 @@ import { handleRouteError, badRequest, notFound, errorResponse } from "@/lib/api
 import { parseJsonBody } from "@/lib/api/validate";
 import { createAdminLog } from "@/lib/adminLog";
 import type { BannedIp } from "@/lib/db/types";
+import { bannedIpsCollection } from "@/lib/db/repositories/bannedIps";
 
 const patchSchema = z.object({
   note: z.string().min(1).max(500).optional(),
@@ -27,9 +28,7 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
     if (!ObjectId.isValid(id)) throw badRequest("Invalid id.");
 
     const db = await getDb();
-    const result = await db
-      .collection<BannedIp>("bannedIps")
-      .findOneAndDelete({ _id: new ObjectId(id) });
+    const result = await bannedIpsCollection(db).findOneAndDelete({ _id: new ObjectId(id) });
     if (!result) throw notFound("Row not found.");
 
     await createAdminLog({
@@ -66,9 +65,11 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     if (Object.keys(update).length === 0) throw badRequest("Nothing to update.");
 
     const db = await getDb();
-    const result = await db
-      .collection<BannedIp>("bannedIps")
-      .findOneAndUpdate({ _id: new ObjectId(id) }, { $set: update }, { returnDocument: "after" });
+    const result = await bannedIpsCollection(db).findOneAndUpdate(
+      { _id: new ObjectId(id) },
+      { $set: update },
+      { returnDocument: "after" }
+    );
     if (!result) throw notFound("Row not found.");
 
     await createAdminLog({

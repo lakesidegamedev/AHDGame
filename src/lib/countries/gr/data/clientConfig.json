@@ -1,0 +1,118 @@
+{
+  "config": {
+    "id": "GR",
+    "name": "Greece",
+    "code": "GR",
+    "status": "coming-soon",
+    "flagEmoji": "🇬🇷",
+    "regionLabel": "Region",
+    "regionLabelPlural": "Regions",
+    "executiveTitle": "Prime Minister",
+    "executiveRealmPhrase": "Greece",
+    "executiveLabel": "Maximos Mansion",
+    "executivePath": "/country/gr/executive",
+    "governmentType": "parliamentaryRepublic",
+    "governmentTypeLabel": "Parliamentary Republic",
+    "descriptor": "A parliamentary republic where a Prime Minister governs at the confidence of the unicameral 300-seat Vouli, elected by reinforced proportional representation.",
+    "heroImage": "https://flagcdn.com/w640/gr.png",
+    "overviewPath": "/country/gr",
+    "mapPath": "/country/gr/map",
+    "currencyCode": "GRD",
+    "centralGovernmentLabel": "State Budget",
+    "financeMinisterCabinetId": "minister_of_finance",
+    "majorPartyIds": ["gr_nd", "gr_pasok"],
+    "partyCreationNPPs": { "statesRequired": 2, "lockHomeState": false, "nppsPerState": 1 },
+    "legislature": {
+      "name": "Hellenic Parliament",
+      "path": "/country/gr/legislature",
+      "bicameral": false,
+      "lowerChamber": {
+        "key": "vouli",
+        "name": "Hellenic Parliament",
+        "shortName": "Vouli",
+        "seats": 300,
+        "description": "300 deputies of the unicameral Vouli ton Ellinon, elected by reinforced proportional representation for four-year terms."
+      }
+    },
+    "officeTypes": [
+      {
+        "key": "primeMinister",
+        "label": "Prime Minister",
+        "isExecutive": true,
+        "isSubNational": false,
+        "labelPlural": "Prime Ministers"
+      },
+      {
+        "key": "president",
+        "label": "President",
+        "isExecutive": true,
+        "isSubNational": false,
+        "isHeadOfState": true,
+        "labelPlural": "Presidents"
+      },
+      {
+        "key": "deputy",
+        "label": "Deputy",
+        "chamberKey": "vouli",
+        "isExecutive": false,
+        "isSubNational": false,
+        "labelPlural": "Deputies"
+      },
+      {
+        "key": "centralBankChair",
+        "label": "Governor of the Bank of Greece",
+        "isExecutive": false,
+        "isSubNational": false,
+        "labelPlural": "Governors of the Bank of Greece"
+      }
+    ],
+    "electionSystems": {
+      "lowerChamber": "pr_hareQuota",
+      "headOfGovernment": "parliamentary",
+      "headOfState": "ceremonial"
+    },
+    "lowerElectionSystem": { "snapElectionsAllowed": true },
+    "centralBank": {
+      "name": "Bank of Greece",
+      "abbreviation": "BoG",
+      "heroImage": "https://flagcdn.com/w640/gr.png",
+      "defaultPrimeRate": 16.5
+    },
+    "usdExchangeRate": 0.027
+  },
+  "eraOverrides": {
+    "2027-default": { "usdExchangeRate": 1.0858695652173913 },
+    "1991-default": { "usdExchangeRate": 0.005486474240774826 },
+    "1953-default": {
+      "governmentType": "parliamentaryMonarchy",
+      "governmentTypeLabel": "Parliamentary Monarchy",
+      "descriptor": "A parliamentary monarchy where a Prime Minister governs at the confidence of the unicameral 300-seat Vouli under King Paul I; the majoritarian electoral law magnifies pluralities into landslides.",
+      "majorPartyIds": ["gr_es", "gr_epek"],
+      "officeTypes": [
+        {
+          "key": "primeMinister",
+          "label": "Prime Minister",
+          "isExecutive": true,
+          "isSubNational": false,
+          "labelPlural": "Prime Ministers"
+        },
+        {
+          "key": "deputy",
+          "label": "Deputy",
+          "chamberKey": "vouli",
+          "isExecutive": false,
+          "isSubNational": false,
+          "labelPlural": "Deputies"
+        },
+        {
+          "key": "centralBankChair",
+          "label": "Governor of the Bank of Greece",
+          "isExecutive": false,
+          "isSubNational": false,
+          "labelPlural": "Governors of the Bank of Greece"
+        }
+      ],
+      "usdExchangeRate": 0.03333333333333333
+    }
+  }
+}

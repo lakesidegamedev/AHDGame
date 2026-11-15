@@ -22,11 +22,10 @@ export interface NominatePartyOption {
 export type NomineeMode = "character" | "npp";
 
 /**
- * President-side SCOTUS nomination modal (#3605). Mirrors
- * `CabinetNominateModal` (src/app/whitehouse/cabinet/components) — same modal
- * shell, same "position → nominee" shape — extended with the seat-vacancy
- * scoping SCOTUS needs (9 numbered seats, not named positions) and the NPP
- * "legal scholar" path #3598 added on top of cabinet's player-only nomination.
+ * President-side SCOTUS nomination modal. Mirrors `CabinetNominateModal`
+ * (src/app/whitehouse/cabinet/components): same modal shell, same
+ * position to nominee shape, extended with seat-vacancy scoping SCOTUS needs
+ * (9 numbered seats, not named positions) and the NPP legal scholar path.
  */
 export function ScotusNominateModal({
   open,

@@ -3,7 +3,6 @@ import type { AdminLog } from "@/lib/db/types/adminLog";
 import type { GameIteration, GameState } from "@/lib/db/types/gameState";
 import type { PartyHistorySnapshot } from "@/lib/db/types/partyHistory";
 import type { PartyMembershipEvent } from "@/lib/db/types/partyMembershipEvent";
-import type { Corporation } from "@/lib/db/types/corporation";
 import type { CorporationHistory } from "@/lib/db/types/corporationHistory";
 import type { MarketCapHistory } from "@/lib/db/types/marketCapHistory";
 import type { ShareTradeHistory } from "@/lib/db/types/shareTradeHistory";
@@ -15,6 +14,17 @@ import { getOrganizationWithdrawalsCollection } from "@/lib/db/collections/organ
 import { getOrganizationProposalsCollection } from "@/lib/db/collections/organizationProposals";
 import { getOrganizationLegislationCollection } from "@/lib/db/collections/organizationLegislation";
 import { captureServerGameEvent, getServerPosthogClient } from "./serverPosthog";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { crisesCollection } from "@/lib/db/repositories/crises";
+import { corporationHistoryCollection } from "@/lib/db/repositories/corporationHistory";
+import { adminLogsCollection } from "@/lib/db/repositories/adminLogs";
+import { tradeHistoryCollection } from "@/lib/db/repositories/tradeHistory";
+import { shareTradeHistoryCollection } from "@/lib/db/repositories/shareTradeHistory";
+import { partyHistoryCollection } from "@/lib/db/repositories/partyHistory";
+import { battleReportsCollection } from "@/lib/db/repositories/battleReports";
+import { marketCapHistoryCollection } from "@/lib/db/repositories/marketCapHistory";
+import { partyMembershipEventsCollection } from "@/lib/db/repositories/partyMembershipEvents";
 
 type Properties = Record<string, string | number | boolean>;
 const finite = (value: number | undefined) => (Number.isFinite(value) ? value! : 0);
@@ -35,15 +45,16 @@ export async function captureWorldDepthPosthog(input: {
   try {
     const { db, turn } = input;
     const actionWindow = { $gte: Math.max(0, turn - 1), $lte: turn };
-    const currentWorld = await db
-      .collection<GameState>("gameState")
-      .findOne({ _id: "current" }, { projection: { worldEpochStartedAt: 1, preset: 1 } });
+    const currentWorld = await gameStateCollection(db).findOne(
+      { _id: "current" },
+      { projection: { worldEpochStartedAt: 1, preset: 1 } }
+    );
     let worldEpochStartedAt = currentWorld?.worldEpochStartedAt;
     if (!worldEpochStartedAt && currentWorld?.preset) {
       // Older gameState documents predate worldEpochStartedAt. The reset-run
       // row is opened before teardown and retains its original startedAt across
       // failed resets and build-only recovery, so it is the legacy boundary.
-      const latestReset = await db.collection<AdminLog>("adminLogs").findOne(
+      const latestReset = await adminLogsCollection(db).findOne(
         {
           action: { $in: ["game_reset", "game_full_reset"] },
           "resetRun.preset": currentWorld.preset,
@@ -85,8 +96,7 @@ export async function captureWorldDepthPosthog(input: {
       leadership,
       withdrawals,
     ] = await Promise.all([
-      db
-        .collection<PartyHistorySnapshot>("partyHistory")
+      partyHistoryCollection(db)
         .find(
           { turn },
           {
@@ -101,8 +111,7 @@ export async function captureWorldDepthPosthog(input: {
           }
         )
         .toArray(),
-      db
-        .collection<PartyMembershipEvent>("partyMembershipEvents")
+      partyMembershipEventsCollection(db)
         .find(membershipFilter, {
           projection: {
             turn: 1,
@@ -115,8 +124,7 @@ export async function captureWorldDepthPosthog(input: {
           },
         })
         .toArray(),
-      db
-        .collection<CorporationHistory>("corporationHistory")
+      corporationHistoryCollection(db)
         .find(
           { turn },
           {
@@ -135,8 +143,7 @@ export async function captureWorldDepthPosthog(input: {
           }
         )
         .toArray(),
-      db
-        .collection<MarketCapHistory>("marketCapHistory")
+      marketCapHistoryCollection(db)
         .find(
           { turn },
           {
@@ -150,8 +157,7 @@ export async function captureWorldDepthPosthog(input: {
           }
         )
         .toArray(),
-      db
-        .collection<TradeHistoryEntry>("tradeHistory")
+      tradeHistoryCollection(db)
         .find(
           { turn: Math.max(0, turn - 1) },
           {
@@ -166,8 +172,7 @@ export async function captureWorldDepthPosthog(input: {
           }
         )
         .toArray(),
-      db
-        .collection<BattleReportDoc>("battleReports")
+      battleReportsCollection(db)
         .find(
           { turn },
           {
@@ -186,8 +191,7 @@ export async function captureWorldDepthPosthog(input: {
           }
         )
         .toArray(),
-      db
-        .collection<Crisis>("crises")
+      crisesCollection(db)
         .find(
           { $or: [{ startTurn: actionWindow }, { endTurn: actionWindow, status: "resolved" }] },
           {
@@ -230,8 +234,7 @@ export async function captureWorldDepthPosthog(input: {
           }
         )
         .toArray(),
-      db
-        .collection<ShareTradeHistory>("shareTradeHistory")
+      shareTradeHistoryCollection(db)
         .find(
           { turn: actionWindow, kind: { $ne: "correction" } },
           { projection: { corporationId: 1, turn: 1, kind: 1, shares: 1, totalAnchor: 1 } }
@@ -255,8 +258,7 @@ export async function captureWorldDepthPosthog(input: {
       ...shareTrades.map((row) => row.corporationId),
     ];
     const corporateNations = corporateIds.length
-      ? await db
-          .collection<Corporation>("corporations")
+      ? await corporationsCollection(db)
           .find({ _id: { $in: corporateIds } }, { projection: { countryId: 1 } })
           .toArray()
       : [];

@@ -13,6 +13,11 @@ import {
   foreignPolicyModeFrom,
   foreignPolicyStageFrom,
 } from "@/lib/nppAutonomy/foreignPolicyRollout";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { tradeFlowSnapshotsCollection } from "@/lib/db/repositories/tradeFlowSnapshots";
+import { conflictsCollection } from "@/lib/db/repositories/conflicts";
+import { tradeEmbargoesCollection } from "@/lib/db/repositories/tradeEmbargoes";
+import { nppForeignPolicyDecisionsCollection } from "@/lib/db/repositories/nppForeignPolicyDecisions";
 
 const LEDGER_WINDOW_TURNS = 120;
 const LEDGER_DOCUMENT_LIMIT = 5_000;
@@ -25,27 +30,21 @@ function percentChange(current: number, previous: number): number | null {
 /** GET /api/admin/npp/foreign-policy returns a bounded operational ledger. */
 export const GET = withAdminRoute(async (_auth) => {
   const db = await getDb();
-  const gameState = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+  const gameState = await gameStateCollection(db).findOne({ _id: "current" });
   const currentTurn = gameState?.currentTurn ?? 0;
   const fromTurn = Math.max(0, currentTurn - LEDGER_WINDOW_TURNS + 1);
 
   const [decisions, embargoes, tradeSnapshots, activeConflictCount] = await Promise.all([
-    db
-      .collection<ForeignPolicyLedgerDecision>("nppForeignPolicyDecisions")
+    nppForeignPolicyDecisionsCollection<ForeignPolicyLedgerDecision>(db)
       .find({ turn: { $gte: fromTurn } })
       .sort({ turn: -1, countryId: 1 })
       .limit(LEDGER_DOCUMENT_LIMIT)
       .toArray(),
-    db.collection<TradeEmbargo>("tradeEmbargoes").find({}).toArray(),
-    db
-      .collection<TradeFlowSnapshot>("tradeFlowSnapshots")
-      .find({})
-      .sort({ turn: -1 })
-      .limit(2)
-      .toArray(),
-    db
-      .collection<ConflictDoc>("conflicts")
-      .countDocuments({ status: { $in: ["active", "escalating", "winding_down"] } }),
+    tradeEmbargoesCollection(db).find({}).toArray(),
+    tradeFlowSnapshotsCollection(db).find({}).sort({ turn: -1 }).limit(2).toArray(),
+    conflictsCollection(db).countDocuments({
+      status: { $in: ["active", "escalating", "winding_down"] },
+    }),
   ]);
 
   const activeEmbargoes = embargoes.filter(

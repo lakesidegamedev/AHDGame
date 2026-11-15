@@ -12,7 +12,6 @@ vi.mock("@/app/world/conflicts/generals/GeneralProfileClient", () => ({
 }));
 afterEach(cleanup);
 const base: ComponentProps<typeof ProfileTabs> = {
-  conflictsEnabled: true,
   subject: { id: "char-1", name: "Test Character" },
   adopted: {},
   general: null,
@@ -29,7 +28,7 @@ function shell(props: Partial<ComponentProps<typeof ProfileTabs>> = {}) {
 }
 describe("profile role views", () => {
   it("always shows all three views and locks inapplicable military and business", () => {
-    render(shell({ conflictsEnabled: false }));
+    render(shell());
     expect(screen.getAllByRole("tab")).toHaveLength(3);
     fireEvent.click(screen.getByRole("tab", { name: /Military/ }));
     expect(screen.getByText("Political content")).toBeTruthy();
@@ -67,7 +66,6 @@ describe("profile role views", () => {
   it("puts the header and the tabs in one band and keeps lock reasons as hover text", () => {
     render(
       shell({
-        conflictsEnabled: false,
         header: <h1>Identity block</h1>,
         notices: <p>Onboarding notice</p>,
       })
@@ -77,7 +75,7 @@ describe("profile role views", () => {
     expect(within(band as HTMLElement).getByRole("tablist")).toBeTruthy();
 
     const military = screen.getByRole("tab", { name: /Military/ });
-    expect(military.getAttribute("title")).toBe("Military is disabled in this world.");
+    expect(military.getAttribute("title")).toBe("No military service record is available.");
     const reasonId = military.getAttribute("aria-describedby");
     expect(reasonId).toBeTruthy();
     expect(document.getElementById(reasonId ?? "")?.closest(".sr-only")).toBeTruthy();

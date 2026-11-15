@@ -9,6 +9,11 @@ import { getHouseSeats, isUsElectoralState } from "@/lib/constants/states";
 import { MS_PER_TURN, SENATE_STAGGER_TURNS } from "@/lib/constants/turnTime";
 import { cycleAnchorContextFromGameState } from "@/lib/elections/cycleAnchorContext";
 import { electionToLarpYear } from "@/lib/utils/formatters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import type { Document } from "mongodb";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 // POST /api/admin/officials/init — Initializes elected official positions and cycle-1 elections for senate, house, or executive offices.
 // Auth: requireAdmin
@@ -31,12 +36,14 @@ export async function POST(request: Request) {
     // office tree and is initialised by the bootstrap + per-turn sync, not
     // by this admin init route.
     if (officeType === "executive") {
-      const existingPres = await db
-        .collection("electedOfficials")
-        .countDocuments({ countryId: "US", officeType: "president" });
-      const existingVP = await db
-        .collection("electedOfficials")
-        .countDocuments({ countryId: "US", officeType: "vicePresident" });
+      const existingPres = await electedOfficialsCollection<Document>(db).countDocuments({
+        countryId: "US",
+        officeType: "president",
+      });
+      const existingVP = await electedOfficialsCollection<Document>(db).countDocuments({
+        countryId: "US",
+        officeType: "vicePresident",
+      });
       if (existingPres > 0 && existingVP > 0) {
         return errorResponse(409, "President and Vice President positions already exist", {
           extra: { count: 2 },
@@ -64,7 +71,7 @@ export async function POST(request: Request) {
         });
       }
       if (execToInsert.length > 0) {
-        await db.collection("electedOfficials").insertMany(execToInsert);
+        await electedOfficialsCollection<Document>(db).insertMany(execToInsert);
       }
       return NextResponse.json({
         success: true,
@@ -77,7 +84,7 @@ export async function POST(request: Request) {
     // Active preset drives House apportionment (1950 vs 1990 vs 2020 census) and
     // the era statehood roster. Read BEFORE the state filter — the apportionment
     // map is what defines statehood — and reused below for cycle-1 anchoring.
-    const presetGameState = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+    const presetGameState = await gameStateCollection(db).findOne({ _id: "current" });
     const presetHouseSeats = getHouseSeats(presetGameState?.preset);
 
     // Only full electoral states, and only those the ACTIVE preset apportions.
@@ -87,7 +94,7 @@ export async function POST(request: Request) {
     // officials for pre-statehood territories (Alaska/Hawaii before 1959) that
     // `seedSeats` gives no seat — the same era gate `initializeOfficials` and
     // `seedSeats` apply. Keep all three in step.
-    const states = (await db.collection<State>("states").find({}).toArray()).filter(
+    const states = (await statesCollection(db).find({}).toArray()).filter(
       (s) => isUsElectoralState(s._id) && presetHouseSeats[s._id] != null
     );
 
@@ -97,7 +104,7 @@ export async function POST(request: Request) {
 
     // Check if officials of this type already exist
     const typeFilter = officeType ? { officeType } : {};
-    const existingCount = await db.collection("electedOfficials").countDocuments(typeFilter);
+    const existingCount = await electedOfficialsCollection<Document>(db).countDocuments(typeFilter);
 
     if (existingCount > 0) {
       const typeLabel = officeType ? `${officeType} positions` : "elected officials";
@@ -170,7 +177,7 @@ export async function POST(request: Request) {
     }
 
     // Insert all officials
-    const result = await db.collection("electedOfficials").insertMany(officialsToInsert);
+    const result = await electedOfficialsCollection<Document>(db).insertMany(officialsToInsert);
 
     // Also create elections for cycle 1
     const electionsToInsert: Omit<Election, "_id">[] = [];
@@ -178,12 +185,14 @@ export async function POST(request: Request) {
     let houseElections = 0;
 
     // 48 turns = 1 year. House 2y (96t), Senate 6y (288t), staggered by class.
-    const { DEFAULT_DURATIONS } = await import("@/lib/turn/perpetualElections");
+    const { DEFAULT_DURATIONS } = await import("@/lib/elections/scheduling");
     const senateDur = DEFAULT_DURATIONS.senate;
     const houseDur = DEFAULT_DURATIONS.house;
 
     // Check if elections already exist for cycle 1
-    const existingElectionsCount = await db.collection("elections").countDocuments({ cycle: 1 });
+    const existingElectionsCount = await electionsCollection<Document>(db).countDocuments({
+      cycle: 1,
+    });
 
     if (existingElectionsCount === 0) {
       // Cycle-1 LARP years anchor to the active preset's calendar (1991-default
@@ -256,7 +265,9 @@ export async function POST(request: Request) {
       }
 
       if (electionsToInsert.length > 0) {
-        await db.collection("elections").insertMany(electionsToInsert.map(withCampaignRules));
+        await electionsCollection<Document>(db).insertMany(
+          electionsToInsert.map(withCampaignRules)
+        );
       }
     }
 
@@ -295,7 +306,7 @@ export async function DELETE() {
     const db = await getDb();
 
     // Delete all vacant House seats (not needed in new system)
-    const result = await db.collection("electedOfficials").deleteMany({
+    const result = await electedOfficialsCollection<Document>(db).deleteMany({
       officeType: "house",
       characterId: null,
     });
@@ -320,8 +331,7 @@ export async function GET() {
 
     const db = await getDb();
 
-    const counts = await db
-      .collection("electedOfficials")
+    const counts = await electedOfficialsCollection<Document>(db)
       .aggregate([
         {
           $group: {

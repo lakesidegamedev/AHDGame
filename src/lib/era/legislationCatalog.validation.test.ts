@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   LEGISLATION_ERA,
+  LEGISLATION_ERA_UNTIL,
   WINDOW_CONSTRAINT_WAIVERS,
   GATED_REVENUE_ACK,
 } from "./legislationCatalog";
@@ -29,6 +30,17 @@ describe("legislation era catalog — authoring validation", () => {
     for (const [id, v] of Object.entries(LEGISLATION_ERA)) {
       const ok = v === "always" || (typeof v === "number" && v > 1900 && v < 2100);
       expect(ok, `${id} = ${String(v)}`).toBe(true);
+    }
+  });
+
+  it("every untilYear names a catalog entry and falls after its first fileable year", () => {
+    for (const [id, until] of Object.entries(LEGISLATION_ERA_UNTIL)) {
+      const from = LEGISLATION_ERA[id];
+      expect(from, `${id} must be in LEGISLATION_ERA`).toBeDefined();
+      expect(Number.isInteger(until) && until > 1900 && until < 2200, `${id} = ${until}`).toBe(
+        true
+      );
+      if (typeof from === "number") expect(until, id).toBeGreaterThan(from);
     }
   });
 

@@ -17,22 +17,13 @@ import {
 /**
  * The United States' institutions.
  *
- * ⚠️ THE FACTS LIVE IN `./institutionsFacts`, NOT HERE. This module composes them
- * with the cabinet, and the cabinet is heavy: `mechanics` alone is 1,915 lines.
- * A registry that needs one seat id or the legislative process must import from
- * `./institutionsFacts`, never from here, or it ships the whole cabinet to the
- * browser. `clientSafeLeafModules.test.ts` enforces that.
+ * Facts live in `./institutionsFacts`, not here: this module pulls in the heavy
+ * cabinet. Import from `institutionsFacts` for seat ids or the legislative
+ * process, or the whole cabinet ships to the browser. Enforced by
+ * `clientSafeLeafModules.test.ts`.
  *
- * ⚠️ `MECHANICS_BY_COUNTRY.US` *is* `US_CABINET_MECHANICS` and
- * `ORDERS_BY_COUNTRY.US` *is* `US_MINISTERIAL_ORDERS` -- those registries
- * forward to the same modules composed here, so there is exactly one copy of
- * each rather than a second source of 2,232 lines.
- *
- * ⚠️ `CABINET_POSITIONS` KEEPS ITS UNPREFIXED NAME. Every other country exports
- * `UK_CABINET_POSITIONS`, `JP_CABINET_POSITIONS` and so on; the US had the bare
- * name because it is the default country, and twelve API routes read it through
- * the `@/lib/constants` barrel. Renaming it is a separate change from moving it,
- * and doing both at once would have hidden one in the other.
+ * `CABINET_POSITIONS` keeps its unprefixed name despite the per-country
+ * convention; API routes read it through the `@/lib/constants` barrel.
  */
 export const US_INSTITUTIONS: CountryInstitutions = {
   config: US_CONFIG,

@@ -1,5 +1,6 @@
 import type { Db, ObjectId } from "mongodb";
 import type { PlayerMail } from "@/lib/db/types/playerMail";
+import { playerMailCollection } from "@/lib/db/repositories/playerMail";
 
 interface SystemMailParams {
   toCharacterId: ObjectId;
@@ -18,7 +19,7 @@ interface SystemMailParams {
  * No fromCharacterId — these messages come from game systems, not players.
  */
 export async function sendSystemMail(db: Db, params: SystemMailParams): Promise<void> {
-  await db.collection<Omit<PlayerMail, "_id">>("playerMail").insertOne(toMail(params));
+  await playerMailCollection<Omit<PlayerMail, "_id">>(db).insertOne(toMail(params));
 }
 
 function toMail(params: SystemMailParams): Omit<PlayerMail, "_id"> {
@@ -40,7 +41,7 @@ function toMail(params: SystemMailParams): Omit<PlayerMail, "_id"> {
 /** Send system mail to many recipients with one database write. */
 export async function sendSystemMails(db: Db, recipients: SystemMailParams[]): Promise<void> {
   if (recipients.length === 0) return;
-  await db
-    .collection<Omit<PlayerMail, "_id">>("playerMail")
-    .insertMany(recipients.map(toMail), { ordered: false });
+  await playerMailCollection<Omit<PlayerMail, "_id">>(db).insertMany(recipients.map(toMail), {
+    ordered: false,
+  });
 }

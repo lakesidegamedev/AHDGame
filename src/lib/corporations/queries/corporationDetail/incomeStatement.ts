@@ -170,7 +170,7 @@ export interface IncomeStatementResult {
 }
 
 /**
- * Income statement, corp taxes, bank charter, and balance sheet (#587).
+ * Income statement, corp taxes, bank charter, and balance sheet.
  *
  * Occupational pensions name the two cash legs the pension pass debits twice
  * a turn: the bargained contribution (a price the CEO agreed) and the deficit

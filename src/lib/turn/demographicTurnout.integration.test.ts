@@ -61,8 +61,8 @@ describe("Demographic Turnout Integration", () => {
         gotvBudgetPerTurn: 100,
         gotvBudgetPercent: 0,
         // Explicit target required by processPartyGOTV — evangelicals align with party (+4,+5)
-        gotvTargetCategory: "ideology",
-        gotvTargetGroup: "evangelicals",
+        gotvTargetCategory: "wealth",
+        gotvTargetGroup: "high",
         suppressionBudgetPercent: 0,
         orgBuildingPercent: 0,
         createdAt: new Date(),
@@ -91,12 +91,12 @@ describe("Demographic Turnout Integration", () => {
       );
 
       // Evangelicals (+4, +5) should be boosted (within 2 points of party)
-      expect(gotvResult.turnout[0].modifiers.ideology.evangelicals).toBeGreaterThan(0);
+      expect(gotvResult.turnout[0].modifiers.wealth.high).toBeGreaterThan(0);
 
       // Step 2: Apply decay
       const decayResult = await applyDecayToAllStates(gotvResult.turnout);
-      const afterDecay = decayResult[0].modifiers.ideology.evangelicals;
-      const afterGOTV = gotvResult.turnout[0].modifiers.ideology.evangelicals;
+      const afterDecay = decayResult[0].modifiers.wealth.high;
+      const afterGOTV = gotvResult.turnout[0].modifiers.wealth.high;
 
       // Should decay by 2%
       expect(afterDecay).toBeCloseTo(afterGOTV * 0.98, 2);
@@ -105,7 +105,7 @@ describe("Demographic Turnout Integration", () => {
       const canvassingAction = {
         characterId: new ObjectId(),
         stateId: "PA",
-        demographic: { category: "ideology", group: "evangelicals" },
+        demographic: { category: "wealth", group: "high" },
         characterPosition: { economic: 4, social: 5 },
         costFunds: 100,
         costActions: 1,
@@ -115,7 +115,7 @@ describe("Demographic Turnout Integration", () => {
       const canvassResult = await processPlayerCanvassing([canvassingAction], decayResult);
 
       // Should be higher than after decay
-      expect(canvassResult[0].modifiers.ideology.evangelicals).toBeGreaterThan(afterDecay);
+      expect(canvassResult[0].modifiers.wealth.high).toBeGreaterThan(afterDecay);
     });
   });
 
@@ -282,8 +282,8 @@ describe("Demographic Turnout Integration", () => {
         gotvBudgetPerTurn: 100,
         gotvBudgetPercent: 0,
         // Explicit target required — progressives (-5,-5) align with DEM at (-4,-4)
-        gotvTargetCategory: "ideology",
-        gotvTargetGroup: "progressives",
+        gotvTargetCategory: "wealth",
+        gotvTargetGroup: "low",
         suppressionBudgetPercent: 0,
         orgBuildingPercent: 0,
         createdAt: new Date(),
@@ -311,10 +311,10 @@ describe("Demographic Turnout Integration", () => {
       );
 
       // Progressives at -5, -5 should be boosted (within 2 points)
-      expect(result.turnout[0].modifiers.ideology.progressives).toBeGreaterThan(0);
+      expect(result.turnout[0].modifiers.wealth.low).toBeGreaterThan(0);
 
       // Evangelicals at +4, +5 should NOT be boosted (too far)
-      expect(result.turnout[0].modifiers.ideology.evangelicals).toBe(0);
+      expect(result.turnout[0].modifiers.wealth.high).toBe(0);
     });
   });
 
@@ -332,7 +332,7 @@ describe("Demographic Turnout Integration", () => {
       const perfectAction = {
         characterId: new ObjectId(),
         stateId: "PA",
-        demographic: { category: "ideology", group: "progressives" },
+        demographic: { category: "wealth", group: "low" },
         characterPosition: { economic: -5, social: -5 },
         costFunds: 100,
         costActions: 1,
@@ -343,19 +343,28 @@ describe("Demographic Turnout Integration", () => {
       const poorAction = {
         characterId: new ObjectId(),
         stateId: "PA",
-        demographic: { category: "ideology", group: "progressives" },
+        demographic: { category: "wealth", group: "low" },
         characterPosition: { economic: 5, social: 5 },
         costFunds: 100,
         costActions: 1,
         isActiveCampaignSeason: false,
       };
 
+      const { resolvePartyTurnoutTargetLean } =
+        await import("@/lib/demographics/partyTurnoutTargetResolver");
+      const lean = resolvePartyTurnoutTargetLean("US", "wealth", "low")!;
+      perfectAction.characterPosition = { economic: lean.economicLean, social: lean.socialLean };
+      poorAction.characterPosition = {
+        economic: lean.economicLean + 5,
+        social: lean.socialLean + 5,
+      };
+
       const perfectResult = await processPlayerCanvassing([perfectAction], [{ ...mockTurnout }]);
       const poorResult = await processPlayerCanvassing([poorAction], [{ ...mockTurnout }]);
 
       // Perfect alignment should produce larger boost
-      expect(perfectResult[0].modifiers.ideology.progressives).toBeGreaterThan(
-        poorResult[0].modifiers.ideology.progressives
+      expect(perfectResult[0].modifiers.wealth.low).toBeGreaterThan(
+        poorResult[0].modifiers.wealth.low
       );
     });
 

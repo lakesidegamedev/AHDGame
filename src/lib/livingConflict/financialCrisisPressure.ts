@@ -1,6 +1,6 @@
 import type { Db } from "mongodb";
 import type { EconomicMetric, EconomicVitalSigns } from "@/lib/db/types";
-import { ECONOMIC_VITAL_SIGNS_COLLECTION } from "@/lib/economy/economicVitalSigns";
+import { economicVitalSignsCollection } from "@/lib/db/repositories/economicVitalSigns";
 export { GLOBAL_FINANCIAL_CRISIS_KEY } from "./financialCrisisKey";
 
 type Metric = Pick<EconomicMetric, "value"> | null | undefined;
@@ -90,22 +90,20 @@ export async function loadFinancialCrisisSignal(
   db: Db,
   currentTurn: number
 ): Promise<FinancialCrisisSignal> {
-  const snapshot = await db
-    .collection<FinancialVitalSigns>(ECONOMIC_VITAL_SIGNS_COLLECTION)
-    .findOne(
-      { turn: { $lte: currentTurn } },
-      {
-        projection: {
-          turn: 1,
-          "firms.lossMakingShare.value": 1,
-          "money.creditToM2.value": 1,
-          "securities.corporateNoHolderBondShare.value": 1,
-          "securities.sovereignNoHolderBondShare.value": 1,
-          "securities.organicTwoSidedListingShare.value": 1,
-        },
-        sort: { turn: -1 },
-      }
-    );
+  const snapshot = await economicVitalSignsCollection<FinancialVitalSigns>(db).findOne(
+    { turn: { $lte: currentTurn } },
+    {
+      projection: {
+        turn: 1,
+        "firms.lossMakingShare.value": 1,
+        "money.creditToM2.value": 1,
+        "securities.corporateNoHolderBondShare.value": 1,
+        "securities.sovereignNoHolderBondShare.value": 1,
+        "securities.organicTwoSidedListingShare.value": 1,
+      },
+      sort: { turn: -1 },
+    }
+  );
 
   if (!snapshot) return financialCrisisSignal({});
   return financialCrisisSignal({

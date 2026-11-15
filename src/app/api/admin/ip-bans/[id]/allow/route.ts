@@ -7,6 +7,7 @@ import { handleRouteError, badRequest, notFound, errorResponse } from "@/lib/api
 import { parseJsonBody } from "@/lib/api/validate";
 import { createAdminLog } from "@/lib/adminLog";
 import type { BannedIp } from "@/lib/db/types";
+import { bannedIpsCollection } from "@/lib/db/repositories/bannedIps";
 
 const patchSchema = z.union([
   z.object({
@@ -60,9 +61,9 @@ export async function PATCH(request: Request, { params }: RouteParams) {
           },
         };
 
-    const result = await db
-      .collection<BannedIp>("bannedIps")
-      .findOneAndUpdate({ _id: objectId }, update, { returnDocument: "after" });
+    const result = await bannedIpsCollection(db).findOneAndUpdate({ _id: objectId }, update, {
+      returnDocument: "after",
+    });
     if (!result) throw notFound("Row not found.");
 
     await createAdminLog({

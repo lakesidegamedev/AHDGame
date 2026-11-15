@@ -1,22 +1,11 @@
 /**
  * 1953 era adjustments for a `StateMetrics` document.
  *
- * The 1953 BASELINE adjuster (`stateBaselines1953.ts`) has existed for a while,
- * but there was never a METRICS analogue — only 1991 had one
- * (`stateMetrics1991.applyEra1991Adjustments`). The consequence was that any
- * country whose seeder lacked a bespoke 1953 metrics bundle seeded its MODERN
- * values into a 1953 world: `seedUKStateMetrics` had no 1953 branch at all, so
- * London started with `medianIncome` 42,000, `costOfLiving` 145,
- * `lifeExpectancy` 81.5 and `broadbandAccess` 97 — in 1953.
+ * Without this, seeders with no bespoke 1953 metrics bundle seed modern values
+ * into a 1953 world, so baselines decay while metrics stay modern forever.
  *
- * The baselines were era-adjusted while the metrics were not, so the world also
- * spent hundreds of turns gliding DOWN from modern values toward 1953 decay
- * targets, and any metric outside the adjusted set simply stayed modern forever.
- *
- * This mirrors the 1991 adjuster's shape exactly (same `shift` helper, same
- * clone-then-clamp structure) so the two eras stay comparable, and mirrors the
- * 1953 BASELINE adjuster's economic ratios so metrics and their decay targets
- * agree instead of pulling against each other.
+ * Mirrors the 1991 metrics adjuster's shape and the 1953 baseline adjuster's
+ * economic ratios so metrics and decay targets agree.
  */
 import { clamp } from "@/lib/numeric/rules";
 import type { StateMetrics, StateMetricValue } from "@/lib/db/types";
@@ -126,22 +115,9 @@ export function applyEra1953Adjustments(metrics: StateMetrics): StateMetrics {
 
   // ── Population ────────────────────────────────────────────────────────────
   if (adjusted.population) {
-    // Baby boom: younger populations and higher birth rates than 2019.
-    // Band must admit the real 1953 spread, not the Western slice. An earlier
-    // medianAge floor of 22 snapped every young country UP to 22 — erasing
-    // Turkey's authored 20, Nigeria's seeded 16, and USSR Central Asia's 21.
-    // Real 1953 ends: ~15–16 (Nigeria North; cf. ngPopulationAnchors1991) and
-    // ~34–36 (Sweden interior / FR rural; seMetricPresets1953 / frMetricPresets1953).
-    // Authored 1953 presets are applied by the per-country seeder AFTER this
-    // adjuster (metricPresets.getRegionMetricPresets), so a country with an
-    // authored medianAge is restored on overlay; the band still matters for
-    // countries that do not author one (NG/BR/UK).
-    //
-    // Pass-through: the −8 assumes a modern (old) input. Skip it when the
-    // seed is already on the young side of the 1953 spread (≤24 ≈ upper end
-    // of developing-world 1950s medians; UN Pop Division). Full-band
-    // pass-through would wrongly leave BR's modern 28–33 untouched. Band
-    // [15, 36] must stay identical to stateBaselines1953 (decay target).
+    // Baby boom: younger than 2019. Band [15, 36] must match stateBaselines1953.
+    // Authored presets are applied after this adjuster and restored on overlay.
+    // Pass-through guards against double-shifting already-young seeds.
     adjusted.population.medianAge = shift(adjusted.population.medianAge, (v) =>
       v >= 15 && v <= 24 ? v : clamp(v - 8, 15, 36)
     );

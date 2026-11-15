@@ -9,6 +9,7 @@ import type { Db, ObjectId } from "mongodb";
 import { z } from "zod";
 import type { Corporation } from "@/lib/db/types";
 import { resolveMergerAuthority } from "@/lib/corporations/mergerReview/authority";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export const antitrustCaseDecisionSchema = z.object({
   decision: z.enum(["order", "dismiss"]),
@@ -37,7 +38,7 @@ export async function decideAntitrustCase(
       error: "Only the competition authority of this country can decide the case.",
     };
   }
-  const result = await db.collection<Corporation>("corporations").updateOne(
+  const result = await corporationsCollection(db).updateOne(
     {
       _id: corporation._id,
       "antitrustCase.openedTurn": open.openedTurn,
@@ -98,8 +99,7 @@ export async function antitrustOrdersView(
   corporation: Pick<Corporation, "_id" | "name" | "antitrustDivestiture" | "pendingDivestiture">
 ): Promise<AntitrustOrdersView> {
   const id = corporation._id.toString();
-  const ordered = await db
-    .collection<Corporation>("corporations")
+  const ordered = await corporationsCollection(db)
     .find(
       { "antitrustDivestiture.rootCorporationId": id },
       { projection: { name: 1, antitrustDivestiture: 1 } }

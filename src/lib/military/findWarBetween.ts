@@ -7,20 +7,16 @@ import { opposedBelligerents } from "@/lib/military/occupation";
 /**
  * The live war these two countries are already fighting against each other, if any.
  *
- * ONE war at a time between the same pair. Both halves of a declaration call this —
- * `validateDeclareWar` at proposal, `declareWar` at enactment — because a bill sits
- * before the chambers for turns and the pair can become opposed in the meantime, via
- * a third country's war. Checking only at proposal would let the enactment open a
- * second war anyway.
+ * ONE war at a time between the same pair. Both `validateDeclareWar` (at
+ * proposal) and `declareWar` (at enactment) call this, because a bill sits
+ * before the chambers for turns and the pair can become opposed in the
+ * meantime via a third country's war.
  *
- * The two checks live in ONE function rather than one copy each. This branch has
- * already been bitten by the other arrangement: the two-thirds pass rule was added
- * to the validator with a defaulted argument, so the engine kept applying a simple
- * majority and no type error could say so.
+ * ONE shared function, not a copy in each caller: a past pass-rule change
+ * diverged between validator and engine with no type error to catch it.
  *
- * Scanned across every live conflict rather than the ones hosted by either party,
- * because a pair can be opposed in a war hosted by a third country and neither
- * host-scoped lookup would see it.
+ * Scanned across every live conflict, not host-scoped, because a pair can be
+ * opposed in a war hosted by a third country.
  */
 export async function findWarBetween(
   db: Db,

@@ -3,46 +3,40 @@ import { ObjectId, type ClientSession, type Collection, type Document, type Filt
 
 /**
  * Partial-write safety for money flows on deployments without transaction
- * support (issue #1672).
+ * support.
  *
  * INVARIANTS (read before adding a call site):
  *
- * 1. Every balance mutation MUST go through `applyIdempotentLeg`. The
- *    idempotency key is recorded on the account document in the SAME atomic
- *    single-document write as the balance change (`$inc` + `$push` with a
- *    `$ne: key` filter), so a crashed-and-retried leg applies at most once
- *    no matter how many times it is re-run. A leg applied any other way
- *    cannot be reconciled safely.
- * 2. Legs always run in order and never skip: leg N runs only after every
- *    earlier leg reported `applied` or `already-applied`. If a leg fails
- *    after earlier legs applied, the applied prefix is reversed with
- *    compensation legs (also keyed, so crash-safe) before the receipt
- *    settles. A flow therefore ends `completed` (every leg applied exactly
- *    once) or terminal without effect (`failed` when nothing applied,
- *    `compensated` when the prefix was reversed). Never a partial state.
- * 3. First attempt and crash recovery are the SAME operation
- *    (`runMoneyFlowLegs`): re-running legs after a crash converges instead
- *    of double-applying, because of invariant 1.
- * 4. One key = one attempt. A key that settled `failed`/`compensated` stays
- *    terminal; a retry with the same key throws `MoneyFlowTerminalError`
- *    (fail closed) and a new attempt needs a new key. A key reused with a
+ * 1. Every balance mutation MUST go through `applyIdempotentLeg`. The key is
+ *    recorded on the account doc in the SAME atomic write as the balance
+ *    change (`$inc` + `$push` filtered on `$ne: key`), so a crashed and
+ *    retried leg applies at most once. A leg applied any other way cannot be
+ *    reconciled safely.
+ * 2. Legs run in order and never skip: leg N runs only after every earlier
+ *    leg reported `applied` or `already-applied`. If a leg fails after
+ *    earlier legs applied, the applied prefix is reversed with keyed
+ *    compensation legs before the receipt settles. A flow ends `completed`
+ *    (every leg applied exactly once) or terminal without effect (`failed`
+ *    if nothing applied, `compensated` if the prefix was reversed). Never a
+ *    partial state.
+ * 3. First attempt and crash recovery are the same operation
+ *    (`runMoneyFlowLegs`): rerunning legs converges instead of
+ *    double-applying, by invariant 1.
+ * 4. One key = one attempt. A key that settled `failed`/`compensated` is
+ *    terminal; retrying the same key throws `MoneyFlowTerminalError` (fail
+ *    closed) and a new attempt needs a new key. Reusing a key with a
  *    different fingerprint throws `MoneyFlowKeyConflictError`.
  * 5. Under real transactions this module is behavior-preserving: legs and
- *    receipt writes accept the caller's session and join the transaction,
- *    so commit/abort keeps the old atomicity. The key guard is harmless
- *    there (a re-invoked transaction callback re-applies cleanly).
+ *    receipt writes accept the caller's session and join the transaction. The
+ *    key guard is harmless (a re-invoked transaction callback re-applies
+ *    cleanly).
  *
- * Migration status: this primitive is available to callers, but the #1672
- * source branch's consumer migrations have not yet been integrated into Track 1.
- * Each caller must use keyed balance legs and keyed side effects, then prove
- * replay, compensation, and orphan recovery before claiming coverage.
- *
- * Operations note: receipts accumulate one small document per keyed flow. The
- * TTL index expires only terminal receipts 30 days after `updatedAt`; an
- * in-progress receipt must survive until recovery. The account's applied-key
- * history is retained for its lifetime: evicting a key while its receipt is
- * in progress lets a delayed retry apply that leg twice. Monitor account
- * document size as part of #1672's recovery and retention gate.
+ * Operations: receipts accumulate one small doc per keyed flow. The TTL index
+ * expires only terminal receipts 30 days after `updatedAt`; an in-progress
+ * receipt must survive until recovery. The account's applied-key history is
+ * retained for its lifetime: evicting a key while its receipt is in progress
+ * lets a delayed retry apply that leg twice. Monitor account doc size as part
+ * of the recovery and retention gate.
  */
 
 export const NON_ATOMIC_MONEY_FLOW_RECEIPTS_COLLECTION = "nonAtomicMoneyFlowReceipts";
@@ -165,7 +159,7 @@ function validateKey(key: string): void {
 
 /**
  * Derive a deterministic subkey for one leg, step, or compensation of a flow
- * (issue #1672). A client key near the accepted 128-character limit would
+ * A client key near the accepted 128-character limit would
  * overflow the cap once a `:holder:...` / `:pool:...` / `:compensate:...`
  * suffix is appended, and the derived write would then throw `RangeError`
  * instead of moving money. This keeps ordinary short keys byte-identical to

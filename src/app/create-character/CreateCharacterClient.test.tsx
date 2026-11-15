@@ -202,6 +202,7 @@ describe("No Parties character creation", () => {
       );
     fireEvent.click(await screen.findByRole("radio", { name: /California/ }));
     await waitFor(() => expect(screen.queryByRole("region", { name: "Party" })).toBeNull());
+    fireEvent.click(screen.getByRole("button", { name: "Spread evenly" }));
     const submit = screen.getByRole("button", { name: /File|Create|Enter/ });
     expect(submit.hasAttribute("disabled")).toBe(false);
     fireEvent.click(submit);
@@ -337,6 +338,7 @@ describe("Creation resilience", () => {
       );
     fireEvent.click(await screen.findByRole("radio", { name: /California/ }));
     await waitFor(() => expect(screen.queryByRole("region", { name: "Party" })).toBeNull());
+    fireEvent.click(screen.getByRole("button", { name: "Spread evenly" }));
     fireEvent.click(screen.getByRole("button", { name: /File|Create|Enter/ }));
     expect(await screen.findByText(/paused for maintenance/)).toBeTruthy();
     expect(intakeEvents()).toContainEqual(

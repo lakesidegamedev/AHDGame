@@ -5,18 +5,11 @@ import { DeclareWarPanel } from "../cabinet/[positionId]/office/components/milit
 import { PeacePanel } from "../cabinet/[positionId]/office/components/PeacePanel";
 
 /**
- * The head of government's war-and-peace surface.
+ * The head of government's war-and-peace surface. The cabinet office page
+ * gates controls on `isHolder || isAdmin` for that seat, which is correct for
+ * the seat's own office, so the head of government gets their own surface.
  *
- * Both APIs already authorize the head of government; before this tab existed they
- * had nowhere to click, because the cabinet office page gates its controls on
- * `isHolder || isAdmin` — the holder of THAT seat. That gate is correct for a seat's
- * own office, so the head of government gets their own surface rather than controls
- * inside someone else's.
- *
- * Mounted by BOTH executive shells (`ExecutiveTabsClient` for parliamentary and
- * one-party, `WhiteHouseClient` for presidential) so the two cannot drift.
- *
- * Spec: the design doc
+ * Mounted by BOTH executive shells so they cannot drift.
  */
 export function ForeignAffairsTab({
   countryId,

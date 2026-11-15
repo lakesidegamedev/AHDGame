@@ -1,0 +1,3226 @@
+{
+  "capturedAt": "2026-11-11",
+  "status": "provisional-game-opening-not-certified",
+  "sources": {
+    "house": "https://www.callthemap.com/results/house",
+    "senate": "https://www.callthemap.com/results?office=senate",
+    "governors": "https://www.callthemap.com/results?office=governor",
+    "stateSenates": "https://www.callthemap.com/results/legislatures",
+    "texasCrossCheck": "https://electionresults.sos.state.tx.us/results.html"
+  },
+  "method": "Reported winners, then count leaders. Pending runoffs/RCV and missing counts retain incumbent party. Incomplete upper-chamber compositions retain prior party counts; any remaining vacancies are apportioned within those weights to fill the modeled game chamber. Nebraska is modeled nonpartisan. All figures are provisional, including publisher calls; none is certified by this snapshot.",
+  "house": [
+    {
+      "district": "AK-AL",
+      "party": "R",
+      "basis": "modeled-incumbent-hold-pending-count"
+    },
+    {
+      "district": "AL-01",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "AL-02",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "AL-03",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "AL-04",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "AL-05",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "AL-06",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "AL-07",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "AR-01",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "AR-02",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "AR-03",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "AR-04",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "AZ-01",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "AZ-02",
+      "party": "R",
+      "basis": "provisional-count-leader"
+    },
+    {
+      "district": "AZ-03",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "AZ-04",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "AZ-05",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "AZ-06",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "AZ-07",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "AZ-08",
+      "party": "R",
+      "basis": "provisional-count-leader"
+    },
+    {
+      "district": "AZ-09",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "CA-01",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "CA-02",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "CA-03",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "CA-04",
+      "party": "D",
+      "basis": "provisional-count-leader"
+    },
+    {
+      "district": "CA-05",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "CA-06",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "CA-07",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "CA-08",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "CA-09",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "CA-10",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "CA-11",
+      "party": "D",
+      "basis": "provisional-count-leader"
+    },
+    {
+      "district": "CA-12",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "CA-13",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "CA-14",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "CA-15",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "CA-16",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "CA-17",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "CA-18",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "CA-19",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "CA-20",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "CA-21",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "CA-22",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "CA-23",
+      "party": "R",
+      "basis": "provisional-count-leader"
+    },
+    {
+      "district": "CA-24",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "CA-25",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "CA-26",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "CA-27",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "CA-28",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "CA-29",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "CA-30",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "CA-31",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "CA-32",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "CA-33",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "CA-34",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "CA-35",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "CA-36",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "CA-37",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "CA-38",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "CA-39",
+      "party": "D",
+      "basis": "provisional-count-leader"
+    },
+    {
+      "district": "CA-40",
+      "party": "R",
+      "basis": "provisional-count-leader"
+    },
+    {
+      "district": "CA-41",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "CA-42",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "CA-43",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "CA-44",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "CA-45",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "CA-46",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "CA-47",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "CA-48",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "CA-49",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "CA-50",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "CA-51",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "CA-52",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "CO-01",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "CO-02",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "CO-03",
+      "party": "R",
+      "basis": "provisional-count-leader"
+    },
+    {
+      "district": "CO-04",
+      "party": "D",
+      "basis": "provisional-count-leader"
+    },
+    {
+      "district": "CO-05",
+      "party": "D",
+      "basis": "provisional-count-leader"
+    },
+    {
+      "district": "CO-06",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "CO-07",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "CO-08",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "CT-01",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "CT-02",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "CT-03",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "CT-04",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "CT-05",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "DE-AL",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "FL-01",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "FL-02",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "FL-03",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "FL-04",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "FL-05",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "FL-06",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "FL-07",
+      "party": "R",
+      "basis": "provisional-count-leader"
+    },
+    {
+      "district": "FL-08",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "FL-09",
+      "party": "D",
+      "basis": "provisional-count-leader"
+    },
+    {
+      "district": "FL-10",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "FL-11",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "FL-12",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "FL-13",
+      "party": "R",
+      "basis": "provisional-count-leader"
+    },
+    {
+      "district": "FL-14",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "FL-15",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "FL-16",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "FL-17",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "FL-18",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "FL-19",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "FL-20",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "FL-21",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "FL-22",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "FL-23",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "FL-24",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "FL-25",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "FL-26",
+      "party": "R",
+      "basis": "provisional-count-leader"
+    },
+    {
+      "district": "FL-27",
+      "party": "R",
+      "basis": "provisional-count-leader"
+    },
+    {
+      "district": "FL-28",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "GA-01",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "GA-02",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "GA-03",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "GA-04",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "GA-05",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "GA-06",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "GA-07",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "GA-08",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "GA-09",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "GA-10",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "GA-11",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "GA-12",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "GA-13",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "GA-14",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "HI-01",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "HI-02",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "IA-01",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "IA-02",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "IA-03",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "IA-04",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "ID-01",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "ID-02",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "IL-01",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "IL-02",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "IL-03",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "IL-04",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "IL-05",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "IL-06",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "IL-07",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "IL-08",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "IL-09",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "IL-10",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "IL-11",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "IL-12",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "IL-13",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "IL-14",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "IL-15",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "IL-16",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "IL-17",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "IN-01",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "IN-02",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "IN-03",
+      "party": "R",
+      "basis": "provisional-count-leader"
+    },
+    {
+      "district": "IN-04",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "IN-05",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "IN-06",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "IN-07",
+      "party": "D",
+      "basis": "provisional-count-leader"
+    },
+    {
+      "district": "IN-08",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "IN-09",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "KS-01",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "KS-02",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "KS-03",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "KS-04",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "KY-01",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "KY-02",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "KY-03",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "KY-04",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "KY-05",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "KY-06",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "LA-01",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "LA-02",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "LA-03",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "LA-04",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "LA-05",
+      "party": "R",
+      "basis": "modeled-incumbent-hold-pending-count"
+    },
+    {
+      "district": "LA-06",
+      "party": "D",
+      "basis": "modeled-incumbent-hold-pending-count"
+    },
+    {
+      "district": "MA-01",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "MA-02",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "MA-03",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "MA-04",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "MA-05",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "MA-06",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "MA-07",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "MA-08",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "MA-09",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "MD-01",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "MD-02",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "MD-03",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "MD-04",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "MD-05",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "MD-06",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "MD-07",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "MD-08",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "ME-01",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "ME-02",
+      "party": "R",
+      "basis": "provisional-count-leader"
+    },
+    {
+      "district": "MI-01",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "MI-02",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "MI-03",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "MI-04",
+      "party": "D",
+      "basis": "provisional-count-leader"
+    },
+    {
+      "district": "MI-05",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "MI-06",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "MI-07",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "MI-08",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "MI-09",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "MI-10",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "MI-11",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "MI-12",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "MI-13",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "MN-01",
+      "party": "D",
+      "basis": "provisional-count-leader"
+    },
+    {
+      "district": "MN-02",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "MN-03",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "MN-04",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "MN-05",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "MN-06",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "MN-07",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "MN-08",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "MO-01",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "MO-02",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "MO-03",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "MO-04",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "MO-05",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "MO-06",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "MO-07",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "MO-08",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "MS-01",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "MS-02",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "MS-03",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "MS-04",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "MT-01",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "MT-02",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "NC-01",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "NC-02",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "NC-03",
+      "party": "D",
+      "basis": "provisional-count-leader"
+    },
+    {
+      "district": "NC-04",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "NC-05",
+      "party": "D",
+      "basis": "provisional-count-leader"
+    },
+    {
+      "district": "NC-06",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "NC-07",
+      "party": "R",
+      "basis": "provisional-count-leader"
+    },
+    {
+      "district": "NC-08",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "NC-09",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "NC-10",
+      "party": "R",
+      "basis": "provisional-count-leader"
+    },
+    {
+      "district": "NC-11",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "NC-12",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "NC-13",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "NC-14",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "ND-AL",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "NE-01",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "NE-02",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "NE-03",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "NH-01",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "NH-02",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "NJ-01",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "NJ-02",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "NJ-03",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "NJ-04",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "NJ-05",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "NJ-06",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "NJ-07",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "NJ-08",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "NJ-09",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "NJ-10",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "NJ-11",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "NJ-12",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "NM-01",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "NM-02",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "NM-03",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "NV-01",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "NV-02",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "NV-03",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "NV-04",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "NY-01",
+      "party": "R",
+      "basis": "provisional-count-leader"
+    },
+    {
+      "district": "NY-02",
+      "party": "R",
+      "basis": "provisional-count-leader"
+    },
+    {
+      "district": "NY-03",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "NY-04",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "NY-05",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "NY-06",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "NY-07",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "NY-08",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "NY-09",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "NY-10",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "NY-11",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "NY-12",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "NY-13",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "NY-14",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "NY-15",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "NY-16",
+      "party": "D",
+      "basis": "provisional-count-leader"
+    },
+    {
+      "district": "NY-17",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "NY-18",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "NY-19",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "NY-20",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "NY-21",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "NY-22",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "NY-23",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "NY-24",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "NY-25",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "NY-26",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "OH-01",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "OH-02",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "OH-03",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "OH-04",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "OH-05",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "OH-06",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "OH-07",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "OH-08",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "OH-09",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "OH-10",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "OH-11",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "OH-12",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "OH-13",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "OH-14",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "OH-15",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "OK-01",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "OK-02",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "OK-03",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "OK-04",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "OK-05",
+      "party": "R",
+      "basis": "provisional-count-leader"
+    },
+    {
+      "district": "OR-01",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "OR-02",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "OR-03",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "OR-04",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "OR-05",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "OR-06",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "PA-01",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "PA-02",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "PA-03",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "PA-04",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "PA-05",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "PA-06",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "PA-07",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "PA-08",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "PA-09",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "PA-10",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "PA-11",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "PA-12",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "PA-13",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "PA-14",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "PA-15",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "PA-16",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "PA-17",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "RI-01",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "RI-02",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "SC-01",
+      "party": "D",
+      "basis": "provisional-count-leader"
+    },
+    {
+      "district": "SC-02",
+      "party": "R",
+      "basis": "provisional-count-leader"
+    },
+    {
+      "district": "SC-03",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "SC-04",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "SC-05",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "SC-06",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "SC-07",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "SD-AL",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "TN-01",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "TN-02",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "TN-03",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "TN-04",
+      "party": "D",
+      "basis": "provisional-count-leader"
+    },
+    {
+      "district": "TN-05",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "TN-06",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "TN-07",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "TN-08",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "TN-09",
+      "party": "R",
+      "basis": "provisional-count-leader"
+    },
+    {
+      "district": "TX-01",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "TX-02",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "TX-03",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "TX-04",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "TX-05",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "TX-06",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "TX-07",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "TX-08",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "TX-09",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "TX-10",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "TX-11",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "TX-12",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "TX-13",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "TX-14",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "TX-15",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "TX-16",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "TX-17",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "TX-18",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "TX-19",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "TX-20",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "TX-21",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "TX-22",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "TX-23",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "TX-24",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "TX-25",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "TX-26",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "TX-27",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "TX-28",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "TX-29",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "TX-30",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "TX-31",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "TX-32",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "TX-33",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "TX-34",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "TX-35",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "TX-36",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "TX-37",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "TX-38",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "UT-01",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "UT-02",
+      "party": "R",
+      "basis": "provisional-count-leader"
+    },
+    {
+      "district": "UT-03",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "UT-04",
+      "party": "R",
+      "basis": "provisional-count-leader"
+    },
+    {
+      "district": "VA-01",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "VA-02",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "VA-03",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "VA-04",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "VA-05",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "VA-06",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "VA-07",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "VA-08",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "VA-09",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "VA-10",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "VA-11",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "VT-AL",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "WA-01",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "WA-02",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "WA-03",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "WA-04",
+      "party": "R",
+      "basis": "provisional-count-leader"
+    },
+    {
+      "district": "WA-05",
+      "party": "R",
+      "basis": "provisional-count-leader"
+    },
+    {
+      "district": "WA-06",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "WA-07",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "WA-08",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "WA-09",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "WA-10",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "WI-01",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "WI-02",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "WI-03",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "WI-04",
+      "party": "D",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "WI-05",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "WI-06",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "WI-07",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "WI-08",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "WV-01",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "WV-02",
+      "party": "R",
+      "basis": "reported-winner"
+    },
+    {
+      "district": "WY-AL",
+      "party": "R",
+      "basis": "reported-winner"
+    }
+  ],
+  "senate": [
+    {
+      "state": "AK",
+      "senateClass": 2,
+      "party": "R",
+      "basis": "modeled-incumbent-hold-pending-count",
+      "sourceUpdatedAt": "2026-11-10T04:03:55Z"
+    },
+    {
+      "state": "AL",
+      "senateClass": 2,
+      "party": "R",
+      "basis": "reported-winner",
+      "sourceUpdatedAt": "2026-11-04T17:16:06Z"
+    },
+    {
+      "state": "AR",
+      "senateClass": 2,
+      "party": "R",
+      "basis": "reported-winner",
+      "sourceUpdatedAt": "2026-11-10T22:31:52Z"
+    },
+    {
+      "state": "CO",
+      "senateClass": 2,
+      "party": "D",
+      "basis": "reported-winner",
+      "sourceUpdatedAt": "2026-11-11T01:42:43Z"
+    },
+    {
+      "state": "DE",
+      "senateClass": 2,
+      "party": "D",
+      "basis": "reported-winner",
+      "sourceUpdatedAt": "2026-11-11T01:58:08Z"
+    },
+    {
+      "state": "FL",
+      "senateClass": 3,
+      "party": "R",
+      "basis": "reported-winner",
+      "sourceUpdatedAt": "2026-11-09T13:42:55Z"
+    },
+    {
+      "state": "GA",
+      "senateClass": 2,
+      "party": "D",
+      "basis": "reported-winner",
+      "sourceUpdatedAt": "2026-11-10T22:30:12Z"
+    },
+    {
+      "state": "IA",
+      "senateClass": 2,
+      "party": "D",
+      "basis": "reported-winner",
+      "sourceUpdatedAt": "2026-11-07T21:37:03Z"
+    },
+    {
+      "state": "ID",
+      "senateClass": 2,
+      "party": "R",
+      "basis": "reported-winner",
+      "sourceUpdatedAt": "2026-11-10T23:42:09Z"
+    },
+    {
+      "state": "IL",
+      "senateClass": 2,
+      "party": "D",
+      "basis": "reported-winner",
+      "sourceUpdatedAt": "2026-11-11T01:54:25Z"
+    },
+    {
+      "state": "KS",
+      "senateClass": 2,
+      "party": "D",
+      "basis": "reported-winner",
+      "sourceUpdatedAt": "2026-11-07T17:37:40Z"
+    },
+    {
+      "state": "KY",
+      "senateClass": 2,
+      "party": "R",
+      "basis": "reported-winner",
+      "sourceUpdatedAt": "2026-11-07T18:07:13Z"
+    },
+    {
+      "state": "LA",
+      "senateClass": 2,
+      "party": "R",
+      "basis": "reported-winner",
+      "sourceUpdatedAt": "2026-11-10T11:00:11Z"
+    },
+    {
+      "state": "MA",
+      "senateClass": 2,
+      "party": "D",
+      "basis": "reported-winner",
+      "sourceUpdatedAt": "2026-11-11T01:59:24Z"
+    },
+    {
+      "state": "ME",
+      "senateClass": 2,
+      "party": "D",
+      "basis": "reported-winner",
+      "sourceUpdatedAt": "2026-11-07T17:55:29Z"
+    },
+    {
+      "state": "MI",
+      "senateClass": 2,
+      "party": "D",
+      "basis": "reported-winner",
+      "sourceUpdatedAt": "2026-11-11T02:00:23Z"
+    },
+    {
+      "state": "MN",
+      "senateClass": 2,
+      "party": "D",
+      "basis": "reported-winner",
+      "sourceUpdatedAt": "2026-11-11T02:06:20Z"
+    },
+    {
+      "state": "MS",
+      "senateClass": 2,
+      "party": "D",
+      "basis": "provisional-count-leader",
+      "sourceUpdatedAt": "2026-11-11T02:04:24Z"
+    },
+    {
+      "state": "MT",
+      "senateClass": 2,
+      "party": "R",
+      "basis": "reported-winner",
+      "sourceUpdatedAt": "2026-11-11T02:06:35Z"
+    },
+    {
+      "state": "NC",
+      "senateClass": 2,
+      "party": "D",
+      "basis": "reported-winner",
+      "sourceUpdatedAt": "2026-11-11T02:06:37Z"
+    },
+    {
+      "state": "NE",
+      "senateClass": 2,
+      "party": "R",
+      "basis": "reported-winner",
+      "sourceUpdatedAt": "2026-11-11T02:07:22Z"
+    },
+    {
+      "state": "NH",
+      "senateClass": 2,
+      "party": "D",
+      "basis": "reported-winner",
+      "sourceUpdatedAt": "2026-11-11T02:08:15Z"
+    },
+    {
+      "state": "NJ",
+      "senateClass": 2,
+      "party": "D",
+      "basis": "reported-winner",
+      "sourceUpdatedAt": "2026-11-11T02:02:39Z"
+    },
+    {
+      "state": "NM",
+      "senateClass": 2,
+      "party": "D",
+      "basis": "reported-winner",
+      "sourceUpdatedAt": "2026-11-07T18:14:09Z"
+    },
+    {
+      "state": "OH",
+      "senateClass": 3,
+      "party": "D",
+      "basis": "reported-winner",
+      "sourceUpdatedAt": "2026-11-07T18:09:01Z"
+    },
+    {
+      "state": "OK",
+      "senateClass": 2,
+      "party": "R",
+      "basis": "reported-winner",
+      "sourceUpdatedAt": "2026-11-07T18:09:07Z"
+    },
+    {
+      "state": "OR",
+      "senateClass": 2,
+      "party": "D",
+      "basis": "reported-winner",
+      "sourceUpdatedAt": "2026-11-11T02:09:58Z"
+    },
+    {
+      "state": "RI",
+      "senateClass": 2,
+      "party": "D",
+      "basis": "reported-winner",
+      "sourceUpdatedAt": "2026-11-10T21:40:56Z"
+    },
+    {
+      "state": "SC",
+      "senateClass": 2,
+      "party": "D",
+      "basis": "reported-winner",
+      "sourceUpdatedAt": "2026-11-11T02:01:27Z"
+    },
+    {
+      "state": "SD",
+      "senateClass": 2,
+      "party": "R",
+      "basis": "reported-winner",
+      "sourceUpdatedAt": "2026-11-11T02:10:37Z"
+    },
+    {
+      "state": "TN",
+      "senateClass": 2,
+      "party": "R",
+      "basis": "reported-winner",
+      "sourceUpdatedAt": "2026-11-07T18:04:00Z"
+    },
+    {
+      "state": "TX",
+      "senateClass": 2,
+      "party": "D",
+      "basis": "reported-winner",
+      "sourceUpdatedAt": "2026-11-04T22:48:37Z"
+    },
+    {
+      "state": "VA",
+      "senateClass": 2,
+      "party": "D",
+      "basis": "reported-winner",
+      "sourceUpdatedAt": "2026-11-11T02:03:03Z"
+    },
+    {
+      "state": "WV",
+      "senateClass": 2,
+      "party": "R",
+      "basis": "reported-winner",
+      "sourceUpdatedAt": "2026-11-10T20:28:21Z"
+    },
+    {
+      "state": "WY",
+      "senateClass": 2,
+      "party": "R",
+      "basis": "reported-winner",
+      "sourceUpdatedAt": "2026-11-04T06:54:49Z"
+    }
+  ],
+  "governors": [
+    {
+      "state": "AK",
+      "party": "R",
+      "basis": "modeled-incumbent-hold-pending-count",
+      "sourceUpdatedAt": "2026-11-10T04:03:56Z"
+    },
+    {
+      "state": "AL",
+      "party": "R",
+      "basis": "reported-winner",
+      "sourceUpdatedAt": "2026-11-04T17:16:06Z"
+    },
+    {
+      "state": "AR",
+      "party": "R",
+      "basis": "reported-winner",
+      "sourceUpdatedAt": "2026-11-10T22:31:52Z"
+    },
+    {
+      "state": "AZ",
+      "party": "D",
+      "basis": "reported-winner",
+      "sourceUpdatedAt": "2026-11-11T01:20:55Z"
+    },
+    {
+      "state": "CA",
+      "party": "D",
+      "basis": "reported-winner",
+      "sourceUpdatedAt": "2026-11-11T01:40:45Z"
+    },
+    {
+      "state": "CO",
+      "party": "D",
+      "basis": "reported-winner",
+      "sourceUpdatedAt": "2026-11-11T01:42:42Z"
+    },
+    {
+      "state": "CT",
+      "party": "D",
+      "basis": "reported-winner",
+      "sourceUpdatedAt": "2026-11-11T01:58:06Z"
+    },
+    {
+      "state": "DE",
+      "party": "D",
+      "basis": "carried-forward-no-election"
+    },
+    {
+      "state": "FL",
+      "party": "R",
+      "basis": "provisional-count-leader",
+      "sourceUpdatedAt": "2026-11-09T22:31:59Z"
+    },
+    {
+      "state": "GA",
+      "party": "D",
+      "basis": "reported-winner",
+      "sourceUpdatedAt": "2026-11-10T22:30:12Z"
+    },
+    {
+      "state": "HI",
+      "party": "D",
+      "basis": "reported-winner",
+      "sourceUpdatedAt": "2026-11-11T01:58:24Z"
+    },
+    {
+      "state": "IA",
+      "party": "D",
+      "basis": "reported-winner",
+      "sourceUpdatedAt": "2026-11-07T21:37:03Z"
+    },
+    {
+      "state": "ID",
+      "party": "R",
+      "basis": "reported-winner",
+      "sourceUpdatedAt": "2026-11-10T23:42:09Z"
+    },
+    {
+      "state": "IL",
+      "party": "D",
+      "basis": "reported-winner",
+      "sourceUpdatedAt": "2026-11-11T01:58:44Z"
+    },
+    {
+      "state": "IN",
+      "party": "R",
+      "basis": "carried-forward-no-election"
+    },
+    {
+      "state": "KS",
+      "party": "D",
+      "basis": "provisional-count-leader",
+      "sourceUpdatedAt": "2026-11-07T17:37:41Z"
+    },
+    {
+      "state": "KY",
+      "party": "D",
+      "basis": "carried-forward-no-election"
+    },
+    {
+      "state": "LA",
+      "party": "R",
+      "basis": "carried-forward-no-election"
+    },
+    {
+      "state": "MA",
+      "party": "D",
+      "basis": "reported-winner",
+      "sourceUpdatedAt": "2026-11-11T01:59:24Z"
+    },
+    {
+      "state": "MD",
+      "party": "D",
+      "basis": "reported-winner",
+      "sourceUpdatedAt": "2026-11-11T02:05:51Z"
+    },
+    {
+      "state": "ME",
+      "party": "D",
+      "basis": "reported-winner",
+      "sourceUpdatedAt": "2026-11-07T17:55:30Z"
+    },
+    {
+      "state": "MI",
+      "party": "D",
+      "basis": "reported-winner",
+      "sourceUpdatedAt": "2026-11-11T02:00:24Z"
+    },
+    {
+      "state": "MN",
+      "party": "D",
+      "basis": "reported-winner",
+      "sourceUpdatedAt": "2026-11-11T02:06:20Z"
+    },
+    {
+      "state": "MO",
+      "party": "R",
+      "basis": "carried-forward-no-election"
+    },
+    {
+      "state": "MS",
+      "party": "R",
+      "basis": "carried-forward-no-election"
+    },
+    {
+      "state": "MT",
+      "party": "R",
+      "basis": "carried-forward-no-election"
+    },
+    {
+      "state": "NC",
+      "party": "D",
+      "basis": "carried-forward-no-election"
+    },
+    {
+      "state": "ND",
+      "party": "R",
+      "basis": "carried-forward-no-election"
+    },
+    {
+      "state": "NE",
+      "party": "R",
+      "basis": "reported-winner",
+      "sourceUpdatedAt": "2026-11-11T02:07:22Z"
+    },
+    {
+      "state": "NH",
+      "party": "R",
+      "basis": "reported-winner",
+      "sourceUpdatedAt": "2026-11-11T02:08:15Z"
+    },
+    {
+      "state": "NJ",
+      "party": "D",
+      "basis": "carried-forward-no-election"
+    },
+    {
+      "state": "NM",
+      "party": "D",
+      "basis": "reported-winner",
+      "sourceUpdatedAt": "2026-11-07T18:14:09Z"
+    },
+    {
+      "state": "NV",
+      "party": "D",
+      "basis": "reported-winner",
+      "sourceUpdatedAt": "2026-11-11T02:00:01Z"
+    },
+    {
+      "state": "NY",
+      "party": "D",
+      "basis": "reported-winner",
+      "sourceUpdatedAt": "2026-11-11T02:01:06Z"
+    },
+    {
+      "state": "OH",
+      "party": "D",
+      "basis": "reported-winner",
+      "sourceUpdatedAt": "2026-11-07T18:09:00Z"
+    },
+    {
+      "state": "OK",
+      "party": "R",
+      "basis": "reported-winner",
+      "sourceUpdatedAt": "2026-11-07T18:09:07Z"
+    },
+    {
+      "state": "OR",
+      "party": "D",
+      "basis": "reported-winner",
+      "sourceUpdatedAt": "2026-11-11T02:09:58Z"
+    },
+    {
+      "state": "PA",
+      "party": "D",
+      "basis": "reported-winner",
+      "sourceUpdatedAt": "2026-11-11T02:01:19Z"
+    },
+    {
+      "state": "RI",
+      "party": "D",
+      "basis": "reported-winner",
+      "sourceUpdatedAt": "2026-11-10T21:40:56Z"
+    },
+    {
+      "state": "SC",
+      "party": "R",
+      "basis": "reported-winner",
+      "sourceUpdatedAt": "2026-11-11T02:01:28Z"
+    },
+    {
+      "state": "SD",
+      "party": "R",
+      "basis": "reported-winner",
+      "sourceUpdatedAt": "2026-11-11T02:10:37Z"
+    },
+    {
+      "state": "TN",
+      "party": "R",
+      "basis": "reported-winner",
+      "sourceUpdatedAt": "2026-11-11T02:01:34Z"
+    },
+    {
+      "state": "TX",
+      "party": "D",
+      "basis": "reported-winner",
+      "sourceUpdatedAt": "2026-11-04T22:48:37Z"
+    },
+    {
+      "state": "UT",
+      "party": "R",
+      "basis": "carried-forward-no-election"
+    },
+    {
+      "state": "VA",
+      "party": "D",
+      "basis": "carried-forward-no-election"
+    },
+    {
+      "state": "VT",
+      "party": "R",
+      "basis": "reported-winner",
+      "sourceUpdatedAt": "2026-11-11T02:08:00Z"
+    },
+    {
+      "state": "WA",
+      "party": "D",
+      "basis": "carried-forward-no-election"
+    },
+    {
+      "state": "WI",
+      "party": "D",
+      "basis": "reported-winner",
+      "sourceUpdatedAt": "2026-11-10T20:26:54Z"
+    },
+    {
+      "state": "WV",
+      "party": "R",
+      "basis": "carried-forward-no-election"
+    },
+    {
+      "state": "WY",
+      "party": "R",
+      "basis": "reported-winner",
+      "sourceUpdatedAt": "2026-11-04T06:54:49Z"
+    }
+  ],
+  "stateSenates": [
+    {
+      "state": "AK",
+      "seats": 20,
+      "counts": {
+        "R": 11,
+        "D": 9
+      },
+      "basis": "modeled-prior-composition-no-count",
+      "unaccountedSeats": 0
+    },
+    {
+      "state": "AL",
+      "seats": 35,
+      "counts": {
+        "R": 24,
+        "D": 10,
+        "I": 1
+      },
+      "basis": "provisional-count",
+      "unaccountedSeats": 0
+    },
+    {
+      "state": "AR",
+      "seats": 35,
+      "counts": {
+        "R": 28,
+        "D": 7
+      },
+      "basis": "provisional-count",
+      "unaccountedSeats": 0
+    },
+    {
+      "state": "AZ",
+      "seats": 30,
+      "counts": {
+        "R": 10,
+        "D": 20
+      },
+      "basis": "provisional-count",
+      "unaccountedSeats": 0
+    },
+    {
+      "state": "CA",
+      "seats": 40,
+      "counts": {
+        "D": 32,
+        "R": 8
+      },
+      "basis": "provisional-count",
+      "unaccountedSeats": 0
+    },
+    {
+      "state": "CO",
+      "seats": 35,
+      "counts": {
+        "R": 11,
+        "D": 24
+      },
+      "basis": "provisional-count",
+      "unaccountedSeats": 0
+    },
+    {
+      "state": "CT",
+      "seats": 36,
+      "counts": {
+        "D": 33,
+        "R": 3
+      },
+      "basis": "provisional-count",
+      "unaccountedSeats": 0
+    },
+    {
+      "state": "DE",
+      "seats": 21,
+      "counts": {
+        "D": 15,
+        "R": 6
+      },
+      "basis": "provisional-count",
+      "unaccountedSeats": 0
+    },
+    {
+      "state": "FL",
+      "seats": 40,
+      "counts": {
+        "R": 27,
+        "D": 12,
+        "I": 1
+      },
+      "basis": "modeled-prior-composition-incomplete-count",
+      "unaccountedSeats": 0
+    },
+    {
+      "state": "GA",
+      "seats": 56,
+      "counts": {
+        "R": 29,
+        "D": 27
+      },
+      "basis": "provisional-count",
+      "unaccountedSeats": 0
+    },
+    {
+      "state": "HI",
+      "seats": 25,
+      "counts": {
+        "D": 21,
+        "R": 3
+      },
+      "basis": "modeled-prior-composition-incomplete-count",
+      "unaccountedSeats": 1
+    },
+    {
+      "state": "IA",
+      "seats": 50,
+      "counts": {
+        "R": 32,
+        "D": 17
+      },
+      "basis": "modeled-prior-composition-incomplete-count",
+      "unaccountedSeats": 1
+    },
+    {
+      "state": "ID",
+      "seats": 35,
+      "counts": {
+        "R": 28,
+        "D": 7
+      },
+      "basis": "provisional-count",
+      "unaccountedSeats": 0
+    },
+    {
+      "state": "IL",
+      "seats": 59,
+      "counts": {
+        "D": 45,
+        "R": 14
+      },
+      "basis": "provisional-count",
+      "unaccountedSeats": 0
+    },
+    {
+      "state": "IN",
+      "seats": 50,
+      "counts": {
+        "R": 35,
+        "D": 15
+      },
+      "basis": "provisional-count",
+      "unaccountedSeats": 0
+    },
+    {
+      "state": "KS",
+      "seats": 40,
+      "counts": {
+        "R": 31,
+        "D": 9
+      },
+      "basis": "provisional-count",
+      "unaccountedSeats": 0
+    },
+    {
+      "state": "KY",
+      "seats": 38,
+      "counts": {
+        "R": 32,
+        "D": 6
+      },
+      "basis": "modeled-prior-composition-incomplete-count",
+      "unaccountedSeats": 0
+    },
+    {
+      "state": "LA",
+      "seats": 39,
+      "counts": {
+        "R": 28,
+        "D": 10
+      },
+      "basis": "modeled-prior-composition-incomplete-count",
+      "unaccountedSeats": 1
+    },
+    {
+      "state": "MA",
+      "seats": 40,
+      "counts": {
+        "D": 35,
+        "R": 5
+      },
+      "basis": "modeled-prior-composition-no-count",
+      "unaccountedSeats": 0
+    },
+    {
+      "state": "MD",
+      "seats": 47,
+      "counts": {
+        "R": 12,
+        "D": 35
+      },
+      "basis": "provisional-count",
+      "unaccountedSeats": 0
+    },
+    {
+      "state": "ME",
+      "seats": 35,
+      "counts": {
+        "D": 24,
+        "R": 11
+      },
+      "basis": "provisional-count",
+      "unaccountedSeats": 0
+    },
+    {
+      "state": "MI",
+      "seats": 38,
+      "counts": {
+        "R": 18,
+        "D": 20
+      },
+      "basis": "modeled-prior-composition-incomplete-count",
+      "unaccountedSeats": 0
+    },
+    {
+      "state": "MN",
+      "seats": 67,
+      "counts": {
+        "R": 28,
+        "D": 39
+      },
+      "basis": "provisional-count",
+      "unaccountedSeats": 0
+    },
+    {
+      "state": "MO",
+      "seats": 34,
+      "counts": {
+        "R": 22,
+        "D": 12
+      },
+      "basis": "provisional-count",
+      "unaccountedSeats": 0
+    },
+    {
+      "state": "MS",
+      "seats": 52,
+      "counts": {
+        "D": 18,
+        "R": 34
+      },
+      "basis": "provisional-count",
+      "unaccountedSeats": 0
+    },
+    {
+      "state": "MT",
+      "seats": 50,
+      "counts": {
+        "D": 18,
+        "R": 32
+      },
+      "basis": "modeled-prior-composition-no-count",
+      "unaccountedSeats": 0
+    },
+    {
+      "state": "NC",
+      "seats": 50,
+      "counts": {
+        "R": 26,
+        "D": 24
+      },
+      "basis": "provisional-count",
+      "unaccountedSeats": 0
+    },
+    {
+      "state": "ND",
+      "seats": 47,
+      "counts": {
+        "R": 41,
+        "D": 6
+      },
+      "basis": "provisional-count",
+      "unaccountedSeats": 0
+    },
+    {
+      "state": "NE",
+      "seats": 49,
+      "counts": {
+        "I": 49
+      },
+      "basis": "modeled-nonpartisan-chamber"
+    },
+    {
+      "state": "NH",
+      "seats": 24,
+      "counts": {
+        "R": 9,
+        "D": 15
+      },
+      "basis": "provisional-count",
+      "unaccountedSeats": 0
+    },
+    {
+      "state": "NJ",
+      "seats": 40,
+      "counts": {
+        "D": 25,
+        "R": 15
+      },
+      "basis": "provisional-count",
+      "unaccountedSeats": 0
+    },
+    {
+      "state": "NM",
+      "seats": 42,
+      "counts": {
+        "D": 26,
+        "R": 16
+      },
+      "basis": "provisional-count",
+      "unaccountedSeats": 0
+    },
+    {
+      "state": "NV",
+      "seats": 21,
+      "counts": {
+        "D": 13,
+        "R": 8
+      },
+      "basis": "provisional-count",
+      "unaccountedSeats": 0
+    },
+    {
+      "state": "NY",
+      "seats": 63,
+      "counts": {
+        "D": 48,
+        "R": 15
+      },
+      "basis": "provisional-count",
+      "unaccountedSeats": 0
+    },
+    {
+      "state": "OH",
+      "seats": 33,
+      "counts": {
+        "D": 11,
+        "R": 22
+      },
+      "basis": "provisional-count",
+      "unaccountedSeats": 0
+    },
+    {
+      "state": "OK",
+      "seats": 48,
+      "counts": {
+        "R": 39,
+        "D": 8
+      },
+      "basis": "modeled-prior-composition-incomplete-count",
+      "unaccountedSeats": 1
+    },
+    {
+      "state": "OR",
+      "seats": 30,
+      "counts": {
+        "D": 18,
+        "R": 12
+      },
+      "basis": "modeled-prior-composition-no-count",
+      "unaccountedSeats": 0
+    },
+    {
+      "state": "PA",
+      "seats": 50,
+      "counts": {
+        "D": 26,
+        "R": 24
+      },
+      "basis": "provisional-count",
+      "unaccountedSeats": 0
+    },
+    {
+      "state": "RI",
+      "seats": 38,
+      "counts": {
+        "D": 36,
+        "R": 2
+      },
+      "basis": "provisional-count",
+      "unaccountedSeats": 0
+    },
+    {
+      "state": "SC",
+      "seats": 46,
+      "counts": {
+        "R": 34,
+        "D": 12
+      },
+      "basis": "provisional-count",
+      "unaccountedSeats": 0
+    },
+    {
+      "state": "SD",
+      "seats": 35,
+      "counts": {
+        "R": 32,
+        "D": 3
+      },
+      "basis": "modeled-prior-composition-no-count",
+      "unaccountedSeats": 0
+    },
+    {
+      "state": "TN",
+      "seats": 33,
+      "counts": {
+        "R": 27,
+        "D": 6
+      },
+      "basis": "provisional-count",
+      "unaccountedSeats": 0
+    },
+    {
+      "state": "TX",
+      "seats": 31,
+      "counts": {
+        "R": 19,
+        "D": 12
+      },
+      "basis": "provisional-count",
+      "unaccountedSeats": 0
+    },
+    {
+      "state": "UT",
+      "seats": 29,
+      "counts": {
+        "R": 21,
+        "D": 8
+      },
+      "basis": "provisional-count",
+      "unaccountedSeats": 0
+    },
+    {
+      "state": "VA",
+      "seats": 40,
+      "counts": {
+        "D": 21,
+        "R": 19
+      },
+      "basis": "provisional-count",
+      "unaccountedSeats": 0
+    },
+    {
+      "state": "VT",
+      "seats": 30,
+      "counts": {
+        "D": 17,
+        "R": 13
+      },
+      "basis": "modeled-prior-composition-no-count",
+      "unaccountedSeats": 0
+    },
+    {
+      "state": "WA",
+      "seats": 49,
+      "counts": {
+        "D": 30,
+        "R": 19
+      },
+      "basis": "provisional-count",
+      "unaccountedSeats": 0
+    },
+    {
+      "state": "WI",
+      "seats": 33,
+      "counts": {
+        "R": 18,
+        "D": 15
+      },
+      "basis": "modeled-prior-composition-incomplete-count",
+      "unaccountedSeats": 0
+    },
+    {
+      "state": "WV",
+      "seats": 34,
+      "counts": {
+        "R": 30,
+        "D": 4
+      },
+      "basis": "provisional-count",
+      "unaccountedSeats": 0
+    },
+    {
+      "state": "WY",
+      "seats": 31,
+      "counts": {
+        "R": 29,
+        "D": 2
+      },
+      "basis": "modeled-prior-composition-no-count",
+      "unaccountedSeats": 0
+    }
+  ]
+}

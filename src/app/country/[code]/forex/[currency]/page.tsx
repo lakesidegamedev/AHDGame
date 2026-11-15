@@ -19,7 +19,7 @@ import type {
   OrderDisplay,
 } from "@/app/country/[code]/forex/types";
 import { formatCurrencyFaceAmount } from "@/lib/currency/formatCurrencyFaceAmount";
-import { CURRENCY_SYMBOLS } from "@/lib/constants/currencies";
+import { CURRENCY_SYMBOLS } from "@/lib/constants/currencyCodes";
 import { CountryFlag } from "@/components/CountryFlag";
 import { CURRENCY_FLAG_CODE } from "@/components/forex/currencyDisplay";
 import type { CurrencyCode } from "@/lib/constants/currencies";
@@ -87,9 +87,8 @@ function CurrencyDetailInner({ params }: { params: Promise<{ code: string; curre
   const [tradeOpen, setTradeOpen] = useState(false);
 
   const fetchData = useCallback(async () => {
-    // Whole body guarded: a rejected fetch (network drop) used to skip every
-    // setLoading(false) below, leaving the page spinning forever. try/finally
-    // guarantees the spinner ends; the catch surfaces an error state + reports.
+    // try/finally guarantees setLoading(false) even on rejected fetch;
+    // catch surfaces an error state and reports.
     try {
       const [res, ordersRes] = await Promise.all([
         fetch("/api/forex/exchange"),

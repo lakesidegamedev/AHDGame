@@ -1,19 +1,7 @@
 /**
- * Japan Region Census Profiles — 2023 era.
- *
- * 2023-default companion to {@link jpRegionCensusData} (the 2019 profiles).
- *
- * Era anchor: 2020 Population Census of Japan plus 2023 Ministry of Internal
- * Affairs / Immigration Services Agency estimates (super-aged society). All
- * values independently authored from historical knowledge of each region
- * circa 2023 — NOT derived by scaling any other era's file.
- *
- * Character of the era: median age ~49; seniors are ~35–40% of adults in
- * rural regions; rural depopulation severe (Akita, Kochi shrinking >1%/yr);
- * Tokyo concentration extreme (net in-migration resumed post-COVID); foreign
- * residents ~2.5% nationally and rising fast — Vietnamese/other Southeast
- * Asian technical-intern workers now widespread including in rural areas,
- * Chinese the largest group in Tokyo. Income uses era-neutral relative tiers.
+ * Japan region census profiles for the 2023-default preset (companion to the 2019 profiles).
+ * Approximate % of adult population, anchored on the 2020 Census and 2023 estimates.
+ * Independently authored per region circa 2023, not scaled from other eras. Income uses era-neutral relative tiers.
  */
 
 import type { JPRegionLayer1 } from "./jpRegionCensusData";

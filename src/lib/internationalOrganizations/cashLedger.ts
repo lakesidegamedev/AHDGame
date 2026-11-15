@@ -10,6 +10,8 @@ import type { CountryId } from "@/lib/constants/countries";
 import { INTERNATIONAL_ORGANIZATIONS } from "@/lib/constants/internationalOrganizations";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
 import { treasuryAnchorValuation } from "@/lib/budget/rules/treasuryAccrual";
+import { fundedOrganizationCashWitnesses } from "./fundedCashWitness";
+import { ledgerTurnFromClock } from "@/lib/ledger/ledgerTurn";
 import { accountId, mintSinkAccount } from "@/lib/ledger/accounts";
 import { emitLedgerEntries } from "@/lib/ledger/emit";
 import type { LedgerEntryInput } from "@/lib/ledger/types";
@@ -18,9 +20,17 @@ import {
   settleTransition,
   type SettlementResult,
 } from "@/lib/banking/settlementJournal";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { organizationFundsCollection } from "@/lib/db/repositories/organizationFunds";
+import { customInternationalOrganizationsCollection } from "@/lib/db/repositories/customInternationalOrganizations";
 
 export interface OrganizationCashContext {
   turn: number;
+  ledgerTurn?: number;
   preset: string;
   ledgerShadowEnabled?: boolean;
   treasuryCashLedgerEnabled?: boolean;
@@ -91,7 +101,7 @@ export async function settleOrganizationFundedCashMove(
   if (!context.treasuryCashLedgerEnabled) {
     throw new Error("Funded organization cash move requires the cash-ledger policy");
   }
-  const journal = db.collection<{ _id: string }>("bankMoneyMoves");
+  const journal = bankMoneyMovesCollection<{ _id: string }>(db);
   if (await journal.findOne({ _id: input.key }, { projection: { _id: 1 } })) {
     return resumeSettlement(db, input.key);
   }
@@ -152,6 +162,7 @@ export async function settleOrganizationFundedCashMove(
       },
     ],
     projections: [
+      ...fundedOrganizationCashWitnesses(input, context),
       ...(input.sourceTreasuryCountry
         ? [
             {
@@ -208,39 +219,32 @@ export async function loadOrganizationCashContext(
   turn?: number
 ): Promise<OrganizationCashContext | null> {
   try {
-    const config = await db
-      .collection<{
-        _id: string;
-        ledgerShadow?: boolean;
-        treasuryCashLedgerEnabled?: boolean;
-      }>("gameConfig")
-      .findOne(
-        { _id: "default" },
-        { projection: { ledgerShadow: 1, treasuryCashLedgerEnabled: 1 } }
-      );
+    const config = await gameConfigCollection<{
+      _id: string;
+      ledgerShadow?: boolean;
+      treasuryCashLedgerEnabled?: boolean;
+    }>(db).findOne(
+      { _id: "default" },
+      { projection: { ledgerShadow: 1, treasuryCashLedgerEnabled: 1 } }
+    );
     const ledgerShadowEnabled = config?.ledgerShadow === true;
     const treasuryCashLedgerEnabled = config?.treasuryCashLedgerEnabled === true;
     if (!ledgerShadowEnabled && !treasuryCashLedgerEnabled) return null;
     const [state, rates, budgets, funds, custom] = await Promise.all([
-      db
-        .collection<{ _id: string; currentTurn: number; preset?: string }>("gameState")
-        .findOne({ _id: "current" }, { projection: { currentTurn: 1, preset: 1 } }),
-      db
-        .collection<{ currencyCode: string; rate: number }>("exchangeRates")
+      gameStateCollection<{ _id: string; currentTurn: number; preset?: string }>(db).findOne(
+        { _id: "current" },
+        { projection: { currentTurn: 1, preset: 1 } }
+      ),
+      exchangeRatesCollection<{ currencyCode: string; rate: number }>(db)
         .find({}, { projection: { currencyCode: 1, rate: 1 } })
         .toArray(),
-      db
-        .collection<{ countryId: string; currencyCode?: CurrencyCode }>("federalBudget")
+      federalBudgetCollection<{ countryId: string; currencyCode?: CurrencyCode }>(db)
         .find({}, { projection: { countryId: 1, currencyCode: 1 } })
         .toArray(),
-      db
-        .collection<{ organizationId: string; currencyCountryId?: CountryId }>("organizationFunds")
+      organizationFundsCollection<{ organizationId: string; currencyCountryId?: CountryId }>(db)
         .find({}, { projection: { organizationId: 1, currencyCountryId: 1 } })
         .toArray(),
-      db
-        .collection<{ id: string; foundingMembers?: CountryId[] }>(
-          "customInternationalOrganizations"
-        )
+      customInternationalOrganizationsCollection<{ id: string; foundingMembers?: CountryId[] }>(db)
         .find({}, { projection: { id: 1, foundingMembers: 1 } })
         .toArray(),
     ]);
@@ -251,6 +255,8 @@ export async function loadOrganizationCashContext(
     const founders = new Map(custom.map((row) => [row.id, row.foundingMembers?.[0] ?? "US"]));
     return {
       turn: resolvedTurn,
+      ledgerTurn:
+        state?.currentTurn === undefined ? resolvedTurn : ledgerTurnFromClock(state.currentTurn),
       preset: state?.preset ?? DEFAULT_SEED_PRESET,
       ledgerShadowEnabled,
       treasuryCashLedgerEnabled,

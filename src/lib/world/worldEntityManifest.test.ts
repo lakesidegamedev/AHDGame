@@ -1,4 +1,4 @@
-import { tierFor } from "./eraRoster";
+import { tierFor, type ShippingPreset } from "./eraRoster";
 import { describe, expect, it } from "vitest";
 import {
   defineWorldEntityPresetManifest,
@@ -361,6 +361,9 @@ describe("world entity manifest", () => {
         )
       );
       for (const countryId of COUNTRY_ORDER) {
+        // A country the roster leaves out of an era (Canada before 2027) is
+        // not a world entity there; S6 in eraContract pins that it has no row.
+        if (tierFor(preset as ShippingPreset, countryId) === "absent") continue;
         expect(classified.has(countryId), `${preset} is missing ${countryId}`).toBe(true);
       }
     }

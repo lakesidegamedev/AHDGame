@@ -8,6 +8,7 @@ import {
 import { getConflictsCollection } from "@/lib/db/collections/conflicts";
 import type { ConflictDoc } from "@/lib/db/types/conflict";
 import type { Bill, BillStatus, DeclareWarProvision } from "@/lib/db/types/legislation";
+import { billsCollection } from "@/lib/db/repositories/bills";
 
 export interface MembershipDefenseWarning {
   organizationId: string;
@@ -80,8 +81,7 @@ export async function loadMembershipDefenseWarnings(
         $or: [{ hostCountry: { $in: applicants } }, { hostEntities: { $in: applicants } }],
       })
       .toArray(),
-    db
-      .collection<Bill>("bills")
+    billsCollection(db)
       .find({
         status: { $in: PENDING_DECLARATION_STATUSES },
         provisions: {

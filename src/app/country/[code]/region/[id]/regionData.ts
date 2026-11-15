@@ -1,13 +1,10 @@
 import { getDb } from "@/lib/mongodb";
-import { loadDemographicCategories } from "@/lib/demographics/categoryCatalog";
 import type {
   State,
   StateDemographics,
-  DemographicCategory,
   StatePartyOrg,
   PoliticalParty,
   ElectedOfficial,
-  Character,
   User,
   NPP,
   PartyBudget,
@@ -26,6 +23,15 @@ import { DD_GEOGRAPHY } from "@/lib/countries/dd/geography";
 import { BR_GEOGRAPHY } from "@/lib/countries/br/geography";
 import { SCO_GEOGRAPHY } from "@/lib/countries/sco/geography";
 import { WAL_GEOGRAPHY } from "@/lib/countries/wal/geography";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { usersCollection } from "@/lib/db/repositories/users";
+import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
+import { partyBudgetCollection } from "@/lib/db/repositories/partyBudget";
 
 /**
  * Coerce a Mongo timestamp field to an ISO string for client serialization.
@@ -43,7 +49,7 @@ export function toIsoStringOrNull(value: Date | string | null | undefined): stri
   return typeof value === "string" ? value : null;
 }
 
-/** Per-country voter-group category ids for region demographics (not US `find({})`). */
+/** Per-country geography registry ids kept for the country snapshot harness. */
 export const REGION_DEMOGRAPHIC_CATEGORY_IDS: Partial<Record<CountryId, string[]>> = {
   UK: UK_GEOGRAPHY.demographicCategoryIds,
   JP: JP_GEOGRAPHY.demographicCategoryIds,
@@ -62,7 +68,7 @@ export const REGION_DEMOGRAPHIC_CATEGORY_IDS: Partial<Record<CountryId, string[]
 export async function getRegionState(stateId: string, countryId: CountryId): Promise<State | null> {
   try {
     const db = await getDb();
-    return db.collection<State>("states").findOne({ _id: stateId, countryId });
+    return statesCollection(db).findOne({ _id: stateId, countryId });
   } catch (error) {
     console.error("Error fetching region state:", error);
     return null;
@@ -76,7 +82,7 @@ export async function getUserData() {
   let homeStateName: string | undefined;
   if (authData.character?.homeState && authData.character.countryId) {
     const db = await getDb();
-    const homeState = await db.collection<State>("states").findOne({
+    const homeState = await statesCollection(db).findOne({
       _id: authData.character.homeState,
       countryId: authData.character.countryId,
     });
@@ -104,12 +110,10 @@ export async function getCurrentPartyNav(
   }
 
   const db = await getDb();
-  const party = await db
-    .collection<PoliticalParty>("politicalParties")
-    .findOne(
-      { sequentialId: Number(character.party), countryId: character.countryId },
-      { projection: { name: 1, countryId: 1 } }
-    );
+  const party = await politicalPartiesCollection(db).findOne(
+    { sequentialId: Number(character.party), countryId: character.countryId },
+    { projection: { name: 1, countryId: 1 } }
+  );
   if (!party) return null;
 
   return {
@@ -122,23 +126,14 @@ export async function getCurrentPartyNav(
 export async function getRegionDemographics(stateId: string, countryId: CountryId) {
   try {
     const db = await getDb();
-    const categoryFilter = REGION_DEMOGRAPHIC_CATEGORY_IDS[countryId];
-
-    const [demographics, categories] = await Promise.all([
-      db
-        .collection<StateDemographics>("stateDemographics")
-        .findOne({ _id: stateId, countryId: countryId }),
-      categoryFilter
-        ? db
-            .collection<DemographicCategory>("demographicCategories")
-            .find({ _id: { $in: categoryFilter } })
-            .toArray()
-        : loadDemographicCategories(db),
-    ]);
-    return { demographics, categories };
+    const demographics = await stateDemographicsCollection(db).findOne({
+      _id: stateId,
+      countryId: countryId,
+    });
+    return { demographics };
   } catch (error) {
     console.error("Error fetching demographics:", error);
-    return { demographics: null, categories: [] };
+    return { demographics: null };
   }
 }
 
@@ -164,8 +159,7 @@ export async function getStatePartyBudgets(
   // Mutation lives canonically on the State Party page; the Politics
   // tab only displays + deep-links.
   try {
-    const rows = await db
-      .collection<PartyBudget>("partyBudget")
+    const rows = await partyBudgetCollection(db)
       .find({ countryId, scope: "state", stateId })
       .toArray();
     const out: Record<
@@ -203,16 +197,12 @@ export async function getStatePartyBudgets(
 export async function getRegionPartyOrg(stateId: string, countryId: CountryId) {
   try {
     const db = await getDb();
-    const partyOrg = await db
-      .collection<StatePartyOrg>("statePartyOrg")
-      .find({ countryId, stateId })
-      .toArray();
+    const partyOrg = await statePartyOrgCollection(db).find({ countryId, stateId }).toArray();
 
     const partyIds = [...new Set(partyOrg.map((po) => po.partyId))];
     const partySeqIds = partyIds.map(Number).filter(Boolean);
     const parties = partySeqIds.length
-      ? await db
-          .collection<PoliticalParty>("politicalParties")
+      ? await politicalPartiesCollection(db)
           .find({
             sequentialId: { $in: partySeqIds },
             countryId,
@@ -231,8 +221,7 @@ export async function getRegionPartyOrg(stateId: string, countryId: CountryId) {
       .map((po) => po.chairId)
       .filter((id): id is NonNullable<typeof id> => id != null);
     const chairs = chairIds.length
-      ? await db
-          .collection<Character>("characters")
+      ? await charactersCollection(db)
           .find({ _id: { $in: chairIds } })
           .project<{ _id: (typeof chairIds)[number]; name: string; sequentialId?: number }>({
             _id: 1,
@@ -289,15 +278,13 @@ export async function getRegionGovernmentApproval(
 export async function getRegionPlayers(stateId: string) {
   try {
     const db = await getDb();
-    const players = await db
-      .collection<Character>("characters")
+    const players = await charactersCollection(db)
       .find({ homeState: stateId })
       .sort({ name: 1 })
       .toArray();
 
     const userIds = players.map((p) => p.userId);
-    const users = await db
-      .collection<User>("users")
+    const users = await usersCollection(db)
       .find({ _id: { $in: userIds } })
       .project<
         Pick<
@@ -346,8 +333,7 @@ export async function getRegionPlayers(stateId: string) {
 export async function getRegionNPPs(stateId: string, countryId: CountryId) {
   try {
     const db = await getDb();
-    const npps = await db
-      .collection<NPP>("npps")
+    const npps = await nppsCollection(db)
       .find({ homeState: stateId, retiredAt: null })
       .sort({ name: 1 })
       .toArray();
@@ -355,8 +341,7 @@ export async function getRegionNPPs(stateId: string, countryId: CountryId) {
     const partyIds = [...new Set(npps.map((n) => n.party).filter(Boolean))];
     const partySeqIds = partyIds.map(Number).filter(Boolean);
     const parties = partySeqIds.length
-      ? await db
-          .collection<PoliticalParty>("politicalParties")
+      ? await politicalPartiesCollection(db)
           .find({ sequentialId: { $in: partySeqIds }, countryId })
           .toArray()
       : [];
@@ -378,8 +363,7 @@ export async function getRegionNPPs(stateId: string, countryId: CountryId) {
 export async function getRegionOfficials(stateId: string, countryId: CountryId) {
   try {
     const db = await getDb();
-    const officials = await db
-      .collection<ElectedOfficial>("electedOfficials")
+    const officials = await electedOfficialsCollection(db)
       // Region ids are not globally unique across countries, so scope the
       // lookup by country as well as by state (ticket-1107).
       .find({ state: stateId.toUpperCase(), countryId })
@@ -393,24 +377,20 @@ export async function getRegionOfficials(stateId: string, countryId: CountryId) 
     const partyIds = [...new Set(officials.map((o) => o.party).filter(Boolean))] as string[];
     const partySeqIds = partyIds.map(Number).filter(Boolean);
     const [characters, npps, parties] = await Promise.all([
-      db
-        .collection<Character>("characters")
+      charactersCollection(db)
         .find({ _id: { $in: characterIds } })
         .toArray(),
-      db
-        .collection<NPP>("npps")
+      nppsCollection(db)
         .find({ _id: { $in: nppIds } })
         .toArray(),
       partySeqIds.length
-        ? db
-            .collection<PoliticalParty>("politicalParties")
+        ? politicalPartiesCollection(db)
             .find({ sequentialId: { $in: partySeqIds }, countryId })
             .toArray()
         : Promise.resolve([] as PoliticalParty[]),
     ]);
     const userIds = characters.map((c) => c.userId);
-    const users = await db
-      .collection<User>("users")
+    const users = await usersCollection(db)
       .find({ _id: { $in: userIds } })
       .project<Pick<User, "_id" | "isBanned" | "patreonProfileBorder" | "patreonHighlightColor">>({
         _id: 1,

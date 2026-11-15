@@ -1,10 +1,11 @@
 import {
   MEDIA_PRODUCT_ACTIVE_INDEX,
   MEDIA_PRODUCT_CORPORATION_INDEX,
-  MEDIA_PRODUCT_PROJECTS,
   MEDIA_PRODUCT_STAGE_INDEX,
 } from "@/lib/products/mediaProduct";
 import type { Migration } from "../types";
+import { mediaProductProjectsV1Collection } from "@/lib/db/repositories/mediaProductProjectsV1";
+import type { Document } from "mongodb";
 
 /** Create durable media product lookup and one-active-development indexes before route or turn use. */
 export const migration: Migration = {
@@ -13,7 +14,7 @@ export const migration: Migration = {
   idempotent: true,
   execute: async (db, ctx) => {
     if (!ctx.dryRun) {
-      const collection = db.collection(MEDIA_PRODUCT_PROJECTS);
+      const collection = mediaProductProjectsV1Collection<Document>(db);
       await collection.createIndex(
         { activeDevelopmentCorporationId: 1 },
         {

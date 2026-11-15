@@ -188,9 +188,7 @@ export default function MarginsPanel({
         ["Growth and construction", pnl.growthAndBuildAnchor],
       ] as const)
     : [];
-  // The whole modifier stack as one signed line, stored as a CREDIT (positive
-  // lowers cost). It is a charge whenever the stack nets negative, so the label
-  // names what it is rather than promising a credit (ticket 1448).
+  // The whole modifier stack as one signed line, stored as a CREDIT (positive lowers cost). When the stack nets negative it is a charge, so the label names what it is rather than promising a credit.
   const policyCost = pnl ? -(pnl.policyAnchor ?? 0) : 0;
   const pctOfRevenue = (value: number) => (marginRevenue > 0 ? (value / marginRevenue) * 100 : 0);
 

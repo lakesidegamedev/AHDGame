@@ -88,10 +88,20 @@ const EXPECTED_MAJORS: Record<string, Record<string, string[]>> = {
     IE: ["FF", "FG", "SF"],
     CN: ["CCP"],
   },
+  // Hand-kept preset lists once stopped at 2023, so LDP, LD and PT seeded Minor here.
+  "2027-default": {
+    US: ["DEM", "REP"],
+    UK: ["CON", "LAB", "LD"],
+    DE: ["CDU", "GRN", "SPD"],
+    JP: ["CDP", "LDP"],
+    BR: ["PL", "PT"],
+    IE: ["FF", "FG", "SF"],
+    CN: ["CCP"],
+  },
 };
 
 describe("seed-tier roster per preset", () => {
-  for (const preset of ["1991-default", "2019-default"] as const) {
+  for (const preset of ["1991-default", "2019-default", "2027-default"] as const) {
     it(`assigns the expected Major/Minor split for ${preset}`, () => {
       const valid = ALL_SEEDS.filter((s) => isPartyValidForPreset(s, preset));
       const majorsByCountry: Record<string, string[]> = {};

@@ -1,32 +1,13 @@
 import type { Layer1Config } from "@/lib/seeds/stateDemographics";
 
-/**
- * 2023-era US state demographic profiles (Layer 1 configs).
+/*
+ * 2023-era US state demographic profiles (Layer 1 configs). Era anchor:
+ * 2022-2023 ACS estimates. Each state was authored independently, NOT scaled
+ * or derived from the 2019 dataset in stateCensusData.ts.
  *
- * Era anchor: 2022–2023 American Community Survey (ACS) estimates, with
- * post-2020-census redistribution and pandemic-era migration baked in.
- *
- * Methodology: every state below was authored INDEPENDENTLY from
- * 2022–2023 reference knowledge of that state — these values are NOT
- * scaled or otherwise derived from the 2019 dataset in
- * `stateCensusData.ts` (that file was consulted only for the field
- * format and the ideology-share scale conventions).
- *
- * Key national reference points circa 2023:
- * - Race: non-Hispanic White ~58.5%, Black ~12%, Hispanic ~19.5%,
- *   Asian ~6.3%, multiracial/other share growing post-2020 census.
- * - Education: bachelor's-or-higher ~38% of adults nationally; the
- *   graduate-degree share continued climbing in metro/coastal states.
- * - Age: national median ~39; boomer retirement swelled the senior
- *   cohort almost everywhere (FL/ME/WV/VT oldest; UT/TX/DC youngest).
- * - Migration: pandemic-era booms in ID, MT, TN, FL, TX, SC, AZ, NV
- *   (younger in-migrants in boomtowns, retirees in FL/AZ/SC); slight
- *   population declines in CA, NY, IL.
- * - Ideology (independent shares; do not sum to 100): post-2020
- *   realignment — progressive and environmentalist identification
- *   elevated among the young and college-educated; white evangelical
- *   share in slow secular decline; gun-owner and patriot identification
- *   firm-to-rising in rural and exurban states.
+ * National reference points circa 2023: non-Hispanic White ~58.5%, Black ~12%,
+ * Hispanic ~19.5%, Asian ~6.3%; bachelor's-or-higher ~38% of adults; median
+ * age ~39. Ideology shares are independent and do not sum to 100.
  */
 export const stateCensusData2023: Record<string, Layer1Config> = {
   AK: {

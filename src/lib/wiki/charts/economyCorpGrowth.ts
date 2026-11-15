@@ -10,7 +10,7 @@ import {
   MARKETING_DECAY_RATE,
   STRENGTH_UPKEEP_STAGE,
   marketingStrengthAfterTurn,
-} from "@/lib/corporations/strengthUpkeep";
+} from "@/lib/corporations/strengthUpkeepRules";
 import type { WikiChartBuilder, WikiChartSpec } from "./types";
 
 const round = (n: number, dp = 4) => {

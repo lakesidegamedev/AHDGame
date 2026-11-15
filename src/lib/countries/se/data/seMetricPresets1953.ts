@@ -1,21 +1,14 @@
 /**
- * Sweden 1953 metric overlays — Social Democratic welfare expansion.
+ * Sweden 1953 metric overlays.
  *
- * Base `seStateMetrics` is authored on ~1979 (peak Swedish model) values.
- * Without this overlay a 1953-default world keeps 1979 life expectancy (~75.5)
- * and near-peak welfare metrics, flattening the fact that 1953 Sweden was
- * already among the world's healthiest (~72; SCB / UN Demographic Yearbook
- * 1950-55) but still far from 1970s coverage depth. Region ids match
- * `seRegionCensusData1953`.
+ * Base `seStateMetrics` is authored on ~1979 values; without this overlay a 1953
+ * world keeps 1979 life expectancy (~75.5) and near-peak welfare metrics. Region
+ * ids match `seRegionCensusData1953`.
  *
- * `medianIncome` is annual household kronor, re-derived (#income-gdp-scale-audit)
- * against the 1953 budget's own GDP/capita rather than Maddison-scaled off the
- * 1979 nominal figure — the old method applied a REAL GDP/capita ratio to a
- * NOMINAL income value (the same mistake diagnosed and fixed for FR/ES/TR),
- * which produced a ~10x-too-high household income. See NATIONAL_1953's
- * medianIncome comment below for the corrected derivation.
- * Broadband/internet did not exist; household electrification was already
- * near-universal outside remote Norrland (SCB energy statistics).
+ * `medianIncome` is annual household kronor derived against 1953 GDP/capita
+ * (nominal), not scaled off the 1979 nominal figure. Broadband/internet did not
+ * exist; household electrification was already near-universal outside remote
+ * Norrland.
  */
 import type { MetricPresetBundle } from "@/lib/seeds/ie/ieMetricPresets";
 
@@ -49,13 +42,9 @@ const NATIONAL_1953: Record<string, number> = {
   "education.universityEnrollment": 3.5, // <4% everywhere (seRegionCensusData1953 header)
   "population.urbanizationRate": 65, // SCB 1950 — urban majority but large rural interior
   "population.medianAge": 34, // older than Mediterranean peers
-  // 0-100 fertility INDEX (population.birthRate; metricDefinitions
-  // `unit: "index"`), NOT a crude per-1000 rate. Real Sweden 1953 TFR ≈2.2
-  // (SCB) — birthRateIndexToTFR(56, 2.06) = 2.06*(0.4+0.56*1.2) = 2.22. This
-  // field was previously ABSENT, so SE fell through seedCohortVectors'
-  // DEFAULT_BIRTH_RATE = 50 (TFR 2.06) — close for Sweden (already a low-
-  // fertility outlier even in 1953) but not authored, so any turn-engine
-  // change to the neutral default would silently drift SE along with it.
+  // 0-100 fertility INDEX (population.birthRate; `unit: "index"`), NOT a crude
+  // per-1000 rate. Real Sweden 1953 TFR ≈2.2 (SCB); birthRateIndexToTFR(56, 2.06) = 2.22.
+  // Authored so the seed does not fall through to DEFAULT_BIRTH_RATE = 50 (TFR 2.06).
   "population.birthRate": 56,
   "population.populationGrowth": 0.6,
   "infrastructure.broadbandAccess": 0, // internet did not exist

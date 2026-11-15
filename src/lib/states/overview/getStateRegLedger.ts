@@ -1,6 +1,9 @@
 import type { Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import type { OrgRegLedger, PoliticalParty, StatePartyOrg } from "@/lib/db/types";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { orgRegLedgerCollection } from "@/lib/db/repositories/orgRegLedger";
 
 export interface StateRegLedgerResult {
   seeded: boolean;
@@ -14,16 +17,13 @@ const REG_LEDGER_LOOKBACK_TURNS = 24;
 /**
  * Upper bound on `reg` ledger rows one party can receive in a single turn.
  * Used to size the over-fetch so the per-turn collapse still covers the full
- * lookback window.
+ * lookback window; an undersized budget silently returns half the window
+ * rather than failing.
  *
- * Budget: 3 from `regDriftDecay` (renormalize + drift + decay) plus, from
- * `demographicTurnoutTurn`, the party's own registration-drive row AND one
- * NEGATIVE row for every rival whose drive sources its surplus. That last term
- * scales with the number of parties funding drives in the state — all six US
- * parties currently do, which is 8 rows in a turn against the old budget of 4,
- * and an undersized budget silently returns half the requested window rather
- * than failing. 16 leaves headroom for a country with a wider roster; it only
- * costs a larger capped read on an indexed query.
+ * Budget: 3 from `regDriftDecay`, plus the party's own registration-drive row
+ * and one NEGATIVE row per rival whose drive sources its surplus, scaling with
+ * the number of parties funding drives in the state. 16 leaves headroom for a
+ * wider roster; it only costs a larger capped read on an indexed query.
  */
 const MAX_REG_ROWS_PER_TURN = 16;
 
@@ -40,8 +40,8 @@ export async function getStateRegLedger(
   const lookback = args.lookbackTurns ?? REG_LEDGER_LOOKBACK_TURNS;
 
   const [rows, parties] = await Promise.all([
-    db.collection<StatePartyOrg>("statePartyOrg").find({ countryId, stateId }).toArray(),
-    db.collection<PoliticalParty>("politicalParties").find({ countryId }).toArray(),
+    statePartyOrgCollection(db).find({ countryId, stateId }).toArray(),
+    politicalPartiesCollection(db).find({ countryId }).toArray(),
   ]);
 
   const partyBySeq = new Map(parties.map((p) => [String(p.sequentialId), p]));
@@ -80,8 +80,7 @@ export async function getStateRegLedger(
   // generated in array order), and only then cut to the lookback window. The
   // sort stays on `turn` alone so it is served by `reg_ledger_lookup`; the
   // within-turn ordering is resolved here rather than by a blocking sort.
-  const ledgerRows = await db
-    .collection<OrgRegLedger>("orgRegLedger")
+  const ledgerRows = await orgRegLedgerCollection(db)
     .find({ countryId, stateId, partyId: top.partyId, metric: "reg" })
     .sort({ turn: -1 })
     .limit(lookback * MAX_REG_ROWS_PER_TURN)

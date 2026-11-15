@@ -9,7 +9,7 @@ import {
   loadReservedPositionsPlacedBy,
   shouldRedactCorporationForViewer,
 } from "@/lib/corporations/reservedCorporateHoldings";
-import type { Bond, Corporation, CorporationPortfolioHistory, Shareholder } from "@/lib/db/types";
+import type { CorporationPortfolioHistory, Shareholder } from "@/lib/db/types";
 import { BOND_UNIT_FACE_VALUE, BOND_MATURITY_LABELS } from "@/lib/db/types/bond";
 import type { BondMaturityTurns } from "@/lib/db/types/bond";
 import { perTurnCouponPayment } from "@/lib/constants/bonds";
@@ -25,6 +25,9 @@ import {
 } from "@/lib/currency/corporationCapital";
 import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
 import type { CurrencyCode } from "@/lib/constants/currencies";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporationPortfolioHistoryCollection } from "@/lib/db/repositories/corporationPortfolioHistory";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -82,8 +85,7 @@ export async function GET(request: Request, { params }: RouteParams) {
     }
 
     const [heldCorps, activeBonds, fxByCurrency, reservedPlaced, funds] = await Promise.all([
-      db
-        .collection<Corporation>("corporations")
+      corporationsCollection(db)
         .find({ "shareholders.corporationId": corporation._id })
         .project({
           _id: 1,
@@ -97,8 +99,7 @@ export async function GET(request: Request, { params }: RouteParams) {
           countryId: 1,
         })
         .toArray(),
-      db
-        .collection<Bond>("bonds")
+      bondsCollection(db)
         .find({
           matured: false,
           $or: [{ "holders.corporationId": corporation._id }, { corporationId: corporation._id }],
@@ -120,8 +121,7 @@ export async function GET(request: Request, { params }: RouteParams) {
       .map((r) => r.targetCorpId)
       .filter((id) => !heldById.has(id.toString()));
     if (missingReservedIds.length > 0) {
-      const extraHeld = await db
-        .collection<Corporation>("corporations")
+      const extraHeld = await corporationsCollection(db)
         .find({ _id: { $in: missingReservedIds } })
         .project({
           _id: 1,
@@ -212,8 +212,7 @@ export async function GET(request: Request, { params }: RouteParams) {
     ];
     const issuerCorps =
       issuerCorpIds.length > 0
-        ? await db
-            .collection<Corporation>("corporations")
+        ? await corporationsCollection(db)
             .find({ _id: { $in: issuerCorpIds.map((cid) => new ObjectId(cid)) } })
             .project({ _id: 1, name: 1, sequentialId: 1, brandColor: 1 })
             .toArray()
@@ -327,8 +326,7 @@ export async function GET(request: Request, { params }: RouteParams) {
     // Most recent 500 turns; sort descending server-side then reverse for the
     // chart consumer (ascending) so long-lived corps don't see the chart
     // truncate to the oldest 500 snapshots.
-    const historyDescending = await db
-      .collection<CorporationPortfolioHistory>("corporationPortfolioHistory")
+    const historyDescending = await corporationPortfolioHistoryCollection(db)
       .find({ corporationId: corporation._id })
       .sort({ turn: -1 })
       .limit(500)

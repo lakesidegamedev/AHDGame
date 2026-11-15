@@ -6,31 +6,25 @@ import * as Sentry from "@sentry/nextjs";
  *
  * V8 OOM (`FATAL ERROR: Ineffective mark-compacts near heap limit`) aborts the
  * process via SIGABRT, bypassing JS-level `unhandledRejection` /
- * `uncaughtException` handlers — so `installCrashCapture` in
- * `crashCapture.ts` cannot see it. The 2026-05-24 sandbox-staging incident
- * died this way: V8 OOM during turn 73's NPP behavior phase, container exit
- * with no Sentry signal, only stdout `<--- Last few GCs --->` noise.
+ * `uncaughtException` handlers, so `installCrashCapture` cannot see it.
  *
- * The watchdog periodically samples `process.memoryUsage().heapUsed` against
- * `v8.getHeapStatistics().heap_size_limit`. Once usage crosses
- * `thresholdPct` (default 75%) — or `rss` crosses `rssThresholdPct` of
- * `rssCapBytes` (default 70% of 5GB) — it fires a Sentry message with
- * rich diagnostics and exits cleanly with code 1 so Railway restarts the
- * container with telemetry intact.
+ * The watchdog samples `process.memoryUsage().heapUsed` against
+ * `v8.getHeapStatistics().heap_size_limit`. Once usage crosses `thresholdPct`
+ * (default 75%) or `rss` crosses `rssThresholdPct` of `rssCapBytes` (default
+ * 70% of 5GB), it fires a Sentry message with diagnostics and exits cleanly
+ * with code 1 so Railway restarts the container with telemetry intact.
  *
- * Leak-hunt diagnostics included:
- * - Periodic sample log every interval (timeline of heap growth in Railway logs)
- * - Per-turn heap-delta ring buffer (recorded by cron.ts around processTurn)
- * - Per-V8-space stats (which space grows — old_space leak vs large_object_space)
+ * Diagnostics:
+ * - Periodic sample log every interval (heap growth timeline in Railway logs)
+ * - Per-turn heap-delta ring buffer (recorded around processTurn)
+ * - Per-V8-space stats (which space grows: old_space vs large_object_space)
  *
- * NOTE: heap snapshot capture at trip time was REMOVED on 2026-05-25 after
- * two consecutive trips got SIGKILL'd by Railway mid-snapshot.
+ * NOTE: heap snapshot capture at trip time is deliberately NOT performed.
  * `v8.writeHeapSnapshot()` transiently allocates a buffer equal to heap size
- * while serializing, pushing RSS past the container cap during the dump.
- * The pure `parseHeapSnapshotJson` parser is still exported for future
- * on-demand use (e.g., a separate diagnostic script invoking
- * `v8.writeHeapSnapshot` outside the watchdog trip path), but nothing in the
- * trip handler calls it.
+ * while serializing, pushing RSS past the container cap and getting the
+ * process SIGKILL'd mid-dump. The pure `parseHeapSnapshotJson` parser is still
+ * exported for on-demand use (e.g. a separate diagnostic script invoking
+ * `v8.writeHeapSnapshot` outside the trip path).
  */
 
 export interface HeapSnapshot {
@@ -66,7 +60,7 @@ export interface HeapWatchdogDeps {
   /**
    * Container memory cap in bytes. Compared against process.memoryUsage().rss
    * to catch the SIGKILL pattern where heap stays under thresholdPct but RSS
-   * spikes past the container limit (Railway sandbox: 5GB as of 2026-05-25).
+   * spikes past the container limit (Railway sandbox: 5GB).
    */
   rssCapBytes?: number;
   rssThresholdPct?: number;
@@ -93,12 +87,10 @@ export interface HeapWatchdogDeps {
 }
 
 const DEFAULT_INTERVAL_MS = 10_000;
-// Lowered from 0.85 → 0.75 (and RSS 0.8 → 0.7) on 2026-05-25 after a real trip
-// got SIGKILL'd mid-snapshot. The snapshot capture has since been removed
-// (see file-level NOTE) but we keep the tighter thresholds — clean restart
+// Tight thresholds (heap 0.75, RSS 0.7): clean restart
 // before Railway SIGKILL is still cheaper than a SIGKILL email + cgroup OOM.
 const DEFAULT_THRESHOLD_PCT = 0.75;
-// Raised from 500MB → 5GB on 2026-05-25 after Railway container cap was bumped.
+// Matches the Railway container cap.
 // Override per service via env (HEAP_WATCHDOG_RSS_CAP_BYTES) if other
 // deployments use a different cap.
 const DEFAULT_RSS_CAP_BYTES = 5_000_000_000;

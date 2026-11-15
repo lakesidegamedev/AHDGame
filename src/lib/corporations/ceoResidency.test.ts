@@ -54,7 +54,7 @@ describe("ceoResidency", () => {
 
   it("returns null but does NOT mutate when CEO's home state no longer matches HQ", async () => {
     // Vacating is the caller's responsibility — this function must never mutate
-    // on a read, as it is called from GET (preview) contexts (bug #0813).
+    // on a read, as it is called from GET (preview) contexts.
     const db = createMockDb();
     db.collection("corporations");
     const ceoId = new ObjectId();

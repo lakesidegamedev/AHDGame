@@ -6,14 +6,12 @@ import { earliestFederationDecisionYear } from "./availability";
 import { loadLiveSuccessionInventory } from "./loadLiveInventory";
 import { loadLiveSuccessionAccountingSnapshot } from "./normalizeLiveFinances";
 import type { SuccessionActivationInput } from "./planActivation";
-import {
-  FEDERATION_POLITICAL_PROPOSALS_COLLECTION,
-  type FederationPoliticalProposalRecord,
-} from "./politicalProposal";
+import { type FederationPoliticalProposalRecord } from "./politicalProposal";
 import { loadPersistedFederationApproval } from "./ratificationStore";
 import { planSuccessionFinances } from "./rules/financialSettlement";
 import { planSuccessionTerritories } from "./rules/territory";
 import { hashFederationPoliticalTerms } from "./settlementIntent";
+import { federationPoliticalProposalsCollection } from "@/lib/db/repositories/federationPoliticalProposals";
 
 export type RatifiedActivation = Omit<SuccessionActivationInput, "sourceRegions" | "custodyAssets">;
 
@@ -43,16 +41,16 @@ export async function buildRatifiedFederationActivation(input: {
     !Number.isFinite(now.getTime())
   )
     throw new Error("Federation activation needs a valid decision and turn");
-  const proposal = await db
-    .collection<FederationPoliticalProposalRecord>(FEDERATION_POLITICAL_PROPOSALS_COLLECTION)
-    .findOne(
-      {
-        _id: `1991-default:${settlementId}:${revision}`,
-        sourceEntityId: sourceCountryId,
-        status: "open",
-      },
-      { session }
-    );
+  const proposal = await federationPoliticalProposalsCollection<FederationPoliticalProposalRecord>(
+    db
+  ).findOne(
+    {
+      _id: `1991-default:${settlementId}:${revision}`,
+      sourceEntityId: sourceCountryId,
+      status: "open",
+    },
+    { session }
+  );
   if (!proposal || proposal.terms.sourceEntityId !== sourceCountryId)
     throw new Error("Federation activation has no open approved proposal");
   const availableFromYear = earliestFederationDecisionYear("1991-default", sourceCountryId);

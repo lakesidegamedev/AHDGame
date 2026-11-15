@@ -513,4 +513,98 @@ export const ENTERTAINMENT_V3: V3LaneContent = {
       ],
     },
   ],
+  "2039": [
+    {
+      name: "Agentic Production Pipelines",
+      description: "Agents schedule shoots and assemble rough cuts overnight.",
+      effects: [
+        { kind: "laborCostReduction", pct: 0.06 },
+        { kind: "inputCost", commodity: "software", pct: 0.07 },
+      ],
+    },
+    {
+      name: "Personal Edition Pricing",
+      description: "Viewers pay extra for editions tuned to them.",
+      effects: [
+        { kind: "plantOutput", pct: 0.018 },
+        { kind: "laborCostReduction", pct: 0.02 },
+      ],
+    },
+    {
+      name: "Digital Likeness Licensing",
+      description: "Clear consent and royalty rules for digital performers head off regulation.",
+      effects: [{ kind: "dominanceShield", pct: 0.13 }],
+    },
+    {
+      name: "Generated Series Studios",
+      description: "Generative pipelines under editorial control produce series at software cost.",
+      effects: [
+        { kind: "laborCostReduction", pct: 0.095 },
+        { kind: "outputRate", commodity: "advertising", pct: 0.095 },
+      ],
+    },
+    {
+      name: "Shared Live Events",
+      description: "Mixed reality premieres sell scarce live moments at high prices.",
+      effects: [
+        { kind: "plantOutput", pct: 0.03 },
+        { kind: "marketingStrength", flat: 38 },
+      ],
+    },
+    {
+      name: "Global Rights Exchange",
+      description: "One licensing exchange clears every territory and format at once.",
+      effects: [
+        { kind: "tariffShield", pct: 0.23 },
+        { kind: "expansionDiscount", pct: 0.19 },
+      ],
+    },
+  ],
+  "2049": [
+    {
+      name: "Self-Running Studios",
+      description: "Agents plan, shoot and edit with a small creative board.",
+      effects: [
+        { kind: "laborCostReduction", pct: 0.065 },
+        { kind: "inputCost", commodity: "software", pct: 0.075 },
+      ],
+    },
+    {
+      name: "Personal Universe Pricing",
+      description: "Fans pay extra for worlds that remember them.",
+      effects: [
+        { kind: "plantOutput", pct: 0.019 },
+        { kind: "laborCostReduction", pct: 0.022 },
+      ],
+    },
+    {
+      name: "Synthetic Talent Standards",
+      description: "Fair pay and consent rules for synthetic performers keep regulators away.",
+      effects: [{ kind: "dominanceShield", pct: 0.14 }],
+    },
+    {
+      name: "Infinite Content Engines",
+      description: "Engines under editorial control turn out shows and games at almost no cost.",
+      effects: [
+        { kind: "laborCostReduction", pct: 0.1 },
+        { kind: "outputRate", commodity: "advertising", pct: 0.1 },
+      ],
+    },
+    {
+      name: "Planet-Wide Live Premieres",
+      description: "Holographic premieres sell one shared moment to every city at once.",
+      effects: [
+        { kind: "plantOutput", pct: 0.03 },
+        { kind: "marketingStrength", flat: 40 },
+      ],
+    },
+    {
+      name: "Universal Rights Ledger",
+      description: "One ledger clears every right in every world and format instantly.",
+      effects: [
+        { kind: "tariffShield", pct: 0.24 },
+        { kind: "expansionDiscount", pct: 0.2 },
+      ],
+    },
+  ],
 };

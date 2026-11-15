@@ -17,7 +17,7 @@
  * preservation, and pruning counterweight survival.
  */
 import "@/lib/seeds/stateDemographics";
-import type { Layer1PositionOverlay, StateDemographics } from "@/lib/db/types";
+import type { Layer1PositionOverlay, CensusGroupView } from "@/lib/db/types";
 import {
   buildGranularElectorateSubstrate,
   clearGranularElectorateCache,
@@ -52,8 +52,8 @@ export interface DeepSouthDryRun {
   rows: StateDryRunRow[];
 }
 
-function stubDemographics(stateId: string): StateDemographics {
-  return { _id: stateId, countryId: "US", groups: {} } as unknown as StateDemographics;
+function stubDemographics(stateId: string): CensusGroupView {
+  return { _id: stateId, countryId: "US", groups: {} } as unknown as CensusGroupView;
 }
 
 /** Full Southern-realignment checkpoint totals as a durable position overlay. */
@@ -95,7 +95,6 @@ function substrate(stateId: string, overlay?: Layer1PositionOverlay): GranularEl
     turnoutDoc: null,
     statePopulation: 1_000_000,
     demographics: demo,
-    categories: [],
     enriched: [],
     demographicDefaults: overlay ? { ...demo, layer1PositionOverrides: overlay } : null,
   });

@@ -17,7 +17,7 @@ export interface PhysicalPnlView {
 }
 
 /**
- * Corp-level physical P&L rollup, plants only (#587).
+ * Corp-level physical P&L rollup, plants only.
  *
  * One object rather than eight loose keys so a client can test
  * `physical != null` as its plants switch and cannot end up half-reading it.

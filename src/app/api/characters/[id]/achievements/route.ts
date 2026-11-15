@@ -6,9 +6,9 @@ import {
   getAchievementRarityMap,
   getAllAchievements,
 } from "@/lib/achievements";
-import type { Character } from "@/lib/db/types";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { getAchievementProgress } from "@/lib/achievements/progress";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -31,7 +31,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     const characterId = new ObjectId(id);
     const db = await getDb();
 
-    const character = await db.collection<Character>("characters").findOne({ _id: characterId });
+    const character = await charactersCollection(db).findOne({ _id: characterId });
     if (!character) {
       return errorResponse(404, "Character not found");
     }

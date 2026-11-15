@@ -1,13 +1,6 @@
 import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
-import type {
-  NPP,
-  StatePartyOrg,
-  PoliticalParty,
-  Character,
-  State,
-  ElectionCandidate,
-} from "@/lib/db/types";
+import type { NPP, StatePartyOrg, PoliticalParty, State, ElectionCandidate } from "@/lib/db/types";
 import type { InfluenceType } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import { isNationalCampaigner } from "@/lib/parties/access";
@@ -17,6 +10,13 @@ import { activeNppElectionCandidacyFilter } from "@/lib/elections/nppCandidacyQu
 import { calculateRelocationCapacity } from "@/lib/npp/recruitment";
 import { getPartyFrontier, isInFrontier } from "@/lib/parties/partyFrontier";
 import { getRelocationTerritory, PARTY_TERRITORY_WARNING } from "@/lib/parties/relocationTerritory";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { usersCollection } from "@/lib/db/repositories/users";
+import type { Document } from "mongodb";
 
 function getNPPCountry(npp: NPP): CountryId {
   return npp.countryId as CountryId;
@@ -67,7 +67,7 @@ function checkTargetStatCap(
 
 export async function hasActivePlayersInState(stateId: string, partyId: string): Promise<boolean> {
   const db = await getDb();
-  const playerCount = await db.collection<Character>("characters").countDocuments({
+  const playerCount = await charactersCollection(db).countDocuments({
     homeState: stateId,
     party: partyId,
   });
@@ -79,12 +79,11 @@ export async function getStatesWithoutPlayers(
   countryId: CountryId
 ): Promise<string[]> {
   const db = await getDb();
-  const statesWithPlayers = await db.collection<Character>("characters").distinct("homeState", {
+  const statesWithPlayers = await charactersCollection(db).distinct("homeState", {
     party: partyId,
     countryId,
   });
-  const allStates = await db
-    .collection<State>("states")
+  const allStates = await statesCollection(db)
     .find({ countryId })
     .project({ _id: 1 })
     .map((s) => s._id as unknown as string)
@@ -104,10 +103,10 @@ export async function validateStatePartyInfluence(
 
   const isChair = statePartyOrg.chairId?.equals(actorCharacterId);
   const isViceChair = statePartyOrg.viceChairId?.equals(actorCharacterId);
-  const actor = await db.collection<Character>("characters").findOne({ _id: actorCharacterId });
+  const actor = await charactersCollection(db).findOne({ _id: actorCharacterId });
   if (!actor) return { valid: false, error: "Actor not found" };
 
-  const user = await db.collection("users").findOne({ _id: actor.userId });
+  const user = await usersCollection<Document>(db).findOne({ _id: actor.userId });
   const isAdmin = user?.isAdmin || false;
 
   if (!isChair && !isViceChair && !isAdmin) {
@@ -169,10 +168,10 @@ export async function validateNationalPartyInfluence(
 
   const isChair = party.chairId?.equals(actorCharacterId);
   const isViceChair = party.viceChairId?.equals(actorCharacterId);
-  const actor = await db.collection<Character>("characters").findOne({ _id: actorCharacterId });
+  const actor = await charactersCollection(db).findOne({ _id: actorCharacterId });
   if (!actor) return { valid: false, error: "Actor not found" };
 
-  const user = await db.collection("users").findOne({ _id: actor.userId });
+  const user = await usersCollection<Document>(db).findOne({ _id: actor.userId });
   const isAdmin = user?.isAdmin || false;
   const isCampaigner = isNationalCampaigner(party, actorCharacterId);
 
@@ -239,9 +238,7 @@ async function validateNppStateRelocationRequest(
     return { valid: false, error: "This NPP already lives in that state." };
   }
 
-  const targetState = await db
-    .collection<State>("states")
-    .findOne({ _id: targetStateId, countryId });
+  const targetState = await statesCollection(db).findOne({ _id: targetStateId, countryId });
   if (!targetState) {
     return { valid: false, error: "Target state not found in this country." };
   }
@@ -262,18 +259,18 @@ async function validateNppStateRelocationRequest(
     return { valid: false, error: PARTY_TERRITORY_WARNING };
   }
 
-  const targetStatePartyOrg = await db
-    .collection<StatePartyOrg>("statePartyOrg")
-    .findOne({ _id: `${targetStateId}_${npp.party}` });
+  const targetStatePartyOrg = await statePartyOrgCollection(db).findOne({
+    _id: `${targetStateId}_${npp.party}`,
+  });
   const targetOrgLevel = targetStatePartyOrg?.organization ?? 0;
   const [targetStateNppCount, regionCount, partyNppCount] = await Promise.all([
-    db.collection<NPP>("npps").countDocuments({
+    nppsCollection(db).countDocuments({
       party: npp.party,
       homeState: targetStateId,
       retiredAt: null,
     }),
-    db.collection<State>("states").countDocuments({ countryId }),
-    db.collection<NPP>("npps").countDocuments({ party: npp.party, retiredAt: null }),
+    statesCollection(db).countDocuments({ countryId }),
+    nppsCollection(db).countDocuments({ party: npp.party, retiredAt: null }),
   ]);
   // Relocation is net-zero nationally, so it is capped by the roster-aware
   // relocation capacity, not the recruitment growth cap. See
@@ -310,9 +307,9 @@ async function validateNppMustBeCandidateForAction(
     return { valid: false, error: "Invalid election ID." };
   }
 
-  const cand = await db
-    .collection<ElectionCandidate>("electionCandidates")
-    .findOne(activeNppElectionCandidacyFilter(electionObjId, npp._id));
+  const cand = await electionCandidatesCollection(db).findOne(
+    activeNppElectionCandidacyFilter(electionObjId, npp._id)
+  );
   if (!cand) {
     return {
       valid: false,

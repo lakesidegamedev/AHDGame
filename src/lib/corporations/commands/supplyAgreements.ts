@@ -38,6 +38,12 @@ import {
   requireSupplyExchangeAccess,
 } from "@/lib/corporations/supplyExchange/guards";
 import { notifySupplyAgreementEvent } from "@/lib/corporations/supplyExchange/notifications";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { supplyAgreementsCollection } from "@/lib/db/repositories/supplyAgreements";
 
 /**
  * Private supply agreement lifecycle (bilateral, both-consent). Either CEO can
@@ -90,17 +96,17 @@ export async function validateCapacity(
   supplier: Corporation,
   terms: Pick<AgreementTerms, "commodity" | "stateId" | "volumeCap">
 ): Promise<{ volumeCapValidated: boolean; currentTurn: number; currentYear?: number }> {
-  const world = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { projection: { currentTurn: 1, currentYear: 1 } });
+  const world = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { projection: { currentTurn: 1, currentYear: 1 } }
+  );
   const currentTurn = world?.currentTurn ?? 0;
   if (!marketAtLeast(await getMarketSystemModeForDb(db), "plants")) {
     return { volumeCapValidated: false, currentTurn, currentYear: world?.currentYear };
   }
 
   const [sectors, config] = await Promise.all([
-    db
-      .collection<CorporateSector>("corporateSectors")
+    corporateSectorsCollection(db)
       .find(
         { corporationId: supplier._id },
         {
@@ -122,9 +128,10 @@ export async function validateCapacity(
         }
       )
       .toArray(),
-    db
-      .collection<GameConfig>("gameConfig")
-      .findOne({ _id: "default" }, { projection: { commandEconomyEnabled: 1 } }),
+    gameConfigCollection(db).findOne(
+      { _id: "default" },
+      { projection: { commandEconomyEnabled: 1 } }
+    ),
   ]);
   const capacityUnits = computeSupplierCommodityCapacityUnits({
     sectors,
@@ -184,8 +191,7 @@ async function loadParties(
   db: Db,
   agreement: Pick<SupplyAgreement, "supplierCorpId" | "buyerCorpId">
 ): Promise<{ supplier: Corporation; buyer: Corporation } | null> {
-  const corps = await db
-    .collection<Corporation>("corporations")
+  const corps = await corporationsCollection(db)
     .find({ _id: { $in: [agreement.supplierCorpId, agreement.buyerCorpId] } })
     .toArray();
   const supplier = corps.find((c) => c._id.equals(agreement.supplierCorpId));
@@ -244,9 +250,10 @@ export async function proposeSupplyAgreement(request: Request, initiatingCorpId:
         );
       }
       stateId = body.stateId;
-      const state = await db
-        .collection<State>("states")
-        .findOne({ _id: stateId }, { projection: { _id: 1 } });
+      const state = await statesCollection(db).findOne(
+        { _id: stateId },
+        { projection: { _id: 1 } }
+      );
       if (!state) {
         return errorResponse(400, "Unknown state");
       }
@@ -260,9 +267,7 @@ export async function proposeSupplyAgreement(request: Request, initiatingCorpId:
       );
     }
 
-    const counterparty = await db
-      .collection<Corporation>("corporations")
-      .findOne({ _id: counterpartyId });
+    const counterparty = await corporationsCollection(db).findOne({ _id: counterpartyId });
     if (!counterparty) {
       return errorResponse(
         404,
@@ -339,7 +344,7 @@ export async function proposeSupplyAgreement(request: Request, initiatingCorpId:
       createdAt: now,
       updatedAt: now,
     };
-    const res = await db.collection<SupplyAgreement>("supplyAgreements").insertOne(doc);
+    const res = await supplyAgreementsCollection(db).insertOne(doc);
 
     recordAudit({
       source: "api",
@@ -397,9 +402,9 @@ export async function updateSupplyAgreement(request: Request, corpId: string, ag
     const ceoCheck = requireCeo(corp, auth.user.userId);
     if (ceoCheck) return ceoCheck;
 
-    const agreement = await db
-      .collection<SupplyAgreement>("supplyAgreements")
-      .findOne({ _id: new ObjectId(agreementId) });
+    const agreement = await supplyAgreementsCollection(db).findOne({
+      _id: new ObjectId(agreementId),
+    });
     if (!agreement) {
       return errorResponse(404, "Agreement not found");
     }
@@ -454,9 +459,10 @@ export async function updateSupplyAgreement(request: Request, corpId: string, ag
         readerIsBuyer: isBuyer,
       });
       if (reachError) return errorResponse(409, reachError);
-      const gameState = await db
-        .collection<GameState>("gameState")
-        .findOne({ _id: "current" }, { projection: { currentTurn: 1 } });
+      const gameState = await gameStateCollection(db).findOne(
+        { _id: "current" },
+        { projection: { currentTurn: 1 } }
+      );
       const currentTurn = gameState?.currentTurn ?? 0;
       const durationTurns = currentOffer.durationTurns ?? agreement.durationTurns;
       const now = new Date();
@@ -466,7 +472,7 @@ export async function updateSupplyAgreement(request: Request, corpId: string, ag
         exclusive: currentOffer.exclusive,
         ...(durationTurns !== undefined ? { durationTurns } : {}),
       };
-      const accepted = await db.collection<SupplyAgreement>("supplyAgreements").updateOne(
+      const accepted = await supplyAgreementsCollection(db).updateOne(
         { _id: agreement._id, status: "pending", proposedByCorpId: currentOfferAuthor },
         {
           $set: {
@@ -592,7 +598,7 @@ export async function updateSupplyAgreement(request: Request, corpId: string, ag
         $push: { offers: offer },
         ...(body.durationTurns === undefined ? { $unset: { durationTurns: "" } } : {}),
       };
-      const result = await db.collection<SupplyAgreement>("supplyAgreements").updateOne(
+      const result = await supplyAgreementsCollection(db).updateOne(
         {
           _id: agreement._id,
           status: "pending",
@@ -653,16 +659,17 @@ export async function updateSupplyAgreement(request: Request, corpId: string, ag
       // free option — the supplier can see its own production before settlement
       // runs, so it could cancel on exactly the turns it was going to be short
       // and the shortfall penalty only ever hit players who forgot to click.
-      const gameState = await db
-        .collection<GameState>("gameState")
-        .findOne({ _id: "current" }, { projection: { currentTurn: 1 } });
+      const gameState = await gameStateCollection(db).findOne(
+        { _id: "current" },
+        { projection: { currentTurn: 1 } }
+      );
       const currentTurn = gameState?.currentTurn ?? 0;
       const immediate = agreement.status === "pending";
       const nextStatus: SupplyAgreement["status"] = immediate ? "cancelled" : "cancelling";
       // Notice scales with the term left on a fixed-term contract.
       const cancelEffectiveTurn = contractCancelEffectiveTurn(currentTurn, agreement.expiresAtTurn);
       const noticeTurns = cancelEffectiveTurn - currentTurn;
-      await db.collection<SupplyAgreement>("supplyAgreements").updateOne(
+      await supplyAgreementsCollection(db).updateOne(
         { _id: agreement._id, status: agreement.status },
         {
           $set: {
@@ -685,12 +692,10 @@ export async function updateSupplyAgreement(request: Request, corpId: string, ag
         delta: [{ field: "status", before: agreement.status, after: nextStatus }],
         outcome: "ok",
       });
-      const other = await db
-        .collection<Corporation>("corporations")
-        .findOne(
-          { _id: isSupplier ? agreement.buyerCorpId : agreement.supplierCorpId },
-          { projection: { userId: 1 } }
-        );
+      const other = await corporationsCollection(db).findOne(
+        { _id: isSupplier ? agreement.buyerCorpId : agreement.supplierCorpId },
+        { projection: { userId: 1 } }
+      );
       if (other) {
         await notifySupplyAgreementEvent({
           recipient: other,

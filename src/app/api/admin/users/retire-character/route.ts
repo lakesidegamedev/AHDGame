@@ -11,10 +11,13 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { parseJsonBody, schemas } from "@/lib/api/validate";
 import { retireCharacter } from "@/lib/retireCharacter";
 import { buildRetireRecapOpts } from "@/lib/recap/retireRecapOpts";
-import type { Character } from "@/lib/db/types";
 import type { RetiredCharacter } from "@/lib/db/types/retiredCharacter";
 import { ObjectId } from "mongodb";
 import { z } from "zod";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { usersCollection } from "@/lib/db/repositories/users";
+import type { Document } from "mongodb";
+import { retiredCharactersCollection } from "@/lib/db/repositories/retiredCharacters";
 
 // GET /api/admin/users/retire-character?userId=xxx — Fetch retired characters for a user.
 // Auth: requireAdmin
@@ -31,8 +34,7 @@ export async function GET(request: Request) {
     }
 
     const db = await getDb();
-    const retired = await db
-      .collection<RetiredCharacter>("retiredCharacters")
+    const retired = await retiredCharactersCollection(db)
       .find({ userId: new ObjectId(userIdParam) })
       .sort({ retiredAt: -1 })
       .toArray();
@@ -71,12 +73,12 @@ export async function POST(request: Request) {
     const db = await getDb();
     const userId = new ObjectId(parsed.data.userId);
 
-    const user = await db.collection("users").findOne({ _id: userId });
+    const user = await usersCollection<Document>(db).findOne({ _id: userId });
     if (!user) return errorResponse(404, "User not found");
 
     // Find active character — use activeCharacterId if set, otherwise first character
     const charQuery = user.activeCharacterId ? { _id: user.activeCharacterId, userId } : { userId };
-    const character = await db.collection<Character>("characters").findOne(charQuery);
+    const character = await charactersCollection(db).findOne(charQuery);
     if (!character) return errorResponse(404, "User has no active character");
 
     const recapOpts = await buildRetireRecapOpts(db, character);

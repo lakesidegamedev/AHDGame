@@ -1,5 +1,5 @@
 /**
- * Minimal in-memory Mongo stand-in for #860 Commons by-election tests.
+ * Minimal in-memory Mongo stand-in for Commons by-election tests.
  *
  * Supports the filter operators the vacancy/recall shells, the watcher, the
  * seat commands, and the lifecycle hooks use ($in/$nin/$ne/$exists/comparison

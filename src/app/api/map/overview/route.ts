@@ -17,6 +17,8 @@ import { loadUsPoliticalStateIds } from "@/lib/elections/usPoliticalHome";
 import type { State } from "@/lib/db/types";
 
 import type { MapSectorSpecializationState, MapOverviewResponse } from "@/lib/map/overviewTypes";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { isParliamentaryMapCountry } from "@/app/country/[code]/map/mapVariant";
 
 // Re-export for any consumer that still imports types from the route file.
 // New consumers should import from "@/lib/map/overviewTypes".
@@ -26,8 +28,7 @@ async function computeSectorSpecializationMap(
   db: Awaited<ReturnType<typeof getDb>>,
   countryId: CountryId
 ): Promise<Record<string, MapSectorSpecializationState>> {
-  const states = await db
-    .collection<State>("states")
+  const states = await statesCollection(db)
     .find({ countryId }, { projection: { _id: 1, name: 1, sectorSpecializations: 1 } })
     .toArray();
 
@@ -66,8 +67,7 @@ export async function GET(request: Request) {
     // Live region roster (drives the nation map's list / names / seat counts) —
     // read straight from the country's owned states so it follows ownership and
     // future cross-country transfers.
-    const rosterStates = await db
-      .collection<State>("states")
+    const rosterStates = await statesCollection(db)
       .find(
         { countryId },
         { projection: { _id: 1, name: 1, houseDistricts: 1, region: 1, population: 1 } }
@@ -148,19 +148,13 @@ export async function GET(request: Request) {
     }
 
     if (countryId === COUNTRY_CONFIGS.UK.id) {
-      const [partyOrg, commons, approvalRaw, lean, sectorSpecializations] = await Promise.all([
+      const [partyOrg, commons, approval, lean, sectorSpecializations] = await Promise.all([
         computePartyOrgMap(db, "UK"),
         computeHouseMap(db, "UK"),
         computeApprovalMap(db, "UK"),
         computeLeanMap(db, "UK"),
         computeSectorSpecializationMap(db, "UK"),
       ]);
-
-      // UK approval needs region ID remapping
-      const approval: Record<string, MapApprovalState> = {};
-      for (const [stateId, v] of Object.entries(approvalRaw)) {
-        approval[stateId] = v;
-      }
 
       return NextResponse.json({
         partyOrg,
@@ -283,6 +277,31 @@ export async function GET(request: Request) {
       return NextResponse.json({
         partyOrg,
         senate,
+        house,
+        governor,
+        approval,
+        lean,
+        presidential: {},
+        sectorSpecializations,
+        regions,
+      } satisfies MapOverviewResponse);
+    }
+
+    // Any other country with a parliamentary map: party org, lower house,
+    // regional executives, approval and lean, all read generically.
+    if (isParliamentaryMapCountry(countryId)) {
+      const [partyOrg, house, governor, approval, lean, sectorSpecializations] = await Promise.all([
+        computePartyOrgMap(db, countryId),
+        computeHouseMap(db, countryId),
+        computeGovernorMap(db, countryId),
+        computeApprovalMap(db, countryId),
+        computeLeanMap(db, countryId),
+        computeSectorSpecializationMap(db, countryId),
+      ]);
+
+      return NextResponse.json({
+        partyOrg,
+        senate: {},
         house,
         governor,
         approval,

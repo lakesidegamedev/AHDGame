@@ -22,6 +22,9 @@ import {
 import { getNationalBudgetId } from "@/lib/bonds/sovereign";
 import { recordAudit, recordAuditBulk } from "@/lib/audit/recordAudit";
 import type { ActionAuditInput } from "@/lib/db/types/actionAuditLog";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { treasuryTransactionsCollection } from "@/lib/db/repositories/treasuryTransactions";
 
 export interface EmitTreasuryTransactionArgs {
   db: Db;
@@ -56,11 +59,8 @@ async function resolveFallbackTurn(
 ): Promise<number> {
   if (entries.every((entry) => entry.turn != null)) return 0;
   return (
-    (
-      await db
-        .collection<GameState>("gameState")
-        .findOne({ _id: "current" }, { projection: { currentTurn: 1 } })
-    )?.currentTurn ?? 0
+    (await gameStateCollection(db).findOne({ _id: "current" }, { projection: { currentTurn: 1 } }))
+      ?.currentTurn ?? 0
   );
 }
 
@@ -76,8 +76,7 @@ async function resolveBudgetCurrencies(
   // currency read must not make the caller retry a committed transfer.
   let budgets: FederalBudget[];
   try {
-    budgets = await db
-      .collection<FederalBudget>("federalBudget")
+    budgets = await federalBudgetCollection(db)
       .find(
         { _id: { $in: countries.map(getNationalBudgetId) } },
         { projection: { _id: 1, currencyCode: 1 } }
@@ -169,7 +168,7 @@ export async function emitTreasuryTransaction(
     return null as unknown as TreasuryTransaction;
   }
 
-  await args.db.collection<TreasuryTransaction>("treasuryTransactions").insertOne(doc);
+  await treasuryTransactionsCollection(args.db).insertOne(doc);
   recordAudit(toAuditEntry(doc));
   return doc;
 }
@@ -194,7 +193,7 @@ export async function emitTreasuryTransactionsBulk(
   });
   if (docs.length === 0) return [];
 
-  await db.collection<TreasuryTransaction>("treasuryTransactions").insertMany(docs);
+  await treasuryTransactionsCollection(db).insertMany(docs);
   recordAuditBulk(docs.map(toAuditEntry));
   return docs;
 }

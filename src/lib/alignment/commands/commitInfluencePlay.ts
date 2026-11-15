@@ -14,21 +14,18 @@ import {
   type InternationalOrganizationId,
 } from "@/lib/constants/internationalOrganizations";
 import { getAlignmentPlaysCollection, getCountryAlignmentsCollection } from "@/lib/db/collections";
-import type { GameState } from "@/lib/db/types";
 import {
   disburseFromOrganizationFund,
   localToUsd,
   resolveOrgFundCurrencyCountry,
 } from "@/lib/internationalOrganizations/organizationFund";
 import { loadGdpUsdMillionsByEntity } from "@/lib/internationalOrganizations/entityGdp";
-import { isIntOrgAlignmentEnabled } from "../featureFlag";
 import { leadFor } from "../project";
 import { MIN_PLAY_POINTS, pointsForSpend } from "../influence";
 import { roundToShareGrid } from "../normalize";
 import { loadAlignmentTopology } from "../topology";
 
 export type CommitPlayFailure =
-  | "gate-off"
   | "no-channel"
   | "unknown-target"
   | "target-locked"
@@ -49,11 +46,6 @@ export async function commitInfluencePlay(params: {
   year: number;
 }): Promise<CommitPlayResult> {
   const { db } = params;
-
-  const gs = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { projection: { intOrgAlignmentEnabled: 1 } });
-  if (!(await isIntOrgAlignmentEnabled(gs ?? {}))) return { ok: false, reason: "gate-off" };
 
   // An org can only carry influence through a channel this era defines. Most
   // orgs have none in most eras, and that is a refusal, not an error.
@@ -89,11 +81,11 @@ export async function commitInfluencePlay(params: {
   const amountUsd = localToUsd(fundCountry, amountLocal);
 
   // A spend too small to buy even one grid step (a hundredth of a point) would
-  // resolve to zero applied points and be refunded a turn later — a submission
-  // and a turn spent to move nothing, which reads as "the button does nothing".
-  // Refuse it up front, BEFORE any debit, so the panel can tell the player the
-  // minimum spend instead. Priced on the raw points the spend buys, matching the
-  // per-point cost the dossier quotes (ticket #1213).
+  // resolve to zero applied points and be refunded a turn later, wasting a
+  // submission and a turn for no movement, which reads as "the button does
+  // nothing". Refuse it up front, BEFORE any debit, so the panel can tell the
+  // player the minimum spend instead. Priced on the raw points the spend buys,
+  // matching the per-point cost the dossier quotes.
   if (roundToShareGrid(pointsForSpend(amountUsd, targetGdpUsd)) < MIN_PLAY_POINTS) {
     return { ok: false, reason: "below-min-points" };
   }

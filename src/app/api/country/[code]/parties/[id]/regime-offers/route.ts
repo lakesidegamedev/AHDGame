@@ -1,21 +1,17 @@
 /**
  * GET /api/country/[code]/parties/[id]/regime-offers
  *
- * Read-only inbox feed for a specific party — surfaces regime-level
- * notifications addressed to this party (currently: Stage-2 selective-
- * concession legalization events).
+ * Read-only inbox feed of regime notifications addressed to a party (stage-2
+ * selective-concession legalization events).
  *
- * Sources from the existing `countryHistory` feed filtered by
- * `eventType: "regime_escalation"` + `party === sequentialId`. No new
- * collection — the regime-history feed is the source of truth.
+ * Reads from countryHistory filtered by eventType "regime_escalation" and
+ * party === sequentialId; no separate collection.
  *
- * Info-asymmetry guard: this endpoint does NOT include the ruling-
- * party leader's diagnostic scalars. Only the events tagged with this
- * partyId are returned.
+ * Info-asymmetry guard: never includes the ruling party leader's diagnostic
+ * scalars, only events tagged with this partyId.
  *
- * No auth — party pages are public. Errors:
- *   400 — invalid country / invalid partyId
- *   500 — anything else
+ * No auth (party pages are public).
+ * Errors: 400 invalid country/partyId, 500 otherwise.
  */
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";

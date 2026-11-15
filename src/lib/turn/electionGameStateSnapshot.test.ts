@@ -28,7 +28,7 @@ import {
   ensureUKElections,
   ngElectionsLive,
   withElectionGameStateSnapshot,
-} from "./perpetualElections";
+} from "@/lib/elections/scheduling";
 
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
 

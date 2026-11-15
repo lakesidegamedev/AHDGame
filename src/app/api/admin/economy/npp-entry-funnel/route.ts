@@ -4,10 +4,8 @@ import { z } from "zod";
 import { errorResponse } from "@/lib/api/errors";
 import type { NppMarketEntryFunnel } from "@/lib/db/types";
 import { getDb } from "@/lib/mongodb";
-import {
-  NPP_MARKET_ENTRY_FUNNEL_COLLECTION,
-  normalizeNppMarketEntryFunnel,
-} from "@/lib/turn/npp/entryFunnelSnapshot";
+import { normalizeNppMarketEntryFunnel } from "@/lib/turn/npp/entryFunnelSnapshot";
+import { nppMarketEntryFunnelsCollection } from "@/lib/db/repositories/nppMarketEntryFunnels";
 
 const querySchema = z.object({
   turn: z.coerce.number().int().nonnegative().optional(),
@@ -31,12 +29,10 @@ export const GET = withAdminRoute(async (_auth, request: Request) => {
   const db = await getDb();
   const doc =
     parsed.data.turn == null
-      ? await db
-          .collection<NppMarketEntryFunnel>(NPP_MARKET_ENTRY_FUNNEL_COLLECTION)
-          .findOne({ _id: "current" })
-      : await db
-          .collection<NppMarketEntryFunnel>(NPP_MARKET_ENTRY_FUNNEL_COLLECTION)
-          .findOne({ _id: `turn:${parsed.data.turn}` });
+      ? await nppMarketEntryFunnelsCollection<NppMarketEntryFunnel>(db).findOne({ _id: "current" })
+      : await nppMarketEntryFunnelsCollection<NppMarketEntryFunnel>(db).findOne({
+          _id: `turn:${parsed.data.turn}`,
+        });
 
   const funnel = normalizeNppMarketEntryFunnel(doc);
   if (!funnel) {

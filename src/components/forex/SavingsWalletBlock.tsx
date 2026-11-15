@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { CurrencyCode } from "@/lib/constants/currencies";
-import { CURRENCY_SYMBOLS } from "@/lib/constants/currencies";
+import { CURRENCY_SYMBOLS } from "@/lib/constants/currencyCodes";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { useToast } from "@/contexts/ToastContext";

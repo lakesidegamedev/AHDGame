@@ -8,9 +8,12 @@
  */
 
 import type { PoliticalMetricCategoryId } from "../politicalMetrics/types";
-import type { LawCountryId } from "./types";
+import type { CostAnchorCountryId } from "./types";
 
-const BUDGET_KEY_BY_CATEGORY: Record<LawCountryId, Record<PoliticalMetricCategoryId, string>> = {
+const BUDGET_KEY_BY_CATEGORY: Record<
+  CostAnchorCountryId,
+  Record<PoliticalMetricCategoryId, string>
+> = {
   US: {
     economy: "other",
     education: "education",
@@ -55,11 +58,55 @@ const BUDGET_KEY_BY_CATEGORY: Record<LawCountryId, Record<PoliticalMetricCategor
     governance: "other",
     defense: "defense",
   },
+  DE: {
+    economy: "other",
+    education: "education",
+    health: "healthcare",
+    infrastructure: "transport",
+    order: "other",
+    environment: "other",
+    society: "welfare",
+    governance: "other",
+    defense: "defense",
+  },
+  CA: {
+    economy: "other",
+    education: "education",
+    health: "health",
+    infrastructure: "transport",
+    order: "other",
+    environment: "other",
+    society: "welfare",
+    governance: "other",
+    defense: "defense",
+  },
+  JP: {
+    economy: "other",
+    education: "education",
+    health: "healthcare",
+    infrastructure: "transport",
+    order: "other",
+    environment: "other",
+    society: "welfare",
+    governance: "other",
+    defense: "defense",
+  },
+  CN: {
+    economy: "other",
+    education: "education",
+    health: "healthcare",
+    infrastructure: "transport",
+    order: "other",
+    environment: "other",
+    society: "welfare",
+    governance: "other",
+    defense: "defense",
+  },
 };
 
 /** The effective budget key for a law: per-law override wins over the category table. */
 export function budgetKeyForLaw(law: {
-  countryId: LawCountryId;
+  countryId: CostAnchorCountryId;
   category: PoliticalMetricCategoryId;
   budgetKeyOverride?: string;
 }): string {

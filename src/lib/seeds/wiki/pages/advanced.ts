@@ -17,6 +17,7 @@ import { caucusesContent } from "../content/caucuses";
 import { tradeSystemContent } from "../content/tradeSystem";
 import { rpgStatsContent } from "../content/rpgStats";
 import { crisisInteractionContent } from "../content/crisisInteraction";
+import { crisisResponsesContent } from "../content/crisisResponses";
 import { globalResponseCrisesContent } from "../content/globalResponseCrises";
 import { playerEventsContent } from "../content/playerEvents";
 import { blocSpheresContent } from "../content/blocSpheres";
@@ -273,16 +274,30 @@ export const advancedPages: readonly WikiSeedPage[] = [
   },
   {
     slug: "crisis-interaction",
-    title: "Crisis Interaction",
+    title: "Crises",
     description:
-      "Template crises, decision trees, collective contributions, chained multi-country decisions such as Vietnam, ambient cards, and automatic spawning.",
+      "What a crisis is, its four stages, what raises and lowers severity, the do-nothing forecast, spread between countries, and the crises page, nav count and inbox alerts.",
     content: crisisInteractionContent,
     category: "advanced",
-    extraTags: ["crisis"],
+    extraTags: ["crisis", "severity", "spillover"],
+    designDocUrl: "design/crisis-system.html",
+    featured: true,
+    difficulty: "intermediate",
+    contentType: "guide",
+    estimatedReadTime: 6,
+  },
+  {
+    slug: "crisis-responses",
+    title: "Crisis Responses",
+    description:
+      "Who can act on a crisis by office, what a response costs in treasury, company cash, approval and actions, the emergency bill, and how your record is kept.",
+    content: crisisResponsesContent,
+    category: "advanced",
+    extraTags: ["crisis", "emergency bill", "levers"],
     designDocUrl: "design/crisis-system.html",
     featured: false,
     difficulty: "intermediate",
-    contentType: "guide",
+    contentType: "mechanics",
     estimatedReadTime: 5,
   },
   {

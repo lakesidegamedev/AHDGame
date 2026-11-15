@@ -48,6 +48,7 @@ import { CampaignActionModal } from "@/app/actions/components/CampaignActionModa
 
 export interface CampaignManagerClientProps {
   countryId: string;
+  preset?: string;
   countryName: string;
   regionNoun: string;
   regionNounPlural: string;
@@ -419,7 +420,11 @@ export default function CampaignManagerClient(props: CampaignManagerClientProps)
               finishedCount={finishedCount}
               countryPicker={<CountryPicker countryId={props.countryId} />}
             />
-          ) : null
+          ) : (
+            <div style={{ padding: 16 }}>
+              <CountryPicker countryId={props.countryId} />
+            </div>
+          )
         }
       >
         <section
@@ -444,6 +449,15 @@ export default function CampaignManagerClient(props: CampaignManagerClientProps)
             </p>
           ) : null}
           {!isDesktop ? <MobileTabs tab={mobileTab} onTab={setMobileTab} /> : null}
+          {!loading && !error && races.length === 0 ? (
+            <div role="status" style={{ color: BLEND.muted }}>
+              <p>{t("noRaces", { country: props.countryName })}</p>
+              <p>{t("noRacesHint")}</p>
+              <button type="button" onClick={reload}>
+                {t("retry")}
+              </button>
+            </div>
+          ) : null}
           {!isDesktop && mobileTab === "races" && filter ? (
             <MobileRaceStrip
               countryId={props.countryId}
@@ -483,6 +497,7 @@ export default function CampaignManagerClient(props: CampaignManagerClientProps)
             {!loading && filter && (isDesktop || mobileTab === "races") ? (
               <CampaignMap
                 countryId={props.countryId}
+                preset={props.preset}
                 countryName={props.countryName}
                 regionNoun={props.regionNoun}
                 races={races}

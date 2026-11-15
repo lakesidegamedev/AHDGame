@@ -1,3 +1,4 @@
+import { hostsSovereigntyReferendums } from "@/lib/referendum/rules/sovereigntyRegions";
 import { z } from "zod";
 import { requireHumanSessionWithCharacter } from "@/lib/api/requireAuth";
 import { handleRouteError, errorResponse, statusResponse } from "@/lib/api/errors";
@@ -10,6 +11,8 @@ import { getReferendumCollection } from "@/lib/db/collections/referendum";
 import { canDeclarePartyPosition } from "@/lib/parties/access";
 import { declarePartyPosition, withdrawPartyPosition } from "@/lib/referendum/partyPositions";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 // POST /api/country/[code]/referendum/[refId]/position
 // Auth: requireHumanSessionWithCharacter; must be the acting party's regional or
@@ -25,8 +28,8 @@ export async function POST(
     if (!COUNTRY_CONFIGS[countryId]) {
       return errorResponse(400, "Invalid country");
     }
-    if (countryId !== "UK") {
-      return errorResponse(400, "Referendums are UK-only.");
+    if (!hostsSovereigntyReferendums(countryId)) {
+      return errorResponse(400, "This country holds no sovereignty referendums.");
     }
 
     const auth = await requireHumanSessionWithCharacter(request);
@@ -56,12 +59,12 @@ export async function POST(
       return errorResponse(400, "You are not in a party.");
     }
     const [partyDoc, stateParty] = await Promise.all([
-      db
-        .collection<PoliticalParty>("politicalParties")
-        .findOne({ countryId, sequentialId: Number(partyId) }),
-      db
-        .collection<StatePartyOrg>("statePartyOrg")
-        .findOne({ countryId, stateId: ref.regionId, partyId: String(partyId) }),
+      politicalPartiesCollection(db).findOne({ countryId, sequentialId: Number(partyId) }),
+      statePartyOrgCollection(db).findOne({
+        countryId,
+        stateId: ref.regionId,
+        partyId: String(partyId),
+      }),
     ]);
     if (!partyDoc) {
       return errorResponse(400, "Party not found.");

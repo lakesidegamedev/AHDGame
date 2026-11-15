@@ -1,5 +1,5 @@
 // National-doctrine tech tree, ported verbatim from the design's doctrineData.js
-// (1900-2040 era doctrine). Pure data + logic; the authoring UI (Secretary of
+// (1900-2050 era doctrine). Pure data + logic; the authoring UI (Secretary of
 // Defense Office → Doctrine tab) and combat modifiers consume it. Mockup-first:
 // the adopted set + points persist client-side until gameState wiring lands.
 
@@ -19,6 +19,7 @@ export const DECADES = [
   "2020s",
   "2030s",
   "2040s",
+  "2050s",
 ] as const;
 
 export const ERASHORT = [
@@ -37,6 +38,7 @@ export const ERASHORT = [
   "Multi-Domain",
   "Autonomous",
   "Integrated",
+  "Convergent",
 ] as const;
 
 export const GRP: Record<string, { label: string; color: string }> = {
@@ -177,6 +179,11 @@ export const DOCTRINE_CATS: DoctrineCategory[] = [
           N(14, "Multi-Domain Maneuver", "+15% joint operations across land/air/cyber/space", 5, {
             m: { joint: 1.15, cvAll: 1.05 },
           }),
+          N(15, "Convergent Maneuver", "+8% force-wide CV · +8% joint operations", 6, {
+            p: "+8% Force CV",
+            g: "army",
+            m: { cvAll: 1.08, joint: 1.08 },
+          }),
         ],
       },
       {
@@ -205,6 +212,7 @@ export const DOCTRINE_CATS: DoctrineCategory[] = [
           N(12, "Drone-Corrected Artillery", "+12% artillery accuracy if drone recon available", 4),
           N(13, "Autonomous Fire Direction", "+10% fire mission speed", 5),
           N(14, "Adaptive Fires Grid", "+15% multi-domain strike coordination", 5),
+          N(15, "Sensor-to-Shooter Mesh", "+10% deep strike reach", 6, { m: { deep: 0.2 } }),
         ],
       },
       {
@@ -232,6 +240,11 @@ export const DOCTRINE_CATS: DoctrineCategory[] = [
           N(12, "Dispersed Defense", "−12% losses from drones and precision fires", 4),
           N(13, "Autonomous Defensive Screens", "+10% early warning and defensive reaction", 5),
           N(14, "Self-Adapting Defense Grid", "+15% defense if command network functional", 5),
+          N(15, "Directed Energy Perimeter", "−15% losses from drones and missiles", 6, {
+            p: "+6% Ground CV",
+            g: "army",
+            m: { cvDom: { ground: 1.06 } },
+          }),
         ],
       },
       {
@@ -464,6 +477,11 @@ export const DOCTRINE_CATS: DoctrineCategory[] = [
             m: { supply: 20 },
           }),
           N(12, "Contested Logistics", "+12% supply under attack", 4, { m: { supply: 12 } }),
+          N(15, "Autonomous Sustainment", "+15 supply throughput · −5% upkeep", 6, {
+            p: "+15 Supply",
+            g: "log",
+            m: { supply: 15, upkeep: 0.95 },
+          }),
         ],
       },
       {
@@ -517,6 +535,9 @@ export const DOCTRINE_CATS: DoctrineCategory[] = [
         nodes: [
           N(10, "Network Attack", "+10% enemy C2 disruption", 3),
           N(11, "Cyber Warfare Command", "+12% cyber operations", 4),
+          N(15, "Resilient Networks Doctrine", "+10% command coordination under cyber attack", 6, {
+            m: { joint: 1.06 },
+          }),
         ],
       },
       {
@@ -526,6 +547,9 @@ export const DOCTRINE_CATS: DoctrineCategory[] = [
         nodes: [
           N(10, "UAV Reconnaissance", "+10% battlefield awareness", 3),
           N(12, "Drone Swarm Doctrine", "+12% saturation strike", 4),
+          N(15, "Orbital Sensing Web", "+8% battlefield awareness · +10% deep strike reach", 6, {
+            m: { cvAll: 1.03, deep: 0.1 },
+          }),
         ],
       },
     ],

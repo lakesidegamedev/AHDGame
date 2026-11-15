@@ -3,27 +3,18 @@ import type { ObjectId } from "mongodb";
 /**
  * Per-corporation in-process serialization for money-mutating operations.
  *
- * Why: cash mutations that run OUTSIDE turn processing (bond issuance, hostile
- * takeover, share trades, sector buys) are multi-step and are NOT wrapped in a
- * DB transaction — prod Mongo is single-node rs0 with no multi-doc txns. When
- * two large cash operations hit the SAME corp document within the same instant
- * (e.g. a bond issuance and a hostile takeover 18s apart, issue #2942/#2949),
- * an interleaving read-then-write can clobber one of the writes and silently
- * lose money. Serializing per-corp so same-corp money ops apply one at a time
- * removes that interleave.
+ * Cash mutations outside turn processing (bond issuance, hostile takeover,
+ * share trades, sector buys) are multi-step and not wrapped in a DB
+ * transaction: single-node rs0 has no multi-doc txns. Two large cash ops on
+ * the same corp can interleave read-then-write and silently lose money.
+ * Serializing per-corp removes that interleave.
  *
- * Scope/caveat: this is an IN-PROCESS mutex (a per-key promise chain). It fully
- * serializes concurrent ops within a single Node process. It does NOT serialize
- * across horizontally-scaled instances — two ops on the same corp landing on
- * different instances can still race. The durable cross-instance fix is a
- * replica set with multi-doc transactions (or a DB advisory lock); tracked in
- * issue #2949. This helper is the low-risk mitigation that closes the common
- * case (a single user's rapid same-corp actions) with no infra change.
+ * In-process only: does not serialize across horizontally-scaled instances.
+ * The durable cross-instance fix is multi-doc transactions or a DB advisory
+ * lock.
  *
- * Deadlock safety: acquire at most ONE corp lock per operation and never nest a
- * second acquisition inside `fn`. The wrapped handlers here lock only the corp
- * whose balance they mutate as the entry point, so there is no lock-ordering
- * cycle.
+ * Deadlock safety: acquire at most ONE corp lock per operation and never nest
+ * a second acquisition inside `fn`.
  */
 
 // key = corp id string → tail of the pending-operation chain for that corp.

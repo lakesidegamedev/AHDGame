@@ -54,7 +54,7 @@ describe("PUT formations", () => {
       sideA: { label: "NATO", countries: ["US"], kind: "coalition", backer: "west" },
       sideB: { label: "PLA", countries: ["CN"], kind: "state", backer: "east" },
     });
-    db.collectionMocks.gameState.findOne.mockResolvedValue({ conflictsEnabled: true });
+    db.collectionMocks.gameState.findOne.mockResolvedValue({});
     db.collectionMocks.cabinetMembers.findOne.mockResolvedValue({
       _id: "m1",
       characterId: "char_1",
@@ -216,12 +216,5 @@ describe("PUT formations", () => {
     const { PUT } = await import(ROUTE);
     const res = await PUT(req({ positions: {} }), call);
     expect(res.status).toBe(403);
-  });
-
-  it("404s when conflicts is disabled", async () => {
-    db.collectionMocks.gameState.findOne.mockResolvedValue({ conflictsEnabled: false });
-    const { PUT } = await import(ROUTE);
-    const res = await PUT(req({ positions: {} }), call);
-    expect(res.status).toBe(404);
   });
 });

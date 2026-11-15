@@ -41,7 +41,6 @@ describe("POST nuclear/test", () => {
     db.collection("politicalMetrics");
     db.collection("newsPosts");
     db.collectionMocks.gameState.findOne.mockResolvedValue({
-      coldWarEnabled: true,
       currentYear: 1953,
       currentTurn: 42,
       startingYear: 1953,
@@ -89,13 +88,6 @@ describe("POST nuclear/test", () => {
     );
   });
 
-  it("404s when the Cold War subsystem is off", async () => {
-    db.collectionMocks.gameState.findOne.mockResolvedValue({ coldWarEnabled: false });
-    const { POST } = await import(ROUTE);
-    const res = await POST(req({ nodeKey: "device-fission" }), call);
-    expect(res.status).toBe(404);
-  });
-
   it("403s a nation outside the capable set", async () => {
     const { POST } = await import(ROUTE);
     const res = await POST(req({ nodeKey: "device-fission" }), {
@@ -132,7 +124,6 @@ describe("POST nuclear/test", () => {
 
   it("400s a device node not yet available in the current year", async () => {
     db.collectionMocks.gameState.findOne.mockResolvedValue({
-      coldWarEnabled: true,
       currentYear: 1950,
       currentTurn: 10,
       startingYear: 1950,

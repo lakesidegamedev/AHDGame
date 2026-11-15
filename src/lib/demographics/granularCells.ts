@@ -267,30 +267,18 @@ function reprievePrunedCells(
   }
 }
 
-/** Derive a full set of granular electorate cells from arbitrary Layer-1 census marginals.
+/** Derive granular electorate cells from Layer-1 census marginals.
  *
- *  Share derivation:
- *    1. Start with the independence product of every dimension's marginal shares.
- *    2. Multiply by the product of applicable pairwise priors.
- *    3. Normalize to sum to 1.
- *    4. Run IPF rake passes so each dimension's marginal totals match the inputs.
- *    5. Drop cells below pruneFloor, reprieve per `preserveBucketRepresentation`,
- *       and renormalize.
+ *  Shares: independence product of marginal shares, times pairwise priors,
+ *  normalized, IPF-rake passes to match input marginals, then prune below
+ *  pruneFloor and renormalize.
  *
- *  Lean derivation:
- *    For each cell, average the economic/social positions of every bucket that has
- *    an entry in its dimension's positions table. Dimensions without positions, or
- *    buckets missing from a positions table, contribute nothing. If no positions
- *    are available for a cell, both leans default to 0. Result is clamped to [-5, 5].
- *    `conditionedOffsets` adjust the averaged positions additively for matching
- *    cells only (see `ConditionedLeanOffset`).
+ *  Lean: average bucket positions per cell (missing positions contribute
+ *  nothing, defaults 0), plus conditionedOffsets, clamped to [-5, 5].
  *
- *  Turnout derivation:
- *    For each cell, take the geometric mean of the turnout rates for every dimension
- *    that provides turnoutRates. Missing rates within a provided table fall back to 55.
- *    If no dimension provides turnout rates, the cell defaults to 55. The cell-level
- *    rates are then scaled so the population-weighted mean equals the average of each
- *    dimension's marginal-weighted mean turnout. Result is clamped to [15, 95].
+ *  Turnout: geometric mean of provided rates (missing rate falls back to 55),
+ *  scaled so population-weighted mean matches input marginals, clamped to
+ *  [15, 95].
  */
 export function deriveGranularCellsGeneric(input: {
   dims: GenericGranularDimInput[];

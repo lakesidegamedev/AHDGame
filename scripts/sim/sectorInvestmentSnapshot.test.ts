@@ -175,7 +175,6 @@ describe("balance replay validity", () => {
     });
     db.collection("gameState").findOne.mockResolvedValue({
       currentTurn: 705,
-      extractionAutoStrategyEnabled: true,
       lastExtractionAutoStrategyTurn: 705,
       nppEntryViabilityMode: "observe",
     });

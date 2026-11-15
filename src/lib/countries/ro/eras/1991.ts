@@ -1,22 +1,11 @@
 import type { CountryEraOverride } from "../../contract";
 import { INITIAL_RATES_1991 } from "@/lib/constants/currencies";
 
-/**
- * January 1991 Romania still used the institutions elected in May 1990 under
- * Decree-Law 92/1990. The directly elected president designated the prime
- * minister; the Assembly of Deputies and Senate approved the government.
- * The constituent parliament held 396 deputy and 119 senate mandates.
- *
- * https://legislatie.just.ro/Public/DetaliiDocumentAfis/891
- * https://legislatie.just.ro/public/DetaliiDocument/35408
- * https://legislatie.just.ro/public/DetaliiDocument/92287
- *
- * The constitution took effect in December 1991 and a new parliamentary
- * election followed in 1992. This config records the 1991 starting chamber;
- * the turn transition supplies the 1992 seat counts at election resolution.
- * The 1992 electoral law's national compensation and minority-seat mechanics
- * remain an approximation in the regional PR resolver.
- */
+/* January 1991 Romania used institutions elected May 1990 under Decree-Law 92/1990:
+ * directly elected president designating the PM; 396 deputies and 119 senators.
+ * The 1991 constitution took effect in December 1991; 1992 election supplied new
+ * seat counts. 1992 electoral law compensation and minority-seat mechanics are
+ * approximated in the regional PR resolver. */
 export const RO_1991: CountryEraOverride = {
   preset: "1991-default",
   config: {

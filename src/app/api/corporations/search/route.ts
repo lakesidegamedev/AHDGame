@@ -8,8 +8,8 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { handleRouteError } from "@/lib/api/errors";
-import type { Corporation } from "@/lib/db/types";
 import { escapeRegex } from "@/lib/utils/escapeRegex";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export async function GET(request: Request) {
   try {
@@ -22,8 +22,7 @@ export async function GET(request: Request) {
 
     const escaped = escapeRegex(q);
     const db = await getDb();
-    const rows = await db
-      .collection<Corporation>("corporations")
+    const rows = await corporationsCollection(db)
       .find(
         { $or: [{ name: { $regex: escaped, $options: "i" } }, { tickerSymbol: escaped }] },
         { projection: { name: 1, tickerSymbol: 1, sequentialId: 1, countryId: 1, logoUrl: 1 } }

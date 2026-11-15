@@ -1,3 +1,4 @@
+import { vacateBannedOfficerSeats } from "@/lib/parties/bannedOfficers";
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
@@ -6,7 +7,6 @@ import { parseObjectId } from "@/lib/utils/objectId";
 import { parseJsonBody } from "@/lib/api/validate";
 import { sendFundsSchema } from "@/lib/api/schemas/send";
 import { findPartyBySequentialId } from "@/lib/db/partyLookup";
-import type { Character } from "@/lib/db/types";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { requirePlayerTransfersEnabled } from "@/lib/api/requirePlayerTransfers";
@@ -31,6 +31,7 @@ import {
   formatPayoutCap,
   getEffectivePlayerPayoutCap,
 } from "@/lib/treasury/payoutCapValues";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string }>;
@@ -40,12 +41,11 @@ interface RouteParams {
 // Auth: requireAuthWithCharacter
 // Errors: 400, 401, 403, 404, 429
 //
-// When the party's `transactionApprovalMode === "double"` (default
-// post-2026-05-22), this endpoint writes a `pendingTreasuryTransactions`
-// row with the proposer's slot pre-filled and returns `{ pending: true }`.
-// The other approver fills the missing slot via the `/treasury/pending/
-// [txnId]/approve` endpoint, which then executes the underlying
-// transfer. Admin actions ALWAYS bypass the workflow (immediate
+// When the party's `transactionApprovalMode === "double"`, this endpoint writes
+// a `pendingTreasuryTransactions` row with the proposer's slot pre-filled and
+// returns `{ pending: true }`. Another approver fills the missing slot via the
+// `/treasury/pending/[txnId]/approve` endpoint, which then executes the
+// underlying transfer. Admin actions always bypass the workflow (immediate
 // execute).
 export async function POST(request: Request, { params }: RouteParams) {
   try {
@@ -82,6 +82,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     // Verify party exists
     const party = await findPartyBySequentialId(db, partyId, countryId);
+    await vacateBannedOfficerSeats(db, party);
     if (!party) {
       return errorResponse(404, "Party not found");
     }
@@ -109,7 +110,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     // Verify target character exists and is a party member in the same country
-    const targetCharacter = await db.collection<Character>("characters").findOne({
+    const targetCharacter = await charactersCollection(db).findOne({
       _id: targetCharacterOid,
     });
 

@@ -1,7 +1,7 @@
 import { getCalendarDayInTimezone } from "@/lib/time/dailyReset";
 
 /**
- * Justice self-serve action pool (#3598, spec #3581 user story 9).
+ * Justice self-serve action pool.
  *
  * The Justice office is otherwise passive between Docket cases; this gives a
  * seated player-Justice a small, self-directed toolkit, judicial-flavored.

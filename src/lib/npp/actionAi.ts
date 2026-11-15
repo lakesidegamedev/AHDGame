@@ -337,17 +337,13 @@ export interface NppDecisionOptions {
 /**
  * Decide the next NPP action. `rng` is an injectable [0,1) source so the turn
  * loop can supply a deterministic seeded RNG (replay-safe; see
- * `lib/events/substrate/rng.ts`). Defaults to Math.random for back-compat —
- * read at call time, so test spies on Math.random still apply.
+ * `lib/events/substrate/rng.ts`). Defaults to Math.random, read at call time so
+ * test spies still apply.
  *
- * RNG DISCIPLINE: this function consumes at most two `rng()` calls (the save
- * heuristic, then the draw), and the v3+ additions below deliberately consume
- * ZERO extra — temperature and commitment reshape the weights rather than adding
- * draws. That keeps the RNG stream aligned call-for-call with the pre-v3 path,
- * so enabling the smarter brain cannot desynchronise a replay. The difficulty
- * reserve (`options.fundsReserve`) holds to the same rule: it filters the
- * candidate set, it does not draw. Difficulty is fixed for a world at setup, so
- * a replay of that world still reproduces exactly.
+ * RNG DISCIPLINE: consumes at most two `rng()` calls (save heuristic, then the
+ * draw). Temperature and commitment reshape weights rather than adding draws,
+ * and the difficulty reserve filters candidates without drawing, keeping the
+ * RNG stream aligned call-for-call so replays never desynchronise.
  */
 export function decideNppAction(
   context: NppActionContext,
@@ -378,11 +374,11 @@ export function decideNppAction(
     if (actionPoints >= apCost && funds - fundCost >= fundsReserve) affordable.push(candidate);
   }
 
-  // Save heuristic: occasionally skip a cheap action to accumulate AP for the next buildDonorBase.
-  // Conditions: build is a meaningful priority, AP is the actual blocker (funds shortages
-  // don't resolve by waiting — fund-gen runs every turn regardless), the wait is short,
-  // and we lose the coin flip. The combination prevents the lock-in that previously kept
-  // NPPs from ever doing partyDonation/advertise.
+  // Save heuristic: occasionally skip a cheap action to accumulate AP for the next
+  // buildDonorBase. Conditions: build is a meaningful priority, AP is the actual
+  // blocker (fund shortages don't resolve by waiting since fund-gen runs every
+  // turn), the wait is short, and we lose the coin flip. Prevents the lock-in that
+  // kept NPPs from ever doing partyDonation/advertise.
   if (
     buildCandidate &&
     buildCandidate.priority > 30 &&

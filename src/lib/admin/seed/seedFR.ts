@@ -1,17 +1,18 @@
 import { ObjectId, type Db } from "mongodb";
 import { writeSplitMetricsBulk } from "@/lib/macroMetrics/split";
-import type {
-  State,
-  PoliticalParty,
-  DemographicCategory,
-  StateDemographics,
-  StateMetrics,
-} from "@/lib/db/types";
+import type { State, PoliticalParty, StateDemographics, StateMetrics } from "@/lib/db/types";
 import type { StateMetricBaseline } from "@/lib/db/types/statePolicy";
 import type { PartySeed } from "@/lib/seeds/reference/politicalParties";
 import { getNextSequentialId } from "@/lib/db/sequentialId";
 import { resolveSeedPartyTier } from "@/lib/seeds/defaultPartyTiers";
 import { getGameStatePresetOrDefault } from "@/lib/db/collections/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
+import type { Document } from "mongodb";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
+import { stateDemographicTurnoutCollection } from "@/lib/db/repositories/stateDemographicTurnout";
+import { stateBaselinesCollection } from "@/lib/db/repositories/stateBaselines";
 
 const FR_REGION_IDS = [
   "FR_IDF",
@@ -36,28 +37,16 @@ export async function seedFRRegions(
   preset: string
 ) {
   if (reset) {
-    await db.collection("states").deleteMany({ countryId: "FR" });
+    await statesCollection<Document>(db).deleteMany({ countryId: "FR" });
   }
-  const { frRegions } = await import("@/lib/seeds/fr/frRegions");
-  const { frRegions1991 } = await import("@/lib/countries/fr/data/frRegions1991");
-  const { frRegions1953 } = await import("@/lib/seeds/fr/frRegions1953");
+  const { regionTableFor } = await import("@/lib/seeds/contract/regionTables");
   const { selectPresetBundle } = await import("@/lib/seeds/presetSelector");
-  const bundle = selectPresetBundle(
-    preset,
-    {
-      "2019-default": frRegions,
-      "1953-default": frRegions1953,
-      "1979-default": frRegions,
-      "1991-default": frRegions1991,
-    },
-    "seedFR:frRegions"
-  );
+  const bundle = selectPresetBundle(preset, regionTableFor("FR"), "regions:FR");
   const regionOps = bundle.map((region) => {
     const { _id, ...regionData } = region;
     return { updateOne: { filter: { _id }, update: { $set: regionData }, upsert: true } };
   });
-  if (regionOps.length > 0)
-    await db.collection<State>("states").bulkWrite(regionOps, { ordered: false });
+  if (regionOps.length > 0) await statesCollection(db).bulkWrite(regionOps, { ordered: false });
   log(`Seeded ${bundle.length} FR regions (${preset})`);
 }
 
@@ -83,14 +72,16 @@ export async function seedFRParties(db: Db, log: (msg: string) => void, preset?:
     const { seedOrder: _seedOrder, validForPresets: _validForPresets, ...partyData } = party;
     void _seedOrder;
     void _validForPresets;
-    const existing = await db
-      .collection<PoliticalParty>("politicalParties")
-      .findOne({ name: party.name, countryId: party.countryId });
+    const existing = await politicalPartiesCollection(db).findOne({
+      name: party.name,
+      countryId: party.countryId,
+    });
 
     if (existing) {
-      await db
-        .collection<PoliticalParty>("politicalParties")
-        .updateOne({ _id: existing._id }, { $set: { ...partyData, updatedAt: now } });
+      await politicalPartiesCollection(db).updateOne(
+        { _id: existing._id },
+        { $set: { ...partyData, updatedAt: now } }
+      );
     } else {
       const sequentialId = await getNextSequentialId(db, "party", party.countryId);
       const doc: PoliticalParty = {
@@ -102,7 +93,7 @@ export async function seedFRParties(db: Db, log: (msg: string) => void, preset?:
         createdAt: now,
         updatedAt: now,
       } as PoliticalParty;
-      await db.collection<PoliticalParty>("politicalParties").insertOne(doc);
+      await politicalPartiesCollection(db).insertOne(doc);
     }
   }
   log(`Seeded ${filtered.length} FR parties (preset: ${activePreset})`);
@@ -115,21 +106,13 @@ export async function seedFRDemographics(
   preset: string
 ) {
   if (reset) {
-    await db.collection("demographicCategories").deleteMany({ _id: "fr_voterGroups" as never });
-    await db.collection("stateDemographics").deleteMany({ countryId: "FR" });
-    await db.collection("stateDemographicTurnout").deleteMany({ countryId: "FR" });
-  }
-  const { frDemographicCategories } = await import("@/lib/seeds/fr/frDemographicCategories");
-  for (const cat of frDemographicCategories) {
-    const { _id, ...catData } = cat;
-    await db
-      .collection<DemographicCategory>("demographicCategories")
-      .updateOne({ _id }, { $set: catData }, { upsert: true });
+    await stateDemographicsCollection<Document>(db).deleteMany({ countryId: "FR" });
+    await stateDemographicTurnoutCollection<Document>(db).deleteMany({ countryId: "FR" });
   }
   const { getCountryLayer1Model, buildModelRegionDemographics } =
     await import("@/lib/seeds/international");
-  const { eraForPreset } = await import("@/lib/seeds/presetSelector");
-  const era = eraForPreset(preset);
+  const { strictEraForPreset } = await import("@/lib/seeds/presetSelector");
+  const era = strictEraForPreset(preset);
   const model = getCountryLayer1Model("FR", era);
   if (!model) {
     log("[FR] no Layer-1 model — skipping demographics");
@@ -137,10 +120,8 @@ export async function seedFRDemographics(
   }
   const regionDemographics = buildModelRegionDemographics(model);
   for (const raw of regionDemographics) {
-    const { _id, ...demoData } = raw;
-    await db
-      .collection<StateDemographics>("stateDemographics")
-      .updateOne({ _id }, { $set: demoData }, { upsert: true });
+    const { _id, groups: _groups, ...demoData } = raw;
+    await stateDemographicsCollection(db).updateOne({ _id }, { $set: demoData }, { upsert: true });
   }
   log(`[FR] Seeded ${regionDemographics.length} region demographics (era ${era})`);
 }
@@ -152,14 +133,13 @@ export async function seedFRStateMetrics(
   preset: string
 ) {
   if (reset) {
-    await db.collection("macroMetrics").deleteMany({ _id: { $in: FR_REGION_IDS } as never });
+    await macroMetricsCollection<Document>(db).deleteMany({ _id: { $in: FR_REGION_IDS } as never });
   }
   const { frStateMetrics } = await import("@/lib/seeds/fr/frStateMetrics");
   const { getRegionMetricPresets, applyMetricPresetToMetrics } =
     await import("@/lib/seeds/metricPresets");
-  // Base bundle is ~1979; 1953 overlay is the only registered FR preset (2019 no-op).
-  // 1991 has no income overlay, so the ~1979 base income is replaced with its
-  // 1991 vintage in the same legacy currency as the 1991 GDP (#3393).
+  // 1991 has no income overlay, so the ~1979 base income is replaced
+  // with its 1991 vintage in the same legacy currency as the 1991 GDP.
   const vintage1991 =
     preset === "1991-default"
       ? (await import("@/lib/seeds/reference/income1991")).apply1991IncomeVintage
@@ -188,7 +168,9 @@ export async function seedFRBaselines(
   preset: string
 ) {
   if (reset) {
-    await db.collection("stateBaselines").deleteMany({ _id: { $in: FR_REGION_IDS } as never });
+    await stateBaselinesCollection<Document>(db).deleteMany({
+      _id: { $in: FR_REGION_IDS } as never,
+    });
   }
   const { frStateBaselines } = await import("@/lib/seeds/fr/frStateBaselines");
   const { getRegionMetricPresets, applyMetricPresetToBaseline } =
@@ -217,9 +199,7 @@ export async function seedFRBaselines(
     const overlay = getRegionMetricPresets("FR", String(raw._id), preset);
     const baseline = overlay ? applyMetricPresetToBaseline(adjusted, overlay) : adjusted;
     const { _id, ...baselineData } = baseline;
-    await db
-      .collection<StateMetricBaseline>("stateBaselines")
-      .updateOne({ _id }, { $set: baselineData }, { upsert: true });
+    await stateBaselinesCollection(db).updateOne({ _id }, { $set: baselineData }, { upsert: true });
   }
   log(`Seeded ${frStateBaselines.length} FR baselines (preset: ${preset})`);
 }

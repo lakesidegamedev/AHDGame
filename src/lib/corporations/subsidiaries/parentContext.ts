@@ -1,11 +1,13 @@
 import type { Db, ObjectId } from "mongodb";
-import type { Character, Corporation } from "@/lib/db/types";
+import type { Corporation } from "@/lib/db/types";
 import { getControllingCorporateParent } from "@/lib/corporations/corporateOwnership";
 import {
   isFormalizedSubsidiary,
   subsidiaryCeoBlockReason,
   type SubsidiaryCeoBlockReason,
 } from "./helpers";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const SYSTEM_USER_ID = "000000000000000000000000";
 
@@ -21,9 +23,10 @@ export async function resolveParentCeoUserId(
 ): Promise<ObjectId> {
   if (parent.caretakerCeo?.underlyingUserId) return parent.caretakerCeo.underlyingUserId;
   if (parent.ceoType === "character" && parent.ceoId) {
-    const ceo = await db
-      .collection<Character>("characters")
-      .findOne({ _id: parent.ceoId }, { projection: { userId: 1 } });
+    const ceo = await charactersCollection(db).findOne(
+      { _id: parent.ceoId },
+      { projection: { userId: 1 } }
+    );
     if (ceo?.userId) return ceo.userId;
   }
   return parent.userId;
@@ -40,8 +43,7 @@ export async function collectSiblingSubsidiaryCeoUserIds(
   parentId: ObjectId,
   excludeSubId: ObjectId
 ): Promise<ObjectId[]> {
-  const formalized = await db
-    .collection<Corporation>("corporations")
+  const formalized = await corporationsCollection(db)
     .find(
       { subsidiaryFormalizedAtTurn: { $exists: true } },
       {
@@ -87,9 +89,7 @@ export async function subsidiaryReclaimBlocked(
   if (!isFormalizedSubsidiary(corp, controllingParent)) return null;
   if (!controllingParent) return null;
 
-  const parent = await db
-    .collection<Corporation>("corporations")
-    .findOne({ _id: controllingParent.corporationId });
+  const parent = await corporationsCollection(db).findOne({ _id: controllingParent.corporationId });
   if (!parent?.userId) return null;
 
   const parentCeoUserId = await resolveParentCeoUserId(db, parent);

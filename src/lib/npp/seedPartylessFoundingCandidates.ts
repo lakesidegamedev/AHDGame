@@ -1,4 +1,5 @@
 import { ObjectId, type Db } from "mongodb";
+import { supportsNoStartingParties } from "@/lib/admin/startingPartiesPresets";
 import type { Election, GameState, NPP, State } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import { getCountryConfigForRuntime } from "@/lib/constants/countries";
@@ -8,6 +9,10 @@ import { generateUniqueNPPName } from "./nameGenerator";
 import { selectPoliticianImage, weightedRandomEthnicity } from "./generator";
 import { NPP_ECONOMY_DEFAULTS } from "./economyDefaults";
 import { generateDefaultPersonality } from "./seedHistorical";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 /** Marker used only to make this bootstrap-created independent pool idempotent. */
 export const PARTYLESS_FOUNDING_PRIOR_MARKER = "foundingIndependent";
@@ -33,36 +38,34 @@ export async function seedPartylessFoundingCandidates(
   preset: string,
   log: (msg: string) => void = () => {}
 ): Promise<PartylessFoundingCandidatesResult> {
-  if (preset !== "1991-default") {
-    throw new Error("Partyless founding candidates are supported only for 1991-default");
+  if (!supportsNoStartingParties(preset)) {
+    throw new Error(`Partyless founding candidates are not supported for ${preset}`);
   }
 
-  const gameState = await db
-    .collection<GameState>("gameState")
-    .findOne(
-      { _id: "current" },
-      { projection: { preset: 1, startingPartiesMode: 1, preIteration: 1 } }
-    );
+  const gameState = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { projection: { preset: 1, startingPartiesMode: 1, preIteration: 1 } }
+  );
   if (
-    gameState?.preset !== "1991-default" ||
+    gameState?.preset !== preset ||
     gameState.startingPartiesMode !== "none" ||
     gameState.preIteration?.active !== true
   ) {
     throw new Error(
-      "Partyless founding candidates require an active 1991-default founding phase with no starting parties"
+      "Partyless founding candidates require an active founding phase with no starting parties"
     );
   }
 
   const enabled = await getEnabledCountryIdsFromDb(db);
   if (enabled.length === 0) return { nppsCreated: 0, byCountry: {} };
   const enabledSet = new Set(enabled);
-  const states = await db
-    .collection<State>("states")
+  const states = await statesCollection(db)
     .find({ countryId: { $in: enabled } }, { projection: { _id: 1, countryId: 1 } })
     .toArray();
   const regions = new Set(states.map((state) => `${state.countryId}:${state._id}`));
-  const elections = await db
-    .collection<Pick<Election, "_id" | "countryId" | "state" | "electionType">>("elections")
+  const elections = await electionsCollection<
+    Pick<Election, "_id" | "countryId" | "state" | "electionType">
+  >(db)
     .find({ cycle: 0, countryId: { $in: enabled } })
     .project({ _id: 1, countryId: 1, state: 1, electionType: 1 })
     .toArray();
@@ -87,8 +90,7 @@ export async function seedPartylessFoundingCandidates(
     return { nppsCreated: 0, byCountry: {} };
   }
 
-  const existing = await db
-    .collection<NPP>("npps")
+  const existing = await nppsCollection(db)
     .find({
       countryId: { $in: enabled },
       party: "independent",
@@ -155,14 +157,14 @@ export async function seedPartylessFoundingCandidates(
       retiredAt: null,
       influenceState: { totalTimesInfluenced: 0 },
       ...NPP_ECONOMY_DEFAULTS,
-      archetypeApprovals: {},
+      bucketApprovals: {},
       electionCooldowns: {},
       createdAt: now,
       updatedAt: now,
     };
   });
 
-  await db.collection<NPP>("npps").insertMany(npps);
+  await nppsCollection(db).insertMany(npps);
   log(
     `Seeded ${npps.length} independent founding candidate NPPs across ${
       Object.keys(byCountry).length

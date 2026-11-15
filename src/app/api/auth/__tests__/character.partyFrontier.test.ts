@@ -11,11 +11,7 @@ vi.mock("@/lib/countryAccess", () => ({
 vi.mock("@/lib/time/gameTime", () => ({
   getGameTime: vi.fn(async () => ({ currentTurn: 1, effectiveNow: new Date() })),
 }));
-vi.mock("@/lib/stats/featureFlag", () => ({ isRpgStatsEnabled: vi.fn(async () => false) }));
 vi.mock("@/lib/currency/featureFlag", () => ({ isForexEnabled: vi.fn(async () => false) }));
-vi.mock("@/lib/onboarding/featureFlag", () => ({
-  isOnboardingChecklistEnabled: vi.fn(async () => false),
-}));
 vi.mock("@/lib/mail/systemMail", () => ({ sendSystemMail: vi.fn() }));
 vi.mock("@/lib/analytics/characterActivation", () => ({ rememberCharacterActivation: vi.fn() }));
 

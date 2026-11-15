@@ -130,7 +130,7 @@ export function FundraisingManagementSection({
   // back to modern groups in the client bundle.
   const targetSections = useTurnoutTargetSections(countryId);
   const { categories: targetableCategories, targets: targetableDemos } =
-    buildPartyTurnoutTargetCatalog(countryId, targetSections);
+    buildPartyTurnoutTargetCatalog(targetSections);
 
   // GOTV computed
   const gotvSpend = Math.floor(stateParty.expectedHourlyIncome * (gotvPercent / 100));

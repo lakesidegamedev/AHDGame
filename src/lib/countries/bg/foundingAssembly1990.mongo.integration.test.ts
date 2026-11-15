@@ -13,7 +13,7 @@ import { BG_ORDINARY_ASSEMBLY_SEATS } from "./rules/assemblyTransition";
 
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn(), getMongoClient: vi.fn() }));
 vi.mock("@/lib/news", () => ({ generateElectionNews: vi.fn().mockResolvedValue(undefined) }));
-vi.mock("@/lib/turn/election/electionNotifications", () => ({
+vi.mock("@/lib/elections/resolution/electionNotifications", () => ({
   sendBatchedElectionResults: vi.fn().mockResolvedValue(undefined),
 }));
 vi.mock("@/lib/audit/recordAudit", () => ({ recordAuditBulk: vi.fn() }));

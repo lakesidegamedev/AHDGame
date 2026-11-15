@@ -1,12 +1,9 @@
 /**
  * One turn of servicing on a named loan, as pure data.
  *
- * The banking turn used to compute the instalment, read the borrower, pick a
- * branch (full, partial, default) and write the loan document in four places
- * with the money move somewhere in the middle. The decision is now one
- * function of the loan, the cash the borrower can pay, and the turn; the
- * transition it returns carries the money legs, the loan-document update
- * guarded on the turn stamp, and the event. The journal lands it once.
+ * The decision is one function of the loan, the cash the borrower can pay, and
+ * the turn; the transition it returns carries the money legs, the loan-document
+ * update guarded on the turn stamp, and the event. The journal lands it once.
  */
 
 import type { BankLoan } from "@/lib/db/types/bank";

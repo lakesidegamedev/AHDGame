@@ -7,7 +7,10 @@ import type { Db, AnyBulkWriteOperation, Filter } from "mongodb";
 import type { Character, ElectedOfficial, NPP, OfficeType } from "@/lib/db/types";
 import { captureOfficeTransition } from "@/lib/analytics/officeTransitionAnalytics";
 import { getExecutiveOfficeKeys } from "@/lib/elections/executiveOffice";
-import { preserveExecutiveOffice } from "@/lib/turn/election/generalResolutionHelpers";
+import { preserveExecutiveOffice } from "@/lib/elections/resolution/generalResolutionHelpers";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export async function reconcileBundestagHolderOffices(
   db: Db,
@@ -15,8 +18,7 @@ export async function reconcileBundestagHolderOffices(
   currentTurn?: number,
   telemetryActors?: Map<string, Pick<Character, "userId" | "currentOffice">>
 ): Promise<ElectedOfficial[]> {
-  const officials = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const officials = await electedOfficialsCollection(db)
     .find(
       { countryId: "DE", officeType: "bundestag" },
       { projection: { characterId: 1, nppId: 1, state: 1, seatsHeld: 1, party: 1, seatSource: 1 } }
@@ -25,15 +27,13 @@ export async function reconcileBundestagHolderOffices(
   const characterIds = officials.flatMap((o) => (o.characterId ? [o.characterId] : []));
   const nppIds = officials.flatMap((o) => (o.nppId ? [o.nppId] : []));
   const [characters, npps] = await Promise.all([
-    db
-      .collection<Character>("characters")
+    charactersCollection(db)
       .find(
         { _id: { $in: characterIds } },
         { projection: { _id: 1, currentOffice: 1, party: 1, userId: 1 } }
       )
       .toArray(),
-    db
-      .collection<NPP>("npps")
+    nppsCollection(db)
       .find({ _id: { $in: nppIds } }, { projection: { _id: 1, currentOffice: 1 } })
       .toArray(),
   ]);
@@ -45,8 +45,7 @@ export async function reconcileBundestagHolderOffices(
   };
   const departingPlayers =
     currentTurn !== undefined
-      ? await db
-          .collection<Character>("characters")
+      ? await charactersCollection(db)
           .find(departingFilter, { projection: { _id: 1, party: 1 } })
           .toArray()
           .catch(() => [])
@@ -112,20 +111,16 @@ export async function reconcileBundestagHolderOffices(
       else characterWrites.push({ updateOne: { filter: { _id: actor._id }, update } });
     }
   }
-  if (vacancyWrites.length)
-    await db.collection<ElectedOfficial>("electedOfficials").bulkWrite(vacancyWrites);
-  if (characterWrites.length)
-    await db.collection<Character>("characters").bulkWrite(characterWrites);
-  if (nppWrites.length) await db.collection<NPP>("npps").bulkWrite(nppWrites);
-  await db
-    .collection<Character>("characters")
-    .updateMany(departingFilter, { $set: { currentOffice: null, updatedAt: now } });
-  await db
-    .collection<NPP>("npps")
-    .updateMany(
-      { countryId: "DE", "currentOffice.type": "bundestag", _id: { $nin: nppIds } },
-      { $set: { currentOffice: null, updatedAt: now } }
-    );
+  if (vacancyWrites.length) await electedOfficialsCollection(db).bulkWrite(vacancyWrites);
+  if (characterWrites.length) await charactersCollection(db).bulkWrite(characterWrites);
+  if (nppWrites.length) await nppsCollection(db).bulkWrite(nppWrites);
+  await charactersCollection(db).updateMany(departingFilter, {
+    $set: { currentOffice: null, updatedAt: now },
+  });
+  await nppsCollection(db).updateMany(
+    { countryId: "DE", "currentOffice.type": "bundestag", _id: { $nin: nppIds } },
+    { $set: { currentOffice: null, updatedAt: now } }
+  );
   if (currentTurn !== undefined) {
     officeTransitions.push(
       ...departingPlayers.map((character) => ({

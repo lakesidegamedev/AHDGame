@@ -40,7 +40,7 @@ export function PatreonBadge({
 
   const isPlusPlus = tier === "supporter-plus-plus";
   const isPlus = tier === "supporter-plus";
-  const label = isPlusPlus ? "Supporter++" : isPlus ? "Supporter+" : "Supporter";
+  const label = isPlusPlus ? "Champion" : isPlus ? "Supporter+" : "Supporter";
   const titleParts = [label];
   if (provider === "stripe") {
     titleParts.push("(Lakeside subscription)");

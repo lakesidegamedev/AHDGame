@@ -1,34 +1,24 @@
 /**
  * Regional budget constraint system for UK regions.
  *
- * Runs every turn as part of the effects & metrics group. Calculates each UK
- * region's budget from council tax, business rates, and the Westminster grant,
- * then compares against enacted spending. Regions in deficit for more than one
- * turn trigger forced austerity (most expensive programme downgraded one tier).
+ * Runs every turn in the effects & metrics group: computes each UK region's
+ * budget from council tax, business rates, and the Westminster grant, then
+ * compares against enacted spending. Regions in deficit for more than one turn
+ * trigger forced austerity (most expensive programme downgraded one tier).
  *
- * **Revenue is derived from the region's own economy and the national grant
- * pool — never from a `legislationTypes` lookup.** The political-legislation
- * v2 preset unseeds every legacy `countryScope: "uk"` type (see
- * `seedLegislationTypes`), so the previous model — council tax rate read off
- * an enacted `uk_council_tax` policy, Westminster grant off a national
- * `uk_local_government_funding` policy — resolved to a silent 0 on every v2
- * world while the COST half kept pricing through the v2 catalog. That
- * asymmetry left all 12 UK regions with £0 revenue against real enacted costs,
- * pinning them in permanent deficit and firing forced austerity every turn.
- * RU/DE/CN/JP regional budgets already derive from the national budget; this
- * brings UK onto the same footing.
- *
- * The per-capita value bases that model replaced were also modern-calibrated
- * (a flat £120,000/head) with no era awareness: on the 1953 preset they billed
- * London £18.8B of council tax against a £17.5B *national* GDP. Anchoring to
- * live regional GDP is era-proof by construction.
+ * Revenue is derived from the region's own economy and the national grant
+ * pool, never from a `legislationTypes` lookup. The v2 preset unseeds all
+ * legacy `countryScope: "uk"` types, so a legislation-based model resolves to
+ * £0 revenue while costs still price through the v2 catalog, pinning every UK
+ * region in permanent deficit. RU/DE/CN/JP derive regional budgets from the
+ * national budget; UK does the same here. Anchoring to live regional GDP is
+ * era-proof where flat per-capita values were not.
  *
  * Pure calculation helpers are exported separately for testability.
  */
 
 import type { AnyBulkWriteOperation } from "mongodb";
 import type { State } from "@/lib/db/types";
-import type { FederalBudget } from "@/lib/db/types/budget";
 import type { StatePolicy } from "@/lib/db/types/statePolicy";
 import type { LegislationType, LegislationPolicyOption } from "@/lib/db/types/legislation";
 import type { RegionalBudget } from "@/lib/db/types/regionalBudget";
@@ -46,6 +36,13 @@ import { settleRegionalBudget } from "@/lib/governmentFinance/rules/regionalSett
 import { resolveAnnualRegionalGrantPool } from "@/lib/governmentFinance/grantTransfers";
 import type { ResetLawProgramDocument } from "@/lib/resetLegislation/program";
 import { buildResetRegionalProgramClaims } from "@/lib/resetLegislation/rules/regionalClaims";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
+import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
+import { cabinetSettingsCollection } from "@/lib/db/repositories/cabinetSettings";
+import { regionalBudgetsCollection } from "@/lib/db/repositories/regionalBudgets";
+import { resetLawProgramsCollection } from "@/lib/db/repositories/resetLawPrograms";
 
 // ── Pure calculation types ───────────────────────────────────────────────────
 
@@ -279,21 +276,19 @@ export async function processRegionalBudgets(
   countryId: "UK" | "SCO" | "WAL" = "UK"
 ): Promise<{ regionsProcessed: number }> {
   // 1. Fetch all UK regions
-  const ukRegions = await db.collection<State>("states").find({ countryId }).toArray();
+  const ukRegions = await statesCollection(db).find({ countryId }).toArray();
 
   if (ukRegions.length === 0) return { regionsProcessed: 0 };
 
   const { stateCostByStateId } = await loadAnnualSubsidyCostMaps(db);
 
   // 2. Fetch all enacted UK regional policies
-  const allRegionalPolicies = await db
-    .collection<StatePolicy>("statePolicies")
+  const allRegionalPolicies = await statePoliciesCollection(db)
     .find({ stateId: { $in: ukRegions.map((r) => r._id as string) } })
     .toArray();
   const resetPrograms =
     resetLegislationV2Enabled && resetWorldId
-      ? await db
-          .collection<ResetLawProgramDocument>("resetLawPrograms")
+      ? await resetLawProgramsCollection<ResetLawProgramDocument>(db)
           .find(
             {
               country: countryId,
@@ -326,9 +321,7 @@ export async function processRegionalBudgets(
   //    a missing type can no longer zero a region's revenue.
   const allLegTypeIds = [...new Set(allRegionalPolicies.map((p) => p.legislationTypeId))];
 
-  const legTypes = await db
-    // full-read(legislationTypes): policyOptions tables price every state law
-    .collection<LegislationType>("legislationTypes")
+  const legTypes = await legislationTypesCollection(db)
     .find({ _id: { $in: allLegTypeIds } })
     .toArray();
   const materializedLegTypes = regionalFinanceEnabled ? withLawAdministration(legTypes) : legTypes;
@@ -338,7 +331,7 @@ export async function processRegionalBudgets(
   //    line — the enacted figure when there is one, else the authored era
   //    baseline. Live UK carries stateGrants = 0 with baselineStateGrants =
   //    £250M, so reading only the enacted line would unfund every region.
-  const nationalBudget = await db.collection<FederalBudget>("federalBudget").findOne(
+  const nationalBudget = await federalBudgetCollection(db).findOne(
     { _id: getNationalBudgetId(countryId) },
     {
       projection: {
@@ -375,26 +368,23 @@ export async function processRegionalBudgets(
 
   // 5. Fetch existing budget documents for all regions
   const regionIds = ukRegions.map((r) => r._id);
-  const existingBudgets = await db
-    .collection<RegionalBudget>("regionalBudgets")
+  const existingBudgets = await regionalBudgetsCollection(db)
     .find({ _id: { $in: regionIds } })
     .toArray();
   const budgetMap = new Map(existingBudgets.map((b) => [b._id, b]));
 
   // Read Chancellor allocation percentages from cabinet settings
-  const chancellorSetting = await db
-    .collection<CabinetSetting>("cabinetSettings")
-    .findOne({ _id: `${countryId}_chancellor` });
+  const chancellorSetting = await cabinetSettingsCollection(db).findOne({
+    _id: `${countryId}_chancellor`,
+  });
   const allocationPercents = chancellorSetting?.allocationPercents ?? null;
 
   let regionsProcessed = 0;
 
-  // Batched: the per-region regionalBudgets upsert (always) and the rare
-  // forced-austerity statePolicies update used to be sequential updateOne
-  // calls inside this loop — one+ round-trip per region. Accumulate into
-  // bulkWrite arrays and commit once after the loop. Small at 12 UK regions,
-  // but this is the shape every per-country regional-budget phase shares, and
-  // it scales with region count toward the 30-50-country target.
+  // Batched: accumulate per-region upserts and rare forced-austerity
+  // updates into bulkWrite arrays and commit once after the loop, avoiding
+  // one round-trip per region. This shape is shared across regional-budget
+  // phases and scales with region count.
   const statePolicyOps: AnyBulkWriteOperation<StatePolicy>[] = [];
   const regionalBudgetOps: AnyBulkWriteOperation<RegionalBudget>[] = [];
 
@@ -403,9 +393,7 @@ export async function processRegionalBudgets(
     const regionResetPrograms = resetProgramsByRegion.get(String(region._id)) ?? [];
     const existingBudget = budgetMap.get(region._id);
 
-    // a. Use existing value bases or defaults. These are no longer a currency
-    //    amount in the revenue formula — only their ratio to baseline is read,
-    //    so the drift feedback loop survives the switch to GDP anchoring.
+    // Values feed the revenue formula only as a ratio to baseline, so drift feedback survives GDP anchoring.
     const propertyValuePerCapita =
       existingBudget?.propertyValuePerCapita ?? DEFAULT_PROPERTY_VALUE_PER_CAPITA;
     const commercialValuePerCapita =
@@ -606,10 +594,10 @@ export async function processRegionalBudgets(
   }
 
   if (statePolicyOps.length > 0) {
-    await db.collection<StatePolicy>("statePolicies").bulkWrite(statePolicyOps);
+    await statePoliciesCollection(db).bulkWrite(statePolicyOps);
   }
   if (regionalBudgetOps.length > 0) {
-    await db.collection<RegionalBudget>("regionalBudgets").bulkWrite(regionalBudgetOps);
+    await regionalBudgetsCollection(db).bulkWrite(regionalBudgetOps);
   }
 
   return { regionsProcessed };

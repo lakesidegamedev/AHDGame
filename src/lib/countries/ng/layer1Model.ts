@@ -1,24 +1,17 @@
 /**
- * Nigeria Layer-1 demographic model — census-consuming build.
+ * Nigeria Layer-1 demographic model , census-consuming build.
  *
- * Architecture:
- *   - dims: ["religion","ethnicity","age","education","income","urbanization"]
- *   - census: approximate per-zone NPC/NBS data from ngRegionCensusData.ts
- *   - composition: maps each of the 8 NG archetypes to census dim/key weights
- *   - positions: per-era, reflecting documented Nigerian political history
- *   - region/archetype leans EMERGE from census × positions — never hand-calibrated
+ * dims: ["religion","ethnicity","age","education","income","urbanization"]
+ * Region/archetype leans EMERGE from census × positions, never hand-calibrated.
  *
- * SCAFFOLD NOTE: Only the "2019" era positions are authored; other eras reuse
- * POSITIONS_2019. Census files exist for 1953 and 1979
- * (`ngRegionCensusData1953` / `ngRegionCensusData1979`, wired in
- * `regionCensusData.ts`), but this model still points every era at the 2019
- * table. Era-specific positions (Second Republic 1979, early Fourth Republic
- * 1999, Yar'Adua/Jonathan 2007, Tinubu 2023) are still unauthored.
+ * SCAFFOLD: only the "2019" era positions are authored; other eras reuse
+ * POSITIONS_2019 even though 1953 and 1979 census files exist. Era-specific
+ * positions are still unauthored.
  *
- * Era-fact anchors to validate in ng.test.ts once era-specific positions land:
+ * Era-fact anchors to validate in ng.test.ts once era positions land:
  *   2019: NORTH-WEST + NORTH-EAST economically RIGHT (Buhari APC base);
- *         SOUTH-SOUTH economically LEFT (PDP/Jonathan resource-control base)
- *   2023: SOUTH-WEST competitive (Tinubu home turf); SOUTH-EAST LEFT (LP/Obi)
+ *         SOUTH-SOUTH economically LEFT (PDP resource-control base)
+ *   2023: SOUTH-WEST competitive (Tinubu); SOUTH-EAST LEFT (LP/Obi)
  */
 
 import type { CountryLayer1Model, DemographicPosition } from "@/lib/seeds/international/types";
@@ -43,10 +36,9 @@ type GroupId = (typeof NG_GROUP_IDS)[number];
 
 // ── Turnout rates (per census dim/key) ────────────────────────────────────────
 // Nigeria has NO compulsory voting (unlike Brazil). INEC averages: ~35% in 2019,
-// ~27% in 2023 (lowest turnout in recent African democracies). Turnout is
-// highly uneven: the North-West has strong APC mobilisation networks but also
-// low female participation in some states; the South-East has the highest
-// educational attainment but historically lower registration trust.
+// ~27% in 2023. Turnout is highly uneven by region (North-West: strong APC
+// mobilisation but low female participation in some states; South-East: high
+// educational attainment but lower registration trust).
 // Rates below are plausible dim/key baselines in the 30-70 range.
 
 const TURNOUT_RATES: CountryLayer1Model["turnoutRates"] = {
@@ -216,7 +208,7 @@ const COMPOSITION: Record<GroupId, CountryLayer1Model["composition"][string]> = 
   },
 };
 
-// ── Default leans (archetype priors, from ngDemographicCategories.ts) ──────────
+// ── Default leans (archetype priors, from the country Layer-1 model) ──────────
 
 const DEFAULT_LEANS: Record<GroupId, { economicLean: number; socialLean: number }> = {
   northern_muslim_conservative: { economicLean: 2, socialLean: 3 },
@@ -229,21 +221,10 @@ const DEFAULT_LEANS: Record<GroupId, { economicLean: number; socialLean: number 
   lagos_cosmopolitan: { economicLean: 0, socialLean: -1 },
 };
 
-// ── Per-era positions: how each census key leaned in that political era ─────────
-//
-// Scale: economicLean -5 (redistribution/left) to +5 (free market/right)
-//        socialLean   -5 (progressive/liberal) to +5 (traditional/conservative)
-//
-// SCAFFOLD: only 2019 is authored. Other eras reuse POSITIONS_2019 and the
-// 2019-default census (ngRegionCensusData) until era-specific profiles land.
-//
-// 2019: BUHARI RE-ELECTION (APC).
-//   Buhari defeated Atiku (PDP) with ~56% in the 2nd cycle of the Fourth Republic.
-//   North-West + North-East = APC Muslim-conservative base (econ right via
-//   subsidy politics, social right via religion). South-South = PDP/Jonathan
-//   resource-control base (econ left). South-West = APC but competitive
-//   (Tinubu machine). South-East = PDP but low turnout. Religion is the primary
-//   social cleavage; ethnicity the primary regional differentiator.
+// Per-era demographic positions.
+// economicLean: -5 redistribution to +5 free market
+// socialLean: -5 progressive to +5 traditional
+// SCAFFOLD: only 2019 authored; other eras reuse POSITIONS_2019.
 
 type DimPositions = Record<string, DemographicPosition>;
 type EraPositions = Record<string, DimPositions>;

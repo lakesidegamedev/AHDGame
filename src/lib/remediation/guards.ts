@@ -4,6 +4,7 @@
 
 import type { Db } from "mongodb";
 import type { CodeGateResult, Defect, GuardName, HealPlan } from "./types";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export interface GuardVerdict {
   guard: string;
@@ -58,7 +59,7 @@ export async function readGameState(db: Db): Promise<GameStateShape | null> {
     processingHeartbeatAt: 1,
   };
   // gameState is keyed by a string sentinel ("current"), not an ObjectId.
-  const gameState = db.collection<{ _id: string } & Record<string, unknown>>("gameState");
+  const gameState = gameStateCollection<{ _id: string } & Record<string, unknown>>(db);
   return gameState.findOne<GameStateShape>({ _id: "current" }, { projection });
 }
 

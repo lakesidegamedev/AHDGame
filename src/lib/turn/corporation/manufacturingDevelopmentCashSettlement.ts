@@ -21,8 +21,13 @@ import {
   corpCapitalToAnchor,
   fxRateForCorpFromMap,
   resolveCorpLiquidCurrencyCode,
+  anchorToCorpCapital,
 } from "@/lib/currency/corporationCapital";
 import type { CorpSnapshot } from "./types";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { ledgerEntriesCollection } from "@/lib/db/repositories/ledgerEntries";
+import { developmentCashWitness } from "./developmentCashLedger";
+import { applyJournaledOps, type JournalContext } from "./resume/journal";
 
 interface DevelopmentCashRow {
   _id: ObjectId;
@@ -33,6 +38,8 @@ interface DevelopmentCashRow {
     turn: number;
     amountAnchor: number;
   };
+  mediaProductDevelopmentPaidTurnV1?: number;
+  mediaProductDevelopmentReceiptV1?: { projectId: string; turn: number; amountAnchor: number };
 }
 
 export interface ManufacturingDevelopmentCashSettlementArgs {
@@ -49,6 +56,8 @@ export interface ManufacturingDevelopmentCashSettlementArgs {
   /** Feature gate; disabled turns do not read or settle title advertising obligations. */
   mediaProductSlatesEnabled?: boolean;
   productLinesV2Enabled?: boolean;
+  /** Turn resume journal; absent or below stage 2 writes directly. */
+  journal?: JournalContext;
 }
 
 export interface OperatingThenDevelopmentCashArgs extends ManufacturingDevelopmentCashSettlementArgs {
@@ -100,13 +109,20 @@ export async function settleManufacturingDevelopmentCash(
   if (uniqueIds.length === 0) return { paidReceipts: 0, paidAmountAnchor: 0 };
 
   if (args.operations.length > 0) {
-    await args.db.collection<Corporation>("corporations").bulkWrite(args.operations, {
-      ordered: false,
-    });
+    // Each op already carries its own paid-turn and receipt guard, so the journal
+    // stores the plan without adding a stamp.
+    const write = (ops: AnyBulkWriteOperation<Corporation>[]) =>
+      corporationsCollection(args.db)
+        .bulkWrite(ops, { ordered: false })
+        .then(() => undefined);
+    if (args.journal)
+      await applyJournaledOps(args.journal, "developmentCash", args.operations, write, {
+        stamp: false,
+      });
+    else await write(args.operations);
   }
 
-  const rows = (await args.db
-    .collection<Corporation>("corporations")
+  const rows = (await corporationsCollection(args.db)
     .find(
       { _id: { $in: uniqueIds } },
       {
@@ -115,6 +131,8 @@ export async function settleManufacturingDevelopmentCash(
           liquidCapital: 1,
           manufacturingProductDevelopmentPaidTurnV2: 1,
           manufacturingProductDevelopmentReceiptV2: 1,
+          mediaProductDevelopmentPaidTurnV1: 1,
+          mediaProductDevelopmentReceiptV1: 1,
         },
       }
     )
@@ -127,6 +145,7 @@ export async function settleManufacturingDevelopmentCash(
   let paidReceipts = 0;
   let paidAmountAnchor = 0;
   const creditOps: AnyBulkWriteOperation<Corporation>[] = [];
+  const witnesses: ReturnType<typeof developmentCashWitness>[] = [];
 
   for (const row of rows) {
     const corporationId = row._id.toString();
@@ -142,6 +161,29 @@ export async function settleManufacturingDevelopmentCash(
     snapshot.liquidCapitalAnchorAfterIncome = liquidCapitalAnchor;
 
     const receipt = row.manufacturingProductDevelopmentReceiptV2;
+    for (const [family, paidTurn, paid] of [
+      ["manufacturing", row.manufacturingProductDevelopmentPaidTurnV2, receipt],
+      ["media", row.mediaProductDevelopmentPaidTurnV1, row.mediaProductDevelopmentReceiptV1],
+    ] as const) {
+      if (
+        paidTurn !== args.turn ||
+        paid?.turn !== args.turn ||
+        !Number.isFinite(paid.amountAnchor) ||
+        !(paid.amountAnchor > 0)
+      )
+        continue;
+      witnesses.push(
+        developmentCashWitness({
+          corporation: corporationId,
+          family,
+          project: paid.projectId,
+          turn: paid.turn,
+          currency: currency ?? "USD",
+          amount: anchorToCorpCapital(paid.amountAnchor, currency, fxRate),
+          rate: currency ? fxRate : 1,
+        })
+      );
+    }
     if (
       row.manufacturingProductDevelopmentPaidTurnV2 === args.turn &&
       receipt?.turn === args.turn &&
@@ -194,8 +236,14 @@ export async function settleManufacturingDevelopmentCash(
     });
   }
 
+  if (witnesses.length > 0)
+    await ledgerEntriesCollection(args.db).bulkWrite(
+      witnesses.map((entry) => ({
+        updateOne: { filter: { _id: entry._id }, update: { $setOnInsert: entry }, upsert: true },
+      }))
+    );
   if (creditOps.length > 0) {
-    await args.db.collection<Corporation>("corporations").bulkWrite(creditOps, { ordered: false });
+    await corporationsCollection(args.db).bulkWrite(creditOps, { ordered: false });
   }
 
   return { paidReceipts, paidAmountAnchor };

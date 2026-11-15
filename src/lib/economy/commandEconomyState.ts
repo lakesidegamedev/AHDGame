@@ -1,29 +1,18 @@
 /**
- * Command-economy macro-state kernels (P1 + P3).
+ * Command-economy macro-state kernels.
  *
- * Pure, deterministic, NaN-guarded math for the planned-economy readouts that
- * live on `FederalBudget.economicFactors` (monetaryOverhang, shortageIndex,
- * blackMarketPremium, secondEconomyShare). The consolidated turn phase
- * `@/lib/turn/commandEconomyTurn` loads state, calls these kernels, and
- * persists — keeping the economics here and the I/O there.
+ * Pure, deterministic, NaN-guarded math for planned-economy readouts on
+ * `FederalBudget.economicFactors`. `commandEconomyTurn` handles I/O.
  *
- * The model is a qualitative rendering of the shortage-economy literature:
- *  - Kornai: a soft-budget, quantity-planned economy runs chronic shortage;
- *    administered (sticky) prices don't clear, so excess nominal income piles
- *    up as a MONETARY OVERHANG (forced savings).
- *  - The overhang and the physical demand-vs-supply gap drive a SHORTAGE INDEX.
- *  - Grossman: the repressed demand spills into a SECOND (black-market) economy
- *    that clears at a premium and, depending on how far the state tolerates it,
- *    RELIEVES the overhang.
+ * Shortage-economy model: a quantity-planned economy runs chronic shortage
+ * (Kornai); sticky prices don't clear, so excess nominal income piles up as a
+ * MONETARY OVERHANG that drives a SHORTAGE INDEX. Repressed demand spills into
+ * a black-market SECOND ECONOMY that clears at a premium and relieves the
+ * overhang (Grossman).
  *
- * All quantities are bounded indices/fractions (not currency units) so they
- * compose without needing a money-stock field the engine does not track.
- *
- * CADENCE: the phase runs every turn (TURNS_PER_YEAR = 48 turns/year), but the
- * growth signals it consumes (wage/GDP growth) are ANNUAL percentages. The flow
- * is therefore divided by TURNS_PER_YEAR so overhang accumulates at the real
- * annual pace rather than ~48x too fast, and the decay is a gentle per-turn rate
- * (a multi-year persistence horizon — forced savings are sticky).
+ * CADENCE: the phase runs every turn (48/year) but growth signals are ANNUAL
+ * percentages, so flows are divided by TURNS_PER_YEAR and decay is a gentle
+ * per-turn rate (forced savings are sticky).
  */
 
 import { TURNS_PER_YEAR } from "@/lib/constants/turnTime";
@@ -37,19 +26,14 @@ const clamp = (v: number, lo: number, hi: number): number =>
  *  ~2-year decay horizon (48 turns/yr) — forced savings bleed off slowly. */
 const OVERHANG_DECAY = 0.99;
 /**
- * Converts an unmet plan (1 − fulfillment) into an annual percentage-point
+ * Converts an unmet plan (1 - fulfillment) into an annual percentage-point
  * deficit on the GOODS side of the overhang gap.
  *
- * WHY THE GOODS SIDE NEEDS THIS. `realGoodsGrowth` is GDP growth, which counts
- * everything the economy produces. In a shortage economy what creates forced
- * savings is the gap between the incomes the plan pays out and the consumer
- * goods that actually reach the shelves, and a plan the enterprises miss by 16%
- * is exactly that gap. Without this term the sign can invert: production RU ran
- * wageGrowth 4.81 against gdpGrowth 5.50, a NEGATIVE gap, so the USSR accrued
- * no overhang at all and structurally never could, no matter how badly its
- * enterprises performed. A command economy that misses its plan every turn and
- * reports zero shortage pressure is the single clearest symptom of the model
- * not being wired to the game.
+ * In a shortage economy, forced savings come from the gap between incomes the
+ * plan pays out and consumer goods that reach the shelves. Without this term
+ * the sign can invert: if wageGrowth and gdpGrowth are close, a missed plan
+ * produces no overhang at all, so the model reports zero shortage pressure
+ * no matter how badly enterprises perform.
  *
  * 20 maps a 16% plan miss to ~3.2pp of annual goods deficit.
  */
@@ -62,26 +46,14 @@ export const MAX_SECOND_ECONOMY_SHARE = 0.6;
 const SECOND_ECONOMY_ADJUST = 0.25;
 
 /**
- * Accumulate the monetary overhang. Overhang grows when nominal income (wages)
- * outruns real goods availability (GDP growth) under a planned economy, scaled
- * by how much of the economy is administered (`plannedShare`); it decays as some
- * excess is spent, and is further relieved by whatever the second economy soaks
- * up. Bounded to [0, OVERHANG_CAP].
+ * Accumulate the monetary overhang. Overhang grows when nominal wages outrun
+ * real goods availability, scaled by `plannedShare`; it decays as excess is
+ * spent and as the second economy absorbs it. Bounded to [0, OVERHANG_CAP].
  *
- * @param prevOverhang   last turn's overhang index
- * @param wageGrowth     nominal wage growth (annual %) — the money injection
- * @param realGoodsGrowth real output growth (annual %, ~gdpGrowth) — goods side
- * @param plannedShare   0..1 share of activity under the plan (from the dial)
- * @param secondEconomyRelief overhang absorbed by the second economy this turn
- * @param creditInjection per-turn overhang-index points injected by monetized
- *        directed credit (Gosbank issuance not backed by savings). Already a
- *        per-turn flow — added AFTER the annual-gap /TURNS_PER_YEAR conversion,
- *        not re-divided. 0 (default) ⇒ byte-identical to the pre-P1 behaviour.
+ * @param creditInjection per-turn overhang-index points from monetized credit;
+ *        already a per-turn flow, added after the /TURNS_PER_YEAR conversion.
  * @param planFulfillment aggregate SOE plan fulfillment (1.0 = on plan). The
- *        unmet part of the plan is the consumer goods the incomes were paid
- *        against but that never reached the shelves, so it widens the gap on
- *        the goods side. Default 1.0 (on plan) ⇒ no deficit term, which is the
- *        pre-existing behaviour for any caller that does not pass it.
+ *        unmet part widens the goods-side gap. Default 1.0 adds no term.
  */
 export function accumulateOverhang(
   prevOverhang: number,
@@ -201,20 +173,14 @@ export function updateSecondEconomy(
 const REPRESSION_EXPRESSION_SUPPRESSION = 0.8;
 
 /**
- * Command Economy v2 (P0): collapse the three shortage-economy readouts into a
- * single 0..1 BLACK-MARKET PRESSURE scalar — the `blackMarketPressure` driver of
- * the endogenous-marketization drift. A big shortage / high shadow premium / a
- * large second economy all push the country toward the market. Each input is
- * normalised to 0..1 against its own ceiling and blended (scarcity dominates,
- * the premium and the grey-market size confirm it).
+ * Collapse the shortage-economy readouts into a 0..1 BLACK-MARKET PRESSURE
+ * scalar, the `blackMarketPressure` driver of endogenous-marketization drift.
+ * Each input is normalised to 0..1 against its own ceiling and blended
+ * (scarcity dominates; premium and grey-market size confirm).
  *
- * INTERNAL REPRESSION (v2, hardliner's lever): a government that represses the
- * second economy forces down its VISIBLE EXPRESSION — the shadow premium and the
- * grey-market share — so less of the shortage shows up as reform pressure and the
- * marketization drift eases. Crucially, repression scales ONLY the premium and
- * second-economy terms; the shortage term (the underlying scarcity, the CAUSE)
- * is left intact. Repression hides the symptom, it does not fix the plan.
- * `repression = 0` (default) ⇒ byte-identical to the pre-repression blend.
+ * Repression scales ONLY the premium and second-economy terms, never the
+ * shortage term (the underlying cause). Repression hides the symptom, it does
+ * not fix the plan. `repression = 0` (default) matches the pre-repression blend.
  *
  * @param shortageIndex      0..100 goods scarcity at administered prices
  * @param blackMarketPremium 0..MAX_BLACK_MARKET_PREMIUM shadow premium (fraction)

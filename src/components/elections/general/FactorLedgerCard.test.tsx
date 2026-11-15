@@ -5,7 +5,7 @@ import { describe, it, expect, afterEach } from "vitest";
 import { render as rtlRender, screen, cleanup } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
 import { FactorLedgerCard, type FactorLedgerCandidate } from "./FactorLedgerCard";
-import { FACTOR_ORDER, type FactorLedgerSnapshot } from "@/lib/electionEngine/factorLedger";
+import { FACTOR_ORDER, type FactorLedgerSnapshot } from "@/lib/elections/engine/factorLedger";
 import enElections from "../../../../messages/en/elections.json";
 
 function render(ui: React.ReactElement) {

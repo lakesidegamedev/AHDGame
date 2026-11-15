@@ -1,0 +1,184 @@
+{
+  "config": {
+    "governmentType": "onePartyState",
+    "regionLabel": "Region",
+    "legislature": {
+      "name": "Grand National Assembly",
+      "lowerChamber": {
+        "key": "grandNationalAssembly",
+        "name": "Grand National Assembly",
+        "shortName": "Assembly",
+        "seats": 369,
+        "description": "369 deputies of the Marea Adunare Națională, elected to five-year terms - a single-list body controlled by the ruling communist party."
+      },
+      "upperChamber": {
+        "key": "stateCouncil",
+        "name": "State Council",
+        "shortName": "Council",
+        "seats": 21,
+        "description": "A collective head of state exercising standing authority between Assembly sessions; chosen by the Grand National Assembly.",
+        "elected": false
+      }
+    },
+    "officeTypes": [
+      {
+        "key": "generalSecretary",
+        "label": "General Secretary",
+        "labelPlural": "General Secretaries",
+        "isExecutive": true,
+        "isSubNational": false
+      },
+      {
+        "key": "presidentOfStateCouncil",
+        "label": "President of the State Council",
+        "labelPlural": "Presidents of the State Council",
+        "isExecutive": true,
+        "isSubNational": false,
+        "isHeadOfState": true
+      },
+      {
+        "key": "assemblyDeputy",
+        "label": "Deputy",
+        "labelPlural": "Deputies",
+        "chamberKey": "grandNationalAssembly",
+        "isExecutive": false,
+        "isSubNational": false
+      },
+      {
+        "key": "centralBankChair",
+        "label": "Governor of the BNR",
+        "labelPlural": "Governors of the BNR",
+        "isExecutive": false,
+        "isSubNational": false
+      }
+    ],
+    "lowerElectionSystem": { "snapElectionsAllowed": false }
+  },
+  "eraOverrides": {
+    "2027-default": {
+      "governmentType": "presidential",
+      "legislature": {
+        "name": "Parliament",
+        "lowerChamber": {
+          "key": "chamberOfDeputies",
+          "name": "Chamber of Deputies",
+          "shortName": "Chamber",
+          "seats": 331,
+          "description": "331 deputies elected for four-year terms by closed-list proportional representation with a 5% national threshold."
+        },
+        "upperChamber": {
+          "key": "senat",
+          "name": "Senate",
+          "shortName": "Senate",
+          "seats": 134,
+          "description": "134 senators elected for four-year terms by closed-list proportional representation with a 5% national threshold.",
+          "elected": true
+        }
+      },
+      "officeTypes": [
+        {
+          "key": "president",
+          "label": "President",
+          "labelPlural": "Presidents",
+          "isExecutive": true,
+          "isSubNational": false,
+          "isHeadOfState": true
+        },
+        {
+          "key": "primeMinister",
+          "label": "Prime Minister",
+          "labelPlural": "Prime Ministers",
+          "isExecutive": true,
+          "isSubNational": false
+        },
+        {
+          "key": "deputy",
+          "label": "Deputy",
+          "labelPlural": "Deputies",
+          "chamberKey": "chamberOfDeputies",
+          "isExecutive": false,
+          "isSubNational": false
+        },
+        {
+          "key": "senator",
+          "label": "Senator",
+          "labelPlural": "Senators",
+          "chamberKey": "senat",
+          "isExecutive": false,
+          "isSubNational": false
+        },
+        {
+          "key": "centralBankChair",
+          "label": "Governor of the BNR",
+          "labelPlural": "Governors of the BNR",
+          "isExecutive": false,
+          "isSubNational": false
+        }
+      ],
+      "lowerElectionSystem": { "snapElectionsAllowed": true },
+      "upperElectionSystem": { "snapElectionsAllowed": true }
+    },
+    "1991-default": {
+      "governmentType": "presidential",
+      "legislature": {
+        "name": "Constituent Parliament",
+        "lowerChamber": {
+          "key": "chamberOfDeputies",
+          "name": "Assembly of Deputies",
+          "shortName": "Assembly",
+          "seats": 396,
+          "description": "396 deputies elected in May 1990 under Decree-Law 92/1990."
+        },
+        "upperChamber": {
+          "key": "senat",
+          "name": "Senate",
+          "shortName": "Senate",
+          "seats": 119,
+          "description": "119 senators elected in May 1990 under Decree-Law 92/1990.",
+          "elected": true
+        }
+      },
+      "officeTypes": [
+        {
+          "key": "president",
+          "label": "President",
+          "labelPlural": "Presidents",
+          "isExecutive": true,
+          "isSubNational": false,
+          "isHeadOfState": true
+        },
+        {
+          "key": "primeMinister",
+          "label": "Prime Minister",
+          "labelPlural": "Prime Ministers",
+          "isExecutive": true,
+          "isSubNational": false
+        },
+        {
+          "key": "deputy",
+          "label": "Deputy",
+          "labelPlural": "Deputies",
+          "chamberKey": "chamberOfDeputies",
+          "isExecutive": false,
+          "isSubNational": false
+        },
+        {
+          "key": "senator",
+          "label": "Senator",
+          "labelPlural": "Senators",
+          "chamberKey": "senat",
+          "isExecutive": false,
+          "isSubNational": false
+        },
+        {
+          "key": "centralBankChair",
+          "label": "Governor of the BNR",
+          "labelPlural": "Governors of the BNR",
+          "isExecutive": false,
+          "isSubNational": false
+        }
+      ],
+      "upperElectionSystem": { "snapElectionsAllowed": false }
+    }
+  }
+}

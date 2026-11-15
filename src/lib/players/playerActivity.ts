@@ -1,6 +1,7 @@
 import type { Db } from "mongodb";
 import { ObjectId } from "mongodb";
 import type { User } from "@/lib/db/types";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 /**
  * Turns of inactivity (= real hours; one turn is one hour) before a player
@@ -56,8 +57,7 @@ export async function activeUserIds(db: Db, userIds: ObjectId[], now: Date): Pro
   const active = new Set<string>();
   if (userIds.length === 0) return active;
 
-  const users = await db
-    .collection<User>("users")
+  const users = await usersCollection(db)
     .find({ _id: { $in: userIds } })
     .project<{ _id: ObjectId; lastActivity?: Date; createdAt?: Date }>({
       _id: 1,

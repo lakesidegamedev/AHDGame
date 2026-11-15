@@ -1,4 +1,5 @@
 "use client";
+import { displayCanadianRegionCode } from "@/lib/countries/ca/regionCodes";
 
 import { SupplyOfferBoard } from "./SupplyOfferBoard";
 import { useCallback, useEffect, useState } from "react";
@@ -132,10 +133,7 @@ export default function SupplyAgreementsSection({
   corpId,
 }: {
   corpId: string;
-  /**
-   * Home country of the corp. Retained for call-site compatibility; the buyer
-   * search is now global (any player-run corp), so it no longer scopes search.
-   */
+  /** Home country of the corp. Retained for call-site compatibility; the buyer search is global and no longer scopes by it. */
   countryId?: string;
 }) {
   const { showToast } = useToast();
@@ -524,7 +522,9 @@ export default function SupplyAgreementsSection({
           <div className="min-w-0">
             <p className="text-sm font-semibold text-foreground">
               {COMMODITY_LABELS[a.commodity]}
-              {a.stateId ? <span className="text-muted"> · {a.stateId}</span> : null}
+              {a.stateId ? (
+                <span className="text-muted"> · {displayCanadianRegionCode(a.stateId)}</span>
+              ) : null}
             </p>
             <p className="text-xs text-muted">
               {role === "supplier" ? "Supplying to " : "Buying from "}

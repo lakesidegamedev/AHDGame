@@ -474,4 +474,86 @@ export const REAL_ESTATE_V3: V3LaneContent = {
       ],
     },
   ],
+  "2039": [
+    {
+      name: "Robotic Concierge Services",
+      description: "Robots and agents handle the front desk, deliveries and security.",
+      effects: [{ kind: "laborCostReduction", pct: 0.06 }],
+    },
+    {
+      name: "Health-Rated Space",
+      description: "Certified air, light and quiet put space at the top of leasing lists.",
+      effects: [{ kind: "plantOutput", pct: 0.017 }],
+    },
+    {
+      name: "Flood and Heat Ratings",
+      description: "Assets that pass new climate rules keep their value while rivals strand.",
+      effects: [{ kind: "dominanceShield", pct: 0.12 }],
+    },
+    {
+      name: "Autonomous Estate Operations",
+      description: "Agents run pricing, maintenance and renewals across the portfolio.",
+      effects: [
+        { kind: "laborCostReduction", pct: 0.1 },
+        { kind: "growthCostReduction", pct: 0.07 },
+      ],
+    },
+    {
+      name: "Hourly Space Markets",
+      description: "The same floor is sold to several tenants a day.",
+      effects: [
+        { kind: "plantOutput", pct: 0.03 },
+        { kind: "outputRate", commodity: "real_estate_services", pct: 0.08 },
+      ],
+    },
+    {
+      name: "New Town Partnerships",
+      description: "Public partnerships hand the firm whole new districts to build and run.",
+      effects: [
+        { kind: "expansionDiscount", pct: 0.2 },
+        { kind: "dominanceShield", pct: 0.19 },
+      ],
+    },
+  ],
+  "2049": [
+    {
+      name: "Robotic Resident Services",
+      description: "Robots and agents handle every resident need around the clock.",
+      effects: [{ kind: "laborCostReduction", pct: 0.065 }],
+    },
+    {
+      name: "Longevity-Rated Homes",
+      description: "Homes certified to add healthy years top every buyer's list.",
+      effects: [{ kind: "plantOutput", pct: 0.018 }],
+    },
+    {
+      name: "Climate Resilience Certification",
+      description: "Certified flood and heat-proof assets keep their value as rivals strand.",
+      effects: [{ kind: "dominanceShield", pct: 0.13 }],
+    },
+    {
+      name: "Self-Managing Portfolios",
+      description: "Agents price, repair and re-let every unit across the estate.",
+      effects: [
+        { kind: "laborCostReduction", pct: 0.1 },
+        { kind: "growthCostReduction", pct: 0.075 },
+      ],
+    },
+    {
+      name: "Minute-Level Space Markets",
+      description: "Rooms are re-let by the minute to whoever needs them next.",
+      effects: [
+        { kind: "plantOutput", pct: 0.03 },
+        { kind: "outputRate", commodity: "real_estate_services", pct: 0.085 },
+      ],
+    },
+    {
+      name: "Charter City Partnerships",
+      description: "Governments hand the firm whole new cities to build and run.",
+      effects: [
+        { kind: "expansionDiscount", pct: 0.2 },
+        { kind: "dominanceShield", pct: 0.2 },
+      ],
+    },
+  ],
 };

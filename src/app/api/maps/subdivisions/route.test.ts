@@ -22,6 +22,15 @@ beforeEach(async () => {
 });
 
 describe("GET /api/maps/subdivisions", () => {
+  it.each([
+    ["US", "special_governor", "OH", "counties"],
+    ["CA", "special_governor", "CA_ON", "subdivisions/ca/census-divisions"],
+    ["CA", "special_caCommons", "CA_ON", "subdivisions/ca/federal-ridings"],
+  ])("serves %s %s geography", async (country, type, region, dataDir) => {
+    expect((await call(`country=${country}&type=${type}&region=${region}`)).status).toBe(200);
+    const { loadSubdivisionFile } = await import("@/lib/maps/subdivisionData");
+    expect(vi.mocked(loadSubdivisionFile).mock.calls.at(-1)?.[0]).toBe(dataDir);
+  });
   it("serves a region's sub-unit shapes for a race type, with no tally needed", async () => {
     const res = await call("country=US&type=governor&region=SD");
     expect(res.status).toBe(200);
@@ -48,4 +57,20 @@ describe("GET /api/maps/subdivisions", () => {
     vi.mocked(loadSubdivisionFile).mockResolvedValue(null);
     expect((await call("country=US&type=governor&region=ZZ")).status).toBe(404);
   });
+});
+
+it("keeps Canadian riding and census-division requests country qualified", async () => {
+  const { loadSubdivisionFile } = await import("@/lib/maps/subdivisionData");
+  expect((await call("country=CA&type=caCommons&region=CA_ON")).status).toBe(200);
+  expect(vi.mocked(loadSubdivisionFile).mock.calls.at(-1)?.[0]).toBe(
+    "subdivisions/ca/federal-ridings"
+  );
+  expect((await call("country=CA&type=caCommons&region=CA_ON&layer=census-divisions")).status).toBe(
+    200
+  );
+  expect(vi.mocked(loadSubdivisionFile).mock.calls.at(-1)?.[0]).toBe(
+    "subdivisions/ca/census-divisions"
+  );
+  expect((await call("country=US&type=house&region=CA_ON")).status).toBe(400);
+  expect((await call("country=CA&type=caCommons&region=CA")).status).toBe(400);
 });

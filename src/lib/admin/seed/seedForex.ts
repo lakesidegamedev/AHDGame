@@ -9,6 +9,7 @@ import { EUROZONE_2027_MEMBERS } from "@/lib/currency/rules/euroAdoption";
 import { seedMoneySupplyBaselines } from "@/lib/moneySupply/seed";
 import { seedFomcBoards } from "@/lib/centralBank/seedFomcBoard";
 import { snapshotMoneySupply } from "@/lib/moneySupply/snapshot";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /**
  * Seed the forex layer for a fresh game world:
@@ -54,7 +55,7 @@ export async function seedForex(db: Db, log: (msg: string) => void, preset: stri
   // Flip the feature flag. We only set it; we never clear it on re-run, because
   // turning forex off in a populated world would orphan currencyBalances data.
   const isPre1999Preset = ["1953-default", "1979-default", "1991-default"].includes(preset);
-  const result = await db.collection<GameState>("gameState").updateOne({ _id: "current" }, [
+  const result = await gameStateCollection(db).updateOne({ _id: "current" }, [
     {
       $set: {
         forexEnabled: true,

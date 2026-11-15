@@ -5,7 +5,10 @@ import { z } from "zod";
 import { errorResponse } from "@/lib/api/errors";
 import { parseJsonBody } from "@/lib/api/validate";
 import { getDb } from "@/lib/mongodb";
+import { withAuditedGrant } from "@/lib/audit/grants/recordGrant";
 import { createAdminLog } from "@/lib/adminLog";
+import { usersCollection } from "@/lib/db/repositories/users";
+import type { Document } from "mongodb";
 
 const schema = z.object({ userId: z.string().length(24), granted: z.boolean() });
 
@@ -21,24 +24,44 @@ export const PATCH = withAdminRoute(async (auth, request: Request) => {
   const { userId, granted } = parsed.data;
   const db = await getDb();
   const _id = new ObjectId(userId);
-  const user = await db.collection("users").findOne({ _id }, { projection: { username: 1 } });
+  const user = await usersCollection<Document>(db).findOne(
+    { _id },
+    { projection: { username: 1 } }
+  );
   if (!user) return errorResponse(404, "User not found");
 
-  await db.collection("users").updateOne(
-    { _id },
-    granted
-      ? {
-          $set: {
-            sandboxAccessGrantedAt: new Date(),
-            sandboxAccessGrantedBy: auth.admin.username,
-            updatedAt: new Date(),
-          },
-        }
-      : {
-          $unset: { sandboxAccessGrantedAt: "", sandboxAccessGrantedBy: "" },
-          $set: { updatedAt: new Date() },
-        }
-  );
+  const apply = async () => {
+    await usersCollection<Document>(db).updateOne(
+      { _id },
+      granted
+        ? {
+            $set: {
+              sandboxAccessGrantedAt: new Date(),
+              sandboxAccessGrantedBy: auth.admin.username,
+              updatedAt: new Date(),
+            },
+          }
+        : {
+            $unset: { sandboxAccessGrantedAt: "", sandboxAccessGrantedBy: "" },
+            $set: { updatedAt: new Date() },
+          }
+    );
+  };
+  if (granted) {
+    await withAuditedGrant(
+      db,
+      {
+        actorUserId: auth.admin.userId,
+        recipients: [{ type: "user", id: userId, name: user.username }],
+        kind: "access",
+        item: "sandbox access",
+        reason: "Control panel: sandbox access granted",
+      },
+      apply
+    );
+  } else {
+    await apply();
+  }
   await createAdminLog({
     category: "account",
     action: granted ? "sandbox_access_granted" : "sandbox_access_revoked",

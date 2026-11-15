@@ -33,10 +33,11 @@ describe("1953 audited country bundles", () => {
     }
   });
 
-  it("keeps the four authored political boards bounded and structurally complete", () => {
-    expect(Object.keys(NATIONAL_BASELINES_1953).sort()).toEqual([...AUDITED_COUNTRIES].sort());
+  it("keeps every authored political board bounded and structurally complete", () => {
+    const boardCountries = ["CN", "DD", "DE", "JP", "RU", "UK", "US"] as const;
+    expect(Object.keys(NATIONAL_BASELINES_1953).sort()).toEqual([...boardCountries]);
     const metricCounts = new Set<number>();
-    for (const countryId of AUDITED_COUNTRIES) {
+    for (const countryId of boardCountries) {
       const values = Object.values(NATIONAL_BASELINES_1953[countryId]);
       metricCounts.add(values.length);
       expect(values.every((metric) => metric.value >= 0 && metric.value <= 100)).toBe(true);

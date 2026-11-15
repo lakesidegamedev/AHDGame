@@ -95,13 +95,11 @@ export function UnifiedMapWithModes({
   const mapMaxWidth = countryConfig.mapMaxWidth ?? "340px";
   const mapMinHeight = countryConfig.mapMinHeight ?? "280px";
 
-  // Every parliamentary map renders the LIVE region roster — the regions whose
-  // `states.countryId` is this country right now. That set is `mapData.regions`
-  // (the owned, preset-correct roster the overview returns), so a split or a
-  // transfer follows its owner. This generalizes the former UK-only path to all
-  // five maps. While the overview is still loading, or if a country's state
-  // `_id`s don't intersect this map's region codes, fall back to the config's
-  // static roster so the map and list never render empty.
+  // Every parliamentary map renders the LIVE region roster: the regions whose
+  // `states.countryId` is this country right now, i.e. `mapData.regions`, so a
+  // split or transfer follows its owner. While the overview is still loading,
+  // or if a country's state `_id`s don't intersect this map's region codes,
+  // fall back to the config's static roster so the map and list never render empty.
   const rosterIds: string[] | null =
     mapData?.regions && mapData.regions.length > 0 ? mapData.regions.map((r) => r.id) : null;
   const liveRegions = rosterIds

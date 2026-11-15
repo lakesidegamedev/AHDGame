@@ -1,7 +1,7 @@
 import { redirect, notFound } from "next/navigation";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { getDb } from "@/lib/mongodb";
-import type { Corporation } from "@/lib/db/types";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export const dynamic = "force-dynamic";
 
@@ -25,7 +25,7 @@ export default async function StateOwnershipRegisterRedirect({ params }: PagePro
   }
 
   const db = await getDb();
-  const corps = db.collection<Corporation>("corporations");
+  const corps = corporationsCollection(db);
   const natCorp =
     (await corps.findOne(
       { countryOwnerId: countryId, isPrimaryNationalCorporation: true },

@@ -15,7 +15,6 @@ import type { RegionalBudget } from "@/lib/db/types/regionalBudget";
 import type { StateBudget } from "@/lib/db/types/budget";
 import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
 import { getSharedFiscalYearStartTurnInYear } from "@/lib/countrySystems/fiscalCalendar";
-import { TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import { resetMetricConditionScore } from "@/lib/resetMetrics/conditionScore";
 import { readResetGovernanceStyle } from "@/lib/resetMetrics/readGovernanceStyle";
 import { resetLawFamilies, resetLawFamilyById } from "@/lib/resetLegislation/catalog";
@@ -31,6 +30,12 @@ import { cabinetActionApplies } from "@/lib/resetMetrics/loadPolicyPressure";
 import type { ResetCountry } from "@/lib/resetLegislation/fundingOwner";
 import { loadMetricLawDelivery } from "@/lib/resetMetrics/loadLawDelivery";
 import { deliveredLawFactor, deliveredMetricEffects } from "@/lib/resetMetrics/rules/lawDelivery";
+import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
+import { regionalBudgetsCollection } from "@/lib/db/repositories/regionalBudgets";
+import { resetLawProgramsCollection } from "@/lib/db/repositories/resetLawPrograms";
+import { resetDepartmentAccountsCollection } from "@/lib/db/repositories/resetDepartmentAccounts";
+import { resetLawOpeningBoardsCollection } from "@/lib/db/repositories/resetLawOpeningBoards";
+import { resetCabinetActionStatesCollection } from "@/lib/db/repositories/resetCabinetActionStates";
 
 const cabinetActionTitles = new Map(resetCabinetActions.map((action) => [action.id, action.title]));
 
@@ -65,14 +70,11 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
       board.board.scope === "national"
         ? readNationalMetricRollup(db, board.board)
         : Promise.resolve(board.board.observations),
-      db
-        .collection<ResetCabinetActionState>("resetCabinetActionStates")
-        .findOne(
-          { _id: countryId as ResetCountry, worldId: board.board.worldId },
-          { projection: { active: 1 } }
-        ),
-      db
-        .collection<ResetLawProgramDocument>("resetLawPrograms")
+      resetCabinetActionStatesCollection<ResetCabinetActionState>(db).findOne(
+        { _id: countryId as ResetCountry, worldId: board.board.worldId },
+        { projection: { active: 1 } }
+      ),
+      resetLawProgramsCollection<ResetLawProgramDocument>(db)
         .find(
           {
             worldId: board.board.worldId,
@@ -98,8 +100,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
         )
         .toArray(),
       board.board.scope === "national"
-        ? db
-            .collection<ResetDepartmentAccountSnapshot>("resetDepartmentAccounts")
+        ? resetDepartmentAccountsCollection<ResetDepartmentAccountSnapshot>(db)
             .find(
               { worldId: board.board.worldId, countryId },
               {
@@ -110,20 +111,16 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
         : Promise.resolve([]),
       board.board.scope === "regional" && board.board.regionId
         ? countryId === COUNTRY_CONFIGS.US.id
-          ? db
-              .collection<StateBudget>("stateBudgets")
-              .findOne(
-                { _id: board.board.regionId, countryId: COUNTRY_CONFIGS.US.id },
-                { projection: { regionalProgramSettlements: 1 } }
-              )
-          : db
-              .collection<RegionalBudget>("regionalBudgets")
-              .findOne(
-                { _id: board.board.regionId, countryId },
-                { projection: { programSettlements: 1 } }
-              )
+          ? stateBudgetsCollection(db).findOne(
+              { _id: board.board.regionId, countryId: COUNTRY_CONFIGS.US.id },
+              { projection: { regionalProgramSettlements: 1 } }
+            )
+          : regionalBudgetsCollection(db).findOne(
+              { _id: board.board.regionId, countryId },
+              { projection: { programSettlements: 1 } }
+            )
         : Promise.resolve(null),
-      db.collection<ResetLawOpeningBoard>("resetLawOpeningBoards").findOne(
+      resetLawOpeningBoardsCollection<ResetLawOpeningBoard>(db).findOne(
         {
           _id: `${countryId}:${board.board.regionId ?? "national"}`,
           worldId: board.board.worldId,
@@ -232,7 +229,6 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
           ),
         })
       : {};
-    const currentYear = 1991 + Math.floor((board.board.asOfTurn - 1) / TURNS_PER_YEAR);
     const metrics = primaryMetrics
       .filter((metric) => board.board.scope === "national" || metric.aggregation !== "national")
       .map((definition) => {
@@ -250,7 +246,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
                   definition,
                   observation?.value ?? null,
                   countryId,
-                  currentYear
+                  board.year
                 ),
           temporaryActionEffect: temporary
             ? {

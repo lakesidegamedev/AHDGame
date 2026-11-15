@@ -6,37 +6,14 @@ import {
 } from "@/lib/seeds/reference/policyOptionHelpers";
 
 /**
- * Brazil (BR) legislation — 1953, Getúlio Vargas's second (constitutional) term.
- * Unlike the other market-democracy/Warsaw-Pact cohorts seeded alongside it
- * (FR/IT/ES/SE/TR/GR/AT/FI and BG/CS/HU/PL/RO/YU), Brazil had ZERO authored
- * legislation types — a fully-seeded legislature (Chamber of Deputies + an
- * electing Federal Senate) with nothing to legislate, and a federal budget
- * whose spending was a frozen constant (the all-or-nothing baseline fallback
- * in `src/lib/budget/spending.ts`) forever. This module authors BOTH halves:
- * revenue/structural levers (matching the FR/TR pattern) AND spending
- * programmes across all six budget categories (matching the CN/DE/NG/JP
- * pattern), since BR needs both to stop being inert to its own politics.
+ * Brazil (BR) legislation for 1953, Vargas's second term. Authored with
+ * both revenue/structural levers and spending programmes across all budget
+ * categories.
  *
- * Historical anchors, 1953: Vargas's nationalist-developmentalist "estado
- * novo"-legacy programme; Petrobras founded by Law 2004 (3 Oct 1953), the
- * state oil monopoly; Vale do Rio Doce (1942) and CSN/Volta Redonda (1941,
- * steel) already state-controlled; BNDE (Banco Nacional de Desenvolvimento
- * Econômico, June 1952) channeling investment; the SALTE Plan (Saúde,
- * Alimentação, Transporte, Energia — 1948) still nominally in force; the CLT
- * (Consolidação das Leis do Trabalho, 1943) governing labor; the IAP system
- * (Institutos de Aposentadoria e Pensões — sectoral pension/social-insurance
- * institutes, est. 1933-1938) predating the 1990 INSS unification; the IVC
- * (Imposto sobre Vendas e Consignações — a cascading state turnover tax)
- * predating the 1965 ICMS value-added reform; and the July 1953 split of the
- * old Ministério da Educação e Saúde into separate Ministério da Educação e
- * Cultura and Ministério da Saúde. No named officeholders are seeded per
- * project convention — institutions, ministries and programmes only.
- *
- * economic axis: -5 statist/dirigiste … +5 liberal/market.
- * social axis:   -5 secular/liberal … +5 traditional (unused here; 0 throughout).
- * effectTargetsWeighted signed relative to LEFT (+1), matching the FR/TR/NG
- * convention so right (market/austerity) options carry the natural-metric
- * upside.
+ * economic axis: -5 statist/dirigiste ... +5 liberal/market.
+ * social axis:   -5 secular/liberal ... +5 traditional (unused here).
+ * effectTargetsWeighted signed relative to LEFT (+1), so right
+ * (market/austerity) options carry the natural-metric upside.
  */
 
 function brPositions(domainLabel: string): LegislationType["positions"] {
@@ -920,22 +897,13 @@ export const brLegislationTypes: LegislationType[] = [
 ];
 
 /**
- * Per-capita cost calibration for BR's spending programmes, mirroring
- * NG_SPENDING_CALIBRATION (ngLegislationTypes.ts). Baselines are the target
- * default-option per-capita cost (local currency), computed from the authored
- * 1953 baselineSpendingByCategory ÷ population (57,000,000) in budgets.ts:
- *   socialSecurity 12.5B / 57M ≈ 219
- *   healthcare      4.0B / 57M ≈  70
- *   education      10.0B / 57M ≈ 175
- *   defense         7.5B / 57M ≈ 132
- *   infrastructure 30.0B / 57M ≈ 526
- *   other          17.5B / 57M ≈ 307
- *   stateGrants    10.0B / 57M ≈ 175
- * These feed the option ladder shape (and the raw ranking used by the 1953
- * seed's category-override rescale in budgets.ts, which pins the DEFAULT
- * option's booked cost to the authored baseline exactly); a non-default
- * option's cost is NOT rescaled and genuinely differs (see
- * brLegislationTypes.test.ts).
+ * Per-capita cost calibration for BR spending programmes, mirroring
+ * NG_SPENDING_CALIBRATION. Baselines are the default-option per-capita cost
+ * in local currency, computed from 1953 baselineSpendingByCategory divided by
+ * population (57,000,000) in budgets.ts. These feed the option ladder shape
+ * and the raw ranking used by the 1953 seed's category-override rescale, which
+ * pins the DEFAULT option's booked cost to the authored baseline. Non-default
+ * option costs are not rescaled and genuinely differ.
  */
 const BR_SPENDING_CALIBRATION: Record<
   string,

@@ -10,7 +10,7 @@ Play at [ahousedividedgame.com](https://www.ahousedividedgame.com). Docs at [doc
 
 **Eras.** Worlds seed from a historical preset (1953, 1979, 1991, 1999, 2007, 2019, 2023, or 2027) and play forward. A preset sets policies, budgets, demographics, seat maps, currencies, commodity prices, cabinet structures, franchise rules, and Supreme Court rosters. As the calendar crosses real inflection points, era checkpoints durably shift the electorate, paced by how the game's own Supreme Court rules on its docket.
 
-**Countries.** 24 registered countries on both sides of the Cold War, resolved per world as playable or economy-only. Western democracies and one-party states with planned economies run their own political machinery. Scotland and Wales are authored secession configurations that stay hidden until registered.
+**Countries.** 25 registered countries on both sides of the Cold War, resolved per world as playable or economy-only. Western democracies and one-party states with planned economies run their own political machinery. Scotland and Wales are authored secession configurations that stay hidden until registered.
 
 **Politics.** Per-office electoral systems: first past the post, proportional (Sainte-Laguë and Hare), mixed-member, Electoral College, parliamentary selection. Primaries with delegate math, campaigns with upgrade tracks and upkeep, a two-layer voter model (country archetypes over a granular census-cell electorate), full bill lifecycles with committees and whips, coalitions and confidence votes, cabinets with confirmation fights, an active Supreme Court docket, impeachment, referendums, and politburo machinery for the one-party states.
 
@@ -30,7 +30,7 @@ Browser (React 19 / Next.js App Router)
      (elections, bills, NPPs, economy, demographics, conflict, metrics)
 ```
 
-Stack: Next.js 16, React 19, TypeScript, Tailwind 4, MongoDB, Vitest and Playwright, Sentry-compatible monitoring, Cloudflare R2 for uploads (local-disk fallback in dev), deployed on Railway with the turn processor scheduled in-process by `node-cron`.
+Stack: Next.js 16, React 19, TypeScript, Tailwind 4, MongoDB, Vitest and Playwright, Sentry-compatible monitoring, Cloudflare R2 for uploads (local-disk fallback in dev). Turns run on a scheduled turn processor; in local development it runs in-process on `node-cron`.
 
 ## Running it locally
 

@@ -4,6 +4,7 @@ import type { CountryGeography } from "../contract";
 import { ukMetricPresets1953 } from "./data/ukMetricPresets1953";
 import { ukMetricPresets1979 } from "./data/ukMetricPresets1979";
 import { ukMetricPresets1991, ukMetricPresets2019 } from "./data/ukMetricPresets";
+import { ukMetricPresets2027 } from "./data/ukMetricPresets2027";
 import { ukPopulationAnchors1991, ukPopulationAnchors2019 } from "./data/ukPopulationAnchors";
 import { ukRegionCensusData } from "./data/ukRegionCensusData";
 import { ukRegionCensusData1953 } from "./data/ukRegionCensusData1953";
@@ -36,19 +37,15 @@ import {
 /**
  * Where the United Kingdom is, and who lives there.
  *
- * ⚠ HEAVY. Every era of census, metric and region data is imported as a VALUE. A
- * registry that needs one string imports `./geographyFacts` instead, which has
- * no value imports at all -- `countryContinents.ts` once held `JP: "Asia"` at
- * zero cost, was repointed at a heavy module, and began pulling 108 KB into
- * every client bundle that read a continent.
+ * ⚠ HEAVY. Every era of census, metric and region data is imported as a VALUE.
+ * A registry that needs one string imports `./geographyFacts` instead, which
+ * has no value imports at all.
  *
- * ⚠ EVERY BUNDLE IS REFERENCED, NEVER INLINED, and `===` is what proves it. An
- * early revision of Japan's geography generated copies from the snapshot; deep
- * equality passed and Japan had two sources for every region.
+ * ⚠ EVERY BUNDLE IS REFERENCED, NEVER INLINED, and `===` is what proves it.
  *
- * ⚠ THE PRESET KEYS COME FROM THE SNAPSHOT. the United Kingdom authors 5 census
- * eras, 4 metric eras, 2 anchor eras and 7 region eras. The gaps are real:
- * an unauthored era inherits, and inventing a key for it would turn a fallback
+ * ⚠ THE PRESET KEYS COME FROM THE SNAPSHOT. The United Kingdom authors 5 census
+ * eras, 4 metric eras, 2 anchor eras and 7 region eras. The gaps are real: an
+ * unauthored era inherits, and inventing a key for it would turn a fallback
  * into an authored value.
  */
 
@@ -65,6 +62,7 @@ const censusBundles = {
 };
 
 const metricPresetBundles = {
+  "2027-default": ukMetricPresets2027,
   "2019-default": ukMetricPresets2019,
   "1991-default": ukMetricPresets1991,
   "1979-default": ukMetricPresets1979,
@@ -267,7 +265,7 @@ export const UK_GEOGRAPHY: CountryGeography = {
   },
   hazardGroups: {
     coastal: ["SEE", "SWE", "EAE", "YHU", "NWE", "NEE", "SCO", "WAL", "NIR"],
-    flood: ["LON", "SWE", "EAE", "YHU", "NWE", "SEE", "WAL", "SCO"],
+    flood: ["LON", "SWE", "EAE", "YHU", "NWE", "SEE", "WAL", "SCO", "EMI", "WMI"],
     wintry: ["SCO", "NEE", "NWE", "YHU", "NIR"],
   },
   demographicCategoryIds: ["uk_voterGroups"],

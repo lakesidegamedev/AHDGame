@@ -5,25 +5,24 @@ import type { CountryStatus } from "@/lib/constants/countries";
 import { isShippingPreset, tierFor, type CountryEraTier } from "@/lib/world/eraRoster";
 import { isKnownPreset } from "@/lib/seeds/presetSelector";
 import { assertCanOpenCountryToPlayers } from "@/lib/world/countryReadinessContract";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
 
 /**
  * Per-preset country enablement. `countryGameStates` rows are normally written
- * only by the admin panel; without this, a reset/bootstrap leaves enablement at
- * each country's CONFIG status, so era-specific countries (USSR, the bloc) never
- * turn on. This seeder writes the access tier (enabledForPlayers / economyPreview
- * / status) for the chosen preset so the era is playable straight after reset.
+ * only by the admin panel; without this, a reset leaves enablement at each
+ * country's CONFIG status, so era-specific countries never turn on. This writes
+ * the access tier for the chosen preset so the era is playable after reset.
  *
- * Rows are written for EVERY registered country in every shipping preset. This
- * deliberately reverses the previous behaviour, where a preset without an
- * explicit manifest map (2019) wrote nothing so "admin-managed rows keep winning
- * exactly as before" — an admin toggle surviving a reset is how 2019 drifted
- * into six player countries instead of three. Release-note this.
+ * Rows are written for EVERY registered country in every shipping preset.
+ * Leaving admin-managed rows to win across a reset is how 2019 drifted into six
+ * player countries instead of three.
  *
  * US is omitted: it runs off the global GameState, not a CountryGameState row.
  *
- * Player tiers are gated by the archetype-aware readiness contract (#3722): a
- * manifest `player` legacyAccess that still has hard blockers fails loudly
- * rather than shipping an incomplete player launch.
+ * Player tiers are gated by the archetype-aware readiness contract: a legacy
+ * `player` access with hard blockers fails loudly rather than shipping an
+ * incomplete launch.
  */
 export type Tier = {
   enabledForPlayers: boolean;
@@ -41,15 +40,18 @@ const NPP: Tier = { enabledForPlayers: false, economyPreview: false, status: "be
 const GLOBAL_GAME_STATE_COUNTRY_ID = COUNTRY_CONFIGS.US.id;
 
 /** The row the roster says a country should carry in a given preset. */
-type RosterRow = Tier & { absentInEra: boolean };
+type RosterRow = Tier & { absentInEra: boolean; backgroundCountry: boolean };
 
 const TIER_ROWS: Record<CountryEraTier, RosterRow | null> = {
-  player: { ...PLAYER, absentInEra: false },
-  econ: { ...ECON, absentInEra: false },
-  npp: { ...NPP, absentInEra: false },
+  player: { ...PLAYER, absentInEra: false, backgroundCountry: false },
+  econ: { ...ECON, absentInEra: false, backgroundCountry: false },
+  npp: { ...NPP, absentInEra: false, backgroundCountry: false },
+  // Registered and not joinable, like an NPP country, but the flag takes it
+  // out of every per-country turn phase.
+  background: { ...NPP, absentInEra: false, backgroundCountry: true },
   // A country absent from this era gets the NPP row plus the flag. It is a
   // separate concept from dissolution — see `absentInEra` in gameState.ts.
-  absent: { ...NPP, absentInEra: true },
+  absent: { ...NPP, absentInEra: true, backgroundCountry: false },
   // Latent countries are unregistered by definition, so they are never in
   // COUNTRY_ORDER and this loop never reaches them. Null rather than a row, so
   // a roster/registry contradiction fails loudly instead of writing a state
@@ -62,9 +64,7 @@ const TIER_ROWS: Record<CountryEraTier, RosterRow | null> = {
  * special presets (`empty`, `2019-no-parties`).
  *
  * Returning null for anything unrecognised would turn a typo into a silent
- * no-op reset — the failure mode this whole sub-project exists to remove. The
- * previous implementation failed loudly via the manifest lookup; that property
- * is preserved here now the manifest is no longer consulted.
+ * no-op reset, so this must fail loudly.
  */
 function assertRecognisedPreset(preset: string): void {
   if (isShippingPreset(preset) || isKnownPreset(preset)) return;
@@ -113,8 +113,9 @@ export function getPresetEnablementTier(preset: string, countryId: CountryId): T
   if (tierId === "absent") return null;
   const row = TIER_ROWS[tierId];
   if (!row) return null;
-  const { absentInEra: _absentInEra, ...tier } = row;
+  const { absentInEra: _absentInEra, backgroundCountry: _backgroundCountry, ...tier } = row;
   void _absentInEra;
+  void _backgroundCountry;
   return tier;
 }
 
@@ -144,7 +145,7 @@ export async function seedCountryGameStates(
     if (tier.enabledForPlayers) {
       assertCanOpenCountryToPlayers(cid, preset);
     }
-    await db.collection<CountryGameState>("countryGameStates").updateOne(
+    await countryGameStatesCollection(db).updateOne(
       { _id: cid },
       {
         $set: {
@@ -155,6 +156,9 @@ export async function seedCountryGameStates(
           // world moving 1991 -> 1953 brings East Germany back rather than
           // stranding a flag the previous era set.
           absentInEra: tier.absentInEra,
+          // Same true-or-false rule, so a world moving 2027 -> 2019 puts a
+          // background country back into the full simulation.
+          backgroundCountry: tier.backgroundCountry,
           updatedAt: now,
         },
         $setOnInsert: {
@@ -167,8 +171,10 @@ export async function seedCountryGameStates(
           nextScheduledTurn: null,
           createdAt: now,
         },
-        ...(cid === "BG" ? { $unset: { bgOrdinaryAssemblySinceTurn: "" } } : {}),
-        ...(cid === "YU"
+        ...(countryHasFeature("bgAdmin", cid)
+          ? { $unset: { bgOrdinaryAssemblySinceTurn: "" } }
+          : {}),
+        ...(countryHasFeature("yuAdmin", cid)
           ? {
               $unset: {
                 yuSuccessionMandateSinceTurn: "",
@@ -177,7 +183,7 @@ export async function seedCountryGameStates(
               },
             }
           : {}),
-        ...(cid === "RU"
+        ...(countryHasFeature("ruAdmin", cid)
           ? {
               $unset: {
                 ruSovietSuccessionSinceTurn: "",

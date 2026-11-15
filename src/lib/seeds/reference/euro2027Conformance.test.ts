@@ -14,18 +14,15 @@ import {
   getSeedCurrencyCode,
   type CurrencyCode,
 } from "@/lib/constants/currencies";
-import {
-  EUROZONE_2027_MEMBERS,
-  euroConversionFactor,
-  legacyAnchorValue,
-} from "@/lib/currency/rules/euroAdoption";
+import { EUROZONE_2027_MEMBERS, euroConversionFactor } from "@/lib/currency/rules/euroAdoption";
+import { NATIONAL_FIGURES_2027 } from "./nationalFigures2027";
 
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
 
 const MEMBERS = [...EUROZONE_2027_MEMBERS];
 const BUDGET_MEMBERS = MEMBERS;
-// Bulgaria's 2027 budget is authored directly in EUR, unlike the legacy rows
-// that this conversion contract checks.
+// Bulgaria's 2027 budget is authored directly in EUR, unlike the carried rows
+// that this projection contract checks.
 const CONVERTED_MEMBERS = MEMBERS.filter((member) => member !== "BG");
 const RATES_2027 = getInitialRates("2027-default");
 const RATES_1991 = getInitialRates("1991-default");
@@ -36,7 +33,7 @@ function configsByCountry(
   return new Map(configs.map((config) => [config.countryId, config]));
 }
 
-/** Pre-conversion row for a 2027 euro member: the authored 2027 override when
+/** Pre-projection row for a 2027 euro member: the authored 2027 override when
  * one exists, else the inherited 2023 row the overlay carries forward. */
 function preConversionBase(
   countryId: string,
@@ -65,79 +62,39 @@ describe("2027 euro seed conformance", () => {
       }
       for (const outsider of ["US", "UK", "JP", "SE", "CN", "BR", "NG", "TR"] as const) {
         expect(byCountry.get(outsider)?.currencyCode, outsider).toBe(
-          COUNTRY_CURRENCY_MAP[outsider]
+          getSeedCurrencyCode(outsider, "2027-default")
         );
       }
     });
 
-    it("converts absolute-money fields at the authored cross rate, ratios pass through", () => {
+    it("lands every carried member on its sourced 2027 euro figures, ratios pass through", () => {
       const configs2027 = configsByCountry(getNationalBudgetSeedConfigsForPreset("2027-default"));
       const configs2023 = getNationalBudgetSeedConfigsForPreset("2023-default");
-      const eurAnchorRate = RATES_2027.DE!;
       for (const member of CONVERTED_MEMBERS) {
-        if (member === "DE") continue; // already EUR, untouched
-        const converted = configs2027.get(member)!;
+        const projected = configs2027.get(member)!;
         const base = preConversionBase(member, configs2023);
-        expect(base, `${member} has a pre-conversion row`).toBeDefined();
-        const factor = euroConversionFactor(RATES_2027[member]!, eurAnchorRate);
+        const figures = NATIONAL_FIGURES_2027[member];
+        expect(figures, `${member} has 2027 national figures`).toBeDefined();
 
-        expect(converted.gdp).toBe(base.gdp * factor);
-        expect(converted.otherRevenue).toBe(base.otherRevenue * factor);
-        expect(converted.debt.principal).toBe(base.debt.principal * factor);
-        expect(converted.debt.ceiling).toBe(base.debt.ceiling * factor);
-        expect(converted.baselineStateGrants).toBe(base.baselineStateGrants * factor);
-        for (const [category, baseline] of Object.entries(base.baselineSpendingByCategory)) {
-          expect(converted.baselineSpendingByCategory[category]).toBe(baseline * factor);
-        }
-        for (const [index, revenueConfig] of (base.policyRevenueConfigs ?? []).entries()) {
-          expect(
-            converted.policyRevenueConfigs?.[index]?.annualRevenuePerCapitaByOptionIndex
-          ).toEqual(
-            revenueConfig.annualRevenuePerCapitaByOptionIndex?.map(
-              (perCapita) => perCapita * factor
-            )
-          );
-        }
-        // Ratios and rates are unit-free: byte-identical to the base row.
-        expect(converted.taxBaseRatios).toEqual(base.taxBaseRatios);
-        expect(converted.debt.interestRate).toBe(base.debt.interestRate);
-        expect(converted.creditRating).toBe(base.creditRating);
+        expect(projected.currencyCode).toBe("EUR");
+        expect(projected.gdp).toBe(figures.gdp);
+        expect(projected.population).toBe(figures.population);
+        expect(projected.debt.principal / projected.gdp).toBeCloseTo(figures.grossDebt / 100, 12);
+        expect(projected.sourceFiscalYear).toBeUndefined();
+        expect(Object.keys(projected.baselineSpendingByCategory)).toEqual(
+          Object.keys(base.baselineSpendingByCategory)
+        );
+        expect(projected.taxBaseRatios).toEqual(base.taxBaseRatios);
+        expect(projected.creditRating).toBe(base.creditRating);
       }
     });
 
-    it("conserves anchor value between the converted row and the FX-seeded rate", () => {
+    it("keeps Ireland's euro amounts at its 2027 figures, not a converted 2023 row", () => {
       const configs2027 = configsByCountry(getNationalBudgetSeedConfigsForPreset("2027-default"));
-      const configs2023 = getNationalBudgetSeedConfigsForPreset("2023-default");
-      const eurAnchorRate = RATES_2027.DE!;
-      for (const member of CONVERTED_MEMBERS) {
-        if (member === "DE") continue;
-        const converted = configs2027.get(member)!;
-        const base = preConversionBase(member, configs2023);
-        // Same-table property the seeder guarantees: converted euros at the
-        // anchor rate hold exactly the anchor value the legacy amount held at
-        // the legacy rate, so budget and FX rows agree in internal units.
-        // Relative form: absolute closeness is meaningless at trillion scale
-        // (float64 carries ~16 significant digits, not 9 decimal places).
-        const gdpAnchorRatio =
-          legacyAnchorValue(converted.gdp, eurAnchorRate) /
-          legacyAnchorValue(base.gdp, RATES_2027[member]!);
-        expect(gdpAnchorRatio).toBeCloseTo(1, 12);
-        const debtAnchorRatio =
-          legacyAnchorValue(converted.debt.principal, eurAnchorRate) /
-          legacyAnchorValue(base.debt.principal, RATES_2027[member]!);
-        expect(debtAnchorRatio).toBeCloseTo(1, 12);
-      }
-    });
-
-    it("converts Ireland at factor 1.0: code flips, amounts stay", () => {
-      const configs2027 = configsByCountry(getNationalBudgetSeedConfigsForPreset("2027-default"));
-      const configs2023 = getNationalBudgetSeedConfigsForPreset("2023-default");
-      const converted = configs2027.get("IE")!;
-      const base = preConversionBase("IE", configs2023);
       expect(euroConversionFactor(RATES_2027.IE!, RATES_2027.DE!)).toBe(1);
-      expect(converted.currencyCode).toBe("EUR");
-      expect(converted.gdp).toBe(base.gdp);
-      expect(converted.debt.principal).toBe(base.debt.principal);
+      const ireland = configs2027.get("IE")!;
+      expect(ireland.currencyCode).toBe("EUR");
+      expect(ireland.gdp).toBe(NATIONAL_FIGURES_2027.IE.gdp);
     });
 
     it("built 2027 budgets (federalBudget rows) carry EUR for members", () => {
@@ -215,7 +172,7 @@ describe("2027 euro seed conformance", () => {
       for (const outsider of ["US", "UK", "JP", "SE", "CN", "BR", "NG", "TR"] as const) {
         const op = byCountry.get(outsider);
         expect(op?.updateOne.update.$setOnInsert.currencyCode, outsider).toBe(
-          COUNTRY_CURRENCY_MAP[outsider]
+          getSeedCurrencyCode(outsider, "2027-default")
         );
         expect(op?.updateOne.update.$setOnInsert.rate, outsider).toBe(RATES_2027[outsider]);
       }
@@ -269,7 +226,7 @@ describe("2027 euro seed conformance", () => {
       // Non-members carry an explicit home code, never undefined.
       for (const outsider of ["US", "UK", "JP", "BR", "CN", "NG", "SE", "TR"] as const) {
         expect(byCountry.get(outsider)?.liquidCurrencyCode, outsider).toBe(
-          COUNTRY_CURRENCY_MAP[outsider]
+          getSeedCurrencyCode(outsider, "2027-default")
         );
       }
     });

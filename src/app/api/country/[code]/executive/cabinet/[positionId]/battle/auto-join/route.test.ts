@@ -41,7 +41,6 @@ describe("battle auto-join route", () => {
     });
     db.collectionMocks.militaryFormations.findOne.mockResolvedValue(null);
     db.collectionMocks.gameState.findOne.mockResolvedValue({
-      conflictsEnabled: true,
       currentTurn: 40,
     });
     db.collectionMocks.cabinetMembers.findOne.mockResolvedValue({

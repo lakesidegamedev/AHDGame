@@ -1,6 +1,6 @@
 /**
  * Produces a primary-voter electorate from a state's general-electorate
- * demographics by **scaling turnout per group based on directional alignment
+ * demographics by **scaling turnout per electorate unit based on directional alignment
  * with the party** (not distance from it).
  *
  * The distinction matters. A Dem primary voter at (-4, -4) is MORE extreme
@@ -27,15 +27,15 @@
  * ≈0 weight in the primary pool.
  */
 
-import type { DemographicCategory, StateDemographics } from "@/lib/db/types";
+import type { ElectorateUnit } from "@/lib/demographics/electorateUnit";
 
-/** Minimum fraction of general turnout any group retains (prevents zero-division). */
+/** Minimum fraction of general turnout any unit retains (prevents zero-division). */
 const PRIMARY_TURNOUT_FLOOR = 0.05;
 
 /**
  * Baseline retention at "zero alignment" (perfect centrist voter). Higher values
  * make the primary electorate less different from the general — centrists still
- * matter. 0.5 means a centrist group turns out at half its general rate.
+ * matter. 0.5 means a centrist unit turns out at half its general rate.
  */
 const PRIMARY_CENTRIST_RETENTION = 0.5;
 
@@ -45,8 +45,8 @@ export interface PartyPositionInput {
 }
 
 /**
- * Directional-alignment retention for one demographic group vs a party.
- * Shared by `shiftDemographicsForPrimary` (projection) and
+ * Directional-alignment retention for one electorate unit vs a party.
+ * Shared by `shiftElectorateForPrimary` (projection) and
  * `applyPrimaryTurnoutRetention` (stagger / polls that already have live
  * GOTV turnouts from `resolveTurnout`).
  */
@@ -79,79 +79,65 @@ export function primaryTurnoutRetention(
  * magnitude) participate fully; centrist voters participate lightly;
  * voters AGAINST the party stay home.
  */
-export function shiftDemographicsForPrimary(
-  demographics: StateDemographics,
+export function shiftElectorateForPrimary(
+  electorate: readonly ElectorateUnit[],
   partyPosition: PartyPositionInput
-): StateDemographics {
-  const shiftedGroups: StateDemographics["groups"] = {};
-  for (const [groupId, group] of Object.entries(demographics.groups)) {
-    const retention = primaryTurnoutRetention(group.economicLean, group.socialLean, partyPosition);
-    const baseTurnout = group.turnout ?? 55;
-    shiftedGroups[groupId] = {
-      ...group,
-      turnout: Math.max(0, baseTurnout * retention),
-    };
-  }
-  return {
-    ...demographics,
-    groups: shiftedGroups,
-  };
+): ElectorateUnit[] {
+  return electorate.map((unit) => ({
+    ...unit,
+    turnout: Math.max(
+      0,
+      unit.turnout * primaryTurnoutRetention(unit.economicLean, unit.socialLean, partyPosition)
+    ),
+  }));
 }
 
 /**
  * Apply the same primary-electorate retention curve to an already-resolved
  * live turnout map (GOTV / Layer-1 / canvassing).
  *
- * Why this exists: `resolveTurnout` / `buildLiveTurnouts` for US states rebuild
- * archetype turnouts from Layer-1 census baselines and **ignore** any turnout
- * already written onto `StateDemographics.groups`. If stagger shifts demographics
- * for the primary and then passes those Layer-1 `liveTurnouts` into vote
- * distribution, the primary electorate shift is completely wiped — projection
- * (no liveTurnouts) and live results diverge systematically.
+ * Live turnouts are rebuilt from Layer-1 census baselines and ignore the
+ * turnout carried on a unit. If the electorate is shifted for the primary and
+ * the Layer-1 `liveTurnouts` are then passed into vote distribution, the
+ * primary shift is wiped, and projection (no liveTurnouts) and live results
+ * diverge systematically.
  *
  * Call this on the general-electorate live turnouts, then recompute the pool
  * with {@link computeTurnoutPoolFromRates}.
  */
 export function applyPrimaryTurnoutRetention(
-  turnoutsByGroup: Record<string, number>,
-  demographics: StateDemographics,
+  turnoutsByUnit: Record<string, number>,
+  electorate: readonly ElectorateUnit[],
   partyPosition: PartyPositionInput
 ): Record<string, number> {
+  const unitsById = new Map(electorate.map((unit) => [unit.id, unit]));
   const result: Record<string, number> = {};
-  for (const [groupId, turnout] of Object.entries(turnoutsByGroup)) {
-    const group = demographics.groups[groupId];
-    if (!group) {
-      result[groupId] = turnout;
+  for (const [unitId, turnout] of Object.entries(turnoutsByUnit)) {
+    const unit = unitsById.get(unitId);
+    if (!unit) {
+      result[unitId] = turnout;
       continue;
     }
-    const retention = primaryTurnoutRetention(group.economicLean, group.socialLean, partyPosition);
-    result[groupId] = Math.max(0, turnout * retention);
+    const retention = primaryTurnoutRetention(unit.economicLean, unit.socialLean, partyPosition);
+    result[unitId] = Math.max(0, turnout * retention);
   }
   return result;
 }
 
 /**
- * Recompute the weighted turnout pool from an explicit per-group turnout map.
- * Mirrors the pool math inside `resolveTurnout` so liveTurnouts and totalPool
- * stay consistent after primary retention is applied.
+ * Recompute the weighted turnout pool from an explicit per-unit turnout map.
+ * Mirrors the pool math in the substrate so liveTurnouts and totalPool stay
+ * consistent after primary retention is applied.
  */
 export function computeTurnoutPoolFromRates(
   statePopulation: number,
-  demographics: StateDemographics,
-  categories: DemographicCategory[],
-  turnoutsByGroup: Record<string, number>
+  electorate: readonly ElectorateUnit[],
+  turnoutsByUnit: Record<string, number>
 ): number {
   let totalPool = 0;
-  for (const category of categories) {
-    const categoryWeight = demographics.categoryWeights[category._id] ?? 0;
-    if (categoryWeight <= 0) continue;
-    for (const group of category.groups) {
-      const stateGroup = demographics.groups[group.id];
-      const populationPct = stateGroup?.population ?? 0;
-      const turnoutPct = turnoutsByGroup[group.id] ?? 0;
-      totalPool +=
-        statePopulation * (populationPct / 100) * (turnoutPct / 100) * (categoryWeight / 100);
-    }
+  for (const unit of electorate) {
+    const turnoutPct = turnoutsByUnit[unit.id] ?? 0;
+    totalPool += statePopulation * (unit.populationPct / 100) * (turnoutPct / 100);
   }
   return Math.round(totalPool);
 }

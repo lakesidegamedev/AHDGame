@@ -16,6 +16,14 @@ import { getOfficeLabel } from "@/lib/utils/officeTitle";
 import { generatePoliticianFlavor } from "@/lib/wiki/politicianFlavor";
 import type { PoliticianOverride, PoliticianElectionEntry } from "@/lib/db/types";
 import { formatElectionTypeLabel, MULTI_SEAT_TYPES } from "@/lib/utils/electionLabels";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { congressLeadersCollection } from "@/lib/db/repositories/congressLeaders";
+import { politicianOverridesCollection } from "@/lib/db/repositories/politicianOverrides";
 
 export async function POST() {
   try {
@@ -26,18 +34,15 @@ export async function POST() {
     const now = new Date();
 
     const [characters, states, parties] = await Promise.all([
-      db.collection<Character>("characters").find({}).toArray(),
-      db.collection<State>("states").find({}).toArray(),
-      db.collection<PoliticalParty>("politicalParties").find({}).toArray(),
+      charactersCollection(db).find({}).toArray(),
+      statesCollection(db).find({}).toArray(),
+      politicalPartiesCollection(db).find({}).toArray(),
     ]);
 
     const stateMap = new Map(states.map((s) => [String(s._id), s]));
     const partyMap = new Map(parties.map((p) => [String(p._id), p]));
 
-    const congressLeaders = await db
-      .collection<CongressLeader>("congressLeaders")
-      .find({})
-      .toArray();
+    const congressLeaders = await congressLeadersCollection(db).find({}).toArray();
     const characterIdsInLeadership = new Set(
       congressLeaders.filter((l) => l.characterId).map((l) => l.characterId!.toString())
     );
@@ -68,15 +73,13 @@ export async function POST() {
         isNPP: false,
       });
 
-      const candidates = await db
-        .collection<ElectionCandidate>("electionCandidates")
+      const candidates = await electionCandidatesCollection(db)
         .find({ characterId: new ObjectId(id), status: "withdrawn" })
         .toArray();
 
       const electionIds = [...new Set(candidates.map((c) => c.electionId.toString()))];
       const elections = electionIds.length
-        ? await db
-            .collection<Election>("elections")
+        ? await electionsCollection(db)
             .find({
               _id: { $in: candidates.map((c) => c.electionId) },
               status: { $in: ["completed", "resolved"] },
@@ -85,8 +88,7 @@ export async function POST() {
         : [];
 
       const electionMap = new Map(elections.map((e) => [e._id.toString(), e]));
-      const tallies = await db
-        .collection<ElectionVoteTally>("electionVoteTallies")
+      const tallies = await electionVoteTalliesCollection(db)
         .find({ electionId: { $in: elections.map((e) => e._id) }, finalized: true })
         .toArray();
       const tallyMap = new Map(tallies.map((t) => [t.electionId.toString(), t]));
@@ -138,9 +140,7 @@ export async function POST() {
 
       const hasHeldCongressLeadership = characterIdsInLeadership.has(id);
 
-      const existing = await db
-        .collection<PoliticianOverride>("politicianOverrides")
-        .findOne({ politicianId: id });
+      const existing = await politicianOverridesCollection(db).findOne({ politicianId: id });
 
       const doc: Omit<PoliticianOverride, "_id"> = {
         politicianId: id,
@@ -154,7 +154,7 @@ export async function POST() {
       };
 
       if (existing) {
-        await db.collection<PoliticianOverride>("politicianOverrides").updateOne(
+        await politicianOverridesCollection(db).updateOne(
           { politicianId: id },
           {
             $set: {
@@ -167,9 +167,7 @@ export async function POST() {
           }
         );
       } else {
-        await db
-          .collection<PoliticianOverride>("politicianOverrides")
-          .insertOne(doc as PoliticianOverride);
+        await politicianOverridesCollection(db).insertOne(doc as PoliticianOverride);
       }
 
       generated++;

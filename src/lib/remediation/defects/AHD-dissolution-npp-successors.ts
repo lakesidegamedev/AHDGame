@@ -1,33 +1,32 @@
 // AHD-dissolution-npp-successors: leaving plants were deleted outright.
 //
 // Before NPP pickup existed, every plant that left its owner (dissolution by
-// any path, or a sector abandon) returned all of its capacity to the unowned
-// pool. Headroom is bookkeeping, not supply, so the plant simply stopped and
-// each large exit was a supply shock in every market it served.
+// any path, or a sector abandon) returned all capacity to the unowned pool.
+// Headroom is bookkeeping, not supply, so the plant simply stopped and each
+// large exit was a supply shock in every market it served.
 //
 // Half A (code): `disposeLeavingSectors` hands NPP_PICKUP_SHARE of each leaving
 // plant's built capacity to an NPP operator.
 // Half B (this heal): apply the same share to exits that already happened,
 // drawing the capacity back out of the pool it went into.
 //
-// The sector rows are gone, so each event is reconstructed from two surviving
+// Sector rows are gone, so each event is reconstructed from two surviving
 // records:
 //  - WHERE: `restoreSectorsToUnowned` leaves a per-sector restore token on each
 //    pool it credited, stamped with the moment of the restore. A dissolution's
-//    tokens carry the exit row's own `createdAt`; an abandonment's fall inside
-//    the window it ran in. Tokens prune after seven days.
-//  - HOW MUCH: `corporationHistory` carries output by commodity, which is the
-//    exact sum of the corporation's sectors' produced units. A dissolution lost
-//    its last recorded output; an abandonment lost the drop across its window.
-//    Output converts to capacity through the live fleet's capacity-per-output
-//    ratio for the same lane and country.
+//    tokens carry the exit row's `createdAt`; an abandonment's fall inside the
+//    window it ran in. Tokens prune after seven days.
+//  - HOW MUCH: `corporationHistory` carries output by commodity, the exact sum
+//    of the corporation's sectors' produced units. A dissolution lost its last
+//    recorded output; an abandonment lost the drop across its window. Output
+//    converts to capacity through the live fleet's capacity-per-output ratio
+//    for the same lane and country.
 // Each pickup takes NPP_PICKUP_SHARE of that estimate and never more than the
 // headroom still unclaimed in the pool, so capacity others have since built
 // into is not counted twice.
 
 import { ObjectId, type Db } from "mongodb";
 import type {
-  Corporation,
   CorporateSector,
   CorporationExit,
   CorporationExitReason,
@@ -64,6 +63,12 @@ import type {
   HealResult,
   VerifyResult,
 } from "../types";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
+import type { Document } from "mongodb";
+import { corporationHistoryCollection } from "@/lib/db/repositories/corporationHistory";
+import { corporationExitsCollection } from "@/lib/db/repositories/corporationExits";
 
 export const DEFECT_ID = "AHD-dissolution-npp-successors";
 
@@ -192,8 +197,7 @@ async function fleetCapacityPerOutput(
     capitalStock: { $gt: 0 },
   };
   const ratio = async (match: Record<string, unknown>): Promise<number | null> => {
-    const [row] = await db
-      .collection<CorporateSector>("corporateSectors")
+    const [row] = await corporateSectorsCollection(db)
       .aggregate<{ capacity: number; output: number }>([
         { $match: match },
         {
@@ -226,12 +230,10 @@ function escapeRegex(value: string): string {
 
 async function eventDone(db: Db, eventId: string): Promise<boolean> {
   return (
-    (await db
-      .collection<CorporateSector>("corporateSectors")
-      .countDocuments(
-        { nppPickupReceipts: { $regex: `^heal-pickup:${escapeRegex(eventId)}:` } },
-        { limit: 1 }
-      )) > 0
+    (await corporateSectorsCollection(db).countDocuments(
+      { nppPickupReceipts: { $regex: `^heal-pickup:${escapeRegex(eventId)}:` } },
+      { limit: 1 }
+    )) > 0
   );
 }
 
@@ -306,11 +308,10 @@ async function buildPlan(db: Db): Promise<{ events: PlannedEvent[]; notes: strin
     notes: [],
   };
   const events: PlannedEvent[] = [];
-  const pools = db.collection<PoolDoc>("unownedSectors");
-  const history = db.collection<HistoryRow>("corporationHistory");
+  const pools = unownedSectorsCollection<PoolDoc>(db);
+  const history = corporationHistoryCollection<HistoryRow>(db);
 
-  const exits = await db
-    .collection<CorporationExit>("corporationExits")
+  const exits = await corporationExitsCollection(db)
     .find({ reason: { $in: [...DISSOLUTION_REASONS] } })
     .sort({ createdAt: 1, _id: 1 })
     .toArray();
@@ -441,8 +442,8 @@ async function apply(db: Db, healPlan: HealPlan, ctx: HealContext): Promise<Heal
   const { events } = healPlan.payload as Payload;
   const now = ctx.now;
   const eraUnitScale = await loadWorldEraUnitScale(db);
-  const corps = db.collection<Corporation>("corporations");
-  const sectors = db.collection<CorporateSector>("corporateSectors");
+  const corps = corporationsCollection(db);
+  const sectors = corporateSectorsCollection(db);
   const nppFilter = {
     ceoType: "npp" as const,
     countryOwnerId: { $exists: false },
@@ -466,9 +467,9 @@ async function apply(db: Db, healPlan: HealPlan, ctx: HealContext): Promise<Heal
         recipients.set(credited.corporationId.toHexString(), credited.corporationId);
         continue;
       }
-      const pool = await db
-        .collection<PoolDoc>("unownedSectors")
-        .findOne({ _id: new ObjectId(pickup.poolId) });
+      const pool = await unownedSectorsCollection<PoolDoc>(db).findOne({
+        _id: new ObjectId(pickup.poolId),
+      });
       const units = pool ? Math.min(pickup.units, headroomOf(pool)) : 0;
       if (!pool || !(units >= MIN_PICKUP_UNITS)) {
         notes.push(`${event.label}: ${pickup.stateId} pool shrank below the plan, skipped`);
@@ -538,16 +539,15 @@ async function apply(db: Db, healPlan: HealPlan, ctx: HealContext): Promise<Heal
         now,
         eraUnitScale
       );
-      if (drawdown) await db.collection("unownedSectors").updateOne({ _id: pool._id }, drawdown);
+      if (drawdown)
+        await unownedSectorsCollection<Document>(db).updateOne({ _id: pool._id }, drawdown);
       updated += 1;
     }
     if (event.exitId && recipients.size > 0) {
-      await db
-        .collection<CorporationExit>("corporationExits")
-        .updateOne(
-          { _id: new ObjectId(event.exitId) },
-          { $set: { successorIds: [...recipients.values()] } }
-        );
+      await corporationExitsCollection(db).updateOne(
+        { _id: new ObjectId(event.exitId) },
+        { $set: { successorIds: [...recipients.values()] } }
+      );
     }
   }
 

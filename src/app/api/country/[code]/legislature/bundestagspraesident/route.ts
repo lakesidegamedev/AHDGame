@@ -40,6 +40,12 @@ import type {
   CongressLeader,
   ElectedOfficial,
 } from "@/lib/db/types";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { congressLeadersCollection } from "@/lib/db/repositories/congressLeaders";
+import { bundestagspraesidentNominationsCollection } from "@/lib/db/repositories/bundestagspraesidentNominations";
+import { bundestagspraesidentElectionsCollection } from "@/lib/db/repositories/bundestagspraesidentElections";
 
 const bundestagspraesidentActionSchema = z.object({
   action: z.enum(["declare", "withdraw", "vote", "start_election", "force_end"]),
@@ -52,7 +58,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
   try {
     const { code } = await params;
     const countryId = code.toUpperCase();
-    if (countryId !== "DE" || !COUNTRY_CONFIGS.DE) {
+    if (!countryHasFeature("deApi", countryId) || !COUNTRY_CONFIGS.DE) {
       return errorResponse(400, "Bundestagspräsident endpoint is DE-only");
     }
     const db = await getDb();
@@ -60,21 +66,19 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
     const bundestag = await getBundestagComposition(db, partyMap);
     const authUser = await getAuthUser().catch(() => null);
 
-    // Look up the viewer's character — votes are stored keyed by `character._id`
-    // (see actions.ts), so we need the character's id to read back myVote. Also
-    // used to surface viewerCharacterId / viewerParty / viewerIsSittingMdB to the
-    // panel so the panel doesn't have to call /api/auth/me separately.
+    // Votes are keyed by `character._id`, so we need the character id to read
+    // back myVote. Also surfaced to the panel so it can skip a separate /api/auth/me call.
     let myCharacterId: string | null = null;
     let myParty: string | null = null;
     let isSittingMdB = false;
     if (authUser) {
-      const char = await db
-        .collection<Character>("characters")
-        .findOne({ userId: new ObjectId(authUser.userId) });
+      const char = await charactersCollection(db).findOne({
+        userId: new ObjectId(authUser.userId),
+      });
       if (char) {
         myCharacterId = char._id.toString();
         myParty = char.party ?? null;
-        const official = await db.collection<ElectedOfficial>("electedOfficials").findOne({
+        const official = await electedOfficialsCollection(db).findOne({
           characterId: char._id,
           officeType: "bundestag",
           countryId: "DE",
@@ -84,9 +88,9 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
     }
 
     // Auto-resolve an expired election before responding (parity with US Speaker GET).
-    const electionDoc = await db
-      .collection<BundestagspraesidentElection>("bundestagspraesidentElections")
-      .findOne({ _id: "current" });
+    const electionDoc = await bundestagspraesidentElectionsCollection(db).findOne({
+      _id: "current",
+    });
     if (electionDoc?.status === "voting") {
       const gameTime = await getGameTime();
       if (isLeadershipElectionClosed(electionDoc, gameTime.currentTurn, gameTime.effectiveNow)) {
@@ -95,14 +99,9 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
     }
 
     const [leader, election, nominations] = await Promise.all([
-      db
-        .collection<CongressLeader>("congressLeaders")
-        .findOne({ role: "speaker_of_the_bundestag" }),
-      db
-        .collection<BundestagspraesidentElection>("bundestagspraesidentElections")
-        .findOne({ _id: "current" }),
-      db
-        .collection<BundestagspraesidentNomination>("bundestagspraesidentNominations")
+      congressLeadersCollection(db).findOne({ role: "speaker_of_the_bundestag" }),
+      bundestagspraesidentElectionsCollection(db).findOne({ _id: "current" }),
+      bundestagspraesidentNominationsCollection(db)
         .find({ status: { $in: ["open", "voting"] } })
         .sort({ votesFor: -1 })
         .toArray(),
@@ -172,7 +171,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
   try {
     const { code } = await params;
     const countryId = code.toUpperCase();
-    if (countryId !== "DE" || !COUNTRY_CONFIGS.DE) {
+    if (!countryHasFeature("deApi", countryId) || !COUNTRY_CONFIGS.DE) {
       return errorResponse(400, "Bundestagspräsident endpoint is DE-only");
     }
 

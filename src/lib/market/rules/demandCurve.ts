@@ -1,27 +1,19 @@
 /**
- * Household demand curves (issue #5448, stage `producerDemandCurveStage`).
+ * Household demand curves (stage `producerDemandCurveStage`).
  *
- * Without this a household order is one budget at one ceiling price, and the
- * book fills it by units: `budget / ceiling`. A cheaper seller sells the same
- * units at a lower price and the household keeps the change, so more supply in
- * a market could never sell more, and every good took a fixed share of income
- * however rich the household was or how its prices moved.
+ * A flat budget-at-one-ceiling order fills by units, so more supply never sells more
+ * and every good takes a fixed income share. Two pure fixes:
  *
- * Two changes, both pure:
+ * - Price: each order becomes a short ladder. The top step is the old order; each
+ *   lower step adds the units a household buys at that lower price,
+ *   `Q(p) = Q0 * (p / p0) ^ -elasticity`. A lower step only fills at a seller who
+ *   asks that little, so it never shows as a shortage at a higher price.
+ * - Income: basket weights shift with income against the world reference,
+ *   `w * incomeIndex ^ (incomeElasticity - 1)`, renormalised so total spending is
+ *   unchanged: richer households spend more on discretionary goods, less on essentials.
  *
- * - **Price.** Each good's order becomes a short ladder. The top step is the
- *   old order, unchanged. Each lower step adds the extra units a household
- *   buys at that lower price, `Q(p) = Q0 * (p / p0) ^ -elasticity`. A lower step
- *   only fills when a seller asks that little, and only what it buys counts as
- *   demand, so a cheap step never shows up as a shortage at a higher price.
- * - **Income.** Basket weights shift with the household's income against the
- *   world reference, `w * incomeIndex ^ (incomeElasticity - 1)`, renormalised so
- *   total spending is unchanged: richer households spend a larger share on
- *   discretionary goods and a smaller one on essentials.
- *
- * Elasticities are long-run estimates in the usual empirical ranges, kept low
- * for essentials and above one for discretionary goods. Tunable; balance
- * changes need a worldsim report.
+ * Elasticities are long-run empirical estimates, low for essentials and above one for
+ * discretionary goods.
  */
 import type { CommodityType } from "@/lib/constants/commodities";
 
@@ -77,15 +69,13 @@ function positive(x: number): number {
 }
 
 /**
- * One good's ladder, inside one real budget (#5451).
+ * One good's ladder, inside one real budget.
  *
  * Quantities are incremental: step k carries only the units the household adds
  * between step k-1's price and its own. The cumulative quantity at step k's
- * price is `min(Q0 * share^-e, budget / price)`: the elastic demand, never more
- * than the good's own budget buys at that price. So at any single market price
- * every step that fills pays that price, and their total spend is at most the
- * budget. Cheaper prices buy more units with the same money; they never fund
- * spending beyond it. The top step is the old single order, unchanged.
+ * price is `min(Q0 * share^-e, budget / price)`: elastic demand, never more
+ * than the good's own budget buys at that price. Cheaper prices buy more
+ * units with the same money; they never fund spending beyond it.
  */
 export function demandSteps(input: {
   budget: number;

@@ -9,6 +9,7 @@
  * skipped silently — no crash, no noise.
  */
 import * as Sentry from "@sentry/nextjs";
+import { servicesConfig } from "@/lib/config/services";
 
 /** Minimum severity that triggers a Discord alert. */
 const ALERT_LEVEL: Sentry.SeverityLevel = "fatal";
@@ -32,7 +33,7 @@ export function alertOps(
   if (level !== ALERT_LEVEL && level !== "fatal") return;
 
   // Read at call time so tests can set env vars after import.
-  const webhookUrl = process.env.DISCORD_ALERT_WEBHOOK_URL;
+  const webhookUrl = servicesConfig.discordAlertWebhookUrl();
   if (!webhookUrl) return;
 
   const message = error instanceof Error ? error.message : String(error);

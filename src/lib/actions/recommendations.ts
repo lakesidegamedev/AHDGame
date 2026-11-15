@@ -1,3 +1,4 @@
+import { regionUrl } from "@/lib/urls";
 // src/lib/actions/recommendations.ts
 import type { Character, PartyBudget, PoliticalParty, StatePartyOrg } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
@@ -86,18 +87,12 @@ export interface StateEconomyData {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Generate suggestions for players who haven't completed core onboarding steps.
- * Each item disappears automatically once the condition is met.
- *
- * Titles, copy, and links come from the canonical onboarding checklist
- * definitions (src/lib/onboarding/checklist.ts) so these suggestions and the
- * profile checklist card can never disagree.
- *
- * Every item here is a politics step, so the whole block is skipped for a
- * player whose tutorial plan asked for neither office nor the top job. An
- * investor who was never shown the political game should not be nagged to join
- * a party. Characters with no stored plan resolve to the full tour, so this
- * changes nothing for anyone who predates the plan.
+ * Suggestions for players who have not completed core onboarding steps; each
+ * disappears once its condition is met. Titles, copy, and links come from the
+ * canonical checklist definitions so suggestions and the profile card agree.
+ * Skipped entirely for players whose plan asked for neither office nor the top
+ * job, so non-political players are not nagged. Characters with no stored plan
+ * resolve to the full tour.
  */
 export function checkGettingStarted(
   character: Character,
@@ -486,7 +481,7 @@ export function findUnownedOpportunities(
         estimatedBenefit: `${topOpp.estimatedCapturePercent}% market share per split`,
         targetUnownedRevenue: topOpp.unownedRevenue,
       },
-      link: `/country/${countryPath}/region/${topOpp.stateId.toUpperCase()}?tab=economy&sector=${sectorType}`,
+      link: `${regionUrl(countryPath, topOpp.stateId.toUpperCase())}?tab=economy&sector=${sectorType}`,
     });
   }
 
@@ -622,7 +617,7 @@ export function checkPartyActions(
         estimatedBenefit: "+1 organization unit per click; Org% follows bucket share",
         targetPartyName: partyName,
       },
-      link: `/country/${countryPath}/region/${statePartyOrg.stateId}/party/${statePartyOrg.partyId}`,
+      link: `${regionUrl(countryPath, statePartyOrg.stateId)}/party/${statePartyOrg.partyId}`,
     });
   }
 
@@ -695,9 +690,8 @@ export function generateRecommendations(
   // 2. Stat-based recommendations (always included)
   recommendations.push(...checkStatThresholds(character, character.homeState, forexEnabled));
 
-  // 3. Unowned sector opportunities (consolidated, filtered by user's corp types).
-  // Skipped entirely under plants: splitting is retired there, so these would
-  // point at a button that no longer exists and a route that returns 403.
+  // Unowned sector opportunities (consolidated, filtered by user's corp types).
+  // Skipped under plants: splitting is retired there, so targets would 403.
   if (!plantsEnabled && allStateEconomies && allStateEconomies.length > 0) {
     recommendations.push(
       ...findUnownedOpportunities(allStateEconomies, character, userCorpSectorTypes)
@@ -723,7 +717,7 @@ export function generateRecommendations(
                 estimatedBenefit: `${sector.estimatedCapturePercent.toFixed(1)}% market share`,
                 targetUnownedRevenue: sector.unownedRevenue,
               },
-              link: `/country/${economy.countryId.toLowerCase()}/region/${economy.stateId.toUpperCase()}?tab=economy`,
+              link: `${regionUrl(economy.countryId.toLowerCase(), economy.stateId.toUpperCase())}?tab=economy`,
             });
           }
         }
@@ -827,7 +821,7 @@ export function generateRecommendations(
       link:
         vacant.level === "national"
           ? `/country/${countryPath}/parties/${vacant.partyId}/leadership`
-          : `/country/${countryPath}/region/${vacant.stateId}/party/${vacant.partyId}`,
+          : `${regionUrl(countryPath, vacant.stateId ?? "")}/party/${vacant.partyId}`,
     });
   }
 

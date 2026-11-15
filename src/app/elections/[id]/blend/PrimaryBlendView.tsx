@@ -35,6 +35,7 @@ import {
   type PrimaryBlendVM,
   type PrimaryPartyVM,
 } from "./primaryBlendViewModel";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 export interface PrimaryBlendViewProps {
   election: ElectionDetail;
@@ -470,7 +471,7 @@ export function PrimaryBlendView({
    * each turn, like the general's tickets table.
    */
   const { campaigns, loading: campaignsLoading } = useElectionCampaigns(electionId, {
-    enabled: election.countryId === "US",
+    enabled: countryHasFeature("usUi", election.countryId),
     refreshKey: election.gameState?.currentTurn ?? undefined,
   });
   const campaignForRow = (rowId: string): CampaignSummary | undefined => {
@@ -745,7 +746,7 @@ export function PrimaryBlendView({
                   />
                 ))}
               </div>
-              {election.countryId === "US" && vm.parties.length > 0 ? (
+              {countryHasFeature("usUi", election.countryId) && vm.parties.length > 0 ? (
                 <nav
                   aria-label="Full primary pages"
                   style={{ marginTop: 10, display: "flex", flexWrap: "wrap", gap: "4px 12px" }}
@@ -964,7 +965,7 @@ export function PrimaryBlendView({
             <PresidentialMap
               variant="stage"
               // County results need the party's board, which is sign-in only.
-              counties={vm.board.length > 0 && election.countryId === "US"}
+              counties={vm.board.length > 0 && countryHasFeature("usUi", election.countryId)}
               countySource={countySource}
               focusRequest={focusRequest}
               presence={mapCampaign.presence}

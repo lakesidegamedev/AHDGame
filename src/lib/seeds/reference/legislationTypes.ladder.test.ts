@@ -39,14 +39,4 @@ describe("legislation seed integrity (#0962)", () => {
     }
     expect(bad).toEqual([]);
   });
-
-  it("uk_government_ethics targets the governmentTransparency ROOT, not the corruptionIndex readout (#0962 #5)", () => {
-    // corruptionIndex is engine-derived from governmentTransparency (§4.7); targeting
-    // both double-counts. The anti-corruption law drives corruption DOWN via the
-    // transparency root, and the graded-chip fix surfaces that on same-side bills.
-    const ethics = legislationTypes.find((l) => l._id === "uk_government_ethics");
-    const metrics = ethics?.effectTargetsWeighted?.map((t) => t.metricId) ?? [];
-    expect(metrics).toContain("governmentTransparency");
-    expect(metrics).not.toContain("corruptionIndex");
-  });
 });

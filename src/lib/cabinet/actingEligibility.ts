@@ -21,14 +21,10 @@ const CONFIRMS_CABINET: ReadonlySet<CountryId> = new Set<CountryId>(["US"]);
 /**
  * May this country's executive install acting cabinet members?
  *
- * Reads the STATIC country config, matching what the approval penalty did
- * before this existed. The runtime `countryState.governmentType` is the
- * eventual source of truth (hence the unused
- * `supportsActingAppointmentsForGovernmentType`), and this should move to it
- * when that migration lands. Safe until then: the only regime transition that
- * rewrites `governmentType` runs a one-party state towards democracy, never a
- * presidential republic away from it, so the static and runtime values cannot
- * disagree for any country in `CONFIRMS_CABINET`.
+ * Reads the STATIC country config. The runtime `countryState.governmentType`
+ * is the eventual source of truth and this should move to it; until then the
+ * two cannot disagree for any country in `CONFIRMS_CABINET`, since the only
+ * regime transition rewrites a one-party state toward democracy.
  */
 export function actingAppointmentsEnabled(countryId: CountryId): boolean {
   return supportsActingAppointments(getCountryConfig(countryId)) && CONFIRMS_CABINET.has(countryId);

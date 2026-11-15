@@ -5,7 +5,7 @@ import type { CountryId } from "@/lib/constants/countriesCore";
  * because it carries electoral-college math and a presidential results panel;
  * every other country falls through to the economy-only placeholder.
  */
-export type ParliamentaryMapCountryId = "UK" | "DE" | "JP" | "CN" | "BR" | "NG";
+export type ParliamentaryMapCountryId = "UK" | "DE" | "JP" | "CN" | "BR" | "NG" | "CA";
 
 const PARLIAMENTARY_MAP_COUNTRIES: ReadonlySet<string> = new Set<ParliamentaryMapCountryId>([
   "UK",
@@ -14,6 +14,7 @@ const PARLIAMENTARY_MAP_COUNTRIES: ReadonlySet<string> = new Set<ParliamentaryMa
   "CN",
   "BR",
   "NG",
+  "CA",
 ]);
 
 export function isParliamentaryMapCountry(id: string): id is ParliamentaryMapCountryId {

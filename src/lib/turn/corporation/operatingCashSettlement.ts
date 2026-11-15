@@ -7,13 +7,15 @@ import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
 import { treasuryAnchorValuation } from "@/lib/budget/rules/treasuryAccrual";
 import { snapshotTreasuryCurrency } from "@/lib/ledger/balanceSnapshot";
 import type { CorpSnapshot } from "./types";
-import type { Corporation } from "@/lib/db/types/corporation";
 import { loadTreasuryCashContext } from "@/lib/nationalization/treasuryLedger";
 import { settleTransition, resumeSettlement } from "@/lib/banking/settlementJournal";
 import { withBankingTelemetryBatch } from "@/lib/banking/telemetry";
 import { oid, type BankingTransition } from "@/lib/banking/rules/boundary";
 import { settlePriorCorporateCashArrears } from "./cashArrears";
 import { KeyedQueue, interleaveByKey, runInLanes } from "@/lib/turn/settlementLanes";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
 
 export { interleaveByKey };
 
@@ -80,22 +82,18 @@ type OperatingLossMember = {
 };
 
 /**
- * The book that replaces one loss receipt and one tax-arrears receipt per
- * corporation with a single move.
+ * The book that replaces a loss receipt plus a tax-arrears receipt per
+ * corporation with a single move. A corp whose cash cannot fund its net never
+ * reaches the net batch, so the withholding guard can only fail there: once
+ * the loss takes its cash it cannot hold the tax either. Balances are the same
+ * either way, so each loss is paid and each payable stated as a projection on
+ * the same receipt.
  *
- * A corporation whose cash cannot fund its net never reaches the net batch.
- * For it the withholding guard can only fail: once the loss takes the cash it
- * has, it cannot also hold the tax, so the per-corporation protocol wrote a
- * refused withholding and then a payable. The balances are the same whether
- * the loss and the payable are one receipt or three, so the wave pays each
- * loss and states each payable as a projection on the same receipt.
- *
- * Each corporation appears in exactly one leg, which is what lets the journal
- * write the whole book's cash in one pass: `batchIndependentDebits` refuses a
- * repeated target. A corporation whose cash covers only part of its loss pays
- * what it has, and the remainder is the projection the serial path recorded.
- * The book carries no Treasury leg: every member's withholding is unfunded by
- * construction, so nothing reaches the Treasury from this move.
+ * Each corporation appears in exactly one leg, so `batchIndependentDebits`
+ * (which refuses repeated targets) writes the whole book's cash in one pass.
+ * A corp whose cash covers only part of its loss pays what it has; the rest is
+ * the recorded projection. No Treasury leg: every withholding here is
+ * unfunded by construction.
  */
 function operatingLossBatchTransition(args: {
   members: readonly OperatingLossMember[];
@@ -203,7 +201,7 @@ export async function settleCorporateOperatingCash(
   return withBankingTelemetryBatch(db, turn, async () => {
     // Old claimed protocols retain their exact receipts; new turns never expose
     // gross modeled earnings or let prior payables consume current withholding.
-    const legacy = await db.collection<{ _id: string }>("bankMoneyMoves").findOne(
+    const legacy = await bankMoneyMovesCollection<{ _id: string }>(db).findOne(
       {
         $or: [
           { _id: { $regex: `^corp-operating-cash:${turn}:` } },
@@ -235,10 +233,10 @@ export async function settleCorporateOperatingCashLegacy(
   }
 
   const ids = snapshots.map((snapshot) => snapshot.corpId);
-  const journals = db.collection<{
+  const journals = bankMoneyMovesCollection<{
     _id: string;
     event?: { meta?: Record<string, unknown> };
-  }>("bankMoneyMoves");
+  }>(db);
   const keys = snapshots.flatMap((snapshot) => {
     const base = `corp-operating-cash:${turn}:${snapshot.corpId.toString()}`;
     return [base, `${base}:net`, `${base}:gross`, `${base}:tax`, `${base}:arrears`];
@@ -269,8 +267,7 @@ export async function settleCorporateOperatingCashLegacy(
     }
   });
 
-  const corporations = await db
-    .collection<Corporation>("corporations")
+  const corporations = await corporationsCollection(db)
     .find(
       { _id: { $in: ids } },
       {
@@ -323,8 +320,7 @@ export async function settleCorporateOperatingCashLegacy(
     .filter((key) => key.startsWith("federalBudget:"))
     .map((key) => key.slice("federalBudget:".length));
   if (treasuryCountries.length) {
-    const rows = await db
-      .collection<{ _id: ObjectId; countryId: string }>("federalBudget")
+    const rows = await federalBudgetCollection<{ _id: ObjectId; countryId: string }>(db)
       .find({ countryId: { $in: treasuryCountries } }, { projection: { _id: 1, countryId: 1 } })
       .toArray();
     for (const row of rows)
@@ -822,13 +818,13 @@ export async function settleCorporateOperatingCashLegacy(
   // twice. Everything else keeps its own receipts below.
   const batchPrefix = `corp-operating-net-batch:${turn}:`;
   const claimedBatches = await journals
-    .find({ _id: { $regex: `^${batchPrefix}` } }, { projection: { _id: 1, legs: 1 } })
+    .find<{
+      _id: string;
+      legs?: { collection?: string; filter?: { _id?: unknown } }[];
+    }>({ _id: { $regex: `^${batchPrefix}` } }, { projection: { _id: 1, legs: 1 } })
     .toArray();
   const batchedCorpIds = new Set<string>();
-  for (const row of claimedBatches as unknown as {
-    _id: string;
-    legs?: { collection?: string; filter?: { _id?: unknown } }[];
-  }[]) {
+  for (const row of claimedBatches) {
     for (const leg of row.legs ?? [])
       if (leg.collection === "corporations" && leg.filter?._id !== undefined)
         batchedCorpIds.add(String(leg.filter._id));
@@ -1025,13 +1021,13 @@ export async function settleCorporateOperatingCashLegacy(
   // their members out, exactly as the net batches do above.
   const lossBatchPrefix = `corp-operating-loss-batch:${turn}:`;
   const claimedLossBatches = await journals
-    .find({ _id: { $regex: `^${lossBatchPrefix}` } }, { projection: { _id: 1, event: 1 } })
+    .find<{
+      _id: string;
+      event?: { meta?: { corporationIds?: string | string[] } };
+    }>({ _id: { $regex: `^${lossBatchPrefix}` } }, { projection: { _id: 1, event: 1 } })
     .toArray();
   const lossBatchedCorpIds = new Set<string>();
-  for (const row of claimedLossBatches as unknown as {
-    _id: string;
-    event?: { meta?: { corporationIds?: string | string[] } };
-  }[]) {
+  for (const row of claimedLossBatches) {
     // The members are fenced like the net batch's, so a resumed wave is the
     // only receipt they ever get this turn.
     const members = row.event?.meta?.corporationIds;

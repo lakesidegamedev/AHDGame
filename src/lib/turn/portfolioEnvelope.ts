@@ -9,6 +9,7 @@ import {
   ESTATE_DISC_CAP,
   ESTATE_UPKEEP_UNIT,
 } from "@/lib/constants/cabinetEstates";
+import { getFederalBudgetCollection } from "@/lib/db/collections/federalBudget";
 
 /**
  * Read-only portfolio discretionary budget (absolute currency): the discretionary slice of the
@@ -27,7 +28,7 @@ export async function resolvePortfolioEnvelope(
   const budget =
     preloadedBudget !== undefined
       ? preloadedBudget
-      : await db.collection<FederalBudget>("federalBudget").findOne({ countryId });
+      : await (await getFederalBudgetCollection(db)).findOne({ countryId });
   if (!budget) return 0;
   const cat = PORTFOLIO_BUDGET_CATEGORY[portfolioKey];
   let raw = 0;

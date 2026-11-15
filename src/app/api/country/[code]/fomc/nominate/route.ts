@@ -18,9 +18,13 @@ import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { getCentralBankScope } from "@/lib/centralBank/helpers";
 import { getGameState } from "@/lib/gameState";
-import type { CentralBank, FomcNomination } from "@/lib/db/types/centralBank";
-import type { Character, NPP } from "@/lib/db/types";
+import type { FomcNomination } from "@/lib/db/types/centralBank";
+import type { NPP } from "@/lib/db/types";
 import { FOMC_VOTE_WINDOW_TURNS, FOMC_PLAYER_VOTE_WINDOW_MS } from "@/lib/db/types/centralBank";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { fomcNominationsCollection } from "@/lib/db/repositories/fomcNominations";
 
 interface RouteContext {
   params: Promise<{ code: string }>;
@@ -71,16 +75,18 @@ export async function POST(request: Request, context: RouteContext) {
     if (!parsed.success) return errorResponse(parsed.status, parsed.error);
     const body = parsed.data;
 
-    const bank = await db.collection<CentralBank>("centralBanks").findOne({ _id: bankId });
+    const bank = await centralBanksCollection(db).findOne({ _id: bankId });
     if (!bank?.fomcBoard)
       return NextResponse.json(notFound("Committee not found").toJson(), { status: 404 });
     if (!bank.fomcBoard.some((s) => s.seatId === body.seatId))
       return NextResponse.json(badRequest("Unknown seat").toJson(), { status: 400 });
 
     // One active nomination per seat at a time.
-    const existing = await db
-      .collection<FomcNomination>("fomcNominations")
-      .findOne({ bankId, seatId: body.seatId, status: "active" });
+    const existing = await fomcNominationsCollection(db).findOne({
+      bankId,
+      seatId: body.seatId,
+      status: "active",
+    });
     if (existing)
       return NextResponse.json(
         badRequest("A nomination for this seat is already before the Senate").toJson(),
@@ -96,9 +102,7 @@ export async function POST(request: Request, context: RouteContext) {
     let nomineeName: string;
     let nomineeParty: string | undefined;
     if (nomineeCharacterId) {
-      const char = await db
-        .collection<Character>("characters")
-        .findOne({ _id: nomineeCharacterId });
+      const char = await charactersCollection(db).findOne({ _id: nomineeCharacterId });
       if (!char) return NextResponse.json(notFound("Nominee not found").toJson(), { status: 404 });
       if (
         requiresCabinetIndependence(
@@ -122,7 +126,7 @@ export async function POST(request: Request, context: RouteContext) {
       nomineeName = char.name;
       nomineeParty = char.party;
     } else {
-      const npp = await db.collection<NPP>("npps").findOne({ _id: nomineeNppId! });
+      const npp = await nppsCollection(db).findOne({ _id: nomineeNppId! });
       if (!npp) return NextResponse.json(notFound("Nominee not found").toJson(), { status: 404 });
       occupantType = "npp";
       nomineeName = npp.name;
@@ -159,9 +163,10 @@ export async function POST(request: Request, context: RouteContext) {
       updatedAt: now,
     };
 
-    const insert = await db
-      .collection<FomcNomination>("fomcNominations")
-      .insertOne({ _id: new ObjectId(), ...nomination } as FomcNomination);
+    const insert = await fomcNominationsCollection(db).insertOne({
+      _id: new ObjectId(),
+      ...nomination,
+    } as FomcNomination);
 
     return NextResponse.json({
       ok: true,

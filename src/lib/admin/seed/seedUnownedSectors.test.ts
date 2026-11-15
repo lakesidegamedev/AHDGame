@@ -188,3 +188,37 @@ describe("seedUnownedSectors refresh mode", () => {
     );
   });
 });
+
+describe("seedUnownedSectors background countries (#5702)", () => {
+  let db: MockDb;
+  beforeEach(() => {
+    vi.clearAllMocks();
+    db = createMockDb();
+    db.collection("states");
+    db.collection("unownedSectors");
+    db.collectionMocks.states.find.mockReturnValue(
+      cursor([
+        { _id: "CA", countryId: "US", gdp: 3_000_000 },
+        { _id: "IDF", countryId: "FR", gdp: 800_000 },
+      ])
+    );
+    db.collectionMocks.unownedSectors.createIndex = vi.fn().mockResolvedValue(undefined);
+  });
+
+  const seededStates = () =>
+    new Set(
+      bulkOps(db.collectionMocks.unownedSectors.bulkWrite).map(
+        ([filter]) => (filter as { stateId: string }).stateId
+      )
+    );
+
+  it("seeds no sectors in a 2027 background country's regions", async () => {
+    await seedUnownedSectors(db as unknown as Db, () => {}, 1, "2027-default");
+    expect(seededStates()).toEqual(new Set(["CA"]));
+  });
+
+  it("still seeds the same country where the preset runs it in full", async () => {
+    await seedUnownedSectors(db as unknown as Db, () => {}, 1, "2019-default");
+    expect(seededStates()).toEqual(new Set(["CA", "IDF"]));
+  });
+});

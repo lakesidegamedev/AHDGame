@@ -156,6 +156,58 @@ describe("POST /api/settings/supporter-requests", () => {
     );
   });
 
+  describe("store-only Champion (tier written by the subscription webhook)", () => {
+    const nppId = new ObjectId();
+    const body = () =>
+      post({ kind: "npp-rename", nppId: nppId.toString(), proposedNppName: "New Name" });
+
+    function mockNpp() {
+      db.collectionMocks.npps.findOne.mockImplementation(
+        async (filter: Record<string, unknown>) => {
+          if (filter && "_id" in filter && !(filter._id as Record<string, unknown>)?.$ne) {
+            return { _id: nppId, name: "Old Name", sequentialId: 7, countryId: "us" };
+          }
+          return null;
+        }
+      );
+    }
+
+    it("can submit a rename exactly like a Patreon Champion", async () => {
+      mockUser({
+        patreonTier: "supporter-plus-plus",
+        patreonExpiresAt: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000),
+        patreonUserId: null,
+      });
+      mockNpp();
+      const { POST } = await import("./route");
+      const res = await POST(body());
+      expect(res.status).toBe(200);
+      expect(db.collectionMocks.supporterRequests.insertOne).toHaveBeenCalledWith(
+        expect.objectContaining({ kind: "npp-rename", status: "pending" })
+      );
+    });
+
+    it("cannot submit once the subscription has lapsed", async () => {
+      mockUser({
+        patreonTier: "supporter-plus-plus",
+        patreonExpiresAt: new Date(Date.now() - 1000),
+      });
+      mockNpp();
+      const { POST } = await import("./route");
+      const res = await POST(body());
+      expect(res.status).toBe(403);
+    });
+
+    it("a non-supporter cannot submit a rename", async () => {
+      mockUser({ patreonTier: null });
+      mockNpp();
+      const { POST } = await import("./route");
+      const res = await POST(body());
+      expect(res.status).toBe(403);
+      expect(db.collectionMocks.supporterRequests.insertOne).not.toHaveBeenCalled();
+    });
+  });
+
   it("rejects npp-rename for retired politicians", async () => {
     mockUser({ patreonTier: "supporter-plus-plus" });
     const nppId = new ObjectId();

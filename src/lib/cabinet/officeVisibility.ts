@@ -10,6 +10,9 @@ import {
 import { getHeadOfGovernmentCharacterId } from "@/lib/api/headOfGovernment";
 import type { ElectedOfficial } from "@/lib/db/types/officials";
 import { getCabinetMembersCollection } from "@/lib/db/collections/cabinetMembers";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
 
 /** Why a viewer may see a cabinet office. Null when they may not. */
 export type CabinetOfficeViewerRole =
@@ -19,7 +22,7 @@ export type CabinetOfficeViewerRole =
  * Cabinet seats whose job is to coordinate the rest of the cabinet, so their
  * holder may read every office in the same government without acting in it.
  * Japan's Chief Cabinet Secretary runs the Cabinet Secretariat that oversees
- * the ministries (ticket 1686, owner-approved 2026-10-26).
+ * the ministries.
  */
 const CABINET_COORDINATOR_SEATS: Partial<Record<CountryId, { positionId: string; title: string }>> =
   {
@@ -38,9 +41,10 @@ const HIDDEN: CabinetOfficeVisibility = { canView: false, canAct: false, viewerR
 
 /** The world's active seed preset, which decides what a country's offices are. */
 async function readActivePreset(db: Db): Promise<string | undefined> {
-  const gameState = await db
-    .collection<{ _id: string; preset?: string }>("gameState")
-    .findOne({ _id: "current" }, { projection: { preset: 1 } });
+  const gameState = await gameStateCollection<{ _id: string; preset?: string }>(db).findOne(
+    { _id: "current" },
+    { projection: { preset: 1 } }
+  );
   return gameState?.preset;
 }
 
@@ -48,25 +52,21 @@ async function readActivePreset(db: Db): Promise<string | undefined> {
  * Who may look inside a cabinet office.
  *
  * A cabinet office's records are the department's own: the force it fields, the
- * money it holds, the orders it has standing. Before this gate every one of
- * those numbers was served to anybody who knew the URL, including foreign
- * governments reading an opponent's order of battle off the defence page.
+ * money it holds, the orders it has standing. This gate must stop anyone else
+ * from reading them off the URL.
  *
- * The rule is deliberately narrow. Only the seated officeholder, the two
- * offices that sit above every seat in the same country's government, and a
- * cabinet-coordinating seat where the country has one, may see inside. Other
- * cabinet colleagues cannot: a foreign ministry has no business in the
- * defence ledger. Country scoping is implicit, because every head-of-X lookup
- * here is asked about the OFFICE's country, so a foreign head of government
- * never matches.
+ * Only the seated officeholder, the two offices above every seat in the same
+ * country's government, and a cabinet-coordinating seat where one exists may
+ * see inside. Other cabinet colleagues cannot: a foreign ministry has no
+ * business in the defence ledger. Country scoping is implicit, since every
+ * head-of-X lookup is asked about the OFFICE's country.
  *
- * A head of state is reached three ways, because the game models them three
- * ways: elected into `electedOfficials` (Ireland, France), appointed or synced
- * into the same collection (RU's presidium chairman, CN's party chair), or
- * reigning on the imperial roll with no office at all (the UK, Japan).
+ * A head of state is reached three ways: elected into `electedOfficials`,
+ * appointed or synced into the same collection, or reigning on the imperial
+ * roll with no office at all.
  *
  * `canAct` keeps exactly the meaning it had before (holder or admin), so a head
- * of government reads their own cabinet without being able to pull its levers.
+ * of government reads their own cabinet without pulling its levers.
  *
  * This is the single seam for widening visibility later. Intelligence
  * investment, counterintelligence, and allied information sharing all belong
@@ -74,13 +74,13 @@ async function readActivePreset(db: Db): Promise<string | undefined> {
  * across the routes.
  *
  * @param holderCharacterId The seat's current holder; null for a vacant or
- *   NPP-held seat. Passed in rather than re-read because every caller has
- *   already loaded the cabinet member.
+ *   NPP-held seat. Passed in because every caller has already loaded the
+ *   cabinet member.
  * @param preset The active seed preset. Optional: read from the world when a
- *   caller does not already have it, so nobody can get this wrong by omission.
- *   It matters because presets redefine `officeTypes` — Spain's head of state is
- *   the `monarch` canonically but the `caudillo` under 1953-default, and reading
- *   the wrong one locks the real head of state out of their own cabinet.
+ *   caller does not already have it. It matters because presets redefine
+ *   `officeTypes` (Spain's head of state is `monarch` canonically but
+ *   `caudillo` under 1953-default), and reading the wrong one locks the real
+ *   head of state out of their own cabinet.
  */
 export async function resolveCabinetOfficeVisibility(
   db: Db,
@@ -141,12 +141,10 @@ export async function resolveCabinetOfficeVisibility(
   const config = getCountryConfig(countryId, preset);
   const headOfStateOfficeType = getHeadOfStateOfficeType(config);
   if (viewerId && headOfStateOfficeType) {
-    const hos = await db
-      .collection<ElectedOfficial>("electedOfficials")
-      .findOne(
-        { countryId, officeType: headOfStateOfficeType, characterId: { $ne: null } },
-        { projection: { characterId: 1 } }
-      );
+    const hos = await electedOfficialsCollection(db).findOne(
+      { countryId, officeType: headOfStateOfficeType, characterId: { $ne: null } },
+      { projection: { characterId: 1 } }
+    );
     if (hos?.characterId && hos.characterId.toString() === viewerId) {
       return { canView: true, canAct: false, viewerRole: "headOfState" };
     }
@@ -163,12 +161,12 @@ export async function resolveCabinetOfficeVisibility(
     // A country may borrow another's crown, in which case the imperial character
     // is filed under the source country.
     const crownCountryId = config.imperialSharedWith ?? countryId;
-    const monarch = await db
-      .collection<{ userId: ObjectId; countryId: CountryId }>("imperialCharacters")
-      .findOne(
-        { countryId: crownCountryId, userId: new ObjectId(viewerUserId) },
-        { projection: { _id: 1 } }
-      );
+    const monarch = await imperialCharactersCollection<{ userId: ObjectId; countryId: CountryId }>(
+      db
+    ).findOne(
+      { countryId: crownCountryId, userId: new ObjectId(viewerUserId) },
+      { projection: { _id: 1 } }
+    );
     if (monarch) return { canView: true, canAct: false, viewerRole: "headOfState" };
   }
 

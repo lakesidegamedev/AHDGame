@@ -35,13 +35,10 @@ export type CountryStatePatch = Partial<
  * Read the runtime state document for a country. Cached per-Db for the
  * duration of the request (or until updateCountryState invalidates).
  *
- * Defensive behaviour: if the DB doc is missing but the countryId is a
- * known COUNTRY_CONFIGS entry, self-heal from the seed config and
- * return. This makes the helper safe to call before the
- * `2026-05-28-promote-country-state` migration has been run in production
- * AND keeps integration tests with hand-built MockDbs from breaking. Tests
- * that want to assert a specific runtime governmentType (e.g.
- * post-Stage-4 conversion behaviour) still stub the lookup explicitly.
+ * If the DB doc is missing but the countryId is a known COUNTRY_CONFIGS
+ * entry, self-heal from the seed config and return. Keeps callers safe on
+ * un-migrated data and lets hand-built MockDbs work. Tests that need a
+ * specific runtime governmentType should still stub the lookup explicitly.
  *
  * Throws on unknown countryId (typo defense).
  */

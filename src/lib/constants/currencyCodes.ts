@@ -13,7 +13,7 @@ import type { CountryId } from "./countriesCore";
 
 /**
  * Currency codes for all countries — active and future.
- * Active v1: USD, GBP, JPY. Future: CAD, EUR (added when those countries launch).
+ * Active v1: USD, GBP, JPY. CAD trades wherever a preset's roster includes Canada.
  */
 export type CurrencyCode =
   | "USD"
@@ -41,6 +41,7 @@ export type CurrencyCode =
   | "ESP"
   | "SEK"
   | "TRL"
+  | "TRY"
   | "GRD"
   | "ATS"
   | "FIM"
@@ -80,6 +81,8 @@ export const COUNTRY_CURRENCY_MAP: Record<CountryId, CurrencyCode> = {
   DD: "DDM",
   SCO: "GBP", // sterlingized — shares the UK's GBP (anchor stays UK)
   WAL: "GBP", // sterlingized — shares the UK's GBP (anchor stays UK)
+  CA: "CAD",
+  QC: "CAD", // shares Canada's CAD (anchor stays CA)
 };
 
 /**
@@ -89,15 +92,12 @@ export const COUNTRY_CURRENCY_MAP: Record<CountryId, CurrencyCode> = {
  * This is authoritative and EXPLICIT (not derived from `COUNTRY_CURRENCY_MAP`
  * iteration order). EUR is DE-only (West German DM proxy pre-eurozone; euro
  * after). IEP is IE-only. SCO/WAL share GBP with UK as the anchor.
- *
- * CAD has no launched country, so it resolves to US (USD parity) — matching the
- * legacy fallback.
  */
 export const CURRENCY_ANCHOR_COUNTRY: Record<CurrencyCode, CountryId> = {
   USD: "US",
   GBP: "UK",
   JPY: "JP",
-  CAD: "US", // no launched CAD country; USD-parity fallback
+  CAD: "CA",
   EUR: "DE",
   IEP: "IE",
   BRL: "BR",
@@ -119,6 +119,7 @@ export const CURRENCY_ANCHOR_COUNTRY: Record<CurrencyCode, CountryId> = {
   ESP: "ES",
   SEK: "SE",
   TRL: "TR",
+  TRY: "TR", // Modern Turkish lira, active only in the 2027 preset (see getSeedCurrencyCode)
   GRD: "GR",
   ATS: "AT",
   FIM: "FI",
@@ -140,6 +141,7 @@ export const CURRENCY_ANCHOR_COUNTRY: Record<CurrencyCode, CountryId> = {
 // from post-reunification central-bank seeding.
 export const FOREX_ACTIVE_COUNTRIES: CountryId[] = [
   "US",
+  "CA",
   "UK",
   "JP",
   "DE",
@@ -162,6 +164,7 @@ export const FOREX_ACTIVE_COUNTRIES: CountryId[] = [
 /** Only currencies that participate in forex */
 export const FOREX_ACTIVE_CURRENCIES: CurrencyCode[] = [
   "USD",
+  "CAD",
   "GBP",
   "JPY",
   "EUR",
@@ -177,6 +180,7 @@ export const FOREX_ACTIVE_CURRENCIES: CurrencyCode[] = [
   "ESP",
   "SEK",
   "TRL",
+  "TRY",
   "GRD",
   "ATS",
   "FIM",
@@ -218,6 +222,7 @@ export const CURRENCY_SYMBOLS: Record<CurrencyCode, string> = {
   ESP: "₧",
   SEK: "kr",
   TRL: "₺",
+  TRY: "₺",
   GRD: "₯",
   ATS: "öS",
   FIM: "mk",

@@ -25,6 +25,8 @@ import {
   defaultFactoryAllocation,
   DEFENCE_FACTORY_SLOTS_PER_PLANT,
 } from "@/lib/military/defenceLotEconomics";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { defenceContractsCollection } from "@/lib/db/repositories/defenceContracts";
 
 const bodySchema = z.object({
   assignedFactories: z.number().int().min(1).max(DEFENCE_FACTORY_SLOTS_PER_PLANT),
@@ -66,9 +68,10 @@ export async function PUT(request: Request, { params }: RouteParams) {
 
     // Scoped to THIS corporation, not just the contract id: without it any CEO could
     // re-allocate another company's plant by pasting an id.
-    const contract = await db
-      .collection<DefenceContract>("defenceContracts")
-      .findOne({ _id: contractObjectId, corporationId: corp._id });
+    const contract = await defenceContractsCollection(db).findOne({
+      _id: contractObjectId,
+      corporationId: corp._id,
+    });
     if (!contract) {
       return errorResponse(404, "No such contract");
     }
@@ -76,9 +79,7 @@ export async function PUT(request: Request, { params }: RouteParams) {
       return errorResponse(409, "This order is closed, so its production lines cannot be changed.");
     }
 
-    const sector = await db
-      .collection<CorporateSector>("corporateSectors")
-      .findOne({ _id: contract.sectorId });
+    const sector = await corporateSectorsCollection(db).findOne({ _id: contract.sectorId });
     if (!sector) {
       return errorResponse(409, "This contract's plant no longer exists.");
     }

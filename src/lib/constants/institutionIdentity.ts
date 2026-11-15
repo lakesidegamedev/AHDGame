@@ -32,6 +32,8 @@ import { WAL_IDENTITY } from "@/lib/countries/wal/identity";
 import { BLR_IDENTITY } from "@/lib/countries/blr/identity";
 import { UKR_IDENTITY } from "@/lib/countries/ukr/identity";
 import { BAL_IDENTITY } from "@/lib/countries/bal/identity";
+import { CA_IDENTITY } from "@/lib/countries/ca/identity";
+import { QC_IDENTITY } from "@/lib/countries/qc/identity";
 
 /**
  * Institution identity overlays for the country-pages masthead family
@@ -107,6 +109,8 @@ export const EXECUTIVE_TEXT: Record<CountryId, IdentityText> = {
   DD: DD_IDENTITY.executiveText,
   SCO: SCO_IDENTITY.executiveText,
   WAL: WAL_IDENTITY.executiveText,
+  CA: CA_IDENTITY.executiveText,
+  QC: QC_IDENTITY.executiveText,
 };
 
 export function getExecutiveIdentity(countryId: CountryId): InstitutionIdentity {
@@ -145,6 +149,8 @@ export const POLICY_TEXT: Record<CountryId, IdentityText> = {
   DD: DD_IDENTITY.policyText,
   SCO: SCO_IDENTITY.policyText,
   WAL: WAL_IDENTITY.policyText,
+  CA: CA_IDENTITY.policyText,
+  QC: QC_IDENTITY.policyText,
 };
 
 export function getPolicyIdentity(countryId: CountryId): InstitutionIdentity {

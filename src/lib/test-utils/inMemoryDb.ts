@@ -1,17 +1,10 @@
 /**
  * A small in-memory stand-in for the driver, for tests that need STATE.
  *
- * `mockDb` returns stubs and lets a test assert on the calls that were made.
- * That is the right tool for "did this code write the field it said it would",
- * and the wrong one for "does money still add up after five operations", which
- * is the question the banking conservation test has to answer. Asserting on
- * calls cannot catch a leak: every individual write looks correct, and the hole
- * is in the arithmetic between them.
- *
- * So this stores documents and applies updates for real. It implements the
- * subset of the query language the banking flows actually use, and throws on
- * anything it does not understand rather than silently matching nothing, which
- * is the failure mode that would make a conservation test pass while lying.
+ * `mockDb` returns stubs and asserts on calls, which cannot catch a leak:
+ * every individual write looks correct and the hole is in the arithmetic
+ * between them. This stores documents and applies updates for real, and
+ * throws on unsupported query syntax rather than silently matching nothing.
  */
 
 import { MongoServerError, ObjectId } from "mongodb";
@@ -147,6 +140,19 @@ function equalsAny(value: unknown, operand: unknown): boolean {
   return sameValue(value, operand);
 }
 
+/** Range operators compare like with like: numbers, strings or dates. */
+function orderedCompare(
+  value: unknown,
+  operand: unknown,
+  test: (a: number | string, b: number | string) => boolean
+): boolean {
+  if (typeof value === "number" && typeof operand === "number") return test(value, operand);
+  if (typeof value === "string" && typeof operand === "string") return test(value, operand);
+  if (value instanceof Date && operand instanceof Date)
+    return test(value.getTime(), operand.getTime());
+  return false;
+}
+
 function matchesCondition(value: unknown, condition: unknown): boolean {
   if (isPlainObject(condition)) {
     const keys = Object.keys(condition);
@@ -159,29 +165,13 @@ function matchesCondition(value: unknown, condition: unknown): boolean {
           case "$ne":
             return !equalsAny(value, operand);
           case "$gte":
-            return (
-              ((typeof value === "number" && typeof operand === "number") ||
-                (typeof value === "string" && typeof operand === "string")) &&
-              value >= operand
-            );
+            return orderedCompare(value, operand, (a, b) => a >= b);
           case "$gt":
-            return (
-              ((typeof value === "number" && typeof operand === "number") ||
-                (typeof value === "string" && typeof operand === "string")) &&
-              value > operand
-            );
+            return orderedCompare(value, operand, (a, b) => a > b);
           case "$lte":
-            return (
-              ((typeof value === "number" && typeof operand === "number") ||
-                (typeof value === "string" && typeof operand === "string")) &&
-              value <= operand
-            );
+            return orderedCompare(value, operand, (a, b) => a <= b);
           case "$lt":
-            return (
-              ((typeof value === "number" && typeof operand === "number") ||
-                (typeof value === "string" && typeof operand === "string")) &&
-              value < operand
-            );
+            return orderedCompare(value, operand, (a, b) => a < b);
           case "$in":
             return (operand as unknown[]).some((o) => equalsAny(value, o));
           case "$elemMatch":
@@ -197,7 +187,12 @@ function matchesCondition(value: unknown, condition: unknown): boolean {
             return Array.isArray(value) && value.length === operand;
           case "$regex": {
             if (typeof value !== "string") return false;
-            const flags = typeof condition["$options"] === "string" ? condition["$options"] : "";
+            const flags =
+              typeof condition["$options"] === "string"
+                ? condition["$options"]
+                : operand instanceof RegExp
+                  ? operand.flags
+                  : "";
             const source = operand instanceof RegExp ? operand.source : String(operand);
             return new RegExp(source, flags).test(value);
           }
@@ -344,6 +339,8 @@ function evalExpr(expr: unknown, doc: Doc, variables: Doc = {}): unknown {
       return (args[0] as number) < (args[1] as number);
     case "$eq":
       return sameValue(args[0], args[1]);
+    case "$ne":
+      return !sameValue(args[0], args[1]);
     case "$in":
       return Array.isArray(args[1]) && args[1].some((value) => sameValue(value, args[0]));
     case "$add":

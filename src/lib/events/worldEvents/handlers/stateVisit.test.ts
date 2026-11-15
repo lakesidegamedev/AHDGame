@@ -62,7 +62,7 @@ describe("worldEvents.stateVisit — Phase 2 executive decision event", () => {
     );
     expect(db.collectionMocks.federalBudget!.updateOne).toHaveBeenCalledWith(
       { countryId: "US" },
-      expect.objectContaining({ $set: expect.objectContaining({ treasuryBalance: 985_000 }) })
+      expect.objectContaining({ $inc: { treasuryBalance: -15_000 } })
     );
     const txDoc = db.collectionMocks.financialTxLog!.insertOne.mock.calls[0][0];
     expect(txDoc.type).toBe("world_event_payout");

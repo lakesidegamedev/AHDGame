@@ -9,6 +9,7 @@ import {
   type CouponBearingSovereignBond,
   type SovereignCouponBook,
 } from "@/lib/budget/rules/sovereignDebtService";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
 
 /** Projection that carries everything the coupon book reads. */
 export const SOVEREIGN_COUPON_BOOK_PROJECTION = {
@@ -44,8 +45,7 @@ export async function loadSovereignCouponBooks(
   db: Db,
   countryIds?: readonly string[]
 ): Promise<Map<string, SovereignCouponBook>> {
-  const bonds = await db
-    .collection<Bond>("bonds")
+  const bonds = await bondsCollection(db)
     .find(
       {
         issuerType: "sovereign",

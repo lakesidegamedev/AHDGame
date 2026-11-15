@@ -1,4 +1,5 @@
 "use client";
+import { displayCanadianRegionCode } from "@/lib/countries/ca/regionCodes";
 
 import { quoteOrganizationBatch } from "@/lib/parties/rules/repeatedOrganization";
 import type { CountryId } from "@/lib/constants/countriesCore";
@@ -11,7 +12,7 @@ import { StateDrawer } from "./StateDrawer";
 import { StatePartyMap, countryHasMap, type MapColorBy } from "./StatePartyMap";
 import { sumBulkEstimate, type BulkMode, type BulkPreview } from "./bulkEstimate";
 import { orgTier, toneColor } from "./orgTier";
-import { COUNTRY_CURRENCY_MAP, CURRENCY_SYMBOLS } from "@/lib/constants/currencies";
+import { COUNTRY_CURRENCY_MAP, CURRENCY_SYMBOLS } from "@/lib/constants/currencyCodes";
 import { apiErrorText } from "@/lib/errors/catalog";
 import { fmtMoney } from "./formatters";
 
@@ -418,7 +419,7 @@ export function StatePartyHQ({
                   onClick={() => setOpenId(r.regionId)}
                   className="rounded-full border border-card-border px-2 py-0.5 text-xs"
                 >
-                  {r.regionId}{" "}
+                  {displayCanadianRegionCode(r.regionId)}{" "}
                   <span style={{ color: toneColor(t.tone) }}>{r.organization.toFixed(0)}%</span>
                 </button>
               );

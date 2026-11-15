@@ -23,6 +23,7 @@ import {
   prepareFundFloatTrade,
   type FloatAuditContext,
 } from "./fundFloatTradePlan";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
 
 export type FundBuyCorp = IndexFundCandidate & {
   publicFloat?: number;
@@ -72,9 +73,10 @@ export async function executeFundShareBuy(
     pools
   );
   if (fund.mandate?.mode === "picked_stocks") {
-    const current = await db
-      .collection<SettlementFund>("indexFunds")
-      .findOne({ _id: fund._id }, { projection: { cashAnchor: 1, holdings: 1 } });
+    const current = await indexFundsCollection<SettlementFund>(db).findOne(
+      { _id: fund._id },
+      { projection: { cashAnchor: 1, holdings: 1 } }
+    );
     if (!current) return { ok: false, sharesBought: 0, anchorSpent: 0 };
     shares = pickedStockPurchaseShares({
       mandate: fund.mandate,

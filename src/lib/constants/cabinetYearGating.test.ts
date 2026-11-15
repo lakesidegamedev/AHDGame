@@ -63,7 +63,7 @@ describe("UK cabinet year gating", () => {
   it("20 defined seats; active counts per preset year", () => {
     // The Chief of the Secret Intelligence Service exists from 1909, so it is
     // active in every preset year and lifts all four counts by one. The Chief
-    // Whip (#859) is perpetual and lifts them by one more.
+    // Whip is perpetual and lifts them by one more.
     expect(uk).toHaveLength(20);
     expect(resolveCabinetRoster(uk, 1953)).toHaveLength(16);
     expect(resolveCabinetRoster(uk, 1979)).toHaveLength(19);

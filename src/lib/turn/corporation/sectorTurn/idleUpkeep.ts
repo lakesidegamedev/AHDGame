@@ -13,42 +13,34 @@ import { TURNS_PER_DAY } from "@/lib/constants/corporations";
 import { idleUpkeepUnitPrice, ownerIdleUnits } from "@/lib/corporations/physicalPnl";
 
 /**
- * P3a: idle / mothball upkeep, plants only (#588).
+ * Idle / mothball upkeep, plants only.
  *
- * Maintenance elsewhere derives from REALIZED revenue, so it scales with
- * utilization: a sector running at 40% pays 40% of maintenance and idle
- * capacity is free to hold. Under plants that is not honest — capacity is a
- * thing you BOUGHT and must keep, and an over-built sector should feel it.
+ * Maintenance elsewhere derives from REALIZED revenue, so idle capacity is
+ * free to hold. Under plants, capacity is a thing you BOUGHT and must keep, and
+ * an over-built sector should feel it.
  *
- * The charge is ADDITIVE on idle units rather than a multiplier on
- * maintenance, for two reasons: the multiplier form divides by utilization,
- * which is undefined at zero and zero is exactly the mothballed case; and the
- * additive form prices idle units at nominal mix prices instead of inheriting
- * the sales legs, so an idle plant's upkeep does not fall because the market
- * price of its output fell.
+ * The charge is ADDITIVE on idle units rather than a multiplier on maintenance:
+ * the multiplier form divides by utilization, undefined at zero and zero is
+ * exactly the mothballed case; and the additive form prices idle units at
+ * nominal mix prices, so an idle plant's upkeep does not fall with the market
+ * price of its output.
  *
- * Two corrections are load-bearing and easy to undo by accident:
+ * Two load-bearing corrections:
  *
  * 1. The unit price is ANCHORED, not `(1 - margin_now)`. Pricing a fixed
  *    site/skeleton-crew cost off the live margin made it GROW as the margin
- *    fell, so the most distressed sectors paid the most per idle unit. Stamped
- *    once on the sector's first plants turn and then held.
- * 2. The base is OWNER-idle capacity, not `capacity - producedUnits`. Every
- *    live sector sat at the launch governor's 0.85 throughput floor —
- *    input-starved, not over-built — and was already losing that 15% off its
- *    top line before being billed upkeep on the same 15% again.
+ *    fell, so the most distressed sectors paid the most per idle unit.
+ * 2. The base is OWNER-idle capacity, not `capacity - producedUnits`. Sectors at
+ *    the throughput floor are input-starved, not over-built, and were billed
+ *    upkeep on the same shortfall already lost off their top line.
  *
- * The flip turn seeds capacity at 1.1x implied units, so utilization is ~0.909
- * and this would be a visible ~2.7% profit step on a tier whose promise is that
- * the flip changes nothing. It is faded in over the same governor ramp every
- * other plants leg uses. A MOTHBALLED sector is not ramped: mothballing is a
- * deliberate action taken after the flip, so there is no continuity to protect.
+ * Idle upkeep is faded in over the same governor ramp every other plants leg
+ * uses, so the flip turn stays roughly neutral. A MOTHBALLED sector is not
+ * ramped: mothballing is a deliberate action taken after the flip.
  *
  * Capacity idled by the DEMAND THROTTLE pays only THROTTLE_IDLE_UPKEEP_SHARE of
- * the idle charge. The market, not the owner, decided that run, and charging
- * full upkeep on top of a glutted plant's lost revenue made overbuilt sectors
- * unrecoverable. Capacity the owner idled with the production slider, and
- * mothballed capacity, keep their existing rules.
+ * the charge: the market, not the owner, decided that run, and full upkeep on a
+ * glutted plant made overbuilt sectors unrecoverable.
  */
 export interface IdleUpkeepInput {
   sector: Pick<CorporateSector, "plantsUpkeepMarginBasisAnchor" | "activeCapacityPercent">;

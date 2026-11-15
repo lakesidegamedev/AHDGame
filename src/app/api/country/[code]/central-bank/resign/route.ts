@@ -7,12 +7,12 @@ import { getDb } from "@/lib/mongodb";
 import { requireAuth } from "@/lib/api/requireAuth";
 import { handleRouteError, forbidden, notFound, errorResponse } from "@/lib/api/errors";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
-import type { CentralBank } from "@/lib/db/types";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { vacateCentralBankChairCharacter } from "@/lib/turn/centralBankChairSelection";
 import { notifyCbChairResignedDiscord } from "@/lib/centralBankChairEvents";
 import { createSystemNewsPost } from "@/lib/news";
 import { getBankId, vacateFomcChairSeat } from "@/lib/centralBank/helpers";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 interface RouteContext {
   params: Promise<{ code: string }>;
@@ -40,9 +40,7 @@ export async function POST(request: Request, context: RouteContext) {
     const myChar = auth.user.character;
     if (!myChar) return errorResponse(400, "No character found");
 
-    const bank = await db
-      .collection<CentralBank>("centralBanks")
-      .findOne({ _id: getBankId(countryId) });
+    const bank = await centralBanksCollection(db).findOne({ _id: getBankId(countryId) });
     if (!bank)
       return NextResponse.json(notFound("Central bank not found").toJson(), { status: 404 });
 
@@ -59,7 +57,7 @@ export async function POST(request: Request, context: RouteContext) {
     // keeps tabling its motions and keeps being named as chair on the page.
     await vacateFomcChairSeat(db, bank._id);
 
-    await db.collection<CentralBank>("centralBanks").updateOne(
+    await centralBanksCollection(db).updateOne(
       { _id: bank._id },
       {
         $set: {

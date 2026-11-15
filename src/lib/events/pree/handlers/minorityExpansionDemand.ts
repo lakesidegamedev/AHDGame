@@ -4,8 +4,8 @@ import { applyDeclarativeEffects } from "@/lib/events/substrate/applyEffects";
 import { threeTierTable } from "./tiers";
 import { seededRoll } from "@/lib/events/substrate/rng";
 import { ObjectId } from "mongodb";
-import type { Corporation } from "@/lib/db/types";
-import type { Character } from "@/lib/db/types/character";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const KIND = "pree.minorityExpansionDemand";
 
@@ -72,9 +72,10 @@ const handler: EventHandler = {
     },
   ],
   async buildPayload(ctx) {
-    const corp = await ctx.db
-      .collection<Corporation>("corporations")
-      .findOne({ ceoId: ctx.character._id }, { projection: { _id: 1, name: 1, shareholders: 1 } });
+    const corp = await corporationsCollection(ctx.db).findOne(
+      { ceoId: ctx.character._id },
+      { projection: { _id: 1, name: 1, shareholders: 1 } }
+    );
     if (!corp) return null;
 
     const ceoIdStr = ctx.character._id.toString();
@@ -97,9 +98,10 @@ const handler: EventHandler = {
     );
     const picked = minorityCharacterIds[(roll - 1) % minorityCharacterIds.length]!;
 
-    const shareholder = await ctx.db
-      .collection<Character>("characters")
-      .findOne({ _id: picked }, { projection: { name: 1, homeState: 1 } });
+    const shareholder = await charactersCollection(ctx.db).findOne(
+      { _id: picked },
+      { projection: { name: 1, homeState: 1 } }
+    );
     if (!shareholder) return null;
 
     return {

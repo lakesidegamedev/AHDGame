@@ -5,6 +5,7 @@ import {
   type CycleAnchorContext,
 } from "@/lib/elections/cycleAnchorContext";
 import { getLandtagAnchor } from "@/lib/seeds/de/deLandtag";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 export type ElectionTypeFilter =
   | ""
@@ -144,7 +145,7 @@ export function canonicalEndTurn(
     case "stateSenate": {
       // D10: RU First Secretaries ride the republic-soviet anchor (null =
       // era-gated OFF). Mirrors the canonicalCycle.ts governor override.
-      if (e.countryId === "RU") {
+      if (countryHasFeature("ruUi", e.countryId)) {
         if (anchors.ruRepublicSoviet == null) return null;
         return anchors.ruRepublicSoviet + (cycle - 1) * 192;
       }

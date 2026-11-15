@@ -16,12 +16,8 @@
  *
  * One game year = 48 turns, so each turn applies 1/48th of the rate. This is
  * NOT a day: {@link TURNS_PER_DAY} is 24, and every money figure in the game
- * (revenue, maintenance, wages, growth cost, profit) is a *daily* rate on that
+ * (revenue, maintenance, wages, growth cost, profit) is a daily rate on that
  * 24-turn clock. A game year is therefore two financial days.
- *
- * Was named `GROWTH_RATE_TURNS_PER_DAY`, which read as "48 turns per day" and
- * made the growth rate look like a daily figure in every call site and label
- * that touched it. Renamed in #3934 alongside the UI copy.
  */
 export const GROWTH_RATE_TURNS_PER_YEAR = 48;
 

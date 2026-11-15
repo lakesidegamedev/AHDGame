@@ -6,7 +6,7 @@ import { useState } from "react";
 import { trackAction } from "@/lib/observability/actionBreadcrumb";
 import { Button } from "@/components/ui";
 import { useCurrency } from "@/contexts/CurrencyContext";
-import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
+import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencyCodes";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import type { BondDetail } from "./bondTypes";
 

@@ -1,23 +1,17 @@
 /**
  * Priority Region cluster lifecycle helpers.
  *
- * A party's `priorityRegion` is a 2–4 state cluster the chair picks to
- * record a cluster where the party intends to concentrate its activity.
- * Build Org's fixed bucket contribution is deliberately not multiplied by
- * this designation. Setting the cluster locks the slot for
- * `PRIORITY_REGION_LOCKOUT_TURNS` (168) turns — no changes, no clears,
- * no re-set until the cooldown expires.
+ * A party's `priorityRegion` is a 2-4 state cluster the chair picks to
+ * record where the party intends to concentrate activity. Build Org's fixed
+ * bucket contribution is deliberately not multiplied by this designation.
+ * Setting the cluster locks the slot for `PRIORITY_REGION_LOCKOUT_TURNS`
+ * (168) turns: no changes, no clears, no re-set until the cooldown expires.
  *
- * The cluster max size is normally `PRIORITY_REGION_MAX_STATES` (3),
- * but a party that holds the state-level executive in at least one of
- * the chosen cluster states at SET TIME gets `+PRIORITY_REGION_GOVERNOR
- * _ANCHOR_BONUS` (+1) capacity for that cluster — the "Governor anchor".
- * Anchor status is evaluated only at set time; losing the anchor mid-
- * lockout doesn't shrink the cluster (per 2026-05-23 spec).
- *
- * See `docs/plans/archive/2026-05/2026-05-21-things-left-deferrals.md`
- * §#13 for the original deferral; this module + the routes + UI ship
- * the base mechanic and the anchor together (2026-05-23).
+ * Max size is normally `PRIORITY_REGION_MAX_STATES` (3), but a party holding
+ * the state-level executive in at least one chosen state at SET TIME gets
+ * `PRIORITY_REGION_GOVERNOR_ANCHOR_BONUS` (+1) capacity, the "Governor
+ * anchor". Anchor status is evaluated only at set time; losing the anchor
+ * mid-lockout does not shrink the cluster.
  */
 
 import type { Db } from "mongodb";
@@ -36,9 +30,7 @@ import { getRegionalExecutive } from "@/lib/states/regionalExecutive";
 export type ClusterValidationResult = { ok: true } | { ok: false; reason: string };
 
 /**
- * The set of stateIds known to a country's adjacency map. Used to
- * reject picks that don't correspond to a real state/region in that
- * country.
+ * Whether a stateId is known to the country's adjacency map.
  */
 function isKnownState(country: CountryId, stateId: string): boolean {
   // `adjacentStates` returns [] for unknown — but [] is also a valid
@@ -69,20 +61,15 @@ export function maxClusterSize(hasGovernorAnchor: boolean): number {
 }
 
 /**
- * Returns true when the cluster is a single connected component under
- * the country's adjacency graph — every state in the cluster is
- * reachable from every other state via a chain of cluster-internal
+ * True when the cluster forms one connected component under the country's
+ * adjacency graph: every state reachable from every other via cluster-internal
  * neighbors.
  *
- * Pure: doesn't touch the DB. `adjacentStates(country, id)` is the
- * static adjacency table; the connectedness check is a BFS on the
- * subgraph induced by the cluster.
+ * Pure; no DB access. BFS over the subgraph induced by the cluster.
  *
- * Edge cases:
- *   - Single-state cluster → trivially connected.
- *   - Empty cluster → vacuously connected (caller should reject empty
- *     clusters via the size check, not here).
- *   - Duplicate state IDs → de-duped before traversal.
+ * Edge cases: single state is trivially connected; empty cluster is vacuously
+ * connected (callers should reject empties via size); duplicates de-duped
+ * before traversal.
  */
 export function isClusterConnected(country: CountryId, stateIds: readonly string[]): boolean {
   const unique = Array.from(new Set(stateIds));
@@ -190,7 +177,7 @@ export function isPriorityRegionLocked(
  * state and the helper returns false.
  *
  * Evaluated at SET time only. Losing the anchor mid-lockout does NOT
- * shrink the cluster (per the 2026-05-23 spec).
+ * shrink the cluster.
  */
 export async function partyHoldsStateExecutiveInCluster(
   db: Db,

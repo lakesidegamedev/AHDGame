@@ -1,5 +1,6 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import type { Db } from "mongodb";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /**
  * The turn whose closing balance snapshot captures cash that moves now.
@@ -34,9 +35,10 @@ export function runWithLedgerTurn<T>(turn: number, work: () => Promise<T>): Prom
 export async function resolveLedgerTurn(db: Db): Promise<number | null> {
   const scoped = processingTurn.getStore();
   if (scoped !== undefined) return scoped;
-  const state = await db
-    .collection<{ _id: string; currentTurn?: number }>("gameState")
-    .findOne({ _id: "current" }, { projection: { currentTurn: 1 } });
+  const state = await gameStateCollection<{ _id: string; currentTurn?: number }>(db).findOne(
+    { _id: "current" },
+    { projection: { currentTurn: 1 } }
+  );
   const clock = state?.currentTurn;
   return typeof clock === "number" && Number.isInteger(clock) ? ledgerTurnFromClock(clock) : null;
 }

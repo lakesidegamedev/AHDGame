@@ -4,7 +4,6 @@
  * existing NPC groups, without creating financial profiles or regional player offices.
  */
 import { ObjectId, type ClientSession, type Db } from "mongodb";
-import type { CountryGameState, ElectedOfficial, GameState, NPP } from "@/lib/db/types";
 import { loadEnactedRussianCouncilFormation } from "./councilFormationProposals";
 import type { UnifiedCabinetMember } from "@/lib/db/types/unifiedCabinetMember";
 import {
@@ -24,6 +23,14 @@ import {
   russianRegionalSupportFromDuma,
   type RussianRegionalNpcProfile,
 } from "./rules/regionalCouncilAppointments";
+import { GAME_STATE_PRE_ITERATION_FIELDS } from "@/lib/db/collections/gameState";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
+import { cabinetMembersCollection } from "@/lib/db/repositories/cabinetMembers";
+import { russianDumaElectionResultsCollection } from "@/lib/db/repositories/russianDumaElectionResults";
+import { russianRegionalAuthoritiesCollection } from "@/lib/db/repositories/russianRegionalAuthorities";
 
 export const RUSSIAN_REGIONAL_AUTHORITIES_COLLECTION = "russianRegionalAuthorities";
 export interface RussianRegionalAuthorityRecord extends RussianCouncilRegionalAuthority {
@@ -48,8 +55,7 @@ export interface RussianRegionalCouncilSeatingInputs {
 
 /** Project existing groups and both physical and mirrored incompatible offices in batches. */
 export async function loadRussianRegionalNpcProfiles(db: Db, session: ClientSession) {
-  const profiles = await db
-    .collection<NPP>("npps")
+  const profiles = await nppsCollection(db)
     .find(
       { countryId: "RU", retiredAt: null, isTechnocrat: { $ne: true } },
       { session, batchSize: 1000, projection: { name: 1, party: 1, currentOffice: 1 } }
@@ -58,15 +64,13 @@ export async function loadRussianRegionalNpcProfiles(db: Db, session: ClientSess
   const ids = profiles.map((row) => row._id);
   const incompatible = new Set<string>();
   if (ids.length) {
-    const physical = await db
-      .collection<ElectedOfficial>("electedOfficials")
+    const physical = await electedOfficialsCollection(db)
       .find(
         { nppId: { $in: ids } },
         { session, batchSize: 1000, projection: { nppId: 1, countryId: 1, officeType: 1 } }
       )
       .toArray();
-    const cabinet = await db
-      .collection<UnifiedCabinetMember>("cabinetMembers")
+    const cabinet = await cabinetMembersCollection<UnifiedCabinetMember>(db)
       .find({ nppId: { $in: ids } }, { session, batchSize: 1000, projection: { nppId: 1 } })
       .toArray();
     for (const row of physical)
@@ -113,14 +117,12 @@ export async function materializeRussianRegionalAuthorities(input: {
     !Number.isFinite(now.getTime())
   )
     throw new Error("Regional Council authority needs a transaction, turn and time");
-  const game = await db
-    .collection<GameState>("gameState")
-    .findOne(
-      { _id: "current" },
-      { session, projection: { preset: 1, preIteration: 1, preIterationTurns: 1 } }
-    );
+  const game = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { session, projection: GAME_STATE_PRE_ITERATION_FIELDS }
+  );
   if (game?.preset !== "1991-default") return { kind: "wait" as const, reason: "other-era" };
-  const country = await db.collection<CountryGameState>("countryGameStates").findOne(
+  const country = await countryGameStatesCollection(db).findOne(
     { _id: "RU" },
     {
       session,
@@ -134,9 +136,7 @@ export async function materializeRussianRegionalAuthorities(input: {
   if (!current) return { kind: "wait" as const, reason: "no-seated-duma" };
   const profiles = await loadRussianRegionalNpcProfiles(db, session);
   const eligible = new Set(profiles.filter((row) => row.eligible).map((row) => row.ownerId));
-  const collection = db.collection<RussianRegionalAuthorityRecord>(
-    RUSSIAN_REGIONAL_AUTHORITIES_COLLECTION
-  );
+  const collection = russianRegionalAuthoritiesCollection<RussianRegionalAuthorityRecord>(db);
   const previous = await collection
     .find({ countryId: "RU", preset: "1991-default" }, { session, batchSize: 1000 })
     .toArray();
@@ -169,8 +169,7 @@ export async function materializeRussianRegionalAuthorities(input: {
   if (needsSupport) {
     root = new ObjectId(current.rootId);
     receipt = (
-      await db
-        .collection<RussianDumaResultRecord>("russianDumaElectionResults")
+      await russianDumaElectionResultsCollection<RussianDumaResultRecord>(db)
         .find(
           {
             countryId: "RU",

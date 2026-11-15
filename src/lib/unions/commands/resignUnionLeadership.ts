@@ -7,18 +7,20 @@ import {
   isUnionProsecutionBarred,
   UNION_PROSECUTION_MESSAGE,
 } from "@/lib/unions/unionProsecutionBar";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { unionsCollection } from "@/lib/db/repositories/unions";
+import { unionLeaderVotesCollection } from "@/lib/db/repositories/unionLeaderVotes";
+import type { Document } from "mongodb";
 
 export type ResignUnionLeadershipResult =
   { ok: true; status: 200 } | { ok: false; status: number; error: string };
 
 /**
- * v3 Phase 8 code-review fix #5: a leader-initiated, voluntary release of
- * union leadership. Before this, leadership could never be reclaimed once
- * claimed (`claimUnion` unconditionally 409s whenever the union already has
- * an owner) — one inactive/banned/quitting leader permanently locked an
- * entire industry's union for the rest of the game. Mirrors CEO vacancy:
- * treasury/membershipPressure are left untouched, the union just becomes
- * unmanned (Phase 5's NPC drift resumes for its sectors).
+ * Leader-initiated, voluntary release of union leadership. `claimUnion`
+ * unconditionally 409s when a union already has an owner, so without this an
+ * inactive leader would permanently lock the industry's union. Mirrors CEO
+ * vacancy: treasury and membershipPressure are untouched, the union simply
+ * becomes unmanned (NPC drift resumes for its sectors).
  */
 export async function resignUnionLeadership(
   db: Db,
@@ -32,14 +34,14 @@ export async function resignUnionLeadership(
     return { ok: false, status: 400, error: "Invalid union ID" };
   }
   const unionObjectId = new ObjectId(unionId);
-  const union = await db.collection<Union>("unions").findOne({ _id: unionObjectId });
+  const union = await unionsCollection(db).findOne({ _id: unionObjectId });
   if (!union) {
     return { ok: false, status: 404, error: "Union not found" };
   }
   if (!union.ownerId || union.ownerId.toString() !== character._id.toString()) {
     return { ok: false, status: 403, error: "You do not lead this union." };
   }
-  // Union ban (player suggestion #93): the union is suspended wholesale while
+  // Union ban: the union is suspended wholesale while
   // banned — leadership is frozen in place (not vacated) so a repeal restores
   // the union exactly as the ban found it.
   if (await isUnionsBanned(db, union.countryId)) {
@@ -49,7 +51,7 @@ export async function resignUnionLeadership(
   const now = new Date();
   await runWithOptionalTransaction(
     async (session) => {
-      await db.collection<Union>("unions").updateOne(
+      await unionsCollection(db).updateOne(
         { _id: unionObjectId },
         {
           $set: { ownerId: null, updatedAt: now },
@@ -57,27 +59,29 @@ export async function resignUnionLeadership(
         },
         { session }
       );
-      await db
-        .collection<Character>("characters")
-        .updateOne(
-          { _id: character._id },
-          { $set: { unionLeaderOf: null, updatedAt: now } },
-          { session }
-        );
-      await db.collection("unionLeaderVotes").deleteMany({ unionId: unionObjectId }, { session });
+      await charactersCollection(db).updateOne(
+        { _id: character._id },
+        { $set: { unionLeaderOf: null, updatedAt: now } },
+        { session }
+      );
+      await unionLeaderVotesCollection<Document>(db).deleteMany(
+        { unionId: unionObjectId },
+        { session }
+      );
     },
     async () => {
-      await db.collection<Union>("unions").updateOne(
+      await unionsCollection(db).updateOne(
         { _id: unionObjectId },
         {
           $set: { ownerId: null, updatedAt: now },
           $unset: { pendingLeaderCharacterId: "", ownerType: "" },
         }
       );
-      await db
-        .collection<Character>("characters")
-        .updateOne({ _id: character._id }, { $set: { unionLeaderOf: null, updatedAt: now } });
-      await db.collection("unionLeaderVotes").deleteMany({ unionId: unionObjectId });
+      await charactersCollection(db).updateOne(
+        { _id: character._id },
+        { $set: { unionLeaderOf: null, updatedAt: now } }
+      );
+      await unionLeaderVotesCollection<Document>(db).deleteMany({ unionId: unionObjectId });
     }
   );
 

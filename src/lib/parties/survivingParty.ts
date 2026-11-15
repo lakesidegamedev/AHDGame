@@ -2,12 +2,11 @@
  * A merged party lives on only as a pointer (`mergedIntoPartyId`) to the party
  * that absorbed it. Anything still carrying the absorbed party's id, such as a
  * candidacy filed before the merge, has to be read as the survivor. Otherwise
- * winning that race writes the dead party back onto the winner, which is how
- * fourteen sitting legislators left the US Constitutional Union Party for the
- * party it had absorbed (ticket 1376).
+ * winning that race writes the dead party back onto the winner.
  */
 import type { Db, ObjectId } from "mongodb";
 import type { PoliticalParty } from "@/lib/db/types";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 export type SurvivingPartyResolver = (
   partyId: string | null | undefined
@@ -26,22 +25,25 @@ const MAX_MERGE_DEPTH = 16;
  */
 export async function loadSurvivingPartyResolver(
   db: Db,
-  countryId: string
+  countryId: string,
+  preloaded?: readonly Pick<PoliticalParty, "_id" | "sequentialId" | "mergedIntoPartyId">[]
 ): Promise<SurvivingPartyResolver> {
-  const merged = await db
-    .collection<PoliticalParty>("politicalParties")
-    .find({ countryId, mergedIntoPartyId: { $exists: true, $ne: null } } as never, {
-      projection: { _id: 1, sequentialId: 1, mergedIntoPartyId: 1 },
-    })
-    .toArray();
+  const merged = preloaded
+    ? preloaded.filter((p) => p.mergedIntoPartyId != null)
+    : await politicalPartiesCollection(db)
+        .find({ countryId, mergedIntoPartyId: { $exists: true, $ne: null } } as never, {
+          projection: { _id: 1, sequentialId: 1, mergedIntoPartyId: 1 },
+        })
+        .toArray();
   if (merged.length === 0) return identity;
 
-  const targets = await db
-    .collection<PoliticalParty>("politicalParties")
-    .find({ _id: { $in: merged.map((p) => p.mergedIntoPartyId as ObjectId) } } as never, {
-      projection: { _id: 1, sequentialId: 1 },
-    })
-    .toArray();
+  const targets =
+    preloaded ??
+    (await politicalPartiesCollection(db)
+      .find({ _id: { $in: merged.map((p) => p.mergedIntoPartyId as ObjectId) } } as never, {
+        projection: { _id: 1, sequentialId: 1 },
+      })
+      .toArray());
   const seqById = new Map<string, string>();
   for (const p of [...merged, ...targets]) seqById.set(String(p._id), String(p.sequentialId));
 

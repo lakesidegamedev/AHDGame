@@ -26,11 +26,13 @@ import type { Db } from "mongodb";
 import type { NppForeignPolicyMode } from "@/lib/db/types";
 
 import { foreignPolicyModeFrom } from "@/lib/nppAutonomy/foreignPolicyRollout";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /** The foreign-policy rollout mode, read once per phase pass. */
 export async function readForeignPolicyMode(db: Db): Promise<NppForeignPolicyMode> {
-  const rollout = await db
-    .collection<{ _id: string; nppForeignPolicyMode?: NppForeignPolicyMode }>("gameState")
-    .findOne({ _id: "current" }, { projection: { nppForeignPolicyMode: 1 } });
+  const rollout = await gameStateCollection<{
+    _id: string;
+    nppForeignPolicyMode?: NppForeignPolicyMode;
+  }>(db).findOne({ _id: "current" }, { projection: { nppForeignPolicyMode: 1 } });
   return foreignPolicyModeFrom(rollout?.nppForeignPolicyMode);
 }

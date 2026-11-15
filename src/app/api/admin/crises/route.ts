@@ -6,7 +6,6 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { parseJsonBody } from "@/lib/api/validate";
 import { ALL_CRISIS_TEMPLATES, getTemplateDuration } from "@/lib/crises/templates";
 import type { Crisis } from "@/lib/db/types/crisis";
-import { isCrisisInteractionEnabled } from "@/lib/crises/featureFlag";
 import { getGameState } from "@/lib/gameState";
 import { STARTING_YEAR } from "@/lib/constants/turnTime";
 import { createCrisisInteraction } from "@/lib/crises/interactionEngine";
@@ -16,6 +15,7 @@ import { loadCooldownMap } from "@/lib/crises/autoCrisisCooldown";
 import { floorCrisisDuration } from "@/lib/crises/crisisDuration";
 import { resolveCrisisLocationName, interpolateLocation } from "@/lib/crises/crisisLocation";
 import { ObjectId } from "mongodb";
+import { crisesCollection } from "@/lib/db/repositories/crises";
 
 /** Mirrors {@link CrisisEffect}; nullable fields default to null to match the stored shape. */
 const crisisEffectSchema = z.object({
@@ -64,10 +64,7 @@ export async function GET() {
     if (!adminResult.ok) return adminResult.response;
 
     const db = await getDb();
-    const crises = await db.collection<Crisis>("crises").find({}).sort({ createdAt: -1 }).toArray();
-    // Surface the feature flag so the admin client can gate the template UI
-    // without importing the server-only DB helper into the browser bundle.
-    const interactionEnabled = await isCrisisInteractionEnabled();
+    const crises = await crisesCollection(db).find({}).sort({ createdAt: -1 }).toArray();
     // Surface the game's starting year so the admin client labels start dates
     // against the active preset's calendar (e.g. 1991-default) rather than the
     // 2019 fallback baked into turnToLarpDate.
@@ -75,7 +72,7 @@ export async function GET() {
     const startingYear = gameState?.startingYear ?? STARTING_YEAR;
     // Surface the auto-disaster master flag so the admin client can render its
     // On/Off toggle with the correct current state.
-    const autoDisastersEnabled = gameState?.autoDisastersEnabled === true;
+    const autoDisastersEnabled = gameState?.autoDisastersEnabled !== false;
     const autoCrisisPaused = gameState?.autoCrisisPaused === true;
 
     // Auto-crisis catalog + live cooldown status for the Auto Crisis admin tab.
@@ -97,7 +94,6 @@ export async function GET() {
 
     return NextResponse.json({
       crises,
-      interactionEnabled,
       autoDisastersEnabled,
       autoCrisisPaused,
       startingYear,
@@ -140,12 +136,6 @@ export async function POST(req: Request) {
     let crisis: Omit<Crisis, "_id">;
 
     if ("templateKey" in body) {
-      // Template-based creation — only available when crisis interactions are enabled
-      const enabled = await isCrisisInteractionEnabled();
-      if (!enabled) {
-        return errorResponse(403, "Crisis interaction templates are not enabled");
-      }
-
       const template = ALL_CRISIS_TEMPLATES[body.templateKey];
       if (!template) {
         return errorResponse(400, "Unknown template");
@@ -206,13 +196,13 @@ export async function POST(req: Request) {
       crisis.wireMessageOnEnd = interpolateLocation(crisis.wireMessageOnEnd, locationName);
     }
 
-    const result = await db.collection<Crisis>("crises").insertOne(crisis as Crisis);
+    const result = await crisesCollection(db).insertOne(crisis as Crisis);
     const insertedCrisis: Crisis = { ...(crisis as Crisis), _id: result.insertedId };
 
     // Create the interaction document immediately rather than waiting for the
     // turn processor's `turn === startTurn` branch (which is skipped once the
-    // turn advances past the creation turn). Only when the feature is enabled.
-    if (insertedCrisis.interactionDefinition && (await isCrisisInteractionEnabled())) {
+    // turn advances past the creation turn).
+    if (insertedCrisis.interactionDefinition) {
       await createCrisisInteraction(db, insertedCrisis);
     }
 

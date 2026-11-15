@@ -9,6 +9,10 @@ import {
   type DemocraticCompetition,
   type SeatControlHistoryRow,
 } from "./competition";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { parliamentSeatsHistoryCollection } from "@/lib/db/repositories/parliamentSeatsHistory";
+import { supremeCourtSeatsCollection } from "@/lib/db/repositories/supremeCourtSeats";
 
 interface ParliamentSeatHistoryDoc extends SeatControlHistoryRow {
   countryId: string;
@@ -29,8 +33,7 @@ export async function loadDemocraticCompetition(
   }
   const officeType = chamberKeys.length === 1 ? chamberKeys[0] : { $in: chamberKeys };
   const [officials, history, courtSeats] = await Promise.all([
-    db
-      .collection<ElectedOfficial>("electedOfficials")
+    electedOfficialsCollection(db)
       .find({ countryId, officeType })
       .project<Pick<ElectedOfficial, "officeType" | "party" | "seatsHeld">>({
         officeType: 1,
@@ -38,15 +41,13 @@ export async function loadDemocraticCompetition(
         seatsHeld: 1,
       })
       .toArray(),
-    db
-      .collection<ParliamentSeatHistoryDoc>("parliamentSeatsHistory")
+    parliamentSeatsHistoryCollection<ParliamentSeatHistoryDoc>(db)
       .find({ countryId, officeType })
       .sort({ turn: 1 })
       .toArray(),
     // eslint-disable-next-line local/no-country-literals -- SCOTUS is US-only per #3581 scope; the find filter below carries the country scope
-    countryId === "US"
-      ? db
-          .collection<SupremeCourtSeat>("supremeCourtSeats")
+    countryHasFeature("usLib", countryId)
+      ? supremeCourtSeatsCollection(db)
           .find({ countryId: "US" })
           .project<
             Pick<
