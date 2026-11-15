@@ -11,11 +11,29 @@ import {
 } from "@/lib/observability/sentryFilters";
 import { isTauriAclRefusalMessage, isTauriShell } from "@/lib/clientShell/tauriAclFallback";
 import { scrubSentryEvent } from "@/lib/observability/scrubSentryEvent";
+import { getClientPlayerContext } from "@/lib/observability/clientPlayerContext";
 import {
   dropSentryLog,
   SENTRY_DATA_COLLECTION,
   SENTRY_TRACE_LIFECYCLE,
 } from "@/lib/observability/sentryPrivacy";
+
+/**
+ * Attach the signed-in player's opaque ids so staff can find a player's own
+ * errors from a support ticket. Applied at send time, after the SDK has loaded.
+ */
+export function withPlayerContext<T extends Sentry.ErrorEvent>(event: T): T {
+  const player = getClientPlayerContext();
+  if (!player) return event;
+  event.user = { id: player.userId };
+  event.tags = {
+    ...event.tags,
+    ...(player.characterId ? { "character.id": player.characterId } : {}),
+    ...(player.countryId ? { "country.id": player.countryId } : {}),
+    "user.staff": player.staff === true,
+  };
+  return event;
+}
 
 /** Replays an error the pre-SDK shim caught, through the SDK's normal pipeline. */
 export function captureQueuedError(entry: { kind: string; reason: unknown }): void {
@@ -139,7 +157,7 @@ export function initSentryClient(): typeof Sentry.captureRouterTransitionStart {
       if (message.includes("insertBefore") && message.includes("not a child")) return null;
       if (message.includes("The object can not be found here")) return null;
 
-      return scrubSentryEvent(event);
+      return scrubSentryEvent(withPlayerContext(event));
     },
 
     // Drop navigation transactions that were cancelled because the user hid the tab
