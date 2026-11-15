@@ -19,6 +19,7 @@ import { usersCollection } from "@/lib/db/repositories/users";
 import type { Document } from "mongodb";
 import { userApiKeysCollection } from "@/lib/db/repositories/userApiKeys";
 import { bannedDevicesCollection } from "@/lib/db/repositories/bannedDevices";
+import { banProviderSubjects, unbanProviderSubjects } from "@/lib/auth/providerLinkHistory";
 
 // POST /api/admin/users/ban — Ban or unban a user by userId.
 // Auth: requireAdmin
@@ -109,6 +110,14 @@ export async function POST(request: Request) {
         );
       }
 
+      // Remember the linked login accounts too, so a banned player cannot
+      // sign in with the same Apple, Discord or Google account on a new account.
+      await banProviderSubjects(db, user, {
+        reason: banReason,
+        bannedAt: new Date(),
+        bannedBy: admin.username,
+      });
+
       // Revoke the user's API keys. authRevokedAt kills session JWTs but the
       // key path is a separate credential channel — without this a banned
       // player could keep calling /api/v1/* (transfers, forex) on a live key.
@@ -128,6 +137,7 @@ export async function POST(request: Request) {
       await vacatePartyLeadershipForBannedUser(db, objectId);
       await stripPartyMembershipForBannedUser(db, objectId);
     } else {
+      await unbanProviderSubjects(db, user);
       await usersCollectionHandle.updateOne(
         { _id: objectId },
         {

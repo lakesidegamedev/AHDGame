@@ -202,6 +202,12 @@ export const INDEX_TARGETS = [
       "identityObservations: the 90-day TTL on lastSeen that enforces the retention period, the per-user paged read that also serves the open-run lookup on every write, and the cross-user (track, value) lookup behind duplicate grouping and the shared-account counts. Without the TTL this collection grows without bound and outlives its stated retention.",
   },
   {
+    id: "indexesProviderLinkHistory",
+    label: "Indexes: Provider Link History",
+    description:
+      "providerLinkHistory: the per-account read that deletion and the alt run use, and the subject-hash lookup behind shared login-account scoring and the once-per-Apple-ID exemption. Without them each new link scans the whole collection.",
+  },
+  {
     id: "indexesIntelligence",
     label: "Indexes — Intelligence",
     description:

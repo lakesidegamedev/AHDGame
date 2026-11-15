@@ -335,8 +335,8 @@ export default function CreateCharacterClient() {
           return;
         }
         // Capture Discord linking state. Apple sign-in satisfies the gate on
-        // its own, so the Discord prompt never opens for those accounts.
-        if (data.user.discordId || data.user.appleId) {
+        // its own, once per Apple ID, so the prompt stays closed for those accounts.
+        if (data.user.discordId || data.user.appleExemptsDiscord) {
           dispatchDiscord({ type: "linked" });
         }
         if (data.user.discordId) {

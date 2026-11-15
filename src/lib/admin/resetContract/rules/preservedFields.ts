@@ -291,6 +291,7 @@ export const PRESERVED_COLLECTION_CONTRACT: Readonly<Record<string, PreservedCol
     altClusters: { kind: "keep-whole", reason: KEEP_MODERATION },
     altDigestState: { kind: "keep-whole", reason: KEEP_MODERATION },
     identityObservations: { kind: "keep-whole", reason: KEEP_MODERATION },
+    providerLinkHistory: { kind: "keep-whole", reason: KEEP_MODERATION },
     altScoringRuns: { kind: "keep-whole", reason: KEEP_MODERATION },
     actionAuditLog: { kind: "keep-whole", reason: KEEP_MODERATION },
     auditAnomalies: { kind: "keep-whole", reason: KEEP_MODERATION },

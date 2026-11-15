@@ -194,6 +194,12 @@ export const PRESERVED: CollectionEntry[] = [
       "Per-value IP and fingerprint observation runs behind the Players panel's rotation history and historical duplicate grouping. Moderation evidence, like altLinks — an account that rotated an address to evade detection must not have that trail cleared by a world reset. Registered explicitly rather than left out of the manifest: omission happens to keep it out of the reset sweep today, but the sweep is driven by this list, so an unlisted collection is one nobody can reason about. Self-limiting regardless, via a 90-day TTL on lastSeen.",
   },
   {
+    name: "providerLinkHistory",
+    category: "preserved",
+    notes:
+      "Keyed hashes of the login accounts (Apple, Discord, Google) each account has linked or unlinked. Moderation evidence behind shared-login alt scoring and the once-per-Apple-ID Discord exemption, so a world reset must not clear it. Rows are deleted with their account, never kept past a self-deletion.",
+  },
+  {
     name: "altScoringRuns",
     category: "preserved",
     notes:

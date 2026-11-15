@@ -43,6 +43,7 @@ import { recordHopSkipped, startLakesideHop } from "@/lib/auth/centralLogin/hop"
 import { isHopIssuerReady } from "@/lib/auth/centralLogin/issuerReadiness";
 import type { OAuthCookieStore, OAuthDb, OAuthLoginAdapter } from "./types";
 import { usersCollection } from "@/lib/db/repositories/users";
+import { isProviderSubjectBanned, recordProviderLinkEvent } from "@/lib/auth/providerLinkHistory";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 import { activityLogCollection } from "@/lib/db/repositories/activityLog";
 import type { Document } from "mongodb";
@@ -306,6 +307,10 @@ async function registerNewUser(
     }
     throw err;
   }
+  // A login account tied to a banned player cannot open a new account.
+  if (await isProviderSubjectBanned(db, adapter.provider, adapter.externalId)) {
+    return adapter.resultRedirect("error", "/login", "registration_blocked");
+  }
   const trackingId = existingTrack || randomUUID();
   if (!existingTrack) {
     cookieStore.set("__ahd_track", trackingId, await getTrackingCookieOptions());
@@ -406,6 +411,14 @@ async function registerNewUser(
     auth_provider: adapter.provider,
     has_referral: Boolean(referredByObjectId),
     ...acquisitionEventProperties(acquisition),
+  });
+
+  await recordProviderLinkEvent(db, {
+    userId: newUserId,
+    provider: adapter.provider,
+    providerId: adapter.externalId,
+    action: "link",
+    at: newUserObservedAt,
   });
 
   // Identity history runs. Recorded after the insert so the run carries the
