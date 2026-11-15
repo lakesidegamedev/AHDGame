@@ -58,10 +58,6 @@ vi.mock("@/lib/currency/corpEconomyFields", () => ({
   writeCorpEconomicLocal: (v: number, _code?: string, rate?: number) =>
     typeof rate === "number" && rate > 0 ? v * rate : v,
 }));
-vi.mock("@/lib/corporations/marketShare", () => ({
-  gdpDerivedMarketAnchor: vi.fn((gdp: number) => gdp),
-}));
-
 function cursor<T>(rows: T[]) {
   const c = { toArray: vi.fn().mockResolvedValue(rows), project: vi.fn(() => c) };
   return c;

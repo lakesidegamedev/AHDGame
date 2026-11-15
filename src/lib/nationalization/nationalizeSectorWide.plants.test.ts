@@ -57,9 +57,6 @@ vi.mock("./consequences/apply", () => ({
     .mockResolvedValue({ confidenceBefore: 70, confidenceAfter: 68, legitimacyDelta: 0 }),
 }));
 vi.mock("./ledger", () => ({ recordNationalizationLedger: vi.fn().mockResolvedValue(undefined) }));
-vi.mock("@/lib/corporations/marketShare", () => ({
-  gdpDerivedMarketAnchor: vi.fn((gdp: number) => gdp),
-}));
 vi.mock("@/lib/corporations/brandFacilityLoss", () => ({
   applyBrandFacilityLoss: vi.fn().mockResolvedValue(undefined),
 }));

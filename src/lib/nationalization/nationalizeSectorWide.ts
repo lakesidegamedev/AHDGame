@@ -24,7 +24,7 @@ import {
   readSectorPlantFields,
   type SectorPlantFieldsUpdate,
 } from "@/lib/corporations/sectorTransferCapex";
-import { computeSectorImpliedUnits } from "@/lib/market/unownedHeadroom";
+import { computeSectorImpliedUnits } from "@/lib/market/sectorImpliedUnits";
 import { CAPACITY_ANCHOR_YEAR, capacityPricePerUnit } from "@/lib/constants/capacityEconomy";
 import { getGameState } from "@/lib/gameState";
 import { debitTreasuryCompensation, settleFundedTreasuryCompensation } from "./treasury";

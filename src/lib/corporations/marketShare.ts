@@ -9,7 +9,7 @@
  */
 
 import type { Db, Filter } from "mongodb";
-import type { Corporation, CorporateSector, State, UnownedSector } from "@/lib/db/types";
+import type { Corporation, CorporateSector, State } from "@/lib/db/types";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import {
   resolveSectorHostCurrencyCode,
@@ -17,12 +17,8 @@ import {
   type CorpCapitalCurrencyInfo,
 } from "@/lib/currency/corporationCapital";
 import { readCorpEconomicAnchor } from "@/lib/currency/corpEconomyFields";
-import { getGdpAnchorRate, isKnownGdpAnchorCountry } from "@/lib/currency/gdpAnchorRate";
 import { type CountryId } from "@/lib/constants/countries";
-import { SECTOR_MARKET_GDP_FRACTION, SECTOR_TYPE_COUNT } from "@/lib/constants/corporations";
-import type { OperatingSectorType, MediaDiscriminator } from "@/lib/constants/corporations";
-
-import { computeUnownedHeadroomUnits } from "@/lib/market/unownedHeadroom";
+import type { MediaDiscriminator } from "@/lib/constants/corporations";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
@@ -184,60 +180,6 @@ export function buildCorporationNationalRevenueShareByMarket(
   return shareByKey;
 }
 
-/**
- * @deprecated Limits nothing; kept only for nationalization callers until the
- * GDP market constants are deleted.
- *
- * GDP-derived baseline market size for one (state, sectorType) bucket, in ₳.
- *
- * `preset` selects the era's GDP→₳ normalization (see
- * {@link getGdpAnchorRate}). Omitting it resolves the base config, which is
- * correct for every modern world and WRONG for a 1953 one — callers with a `db`
- * should pass `await loadWorldPreset(db)`.
- */
-export function gdpDerivedMarketAnchor(
-  stateGdp: number,
-  countryId: CountryId,
-  preset?: string
-): number {
-  if (!isKnownGdpAnchorCountry(countryId)) {
-    // Defensive: a state/sector can carry a stale or unrecognized countryId
-    // (e.g. pre-rename legacy data) even though the type says CountryId.
-    // This runs inside per-corp/per-sector turn loops — throwing here takes
-    // down the whole phase for every corporation, not just the bad one.
-    console.warn(
-      `[gdpDerivedMarketAnchor] unrecognized countryId "${countryId}" — falling back to usdExchangeRate=1`
-    );
-  }
-  const usdExchangeRate = getGdpAnchorRate(countryId, preset);
-  return Math.round((stateGdp * usdExchangeRate * SECTOR_MARKET_GDP_FRACTION) / SECTOR_TYPE_COUNT);
-}
-
-/**
- * @deprecated Retained only for turn-phase callers until the stored-cell types
- * are deleted. Unowned headroom in units: persisted `headroomUnits`, else
- * computed from revenue.
- */
-export function unownedHeadroomUnitsOf(
-  sectorType: OperatingSectorType,
-  headroomUnits: number | null | undefined,
-  revenue: number,
-  unitScale: number,
-  industryModel?: string | null,
-  mediaDiscriminator?: MediaDiscriminator | null
-): number {
-  if (typeof headroomUnits === "number" && Number.isFinite(headroomUnits) && headroomUnits >= 0) {
-    return headroomUnits;
-  }
-  return computeUnownedHeadroomUnits(
-    sectorType,
-    revenue,
-    unitScale,
-    industryModel,
-    mediaDiscriminator
-  );
-}
-
 interface BuildSectorMarketShareInputs {
   sectors: CorporateSector[];
   /**
@@ -249,8 +191,6 @@ interface BuildSectorMarketShareInputs {
   corpById?: ReadonlyMap<string, CorpCapitalCurrencyInfo>;
   /** stateId → state document (gdp + countryId). */
   stateById: ReadonlyMap<string, Pick<State, "_id" | "gdp" | "countryId">>;
-  /** @deprecated Ignored. Market share is owned revenue only; removed with the pool types. */
-  unownedSectors?: UnownedSector[];
   /** FX rates so per-corp local revenue normalizes to ₳. */
   exchangeRatesByCurrency: ReadonlyMap<CurrencyCode, number>;
   /**
