@@ -17,3 +17,5 @@ areas: [frontend]
 - Every crisis type has a representative photo. The detail page uses the same photo.
 - The crisis detail page now explains who can respond when you cannot, and what happens if nobody does.
 - Rewrote the descriptions and opening news items for the economic, political and infrastructure crises so they say what is happening, who is hit and what it does in game terms.
+- Rewrote the descriptions, opening news items and closing news items for the natural disasters, the wartime and Vietnam crises, the 1960s unrest crises, and every crisis from the 2027 and 2050s eras. Each now names the place it hits, who suffers, and what it does to output, prices, approval and the other numbers you will see move.
+- On the Actions page, every crisis that needs your decision now starts as a single row showing its photo, severity, a "Your decision" tag and the time left. One click opens it in place, and your own actions stay at the top of the page.
