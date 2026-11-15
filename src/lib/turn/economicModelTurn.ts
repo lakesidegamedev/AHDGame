@@ -23,7 +23,7 @@ import { getCorporateSectorsCollection } from "@/lib/db/collections/corporateSec
 import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 import { enactedLawsCollection } from "@/lib/db/repositories/enactedLaws";
 
-/** Owned + unowned sector revenue rolled up by CorporationType for one region. */
+/** Owned + background sector revenue rolled up by CorporationType for one region. */
 interface RegionRevenue {
   byType: Record<string, number>;
   total: number;
@@ -147,7 +147,7 @@ export async function processEconomicModelTurn(
   // §State-Capitalist lever: per-region + per-country share of ALL the economy's
   // sectors owned by National Corporations (state ownership). When ≥
   // STATE_CAPITALIST_OWNERSHIP_THRESHOLD it drives the State-Capitalist affinity.
-  // The denominator counts EVERY sector — corporate-owned AND unowned — so the
+  // The denominator counts EVERY sector, corporate-owned and background, so the
   // share reflects how much of the whole economy the state controls.
   const natCorpIds = new Set<string>();
   for (const c of corporations) if (isStateOwned(c)) natCorpIds.add(String(c._id));
@@ -161,10 +161,10 @@ export async function processEconomicModelTurn(
       bump(ownSoeByCountry, country);
     }
   }
-  // Unowned sectors are part of the economy NOT nationalized — they count toward the
+  // The background economy is part of the economy NOT nationalized: it counts toward the
   // TOTAL (denominator) but never as state-owned.
   const countryByState = new Map(states.map((s) => [String(s._id), String(s.countryId)]));
-  for (const [stateId, list] of sectorTax.unownedByState) {
+  for (const [stateId, list] of sectorTax.backgroundByState) {
     const country = countryByState.get(String(stateId));
     if (country) bump(ownTotalByCountry, country, list.length);
   }
@@ -191,12 +191,12 @@ export async function processEconomicModelTurn(
     const byType: Record<string, number> = {};
     let total = 0;
     const owned = sectorTax.ownedByState.get(stateId) ?? [];
-    const unowned = sectorTax.unownedByState.get(stateId) ?? [];
+    const background = sectorTax.backgroundByState.get(stateId) ?? [];
     for (const r of owned) {
       if (r.sectorType) byType[r.sectorType] = (byType[r.sectorType] ?? 0) + r.revenue;
       total += r.revenue;
     }
-    for (const r of unowned) {
+    for (const r of background) {
       if (r.sectorType) byType[r.sectorType] = (byType[r.sectorType] ?? 0) + r.revenue;
       total += r.revenue;
     }

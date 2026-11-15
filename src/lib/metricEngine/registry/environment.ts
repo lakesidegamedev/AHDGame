@@ -78,7 +78,7 @@ export function mixIntensity(rows: SectorRow[]): number {
 
 function sectorRows(ctx: EngineNodeContext): SectorRow[] {
   const p = ctx.providers["sectorRevenueTax"] as SectorRevenueTaxPayload | undefined;
-  return p ? [...p.owned, ...p.unowned] : [];
+  return p ? [...p.owned, ...p.background] : [];
 }
 
 const envResp = (ctx: EngineNodeContext): number =>

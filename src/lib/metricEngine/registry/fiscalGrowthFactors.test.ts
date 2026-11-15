@@ -180,7 +180,7 @@ describe("wageGrowth/tradeGrowth metric registration", () => {
 describe("tradeGrowth → GDP net-exports coupling (T5, lagged)", () => {
   const payload = (): SectorRevenueTaxPayload => ({
     owned: [{ revenue: 1000, currentGrowthRate: 3 }],
-    unowned: [{ revenue: 500 }],
+    background: [{ revenue: 500 }],
     federalSalesTax: 0,
     stateSalesTax: 6,
     countryId: "US",
@@ -320,7 +320,7 @@ describe("§6.1 sector GDP concentration in sectorGrowthNode (P7b, lagged model)
       { revenue: 1000, currentGrowthRate: 6, sectorType: "defense" }, // aligned, high growth
       { revenue: 1000, currentGrowthRate: 0, sectorType: "agriculture" }, // off-model, flat
     ],
-    unowned: [],
+    background: [],
     federalSalesTax: 0,
     stateSalesTax: 6, // US neutral → no consumption-tax gap
     countryId: "US",

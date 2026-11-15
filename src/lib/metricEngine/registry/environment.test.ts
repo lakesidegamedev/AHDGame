@@ -28,7 +28,7 @@ function ctx(over: {
       ? {
           sectorRevenueTax: {
             owned: over.rows,
-            unowned: [],
+            background: [],
             federalSalesTax: 0,
             stateSalesTax: 0,
             countryId: "US",

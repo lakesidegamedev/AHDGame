@@ -2,8 +2,8 @@
  * What drives GDP growth and what corporations can do to raise it. GDP growth is
  * the revenue-weighted average of sector growth rates in the region
  * (computeWeightedGrowthRate), so owned sectors that grow realized revenue
- * (computeRealizedRevenueGrowthRate) lift it while unowned sectors grow at
- * DEFAULT_UNOWNED_GROWTH_RATE. Unemployment follows growth by Okun's law, and sales
+ * (computeRealizedRevenueGrowthRate) lift it while the background economy grows at
+ * DEFAULT_BACKGROUND_GROWTH_RATE. Unemployment follows growth by Okun's law, and sales
  * or VAT rates above a country's neutral rate cut growth (computeConsumptionTaxAdjustedGrowthRate).
  */
 /**
@@ -30,8 +30,8 @@ import { BR_ECONOMY } from "@/lib/countries/br/economy";
 import { realRevenueGrowth } from "@/lib/metricEngine/rules/revenueGrowthSignal";
 import { CA_ECONOMY } from "@/lib/countries/ca/economy";
 
-/** Default daily growth rate for unowned sectors (background economy) */
-export const DEFAULT_UNOWNED_GROWTH_RATE = 0.5;
+/** Default growth rate of the background economy (regional output outside simulated plants) */
+export const DEFAULT_BACKGROUND_GROWTH_RATE = 0.5;
 
 /** Inertia weight for smoothing with previous reading (prevents jarring jumps) */
 export const INERTIA = 0.4;
@@ -104,12 +104,12 @@ export const UNEMPLOYMENT_MAX = 15.0;
 
 /**
  * Compute revenue-weighted average growth rate for a collection of sectors.
- * Owned sectors contribute their growthRate; unowned sectors use a low background growth
+ * Owned sectors contribute their growthRate; the background economy uses a low growth
  * rate so owned-sector contractions can still pull state GDP negative.
  */
 export function computeWeightedGrowthRate(
   ownedSectors: Array<{ revenue: number; currentGrowthRate: number; sectorType?: string }>,
-  unownedSectors: Array<{ revenue: number; sectorType?: string }>,
+  backgroundSectors: Array<{ revenue: number; sectorType?: string }>,
   /**
    * §6.1 economic-model concentration (P7b): multiplies each sector's WEIGHT by
    * its alignment to the region's model. Defaults to 1 (no concentration) — when
@@ -128,14 +128,14 @@ export function computeWeightedGrowthRate(
     weightedGrowth += sector.currentGrowthRate * w;
   }
 
-  for (const sector of unownedSectors) {
+  for (const sector of backgroundSectors) {
     const w = sector.revenue * wm(sector.sectorType);
     totalRevenue += w;
-    // Unowned sectors contribute default background growth
-    weightedGrowth += DEFAULT_UNOWNED_GROWTH_RATE * w;
+    // The background economy contributes default growth
+    weightedGrowth += DEFAULT_BACKGROUND_GROWTH_RATE * w;
   }
 
-  if (totalRevenue === 0) return DEFAULT_UNOWNED_GROWTH_RATE;
+  if (totalRevenue === 0) return DEFAULT_BACKGROUND_GROWTH_RATE;
 
   return weightedGrowth / totalRevenue;
 }
@@ -184,7 +184,7 @@ export const SECTOR_SIGNAL_MAX = 15;
  * Region level, not per sector: no per-sector prior-revenue snapshot exists,
  * but the phase already persists per-region stocks on the `states` doc.
  *
- * The unowned 0.5 pin is omitted: realized-revenue delta is already bounded
+ * The background 0.5 pin is omitted: realized-revenue delta is already bounded
  * and EMA-smoothed downstream, so the pin would be a constant drag.
  *
  * Returns `null` when there is no usable baseline (flip turn, unseeded region,

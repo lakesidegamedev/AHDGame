@@ -78,7 +78,7 @@ describe("freightLogisticsAdequacyTerm", () => {
  */
 function roadCtx(payload: {
   owned: Array<{ revenue: number; sectorType?: string }>;
-  unowned: Array<{ revenue: number; sectorType?: string }>;
+  background: Array<{ revenue: number; sectorType?: string }>;
 }): EngineNodeContext {
   return {
     current: {},
@@ -91,7 +91,7 @@ function roadCtx(payload: {
 }
 
 describe("roadConditionNode — freight wiring (ticket #1143)", () => {
-  const empty = { owned: [], unowned: [] };
+  const empty = { owned: [], background: [] };
 
   it("a freight-heavy region ends with better roads than a freight-thin one", () => {
     const heavy = roadConditionNode.compute!(
@@ -100,7 +100,7 @@ describe("roadConditionNode — freight wiring (ticket #1143)", () => {
           { revenue: 200, sectorType: "logistics" },
           { revenue: 800, sectorType: "manufacturing" },
         ],
-        unowned: [],
+        background: [],
       })
     );
     const thin = roadConditionNode.compute!(
@@ -109,7 +109,7 @@ describe("roadConditionNode — freight wiring (ticket #1143)", () => {
           { revenue: 10, sectorType: "logistics" },
           { revenue: 990, sectorType: "manufacturing" },
         ],
-        unowned: [],
+        background: [],
       })
     );
     expect(heavy).toBeGreaterThan(thin);
@@ -117,7 +117,7 @@ describe("roadConditionNode — freight wiring (ticket #1143)", () => {
 
   it("building freight lifts roads above the no-freight-sector baseline", () => {
     const noFreight = roadConditionNode.compute!(
-      roadCtx({ owned: [{ revenue: 1000, sectorType: "manufacturing" }], unowned: [] })
+      roadCtx({ owned: [{ revenue: 1000, sectorType: "manufacturing" }], background: [] })
     );
     const built = roadConditionNode.compute!(
       roadCtx({
@@ -125,7 +125,7 @@ describe("roadConditionNode — freight wiring (ticket #1143)", () => {
           { revenue: 150, sectorType: "logistics" },
           { revenue: 850, sectorType: "manufacturing" },
         ],
-        unowned: [],
+        background: [],
       })
     );
     expect(built).toBeGreaterThan(noFreight);
