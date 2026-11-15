@@ -338,6 +338,10 @@ export function CampaignMap(props: CampaignMapProps) {
           borderRadius: 12,
           overflow: "hidden",
           background: BLEND.inset,
+          // As wide as the column allows while the whole map still fits on screen
+          // under the navbar, title and controls; the frame keeps the map's shape.
+          width: `min(100%, calc((100vh - 220px) * ${geo.w / geo.h}))`,
+          marginInline: "auto",
         }}
       >
         <svg
