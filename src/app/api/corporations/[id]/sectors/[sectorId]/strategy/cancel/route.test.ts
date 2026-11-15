@@ -304,4 +304,36 @@ describe("POST /strategy/cancel", () => {
     expect(res.status).toBe(409);
     expect(db.collectionMocks["corporateSectors"]!.updateOne).not.toHaveBeenCalled();
   });
+
+  it("returns 409 while a turn is processing and writes nothing", async () => {
+    await wireDb();
+    await wireAuth();
+    const { POST } = await import("./route");
+
+    db.collectionMocks["corporateSectors"]!.findOne.mockResolvedValue({
+      _id: new ObjectId(sectorId),
+      corporationId: new ObjectId(corpId),
+      strategyId: "oil_gas",
+      transitionFromStrategyId: "standard",
+      transitionStartTurn: 94,
+      revenue: 100_000,
+    });
+    db.collectionMocks["gameState"]!.findOne.mockResolvedValue({
+      _id: "current",
+      currentTurn: 100,
+      isProcessing: true,
+      processingStartedAt: new Date(),
+      processingHeartbeatAt: new Date(),
+    });
+
+    const res = await POST(new Request("http://localhost/api/test", { method: "POST" }), {
+      params: Promise.resolve({ id: corpId, sectorId }),
+    });
+    const body = await res.json();
+    expect(res.status).toBe(409);
+    expect(body.error).toMatch(/processing/i);
+    expect(db.collectionMocks["corporateSectors"]!.findOne).not.toHaveBeenCalled();
+    expect(db.collectionMocks["corporateSectors"]!.updateOne).not.toHaveBeenCalled();
+    expect(db.collectionMocks["corporations"]!.updateOne).not.toHaveBeenCalled();
+  });
 });
