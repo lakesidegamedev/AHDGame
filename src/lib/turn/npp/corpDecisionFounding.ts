@@ -148,10 +148,29 @@ export function decideNppFounding({
             aggregate: exceptionalShortageEntry ? "max" : "mean",
           });
       const unmetSizing = foundingUnmetSizing({ unmetUnits, starterUnits });
-      const sizeCap = isExtraction
-        ? Math.min(unmetSizing.sizeCap, starterUnits * NPP_EXTRACTION_FOUNDING_MAX_FACILITIES)
-        : unmetSizing.sizeCap;
-      const unmetBlocksEntry = unmetSizing.blocksEntry;
+      // NPP entrants share a per-turn budget of new capacity in the cell and
+      // need a price signal that has held; player autopilot is not paced.
+      const paced = corp.ceoType === "npp";
+      const paceRoom =
+        paced && placementSignals?.paceRoomUnitsOf
+          ? placementSignals.paceRoomUnitsOf(foundingTarget, demandClaims, {
+              strategyId: foundingStrategyId,
+              aggregate: exceptionalShortageEntry ? "max" : "mean",
+            })
+          : Number.POSITIVE_INFINITY;
+      const signalHeld =
+        !paced ||
+        !placementSignals?.priceSignalPersistedOf ||
+        placementSignals.priceSignalPersistedOf(foundingTarget, {
+          strategyId: foundingStrategyId,
+        });
+      const sizeCap = Math.min(
+        isExtraction
+          ? Math.min(unmetSizing.sizeCap, starterUnits * NPP_EXTRACTION_FOUNDING_MAX_FACILITIES)
+          : unmetSizing.sizeCap,
+        paceRoom
+      );
+      const unmetBlocksEntry = unmetSizing.blocksEntry || starterUnits > paceRoom || !signalHeld;
       const sizedUnits =
         starterUnits > 0
           ? Math.max(

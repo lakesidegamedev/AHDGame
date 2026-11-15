@@ -120,7 +120,7 @@ function stateRatio(supply: number, demand: number): number {
   return raw <= knee ? raw : knee + Math.log(raw / knee + 1) * 0.5;
 }
 
-function commodityPriceDocs(rng: () => number): Record<string, unknown>[] {
+function commodityPriceDocs(rng: () => number, turn: number): Record<string, unknown>[] {
   const docs: Record<string, unknown>[] = [];
   for (const commodity of COMMODITY_TYPES) {
     const nationalSupply: Record<string, number> = {};
@@ -167,6 +167,7 @@ function commodityPriceDocs(rng: () => number): Record<string, unknown>[] {
       stateDemand,
       globalSupply,
       globalDemand,
+      turn: turn - 1,
       updatedAt: new Date("2026-10-01T00:00:00Z"),
     });
   }
@@ -354,7 +355,18 @@ export async function seedNppDecisionsWorld(
   await db.collection("corporations").insertMany(corpDocs as never[]);
   await db.collection("corporateSectors").insertMany(sectorDocsAll as never[]);
   await db.collection("states").insertMany(stateDocs() as never[]);
-  await db.collection("commodityPrices").insertMany(commodityPriceDocs(rng) as never[]);
+  const priceDocs = commodityPriceDocs(rng, turn);
+  await db.collection("commodityPrices").insertMany(priceDocs as never[]);
+  // The prior turn's snapshot, so a price that is above base now has held.
+  await db.collection("commodityPriceHistory").insertMany(
+    priceDocs.map((doc) => ({
+      commodity: doc.commodity,
+      turn: Number(doc.turn) - 1,
+      globalPrice: doc.globalPrice,
+      nationalPrices: doc.nationalPrices,
+      statePrices: doc.statePrices,
+    })) as never[]
+  );
   await db.collection("npps").insertMany(nppDocs(nppCorporations) as never[]);
   await db.collection("exchangeRates").insertMany(
     Object.entries(FX_BY_CURRENCY).map(([currencyCode, rate]) => ({

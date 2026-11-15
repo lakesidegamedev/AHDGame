@@ -22,6 +22,11 @@ import {
 } from "@/lib/turn/npp/rules/sectorConcentration";
 import { makeNppCorpDecision } from "@/lib/turn/npp/makeCorpDecision";
 import { addDemandClaim, netUnmetDemandUnits } from "@/lib/turn/npp/rules/demandClaims";
+import {
+  createPaceLedger,
+  createPricePersistence,
+  loadPriorPriceSnapshots,
+} from "@/lib/turn/npp/buildPacingShell";
 import { demandClaimKeyOf, loadInFlightDemandClaims } from "@/lib/turn/npp/demandClaimsShell";
 import { strategyStateNeedsPersist } from "@/lib/turn/npp/rules/strategyCadence";
 export { makeNppCorpDecision } from "@/lib/turn/npp/makeCorpDecision";
@@ -449,8 +454,20 @@ export async function processNppCorporationDecisions(
     gapMemo.set(memoKey, value);
     return value;
   };
-  placementSignals.claimDemandUnits = (cell, units) =>
+  // Per-turn ceiling on new NPP capacity per gap and per country and lane, and
+  // the persisted-price gate on founding (rules/buildPacing).
+  const paceLedger = createPaceLedger({
+    gapKeyOf: demandClaimKeyOf,
+    grossUnmetOf: (cell, options) => readGap(cell, options).unmet,
+  });
+  const priorPrices = await loadPriorPriceSnapshots(db, commodityPriceDocs);
+  placementSignals.priceSignalPersistedOf = createPricePersistence(priceByCommodity, priorPrices);
+  placementSignals.paceRoomUnitsOf = (cell, pending, options) =>
+    paceLedger.roomOf(cell, pending, options);
+  placementSignals.claimDemandUnits = (cell, units) => {
     addDemandClaim(demandClaims, readGap(cell, undefined).claimKey, units);
+    paceLedger.grant(cell, units);
+  };
   placementSignals.unmetDemandUnitsOf = (cell, options) => {
     const { unmet, claimKey } = readGap(cell, options);
     return netUnmetDemandUnits(unmet, demandClaims.get(claimKey));
