@@ -17,6 +17,13 @@ import {
   SENTRY_TRACE_LIFECYCLE,
 } from "@/lib/observability/sentryPrivacy";
 
+/** Replays an error the pre-SDK shim caught, through the SDK's normal pipeline. */
+export function captureQueuedError(entry: { kind: string; reason: unknown }): void {
+  const hint = { mechanism: { type: `auto.browser.queued.${entry.kind}`, handled: false } };
+  if (entry.reason instanceof Error) Sentry.captureException(entry.reason, hint);
+  else Sentry.captureMessage(String(entry.reason), "error");
+}
+
 export function initSentryClient(): typeof Sentry.captureRouterTransitionStart {
   // Browser bundles only receive NEXT_PUBLIC_* environment variables.
   const dsn = process.env.NEXT_PUBLIC_SENTRY_DSN;

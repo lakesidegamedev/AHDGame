@@ -33,6 +33,7 @@ import type {
   VerifyResult,
 } from "./types";
 import { healRunsCollection } from "@/lib/db/repositories/healRuns";
+import { worldOutOfScope } from "./worldScope";
 
 export const HEAL_RUNS_COLLECTION = "healRuns";
 
@@ -57,6 +58,8 @@ export async function runDetect(
   args: { env: HealEnv; now?: Date }
 ): Promise<DetectResult> {
   assertEnvAllowed(defect, args.env);
+  const outOfScope = await worldOutOfScope(db, defect);
+  if (outOfScope) return { affected: 0, sample: [], notes: [outOfScope] };
   return defect.detect(db, { env: args.env, dryRun: true, now: args.now ?? new Date() });
 }
 
@@ -120,6 +123,22 @@ export async function runPlan(
   assertEnvAllowed(defect, args.env);
   const now = args.now ?? new Date();
   const ctx = { env: args.env, dryRun: true, now };
+
+  const outOfScope = await worldOutOfScope(db, defect);
+  if (outOfScope) {
+    const turnLock = await readTurnLock(db, now);
+    return {
+      defectId: defect.id,
+      env: args.env,
+      plan: { affected: 0, touched: [], moneyDelta: 0, summary: outOfScope },
+      detect: { affected: 0, sample: [], notes: [outOfScope] },
+      guards: { ok: true, verdicts: [], refusal: "" },
+      turnLock,
+      token: null,
+      tokenWithheld: outOfScope,
+      warnings: defectWarnings(defect),
+    };
+  }
 
   const detect = await defect.detect(db, ctx);
   const plan = await defect.plan(db, ctx);
@@ -204,6 +223,8 @@ export async function runApply(
   if (args.env === "prod" && args.confirmProd !== true) {
     return { ok: false, refusal: "env is prod and confirmProd was not set — refusing" };
   }
+  const outOfScope = await worldOutOfScope(db, defect);
+  if (outOfScope) return { ok: false, refusal: outOfScope };
 
   // Re-derive from live state. Never trust the plan the caller is holding.
   const ctx = { env: args.env, dryRun: false, now, requestedBy: args.requestedBy };

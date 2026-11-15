@@ -15,6 +15,7 @@ import type { CountryLayer1Model, DemographicPosition } from "@/lib/seeds/intern
 import { trRegionCensusData, type TRRegionLayer1 } from "@/lib/seeds/tr/trRegionCensusData";
 import { trRegionCensusDataModern } from "./data/trRegionCensusDataModern";
 import { trRegionCensusData1953 } from "@/lib/seeds/tr/trRegionCensusData1953";
+import { trRegionCensusData1991 } from "@/lib/seeds/tr/trRegionCensusData1991";
 import type { EraId } from "@/lib/seeds/presetSelector";
 
 const TR_GROUP_IDS = [
@@ -195,7 +196,7 @@ const ERA_POSITIONS: Partial<Record<EraId, EraPositions>> = {
 const ERA_CENSUS: Partial<Record<EraId, Record<string, TRRegionLayer1>>> = {
   "1953": trRegionCensusData1953,
   "1979": trRegionCensusData,
-  "1991": trRegionCensusData,
+  "1991": trRegionCensusData1991,
   "1999": trRegionCensusData,
   "2007": trRegionCensusData,
   "2019": trRegionCensusDataModern,

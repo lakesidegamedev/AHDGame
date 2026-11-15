@@ -5,6 +5,8 @@ import { useTranslations } from "next-intl";
 import { MessageBanner, SpinnerIcon } from "./shared";
 import { apiErrorText } from "@/lib/errors/catalog";
 import { isPlaceholderEmail } from "@/lib/auth/placeholderEmail";
+import { AccountFieldsNotice } from "@/components/auth/AccountFieldsNotice";
+import { useAccountFieldsMode } from "@/hooks/useAccountFieldsMode";
 
 interface Props {
   email: string;
@@ -13,6 +15,7 @@ interface Props {
 
 export function EmailSection({ email, hasPassword }: Props) {
   const t = useTranslations("settings");
+  const accountFieldsMode = useAccountFieldsMode();
   const hasRealEmail = !isPlaceholderEmail(email);
   const [editing, setEditing] = useState(false);
   const [newEmail, setNewEmail] = useState("");
@@ -61,6 +64,20 @@ export function EmailSection({ email, hasPassword }: Props) {
 
   const inputCls =
     "w-full rounded-xl border border-card-border bg-background px-4 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50 disabled:cursor-not-allowed";
+
+  if (accountFieldsMode !== "off") {
+    return (
+      <div className="space-y-3">
+        <div>
+          <label className="block text-xs font-medium text-muted mb-1">{t("page.email")}</label>
+          <div className="rounded-xl border border-card-border bg-background/50 px-4 py-2.5 text-sm text-foreground">
+            {hasRealEmail ? email : t("email.noneOnFile")}
+          </div>
+        </div>
+        <AccountFieldsNotice kind="email" mode={accountFieldsMode} />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-3">

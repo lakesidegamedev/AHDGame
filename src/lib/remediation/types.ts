@@ -169,6 +169,12 @@ export interface Defect {
   /** Environments this defect may be healed in. */
   envs: HealEnv[];
   /**
+   * ISO date. Set when the pinned rows belong to one world: in a world whose
+   * epoch started on or after this date the defect reports 0 and refuses to
+   * plan or apply (see worldScope.ts).
+   */
+  worldsStartedBefore?: string;
+  /**
    * Re-running apply() after success must be a safe no-op. The runner refuses
    * to register a non-idempotent defect: that is a migration.
    */

@@ -351,6 +351,8 @@ export const defect: Defect = {
     note: "banks are chartered at runtime by player corporations owning a financial sector (banking/charter issueCharter); seeds create no charters — only the bankCharterHistory runtime collection entry in the seed manifest and the corporations_bankCharter_status index.",
   },
   envs: ["prod"],
+  // The legs pin rows of one world; a later world owes none of them.
+  worldsStartedBefore: "2026-11-12T00:00:00.000Z",
   idempotent: true,
   // Deliberate: this restores value the merge bug destroyed on top of the
   // shell cash the merger already moved, so the money-conserving guard is
