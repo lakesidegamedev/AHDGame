@@ -1,5 +1,6 @@
 "use client";
 
+import { WikiHelpLink } from "@/components/wiki/WikiHelpLink";
 import { useCallback, useEffect, useState } from "react";
 import type { CountryId } from "@/lib/constants/countriesCore";
 import { WhippedBadge } from "@/components/bills/WhippedBadge";
@@ -221,7 +222,10 @@ export default function ImpeachmentPanel({
   return (
     <section className="rounded-xl border border-card-border bg-card p-4 sm:p-5">
       <div className="flex items-center justify-between gap-2 flex-wrap">
-        <h2 className="text-sm font-bold text-foreground">Impeachment</h2>
+        <div className="flex items-center gap-2">
+          <h2 className="text-sm font-bold text-foreground">Impeachment</h2>
+          <WikiHelpLink screen="impeachment" />
+        </div>
         {stageChip && (
           <span className="text-[11px] rounded-full border border-warning/30 bg-warning/10 px-2 py-0.5 text-warning font-semibold uppercase tracking-wide">
             {stageChip}

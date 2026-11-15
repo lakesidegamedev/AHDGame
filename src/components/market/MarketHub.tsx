@@ -1,5 +1,6 @@
 "use client";
 
+import { WikiHelpLink } from "@/components/wiki/WikiHelpLink";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { ChevronDown, ChevronUp } from "lucide-react";
@@ -192,7 +193,11 @@ export function MarketHub() {
       <main className="mx-auto max-w-7xl space-y-4 px-4 py-6 sm:px-6">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h1 className="text-heading-lg font-bold text-foreground">The Market</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-heading-lg font-bold text-foreground">The Market</h1>
+              {tab === "stocks" && <WikiHelpLink screen="stock-market" />}
+              {tab === "bonds" && <WikiHelpLink screen="bond-market" />}
+            </div>
             <p className="text-sm text-muted">
               Stocks, bonds, funds, sectors, commodities, supply deals and currencies in one place.
             </p>
