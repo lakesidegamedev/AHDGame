@@ -22,7 +22,15 @@ import {
   resolveSectorHostCurrencyCode,
 } from "@/lib/currency/corporationCapital";
 import { readCorpEconomicAnchor } from "@/lib/currency/corpEconomyFields";
-import { OPERATING_SECTOR_TYPES, OPERATING_SECTOR_TYPE_LABELS, type OperatingSectorType, ATTACK_OWNED_CONTESTED_FRACTION, calculateWorkers, getDominanceAttackEaseMultiplier, getUnderdogAttackAmplifier } from "@/lib/constants/corporations";
+import {
+  OPERATING_SECTOR_TYPES,
+  OPERATING_SECTOR_TYPE_LABELS,
+  type OperatingSectorType,
+  ATTACK_OWNED_CONTESTED_FRACTION,
+  calculateWorkers,
+  getDominanceAttackEaseMultiplier,
+  getUnderdogAttackAmplifier,
+} from "@/lib/constants/corporations";
 import { roundMarketingStrength } from "@/lib/utils/formatters";
 import {
   calculateAttackCostAnchor,

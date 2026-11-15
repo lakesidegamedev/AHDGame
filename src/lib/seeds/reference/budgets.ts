@@ -29,7 +29,11 @@ import { getCostClass } from "@/lib/era/legislationCostCatalog";
 import type { Corporation, CorporateSector } from "@/lib/db/types";
 import type { EnactedLaw, FederalBudget, StateBudget } from "@/lib/db/types/budget";
 import type { LegislationPolicyOption, LegislationType } from "@/lib/db/types/legislation";
-import { OPERATING_SECTOR_TYPE_LABELS, OPERATING_SECTOR_TYPES, type OperatingSectorType } from "@/lib/constants/corporations";
+import {
+  OPERATING_SECTOR_TYPE_LABELS,
+  OPERATING_SECTOR_TYPES,
+  type OperatingSectorType,
+} from "@/lib/constants/corporations";
 import type { CorporationType } from "@/lib/constants/corporations";
 import { getEraUnitScale } from "@/lib/constants/sectorSeedEra";
 import { computeSectorImpliedUnits } from "@/lib/market/sectorImpliedUnits";

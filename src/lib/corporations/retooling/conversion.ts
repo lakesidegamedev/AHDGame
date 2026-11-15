@@ -68,7 +68,7 @@ export function industryConversionFields(
     sectorType: toLane,
     strategyId: toStrategyId,
     capitalStock: stock,
-    ...seedPlantLedger({ ...to, strategyId: toStrategyId }, stock),
+    ...seedPlantLedger({ sectorType: toLane, strategyId: toStrategyId }, stock),
     buildQueue: rescaleBuildQueueForStrategyChange(from.buildQueue ?? [], ratio),
     // Old products' asking policies do not apply to the new outputs.
     producerQuotes: {},

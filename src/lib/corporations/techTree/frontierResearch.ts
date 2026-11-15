@@ -14,12 +14,9 @@ import { SECTOR_STRATEGIES } from "@/lib/constants/sectorStrategies";
 import type { SectorStrategy } from "@/lib/constants/sectorStrategyTypes";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
-/** Mongo filter for the corporations whose tech tree is this lane's. */
+/** Mongo filter for the corporations whose tech tree is this sector type's. */
 export function laneCorporationFilter(lane: OperatingSectorType): Record<string, unknown> {
-  // null matches an absent field, so a plain lane excludes the folded ones.
-  return {
-    type: lane,
-  };
+  return { type: lane };
 }
 
 export async function loadSectorFrontierResearch(
@@ -83,8 +80,8 @@ export interface FrontierResearchIdentityRow {
 
 /**
  * Folds grouped identity rows into per-lane totals. A row counts toward a lane
- * only when its identity is exactly that lane's (the `laneCorporationFilter`
- * match), so the totals equal what `loadSectorFrontierResearch` returns.
+ * only when its type is that lane (the `laneCorporationFilter` match), so the
+ * totals equal what `loadSectorFrontierResearch` returns.
  */
 export function frontierResearchByLane(
   rows: readonly FrontierResearchIdentityRow[]

@@ -2,7 +2,12 @@ import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import { handleRouteError } from "@/lib/api/errors";
-import { OPERATING_SECTOR_TYPES, OPERATING_SECTOR_TYPE_LABELS, isOperatingSectorType, type OperatingSectorType } from "@/lib/constants/corporations";
+import {
+  OPERATING_SECTOR_TYPES,
+  OPERATING_SECTOR_TYPE_LABELS,
+  isOperatingSectorType,
+  type OperatingSectorType,
+} from "@/lib/constants/corporations";
 import {
   COUNTRY_CONFIGS,
   COUNTRY_ORDER,

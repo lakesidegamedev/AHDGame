@@ -5,7 +5,12 @@ import { getDb } from "@/lib/mongodb";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { requireBotToken } from "@/lib/api/requireBotToken";
 import { checkRateLimit, rateLimitResponse, BOT_FINANCIAL_LIMITS } from "@/lib/api/rateLimit";
-import { OPERATING_SECTOR_TYPE_LABELS, calculateWorkers, isOperatingSectorType, OPERATING_SECTOR_TYPES } from "@/lib/constants/corporations";
+import {
+  OPERATING_SECTOR_TYPE_LABELS,
+  calculateWorkers,
+  isOperatingSectorType,
+  OPERATING_SECTOR_TYPES,
+} from "@/lib/constants/corporations";
 
 import {
   fxRateForCorpFromMap,

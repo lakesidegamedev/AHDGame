@@ -14,7 +14,11 @@ import type {
 import type { NationalizeProvision } from "@/lib/db/types/legislation";
 import type { DocketCase } from "@/lib/db/types/scotus";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
-import { OPERATING_SECTOR_TYPE_LABELS, type CorporationType, type OperatingSectorType } from "@/lib/constants/corporations";
+import {
+  OPERATING_SECTOR_TYPE_LABELS,
+  type CorporationType,
+  type OperatingSectorType,
+} from "@/lib/constants/corporations";
 import { getNationalDocId } from "@/lib/constants/nationalScope";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
 import { getStartingYearForPreset } from "@/lib/constants/turnTime";

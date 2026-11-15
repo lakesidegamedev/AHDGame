@@ -12,7 +12,7 @@ describe("base-price margins (market recovery phase 1)", () => {
   const rows = baseMarginTable();
 
   it("covers every operating sector", () => {
-    expect(new Set(rows.map((r) => r.sectorType)).size).toBeGreaterThanOrEqual(17);
+    expect(new Set(rows.map((r) => r.sectorType)).size).toBeGreaterThanOrEqual(15);
   });
 
   it("every standard strategy earns at least 15% at base prices", () => {

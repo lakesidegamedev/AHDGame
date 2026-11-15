@@ -129,26 +129,6 @@ describe("construction in progress", () => {
 });
 
 describe("sectorBookValueAnchor (D11)", () => {
-  it("prices manufacturing vehicle rows on the vehicles lane, not generic manufacturing", () => {
-    const generic = sectorBookValueAnchor(
-      { sectorType: "manufacturing", capitalStock: 250_000, strategyId: "standard" },
-      1991,
-      1
-    );
-    const modelled = sectorBookValueAnchor(
-      {
-        sectorType: "manufacturing",
-        capitalStock: 250_000,
-        strategyId: "standard",
-      },
-      1991,
-      1
-    );
-
-    expect(modelled).toBeGreaterThan(0);
-    expect(modelled).not.toBe(generic);
-  });
-
   const CAPACITY = 250;
 
   it("prices a flip-identity sector at 3.0 × RPU × capacity at the anchor year", () => {

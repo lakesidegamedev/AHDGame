@@ -4,7 +4,11 @@ import { isPrivateEnterpriseBlocked } from "@/lib/economy/queries/privateEnterpr
 import { ObjectId as Oid } from "mongodb";
 import type { Corporation, CorporateSector } from "@/lib/db/types";
 
-import { CEO_INITIAL_SHARES, DEFAULT_SHARE_PRICE, type OperatingSectorType } from "@/lib/constants/corporations";
+import {
+  CEO_INITIAL_SHARES,
+  DEFAULT_SHARE_PRICE,
+  type OperatingSectorType,
+} from "@/lib/constants/corporations";
 import { COUNTRY_CURRENCY_MAP, type CurrencyCode } from "@/lib/constants/currencies";
 import { getNextSequentialId } from "@/lib/db/sequentialId";
 import { getGameStatePresetOrDefault } from "@/lib/db/collections/gameState";

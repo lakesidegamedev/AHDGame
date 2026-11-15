@@ -21,7 +21,11 @@ import type {
   State,
   StateMetrics,
 } from "@/lib/db/types";
-import { DEFAULT_PROFIT_MARGIN, DEFAULT_SECTOR_STARTING_REVENUE, DEFAULT_SECTOR_STARTING_WORKERS } from "@/lib/constants/corporations";
+import {
+  DEFAULT_PROFIT_MARGIN,
+  DEFAULT_SECTOR_STARTING_REVENUE,
+  DEFAULT_SECTOR_STARTING_WORKERS,
+} from "@/lib/constants/corporations";
 import {
   capacityRescaleRatio,
   rescaleBuildQueueForStrategyChange,

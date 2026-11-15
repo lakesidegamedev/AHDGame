@@ -25,7 +25,16 @@ import { getEraFounderShares, getEraNominalScale } from "@/lib/constants/sectorS
 import { autoGrantedNodeIds } from "@/lib/constants/techTree";
 import { resolveGameYear } from "@/lib/era/era";
 import { getStartingYearForPreset } from "@/lib/constants/turnTime";
-import { OPERATING_SECTOR_TYPES, type CorporationType, DEFAULT_SHARE_PRICE, CEO_INITIAL_SHARES, DEFAULT_PROFIT_MARGIN, DEFAULT_SECTOR_STARTING_REVENUE, DEFAULT_SECTOR_STARTING_WORKERS, type OperatingSectorType } from "@/lib/constants/corporations";
+import {
+  OPERATING_SECTOR_TYPES,
+  type CorporationType,
+  DEFAULT_SHARE_PRICE,
+  CEO_INITIAL_SHARES,
+  DEFAULT_PROFIT_MARGIN,
+  DEFAULT_SECTOR_STARTING_REVENUE,
+  DEFAULT_SECTOR_STARTING_WORKERS,
+  type OperatingSectorType,
+} from "@/lib/constants/corporations";
 import {
   COUNTRY_CURRENCY_MAP,
   getSeedCurrencyCode,

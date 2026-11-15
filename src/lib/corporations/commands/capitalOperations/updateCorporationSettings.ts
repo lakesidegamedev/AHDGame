@@ -12,7 +12,13 @@ import { loadFxRatesByCurrency } from "@/lib/currency/corporationCapital";
 import { buildSectorCurrencyRestatement } from "@/lib/corporations/queries/corporationDetail/currencyRestatement";
 import { computeRevenueRealizationRatio } from "@/lib/corporations/queries/corporationDetail/realizationRatio";
 import { sectorDailyRevenueBasis } from "@/lib/corporations/dailyRevenueBasis";
-import { TYPE_SWITCH_COOLDOWN_TURNS, TYPE_SWITCH_PENALTY_TURNS, CEO_SALARY_MAX_REVENUE_MULTIPLE, CORP_OVERHEAD_MAX_REVENUE_MULTIPLE, type OperatingSectorType } from "@/lib/constants/corporations";
+import {
+  TYPE_SWITCH_COOLDOWN_TURNS,
+  TYPE_SWITCH_PENALTY_TURNS,
+  CEO_SALARY_MAX_REVENUE_MULTIPLE,
+  CORP_OVERHEAD_MAX_REVENUE_MULTIPLE,
+  type OperatingSectorType,
+} from "@/lib/constants/corporations";
 import { migrateUnlockedTechOnPrimaryTypeSwitch } from "@/lib/corporations/techTree/migrateUnlocksOnTypeSwitch";
 import { STARTING_YEAR, TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import type { CorporateSector } from "@/lib/db/types";

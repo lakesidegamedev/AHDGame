@@ -22,7 +22,15 @@ import { randomBrandColor } from "@/lib/corporations/brandColor";
 import type { Character, Corporation, State, User } from "@/lib/db/types";
 import { getNextSequentialId } from "@/lib/db/sequentialId";
 import { openCeoTenure } from "@/lib/corporations/ceoHistory";
-import { CORPORATION_FOUNDING_COST, MIN_CORPORATION_STARTING_CAPITAL, MAX_CORPORATION_STARTING_CAPITAL, CORPORATION_STARTING_CAPITAL, OPERATING_SECTOR_TYPE_LABELS, CEO_INITIAL_SHARES, MIN_SHARE_PRICE } from "@/lib/constants/corporations";
+import {
+  CORPORATION_FOUNDING_COST,
+  MIN_CORPORATION_STARTING_CAPITAL,
+  MAX_CORPORATION_STARTING_CAPITAL,
+  CORPORATION_STARTING_CAPITAL,
+  OPERATING_SECTOR_TYPE_LABELS,
+  CEO_INITIAL_SHARES,
+  MIN_SHARE_PRICE,
+} from "@/lib/constants/corporations";
 import { logWireEvent, wireHeadlineCorpFounded, wireHeadlineCorpIpo } from "@/lib/wireEvent";
 import { computeIpoIssuance } from "@/lib/corporations/ipoIssuance";
 import {
