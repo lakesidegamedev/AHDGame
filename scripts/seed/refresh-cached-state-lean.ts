@@ -10,6 +10,7 @@
  * Usage: npx tsx scripts/seed/refresh-cached-state-lean.ts --countries US,CA [--apply]
  */
 import { connectDb, closeDb } from "../utils/db";
+import type { CountryId } from "../../src/lib/constants/countries";
 import { censusCachedStateLean } from "../../src/lib/demographics/cachedStateLean";
 import { getGameStateCollection } from "../../src/lib/db/collections/gameState";
 import { statesCollection } from "../../src/lib/db/repositories/states";
@@ -22,7 +23,7 @@ function arg(name: string): string | undefined {
 }
 
 async function main() {
-  const countries = (arg("--countries") ?? "").split(",").filter(Boolean);
+  const countries = (arg("--countries") ?? "").split(",").filter(Boolean) as CountryId[];
   if (countries.length === 0) throw new Error("Pass --countries, e.g. --countries US,CA");
   const apply = process.argv.includes("--apply");
   const db = await connectDb();

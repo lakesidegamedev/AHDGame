@@ -1,13 +1,8 @@
 /**
- * Fit the 2027 US per-state position surface to the 2024 presidential result.
- *
- * Each state carries one calibration level L: `race.white` sits at L and
- * `education.no_college`, `wealth.middle` and `age.senior` at L + 0.5 (the
- * shape every earlier US vintage uses). L is solved by bisection so the
- * state's census electorate economic lean equals
- * `LEAN_PER_MARGIN_POINT * margin`, with margin the 2024 Republican minus
- * Democratic share in points. Ideology positions are carried from the 2023
- * surface (they do not enter the census electorate).
+ * Fit the 2027 US per-state position surface so each state's census
+ * electorate economic lean equals LEAN_PER_MARGIN_POINT times its 2024
+ * Republican margin. One level L per state: white at L; non-college,
+ * middle-income and senior at L + 0.5.
  *
  * Usage: npx tsx scripts/seeds/fit-us-state-positions-2027.ts > src/lib/countries/us/data/usStatePositions2027.ts
  */
