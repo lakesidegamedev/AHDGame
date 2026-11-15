@@ -4,7 +4,7 @@ import type { StateDemographicTurnout } from "@/lib/db/types";
  * China macro-region demographic turnout modifier seeds.
  *
  * All modifiers start at 0 — no GOTV, canvassing, or suppression effects
- * applied yet. Keys match the CN voter group IDs from cnDemographicCategories.ts.
+ * applied yet. Keys match the CN voter group IDs from the country Layer-1 model.
  *
  * The category key is "cn_voterGroups" to align with the CN demographic
  * profile and avoid collision with US/UK/DE/JP documents in the same

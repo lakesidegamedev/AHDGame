@@ -2,14 +2,17 @@ import type { Db } from "mongodb";
 import {
   defaultRulesetFor,
   type LeadershipRemovalRuleset,
-} from "@/lib/uk/leadership/leadershipRemoval";
-import { committeeNameForFamily, LEADERSHIP_HISTORY_CAP } from "@/lib/uk/leadership/rules";
+} from "@/lib/countries/uk/leadership/leadershipRemoval";
+import {
+  committeeNameForFamily,
+  LEADERSHIP_HISTORY_CAP,
+} from "@/lib/countries/uk/leadership/rules";
 import type {
   LeadershipHistoryEntry,
   LeadershipHistoryKind,
   LeadershipPartyFamily,
   UKPartyLeadership,
-} from "@/lib/uk/leadership/leadershipTypes";
+} from "@/lib/countries/uk/leadership/leadershipTypes";
 import type { PoliticalParty } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import { getUKPartyLeadershipCollection } from "@/lib/db/collections/ukPartyLeadership";

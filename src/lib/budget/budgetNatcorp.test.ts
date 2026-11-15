@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { isPoliticalMetricsCountry } from "@/lib/politicalMetrics/types";
 import {
   generateCountryOwnedSeedData,
   initialNationalBudgets,
@@ -199,25 +200,17 @@ describe("Budget spending categories after fiscal year rollover", () => {
     }
   });
 
-  it("enacted laws seed produces laws with budget categories for both countries", () => {
+  it("legacy enacted laws seed only countries outside the political law book", () => {
     const laws = generateDefaultEnactedLaws("2019-default");
 
-    const usLaws = laws.filter((l) => l.countryId === "US");
-    const ukLaws = laws.filter((l) => l.countryId === "UK");
+    // The political law book seeds its own countries' enacted laws.
+    for (const law of laws) expect(isPoliticalMetricsCountry(law.countryId)).toBe(false);
+    expect(laws.filter((l) => l.countryId === "US")).toEqual([]);
+    expect(laws.filter((l) => l.countryId === "UK")).toEqual([]);
 
-    expect(usLaws.length).toBeGreaterThan(0);
-    expect(ukLaws.length).toBeGreaterThan(0);
-
-    // Every law has a budget category
-    for (const law of laws) {
-      expect(law.budgetCategory).toBeTruthy();
-    }
-
-    // US and UK should have distinct category sets
-    const usCategories = new Set(usLaws.map((l) => l.budgetCategory));
-    const ukCategories = new Set(ukLaws.map((l) => l.budgetCategory));
-    expect(usCategories.size).toBeGreaterThanOrEqual(2);
-    expect(ukCategories.size).toBeGreaterThanOrEqual(2);
+    expect(laws.length).toBeGreaterThan(0);
+    for (const law of laws) expect(law.budgetCategory).toBeTruthy();
+    expect(new Set(laws.map((l) => l.budgetCategory)).size).toBeGreaterThanOrEqual(2);
   });
 
   it("1991 US and UK national budgets start with plausible fiscal gaps", () => {

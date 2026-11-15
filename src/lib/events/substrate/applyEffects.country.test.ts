@@ -72,7 +72,7 @@ describe("applyDeclarativeEffects — country scope (World Events v1 Phase 0)", 
     // Treasury moved via the canonical mover.
     expect(db.collectionMocks.federalBudget!.updateOne).toHaveBeenCalledWith(
       { countryId: "US" },
-      expect.objectContaining({ $set: expect.objectContaining({ treasuryBalance: 1_005_000 }) })
+      expect.objectContaining({ $inc: { treasuryBalance: 5_000 } })
     );
     // A financialTxLog row was written for the same amount — this is what the
     // shadow ledger derives a balanced entry from (deriveFromTx.ts), so
@@ -106,7 +106,7 @@ describe("applyDeclarativeEffects — country scope (World Events v1 Phase 0)", 
 
     expect(db.collectionMocks.federalBudget!.updateOne).toHaveBeenCalledWith(
       { countryId: "US" },
-      expect.objectContaining({ $set: expect.objectContaining({ treasuryBalance: 998_000 }) })
+      expect.objectContaining({ $inc: { treasuryBalance: -2_000 } })
     );
     const doc = db.collectionMocks.financialTxLog!.insertOne.mock.calls[0][0];
     expect(doc.amount).toBe(-2_000);

@@ -12,6 +12,7 @@ import { importerTariffOnFlow } from "./tariffDrag";
 import { blockadeAffinityMultiplier } from "@/lib/navair/blockade";
 import { PRIMARY_SECTOR_BY_COMMODITY } from "./commoditySector";
 import { tariffRateToImportCostMultiplier } from "./rules/importCostMultiplier";
+import { treatyAffinityMultiplier, treatyImportCostMultiplier } from "./rules/treatyTrade";
 
 export interface TradeAffinityContext {
   /** Active FTA country pairs. */
@@ -48,6 +49,11 @@ export interface TradeAffinityContext {
    * common case and costs nothing.
    */
   blockadeClosure?: ReadonlyMap<string, number>;
+  /**
+   * Treaty organisations whose terms are in force. Members of one trade on easier terms with
+   * each other on the commodities it names (`rules/treatyTrade.ts`). Absent means none.
+   */
+  activeTreaties?: ReadonlySet<string>;
 }
 
 export interface TradeAffinityFns {
@@ -169,7 +175,15 @@ function capFor(
  * (mode "cap" → capUnits) specific flows. Pure given its context.
  */
 export function buildTradeAffinity(ctx: TradeAffinityContext): TradeAffinityFns {
-  const { ftaPairs, blocsByCountry, tariffs, embargoes, curtainedCountries, blockadeClosure } = ctx;
+  const {
+    ftaPairs,
+    blocsByCountry,
+    tariffs,
+    embargoes,
+    curtainedCountries,
+    blockadeClosure,
+    activeTreaties,
+  } = ctx;
 
   const curtained = (a: string, b: string): boolean => {
     if (!curtainedCountries || curtainedCountries.size === 0) return false;
@@ -198,7 +212,14 @@ export function buildTradeAffinity(ctx: TradeAffinityContext): TradeAffinityFns 
     const rate = sectorType
       ? importerTariffOnFlow(tariffs, ftaPairs, importer, exporter, sectorType)
       : 0;
-    const multiplier = tariffRateToImportCostMultiplier(rate);
+    const multiplier =
+      tariffRateToImportCostMultiplier(rate) *
+      treatyImportCostMultiplier(
+        commodity,
+        blocsByCountry.get(exporter),
+        blocsByCountry.get(importer),
+        activeTreaties
+      );
     tariffMultiplierByRoute.set(key, multiplier);
     return multiplier;
   };
@@ -221,7 +242,15 @@ export function buildTradeAffinity(ctx: TradeAffinityContext): TradeAffinityFns 
         blockadeClosure?.get(importer) ?? 0
       );
       if (closure >= 1) return 0;
-      const importerTariffRate = tariffMultiplierFor(commodity, exporter, importer) - 1;
+      const treatyCost = treatyImportCostMultiplier(
+        commodity,
+        blocsByCountry.get(exporter),
+        blocsByCountry.get(importer),
+        activeTreaties
+      );
+      // The tariff drag reads the tariff alone; the treaty waiver is applied separately.
+      const importerTariffRate =
+        tariffMultiplierFor(commodity, exporter, importer) / treatyCost - 1;
       const affinity = computeAffinity({
         exporter,
         importer,
@@ -231,7 +260,15 @@ export function buildTradeAffinity(ctx: TradeAffinityContext): TradeAffinityFns 
         importerTariffRate,
         blocked: false,
       });
-      return closure > 0 ? affinity * blockadeAffinityMultiplier(closure) : affinity;
+      const withTreaty =
+        affinity *
+        treatyAffinityMultiplier(
+          commodity,
+          blocsByCountry.get(exporter),
+          blocsByCountry.get(importer),
+          activeTreaties
+        );
+      return closure > 0 ? withTreaty * blockadeAffinityMultiplier(closure) : withTreaty;
     },
     importCostMultiplierFor: tariffMultiplierFor,
     capUnitsFor: (commodity, exporter, importer) => {

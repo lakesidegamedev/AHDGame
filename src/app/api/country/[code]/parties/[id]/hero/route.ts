@@ -9,6 +9,7 @@ import type { PoliticalParty } from "@/lib/db/types";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { canActAsChair } from "@/lib/parties/actingChair";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 const heroSchema = z.object({
   heroImageUrl: z
@@ -62,9 +63,7 @@ export async function POST(
       );
     }
 
-    await db
-      .collection<PoliticalParty>("politicalParties")
-      .updateOne({ _id: party._id }, { $set: { heroImageUrl } });
+    await politicalPartiesCollection(db).updateOne({ _id: party._id }, { $set: { heroImageUrl } });
 
     return NextResponse.json({ message: "Hero image updated successfully" });
   } catch (error) {

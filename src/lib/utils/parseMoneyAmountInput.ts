@@ -1,11 +1,10 @@
 /**
  * Parse a money amount typed into a text or number input.
- * `parseFloat("1,000")` yields 1; this strips grouping separators first.
- * Also normalizes full-width digits (IME) to ASCII.
+ * Strips grouping separators (parseFloat("1,000") yields 1) and normalizes
+ * full-width IME digits to ASCII.
  *
- * Accepts the K/M/B/T shorthand every money figure on screen is printed in
- * ("4.0M" is 4,000,000), so a player can type what they just read instead of
- * spelling it out in plain units (ticket #1236).
+ * Accepts the K/M/B/T shorthand money figures are displayed in ("4.0M" is
+ * 4,000,000) so players can type what they read.
  */
 
 /** Multiplier for one trailing shorthand letter. */

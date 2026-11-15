@@ -49,6 +49,12 @@ import {
 import type { CountryId } from "@/lib/constants/countries";
 import type { Election, ElectionCandidate, ElectionVoteTally, GameState } from "@/lib/db/types";
 import { MS_PER_TURN } from "@/lib/constants/turnTime";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import type { Document } from "mongodb";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
 
 const ENDED_STATUSES = new Set(["completed", "resolved", "cancelled"]);
 const INDEPENDENT_COLOR = "#9CA3AF";
@@ -57,8 +63,7 @@ async function loadPartyMap(
   db: Db,
   countryId: string
 ): Promise<Map<string, ElectionNightPartyInfo>> {
-  const docs = await db
-    .collection("politicalParties")
+  const docs = await politicalPartiesCollection<Document>(db)
     .find({ countryId })
     .project<{ sequentialId: number; name: string; abbreviation?: string; color?: string }>({
       sequentialId: 1,
@@ -88,8 +93,7 @@ function partyInfo(
 
 async function loadRegionNames(db: Db, regionIds: string[]): Promise<Map<string, string>> {
   if (regionIds.length === 0) return new Map();
-  const docs = await db
-    .collection<{ _id: string; name?: string }>("states")
+  const docs = await statesCollection<{ _id: string; name?: string }>(db)
     .find({ _id: { $in: regionIds } })
     .project<{ _id: string; name?: string }>({ name: 1 })
     .toArray();
@@ -137,11 +141,8 @@ export async function buildResultsPayload(
 ): Promise<ElectionResultsResponse> {
   const isAdmin = opts.isAdmin;
   const [candidates, tally, partyMap] = await Promise.all([
-    db
-      .collection<ElectionCandidate>("electionCandidates")
-      .find({ electionId: election._id })
-      .toArray(),
-    db.collection<ElectionVoteTally>("electionVoteTallies").findOne({ electionId: election._id }),
+    electionCandidatesCollection(db).find({ electionId: election._id }).toArray(),
+    electionVoteTalliesCollection(db).findOne({ electionId: election._id }),
     loadPartyMap(db, election.countryId),
   ]);
 
@@ -185,7 +186,7 @@ export async function buildResultsPayload(
 
     let unitIds: string[];
     const evByUnit = new Map<string, number>();
-    if (election.countryId === "US") {
+    if (countryHasFeature("usElections", election.countryId)) {
       const apportionment = await loadApportionment(
         db,
         gameState?.preset,
@@ -205,8 +206,7 @@ export async function buildResultsPayload(
       // Non-US presidents: popular vote per region. The tally may carry
       // vestigial all-zero US unit keys from init — scope to the country's
       // own regions plus any tally key that actually holds votes.
-      const regionDocs = await db
-        .collection<{ _id: string; name?: string }>("states")
+      const regionDocs = await statesCollection<{ _id: string; name?: string }>(db)
         .find({ countryId: election.countryId })
         .project<{ _id: string; name?: string }>({ name: 1 })
         .toArray();
@@ -224,7 +224,13 @@ export async function buildResultsPayload(
       weight: evByUnit.get(unitId) ?? 0,
       votes: unitVotes[unitId] ?? {},
     }));
-    if (election.countryId === "US" && finalHour && totalEv && evNeeded && !tally.finalized) {
+    if (
+      countryHasFeature("usElections", election.countryId) &&
+      finalHour &&
+      totalEv &&
+      evNeeded &&
+      !tally.finalized
+    ) {
       // US presidential final hour: the election-night broadcast replaces the
       // generic drip. The tally here is the penultimate-turn tally; the final
       // turn is not counted until the race resolves.
@@ -293,14 +299,10 @@ export async function buildResultsPayload(
   const rosterIds = new Set([...rosterDocIds, ...tallyOnlyIds]);
 
   // ── Seat projections (multi-seat races) ───────────────────────────────
-  // #1277: same rule as `enrichElection` — a finalized tally's allocation is
-  // authoritative, anything earlier is a projection. This used to read
-  // `tally.seatsEstimate ?? compute(...)`, but `accumulateVoteTurn` rewrites
-  // that field every turn, so the fallback was near-dead and a LIVE race was
-  // served last turn's estimate instead of one built from the current roster.
-  // `resolvedSeatsEstimate(tally, null)` first so a finalized race
-  // short-circuits before the org-ranking round-trip, exactly as the old
-  // `??` did.
+  // Same rule as `enrichElection`: a finalized tally's allocation is
+  // authoritative, anything earlier is a projection. `resolvedSeatsEstimate`
+  // first so a finalized race short-circuits before the org-ranking
+  // round-trip; otherwise compute from the current roster.
   const seatsEstimate =
     !isPresident && tally
       ? (resolvedSeatsEstimate(tally, null) ??
@@ -382,7 +384,9 @@ export async function buildResultsPayload(
   }
   // Ended winner-take-one races (incl. popular-vote presidents): top of the poll.
   const isRussianDirectBallot =
-    election.countryId === "RU" && isPresident && !!election.russianPresidentialRound;
+    countryHasFeature("ruElections", election.countryId) &&
+    isPresident &&
+    !!election.russianPresidentialRound;
   if (isRussianDirectBallot)
     projectedWinner =
       tally?.russianPresidentialResult?.outcome === "won"
@@ -390,9 +394,9 @@ export async function buildResultsPayload(
         : null;
   const singleWinnerRace =
     !isRussianDirectBallot &&
-    !(election.countryId === "BR" && isPresident) &&
+    !(countryHasFeature("brElections", election.countryId) && isPresident) &&
     (isPresident || (election.totalSeats ?? 1) <= 1);
-  if (election.countryId === "BR" && isPresident)
+  if (countryHasFeature("brElections", election.countryId) && isPresident)
     projectedWinner =
       tally?.brazilPresidentialResult?.outcome === "won"
         ? tally.brazilPresidentialResult.winnerId
@@ -401,7 +405,10 @@ export async function buildResultsPayload(
   // no EV majority that is the House contingent winner, never the popular-vote
   // leader the fallback below would pick.
   const usCollegeResolution =
-    isPresident && isEnded && election.countryId === "US" && tally?.resolutionMode
+    isPresident &&
+    isEnded &&
+    countryHasFeature("usElections", election.countryId) &&
+    tally?.resolutionMode
       ? tally.resolutionMode
       : undefined;
   if (usCollegeResolution) {
@@ -420,7 +427,7 @@ export async function buildResultsPayload(
   const usCollegeAwaitingResolution =
     isPresident &&
     election.status === "completed" &&
-    election.countryId === "US" &&
+    countryHasFeature("usElections", election.countryId) &&
     !usCollegeResolution;
   if (
     !projectedWinner &&

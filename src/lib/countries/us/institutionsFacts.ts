@@ -5,19 +5,12 @@ import type { LegislativeProcess } from "@/lib/legislature/process";
 import type { OrderOfBattleEntry } from "@/lib/seeds/reference/ordersOfBattle";
 
 /**
- * US's institutions, as pure data.
- *
- * ⚠ GENERATED FROM `__snapshots__/us.pre-move.json`, NOT TRANSCRIBED.
- * Regenerate with:
- *
- *     npx tsx scripts/countries/gen-country-institutions.ts US --force
- *
- * ⚠ KEEP THIS FILE FREE OF VALUE IMPORTS. It is the light half of the pair:
- * registries that want one seat id or the legislative process import from HERE,
- * while `institutions.ts` composes these with the cabinet and is heavy. A
- * registry that reads a single string through the heavy module ships the whole
- * cabinet to the browser, which is a regression this work has already shipped
- * once. `clientSafeLeafModules.test.ts` enforces it.
+ * US's institutions, as pure data. Generated from
+ * __snapshots__/us.pre-move.json; regenerate via
+ * scripts/countries/gen-country-institutions.ts US --force.
+ * KEEP VALUE-IMPORT FREE: this is the light half; value imports
+ * pull the heavy cabinet module into browser bundles.
+ * clientSafeLeafModules.test.ts enforces this.
  */
 
 export const US_CONFIG: CountryConfig = {
@@ -167,7 +160,6 @@ export const US_CONFIG: CountryConfig = {
     lockHomeState: true,
     nppsPerState: 2,
   },
-  demographicProfileId: "us_archetypes",
   executiveTermLimit: {
     officeKey: "president",
     maxTermsPerCharacter: 2,

@@ -1,3 +1,4 @@
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 /**
  * Which campaign controls the presidential map's state panel offers, and the
  * data the map's "Your campaign" layer needs. Plain data in and out.
@@ -11,7 +12,7 @@
 /** The map is the way into a state's campaign actions on US races only. */
 export function campaignMapIsEntry(countryId: string | null | undefined): boolean {
   // eslint-disable-next-line local/no-country-literals -- the presidential map is the US state map
-  return countryId === "US";
+  return countryHasFeature("usLib", countryId);
 }
 
 export interface StateActionInput {

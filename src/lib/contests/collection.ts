@@ -1,8 +1,7 @@
 import type { Db } from "mongodb";
 import type { ContestRound } from "@/lib/db/types/contestRound";
-
-const CONTEST_ROUNDS_COLLECTION = "contestRounds";
+import { contestRoundsCollection } from "@/lib/db/repositories/contestRounds";
 
 export function getContestRoundsCollection(db: Db) {
-  return db.collection<ContestRound>(CONTEST_ROUNDS_COLLECTION);
+  return contestRoundsCollection<ContestRound>(db);
 }

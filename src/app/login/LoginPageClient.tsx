@@ -18,6 +18,11 @@ import {
 } from "@/lib/utils/fingerprintCapture";
 import { getOrCreateDeviceKey } from "@/lib/utils/deviceKey";
 import { loginDestination } from "@/lib/auth/lakesideLoginReturn";
+import {
+  HOP_READY_PATH,
+  READINESS_CLIENT_TIMEOUT_MS,
+  chooseHopNavigation,
+} from "@/lib/auth/centralLogin/hopRules";
 import { Input, Label, Button, SectionLabel } from "@/components/ui";
 import { apiErrorText } from "@/lib/errors/catalog";
 
@@ -179,6 +184,7 @@ export default function LoginPageClient({
           fingerprint: captured.hash,
           fingerprintComponents: captured.hash ? captured.components : undefined,
           deviceKey: deviceKey || undefined,
+          returnTo: readReturnTo() || undefined,
         }),
       });
 
@@ -195,6 +201,22 @@ export default function LoginPageClient({
 
       if (typeof data.unifiedRedirect === "string") {
         window.location.assign(data.unifiedRedirect);
+        return;
+      }
+
+      if (typeof data.lakesideHop === "string") {
+        const destination = loginDestination(readReturnTo(), data.user);
+        let readiness: { ready?: unknown } | null = null;
+        try {
+          const ready = await fetch(HOP_READY_PATH, {
+            cache: "no-store",
+            signal: AbortSignal.timeout(READINESS_CLIENT_TIMEOUT_MS),
+          });
+          readiness = ready.ok ? ((await ready.json()) as { ready?: unknown }) : null;
+        } catch {
+          readiness = null;
+        }
+        window.location.assign(chooseHopNavigation(data.lakesideHop, readiness, destination));
         return;
       }
 

@@ -1,24 +1,13 @@
 /**
- * Per-Land canonical anchors for DE Landtag elections.
- *
- * Two tables — one for each seeded era (2019-default, 1991-default).
- * Use getLandtagAnchor() rather than reading a table directly.
+ * Per-Land canonical anchors for DE Landtag elections, one table per seeded
+ * era. Use getLandtagAnchor() rather than reading a table directly.
  *
  * 2019-default: turn 1 = Feb 2020; 48 turns/year.
- *   2026 → turn 288 … 2030 → turn 480
+ * 1991-default: turn 1 = Jan 1991; values are months from Jan 1991 × 4,
+ *   rounded to the nearest real-world election year; period 240 turns.
  *
- * 1991-default: turn 1 = Jan 1991; 48 turns/year.
- *   Values are "months from Jan 1991 × 4", rounded to the nearest real-world
- *   Landtag election year boundary. Cycle period = 240 turns (5 game-years).
- *
- * Real-world next-election years after Jan 1991 (source: Bundestag records):
- *   BW Apr-1992, BY Sep-1994, BE Oct-1995, BB Sep-1994, BRE Sep-1991,
- *   HH Jun-1991, HE Feb-1995, MV Oct-1994, NI Mar-1994, NW May-1995,
- *   RP Apr-1991, SL Oct-1994, SN Sep-1994, ST Jun-1994, SH Apr-1992,
- *   TH Oct-1994.
- *
- * Uses internal IDs (Bremen is `BRE` here to avoid the CN-Huabei `HB`
- * collision; the displayed map label is still "HB").
+ * Uses internal IDs (Bremen is `BRE` to avoid the CN-Huabei `HB` collision;
+ * the displayed map label is still "HB").
  */
 
 /** 2019-default: cycle-1 end turns (turn 1 = Feb 2020). */

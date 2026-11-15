@@ -1,20 +1,12 @@
 import type { CountryEraOverride } from "../../contract";
 
 /**
- * SCO, 1991.
+ * SCO, 1991. GENERATED, do not edit by hand.
+ * Regenerate: npx tsx scripts/countries/gen-country-eras.ts SCO --force
  *
- * ⚠ GENERATED from `__snapshots__/sco.pre-move.json`. Regenerate with:
- *
- *     npx tsx scripts/countries/gen-country-eras.ts SCO --force
- *
- * ⚠ DIFFERENCES ONLY. Everything not named here comes from the base modules.
- *
- * No config override: this era uses SCO's base configuration. The field
- * is ABSENT rather than an empty object, because `getCountryConfig` merges
- * shallowly and `config: {}` reads as an override that supplies nothing.
- *
- * No per-era orders of battle: this era falls back to the base set rather
- * than inventing an empty one.
+ * Differences only; unnamed fields fall back to base modules. Keep
+ * config and orders of battle absent rather than empty: getCountryConfig
+ * merges shallowly, so {} would read as an override that supplies nothing.
  */
 export const SCO_1991: CountryEraOverride = {
   preset: "1991-default",

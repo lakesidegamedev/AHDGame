@@ -25,7 +25,11 @@ export function region(id: RegionId): StrategicRegion | undefined {
 }
 
 export function neighbors(id: RegionId): RegionId[] {
-  return regionNeighbors(id as keyof typeof REGION_ADJACENCY) ?? [];
+  const adjacent = regionNeighbors(id as keyof typeof REGION_ADJACENCY) ?? [];
+  // Sea and air routes cross the Pacific. Keep the ground-war topology unchanged.
+  if (id === "noa") return [...adjacent, "wpa"];
+  if (id === "wpa") return [...adjacent, "noa"];
+  return adjacent;
 }
 
 export function areAdjacent(a: RegionId, b: RegionId): boolean {

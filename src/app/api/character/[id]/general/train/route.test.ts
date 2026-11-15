@@ -38,7 +38,7 @@ describe("POST general/train", () => {
     db.collection("gameState");
     db.collection("characters");
     db.collection("characterGenerals");
-    db.collectionMocks.gameState.findOne.mockResolvedValue({ conflictsEnabled: true });
+    db.collectionMocks.gameState.findOne.mockResolvedValue({});
     db.collectionMocks.characters.findOne.mockResolvedValue({ _id: CHAR_ID, name: "Jane Doe" });
     db.collectionMocks.characterGenerals.findOne.mockResolvedValue({
       characterId: CHAR_ID.toString(),

@@ -23,6 +23,7 @@ import {
   unionsUrl,
 } from "@/lib/urls";
 import { POLITICAL_METRIC_COUNTRY_IDS } from "@/lib/politicalMetrics/types";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 export type NationDetailItemId =
   | "executive"
@@ -175,23 +176,17 @@ export function buildNationalDetailsSections(
     });
   }
 
-  // Section and item order below is set by measured traffic (Umami, 24 days
-  // to 2026-07-23, 318k pageviews) rather than by taxonomy. Shares quoted as
-  // % of all site pageviews:
-  //   Politics  ~8%   — /elections/[id] 4.45 (the #6 page site-wide),
-  //                     party pages 2.46 + party list 1.07, politicians 0.37
-  //   Other     4.58% — Map alone, and it is the gateway into
-  //                     /country/[code]/region/[id] and its sub-pages, the
-  //                     ~20% traffic cluster that is the largest in the app
-  //   Government 2.8% — legislature 2.24, executive 0.47, policy 0.12
-  //   Economy   ~1.2% — central bank 0.68, economy 0.24, metrics 0.17,
-  //                     budget 0.13
+  // Section and item order reflects measured site traffic, not taxonomy:
+  // Politics is the largest share (elections pages rank high site-wide);
+  // "Other" is the Map alone, the gateway to the region cluster.
+  // Map outranks every Government and Economy link and no longer sits last.
+  // Its section title is still "Other" which undersells a top destination;
+  // renaming or pinning it is a separate structural decision.
   const sections: NationDetailSection[] = [
     { title: "Politics", titleKey: "menus.nation.sections.politics", items: politics },
-    // Map outranks every Government and Economy link and no longer sits last.
-    // Its section title is still "Other", which undersells a top-five
-    // destination — renaming or promoting it to a pinned link is a structural
-    // change left for a separate decision.
+    // Map outranks every Government and Economy link but still sits under
+    // the "Other" section title, which undersells a top-five destination.
+    // Renaming or pinning it is a separate structural decision.
     {
       title: "Other",
       titleKey: "menus.nation.sections.other",
@@ -218,7 +213,7 @@ export function buildNationalDetailsSections(
         },
         // SCOTUS is a US-only mechanic (#3581) — same country-literal
         // convention as the executive surface / CountryOverviewClient.
-        ...(config.id === "US"
+        ...(countryHasFeature("usUi", config.id)
           ? [
               {
                 id: "scotus" as const,

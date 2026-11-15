@@ -12,13 +12,12 @@
  * should let that story happen.
  */
 import type { Db, ObjectId } from "mongodb";
-import type { Character, GameState } from "@/lib/db/types";
 import { getSettlementCrisesCollection } from "@/lib/db/collections";
 import type { SettlementSeatKey } from "@/lib/constants/settlementCrisis";
-import { isSettlementCrisisEnabled } from "./featureFlag";
 import { resolveSettlementSeat, type SettlementSeatRole } from "./seatResolution";
 import { resolveSeatDirection, type SettlementDirection } from "./direction";
 import { seatBudgetFor, type AffordabilityReason, type SeatBudget } from "./affordability";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export interface SettlementSeatContext {
   id: SettlementSeatKey;
@@ -31,33 +30,25 @@ export interface SettlementSeatContext {
 }
 
 export interface SettlementActorContext {
-  /** Null when no crisis is open. Distinct from the function returning null. */
+  /** Null when no crisis is open. */
   crisisId: string | null;
   seat: SettlementSeatContext | null;
   personal: { actionsRemaining: number };
 }
 
 /**
- * THREE OUTCOMES, and callers must tell them apart:
- *   - `null`                       — the feature gate is off; render nothing.
- *   - `{ crisisId: null, … }`      — gate on, but no crisis is open.
+ * Two outcomes:
+ *   - `{ crisisId: null, … }`      — no crisis is open.
  *   - `{ crisisId: "…", … }`       — a live crisis this viewer can look at.
- *
- * Collapsing the first two would make a disabled feature and a quiet world
- * look identical to the dossier.
  */
 export async function loadSettlementActorContext(
   db: Db,
   characterId: ObjectId
-): Promise<SettlementActorContext | null> {
-  const gameState = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { projection: { settlementCrisisEnabled: 1 } });
-  if (!(await isSettlementCrisisEnabled(gameState ?? {}))) return null;
-
-  const character = await db
-    .collection<Character>("characters")
-    .findOne({ _id: characterId }, { projection: { actions: 1 } });
+): Promise<SettlementActorContext> {
+  const character = await charactersCollection(db).findOne(
+    { _id: characterId },
+    { projection: { actions: 1 } }
+  );
   const personal = { actionsRemaining: character?.actions ?? 0 };
 
   const crises = await getSettlementCrisesCollection(db);

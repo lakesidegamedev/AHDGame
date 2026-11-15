@@ -129,7 +129,7 @@ const SIM_RUN = {
   startedAt: new Date("2026-01-01T00:00:00Z"),
   effectiveConfigInitial: {
     capturedAtTurn: 0,
-    gameState: { macroGrowthV1: true },
+    gameState: { forexEnabled: true },
     gameConfig: { labourSystemMode: "full" },
   },
   actorMode: "pure-npp",

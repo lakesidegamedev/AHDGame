@@ -1,18 +1,14 @@
 /**
- * Geographic market-access visibility (#968 delivered price + route mix, #991
- * resident-vs-local-producer demand, #992 stock-vs-flow kind inventory).
+ * Geographic market-access visibility: delivered price, route mix,
+ * resident-vs-local-producer demand, and stock-vs-flow kind inventory.
  *
- * The landed-price sourcing pass already computes all of this and persists it
- * (see `runSourcingPass` in logistics/sourcing.ts and the `sourcingNetworkLoad`
- * / `commoditySourcingFlows` docs it writes), and the market-formation snapshot
- * already splits resident demand from the demand a local producer can contest.
- * Until now none of it reached a reader: no symbol carried a delivered price or
- * a route, and `reconciliation.stockVsFlowByKind` sat unread on the snapshot.
+ * The sourcing pass and market-formation snapshot already compute and persist
+ * this data; this module makes it readable. Missing inputs become null, never a
+ * fabricated zero, so an unmeasured commodity is distinguishable from a free
+ * one.
  *
- * This module is PURE: plain data in, plain data out. It never touches the db,
- * the clock, the environment, or randomness — the API shell loads the persisted
- * docs and hands them here. Missing inputs become null, never a fabricated
- * zero, so an unmeasured commodity is distinguishable from a free one.
+ * Pure: plain data in, plain data out. Never touches the db, clock, environment,
+ * or randomness.
  */
 
 import type { CommodityType } from "@/lib/constants/commodities";
@@ -307,9 +303,9 @@ export function summarizeResidentDemandSplit(
 }
 
 /**
- * Roll the reconciliation report's full per-kind stock-vs-flow inventory into
- * the top kinds by |divergence| plus the total divergent count (#992). Null when
- * no inventory was recorded (the check was skipped): unknown, not zero.
+ * Rolls the reconciliation report's per-kind stock-vs-flow inventory into
+ * the top kinds by |divergence| plus the total divergent count. Null when
+ * no inventory was recorded (check skipped): unknown, not zero.
  */
 export function summarizeStockVsFlowDivergence(
   byKind: readonly StockVsFlowByKind[] | null | undefined,

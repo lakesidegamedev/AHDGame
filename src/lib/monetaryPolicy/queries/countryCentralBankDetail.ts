@@ -27,7 +27,6 @@ import type {
   MoneySupplySnapshot,
   NPP,
 } from "@/lib/db/types";
-import type { FederalBudget } from "@/lib/db/types/budget";
 import type { LocLedgerEntry } from "@/lib/db/types/locLedger";
 import type { PoliticalParty } from "@/lib/db/types/party";
 import type { SavingsLedgerEntry } from "@/lib/db/types/savingsLedger";
@@ -70,6 +69,20 @@ import {
   computeReservePoolTransferLimits,
   turnsUntilReservePoolTransferReady,
 } from "@/lib/centralBank/reservePoolTransfer";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { savingsLedgerCollection } from "@/lib/db/repositories/savingsLedger";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
+import { moneySupplySnapshotsCollection } from "@/lib/db/repositories/moneySupplySnapshots";
+import { locLedgerCollection } from "@/lib/db/repositories/locLedger";
 
 type ViewerCharacter = Character | null;
 
@@ -128,9 +141,10 @@ export async function buildCentralBankChairData(
     // chairCharacterId would render a player name under the "Autonomous Chair
     // (AI)" badge (M1). chairMode "npp" never resolves to a character.
     const npp = bank.chairNppId
-      ? await db
-          .collection<NPP>("npps")
-          .findOne({ _id: bank.chairNppId }, { projection: { _id: 1, name: 1, avatarUrl: 1 } })
+      ? await nppsCollection(db).findOne(
+          { _id: bank.chairNppId },
+          { projection: { _id: 1, name: 1, avatarUrl: 1 } }
+        )
       : null;
     return {
       chairData: npp
@@ -155,13 +169,13 @@ export async function buildCentralBankChairData(
   } | null = null;
 
   if (bank.chairCharacterId) {
-    const character = await db
-      .collection<Character>("characters")
-      .findOne({ _id: new ObjectId(bank.chairCharacterId) });
+    const character = await charactersCollection(db).findOne({
+      _id: new ObjectId(bank.chairCharacterId),
+    });
     if (character) {
       const chairParty =
         character.party != null
-          ? await db.collection<PoliticalParty>("politicalParties").findOne({
+          ? await politicalPartiesCollection(db).findOne({
               sequentialId: Number(character.party),
               countryId: character.countryId,
             })
@@ -199,19 +213,11 @@ export async function loadCountryCentralBankDetail(params: {
     getGameStateCore(db),
     getCentralBankScope(db, countryId),
   ]);
-  const bank = await db
-    .collection<CentralBank>("centralBanks")
-    .findOneAndUpdate(
-      { _id: bankId },
-      buildCentralBankBootstrapUpdate(
-        countryId,
-        bankId,
-        intorgId,
-        undefined,
-        gameState?.currentYear
-      ),
-      { upsert: true, returnDocument: "after" }
-    );
+  const bank = await centralBanksCollection(db).findOneAndUpdate(
+    { _id: bankId },
+    buildCentralBankBootstrapUpdate(countryId, bankId, intorgId, undefined, gameState?.currentYear),
+    { upsert: true, returnDocument: "after" }
+  );
 
   if (!bank) {
     return { ok: false as const, status: 500, error: "Failed to load central bank" };
@@ -221,7 +227,7 @@ export async function loadCountryCentralBankDetail(params: {
   const financialBank =
     financialBankId === bankId
       ? bank
-      : await db.collection<CentralBank>("centralBanks").findOne({ _id: financialBankId });
+      : await centralBanksCollection(db).findOne({ _id: financialBankId });
   if (!financialBank)
     return { ok: false as const, status: 503, error: "National financial account unavailable" };
 
@@ -230,7 +236,7 @@ export async function loadCountryCentralBankDetail(params: {
   const policyBank =
     policyScope.bankId === bankId
       ? bank
-      : await db.collection<CentralBank>("centralBanks").findOne({ _id: policyScope.bankId });
+      : await centralBanksCollection(db).findOne({ _id: policyScope.bankId });
   if (!policyBank)
     return { ok: false as const, status: 503, error: "Monetary authority unavailable" };
   const isPolicyChair =
@@ -248,15 +254,15 @@ export async function loadCountryCentralBankDetail(params: {
       isBankGovernmentControlledLive(policyBank, bankHomeCountryId),
       buildCentralBankChairData(db, bank),
       isForexEnabled(),
-      db
-        .collection<FederalBudget>("federalBudget")
-        .findOne({ _id: getNationalBudgetId(countryId) } as { _id: "federal" }),
+      federalBudgetCollection(db).findOne({ _id: getNationalBudgetId(countryId) } as {
+        _id: "federal";
+      }),
     ]);
   const viewerSetsRate =
     governmentControlled && viewer?.character
       ? await isNationalIssuer(db, bankHomeCountryId, viewer.character._id)
       : false;
-  // Ticket #1072: the pending-appointment card told the nominee an offer was
+  // The pending-appointment card told the nominee an offer was
   // waiting and gave them nowhere to accept it. The accept and decline routes
   // already existed; only the button was missing. Flag the nominee so the card
   // can show it to them and to nobody else.
@@ -276,7 +282,7 @@ export async function loadCountryCentralBankDetail(params: {
   let forexSpreadStrength = FOREX_SPREAD_STRENGTH_DEFAULT;
   let forexSpreadStrengthLastChangedTurn: number | null = null;
   if (forexEnabled) {
-    const rateDocs = await db.collection<ExchangeRate>("exchangeRates").find({}).toArray();
+    const rateDocs = await exchangeRatesCollection(db).find({}).toArray();
     rateMap = Object.fromEntries(rateDocs.map((rate) => [rate.currencyCode, rate.rate])) as Partial<
       Record<CurrencyCode, number>
     >;
@@ -328,11 +334,12 @@ export async function loadCountryCentralBankDetail(params: {
   const anchorBudgetDoc =
     bankHomeCountryId === countryId
       ? budgetDoc
-      : await db
-          .collection<FederalBudget>("federalBudget")
-          .findOne({ _id: getNationalBudgetId(bankHomeCountryId) } as { _id: "federal" }, {
+      : await federalBudgetCollection(db).findOne(
+          { _id: getNationalBudgetId(bankHomeCountryId) } as { _id: "federal" },
+          {
             projection: { "economicFactors.inflationRate": 1 },
-          });
+          }
+        );
   const rateInflationValue = anchorBudgetDoc?.economicFactors?.inflationRate ?? null;
   const currentTurn = gameState?.currentTurn ?? 0;
 
@@ -345,21 +352,17 @@ export async function loadCountryCentralBankDetail(params: {
     fxDocForBreakdown,
     tariffExposureSnapshot,
   ] = await Promise.all([
-    db
-      .collection<GameConfig>("gameConfig")
-      .findOne(
-        { _id: "default" },
-        { projection: { lineOfCreditEnabled: 1, moneySupplyEnabled: 1 } }
-      ),
+    gameConfigCollection(db).findOne(
+      { _id: "default" },
+      { projection: { lineOfCreditEnabled: 1, moneySupplyEnabled: 1 } }
+    ),
     nationalDocId
-      ? db.collection<StateMetrics>("macroMetrics").findOne({ _id: nationalDocId })
+      ? macroMetricsCollection(db).findOne({ _id: nationalDocId })
       : Promise.resolve(null),
-    db
-      .collection<CommodityPrice>("commodityPrices")
+    commodityPricesCollection(db)
       .find({}, { projection: { commodity: 1, basePrice: 1, nationalPrices: 1 } })
       .toArray(),
-    db
-      .collection<SavingsLedgerEntry>("savingsLedger")
+    savingsLedgerCollection(db)
       .aggregate<{ _id: { type: string }; total: number }>([
         {
           $match: {
@@ -371,7 +374,7 @@ export async function loadCountryCentralBankDetail(params: {
         { $group: { _id: { type: "$type" }, total: { $sum: "$amount" } } },
       ])
       .toArray(),
-    db.collection<ExchangeRate>("exchangeRates").findOne({ _id: countryId }),
+    exchangeRatesCollection(db).findOne({ _id: countryId }),
     loadTurnTariffInflationExposure(db, currentTurn),
   ]);
 
@@ -410,9 +413,10 @@ export async function loadCountryCentralBankDetail(params: {
   const effectiveRate = computeEffectivePrimeRate(policyBank.primeRate, primeRateHistory);
   const gdp = budgetDoc?.gdp || 27_000_000_000_000;
   const surplusToGdp = (budgetDoc?.surplus ?? 0) / gdp;
-  const moneyForBreakdown = await db
-    .collection<MoneySupplySnapshot>("moneySupplySnapshots")
-    .findOne({ currencyCode: nationalCurrency }, { sort: { turn: -1 } });
+  const moneyForBreakdown = await moneySupplySnapshotsCollection(db).findOne(
+    { currencyCode: nationalCurrency },
+    { sort: { turn: -1 } }
+  );
 
   const { rate: computedInflationRate, breakdown: computedInflationBreakdown } =
     calculateInflationWithBreakdown({
@@ -497,8 +501,7 @@ export async function loadCountryCentralBankDetail(params: {
   const lobbyCharIds = [...lobbyTotalsMap.keys()].map((id) => new ObjectId(id));
   const lobbyChars =
     lobbyCharIds.length > 0
-      ? await db
-          .collection<Character>("characters")
+      ? await charactersCollection(db)
           .find({ _id: { $in: lobbyCharIds } })
           .project<Pick<Character, "_id" | "avatarUrl" | "sequentialId">>({
             _id: 1,
@@ -524,8 +527,7 @@ export async function loadCountryCentralBankDetail(params: {
   const homeCurrency = nationalCurrency;
   const [locAgg, savingsInterestAgg, locInterestAccrualAgg, locPaymentInterestAgg] =
     await Promise.all([
-      db
-        .collection<Character>("characters")
+      charactersCollection(db)
         .aggregate<{ totalBalance: number; totalArrears: number }>([
           {
             $match: {
@@ -548,22 +550,19 @@ export async function loadCountryCentralBankDetail(params: {
           },
         ])
         .toArray(),
-      db
-        .collection<SavingsLedgerEntry>("savingsLedger")
+      savingsLedgerCollection(db)
         .aggregate<{ total: number }>([
           { $match: { countryId, type: "interest", currencyCode: homeCurrency } },
           { $group: { _id: null, total: { $sum: "$amount" } } },
         ])
         .toArray(),
-      db
-        .collection<LocLedgerEntry>("locLedger")
+      locLedgerCollection(db)
         .aggregate<{ total: number }>([
           { $match: { countryId, type: "interest", currencyCode: homeCurrency } },
           { $group: { _id: null, total: { $sum: "$amount" } } },
         ])
         .toArray(),
-      db
-        .collection<LocLedgerEntry>("locLedger")
+      locLedgerCollection(db)
         .aggregate<{ total: number }>([
           {
             $match: {
@@ -615,8 +614,7 @@ export async function loadCountryCentralBankDetail(params: {
   const locInterestReceivedLifetime = locPaymentInterestAgg[0]?.total ?? 0;
   const [moneySupply, eligibleQeBonds] = await Promise.all([
     Promise.resolve(moneyForBreakdown),
-    db
-      .collection("bonds")
+    bondsCollection(db)
       .find(
         {
           issuerType: "sovereign",
@@ -641,8 +639,8 @@ export async function loadCountryCentralBankDetail(params: {
   ]);
 
   const policyFx =
-    policyCurrency === "EUR" && countryId !== "DE"
-      ? await db.collection<ExchangeRate>("exchangeRates").findOne({ _id: "DE" })
+    policyCurrency === "EUR" && !countryHasFeature("deLib", countryId)
+      ? await exchangeRatesCollection(db).findOne({ _id: "DE" })
       : fxDocForBreakdown;
 
   const interventionPolicy = policyFx ? effectiveInterventionPolicy(policyFx) : null;

@@ -5,9 +5,9 @@ import { errorResponse } from "@/lib/api/errors";
 import type { EconomicVitalSigns } from "@/lib/db/types";
 import { evaluateCorporateNoHolderAlert } from "@/lib/economy/corporateNoHolderAlert/rules";
 import { getDb } from "@/lib/mongodb";
+import { economicVitalSignsCollection } from "@/lib/db/repositories/economicVitalSigns";
 
 // Keep this read-only route off the full turn-snapshot import graph.
-const ECONOMIC_VITAL_SIGNS_COLLECTION = "economicVitalSigns";
 
 const querySchema = z.object({
   turn: z.coerce.number().int().nonnegative().optional(),
@@ -27,12 +27,13 @@ export const GET = withAdminRoute(async (_auth, request: Request) => {
   const db = await getDb();
   const snapshot =
     parsed.data.turn == null
-      ? await db
-          .collection<EconomicVitalSigns>(ECONOMIC_VITAL_SIGNS_COLLECTION)
-          .findOne({}, { sort: { turn: -1 } })
-      : await db
-          .collection<EconomicVitalSigns>(ECONOMIC_VITAL_SIGNS_COLLECTION)
-          .findOne({ turn: parsed.data.turn });
+      ? await economicVitalSignsCollection<EconomicVitalSigns>(db).findOne(
+          {},
+          { sort: { turn: -1 } }
+        )
+      : await economicVitalSignsCollection<EconomicVitalSigns>(db).findOne({
+          turn: parsed.data.turn,
+        });
 
   if (!snapshot) {
     return errorResponse(404, "Economic vital signs snapshot not found");

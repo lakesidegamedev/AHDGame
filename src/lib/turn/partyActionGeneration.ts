@@ -5,7 +5,6 @@ import type {
   PartyPoliticalStrengthLedgerRow,
   PoliticalParty,
   StatePartyOrg,
-  Character,
 } from "@/lib/db/types";
 import { emitTreasuryTransaction } from "@/lib/treasury/emit";
 import { activeUserIds } from "@/lib/players/playerActivity";
@@ -18,41 +17,29 @@ import {
   psInvestmentRate,
 } from "./politicalStrength/strengthConstants";
 import { resolvePartyPsCap, resolvePartyTier } from "@/lib/parties/partyTier";
+import { effectivePsInvestmentBudget } from "@/lib/parties/rules/nppTreasurySpendDown";
 import {
   computeNppActionPointGain,
   nppActionPointCap,
   nppActionPointRegen,
 } from "@/lib/npp/actionPoints";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { partyPoliticalStrengthLedgerCollection } from "@/lib/db/repositories/partyPoliticalStrengthLedger";
 
-/**
- * Per-turn Political Strength generation for national + state parties
- * (2026-06-25 rebalance — two streams):
- *
- *  - **Flat passive**: `NATIONAL_PASSIVE_PS_PER_TURN` (20) for national parties,
- *    `STATE_PASSIVE_PS_PER_TURN` (5) for state/regional. Paid EVERY turn,
- *    treasury-independent — a broke party still earns its passive (only the
- *    spend stream needs money). Clamped at the hard cap.
- *  - **Explicit `psInvestmentBudget`**: a chair-set per-turn budget that IS
- *    debited from treasury. Converts at `psInvestmentRate(scope)` — 5% of the
- *    legacy per-country rate (UK national `£10k/+1 PS`, state half that) — up to
- *    `PS_INVESTMENT_MAX_TIERS` (`+20 PS/turn`). Self-throttling: if treasury
- *    can't cover the budget, only what's available is spent and PS scales
- *    proportionally. The hard cap is the only ceiling (soft-cap bands removed
- *    2026-06-28): spend converts at full rate up to the headroom remaining below
- *    the cap, and the debit only ever pays for PS actually gained.
- *
- * The former "% of treasury" phantom baseline stream was removed in this
- * rebalance — passive no longer scales with treasury size.
- *
- * Per Phase 0.5 §5.6 distinction: passive and spend gains write to
- * `partyPoliticalStrengthLedger` (not `orgRegLedger`).
- */
+// Per-turn Political Strength for national and state parties:
+// - Flat passive: NATIONAL_PASSIVE_PS_PER_TURN (20) / STATE_PASSIVE_PS_PER_TURN (5),
+//   paid every turn regardless of treasury, clamped at the hard cap.
+// - psInvestmentBudget: chair-set per-turn budget debited from treasury, converted
+//   at psInvestmentRate(scope) up to PS_INVESTMENT_MAX_TIERS (+20/turn). Spends only
+//   what treasury covers and only pays for PS actually gained (cap-bounded).
+// Gains write to partyPoliticalStrengthLedger, not orgRegLedger.
 
 /**
  * Identity of a party for tier lookup. `sequentialId` is only unique within a
- * country (Bug #0668), so both halves are required — see `tierByPartyKey`.
- * Delimiter/fallback match the composite party key used across the turn phases
- * (`fundGeneration`, `nppActionProcessing`, `demographicTurnoutTurn`, …).
+ * country, so both halves are required. Delimiter and fallback match the
+ * composite party key used across turn phases.
  */
 function partyTierKey(countryId: string | undefined, sequentialId: string | number): string {
   return `${countryId ?? "US"}:${sequentialId}`;
@@ -104,12 +91,8 @@ export function computePartyPsGain(input: ComputePsGainInput): ComputePsGainResu
   // hard cap can still clamp it out near the ceiling).
   const passive = input.passivePerTurn;
 
-  // Headroom for the spend stream after passive is applied. The hard cap is the
-  // only limiter (soft-cap bands removed 2026-06-28): spend converts at the full
-  // rate, but never buys more PS than fits below the cap — so the debit only ever
-  // pays for PS actually gained, never for PS the cap would clamp away. (The old
-  // bands returned 0 at cap, which also guarded this; the headroom term replaces
-  // that guard now that the throttle is gone.)
+  // Headroom below the cap after passive PS. The debit only pays for PS
+  // actually gained, never for PS the hard cap would clamp away.
   const headroomAfterPassive = Math.max(0, input.cap - input.current - passive);
 
   // Explicit investment stream — self-throttling on treasury, capped at
@@ -158,10 +141,7 @@ export async function processPartyActionGeneration(
   };
 
   // ─── National parties ──────────────────────────────────────────────────
-  const nationalParties = await db
-    .collection<PoliticalParty>("politicalParties")
-    .find({})
-    .toArray();
+  const nationalParties = await politicalPartiesCollection(db).find({}).toArray();
 
   const nationalLedgerRows: Omit<PartyPoliticalStrengthLedgerRow, "_id">[] = [];
   // NPP Action Point regen rides this loop independently of PS: a party already
@@ -201,13 +181,22 @@ export async function processPartyActionGeneration(
         party.psCapEarnedRegions?.length ?? 0,
         nationalCapForCountry(party.countryId)
       );
+    const nationalRate = psInvestmentRate(party.countryId, "national");
     const gain = computePartyPsGain({
       current: party.politicalStrength ?? 0,
       cap,
       treasury: party.treasury ?? 0,
       passivePerTurn: NATIONAL_PASSIVE_PS_PER_TURN,
-      psInvestmentBudget: party.psInvestmentBudget ?? 0,
-      psInvestmentRatePerPs: psInvestmentRate(party.countryId, "national"),
+      // An NPP-run party spends its surplus here so its treasury does not
+      // compound without limit.
+      psInvestmentBudget: effectivePsInvestmentBudget({
+        party,
+        chairBudget: party.psInvestmentBudget ?? 0,
+        treasury: party.treasury ?? 0,
+        ratePerPs: nationalRate,
+        maxPsPerTurn: PS_INVESTMENT_MAX_TIERS,
+      }),
+      psInvestmentRatePerPs: nationalRate,
     });
     if (gain.total <= 0 && gain.investmentDebit <= 0) continue;
 
@@ -274,13 +263,11 @@ export async function processPartyActionGeneration(
   }
 
   if (nationalApOps.length > 0 || nationalPsOps.length > 0) {
-    await db
-      .collection<PoliticalParty>("politicalParties")
-      .bulkWrite([...nationalApOps, ...nationalPsOps]);
+    await politicalPartiesCollection(db).bulkWrite([...nationalApOps, ...nationalPsOps]);
   }
 
   // ─── State parties ─────────────────────────────────────────────────────
-  const stateParties = await db.collection<StatePartyOrg>("statePartyOrg").find({}).toArray();
+  const stateParties = await statePartyOrgCollection(db).find({}).toArray();
   const stateApOps: AnyBulkWriteOperation<StatePartyOrg>[] = [];
   const statePsOps: AnyBulkWriteOperation<StatePartyOrg>[] = [];
 
@@ -289,8 +276,7 @@ export async function processPartyActionGeneration(
   // matching checkPartyPresence / hasPresence. One projected find — no per-row query.
   // Only players active within the inactivity window count: an all-inactive
   // homed roster drops the party to the NPP-only cap (see playerActivity).
-  const memberRows = await db
-    .collection<Character>("characters")
+  const memberRows = await charactersCollection(db)
     .find({}, { projection: { party: 1, homeState: 1, userId: 1 } })
     .toArray();
   const memberUserIds = memberRows
@@ -422,14 +408,14 @@ export async function processPartyActionGeneration(
   }
 
   if (stateApOps.length > 0 || statePsOps.length > 0) {
-    await db.collection<StatePartyOrg>("statePartyOrg").bulkWrite([...stateApOps, ...statePsOps]);
+    await statePartyOrgCollection(db).bulkWrite([...stateApOps, ...statePsOps]);
   }
 
   const allLedgerRows = [...nationalLedgerRows, ...stateLedgerRows];
   if (allLedgerRows.length > 0) {
-    await db
-      .collection<PartyPoliticalStrengthLedgerRow>("partyPoliticalStrengthLedger")
-      .insertMany(allLedgerRows.map((r) => ({ ...r, _id: new ObjectId() })));
+    await partyPoliticalStrengthLedgerCollection(db).insertMany(
+      allLedgerRows.map((r) => ({ ...r, _id: new ObjectId() }))
+    );
   }
 
   return result;

@@ -58,7 +58,7 @@ describe("simTurnProfiles — elections-only turn-phase gate", () => {
       "supportAccrual",
       "nationalMetrics",
       "approvalSnapshot",
-      "archetypeApprovalDecay",
+      "bucketApprovalDecay",
       "partyHistorySnapshot",
       "census",
       "demographicFlows",

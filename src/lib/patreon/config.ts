@@ -1,8 +1,9 @@
 import type { PatreonTier } from "@/lib/db/types";
 import { PATREON_GRACE_PERIOD_MS } from "@/lib/db/types";
+import { readEnv as readRawEnv } from "@/lib/config/read";
 
 function readEnv(name: string): string | undefined {
-  const value = process.env[name]?.trim();
+  const value = readRawEnv(name)?.trim();
   return value ? value : undefined;
 }
 

@@ -2,14 +2,9 @@ import type { ObjectId } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 
 /**
- * UK Commons by-election + recall petition documents (epic #856, ticket #860).
- *
  * A Commons vacancy is a durable record, not just a tombstoned official row:
- * the row says a seat has no holder, this says WHY it is empty, HOW MANY seats
- * are open, and WHICH by-election (if any) will fill them. Recall petitions
- * are the second route to a vacancy: an infamy/sustained-low-approval trigger
- * opens one, a constituency support-check window runs, and a deterministic
- * resolution either retains the MP or vacates the seat.
+ * it says WHY the seat is empty, HOW MANY are open, and WHICH by-election
+ * (if any) will fill them. Recall petitions are the second route to a vacancy.
  */
 
 /** How a Commons seat became vacant. `removal` is the watcher backstop for

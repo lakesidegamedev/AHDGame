@@ -9,24 +9,19 @@ import type { PoliticalMetricId } from "./types";
  * For the political-pipeline countries (US/UK/RU/DD) those deltas are dropped from
  * stateMetrics; this module maps them onto political-metric families and folds them
  * into a decaying `cabinetResiduals` offset that the dynamics step adds on top of the
- * day-one `residuals` in composeTarget. Spec:
- * docs/superpowers/specs/2026-07-23-cabinet-political-residual-channel-design.md
+ * day-one `residuals` in composeTarget.
  */
 
 /** Residual carry-over per turn (0.9 → ~10× steady-state, ~20-turn fade). */
 export const CABINET_RESIDUAL_DECAY = 0.9;
 
 /**
- * The cabinet channels a residual can come from, ticket #1129.
+ * The cabinet channels a residual can come from.
  *
- * Before this, every cabinet effect was summed into ONE number per metric and
- * clamped once. On prod that clamp bound 21% of US regional entries, and for
- * `society.civicLife` and `economy.competition` it bound ALL 51 states, so a
- * player who built an estate aimed at those families bought exactly zero. The
- * clamp is now applied per SOURCE, which is the granularity the turn phase
- * already computes effects at and the one a player acts on: an estate is not
- * an order and is not a tier setting, so a saturated order book must not make
- * a new estate worthless.
+ * The clamp is applied per SOURCE because a player acts at that granularity:
+ * an estate is not an order and is not a tier setting, so a saturated order
+ * book must not make a new estate worthless by clamping the combined total to
+ * zero.
  *
  * These ids are persisted (`cabinetResidualsBySource`), so renaming one strands
  * that channel's stored residual and it decays away over ~20 turns. Adding one
@@ -49,20 +44,18 @@ export type CabinetSourceId = (typeof CABINET_SOURCE_IDS)[number];
 const CABINET_LEGACY_SOURCE = "legacy";
 
 /**
- * Saturation asymptote PER SOURCE. Unchanged in value from the single global cap
- * it replaces, deliberately: raising it would have inflated every channel that is
- * already binding, and the complaint was never that a saturated channel was too
- * weak, it was that a saturated channel silenced the OTHER channels.
+ * Saturation asymptote PER SOURCE. The value is deliberately unchanged
+ * from the single global cap it replaces: the complaint was that a
+ * saturated channel silenced the OTHER channels, not that a saturated
+ * channel was too weak.
  *
- * Since issue #703 this is an asymptote, not a clamp: the fold below approaches
- * it monotonically but never reaches it, so more investment always buys strictly
- * more residual. A higher clamp is not the fix for saturation; it just re-pins
- * at the new ceiling. See `saturateResidual`.
+ * This is an asymptote, not a clamp: the fold below approaches it
+ * monotonically but never reaches it, so more investment always buys
+ * strictly more residual. Raising the cap is not the fix for saturation;
+ * it just re-pins at the new ceiling. See `saturateResidual`.
  *
- * Theoretical total ceiling is therefore 6 × 8 = 48 points, against the ~62 a
- * fully stacked law book commands. Both maxima need every lever in the game
- * pointed at one family: the observed prod maximum after the split is about 16
- * (economy.competition), so the channel stays well under laws in practice.
+ * Theoretical total ceiling is 6 x 8 = 48 points, against the ~62 a
+ * fully stacked law book commands, so the channel stays well under laws.
  */
 export const CABINET_RESIDUAL_CAP_PER_SOURCE = 8;
 
@@ -269,10 +262,10 @@ export function addContributions(
 }
 
 /**
- * Soft-saturation curve order, issue #703. The steady state of the fold below
- * for a constant contribution c is `saturateResidual(10·c)` (the 10× comes from
- * DECAY = 0.9), and order 2.5 fits the target shape from the issue:
- * 0.4 → ~3.7, 0.8 → ~6.1, 0.9 → ~6.4, 1.8 → ~7.6, 3.6 → ~7.9.
+ * Soft-saturation curve order. The steady state of the fold below for a constant
+ * contribution c is `saturateResidual(10·c)` (the 10× comes from DECAY = 0.9),
+ * and order 2.5 fits the target shape: 0.4 → ~3.7, 0.8 → ~6.1, 0.9 → ~6.4,
+ * 1.8 → ~7.6, 3.6 → ~7.9.
  */
 const CABINET_RESIDUAL_SATURATION_ORDER = 2.5;
 
@@ -287,10 +280,9 @@ function saturateResidual(latent: number): number {
 }
 
 /**
- * Inverse of `saturateResidual`. Stored values hard-pinned at exactly ±cap by
- * the pre-#703 clamp have no finite latent, so they are read as cap − 0.01:
- * near enough that a standing contribution holds them near the cap (no lurch
- * on the first turn after the change), while the 0.9 decay still drains them.
+ * Inverse of `saturateResidual`. Stored values pinned at exactly ±cap have no
+ * finite latent, so they are read as cap − 0.01: close enough that a standing
+ * contribution holds them near the cap, while the 0.9 decay still drains them.
  */
 function unsaturateResidual(residual: number): number {
   const cap = CABINET_RESIDUAL_CAP_PER_SOURCE;
@@ -331,15 +323,13 @@ export function foldCabinetResiduals(
 export type CabinetResidualsBySource = Record<string, Record<string, number>>;
 
 /**
- * Reinterpret a pre-#1129 flat residual as per-source state WITHOUT a migration.
+ * Reinterpret a flat residual as per-source state WITHOUT a migration.
  *
  * The stored flat number is a sum whose composition was never recorded, so it
  * cannot be split truthfully. It is split by each source's share of THIS turn's
- * contribution instead, which keeps the applied total identical on the first
- * turn (no player sees a lurch) and is washed out within a few turns by the 0.9
- * decay, after which every channel carries its own true history. Any part of a
- * metric with no current contribution has no share to assign, so it goes to the
- * legacy pen and simply decays.
+ * contribution instead, keeping the applied total identical on the first turn;
+ * 0.9 decay washes it out within a few turns. Any metric with no current
+ * contribution has no share to assign and goes to the legacy pen, then decays.
  */
 export function seedBySourceFromLegacy(
   flatPrev: Record<string, number>,
@@ -370,8 +360,8 @@ export function seedBySourceFromLegacy(
 
 /**
  * Fold every channel independently. A heavily driven channel still grows, only
- * ever more slowly (issue #703), and it cannot stop any OTHER channel from
- * growing either, which is the whole point of ticket #1129. Empty channels are
+ * ever more slowly, and it cannot stop any OTHER channel from
+ * growing either, which is the whole point of. Empty channels are
  * dropped so the stored doc stays small.
  */
 export function foldCabinetResidualsBySource(
@@ -403,7 +393,7 @@ export function sumCabinetResiduals(bySource: CabinetResidualsBySource): Record<
 
 /**
  * How many channels sit within 0.01 of the per-source asymptote for a metric.
- * Since issue #703 no channel ever touches the cap, so this now means "driven
+ * Since no channel ever touches the cap, so this now means "driven
  * so hard it is effectively maxed". The board's at-ceiling warning is only
  * honest when EVERY channel is there: below that, building in a less-driven
  * channel still buys movement.

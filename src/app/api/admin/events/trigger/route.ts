@@ -6,7 +6,6 @@ import { getDb } from "@/lib/mongodb";
 import "@/lib/events/pree/index";
 import { badRequest, conflict, notFound, errorResponse } from "@/lib/api/errors";
 import { parseJsonBody } from "@/lib/api/validate";
-import type { Character } from "@/lib/db/types/character";
 import { getEventDefinitionsCollection } from "@/lib/db/collections/eventDefinitions";
 import { getEventHandler } from "@/lib/events/substrate/registry";
 import {
@@ -17,6 +16,7 @@ import {
 } from "@/lib/events/substrate/offer";
 import { notifyPlayerEventOffered } from "@/lib/events/pree/notifications";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const TriggerSchema = z.object({
   characterId: z.string().refine((v) => ObjectId.isValid(v), "Invalid characterId"),
@@ -38,7 +38,7 @@ export const POST = withAdminRoute(async (_auth, request: Request) => {
   const db = await getDb();
   const scopeId = new ObjectId(characterId);
 
-  const character = await db.collection<Character>("characters").findOne({ _id: scopeId });
+  const character = await charactersCollection(db).findOne({ _id: scopeId });
   if (!character) {
     throw notFound("Character not found");
   }

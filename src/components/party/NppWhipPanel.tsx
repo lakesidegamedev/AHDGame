@@ -268,14 +268,43 @@ export function NppWhipPanel({
     resolvedCountryId,
   ]);
 
-  // Whip a bill for a given chamber
-  const handleBillWhip = async (
-    billId: string,
-    chamberKey: string,
-    direction: "for" | "against"
+  const nationalOrRegionWhipUrl = () =>
+    endpointConfig?.whipUrl
+      ? endpointConfig.whipUrl
+      : isNational
+        ? whipUrl
+        : regionApiSubUrl(effectiveCountryId, stateId!, `party/${partyId}/whip`);
+
+  // Request construction runs inside the try so a throw still shows the network toast.
+  const postWhip = async (
+    whippingKey: string,
+    buildRequest: () => { url: string; body: Record<string, unknown> }
   ) => {
-    setWhippingId(billId);
+    setWhippingId(whippingKey);
     try {
+      const { url, body } = buildRequest();
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ audience: "npp", ...body }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showToast(data.message, "success");
+        setRefreshKey((k) => k + 1);
+      } else {
+        showToast(apiErrorText(data, "Failed to issue whip"), "error");
+      }
+    } catch {
+      showToast("Network error", "error");
+    } finally {
+      setWhippingId(null);
+    }
+  };
+
+  // Whip a bill for a given chamber
+  const handleBillWhip = (billId: string, chamberKey: string, direction: "for" | "against") =>
+    postWhip(billId, () => {
       const useNationalEndpoint = isNational && chamberKey !== "stateLegislature";
       const url = endpointConfig?.whipUrl
         ? endpointConfig.whipUrl
@@ -287,82 +316,37 @@ export function NppWhipPanel({
               `party/${partyId}/whip`
             );
       const chamber = chamberKey === "stateLegislature" ? subNationalChamberKey : chamberKey;
-
-      const res = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          audience: "npp",
+      return {
+        url,
+        body: {
           targetType: "bill",
           targetId: billId,
           chamber,
           direction,
           mode: whipMode,
-        }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        showToast(data.message, "success");
-        setRefreshKey((k) => k + 1);
-      } else {
-        showToast(apiErrorText(data, "Failed to issue whip"), "error");
-      }
-    } catch {
-      showToast("Network error", "error");
-    } finally {
-      setWhippingId(null);
-    }
-  };
+        },
+      };
+    });
 
-  const handleLeadershipCandidacyWhip = async (
-    election: LeadershipElectionItem,
-    candidacyId: string
-  ) => {
-    setWhippingId(`${election.id}_${candidacyId}`);
-    try {
+  const handleLeadershipCandidacyWhip = (election: LeadershipElectionItem, candidacyId: string) =>
+    postWhip(`${election.id}_${candidacyId}`, () => {
       const targetType = election.type === "speaker" ? "speakerElection" : "leadershipElection";
+      const { legislature } = getCountryClientConfig(
+        (countryId ?? "US").toUpperCase() as CountryId
+      );
       const chamber =
         election.type === "speaker" ||
         election.type === "majority_leader" ||
         election.type === "minority_leader"
-          ? getCountryClientConfig((countryId ?? "US").toUpperCase() as CountryId).legislature
-              .lowerChamber.key
-          : (getCountryClientConfig((countryId ?? "US").toUpperCase() as CountryId).legislature
-              .upperChamber?.key ??
-            getCountryClientConfig((countryId ?? "US").toUpperCase() as CountryId).legislature
-              .lowerChamber.key);
-      const url = endpointConfig?.whipUrl
-        ? endpointConfig.whipUrl
-        : isNational
-          ? whipUrl
-          : regionApiSubUrl(effectiveCountryId, stateId!, `party/${partyId}/whip`);
-      const res = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          audience: "npp",
-          targetType,
-          targetId: election.id,
-          chamber,
-          direction: "for",
-          candidacyId,
-        }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        showToast(data.message, "success");
-        setRefreshKey((k) => k + 1);
-      } else {
-        showToast(apiErrorText(data, "Failed to issue whip"), "error");
-      }
-    } catch {
-      showToast("Network error", "error");
-    } finally {
-      setWhippingId(null);
-    }
-  };
+          ? legislature.lowerChamber.key
+          : (legislature.upperChamber?.key ?? legislature.lowerChamber.key);
+      return {
+        url: nationalOrRegionWhipUrl(),
+        body: { targetType, targetId: election.id, chamber, direction: "for", candidacyId },
+      };
+    });
 
-  const handleGovernmentVoteWhip = async (
+  const handleGovernmentVoteWhip = (
     voteId: string,
     direction: "for" | "against",
     targetType:
@@ -370,82 +354,34 @@ export function NppWhipPanel({
     /** Impeachments move between chambers as the case advances, so the item
      *  carries its own chamber rather than always using the lower one. */
     chamberOverride?: string
-  ) => {
-    setWhippingId(`cv_${voteId}_${direction}`);
-    try {
+  ) =>
+    postWhip(`cv_${voteId}_${direction}`, () => {
       const config = getCountryClientConfig((countryId ?? "US").toUpperCase() as CountryId);
       const chamber = chamberOverride ?? config.legislature.lowerChamber.key;
-      // A state party panel must post to its own region route. This handler
-      // previously always resolved the national URL, which was harmless while
-      // it only served PM and no-confidence votes (never shown on a state
-      // panel) but breaks a governor impeachment, which is.
-      const url = endpointConfig?.whipUrl
-        ? endpointConfig.whipUrl
-        : isNational
-          ? whipUrl
-          : regionApiSubUrl(effectiveCountryId, stateId!, `party/${partyId}/whip`);
-      const res = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          audience: "npp",
-          targetType,
-          targetId: voteId,
-          chamber,
-          direction,
-        }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        showToast(data.message, "success");
-        setRefreshKey((k) => k + 1);
-      } else {
-        showToast(apiErrorText(data, "Failed to issue whip"), "error");
-      }
-    } catch {
-      showToast("Network error", "error");
-    } finally {
-      setWhippingId(null);
-    }
-  };
+      // A state party panel must post to its own region route; the national
+      // URL breaks governor impeachment.
+      return {
+        url: nationalOrRegionWhipUrl(),
+        body: { targetType, targetId: voteId, chamber, direction },
+      };
+    });
 
-  const handleCabinetWhip = async (item: LeadershipElectionItem, direction: "for" | "against") => {
-    const nominationId = item.id;
-    setWhippingId(`cab_${nominationId}_${direction}`);
-    try {
+  const handleCabinetWhip = (item: LeadershipElectionItem, direction: "for" | "against") =>
+    postWhip(`cab_${item.id}_${direction}`, () => {
       const config = getCountryClientConfig((countryId ?? "US").toUpperCase() as CountryId);
       const chamber = config.upperElectionSystem
         ? (config.legislature.upperChamber?.key ?? config.legislature.lowerChamber.key)
         : config.legislature.lowerChamber.key;
-      const url = endpointConfig?.whipUrl
-        ? endpointConfig.whipUrl
-        : isNational
-          ? whipUrl
-          : regionApiSubUrl(effectiveCountryId, stateId!, `party/${partyId}/whip`);
-      const res = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          audience: "npp",
+      return {
+        url: nationalOrRegionWhipUrl(),
+        body: {
           targetType: item.targetType ?? "cabinetNomination",
-          targetId: nominationId,
+          targetId: item.id,
           chamber,
           direction,
-        }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        showToast(data.message, "success");
-        setRefreshKey((k) => k + 1);
-      } else {
-        showToast(apiErrorText(data, "Failed to issue whip"), "error");
-      }
-    } catch {
-      showToast("Network error", "error");
-    } finally {
-      setWhippingId(null);
-    }
-  };
+        },
+      };
+    });
 
   const summarizeBillWhips = (
     whips: Array<{

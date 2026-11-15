@@ -1,4 +1,6 @@
 import type { Db, ObjectId } from "mongodb";
+import { suspiciousCharactersCollection } from "@/lib/db/repositories/suspiciousCharacters";
+import type { Document } from "mongodb";
 
 /**
  * Keep suspicious-activity flags in sync with a user's ban state.
@@ -20,14 +22,12 @@ export async function syncSuspiciousFlagsForBanState(
 ): Promise<void> {
   const now = new Date();
   if (banned) {
-    await db
-      .collection("suspiciousCharacters")
-      .updateMany(
-        { userId, pool: { $ne: "resolved" } },
-        { $set: { pool: "resolved", dismissed: true, resolvedByBan: true, lastUpdated: now } }
-      );
+    await suspiciousCharactersCollection<Document>(db).updateMany(
+      { userId, pool: { $ne: "resolved" } },
+      { $set: { pool: "resolved", dismissed: true, resolvedByBan: true, lastUpdated: now } }
+    );
   } else {
-    await db.collection("suspiciousCharacters").updateMany(
+    await suspiciousCharactersCollection<Document>(db).updateMany(
       { userId, resolvedByBan: true },
       {
         $set: { pool: "active", dismissed: false, lastUpdated: now },

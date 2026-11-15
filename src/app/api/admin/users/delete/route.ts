@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
-import { IDENTITY_OBSERVATIONS_COLLECTION } from "@/lib/db/types/identityObservation";
 import { requireAdmin } from "@/lib/api/requireAdmin";
 import { withNoStore } from "@/lib/api/withNoStore";
 import { isAuthMigrationFenced } from "@/lib/auth/sourceFence";
@@ -13,6 +12,12 @@ import { cascadeCharacterDeletion } from "@/lib/account/cascadeCharacterDeletion
 import { stampSubjectDeleted } from "@/lib/financialTxLog/stampDeleted";
 import { logCharacterDeleted } from "@/lib/db/collections/activityLog";
 import { heldBlocRowIds, releaseVacatedBlocSeats } from "@/lib/elections/vacatedBlocSeats";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import type { Document } from "mongodb";
+import { usersCollection } from "@/lib/db/repositories/users";
+import { actionLogsCollection } from "@/lib/db/repositories/actionLogs";
+import { identityObservationsCollection } from "@/lib/db/repositories/identityObservations";
 
 // POST /api/admin/users/delete — Permanently delete a user account and their character.
 // Auth: requireAdmin
@@ -36,13 +41,13 @@ export const POST = withNoStore(async (request: Request) => {
     }
 
     const db = await getDb();
-    const usersCollection = db.collection("users");
-    const charactersCollection = db.collection("characters");
-    const actionLogsCollection = db.collection("actionLogs");
-    const officialsCollection = db.collection("electedOfficials");
+    const usersCollectionHandle = usersCollection<Document>(db);
+    const charactersHandle = charactersCollection(db);
+    const actionLogsHandle = actionLogsCollection<Document>(db);
+    const officialsCollection = electedOfficialsCollection<Document>(db);
 
     // Check if user exists
-    const user = await usersCollection.findOne({ _id: objectId });
+    const user = await usersCollectionHandle.findOne({ _id: objectId });
     if (!user) {
       return errorResponse(404, "User not found");
     }
@@ -59,7 +64,7 @@ export const POST = withNoStore(async (request: Request) => {
     }
 
     // Find the user's character
-    const character = await charactersCollection.findOne({ userId: objectId });
+    const character = await charactersHandle.findOne({ userId: objectId });
 
     // Log admin deletion with tracking data (before actually deleting)
     // WHY: Deleted accounts lose all IP/fingerprint data — this preserves an audit trail for fraud investigation
@@ -103,7 +108,7 @@ export const POST = withNoStore(async (request: Request) => {
 
       // Retain action logs for forensics: stamp them deleted + denormalize
       // identity from the still-present docs so they stay readable afterward.
-      await actionLogsCollection.updateMany(
+      await actionLogsHandle.updateMany(
         { characterId: character._id },
         {
           $set: {
@@ -145,7 +150,7 @@ export const POST = withNoStore(async (request: Request) => {
       });
 
       // Delete the character
-      await charactersCollection.deleteOne({ _id: character._id });
+      await charactersHandle.deleteOne({ _id: character._id });
     }
 
     if (!character) {
@@ -167,10 +172,10 @@ export const POST = withNoStore(async (request: Request) => {
     // does NOT take it with it. Purged here so account deletion actually
     // removes the account's IP and fingerprint evidence rather than orphaning
     // 90 days of it.
-    await db.collection(IDENTITY_OBSERVATIONS_COLLECTION).deleteMany({ userId: objectId });
+    await identityObservationsCollection<Document>(db).deleteMany({ userId: objectId });
 
     // Delete the user
-    await usersCollection.deleteOne({ _id: objectId });
+    await usersCollectionHandle.deleteOne({ _id: objectId });
 
     return NextResponse.json({
       success: true,

@@ -2,26 +2,25 @@ import type { CountryGameState } from "@/lib/db/types";
 import type { CountryElections } from "../contract";
 import type { CountryElectionPhaseEntry } from "@/lib/turn/countryPhases";
 import { getDb } from "@/lib/mongodb";
-import { getCurrentTurnAndCtx } from "@/lib/turn/perpetualElections/engine";
+import { getCurrentTurnAndCtx } from "@/lib/elections/scheduling/engine";
 import {
   easternBlocElectionsLive,
   ensureEasternBlocAssemblyElections,
   ensureRegionalDelegateElections,
   seatsFromRegionField,
-} from "@/lib/turn/perpetualElections/shared";
+} from "@/lib/elections/scheduling/shared";
 import { roElectionSeatsForPreset } from "./rules/parliament1992";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
 
 /** Romania's constituent bicameral parliament in 1991; Cold War assembly otherwise. */
 export async function ensureROElections(now: Date, inFlightTurn?: number): Promise<void> {
   const db = await getDb();
   const { ctx } = await getCurrentTurnAndCtx(db);
   if (ctx.preset === "1991-default") {
-    const country = await db
-      .collection<CountryGameState>("countryGameStates")
-      .findOne(
-        { _id: "RO" },
-        { projection: { roElectoralLaw1992SinceTurn: 1, roParliament1992SinceTurn: 1 } }
-      );
+    const country = await countryGameStatesCollection(db).findOne(
+      { _id: "RO" },
+      { projection: { roElectoralLaw1992SinceTurn: 1, roParliament1992SinceTurn: 1 } }
+    );
     const authorized =
       country?.roElectoralLaw1992SinceTurn != null || country?.roParliament1992SinceTurn != null;
     for (const [electionType, field, label, chamber] of [
@@ -62,20 +61,11 @@ export async function ensureROElections(now: Date, inFlightTurn?: number): Promi
 }
 
 /**
- * Romania's elections.
- *
- * ⚠️ SERVER ONLY. The spawners reach `getDb`.
- *
- * ⚠️ NO `spawn`. Romania has no row in
- * `SPAWN_ELECTIONS_REGISTRY`; these phases run through
- * `COUNTRY_ELECTION_PHASES`, in this order. Adding a `spawn` would run them a
- * second time each turn. The RO spawner lives here and uses shared election
- * helpers without moving the other countries' phases.
- *
- * ⚠️ NO `seats`. There is no seat table for Romania anywhere;
- * apportionment is read from the live regions, the way East Germany's
- * Volkskammer and Brazil's Senate are. An empty `byChamber` would describe a
- * chamber with no seats rather than one whose seats live elsewhere.
+ * Romania's elections. SERVER ONLY: spawners reach getDb.
+ * No spawn: RO has no SPAWN_ELECTIONS_REGISTRY row, so these phases run via
+ * COUNTRY_ELECTION_PHASES; adding spawn would double-run them each turn.
+ * No seats: apportionment reads from live regions, not a seat table.
+ * Empty byChamber would mean a chamber with no seats, not seats elsewhere.
  */
 const phases: CountryElectionPhaseEntry[] = [
   { name: "roGrandNationalAssemblyElections", fn: ensureROElections },

@@ -18,10 +18,10 @@ import {
   type SourceSecuritySnapshotUser,
 } from "./sourceSecuritySnapshot";
 import type { LoadedSourceOwnershipProof, SourceOwnershipProof } from "./sourceOwnershipProof";
+import { sourceFenceReceiptsCollection } from "@/lib/db/repositories/sourceFenceReceipts";
+import { sourceFenceConsumptionsCollection } from "@/lib/db/repositories/sourceFenceConsumptions";
+import { usersCollection } from "@/lib/db/repositories/users";
 
-const USERS = "users";
-const CONSUMPTIONS = "sourceFenceConsumptions";
-const RECEIPTS = "sourceFenceReceipts";
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 const HEX24 = /^[0-9a-f]{24}$/;
 const HEX64 = /^[0-9a-f]{64}$/;
@@ -359,9 +359,9 @@ export function createSourceFenceWriter(config: SourceFenceWriterConfig) {
     if (!Number.isSafeInteger(timeout) || timeout < 10 || timeout > 10_000)
       throw new TypeError("Invalid source fence loader timeout");
   }
-  const users = config.db.collection<SourceSecuritySnapshotUser>(USERS);
-  const consumptions = config.db.collection<StoredBinding>(CONSUMPTIONS);
-  const receipts = config.db.collection<StoredReceipt>(RECEIPTS);
+  const users = usersCollection<SourceSecuritySnapshotUser>(config.db);
+  const consumptions = sourceFenceConsumptionsCollection<StoredBinding>(config.db);
+  const receipts = sourceFenceReceiptsCollection<StoredReceipt>(config.db);
   const privilegedCohort = new Set(privilegedIds);
 
   async function reconcile(proof: SourceOwnershipProof): Promise<SourceFenceResult | null> {

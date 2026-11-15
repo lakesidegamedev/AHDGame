@@ -1,6 +1,7 @@
 import type { ClientSession, Db, Document, ObjectId } from "mongodb";
 import { resumeFundCommandAudit, type FundCommandAudit } from "./playerCommandAudit";
 import { statusResponse } from "@/lib/api/errors";
+import { indexFundCommandsCollection } from "@/lib/db/repositories/indexFundCommands";
 
 export interface FundCommandRequest {
   fundId: string;
@@ -19,8 +20,6 @@ interface FundCommand extends Document {
   audit?: FundCommandAudit;
 }
 
-const COLLECTION = "indexFundCommands";
-
 export function pendingFundCommandResponse(operationId: string): Response {
   return statusResponse(409, {
     pending: true,
@@ -38,7 +37,7 @@ export async function claimFundCommand(
   request: FundCommandRequest
 ): Promise<{ key: string; response?: Response }> {
   const key = `fund:${characterId}:${operationId}`;
-  const commands = db.collection<FundCommand>(COLLECTION);
+  const commands = indexFundCommandsCollection<FundCommand>(db);
   try {
     await commands.insertOne({
       _id: key,
@@ -81,7 +80,7 @@ export async function completeFundCommand(
   session?: ClientSession,
   audit?: FundCommandAudit
 ): Promise<void> {
-  await db.collection<FundCommand>(COLLECTION).updateOne(
+  await indexFundCommandsCollection<FundCommand>(db).updateOne(
     { _id: key, state: "pending" },
     {
       $set: {
@@ -101,7 +100,8 @@ export async function recordFundCommandQuote(
   key: string,
   quote: Record<string, string | number | boolean>
 ): Promise<void> {
-  await db
-    .collection<FundCommand>(COLLECTION)
-    .updateOne({ _id: key, state: "pending", quote: { $exists: false } }, { $set: { quote } });
+  await indexFundCommandsCollection<FundCommand>(db).updateOne(
+    { _id: key, state: "pending", quote: { $exists: false } },
+    { $set: { quote } }
+  );
 }

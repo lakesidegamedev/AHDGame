@@ -27,6 +27,10 @@ import {
 } from "@/lib/imf/imfFacilityFinancials";
 import { lastTurnSupplyAgreementCash } from "@/lib/corporations/supplyAgreementCash";
 import type { SupplyAgreement } from "@/lib/db/types/supplyAgreement";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporationHistoryCollection } from "@/lib/db/repositories/corporationHistory";
+import { supplyAgreementsCollection } from "@/lib/db/repositories/supplyAgreements";
 
 export interface LatestCorpIncomeRow {
   income?: number;
@@ -77,7 +81,7 @@ export interface PortfolioHoldings {
 }
 
 /**
- * Bonds, portfolio holdings, and corp-income reads for the detail view (#587).
+ * Bonds, portfolio holdings, and corp-income reads for the detail view.
  *
  * Held-bond values and held-corp stock values are anchor-denominated through
  * the valuation FX map (displayed and ranked values); the corp's own
@@ -91,9 +95,8 @@ export async function loadPortfolioHoldings(
   fxByCurrency: Map<CurrencyCode, number>
 ): Promise<PortfolioHoldings> {
   const [outstandingBonds, heldBondsRaw] = await Promise.all([
-    db.collection<Bond>("bonds").find({ corporationId: corporation._id, matured: false }).toArray(),
-    db
-      .collection<Bond>("bonds")
+    bondsCollection(db).find({ corporationId: corporation._id, matured: false }).toArray(),
+    bondsCollection(db)
       .find({ "holders.corporationId": corporation._id, matured: false })
       .toArray(),
   ]);
@@ -103,8 +106,7 @@ export async function loadPortfolioHoldings(
   ];
   const heldBondIssuerCorps =
     heldBondIssuerCorpIds.length > 0
-      ? await db
-          .collection<Corporation>("corporations")
+      ? await corporationsCollection(db)
           .find(
             { _id: { $in: heldBondIssuerCorpIds.map((id) => new ObjectId(id)) } },
             { projection: { _id: 1, name: 1 } }
@@ -116,9 +118,8 @@ export async function loadPortfolioHoldings(
   const GAME_DAYS_PER_YEAR_RATIO = TURNS_PER_YEAR / TURNS_PER_DAY;
   const portfolioFxByCurrency = await loadValuationFxRates(db);
   const heldBondsSummary: HeldBondSummary[] = heldBondsRaw.map((bond) => {
-    // `holders` is required by the Bond type, but legacy rows can arrive
-    // without it; an unguarded `.find` throws a TypeError and 500s the whole
-    // corporation page (#2349). A bond with no holder rows contributes nothing.
+    // `holders` is required by the Bond type, but legacy rows can arrive without it;
+    // an unguarded `.find` throws. A bond with no holder rows contributes nothing.
     const holding = (bond.holders ?? []).find(
       (h) => h.corporationId?.toString() === corporation._id.toString()
     );
@@ -162,8 +163,7 @@ export async function loadPortfolioHoldings(
 
   const reserved = await loadReservedPositionsPlacedBy(db, corporation._id);
   const reservedByTarget = new Map(reserved.map((r) => [r.targetCorpId.toString(), r.shares]));
-  const heldCorps = await db
-    .collection<Corporation>("corporations")
+  const heldCorps = await corporationsCollection(db)
     .find({
       $or: [
         { "shareholders.corporationId": corporation._id },
@@ -190,7 +190,7 @@ export async function loadPortfolioHoldings(
   const { receivables: imfReceivableRows, totalPrincipal: imfReceivablesPrincipal } =
     await findImfFacilityReceivablesForLender(db, corporation._id);
   const [latestCorpIncomeRow, imfLenderReceiptsAnchor] = await Promise.all([
-    db.collection<LatestCorpIncomeRow>("corporationHistory").findOne(
+    corporationHistoryCollection<LatestCorpIncomeRow>(db).findOne(
       { corporationId: corporation._id },
       {
         sort: { turn: -1 },
@@ -210,9 +210,8 @@ export async function loadPortfolioHoldings(
   ]);
   const turnIncomeForImf =
     typeof latestCorpIncomeRow?.income === "number" ? latestCorpIncomeRow.income : 0;
-  // Realized dividend income (local ccy) this corp received from holdings last
-  // turn, scaled per-turn → daily to match the projected `income` units (#3109).
-  // Reporting only — the cash was already credited in the dividend phase.
+  // Realized dividend income (local ccy) this corp received last turn, scaled
+  // per-turn to daily to match projected `income` units. Reporting only; cash was already credited.
   const dividendIncomeReceivedDaily =
     typeof latestCorpIncomeRow?.dividendIncomeReceived === "number"
       ? Math.round(latestCorpIncomeRow.dividendIncomeReceived * TURNS_PER_DAY)
@@ -231,8 +230,7 @@ export async function loadPortfolioHoldings(
       : 0;
 
   const supplySettlementTurn = latestCorpIncomeRow?.turn ?? currentTurn;
-  const supplyAgreementDocs = await db
-    .collection<SupplyAgreement>("supplyAgreements")
+  const supplyAgreementDocs = await supplyAgreementsCollection(db)
     .find(
       {
         $or: [{ supplierCorpId: corporation._id }, { buyerCorpId: corporation._id }],

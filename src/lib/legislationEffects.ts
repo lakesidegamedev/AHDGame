@@ -46,6 +46,11 @@ import { isMacroMetricPath } from "@/lib/macroMetrics/paths";
 import { boardDeltaForLegacyEffect } from "@/lib/politicalLegislation/legacyEffectBridge";
 import { applyBoardDelta } from "@/lib/politicalLegislation/boardWrite";
 import type { PoliticalMetricsDoc } from "@/lib/db/types/politicalMetrics";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { billsCollection } from "@/lib/db/repositories/bills";
+import type { Document } from "mongodb";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 
 /** National pseudo-state ids (federal, uk_national, …) vs real sub-national regions (XB, TX, …). */
 function getNonPolicyProvisionScope(stateId: string | undefined): "national" | "state" {
@@ -70,14 +75,11 @@ async function applyOneProvision(
   const { metricCategoryId, metricId } = legislationType.effectTarget;
   const path = `${metricCategoryId}.${metricId}.value`;
   // Macro paths write the enacting country's macroMetrics docs (regions plus
-  // the national rollup, which all carry `countryId`). This used to be an
-  // empty-filter updateMany: a US bill nudged every region on earth, including
-  // countries that never saw the bill. A bill with no countryId cannot be
-  // attributed, so its macro effect is dropped, exactly as the political
-  // branch below already does.
+  // the national rollup, all carrying `countryId`). A bill with no countryId
+  // cannot be attributed, so its macro effect is dropped.
   if (isMacroMetricPath(path)) {
     if (!countryId) return;
-    await db.collection<StateMetrics>("macroMetrics").updateMany(
+    await macroMetricsCollection(db).updateMany(
       {
         countryId,
         ...(path === "economic.unemploymentRate.value"
@@ -115,10 +117,7 @@ async function applyOneProvision(
   }
 }
 
-/**
- * Derive a CountryId from a bill. Post-migration all bills should have
- * countryId set directly — the old stateId-prefix parsing is no longer valid.
- */
+/** Derive a CountryId directly from a bill's countryId. */
 function getBillCountryId(bill: Pick<Bill, "countryId">): CountryId | null {
   return (bill.countryId as CountryId) ?? null;
 }
@@ -129,12 +128,10 @@ function getBillCountryId(bill: Pick<Bill, "countryId">): CountryId | null {
  * parent seat picks up its post-split name (e.g. HEW -> HHS). Idempotent.
  */
 async function applyCreateDepartmentProvision(db: Db, p: CreateDepartmentProvision): Promise<void> {
-  await db
-    .collection<GameState>("gameState")
-    .updateOne(
-      { _id: "current" as unknown as GameState["_id"] },
-      { $addToSet: { manuallyEnabledSeats: p.positionId }, $set: { updatedAt: new Date() } }
-    );
+  await gameStateCollection(db).updateOne(
+    { _id: "current" as unknown as GameState["_id"] },
+    { $addToSet: { manuallyEnabledSeats: p.positionId }, $set: { updatedAt: new Date() } }
+  );
 }
 
 export async function applyLegislationEffect(
@@ -165,13 +162,10 @@ export async function applyLegislationEffect(
   );
   const legislationTypes = new Map<string, LegislationType>();
   if (policyTypeIds.length === 1) {
-    const legislationType = await db
-      .collection<LegislationType>("legislationTypes")
-      .findOne({ _id: policyTypeIds[0] });
+    const legislationType = await legislationTypesCollection(db).findOne({ _id: policyTypeIds[0] });
     if (legislationType) legislationTypes.set(legislationType._id, legislationType);
   } else if (policyTypeIds.length > 1) {
-    const loaded = await db
-      .collection<LegislationType>("legislationTypes")
+    const loaded = await legislationTypesCollection(db)
       .find({ _id: { $in: policyTypeIds } })
       .toArray();
     for (const legislationType of loaded) {
@@ -210,12 +204,10 @@ export async function applyLegislationEffect(
               snapshotTurn
             );
             if (snapshot && bill._id) {
-              await db
-                .collection("bills")
-                .updateOne(
-                  { _id: bill._id },
-                  { $set: { [`provisions.${provisionIndex}.nationalizationSnapshot`]: snapshot } }
-                );
+              await billsCollection<Document>(db).updateOne(
+                { _id: bill._id },
+                { $set: { [`provisions.${provisionIndex}.nationalizationSnapshot`]: snapshot } }
+              );
             }
           } catch (err) {
             console.error("[legislationEffects] nationalization snapshot failed:", err);

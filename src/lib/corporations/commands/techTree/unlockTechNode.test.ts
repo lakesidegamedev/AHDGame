@@ -41,7 +41,7 @@ vi.mock("@/lib/audit/recordAudit", () => ({
 
 function mockDb({ revenues = [24_000], modifiedCount = 1 } = {}) {
   const updateOne = vi.fn().mockResolvedValue({ modifiedCount });
-  // Ledger rows land here via the strict emit (ticket #1998).
+  // Ledger rows land here via the strict emit.
   const txInserts: Record<string, unknown>[] = [];
   const insertOne = vi.fn((doc: Record<string, unknown>) => {
     txInserts.push(doc);

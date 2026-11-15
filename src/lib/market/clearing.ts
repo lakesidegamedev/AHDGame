@@ -29,8 +29,7 @@ import { LOYAL_POOL_FRACTION, SLICE_NOISE_FLOOR } from "@/lib/market/brandLoyalt
 import { isStateScopedCommodity, supplyAgreementScopeKey } from "@/lib/market/commodityMarketScope";
 
 /**
- * Market clearing — Tier 3 (Fix 2) of the structural market rework
- * (audit t806; see docs/plans/2026-07-03-market-structural-plan.md).
+ * Market clearing, Tier 3 of the structural market rework.
  *
  * Sellers post a price relative to market (their **pricing posture**,
  * −20%…+20%) and per commodity the (lagged) demand fills sellers
@@ -43,10 +42,9 @@ import { isStateScopedCommodity, supplyAgreementScopeKey } from "@/lib/market/co
  *
  *   legFactor = soldFraction × (1 + posture) × priceRealizationFactor(price/base)
  *
- * i.e. volume × your price choice × the macro price level (Tier 1's term —
- * clearing subsumes rather than stacks a second copy: when clearing is on,
- * this factor REPLACES the plain realization multiplier). Sector factor is
- * the supply-rate-weighted mean across outputs, ramped in per sector via the
+ * i.e. volume × your price choice × the macro price level (clearing subsumes
+ * the plain realization multiplier when on). Sector factor is the
+ * supply-rate-weighted mean across outputs, ramped in per sector via the
  * shared 240-turn window.
  *
  * Demand is the PRIOR turn's aggregate (lagged, like every market input in
@@ -98,14 +96,12 @@ export {
 } from "./rules/offerPricing";
 /**
  * Automated posture for NPP/unowned sellers: skim into shortages, undercut
- * into gluts, sit at market when balanced. Deliberately milder than the
- * player range so players can always out-position the AI.
+ * into gluts, sit at market when balanced. Milder than the player range so
+ * players can always out-position the AI.
  *
- * `lastSoldFraction` (the sector's own lagged fill rate, when known) gates the
- * aggregate heuristic: a seller that failed to clear its book last turn must
- * not skim, and one that barely sold at all undercuts to chase volume —
- * regardless of what the aggregate balance says. Survival beats margin for an
- * unmanaged corp (away-safety, see docs/plans/2026-07-05-corp-policy-engine-ux.md).
+ * `lastSoldFraction` gates the aggregate heuristic: a seller that failed to
+ * clear its book must not skim, and one that barely sold undercuts to chase
+ * volume. Survival beats margin for an unmanaged corp.
  */
 export function autoPosture(
   demandUnits: number,
@@ -173,29 +169,19 @@ function sellerContractFillBasis(s: ClearingSeller): number {
     : Math.max(0, s.units);
 }
 
-/**
- * Fill one commodity's demand cheapest-first. Sellers at the same posture
- * split the residual demand pro-rata. Returns soldFraction per seller id.
+/*
+ * Fill one commodity's demand cheapest-first. Sellers at the same posture split
+ * residual demand pro-rata. Returns soldFraction per seller id.
  *
- * When `loyaltyById` is supplied (brand-loyalty slice, A2b), a loyal-slice
- * PRE-PASS runs first: a finite pool (LOYAL_POOL_FRACTION of demand) is split
- * across sellers by RELATIVE loyalty and filled at each seller's own price —
- * loyal customers who don't defect to the cheapest option. The remainder then
- * clears cheapest-first exactly as before. Omitting `loyaltyById` (flag off) is
- * byte-identical to the original cheapest-first behaviour.
+ * When `loyaltyById` is supplied, a loyal-slice pre-pass runs first: a finite
+ * pool (LOYAL_POOL_FRACTION of demand) is split by relative loyalty and filled
+ * at each seller's own price. Omitting it is identical to plain cheapest-first.
  *
- * A supply agreement is ADDITIVE, not restrictive: `contractedUnitsById`
+ * A supply contract is ADDITIVE, not restrictive: `contractedUnitsById`
  * reserves the buyer's volume off the top, and everything the supplier produces
- * ABOVE the contract clears on the open market like any other unit. There is no
- * surplus blackhole — a supplier that contracts 50 of 100 still offers the other
- * 50 to the book, so `soldFraction` reflects real total sales (contracted +
- * open-market fill), never `contracted / produced`.
- *
- * Contracted volume is guaranteed ahead of the anonymous order book, up to the
- * supplier's actual offer. The caller already caps reservations by each named
- * buyer's physical demand. Bounding the reservation again by this pass's
- * proportional anonymous demand made valid agreements under-deliver in thin
- * books, such as ticket #1139's 13k freight contract filling only 6.4k.
+ * ABOVE the contract clears on the open market, so `soldFraction` reflects real
+ * total sales. Contracted volume is guaranteed up to the supplier's offer; do
+ * not re-bound it by this pass's anonymous demand.
  */
 export function clearCommodityMarket(
   demandUnits: number,
@@ -418,22 +404,20 @@ export interface ClearingBookDiagnostic {
 }
 
 /**
- * Clearing book invariant (issue #2054): after normalization the offered book
- * and the lagged supply ledger MUST be in one canonical basis. The basis fix
- * (canonicalPlantsUnitsForCommodity on both sides) is what makes them
- * comparable; this predicate is only the backstop that names a residual drift.
+ * Clearing book invariant: after normalization the offered book and the lagged
+ * supply ledger MUST be in one canonical basis. The basis fix
+ * (canonicalPlantsUnitsForCommodity on both sides) makes them comparable; this
+ * predicate is the backstop that names residual drift.
  *
  * Two gates, both required. First MATERIALITY: the absolute gap must reach
  * MIN_MATERIAL_BOOK_GAP units. A sub-gap excess cannot move fills or prices:
- * the pinned books run in the thousands, so a gap two orders below that is
- * mix-rounding and scope noise (first landing, new production, sub-scale
- * national books, near-zero denominators), never a defect. Second GROWTH: past
- * the gap, legitimate one-turn growth cannot double an established book
- * (builds land over many turns, the policy output curve caps at +15%), so an
- * excess past 2x is a basis breach, not growth. A material book against a
- * zero (or missing) lagged baseline has an infinite ratio and breaches: that
- * is exactly the pinned pharmaceuticals/ordnance shape, and canonicalization
- * leaves no legitimate way to offer thousands of units the ledger never saw.
+ * pinned books run in the thousands, so a gap two orders below that is
+ * mix-rounding and scope noise, never a defect. Second GROWTH: legitimate
+ * one-turn growth cannot double an established book (builds land over many
+ * turns, the policy output curve caps at +15%), so an excess past 2x is a
+ * basis breach. A material book against a zero (or missing) lagged baseline
+ * breaches: canonicalization leaves no legitimate way to offer thousands of
+ * units the ledger never saw.
  */
 const CLEARING_BOOK_INVARIANT_MIN_MATERIAL_GAP = 250;
 const CLEARING_BOOK_INVARIANT_MAX_GROWTH_FACTOR = 2;
@@ -921,9 +905,7 @@ export function computeClearingFactors(args: {
       partitioned.set("", sellers);
     }
 
-    // Own-group reservations: the bridge needs the buyers of ONE book, and it
-    // used to filter the whole buyer list for every book. Group them once per
-    // commodity so a state-scoped market pays one pass, not one per state.
+    // Group buyers by book once so a state-scoped market pays one pass, not one per state.
     if (args.internalSupply && !args.groupSupply && args.sectorCorpId) {
       const buyersByBook = new Map<string, InternalSupplyContextBuyer[]>();
       for (const buyer of args.internalSupply.buyers) {

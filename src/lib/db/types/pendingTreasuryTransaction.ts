@@ -13,8 +13,6 @@ import type { CountryId } from "../../constants/countries";
  * (`leadershipApproval`) must be the Chair OR Vice-Chair (the latter via
  * the acting-chair helper). The proposer auto-fills whichever slot
  * matches their role.
- *
- * See `docs/plans/archive/2026-05/2026-05-22-treasury-two-person-approval.md`.
  */
 export interface PendingTreasuryTransaction {
   _id: ObjectId;
@@ -56,8 +54,7 @@ export interface PendingTreasuryTransaction {
   /**
    * Treasurer slot. Filled when proposer is treasurer OR when treasurer
    * clicks Approve. For type === "request" the requester NEVER fills
-   * this slot, even if they hold the Treasurer seat (user-confirmed
-   * 2026-05-23: no auto-approvals for Request Funds).
+   * this slot, even if they hold the Treasurer seat (no auto-approvals).
    */
   treasurerApproval?: { characterId: ObjectId; approvedAt: Date };
   /**

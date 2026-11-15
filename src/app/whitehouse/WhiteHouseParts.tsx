@@ -3,6 +3,7 @@ import { Avatar } from "@/components/Avatar";
 import { PartyChip } from "@/app/congress/components/CongressShared";
 import { SectionLabel } from "@/components/ui";
 import { type CountryId } from "@/lib/constants/countries";
+import type { ExecutiveStatusPayload } from "@/lib/elections/rules/successionFill";
 
 interface ExecutiveData {
   id: string;
@@ -83,6 +84,8 @@ export interface WhiteHouseResponse {
   isVicePresident: boolean;
   isSenator: boolean;
   vpNomination: VpNomination | null;
+  /** Succession and caretaker state of the country's executive. */
+  executiveStatus?: ExecutiveStatusPayload;
 }
 
 export interface Character {

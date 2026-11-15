@@ -1,7 +1,6 @@
 import type { Db } from "mongodb";
 import type { CrisisAutoCooldown } from "@/lib/db/types/crisis";
-
-const COLLECTION = "crisisAutoCooldowns";
+import { crisisAutoCooldownsCollection } from "@/lib/db/repositories/crisisAutoCooldowns";
 
 /** Sentinel scope key for world-scoped (global) auto-crises. */
 export const GLOBAL_SCOPE_KEY = "GLOBAL";
@@ -12,7 +11,7 @@ function key(templateKey: string, scopeKey: string): string {
 
 /** Load every cooldown row, keyed by `${templateKey}:${scopeKey}`. */
 export async function loadCooldownMap(db: Db): Promise<Map<string, CrisisAutoCooldown>> {
-  const rows = await db.collection<CrisisAutoCooldown>(COLLECTION).find({}).toArray();
+  const rows = await crisisAutoCooldownsCollection<CrisisAutoCooldown>(db).find({}).toArray();
   return new Map(rows.map((r) => [r._id, r]));
 }
 
@@ -50,7 +49,10 @@ export async function setArmed(
   const _id = key(templateKey, scopeKey);
   const row = cooldowns.get(_id);
   if (!row || row.armed === armed) return;
-  await db.collection<CrisisAutoCooldown>(COLLECTION).updateOne({ _id }, { $set: { armed } });
+  await crisisAutoCooldownsCollection<CrisisAutoCooldown>(db).updateOne(
+    { _id },
+    { $set: { armed } }
+  );
   cooldowns.set(_id, { ...row, armed });
 }
 
@@ -65,7 +67,7 @@ export async function stampCooldown(
 ): Promise<void> {
   const _id = key(templateKey, scopeKey);
   const now = new Date();
-  await db.collection<CrisisAutoCooldown>(COLLECTION).updateOne(
+  await crisisAutoCooldownsCollection<CrisisAutoCooldown>(db).updateOne(
     { _id },
     {
       $set: {
@@ -76,6 +78,7 @@ export async function stampCooldown(
         armed: false,
         updatedAt: now,
       },
+      $unset: { deferredTurn: "" },
     },
     { upsert: true }
   );

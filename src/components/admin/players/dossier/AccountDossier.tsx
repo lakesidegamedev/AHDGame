@@ -1,21 +1,12 @@
 "use client";
 
-// AccountDossier — the investigator's one-screen cockpit for a single
-// account (forensics v2 plan, Wave 2 "dossier UI"). Self-contained: given a
-// `userId` it fetches GET /api/admin/players/[userId]/dossier and renders
-// the full footprint — identity + devices, sessions, money (totals, flow
-// graph, recent txs), alt links/rings, and the recent-action audit stream.
+// One-screen investigator cockpit for a single account: fetches the
+// dossier API and renders identity, sessions, money, linked accounts and
+// recent actions. Clicking a linked account re-centers the dossier and
+// pushes a breadcrumb.
 //
-// Pivoting: clicking a linked account re-centers the dossier on that user
-// and pushes a breadcrumb trail, so an investigator can walk a ring
-// account-by-account and step back. The `context` prop mirrors the sibling
-// admin Players sub-tabs ("admin" unlocks raw PII server-side; "moderator"
-// gets the masked footprint) — masking itself is enforced by the API.
-//
-// Wiring (coordinator): `import AccountDossier from
-// "@/components/admin/players/dossier/AccountDossier"` and render
-// `<AccountDossier userId={selectedUserId} context={context} />`. No other
-// props are required.
+// Masking is enforced by the API: `context` only selects which sub-tab
+// footprint to request ("admin" raw PII, "moderator" masked).
 
 import { useCallback, useEffect, useState } from "react";
 import { DossierHeader } from "./DossierHeader";

@@ -1,20 +1,13 @@
 /**
  * What a bank charter may do, decided in one place.
  *
- * Charter type used to be re-derived at every call site: six copies of "is
- * this a deposit taker", a `$in: ["retail", "universal"]` in the turn query,
- * an `=== "investment"` in the lending cap, another in the rate setter, another
- * in the discount window, a `type === "investment" || type === "universal"` in
- * the solvency pass, the interbank module and the prop desk. They agreed, until
- * one of them did not: the turn query excluded investment charters from loan
- * servicing while origination admitted them, and a loan nobody serviced was the
- * result.
+ * Charter type must not be re-derived at call sites: prior scattered checks
+ * disagreed (e.g. the turn query excluded investment charters from loan
+ * servicing while origination admitted them, leaving loans unserviced).
  *
- * This module answers every capability question from one table. Callers ask
- * "may this charter accept a player deposit" and get a decision with a reason,
- * never a charter type to compare against. The reason is what the player sees
- * when the answer is no, so it is part of the contract rather than an error
- * string invented at the call site.
+ * Callers ask "may this charter accept a player deposit" and get a decision
+ * with a reason, never a charter type to compare. The reason is part of the
+ * contract and is shown to the player on refusal.
  */
 
 import type { BankCharterStatus, BankCharterType } from "@/lib/db/types/bank";

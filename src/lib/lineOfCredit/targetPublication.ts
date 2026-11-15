@@ -1,7 +1,8 @@
 /** LOC target cash stays protected until its durable journal outcome is acknowledged. */
 import { isDeepStrictEqual } from "node:util";
 import type { Db, Document, ObjectId } from "mongodb";
-import { MONEY_MOVE_COLLECTION, SETTLED_KEYS_CAP } from "@/lib/banking/moneyMove";
+import { SETTLED_KEYS_CAP } from "@/lib/banking/moneyMove";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
 
 interface TargetSpec {
   token: string;
@@ -33,7 +34,7 @@ interface Outcome {
  * occurs only after the original journal permanently records that outcome.
  */
 export async function publishLocTarget(db: Db, key: string, spec: TargetSpec): Promise<Outcome> {
-  const journal = db.collection<Document>(MONEY_MOVE_COLLECTION);
+  const journal = bankMoneyMovesCollection<Document>(db);
   const target = db.collection<TargetDocument>(spec.collection);
   const journalId = { _id: key as never };
   const targetId = { _id: spec.id as never };

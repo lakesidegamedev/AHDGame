@@ -65,7 +65,7 @@ describe("resolvePolicyProvision", () => {
         directionLabel: "Right",
       });
       const dimension = countryId === "US" ? "wealth" : "income";
-      expect(out.archetypeApprovals).toEqual({
+      expect(out.bucketApprovals).toEqual({
         [`${dimension}:low`]: -1,
         [`${dimension}:middle`]: -0.8,
         [`${dimension}:high`]: 1.2,
@@ -92,7 +92,7 @@ describe("resolvePolicyProvision", () => {
       legislationTypeName: "Corporate tax",
       directionLabel: "Right",
     });
-    expect(out.archetypeApprovals).toEqual({});
+    expect(out.bucketApprovals).toEqual({});
     expect(out.policyDomain).toBeUndefined();
   });
 

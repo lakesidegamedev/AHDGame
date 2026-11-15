@@ -8,12 +8,12 @@
  * `generateUniqueNPPNameAndGender`. To add a new country: define a pool +
  * `generate{XX}NameAndGender` function, then register it in NAME_GENERATORS.
  *
- * A country with no entry falls back to the US pool, which is why the registry
- * matters more than it looks: before this file covered them, a French or
- * Russian chamber seeded entirely American names.
+ * Every NPP country must be registered: generating a name for a country with
+ * no pool of its own throws rather than borrowing another country's pool.
  */
 
 import { namesForYear } from "./nameEra";
+import { CA_SURNAMES, CA_FIRST_NAMES_MALE, CA_FIRST_NAMES_FEMALE } from "./nameListsCa";
 import {
   FIRST_NAMES_MALE,
   FIRST_NAMES_FEMALE,
@@ -105,6 +105,17 @@ import {
   DD_FIRST_NAMES_MALE,
   DD_FIRST_NAMES_FEMALE,
 } from "./nameLists4";
+import {
+  AT_SURNAMES,
+  AT_FIRST_NAMES_MALE,
+  AT_FIRST_NAMES_FEMALE,
+  GR_SURNAMES,
+  GR_FIRST_NAMES_MALE,
+  GR_FIRST_NAMES_FEMALE,
+  FI_SURNAMES,
+  FI_FIRST_NAMES_MALE,
+  FI_FIRST_NAMES_FEMALE,
+} from "./nameLists5";
 
 // Name suffixes (rare but add variety)
 const SUFFIXES = ["Jr.", "Sr.", "III", "IV"];
@@ -152,6 +163,18 @@ function generateUKNameAndGender(): { name: string; gender: "male" | "female" } 
   const firstNames = isFemale ? UK_FIRST_NAMES_FEMALE : UK_FIRST_NAMES_MALE;
   const firstName = firstNames[Math.floor(Math.random() * firstNames.length)];
   const surname = UK_SURNAMES[Math.floor(Math.random() * UK_SURNAMES.length)];
+  return { name: `${firstName} ${surname}`, gender };
+}
+
+// ─── CA Name Pools ──────────────────────────────────────────────────────────
+// Canadian names blend the census traditions (see nameListsCa.ts).
+
+function generateCANameAndGender(): { name: string; gender: "male" | "female" } {
+  const isFemale = Math.random() < 0.4;
+  const gender: "male" | "female" = isFemale ? "female" : "male";
+  const firstNames = isFemale ? CA_FIRST_NAMES_FEMALE : CA_FIRST_NAMES_MALE;
+  const firstName = firstNames[Math.floor(Math.random() * firstNames.length)];
+  const surname = CA_SURNAMES[Math.floor(Math.random() * CA_SURNAMES.length)];
   return { name: `${firstName} ${surname}`, gender };
 }
 
@@ -564,6 +587,49 @@ function generateDDNameAndGender(): { name: string; gender: "male" | "female" } 
   return { name: `${firstName} ${surname}`, gender };
 }
 
+/** Greek feminine surnames: -os becomes -ou, -is becomes -i, -as becomes -a. */
+export function feminizeGreekSurname(surname: string): string {
+  if (surname.endsWith("os")) return `${surname.slice(0, -2)}ou`;
+  if (surname.endsWith("is")) return surname.slice(0, -1);
+  if (surname.endsWith("as")) return surname.slice(0, -1);
+  return surname;
+}
+
+function pickName(list: readonly string[]): string {
+  return list[Math.floor(Math.random() * list.length)];
+}
+
+function generateATNameAndGender(): { name: string; gender: "male" | "female" } {
+  const isFemale = Math.random() < 0.5;
+  const firstName = pickName(isFemale ? AT_FIRST_NAMES_FEMALE : AT_FIRST_NAMES_MALE);
+  return { name: `${firstName} ${pickName(AT_SURNAMES)}`, gender: isFemale ? "female" : "male" };
+}
+
+function generateGRNameAndGender(): { name: string; gender: "male" | "female" } {
+  const isFemale = Math.random() < 0.5;
+  const firstName = pickName(isFemale ? GR_FIRST_NAMES_FEMALE : GR_FIRST_NAMES_MALE);
+  const surname = pickName(GR_SURNAMES);
+  return {
+    name: `${firstName} ${isFemale ? feminizeGreekSurname(surname) : surname}`,
+    gender: isFemale ? "female" : "male",
+  };
+}
+
+function generateFINameAndGender(): { name: string; gender: "male" | "female" } {
+  const isFemale = Math.random() < 0.5;
+  const firstName = pickName(isFemale ? FI_FIRST_NAMES_FEMALE : FI_FIRST_NAMES_MALE);
+  return { name: `${firstName} ${pickName(FI_SURNAMES)}`, gender: isFemale ? "female" : "male" };
+}
+
+function generateUKRNameAndGender(): { name: string; gender: "male" | "female" } {
+  const isFemale = Math.random() < 0.5;
+  const firstName = pickName(isFemale ? RU_UA_FIRST_NAMES_FEMALE : RU_UA_FIRST_NAMES_MALE);
+  return {
+    name: `${firstName} ${pickName(RU_UA_SURNAMES)}`,
+    gender: isFemale ? "female" : "male",
+  };
+}
+
 /**
  * Generate a random NPP name along with the gender used to produce it.
  * Use this when the gender is needed for downstream logic (e.g. image selection).
@@ -618,11 +684,11 @@ export function generateUniqueNPPName(
 /**
  * The token pools behind each country's generator, indexed for membership
  * checks. `isNameFromCountryPool` uses this to tell a name that came out of
- * the right pool from one that came out of the US fallback — which is what an
+ * the right pool from one that came out of another country's pool, which is what an
  * NPP seeded before its country had a pool looks like.
  *
- * Countries absent here have no pool of their own and legitimately use the US
- * one, so nothing about their names can be wrong.
+ * The US is absent here: its names come from the multi-ethnic default pool,
+ * so nothing about them can be wrong.
  */
 const COUNTRY_NAME_POOLS: Record<
   string,
@@ -726,6 +792,16 @@ const COUNTRY_NAME_POOLS: Record<
   },
   SCO: { surnames: UK_SURNAMES, firstNames: [...UK_FIRST_NAMES_MALE, ...UK_FIRST_NAMES_FEMALE] },
   WAL: { surnames: UK_SURNAMES, firstNames: [...UK_FIRST_NAMES_MALE, ...UK_FIRST_NAMES_FEMALE] },
+  AT: { surnames: AT_SURNAMES, firstNames: [...AT_FIRST_NAMES_MALE, ...AT_FIRST_NAMES_FEMALE] },
+  GR: {
+    surnames: [...GR_SURNAMES, ...GR_SURNAMES.map(feminizeGreekSurname)],
+    firstNames: [...GR_FIRST_NAMES_MALE, ...GR_FIRST_NAMES_FEMALE],
+  },
+  FI: { surnames: FI_SURNAMES, firstNames: [...FI_FIRST_NAMES_MALE, ...FI_FIRST_NAMES_FEMALE] },
+  UKR: {
+    surnames: RU_UA_SURNAMES,
+    firstNames: [...RU_UA_FIRST_NAMES_MALE, ...RU_UA_FIRST_NAMES_FEMALE],
+  },
   JP: {
     surnames: JP_SURNAMES,
     firstNames: [...JP_GIVEN_NAMES_MALE, ...JP_GIVEN_NAMES_FEMALE],
@@ -736,6 +812,17 @@ const COUNTRY_NAME_POOLS: Record<
     surnameFirst: true,
   },
 };
+
+/**
+ * A country's own name pool (first names of both genders, surnames), or null
+ * when it has none (the US default pool is not listed here). For callers
+ * that draw names with their own seeded rng instead of this module's.
+ */
+export function countryNamePool(
+  countryId: string
+): { firstNames: readonly string[]; surnames: readonly string[]; surnameFirst?: boolean } | null {
+  return COUNTRY_NAME_POOLS[countryId.toUpperCase()] ?? null;
+}
 
 /**
  * True when `name` could have been produced by `countryId`'s own pool.
@@ -813,6 +900,9 @@ const ALL_MALE_GIVEN_NAMES: readonly string[] = [
   ...RU_CAUCASUS_FIRST_NAMES_MALE,
   ...RU_CENTRAL_ASIA_FIRST_NAMES_MALE,
   ...DD_FIRST_NAMES_MALE,
+  ...AT_FIRST_NAMES_MALE,
+  ...GR_FIRST_NAMES_MALE,
+  ...FI_FIRST_NAMES_MALE,
 ];
 
 const ALL_FEMALE_GIVEN_NAMES: readonly string[] = [
@@ -844,6 +934,9 @@ const ALL_FEMALE_GIVEN_NAMES: readonly string[] = [
   ...RU_CAUCASUS_FIRST_NAMES_FEMALE,
   ...RU_CENTRAL_ASIA_FIRST_NAMES_FEMALE,
   ...DD_FIRST_NAMES_FEMALE,
+  ...AT_FIRST_NAMES_FEMALE,
+  ...GR_FIRST_NAMES_FEMALE,
+  ...FI_FIRST_NAMES_FEMALE,
 ];
 
 /**
@@ -887,11 +980,11 @@ export function generateUniqueNPPNameAndGender(
   year?: number | null
 ): { name: string; gender: "male" | "female" } | null {
   const NAME_GENERATORS: Record<string, typeof generateNPPNameAndGender> = {
-    // The default `generateNPPNameAndGender` is a US-style multi-ethnic pool,
-    // so US is registered explicitly here for clarity even though it would hit
-    // the same generator via the fallback below.
+    // The US-style multi-ethnic pool; also used when no country is given.
     US: generateNPPNameAndGender,
     UK: generateUKNameAndGender,
+    CA: generateCANameAndGender,
+    QC: generateCANameAndGender,
     DE: generateDENameAndGender,
     JP: generateJPNameAndGender,
     CN: generateCNNameAndGender,
@@ -918,9 +1011,13 @@ export function generateUniqueNPPNameAndGender(
     // Latent secession targets — British Isles naming, same as the UK pool.
     SCO: generateUKNameAndGender,
     WAL: generateUKNameAndGender,
+    AT: generateATNameAndGender,
+    GR: generateGRNameAndGender,
+    FI: generateFINameAndGender,
+    UKR: generateUKRNameAndGender,
   };
-  const generator =
-    (countryId ? NAME_GENERATORS[countryId.toUpperCase()] : undefined) ?? generateNPPNameAndGender;
+  const generator = countryId ? NAME_GENERATORS[countryId.toUpperCase()] : generateNPPNameAndGender;
+  if (!generator) throw new Error(`No NPP name pool for country ${countryId}`);
   for (let i = 0; i < maxAttempts; i++) {
     // Only the US generator takes a year today; the others ignore the extra
     // argument harmlessly, so this needs no per-country branching.

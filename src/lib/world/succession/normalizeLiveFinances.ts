@@ -3,6 +3,7 @@ import type { CountryId } from "@/lib/constants/countries";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import type { ExchangeRate } from "@/lib/db/types/exchangeRate";
 import { loadLiveSuccessionFinances, type LiveSuccessionFinances } from "./loadLiveFinances";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 export interface SuccessionAccountingSnapshot {
   /** Signed source treasury cash in shared accounting minor units. */
@@ -98,8 +99,7 @@ export async function loadSuccessionExchangeRates(
   ].filter((code): code is CurrencyCode => code != null);
   const unique = [...new Set(currencies)];
   if (unique.length === 0) return {};
-  const rows = await db
-    .collection<ExchangeRate>("exchangeRates")
+  const rows = await exchangeRatesCollection(db)
     .find({ currencyCode: { $in: unique } }, { session })
     .toArray();
   const rates: Record<string, number> = {};

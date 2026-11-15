@@ -19,19 +19,20 @@ import {
 } from "@/lib/currency/corporationCapital";
 import { emitTx } from "@/lib/financialTxLog/emit";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
-import type { Character, Corporation, ShareOffer } from "@/lib/db/types";
+import type { ShareOffer } from "@/lib/db/types";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { shareOffersCollection } from "@/lib/db/repositories/shareOffers";
 
 interface RouteParams {
   params: Promise<{ id: string; listingId: string; offerId: string }>;
 }
 
 async function restoreOfferToPending(db: Awaited<ReturnType<typeof getDb>>, offerId: ObjectId) {
-  await db
-    .collection<ShareOffer>("shareOffers")
-    .updateOne(
-      { _id: offerId, status: "cancelled" },
-      { $set: { status: "pending", updatedAt: new Date() } }
-    );
+  await shareOffersCollection(db).updateOne(
+    { _id: offerId, status: "cancelled" },
+    { $set: { status: "pending", updatedAt: new Date() } }
+  );
 }
 
 /**
@@ -60,9 +61,7 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
       return errorResponse(400, "Invalid offer ID");
     }
 
-    const offer = await db
-      .collection<ShareOffer>("shareOffers")
-      .findOne({ _id: new ObjectId(offerId) });
+    const offer = await shareOffersCollection(db).findOne({ _id: new ObjectId(offerId) });
 
     if (!offer) return errorResponse(404, "Offer not found");
     if (offer.status !== "pending") return errorResponse(400, "Offer is not pending");
@@ -79,9 +78,7 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
     // Refund escrow. offer.escrowAmount is in the LISTING corp's liquidCurrencyCode
     // (Option B); normalize to ₳ via the listing corp's FX, then hop to whatever
     // party the refund lands in.
-    const listingCorp = await db
-      .collection<Corporation>("corporations")
-      .findOne({ _id: offer.corporationId });
+    const listingCorp = await corporationsCollection(db).findOne({ _id: offer.corporationId });
     const listingCorpFxRate = await getCorpFxRate(db, listingCorp ?? {});
     const refundAnchor = corpLiquidCapitalToAnchor(
       offer.escrowAmount,
@@ -91,32 +88,26 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
     const currentTurn = await getCurrentTurn(db);
 
     if (offer.buyerCorporationId) {
-      const buyerCorp = await db
-        .collection<Corporation>("corporations")
-        .findOne({ _id: offer.buyerCorporationId });
+      const buyerCorp = await corporationsCollection(db).findOne({ _id: offer.buyerCorporationId });
       const buyerFxRate = await getCorpFxRate(db, buyerCorp ?? {});
       const refundInBuyerCapital = anchorToCorpLiquidCapital(
         refundAnchor,
         buyerCorp ?? {},
         buyerFxRate
       );
-      const claim = await db
-        .collection<ShareOffer>("shareOffers")
-        .updateOne(
-          { _id: offer._id, status: "pending" },
-          { $set: { status: "cancelled", updatedAt: now } }
-        );
+      const claim = await shareOffersCollection(db).updateOne(
+        { _id: offer._id, status: "pending" },
+        { $set: { status: "cancelled", updatedAt: now } }
+      );
       if (claim.matchedCount === 0) {
         return errorResponse(400, "Offer is not pending");
       }
       let refundCredited = false;
       try {
-        const refundResult = await db
-          .collection<Corporation>("corporations")
-          .updateOne(
-            { _id: offer.buyerCorporationId },
-            { $inc: { liquidCapital: refundInBuyerCapital }, $set: { updatedAt: now } }
-          );
+        const refundResult = await corporationsCollection(db).updateOne(
+          { _id: offer.buyerCorporationId },
+          { $inc: { liquidCapital: refundInBuyerCapital }, $set: { updatedAt: now } }
+        );
         if (refundResult.matchedCount === 0) {
           throw new Error("Buyer corporation not found");
         }
@@ -143,12 +134,10 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
         });
       } catch (error) {
         if (refundCredited) {
-          await db
-            .collection<Corporation>("corporations")
-            .updateOne(
-              { _id: offer.buyerCorporationId },
-              { $inc: { liquidCapital: -refundInBuyerCapital }, $set: { updatedAt: new Date() } }
-            );
+          await corporationsCollection(db).updateOne(
+            { _id: offer.buyerCorporationId },
+            { $inc: { liquidCapital: -refundInBuyerCapital }, $set: { updatedAt: new Date() } }
+          );
         }
         await restoreOfferToPending(db, offer._id);
         throw error;
@@ -164,18 +153,16 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
         charFxRate = fxResult.rate;
       }
       const refundInHome = refundAnchor * charFxRate;
-      const claim = await db
-        .collection<ShareOffer>("shareOffers")
-        .updateOne(
-          { _id: offer._id, status: "pending" },
-          { $set: { status: "cancelled", updatedAt: now } }
-        );
+      const claim = await shareOffersCollection(db).updateOne(
+        { _id: offer._id, status: "pending" },
+        { $set: { status: "cancelled", updatedAt: now } }
+      );
       if (claim.matchedCount === 0) {
         return errorResponse(400, "Offer is not pending");
       }
       let refundCredited = false;
       try {
-        const refundResult = await db.collection<Character>("characters").updateOne(
+        const refundResult = await charactersCollection(db).updateOne(
           { _id: character._id },
           {
             $inc: buildPersonalBalanceInc(refundInHome, homeCurrency, forexEnabled),
@@ -208,7 +195,7 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
         });
       } catch (error) {
         if (refundCredited) {
-          await db.collection<Character>("characters").updateOne(
+          await charactersCollection(db).updateOne(
             { _id: character._id },
             {
               $inc: buildPersonalBalanceInc(-refundInHome, homeCurrency, forexEnabled),

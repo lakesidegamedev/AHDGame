@@ -10,8 +10,6 @@ import type { BlocLookup } from "@/lib/military/bloc";
  * Pure on purpose: selection is the part with the interesting rules, and keeping it
  * free of the database lets every rule be tested directly instead of through a
  * mocked resolver.
- *
- * Spec: docs/superpowers/specs/2026-08-04-allied-coalition-battles-design.md
  */
 
 /** One merged offensive: every ally attacking the same enemy side at one front. */

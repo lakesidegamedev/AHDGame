@@ -22,7 +22,7 @@ describe("loadWorldAlignment", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     db = createMockDb();
-    gameState({ _id: "current", currentYear: 1953, intOrgAlignmentEnabled: true });
+    gameState({ _id: "current", currentYear: 1953 });
     alignments([]);
     memberships([]);
     db.collection("alignmentCrises").find.mockReturnValue({
@@ -37,7 +37,6 @@ describe("loadWorldAlignment", () => {
   it("reports the era's poles and gate", async () => {
     const { loadWorldAlignment } = await import("./worldAlignment");
     const v = await loadWorldAlignment(db as unknown as Db);
-    expect(v.enabled).toBe(true);
     expect(v.eraKey).toBe("cold-war");
     expect(v.year).toBe(1953);
     expect(v.poles.map((p) => p.id)).toEqual(["WEST", "EAST"]);
@@ -47,7 +46,7 @@ describe("loadWorldAlignment", () => {
   });
 
   it("is three-pole in a modern world", async () => {
-    gameState({ _id: "current", currentYear: 2019, intOrgAlignmentEnabled: true });
+    gameState({ _id: "current", currentYear: 2019 });
     const { loadWorldAlignment } = await import("./worldAlignment");
     const v = await loadWorldAlignment(db as unknown as Db);
     expect(v.poles.map((p) => p.id)).toEqual(["WASHINGTON", "MOSCOW", "BEIJING"]);
@@ -128,22 +127,11 @@ describe("loadWorldAlignment", () => {
     expect(row.status).toBe("eligible");
   });
 
-  it("is inert but not broken when the gate is off", async () => {
-    gameState({ _id: "current", currentYear: 1953, intOrgAlignmentEnabled: false });
-    const { loadWorldAlignment } = await import("./worldAlignment");
-    const v = await loadWorldAlignment(db as unknown as Db);
-    expect(v.enabled).toBe(false);
-    expect(v.rows).toEqual([]);
-    // The collection is never read when the gate is off.
-    expect(db.collectionMocks.countryAlignments?.find).not.toHaveBeenCalled();
-  });
-
   it("carries open flashpoints with their raised movement ceiling", async () => {
     gameState({
       _id: "current",
       currentYear: 1953,
       currentTurn: 100,
-      intOrgAlignmentEnabled: true,
     });
     db.collection("alignmentCrises").find.mockReturnValue({
       sort: vi.fn().mockReturnThis(),
@@ -169,13 +157,5 @@ describe("loadWorldAlignment", () => {
     expect(c.turnsRemaining).toBe(8);
     expect(c.movementCap).toBe(CRISIS_TURN_CAP);
     expect(c.movementCap).toBeGreaterThan(PER_NATION_TURN_CAP);
-  });
-
-  it("reports no flashpoints when the gate is off, without reading them", async () => {
-    gameState({ _id: "current", currentYear: 1953, intOrgAlignmentEnabled: false });
-    const { loadWorldAlignment } = await import("./worldAlignment");
-    const v = await loadWorldAlignment(db as unknown as Db);
-    expect(v.crises).toEqual([]);
-    expect(db.collection("alignmentCrises").find).not.toHaveBeenCalled();
   });
 });

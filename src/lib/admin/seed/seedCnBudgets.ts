@@ -2,6 +2,8 @@ import type { Db } from "mongodb";
 import { seedCountryBudgets } from "./seedCountryBudgets";
 import type { GameConfig } from "@/lib/db/types/gameConfig";
 import { upsertCountryOwnedCorpEntries } from "./upsertCountryOwnedCorps";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 export async function seedCnBudgets(
   db: Db,
@@ -23,13 +25,13 @@ export async function seedCnBudgets(
     ],
     seedCorporations: async (statesForBudgets) => {
       const { generateCountryOwnedSeedData } = await import("@/lib/seeds/reference/budgets");
-      // Command Economy v2 (#3496): when `commandEconomyEnabled` is on AND CN is in
-      // its fully-command era (First-Five-Year-Plan band), the CN seed splits into
-      // one SOE per commanding-height sector (see generateCountryOwnedSeedData).
-      // Dual-track / market CN eras are unaffected, and flag-off is byte-identical.
-      const gameConfig = await db
-        .collection<GameConfig>("gameConfig")
-        .findOne({ _id: "default" }, { projection: { commandEconomyEnabled: 1 } });
+      // When commandEconomyEnabled is on AND CN is in its fully-command era,
+      // the CN seed splits into one SOE per commanding-height sector.
+      // Dual-track / market eras and flag-off are unaffected.
+      const gameConfig = await gameConfigCollection(db).findOne(
+        { _id: "default" },
+        { projection: { commandEconomyEnabled: 1 } }
+      );
       const commandEconomyEnabled = gameConfig?.commandEconomyEnabled === true;
 
       const countryOwnedSeedData = generateCountryOwnedSeedData(
@@ -38,8 +40,8 @@ export async function seedCnBudgets(
         commandEconomyEnabled,
         log
       );
-      const cnCorpData = countryOwnedSeedData.filter(
-        (entry) => entry.corporation.countryOwnerId === "CN"
+      const cnCorpData = countryOwnedSeedData.filter((entry) =>
+        countryHasFeature("cnAdmin", entry.corporation.countryOwnerId)
       );
       await upsertCountryOwnedCorpEntries(db, "CN", cnCorpData);
       if (cnCorpData.length > 0) {

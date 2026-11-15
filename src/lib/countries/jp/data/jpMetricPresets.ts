@@ -3,19 +3,11 @@ import { jpStateMetrics } from "@/lib/countries/jp/data/jpStateMetrics";
 import { JP_REGION_IDS } from "./jpRegionDirectory";
 
 /**
- * Per-region, per-era HAND-AUTHORED values for Japan's new overhaul ROOT metrics.
- * Consumed via `getRegionMetricPresets` and overlaid by `seedJPStateMetrics` /
- * `seedJPBaselines` AFTER `applyEra1991Adjustments`. The preset is the SINGLE SOURCE OF
- * TRUTH for these metrics in both eras; `uniformMetricDefault` is a fallback only.
- *
- * JP differs from IE/DE: its seed (`jpStateMetrics`) already hand-authors ~16 of these
- * metrics PER REGION with real 2020-era data (ruralRevitalization, foodSecurity,
- * academicPressure, elderCareQuality, mentalHealthAccess, transportEfficiency,
- * naturalDisasterPreparedness, nuclearSafety, workLifeBalance, foreignWorkerIntegration,
- * genderEquality, roboticsAdoption, demographicDecline + flat tradeBalance/housingSupply/
- * debtToGdp). The 2019 bundle PRESERVES those (read from the seed) and authors only the
- * metrics the seed otherwise left to the uniform formula — so no blind formula value
- * survives, and the genuine per-region seed data isn't discarded. 1991 is fully authored.
+ * Per-region, per-era hand-authored values for Japan's overhaul ROOT metrics.
+ * Consumed via `getRegionMetricPresets`, overlaid after `applyEra1991Adjustments`.
+ * Single source of truth for these metrics in both eras; `uniformMetricDefault`
+ * is fallback only. 2019 preserves seed-authored metrics and authors the rest;
+ * 1991 is fully authored.
  */
 
 /** A per-region map of metricPath → numeric value (only the metrics JP authors). */

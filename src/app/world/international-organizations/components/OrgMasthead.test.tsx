@@ -118,15 +118,8 @@ describe("OrgMasthead", () => {
     );
   });
 
-  it("hides the Influence tab when bloc alignment is switched off", () => {
-    // Fail-closed: a world with the gate off must show no trace of the feature,
-    // not a tab that explains it is unavailable.
+  it("offers the Influence tab", () => {
     render(<OrgMasthead org={org} viewer={viewer} />);
-    expect(screen.queryByText("Influence")).toBeNull();
-  });
-
-  it("offers the Influence tab once bloc alignment is switched on", () => {
-    render(<OrgMasthead org={org} viewer={viewer} alignmentEnabled />);
     expect(screen.getByText("Influence")).toBeTruthy();
   });
 

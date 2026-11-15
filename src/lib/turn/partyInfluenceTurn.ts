@@ -2,12 +2,16 @@
 import type { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import type { Character, GameConfig } from "@/lib/db/types";
-import type { PoliticalParty } from "@/lib/db/types/party";
 import type { StatePartyOrg } from "@/lib/db/types/statePartyOrg";
 import type { Caucus } from "@/lib/db/types/caucus";
 import { energyActionLimits } from "@/lib/stats/statDrift";
 import { STAT_MIN } from "@/lib/stats/statsConstants";
 import { appendActionGrantLog } from "./actionGrantLog";
+import { getPoliticalPartiesCollection } from "@/lib/db/collections/politicalParties";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { caucusesCollection } from "@/lib/db/repositories/caucuses";
 
 /*
  * Reference infamy level at which the infamy penalty reaches its configured
@@ -135,9 +139,10 @@ export async function processPartyInfluenceTurn(
   const db = await getDb();
   const currentTurn =
     (
-      await db
-        .collection<{ _id: string; currentTurn?: number }>("gameState")
-        .findOne({ _id: "current" }, { projection: { currentTurn: 1 } })
+      await gameStateCollection<{ _id: string; currentTurn?: number }>(db).findOne(
+        { _id: "current" },
+        { projection: { currentTurn: 1 } }
+      )
     )?.currentTurn ?? 0;
 
   /*
@@ -159,13 +164,12 @@ export async function processPartyInfluenceTurn(
   const maxBonus = Math.max(config?.partyInfluenceMaxBonus ?? 0, DEFAULT_PARTY_INFLUENCE_MAX_BONUS);
 
   // Load all parties; key by countryId:sequentialId per project convention
-  const parties = await db.collection<PoliticalParty>("politicalParties").find({}).toArray();
+  const parties = await (await getPoliticalPartiesCollection(db)).find({}).toArray();
   const partyMap = new Map(parties.map((p) => [`${p.countryId}:${p.sequentialId}`, p]));
 
   // State-party leadership — chairs / vice chairs accumulate partyInfluence
   // (which feeds presidential primary standing). Build sets keyed by character id.
-  const statePartyOrgs = await db
-    .collection<StatePartyOrg>("statePartyOrg")
+  const statePartyOrgs = await statePartyOrgCollection(db)
     .find(
       {
         $or: [{ chairId: { $ne: null } }, { viceChairId: { $ne: null } }],
@@ -183,8 +187,7 @@ export async function processPartyInfluenceTurn(
   // Caucus leadership — chairs / vice chairs of ACTIVE caucuses (disbandedAt: null)
   // accumulate partyInfluence the same way state-org leaders do. Same magnitude as
   // the state-org roles (chair +2, vice +1). Build sets keyed by character id.
-  const caucuses = await db
-    .collection<Caucus>("caucuses")
+  const caucuses = await caucusesCollection(db)
     .find(
       {
         disbandedAt: null,
@@ -298,6 +301,6 @@ export async function processPartyInfluenceTurn(
   }
 
   if (ops.length > 0) {
-    await db.collection("characters").bulkWrite(ops as never);
+    await charactersCollection(db).bulkWrite(ops as never);
   }
 }

@@ -5,15 +5,14 @@
  */
 
 import { COUNTRIES_WITH_BESPOKE_PRESIDENTIAL_ELECTIONS } from "@/lib/constants/countries";
-import { resolveTurnout } from "@/lib/electionEngine/resolvedTurnout";
 import {
   calcPrimaryScore,
   primarySharePctSoftmax,
   PRIMARY_SHARE_SOFTMAX_TEMPERATURE,
 } from "@/lib/primaryScore";
-import { NPP_PRIMARY_SCORE_MULTIPLIER } from "@/lib/electionEngine/constants";
+import { NPP_PRIMARY_SCORE_MULTIPLIER } from "@/lib/elections/engine/constants";
 import {
-  shiftDemographicsForPrimary,
+  shiftElectorateForPrimary,
   applyPrimaryTurnoutRetention,
 } from "@/lib/campaigns/shiftPrimaryElectorate";
 import { ObjectId, type Db } from "mongodb";
@@ -24,9 +23,9 @@ import type {
   StateDemographicTurnout,
   StatePartyOrg,
 } from "@/lib/db/types";
-import { fetchEnrichedCandidates } from "@/lib/electionEngine/candidateEnrichment";
-import { distributeVotesByGroupLevelAllocation } from "@/lib/electionEngine/voteDistribution";
-import { distributeVotesBySwingFlow } from "@/lib/electionEngine/voteDistributionSwingFlow";
+import { fetchEnrichedCandidates } from "@/lib/elections/engine/candidateEnrichment";
+import { distributeVotesByGroupLevelAllocation } from "@/lib/elections/engine/voteDistribution";
+import { distributeVotesBySwingFlow } from "@/lib/elections/engine/voteDistributionSwingFlow";
 import { buildGranularElectorateSubstrate } from "@/lib/demographics/granularElectorate";
 import { loadCampaignAudience } from "./audience";
 import {
@@ -38,6 +37,9 @@ import {
   organizationAdWeight,
   NG_CAMPAIGN_TURNOUT_RATE,
 } from "./rules";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 
 export async function projectCampaignPoll(
   db: Db,
@@ -47,12 +49,12 @@ export async function projectCampaignPoll(
   partyOrgs: StatePartyOrg[],
   inPrimary: boolean
 ) {
-  const election = await db
-    .collection<Election>("elections")
-    .findOne({ _id: new ObjectId(electionId), countryId: character.countryId });
+  const election = await electionsCollection(db).findOne({
+    _id: new ObjectId(electionId),
+    countryId: character.countryId,
+  });
   if (!election) return null;
-  const candidates = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const candidates = await electionCandidatesCollection(db)
     .find({
       electionId: election._id,
       status: "active",
@@ -73,13 +75,6 @@ export async function projectCampaignPoll(
     ...audience.context,
     campaignRulesVersion: election.campaignRulesVersion ?? 0,
     turnoutDoc: turnoutForElection(turnoutDoc, election),
-    liveTurnouts: resolveTurnout(
-      audience.context.statePopulation,
-      audience.context.demographics,
-      audience.context.categories,
-      turnoutForElection(turnoutDoc, election),
-      audience.context
-    ).byGroup,
     enriched,
   });
   if (!substrate?.campaignCells) return null;
@@ -104,7 +99,7 @@ export async function projectCampaignPoll(
     bonusesByCandidate,
   };
   if (presidential && COUNTRIES_WITH_BESPOKE_PRESIDENTIAL_ELECTIONS.has(election.countryId)) {
-    if (election.countryId !== "NG" || inPrimary) return null;
+    if (!countryHasFeature("ngLib", election.countryId) || inPrimary) return null;
     const weights = enriched.map((candidate) => {
       const org =
         partyOrgs.find(
@@ -164,17 +159,17 @@ export async function projectCampaignPoll(
       ),
     };
   }
-  let demographics = substrate.demographics;
+  let electorate = substrate.electorate;
   let liveTurnouts = substrate.liveTurnouts;
   if (inPrimary) {
     const position = {
       economicPosition: enriched[0]?.partyEcon ?? 0,
       socialPosition: enriched[0]?.partySocial ?? 0,
     };
-    demographics = shiftDemographicsForPrimary(substrate.demographics, position);
+    electorate = shiftElectorateForPrimary(substrate.electorate, position);
     liveTurnouts = applyPrimaryTurnoutRetention(
       substrate.liveTurnouts,
-      substrate.demographics,
+      substrate.electorate,
       position
     );
   }
@@ -185,8 +180,7 @@ export async function projectCampaignPoll(
     substrate.totalPool,
     substrate.totalPool,
     audience.context.statePopulation,
-    demographics,
-    substrate.categories,
+    electorate,
     new Map(partyOrgs.map((org) => [org.partyId, org.organization])),
     {
       isGeneralElection: !inPrimary,

@@ -15,13 +15,10 @@ type CorpQuoteRow = {
 /**
  * Convert a share price from its corporation's home currency into ₳.
  *
- * Every `*Anchor` quantity a fund holds — `cashAnchor`, `quotedNav`, bond
- * principal, subscribe and redeem amounts — is denominated in ₳, and the FX
- * table is quoted as local units per ₳. This helper used to convert into the
- * FUND's `anchorCurrencyCode` instead (`price * anchorRate / localRate`), which
- * only coincides with ₳ when that currency happens to sit at parity. For a JPY
- * or GBP fund the equity leg of NAV was denominated differently from the cash
- * leg it was added to, so every non-USD fund mispriced itself.
+ * Every `*Anchor` quantity a fund holds (cashAnchor, quotedNav, bond
+ * principal, subscribe/redeem amounts) is denominated in ₳, and the FX table
+ * is quoted as local units per ₳. The equity leg and cash leg must share that
+ * denomination, or non-₳ funds misprice their NAV.
  */
 export function convertLocalPriceToAnchor(
   localPrice: number,

@@ -16,17 +16,15 @@ const BASELINE_MAX_SLOT = 9;
 /**
  * Decade-weighted anchor value of a corporation's unlocked tech-tree nodes.
  *
- * Weight = 0.5^(currentDecadeIndex − nodeDecadeIndex), capped at 1.0 so
+ * Weight = 0.5^(currentDecadeIndex - nodeDecadeIndex), capped at 1.0 so
  * nodes from the current decade get full weight and each prior decade halves.
  * Returns 0 when currentYear is unknown or the corp has no unlocked nodes.
  *
- * Baseline nodes of decades the world clock has already passed carry no value.
- * Every corporation in the sector is granted them for free (autoGrantedNodeIds,
- * at founding and by backfill), so they are shared know-how rather than an
- * asset that sets one company apart. Valuing them gave every company the same
- * ~₳11M of book in the 1991 world, about 38% of all listed market cap, so a
- * dormant firm and a leader were priced almost alike. Only research a company
- * chose and paid for (current or future decades, and specializations) counts.
+ * Baseline nodes of already-passed decades carry no value: every corporation
+ * gets them for free, so they are shared know-how, not a distinguishing asset.
+ * Valuing them priced a dormant firm and a leader almost alike. Only research
+ * a company chose and paid for (current or future decades, specializations)
+ * counts.
  */
 export function computeTechAssetValueAnchor(
   corp: Pick<Corporation, "type" | "unlockedTechNodeIds" | "techDecadeLane" | "industryModel">,

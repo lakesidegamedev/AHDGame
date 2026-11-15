@@ -25,6 +25,7 @@ import {
   getEstateArchetype,
   isAbroadSited,
 } from "@/lib/constants/cabinetEstates";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 const openSchema = z.object({
   archetypeId: z.string(),
@@ -75,9 +76,10 @@ export async function POST(request: Request, { params }: RouteParams) {
         return errorResponse(400, "Invalid host country");
       }
     } else {
-      const region = await db
-        .collection<{ _id: string; countryId: string }>("states")
-        .findOne({ _id: parsed.data.siteId, countryId }, { projection: { _id: 1 } });
+      const region = await statesCollection<{ _id: string; countryId: string }>(db).findOne(
+        { _id: parsed.data.siteId, countryId },
+        { projection: { _id: 1 } }
+      );
       if (!region) {
         return errorResponse(400, "Invalid region for this country");
       }

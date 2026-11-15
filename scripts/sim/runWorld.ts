@@ -494,6 +494,7 @@ function log(msg: string) {
 async function main() {
   const { getDb } = await import("@/lib/mongodb");
   const { bootstrapGameWorld } = await import("@/lib/admin/bootstrapGameWorld");
+  const { assertSeedContractForReset } = await import("@/lib/admin/resetPreflight");
   const { forceFullAutonomy, stampInitialGameClock } = await import("@/lib/sim/forceFullAutonomy");
   const { backfillMissingSeats } = await import("@/lib/sim/backfillMissingSeats");
   const { bootstrapWorldsimCorporations } = await import("@/lib/sim/worldsimCorporationBootstrap");
@@ -575,6 +576,7 @@ async function main() {
   const preIteration = preIterationOverride ?? presetDefaultsToFoundingPhase(preset);
 
   if (!alreadyBootstrapped) {
+    assertSeedContractForReset(preset);
     // Order matters: bootstrapGameWorld's OWN internal initializeGameState()
     // call is idempotent (returns the existing doc untouched if one already
     // exists) — so the gameState clock must be created and stamped to the
@@ -1055,13 +1057,6 @@ async function main() {
   await db
     .collection<GameConfig>("gameConfig")
     .updateOne({ _id: "default" }, { $set: { simSandbox: true } }, { upsert: true });
-
-  if (macroGrowth) {
-    await db
-      .collection<GameState>("gameState")
-      .updateOne({ _id: "current" }, { $set: { macroGrowthV1: true } });
-    log("Set macroGrowthV1=true on sandbox gameState");
-  }
 
   if (allFeatureFlags) {
     const { DEFAULT_GAME_STATE_FLAGS } = await import("@/lib/seeds/reference/featureFlagDefaults");

@@ -6,9 +6,9 @@ import { resolveNationalMedianIncome } from "./spending";
 
 describe("phantom-line gate contract", () => {
   it("an era-inactive enacted law is excluded when the year is set; included when null", () => {
-    expect(isLegislationTypeActive("cn_common_prosperity", 2009)).toBe(false);
-    expect(isLegislationTypeActive("cn_common_prosperity", 2025)).toBe(true);
-    expect(isLegislationTypeActive("cn_common_prosperity", null)).toBe(true);
+    expect(isLegislationTypeActive("ie_ai_liability_act", 2020)).toBe(false);
+    expect(isLegislationTypeActive("ie_ai_liability_act", 2030)).toBe(true);
+    expect(isLegislationTypeActive("ie_ai_liability_act", null)).toBe(true);
   });
 });
 

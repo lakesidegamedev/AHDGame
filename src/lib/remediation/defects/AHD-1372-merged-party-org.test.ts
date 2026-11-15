@@ -14,7 +14,7 @@ function cursor(rows: Doc[]) {
   return value;
 }
 
-function incidentDb() {
+function incidentDb(options: { worldEpochId?: string; rowCreatedAt?: Date } = {}) {
   const parties: Doc[] = [
     { countryId: "UK", sequentialId: 1, abbreviation: "LAB" },
     { countryId: "UK", sequentialId: 4, abbreviation: "PC", isDefunct: true },
@@ -139,10 +139,14 @@ function incidentDb() {
           },
         };
       }
+      if (name === "gameState") {
+        return { findOne: async () => ({ worldEpochId: options.worldEpochId }) };
+      }
       throw new Error(`Unexpected collection ${name}`);
     },
   };
 
+  if (options.rowCreatedAt) for (const row of orgRows) row.createdAt = options.rowCreatedAt;
   return { db: db as unknown as Db, orgRows: () => orgRows, parties, pools };
 }
 
@@ -265,5 +269,36 @@ describe("AHD-1372 merged party Org/Reg remediation", () => {
     );
     expect(world.orgRows()).toHaveLength(3);
     expect(world.pools[0].unregistered).toBe(5);
+  });
+
+  it("does not flag or delete a fresh world's own regional rows of a defunct party", async () => {
+    // Epoch id created 2026-11-12T19:16:45Z; the seed wrote the rows afterwards.
+    const world = incidentDb({
+      worldEpochId: "6af6109d59773223b82f5390",
+      rowCreatedAt: new Date("2026-11-12T19:19:54Z"),
+    });
+    const context: HealContext = {
+      env: "prod",
+      dryRun: true,
+      now: new Date("2026-11-13T12:00:00Z"),
+    };
+    expect((await defect.detect(world.db, context)).affected).toBe(0);
+    const plan = await defect.plan(world.db, context);
+    expect(plan.affected).toBe(0);
+    await defect.apply(world.db, plan, { ...context, dryRun: false });
+    expect(world.orgRows()).toHaveLength(3);
+  });
+
+  it("still flags rows older than the current world", async () => {
+    const world = incidentDb({
+      worldEpochId: "6af6109d59773223b82f5390",
+      rowCreatedAt: new Date("2026-10-01T00:00:00Z"),
+    });
+    const context: HealContext = {
+      env: "prod",
+      dryRun: true,
+      now: new Date("2026-11-13T12:00:00Z"),
+    };
+    expect((await defect.detect(world.db, context)).affected).toBe(2);
   });
 });

@@ -7,14 +7,10 @@ import {
 } from "@/lib/corporations/groups/groupMembership";
 export async function loadGroupDirectionMembership(
   db: Db,
-  subsidiariesEnabled: boolean,
   corps: readonly Corporation[],
   preloaded?: GroupMembership
 ) {
-  if (
-    !subsidiariesEnabled ||
-    !corps.some((c) => c.ceoType === "npp" && !c.caretakerCeo && !!c.groupDirection)
-  )
+  if (!corps.some((c) => c.ceoType === "npp" && !c.caretakerCeo && !!c.groupDirection))
     return undefined;
   return preloaded ?? resolveFormalizedGroups(db, { includeReserved: true });
 }

@@ -20,7 +20,7 @@ import {
 } from "@/lib/corporations/subsidiaries/cycleGuard";
 import { resolveCorporation } from "@/lib/api/corporations/resolveQuery";
 import { assertCeoTradeNotBlocked } from "@/lib/corporations/commands/privatization/openVoteGuard";
-import type { Character, Corporation, User } from "@/lib/db/types";
+import type { User } from "@/lib/db/types";
 import type { ImperialCharacter } from "@/lib/db/types/imperialCharacter";
 import {
   creditShares,
@@ -74,6 +74,11 @@ import {
 import { applyFloatBuyCredit } from "@/lib/corporations/shareEscrowSettlement";
 import { assertCeoAcquisitionWithinCap } from "@/lib/corporations/ceoShareAcquisitionCap";
 import { rejectDuringTurn } from "@/lib/api/rejectDuringTurn";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -129,15 +134,15 @@ export async function buyPublicShares(request: Request, { params }: RouteParams)
       }
 
       // Resolve CEO identity from correct collection
-      const corpUserDoc = await db
-        .collection<User>("users")
-        .findOne({ _id: new ObjectId(corpAuth.user.userId) });
+      const corpUserDoc = await usersCollection(db).findOne({
+        _id: new ObjectId(corpAuth.user.userId),
+      });
       const isCeoImperial =
         corpUserDoc?.activeCharacterType === "imperial" && !!corpUserDoc?.activeImperialCharacterId;
 
       let ceoId: ObjectId;
       if (isCeoImperial) {
-        const imperial = await db.collection<ImperialCharacter>("imperialCharacters").findOne({
+        const imperial = await imperialCharactersCollection(db).findOne({
           _id: corpUserDoc!.activeImperialCharacterId!,
           userId: new ObjectId(corpAuth.user.userId),
         });
@@ -149,7 +154,7 @@ export async function buyPublicShares(request: Request, { params }: RouteParams)
         const characterQuery = corpUserDoc?.activeCharacterId
           ? { _id: corpUserDoc.activeCharacterId, userId: new ObjectId(corpAuth.user.userId) }
           : { userId: new ObjectId(corpAuth.user.userId) };
-        const character = await db.collection<Character>("characters").findOne(characterQuery);
+        const character = await charactersCollection(db).findOne(characterQuery);
         if (!character) {
           return errorResponse(404, "Character not found");
         }
@@ -157,9 +162,10 @@ export async function buyPublicShares(request: Request, { params }: RouteParams)
       }
 
       // Look up the buying corporation (caller must be CEO)
-      const buyingCorp = await db
-        .collection<Corporation>("corporations")
-        .findOne({ ceoId, ceoVacant: { $ne: true } });
+      const buyingCorp = await corporationsCollection(db).findOne({
+        ceoId,
+        ceoVacant: { $ne: true },
+      });
       if (!buyingCorp) {
         return errorResponse(403, "You must be a CEO to buy shares on behalf of a corporation");
       }
@@ -349,9 +355,7 @@ export async function buyPublicShares(request: Request, { params }: RouteParams)
           sharesBought: shares,
         });
 
-        // Route the FX spread the corp already paid on a cross-currency share
-        // buy into the CB system (reserve slice → target-currency CB; revenue →
-        // buyer-currency CB). Previously this spread was destroyed.
+        // Route the FX spread the corp already paid on a cross-currency buy into the CB system (reserve slice to target-currency CB, revenue to buyer-currency CB).
         if (buyingCurrency !== targetCurrency) {
           await distributeConversionSpread(
             db,
@@ -435,9 +439,7 @@ export async function buyPublicShares(request: Request, { params }: RouteParams)
       );
     }
 
-    const userDoc = await db
-      .collection<User>("users")
-      .findOne({ _id: new ObjectId(basicAuth.user.userId) });
+    const userDoc = await usersCollection(db).findOne({ _id: new ObjectId(basicAuth.user.userId) });
     const isImperialMode =
       userDoc?.activeCharacterType === "imperial" && !!userDoc?.activeImperialCharacterId;
 
@@ -453,7 +455,7 @@ export async function buyPublicShares(request: Request, { params }: RouteParams)
 
     if (isImperialMode) {
       // ── Imperial character share buy ────────────────────────────
-      const imperial = await db.collection<ImperialCharacter>("imperialCharacters").findOne({
+      const imperial = await imperialCharactersCollection(db).findOne({
         _id: userDoc!.activeImperialCharacterId!,
         userId: new ObjectId(basicAuth.user.userId),
       });
@@ -488,7 +490,7 @@ export async function buyPublicShares(request: Request, { params }: RouteParams)
       // wallets via autoConvertForPurchase (matches bond buy flow).
       let imperialConversion: ExplicitPayConversion | undefined;
       if (forexEnabled) {
-        const gs = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+        const gs = await gameStateCollection(db).findOne({ _id: "current" });
         if (payCurrency && payCurrency !== imperialHomeCurrency) {
           const convertResult = await convertForExplicitPay(db, {
             character: imperial,
@@ -693,7 +695,7 @@ export async function buyPublicShares(request: Request, { params }: RouteParams)
     const characterQuery = userDoc?.activeCharacterId
       ? { _id: userDoc.activeCharacterId, userId: new ObjectId(basicAuth.user.userId) }
       : { userId: new ObjectId(basicAuth.user.userId) };
-    const character = await db.collection<Character>("characters").findOne(characterQuery);
+    const character = await charactersCollection(db).findOne(characterQuery);
     if (!character) {
       return errorResponse(404, "Character not found");
     }
@@ -702,7 +704,7 @@ export async function buyPublicShares(request: Request, { params }: RouteParams)
       return errorResponse(tradeLock.status, tradeLock.error);
     }
     // Load full character doc for balance check and home currency lookup.
-    const charDoc = await db.collection<Character>("characters").findOne({ _id: character._id });
+    const charDoc = await charactersCollection(db).findOne({ _id: character._id });
     if (!charDoc) {
       return errorResponse(404, "Character not found");
     }
@@ -737,7 +739,7 @@ export async function buyPublicShares(request: Request, { params }: RouteParams)
     let charSpreadCharged = 0;
     let charConversion: ExplicitPayConversion | undefined;
     if (forexEnabled) {
-      const gs = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+      const gs = await gameStateCollection(db).findOne({ _id: "current" });
       if (payCurrency && payCurrency !== homeCurrency) {
         const convertResult = await convertForExplicitPay(db, {
           character: charDoc,

@@ -30,7 +30,7 @@ import { ObjectId } from "mongodb";
 import type {
   PresidentVoteTurnDryRun,
   PresidentVoteTurnCalibration,
-} from "@/lib/presidentialElectionEngine";
+} from "@/lib/elections/presidential/presidentialElectionEngine";
 
 const COUNTRY = "US";
 
@@ -127,7 +127,7 @@ async function main() {
   const [{ getDb }, { loadApportionment }, { accumulatePresidentVoteTurn }] = await Promise.all([
     import("@/lib/mongodb"),
     import("@/lib/elections/apportionment"),
-    import("@/lib/presidentialElectionEngine"),
+    import("@/lib/elections/presidential/presidentialElectionEngine"),
   ]);
   const db = await getDb();
   const election = await db.collection("elections").findOne({

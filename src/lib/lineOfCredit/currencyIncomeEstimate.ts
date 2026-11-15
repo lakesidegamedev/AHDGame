@@ -7,6 +7,7 @@ import type { CurrencyCode } from "@/lib/constants/currencies";
 import { getHomeCurrency } from "@/lib/currency/characterFunds";
 import { getGameState } from "@/lib/gameState";
 import { fromInternalUnits, toInternalUnits } from "./locMath";
+import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
 
 /**
  * LOC underwriting uses a rolling income average instead of a one-turn snapshot.
@@ -41,8 +42,7 @@ export async function estimatePerTurnCurrencyIncomeHomeFace(
   } = incomeWindow(state ?? {}, LOC_INCOME_AVERAGING_TURNS);
   if (observationTurns === 0) return 0;
 
-  const rows = await db
-    .collection<FinancialTxLogEntry>("financialTxLog")
+  const rows = await financialTxLogCollection(db)
     .find({
       subjectType: "character",
       subjectId: character._id,

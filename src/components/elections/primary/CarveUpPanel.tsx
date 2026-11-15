@@ -1,17 +1,13 @@
 /**
  * Per-state demographic carve-up panel.
  *
- * Shows a conic-gradient pie chart of candidate slices in the currently
- * selected state, plus a breakdown row per candidate (avatar pill, name,
- * archetype tag, percent, bar). The slices come from the view-model
- * (Task 4.4) which runs `calcAppeal` against the per-state demographics.
+ * Shows a conic-gradient pie of candidate slices in the selected state, plus a
+ * breakdown row per candidate (avatar pill, name, party label, percent, bar).
+ * Slices come from the view-model, which runs `calcAppeal` against per-state
+ * demographics.
  *
- * Renders an honest empty state when no candidate has run in this state
- * yet — no fake numbers, no "0%" pie.
- *
+ * Renders an honest empty state when no candidate has run in this state yet.
  * Pure presentational; the parent decides which state is selected.
- *
- * See plan §"Phase 4 — Tasks" 4.3.
  */
 
 import { useTranslations } from "next-intl";
@@ -21,8 +17,8 @@ export interface CarveUpSlice {
   candidateName: string;
   /** Hex color of the candidate's party. */
   color: string;
-  /** Optional archetype tag (e.g. "Populist", "Moderate"). */
-  archetype?: string;
+  /** Optional party label shown beside the name. */
+  partyLabel?: string;
   /** Slice percent in 0..100. Sum across slices should equal 100. */
   pct: number;
 }
@@ -112,9 +108,9 @@ export function CarveUpPanel({
                       </span>
                     </div>
                     <div className="mt-1 flex items-center gap-2">
-                      {s.archetype ? (
+                      {s.partyLabel ? (
                         <span className="rounded-full border border-card-border px-1.5 py-0.5 text-[9px] uppercase tracking-wider text-muted">
-                          {s.archetype}
+                          {s.partyLabel}
                         </span>
                       ) : null}
                       <div className="relative h-1 flex-1 rounded-full bg-background overflow-hidden">

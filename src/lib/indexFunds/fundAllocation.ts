@@ -40,18 +40,9 @@ export function computeHoldingsValueAnchor(fund: Pick<IndexFund, "holdings">): n
   }, 0);
 }
 
-export function computeTotalFundBackingAnchor(
-  fund: Pick<IndexFund, "cashAnchor" | "holdings" | "bondAllocations">,
-  options?: { bondPrincipalAnchor?: number }
-): number {
-  const cashAnchor = Number.isFinite(fund.cashAnchor) ? Math.max(0, fund.cashAnchor) : 0;
-  const bondPrincipal = options?.bondPrincipalAnchor ?? sumBondPrincipalAnchor(fund);
-  return computeHoldingsValueAnchor(fund) + bondPrincipal + cashAnchor;
-}
-
 /** A bond fund holds no equities: everything past the cash buffer goes into bonds. */
-export const BOND_FUND_MAX_EQUITY_ALLOCATION = 0;
-export const BOND_FUND_MIN_RESERVE_ALLOCATION = 1;
+const BOND_FUND_MAX_EQUITY_ALLOCATION = 0;
+const BOND_FUND_MIN_RESERVE_ALLOCATION = 1;
 
 /**
  * Equity funds: at most 75% of backing in equities; at least 25% in the

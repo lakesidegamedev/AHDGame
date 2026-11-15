@@ -4,10 +4,14 @@ import { getDb } from "@/lib/mongodb";
 import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { parseJsonBody } from "@/lib/api/validate";
-import type { Character, State } from "@/lib/db/types";
+import type { State } from "@/lib/db/types";
 import { performRelocation } from "@/lib/character/performRelocation";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { isCountryEnabledForPlayers } from "@/lib/countryAccess";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { usersCollection } from "@/lib/db/repositories/users";
+import type { Document } from "mongodb";
 
 const updateCountrySchema = z.object({
   username: z.string().min(1, "Username is required"),
@@ -40,20 +44,18 @@ export async function PATCH(request: Request) {
       return errorResponse(400, `Country ${countryId} is not enabled for players`);
     }
 
-    const user = await db.collection("users").findOne({ username });
+    const user = await usersCollection<Document>(db).findOne({ username });
     if (!user) {
       return errorResponse(404, `User '${username}' not found`);
     }
 
-    const character = await db.collection<Character>("characters").findOne({ userId: user._id });
+    const character = await charactersCollection(db).findOne({ userId: user._id });
     if (!character) {
       return errorResponse(404, `No character found for user '${username}'`);
     }
 
     const targetStateId = homeState ?? character.homeState;
-    const targetState = await db
-      .collection<State>("states")
-      .findOne({ _id: targetStateId, countryId });
+    const targetState = await statesCollection(db).findOne({ _id: targetStateId, countryId });
     if (!targetState) {
       return errorResponse(400, `No state "${targetStateId}" in country "${countryId}"`);
     }

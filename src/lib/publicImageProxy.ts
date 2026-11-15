@@ -142,12 +142,39 @@ export async function redirectToFirstAvailableImage(
   return null;
 }
 
+// The container origin when Next runs behind the Railway/Cloudflare proxy. A
+// redirect built from `request.url` there points the browser at a host it
+// cannot reach (`https://localhost:3000/ahd-logo.png`), so the fallback logo
+// 404s in production on every party or coalition without a custom image.
+const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "0.0.0.0", "[::1]"]);
+
+function isLoopbackUrl(url: URL): boolean {
+  return (
+    LOOPBACK_HOSTS.has(url.hostname) || url.hostname.startsWith("127.") || url.hostname === "::1"
+  );
+}
+
 export function redirectToFallbackImage(
   fallbackPath: string,
   requestUrl: string,
   cacheControl: string
 ): NextResponse {
-  return NextResponse.redirect(new URL(fallbackPath, requestUrl), {
+  const resolved = new URL(fallbackPath, requestUrl);
+
+  if (isLoopbackUrl(resolved)) {
+    // Relative Location: the browser resolves it against the page it actually
+    // requested, so the redirect stays on the public origin without the server
+    // having to reconstruct it from forwarded headers.
+    return new NextResponse(null, {
+      status: 302,
+      headers: {
+        Location: `${resolved.pathname}${resolved.search}${resolved.hash}`,
+        "Cache-Control": cacheControl,
+      },
+    });
+  }
+
+  return NextResponse.redirect(resolved, {
     status: 302,
     headers: {
       "Cache-Control": cacheControl,

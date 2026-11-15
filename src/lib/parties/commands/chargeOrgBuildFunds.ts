@@ -5,28 +5,23 @@ import type { CountryId } from "@/lib/constants/countries";
 import { emitTreasuryTransaction } from "@/lib/treasury/emit";
 import type { OrgBuildFundingScope } from "@/lib/politicalStrength/buildOrgFunding";
 import { witnessOrgBuildCharge, type OrgBuildLedgerOptions } from "@/lib/parties/orgBuildLedger";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 /**
- * Cash side of the Build Org action — the money counterpart to
- * `spendPoliticalStrength`.
+ * Cash side of the Build Org action, counterpart to `spendPoliticalStrength`.
+ * Charges the treasury of the SAME tier that pays the PS: `state` debits
+ * `statePartyOrg.treasury`, national debits `politicalParties.treasury`.
+ * The price is computed elsewhere (`orgBuildCashPrice` /
+ * `resolveOrgBuildFunding`); this only moves it.
  *
- * Charges the treasury of the SAME tier that pays the PS: a `state`-scope click
- * debits `statePartyOrg.treasury`, a national-scope click debits
- * `politicalParties.treasury`. The price itself is computed by
- * `orgBuildCashPrice` / `resolveOrgBuildFunding`; this command only moves it.
+ * Never overdraws, never hard-fails: the pipeline subtracts
+ * `min(amount, max(treasury, 0))`, so a treasury that fell below the price
+ * pays what is left, and an overdrawn row is left as-is.
  *
- * **Never overdraws, never hard-fails.** The debit runs as an update pipeline
- * that subtracts `min(amount, max(treasury, 0))`, so:
- *  - a treasury that fell below the price between the caller's read and this
- *    write pays what is left rather than going negative, and
- *  - an already-overdrawn row is left exactly as it was rather than sinking
- *    further.
- *
- * Callers get back the amount ACTUALLY charged and derive the click's realized
- * funded fraction from it (floored via `clampFundedFraction`, so committed PS
- * can never buy zero Org). That is why this returns a number instead of an
- * ok/error union: by the time it runs, the PS is already spent and there is no
- * failure the player could act on.
+ * Returns the amount ACTUALLY charged. Callers derive the funded fraction
+ * from it (via `clampFundedFraction`). Not an ok/error union because by the
+ * time it runs the PS is already spent and there is no failure to act on.
  */
 
 export interface ChargeOrgBuildFundsInput {
@@ -88,9 +83,9 @@ export async function chargeOrgBuildFunds(
     holderId = input.stateRowId;
     // Scoped by country AND party, not by row id alone. The id is composite
     // (`US_CA_1`) so today's caller could not address a foreign row, but party
-    // sequentialIds repeat across countries (Bug #0668) and a debit should fail
+    // sequentialIds repeat across countries and a debit should fail
     // closed on a mismatch rather than rely on how its caller built the id.
-    before = await db.collection<StatePartyOrg>("statePartyOrg").findOneAndUpdate(
+    before = await statePartyOrgCollection(db).findOneAndUpdate(
       {
         _id: input.stateRowId,
         countryId: input.countryId,
@@ -101,13 +96,11 @@ export async function chargeOrgBuildFunds(
     );
   } else {
     holderId = input.partyId;
-    before = await db
-      .collection<PoliticalParty>("politicalParties")
-      .findOneAndUpdate(
-        { countryId: input.countryId, sequentialId: Number(input.partyId) },
-        debitPipeline(amount, input.now),
-        { returnDocument: "before" }
-      );
+    before = await politicalPartiesCollection(db).findOneAndUpdate(
+      { countryId: input.countryId, sequentialId: Number(input.partyId) },
+      debitPipeline(amount, input.now),
+      { returnDocument: "before" }
+    );
   }
 
   if (!before) return { charged: 0 };

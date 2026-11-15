@@ -1,6 +1,9 @@
 import { ObjectId, type Db, type Filter } from "mongodb";
 import type { PoliticalParty, Referendum, State } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { referendumsCollection } from "@/lib/db/repositories/referendums";
 
 function iso(value: Date | null | undefined): string | null {
   return value instanceof Date && !Number.isNaN(value.getTime()) ? value.toISOString() : null;
@@ -22,14 +25,12 @@ async function hydrateReferendums(db: Db, rows: Referendum[]) {
 
   const [regions, parties] = await Promise.all([
     regionIds.length
-      ? db
-          .collection<State>("states")
+      ? statesCollection(db)
           .find({ _id: { $in: regionIds } }, { projection: { _id: 1, name: 1 } })
           .toArray()
       : Promise.resolve([]),
     partyFilters.length
-      ? db
-          .collection<PoliticalParty>("politicalParties")
+      ? politicalPartiesCollection(db)
           .find({ $or: partyFilters } as Filter<PoliticalParty>)
           .toArray()
       : Promise.resolve([]),
@@ -86,8 +87,7 @@ export async function queryReferendums(
   if (params.country) filter.countryId = params.country;
   if (params.status) filter.status = params.status;
   const limit = Math.min(Math.max(params.limit ?? 50, 1), 200);
-  const rows = await db
-    .collection<Referendum>("referendums")
+  const rows = await referendumsCollection(db)
     .find(filter)
     .sort({ updatedAt: -1 })
     .limit(limit)
@@ -97,7 +97,7 @@ export async function queryReferendums(
 
 export async function queryReferendum(db: Db, id: string) {
   if (!ObjectId.isValid(id)) return null;
-  const row = await db.collection<Referendum>("referendums").findOne({ _id: new ObjectId(id) });
+  const row = await referendumsCollection(db).findOne({ _id: new ObjectId(id) });
   if (!row) return null;
   return (await hydrateReferendums(db, [row]))[0] ?? null;
 }

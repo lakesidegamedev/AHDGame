@@ -5,33 +5,15 @@
  * directly. Type-only imports are allowed.
  */
 
-/**
- * US party registration + organization seed for the 1979-default preset.
- *
- * DESIGN (owner steer): a 1979 start is NOT a 1980-Reagan-landslide partisan
- * map. In 1979 the Democrats are organizationally DOMINANT — they hold the House,
- * the Senate, most governorships and legislatures, and the Solid South is still
- * Democratic by registration. Reagan's 1980 landslide was a referendum on
- * stagflation + the hostage crisis, not a realignment of party organization.
- *
- * So we anchor REGISTRATION + ORG to the 1979 partisan landscape (Democrats
- * favored almost everywhere; GOP strong only in the Mountain West / Plains /
- * rural New England) — NOT to the 1980 result. We do NOT push any state's
- * demographic LEAN rightward to chase the landslide; the derived leans
- * (`deriveRegionLeans`) stay census-honest, and the 1980 Reagan strength is
- * carried separately by `PRESET_MARGINS["1979-default"]` (→ initial Org in
- * `statePartyOrg.ts`) and by the presidential baseline. Every lane still seeds a
- * real Republican org presence (REP org ≥ 18 even in the strongest D states), so
- * "the org is there" in the states Reagan would carry.
- *
- * 1979-era characteristics vs the 1999 lanes:
- *   - Independents/unaffiliated LOWER (~9–10 pts) — pre-dealignment party
- *     attachment in formal registration is even stronger than in 1999.
- *   - The ancestral-Democrat South is at its absolute peak: LA/OK/WV/KY carried
- *     ~63–72% Democratic *registration* in 1979 (override states below).
+/*
+ * US party registration and org seed for the 1979-default preset. Anchors to
+ * the 1979 partisan landscape (Democrats organizationally dominant; Solid
+ * South still Democratic by registration), NOT to the 1980 Reagan result.
+ * Demographic leans stay census-honest; 1980 Reagan strength is carried by
+ * PRESET_MARGINS and the presidential baseline instead. Every lane still seeds
+ * a real REP org presence (org >= 18).
  *
  * US-only: non-US countries fall back to their 2019 lanes on a 1979 reset.
- * Curated from late-1970s state SoS registration data + the 1979 partisan map.
  */
 
 import type { StateRegistrationSeed } from "@/lib/seeds/registration/registrationLanes";

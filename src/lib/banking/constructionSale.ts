@@ -1,8 +1,7 @@
 import { getCorporateSectorLaneQuery } from "@/lib/corporations/sectorLocation";
 import { ObjectId, type Db } from "mongodb";
 import type { BankLoan } from "@/lib/db/types/bank";
-import type { CentralBank } from "@/lib/db/types/centralBank";
-import type { Corporation, CorporateSector } from "@/lib/db/types/corporation";
+import type { CorporateSector } from "@/lib/db/types/corporation";
 import { getCorpFxRate, resolveCorpLiquidCurrencyCode } from "@/lib/currency/corporationCapital";
 import {
   CURRENCY_ANCHOR_COUNTRY,
@@ -24,6 +23,10 @@ import { foldSoldSiteIntoSurvivor, securedSaleMergeRefusal } from "./constructio
 import { ensureFund } from "./insurance";
 import { resumeSettlement, settleTransition } from "./settlementJournal";
 import type { TransitionLeg } from "./rules/boundary";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { bankLoansCollection } from "@/lib/db/repositories/bankLoans";
 
 type Result = { ok: true; quote: ConstructionSaleQuote } | { ok: false; error: string };
 
@@ -36,7 +39,7 @@ export async function buySecuredConstructionProperty(input: {
   turn: number;
 }): Promise<Result> {
   const { db, sectorId, borrowerId, buyerId, turn } = input;
-  const sectors = db.collection<CorporateSector>("corporateSectors");
+  const sectors = corporateSectorsCollection(db);
   const sector = await sectors.findOne({ _id: sectorId });
   const claim = sector?.constructionFinancing;
   if (
@@ -49,7 +52,7 @@ export async function buySecuredConstructionProperty(input: {
   let quote = claim.sale;
   if (quote?.buyerId !== undefined && quote.buyerId !== String(buyerId))
     return { ok: false, error: "Another buyer owns this sale receipt" };
-  const loans = db.collection<BankLoan>("bankLoans");
+  const loans = bankLoansCollection(db);
   const loan = await loans.findOne({ _id: new ObjectId(claim.loanId) });
   if (
     !loan ||
@@ -126,11 +129,12 @@ export async function buySecuredConstructionProperty(input: {
     const owned = await acquireConstructionLoanLock(db, loan, key);
     if (!owned) return { ok: false, error: "Another receipt owns the pledged loan" };
     const [buyer, seller, bank] = await Promise.all([
-      db.collection<Corporation>("corporations").findOne({ _id: buyerId }),
-      db.collection<Corporation>("corporations").findOne({ _id: borrowerId }),
-      db
-        .collection<Corporation>("corporations")
-        .findOne({ _id: loan.bankCorporationId }, { projection: { bankCharter: 1 } }),
+      corporationsCollection(db).findOne({ _id: buyerId }),
+      corporationsCollection(db).findOne({ _id: borrowerId }),
+      corporationsCollection(db).findOne(
+        { _id: loan.bankCorporationId },
+        { projection: { bankCharter: 1 } }
+      ),
     ]);
     const refuse = async (error: string): Promise<Result> => {
       await releaseConstructionLoanLock(db, loan, key);
@@ -170,8 +174,7 @@ export async function buySecuredConstructionProperty(input: {
       const burned = feeLocal - revenue - reserve;
       if (burned < 0) return refuse("The FX fee rounding is invalid");
       const ids = [...new Set([sourceId, destinationId])];
-      const recipients = await db
-        .collection<CentralBank>("centralBanks")
+      const recipients = await centralBanksCollection(db)
         .find({ _id: { $in: ids } })
         .toArray();
       if (recipients.length !== ids.length) return refuse("The FX fee recipients are unavailable");
@@ -318,8 +321,7 @@ export async function recoverConstructionSales(
   db: Db,
   turn: number
 ): Promise<Array<{ key: string; error: string }>> {
-  const sectors = await db
-    .collection<CorporateSector>("corporateSectors")
+  const sectors = await corporateSectorsCollection(db)
     .find(
       {
         "constructionFinancing.sale.turn": { $lt: turn },

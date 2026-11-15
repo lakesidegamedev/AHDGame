@@ -3,15 +3,12 @@
 import { sectorDisplayProfit } from "./sectorSortUtils";
 
 /**
- * The dossier that heads a sector type on the Sectors tab.
+ * The dossier that heads a sector type on the Sectors tab: two sentences on
+ * what moves the margin plus a row of live figures for the sites of that type
+ * the corp owns.
  *
- * A corporation's sectors used to arrive as one undifferentiated table, and
- * nothing on the page said what a mine, a newsroom or a power station actually
- * is. The dossier answers that once per type: two sentences on what moves the
- * margin and a row of live figures for the sites of that type you own.
- *
- * Everything numeric here resolves from the sectors passed in. The only static
- * content is the copy, which lives in `sectorTypeDossier`.
+ * Everything numeric resolves from the sectors passed in; the only static
+ * content is the copy in `sectorTypeDossier`.
  */
 
 import {

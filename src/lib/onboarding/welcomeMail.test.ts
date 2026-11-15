@@ -45,6 +45,20 @@ describe("buildWelcomeMailBody", () => {
     expect(body).toContain("pays out £37,500");
   });
 
+  it("greets a Canadian player in Canadian dollars with a home province", () => {
+    const body = buildWelcomeMailBody({
+      ...BASE,
+      countryId: "CA",
+      currencyCode: "CAD",
+      localStartingFunds: 342_500,
+      localRewardAmount: 68_500,
+    });
+
+    expect(body).toContain("a home province");
+    expect(body).toContain("C$342,500 in campaign funds");
+    expect(body).toContain("pays out C$68,500");
+  });
+
   it("falls back to anchor amounts when locals are missing", () => {
     const body = buildWelcomeMailBody({ ...BASE, currencyCode: "EUR" });
 

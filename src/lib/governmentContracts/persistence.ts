@@ -1,8 +1,9 @@
 /** Government tenders keep bids on the tender so closing, bidding and choosing one winner share an atomic document. */
 import type { Db } from "mongodb";
 import type { GovernmentTender } from "./types";
+import { governmentTendersCollection } from "@/lib/db/repositories/governmentTenders";
 export function tenders(db: Db) {
-  return db.collection<GovernmentTender>("governmentTenders");
+  return governmentTendersCollection<GovernmentTender>(db);
 }
 export async function ensureGovernmentContractIndexes(db: Db) {
   await tenders(db).createIndex(

@@ -6,6 +6,7 @@ import {
   loadFxRatesByCurrency,
   resolveCorpLiquidCurrencyCode,
 } from "@/lib/currency/corporationCapital";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /** IMF bailout loans owed to a lender corporation (anchor ₳ principal outstanding). */
 export type ImfFacilityReceivableRow = {
@@ -37,8 +38,7 @@ export async function findImfFacilityReceivablesForLender(
   db: Db,
   lenderCorporationId: ObjectId
 ): Promise<{ receivables: ImfFacilityReceivableRow[]; totalPrincipal: number }> {
-  const rows = await db
-    .collection<Corporation>("corporations")
+  const rows = await corporationsCollection(db)
     .find({
       imfBailoutActive: true,
       imfBailoutImfCorporationId: lenderCorporationId,

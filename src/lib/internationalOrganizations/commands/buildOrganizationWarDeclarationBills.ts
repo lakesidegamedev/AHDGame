@@ -5,6 +5,7 @@ import type { Bill, DeclareWarProvision } from "@/lib/db/types/legislation";
 import { getJointSittingOfficeTypes } from "@/lib/legislature/chamberOfficeType";
 import { notifyBillsVoteOpen } from "@/lib/turn/billLifecycle/lifecycleHelpers";
 import { warGoalLabel } from "@/lib/military/warGoals";
+import { billsCollection } from "@/lib/db/repositories/bills";
 
 const WAR_DECLARATION_VOTE_HOURS = 24;
 
@@ -45,7 +46,7 @@ export async function buildOrganizationWarDeclarationBills(params: {
   } = params;
   if (sponsors.length === 0) return new Map();
 
-  const bills = db.collection<Bill>("bills");
+  const bills = billsCollection(db);
   const existing = await bills
     .find(
       {

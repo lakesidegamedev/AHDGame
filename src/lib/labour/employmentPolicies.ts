@@ -29,6 +29,9 @@ import {
 } from "./rules/employmentPolicy";
 import type { EmploymentPolicy } from "./rules/employment";
 import type { CountryId } from "@/lib/constants/countries";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
+import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
+import { enactedLawsCollection } from "@/lib/db/repositories/enactedLaws";
 
 export interface EmploymentRegion {
   _id: string;
@@ -46,8 +49,7 @@ export async function loadEmploymentLawBook(
   const knownCountry = (country: string): country is CountryId =>
     countries.some((c) => c === country);
   const [records, enacted, nationalDelivery, regionalDelivery] = await Promise.all([
-    db
-      .collection<StatePolicy>("statePolicies")
+    statePoliciesCollection(db)
       .find(
         {},
         {
@@ -64,8 +66,7 @@ export async function loadEmploymentLawBook(
         }
       )
       .toArray(),
-    db
-      .collection<EnactedLaw>("enactedLaws")
+    enactedLawsCollection(db)
       .find(
         { repealedAt: { $exists: false } },
         {
@@ -92,8 +93,7 @@ export async function loadEmploymentLawBook(
   // Option names identify explicit jobs guarantees; option ordering determines
   // intensity, and finance uses implementation metadata to fail closed.
   const types = ids.length
-    ? await db
-        .collection<LegislationType>("legislationTypes")
+    ? await legislationTypesCollection(db)
         .find(
           { _id: { $in: ids } },
           {

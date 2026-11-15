@@ -43,6 +43,7 @@ import {
 } from "@/lib/banking/rules/invariants";
 import { validEquityCustodyMutation } from "./rules/equityCustody";
 import { countBankingEvent } from "@/lib/banking/telemetry";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
 
 /** Collection holding the claim records. Also the repair queue. */
 export const MONEY_MOVE_COLLECTION = "bankMoneyMoves";
@@ -282,7 +283,7 @@ export async function claimMoneyMove(db: Db, move: MoneyMove): Promise<MoneyMove
   };
 
   try {
-    await db.collection<MoneyMoveRecord>(MONEY_MOVE_COLLECTION).insertOne(record);
+    await bankMoneyMovesCollection<MoneyMoveRecord>(db).insertOne(record);
   } catch (error) {
     const code =
       typeof error === "object" && error !== null && "code" in error
@@ -313,7 +314,7 @@ export async function completeMoneyMove(
   error?: string,
   status: MoneyMoveStatus = error ? "partial" : "applied"
 ): Promise<void> {
-  const records = db.collection<MoneyMoveRecord>(MONEY_MOVE_COLLECTION);
+  const records = bankMoneyMovesCollection<MoneyMoveRecord>(db);
   // Each leg's durable target stamp is the witness. Completion only marks
   // confirmed legs; rereading and replacing the whole array can overwrite a
   // concurrent recovery stamp and costs a round trip for every fresh move.
@@ -377,7 +378,7 @@ export async function applyMoneyMove(db: Db, move: MoneyMove): Promise<MoneyMove
     // Preserve selectors such as countryId in the public API, but freeze the
     // selected document before claiming cash. Replays use the original binding
     // even if a previous write changed the caller's selector fields.
-    const prior = await db.collection<MoneyMoveRecord>(MONEY_MOVE_COLLECTION).findOne(
+    const prior = await bankMoneyMovesCollection<MoneyMoveRecord>(db).findOne(
       {
         _id: move.key,
       },
@@ -410,18 +411,20 @@ export async function applyMoneyMove(db: Db, move: MoneyMove): Promise<MoneyMove
     },
   });
   if (claim.status === "replayed") {
-    const existing = await db
-      .collection<MoneyMoveRecord>(MONEY_MOVE_COLLECTION)
-      .findOne({ _id: move.key }, { projection: { legs: 1, quoteIdentity: 1 } });
+    const existing = await bankMoneyMovesCollection<MoneyMoveRecord>(db).findOne(
+      { _id: move.key },
+      { projection: { legs: 1, quoteIdentity: 1 } }
+    );
     if (valuedQuoteConflict(existing, prepared, move.quoteIdentity))
       return valuedQuoteConflictResult(move.key);
     if (move.turn !== undefined) countBankingEvent(db, move.turn, "replayedSettlements");
     return { status: "replayed", applied: [] };
   }
   if (claim.status === "rejected") {
-    const existing = await db
-      .collection<MoneyMoveRecord>(MONEY_MOVE_COLLECTION)
-      .findOne({ _id: move.key }, { projection: { legs: 1, quoteIdentity: 1 } });
+    const existing = await bankMoneyMovesCollection<MoneyMoveRecord>(db).findOne(
+      { _id: move.key },
+      { projection: { legs: 1, quoteIdentity: 1 } }
+    );
     if (valuedQuoteConflict(existing, prepared, move.quoteIdentity))
       return valuedQuoteConflictResult(move.key);
     if (move.turn !== undefined) countBankingEvent(db, move.turn, "rejectedSettlements");
@@ -509,7 +512,7 @@ async function acknowledgeLeg(
   id: unknown,
   receipt: LegReceipt
 ): Promise<void> {
-  const records = db.collection<MoneyMoveRecord>(MONEY_MOVE_COLLECTION);
+  const records = bankMoneyMovesCollection<MoneyMoveRecord>(db);
   const path = `legs.${receipt.index}`;
   const field = receipt.outcome === "applied" ? `${path}.applied` : `${path}.refusal`;
   const acknowledged = await records.updateOne(
@@ -553,7 +556,7 @@ async function applyLeg(
   i: number,
   leg: MoneyMoveRecordLeg
 ): Promise<string | null> {
-  const records = db.collection<MoneyMoveRecord>(MONEY_MOVE_COLLECTION);
+  const records = bankMoneyMovesCollection<MoneyMoveRecord>(db);
   const path = `legs.${i}`;
   if (leg.kind === "mint" || leg.kind === "burn") {
     await records.updateOne(
@@ -764,7 +767,7 @@ async function deliverCashLegsInBatch(
     const row = rows.find((r) => isDeepStrictEqual(r._id, legs[i].filter!._id));
     if (row) current.set(i, row);
   }
-  const records = db.collection<MoneyMoveRecord>(MONEY_MOVE_COLLECTION);
+  const records = bankMoneyMovesCollection<MoneyMoveRecord>(db);
   // The batch only needs each leg's applied/refusal mark. Projecting those
   // two subfields keeps array positions and count without decoding every
   // leg's selector, valuation and note on a large payout.
@@ -908,7 +911,7 @@ async function executeMoneyMove(
   resuming: boolean,
   claimed?: MoneyMoveRecord
 ): Promise<MoneyMoveResult> {
-  const records = db.collection<MoneyMoveRecord>(MONEY_MOVE_COLLECTION);
+  const records = bankMoneyMovesCollection<MoneyMoveRecord>(db);
   // A move this call just claimed is exactly the record it inserted, so it is
   // not read back. Every leg still re-reads the journal before it writes, so
   // a recovery worker that touched the record meanwhile is still respected.
@@ -1083,8 +1086,7 @@ export async function listUnfinishedMoneyMoves(
   db: Db,
   options: { kind?: string; limit?: number } = {}
 ): Promise<MoneyMoveRepairRow[]> {
-  const rows = await db
-    .collection<MoneyMoveRecord>(MONEY_MOVE_COLLECTION)
+  const rows = await bankMoneyMovesCollection<MoneyMoveRecord>(db)
     .find({ status: "partial", ...(options.kind ? { kind: options.kind } : {}) })
     .sort({ createdAt: 1 })
     .limit(Math.max(1, options.limit ?? 100))
@@ -1111,12 +1113,10 @@ export async function listUnfinishedMoneyMoves(
  * record so the queue means what it says.
  */
 export async function closeMoneyMove(db: Db, key: string, note: string): Promise<boolean> {
-  const res = await db
-    .collection<MoneyMoveRecord>(MONEY_MOVE_COLLECTION)
-    .updateOne(
-      { _id: key, status: "partial" },
-      { $set: { status: "applied", completedAt: new Date(), error: `repaired: ${note}` } }
-    );
+  const res = await bankMoneyMovesCollection<MoneyMoveRecord>(db).updateOne(
+    { _id: key, status: "partial" },
+    { $set: { status: "applied", completedAt: new Date(), error: `repaired: ${note}` } }
+  );
   return res.matchedCount === 1;
 }
 

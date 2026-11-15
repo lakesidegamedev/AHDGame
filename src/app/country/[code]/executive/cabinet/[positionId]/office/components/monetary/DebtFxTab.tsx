@@ -6,6 +6,7 @@ export function DebtFxTab({
   positionId,
   canAct,
   sovereignBondProfile,
+  sovereignBondMaturities,
   debtPrincipal,
   sovereignBondsOutstanding,
   onUpdate,
@@ -14,6 +15,7 @@ export function DebtFxTab({
   positionId: string;
   canAct: boolean;
   sovereignBondProfile: Record<number, number> | null;
+  sovereignBondMaturities?: number[];
   debtPrincipal: number;
   sovereignBondsOutstanding: number;
   onUpdate: () => void;
@@ -25,6 +27,7 @@ export function DebtFxTab({
         positionId={positionId}
         canAct={canAct}
         currentProfile={sovereignBondProfile}
+        maturities={sovereignBondMaturities}
         debtPrincipal={debtPrincipal}
         sovereignBondsOutstanding={sovereignBondsOutstanding}
         onUpdate={onUpdate}

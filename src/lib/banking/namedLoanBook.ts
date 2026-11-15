@@ -8,7 +8,7 @@
  * locks.
  */
 import type { Db, ObjectId } from "mongodb";
-import type { Character, Corporation } from "@/lib/db/types";
+import type { Corporation } from "@/lib/db/types";
 import type { BankLoan } from "@/lib/db/types/bank";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import type { MoneyTarget } from "@/lib/banking/moneyMove";
@@ -31,6 +31,9 @@ import {
   recordLoanServiceBatch,
   type LoanServiceBatchRow,
 } from "@/lib/banking/loanServiceBatch";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { bankLoansCollection } from "@/lib/db/repositories/bankLoans";
 
 export type LoanServiceResult = {
   interestCollected: number;
@@ -218,12 +221,10 @@ async function readBorrowerAvailable(
 ): Promise<{ available: number; name: string }> {
   if (!loan.borrowerId) return { available: 0, name: "Borrower" };
   if (loan.borrowerType === "character") {
-    const ch = await db
-      .collection<Character>("characters")
-      .findOne(
-        { _id: loan.borrowerId },
-        { projection: { name: 1, [`currencyBalances.personal.${currency}`]: 1 } }
-      );
+    const ch = await charactersCollection(db).findOne(
+      { _id: loan.borrowerId },
+      { projection: { name: 1, [`currencyBalances.personal.${currency}`]: 1 } }
+    );
     return {
       available: Math.max(0, ch?.currencyBalances?.personal?.[currency] ?? 0),
       // The ledger leg needs the name; read it with the balance instead of
@@ -231,9 +232,10 @@ async function readBorrowerAvailable(
       name: ch?.name ?? "Borrower",
     };
   }
-  const corp = await db
-    .collection<Corporation>("corporations")
-    .findOne({ _id: loan.borrowerId }, { projection: { name: 1, liquidCapital: 1 } });
+  const corp = await corporationsCollection(db).findOne(
+    { _id: loan.borrowerId },
+    { projection: { name: 1, liquidCapital: 1 } }
+  );
   return {
     available: Math.max(0, corp?.liquidCapital ?? 0),
     name: corp?.name ?? "Borrower",
@@ -257,8 +259,7 @@ export async function serviceNamedLoanBook(
     replayed: false,
     partial: false,
   };
-  const loans = await db
-    .collection<BankLoan>("bankLoans")
+  const loans = await bankLoansCollection(db)
     .find({
       bankCorporationId: corp._id,
       borrowerType: { $in: ["character", "corporation"] },
@@ -293,8 +294,7 @@ export async function serviceNamedLoanBook(
   }
   const [preloadChars, preloadCorps] = await Promise.all([
     characterIds.size
-      ? db
-          .collection<Character>("characters")
+      ? charactersCollection(db)
           .find(
             { _id: { $in: [...characterIds.values()] } },
             { projection: { name: 1, "currencyBalances.personal": 1 } }
@@ -302,8 +302,7 @@ export async function serviceNamedLoanBook(
           .toArray()
       : Promise.resolve([]),
     corporationIds.size
-      ? db
-          .collection<Corporation>("corporations")
+      ? corporationsCollection(db)
           .find(
             { _id: { $in: [...corporationIds.values()] } },
             { projection: { name: 1, liquidCapital: 1 } }
@@ -505,7 +504,7 @@ export async function serviceNamedLoanBook(
 
   async function serviceConstructionBatch(candidates: readonly BankLoan[]): Promise<BankLoan[]> {
     const key = `loan-service-construction-batch:${corp._id.toString()}:${turn}`;
-    const bankLoans = db.collection<BankLoan>("bankLoans");
+    const bankLoans = bankLoansCollection(db);
     // The lease is taken first and names every candidate, and the locks are
     // released before it. Recovery finds a batch only through its lease, so no
     // crash between the two can leave a batch-key lock nobody can clear.

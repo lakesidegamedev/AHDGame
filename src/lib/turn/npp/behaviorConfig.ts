@@ -2,9 +2,10 @@ import type { Db } from "mongodb";
 import type { GameConfig } from "@/lib/db/types";
 import { retailCapacityExpansionPaused } from "@/lib/market/retailDemandTransition";
 import { BANKING_POLICY_PROJECTION, resolveBankingPolicy } from "@/lib/banking/rules/policy";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 export async function loadNppBehaviorConfig(db: Db, turn: number) {
-  const config = await db.collection<GameConfig>("gameConfig").findOne(
+  const config = await gameConfigCollection(db).findOne(
     { _id: "default" },
     {
       projection: {

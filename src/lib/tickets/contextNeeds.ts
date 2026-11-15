@@ -4,13 +4,11 @@ import { stripPlatformPrefix } from "./platform";
 /**
  * Creation-time missing-context inference for Discord support tickets.
  *
- * Deterministic and dependency-free on purpose: it runs inside the ticket
- * filing request, where the triage worker and the Jev classifier are not
- * available (and may be disabled or delayed — ticket #1339 waited ~15h for
- * its follow-up questions). The ops dashboard later refines the same decision
- * with the model; the key format below MUST stay byte-identical to the
- * dashboard's `contextRequestKey` so both sides dedupe on one idempotent
- * player-update ledger key.
+ * Deterministic and dependency-free because it runs inside the ticket filing
+ * request, where the triage worker and Jev classifier may be unavailable or
+ * delayed. The dashboard later refines the same decision with the model; the
+ * key format below MUST stay byte-identical to the dashboard's
+ * `contextRequestKey` so both sides dedupe on one idempotent ledger key.
  */
 
 export type TicketContextNeed = "discord" | "corporation" | "page";

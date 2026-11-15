@@ -72,6 +72,10 @@ describe("1991 transition national budgets", () => {
       modern
         .filter((row) => IDS.includes(row.countryId as (typeof IDS)[number]))
         .map((row) => row.countryId)
-    ).toEqual(["HU", "BG"]);
+        .sort()
+    ).toEqual(["BG", "HU", "PL", "RO", "RU"]);
+    expect(modern.filter((row) => ["PL", "RO", "RU"].includes(row.countryId))).toSatisfy(
+      (rows: Array<{ fiscalYear?: number }>) => rows.every((row) => row.fiscalYear === 2027)
+    );
   });
 });

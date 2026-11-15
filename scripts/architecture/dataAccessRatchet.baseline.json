@@ -1,0 +1,561 @@
+{
+  "note": "Data access ratchet. Direct .collection() calls outside src/lib/db/collections and src/lib/db/repositories (named, unlisted or dynamic), and untyped .collection() calls, may only go down. Use the repository handle for the collection; after converting call sites run `npm run data-access:lower`.",
+  "files": {
+    "src/app/api/admin/financial-logs/reconcile/route.ts": {
+      "dynamic": 1
+    },
+    "src/app/api/admin/leadership-elections/route.ts": {
+      "dynamic": 9,
+      "untyped": 9
+    },
+    "src/app/api/admin/migrations/create-indexes/diagnose/route.ts": {
+      "dynamic": 1,
+      "untyped": 1
+    },
+    "src/app/api/admin/migrations/create-indexes/route.ts": {
+      "dynamic": 1,
+      "untyped": 1
+    },
+    "src/app/api/bonds/[bondId]/sell/route.ts": {
+      "dynamic": 2,
+      "untyped": 2
+    },
+    "src/app/api/corporations/[id]/bond-default/cash/route.ts": {
+      "dynamic": 2,
+      "untyped": 2
+    },
+    "src/app/api/corporations/[id]/shares/self-issue/route.ts": {
+      "dynamic": 2,
+      "untyped": 2
+    },
+    "src/app/api/country/[code]/parties/[id]/caucuses/[slug]/members/[memberId]/route.ts": {
+      "dynamic": 1,
+      "untyped": 1
+    },
+    "src/app/api/country/[code]/parties/[id]/caucuses/[slug]/members/route.ts": {
+      "dynamic": 1,
+      "untyped": 1
+    },
+    "src/app/api/upload/avatar/route.ts": {
+      "dynamic": 1,
+      "untyped": 1
+    },
+    "src/app/api/upload/profile-header/route.ts": {
+      "dynamic": 1,
+      "untyped": 1
+    },
+    "src/lib/actions/officePoolTopUp.ts": {
+      "dynamic": 1,
+      "untyped": 1
+    },
+    "src/lib/admin/countryReadinessReport.ts": {
+      "dynamic": 1,
+      "untyped": 1
+    },
+    "src/lib/admin/economyReset/apply.ts": {
+      "dynamic": 3,
+      "untyped": 3
+    },
+    "src/lib/admin/economyReset/census.ts": {
+      "dynamic": 3,
+      "untyped": 2
+    },
+    "src/lib/admin/recover1991Bootstrap.ts": {
+      "dynamic": 1,
+      "untyped": 1
+    },
+    "src/lib/admin/resetContract/applyPreservedFieldContracts.ts": {
+      "dynamic": 1,
+      "untyped": 1
+    },
+    "src/lib/admin/resetContract/residueScan.ts": {
+      "dynamic": 3,
+      "untyped": 3
+    },
+    "src/lib/admin/resetGameWorld.ts": {
+      "dynamic": 1,
+      "untyped": 1
+    },
+    "src/lib/admin/seed/applyEraCurrencyTopology.ts": {
+      "dynamic": 1,
+      "untyped": 1
+    },
+    "src/lib/admin/seed/indexes/helpers.ts": {
+      "dynamic": 4,
+      "untyped": 4
+    },
+    "src/lib/admin/seed/indexes/plan.ts": {
+      "dynamic": 1,
+      "untyped": 1
+    },
+    "src/lib/admin/seed/purgeAbsentCountryRegions.ts": {
+      "dynamic": 1,
+      "untyped": 1
+    },
+    "src/lib/admin/seed/referenceRebuildClear.ts": {
+      "dynamic": 1,
+      "untyped": 1
+    },
+    "src/lib/admin/seed/runCoreSeed.ts": {
+      "dynamic": 1,
+      "untyped": 1
+    },
+    "src/lib/admin/seed/seedRegionMetrics.ts": {
+      "dynamic": 1,
+      "untyped": 1
+    },
+    "src/lib/admin/seedDiagnostic/conformance.ts": {
+      "dynamic": 3,
+      "untyped": 3
+    },
+    "src/lib/admin/seedDiagnostic/regionDerivedCoverage.ts": {
+      "dynamic": 1,
+      "untyped": 1
+    },
+    "src/lib/admin/startingParties.ts": {
+      "dynamic": 3,
+      "untyped": 3
+    },
+    "src/lib/banking/atomicDocumentSettlement.ts": {
+      "dynamic": 3,
+      "untyped": 3
+    },
+    "src/lib/banking/cancelConversionUnderwriting.ts": {
+      "dynamic": 3
+    },
+    "src/lib/banking/fundedSovereignCoupons.ts": {
+      "dynamic": 2
+    },
+    "src/lib/banking/legacyDepositInterest.ts": {
+      "dynamic": 2,
+      "untyped": 2
+    },
+    "src/lib/banking/moneyMove.ts": {
+      "dynamic": 4,
+      "untyped": 1
+    },
+    "src/lib/banking/projectionSettlement.ts": {
+      "dynamic": 3,
+      "untyped": 1
+    },
+    "src/lib/banking/recovery.ts": {
+      "dynamic": 1,
+      "untyped": 1
+    },
+    "src/lib/banking/settlementJournal.ts": {
+      "dynamic": 1,
+      "untyped": 1
+    },
+    "src/lib/bonds/saleRecovery.ts": {
+      "dynamic": 1,
+      "untyped": 1
+    },
+    "src/lib/bonds/sovereignMaturityPayoutTargets.ts": {
+      "dynamic": 1
+    },
+    "src/lib/campaigns/queries/campaignQueries.ts": {
+      "dynamic": 1
+    },
+    "src/lib/congress/applyWhipVotes.ts": {
+      "dynamic": 3
+    },
+    "src/lib/congress/billProposalLimits.ts": {
+      "dynamic": 3,
+      "untyped": 3
+    },
+    "src/lib/congress/clearWhippedVote.ts": {
+      "dynamic": 1
+    },
+    "src/lib/congress/leadership/openElection.ts": {
+      "dynamic": 4
+    },
+    "src/lib/congress/leadershipElections.ts": {
+      "dynamic": 7,
+      "untyped": 2
+    },
+    "src/lib/congress/leadershipRaceGuard.ts": {
+      "dynamic": 2,
+      "untyped": 1
+    },
+    "src/lib/congress/leadershipState.ts": {
+      "dynamic": 3
+    },
+    "src/lib/congress/leadershipVoteBallots.ts": {
+      "dynamic": 2,
+      "untyped": 1
+    },
+    "src/lib/corporations/cancelShareOrder.ts": {
+      "dynamic": 1,
+      "untyped": 1
+    },
+    "src/lib/corporations/commands/acquisitions/acquisitionSettlement.ts": {
+      "dynamic": 2,
+      "untyped": 2
+    },
+    "src/lib/corporations/commands/acquisitions/acquisitionSettlementWorld.ts": {
+      "corporations": 3,
+      "federalBudget": 1,
+      "untyped": 4
+    },
+    "src/lib/corporations/commands/acquisitions/controllerTransferBarrier.ts": {
+      "dynamic": 1
+    },
+    "src/lib/corporations/commands/shareTrading/fillShareOrderSettlement.ts": {
+      "dynamic": 1
+    },
+    "src/lib/corporations/commands/shareTrading/quoteSaleTax.ts": {
+      "dynamic": 1
+    },
+    "src/lib/corporations/commands/shareTrading/shareFillAudit.ts": {
+      "dynamic": 3
+    },
+    "src/lib/corporations/commands/shareTrading/shareFillMoney.ts": {
+      "dynamic": 1
+    },
+    "src/lib/corporations/commands/shareTrading/shareFillMoneyLegs.ts": {
+      "dynamic": 2
+    },
+    "src/lib/corporations/ownership/history.ts": {
+      "dynamic": 1
+    },
+    "src/lib/countries/hu/constituencyByElections1991.ts": {
+      "dynamic": 1,
+      "untyped": 1
+    },
+    "src/lib/countries/hu/constituencyByElections2011.ts": {
+      "dynamic": 1,
+      "untyped": 1
+    },
+    "src/lib/countries/hu/listAssemblyReceipt.ts": {
+      "dynamic": 1
+    },
+    "src/lib/countries/hu/listVacancies1991.ts": {
+      "dynamic": 2,
+      "untyped": 2
+    },
+    "src/lib/countries/jp/elections/shugiinFilingIndexes.ts": {
+      "dynamic": 1,
+      "untyped": 1
+    },
+    "src/lib/countries/ru/assemblyCampaigns.ts": {
+      "dynamic": 1
+    },
+    "src/lib/countries/ru/assemblyVacancySeating.ts": {
+      "dynamic": 2,
+      "untyped": 2
+    },
+    "src/lib/countries/ru/data/2026-08-30-purge-retired-ru-metric-regions.ts": {
+      "dynamic": 1,
+      "untyped": 1
+    },
+    "src/lib/countries/ru/ruConvocation.ts": {
+      "dynamic": 1,
+      "untyped": 1
+    },
+    "src/lib/countries/ru/seedRU.ts": {
+      "dynamic": 1,
+      "untyped": 1
+    },
+    "src/lib/country/background/countryBriefs.ts": {
+      "dynamic": 1
+    },
+    "src/lib/country/background/loadBackgroundCountryView.ts": {
+      "dynamic": 1
+    },
+    "src/lib/country/mergeCountry.ts": {
+      "dynamic": 2,
+      "untyped": 2
+    },
+    "src/lib/country/mergePartiesIntoCountry.ts": {
+      "dynamic": 5,
+      "untyped": 5
+    },
+    "src/lib/country/mergeRegion.ts": {
+      "dynamic": 6,
+      "untyped": 3
+    },
+    "src/lib/currency/autoConvert.ts": {
+      "dynamic": 5,
+      "untyped": 5
+    },
+    "src/lib/currency/marketMaker.ts": {
+      "dynamic": 2,
+      "untyped": 2
+    },
+    "src/lib/db/collections/activityLog.ts": {
+      "untyped": 1
+    },
+    "src/lib/db/sessionDb.ts": {
+      "dynamic": 1,
+      "untyped": 1
+    },
+    "src/lib/debate/debateSessionLifecycle.ts": {
+      "dynamic": 1,
+      "untyped": 1
+    },
+    "src/lib/demographics/flowJournal.ts": {
+      "dynamic": 1
+    },
+    "src/lib/financialTxLog/suspectScan.ts": {
+      "dynamic": 1
+    },
+    "src/lib/forex/fillRecovery.ts": {
+      "dynamic": 1,
+      "untyped": 1
+    },
+    "src/lib/indexFunds/fundFloatSettlement.ts": {
+      "dynamic": 1,
+      "untyped": 1
+    },
+    "src/lib/indexFunds/playerCommandAudit.ts": {
+      "dynamic": 1,
+      "untyped": 1
+    },
+    "src/lib/indexFunds/processQueuedRedemptions.ts": {
+      "dynamic": 1,
+      "untyped": 1
+    },
+    "src/lib/indexFunds/queuedPayoutBatch.ts": {
+      "dynamic": 1,
+      "untyped": 1
+    },
+    "src/lib/indexFunds/sponsorship/holderPayout.ts": {
+      "dynamic": 2,
+      "untyped": 1
+    },
+    "src/lib/influence/simpleInfluence.ts": {
+      "dynamic": 4,
+      "untyped": 2
+    },
+    "src/lib/internationalOrganizations/backgroundOrgVoting.ts": {
+      "dynamic": 1
+    },
+    "src/lib/internationalOrganizations/cashLedger.ts": {
+      "dynamic": 2,
+      "untyped": 2
+    },
+    "src/lib/legislature/v2VotePolicyShift.ts": {
+      "dynamic": 1
+    },
+    "src/lib/lineOfCredit/settlement.ts": {
+      "dynamic": 1,
+      "untyped": 1
+    },
+    "src/lib/lineOfCredit/targetPublication.ts": {
+      "dynamic": 1
+    },
+    "src/lib/livingConflict/fallbackTrajectory.ts": {
+      "dynamic": 1
+    },
+    "src/lib/market/producerMarket/payablesSettlement.ts": {
+      "dynamic": 1
+    },
+    "src/lib/mediaEditorial/applyEffects.ts": {
+      "dynamic": 1
+    },
+    "src/lib/metricHistory.ts": {
+      "dynamic": 3
+    },
+    "src/lib/migrations/entries/2026-06-01-index-fund-foundation.ts": {
+      "dynamic": 1,
+      "untyped": 1
+    },
+    "src/lib/migrations/entries/2026-07-01-union-indexes.ts": {
+      "dynamic": 2,
+      "untyped": 2
+    },
+    "src/lib/migrations/entries/2026-08-26-repair-out-of-range-policy-levels.ts": {
+      "dynamic": 1,
+      "untyped": 1
+    },
+    "src/lib/migrations/entries/2026-08-28-equity-liquidity-indexes.ts": {
+      "dynamic": 1,
+      "untyped": 1
+    },
+    "src/lib/migrations/entries/2026-08-31-intelligence-indexes.ts": {
+      "dynamic": 1,
+      "untyped": 1
+    },
+    "src/lib/migrations/entries/2026-09-09-unique-voting-party-elections.ts": {
+      "dynamic": 2,
+      "untyped": 2
+    },
+    "src/lib/migrations/entries/2026-09-11-source-fence-indexes.ts": {
+      "dynamic": 2,
+      "untyped": 2
+    },
+    "src/lib/migrations/entries/2026-09-26-market-chart-indexes.ts": {
+      "dynamic": 1,
+      "untyped": 1
+    },
+    "src/lib/migrations/entries/2026-09-30-long-horizon-telemetry-indexes.ts": {
+      "dynamic": 1,
+      "untyped": 1
+    },
+    "src/lib/migrations/entries/2026-10-01-reconcile-seed-indexes.ts": {
+      "dynamic": 2,
+      "untyped": 2
+    },
+    "src/lib/migrations/entries/2026-10-04-industry-model-market-indexes.ts": {
+      "dynamic": 2,
+      "untyped": 2
+    },
+    "src/lib/migrations/entries/2026-10-04-media-discriminator-market-indexes.ts": {
+      "dynamic": 2,
+      "untyped": 2
+    },
+    "src/lib/migrations/entries/2026-10-04-political-media-order-indexes.ts": {
+      "dynamic": 1,
+      "untyped": 1
+    },
+    "src/lib/migrations/entries/2026-10-16-income-tax-tiers.ts": {
+      "dynamic": 2,
+      "untyped": 2
+    },
+    "src/lib/migrations/entries/2026-10-16-stock-holding-tax-tiers.ts": {
+      "dynamic": 2,
+      "untyped": 2
+    },
+    "src/lib/migrations/entries/2026-10-23-drop-log-text-indexes.ts": {
+      "dynamic": 1,
+      "untyped": 1
+    },
+    "src/lib/migrations/indexPlans.ts": {
+      "dynamic": 1,
+      "untyped": 1
+    },
+    "src/lib/partyWhips/commands/issueCaucusWhip.ts": {
+      "dynamic": 1
+    },
+    "src/lib/partyWhips/commands/issueNationalPartyWhip.ts": {
+      "dynamic": 1
+    },
+    "src/lib/partyWhips/whipDefiance.ts": {
+      "dynamic": 1
+    },
+    "src/lib/policyShift.ts": {
+      "dynamic": 2,
+      "untyped": 1
+    },
+    "src/lib/politicalMedia/journal.ts": {
+      "dynamic": 4
+    },
+    "src/lib/propagateNameChange.ts": {
+      "dynamic": 2,
+      "untyped": 2
+    },
+    "src/lib/referendum/secede/carryOverOfficials.ts": {
+      "dynamic": 1,
+      "untyped": 1
+    },
+    "src/lib/referendum/secede/fanoutDriver.ts": {
+      "dynamic": 7
+    },
+    "src/lib/referendum/secede/splitParties.ts": {
+      "dynamic": 5,
+      "untyped": 5
+    },
+    "src/lib/referendum/transfer/convertPublicCurrency.ts": {
+      "dynamic": 2
+    },
+    "src/lib/referendum/transfer/evacuateRegionPolitics.ts": {
+      "dynamic": 3,
+      "untyped": 3
+    },
+    "src/lib/referendum/transfer/regionScopedCollections.ts": {
+      "dynamic": 2,
+      "untyped": 1
+    },
+    "src/lib/remediation/adhoc.ts": {
+      "dynamic": 6,
+      "untyped": 6
+    },
+    "src/lib/remediation/backup.ts": {
+      "dynamic": 3,
+      "untyped": 3
+    },
+    "src/lib/remediation/defects/AHD-1124-brl-forced-maturity-restitution.ts": {
+      "dynamic": 1,
+      "untyped": 1
+    },
+    "src/lib/remediation/defects/AHD-1266-tr-repudiation-restitution.ts": {
+      "dynamic": 1,
+      "untyped": 1
+    },
+    "src/lib/remediation/defects/AHD-command-economy-private-sector-ownership.ts": {
+      "dynamic": 2,
+      "untyped": 2
+    },
+    "src/lib/remediation/inspect.ts": {
+      "dynamic": 5,
+      "untyped": 5
+    },
+    "src/lib/retention/archive.ts": {
+      "dynamic": 1,
+      "untyped": 1
+    },
+    "src/lib/retention/moneyJournalPrune.ts": {
+      "dynamic": 1,
+      "untyped": 1
+    },
+    "src/lib/retention/retention.ts": {
+      "dynamic": 2,
+      "untyped": 2
+    },
+    "src/lib/sidebarWidgets/dueSoon/politics.ts": {
+      "dynamic": 1
+    },
+    "src/lib/sim/materializeSyntheticActors.ts": {
+      "dynamic": 2,
+      "untyped": 2
+    },
+    "src/lib/singleplayer/saveArchive.ts": {
+      "dynamic": 6,
+      "untyped": 6
+    },
+    "src/lib/turn/atomicClaim.ts": {
+      "dynamic": 1,
+      "untyped": 1
+    },
+    "src/lib/turn/billLifecycle/regionalEngine.ts": {
+      "dynamic": 10
+    },
+    "src/lib/turn/campaignTurn.ts": {
+      "dynamic": 1
+    },
+    "src/lib/turn/corporation/migrateEntertainmentRemoval.ts": {
+      "dynamic": 2,
+      "untyped": 2
+    },
+    "src/lib/turn/crisisV2/spillover.ts": {
+      "dynamic": 1
+    },
+    "src/lib/turn/governmentApprovalFavorability.ts": {
+      "dynamic": 1
+    },
+    "src/lib/turn/history/freezeOfficeHistoryIterations.ts": {
+      "dynamic": 2,
+      "untyped": 2
+    },
+    "src/lib/turn/npp/leadershipVoting.ts": {
+      "dynamic": 2,
+      "untyped": 2
+    },
+    "src/lib/turn/subhour/rewindHalfTick.ts": {
+      "dynamic": 2,
+      "untyped": 2
+    },
+    "src/lib/world/succession/materializeFederalRetirement.ts": {
+      "dynamic": 2,
+      "untyped": 1
+    },
+    "src/lib/world/succession/materializeRussianCongress.ts": {
+      "dynamic": 4,
+      "untyped": 4
+    },
+    "src/lib/world/succession/materializeTerritory.ts": {
+      "dynamic": 1,
+      "untyped": 1
+    }
+  }
+}

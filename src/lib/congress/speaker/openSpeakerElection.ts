@@ -2,6 +2,8 @@ import type { Db } from "@/lib/mongodb";
 import type { SpeakerElection, SpeakerNomination } from "@/lib/db/types";
 import { getGameTime } from "@/lib/time/gameTime";
 import { isLeadershipElectionClosed } from "@/lib/congress/leadershipElections";
+import { speakerElectionsCollection } from "@/lib/db/repositories/speakerElections";
+import { speakerNominationsCollection } from "@/lib/db/repositories/speakerNominations";
 
 const ELECTION_DURATION_MS = 24 * 60 * 60 * 1000; // 24 hours
 
@@ -16,9 +18,7 @@ const ELECTION_DURATION_MS = 24 * 60 * 60 * 1000; // 24 hours
  */
 export async function openSpeakerElection(db: Db, now: Date): Promise<boolean> {
   const gameTime = await getGameTime();
-  const existing = await db
-    .collection<SpeakerElection>("speakerElections")
-    .findOne({ _id: "current" });
+  const existing = await speakerElectionsCollection(db).findOne({ _id: "current" });
   if (
     existing?.status === "voting" &&
     !isLeadershipElectionClosed(existing, gameTime.currentTurn, gameTime.effectiveNow)
@@ -26,16 +26,14 @@ export async function openSpeakerElection(db: Db, now: Date): Promise<boolean> {
     return false;
   }
 
-  await db
-    .collection<SpeakerNomination>("speakerNominations")
-    .updateMany(
-      { status: { $in: ["open", "voting"] } },
-      { $set: { status: "failed", updatedAt: now } }
-    );
+  await speakerNominationsCollection(db).updateMany(
+    { status: { $in: ["open", "voting"] } },
+    { $set: { status: "failed", updatedAt: now } }
+  );
 
   const endsAt = new Date(gameTime.effectiveNow.getTime() + ELECTION_DURATION_MS);
   const endsOnTurn = gameTime.currentTurn + ELECTION_DURATION_MS / 3_600_000;
-  await db.collection<SpeakerElection>("speakerElections").updateOne(
+  await speakerElectionsCollection(db).updateOne(
     { _id: "current" },
     {
       $set: {

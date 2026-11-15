@@ -1,0 +1,287 @@
+## fresh-t1 jp.shugiin
+JP/shugiin/CGK c1 y2024 active seats=28 turns=1/72/96 dur=192/168 seat=JP-shugiin-CGK shift=- alloc=pr_hareQuota t=2026-11-08T12:00:00.000Z|2026-11-11T11:00:00.000Z|2026-11-12T11:00:00.000Z
+JP/shugiin/CHU c1 y2024 active seats=81 turns=1/72/96 dur=192/168 seat=JP-shugiin-CHU shift=- alloc=pr_hareQuota t=2026-11-08T12:00:00.000Z|2026-11-11T11:00:00.000Z|2026-11-12T11:00:00.000Z
+JP/shugiin/HOK c1 y2024 active seats=12 turns=1/72/96 dur=192/168 seat=JP-shugiin-HOK shift=- alloc=pr_hareQuota t=2026-11-08T12:00:00.000Z|2026-11-11T11:00:00.000Z|2026-11-12T11:00:00.000Z
+JP/shugiin/KAN c1 y2024 active seats=150 turns=1/72/96 dur=192/168 seat=JP-shugiin-KAN shift=- alloc=pr_hareQuota t=2026-11-08T12:00:00.000Z|2026-11-11T11:00:00.000Z|2026-11-12T11:00:00.000Z
+JP/shugiin/KNS c1 y2024 active seats=82 turns=1/72/96 dur=192/168 seat=JP-shugiin-KNS shift=- alloc=pr_hareQuota t=2026-11-08T12:00:00.000Z|2026-11-11T11:00:00.000Z|2026-11-12T11:00:00.000Z
+JP/shugiin/KYU c1 y2024 active seats=61 turns=1/72/96 dur=192/168 seat=JP-shugiin-KYU shift=- alloc=pr_hareQuota t=2026-11-08T12:00:00.000Z|2026-11-11T11:00:00.000Z|2026-11-12T11:00:00.000Z
+JP/shugiin/SHI c1 y2024 active seats=14 turns=1/72/96 dur=192/168 seat=JP-shugiin-SHI shift=- alloc=pr_hareQuota t=2026-11-08T12:00:00.000Z|2026-11-11T11:00:00.000Z|2026-11-12T11:00:00.000Z
+JP/shugiin/TOH c1 y2024 active seats=37 turns=1/72/96 dur=192/168 seat=JP-shugiin-TOH shift=- alloc=pr_hareQuota t=2026-11-08T12:00:00.000Z|2026-11-11T11:00:00.000Z|2026-11-12T11:00:00.000Z
+## fresh-t1 jp.sangiin
+JP/sangiin/CGK c1 y2025 active seats=7 turns=1/99/123 dur=144/120 seat=JP-sangiin-CGK-1 shift=- class=1 t=2026-11-08T12:00:00.000Z|2026-11-12T14:00:00.000Z|2026-11-13T14:00:00.000Z
+JP/sangiin/CGK c1 y2028 active seats=7 turns=1/243/267 dur=144/120 seat=JP-sangiin-CGK-2 shift=- class=2 t=2026-11-08T12:00:00.000Z|2026-11-18T14:00:00.000Z|2026-11-19T14:00:00.000Z
+JP/sangiin/CHU c1 y2025 active seats=22 turns=1/99/123 dur=144/120 seat=JP-sangiin-CHU-1 shift=- class=1 t=2026-11-08T12:00:00.000Z|2026-11-12T14:00:00.000Z|2026-11-13T14:00:00.000Z
+JP/sangiin/CHU c1 y2028 active seats=22 turns=1/243/267 dur=144/120 seat=JP-sangiin-CHU-2 shift=- class=2 t=2026-11-08T12:00:00.000Z|2026-11-18T14:00:00.000Z|2026-11-19T14:00:00.000Z
+JP/sangiin/HOK c1 y2025 active seats=4 turns=1/99/123 dur=144/120 seat=JP-sangiin-HOK-1 shift=- class=1 t=2026-11-08T12:00:00.000Z|2026-11-12T14:00:00.000Z|2026-11-13T14:00:00.000Z
+JP/sangiin/HOK c1 y2028 active seats=3 turns=1/243/267 dur=144/120 seat=JP-sangiin-HOK-2 shift=- class=2 t=2026-11-08T12:00:00.000Z|2026-11-18T14:00:00.000Z|2026-11-19T14:00:00.000Z
+JP/sangiin/KAN c1 y2025 active seats=40 turns=1/99/123 dur=144/120 seat=JP-sangiin-KAN-1 shift=- class=1 t=2026-11-08T12:00:00.000Z|2026-11-12T14:00:00.000Z|2026-11-13T14:00:00.000Z
+JP/sangiin/KAN c1 y2028 active seats=40 turns=1/243/267 dur=144/120 seat=JP-sangiin-KAN-2 shift=- class=2 t=2026-11-08T12:00:00.000Z|2026-11-18T14:00:00.000Z|2026-11-19T14:00:00.000Z
+JP/sangiin/KNS c1 y2025 active seats=22 turns=1/99/123 dur=144/120 seat=JP-sangiin-KNS-1 shift=- class=1 t=2026-11-08T12:00:00.000Z|2026-11-12T14:00:00.000Z|2026-11-13T14:00:00.000Z
+JP/sangiin/KNS c1 y2028 active seats=22 turns=1/243/267 dur=144/120 seat=JP-sangiin-KNS-2 shift=- class=2 t=2026-11-08T12:00:00.000Z|2026-11-18T14:00:00.000Z|2026-11-19T14:00:00.000Z
+JP/sangiin/KYU c1 y2025 active seats=16 turns=1/99/123 dur=144/120 seat=JP-sangiin-KYU-1 shift=- class=1 t=2026-11-08T12:00:00.000Z|2026-11-12T14:00:00.000Z|2026-11-13T14:00:00.000Z
+JP/sangiin/KYU c1 y2028 active seats=15 turns=1/243/267 dur=144/120 seat=JP-sangiin-KYU-2 shift=- class=2 t=2026-11-08T12:00:00.000Z|2026-11-18T14:00:00.000Z|2026-11-19T14:00:00.000Z
+JP/sangiin/SHI c1 y2025 active seats=4 turns=1/99/123 dur=144/120 seat=JP-sangiin-SHI-1 shift=- class=1 t=2026-11-08T12:00:00.000Z|2026-11-12T14:00:00.000Z|2026-11-13T14:00:00.000Z
+JP/sangiin/SHI c1 y2028 active seats=4 turns=1/243/267 dur=144/120 seat=JP-sangiin-SHI-2 shift=- class=2 t=2026-11-08T12:00:00.000Z|2026-11-18T14:00:00.000Z|2026-11-19T14:00:00.000Z
+JP/sangiin/TOH c1 y2025 active seats=10 turns=1/99/123 dur=144/120 seat=JP-sangiin-TOH-1 shift=- class=1 t=2026-11-08T12:00:00.000Z|2026-11-12T14:00:00.000Z|2026-11-13T14:00:00.000Z
+JP/sangiin/TOH c1 y2028 active seats=10 turns=1/243/267 dur=144/120 seat=JP-sangiin-TOH-2 shift=- class=2 t=2026-11-08T12:00:00.000Z|2026-11-18T14:00:00.000Z|2026-11-19T14:00:00.000Z
+## fresh-t300 jp.shugiin
+JP/shugiin/CGK c3 y2032 active seats=28 turns=288/456/480 dur=192/168 seat=JP-shugiin-CGK shift=- alloc=pr_hareQuota t=2026-11-08T00:00:00.000Z|2026-11-15T00:00:00.000Z|2026-11-16T00:00:00.000Z
+JP/shugiin/CHU c3 y2032 active seats=81 turns=288/456/480 dur=192/168 seat=JP-shugiin-CHU shift=- alloc=pr_hareQuota t=2026-11-08T00:00:00.000Z|2026-11-15T00:00:00.000Z|2026-11-16T00:00:00.000Z
+JP/shugiin/HOK c3 y2032 active seats=12 turns=288/456/480 dur=192/168 seat=JP-shugiin-HOK shift=- alloc=pr_hareQuota t=2026-11-08T00:00:00.000Z|2026-11-15T00:00:00.000Z|2026-11-16T00:00:00.000Z
+JP/shugiin/KAN c3 y2032 active seats=150 turns=288/456/480 dur=192/168 seat=JP-shugiin-KAN shift=- alloc=pr_hareQuota t=2026-11-08T00:00:00.000Z|2026-11-15T00:00:00.000Z|2026-11-16T00:00:00.000Z
+JP/shugiin/KNS c3 y2032 active seats=82 turns=288/456/480 dur=192/168 seat=JP-shugiin-KNS shift=- alloc=pr_hareQuota t=2026-11-08T00:00:00.000Z|2026-11-15T00:00:00.000Z|2026-11-16T00:00:00.000Z
+JP/shugiin/KYU c3 y2032 active seats=61 turns=288/456/480 dur=192/168 seat=JP-shugiin-KYU shift=- alloc=pr_hareQuota t=2026-11-08T00:00:00.000Z|2026-11-15T00:00:00.000Z|2026-11-16T00:00:00.000Z
+JP/shugiin/SHI c3 y2032 active seats=14 turns=288/456/480 dur=192/168 seat=JP-shugiin-SHI shift=- alloc=pr_hareQuota t=2026-11-08T00:00:00.000Z|2026-11-15T00:00:00.000Z|2026-11-16T00:00:00.000Z
+JP/shugiin/TOH c3 y2032 active seats=37 turns=288/456/480 dur=192/168 seat=JP-shugiin-TOH shift=- alloc=pr_hareQuota t=2026-11-08T00:00:00.000Z|2026-11-15T00:00:00.000Z|2026-11-16T00:00:00.000Z
+## fresh-t300 jp.sangiin
+JP/sangiin/CGK c2 y2028 active seats=7 turns=300/387/411 dur=144/120 seat=JP-sangiin-CGK-1 shift=- class=1 t=2026-11-08T12:00:00.000Z|2026-11-12T03:00:00.000Z|2026-11-13T03:00:00.000Z
+JP/sangiin/CGK c2 y2031 active seats=7 turns=300/531/555 dur=144/120 seat=JP-sangiin-CGK-2 shift=- class=2 t=2026-11-08T12:00:00.000Z|2026-11-18T03:00:00.000Z|2026-11-19T03:00:00.000Z
+JP/sangiin/CHU c2 y2028 active seats=22 turns=300/387/411 dur=144/120 seat=JP-sangiin-CHU-1 shift=- class=1 t=2026-11-08T12:00:00.000Z|2026-11-12T03:00:00.000Z|2026-11-13T03:00:00.000Z
+JP/sangiin/CHU c2 y2031 active seats=22 turns=300/531/555 dur=144/120 seat=JP-sangiin-CHU-2 shift=- class=2 t=2026-11-08T12:00:00.000Z|2026-11-18T03:00:00.000Z|2026-11-19T03:00:00.000Z
+JP/sangiin/HOK c2 y2028 active seats=4 turns=300/387/411 dur=144/120 seat=JP-sangiin-HOK-1 shift=- class=1 t=2026-11-08T12:00:00.000Z|2026-11-12T03:00:00.000Z|2026-11-13T03:00:00.000Z
+JP/sangiin/HOK c2 y2031 active seats=3 turns=300/531/555 dur=144/120 seat=JP-sangiin-HOK-2 shift=- class=2 t=2026-11-08T12:00:00.000Z|2026-11-18T03:00:00.000Z|2026-11-19T03:00:00.000Z
+JP/sangiin/KAN c2 y2028 active seats=40 turns=300/387/411 dur=144/120 seat=JP-sangiin-KAN-1 shift=- class=1 t=2026-11-08T12:00:00.000Z|2026-11-12T03:00:00.000Z|2026-11-13T03:00:00.000Z
+JP/sangiin/KAN c2 y2031 active seats=40 turns=300/531/555 dur=144/120 seat=JP-sangiin-KAN-2 shift=- class=2 t=2026-11-08T12:00:00.000Z|2026-11-18T03:00:00.000Z|2026-11-19T03:00:00.000Z
+JP/sangiin/KNS c2 y2028 active seats=22 turns=300/387/411 dur=144/120 seat=JP-sangiin-KNS-1 shift=- class=1 t=2026-11-08T12:00:00.000Z|2026-11-12T03:00:00.000Z|2026-11-13T03:00:00.000Z
+JP/sangiin/KNS c2 y2031 active seats=22 turns=300/531/555 dur=144/120 seat=JP-sangiin-KNS-2 shift=- class=2 t=2026-11-08T12:00:00.000Z|2026-11-18T03:00:00.000Z|2026-11-19T03:00:00.000Z
+JP/sangiin/KYU c2 y2028 active seats=16 turns=300/387/411 dur=144/120 seat=JP-sangiin-KYU-1 shift=- class=1 t=2026-11-08T12:00:00.000Z|2026-11-12T03:00:00.000Z|2026-11-13T03:00:00.000Z
+JP/sangiin/KYU c2 y2031 active seats=15 turns=300/531/555 dur=144/120 seat=JP-sangiin-KYU-2 shift=- class=2 t=2026-11-08T12:00:00.000Z|2026-11-18T03:00:00.000Z|2026-11-19T03:00:00.000Z
+JP/sangiin/SHI c2 y2028 active seats=4 turns=300/387/411 dur=144/120 seat=JP-sangiin-SHI-1 shift=- class=1 t=2026-11-08T12:00:00.000Z|2026-11-12T03:00:00.000Z|2026-11-13T03:00:00.000Z
+JP/sangiin/SHI c2 y2031 active seats=4 turns=300/531/555 dur=144/120 seat=JP-sangiin-SHI-2 shift=- class=2 t=2026-11-08T12:00:00.000Z|2026-11-18T03:00:00.000Z|2026-11-19T03:00:00.000Z
+JP/sangiin/TOH c2 y2028 active seats=10 turns=300/387/411 dur=144/120 seat=JP-sangiin-TOH-1 shift=- class=1 t=2026-11-08T12:00:00.000Z|2026-11-12T03:00:00.000Z|2026-11-13T03:00:00.000Z
+JP/sangiin/TOH c2 y2031 active seats=10 turns=300/531/555 dur=144/120 seat=JP-sangiin-TOH-2 shift=- class=2 t=2026-11-08T12:00:00.000Z|2026-11-18T03:00:00.000Z|2026-11-19T03:00:00.000Z
+## after-cycle1-t120 jp.shugiin
+JP/shugiin/CGK c2 y2028 active seats=28 turns=96/264/288 dur=192/168 seat=JP-shugiin-CGK shift=- alloc=pr_hareQuota t=2026-11-07T12:00:00.000Z|2026-11-14T12:00:00.000Z|2026-11-15T12:00:00.000Z
+JP/shugiin/CHU c2 y2028 active seats=81 turns=96/264/288 dur=192/168 seat=JP-shugiin-CHU shift=- alloc=pr_hareQuota t=2026-11-07T12:00:00.000Z|2026-11-14T12:00:00.000Z|2026-11-15T12:00:00.000Z
+JP/shugiin/HOK c2 y2028 active seats=12 turns=96/264/288 dur=192/168 seat=JP-shugiin-HOK shift=- alloc=pr_hareQuota t=2026-11-07T12:00:00.000Z|2026-11-14T12:00:00.000Z|2026-11-15T12:00:00.000Z
+JP/shugiin/KAN c2 y2028 active seats=150 turns=96/264/288 dur=192/168 seat=JP-shugiin-KAN shift=- alloc=pr_hareQuota t=2026-11-07T12:00:00.000Z|2026-11-14T12:00:00.000Z|2026-11-15T12:00:00.000Z
+JP/shugiin/KNS c2 y2028 active seats=82 turns=96/264/288 dur=192/168 seat=JP-shugiin-KNS shift=- alloc=pr_hareQuota t=2026-11-07T12:00:00.000Z|2026-11-14T12:00:00.000Z|2026-11-15T12:00:00.000Z
+JP/shugiin/KYU c2 y2028 active seats=61 turns=96/264/288 dur=192/168 seat=JP-shugiin-KYU shift=- alloc=pr_hareQuota t=2026-11-07T12:00:00.000Z|2026-11-14T12:00:00.000Z|2026-11-15T12:00:00.000Z
+JP/shugiin/SHI c2 y2028 active seats=14 turns=96/264/288 dur=192/168 seat=JP-shugiin-SHI shift=- alloc=pr_hareQuota t=2026-11-07T12:00:00.000Z|2026-11-14T12:00:00.000Z|2026-11-15T12:00:00.000Z
+JP/shugiin/TOH c2 y2028 active seats=37 turns=96/264/288 dur=192/168 seat=JP-shugiin-TOH shift=- alloc=pr_hareQuota t=2026-11-07T12:00:00.000Z|2026-11-14T12:00:00.000Z|2026-11-15T12:00:00.000Z
+## after-cycle1-t120 jp.sangiin
+JP/sangiin/CGK c2 y2028 active seats=7 turns=120/387/411 dur=144/120 seat=JP-sangiin-CGK-1 shift=- class=1 t=2026-11-08T12:00:00.000Z|2026-11-19T15:00:00.000Z|2026-11-20T15:00:00.000Z
+JP/sangiin/CGK c2 y2031 active seats=7 turns=120/531/555 dur=144/120 seat=JP-sangiin-CGK-2 shift=- class=2 t=2026-11-08T12:00:00.000Z|2026-11-25T15:00:00.000Z|2026-11-26T15:00:00.000Z
+JP/sangiin/CHU c2 y2028 active seats=22 turns=120/387/411 dur=144/120 seat=JP-sangiin-CHU-1 shift=- class=1 t=2026-11-08T12:00:00.000Z|2026-11-19T15:00:00.000Z|2026-11-20T15:00:00.000Z
+JP/sangiin/CHU c2 y2031 active seats=22 turns=120/531/555 dur=144/120 seat=JP-sangiin-CHU-2 shift=- class=2 t=2026-11-08T12:00:00.000Z|2026-11-25T15:00:00.000Z|2026-11-26T15:00:00.000Z
+JP/sangiin/HOK c2 y2028 active seats=4 turns=120/387/411 dur=144/120 seat=JP-sangiin-HOK-1 shift=- class=1 t=2026-11-08T12:00:00.000Z|2026-11-19T15:00:00.000Z|2026-11-20T15:00:00.000Z
+JP/sangiin/HOK c2 y2031 active seats=3 turns=120/531/555 dur=144/120 seat=JP-sangiin-HOK-2 shift=- class=2 t=2026-11-08T12:00:00.000Z|2026-11-25T15:00:00.000Z|2026-11-26T15:00:00.000Z
+JP/sangiin/KAN c2 y2028 active seats=40 turns=120/387/411 dur=144/120 seat=JP-sangiin-KAN-1 shift=- class=1 t=2026-11-08T12:00:00.000Z|2026-11-19T15:00:00.000Z|2026-11-20T15:00:00.000Z
+JP/sangiin/KAN c2 y2031 active seats=40 turns=120/531/555 dur=144/120 seat=JP-sangiin-KAN-2 shift=- class=2 t=2026-11-08T12:00:00.000Z|2026-11-25T15:00:00.000Z|2026-11-26T15:00:00.000Z
+JP/sangiin/KNS c2 y2028 active seats=22 turns=120/387/411 dur=144/120 seat=JP-sangiin-KNS-1 shift=- class=1 t=2026-11-08T12:00:00.000Z|2026-11-19T15:00:00.000Z|2026-11-20T15:00:00.000Z
+JP/sangiin/KNS c2 y2031 active seats=22 turns=120/531/555 dur=144/120 seat=JP-sangiin-KNS-2 shift=- class=2 t=2026-11-08T12:00:00.000Z|2026-11-25T15:00:00.000Z|2026-11-26T15:00:00.000Z
+JP/sangiin/KYU c2 y2028 active seats=16 turns=120/387/411 dur=144/120 seat=JP-sangiin-KYU-1 shift=- class=1 t=2026-11-08T12:00:00.000Z|2026-11-19T15:00:00.000Z|2026-11-20T15:00:00.000Z
+JP/sangiin/KYU c2 y2031 active seats=15 turns=120/531/555 dur=144/120 seat=JP-sangiin-KYU-2 shift=- class=2 t=2026-11-08T12:00:00.000Z|2026-11-25T15:00:00.000Z|2026-11-26T15:00:00.000Z
+JP/sangiin/SHI c2 y2028 active seats=4 turns=120/387/411 dur=144/120 seat=JP-sangiin-SHI-1 shift=- class=1 t=2026-11-08T12:00:00.000Z|2026-11-19T15:00:00.000Z|2026-11-20T15:00:00.000Z
+JP/sangiin/SHI c2 y2031 active seats=4 turns=120/531/555 dur=144/120 seat=JP-sangiin-SHI-2 shift=- class=2 t=2026-11-08T12:00:00.000Z|2026-11-25T15:00:00.000Z|2026-11-26T15:00:00.000Z
+JP/sangiin/TOH c2 y2028 active seats=10 turns=120/387/411 dur=144/120 seat=JP-sangiin-TOH-1 shift=- class=1 t=2026-11-08T12:00:00.000Z|2026-11-19T15:00:00.000Z|2026-11-20T15:00:00.000Z
+JP/sangiin/TOH c2 y2031 active seats=10 turns=120/531/555 dur=144/120 seat=JP-sangiin-TOH-2 shift=- class=2 t=2026-11-08T12:00:00.000Z|2026-11-25T15:00:00.000Z|2026-11-26T15:00:00.000Z
+## after-cycle1-t700 jp.shugiin
+JP/shugiin/CGK c5 y2040 active seats=28 turns=672/840/864 dur=192/168 seat=JP-shugiin-CGK shift=- alloc=pr_hareQuota t=2026-11-07T08:00:00.000Z|2026-11-14T08:00:00.000Z|2026-11-15T08:00:00.000Z
+JP/shugiin/CHU c5 y2040 active seats=81 turns=672/840/864 dur=192/168 seat=JP-shugiin-CHU shift=- alloc=pr_hareQuota t=2026-11-07T08:00:00.000Z|2026-11-14T08:00:00.000Z|2026-11-15T08:00:00.000Z
+JP/shugiin/HOK c5 y2040 active seats=12 turns=672/840/864 dur=192/168 seat=JP-shugiin-HOK shift=- alloc=pr_hareQuota t=2026-11-07T08:00:00.000Z|2026-11-14T08:00:00.000Z|2026-11-15T08:00:00.000Z
+JP/shugiin/KAN c5 y2040 active seats=150 turns=672/840/864 dur=192/168 seat=JP-shugiin-KAN shift=- alloc=pr_hareQuota t=2026-11-07T08:00:00.000Z|2026-11-14T08:00:00.000Z|2026-11-15T08:00:00.000Z
+JP/shugiin/KNS c5 y2040 active seats=82 turns=672/840/864 dur=192/168 seat=JP-shugiin-KNS shift=- alloc=pr_hareQuota t=2026-11-07T08:00:00.000Z|2026-11-14T08:00:00.000Z|2026-11-15T08:00:00.000Z
+JP/shugiin/KYU c5 y2040 active seats=61 turns=672/840/864 dur=192/168 seat=JP-shugiin-KYU shift=- alloc=pr_hareQuota t=2026-11-07T08:00:00.000Z|2026-11-14T08:00:00.000Z|2026-11-15T08:00:00.000Z
+JP/shugiin/SHI c5 y2040 active seats=14 turns=672/840/864 dur=192/168 seat=JP-shugiin-SHI shift=- alloc=pr_hareQuota t=2026-11-07T08:00:00.000Z|2026-11-14T08:00:00.000Z|2026-11-15T08:00:00.000Z
+JP/shugiin/TOH c5 y2040 active seats=37 turns=672/840/864 dur=192/168 seat=JP-shugiin-TOH shift=- alloc=pr_hareQuota t=2026-11-07T08:00:00.000Z|2026-11-14T08:00:00.000Z|2026-11-15T08:00:00.000Z
+## after-cycle1-t700 jp.sangiin
+JP/sangiin/CGK c4 y2034 active seats=7 turns=700/963/987 dur=144/120 seat=JP-sangiin-CGK-1 shift=- class=1 t=2026-11-08T12:00:00.000Z|2026-11-19T11:00:00.000Z|2026-11-20T11:00:00.000Z
+JP/sangiin/CGK c4 y2037 active seats=7 turns=700/1107/1131 dur=144/120 seat=JP-sangiin-CGK-2 shift=- class=2 t=2026-11-08T12:00:00.000Z|2026-11-25T11:00:00.000Z|2026-11-26T11:00:00.000Z
+JP/sangiin/CHU c4 y2034 active seats=22 turns=700/963/987 dur=144/120 seat=JP-sangiin-CHU-1 shift=- class=1 t=2026-11-08T12:00:00.000Z|2026-11-19T11:00:00.000Z|2026-11-20T11:00:00.000Z
+JP/sangiin/CHU c4 y2037 active seats=22 turns=700/1107/1131 dur=144/120 seat=JP-sangiin-CHU-2 shift=- class=2 t=2026-11-08T12:00:00.000Z|2026-11-25T11:00:00.000Z|2026-11-26T11:00:00.000Z
+JP/sangiin/HOK c4 y2034 active seats=4 turns=700/963/987 dur=144/120 seat=JP-sangiin-HOK-1 shift=- class=1 t=2026-11-08T12:00:00.000Z|2026-11-19T11:00:00.000Z|2026-11-20T11:00:00.000Z
+JP/sangiin/HOK c4 y2037 active seats=3 turns=700/1107/1131 dur=144/120 seat=JP-sangiin-HOK-2 shift=- class=2 t=2026-11-08T12:00:00.000Z|2026-11-25T11:00:00.000Z|2026-11-26T11:00:00.000Z
+JP/sangiin/KAN c4 y2034 active seats=40 turns=700/963/987 dur=144/120 seat=JP-sangiin-KAN-1 shift=- class=1 t=2026-11-08T12:00:00.000Z|2026-11-19T11:00:00.000Z|2026-11-20T11:00:00.000Z
+JP/sangiin/KAN c4 y2037 active seats=40 turns=700/1107/1131 dur=144/120 seat=JP-sangiin-KAN-2 shift=- class=2 t=2026-11-08T12:00:00.000Z|2026-11-25T11:00:00.000Z|2026-11-26T11:00:00.000Z
+JP/sangiin/KNS c4 y2034 active seats=22 turns=700/963/987 dur=144/120 seat=JP-sangiin-KNS-1 shift=- class=1 t=2026-11-08T12:00:00.000Z|2026-11-19T11:00:00.000Z|2026-11-20T11:00:00.000Z
+JP/sangiin/KNS c4 y2037 active seats=22 turns=700/1107/1131 dur=144/120 seat=JP-sangiin-KNS-2 shift=- class=2 t=2026-11-08T12:00:00.000Z|2026-11-25T11:00:00.000Z|2026-11-26T11:00:00.000Z
+JP/sangiin/KYU c4 y2034 active seats=16 turns=700/963/987 dur=144/120 seat=JP-sangiin-KYU-1 shift=- class=1 t=2026-11-08T12:00:00.000Z|2026-11-19T11:00:00.000Z|2026-11-20T11:00:00.000Z
+JP/sangiin/KYU c4 y2037 active seats=15 turns=700/1107/1131 dur=144/120 seat=JP-sangiin-KYU-2 shift=- class=2 t=2026-11-08T12:00:00.000Z|2026-11-25T11:00:00.000Z|2026-11-26T11:00:00.000Z
+JP/sangiin/SHI c4 y2034 active seats=4 turns=700/963/987 dur=144/120 seat=JP-sangiin-SHI-1 shift=- class=1 t=2026-11-08T12:00:00.000Z|2026-11-19T11:00:00.000Z|2026-11-20T11:00:00.000Z
+JP/sangiin/SHI c4 y2037 active seats=4 turns=700/1107/1131 dur=144/120 seat=JP-sangiin-SHI-2 shift=- class=2 t=2026-11-08T12:00:00.000Z|2026-11-25T11:00:00.000Z|2026-11-26T11:00:00.000Z
+JP/sangiin/TOH c4 y2034 active seats=10 turns=700/963/987 dur=144/120 seat=JP-sangiin-TOH-1 shift=- class=1 t=2026-11-08T12:00:00.000Z|2026-11-19T11:00:00.000Z|2026-11-20T11:00:00.000Z
+JP/sangiin/TOH c4 y2037 active seats=10 turns=700/1107/1131 dur=144/120 seat=JP-sangiin-TOH-2 shift=- class=2 t=2026-11-08T12:00:00.000Z|2026-11-25T11:00:00.000Z|2026-11-26T11:00:00.000Z
+## all-live jp.shugiin
+heal method=pr_hareQuota
+heal method=pr_hareQuota
+heal method=pr_hareQuota
+heal method=pr_hareQuota
+heal method=pr_hareQuota
+heal method=pr_hareQuota
+heal method=pr_hareQuota
+heal method=pr_hareQuota
+heal seats=12
+heal seats=14
+heal seats=150
+heal seats=28
+heal seats=37
+heal seats=61
+heal seats=81
+heal seats=82
+## all-live jp.sangiin
+heal seats=10
+heal seats=10
+heal seats=15
+heal seats=16
+heal seats=22
+heal seats=22
+heal seats=22
+heal seats=22
+heal seats=3
+heal seats=4
+heal seats=4
+heal seats=4
+heal seats=40
+heal seats=40
+heal seats=7
+heal seats=7
+## late-joiner jp.shugiin
+JP/shugiin/KYU c4 y2036 upcoming seats=61 turns=480/648/672 dur=192/168 seat=JP-shugiin-KYU shift=- alloc=pr_hareQuota t=2026-11-09T18:00:00.000Z|2026-11-16T18:00:00.000Z|2026-11-17T18:00:00.000Z
+heal method=pr_hareQuota
+heal method=pr_hareQuota
+heal method=pr_hareQuota
+heal method=pr_hareQuota
+heal method=pr_hareQuota
+heal method=pr_hareQuota
+heal method=pr_hareQuota
+heal seats=12
+heal seats=14
+heal seats=150
+heal seats=28
+heal seats=37
+heal seats=81
+heal seats=82
+## late-joiner jp.sangiin
+JP/sangiin/KYU c2 y2031 active seats=15 turns=450/531/555 dur=144/120 seat=JP-sangiin-KYU-2 shift=- class=2 t=2026-11-08T12:00:00.000Z|2026-11-11T21:00:00.000Z|2026-11-12T21:00:00.000Z
+JP/sangiin/KYU c3 y2031 active seats=16 turns=450/675/699 dur=144/120 seat=JP-sangiin-KYU-1 shift=- class=1 t=2026-11-08T12:00:00.000Z|2026-11-17T21:00:00.000Z|2026-11-18T21:00:00.000Z
+heal seats=10
+heal seats=10
+heal seats=22
+heal seats=22
+heal seats=22
+heal seats=22
+heal seats=3
+heal seats=4
+heal seats=4
+heal seats=4
+heal seats=40
+heal seats=40
+heal seats=7
+heal seats=7
+## late-joiner-with-history jp.shugiin
+JP/shugiin/KYU c4 y2036 upcoming seats=61 turns=480/648/672 dur=192/168 seat=JP-shugiin-KYU shift=- alloc=pr_hareQuota t=2026-11-09T18:00:00.000Z|2026-11-16T18:00:00.000Z|2026-11-17T18:00:00.000Z
+heal method=pr_hareQuota
+heal method=pr_hareQuota
+heal method=pr_hareQuota
+heal method=pr_hareQuota
+heal method=pr_hareQuota
+heal method=pr_hareQuota
+heal method=pr_hareQuota
+heal seats=12
+heal seats=14
+heal seats=150
+heal seats=28
+heal seats=37
+heal seats=81
+heal seats=82
+## late-joiner-with-history jp.sangiin
+JP/sangiin/KYU c2 y2031 active seats=15 turns=450/531/555 dur=144/120 seat=JP-sangiin-KYU-2 shift=- class=2 t=2026-11-08T12:00:00.000Z|2026-11-11T21:00:00.000Z|2026-11-12T21:00:00.000Z
+JP/sangiin/KYU c3 y2031 active seats=16 turns=450/675/699 dur=144/120 seat=JP-sangiin-KYU-1 shift=- class=1 t=2026-11-08T12:00:00.000Z|2026-11-17T21:00:00.000Z|2026-11-18T21:00:00.000Z
+heal seats=10
+heal seats=10
+heal seats=22
+heal seats=22
+heal seats=22
+heal seats=22
+heal seats=3
+heal seats=4
+heal seats=4
+heal seats=4
+heal seats=40
+heal seats=40
+heal seats=7
+heal seats=7
+## resolved-this-turn jp.shugiin
+(none)
+## resolved-this-turn jp.sangiin
+(none)
+## gate-closed jp.shugiin
+JP/shugiin/CGK c3 y2032 active seats=28 turns=288/456/480 dur=192/168 seat=JP-shugiin-CGK shift=- alloc=pr_hareQuota t=2026-11-08T00:00:00.000Z|2026-11-15T00:00:00.000Z|2026-11-16T00:00:00.000Z
+JP/shugiin/CHU c3 y2032 active seats=81 turns=288/456/480 dur=192/168 seat=JP-shugiin-CHU shift=- alloc=pr_hareQuota t=2026-11-08T00:00:00.000Z|2026-11-15T00:00:00.000Z|2026-11-16T00:00:00.000Z
+JP/shugiin/HOK c3 y2032 active seats=12 turns=288/456/480 dur=192/168 seat=JP-shugiin-HOK shift=- alloc=pr_hareQuota t=2026-11-08T00:00:00.000Z|2026-11-15T00:00:00.000Z|2026-11-16T00:00:00.000Z
+JP/shugiin/KAN c3 y2032 active seats=150 turns=288/456/480 dur=192/168 seat=JP-shugiin-KAN shift=- alloc=pr_hareQuota t=2026-11-08T00:00:00.000Z|2026-11-15T00:00:00.000Z|2026-11-16T00:00:00.000Z
+JP/shugiin/KNS c3 y2032 active seats=82 turns=288/456/480 dur=192/168 seat=JP-shugiin-KNS shift=- alloc=pr_hareQuota t=2026-11-08T00:00:00.000Z|2026-11-15T00:00:00.000Z|2026-11-16T00:00:00.000Z
+JP/shugiin/KYU c3 y2032 active seats=61 turns=288/456/480 dur=192/168 seat=JP-shugiin-KYU shift=- alloc=pr_hareQuota t=2026-11-08T00:00:00.000Z|2026-11-15T00:00:00.000Z|2026-11-16T00:00:00.000Z
+JP/shugiin/SHI c3 y2032 active seats=14 turns=288/456/480 dur=192/168 seat=JP-shugiin-SHI shift=- alloc=pr_hareQuota t=2026-11-08T00:00:00.000Z|2026-11-15T00:00:00.000Z|2026-11-16T00:00:00.000Z
+JP/shugiin/TOH c3 y2032 active seats=37 turns=288/456/480 dur=192/168 seat=JP-shugiin-TOH shift=- alloc=pr_hareQuota t=2026-11-08T00:00:00.000Z|2026-11-15T00:00:00.000Z|2026-11-16T00:00:00.000Z
+## gate-closed jp.sangiin
+JP/sangiin/CGK c2 y2028 active seats=7 turns=300/387/411 dur=144/120 seat=JP-sangiin-CGK-1 shift=- class=1 t=2026-11-08T12:00:00.000Z|2026-11-12T03:00:00.000Z|2026-11-13T03:00:00.000Z
+JP/sangiin/CGK c2 y2031 active seats=7 turns=300/531/555 dur=144/120 seat=JP-sangiin-CGK-2 shift=- class=2 t=2026-11-08T12:00:00.000Z|2026-11-18T03:00:00.000Z|2026-11-19T03:00:00.000Z
+JP/sangiin/CHU c2 y2028 active seats=22 turns=300/387/411 dur=144/120 seat=JP-sangiin-CHU-1 shift=- class=1 t=2026-11-08T12:00:00.000Z|2026-11-12T03:00:00.000Z|2026-11-13T03:00:00.000Z
+JP/sangiin/CHU c2 y2031 active seats=22 turns=300/531/555 dur=144/120 seat=JP-sangiin-CHU-2 shift=- class=2 t=2026-11-08T12:00:00.000Z|2026-11-18T03:00:00.000Z|2026-11-19T03:00:00.000Z
+JP/sangiin/HOK c2 y2028 active seats=4 turns=300/387/411 dur=144/120 seat=JP-sangiin-HOK-1 shift=- class=1 t=2026-11-08T12:00:00.000Z|2026-11-12T03:00:00.000Z|2026-11-13T03:00:00.000Z
+JP/sangiin/HOK c2 y2031 active seats=3 turns=300/531/555 dur=144/120 seat=JP-sangiin-HOK-2 shift=- class=2 t=2026-11-08T12:00:00.000Z|2026-11-18T03:00:00.000Z|2026-11-19T03:00:00.000Z
+JP/sangiin/KAN c2 y2028 active seats=40 turns=300/387/411 dur=144/120 seat=JP-sangiin-KAN-1 shift=- class=1 t=2026-11-08T12:00:00.000Z|2026-11-12T03:00:00.000Z|2026-11-13T03:00:00.000Z
+JP/sangiin/KAN c2 y2031 active seats=40 turns=300/531/555 dur=144/120 seat=JP-sangiin-KAN-2 shift=- class=2 t=2026-11-08T12:00:00.000Z|2026-11-18T03:00:00.000Z|2026-11-19T03:00:00.000Z
+JP/sangiin/KNS c2 y2028 active seats=22 turns=300/387/411 dur=144/120 seat=JP-sangiin-KNS-1 shift=- class=1 t=2026-11-08T12:00:00.000Z|2026-11-12T03:00:00.000Z|2026-11-13T03:00:00.000Z
+JP/sangiin/KNS c2 y2031 active seats=22 turns=300/531/555 dur=144/120 seat=JP-sangiin-KNS-2 shift=- class=2 t=2026-11-08T12:00:00.000Z|2026-11-18T03:00:00.000Z|2026-11-19T03:00:00.000Z
+JP/sangiin/KYU c2 y2028 active seats=16 turns=300/387/411 dur=144/120 seat=JP-sangiin-KYU-1 shift=- class=1 t=2026-11-08T12:00:00.000Z|2026-11-12T03:00:00.000Z|2026-11-13T03:00:00.000Z
+JP/sangiin/KYU c2 y2031 active seats=15 turns=300/531/555 dur=144/120 seat=JP-sangiin-KYU-2 shift=- class=2 t=2026-11-08T12:00:00.000Z|2026-11-18T03:00:00.000Z|2026-11-19T03:00:00.000Z
+JP/sangiin/SHI c2 y2028 active seats=4 turns=300/387/411 dur=144/120 seat=JP-sangiin-SHI-1 shift=- class=1 t=2026-11-08T12:00:00.000Z|2026-11-12T03:00:00.000Z|2026-11-13T03:00:00.000Z
+JP/sangiin/SHI c2 y2031 active seats=4 turns=300/531/555 dur=144/120 seat=JP-sangiin-SHI-2 shift=- class=2 t=2026-11-08T12:00:00.000Z|2026-11-18T03:00:00.000Z|2026-11-19T03:00:00.000Z
+JP/sangiin/TOH c2 y2028 active seats=10 turns=300/387/411 dur=144/120 seat=JP-sangiin-TOH-1 shift=- class=1 t=2026-11-08T12:00:00.000Z|2026-11-12T03:00:00.000Z|2026-11-13T03:00:00.000Z
+JP/sangiin/TOH c2 y2031 active seats=10 turns=300/531/555 dur=144/120 seat=JP-sangiin-TOH-2 shift=- class=2 t=2026-11-08T12:00:00.000Z|2026-11-18T03:00:00.000Z|2026-11-19T03:00:00.000Z
+## after-called-snap jp.shugiin
+JP/shugiin/CGK c5 y2035 active seats=28 turns=420/588/612 dur=192/168 seat=JP-shugiin-CGK shift=612 alloc=pr_hareQuota t=2026-11-07T06:00:00.000Z|2026-11-14T06:00:00.000Z|2026-11-15T06:00:00.000Z
+JP/shugiin/CHU c5 y2035 active seats=81 turns=420/588/612 dur=192/168 seat=JP-shugiin-CHU shift=612 alloc=pr_hareQuota t=2026-11-07T06:00:00.000Z|2026-11-14T06:00:00.000Z|2026-11-15T06:00:00.000Z
+JP/shugiin/HOK c5 y2035 active seats=12 turns=420/588/612 dur=192/168 seat=JP-shugiin-HOK shift=612 alloc=pr_hareQuota t=2026-11-07T06:00:00.000Z|2026-11-14T06:00:00.000Z|2026-11-15T06:00:00.000Z
+JP/shugiin/KAN c5 y2035 active seats=150 turns=420/588/612 dur=192/168 seat=JP-shugiin-KAN shift=612 alloc=pr_hareQuota t=2026-11-07T06:00:00.000Z|2026-11-14T06:00:00.000Z|2026-11-15T06:00:00.000Z
+JP/shugiin/KNS c5 y2035 active seats=82 turns=420/588/612 dur=192/168 seat=JP-shugiin-KNS shift=612 alloc=pr_hareQuota t=2026-11-07T06:00:00.000Z|2026-11-14T06:00:00.000Z|2026-11-15T06:00:00.000Z
+JP/shugiin/KYU c5 y2035 active seats=61 turns=420/588/612 dur=192/168 seat=JP-shugiin-KYU shift=612 alloc=pr_hareQuota t=2026-11-07T06:00:00.000Z|2026-11-14T06:00:00.000Z|2026-11-15T06:00:00.000Z
+JP/shugiin/SHI c5 y2035 active seats=14 turns=420/588/612 dur=192/168 seat=JP-shugiin-SHI shift=612 alloc=pr_hareQuota t=2026-11-07T06:00:00.000Z|2026-11-14T06:00:00.000Z|2026-11-15T06:00:00.000Z
+JP/shugiin/TOH c5 y2035 active seats=37 turns=420/588/612 dur=192/168 seat=JP-shugiin-TOH shift=612 alloc=pr_hareQuota t=2026-11-07T06:00:00.000Z|2026-11-14T06:00:00.000Z|2026-11-15T06:00:00.000Z
+## after-imposed-snap jp.shugiin
+JP/shugiin/CGK c5 y2040 upcoming seats=28 turns=672/840/864 dur=192/168 seat=JP-shugiin-CGK shift=- alloc=pr_hareQuota t=2026-11-17T18:00:00.000Z|2026-11-24T18:00:00.000Z|2026-11-25T18:00:00.000Z
+JP/shugiin/CHU c5 y2040 upcoming seats=81 turns=672/840/864 dur=192/168 seat=JP-shugiin-CHU shift=- alloc=pr_hareQuota t=2026-11-17T18:00:00.000Z|2026-11-24T18:00:00.000Z|2026-11-25T18:00:00.000Z
+JP/shugiin/HOK c5 y2040 upcoming seats=12 turns=672/840/864 dur=192/168 seat=JP-shugiin-HOK shift=- alloc=pr_hareQuota t=2026-11-17T18:00:00.000Z|2026-11-24T18:00:00.000Z|2026-11-25T18:00:00.000Z
+JP/shugiin/KAN c5 y2040 upcoming seats=150 turns=672/840/864 dur=192/168 seat=JP-shugiin-KAN shift=- alloc=pr_hareQuota t=2026-11-17T18:00:00.000Z|2026-11-24T18:00:00.000Z|2026-11-25T18:00:00.000Z
+JP/shugiin/KNS c5 y2040 upcoming seats=82 turns=672/840/864 dur=192/168 seat=JP-shugiin-KNS shift=- alloc=pr_hareQuota t=2026-11-17T18:00:00.000Z|2026-11-24T18:00:00.000Z|2026-11-25T18:00:00.000Z
+JP/shugiin/KYU c5 y2040 upcoming seats=61 turns=672/840/864 dur=192/168 seat=JP-shugiin-KYU shift=- alloc=pr_hareQuota t=2026-11-17T18:00:00.000Z|2026-11-24T18:00:00.000Z|2026-11-25T18:00:00.000Z
+JP/shugiin/SHI c5 y2040 upcoming seats=14 turns=672/840/864 dur=192/168 seat=JP-shugiin-SHI shift=- alloc=pr_hareQuota t=2026-11-17T18:00:00.000Z|2026-11-24T18:00:00.000Z|2026-11-25T18:00:00.000Z
+JP/shugiin/TOH c5 y2040 upcoming seats=37 turns=672/840/864 dur=192/168 seat=JP-shugiin-TOH shift=- alloc=pr_hareQuota t=2026-11-17T18:00:00.000Z|2026-11-24T18:00:00.000Z|2026-11-25T18:00:00.000Z
+## after-shifted-regular jp.shugiin
+JP/shugiin/CGK c5 y2034 active seats=28 turns=380/548/572 dur=192/168 seat=JP-shugiin-CGK shift=572 alloc=pr_hareQuota t=2026-11-05T14:00:00.000Z|2026-11-12T14:00:00.000Z|2026-11-13T14:00:00.000Z
+JP/shugiin/CHU c5 y2034 active seats=81 turns=380/548/572 dur=192/168 seat=JP-shugiin-CHU shift=572 alloc=pr_hareQuota t=2026-11-05T14:00:00.000Z|2026-11-12T14:00:00.000Z|2026-11-13T14:00:00.000Z
+JP/shugiin/HOK c5 y2034 active seats=12 turns=380/548/572 dur=192/168 seat=JP-shugiin-HOK shift=572 alloc=pr_hareQuota t=2026-11-05T14:00:00.000Z|2026-11-12T14:00:00.000Z|2026-11-13T14:00:00.000Z
+JP/shugiin/KAN c5 y2034 active seats=150 turns=380/548/572 dur=192/168 seat=JP-shugiin-KAN shift=572 alloc=pr_hareQuota t=2026-11-05T14:00:00.000Z|2026-11-12T14:00:00.000Z|2026-11-13T14:00:00.000Z
+JP/shugiin/KNS c5 y2034 active seats=82 turns=380/548/572 dur=192/168 seat=JP-shugiin-KNS shift=572 alloc=pr_hareQuota t=2026-11-05T14:00:00.000Z|2026-11-12T14:00:00.000Z|2026-11-13T14:00:00.000Z
+JP/shugiin/KYU c5 y2034 active seats=61 turns=380/548/572 dur=192/168 seat=JP-shugiin-KYU shift=572 alloc=pr_hareQuota t=2026-11-05T14:00:00.000Z|2026-11-12T14:00:00.000Z|2026-11-13T14:00:00.000Z
+JP/shugiin/SHI c5 y2034 active seats=14 turns=380/548/572 dur=192/168 seat=JP-shugiin-SHI shift=572 alloc=pr_hareQuota t=2026-11-05T14:00:00.000Z|2026-11-12T14:00:00.000Z|2026-11-13T14:00:00.000Z
+JP/shugiin/TOH c5 y2034 active seats=37 turns=380/548/572 dur=192/168 seat=JP-shugiin-TOH shift=572 alloc=pr_hareQuota t=2026-11-05T14:00:00.000Z|2026-11-12T14:00:00.000Z|2026-11-13T14:00:00.000Z
+## live-snap jp.shugiin
+heal method=pr_hareQuota
+heal method=pr_hareQuota
+heal method=pr_hareQuota
+heal method=pr_hareQuota
+heal method=pr_hareQuota
+heal method=pr_hareQuota
+heal method=pr_hareQuota
+heal method=pr_hareQuota
+heal seats=12
+heal seats=14
+heal seats=150
+heal seats=28
+heal seats=37
+heal seats=61
+heal seats=81
+heal seats=82
+## mixed-snap-and-regular-history jp.shugiin
+JP/shugiin/CGK c4 y2036 upcoming seats=28 turns=480/648/672 dur=192/168 seat=JP-shugiin-CGK shift=- alloc=pr_hareQuota t=2026-11-09T18:00:00.000Z|2026-11-16T18:00:00.000Z|2026-11-17T18:00:00.000Z
+JP/shugiin/CHU c4 y2036 upcoming seats=81 turns=480/648/672 dur=192/168 seat=JP-shugiin-CHU shift=- alloc=pr_hareQuota t=2026-11-09T18:00:00.000Z|2026-11-16T18:00:00.000Z|2026-11-17T18:00:00.000Z
+JP/shugiin/HOK c6 y2035 active seats=12 turns=410/578/602 dur=192/168 seat=JP-shugiin-HOK shift=602 alloc=pr_hareQuota t=2026-11-06T20:00:00.000Z|2026-11-13T20:00:00.000Z|2026-11-14T20:00:00.000Z
+JP/shugiin/KAN c4 y2036 upcoming seats=150 turns=480/648/672 dur=192/168 seat=JP-shugiin-KAN shift=- alloc=pr_hareQuota t=2026-11-09T18:00:00.000Z|2026-11-16T18:00:00.000Z|2026-11-17T18:00:00.000Z
+JP/shugiin/KNS c4 y2036 upcoming seats=82 turns=480/648/672 dur=192/168 seat=JP-shugiin-KNS shift=- alloc=pr_hareQuota t=2026-11-09T18:00:00.000Z|2026-11-16T18:00:00.000Z|2026-11-17T18:00:00.000Z
+JP/shugiin/KYU c4 y2036 upcoming seats=61 turns=480/648/672 dur=192/168 seat=JP-shugiin-KYU shift=- alloc=pr_hareQuota t=2026-11-09T18:00:00.000Z|2026-11-16T18:00:00.000Z|2026-11-17T18:00:00.000Z
+JP/shugiin/SHI c4 y2036 upcoming seats=14 turns=480/648/672 dur=192/168 seat=JP-shugiin-SHI shift=- alloc=pr_hareQuota t=2026-11-09T18:00:00.000Z|2026-11-16T18:00:00.000Z|2026-11-17T18:00:00.000Z
+JP/shugiin/TOH c4 y2036 upcoming seats=37 turns=480/648/672 dur=192/168 seat=JP-shugiin-TOH shift=- alloc=pr_hareQuota t=2026-11-09T18:00:00.000Z|2026-11-16T18:00:00.000Z|2026-11-17T18:00:00.000Z

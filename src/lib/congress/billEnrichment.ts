@@ -56,22 +56,10 @@ import {
   OPERATING_SECTOR_TYPE_LABELS,
   type OperatingSectorType,
 } from "@/lib/constants/corporations";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 
 // Re-exported from billTargetPreview (the shared SSOT) for existing importers.
 export type { NationalizationProvisionDetail };
-
-/**
- * One projected-effect chip on the bill detail page. `direction` is the way the
- * metric's VALUE moves when switching from the current law to the proposed one
- * (a delta, not the absolute push), and `isGood` is whether that movement is
- * beneficial given the metric's polarity. Computed via the shared
- * {@link pushesValueUp} helper so it stays consistent with the metric detail page.
- */
-export interface BillProvisionEffect {
-  metric: string;
-  direction: "up" | "down";
-  isGood: boolean;
-}
 
 /**
  * One resolved provision on the national bill page.
@@ -325,8 +313,7 @@ export async function resolveBillProvisions(
       ...new Set(canonicalLegTypeIds.flatMap((id) => getEquivalentLegislationTypeIds(id))),
     ];
     const legislationTypes = legTypeIds.length
-      ? await db
-          .collection<LegislationType>("legislationTypes")
+      ? await legislationTypesCollection(db)
           .find({ _id: { $in: legTypeIds } })
           .toArray()
       : [];
@@ -642,7 +629,7 @@ export async function resolveBillProvisions(
   }
 
   if (bill.legislationTypeId && !bill.provisions?.length) {
-    const lt = await db.collection<LegislationType>("legislationTypes").findOne({
+    const lt = await legislationTypesCollection(db).findOne({
       _id: { $in: getEquivalentLegislationTypeIds(bill.legislationTypeId) },
     });
     legislationTypeName = lt?.name ?? humanizeLegislationTypeId(bill.legislationTypeId) ?? null;

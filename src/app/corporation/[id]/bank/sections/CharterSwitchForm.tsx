@@ -14,13 +14,11 @@ function takesDeposits(type: BankCharterType): boolean {
 }
 
 /**
- * CEO control to change an existing bank's charter type in place (retail ↔
- * universal ↔ investment). Calls PATCH /api/corporations/[id]/bank/charter,
+ * CEO control to change an existing bank's charter type in place (retail <->
+ * universal <-> investment). Calls PATCH /api/corporations/[id]/bank/charter,
  * which is fully authorized and money-safe server-side (`switchCharterType`):
  * moving to an investment charter returns the whole deposit book with
- * conservation, and a 24-turn cooldown then locks the type. This form only
- * surfaces that existing capability; the backend was reachable by no UI before,
- * which is why a chartered CEO could not find the option (ticket 1069).
+ * conservation, and a 24-turn cooldown then locks the type.
  */
 export function CharterSwitchForm({
   data,

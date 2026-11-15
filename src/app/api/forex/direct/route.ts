@@ -24,7 +24,11 @@ import {
   getNewCharacterTransferBarrier,
   NEW_CHARACTER_TRANSFER_BARRIER_TURNS,
 } from "@/lib/character/newCharacterTransferBarrier";
-import type { CurrencyOrder, Character, GameConfig, PlayerMail } from "@/lib/db/types";
+import type { CurrencyOrder, GameConfig, PlayerMail } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { currencyOrdersCollection } from "@/lib/db/repositories/currencyOrders";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { playerMailCollection } from "@/lib/db/repositories/playerMail";
 
 const directTradeSchema = z
   .object({
@@ -71,9 +75,7 @@ export async function POST(request: Request) {
     }
 
     // Verify target exists
-    const target = await db
-      .collection<Character>("characters")
-      .findOne({ _id: new ObjectId(targetCharacterId) });
+    const target = await charactersCollection(db).findOne({ _id: new ObjectId(targetCharacterId) });
     if (!target) throw notFound("Target character not found");
 
     // New characters cannot move money via direct trades for their first 48 turns
@@ -93,9 +95,10 @@ export async function POST(request: Request) {
     }
 
     // Non-convertible command currencies cannot be peer-traded either.
-    const gameConfig = await db
-      .collection<GameConfig>("gameConfig")
-      .findOne({ _id: "default" }, { projection: { commandEconomyEnabled: 1 } });
+    const gameConfig = await gameConfigCollection(db).findOne(
+      { _id: "default" },
+      { projection: { commandEconomyEnabled: 1 } }
+    );
     const blocked = nonConvertibleTradeCurrency(
       [fromCurrency, toCurrency],
       gameTime.currentYear,
@@ -137,13 +140,11 @@ export async function POST(request: Request) {
     let requestId: ObjectId | null = null;
     await runWithOptionalTransaction(
       async (session) => {
-        const escrowResult = await db
-          .collection("characters")
-          .updateOne(
-            { _id: character._id, [balanceField]: { $gte: amount } },
-            { $inc: escrowInc },
-            { session }
-          );
+        const escrowResult = await charactersCollection(db).updateOne(
+          { _id: character._id, [balanceField]: { $gte: amount } },
+          { $inc: escrowInc },
+          { session }
+        );
         if (escrowResult.modifiedCount === 0) {
           const balance = getPersonalBalance(character, fromCurrency, true);
           throw badRequest(
@@ -151,15 +152,17 @@ export async function POST(request: Request) {
           );
         }
 
-        const result: InsertOneResult<CurrencyOrder> = await db
-          .collection<CurrencyOrder>("currencyOrders")
-          .insertOne(order as CurrencyOrder, { session });
+        const result: InsertOneResult<CurrencyOrder> = await currencyOrdersCollection(db).insertOne(
+          order as CurrencyOrder,
+          { session }
+        );
         requestId = result.insertedId;
       },
       async () => {
-        const escrowResult = await db
-          .collection("characters")
-          .updateOne({ _id: character._id, [balanceField]: { $gte: amount } }, { $inc: escrowInc });
+        const escrowResult = await charactersCollection(db).updateOne(
+          { _id: character._id, [balanceField]: { $gte: amount } },
+          { $inc: escrowInc }
+        );
         if (escrowResult.modifiedCount === 0) {
           const balance = getPersonalBalance(character, fromCurrency, true);
           throw badRequest(
@@ -168,17 +171,15 @@ export async function POST(request: Request) {
         }
 
         try {
-          const result: InsertOneResult<CurrencyOrder> = await db
-            .collection<CurrencyOrder>("currencyOrders")
-            .insertOne(order as CurrencyOrder);
+          const result: InsertOneResult<CurrencyOrder> = await currencyOrdersCollection(
+            db
+          ).insertOne(order as CurrencyOrder);
           requestId = result.insertedId;
         } catch (error) {
-          await db
-            .collection("characters")
-            .updateOne(
-              { _id: character._id },
-              { $inc: buildPersonalBalanceInc(amount, fromCurrency, true) }
-            );
+          await charactersCollection(db).updateOne(
+            { _id: character._id },
+            { $inc: buildPersonalBalanceInc(amount, fromCurrency, true) }
+          );
           throw error;
         }
       }
@@ -202,7 +203,7 @@ export async function POST(request: Request) {
     };
     let notifiedTarget = true;
     try {
-      await db.collection<PlayerMail>("playerMail").insertOne(mail as PlayerMail);
+      await playerMailCollection(db).insertOne(mail as PlayerMail);
     } catch {
       notifiedTarget = false;
     }

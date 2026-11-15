@@ -9,6 +9,7 @@ import { isForexEnabled } from "@/lib/currency/featureFlag";
 import { logWireEvent, wireHeadlineCorpPrivatizationVoteCancelled } from "@/lib/wireEvent";
 import { notifyVoteEventRaw } from "@/lib/corporations/votes/voteNotifications";
 import type { CorporationPrivatizationVote } from "@/lib/db/types";
+import { corporationPrivatizationVotesCollection } from "@/lib/db/repositories/corporationPrivatizationVotes";
 
 interface RouteParams {
   params: Promise<{ id: string; voteId: string }>;
@@ -34,9 +35,10 @@ export async function POST(_request: Request, { params }: RouteParams) {
     const { corporation } = resolved;
     const ceoCheck = requireCeo(corporation, auth.user.userId);
     if (ceoCheck) return ceoCheck;
-    const vote = await db
-      .collection<CorporationPrivatizationVote>("corporationPrivatizationVotes")
-      .findOne({ _id: new ObjectId(voteId), corporationId: corporation._id });
+    const vote = await corporationPrivatizationVotesCollection(db).findOne({
+      _id: new ObjectId(voteId),
+      corporationId: corporation._id,
+    });
     if (!vote) return errorResponse(404, "Vote not found");
     const forex = await isForexEnabled();
     const result = await cancelPrivatizationVote({ db, vote, forexEnabled: forex });

@@ -1,7 +1,5 @@
 import type { Db } from "mongodb";
-import type { Corporation } from "@/lib/db/types";
 import type { BankCharter, BankLoan, InterbankLoan } from "@/lib/db/types/bank";
-import type { CentralBank } from "@/lib/db/types/centralBank";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import type { LendingProfileId } from "@/lib/banking/creditBands";
 import { getCountryIdForCurrency } from "@/lib/constants/currencies";
@@ -46,6 +44,8 @@ import {
 import { PROP_LEVERAGE_MULTIPLE, computePropEquityBase } from "@/lib/banking/rules/propLeverage";
 import { requiredReserves as computeRequiredReserves } from "@/lib/banking/rules/balanceSheet";
 import type { BankBalanceSheet } from "@/lib/banking/rules/balanceSheet";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /**
  * Next-turn outlook for the bank CEO console.
@@ -150,12 +150,10 @@ export async function buildBankOutlook(db: Db, ctx: OutlookContext): Promise<Ban
   const playerPointed = Math.max(0, ctx.sheet.playerDeposits + ctx.sheet.pointerDeposits);
 
   const bankId = getBankId(getCountryIdForCurrency(currency));
-  const cb = await db
-    .collection<CentralBank>("centralBanks")
-    .findOne(
-      { _id: bankId },
-      { projection: { primeRate: 1, inflationHistory: 1, externalBroadMoney: 1, chairInfamy: 1 } }
-    );
+  const cb = await centralBanksCollection(db).findOne(
+    { _id: bankId },
+    { projection: { primeRate: 1, inflationHistory: 1, externalBroadMoney: 1, chairInfamy: 1 } }
+  );
   const prime =
     typeof cb?.primeRate === "number" && Number.isFinite(cb.primeRate) ? cb.primeRate : 0;
   const inflation = cb?.inflationHistory?.at(-1)?.rate ?? 0;
@@ -174,8 +172,7 @@ export async function buildBankOutlook(db: Db, ctx: OutlookContext): Promise<Ban
   let direction: BankOutlook["depositDirection"] = null;
   let targetNpc: number | null = null;
   if (depositTaking) {
-    const peers = await db
-      .collection<Corporation>("corporations")
+    const peers = await corporationsCollection(db)
       .find(
         { "bankCharter.status": "active", "bankCharter.currency": currency },
         { projection: { "bankCharter.depositOffset": 1, "bankCharter.type": 1 } }

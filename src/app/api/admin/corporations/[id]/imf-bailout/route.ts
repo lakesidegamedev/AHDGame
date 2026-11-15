@@ -11,7 +11,6 @@ import { getDb } from "@/lib/mongodb";
 import { requireAdmin } from "@/lib/api/requireAdmin";
 import { parseJsonBody } from "@/lib/api/validate";
 import { handleRouteError, notFound, errorResponse } from "@/lib/api/errors";
-import type { Bond, Character, Corporation } from "@/lib/db/types";
 import { adminImfBailoutSchema } from "@/lib/api/schemas/adminImfBailout";
 import { getImfCorporation } from "@/lib/imf/resolveImfCorporation";
 import { roundFaceToBondUnits } from "@/lib/bonds/corporateBondDefault";
@@ -26,6 +25,12 @@ import {
   imfPerTurnInterestRate,
   simulateImfFacilityPayoffTurns,
 } from "@/lib/imf/imfFacilityMath";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { corporationHistoryCollection } from "@/lib/db/repositories/corporationHistory";
+import { bondHistoryCollection } from "@/lib/db/repositories/bondHistory";
+import type { Document } from "mongodb";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -59,9 +64,7 @@ export async function GET(request: Request, { params }: RouteParams) {
 
     const { id } = await params;
     const db = await getDb();
-    const corp = await db
-      .collection<Corporation>("corporations")
-      .findOne({ _id: new ObjectId(id) });
+    const corp = await corporationsCollection(db).findOne({ _id: new ObjectId(id) });
     if (!corp) throw notFound("Corporation not found");
 
     const { searchParams } = new URL(request.url);
@@ -81,12 +84,12 @@ export async function GET(request: Request, { params }: RouteParams) {
       Number.isFinite(incomeCapturePct) ? incomeCapturePct : DEFAULT_INCOME_CAPTURE_PERCENT
     );
 
-    const lastHist = await db
-      .collection<{ income?: number; turn?: number }>("corporationHistory")
-      .findOne(
-        { corporationId: corp._id },
-        { sort: { turn: -1 }, projection: { income: 1, turn: 1 } }
-      );
+    const lastHist = await corporationHistoryCollection<{ income?: number; turn?: number }>(
+      db
+    ).findOne(
+      { corporationId: corp._id },
+      { sort: { turn: -1 }, projection: { income: 1, turn: 1 } }
+    );
 
     const lastTurnIncome =
       typeof lastHist?.income === "number" && Number.isFinite(lastHist.income)
@@ -136,8 +139,7 @@ export async function GET(request: Request, { params }: RouteParams) {
       });
     }
 
-    const bonds = await db
-      .collection<Bond>("bonds")
+    const bonds = await bondsCollection(db)
       .find({ corporationId: corp._id, matured: false })
       .toArray();
 
@@ -222,9 +224,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     }
 
     const db = await getDb();
-    const corp = await db
-      .collection<Corporation>("corporations")
-      .findOne({ _id: new ObjectId(id) });
+    const corp = await corporationsCollection(db).findOne({ _id: new ObjectId(id) });
     if (!corp) throw notFound("Corporation not found");
 
     if (!corp.imfBailoutActive) {
@@ -236,12 +236,10 @@ export async function PATCH(request: Request, { params }: RouteParams) {
 
     const fraction = incomeCapturePercentToFraction(parsed.data.incomeCapturePercent);
     const now = new Date();
-    await db
-      .collection<Corporation>("corporations")
-      .updateOne(
-        { _id: corp._id },
-        { $set: { imfFacilityIncomeCaptureFraction: fraction, updatedAt: now } }
-      );
+    await corporationsCollection(db).updateOne(
+      { _id: corp._id },
+      { $set: { imfFacilityIncomeCaptureFraction: fraction, updatedAt: now } }
+    );
 
     return NextResponse.json({
       success: true,
@@ -269,9 +267,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     const body = parsed.data;
     const db = await getDb();
 
-    const corp = await db
-      .collection<Corporation>("corporations")
-      .findOne({ _id: new ObjectId(id) });
+    const corp = await corporationsCollection(db).findOne({ _id: new ObjectId(id) });
     if (!corp) throw notFound("Corporation not found");
 
     if (corp.imfInstitution) {
@@ -293,7 +289,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     const now = new Date();
 
     if (!body.active) {
-      await db.collection<Corporation>("corporations").updateOne(
+      await corporationsCollection(db).updateOne(
         { _id: corp._id },
         {
           $set: { imfBailoutActive: false, updatedAt: now },
@@ -329,8 +325,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       body.incomeCapturePercent ?? DEFAULT_INCOME_CAPTURE_PERCENT
     );
 
-    const bonds = await db
-      .collection<Bond>("bonds")
+    const bonds = await bondsCollection(db)
       .find({ corporationId: corp._id, matured: false })
       .toArray();
 
@@ -352,8 +347,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     if (bonds.length > 0) {
       if (holderCharIds.size > 0) {
-        const chars = await db
-          .collection<Character>("characters")
+        const chars = await charactersCollection(db)
           .find(
             { _id: { $in: [...holderCharIds].map((x) => new ObjectId(x)) } },
             { projection: { _id: 1, name: 1, userId: 1, sequentialId: 1 } }
@@ -375,9 +369,9 @@ export async function POST(request: Request, { params }: RouteParams) {
 
       const bondIds = bonds.map((b) => b._id);
       if (bondIds.length > 0) {
-        await db.collection("bondHistory").deleteMany({ bondId: { $in: bondIds } });
+        await bondHistoryCollection<Document>(db).deleteMany({ bondId: { $in: bondIds } });
       }
-      await db.collection<Bond>("bonds").deleteMany({ corporationId: corp._id });
+      await bondsCollection(db).deleteMany({ corporationId: corp._id });
     }
 
     const shareholders = [...(corp.shareholders ?? [])];
@@ -408,7 +402,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     const newTotal = O + newShares;
 
-    await db.collection<Corporation>("corporations").updateOne(
+    await corporationsCollection(db).updateOne(
       { _id: corp._id },
       {
         $set: {

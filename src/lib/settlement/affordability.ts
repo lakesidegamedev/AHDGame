@@ -54,20 +54,13 @@ export function seatBudgetFor(state: SettlementSeatState, seatId: SettlementSeat
 }
 
 /**
- * Reasons are checked in a fixed order — actions, then capital — so a play
- * short on two counts always names the same one and the UI copy does not
- * flicker between renders.
+ * Reasons are checked in a fixed order, actions then capital, so a play short on
+ * both always names the same one and the UI copy does not flicker.
  *
- * ⚠️ THE TREASURY IS NOT CONSULTED, deliberately. A nation may spend into debt:
- * `treasuryBalance` is the signed cash position and `spendFromTreasury` splits
- * a spend into surplus and new debt rather than refusing it, so `commitPlay`
- * has no balance guard either. Gating the button on funds here would grey out a
- * play the command accepts, and the board disagreeing with the command is worse
- * than either behaviour on its own.
- *
- * Personal plays are different and still check funds — see
- * {@link canCharacterAfford}. A character's campaign balance cannot go
- * negative; a nation's can, and that is what national debt IS.
+ * ⚠️ THE TREASURY IS NOT CONSULTED, deliberately: a nation may spend into debt,
+ * and `commitPlay` has no balance guard, so gating here would grey out a play
+ * the command accepts. Personal plays still check funds; see
+ * {@link canCharacterAfford}.
  */
 export function canSeatAfford(play: SettlementPlayDef, budget: SeatBudget): Affordability {
   if (play.actionCost > budget.actionsRemaining) return { ok: false, reason: "actions" };

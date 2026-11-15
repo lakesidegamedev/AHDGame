@@ -1,38 +1,47 @@
 import type { Db } from "mongodb";
+import { getCollectionsByCategory } from "./seedManifest";
+
+/**
+ * Reference collections a reference rebuild keeps, and why. Every other
+ * reference collection is emptied before bootstrap.
+ */
+export const REFERENCE_REBUILD_KEPT_COLLECTIONS: Readonly<Record<string, string>> = Object.freeze({
+  gameConfig:
+    "Operator state no seeder restores (maintenance seal, webhooks, gates, the reset run record). " +
+    "Teardown resets its per-world keys explicitly.",
+  politicalParties:
+    "Default parties keep their identity and sequential ids, which archived careers and party " +
+    "counters reference. Country seeders replace their own rows and finalize removes the rest.",
+  achievements: "Seeded only into an empty collection; character achievements reference its ids.",
+});
 
 /**
  * Reference collections a reset empties before a reference rebuild
  * (`resetReference: true`), so the bootstrap that follows writes them into an
- * empty collection exactly as it does on a brand-new database.
+ * empty collection exactly as it does on a brand-new database: replaced, never
+ * merged.
  *
- * Each one is manifest category `reference`, which the teardown's runtime sweep
- * never touches, and each is seeded by upserts keyed on the NEW roster. An
- * upsert cannot remove a row the new world does not write, so without this
- * clear a reset kept every row the outgoing world had and the fresh seed would
- * not: measured on a 1991 reset of an existing world, Ukrainian, Belarusian and
- * Baltic region baselines and turnout rows, Soviet and East German registration
- * pools, retired voter-group categories, East German strategic sectors and
- * metrics, and cohort rows for regions the 1991 seed gives no age profile. Most
- * also carry turn-by-turn runtime state (registration drift, turnout decay,
- * consumed market headroom, cohort ageing, head-of-government designations).
+ * Seeders upsert keyed on the NEW roster, and many `$set` only the fields they
+ * author. An upsert cannot remove a row the new world does not write, nor a
+ * field the seeder no longer writes, so without this clear a reset kept old
+ * regions, accreted engine state on region rows, budget sub-ledgers such as
+ * the defence appropriation, and runtime channels on political boards.
  *
- * Every entry must be rebuilt by `bootstrapGameWorld` for every preset that
- * seeds it, and must hold nothing that outlives a world. Enforced by
- * referenceRebuildClear.test.ts against the seed manifest.
+ * Derived from the seed manifest, so a new reference collection is cleared
+ * unless it is added to {@link REFERENCE_REBUILD_KEPT_COLLECTIONS} with a
+ * reason. A brand-new database starts with every one of these empty, and
+ * bootstrap builds a playable world from that, so an empty start is the
+ * supported baseline.
  */
 export const REFERENCE_REBUILD_CLEARED_COLLECTIONS: ReadonlyArray<{
   name: string;
   seededBy: string;
-}> = [
-  { name: "unownedSectors", seededBy: "seedUnownedSectors" },
-  { name: "stateBaselines", seededBy: "runCoreSeed and the country seeders" },
-  { name: "stateDemographicTurnout", seededBy: "runCoreSeed and the country seeders" },
-  { name: "stateRegistrationPool", seededBy: "seedRegistrationLanes" },
-  { name: "regionDemographics", seededBy: "seedCohortVectors" },
-  { name: "strategicSectorDesignations", seededBy: "seedStrategicSectors" },
-  { name: "stateMetrics", seededBy: "seedRegionMetrics (retired store, cleared for stragglers)" },
-  { name: "demographicCategories", seededBy: "runCoreSeed and the country seeders" },
-];
+}> = getCollectionsByCategory("reference")
+  .filter(({ name }) => !(name in REFERENCE_REBUILD_KEPT_COLLECTIONS))
+  .map(({ name, seededBy }) => ({
+    name,
+    seededBy: seededBy ?? "no current seeder; cleared so retired rows cannot linger",
+  }));
 
 /** Empty every collection in {@link REFERENCE_REBUILD_CLEARED_COLLECTIONS}. */
 export async function clearReferenceForRebuild(db: Db): Promise<Record<string, number>> {

@@ -274,19 +274,15 @@ export interface TurnDriftResult {
 
 /**
  * One-way coupling from popularLegitimacy into partyConfidence drift.
- * Models the panic that sets in when the country can see the regime
- * fighting itself reflected on the street. The reverse direction
- * (party → popular) is wired separately as `intraPartyCouplingBleed`
- * in `popularLegitimacyDrivers.ts`.
+ * Models the panic when the country sees the regime fighting itself on
+ * the street. The reverse direction (party to popular) is wired
+ * separately as `intraPartyCouplingBleed` in `popularLegitimacyDrivers.ts`.
  *
- * Returns 0 when popular ≥ 30, -0.25 in [15, 30), -0.5 below 15.
- *
- * Halved from -0.5/-1.0 (#3165): partyConfidence has no natural recovery
- * drift, so this bleed alone ground CN's confidence 37.5 → 0 at a clean
- * -1/turn while every other component was 0. At the halved rates the
- * popular scalar (which does recover, at +0.1/turn net of the reduced
- * reverse bleed) can climb back above 30 and shut this bleed off before
- * confidence is fully exhausted.
+ * Returns 0 when popular >= 30, -0.25 in [15, 30), -0.5 below 15.
+ * Halved from -0.5/-1.0 because partyConfidence has no natural recovery
+ * drift; at the higher rates this bleed alone could grind confidence to
+ * zero. At halved rates the popular scalar can recover above 30 and shut
+ * the bleed off before confidence is exhausted.
  */
 export function popularLegitimacyBleedIntoParty(popularLegitimacy: number): number {
   if (popularLegitimacy >= 30) return 0;

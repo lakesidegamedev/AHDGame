@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { computeAllMarginModifiers, type StateMetricValues } from "./corporations";
 
-// Bug #0775: state-owned corps (NatCorps) are diversified state holding companies
+// State-owned corps (NatCorps) are diversified state holding companies
 // that hold nationalized sectors of many types and dominate the markets they take
 // by design. The private-firm penalties for market dominance, off-type sectors, and
 // logistical sprawl should not apply on top of the dedicated SOE efficiency penalty.

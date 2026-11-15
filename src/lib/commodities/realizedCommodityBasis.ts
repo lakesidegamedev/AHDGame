@@ -1,43 +1,29 @@
 /**
  * Realized physical-unit basis shared by the commodity market leaderboards
- * (`GET /api/commodities/[type]`) and the corporation commodity detail
- * (`GET /api/corporations/[id]/commodities`, via `computeCorpCommodityFlows`).
+ * and the corporation commodity detail.
  *
- * One basis, two surfaces:
- * - Supply for a sector is `computeSectorCommodityUnits` supply: measured
- *   `producedUnits` split across the output mix under the plants tier, falling
- *   back to the revenue nameplate only before a sector's first plants turn.
- * - Demand for a sector is `computeSectorCommodityUnits` demand: the revenue
- *   nameplate scaled by plant utilization (`producedUnits / capacityUnits`).
- * - Same turn: both surfaces read `gameState.currentTurn`.
- * - Same geographic scope: global totals sum every sector; a country slice sums
- *   the sectors whose state maps to that country.
+ * Both surfaces read the same turn (`gameState.currentTurn`) and the same
+ * geography (global sums every sector; a country slice sums the sectors whose
+ * state maps to that country). Supply is `producedUnits` split by output mix
+ * (revenue nameplate only before a sector's first plants turn); demand is the
+ * nameplate scaled by plant utilization (`producedUnits / capacityUnits`).
  *
  * Revenue divided by price is never presented as realized output once measured
- * production exists. The old market path did exactly that (revenue x rate /
- * basePrice with no utilization leg), which overstated low-utilization plants
- * by 1/utilization and is kept in the regression test as a negative control.
+ * production exists: it overstates low-utilization plants by 1/utilization.
  *
  * Genuinely different measures stay separate and labelled:
- * - Advertising-budget demand (marketingBudget x
- *   MARKETING_ADVERTISING_DEMAND_RATE / basePrice) is market-level demand, not
- *   corporation input consumption, and is reported as its own labelled row.
- * - Synthetic non-corporate demand (base stabilizer, GDP-scaled retail /
- *   construction legs, economy-wide financial demand, government healthcare
- *   expenditure) is system demand, reported under `syntheticDemandSources`.
+ * - Advertising-budget demand is market-level demand, not corporation input
+ *   consumption.
+ * - Synthetic non-corporate demand is system demand, under
+ *   `syntheticDemandSources`.
  *
- * EXTRACTION EXCEPTION: for EXTRACTABLE_RESOURCES both display surfaces share
- * the nameplate plus state-capacity filter basis that `computeSectorCommodityUnits`
- * implements. They deliberately do NOT reconstruct the unpersisted turn factors
- * (`extractionRealizedFraction`, `extractionOutputScaleFor`, per-sector
- * deposit-capacity rationing multipliers): those are computed in-memory each
- * turn by `computeRawSupplyDemand` / `bookExtractionDepletion` and are not
- * persisted, so exact equality with the turn ledger is not claimed for
- * extraction. Do not "finish" this by adding only the cheap leg.
+ * EXTRACTABLE_RESOURCES share the nameplate plus state-capacity filter basis
+ * only. They do NOT reconstruct unpersisted turn factors (extraction realized
+ * fraction, output scale, deposit-capacity rationing), so exact equality with
+ * the turn ledger is not claimed. Do not add only the cheap leg.
  *
- * Rounding: every per-corporation volume is rounded to two decimals. A
- * cross-surface comparison therefore reconciles within one cent per aggregated
- * row plus float epsilon; totals reconcile within one cent per row.
+ * Every per-corporation volume is rounded to two decimals, so cross-surface
+ * reconciliation is within one cent per row plus float epsilon.
  */
 import type { CommodityType, ExtractableResource } from "@/lib/constants/commodities";
 import { EXTRACTABLE_RESOURCES } from "@/lib/constants/commodities";

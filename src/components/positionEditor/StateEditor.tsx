@@ -1,16 +1,13 @@
 "use client";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { Button, Modal, Toast } from "@/components/ui";
 import type { ToastVariant } from "@/components/ui/Toast";
 import { usePositionEditorState } from "./usePositionEditorState";
 import { Layer1Tab } from "./tabs/Layer1Tab";
 import { LivePreviewPanel } from "./LivePreviewPanel";
-import {
-  computeDerivedComposition,
-  editorPositionsTable,
-  editorTurnoutTable,
-} from "@/lib/positionEditor/derive";
+import { editorPositionsTable, editorTurnoutTable } from "@/lib/positionEditor/derive";
+import { useDerivedPreview } from "./useDerivedPreview";
 import { loadOverride, clearOverride } from "@/lib/positionEditor/storage";
 import { stateConfigToCsv, downloadCsv } from "@/lib/positionEditor/csv";
 import type { EraId, EditorStateConfig } from "@/lib/positionEditor/types";
@@ -77,10 +74,7 @@ export function StateEditor({
     loadPreset();
   }, [era, country, state, load, loadPreset]);
 
-  const derived = useMemo(
-    () => (ed.config ? computeDerivedComposition(ed.config) : null),
-    [ed.config]
-  );
+  const derived = useDerivedPreview(ed.config);
 
   if (notFound && !ed.config)
     return (
@@ -133,7 +127,7 @@ export function StateEditor({
     <div className="mx-auto max-w-7xl px-4 pb-16 sm:px-6">
       <div className="sticky top-0 z-10 -mx-4 flex flex-wrap items-center gap-3 border-b border-card-border bg-card/85 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6">
         <Link
-          href="/admin/position-editor"
+          href="/control/world/position-editor"
           className="text-sm text-muted transition-colors hover:text-foreground"
         >
           ← Map

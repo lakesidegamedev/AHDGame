@@ -5,6 +5,7 @@ import type { Coalition } from "@/lib/db/types/coalition";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { isCountryEnabledForPlayers } from "@/lib/countryAccess";
 import { getSiteUrl } from "@/lib/siteMetadata";
+import { coalitionsCollection } from "@/lib/db/repositories/coalitions";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -24,9 +25,10 @@ export async function generateMetadata({
 
   const db = await getDb();
   if (!(await isCountryEnabledForPlayers(db, countryId))) return {};
-  const coalition = await db
-    .collection<Coalition>("coalitions")
-    .findOne({ sequentialId, countryId }, { projection: { name: 1 } });
+  const coalition = await coalitionsCollection(db).findOne(
+    { sequentialId, countryId },
+    { projection: { name: 1 } }
+  );
   if (!coalition) return {};
 
   const title = `${coalition.name} | A House Divided`;

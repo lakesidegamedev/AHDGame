@@ -1,9 +1,11 @@
 import type { Db } from "mongodb";
 import type { BondMarketPool } from "@/lib/db/types";
-import { BOND_MARKET_POOLS_COLLECTION } from "@/lib/db/types/bondMarketPool";
 import { sovereignFaceMaturingSoon } from "@/lib/bonds/marketPoolTurn";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import type { Migration, MigrationContext, MigrationResult } from "../types";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { moneySupplySnapshotsCollection } from "@/lib/db/repositories/moneySupplySnapshots";
+import { bondMarketPoolsCollection } from "@/lib/db/repositories/bondMarketPools";
 
 /**
  * Top up each bond market pool to its rollover working balance.
@@ -17,21 +19,18 @@ import type { Migration, MigrationContext, MigrationResult } from "../types";
  * underwriting cap.
  */
 async function topUpWorkingBalance(db: Db, ctx: MigrationContext): Promise<MigrationResult> {
-  const turnDoc = await db
-    .collection<{ _id: string; currentTurn?: number }>("gameState")
-    .findOne({ _id: "current" }, { projection: { currentTurn: 1 } });
+  const turnDoc = await gameStateCollection<{ _id: string; currentTurn?: number }>(db).findOne(
+    { _id: "current" },
+    { projection: { currentTurn: 1 } }
+  );
   const turn = turnDoc?.currentTurn ?? 0;
-  const pools = await db
-    .collection<BondMarketPool>(BOND_MARKET_POOLS_COLLECTION)
-    .find({})
-    .toArray();
+  const pools = await bondMarketPoolsCollection<BondMarketPool>(db).find({}).toArray();
   const notes: string[] = [];
   let updated = 0;
   for (const pool of pools) {
     const currency = pool._id as CurrencyCode;
     const rollover = await sovereignFaceMaturingSoon(db, currency, turn);
-    const latest = await db
-      .collection<{ currencyCode: string; m2?: number }>("moneySupplySnapshots")
+    const latest = await moneySupplySnapshotsCollection<{ currencyCode: string; m2?: number }>(db)
       .find({ currencyCode: currency }, { projection: { m2: 1 }, sort: { turn: -1 }, limit: 1 })
       .toArray();
     const m2 = latest[0]?.m2;
@@ -46,9 +45,10 @@ async function topUpWorkingBalance(db: Db, ctx: MigrationContext): Promise<Migra
       `${currency}: target ${(pool.targetCashLocal ?? 0).toLocaleString("en-US")} -> ${target.toLocaleString("en-US")}, cash ${(pool.cashLocal ?? 0).toLocaleString("en-US")} -> ${cash.toLocaleString("en-US")}`
     );
     if (!ctx.dryRun) {
-      await db
-        .collection<BondMarketPool>(BOND_MARKET_POOLS_COLLECTION)
-        .updateOne({ _id: pool._id }, { $set: set });
+      await bondMarketPoolsCollection<BondMarketPool>(db).updateOne(
+        { _id: pool._id },
+        { $set: set }
+      );
     }
     updated++;
   }

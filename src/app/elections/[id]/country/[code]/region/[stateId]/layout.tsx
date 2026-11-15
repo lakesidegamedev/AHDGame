@@ -8,6 +8,8 @@ import { canonicalRegionId } from "@/lib/constants/countries";
 import { getSiteUrl } from "@/lib/siteMetadata";
 import { redirect } from "next/navigation";
 import { downBallotRedirectTarget } from "@/lib/elections/downBallotRedirect";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -39,9 +41,10 @@ export async function generateMetadata({
   if (!ObjectId.isValid(id)) return {};
 
   const db = await getDb();
-  const election = await db
-    .collection<Election>("elections")
-    .findOne({ _id: new ObjectId(id) }, { projection: { electionType: 1, cycle: 1 } });
+  const election = await electionsCollection(db).findOne(
+    { _id: new ObjectId(id) },
+    { projection: { electionType: 1, cycle: 1 } }
+  );
   if (!election) return {};
 
   const typeLabel = ELECTION_TYPE_LABELS[election.electionType] ?? "Election";
@@ -50,12 +53,10 @@ export async function generateMetadata({
   const countryId = code.toUpperCase();
   // `states._id` is globally unique across countries, so the id alone is a
   // sufficient (and Filter<State>-typed) lookup for the raw URL param.
-  const state = await db
-    .collection<State>("states")
-    .findOne(
-      { _id: canonicalRegionId(countryId, stateId.toUpperCase()) },
-      { projection: { name: 1 } }
-    );
+  const state = await statesCollection(db).findOne(
+    { _id: canonicalRegionId(countryId, stateId.toUpperCase()) },
+    { projection: { name: 1 } }
+  );
   const regionName = state?.name ?? stateId;
   const title = `${typeLabel} — ${regionName} | A House Divided`;
   const description = `Regional results for the ${typeLabel.toLowerCase()} in ${regionName}, ${countryId} — county / district breakdown.`;

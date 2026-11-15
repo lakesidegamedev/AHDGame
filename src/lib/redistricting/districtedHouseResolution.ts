@@ -10,7 +10,9 @@ import {
   assignDistrictsToNominees,
 } from "./districtedResolution";
 import { buildNomineesByParty, buildSeatResult } from "./districtedSeatResult";
-import { getMultiSeatMinShare } from "@/lib/turn/election/seatAllocation";
+import { getMultiSeatMinShare } from "@/lib/elections/resolution/seatAllocation";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { congressionalDistrictsCollection } from "@/lib/db/repositories/congressionalDistricts";
 
 export interface DistrictedArgs {
   countryId: string;
@@ -32,7 +34,7 @@ export interface DistrictedArgs {
    * runs on every House race page view: with persistence unconditional, opening
    * a live race rewrote that state's sitting members from an in-progress tally.
    * The projection path also has no NPP id map, so it wrote `npps` ids into
-   * `holderCharacterId` and every NPP-held seat rendered unheld (#2906 again).
+   * `holderCharacterId` and every NPP-held seat rendered unheld.
    */
   persist?: boolean;
   preloadedDistricts?: CongressionalDistrict[];
@@ -101,7 +103,7 @@ export function projectDistrictedSeats(
   // each party's quota into the districts where it is strongest (lean + boost).
   // Quotas are proportional so a statewide plurality — or a lean-invariant
   // centrist party — can no longer sweep every district; gerrymandering shifts
-  // WHICH districts each party holds, not HOW MANY. (ticket 926)
+  // WHICH districts each party holds, not HOW MANY.
   const quotas = computePartySeatQuotas(
     baselines,
     docs.length,
@@ -141,8 +143,7 @@ export async function districtedHouseResolution(
 ): Promise<SeatResult | null> {
   const docs =
     args.preloadedDistricts ??
-    (await db
-      .collection<CongressionalDistrict>("congressionalDistricts")
+    (await congressionalDistrictsCollection(db)
       .find({ countryId: args.countryId, stateId: args.stateId } as Partial<CongressionalDistrict>)
       .toArray());
   if (docs.length === 0) return null;
@@ -150,8 +151,7 @@ export async function districtedHouseResolution(
   // Build a party→pool lookup keyed by the identifier forms candidate.party may use.
   const parties =
     args.preloadedParties ??
-    (await db
-      .collection<PoliticalParty>("politicalParties")
+    (await politicalPartiesCollection(db)
       .find({ countryId: args.countryId } as Partial<PoliticalParty>)
       .toArray());
   const poolByKey = new Map<string, Pool>();
@@ -190,7 +190,7 @@ export async function districtedHouseResolution(
     // NPP winners resolve against the `npps` collection, not `characters`, so
     // stamp holderNppId and leave holderCharacterId null (and vice versa).
     const charIdRaw = nppIdRaw ? null : (args.candidateCharacterId[candidateId] ?? null);
-    await db.collection<CongressionalDistrict>("congressionalDistricts").updateOne(
+    await congressionalDistrictsCollection(db).updateOne(
       { _id: d._id },
       {
         $set: {

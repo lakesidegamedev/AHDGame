@@ -1,6 +1,7 @@
 import type { Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import type { PartyGroupFavorability } from "@/lib/db/types";
+import { partyGroupFavorabilityCollection } from "@/lib/db/repositories/partyGroupFavorability";
 
 /**
  * Load active per-party demographic favorability rows for a country and
@@ -20,8 +21,7 @@ export async function loadPartyGroupFavorability(
   countryId: CountryId,
   currentTurn: number
 ): Promise<Map<string, number>> {
-  const rows = await db
-    .collection<PartyGroupFavorability>("partyGroupFavorability")
+  const rows = await partyGroupFavorabilityCollection(db)
     .find({
       countryId,
       expiresAtTurn: { $gt: currentTurn },

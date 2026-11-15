@@ -4,7 +4,7 @@ import { requireModerator } from "@/lib/api/requireModerator";
 import { handleRouteError } from "@/lib/api/errors";
 import { parseBoundedIntParam } from "@/lib/api/validate";
 import type { PlayerContentReport } from "@/lib/db/types";
-import { PLAYER_CONTENT_REPORTS } from "@/lib/safety/playerSafety";
+import { playerContentReportsCollection } from "@/lib/db/repositories/playerContentReports";
 
 // GET /api/admin/player-reports — List player content reports (paginated, filterable by status)
 // Auth: requireModerator (admins and moderators)
@@ -23,7 +23,7 @@ export async function GET(request: Request) {
         : {};
 
     const db = await getDb();
-    const reports = db.collection<PlayerContentReport>(PLAYER_CONTENT_REPORTS);
+    const reports = playerContentReportsCollection<PlayerContentReport>(db);
     const [rows, total] = await Promise.all([
       reports.find(filter).sort({ createdAt: -1 }).skip(offset).limit(limit).toArray(),
       reports.countDocuments(filter),

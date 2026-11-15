@@ -1,20 +1,8 @@
 /**
- * China Region Census Profiles — 1979 (eve of reform and opening).
- *
- * 1979-default companion to {@link cnRegionCensusData} (the 2019 profiles).
- *
- * Era anchor: 1982 National Population Census (NBS), read backward to 1979.
- * Every value below is independently authored from historical knowledge of
- * each macro-region at the start of Deng's reforms — NOT derived by scaling
- * any other era's file.
- *
- * Era character: overwhelmingly rural agrarian China (~19% urban nationally,
- * with hukou strictly enforced); a very young population from the 1962–1975
- * baby boom, pre-one-child-policy; education devastated by the Cultural
- * Revolution — gaokao only restored in 1977, so university attainment is
- * near-zero everywhere; commune-era income compression with the Northeast
- * (danwei heavy industry) the only region with a meaningful wage class.
- * Income uses era-neutral relative tiers (no RMB thresholds).
+ * China region census profiles for 1979, companion to cnRegionCensusData
+ * (2019 profiles). Anchored on the 1982 NBS census read back to 1979; each
+ * value independently authored, not scaled from another era. Income uses
+ * era-neutral relative tiers, not RMB thresholds.
  */
 
 import type { CNRegionLayer1 } from "@/lib/seeds/cn/cnRegionCensusData";

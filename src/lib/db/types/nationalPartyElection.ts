@@ -25,11 +25,9 @@ export interface NationalPartyElection {
    */
   founding?: boolean;
   /**
-   * Turn on which quorum acceleration was applied — when >50% of party
-   * members had voted AND the chair seat was vacant, the remaining election
-   * timer was halved. Set exactly once per election; prevents re-halving.
-   * Never applied on a party's first completed-chair cycle (ticket #1023).
-   * Undefined when acceleration never triggered.
+   * Turn on which quorum acceleration was applied. Set exactly once per
+   * election; prevents re-halving. Not applied on a party's first
+   * completed-chair cycle. Undefined when never triggered.
    */
   quorumAcceleratedAtTurn?: number;
   /**

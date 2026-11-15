@@ -14,24 +14,18 @@ import {
   reconcileNorthernIrelandInstitution,
   type NorthernIrelandSignal,
 } from "./rules";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { livingConflictsCollection } from "@/lib/db/repositories/livingConflicts";
+import { ukDevolutionCollection } from "@/lib/db/repositories/ukDevolution";
 
-export async function loadNorthernIrelandSignal(
-  db: Db,
-  enabled?: boolean
-): Promise<NorthernIrelandSignal | null> {
-  const game =
-    enabled === undefined
-      ? await db
-          .collection<GameState>("gameState")
-          .findOne({ _id: "current" }, { projection: { livingConflictsEnabled: 1 } })
-      : null;
-  if (!(enabled ?? game?.livingConflictsEnabled)) return null;
-  return db
-    .collection<LivingConflictState>("livingConflicts")
-    .findOne(
-      { defKey: "northern_ireland" },
-      { projection: { hasOpened: 1, status: 1, phaseLevel: 1, tracks: 1 } }
-    );
+export async function loadNorthernIrelandSignal(db: Db): Promise<NorthernIrelandSignal | null> {
+  return livingConflictsCollection<LivingConflictState>(db).findOne(
+    { defKey: "northern_ireland" },
+    { projection: { hasOpened: 1, status: 1, phaseLevel: 1, tracks: 1 } }
+  );
 }
 
 export async function reconcileNorthernIrelandGovernance(
@@ -41,12 +35,8 @@ export async function reconcileNorthernIrelandGovernance(
 ): Promise<void> {
   if (!conflict.hasOpened || conflict.status === "closed") return;
   const [region, game] = await Promise.all([
-    db
-      .collection<State>("states")
-      .findOne({ _id: "NIR", countryId: "UK" }, { projection: { _id: 1 } }),
-    db
-      .collection<GameState>("gameState")
-      .findOne({ _id: "current" }, { projection: { startingYear: 1 } }),
+    statesCollection(db).findOne({ _id: "NIR", countryId: "UK" }, { projection: { _id: 1 } }),
+    gameStateCollection(db).findOne({ _id: "current" }, { projection: { startingYear: 1 } }),
   ]);
   if (!region) return;
   const startingYear = game?.startingYear ?? 1991;
@@ -56,8 +46,7 @@ export async function reconcileNorthernIrelandGovernance(
   // alone cannot abolish them; only a negotiated settlement takes ownership.
   if (!current.northernIrelandPeace && startingYear >= 1999 && posture === "unsettled") return;
   if (current.northernIrelandPeace?.posture === posture) return;
-  const elections = await db
-    .collection<Election>("elections")
+  const elections = await electionsCollection(db)
     .find(
       { countryId: "UK", state: "NIR", electionType: { $in: ["governor", "regionalCouncil"] } },
       { projection: { electionType: 1, cycle: 1 } }
@@ -77,8 +66,7 @@ export async function reconcileNorthernIrelandGovernance(
   if (!next.regions.NIR.active) {
     const now = new Date();
     await vacateUKRegionalExecutives(db, ["NIR"], now);
-    const unfinished = await db
-      .collection<Election>("elections")
+    const unfinished = await electionsCollection(db)
       .find(
         {
           countryId: "UK",
@@ -91,22 +79,18 @@ export async function reconcileNorthernIrelandGovernance(
       .toArray();
     const ids = unfinished.map((e) => e._id);
     if (ids.length) {
-      await db
-        .collection<Election>("elections")
-        .updateMany(
-          { _id: { $in: ids }, status: { $in: ["active", "upcoming"] } },
-          { $set: { status: "cancelled", updatedAt: now } }
-        );
-      await db
-        .collection<ElectionCandidate>("electionCandidates")
-        .updateMany(
-          { electionId: { $in: ids }, status: "active" },
-          { $set: { status: "withdrawn", withdrawnAt: now } }
-        );
+      await electionsCollection(db).updateMany(
+        { _id: { $in: ids }, status: { $in: ["active", "upcoming"] } },
+        { $set: { status: "cancelled", updatedAt: now } }
+      );
+      await electionCandidatesCollection(db).updateMany(
+        { electionId: { $in: ids }, status: "active" },
+        { $set: { status: "withdrawn", withdrawnAt: now } }
+      );
     }
   }
   // Persist last. A retry repeats idempotent cleanup after a partial failure.
-  await db.collection<UKDevolutionState>("ukDevolution").updateOne(
+  await ukDevolutionCollection<UKDevolutionState>(db).updateOne(
     { _id: "UK" },
     {
       $set: { regions: next.regions, northernIrelandPeace: next.northernIrelandPeace },
@@ -118,9 +102,10 @@ export async function reconcileNorthernIrelandGovernance(
 
 /** Missing metadata preserves legacy institutions until the peace process owns them. */
 export async function northernIrelandAssemblySuspended(db: Db): Promise<boolean> {
-  const state = await db
-    .collection<UKDevolutionState>("ukDevolution")
-    .findOne({ _id: "UK" }, { projection: { northernIrelandPeace: 1, "regions.NIR.active": 1 } });
+  const state = await ukDevolutionCollection<UKDevolutionState>(db).findOne(
+    { _id: "UK" },
+    { projection: { northernIrelandPeace: 1, "regions.NIR.active": 1 } }
+  );
   return Boolean(state?.northernIrelandPeace && !state.regions.NIR.active);
 }
 

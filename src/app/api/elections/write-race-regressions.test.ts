@@ -66,29 +66,29 @@ vi.mock("@/lib/utils/statePartyElectionValidation", () => ({
   validateStatePartyElectionAccess: vi.fn(),
 }));
 
-vi.mock("@/lib/nationalPartyElections", async () => {
-  const actual = await vi.importActual<typeof import("@/lib/nationalPartyElections")>(
-    "@/lib/nationalPartyElections"
-  );
+vi.mock("@/lib/elections/party/nationalPartyElections", async () => {
+  const actual = await vi.importActual<
+    typeof import("@/lib/elections/party/nationalPartyElections")
+  >("@/lib/elections/party/nationalPartyElections");
   return {
     ...actual,
     notifyNationalCandidacyDeclared: vi.fn().mockResolvedValue(undefined),
   };
 });
 
-vi.mock("@/lib/nationalCommitteeElections", async () => {
-  const actual = await vi.importActual<typeof import("@/lib/nationalCommitteeElections")>(
-    "@/lib/nationalCommitteeElections"
-  );
+vi.mock("@/lib/elections/party/nationalCommitteeElections", async () => {
+  const actual = await vi.importActual<
+    typeof import("@/lib/elections/party/nationalCommitteeElections")
+  >("@/lib/elections/party/nationalCommitteeElections");
   return {
     ...actual,
     notifyCommitteeCandidacyDeclared: vi.fn().mockResolvedValue(undefined),
   };
 });
 
-vi.mock("@/lib/statePartyElections", async () => {
-  const actual = await vi.importActual<typeof import("@/lib/statePartyElections")>(
-    "@/lib/statePartyElections"
+vi.mock("@/lib/elections/party/statePartyElections", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/elections/party/statePartyElections")>(
+    "@/lib/elections/party/statePartyElections"
   );
   return {
     ...actual,

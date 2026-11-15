@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildCoalitionWeakness, buildParticipationPlan } from "./briefing";
-import type { CandidateNationalLedger } from "@/lib/electionEngine/factorLedger";
+import type { CandidateNationalLedger } from "@/lib/elections/engine/factorLedger";
 
 function candidate(
   id: string,

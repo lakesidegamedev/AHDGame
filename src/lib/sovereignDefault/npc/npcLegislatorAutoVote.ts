@@ -21,6 +21,8 @@ import type { CountryId } from "@/lib/constants/countries";
 import type { SovereignResolutionChoice } from "@/lib/db/types/budget";
 import type { SovereignCrisisDecision } from "@/lib/db/types/sovereignCrisisDecision";
 import type { NPP } from "@/lib/db/types/npp";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { sovereignCrisisDecisionsCollection } from "@/lib/db/repositories/sovereignCrisisDecisions";
 
 interface NpcLegislatorAutoVoteInput {
   decision: SovereignCrisisDecision;
@@ -106,8 +108,7 @@ export async function runNpcLegislatorAutoVote(
   // Find NPPs holding seats in the active chamber for this country, who
   // have NOT already voted on this phase.
   const alreadyVotedIds = Object.keys(phase.votes ?? {});
-  const npps = await db
-    .collection<NPP>("npps")
+  const npps = await nppsCollection(db)
     .find({
       countryId: input.countryCode,
       "currentOffice.type": phase.chamberKey,
@@ -132,15 +133,13 @@ export async function runNpcLegislatorAutoVote(
 
     const voteFieldKey = `legislativePhases.${chamberIndex}.votes.${nppKey}`;
     const counterField = vote === "for" ? "votesFor" : "votesAgainst";
-    const result = await db
-      .collection<SovereignCrisisDecision>("sovereignCrisisDecisions")
-      .updateOne(
-        { _id: decision._id, [voteFieldKey]: { $exists: false } },
-        {
-          $set: { [voteFieldKey]: vote },
-          $inc: { [`legislativePhases.${chamberIndex}.${counterField}`]: 1 },
-        }
-      );
+    const result = await sovereignCrisisDecisionsCollection(db).updateOne(
+      { _id: decision._id, [voteFieldKey]: { $exists: false } },
+      {
+        $set: { [voteFieldKey]: vote },
+        $inc: { [`legislativePhases.${chamberIndex}.${counterField}`]: 1 },
+      }
+    );
     if (result.modifiedCount === 1) {
       report.npcsVoted += 1;
       if (vote === "for") report.votesFor += 1;

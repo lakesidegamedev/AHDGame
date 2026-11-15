@@ -4,15 +4,19 @@
  * reuse that count instead of recalculating after withdrawals or partial seating.
  */
 import { type ClientSession, type Db } from "mongodb";
-import type { Election, ElectionCandidate, ElectionVoteTally, GameState } from "@/lib/db/types";
 import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
-import { TALLY_WITH_LATEST_SNAPSHOT_ONLY } from "@/lib/electionEngine/tallyProjections";
+import { TALLY_WITH_LATEST_SNAPSHOT_ONLY } from "@/lib/elections/engine/tallyProjections";
 import { buildBgFoundingSlates } from "./rules/foundingSlates1990";
 import type { BgFoundingNominations } from "./rules/foundingMandates1990";
 import { projectBgFoundingBallots } from "./rules/foundingBallots1990";
 import { countBgFoundingElection, type BgFoundingCount } from "./rules/foundingCount1990";
 import { BG_1990_LIST_DISTRICTS } from "./data/foundingDistricts1990";
 import type { BgFoundingBallots } from "./rules/foundingBallots1990";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { bgFoundingAssemblyCountsCollection } from "@/lib/db/repositories/bgFoundingAssemblyCounts";
 
 export const BG_FOUNDING_COUNTS_COLLECTION = "bgFoundingAssemblyCounts";
 export interface BgFoundingAssemblyRecord {
@@ -68,15 +72,15 @@ async function materializeBgFoundingFirstCount(input: {
   )
     throw new Error("Bulgarian certification needs an active transaction, cycle, turn and time");
   const receiptId = `BG:founding1990:${cycle}`;
-  const journal = db.collection<BgFoundingAssemblyRecord>(BG_FOUNDING_COUNTS_COLLECTION);
+  const journal = bgFoundingAssemblyCountsCollection<BgFoundingAssemblyRecord>(db);
   const saved = await journal.findOne({ _id: receiptId }, { session });
   if (saved) return saved;
-  const game = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { session, projection: { preset: 1 } });
+  const game = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { session, projection: { preset: 1 } }
+  );
   if (game?.preset !== "1991-default") return null;
-  const elections = await db
-    .collection<Election>("elections")
+  const elections = await electionsCollection(db)
     .find(
       {
         countryId: "BG",
@@ -114,8 +118,7 @@ async function materializeBgFoundingFirstCount(input: {
   )
     throw new Error("Bulgarian certification has a changed electorate or receipt");
   const ids = elections.map((row) => row._id);
-  const tallies = await db
-    .collection<ElectionVoteTally>("electionVoteTallies")
+  const tallies = await electionVoteTalliesCollection(db)
     .find(
       { electionId: { $in: ids } },
       {
@@ -124,8 +127,7 @@ async function materializeBgFoundingFirstCount(input: {
       }
     )
     .toArray();
-  const candidates = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const candidates = await electionCandidatesCollection(db)
     .find(
       { electionId: { $in: ids } },
       {

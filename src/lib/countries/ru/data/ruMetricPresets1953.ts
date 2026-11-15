@@ -1,22 +1,14 @@
 import type { MetricPresetBundle } from "@/lib/seeds/uk/ukMetricPresets";
 
 /**
- * 1953 USSR — Stalin's death (March 1953); Khrushchev consolidating power. Late-Stalinist
- * command economy at the peak of forced industrialization and post-war reconstruction
- * (GDP growth ~6%, well above the Brezhnev-era ~2.5% the base ruStateMetrics bundle is
- * authored for). Population still war-scarred: ~26 median age (WWII killed ~27M, skewing
- * the pyramid young), life expectancy ~60-62 and climbing fast, birth rate high. Gulag at
- * its maximum extent (~2.5M in camps — incarceration far above the 1979 level). Doctors'
- * Plot, total press control, closed borders. Literacy campaigns near-complete among the
- * young but older rural cohorts lag (~87% overall vs 99% by 1979). Urbanization ~44%
- * (vs ~62% in 1979). First H-bomb test August 1953; no civilian nuclear power until
- * Obninsk 1954.
+ * 1953 USSR overlay. The base ruStateMetrics bundle carries ~1979 values;
+ * without this overlay the seeded metrics and their decay baselines
+ * disagree from turn 1 (artificial glide). Applied to BOTH metrics and
+ * baselines so every covered path lands on its decay target at seed.
  *
- * The base `ruStateMetrics` bundle carries ~1979 values, while `seedRUBaselines` runs
- * `applyEra1953BaselineAdjustments` for the 1953 preset — without this overlay the seeded
- * metrics and their decay baselines disagree from turn 1 (artificial glide). This overlay
- * is applied to BOTH the metrics and the baselines (mirroring the UK/DE/JP 1953 pattern),
- * so every covered path lands exactly on its decay target at seed.
+ * 1953 differs sharply from 1979: GDP growth ~6%, median age ~26, life
+ * expectancy ~60, birth rate high, urbanization ~44%, incarceration at
+ * Gulag maximum, near-total press control.
  */
 
 const RU_REGIONS = [

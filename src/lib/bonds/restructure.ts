@@ -103,20 +103,16 @@ export function previewRestructure(params: {
     proceeds += c.salvageAnchor;
   }
 
-  // LAST-SECTOR GUARD. Restructuring is defined as the path where the corp
-  // SURVIVES with its remaining sectors, and that is what the player is told.
-  // Selling every sector it owns is not a restructure, it is a dissolution
-  // wearing a restructure's message: the corp keeps its shell, its shares and
-  // its cash, and has no business left. Ticket #1130 lost a corp its only
-  // sector — 232k of book, including 840 units of paid-for construction — to
-  // cover a 167k debt it was more than covered against.
+  // LAST-SECTOR GUARD. Restructuring means the corp SURVIVES with its remaining
+  // sectors, and that is what the player is told. Selling every sector it owns is
+  // a dissolution wearing a restructure's message: shell, shares and cash remain
+  // with no business left.
   //
   // Declaring this infeasible drops the ladder through to the CEO-driven
-  // dissolution decision, which is the honest framing of the choice, instead
-  // of silently ending the business.
-  // Keyed on sectors OWNED, not on salvageable candidates: a corp left holding
-  // a zero/negative-NPV sector still has something to rebuild from, so selling
-  // its only valuable sector is a real restructure.
+  // dissolution decision instead of silently ending the business.
+  // Keyed on sectors OWNED, not salvageable candidates: a corp holding a
+  // zero/negative-NPV sector still has something to rebuild from, so selling its
+  // only valuable sector is a real restructure.
   const sectorsOwned = params.sectorNpvByIdAnchor.length;
   if (sectorsOwned > 0 && sectorsToLiquidate.length >= sectorsOwned) {
     return {

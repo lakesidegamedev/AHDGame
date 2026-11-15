@@ -10,9 +10,7 @@ interface RouteParams {
   params: Promise<{ id: string }>;
 }
 
-// POST /api/campaigns/[id]/opposition-research/reset — Resets the campaign's opposition research level to 0, clears the target, and clears the retarget cooldown. Spent funds/actions are not refunded; an activity-log entry is pushed with reason "reset".
-// Auth: requireAuthWithCharacter (admin OR campaign manager OR owner of any character that is the candidate)
-// Errors: 400, 401, 403, 404, 429
+// POST /api/campaigns/[id]/opposition-research/reset - Resets opposition research level to 0, clears target and retarget cooldown. Spent funds/actions are not refunded. Auth: admin OR campaign manager OR candidate owner.
 export async function POST(_request: Request, { params }: RouteParams) {
   try {
     const { id: campaignId } = await params;

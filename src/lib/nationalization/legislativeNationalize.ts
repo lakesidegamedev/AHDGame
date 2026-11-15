@@ -23,6 +23,10 @@ import { MONOPOLY_SHARE_THRESHOLD } from "./constants";
 import { computeNoticeTurns } from "./noticeWindow";
 import { isWithinRenationalizeCooldown } from "./privatizationShares";
 import { nationalizeSectorWide } from "./nationalizeSectorWide";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { countryLeaderStatesCollection } from "@/lib/db/repositories/countryLeaderStates";
+import { pendingNationalizationsCollection } from "@/lib/db/repositories/pendingNationalizations";
 
 export async function applyNationalizeProvision(
   db: Db,
@@ -46,15 +50,13 @@ export async function applyNationalizeProvision(
     return;
   }
 
-  const corps = db.collection<Corporation>("corporations");
+  const corps = corporationsCollection(db);
 
   // Resolve the target corp (directly, or via the sector's owner).
   let targetCorp: Corporation | null = null;
   let targetSector: CorporateSector | null = null;
   if (provision.targetSectorId) {
-    targetSector = await db
-      .collection<CorporateSector>("corporateSectors")
-      .findOne({ _id: provision.targetSectorId });
+    targetSector = await corporateSectorsCollection(db).findOne({ _id: provision.targetSectorId });
     if (targetSector) targetCorp = await corps.findOne({ _id: targetSector.corporationId });
   } else if (provision.targetCorporationId) {
     targetCorp = await corps.findOne({ _id: provision.targetCorporationId });
@@ -84,19 +86,16 @@ export async function applyNationalizeProvision(
   // reach is locked, so these never GATE the taking — they only shape the
   // consequences (a monopoly break-up polls well; a strategic taking is
   // contested). The donor's whole-corp footprint frames a sector taking too.
-  const corpSectors = await db
-    .collection<CorporateSector>("corporateSectors")
+  const corpSectors = await corporateSectorsCollection(db)
     .find({ corporationId: targetCorp._id })
     .toArray();
   const designatedTypes = await getDesignatedSectorTypes(db, countryId);
   const strategicMatch = corpHasStrategicSector(designatedTypes, countryId, corpSectors);
   const topShare = await getTopMarketSharePercent(db, targetCorp, corpSectors);
 
-  // A PLAYER taking carries the conditions that fired (falling back to the
-  // "supermajority" democratic-authorization marker so it still reads as a real
-  // expropriation in the consequences layer). An NPC / unowned target has no
-  // private owner → stays politics-neutral (never add monopoly/strategic, which
-  // would wrongly fire the P3a expropriation backlash).
+  // Player targets carry fired triggers (fallback "supermajority" so it reads as real
+  // expropriation). NPC/unowned targets stay politics-neutral: never add monopoly/strategic,
+  // which would wrongly fire the P3a expropriation backlash.
   let triggers: NationalizationTrigger[];
   if (targetCorp.userId != null) {
     const fired: NationalizationTrigger[] = [];
@@ -120,7 +119,7 @@ export async function applyNationalizeProvision(
   if (targetCorp.userId != null) {
     const noticeTurns = computeNoticeTurns(triggers);
     if (noticeTurns > 0) {
-      await db.collection<PendingNationalization>("pendingNationalizations").insertOne({
+      await pendingNationalizationsCollection(db).insertOne({
         _id: new ObjectId(),
         countryId,
         ...(provision.targetSectorId
@@ -169,8 +168,9 @@ export async function applyNationalizeProvision(
 
 /** Active regime's governing party (most-recently-updated leader-state). */
 async function resolveGoverningPartyId(db: Db, countryId: CountryId): Promise<string | null> {
-  const leader = await db
-    .collection<CountryLeaderState>("countryLeaderStates")
-    .findOne({ countryId }, { sort: { updatedAt: -1 } });
+  const leader = await countryLeaderStatesCollection(db).findOne(
+    { countryId },
+    { sort: { updatedAt: -1 } }
+  );
   return leader?.governingPartyId ?? null;
 }

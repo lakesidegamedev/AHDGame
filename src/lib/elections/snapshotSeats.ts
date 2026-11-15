@@ -1,4 +1,4 @@
-import { allocateSeats } from "@/lib/turn/election/seatAllocation";
+import { allocateSeats } from "@/lib/elections/resolution/seatAllocation";
 import { MULTI_SEAT_TYPES } from "@/lib/utils/electionLabels";
 import { HOUSE_SEATS } from "@/lib/constants";
 import type { ElectionMethod } from "@/lib/constants/countries";

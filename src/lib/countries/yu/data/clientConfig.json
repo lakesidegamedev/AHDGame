@@ -1,0 +1,158 @@
+{
+  "config": {
+    "id": "YU",
+    "name": "Yugoslavia",
+    "code": "YU",
+    "status": "coming-soon",
+    "flagEmoji": "🇾🇺",
+    "regionLabel": "Republic",
+    "regionLabelPlural": "Republics",
+    "executiveTitle": "President",
+    "executiveRealmPhrase": "Yugoslavia",
+    "executiveLabel": "Assembly",
+    "executivePath": "/country/yu/executive",
+    "governmentType": "onePartyState",
+    "governmentTypeLabel": "One Party State",
+    "descriptor": "A non-aligned one-party federation governed by a collective presidency and the League of Communists under worker self-management; a market-socialist economy distinct from the Soviet bloc.",
+    "heroImage": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/61/Flag_of_Yugoslavia_%281946-1992%29.svg/500px-Flag_of_Yugoslavia_%281946-1992%29.svg.png",
+    "overviewPath": "/country/yu",
+    "mapPath": "/country/yu/map",
+    "currencyCode": "YUD",
+    "centralGovernmentLabel": "Federal Plan",
+    "exchangeName": "SZP",
+    "exchangeKind": "stateRegister",
+    "financeMinisterCabinetId": "minister_of_finance",
+    "rulingPartyId": 1,
+    "majorPartyIds": ["skj"],
+    "partyCreationNPPs": { "statesRequired": 1, "lockHomeState": true, "nppsPerState": 2 },
+    "legislature": {
+      "name": "Federal Assembly",
+      "path": "/country/yu/legislature",
+      "bicameral": false,
+      "lowerChamber": {
+        "key": "federalAssembly",
+        "name": "Federal Assembly",
+        "shortName": "Assembly",
+        "seats": 308,
+        "description": "308 delegates of the Skupština, drawn from the republics and provinces under the self-management system led by the League of Communists."
+      },
+      "upperChamber": {
+        "key": "presidency",
+        "name": "Presidency",
+        "shortName": "Presidency",
+        "seats": 9,
+        "description": "The collective State Presidency - a rotating federal head of state representing the republics and provinces.",
+        "elected": false
+      }
+    },
+    "officeTypes": [
+      {
+        "key": "president",
+        "label": "President",
+        "isExecutive": true,
+        "isSubNational": false,
+        "isHeadOfState": true,
+        "labelPlural": "Presidents"
+      },
+      {
+        "key": "assemblyDelegate",
+        "label": "Delegate",
+        "chamberKey": "federalAssembly",
+        "isExecutive": false,
+        "isSubNational": false,
+        "labelPlural": "Delegates"
+      },
+      {
+        "key": "centralBankChair",
+        "label": "Governor of the NBY",
+        "isExecutive": false,
+        "isSubNational": false,
+        "labelPlural": "Governors of the NBY"
+      }
+    ],
+    "electionSystems": {
+      "lowerChamber": "fptp",
+      "headOfGovernment": "parliamentary",
+      "headOfState": "ceremonial"
+    },
+    "lowerElectionSystem": { "snapElectionsAllowed": false },
+    "centralBank": {
+      "name": "National Bank of Yugoslavia",
+      "abbreviation": "NBY",
+      "heroImage": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/61/Flag_of_Yugoslavia_%281946-1992%29.svg/500px-Flag_of_Yugoslavia_%281946-1992%29.svg.png",
+      "defaultPrimeRate": 8
+    },
+    "usdExchangeRate": 0.055
+  },
+  "eraOverrides": {
+    "1991-default": {
+      "executiveTitle": "Prime Minister",
+      "governmentType": "parliamentaryRepublic",
+      "governmentTypeLabel": "Federal Parliamentary Republic",
+      "rulingPartyId": null,
+      "majorPartyIds": ["srsj", "sps", "hdz", "sda", "demos", "skcg", "vmro-dpmne"],
+      "legislature": {
+        "name": "Federal Assembly",
+        "path": "/country/yu/legislature",
+        "bicameral": true,
+        "lowerChamber": {
+          "key": "federalAssembly",
+          "name": "Federal Chamber",
+          "shortName": "Federal",
+          "seats": 220,
+          "description": "220 delegates chosen through the republic and province delegate system."
+        },
+        "upperChamber": {
+          "key": "councilRepublicsProvinces",
+          "name": "Council of Republics and Provinces",
+          "shortName": "Republics",
+          "seats": 88,
+          "description": "Twelve delegates per republic and eight per autonomous province.",
+          "elected": false
+        }
+      },
+      "officeTypes": [
+        {
+          "key": "primeMinister",
+          "label": "Prime Minister",
+          "isExecutive": true,
+          "isSubNational": false,
+          "labelPlural": "Prime Ministers"
+        },
+        {
+          "key": "president",
+          "label": "Chair of the Presidency",
+          "isExecutive": true,
+          "isSubNational": false,
+          "isHeadOfState": true,
+          "labelPlural": "Chairs of the Presidency"
+        },
+        {
+          "key": "assemblyDelegate",
+          "label": "Federal Delegate",
+          "chamberKey": "federalAssembly",
+          "isExecutive": false,
+          "isSubNational": false,
+          "labelPlural": "Federal Delegates"
+        },
+        {
+          "key": "councilDelegate",
+          "label": "Republic or Province Delegate",
+          "chamberKey": "councilRepublicsProvinces",
+          "isExecutive": false,
+          "isSubNational": false,
+          "labelPlural": "Republic or Province Delegates"
+        },
+        {
+          "key": "centralBankChair",
+          "label": "Governor of the NBY",
+          "isExecutive": false,
+          "isSubNational": false,
+          "labelPlural": "Governors of the NBY"
+        }
+      ],
+      "usdExchangeRate": 0.07370554634236226
+    },
+    "1953-default": { "usdExchangeRate": 0.059998800023999516 }
+  }
+}

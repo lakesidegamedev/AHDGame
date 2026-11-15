@@ -11,14 +11,13 @@ import { opposedBelligerents } from "@/lib/military/occupation";
 import { getTrucesCollection, trucePairId } from "@/lib/military/truce";
 import { WAR_DECLARATION_COOLDOWN_TURNS } from "@/lib/military/warGoals";
 import { planOrganizationWarDeclaration, type OrganizationWarPlan } from "./warDeclarationRules";
+import { billsCollection } from "@/lib/db/repositories/bills";
 
 export interface OrganizationWarPlanningResult extends OrganizationWarPlan {
-  conflictsEnabled: boolean;
   targetEnabled: boolean;
 }
 
 export interface OrganizationWarPlanningContext {
-  conflictsEnabled: boolean;
   access: Record<CountryId, CountryAccess>;
   allianceRoll: AllianceRoll;
   activeTrucePairIds: ReadonlySet<string>;
@@ -36,17 +35,13 @@ export async function loadOrganizationWarPlanningContext(
   currentTurn: number
 ): Promise<OrganizationWarPlanningContext> {
   const countryIds = Object.keys(COUNTRY_CONFIGS) as CountryId[];
-  const [access, allianceRoll, gameState, truces, declarationBills, conflicts] = await Promise.all([
+  const [access, allianceRoll, truces, declarationBills, conflicts] = await Promise.all([
     getAllCountryAccess(db),
     loadAllianceRoll(db),
-    db
-      .collection<{ _id: string; conflictsEnabled?: boolean }>("gameState")
-      .findOne({ _id: "current" }, { projection: { conflictsEnabled: 1 } }),
     getTrucesCollection(db)
       .find({ expiresTurn: { $gt: currentTurn } }, { projection: { _id: 1 } })
       .toArray(),
-    db
-      .collection<Bill>("bills")
+    billsCollection(db)
       .find(
         {
           countryId: { $in: countryIds },
@@ -71,7 +66,6 @@ export async function loadOrganizationWarPlanningContext(
   }
 
   return {
-    conflictsEnabled: gameState?.conflictsEnabled === true,
     access,
     allianceRoll,
     activeTrucePairIds: new Set(truces.map((truce) => truce._id)),
@@ -129,5 +123,5 @@ export async function planOrganizationWarDeclarationFromDb(params: {
       };
     }),
   });
-  return { ...plan, conflictsEnabled: context.conflictsEnabled, targetEnabled };
+  return { ...plan, targetEnabled };
 }

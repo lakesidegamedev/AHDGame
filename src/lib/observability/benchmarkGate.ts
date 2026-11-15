@@ -1,10 +1,8 @@
 /**
- * Aged-world turn benchmark gate (#2696).
+ * Aged-world turn benchmark gate.
  *
- * `scripts/perf/aged-benchmark.ts` restores an aged world snapshot, runs real
- * turns and writes a result file. This module turns those turn logs into a
- * per-case result and compares a candidate result against a baseline, so a
- * turn performance change can be qualified with one command:
+ * Turns logs from `scripts/perf/aged-benchmark.ts` become per-case results,
+ * compared candidate against baseline:
  *
  *   quiet, NPP-action, fund-rebalance and election-deadline turns are kept
  *   apart, because a faster quiet turn can hide a slower boundary turn;

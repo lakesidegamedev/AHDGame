@@ -10,20 +10,19 @@ import { pledgeCatalogFor } from "@/lib/countries/uk/manifesto/pledgeCatalog";
 import { selectNppPledges } from "@/lib/countries/uk/manifesto/nppManifesto";
 
 /**
- * Manifesto lifecycle at election call (epic #856, ticket #857).
+ * Manifesto lifecycle at election call.
  *
  * When a UK election is called, every party's manifesto is finalised:
- *  - a player-led party with a COMPLETE valid draft has it LOCKED (locks at
- *    election call, immutable through the campaign);
- *  - an NPP (AI) party with no locked manifesto gets one AUTO-GENERATED from its
- *    own ideology and locked (symmetry — NPPs are judged on delivery too).
+ *  - a player-led party with a COMPLETE valid draft has it LOCKED (immutable
+ *    through the campaign);
+ *  - an NPP (AI) party with no locked manifesto gets one AUTO-GENERATED from
+ *    its own ideology and locked (symmetry: NPPs are judged on delivery too).
  *
- * A player-led party whose draft is incomplete/absent is simply left without a
- * manifesto (no effect, no penalty) — we never invent pledges on a human's behalf.
+ * A player-led party whose draft is incomplete or absent is left without a
+ * manifesto (no effect, no penalty): we never invent pledges on a human's behalf.
  *
  * Pure orchestration over the manifestos collection; the caller supplies the
- * party roster + ideology. Placement of the call at the exact dissolution point
- * is wired separately.
+ * party roster and ideology.
  */
 
 export interface ManifestoLifecycleParty {
@@ -49,11 +48,10 @@ export async function finaliseManifestosAtElectionCall(
     parties: ManifestoLifecycleParty[];
     now: Date;
     /**
-     * Standing platforms by party key (ticket #862): the pledge sets each
-     * party's conference ratified between elections. The leader finalises
-     * the election manifesto FROM the platform at dissolution: a player
-     * party with NO draft of its own gets one seeded from its platform and
-     * locked; the leader's own draft always wins and is never overwritten.
+     * Standing platforms by party key: pledge sets ratified at conference between
+     * elections. The leader finalises the election manifesto FROM the platform at
+     * dissolution: a player party with no draft gets one seeded from its platform
+     * and locked; the leader's own draft always wins and is never overwritten.
      * NPP parties use their platform when valid, else fall back to
      * ideology-generated pledges.
      */

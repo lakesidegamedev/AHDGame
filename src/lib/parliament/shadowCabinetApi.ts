@@ -22,11 +22,13 @@ import { resolveCabinetRoster } from "@/lib/cabinet/rosterEra";
 import { getLiveGameYear } from "@/lib/cabinet/liveGameYear";
 import { getCountryState } from "@/lib/countryState";
 import { type CountryId } from "@/lib/constants/countries";
-import type { Character, PoliticalParty } from "@/lib/db/types";
+import type { PoliticalParty } from "@/lib/db/types";
 import type { ShadowCabinetAppointment } from "@/lib/db/types/party";
 import { getGovernmentFormationsCollection } from "@/lib/db/collections/governmentFormation";
 import { resolveOppositionLeaderForCountry } from "@/lib/parliament/oppositionLeader";
-import { getEligibleCabinetCharacters } from "@/lib/uk/cabinetEligibility";
+import { getEligibleCabinetCharacters } from "@/lib/countries/uk/cabinetEligibility";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 const appointSchema = z.object({
   positionId: z.string(),
@@ -62,9 +64,9 @@ async function authorizeOppositionLeader(
   const unauthorized = "Only the Leader of the Opposition may manage the shadow cabinet";
   if (!ObjectId.isValid(authUserId)) throw forbidden(unauthorized);
 
-  const callerCharacter = await db
-    .collection<Character>("characters")
-    .findOne({ userId: new ObjectId(authUserId) });
+  const callerCharacter = await charactersCollection(db).findOne({
+    userId: new ObjectId(authUserId),
+  });
   if (!callerCharacter) throw forbidden(unauthorized);
 
   const opposition = await resolveOppositionLeaderForCountry(db, countryId);
@@ -137,12 +139,10 @@ export async function appointShadowCabinetHandler(request: Request, countryId: C
       characterName: chosen.name,
       appointedAt: new Date(),
     };
-    await db
-      .collection<PoliticalParty>("politicalParties")
-      .updateOne(
-        { _id: oppositionParty._id },
-        { $set: { [`shadowCabinet.${positionId}`]: appointment, updatedAt: new Date() } }
-      );
+    await politicalPartiesCollection(db).updateOne(
+      { _id: oppositionParty._id },
+      { $set: { [`shadowCabinet.${positionId}`]: appointment, updatedAt: new Date() } }
+    );
 
     return NextResponse.json({
       success: true,
@@ -185,12 +185,10 @@ export async function clearShadowCabinetHandler(request: Request, countryId: Cou
       throw notFound("That shadow cabinet post is already vacant");
     }
 
-    await db
-      .collection<PoliticalParty>("politicalParties")
-      .updateOne(
-        { _id: oppositionParty._id },
-        { $unset: { [`shadowCabinet.${positionId}`]: "" }, $set: { updatedAt: new Date() } }
-      );
+    await politicalPartiesCollection(db).updateOne(
+      { _id: oppositionParty._id },
+      { $unset: { [`shadowCabinet.${positionId}`]: "" }, $set: { updatedAt: new Date() } }
+    );
 
     return NextResponse.json({
       success: true,

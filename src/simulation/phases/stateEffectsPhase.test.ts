@@ -1,8 +1,26 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   stateEffectsAndNationalAggregationPhase,
   closingFinancialSnapshotsPhase,
 } from "@/simulation/phases/stateEffectsPhase";
+import { loadCountryTiers } from "@/lib/country/countryTier";
+
+// Regional phases gate on the country tier. The harness DB is empty, so the
+// tier read is stubbed: nothing is background unless a test says so.
+const backgroundCountries = new Set<string>();
+vi.mock("@/lib/country/countryTier", () => ({
+  loadCountryTiers: vi.fn(async () => ({
+    tierOf: (countryId: string) => (backgroundCountries.has(countryId) ? "background" : "npp"),
+    registeredIds: [],
+    fullSimulationIds: [],
+    backgroundIds: [...backgroundCountries],
+  })),
+}));
+
+beforeEach(() => {
+  backgroundCountries.clear();
+  vi.mocked(loadCountryTiers).mockClear();
+});
 
 /**
  * S4 (2026-07-16 core-sim audit): crisisTurn, ministerialOrders, and
@@ -73,6 +91,45 @@ describe("stateEffectsAndNationalAggregation phase ordering", () => {
     // The metric engine consumes the settled metric values and must run after
     // the last writer finishes.
     expect(idx("end:policyEffects")).toBeLessThan(idx("start:metricEngine"));
+  });
+
+  it("skips RU regional budgets without running them when RU is background", async () => {
+    backgroundCountries.add("RU");
+    const { events, runtime, context } = makeHarness(1000);
+
+    await stateEffectsAndNationalAggregationPhase.execute(context as never, runtime as never);
+
+    expect(events).not.toContain("start:ruRegionalBudgetProcessing");
+    expect(runtime.markPhaseSkipped).toHaveBeenCalledWith(
+      "ruRegionalBudgetProcessing",
+      "conditional",
+      "skipped: RU is a background country"
+    );
+    // One shared tier read for every regional phase that turn.
+    expect(loadCountryTiers).toHaveBeenCalledTimes(1);
+  });
+
+  it("runs RU regional budgets when RU is fully simulated and the phase is due", async () => {
+    const { events, runtime, context } = makeHarness(1000);
+
+    await stateEffectsAndNationalAggregationPhase.execute(context as never, runtime as never);
+
+    expect(events).toContain("start:ruRegionalBudgetProcessing");
+  });
+
+  it("does not read tiers for RU on a turn its regional budget is not due", async () => {
+    backgroundCountries.add("RU");
+    const { events, runtime, context } = makeHarness(1001);
+
+    await stateEffectsAndNationalAggregationPhase.execute(context as never, runtime as never);
+
+    expect(events).not.toContain("start:ruRegionalBudgetProcessing");
+    expect(runtime.markPhaseSkipped).toHaveBeenCalledWith(
+      "ruRegionalBudgetProcessing",
+      "conditional",
+      expect.stringContaining("regional budgets run every")
+    );
+    expect(loadCountryTiers).not.toHaveBeenCalled();
   });
 
   it("waits for the due JP regional settlement before applying policy effects", async () => {

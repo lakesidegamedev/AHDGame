@@ -1,9 +1,12 @@
 import type { Db } from "mongodb";
 import type { Migration, MigrationContext, MigrationResult } from "../types";
 import type { BondMarketPool } from "@/lib/db/types";
-import { BOND_MARKET_POOLS_COLLECTION } from "@/lib/db/types/bondMarketPool";
 import { BOND_POOL_M2_SHARE } from "@/lib/bonds/marketPool";
 import type { CurrencyCode } from "@/lib/constants/currencies";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { moneySupplySnapshotsCollection } from "@/lib/db/repositories/moneySupplySnapshots";
+import { bondMarketPoolsCollection } from "@/lib/db/repositories/bondMarketPools";
 
 /**
  * Opening balance sheet for the bond market pools.
@@ -16,19 +19,16 @@ import type { CurrencyCode } from "@/lib/constants/currencies";
  */
 async function seedBondMarketPools(db: Db, ctx: MigrationContext): Promise<MigrationResult> {
   const [exchangeRateRows, bondCurrencyRows, latestSnapshot] = await Promise.all([
-    db
-      .collection<{ currencyCode?: string }>("exchangeRates")
+    exchangeRatesCollection<{ currencyCode?: string }>(db)
       .find({}, { projection: { currencyCode: 1 } })
       .toArray(),
-    db
-      .collection<{ currencyCode?: string }>("bonds")
+    bondsCollection<{ currencyCode?: string }>(db)
       .aggregate<{ _id: string | null }>([
         { $match: { matured: { $ne: true } } },
         { $group: { _id: "$currencyCode" } },
       ])
       .toArray(),
-    db
-      .collection<{ turn: number }>("moneySupplySnapshots")
+    moneySupplySnapshotsCollection<{ turn: number }>(db)
       .find({}, { projection: { turn: 1 }, sort: { turn: -1 }, limit: 1 })
       .toArray(),
   ]);
@@ -40,8 +40,7 @@ async function seedBondMarketPools(db: Db, ctx: MigrationContext): Promise<Migra
   const snapshotTurn = latestSnapshot[0]?.turn;
   const m2ByCurrency = new Map<string, number>();
   if (snapshotTurn != null) {
-    const rows = await db
-      .collection<{ currencyCode: string; m2?: number }>("moneySupplySnapshots")
+    const rows = await moneySupplySnapshotsCollection<{ currencyCode: string; m2?: number }>(db)
       .find({ turn: snapshotTurn }, { projection: { currencyCode: 1, m2: 1 } })
       .toArray();
     for (const row of rows)
@@ -50,8 +49,7 @@ async function seedBondMarketPools(db: Db, ctx: MigrationContext): Promise<Migra
 
   const existing = new Set(
     (
-      await db
-        .collection<BondMarketPool>(BOND_MARKET_POOLS_COLLECTION)
+      await bondMarketPoolsCollection<BondMarketPool>(db)
         .find({}, { projection: { _id: 1 } })
         .toArray()
     ).map((pool) => String(pool._id))
@@ -86,7 +84,7 @@ async function seedBondMarketPools(db: Db, ctx: MigrationContext): Promise<Migra
     };
   }
   if (docs.length > 0) {
-    const result = await db.collection<BondMarketPool>(BOND_MARKET_POOLS_COLLECTION).bulkWrite(
+    const result = await bondMarketPoolsCollection<BondMarketPool>(db).bulkWrite(
       docs.map((doc) => ({
         updateOne: {
           filter: { _id: doc._id },

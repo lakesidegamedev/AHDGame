@@ -1,36 +1,18 @@
 /**
- * What a resolved German Question actually does to the world.
+ * What a resolved German Question does to the world.
  *
- * `incumbent` — West Germany stays sovereign in NATO. Nothing is absorbed and
- * no border moves; the crisis closes, both Germanies get a history entry, and a
- * cooldown runs before the question can be asked again.
+ * `incumbent`, West Germany stays sovereign in NATO. Nothing is absorbed; the
+ * crisis closes with history entries and a cooldown.
  *
- * `challenger` — the two Germanies become one, in the Warsaw Pact, under a
- * one-party constitutional settlement.
+ * `challenger`, the two Germanies unify under the GDR shell in the Warsaw
+ * Pact, one-party.
  *
- * WHICH SHELL SURVIVES, AND WHY IT IS THE CHALLENGER.
- *
- * The winner's shell survives: the GDR absorbs the Federal Republic. This was
- * once built the other way round, on the argument that a country's NAME is
- * immutable seed data and a unified Germany must not render as "East Germany".
- * That argument weighed the name and counted nothing else.
- *
- * The name needs a runtime override EITHER way — the Federal Republic renders as
- * "West Germany" for as long as the GDR exists, so a unified state under that
- * shell is just as wrong. Everything else is free on this side and expensive on
- * the other. The winner's CURRENCY is read at 243 sites, with a reverse map at
- * 106 more that already pairs the Mark with the GDR; its GOVERNMENT TYPE and its
- * party REGIME STATUSES are already what a victorious SED would install. Under
- * the other shell each of those needs its own runtime override on top of
- * compiled config. One override against three.
- *
- * The display layer answers the name question in `resolveCountryIdentity`, which
- * reads `countryState` rather than the compiled config, so a unified Germany is
- * called Germany wherever a reader meets it.
- *
- * What a player sees is the outcome the design describes: one country called
- * Germany, one-party, in the Warsaw Pact, holding every Land, paying in the
- * currency it won the war with.
+ * THE CHALLENGER SHELL WINS. The name needs a runtime override either way, so
+ * it is not the tiebreaker. The GDR shell already has the winning currency
+ * (read at 243 sites, reverse map at 106), the government type, and the party
+ * regime statuses a victorious SED would install. The FRG shell would need three
+ * separate runtime overrides. The display layer resolves the name via
+ * `resolveCountryIdentity`, which reads `countryState`, not compiled config.
  */
 import type { Db, ObjectId } from "mongodb";
 import type { SettlementCrisisDoc, SettlementOutcome } from "@/lib/db/types/settlementCrisis";
@@ -71,6 +53,16 @@ import {
   INTERNATIONAL_ORGANIZATIONS,
   type InternationalOrganizationId,
 } from "@/lib/constants/internationalOrganizations";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import type { Document } from "mongodb";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
+import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
+import { cabinetMembersCollection } from "@/lib/db/repositories/cabinetMembers";
 
 export interface ActuationResult {
   actuated: boolean;
@@ -179,19 +171,10 @@ export async function actuateSettlementOutcome(
     return { actuated: true, outcome: "incumbent", deferred: false };
   }
 
-  // challenger — the merge. THE CHALLENGER IS THE SHELL THAT SURVIVES, and the
-  // incumbent is absorbed into it.
-  //
-  // ⚠️ THIS DIRECTION WAS ONCE THE OTHER WAY ROUND, on the argument that a
-  // country's NAME is immutable seed data and a unified Germany must not render
-  // as "East Germany". That reasoning weighed the name and counted nothing else,
-  // and the name needed a runtime override EITHER way — the Federal Republic
-  // renders as "West Germany" for as long as the GDR exists. Everything else is
-  // free on this side and expensive on the other: the winner's CURRENCY (read at
-  // 243 sites, with a reverse map at 106 more that already pairs the Mark with
-  // the GDR), its GOVERNMENT TYPE, and its party REGIME STATUSES are all already
-  // correct when the winner is the shell. A country that wins the war does not
-  // hand over its money and its constitution to the side that lost.
+  // challenger: the merge. THE CHALLENGER IS THE SHELL THAT SURVIVES, and the
+  // incumbent is absorbed into it. The winner's currency, government type, and
+  // party regime statuses are already correct when the winner is the shell; a
+  // country that wins the war does not hand over its money and constitution.
   //
   // ORDER IS LOAD-BEARING at every step, and each is argued at its own call site.
   //
@@ -222,9 +205,10 @@ export async function actuateSettlementOutcome(
   //     real accounts locked out of the country they had just won.
   let absorbedWasPlayable = crisis.absorbedWasPlayable ?? null;
   if (absorbedWasPlayable == null) {
-    const absorbedGameState = await db
-      .collection<CountryGameState>("countryGameStates")
-      .findOne({ _id: absorbed }, { projection: { enabledForPlayers: 1, status: 1 } });
+    const absorbedGameState = await countryGameStatesCollection(db).findOne(
+      { _id: absorbed },
+      { projection: { enabledForPlayers: 1, status: 1 } }
+    );
     absorbedWasPlayable = absorbedGameState?.enabledForPlayers === true;
     await crises.updateOne({ _id: crisis._id }, { $set: { absorbedWasPlayable } });
   }
@@ -256,9 +240,10 @@ export async function actuateSettlementOutcome(
       countryFiscalBase(db, target),
       countryFiscalBase(db, challenger),
     ]);
-    const gs = await db
-      .collection<GameState>("gameState")
-      .findOne({ _id: "current" }, { projection: { incomeBandIndexByCountry: 1 } });
+    const gs = await gameStateCollection(db).findOne(
+      { _id: "current" },
+      { projection: { incomeBandIndexByCountry: 1 } }
+    );
     mergeBases = {
       fromGdp: fromBase.gdp,
       fromPopulation: fromBase.population,
@@ -287,14 +272,11 @@ export async function actuateSettlementOutcome(
   }
 
   // 3b. National officeholders the region sweep cannot see.
-  //
-  //     `evacuateRegionPolitics` works per region and matches on `state`, so an
-  //     official with no region — East Germany's Chairman of the Council of State
-  //     is exactly this — is never visited by it, and would be left seated on a
-  //     country that no longer exists. Same for a cabinet seat held by an NPP
-  //     rather than a player.
-  //     The ruling party needs no translation: it is the SURVIVOR's own, and the
-  //     survivor's parties are not the ones that moved.
+  //     evacuateRegionPolitics matches on `state`, so an official with no region
+  //     (e.g. East Germany's Chairman of the Council of State) is never visited
+  //     and would stay seated on a country that no longer exists. Same for a
+  //     cabinet seat held by an NPP. The ruling party needs no translation: it is
+  //     the survivor's own.
   const rulingPartyId = survivorRulingPartyId;
   await retireNationalRemnants(db, {
     absorbed,
@@ -303,17 +285,11 @@ export async function actuateSettlementOutcome(
     rulingPartyId,
   });
 
-  // 3c. The national balance sheet: treasury, debt, defence account, the
-  //     sovereign bonds real players hold, and the national law book — all
-  //     FX-converted. Without this the ghost treasury pays coupons until it
-  //     defaults for a country that no longer exists, and the unified budget
-  //     forgets every national programme the absorbed state legislated.
-  //     ⚠️ THE LEVERS DO NOT CROSS. The winner's-law rule assumes the absorbed
-  //     side won; here the SURVIVOR is the winner, so carrying the absorbed
-  //     side's tax code and wage floor would impose the LOSER's law on the
-  //     victor. Quantities still cross — the treasury, the defence account, the
-  //     bonds and the debt ceiling are how much the unified state holds and may
-  //     borrow, not rules about how it behaves.
+  // 3c. The national balance sheet: treasury, debt, defence account, held bonds,
+  // national law book, all FX-converted. Without it the ghost treasury pays
+  // coupons until default. The levers do not cross: the survivor is the winner,
+  // so carrying the absorbed side's tax code and wage floor would impose the
+  // loser's law on the victor. Quantities still cross.
   const fisc = await mergeNationalFisc(db, {
     fromCountryId: absorbed,
     toCountryId: survivor,
@@ -343,34 +319,25 @@ export async function actuateSettlementOutcome(
   // 3d-bis. The National Corporation tree. State enterprises are country-keyed
   //     (`countryOwnerId`), so the region sweep never sees them: without this
   //     the absorbed side's primary NatCorp and split-offs survive as a second,
-  //     ghost NatCorp family under the survivor — still flagged primary, still
-  //     holding sectors, still the corporationId on its sovereign bonds. The
-  //     live German reunification left two primaries and coupon money flowing
-  //     to a corp of a country that no longer existed (ticket #1254).
+  //     ghost NatCorp family under the survivor, still flagged primary, still
+  //     holding sectors, still the corporationId on its sovereign bonds.
   await mergeNationalCorporations(db, {
     fromCountryId: absorbed,
     toCountryId: survivor,
   });
 
-  // 3e. The ECONOMIC regime. `installOnePartyState` below converts the political
-  //     system, but the command economy is its own per-country dial.
+  // 3e. The ECONOMIC regime. `installOnePartyState` below converts the
+  //     political system, but the command economy is its own per-country dial.
   //
-  //     A NO-OP FOR THIS PAIRING, and deliberately left in. `mergeEconomicRegime`
-  //     is ONE-DIRECTIONAL — it only ever makes the survivor more planned — so
-  //     with the GDR as the shell the market half cannot "reform" the winner as a
-  //     side effect of being absorbed, and the call returns without writing. It
-  //     stays because the direction is a property of the settlement rather than of
-  //     this pipeline, and because the guard doing the work lives in that function
-  //     where a reader will look for it.
+  //     A no-op for this pairing, deliberately left in: `mergeEconomicRegime`
+  //     is one-directional and the guard lives in that function.
   //
-  //     Year through `yearOfTurn` (calendar, not raw turn — the #1208 class of
-  //     bug) for the schedule fallback.
-  const gameStateDoc = await db
-    .collection<GameState>("gameState")
-    .findOne(
-      { _id: "current" },
-      { projection: { startingYear: 1, preIteration: 1, preIterationTurns: 1 } }
-    );
+  //     Year through `yearOfTurn` (calendar, not raw turn) for the schedule
+  //     fallback.
+  const gameStateDoc = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { projection: { startingYear: 1, preIteration: 1, preIterationTurns: 1 } }
+  );
   const currentYear = yearOfTurn(currentTurn, gameStateDoc?.startingYear ?? STARTING_YEAR, {
     preIterationActive: gameStateDoc?.preIteration?.active,
     preIterationTurns: gameStateDoc?.preIterationTurns,
@@ -419,13 +386,11 @@ export async function actuateSettlementOutcome(
   //    which is the one dissolution marker everything honors (deliberately NOT
   //    a `CountryStatus` value — see that field's doc).
   if (absorbedWasPlayable) {
-    await db
-      .collection<CountryGameState>("countryGameStates")
-      .updateOne(
-        { _id: survivor },
-        { $set: { enabledForPlayers: true, status: "active", updatedAt: new Date() } },
-        { upsert: true }
-      );
+    await countryGameStatesCollection(db).updateOne(
+      { _id: survivor },
+      { $set: { enabledForPlayers: true, status: "active", updatedAt: new Date() } },
+      { upsert: true }
+    );
   }
 
   await recordCountryEvent(db, {
@@ -478,9 +443,9 @@ async function creditReunificationToLeader(
   survivor: CountryId,
   currentTurn: number
 ): Promise<void> {
-  const gov = await db
-    .collection<GovernmentFormationHead>("governmentFormations")
-    .findOne({ _id: survivor });
+  const gov = await governmentFormationsCollection<GovernmentFormationHead>(db).findOne({
+    _id: survivor,
+  });
   if (!gov?.pmCharacterId) return;
   await adjustLeaderConfidence(
     db,
@@ -516,45 +481,35 @@ async function clearCabinetPointers(
   const nppIds = ministers.map((m) => m.nppId).filter(Boolean) as ObjectId[];
 
   if (characterIds.length > 0) {
-    await db
-      .collection("characters")
-      .updateMany(
-        { _id: { $in: characterIds }, "currentOffice.type": "parliamentaryCabinet" },
-        { $set: { currentOffice: null, updatedAt: now }, $unset: { cabinetPosition: "" } }
-      );
-    await db
-      .collection("characters")
-      .updateMany(
-        { _id: { $in: characterIds }, "currentOffice.type": { $ne: null } },
-        { $unset: { cabinetPosition: "" }, $set: { updatedAt: now } }
-      );
+    await charactersCollection<Document>(db).updateMany(
+      { _id: { $in: characterIds }, "currentOffice.type": "parliamentaryCabinet" },
+      { $set: { currentOffice: null, updatedAt: now }, $unset: { cabinetPosition: "" } }
+    );
+    await charactersCollection<Document>(db).updateMany(
+      { _id: { $in: characterIds }, "currentOffice.type": { $ne: null } },
+      { $unset: { cabinetPosition: "" }, $set: { updatedAt: now } }
+    );
   }
 
   if (nppIds.length > 0) {
-    await db
-      .collection("npps")
-      .updateMany(
-        { _id: { $in: nppIds }, "currentOffice.type": "parliamentaryCabinet" },
-        { $set: { currentOffice: null, updatedAt: now } }
-      );
+    await nppsCollection<Document>(db).updateMany(
+      { _id: { $in: nppIds }, "currentOffice.type": "parliamentaryCabinet" },
+      { $set: { currentOffice: null, updatedAt: now } }
+    );
   }
 }
 
 /**
  * Deal with what the per-region sweep cannot reach.
  *
- * `evacuateRegionPolitics` runs once per region and matches officials on
- * `state`, so anything held at NATIONAL level is invisible to it. The Federal
- * Republic's central bank chair carries no region at all, and would otherwise sit
- * for ever on a country that no longer exists. NPP-held cabinet seats have the
- * same shape: the region sweep only re-scopes the ones a resident PLAYER holds.
- *
- * Offices with a counterpart are carried; offices without one retire. Seat counts
- * are NOT rescaled here, because a national office that is not tied to a region
- * is not part of any region's delegation.
+ * `evacuateRegionPolitics` matches officials on `state`, so anything held at
+ * NATIONAL level is invisible to it, for example the central bank chair or
+ * NPP-held cabinet seats. Offices with a counterpart are carried; offices
+ * without one retire. Seat counts are not rescaled here: a national office not
+ * tied to a region is not part of any region's delegation.
  *
  * Runs after `mergeCountry`, so anything still pointing at the absorbed country
- * is genuinely a remnant rather than a region the sweep has not reached yet.
+ * is genuinely a remnant.
  */
 async function retireNationalRemnants(
   db: Db,
@@ -572,21 +527,20 @@ async function retireNationalRemnants(
   const { absorbed, survivor, rulingPartyId } = params;
   const now = new Date();
 
-  const remnants = (await db
-    .collection("electedOfficials")
-    .find({ countryId: absorbed })
-    .toArray()) as unknown as Array<{
-    _id: ObjectId;
-    officeType: string;
-    characterId?: ObjectId | null;
-    nppId?: ObjectId | null;
-    party?: string;
-  }>;
+  const remnants = await electedOfficialsCollection<Document>(db)
+    .find<{
+      _id: ObjectId;
+      officeType: string;
+      characterId?: ObjectId | null;
+      nppId?: ObjectId | null;
+      party?: string;
+    }>({ countryId: absorbed })
+    .toArray();
 
   for (const official of remnants) {
     const target = remapOffice(absorbed, survivor, official.officeType);
     if (target === null) {
-      await db.collection("electedOfficials").deleteOne({ _id: official._id });
+      await electedOfficialsCollection<Document>(db).deleteOne({ _id: official._id });
       if (official.characterId || official.nppId) {
         await captureOfficeTransition({
           db,
@@ -600,12 +554,10 @@ async function retireNationalRemnants(
       }
       continue;
     }
-    await db
-      .collection("electedOfficials")
-      .updateOne(
-        { _id: official._id },
-        { $set: { countryId: survivor, officeType: target, updatedAt: now } }
-      );
+    await electedOfficialsCollection<Document>(db).updateOne(
+      { _id: official._id },
+      { $set: { countryId: survivor, officeType: target, updatedAt: now } }
+    );
     if (official.characterId || official.nppId) {
       await captureOfficeTransition({
         db,
@@ -641,23 +593,25 @@ async function retireNationalRemnants(
   // defeated it.
   //
   // Read BEFORE the delete, because the rows are how the holders are found.
-  const ministers = (await db
-    .collection("cabinetMembers")
-    .find({ countryId: absorbed })
-    .toArray()) as unknown as Array<{
-    characterId?: ObjectId | null;
-    nppId?: ObjectId | null;
-    party?: string;
-    appointedTurn?: number;
-  }>;
-  await db.collection("cabinetMembers").deleteMany({ countryId: absorbed });
+  const ministers = await cabinetMembersCollection<Document>(db)
+    .find<{
+      characterId?: ObjectId | null;
+      nppId?: ObjectId | null;
+      party?: string;
+      appointedTurn?: number;
+    }>({ countryId: absorbed })
+    .toArray();
+  await cabinetMembersCollection<Document>(db).deleteMany({ countryId: absorbed });
   await clearCabinetPointers(db, ministers, now);
   for (const minister of ministers) {
     if (!minister.characterId && !minister.nppId) continue;
     await captureOfficeTransition({
       db,
-      officeType:
-        absorbed === "US" ? "usCabinet" : absorbed === "UK" ? "ukCabinet" : "parliamentaryCabinet",
+      officeType: countryHasFeature("usLib", absorbed)
+        ? "usCabinet"
+        : countryHasFeature("ukLib", absorbed)
+          ? "ukCabinet"
+          : "parliamentaryCabinet",
       partyId: minister.party,
       transitionType: "lost",
       selectionMethod: "removal",
@@ -668,18 +622,10 @@ async function retireNationalRemnants(
     });
   }
 
-  // THE WINNER'S GOVERNMENT STAYS. The winner is the shell, so its head of
-  // government is already seated and already holds the right office key; there is
-  // nothing to carry and nobody to displace. What has to happen is that the
-  // LOSING head of government stops holding an office in a country that no longer
-  // exists.
-  //
-  // This block used to run the other way, and had to: when the shell was the
-  // loser, the winner's leader had to be moved into it, their office key
-  // re-pointed, and the displaced incumbent stood down without catching the
-  // incoming leader in the same sweep. All of that machinery exists only because
-  // the wrong side was surviving.
-  const formations = db.collection<GovernmentFormationHead>("governmentFormations");
+  // The winner's government stays: the winner is the shell, so its head of
+  // government is already seated under the right office key. Only the losing
+  // head of government needs standing down from a country that no longer exists.
+  const formations = governmentFormationsCollection<GovernmentFormationHead>(db);
   const absorbedGov = await formations.findOne({ _id: absorbed });
 
   if (absorbedGov?.pmCharacterId || absorbedGov?.pmNppId) {
@@ -690,10 +636,13 @@ async function retireNationalRemnants(
     // field.
     const standDown = { $set: { currentOffice: null, updatedAt: now } };
     if (absorbedGov.pmCharacterId) {
-      await db.collection("characters").updateOne({ _id: absorbedGov.pmCharacterId }, standDown);
+      await charactersCollection<Document>(db).updateOne(
+        { _id: absorbedGov.pmCharacterId },
+        standDown
+      );
     }
     if (absorbedGov.pmNppId) {
-      await db.collection("npps").updateOne({ _id: absorbedGov.pmNppId }, standDown);
+      await nppsCollection<Document>(db).updateOne({ _id: absorbedGov.pmNppId }, standDown);
     }
   }
 
@@ -793,42 +742,29 @@ async function adoptChallengerSettlement(
 ): Promise<void> {
   const mappedRulingParty = params.rulingPartyId;
 
-  // The full one-party install, not just a `governmentType` copy: it also sets
-  // `rulingPartyId`, restores `opsVoteMultipliers` and `hasLeaderConfidenceModel`,
-  // marks the ruling party `ruling` and every other party `banned`, and seeds the
-  // regime-escalation row the per-turn driver needs.
+  // The winner's settlement, not a bare one-party install: the parties that
+  // CROSSED are the LOSER's map values (under post-migration numbers) and are
+  // outlawed. The survivor's own list (its ruling party plus tolerated bloc)
+  // stays approved. Read after migration so the map distinguishes the two sets.
   //
-  // ⚠️ NO `pendingPostConversionElection` IS WRITTEN, and that is deliberate.
-  // Every other route into a conversion schedules one; this one must not, because
-  // the whole point of the merge is that the carried chamber keeps sitting. A
-  // snap election here would dissolve the seats this pipeline just preserved.
-  // Do not "fix" the omission — `reunification.e2e.test.ts` asserts it.
-  // THE WINNER'S OWN SETTLEMENT, NOT A BARE ONE-PARTY INSTALL.
+  // NO `pendingPostConversionElection` is written, deliberately. Every other
+  // conversion route schedules one; here the carried chamber keeps sitting and a
+  // snap election would dissolve the seats this pipeline preserved.
+  // `reunification.e2e.test.ts` asserts this omission.
   //
-  // The parties that CROSSED are the LOSER's — the map's values are the absorbed
-  // country's, under their post-migration numbers — and those are the ones this
-  // settlement outlaws. The survivor's own list is everything else: its ruling
-  // party, and the bloc it tolerates beside it. The GDR's National Front (CDU-Ost,
-  // LDPD, NDPD, DBD) must stay `approved`, because a winner that dissolved its own
-  // coalition partners at the moment it won is not the settlement it fought for.
-  //
-  // Read AFTER the migration, so the survivor's list already contains both sets
-  // and the map is what tells them apart.
-  //
-  // `vacateBannedSeats` then empties the offices the outlawed parties hold. Left
-  // seated they would be most of a chamber in a state where they are illegal, and
-  // the ruling party would govern as a minority of benches nominally opposed to
-  // it. The seats are vacated, not reassigned: the chamber keeps its nominal size
-  // and those Laender stand empty until something fills them.
+  // `vacateBannedSeats` empties offices held by outlawed parties; seats are
+  // vacated, not reassigned, so the chamber keeps its nominal size.
   const carried = new Set(
     Object.values(params.partyIdMap)
       .map((id) => Number(id))
       .filter((id) => Number.isInteger(id))
   );
-  const survivorParties = (await db
-    .collection("politicalParties")
-    .find({ countryId: params.survivor }, { projection: { sequentialId: 1 } })
-    .toArray()) as unknown as Array<{ sequentialId?: number }>;
+  const survivorParties = await politicalPartiesCollection<Document>(db)
+    .find<{ sequentialId?: number }>(
+      { countryId: params.survivor },
+      { projection: { sequentialId: 1 } }
+    )
+    .toArray();
   const toleratedPartyIds = survivorParties
     .map((party) => party.sequentialId)
     .filter(
@@ -847,28 +783,23 @@ async function adoptChallengerSettlement(
 
   // THE UNIFIED STATE IS CALLED GERMANY.
   //
-  // Neither half's name survives a reunification: the GDR's shell would go on
-  // reading as "East Germany", and the Federal Republic's carries the era alias
-  // "West Germany" for as long as the GDR exists. Both name one half of a country
-  // that no longer has halves.
+  // Neither half's name survives reunification: the GDR's shell reads as "East
+  // Germany", and the Federal Republic's carries the "West Germany" era alias
+  // while the GDR exists. Both name half of a country that no longer has halves.
   //
-  // A DISPLAY override, not a rename. `COUNTRY_CONFIGS.name` is the identity some
-  // ninety synchronous call sites read and cannot change under them;
-  // `resolveCountryIdentity` consults this instead wherever a reader is told what
-  // the country is called. The absorbed side's compiled name is the right answer
-  // here only by coincidence of this pairing, so the unified name is taken from
-  // the ERA-NEUTRAL name of whichever shell is not the one that renders as a half.
+  // A DISPLAY override, not a rename: `COUNTRY_CONFIGS.name` is the identity
+  // synchronous call sites read and cannot change under them;
+  // `resolveCountryIdentity` consults this instead. The unified name comes from
+  // the era-neutral name of whichever shell does not render as a half.
   await updateCountryState(db, params.survivor, {
     displayNameOverride: UNIFIED_GERMANY_NAME,
     flagEmojiOverride: COUNTRY_CONFIGS[params.absorbed]?.flagEmoji ?? null,
   });
 
-  // The survivor inherits the absorbed side's catalogue, and needs it for the
-  // territory more than for the politics: the western Laender arrive already
+  // The survivor inherits the absorbed side's catalogue: its regions arrive
   // holding enacted programmes whose legislation types are scoped to a country
-  // that no longer exists. Left unscoped those regions read as having no current
-  // law at all -- the same defect a regional default law was added to prevent --
-  // and nothing they had passed could be amended or repealed.
+  // that no longer exists. Left unscoped, those regions read as having no current
+  // law, and nothing they passed could be amended or repealed.
   await rescopeLegislationCatalogue(db, params.absorbed, params.survivor);
 
   const preset = await getGameStatePresetOrDefault(db);
@@ -885,21 +816,16 @@ async function adoptChallengerSettlement(
 
   const westOrg = blocOrgFor(preset, "west");
   // ONE GERMANY, ONE ALLIANCE. `admitMember` only ever inserts, so without the
-  // withdrawal a surviving shell already in NATO — which DE is, in the 1953 era —
-  // comes out of reunification holding a row in BOTH poles. That is not a
-  // cosmetic duplicate: `loadBlocMembership` writes `out[countryId] = bloc` per
-  // row with no precedence, so which bloc a unified Germany reads as would come
-  // down to the order Mongo happened to return two documents in, and every
-  // military and alignment call downstream reads that map.
+  // withdrawal a surviving shell already in NATO comes out of reunification
+  // holding a row in BOTH poles. `loadBlocMembership` keys a country to
+  // whichever row it reads last, so a duplicate is not cosmetic: every military
+  // and alignment call downstream becomes a coin flip.
   //
-  // WEST FIRST, THEN EAST, and the order is load-bearing. A throw between the two
-  // is no longer permanent -- the actuation holds a LEASE now, and the next tick
-  // re-enters and finishes -- but it is still visible to whoever looks before that
-  // tick, and the withdrawal is not guaranteed to be the step that failed. Ending
-  // up in NEITHER pole is wrong, deterministic, and legible to an admin; ending up
-  // in BOTH is the non-deterministic read above, which resolves differently on
-  // successive reads and would not obviously be a fault at all. Fail toward the
-  // one somebody can see.
+  // WEST FIRST, THEN EAST is load-bearing. A throw between the two is visible
+  // until the next tick re-enters, but the withdrawal is not guaranteed to be
+  // the step that failed. Ending in NEITHER pole is deterministic and legible;
+  // ending in BOTH is the non-deterministic read above. Fail toward the one
+  // somebody can see.
   await leaveBloc(db, westOrg, pactOrg, {
     countryId: params.survivor,
     currentTurn: params.currentTurn,
@@ -915,22 +841,16 @@ async function adoptChallengerSettlement(
   }
 
   // The absorbed state is dissolved, and `mergeCountry` does not touch
-  // organisation rows — it moves regions and retires the shell. Left alone, the
-  // GDR stays on the Warsaw Pact roll for ever: `getMembers` keeps listing it and
-  // `loadBlocMembership` keeps answering "east" for a country that no longer
-  // exists. `votingMembers` already drops it (the retirement clears
-  // `enabledForPlayers`), so this is about the roll a player reads, and about not
-  // leaving a dissolved country holding a chair it can never vacate.
+  // organisation rows. Left alone, the GDR stays on the Warsaw Pact roll for
+  // ever: `getMembers` lists it and `loadBlocMembership` answers "east" for a
+  // country that no longer exists. This is about the roll a player reads, and
+  // about not leaving a dissolved country holding a chair it can never vacate.
   //
-  // Bloc organisations ONLY. A dissolved country lingering in COMECON or the UN is
-  // the same defect, but it belongs to `mergeCountry` — every merge has it, not
-  // just this one — and inventing a general cleanup here would hide it.
+  // Bloc organisations ONLY. A dissolved country lingering in COMECON or the
+  // UN is the same defect but belongs to `mergeCountry`, not here.
   //
-  // LAST, and after the admission, by the same argument as the ordering above: a
-  // throw here leaves the survivor correctly in the Pact with a stale GDR row
-  // beside it, which is untidy and which the resuming tick clears. Moving it
-  // earlier would trade that for a survivor in no alliance at all, which is the
-  // state the design has no name for.
+  // Runs LAST, after the admission: a throw here leaves the survivor correctly
+  // in the Pact with a stale row beside it, which the resuming tick clears.
   //
   // A Set because the two poles can resolve to the same organisation in a
   // misconfigured era, and withdrawing twice would write the history entry twice.
@@ -943,25 +863,18 @@ async function adoptChallengerSettlement(
 }
 
 /**
- * Take a country out of one bloc organisation, if it is actually in it.
+ * Remove a country from a bloc organisation it belongs to.
  *
- * `removeOrganizationMembership` and NOT `withdrawFromOrg`, which is the other
- * function in this codebase with this shape. That one is unreferenced, takes a
- * character it only uses for a history detail, terminates every affected
- * agreement outright, and never touches pending leadership elections. This one
- * is the path a real withdrawal already goes through — its own header says it is
- * shared by the two live leave routes "so both behave identically" — and it
- * additionally rejects leadership elections the leaver is standing in or
- * nominating, and tells the REMAINING members somebody left. A settlement that
- * dissolved a country should not leave it on a ballot inside the alliance it
- * just left.
+ * Uses `removeOrganizationMembership`, not the unreferenced `withdrawFromOrg`:
+ * this path terminates agreements appropriately, rejects leadership elections
+ * the leaver is standing in or nominating, and notifies the REMAINING members.
+ * A dissolved country must not remain on a ballot inside the alliance it left.
  *
- * The membership test is not belt-and-braces. Every side effect above fires
- * unconditionally, including a history entry written to each remaining member —
- * so calling this for a country that was never in the organisation would tell
- * the whole alliance about a withdrawal that never happened.
+ * The membership test is required: side effects fire unconditionally, including
+ * a history entry written to each remaining member, so leaving when never a
+ * member would announce a withdrawal that never happened.
  *
- * `skip` guards the degenerate era where one organisation carries both poles:
+ * `skip` guards the degenerate era where one organisation carries both poles;
  * withdrawing from the alliance we are about to join would undo the admission.
  */
 async function leaveBloc(

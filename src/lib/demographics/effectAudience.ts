@@ -1,14 +1,11 @@
-import { archetypeValuesToBuckets } from "./archetypeBucketMap";
 import { bucketLabel } from "./bucketLabels";
+import { isBucketTarget } from "./turnoutTarget";
 
 /**
  * How to describe a policy's approval effects to the player.
  *
- * Impacts arrive keyed on buckets already (`calculateShiftImpacts`), and older
- * stored effects still carry archetype ids, so every value is projected onto
- * the country's Layer-1 buckets before it is named. Describing effects in
- * buckets is what actually happens: the player reads the same groups the vote
- * engine moves.
+ * Impacts arrive keyed on buckets (`calculateShiftImpacts`); any other key is
+ * ignored. The player reads the same groups the vote engine moves.
  *
  * Effects are described in the country's own bucket vocabulary and language, so
  * a German bill reads "Hochschulabschluss" and a Japanese one
@@ -30,13 +27,13 @@ export function describeApprovalEffects(
   approvals: Record<string, number>,
   billCountry: string | undefined
 ): EffectAudienceRow[] {
-  const rows = Object.entries(archetypeValuesToBuckets(approvals, billCountry)).map(
-    ([id, value]) => ({
+  const rows = Object.entries(approvals)
+    .filter(([id]) => isBucketTarget(id))
+    .map(([id, value]) => ({
       id,
       label: bucketLabel(id, billCountry),
       value,
-    })
-  );
+    }));
 
   return rows
     .filter((r) => r.value !== 0 && Number.isFinite(r.value))

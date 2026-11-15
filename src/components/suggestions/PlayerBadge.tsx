@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { getCountryFlagUrlForEra } from "@/lib/constants";
+import { getCountryFlagUrlForEra } from "@/lib/constants/flags";
 import { useActivePreset } from "@/contexts/RegisteredCountriesContext";
 import { type CountryId } from "@/lib/constants/countriesCore";
 import { getCountryClientConfig } from "@/lib/constants/countryClientConfig";

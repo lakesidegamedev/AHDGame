@@ -8,8 +8,6 @@
  *   1. tally.candidateParties snapshot (set at tally init / resolution)
  *   2. ElectionCandidate.party (ballot / entry-time party on the candidacy row)
  *   3. optional live fallback (only for in-progress races)
- *
- * See #939.
  */
 
 export interface ResolveElectionPartyInput {

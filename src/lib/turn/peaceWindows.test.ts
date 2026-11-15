@@ -8,16 +8,10 @@ vi.mock("@/lib/military/resolveConflict", () => ({ resolveConflict }));
 
 import { resolvePeaceWindows } from "./peaceWindows";
 
-function mockDb(opts: {
-  conflictsEnabled?: boolean;
-  lapsed?: Array<Record<string, unknown>>;
-  claimModified?: number;
-}) {
+function mockDb(opts: { lapsed?: Array<Record<string, unknown>>; claimModified?: number }) {
   const updates: Array<{ filter: unknown; update: unknown }> = [];
   const db = {
-    collection: (name: string) => ({
-      findOne: async () =>
-        name === "gameState" ? { conflictsEnabled: opts.conflictsEnabled !== false } : null,
+    collection: () => ({
       find: () => ({ toArray: async () => opts.lapsed ?? [] }),
       updateOne: async (filter: unknown, update: unknown) => {
         updates.push({ filter, update });
@@ -36,12 +30,6 @@ const lapsedWar = {
 beforeEach(() => resolveConflict.mockClear());
 
 describe("resolvePeaceWindows", () => {
-  it("does nothing while the conflicts subsystem is off", async () => {
-    const { db } = mockDb({ conflictsEnabled: false, lapsed: [lapsedWar] });
-    expect(await resolvePeaceWindows(db, 100)).toEqual({ resolved: 0 });
-    expect(resolveConflict).not.toHaveBeenCalled();
-  });
-
   it("white-peaces a lapsed window for the side that won the ground", async () => {
     const { db } = mockDb({ lapsed: [lapsedWar] });
     expect(await resolvePeaceWindows(db, 100)).toEqual({ resolved: 1 });

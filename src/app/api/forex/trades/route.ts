@@ -7,6 +7,8 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
 import type { TradeHistoryEntry } from "@/lib/db/types/tradeHistory";
 import type { GameState } from "@/lib/db/types";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { tradeHistoryCollection } from "@/lib/db/repositories/tradeHistory";
 
 export async function GET() {
   try {
@@ -17,7 +19,7 @@ export async function GET() {
 
     const db = await getDb();
 
-    const gs = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+    const gs = await gameStateCollection(db).findOne({ _id: "current" });
     const currentTurn = gs?.currentTurn ?? 0;
     const oldestTurn = Math.max(0, currentTurn - 48);
 
@@ -34,8 +36,7 @@ export async function GET() {
       sellerName: string | null;
     }
 
-    const trades = await db
-      .collection<TradeHistoryEntry>("tradeHistory")
+    const trades = await tradeHistoryCollection(db)
       .aggregate<TradeWithNames>([
         { $match: { turn: { $gte: oldestTurn } } },
         { $sort: { createdAt: -1 } },

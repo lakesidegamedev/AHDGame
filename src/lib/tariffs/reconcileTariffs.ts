@@ -1,9 +1,12 @@
 import { ObjectId, type AnyBulkWriteOperation, type Db, type Filter } from "mongodb";
 import type { Bill, TariffProvision } from "@/lib/db/types";
-import type { FederalBudget, Tariff } from "@/lib/db/types";
+import type { Tariff } from "@/lib/db/types";
 import { applyTariffProvision, tariffProvisionFilter } from "@/lib/tariffs/tariffEffects";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { getNationalBudgetId } from "@/lib/bonds/sovereign";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { billsCollection } from "@/lib/db/repositories/bills";
+import { tariffsCollection } from "@/lib/db/repositories/tariffs";
 
 const BASELINE_TARIFF_COUNTRIES = [
   COUNTRY_CONFIGS.US.id,
@@ -32,20 +35,20 @@ async function ensureBaselineEconomyWideTariffs(db: Db, countryId?: CountryId): 
     if (!BASELINE_TARIFF_COUNTRIES.includes(candidateCountryId)) continue;
     const baselineCountryId = candidateCountryId as BaselineTariffCountryId;
 
-    const existingTariff = await db.collection<Tariff>("tariffs").findOne({
+    const existingTariff = await tariffsCollection(db).findOne({
       countryId: baselineCountryId,
       scopeType: "economy_wide",
     });
     if (existingTariff) continue;
 
-    const budget = await db
-      .collection<FederalBudget>("federalBudget")
-      .findOne({ _id: getNationalBudgetId(baselineCountryId) });
+    const budget = await federalBudgetCollection(db).findOne({
+      _id: getNationalBudgetId(baselineCountryId),
+    });
     const rate = budget?.taxRates?.tariffs;
     if (typeof rate !== "number") continue;
 
     const now = new Date();
-    await db.collection<Tariff>("tariffs").updateOne(
+    await tariffsCollection(db).updateOne(
       {
         countryId: baselineCountryId,
         scopeType: "economy_wide",
@@ -91,8 +94,7 @@ export async function reconcileSignedTariffBills(db: Db, countryId?: CountryId):
     query.countryId = countryId;
   }
 
-  const signedBills = await db
-    .collection<Bill>("bills")
+  const signedBills = await billsCollection(db)
     .find(query)
     .sort({ enactedAt: 1, updatedAt: 1, _id: 1 })
     .toArray();
@@ -101,7 +103,7 @@ export async function reconcileSignedTariffBills(db: Db, countryId?: CountryId):
   const flush = async () => {
     if (pending.length === 0) return;
     const operations = pending.splice(0);
-    await db.collection<Tariff>("tariffs").bulkWrite(operations, { ordered: true });
+    await tariffsCollection(db).bulkWrite(operations, { ordered: true });
   };
 
   for (const bill of signedBills) {

@@ -7,27 +7,12 @@
  */
 
 /**
- * US party registration + organization seed for the 2027-default preset.
+ * US party registration + organization seed for the 2027-default preset,
+ * projected from 2022 registration data and midterm results.
  *
- * Anchored to 2022 state voter-registration data + 2022 midterm election
- * results. The 2027 projection retains these documented modern-era shifts:
- *
- *   - Independent/unaffiliated registration growth: independents up +1 to +2 pts
- *     in most states, reflecting continued decline of formal party registration.
- *   - Florida registration flip: by Nov 2022, Republicans held a ~600k-voter
- *     registration lead in FL. DEM reg falls to ~29%, REP rises to ~40%.
- *   - Nevada: Dems retain slight registration lead but narrowed (no-party
- *     registrants now the single largest bloc).
- *   - AZ: Republicans narrowly trail Dems in reg by 2023; independents large.
- *   - TX: remains no-registration state; org/lean reflects 2022 outcome.
- *   - GA: competitive with slight R org edge reflecting continued R gains.
- *   - Strong-R states: Republican org/reg up slightly as realignment continued.
- *   - VA/CO: solidified Dem lean; lean categories nudged toward solidD.
- *   - National unregistered: slight uptick (+1) in several Southern states.
- *
- * US-only: non-US countries fall back to their 2019 lanes on a 2023 reset.
- *
- * Curated from NCSL/state SoS 2022 registration data and 2022 election results.
+ * Shifts vs 2019: independents up 1 to 2 pts; FL flipped to R registration
+ * lead; NV/GA/AZ competitive; TX has no registration. Non-US countries fall
+ * back to their 2019 lanes on a 2023 reset.
  */
 
 import type { StateRegistrationSeed } from "@/lib/seeds/registration/registrationLanes";

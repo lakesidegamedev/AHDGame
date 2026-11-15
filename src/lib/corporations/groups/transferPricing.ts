@@ -1,33 +1,17 @@
 /**
- * C5 — transfer pricing.
+ * Transfer pricing within a corporate group.
  *
- * Supply agreements already carry a `pricePremium`: an agreed offset from the
- * market price, bounded to ±`SUPPLY_AGREEMENT_PRICE_BAND`. Between two
- * unrelated corporations that is a negotiation, and the band is what stops it
- * becoming a disguised gift.
+ * Supply agreements carry a `pricePremium`, bounded to ±`SUPPLY_AGREEMENT_PRICE_BAND`.
+ * Between unrelated corporations the band keeps it a negotiation; between members
+ * of the same group both sides share an owner, so the premium is a dial for which
+ * corporation books profit and, across borders, which treasury collects tax.
  *
- * Between two members of the SAME GROUP it is something else. Both sides have
- * the same owner, so "agreement" is not a constraint at all, and the premium
- * becomes a dial for deciding which corporation books the profit. When those
- * corporations sit in different countries, that is a dial for deciding which
- * TREASURY collects the tax.
+ * Deterministic by design: exposure accrues on the agreement and the audit fires
+ * when it crosses a published threshold, so aggressive pricing is a calculable
+ * risk rather than a slot machine.
  *
- * That has been possible since supply agreements shipped. What was missing is
- * anybody noticing.
- *
- * ## Why this is deterministic
- *
- * No dice. Exposure accrues on the agreement, and the audit fires when the
- * accrued amount crosses a published threshold. A player can compute exactly
- * how long a given position survives, which makes aggressive pricing a
- * calculated risk rather than a slot machine. Same reasoning as the C3 review
- * bands and the B4 resolve clock.
- *
- * ## Why same-country pricing is ignored
- *
- * Shifting profit between two corporations taxed by the SAME treasury moves no
- * tax base — and C4 group relief already nets the two positions against each
- * other. There is nothing to audit.
+ * Same-country pricing is ignored: shifting profit between corporations taxed by
+ * the same treasury moves no tax base, and group relief already nets the two.
  */
 
 /** Cumulative shifted base (₳) on one agreement before the authority acts. */

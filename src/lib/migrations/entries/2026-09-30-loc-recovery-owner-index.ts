@@ -1,4 +1,5 @@
 import type { Migration } from "../types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /** Index only: pending LOC owner recovery reads no unrelated character payloads. */
 export const migration: Migration = {
@@ -8,12 +9,10 @@ export const migration: Migration = {
   idempotent: true,
   execute: async (db, ctx) => {
     if (!ctx.dryRun)
-      await db
-        .collection("characters")
-        .createIndex(
-          { "pendingLocSettlement.key": 1 },
-          { name: "characters_pendingLocSettlement_key", sparse: true }
-        );
+      await charactersCollection(db).createIndex(
+        { "pendingLocSettlement.key": 1 },
+        { name: "characters_pendingLocSettlement_key", sparse: true }
+      );
     return {
       documentsScanned: 0,
       documentsUpdated: 0,

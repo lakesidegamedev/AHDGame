@@ -2,26 +2,15 @@
  * Regional default law for new-generation `both` laws.
  *
  * A `both` law may be enacted nationally OR supplemented by a region. The
- * national side seeds a `statePolicies` row per law; the regional side seeded
- * nothing, because `seedPoliticalLegislationBaseline` only walked
- * `getRegionalCatalog()` (the DD Land sidecars). Meanwhile
- * `projectLawToLegislationType` passes `allowedScope: "both"` straight through
- * and `/api/game/legislation-types?scope=state` offers exactly that, so every
- * `both` law was proposable in a region that had no current law for it.
+ * regional side seeded nothing, so every `both` law was proposable in a
+ * region that had no current law for it, blanking the fiscal comparison
+ * and political-metric chips (`LawProvisionComparison` bails on
+ * `currentIndex === undefined`).
  *
- * That blanks more than the "Current law" box. `LawProvisionComparison` bails
- * on `currentIndex === undefined`, taking the fiscal comparison AND the
- * political-metric chips with it, which is what a player sees as "this regional
- * infrastructure bill has no metrics".
- *
- * THE LEVEL IS 0, AND NOT A JUDGEMENT CALL. `getEnactedLevel` already states
- * the engine's rule — "region reads without a record stay at 0 until seeded or
- * enacted through play" — and `seedPoliticalMetricsResiduals` composes day-one
- * equilibrium from the national law book plus `REGIONAL_SUPPLEMENT_FACTOR` ×
- * the *sidecar* baselines only. Seeding these rows at 0 therefore changes
- * nothing the dynamics engine reads; seeding them at `baselineLevelFor` would
- * double-count every `both` law into every region's target, which is a balance
- * change needing its own issue and a simulation report.
+ * The level is 0 by engine rule: `getEnactedLevel` treats a region with no
+ * record as 0, and day-one equilibrium composes from the national law book
+ * plus sidecar baselines only. Seeding at `baselineLevelFor` would
+ * double-count every `both` law into every region's target.
  */
 
 import { getCatalog, getLaw } from "./catalog";
@@ -49,22 +38,18 @@ export function regionalDefaultLaws(countryId: string, year?: number): Political
 }
 
 /**
- * The level a law sits at in a region with no `statePolicies` row, or
+ * The level a law sits at in a region with no statePolicies row, or
  * `undefined` when the id is not a law this rule covers.
  *
- * The read-path half of the fix, so a region added after the seed ran — or a
- * world seeded before the backfill migration — still renders a current law
- * instead of a blank provision. Callers apply it only at region scope; at
- * national scope a missing row means something else is wrong and should not be
- * papered over.
+ * Read-path fallback so a region added after seeding, or a world seeded before
+ * the backfill, still renders a current law instead of a blank provision.
+ * Apply only at region scope; at national scope a missing row means something
+ * else is wrong and should not be papered over.
  *
- * Deliberately NOT narrowed by country. Law ids are globally unique across the
- * four catalogs — `getProjectedPoliticalLegislationTypes`' test asserts the
- * projected `_id` set is as large as the catalog itself — so the id alone
- * already identifies the country. A country parameter could only ever REJECT a
- * correct answer: `resolveBillCountryId` falls back to "US" for a legacy bill it
- * cannot place, which would silently drop a RU/UK/DD region back to the ladder
- * centre. It buys no protection and adds a failure mode.
+ * Deliberately not narrowed by country: law ids are globally unique across
+ * the four catalogs, so the id alone identifies the country. A country filter
+ * could only wrongly reject: `resolveBillCountryId` falls back to "US" for a
+ * legacy bill it cannot place, silently dropping a RU/UK/DD region.
  */
 export function regionalDefaultLevel(lawId: string): number | undefined {
   const law = getLaw(lawId);

@@ -2,11 +2,15 @@ import { getAuthUserWithCharacter } from "@/lib/auth";
 import { getDb } from "@/lib/mongodb";
 import { redirect } from "next/navigation";
 import { ObjectId, type Db } from "mongodb";
-import type { Campaign, Character, Election, PoliticalParty } from "@/lib/db/types";
+import type { Campaign, Election, PoliticalParty } from "@/lib/db/types";
 import { isCampaignEligibleElection } from "@/lib/campaigns/isCampaignEligible";
 import Link from "next/link";
 import { resolveCampaignRedirect } from "@/lib/campaigns/queries/campaignRedirect";
 import { standaloneCampaignHref } from "@/lib/campaignManager/links";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
 
 /** The viewer's campaign on its race page in Campaign mode, else the standalone page. */
 async function campaignDestination(db: Db, campaignId: string) {
@@ -26,8 +30,7 @@ export default async function CampaignPage() {
   // Multi-profile aware: find every character this user owns so campaigns on
   // any of their characters (not just the active one) resolve. Includes retired
   // characters — a presidential run from a prior life still surfaces the manager.
-  const userCharacters = await db
-    .collection<Character>("characters")
+  const userCharacters = await charactersCollection(db)
     .find({ userId: userOid }, { projection: { _id: 1 } })
     .toArray();
   const characterOids = userCharacters.map((c) => c._id);
@@ -37,8 +40,7 @@ export default async function CampaignPage() {
   // US senate / governor / house / state-senate; the redirect prefers the
   // highest-priority eligible race (president > governor > senate > house >
   // stateSenate) per typical career importance.
-  const candidateCampaigns = await db
-    .collection<Campaign>("campaigns")
+  const candidateCampaigns = await campaignsCollection(db)
     .find(
       {
         $or: [
@@ -54,8 +56,7 @@ export default async function CampaignPage() {
 
   if (candidateCampaigns.length > 0) {
     const electionIds = candidateCampaigns.map((c) => c.electionId);
-    const eligibleElections = await db
-      .collection<Election>("elections")
+    const eligibleElections = await electionsCollection(db)
       .find({ _id: { $in: electionIds } })
       .toArray();
     const target = eligibleElections.find((e) => isCampaignEligibleElection(e));
@@ -73,14 +74,12 @@ export default async function CampaignPage() {
   // presidential candidate routes to that campaign even when not nominee/manager.
   // Mirrors the visibility check in /api/client-nav.
   if (characterOids.length > 0) {
-    const presElections = await db
-      .collection<Election>("elections")
+    const presElections = await electionsCollection(db)
       .find({ electionType: "president", status: "active" })
       .project({ _id: 1, countryId: 1 })
       .toArray();
     if (presElections.length > 0) {
-      const officerParties = await db
-        .collection<PoliticalParty>("politicalParties")
+      const officerParties = await politicalPartiesCollection(db)
         .find({
           countryId: { $in: presElections.map((e) => e.countryId) },
           $or: [
@@ -105,9 +104,7 @@ export default async function CampaignPage() {
             electionId: { $in: electionByCountry.get(p.countryId)! },
           }));
         if (orClauses.length > 0) {
-          const officerCampaign = await db
-            .collection<Campaign>("campaigns")
-            .findOne({ $or: orClauses });
+          const officerCampaign = await campaignsCollection(db).findOne({ $or: orClauses });
           if (officerCampaign) {
             redirect(await campaignDestination(db, officerCampaign._id.toString()));
           }

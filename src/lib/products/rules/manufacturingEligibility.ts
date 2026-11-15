@@ -71,7 +71,9 @@ export function legalManufacturingProductKinds(
         options.currentYear,
         true
       );
-      if (availability.locked) continue;
+      // A sunset recipe is closed to new sites, but a plant already on it
+      // keeps running and keeps making its products.
+      if (availability.locked && availability.reason !== "sunset") continue;
     }
     for (const kind of MANUFACTURING_PRODUCT_KINDS) {
       if (
@@ -119,24 +121,23 @@ export function isLegalManufacturingProductForPlant(
   const strategy = SECTOR_STRATEGIES[operatingType as keyof typeof SECTOR_STRATEGIES]?.find(
     (candidate) => candidate.id === (plant.strategyId ?? "standard")
   );
-  if (
-    strategy &&
-    options?.techTreesEnabled &&
-    options.currentYear != null &&
-    getStrategyAvailability(
-      {
-        type: operatingType as OperatingSectorType,
-        industryModel: plant.industryModel,
-        unlockedTechNodeIds: options.unlockedTechNodeIds
-          ? [...options.unlockedTechNodeIds]
-          : undefined,
-        techDecadeLane: options.techDecadeLane,
-      },
-      strategy,
-      options.currentYear,
-      true
-    ).locked
-  ) {
+  const availability =
+    strategy && options?.techTreesEnabled && options.currentYear != null
+      ? getStrategyAvailability(
+          {
+            type: operatingType as OperatingSectorType,
+            industryModel: plant.industryModel,
+            unlockedTechNodeIds: options.unlockedTechNodeIds
+              ? [...options.unlockedTechNodeIds]
+              : undefined,
+            techDecadeLane: options.techDecadeLane,
+          },
+          strategy,
+          options.currentYear,
+          true
+        )
+      : null;
+  if (availability?.locked && availability.reason !== "sunset") {
     return false;
   }
   return (

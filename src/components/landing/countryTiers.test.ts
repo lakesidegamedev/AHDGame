@@ -24,7 +24,10 @@ import {
   getWorldEntityPresetManifest,
   WORLD_ENTITY_MANIFESTS,
 } from "@/lib/world/worldEntityManifest";
-import { getWorldEntityMapSnapshot } from "@/lib/world/worldEntityMap";
+import {
+  backgroundMacroFeatureIdsForPreset,
+  getWorldEntityMapSnapshot,
+} from "@/lib/world/worldEntityMap";
 
 const PLAYER = { enabledForPlayers: true, economyPreview: false };
 const ECON = { enabledForPlayers: false, economyPreview: true };
@@ -189,6 +192,78 @@ describe("1953 landing tiers", () => {
   });
 });
 
+describe("2027 landing tiers", () => {
+  const lookup = lookupFor("2027");
+  const tierOf = (featureId: string): CountryTier => tierForFeature(lookup, featureId);
+  const macro = new Set(backgroundMacroFeatureIdsForPreset("2027-default"));
+
+  it("colours the United States and Canada as Player Nations", () => {
+    expect(tierOf("840")).toBe("player");
+    expect(tierOf("124")).toBe("player");
+  });
+
+  it("colours the computer-run full simulations as Economic Powers", () => {
+    expect(tierOf("826")).toBe("economic"); // United Kingdom
+    expect(tierOf("276")).toBe("economic"); // Germany
+    expect(tierOf("392")).toBe("economic"); // Japan
+    expect(tierOf("156")).toBe("economic"); // China
+  });
+
+  it("leaves the sixteen background countries out of the named tiers", () => {
+    // Ireland, Brazil, Nigeria, Russia, Poland, Hungary, Romania, Bulgaria, France,
+    // Italy, Spain, Sweden, Turkey, Austria, Finland, Greece.
+    const background = [
+      "372",
+      "076",
+      "566",
+      "643",
+      "616",
+      "348",
+      "642",
+      "100",
+      "250",
+      "380",
+      "724",
+      "752",
+      "792",
+      "040",
+      "246",
+      "300",
+    ];
+    expect(background).toHaveLength(16);
+    for (const id of background) {
+      expect(tierOf(id), id).toBe("background");
+      // The globe paints them as simulated land, apart from unsimulated grey.
+      expect(macro.has(id), id).toBe(true);
+    }
+  });
+
+  it("names exactly two player, four economic and no battleground features", () => {
+    // bi: overlay keys duplicate their owners, so count real map features only.
+    const real = [...lookup.entries()].filter(([key]) => !key.startsWith("bi:"));
+    expect(real.filter(([, tier]) => tier === "player")).toHaveLength(2);
+    expect(real.filter(([, tier]) => tier === "economic")).toHaveLength(4);
+    expect(real.filter(([, tier]) => tier === "battleground")).toHaveLength(0);
+  });
+
+  it("matches the landing roster to the manifest tiers", () => {
+    const manifest = getWorldEntityPresetManifest("2027-default");
+    const legacy = new Map(manifest.entries.map((e) => [e.entityId, e.legacyAccess]));
+    const snapshot = getWorldEntityMapSnapshot("2027-default");
+    for (const [featureId, item] of Object.entries(snapshot.byFeatureId)) {
+      const expected =
+        legacy.get(item.entityId) === "player"
+          ? "player"
+          : item.simulationTier === "full-autonomous"
+            ? "economic"
+            : item.simulationTier === "background-macro"
+              ? "background"
+              : undefined;
+      if (expected) expect(tierOf(featureId), featureId).toBe(expected);
+    }
+  });
+});
+
 describe("roster tables stay in sync with the world entity manifest", () => {
   // The rosters are materialised copies so the landing bundle does not import
   // the manifest. These tests are the reason that copy is safe.
@@ -235,6 +310,9 @@ describe("roster tables stay in sync with the world entity manifest", () => {
     expect(battlegroundFeatureIdsForEra("2023")).toEqual([]);
     expect(economicPowerFeatureIdsForEra("2023")).toBe(
       ECONOMIC_POWER_FEATURE_IDS_BY_PRESET["2023-default"]
+    );
+    expect(economicPowerFeatureIdsForEra("2027")).toBe(
+      ECONOMIC_POWER_FEATURE_IDS_BY_PRESET["2027-default"]
     );
     expect(economicPowerFeatureIdsForEra("2099")).toEqual([]);
   });

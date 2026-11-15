@@ -2,7 +2,7 @@
 
 import React from "react";
 import { useGameClock } from "@/contexts/useGameClock";
-import { ELECTION_DAY_TURNS } from "@/lib/electionEngine/voteCalculations";
+import { ELECTION_DAY_TURNS } from "@/lib/elections/engine/voteCalculations";
 import type { ElectionDetail } from "./ElectionDetailTypes";
 
 /**

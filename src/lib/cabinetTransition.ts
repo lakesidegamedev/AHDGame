@@ -7,14 +7,22 @@ import { IE_CABINET_POSITIONS } from "@/lib/constants/ieCabinet";
 import { CN_CABINET_POSITIONS } from "@/lib/constants/cnCabinet";
 import { NG_CABINET_POSITIONS } from "@/lib/constants/ngCabinet";
 import { SCO_CABINET_POSITIONS } from "@/lib/constants/scoCabinet";
+import { getCabinetPositions } from "@/lib/constants/cabinetPositions";
 import { WAL_CABINET_POSITIONS } from "@/lib/constants/walCabinet";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { createNotifications, type NotificationInput } from "@/lib/notifications";
 import type { CabinetMember, CabinetNomination } from "@/lib/db/types/cabinet";
-import type { Character, ElectedOfficial } from "@/lib/db/types";
+import type { ElectedOfficial } from "@/lib/db/types";
 import type { OfficeType } from "@/lib/db/types/character";
 import { cabinetOfficeTypeForCountry } from "@/lib/actions/officeActionBonus";
 import { getCabinetEligibleOfficeTypes } from "@/lib/legislature/chamberOfficeType";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { cabinetMembersCollection } from "@/lib/db/repositories/cabinetMembers";
+import { cabinetNominationsCollection } from "@/lib/db/repositories/cabinetNominations";
+import { cabinetSettingsCollection } from "@/lib/db/repositories/cabinetSettings";
+import type { Document } from "mongodb";
+import { ministerialOrdersCollection } from "@/lib/db/repositories/ministerialOrders";
 
 /**
  * For the cleared cabinet holders, (1) restore each holder's `currentOffice` so
@@ -46,12 +54,10 @@ export async function notifyAndRestoreClearedHolders(
   const cabinetType = cabinetOfficeTypeForCountry(countryId);
   const eligibleOfficeTypes = getCabinetEligibleOfficeTypes(countryId);
   const [chars, seats] = await Promise.all([
-    db
-      .collection<Character>("characters")
+    charactersCollection(db)
       .find({ _id: { $in: memberIds } }, { projection: { _id: 1, userId: 1, currentOffice: 1 } })
       .toArray(),
-    db
-      .collection<ElectedOfficial>("electedOfficials")
+    electedOfficialsCollection(db)
       .find({
         characterId: { $in: memberIds },
         countryId,
@@ -81,13 +87,15 @@ export async function notifyAndRestoreClearedHolders(
             }
           : {}),
       } as OfficeType;
-      await db
-        .collection<Character>("characters")
-        .updateOne({ _id: c._id }, { $set: { currentOffice: restoreOffice, updatedAt: now } });
+      await charactersCollection(db).updateOne(
+        { _id: c._id },
+        { $set: { currentOffice: restoreOffice, updatedAt: now } }
+      );
     } else {
-      await db
-        .collection<Character>("characters")
-        .updateOne({ _id: c._id }, { $unset: { currentOffice: "" }, $set: { updatedAt: now } });
+      await charactersCollection(db).updateOne(
+        { _id: c._id },
+        { $unset: { currentOffice: "" }, $set: { updatedAt: now } }
+      );
     }
   }
 
@@ -124,6 +132,7 @@ export async function clearCabinetOnTransition(db: Db, countryId: CountryId): Pr
     NG: NG_CABINET_POSITIONS,
     SCO: SCO_CABINET_POSITIONS,
     WAL: WAL_CABINET_POSITIONS,
+    QC: getCabinetPositions("QC"),
   };
   const positions = positionsByCountry[countryId];
   if (!positions) return; // Country has no cabinet positions defined yet
@@ -133,14 +142,12 @@ export async function clearCabinetOnTransition(db: Db, countryId: CountryId): Pr
 
   if (countryId === COUNTRY_CONFIGS.US.id) {
     // Handle US cabinet (confirmation-based)
-    const members = await db.collection<CabinetMember>("cabinetMembers").find(filter).toArray();
-    await db.collection<CabinetMember>("cabinetMembers").deleteMany(filter);
-    await db
-      .collection<CabinetNomination>("cabinetNominations")
-      .updateMany(
-        { ...filter, status: { $in: ["proposed", "active"] } },
-        { $set: { status: "withdrawn", updatedAt: new Date() } }
-      );
+    const members = await cabinetMembersCollection(db).find(filter).toArray();
+    await cabinetMembersCollection(db).deleteMany(filter);
+    await cabinetNominationsCollection(db).updateMany(
+      { ...filter, status: { $in: ["proposed", "active"] } },
+      { $set: { status: "withdrawn", updatedAt: new Date() } }
+    );
 
     // Restore office state for the cleared secretaries and notify the players.
     // NPP-held seats carry a null characterId: no player to notify, no office
@@ -155,24 +162,22 @@ export async function clearCabinetOnTransition(db: Db, countryId: CountryId): Pr
     // cabinetMembers collection is the single source of truth for seat holders,
     // so a transition clears the country's seats there and restores/notifies the
     // affected players.
-    const members = await db
-      .collection<CabinetMember>("cabinetMembers")
+    const members = await cabinetMembersCollection(db)
       .find({ ...filter, countryId })
       .toArray();
 
-    await db.collection<CabinetMember>("cabinetMembers").deleteMany({ ...filter, countryId });
+    await cabinetMembersCollection(db).deleteMany({ ...filter, countryId });
 
-    await db
-      .collection<CabinetNomination>("cabinetNominations")
-      .updateMany(
-        { ...filter, countryId, status: { $in: ["proposed", "active"] } },
-        { $set: { status: "withdrawn", updatedAt: new Date() } }
-      );
+    await cabinetNominationsCollection(db).updateMany(
+      { ...filter, countryId, status: { $in: ["proposed", "active"] } },
+      { $set: { status: "withdrawn", updatedAt: new Date() } }
+    );
 
-    await db.collection("cabinetSettings").deleteMany({ countryId });
-    await db
-      .collection("ministerialOrders")
-      .updateMany({ countryId, active: true }, { $set: { active: false } });
+    await cabinetSettingsCollection<Document>(db).deleteMany({ countryId });
+    await ministerialOrdersCollection<Document>(db).updateMany(
+      { countryId, active: true },
+      { $set: { active: false } }
+    );
 
     // Restore office state and notify the player holders. NPP-held seats carry a
     // null characterId — they have no player to notify and no office to restore.

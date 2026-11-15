@@ -6,6 +6,9 @@ import { writeSplitMetricsBulk } from "@/lib/macroMetrics/split";
 import { makeEasternBlocBaselines } from "@/lib/seeds/shared/easternBlocMetrics";
 import { SUCCESSOR_STATE_METRICS_1991 } from "@/lib/seeds/reference/successorMetrics1991";
 import { NATIONAL_SCOPE_IDS } from "@/lib/constants/nationalScope";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { stateBaselinesCollection } from "@/lib/db/repositories/stateBaselines";
+import { stateMetricsCollection } from "@/lib/db/repositories/stateMetrics";
 
 /** Obsolete regional rows left by earlier seed passes, excluding national summaries. */
 function obsoleteSuccessorMetricFilter1991(): Filter<MacroMetricsDoc> {
@@ -29,13 +32,13 @@ export async function seedSuccessorMetrics1991(
   if (preset !== "1991-default") return;
   const ids = SUCCESSOR_STATE_METRICS_1991.map((metric) => metric._id);
   if (reset) {
-    await db.collection<MacroMetricsDoc>("macroMetrics").deleteMany({ _id: { $in: ids } });
-    await db.collection<StateMetrics>("stateMetrics").deleteMany({ _id: { $in: ids } });
-    await db.collection<StateMetricBaseline>("stateBaselines").deleteMany({ _id: { $in: ids } });
+    await macroMetricsCollection<MacroMetricsDoc>(db).deleteMany({ _id: { $in: ids } });
+    await stateMetricsCollection(db).deleteMany({ _id: { $in: ids } });
+    await stateBaselinesCollection(db).deleteMany({ _id: { $in: ids } });
   }
   await writeSplitMetricsBulk(db, SUCCESSOR_STATE_METRICS_1991);
   const baselines = makeEasternBlocBaselines(SUCCESSOR_STATE_METRICS_1991);
-  await db.collection<StateMetricBaseline>("stateBaselines").bulkWrite(
+  await stateBaselinesCollection(db).bulkWrite(
     baselines.map(({ _id, ...baseline }) => ({
       updateOne: { filter: { _id }, update: { $set: baseline }, upsert: true },
     }))
@@ -43,9 +46,9 @@ export async function seedSuccessorMetrics1991(
   // Earlier packs can seed older aggregate ids (HU_HUN, PL_CEN, UKR, etc.).
   // Upserting the detailed 1991 vectors does not retire those extra rows.
   // Purge only after the complete replacement vectors have been persisted.
-  const removed = await db
-    .collection<MacroMetricsDoc>("macroMetrics")
-    .deleteMany(obsoleteSuccessorMetricFilter1991());
+  const removed = await macroMetricsCollection<MacroMetricsDoc>(db).deleteMany(
+    obsoleteSuccessorMetricFilter1991()
+  );
   if (removed.deletedCount > 0) {
     log(`Removed ${removed.deletedCount} obsolete January 1991 regional macro rows`);
   }

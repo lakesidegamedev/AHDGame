@@ -7,23 +7,17 @@ import { AREA_VALUES, BADGE_VALUES } from "./types";
 /**
  * Changelog entry filenames.
  *
- * An entry file used to be named for a version, and the generator handed out
- * the next unused patch number. That made a version a per-pull-request unit:
- * 313 entries reached 1.4.63 in six weeks, 193 of them inside one minor line,
- * with dozens of files sharing a patch number and a topic suffix to tell them
- * apart. Nobody could say what "1.4.38" was, because it was not anything: it
- * was six unrelated pull requests that happened to merge on the same afternoon.
- *
- * A version is now a release, and only the release script mints one:
+ * A version is a release, not a per-pull-request unit; only the release
+ * script mints one:
  *
  *   content/changelog/unreleased/<topic>.md   one per pull request, no version
- *   content/changelog/dev/<version>.md        one per release, written by the release script
+ *   content/changelog/dev/<version>.md        one per release, script-written
  *   content/changelog/public/<version>.md     one per release, curated
  *
- * The unreleased note carries no version field at all, so there is nothing to
- * guess, nothing to renumber, and no add/add conflict between branches: two
- * branches write two different topics. `npm run changelog:release` folds every
- * note into one dev post, bumps package.json, and empties the directory.
+ * Unreleased notes carry no version field, so two branches write two
+ * different topics: nothing to guess, nothing to renumber, no add/add
+ * conflicts. `npm run changelog:release` folds every note into one dev post,
+ * bumps package.json, and empties the directory.
  */
 
 /** `1.2.3`, and nothing else: a release entry's stem is its version. */

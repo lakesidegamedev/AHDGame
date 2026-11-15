@@ -10,6 +10,7 @@ import {
   resolveOrganizationUnits,
   type OrganizationBucketResult,
 } from "@/lib/parties/rules/organizationBucket";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 export interface BuildOrganizationBucketInput {
   countryId: CountryId;
@@ -42,7 +43,7 @@ export async function buildOrganizationBucket(
   db: Db,
   input: BuildOrganizationBucketInput
 ): Promise<BuildOrganizationBucketResult | null> {
-  const collection = db.collection<StatePartyOrg>("statePartyOrg");
+  const collection = statePartyOrgCollection(db);
 
   // Convert legacy percentage-only rows as one regional snapshot so their
   // starting unit scale accounts for the permanent Unaffiliated stake. Each

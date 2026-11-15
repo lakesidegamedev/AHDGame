@@ -9,6 +9,7 @@ import { NG_CORE5_NORMALS } from "@/lib/countries/ng/geographyFacts";
 import { UK_CORE5_NORMALS } from "@/lib/countries/uk/geographyFacts";
 import { US_CORE5_NORMALS } from "@/lib/countries/us/geographyFacts";
 import type { BandAnchor, MetricBandCurve, NormalAnchor } from "./metricCatalogTypes";
+import { CA_CORE5_NORMALS } from "@/lib/countries/ca/geographyFacts";
 
 /**
  * Absolute {year, best, worst} band curves — no reference year; 2019 is just
@@ -22,7 +23,7 @@ import type { BandAnchor, MetricBandCurve, NormalAnchor } from "./metricCatalogT
  * by each metric's fixed band spread — the same geometry as its static
  * THRESHOLDS band (hardcoded here, NOT imported from metricScoring: cycle).
  * Floors keep bands inside each metric's playable range. The global set is the
- * old PR #2661 Western curve (US-shaped), kept as the fallback for latent
+ * old Western curve (US-shaped), kept as the fallback for latent
  * countries (RU, …). Values are era-plausible authored estimates — the dry-run
  * review is the tuning gate before any flag flip.
  */
@@ -54,6 +55,7 @@ export const CORE5_NORMALS: Record<
     DE: DE_CORE5_NORMALS["gdpGrowth"] as NormalAnchor[],
     JP: JP_CORE5_NORMALS["gdpGrowth"] as NormalAnchor[],
     IE: IE_CORE5_NORMALS["gdpGrowth"] as NormalAnchor[],
+    CA: CA_CORE5_NORMALS["gdpGrowth"] as NormalAnchor[],
     BR: BR_CORE5_NORMALS["gdpGrowth"] as NormalAnchor[],
     CN: CN_CORE5_NORMALS["gdpGrowth"] as NormalAnchor[],
     NG: NG_CORE5_NORMALS["gdpGrowth"] as NormalAnchor[],
@@ -71,6 +73,7 @@ export const CORE5_NORMALS: Record<
     DE: DE_CORE5_NORMALS["unemploymentRate"] as NormalAnchor[],
     JP: JP_CORE5_NORMALS["unemploymentRate"] as NormalAnchor[],
     IE: IE_CORE5_NORMALS["unemploymentRate"] as NormalAnchor[],
+    CA: CA_CORE5_NORMALS["unemploymentRate"] as NormalAnchor[],
     BR: BR_CORE5_NORMALS["unemploymentRate"] as NormalAnchor[],
     CN: CN_CORE5_NORMALS["unemploymentRate"] as NormalAnchor[],
     NG: NG_CORE5_NORMALS["unemploymentRate"] as NormalAnchor[],
@@ -88,6 +91,7 @@ export const CORE5_NORMALS: Record<
     DE: DE_CORE5_NORMALS["lifeExpectancy"] as NormalAnchor[],
     JP: JP_CORE5_NORMALS["lifeExpectancy"] as NormalAnchor[],
     IE: IE_CORE5_NORMALS["lifeExpectancy"] as NormalAnchor[],
+    CA: CA_CORE5_NORMALS["lifeExpectancy"] as NormalAnchor[],
     BR: BR_CORE5_NORMALS["lifeExpectancy"] as NormalAnchor[],
     CN: CN_CORE5_NORMALS["lifeExpectancy"] as NormalAnchor[],
     NG: NG_CORE5_NORMALS["lifeExpectancy"] as NormalAnchor[],
@@ -106,6 +110,7 @@ export const CORE5_NORMALS: Record<
     DE: DE_CORE5_NORMALS["violentCrimeRate"] as NormalAnchor[],
     JP: JP_CORE5_NORMALS["violentCrimeRate"] as NormalAnchor[],
     IE: IE_CORE5_NORMALS["violentCrimeRate"] as NormalAnchor[],
+    CA: CA_CORE5_NORMALS["violentCrimeRate"] as NormalAnchor[],
     BR: BR_CORE5_NORMALS["violentCrimeRate"] as NormalAnchor[],
     CN: CN_CORE5_NORMALS["violentCrimeRate"] as NormalAnchor[],
     NG: NG_CORE5_NORMALS["violentCrimeRate"] as NormalAnchor[],
@@ -123,6 +128,7 @@ export const CORE5_NORMALS: Record<
     DE: DE_CORE5_NORMALS["povertyRate"] as NormalAnchor[],
     JP: JP_CORE5_NORMALS["povertyRate"] as NormalAnchor[],
     IE: IE_CORE5_NORMALS["povertyRate"] as NormalAnchor[],
+    CA: CA_CORE5_NORMALS["povertyRate"] as NormalAnchor[],
     BR: BR_CORE5_NORMALS["povertyRate"] as NormalAnchor[],
     CN: CN_CORE5_NORMALS["povertyRate"] as NormalAnchor[],
     NG: NG_CORE5_NORMALS["povertyRate"] as NormalAnchor[],
@@ -138,13 +144,42 @@ function normalsToAnchors(metricId: string, normals: NormalAnchor[]): BandAnchor
   }));
 }
 
+/** Year every band curve is defined to, so bands are authored rather than clamped. */
+export const BAND_HORIZON_YEAR = 2050;
+
+/**
+ * Authored 2040 to 2050 drift of the per-country era normal, in each metric's
+ * own units. Invented central path: growth keeps easing with ageing, jobs hold,
+ * life expectancy keeps climbing about 0.1 years a year, crime and poverty drift
+ * down slowly. The band spread around the normal is unchanged.
+ */
+const CORE5_NORMAL_DRIFT_2040_TO_2050: Record<string, number> = {
+  gdpGrowth: -0.1,
+  unemploymentRate: 0,
+  lifeExpectancy: 1,
+  violentCrimeRate: -15,
+  povertyRate: -0.4,
+};
+
+function withHorizonNormal(metricId: string, normals: NormalAnchor[]): NormalAnchor[] {
+  const last = normals[normals.length - 1];
+  if (!last || last.year >= BAND_HORIZON_YEAR) return normals;
+  return [
+    ...normals,
+    {
+      year: BAND_HORIZON_YEAR,
+      value: last.value + (CORE5_NORMAL_DRIFT_2040_TO_2050[metricId] ?? 0),
+    },
+  ];
+}
+
 function buildCore5Curves(): Record<string, MetricBandCurve> {
   const out: Record<string, MetricBandCurve> = {};
   for (const [metricId, byScope] of Object.entries(CORE5_NORMALS)) {
     const curve: MetricBandCurve = { byCountry: {} };
     for (const [scope, normals] of Object.entries(byScope)) {
       if (!normals) continue;
-      const anchors = normalsToAnchors(metricId, normals);
+      const anchors = normalsToAnchors(metricId, withHorizonNormal(metricId, normals));
       if (scope === "global") curve.global = anchors;
       else curve.byCountry![scope as CountryId] = anchors;
     }
@@ -153,7 +188,7 @@ function buildCore5Curves(): Record<string, MetricBandCurve> {
   return out;
 }
 
-export const METRIC_BAND_CURVES: Record<string, MetricBandCurve> = {
+const AUTHORED_METRIC_BAND_CURVES: Record<string, MetricBandCurve> = {
   ...buildCore5Curves(),
 
   // ── Distortion set (scored metrics whose 2019 band misjudges old eras) ──────
@@ -249,7 +284,7 @@ export const METRIC_BAND_CURVES: Record<string, MetricBandCurve> = {
     },
   },
   incomeInequality: {
-    // 1953 best lowered 22→12 (#3238): the US 1953 seeds author Gini 15-42
+    // 1953 best lowered 22→12: the US 1953 seeds author Gini 15-42
     // around a 22 normal (the most-equal modern era) — with best=22 half the
     // country pinned at score 100 at seed and equality gains carried no signal.
     global: [
@@ -318,7 +353,7 @@ export const METRIC_BAND_CURVES: Record<string, MetricBandCurve> = {
     ],
   },
 
-  // ── Saturation set (#3238): metrics whose era-authentic 1953/1979 seed
+  // ── Saturation set: metrics whose era-authentic 1953/1979 seed
   //    values pinned at 0/100 against the modern static band. Anchors are
   //    derived from the authored seed normals (stateMetrics1953/1979.ts and
   //    the per-country ${cc}MetricPresets1953/1979.ts files) so a freshly
@@ -618,3 +653,40 @@ export const METRIC_BAND_CURVES: Record<string, MetricBandCurve> = {
     ],
   },
 };
+
+/**
+ * Extends a curve set to {@link BAND_HORIZON_YEAR}. A curve whose last anchor is
+ * earlier gets an explicit 2050 anchor that holds its last band. This keeps the
+ * saturation set's invariant (late anchors equal the static THRESHOLDS band, so
+ * scoring from 2019 on is unchanged) while making the band defined at 2050
+ * instead of relying on clamping. Core-5 curves already carry authored 2050
+ * drift and are left alone.
+ */
+function withHorizonAnchors(
+  curves: Record<string, MetricBandCurve>
+): Record<string, MetricBandCurve> {
+  const extend = (anchors: BandAnchor[] | undefined): BandAnchor[] | undefined => {
+    if (!anchors || anchors.length === 0) return anchors;
+    const last = anchors[anchors.length - 1];
+    if (last.year >= BAND_HORIZON_YEAR) return anchors;
+    return [...anchors, { year: BAND_HORIZON_YEAR, best: last.best, worst: last.worst }];
+  };
+  const out: Record<string, MetricBandCurve> = {};
+  for (const [metricId, curve] of Object.entries(curves)) {
+    const byCountry = curve.byCountry
+      ? Object.fromEntries(
+          Object.entries(curve.byCountry).map(([cc, anchors]) => [cc, extend(anchors)])
+        )
+      : undefined;
+    out[metricId] = {
+      ...curve,
+      ...(curve.global ? { global: extend(curve.global) } : {}),
+      ...(byCountry ? { byCountry } : {}),
+    } as MetricBandCurve;
+  }
+  return out;
+}
+
+export const METRIC_BAND_CURVES: Record<string, MetricBandCurve> = withHorizonAnchors(
+  AUTHORED_METRIC_BAND_CURVES
+);

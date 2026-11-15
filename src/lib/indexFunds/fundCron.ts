@@ -2,18 +2,18 @@ import { settleBankFundSubscriptions } from "./subscriptions";
 /**
  * Index Fund Cron Engine
  *
- * Runs once per game turn (via the turn phase):
+ * Runs once per game turn:
  *   Pass 1: mark holdings to market, recompute NAV, deploy bond reserve.
  *   Pass 2: recompute target constituents (financial-day cadence, or first init).
- *   Pass 3: two-sided rebalance toward those weights (sell overweight, buy underweight from public float).
- *   Pass 3b: cross-fund rebalancing (same financial-day cadence as Pass 2).
+ *   Pass 3: two-sided rebalance toward those weights.
+ *   Pass 3b: cross-fund rebalancing (same cadence as Pass 2).
  *   Pass 3c: process queued redemptions and snapshot NAV.
  *   Step 6: NPP fund investing, throttled by NPP_FUND_INVESTMENT_INTERVAL.
  *   Step 7: sponsored expense fees and wind-down.
  *
- * Gated behind the `indexFundsMode` feature flag. If disabled, the engine
- * is a silent no-op. The HTTP route `/api/cron/index-fund` is a manual/debug
- * entry point; it is not registered in `src/lib/cron.ts`.
+ * Gated behind `indexFundsMode`; a silent no-op when disabled. The HTTP
+ * route `/api/cron/index-fund` is a manual/debug entry point and is not
+ * registered in `src/lib/cron.ts`.
  */
 
 import { withBondPoolLedgerSnapshot } from "@/lib/bonds/marketPoolLedger";
@@ -45,6 +45,8 @@ import {
   listActiveFunds,
   listServiceableFunds,
   updateFundNav,
+  updateFundNavsBulk,
+  type FundNavUpdate,
   insertFundSnapshotsBulk,
   setFundStatus,
   insertFundTransactionsBulk,
@@ -108,6 +110,10 @@ import { isStaggeredTurn } from "@/lib/turn/staggerPhase";
 import { TURNS_PER_DAY } from "@/lib/constants/turnTime";
 import { emitTxBulk, type TxInput } from "@/lib/financialTxLog/emit";
 import type { EquityMarketPool, ShareOrder } from "@/lib/db/types";
+import { workerConfig } from "@/lib/config/worker";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import type { Document } from "mongodb";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 export {
   INDEX_FUND_NAV_CONCURRENCY,
   shouldRebalanceIndexFundConstituents,
@@ -118,6 +124,65 @@ export {
 export type { FundCronResult, RebalanceOutcome } from "./fundCronRebalance";
 
 // ── Types ─────────────────────────────────────────────────────────────
+
+type NavPreparation =
+  | {
+      kind: "ready";
+      fund: IndexFund;
+      bondPrincipalAnchor: number;
+      queuedUnits: number;
+      warning?: string;
+      navUpdate: FundNavUpdate;
+      statusChange?: { status: IndexFund["status"]; reason?: IndexFund["pauseReason"] };
+    }
+  | { kind: "collapsed"; error: string }
+  | { kind: "error"; error: string };
+
+/**
+ * Persist the NAV of every fund that finished Pass 1a. One unordered bulk write
+ * replaces one update per fund; the stored fields are identical. If the batch
+ * fails, every fund falls back to its own update so a single bad document only
+ * turns its own fund into an error, as before. Status flips follow the NAV
+ * write and stay per fund (they are rare).
+ */
+async function publishReadyFundNavs(db: Db, prepared: NavPreparation[]): Promise<NavPreparation[]> {
+  const ready = prepared.flatMap((p) => (p.kind === "ready" ? [p] : []));
+  if (ready.length === 0) return prepared;
+  const failed = new Map<string, string>();
+  try {
+    await updateFundNavsBulk(
+      db,
+      ready.map((p) => ({ fundId: p.fund._id, update: p.navUpdate }))
+    );
+  } catch {
+    for (const p of ready) {
+      try {
+        await updateFundNav(db, p.fund._id, p.navUpdate);
+      } catch (err) {
+        failed.set(p.fund._id.toString(), err instanceof Error ? err.message : String(err));
+      }
+    }
+  }
+  const statusFailed = new Map<string, string>();
+  for (const p of ready) {
+    if (!p.statusChange || failed.has(p.fund._id.toString())) continue;
+    try {
+      if (p.statusChange.reason) {
+        await setFundStatus(db, p.fund._id, p.statusChange.status, p.statusChange.reason);
+      } else {
+        await setFundStatus(db, p.fund._id, p.statusChange.status);
+      }
+    } catch (err) {
+      statusFailed.set(p.fund._id.toString(), err instanceof Error ? err.message : String(err));
+    }
+  }
+  return prepared.map((p): NavPreparation => {
+    if (p.kind !== "ready") return p;
+    const id = p.fund._id.toString();
+    const message = failed.get(id) ?? statusFailed.get(id);
+    return message === undefined ? p : { kind: "error", error: `Fund ${p.fund.slug}: ${message}` };
+  });
+}
 
 /**
  * Run the full index-fund cron cycle.
@@ -175,9 +240,10 @@ async function runFundCron(db: Db, options?: IndexFundCronOptions): Promise<Fund
 
   if (
     !(await isIndexFundsEnabled()) &&
-    !(await db
-      .collection("indexFunds")
-      .countDocuments({ "mandate.mode": "picked_stocks", status: { $ne: "delisted" } }))
+    !(await indexFundsCollection<Document>(db).countDocuments({
+      "mandate.mode": "picked_stocks",
+      status: { $ne: "delisted" },
+    }))
   ) {
     try {
       await refreshEquityLiquidityFacility({
@@ -209,10 +275,10 @@ async function runFundCron(db: Db, options?: IndexFundCronOptions): Promise<Fund
 
   // Env-gated pass-level timing (SIM_CORP_TIMING=1), same mechanism as the
   // corporation/NPP turn phases - zero-cost when off.
-  const timingOn = process.env.SIM_CORP_TIMING === "1";
+  const timingOn = workerConfig.simCorpTiming();
   const passTimings: Array<[string, number]> = [];
   let _tPrev = timingOn ? Date.now() : 0;
-  // Always feeds the persisted phase sub-steps (#2689).
+  // Always feeds the persisted phase sub-steps.
   const steps = substepMarker();
   const mark = (label: string): void => {
     steps.mark(label);
@@ -222,7 +288,7 @@ async function runFundCron(db: Db, options?: IndexFundCronOptions): Promise<Fund
     _tPrev = nowMs;
   };
 
-  const liquidityConfig = await db.collection<GameConfig>("gameConfig").findOne(
+  const liquidityConfig = await gameConfigCollection(db).findOne(
     { _id: "default" },
     {
       projection: {
@@ -233,7 +299,7 @@ async function runFundCron(db: Db, options?: IndexFundCronOptions): Promise<Fund
     }
   );
   const bondLiquidityEnabled = liquidityConfig?.indexFundBondLiquidityEnabled === true;
-  // #1001 domestic coverage: off (or unset) skips the ensure entirely, so the
+  // domestic coverage: off (or unset) skips the ensure entirely, so the
   // pass is unchanged. On, missing home-sovereign funds are seeded before the
   // serviceable-fund read so they deploy real cash into home paper this turn.
   if (domesticCoverageEnabled(liquidityConfig)) {
@@ -259,15 +325,20 @@ async function runFundCron(db: Db, options?: IndexFundCronOptions): Promise<Fund
       }),
     ])
   );
-  let funds = await listServiceableFunds(db);
-  const redemptionServiceFundIds = funds.map((fund) => fund._id);
+  const serviceableFunds = await listServiceableFunds(db);
+  const redemptionServiceFundIds = serviceableFunds.map((fund) => fund._id);
+  // A background country's national index is cash marked to its
+  // output index by the macro kernel: it owns no equities or bonds, so it
+  // skips NAV, bond deployment and rebalancing and is only served below for
+  // its redemption queue and snapshot.
+  let funds = serviceableFunds.filter((fund) => !fund.nationalIndex);
   // Load valuation side ledgers once before Pass 1 so NAV includes committed
   // bid escrow and counts queued redemption units as the claims they are.
-  const fundIds = funds.map((fund) => fund._id);
+  const fundIds = redemptionServiceFundIds;
   const openOrdersEscrowByFundId = await loadOpenOrdersEscrowByFundId(db, fundIds);
   const queuedUnitsByFundId = await loadQueuedRedemptionUnitsByFundId(db, fundIds);
   const initialBondPrincipalByFundId = await sumFundBondHoldingsByFundId(db, funds, exchangeRates);
-  // #992 tranche 6: one thresholds read for every bond-reserve purchase row
+  // One thresholds read for every bond-reserve purchase row
   // this turn; threaded through each deploy so N funds share it.
   const [bondDeployThresholds, turnLengthMinutes, bondSettleInTransaction] = await Promise.all([
     loadTxThresholds(db),
@@ -283,17 +354,7 @@ async function runFundCron(db: Db, options?: IndexFundCronOptions): Promise<Fund
   // funds compete for shared public float there, so its ordering is part of
   // the economic result and must remain deterministic.
   const navReadyFundIds: IndexFund["_id"][] = [];
-  type NavPreparation =
-    | {
-        kind: "ready";
-        fund: IndexFund;
-        bondPrincipalAnchor: number;
-        queuedUnits: number;
-        warning?: string;
-      }
-    | { kind: "collapsed"; error: string }
-    | { kind: "error"; error: string };
-  const navPreparations = await boundedParallelMap(
+  const preparedNavs = await boundedParallelMap(
     funds,
     INDEX_FUND_NAV_CONCURRENCY,
     async (fund): Promise<NavPreparation> => {
@@ -351,17 +412,6 @@ async function runFundCron(db: Db, options?: IndexFundCronOptions): Promise<Fund
           unitSupply: workingFund.unitSupply,
         });
 
-        await updateFundNav(db, workingFund._id, {
-          quotedNav: newNav,
-          backingRatio: backing.backingRatio,
-        });
-
-        if (backing.shouldAutoPause) {
-          await setFundStatus(db, workingFund._id, "paused", backing.pauseReason);
-        } else if (workingFund.status === "paused" && workingFund.pauseReason === "backing_ratio") {
-          await setFundStatus(db, workingFund._id, "active");
-        }
-
         // NAV persistence only changes fields already known in this pass. Keep
         // the in-memory fund in sync instead of reading the full document back,
         // and reuse the bond-principal snapshot loaded for every fund above.
@@ -375,6 +425,12 @@ async function runFundCron(db: Db, options?: IndexFundCronOptions): Promise<Fund
           fund: refreshedFund,
           bondPrincipalAnchor,
           queuedUnits: queuedRedemptionUnits,
+          navUpdate: { quotedNav: newNav, backingRatio: backing.backingRatio },
+          ...(backing.shouldAutoPause
+            ? { statusChange: { status: "paused" as const, reason: backing.pauseReason } }
+            : workingFund.status === "paused" && workingFund.pauseReason === "backing_ratio"
+              ? { statusChange: { status: "active" as const } }
+              : {}),
           ...(backing.shouldAutoPause
             ? {
                 warning: `Fund ${workingFund.slug} auto-paused: backing ratio ${backing.backingRatio.toFixed(4)}`,
@@ -387,6 +443,10 @@ async function runFundCron(db: Db, options?: IndexFundCronOptions): Promise<Fund
       }
     }
   );
+  // Publish every ready fund's NAV in one bulk write instead of one update per
+  // fund. If the batch fails, fall back to the per-fund writes so one bad
+  // document still only costs its own fund.
+  const navPreparations = await publishReadyFundNavs(db, preparedNavs);
   mark("pass1a-nav");
 
   try {
@@ -540,7 +600,7 @@ async function runFundCron(db: Db, options?: IndexFundCronOptions): Promise<Fund
     // Queued redemptions hold the fund out of trading. One held slot is routine:
     // the queue pays down and the catch-up turn rebalances. Warn only when the
     // fund has already missed a whole day, and only on its own stagger turn so a
-    // stuck fund says so once a day rather than every turn (#5083).
+    // stuck fund says so once a day rather than every turn.
     else if (
       fund.targetConstituents.length > 0 &&
       rebalanceDue(fund) &&

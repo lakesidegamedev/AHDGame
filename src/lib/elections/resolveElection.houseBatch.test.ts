@@ -154,7 +154,6 @@ function seededHouseBatch(specs: HouseElectionSeed[], options: HouseBatchOptions
           currentYear: 1992,
           currentTurn: 10,
           isActive: true,
-          redistrictingEnabled: true,
         }
       : options.gameState
   );
@@ -213,34 +212,24 @@ describe("batched US House district projections", () => {
 
   it.each([
     {
-      reason: "redistricting is disabled",
-      spec: { state: "CA" },
-      gameState: { _id: "current", preset: "1990", currentYear: 1992, redistrictingEnabled: false },
-    },
-    {
-      reason: "the redistricting flag is missing",
-      spec: { state: "CA" },
-      gameState: { _id: "current", preset: "1990", currentYear: 1992 },
-    },
-    {
       reason: "the House tally is missing",
       spec: { state: "CA", tally: "absent" as const },
-      gameState: { _id: "current", preset: "1990", currentYear: 1992, redistrictingEnabled: true },
+      gameState: { _id: "current", preset: "1990", currentYear: 1992 },
     },
     {
       reason: "the House race is outside the US",
       spec: { state: "ON", countryId: "UK" as const },
-      gameState: { _id: "current", preset: "1990", currentYear: 1992, redistrictingEnabled: true },
+      gameState: { _id: "current", preset: "1990", currentYear: 1992 },
     },
     {
       reason: "the US race is not a House election",
       spec: { state: "FL", electionType: "senate" },
-      gameState: { _id: "current", preset: "1990", currentYear: 1992, redistrictingEnabled: true },
+      gameState: { _id: "current", preset: "1990", currentYear: 1992 },
     },
     {
       reason: "a finalized nonempty allocation already exists",
       spec: { state: "TX", tally: "finalized-allocation" as const },
-      gameState: { _id: "current", preset: "1990", currentYear: 1992, redistrictingEnabled: true },
+      gameState: { _id: "current", preset: "1990", currentYear: 1992 },
     },
   ])("does not read districts when $reason", async ({ spec, gameState }) => {
     const fixture = seededHouseBatch([spec], { gameState });

@@ -1,28 +1,19 @@
 /**
- * Broadcast events — shared historic moments (the moon landing, the Wall
- * coming down) offered to EVERY eligible character at once instead of the
- * usual one-random-event-per-character weighted pick.
+ * Broadcast events: shared historic moments (moon landing, the Wall coming
+ * down) offered to every eligible character at once instead of the usual
+ * one-random-event-per-character weighted pick.
  *
- * Mechanics:
  * - A definition opts in with `broadcast: "country" | "global"` plus a
- *   `minYear`/`maxYear` window (era gating) — the broadcast fires on the
- *   first turn the in-game year is inside the window.
- * - "country" broadcasts additionally respect `requiresCountryIds`: only
- *   characters of those nations receive the moment (e.g. a US-only national
- *   tragedy). "global" reaches every country.
- * - Each broadcast fires AT MOST ONCE per world. Fired kinds are recorded in
- *   the shared event cooldown ledger under a synthetic country scope keyed
- *   by {@link broadcastScopeId}, reusing the scheduler's
- *   `lastFiredTurnByKind` machinery (no new collections).
- * - Only one broadcast fires per turn; if several become due in the same
- *   year the rest stay due and fire on following turns.
- * - Broadcast offers bypass the per-character global spacing cooldown (the
- *   moment shouldn't skip people just because they recently had jury duty).
- *   A pending event does NOT block a broadcast either: it is superseded —
- *   auto-resolved on its default option (same semantics as a timeout sweep)
- *   so the historic moment always lands.
- * - Broadcast definitions never enter the normal weighted pool (see
- *   weighting.ts), so `baseWeight` is unused for them.
+ *   `minYear`/`maxYear` window; it fires on the first turn in window.
+ * - "country" also respects `requiresCountryIds`; "global" reaches all.
+ * - Each broadcast fires AT MOST ONCE per world, tracked in the shared
+ *   cooldown ledger under a synthetic scope ({@link broadcastScopeId}).
+ * - Only one broadcast fires per turn; others stay due for later turns.
+ * - Broadcasts bypass the per-character global spacing cooldown, and a
+ *   pending event is superseded (auto-resolved on its default option) so
+ *   the historic moment always lands.
+ * - Broadcast definitions never enter the weighted pool, so `baseWeight`
+ *   is unused for them.
  */
 import type { Db } from "mongodb";
 import type { EventDefinition } from "@/lib/db/types/events";

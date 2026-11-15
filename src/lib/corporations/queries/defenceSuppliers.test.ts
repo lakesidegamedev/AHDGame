@@ -86,7 +86,7 @@ const world = (over: Partial<World> = {}): World => ({
   ...over,
 });
 
-// The country's anchored lot price. Build cost is a share of it (ticket #1134),
+// The country's anchored lot price. Build cost is a share of it,
 // so the picker needs it to quote a cost at all.
 const LOT_PRICE = 380_000_000;
 
@@ -131,7 +131,7 @@ describe("listDefenceSuppliers", () => {
     expect(rows).toHaveLength(0);
   });
 
-  // Ticket #1087: a Soviet plant whose NatCorp never got liquidCurrencyCode used to vanish
+  // A Soviet plant whose NatCorp never got liquidCurrencyCode used to vanish
   // because canSupply treated the missing field as USD against a SUR appropriation.
   it("offers a domestic plant whose currency is inferred from country", async () => {
     const ruId = new ObjectId();
@@ -159,7 +159,7 @@ describe("listDefenceSuppliers", () => {
     expect(rows[0].corporationName).toBe("Ministries of Defence Industry");
   });
 
-  // Ticket #1134: a vacant NatCorp CEO cannot re-allocate lines, so the picker must
+  // A vacant NatCorp CEO cannot re-allocate lines, so the picker must
   // project the full remaining plant, not the private even-split default.
   it("projects a state-owned two-domain plant at full remaining output", async () => {
     const ruId = new ObjectId();
@@ -273,7 +273,7 @@ describe("listDefenceSuppliers", () => {
     expect(rows[0].plantLabel).toBe("TX");
   });
 
-  // Ticket #1149. Delivery already accepted a home-country corp's overseas plant
+  // Delivery already accepted a home-country corp's overseas plant
   // (`canSupply` keys on HQ / currency, not host state). The picker filtered sectors by
   // `countryId`, so a UK minister could only award Streibl's tiny domestic line while the
   // same corp's Greek works never appeared — and 4 production lines on that domestic plant

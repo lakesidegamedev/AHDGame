@@ -13,6 +13,11 @@ import {
 } from "@/lib/livingConflict/rules/financialRescue";
 import { TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import { loadBankingPolicy } from "@/lib/banking/policy";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
+import { bankGuaranteesCollection } from "@/lib/db/repositories/bankGuarantees";
+import { financialCrisisBankActionsCollection } from "@/lib/db/repositories/financialCrisisBankActions";
 
 export type FinancialCrisisBankResponse = "recapitalize" | "guarantee" | "resolve";
 
@@ -72,15 +77,15 @@ export async function prepareFinancialCrisisBankResponse(
 ): Promise<void> {
   if (option.action?.kind !== "financialCrisisResponse") return;
   if (!["recapitalize", "guarantee", "resolve"].includes(option.action.response)) return;
-  const budget = await db
-    .collection<FederalBudget>("federalBudget")
-    .findOne({ countryId: countryId as FederalBudget["countryId"] });
+  const budget = await federalBudgetCollection(db).findOne({
+    countryId: countryId as FederalBudget["countryId"],
+  });
   const currency = resolveCountryCurrencyCode(budget);
   const cashLedgerEnabled =
     option.action.response === "resolve"
       ? false
       : (treasuryCashLedgerEnabled ?? (await loadBankingPolicy(db)).treasuryCashLedger);
-  const eligible = await db.collection<Corporation>("corporations").findOne(
+  const eligible = await corporationsCollection(db).findOne(
     {
       countryId: countryId as Corporation["countryId"],
       "bankCharter.status": "active",
@@ -110,18 +115,18 @@ export async function applyFinancialCrisisBankResponse(
   response: FinancialCrisisBankResponse
 ): Promise<void> {
   const actionId = [ctx.crisis._id, ctx.interaction._id, ctx.countryId, response].join(":");
-  const prior = await ctx.db
-    .collection<FinancialCrisisBankAction>("financialCrisisBankActions")
-    .findOne({ _id: actionId });
+  const prior = await financialCrisisBankActionsCollection<FinancialCrisisBankAction>(
+    ctx.db
+  ).findOne({ _id: actionId });
   if (prior) return;
   // A durable quote owns all legs and projections. Recover it before considering
   // a new quote from balances or charter statuses the first attempt changed.
-  const pending = await ctx.db
-    .collection<{ _id: string }>("bankMoneyMoves")
-    .findOne({ _id: actionId });
+  const pending = await bankMoneyMovesCollection<{ _id: string }>(ctx.db).findOne({
+    _id: actionId,
+  });
   if (pending)
     throw new Error("Rescue settlement is pending recovery; funding will not be duplicated");
-  const guaranteeCollection = ctx.db.collection<PendingFinancialGuarantee>("bankGuarantees");
+  const guaranteeCollection = bankGuaranteesCollection<PendingFinancialGuarantee>(ctx.db);
   // The unfunded shell is written before settlement so a process crash cannot
   // cause a retry to quote a different bank cohort, source balance or amount.
   let pendingGuarantee =
@@ -139,24 +144,21 @@ export async function applyFinancialCrisisBankResponse(
   let amount: number;
   if (pendingGuarantee) {
     const frozen = pendingGuarantee;
-    budget = (await ctx.db
-      .collection<{
-        _id: string;
-        countryId: string;
-        currencyCode?: string | null;
-      }>("federalBudget")
-      .findOne({
-        _id: frozen.treasuryId,
-        countryId: frozen.countryId,
-        currencyCode: frozen.treasuryCurrencyCodePresent
-          ? { $exists: true, $eq: frozen.treasuryCurrencyCode }
-          : { $exists: false },
-      })) as FederalBudget | null;
+    budget = (await federalBudgetCollection<{
+      _id: string;
+      countryId: string;
+      currencyCode?: string | null;
+    }>(ctx.db).findOne({
+      _id: frozen.treasuryId,
+      countryId: frozen.countryId,
+      currencyCode: frozen.treasuryCurrencyCodePresent
+        ? { $exists: true, $eq: frozen.treasuryCurrencyCode }
+        : { $exists: false },
+    })) as FederalBudget | null;
     currency = frozen.currency;
     if (!budget || ctx.countryId !== frozen.countryId)
       throw new Error("Original guarantee funding treasury changed before settlement");
-    banks = await ctx.db
-      .collection<Corporation>("corporations")
+    banks = await corporationsCollection(ctx.db)
       .find(
         {
           $or: frozen.bankEpochs.map((bank) => ({
@@ -180,14 +182,13 @@ export async function applyFinancialCrisisBankResponse(
       ctx.option,
       treasuryCashLedgerEnabled
     );
-    budget = await ctx.db
-      .collection<FederalBudget>("federalBudget")
-      .findOne({ countryId: ctx.countryId as FederalBudget["countryId"] });
+    budget = await federalBudgetCollection(ctx.db).findOne({
+      countryId: ctx.countryId as FederalBudget["countryId"],
+    });
     currency = resolveCountryCurrencyCode(budget);
     if (!budget || !currency) throw new Error("Treasury currency is unavailable");
     banks = rankBanksForFinancialIntervention(
-      await ctx.db
-        .collection<Corporation>("corporations")
+      await corporationsCollection(ctx.db)
         .find(
           {
             countryId: ctx.countryId as Corporation["countryId"],

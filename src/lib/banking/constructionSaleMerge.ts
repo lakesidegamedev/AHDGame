@@ -9,6 +9,7 @@ import { sectorMergeStrategyRefusal } from "@/lib/corporations/sectorMergeStrate
 import { constructionBorrowerTransferRefusal } from "./rules/constructionBorrowerTransfer";
 import { hasProtectedConstructionClaim } from "./rules/constructionProperty";
 import { mergeSurvivorConstructionFilter } from "./constructionBorrowerTransfer";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 /**
  * Why a pledged site cannot fold into the buyer's existing site in its market,
@@ -47,7 +48,7 @@ export async function foldSoldSiteIntoSurvivor(
   db: Db,
   input: { donorId: ObjectId; survivorId: ObjectId; buyerId: ObjectId; saleKey: string }
 ): Promise<{ ok: true } | { ok: false; error: string }> {
-  const sectors = db.collection<CorporateSector>("corporateSectors");
+  const sectors = corporateSectorsCollection(db);
   const { donorId, survivorId, buyerId, saleKey } = input;
   const plants = marketAtLeast(await getMarketSystemModeForDb(db), "plants");
   // bounded-cas-retry(maxAttempts=5): Retry only when a turn rewrote the survivor between the read and the guarded fold.

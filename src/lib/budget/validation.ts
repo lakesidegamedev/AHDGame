@@ -10,7 +10,7 @@ import type { Db } from "mongodb";
 import { effectiveBorrowingLimit } from "@/lib/budget/borrowingLimit";
 import { COST_INCOME_ANCHORS } from "@/lib/politicalLegislation/costAnchors";
 import { countryFiscalBase, regionFiscalBase } from "@/lib/politicalLegislation/fiscalBase";
-import type { FederalBudget, StateBudget } from "@/lib/db/types/budget";
+import type { StateBudget } from "@/lib/db/types/budget";
 import type { RegionalBudget } from "@/lib/db/types/regionalBudget";
 import type { Bill, LegislationType } from "@/lib/db/types/legislation";
 import { isPolicyProvision } from "@/lib/db/types/legislation";
@@ -28,6 +28,11 @@ import {
 } from "./costs";
 import { resolveNationalGdpPerCapita, resolveNationalMedianIncome } from "./spending";
 import { getEraContext } from "@/lib/era/context";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
+import { regionalBudgetsCollection } from "@/lib/db/repositories/regionalBudgets";
 
 /** Era year for the cost basis; defensive so a mock db (no gameState) ⇒ flag off. */
 async function resolveEraYear(db: Db): Promise<number | null> {
@@ -73,7 +78,7 @@ function getBillSelections(
 }
 
 async function getCountryPopulation(db: Db, countryId: CountryId): Promise<number> {
-  const states = await db.collection<State>("states").find({ countryId }).toArray();
+  const states = await statesCollection(db).find({ countryId }).toArray();
   return states.reduce((sum, state) => sum + (state.population ?? 0), 0);
 }
 
@@ -93,8 +98,7 @@ async function calculateBillAnnualCost(
   const legislationTypeIds = [
     ...new Set(selections.map((selection) => selection.legislationTypeId)),
   ];
-  const legislationTypes = await db
-    .collection<LegislationType>("legislationTypes")
+  const legislationTypes = await legislationTypesCollection(db)
     .find({ _id: { $in: legislationTypeIds } })
     .toArray();
   const legislationTypeMap = new Map(
@@ -125,9 +129,7 @@ export async function validateFederalBudgetImpact(
   bill: Pick<Bill, "legislationTypeId" | "effectDirection" | "provisions">,
   budgetId: string = "federal"
 ): Promise<BudgetValidationResult> {
-  const federalBudget = await db
-    .collection<FederalBudget>("federalBudget")
-    .findOne({ _id: budgetId });
+  const federalBudget = await federalBudgetCollection(db).findOne({ _id: budgetId });
   if (!federalBudget) {
     return { allowed: true, costAmount: 0, newTotalSpending: 0 };
   }
@@ -197,16 +199,16 @@ export async function validateStateBudgetImpact(
   // stateBudgets row here can reject a bill while the region page shows ample
   // funding from the live regional budget.
   const regionalBudget = isParliamentarySystem(getCountryConfig(countryId))
-    ? await db.collection<RegionalBudget>("regionalBudgets").findOne({ _id: stateId, countryId })
+    ? await regionalBudgetsCollection(db).findOne({ _id: stateId, countryId })
     : null;
   const stateBudget = regionalBudget
     ? null
-    : await db.collection<StateBudget>("stateBudgets").findOne({ _id: stateId, countryId });
+    : await stateBudgetsCollection(db).findOne({ _id: stateId, countryId });
   if (!regionalBudget && !stateBudget) {
     return { allowed: true, costAmount: 0, newTotalSpending: 0 };
   }
 
-  const state = await db.collection<State>("states").findOne({ _id: stateId, countryId });
+  const state = await statesCollection(db).findOne({ _id: stateId, countryId });
   const budgetCapacity = regionalBudget?.totalBudget ?? stateBudget?.revenue.total ?? 0;
   const currentSpending = regionalBudget
     ? regionalBudget.totalBudget - regionalBudget.surplus

@@ -49,6 +49,3 @@ export const supplyAgreementUpdateSchema = z.discriminatedUnion("action", [
     ...terms,
   }),
 ]);
-
-export type SupplyAgreementProposalInput = z.infer<typeof supplyAgreementProposalSchema>;
-export type SupplyAgreementUpdateInput = z.infer<typeof supplyAgreementUpdateSchema>;

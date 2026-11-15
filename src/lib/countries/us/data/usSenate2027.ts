@@ -2,18 +2,10 @@ import type { HistoricalSeat } from "@/lib/constants/historicalSeats";
 
 /**
  * Projected US Senate composition for the January 2027 seed.
- *
- * Classes 1 and 3 use 119th Congress holdovers except for the 2026 Ohio and
- * Florida Class 3 special elections. Class 2 uses the frozen Call the Map
- * 2026-09-09 median projection. Its projected flips are North Carolina,
- * Maine, and Ohio from Republican to Democratic; Florida, Texas, Alaska, and
- * Iowa remain Republican. Maine Class 1 and Vermont Class 1 remain independent
- * and count toward the 50-seat Democratic-aligned total.
- *
- * Sources:
- * https://www.callthemap.com/senate
- * https://www.congress.gov/congressional-record/volume-171/issue-1/senate-section/article/S5-3
- * https://www.senate.gov/senators/Class_I.htm
+ * Classes 1 and 3: 119th Congress holdovers, plus 2026 OH/FL Class 3 specials.
+ * Class 2: Call the Map 2026-09-09 median projection.
+ * Maine and Vermont Class 1 independents count toward Democratic-aligned 50.
+ * Sources: callthemap.com/senate, senate.gov Class I page, congress.gov.
  */
 export const US_SENATE_2027: HistoricalSeat[] = [
   { state: "AL", officeType: "senate", party: "republican", senateClass: 2 },

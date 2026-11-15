@@ -8,7 +8,7 @@ function fakeDb(elections: Record<string, unknown>[]): {
 } {
   const db = {
     collection(name: string) {
-      if (name === "gameState") return { findOne: async () => ({ redistrictingEnabled: true }) };
+      if (name === "gameState") return { findOne: async () => ({}) };
       return {
         find: () => ({ toArray: async () => elections }),
         async updateOne(filter: { _id: unknown }, update: { $set: Record<string, unknown> }) {

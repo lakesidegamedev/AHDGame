@@ -164,22 +164,6 @@ describe("spawnNppCorporation — plants", () => {
     expect(corporation.unlockedTechNodeIds).toEqual(autoGrantedNodeIds("manufacturing", 1953));
   });
 
-  it("leaves tech state absent while the tech-tree feature is disabled", async () => {
-    db.collectionMocks.gameState!.findOne.mockResolvedValue({
-      _id: "current",
-      sectorTechTreesEnabled: false,
-      currentYear: 1953,
-    });
-
-    await spawn(true);
-    const corporation = db.collectionMocks.corporations!.insertOne.mock.calls[0][0] as Record<
-      string,
-      unknown
-    >;
-
-    expect(corporation.unlockedTechNodeIds).toBeUndefined();
-  });
-
   it("founds a focused extraction sector with strategy-normalized capacity", async () => {
     const extractionPoolUnits = computeUnownedHeadroomUnits("extraction", POOL_REVENUE, 1);
     db.collectionMocks.unownedSectors!.findOne.mockResolvedValue({

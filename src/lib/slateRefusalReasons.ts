@@ -3,7 +3,7 @@
  * and the party activity feed so a chair reads the same wording in both.
  *
  * Two families: reasons the NPP gave for declining, and reasons the turn's
- * filing pass could not put an accepted row on the ballot (#1181).
+ * filing pass could not put an accepted row on the ballot.
  */
 import type { SlateRefusalReason } from "@/lib/db/types";
 

@@ -2,7 +2,7 @@ import { CORPORATION_FOUNDING_COOLDOWN_TURNS } from "@/lib/constants/corporation
 
 /**
  * Turns remaining before a user may found another corporation after their
- * previous corporation ended (Bug #0728).
+ * previous corporation ended.
  * Returns 0 when the user may found now — including their first-ever founding
  * (no `lastCorporationFoundedTurn`). The legacy-named field stores the turn
  * their corporation ended, preventing immediate refounding after dissolution.

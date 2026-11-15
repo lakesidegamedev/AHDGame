@@ -8,7 +8,11 @@ import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { parseJsonBody } from "@/lib/api/validate";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { resolveCorporation, requireCeo } from "@/lib/api/corporations/resolveQuery";
-import type { Corporation, GameConfig } from "@/lib/db/types";
+import type { GameConfig } from "@/lib/db/types";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import type { Document } from "mongodb";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -38,9 +42,10 @@ export async function PUT(request: Request, { params }: RouteParams) {
     const db = await getDb();
     const actionBlock = await requireCorporationActionsEnabled(db);
     if (actionBlock) return actionBlock;
-    const config = await db
-      .collection<GameConfig>("gameConfig")
-      .findOne({ _id: "default" }, { projection: { mediaEditorialEnabled: 1 } });
+    const config = await gameConfigCollection(db).findOne(
+      { _id: "default" },
+      { projection: { mediaEditorialEnabled: 1 } }
+    );
     if (config?.mediaEditorialEnabled !== true) {
       return errorResponse(404, "Editorial stance is unavailable");
     }
@@ -50,20 +55,19 @@ export async function PUT(request: Request, { params }: RouteParams) {
     const denied = requireCeo(corporation, auth.user.userId);
     if (denied) return denied;
 
-    const mediaSector = await db
-      .collection("corporateSectors")
-      .findOne({ corporationId: corporation._id, sectorType: "media" }, { projection: { _id: 1 } });
+    const mediaSector = await corporateSectorsCollection<Document>(db).findOne(
+      { corporationId: corporation._id, sectorType: "media" },
+      { projection: { _id: 1 } }
+    );
     if (!mediaSector) {
       return errorResponse(403, "Only a media publisher can set an editorial stance");
     }
 
     const stance = { economic: parsed.data.economic, social: parsed.data.social };
-    const updated = await db
-      .collection<Corporation>("corporations")
-      .updateOne(
-        { _id: corporation._id, userId: new ObjectId(auth.user.userId), ceoVacant: { $ne: true } },
-        { $set: { editorialStance: stance } }
-      );
+    const updated = await corporationsCollection(db).updateOne(
+      { _id: corporation._id, userId: new ObjectId(auth.user.userId), ceoVacant: { $ne: true } },
+      { $set: { editorialStance: stance } }
+    );
     if (updated.modifiedCount !== 1 && updated.matchedCount !== 1) {
       return errorResponse(409, "Corporation ownership changed");
     }

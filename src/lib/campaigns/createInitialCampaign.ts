@@ -13,6 +13,7 @@
 import { ObjectId } from "mongodb";
 import type { Db } from "mongodb";
 import type { Campaign } from "@/lib/db/types";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
 
 export interface CreateInitialCampaignArgs {
   db: Db;
@@ -35,15 +36,15 @@ export async function createInitialCampaign({
   party,
   now = new Date(),
 }: CreateInitialCampaignArgs): Promise<ObjectId> {
-  const existing = await db
-    .collection<Campaign>("campaigns")
-    .findOne({ electionId, candidateId }, { projection: { _id: 1, status: 1 } });
+  const existing = await campaignsCollection(db).findOne(
+    { electionId, candidateId },
+    { projection: { _id: 1, status: 1 } }
+  );
   if (existing) {
-    // A re-entering candidate keeps their retained funds/levels: reactivate a
-    // campaign archived by an earlier withdrawal (ticket #1313 archives on
-    // every withdraw path, so entry must undo it). Active rows stay a no-op.
+    // Re-entering candidate keeps retained funds/levels: reactivate a campaign
+    // archived by an earlier withdrawal. Active rows are a no-op.
     if (existing.status === "archived") {
-      await db.collection<Campaign>("campaigns").updateOne(
+      await campaignsCollection(db).updateOne(
         { _id: existing._id },
         {
           $set: { status: "active", archivedAt: null, party, updatedAt: now },
@@ -101,7 +102,7 @@ export async function createInitialCampaign({
     updatedAt: now,
   };
 
-  await db.collection<Campaign>("campaigns").insertOne(doc);
+  await campaignsCollection(db).insertOne(doc);
   return doc._id;
 }
 
@@ -125,9 +126,10 @@ export async function ensureCampaignForCandidate({
   party,
   now = new Date(),
 }: CreateInitialCampaignArgs): Promise<ObjectId> {
-  const existing = await db
-    .collection<Campaign>("campaigns")
-    .findOne({ electionId, candidateId }, { projection: { _id: 1, status: 1 } });
+  const existing = await campaignsCollection(db).findOne(
+    { electionId, candidateId },
+    { projection: { _id: 1, status: 1 } }
+  );
 
   if (!existing) {
     return createInitialCampaign({ db, electionId, candidateId, candidateIsNPP, party, now });
@@ -135,7 +137,7 @@ export async function ensureCampaignForCandidate({
 
   // Missing status is treated as active (legacy rows) — no-op.
   if (existing.status === "archived") {
-    await db.collection<Campaign>("campaigns").updateOne(
+    await campaignsCollection(db).updateOne(
       { _id: existing._id },
       {
         $set: { status: "active", archivedAt: null, updatedAt: now },

@@ -26,22 +26,14 @@ import { forceDefenseContribution } from "@/lib/politicalMetrics/forceDefense";
 import { readinessBaselineOf, READINESS_DRIFT_STEP } from "@/lib/military/readinessDrift";
 
 /**
- * Pure: force aggregate + upkeep burden → Defense metric deltas. All deltas are applied
- * downstream through the existing capped cabinet-effect mechanism.
+ * Pure: force aggregate + upkeep burden → Defense metric deltas. Deltas flow
+ * through the existing capped cabinet-effect mechanism.
  *
- * `burden` is the force measured against the country's own SEEDED order of battle (see
- * `upkeepBurden` — the defence line cancels out of it, so this does not track budget
- * choices).
- * It replaced a synthetic envelope that was floored at a country-independent constant — on
- * the live board 26 of 27 nations sat exactly on that floor, so `budgetBalance` contained no
- * budget term at all and moved only with roster size. Russia, whose defence line is sized for
- * its 49 units, read the WORST balance on the board for having a large army.
- *
- * ⚠️ `burden` is nullable ON PURPOSE and null is NOT interchangeable with 0. A burden of 0
- * means the force costs nothing to sustain, which is the most POSITIVE reading available;
- * null means the country has no usable defence line and the metric has nothing to say.
- * Collapsing the two — by narrowing this to `number` and letting callers pass 0 — hands every
- * unfunded country a maximal score. `militaryForceEffects.test.ts` pins the difference.
+ * `burden` is nullable ON PURPOSE; null is NOT interchangeable with 0. A
+ * burden of 0 means the force costs nothing to sustain (most positive
+ * reading); null means the country has no usable defence line and the metric
+ * has nothing to say. Collapsing the two hands unfunded countries a maximal
+ * score.
  */
 export function computeForceMetricDeltas(
   agg: ForceAggregate,
@@ -162,20 +154,16 @@ export async function applyMilitaryForceEffects(
 }
 
 /**
- * Settle every unit's readiness toward its posture baseline, suppressed by unpaid upkeep.
+ * Settle every unit's readiness toward its posture baseline, suppressed by
+ * unpaid upkeep.
  *
- * Lives OUTSIDE `applyMilitaryForceEffects` deliberately. That step returns early without a
- * defence seat, but the appropriation sweep charges every country with units — so leaving the
- * drift there let the eleven seatless nations that field real forces (FR, IT, ES, SE, TR, BR,
- * GR, FI, AT and the two devolved UK members) accrue arrears that nothing ever collected on.
- * Their armies could run permanently unfunded at full readiness.
+ * Lives outside `applyMilitaryForceEffects`, which returns early for nations
+ * without a defence seat; those nations still field units and would otherwise
+ * accrue arrears nothing collects, running unfunded at full readiness. Called
+ * by the appropriation sweep with its just-computed ratio so the drift always
+ * sees this turn's arrears.
  *
- * Called by the appropriation sweep with the ratio it just computed, which also means the
- * "drift must see this turn's arrears" constraint is satisfied structurally rather than by
- * keeping two turn steps adjacent in the pipeline.
- *
- * `units` is passed in because the caller has just read them; re-reading here would double
- * the sweep's query count for no benefit.
+ * `units` is passed in to avoid doubling the sweep's query count.
  */
 export async function applyReadinessDrift(
   db: Db,

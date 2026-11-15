@@ -1,0 +1,214 @@
+{
+  "config": {
+    "id": "BG",
+    "name": "Bulgaria",
+    "code": "BG",
+    "status": "coming-soon",
+    "flagEmoji": "🇧🇬",
+    "regionLabel": "Region",
+    "regionLabelPlural": "Regions",
+    "executiveTitle": "General Secretary",
+    "executiveRealmPhrase": "Bulgaria",
+    "executiveLabel": "Assembly",
+    "executivePath": "/country/bg/executive",
+    "governmentType": "onePartyState",
+    "governmentTypeLabel": "One Party State",
+    "descriptor": "A one-party socialist state where the ruling communist party's General Secretary governs through the National Assembly; the economy is centrally planned until reform.",
+    "heroImage": "https://flagcdn.com/w640/bg.png",
+    "overviewPath": "/country/bg",
+    "mapPath": "/country/bg/map",
+    "currencyCode": "BGL",
+    "centralGovernmentLabel": "Central Plan",
+    "exchangeName": "DKP",
+    "exchangeKind": "stateRegister",
+    "financeMinisterCabinetId": "minister_of_finance",
+    "rulingPartyId": 1,
+    "majorPartyIds": ["bkp"],
+    "partyCreationNPPs": { "statesRequired": 1, "lockHomeState": true, "nppsPerState": 2 },
+    "legislature": {
+      "name": "National Assembly",
+      "path": "/country/bg/legislature",
+      "bicameral": false,
+      "lowerChamber": {
+        "key": "nationalAssembly",
+        "name": "National Assembly",
+        "shortName": "Assembly",
+        "seats": 400,
+        "description": "400 deputies of the Narodno Sabranie, elected to five-year terms - a single-list body controlled by the ruling communist party within the Fatherland Front."
+      },
+      "upperChamber": {
+        "key": "stateCouncil",
+        "name": "State Council",
+        "shortName": "Council",
+        "seats": 21,
+        "description": "A collective head of state exercising standing authority between Assembly sessions.",
+        "elected": false
+      }
+    },
+    "officeTypes": [
+      {
+        "key": "generalSecretary",
+        "label": "General Secretary",
+        "isExecutive": true,
+        "isSubNational": false,
+        "labelPlural": "General Secretaries"
+      },
+      {
+        "key": "chairmanOfStateCouncil",
+        "label": "Chairman of the State Council",
+        "isExecutive": true,
+        "isSubNational": false,
+        "isHeadOfState": true,
+        "labelPlural": "Chairmen of the State Council"
+      },
+      {
+        "key": "assemblyDeputy",
+        "label": "Deputy",
+        "chamberKey": "nationalAssembly",
+        "isExecutive": false,
+        "isSubNational": false,
+        "labelPlural": "Deputies"
+      },
+      {
+        "key": "centralBankChair",
+        "label": "Governor of the BNB",
+        "isExecutive": false,
+        "isSubNational": false,
+        "labelPlural": "Governors of the BNB"
+      }
+    ],
+    "electionSystems": {
+      "lowerChamber": "fptp",
+      "headOfGovernment": "parliamentary",
+      "headOfState": "ceremonial"
+    },
+    "lowerElectionSystem": { "snapElectionsAllowed": false },
+    "centralBank": {
+      "name": "Bulgarian National Bank",
+      "abbreviation": "BNB",
+      "heroImage": "https://flagcdn.com/w640/bg.png",
+      "defaultPrimeRate": 5
+    },
+    "usdExchangeRate": 1
+  },
+  "eraOverrides": {
+    "2027-default": {
+      "executiveTitle": "Prime Minister",
+      "governmentType": "parliamentaryRepublic",
+      "governmentTypeLabel": "Parliamentary Republic",
+      "currencyCode": "EUR",
+      "rulingPartyId": null,
+      "majorPartyIds": ["pb", "gerb-sds", "pp-db", "dps", "v"],
+      "legislature": {
+        "name": "National Assembly",
+        "path": "/country/bg/legislature",
+        "bicameral": false,
+        "lowerChamber": {
+          "key": "nationalAssembly",
+          "name": "National Assembly",
+          "shortName": "Assembly",
+          "seats": 240,
+          "description": "240 deputies elected by proportional representation for a four-year term."
+        }
+      },
+      "officeTypes": [
+        {
+          "key": "primeMinister",
+          "label": "Prime Minister",
+          "isExecutive": true,
+          "isSubNational": false,
+          "labelPlural": "Prime Ministers"
+        },
+        {
+          "key": "president",
+          "label": "President",
+          "isExecutive": true,
+          "isSubNational": false,
+          "isHeadOfState": true,
+          "labelPlural": "Presidents"
+        },
+        {
+          "key": "assemblyDeputy",
+          "label": "Deputy",
+          "chamberKey": "nationalAssembly",
+          "isExecutive": false,
+          "isSubNational": false,
+          "labelPlural": "Deputies"
+        },
+        {
+          "key": "centralBankChair",
+          "label": "Governor of the BNB",
+          "isExecutive": false,
+          "isSubNational": false,
+          "labelPlural": "Governors of the BNB"
+        }
+      ],
+      "electionSystems": {
+        "lowerChamber": "pr_hareQuota",
+        "headOfGovernment": "parliamentary",
+        "headOfState": "ceremonial"
+      },
+      "lowerElectionSystem": { "snapElectionsAllowed": true },
+      "usdExchangeRate": 1.0869565217391304
+    },
+    "1991-default": {
+      "executiveTitle": "Prime Minister",
+      "governmentType": "parliamentaryRepublic",
+      "governmentTypeLabel": "Parliamentary Republic",
+      "rulingPartyId": null,
+      "majorPartyIds": ["bsp", "sds", "dps", "bzns"],
+      "legislature": {
+        "name": "Grand National Assembly",
+        "path": "/country/bg/legislature",
+        "bicameral": false,
+        "lowerChamber": {
+          "key": "nationalAssembly",
+          "name": "Grand National Assembly",
+          "shortName": "Assembly",
+          "seats": 400,
+          "description": "400 deputies elected in the multiparty June 1990 election."
+        }
+      },
+      "officeTypes": [
+        {
+          "key": "primeMinister",
+          "label": "Prime Minister",
+          "isExecutive": true,
+          "isSubNational": false,
+          "labelPlural": "Prime Ministers"
+        },
+        {
+          "key": "president",
+          "label": "President",
+          "isExecutive": true,
+          "isSubNational": false,
+          "isHeadOfState": true,
+          "labelPlural": "Presidents"
+        },
+        {
+          "key": "assemblyDeputy",
+          "label": "Deputy",
+          "chamberKey": "nationalAssembly",
+          "isExecutive": false,
+          "isSubNational": false,
+          "labelPlural": "Deputies"
+        },
+        {
+          "key": "centralBankChair",
+          "label": "Governor of the BNB",
+          "isExecutive": false,
+          "isSubNational": false,
+          "labelPlural": "Governors of the BNB"
+        }
+      ],
+      "electionSystems": {
+        "lowerChamber": "ams",
+        "headOfGovernment": "parliamentary",
+        "headOfState": "ceremonial"
+      },
+      "lowerElectionSystem": { "snapElectionsAllowed": true },
+      "usdExchangeRate": 0.035398230088495575
+    },
+    "1953-default": { "usdExchangeRate": 0.06535947712418301 }
+  }
+}

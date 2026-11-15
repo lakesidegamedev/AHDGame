@@ -2,12 +2,12 @@ import { errorResponse } from "@/lib/api/errors";
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import {
-  COLLECTION_NAME,
   MAX_BODY_BYTES,
   clientStatisticsReportSchema,
   toStoredDocument,
   type ClientSimulationStatisticsDoc,
 } from "@/lib/clientStatistics";
+import { clientSimulationStatisticsCollection } from "@/lib/db/repositories/clientSimulationStatistics";
 
 export const dynamic = "force-dynamic";
 // Bound anonymous ingress without keeping per-IP or account identifiers.
@@ -25,16 +25,15 @@ function acceptWithinGlobalBudget(now: number): boolean {
 /**
  * Anonymous aggregate statistics ingress for optional desktop telemetry.
  *
- * Privacy contract: no auth, no account ids, no names, no cookies are read
- * here, and the client IP is never retained. Failures return generic errors
- * and never log the payload or the IP. The ack is a minimal 202 with
- * no-store. The receiving proxy and access-log retention are deployment
- * config; this handler alone cannot guarantee them.
+ * Privacy contract: no auth, no account ids, no names, no cookies are read,
+ * and the client IP is never retained. Failures return generic errors and
+ * never log the payload or IP. Ack is a minimal 202 with no-store. The
+ * receiving proxy and access-log retention are deployment config; this
+ * handler alone cannot guarantee them.
  *
- * TTL ops note: documents carry `expiresAt` (30 days). The TTL index
- * `db.clientSimulationStatistics.createIndex({ expiresAt: 1 },
- * { expireAfterSeconds: 0 })` must be created by deployment/migration. It is
- * deliberately NOT created per request.
+ * Documents carry `expiresAt` (30 days). The TTL index on `expiresAt`
+ * (expireAfterSeconds: 0) must be created by deployment/migration, not per
+ * request.
  */
 
 /** Stream the body with a hard byte cap so oversized payloads die early. */
@@ -103,9 +102,9 @@ export async function POST(request: Request) {
 
   try {
     const db = await getDb();
-    await db
-      .collection<ClientSimulationStatisticsDoc>(COLLECTION_NAME)
-      .insertOne(toStoredDocument(parsed.data, Date.now()));
+    await clientSimulationStatisticsCollection<ClientSimulationStatisticsDoc>(db).insertOne(
+      toStoredDocument(parsed.data, Date.now())
+    );
   } catch {
     return noStore(errorResponse(500, "Unable to store report"));
   }

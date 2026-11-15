@@ -1,5 +1,5 @@
 /**
- * Export shell for the research panels (#2331, #2332, #2333, #2336).
+ * Export shell for the research panels.
  *
  * Read-only and bounded: every request is validated by `parseResearchQuery`
  * (turn window cap, row cap, keyset cursor), reads only the sanitized research
@@ -48,6 +48,7 @@ import {
   type TradePanelRow,
   type TradeTelemetryRow,
 } from "./rules";
+import { commoditySourcingFlowsCollection } from "@/lib/db/repositories/commoditySourcingFlows";
 
 export interface ResearchExport {
   schemaVersion: number;
@@ -236,8 +237,7 @@ export async function runResearchExport(
     : null;
   for (let batches = 0; batches <= query.toTurn - query.fromTurn + 2; batches++) {
     if (collected.length > query.limit) break;
-    const docs = await db
-      .collection<CommoditySourcingDoc>("commoditySourcingFlows")
+    const docs = await commoditySourcingFlowsCollection<CommoditySourcingDoc>(db)
       .find({
         ...window,
         ...commodityFilter,

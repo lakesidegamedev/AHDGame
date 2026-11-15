@@ -4,12 +4,13 @@
  * was appointed and left (or reset) between visits never got the award.
  */
 import { ObjectId, type Db } from "mongodb";
-import type { CentralBank } from "@/lib/db/types";
 import type { CharacterAchievement } from "@/lib/db/types";
 import { getCabinetMembersCollection } from "@/lib/db/collections/cabinetMembers";
 import { getAchievementBySlug } from "./index";
 import { invalidateRarityCache } from "./cache";
 import { resolveOfficeHolderGrants } from "./officeHolderRules";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { characterAchievementsCollection } from "@/lib/db/repositories/characterAchievements";
 
 export async function awardOfficeHolderAchievements(
   db: Db,
@@ -20,8 +21,7 @@ export async function awardOfficeHolderAchievements(
       getCabinetMembersCollection(db)
         .find({ characterId: { $ne: null } }, { projection: { characterId: 1 } })
         .toArray(),
-      db
-        .collection<CentralBank>("centralBanks")
+      centralBanksCollection(db)
         .find({ chairCharacterId: { $ne: null } }, { projection: { chairCharacterId: 1 } })
         .toArray(),
     ]);
@@ -55,7 +55,7 @@ export async function awardOfficeHolderAchievements(
     const achievementIds = [...defIds.values()].filter((id): id is ObjectId => id != null);
     if (achievementIds.length === 0) return 0;
 
-    const col = db.collection<CharacterAchievement>("characterAchievements");
+    const col = characterAchievementsCollection(db);
     const existing = await col
       .find(
         {

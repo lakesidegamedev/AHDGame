@@ -2,11 +2,10 @@
  * Resolve the country-scoped destination for a legacy root URL such as
  * `/politicians?country=uk`.
  *
- * These root routes used to be client components that called `redirect()`
- * after hydration. The server therefore answered with an empty loading shell
- * and no HTTP redirect, so crawlers, link previews and text-only views of the
- * URL saw a blank page. Resolving the URL here lets the route page redirect on
- * the server instead.
+ * These roots previously redirected client-side after hydration, so the
+ * server returned an empty shell with no HTTP redirect and crawlers, link
+ * previews and text-only views saw a blank page. Resolving here lets the
+ * route page redirect on the server instead.
  */
 export type RedirectSearchParams = Record<string, string | string[] | undefined>;
 
@@ -31,7 +30,7 @@ export const LEGACY_COUNTRY_ROOTS = [
  * HTTP redirects for the legacy roots, for `next.config.ts`. The route pages
  * call `redirect()`, but their loading boundary starts streaming first, so the
  * server still answered 200 with an empty shell and the browser redirected a
- * second later (#5446). A config redirect answers before any render. A
+ * second later. A config redirect answers before any render. A
  * `?country=` query picks the country, as `countryScopedUrl` does; otherwise
  * it is the US.
  */

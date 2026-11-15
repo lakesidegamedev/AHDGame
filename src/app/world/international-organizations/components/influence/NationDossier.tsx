@@ -228,18 +228,15 @@ function CommitPlayForm({
   const fundCode = COUNTRY_CURRENCY_MAP[view.fundCurrencyCountryId] ?? "USD";
   const inFundCurrency = (n: number) => formatFundAmount(n, fundCode);
 
-  // The field takes the K/M/B shorthand the panel itself prints, via the same
-  // parser every other money input uses. A plain-units field next to figures
-  // quoted as "SUR 4.0M" reads as "type 4", which buys nothing (ticket #1236).
+  // Takes the K/M/B shorthand the panel itself prints, via the shared money
+  // parser. A plain-units field next to "SUR 4.0M" reads as "type 4".
   const typed = parseMoneyAmountInput(amount);
   const pointCost = target.pointCostLocal ?? 0;
   const hasPreview = typed > 0 && pointCost > 0;
-  // The quote carries resistance but not channel strength, strain, opposition,
-  // the turn ceiling or normalization. Never display this intermediate pressure.
-  // One play is capped before anything else, so
-  // past playMaxPoints the money buys nothing even against a rival (ticket #1371).
-  // The turn limit is different: it bounds what is left after opposing pushes
-  // cancel, so points past it still count when a rival pushes back.
+  // Never display this intermediate pressure. The play cap applies first, so
+  // points past playMaxPoints buy nothing even against a rival. The turn cap
+  // bounds what is left after opposing pushes cancel, so points past it still
+  // count when a rival pushes back.
   const rawPoints = hasPreview ? typed / pointCost : 0;
   const playPoints = Math.min(rawPoints, target.playMaxPoints);
   const overPlayCap = rawPoints > target.playMaxPoints;

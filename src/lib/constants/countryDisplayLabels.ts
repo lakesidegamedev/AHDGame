@@ -253,6 +253,22 @@ export const COUNTRY_DISPLAY_LABELS: Record<CountryId, CountryDisplayLabel> = {
     regionLabel: "Region",
     regionLabelPlural: "Regions",
   },
+  CA: {
+    name: "Canada",
+    exchangeName: "TSX",
+    flagEmoji: "🇨🇦",
+    executiveLabel: "Office of the Prime Minister",
+    regionLabel: "Province",
+    regionLabelPlural: "Provinces & Territories",
+  },
+  QC: {
+    name: "Quebec",
+    exchangeName: "Montreal Exchange",
+    flagEmoji: "⚜️",
+    executiveLabel: "Office of the Premier",
+    regionLabel: "Region",
+    regionLabelPlural: "Regions",
+  },
   DD: {
     exchangeKind: "stateRegister",
     name: "East Germany",

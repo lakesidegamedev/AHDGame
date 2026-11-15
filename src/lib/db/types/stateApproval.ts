@@ -17,6 +17,8 @@ export interface StateApprovalHistory {
   countryId: CountryId;
   /** 0–100: this region's approval at the latest snapshot */
   approvalRating: number;
+  /** Crisis approval writes already applied here, so a repeated write is a no-op. */
+  appliedCrisisEffects?: string[];
   /** Turn-by-turn history (most recent last, capped at 20 entries) */
   history: Array<{
     turn: number;

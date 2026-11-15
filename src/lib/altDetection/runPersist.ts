@@ -186,16 +186,14 @@ interface ClusterUpsertSummary {
  * Upsert computed clusters. Two paths:
  *  - Matches an existing doc (by member overlap): refresh confidence/
  *    evidence/roles in place, but NEVER touch `status`/`reviewedBy`/
- *    `reviewNote` — a moderator's disposition on a ring is sticky across
+ *    `reviewNote`; a moderator's disposition on a ring is sticky across
  *    hourly recomputes.
- *  - No match (brand-new ring): only persisted if `confidence >=
- *    thresholds.cluster` (auto-open threshold, owner decision: 60%), with
- *    `status:"open"`. Below threshold, the cluster is computed but not
- *    written — this keeps low-confidence noise out of `altClusters`
- *    without overloading the fixed `AltClusterStatus` enum with a 5th
- *    "hidden" state; it will be (re-)written the moment its confidence
- *    crosses the threshold on a later run, or the moment a real match with
- *    an already-reviewed doc appears.
+ *  - No match (brand-new ring): only persisted if `confidence >=`
+ *    `clusterThreshold`, with `status:"open"`. Below threshold, the cluster
+ *    is computed but not written, keeping low-confidence noise out of
+ *    `altClusters` without adding a 5th "hidden" `AltClusterStatus`. It is
+ *    written the moment confidence crosses the threshold on a later run, or
+ *    when a real match with an already-reviewed doc appears.
  */
 export async function upsertClusters(
   db: Db,

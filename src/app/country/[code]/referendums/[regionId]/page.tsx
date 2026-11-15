@@ -34,6 +34,10 @@ import { ConsentBillStatus } from "@/components/referendum/campaignsPanel/Consen
 import { buildConsentBillViews, type ConsentBillView } from "@/lib/referendum/consentBillView";
 import type { ObjectId } from "mongodb";
 import { turnoutTargetLabel } from "@/lib/demographics/turnoutTarget";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { billsCollection } from "@/lib/db/repositories/bills";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 /**
  * Display name for a cohort. Cohorts are Layer-1 buckets
@@ -120,7 +124,7 @@ export default async function ReferendumDetailPage({
   const ref = resolved.referendum;
   const [currentTurn, stateDoc, user, pmId] = await Promise.all([
     getCurrentTurn(db),
-    db.collection<State>("states").findOne({ _id: regionId.toUpperCase(), countryId }),
+    statesCollection(db).findOne({ _id: regionId.toUpperCase(), countryId }),
     getAuthUserWithCharacter(),
     getHeadOfGovernmentCharacterId(db, countryId),
   ]);
@@ -136,14 +140,12 @@ export default async function ReferendumDetailPage({
       : "auto";
 
   // Org-present parties in the region = the "could declare / undeclared" set.
-  const regionStateParties = await db
-    .collection<StatePartyOrg>("statePartyOrg")
+  const regionStateParties = await statePartyOrgCollection(db)
     .find({ countryId, stateId: regionId.toUpperCase() })
     .toArray();
   const orgPartyIds = regionStateParties.map((sp) => String(sp.partyId));
   const partyDocs = orgPartyIds.length
-    ? await db
-        .collection<PoliticalParty>("politicalParties")
+    ? await politicalPartiesCollection(db)
         .find({ countryId, sequentialId: { $in: orgPartyIds.map(Number) } })
         .toArray()
     : [];
@@ -185,12 +187,12 @@ export default async function ReferendumDetailPage({
   if (ref.status === "campaigning" && user?.character?.party) {
     const viewerParty = String(user.character.party);
     const [viewerPartyDoc, viewerStateParty] = await Promise.all([
-      db
-        .collection<PoliticalParty>("politicalParties")
-        .findOne({ countryId, sequentialId: Number(viewerParty) }),
-      db
-        .collection<StatePartyOrg>("statePartyOrg")
-        .findOne({ countryId, stateId: regionId.toUpperCase(), partyId: viewerParty }),
+      politicalPartiesCollection(db).findOne({ countryId, sequentialId: Number(viewerParty) }),
+      statePartyOrgCollection(db).findOne({
+        countryId,
+        stateId: regionId.toUpperCase(),
+        partyId: viewerParty,
+      }),
     ]);
     if (viewerPartyDoc) {
       viewerIsPartyOfficer = canSpendOnStateParty(viewerPartyDoc, viewerStateParty, user);
@@ -287,8 +289,7 @@ export default async function ReferendumDetailPage({
       (x): x is ObjectId => x != null
     );
     if (orderedBillIds.length > 0) {
-      const billDocs = await db
-        .collection<Bill>("bills")
+      const billDocs = await billsCollection(db)
         .find({ _id: { $in: orderedBillIds } })
         .toArray();
       const byId = new Map(billDocs.map((b) => [String(b._id), b]));

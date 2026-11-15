@@ -5,7 +5,6 @@ import type { WorldAlignmentView } from "@/lib/alignment/queries/worldAlignment"
 import { ColdWarLedgerClient } from "./ColdWarLedgerClient";
 
 const COLD: WorldAlignmentView = {
-  enabled: true,
   year: 1953,
   eraKey: "cold-war",
   joinGate: 50,
@@ -146,12 +145,6 @@ describe("ColdWarLedgerClient", () => {
   it("explains a world with no alignment recorded", () => {
     render(<ColdWarLedgerClient view={{ ...COLD, rows: [] }} />);
     expect(screen.getByText(/No alignment has been recorded/)).toBeTruthy();
-  });
-
-  it("shows a disabled state, and no table, when the gate is off", () => {
-    render(<ColdWarLedgerClient view={{ ...COLD, enabled: false, rows: [] }} />);
-    expect(screen.getByText(/switched off for this world/)).toBeTruthy();
-    expect(screen.queryByRole("table")).toBeNull();
   });
 
   it("signs the trend and dashes a missing one", () => {

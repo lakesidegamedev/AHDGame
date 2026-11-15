@@ -2,7 +2,6 @@ import type { EasternBlocSeedConfig } from "@/lib/admin/seed/seedEasternBloc";
 import { yuRegions } from "@/lib/seeds/yu/yuRegions";
 import { yuRegions1953 } from "@/lib/seeds/yu/yuRegions1953";
 import { yuParties } from "@/lib/seeds/yu/yuParties";
-import { makeEasternBlocCategories } from "@/lib/seeds/shared/easternBlocModel";
 import {
   makeEasternBlocStateMetrics,
   makeEasternBlocBaselines,
@@ -87,10 +86,8 @@ export function getYuSeedConfig(preset: string): EasternBlocSeedConfig {
   );
   return {
     countryId: "YU",
-    categoryId: "yu_voterGroups",
     regions,
     parties: yuParties,
-    categories: makeEasternBlocCategories("yu_voterGroups", "Yugoslavia Voter Groups"),
     metrics,
     baselines: makeEasternBlocBaselines(metrics),
   };

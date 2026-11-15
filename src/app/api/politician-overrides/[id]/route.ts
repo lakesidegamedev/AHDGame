@@ -6,6 +6,7 @@ import { parseJsonBody } from "@/lib/api/validate";
 import { z } from "zod";
 import type { PoliticianOverride } from "@/lib/db/types";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
+import { politicianOverridesCollection } from "@/lib/db/repositories/politicianOverrides";
 
 const overrideSchema = z.object({
   customBio: z.string().optional(),
@@ -20,9 +21,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   try {
     const { id } = await params;
     const db = await getDb();
-    const override = await db
-      .collection<PoliticianOverride>("politicianOverrides")
-      .findOne({ politicianId: id });
+    const override = await politicianOverridesCollection(db).findOne({ politicianId: id });
     if (!override) {
       return errorResponse(404, "Not found");
     }
@@ -59,9 +58,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
 
     const db = await getDb();
     const now = new Date();
-    const existing = await db
-      .collection<PoliticianOverride>("politicianOverrides")
-      .findOne({ politicianId: id });
+    const existing = await politicianOverridesCollection(db).findOne({ politicianId: id });
 
     const update: Partial<PoliticianOverride> = {
       politicianId: id,
@@ -72,11 +69,9 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     if (body.sectionOrder !== undefined) update.sectionOrder = body.sectionOrder;
 
     if (existing) {
-      await db
-        .collection<PoliticianOverride>("politicianOverrides")
-        .updateOne({ politicianId: id }, { $set: update });
+      await politicianOverridesCollection(db).updateOne({ politicianId: id }, { $set: update });
     } else {
-      await db.collection<PoliticianOverride>("politicianOverrides").insertOne({
+      await politicianOverridesCollection(db).insertOne({
         ...update,
         customBio: body.customBio,
         customSections: body.customSections,
@@ -110,9 +105,7 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
 
     const { id } = await params;
     const db = await getDb();
-    const result = await db
-      .collection<PoliticianOverride>("politicianOverrides")
-      .deleteOne({ politicianId: id });
+    const result = await politicianOverridesCollection(db).deleteOne({ politicianId: id });
     if (result.deletedCount === 0) {
       return errorResponse(404, "Not found");
     }

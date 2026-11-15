@@ -1,6 +1,7 @@
 // GET /api/country/[code]/scotus/cases - History of past Docket cases and their outcomes (affirmed/diverged).
 // Auth: requireBasicAuth
 // Errors: 400, 401, 404
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { requireBasicAuth } from "@/lib/api/requireAuth";
@@ -22,7 +23,7 @@ export async function GET(request: Request, context: RouteContext) {
     if (!COUNTRY_CONFIGS[countryId]) {
       return errorResponse(404, "Country not found");
     }
-    if (countryId !== "US") {
+    if (!countryHasFeature("supremeCourtDocket", countryId)) {
       return NextResponse.json({ cases: [] });
     }
 

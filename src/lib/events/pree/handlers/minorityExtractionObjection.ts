@@ -4,7 +4,10 @@ import { applyDeclarativeEffects } from "@/lib/events/substrate/applyEffects";
 import { threeTierTable } from "./tiers";
 import { SECTOR_STRATEGIES } from "@/lib/constants/sectorStrategies";
 import { seededRoll } from "@/lib/events/substrate/rng";
-import type { Corporation, CorporateSector } from "@/lib/db/types";
+import type { CorporateSector } from "@/lib/db/types";
+import { isUngatedStrategy } from "@/lib/constants/techTree/strategyAvailability";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 const KIND = "pree.minorityExtractionObjection";
 
@@ -65,16 +68,16 @@ const handler: EventHandler = {
     },
   ],
   async buildPayload(ctx) {
-    const corp = await ctx.db
-      .collection<Corporation>("corporations")
-      .findOne({ ceoId: ctx.character._id }, { projection: { _id: 1, name: 1 } });
+    const corp = await corporationsCollection(ctx.db).findOne(
+      { ceoId: ctx.character._id },
+      { projection: { _id: 1, name: 1 } }
+    );
     if (!corp) return null;
 
     const extractionStrats = SECTOR_STRATEGIES["extraction"]!;
     if (extractionStrats.length <= 1) return null;
 
-    const extractionSectors = await ctx.db
-      .collection<CorporateSector>("corporateSectors")
+    const extractionSectors = await corporateSectorsCollection(ctx.db)
       .find({ corporationId: corp._id, sectorType: "extraction" })
       .project({ strategyId: 1, revenue: 1 })
       .toArray();
@@ -88,7 +91,9 @@ const handler: EventHandler = {
     const currentId = (sector.strategyId as string | undefined) ?? "standard";
     const currentStrat = extractionStrats.find((s) => s.id === currentId) ?? extractionStrats[0]!;
 
-    const alternatives = extractionStrats.filter((s) => s.id !== currentStrat.id);
+    const alternatives = extractionStrats.filter(
+      (s) => s.id !== currentStrat.id && isUngatedStrategy(s)
+    );
     if (alternatives.length === 0) return null;
 
     const roll = seededRoll(ctx.character._id.toHexString(), ctx.currentTurn, KIND, "extractPick");

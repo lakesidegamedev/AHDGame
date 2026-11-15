@@ -9,17 +9,11 @@
 export const MACRO_CATEGORIES: ReadonlySet<string> = new Set(["economic", "population"]);
 
 /**
- * Individual `governance.*` paths that live on macroMetrics despite governance
- * being a political category.
- *
- * `independenceDesire` is mechanic state whose drift phase is its sole owner.
- * `budgetBalance` and `debtToGdp` are OBJECTIVE FISCAL STATE, synced from the
- * federal budget every turn — the same kind of thing as unemployment, not a
- * political judgement. Leaving them on the political side meant that once every
- * country had a board and the political half stopped being written, the
- * national budget sync wrote to nothing at all. They also feed `economy.fiscal`
- * through TIER2_SOURCES, which reads the MACRO store, so Bridge B could never
- * see them where they were.
+ * `governance.*` paths that live on macroMetrics despite governance being a
+ * political category. `independenceDesire` is mechanic state owned by its drift
+ * phase. `budgetBalance` and `debtToGdp` are objective fiscal state synced every
+ * turn from the federal budget; they also feed `economy.fiscal` through
+ * TIER2_SOURCES, which reads the MACRO store.
  */
 const MACRO_GOVERNANCE_PATHS: ReadonlySet<string> = new Set([
   "governance.independenceDesire",

@@ -15,7 +15,7 @@ import { ok, warn, critical, relCheck } from "./checkFactory";
 import { getStartingYearForPreset } from "@/lib/constants/turnTime";
 import {
   COUNTRY_CURRENCY_MAP,
-  getInitialRates,
+  getRuntimeInitialRates,
   getSeedCurrencyCode,
   type CurrencyCode,
 } from "@/lib/constants/currencies";
@@ -23,13 +23,21 @@ import {
   currencyConversionScale,
   currencyForCountryAtYear,
 } from "@/lib/currency/rules/eraCurrency";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { enactedLawsCollection } from "@/lib/db/repositories/enactedLaws";
 
 export async function checkNationalBudgets(
   db: Db,
   expect: SeedExpectations
 ): Promise<SeedDiagnosticCheck[]> {
   const checks: SeedDiagnosticCheck[] = [];
-  const budgets = await db.collection("federalBudget").find({}).toArray();
+  const budgets = await federalBudgetCollection(db).find({}).toArray();
   const byCountry = new Map(budgets.map((b) => [String(b.countryId), b]));
   // Check the active 1991 manifest against authored budget configs, including
   // the transition economies. A future roster expansion must not silently
@@ -51,7 +59,7 @@ export async function checkNationalBudgets(
       }
     }
   }
-  const rates = getInitialRates(expect.preset);
+  const rates = getRuntimeInitialRates(expect.preset);
   const euroRate = rates.DE;
   const authoredBudgetCurrency = new Map(
     expect.nationalBudgets.map((config) => [config.countryId, config.currencyCode])
@@ -72,8 +80,7 @@ export async function checkNationalBudgets(
 
   const useGdpInvariant = shouldReconcileStateGdpForPreset(expect.preset);
   const regionRows = useGdpInvariant
-    ? await db
-        .collection<{ _id: string; countryId: string; gdp?: number }>("states")
+    ? await statesCollection<{ _id: string; countryId: string; gdp?: number }>(db)
         .find({})
         .project({ _id: 1, countryId: 1, gdp: 1 })
         .toArray()
@@ -199,13 +206,12 @@ export async function checkStaleCostFractions(
   const expectedByKey = new Map<string, (typeof expectedLaws)[number]>(
     expectedLaws.map((law) => [`${law.countryId}:${law.legislationTypeId}`, law])
   );
-  const actualLaws = await db
-    .collection<{
-      countryId?: string;
-      legislationTypeId?: string;
-      gdpCostFraction?: number;
-      incomeCostFraction?: number;
-    }>("enactedLaws")
+  const actualLaws = await enactedLawsCollection<{
+    countryId?: string;
+    legislationTypeId?: string;
+    gdpCostFraction?: number;
+    incomeCostFraction?: number;
+  }>(db)
     .find({})
     .project({
       countryId: 1,
@@ -280,14 +286,13 @@ export async function checkMonetary(
   db: Db,
   expect: SeedExpectations
 ): Promise<SeedDiagnosticCheck[]> {
-  const banks = await db
-    .collection<{
-      _id: string;
-      countryId?: CountryId;
-      primeRate?: number;
-      rateHistory?: unknown[];
-      inflationHistory?: unknown[];
-    }>("centralBanks")
+  const banks = await centralBanksCollection<{
+    _id: string;
+    countryId?: CountryId;
+    primeRate?: number;
+    rateHistory?: unknown[];
+    inflationHistory?: unknown[];
+  }>(db)
     .find({})
     .toArray();
   const byId = new Map(banks.map((b) => [String(b._id), b]));
@@ -372,10 +377,12 @@ export async function checkMonetary(
 }
 
 export async function checkForex(db: Db, expect: SeedExpectations): Promise<SeedDiagnosticCheck[]> {
-  const rates = await db
-    .collection<{ _id: string; countryId?: string; currencyCode?: CurrencyCode; rate?: number }>(
-      "exchangeRates"
-    )
+  const rates = await exchangeRatesCollection<{
+    _id: string;
+    countryId?: string;
+    currencyCode?: CurrencyCode;
+    rate?: number;
+  }>(db)
     .find({})
     .toArray();
   const byCountry = new Map(rates.map((r) => [String(r.countryId ?? r._id), r] as const));
@@ -383,11 +390,11 @@ export async function checkForex(db: Db, expect: SeedExpectations): Promise<Seed
   const year = getStartingYearForPreset(expect.preset);
 
   if (expect.preset === "2027-default") {
-    const gameState = await db
-      .collection<{ _id: string; eurozoneEnabled?: boolean; euroAdoptedCountries?: string[] }>(
-        "gameState"
-      )
-      .findOne({ _id: "current" });
+    const gameState = await gameStateCollection<{
+      _id: string;
+      eurozoneEnabled?: boolean;
+      euroAdoptedCountries?: string[];
+    }>(db).findOne({ _id: "current" });
     const expected = [...EUROZONE_2027_MEMBERS].sort();
     const actual = gameState?.euroAdoptedCountries;
     const valid =
@@ -467,12 +474,12 @@ export async function checkForex(db: Db, expect: SeedExpectations): Promise<Seed
 
     if (expectedCurrency === "EUR") {
       const [budget, legacyCorps, legacyBonds] = await Promise.all([
-        db.collection("federalBudget").findOne({ countryId }, { projection: { currencyCode: 1 } }),
-        db.collection("corporations").countDocuments({
+        federalBudgetCollection(db).findOne({ countryId }, { projection: { currencyCode: 1 } }),
+        corporationsCollection(db).countDocuments({
           countryId,
           liquidCurrencyCode: { $ne: "EUR" },
         }),
-        db.collection("bonds").countDocuments({ countryId, currencyCode: { $ne: "EUR" } }),
+        bondsCollection(db).countDocuments({ countryId, currencyCode: { $ne: "EUR" } }),
       ]);
       checks.push(
         budget?.currencyCode === "EUR" && legacyCorps === 0 && legacyBonds === 0

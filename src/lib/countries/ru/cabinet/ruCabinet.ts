@@ -87,5 +87,3 @@ export const RU_CABINET_POSITIONS = [
     ],
   },
 ] as const;
-
-export type RUCabinetPositionId = (typeof RU_CABINET_POSITIONS)[number]["id"];

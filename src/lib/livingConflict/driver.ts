@@ -2,6 +2,7 @@ import { advanceArabRegionalTurn, reconcileArabTerrorismSpillover } from "./arab
 import { advancePandemicState, pandemicOpeningYear, PANDEMIC_KEY } from "./rules/pandemic";
 import type { Db } from "mongodb";
 import { hasRequiredBelligerents } from "./rules/participants";
+import { openingWindowOpen } from "./rules/openingWindow";
 import type {
   ConflictActor,
   ConflictRole,
@@ -22,6 +23,7 @@ import {
   tickConflict,
 } from "./engine";
 import { advanceCampaignTurn, normalizeCampaignState } from "./campaign";
+import { livingConflictsCollection } from "@/lib/db/repositories/livingConflicts";
 
 /**
  * The DB-facing turn driver for living conflicts. Loads a conflict's state, opens
@@ -34,8 +36,6 @@ import { advanceCampaignTurn, normalizeCampaignState } from "./campaign";
  * behind `livingConflictsEnabled`, which ships off. Kept a thin orchestration
  * over the pure engine so its logic is testable with a fake db.
  */
-
-const LIVING_CONFLICT_COLLECTION = "livingConflicts";
 
 /** Who is playing which role in a given conflict, assembled by the caller. */
 export interface ConflictParticipants {
@@ -77,21 +77,17 @@ export function nationsForRoles(p: ConflictParticipants, roles: ConflictRole[] |
 }
 
 export async function loadConflictState(db: Db, defKey: string): Promise<LivingConflictState> {
-  const doc = await db
-    .collection<LivingConflictState>(LIVING_CONFLICT_COLLECTION)
-    .findOne({ defKey });
+  const doc = await livingConflictsCollection<LivingConflictState>(db).findOne({ defKey });
   if (!doc) return emptyConflictState(defKey);
   return { ...doc, campaign: normalizeCampaignState(doc.campaign) };
 }
 
 export async function saveConflictState(db: Db, state: LivingConflictState): Promise<void> {
-  await db
-    .collection<LivingConflictState>(LIVING_CONFLICT_COLLECTION)
-    .updateOne(
-      { defKey: state.defKey },
-      { $set: { ...state, updatedAt: new Date() } },
-      { upsert: true }
-    );
+  await livingConflictsCollection<LivingConflictState>(db).updateOne(
+    { defKey: state.defKey },
+    { $set: { ...state, updatedAt: new Date() } },
+    { upsert: true }
+  );
 }
 
 export interface DrivenEvent {
@@ -102,13 +98,6 @@ export interface DrivenEvent {
 export interface DriveResult {
   state: LivingConflictState;
   events: DrivenEvent[];
-}
-
-function inWindow(def: LivingConflictDef, year: number | null | undefined): boolean {
-  if (def.fromYear !== undefined && (typeof year !== "number" || year < def.fromYear)) return false;
-  if (def.untilYear !== undefined && (typeof year !== "number" || year > def.untilYear))
-    return false;
-  return true;
 }
 
 /**
@@ -153,17 +142,7 @@ export async function driveConflictTurn(
       year < pandemicOpeningYear(participants)
     )
       return { state, events: [] };
-    // A surviving federation in the authored 2027 world is an explicit
-    // counterfactual, not a replay of the historical 1991-2010 window.
-    const survivingFederation =
-      def.key === "yugoslav_dissolution" &&
-      state.openingProvenance?.preset === "2027-default" &&
-      state.openingDisposition === "counterfactual" &&
-      year === 2027;
-    if (
-      (!inWindow(def, year) && !survivingFederation) ||
-      !hasRequiredBelligerents(def, participants)
-    ) {
+    if (!openingWindowOpen(def, state, year) || !hasRequiredBelligerents(def, participants)) {
       return { state, events: [] };
     }
     if (def.minimumOpeningPressure !== undefined && externalPressure < def.minimumOpeningPressure) {

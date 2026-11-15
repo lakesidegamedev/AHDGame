@@ -6,6 +6,7 @@
 import type { LawFamilyDefinition } from "./catalog";
 import { getCabinetMechanics } from "@/lib/constants/cabinetMechanics";
 import { resolveDepartment } from "@/lib/cabinet/rosterEra";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 export type ResetCountry = "US" | "UK" | "JP" | "IE" | "SCO" | "WAL";
 
@@ -149,13 +150,13 @@ export function fundingSeatForLaw(
 ): string {
   if (!(law.ownerCode in SEATS)) throw new Error(`Unknown reset owner ${law.ownerCode}`);
   const code = law.ownerCode as ResetOwnerCode;
-  if (country === "US") {
+  if (countryHasFeature("usSeeds", country)) {
     if (law.id === "L50") return "secretary_of_treasury"; // ATF in the 1991 Treasury.
     if (code === "EDU" && enabledSeats.has("secretary_of_education")) {
       return "secretary_of_education";
     }
   }
-  if (country === "UK") {
+  if (countryHasFeature("ukSeeds", country)) {
     if (law.id === "L21" || law.id === "L38") return "health_secretary";
     if (law.id === "L36") return "justice_secretary";
   }
@@ -169,13 +170,13 @@ export function fundingNameForLaw1991(
   enabledSeats: ReadonlySet<string> = new Set()
 ): string {
   const seatId = fundingSeatForLaw(law, country, enabledSeats);
-  if (country === "US") {
+  if (countryHasFeature("usSeeds", country)) {
     if (law.id === "L50") return "Department of the Treasury (ATF funding)";
     if (seatId === "secretary_of_health" && !enabledSeats.has("secretary_of_education")) {
       return "Department of Health, Education, and Welfare";
     }
   }
-  if (country === "JP") {
+  if (countryHasFeature("jpSeeds", country)) {
     const labels: Record<string, string> = {
       finance_minister: "Ministry of Finance",
       health_minister: "Ministry of Health and Welfare",
@@ -192,7 +193,8 @@ export function fundingNameForLaw1991(
     };
     if (labels[seatId]) return labels[seatId];
   }
-  if (country === "UK" && seatId === "transport_secretary") return "Department of Transport";
+  if (countryHasFeature("ukSeeds", country) && seatId === "transport_secretary")
+    return "Department of Transport";
   const mechanics = getCabinetMechanics(country, seatId);
   if (!mechanics) throw new Error(`No Cabinet mechanics for ${country} ${seatId}`);
   return resolveDepartment(mechanics, 1991);

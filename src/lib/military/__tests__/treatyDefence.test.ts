@@ -146,7 +146,6 @@ function world(opts: { preset?: string; coldWarEndedTurn?: number } = {}) {
   store.gameState = [
     {
       _id: "current",
-      conflictsEnabled: true,
       preset: opts.preset ?? "2019-default",
       ...(opts.coldWarEndedTurn != null ? { coldWarEndedTurn: opts.coldWarEndedTurn } : {}),
     },
@@ -506,15 +505,6 @@ describe("resolveTreatyDefenders: loaded from organization data", () => {
         sideB: { countries: ["UK"] },
       },
     ];
-    expect(
-      await resolveTreatyDefenders(fakeDb(), { defender: "DD", attackers: ["RU"], currentTurn: 1 })
-    ).toEqual([]);
-  });
-
-  it("returns nothing when the conflicts subsystem is off", async () => {
-    store.gameState = [{ _id: "current", conflictsEnabled: false }];
-    store.organizationPostures = [{ organizationId: "ndp", posture: "article5" }];
-    store.organizationMemberships = [membership("ndp", "DD"), membership("ndp", "UK")];
     expect(
       await resolveTreatyDefenders(fakeDb(), { defender: "DD", attackers: ["RU"], currentTurn: 1 })
     ).toEqual([]);

@@ -1,16 +1,7 @@
 import type { Db } from "mongodb";
 import { ZOD_CURRENCY_ENUM, type CurrencyCode } from "@/lib/constants/currencies";
-import type { ProducerEconomyAccount } from "@/lib/db/types/producerEconomy";
 import type { CountryId } from "@/lib/constants/countries";
-import type {
-  Bond,
-  CentralBank,
-  Corporation,
-  FederalBudget,
-  GameConfig,
-  MoneySupplySnapshot,
-  OrganizationFund,
-} from "@/lib/db/types";
+import type { GameConfig, MoneySupplySnapshot } from "@/lib/db/types";
 import { BOND_UNIT_FACE_VALUE } from "@/lib/db/types/bond";
 import { annualizedMoneyGrowthPct, MONEY_ACCOUNTING_VERSION } from "./calculate";
 import { seedMoneySupplyBaselines } from "./seed";
@@ -31,6 +22,27 @@ import {
   type MutableComponents,
 } from "./assemble";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import type { Document } from "mongodb";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { producerEconomyAccountsCollection } from "@/lib/db/repositories/producerEconomyAccounts";
+import { bondMarketPoolsCollection } from "@/lib/db/repositories/bondMarketPools";
+import { organizationFundsCollection } from "@/lib/db/repositories/organizationFunds";
+import { equityMarketPoolsCollection } from "@/lib/db/repositories/equityMarketPools";
+import { productAdvertisingClearingCollection } from "@/lib/db/repositories/productAdvertisingClearing";
+import { moneySupplySnapshotsCollection } from "@/lib/db/repositories/moneySupplySnapshots";
 
 export { PERSONS_PER_HOUSEHOLD, HOUSEHOLD_LIQUID_RATIO, HOUSEHOLD_SAVINGS_RATIO };
 
@@ -42,7 +54,7 @@ type SnapshotMoneySupplyConfig = GameConfig & {
 };
 
 export async function snapshotMoneySupply(db: Db, turn: number): Promise<number> {
-  const config = await db.collection<SnapshotMoneySupplyConfig>("gameConfig").findOne(
+  const config = await gameConfigCollection<SnapshotMoneySupplyConfig>(db).findOne(
     { _id: "default" },
     {
       projection: {
@@ -60,15 +72,17 @@ export async function snapshotMoneySupply(db: Db, turn: number): Promise<number>
     config?.privateBankingEnabled === true &&
     config?.bankConstructionFinanceEnabled === true;
 
-  const gameState = await db
-    .collection<{ _id: string; preset?: string; worldEpochId?: string }>("gameState")
-    .findOne({ _id: "current" }, { projection: { preset: 1, worldEpochId: 1 } });
+  const gameState = await gameStateCollection<{
+    _id: string;
+    preset?: string;
+    worldEpochId?: string;
+  }>(db).findOne({ _id: "current" }, { projection: { preset: 1, worldEpochId: 1 } });
   const preset = gameState?.preset ?? DEFAULT_SEED_PRESET;
   const currencyFor = (countryId: CountryId) => homeCurrency(countryId, preset);
-  let banks = await db.collection<CentralBank>("centralBanks").find({}).toArray();
+  let banks = await centralBanksCollection(db).find({}).toArray();
   if (banks.some((bank) => bank.externalBroadMoney == null)) {
     await seedMoneySupplyBaselines(db, preset);
-    banks = await db.collection<CentralBank>("centralBanks").find({}).toArray();
+    banks = await centralBanksCollection(db).find({}).toArray();
   }
   const [
     characters,
@@ -86,8 +100,7 @@ export async function snapshotMoneySupply(db: Db, turn: number): Promise<number>
     equityPools,
     producerAccounts,
   ] = await Promise.all([
-    db
-      .collection("characters")
+    charactersCollection(db)
       .find(
         {},
         {
@@ -102,8 +115,7 @@ export async function snapshotMoneySupply(db: Db, turn: number): Promise<number>
         }
       )
       .toArray(),
-    db
-      .collection("npps")
+    nppsCollection<Document>(db)
       .find(
         {},
         { projection: { countryId: 1, funds: 1, currencyBalances: 1, nppInvestmentCashAnchor: 1 } }
@@ -111,8 +123,7 @@ export async function snapshotMoneySupply(db: Db, turn: number): Promise<number>
       .toArray(),
     // Corp-level liquidCapital is the SSOT insolvency keys on and sectorTurn
     // $inc's every turn. CorporateSector has no liquidCapital field.
-    db
-      .collection<Corporation>("corporations")
+    corporationsCollection(db)
       .find(
         {},
         {
@@ -137,12 +148,10 @@ export async function snapshotMoneySupply(db: Db, turn: number): Promise<number>
         }
       )
       .toArray(),
-    db
-      .collection("politicalParties")
+    politicalPartiesCollection<Document>(db)
       .find({}, { projection: { countryId: 1, treasury: 1 } })
       .toArray(),
-    db
-      .collection<FederalBudget>("federalBudget")
+    federalBudgetCollection(db)
       .find(
         {},
         {
@@ -154,50 +163,41 @@ export async function snapshotMoneySupply(db: Db, turn: number): Promise<number>
         }
       )
       .toArray(),
-    db
-      .collection<OrganizationFund>("organizationFunds")
+    organizationFundsCollection(db)
       .find({}, { projection: { currencyCountryId: 1, balanceLocal: 1 } })
       .toArray(),
-    db
-      .collection<Bond>("bonds")
+    bondsCollection(db)
       .find({ issuerType: "sovereign", matured: false, defaulted: false })
       .toArray(),
-    db
-      .collection<{ _id: string; countryId?: string; population?: number }>("states")
+    statesCollection<{ _id: string; countryId?: string; population?: number }>(db)
       .find({}, { projection: { countryId: 1, population: 1 } })
       .toArray(),
     // State-level + national-scope rows. Restricting to NATIONAL_SCOPE alone
     // left FR/IT/ES/SE/TR (and every other country without a national doc) at
     // householdLiquid = 0 even after the demography derivation landed.
-    db
-      .collection<{ _id: string; economic?: { medianIncome?: { value?: number } } }>("macroMetrics")
+    macroMetricsCollection<{ _id: string; economic?: { medianIncome?: { value?: number } } }>(db)
       .find({}, { projection: { "economic.medianIncome": 1 } })
       .toArray(),
     // Fund cash is ₳ (every fund leg is, since the currency SSOT fix), so it
     // converts into a native figure with the same rate table everything else
     // uses. That was the blocker on counting it at all.
-    db
-      .collection<{ _id: unknown; cashAnchor?: number; anchorCurrencyCode?: string }>("indexFunds")
+    indexFundsCollection<{ _id: unknown; cashAnchor?: number; anchorCurrencyCode?: string }>(db)
       .find({}, { projection: { cashAnchor: 1, anchorCurrencyCode: 1 } })
       .toArray(),
-    db
-      .collection<{ currencyCode: string; rate: number }>("exchangeRates")
+    exchangeRatesCollection<{ currencyCode: string; rate: number }>(db)
       .find({}, { projection: { currencyCode: 1, rate: 1 } })
       .toArray(),
-    db
-      .collection<{
-        _id: string;
-        cashLocal?: number;
-        lifetime?: { qeIn?: number; qtOut?: number };
-      }>("bondMarketPools")
+    bondMarketPoolsCollection<{
+      _id: string;
+      cashLocal?: number;
+      lifetime?: { qeIn?: number; qtOut?: number };
+    }>(db)
       .find({}, { projection: { cashLocal: 1, lifetime: 1 } })
       .toArray(),
-    db
-      .collection<{ _id: string; cashLocal?: number }>("equityMarketPools")
+    equityMarketPoolsCollection<{ _id: string; cashLocal?: number }>(db)
       .find({}, { projection: { cashLocal: 1 } })
       .toArray(),
-    db
-      .collection<ProducerEconomyAccount>("producerEconomyAccounts")
+    producerEconomyAccountsCollection(db)
       .find(
         { worldEpoch: gameState?.worldEpochId ?? "" },
         { projection: { kind: 1, currency: 1, cash: 1 } }
@@ -223,10 +223,9 @@ export async function snapshotMoneySupply(db: Db, turn: number): Promise<number>
   // construction-in-progress or collateral mark. Read it only when both the
   // funded Treasury ledger and bank construction finance are enabled.
   const constructionEscrows = constructionCashEnabled
-    ? await db
-        .collection<{
-          constructionFinancing?: { currency?: CurrencyCode; escrowLocal?: number };
-        }>("corporateSectors")
+    ? await corporateSectorsCollection<{
+        constructionFinancing?: { currency?: CurrencyCode; escrowLocal?: number };
+      }>(db)
         .find(
           { "constructionFinancing.escrowLocal": { $gt: 0 } },
           {
@@ -304,9 +303,7 @@ export async function snapshotMoneySupply(db: Db, turn: number): Promise<number>
         : governmentLiquidFromTreasury(budget.treasuryBalance)
     );
   // Fund cash is ₳ and the rate table is local-per-₳, so cashAnchor × rate is
-  // the native figure. This used to be left at 0 because the equity leg of a
-  // fund was denominated inconsistently; with one unit across every fund leg
-  // the conversion is well defined and the cash is real money that moves.
+  // the native figure.
   const rateByCurrency = new Map<string, number>(
     exchangeRateRows
       .filter((r) => Number.isFinite(r.rate) && r.rate > 0)
@@ -340,11 +337,9 @@ export async function snapshotMoneySupply(db: Db, turn: number): Promise<number>
       "organizationLiquid",
       fund.balanceLocal
     );
-  // Bond-pool cash enters as a raw audit component plus its QE lifetime legs,
-  // so calculateMoneyAggregates can net the QE-parked portion back into
-  // observed M2 while the settlement inventory stays outside it (v3 boundary,
-  // issue #2021). Pools without flow counters contribute zero QE legs and
-  // read as pure settlement inventory.
+  // Bond-pool cash is a raw audit component; its QE lifetime legs let
+  // calculateMoneyAggregates net the QE-parked portion back into observed M2 while
+  // settlement inventory stays outside. Pools without flow counters add zero QE legs.
   for (const pool of bondPools) {
     addComponent(byCurrency, pool._id as CurrencyCode, "bondPoolCash", pool.cashLocal ?? 0);
     addComponent(byCurrency, pool._id as CurrencyCode, "bondPoolQeIn", pool.lifetime?.qeIn ?? 0);
@@ -355,11 +350,10 @@ export async function snapshotMoneySupply(db: Db, turn: number): Promise<number>
   // Funded advertising orders owed to sellers sit in the clearing pool between
   // the buyer debit and the seller credit. It is corporate cash in transit,
   // normally zero at turn end, counted so an in-flight clearing is not missing money.
-  const advertisingClearingPools = await db
-    .collection<{ currencyCode?: string; cashLocal?: number }>(
-      // PRODUCT_ADVERTISING_CLEARING_COLLECTION, kept literal to avoid importing the settlement shell.
-      "productAdvertisingClearing"
-    )
+  const advertisingClearingPools = await productAdvertisingClearingCollection<{
+    currencyCode?: string;
+    cashLocal?: number;
+  }>(db)
     .find({}, { projection: { currencyCode: 1, cashLocal: 1 } })
     .toArray();
   for (const pool of advertisingClearingPools)
@@ -396,16 +390,14 @@ export async function snapshotMoneySupply(db: Db, turn: number): Promise<number>
   ): Promise<void> {
     const currencyCode = currencyFor(countryId);
     const aggregates = aggregatesForCurrency(byCurrency, currencyCode);
-    const prior = await db
-      .collection<MoneySupplySnapshot>(MONEY_SUPPLY_SNAPSHOTS_COLLECTION)
-      .findOne(
-        {
-          currencyCode,
-          accountingVersion: MONEY_ACCOUNTING_VERSION,
-          turn: { $lte: Math.max(0, turn - 12) },
-        },
-        { sort: { turn: -1 } }
-      );
+    const prior = await moneySupplySnapshotsCollection<MoneySupplySnapshot>(db).findOne(
+      {
+        currencyCode,
+        accountingVersion: MONEY_ACCOUNTING_VERSION,
+        turn: { $lte: Math.max(0, turn - 12) },
+      },
+      { sort: { turn: -1 } }
+    );
     const doc: MoneySupplySnapshot = {
       _id: `${turn}:${currencyCode}`,
       turn,
@@ -424,9 +416,11 @@ export async function snapshotMoneySupply(db: Db, turn: number): Promise<number>
       netMoneyCreatedLifetime,
       createdAt: now,
     };
-    await db
-      .collection<MoneySupplySnapshot>(MONEY_SUPPLY_SNAPSHOTS_COLLECTION)
-      .replaceOne({ _id: doc._id }, doc, { upsert: true });
+    await moneySupplySnapshotsCollection<MoneySupplySnapshot>(db).replaceOne(
+      { _id: doc._id },
+      doc,
+      { upsert: true }
+    );
     written++;
   }
 
@@ -434,25 +428,13 @@ export async function snapshotMoneySupply(db: Db, turn: number): Promise<number>
     await writeSnapshot(bank.countryId, bank._id, bank.netMoneyCreatedLifetime ?? 0);
   }
 
-  // Countries with no central bank (Warsaw Pact / non-aligned command
-  // economies excluded from FOREX_ACTIVE_COUNTRIES — see updateCentralBanks
-  // in src/lib/currency/migration.ts) still accumulate real money-supply
-  // components above: household money from demography, government liquid
-  // from federalBudget.treasuryBalance, NPP/party liquid, all keyed by their
-  // OWN currency. But this write loop iterated `banks` alone, so those
-  // currencies' aggregates were computed and then silently discarded every
-  // turn — every one of these countries had zero moneySupplySnapshot rows
-  // for the entire run. This is the same shape as the bug already fixed in
-  // inflationRecalc.ts's "unbanked" pass (PL/HU/CS/RO/BG/YU). UKR/BLR/BAL do NOT
-  // need an entry here: they are on the Soviet ruble, and RU's central bank
-  // already writes the SUR aggregate, so the currency guard below skips them
-  // correctly rather than by accident. A command
-  // economy genuinely has no central-bank monetary policy to model — that's
-  // real (`monetaryOverhang`/`blackMarketPremium` on FederalBudget model
-  // exactly this) — but "no central bank" must not mean "no money-supply
-  // record". The synthetic bankId (the country's own id) and
-  // netMoneyCreatedLifetime: 0 reflect that there is no CB operations ledger
-  // behind these currencies.
+  // Countries with no central bank still accumulate real money-supply
+  // components above, keyed by their own currency. The loop below writes a
+  // snapshot for each unbanked currency once, with the country's own id as a
+  // synthetic bankId and netMoneyCreatedLifetime: 0, since no CB operations
+  // ledger exists. Currencies already covered by a bank are skipped: UKR/BLR/BAL
+  // are on the Soviet ruble, so RU's central bank writes the SUR aggregate.
+  // No central bank must not mean no money-supply record.
   const bankedCountryIds = new Set(banks.map((bank) => bank.countryId));
   const writtenCurrencies = new Set(banks.map((bank) => currencyFor(bank.countryId)));
   for (const budget of budgets) {

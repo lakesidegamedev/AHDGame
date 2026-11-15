@@ -8,30 +8,17 @@ import { reconcileCommandCommanders } from "@/lib/military/commands";
 import type { Migration, MigrationResult } from "../types";
 
 /**
- * Clear commanders who are no longer commissioned generals of their command's
- * country.
+ * Clear commanders who are no longer commissioned generals of their
+ * command's country.
  *
- * A `commanderIds` entry is a CHARACTER id, and a character can emigrate or be
- * dismissed without anything touching the saved command. The stored id then names
- * somebody the country's roster no longer holds, and two things follow: the office
- * cannot draw a row for them (so the count stands over an empty list with no way to
- * remove anyone), and the commands PUT re-checks every id against that same roster
- * and 400s the WHOLE array — freezing every later edit to any command in the
- * country, including creating a new one.
+ * A `commanderIds` entry is a CHARACTER id; a character can emigrate or be
+ * dismissed without anything touching the saved command. The stale id cannot
+ * draw a row (the count stands over an empty list), and the commands PUT
+ * re-checks every id against the roster and 400s the WHOLE array, freezing
+ * every later edit to any command in the country.
  *
- * Measured against production on 2026-08-26, two countries are in that state:
- * Russia's only command and one of the United Kingdom's, each led by a general
- * whose character had moved abroad.
- *
- * The runtime heals this on load now (`reconcileCommandCommanders`, called from the
- * office's seed), so this migration is not what makes the fix work — it is what
- * makes it immediate, instead of waiting for those two defence secretaries to open
- * their offices and save something.
- *
- * Country-agnostic on purpose: it repairs whatever is broken at deploy time rather
- * than hard-coding the two documents that happen to be broken today.
- *
- * Idempotent: a second run finds nothing off-roster and writes nothing.
+ * Runtime heals this on load via `reconcileCommandCommanders`; this migration
+ * just makes the fix immediate. Country-agnostic on purpose. Idempotent.
  */
 async function dropOffRosterCommandCommanders(db: Db, dryRun: boolean): Promise<MigrationResult> {
   const docs = await getMilitaryCommandsCollection(db)

@@ -1,9 +1,7 @@
 import type { Db } from "mongodb";
 
-import {
-  MANUFACTURING_PRODUCT_PROJECTS_V2,
-  type ManufacturingProductProject,
-} from "@/lib/products/manufacturingProject";
+import { type ManufacturingProductProject } from "@/lib/products/manufacturingProject";
+import { manufacturingProductProjectsV2Collection } from "@/lib/db/repositories/manufacturingProductProjectsV2";
 
 /**
  * Record this turn's NPP manufacturing product projects.
@@ -19,7 +17,7 @@ export async function persistNppManufacturingProjects(
 ): Promise<void> {
   if (projects.length === 0) return;
   try {
-    await db.collection<ManufacturingProductProject>(MANUFACTURING_PRODUCT_PROJECTS_V2).bulkWrite(
+    await manufacturingProductProjectsV2Collection<ManufacturingProductProject>(db).bulkWrite(
       projects.map((project) => ({ insertOne: { document: project } })),
       { ordered: false }
     );

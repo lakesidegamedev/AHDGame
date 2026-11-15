@@ -2,23 +2,22 @@
  * POST /api/country/[code]/regime/decision/[id]/resolve
  *
  * Resolve the active regime-escalation decision by choosing one of its
- * registered options. Body carries `{ optionId, payload? }` — the
- * payload merges into `activeDecision.payload` so option handlers that
- * need extra parameters (e.g. Stage 2 `selectiveConcession` taking a
- * banned partyId) can pass them in here without needing a separate
- * route per option.
+ * registered options. Body `{ optionId, payload? }`: payload merges into
+ * `activeDecision.payload` so option handlers needing extra parameters
+ * (e.g. Stage 2 `selectiveConcession` taking a banned partyId) can pass
+ * them without a separate route per option.
  *
- * Auth: sitting head of government (the same gate as
- * `/reform/[action]`). The decision-id in the URL must match
- * `activeDecision.id` to guard against stale UI replays.
+ * Auth: sitting head of government (same gate as `/reform/[action]`). The
+ * URL decision-id must match `activeDecision.id` to guard against stale UI
+ * replays.
  *
  * Errors:
- *   400 — unknown country / invalid body
- *   401 — not authenticated
- *   403 — caller is not the sitting leader
- *   404 — no active decision (queue is empty)
- *   409 — decision-id in URL doesn't match the active slot OR unknown optionId
- *   500 — anything else
+ *   400 unknown country / invalid body
+ *   401 not authenticated
+ *   403 caller not the sitting leader
+ *   404 no active decision
+ *   409 decision-id mismatch OR unknown optionId
+ *   500 anything else
  */
 import { NextResponse } from "next/server";
 import { z } from "zod";

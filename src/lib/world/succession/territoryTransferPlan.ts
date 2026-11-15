@@ -3,6 +3,7 @@ import type { CountryId } from "@/lib/constants/countries";
 import type { State } from "@/lib/db/types/state";
 import type { SuccessorTerritory } from "./rules/territory";
 import { buildSourceRegionHierarchy } from "./sourceRegionHierarchy";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 export interface FederationStateTransferPlan {
   stateId: string;
@@ -23,8 +24,7 @@ export async function planLiveFederationStateTransfers(input: {
   session?: ClientSession;
 }): Promise<FederationStateTransferPlan[]> {
   const { db, sourceCountryId, territories, session } = input;
-  const states = await db
-    .collection<State>("states")
+  const states = await statesCollection(db)
     .find({ countryId: sourceCountryId }, { session })
     .toArray();
   const { topLevel, topLevelFor } = buildSourceRegionHierarchy(states);

@@ -7,6 +7,24 @@ import { getMetricDefinition } from "@/lib/constants/metricDefinitions";
 
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
 vi.mock("@/lib/wireEvent", () => ({ logWireEvent: vi.fn().mockResolvedValue(undefined) }));
+vi.mock("@/lib/livingConflict/globalResponse", () => ({
+  resolveGlobalResponse: vi.fn().mockResolvedValue(undefined),
+}));
+vi.mock("@/lib/livingConflict/processTurn", () => ({
+  processLivingConflictsTurn: vi.fn().mockResolvedValue({ conflictsProcessed: 0, eventsOpened: 0 }),
+}));
+vi.mock("@/lib/livingConflict/vietnamCompat", async () => {
+  const { emptyVietnamState } = await import("@/lib/crises/vietnamEscalation");
+  return {
+    retireLegacyVietnamCrises: vi.fn().mockResolvedValue(0),
+    livingVietnamAsLegacyState: vi.fn().mockResolvedValue(emptyVietnamState()),
+  };
+});
+vi.mock("@/lib/crises/interactionEngine", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/crises/interactionEngine")>()),
+  getExpiredInteractions: vi.fn().mockResolvedValue([]),
+  autoResolveCrisisInteraction: vi.fn().mockResolvedValue(undefined),
+}));
 
 let db: MockDb;
 
@@ -177,6 +195,50 @@ describe("processCrisisTurn", () => {
 
     const { logWireEvent } = await import("@/lib/wireEvent");
     expect(logWireEvent).toHaveBeenCalledWith("crisis_end", "Crisis over", expect.any(Object));
+  });
+
+  it("still closes the other expiring crises when one global response resolver throws", async () => {
+    const { resolveGlobalResponse } = await import("@/lib/livingConflict/globalResponse");
+    const failing = makeCrisis({
+      _id: new ObjectId(),
+      startTurn: 5,
+      durationTurns: 3,
+      globalResponse: {} as Crisis["globalResponse"],
+    });
+    const healthy = makeCrisis({ _id: new ObjectId(), startTurn: 5, durationTurns: 3 });
+    vi.mocked(resolveGlobalResponse).mockRejectedValueOnce(new Error("resolver down"));
+    db.collectionMocks.crises.find.mockReturnValue({ toArray: async () => [failing, healthy] });
+    db.collectionMocks.states.find.mockReturnValue({ toArray: async () => [] });
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const { processCrisisTurn } = await import("./crisisTurn");
+    await processCrisisTurn(db as unknown as Db, 8);
+
+    expect(db.collectionMocks.crises.updateMany).toHaveBeenCalledWith(
+      { _id: { $in: [healthy._id] } },
+      expect.objectContaining({
+        $set: expect.objectContaining({ status: "resolved", endTurn: 8 }),
+      })
+    );
+    errorSpy.mockRestore();
+  });
+
+  it("keeps resolving expired interactions after one auto-resolve throws", async () => {
+    const { getExpiredInteractions, autoResolveCrisisInteraction } =
+      await import("@/lib/crises/interactionEngine");
+    const first = { _id: new ObjectId() };
+    const second = { _id: new ObjectId() };
+    vi.mocked(getExpiredInteractions).mockResolvedValueOnce([first, second] as never);
+    vi.mocked(autoResolveCrisisInteraction).mockRejectedValueOnce(new Error("bad tree"));
+    db.collectionMocks.crises.find.mockReturnValue({ toArray: async () => [makeCrisis()] });
+    db.collectionMocks.states.find.mockReturnValue({ toArray: async () => [] });
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const { processCrisisTurn } = await import("./crisisTurn");
+    await expect(processCrisisTurn(db as unknown as Db, 10)).resolves.toBe(1);
+
+    expect(autoResolveCrisisInteraction).toHaveBeenCalledWith(expect.anything(), second._id);
+    errorSpy.mockRestore();
   });
 
   it("does not auto-resolve indefinite crisis", async () => {

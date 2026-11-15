@@ -6,6 +6,9 @@ import { retoolRescaleFields } from "@/lib/corporations/retoolRescale";
 import { getMarketSystemModeForDb, marketAtLeast } from "@/lib/market/featureFlag";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
 import type { Migration, MigrationResult } from "../types";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { stateResourceCapacityCollection } from "@/lib/db/repositories/stateResourceCapacity";
 
 /**
  * Markets repair plan P2a: author the eastern-bloc deposits and point the
@@ -78,9 +81,11 @@ async function backfillEasternDeposits(db: Db, dryRun: boolean): Promise<Migrati
   const notes: string[] = [];
   const now = new Date();
 
-  const gameState = await db
-    .collection<{ _id: string; preset?: string; currentTurn?: number }>("gameState")
-    .findOne({ _id: "current" }, { projection: { preset: 1, currentTurn: 1 } });
+  const gameState = await gameStateCollection<{
+    _id: string;
+    preset?: string;
+    currentTurn?: number;
+  }>(db).findOne({ _id: "current" }, { projection: { preset: 1, currentTurn: 1 } });
   const preset = gameState?.preset ?? DEFAULT_SEED_PRESET;
   const currentTurn = gameState?.currentTurn ?? 0;
   // Post-headroom, era-gated values, byte-identical to what a fresh seed
@@ -88,8 +93,7 @@ async function backfillEasternDeposits(db: Db, dryRun: boolean): Promise<Migrati
   const capacityMap = getStateResourceCapacity(preset);
 
   // ── Part 1: deposit backfill, empty docs only ──────────────────────────
-  const existing = await db
-    .collection<StateResourceCapacity>("stateResourceCapacity")
+  const existing = await stateResourceCapacityCollection(db)
     .find({ stateId: { $in: [...BACKFILL_STATE_IDS] } })
     .toArray();
   const existingByState = new Map(existing.map((doc) => [doc.stateId, doc]));
@@ -124,8 +128,7 @@ async function backfillEasternDeposits(db: Db, dryRun: boolean): Promise<Migrati
   );
 
   // ── Part 2: CN SOE iron flip ───────────────────────────────────────────
-  const cnSectors = await db
-    .collection<CorporateSector>("corporateSectors")
+  const cnSectors = await corporateSectorsCollection(db)
     .find({
       countryId: "CN",
       sectorType: "extraction",
@@ -143,9 +146,7 @@ async function backfillEasternDeposits(db: Db, dryRun: boolean): Promise<Migrati
 
   let documentsUpdated = 0;
   if (ops.length > 0) {
-    const result = await db
-      .collection<StateResourceCapacity>("stateResourceCapacity")
-      .bulkWrite(ops, { ordered: true });
+    const result = await stateResourceCapacityCollection(db).bulkWrite(ops, { ordered: true });
     documentsUpdated += result.modifiedCount + result.upsertedCount;
   }
 
@@ -162,7 +163,7 @@ async function backfillEasternDeposits(db: Db, dryRun: boolean): Promise<Migrati
       buildQueue: sector.buildQueue,
       otherOpexPerUnitAnchor: sector.otherOpexPerUnitAnchor,
     });
-    await db.collection<CorporateSector>("corporateSectors").updateOne(
+    await corporateSectorsCollection(db).updateOne(
       { _id: sector._id },
       {
         $set: {

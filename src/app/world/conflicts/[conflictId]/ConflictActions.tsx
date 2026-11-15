@@ -105,11 +105,8 @@ export function ConflictActions({
     }
   }
 
-  // Project the offensive that is actually FILED once one is, not whatever the picker
-  // happens to hold. The odds used to be shown only before declaring and hidden the
-  // moment you committed — backwards, and the reason a player asked "can we get more
-  // info here on what this means and the chance of success?" while looking at a
-  // pending offensive.
+  // Project the offensive that is actually FILED once one is, not whatever the
+  // picker holds.
   const projectionTarget = pending ?? target;
 
   // The settled projection is keyed to the request it answers, so nothing is set

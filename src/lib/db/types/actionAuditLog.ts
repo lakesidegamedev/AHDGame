@@ -125,6 +125,8 @@ export interface ActionAuditRecord {
   net?: ActionAuditNet;
   outcome: ActionAuditOutcome;
   reason?: string;
+  /** Which world (seed preset) the action happened in. */
+  world?: string;
   /** Anomaly tags stamped by `src/lib/audit/anomalyScan.ts` after the fact. */
   flags?: string[];
   meta?: Record<string, unknown>;

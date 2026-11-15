@@ -21,11 +21,9 @@ function doc(modifiers: Record<string, Record<string, number>>): StateDemographi
 }
 
 /**
- * Outside the US, a turnout modifier stored per-group used to reach the granular
- * electorate only as a whole-state aggregate ratio, or — for a bucket the
- * archetype map could not place — not at all. Bucket-targeted actions write
- * dim-keyed modifiers, and those must move that dimension's voters natively, the
- * same way they always have on the US census path.
+ * Bucket-targeted actions write dim-keyed modifiers, and outside the US those
+ * must move that dimension's voters natively, the same way they do on the US
+ * census path.
  */
 describe("dim-keyed turnout modifiers apply natively outside the US", () => {
   beforeEach(() => clearGranularElectorateCache());
@@ -54,19 +52,16 @@ describe("dim-keyed turnout modifiers apply natively outside the US", () => {
     expect(shareOf(boosted.units)).toBeCloseTo(shareOf(base.units), 6);
   });
 
-  // Archetype-keyed modifiers keep going through the aggregate-ratio path, so
-  // they must remain inert here or they would be counted twice.
-  it("ignores archetype-keyed modifiers, which the aggregate ratio still owns", () => {
+  it("ignores group-keyed modifiers, which have no bucket", () => {
     const region = firstRegion("UK");
     const base = deriveGranularElectorateUnits("UK", region, PRESET, null)!;
-    const withArchetype = deriveGranularElectorateUnits(
+    const withGroupKey = deriveGranularElectorateUnits(
       "UK",
       region,
       PRESET,
       doc({ voterGroups: { post_industrial_workers: 25 } })
     )!;
-    expect(meanTurnout(withArchetype.units)).toBeCloseTo(meanTurnout(base.units), 6);
-    expect(withArchetype.modifiersNative).toBe(false);
+    expect(meanTurnout(withGroupKey.units)).toBeCloseTo(meanTurnout(base.units), 6);
   });
 
   it("ignores a bucket key the country's model does not have", () => {

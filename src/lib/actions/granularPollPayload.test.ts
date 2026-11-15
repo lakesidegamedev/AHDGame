@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import type { Layer1Config } from "@/lib/seeds/stateDemographics";
 import { DEMOGRAPHIC_TURNOUT_RATES } from "@/lib/seeds/demographicCategories";
-import { NPP_GENERAL_WEIGHT_MULTIPLIER } from "@/lib/electionEngine/constants";
+import { NPP_GENERAL_WEIGHT_MULTIPLIER } from "@/lib/elections/engine/constants";
 import { stateCensusData } from "@/lib/seeds/stateCensusData";
 import { approvalScalar } from "@/lib/utils/demographicAppeal";
 import {
@@ -125,7 +125,7 @@ describe("buildGranularPollPayload", () => {
     expect(shares.undecided).toBeCloseTo(0.16, 5);
   });
 
-  it("projects archetype approvals onto matching cell buckets before the approval curve", () => {
+  it("applies bucket approvals to matching cells before the approval curve", () => {
     const payload = buildGranularPollPayload({
       config: ctConfig(),
       era: "2019",
@@ -133,7 +133,7 @@ describe("buildGranularPollPayload", () => {
         economicPosition: 0,
         socialPosition: 0,
         favorability: 50,
-        archetypeApprovals: { retirees: 40 },
+        bucketApprovals: { "age:senior": 28 },
         politicalInfluence: 50,
       },
       opponents: [makeOpponent({ economicPosition: 0, socialPosition: 0 })],

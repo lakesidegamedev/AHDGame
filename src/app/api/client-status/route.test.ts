@@ -10,6 +10,16 @@ import {
   calculatePoliticalInfluenceDecay,
 } from "@shared/constants/formulas";
 
+// National GDP per capita is a database read; pin it to the era baseline so
+// these tests keep exercising the pre-existing scalar of exactly 1.0.
+vi.mock("@/lib/campaigns/nationalGdpBasis", async () => {
+  const { gdpBaselinePerCapita } = await import("@/lib/campaigns/rules/gdpBaseline");
+  return {
+    loadNationalGdpPerCapita: vi.fn(async (_db: unknown, countryId: string) =>
+      gdpBaselinePerCapita(countryId)
+    ),
+  };
+});
 vi.mock("@/lib/api/requireAuth", () => ({
   requireBasicAuth: vi.fn(),
 }));
@@ -114,6 +124,41 @@ function seedIndependentCharacter(userId: ObjectId): Record<string, FakeSeed> {
 }
 
 describe("GET /api/client-status", () => {
+  it.each([
+    ["SCO", "LOT"],
+    ["WAL", "CDF"],
+    ["IE", "NIR"],
+  ])("returns status bar income after conversion to %s", async (countryId, homeState) => {
+    const userId = new ObjectId();
+    const seeds = seedIndependentCharacter(userId);
+    seeds.characters.findOne = {
+      ...seeds.characters.findOne,
+      countryId,
+      homeState,
+    };
+    seeds.states.findOne = {
+      _id: homeState,
+      countryId,
+      population: 1000000,
+      gdp: 30000,
+    };
+    seeds.gameState.findOne = { _id: "current", preset: "1991-default" };
+    const { requireBasicAuth } = await import("@/lib/api/requireAuth");
+    vi.mocked(requireBasicAuth).mockResolvedValue({
+      ok: true,
+      user: { userId: userId.toHexString() },
+    } as never);
+    const { getDb } = await import("@/lib/mongodb");
+    vi.mocked(getDb).mockResolvedValue(createFakeDb(seeds, []));
+
+    const response = await GET(new Request("http://localhost/api/client-status?layout=standard"));
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.name).toBe("Test Character");
+    expect(body.campaignIncomeBreakdown).toBeTruthy();
+    expect(Number.isFinite(body.campaignIncomeBreakdown.netPerTurn)).toBe(true);
+  });
+
   it("returns the shared auth failure response for banned or revoked sessions", async () => {
     const { requireBasicAuth } = await import("@/lib/api/requireAuth");
     vi.mocked(requireBasicAuth).mockResolvedValue({

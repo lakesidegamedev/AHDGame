@@ -7,6 +7,7 @@ import type {
   TurnExecutionContext,
 } from "@/simulation/engine/types";
 import { postLockReportingSteps } from "@/simulation/phases/postLockReportingPhases";
+import { turnLogsCollection } from "@/lib/db/repositories/turnLogs";
 
 export interface CommittedTurnReporting {
   /** The health grade the post-lock health snapshot produced, if it ran. */
@@ -40,12 +41,10 @@ export async function runCommittedTurnReporting(input: {
     const healthResult = outcome.phaseResults.gameHealthSnapshot ?? null;
     const health = healthResult?.health ?? null;
     if (turnLogId) {
-      await context.db
-        .collection<TurnLog>("turnLogs")
-        .updateOne(
-          { _id: turnLogId },
-          { $set: { ...postLockTurnLogUpdate(outcome), ...(health ? { health } : {}) } }
-        );
+      await turnLogsCollection(context.db).updateOne(
+        { _id: turnLogId },
+        { $set: { ...postLockTurnLogUpdate(outcome), ...(health ? { health } : {}) } }
+      );
     }
     return { health, healthWritten: healthResult?.snapshotWritten === true };
   } catch (error) {

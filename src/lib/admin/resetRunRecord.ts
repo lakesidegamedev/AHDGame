@@ -1,19 +1,15 @@
 /**
- * One reset run's failure list and outcome.
+ * One reset run's failure list and outcome, kept for diagnosis and visibility.
  *
- * A reset used to be all-or-nothing with no record: `bootstrapGameWorld` and
- * `resetGameWorld` contain zero try/catch between them, and the audit row was
- * written in FINALIZE — so a run that died in teardown left the world sealed
- * (B2 seals before anything is destroyed) and half-built, with no trace of what
- * happened once the admin's browser tab closed.
- *
- * Recovery is deliberately RE-RUN, not resume: the reset is ~100s, teardown
- * wipes runtime state anyway, and every seeder is idempotent. So this module
- * carries no checkpoint state — it exists for diagnosis and visibility.
+ * Recovery is re-run, not resume: the reset is long, teardown wipes runtime
+ * state, and every seeder is idempotent. This module carries no checkpoint
+ * state.
  */
 import { ObjectId, type Db } from "mongodb";
 import type { AdminLog } from "@/lib/db/types/adminLog";
 import type { GameConfig } from "@/lib/db/types";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { adminLogsCollection } from "@/lib/db/repositories/adminLogs";
 
 const LOG_TAIL_LINES = 200;
 
@@ -86,13 +82,12 @@ export function createResetRunRecord(log?: (msg: string) => void): ResetRunRecor
 /**
  * Insert the run's audit row BEFORE anything is destroyed.
  *
- * ⚠️ The ordering IS the fix. This row used to be written in finalize (phase
- * 2b), so a reset that died in teardown left nothing behind. It survives the
- * teardown it records because `adminLogs` is manifest category `preserved` —
+ * ⚠️ The ordering matters: a reset that dies in teardown must still leave this
+ * row behind. It survives the teardown it records because `adminLogs` is manifest category `preserved` -
  * "Reset writes a new game_reset entry but never wipes the collection".
  *
- * Deliberately NOT gated on `adminUsername`. The old insert was, so a
- * script-driven reset produced no audit row at all.
+ * Deliberately NOT gated on `adminUsername`, so a script-driven reset still
+ * produces an audit row.
  */
 export async function openResetRunLog(
   db: Db,
@@ -100,7 +95,7 @@ export async function openResetRunLog(
   ctx: { preset: string; mode: string; adminUsername?: string }
 ): Promise<void> {
   const now = new Date();
-  await db.collection<AdminLog>("adminLogs").insertOne({
+  await adminLogsCollection(db).insertOne({
     category: "system",
     action: "game_reset",
     username: "SYSTEM",
@@ -124,6 +119,8 @@ export interface ResetRunOutcome {
   /** Set for a full reset so the row's action matches the previous behaviour. */
   deleteProfiles?: boolean;
   adminUsername?: string;
+  /** Post-reset residue violations; above zero keeps the turn system stopped. */
+  residueViolations?: number;
 }
 
 /**
@@ -141,7 +138,7 @@ export async function closeResetRunLog(
 ): Promise<void> {
   const finishedAt = new Date();
   try {
-    await db.collection<AdminLog>("adminLogs").updateOne(
+    await adminLogsCollection(db).updateOne(
       { "resetRun.runId": run.runId } as never,
       {
         $set: {
@@ -152,6 +149,7 @@ export async function closeResetRunLog(
           "resetRun.failures": run.failures,
           "resetRun.finishedAt": finishedAt,
           "resetRun.logTail": outcome.logs.slice(-LOG_TAIL_LINES),
+          "resetRun.residueViolations": outcome.residueViolations ?? 0,
         },
       } as never
     );
@@ -160,7 +158,7 @@ export async function closeResetRunLog(
   }
 
   try {
-    await db.collection<GameConfig>("gameConfig").updateOne(
+    await gameConfigCollection(db).updateOne(
       { _id: "default" },
       {
         $set: {
@@ -170,6 +168,7 @@ export async function closeResetRunLog(
             phaseReached: outcome.phaseReached,
             at: finishedAt,
             by: outcome.adminUsername,
+            residueViolations: outcome.residueViolations ?? 0,
           },
         },
       } as never,

@@ -4,7 +4,7 @@ import { InlineError } from "@/components/ui/InlineError";
 import { useState } from "react";
 import { Button } from "@/components/ui";
 import { canTableResolutionType } from "@/lib/constants/orgCategory";
-import { DIRECTIVE_CATALOG, getDirectiveDef } from "@/lib/constants/orgDirectives";
+import { directivesForOrganization, getDirectiveDef } from "@/lib/constants/orgDirectives";
 import { actingCountryOf, type OrgSummary, type OrgViewerInfo } from "../orgTypes";
 import { orgProposingCountry } from "../orgTypes";
 import { organizationVoteHandler, postOrganizationAction } from "../proposalActions";
@@ -102,7 +102,7 @@ export function DirectivePanel({ org, viewer, currentTurn, votingWindowTurns, on
               className="mt-1 w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm text-foreground focus:border-primary focus:outline-none"
             >
               <option value="">Select…</option>
-              {DIRECTIVE_CATALOG.map((d) => (
+              {directivesForOrganization(org.id).map((d) => (
                 <option key={d.key} value={d.key}>
                   {d.label}
                 </option>

@@ -32,17 +32,9 @@ export interface ConversationStep {
   summary: string | null;
 }
 
-/**
- * Canonical order, minus Stats when the RPG-stats flag is off. Review always
- * closes the flow.
- */
-export function visibleConversationStepIds(
-  rpgStatsEnabled: boolean,
-  partySelectorVisible = true
-): ConversationStepId[] {
-  return CONVERSATION_STEP_IDS.filter(
-    (id) => (id !== "stats" || rpgStatsEnabled) && (id !== "party" || partySelectorVisible)
-  );
+/** Canonical order, minus Party when the selector is hidden. Review always closes the flow. */
+export function visibleConversationStepIds(partySelectorVisible = true): ConversationStepId[] {
+  return CONVERSATION_STEP_IDS.filter((id) => id !== "party" || partySelectorVisible);
 }
 
 function titleFor(id: ConversationStepId, regionNoun: string): string {
@@ -85,12 +77,11 @@ function promptFor(id: ConversationStepId, regionNoun: string): string {
 
 export function buildConversationSteps(args: {
   regionNoun: string;
-  rpgStatsEnabled: boolean;
   partySelectorVisible?: boolean;
   complete: Record<ConversationStepId, boolean>;
   summary: Record<ConversationStepId, string | null>;
 }): ConversationStep[] {
-  return visibleConversationStepIds(args.rpgStatsEnabled, args.partySelectorVisible).map((id) => ({
+  return visibleConversationStepIds(args.partySelectorVisible).map((id) => ({
     id,
     title: titleFor(id, args.regionNoun),
     prompt: promptFor(id, args.regionNoun),

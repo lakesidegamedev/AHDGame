@@ -1,5 +1,6 @@
 import type { Db } from "mongodb";
 import type { WireEvent } from "@/lib/wireEvent";
+import { wireEventsCollection } from "@/lib/db/repositories/wireEvents";
 
 /** One headline as the ticker consumes it. */
 export interface RaceWireItem {
@@ -43,8 +44,7 @@ export async function getRaceWireFeed(db: Db, query: RaceWireQuery): Promise<Rac
   const filter: Record<string, unknown> = { electionId: query.electionId };
   if (query.campaignId) filter.campaignId = query.campaignId;
 
-  const rows = await db
-    .collection<WireEvent>("wireEvents")
+  const rows = await wireEventsCollection<WireEvent>(db)
     .find(filter)
     .sort({ timestamp: -1 })
     .limit(limit)

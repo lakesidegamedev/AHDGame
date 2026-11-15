@@ -22,6 +22,7 @@ import { getControllingCorporateParent } from "../corporateOwnership";
 import { computeMarketSharePercent } from "../marketShare";
 import { loadIndustryBasis } from "../corpMarketShare";
 import { getMarketSystemModeForDb, marketAtLeast } from "@/lib/market/featureFlag";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /**
  * Every corporation under the acquirer's control, including itself. Walks
@@ -32,8 +33,7 @@ import { getMarketSystemModeForDb, marketAtLeast } from "@/lib/market/featureFla
 export async function controlledGroupIds(db: Db, rootId: ObjectId): Promise<Set<string>> {
   // Only the vote-weight fields are read, so the scan stays cheap on documents
   // that are otherwise very fat.
-  const corps = (await db
-    .collection<Corporation>("corporations")
+  const corps = (await corporationsCollection(db)
     .find({}, { projection: { shareholders: 1, totalShares: 1, superShareMultiplier: 1 } })
     .toArray()) as Corporation[];
 
@@ -106,11 +106,9 @@ export async function settleDivestitureIfSatisfied(
   );
   if (share >= obligation.thresholdPercent) return false;
 
-  await db
-    .collection<Corporation>("corporations")
-    .updateOne(
-      { _id: corporation._id },
-      { $unset: { pendingDivestiture: "" }, $set: { updatedAt: new Date() } }
-    );
+  await corporationsCollection(db).updateOne(
+    { _id: corporation._id },
+    { $unset: { pendingDivestiture: "" }, $set: { updatedAt: new Date() } }
+  );
   return true;
 }

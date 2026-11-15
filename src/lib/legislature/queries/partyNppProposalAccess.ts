@@ -18,6 +18,12 @@ import { officialsCountryScope } from "@/lib/db/electedOfficialScope";
 import { isSameCountry } from "@/lib/api/sameCountry";
 import { STATE_TERMINAL_STATUSES } from "@/lib/congress/billProposalLimits";
 import { canDirectRegionalPartyNpp, hasPartyNppSeats } from "../rules/partyNppProposal";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { stateBillsCollection } from "@/lib/db/repositories/stateBills";
+import { governorLegislationQueueCollection } from "@/lib/db/repositories/governorLegislationQueue";
 
 export async function resolvePartyNppProposalAccess(
   db: Db,
@@ -36,15 +42,14 @@ export async function resolvePartyNppProposalAccess(
   if (!Number.isSafeInteger(partyNumber) || partyNumber <= 0) return denied;
   stateId = stateId.toUpperCase();
   const [party, regionalParty] = await Promise.all([
-    db
-      .collection<PoliticalParty>("politicalParties")
-      .findOne(
-        { countryId, sequentialId: partyNumber },
-        { projection: { chairId: 1, sequentialId: 1 } }
-      ),
-    db
-      .collection<StatePartyOrg>("statePartyOrg")
-      .findOne({ countryId, stateId, partyId: character.party }, { projection: { chairId: 1 } }),
+    politicalPartiesCollection(db).findOne(
+      { countryId, sequentialId: partyNumber },
+      { projection: { chairId: 1, sequentialId: 1 } }
+    ),
+    statePartyOrgCollection(db).findOne(
+      { countryId, stateId, partyId: character.party },
+      { projection: { chairId: 1 } }
+    ),
   ]);
   if (
     !party ||
@@ -60,8 +65,7 @@ export async function resolvePartyNppProposalAccess(
     return denied;
   const officeType = getSubNationalLegislatureKey(countryId);
   if (!officeType) return { authorized: true, npp: null };
-  const seats = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const seats = await electedOfficialsCollection(db)
     .find(
       { ...officialsCountryScope(countryId), state: stateId, officeType, isNPP: true },
       { projection: { nppId: 1, seatsHeld: 1 } }
@@ -73,8 +77,7 @@ export async function resolvePartyNppProposalAccess(
   if (!ids.length) return { authorized: true, npp: null };
   const skipReservations = options.ignoreBillReservations === true;
   const [npps, busy, queued] = await Promise.all([
-    db
-      .collection<NPP>("npps")
+    nppsCollection(db)
       .find(
         { _id: { $in: ids }, party: character.party, retiredAt: null },
         { projection: { name: 1, party: 1, countryId: 1 } }
@@ -83,8 +86,7 @@ export async function resolvePartyNppProposalAccess(
       .toArray(),
     skipReservations
       ? Promise.resolve([] as Pick<StateBill, "sponsorNppId" | "nppId">[])
-      : db
-          .collection<StateBill>("stateBills")
+      : stateBillsCollection(db)
           .find(
             {
               status: { $nin: STATE_TERMINAL_STATUSES },
@@ -95,8 +97,7 @@ export async function resolvePartyNppProposalAccess(
           .toArray(),
     skipReservations
       ? Promise.resolve([] as Pick<GovernorQueuedBill, "targetNppId">[])
-      : db
-          .collection<GovernorQueuedBill>("governorLegislationQueue")
+      : governorLegislationQueueCollection(db)
           .find(
             { countryId, status: "pending", targetNppId: { $in: ids } },
             { projection: { targetNppId: 1 } }

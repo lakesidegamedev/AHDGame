@@ -25,8 +25,10 @@ import {
 import { liftedSectorIds, getVentureLine, type VentureSector } from "./lines";
 import { sectorTurnRevenueAnchor } from "./revenue";
 import { refundVentureReceipt } from "./refund";
-import { PRODUCT_VENTURES, ventureDocument } from "./store";
+import { ventureDocument } from "./store";
 import type { ProductVenture, VentureDomain } from "./types";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { productVenturesCollection } from "@/lib/db/repositories/productVentures";
 
 export type VentureNotifier = (inputs: NotificationInput[]) => Promise<void>;
 
@@ -52,8 +54,7 @@ export async function loadVentureBoostBySectorId(
     enabled: Record<VentureDomain, boolean>;
   }
 ): Promise<Map<string, number>> {
-  const released = await db
-    .collection<ProductVenture>(PRODUCT_VENTURES)
+  const released = await productVenturesCollection<ProductVenture>(db)
     .find({ stage: "released", boostEndsTurn: { $gte: input.turn } })
     .toArray();
   const boostsBySector = new Map<string, number[]>();
@@ -117,7 +118,7 @@ export async function processProductVentures(
     paidAnchor: 0,
     boosted: 0,
   };
-  const collection = args.db.collection<ProductVenture>(PRODUCT_VENTURES);
+  const collection = productVenturesCollection<ProductVenture>(args.db);
   const ventures = await collection
     .find({
       stage: { $in: ["development", "released"] },
@@ -133,9 +134,8 @@ export async function processProductVentures(
 
   const developing = live.filter((venture) => venture.stage === "development");
   const fresh = developing.length
-    ? ((await args.db
-        .collection<Corporation>("corporations")
-        .find(
+    ? await corporationsCollection(args.db)
+        .find<FreshCorp>(
           {
             _id: {
               $in: [...new Set(developing.map((v) => v.corporationId))].map(
@@ -152,7 +152,7 @@ export async function processProductVentures(
             },
           }
         )
-        .toArray()) as unknown as FreshCorp[])
+        .toArray()
     : [];
   const freshById = new Map(fresh.map((row) => [row._id.toString(), row]));
 
@@ -179,7 +179,7 @@ export async function processProductVentures(
       const total = chargeWanted + investmentWanted;
       if (total > 0) {
         const local = anchorToCorpLiquidCapital(total, row, fx);
-        const debit = await args.db.collection<Corporation>("corporations").updateOne(
+        const debit = await corporationsCollection(args.db).updateOne(
           {
             _id: row._id,
             [`${receiptKey}.turn`]: { $ne: args.turn },
@@ -258,9 +258,9 @@ export async function processProductVentures(
     }
     result.developed += 1;
     if (step.completed) {
-      await args.db
-        .collection<Corporation>("corporations")
-        .updateOne({ _id: row._id }, { $unset: { [receiptKey]: "" } } as never);
+      await corporationsCollection(args.db).updateOne({ _id: row._id }, {
+        $unset: { [receiptKey]: "" },
+      } as never);
     }
 
     const humanOwner = corp.ceoType !== "npp" && corp.userId;

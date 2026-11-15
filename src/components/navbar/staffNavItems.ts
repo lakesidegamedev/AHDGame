@@ -14,6 +14,8 @@ export interface StaffNavItem {
 export interface StaffNavOpts {
   isAdmin?: boolean;
   isModerator?: boolean;
+  /** Read-only staff. Sees the control panel, nothing moderator-gated. */
+  isJuniorDev?: boolean;
   /**
    * The viewer owns the local singleplayer world: singleplayer mode AND the
    * DB account record carries admin (the owner grant). Never true from
@@ -29,6 +31,7 @@ export interface StaffNavOpts {
 export function buildStaffNavItems({
   isAdmin = false,
   isModerator = false,
+  isJuniorDev = false,
   isSingleplayerOwner = false,
 }: StaffNavOpts): StaffNavItem[] {
   return [
@@ -38,12 +41,11 @@ export function buildStaffNavItems({
       href: "/singleplayer/admin",
       show: isSingleplayerOwner,
     },
-    { label: "Admin Panel", labelKey: "menus.staff.adminPanel", href: "/admin", show: isAdmin },
     {
-      label: "Mod Panel",
-      labelKey: "menus.staff.modPanel",
-      href: "/moderator",
-      show: isAdmin || isModerator,
+      label: "Control Panel",
+      labelKey: "menus.staff.controlPanel",
+      href: "/control",
+      show: isAdmin || isModerator || isJuniorDev,
     },
     {
       label: "Ops Dashboard",
@@ -57,7 +59,7 @@ export function buildStaffNavItems({
       labelKey: "menus.staff.docs",
       href: DOCS_URL,
       external: true,
-      show: isAdmin || isModerator,
+      show: isAdmin || isModerator || isJuniorDev,
     },
     {
       label: "Tickets",
@@ -94,5 +96,5 @@ export function viewerIsSingleplayerOwner(
 }
 
 export function isStaffUser(opts: StaffNavOpts): boolean {
-  return !!(opts.isAdmin || opts.isModerator);
+  return !!(opts.isAdmin || opts.isModerator || opts.isJuniorDev);
 }

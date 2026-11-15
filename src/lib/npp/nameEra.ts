@@ -1,27 +1,16 @@
 /**
  * Era gating for generated politician names.
  *
- * A 1953 world could name a senator Aaliyah or Jayden. The name pools are flat
- * lists with no sense of when a name entered use, so every era drew from the
- * same modern-weighted set.
+ * Name pools are flat lists with no sense of when a name entered use, so
+ * every era drew from the same modern-weighted set.
  *
- * WHAT IS GATED, AND WHAT IS NOT
- * ------------------------------
- * Only names that are demonstrably modern in American use: post-war coinages
- * (DeShawn, Aaliyah, Imani) and names whose documented usage surge is firmly
- * mid-century-or-later (Jennifer, Jessica, Ashley, Ryan, Zachary). Traditional
- * names — James, Mary, Margaret, Frank — carry no entry and work in every era,
- * because they genuinely did.
+ * Only names that are demonstrably modern in American use are gated:
+ * post-war coinages and names with a documented mid-century-or-later
+ * surge. Traditional names carry no entry and work in every era. A name
+ * with no entry is ELIGIBLE, not assumed old: over-excluding flattens
+ * variety, while an over-inclusive early era is a mild flavour miss.
  *
- * Deliberately conservative, in the same spirit as the portrait filter: a name
- * with no entry is ELIGIBLE, not assumed old. Over-excluding would strip the
- * pool and flatten the variety the lists exist to provide, while a slightly
- * over-inclusive 1953 is a mild flavour miss. Errors are cheap in one direction
- * and expensive in the other, so this leans the cheap way.
- *
- * Years are the decade a name became common in the US, not the first recorded
- * use — the question is whether a politician of voting age could plausibly
- * carry it, not whether the name existed at all.
+ * Years are the decade a name became common, not the first recorded use.
  */
 
 /** Name → earliest year it reads as plausible for an adult politician. */

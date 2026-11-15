@@ -19,6 +19,10 @@ import { emitLedgerEntries } from "@/lib/ledger/emit";
 import { ledgerTurnFromClock } from "@/lib/ledger/ledgerTurn";
 import type { LedgerEntryInput } from "@/lib/ledger/types";
 import type { FinancialTxType } from "@/lib/db/types/financialTxLog";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 /**
  * Each flow's transaction type and settlement reason. Event-driven flows reuse
@@ -81,6 +85,8 @@ const FLOW_ACCOUNTING = {
   },
   // A peace indemnity leaves one treasury for another, in each one's currency.
   peace_indemnity: { txType: "peace_indemnity", reason: "peace_indemnity" },
+  // Nation-funded frontier programme points, with no modeled recipient.
+  frontier_programme: { txType: "crisis_response_cost", reason: "frontier_programme" },
   // An index listing petition paid to the treasury when nobody holds the seat.
   index_listing_lobbying: { txType: "index_listing_lobbying", reason: "index_listing_lobbying" },
 } as const satisfies Record<string, { txType: FinancialTxType; reason: string }>;
@@ -114,29 +120,26 @@ export async function loadTreasuryCashContext(
   turn?: number
 ): Promise<TreasuryCashContext | null> {
   try {
-    const config = await db
-      .collection<{
-        _id: string;
-        ledgerShadow?: boolean;
-        treasuryCashLedgerEnabled?: boolean;
-      }>("gameConfig")
-      .findOne(
-        { _id: "default" },
-        { projection: { ledgerShadow: 1, treasuryCashLedgerEnabled: 1 } }
-      );
+    const config = await gameConfigCollection<{
+      _id: string;
+      ledgerShadow?: boolean;
+      treasuryCashLedgerEnabled?: boolean;
+    }>(db).findOne(
+      { _id: "default" },
+      { projection: { ledgerShadow: 1, treasuryCashLedgerEnabled: 1 } }
+    );
     const ledgerShadowEnabled = config?.ledgerShadow === true;
     const treasuryCashLedgerEnabled = config?.treasuryCashLedgerEnabled === true;
     if (!ledgerShadowEnabled && !treasuryCashLedgerEnabled) return null;
     const [state, rates, budgets] = await Promise.all([
-      db
-        .collection<{ _id: string; currentTurn: number; preset?: string }>("gameState")
-        .findOne({ _id: "current" }, { projection: { currentTurn: 1, preset: 1 } }),
-      db
-        .collection<{ currencyCode: string; rate: number }>("exchangeRates")
+      gameStateCollection<{ _id: string; currentTurn: number; preset?: string }>(db).findOne(
+        { _id: "current" },
+        { projection: { currentTurn: 1, preset: 1 } }
+      ),
+      exchangeRatesCollection<{ currencyCode: string; rate: number }>(db)
         .find({}, { projection: { currencyCode: 1, rate: 1 } })
         .toArray(),
-      db
-        .collection<{ countryId: string; currencyCode?: CurrencyCode }>("federalBudget")
+      federalBudgetCollection<{ countryId: string; currencyCode?: CurrencyCode }>(db)
         .find({}, { projection: { countryId: 1, currencyCode: 1 } })
         .toArray(),
     ]);

@@ -3,6 +3,9 @@ import type { Collection, Db } from "mongodb";
 import type { FinancialTxLogEntry, FinancialSuspectFlag } from "@/lib/db/types/financialTxLog";
 import type { PortfolioHistory, SystemSettings } from "@/lib/db/types";
 import type { ExchangeRate } from "@/lib/db/types/exchangeRate";
+import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { systemSettingsCollection } from "@/lib/db/repositories/systemSettings";
 
 interface ScanConfig {
   windowTurns: number; // default 6 — coarse pair-velocity / round-trip window
@@ -79,9 +82,7 @@ async function ensureFinancialTxTurnIndex(col: Collection<FinancialTxLogEntry>):
 }
 
 async function loadScanConfig(db: Db): Promise<ScanConfig> {
-  const settings = await db
-    .collection<SystemSettings>("systemSettings")
-    .findOne({ _id: "current" });
+  const settings = await systemSettingsCollection(db).findOne({ _id: "current" });
   const cfg = settings?.financialTxLog;
   return {
     windowTurns: cfg?.suspectScanWindowTurns ?? 6,
@@ -105,7 +106,7 @@ export async function runFinancialSuspectScan(db: Db, currentTurn: number): Prom
     const minTurn = currentTurn - config.windowTurns + 1;
     const now = new Date();
 
-    const col = db.collection<FinancialTxLogEntry>("financialTxLog");
+    const col = financialTxLogCollection(db);
     await ensureFinancialTxTurnIndex(col);
     const window = await col
       .find(
@@ -379,7 +380,7 @@ export async function runFinancialSuspectScan(db: Db, currentTurn: number): Prom
       }
 
       if (charSubjectIds.size > 0 || corpSubjectIds.size > 0) {
-        const exchangeRates = await db.collection<ExchangeRate>("exchangeRates").find({}).toArray();
+        const exchangeRates = await exchangeRatesCollection(db).find({}).toArray();
         const ratesByCurrency = new Map<string, number>();
         for (const r of exchangeRates) {
           ratesByCurrency.set(r.currencyCode as string, r.rate);

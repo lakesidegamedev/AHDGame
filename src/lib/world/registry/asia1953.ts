@@ -1,5 +1,5 @@
 /**
- * Asia / Middle East — 1953 Tier-3 registry (#3728).
+ * Asia / Middle East, 1953 Tier-3 registry.
  *
  * Already classified: CN, JP (CountryConfig). Taiwan and Israel are explicit
  * status records even though outside the expanded Tier-1/2 candidate slate.

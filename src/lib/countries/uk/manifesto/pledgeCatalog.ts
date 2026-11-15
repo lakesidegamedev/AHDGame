@@ -1,22 +1,13 @@
 import type { PledgeCatalogEntry } from "@/lib/db/types/manifesto";
 
 /**
- * Curated UK manifesto pledge catalog (epic #856, ticket #857).
+ * Curated UK manifesto pledge catalog.
  *
- * Each entry maps to REAL UK legislation ids from
- * `src/lib/politicalLegislation/laws/ukLaws.ts`. UK "primary" laws use a
- * `levels[]` ladder (0 = least provision → 4 = most), recorded in `enactedLaws`
- * as `policyOptionIndex`; targets therefore use `policyOptionLevel`.
- *
- * `position` is the pledge's stance on the shared -5..+5 axes (economic, social)
- * for popularity scoring. `salienceByGroup` keys are Layer-1 demographic bucket
- * ids; absent keys fall back to `baseSalience`. Salience values here are a
- * first pass and are the primary thing to tune in worldsim.
- *
- * NOTE: demographic bucket ids used in salienceByGroup should be reconciled
- * against the live UK demographic categories before enabling scoring; unknown
- * keys degrade gracefully to baseSalience, so a wrong key under-weights rather
- * than crashes.
+ * `targets[].policyOptionLevel` indexes the `levels[]` ladder in
+ * `ukLaws.ts` (0 = least provision, 4 = most). `position` is the pledge's
+ * stance on the shared -5..+5 economic/social axes. `salienceByGroup` keys
+ * are Layer-1 demographic bucket ids; unknown keys fall back to `baseSalience`,
+ * so a stale key under-weights rather than crashes.
  */
 export const UK_PLEDGE_CATALOG: PledgeCatalogEntry[] = [
   {
@@ -48,9 +39,7 @@ export const UK_PLEDGE_CATALOG: PledgeCatalogEntry[] = [
     label: "Cut income tax",
     blurb: "Let working people keep more of what they earn.",
     policyDomain: "economy",
-    // Tax laws are slider/option-based (rate:*), not level ladders; the exact
-    // option id is resolved at wiring time. Left without a concrete option id
-    // until the tax-slider target contract is confirmed (see #857).
+    // Tax laws are slider/option-based (rate:*), not level ladders; the exact option id is resolved at wiring time, so no concrete option id here yet.
     targets: [{ legislationTypeId: "uk.tax.incomeTax" }],
     position: { economic: 3.5, social: 0 },
     targetSemantics: "enact",

@@ -23,6 +23,10 @@ import {
   enactImmediateWarEntry,
   warEntryIsImmediate,
 } from "@/lib/military/warEntryPolicy";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { billsCollection } from "@/lib/db/repositories/bills";
+import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
 
 type ActiveJoinResolution = OrganizationLegislation & {
   type: "join_conflict";
@@ -34,22 +38,17 @@ function billKey(resolutionId: string, countryId: string): string {
 }
 
 /**
- * Repair the seam between an enacted bloc call and autonomous national politics.
- *
- * A join-conflict resolution used to ask only the voting roll that existed on its
- * enactment turn to legislate. If autonomous foreign policy was activated later,
- * every newly active government was permanently skipped because resolution effects
- * were one-shot. This sweep treats an active resolution as a standing request to its
- * current autonomous members. It creates the missing national bill, once, and leaves
- * ratification and military preparation to the ordinary country lifecycle.
- *
- * Player governments are deliberately absent. The original enactment path already
- * creates their bills, and `isNppAutonomyActive` is the player-control rail.
+ * A join-conflict resolution is a standing request to its current autonomous
+ * members, not just those from the enactment turn. This sweep creates the
+ * missing national bill once; ratification and military prep remain in the
+ * normal country lifecycle. Player governments are skipped: the enactment
+ * path already creates their bills.
  */
 export async function reconcileAutonomousWarEntryBills(db: Db): Promise<number> {
-  const rollout = await db
-    .collection<{ _id: string; nppForeignPolicyMode?: NppForeignPolicyMode }>("gameState")
-    .findOne({ _id: "current" }, { projection: { nppForeignPolicyMode: 1 } });
+  const rollout = await gameStateCollection<{
+    _id: string;
+    nppForeignPolicyMode?: NppForeignPolicyMode;
+  }>(db).findOne({ _id: "current" }, { projection: { nppForeignPolicyMode: 1 } });
   const autonomousPolicyActive = foreignPolicyModeFrom(rollout?.nppForeignPolicyMode) === "active";
 
   const resolutions = (await (
@@ -60,8 +59,7 @@ export async function reconcileAutonomousWarEntryBills(db: Db): Promise<number> 
   if (resolutions.length === 0) return 0;
 
   const resolutionIds = resolutions.map((resolution) => resolution._id.toString());
-  const existingBills = await db
-    .collection<Bill>("bills")
+  const existingBills = await billsCollection(db)
     .find({
       provisions: {
         $elemMatch: { type: "join_conflict", resolutionId: { $in: resolutionIds } },
@@ -119,12 +117,10 @@ export async function reconcileAutonomousWarEntryBills(db: Db): Promise<number> 
       if (chosen.includes(countryId)) {
         if (bill && bill.status !== "signed") {
           const now = new Date();
-          await db
-            .collection<Bill>("bills")
-            .updateOne(
-              { _id: bill._id, status: { $nin: ["signed", "failed", "withdrawn"] } },
-              { $set: { status: "signed", enactedAt: now, updatedAt: now } }
-            );
+          await billsCollection(db).updateOne(
+            { _id: bill._id, status: { $nin: ["signed", "failed", "withdrawn"] } },
+            { $set: { status: "signed", enactedAt: now, updatedAt: now } }
+          );
         }
         continue;
       }
@@ -141,12 +137,10 @@ export async function reconcileAutonomousWarEntryBills(db: Db): Promise<number> 
         });
         const now = new Date();
         if (bill && bill.status !== "signed") {
-          await db
-            .collection<Bill>("bills")
-            .updateOne(
-              { _id: bill._id, status: { $nin: ["signed", "failed", "withdrawn"] } },
-              { $set: { status: "signed", enactedAt: now, updatedAt: now } }
-            );
+          await billsCollection(db).updateOne(
+            { _id: bill._id, status: { $nin: ["signed", "failed", "withdrawn"] } },
+            { $set: { status: "signed", enactedAt: now, updatedAt: now } }
+          );
         }
         await recordOrgHistoryEvent(
           db,
@@ -170,7 +164,7 @@ export async function reconcileAutonomousWarEntryBills(db: Db): Promise<number> 
           stake,
           currentTurn,
         });
-        await db.collection<Bill>("bills").updateOne(
+        await billsCollection(db).updateOne(
           { _id: bill._id },
           {
             $set: {
@@ -196,14 +190,16 @@ export async function reconcileAutonomousWarEntryBills(db: Db): Promise<number> 
       if (!autonomousPolicyActive || bill || !hasBillLifecycle(countryId)) continue;
       if (!(await isNppAutonomyActive(db, countryId))) continue;
 
-      const formation = await db
-        .collection<GovernmentFormation>("governmentFormations")
-        .findOne({ _id: countryId, status: "formed" });
+      const formation = await governmentFormationsCollection(db).findOne({
+        _id: countryId,
+        status: "formed",
+      });
       const headId = formation?.presidentNppId ?? formation?.pmNppId ?? null;
       if (!headId) continue;
-      const head = await db
-        .collection<NPP>("npps")
-        .findOne({ _id: headId }, { projection: { _id: 1, name: 1, party: 1 } });
+      const head = await nppsCollection(db).findOne(
+        { _id: headId },
+        { projection: { _id: 1, name: 1, party: 1 } }
+      );
       if (!head) continue;
 
       const billId = await buildJoinConflictBill({

@@ -21,7 +21,11 @@ import { getGovernmentFormationsCollection } from "@/lib/db/collections/governme
 import { getLowerChamberOfficeType } from "@/lib/legislature/chamberOfficeType";
 import { tallySeatsByParty, appointPrimeMinister } from "@/lib/turn/parliamentaryGovernment";
 import { chooseAutonomousCabinet } from "@/lib/government/rules/autonomousSupport";
+import { refusalBlocks } from "@/lib/government/rules/coalitionRefusals";
 import { isNppAutonomyActive } from "./featureFlag";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 /**
  * Seat an NPP Prime Minister for `countryId` when government formation has
@@ -50,8 +54,7 @@ export async function appointNppPrimeMinister(
   // Seated lower-chamber NPP MPs available to lead a viable cabinet. A player-character PM is
   // impossible here (country is not player-enabled), so we pick from NPPs.
   const lowerOfficeType = getLowerChamberOfficeType(countryId, preset);
-  const nppMps = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const nppMps = await electedOfficialsCollection(db)
     .find({
       countryId,
       officeType: lowerOfficeType,
@@ -63,13 +66,21 @@ export async function appointNppPrimeMinister(
 
   const majorityThreshold =
     gov.majorityThreshold ?? getCountryConfig(countryId, preset).coalitionThreshold;
-  const parties = await db
-    .collection<PoliticalParty>("politicalParties")
+  const parties = await politicalPartiesCollection(db)
     .find(
       { countryId, sequentialId: { $in: Object.keys(seatsByParty).map(Number) } },
-      { projection: { sequentialId: 1, economicPosition: 1, socialPosition: 1 } }
+      {
+        projection: { sequentialId: 1, abbreviation: 1, economicPosition: 1, socialPosition: 1 },
+      }
     )
     .toArray();
+  // Parties that refuse to govern together never share a cabinet, and a
+  // refuser will not tolerate the other's minority either.
+  const refusals = gov.coalitionRefusals ?? [];
+  const abbreviationOf = (id: string) =>
+    parties.find((p) => String(p.sequentialId) === id)?.abbreviation ?? "";
+  const blocked = (a: string, b: string) =>
+    refusalBlocks(refusals, abbreviationOf(a), abbreviationOf(b));
   const support = chooseAutonomousCabinet(
     Object.entries(seatsByParty).map(([id, seats]) => {
       const party = parties.find((p) => String(p.sequentialId) === id);
@@ -81,7 +92,8 @@ export async function appointNppPrimeMinister(
       };
     }),
     nppMps.flatMap((mp) => (mp.party ? [mp.party] : [])),
-    majorityThreshold
+    majorityThreshold,
+    blocked
   );
   if (!support) return false;
   const governingPartyId = support.leadPartyId;
@@ -98,9 +110,10 @@ export async function appointNppPrimeMinister(
   const pmOfficial = eligibleMps[0];
   if (!pmOfficial.nppId) return false;
 
-  const npp = await db
-    .collection<NPP>("npps")
-    .findOne({ _id: pmOfficial.nppId }, { projection: { name: 1 } });
+  const npp = await nppsCollection(db).findOne(
+    { _id: pmOfficial.nppId },
+    { projection: { name: 1 } }
+  );
   if (!npp) return false;
 
   // Seat the NPP as head of government: clears any prior PM, sets the NPP's

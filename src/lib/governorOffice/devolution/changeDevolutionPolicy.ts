@@ -13,8 +13,9 @@ import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import {
   DEVOLUTION_POLICY_CHANGE_AP_COST,
   DEVOLUTION_POLICY_CHANGE_COOLDOWN_TURNS,
-  isUKDevolutionRegion,
 } from "@/lib/constants/devolution";
+import { sovereigntyRegionIn } from "@/lib/referendum/rules/sovereigntyRegions";
+import { governorOfficeStateCollection } from "@/lib/db/repositories/governorOfficeState";
 
 export interface ChangeDevolutionPolicyInput {
   countryId: CountryId;
@@ -41,10 +42,7 @@ export async function changeDevolutionPolicy(
   const { countryId, stateId, policy } = input;
   const adminOverride = input.adminOverride === true;
 
-  if (countryId !== "UK") {
-    return { status: 400, body: { error: "Devolution Policy is UK-only." } };
-  }
-  if (!isUKDevolutionRegion(stateId)) {
+  if (!sovereigntyRegionIn(countryId, stateId)) {
     return {
       status: 400,
       body: { error: "Region has no Devolution Policy axis." },
@@ -57,9 +55,7 @@ export async function changeDevolutionPolicy(
   const now = new Date();
   const currentTurn = await getCurrentTurn(db);
 
-  const officeState = await db
-    .collection<GovernorOfficeState>("governorOfficeState")
-    .findOne({ countryId, stateId });
+  const officeState = await governorOfficeStateCollection(db).findOne({ countryId, stateId });
   if (!officeState) {
     return {
       status: 400,
@@ -99,7 +95,7 @@ export async function changeDevolutionPolicy(
   };
   const inc = adminOverride ? {} : { gubernatorialActions: -DEVOLUTION_POLICY_CHANGE_AP_COST };
 
-  await db.collection<GovernorOfficeState>("governorOfficeState").updateOne(
+  await governorOfficeStateCollection(db).updateOne(
     { countryId, stateId },
     {
       $set: update,

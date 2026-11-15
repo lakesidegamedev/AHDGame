@@ -1,24 +1,10 @@
 /**
  * Colours for the market-position ring and its legend.
  *
- * The old list was nine hues handed out by array index and cycled with `i % 9`.
- * Measured against the card surface it failed three of the standard palette
- * checks: `#3b82f6` and `#8b5cf6` were ΔE 1.3 apart under deuteranopia (the same
- * colour to a red-green colourblind reader), `#14b8a6` and `#22c55e` were 11.3
- * apart even with full colour vision, and three of the nine sat outside the
- * dark-mode lightness band. Cycling then guaranteed outright collisions past the
- * ninth rival.
- *
- * These four are the replacement, and the ORDER IS PART OF THE RESULT: teal must
- * not neighbour pink (ΔE 3.8 under deuteranopia when it does). As written they
- * pass every check on the dark card surface and on the light one. On the navy
- * theme the pink warns at 2.5:1 contrast, which the legend beside the chart
- * discharges by naming every series in text.
- *
- * Four is deliberate rather than shy. This slot list is only reached by a
- * player-owned corp with no brand colour of its own, and folding the NPP field
- * into a single arc means a sector almost never shows more than a handful of
- * player slices. Past four the answer is the list, not a fifth hue.
+ * ORDER IS PART OF THE RESULT: adjacent slots must stay distinguishable, and
+ * teal must not neighbour pink. These four pass contrast and colourblind
+ * checks on both card surfaces. Never cycle past the end: four is the intended
+ * cap, so a sector rarely shows more than a handful of player slices.
  */
 
 /** Player-corp fallback slots, in validated order. Never cycle past the end. */

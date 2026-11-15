@@ -22,7 +22,6 @@ describe("nav link inventory parity", () => {
       countryId: "US",
       myCorporationId: 1,
       myUnionId: "u1",
-      conflictsEnabled: true,
       unionsEnabled: true,
       settlementCrisisLive: true,
     })
@@ -31,7 +30,7 @@ describe("nav link inventory parity", () => {
 
     expect(hrefs).not.toContain("/world/legacy");
     expect(hrefs).toContain("/world/trade");
-    expect(hrefs).toContain("/world/conflicts");
+    expect(hrefs).toContain("/world/crises?view=conflicts");
     expect(hrefs).toContain("/unions");
     expect(hrefs).toContain("/unions/u1");
     expect(hrefs).toContain("/api/corporations/mine");
@@ -43,8 +42,7 @@ describe("nav link inventory parity", () => {
     // covered in staffNavItems.test.ts. The inventory only guards the route list.
     const labels = buildStaffNavItems({ isAdmin: true, isModerator: true }).map((i) => i.label);
 
-    expect(labels).toContain("Admin Panel");
-    expect(labels).toContain("Mod Panel");
+    expect(labels).toContain("Control Panel");
     expect(labels).toContain("Ops Dashboard");
   });
 
@@ -79,7 +77,6 @@ describe("nav link inventory parity", () => {
     const worldItems = buildWorldNavItems({
       countryId: "US",
       myCorporationId: 1,
-      conflictsEnabled: true,
       unionsEnabled: true,
     });
     const nationSections = buildNationalDetailsSections("US", {

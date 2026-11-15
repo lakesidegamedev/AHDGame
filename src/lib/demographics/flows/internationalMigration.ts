@@ -6,16 +6,13 @@ const MIGRANT_SIGMA = 7;
 /**
  * Economic pull on international migration intake.
  *
- * v0 balance fix (2026-06-30): the growth term reads the region's OUTPUT GAP
- * (gdpGrowth − its own potential), NOT absolute growth vs a fixed 2.5% neutral.
- * The old fixed anchor split regions into permanent boom/doom basins at the 2.5%
- * line — a demographically weak region settles at gdpGrowth = potential below
- * 2.5%, so it perpetually shed population, lowering potential further (no interior
- * equilibrium; see docs/plans/2026-06-30-macro-balance-v0.md). Against each
- * region's OWN potential, a region growing at potential is migration-neutral
- * (pull = 1); only genuinely hot (above potential) or depressed (below potential)
- * regions move people. ADDITIVE to the national total; clamp reached only at
- * extremes. Unemployment term unchanged (still vs a fixed neutral).
+ * The growth term reads the region's OUTPUT GAP (gdpGrowth − its own
+ * potential), NOT absolute growth vs a fixed neutral. Against each region's
+ * OWN potential, a region growing at potential is migration-neutral
+ * (pull = 1); a fixed anchor would split regions into permanent boom/doom
+ * basins with no interior equilibrium. ADDITIVE to the national total; clamp
+ * reached only at extremes. Unemployment term unchanged (still vs a fixed
+ * neutral).
  */
 // Fallback for missing gdpGrowth/potential — NOT the migration-neutral anchor
 // anymore (the pull's neutral point is each region's OWN potential). When both
@@ -147,7 +144,7 @@ export function labourMigrationPct(
   return Math.min(rule.maxPct, (1 - 1 / tightness) * rule.perShortage * wage);
 }
 
-// ── Conservation + caps (design 2026-06-16) ────────────────────────────────
+// ── Conservation + caps ────────────────────────────────
 // The cohort flow consumes per-region `migrationRate` as a literal annual net %
 // and adds it to the national headcount with no global renormalization. Two
 // safeguards keep world population from inflating regardless of the inputs:

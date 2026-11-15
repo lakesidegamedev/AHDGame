@@ -12,6 +12,7 @@ import { getDb } from "@/lib/mongodb";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { COUNTRY_CONFIGS, getOfficeTypeConfig, type CountryId } from "@/lib/constants/countries";
 import type { SovereignCrisisDecision } from "@/lib/db/types/sovereignCrisisDecision";
+import { sovereignCrisisDecisionsCollection } from "@/lib/db/repositories/sovereignCrisisDecisions";
 
 const bodySchema = z.object({
   vote: z.enum(["for", "against"]),
@@ -38,8 +39,7 @@ export async function POST(req: Request, { params }: RouteParams) {
   const vote = parsed.data.vote;
 
   const db = await getDb();
-  const decisions = await db
-    .collection<SovereignCrisisDecision>("sovereignCrisisDecisions")
+  const decisions = await sovereignCrisisDecisionsCollection(db)
     .find({ countryCode: upper, state: "executiveProposed" })
     .sort({ firedAtTurn: -1 })
     .limit(1)
@@ -91,7 +91,7 @@ export async function POST(req: Request, { params }: RouteParams) {
   // and without an atomic filter both would $inc the counter, corrupting the
   // tally. Filter on the dotted-path field NOT existing so the second writer
   // matches no document and modifiedCount stays at 0.
-  const result = await db.collection<SovereignCrisisDecision>("sovereignCrisisDecisions").updateOne(
+  const result = await sovereignCrisisDecisionsCollection(db).updateOne(
     { _id: decision._id, [voteFieldKey]: { $exists: false } },
     {
       $set: { [voteFieldKey]: vote },

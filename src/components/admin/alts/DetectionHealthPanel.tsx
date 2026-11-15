@@ -1,21 +1,19 @@
 "use client";
 
-// DetectionHealthPanel (forensics-v2 Wave 3, admin-only) — the two questions
-// the ranked cluster list cannot answer:
+// DetectionHealthPanel (admin-only) answers the two questions the ranked
+// cluster list cannot:
 //
-//  1. "Is the confidence number trustworthy?" — the calibration report
-//     (GET /api/admin/alts/calibration): a reliability plot of predicted vs.
-//     observed confirm rate over dispositioned rings, a Brier skill score
-//     against the base-rate prior, and a precision/recall sweep that says
-//     whether the auto-open threshold is set in the right place.
-//  2. "Is the detector still running properly?" — the run telemetry report
-//     (GET /api/admin/alts/metrics): candidate volume, confidence
-//     distribution, and per-signal firing trends across recent hourly runs,
-//     with explicit warnings when a signal that used to fire has gone
-//     silent (usually an upstream data break, not fewer alts).
+//  1. Is the confidence number trustworthy? The calibration report
+//     (GET /api/admin/alts/calibration) shows predicted vs. observed confirm
+//     rate, a Brier skill score against the base-rate prior, and a
+//     precision/recall sweep for the auto-open threshold.
+//  2. Is the detector still running properly? The run telemetry report
+//     (GET /api/admin/alts/metrics) shows candidate volume, confidence
+//     distribution, and per-signal firing trends, warning when a signal that
+//     used to fire has gone silent (usually an upstream data break).
 //
-// Both endpoints are read-only and advisory. Any threshold or weight change
-// they suggest is applied by hand through the ScoringConfigPanel.
+// Both endpoints are read-only and advisory; threshold or weight changes are
+// applied by hand through the ScoringConfigPanel.
 
 import { useEffect, useState } from "react";
 import {

@@ -1,4 +1,5 @@
 import * as cron from "node-cron";
+import { logger } from "@/lib/observability/logger";
 import { dispatchNativePush } from "@/lib/nativePush/dispatcher";
 import * as Sentry from "@sentry/nextjs";
 import { trackCheckpoint } from "@/lib/turn/subhour/checkpointTelemetry";
@@ -11,6 +12,12 @@ import { backupTurnSchedule, resolveTurnCronMinute, turnCronSchedule } from "./c
 import { getProcessingLockState, TURN_LOCK_STALE_MS } from "./turn/processingLock";
 import { recordTurnHeapDelta } from "@/lib/observability/heapWatchdog";
 import { getDb } from "@/lib/mongodb";
+import { workerConfig } from "@/lib/config/worker";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { createTurnRetryController, type TurnRetryAttempt } from "@/lib/turn/turnRetry";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { resolveTurnResilienceStage } from "@/lib/turn/rules/staleLock";
+import { tryFastStaleLockTakeover } from "@/lib/turn/turnLockHolder";
 import { deploymentServiceSlug } from "@/lib/deploymentIdentity";
 import { sweepPlayerRandomEventsRealtime } from "@/lib/events/pree/driver";
 import { persistApiAbuseScan } from "@/lib/api/abuseDetection";
@@ -22,6 +29,9 @@ import { runShareFillRecoveryPass } from "@/lib/corporations/commands/shareTradi
 import { captureServerProductEvent } from "@/lib/analytics/captureServer";
 import { isCronWorkerProcess, shouldStartHostedBackgroundServices } from "@/lib/startupMode";
 import { PatreonReconcileLockBusyError, runPatreonReconcile } from "@/lib/patreon/reconcile";
+import { runtimeConfig } from "@/lib/config/runtime";
+import { servicesConfig } from "@/lib/config/services";
+import { serverEnv } from "@/lib/config/read";
 
 /*
  * Sentry cron-monitor slug for the primary turn cron. Service-suffixed so
@@ -37,7 +47,7 @@ import { PatreonReconcileLockBusyError, runPatreonReconcile } from "@/lib/patreo
  * extras) and normal (every hour) modes. A missed check-in within
  * `checkinMargin` is tolerated; beyond that Sentry alerts.
  */
-export function deriveTurnCronMonitorSlug(env: NodeJS.ProcessEnv = process.env): string {
+export function deriveTurnCronMonitorSlug(env: NodeJS.ProcessEnv = serverEnv()): string {
   return `turn-cron-${deploymentServiceSlug(env)}`;
 }
 const TURN_CRON_MONITOR_SLUG = deriveTurnCronMonitorSlug();
@@ -56,11 +66,12 @@ const TURN_CRON_MONITOR_CONFIG = {
  * so trip events include the recent per-turn growth pattern.
  */
 async function runTurnWithHeapDiagnostics(
-  source: "primary" | "backup" | "stuckLockSweep"
-): Promise<ReturnType<typeof processTurn>> {
+  source: "primary" | "backup" | "stuckLockSweep" | "staleLockWatchdog" | "retry",
+  retryAttempt?: TurnRetryAttempt
+): Promise<Awaited<ReturnType<typeof processTurn>>> {
   const before = process.memoryUsage();
   const t0 = Date.now();
-  const result = await processTurn();
+  const result = await processTurn(retryAttempt ? { retryAttempt } : {});
   const after = process.memoryUsage();
   const durationMs = Date.now() - t0;
   const deltaBytes = after.heapUsed - before.heapUsed;
@@ -73,8 +84,18 @@ async function runTurnWithHeapDiagnostics(
   console.log(
     `[Heap] turn ${result.turn} (${source}): heapUsed ${(before.heapUsed / 1_000_000).toFixed(0)}MB → ${(after.heapUsed / 1_000_000).toFixed(0)}MB (delta=${deltaBytes >= 0 ? "+" : ""}${(deltaBytes / 1_000_000).toFixed(1)}MB) rss=${(after.rss / 1_000_000).toFixed(0)}MB dur=${durationMs}ms`
   );
+  // A retry attempt reports to the controller that scheduled it.
+  if (source !== "retry") void turnRetryController.onResult(result);
   return result;
 }
+
+const turnRetryController = createTurnRetryController({
+  run: (attempt) => runTurnWithHeapDiagnostics("retry", attempt),
+  record: async (entry) => {
+    const db = await getDb();
+    await gameStateCollection(db).updateOne({ _id: "current" }, { $set: { lastTurnRetry: entry } });
+  },
+});
 
 let nativePushCron: ReturnType<typeof cron.schedule> | null = null;
 let pushDispatchRunning = false;
@@ -83,11 +104,12 @@ let stockExchangeRefreshCron: ReturnType<typeof cron.schedule> | null = null;
 let fogOfWarCron: ReturnType<typeof cron.schedule> | null = null;
 let backupCron: ReturnType<typeof cron.schedule> | null = null;
 let stuckLockRecoveryCron: ReturnType<typeof cron.schedule> | null = null;
+let staleLockWatchdogCron: ReturnType<typeof cron.schedule> | null = null;
+let staleLockWatchdogRunning = false;
 
 /**
- * How long a turn lock must sit untouched before the 5-minute recovery sweep
- * will repossess it. Two full stale windows, i.e. twice what the :00/:30 turn
- * crons require — see the rationale at the sweep itself (#1208).
+ * Two full stale windows: twice what the :00/:30 turn crons require before the
+ * 5-minute recovery sweep repossesses a lock.
  */
 const STUCK_LOCK_SWEEP_MIN_AGE_MS = 2 * TURN_LOCK_STALE_MS;
 let playerEventsSweepCron: ReturnType<typeof cron.schedule> | null = null;
@@ -101,10 +123,10 @@ let patreonReconcileCron: ReturnType<typeof cron.schedule> | null = null;
 let patreonReconcileRunning = false;
 
 /**
- * Share-fill orphan recovery sweep (issue #1672). Staggered to :07/:22/:37/:52
- * so it never fires on a turn tick (:00/:30) or the stock refresh (:15), and
- * runs 4x/hour so a crash-orphaned receipt waits at most ~15 minutes. Offset
- * slots double as the test selector (see `findScheduledCallback` in cron.test.ts).
+ * Share-fill orphan recovery sweep. Staggered to :07/:22/:37/:52
+ * so it never fires on a turn tick (:00/:30) or the stock refresh (:15),
+ * and runs 4x/hour so a crash-orphaned receipt waits at most ~15 minutes.
+ * Offset slots double as the test selector (see `findScheduledCallback` in cron.test.ts).
  */
 export const SHARE_FILL_RECOVERY_SCHEDULE = "7,22,37,52 * * * *";
 
@@ -136,7 +158,7 @@ function getCronSchedule(fastMode?: boolean): string {
 export async function initializeCronJobs() {
   nativePushCron?.stop();
   nativePushCron = null;
-  if (process.env.NATIVE_PUSH_ENABLED === "true" && process.env.SINGLEPLAYER !== "1") {
+  if (runtimeConfig.nativePushEnabled() && !runtimeConfig.singleplayer()) {
     nativePushCron = cron.schedule("* * * * *", async () => {
       if (pushDispatchRunning) return;
       pushDispatchRunning = true;
@@ -168,6 +190,9 @@ export async function initializeCronJobs() {
   if (stuckLockRecoveryCron) {
     stuckLockRecoveryCron.stop();
   }
+  if (staleLockWatchdogCron) {
+    staleLockWatchdogCron.stop();
+  }
   if (playerEventsSweepCron) {
     playerEventsSweepCron.stop();
   }
@@ -194,10 +219,8 @@ export async function initializeCronJobs() {
     async () => {
       // Tick-fired log is outside Sentry.withMonitor on purpose: it proves the
       // node-cron scheduler ran the callback at the expected time. When the
-      // Sentry monitor goes silent (missed check-ins) while the container is
-      // alive, the presence/absence of this log distinguishes a scheduler
-      // problem from a withMonitor problem (withMonitor hang or throw is the
-      // current leading hypothesis for the 2026-05-25 ~3h cron silence).
+      // Sentry monitor goes silent while the container is alive, presence or
+      // absence of this log distinguishes a scheduler problem from a withMonitor problem.
       const tickStartedAt = Date.now();
       console.log(`[Cron] tick fired at ${new Date(tickStartedAt).toISOString()}`);
       try {
@@ -229,7 +252,7 @@ export async function initializeCronJobs() {
                 // process likely died mid-turn; fall through so processTurn's
                 // findOneAndUpdate-based stale-lock takeover can repossess the
                 // lock. Otherwise the cron would skip forever on a permanently
-                // stuck isProcessing flag (2026-05-24 sandbox-staging incident).
+                // stuck isProcessing flag.
                 const lockState = getProcessingLockState(currentState);
                 if (!lockState.isStale) {
                   console.log("[Cron] Turn processing skipped — turn already in progress");
@@ -346,18 +369,16 @@ export async function initializeCronJobs() {
   // Stuck-lock recovery sweep. STRICTLY a recovery path: it never starts a
   // turn that is merely due, only repossesses one whose lock has gone stale.
   //
-  // Why this exists (2026-08-28): when a process dies mid-turn — a redeploy's
-  // SIGTERM, a heapWatchdog trip, or a hard V8 OOM — gameState.isProcessing is
-  // left set with a frozen heartbeat. Recovery previously depended on the turn
-  // cron's own ticks, which are only :00 and :30, so a turn killed at :05 sat
-  // wedged on "Processing..." until :30, and one killed at :35 until the next
-  // :30 — most of an hour. Sweeping every 5 minutes bounds the wedge to roughly
-  // the stale window plus 5 minutes.
+  // When a process dies mid-turn (SIGTERM, heapWatchdog, OOM),
+  // gameState.isProcessing is left set with a frozen heartbeat. The turn cron
+  // only ticks at :00 and :30, so without this sweep a wedged turn can sit for
+  // most of an hour. Sweeping every 5 minutes bounds the wedge to roughly the
+  // stale window plus 5 minutes.
   //
-  // TURN_LOCK_STALE_MS (20 min) is deliberately NOT shortened to speed this up:
-  // it is the safety interlock that stops a second process stealing the lock
-  // from a turn that is alive but not heart-beating (a long synchronous stretch
-  // starves the 30s heartbeat timer). Observed turns have run 666s and 495s.
+  // TURN_LOCK_STALE_MS (20 min) is deliberately NOT shortened: it is the safety
+  // interlock that stops a second process stealing the lock from a turn that is
+  // alive but not heart-beating (a long synchronous stretch starves the 30s
+  // heartbeat timer).
   stuckLockRecoveryCron = cron.schedule(
     "*/5 * * * *",
     async () => {
@@ -378,6 +399,8 @@ export async function initializeCronJobs() {
         // Clearing a stranded migration lock is the admin Reset Lock's job, not
         // this sweep's: taking it over could corrupt a half-applied migration.
         if (currentState.processingKind !== "turn") return;
+        // A held lock waits for a person (see the hold runbook in turnSystem.ts).
+        if (currentState.processingHoldReason) return;
 
         const lockState = getProcessingLockState(currentState);
         if (!lockState.isStale) return;
@@ -385,19 +408,12 @@ export async function initializeCronJobs() {
         // Deliberately MORE conservative than the :00/:30 crons, which act as
         // soon as the lock is stale at TURN_LOCK_STALE_MS.
         //
-        // #1208 is a real production incident of the hazard: a turn that ran
-        // past the 20-minute threshold WITHOUT heartbeating was taken over by a
-        // second worker while still alive, re-running news-emitting phases and
-        // posting duplicate World News. The dedup added there is explicitly
-        // best-effort, so it mitigates the symptom rather than the race.
-        //
-        // This sweep checks every 5 minutes instead of every 30, so it is far
-        // likelier than those crons to catch a turn in the window where it is
-        // merely blocked (a long synchronous stretch starves the 30s heartbeat
-        // timer) rather than dead. A dead holder never heartbeats again, so
-        // waiting a second full window costs it nothing; a blocked one gets
-        // that much longer to recover and keep its lock. Worst-case wedge is
-        // still bounded well under the up-to-an-hour this sweep exists to fix.
+        // This sweep runs every 5 minutes instead of every 30, so it is far likelier
+        // to catch a turn in the window where it is merely blocked (a long synchronous
+        // stretch starves the 30s heartbeat timer) rather than dead. A dead holder
+        // never heartbeats again, so waiting a second full window costs it nothing; a
+        // blocked one gets that much longer to recover and keep its lock. Worst-case
+        // wedge stays bounded well under the up-to-an-hour this sweep exists to fix.
         const lastTouchMs = lockState.lastTouch?.getTime();
         const lockAgeMs = lastTouchMs === undefined ? Infinity : Date.now() - lastTouchMs;
         if (lockAgeMs < STUCK_LOCK_SWEEP_MIN_AGE_MS) return;
@@ -454,6 +470,49 @@ export async function initializeCronJobs() {
         Sentry.captureException(error, {
           tags: { component: "cron", job: "stuckLockSweep" },
         });
+      }
+    },
+    { timezone: "UTC" }
+  );
+
+  // Fast stale-lock watchdog (turnResilienceStage >= 1). Every minute it checks
+  // whether the turn lock's heartbeat is more than a few minutes old and, if so,
+  // takes the lock over by compare-and-set on the holder it read, then runs the
+  // normal turn, which resumes from the recorded step. At stage 0 it does nothing
+  // and the 20 minute rules above stay in force.
+  staleLockWatchdogCron = cron.schedule(
+    "* * * * *",
+    async () => {
+      if (staleLockWatchdogRunning) return;
+      staleLockWatchdogRunning = true;
+      try {
+        const db = await getDb();
+        const config = await gameConfigCollection(db).findOne(
+          { _id: "default" },
+          { projection: { turnResilienceStage: 1, simSandbox: 1 } }
+        );
+        const stage = resolveTurnResilienceStage({
+          configStage: config?.turnResilienceStage,
+          simSandbox: config?.simSandbox === true,
+          envStage: workerConfig.turnResilienceStage(),
+        });
+        if (stage < 1) return;
+        if (!(await tryFastStaleLockTakeover(db, stage))) return;
+        logger.warn("Cron", "Stale-lock watchdog took over a turn lock; resuming the turn");
+        try {
+          Sentry.captureMessage("Stale turn lock taken over by watchdog", {
+            level: "warning",
+            fingerprint: ["stale-turn-lock-watchdog"],
+          });
+        } catch {
+          // Telemetry must not gate recovery.
+        }
+        const result = await runTurnWithHeapDiagnostics("staleLockWatchdog");
+        logger.info("Cron", "Stale-lock watchdog result", { success: result.success });
+      } catch (error) {
+        logger.error("Cron", "Error in stale-lock watchdog", error, { job: "staleLockWatchdog" });
+      } finally {
+        staleLockWatchdogRunning = false;
       }
     },
     { timezone: "UTC" }
@@ -546,7 +605,7 @@ export async function initializeCronJobs() {
     "30 4 * * *",
     async () => {
       try {
-        const enabled = process.env.RETENTION_ENABLED === "1";
+        const enabled = runtimeConfig.retentionEnabled();
         const summary = await runRetention({ dryRun: !enabled, compact: enabled });
         const totalDeleted = summary.results.reduce((s, r) => s + (r.deletedCount ?? 0), 0);
         const totalArchived = summary.results.reduce((s, r) => s + (r.archivedCount ?? 0), 0);
@@ -664,20 +723,17 @@ export async function initializeCronJobs() {
   console.log("[Cron] API abuse detection will scan every hour.");
   console.log(
     `[Cron] History retention will run daily at 04:30 UTC (${
-      process.env.RETENTION_ENABLED === "1" ? "live" : "dry-run"
+      runtimeConfig.retentionEnabled() ? "live" : "dry-run"
     }).`
   );
   console.log("[Cron] Stuck turn-lock recovery sweep will run every 5 minutes.");
-  // Share-fill orphan recovery (issue #1672). Deliberately NOT a turn phase:
-  // the receipt scan is a query-per-row N+1 that must not run inside
-  // processTurn. This sweep re-drives lonely receipts outside the turn with
-  // a bounded fair pass. Deferrable by design: while a turn holds the
-  // processing lock (fresh OR stale — a stale lock may still be a live but
-  // blocked turn, per #1208) the pass is skipped and retried next tick.
-  // With no world or a paused world there is nothing to recover, so the
-  // sweep returns before touching the database.
-  // `runShareFillRecoveryPass` never throws and carries its own concurrency
-  // guard, so overlapping ticks collapse instead of piling up.
+  // Share-fill orphan recovery. Deliberately NOT a turn phase: the receipt
+  // scan is an N+1 query that must not run inside processTurn, so this sweep
+  // re-drives lonely receipts with a bounded fair pass. Deferrable by design:
+  // while a turn holds the processing lock (fresh OR stale, since a stale lock
+  // may still be a live blocked turn) the pass is skipped and retried next
+  // tick. No world or a paused world means nothing to recover. The pass never
+  // throws and carries its own concurrency guard, so overlapping ticks collapse.
   shareFillRecoveryCron = cron.schedule(
     SHARE_FILL_RECOVERY_SCHEDULE,
     async () => {
@@ -715,10 +771,11 @@ export async function initializeCronJobs() {
   // for authenticated dry-runs and explicit operator applies.
   if (
     process.env.NODE_ENV === "production" &&
-    isCronWorkerProcess(process.env) &&
-    shouldStartHostedBackgroundServices(process.env) &&
+    isCronWorkerProcess(serverEnv()) &&
+    shouldStartHostedBackgroundServices(serverEnv()) &&
     // Sandboxes do not inherit the creator token or reconcile live supporters.
-    (process.env.SENTRY_ENVIRONMENT !== "sandbox" || !!process.env.PATREON_CREATOR_TOKEN?.trim())
+    (servicesConfig.sentryEnvironment() !== "sandbox" ||
+      !!servicesConfig.patreonCreatorToken()?.trim())
   ) {
     patreonReconcileCron = cron.schedule(
       PATREON_RECONCILIATION_SCHEDULE,
@@ -784,6 +841,10 @@ export async function restartCronWithSchedule(): Promise<boolean> {
     stuckLockRecoveryCron.stop();
     stuckLockRecoveryCron = null;
   }
+  if (staleLockWatchdogCron) {
+    staleLockWatchdogCron.stop();
+    staleLockWatchdogCron = null;
+  }
   if (playerEventsSweepCron) {
     playerEventsSweepCron.stop();
     playerEventsSweepCron = null;
@@ -845,6 +906,10 @@ export function stopCronJobs() {
   if (stuckLockRecoveryCron) {
     stuckLockRecoveryCron.stop();
     stuckLockRecoveryCron = null;
+  }
+  if (staleLockWatchdogCron) {
+    staleLockWatchdogCron.stop();
+    staleLockWatchdogCron = null;
   }
   if (playerEventsSweepCron) {
     playerEventsSweepCron.stop();

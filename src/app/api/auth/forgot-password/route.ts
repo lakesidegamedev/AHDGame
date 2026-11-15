@@ -1,3 +1,4 @@
+import { accountFieldsRefusal } from "@/lib/auth/accountFields/mode";
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { getClientIp } from "@/lib/utils/network";
@@ -8,12 +9,14 @@ import { forgotPasswordBodySchema } from "@/lib/api/schemas/auth";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { verifyTurnstileToken } from "@/lib/turnstile";
 import { recordAudit } from "@/lib/audit/recordAudit";
-import { createPasswordReset, PASSWORD_RESETS_COLLECTION } from "@/lib/passwordReset";
+import { createPasswordReset } from "@/lib/passwordReset";
 import { isAuthMigrationFenced } from "@/lib/auth/sourceFence";
 import type { PasswordResetDoc } from "@/lib/passwordReset";
 import { sendEmail } from "@/lib/email";
+import { renderBrandedEmail } from "@/lib/emailTemplate";
 import { isPlaceholderEmail } from "@/lib/auth/placeholderEmail";
-import type { User } from "@/lib/db/types";
+import { usersCollection } from "@/lib/db/repositories/users";
+import { passwordResetsCollection } from "@/lib/db/repositories/passwordResets";
 
 /** Per-identifier limit: 3 requests per 15 minutes. Deliberately tighter than
  * the per-IP AUTH_LIMITS so one target account cannot be spammed with links. */
@@ -23,16 +26,16 @@ const IDENTIFIER_LIMITS = { maxRequests: 3, windowMs: 15 * 60 * 1000 };
 // never reveals whether the identifier matched an account.
 const GENERIC_OK = { ok: true } as const;
 
-function resetEmailContent(url: string): { html: string; text: string } {
-  const text =
-    "We received a request to reset your A House Divided password.\n\n" +
-    `Reset it here: ${url}\n\n` +
-    "This link lasts 30 minutes. If you did not request this, you can ignore this email and your password will stay the same.";
-  const html =
-    "<p>We received a request to reset your A House Divided password.</p>" +
-    `<p><a href="${url}">Reset your password</a></p>` +
-    "<p>This link lasts 30 minutes. If you did not request this, you can ignore this email and your password will stay the same.</p>";
-  return { html, text };
+function resetEmailContent(url: string, baseUrl: string): { html: string; text: string } {
+  return renderBrandedEmail({
+    preheader: "Reset your A House Divided password. This link lasts 30 minutes.",
+    heading: "Reset your password",
+    paragraphs: ["We received a request to reset your A House Divided password."],
+    cta: { label: "Reset your password", url },
+    footnote:
+      "This link lasts 30 minutes. If you did not request this, you can ignore this email and your password will stay the same.",
+    baseUrl,
+  });
 }
 
 // POST /api/auth/forgot-password - Requests a password reset link by email or username. Always returns a generic 200.
@@ -40,6 +43,9 @@ function resetEmailContent(url: string): { html: string; text: string } {
 // Errors: 400, 429
 export async function POST(request: Request) {
   try {
+    const accountFieldsBlock = accountFieldsRefusal("reset");
+    if (accountFieldsBlock) return accountFieldsBlock;
+
     const clientIp = await getClientIp();
     const ipLimit = await durableRateLimit(clientIp, AUTH_LIMITS.maxRequests, AUTH_LIMITS.windowMs);
     if (!ipLimit.ok) return rateLimitResponse(ipLimit.retryAfter);
@@ -71,7 +77,7 @@ export async function POST(request: Request) {
     }
 
     const db = await getDb();
-    const user = await db.collection<User>("users").findOne({
+    const user = await usersCollection(db).findOne({
       $or: [{ email: identifier }, { username: identifier }],
     });
 
@@ -112,7 +118,7 @@ export async function POST(request: Request) {
     let emailed = false;
     // Discord sign-ups carry an undeliverable placeholder; they get the Discord DM below.
     if (!isPlaceholderEmail(user.email)) {
-      const { html, text } = resetEmailContent(url);
+      const { html, text } = resetEmailContent(url, baseUrl);
       const result = await sendEmail({
         to: user.email,
         subject: "Reset your A House Divided password",
@@ -124,7 +130,7 @@ export async function POST(request: Request) {
 
     let queuedDiscord = false;
     if (user.discordId) {
-      await db.collection<PasswordResetDoc>(PASSWORD_RESETS_COLLECTION).updateOne(
+      await passwordResetsCollection<PasswordResetDoc>(db).updateOne(
         { _id: doc._id },
         {
           $set: {

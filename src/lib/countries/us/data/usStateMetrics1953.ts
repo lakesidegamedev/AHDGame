@@ -1,24 +1,13 @@
 /**
- * SEED INDEPENDENCE — DO NOT DERIVE FROM ANOTHER ERA.
- * Each era seed is self-contained. This file MUST NOT import and transform
- * another era's seed data. All values are authored for 1953 directly.
+ * SEED INDEPENDENCE: DO NOT DERIVE FROM ANOTHER ERA.
+ * Each era seed is self-contained; all values are authored for 1953 directly.
  * Type-only imports and same-era imports (states1953) are allowed.
  *
- * SCALE NOTE: 1953 is a *post-Korean-War, peak-manufacturing, pre-Civil-Rights,
- * Eisenhower year-one* world. Era anchors that sit far from all later eras:
- *   - median household income national ≈ $3,900 (≈5% of the 2023 ≈$80,610)
- *   - home broadband 0% (the commercial TV set is barely a decade old)
- *   - unemployment ≈ 2.9% — the peacetime low, post-Korean-War demobilization
- *   - incarceration ≈ 98/100k — the historical low, pre-mass-incarceration
- *   - income inequality VERY LOW (Gini ≈ 0.37) — peak New Deal redistribution era
- *   - violent crime LOW (~160/100k) — pre-baby-boom urban crime surge
- *   - manufacturing at its absolute PEAK share (~30% of GDP)
- *   - defense spending VERY HIGH (~14% of GDP; Korean War + NATO buildup)
- *   - agriculture still significant (~8% of GDP; farm population ~15%)
- *   - no broadband, no cable, no internet; three TV networks barely launched
- *   - racial segregation legal (pre-Brown v. Board); Jim Crow South
- *   - labor union density at its historic peak (~35% private-sector unionization)
- *   - life expectancy ≈ 68.8 years (antibiotics new; cardiac disease high)
+ * SCALE: 1953 is post-Korean-War, peak-manufacturing, pre-Civil-Rights. Key
+ * anchors: median household income ~$3,900; 0% home broadband; unemployment
+ * ~2.9%; incarceration ~98/100k; Gini ~0.37; violent crime ~160/100k;
+ * manufacturing ~30% of GDP; defense ~14% of GDP; agriculture ~8% of GDP;
+ * labor union density ~35%; life expectancy ~68.8 years.
  */
 import type { StateMetrics, StateMetricValue } from "@/lib/db/types";
 import { states1953 } from "./usStates1953";
@@ -474,49 +463,20 @@ const URBANIZATION_1953: Record<string, number> = {
 };
 
 /**
- * 1953 fertility index (0-100; population.birthRate — see metricDefinitions
- * `unit: "index"` and `uniformStateMetrics`. This is NOT a crude rate per
- * 1000; do not author a raw TFR or per-1000 figure here).
+ * 1953 fertility index (0-100; population.birthRate, `unit: "index"`). NOT a
+ * crude per-1000 rate or TFR; do not author one here.
  *
- * This field was previously ABSENT from this file, so every US state fell
- * through to `uniformStateMetrics`'s generic `65 - medianAge*0.5` default —
- * which, at the 1950 median ages below (mostly 26-34), lands at ~49-51: the
- * NEUTRAL midpoint, i.e. a modern-day replacement-level reading. That silently
- * erased the baby boom: `demographics/flows/fertility.ts`'s
- * `birthRateIndexToTFR(index, replacementTFR)` anchors index 50 at
- * `REPLACEMENT_TFR` (2.06, `demographics/phase.ts`) and index 100 at
- * `2.06 * 1.6 = 3.296`. `population.birthRate` is also a STATIC ROOT metric —
- * no turn-engine node evolves it (unlike `medianAge`, which the demographic
- * phase updates every turn from the live cohort vector) — so whatever is
- * authored here is literally the fertility rate for the entire run. Index
- * ≈50 simulated a ~2019 replacement TFR for a country whose real 1953 TFR was
- * ≈3.3 (Vital Statistics of the United States, 1953; NCHS), so every turn of
- * `cohortFlows`'s fertility flow produced only replacement-level births and
- * the population aged FORWARD across the run instead of getting younger —
- * exactly backwards for 1953-66 America.
+ * `birthRateIndexToTFR` anchors index 50 at replacement TFR (2.06) and index
+ * 100 at ~3.3. `population.birthRate` is a STATIC root metric with no turn
+ * evolution, so whatever is authored here is the fertility rate for the whole
+ * run.
  *
- * CALIBRATION — not just "high", but high AND consistent with the authored
- * `medianAge` above. `seedSynthesis.ts`'s youth/adult split is SOLVED to
- * report the seeded median age, using the birth-rate index only as a prior
- * that bounds the solve to ±0.10 of population share; a birth rate whose
- * prior sits far from what the seeded median (plus the real 1950-census adult
- * shares, `stateCensusData1953.ts`) implies gets envelope-clamped rather than
- * honoured (see seedSynthesis.ts's doc comment on Turkey 1953 for the same
- * failure mode). Each value below is the HIGHEST index (found by bisecting
- * against the live solver, `synthesizeAgeSexVector`, using this state's real
- * adult census shares) that still lands the turn-0 synthesized median within
- * ~2 years of the authored `medianAge` — i.e. the most fertility signal this
- * state's authored inputs can carry without breaking its own seeded age
- * structure. The resulting synthesized medians therefore run 1-2 years
- * YOUNGER than the raw census figure above (e.g. CA 30.2 → synthesizes ~28.3;
- * MS 26.5 → ~24.6) — a small, correctly-directed bias, since 1953 sat only 7
- * years into an already-high-fertility period whose cumulative effect on the
- * age structure was still building. Resulting TFRs (`birthRateIndexToTFR`)
- * come out 2.3-2.5 for the industrial Northeast (historically low-fertility,
- * DC/NY/NH/NJ lowest) up to 3.0-3.3 for the rural South and Mountain
- * West/Utah (UT hits the model's own ceiling, matching Utah's real status as
- * the historic US fertility outlier) — the correct South/West-high,
- * Northeast-low direction, at the highest magnitude the seeded medians admit.
+ * Each value is the highest index that, through `seedSynthesis.ts`'s solved
+ * age/sex split, keeps the turn-0 synthesized median within ~2 years of the
+ * authored `medianAge` for this state's real 1950 census adult shares. Higher
+ * values get envelope-clamped rather than honoured. Yields TFRs of ~2.3-2.5 in
+ * the industrial Northeast up to ~3.0-3.3 in the rural South and Mountain West,
+ * matching 1953's South/West-high, Northeast-low pattern.
  */
 const BIRTH_RATE_1953: Record<string, number> = {
   AL: 95,

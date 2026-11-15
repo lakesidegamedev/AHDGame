@@ -12,14 +12,18 @@ import type {
   HealResult,
   VerifyResult,
 } from "../types";
+import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
+import { bankFailurePoliticalEventsCollection } from "@/lib/db/repositories/bankFailurePoliticalEvents";
 
-// Support #1749, Monroe Indrustry (seq 2857). The turn-601 failure waterfall
-// froze a resolution record: vault + USD insurance fund paid the household
-// book into the central bank. The 22,150.23 player book returned to the CB as
-// householdSavingsLiability, so it is not restored here; the bank reopens with
-// npc/total deposits equal to the household book. Owner decision: reopen the
-// old universal charter and have the game mint the 304,203.61 shortfall.
-// liquidCapital is never touched. Legs are READ from the frozen record.
+// Frozen turn-601 waterfall resolution: vault plus USD insurance fund
+// paid the household book into the central bank. The 22,150.23 household
+// book returned to the CB as householdSavingsLiability, so it is not
+// restored here; the bank reopens with npc/total deposits equal to the
+// household book. The game mints the 304,203.61 shortfall. liquidCapital
+// is never touched. Legs are READ from the frozen record.
 
 export const DEFECT_ID = "AHD-1749-monroe-bank-restoration";
 export const CASH_AT_WATERFALL = 7_709_632.58738934;
@@ -103,25 +107,24 @@ function incOf(update: Record<string, unknown> | undefined): Record<string, numb
   return out;
 }
 async function load(db: Db): Promise<CorpDoc | null> {
-  return db
-    .collection<CorpDoc>("corporations")
-    .findOne(
-      { _id: new ObjectId(CORPORATION_ID) },
-      { projection: { name: 1, liquidCapital: 1, bankCharter: 1, remediation: 1 } }
-    );
+  return corporationsCollection<CorpDoc>(db).findOne(
+    { _id: new ObjectId(CORPORATION_ID) },
+    { projection: { name: 1, liquidCapital: 1, bankCharter: 1, remediation: 1 } }
+  );
 }
 const markerOf = (doc: CorpDoc | null): Marker | undefined => {
   const v = doc?.remediation?.[DEFECT_ID];
   return v && typeof v === "object" ? (v as Marker) : undefined;
 };
 async function loadRecord(db: Db): Promise<FrozenRecord | null> {
-  return db.collection<FrozenRecord>("bankMoneyMoves").findOne({ _id: RECORD_ID });
+  return bankMoneyMovesCollection<FrozenRecord>(db).findOne({ _id: RECORD_ID });
 }
 async function eventExists(db: Db): Promise<boolean> {
   return Boolean(
-    await db
-      .collection<{ _id: string }>(BANK_FAILURE_EVENTS)
-      .findOne({ _id: FAILURE_EVENT_ID }, { projection: { _id: 1 } })
+    await bankFailurePoliticalEventsCollection<{ _id: string }>(db).findOne(
+      { _id: FAILURE_EVENT_ID },
+      { projection: { _id: 1 } }
+    )
   );
 }
 function readPlayerBook(record: FrozenRecord): number {
@@ -337,14 +340,15 @@ async function apply(db: Db, healPlan: HealPlan, ctx: HealContext): Promise<Heal
   const id = new ObjectId(CORPORATION_ID);
   const turn =
     (
-      await db
-        .collection<{ _id: string; currentTurn?: number }>("gameState")
-        .findOne({ _id: "current" }, { projection: { currentTurn: 1 } })
+      await gameStateCollection<{ _id: string; currentTurn?: number }>(db).findOne(
+        { _id: "current" },
+        { projection: { currentTurn: 1 } }
+      )
     )?.currentTurn ?? 0;
 
   // Claim the marker BEFORE the money moves; the journal key is the second
   // at-most-once guard, and a crash resumes from the journal rather than paying twice.
-  await db.collection<CorpDoc>("corporations").updateOne(
+  await corporationsCollection<CorpDoc>(db).updateOne(
     { _id: id, [`${MARKER_PATH}.status`]: { $ne: "done" } },
     {
       $set: {
@@ -496,13 +500,15 @@ async function apply(db: Db, healPlan: HealPlan, ctx: HealContext): Promise<Heal
   // TransitionProjection has no delete form. The failure is reversed, so the
   // political event must not keep weighing on approval. Guarded by _id, and a
   // second run simply deletes nothing.
-  const deleted = await db
-    .collection<{ _id: string }>(BANK_FAILURE_EVENTS)
-    .deleteOne({ _id: FAILURE_EVENT_ID });
+  const deleted = await bankFailurePoliticalEventsCollection<{ _id: string }>(db).deleteOne({
+    _id: FAILURE_EVENT_ID,
+  });
 
-  const existing = await db
-    .collection("financialTxLog")
-    .findOne({ type: "restitution_credit", subjectId: id, "meta.defectId": DEFECT_ID });
+  const existing = await financialTxLogCollection(db).findOne({
+    type: "restitution_credit",
+    subjectId: id,
+    "meta.defectId": DEFECT_ID,
+  });
   if (!existing) {
     const entry: Omit<FinancialTxLogEntry, "_id" | "expiresAt" | "flagged"> = {
       type: "restitution_credit" as const,

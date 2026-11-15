@@ -14,8 +14,7 @@ import { getElectoralVoteUnits } from "@/lib/constants/states";
 import { randomUUID } from "node:crypto";
 import { applyStateAttackSpend } from "@/lib/elections/stateAttackSpend";
 import { getOpsBranchMagnitude } from "@/lib/campaigns/upgradeCosts";
-import { getHomeCurrency, loadCharacterFxRate } from "@/lib/currency/characterFunds";
-import { isForexEnabled } from "@/lib/currency/featureFlag";
+import { loadCampaignFxRate } from "@/lib/currency/campaignFxRate";
 import { liveActionFilter } from "@/lib/elections/primaryStateActions";
 import { emitStateAttackWire } from "@/lib/elections/raceWireEmit";
 import {
@@ -26,7 +25,7 @@ import {
   PRIMARY_VOTE_SUPPRESSION_COST_ACTIONS,
   PRIMARY_VOTE_SUPPRESSION_COST_FUNDS,
   PRIMARY_VOTE_SUPPRESSION_PCT,
-} from "@/lib/electionEngine/constants";
+} from "@/lib/elections/engine/constants";
 import type {
   Campaign,
   Character,
@@ -36,6 +35,13 @@ import type {
   PrimaryStateActionKind,
   State,
 } from "@/lib/db/types";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
+import { primaryStateActionsCollection } from "@/lib/db/repositories/primaryStateActions";
 
 /**
  * What each kind costs and does, so the gate, the debit and the stored row all
@@ -100,9 +106,10 @@ export async function POST(request: Request, { params }: RouteParams) {
     const { id: electionParam } = await params;
     const db = await getDb();
 
-    const gameState = await db
-      .collection<GameState>("gameState")
-      .findOne({ _id: "current" }, { projection: { preset: 1 } });
+    const gameState = await gameStateCollection(db).findOne(
+      { _id: "current" },
+      { projection: { preset: 1 } }
+    );
     const validStates = new Set(getElectoralVoteUnits(gameState?.preset).map((u) => u.stateId));
     if (!validStates.has(stateId)) {
       return errorResponse(400, "Invalid US state code");
@@ -116,7 +123,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
     const election = resolved.election;
 
-    if (election.electionType !== "president" || election.countryId !== "US") {
+    if (election.electionType !== "president" || !countryHasFeature("usApi", election.countryId)) {
       return errorResponse(400, "State attacks are only available in US presidential primaries");
     }
     if (election.status !== "active") {
@@ -131,7 +138,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     const character = auth.user.character;
 
-    const actor = await db.collection<ElectionCandidate>("electionCandidates").findOne({
+    const actor = await electionCandidatesCollection(db).findOne({
       electionId: election._id,
       characterId: character._id,
       status: "active",
@@ -143,7 +150,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       return errorResponse(400, "You cannot attack yourself");
     }
 
-    const target = await db.collection<ElectionCandidate>("electionCandidates").findOne({
+    const target = await electionCandidatesCollection(db).findOne({
       _id: new ObjectId(targetCandidateId),
       electionId: election._id,
       status: "active",
@@ -157,7 +164,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       return errorResponse(400, "You can only attack a rival in your own primary");
     }
 
-    const already = await db.collection<PrimaryStateAction>("primaryStateActions").findOne({
+    const already = await primaryStateActionsCollection(db).findOne({
       ...liveActionFilter(election._id, currentTurn),
       actorCandidateId: actor._id,
       targetCandidateId: target._id,
@@ -168,38 +175,37 @@ export async function POST(request: Request, { params }: RouteParams) {
       return errorResponse(409, "You already have an attack running on them there");
     }
 
-    const campaign = await db
-      .collection<Campaign>("campaigns")
-      .findOne({ electionId: election._id, candidateId: character._id });
+    const campaign = await campaignsCollection(db).findOne({
+      electionId: election._id,
+      candidateId: character._id,
+    });
     if (!campaign) {
       return errorResponse(403, "You have no campaign in this race");
     }
     // The constant is anchor-denominated and the war chest is in the campaign's
     // own currency, so the price is converted before it is compared, exactly as
     // the Presence build route does.
-    const forexEnabled = await isForexEnabled();
-    const { rate } = forexEnabled
-      ? await loadCharacterFxRate(db, getHomeCurrency(character))
-      : { rate: 1 };
-    const costFundsLocal = terms.costFunds * rate;
+    const costFundsLocal = terms.costFunds * (await loadCampaignFxRate(db, character));
     if ((campaign.funds ?? 0) < costFundsLocal) {
       return errorResponse(
         400,
         `Not enough campaign funds. A local attack costs $${Math.round(costFundsLocal).toLocaleString("en-US")}.`
       );
     }
-    const freshChar = await db
-      .collection<Character>("characters")
-      .findOne({ _id: character._id }, { projection: { actions: 1 } });
+    const freshChar = await charactersCollection(db).findOne(
+      { _id: character._id },
+      { projection: { actions: 1 } }
+    );
     if (!freshChar || freshChar.actions < terms.costActions) {
       return errorResponse(400, `Not enough actions. That costs ${terms.costActions}.`);
     }
 
     // The target's Rapid Response, stamped onto the row now so a later retune
     // of their tree cannot rewrite an attack already paid for.
-    const targetCampaign = await db
-      .collection<Campaign>("campaigns")
-      .findOne({ electionId: election._id, candidateId: target.characterId });
+    const targetCampaign = await campaignsCollection(db).findOne({
+      electionId: election._id,
+      candidateId: target.characterId,
+    });
     const shieldTree = targetCampaign?.mediaSpendingTree;
     const shieldApplied =
       terms.shielded && shieldTree?.starter && shieldTree.c > 0
@@ -210,8 +216,8 @@ export async function POST(request: Request, { params }: RouteParams) {
     // lookup that throws there would 500 on an attack the player has already
     // paid for.
     const stateName =
-      (await db.collection<State>("states").findOne({ _id: stateId }, { projection: { name: 1 } }))
-        ?.name ?? stateId;
+      (await statesCollection(db).findOne({ _id: stateId }, { projection: { name: 1 } }))?.name ??
+      stateId;
 
     const now = new Date();
     const row: Omit<PrimaryStateAction, "_id"> = {
@@ -228,11 +234,10 @@ export async function POST(request: Request, { params }: RouteParams) {
       createdAt: now,
     };
 
-    // Crash-safe spend (issue #1672): the actions and funds debits are keyed
-    // idempotent legs and the attack row a deterministic insert, so a crash
-    // between the sequential writes reconciles instead of charging for an
-    // attack that never landed. `Idempotency-Key` replays the stored outcome
-    // without charging again.
+    // Crash-safe spend: the actions and funds debits are keyed idempotent legs
+    // and the attack row a deterministic insert, so a crash between sequential
+    // writes reconciles instead of charging for an attack that never landed.
+    // `Idempotency-Key` replays the stored outcome without charging again.
     const headerKey = request.headers.get("Idempotency-Key");
     if (headerKey !== null && (headerKey.length === 0 || headerKey.length > 128)) {
       return errorResponse(400, "Invalid Idempotency-Key header");

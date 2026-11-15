@@ -14,7 +14,6 @@ import type {
   NationalCommitteeCandidate,
   NationalCommitteeVote,
   BillWhip,
-  Character,
   NPP,
   ElectedOfficial,
   Caucus,
@@ -26,6 +25,32 @@ import type {
   PartyCharter,
 } from "@/lib/db/types";
 import type { Coalition } from "@/lib/db/types/coalition";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
+import type { Document } from "mongodb";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { coalitionsCollection } from "@/lib/db/repositories/coalitions";
+import { nationalPartyElectionsCollection } from "@/lib/db/repositories/nationalPartyElections";
+import { partyChartersCollection } from "@/lib/db/repositories/partyCharters";
+import { statePartyCandidatesCollection } from "@/lib/db/repositories/statePartyCandidates";
+import { nationalPartyCandidatesCollection } from "@/lib/db/repositories/nationalPartyCandidates";
+import { nationalCommitteeCandidatesCollection } from "@/lib/db/repositories/nationalCommitteeCandidates";
+import { statePartyElectionsCollection } from "@/lib/db/repositories/statePartyElections";
+import { partyBudgetCollection } from "@/lib/db/repositories/partyBudget";
+import { caucusesCollection } from "@/lib/db/repositories/caucuses";
+import { billWhipsCollection } from "@/lib/db/repositories/billWhips";
+import { statePartyVotesCollection } from "@/lib/db/repositories/statePartyVotes";
+import { nationalPartyVotesCollection } from "@/lib/db/repositories/nationalPartyVotes";
+import { nationalCommitteeVotesCollection } from "@/lib/db/repositories/nationalCommitteeVotes";
+import { nationalCommitteeElectionsCollection } from "@/lib/db/repositories/nationalCommitteeElections";
+import { slateCandidatesCollection } from "@/lib/db/repositories/slateCandidates";
+import { treasuryTransactionsCollection } from "@/lib/db/repositories/treasuryTransactions";
+import { caucusMembershipsCollection } from "@/lib/db/repositories/caucusMemberships";
+import { recruitmentSlatesCollection } from "@/lib/db/repositories/recruitmentSlates";
+import { caucusPolicyPositionsCollection } from "@/lib/db/repositories/caucusPolicyPositions";
 
 export interface EmptyPartyCleanupResult {
   deletedParties: string[];
@@ -57,8 +82,7 @@ export async function cleanupEmptyParties(): Promise<EmptyPartyCleanupResult> {
   const db = await getDb();
 
   // Find non-default parties (we'll check actual membership, not the memberCount field)
-  const nonDefaultParties = await db
-    .collection<PoliticalParty>("politicalParties")
+  const nonDefaultParties = await politicalPartiesCollection(db)
     .find({ isDefault: { $ne: true } })
     .toArray();
 
@@ -86,8 +110,7 @@ export async function cleanupEmptyParties(): Promise<EmptyPartyCleanupResult> {
   // Use composite keys (countryId:partyId) to avoid cross-country sequential ID collisions
   type CompositeCount = { _id: { countryId: string; party: string }; count: number };
   const [charCounts, nppCounts, officialCounts] = await Promise.all([
-    db
-      .collection<Character>("characters")
+    charactersCollection(db)
       .aggregate<CompositeCount>([
         { $match: { party: { $in: partyStringIds } } },
         {
@@ -98,8 +121,7 @@ export async function cleanupEmptyParties(): Promise<EmptyPartyCleanupResult> {
         },
       ])
       .toArray(),
-    db
-      .collection<NPP>("npps")
+    nppsCollection(db)
       .aggregate<CompositeCount>([
         { $match: { party: { $in: partyStringIds }, retiredAt: null } },
         {
@@ -113,8 +135,7 @@ export async function cleanupEmptyParties(): Promise<EmptyPartyCleanupResult> {
     // Also check for elected officials - don't delete parties with sitting members of Congress/Parliament
     // Note: ElectedOfficial doesn't have countryId, but the party field is specific to a country
     // For now, we count all officials with matching party (sequential ID)
-    db
-      .collection<ElectedOfficial>("electedOfficials")
+    electedOfficialsCollection(db)
       .aggregate<{ _id: string; count: number }>([
         {
           $match: {
@@ -141,8 +162,7 @@ export async function cleanupEmptyParties(): Promise<EmptyPartyCleanupResult> {
   // founding agreement — losing it requires an explicit dissolution flow.
   const charteredPartyIds = new Set<string>(
     (
-      await db
-        .collection<PartyCharter>("partyCharters")
+      await partyChartersCollection(db)
         .find({
           status: { $in: ["ratified", "migrated", "migrated-incomplete"] },
           partyId: { $ne: null },
@@ -198,8 +218,7 @@ export async function cleanupEmptyParties(): Promise<EmptyPartyCleanupResult> {
   const uniqueCountries = [...new Set(partyCountryPairs.map((p) => p.countryId))];
   const stateIdsByCountry = new Map<string, string[]>();
   for (const cid of uniqueCountries) {
-    const states = await db
-      .collection("states")
+    const states = await statesCollection<Document>(db)
       .find({ countryId: cid })
       .project({ _id: 1 })
       .toArray();
@@ -215,33 +234,24 @@ export async function cleanupEmptyParties(): Promise<EmptyPartyCleanupResult> {
 
   const stateElections =
     stateElectionFilters.length > 0
-      ? await db
-          .collection<StatePartyElection>("statePartyElections")
-          .find({ $or: stateElectionFilters })
-          .toArray()
+      ? await statePartyElectionsCollection(db).find({ $or: stateElectionFilters }).toArray()
       : [];
   const stateElectionIds = stateElections.map((e) => e._id);
 
   const nationalElections =
     partyCountryPairs.length > 0
-      ? await db
-          .collection<NationalPartyElection>("nationalPartyElections")
-          .find({ $or: partyCountryPairs })
-          .toArray()
+      ? await nationalPartyElectionsCollection(db).find({ $or: partyCountryPairs }).toArray()
       : [];
   const nationalElectionIds = nationalElections.map((e) => e._id);
 
   const committeeElections =
     partyCountryPairs.length > 0
-      ? await db
-          .collection<NationalCommitteeElection>("nationalCommitteeElections")
-          .find({ $or: partyCountryPairs })
-          .toArray()
+      ? await nationalCommitteeElectionsCollection(db).find({ $or: partyCountryPairs }).toArray()
       : [];
   const committeeElectionIds = committeeElections.map((e) => e._id);
   const caucuses =
     partyCountryPairs.length > 0
-      ? await db.collection<Caucus>("caucuses").find({ $or: partyCountryPairs }).toArray()
+      ? await caucusesCollection(db).find({ $or: partyCountryPairs }).toArray()
       : [];
   const caucusIds = caucuses.map((caucus) => caucus._id);
 
@@ -249,42 +259,42 @@ export async function cleanupEmptyParties(): Promise<EmptyPartyCleanupResult> {
   let deletedStateCandidates = 0;
   let deletedStateVotes = 0;
   if (stateElectionIds.length > 0) {
-    const candidateResult = await db
-      .collection<StatePartyCandidate>("statePartyCandidates")
-      .deleteMany({ electionId: { $in: stateElectionIds } });
+    const candidateResult = await statePartyCandidatesCollection(db).deleteMany({
+      electionId: { $in: stateElectionIds },
+    });
     deletedStateCandidates = candidateResult.deletedCount;
 
-    const voteResult = await db
-      .collection<StatePartyVote>("statePartyVotes")
-      .deleteMany({ electionId: { $in: stateElectionIds } });
+    const voteResult = await statePartyVotesCollection(db).deleteMany({
+      electionId: { $in: stateElectionIds },
+    });
     deletedStateVotes = voteResult.deletedCount;
   }
 
   let deletedNationalCandidates = 0;
   let deletedNationalVotes = 0;
   if (nationalElectionIds.length > 0) {
-    const candidateResult = await db
-      .collection<NationalPartyCandidate>("nationalPartyCandidates")
-      .deleteMany({ electionId: { $in: nationalElectionIds } });
+    const candidateResult = await nationalPartyCandidatesCollection(db).deleteMany({
+      electionId: { $in: nationalElectionIds },
+    });
     deletedNationalCandidates = candidateResult.deletedCount;
 
-    const voteResult = await db
-      .collection<NationalPartyVote>("nationalPartyVotes")
-      .deleteMany({ electionId: { $in: nationalElectionIds } });
+    const voteResult = await nationalPartyVotesCollection(db).deleteMany({
+      electionId: { $in: nationalElectionIds },
+    });
     deletedNationalVotes = voteResult.deletedCount;
   }
 
   let deletedCommitteeCandidates = 0;
   let deletedCommitteeVotes = 0;
   if (committeeElectionIds.length > 0) {
-    const candidateResult = await db
-      .collection<NationalCommitteeCandidate>("nationalCommitteeCandidates")
-      .deleteMany({ electionId: { $in: committeeElectionIds } });
+    const candidateResult = await nationalCommitteeCandidatesCollection(db).deleteMany({
+      electionId: { $in: committeeElectionIds },
+    });
     deletedCommitteeCandidates = candidateResult.deletedCount;
 
-    const voteResult = await db
-      .collection<NationalCommitteeVote>("nationalCommitteeVotes")
-      .deleteMany({ electionId: { $in: committeeElectionIds } });
+    const voteResult = await nationalCommitteeVotesCollection(db).deleteMany({
+      electionId: { $in: committeeElectionIds },
+    });
     deletedCommitteeVotes = voteResult.deletedCount;
   }
 
@@ -293,35 +303,29 @@ export async function cleanupEmptyParties(): Promise<EmptyPartyCleanupResult> {
   // StatePartyElection uses stateId prefix filtering (same as query above)
   const stateElectionResult =
     stateElectionFilters.length > 0
-      ? await db
-          .collection<StatePartyElection>("statePartyElections")
-          .deleteMany({ $or: stateElectionFilters })
+      ? await statePartyElectionsCollection(db).deleteMany({ $or: stateElectionFilters })
       : { deletedCount: 0 };
 
   const nationalElectionResult =
     partyCountryPairs.length > 0
-      ? await db
-          .collection<NationalPartyElection>("nationalPartyElections")
-          .deleteMany({ $or: partyCountryPairs })
+      ? await nationalPartyElectionsCollection(db).deleteMany({ $or: partyCountryPairs })
       : { deletedCount: 0 };
 
   const committeeElectionResult =
     partyCountryPairs.length > 0
-      ? await db
-          .collection<NationalCommitteeElection>("nationalCommitteeElections")
-          .deleteMany({ $or: partyCountryPairs })
+      ? await nationalCommitteeElectionsCollection(db).deleteMany({ $or: partyCountryPairs })
       : { deletedCount: 0 };
 
   // 4. Delete state party organizations (has countryId field)
   const stateOrgResult =
     partyCountryPairs.length > 0
-      ? await db.collection<StatePartyOrg>("statePartyOrg").deleteMany({ $or: partyCountryPairs })
+      ? await statePartyOrgCollection(db).deleteMany({ $or: partyCountryPairs })
       : { deletedCount: 0 };
 
   // 5. Delete party budgets (has countryId field)
   const budgetResult =
     partyCountryPairs.length > 0
-      ? await db.collection<PartyBudget>("partyBudget").deleteMany({ $or: partyCountryPairs })
+      ? await partyBudgetCollection(db).deleteMany({ $or: partyCountryPairs })
       : { deletedCount: 0 };
 
   // 6. Delete bill whips
@@ -333,36 +337,28 @@ export async function cleanupEmptyParties(): Promise<EmptyPartyCleanupResult> {
   });
   const whipResult =
     whipFilters.length > 0
-      ? await db.collection<BillWhip>("billWhips").deleteMany({ $or: whipFilters })
+      ? await billWhipsCollection(db).deleteMany({ $or: whipFilters })
       : { deletedCount: 0 };
 
   // 6b. Delete caucus-owned records before dropping the parent party. Party
   // cleanup runs automatically during turns, so leaving these docs behind would
   // strand active caucus orders/treasury history with no live party surface.
   if (caucusIds.length > 0) {
-    await db
-      .collection<CaucusMembership>("caucusMemberships")
-      .deleteMany({ caucusId: { $in: caucusIds } });
-    await db
-      .collection<CaucusPolicyPosition>("caucusPolicyPositions")
-      .deleteMany({ caucusId: { $in: caucusIds } });
+    await caucusMembershipsCollection(db).deleteMany({ caucusId: { $in: caucusIds } });
+    await caucusPolicyPositionsCollection(db).deleteMany({ caucusId: { $in: caucusIds } });
   }
   if (partyCountryPairs.length > 0) {
-    await db
-      .collection<RecruitmentSlate>("recruitmentSlates")
-      .deleteMany({ $or: partyCountryPairs });
-    await db.collection<SlateCandidate>("slateCandidates").deleteMany({ $or: partyCountryPairs });
-    await db
-      .collection<TreasuryTransaction>("treasuryTransactions")
-      .deleteMany({ $or: partyCountryPairs });
-    await db.collection<Caucus>("caucuses").deleteMany({ $or: partyCountryPairs });
+    await recruitmentSlatesCollection(db).deleteMany({ $or: partyCountryPairs });
+    await slateCandidatesCollection(db).deleteMany({ $or: partyCountryPairs });
+    await treasuryTransactionsCollection(db).deleteMany({ $or: partyCountryPairs });
+    await caucusesCollection(db).deleteMany({ $or: partyCountryPairs });
   }
 
   // 6c. Remove deleted parties from any coalition memberships
   for (const party of emptyParties) {
     const partyOid = party._id;
 
-    const coalition = await db.collection<Coalition>("coalitions").findOne({
+    const coalition = await coalitionsCollection(db).findOne({
       "members.partyId": partyOid,
     });
 
@@ -371,19 +367,17 @@ export async function cleanupEmptyParties(): Promise<EmptyPartyCleanupResult> {
 
       if (remainingMembers.length === 0) {
         // Last member — delete coalition entirely
-        await db.collection<Coalition>("coalitions").deleteOne({ _id: coalition._id });
+        await coalitionsCollection(db).deleteOne({ _id: coalition._id });
       } else if (coalition.chairPartyId.equals(partyOid)) {
         // Chair's party is being deleted — pass to next most senior member
         const nextMember = [...remainingMembers].sort(
           (a, b) => a.joinedAt.getTime() - b.joinedAt.getTime()
         )[0]!;
-        const nextParty = await db
-          .collection<PoliticalParty>("politicalParties")
-          .findOne({ _id: nextMember.partyId });
+        const nextParty = await politicalPartiesCollection(db).findOne({ _id: nextMember.partyId });
 
         const newChairCharacterId = nextParty?.chairId ?? null;
 
-        await db.collection<Coalition>("coalitions").updateOne(
+        await coalitionsCollection(db).updateOne(
           { _id: coalition._id },
           {
             $pull: { members: { partyId: partyOid } },
@@ -396,7 +390,7 @@ export async function cleanupEmptyParties(): Promise<EmptyPartyCleanupResult> {
         );
       } else {
         // Non-chair member deleted — just remove from members list
-        await db.collection<Coalition>("coalitions").updateOne(
+        await coalitionsCollection(db).updateOne(
           { _id: coalition._id },
           {
             $pull: { members: { partyId: partyOid } },
@@ -408,7 +402,7 @@ export async function cleanupEmptyParties(): Promise<EmptyPartyCleanupResult> {
   }
 
   // 7. Finally, delete the parties themselves
-  await db.collection<PoliticalParty>("politicalParties").deleteMany({ _id: { $in: partyIds } });
+  await politicalPartiesCollection(db).deleteMany({ _id: { $in: partyIds } });
 
   const result: EmptyPartyCleanupResult = {
     deletedParties: partySeqIds,

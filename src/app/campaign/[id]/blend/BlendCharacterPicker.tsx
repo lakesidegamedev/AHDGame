@@ -19,9 +19,9 @@ export interface BlendCharacterPickerProps {
 }
 
 /**
- * Search-and-pick used by both the ticket (running mate) and the manager slots,
- * styled for Blend. Queries the shared character search endpoint, debounced,
- * and excludes anyone who already holds the role.
+ * Search-and-pick for the running mate and manager slots, styled for Blend.
+ * Debounced query against the shared character search endpoint; excludes
+ * characters that already hold the role.
  */
 export function BlendCharacterPicker({
   placeholder,

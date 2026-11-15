@@ -6,8 +6,8 @@ import type {
   ContingentProjectionDisplay,
   PresidentialResolutionMode,
 } from "@/lib/elections/presidentialResolutionDisplay";
-import type { FactorLedgerSnapshot } from "@/lib/electionEngine/factorLedger";
-import type { DemocraticHealthElectionSnapshot } from "@/lib/electionEngine/democraticHealth";
+import type { FactorLedgerSnapshot } from "@/lib/elections/engine/factorLedger";
+import type { DemocraticHealthElectionSnapshot } from "@/lib/elections/engine/democraticHealth";
 
 export interface Endorsement {
   nppId?: string;
@@ -184,6 +184,7 @@ export type ElectionType =
   | "stateSenate"
   | "governor"
   | "president"
+  | "special_president"
   | "commons"
   | "primeMinister"
   | "regionalCouncil"
@@ -252,8 +253,8 @@ export interface ElectionDetail {
   inGeneral: boolean;
   /**
    * Candidates advancing per party from this race's primary, resolved
-   * server-side against the live redistricting flag. Optional so payloads
-   * cached before ticket-1041 still typecheck; consumers fall back to 1.
+   * server-side against the live redistricting flag. Optional; consumers
+   * fall back to 1.
    */
   primaryAdvanceCount?: number;
   /**
@@ -277,8 +278,6 @@ export interface ElectionDetail {
     pausedAt: string | null;
     lastTurnProcessed?: string | null;
     currentTurn?: number | null;
-    /** When true, US House primaries advance top-3 (districted nominee split). */
-    redistrictingEnabled?: boolean;
   } | null;
 
   /**

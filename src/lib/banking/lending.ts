@@ -33,6 +33,11 @@ import { decideBankCommand } from "@/lib/banking/rules/decide";
 import type { BorrowerSnapshot } from "@/lib/banking/rules/boundary";
 import { reviveObjectIds, settleTransition } from "@/lib/banking/settlementJournal";
 import { quoteLoanOrigination } from "@/lib/banking/rules/loanFees";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { bankLoansCollection } from "@/lib/db/repositories/bankLoans";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import { corporationHistoryCollection } from "@/lib/db/repositories/corporationHistory";
 
 export { CHARACTER_LOAN_SPREAD_PP };
 
@@ -97,8 +102,7 @@ export async function buildFundConstituentResolver(
     return () => [];
   }
 
-  const funds = await db
-    .collection<IndexFund>("indexFunds")
+  const funds = await indexFundsCollection(db)
     .find({ slug: { $in: [...fundIds] } })
     .project({ slug: 1, targetConstituents: 1 })
     .toArray();
@@ -121,8 +125,7 @@ export async function averageCorpIncomePerTurn(
   currentTurn: number
 ): Promise<number> {
   const windowStart = Math.max(1, currentTurn - CORP_INCOME_AVERAGING_TURNS + 1);
-  const rows = await db
-    .collection<Pick<CorporationHistory, "income">>("corporationHistory")
+  const rows = await corporationHistoryCollection<Pick<CorporationHistory, "income">>(db)
     .find({
       corporationId,
       turn: { $gte: windowStart, $lte: currentTurn },
@@ -143,10 +146,9 @@ async function committedNamedLoanPaymentPerTurn(
   currentTurn: number,
   currency: CurrencyCode
 ): Promise<number> {
-  const loans = await db
-    .collection<
-      Pick<BankLoan, "outstanding" | "ratePercent" | "originatedTurn" | "termTurns" | "currency">
-    >("bankLoans")
+  const loans = await bankLoansCollection<
+    Pick<BankLoan, "outstanding" | "ratePercent" | "originatedTurn" | "termTurns" | "currency">
+  >(db)
     .find({
       borrowerType: borrower.type,
       borrowerId: borrower.id,
@@ -220,7 +222,7 @@ export async function loadBorrowerSnapshot(
 ): Promise<{ snapshot: BorrowerSnapshot; name: string } | { error: string }> {
   const resolveFunds = await buildFundConstituentResolver(db, charter.blacklist?.indexFundIds);
   if (borrower.type === "character") {
-    const character = await db.collection<Character>("characters").findOne({ _id: borrower.id });
+    const character = await charactersCollection(db).findOne({ _id: borrower.id });
     if (!character) return { error: "Borrower character not found" };
     return {
       name: character.name ?? "Borrower",
@@ -239,7 +241,7 @@ export async function loadBorrowerSnapshot(
       },
     };
   }
-  const corp = await db.collection<Corporation>("corporations").findOne({ _id: borrower.id });
+  const corp = await corporationsCollection(db).findOne({ _id: borrower.id });
   if (!corp) return { error: "Borrower corporation not found" };
   return {
     name: corp.name ?? "Borrower",
@@ -260,22 +262,18 @@ export async function loadBorrowerSnapshot(
 }
 
 /**
- * Originate a named loan. Objective auto-approval unless the bank has opted
- * into CEO approval, in which case the loan is parked as `pending` with no
- * money moved.
+ * Originate a named loan. Auto-approved unless the bank opted into CEO approval,
+ * in which case the loan is parked as `pending` with no money moved.
  *
- * The rules boundary decides (capability, term, self-lending, blacklist,
- * currency, the binding cap) and returns one transition: the loan record,
- * the bank's vault debit, the borrower's proceeds and the cached loan total.
- * The journal lands it exactly once. There is no compensating delete any
- * more: a crash leaves a visible half-applied record, never a booked loan
+ * The rules boundary decides (capability, term, self-lending, blacklist, currency,
+ * the binding cap) and returns one transition: the loan record, the vault debit,
+ * the borrower's proceeds and the cached loan total. The journal lands it exactly
+ * once; a crash leaves a visible half-applied record rather than a booked loan
  * with no cash behind it.
  *
- * The vault IS debited. Origination used to credit the borrower and touch
- * nothing on the bank but a counter, so lending created money and repayment
- * later credited the bank with cash it had never paid out. The caps
- * (cash reserves, lendable headroom) always assumed the bank funds the loan;
- * now it does.
+ * The vault IS debited: caps (cash reserves, lendable headroom) assume the bank
+ * funds the loan, so origination credits neither the borrower nor the bank
+ * without a matching debit.
  */
 export async function originateLoan(
   db: Db,
@@ -334,9 +332,10 @@ export async function originateLoan(
   if ("error" in loadedBorrower) return reject(loadedBorrower.error);
   if (loadedBorrower.snapshot.blocked) return reject("Borrower is on the bank's blacklist");
   if (!loadedBorrower.snapshot.currencyMatches) {
-    const corp = await db
-      .collection<Corporation>("corporations")
-      .findOne({ _id: borrower.id }, { projection: { liquidCurrencyCode: 1, countryId: 1 } });
+    const corp = await corporationsCollection(db).findOne(
+      { _id: borrower.id },
+      { projection: { liquidCurrencyCode: 1, countryId: 1 } }
+    );
     const corpCurrency = corp ? resolveCorpLiquidCurrencyCode(corp) : undefined;
     return reject(
       `Loan currency ${currency} does not match corporation treasury currency ${corpCurrency ?? "unknown"}`
@@ -445,8 +444,7 @@ export async function listBorrowerFacingLoans(
     borrowerClause.push({ borrowerType: "corporation", borrowerId: { $in: corpIds } });
   }
 
-  const loans = await db
-    .collection<BankLoan>("bankLoans")
+  const loans = await bankLoansCollection(db)
     .find({
       status: { $in: ["current", "arrears", "defaulted"] },
       $or: borrowerClause,
@@ -460,8 +458,7 @@ export async function listBorrowerFacingLoans(
   const bankIds = [...new Set(loans.map((loan) => loan.bankCorporationId.toString()))].map(
     (id) => new ObjectId(id)
   );
-  const banks = await db
-    .collection<Pick<Corporation, "_id" | "name" | "sequentialId">>("corporations")
+  const banks = await corporationsCollection<Pick<Corporation, "_id" | "name" | "sequentialId">>(db)
     .find({ _id: { $in: bankIds } })
     .project({ _id: 1, name: 1, sequentialId: 1 })
     .toArray();

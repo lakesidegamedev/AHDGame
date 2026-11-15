@@ -694,9 +694,7 @@ export default function ExpandMarketModal({
                       ? suggestionMode === "playerCorp"
                         ? "No established markets found for this sector type."
                         : // Never claim the world is served. This branch means no
-                          // candidate market rows came back at all, which is a
-                          // different thing, and the old wording told players the
-                          // board was closed when it was not (#1162).
+                          // Distinct from no candidate rows at all; don't imply the board is closed.
                           "No markets found for this sector type yet."
                       : suggestionMode === "playerCorp"
                         ? "No player corporations found in this sector type."

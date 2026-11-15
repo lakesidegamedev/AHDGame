@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { withNoStore } from "@/lib/api/withNoStore";
 import { getDb } from "@/lib/mongodb";
 import type {
-  Corporation,
   Election,
   GameConfig,
   PoliticalParty,
@@ -16,6 +15,13 @@ import { getGameState } from "@/lib/gameState";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { regionNoun } from "@/lib/onboarding/checklist";
 import type { TutorialFacts } from "@/lib/tutorial/facts";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { unionsCollection } from "@/lib/db/repositories/unions";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 
 /**
  * GET /api/tutorial/context — live world numbers for the tutorial coach.
@@ -54,36 +60,33 @@ async function handleGET() {
     const [gameState, gameConfig, state, metrics, partyCount, openRaces, corps, unions] =
       await Promise.all([
         getGameState(db),
-        db
-          .collection<GameConfig>("gameConfig")
-          .findOne({ _id: "default" }, { projection: { turnLengthMinutes: 1 } }),
-        db
-          .collection<State>("states")
-          .findOne(
-            { _id: character.homeState, countryId },
-            { projection: { name: 1, population: 1 } }
-          ),
+        gameConfigCollection(db).findOne(
+          { _id: "default" },
+          { projection: { turnLengthMinutes: 1 } }
+        ),
+        statesCollection(db).findOne(
+          { _id: character.homeState, countryId },
+          { projection: { name: 1, population: 1 } }
+        ),
         // Unemployment lives on macroMetrics, keyed by region id.
-        db
-          .collection<StateMetrics>("macroMetrics")
-          .findOne(
-            { _id: character.homeState },
-            { projection: { "economic.unemploymentRate.value": 1 } }
-          ),
+        macroMetricsCollection(db).findOne(
+          { _id: character.homeState },
+          { projection: { "economic.unemploymentRate.value": 1 } }
+        ),
         // The collection is "politicalParties", not "parties" (seedManifest.ts).
-        db.collection<PoliticalParty>("politicalParties").countDocuments({ countryId }),
-        db.collection<Election>("elections").countDocuments({
+        politicalPartiesCollection(db).countDocuments({ countryId }),
+        electionsCollection(db).countDocuments({
           countryId,
           state: character.homeState,
           status: { $in: ["upcoming", "active"] },
         }),
         Promise.all([
-          db.collection<Corporation>("corporations").countDocuments({ countryId }),
-          db.collection<Corporation>("corporations").countDocuments({ countryId, ceoVacant: true }),
+          corporationsCollection(db).countDocuments({ countryId }),
+          corporationsCollection(db).countDocuments({ countryId, ceoVacant: true }),
         ]),
         Promise.all([
-          db.collection<Union>("unions").countDocuments({ countryId }),
-          db.collection<Union>("unions").countDocuments({ countryId, ownerId: null }),
+          unionsCollection(db).countDocuments({ countryId }),
+          unionsCollection(db).countDocuments({ countryId, ownerId: null }),
         ]),
       ]);
 

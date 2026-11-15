@@ -1,32 +1,23 @@
 import type { GovernmentFormation } from "@/lib/db/types/governmentFormation";
 
 /**
- * Initial US governmentFormations seed document.
+ * Initial US governmentFormation seed document, created in "pending" status.
  *
- * Created in "pending" status, matching Brazil and Nigeria — the other two
- * presidential countries, both of which have carried one since the initial
- * release. The US was the only seeded country without one, which the admin
- * readiness report flagged as missing on every reset.
- *
- * ⚠️ THIS IS NOT WHERE THE PRESIDENT LIVES, and seeding it does not seat one.
+ * THIS IS NOT WHERE THE PRESIDENT LIVES; seeding it does not seat one.
  * For a presidential system `getHeadOfGovernmentCharacterId` reads
- * `electedOfficials` with `officeType: "president"`; only parliamentary and
- * one-party countries resolve through `governmentFormations.pmCharacterId`.
- * `pmCharacterId` stays null here forever, deliberately. The row exists so the
- * legislature's majority arithmetic has somewhere to live and so every seeded
- * country answers the same diagnostic the same way.
+ * `electedOfficials` with `officeType: "president"`. `pmCharacterId` stays
+ * null here deliberately; the row exists so legislature majority arithmetic
+ * has somewhere to live and country diagnostics resolve uniformly.
  *
- * ⚠️ NOTHING CREATES THIS LAZILY, unlike the UK's. `runParliamentaryCountry`
- * seeds a missing row on the first processed turn, but it only runs for
- * countries `isParliamentarySystem` accepts, and the US is not one. Without a
- * seed step the row never appears at all.
+ * Nothing creates this lazily: `runParliamentaryCountry` only seeds missing
+ * rows for parliamentary systems, and the US is not one, so without a seed
+ * step the row never appears.
  *
- * majorityThreshold and totalSeats track the House of Representatives:
- *   - totalSeats: 435, which every shipping preset agrees on
+ * House of Representatives:
+ *   - totalSeats: 435
  *   - majorityThreshold: 218 (435 / 2 + 1)
- *
- * The Senate is deliberately absent from both numbers, matching Nigeria: the
- * threshold is a lower-chamber majority, not a total of both chambers.
+ * The Senate is deliberately excluded: the threshold is a lower-chamber
+ * majority, matching Nigeria.
  */
 export const usGovernmentFormation: Omit<GovernmentFormation, "createdAt" | "updatedAt"> = {
   _id: "US",

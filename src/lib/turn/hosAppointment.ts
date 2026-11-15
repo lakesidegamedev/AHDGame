@@ -12,7 +12,10 @@ import { computeParliamentaryGovernmentTally } from "@/lib/congress/governmentVo
 import { autoAyeNPPsForParliamentaryAppointment } from "@/lib/turn/parliamentaryGovernment";
 import { createNotifications } from "@/lib/notifications";
 import { sendCountryGameEvent, DISCORD_COLORS } from "@/lib/discordWebhooks";
-import type { Character, ElectedOfficial, NPP } from "@/lib/db/types";
+import type { ElectedOfficial } from "@/lib/db/types";
+import { getElectedOfficialsCollection } from "@/lib/db/collections/electedOfficials";
+import { getCharactersCollection } from "@/lib/db/collections/characters";
+import { getNppsCollection } from "@/lib/db/collections/npps";
 
 /**
  * Resolve an expired head-of-state appointment vote (`office: "headOfState"`,
@@ -75,29 +78,33 @@ export async function resolveHeadOfStateAppointmentVote(
   if (!hosOfficeType) return;
 
   // Replace the seated head-of-state row.
-  await db.collection<ElectedOfficial>("electedOfficials").deleteMany({
+  await (
+    await getElectedOfficialsCollection(db)
+  ).deleteMany({
     countryId,
     officeType: hosOfficeType,
   });
   const isNppVote = vote.nomineeMode === "npp";
   const nomineeChar = isNppVote
     ? null
-    : await db
-        .collection<Character>("characters")
-        .findOne(
-          { _id: vote.nomineeCharacterId! },
-          { projection: { party: 1, userId: 1, avatarUrl: 1 } }
-        );
+    : await (
+        await getCharactersCollection(db)
+      ).findOne(
+        { _id: vote.nomineeCharacterId! },
+        { projection: { party: 1, userId: 1, avatarUrl: 1 } }
+      );
   const nomineeAvatarUrl = isNppVote
     ? vote.nomineeNppId
       ? (
-          await db
-            .collection<NPP>("npps")
-            .findOne({ _id: vote.nomineeNppId }, { projection: { avatarUrl: 1 } })
+          await (
+            await getNppsCollection(db)
+          ).findOne({ _id: vote.nomineeNppId }, { projection: { avatarUrl: 1 } })
         )?.avatarUrl
       : undefined
     : nomineeChar?.avatarUrl;
-  await db.collection<ElectedOfficial>("electedOfficials").insertOne({
+  await (
+    await getElectedOfficialsCollection(db)
+  ).insertOne({
     _id: new ObjectId(),
     countryId,
     officeType: hosOfficeType,

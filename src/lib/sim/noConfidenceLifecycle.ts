@@ -1,11 +1,11 @@
 /**
- * Deterministic UK no-confidence motion lifecycle contract (issue #2103).
+ * Deterministic UK no-confidence motion lifecycle contract.
  *
  * Pure rules module: no database, no wall clock, no randomness, no env, no
- * network — so the fixed ballot, the retention/terminal checks, and the
+ * network, so the fixed ballot, the retention/terminal checks, and the
  * lifecycle report they feed are deterministic and unit-testable. The shell
  * driver in `driveNoConfidenceLifecycle.ts` runs this contract against the
- * REAL proposal, query, vote, and turn-resolution seams in a sandbox world;
+ * real proposal, query, vote, and turn-resolution seams in a sandbox world;
  * this module only computes what that run must observe.
  *
  * Fixed ballot (5 seated Commons voters, each one seat):
@@ -13,15 +13,15 @@
  * - two further opposition voters vote aye, two government voters vote nay
  * - totals are votesFor=3, votesAgainst=2, which cannot reach a Commons
  *   majority threshold, so the expected terminal outcome is `failed` and the
- *   sitting PM survives. The expected outcome is computed through the REAL
+ *   sitting PM survives. The expected outcome is computed through the real
  *   carry rule (`noConfidenceMotionCarries`), not asserted, so a change to
  *   that rule fails the contract instead of silently redefining the ballot.
  *
  * Ballot identities derive from `syntheticObjectIdHex` under a `vonc:`
  * namespace, which never collides with the synthetic-actor plan namespaces
- * (`actor:`, `character:`, `user:`, `ticker:`, ...). The plan intentionally
- * adds no roles to `SYNTHETIC_ACTOR_ROLES`, so the actor plan version and
- * the materialized population are untouched by this issue.
+ * (`actor:`, `character:`, `user:`, `ticker:`, ...). The plan adds no roles to
+ * `SYNTHETIC_ACTOR_ROLES`, so the actor plan version and the materialized
+ * population are untouched.
  */
 
 import { noConfidenceMotionCarries } from "@/lib/turn/parliamentaryGovernment";
@@ -37,7 +37,7 @@ export const NO_CONFIDENCE_LIFECYCLE_MECHANIC_ID = "uk-no-confidence-lifecycle";
 /** Country this lifecycle driver is scoped to. */
 export const NO_CONFIDENCE_COUNTRY_ID = "UK" as const;
 
-/** Preset the bounded experiment in #2103 runs against. */
+/** Preset the bounded experiment in runs against. */
 const NO_CONFIDENCE_PRESET = "1979-default";
 
 /** Fixed deterministic ballot totals for every seed. */

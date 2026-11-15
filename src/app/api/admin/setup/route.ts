@@ -52,6 +52,19 @@ import {
   removeLegacyJPCeremonialIdentity,
 } from "@/lib/admin/seed";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
+import type { Document } from "mongodb";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
+import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
+import { seatsCollection } from "@/lib/db/repositories/seats";
+import { partyBudgetCollection } from "@/lib/db/repositories/partyBudget";
+import { policiesCollection } from "@/lib/db/repositories/policies";
 
 export async function GET() {
   try {
@@ -74,18 +87,18 @@ export async function GET() {
       partyBudgetCount,
       unownedSectorCount,
     ] = await Promise.all([
-      db.collection("states").countDocuments({ countryId: "US" }),
-      db.collection("states").countDocuments({ countryId: "UK" }),
-      db.collection("policies").countDocuments(),
-      db.collection<{ _id: string }>("gameConfig").findOne({ _id: "default" }),
-      db.collection<GameState>("gameState").findOne({ _id: "current" }),
-      db.collection("electedOfficials").countDocuments(),
-      db.collection("elections").countDocuments(),
-      db.collection("politicalParties").countDocuments(),
-      db.collection("stateDemographics").countDocuments(),
-      db.collection("seats").countDocuments(),
-      db.collection("partyBudget").countDocuments(),
-      db.collection("unownedSectors").countDocuments(),
+      statesCollection<Document>(db).countDocuments({ countryId: "US" }),
+      statesCollection<Document>(db).countDocuments({ countryId: "UK" }),
+      policiesCollection<Document>(db).countDocuments(),
+      gameConfigCollection<{ _id: string }>(db).findOne({ _id: "default" }),
+      gameStateCollection(db).findOne({ _id: "current" }),
+      electedOfficialsCollection<Document>(db).countDocuments(),
+      electionsCollection<Document>(db).countDocuments(),
+      politicalPartiesCollection<Document>(db).countDocuments(),
+      stateDemographicsCollection<Document>(db).countDocuments(),
+      seatsCollection<Document>(db).countDocuments(),
+      partyBudgetCollection<Document>(db).countDocuments(),
+      unownedSectorsCollection<Document>(db).countDocuments(),
     ]);
 
     const checks = {
@@ -149,16 +162,17 @@ export async function POST(request: Request) {
     // wrote 2019 policy catalogues, budgets and sector weights into whatever era
     // the world actually is — latent state corruption that only shows up later
     // as anachronistic content. Read it once and thread it everywhere.
-    const gsPreset = await db
-      .collection<{ _id: string; preset?: string }>("gameState")
-      .findOne({ _id: "current" }, { projection: { preset: 1 } });
+    const gsPreset = await gameStateCollection<{ _id: string; preset?: string }>(db).findOne(
+      { _id: "current" },
+      { projection: { preset: 1 } }
+    );
     const preset = gsPreset?.preset ?? DEFAULT_SEED_PRESET;
     const logs: string[] = [];
     const log = (msg: string) => logs.push(msg);
 
     log("=== Step 1: Seeding reference and runtime data ===");
 
-    if (scope === "US" || seedAll) {
+    if (countryHasFeature("usApi", scope) || seedAll) {
       await seedStates(db, false, log, preset);
       await seedPolicies(db, false, log);
       await seedDemographics(db, false, log);
@@ -175,7 +189,7 @@ export async function POST(request: Request) {
       await seedUnownedSectors(db, log, 1, preset);
     }
 
-    if (scope === "UK" || seedAll) {
+    if (countryHasFeature("ukApi", scope) || seedAll) {
       const {
         seedUKRegions,
         seedUKParties,
@@ -201,7 +215,7 @@ export async function POST(request: Request) {
       await seedUKElections(log);
     }
 
-    if (scope === "JP" || seedAll) {
+    if (countryHasFeature("jpApi", scope) || seedAll) {
       await seedJPRegions(db, false, log, preset);
       await seedJPParties(db, log);
       await seedJPDemographics(db, false, log, preset);
@@ -218,7 +232,7 @@ export async function POST(request: Request) {
 
     await seedStateSectorSpecializations(db, false, log);
 
-    if (scope === "US" || seedAll) {
+    if (countryHasFeature("usApi", scope) || seedAll) {
       await seedCountyMapData(log);
     }
 
@@ -231,7 +245,7 @@ export async function POST(request: Request) {
     );
 
     log("=== Step 3: Checking elected officials ===");
-    const officialsCount = await db.collection("electedOfficials").countDocuments();
+    const officialsCount = await electedOfficialsCollection<Document>(db).countDocuments();
 
     if (officialsCount === 0) {
       log("No officials found - initializing default vacant-world officials");

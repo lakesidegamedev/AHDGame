@@ -6,9 +6,9 @@ import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
-import type { Corporation } from "@/lib/db/types";
 import { escapeRegex } from "@/lib/utils/escapeRegex";
 import { isStateOwned } from "@/lib/nationalization/nationalCorporation";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 interface RouteParams {
   params: Promise<{ code: string }>;
@@ -25,8 +25,7 @@ export async function GET(request: Request, { params }: RouteParams) {
     if (q.length < 2) return NextResponse.json({ results: [] });
 
     const db = await getDb();
-    const rows = await db
-      .collection<Corporation>("corporations")
+    const rows = await corporationsCollection(db)
       .find({
         countryId,
         countryOwnerId: { $exists: false },

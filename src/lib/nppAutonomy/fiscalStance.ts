@@ -1,20 +1,12 @@
 /**
- * fiscalStance — the NPP government's tax-and-spend posture (V1.6).
+ * FiscalStance: the NPP government's tax-and-spend posture derived from the
+ * governing agenda, macro position, and head's archetype. Biases sponsored
+ * tax/spending bills (see selectNppBill's fiscal nudge). Pairs with the
+ * central bank's hawk/dove chairAlignment to produce emergent fiscal-monetary
+ * tension without either side knowing about the other.
  *
- * The head of government / finance minister adopts a single fiscal posture —
- * expansionary, neutral, or austere — derived from the same governing agenda the
- * rest of the brain reads, plus the macro position (inflation, debt) and the
- * head's archetype. The posture biases the tax/spending bills the government
- * sponsors (see selectNppBill's fiscal nudge): an expansionary government leans
- * to loosen (spend / cut), an austere one to tighten.
- *
- * This deliberately pairs with the central bank's hawk/dove `chairAlignment`: a
- * spendthrift expansionary government running into a hawkish bank (or vice
- * versa) produces emergent fiscal–monetary tension without either side knowing
- * about the other — each just reads the same macro conditions.
- *
- * Pure + deterministic. The orchestrator persists the result on the government
- * doc; nothing here touches the DB.
+ * Pure + deterministic. The orchestrator persists the result; nothing here
+ * touches the DB.
  */
 
 import type { NPPPersonality } from "@/lib/db/types/npp";
@@ -104,25 +96,14 @@ const INFLATION_HOT_MARGIN = 2.0;
 const DEBT_DISTRESS_CEILING = 0.7; // CCC tier's gdpPenalty - normalizes to [0,1]
 /**
  * How hard credit-rating distress pulls the score toward austerity.
- * Deliberately UNCAPPED (unlike the inflation term below): the whole point of
- * this recalibration is that sufficiently severe debt distress must be able
- * to outweigh even the maximum possible growth/employment/poverty pull (+1)
- * plus the most spend-hungry archetype (+0.25 reformer) - a government
- * cannot indefinitely out-vote its own credit rating just by wanting more,
- * which is exactly the property the flat `DEBT_HIGH=1.0` line lacked (its
- * `Math.min(1, …)` cap meant debt alone could never beat a maxed growth
- * pull). Picked so:
- *   - AAA/AA (0-80% of GDP, zero rating penalty): no pull at all - matches
- *     debt.ts's own judgment that those bands aren't real distress yet.
- *   - A (80-100%): -0.71 - enough to flip an average government (a modest
- *     agenda pull + normal archetype, roughly 0-0.7) toward neutral/austere,
- *     but a country with a genuinely severe unmet-need agenda (the sandbox's
- *     CS, near-maxed) can still stay expansionary a while longer - direction
- *     tracking degree, not a hard cutoff.
- *   - BBB (100-120%, where the regressed cohort - BG/HU/PL/RO/TR/YU - sits):
- *     -1.43 - reliably outweighs a strong-but-not-maximal pull (this is what
- *     the accompanying regression simulation exercises).
- *   - BB/B/CCC (120%+): -2.1 to -5 - decisively austere regardless of agenda.
+ * Deliberately UNCAPPED (unlike the inflation term): severe debt distress must
+ * be able to outweigh the maximum growth/employment/poverty pull (+1) plus the
+ * most spend-hungry archetype (+0.25 reformer). A government cannot out-vote
+ * its own credit rating just by wanting more, which the flat capped
+ * `DEBT_HIGH` line could not express. Bands: AAA/AA (0-80% of GDP) no pull;
+ * A (80-100%) flips an average government toward neutral but leaves a severe
+ * unmet-need agenda expansionary; BBB (100-120%) reliably outweighs a strong
+ * non-maximal pull; BB/B/CCC (120%+) decisively austere regardless of agenda.
  */
 const DEBT_DISTRESS_WEIGHT = 5;
 

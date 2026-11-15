@@ -7,6 +7,7 @@ import {
   loadFieldOfficesForElection,
   type FieldOfficesByElection,
 } from "./fieldOffices/engine";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
 
 /**
  * Campaign vote effects for the generic tally engine.
@@ -42,8 +43,7 @@ async function loadGroundGameByElection(
     $or: [{ "groundGameTree.starter": true }, { groundGameLevel: { $gt: 0 } }],
   };
   if (electionId) filter.electionId = electionId;
-  const rows = await db
-    .collection<Campaign>("campaigns")
+  const rows = await campaignsCollection(db)
     .find(filter, {
       projection: { electionId: 1, candidateId: 1, groundGameTree: 1, groundGameLevel: 1 },
     })

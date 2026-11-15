@@ -14,6 +14,8 @@ import {
   fxRateForCorpFromMap,
   loadFxRatesByCurrency,
 } from "@/lib/currency/corporationCapital";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
 
 export type FundOnlyBuyoutResult = { ok: true } | { ok: false; error: string; status: number };
 
@@ -22,33 +24,31 @@ export type FundOnlyBuyoutResult = { ok: true } | { ok: false; error: string; st
  * CORPORATE TREASURY (a corporate buyback). Used when the only non-CEO holders
  * are index funds.
  *
- * Why this exists (suggestion #71): index funds have no vote path, so the normal
- * 24-turn privatization vote is structurally unwinnable when a fund holds the
- * only minority stake — the CEO owns e.g. 99.9%, a fund owns 0.1%, nobody can
- * cast a vote, and the vote can never pass (it fails after 24 turns and sets a
- * 96-turn cooldown). This buys the fund out instead so the take-private completes.
+ * Index funds have no vote path, so the normal 24-turn privatization vote is
+ * structurally unwinnable when a fund holds the only minority stake: the CEO
+ * owns e.g. 99.9%, a fund owns 0.1%, nobody can cast a vote, and it fails at 24
+ * turns then sets a 96-turn cooldown. This buys the fund out so the take-private
+ * completes.
  *
  * Funds are cashed out at fair MARKET value (execution price), NOT the 10%
- * take-private premium: the premium exists to induce consent from holders who
- * can object, and a passive fund neither votes nor objects — it is simply cashed
- * out at fair value.
+ * take-private premium: the premium induces consent from holders who can
+ * object, and a passive fund neither votes nor objects.
  *
  * Money-safety: the cash movement is `sellFundHoldingShares`, the existing,
- * conservation-tested "corp buys its float back from a fund" path (issuer-funded
- * debit with a balance guard, correct FX, fund cash credit, registry update),
- * plus a bank-NAV top-up (issue #1750; see below) when the market execution
- * price underprices the realizable bank net assets. Retiring the resulting
- * float is a pure share-count cleanup with no money move.
+ * conservation-tested issuer-funded buyback path (balance guard, correct FX,
+ * fund cash credit, registry update), plus a bank-NAV top-up when the market
+ * execution price underprices realizable bank net assets. Retiring the
+ * resulting float is a pure share-count cleanup with no money move.
  *
- * Bank-NAV floor (issue #1750 residual): the quoted/execution share price
- * recognizes only BANK_EQUITY_VALUATION_WEIGHT of a subsidiary bank's book
- * equity and none of its marked bond/prop book, so a bank-heavy corp can
- * otherwise be taken private through this path for less than the realizable
- * bank net assets (ring-fenced cash plus loans plus the marked book, net of
- * cash-backed deposits and borrowings) the CEO inherits. The fund is topped up
- * from the corporate treasury to full realizable NAV per share, exactly like
- * the hostile-takeover squeeze-out and the voted take-private floors. Inert
- * for corps without an active charter; secondary-market pricing is untouched.
+ * Bank-NAV floor: the quoted/execution share price recognizes only
+ * BANK_EQUITY_VALUATION_WEIGHT of a subsidiary bank's book equity and none of
+ * its marked bond/prop book, so a bank-heavy corp could otherwise be taken
+ * private for less than the realizable bank net assets (ring-fenced cash plus
+ * loans plus the marked book, net of cash-backed deposits and borrowings) the
+ * CEO inherits. The fund is topped up from the corporate treasury to full
+ * realizable NAV per share, matching the hostile-takeover squeeze-out and
+ * voted take-private floors. Inert for corps without an active charter;
+ * secondary-market pricing is untouched.
  *
  * Preconditions (enforced by the caller, openPrivatizationVote):
  *  - corp public, CEO controls > threshold voting power, no vote open, not on cooldown
@@ -69,10 +69,22 @@ export async function executeFundOnlyBuyout(
   if (transferRestriction) return { ok: false, error: transferRestriction, status: 403 };
   const ceoIdStr = corporation.ceoId.toString();
   const fundHolders = (corporation.shareholders ?? []).filter(
-    (s) => s.fundId && !s.characterId && !s.corporationId
+    (s) => s.fundId && !s.characterId && !s.corporationId && !s.nppId
   );
   if (fundHolders.length === 0) {
     return { ok: false, error: "No index-fund holders to buy out", status: 400 };
+  }
+
+  const ceoHolds = (s: { characterId?: unknown }) => String(s.characterId) === ceoIdStr;
+  const strangers = (corporation.shareholders ?? []).filter(
+    (s) => !ceoHolds(s) && !(s.fundId && !s.characterId && !s.corporationId && !s.nppId)
+  );
+  if (strangers.length > 0) {
+    return {
+      ok: false,
+      error: "Non-fund minority holders remain; this corporation needs a privatization vote.",
+      status: 409,
+    };
   }
 
   const currency = corporation.liquidCurrencyCode ?? "USD";
@@ -152,8 +164,7 @@ export async function executeFundOnlyBuyout(
   }
 
   const fundIds = fundHolders.map((h) => h.fundId!);
-  const funds = await db
-    .collection<IndexFund>("indexFunds")
+  const funds = await indexFundsCollection(db)
     .find({ _id: { $in: fundIds } })
     .toArray();
 
@@ -225,7 +236,7 @@ export async function executeFundOnlyBuyout(
       fxRate = 1;
     }
     const topUpLocalTotal = anchorToCorpCapital(topUpAnchorTotal, currency, fxRate);
-    const debit = await db.collection<Corporation>("corporations").updateOne(
+    const debit = await corporationsCollection(db).updateOne(
       {
         _id: corporation._id,
         liquidCapital: { $gte: topUpLocalTotal },
@@ -253,9 +264,10 @@ export async function executeFundOnlyBuyout(
           ? Math.round((topUpAnchorTotal - creditedAnchor) * 100) / 100
           : Math.round((s.sharesSold / boughtBack) * topUpAnchorTotal * 100) / 100;
       if (share <= 0) continue;
-      await db
-        .collection<IndexFund>("indexFunds")
-        .updateOne({ _id: s.fundId }, { $inc: { cashAnchor: share }, $set: { updatedAt: now } });
+      await indexFundsCollection(db).updateOne(
+        { _id: s.fundId },
+        { $inc: { cashAnchor: share }, $set: { updatedAt: now } }
+      );
       creditedAnchor += share;
     }
     cashPaidAnchor = Math.round((cashPaidAnchor + topUpAnchorTotal) * 100) / 100;
@@ -264,7 +276,7 @@ export async function executeFundOnlyBuyout(
   // Re-read and verify the CEO is the only remaining holder before consolidating,
   // so any registry/fund-holding drift can never let us silently drop unpaid
   // shares when we rebuild the cap table.
-  const after = await db.collection<Corporation>("corporations").findOne({ _id: corporation._id });
+  const after = await corporationsCollection(db).findOne({ _id: corporation._id });
   if (!after) {
     return { ok: false, error: "Corporation vanished mid-buyout", status: 409 };
   }
@@ -279,10 +291,9 @@ export async function executeFundOnlyBuyout(
     };
   }
 
-  // Retire the bought-back float and finalize the take-private. The float here
-  // is the corp's own just-repurchased shares (already paid for above), so
-  // retiring it is a pure share-count cleanup — NO further money moves. Strip
-  // dual-class supershare state (#908): a private corp is single-class.
+  // Retire the just-repurchased float (already paid above): pure share-count
+  // cleanup, no money moves. Strip dual-class supershare state: a private
+  // corp is single-class.
   const now = new Date();
   const ceoEntry = after.shareholders?.find((s) => s.characterId?.toString() === ceoIdStr);
   const ceoSharesAfter = ceoEntry?.shares ?? 0;
@@ -297,7 +308,7 @@ export async function executeFundOnlyBuyout(
         : {}),
     },
   ];
-  await db.collection<Corporation>("corporations").updateOne(
+  await corporationsCollection(db).updateOne(
     { _id: corporation._id },
     {
       $set: {

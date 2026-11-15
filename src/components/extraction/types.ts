@@ -8,8 +8,8 @@ import type { ExtractableResource } from "@/lib/constants/commodities";
  * trimmed/serialized for the client (ObjectId -> string, Date -> ISO string).
  */
 
-export type ProspectInitiatorType = "corporation" | "national_government" | "state_government";
-export type ProspectStatus = "active" | "succeeded" | "failed";
+type ProspectInitiatorType = "corporation" | "national_government" | "state_government";
+type ProspectStatus = "active" | "succeeded" | "failed";
 
 export interface ProspectingSurveyRow {
   _id: string;
@@ -55,19 +55,6 @@ export interface ExtractionContractRow {
 
 /** Which government level(s) may issue extraction contracts for a country. */
 export type ContractAuthority = "national" | "both" | "state";
-
-/** Wire shape of GET /api/contracts/extraction/eligible-corporations. */
-export interface EligibleCorporation {
-  id: string;
-  name: string;
-  ceoName?: string;
-}
-
-export interface HeadroomInfo {
-  contractedShare: number;
-  remainingHeadroom: number;
-  authority: ContractAuthority;
-}
 
 /** Effective status for display when the doc predates the `status` field. */
 export function effectiveContractStatus(c: {

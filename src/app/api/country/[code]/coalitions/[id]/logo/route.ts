@@ -7,6 +7,7 @@ import { handleRouteError, forbidden, notFound, errorResponse } from "@/lib/api/
 import type { Coalition } from "@/lib/db/types/coalition";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
+import { coalitionsCollection } from "@/lib/db/repositories/coalitions";
 
 const logoSchema = z.object({
   logoUrl: z
@@ -47,9 +48,10 @@ export async function POST(
 
     const db = await getDb();
 
-    const coalition = await db
-      .collection<Coalition>("coalitions")
-      .findOne({ sequentialId: parseInt(id, 10), countryId });
+    const coalition = await coalitionsCollection(db).findOne({
+      sequentialId: parseInt(id, 10),
+      countryId,
+    });
     if (!coalition) {
       throw notFound("Coalition not found.");
     }
@@ -61,9 +63,10 @@ export async function POST(
 
     const now = new Date();
 
-    await db
-      .collection<Coalition>("coalitions")
-      .updateOne({ _id: coalition._id }, { $set: { logoUrl, updatedAt: now } });
+    await coalitionsCollection(db).updateOne(
+      { _id: coalition._id },
+      { $set: { logoUrl, updatedAt: now } }
+    );
 
     return NextResponse.json({ success: true });
   } catch (error) {

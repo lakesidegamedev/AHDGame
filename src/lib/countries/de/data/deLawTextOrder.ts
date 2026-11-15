@@ -1,0 +1,136 @@
+import type { DeLawText } from "./deLawTextTypes";
+
+export const DE_LAW_TEXT_ORDER: Record<string, DeLawText> = {
+  "order.dueProcess.primary": [
+    "Criminal Procedure and Detention Standards Act",
+    "The rules the state must follow before it may hold or charge a person.",
+    4,
+    [
+      ["No Statutory Standards", "Arrest and detention follow no fixed rules."],
+      ["Basic Protections", "Suspects must be brought before a judge."],
+      ["Detention Standards", "Detention is limited, reviewed and documented."],
+      ["Strong Process Rights", "Counsel, interpreters and disclosure are guaranteed."],
+      ["Full Rights Charter", "Constitutional guarantees apply at every stage."],
+    ],
+  ],
+  "order.legalAid.primary": [
+    "Legal Aid Act",
+    "The scheme that puts a lawyer within reach of people on low incomes.",
+    3,
+    [
+      ["No Legal Aid", "Only those who can pay get a lawyer."],
+      ["Advice Vouchers", "Low income people can get a short consultation."],
+      ["Legal Aid Scheme", "Court costs and lawyers are paid in qualifying cases."],
+      ["Access Guarantee", "Aid covers most civil and criminal matters."],
+      ["Universal Legal Service", "Every resident has access to legal advice and representation."],
+    ],
+  ],
+  "order.communityTrust.primary": [
+    "Police Accountability Act",
+    "Oversight bodies and codes that keep officers answerable.",
+    3,
+    [
+      ["No Oversight", "Police answer to nobody outside their own ranks."],
+      ["Complaint Offices", "Complaints can be filed with an office."],
+      ["Conduct Standards", "Codes of conduct and training apply."],
+      ["Accountability Regime", "Independent oversight investigates misconduct."],
+      ["Full Consent Model", "Policing rests on community trust and transparent review."],
+    ],
+  ],
+  "order.safety.primary": [
+    "Crime Prevention Act",
+    "Money aimed at stopping crime before the police are needed.",
+    2,
+    [
+      ["No Programmes", "Prevention is left to local initiative."],
+      ["Targeted Grants", "Grants support youth and neighbourhood projects."],
+      ["Prevention Programme", "A funded programme covers schools, youth work and design."],
+      ["National Safety Drive", "A national strategy coordinates prevention."],
+      ["Total Safety Guarantee", "Prevention services reach every district."],
+    ],
+  ],
+  "order.courts.primary": [
+    "Court Capacity and Judiciary Act",
+    "Judges, staff and courtrooms enough to clear the lists.",
+    2,
+    [
+      ["Starved Courts", "Cases pile up for years."],
+      ["Judicial Appointments", "More judges are appointed."],
+      ["Court Modernization", "Digital filing and new rooms speed up cases."],
+      ["Speedy Trial Standard", "Time limits keep trials moving."],
+      ["Full Capacity Guarantee", "Courts are staffed to clear every list on time."],
+    ],
+  ],
+  "order.policeStrength.primary": [
+    "Police Forces Act",
+    "The strength and equipment of the Land and federal police.",
+    3,
+    [
+      ["Skeleton Forces", "Police are too few to respond reliably."],
+      ["Establishment Funding", "Funded posts keep the force at a minimum."],
+      ["Modern Police", "Equipment, training and numbers meet modern needs."],
+      ["National Enforcement Web", "Federal and Land forces share data and resources."],
+      ["Maximum Enforcement", "A very large, well equipped force covers every area."],
+    ],
+  ],
+  "order.deterrence.primary": [
+    "Sentencing and Prisons Act",
+    "How heavily the scales come down and where the convicted go.",
+    2,
+    [
+      ["No Policy", "Sentencing follows no guidance."],
+      ["Prison Standards", "Prisons meet basic standards."],
+      ["Firm Sentencing", "Sentencing ranges are firmer for serious offences."],
+      ["Severe Regime", "Long sentences and strict custody apply."],
+      ["Maximum Deterrence", "The harshest penalties the constitution allows are applied."],
+    ],
+  ],
+  "sec.justiceAdministration": [
+    "Justice Administration Act",
+    "Running the courts as a service for the people who use them.",
+    3,
+    [
+      ["No Programme", "Courts run themselves."],
+      ["Court Administration", "Professional administrators manage courts."],
+      ["Justice Administration", "Shared systems and standards apply."],
+      ["Expanded Access Programme", "Mediation and online access widen reach."],
+      ["Model Justice System", "A fully modern system serves every user."],
+    ],
+  ],
+  "sec.prisonAndYouthJustice": [
+    "Prison and Youth Justice Act",
+    "Youth custody and the argument over what prison is for.",
+    3,
+    [
+      ["No Reform", "Prisons are warehouses."],
+      ["Basic Standards", "Basic living standards apply."],
+      ["Rehabilitation System", "Education and work programmes are provided."],
+      ["Modern Corrections", "Release planning and support reduce reoffending."],
+      ["Model Corrections System", "A system built around resettlement and low reoffending."],
+    ],
+  ],
+  "sec.domesticIntelligence": [
+    "Domestic Intelligence Act",
+    "The domestic service's reach into extremism and organized crime.",
+    2,
+    [
+      ["No Expansion", "No domestic service exists."],
+      ["Regional Offices", "Land offices collect information."],
+      ["Service Expansion", "The service grows and gains new powers."],
+      ["National Coordination", "Federal and Land services coordinate."],
+      ["Saturation Coverage", "Broad surveillance covers all threats."],
+    ],
+  ],
+  "sec.civilProtection": [
+    "Civil Protection Act",
+    "Warning systems, shelters and disaster relief.",
+    2,
+    [
+      ["No Service", "Disaster response is improvised."],
+      ["Warning Systems", "Sirens and alert apps warn the public."],
+      ["Civil Protection Service", "A trained relief service stands ready."],
+      ["Shelter and Continuity", "Shelters and supply reserves are kept."],
+      ["Total Preparedness", "Every region is prepared for major crises."],
+    ],
+  ],
+};

@@ -1,20 +1,10 @@
 import type { CountryEraOverride } from "../../contract";
 
 /**
- * IT, 2007.
- *
- * ⚠ GENERATED from `__snapshots__/it.pre-move.json`. Regenerate with:
- *
- *     npx tsx scripts/countries/gen-country-eras.ts IT --force
- *
- * ⚠ DIFFERENCES ONLY. Everything not named here comes from the base modules.
- *
- * No config override: this era uses IT's base configuration. The field
- * is ABSENT rather than an empty object, because `getCountryConfig` merges
- * shallowly and `config: {}` reads as an override that supplies nothing.
- *
- * No per-era orders of battle: this era falls back to the base set rather
- * than inventing an empty one.
+ * IT, 2007. Generated file. Regenerate with the gen-country-eras script.
+ * Differences only; unnamed fields come from base modules.
+ * No config override: `config: {}` reads as an override under shallow merge.
+ * No per-era orders of battle: falls back to the base set.
  */
 export const IT_2007: CountryEraOverride = {
   preset: "2007-default",

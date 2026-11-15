@@ -1,18 +1,10 @@
 /**
- * Registration influence card — displays per-state Reg as partisan-lean
- * influence breakdown. Phase 5b D3 enforces honest framing: values are
- * labeled "lean" / "influence" / "strength," NEVER "% of votes" or
- * "votes locked." Reg is the slow partisan baseline per Phase 0.5 §4.2,
- * not a literal vote-share promise.
+ * Per-state registration as partisan-lean influence, not a vote share.
+ * Labels must say "lean" / "influence" / "strength," never "% of votes."
  *
- * When the state's `RegBreakdown.bootstrapped === false` (the Phase 1.5 /
- * Phase 2 prereq seed hasn't run yet for this state), the card shows an
- * honest "data populating" placeholder rather than fabricating zeros.
- *
- * Pure presentational; the parent passes the breakdown from the
- * `generalViewModel`'s `regBreakdownByState[selectedStateId]`.
- *
- * See plan §"Phase 5b — Tasks" 5b.2 and §"Phase 5b — D3".
+ * When `breakdown.bootstrapped === false` the card shows a "data
+ * populating" placeholder rather than fabricating zeros. Presentational;
+ * the parent supplies the breakdown from `generalViewModel`.
  */
 
 import { useTranslations } from "next-intl";

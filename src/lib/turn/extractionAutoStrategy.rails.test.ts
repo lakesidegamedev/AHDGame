@@ -21,7 +21,7 @@ function cursor<T>(rows: T[]) {
   return c;
 }
 
-const ENABLED = { extractionAutoStrategyEnabled: true, lastExtractionAutoStrategyTurn: 0 };
+const ENABLED = { lastExtractionAutoStrategyTurn: 0 };
 const NPC_USER_ID = new ObjectId("000000000000000000000000");
 const npcCorp = (_id: ObjectId, countryId = "US") => ({
   _id,

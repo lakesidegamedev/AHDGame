@@ -76,7 +76,6 @@ describe("processAutoSectorSeed — plants boost basis", () => {
     const { marketAtLeast } = await import("@/lib/market/featureFlag");
     vi.mocked(marketAtLeast).mockReturnValue(plants);
     await processAutoSectorSeed(db as unknown as Db, 1000, {
-      autoSectorSeedEnabled: true,
       lastAutoSeedTurn: 0,
     });
     const call = db.collectionMocks.unownedSectors!.updateMany.mock.calls[0];
@@ -148,7 +147,6 @@ describe("processAutoSectorSeed — boost is capped by built capacity", () => {
     const { marketAtLeast } = await import("@/lib/market/featureFlag");
     vi.mocked(marketAtLeast).mockReturnValue(true);
     await processAutoSectorSeed(db as unknown as Db, 1000, {
-      autoSectorSeedEnabled: true,
       lastAutoSeedTurn: 0,
     });
   }
@@ -193,7 +191,6 @@ describe("processAutoSectorSeed — boost is capped by built capacity", () => {
     wire(pool(900), 500);
     vi.mocked(marketAtLeast).mockReturnValue(false);
     await processAutoSectorSeed(db as unknown as Db, 1000, {
-      autoSectorSeedEnabled: true,
       lastAutoSeedTurn: 0,
     });
     expect(db.collectionMocks.unownedSectors!.updateMany).toHaveBeenCalled();

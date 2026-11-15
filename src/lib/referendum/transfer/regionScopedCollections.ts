@@ -1,31 +1,22 @@
 /**
  * Single source of truth for every persistent collection scoped to a
- * sub-national region. `transferRegion` rescopes each of these from the old
- * country to the new one by flipping `countryId`.
+ * sub-national region. `transferRegion` rescopes each by flipping `countryId`.
  *
  * Deliberately ABSENT:
- *  - `states`, `electedOfficials`, `seats`, `politicalParties` — handled by the
- *    dedicated region-doc / officials / party migration steps (they need more
- *    than a `countryId` flip: office-type remap, seat magnitude, party id map).
+ *  - `states`, `electedOfficials`, `seats`, `politicalParties`: handled by
+ *    dedicated migration steps needing more than a countryId flip.
  *  - Country-level collections (`federalBudget`, `centralBank`, `countryState`,
- *    `governmentApprovals`, national party pools) — they belong to the country,
- *    not the region, and must NOT move.
- *  - Transient election-process artifacts (vote tallies, candidates, in-flight
- *    elections) and decaying caches (`partyStrengthPressure`, composite `_id`) —
- *    they regenerate; the orchestrator handles in-flight NIR elections separately.
- *
- * Collection name strings and region-key fields were confirmed against each
- * type's getter / definition (see `src/lib/db/types/*` and `db/collections/*`).
+ *    `governmentApprovals`, national party pools): belong to the country.
+ *  - Transient election artifacts and decaying caches: they regenerate.
  *
  * Region-key variants:
- *   - "stateIdField":   the doc has a `stateId` field
- *   - "stateField":     the doc has a `state` field (officials / seats)
- *   - "idIsState":      the doc `_id` IS the region id (one doc per region)
- *   - "homeStateField": the doc keys residency by `homeState` (characters)
- *   - "compositeCountryState": the doc `_id` is `${countryId}_${stateId}` — the
- *       owner is baked into the key, so the doc must be RE-KEYED (you can't $set
- *       _id), not just have its `countryId` flipped, or callers that rebuild the
- *       key from the new owner orphan it.
+ *   - "stateIdField":   doc has a `stateId` field
+ *   - "stateField":     doc has a `state` field (officials / seats)
+ *   - "idIsState":      doc `_id` IS the region id
+ *   - "homeStateField": doc keys residency by `homeState`
+ *   - "compositeCountryState": `_id` is `${countryId}_${stateId}`, so the doc
+ *       must be RE-KEYED, not just flipped, or callers rebuilding the key
+ *       from the new owner orphan it.
  */
 import { ENERGY_POSITION_BY_COUNTRY } from "@/lib/constants/cabinetEnergy";
 import { INFRA_POSITION_BY_COUNTRY } from "@/lib/constants/cabinetInfra";
@@ -214,34 +205,21 @@ export async function rescopeRegionToCountry(
   const report: Array<{ collection: string; matched: number }> = [];
   for (const scope of scopes) {
     if (scope.key === "compositeCountryState") {
-      // The owner is baked into `_id` (`${countryId}_${stateId}`); you can't $set
-      // _id, so move the doc to its new key — else callers that rebuild the key
-      // from the new owner (`${toCountryId}_${regionId}`) orphan the old one.
+      // The owner is baked into `_id` (`${countryId}_${stateId}`) and _id cannot be $set,
+      // so move the doc to its new key or callers rebuilding the key from the new owner
+      // will orphan the old one.
       const coll = db.collection<Record<string, unknown>>(scope.collection);
       const oldId = `${fromCountryId}_${regionId}`;
       const newId = `${toCountryId}_${regionId}`;
       const doc = await coll.findOne({ _id: oldId } as Record<string, unknown>);
       let matched = 0;
       if (doc) {
-        // SECURE THE NEW KEY BEFORE RELEASING THE OLD ONE, and never blindly
-        // insert. This re-key is not guarded by the region-doc idempotency
-        // check above: a merge that crashed between this write and
-        // `convertRegionDoc` leaves a region that straddles the two keys. The
-        // retry re-reads the old `DD_MV` and finds a `DE_MV` from the first
-        // attempt already seated under the new key, and a blind insert there
-        // died with E11000, aborting the whole transfer half-done (ticket
-        // #1247: a reunification dictated in the won-war panel stalled at its
-        // second Land and never resumed). Upsert-replace instead: an existing
-        // row under the new key is absorbed, its payload replaced with the
-        // old row's, which is the authoritative one, and the delete below
-        // then frees the old key.
-        //
-        // A CRASHED RETRY IS NOT THE ONLY WAY THE NEW KEY IS TAKEN. A world can
-        // also carry an orphan under `${toCountryId}_${regionId}` from an
-        // earlier transfer or an old seed, with no failed attempt behind it --
-        // the live German world held four of them before any of this ran. Same
-        // collision, same answer: the moving region's document wins, because it
-        // is the one describing a region that actually exists.
+        // Secure the new key before releasing the old one, and never blindly insert.
+        // A crashed merge can leave an existing row under the new key; a blind insert
+        // would die with E11000 and abort the transfer half-done. An orphan under the
+        // new key from an earlier transfer or old seed is possible too. Same
+        // collision, same answer: upsert-replace so the moving region's document wins,
+        // then the delete below frees the old key.
         await coll.replaceOne(
           { _id: newId } as Record<string, unknown>,
           {

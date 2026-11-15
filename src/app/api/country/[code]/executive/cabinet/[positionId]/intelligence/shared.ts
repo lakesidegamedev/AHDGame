@@ -23,6 +23,7 @@ import {
 import { EFFICACY_PIVOT, EFFICACY_SLOPE, NEUTRAL_STAT } from "@/lib/stats/statsConstants";
 import type { CharacterStats } from "@/lib/stats/statsConstants";
 import { errorResponse } from "@/lib/api/errors";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /** The intelligence seat's id. Identical across every country that has one. */
 export const INTELLIGENCE_POSITION_ID = "director_of_intelligence";
@@ -111,9 +112,10 @@ interface GameStateSlice {
 }
 
 export async function loadCurrentTurn(db: Db): Promise<number> {
-  const gs = await db
-    .collection<GameStateSlice & { _id: string }>("gameState")
-    .findOne({ _id: "current" }, { projection: { currentTurn: 1 } });
+  const gs = await gameStateCollection<GameStateSlice & { _id: string }>(db).findOne(
+    { _id: "current" },
+    { projection: { currentTurn: 1 } }
+  );
   return gs?.currentTurn ?? 0;
 }
 

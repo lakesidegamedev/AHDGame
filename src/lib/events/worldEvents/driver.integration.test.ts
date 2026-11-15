@@ -142,7 +142,7 @@ describe("World Events v1 Phase 1 — multi-turn scheduler simulation", () => {
     const usScopeId = countryScopeId("US").toHexString();
 
     // Turn 1: never fired before -> immediately due.
-    const r1 = await processWorldEventsTurn(db as never, 1, { worldEventsEnabled: true });
+    const r1 = await processWorldEventsTurn(db as never, 1);
     expect(r1.offered).toBeGreaterThan(0);
     expect(pendingScopeIds.has(usScopeId)).toBe(true);
 
@@ -163,16 +163,12 @@ describe("World Events v1 Phase 1 — multi-turn scheduler simulation", () => {
     });
 
     // One turn before the gap elapses: not due yet.
-    const beforeDue = await processWorldEventsTurn(db as never, lastFired + gap - 1, {
-      worldEventsEnabled: true,
-    });
+    const beforeDue = await processWorldEventsTurn(db as never, lastFired + gap - 1);
     expect(pendingScopeIds.has(usScopeId)).toBe(false);
     void beforeDue;
 
     // Exactly at the gap: due again.
-    const r2 = await processWorldEventsTurn(db as never, lastFired + gap, {
-      worldEventsEnabled: true,
-    });
+    const r2 = await processWorldEventsTurn(db as never, lastFired + gap);
     expect(r2.offered).toBeGreaterThan(0);
     expect(pendingScopeIds.has(usScopeId)).toBe(true);
   });
@@ -188,7 +184,7 @@ describe("World Events v1 Phase 1 — multi-turn scheduler simulation", () => {
     let fireCount = 0;
 
     for (let turn = 1; turn <= 100; turn++) {
-      const result = await processWorldEventsTurn(db as never, turn, { worldEventsEnabled: true });
+      const result = await processWorldEventsTurn(db as never, turn);
       if (result.offered > 0) {
         fireCount++;
         expect(pendingScopeIds.has(ukScopeId)).toBe(true);
@@ -210,7 +206,7 @@ describe("World Events v1 Phase 1 — multi-turn scheduler simulation", () => {
 
     // Turn 1: both defs have never fired -> both would be "due" for UK, but
     // the cap means UK gets exactly one instance this turn.
-    const result = await processWorldEventsTurn(db as never, 1, { worldEventsEnabled: true });
+    const result = await processWorldEventsTurn(db as never, 1);
     const ukInserts = db.collectionMocks.eventInstances!.insertOne.mock.calls.filter(
       (call) => (call[0].scopeId as ObjectId).toHexString() === countryScopeId("UK").toHexString()
     );

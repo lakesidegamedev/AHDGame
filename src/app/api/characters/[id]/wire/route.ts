@@ -14,7 +14,7 @@ import {
   NEW_CHARACTER_TRANSFER_BARRIER_TURNS,
 } from "@/lib/character/newCharacterTransferBarrier";
 import { z } from "zod";
-import type { Character, User } from "@/lib/db/types";
+import type { User } from "@/lib/db/types";
 import { getCharacterByUserId } from "@/lib/db/characterLookup";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
 import {
@@ -28,6 +28,9 @@ import {
   CURRENCY_SYMBOLS,
   type CurrencyCode,
 } from "@/lib/constants/currencies";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { usersCollection } from "@/lib/db/repositories/users";
+import type { Document } from "mongodb";
 
 const wireSchema = z.object({
   amount: z.number().int().positive(),
@@ -80,13 +83,11 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     const [target, userDoc] = await Promise.all([
-      db.collection<Character>("characters").findOne({ _id: targetObjectId }),
-      db
-        .collection<User>("users")
-        .findOne(
-          { _id: new ObjectId(user.userId) },
-          { projection: { wireQuotaUsed: 1, wireQuotaWindowStart: 1 } }
-        ),
+      charactersCollection(db).findOne({ _id: targetObjectId }),
+      usersCollection(db).findOne(
+        { _id: new ObjectId(user.userId) },
+        { projection: { wireQuotaUsed: 1, wireQuotaWindowStart: 1 } }
+      ),
     ]);
 
     if (!target) {
@@ -164,7 +165,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     const userObjectId = new ObjectId(user.userId);
     const claimFreshQuota = () =>
-      db.collection("users").updateOne(
+      usersCollection<Document>(db).updateOne(
         {
           _id: userObjectId,
           wireQuotaWindowStart: { $gte: quotaWindowCutoff },
@@ -173,7 +174,7 @@ export async function POST(request: Request, { params }: RouteParams) {
         { $inc: { wireQuotaUsed: anchorAmount }, $set: { updatedAt: now } }
       );
     const claimResetQuota = () =>
-      db.collection("users").updateOne(
+      usersCollection<Document>(db).updateOne(
         {
           _id: userObjectId,
           $or: [
@@ -203,12 +204,10 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     if (!quotaClaimMode) {
-      const latestUserDoc = await db
-        .collection<User>("users")
-        .findOne(
-          { _id: userObjectId },
-          { projection: { wireQuotaUsed: 1, wireQuotaWindowStart: 1 } }
-        );
+      const latestUserDoc = await usersCollection(db).findOne(
+        { _id: userObjectId },
+        { projection: { wireQuotaUsed: 1, wireQuotaWindowStart: 1 } }
+      );
       const latestWindowStart = latestUserDoc?.wireQuotaWindowStart
         ? new Date(latestUserDoc.wireQuotaWindowStart)
         : null;
@@ -225,12 +224,10 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     const rollbackQuotaClaim = async () => {
       if (quotaClaimMode === "fresh") {
-        await db
-          .collection("users")
-          .updateOne(
-            { _id: userObjectId, wireQuotaWindowStart: { $gte: quotaWindowCutoff } },
-            { $inc: { wireQuotaUsed: -anchorAmount }, $set: { updatedAt: new Date() } }
-          );
+        await usersCollection<Document>(db).updateOne(
+          { _id: userObjectId, wireQuotaWindowStart: { $gte: quotaWindowCutoff } },
+          { $inc: { wireQuotaUsed: -anchorAmount }, $set: { updatedAt: new Date() } }
+        );
         return;
       }
 
@@ -243,7 +240,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       if (userDoc?.wireQuotaUsed !== undefined) {
         resetRollback.wireQuotaUsed = userDoc.wireQuotaUsed;
       } else {
-        await db.collection("users").updateOne(
+        await usersCollection<Document>(db).updateOne(
           { _id: userObjectId },
           {
             $unset: { wireQuotaUsed: "", wireQuotaWindowStart: "" },
@@ -253,14 +250,14 @@ export async function POST(request: Request, { params }: RouteParams) {
         return;
       }
 
-      await db.collection("users").updateOne({ _id: userObjectId }, { $set: resetRollback });
+      await usersCollection<Document>(db).updateOne({ _id: userObjectId }, { $set: resetRollback });
     };
 
     const atomicFilter = forexEnabled
       ? { _id: sender._id, [`currencyBalances.personal.${transferCurrency}`]: { $gte: amount } }
       : { _id: sender._id, cashOnHand: { $gte: amount } };
 
-    const senderUpdate = await db.collection<Character>("characters").updateOne(atomicFilter, {
+    const senderUpdate = await charactersCollection(db).updateOne(atomicFilter, {
       $inc: { ...buildPersonalBalanceInc(-amount, transferCurrency, forexEnabled) },
       $set: { updatedAt: now },
     });
@@ -271,7 +268,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     const senderRollbackInc = buildPersonalBalanceInc(amount, transferCurrency, forexEnabled);
-    const recipientCreditResult = await db.collection<Character>("characters").updateOne(
+    const recipientCreditResult = await charactersCollection(db).updateOne(
       { _id: targetObjectId },
       {
         $inc: { ...buildPersonalBalanceInc(amount, transferCurrency, forexEnabled) },
@@ -279,12 +276,10 @@ export async function POST(request: Request, { params }: RouteParams) {
       }
     );
     if (recipientCreditResult.modifiedCount === 0) {
-      await db
-        .collection<Character>("characters")
-        .updateOne(
-          { _id: sender._id },
-          { $inc: senderRollbackInc, $set: { updatedAt: new Date() } }
-        );
+      await charactersCollection(db).updateOne(
+        { _id: sender._id },
+        { $inc: senderRollbackInc, $set: { updatedAt: new Date() } }
+      );
       await rollbackQuotaClaim();
       return errorResponse(404, "Recipient not found");
     }

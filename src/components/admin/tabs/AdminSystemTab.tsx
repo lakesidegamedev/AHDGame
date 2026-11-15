@@ -36,10 +36,8 @@ import { IssueSovereignDebtCard } from "@/components/admin/economy/IssueSovereig
 import { DiscordIntegrations } from "@/components/admin/system/DiscordIntegrations";
 import { HealDiscordUsers } from "@/components/admin/heal/HealDiscordUsers";
 import { GameHealthTab } from "@/components/admin/system/GameHealthTab";
-import { CodeQualityTab } from "@/components/admin/system/CodeQualityTab";
 import { AdminObservabilityTab } from "./AdminObservabilityTab";
 import { SubTabBar } from "./SubTabBar";
-import { SubNavLayout } from "./SubNavLayout";
 
 export type SystemSubTab =
   | "seed"
@@ -48,7 +46,6 @@ export type SystemSubTab =
   | "post-reset"
   | "heal"
   | "game-health"
-  | "code-quality"
   | "integrations"
   | "observability";
 
@@ -64,7 +61,6 @@ const HEAL_CATEGORIES: { id: HealCategory; label: string }[] = [
 
 interface AdminSystemTabProps {
   activeSub: SystemSubTab;
-  onSubChange: (sub: SystemSubTab) => void;
 }
 
 const HEAL_CATEGORY_IDS = HEAL_CATEGORIES.map((c) => c.id);
@@ -75,7 +71,7 @@ function getValidHealCategory(param: string | null): HealCategory {
     : "elections";
 }
 
-export function AdminSystemTab({ activeSub, onSubChange }: AdminSystemTabProps) {
+export function AdminSystemTab({ activeSub }: AdminSystemTabProps) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
@@ -89,7 +85,7 @@ export function AdminSystemTab({ activeSub, onSubChange }: AdminSystemTabProps) 
   };
 
   return (
-    <SubNavLayout tab="system" active={activeSub} onChange={onSubChange}>
+    <>
       <div className="space-y-6">
         <div className="rounded-xl border border-yellow-500/50 bg-yellow-500/10 p-3 shadow-sm sm:p-4">
           <div className="flex items-start gap-2 sm:gap-3">
@@ -194,10 +190,9 @@ export function AdminSystemTab({ activeSub, onSubChange }: AdminSystemTabProps) 
           </div>
         )}
         {activeSub === "game-health" && <GameHealthTab />}
-        {activeSub === "code-quality" && <CodeQualityTab />}
         {activeSub === "integrations" && <DiscordIntegrations />}
         {activeSub === "observability" && <AdminObservabilityTab />}
       </div>
-    </SubNavLayout>
+    </>
   );
 }

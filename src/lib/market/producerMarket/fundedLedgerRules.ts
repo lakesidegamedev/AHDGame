@@ -21,8 +21,9 @@ export interface FundedLedgerRow {
   /** Null: counted in the world total only. */
   stateId: string | null;
   /**
-   * Set only on a stateless row whose buyer belongs to a country: the national
-   * book counts it there, state books still do not. Absent otherwise.
+   * Set only on a stateless row whose buyer (or background seller) belongs to
+   * a country: the national book counts it there, state books still do not.
+   * Absent otherwise.
    */
   countryId?: string;
   supply: number;
@@ -41,6 +42,11 @@ export function fundedLedgerRows(input: {
     commodity: string;
     book: string;
     offeredUnits: number;
+    /**
+     * Seller with no state that belongs to a country: its supply counts in that
+     * country's national book. Absent for plants.
+     */
+    countryId?: string;
   }[];
   stateOfAccount: (accountId: string) => string | null;
   /**
@@ -74,9 +80,11 @@ export function fundedLedgerRows(input: {
       row(o.commodity, stateId, countryId).demand += o.requestedUnits * input.unitScale;
     }
   for (const p of input.products)
-    if (Number.isFinite(p.offeredUnits) && p.offeredUnits > 0)
-      row(p.commodity, bookState(p.book) ?? input.stateOfProducer(p.producerId)).supply +=
+    if (Number.isFinite(p.offeredUnits) && p.offeredUnits > 0) {
+      const stateId = bookState(p.book) ?? input.stateOfProducer(p.producerId);
+      row(p.commodity, stateId, stateId == null ? p.countryId : null).supply +=
         p.offeredUnits * input.unitScale;
+    }
   return [...rows.values()].sort((a, b) =>
     a.commodity !== b.commodity
       ? a.commodity.localeCompare(b.commodity)

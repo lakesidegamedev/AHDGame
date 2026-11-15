@@ -18,8 +18,13 @@ import {
   nonConvertibleTradeCurrency,
 } from "@/lib/constants/commandEconomy";
 import type { CountryId } from "@/lib/constants/countries";
-import type { Character, GameConfig, GameState, User } from "@/lib/db/types";
+import type { GameConfig, GameState, User } from "@/lib/db/types";
 import type { ImperialCharacter } from "@/lib/db/types/imperialCharacter";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
+import { usersCollection } from "@/lib/db/repositories/users";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 const marketOrderSchema = z
   .object({
@@ -61,13 +66,14 @@ export async function POST(request: Request) {
 
     const { fromCurrency, toCurrency, amount } = parsed.data;
     const db = await getDb();
-    const gs = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+    const gs = await gameStateCollection(db).findOne({ _id: "current" });
     const currentTurn = gs?.currentTurn ?? 0;
 
     // Mirror /api/forex/exchange — refuse non-convertible command currencies.
-    const gameConfig = await db
-      .collection<GameConfig>("gameConfig")
-      .findOne({ _id: "default" }, { projection: { commandEconomyEnabled: 1 } });
+    const gameConfig = await gameConfigCollection(db).findOne(
+      { _id: "default" },
+      { projection: { commandEconomyEnabled: 1 } }
+    );
     const blocked = nonConvertibleTradeCurrency(
       [fromCurrency, toCurrency],
       gs?.currentYear,
@@ -78,9 +84,7 @@ export async function POST(request: Request) {
     }
 
     // Resolve character from API key owner
-    const userDoc = await db
-      .collection<User>("users")
-      .findOne({ _id: new ObjectId(apiAuth.ownerUserId) });
+    const userDoc = await usersCollection(db).findOne({ _id: new ObjectId(apiAuth.ownerUserId) });
 
     const isImperialMode =
       userDoc?.activeCharacterType === "imperial" && !!userDoc?.activeImperialCharacterId;
@@ -91,7 +95,7 @@ export async function POST(request: Request) {
     let characterName: string;
 
     if (isImperialMode) {
-      const imperial = await db.collection<ImperialCharacter>("imperialCharacters").findOne({
+      const imperial = await imperialCharactersCollection(db).findOne({
         _id: userDoc!.activeImperialCharacterId!,
         userId: new ObjectId(apiAuth.ownerUserId),
       });
@@ -106,7 +110,7 @@ export async function POST(request: Request) {
       const characterQuery = userDoc?.activeCharacterId
         ? { _id: userDoc.activeCharacterId, userId: new ObjectId(apiAuth.ownerUserId) }
         : { userId: new ObjectId(apiAuth.ownerUserId) };
-      const character = await db.collection<Character>("characters").findOne(characterQuery);
+      const character = await charactersCollection(db).findOne(characterQuery);
       if (!character) {
         return errorResponse(404, "Character not found");
       }

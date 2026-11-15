@@ -4,7 +4,7 @@ import type { StateDemographicTurnout } from "@/lib/db/types";
  * Germany Bundesländer demographic turnout modifier seeds.
  *
  * All modifiers start at 0 — no GOTV, canvassing, or suppression effects
- * applied yet. Keys match the DE voter group IDs from deDemographicCategories.ts.
+ * applied yet. Keys match the DE voter group IDs from the country Layer-1 model.
  *
  * The category key is "de_voterGroups" to align with the DE demographic
  * profile and avoid collision with US/UK/JP documents in the same

@@ -1,23 +1,8 @@
 "use client";
 
 /**
- * Primary calendar timeline. Vertical layout: one row per primary wave from
- * `PRIMARY_WAVES`, with wave label on the left and a horizontal scroll of
- * per-state chips on the right.
- *
- * Past waves render in muted styling. A voted state shows its winner as a
- * small color swatch beside the state code. Selected state shows a highlight
- * ring matching the party color.
- *
- * Phase 4 ships this for the presidential primary surface only. Senate /
- * Gov / House calendars look different — they don't use the staggered-wave
- * model — so this widget is presidential-specific by design.
- *
- * Pure presentational: takes the wave shape + selection + click callback.
- * The view-model (Task 4.4) builds the wave list with `isPast` flags from
- * the live election state.
- *
- * See plan §"Phase 4 — Tasks" 4.2.
+ * Presidential-primary-only by design: other calendars don't use the staggered
+ * wave model. Pure presentational; the view-model supplies waves with isPast.
  */
 
 import { useTranslations } from "next-intl";

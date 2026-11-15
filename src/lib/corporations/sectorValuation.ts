@@ -48,25 +48,22 @@ export function computeSectorListingValuation(
    */
   plantsEnabled = false,
   /**
-   * Book-value floor inputs (D11). Supplied only under plants.
+   * Book-value floor inputs. Supplied only under plants.
    *
-   * WHY A FLOOR EXISTS AT ALL. The quote above is an NPV of PROFIT, and under
-   * plants profit is derived from `revenue`, which is itself derived from
-   * `capitalStock`. A MOTHBALLED sector therefore prices at exactly 0 — and
-   * because the listing route rejects a 0 price, its owner could not sell it at
-   * any price, to anybody, while it sat on real capacity and real construction
-   * in progress. The only exits left were abandon (a partial refund) and
-   * dissolution (salvage), both of which pay LESS than the plant is worth. That
-   * is a trap, not a market.
+   * The quote above is an NPV of PROFIT, and under plants profit derives from
+   * `revenue`, which derives from `capitalStock`. A MOTHBALLED sector therefore
+   * prices at exactly 0, and the listing route rejects a 0 price, so its owner
+   * could not sell it at any price while it sat on real capacity and real
+   * construction in progress. The only exits left were abandon (a partial
+   * refund) and dissolution (salvage), both paying LESS than the plant is worth.
    *
-   * The floor is `sectorBookValueAnchor` — the identical basis dissolution
+   * The floor is `sectorBookValueAnchor`, the identical basis dissolution
    * salvage and nationalization compensation settle at, so a mothballed plant
    * is worth the same number on every exit and there is no arbitrage between
    * them. It is a `max`, never a replacement: a profitable sector still quotes
-   * on its earnings, which are normally far above book, and nothing about the
-   * ordinary listing changes.
+   * on its earnings, which are normally far above book.
    *
-   * Omit below plants — the legacy quote is then byte-identical.
+   * Omit below plants: the legacy quote is then byte-identical.
    */
   bookFloor?: {
     sector: SectorBookValueInput;

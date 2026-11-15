@@ -5,7 +5,7 @@ import { fundTradeCapabilities } from "./tradeCapabilities";
  * anchor values. Orders retain receipts and audit witnesses for safe retries.
  */
 import { ObjectId, type Db } from "mongodb";
-import type { Corporation, IndexFund } from "@/lib/db/types";
+import type { IndexFund } from "@/lib/db/types";
 import { badRequest, errorResponse, handleRouteError } from "@/lib/api/errors";
 import { runTransactionWithSessionRetry } from "@/lib/db/transactionWithRetry";
 import {
@@ -42,6 +42,11 @@ import { claimFundRedemptionLock } from "./redemptionLock";
 import { rejectDuringTurn } from "@/lib/api/rejectDuringTurn";
 import { canRedeemSponsorUnits } from "./sponsorship/sponsorUnits";
 import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import type { Document } from "mongodb";
+import { indexFundPositionsCollection } from "@/lib/db/repositories/indexFundPositions";
+import { indexFundTransactionsCollection } from "@/lib/db/repositories/indexFundTransactions";
 
 export async function tradeCorporationFund(
   db: Db,
@@ -56,9 +61,7 @@ export async function tradeCorporationFund(
     return queueBankFundSubscription(db, { fund, characterId, userId, ...order });
   }
   const corporationId = new ObjectId(order.corporationId);
-  const corporation = await db
-    .collection<Corporation>("corporations")
-    .findOne({ _id: corporationId });
+  const corporation = await corporationsCollection(db).findOne({ _id: corporationId });
   if (!corporation) return errorResponse(404, "Corporation not found");
   if (corporation.userId?.toString() !== userId)
     return errorResponse(403, "Only the CEO can invest for a corporation");
@@ -153,9 +156,10 @@ export async function tradeCorporationFund(
         const undo: Array<() => Promise<unknown>> = [];
         let completionStarted = false;
         try {
-          const currentCorp = await db
-            .collection<Corporation>("corporations")
-            .findOne({ _id: corporationId, userId: new ObjectId(userId) }, options);
+          const currentCorp = await corporationsCollection(db).findOne(
+            { _id: corporationId, userId: new ObjectId(userId) },
+            options
+          );
           if (!currentCorp)
             throw badRequest("Corporation ownership changed; reload before trading");
           let balanceAfter = 0;
@@ -195,16 +199,14 @@ export async function tradeCorporationFund(
               );
               if (!restored.ok) throw new Error("Corporate fund position compensation failed");
               if (priorPosition)
-                await db
-                  .collection("indexFundPositions")
-                  .updateOne(
-                    { _id: priorPosition._id },
-                    priorPosition.avgNavAnchor == null
-                      ? { $unset: { avgNavAnchor: "" } }
-                      : { $set: { avgNavAnchor: priorPosition.avgNavAnchor } }
-                  );
+                await indexFundPositionsCollection<Document>(db).updateOne(
+                  { _id: priorPosition._id },
+                  priorPosition.avgNavAnchor == null
+                    ? { $unset: { avgNavAnchor: "" } }
+                    : { $set: { avgNavAnchor: priorPosition.avgNavAnchor } }
+                );
             });
-            const credited = await db.collection("indexFunds").updateOne(
+            const credited = await indexFundsCollection<Document>(db).updateOne(
               { _id: fund._id, status: "active", quotedNav: fund.quotedNav },
               {
                 $inc: { unitSupply: order.units, cashAnchor: amountAnchor },
@@ -215,12 +217,10 @@ export async function tradeCorporationFund(
             if (!credited.matchedCount)
               throw badRequest("Fund quote changed; reload before trading");
             undo.push(() =>
-              db
-                .collection("indexFunds")
-                .updateOne(
-                  { _id: fund._id },
-                  { $inc: { unitSupply: -order.units, cashAnchor: -amountAnchor } }
-                )
+              indexFundsCollection<Document>(db).updateOne(
+                { _id: fund._id },
+                { $inc: { unitSupply: -order.units, cashAnchor: -amountAnchor } }
+              )
             );
             response = {
               success: true,
@@ -230,9 +230,7 @@ export async function tradeCorporationFund(
               balanceAfter,
             };
           } else {
-            const currentFund = await db
-              .collection<IndexFund>("indexFunds")
-              .findOne({ _id: fund._id }, options);
+            const currentFund = await indexFundsCollection(db).findOne({ _id: fund._id }, options);
             if (!currentFund) throw badRequest("Fund no longer exists");
             if (!(await canRedeemSponsorUnits(db, currentFund, corporationId, options)))
               throw badRequest(
@@ -248,7 +246,7 @@ export async function tradeCorporationFund(
             if (!prior || prior.units < order.units)
               throw badRequest("Insufficient corporation fund units");
             const liability = await getQueuedRedemptionLiabilityAnchor(db, fund._id);
-            const debitedFund = await db.collection("indexFunds").updateOne(
+            const debitedFund = await indexFundsCollection<Document>(db).updateOne(
               {
                 _id: fund._id,
                 status: { $ne: "delisted" },
@@ -267,12 +265,10 @@ export async function tradeCorporationFund(
                 "Fund cash is unavailable or the quote changed. Units remain invested; retry after the fund cycle."
               );
             undo.push(() =>
-              db
-                .collection("indexFunds")
-                .updateOne(
-                  { _id: fund._id },
-                  { $inc: { unitSupply: order.units, cashAnchor: amountAnchor } }
-                )
+              indexFundsCollection<Document>(db).updateOne(
+                { _id: fund._id },
+                { $inc: { unitSupply: order.units, cashAnchor: amountAnchor } }
+              )
             );
             const debit = await debitFundPosition(
               db,
@@ -293,19 +289,18 @@ export async function tradeCorporationFund(
                 prior.avgNavAnchor ?? fund.quotedNav
               )
             );
-            const paid = await db
-              .collection<Corporation>("corporations")
-              .findOneAndUpdate(
-                { _id: corporationId },
-                { $inc: { liquidCapital: amountNative } },
-                { ...options, returnDocument: "after", projection: { liquidCapital: 1 } }
-              );
+            const paid = await corporationsCollection(db).findOneAndUpdate(
+              { _id: corporationId },
+              { $inc: { liquidCapital: amountNative } },
+              { ...options, returnDocument: "after", projection: { liquidCapital: 1 } }
+            );
             if (!paid) throw badRequest("Corporation no longer exists");
             balanceAfter = paid.liquidCapital;
             undo.push(() =>
-              db
-                .collection("corporations")
-                .updateOne({ _id: corporationId }, { $inc: { liquidCapital: -amountNative } })
+              corporationsCollection(db).updateOne(
+                { _id: corporationId },
+                { $inc: { liquidCapital: -amountNative } }
+              )
             );
             response = {
               success: true,
@@ -331,7 +326,9 @@ export async function tradeCorporationFund(
             },
             options
           );
-          undo.push(() => db.collection("indexFundTransactions").deleteOne({ _id: transactionId }));
+          undo.push(() =>
+            indexFundTransactionsCollection<Document>(db).deleteOne({ _id: transactionId })
+          );
           completionStarted = true;
           await completeFundCommand(db, command.key, response, 200, session, {
             fundId: fund._id,

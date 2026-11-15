@@ -66,7 +66,6 @@ function renderNav(
         myCorporationHasGroup
         myUnionId="union"
         unionsEnabled
-        conflictsEnabled
         settlementCrisisLive
         {...overrides}
       />
@@ -109,7 +108,7 @@ describe("experimental desktop menu integration", () => {
       "/corporation/7/group",
       "/unions/union",
       "/world/german-question",
-      "/world/conflicts",
+      "/world/crises?view=conflicts",
       "/market",
       "/world/trade",
     ])
@@ -122,7 +121,6 @@ describe("experimental desktop menu integration", () => {
       myCorporationId: null,
       myUnionId: null,
       unionsEnabled: false,
-      conflictsEnabled: false,
       settlementCrisisLive: false,
     });
     fireEvent.click(screen.getByRole("button", { name: "World" }));
@@ -135,7 +133,6 @@ describe("experimental desktop menu integration", () => {
       "/corporation/7/group",
       "/unions/union",
       "/unions",
-      "/world/conflicts",
       "/world/german-question",
     ])
       expect(hrefs).not.toContain(href);

@@ -8,30 +8,22 @@ import type { LegislationType } from "@/lib/db/types";
 import type { StateMetricBaseline } from "@/lib/db/types/statePolicy";
 
 /**
- * Faithful in-memory simulation of how an enacted law moves a metric category's
- * metrics over N turns. It mirrors the PRODUCTION two-layer per-turn pipeline so a
- * sim's "expected movement" is the real movement, not a toy approximation:
+ * In-memory simulation of how an enacted law moves a metric category's metrics
+ * over N turns. Mirrors the production two-layer pipeline so expected movement
+ * matches real movement:
  *
- *   Layer 1 — policy (processStateMetrics): each metric's value decays toward
- *     `calculateMetricTarget(baseline, activeLaws…)` (baseline + Σ weighted
- *     `effectTargetsWeighted` contributions, with optional half-life decay), then
- *     additive `ratePerTurn` ticks from `computeTickRates`. This yields the
- *     "policy-adjusted value".
- *   Layer 2 — engine (evalNode/coexistence): for REGISTRY-NODE metrics, the
- *     policy-adjusted value is fed as `policyValue`; the node outputs
- *     `simBaseline + cappedPolicyDelta` (its `compute()` target tracks spending /
- *     inputs, the policy delta is the law's sustained offset).
+ *   Layer 1 (processStateMetrics): value decays toward
+ *     calculateMetricTarget(baseline, activeLaws) then applies ratePerTurn
+ *     ticks from computeTickRates.
+ *   Layer 2 (evalNode/coexistence): for REGISTRY-NODE metrics, the policy value
+ *     is fed as policyValue; the node outputs simBaseline + cappedPolicyDelta.
  *
- * Two metric kinds, matching production:
- *   • ROOT metrics (e.g. healthcare.uninsuredRate) — policy-controlled, NOT engine
- *     nodes. Layer 1 only; exposed each turn as an input the nodes read.
- *   • NODE metrics (e.g. healthcare.lifeExpectancy) — Layer 1 (→ policyValue) then
- *     Layer 2 (→ final value).
+ * Two metric kinds:
+ *   ROOT metrics: policy-controlled, Layer 1 only; exposed as node inputs.
+ *   NODE metrics: Layer 1 then Layer 2.
  *
- * Pure: no DB, no clock. Deterministic. Drives the per-category
- * `*.legislation.sim.test.ts` suites. Run an identical CONTROL (policies: [])
- * alongside the LAW run and compare — divergence isolates the law's effect from
- * the engine's baseline drift.
+ * Pure, deterministic. Run an identical CONTROL (policies: []) alongside the
+ * LAW run; divergence isolates the law's effect from baseline drift.
  */
 export type LegTypeMap = Map<string, LegislationType>;
 

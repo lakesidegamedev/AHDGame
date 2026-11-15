@@ -1,19 +1,8 @@
-/**
- * Timed economy-only pause for a live world.
- *
- * After an economy reset the owner can freeze the economy for a fixed number of
- * hourly turns while politics, elections, campaigns, parties, legislation and
- * everything else non-economic keeps running. The window is one turn number on
- * gameConfig (`economyPauseUntilTurn`): economy phases are skipped on every turn
- * strictly below it, and the turn numbered `economyPauseUntilTurn` runs the
- * economy normally, so the world resumes on its own with no second command.
- *
- * The skipped set is ELECTIONS_SKIP_PHASES (src/simulation/phases/
- * simTurnProfiles.ts), the same econ/political boundary the sandbox
- * "elections-only" profile uses. It is imported, never copied, so the two
- * cannot drift apart. This module stays pure: turn numbers in, decisions out,
- * no database, no clock, no environment.
- */
+/* Timed economy-only pause: economy phases skip every turn strictly below
+ * `economyPauseUntilTurn`; that turn runs normally so the world resumes
+ * without a second command. Non-economic phases keep running. Skipped set
+ * is imported from ELECTIONS_SKIP_PHASES so it cannot drift. Pure: turn
+ * numbers in, decisions out. */
 import { ELECTIONS_SKIP_PHASES } from "@/simulation/phases/simTurnProfiles";
 
 export interface EconomyPauseStatus {
@@ -36,33 +25,24 @@ function resolveUntilTurn(untilTurn: number | null | undefined): number | null {
 }
 
 /**
- * Phases in the skipped set that a live world (unlike a sandbox) would
- * otherwise run every turn. None of them has to run for a player action to
- * settle safely while the pause is on:
+ * Phases in the skipped set a live world would otherwise run every turn. None
+ * must run for a player action to settle safely while paused:
  *
- * - contractSettlement: every royalty is keyed to the turn it belongs to
- *   (`lastRoyaltyTurn >= turn` skips, `expiresTurn <= turn` expires), so a
- *   skipped turn pays nothing and nothing catches up on resume. Existing
- *   extraction contracts stop paying for the window and keep their term.
+ * - contractSettlement: every royalty is keyed to its turn, so a skipped turn
+ *   pays nothing and nothing catches up on resume.
  * - savingsInterestTurn, bondTurn, lineOfCreditTurn, bankingTurn,
- *   npcBankPolicyTurn: each accrues for the turn it runs on (savings interest
- *   compounds on turn multiples, for example) and never for a turn it did not
- *   run, so balances hold and interest resumes instead of landing 24 turns of
- *   it at once.
- * - departmentProgramSettlement: per-turn programme payouts, which pause and
- *   resume; no backlog is owed for the skipped turns.
- * - ledgerBalanceSnapshot, ledgerPreForexSnapshot, ledgerReconcile: the shadow
- *   ledger (off in production seeds) is skipped as a set. reconcileTurn on the
- *   first resumed turn finds no opening snapshot at turn minus one and skips
- *   its stock-vs-flow check, instead of reading 24 frozen turns as one turn of
- *   drift. The cost is that entries player actions emit during the pause are
- *   never reconciled, and that single check is lost.
+ *   npcBankPolicyTurn: each accrues for the turn it runs on, so balances hold
+ *   and interest resumes instead of landing the whole window at once.
+ * - departmentProgramSettlement: per-turn payouts; no backlog is owed.
+ * - ledgerBalanceSnapshot, ledgerPreForexSnapshot, ledgerReconcile: skipped as
+ *   a set, so the first resumed reconcile finds no opening snapshot and skips
+ *   instead of reading the frozen window as drift. Cost: entries emitted during
+ *   the pause are never reconciled.
  * - financialSuspectScan: detection only, settles no money.
  *
- * fiscalYear is the exception and keeps running (LIVE_PAUSE_RUNS): it fires
- * only on the calendar boundary turn and is never replayed, and with 48 turns a
- * year a 24 turn window covers a year end about half the time. Skipping it
- * would lose that year's budget rollover outright.
+ * fiscalYear is the exception (LIVE_PAUSE_RUNS): it fires only on the calendar
+ * boundary turn and is never replayed, so skipping it would lose that year's
+ * budget rollover.
  */
 const LIVE_PAUSE_RUNS: ReadonlySet<string> = new Set(["fiscalYear"]);
 

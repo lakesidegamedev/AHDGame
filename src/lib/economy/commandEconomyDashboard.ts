@@ -154,9 +154,9 @@ export interface CommandEconomyDashboard {
   drivers: MarketizationDrivers;
   soes: SoeView[];
   /**
-   * Aggregate plan fulfillment across all SOEs: the directors' collective grade
-   * against the quotas Gosplan set. No longer a mirror of
-   * `drivers.soePerformance`, which is capacity utilisation.
+   * Aggregate plan fulfillment across all SOEs: the directors' collective
+   * grade against Gosplan's quotas. Distinct from `drivers.soePerformance`,
+   * which is capacity utilisation.
    */
   aggregateFulfillment: number;
   gosbank: GosbankStanceView;

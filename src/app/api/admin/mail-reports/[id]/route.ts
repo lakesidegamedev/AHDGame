@@ -14,6 +14,11 @@ import { stripPartyMembershipForBannedUser } from "@/lib/account/stripPartyMembe
 import { loadUserCharacterAndCeoCorpIds } from "@/lib/account/loadUserCharacterAndCeoCorpIds";
 import { syncSuspiciousFlagsForBanState } from "@/lib/account/syncSuspiciousFlagsForBanState";
 import { getMailReportDetail } from "@/lib/mail/queries/mailReportDetail";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { usersCollection } from "@/lib/db/repositories/users";
+import type { Document } from "mongodb";
+import { playerMailCollection } from "@/lib/db/repositories/playerMail";
+import { playerMailReportsCollection } from "@/lib/db/repositories/playerMailReports";
 
 const mailReportActionSchema = z.object({
   action: z.enum(["dismiss", "delete_mail", "warn", "ban"]),
@@ -61,9 +66,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     const { action, adminNote } = parsed.data;
     const db = await getDb();
 
-    const report = await db
-      .collection<PlayerMailReport>("playerMailReports")
-      .findOne({ _id: reportId });
+    const report = await playerMailReportsCollection(db).findOne({ _id: reportId });
 
     if (!report) {
       return errorResponse(404, "Report not found");
@@ -77,29 +80,29 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     };
 
     if (action === "dismiss") {
-      await db
-        .collection<PlayerMailReport>("playerMailReports")
-        .updateOne({ _id: reportId }, { $set: { ...baseUpdate, status: "dismissed" } });
+      await playerMailReportsCollection(db).updateOne(
+        { _id: reportId },
+        { $set: { ...baseUpdate, status: "dismissed" } }
+      );
     }
 
     if (action === "delete_mail") {
-      await db
-        .collection<PlayerMail>("playerMail")
-        .updateOne(
-          { _id: report.mailId },
-          { $set: { deletedByRecipient: true, deletedBySender: true } }
-        );
-      await db.collection<PlayerMail>("playerMail").deleteOne({ _id: report.mailId });
-      await db
-        .collection<PlayerMailReport>("playerMailReports")
-        .updateOne({ _id: reportId }, { $set: { ...baseUpdate, status: "actioned" } });
+      await playerMailCollection(db).updateOne(
+        { _id: report.mailId },
+        { $set: { deletedByRecipient: true, deletedBySender: true } }
+      );
+      await playerMailCollection(db).deleteOne({ _id: report.mailId });
+      await playerMailReportsCollection(db).updateOne(
+        { _id: reportId },
+        { $set: { ...baseUpdate, status: "actioned" } }
+      );
     }
 
     if (action === "warn") {
-      const mail = await db.collection<PlayerMail>("playerMail").findOne({ _id: report.mailId });
+      const mail = await playerMailCollection(db).findOne({ _id: report.mailId });
 
       if (mail) {
-        const senderChar = await db.collection("characters").findOne({ _id: mail.fromCharacterId });
+        const senderChar = await charactersCollection(db).findOne({ _id: mail.fromCharacterId });
 
         if (senderChar) {
           await createNotification({
@@ -112,20 +115,21 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
         }
       }
 
-      await db
-        .collection<PlayerMailReport>("playerMailReports")
-        .updateOne({ _id: reportId }, { $set: { ...baseUpdate, status: "actioned" } });
+      await playerMailReportsCollection(db).updateOne(
+        { _id: reportId },
+        { $set: { ...baseUpdate, status: "actioned" } }
+      );
     }
 
     if (action === "ban") {
-      const mail = await db.collection<PlayerMail>("playerMail").findOne({ _id: report.mailId });
+      const mail = await playerMailCollection(db).findOne({ _id: report.mailId });
 
       if (mail) {
-        const senderChar = await db.collection("characters").findOne({ _id: mail.fromCharacterId });
+        const senderChar = await charactersCollection(db).findOne({ _id: mail.fromCharacterId });
 
         if (senderChar) {
           const { ceoCorpIds } = await loadUserCharacterAndCeoCorpIds(db, senderChar.userId);
-          await db.collection("users").updateOne(
+          await usersCollection<Document>(db).updateOne(
             { _id: senderChar.userId },
             {
               $set: {
@@ -148,9 +152,10 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
         }
       }
 
-      await db
-        .collection<PlayerMailReport>("playerMailReports")
-        .updateOne({ _id: reportId }, { $set: { ...baseUpdate, status: "actioned" } });
+      await playerMailReportsCollection(db).updateOne(
+        { _id: reportId },
+        { $set: { ...baseUpdate, status: "actioned" } }
+      );
     }
 
     return NextResponse.json({ success: true });

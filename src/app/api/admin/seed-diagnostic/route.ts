@@ -11,6 +11,8 @@ import { getDb } from "@/lib/mongodb";
 import { requireAdminOrApiKey } from "@/lib/api/requireAdminOrApiKey";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { runSeedDiagnostic } from "@/lib/admin/seedDiagnostic";
+import { seedDiagnosticsCollection } from "@/lib/db/repositories/seedDiagnostics";
+import type { Document } from "mongodb";
 
 const postSchema = z.object({
   mode: z.enum(["conformance", "drift"]).default("conformance"),
@@ -29,8 +31,7 @@ export async function GET(request: Request) {
     const limit = Number.isFinite(limitRaw) ? Math.min(Math.max(1, limitRaw), 50) : 1;
 
     const db = await getDb();
-    const reports = await db
-      .collection("seedDiagnostics")
+    const reports = await seedDiagnosticsCollection<Document>(db)
       .find({})
       .sort({ ranAt: -1 })
       .limit(limit)

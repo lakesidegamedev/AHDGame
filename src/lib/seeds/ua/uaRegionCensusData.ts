@@ -1,22 +1,21 @@
 /**
- * Ukraine (Ukrainian SSR) Layer-1 census (1979, the Shcherbytsky years), one
- * entry per macro-region. ethnicity: ukrainian (titular) / russian / other.
- * Each dim sums 100. Keys MUST match the region `_id` values in uaRegions.ts.
+ * Ukraine (Ukrainian SSR) Layer-1 census (1979), one entry per macro-region.
+ * ethnicity: ukrainian (titular) / russian / other. Each dim sums 100. Keys
+ * MUST match the region `_id` values in uaRegions.ts.
  *
  * Textures follow the January 1979 census: 73.6% Ukrainian and 21.1% Russian
  * republic-wide, with the Russian share tracking industry and the coast rather
- * than being spread evenly. Donbas is the only region where Russians are the
+ * than spread evenly. Donbas is the only region where Russians are the
  * plurality; the Crimean component of the south (transferred from the RSFSR in
- * 1954) is the reason the coastal Russian share runs so far above the Dnieper
- * belt's. The west stays overwhelmingly titular, with Transcarpathian
- * Hungarians and Bukovinian Romanians in `other`.
+ * 1954) is why the coastal Russian share runs so far above the Dnieper belt.
+ * The west stays overwhelmingly titular, with Transcarpathian Hungarians and
+ * Bukovinian Romanians in `other`.
  *
- * Against 1953: urbanisation is up everywhere and has roughly doubled outside
- * Donbas, the primary-or-below stock has collapsed as the wartime cohorts age
- * out and universal secondary schooling works through, and the age profile has
- * flipped from young-and-rebuilding to the low-fertility, ageing shape that
- * defines the late Brezhnev republic. Income is still compressed, but the
- * middle band is now genuinely broad rather than a floor with a name.
+ * Urbanisation is up everywhere and roughly doubled outside Donbas; the
+ * primary-or-below stock has collapsed as wartime cohorts age out and universal
+ * secondary schooling works through; the age profile is late-Brezhnev
+ * low-fertility and ageing. Income is still compressed, but the middle band is
+ * genuinely broad rather than a floor with a name.
  */
 export const uaRegionCensusData = {
   UKR_KYI: {

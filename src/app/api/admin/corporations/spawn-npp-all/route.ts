@@ -14,6 +14,7 @@ import { batchSpawnNppCorporations } from "@/lib/admin/spawnNppCorporation";
 import { nppCorpSpawnPlan } from "@/lib/admin/seed/seedNppCorporations";
 import { getGameStatePresetOrDefault } from "@/lib/db/collections/gameState";
 import { getStartingYearForPreset } from "@/lib/constants/turnTime";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export async function POST() {
   try {
@@ -34,9 +35,10 @@ export async function POST() {
 
     for (const { countryId, perSectorCount } of plan) {
       // Idempotent: skip countries that already have NPP corps.
-      const existingCount = await db
-        .collection("corporations")
-        .countDocuments({ ceoType: "npp", countryId });
+      const existingCount = await corporationsCollection(db).countDocuments({
+        ceoType: "npp",
+        countryId,
+      });
       if (existingCount > 0) {
         results.push({
           countryId,

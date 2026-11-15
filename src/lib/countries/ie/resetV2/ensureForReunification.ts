@@ -14,6 +14,7 @@ import {
   type ResetSystem,
   type ResetSystemSeedReceipt,
 } from "@/lib/resetVersions/rules";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 const IRELAND = "IE" as const;
 
@@ -42,7 +43,7 @@ function mergeCountryReceipt(
  * calls are no-ops once every active v2 system's receipt includes Ireland.
  */
 export async function ensureIrelandResetV2ForReunification(db: Db): Promise<{ promoted: boolean }> {
-  const state = await db.collection<GameState>("gameState").findOne(
+  const state = await gameStateCollection(db).findOne(
     { _id: "current" },
     {
       projection: {
@@ -94,9 +95,10 @@ export async function ensureIrelandResetV2ForReunification(db: Db): Promise<{ pr
     }
     set[`resetVersionSeeds.${system}`] = mergeCountryReceipt(existing, addition, system);
   }
-  const updated = await db
-    .collection<GameState>("gameState")
-    .updateOne({ _id: "current", resetWorldId: worldId, currentTurn: sourceTurn }, { $set: set });
+  const updated = await gameStateCollection(db).updateOne(
+    { _id: "current", resetWorldId: worldId, currentTurn: sourceTurn },
+    { $set: set }
+  );
   if (updated.matchedCount !== 1) {
     throw new Error("Ireland v2 boards were prepared, but the world changed before activation");
   }

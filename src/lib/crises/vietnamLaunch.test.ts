@@ -12,11 +12,7 @@ vi.mock("@/lib/turn/crisisTurn", () => ({
   announceCrisisStart: vi.fn().mockResolvedValue(undefined),
 }));
 
-import {
-  openVietnamChain,
-  processVietnamChainOpening,
-  VIETNAM_COMMITMENT_TEMPLATE_KEYS,
-} from "./crisisChain";
+import { openVietnamChain, VIETNAM_COMMITMENT_TEMPLATE_KEYS } from "./crisisChain";
 import { announceVietnamChainStart } from "./vietnamWire";
 import { announceCrisisStart } from "@/lib/turn/crisisTurn";
 import { ALL_CRISIS_TEMPLATES, VIETNAM_DECISION_WINDOW_MINUTES } from "./templates";
@@ -251,11 +247,5 @@ describe("openVietnamChain", () => {
     expect((await openVietnamChain(asDb(db), 20, VIETNAM_FROM_YEAR)).started).toBe(true);
     const fresh = makeDb();
     expect((await openVietnamChain(asDb(fresh), 20, VIETNAM_UNTIL_YEAR)).started).toBe(true);
-  });
-
-  it("is the same path the turn loop takes", async () => {
-    const result = await processVietnamChainOpening(asDb(db), 20, IN_WINDOW);
-    expect(result.spawned).toBe(3);
-    expect(vi.mocked(announceVietnamChainStart)).toHaveBeenCalledTimes(1);
   });
 });

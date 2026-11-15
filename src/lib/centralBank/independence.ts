@@ -1,26 +1,17 @@
 /**
- * B5 — the independence fight.
+ * Central bank independence fight.
  *
- * B4 gave scrutiny economic teeth and made ONE political act expensive: setting
- * the rate from the finance seat instead of the bank (`INTERFERENCE_SCRUTINY`).
- * The other two ways a government takes a central bank were still free.
+ * Two government takeovers must be expensive:
+ *  - **Dismissing the chair.** Takes ALL of the institution's scrutiny plus
+ *    more (DISMISSAL_SCRUTINY). Making it equal to a resignation would let
+ *    the government fire and reinstall the chair cheaply. Firing is strictly
+ *    worse than waiting a term out.
+ *  - **Revoking independence by statute.** Flips `governmentControlled` and
+ *    posts news; the statute costs legislative votes but the bank's word
+ *    was costing nothing. Revoking now adds scrutiny.
  *
- *  - **Dismissing the chair.** There was no dismissal path at all: a chair could
- *    resign, or a term could expire, and both took the ordinary
- *    `CHAIR_CHANGE_SCRUTINY_RETAINED` haircut. Adding a dismissal that took the
- *    same haircut would have handed the government the laundromat B4 closed —
- *    fire the chair, keep 75%, repeat. So a dismissal keeps ALL of the
- *    institution's scrutiny and adds more on top. Firing the chair is strictly
- *    worse than waiting them out, which is the point.
- *  - **Revoking independence by statute.** `applyCentralBankIndependenceProvision`
- *    flipped `governmentControlled` and posted a news item. Nothing else. The
- *    statute is already expensive in the legislature — it needs votes — but the
- *    thing it buys, a bank that does what the government says, arrived at no
- *    cost to what that bank's word is worth.
- *
- * Granting independence deliberately pays NOTHING back. If it did, grant-revoke
- * cycling would be a laundromat with extra steps. The only way out of scrutiny
- * stays the one B4 built: hold a correct stance and let resolve mature.
+ * Granting independence pays NOTHING back; otherwise grant-revoke cycling
+ * becomes a laundromat. Scrutiny only decays via correct stances over time.
  */
 
 import type { CentralBank } from "@/lib/db/types/centralBank";

@@ -1,11 +1,10 @@
 /**
- * Pure rules for UK Commons by-elections + recall petitions (epic #856, #860).
+ * Pure rules for UK Commons by-elections and recall petitions.
  *
- * Plain data in, plain data out. No DB, no clock, no randomness: the turn
- * phase and API routes load documents, call these, and write results.
+ * Plain data in, plain data out. No DB, no clock, no randomness: callers load
+ * documents, call these, and write results.
  *
- * Balance constants below are first-pass values: they need worldsim
- * validation before anyone treats them as tuned. This branch is worldsim-gated.
+ * Balance constants below are first-pass values pending worldsim validation.
  */
 
 /** Infamy at or above this opens a recall petition immediately. */

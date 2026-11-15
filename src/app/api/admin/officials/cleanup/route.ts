@@ -1,20 +1,12 @@
-/**
- * POST /api/admin/officials/cleanup
- *
- * Removes stale ElectedOfficial records for multi-seat races (house, stateSenate):
- *  1. Deletes ALL vacant rows (characterId null, nppId null) — vacancies are
- *     now derived from seat totals, not stored as DB rows.
- *  2. Removes duplicate filled rows for the same character/NPP.
- *  3. Clears currentOffice on characters whose official record no longer exists.
- *
- * Idempotent — safe to run multiple times.
- */
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError } from "@/lib/api/errors";
-import type { ElectedOfficial, Character } from "@/lib/db/types";
+import type { ElectedOfficial } from "@/lib/db/types";
 import { ObjectId } from "mongodb";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import type { Document } from "mongodb";
 
 // POST /api/admin/officials/cleanup — Removes vacant and duplicate house/stateSenate official records and clears stale currentOffice on affected characters.
 // Auth: requireAdmin
@@ -28,13 +20,13 @@ export async function POST() {
 
     // Step 1: Delete ALL vacant house/stateSenate rows.
     // Vacancies are computed from known seat totals — they must not be in the DB.
-    const vacantResult = await db.collection("electedOfficials").deleteMany({
+    const vacantResult = await electedOfficialsCollection<Document>(db).deleteMany({
       officeType: { $in: ["house", "stateSenate"] },
       characterId: null,
       nppId: { $exists: false },
     });
     // Also catch records where nppId is explicitly null
-    const vacantResult2 = await db.collection("electedOfficials").deleteMany({
+    const vacantResult2 = await electedOfficialsCollection<Document>(db).deleteMany({
       officeType: { $in: ["house", "stateSenate"] },
       characterId: null,
       nppId: null,
@@ -42,8 +34,7 @@ export async function POST() {
     const vacantDeleted = vacantResult.deletedCount + vacantResult2.deletedCount;
 
     // Step 2: Remove duplicate filled rows (same character or NPP, same officeType+state).
-    const filled = await db
-      .collection<ElectedOfficial>("electedOfficials")
+    const filled = await electedOfficialsCollection(db)
       .find({ officeType: { $in: ["house", "stateSenate"] } })
       .toArray();
 
@@ -71,13 +62,14 @@ export async function POST() {
 
     let dupDeleted = 0;
     if (toDelete.length > 0) {
-      const r = await db.collection("electedOfficials").deleteMany({ _id: { $in: toDelete } });
+      const r = await electedOfficialsCollection<Document>(db).deleteMany({
+        _id: { $in: toDelete },
+      });
       dupDeleted = r.deletedCount;
     }
 
     // Step 3: Clear currentOffice on characters no longer in electedOfficials.
-    const remaining = await db
-      .collection<ElectedOfficial>("electedOfficials")
+    const remaining = await electedOfficialsCollection(db)
       .find({ officeType: { $in: ["house", "stateSenate"] } })
       .toArray();
 
@@ -85,8 +77,7 @@ export async function POST() {
     // indexable instead of $toString-ing every candidate _id in an $expr scan.
     const activeCharIds = remaining.filter((o) => o.characterId).map((o) => o.characterId!);
 
-    const orphaned = await db
-      .collection<Character>("characters")
+    const orphaned = await charactersCollection(db)
       .find({
         "currentOffice.type": { $in: ["house", "stateSenate"] },
         _id: { $nin: activeCharIds },
@@ -95,9 +86,10 @@ export async function POST() {
 
     let clearedOffices = 0;
     for (const char of orphaned) {
-      await db
-        .collection("characters")
-        .updateOne({ _id: char._id }, { $set: { currentOffice: null, updatedAt: new Date() } });
+      await charactersCollection(db).updateOne(
+        { _id: char._id },
+        { $set: { currentOffice: null, updatedAt: new Date() } }
+      );
       clearedOffices++;
     }
 

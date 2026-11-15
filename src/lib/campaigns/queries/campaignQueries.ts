@@ -14,7 +14,7 @@ import {
   SUPPORT_RALLY_FULL_VALUE,
   SUPPORT_RALLY_ACTION_COST,
   SUPPORT_RALLY_TOUR_TICK_ACTION_COST,
-} from "@/lib/electionEngine/electionFormulaFactors";
+} from "@/lib/elections/engine/electionFormulaFactors";
 import {
   isCampaignManagerUser,
   isCampaignNomineeUser,
@@ -60,6 +60,22 @@ import type {
 } from "@/lib/db/types";
 import { ObjectId, type Db } from "mongodb";
 import { loadOppositionTargets } from "@/lib/campaigns/oppositionTargets";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
+import type { Document } from "mongodb";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { playerEndorsementsCollection } from "@/lib/db/repositories/playerEndorsements";
+import { nppEndorsementsCollection } from "@/lib/db/repositories/nppEndorsements";
+import { governorEndorsementsCollection } from "@/lib/db/repositories/governorEndorsements";
+import { executiveEndorsementsCollection } from "@/lib/db/repositories/executiveEndorsements";
+import { campaignFieldOfficesCollection } from "@/lib/db/repositories/campaignFieldOffices";
 
 export interface CampaignListItem {
   id: string;
@@ -83,7 +99,7 @@ export async function getCampaignDetail(
   campaignId: ObjectId,
   user: AuthUserWithCharacter | null
 ): Promise<CampaignData> {
-  const campaign = await db.collection<Campaign>("campaigns").findOne({ _id: campaignId });
+  const campaign = await campaignsCollection(db).findOne({ _id: campaignId });
   if (!campaign) {
     throw notFound("Campaign not found");
   }
@@ -93,12 +109,12 @@ export async function getCampaignDetail(
   // serial round-trips.
   const [candidate, manager, election] = await Promise.all([
     campaign.candidateIsNPP
-      ? db.collection<NPP>("npps").findOne({ _id: campaign.candidateId })
-      : db.collection<Character>("characters").findOne({ _id: campaign.candidateId }),
+      ? nppsCollection(db).findOne({ _id: campaign.candidateId })
+      : charactersCollection(db).findOne({ _id: campaign.candidateId }),
     campaign.managerCharacterId
-      ? db.collection<Character>("characters").findOne({ _id: campaign.managerCharacterId })
+      ? charactersCollection(db).findOne({ _id: campaign.managerCharacterId })
       : Promise.resolve(null),
-    db.collection<Election>("elections").findOne({ _id: campaign.electionId }),
+    electionsCollection(db).findOne({ _id: campaign.electionId }),
   ]);
   if (!candidate) {
     throw notFound("Campaign candidate not found");
@@ -112,8 +128,7 @@ export async function getCampaignDetail(
     (m) => m.characterId
   );
   const managerChars = managerCharIds.length
-    ? await db
-        .collection<Character>("characters")
+    ? await charactersCollection(db)
         .find({ _id: { $in: managerCharIds } }, { projection: { _id: 1, name: 1 } })
         .toArray()
     : [];
@@ -159,9 +174,8 @@ export async function getCampaignDetail(
       : Promise.resolve(false),
     getPartyTreasuryAccess(db, campaign, election, user, detailPreset),
   ]);
-  // A running mate gets an owner-level VIEW of the ticket campaign (canSeeExact),
-  // but a narrower action set, enforced client-side and by the server route
-  // gates, not here.
+  // Running mate gets owner-level view (canSeeExact) but a narrower action
+  // set, enforced by client and server route gates, not here.
   const canSeeExact = isManager || isNominee || isAdmin || isRunningMate;
   const isSameParty =
     user?.character?.party === campaign.party &&
@@ -193,16 +207,15 @@ export async function getCampaignDetail(
   let runningMateName: string | null = null;
   let runningMateCharacterId: string | null = null;
   if (election?.electionType === "president") {
-    const ticketRow = await db
-      .collection<ElectionCandidate>("electionCandidates")
-      .findOne(
-        { electionId: campaign.electionId, characterId: campaign.candidateId },
-        { projection: { runningMateId: 1 } }
-      );
+    const ticketRow = await electionCandidatesCollection(db).findOne(
+      { electionId: campaign.electionId, characterId: campaign.candidateId },
+      { projection: { runningMateId: 1 } }
+    );
     if (ticketRow?.runningMateId) {
-      const mate = await db
-        .collection<{ name?: string }>("characters")
-        .findOne({ _id: ticketRow.runningMateId }, { projection: { name: 1 } });
+      const mate = await charactersCollection<{ name?: string }>(db).findOne(
+        { _id: ticketRow.runningMateId },
+        { projection: { name: 1 } }
+      );
       if (mate?.name) {
         runningMateName = mate.name;
         runningMateCharacterId = ticketRow.runningMateId.toString();
@@ -322,15 +335,13 @@ export async function getCampaignDetail(
     );
     base.electionInfo.phase = phase.inPrimary ? "primary" : phase.inGeneral ? "general" : "unknown";
   }
-  // playerEndorsements.candidateId is keyed by the electionCandidates row
-  // _id (not campaign.candidateId, which is the character/NPP identity id —
-  // see ticket #868), so resolve the row once and join on it. A character
-  // can have more than one row per election (e.g. withdrew and re-entered
-  // under a different party). `candidateRow` prefers the active one and falls
-  // back to any row, which is what the ownSupport/suspension panel below
-  // expects. Endorsements do NOT take that fallback: see `activeCandidateRow`.
-  const candidateRowCandidates = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  // playerEndorsements.candidateId keys on the electionCandidates row _id,
+  // not campaign.candidateId (the character/NPP identity id). A character can
+  // have multiple rows per election (e.g. re-entered under a different party).
+  // `candidateRow` prefers the active one and falls back to any row, which the
+  // ownSupport/suspension panel expects. Endorsements do NOT fall back: see
+  // `activeCandidateRow`.
+  const candidateRowCandidates = await electionCandidatesCollection(db)
     .find({
       electionId: campaign.electionId,
       characterId: campaign.candidateId,
@@ -353,8 +364,7 @@ export async function getCampaignDetail(
   // endorsements tab lists the same rows the action panel counts, so one read
   // serves both and the list cannot disagree with the number beside it.
   const [nppEndorsementRows, playerEndorsementRows] = await Promise.all([
-    db
-      .collection<NPPEndorsement>("nppEndorsements")
+    nppEndorsementsCollection(db)
       .find(
         buildActiveVisibleNppEndorsementFilter({
           electionId: campaign.electionId,
@@ -364,8 +374,7 @@ export async function getCampaignDetail(
       )
       .toArray(),
     activeCandidateRow
-      ? db
-          .collection<PlayerEndorsement>("playerEndorsements")
+      ? playerEndorsementsCollection(db)
           .find(
             {
               electionId: campaign.electionId,
@@ -400,15 +409,16 @@ export async function getCampaignDetail(
   // 15 actions a turn against an engine crediting 8.
   const [gameConfigForActions, governorEndorsementCount, executiveEndorsementCount] =
     await Promise.all([
-      db
-        .collection<{ _id: string; baseActionsPerTurn?: number }>("gameConfig")
-        .findOne({ _id: "default" }, { projection: { baseActionsPerTurn: 1 } }),
-      db.collection("governorEndorsements").countDocuments({
+      gameConfigCollection<{ _id: string; baseActionsPerTurn?: number }>(db).findOne(
+        { _id: "default" },
+        { projection: { baseActionsPerTurn: 1 } }
+      ),
+      governorEndorsementsCollection<Document>(db).countDocuments({
         electionId: campaign.electionId,
         candidateId: campaign.candidateId,
         isActive: true,
       }),
-      db.collection("executiveEndorsements").countDocuments({
+      executiveEndorsementsCollection<Document>(db).countDocuments({
         electionId: campaign.electionId,
         candidateId: campaign.candidateId,
         isActive: true,
@@ -423,9 +433,8 @@ export async function getCampaignDetail(
     candidateIsNPP: campaign.candidateIsNPP === true,
     baseActionsPerTurn: gameConfigForActions?.baseActionsPerTurn ?? 4,
   });
-  // Rally-tour tick drains actions every turn (campaignTurn.ts subtracts it from the
-  // same $inc). Populated in the owner block below once we know the tour state; the
-  // headline perTurn is reported NET of it so the panel matches the balance movement.
+  // Rally-tour tick drains actions every turn; perTurn is reported
+  // NET of it so the panel matches balance movement. Populated below.
   let rallyTourActionDrain = 0;
 
   // Phase B — own-candidate Support snapshot for the rally panel. Only
@@ -469,12 +478,10 @@ export async function getCampaignDetail(
       suspendedAt = candidateRow.suspendedAt?.toISOString() ?? null;
       endorsementTargetWithdrawn = candidateRow.endorsementTargetWithdrawnAt != null;
       if (candidateRow.endorsedElectionCandidateId) {
-        const endorsedRow = await db
-          .collection<ElectionCandidate>("electionCandidates")
-          .findOne(
-            { _id: candidateRow.endorsedElectionCandidateId },
-            { projection: { _id: 1, characterName: 1 } }
-          );
+        const endorsedRow = await electionCandidatesCollection(db).findOne(
+          { _id: candidateRow.endorsedElectionCandidateId },
+          { projection: { _id: 1, characterName: 1 } }
+        );
         if (endorsedRow) {
           endorsedCandidate = {
             id: endorsedRow._id.toString(),
@@ -496,8 +503,7 @@ export async function getCampaignDetail(
           user?.character?._id ?? null
         );
         if (isNominee || isAdmin) {
-          const targets = await db
-            .collection<ElectionCandidate>("electionCandidates")
+          const targets = await electionCandidatesCollection(db)
             .find(
               {
                 electionId: campaign.electionId,
@@ -549,16 +555,12 @@ export async function getCampaignDetail(
     ),
   };
 
-  // Campaign-room briefing (owner-only, read-only). Composes data the engine /
-  // tally already produced — never recomputes vote math. Skipped for archived
-  // campaigns (no live plan to brief). Delegate/tipping paths and coalition
-  // weakness are presidential concepts read off the tally; the cash runway
-  // applies to any race.
-  // Regular campaign flows stop while archived or suspended. Geographic
-  // office upkeep runs separately and can still charge a suspended campaign.
+  // Owner-only read-only briefing; composes engine/tally data, never recomputes
+  // vote math. Skipped for archived campaigns. Delegate and coalition weakness
+  // are presidential concepts; cash runway applies to any race. Regular flows
+  // stop while archived or suspended; office upkeep can still charge suspended.
   const accruesNothing = campaign.status === "archived" || campaignSuspended;
-  const offices = await db
-    .collection<CampaignFieldOffice>("campaignFieldOffices")
+  const offices = await campaignFieldOfficesCollection(db)
     .find({ campaignId, electionId: campaign.electionId }, { projection: { _id: 1 } })
     .toArray();
   const preview = buildCampaignBudgetPreview(
@@ -661,9 +663,9 @@ async function buildBriefing(args: {
   let participationPlan: CampaignBriefing["participationPlan"];
 
   if (election?.electionType === "president") {
-    const tally = await db
-      .collection<ElectionVoteTally>("electionVoteTallies")
-      .findOne({ electionId: campaign.electionId });
+    const tally = await electionVoteTalliesCollection(db).findOne({
+      electionId: campaign.electionId,
+    });
     if (tally) {
       // The tally / ledger / delegate map are keyed by the electionCandidate row
       // id, not the character identity id — resolve the owner's row id.
@@ -680,17 +682,21 @@ async function buildBriefing(args: {
         coalitionWeakness
       );
 
-      const gameState = await db
-        .collection<{ _id: string; preset?: string; currentYear?: number }>("gameState")
-        .findOne({ _id: "current" }, { projection: { preset: 1, currentYear: 1 } });
+      const gameState = await gameStateCollection<{
+        _id: string;
+        preset?: string;
+        currentYear?: number;
+      }>(db).findOne({ _id: "current" }, { projection: { preset: 1, currentYear: 1 } });
       const preset = gameState?.preset;
 
       if (isGeneralPhase) {
         const { electoralVoteUnits } = await loadApportionment(db, preset, gameState?.currentYear);
-        const stateDocs = (await db
-          .collection("states")
-          .find({ countryId: election.countryId ?? "US" }, { projection: { _id: 1, name: 1 } })
-          .toArray()) as unknown as Array<{ _id: string; name: string }>;
+        const stateDocs = await statesCollection<Document>(db)
+          .find<{ _id: string; name: string }>(
+            { countryId: election.countryId ?? "US" },
+            { projection: { _id: 1, name: 1 } }
+          )
+          .toArray();
         const stateNameById: Record<string, string> = {};
         for (const s of stateDocs) stateNameById[s._id] = s.name;
         path = buildTippingPath({
@@ -701,12 +707,10 @@ async function buildBriefing(args: {
           stateNameById,
         });
       } else {
-        const party = await db
-          .collection<PoliticalParty>("politicalParties")
-          .findOne(
-            { sequentialId: Number(campaign.party), countryId: election.countryId },
-            { projection: { primaryCalendar: 1, economicPosition: 1 } }
-          );
+        const party = await politicalPartiesCollection(db).findOne(
+          { sequentialId: Number(campaign.party), countryId: election.countryId },
+          { projection: { primaryCalendar: 1, economicPosition: 1 } }
+        );
         const family = resolvePartyFamily(campaign.party, {
           primaryCalendar: party?.primaryCalendar ?? null,
           economicPosition: party?.economicPosition,
@@ -764,13 +768,11 @@ export async function getViewerCampaigns(
   const userOid = new ObjectId(user.userId);
   const party = user.character.party;
   const characterCountryId = user.character.countryId;
-  const ownedCharacterIds = await db
-    .collection<Character>("characters")
+  const ownedCharacterIds = await charactersCollection(db)
     .find({ userId: userOid }, { projection: { _id: 1 } })
     .toArray();
   const candidateIds = ownedCharacterIds.map((character) => character._id);
-  const countryElections = await db
-    .collection<Election>("elections")
+  const countryElections = await electionsCollection(db)
     .find(
       { countryId: characterCountryId },
       { projection: { _id: 1, countryId: 1, electionType: 1 } }
@@ -784,7 +786,7 @@ export async function getViewerCampaigns(
   // for the activity array. A campaign now keeps 200 entries rather than 10.
   const campaignListProjection = { projection: { activityHistory: 0 } };
 
-  const myCampaignDoc = await db.collection<Campaign>("campaigns").findOne(
+  const myCampaignDoc = await campaignsCollection(db).findOne(
     {
       status: { $ne: "archived" },
       $or: [
@@ -797,7 +799,7 @@ export async function getViewerCampaigns(
 
   let partyCampaignDoc: Campaign | null = null;
   if (party && party !== "independent" && eligibleCountryElectionIds.length > 0) {
-    partyCampaignDoc = await db.collection<Campaign>("campaigns").findOne(
+    partyCampaignDoc = await campaignsCollection(db).findOne(
       {
         party,
         status: { $ne: "archived" },
@@ -814,8 +816,7 @@ export async function getViewerCampaigns(
   const eligibleElectionCountryMap = new Map<string, string>();
   const eligibleElectionTypeMap = new Map<string, string>();
   if (electionIds.length > 0) {
-    const elections = await db
-      .collection<Election>("elections")
+    const elections = await electionsCollection(db)
       .find(
         { _id: { $in: electionIds } },
         { projection: { _id: 1, countryId: 1, electionType: 1 } }
@@ -877,8 +878,7 @@ async function getPartyTreasuryAccess(
     return undefined;
   }
 
-  const ownedCharIds = await db
-    .collection<Character>("characters")
+  const ownedCharIds = await charactersCollection(db)
     .find({ userId: new ObjectId(user.userId) }, { projection: { _id: 1 } })
     .toArray();
   const ownedIds = ownedCharIds.map((character) => character._id);
@@ -886,7 +886,7 @@ async function getPartyTreasuryAccess(
     return undefined;
   }
 
-  const candidateParty = await db.collection<PoliticalParty>("politicalParties").findOne(
+  const candidateParty = await politicalPartiesCollection(db).findOne(
     {
       sequentialId: Number(campaign.party),
       countryId: election.countryId,

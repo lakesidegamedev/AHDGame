@@ -93,7 +93,7 @@ describe("setSectorGrowth — preview", () => {
   });
 });
 
-// Ticket #1271. The growth-cost quote is discounted at the HOST country's prime
+// The growth-cost quote is discounted at the HOST country's prime
 // rate. Resolving that country from the sector's stored value, then the corp,
 // then a literal "US" quoted a foreign operation at somebody else's rates.
 describe("setSectorGrowth — host country resolution", () => {

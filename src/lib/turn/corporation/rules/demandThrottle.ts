@@ -1,70 +1,42 @@
 /**
  * Demand-aware production throttle (plants tier).
  *
- * ─── The problem ────────────────────────────────────────────────────────────
+ * THE PROBLEM. Under plants a sector's revenue carries `soldFraction` but its
+ * COSTS do not: inputs bill at `utilization = producedUnits / capacity`, labor
+ * at headcount, upkeep at capacity, and `otherOpexPerUnit` per produced unit.
+ * Unsold output is not capitalised either. A plant that makes 60k and sells 10k
+ * pays full freight on 60k and books revenue on 10k, a structural loss no
+ * operator can manage out of. `otherOpexPerUnit` is solved once on the first
+ * physical-P&L turn and held, so the loss compounds every turn a market stays
+ * glutted.
  *
- * Under plants a sector's revenue carries `soldFraction` (it rides
- * `clearingRevenueLeg`) but its COSTS do not. Inputs are billed at
- * `utilization = producedUnits / capacity`, labor at headcount, upkeep at
- * capacity, and the calibrated `otherOpexPerUnit` residual per produced unit.
- * Unsold output is not capitalised either — `market/inventory.ts` routes it to
- * a shadow global stock that deliberately does not feed prices yet.
- *
- * So a plant that makes 60k and sells 10k pays full freight on 60k and books
- * revenue on 10k. That is a structural loss no operator can manage out of, and
- * it is what players reported as margins of -254% and -500% that swing wildly
- * turn to turn (ticket #1072, and the same mechanism under #1129, #1139, #1153
- * and #1159). The margin swings because `otherOpexPerUnit` is solved ONCE, on
- * the sector's first physical-P&L turn, and then held — so a sector calibrated
- * at a healthy fill rate keeps paying that turn's cost basis forever.
- *
- * Nothing throttled output toward what buyers would take, so the loss
- * compounded every turn a market stayed glutted and the only lever a player had
- * was to mothball the whole sector.
- *
- * ─── The fix ────────────────────────────────────────────────────────────────
- *
- * Firms do not run flat out into a market that will not take the goods. Target
- * production at what the sector ACTUALLY SOLD last turn, plus a probe margin so
- * it keeps testing for more demand and can ramp back up:
+ * THE FIX. Target production at what the sector ACTUALLY SOLD last turn, plus a
+ * probe margin so it keeps testing for more demand and can ramp back up:
  *
  *     target = priorSoldUnits x (1 + PROBE_MARGIN)
  *
  * Targeting absolute SOLD UNITS rather than a fraction is what makes this
- * stable. A fraction-based throttle oscillates: cut output to what sold, sell
- * all of it, read `soldFraction` as 1.0, produce full again, glut again. An
- * absolute target converges — sell 10k and you make 11.5k; sell all 11.5k and
- * you make 13.2k, ramping while demand absorbs it; sell only 10k of the 11.5k
- * and you settle back at 11.5k.
+ * stable. A fraction-based throttle oscillates (cut to what sold, sell all of
+ * it, read soldFraction 1.0, produce full, glut again). An absolute target
+ * converges: sell 10k and make 11.5k; sell all 11.5k and make 13.2k, ramping
+ * while demand absorbs it; sell 10k of 11.5k and settle back at 11.5k.
  *
- * ─── Flip identity ──────────────────────────────────────────────────────────
- *
- * A plant running at capacity and clearing it has a target ABOVE what it can
+ * FLIP IDENTITY. A plant at capacity clearing it has a target above what it can
  * physically make, so the throttle returns 1 and the sector is byte-identical.
- * Only gluts move. A sector with no sales history (newly founded, first turn,
- * or a world that has never run the clearing pre-pass) is untouched too — there
- * is nothing to infer demand from yet.
+ * A sector with no sales history (new, first turn, or a world that never ran the
+ * clearing pre-pass) is untouched too: nothing to infer demand from yet.
  */
 
 /**
- * ─── Mixed-output plants (ticket 1370) ──────────────────────────────────────
+ * Mixed-output plants: `soldUnits` blends output legs by supply rate, which is
+ * value weight at BASE prices. That is the wrong scale when the throttle
+ * matters: a plant selling out its scarce leg at 8x base but throttled on a
+ * glutted leg reads a low blended fraction and shrinks every turn.
  *
- * `sector.soldUnits` is produced units times the sector's blended
- * `soldFraction`, and clearing blends its output legs by SUPPLY RATE, which is
- * the same as weighting them by value at BASE prices. That is the wrong scale
- * exactly when the throttle matters: a hardware plant (electronics 0.55,
- * software 0.15) sold every unit of electronics into a 36% world shortage
- * priced at 8x base, sold a tenth of its software into a glut priced at 2x,
- * read a blended 0.81, and was cut to the 10% floor. Every turn it sold out
- * again and every turn the target (0.81 x 1.15 < 1) shrank it, so the plant
- * could never climb back while its main market went unserved.
- *
- * `throttleSoldUnits` restates last turn's sales by the value buyers put on
- * each leg: per-leg fill weighted by rate x (price / base), at the same lagged
- * market prices clearing realizes against. A plant whose valuable output sells
- * ramps; a plant whose valuable output is the glutted leg still throttles, so
- * the guard against running flat out into a glut is unchanged. Single-output
- * sectors return `soldUnits` untouched.
+ * `throttleSoldUnits` restates last turn's sales at lagged market prices: per-
+ * leg fill weighted by rate x (price / base). A plant whose valuable output
+ * sells ramps; a plant glutted on its valuable leg still throttles. Single-
+ * output sectors return `soldUnits` untouched.
  */
 export function throttleSoldUnits(args: {
   /** Last turn's produced units (persisted). */
@@ -113,25 +85,23 @@ export const SOLD_OUT_FILL = 0.99;
 export const SHORTAGE_RELAXED_FILL = 0.5;
 
 /**
- * Extra units a sold-out plant can put into a market that left buyers unserved
- * (ticket 1393).
+ * Extra units a sold-out plant can put into a market that left buyers unserved.
  *
- * The throttle reads last turn's sales as the demand it can count on. That is
- * the right floor in a glut, but a plant that sold every unit it made into a
- * book where lagged demand exceeded lagged supply learned nothing about the
- * ceiling: buyers wanted more than anyone offered. Ramping 15% a turn from
- * there left a plant at a third of capacity for many turns while its own
- * market stayed short, and showed it as "Demand limited" beside "100% sold".
+ * The throttle reads last turn's sales as the demand it can count on, which is
+ * the right floor in a glut but tells a sold-out plant nothing about the ceiling.
+ * Ramping only 15% a turn from there left plants at a third of capacity for
+ * many turns while their market stayed short, shown as "Demand limited" beside
+ * "100% sold".
  *
  * Per output leg that sold out, the book's unmet demand (demand minus supply)
  * converts to sector units through the leg's share of the output mix. Legs are
  * blended by the same value weights `throttleSoldUnits` uses, so a plant whose
- * valuable output is short ramps and a glutted co-product still holds it back.
- * Each seller receives only its share of the normalized clearing book. The
- * allocations sum to at most the book's unmet demand. Capacity caps remain
+ * valuable output is short ramps while a glutted co-product still holds it
+ * back. Each seller receives only its share of the normalized clearing book,
+ * and allocations sum to at most the book's unmet demand. Capacity caps remain
  * in the throttle; unused allocations are not promised to another seller.
- * Extraction may also claim its share of a wider shortage after selling at
- * least half its output. Full fills retain their existing scoped-book headroom.
+ * Extraction may claim its share of a wider shortage after selling at least
+ * half its output. Full fills retain existing scoped-book headroom.
  */
 export function soldOutMarketHeadroomUnits(args: {
   /** Fill per output commodity for the prior output in this scoped book. */

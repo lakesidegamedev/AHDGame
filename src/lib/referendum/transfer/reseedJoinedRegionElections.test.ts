@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { Db } from "mongodb";
 
-vi.mock("@/lib/turn/perpetualElections", () => ({
+vi.mock("@/lib/elections/scheduling", () => ({
   ensureIEElections: vi.fn(),
   ensureIELocalCouncilElections: vi.fn(),
   ensureIECathaoirleachElections: vi.fn(),
@@ -12,7 +12,7 @@ vi.mock("@/lib/turn/parliamentaryGovernment", () => ({
 }));
 
 const { reseedJoinedRegionElections } = await import("./reseedJoinedRegionElections");
-const perpetual = await import("@/lib/turn/perpetualElections");
+const perpetual = await import("@/lib/elections/scheduling");
 const parl = await import("@/lib/turn/parliamentaryGovernment");
 
 describe("reseedJoinedRegionElections", () => {

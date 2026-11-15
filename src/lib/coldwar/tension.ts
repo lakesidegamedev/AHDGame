@@ -4,9 +4,11 @@
  * so claimed outcome retries cannot duplicate or omit a discrete shock.
  */
 import { planTensionEvent } from "./rules/tensionEvent";
+import { stepBlocDyads, type BlocDyad, type BlocPairId } from "./rules/blocTension";
 import type { Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import type { ConflictType } from "@/lib/db/types/conflict";
+import { coldWarTensionCollection } from "@/lib/db/repositories/coldWarTension";
 
 /**
  * Global cold-war tension: one 0-100 number the whole world shares, with a
@@ -21,7 +23,6 @@ import type { ConflictType } from "@/lib/db/types/conflict";
  * DEFCON, procurement demand, detente goodwill.
  */
 
-const COLD_WAR_TENSION_COLLECTION = "coldWarTension";
 const COLD_WAR_TENSION_ID = "current";
 
 export const TENSION_BASELINE = 12;
@@ -61,6 +62,11 @@ export interface ColdWarTensionState {
   pressureFloor: number;
   updatedTurn: number;
   events: TensionEvent[];
+  /**
+   * Tension per pair of blocs (US-led, CN-led, non-aligned), 2027 onward only
+   * (#5695). Absent in earlier worlds, which keep the single global value.
+   */
+  blocDyads?: BlocDyad[];
   updatedAt: Date;
 }
 
@@ -287,9 +293,7 @@ function emptyTensionState(): ColdWarTensionState {
 type StoredState = ColdWarTensionState & { _id: string };
 
 export async function getColdWarTension(db: Db): Promise<ColdWarTensionState> {
-  const doc = await db
-    .collection<StoredState>(COLD_WAR_TENSION_COLLECTION)
-    .findOne({ _id: COLD_WAR_TENSION_ID });
+  const doc = await coldWarTensionCollection<StoredState>(db).findOne({ _id: COLD_WAR_TENSION_ID });
   if (!doc) return emptyTensionState();
   return {
     value: clampTension(doc.value ?? TENSION_BASELINE),
@@ -297,6 +301,7 @@ export async function getColdWarTension(db: Db): Promise<ColdWarTensionState> {
     updatedTurn: doc.updatedTurn ?? 0,
     events: doc.events ?? [],
     updatedAt: doc.updatedAt ?? new Date(0),
+    ...(doc.blocDyads ? { blocDyads: doc.blocDyads } : {}),
     ...(doc.appliedEventIds ? { appliedEventIds: doc.appliedEventIds } : {}),
   };
 }
@@ -305,9 +310,11 @@ async function putColdWarTension(db: Db, state: ColdWarTensionState): Promise<vo
   const projection = { ...state, updatedAt: new Date() };
   // Only keyed event CAS writes this receipt list; ordinary writers may hold an older snapshot.
   delete projection.appliedEventIds;
-  await db
-    .collection<StoredState>(COLD_WAR_TENSION_COLLECTION)
-    .updateOne({ _id: COLD_WAR_TENSION_ID }, { $set: projection }, { upsert: true });
+  await coldWarTensionCollection<StoredState>(db).updateOne(
+    { _id: COLD_WAR_TENSION_ID },
+    { $set: projection },
+    { upsert: true }
+  );
 }
 
 /** Apply a discrete spike (or relief, negative delta) and record it. */
@@ -336,7 +343,7 @@ export async function applyTensionEvent(
   if (!options.eventId.trim() || options.eventId.length > 500 || !Number.isFinite(delta))
     throw new Error("Invalid keyed tension event");
   if (state.appliedEventIds?.includes(options.eventId)) return state;
-  const collection = db.collection<StoredState>(COLD_WAR_TENSION_COLLECTION);
+  const collection = coldWarTensionCollection<StoredState>(db);
   await collection.updateOne(
     { _id: COLD_WAR_TENSION_ID },
     { $setOnInsert: emptyTensionState() },
@@ -378,7 +385,9 @@ export async function applyTensionEvent(
 export async function runTensionTurn(
   db: Db,
   turn: number,
-  pressures: TensionPressures
+  pressures: TensionPressures,
+  /** Per-pair floors in a multipolar (2027+) world; omitted elsewhere. */
+  blocFloors?: Record<BlocPairId, number>
 ): Promise<ColdWarTensionState> {
   const state = await getColdWarTension(db);
   if (state.updatedTurn >= turn) return state;
@@ -388,6 +397,7 @@ export async function runTensionTurn(
     value: stepTension(state.value, pressures),
     pressureFloor,
     updatedTurn: turn,
+    ...(blocFloors ? { blocDyads: stepBlocDyads(state.blocDyads, blocFloors) } : {}),
   };
   await putColdWarTension(db, next);
   return next;

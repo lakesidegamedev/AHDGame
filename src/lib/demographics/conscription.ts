@@ -8,6 +8,7 @@ import { CN_CONSCRIPTION } from "@/lib/countries/cn/geographyFacts";
 import { IE_CONSCRIPTION } from "@/lib/countries/ie/geographyFacts";
 import { NG_CONSCRIPTION } from "@/lib/countries/ng/geographyFacts";
 import { BR_CONSCRIPTION } from "@/lib/countries/br/geographyFacts";
+import { CA_CONSCRIPTION } from "@/lib/countries/ca/geographyFacts";
 
 export interface ConscriptionOption {
   label: string;
@@ -52,6 +53,7 @@ export const CONSCRIPTION_SEED: Partial<Record<CountryId, ConscriptionPolicy>> =
   DE: DE_CONSCRIPTION, // suspended
   JP: JP_GEOGRAPHY.conscription,
   IE: IE_CONSCRIPTION,
+  CA: CA_CONSCRIPTION,
   BR: BR_CONSCRIPTION,
   CN: CN_CONSCRIPTION,
   NG: NG_CONSCRIPTION,

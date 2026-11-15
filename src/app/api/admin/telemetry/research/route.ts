@@ -6,6 +6,7 @@ import type { GameState } from "@/lib/db/types/gameState";
 import { exportResearchPanel } from "@/lib/telemetry/research/export";
 import { SOURCING_FLOW_RETENTION_TURNS } from "@/lib/logistics/sourcingLedger";
 import { checkResearchRetention, parseResearchQuery } from "@/lib/telemetry/research/rules";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 // GET /api/admin/telemetry/research?panel=country-turn|annual-fiscal|trade|securities
 //   &fromTurn=&toTurn=&countries=US,UK&commodities=oil&limit=&after=
@@ -20,9 +21,10 @@ export async function GET(request: Request) {
     if (!auth.ok) return auth.response;
 
     const db = await getDb();
-    const gameState = await db
-      .collection<GameState>("gameState")
-      .findOne({ _id: "current" as never }, { projection: { currentTurn: 1 } });
+    const gameState = await gameStateCollection(db).findOne(
+      { _id: "current" as never },
+      { projection: { currentTurn: 1 } }
+    );
     const params = Object.fromEntries(new URL(request.url).searchParams.entries());
     const parsed = parseResearchQuery(params, gameState?.currentTurn ?? 0);
     if (!parsed.ok) return errorResponse(400, parsed.error);

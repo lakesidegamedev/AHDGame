@@ -1,5 +1,5 @@
 import type { CountryLayer1Model } from "./types";
-import type { StateDemographics, StateDemographicGroup } from "@/lib/db/types";
+import type { CensusGroupView, StateDemographicGroup } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 
 function clampLean(v: number): number {
@@ -7,7 +7,7 @@ function clampLean(v: number): number {
 }
 
 /**
- * Build seedable per-region StateDemographics from a country Layer-1 model:
+ * Build seedable per-region CensusGroupView from a country Layer-1 model:
  * each region's archetype population/econ/social/turnout are derived from the
  * region's real census via the model's composition + per-era positions. This is
  * the gated alternative to the static {c}RegionDemographics seed arrays.
@@ -18,7 +18,7 @@ export function buildModelRegionDemographics(
   override?: {
     turnout?: Record<string, Record<string, number>>;
   }
-): StateDemographics[] {
+): CensusGroupView[] {
   // Deep-merge override over model.positions (override wins per dim/key)
   const mergedPositions: CountryLayer1Model["positions"] = positionsOverride
     ? {
@@ -50,7 +50,7 @@ export function buildModelRegionDemographics(
       }
     : model;
 
-  const out: StateDemographics[] = [];
+  const out: CensusGroupView[] = [];
   for (const [regionId, config] of Object.entries(merged.census)) {
     const pops = deriveCountryGroupPopulations(merged, config);
     const groups: Record<string, StateDemographicGroup> = {};

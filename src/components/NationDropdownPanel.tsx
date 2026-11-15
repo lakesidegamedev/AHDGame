@@ -13,6 +13,7 @@ import { countryUrl, cabinetOfficeUrl, partyUrl, scotusJusticeOfficeUrl } from "
 import { buildNationalDetailsSections } from "@/components/navbar/nationDetailsSections";
 import { CollapsibleNavSection } from "@/components/navbar/CollapsibleNavSection";
 import { NATION_DETAIL_ICONS } from "@/components/navbar/nationDetailIcons";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 export interface NationDropdownPanelProps {
   currentParty?: { id: string; name: string; countryId: string } | null;
@@ -222,7 +223,7 @@ export function NationDropdownPanel({
                 </span>
               </Link>
             )}
-            {userCountry === "US" && (
+            {countryHasFeature("usUi", userCountry) && (
               <Link
                 href="/political-operations"
                 onClick={() => onClose()}

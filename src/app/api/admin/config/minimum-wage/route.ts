@@ -6,7 +6,7 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { parseJsonBody } from "@/lib/api/validate";
 import { createAdminLog } from "@/lib/adminLog";
 import { clampKaitzRatio, MIN_WAGE_KAITZ_MAX } from "@/lib/labour/laborCost";
-import type { FederalBudget } from "@/lib/db/types";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 const patchSchema = z.object({
   countryId: z.string().min(1).max(8),
@@ -24,8 +24,7 @@ export async function GET() {
     if (!auth.ok) return auth.response;
 
     const db = await getDb();
-    const budgets = await db
-      .collection<FederalBudget>("federalBudget")
+    const budgets = await federalBudgetCollection(db)
       .find({}, { projection: { countryId: 1, minimumWageKaitzRatio: 1 } })
       .toArray();
 
@@ -67,14 +66,12 @@ export async function PATCH(request: Request) {
       parsed.data.kaitzRatio === null ? null : clampKaitzRatio(parsed.data.kaitzRatio);
 
     const db = await getDb();
-    const result = await db
-      .collection<FederalBudget>("federalBudget")
-      .updateOne(
-        { countryId },
-        kaitzRatio === null
-          ? { $unset: { minimumWageKaitzRatio: "" } }
-          : { $set: { minimumWageKaitzRatio: kaitzRatio } }
-      );
+    const result = await federalBudgetCollection(db).updateOne(
+      { countryId },
+      kaitzRatio === null
+        ? { $unset: { minimumWageKaitzRatio: "" } }
+        : { $set: { minimumWageKaitzRatio: kaitzRatio } }
+    );
 
     if (result.matchedCount === 0) {
       return errorResponse(404, `No federal budget found for country "${countryId}".`);

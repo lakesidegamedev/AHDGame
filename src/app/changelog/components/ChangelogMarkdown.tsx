@@ -7,21 +7,18 @@ import remarkGfm from "remark-gfm";
 import { ChangelogChart, parseChartSpec } from "./ChangelogChart";
 
 /**
- * Markdown renderer for changelog posts.
+ * Markdown renderer for changelog posts with two extensions:
  *
- * Two authoring extensions beyond plain markdown, both used by the dev-diary
- * posts:
- *
- *   ![Caption text](/changelog/1.0.0/turn-timings.png)
- *     -> a figure with the alt text rendered as a visible caption.
+ *   ![Caption](/changelog/1.0.0/turn-timings.png)
+ *     -> figure with the alt text as a visible caption.
  *
  *   ```chart
- *   { "type": "bar", "title": "...", "categories": [...], "series": [...] }
+ *   { "type": "bar", ... }
  *   ```
- *     -> an inline SVG chart. See ChangelogChart for the spec.
+ *     -> inline SVG chart. See ChangelogChart for the spec.
  *
- * `compact` renders the tighter type used inside feed cards; the full post page
- * uses the roomier default so a long read does not feel cramped.
+ * `compact` renders tighter type for feed cards; the full post page uses the
+ * roomier default.
  */
 
 interface ChangelogMarkdownProps {

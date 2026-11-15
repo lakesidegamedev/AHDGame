@@ -1,6 +1,10 @@
 import type { AnyBulkWriteOperation, Db } from "mongodb";
 import type { PoliticalParty } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import type { Document } from "mongodb";
 
 export interface ReconcileMemberCountsResult {
   partiesChecked: number;
@@ -28,21 +32,18 @@ interface PartyGroupCount {
  */
 export async function reconcilePartyMemberCounts(db: Db): Promise<ReconcileMemberCountsResult> {
   const [playerGroups, nppGroups, parties] = await Promise.all([
-    db
-      .collection("characters")
+    charactersCollection(db)
       .aggregate<PartyGroupCount>([
         { $group: { _id: { party: "$party", countryId: "$countryId" }, count: { $sum: 1 } } },
       ])
       .toArray(),
-    db
-      .collection("npps")
+    nppsCollection<Document>(db)
       .aggregate<PartyGroupCount>([
         { $match: { retiredAt: null } },
         { $group: { _id: { party: "$party", countryId: "$countryId" }, count: { $sum: 1 } } },
       ])
       .toArray(),
-    db
-      .collection<PoliticalParty>("politicalParties")
+    politicalPartiesCollection(db)
       .find({})
       .project<{ sequentialId: number; countryId: CountryId; memberCount: number }>({
         sequentialId: 1,
@@ -75,7 +76,7 @@ export async function reconcilePartyMemberCounts(db: Db): Promise<ReconcileMembe
   }
 
   if (ops.length > 0) {
-    await db.collection<PoliticalParty>("politicalParties").bulkWrite(ops);
+    await politicalPartiesCollection(db).bulkWrite(ops);
   }
 
   return { partiesChecked: parties.length, partiesUpdated: ops.length };

@@ -25,7 +25,7 @@ describe("PatreonBadge", () => {
     expect(screen.getByText("Supporter+")).toBeTruthy();
 
     render(<PatreonBadge tier="supporter-plus-plus" />);
-    expect(screen.getByText("Supporter++")).toBeTruthy();
+    expect(screen.getByText("Champion")).toBeTruthy();
   });
 
   it("credits a Lakeside subscription rather than implying Patreon", () => {

@@ -67,8 +67,6 @@ export function resolveCabinetTabs(args: {
   countryId: string;
   positionId: string;
   mechanics: CabinetPositionMechanics;
-  /** Gates conflict-only tabs and controls such as Doctrine and intelligence. */
-  conflictsEnabled?: boolean;
   /**
    * The merger-review queue answered `applies: true` for THIS viewer. Server
    * truth only: the seat, the era and the command-economy gate are all resolved
@@ -79,7 +77,7 @@ export function resolveCabinetTabs(args: {
   flagshipAvailable?: boolean;
   allocationsAvailable?: boolean;
 }): CabinetTab[] {
-  const { countryId, positionId, conflictsEnabled = false, competitionQueueApplies = false } = args;
+  const { countryId, positionId, competitionQueueApplies = false } = args;
   const tabs: CabinetTab[] = [{ id: "overview", label: "Overview" }];
   if (args.cabinetVersion === "v2") {
     tabs.push({ id: "actions", label: "Actions", labelKey: "actionsTab" });
@@ -113,18 +111,14 @@ export function resolveCabinetTabs(args: {
     tabs.push({ id: "competition", label: "Merger Review" });
   }
 
-  // The intelligence seat gains its own console. Gated on the Conflicts
-  // subsystem for the same reason Commands and Doctrine are: it is Cold War
-  // machinery, and a world with that switched off should not surface it.
-  if (isIntelligenceMinister(positionId) && conflictsEnabled) {
+  // The intelligence seat gains its own console.
+  if (isIntelligenceMinister(positionId)) {
     tabs.push({ id: "intelligence", label: "Intelligence" });
   }
 
-  // Command administration remains available while Conflicts is disabled.
-  // Doctrine belongs to the conflict subsystem and stays behind its feature gate.
   if (isDefenseMinister(positionId)) {
     tabs.push({ id: "commands", label: "Commands" });
-    if (conflictsEnabled) tabs.push({ id: "doctrine", label: "Doctrine" });
+    tabs.push({ id: "doctrine", label: "Doctrine" });
   }
 
   return tabs;

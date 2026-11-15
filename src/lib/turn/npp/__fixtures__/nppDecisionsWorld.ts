@@ -391,7 +391,6 @@ export async function seedNppDecisionsWorld(
     preset: "2019-default",
     worldEpochId: "epoch-fixture",
     nppCorpStrategyEnabled: true,
-    subsidiaryCorporationsEnabled: false,
     frontierEntryExperimentEnabled: false,
     nppAutonomyLevel: "v2",
     isProcessing: false,

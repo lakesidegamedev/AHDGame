@@ -4,7 +4,7 @@ import type { StateDemographicTurnout } from "@/lib/db/types";
  * Ireland planning region demographic turnout modifier seeds.
  *
  * All modifiers start at 0 — no GOTV, canvassing, or suppression effects
- * applied yet. Keys match the IE voter group IDs from ieDemographicCategories.ts.
+ * applied yet. Keys match the IE voter group IDs from the country Layer-1 model.
  *
  * The category key is "ie_voterGroups" to align with the IE demographic
  * profile and avoid collision with US/UK/DE/JP documents in the same

@@ -461,6 +461,66 @@ describe("Bond transactional routes — cross-currency regression (A19-A21, A25)
     expect(update.$inc["currencyBalances.personal.JPY"]).toBe(-10_200);
   });
 
+  // ── Background-country sovereign (#5702) ───────────────────────────────────
+  it("buy: a US character buys a background country's sovereign bond in its currency", async () => {
+    // A 2027 background country (France) still issues through the ordinary
+    // sovereign path: a EUR bond with no issuing corporation. A US player's
+    // purchase debits EUR, not their home USD.
+    const charId = new ObjectId();
+    const bondId = new ObjectId();
+
+    db.collectionMocks["users"]!.findOne.mockResolvedValue({
+      _id: new ObjectId(userId),
+      activeCharacterId: charId,
+      activeCharacterType: "regular",
+    });
+    db.collectionMocks["bonds"]!.findOne.mockResolvedValue({
+      _id: bondId,
+      issuerType: "sovereign",
+      currencyCode: "EUR",
+      countryId: "FR",
+      faceValue: 1000,
+      marketPrice: 1.0,
+      publicFloat: 50,
+      holders: [],
+      matured: false,
+      defaulted: false,
+    });
+    db.collectionMocks["corporations"]!.findOne.mockResolvedValue(null);
+    db.collectionMocks["characters"]!.findOne.mockResolvedValue({
+      _id: charId,
+      userId: new ObjectId(userId),
+      countryId: "US",
+      currencyBalances: { personal: { USD: 0, EUR: 50_000 } },
+    });
+    db.collectionMocks["characters"]!.findOneAndUpdate.mockResolvedValue({
+      _id: charId,
+      currencyBalances: { personal: { EUR: 39_800 } },
+    });
+    db.collectionMocks["gameState"]!.findOne.mockResolvedValue({
+      _id: "current",
+      forexEnabled: true,
+      currentTurn: 100,
+    });
+
+    const req = new Request(`http://test.local/api/bonds/${bondId.toString()}/buy`, {
+      method: "POST",
+      body: JSON.stringify({ units: 10 }),
+      headers: { "content-type": "application/json" },
+    });
+    const { POST } = await import("../[bondId]/buy/route");
+    const res = await POST(req, { params: Promise.resolve({ bondId: bondId.toString() }) });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { costCurrency: string; buyer: string };
+    expect(body).toMatchObject({ costCurrency: "EUR", buyer: "character" });
+
+    const guardCalls = db.collectionMocks["characters"]!.findOneAndUpdate.mock.calls;
+    expect(guardCalls.length).toBeGreaterThanOrEqual(1);
+    const filter = guardCalls[0][0] as Record<string, unknown>;
+    expect(filter["currencyBalances.personal.EUR"]).toEqual({ $gte: expect.any(Number) });
+    expect(filter["currencyBalances.personal.USD"]).toBeUndefined();
+  });
+
   // ── SELL character path (A25-ext canonical bond.currencyCode) ──────────────
   it("sell: character-path credits proceeds in bond.currencyCode (A25-ext)", async () => {
     // Mirror scenario to the buy test: a bond with `currencyCode=USD` whose

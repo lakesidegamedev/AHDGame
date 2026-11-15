@@ -7,6 +7,7 @@ import { z } from "zod";
 import { getCountryWebhookDescriptors } from "@/lib/discord/countryWebhooks";
 import { deploymentServiceSlug } from "@/lib/deploymentIdentity";
 import type { GameConfig } from "@/lib/db/types";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 /** Top-level (non country-scoped) webhooks, keyed by their gameConfig field. */
 const GENERAL_FIELDS = {
@@ -82,9 +83,10 @@ export const PATCH = withAdminRoute(async (_auth, request: Request) => {
   // hand ownership to whoever happened to clear it.
   if (Object.keys($set).length > 0) {
     const self = deploymentServiceSlug();
-    const current = await db
-      .collection<GameConfig>("gameConfig")
-      .findOne({ _id: "default" }, { projection: { discordWebhookOwnerService: 1 } });
+    const current = await gameConfigCollection(db).findOne(
+      { _id: "default" },
+      { projection: { discordWebhookOwnerService: 1 } }
+    );
     const owner = current?.discordWebhookOwnerService;
     // Saving from a deployment that does not own these webhooks must not take
     // ownership by accident — that is exactly how a restored world would start
@@ -105,9 +107,7 @@ export const PATCH = withAdminRoute(async (_auth, request: Request) => {
   if (Object.keys($unset).length > 0) update.$unset = $unset;
 
   if (Object.keys(update).length > 0) {
-    await db
-      .collection<GameConfig>("gameConfig")
-      .updateOne({ _id: "default" }, update, { upsert: false });
+    await gameConfigCollection(db).updateOne({ _id: "default" }, update, { upsert: false });
   }
 
   return NextResponse.json({ success: true });
@@ -115,7 +115,7 @@ export const PATCH = withAdminRoute(async (_auth, request: Request) => {
 
 export const GET = withAdminRoute(async (_auth) => {
   const db = await getDb();
-  const config = await db.collection<GameConfig>("gameConfig").findOne(
+  const config = await gameConfigCollection(db).findOne(
     { _id: "default" },
     {
       projection: {

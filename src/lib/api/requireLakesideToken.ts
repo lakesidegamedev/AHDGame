@@ -1,4 +1,5 @@
 import { timingSafeCompare } from "@/lib/api/timingSafeCompare";
+import { servicesConfig } from "@/lib/config/services";
 
 /**
  * Validates the server-to-server bearer token used by the Lakeside account
@@ -10,7 +11,7 @@ import { timingSafeCompare } from "@/lib/api/timingSafeCompare";
  * @returns true if the request carries the configured token, false otherwise.
  */
 export function requireLakesideToken(request: Request): boolean {
-  const secret = process.env.LAKESIDE_S2S_TOKEN?.trim();
+  const secret = servicesConfig.lakesideS2sToken()?.trim();
   if (!secret) return false;
 
   const header = request.headers.get("Authorization") ?? "";

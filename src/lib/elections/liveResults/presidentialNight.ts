@@ -17,7 +17,7 @@ import {
   ELECTION_DAY_TURNS,
   resolveTurnWindow,
   turnVoteWeight,
-} from "@/lib/electionEngine/voteCalculations";
+} from "@/lib/elections/engine/voteCalculations";
 import { hashFraction } from "./computeResults";
 import {
   FIRST_CLOSE_ET_HOUR,

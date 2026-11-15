@@ -21,6 +21,11 @@ import {
   discordSubmitHandleForChip,
   discordSubmitPrimaryLabel,
 } from "@/lib/suggestions/discordSubmitAttribution";
+import { servicesConfig } from "@/lib/config/services";
+import { usersCollection } from "@/lib/db/repositories/users";
+import { suggestionReadsCollection } from "@/lib/db/repositories/suggestionReads";
+import type { Document } from "mongodb";
+import { suggestionCommentsCollection } from "@/lib/db/repositories/suggestionComments";
 
 async function findSuggestionByAdminId(db: Db, id: string): Promise<Suggestion | null> {
   const coll = getSuggestionsCollection(db);
@@ -55,9 +60,10 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     let reporterCharacterName: string | null = null;
     if (suggestion.userId) {
       const [u, character] = await Promise.all([
-        db
-          .collection<User>("users")
-          .findOne({ _id: suggestion.userId }, { projection: { username: 1, discordUsername: 1 } }),
+        usersCollection(db).findOne(
+          { _id: suggestion.userId },
+          { projection: { username: 1, discordUsername: 1 } }
+        ),
         getCharacterByUserId(db, suggestion.userId),
       ]);
       reporterUsername = u?.username ?? null;
@@ -178,10 +184,11 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
         return match ? parseInt(match[1], 10) : null;
       })();
 
-    if (githubIssueNum && process.env.GIT_TOKEN && process.env.GITHUB_REPO) {
-      const adminUser = await db
-        .collection<User>("users")
-        .findOne({ _id: new ObjectId(admin.userId) }, { projection: { username: 1 } });
+    if (githubIssueNum && servicesConfig.gitToken() && servicesConfig.githubRepo()) {
+      const adminUser = await usersCollection(db).findOne(
+        { _id: new ObjectId(admin.userId) },
+        { projection: { username: 1 } }
+      );
       await syncSuggestionToGitHub({
         githubIssueNumber: githubIssueNum,
         previousStatus: statusChanged ? previousStatus : undefined,
@@ -245,8 +252,8 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
     }
 
     const coll = getSuggestionsCollection(db);
-    const commentsColl = db.collection("suggestionComments");
-    const readsColl = db.collection("suggestionReads");
+    const commentsColl = suggestionCommentsCollection<Document>(db);
+    const readsColl = suggestionReadsCollection<Document>(db);
 
     const [cDel, rDel] = await Promise.all([
       commentsColl.deleteMany({ suggestionId: suggestion._id }),

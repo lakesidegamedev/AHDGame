@@ -15,6 +15,8 @@ import {
   type ResetMetricSnapshot,
 } from "./rules/snapshot";
 import type { OpeningCountry } from "./rules/provisionalOpening";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { resetMetricSnapshotsCollection } from "@/lib/db/repositories/resetMetricSnapshots";
 
 export function buildOpeningMetricSnapshots1991(
   worldId: string,
@@ -72,8 +74,7 @@ export async function seedOpeningMetrics1991(
   const expected = buildOpeningMetricSnapshots1991(worldId, sourceTurn).filter((row) =>
     countries.includes(row.countryId)
   );
-  const seededRegions = await db
-    .collection<State>("states")
+  const seededRegions = await statesCollection(db)
     .find({ countryId: { $in: [...countries] } }, { projection: { _id: 1, countryId: 1 } })
     .toArray();
   const expectedRegionKeys = expected
@@ -84,7 +85,7 @@ export async function seedOpeningMetrics1991(
   if (JSON.stringify(seededRegionKeys) !== JSON.stringify(expectedRegionKeys)) {
     throw new Error("The seeded 1991 regions do not match the v2 metric opening catalog");
   }
-  const collection = db.collection<ResetMetricSnapshot>("resetMetricSnapshots");
+  const collection = resetMetricSnapshotsCollection<ResetMetricSnapshot>(db);
   await collection.bulkWrite(
     expected.map((row) => ({
       replaceOne: { filter: { _id: row._id }, replacement: row, upsert: true },

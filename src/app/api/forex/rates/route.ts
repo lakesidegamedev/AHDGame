@@ -10,6 +10,7 @@ import { isForexEnabled } from "@/lib/currency/featureFlag";
 import type { ExchangeRate } from "@/lib/db/types";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { resolveMonetaryRegime, type MonetaryRegime } from "@/lib/monetary/brettonWoods";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 // GET /api/forex/rates — Returns current exchange rates as a simple map (local currency per 1 internal unit)
 // Auth: public
@@ -22,7 +23,7 @@ export async function GET() {
     }
 
     const [rateRows, union] = await Promise.all([
-      db.collection<ExchangeRate>("exchangeRates").find({}).toArray(),
+      exchangeRatesCollection(db).find({}).toArray(),
       loadEuroMonetaryUnion(db),
     ]);
     const spreadStrengths: Partial<Record<CurrencyCode, number>> = {};

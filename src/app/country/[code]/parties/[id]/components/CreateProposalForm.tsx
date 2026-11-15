@@ -105,6 +105,7 @@ export function CreateProposalForm({
         );
       }
     } catch {
+      setMsg("Could not load the party list. Check your connection and try again.");
     } finally {
       setLoadingParties(false);
     }
@@ -176,6 +177,7 @@ export function CreateProposalForm({
         setOfficers(opts);
       }
     } catch {
+      setMsg("Could not load party officers. Check your connection and try again.");
     } finally {
       setLoadingOfficers(false);
     }

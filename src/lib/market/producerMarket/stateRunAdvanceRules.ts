@@ -1,17 +1,13 @@
 /**
  * Soft-budget operating advance for state companies on a funded producer turn.
  *
- * A funded plant only runs the share of its plants its own cash can staff and
- * supply. That is right for a private company, but a state company remits its
- * profit to the treasury and is backed by it, so it holds almost no cash of its
- * own: on a funded turn it would plan nothing, pay no wages and buy no inputs,
- * however much capacity it owns. The legacy path ran these plants on a soft
- * budget (the treasury covered the loss afterwards). This is the funded
- * equivalent: before the market plans, the owning treasury advances exactly
- * the gap between the company's cash and its full run (old bills still owed,
- * fixed bills, wages and inputs at the bid ceiling). At close the company hands
- * back whatever of the advance it did not spend, so the treasury only carries
- * what the run actually cost, the same way it backs a loss today.
+ * A funded plant runs only what its cash can staff and supply, but a state
+ * company remits profit to the treasury and holds almost no cash, so it would
+ * plan nothing. The legacy path ran these on a soft budget (treasury covered
+ * the loss). Funded equivalent: before planning, the owning treasury advances
+ * exactly the gap between the company's cash and its full run (old bills, fixed
+ * bills, wages, inputs at the bid ceiling). At close the company returns any
+ * unspent advance, so the treasury carries only the actual run cost.
  *
  * Pure: plain data in, plain data out. Anchor units throughout.
  */

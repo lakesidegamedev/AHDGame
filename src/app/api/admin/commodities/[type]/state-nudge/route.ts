@@ -11,6 +11,7 @@ import { requireAdmin } from "@/lib/api/requireAdmin";
 import { parseJsonBody } from "@/lib/api/validate";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import type { CommodityPrice } from "@/lib/db/types";
+import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
 
 const schema = z.object({
   stateId: z.string().min(1),
@@ -28,14 +29,15 @@ export async function POST(request: Request, { params }: { params: Promise<{ typ
 
     const { stateId, price } = parsed.data;
     const db = await getDb();
-    const result = await db
-      .collection<CommodityPrice>("commodityPrices")
-      .updateOne({ commodity: type } as Record<string, unknown>, {
+    const result = await commodityPricesCollection(db).updateOne(
+      { commodity: type } as Record<string, unknown>,
+      {
         $set: {
           [`stateNudges.${stateId}`]: price,
           updatedAt: new Date(),
         },
-      });
+      }
+    );
 
     if (result.matchedCount === 0) return errorResponse(404, "Commodity not found");
 

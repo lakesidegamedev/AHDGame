@@ -16,6 +16,11 @@ import { MS_PER_TURN, SENATE_STAGGER_TURNS } from "@/lib/constants/turnTime";
 import { cycleAnchorContextFromGameState } from "@/lib/elections/cycleAnchorContext";
 import { admittedStateIdsAsOf } from "@/lib/elections/statehoodAdmission";
 import { electionToLarpYear } from "@/lib/utils/formatters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import type { Document } from "mongodb";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 export async function initializeOfficials(db: Db): Promise<{
   message: string;
@@ -23,7 +28,7 @@ export async function initializeOfficials(db: Db): Promise<{
 }> {
   const now = new Date();
 
-  const existingCount = await db.collection("electedOfficials").countDocuments();
+  const existingCount = await electedOfficialsCollection<Document>(db).countDocuments();
   if (existingCount > 0) {
     return {
       message: `Officials already initialized (${existingCount} records)`,
@@ -34,7 +39,7 @@ export async function initializeOfficials(db: Db): Promise<{
   // Active preset drives House apportionment (1950 vs 1990 vs 2020 census), the
   // era statehood roster, and the cycle-1 LARP-year anchoring below. Must be read
   // BEFORE the state filter — the apportionment map is what defines statehood.
-  const gameState = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+  const gameState = await gameStateCollection(db).findOne({ _id: "current" });
   const houseSeatsByState = getHouseSeats(gameState?.preset);
 
   // Only full electoral states get Senate/House officials + cycle-1 elections.
@@ -53,7 +58,7 @@ export async function initializeOfficials(db: Db): Promise<{
   //     A territory admitted mid-game carries `admittedYear` and stays a state
   //     through a reset, so it is admitted to this roster too — otherwise a
   //     reset would hand it seats (seedSeats keeps them) but no officials.
-  const allUsStates = await db.collection<State>("states").find({ countryId: "US" }).toArray();
+  const allUsStates = await statesCollection(db).find({ countryId: "US" }).toArray();
   const admittedIds = new Set(
     admittedStateIdsAsOf(allUsStates, gameState?.currentYear ?? Number.POSITIVE_INFINITY)
   );
@@ -126,14 +131,14 @@ export async function initializeOfficials(db: Db): Promise<{
     }
   }
 
-  await db.collection("electedOfficials").insertMany(officialsToInsert);
+  await electedOfficialsCollection<Document>(db).insertMany(officialsToInsert);
 
   // Create cycle-1 elections
-  const existingElections = await db.collection("elections").countDocuments({ cycle: 1 });
+  const existingElections = await electionsCollection<Document>(db).countDocuments({ cycle: 1 });
   let electionsCreated = 0;
 
   if (existingElections === 0) {
-    const { DEFAULT_DURATIONS } = await import("@/lib/turn/perpetualElections");
+    const { DEFAULT_DURATIONS } = await import("@/lib/elections/scheduling");
     const senateDur = DEFAULT_DURATIONS.senate;
     const houseDur = DEFAULT_DURATIONS.house;
 
@@ -200,7 +205,7 @@ export async function initializeOfficials(db: Db): Promise<{
     }
 
     if (electionsToInsert.length > 0) {
-      await db.collection("elections").insertMany(electionsToInsert.map(withCampaignRules));
+      await electionsCollection<Document>(db).insertMany(electionsToInsert.map(withCampaignRules));
       electionsCreated = electionsToInsert.length;
     }
   }

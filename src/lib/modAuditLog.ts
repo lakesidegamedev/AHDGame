@@ -2,6 +2,7 @@ import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import type { ModAuditLogEntry } from "@/lib/db/types";
 import { recordAudit } from "@/lib/audit/recordAudit";
+import { modAuditLogCollection } from "@/lib/db/repositories/modAuditLog";
 
 interface CreateModAuditLogParams {
   moderatorId: string;
@@ -25,7 +26,7 @@ export async function createModAuditLog(params: CreateModAuditLogParams): Promis
   const _id = new ObjectId();
   try {
     const db = await getDb();
-    await db.collection<ModAuditLogEntry>("modAuditLog").insertOne({
+    await modAuditLogCollection(db).insertOne({
       _id,
       moderatorId: new ObjectId(params.moderatorId),
       moderatorName: params.moderatorName,

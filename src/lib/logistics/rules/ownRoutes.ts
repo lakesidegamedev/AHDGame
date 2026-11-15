@@ -119,9 +119,8 @@ export function buildOwnRoutes(args: {
 }
 
 /**
- * Freight capacity each route owner holds per state, keyed like route
- * identities, for the own-shipments-first rule. Only sectors under a non-market
- * supply policy count, since only they plan own routes.
+ * Own freight TEU per route owner per state, for the own-shipments-first rule.
+ * Only non-market supply policies plan own routes.
  */
 export function buildOwnFreightCapacity(args: {
   sectors: readonly OwnRouteSector[];

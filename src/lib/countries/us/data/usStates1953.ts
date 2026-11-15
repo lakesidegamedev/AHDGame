@@ -1,23 +1,15 @@
 /**
- * SEED INDEPENDENCE — DO NOT DERIVE FROM ANOTHER ERA.
- * Each era seed is self-contained. This file MUST NOT import and transform
- * another era's seed data. All values are authored for 1953 directly.
- * Type-only imports are allowed.
+ * SEED INDEPENDENCE: DO NOT DERIVE FROM ANOTHER ERA.
+ * This file is self-contained and MUST NOT import or transform another era's
+ * seed data. Values are authored for 1953 directly. Type-only imports are
+ * allowed.
  *
- * US state seed for the 1953-default preset (Eisenhower / 83rd Congress snapshot —
- * Cold War, post-Korean-War armistice, peak manufacturing, pre-Civil-Rights era).
- * population = 1950 US Census; gdp = estimated 1953 nominal Gross State Product
- * (millions USD; US national nominal GDP 1953 ≈ $387B).
+ * 1953 preset snapshot. population = 1950 US Census; gdp = estimated 1953
+ * nominal Gross State Product (millions USD; US nominal GDP 1953 ~$387B).
  *
- * houseDistricts = **1950-Census apportionment** — the map used for the 83rd–87th
- * Congresses (1953–1963); the 83rd (elected Nov 1952) was the first under it, so a
- * 1953 start seats it. Key differences from the 1970-apportionment (1979 seed):
- * CA 30 (not 43), NY 43 (not 39), PA 30 (not 25), IL 25 (not 24), OH 23,
- * TX 22 (not 24), MI 18 (not 19). The Sunbelt had not yet boomed; industrial
- * Northeast/Midwest had their peak seat counts. Total = 435 (matches HOUSE_SEATS_1953).
- * AK and HI were territories in 1953 (houseDistricts = 0).
- * stateSenateSeats/region are era-invariant.
- * National anchors: US 1950 pop ≈ 150.7M; nominal GDP 1953 ≈ $387B.
+ * houseDistricts = 1950-Census apportionment (83rd-87th Congresses). Total
+ * = 435 (matches HOUSE_SEATS_1953). AK and HI were territories (0 seats).
+ * stateSenateSeats/region are era-invariant. US 1950 pop ~150.7M.
  */
 import type { State } from "@/lib/db/types";
 

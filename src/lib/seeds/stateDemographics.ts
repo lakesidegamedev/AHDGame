@@ -1,4 +1,4 @@
-import type { StateDemographics, StateDemographicGroup } from "@/lib/db/types";
+import type { CensusGroupView, StateDemographicGroup } from "@/lib/db/types";
 import type { DemographicModifiers } from "@/lib/db/types/stateDemographicTurnout";
 import type { CountryId } from "@/lib/constants/countries";
 import {
@@ -104,7 +104,7 @@ function generateStateDemographics(
     positions?: Record<string, Record<string, { economicLean: number; socialLean: number }>>;
     turnout?: Layer1SeedOverride["turnout"];
   } = {}
-): StateDemographics {
+): CensusGroupView {
   // Turnout overrides are authored alongside positions and only applied when
   // the Layer-1 path is on (the legacy path is left untouched).
   const override: Layer1SeedOverride | undefined = opts.layer1Positions
@@ -225,7 +225,7 @@ export function registerAndGenerate(
     positions?: Record<string, Record<string, { economicLean: number; socialLean: number }>>;
     turnout?: Layer1SeedOverride["turnout"];
   } = {}
-): StateDemographics {
+): CensusGroupView {
   stateCensusDataByEra[era][stateId] = config;
   return generateStateDemographics(stateId, config, era, "US", opts);
 }
@@ -240,7 +240,7 @@ export function generateStateDemographicsForTest(
     positions?: Record<string, Record<string, { economicLean: number; socialLean: number }>>;
     turnout?: Layer1SeedOverride["turnout"];
   }
-): StateDemographics {
+): CensusGroupView {
   return generateStateDemographics(stateId, config, era, "US", opts);
 }
 
@@ -250,7 +250,7 @@ for (const [stateId, config] of Object.entries(importedCensusData)) {
 }
 
 // Generate demographics from imported data
-export const stateDemographics: StateDemographics[] = Object.entries(importedCensusData).map(
+export const stateDemographics: CensusGroupView[] = Object.entries(importedCensusData).map(
   ([stateId, config]) => registerAndGenerate(stateId, config, "2019")
 );
 

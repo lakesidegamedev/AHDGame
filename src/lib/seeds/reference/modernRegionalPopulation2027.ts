@@ -4,24 +4,21 @@
  * These game anchors do not replace dated census observations.
  */
 import { allocatePopulationTotal } from "@/lib/seeds/rules/populationAllocation";
+import { NATIONAL_FIGURES_2027 } from "./nationalFigures2027";
 
-/**
- * Fiscal population anchors from `getNationalBudgetSeedConfigsForPreset`.
- * They are game budget inputs, not claimed to be official demographic counts.
- * Regional shares remain the documented modern seed shares until each country
- * has a sourced contemporary regional series.
- */
+/** National 2027 population totals, the same figures the 2027 budget rows carry. */
 export const MODERN_REGIONAL_POPULATION_ANCHORS_2027 = {
-  IE: 5_100_000,
-  CN: 1_412_000_000,
-  NG: 200_000_000,
-  FR: 67_000_000,
-  IT: 60_400_000,
-  ES: 47_000_000,
-  SE: 10_300_000,
-  GR: 10_700_000,
-  AT: 8_900_000,
-  FI: 5_500_000,
+  IE: NATIONAL_FIGURES_2027.IE.population,
+  CN: NATIONAL_FIGURES_2027.CN.population,
+  NG: NATIONAL_FIGURES_2027.NG.population,
+  FR: NATIONAL_FIGURES_2027.FR.population,
+  IT: NATIONAL_FIGURES_2027.IT.population,
+  ES: NATIONAL_FIGURES_2027.ES.population,
+  SE: NATIONAL_FIGURES_2027.SE.population,
+  GR: NATIONAL_FIGURES_2027.GR.population,
+  AT: NATIONAL_FIGURES_2027.AT.population,
+  FI: NATIONAL_FIGURES_2027.FI.population,
+  TR: NATIONAL_FIGURES_2027.TR.population,
 } as const;
 
 export type ModernRegionalPopulationCountry = keyof typeof MODERN_REGIONAL_POPULATION_ANCHORS_2027;

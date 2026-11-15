@@ -75,7 +75,7 @@ interface SurpriseDecision {
 
 /**
  * Pure builder for a procedurally-spawned "surprise" case's wire post
- * (#3607 flavor content — not part of the curated landmark catalogue, so
+ * (flavor content, not part of the curated landmark catalogue, so
  * there's no authored holding/alternate text to draw on). Kept deliberately
  * generic; a tied Court (majoritySide 0) gets a distinct "no ruling" post
  * rather than a fabricated outcome.

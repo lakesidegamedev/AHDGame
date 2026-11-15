@@ -1,38 +1,10 @@
 /**
- * Curated Registration / Org bootstrap seed values for the 1991-default
- * preset. Mirrors the structure of `registrationLanes.ts` but anchored to
- * 1988-92 election baselines:
- *
- *   - US: 1988 presidential + 1990 midterm + state-level partisanship
- *     (Solid Democratic South still in place; the Reagan / Bush coalition
- *     hadn't fully realigned the South yet — many Southern states were
- *     "Solid D" by registration even as they voted Republican at the
- *     federal level). DC is seeded as strong-D (1988 Dukakis 82.7%).
- *   - UK: 1992 general election by region (Major's Tory win, Labour
- *     opposition; SDP + Liberals merged into LD in 1988 so LD is
- *     historically accurate; no Reform / Brexit Party). Region IDs match
- *     `ukRegions.ts` (LON/SEE/SWE/EAE/EMI/WMI/YHU/NWE/NEE/SCO/WAL/NIR).
- *   - DE: 1990 federal election (first post-reunification ballot — CDU/CSU
- *     43.8 / SPD 33.5 / FDP 11.0 / Greens-B90 5.1 / PDS 2.4; PDS strong in
- *     the new East-German Länder). Uses the 1991-only `PDS` default
- *     directly; no modern Die-Linke proxy.
- *   - JP: 1990 lower-house election (LDP 46 / JSP 24 / Komeito 8 / JCP 8 /
- *     DSP 5). Uses the 1991-only `JSP` and `DSP` defaults directly. Region
- *     IDs match `jpRegions.ts` (HOK/TOH/KAN/CHU/KNS/CGK/SHI/KYU).
- *   - BR: 1990 Câmara dos Deputados elections by macro-region. Uses
- *     1991-only PMDB/PFL/PDT/PDS/PTB/PRN/PSB/PCDOB defaults plus the
- *     surviving PT and PSD. Sinn-Fein-style "br_other" rolls to
- *     unaffiliated.
- *   - IE: 1989 Dáil election by region. Uses 1991-only WP (Workers'
- *     Party) and PD (Progressive Democrats) defaults plus FF/FG/LAB.
- *     Green Party had no Dáil presence in 1991 (single seat in Dublin
- *     South only); rolled to unaffiliated.
- *
- * `AFD` (founded 2013) and `RUK` (founded 2018) are not seeded.
- *
- * Curated by historical election results 2026-05; intended as a
- * playable first pass rather than fully precise per-state data. Refine
- * via per-state overrides when needed.
+ * Curated Registration / Org bootstrap seeds for the 1991-default preset,
+ * anchored to 1988-92 election baselines. Uses 1991-only party defaults (PDS,
+ * JSP, DSP, PMDB/PFL/PDT/PDS/PTB/PRN/PSB/PCDOB, WP, PD) rather than modern
+ * proxies; parties founded later (AFD, RUK) are not seeded. Region IDs match
+ * their respective *Regions.ts files. Playable first pass; refine via per-state
+ * overrides.
  */
 
 import type { StateRegistrationSeed } from "./registrationLanes";

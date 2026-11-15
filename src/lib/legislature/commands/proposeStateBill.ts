@@ -12,7 +12,7 @@ import {
 } from "@/lib/constants/countries";
 import type { AuthUserWithCharacter } from "@/lib/auth";
 import { STATE_TERMINAL_STATUSES } from "@/lib/congress/billProposalLimits";
-import type { Character, ElectedOfficial, PoliticalParty, StateBill } from "@/lib/db/types";
+import type { ElectedOfficial, PoliticalParty, StateBill } from "@/lib/db/types";
 import { isBannedParty } from "@/lib/turn/onePartyConstraints";
 import { getCountryState } from "@/lib/countryState";
 import type { RegionalBudget } from "@/lib/db/types/regionalBudget";
@@ -21,6 +21,11 @@ import type { LegislatureCommandResult } from "@/lib/legislature/commands/types"
 import { getGameState } from "@/lib/gameState";
 import { snapshotPolicyProvisionsInPlace } from "@/lib/legislature/provisionEnrichment";
 import { validateStateBillProvisions } from "@/lib/legislature/commands/validateStateBillProvisions";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { stateBillsCollection } from "@/lib/db/repositories/stateBills";
+import { regionalBudgetsCollection } from "@/lib/db/repositories/regionalBudgets";
 
 const VOTING_DURATION_HOURS = 24;
 
@@ -98,9 +103,10 @@ export async function proposeStateBill(
   // lifts the banned-party restriction.
   const runtimeState = await getCountryState(db, countryId);
   if (runtimeState.governmentType === "onePartyState" && character.party) {
-    const sponsorParty = await db
-      .collection<PoliticalParty>("politicalParties")
-      .findOne({ sequentialId: parseInt(character.party, 10), countryId });
+    const sponsorParty = await politicalPartiesCollection(db).findOne({
+      sequentialId: parseInt(character.party, 10),
+      countryId,
+    });
     // RUNTIME shape, not `postCountryConfig` — see the note in `nationalBillActions`.
     if (isBannedParty({ governmentType: runtimeState.governmentType }, sponsorParty)) {
       return {
@@ -111,7 +117,7 @@ export async function proposeStateBill(
   }
 
   if (!adminOverride || !user.isAdmin) {
-    const existingActiveBill = await db.collection<StateBill>("stateBills").findOne({
+    const existingActiveBill = await stateBillsCollection(db).findOne({
       $or: [{ sponsorId: character._id }, { proposalPayerId: character._id }],
       stateId,
       status: { $nin: STATE_TERMINAL_STATUSES },
@@ -133,7 +139,7 @@ export async function proposeStateBill(
     }
   } else if (!partyNpp) {
     const subNationalOffice = getSubNationalLegislatureKey(countryId);
-    const official = await db.collection<ElectedOfficial>("electedOfficials").findOne({
+    const official = await electedOfficialsCollection(db).findOne({
       officeType: subNationalOffice,
       state: stateId,
       characterId: character._id,
@@ -207,7 +213,7 @@ export async function proposeStateBill(
         },
       };
     }
-    const spendResult = await db.collection<Character>("characters").updateOne(
+    const spendResult = await charactersCollection(db).updateOne(
       {
         _id: character._id,
         actions: { $gte: actionCost },
@@ -269,10 +275,10 @@ export async function proposeStateBill(
 
   let result;
   try {
-    result = await db.collection<StateBill>("stateBills").insertOne(bill as StateBill);
+    result = await stateBillsCollection(db).insertOne(bill as StateBill);
   } catch (error) {
     if (!(adminOverride && user.isAdmin)) {
-      await db.collection<Character>("characters").updateOne(
+      await charactersCollection(db).updateOne(
         { _id: character._id },
         {
           $inc: {
@@ -303,9 +309,7 @@ export async function proposeStateBill(
     turnsOverBudget: number;
   } | null = null;
   if (postCountryConfig.subNationalChamber?.regionalModel) {
-    const budgetDoc = await db
-      .collection<RegionalBudget>("regionalBudgets")
-      .findOne({ _id: stateId });
+    const budgetDoc = await regionalBudgetsCollection(db).findOne({ _id: stateId });
     if (budgetDoc) {
       budget = {
         totalBudget: budgetDoc.totalBudget,

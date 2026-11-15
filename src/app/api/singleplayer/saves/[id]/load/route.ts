@@ -4,6 +4,7 @@ import { errorResponse } from "@/lib/api/errors";
 import { getDb } from "@/lib/mongodb";
 import { isSaveId, requestLoad } from "@/lib/singleplayer/saves";
 import { saveRouteError } from "@/lib/singleplayer/saveRoutes";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export const dynamic = "force-dynamic";
 
@@ -19,11 +20,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   try {
     const { id } = await params;
     if (!isSaveId(id)) return errorResponse(400, "Not a save id.");
-    const state = await (
+    const state = await gameStateCollection<{ _id: string; isProcessing?: boolean }>(
       await getDb()
-    )
-      .collection<{ _id: string; isProcessing?: boolean }>("gameState")
-      .findOne({ _id: "current" }, { projection: { isProcessing: 1 } });
+    ).findOne({ _id: "current" }, { projection: { isProcessing: 1 } });
     if (state?.isProcessing === true)
       return errorResponse(409, "A turn is running. Load a save when it finishes.");
     const save = await requestLoad(id);

@@ -126,17 +126,11 @@ function botTokenRejected(): { ok: false; response: NextResponse } {
 export const SYNTHETIC_RUN_HEADER = "X-Synthetic-Run";
 
 /**
- * Decide what a claimed synthetic run means for this request.
- *
- * A valid session with no bot header already satisfies these guards, so an
- * automated caller was previously indistinguishable from a player: it could act
- * freely and its actions were unattributable afterwards. The header closes that
- * by making automation declare itself.
- *
- * It is checked, not trusted. A request claiming a run against a character that
- * is not marked synthetic is refused outright rather than merely unlabelled —
- * otherwise the header would be a way for a real account to opt out of being
- * treated as a person, which is the opposite of the point.
+ * Interpret a claimed synthetic run. A valid session with no bot header
+ * already passes these guards, so automation was previously unattributable.
+ * The header is checked, not trusted: a claim against a non-synthetic
+ * character is refused, not merely unlabelled, so a real account cannot
+ * opt out of being treated as a person.
  */
 function synthetic(
   request: Request,

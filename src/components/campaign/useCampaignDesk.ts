@@ -130,9 +130,7 @@ export function useCampaignDesk(campaignId: string | null): CampaignDesk {
       if (!res.ok) return;
       const data = await res.json();
       const meCharacter = data?.user?.character;
-      // Prefer the stored local balance over the legacy anchor mirror
-      // (in-game bug #0553). The mirror drifts under floating FX and can
-      // block actions even when the real balance is fine.
+      // Prefer the stored local balance over the legacy anchor mirror, which drifts under floating FX and can block actions.
       const storedOrLegacy = meCharacter?.campaignFundsStored ?? meCharacter?.funds ?? null;
       setMe({
         funds: storedOrLegacy,

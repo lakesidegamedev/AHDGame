@@ -12,9 +12,11 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { createNotification } from "@/lib/notifications";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
-import type { Corporation } from "@/lib/db/types";
 import { assertTreasuryAuthority } from "@/lib/nationalization/authority";
 import { isStateOwned } from "@/lib/nationalization/nationalCorporation";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporationCeoVotesCollection } from "@/lib/db/repositories/corporationCeoVotes";
+import type { Document } from "mongodb";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string }>;
@@ -53,7 +55,7 @@ export async function POST(_request: Request, { params }: RouteParams) {
       );
     }
 
-    const corps = db.collection<Corporation>("corporations");
+    const corps = corporationsCollection(db);
     const target = await corps.findOne({ ...idQuery, countryOwnerId: countryId });
     if (!target || !isStateOwned(target)) {
       return errorResponse(404, "National Corporation not found for this country.");
@@ -77,7 +79,7 @@ export async function POST(_request: Request, { params }: RouteParams) {
 
     // Cleanup any stale CEO votes (a NatCorp seat refills via SoT appointment,
     // not a shareholder election, but clear them so nothing dangles).
-    await db.collection("corporationCeoVotes").deleteMany({ corporationId: target._id });
+    await corporationCeoVotesCollection<Document>(db).deleteMany({ corporationId: target._id });
 
     if (removedUserId) {
       await createNotification({

@@ -1,7 +1,8 @@
 import type { Db } from "mongodb";
-import type { FederalBudget } from "@/lib/db/types/budget";
 import { deriveFiscalState } from "@/lib/budget/treasuryBalance";
 import type { Migration, MigrationResult } from "../types";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 /**
  * Reprice persisted sovereign fields after removing the historical-anchor
@@ -13,8 +14,7 @@ import type { Migration, MigrationResult } from "../types";
  * brought into line with the current model.
  */
 async function repriceCurrentSovereignRisk(db: Db, dryRun: boolean): Promise<MigrationResult> {
-  const budgets = await db
-    .collection<FederalBudget>("federalBudget")
+  const budgets = await federalBudgetCollection(db)
     .find({ mergedInto: { $exists: false } })
     .toArray();
 
@@ -57,12 +57,10 @@ async function repriceCurrentSovereignRisk(db: Db, dryRun: boolean): Promise<Mig
     budgetsUpdated += 1;
 
     if (!dryRun) {
-      await db
-        .collection<FederalBudget>("federalBudget")
-        .updateOne({ _id: budget._id }, { $set: update });
+      await federalBudgetCollection(db).updateOne({ _id: budget._id }, { $set: update });
     }
 
-    if (budget.countryId === "DD") {
+    if (countryHasFeature("ddSeeds", budget.countryId)) {
       notes.push(
         `${dryRun ? "would reprice" : "repriced"} DD: ${derived.creditRating} at ${(derived.interestRate * 100).toFixed(1)}%`
       );

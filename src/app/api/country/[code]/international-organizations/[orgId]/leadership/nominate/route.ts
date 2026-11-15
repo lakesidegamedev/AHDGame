@@ -33,8 +33,8 @@ import {
   getDiplomaticActionsRemaining,
   spendDiplomaticAction,
 } from "@/lib/internationalOrganizations/diplomaticActions";
-import type { Character } from "@/lib/db/types";
 import { isPendingOrganizationLeadershipElectionDuplicateKey } from "@/lib/elections/duplicateKey";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const nominateSchema = z.object({
   candidateCharacterId: z
@@ -122,7 +122,7 @@ export async function POST(
     // Validate candidate: must be a sitting head of government OR foreign minister
     // of a member country.
     const candidateId = new ObjectId(body.data.candidateCharacterId);
-    const candidate = await db.collection<Character>("characters").findOne({ _id: candidateId });
+    const candidate = await charactersCollection(db).findOne({ _id: candidateId });
     if (!candidate) {
       return NextResponse.json(badRequest("Candidate character not found.").toJson(), {
         status: 400,

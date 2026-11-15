@@ -61,3 +61,44 @@ export function regionMatchesTags(
   if (!set) return false;
   return required.every((tag) => set.has(tag));
 }
+
+/**
+ * Coarse national hazard tags for background countries, which run an aggregate
+ * model rather than a region map. Authored game design from each country's
+ * broad geography; used for climate exposure, not for regional disaster spawns.
+ */
+export const BACKGROUND_NATIONAL_HAZARDS: Partial<Record<CountryId, readonly HazardTag[]>> = {
+  IE: ["coastal", "flood"],
+  BR: ["hot", "coastal", "flood", "wildfire"],
+  NG: ["hot", "arid", "coastal", "flood"],
+  RU: ["wintry", "wildfire", "flood"],
+  PL: ["flood", "wintry"],
+  HU: ["arid", "flood"],
+  RO: ["flood", "seismic", "wintry"],
+  BG: ["flood", "seismic", "wildfire"],
+  FR: ["coastal", "flood", "wildfire"],
+  IT: ["hot", "seismic", "volcanic", "coastal", "flood", "wildfire"],
+  ES: ["hot", "arid", "coastal", "wildfire"],
+  SE: ["wintry", "coastal", "wildfire"],
+  TR: ["hot", "arid", "seismic", "wildfire"],
+  AT: ["wintry", "flood"],
+  FI: ["wintry", "coastal"],
+  GR: ["hot", "arid", "seismic", "coastal", "wildfire"],
+};
+
+/**
+ * Tags that set a region's climate exposure: its own curated tags, or its
+ * country's coarse national tags when the region carries none.
+ */
+export function getClimateExposureTags(countryId: CountryId, regionId: string): HazardTag[] {
+  const own = REGION_TAGS.get(`${countryId}:${regionId}`);
+  if (own && own.size > 0) return Array.from(own);
+  return [...(BACKGROUND_NATIONAL_HAZARDS[countryId] ?? [])];
+}
+
+/** Every hazard tag a country carries, regional or national. */
+export function getCountryHazardTags(countryId: CountryId): HazardTag[] {
+  const tags = new Set<HazardTag>(BACKGROUND_NATIONAL_HAZARDS[countryId] ?? []);
+  for (const tag of Object.keys(HAZARD_GROUPS[countryId] ?? {})) tags.add(tag as HazardTag);
+  return Array.from(tags);
+}

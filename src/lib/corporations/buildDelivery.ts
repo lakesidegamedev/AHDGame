@@ -1,25 +1,19 @@
 /**
  * Smooth (per-turn) build delivery for the plants tier.
  *
- * A capacity build used to be binary: an order sat fully under construction and
- * the WHOLE `unitsOrdered` landed on a single turn (`onlineTurn`). Large orders
- * therefore appeared as one lump. Orders placed with `smooth: true` instead
- * deliver LINEARLY across their build window — a slice of capacity (and a
- * proportional slice of the paid cost leaving CIP) every turn from `startTurn`
- * to `onlineTurn`.
+ * Orders placed with `smooth: true` deliver linearly across their build window: a
+ * slice of capacity (and a proportional slice of the paid cost leaving CIP) every
+ * turn from `startTurn` to `onlineTurn`, instead of landing as one lump.
  *
- * The whole model is a PURE FUNCTION of the order's immutable fields
- * (`startTurn`, `onlineTurn`, `unitsOrdered`, `costPaidAnchor`) and the current
- * turn. Nothing is stored per order about how much has been delivered, so the
- * turn processor never has to mutate an in-flight order — it keeps writing only
- * the C4-safe delta (`$pull` the orders that fully landed, `$inc` the CIP those
- * turns released). Capacity accumulates because each turn adds that turn's slice
- * to `capitalStock`, and the per-turn slices telescope to exactly `unitsOrdered`
- * by `onlineTurn`.
+ * The model is a pure function of the order's immutable fields (`startTurn`,
+ * `onlineTurn`, `unitsOrdered`, `costPaidAnchor`) and the current turn. Nothing is
+ * stored per order about delivery progress, so the turn processor never mutates an
+ * in-flight order; it keeps writing only the C4-safe delta (`$pull` fully-landed
+ * orders, `$inc` the CIP those turns released). Per-turn slices telescope to
+ * exactly `unitsOrdered` by `onlineTurn`.
  *
- * Legacy orders (no `smooth` flag) and any degenerate order whose window is
- * non-positive keep the old all-at-once behaviour, so this is safe to ship with
- * orders already in flight: they land exactly as they would have.
+ * Legacy orders (no `smooth` flag) and degenerate orders with a non-positive
+ * window keep the all-at-once behaviour, so in-flight orders land unchanged.
  */
 
 import type { SectorBuildOrder } from "@/lib/db/types";
@@ -56,18 +50,12 @@ function safeCost(order: SectorBuildOrder): number {
 }
 
 /**
- * The last turn whose build deliveries already landed, which a turn's delivery
- * window starts after.
- *
- * Usually the previous turn. An economy pause skips the corporation turn while
- * the turn counter keeps moving, so the build step can last have run many
- * turns ago (#5169). `sectorSettledTurn` is the stamp the turn writes on the
- * sector together with the deliveries themselves, so a replayed turn finds its
- * own number and delivers nothing twice. A sector that has never been stamped
- * (created during a pause, or after a reset) falls back to the world stamp:
- * the last turn the corporation turn ran in this world. With neither, the
- * previous turn. A stamp after `currentTurn` belongs to an older world and is
- * ignored.
+ * Last turn whose build deliveries already landed. Sectors are stamped when
+ * deliveries land, so a replayed turn finds its own stamp and delivers
+ * nothing twice. Falls back to the world stamp (last turn the corporation
+ * turn ran) for unstamped sectors, then to the previous turn. Stamps ahead
+ * of currentTurn belong to an older world and are ignored. Economy pauses
+ * make "previous turn" unreliable as a fallback.
  */
 export function resolveBuildSettledTurn(
   currentTurn: number,
@@ -129,13 +117,12 @@ export function costReleasedThisTurn(order: SectorBuildOrder, currentTurn: numbe
  * does not add capacity on every turn.
  *
  * A linear smooth order adds exactly `unitsOrdered / window` each turn. A
- * whole-plant order adds whole plants, so it only has a per-turn rate when at
- * least one plant lands each turn, and then the rate is an average of lumpy
- * steps. With fewer plants than turns it lands in steps with empty turns
- * between, and an order under one plant lands in one piece on its online turn;
- * quoting "about 0.1 a turn" for that described capacity that never arrives
- * that way (ticket 1753). Legacy orders land all at once and have no rate
- * either. Use `nextArrivalTurn` to say when a stepped order next lands.
+ * whole-plant order only has a per-turn rate when at least one plant lands per
+ * turn, and then it is an average of lumpy steps. With fewer plants than turns
+ * it lands in steps with empty turns between; an order under one plant lands in
+ * one piece on its online turn, so it has no steady rate. Legacy orders land all
+ * at once and have no rate either. Use `nextArrivalTurn` to say when a stepped
+ * order next lands.
  */
 export function steadyUnitsPerTurn(order: SectorBuildOrder, currentTurn: number): number {
   const units = safeUnits(order);

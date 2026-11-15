@@ -1,28 +1,24 @@
 /**
- * NPP stance drift (#101) — nudges each NPP's economic/social stance toward a
- * per-NPP TARGET each interval, gated by how stubborn each NPP is. A stubborn NPP
- * barely moves; a flexible one converges to its target over time.
+ * NPP stance drift: nudges each NPP's economic/social stance toward a per-NPP
+ * target each interval, gated by how stubborn the NPP is.
  *
  * The target is NOT the raw state lean. Drifting straight to the electorate
- * centre made every flexible NPP of both parties collapse onto the same point
- * (the appeal-maximising position), erasing party contrast and letting NPPs mimic
- * the ideal winning stance a fixed-position player could never match. The target
- * is now party-anchored and only pulled part-way toward the state lean, with a
- * stable per-NPP offset. See {@link nppStanceTarget}; the one-off re-scatter heal
- * uses the same function, so a healed NPP already sits on its target and does not
- * re-mimic on the next cycle.
- *
- * Drift-only by design: it reads each NPP's CURRENT stance and nudges it forward.
- * Stance (`policies.economic` / `.social`) and the lean (`cachedEconomicLean` /
- * `cachedSocialLean`) share the same -5 (left) to +5 (right) axis. `domainPositions`
- * are re-derived deterministically (`noise: 0`) so per-domain stances track the
- * axes — what the cross-pressure resolver reads for modern bills.
+ * centre collapsed every flexible NPP onto the same appeal-maximising point,
+ * erasing party contrast. The target is party-anchored, pulled part-way toward
+ * the state lean, with a stable per-NPP offset. Drift-only: reads the current
+ * stance and nudges forward. Stance and lean share the -5 (left) to +5 (right)
+ * axis; `domainPositions` are re-derived deterministically (`noise: 0`).
  */
 import type { AnyBulkWriteOperation } from "mongodb";
 import type { Db } from "@/lib/mongodb";
-import type { LegislationType, NPP, PoliticalParty, State } from "@/lib/db/types";
+import type { LegislationType, NPP } from "@/lib/db/types";
 import { deriveDomainPositions } from "@/lib/npp/domainPositions";
 import { nppStanceTarget } from "@/lib/npp/stanceTarget";
+import { getNppsCollection } from "@/lib/db/collections/npps";
+import { getStatesCollection } from "@/lib/db/collections/states";
+import { getPoliticalPartiesCollection } from "@/lib/db/collections/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 
 /**
  * Max updates per bulkWrite. Sized well under MongoDB's 16MB per-command BSON
@@ -63,8 +59,9 @@ export async function processNppStanceDrift(
 ): Promise<{ drifted: number }> {
   if (currentTurn % NPP_STANCE_DRIFT_INTERVAL !== 0) return { drifted: 0 };
 
-  const npps = await db
-    .collection<NPP>("npps")
+  const npps = await (
+    await getNppsCollection(db)
+  )
     .find(
       { retiredAt: null },
       {
@@ -85,8 +82,9 @@ export async function processNppStanceDrift(
   if (npps.length === 0) return { drifted: 0 };
 
   const stateIds = [...new Set(npps.map((n) => n.homeState).filter(Boolean))];
-  const states = await db
-    .collection<State>("states")
+  const states = await (
+    await getStatesCollection(db)
+  )
     .find(
       { _id: { $in: stateIds } },
       { projection: { _id: 1, cachedEconomicLean: 1, cachedSocialLean: 1 } }
@@ -96,8 +94,9 @@ export async function processNppStanceDrift(
 
   // Party positions anchor each NPP's target so both parties don't converge on
   // the same state lean. Keyed by countryId + sequentialId to match npp.party.
-  const parties = await db
-    .collection<PoliticalParty>("politicalParties")
+  const parties = await (
+    await getPoliticalPartiesCollection(db)
+  )
     .find(
       {},
       { projection: { sequentialId: 1, countryId: 1, economicPosition: 1, socialPosition: 1 } }
@@ -105,11 +104,7 @@ export async function processNppStanceDrift(
     .toArray();
   const partyByKey = new Map(parties.map((p) => [`${p.countryId}:${p.sequentialId}`, p]));
 
-  const legislationTypes = await db
-    // full-read(legislationTypes): deriveDomainPositions derives a stance from every type
-    .collection<LegislationType>("legislationTypes")
-    .find({})
-    .toArray();
+  const legislationTypes = await legislationTypesCollection(db).find({}).toArray();
 
   const now = new Date();
   const ops: AnyBulkWriteOperation<NPP>[] = [];
@@ -172,15 +167,12 @@ export async function processNppStanceDrift(
     });
   }
 
-  // Chunk the write. Each op carries a full `domainPositions` map, so at a few
-  // thousand NPPs the single bulkWrite crossed MongoDB's hard 16MB BSON command
-  // limit and threw — measured at 16,810,543 bytes against a 16,809,984 ceiling.
-  // The phase then failed EVERY turn it exceeded the limit, and because the
-  // runtime converts a phase throw into a warning the run reported healthy while
-  // no NPP stance drifted at all. This is the recurring nppStanceDrift failure
-  // (#3703); it grows with NPP count, so v4 worlds hit it far more often.
+  // Chunk the write. Each op carries a full `domainPositions` map; a single
+  // bulkWrite crosses MongoDB's 16MB BSON command limit at scale, and the phase
+  // throw is downgraded to a warning so drift silently stops. Chunking keeps
+  // command size bounded as NPP count grows.
   for (let i = 0; i < ops.length; i += STANCE_DRIFT_BULK_CHUNK) {
-    await db.collection<NPP>("npps").bulkWrite(ops.slice(i, i + STANCE_DRIFT_BULK_CHUNK));
+    await nppsCollection(db).bulkWrite(ops.slice(i, i + STANCE_DRIFT_BULK_CHUNK));
   }
   return { drifted: ops.length };
 }

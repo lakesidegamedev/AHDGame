@@ -7,10 +7,10 @@ import { setDividendRateSchema } from "@/lib/api/schemas/corporations";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { resolveCorporation, requireCeo } from "@/lib/api/corporations/resolveQuery";
 import { hasOpenPrivatizationVote } from "@/lib/corporations/commands/privatization/openVoteGuard";
-import type { Corporation } from "@/lib/db/types";
 import { logWireEvent, wireHeadlineDividend } from "@/lib/wireEvent";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { recordAudit } from "@/lib/audit/recordAudit";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -73,7 +73,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     const now = new Date();
     const cooldownCutoff = new Date(now.getTime() - DIVIDEND_COOLDOWN_MS);
-    const update = await db.collection<Corporation>("corporations").updateOne(
+    const update = await corporationsCollection(db).updateOne(
       {
         _id: corporation._id,
         $or: [

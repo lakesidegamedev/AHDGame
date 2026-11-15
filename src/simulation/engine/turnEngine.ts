@@ -1,17 +1,14 @@
 /**
  * Which turn engine processes a turn, and which implementation each phase runs.
  *
- * The turn engine is versioned separately from the app. `gameConfig.turnEngineVersion`
- * picks the engine for a NEW turn; the choice is read once, at turn start, and stamped
- * on the in-flight turn so every phase of that turn runs the same code. A turn that
- * crashes and resumes continues on the engine that started it — switching engines
- * mid-turn would let half a world be produced by one set of rules and half by another,
- * which is exactly the outcome change this versioning exists to prevent.
+ * `gameConfig.turnEngineVersion` picks the engine for a new turn; the choice
+ * is read once at turn start and stamped on the in-flight turn, so every phase
+ * and any resume stays on the engine that started it. Switching mid-turn would
+ * let one set of rules produce half a world, which this versioning prevents.
  *
- * v2 is not a fork of the engine: it reuses the phase registry, runtime, phase names,
- * resume codecs and crash recovery unchanged and swaps in optimized implementations
- * phase by phase. Any phase without a v2 implementation runs its v1 code, so an
- * incomplete v2 is always a slower v2, never a differently-ruled world.
+ * v2 reuses the phase registry, runtime, phase names, resume codecs and crash
+ * recovery, swapping in optimized phases individually. Phases without a v2
+ * implementation run v1, so an incomplete v2 is slower, never differently ruled.
  */
 
 export const TURN_ENGINE_SELECTIONS = ["v1", "v2"] as const;

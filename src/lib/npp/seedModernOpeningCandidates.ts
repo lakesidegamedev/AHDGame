@@ -16,8 +16,17 @@ import type {
 import { getAllCountryAccess } from "@/lib/countryAccess";
 import { isNationwideDirectExecutiveElection } from "@/lib/elections/nationwideExecutive";
 import { canPartyFieldInState } from "@/lib/turn/nppEntryLogic";
-import { DEFAULT_CANDIDATE_SUPPORT } from "@/lib/electionEngine/electionFormulaFactors";
+import { DEFAULT_CANDIDATE_SUPPORT } from "@/lib/elections/engine/electionFormulaFactors";
 import { generateNPP, type NPPGenerationContext } from "./generator";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { countersCollection } from "@/lib/db/repositories/counters";
 
 /** Called only by fresh historical bootstrap, never by a turn or reference refresh. */
 export async function seedModernOpeningCandidates(
@@ -27,12 +36,12 @@ export async function seedModernOpeningCandidates(
   log: (message: string) => void = () => {}
 ): Promise<number> {
   if (preset !== "1991-default" && preset !== "2019-default") return 0;
-  const gs = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { projection: { currentTurn: 1, startingPartiesMode: 1 } });
+  const gs = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { projection: { currentTurn: 1, startingPartiesMode: 1 } }
+  );
   const access = await getAllCountryAccess(db);
-  const races = await db
-    .collection<Election>("elections")
+  const races = await electionsCollection(db)
     .find(
       { status: "active" },
       {
@@ -48,25 +57,21 @@ export async function seedModernOpeningCandidates(
     )
     .sort({ countryId: 1, state: 1, _id: 1 })
     .toArray();
-  const candidates = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const candidates = await electionCandidatesCollection(db)
     .find({ status: "active" }, { projection: { electionId: 1, nppId: 1, characterId: 1 } })
     .toArray();
   const covered = new Set(candidates.map((c) => String(c.electionId)));
   const empty = races.filter((r) => !covered.has(String(r._id)));
   if (empty.length === 0) return 0;
-  const parties = await db
-    .collection<PoliticalParty>("politicalParties")
+  const parties = await politicalPartiesCollection(db)
     .find({ isDefault: true }, { projection: { sequentialId: 1, countryId: 1 } })
     .sort({ sequentialId: 1 })
     .toArray();
-  const regions = await db
-    .collection<{ _id: string; countryId: string }>("states")
+  const regions = await statesCollection<{ _id: string; countryId: string }>(db)
     .find({}, { projection: { _id: 1, countryId: 1 } })
     .sort({ _id: 1 })
     .toArray();
-  const orgs = await db
-    .collection<StatePartyOrg>("statePartyOrg")
+  const orgs = await statePartyOrgCollection(db)
     .find({}, { projection: { stateId: 1, partyId: 1, hasPresence: 1 } })
     .toArray();
   const orgByKey = new Map(orgs.map((o) => [`${o.stateId}:${o.partyId}`, o]));
@@ -117,8 +122,7 @@ export async function seedModernOpeningCandidates(
     slots.push(slot);
   }
   if (slots.length === 0) return 0;
-  const actors = await db
-    .collection<NPP>("npps")
+  const actors = await nppsCollection(db)
     .find(
       {},
       {
@@ -134,8 +138,7 @@ export async function seedModernOpeningCandidates(
       }
     )
     .toArray();
-  const incumbents = await db
-    .collection<{ nppId?: unknown }>("electedOfficials")
+  const incumbents = await electedOfficialsCollection<{ nppId?: unknown }>(db)
     .find({ nppId: { $exists: true } }, { projection: { nppId: 1 } })
     .toArray();
   const claimed = new Set([
@@ -180,20 +183,18 @@ export async function seedModernOpeningCandidates(
     } as ElectionCandidate);
   }
   if (generated.length > 0) {
-    const counter = await db
-      .collection<Counter>("counters")
-      .findOneAndUpdate(
-        { _id: "npp" },
-        { $inc: { seq: generated.length } },
-        { upsert: true, returnDocument: "after" }
-      );
+    const counter = await countersCollection(db).findOneAndUpdate(
+      { _id: "npp" },
+      { $inc: { seq: generated.length } },
+      { upsert: true, returnDocument: "after" }
+    );
     if (!counter) throw new Error("Failed to reserve opening candidate IDs");
     generated.forEach((actor, index) => {
       actor.sequentialId = counter.seq - generated.length + index + 1;
     });
-    await db.collection<NPP>("npps").insertMany(generated);
+    await nppsCollection(db).insertMany(generated);
   }
-  await db.collection<ElectionCandidate>("electionCandidates").insertMany(entries);
+  await electionCandidatesCollection(db).insertMany(entries);
   log(
     `Seeded ${entries.length} modern opening candidate fields with ${generated.length} new unseated actors`
   );

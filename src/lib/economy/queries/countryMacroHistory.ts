@@ -10,8 +10,8 @@
  * so the page never rebuilds history from growth rates and adds no work to the
  * turn.
  */
+import { getGameStateCollection } from "@/lib/db/collections/gameState";
 import type { Db } from "mongodb";
-import type { GameState } from "@/lib/db/types/gameState";
 import { getMacroTelemetryCollection } from "@/lib/db/collections/longHorizonTelemetry";
 import { buildWorldId } from "@/lib/telemetry/longHorizon/rules";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
@@ -56,7 +56,9 @@ export async function buildCountryMacroHistory(
   const turns = normalizeHistoryTurns(requestedTurns);
   const currencyCode = COUNTRY_CONFIGS[countryId].currencyCode;
 
-  const gameState = await db.collection<GameState>("gameState").findOne(
+  const gameState = await (
+    await getGameStateCollection(db)
+  ).findOne(
     { _id: "current" },
     {
       projection: { _id: 1, currentTurn: 1, preset: 1, iteration: 1 },

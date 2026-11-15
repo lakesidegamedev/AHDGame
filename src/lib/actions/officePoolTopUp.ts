@@ -1,6 +1,6 @@
 import type { Db, ObjectId } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
-import type { Character, ElectedOfficial, GovernorOfficeState } from "@/lib/db/types";
+import type { ElectedOfficial, GovernorOfficeState } from "@/lib/db/types";
 import type { SupremeCourtSeat } from "@/lib/db/types/scotus";
 import { MINISTERIAL_ACTION_CAP } from "@/lib/constants/cabinetMechanicsTypes";
 import { initialVpActionFields, VP_ACTION_CAP } from "@/lib/constants/vicePresidentActions";
@@ -20,6 +20,10 @@ import {
   officePoolTopUpBlock,
   type OfficePoolKind,
 } from "./officePoolTopUpRules";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { supremeCourtSeatsCollection } from "@/lib/db/repositories/supremeCourtSeats";
+import { governorOfficeStateCollection } from "@/lib/db/repositories/governorOfficeState";
 
 export { OFFICE_POOL_TOP_UP_AP_COST } from "./officePoolTopUpRules";
 export type { OfficePoolKind } from "./officePoolTopUpRules";
@@ -73,12 +77,10 @@ async function resolveMinisterialPool(
   }
   if (usesSharedMinisterialPool(countryId, member)) {
     const pool = await ensureUkSharedPool(db, member.characterId, now);
-    const stamp = await db
-      .collection<Character>("characters")
-      .findOne(
-        { _id: member.characterId },
-        { projection: { sharedMinisterialActionTopUpTurn: 1 } }
-      );
+    const stamp = await charactersCollection(db).findOne(
+      { _id: member.characterId },
+      { projection: { sharedMinisterialActionTopUpTurn: 1 } }
+    );
     const holderId = member.characterId;
     return {
       ok: true,
@@ -119,18 +121,20 @@ async function resolveVpPool(
   characterId: ObjectId,
   countryId: CountryId
 ): Promise<Resolution> {
-  const vp = await db
-    .collection<ElectedOfficial>("electedOfficials")
-    .findOne({ countryId, officeType: "vicePresident" });
+  const vp = await electedOfficialsCollection(db).findOne({
+    countryId,
+    officeType: "vicePresident",
+  });
   if (!vp) return { ok: false, status: 404, error: "No vice-president office found" };
   if (!sameId(vp.characterId, characterId)) {
     return { ok: false, status: 403, error: "Only the sitting vice-president can buy actions" };
   }
   // Legacy VP docs without a pool are backfilled to the cap, as the action route does.
   if (vp.vpActionsRemaining == null) {
-    await db
-      .collection<ElectedOfficial>("electedOfficials")
-      .updateOne({ _id: vp._id }, { $set: initialVpActionFields() });
+    await electedOfficialsCollection(db).updateOne(
+      { _id: vp._id },
+      { $set: initialVpActionFields() }
+    );
   }
   return {
     ok: true,
@@ -152,9 +156,7 @@ async function resolveJusticePool(
   countryId: CountryId,
   seatNumber: number
 ): Promise<Resolution> {
-  const seat = await db
-    .collection<SupremeCourtSeat>("supremeCourtSeats")
-    .findOne({ countryId, seatNumber });
+  const seat = await supremeCourtSeatsCollection(db).findOne({ countryId, seatNumber });
   if (!seat) return { ok: false, status: 404, error: "Court seat not found" };
   if (!sameId(seat.justiceCharacterId, characterId)) {
     return {
@@ -164,9 +166,10 @@ async function resolveJusticePool(
     };
   }
   if (seat.justiceActionsRemaining == null) {
-    await db
-      .collection<SupremeCourtSeat>("supremeCourtSeats")
-      .updateOne({ _id: seat._id }, { $set: initialJusticeActionFields() });
+    await supremeCourtSeatsCollection(db).updateOne(
+      { _id: seat._id },
+      { $set: initialJusticeActionFields() }
+    );
   }
   return {
     ok: true,
@@ -197,9 +200,7 @@ async function resolveGubernatorialPool(
   if (!isHolder) {
     return { ok: false, status: 403, error: "Only the sitting office-holder can buy actions" };
   }
-  const office = await db
-    .collection<GovernorOfficeState>("governorOfficeState")
-    .findOne({ countryId, stateId });
+  const office = await governorOfficeStateCollection(db).findOne({ countryId, stateId });
   if (!office?._id) return { ok: false, status: 404, error: "Office not found" };
   return {
     ok: true,
@@ -246,9 +247,10 @@ export async function topUpOfficePool(
   if (!resolved.ok) return resolved;
   const { pool } = resolved;
 
-  const character = await db
-    .collection<Character>("characters")
-    .findOne({ _id: characterId }, { projection: { actions: 1 } });
+  const character = await charactersCollection(db).findOne(
+    { _id: characterId },
+    { projection: { actions: 1 } }
+  );
   const blocked = officePoolTopUpBlock({
     remaining: pool.remaining,
     cap: pool.cap,
@@ -258,7 +260,7 @@ export async function topUpOfficePool(
   });
   if (blocked) return { ok: false, status: blocked.status, error: blocked.error };
 
-  const charactersCol = db.collection<Character>("characters");
+  const charactersCol = charactersCollection(db);
   const debited = await charactersCol.findOneAndUpdate(
     { _id: characterId, actions: { $gte: OFFICE_POOL_TOP_UP_AP_COST } },
     { $inc: { actions: -OFFICE_POOL_TOP_UP_AP_COST }, $set: { updatedAt: now } },

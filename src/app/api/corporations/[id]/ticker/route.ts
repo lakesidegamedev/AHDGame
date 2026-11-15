@@ -6,6 +6,7 @@ import { requireCorporationActionsEnabled } from "@/lib/api/requireCorporationAc
 import { parseJsonBody } from "@/lib/api/validate";
 import { getDb } from "@/lib/mongodb";
 import { resolveCorporation, requireCeo } from "@/lib/api/corporations/resolveQuery";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 const TickerSchema = z.object({
   newTicker: z
@@ -54,19 +55,18 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       return errorResponse(400, "That is already your ticker symbol");
     }
 
-    const conflict = await db
-      .collection("corporations")
-      .findOne({ tickerSymbol: newTicker, _id: { $ne: corporation._id } });
+    const conflict = await corporationsCollection(db).findOne({
+      tickerSymbol: newTicker,
+      _id: { $ne: corporation._id },
+    });
     if (conflict) {
       return errorResponse(409, "That ticker is already in use by another corporation");
     }
 
-    await db
-      .collection("corporations")
-      .updateOne(
-        { _id: corporation._id },
-        { $set: { tickerSymbol: newTicker, updatedAt: new Date() } }
-      );
+    await corporationsCollection(db).updateOne(
+      { _id: corporation._id },
+      { $set: { tickerSymbol: newTicker, updatedAt: new Date() } }
+    );
 
     return NextResponse.json({ tickerSymbol: newTicker });
   } catch (e) {

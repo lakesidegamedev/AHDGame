@@ -85,7 +85,6 @@ describe("battle forecast route", () => {
       toArray: vi.fn().mockResolvedValue([]),
     });
     db.collectionMocks.gameState.findOne.mockResolvedValue({
-      conflictsEnabled: true,
       currentTurn: 40,
     });
     db.collectionMocks.cabinetMembers.findOne.mockResolvedValue({
@@ -280,32 +279,30 @@ describe("battle forecast route", () => {
 
   /**
    * The same regression, reached the other way. An NPP ally never writes a
-   * `theaterState.autoJoin` order — it has no player to write one — so the admin
-   * `nppOffensiveJoinEnabled` switch opts it in instead. The resolver enrols it; if
+   * `theaterState.autoJoin` order — it has no player to write one — so being
+   * NPP-run opts it in instead. The resolver enrols it; if
    * the forecast kept deriving its own set from `theaterState` it would silently go
    * back to understating the attack, on a route whose contract is that it cannot
    * disagree with the outcome it predicts.
    */
-  it("pools an NPP ally opted in by the admin switch, which writes no standing order", async () => {
+  it("pools an NPP ally, which writes no standing order", async () => {
     const alliedConflict = {
       ...CONFLICT,
       sideA: { label: "A", countries: ["US", "UK"], kind: "coalition" },
     };
-    const oddsWith = async (switchOn: boolean) => {
+    const oddsWith = async (ukIsNpp: boolean) => {
       vi.resetModules();
       db.collectionMocks.conflicts.findOne.mockResolvedValue(alliedConflict);
       db.collectionMocks.gameState.findOne.mockResolvedValue({
-        conflictsEnabled: true,
         currentTurn: 40,
-        nppOffensiveJoinEnabled: switchOn,
       });
       db.collection("countryGameStates");
       db.collectionMocks.countryGameStates.find.mockReturnValue({
         toArray: vi
           .fn()
-          .mockResolvedValue([{ _id: "UK", status: "active", enabledForPlayers: false }]),
+          .mockResolvedValue([{ _id: "UK", status: "active", enabledForPlayers: !ukIsNpp }]),
       });
-      // Deliberately empty: the switch is the ONLY thing that can enrol UK here.
+      // Deliberately empty: being NPP-run is the ONLY thing that can enrol UK here.
       db.collectionMocks.theaterState.find.mockReturnValue({
         toArray: vi.fn().mockResolvedValue([]),
       });
@@ -447,12 +444,6 @@ describe("battle forecast route", () => {
     const res = await GET(req("theaterId=afghan&targetCountry=US"), ddCall);
     expect(res.status).toBe(200);
     expect(typeof (await res.json()).oddsPct).toBe("number");
-  });
-
-  it("404s when conflicts is disabled", async () => {
-    db.collectionMocks.gameState.findOne.mockResolvedValue({ conflictsEnabled: false });
-    const { GET } = await import(ROUTE);
-    expect((await GET(req("theaterId=afghan&targetCountry=CN"), call)).status).toBe(404);
   });
 
   it("403s a non-holder when no theater commander is designated", async () => {

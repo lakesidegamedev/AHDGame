@@ -8,7 +8,7 @@ vi.mock("@/lib/countryState", () => ({ getCountryState: vi.fn() }));
 vi.mock("@/lib/parliament/oppositionLeader", () => ({
   resolveOppositionLeaderForCountry: vi.fn(),
 }));
-vi.mock("@/lib/uk/cabinetEligibility", () => ({ getEligibleCabinetCharacters: vi.fn() }));
+vi.mock("@/lib/countries/uk/cabinetEligibility", () => ({ getEligibleCabinetCharacters: vi.fn() }));
 
 function makeRequest(method: "POST" | "DELETE", body: Record<string, unknown>) {
   return new Request("http://localhost/api/country/UK/executive/shadow-cabinet", {
@@ -57,7 +57,7 @@ describe("shadow-cabinet route", () => {
       partyDoc: { _id: oppositionPartyId, name: "Labour", sequentialId: 2 },
     } as never);
 
-    const { getEligibleCabinetCharacters } = await import("@/lib/uk/cabinetEligibility");
+    const { getEligibleCabinetCharacters } = await import("@/lib/countries/uk/cabinetEligibility");
     vi.mocked(getEligibleCabinetCharacters).mockResolvedValue([
       {
         _id: eligibleCharId.toString(),

@@ -1,10 +1,6 @@
 /**
- * Tuning constants for the `CommitteeProposal` system.
- *
- * Per the 2026-05-22 amendments-via-CommitteeProposal redesign
- * (`docs/plans/archive/2026-05/2026-05-22-amendments-via-committee-proposals.md`),
- * proposal resolution + cooldowns are extracted here so future tuning
- * lands in one place.
+ * Tuning constants for the `CommitteeProposal` system, gathered here so
+ * future tuning lands in one place.
  */
 
 /**
@@ -48,7 +44,5 @@ export const PROPOSAL_COOLDOWN_TURNS = 96 as const;
  * tidy without forcing immediate response. Mirrors the `expireOpen*`
  * sweep pattern used by `CommitteeProposal` expiry, but pending txns
  * resolve to `"expired"` (no execution, no balance change).
- *
- * Per the 2026-05-22 treasury-two-person-approval scope doc.
  */
 export const PENDING_TXN_EXPIRY_TURNS = 48 as const;

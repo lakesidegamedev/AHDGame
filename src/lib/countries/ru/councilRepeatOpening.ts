@@ -4,30 +4,27 @@
  * preserves successful mandates and Congress until joint chamber handover.
  */
 import { ObjectId, type ClientSession, type Db } from "mongodb";
-import type {
-  CountryGameState,
-  Election,
-  GameState,
-  State,
-  StateRegistrationPool,
-} from "@/lib/db/types";
+import type { Election } from "@/lib/db/types";
 import { MS_PER_TURN } from "@/lib/constants/turnTime";
 import { calendarTurn, turnToGameMonth } from "@/lib/utils/gameDate";
 import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
-import {
-  RUSSIAN_COUNCIL_RESULTS_COLLECTION,
-  type RussianCouncilResultRecord,
-} from "./councilElectionResult";
-import {
-  RUSSIAN_COUNCIL_OPENINGS_COLLECTION,
-  type RussianCouncilOpeningRecord,
-} from "./councilElectionOpening";
+import { type RussianCouncilResultRecord } from "./councilElectionResult";
+import { type RussianCouncilOpeningRecord } from "./councilElectionOpening";
 import { pendingRussianCouncilRepeatBallots } from "./rules/councilRepeat";
 import { freezeRussianCouncilElectorate } from "./rules/councilElectorate";
 import { planRussianCouncilDistricts } from "./rules/councilDistricts";
 import { planRussianDumaBallot } from "./rules/assemblySchedule";
 import { loadRussianAssemblyRepeatTerm } from "./assemblyRepeatTerm";
 import { hasAuthorizedPostSovietTransition } from "./rules/postSovietTransition";
+import { GAME_STATE_PRE_ITERATION_FIELDS } from "@/lib/db/collections/gameState";
+import { STATE_POPULATION_FIELDS } from "@/lib/db/collections/states";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
+import { stateRegistrationPoolCollection } from "@/lib/db/repositories/stateRegistrationPool";
+import { russianCouncilElectionResultsCollection } from "@/lib/db/repositories/russianCouncilElectionResults";
+import { russianCouncilElectionOpeningsCollection } from "@/lib/db/repositories/russianCouncilElectionOpenings";
 
 export async function materializeRussianCouncilRepeatOpening(input: {
   db: Db;
@@ -47,14 +44,12 @@ export async function materializeRussianCouncilRepeatOpening(input: {
     !Number.isFinite(now.getTime())
   )
     throw new Error("Council repeats need a transaction, turn and time");
-  const game = await db
-    .collection<GameState>("gameState")
-    .findOne(
-      { _id: "current" },
-      { session, projection: { preset: 1, preIteration: 1, preIterationTurns: 1 } }
-    );
+  const game = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { session, projection: GAME_STATE_PRE_ITERATION_FIELDS }
+  );
   if (game?.preset !== "1991-default") return null;
-  const countries = db.collection<CountryGameState>("countryGameStates");
+  const countries = countryGameStatesCollection(db);
   const country = await countries.findOne(
     { _id: "RU" },
     {
@@ -79,9 +74,9 @@ export async function materializeRussianCouncilRepeatOpening(input: {
     )
   )
     throw new Error("Council repeat mandate changed");
-  const previous = await db
-    .collection<RussianCouncilResultRecord>(RUSSIAN_COUNCIL_RESULTS_COLLECTION)
-    .findOne({ _id: previousResultId }, { session });
+  const previous = await russianCouncilElectionResultsCollection<RussianCouncilResultRecord>(
+    db
+  ).findOne({ _id: previousResultId }, { session });
   if (
     !previous ||
     previous.countryId !== "RU" ||
@@ -106,7 +101,7 @@ export async function materializeRussianCouncilRepeatOpening(input: {
     throw new Error("Council repeat generation identity changed");
   // Resolving preserved ballots validates the complete accumulated89-subject family before any write.
   const pending = pendingRussianCouncilRepeatBallots(previous.ballots);
-  const openings = db.collection<RussianCouncilOpeningRecord>(RUSSIAN_COUNCIL_OPENINGS_COLLECTION);
+  const openings = russianCouncilElectionOpeningsCollection<RussianCouncilOpeningRecord>(db);
   if (previousGeneration > 0) {
     const binding = await openings.findOne(
       { _id: `${rootCohortId.toHexString()}:repeat:${previousGeneration}` },
@@ -161,15 +156,10 @@ export async function materializeRussianCouncilRepeatOpening(input: {
     electionIds.some((id) => previous.ballots.some((row) => row.id === id.toHexString()))
   )
     throw new Error("Council repeats need distinct new ballot identities");
-  const regions = await db
-    .collection<State>("states")
-    .find(
-      { countryId: "RU" },
-      { session, projection: { _id: 1, population: 1, votingEligiblePopulation: 1 } }
-    )
+  const regions = await statesCollection(db)
+    .find({ countryId: "RU" }, { session, projection: STATE_POPULATION_FIELDS })
     .toArray();
-  const pools = await db
-    .collection<StateRegistrationPool>("stateRegistrationPool")
+  const pools = await stateRegistrationPoolCollection(db)
     .find({ countryId: "RU" }, { session, projection: { stateId: 1, unregistered: 1 } })
     .toArray();
   if (new Set(pools.map((row) => row.stateId)).size !== pools.length)
@@ -230,7 +220,7 @@ export async function materializeRussianCouncilRepeatOpening(input: {
       pending.map((row) => [row.seatId, register[row.seatId]])
     ),
   };
-  await db.collection<Election>("elections").insertMany(ballots, { session });
+  await electionsCollection(db).insertMany(ballots, { session });
   await openings.insertOne(record, { session });
   const bound = await countries.updateOne(
     {
@@ -252,9 +242,9 @@ export async function openRussianCouncilRepeat(
     "session" | "cohortId" | "electionIds"
   >
 ) {
-  const previous = await input.db
-    .collection<RussianCouncilResultRecord>(RUSSIAN_COUNCIL_RESULTS_COLLECTION)
-    .findOne({ _id: input.previousResultId }, { projection: { ballots: 1 } });
+  const previous = await russianCouncilElectionResultsCollection<RussianCouncilResultRecord>(
+    input.db
+  ).findOne({ _id: input.previousResultId }, { projection: { ballots: 1 } });
   if (!previous?.ballots) throw new Error("Council repeats need preserved predecessor ballots");
   const electionIds = pendingRussianCouncilRepeatBallots(previous.ballots).map(
     () => new ObjectId()

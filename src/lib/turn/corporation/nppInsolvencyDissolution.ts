@@ -1,6 +1,5 @@
 import type { AnyBulkWriteOperation, Db } from "mongodb";
-import type { Bond, Corporation } from "@/lib/db/types";
-import type { FederalBudget } from "@/lib/db/types/budget";
+import type { Corporation } from "@/lib/db/types";
 import type { GameConfig } from "@/lib/db/types/gameConfig";
 import type { GameState } from "@/lib/db/types/gameState";
 import { isCommandEconomy, isSoeSpared } from "@/lib/constants/commandEconomy";
@@ -16,72 +15,29 @@ import { isMateriallyInsolvent } from "./nppInsolvencyRules";
 import { recordAuditBulk } from "@/lib/audit/recordAudit";
 import type { ActionAuditInput } from "@/lib/db/types/actionAuditLog";
 import { SETTLEMENT_HISTORY_EXCLUDED } from "@/lib/banking/settlementHistory";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
-/**
- * NPP-run corporation auto-insolvency dissolution.
- *
- * Fills a real gap: a PLAYER corp that goes deeply insolvent gets nationalized
- * or dissolved (the government / a player acts on the financial-distress clock
- * stamped by trackFinancialDistress). An NPP-run corp had NO such exit — nobody
- * ever executes that path in a pure-NPP world — so a structurally-unprofitable
- * corp (common in a crowded 3-corps-per-sector market where the losers of the
- * revenue split still pay full operating costs) bled liquidCapital toward
- * arbitrarily negative values forever, polluting economy/wealth metrics and
- * index-fund NAVs it's a constituent of.
- *
- * This gives NPP corps the missing bankruptcy exit: any NPP-CEO'd corp whose
- * liquidCapital (anchor-converted) has fallen below a deep-negative threshold —
- * i.e. terminally insolvent, not a transient dip — is wound down via the same
- * `executeCorporationBondDefaultDissolution` used when a character is deleted.
- * That hands its sectors to NPP successor corporations so the plants keep
- * producing (a successor that fails in turn returns its sectors to the unowned
- * market pool for survivors and new foundings to re-absorb), settles/cleans its
- * share-market activity and index-fund holdings, and removes the corp. The
- * successors' NPP operators mothball chronically loss-making plants, so
- * over-crowded sectors still shed capacity without a supply cliff.
- *
- * Issue #3237: the deep threshold alone was toothless against slow bleeders.
- * 1953-era 250-turn sims ended with ~31% of corps persistently negative —
- * median 52 CONSECUTIVE negative turns — but every one of them still above
- * -1M ₳, so none ever reached the exit. Two additional triggers close that:
- *
- *   1. PERSISTENT insolvency: each turn this phase stamps
- *      `nppInsolventSinceTurn` on an NPP corp whose effective cash
- *      (liquidCapital + positive share-buyback escrow, anchor-converted) is
- *      negative, and clears it on recovery. A corp continuously insolvent for
- *      PERSISTENT_INSOLVENCY_GRACE_TURNS is wound down even though it never
- *      reached the deep threshold. The grace window is deliberately long so
- *      corps riding a cyclical loss are spared — only true zombies exit.
- *   2. LINGERING bond default: bondTurn's auto-resolver tries refinance →
- *      restructure every turn; its step 3 ("default stands for the CEO to
- *      dissolve & settle") assumes a CEO that NPP corps don't have, so an
- *      unresolvable NPP default previously lingered forever (the "stuck bond
- *      defaults" audit finding). An NPP corp whose bond has been defaulted
- *      and unresolved for LINGERING_DEFAULT_GRACE_TURNS is wound down;
- *      bondholders take the haircut through the same settlement waterfall.
- *
- * Dissolution conserves value by construction: previewDissolveSettlement caps
- * bondholder + shareholder pools at (liquidCapital + salvaged sector NPV), so
- * nothing is minted; the ledger rows are emitted by the dissolution executor.
- *
- * Player corps are untouched: the query filters `ceoType: "npp"`, so
- * player-run corps keep the trackFinancialDistress → nationalization-grace
- * protection they have today. Natcorps (`countryOwnerId`) and suspended corps
- * are likewise excluded, exactly as before.
- *
- * Capped per turn so the one-time backlog (when this first runs against a world
- * that already accumulated insolvent corps) clears over a few turns rather than
- * stalling a single turn with hundreds of full settlements.
- */
+// NPP-run corps have no owner to dissolve an insolvent or bond-defaulted company, so they
+// would bleed liquidCapital negative forever and pollute wealth metrics. Any NPP corps whose
+// cash falls below DISSOLUTION_ANCHOR_THRESHOLD, stays insolvent for
+// PERSISTENT_INSOLVENCY_GRACE_TURNS, or leaves a bond default unresolved for
+// LINGERING_DEFAULT_GRACE_TURNS is wound down through the standard bond-default
+// dissolution: sectors pass to NPP successors, share-market exposure settles, and the
+// settlement pool is capped at cash plus salvaged sector value so nothing is minted.
+// Player, natcorp, and suspended corps are excluded. Work is capped per turn so a
+// backlog drains over a few turns instead of stalling one.
 
 // Deep-insolvency trigger, in ₳. Roughly a half starting-capital of debt — well
 // past a transient dip, so healthy corps riding a temporary loss are never
 // caught; only terminally-underwater ones are. Fires immediately (no grace).
 const DISSOLUTION_ANCHOR_THRESHOLD = -1_000_000;
 // Consecutive turns of negative effective cash (LC + positive escrow) before a
-// slow-bleeding NPP corp is wound down. Evidence basis (#3237): stuck corps in
-// the 1953 sims had a median 52-turn negative streak; 30 turns is well past any
-// cyclical dip while still clearing zombies within a season.
+// slow-bleeding NPP corp is wound down. Long enough to clear cyclical dips,
+// short enough to remove zombies within a season.
 export const PERSISTENT_INSOLVENCY_GRACE_TURNS = 30;
 
 /** gameConfig.nppInsolvencyGraceTurns when it is a whole number of at least 1, else the default. */
@@ -111,21 +67,19 @@ export async function processNppInsolventCorpDissolution(
   // (efficiency pressure; the reform nudge flows through the marketization
   // policy-stance term, which reads hard budgets as reformist). NPP default is
   // fairly soft, so a hands-off world keeps the historical spare-everyone shape.
-  const gc = await db
-    .collection<GameConfig>("gameConfig")
-    .findOne(
-      { _id: "default" },
-      { projection: { commandEconomyEnabled: 1, nppInsolvencyGraceTurns: 1 } }
-    );
+  const gc = await gameConfigCollection(db).findOne(
+    { _id: "default" },
+    { projection: { commandEconomyEnabled: 1, nppInsolvencyGraceTurns: 1 } }
+  );
   const commandEconomyEnabled = gc?.commandEconomyEnabled === true;
   const graceTurns = insolvencyGraceTurns(gc?.nppInsolvencyGraceTurns);
-  const gs = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { projection: { currentYear: 1 } });
+  const gs = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { projection: { currentYear: 1 } }
+  );
   const currentYear = gs?.currentYear ?? null;
 
-  let corps = await db
-    .collection<Corporation>("corporations")
+  let corps = await corporationsCollection(db)
     .find(
       { ceoType: "npp", countryOwnerId: { $exists: false }, suspended: { $ne: true } },
       { projection: SETTLEMENT_HISTORY_EXCLUDED }
@@ -133,8 +87,7 @@ export async function processNppInsolventCorpDissolution(
     .toArray();
   if (commandEconomyEnabled) {
     // Per-country budget softness (default fairly soft when not yet written).
-    const softnessBudgets = await db
-      .collection<FederalBudget>("federalBudget")
+    const softnessBudgets = await federalBudgetCollection(db)
       .find({}, { projection: { countryId: 1, "economicFactors.budgetSoftness": 1 } })
       .toArray();
     const softnessByCountry = new Map<string, number>();
@@ -156,7 +109,7 @@ export async function processNppInsolventCorpDissolution(
   // NPP issuers whose bond default has lingered past the auto-resolver's reach.
   const lingeringDefaultIssuerIds = new Set(
     (
-      await db.collection<Bond>("bonds").distinct("corporationId", {
+      await bondsCollection(db).distinct("corporationId", {
         matured: false,
         defaulted: true,
         defaultedAtTurn: { $lte: turn - LINGERING_DEFAULT_GRACE_TURNS },
@@ -211,7 +164,7 @@ export async function processNppInsolventCorpDissolution(
     }
   }
   if (clockOps.length > 0) {
-    await db.collection<Corporation>("corporations").bulkWrite(clockOps);
+    await corporationsCollection(db).bulkWrite(clockOps);
   }
 
   const insolvent = corps

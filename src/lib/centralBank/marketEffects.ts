@@ -1,30 +1,18 @@
 /**
- * B4 market effects: the second half of central-bank credibility.
+ * Market consequences of central-bank credibility: sovereign spread, FX
+ * target adherence, and deposit flight.
  *
- * `credibility.ts` gave scrutiny (`CentralBank.chairInfamy`, 0-100) one
- * consequence, a floored dampener on the inflation-EXPECTATIONS channel. This
- * module gives it the three market consequences that were deliberately split
- * out of that PR because they are the ones that cannot spiral:
+ * Every function here honors three invariants:
  *
- *  1. Sovereign spread. A discredited bank's government borrows dearer.
- *  2. FX target adherence. The same reserves buy less of the target.
- *  3. Deposit flight. Households park savings outside the domestic banking
- *     system, in currencies whose issuer they still believe.
+ *  - No inflation feedback: nothing here feeds the inflation term. The
+ *    expectations dampener is the only credibility-to-inflation channel; a
+ *    second would close the death-spiral loop.
+ *  - Bounded and floored: a maximally discredited bank still has a
+ *    functioning market. Ruin is expensive, not terminal.
+ *  - Zero at full credibility: at scrutiny 0 every multiplier is 1 and every
+ *    delta is 0, so a clean bank sees no change.
  *
- * Three properties are load-bearing and every function here honours them:
- *
- *  - **No inflation feedback.** Nothing here returns into the inflation term.
- *    The expectations dampener is the ONLY credibility-to-inflation channel,
- *    and a second one is what would close the death-spiral loop.
- *  - **Bounded and floored.** A maximally discredited bank still has a
- *    functioning market: a finite spread, a partly effective intervention, and
- *    a banking system that still takes deposits. Ruin is expensive, not
- *    terminal.
- *  - **Zero at full credibility.** At scrutiny 0 every multiplier here is
- *    exactly 1 and every delta exactly 0, so a clean bank sees literally no
- *    change and existing balance cannot be perturbed.
- *
- * Pure math only. Wiring lives at the three call sites.
+ * Pure math only. Wiring lives at the call sites.
  */
 
 import { credibilityFromScrutiny } from "@/lib/centralBank/credibility";

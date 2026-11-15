@@ -1,28 +1,19 @@
 /**
  * NPP engine 6: opportunity-driven investing (v6).
  *
- * Below v6 every NPP with spare investment cash rolls a flat chance to buy
- * (stock 0.075, bond 0.05, times risk tolerance) before it looks at the
- * market, and every NPP holding a share position rolls 0.02 times its price
- * ratio to trim it. Whether the market is cheap or dear only decides WHAT gets
- * bought, never WHETHER anything is.
- *
  * At v6 an NPP looks first and acts on what it sees. Each NPP's chance scales
  * with the quality of its best available opportunity:
- *   - stock buy: the best fundamental-to-price ratio on offer, relative to the
- *     least this NPP will accept (its value floor);
- *   - bond buy: the best current yield, relative to the yield floor;
+ *   - stock buy: best fundamental-to-price ratio, relative to its value floor;
+ *   - bond buy: best current yield, relative to its yield floor;
  *   - stock sell: how far the holding trades above fundamentals.
  *
- * Smarter, not stronger. The multipliers are normalized across everyone
- * deciding in the same sweep so the expected number of trades equals what the
- * flat engine 5 rates give on the same candidate set: a clearly better
- * opportunity raises an NPP's chance, a marginal one lowers it, and the total
- * does not move. Each multiplier is capped (2x base for buys, the engine 5
- * price-ratio ceiling for sells), so no single NPP trades far more often than
- * before. Size rules are unchanged.
+ * Smarter, not stronger. Multipliers are normalized across everyone deciding
+ * the same sweep so the expected number of trades equals the flat engine 5
+ * rates on the same candidate set. Each multiplier is capped (2x base for
+ * buys, the engine 5 price-ratio ceiling for sells), so no single NPP trades
+ * far more often than before. Size rules are unchanged.
  *
- * Pure: the caller loads the market, draws from its seeded streams and writes.
+ * Pure: the caller loads the market, draws from seeded streams, writes.
  */
 
 /** Ceiling on a buy multiplier: at most twice the engine 5 chance. */

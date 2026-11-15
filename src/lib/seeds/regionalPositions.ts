@@ -3,20 +3,16 @@ import type { DemographicTurnoutRates } from "./demographicCategories";
 /**
  * Regional authoring helpers for the era electorate tables.
  *
- * Every US anchor era before 2019 is authored at REGION level: one table of
- * Layer-1 positions per region, applied unchanged to every state in it, with
- * single-state exceptions expressed as a SHIFT off that regional table rather
- * than as 51 bespoke tables. The shift is what a sentence like "West Virginia
- * sits two points economically left of the rest of the Border South" means in
- * data.
+ * Pre-2019 US anchors are authored at REGION level and applied to every state
+ * in the region; single-state exceptions are expressed as a SHIFT off that
+ * table rather than bespoke state tables.
  *
- * A shift is not applied uniformly across buckets. `REGIONAL_SIGNATURE` is how
+ * Shifts are not uniform across buckets. `REGIONAL_SIGNATURE` gives how
  * strongly each Layer-1 bucket carries a region's political signature:
- * `race.white` is the largest single lever and moves fully, the education and
- * wealth middle move most of the way, and nationally anchored buckets (the
- * minority races, the poor, the ideological poles) barely move at all, because
- * a Black voter in Vermont and a Black voter in Mississippi did not differ by
- * the same distance their white neighbours did.
+ * `race.white` moves fully, education and wealth move most of the way, and
+ * nationally anchored buckets (minority races, the poor, ideological poles)
+ * barely move, since a Black voter in Vermont and one in Mississippi did not
+ * differ by their white neighbours' distance.
  */
 
 /** `[dimension, key, economicLean, socialLean]` — the shape both era tables use. */

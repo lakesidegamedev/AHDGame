@@ -21,8 +21,8 @@
  */
 import { describe, it, expect, beforeEach } from "vitest";
 import "@/lib/seeds/stateDemographics";
-import type { DemographicCategory, Layer1PositionOverlay, StateDemographics } from "@/lib/db/types";
-import type { EnrichedCandidate } from "@/lib/electionEngine/types";
+import type { Layer1PositionOverlay, CensusGroupView } from "@/lib/db/types";
+import type { EnrichedCandidate } from "@/lib/elections/engine/types";
 import {
   buildGranularElectorateSubstrate,
   clearGranularElectorateCache,
@@ -37,11 +37,10 @@ import { conditionedOffsetsAtAnchor } from "@/lib/seeds/demographicCategories";
 
 const DEEP_SOUTH = ["AL", "MS", "SC", "LA", "GA", "AR"] as const;
 
-const EMPTY_CATEGORIES: DemographicCategory[] = [];
 const EMPTY_ENRICHED: EnrichedCandidate[] = [];
 
-function stubDemographics(stateId: string): StateDemographics {
-  return { _id: stateId, countryId: "US", groups: {} } as unknown as StateDemographics;
+function stubDemographics(stateId: string): CensusGroupView {
+  return { _id: stateId, countryId: "US", groups: {} } as unknown as CensusGroupView;
 }
 
 function substrate(
@@ -56,7 +55,6 @@ function substrate(
     turnoutDoc: null,
     statePopulation: 1_000_000,
     demographics: demo,
-    categories: EMPTY_CATEGORIES,
     enriched: EMPTY_ENRICHED,
     demographicDefaults: overlay ? { ...demo, layer1PositionOverrides: overlay } : null,
   });

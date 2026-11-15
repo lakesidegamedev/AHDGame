@@ -5,6 +5,9 @@ import { INVESTOR_CONFIDENCE_BASELINE } from "../constants";
 
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
 vi.mock("@/lib/wireEvent", () => ({ logWireEvent: vi.fn().mockResolvedValue(undefined) }));
+vi.mock("@/lib/coldwar/tension", () => ({
+  applyTensionEvent: vi.fn().mockResolvedValue({}),
+}));
 
 function cursor<T>(rows: T[]) {
   return {
@@ -68,6 +71,9 @@ describe("applyNationalizationConsequences", () => {
 
     expect(result.confidenceAfter).toBeLessThan(INVESTOR_CONFIDENCE_BASELINE);
     expect(result.foreignOwnerRecorded).toBeNull();
+    expect(result.tensionDelta).toBe(0);
+    const { applyTensionEvent } = await import("@/lib/coldwar/tension");
+    expect(vi.mocked(applyTensionEvent)).not.toHaveBeenCalled();
     expect(db.collectionMocks.federalBudget.updateOne).toHaveBeenCalled();
     // Trust nudged DOWN on CA's board (unpopular strategic seizure). The legacy
     // stateMetrics write this replaced had silently stopped applying.
@@ -101,6 +107,40 @@ describe("applyNationalizationConsequences", () => {
       "corporation_nationalized",
       expect.stringContaining("UK-owned")
     );
+  });
+
+  it("raises world tension for a foreign owner, scaled by the payment tier", async () => {
+    db.collectionMocks.federalBudget.findOne.mockResolvedValue({ countryId: "US" });
+    db.collectionMocks.states.find.mockReturnValue(cursor([]));
+    db.collectionMocks.stateMetrics.find.mockReturnValue(cursor([]));
+
+    const { applyNationalizationConsequences } = await import("./apply");
+    const { applyTensionEvent } = await import("@/lib/coldwar/tension");
+    const result = await applyNationalizationConsequences(db as unknown as Db, {
+      countryId: "US",
+      method: "executive",
+      tier: "seizure",
+      triggers: ["strategic"],
+      sectorTypes: ["energy"],
+      valuationAnchor: 1_000_000,
+      compensationAnchor: 0,
+      foreignOwnerCountryId: "JP",
+      governingPartyId: null,
+      turn: 30,
+    });
+
+    expect(result.tensionDelta).toBe(3);
+    expect(vi.mocked(applyTensionEvent)).toHaveBeenCalledWith(
+      db,
+      30,
+      "crisis",
+      expect.stringContaining("energy"),
+      3
+    );
+    // The ledger label names both sides, not just ids.
+    const label = vi.mocked(applyTensionEvent).mock.calls[0][3];
+    expect(label).toMatch(/Japan|JP/);
+    expect(label).toMatch(/United States|US/);
   });
 
   it("a statist government takes a smaller confidence hit than a market one", async () => {

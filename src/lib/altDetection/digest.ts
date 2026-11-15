@@ -39,6 +39,9 @@ import type { AltCluster } from "@/lib/db/types/altDetection";
 import { isAltScoringEnabled } from "./featureFlag";
 import { resolveAltScoringConfig } from "./config";
 import { sendDiscordWebhookMultiple, type DiscordEmbed } from "@/lib/discordWebhooks";
+import { readEnv } from "@/lib/config/read";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { altDigestStateCollection } from "@/lib/db/repositories/altDigestState";
 
 /** Env var carrying the mod-facing digest webhook URL. Mirrors the
  * `DISCORD_ALERT_WEBHOOK_URL` pattern in `src/lib/observability/alertOps.ts`
@@ -78,7 +81,7 @@ interface AltDigestStateDoc {
 }
 
 function getDigestStateCollection(db: Db) {
-  return db.collection<AltDigestStateDoc>("altDigestState");
+  return altDigestStateCollection<AltDigestStateDoc>(db);
 }
 
 // ─── Selection (pure, unit-testable) ────────────────────────────────────
@@ -108,9 +111,8 @@ export interface AltDigestSelection {
 }
 
 /**
- * Pure selection: given the full current `open` cluster set and the
- * previously-reported id set, determine which clusters are newly notable.
- * Exported for unit tests.
+ * Pure selection: given the current `open` clusters and previously-reported
+ * ids, return clusters that are newly notable. Exported for tests.
  */
 export function selectNewClusters(
   openClusters: AltCluster[],
@@ -139,9 +141,8 @@ export function selectNewClusters(
 }
 
 /**
- * Prune ids that are no longer `open` out of a previously-reported set, so
- * a dismissed-then-reopened ring can be reported again. Exported for unit
- * tests.
+ * Prune ids no longer `open` from a reported set, so a dismissed-then-
+ * reopened ring can be reported again. Exported for tests.
  */
 export function pruneReportedIds(
   reportedIds: ReadonlySet<string>,
@@ -253,7 +254,7 @@ export async function runAltDigest(
   options: { now?: Date; adminUrl?: string } = {}
 ): Promise<AltDigestRunResult> {
   const startedAt = Date.now();
-  const webhookUrl = process.env[WEBHOOK_ENV_VAR];
+  const webhookUrl = readEnv(WEBHOOK_ENV_VAR);
   const webhookConfigured = Boolean(webhookUrl);
   let enabled = false;
 
@@ -269,8 +270,7 @@ export async function runAltDigest(
 
     const [state, configDoc, openClusters] = await Promise.all([
       stateCol.findOne({ _id: "default" }),
-      db
-        .collection<{ _id: string; altScoring?: unknown }>("gameConfig")
+      gameConfigCollection<{ _id: string; altScoring?: unknown }>(db)
         .findOne({ _id: "default" }, { projection: { altScoring: 1 } })
         .catch(() => null),
       getAltClustersCollection(db).then((col) => col.find({ status: "open" }).toArray()),

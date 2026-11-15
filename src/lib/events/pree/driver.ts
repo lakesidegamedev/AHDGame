@@ -19,6 +19,8 @@ import { pickWeightedIndex, seededRoll } from "@/lib/events/substrate/rng";
 import { sweepExpired } from "@/lib/events/substrate/sweep";
 import type { ResolveEventHooks } from "@/lib/events/substrate/types";
 import { isCharacterEligibleForOffer } from "@/lib/events/substrate/cooldown";
+import { logger } from "@/lib/observability/logger";
+import type { GameConfig } from "@/lib/db/types/gameConfig";
 import { filterEligibleTemplates } from "./weighting";
 import type { CharacterEventContext } from "./eligibility";
 import { matchesEligibility } from "./eligibility";
@@ -33,7 +35,11 @@ import { notifyPlayerEventOffered, notifyPlayerEventResolved } from "./notificat
 import { processDebateChallenges } from "@/lib/debate/processDebateChallenges";
 import { sweepExpiredDebates } from "@/lib/debate/debateSessionLifecycle";
 import { makeSeededRng } from "@/lib/events/substrate/rng";
-import { isRpgStatsEnabled } from "@/lib/stats/featureFlag";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import type { Document } from "mongodb";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 
 /** Eligibility maps are loaded per chunk to bound query sizes; all player characters are processed. */
 const CHARACTER_CHUNK_SIZE = 200;
@@ -42,6 +48,8 @@ export interface PlayerRandomEventsTurnResult {
   swept: number;
   offered: number;
   skippedOffers: number;
+  /** Characters for whom no event at all was eligible, even from the generic pool. */
+  exhaustedOffers?: number;
 }
 
 interface CharacterEligibilityMaps {
@@ -72,18 +80,15 @@ async function loadEligibilityMaps(
   }
 
   const [candidacies, officials, ceoCorps] = await Promise.all([
-    db
-      .collection("electionCandidates")
+    electionCandidatesCollection<Document>(db)
       .find({ characterId: { $in: characterIds }, status: "active" })
       .project({ characterId: 1 })
       .toArray(),
-    db
-      .collection("electedOfficials")
+    electedOfficialsCollection<Document>(db)
       .find({ characterId: { $in: characterIds } })
       .project({ characterId: 1 })
       .toArray(),
-    db
-      .collection("corporations")
+    corporationsCollection(db)
       .find({ ceoId: { $in: characterIds } })
       .project({ ceoId: 1, totalShares: 1, shareholders: 1 })
       .toArray(),
@@ -168,8 +173,7 @@ async function sweepExpiredWithNotifications(
     .toArray();
 
   if (pending.length > 0) {
-    const chars = await db
-      .collection<Character>("characters")
+    const chars = await charactersCollection(db)
       .find({ _id: { $in: pending.map((p) => p.scopeId) } })
       .project({ _id: 1, userId: 1 })
       .toArray();
@@ -185,15 +189,27 @@ async function sweepExpiredWithNotifications(
  * Per-turn PREE driver: sweep expired instances, then optionally offer one
  * event per eligible character when the feature flag is on.
  */
+/** The random event options a world's config sets; absent reads off. */
+export function preeConfigFlags(
+  config:
+    Pick<GameConfig, "treasuryCashLedgerEnabled" | "preeGenericFallbackEnabled"> | null | undefined
+): { treasuryCashLedgerEnabled: boolean; genericFallbackEnabled: boolean } {
+  return {
+    treasuryCashLedgerEnabled: config?.treasuryCashLedgerEnabled === true,
+    genericFallbackEnabled: config?.preeGenericFallbackEnabled === true,
+  };
+}
+
 export async function processPlayerRandomEventsTurn(
   db: Db,
   currentTurn: number,
   preloaded?: {
     playerRandomEventsEnabled?: boolean;
-    rpgStatsEnabled?: boolean;
     treasuryCashLedgerEnabled?: boolean;
     /** In-game year for era gating (minYear/maxYear on definitions). Omit = no era filtering. */
     currentYear?: number;
+    /** Undated fallback when the dated packs are exhausted. Omit = on. */
+    genericFallbackEnabled?: boolean;
   }
 ): Promise<PlayerRandomEventsTurnResult> {
   await processLotteryAnnuities(db);
@@ -210,11 +226,9 @@ export async function processPlayerRandomEventsTurn(
 
   // Election debates: roll challenges and resolve overdue debates before offering
   // normal events. Participants are excluded from the offer loop so a debate can
-  // never collide with a standard random event (the "supersede" rule). Gated
-  // behind the RPG-stats flag.
-  const debateParticipants = (await isRpgStatsEnabled(preloaded))
-    ? (await processDebateChallenges(db, currentTurn, new Date())).participantCharacterIds
-    : new Set<string>();
+  // never collide with a standard random event (the "supersede" rule).
+  const debateParticipants = (await processDebateChallenges(db, currentTurn, new Date()))
+    .participantCharacterIds;
 
   const definitions = await loadApprovedDefinitions(db);
   if (definitions.length === 0) {
@@ -237,11 +251,11 @@ export async function processPlayerRandomEventsTurn(
 
   let offered = 0;
   let skippedOffers = 0;
+  let exhaustedOffers = 0;
 
   // Walk every player character in chunks — a hard cap here would silently
   // exclude everyone past the cap from ever receiving events.
-  const cursor = db
-    .collection<Character>("characters")
+  const cursor = charactersCollection(db)
     .find({ userId: { $exists: true } })
     .batchSize(CHARACTER_CHUNK_SIZE);
 
@@ -270,10 +284,14 @@ export async function processPlayerRandomEventsTurn(
         preloaded?.currentYear,
         broadcastDef,
         broadcastPreset,
-        preloaded?.treasuryCashLedgerEnabled
+        preloaded?.treasuryCashLedgerEnabled,
+        preloaded?.genericFallbackEnabled !== false
       );
       if (result === "offered") {
         offered++;
+      } else if (result === "exhausted") {
+        exhaustedOffers++;
+        skippedOffers++;
       } else {
         skippedOffers++;
       }
@@ -289,7 +307,14 @@ export async function processPlayerRandomEventsTurn(
   }
   await processChunk();
 
-  return { swept: sweepResult.swept.length, offered, skippedOffers };
+  if (exhaustedOffers > 0) {
+    logger.warn("pree", "player random events pool exhausted", {
+      turn: currentTurn,
+      year: preloaded?.currentYear,
+      exhaustedOffers,
+    });
+  }
+  return { swept: sweepResult.swept.length, offered, skippedOffers, exhaustedOffers };
 }
 
 async function offerEventToCharacter(
@@ -301,8 +326,9 @@ async function offerEventToCharacter(
   currentYear?: number,
   broadcastDef?: EventDefinition | null,
   broadcastPreset?: string,
-  treasuryCashLedgerEnabled = false
-): Promise<"offered" | "skipped"> {
+  treasuryCashLedgerEnabled = false,
+  genericFallbackEnabled = true
+): Promise<"offered" | "skipped" | "exhausted"> {
   const pendingInstance = await getEventInstancesCollection(db).findOne({
     scope: "character",
     scopeId: character._id,
@@ -355,15 +381,31 @@ async function offerEventToCharacter(
   if (useBroadcast) {
     pickedDefinition = broadcastDef;
   } else {
-    const eligible = filterEligibleTemplates(
+    let eligible = filterEligibleTemplates(
       definitions,
       characterCtx,
       ledger,
       currentTurn,
       currentYear
     );
+    if (eligible.length === 0 && !genericFallbackEnabled) return "skipped";
     if (eligible.length === 0) {
-      return "skipped";
+      // Dated packs have run out for this character. The undated modern pool
+      // keeps the world moving, even if it repeats a recent kind.
+      eligible = filterEligibleTemplates(
+        definitions,
+        characterCtx,
+        ledger,
+        currentTurn,
+        currentYear,
+        {
+          unboundedOnly: true,
+          ignoreKindCooldown: true,
+        }
+      );
+    }
+    if (eligible.length === 0) {
+      return "exhausted";
     }
     const offerRoll = seededRoll(character._id.toHexString(), currentTurn, "pree", "offer");
     pickedDefinition = eligible[pickWeightedIndex(eligible, offerRoll)].definition;

@@ -1,0 +1,92 @@
+{
+  "config": {
+    "governmentType": "parliamentaryMonarchy",
+    "regionLabel": "Nation",
+    "regionalBillAssentTitle": "First Minister",
+    "legislature": {
+      "name": "Parliament",
+      "lowerChamber": {
+        "key": "commons",
+        "name": "House of Commons",
+        "shortName": "Commons",
+        "seats": 650,
+        "description": "650 elected MPs from single-member constituencies. The primary legislative chamber."
+      },
+      "upperChamber": {
+        "key": "lords",
+        "name": "House of Lords",
+        "shortName": "Lords",
+        "seats": 784,
+        "description": "Appointed and hereditary peers. Revises and scrutinises legislation."
+      }
+    },
+    "subNationalChamber": {
+      "key": "regionalCouncil",
+      "name": "Regional Council",
+      "shortName": "Regional Council",
+      "regionalModel": true
+    },
+    "officeTypes": [
+      {
+        "key": "primeMinister",
+        "label": "Prime Minister",
+        "labelPlural": "Prime Ministers",
+        "isExecutive": true,
+        "isSubNational": false
+      },
+      {
+        "key": "commons",
+        "label": "Member of Parliament",
+        "labelPlural": "Members of Parliament",
+        "chamberKey": "commons",
+        "isExecutive": false,
+        "isSubNational": false
+      },
+      {
+        "key": "regionalCouncil",
+        "label": "Regional Councillor",
+        "labelPlural": "Regional Councillors",
+        "chamberKey": "regionalCouncil",
+        "isExecutive": false,
+        "isSubNational": true
+      },
+      {
+        "key": "governor",
+        "label": "First Minister",
+        "labelPlural": "First Ministers",
+        "isExecutive": false,
+        "isSubNational": true
+      },
+      {
+        "key": "centralBankChair",
+        "label": "Governor of the Bank of England",
+        "labelPlural": "Governors of the Bank of England",
+        "isExecutive": false,
+        "isSubNational": false
+      }
+    ],
+    "lowerElectionSystem": { "snapElectionsAllowed": true }
+  },
+  "eraOverrides": {
+    "1953-default": {
+      "legislature": {
+        "name": "Parliament",
+        "lowerChamber": {
+          "key": "commons",
+          "name": "House of Commons",
+          "shortName": "Commons",
+          "seats": 625,
+          "description": "625 elected MPs from single-member constituencies (1950–1955 redistribution). The primary legislative chamber."
+        },
+        "upperChamber": {
+          "key": "lords",
+          "name": "House of Lords",
+          "shortName": "Lords",
+          "seats": 784,
+          "description": "Appointed and hereditary peers. Revises and scrutinises legislation."
+        }
+      }
+    }
+  },
+  "regionalAssentOfficeKey": "governor"
+}

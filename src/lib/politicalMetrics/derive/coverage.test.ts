@@ -24,22 +24,22 @@ function flatten(doc: Record<string, unknown>): Record<string, number> {
   return flat;
 }
 
-async function jpBoard() {
-  const { jpStateMetrics } = await import("@/lib/countries/jp/data/jpStateMetrics");
-  const legacy = flatten(jpStateMetrics[0] as unknown as Record<string, unknown>);
+async function frBoard() {
+  const { frStateMetrics } = await import("@/lib/countries/fr/data/frStateMetrics");
+  const legacy = flatten(frStateMetrics[0] as unknown as Record<string, unknown>);
   // A real seed carries economic/population in the SAME doc (pre-split source),
   // so the same flat map serves as both halves here.
-  return deriveCountryBoard({ countryId: "JP", legacy, macro: legacy });
+  return deriveCountryBoard({ countryId: "FR", legacy, macro: legacy });
 }
 
 describe("non-playable derivation coverage", () => {
   it("leaves NOTHING unauthored for a real seed", async () => {
-    const board = await jpBoard();
+    const board = await frBoard();
     expect(board.unauthored).toEqual([]);
   });
 
   it("sources the defense block from the authored table (tier 4)", async () => {
-    const board = await jpBoard();
+    const board = await frBoard();
     for (const id of DEFENSE_FAMILIES) {
       expect(board.values[id]?.tier, id).toBe(4);
       expect(board.values[id]?.sources, id).toEqual(["authored"]);
@@ -47,7 +47,7 @@ describe("non-playable derivation coverage", () => {
   });
 
   it("emits all 63 families, all finite and in 0-100", async () => {
-    const board = await jpBoard();
+    const board = await frBoard();
     expect(Object.keys(board.values)).toHaveLength(63);
     for (const [id, fam] of Object.entries(board.values)) {
       expect(Number.isFinite(fam.value), id).toBe(true);
@@ -57,7 +57,7 @@ describe("non-playable derivation coverage", () => {
   });
 
   it("derives most families at tier 1 or 2, not the coarse category fallback", async () => {
-    const board = await jpBoard();
+    const board = await frBoard();
     const strong = Object.values(board.values).filter((f) => f.tier <= 2).length;
     // A collapse to mostly tier 3 means the TIER1 inversion stopped matching
     // the seed's metric ids — derivation would still "work" but be meaningless.
@@ -67,19 +67,19 @@ describe("non-playable derivation coverage", () => {
 
 /**
  * Gate on the EMITTED artifact, not just the derivation. `seedPoliticalMetrics`
- * reads nonPlayableBoards.ts directly, so a country dropped from the defense
+ * reads non-playable-boards.json directly, so a country dropped from the defense
  * table (or a regeneration run before the table was complete) would ship an
- * incomplete board without the derivation tests noticing — they only sample JP.
+ * incomplete board without the derivation tests noticing — they only sample FR.
  */
 describe("emitted non-playable board file", () => {
   it("gives every REGION all 63 families, finite and in 0-100", async () => {
-    const { NON_PLAYABLE_BOARDS } = await import("../seeds/nonPlayableBoards");
+    const NON_PLAYABLE_BOARDS = (await import("../seeds/nonPlayableBoards")).getNonPlayableBoards();
     const presets = Object.keys(NON_PLAYABLE_BOARDS);
     expect(presets.length).toBeGreaterThanOrEqual(1);
     let regionCount = 0;
     for (const presetId of presets) {
       const countries = Object.keys(NON_PLAYABLE_BOARDS[presetId]);
-      expect(countries.length, presetId).toBeGreaterThanOrEqual(22);
+      expect(countries.length, presetId).toBeGreaterThanOrEqual(20);
       for (const countryId of countries) {
         const byRegion = NON_PLAYABLE_BOARDS[presetId][countryId];
         expect(Object.keys(byRegion).length, countryId).toBeGreaterThan(0);
@@ -101,11 +101,11 @@ describe("emitted non-playable board file", () => {
   it("preserves per-region variation instead of copying one national board", async () => {
     // The Phase 0 guarantee. If a regeneration ever collapses back to a single
     // board per country, every non-playable region silently loses its character.
-    const { NON_PLAYABLE_BOARDS } = await import("../seeds/nonPlayableBoards");
-    const de = NON_PLAYABLE_BOARDS["1953-default"].DE;
-    const regionIds = Object.keys(de);
+    const NON_PLAYABLE_BOARDS = (await import("../seeds/nonPlayableBoards")).getNonPlayableBoards();
+    const fr = NON_PLAYABLE_BOARDS["1953-default"].FR;
+    const regionIds = Object.keys(fr);
     expect(regionIds.length).toBeGreaterThan(1);
-    const board = (r: string) => de[r] as Record<string, number>;
+    const board = (r: string) => fr[r] as Record<string, number>;
     const varying = Object.keys(board(regionIds[0])).filter(
       (familyId) => new Set(regionIds.map((r) => board(r)[familyId])).size > 1
     );
@@ -115,7 +115,7 @@ describe("emitted non-playable board file", () => {
   it("keeps the defense block identical across a country's regions", async () => {
     // Defense posture is a national property — the tier-4 table is authored per
     // country, so regional divergence here would mean the derivation leaked.
-    const { NON_PLAYABLE_BOARDS } = await import("../seeds/nonPlayableBoards");
+    const NON_PLAYABLE_BOARDS = (await import("../seeds/nonPlayableBoards")).getNonPlayableBoards();
     for (const [presetId, byCountry] of Object.entries(NON_PLAYABLE_BOARDS)) {
       for (const [countryId, byRegion] of Object.entries(byCountry)) {
         const regionIds = Object.keys(byRegion);
@@ -132,9 +132,9 @@ describe("emitted non-playable board file", () => {
   });
 
   it("excludes playable countries, which seed from anchors instead", async () => {
-    const { NON_PLAYABLE_BOARDS } = await import("../seeds/nonPlayableBoards");
+    const NON_PLAYABLE_BOARDS = (await import("../seeds/nonPlayableBoards")).getNonPlayableBoards();
     for (const byCountry of Object.values(NON_PLAYABLE_BOARDS)) {
-      for (const playable of ["US", "UK", "RU", "DD"]) {
+      for (const playable of ["US", "UK", "RU", "DD", "DE", "JP", "CN"]) {
         expect(byCountry[playable], playable).toBeUndefined();
       }
     }

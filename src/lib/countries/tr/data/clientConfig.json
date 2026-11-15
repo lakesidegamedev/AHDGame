@@ -1,0 +1,160 @@
+{
+  "config": {
+    "id": "TR",
+    "name": "Turkey",
+    "code": "TR",
+    "status": "coming-soon",
+    "flagEmoji": "🇹🇷",
+    "regionLabel": "Region",
+    "regionLabelPlural": "Regions",
+    "executiveTitle": "Prime Minister",
+    "executiveRealmPhrase": "Turkey",
+    "executiveLabel": "Çankaya",
+    "executivePath": "/country/tr/executive",
+    "governmentType": "parliamentaryRepublic",
+    "governmentTypeLabel": "Parliamentary Republic",
+    "descriptor": "A parliamentary republic where a Prime Minister governs at the confidence of a 450-seat National Assembly and a 184-seat Senate, amid the unstable AP/CHP coalitions of the late 1970s.",
+    "heroImage": "https://flagcdn.com/w640/tr.png",
+    "overviewPath": "/country/tr",
+    "mapPath": "/country/tr/map",
+    "currencyCode": "TRL",
+    "centralGovernmentLabel": "State Budget",
+    "financeMinisterCabinetId": "minister_of_finance",
+    "majorPartyIds": ["tr_ap", "tr_chp"],
+    "partyCreationNPPs": { "statesRequired": 2, "lockHomeState": false, "nppsPerState": 1 },
+    "legislature": {
+      "name": "Grand National Assembly",
+      "path": "/country/tr/legislature",
+      "bicameral": true,
+      "lowerChamber": {
+        "key": "milletMeclisi",
+        "name": "National Assembly",
+        "shortName": "Meclis",
+        "seats": 450,
+        "description": "450 deputies elected by proportional representation (D'Hondt) for four-year terms."
+      },
+      "upperChamber": {
+        "key": "senato",
+        "name": "Senate of the Republic",
+        "shortName": "Senato",
+        "seats": 184,
+        "description": "184 senators (the Cumhuriyet Senatosu, abolished after the 1980 coup), partly elected and partly appointed.",
+        "elected": true
+      }
+    },
+    "officeTypes": [
+      {
+        "key": "primeMinister",
+        "label": "Prime Minister",
+        "isExecutive": true,
+        "isSubNational": false,
+        "labelPlural": "Prime Ministers"
+      },
+      {
+        "key": "president",
+        "label": "President",
+        "isExecutive": true,
+        "isSubNational": false,
+        "isHeadOfState": true,
+        "labelPlural": "Presidents"
+      },
+      {
+        "key": "deputy",
+        "label": "Deputy",
+        "chamberKey": "milletMeclisi",
+        "isExecutive": false,
+        "isSubNational": false,
+        "labelPlural": "Deputies"
+      },
+      {
+        "key": "senator",
+        "label": "Senator",
+        "chamberKey": "senato",
+        "isExecutive": false,
+        "isSubNational": false,
+        "labelPlural": "Senators"
+      },
+      {
+        "key": "centralBankChair",
+        "label": "Governor of the Central Bank of Turkey",
+        "isExecutive": false,
+        "isSubNational": false,
+        "labelPlural": "Governors of the Central Bank of Turkey"
+      }
+    ],
+    "electionSystems": {
+      "lowerChamber": "pr_hareQuota",
+      "upperChamber": "pr_hareQuota",
+      "headOfGovernment": "parliamentary",
+      "headOfState": "ceremonial"
+    },
+    "lowerElectionSystem": { "snapElectionsAllowed": true },
+    "upperElectionSystem": { "snapElectionsAllowed": false },
+    "centralBank": {
+      "name": "Central Bank of the Republic of Turkey",
+      "abbreviation": "TCMB",
+      "heroImage": "https://flagcdn.com/w640/tr.png",
+      "defaultPrimeRate": 20
+    },
+    "usdExchangeRate": 0.029
+  },
+  "eraOverrides": {
+    "2027-default": { "currencyCode": "TRY" },
+    "1991-default": { "usdExchangeRate": 0.00023970377407599706 },
+    "1953-default": {
+      "descriptor": "A parliamentary republic where a Prime Minister governs at the confidence of a unicameral 487-seat Grand National Assembly (TBMM); no Senate existed until the 1961 constitution.",
+      "majorPartyIds": ["tr_dp", "tr_chp"],
+      "legislature": {
+        "name": "Grand National Assembly",
+        "path": "/country/tr/legislature",
+        "bicameral": false,
+        "lowerChamber": {
+          "key": "milletMeclisi",
+          "name": "Grand National Assembly",
+          "shortName": "Meclis",
+          "seats": 487,
+          "description": "487 deputies of the unicameral Türkiye Büyük Millet Meclisi (1950 election size; Senate created only by the 1961 constitution)."
+        }
+      },
+      "officeTypes": [
+        {
+          "key": "primeMinister",
+          "label": "Prime Minister",
+          "isExecutive": true,
+          "isSubNational": false,
+          "labelPlural": "Prime Ministers"
+        },
+        {
+          "key": "president",
+          "label": "President",
+          "isExecutive": true,
+          "isSubNational": false,
+          "isHeadOfState": true,
+          "labelPlural": "Presidents"
+        },
+        {
+          "key": "deputy",
+          "label": "Deputy",
+          "chamberKey": "milletMeclisi",
+          "isExecutive": false,
+          "isSubNational": false,
+          "labelPlural": "Deputies"
+        },
+        {
+          "key": "centralBankChair",
+          "label": "Governor of the Central Bank of Turkey",
+          "isExecutive": false,
+          "isSubNational": false,
+          "labelPlural": "Governors of the Central Bank of Turkey"
+        }
+      ],
+      "electionSystems": {
+        "lowerChamber": "pr_hareQuota",
+        "headOfGovernment": "parliamentary",
+        "headOfState": "ceremonial"
+      },
+      "upperElectionSystem": null,
+      "usdExchangeRate": 0.35714285714285715
+    }
+  }
+}

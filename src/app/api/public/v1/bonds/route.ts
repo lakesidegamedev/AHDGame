@@ -3,8 +3,8 @@ import { getDb } from "@/lib/mongodb";
 import { handleRouteError } from "@/lib/api/errors";
 import { publicApiGuard } from "@/lib/publicApi/middleware";
 import { escapeRegex } from "@/lib/utils/escapeRegex";
-import type { Bond } from "@/lib/db/types/bond";
-import type { Corporation } from "@/lib/db/types";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 const PER_PAGE = 20;
 
@@ -22,7 +22,7 @@ export async function GET(request: Request) {
     const query: Record<string, unknown> = { defaulted: { $ne: true } };
 
     if (corp) {
-      const corpDoc = await db.collection<Corporation>("corporations").findOne({
+      const corpDoc = await corporationsCollection(db).findOne({
         name: { $regex: escapeRegex(corp), $options: "i" },
       });
       if (corpDoc) {
@@ -38,13 +38,12 @@ export async function GET(request: Request) {
     }
 
     const [bonds, total] = await Promise.all([
-      db
-        .collection<Bond>("bonds")
+      bondsCollection(db)
         .find(query)
         .skip((page - 1) * PER_PAGE)
         .limit(PER_PAGE)
         .toArray(),
-      db.collection<Bond>("bonds").countDocuments(query),
+      bondsCollection(db).countDocuments(query),
     ]);
 
     return NextResponse.json({

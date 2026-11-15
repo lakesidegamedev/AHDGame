@@ -1,8 +1,8 @@
 /**
- * Americas — 1953 Tier-3 registry (#3728).
+ * Americas, 1953 Tier-3 registry.
  *
  * Already classified: US, BR (CountryConfig). Tier-2 candidates (MX, CU, GT, PA,
- * NI, CL, AR, VE) are listed here as Tier-3 until sphere-macro seeding (#3721).
+ * NI, CL, AR, VE) are listed here as Tier-3 until sphere-macro seeding.
  *
  * Dominions: Canada is a sovereign Commonwealth realm (Statute of Westminster).
  * Caribbean/South American colonies keep 1953 names (British Guiana, British

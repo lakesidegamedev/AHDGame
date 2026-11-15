@@ -1,24 +1,13 @@
 import type { State } from "@/lib/db/types";
 
 /**
- * Nigeria's 6 geopolitical zones as State-compatible documents.
+ * Nigeria's 6 geopolitical zones as State-compatible documents (aggregated,
+ * not the 36 states + FCT). The playable sub-national units.
  *
- * The 6 zones (aggregated, not the real 36 states + FCT) are the playable
- * sub-national units. Seat counts are zone-scaled to NASS totals
- * (House of Representatives 360, Senate 109).
- *
- * - `population` — approximate 2019 estimates (people).
- * - `gdp` — regional GDP in millions of NGN.
- * - `houseDistricts` — House of Representatives seats allocated to the zone
- *     (must sum to 360 across all 6 zones).
- * - `stateSenateSeats` — Senate seats allocated to the zone
- *     (must sum to 109 across all 6 zones).
- * - `region` — geopolitical zone grouping used for regional filters.
- * - `votingSystem` — Placeholder; actual system is FPTP by federal
+ * - `houseDistricts` , House seats for the zone (must sum to 360).
+ * - `stateSenateSeats` , Senate seats for the zone (must sum to 109).
+ * - `votingSystem` , Placeholder; actual system is FPTP by federal
  *     constituency.
- *
- * Era variants not authored — 1991 falls back to 2019 via selectPresetBundle.
- * Approximate 2019 data, tunable.
  */
 export const ngRegions: State[] = [
   // ── North-West ───────────────────────────────────────────────────────────────

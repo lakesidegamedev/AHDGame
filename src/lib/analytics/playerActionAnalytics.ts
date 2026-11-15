@@ -4,6 +4,7 @@ import { getAnalyticsAccount, isAnalyticsGenerationCurrent } from "./accountCont
 import { getStoredConsent } from "@/components/CookieConsent";
 import { captureFirstMeaningfulAction, captureProductEvent } from "./capture";
 import { playerActionOperationProperties } from "./playerActionOperation";
+import { ANALYTICS_ELECTION_TYPES } from "./electionTypes";
 
 const PLAYER_ACTION_API_ROOTS = new Set([
   "actions",
@@ -301,51 +302,6 @@ function depthFamilyFor(segments: string[]): DepthFamily | undefined {
     return "diplomacy";
   return undefined;
 }
-
-const ELECTION_TYPES = new Set([
-  "president",
-  "presidential",
-  "house",
-  "senate",
-  "stateSenate",
-  "governor",
-  "special_governor",
-  "commons",
-  "snap_commons",
-  "special_commons",
-  "primeMinister",
-  "holyrood",
-  "senedd",
-  "regionalCouncil",
-  "shugiin",
-  "sangiin",
-  "bundestag",
-  "snap_bundestag",
-  "assembleeNationale",
-  "cameraDeputati",
-  "chamber",
-  "congresoDiputados",
-  "dail",
-  "landAssembly",
-  "landtag",
-  "localCouncil",
-  "milletMeclisi",
-  "nationalitiesDeputy",
-  "npcDelegate",
-  "peoplesCongress",
-  "republicSupremeSoviet",
-  "riksdag",
-  "seanad",
-  "senat",
-  "senato",
-  "specialElection",
-  "supremeSoviet",
-  "supremeSovietDeputy",
-  "uachtaran",
-  "volkskammerDeputy",
-  "presidential_primary",
-  "party_leadership",
-]);
 
 const ACTION_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 const NON_ACTION_PATH_SEGMENTS = new Set([
@@ -742,7 +698,7 @@ function safeElectionType(responseBody: Record<string, unknown> | null): string 
       : nested && typeof nested === "object" && "electionType" in nested
         ? (nested as { electionType?: unknown }).electionType
         : undefined;
-  return typeof value === "string" && ELECTION_TYPES.has(value) ? value : "unknown";
+  return typeof value === "string" && ANALYTICS_ELECTION_TYPES.has(value) ? value : "unknown";
 }
 
 function safeElectionPhase(responseBody: Record<string, unknown> | null): string | undefined {

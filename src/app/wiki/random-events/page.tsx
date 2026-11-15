@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
 import { getDb } from "@/lib/mongodb";
+import { eventDefinitionsCollection } from "@/lib/db/repositories/eventDefinitions";
+import type { Document } from "mongodb";
 
 export const metadata: Metadata = {
   title: "Random events | wiki | A House Divided",
@@ -27,8 +29,7 @@ const ELIGIBILITY_STYLES: Record<string, string> = {
 
 async function getApprovedEvents(): Promise<EventDef[]> {
   const db = await getDb();
-  const docs = await db
-    .collection("eventDefinitions")
+  const docs = await eventDefinitionsCollection<Document>(db)
     .find({ status: "approved" })
     .sort({ title: 1 })
     .project({ kind: 1, title: 1, body: 1, image: 1, eligibility: 1 })

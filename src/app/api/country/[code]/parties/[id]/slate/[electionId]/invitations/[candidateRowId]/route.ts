@@ -8,7 +8,12 @@ import { findSlateForElection } from "@/lib/db/recruitmentSlateLookup";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import type { Election, ElectionCandidate, SlateCandidate } from "@/lib/db/types";
 import { resolveSlateAuthority } from "@/lib/slateAuthority";
-import { removeWithdrawnCandidateFromTally } from "@/lib/electionEngine/tallyCleaner";
+import { removeWithdrawnCandidateFromTally } from "@/lib/elections/engine/tallyCleaner";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
+import type { Document } from "mongodb";
+import { slateCandidatesCollection } from "@/lib/db/repositories/slateCandidates";
 
 interface RouteParams {
   params: Promise<{
@@ -59,9 +64,10 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
       );
     }
 
-    const row = await db
-      .collection<SlateCandidate>("slateCandidates")
-      .findOne({ _id: new ObjectId(candidateRowId), slateId: slate._id });
+    const row = await slateCandidatesCollection(db).findOne({
+      _id: new ObjectId(candidateRowId),
+      slateId: slate._id,
+    });
     if (!row) {
       return errorResponse(404, "Invitation not found on this slate");
     }
@@ -71,9 +77,7 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
       // slate handle alone would leave the candidate on the ballot, so mirror
       // the self-withdraw cleanup: mark the candidate withdrawn, scrub the
       // tally, and archive any campaign doc before tombstoning the slate row.
-      const election = await db
-        .collection<Election>("elections")
-        .findOne({ _id: electionObjectId, countryId });
+      const election = await electionsCollection(db).findOne({ _id: electionObjectId, countryId });
       if (
         !election ||
         election.status === "completed" ||
@@ -83,24 +87,22 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
         return errorResponse(409, "Cannot withdraw a filed candidate from a closed race.");
       }
 
-      const filedCandidate = await db.collection<ElectionCandidate>("electionCandidates").findOne({
+      const filedCandidate = await electionCandidatesCollection(db).findOne({
         electionId: electionObjectId,
         characterId: row.candidateId,
         status: "active",
       });
       if (filedCandidate) {
-        await db
-          .collection<ElectionCandidate>("electionCandidates")
-          .updateOne(
-            { _id: filedCandidate._id },
-            { $set: { status: "withdrawn", withdrawnAt: now } }
-          );
+        await electionCandidatesCollection(db).updateOne(
+          { _id: filedCandidate._id },
+          { $set: { status: "withdrawn", withdrawnAt: now } }
+        );
         await removeWithdrawnCandidateFromTally(
           db,
           electionObjectId,
           filedCandidate._id.toString()
         );
-        await db.collection("campaigns").updateOne(
+        await campaignsCollection<Document>(db).updateOne(
           {
             electionId: electionObjectId,
             candidateId: filedCandidate.characterId,
@@ -123,12 +125,10 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
     // A `withdrawn` tombstone keeps the slate non-empty (blocking re-hydration)
     // and is excluded from the file/override passes and template carry-forward —
     // matching how the POST reassign route already tombstones vacated rows (#906).
-    await db
-      .collection<SlateCandidate>("slateCandidates")
-      .updateOne(
-        { _id: row._id },
-        { $set: { status: "withdrawn", refusalReason: null, respondedAt: now, updatedAt: now } }
-      );
+    await slateCandidatesCollection(db).updateOne(
+      { _id: row._id },
+      { $set: { status: "withdrawn", refusalReason: null, respondedAt: now, updatedAt: now } }
+    );
     return NextResponse.json({ success: true });
   } catch (error) {
     return handleRouteError(error);

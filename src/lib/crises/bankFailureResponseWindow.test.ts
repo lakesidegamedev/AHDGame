@@ -3,16 +3,13 @@ import { ObjectId, type Db } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
 import type { Crisis } from "@/lib/db/types/crisis";
 
-const { createCrisisFromTemplate, createCrisisInteraction, isCrisisInteractionEnabled } =
-  vi.hoisted(() => ({
-    createCrisisFromTemplate: vi.fn(),
-    createCrisisInteraction: vi.fn(),
-    isCrisisInteractionEnabled: vi.fn(),
-  }));
+const { createCrisisFromTemplate, createCrisisInteraction } = vi.hoisted(() => ({
+  createCrisisFromTemplate: vi.fn(),
+  createCrisisInteraction: vi.fn(),
+}));
 
 vi.mock("./createCrisisFromTemplate", () => ({ createCrisisFromTemplate }));
 vi.mock("./interactionEngine", () => ({ createCrisisInteraction }));
-vi.mock("./featureFlag", () => ({ isCrisisInteractionEnabled }));
 
 import {
   bankFailureResponseEventId,
@@ -27,7 +24,6 @@ describe("bank failure response window", () => {
     vi.clearAllMocks();
     db = createMockDb();
     db.collection("crises");
-    isCrisisInteractionEnabled.mockResolvedValue(true);
     createCrisisFromTemplate.mockResolvedValue(new ObjectId());
   });
 
@@ -98,16 +94,5 @@ describe("bank failure response window", () => {
 
     expect(createCrisisFromTemplate).not.toHaveBeenCalled();
     expect(createCrisisInteraction).toHaveBeenCalledWith(db, crisis);
-  });
-
-  it("does not create a crisis while crisis interactions are disabled", async () => {
-    isCrisisInteractionEnabled.mockResolvedValue(false);
-    await ensureBankFailureResponseWindow(db as unknown as Db, {
-      bankId: new ObjectId(),
-      countryId: "US",
-      charteredTurn: 4,
-      currentTurn: 10,
-    });
-    expect(createCrisisFromTemplate).not.toHaveBeenCalled();
   });
 });

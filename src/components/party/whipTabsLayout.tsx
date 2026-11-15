@@ -5,6 +5,7 @@ import { useMemo, useState, type ReactNode } from "react";
 import { type CountryId } from "@/lib/constants/countriesCore";
 import { getCountryClientConfig } from "@/lib/constants/countryClientConfig";
 import { useRuntimeCountryConfig } from "@/hooks/useRuntimeCountryConfig";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 export type WhipSubTarget = "bills" | "leadership" | "cabinet";
 
@@ -75,7 +76,7 @@ export function WhipTabsLayout({
     { key: "leadership", label: "Leadership", show: true },
     {
       key: "cabinet",
-      label: config.id === "US" ? t("nominationsTab") : "Cabinet",
+      label: countryHasFeature("usUi", config.id) ? t("nominationsTab") : "Cabinet",
       show: showCabinet,
     },
   ];

@@ -17,8 +17,8 @@ export interface Era {
   endYear: number;
 }
 
-/** Supported year domain. Presets 1953/1979/1991/2019 all fall inside. */
-export const ERA_DOMAIN = { min: 1950, max: 2049 } as const;
+/** Supported year domain. Every shipping preset, and play well past 2050, falls inside. */
+export const ERA_DOMAIN = { min: 1950, max: 2099 } as const;
 
 export function eraFromYear(year: number): Era {
   const clamped = Math.min(ERA_DOMAIN.max, Math.max(ERA_DOMAIN.min, year));

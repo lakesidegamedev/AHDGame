@@ -8,11 +8,13 @@
  * resolves and lapses those offers.
  */
 import type { AnyBulkWriteOperation, Db, ObjectId } from "mongodb";
-import type { CabinetNomination, Character } from "@/lib/db/types";
-import type { CentralBank } from "@/lib/db/types/centralBank";
+import type { CabinetNomination } from "@/lib/db/types";
 import { createNotifications, type NotificationInput } from "@/lib/notifications";
 import { getCabinetPositionById } from "@/lib/constants";
 import { vacateFomcChairSeat } from "@/lib/centralBank/helpers";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { cabinetNominationsCollection } from "@/lib/db/repositories/cabinetNominations";
 
 /** Turns a nominee has to answer before the offer lapses. */
 export const CABINET_NOMINATION_CHOICE_TURNS = 3;
@@ -29,7 +31,7 @@ export async function findPendingCabinetNominationChoice(
   characterId: ObjectId,
   currentTurn: number
 ): Promise<CabinetNomination | null> {
-  const nomination = await db.collection<CabinetNomination>("cabinetNominations").findOne({
+  const nomination = await cabinetNominationsCollection(db).findOne({
     nomineeCharacterId: characterId,
     status: "awaiting_choice",
   });
@@ -42,11 +44,9 @@ export async function findPendingCabinetNominationChoice(
 
 /** Plain-language name of the bank office blocking the appointment. */
 export async function describeBankOfficeConflict(db: Db, characterId: ObjectId): Promise<string> {
-  const chair = await db
-    .collection<CentralBank>("centralBanks")
-    .findOne({ chairCharacterId: characterId });
+  const chair = await centralBanksCollection(db).findOne({ chairCharacterId: characterId });
   if (chair) return "central bank chair";
-  const boardSeat = await db.collection<CentralBank>("centralBanks").findOne({
+  const boardSeat = await centralBanksCollection(db).findOne({
     fomcBoard: { $elemMatch: { occupantType: "player", characterId } },
   });
   return boardSeat ? "Federal Reserve board seat" : "central bank office";
@@ -76,7 +76,7 @@ export async function resolveCabinetNominationChoice(
   db: Db,
   input: ResolveCabinetNominationChoiceInput
 ): Promise<ResolveCabinetNominationChoiceResult> {
-  const nomination = await db.collection<CabinetNomination>("cabinetNominations").findOne({
+  const nomination = await cabinetNominationsCollection(db).findOne({
     _id: input.nominationId,
     status: "awaiting_choice",
   });
@@ -92,18 +92,16 @@ export async function resolveCabinetNominationChoice(
   }
 
   const posName = positionName(nomination.positionId);
-  const nomineeChar = await db
-    .collection<Character>("characters")
-    .findOne({ _id: input.characterId });
-  const presidentChar = await db
-    .collection<Character>("characters")
-    .findOne({ _id: nomination.proposedByPresidentId });
+  const nomineeChar = await charactersCollection(db).findOne({ _id: input.characterId });
+  const presidentChar = await charactersCollection(db).findOne({
+    _id: nomination.proposedByPresidentId,
+  });
   const isSameAsPresident =
     !!nomineeChar && nomineeChar._id.toString() === nomination.proposedByPresidentId.toString();
   const notifications: NotificationInput[] = [];
 
   if (input.decision === "remain") {
-    await db.collection<CabinetNomination>("cabinetNominations").updateOne(
+    await cabinetNominationsCollection(db).updateOne(
       { _id: nomination._id, status: "awaiting_choice" },
       {
         $set: {
@@ -150,18 +148,16 @@ export async function resolveCabinetNominationChoice(
 
   // Accept: stand down from the bank office(s) that bar a cabinet seat. This
   // mirrors the chair resignation route, plus any US Fed board seat held.
-  const chairBank = await db
-    .collection<CentralBank>("centralBanks")
-    .findOne({ chairCharacterId: input.characterId });
+  const chairBank = await centralBanksCollection(db).findOne({
+    chairCharacterId: input.characterId,
+  });
   if (chairBank) {
-    await db
-      .collection("characters")
-      .updateOne(
-        { _id: input.characterId, "currentOffice.type": "centralBankChair" },
-        { $set: { currentOffice: null } }
-      );
+    await charactersCollection(db).updateOne(
+      { _id: input.characterId, "currentOffice.type": "centralBankChair" },
+      { $set: { currentOffice: null } }
+    );
     await vacateFomcChairSeat(db, chairBank._id);
-    await db.collection<CentralBank>("centralBanks").updateOne(
+    await centralBanksCollection(db).updateOne(
       { _id: chairBank._id },
       {
         $set: {
@@ -176,7 +172,7 @@ export async function resolveCabinetNominationChoice(
       }
     );
   }
-  await db.collection<CentralBank>("centralBanks").updateMany(
+  await centralBanksCollection(db).updateMany(
     { fomcBoard: { $elemMatch: { occupantType: "player", characterId: input.characterId } } },
     {
       $set: {
@@ -193,7 +189,7 @@ export async function resolveCabinetNominationChoice(
 
   // Re-run the normal confirmation path on the next turn: voting is closed, the
   // bank office is gone, so the seat is filled without any special-casing.
-  await db.collection<CabinetNomination>("cabinetNominations").updateOne(
+  await cabinetNominationsCollection(db).updateOne(
     { _id: nomination._id, status: "awaiting_choice" },
     {
       $set: {
@@ -246,16 +242,14 @@ export async function expireUnansweredCabinetNominationChoices(
   now: Date,
   currentTurn: number
 ): Promise<void> {
-  const lapsed = await db
-    .collection<CabinetNomination>("cabinetNominations")
+  const lapsed = await cabinetNominationsCollection(db)
     .find({ status: "awaiting_choice", choiceExpiresOnTurn: { $lte: currentTurn } })
     .toArray();
   if (lapsed.length === 0) return;
 
   const nomineeIds = lapsed.flatMap((n) => (n.nomineeCharacterId ? [n.nomineeCharacterId] : []));
   const presidentIds = lapsed.map((n) => n.proposedByPresidentId);
-  const characters = await db
-    .collection<Character>("characters")
+  const characters = await charactersCollection(db)
     .find({ _id: { $in: [...nomineeIds, ...presidentIds] } })
     .toArray();
   const characterById = new Map(characters.map((c) => [c._id.toString(), c]));
@@ -319,7 +313,7 @@ export async function expireUnansweredCabinetNominationChoices(
   }
 
   if (updates.length > 0) {
-    await db.collection<CabinetNomination>("cabinetNominations").bulkWrite(updates);
+    await cabinetNominationsCollection(db).bulkWrite(updates);
   }
   if (notifications.length > 0) await createNotifications(notifications);
 }

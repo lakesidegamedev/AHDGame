@@ -147,7 +147,7 @@ export function AdministrationTable({
     }
     // An acting holder does not block confirmation: nominating sends the seat
     // to the Senate and confirming replaces the caretaker, so the President is
-    // not pushed toward firing first (ticket #1273).
+    // not pushed toward firing first.
     if (!position.member || position.member.acting) {
       buttons.unshift(
         <RowButton key="nominate" onClick={() => cabinet.openNominateModal(position.id)}>

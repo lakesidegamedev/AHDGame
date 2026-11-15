@@ -1,7 +1,6 @@
 /**
  * Russia's direct presidency activates after a certified ticket and July eligibility.
- * processRuPresidencyTransition seats that ticket transactionally; a historical
- * date or an unbound certification marker never removes the existing Chairman.
+ * A historical date or unbound certification marker never removes the existing Chairman.
  */
 import { ObjectId, type Db } from "mongodb";
 import type { GameState } from "@/lib/db/types";

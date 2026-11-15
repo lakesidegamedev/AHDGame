@@ -1,11 +1,12 @@
 import type { ClientSession, Db, Document } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
-import type { State } from "@/lib/db/types/state";
 import {
   REGION_SCOPED_COLLECTIONS,
   type RegionScope,
 } from "@/lib/referendum/transfer/regionScopedCollections";
 import type { FederationStateTransferPlan } from "./territoryTransferPlan";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { federationArchivedRegionRowsCollection } from "@/lib/db/repositories/federationArchivedRegionRows";
 
 export const FEDERATION_ARCHIVED_REGION_ROWS_COLLECTION = "federationArchivedRegionRows";
 
@@ -63,9 +64,7 @@ export async function materializeFederationTerritory(input: {
     throw new Error("Federation territory archive needs a complete approved partition");
   if (departed.length === 0) return { statesArchived: 0, regionalRowsArchived: 0 };
   const successorForState = new Map(departed.map((row) => [row.stateId, row.successorEntityId]));
-  const archive = db.collection<FederationArchivedRegionRow>(
-    FEDERATION_ARCHIVED_REGION_ROWS_COLLECTION
-  );
+  const archive = federationArchivedRegionRowsCollection<FederationArchivedRegionRow>(db);
   const archiveRows = async (
     collection: string,
     rows: Document[],
@@ -90,8 +89,7 @@ export async function materializeFederationTerritory(input: {
     await archive.insertMany(records, { session });
   };
 
-  const states = await db
-    .collection<State>("states")
+  const states = await statesCollection(db)
     .find({ _id: { $in: stateIds }, countryId: sourceCountryId }, { session })
     .toArray();
   if (states.length !== departed.length)
@@ -133,9 +131,10 @@ export async function materializeFederationTerritory(input: {
       regionalRowsArchived += rows.length;
     }
   }
-  const removedStates = await db
-    .collection<State>("states")
-    .deleteMany({ _id: { $in: stateIds }, countryId: sourceCountryId }, { session });
+  const removedStates = await statesCollection(db).deleteMany(
+    { _id: { $in: stateIds }, countryId: sourceCountryId },
+    { session }
+  );
   if (removedStates.deletedCount !== states.length)
     throw new Error("Federation states changed during territory archive");
   return { statesArchived: states.length, regionalRowsArchived };

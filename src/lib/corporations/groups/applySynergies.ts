@@ -16,6 +16,7 @@ import {
   loadStrengthUpkeepStage,
   strengthUpkeepActive,
 } from "@/lib/corporations/strengthUpkeep";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export interface SynergyResult {
   groupsProcessed: number;
@@ -38,8 +39,7 @@ export async function applyGroupSynergies(db: Db, currentTurn: number): Promise<
     for (const id of members) allIds.add(id);
   }
 
-  const corps = await db
-    .collection<Corporation>("corporations")
+  const corps = await corporationsCollection(db)
     .find({ _id: { $in: [...allIds].map((id) => new ObjectId(id)) } })
     .project<
       Pick<
@@ -103,7 +103,7 @@ export async function applyGroupSynergies(db: Db, currentTurn: number): Promise<
 
   if (ops.length > 0) {
     try {
-      await db.collection<Corporation>("corporations").bulkWrite(ops);
+      await corporationsCollection(db).bulkWrite(ops);
     } catch (err) {
       result.errors.push(err instanceof Error ? err.message : String(err));
     }

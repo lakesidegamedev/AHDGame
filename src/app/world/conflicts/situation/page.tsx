@@ -1,4 +1,3 @@
-import { requireConflictsEnabled } from "../_coldwar/gate";
 import { getAuthUserWithCharacter } from "@/lib/auth";
 import { getDb } from "@/lib/mongodb";
 import { getMilitaryUnitsCollection } from "@/lib/db/collections/militaryUnits";
@@ -10,12 +9,10 @@ import { listActiveConflicts } from "@/lib/db/collections/conflicts";
 import { SituationBoardClient } from "./SituationBoardClient";
 
 // Conflicts — World Situation Board. Commit the country's combat power to proxy
-// theaters. Gated by `conflictsEnabled`. Reads the viewer's country's live-unit pool
+// theaters. Reads the viewer's country's live-unit pool
 // (the committable CP) and its persisted situation state (war-footing cohesion +
 // per-theater commitments), and passes both to the client.
 export default async function SituationBoardPage() {
-  await requireConflictsEnabled();
-
   const authUser = await getAuthUserWithCharacter();
   const country = authUser?.character?.countryId ?? "US";
 

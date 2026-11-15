@@ -87,7 +87,6 @@ function seedDb(
     currentYear: 1995,
     nextScheduledTurn: null,
     pausedAt: null,
-    liveElectionResultsEnabled: true,
   });
   db.collectionMocks.elections!.findOne.mockResolvedValue({
     _id: electionId,

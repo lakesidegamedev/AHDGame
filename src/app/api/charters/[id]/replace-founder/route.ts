@@ -7,25 +7,22 @@ import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { parseJsonBody } from "@/lib/api/validate";
 import { replaceFounderSchema } from "@/lib/api/schemas/charters";
 import { replaceFounder } from "@/lib/charters/replaceFounder";
-import type { Character, PartyCharter } from "@/lib/db/types";
+import type { PartyCharter } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { partyChartersCollection } from "@/lib/db/repositories/partyCharters";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
 }
 
 /**
- * POST /api/charters/[id]/replace-founder — Swaps a founder slot with a fresh
- * characterId and returns the charter to `pending-signatures`. Works both for
- * a voided founder (rejected / banned / withdrawn, status
- * `founder-replacement`) and, per suggestion #287, for a voluntary swap of an
- * inactive UNSIGNED founder while the charter is still `pending-signatures`.
+ * POST /api/charters/[id]/replace-founder: swaps a founder slot with a fresh
+ * characterId and returns the charter to `pending-signatures`. Handles both a
+ * voided founder (status `founder-replacement`) and a voluntary swap of an
+ * inactive unsigned founder while still `pending-signatures`.
  *
- * Authorization: caller must own at least one of the current founder
- * characters (the surviving founders OR the outgoing founder themselves
- * — self-replacement is allowed when a player wants to hand their slot
- * over).
- *
- * Auth: requireAuthWithCharacter
+ * Authorization: caller must own at least one current founder character,
+ * including the outgoing founder (self-replacement allowed).
  */
 export async function POST(request: Request, { params }: RouteParams) {
   try {
@@ -53,14 +50,11 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     // Authorization: caller must own at least one founder character on
     // the charter (surviving founder OR outgoing founder themselves).
-    const charter = await db
-      .collection<PartyCharter>("partyCharters")
-      .findOne({ _id: charterObjectId });
+    const charter = await partyChartersCollection(db).findOne({ _id: charterObjectId });
     if (!charter) {
       return errorResponse(404, "Charter not found");
     }
-    const callerCharacters = await db
-      .collection<Character>("characters")
+    const callerCharacters = await charactersCollection(db)
       .find({ userId: callerUserId, _id: { $in: charter.foundersCharacterIds } })
       .project<{ _id: ObjectId }>({ _id: 1 })
       .toArray();

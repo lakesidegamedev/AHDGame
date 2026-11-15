@@ -21,7 +21,7 @@ describe("buildNationalDetailsSections", () => {
   });
 
   it("non-playables keep National Metrics and omit the registry entry", () => {
-    const s = buildNationalDetailsSections("JP");
+    const s = buildNationalDetailsSections("FR");
     const politics = s.find((x) => x.title === "Politics")!;
     expect(politics.items.map((i) => i.id)).toEqual(["elections", "parties", "politicians"]);
     const economy = s.find((x) => x.title === "Economy")!;

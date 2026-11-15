@@ -13,6 +13,9 @@ import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { MARKETIZATION_SCHEDULE, plannedShare } from "@/lib/constants/commandEconomy";
 import { getNationalBudgetId } from "@/lib/bonds/sovereign";
 import { presentPlannedEconomy } from "@/lib/economy/presentPlannedEconomy";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 export async function GET() {
   try {
@@ -23,17 +26,15 @@ export async function GET() {
     const scheduledIds = Object.keys(MARKETIZATION_SCHEDULE) as CountryId[];
 
     const [gameState, gameConfig, budgets] = await Promise.all([
-      db
-        .collection<GameState>("gameState")
-        .findOne({ _id: "current" }, { projection: { currentYear: 1, currentTurn: 1 } }),
-      db
-        .collection<GameConfig>("gameConfig")
-        .findOne(
-          { _id: "default" },
-          { projection: { commandEconomyEnabled: 1, commandEconomySecondEconomyTolerance: 1 } }
-        ),
-      db
-        .collection<FederalBudget>("federalBudget")
+      gameStateCollection(db).findOne(
+        { _id: "current" },
+        { projection: { currentYear: 1, currentTurn: 1 } }
+      ),
+      gameConfigCollection(db).findOne(
+        { _id: "default" },
+        { projection: { commandEconomyEnabled: 1, commandEconomySecondEconomyTolerance: 1 } }
+      ),
+      federalBudgetCollection(db)
         .find(
           { _id: { $in: scheduledIds.map((id) => getNationalBudgetId(id)) } },
           {

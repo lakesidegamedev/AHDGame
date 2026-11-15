@@ -64,7 +64,6 @@ function renderNav(overrides: Partial<ExperimentalNavbarProps> = {}) {
         myCorporationHasGroup
         myUnionId="union"
         unionsEnabled
-        conflictsEnabled
         settlementCrisisLive
         {...overrides}
       />
@@ -149,13 +148,13 @@ describe("phone navigation dock", () => {
         "/world",
         "/market",
         "/world/trade",
-        "/world/conflicts",
+        "/world/crises?view=conflicts",
         "/unions",
         "/unions/union",
         "/corporation/7/group",
         "/about",
         "/privacy",
-        "/admin",
+        "/control",
       ])
     );
   });

@@ -105,18 +105,16 @@ export interface EnrichmentDependencies {
    */
   states?: Map<string, State>;
   /**
-   * Optional. The seatId of the election being enriched (e.g. `US-senate-TX-2`).
-   * When provided, the local region is parsed from this seatId and used to
-   * look up the state in `states` for state-aware alignment. Omit for races
-   * without a single regional electorate (e.g. presidential).
+   * Optional seatId of the election being enriched (e.g. `US-senate-TX-2`).
+   * When provided, the local region is parsed from it to look up the state
+   * for state-aware alignment. Omit for races without a single regional electorate.
    */
   electionSeatId?: string | null;
   /**
    * When true (ended / historical elections), labels and colours use the
-   * candidacy-row party (`ElectionCandidate.party`) instead of the character's
-   * live `character.party`. Prevents party switches after the race from
-   * recolouring old results. In-progress races leave this false so the UI
-   * still tracks live affiliation. (#939)
+   * candidacy-row party instead of the character's live party, so party
+   * switches after the race do not recolour old results. In-progress races
+   * leave this false to track live affiliation.
    */
   preferBallotParty?: boolean;
 }
@@ -164,7 +162,7 @@ export function enrichElectionCandidates(deps: EnrichmentDependencies): Enriched
   const electionCandidateById = new Map(candidates.map((c) => [c._id.toString(), c]));
   // nppEndorsements.candidateId is the character/NPP identity id (see
   // getEndorsementTargetId); playerEndorsements.candidateId is the
-  // electionCandidates row id (ticket #868). Both get normalized to row id
+  // electionCandidates row id. Both get normalized to row id
   // below so `endorsementsByCandidate` has one consistent key space.
   const rowIdByIdentityId = new Map(
     candidates.map((c) => [c.characterId.toString(), c._id.toString()])
@@ -234,7 +232,7 @@ export function enrichElectionCandidates(deps: EnrichmentDependencies): Enriched
     // Ballot / primary mechanics use the candidate row (entry-time party).
     // In-progress races: labels follow current character/NPP party so UI matches
     // profile after leaving/joining a party. Ended races: keep the ballot
-    // party so historical maps/results are not recoloured by later switches (#939).
+    // party so historical maps/results are not recoloured by later switches.
     const charForDisplay = !c.isNPP ? charMap.get(c.characterId.toString()) : undefined;
     const nppForDisplay = c.isNPP && c.nppId ? nppMap.get(c.nppId.toString()) : undefined;
     const displayPartyKey = preferBallotParty

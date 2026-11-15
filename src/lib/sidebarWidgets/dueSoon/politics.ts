@@ -10,6 +10,11 @@ import type { StatePartyElection, StatePartyVote } from "@/lib/db/types/statePar
 import { isInNewCharacterCooldown } from "@/lib/auth/newCharacterCooldown";
 import { getLeadershipEligibility } from "@/lib/parties/leadershipTenure";
 import type { DueSoonContext, DueSoonItem } from "./types";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { cabinetNominationsCollection } from "@/lib/db/repositories/cabinetNominations";
+import { nationalPartyElectionsCollection } from "@/lib/db/repositories/nationalPartyElections";
+import { statePartyElectionsCollection } from "@/lib/db/repositories/statePartyElections";
+import { scotusNominationsCollection } from "@/lib/db/repositories/scotusNominations";
 
 const ROW_LIMIT = 20;
 
@@ -28,19 +33,16 @@ export async function partyBallots(ctx: DueSoonContext): Promise<DueSoonItem[]> 
   if (!member?.party || !ctx.countryId) return [];
   const partyId = member.party;
   const countryId = ctx.countryId;
-  const party = await ctx.db
-    .collection<PoliticalParty>("politicalParties")
-    .findOne(
-      { sequentialId: Number(partyId), countryId },
-      { projection: { name: 1, sequentialId: 1, leadershipElectionMethod: 1 } }
-    );
+  const party = await politicalPartiesCollection(ctx.db).findOne(
+    { sequentialId: Number(partyId), countryId },
+    { projection: { name: 1, sequentialId: 1, leadershipElectionMethod: 1 } }
+  );
   if (!party || party.leadershipElectionMethod === "committee") return [];
   const canonicalId = String(party.sequentialId);
 
   const homeState = member.homeState?.toUpperCase();
   const [national, regional] = await Promise.all([
-    ctx.db
-      .collection<NationalPartyElection>("nationalPartyElections")
+    nationalPartyElectionsCollection(ctx.db)
       .find(
         { countryId, partyId: canonicalId, status: "voting" },
         { projection: { position: 1, endTurn: 1, founding: 1 } }
@@ -48,8 +50,7 @@ export async function partyBallots(ctx: DueSoonContext): Promise<DueSoonItem[]> 
       .limit(ROW_LIMIT)
       .toArray(),
     homeState
-      ? ctx.db
-          .collection<StatePartyElection>("statePartyElections")
+      ? statePartyElectionsCollection(ctx.db)
           .find(
             { countryId, stateId: homeState, partyId: canonicalId, status: "voting" },
             { projection: { position: 1, endTurn: 1, founding: 1, stateId: 1 } }
@@ -133,8 +134,7 @@ export async function confirmationVotes(ctx: DueSoonContext): Promise<DueSoonIte
   if (!seat?.countryId) return [];
   const countryId = seat.countryId;
   const [cabinet, scotus] = await Promise.all([
-    ctx.db
-      .collection<CabinetNomination>("cabinetNominations")
+    cabinetNominationsCollection(ctx.db)
       .find(
         { countryId, status: "active", ...(senate ? {} : { positionId: "vicePresident" }) },
         {
@@ -150,8 +150,7 @@ export async function confirmationVotes(ctx: DueSoonContext): Promise<DueSoonIte
       .limit(ROW_LIMIT)
       .toArray(),
     senate
-      ? ctx.db
-          .collection<ScotusNomination>("scotusNominations")
+      ? scotusNominationsCollection(ctx.db)
           .find(
             { countryId, status: "active" },
             {

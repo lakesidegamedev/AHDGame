@@ -4,11 +4,7 @@ import { type Db, type ObjectId, type Document, type AnyBulkWriteOperation } fro
 import type { IndexFund, IndexFundRedemptionQueueEntry } from "@/lib/db/types";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
-import {
-  getFundById,
-  listPendingRedemptions,
-  FUND_REDEMPTION_QUEUE_COLLECTION,
-} from "./fundQueries";
+import { getFundById, listPendingRedemptions } from "./fundQueries";
 import { loadTxThresholds } from "@/lib/financialTxLog/emit";
 import { sellFundHoldingsForRedemptionCash } from "./fundRedemptionLiquidity";
 import { sellFundBondHoldingsForCash } from "@/lib/bonds/sellFundBondUnits";
@@ -26,17 +22,18 @@ import {
   recoverQueuedPayouts,
   settleQueuedPayout,
 } from "./queuedPayoutSettlement";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { indexFundRedemptionQueueCollection } from "@/lib/db/repositories/indexFundRedemptionQueue";
 
 /**
  * Queue claims one redemption pass may make, shared by every fund in the pass.
  * The pro-rata gate gives every waiting entry a slice, so an uncapped pass
- * re-settled the whole queue each turn (#3366). Entries past the budget stay
+ * would re-settle the whole queue each turn. Entries past the budget stay
  * untouched and go first next turn; cash they did not draw stays in the fund.
  *
- * NPP payouts settle in batches (queuedPayoutBatch.ts) for about one claim
- * write each, so the budget sits above the NPP rebalancing inflow (about 1,000
- * claims a turn on a 1991 world). At the old one-receipt-per-claim cost of ~30
- * round trips the pass could pay 250 and the queue grew without bound.
+ * NPP payouts settle in batches (~one claim write each), so the budget sits
+ * above the NPP rebalancing inflow (~1,000 claims a turn on a 1991 world).
  */
 export const QUEUED_REDEMPTION_CLAIMS_PER_PASS = 2000;
 
@@ -45,11 +42,9 @@ export interface QueuedRedemptionClaimBudget {
 }
 
 /**
- * What one redemption pass loads once for every fund it serves: the pending
- * queue rows, the holder documents they credit, the fund-to-native rates and
- * the audit context. Each of those used to be read inside the per-fund call,
- * so a pass over N waiting funds paid N times for data that cannot change
- * between them.
+ * Per-pass context shared across every fund: pending queue rows, holder
+ * documents they credit, fund-to-native rates and audit context. Loaded once
+ * because none of it can change during a pass.
  */
 export interface QueuedRedemptionPassContext {
   pendingByFundId: Map<string, IndexFundRedemptionQueueEntry[]>;
@@ -76,8 +71,7 @@ export async function prepareQueuedRedemptionPass(
     loadedPending ??
     (fundIds.length === 0
       ? []
-      : await db
-          .collection<IndexFundRedemptionQueueEntry>(FUND_REDEMPTION_QUEUE_COLLECTION)
+      : await indexFundRedemptionQueueCollection<IndexFundRedemptionQueueEntry>(db)
           .find({ fundId: { $in: fundIds }, status: { $in: ["queued", "partial"] } })
           .sort({ createdAt: 1 })
           .toArray());
@@ -93,8 +87,7 @@ export async function prepareQueuedRedemptionPass(
   const nppCurrencyById = new Map<string, CurrencyCode>();
   const nppIds = pending.flatMap((entry) => (entry.nppId ? [entry.nppId] : []));
   if (nppIds.length > 0) {
-    const nppDocs = await db
-      .collection<{ _id: ObjectId; countryId?: string }>("npps")
+    const nppDocs = await nppsCollection<{ _id: ObjectId; countryId?: string }>(db)
       .find({ _id: { $in: nppIds } })
       .project({ countryId: 1, name: 1 })
       .toArray();
@@ -125,10 +118,9 @@ export async function prepareQueuedRedemptionPass(
   const currencies = [...new Set(funds.map((fund) => fund.anchorCurrencyCode))] as CurrencyCode[];
   const fxRateByCurrency = new Map<CurrencyCode, { rate: number; ok: boolean }>();
   if (forexEnabled && currencies.length > 0) {
-    const rows = await db
-      .collection<{ currencyCode: CurrencyCode; rate: number }>("exchangeRates")
+    const rows = await exchangeRatesCollection<{ currencyCode: CurrencyCode; rate: number }>(db)
       // Keep currencyCode: the map below is keyed by it, and a projection
-      // without it returns rows that cannot be keyed (#5083).
+      // without it returns rows that cannot be keyed.
       .find({ currencyCode: { $in: currencies } }, { projection: { currencyCode: 1, rate: 1 } })
       .toArray();
     const byCurrency = new Map(rows.map((row) => [row.currencyCode, row.rate]));
@@ -186,7 +178,7 @@ export async function processQueuedRedemptions(
       new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
   );
 
-  // #992 tranche 6: one batched holder lookup for the pass so each NPP
+  // One batched holder lookup for the pass so each NPP
   // redemption below can be denominated in the NPP home currency (the
   // npp:<id>:<homeCurrency> snapshot key) without a per-entry read.
   const holders = context.holders;
@@ -206,7 +198,7 @@ export async function processQueuedRedemptions(
 
   // Wallet credits are in the fund's native currency; the ₳ → native multiplier
   // is stamped on each queue entry at request time (entry.redeemFxRate, ticket
-  // #857 grandfather) - 1 for pre-fix legacy units, the fund rate for post-fix
+  // grandfather) - 1 for pre-fix legacy units, the fund rate for post-fix
   // units. Fund `cashAnchor` and NPP investment cash stay in ₳. We still gate on
   // rate availability so a momentary outage defers rather than risks a bad payout.
   if (forexEnabled) {
@@ -227,7 +219,7 @@ export async function processQueuedRedemptions(
   let paid = recovery.recovered;
   let fundState = fund;
   let availableCash = fund.cashAnchor;
-  // #992 tranche 6: thresholds for the bond-sale ledger rows below, loaded
+  // Thresholds for the bond-sale ledger rows below, loaded
   // at most once per redemption pass and only when a bond sale actually runs.
   let bondSaleThresholds: Awaited<ReturnType<typeof loadTxThresholds>> | undefined;
 
@@ -291,52 +283,48 @@ export async function processQueuedRedemptions(
     // Fence this claim before liquidation or payout. Its frozen journal, not
     // current prices or an acknowledgement, determines every recovery.
     const claimId = randomUUID();
-    const entry = await db
-      .collection<IndexFundRedemptionQueueEntry>(FUND_REDEMPTION_QUEUE_COLLECTION)
-      .findOneAndUpdate(
-        {
-          _id: pendingEntry._id,
-          status: pendingEntry.status,
-          units: pendingEntry.units,
-          paidAmountAnchor: pendingEntry.paidAmountAnchor,
-          pendingSettlementProjection: { $exists: false },
+    const entry = await indexFundRedemptionQueueCollection<IndexFundRedemptionQueueEntry>(
+      db
+    ).findOneAndUpdate(
+      {
+        _id: pendingEntry._id,
+        status: pendingEntry.status,
+        units: pendingEntry.units,
+        paidAmountAnchor: pendingEntry.paidAmountAnchor,
+        pendingSettlementProjection: { $exists: false },
+      },
+      {
+        $set: {
+          status: "processing",
+          settlementClaimId: claimId,
+          processingTurn: currentTurn,
+          processingStartedAt: new Date(),
+          updatedAt: new Date(),
         },
-        {
-          $set: {
-            status: "processing",
-            settlementClaimId: claimId,
-            processingTurn: currentTurn,
-            processingStartedAt: new Date(),
-            updatedAt: new Date(),
-          },
-          $unset: { payoutPlan: "" },
-        },
-        { returnDocument: "before" }
-      );
+        $unset: { payoutPlan: "" },
+      },
+      { returnDocument: "before" }
+    );
     if (!entry) continue;
     const restoreQueueClaim = async () => {
-      await db
-        .collection<IndexFundRedemptionQueueEntry>(FUND_REDEMPTION_QUEUE_COLLECTION)
-        .updateOne(
-          { _id: entry._id, status: "processing", settlementClaimId: claimId },
-          {
-            $set: { status: entry.status, updatedAt: new Date() },
-            $unset: { processingStartedAt: "", settlementClaimId: "", processingTurn: "" },
-          }
-        );
+      await indexFundRedemptionQueueCollection<IndexFundRedemptionQueueEntry>(db).updateOne(
+        { _id: entry._id, status: "processing", settlementClaimId: claimId },
+        {
+          $set: { status: entry.status, updatedAt: new Date() },
+          $unset: { processingStartedAt: "", settlementClaimId: "", processingTurn: "" },
+        }
+      );
     };
 
     const unitsRemaining = remainingRedemptionUnits(entry);
     if (unitsRemaining <= 0) {
-      await db
-        .collection<IndexFundRedemptionQueueEntry>(FUND_REDEMPTION_QUEUE_COLLECTION)
-        .updateOne(
-          { _id: entry._id, status: "processing", settlementClaimId: claimId },
-          {
-            $set: { status: "paid", updatedAt: new Date() },
-            $unset: { processingStartedAt: "", settlementClaimId: "", processingTurn: "" },
-          }
-        );
+      await indexFundRedemptionQueueCollection<IndexFundRedemptionQueueEntry>(db).updateOne(
+        { _id: entry._id, status: "processing", settlementClaimId: claimId },
+        {
+          $set: { status: "paid", updatedAt: new Date() },
+          $unset: { processingStartedAt: "", settlementClaimId: "", processingTurn: "" },
+        }
+      );
       continue;
     }
 
@@ -469,9 +457,10 @@ export async function processQueuedRedemptions(
   await flushBatch();
 
   if (cancellations.length > 0) {
-    const cancelled = await db
-      .collection<IndexFundRedemptionQueueEntry>(FUND_REDEMPTION_QUEUE_COLLECTION)
-      .bulkWrite(cancellations);
+    const cancelled =
+      await indexFundRedemptionQueueCollection<IndexFundRedemptionQueueEntry>(db).bulkWrite(
+        cancellations
+      );
     if (cancelled.matchedCount > 0)
       console.warn(
         `[indexfund-cron] cancelled queued redemptions for ${fund.slug}: ${cancelled.matchedCount} holder_missing claims with units burned at request`

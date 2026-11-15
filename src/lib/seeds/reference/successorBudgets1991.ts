@@ -9,6 +9,7 @@ import {
   SOVIET_UNION_1991_GDP_MILLION_RUB,
   SOVIET_UNION_1991_POPULATION,
 } from "@/lib/countries/ru/data/sovietUnionRegions1991";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 /**
  * January 1991 transition fiscal openings. GDP and population use this era's
@@ -78,19 +79,17 @@ export const SUCCESSOR_NATIONAL_BUDGETS_1991: NationalBudgetSeedConfig[] = (
   Object.keys(opening) as Array<keyof typeof opening>
 ).map((countryId) => {
   const profile = opening[countryId];
-  const gdp =
-    countryId === "RU"
-      ? SOVIET_UNION_1991_GDP_MILLION_RUB * 1_000_000
-      : SUCCESSOR_NOMINAL_GDP_1991[countryId];
-  const population =
-    countryId === "RU"
-      ? SOVIET_UNION_1991_POPULATION
-      : Object.values(SUCCESSOR_REGION_POPULATION_1991[countryId]).reduce(
-          (sum, count) => sum + count,
-          0
-        );
+  const gdp = countryHasFeature("ruSeeds", countryId)
+    ? SOVIET_UNION_1991_GDP_MILLION_RUB * 1_000_000
+    : SUCCESSOR_NOMINAL_GDP_1991[countryId];
+  const population = countryHasFeature("ruSeeds", countryId)
+    ? SOVIET_UNION_1991_POPULATION
+    : Object.values(SUCCESSOR_REGION_POPULATION_1991[countryId]).reduce(
+        (sum, count) => sum + count,
+        0
+      );
   const fiscal = SUCCESSOR_1991_GENERAL_GOVERNMENT_GDP_PERCENT[countryId];
-  const plLaw = countryId === "PL" ? PL_1991_BUDGET_LAW_MILLION_PLZ : null;
+  const plLaw = countryHasFeature("plSeeds", countryId) ? PL_1991_BUDGET_LAW_MILLION_PLZ : null;
   const revenueTotal = plLaw ? plLaw.revenue * 1_000_000 : Math.round((gdp * fiscal.revenue) / 100);
   const expenditureTotal = plLaw
     ? plLaw.expenditure * 1_000_000
@@ -105,17 +104,16 @@ export const SUCCESSOR_NATIONAL_BUDGETS_1991: NationalBudgetSeedConfig[] = (
     spendingShares
   );
   const prefix = countryId.toLowerCase();
-  const taxPolicyIds =
-    countryId === "RU"
-      ? {
-          incomeTax: "ru.tax.incomeTax",
-          domesticCorporateTax: "ru.tax.domesticCorporateTax",
-          foreignCorporateTax: "ru.tax.foreignCorporateTax",
-          payrollTax: "ru.tax.payrollTax",
-          tariffs: "ru.tax.tariffs",
-          salesTax: "ru.tax.salesTax",
-        }
-      : easternBlocPolicyConfig(prefix).taxPolicyIds;
+  const taxPolicyIds = countryHasFeature("ruSeeds", countryId)
+    ? {
+        incomeTax: "ru.tax.incomeTax",
+        domesticCorporateTax: "ru.tax.domesticCorporateTax",
+        foreignCorporateTax: "ru.tax.foreignCorporateTax",
+        payrollTax: "ru.tax.payrollTax",
+        tariffs: "ru.tax.tariffs",
+        salesTax: "ru.tax.salesTax",
+      }
+    : easternBlocPolicyConfig(prefix).taxPolicyIds;
   return {
     budgetId: countryId,
     countryId,

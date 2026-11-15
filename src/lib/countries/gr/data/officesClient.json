@@ -1,0 +1,78 @@
+{
+  "config": {
+    "governmentType": "parliamentaryRepublic",
+    "regionLabel": "Region",
+    "legislature": {
+      "name": "Hellenic Parliament",
+      "lowerChamber": {
+        "key": "vouli",
+        "name": "Hellenic Parliament",
+        "shortName": "Vouli",
+        "seats": 300,
+        "description": "300 deputies of the unicameral Vouli ton Ellinon, elected by reinforced proportional representation for four-year terms."
+      }
+    },
+    "officeTypes": [
+      {
+        "key": "primeMinister",
+        "label": "Prime Minister",
+        "labelPlural": "Prime Ministers",
+        "isExecutive": true,
+        "isSubNational": false
+      },
+      {
+        "key": "president",
+        "label": "President",
+        "labelPlural": "Presidents",
+        "isExecutive": true,
+        "isSubNational": false,
+        "isHeadOfState": true
+      },
+      {
+        "key": "deputy",
+        "label": "Deputy",
+        "labelPlural": "Deputies",
+        "chamberKey": "vouli",
+        "isExecutive": false,
+        "isSubNational": false
+      },
+      {
+        "key": "centralBankChair",
+        "label": "Governor of the Bank of Greece",
+        "labelPlural": "Governors of the Bank of Greece",
+        "isExecutive": false,
+        "isSubNational": false
+      }
+    ],
+    "lowerElectionSystem": { "snapElectionsAllowed": true }
+  },
+  "eraOverrides": {
+    "1953-default": {
+      "governmentType": "parliamentaryMonarchy",
+      "officeTypes": [
+        {
+          "key": "primeMinister",
+          "label": "Prime Minister",
+          "labelPlural": "Prime Ministers",
+          "isExecutive": true,
+          "isSubNational": false
+        },
+        {
+          "key": "deputy",
+          "label": "Deputy",
+          "labelPlural": "Deputies",
+          "chamberKey": "vouli",
+          "isExecutive": false,
+          "isSubNational": false
+        },
+        {
+          "key": "centralBankChair",
+          "label": "Governor of the Bank of Greece",
+          "labelPlural": "Governors of the Bank of Greece",
+          "isExecutive": false,
+          "isSubNational": false
+        }
+      ]
+    }
+  }
+}

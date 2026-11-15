@@ -1,7 +1,13 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import type { DemographicTargeting } from "@/lib/db/types";
-import { DEMOGRAPHIC_BUCKETS } from "./constants";
+
+interface BucketOption {
+  id: string;
+  label: string;
+  dim: string;
+}
 
 interface Step3DemographicsProps {
   targeting: DemographicTargeting[];
@@ -9,6 +15,24 @@ interface Step3DemographicsProps {
 }
 
 export function Step3Demographics({ targeting, onChange }: Step3DemographicsProps) {
+  // Served by the API: the bucket list comes from the server-only country
+  // electorate models. A failed fetch leaves the list empty.
+  const [buckets, setBuckets] = useState<BucketOption[] | null>(null);
+  useEffect(() => {
+    let live = true;
+    fetch("/api/admin/law-types/turnout-targets", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data: { options?: BucketOption[] } | null) => {
+        if (live) setBuckets(data?.options ?? []);
+      })
+      .catch(() => {
+        if (live) setBuckets([]);
+      });
+    return () => {
+      live = false;
+    };
+  }, []);
+
   const toggleGroup = (groupId: string) => {
     const existing = targeting.find((t) => t.groupId === groupId);
     if (existing) {
@@ -37,8 +61,13 @@ export function Step3Demographics({ targeting, onChange }: Step3DemographicsProp
         </p>
       </div>
 
+      {buckets === null && <p className="text-xs text-muted">Loading buckets...</p>}
+      {buckets?.length === 0 && (
+        <p className="text-xs text-muted">No demographic buckets could be loaded.</p>
+      )}
+
       <div className="grid gap-2 sm:grid-cols-2">
-        {DEMOGRAPHIC_BUCKETS.map((group) => {
+        {(buckets ?? []).map((group) => {
           const selected = targeting.find((t) => t.groupId === group.id);
           return (
             <div

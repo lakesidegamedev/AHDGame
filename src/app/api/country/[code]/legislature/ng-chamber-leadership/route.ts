@@ -1,18 +1,16 @@
 /**
  * GET  /api/country/ng/legislature/ng-chamber-leadership
- *   Returns, for both NG presiding-officer roles (Speaker of the House of
- *   Representatives, President of the Senate): the current holder, the active
- *   election (24h window), open nominations, viewer eligibility, and viewer
- *   identity. Auto-resolves an expired-but-not-yet-resolved election before
- *   responding (parity with the DE Bundestagspräsident GET).
+ *   Returns, for both NG presiding-officer roles, the current holder, the
+ *   active election (24h window), open nominations, viewer eligibility, and
+ *   viewer identity. Auto-resolves an expired-but-unresolved election before
+ *   responding.
  *
  * POST /api/country/ng/legislature/ng-chamber-leadership
  *   Body: { role, action, nominationId? }. Actions: declare | withdraw | vote
  *   | start_election (admin) | force_end (admin).
  *
- * Mirror of `/api/country/de/legislature/bundestagspraesident` for the NG
- * National Assembly. Same 24h window, same plurality-winner rule, same
- * any-seated eligibility. Two roles served by one route; NPPs do not vote.
+ * Same 24h window and plurality-winner rule as the DE Bundestagspräsident
+ * route. Two roles served by one route; NPPs do not vote.
  */
 import { NextResponse } from "next/server";
 import { z } from "zod";
@@ -37,18 +35,16 @@ import type {
   NgChamberLeadershipElection,
   NgChamberLeadershipNomination,
   NgChamberLeadershipRole,
-  Character,
-  ElectedOfficial,
 } from "@/lib/db/types";
-import {
-  NG_ROLES,
-  NG_ROLE_CONFIG,
-  NG_ELECTION_COLLECTION,
-  NG_NOMINATION_COLLECTION,
-} from "@/lib/congress/ngChamberLeadership/config";
+import { NG_ROLES, NG_ROLE_CONFIG } from "@/lib/congress/ngChamberLeadership/config";
 import { getNgChamberComposition } from "@/lib/congress/ngChamberLeadership/composition";
 import { resolveNgChamberLeadershipElection } from "@/lib/congress/ngChamberLeadership/resolveElection";
 import { handleNgChamberLeadershipAction } from "@/lib/congress/ngChamberLeadership/actions";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { ngChamberLeadershipNominationsCollection } from "@/lib/db/repositories/ngChamberLeadershipNominations";
+import { ngChamberLeadershipElectionsCollection } from "@/lib/db/repositories/ngChamberLeadershipElections";
 
 const actionSchema = z.object({
   role: z.enum(["speaker_ng_reps", "president_ng_senate"]),
@@ -57,7 +53,7 @@ const actionSchema = z.object({
 });
 
 function isNgRequest(code: string): boolean {
-  return code.toUpperCase() === "NG";
+  return countryHasFeature("ngApi", code.toUpperCase());
 }
 
 export async function GET(_request: Request, { params }: { params: Promise<{ code: string }> }) {
@@ -76,9 +72,9 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
     let myParty: string | null = null;
     let myCharObjId: ObjectId | null = null;
     if (authUser) {
-      const char = await db
-        .collection<Character>("characters")
-        .findOne({ userId: new ObjectId(authUser.userId) });
+      const char = await charactersCollection(db).findOne({
+        userId: new ObjectId(authUser.userId),
+      });
       if (char) {
         myCharacterId = char._id.toString();
         myParty = char.party ?? null;
@@ -99,9 +95,10 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
         const cfg = NG_ROLE_CONFIG[role];
 
         // Auto-resolve an expired election before responding.
-        const electionDoc = await db
-          .collection<NgChamberLeadershipElection>(NG_ELECTION_COLLECTION)
-          .findOne({ _id: role });
+        const electionDoc =
+          await ngChamberLeadershipElectionsCollection<NgChamberLeadershipElection>(db).findOne({
+            _id: role,
+          });
         if (
           electionDoc?.status === "voting" &&
           isLeadershipElectionClosed(electionDoc, gameTime.currentTurn, gameTime.effectiveNow)
@@ -110,12 +107,14 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
         }
 
         const [officerOfficial, election, nominations] = await Promise.all([
-          db
-            .collection<ElectedOfficial>("electedOfficials")
-            .findOne({ officeType: cfg.officerOfficeType, countryId: "NG" }),
-          db.collection<NgChamberLeadershipElection>(NG_ELECTION_COLLECTION).findOne({ _id: role }),
-          db
-            .collection<NgChamberLeadershipNomination>(NG_NOMINATION_COLLECTION)
+          electedOfficialsCollection(db).findOne({
+            officeType: cfg.officerOfficeType,
+            countryId: "NG",
+          }),
+          ngChamberLeadershipElectionsCollection<NgChamberLeadershipElection>(db).findOne({
+            _id: role,
+          }),
+          ngChamberLeadershipNominationsCollection<NgChamberLeadershipNomination>(db)
             .find({ role, status: { $in: ["open", "voting"] } })
             .sort({ votesFor: -1 })
             .toArray(),
@@ -124,7 +123,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
         const leader = await resolveExecutiveHolder(db, officerOfficial);
 
         const isMember = myCharObjId
-          ? !!(await db.collection<ElectedOfficial>("electedOfficials").findOne({
+          ? !!(await electedOfficialsCollection(db).findOne({
               characterId: myCharObjId,
               officeType: cfg.memberOfficeType,
               countryId: "NG",

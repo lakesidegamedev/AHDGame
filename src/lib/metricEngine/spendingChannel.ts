@@ -1,18 +1,13 @@
 /**
- * Spending → metric channel (spec P0). Per-capita spending in a budget category
- * drives a derived outcome metric with diminishing returns; capital-stock metrics
- * (infrastructure, militaryReadiness) instead use maintenance-decay so they erode
- * toward "poor" unless investment offsets them. This is the GDP→budget→outcomes
- * loop the design's success-criterion #2 needs.
+ * Spending to metric channel: per-capita spending in a budget category drives
+ * a derived outcome with diminishing returns; capital-stock metrics use
+ * maintenance-decay so they erode unless investment offsets it.
  *
- * `halfSaturation` and `max` are CALIBRATION inputs — each consuming metric passes
- * values tuned to its realistic per-capita spending scale (pinned per-metric in
- * P2+). The framework here only guarantees the SHAPE: monotonic, concave, bounded.
- *
- * UNITS: `ctx.spending` per-capita values arrive GDP-normalized onto the US
- * reference scale (spendingProvider × US_REFERENCE_GDP_PER_CAPITA / country
- * GDP-per-capita, #0887 RC2), so the *_SPEND_HALF_SAT constants keep their
- * #826 US-dollar calibrations for every country.
+ * `halfSaturation` and `max` are per-metric calibration inputs; the framework
+ * only guarantees the shape: monotonic, concave, bounded. UNITS: `ctx.spending`
+ * per-capita values are GDP-normalized onto the US reference scale, so the
+ * *_SPEND_HALF_SAT constants keep their US-dollar calibrations for every
+ * country.
  */
 
 /**

@@ -30,6 +30,11 @@ import {
   summarizePlayerWhips,
   type PlayerWhipSummaryEntry,
 } from "@/lib/partyWhips/playerWhipSummary";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { cabinetNominationsCollection } from "@/lib/db/repositories/cabinetNominations";
+import { billWhipsCollection } from "@/lib/db/repositories/billWhips";
+import { impeachmentsCollection } from "@/lib/db/repositories/impeachments";
+import { speakerVacateMotionsCollection } from "@/lib/db/repositories/speakerVacateMotions";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string; slug: string }>;
@@ -129,14 +134,12 @@ export async function GET(_request: Request, { params }: RouteParams) {
       : null;
     const officeTypes = upperOfficeType ? [upperOfficeType, lowerOfficeType] : [lowerOfficeType];
 
-    const allOfficials = await db
-      .collection<ElectedOfficial>("electedOfficials")
+    const allOfficials = await electedOfficialsCollection(db)
       .find({
         party: partyIdStr,
         officeType: { $in: officeTypes },
-        // Two independent disjunctions: the country scope (bug #0699) and the
-        // caucus membership match. They cannot both be a top-level $or, so
-        // they are joined under $and.
+        // Country scope and caucus membership are independent disjunctions,
+        // so they are joined under $and.
         $and: [
           officialsCountryScope(countryId),
           {
@@ -166,8 +169,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     const result: Record<string, LeadershipElectionItem[]> = {};
     for (const chamberKey of chamberKeys) result[chamberKey] = [];
 
-    const existingWhips = await db
-      .collection<BillWhip>("billWhips")
+    const existingWhips = await billWhipsCollection(db)
       .find({
         targetType: {
           $in: [
@@ -220,9 +222,10 @@ export async function GET(_request: Request, { params }: RouteParams) {
     // The motion to vacate the chair is a US House singleton. Resolution is
     // lazy, so gate on the game clock as well as the status.
     if (hasLowerMembers && countryId === COUNTRY_CONFIGS.US.id) {
-      const motion = await db
-        .collection<SpeakerVacateMotion>("speakerVacateMotions")
-        .findOne({ _id: "current", status: "voting" });
+      const motion = await speakerVacateMotionsCollection(db).findOne({
+        _id: "current",
+        status: "voting",
+      });
       if (motion && !isLeadershipElectionClosed(motion, currentTurnForLeadership, now)) {
         const whipKey = `speakerVacateMotion_current_${lowerKey}`;
         const { nppSummary, playerSummary } = buildSummaries(whipKey, motion.startedAt);
@@ -248,8 +251,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
 
     // Open presidential impeachments, on whichever chamber sits at the case's
     // current stage. Governor cases belong to the state party's panel.
-    const openImpeachments = await db
-      .collection<Impeachment>("impeachments")
+    const openImpeachments = await impeachmentsCollection(db)
       .find({ countryId, stage: { $in: ["house", "senate"] }, targetOffice: { $ne: "governor" } })
       .toArray();
 
@@ -350,8 +352,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     }
 
     if (hasUpperMembers || hasLowerMembers) {
-      const activeNominations = await db
-        .collection<CabinetNomination>("cabinetNominations")
+      const activeNominations = await cabinetNominationsCollection(db)
         .find({ status: "active", countryId })
         .toArray();
 

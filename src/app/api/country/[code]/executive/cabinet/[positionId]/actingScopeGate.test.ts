@@ -30,7 +30,6 @@ beforeEach(async () => {
   }
   db.collectionMocks.gameState.findOne.mockResolvedValue({
     _id: "current",
-    conflictsEnabled: true,
     currentTurn: 400,
     currentYear: 1953,
     startingYear: 1953,

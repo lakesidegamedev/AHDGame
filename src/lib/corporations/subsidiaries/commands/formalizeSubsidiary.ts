@@ -16,6 +16,7 @@ import {
   wouldCreateOwnershipCycle,
 } from "../helpers";
 import { fail, type SubsidiaryCommandResult } from "../commandTypes";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export interface FormalizeSubsidiaryInput {
   parent: Corporation;
@@ -76,8 +77,7 @@ export async function formalizeSubsidiary(
   }
 
   // No chaining / no cycles. Fetch the minimal cap-table fields for every corp.
-  const allCorps = await db
-    .collection<Corporation>("corporations")
+  const allCorps = await corporationsCollection(db)
     .find({}, { projection: { _id: 1, shareholders: 1, totalShares: 1, superShareMultiplier: 1 } })
     .toArray();
   if (wouldCreateOwnershipCycle(parent, target, allCorps)) {
@@ -99,12 +99,10 @@ export async function formalizeSubsidiary(
     );
   }
 
-  const result = await db
-    .collection<Corporation>("corporations")
-    .updateOne(
-      { _id: target._id, subsidiaryFormalizedAtTurn: { $exists: false } },
-      { $set: { subsidiaryFormalizedAtTurn: turn, updatedAt: now } }
-    );
+  const result = await corporationsCollection(db).updateOne(
+    { _id: target._id, subsidiaryFormalizedAtTurn: { $exists: false } },
+    { $set: { subsidiaryFormalizedAtTurn: turn, updatedAt: now } }
+  );
   if (result.matchedCount === 0) {
     return fail("This corporation is already a formalized subsidiary.", 409);
   }

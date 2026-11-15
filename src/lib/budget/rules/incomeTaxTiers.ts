@@ -86,7 +86,18 @@ export function aggregateIncomeTaxRate(rates: IncomeTaxRates, shares?: IncomeSha
   if (low === middle && middle === high) return low;
   return incomeTaxRevenue(100, rates, shares);
 }
-export function earnedIncomeTier(annualIncome: number, medianAnnualIncome: number): IncomeTier {
+/**
+ * The tier cut-offs are fractions of the median, which grows in real terms
+ * only. Deflating nominal earnings by the country's cumulative price index
+ * keeps a constant real income in the same tier as prices rise.
+ */
+export function earnedIncomeTier(
+  nominalAnnualIncome: number,
+  medianAnnualIncome: number,
+  priceIndex = 1
+): IncomeTier {
+  const annualIncome =
+    Number.isFinite(priceIndex) && priceIndex > 0 ? nominalAnnualIncome / priceIndex : NaN;
   if (
     !Number.isFinite(annualIncome) ||
     annualIncome < 0 ||

@@ -5,18 +5,24 @@
  */
 import { legislationTypes } from "@/lib/seeds/reference/legislationTypes";
 import type { BucketProfileSection } from "../bucketProfile";
-import { resolveLegislativePriorities, type PriorityContext, type PriorityLaw } from "./rules";
+import { getProjectedPoliticalLegislationTypes } from "@/lib/admin/seed/seedPoliticalLegislation";
+import {
+  priorityOptionsFor,
+  resolveLegislativePriorities,
+  type PriorityContext,
+  type PriorityLaw,
+} from "./rules";
 
 // Only serializable names and references cross the page's client boundary.
 // Keep the consolidated seed catalog out of the client and turn import graphs.
-const priorityLaws: ReadonlyMap<string, PriorityLaw> = new Map(
-  legislationTypes.map((law) => [
+export const priorityLaws: ReadonlyMap<string, PriorityLaw> = new Map(
+  [...legislationTypes, ...getProjectedPoliticalLegislationTypes()].map((law) => [
     law._id,
     {
       _id: law._id,
       countryScope: law.countryScope,
       name: law.name,
-      policyOptions: (law.policyOptions ?? []).map(({ id, name }) => ({ id, name })),
+      policyOptions: priorityOptionsFor(law),
     },
   ])
 );

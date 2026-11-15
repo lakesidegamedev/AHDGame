@@ -14,7 +14,7 @@ import {
   hasConfidenceVoteMechanism,
   COUNTRY_CONFIGS,
 } from "@/lib/constants/countries";
-import { getRegisteredCountryIds } from "@/lib/country/registeredCountries";
+import { getFullSimulationCountryIds } from "@/lib/country/countryTier";
 import type { Election } from "@/lib/db/types";
 import { MS_PER_TURN } from "@/lib/constants/turnTime";
 import {
@@ -100,7 +100,7 @@ import {
   ensureWALGovernorElections,
   ensureSCORegionalCouncilElections,
   ensureWALRegionalCouncilElections,
-} from "@/lib/turn/perpetualElections";
+} from "@/lib/elections/scheduling";
 import {
   getParliamentaryCountryIds,
   updateParliamentaryGovernmentSeats,
@@ -115,13 +115,17 @@ import {
 import type { CompletedSnapConfidence } from "./snapConfidence";
 import { processPMVacancyDeadlines } from "@/lib/turn/pmVacancyDeadline";
 import { appointNppPrimeMinister } from "@/lib/nppAutonomy/appointNppPrimeMinister";
+import { syncCoalitionRefusals } from "@/lib/government/coalitionRefusalState";
 
 // Per-country seat update overrides (UK has a legacy seed fallback on first run)
 import { updateGovernmentSeats as updateUKGovernmentSeats } from "@/lib/turn/ukGovernmentFormation";
 import { getDb } from "@/lib/mongodb";
 import { getGameStatePreset } from "@/lib/db/collections/gameState";
 import { JP_ELECTIONS } from "@/lib/countries/jp/elections";
+import { CA_ELECTIONS } from "@/lib/countries/ca/elections";
+import { QC_ELECTIONS } from "@/lib/countries/qc/elections";
 import { JP_BILL_PHASE_SHAPE } from "@/lib/countries/jp/elections/billLifecycle";
+import { getElectionsCollection } from "@/lib/db/collections/elections";
 
 /** Countries that need a custom updateGovernmentSeats wrapper (e.g. for legacy seed). */
 const SEAT_UPDATE_OVERRIDES: Partial<Record<CountryId, () => Promise<void>>> = {
@@ -134,6 +138,8 @@ export interface CountryBillPhaseEntry {
   phaseName:
     | "scoBillLifecycle"
     | "walBillLifecycle"
+    | "caBillLifecycle"
+    | "qcBillLifecycle"
     | "ukBillLifecycle"
     | "jpBillLifecycle"
     | "ieBillLifecycle"
@@ -173,6 +179,16 @@ export const COUNTRY_BILL_PHASES: Partial<Record<CountryId, CountryBillPhaseEntr
   WAL: {
     phaseName: "walBillLifecycle",
     fn: (now, context) => runBillLifecycleForConfiguredCountry("WAL", now, context),
+    emptyResult: { enacted: 0, failed: 0 },
+  },
+  QC: {
+    phaseName: "qcBillLifecycle",
+    fn: (now, context) => runBillLifecycleForConfiguredCountry("QC", now, context),
+    emptyResult: { enacted: 0, failed: 0 },
+  },
+  CA: {
+    phaseName: "caBillLifecycle",
+    fn: (now, context) => runBillLifecycleForConfiguredCountry("CA", now, context),
     emptyResult: { enacted: 0, failed: 0 },
   },
   UK: {
@@ -331,6 +347,9 @@ export const COUNTRY_ELECTION_PHASES: Partial<Record<CountryId, CountryElectionP
     { name: "ukGovernorElections", fn: ensureUKGovernorElections },
   ],
   JP: JP_ELECTIONS.electionPhases,
+  CA: CA_ELECTIONS.electionPhases,
+  // Successor country: no-op until a Quebec referendum carries.
+  QC: QC_ELECTIONS.electionPhases,
   IE: [
     { name: "ieElections", fn: ensureIEElections },
     { name: "ieUachtaranElections", fn: ensureIEUachtaranElections },
@@ -370,11 +389,11 @@ export const COUNTRY_ELECTION_PHASES: Partial<Record<CountryId, CountryElectionP
     // 1991 Soviet Congress of People's Deputies; gated to the Union constitution.
     { name: "ruUnionCongressElections", fn: ensureRUUnionCongressElections },
   ],
-  // DD Volkskammer + Land assemblies + Land First Secretaries — status-gated
-  // + era-gated (null anchor outside 1953/1979) like RU; per-game
-  // countryGameStates enablement (1953/1979 PLAYER) activates them. Land
-  // assemblies must spawn before governors so the First Secretary queue has
-  // legislature NPPs to sponsor through (ticket #1044).
+  // DD Volkskammer + Land assemblies + Land First Secretaries: status-gated,
+  // era-gated (null anchor outside 1953/1979) like RU, per-game countryGameStates
+  // enablement (1953/1979 PLAYER) activates them. Land assemblies must spawn
+  // before governors so the First Secretary queue has legislature NPPs to
+  // sponsor through.
   DD: [
     { name: "ddVolkskammerElections", fn: ensureDDVolkskammerElections },
     { name: "ddLandAssemblyElections", fn: ensureDDLandAssemblyElections },
@@ -420,17 +439,11 @@ export const COUNTRY_ELECTION_PHASES: Partial<Record<CountryId, CountryElectionP
     { name: "walGovernorElections", fn: ensureWALGovernorElections },
     { name: "walRegionalCouncilElections", fn: ensureWALRegionalCouncilElections },
   ],
-  // Beta parliamentary countries (#3239) — no-ops while `coming-soon` (gated
-  // on runtime country status inside each ensure fn, like NG); flipping the
-  // status to beta/active activates the lower-chamber cycle. ES additionally
-  // era-gates: 1953-default spawns nothing (Franco dictatorship).
-  // Upper chambers (Senates, #3791): sibling phases to the lower-chamber
-  // spawner above, sourced from `state.stateSenateSeats` instead of
-  // `houseDistricts`. See `ensureBetaSenateElections` in perpetualElections.ts
-  // for the per-country simplification notes (FR full-chamber 9y renewal, IT
-  // concurrent-with-Camera, ES concurrent-with-Congreso + era-gated, TR
-  // 1953-default-only 6y full-chamber renewal). SE has no elected upper
-  // chamber (unicameral since 1970) — no senate phase.
+  // Beta parliamentary countries: no-ops while `coming-soon` (gated on
+  // runtime country status inside each ensure fn). ES era-gates: 1953-default
+  // spawns nothing (Franco dictatorship). Upper chambers are sibling phases to
+  // the lower-chamber spawner, sourced from `state.stateSenateSeats` instead of
+  // `houseDistricts`. SE has no elected upper chamber (unicameral since 1970).
   FR: [
     { name: "frElections", fn: ensureFRElections },
     { name: "frSenateElections", fn: ensureFRSenateElections },
@@ -480,10 +493,10 @@ export async function runPostElectionGovernmentPhases(
 
   if (generalResolved > 0) {
     // Iterate every REGISTERED country with a configured lower chamber (US
-    // included), not just parliamentary countries. Registered, not the raw
-    // COUNTRY_ORDER: a country dissolved by a merge stays compiled into the
-    // static list forever, and this loop must stop visiting it.
-    const registered = new Set(await getRegisteredCountryIds(db));
+    // included), not the raw COUNTRY_ORDER: merged-away countries stay in the
+    // static list and must stop being visited. Background countries have no
+    // legislature.
+    const registered = new Set(await getFullSimulationCountryIds(db));
     const countryIds = [...registered].filter(
       (id) => COUNTRY_CONFIGS[id].legislature.lowerChamber.key
     );
@@ -498,8 +511,7 @@ export async function runPostElectionGovernmentPhases(
       ),
     ];
     const [recent, live] = await Promise.all([
-      db
-        .collection<Election>("elections")
+      (await getElectionsCollection(db))
         .find(
           {
             countryId: { $in: countryIds },
@@ -511,8 +523,7 @@ export async function runPostElectionGovernmentPhases(
         )
         .sort({ updatedAt: -1, _id: -1 })
         .toArray(),
-      db
-        .collection<Election>("elections")
+      (await getElectionsCollection(db))
         .find(
           {
             countryId: { $in: countryIds },
@@ -600,11 +611,11 @@ export async function runParliamentaryGovernmentPhases(
 ): Promise<void> {
   const db = await getDb();
   const preset = await getGameStatePreset(db);
-  // Registered only: `getParliamentaryCountryIds` filters the STATIC list by
-  // config, so a country dissolved by a merge would otherwise keep receiving
-  // seat sync, confidence processing and NPP PM appointment every turn — a
-  // ghost government for a state that no longer exists.
-  const registered = new Set(await getRegisteredCountryIds(db));
+  // Registered only: getParliamentaryCountryIds filters the STATIC list by
+  // config, so a dissolved country would otherwise keep receiving seat sync,
+  // confidence processing and NPP PM appointment every turn (ghost government).
+  // Background countries are skipped for the same reason: no government is simulated.
+  const registered = new Set(await getFullSimulationCountryIds(db));
   const parliamentaryCountries = getParliamentaryCountryIds(preset).filter((id) =>
     registered.has(id)
   );
@@ -653,6 +664,7 @@ async function runParliamentaryCountry(
     // formation stalls "pending" forever. Autoseat the largest party's NPP
     // leader. No-op unless isNppAutonomyActive (never fires where players are
     // enabled) and a player vote hasn't already formed a government this turn.
+    await syncCoalitionRefusals(db, countryId, preset);
     await appointNppPrimeMinister(db, countryId, currentTurn, gameNow, preset);
 
     // Reflect the formed government's party onto countryState.rulingPartyId

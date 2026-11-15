@@ -26,7 +26,7 @@ const LOCAL_CURRENCY_1953: CountryId[] = [
 ];
 
 /**
- * Countries whose 1953 regional GDP is authored in USD millions (refs #3498 —
+ * Countries whose 1953 regional GDP is authored in USD millions
  * see the header of each `*Regions1953.ts`). They are already ₳-denominated, so
  * 1.0 IS their era-correct normalization; 1/INITIAL_RATES_1953 would read Italy
  * as a $27M economy.
@@ -37,7 +37,7 @@ const USD_ANCHORED_1953: CountryId[] = ["IT", "JP", "CN", "NG"];
 const SOVIET_RUBLE_1953: CountryId[] = ["UKR", "BLR", "BAL"];
 
 /**
- * Warsaw-Pact / non-aligned satellites (refs #3778 §1). Budget-only economies —
+ * Warsaw-Pact / non-aligned satellites. Budget-only economies —
  * deliberately outside `FOREX_ACTIVE_COUNTRIES`, so `seedExchangeRates` writes
  * no `exchangeRates` row for them — but their 1953 GDP→₳ rate is still authored
  * in `INITIAL_RATES_1953` so there is one table to derive the config override
@@ -216,7 +216,7 @@ describe("1953 era usdExchangeRate overrides", () => {
         expect(override?.usdExchangeRate).toBeUndefined();
       }
     }
-    // The 1991 list includes the successor bundles stored in original local currencies and the eight legacy-currency Western European economies (#3034).
+    // The 1991 list includes the successor bundles stored in original local currencies and the eight legacy-currency Western European economies.
     const anchored1991 = Object.entries(ERA_COUNTRY_CONFIG_OVERRIDES["1991-default"] ?? {})
       .filter(([, override]) => override?.usdExchangeRate !== undefined)
       .map(([countryId]) => countryId)

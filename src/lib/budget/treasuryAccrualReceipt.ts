@@ -3,6 +3,8 @@ import { createHash } from "node:crypto";
 import { ObjectId, type Db } from "mongodb";
 import type { FederalBudget, TreasuryAccrualReceipt } from "@/lib/db/types/budget";
 import { treasuryAccrualLegs } from "./rules/treasuryAccrual";
+import { ledgerEntriesCollection } from "@/lib/db/repositories/ledgerEntries";
+import type { Document } from "mongodb";
 
 /** One budget's accrual receipt, waiting to be witnessed in the ledger. */
 export interface TreasuryAccrualPublication {
@@ -54,11 +56,9 @@ function publicationOp(publication: TreasuryAccrualPublication): LedgerEntryOp |
 /**
  * Publish a pass's accrual witnesses in one write.
  *
- * Each row is keyed by the budget and turn it belongs to, so the rows are
- * independent of each other; only the round trips are shared. Publishing them
- * after the lanes moved the cash is the same recovery point as publishing each
- * one before its own lane: a crash before this write leaves the receipt stored
- * on the budget, and the next pass republishes it from there.
+ * Rows are independent, keyed by budget and turn; only round trips are shared.
+ * A crash before this write leaves the receipt on the budget, and the next
+ * pass republishes it.
  */
 export async function publishTreasuryAccrualReceipts(
   db: Db,
@@ -70,5 +70,5 @@ export async function publishTreasuryAccrualReceipts(
     if (op) ops.set(op.updateOne.filter._id.toHexString(), op);
   }
   if (ops.size === 0) return;
-  await db.collection("ledgerEntries").bulkWrite([...ops.values()], { ordered: false });
+  await ledgerEntriesCollection<Document>(db).bulkWrite([...ops.values()], { ordered: false });
 }

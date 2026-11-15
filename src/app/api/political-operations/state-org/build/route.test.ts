@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ObjectId, MongoServerError } from "mongodb";
-import { stateOrgLevelCost } from "@/lib/electionEngine/constants";
+import { stateOrgLevelCost } from "@/lib/elections/engine/constants";
 
 vi.mock("@/lib/mongodb", () => ({
   getDb: vi.fn(),
@@ -24,6 +24,10 @@ vi.mock("@/lib/currency/characterFunds", async () => {
     getHomeCurrency: vi.fn().mockReturnValue("USD"),
   };
 });
+
+vi.mock("@/lib/currency/campaignFxRate", () => ({
+  loadCampaignFxRate: vi.fn().mockResolvedValue(1),
+}));
 
 vi.mock("@/lib/currency/featureFlag", () => ({
   isForexEnabled: vi.fn().mockResolvedValue(false),
@@ -308,12 +312,9 @@ describe("POST /api/political-operations/state-org/build", () => {
     vi.mocked(runWithOptionalTransaction).mockImplementationOnce(async (tx, withoutTransaction) =>
       fallback ? withoutTransaction() : tx({} as never)
     );
-    vi.mocked((await import("@/lib/currency/featureFlag")).isForexEnabled).mockResolvedValueOnce(
-      true
-    );
     vi.mocked(
-      (await import("@/lib/currency/characterFunds")).loadCharacterFxRate
-    ).mockResolvedValueOnce({ rate, ok: true });
+      (await import("@/lib/currency/campaignFxRate")).loadCampaignFxRate
+    ).mockResolvedValueOnce(rate);
     const orgFindOneAndUpdate = vi.fn().mockResolvedValue({
       _id: new ObjectId(),
       characterId: mockCharacterId,

@@ -14,7 +14,7 @@ import type { AgeSexVector } from "../cohortVector";
 // 95 ≈32%, capped at the 100+ terminal. Tuned (Task 6 stationarity) so a
 // replacement-TFR population lands flat with a realistic over-65 share.
 const GOMPERTZ_A = 9.4e-6; // baseline hazard scale (male)
-const GOMPERTZ_B = 0.11; // age slope
+export const GOMPERTZ_B = 0.11; // age slope
 const INFANT_FLOOR = 0.0004; // keeps 0-17 ~0.05%/yr rather than ~0
 const FEMALE_FACTOR = 0.78; // female ≈ 0.7-0.85× male at every age
 const MORTALITY_CAP = 0.55; // 100+ terminal (audit-C2); curve is monotonic up to it

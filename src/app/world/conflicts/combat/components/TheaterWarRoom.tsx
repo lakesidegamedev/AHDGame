@@ -81,11 +81,7 @@ export function TheaterWarRoom({
   const frontReports = state.reports.filter((r) => r.theaterId === frontId);
   const conflict = state.conflicts.find((c) => c.id === frontId) ?? null;
 
-  // Who this nation may declare on HERE — the opposing side's roster at the selected
-  // front, resolved server-side. This used to be a global 9-country table filtered by
-  // bloc, which offered an East German player its own Warsaw Pact allies (and a "USSR"
-  // entry that is not a country) while hiding the NATO belligerents it was actually
-  // fighting. Targets belong to a front, not to the world.
+  // Targets are the opposing side's roster at the selected front, resolved server-side. Targets belong to a front, not to the world.
   const targets = conflict?.enemyCountries ?? [];
   const [target, setTarget] = useState<string>(targets[0] ?? "");
   // Switching fronts can strand a target that is not a belligerent at the new one; the

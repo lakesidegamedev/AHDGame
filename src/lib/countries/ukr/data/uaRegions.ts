@@ -1,36 +1,22 @@
 import type { State } from "@/lib/db/types";
 
 /**
- * Ukraine (Ukrainian SSR) 1979 - the Shcherbytsky years. Pop 49.8M (the January
- * 1979 census figure, and the same total the union-level seed carries for its
- * `UKR` region); gdp in millions of Soviet rubles on the same basis as
- * uaRegions1953.ts.
+ * Ukraine (Ukrainian SSR) 1979. Pop 49.8M (January 1979 census; matches the
+ * `UKR` total in the union-level seed). GDP in millions of Soviet rubles on
+ * the same basis as `uaRegions1953.ts`.
  *
- * Same six macro-regions as 1953, so region codes, census keys and metric
+ * Six macro-regions match 1953, so region codes, census keys and metric
  * overrides line up across both Cold-War presets and one map shard serves both.
  *
- * Scale: ₽875,000M against ₽291,667M in 1953, roughly threefold real growth
- * over twenty-six years (~4.3%/yr, consistent with Soviet NMP series for the
- * republic and with the sharp slowdown after 1970 that leaves the late-1970s
- * figure well short of a straight-line extrapolation of the 1950s recovery).
- * Per head that is ₽17,570 against ₽7,114 - the republic roughly doubled its
- * output per person while adding 8.8M people.
+ * Relative to 1953: Ukraine is now majority urban (~61%), Donbas has peaked
+ * (coal is deeper and dearer, its share of output falls even as absolute
+ * output rises, and the Dnieper belt overtakes it), Western Ukraine is
+ * patchily industrialised but still the poorest and most rural region, and
+ * the south includes Crimea (transferred 1954) plus the North Crimean canal
+ * irrigation belt.
  *
- * What has changed since 1953:
- * - Ukraine is now majority urban (about 61% at the 1979 census against roughly
- *   a third in 1953). The Dnieper belt and Donbas are the urban core.
- * - Donbas has peaked. The coal is deeper, thinner and dearer every year, and
- *   the region's share of republican output falls even though its absolute
- *   output rises. The Dnieper belt overtakes it decisively.
- * - Western Ukraine has been industrialised in patches (Lviv buses, Volhynian
- *   coal, Transcarpathian light industry) but is still the poorest region per
- *   head and still the most rural and most religiously distinct.
- * - The south now includes Crimea outright (transferred 1954) and has gained
- *   the Southern Bug/North Crimean canal irrigation belt, plus Odesa's role as
- *   the union's main warm-water commercial port.
- *
- * houseDistricts = Supreme Soviet of the Ukrainian SSR seats (435), apportioned
- * by population with largest remainder.
+ * `houseDistricts` = Supreme Soviet of the Ukrainian SSR seats (435),
+ * apportioned by population with largest remainder.
  */
 export const uaRegions: State[] = [
   {
@@ -73,9 +59,6 @@ export const uaRegions: State[] = [
     _id: "UKR_DON",
     countryId: "UKR",
     regionType: "state",
-    // Still the highest output per head (₽20,588) but no longer the growth
-    // story: costs per tonne of coal are rising faster than anywhere in the
-    // union and the workforce is ageing in place.
     name: "Donbas",
     population: 8_500_000,
     gdp: 175_000,

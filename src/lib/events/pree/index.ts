@@ -70,3 +70,5 @@ import "../worldEvents/handlers/highTensionEvents";
 import "../worldEvents/handlers/constitutionalCrisis";
 // Broadcast events (5) — shared historic moments offered to everyone at once.
 import "./handlers/broadcastEvents";
+// 2027 world content: 2020s-2040s decade packs, broadcasts, modern UK/DE/JP/CN events.
+import "./handlers/modernPackEvents";

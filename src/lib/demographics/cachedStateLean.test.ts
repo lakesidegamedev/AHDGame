@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { ELECTION_1952_MARGIN } from "@/lib/data/1952ElectionResults";
 import { deriveGranularElectorateUnits } from "@/lib/demographics/granularElectorate";
-import { calculateStateLeanForCache } from "@/lib/demographics/cachedStateLean";
+import {
+  calculateStateLeanForCache,
+  censusCachedStateLean,
+} from "@/lib/demographics/cachedStateLean";
+import { censusStateLean } from "@/lib/demographics/censusLean";
 import { demographicCategories } from "@/lib/seeds/demographicCategories";
 import { registerAndGenerate, stateCensusData } from "@/lib/seeds/stateDemographics";
 import { stateCensusData1953 } from "@/lib/seeds/stateCensusData1953";
@@ -102,7 +106,7 @@ describe("calculateStateLeanForCache", () => {
     expect(nationalEconomic / nationalWeight).toBeLessThanOrEqual(0.2);
   });
 
-  it("keeps the legacy cache derivation outside the audited 1953 US world", () => {
+  it("reads the census electorate in every preset", () => {
     const stateId = "CA";
     const census = stateCensusData[stateId];
     expect(census).not.toBeNull();
@@ -114,13 +118,23 @@ describe("calculateStateLeanForCache", () => {
       stateId,
       preset: "2019-default",
     });
+    const viaCensus = censusStateLean(demographics, {
+      countryId: "US",
+      stateId,
+      preset: "2019-default",
+    });
 
-    expect(cached).toEqual(
-      calculateStateLeanForCache(demographics, demographicCategories, {
-        countryId: "US",
-        stateId,
-        preset: null,
-      })
+    expect(cached).toEqual(viaCensus);
+    expect(Number.isFinite(cached.economicLean)).toBe(true);
+    expect(Number.isFinite(cached.socialLean)).toBe(true);
+  });
+
+  it("returns null for a region with no census and errors from the strict form", () => {
+    const demographics = registerAndGenerate("CA", stateCensusData.CA!, "2019");
+    const context = { countryId: "ZZ", stateId: "NOWHERE", preset: "2019-default" };
+    expect(censusCachedStateLean(demographics, context)).toBeNull();
+    expect(() => calculateStateLeanForCache(demographics, demographicCategories, context)).toThrow(
+      "No census electorate for ZZ region NOWHERE"
     );
   });
 });

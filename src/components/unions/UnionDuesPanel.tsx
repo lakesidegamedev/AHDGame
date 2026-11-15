@@ -34,18 +34,14 @@ interface UnionDuesPanelProps {
 }
 
 /**
- * Union dues v1's main lever: what each member pays, set as a SHARE OF THEIR
- * ANNUAL WAGE rather than as a cash figure.
+ * Main dues lever: what each member pays, as a SHARE OF ANNUAL WAGE, not a
+ * cash figure.
  *
- * The cash slider it replaces was unusable in practice. A member's annual wage
- * in this economy is single digits, so the 10% ceiling came out near 1, and the
- * control rounded both its range and its readout to whole units: the whole
- * usable band collapsed onto "0" or "1" and the head had no way to pick a rate
- * (player ticket #1112). A percentage is also what the model itself reasons in,
- * `duesBurdenRatio` divides the rate by the wage before approval ever sees it,
- * so the same slider position means the same thing in every country and era,
- * which is the property `unionServices.ts` documents as the whole reason costs
- * are fractions there too.
+ * Annual wages here are single digits, so a cash slider with a whole-number
+ * readout collapses the usable band onto 0 or 1 and the head cannot pick a
+ * rate. A percentage is also what the model reasons in (`duesBurdenRatio`
+ * divides the rate by the wage), so the same slider position means the same
+ * thing in every country and era.
  *
  * The cash equivalent is shown alongside, and the request still sends an
  * absolute `duesPerWorkerAnnual`, so the API and its clamp are unchanged.

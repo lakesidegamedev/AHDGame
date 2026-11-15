@@ -6,7 +6,6 @@ import { getMessageStyle, resolveElectionYear } from "@/lib/utils/formatters";
 import { useElectionActions } from "@/hooks/useElectionActions";
 import { useActivePreset } from "@/contexts/RegisteredCountriesContext";
 import type { ElectionDisplay, CharacterBasic, GameStateDisplay } from "@/lib/db/types";
-import type { ElectionResponse } from "@/lib/elections/resolveElection";
 import { partiesApiUrl, countryElectionsUrl } from "@/lib/urls";
 import { type CountryId, isParliamentarySystem } from "@/lib/constants/countriesCore";
 import { getCountryRegionLabels } from "@/lib/country/countryRegionLabels";
@@ -36,10 +35,6 @@ import {
   type PartyLookup,
   type RegionElectorate,
 } from "@/lib/elections/blendRegionViewModel";
-
-function toElectionDisplay(e: ElectionResponse): ElectionDisplay {
-  return mapElectionResponseToDisplay(e);
-}
 
 interface StateElectionsProps {
   stateId: string;
@@ -133,14 +128,16 @@ export function StateElections({
       if (electionsRes.ok) {
         const electionsData = await electionsRes.json();
         const stateElections: ElectionDisplay[] = (electionsData.elections || []).map(
-          toElectionDisplay
+          mapElectionResponseToDisplay
         );
 
         // Merge in presidential elections (deduplicate by id)
         if (presRes.ok) {
           const presData = await presRes.json();
           const existingIds = new Set(stateElections.map((e: ElectionDisplay) => e.id));
-          for (const pe of (presData.elections || []).map(toElectionDisplay) as ElectionDisplay[]) {
+          for (const pe of (presData.elections || []).map(
+            mapElectionResponseToDisplay
+          ) as ElectionDisplay[]) {
             if (!existingIds.has(pe.id)) stateElections.push(pe);
           }
         }

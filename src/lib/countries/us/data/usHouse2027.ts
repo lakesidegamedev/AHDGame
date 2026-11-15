@@ -3,13 +3,9 @@ import type { HistoricalSeat } from "@/lib/constants/historicalSeats";
 /**
  * Projected US House composition for the January 2027 seed.
  *
- * Call the Map's 2026-09-09 district favorites aggregate to 224 Democratic
- * and 211 Republican seats. The site's national median is 228 Democratic and
- * 207 Republican, which is the product's frozen composition assumption.
- * Reconciliation assigns the four closest Republican-favorite districts to
- * Democrats: FL-22 (even), PA-08 (R+0.7), NY-17 (R+0.9), and OH-09 (R+1.0).
- *
- * Source: https://www.callthemap.com/house
+ * Target is 228 Democratic and 207 Republican seats (the product's frozen
+ * composition assumption). The four closest Republican-favorite districts are
+ * assigned to Democrats to reconcile: FL-22, PA-08, NY-17, OH-09.
  */
 export const US_HOUSE_2027: HistoricalSeat[] = [
   { state: "AK", officeType: "house", party: "republican", seatsHeld: 1 },

@@ -1,3 +1,4 @@
+import { normalizeConvertedMetricBoard } from "./convertedBoard";
 import { primaryMetrics } from "../catalog";
 import type { OpeningMetricObservation } from "./openingObservation";
 import { openingMetricHistory, validateMetricHistory, type ResetMetricHistory } from "./history";
@@ -43,6 +44,15 @@ export interface ResetMetricSnapshot {
   housingSource?: HousingPublicationSource;
   /** Country source inputs and regional stock state are wiped with this world-bound collection. */
   housingState?: HousingState;
+}
+
+/** Normalize known conversion defects and BSON-null national region identities. */
+export function normalizeNationalMetricBoard(board: ResetMetricSnapshot): ResetMetricSnapshot {
+  board = normalizeConvertedMetricBoard(board);
+  if (board.scope !== "national" || board.regionId != null) return board;
+  const normalized = { ...board };
+  delete normalized.regionId;
+  return normalized;
 }
 
 /** Validate an entire scoped opening board before any v2 writer can consume it. */

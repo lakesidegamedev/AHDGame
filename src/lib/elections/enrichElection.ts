@@ -7,7 +7,7 @@ import { resolveElectionYear } from "@/lib/utils/formatters";
 import { cycleAnchorContextFromGameState } from "./cycleAnchorContext";
 import { computeSeatMargins, type SeatProjection } from "@/lib/elections/seatMargins";
 import type { CongressionalDistrict } from "@/lib/db/types/congressionalDistrict";
-import { oneRowPerTurn } from "@/lib/electionEngine/rules/turnSlice";
+import { oneRowPerTurn } from "@/lib/elections/rules/turnSlice";
 import { hu1991PrimaryAdvanceLimit } from "@/lib/countries/hu/rules/assemblyCampaign1991";
 import { russianAssemblyPrimaryAdvanceLimit } from "@/lib/countries/ru/assemblyPrimaryProgression";
 import { usesLegacyPresidentialCampaign } from "@/lib/countries/ru/rules/presidentialCampaign";
@@ -36,9 +36,10 @@ import { loadCampaignAudience, loadNationalCampaignCells } from "@/lib/campaignT
 import type { Db, ObjectId as MongoObjectId } from "mongodb";
 import { blocListQuota, blocListQuotaForGovernment } from "@/lib/constants/blocList";
 import { getCountryState } from "@/lib/countryState";
-import { allocateBlocListSeats } from "@/lib/turn/election/blocListAllocation";
+import { allocateBlocListSeats } from "@/lib/elections/resolution/blocListAllocation";
 import { MULTI_SEAT_TYPES } from "@/lib/utils/electionLabels";
-import { loadDemographicCategories } from "@/lib/demographics/categoryCatalog";
+import { eraYearContextFromGameState } from "@/lib/era/context";
+import { censusMedianVoter } from "./censusMedianVoter";
 import { ObjectId } from "mongodb";
 import type {
   Election,
@@ -54,7 +55,6 @@ import type {
   StatePartyOrg,
   StateRegistrationPool,
   ElectionVoteTally,
-  DemographicCategory,
   State,
   StateDemographics,
 } from "@/lib/db/types";
@@ -68,14 +68,14 @@ import {
   resolvePresidentApproval,
   buildPresidentialModifierByParty,
   presidentialModifierToPct,
-} from "@/lib/electionEngine/presidentialCoattail";
+} from "@/lib/elections/engine/presidentialCoattail";
 import {
   buildGovModifierByParty,
   govModifierToPct,
   resolveGovExecutiveApproval,
   isCoattailEligibleRace,
   isOwnRegionalExecutiveRace,
-} from "@/lib/electionEngine/govCoattail";
+} from "@/lib/elections/engine/govCoattail";
 import { getCharacterByUserId } from "@/lib/db/characterLookup";
 import { applyFactorLedgerFogOfWar } from "@/lib/elections/factorLedgerFog";
 import { type GameTimeContext } from "@/lib/time/gameTime";
@@ -87,29 +87,25 @@ import {
   type PrimaryCalendarWave,
 } from "@/lib/elections/candidateEnrichment";
 import { getOrCreateVoteTally } from "@/lib/elections/voteTallyService";
-import { isRedistrictingEnabled } from "@/lib/redistricting/flag";
 import { projectDistrictedSeats } from "@/lib/redistricting/districtedHouseResolution";
-import { buildPrimaryShareMap } from "@/lib/turn/election/generalResolutionHelpers";
+import { buildPrimaryShareMap } from "@/lib/elections/resolution/generalResolutionHelpers";
 import { selectEndedDisplayCandidates } from "@/lib/elections/endedResultsCandidates";
 import { selectGeneralPhaseDisplayCandidates } from "@/lib/elections/generalPhaseCandidates";
 import { computeElectoralVotes } from "@/lib/elections/electoralVoteService";
-import { getFundsByPartyForElection } from "@/lib/electionEngine/fundsByParty";
-import { getIncumbentSeatShareByParty } from "@/lib/electionEngine/incumbentSeatShare";
+import { getFundsByPartyForElection } from "@/lib/elections/engine/fundsByParty";
+import { getIncumbentSeatShareByParty } from "@/lib/elections/engine/incumbentSeatShare";
+import { capIncumbentSeatShares } from "@/lib/parties/rules/partyRenewal";
 import {
   resolveSingleSeatLegislativeIncumbent,
   isSingleSeatLegislativeRace,
-} from "@/lib/electionEngine/singleSeatIncumbency";
-import {
-  computeMedianVoter,
-  computeNationalEvWeightedMedian,
-  usesEvWeightedNationalMedian,
-} from "@/lib/electionEngine/medianVoter";
+} from "@/lib/elections/engine/singleSeatIncumbency";
+import { usesEvWeightedNationalMedian } from "@/lib/elections/engine/medianVoter";
 import { loadApportionment } from "@/lib/elections/apportionment";
 import {
   buildMidtermOppositionModifierByParty,
   isMidtermOppositionBoostEligible,
   midtermOppositionModifierToPct,
-} from "@/lib/electionEngine/midtermOppositionBoost";
+} from "@/lib/elections/engine/midtermOppositionBoost";
 import { resolveGoverningPartyIds } from "@/lib/government/governingPartyIds";
 import type {
   ElectionResponse,
@@ -142,6 +138,22 @@ import {
   collegeSizeFromEvByState,
   electoralMajorityFor,
 } from "./presidentialResolutionDisplay";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
+import { playerEndorsementsCollection } from "@/lib/db/repositories/playerEndorsements";
+import { nppEndorsementsCollection } from "@/lib/db/repositories/nppEndorsements";
+import { demographicDefaultsCollection } from "@/lib/db/repositories/demographicDefaults";
+import { stateRegistrationPoolCollection } from "@/lib/db/repositories/stateRegistrationPool";
+import { congressionalDistrictsCollection } from "@/lib/db/repositories/congressionalDistricts";
+import { primarySnapshotsCollection } from "@/lib/db/repositories/primarySnapshots";
 
 export async function _enrichElection(
   election: Election,
@@ -195,7 +207,7 @@ export async function _enrichElection(
       const stateDoc =
         deps.localRegionState !== undefined
           ? deps.localRegionState
-          : await db.collection<State>("states").findOne({ _id: localRegionId, countryId });
+          : await statesCollection(db).findOne({ _id: localRegionId, countryId });
       if (stateDoc) statesForEnrichment.set(localRegionId, stateDoc);
     }
   }
@@ -219,7 +231,7 @@ export async function _enrichElection(
   const charPartyMap = new Map(characters.map((c) => [c._id.toString(), c.party]));
 
   // Enrich candidates. Ended races keep ballot-time party on labels/colours so
-  // later party switches cannot recolour historical results (#939).
+  // later party switches cannot recolour historical results.
   const enrichedCandidates = enrichElectionCandidates({
     candidates,
     characters,
@@ -361,11 +373,10 @@ export async function _enrichElection(
     russianAssemblyPrimaryAdvanceLimit(election, enrichedWithYou.length) ??
     getPrimaryWinnersForElection(countryId as CountryId, election.electionType);
 
-  // Display candidates: post-primary dedup, keeping up to `primaryAdvanceCount`
-  // per party. Safety net for the window between primaryEndTime and the next
-  // primary-resolution turn — and for multi-advance races that intentionally
-  // leave several same-party nominees active through the general (#1043).
-  // Always include the current user's candidate even if they lost the primary.
+  // Display candidates: post-primary dedup, up to `primaryAdvanceCount`
+  // per party. Covers the window between primaryEndTime and primary
+  // resolution, and multi-advance races. Always include the current user's
+  // candidate even if they lost the primary.
   let displayCandidates: EnrichedCandidate[] = primaryCandidates;
   if (!inPrimary && !isEnded) {
     displayCandidates = selectGeneralPhaseDisplayCandidates(enrichedWithYou, primaryAdvanceCount);
@@ -403,14 +414,10 @@ export async function _enrichElection(
     });
   }
 
-  // A finished election is a historical record: it must render the same field
-  // forever, even after a contestant's character or NPP is deleted. The
-  // turn-651 Liberal/SDP merge removed every Liberal NPP along with their
-  // candidacy rows, and Scotland's published count silently fell from 2,498,473
-  // votes to 2,177,563 with every share recomputed on the smaller denominator.
-  // The tally still holds their name, party and votes, so the row is rebuilt
-  // from it. Gated on `isEnded` — while a race is live a missing candidacy
-  // means a genuine withdrawal and must NOT be shown.
+  // A finished election must render the same field forever, even after a
+  // contestant's character, NPP or candidacy row is deleted (a party merge does
+  // this), so missing rows are rebuilt from the tally's name, party and votes.
+  // Only when ended: in a live race a missing candidacy is a real withdrawal.
   if (isEnded) {
     displayCandidates = appendHistoricalTallyCandidates(displayCandidates, tally, (partyId) => {
       const partyObj = partyMap.get(partyId);
@@ -449,9 +456,9 @@ export async function _enrichElection(
 
   // Polling data (always computed for both views).
   // Ended races: omit live character.party so polling colours stay on the
-  // candidacy-row (ballot) party — same historical rule as map colours (#939).
-  // Primary: pass live byParty shares so party/list cards match the detail page
-  // (ticket-1022 — snapshot shares left late joiners at 0%).
+  // candidacy-row (ballot) party, same historical rule as map colours.
+  // Primary: pass live byParty shares so party/list cards match the detail
+  // page rather than snapshot shares.
   let polling = buildPollingData(
     election.electionType,
     countryId,
@@ -465,7 +472,7 @@ export async function _enrichElection(
   );
 
   // Seat estimates (always computed for multi-seat races, needed by both views).
-  // #1277: a RESOLVED race must show the allocation it actually seated, never a
+  // A RESOLVED race must show the allocation it actually seated, never a
   // fresh recompute. Recomputing on every load meant a finished election
   // rendered a different result whenever an allocator input drifted underneath
   // it — a player held 7 seats while this page showed 16. `generalResolution`
@@ -476,11 +483,11 @@ export async function _enrichElection(
 
   const isBgOrdinary =
     gameState?.preset === "1991-default" &&
-    election.countryId === "BG" &&
+    countryHasFeature("bgElections", election.countryId) &&
     election.electionType === "nationalAssembly" &&
     (election.cycle >= 1 || election.bulgarianFoundingRound != null);
   const isHu1991Pending =
-    election.countryId === "HU" &&
+    countryHasFeature("huElections", election.countryId) &&
     election.electionType === "nationalAssembly" &&
     (election.hungarianAssemblyRound?.ruleVersion === "mixed-1989-v1" ||
       election.hungarianModernByElection != null ||
@@ -499,15 +506,11 @@ export async function _enrichElection(
           election.state
         ));
 
-  // US House with redistricting on: project seats district-by-district using the
-  // SAME engine that decides the final result, instead of the statewide
-  // proportional estimate above — so the live "Projected Seats" panel matches
-  // how the race will actually resolve. Falls back to the proportional estimate
-  // for states with no districts drawn.
+  // US House: project seats district by district with the engine that decides the
+  // final result, so the live panel matches the race. Falls back to the
+  // proportional estimate above when no districts are drawn.
   const redistrictedHouseRace =
-    election.electionType === "house" &&
-    (countryId ?? "US") === "US" &&
-    isRedistrictingEnabled(gameState);
+    election.electionType === "house" && countryHasFeature("usElections", countryId ?? "US");
   let districtsForState: CongressionalDistrict[] | null = null;
   let districtedMarginProjection: SeatProjection | null = null;
   if (redistrictedHouseRace && !seatedAllocation && tally) {
@@ -520,8 +523,7 @@ export async function _enrichElection(
     }
     const districts = deps.preloadedDistricts
       ? deps.preloadedDistricts.filter((d) => d.stateId === election.state)
-      : await db
-          .collection<CongressionalDistrict>("congressionalDistricts")
+      : await congressionalDistrictsCollection(db)
           .find({ countryId: "US", stateId: election.state as string })
           .toArray();
     districtsForState = districts;
@@ -556,8 +558,7 @@ export async function _enrichElection(
   // races skip the projection above; a one-document check settles those without
   // loading the whole state's districts.
   if (redistrictedHouseRace && districtsForState === null && isFull) {
-    districtsForState = await db
-      .collection<CongressionalDistrict>("congressionalDistricts")
+    districtsForState = await congressionalDistrictsCollection(db)
       .find({ countryId: "US", stateId: election.state as string })
       .limit(1)
       .toArray();
@@ -573,7 +574,7 @@ export async function _enrichElection(
   // it can never be. Overriding caller-side keeps the shared helper's signature
   // and its other two call sites untouched.
   const blocCountry = countryId ?? election.countryId;
-  // Skipped for a resolved race (#1277): the seated allocation already IS the
+  // Skipped for a resolved race: the seated allocation already IS the
   // bloc-list result the resolver produced, and short-circuiting here also
   // spares the `getCountryState` round-trip below.
   const configuredBlocQuota =
@@ -710,13 +711,13 @@ export async function _enrichElection(
       myCampaignId = await findViewerRaceCampaignId(db, electionOid, userId);
     }
 
-    // The reader's party, so a primary screen offers endorsement only where the
-    // endorse route would accept it (own-party candidates). Presidential
-    // primaries only: nothing else on the page needs it.
+    // The reader's party, so a primary screen offers endorsement only for
+    // own-party candidates. Presidential primaries only.
     if (myCharId && isPresident && inPrimary && ObjectId.isValid(myCharId)) {
-      const me = await db
-        .collection<Character>("characters")
-        .findOne({ _id: new ObjectId(myCharId) }, { projection: { party: 1 } });
+      const me = await charactersCollection(db).findOne(
+        { _id: new ObjectId(myCharId) },
+        { projection: { party: 1 } }
+      );
       myPartyId = me?.party ?? null;
     }
 
@@ -878,11 +879,9 @@ export async function _enrichElection(
         ),
         ...resolvedTally.candidateIsNPP,
       };
-      // For an ended/finalized election, a candidate's live party can differ from
-      // the party they ran under (they may have switched since). Prefer the tally
-      // snapshot, then the candidacy-row (ballot) party — never the live
-      // character.party — so historical maps/results keep election-time colours.
-      // In-progress elections still use the live party. (#939)
+      // For ended elections, prefer the tally snapshot, then the
+      // candidacy-row party, never the live character.party, so historical
+      // maps keep election-time colours. In-progress races use live party.
       const preferElectionTimeParty = isEnded || resolvedTally.finalized === true;
       const ballotPartyById = new Map(candidates.map((c) => [c._id.toString(), c.party]));
       for (const cid of referencedCandidateIds) {
@@ -1021,16 +1020,17 @@ export async function _enrichElection(
         ? [election.state]
         : [];
 
-    const [fundsMap, seatShareMap, categories, allDemographics] = await Promise.all([
+    const [fundsMap, seatShareMap, allDemographics, allDefaults] = await Promise.all([
       getFundsByPartyForElection(electionOid, db),
       getIncumbentSeatShareByParty(election, db),
       demographicsQueryStateIds.length > 0
-        ? loadDemographicCategories(db)
-        : Promise.resolve([] as DemographicCategory[]),
+        ? stateDemographicsCollection(db)
+            .find({ _id: { $in: demographicsQueryStateIds }, countryId: countryId as CountryId })
+            .toArray()
+        : Promise.resolve([] as StateDemographics[]),
       demographicsQueryStateIds.length > 0
-        ? db
-            .collection<StateDemographics>("stateDemographics")
-            .find({ _id: { $in: demographicsQueryStateIds } })
+        ? demographicDefaultsCollection(db)
+            .find({ _id: { $in: demographicsQueryStateIds }, countryId: countryId as CountryId })
             .toArray()
         : Promise.resolve([] as StateDemographics[]),
     ]);
@@ -1041,7 +1041,12 @@ export async function _enrichElection(
     // single-winner race (US Senate + executives), so the card can never show
     // a prior vote split as an "Incumbency" row on a vacant seat.
     if (seatShareMap.size > 0) {
-      incumbentSeatShareByPartyMap = Object.fromEntries(seatShareMap);
+      // Same ratchet cap the vote engine applies under party renewal.
+      incumbentSeatShareByPartyMap = Object.fromEntries(
+        gameState?.nppPartyRenewalEnabled === true
+          ? capIncumbentSeatShares(seatShareMap)
+          : seatShareMap
+      );
     }
 
     // Per-party registration for the race's state so the driver card can
@@ -1065,24 +1070,15 @@ export async function _enrichElection(
       }
     }
 
-    if (categories.length > 0 && allDemographics.length > 0) {
-      if (useEvWeightedMedian) {
-        const evEntries = allDemographics
-          .map((d) => ({
-            demographics: d,
-            ev: evByState[d._id as string] ?? 0,
-          }))
-          .filter((e) => e.ev > 0);
-        if (evEntries.length > 0) {
-          medianVoter = computeNationalEvWeightedMedian(evEntries, categories);
-        }
-      } else if (election.state) {
-        const stateDemographics = allDemographics.find((d) => d._id === election.state);
-        if (stateDemographics) {
-          medianVoter = computeMedianVoter(stateDemographics, categories);
-        }
-      }
-    }
+    medianVoter = censusMedianVoter({
+      countryId,
+      preset: gameState?.preset,
+      eraYear: eraYearContextFromGameState(gameState),
+      demographics: allDemographics,
+      defaults: allDefaults,
+      evByState: useEvWeightedMedian ? evByState : null,
+      stateId: election.state ?? undefined,
+    });
 
     // Coattails inputs for the persuasion-drivers card (mirrors the turn
     // engine; display values here). Both are nominal-share multipliers
@@ -1136,11 +1132,9 @@ export async function _enrichElection(
       }
     }
 
-    // Approval-scaled incumbency for the President's OWN race. Mirrors the turn
-    // engine (presidentialElectionEngine.ts), which now threads the sitting
-    // President's party + national approval into the incumbency driver. Sourced
-    // from the sitting President, not the live tally, so the card matches the
-    // shield/drag the engine applies (VP rides the same ticket).
+    // Approval-scaled incumbency for the President's own race, matching the
+    // turn engine. Sourced from the sitting President, not the live tally, so
+    // the card matches the engine's shield/drag (VP rides the same ticket).
     if (isPresidentialRace) {
       const president = await resolvePresidentApproval(db, cid);
       if (president) {
@@ -1206,10 +1200,7 @@ export async function _enrichElection(
   // (`!inPrimary && !isUpcoming`), and registration is a phase-agnostic
   // baseline, so populate it wherever the card is shown rather than only mid-race.
   if (isFull && isPresident && (inGeneral || isEnded)) {
-    const pools = await db
-      .collection<StateRegistrationPool>("stateRegistrationPool")
-      .find({ countryId })
-      .toArray();
+    const pools = await stateRegistrationPoolCollection(db).find({ countryId }).toArray();
     // The presidential deps load every country's statePartyOrg rows
     // (`fetchDepsForElection` uses `find({})`); scope to this election's
     // country so foreign states never leak into the US breakdown. Legacy
@@ -1329,7 +1320,6 @@ export async function _enrichElection(
             lastTurnProcessed: gameState.lastTurnProcessed ?? null,
             currentTurn: gameState.currentTurn,
             effectiveNow: gameTime.effectiveNow.toISOString(),
-            redistrictingEnabled: isRedistrictingEnabled(gameState),
           }
         : null,
 
@@ -1407,10 +1397,7 @@ export async function fetchDepsForElection(
   if (election.status !== "completed" && election.status !== "resolved") {
     candidateQuery.status = "active";
   }
-  const candidates = await db
-    .collection<ElectionCandidate>("electionCandidates")
-    .find(candidateQuery)
-    .toArray();
+  const candidates = await electionCandidatesCollection(db).find(candidateQuery).toArray();
 
   const characterIds = candidates.filter((c) => !c.isNPP).map((c) => c.characterId);
   const runningMateIds = candidates.filter((c) => c.runningMateId).map((c) => c.runningMateId!);
@@ -1429,7 +1416,7 @@ export async function fetchDepsForElection(
   ].map((id) => new ObjectId(id));
 
   // Parallel fetches (core data always; endorsements/campaigns only for full view).
-  // Summary views project the candidate-batch reads (#2168): NPPs drop the
+  // Summary views project the candidate-batch reads: NPPs drop the
   // ~30KB stance map, characters keep the closed display/scoring set, and
   // full view keeps whole documents. See electionSummaryProjections.ts.
   const [
@@ -1444,8 +1431,7 @@ export async function fetchDepsForElection(
     tally,
   ] = await Promise.all([
     allCharIds.length > 0
-      ? db
-          .collection<Character>("characters")
+      ? charactersCollection(db)
           .find(
             { _id: { $in: allCharIds } },
             isFull ? undefined : { projection: ELECTION_SUMMARY_CHARACTER_PROJECTION }
@@ -1453,30 +1439,24 @@ export async function fetchDepsForElection(
           .toArray()
       : Promise.resolve([] as Character[]),
     nppIds.length > 0
-      ? db
-          .collection<NPP>("npps")
+      ? nppsCollection(db)
           .find(
             { _id: { $in: nppIds } },
             isFull ? undefined : { projection: ELECTION_SUMMARY_NPP_PROJECTION }
           )
           .toArray()
       : Promise.resolve([] as NPP[]),
-    db.collection<PoliticalParty>("politicalParties").find({ countryId }).toArray(),
+    politicalPartiesCollection(db).find({ countryId }).toArray(),
     isFull
-      ? db
-          .collection<NPPEndorsement>("nppEndorsements")
+      ? nppEndorsementsCollection(db)
           .find(buildActiveVisibleNppEndorsementFilter({ electionId: electionOid }))
           .toArray()
       : Promise.resolve([] as NPPEndorsement[]),
     isFull
-      ? db
-          .collection<PlayerEndorsement>("playerEndorsements")
-          .find({ electionId: electionOid, isActive: true })
-          .toArray()
+      ? playerEndorsementsCollection(db).find({ electionId: electionOid, isActive: true }).toArray()
       : Promise.resolve([] as PlayerEndorsement[]),
     isFull
-      ? db
-          .collection<PrimarySnapshot>("primarySnapshots")
+      ? primarySnapshotsCollection(db)
           .find({ electionId: electionOid })
           .sort({ recordedAt: 1 })
           .limit(144)
@@ -1485,11 +1465,10 @@ export async function fetchDepsForElection(
           .then((rows) => oneRowPerTurn(rows).slice(0, 72))
       : Promise.resolve([] as PrimarySnapshot[]),
     isFull && isPresident
-      ? db.collection<StatePartyOrg>("statePartyOrg").find({}).toArray()
+      ? statePartyOrgCollection(db).find({}).toArray()
       : Promise.resolve([] as StatePartyOrg[]),
     isFull
-      ? db
-          .collection<Campaign>("campaigns")
+      ? campaignsCollection(db)
           .find(
             { electionId: electionOid },
             {
@@ -1504,7 +1483,7 @@ export async function fetchDepsForElection(
           )
           .toArray()
       : Promise.resolve([] as Campaign[]),
-    db.collection<ElectionVoteTally>("electionVoteTallies").findOne({ electionId: electionOid }),
+    electionVoteTalliesCollection(db).findOne({ electionId: electionOid }),
   ]);
 
   // Latest primary snapshot — trend charts (full view) + fallback when live
@@ -1515,8 +1494,7 @@ export async function fetchDepsForElection(
     latestPrimarySnapshot = snapshots[snapshots.length - 1];
   } else {
     // summary mode (snapshots array is empty) — fetch the single latest
-    const latest = await db
-      .collection<PrimarySnapshot>("primarySnapshots")
+    const latest = await primarySnapshotsCollection(db)
       .find({ electionId: electionOid })
       .sort({ recordedAt: -1 })
       .limit(1)
@@ -1544,8 +1522,8 @@ export async function fetchDepsForElection(
       q["currentOffice.senateClass"] = election.senateClass;
     }
     const [incumbentChar, incumbentNPP] = await Promise.all([
-      db.collection<Character>("characters").findOne(q, { projection: { name: 1, party: 1 } }),
-      db.collection<NPP>("npps").findOne(q, { projection: { name: 1, party: 1 } }),
+      charactersCollection(db).findOne(q, { projection: { name: 1, party: 1 } }),
+      nppsCollection(db).findOne(q, { projection: { name: 1, party: 1 } }),
     ]);
     const holder = incumbentChar ?? incumbentNPP;
     if (holder) incumbent = { name: holder.name, partyId: holder.party };

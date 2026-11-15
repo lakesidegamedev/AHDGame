@@ -1,5 +1,6 @@
 import type { Db } from "mongodb";
 import type { Character } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /**
  * Ordinal rank (1 = highest) for a character's national political influence within
@@ -12,7 +13,7 @@ export async function getNationalNpiOrdinalRank(
 ): Promise<number> {
   const countryId = character.countryId ?? "US";
   const npi = character.nationalInfluence ?? 0;
-  const ahead = await db.collection<Character>("characters").countDocuments({
+  const ahead = await charactersCollection(db).countDocuments({
     isBanned: { $ne: true },
     countryId,
     $or: [

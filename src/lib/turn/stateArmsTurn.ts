@@ -28,20 +28,18 @@ export interface StateArmsResult {
 }
 
 /**
- * Per-turn: credit a planned-defence economy's arsenal with what its state factories made.
+ * Per-turn: credit a planned-defence economy's arsenal with what its state
+ * factories made.
  *
- * Runs BEFORE `applyDefenceRefit` in the turn order, for the same reason delivery does:
- * materiel has to be in the store before it can be issued, or every lot idles a turn.
+ * Runs BEFORE `applyDefenceRefit` so materiel is in the store before it can be
+ * issued, or every lot idles a turn.
  *
- * A market economy is not on the roster and gets no rate, but it does get the emergency
- * FLOOR (`materielFloor`): one lot into a domain whose store has reached zero, which
- * switches itself off the moment the store is no longer empty. Without it a nation with
- * no contract pipeline running has no route back from 0/0/0 equipment at all, which is
- * where the United States finished the War for Germany.
+ * A market economy gets no rate but does get the emergency floor
+ * (`materielFloor`): one lot into an empty domain, switched off once the store
+ * is non-empty. Without it a nation with no contract pipeline has no route back
+ * from 0/0/0 equipment.
  *
- * The arsenal is read BEFORE the roster so the floor stays cheap: a market economy whose
- * stores all hold something cannot reach the floor, and returns on one small document
- * without ever listing its units.
+ * The arsenal is read before the roster so the floor stays cheap.
  */
 export async function applyStateArmsProduction(
   db: Db,

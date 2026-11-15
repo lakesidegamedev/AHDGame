@@ -6,29 +6,12 @@ import type { IncomeStartVintage, NormalAnchor } from "@/lib/era/metricCatalog";
 import type { ScoreThreshold } from "@/lib/utils/metricScoring";
 import type { WorldEntityRegion } from "@/lib/world/worldEntityManifest";
 
-/**
- * The small facts about where CN is.
+/*
+ * GENERATED from `__snapshots__/cn.pre-move.json`. Do not edit values by hand; a hand draft got six values wrong and still typechecked. Regenerate with `npx tsx scripts/countries/gen-country-geography-facts.ts CN --force`.
  *
- * ⚠ GENERATED FROM `__snapshots__/cn.pre-move.json`, NOT TRANSCRIBED.
- * Regenerate with:
+ * Must stay free of value imports: `geography.ts` imports all census, metric and region data as values, so importing it here ships that whole module to the browser.
  *
- *     npx tsx scripts/countries/gen-country-geography-facts.ts CN --force
- *
- * A hand-written draft of this file got six values wrong, including an
- * independent-bias of 0.06 where the registry says 2.33 and a threshold object
- * with the wrong KEYS. All six typechecked. Do not edit values here by hand.
- *
- * ⚠ KEEP THIS FILE FREE OF VALUE IMPORTS. It is the light half of the pair;
- * `geography.ts` imports every era of census, metric and region data as values.
- * A registry that forwards to the heavy module for one string ships all of it to
- * the browser -- which shipped once already, when `countryContinents.ts` started
- * pulling 108 KB per bundle for a continent name.
- *
- * ⚠ THE ISO PAIR IS TWO REGISTRIES DESCRIBING ONE FACT.
- * `COUNTRY_TO_ISO_NUMERIC` maps CN to the code and
- * `ISO_NUMERIC_TO_COUNTRY` maps it back. The generator asserts they agree
- * before writing; if they ever disagree, a lookup by code and a lookup by
- * country would report different things.
+ * `COUNTRY_TO_ISO_NUMERIC` and `ISO_NUMERIC_TO_COUNTRY` describe one fact twice; the generator asserts they agree.
  */
 
 export const CN_CONTINENT: Continent = "Asia";
@@ -258,9 +241,7 @@ export const CN_INCOME_ANCHORS: NormalAnchor[] = [
   },
   {
     year: 1991,
-    // Interpolation point only. A world STARTING in 1991 scores against
-    // CN_INCOME_START_VINTAGES instead; this value stays so worlds starting
-    // in 1999 and 2007 keep their existing bands (#3316).
+    // Interpolation point only. Worlds starting in 1991 score against CN_INCOME_START_VINTAGES instead; keeping this value preserves bands for 1999 and 2007 starts.
     value: 9000,
   },
   {
@@ -272,8 +253,7 @@ export const CN_INCOME_ANCHORS: NormalAnchor[] = [
 /**
  * Income anchor for a world that STARTS in the given year, when that year's
  * seed is dated to a different currency vintage than the interpolation series
- * above. Used only at the exact start year; never interpolated. 1991 is the
- * derived household median from seeds/reference/income1991 (#3376).
+ * above. Used only at the exact start year; never interpolated.
  */
 export const CN_INCOME_START_VINTAGES: Record<number, IncomeStartVintage> = {
   1991: { value: 3187, id: "cn-1991-household-r1" },

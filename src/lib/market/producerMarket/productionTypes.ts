@@ -15,6 +15,7 @@ import type {
   ProducerInputReservation,
 } from "./production";
 import type { ProducerPlanningDiagnostics } from "./planningRules";
+import type { ImportTariffTable } from "./tariffRules";
 
 export type ProducerEconomyInput = {
   turn: number;
@@ -104,6 +105,12 @@ export type ProducerEconomyInput = {
   askBuyerTieBreak?: boolean;
   /** Automatic asks assume dearer competitors match (quoteProducer competitorsMatch), stage >= 2. */
   askCompetitorsMatch?: boolean;
+  /**
+   * Import tariff per route (tariffRules, gameConfig.producerTariffStage): a
+   * buyer is offered an import only when its landed price is within its limit.
+   * Absent = no tariff seen at clearing.
+   */
+  importTariffs?: ImportTariffTable;
 };
 
 export type ProducerPlanningExecution = {

@@ -2,16 +2,10 @@ import { TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import { calendarTurn, type CalendarClock } from "@/lib/utils/gameDate";
 
 /**
- * Convert a calendar year (authored on roster/docket data) to the turn it fires
- * on, given the preset's starting year. Turn 1 = the first week of
- * `startingYear` (see STARTING_YEAR doc comment in turnTime.ts), so this mirrors
- * the same `(year - startingYear) * TURNS_PER_YEAR` shape used by the
- * election-cycle anchor formulas.
- *
- * The result is a CALENDAR turn, so compare it against
- * `calendarTurn(currentTurn, clock)` and never against the raw counter. On a
- * world with a founding phase the two are a game year apart, and comparing a
- * calendar turn to a raw one is what fired the 1962 docket in 1961 (#1208).
+ * Convert an authored calendar year to the turn it fires on.
+ * Turn 1 = first week of `startingYear`. Returns a CALENDAR turn: compare
+ * against `calendarTurn(currentTurn, clock)`, never the raw counter, or worlds
+ * with a founding phase fire a game year early.
  * {@link yearFiringAtOrAfterTurn} is the inverse; keep the pair together.
  */
 export function yearToTurn(year: number, startingYear: number): number {
@@ -25,7 +19,7 @@ export function yearToTurn(year: number, startingYear: number): number {
  * Lives next to `yearToTurn` on purpose. This used to be re-derived inline in
  * `crises/optionActions.ts`, and when the docket moved to firing on the CALENDAR
  * turn the copy kept inverting the old raw-turn rule, scheduling challenges a
- * game year late on a world with a founding phase (#1208). One pair, one place.
+ * game year late on a world with a founding phase. One pair, one place.
  *
  * Annual granularity means the case can land up to a year after `turn`; that is
  * inherent in a docket authored by year, not a rounding choice.

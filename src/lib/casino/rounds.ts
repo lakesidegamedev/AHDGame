@@ -17,6 +17,7 @@ import {
   toLocal,
   type CasinoPlayer,
 } from "./house";
+import { casinoRoundsCollection } from "@/lib/db/repositories/casinoRounds";
 
 /**
  * Shared-pot games: players stake into a round and the round pays itself out.
@@ -103,7 +104,7 @@ export interface CasinoRound {
 type Fail = { ok: false; status: number; error: string; extra?: Record<string, unknown> };
 type Ok<T> = { ok: true } & T;
 
-const rounds = (db: Db) => db.collection<CasinoRound>("casinoRounds");
+const rounds = (db: Db) => casinoRoundsCollection<CasinoRound>(db);
 
 export function publicRound(r: CasinoRound) {
   return {

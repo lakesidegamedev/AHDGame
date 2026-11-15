@@ -2,45 +2,26 @@ import { withAdminRoute } from "@/lib/api/withAdminAuth";
 /**
  * POST /api/admin/elections/recalibrate-timers
  *
- * Recalculates primaryEndTime and endTime for every active/upcoming election
- * so they match the canonical LARP schedule, correcting drift caused by
- * batch/manual turn firing.
+ * Recalculates primaryEndTime and endTime for every active/upcoming election so
+ * they match the canonical LARP schedule, correcting drift caused by batch/manual
+ * turn firing.
  *
- * Root cause: election timestamps are wall-clock absolute dates (now + Nh),
- * but batch turns advance currentTurn instantly without advancing the clock.
- * After firing 150 turns in seconds, a House cycle-1 election created at
- * game start still has endTime = "game_start + 96h" (far in the future on
- * the clock) even though LARP turn 96 passed long ago.
+ * Why drift happens: election timestamps are wall-clock absolute dates (now + Nh)
+ * but batch turns advance currentTurn instantly without advancing the clock, so a
+ * cycle-1 election created at game start keeps an endTime far in the future even
+ * though its LARP turn passed long ago.
  *
- * Canonical schedule (1 turn = 1 real hour, 48 turns = 1 LARP year):
- *   House  cycle 1       → endTurn = 144  (bootstrap ends 2022; 48h general)
- *   House  cycle N≥2     → endTurn = 144 + (N−1) × 96  (2024, 2026, …; 48h general)
- *   Senate class C cycle 1 → endTurn = SENATE_CYCLE1_END_TURN[C] (C2=336, C3=144, C1=240)
- *   Senate class C cycle N≥2 → endTurn = SENATE_CYCLE1_END_TURN[C] + (N−1) × 288
- *   Governor  cycle 1    → endTurn = 240  (bootstrap ends 2024)
- *   Governor  cycle N≥2  → endTurn = 240 + (N−1) × 192
- *   StateSenate cycle 1  → endTurn = 240  (bootstrap ends 2024)
- *   StateSenate cycle N≥2 → endTurn = 240 + (N−1) × 192
- *   President cycle 1    → endTurn = 240  (bootstrap ends 2024; 24h general)
- *   President cycle N≥2  → endTurn = 240 + (N−1) × 192
- *   UK Commons cycle 1   → endTurn = 219  (bootstrap: July 2024 general election)
- *   UK Commons cycle N≥2 → if a snap_commons (or regular commons) has resolved for
- *                          the region, endTurn = priorEndTurn + 240; otherwise
- *                          219 + (N−1) × 240.
- *   UK RegionalCouncil   → five annual cohorts; each region retains a 5-year term
- *   JP Shugiin cycle 1   → endTurn = 240  (bootstrap ends 2024)
- *   JP Shugiin cycle N≥2 → if a snap_shugiin (or regular shugiin) has resolved for
- *                          the region, endTurn = priorEndTurn + 192; otherwise
- *                          240 + (N−1) × 192.
- *   JP Sangiin class C cycle 1 → endTurn = JP_SANGIIN_CYCLE1_END_TURN[C] (C1=123 Jul 2022, C2=267 Jul 2025)
- *   JP Sangiin class C cycle N≥2 → endTurn = JP_SANGIIN_CYCLE1_END_TURN[C] + (N−1) × 288  (6-year term per class; stagger between classes is 144)
- *   JP Governor           → same formula as US Governor
+ * Canonical schedule: 1 turn = 1 real hour, 48 turns = 1 LARP year. Each office's
+ * endTurn is computed from its cycle-1 end turn plus term length per cycle, with
+ * UK Commons and JP Shugiin using the prior resolved endTurn + term after a snap
+ * or regular election has resolved. Per-office constants and cycle-1 turns live
+ * alongside the recalibration logic below.
  *
- *   primaryEndTurn = endTurn − generalDurationHours
- *   startTime is always in the past (zero-gap: primaries open immediately)
+ * primaryEndTurn = endTurn - generalDurationHours. startTime is always in the past
+ * (zero-gap: primaries open immediately).
  *
- * Elections whose canonical endTurn ≤ currentTurn are already past due:
- * their endTime is set to now−1s so the next turn completes them and the
+ * Elections whose canonical endTurn <= currentTurn are already past due: their
+ * endTime is set to now-1s so the next turn completes them and the
  * perpetual-election system can spawn the next cycle.
  */
 
@@ -59,7 +40,7 @@ import {
   ensureDEElections,
   ensureJPElections,
   ensureJPCouncillorElections,
-} from "@/lib/turn/perpetualElections";
+} from "@/lib/elections/scheduling";
 import type { Filter } from "mongodb";
 import type { Election, GameState } from "@/lib/db/types";
 import {
@@ -80,10 +61,17 @@ const DE_BUNDESTAG_CYCLE_PERIOD_HOURS = 192; // 4 game-years — period only, no
 const IE_DAIL_CYCLE_PERIOD_HOURS = 192; // 4 game-years
 const IE_UACHTARAN_CYCLE_PERIOD_HOURS = 336; // 7 game-years
 const IE_LOCAL_COUNCIL_CYCLE_PERIOD_HOURS = 240; // 5 game-years
-import { DEFAULT_DURATIONS } from "@/lib/turn/perpetualElections";
+import { DEFAULT_DURATIONS } from "@/lib/elections/scheduling";
 import { electionToLarpYear } from "@/lib/utils/formatters";
 import { getLandtagAnchor } from "@/lib/seeds/de/deLandtag";
 import { getUKRegionalCouncilCycle1EndTurn } from "@/lib/elections/ukRegionalCouncilStagger";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import type { Document } from "mongodb";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
 
 /**
  * Derive the canonical LARP end-turn, primary-end-turn, and start-turn for
@@ -111,7 +99,9 @@ export function canonicalTurns(
   const customCycle1EndTurn =
     electionType === "landtag" && state
       ? getLandtagAnchor(state, ctx.preset)
-      : electionType === "regionalCouncil" && election.countryId === "UK" && state
+      : electionType === "regionalCouncil" &&
+          countryHasFeature("ukApi", election.countryId) &&
+          state
         ? getUKRegionalCouncilCycle1EndTurn(state, ctx)
         : undefined;
   return canonicalTurnsForCycle({
@@ -158,19 +148,16 @@ function seatKeyFor(election: Election): string {
 }
 
 /**
- * Decide whether Step 0 should reactivate a `completed`/`resolved` election
- * back to `active` because its canonical endTurn is still in the future.
+ * Decide whether Step 0 should reactivate a `completed`/`resolved` election to
+ * `active` because its canonical endTurn is still in the future.
  *
- * Reactivates only when the election is *premature without* having actually
- * been resolved. Signals that resolution already ran:
- *   - the seat has a non-vacant `electedOfficials` row (`seatedSet`)
- *   - the vote tally is finalized (`finalizedSet`)
- *
- * If either is true, leave the election alone and let the perpetual-election
- * spawn helpers create a fresh next cycle. Reactivating in that case wipes
- * the apparent withdrawal of every player whose candidacy was withdrawn during
- * the prior resolution — see healRecalibrateWithdrawals.ts for the heal that
- * recovered victims of the prior unguarded behavior.
+ * Reactivate only when the election is premature without having been resolved.
+ * Signals that resolution already ran: the seat has a non-vacant
+ * `electedOfficials` row (`seatedSet`) or the vote tally is finalized
+ * (`finalizedSet`). If either is true, leave the election alone and let the
+ * perpetual-election spawn helpers create a fresh next cycle. Reactivating
+ * would wipe the apparent withdrawal of every player withdrawn during the prior
+ * resolution.
  */
 export function shouldReactivatePrematureElection(
   election: Election,
@@ -222,7 +209,7 @@ export const POST = withAdminRoute(async (_auth) => {
   // Persist the floored ref as lastTurnProcessed so all future turn processing
   // and election timestamps stay aligned to hour boundaries.
   if (ref.getTime() !== rawRef.getTime()) {
-    await db.collection<GameState>("gameState").updateOne({ _id: "current" } as Filter<GameState>, {
+    await gameStateCollection(db).updateOne({ _id: "current" } as Filter<GameState>, {
       $set: { lastTurnProcessed: ref, updatedAt: now },
     });
     invalidateGameTimeCache();
@@ -233,23 +220,18 @@ export const POST = withAdminRoute(async (_auth) => {
   let renumbered = 0;
 
   // ── Step 0: Reactivate prematurely completed elections ─────────────────
-  // If a completed election's canonical endTurn is still in the future,
-  // it was closed too early. Only check recent completions (last 500) to
-  // avoid scanning thousands of old elections on live servers.
+  // A completed election whose canonical endTurn is still in the future was
+  // closed too early. Only check the recent 500 to avoid scanning old
+  // elections on live servers.
   //
-  // A finalized vote tally (or any non-vacant electedOfficial seated at the
-  // election's resolution time) means resolution actually ran — winner
-  // seated, candidates marked withdrawn, careerHistory written. Reactivating
-  // such an election just leaves it in a corrupted "active but already
-  // decided" state where the seat is held but the candidates are missing,
-  // so we skip those and let `ensurePerpetualElections` spawn a fresh next
-  // cycle instead. See healRecalibrateWithdrawals.ts for the data heal that
-  // recovers victims of the prior unguarded behavior.
+  // Skip elections whose resolution already ran (finalized tally or a seated
+  // electedOfficial): reactivating leaves a corrupted "active but decided"
+  // state where the seat is held but candidates are gone. Let
+  // `ensurePerpetualElections` spawn a fresh cycle instead.
   //
-  // Wrapped in try-catch so failures here don't block the core recalibration.
+  // Wrapped in try-catch so failures here don't block core recalibration.
   try {
-    const recentCompleted = await db
-      .collection<Election>("elections")
+    const recentCompleted = await electionsCollection(db)
       .find({ status: { $in: ["completed", "resolved"] } })
       .sort({ updatedAt: -1 })
       .limit(500)
@@ -259,19 +241,17 @@ export const POST = withAdminRoute(async (_auth) => {
     // already-resolved elections without a per-election round trip.
     const candidateIds = recentCompleted.map((e) => e._id);
     const [finalizedTallies, sittingOfficials] = await Promise.all([
-      db
-        .collection<{ electionId: Election["_id"]; finalized?: boolean }>("electionVoteTallies")
+      electionVoteTalliesCollection<{ electionId: Election["_id"]; finalized?: boolean }>(db)
         .find({ electionId: { $in: candidateIds }, finalized: true })
         .project({ electionId: 1 })
         .toArray(),
-      db
-        .collection<{
-          officeType: string;
-          state?: string;
-          senateClass?: number;
-          chamberClass?: number;
-          characterId?: import("mongodb").ObjectId | null;
-        }>("electedOfficials")
+      electedOfficialsCollection<{
+        officeType: string;
+        state?: string;
+        senateClass?: number;
+        chamberClass?: number;
+        characterId?: import("mongodb").ObjectId | null;
+      }>(db)
         .find({ characterId: { $ne: null } })
         .project({ officeType: 1, state: 1, senateClass: 1, chamberClass: 1, characterId: 1 })
         .toArray(),
@@ -317,7 +297,7 @@ export const POST = withAdminRoute(async (_auth) => {
     }
 
     if (reactivateOps.length > 0) {
-      await db.collection<Election>("elections").bulkWrite(reactivateOps);
+      await electionsCollection(db).bulkWrite(reactivateOps);
     }
     if (skippedAlreadyResolved > 0) {
       console.log(
@@ -332,8 +312,7 @@ export const POST = withAdminRoute(async (_auth) => {
   // If an election's cycle is too high for the current turn, renumber it.
   // Wrapped in try-catch so failures here don't block the core recalibration.
   try {
-    const allActive = await db
-      .collection<Election>("elections")
+    const allActive = await electionsCollection(db)
       .find({ status: { $in: ["active", "upcoming"] } })
       .toArray();
 
@@ -416,24 +395,23 @@ export const POST = withAdminRoute(async (_auth) => {
     }
 
     if (renumberOps.length > 0) {
-      await db.collection<Election>("elections").bulkWrite(renumberOps);
+      await electionsCollection(db).bulkWrite(renumberOps);
     }
     if (toDeletePremature.length > 0) {
-      await db
-        .collection("electionCandidates")
-        .deleteMany({ electionId: { $in: toDeletePremature } });
-      await db
-        .collection("electionVoteTallies")
-        .deleteMany({ electionId: { $in: toDeletePremature } });
-      await db.collection<Election>("elections").deleteMany({ _id: { $in: toDeletePremature } });
+      await electionCandidatesCollection<Document>(db).deleteMany({
+        electionId: { $in: toDeletePremature },
+      });
+      await electionVoteTalliesCollection<Document>(db).deleteMany({
+        electionId: { $in: toDeletePremature },
+      });
+      await electionsCollection(db).deleteMany({ _id: { $in: toDeletePremature } });
     }
   } catch (err) {
     console.error("[Recalibrate] Step 0b (cycle renumbering) failed:", err);
   }
 
   // ── Step 1: Recalibrate all active/upcoming elections ────────────────
-  const elections = await db
-    .collection<Election>("elections")
+  const elections = await electionsCollection(db)
     .find({ status: { $in: ["active", "upcoming"] } })
     .toArray();
 
@@ -454,8 +432,7 @@ export const POST = withAdminRoute(async (_auth) => {
     shugiin: ["shugiin", "snap_shugiin"],
   };
   for (const [regularType, candidateTypes] of Object.entries(lowerChamberTypeMap)) {
-    const prior = await db
-      .collection<Election>("elections")
+    const prior = await electionsCollection(db)
       .find({
         electionType: { $in: candidateTypes },
         status: { $in: ["completed", "resolved"] },
@@ -708,14 +685,14 @@ export const POST = withAdminRoute(async (_auth) => {
   }
 
   if (ops.length > 0) {
-    await db.collection<Election>("elections").bulkWrite(ops);
+    await electionsCollection(db).bulkWrite(ops);
   }
 
   // Delete pruned elections and their candidates
   if (toDelete.length > 0) {
-    await db.collection("electionCandidates").deleteMany({ electionId: { $in: toDelete } });
-    await db.collection("electionVoteTallies").deleteMany({ electionId: { $in: toDelete } });
-    await db.collection<Election>("elections").deleteMany({ _id: { $in: toDelete } });
+    await electionCandidatesCollection<Document>(db).deleteMany({ electionId: { $in: toDelete } });
+    await electionVoteTalliesCollection<Document>(db).deleteMany({ electionId: { $in: toDelete } });
+    await electionsCollection(db).deleteMany({ _id: { $in: toDelete } });
   }
 
   // Only re-spawn missing elections if some were actually pruned or deleted.

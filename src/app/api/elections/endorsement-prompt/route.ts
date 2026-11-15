@@ -7,6 +7,9 @@ import { isPrimaryPhaseOpen } from "@/lib/elections/playerEndorsements";
 import { getGameTime } from "@/lib/time/gameTime";
 import type { CountryId } from "@/lib/constants/countries";
 import type { Election, ElectionCandidate, PlayerEndorsement } from "@/lib/db/types";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { playerEndorsementsCollection } from "@/lib/db/repositories/playerEndorsements";
 
 export interface EndorsementPromptCandidate {
   /** electionCandidates row id: what POST /endorse expects as `candidateId`. */
@@ -48,10 +51,8 @@ function noStore(body: EndorsementPromptResponse) {
  *
  * Scoped to the caller's OWN country rather than hard-coded to the US, because
  * that is the rule `POST /api/elections/[id]/endorse` actually enforces
- * (`assertSameCountry`). A US player with a live US presidential race is the
- * case this exists for; gating on the literal string "US" would just mean the
- * card silently fails to appear the first time another presidential republic
- * ships one.
+ * (`assertSameCountry`). Hard-coding "US" would make the card silently vanish
+ * the first time another presidential republic ships one.
  *
  * Every reason the endorse endpoint would reject the player is filtered out
  * here, so the card never offers a button that 400s: ended races, races the
@@ -74,7 +75,7 @@ export async function GET(request: Request) {
     // completed/resolved), and they are exactly when an endorsement is worth the
     // most, so include them and let the candidate list decide whether there is
     // anything to show.
-    const election = await db.collection<Election>("elections").findOne(
+    const election = await electionsCollection(db).findOne(
       {
         electionType: "president",
         countryId,
@@ -84,15 +85,14 @@ export async function GET(request: Request) {
     );
     if (!election) return noStore(EMPTY);
 
-    const existing = await db.collection<PlayerEndorsement>("playerEndorsements").findOne({
+    const existing = await playerEndorsementsCollection(db).findOne({
       characterId: character._id,
       electionId: election._id,
       isActive: true,
     });
     if (existing) return noStore(EMPTY);
 
-    const candidates = await db
-      .collection<ElectionCandidate>("electionCandidates")
+    const candidates = await electionCandidatesCollection(db)
       .find({ electionId: election._id, status: "active" })
       .toArray();
     if (candidates.length === 0) return noStore(EMPTY);

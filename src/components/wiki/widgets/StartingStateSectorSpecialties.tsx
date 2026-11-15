@@ -17,6 +17,7 @@ import { brRegions } from "@/lib/seeds/br/brRegions";
 import { cnRegions } from "@/lib/seeds/cn/cnRegions";
 import { ieRegions } from "@/lib/seeds/ie/ieRegions";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 type StartingCountryId = Exclude<
   CountryId,
@@ -43,10 +44,12 @@ type StartingCountryId = Exclude<
   | "DD"
   | "SCO"
   | "WAL"
+  | "CA"
+  | "QC"
 >;
 
 const REGIONS_BY_COUNTRY: Record<StartingCountryId, readonly State[]> = {
-  US: states.filter((state) => state.countryId === "US"),
+  US: states.filter((state) => countryHasFeature("usUi", state.countryId)),
   UK: ukRegions,
   DE: deRegions,
   JP: jpRegions,

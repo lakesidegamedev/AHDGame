@@ -1,13 +1,8 @@
 /**
- * East Berlin (`BEO`) geometry. Both Cold-War presets seed East Germany on the
- * eastern-Länder codes (BEO/MV/BB/ST/SN/TH); the five Länder render from the
- * germany shard by ownership, but `BEO` has no shape there (BE is West Berlin;
- * Brandenburg carries Berlin as an interior enclave hole), so this one-feature
- * shard supplies the Berlin outline — lifted from Brandenburg's interior ring
- * by `scripts/maps/build-dd-geo.mjs`, filling BB's hole exactly.
- *
- * World map: excluded (`worldOverlay: false` in the manifest) — the world
- * overlay already folds `BE` onto Brandenburg's owner, covering all of Berlin.
+ * East Berlin (`BEO`) geometry. The germany shard has no shape for `BEO`
+ * (BE is West Berlin; Brandenburg carries Berlin as an interior enclave hole),
+ * so this one-feature shard supplies the Berlin outline, lifted from
+ * Brandenburg's interior ring to fill that hole exactly.
  */
 export const DD_GEO_URL = "/dd-regions.json";
 

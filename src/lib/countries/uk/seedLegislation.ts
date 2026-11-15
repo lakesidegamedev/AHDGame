@@ -1,6 +1,7 @@
 import type { Db } from "mongodb";
 import type { LegislationType } from "@/lib/db/types";
 import { legislationTypes } from "@/lib/seeds/reference/legislationTypes";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 
 /**
  * Admin-only destructive re-seed for UK legislation types
@@ -16,15 +17,13 @@ import { legislationTypes } from "@/lib/seeds/reference/legislationTypes";
  */
 export async function seedUkLegislation(db: Db, log: (msg: string) => void) {
   // Remove existing UK legislation types
-  const deleteResult = await db
-    .collection<LegislationType>("legislationTypes")
-    .deleteMany({ countryScope: "uk" });
+  const deleteResult = await legislationTypesCollection(db).deleteMany({ countryScope: "uk" });
   const deletedCount = deleteResult.deletedCount || 0;
 
   const ukTypes = legislationTypes.filter((lt) => lt.countryScope === "uk");
 
   if (ukTypes.length > 0) {
-    await db.collection<LegislationType>("legislationTypes").insertMany(ukTypes);
+    await legislationTypesCollection(db).insertMany(ukTypes);
   }
 
   log(

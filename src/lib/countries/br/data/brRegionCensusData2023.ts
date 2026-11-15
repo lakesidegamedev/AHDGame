@@ -1,18 +1,9 @@
 /**
- * Brazil Region Census Profiles — 2023 era.
+ * Brazil Region Census Profiles, 2023 era.
  *
- * 2023-default companion to {@link brRegionCensusData} (the 2019 profiles).
- * Anchored on IBGE Censo Demográfico 2022 (% of adult population), authored
- * independently from historical knowledge of the era — not derived by scaling
- * any other era's profiles.
- *
- * Era anchors: an aging Brazil — fertility well below replacement, senior
- * share climbing everywhere (highest in the Sul). Pardo is now the national
- * plurality as self-classification keeps shifting. The Centro-Oeste is an
- * agro powerhouse with above-average incomes; the Nordeste remains the
- * poorest region despite two decades of convergence. Evangelical growth
- * (~30% nationally) reshapes the urban periphery but is not a Layer 1 field.
- * Income uses era-neutral relative tiers.
+ * IBGE Censo Demografico 2022 (% of adult population). Authored from
+ * era knowledge, not scaled from other eras. Income uses era-neutral
+ * relative tiers.
  */
 
 import type { BRRegionLayer1 } from "@/lib/seeds/br/brRegionCensusData";

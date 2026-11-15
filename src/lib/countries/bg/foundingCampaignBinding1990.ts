@@ -6,9 +6,16 @@
 import { type ClientSession, type Db } from "mongodb";
 import type { Election, GameState, State, StateRegistrationPool } from "@/lib/db/types";
 import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
-import { scalePoolToRegistered } from "@/lib/electionEngine/rules/registration";
+import { scalePoolToRegistered } from "@/lib/elections/rules/registration";
 import { BG_1990_LIST_DISTRICTS } from "./data/foundingDistricts1990";
 import { isBgOrdinaryCapacity } from "./rules/assemblyTransition";
+import { STATE_POPULATION_FIELDS } from "@/lib/db/collections/states";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import type { Document } from "mongodb";
+import { stateRegistrationPoolCollection } from "@/lib/db/repositories/stateRegistrationPool";
 
 async function materializeBgFoundingCampaignBinding(input: {
   db: Db;
@@ -24,12 +31,12 @@ async function materializeBgFoundingCampaignBinding(input: {
     !Number.isFinite(now.getTime())
   )
     throw new Error("Bulgarian campaign binding needs an active transaction, cycle and time");
-  const game = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { session, projection: { preset: 1 } });
+  const game = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { session, projection: { preset: 1 } }
+  );
   if (game?.preset !== "1991-default") return false;
-  const elections = await db
-    .collection<Election>("elections")
+  const elections = await electionsCollection(db)
     .find(
       {
         countryId: "BG",
@@ -74,18 +81,16 @@ async function materializeBgFoundingCampaignBinding(input: {
       throw new Error("Bulgarian frozen campaign cohort is incomplete or changed");
     return false;
   }
-  const states = await db
-    .collection<State>("states")
+  const states = await statesCollection(db)
     .find(
       { countryId: "BG" },
       {
         session,
-        projection: { _id: 1, population: 1, votingEligiblePopulation: 1 },
+        projection: STATE_POPULATION_FIELDS,
       }
     )
     .toArray();
-  const pools = await db
-    .collection<StateRegistrationPool>("stateRegistrationPool")
+  const pools = await stateRegistrationPoolCollection(db)
     .find(
       { countryId: "BG" },
       {
@@ -113,7 +118,7 @@ async function materializeBgFoundingCampaignBinding(input: {
       return [String(row._id), voters];
     })
   );
-  const result = await db.collection<Election>("elections").bulkWrite(
+  const result = await electionsCollection(db).bulkWrite(
     elections.map((row) => ({
       updateOne: {
         filter: { _id: row._id, bulgarianFoundingRound: { $exists: false } },
@@ -135,7 +140,7 @@ async function materializeBgFoundingCampaignBinding(input: {
   );
   if (result.modifiedCount !== 5)
     throw new Error("Bulgarian campaign binding changed concurrently");
-  await db.collection("electionVoteTallies").updateMany(
+  await electionVoteTalliesCollection<Document>(db).updateMany(
     { electionId: { $in: elections.map((row) => row._id) }, finalized: { $ne: true } },
     {
       $set: { bulgarianFoundingBallot: true },
@@ -152,12 +157,12 @@ export async function bindBgFoundingCampaigns(
   now: Date,
   cycles?: readonly number[]
 ): Promise<number> {
-  const game = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { projection: { preset: 1 } });
+  const game = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { projection: { preset: 1 } }
+  );
   if (game?.preset !== "1991-default") return 0;
-  const unbound = await db
-    .collection<Election>("elections")
+  const unbound = await electionsCollection(db)
     .find(
       {
         countryId: "BG",

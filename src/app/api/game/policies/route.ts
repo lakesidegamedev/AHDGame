@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { handleRouteError } from "@/lib/api/errors";
 import { getDb } from "@/lib/mongodb";
 import type { Policy } from "@/lib/db/types";
+import { policiesCollection } from "@/lib/db/repositories/policies";
 
 // GET /api/game/policies — Returns all policy documents from the database.
 // Auth: public
@@ -9,7 +10,7 @@ import type { Policy } from "@/lib/db/types";
 export async function GET() {
   try {
     const db = await getDb();
-    const policies = await db.collection<Policy>("policies").find({}).toArray();
+    const policies = await policiesCollection(db).find({}).toArray();
 
     return NextResponse.json(policies, {
       headers: {

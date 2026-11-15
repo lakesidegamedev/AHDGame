@@ -18,23 +18,11 @@ import {
 } from "@/lib/onboarding/tutorialPlan";
 
 /**
- * Interactive tutorial coach — a spotlight-tooltip walkthrough over the real
- * app, modeled on the Electioneer / MetroForge onboarding coach and adapted for
- * A House Divided's multi-route shell.
- *
- * Mounted once in the root layout so it survives route navigation. Each step
- * highlights a real `data-coach="…"` element, and steps that live on another
- * page offer a button that navigates there; when the player arrives and the
- * anchor renders, the spotlight rides it.
- *
- * The tour is assembled from chapters (see chapters.ts), so the card carries a
- * chapter rail the player can read and jump around in, a back button, and live
- * world numbers for the steps that declare them. Progress is written to the
- * character so a device switch resumes mid-tour; localStorage is kept as the
- * offline fast path and as the "already finished this" memory.
- *
- * Replay: dispatch `window` event `ahd:start-tutorial`, optionally with a
- * chapter id in `detail` to replay that chapter alone.
+ * Mounted once in the root layout so it survives navigation. Steps highlight
+ * real data-coach anchors; cross-page steps navigate, and the spotlight picks
+ * up the anchor when it renders. Progress is written to the character (localStorage
+ * is the offline fast path and done-flag memory). Replay via the ahd:start-tutorial
+ * window event, optionally with a chapter id in detail.
  */
 
 // v2: bumped with the chapter redesign. A player who finished or skipped the
@@ -277,16 +265,11 @@ export function TutorialCoach({ character, plan, autoStart }: TutorialCoachProps
     };
   }, [active]);
 
-  // Arm ~450ms after going active or navigating, so a fresh route settles and
-  // its anchor mounts before we try to spotlight. Re-running on pathname is
-  // what makes cross-page highlighting reliable: after "Take me there" lands on
-  // the new page we disarm and re-detect against fresh DOM.
-  //
-  // A plain "Next" on the same page does NOT disarm. The anchors of the current
-  // page are already mounted, so there is nothing to wait for, and disarming
-  // used to blank the whole widget for 450ms on every Next press — the reported
-  // flicker. Only a route change re-opens the settle window, and `step` is
-  // deliberately not a dependency here. `finish` owns the teardown.
+  // Arm ~450ms after going active or navigating so a fresh route's anchor
+  // mounts before spotlighting. Re-running on pathname re-detects against fresh
+  // DOM after a cross-page jump. A same-page Next does NOT disarm: anchors are
+  // already mounted and disarming blanked the widget. `step` is deliberately not
+  // a dependency; `finish` owns teardown.
   useEffect(() => {
     // Wait for the world flags too: they decide which steps exist, so the card
     // must not show step 3 of one list and then jump when the flags land.

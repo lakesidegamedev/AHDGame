@@ -4,13 +4,7 @@
  * a refused QT asset exchange refunds the original market payment before releasing the command.
  */
 import { ObjectId, type Db, type Document } from "mongodb";
-import type {
-  Bond,
-  CentralBank,
-  FederalBudget,
-  GameConfig,
-  MonetaryOperationRecord,
-} from "@/lib/db/types";
+import type { Bond, CentralBank, MonetaryOperationRecord } from "@/lib/db/types";
 import { COUNTRY_CURRENCY_MAP, type CurrencyCode } from "@/lib/constants/currencies";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
 import { getBankId } from "@/lib/centralBank/helpers";
@@ -45,6 +39,16 @@ import { treasuryAdvanceMoneyDelta } from "./rules/assemble";
 import { planOpenMarketOperation, quotedQeMarketPrice } from "./quantitativeEasing";
 import type { ExecuteMonetaryOperationInput } from "./operations";
 import { releaseMonetaryCommandReservation } from "./commandReservation";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { actionAuditLogCollection } from "@/lib/db/repositories/actionAuditLog";
+import { bondMarketPoolsCollection } from "@/lib/db/repositories/bondMarketPools";
+import { bankLiquidityOperationsCollection } from "@/lib/db/repositories/bankLiquidityOperations";
+import { monetaryOperationCommandsCollection } from "@/lib/db/repositories/monetaryOperationCommands";
 
 const COLLECTION = "monetaryOperationCommands";
 export class MonetaryOperationRejected extends Error {}
@@ -90,7 +94,9 @@ export async function existingMonetaryOperation(
   input: ExecuteMonetaryOperationInput
 ): Promise<boolean> {
   if (!input.operationId) return false;
-  const receipt = await db.collection<Receipt>(COLLECTION).findOne({ _id: input.operationId });
+  const receipt = await monetaryOperationCommandsCollection<Receipt>(db).findOne({
+    _id: input.operationId,
+  });
   if (!receipt) return false;
   sameCommand(receipt, input);
   if (receipt.status === "rejected") {
@@ -134,12 +140,10 @@ async function prepare(db: Db, command: Command): Promise<Receipt> {
       createdAt: now,
     },
   };
-  const config = await db
-    .collection<GameConfig>("gameConfig")
-    .findOne(
-      { _id: "default" },
-      { projection: { ledgerShadow: 1, auditLog: 1, turnLengthMinutes: 1 } }
-    );
+  const config = await gameConfigCollection(db).findOne(
+    { _id: "default" },
+    { projection: { ledgerShadow: 1, auditLog: 1, turnLengthMinutes: 1 } }
+  );
   if (isAuditLogEnabledFromConfig(config)) {
     const context = getAuditRequestContext();
     const actorClass = command.actorClass ?? context?.actor?.kind ?? "system";
@@ -184,9 +188,9 @@ async function prepare(db: Db, command: Command): Promise<Receipt> {
     if (!Number.isSafeInteger(amount) || amount <= 0)
       throw new MonetaryOperationRejected("Amount must be positive");
     const budgetId = getNationalBudgetId(command.countryId);
-    const budget = await db
-      .collection<FederalBudget>("federalBudget")
-      .findOne({ _id: budgetId } as { _id: "federal" });
+    const budget = await federalBudgetCollection(db).findOne({ _id: budgetId } as {
+      _id: "federal";
+    });
     if (!budget) throw new MonetaryOperationRejected("Federal budget not found");
     receipt.currency = resolveCountryCurrencyCode(budget) ?? receipt.currency;
     receipt.cash.currency = receipt.currency;
@@ -216,12 +220,14 @@ async function prepare(db: Db, command: Command): Promise<Receipt> {
     ];
     if (isLedgerShadowEnabledFromConfig(config)) {
       const [rate, state] = await Promise.all([
-        db
-          .collection<{ currencyCode: string; rate: number }>("exchangeRates")
-          .findOne({ currencyCode: receipt.currency }, { projection: { rate: 1 } }),
-        db
-          .collection<{ _id: string; preset?: string }>("gameState")
-          .findOne({ _id: "current" }, { projection: { preset: 1 } }),
+        exchangeRatesCollection<{ currencyCode: string; rate: number }>(db).findOne(
+          { currencyCode: receipt.currency },
+          { projection: { rate: 1 } }
+        ),
+        gameStateCollection<{ _id: string; preset?: string }>(db).findOne(
+          { _id: "current" },
+          { projection: { preset: 1 } }
+        ),
       ]);
       const valuation = treasuryAnchorValuation({
         countryId: command.countryId,
@@ -263,7 +269,7 @@ async function prepare(db: Db, command: Command): Promise<Receipt> {
   }
   if (!command.bondId || !ObjectId.isValid(command.bondId))
     throw new MonetaryOperationRejected("Valid bond required");
-  const bond = await db.collection<Bond & { settledKeys?: string[] }>("bonds").findOne({
+  const bond = await bondsCollection<Bond & { settledKeys?: string[] }>(db).findOne({
     _id: new ObjectId(command.bondId),
     issuerType: "sovereign",
     countryId: command.countryId,
@@ -394,9 +400,10 @@ async function prepare(db: Db, command: Command): Promise<Receipt> {
   }
   if (isLedgerShadowEnabledFromConfig(config)) {
     // Published only with a completed receipt; a refused or refunded operation moved nothing.
-    const quote = await db
-      .collection<{ currencyCode: string; rate: number }>("exchangeRates")
-      .findOne({ currencyCode: receipt.currency }, { projection: { rate: 1 } });
+    const quote = await exchangeRatesCollection<{ currencyCode: string; rate: number }>(db).findOne(
+      { currencyCode: receipt.currency },
+      { projection: { rate: 1 } }
+    );
     const amount = command.type === "qe" ? plan.consideration : -plan.consideration;
     // Same valuation and missing-rate fallback as the snapshot's bond_pool account.
     const anchorAmount = amount / (quote?.rate && quote.rate > 0 ? quote.rate : 1);
@@ -499,7 +506,7 @@ async function publishAudit(db: Db, receipt: Receipt): Promise<void> {
     },
   };
   try {
-    const audit = db.collection<ActionAuditRecord>("actionAuditLog");
+    const audit = actionAuditLogCollection(db);
     const inserted = await audit.updateOne(
       { _id: record._id },
       { $setOnInsert: record },
@@ -510,12 +517,10 @@ async function publishAudit(db: Db, receipt: Receipt): Promise<void> {
       !isDeepStrictEqual(await audit.findOne({ _id: record._id }), record)
     )
       throw new Error("Monetary audit row differs from the original command");
-    const marked = await db
-      .collection<Receipt>(COLLECTION)
-      .updateOne(
-        { _id: receipt._id, status: receipt.status },
-        { $set: { auditDelivered: true, recoveryPending: false } }
-      );
+    const marked = await monetaryOperationCommandsCollection<Receipt>(db).updateOne(
+      { _id: receipt._id, status: receipt.status },
+      { $set: { auditDelivered: true, recoveryPending: false } }
+    );
     if (marked.matchedCount !== 1)
       throw new Error("Monetary audit delivered without completion marker");
   } catch (error) {
@@ -539,13 +544,13 @@ async function finish(
     await publishAudit(db, receipt);
     throw new MonetaryOperationRejected(receipt.error ?? "Monetary operation was rejected");
   }
-  const receipts = db.collection<Receipt>(COLLECTION);
-  const banks = db.collection<
+  const receipts = monetaryOperationCommandsCollection<Receipt>(db);
+  const banks = centralBanksCollection<
     Omit<CentralBank, "lastMonetaryOperationTurn"> & {
       lastMonetaryOperationTurn?: number | null;
       pendingLiquidityOperationId?: string;
     }
-  >("centralBanks");
+  >(db);
   if (receipt.status === "planning") {
     const already = await banks.findOne(
       { _id: receipt.bankId, pendingLiquidityOperationId: `monetary:${receipt._id}` },
@@ -646,13 +651,11 @@ async function finish(
     throw new MonetaryOperationRejected("Bond inventory changed before the monetary exchange");
   }
   if (receipt.command.type === "qe") {
-    await db
-      .collection<{ _id: string }>("bondMarketPools")
-      .updateOne(
-        { _id: receipt.currency },
-        { $setOnInsert: { cashLocal: 0, targetCashLocal: 0, createdAt: receipt.createdAt } },
-        { upsert: true }
-      );
+    await bondMarketPoolsCollection<{ _id: string }>(db).updateOne(
+      { _id: receipt.currency },
+      { $setOnInsert: { cashLocal: 0, targetCashLocal: 0, createdAt: receipt.createdAt } },
+      { upsert: true }
+    );
   }
   if (receipt.command.type !== "qt") await ordinary(db, receipt.cash);
   await terminal(db, receipt);
@@ -666,12 +669,13 @@ export async function executeJournaledMonetaryOperation(
   if (!/^[a-zA-Z0-9_-]{8,128}$/.test(command.operationId))
     throw new MonetaryOperationRejected("Valid operation ID required");
   if (
-    await db
-      .collection<{ _id: string }>("bankLiquidityOperations")
-      .findOne({ _id: command.operationId }, { projection: { _id: 1 } })
+    await bankLiquidityOperationsCollection<{ _id: string }>(db).findOne(
+      { _id: command.operationId },
+      { projection: { _id: 1 } }
+    )
   )
     throw new MonetaryOperationRejected("Operation ID already belongs to a liquidity command");
-  const receipts = db.collection<Receipt>(COLLECTION);
+  const receipts = monetaryOperationCommandsCollection<Receipt>(db);
   let receipt = await receipts.findOne({ _id: command.operationId });
   if (!receipt) {
     await receipts.createIndex(
@@ -696,8 +700,7 @@ export async function executeJournaledMonetaryOperation(
   return finish(db, receipt, cooldown);
 }
 export async function resumeMonetaryOperations(db: Db, cooldown: number): Promise<void> {
-  const pending = await db
-    .collection<Receipt>(COLLECTION)
+  const pending = await monetaryOperationCommandsCollection<Receipt>(db)
     .find({ recoveryPending: true })
     .sort({ _id: 1 })
     .limit(100)
@@ -706,9 +709,10 @@ export async function resumeMonetaryOperations(db: Db, cooldown: number): Promis
     try {
       await finish(db, receipt, cooldown);
     } catch (error) {
-      const current = await db
-        .collection<Receipt>(COLLECTION)
-        .findOne({ _id: receipt._id }, { projection: { status: 1 } });
+      const current = await monetaryOperationCommandsCollection<Receipt>(db).findOne(
+        { _id: receipt._id },
+        { projection: { status: 1 } }
+      );
       if (current?.status !== "rejected") throw error;
     }
   }

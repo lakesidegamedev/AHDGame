@@ -1,5 +1,3 @@
-import { COUNTRY_ELECTION_PHASE_NAMES } from "./countryElectionPhaseNames";
-
 export const BASE_TURN_PHASE_NAMES = [
   "bannedShareholderRelease",
   "inactiveShareholderShareRelease",
@@ -48,8 +46,10 @@ export const BASE_TURN_PHASE_NAMES = [
   "nppBillSponsorship",
   "generateChallengers",
   "nppBehavior",
+  "nppPartyRenewal",
   "playerEndorsementPartySweep",
   "billLifecycle",
+  "countryBillLifecycle",
   "stateBillTimers",
   "resetLawEnactmentReconciliation",
   "cabinetNominations",
@@ -81,6 +81,7 @@ export const BASE_TURN_PHASE_NAMES = [
   "parliamentaryGovernmentConfidence",
   "parliamentaryVacancyWatcher",
   "perpetualElections",
+  "countryElections",
   "byElectionWatcher",
   "commonsByElectionWatcher",
   "leadershipElections",
@@ -97,7 +98,7 @@ export const BASE_TURN_PHASE_NAMES = [
   "fiscalYear",
   "policyEffects",
   "demographicEffects",
-  "archetypeApprovalDecay",
+  "bucketApprovalDecay",
   "unownedSectorGrowth",
   "metricDecay",
   "investorConfidenceDecay",
@@ -107,6 +108,8 @@ export const BASE_TURN_PHASE_NAMES = [
   "jpRegionalBudgetProcessing",
   "deRegionalBudgetProcessing",
   "crisisTurn",
+  "crisisV2Turn",
+  "frontierRaces",
   // Runs BEFORE ministerialOrders, which is what resolves battle declarations. Sea
   // control, air superiority and supply have to be current for the turn before a battle
   // reads them, or every battle fights on last turn's dispositions.
@@ -152,6 +155,7 @@ export const BASE_TURN_PHASE_NAMES = [
   "corpPortfolioSnapshot",
   "stockExchangeSnapshot",
   "investorRankingSnapshot",
+  "countryBriefs",
   "wealthListSnapshot",
   "moneySupplySnapshot",
   "ledgerBalanceSnapshot",
@@ -159,7 +163,4 @@ export const BASE_TURN_PHASE_NAMES = [
   "economicVitalSigns",
 ] as const;
 
-export const TURN_PHASE_NAMES: string[] = [
-  ...BASE_TURN_PHASE_NAMES,
-  ...COUNTRY_ELECTION_PHASE_NAMES,
-];
+export const TURN_PHASE_NAMES: string[] = [...BASE_TURN_PHASE_NAMES];

@@ -2,7 +2,7 @@ import type { Db, ObjectId } from "mongodb";
 import { assertSubsidiaryWithinCap } from "@/lib/mechanicalLaws/guards";
 import { isPrivateEnterpriseBlocked } from "@/lib/economy/queries/privateEnterpriseGate";
 import { ObjectId as Oid } from "mongodb";
-import type { Character, Corporation, CorporateSector } from "@/lib/db/types";
+import type { Corporation, CorporateSector } from "@/lib/db/types";
 
 import {
   CEO_INITIAL_SHARES,
@@ -55,6 +55,9 @@ import {
   prepareConstructionBorrowerTransfers,
   settleConstructionBorrowerTransfers,
 } from "@/lib/banking/constructionBorrowerTransfer";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 // PLANTS-GATED: a spin-off only re-points `corporationId` on the existing row, so
 // capitalStock, buildQueue, CIP and plantsStartTurn ride along untouched. There
@@ -131,8 +134,7 @@ export async function spinOff(
   if (capRejection) return fail(capRejection.error, capRejection.status);
 
   // Parent must have ≥1 sector of the requested type.
-  const sectors = await db
-    .collection<CorporateSector>("corporateSectors")
+  const sectors = await corporateSectorsCollection(db)
     .find({ corporationId: parent._id, ...operatingSectorIdentity(sectorType) })
     .toArray();
   if (sectors.length === 0) {
@@ -146,9 +148,10 @@ export async function spinOff(
   const SYSTEM_USER = new Oid("000000000000000000000000");
   if (appointedCeoType === "character") {
     if (!appointedCeoCharacterId) return fail("A character is required to appoint a human CEO.");
-    const character = await db
-      .collection<Character>("characters")
-      .findOne({ _id: appointedCeoCharacterId }, { projection: { userId: 1 } });
+    const character = await charactersCollection(db).findOne(
+      { _id: appointedCeoCharacterId },
+      { projection: { userId: 1 } }
+    );
     if (!character || !character.userId) {
       return fail("The selected character cannot serve as CEO (no owning player).");
     }
@@ -232,14 +235,12 @@ export async function spinOff(
       CEO_INITIAL_SHARES,
       await getGameStatePresetOrDefault(db)
     );
-    // Passed-decade baseline tech, exactly as a newly founded corp gets it
-    // (suggestion #363). Without it the moved sectors lost their tech margin,
-    // build discount and input/output bonuses the moment they changed hands.
+    // Baseline tech for the passed decade, matching a newly founded corp. Without it moved sectors lose tech margin, build discount and bonuses on transfer.
     const gameState = await getGameState(db);
-    const baselineTechNodeIds =
-      gameState?.sectorTechTreesEnabled === true
-        ? autoGrantedNodeIds(sectorType, resolveGameYear(gameState) ?? STARTING_YEAR)
-        : [];
+    const baselineTechNodeIds = autoGrantedNodeIds(
+      sectorType,
+      resolveGameYear(gameState ?? {}) ?? STARTING_YEAR
+    );
     // Create the wholly parent-owned private corp. Parent holds 100% of shares.
     const corpDoc: Omit<Corporation, "_id"> & { _id: ObjectId } = {
       _id: newCorpId,
@@ -295,21 +296,13 @@ export async function spinOff(
     await insertCorporationWithTickerRetry(db, corpDoc as Corporation);
     await openCeoTenure(db, newCorpId, { holderId: ceoId, ceoType: ceoTypeResolved, turn });
 
-    // Transfer the parent's sectors of this type to the new corp, re-denominating
-    // revenue/currentGrowthCost across corp currencies (identity when the two
-    // share a currency, which is the norm for a spun-off corp).
-    //
-    // PLANT STATE (P3b): this is a REASSIGN, not a merge — the sector doc keeps
-    // its `_id` and only changes `corporationId`, so `capitalStock`,
-    // `buildQueue`, `constructionInProgressAnchor`, `mothballed` and
-    // `plantsStartTurn` ride along untouched. That is the correct outcome and
-    // it must stay that way: the ₳-anchored capex fields (CIP, and each build
-    // order's `costPaidAnchor`) must NOT be put through the
-    // readCorpEconomicAnchor/writeCorpEconomicLocal round-trip applied to
-    // revenue below. Those two fields are already ₳ by contract; re-denominating
-    // them on a cross-currency spin-out would restate the same money by the FX
-    // rate (~87× on a JPY parent) and let the subsidiary cancel its inherited
-    // build orders for a refund far larger than the parent ever paid.
+    // Reassign sector docs to the new corp: only corporationId changes, so
+    // capitalStock, buildQueue, mothballed and plantsStartTurn ride along.
+    // The A-anchored capex fields (CIP, each order's costPaidAnchor) are already
+    // A by contract and must NOT go through the readCorpEconomicAnchor/
+    // writeCorpEconomicLocal round-trip applied to revenue below. Re-denominating
+    // them on a cross-currency spin-out would restate the money by the FX rate
+    // and let the subsidiary cancel inherited orders for an inflated refund.
     const newFx = parentFx; // same country/currency as parent
     for (const [index, sector] of sectors.entries()) {
       const revenueAnchor = readCorpEconomicAnchor(sector.revenue, parentCurrency, parentFx);
@@ -322,7 +315,7 @@ export async function spinOff(
         writeCorpEconomicLocal(revenueAnchor, currencyCode, newFx)
       );
       const newGrowthLocal = Math.round(writeCorpEconomicLocal(growthAnchor, currencyCode, newFx));
-      const moved = await db.collection<CorporateSector>("corporateSectors").updateOne(
+      const moved = await corporateSectorsCollection(db).updateOne(
         {
           _id: sector._id,
           corporationId: parent._id,
@@ -345,14 +338,14 @@ export async function spinOff(
     }
 
     // Anchor the parent's spin-off cooldown.
-    await db
-      .collection<Corporation>("corporations")
-      .updateOne({ _id: parent._id }, { $set: { lastSpinOffTurn: turn, updatedAt: now } });
+    await corporationsCollection(db).updateOne(
+      { _id: parent._id },
+      { $set: { lastSpinOffTurn: turn, updatedAt: now } }
+    );
 
     // The incorporation fee is government revenue, not destroyed money: it goes
-    // to the parent's country treasury, and both legs are ledgered. Previously
-    // this was a single-sided debit with no counter-account, which read as a
-    // leak to any money-conservation check.
+    // to the parent's country treasury, and both legs are ledgered for
+    // money-conservation checks.
     const feeCurrency = (parentCurrency ?? "USD") as CurrencyCode;
     const feeToTreasury = await creditTreasuryProceedsPaired(db, {
       countryId: parent.countryId,
@@ -429,7 +422,7 @@ export async function spinOff(
     if (transferredSectorIds.length > 0) {
       // A financed site goes back with its claim naming the parent again, so
       // the settle below leaves its loan with the parent.
-      const rollback = await db.collection<CorporateSector>("corporateSectors").bulkWrite(
+      const rollback = await corporateSectorsCollection(db).bulkWrite(
         transferredSectorIds.map((sectorId) => {
           const index = sectors.findIndex((sector) => sector._id.equals(sectorId));
           return {
@@ -459,7 +452,7 @@ export async function spinOff(
       }
     }
     await settleConstructionBorrowerTransfers(db, constructionTransfers);
-    await db.collection<Corporation>("corporations").deleteOne({ _id: newCorpId });
+    await corporationsCollection(db).deleteOne({ _id: newCorpId });
     await refundCorpLiquidCapital(db, parent._id, costLocal);
     await Promise.all(
       sectors.map((sector, index) =>

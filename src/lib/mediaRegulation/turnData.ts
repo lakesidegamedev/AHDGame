@@ -1,5 +1,5 @@
 import type { Db, Document } from "mongodb";
-import type { CorporateSector, Corporation } from "@/lib/db/types/corporation";
+import type { CorporateSector } from "@/lib/db/types/corporation";
 import {
   COMMODITY_BASE_PRICES,
   commodityMixWeight,
@@ -14,6 +14,9 @@ import { US_STATE_IDS } from "@/lib/countries/us/data/usStateBaselines";
 import { isPlannedEconomy } from "@/lib/constants/commandEconomy";
 import { currentTurnDeliveredAdvertisingUnits, type MediaOutletDelivery } from "./rules";
 import { loadPoliticalMediaOrdersForClearing } from "@/lib/politicalMedia/journal";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
 
 /**
  * Load measured US media delivery for concentration-gated legislation.
@@ -47,8 +50,7 @@ export async function loadUSMediaOutletDelivery(
   db: Db,
   context: MediaOutletLoadContext = {}
 ): Promise<MediaOutletDelivery[]> {
-  const sectors = await db
-    .collection<CorporateSector>("corporateSectors")
+  const sectors = await corporateSectorsCollection(db)
     .find(
       {
         stateId: { $in: US_STATE_IDS },
@@ -84,8 +86,7 @@ export async function loadUSMediaOutletDelivery(
     ).values(),
   ];
   const corporations = corporationIds.length
-    ? await db
-        .collection<Corporation>("corporations")
+    ? await corporationsCollection(db)
         .find({ _id: { $in: corporationIds } }, { projection: { countryOwnerId: 1 } })
         .toArray()
     : [];
@@ -129,8 +130,7 @@ export async function loadUSMediaOutletDelivery(
     typeof context.currentTurn === "number" &&
     Number.isSafeInteger(context.currentTurn)
   ) {
-    const receipts = await db
-      .collection<PoliticalSellerReceiptRow>("bankMoneyMoves")
+    const receipts = await bankMoneyMovesCollection<PoliticalSellerReceiptRow>(db)
       .find(
         {
           kind: "political-media-seller-receipt",

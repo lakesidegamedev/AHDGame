@@ -8,6 +8,7 @@ import { getEventHandler } from "@/lib/events/substrate/registry";
 import { pickTier } from "@/lib/events/substrate/tiers";
 import { countryScopeId } from "@/lib/events/substrate/countryScopeId";
 import type { CountryId } from "@/lib/constants/countries";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export interface ActiveEventOptionDto {
   id: string;
@@ -132,9 +133,10 @@ export async function buildActiveEventForCharacter(
   const hasStatOptions = handler.options.some((o) => o.primaryStat);
   let charStats: Record<string, number> | undefined;
   if (hasStatOptions && instance.scope === "character") {
-    const character = await db
-      .collection("characters")
-      .findOne({ _id: instance.scopeId }, { projection: { stats: 1 } });
+    const character = await charactersCollection(db).findOne(
+      { _id: instance.scopeId },
+      { projection: { stats: 1 } }
+    );
     charStats = character?.stats as Record<string, number> | undefined;
   }
 

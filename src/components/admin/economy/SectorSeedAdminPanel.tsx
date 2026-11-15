@@ -1,7 +1,7 @@
 "use client";
 
 import { InlineError } from "@/components/ui/InlineError";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import type { SeedPreviewResponse, SeedPreviewRow } from "@/lib/api/types/sectorSeed";
 import { apiErrorText } from "@/lib/errors/catalog";
 
@@ -34,9 +34,6 @@ function fmtM(n: number) {
 }
 
 export function SectorSeedAdminPanel() {
-  const [autoSeedEnabled, setAutoSeedEnabled] = useState<boolean | null>(null);
-  const [togglingAutoSeed, setTogglingAutoSeed] = useState(false);
-
   const [maxBoostPct, setMaxBoostPct] = useState(100);
   const [preview, setPreview] = useState<SeedPreviewResponse | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
@@ -49,51 +46,6 @@ export function SectorSeedAdminPanel() {
   const [fixPreview, setFixPreview] = useState<FixPreview | null>(null);
   const [fixLoading, setFixLoading] = useState(false);
   const [fixConfirming, setFixConfirming] = useState(false);
-
-  // Fetch flag state on mount via the dry-run endpoint (maxBoost=0 → no real boost data needed)
-  useEffect(() => {
-    void fetch("/api/admin/corporations/seed-unowned?maxBoost=0")
-      .then((r) => r.json())
-      .then((data: Partial<SeedPreviewResponse>) => {
-        setAutoSeedEnabled(data.autoSectorSeedEnabled === true);
-      })
-      .catch(() => setAutoSeedEnabled(false));
-  }, []);
-
-  const handleToggleAutoSeed = async () => {
-    const next = !autoSeedEnabled;
-    if (
-      !confirm(
-        `${next ? "Enable" : "Disable"} automatic sector seeding?\n\n` +
-          "When on, the turn engine applies a distress-weighted 0–25% boost to all " +
-          "unowned sector revenue every 48 turns."
-      )
-    )
-      return;
-    setTogglingAutoSeed(true);
-    try {
-      const res = await fetch("/api/admin/auto-sector-seed/toggle", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ enabled: next }),
-      });
-      const data = (await res.json()) as { autoSectorSeedEnabled?: boolean; error?: string };
-      if (res.ok) {
-        setAutoSeedEnabled(data.autoSectorSeedEnabled === true);
-        setMessage(
-          data.autoSectorSeedEnabled
-            ? "Auto sector seeding enabled"
-            : "Auto sector seeding disabled"
-        );
-      } else {
-        setMessage(apiErrorText(data, "Failed to toggle auto sector seeding"));
-      }
-    } catch {
-      setMessage("Failed to toggle auto sector seeding");
-    } finally {
-      setTogglingAutoSeed(false);
-    }
-  };
 
   const handleSliderChange = (val: number) => {
     setMaxBoostPct(val);
@@ -113,7 +65,6 @@ export function SectorSeedAdminPanel() {
       const json = (await res.json()) as SeedPreviewResponse & { error?: string };
       if (!res.ok) throw new Error(apiErrorText(json, `HTTP ${res.status}`));
       setPreview(json);
-      setAutoSeedEnabled(json.autoSectorSeedEnabled);
     } catch (e) {
       setPreviewError(e instanceof Error ? e.message : "Preview failed");
     } finally {
@@ -181,7 +132,7 @@ export function SectorSeedAdminPanel() {
 
   return (
     <div className="space-y-5">
-      {/* Header + auto-seed toggle */}
+      {/* Header */}
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <h3 className="text-sm font-semibold mb-1">Distress-weighted sector seed</h3>
@@ -192,18 +143,6 @@ export function SectorSeedAdminPanel() {
             National Corporation. Irreversible — preview first.
           </p>
         </div>
-        <button
-          onClick={handleToggleAutoSeed}
-          disabled={togglingAutoSeed || autoSeedEnabled === null}
-          className={`shrink-0 rounded border px-3 py-1.5 text-xs transition-colors ${
-            autoSeedEnabled
-              ? "border-success/50 bg-success/10 text-success hover:bg-success/20"
-              : "border-card-border bg-card text-muted hover:bg-background/60"
-          }`}
-          title="When on, applies a distress-weighted 0–25% boost every 48 turns automatically"
-        >
-          Auto-Seed: {autoSeedEnabled === null ? "…" : autoSeedEnabled ? "On" : "Off"}
-        </button>
       </div>
 
       {message && (

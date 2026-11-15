@@ -54,7 +54,6 @@ async function run() {
   await runDEStateMetrics(db);
   await runDEBaselines(db);
   await runDEGovernmentFormation(db);
-  await runDELegislation(db);
   await runDEBudgets(db);
   await runDESeats(db);
   await runDEPartyBudgets(db);
@@ -108,11 +107,6 @@ async function runDEBaselines(db: Db) {
 async function runDEGovernmentFormation(db: Db) {
   const { seedDEGovernmentFormation } = await import("@/lib/admin/seed/seedDE");
   await seedDEGovernmentFormation(db, log, PRESET);
-}
-
-async function runDELegislation(db: Db) {
-  const { seedDELegislation } = await import("@/lib/admin/seed/seedDE");
-  await seedDELegislation(db, log);
 }
 
 async function runDEBudgets(db: Db) {

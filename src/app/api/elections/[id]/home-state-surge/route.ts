@@ -4,7 +4,7 @@ import { requireAuthWithCharacter } from "@/lib/api/requireAuth";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { CAMPAIGN_ACTION_LIMITS, checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { resolveElectionRouteParam } from "@/lib/elections/electionParamResolution";
-import type { Character, ElectionCandidate } from "@/lib/db/types";
+import type { ElectionCandidate } from "@/lib/db/types";
 import { getGameTime } from "@/lib/time/gameTime";
 import { isPrimaryEnded } from "@/lib/elections/phases";
 import { getHomeCurrency, loadCharacterFxRate } from "@/lib/currency/characterFunds";
@@ -26,7 +26,9 @@ import {
   PRIMARY_HOME_SURGE_COST_ACTIONS,
   PRIMARY_HOME_SURGE_COST_FUNDS,
   PRIMARY_HOME_SURGE_PCT,
-} from "@/lib/electionEngine/constants";
+} from "@/lib/elections/engine/constants";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -81,7 +83,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     const character = auth.user.character;
 
-    const candidate = await db.collection<ElectionCandidate>("electionCandidates").findOne({
+    const candidate = await electionCandidatesCollection(db).findOne({
       electionId: election._id,
       characterId: character._id,
       status: "active",
@@ -90,12 +92,10 @@ export async function POST(request: Request, { params }: RouteParams) {
       return errorResponse(403, "You are not an active candidate in this election");
     }
 
-    const freshChar = await db
-      .collection<Character>("characters")
-      .findOne(
-        { _id: character._id },
-        { projection: { actions: 1, funds: 1, currencyBalances: 1, homeState: 1, countryId: 1 } }
-      );
+    const freshChar = await charactersCollection(db).findOne(
+      { _id: character._id },
+      { projection: { actions: 1, funds: 1, currencyBalances: 1, homeState: 1, countryId: 1 } }
+    );
 
     if (!freshChar) {
       return errorResponse(404, "Character not found");
@@ -115,19 +115,19 @@ export async function POST(request: Request, { params }: RouteParams) {
       : PRIMARY_HOME_SURGE_COST_FUNDS;
     const campaignFundsField = forexEnabled ? "currencyBalances.campaign" : "funds";
 
-    // Crash-safe money flow (issue #1672): the combined actions+funds
-    // debit is one keyed leg (same-document writes must share a leg — two
-    // legs on one document under one key collide on the key guard) and the
-    // surge flag a keyed update, so a crash between the sequential writes
-    // reconciles instead of charging for a surge that never landed.
+    // Crash-safe money flow: the combined actions+funds debit is one keyed leg
+    // (same-document writes must share a leg, or two legs on one document under
+    // one key collide on the key guard) and the surge flag a keyed update, so a
+    // crash between sequential writes reconciles instead of charging for a
+    // surge that never landed.
     const headerKey = request.headers.get("Idempotency-Key");
     if (headerKey !== null && (headerKey.length === 0 || headerKey.length > 128)) {
       return errorResponse(400, "Invalid Idempotency-Key header");
     }
     const flowKey = headerKey ?? randomUUID();
     const fingerprint = `${character._id.toHexString()}:${candidate._id.toHexString()}:surge:${PRIMARY_HOME_SURGE_COST_ACTIONS}:${costFundsLocal}`;
-    const characters = db.collection<Character>("characters");
-    const candidates = db.collection<ElectionCandidate>("electionCandidates");
+    const characters = charactersCollection(db);
+    const candidates = electionCandidatesCollection(db);
     const receipts = await getMoneyFlowReceiptsCollection(db);
     const previousReceipt = headerKey ? await receipts.findOne({ _id: flowKey }) : null;
     if (previousReceipt && previousReceipt.fingerprint !== fingerprint) {

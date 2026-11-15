@@ -1,30 +1,36 @@
 /**
  * DE regional budget constraint system for Bundesländer.
  *
- * Runs every turn alongside UK and JP budget processing. Each Land's revenue
- * comes from three sources mirroring German fiscal federalism:
+ * Each Land's revenue comes from three sources mirroring German fiscal
+ * federalism:
  *
  *   1. Income Tax Share (Einkommensteueranteil): 42.5% of federal income tax
- *      collected in-territory, scaled by the enacted de_income_tax_rate.
+ *      collected in-territory, scaled by the enacted income tax rate.
  *   2. VAT Share (Umsatzsteueranteil): 46.5% of VAT revenue distributed by
- *      population, scaled by the enacted de_vat_rate.
+ *      population, scaled by the enacted VAT rate.
  *   3. Federal Equalization Grant (BEZ): Finance Minister allocation or an
  *      equal per-capita split of the grant pool.
  *
- * Revenues are compared against enacted Bundestag spending costs. Lands in
- * deficit for more than one turn trigger forced austerity (most expensive
+ * Deficits for more than one turn trigger forced austerity (most expensive
  * programme downgraded one tier), matching UK and JP behaviour.
  */
 
 import type { Db } from "mongodb";
 import type { AnyBulkWriteOperation } from "mongodb";
-import type { State, StateMetrics } from "@/lib/db/types";
+import type { StateMetrics } from "@/lib/db/types";
 import type { StatePolicy } from "@/lib/db/types/statePolicy";
 import type { LegislationType, LegislationPolicyOption } from "@/lib/db/types/legislation";
 import type { RegionalBudget } from "@/lib/db/types/regionalBudget";
 import type { CabinetSetting } from "@/lib/db/types/cabinetSetting";
 import { loadAnnualSubsidyCostMaps } from "@/lib/subsidies/subsidyBudgetCosts";
 import { getCountryConfig, type CountryId } from "@/lib/constants/countries";
+import { getStatesCollection } from "@/lib/db/collections/states";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
+import { cabinetSettingsCollection } from "@/lib/db/repositories/cabinetSettings";
+import { regionalBudgetsCollection } from "@/lib/db/repositories/regionalBudgets";
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
@@ -47,15 +53,14 @@ const TAX_SLIDER_ID_PREFIX = "rate:";
 /**
  * Which national tax laws drive each country's Länder revenue shares.
  *
- * Per country because the catalogues differ: DE runs the legacy `de_*` option
- * ladders, while DD's national tax book is the v2 `dd.tax.*` slider set. Reading
- * DE's ids against DD returns nothing at all, so both shares computed to zero
- * and every Land's budget collapsed to the equalization grant alone (#1323).
- * The per-Land trade tax stays `de_trade_tax` for both — it is the id DD's own
- * regions actually carry.
+ * Per country because each country's tax book has its own ids. Reading DE's ids
+ * against DD returns nothing, so both shares would compute to zero and every
+ * Land's budget collapses to the equalization grant alone. The per-Land trade
+ * tax stays `de_trade_tax`, the id DD's own regions carry; DE has no such lever
+ * in its law book, so its Länder use the statutory Hebesatz.
  */
 export const TAX_TYPE_IDS = {
-  DE: { incomeTax: "de_income_tax_rate", vat: "de_vat_rate" },
+  DE: { incomeTax: "de.tax.incomeTax", vat: "de.tax.salesTax" },
   DD: { incomeTax: "dd.tax.incomeTax", vat: "dd.tax.salesTax" },
 } as const satisfies Partial<Record<CountryId, { incomeTax: string; vat: string }>>;
 
@@ -94,8 +99,8 @@ const DEFAULT_FEDERAL_GRANT_PER_CAPITA = 500;
 function getTaxRateFromPolicy(
   policy: StatePolicy | undefined,
   legTypeMap: Map<string, LegislationType>
-): number {
-  if (!policy) return 0;
+): number | undefined {
+  if (!policy) return undefined;
   const legType = legTypeMap.get(policy.legislationTypeId);
   // Tax-slider laws (ruling #16, spec 5.1b) carry a SYNTHETIC option id,
   // `rate:<value>`, that matches no seeded `policyOptions` entry — the rate is
@@ -246,24 +251,15 @@ export async function processDERegionalBudgets(
 }
 
 /**
- * The Laender model for any country that funds its regions by revenue SHARING —
- * a slice of the national income tax and VAT collected in-territory, the
- * per-Land trade tax, and an equalization grant on top.
+ * The Laender model for countries that fund regions by revenue SHARING: a slice
+ * of national income tax and VAT collected in-territory, the per-Land trade tax,
+ * and an equalization grant.
  *
- * DD joined when the unified Germany was left with no processor at all: this one
- * was scoped to `countryId: "DE"`, which has held zero states since the shell
- * dissolved on turn 550, so DD's 16 Laender froze at that turn (#1323).
- *
- * DD stays on THIS model rather than the one-party central-transfer model, for a
- * structural reason rather than a stylistic one. That model funds regions from
- * `onePartyRegionalBudget.primaryTaxLegislationKey`, which for DD is
- * `dd.tax.domesticCorporateTax` — authored at 0%, because DD collects enterprise
- * surplus through `otherRevenue` and the product levy instead. A model whose
- * only regional revenue term is a tax the country deliberately sets to zero
- * cannot fund anything: DD's Laender carry ~1390/capita of enacted programmes
- * against a 100/capita transfer, so all eleven western Laender would have sat
- * ~10x over budget permanently and the austerity path would have stripped a
- * policy tier from each of them EVERY TURN.
+ * DD uses THIS model rather than one-party central transfer, which funds regions
+ * from `onePartyRegionalBudget.primaryTaxLegislationKey`, for DD a tax authored
+ * at 0% (enterprise surplus comes via `otherRevenue` and the product levy). A
+ * model whose only revenue term is zero cannot fund enacted programmes: the
+ * western Laender would sit far over budget and lose a policy tier every turn.
  */
 export async function processLaenderRegionalBudgets(
   db: Db,
@@ -271,7 +267,7 @@ export async function processLaenderRegionalBudgets(
   turnNumber: number,
   preset?: string
 ): Promise<{ regionsProcessed: number }> {
-  const deRegions = await db.collection<State>("states").find({ countryId }).toArray();
+  const deRegions = await (await getStatesCollection(db)).find({ countryId }).toArray();
   if (deRegions.length === 0) return { regionsProcessed: 0 };
 
   // `preset` threaded through so era-specific knobs (the 1953-scaled
@@ -291,14 +287,12 @@ export async function processLaenderRegionalBudgets(
   const regionIds = deRegions.map((r) => r._id as string);
 
   // Fetch all enacted DE regional policies (for spending calculation)
-  const allRegionalPolicies = await db
-    .collection<StatePolicy>("statePolicies")
+  const allRegionalPolicies = await statePoliciesCollection(db)
     .find({ stateId: { $in: regionIds } })
     .toArray();
 
   // Fetch DE national policies (for income tax rate and VAT rate)
-  const nationalPolicies = await db
-    .collection<StatePolicy>("statePolicies")
+  const nationalPolicies = await statePoliciesCollection(db)
     .find({ stateId: `${countryId.toLowerCase()}_national` })
     .toArray();
 
@@ -307,9 +301,7 @@ export async function processLaenderRegionalBudgets(
   const nationalLegTypeIds = new Set(nationalPolicies.map((p) => p.legislationTypeId));
   const allLegTypeIds = [...new Set([...regionalLegTypeIds, ...nationalLegTypeIds])];
 
-  const legTypes = await db
-    // full-read(legislationTypes): policyOptions tables price every regional law
-    .collection<LegislationType>("legislationTypes")
+  const legTypes = await legislationTypesCollection(db)
     .find({ _id: { $in: allLegTypeIds } })
     .toArray();
   const legTypeMap = new Map(legTypes.map((lt) => [lt._id, lt]));
@@ -326,8 +318,14 @@ export async function processLaenderRegionalBudgets(
   );
   const vatPolicy = nationalPolicies.find((p) => p.legislationTypeId === taxTypeIds.vat);
 
-  const incomeTaxRate = getTaxRateFromPolicy(incomeTaxPolicy, legTypeMap);
-  const vatRate = getTaxRateFromPolicy(vatPolicy, legTypeMap);
+  // Slider tax laws keep their rate in the national budget until a bill
+  // writes a policy row, so the budget is the rate whenever no row exists.
+  const nationalRates = (
+    await federalBudgetCollection(db).findOne({ _id: countryId }, { projection: { taxRates: 1 } })
+  )?.taxRates;
+  const incomeTaxRate =
+    getTaxRateFromPolicy(incomeTaxPolicy, legTypeMap) ?? nationalRates?.incomeTax ?? 0;
+  const vatRate = getTaxRateFromPolicy(vatPolicy, legTypeMap) ?? nationalRates?.salesTax ?? 0;
 
   const nationalPopulation = deRegions.reduce((sum, r) => sum + r.population, 0);
 
@@ -340,26 +338,22 @@ export async function processLaenderRegionalBudgets(
   }
 
   // Fetch existing budget documents
-  const existingBudgets = await db
-    .collection<RegionalBudget>("regionalBudgets")
+  const existingBudgets = await regionalBudgetsCollection(db)
     .find({ _id: { $in: regionIds } })
     .toArray();
   const budgetMap = new Map(existingBudgets.map((b) => [b._id, b]));
 
   // Fetch median income per region (SP5: economic.* lives on macroMetrics)
-  const stateMetrics = await db
-    .collection<StateMetrics>("macroMetrics")
+  const stateMetrics = await macroMetricsCollection(db)
     .find({ _id: { $in: regionIds } })
     .toArray();
   const metricsMap = new Map(stateMetrics.map((m) => [m._id, m]));
 
   // Read Finance Minister allocation (controls federal equalization distribution)
-  const ministerSetting = await db
-    .collection<CabinetSetting>("cabinetSettings")
-    // Keyed off the country's OWN finance-minister cabinet id, not DE's. The
+  const ministerSetting = await cabinetSettingsCollection(db)
+    // Must use the country's OWN finance-minister cabinet id, not DE's. The
     // suffix differs per country (DE `finance_minister`, DD `minister_of_finance`),
-    // so a hardcoded DE key silently returned nothing for DD and dropped its
-    // Finance Minister's allocation back to the even per-capita split (#1323).
+    // so a hardcoded DE key silently drops that country's allocation.
     .findOne({
       _id: `${countryId}_${getCountryConfig(countryId, preset).financeMinisterCabinetId}`,
     });
@@ -493,12 +487,7 @@ export async function processLaenderRegionalBudgets(
     regionalBudgetOps.push({
       updateOne: {
         filter: { _id: region._id },
-        // Clear the shapes this model does not own — the mirror of the same
-        // `$unset` in the one-party processor. `RegionalBudget` is a union of
-        // per-country field sets and `buildRegionalRevenueShape` dispatches on
-        // which fields are PRESENT, so a region that changed model would carry
-        // two shapes at once and readers would resolve whichever branch is
-        // tested first (#1323).
+        // Clear shapes this model does not own, mirroring the one-party processor's `$unset`. `RegionalBudget` is a union of per-country field sets and `buildRegionalRevenueShape` dispatches on which fields are PRESENT, so a region that changed model would carry two shapes and readers would resolve whichever branch is tested first.
         update: { $set: budgetDoc, $unset: FOREIGN_SHAPE_FIELDS },
         upsert: true,
       },
@@ -508,10 +497,10 @@ export async function processLaenderRegionalBudgets(
   }
 
   if (statePolicyOps.length > 0) {
-    await db.collection<StatePolicy>("statePolicies").bulkWrite(statePolicyOps);
+    await statePoliciesCollection(db).bulkWrite(statePolicyOps);
   }
   if (regionalBudgetOps.length > 0) {
-    await db.collection<RegionalBudget>("regionalBudgets").bulkWrite(regionalBudgetOps);
+    await regionalBudgetsCollection(db).bulkWrite(regionalBudgetOps);
   }
 
   return { regionsProcessed };

@@ -1,6 +1,8 @@
 import type { Db, ObjectId } from "mongodb";
 import type { Corporation } from "@/lib/db/types/corporation";
 import type { NPP } from "@/lib/db/types/npp";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 // Older snapshots can carry the pre-migration player controller tag.
 type RestoredCorporation = Omit<Corporation, "ceoType"> & {
@@ -18,8 +20,7 @@ export async function applyCloneControllerPolicy(
     return 0;
   }
 
-  const nppRows = await db
-    .collection<NPP>("npps")
+  const nppRows = await nppsCollection(db)
     .find({ retiredAt: null }, { projection: { _id: 1, countryId: 1 } })
     .toArray();
   const byCountry = new Map<string, ObjectId[]>();
@@ -30,7 +31,7 @@ export async function applyCloneControllerPolicy(
     byCountry.set(n.countryId, pool);
   }
   const rr = new Map<string, number>();
-  const cursor = db.collection<RestoredCorporation>("corporations").find({
+  const cursor = corporationsCollection<RestoredCorporation>(db).find({
     ceoType: { $in: ["character", "player", null] },
     countryOwnerId: { $exists: false },
   });
@@ -42,7 +43,7 @@ export async function applyCloneControllerPolicy(
     const ceoId = pool.length ? pool[roundRobinIndex % pool.length] : corp.ceoId;
     if (!pool.length) noNpp++;
     rr.set(corp.countryId, (rr.get(corp.countryId) ?? 0) + 1);
-    await db.collection<Corporation>("corporations").updateOne(
+    await corporationsCollection(db).updateOne(
       { _id: corp._id },
       {
         $set: { ceoType: "npp", ceoId, ceoVacant: false, ceoSalary: 0, updatedAt: new Date() },

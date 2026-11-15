@@ -1,13 +1,7 @@
 import { ObjectId, type Db } from "mongodb";
-import type {
-  Character,
-  ElectedOfficial,
-  Election,
-  ElectionCandidate,
-  PoliticalParty,
-} from "@/lib/db/types";
+import type { ElectedOfficial, Election, ElectionCandidate, PoliticalParty } from "@/lib/db/types";
 import { electionStatusBlocksFurtherEntry } from "@/lib/elections/activeCandidacy";
-import { DEFAULT_CANDIDATE_SUPPORT } from "@/lib/electionEngine/electionFormulaFactors";
+import { DEFAULT_CANDIDATE_SUPPORT } from "@/lib/elections/engine/electionFormulaFactors";
 import { isSpecialCommonsElection, officeKeyForElectionType } from "@/lib/utils/electionLabels";
 import { activeUserIds } from "@/lib/players/playerActivity";
 import type { CountryId } from "@/lib/constants/countries";
@@ -16,6 +10,12 @@ import {
   canFieldExecutiveCandidate,
   canFieldLegislativeCandidate,
 } from "@/lib/turn/onePartyConstraints";
+import { getCharactersCollection } from "@/lib/db/collections/characters";
+import { getElectedOfficialsCollection } from "@/lib/db/collections/electedOfficials";
+import { getElectionsCollection } from "@/lib/db/collections/elections";
+import { getPoliticalPartiesCollection } from "@/lib/db/collections/politicalParties";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import type { Document } from "mongodb";
 
 const EXCLUDED_TYPES = new Set(["president", "vicePresident"]);
 
@@ -53,8 +53,9 @@ export async function runAutoReelectionEntry(
   now: Date,
   currentTurn: number
 ): Promise<void> {
-  const optedInCharacters = await db
-    .collection<Character>("characters")
+  const optedInCharacters = await (
+    await getCharactersCollection(db)
+  )
     .find({ autoRunForReelection: true })
     .toArray();
 
@@ -78,14 +79,12 @@ export async function runAutoReelectionEntry(
     characters.map((character) => [character._id.toHexString(), character] as const)
   );
 
-  const offices = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const offices = await (
+    await getElectedOfficialsCollection(db)
+  )
     .find({ characterId: { $in: characterIds } })
     .toArray();
-  // Characters whose target seat comes from a currently held office. A Commons
-  // by-election (#860) fills only vacated seats, so these holders must never
-  // auto-file for a special_commons race sharing their seat key — a sitting
-  // winner would double-seat (additive resolution never sweeps).
+  // Characters already holding an office: a by-election fills only vacated seats, so auto-filing here would double-seat a sitting winner (additive resolution never sweeps).
   const holdersFromOffice = new Set<string>();
   for (const office of offices) {
     if (!office.characterId) continue;
@@ -95,8 +94,7 @@ export async function runAutoReelectionEntry(
     holdersFromOffice.add(characterKey);
   }
 
-  const priorCandidates = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const priorCandidates = await electionCandidatesCollection(db)
     .find({ characterId: { $in: characterIds } })
     .toArray();
   const priorElectionIds = [
@@ -104,8 +102,9 @@ export async function runAutoReelectionEntry(
   ];
   const priorElections =
     priorElectionIds.length > 0
-      ? await db
-          .collection<Election>("elections")
+      ? await (
+          await getElectionsCollection(db)
+        )
           .find({
             _id: { $in: priorElectionIds.map((id) => new ObjectId(id)) },
             status: "resolved",
@@ -134,8 +133,9 @@ export async function runAutoReelectionEntry(
   const blockingElectionsByCharacter = new Map<string, Set<string>>();
   if (activeCandidacies.length > 0) {
     const referencedIds = [...new Set(activeCandidacies.map((c) => c.electionId.toHexString()))];
-    const statusRows = await db
-      .collection<Election>("elections")
+    const statusRows = await (
+      await getElectionsCollection(db)
+    )
       .find(
         { _id: { $in: referencedIds.map((id) => new ObjectId(id)) } },
         { projection: { status: 1 } }
@@ -188,8 +188,9 @@ export async function runAutoReelectionEntry(
     targetSeatByCharacterId.set(characterKey, value.seatKey);
   }
 
-  const elections = await db
-    .collection<Election>("elections")
+  const elections = await (
+    await getElectionsCollection(db)
+  )
     .find({
       status: { $in: ["active", "upcoming"] },
       electionType: { $nin: Array.from(EXCLUDED_TYPES) },
@@ -210,8 +211,9 @@ export async function runAutoReelectionEntry(
   }
   const partyByKey = new Map<string, Pick<PoliticalParty, "regimeStatus">>();
   if (opsConfigByCountry.size > 0) {
-    const parties = await db
-      .collection<PoliticalParty>("politicalParties")
+    const parties = await (
+      await getPoliticalPartiesCollection(db)
+    )
       .find({ countryId: { $in: [...opsConfigByCountry.keys()] } })
       .toArray();
     for (const party of parties) {
@@ -280,8 +282,7 @@ export async function runAutoReelectionEntry(
       pendingNames.push(character.name);
 
       // Record the decision, not the write. A later election sharing this seat
-      // key must see this entry as blocking, which is what the sequential
-      // insertOne used to give us for free.
+      // key must see this entry as blocking.
       existingEntry.add(`${electionKey}:${characterKey}`);
       let set = blockingElectionsByCharacter.get(characterKey);
       if (!set) blockingElectionsByCharacter.set(characterKey, (set = new Set()));
@@ -292,7 +293,9 @@ export async function runAutoReelectionEntry(
     try {
       // Unordered: a duplicate key on one document still inserts the rest,
       // preserving the per-character tolerance the old try/catch had.
-      await db.collection("electionCandidates").insertMany(pending as never[], { ordered: false });
+      await electionCandidatesCollection<Document>(db).insertMany(pending as never[], {
+        ordered: false,
+      });
     } catch {
       // Duplicate key or transient error - the unordered write still applied
       // everything it could, same as skipping silently per character before.

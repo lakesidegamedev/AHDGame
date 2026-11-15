@@ -1,22 +1,16 @@
 /**
- * 1990 German Bundestag Zweitstimmen per Land
+ * 1990 German Bundestag Zweitstimmen per Land (12th Bundestag, first
+ * all-German election after reunification). Used by `calculateDEStatePartyOrgs`
+ * when the active preset is `1991-default`.
  *
- * Vote share percentages from the 12th Bundestag election (December 1990),
- * the first all-German parliamentary election after reunification. Used by
- * `calculateDEStatePartyOrgs` when the active preset is `1991-default`.
+ * Party-era notes:
+ *   - AfD and Die Linke don't exist yet; the East-only PDS (SED successor)
+ *     gets the `pds` slot, present only in the five new Länder + East Berlin.
+ *   - Grüne is small; East entries are Bündnis 90/Grüne, recorded under `grn`
+ *     for engine compatibility.
+ *   - CSU only contests BY; CDU absent from BY.
  *
- * Key differences from the 2021 dataset:
- *   - AfD doesn't exist yet (founded 2013). No `afd` entry.
- *   - Die Linke doesn't exist yet (founded 2007). The East-only PDS
- *     (Partei des Demokratischen Sozialismus, SED successor) gets the
- *     `pds` slot and only appears in the five new Länder + East Berlin.
- *   - Grüne is much smaller (3.8% West, 6% East as Bündnis 90/Grüne).
- *     Recorded under the same `grn` slug for engine compatibility — the
- *     two parallel organisations didn't formally merge until 1993.
- *   - CSU still only contests in BY; CDU still absent from BY.
- *
- * Values rounded for gameplay calibration from Bundeswahlleiter 1990
- * Zweitstimmen-by-Land tables.
+ * Values rounded for gameplay calibration from Bundeswahlleiter 1990 tables.
  */
 
 export const DE_LAND_VOTE_SHARES_1990: Record<string, Record<string, number>> = {

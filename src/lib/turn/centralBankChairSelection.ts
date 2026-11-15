@@ -1,31 +1,20 @@
 import { getIncompatibleOfficeHolders } from "@/lib/cabinet/officeCompatibility";
 import { captureOfficeTransition } from "@/lib/analytics/officeTransitionAnalytics";
 /**
- * Central Bank Chair Selection Phase
- *
- * Runs each turn after centralBankChairTurn (infamy/bonuses).
- * When a chair's term expires, selects a new chair from the executive
- * nomination pool. The market/wealth pool (30% of picks used to be drawn from
- * the nation's richest players) was removed: a chair is someone the executive
- * put forward, not whoever the leaderboard says is rich this turn.
- *
- * The selected player must **accept** before the appointment is finalized.
- * Refusals re-run the weighted draw with decliners excluded; with no
- * candidates the seat may stay vacant (or an NPP technocrat is seated when
- * autonomy is on).
- *
- * Lobbying funds shift weights within the pool. `ChairSelectionPending.pool`
- * keeps its "economic" arm only so pending docs written before the removal
- * still resolve.
+ * Central Bank Chair Selection Phase: runs each turn after
+ * centralBankChairTurn. On term expiry, selects a chair from the executive
+ * nomination pool (never a wealth/market pool). The selected player must
+ * accept; refusals re-run the draw with decliners excluded. With no
+ * candidates the seat stays vacant, or an NPP technocrat is seated when
+ * autonomy is on. Lobbying shifts weights within the pool.
  */
 
 import { ObjectId } from "mongodb";
 import type { Db } from "mongodb";
 import type { CentralBank, ChairSelectionPending, FomcSeat } from "@/lib/db/types/centralBank";
 import { FOMC_COMMITTEE_COUNTRY_IDS } from "@/lib/db/types/centralBank";
-import type { Character } from "@/lib/db/types";
 import { COUNTRY_CONFIGS, COUNTRY_ORDER, type CountryId } from "@/lib/constants/countries";
-import { getRegisteredCountryIds } from "@/lib/country/registeredCountries";
+import { getFullSimulationCountryIds } from "@/lib/country/countryTier";
 import { TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import { createNotifications } from "@/lib/notifications";
 import { createSystemNewsPost } from "@/lib/news";
@@ -42,10 +31,14 @@ import { makeSeededRng } from "@/lib/events/substrate/rng";
 import { claimStatusTransition } from "@/lib/turn/atomicClaim";
 import { logger } from "../observability/logger";
 import { CHAIR_CHANGE_SCRUTINY_RETAINED } from "@/lib/centralBank/credibility";
+import { workerConfig } from "@/lib/config/worker";
+import { getCharactersCollection } from "@/lib/db/collections/characters";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 // Optional global salt so headless sim runs can vary this RNG across runs
 // while staying reproducible within a run (mirrors nppActionProcessing.ts).
-const CB_CHAIR_RNG_SALT = process.env.SIM_RNG_SALT ? `:${process.env.SIM_RNG_SALT}` : "";
+const CB_CHAIR_RNG_SALT = workerConfig.simRngSalt() ? `:${workerConfig.simRngSalt()}` : "";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -149,12 +142,10 @@ export async function vacateCentralBankChairCharacter(
   chairCharacterId: ObjectId | null | undefined
 ): Promise<void> {
   if (!chairCharacterId) return;
-  await db
-    .collection("characters")
-    .updateOne(
-      { _id: chairCharacterId, "currentOffice.type": "centralBankChair" },
-      { $set: { currentOffice: null } }
-    );
+  await charactersCollection(db).updateOne(
+    { _id: chairCharacterId, "currentOffice.type": "centralBankChair" },
+    { $set: { currentOffice: null } }
+  );
 }
 
 async function selectChairCandidate(
@@ -191,7 +182,7 @@ async function selectChairCandidate(
     )
       continue;
 
-    const char = await db.collection<Character>("characters").findOne({
+    const char = await charactersCollection(db).findOne({
       _id: new ObjectId(nom.characterId),
       userId: { $exists: true },
     });
@@ -228,7 +219,7 @@ async function notifyPendingNominee(
 ): Promise<void> {
   const config = COUNTRY_CONFIGS[countryId];
 
-  const character = await db.collection<Character>("characters").findOne({ _id: characterId });
+  const character = await (await getCharactersCollection(db)).findOne({ _id: characterId });
   // Country webhooks must not depend on in-app notification success or player-linked userId.
   notifyCbChairPendingDiscord(countryId, characterName, pool, character?.avatarUrl).catch((err) =>
     logger.error("CentralBankChairSelection", "Discord pending failed", err)
@@ -251,7 +242,7 @@ async function notifyPendingNominee(
 }
 
 export async function persistVacancy(db: Db, bankId: string, gameNow: Date): Promise<void> {
-  await db.collection<CentralBank>("centralBanks").updateOne(
+  await centralBanksCollection(db).updateOne(
     { _id: bankId },
     {
       $set: {
@@ -285,7 +276,7 @@ async function persistPendingProposal(
   notifyCountryId: CountryId,
   intorgId?: string
 ): Promise<void> {
-  await db.collection<CentralBank>("centralBanks").updateOne(
+  await centralBanksCollection(db).updateOne(
     { _id: bank._id },
     {
       $set: {
@@ -335,16 +326,15 @@ export async function processCentralBankChairSelection(
     vacanciesRemaining: 0,
   };
 
-  const banks = await db.collection<CentralBank>("centralBanks").find({}).toArray();
+  const banks = await centralBanksCollection(db).find({}).toArray();
   if (banks.length === 0) return result;
 
   const rng = makeSeededRng(`cbchair:${currentTurn}${CB_CHAIR_RNG_SALT}`);
 
-  // Registered countries only: a country dissolved by a merge keeps its central
-  // bank document, and this phase would otherwise go on running chair terms —
-  // opening selections, appointing NPP chairs, posting news — for a dead
-  // state's monetary authority.
-  const registered = new Set(await getRegisteredCountryIds(db));
+  // Registered, full-simulation countries only: a merged-away country keeps
+  // its central bank document, and a background country has no politicians,
+  // government or legislature for this phase to run.
+  const registered = new Set(await getFullSimulationCountryIds(db));
 
   const processedBankIds = new Set<string>();
   for (const countryId of COUNTRY_ORDER) {
@@ -482,7 +472,7 @@ export async function acceptCentralBankChairSelection(
   gameNow: Date,
   currentTurn: number
 ): Promise<ChairAppointmentResult> {
-  const bank = await db.collection<CentralBank>("centralBanks").findOne({
+  const bank = await centralBanksCollection(db).findOne({
     _id: getBankId(countryId),
   });
   if (!bank?.chairSelectionPending) return { ok: false, error: "No pending chair appointment" };
@@ -491,7 +481,9 @@ export async function acceptCentralBankChairSelection(
   if (!pending.characterId.equals(acceptingCharacterId))
     return { ok: false, error: "You are not the pending nominee" };
 
-  const character = await db.collection<Character>("characters").findOne({
+  const character = await (
+    await getCharactersCollection(db)
+  ).findOne({
     _id: acceptingCharacterId,
   });
   if (!character?.userId) return { ok: false, error: "Character cannot accept this appointment" };
@@ -628,7 +620,9 @@ export async function acceptCentralBankChairSelection(
   const execOffice = config.officeTypes.find((o) => o.isExecutive);
   const executiveTitle = execOffice?.label ?? "executive";
   const executive = pending.appointedByExecutiveId
-    ? await db.collection<Character>("characters").findOne({
+    ? await (
+        await getCharactersCollection(db)
+      ).findOne({
         _id: pending.appointedByExecutiveId,
       })
     : null;
@@ -726,9 +720,9 @@ async function reselectAfterRefusal(
 
   const cfg = COUNTRY_CONFIGS[countryId];
   // Resolve the refused nominee's user for an in-app notice (best effort).
-  const refusedNominee = await db
-    .collection<Character>("characters")
-    .findOne({ _id: pending.characterId }, { projection: { userId: 1, name: 1, avatarUrl: 1 } });
+  const refusedNominee = await (
+    await getCharactersCollection(db)
+  ).findOne({ _id: pending.characterId }, { projection: { userId: 1, name: 1, avatarUrl: 1 } });
   if (refusedNominee?.userId) {
     const title =
       reason === "timeout"
@@ -799,7 +793,7 @@ export async function lapsePendingCentralBankChairSelection(
   gameNow: Date,
   currentTurn: number
 ): Promise<RefusalReselectionOutcome> {
-  const bank = await db.collection<CentralBank>("centralBanks").findOne({
+  const bank = await centralBanksCollection(db).findOne({
     _id: getBankId(countryId),
   });
   if (!bank?.chairSelectionPending) {
@@ -823,7 +817,7 @@ export async function declineCentralBankChairSelection(
   gameNow: Date,
   currentTurn: number
 ): Promise<ChairDeclineResult> {
-  const bank = await db.collection<CentralBank>("centralBanks").findOne({
+  const bank = await centralBanksCollection(db).findOne({
     _id: getBankId(countryId),
   });
   if (!bank?.chairSelectionPending) return { ok: false, error: "No pending chair appointment" };
@@ -832,7 +826,9 @@ export async function declineCentralBankChairSelection(
   if (!pending.characterId.equals(decliningCharacterId))
     return { ok: false, error: "You are not the pending nominee" };
 
-  const decliner = await db.collection<Character>("characters").findOne({
+  const decliner = await (
+    await getCharactersCollection(db)
+  ).findOne({
     _id: decliningCharacterId,
     userId: { $exists: true },
   });

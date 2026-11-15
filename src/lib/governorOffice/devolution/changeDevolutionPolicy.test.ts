@@ -28,10 +28,10 @@ describe("changeDevolutionPolicy", () => {
     db = createMockDb();
   });
 
-  it("rejects non-UK country", async () => {
+  it("rejects a region claimed for another country", async () => {
     const result = await changeDevolutionPolicy(db as unknown as Db, input({ countryId: "US" }));
     expect(result.status).toBe(400);
-    expect(result.body.error).toMatch(/UK-only/);
+    expect(result.body.error).toMatch(/no Devolution Policy axis/);
   });
 
   it("rejects a region without a Devolution axis", async () => {

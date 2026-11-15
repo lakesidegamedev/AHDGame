@@ -17,8 +17,11 @@ import { CONGRESS_LIMITS, checkRateLimit, rateLimitResponse } from "@/lib/api/ra
 import { buildEmbeddedVoteTallyUpdate } from "@/lib/votes/embeddedVoteTally";
 import { getGameTime } from "@/lib/time/gameTime";
 import { isVotingDeadlinePassed } from "@/lib/legislature/billVotingWindow";
-import type { ElectedOfficial, Character } from "@/lib/db/types";
+import type { ElectedOfficial } from "@/lib/db/types";
 import type { ScotusNomination } from "@/lib/db/types/scotus";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { scotusNominationsCollection } from "@/lib/db/repositories/scotusNominations";
 
 const voteSchema = z.object({
   vote: z.enum(["for", "against", "abstain"]),
@@ -54,9 +57,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     const now = new Date();
     const gameTime = await getGameTime();
 
-    const nomination = await db
-      .collection<ScotusNomination>("scotusNominations")
-      .findOne({ _id: nominationOid, status: "active" });
+    const nomination = await scotusNominationsCollection(db).findOne({
+      _id: nominationOid,
+      status: "active",
+    });
     if (!nomination) {
       return errorResponse(404, "Nomination not found or voting closed");
     }
@@ -71,14 +75,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       return errorResponse(409, "Voting has ended");
     }
 
-    const myCharacter = await db.collection<Character>("characters").findOne({
+    const myCharacter = await charactersCollection(db).findOne({
       userId: new ObjectId(authUser.userId),
     });
     if (!myCharacter) {
       return errorResponse(400, "No character");
     }
 
-    const senatorOfficial = await db.collection<ElectedOfficial>("electedOfficials").findOne({
+    const senatorOfficial = await electedOfficialsCollection(db).findOne({
       characterId: myCharacter._id,
       officeType: "senate",
     });
@@ -87,7 +91,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     }
 
     const voteKey = myCharacter._id.toString();
-    const updateResult = await db.collection<ScotusNomination>("scotusNominations").updateOne(
+    const updateResult = await scotusNominationsCollection(db).updateOne(
       { _id: nominationOid, status: "active" },
       buildEmbeddedVoteTallyUpdate({
         voteField: "votes",

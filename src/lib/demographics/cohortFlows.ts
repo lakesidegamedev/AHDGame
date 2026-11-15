@@ -19,7 +19,17 @@ export interface CohortInputs {
   replacementTFR: number;
   /** `population.birthRate` metric, 0-100 index. */
   birthRateIndex: number;
+  /**
+   * Annual TFR from a country path (2027 world). When set it replaces the
+   * index to TFR map; `birthRateIndex` is then only a reading.
+   */
+  fertilityRate?: number;
   healthcare: HealthcareInputs;
+  /**
+   * Secular mortality improvement multiplier on the legacy curve (2027 world),
+   * applied on top of the healthcare modifier. Absent = 1.
+   */
+  mortalityImprovement?: number;
   /** V2 calibrated annual age-specific central death rates; legacy worlds keep their curve. */
   mortalityRates?: MortalityRates;
   /** Bounded annual excess death fraction from an active pandemic. */
@@ -67,7 +77,10 @@ export function advanceCohort(
   let v = applyContinuousAging(vector, turnsPerYear);
 
   // Mortality.
-  const modifier = healthcareMortalityModifier(inputs.healthcare);
+  const improvement = Number.isFinite(inputs.mortalityImprovement)
+    ? Math.max(0, Math.min(1, inputs.mortalityImprovement as number))
+    : 1;
+  const modifier = healthcareMortalityModifier(inputs.healthcare) * improvement;
   const mortality: MortalityBasis = {
     kind: "mortality",
     maleExposure: [...v.male],
@@ -112,7 +125,9 @@ export function advanceCohort(
   }
 
   // Fertility → newborns into age 0 (split by sex at birth).
-  const tfr = birthRateIndexToTFR(inputs.birthRateIndex, inputs.replacementTFR);
+  const tfr = Number.isFinite(inputs.fertilityRate)
+    ? Math.max(0, inputs.fertilityRate as number)
+    : birthRateIndexToTFR(inputs.birthRateIndex, inputs.replacementTFR);
   const births = computeBirths(v, tfr, turnsPerYear, inputs.servingFemaleByAge);
   const fertility = fertilityBasis(v, tfr, inputs.servingFemaleByAge);
   const { male, female } = splitNewbornsBySex(births);

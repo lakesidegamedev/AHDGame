@@ -1,5 +1,5 @@
 /**
- * Static 1953 proposed Tier-1 roster and reclassification plan (#3723).
+ * Static 1953 proposed Tier-1 roster and reclassification plan.
  *
  * Kept free of readiness-contract imports so {@link worldEntityManifest} can
  * apply the plan without creating a circular dependency through
@@ -7,17 +7,13 @@
  */
 
 import type { CountryId } from "@/lib/constants/countries";
-import type {
-  ReadinessResult,
-  WorldEconomicArchetype,
-  WorldSimulationTier,
-} from "./worldEntityManifest";
+import type { WorldEconomicArchetype, WorldSimulationTier } from "./worldEntityManifest";
 
 export const PRESET_1953 = "1953-default" as const;
 
 /**
- * Proposed 1953 full-autonomous target roster from epic #3712.
- * This is a target, not a readiness claim — the matrix evaluates each entry.
+ * Proposed 1953 full-autonomous target roster.
+ * This is a target, not a readiness claim; the matrix evaluates each entry.
  */
 export const PROPOSED_1953_TIER1_ROSTER = [
   { entityId: "US", displayName: "United States", countryId: "US" as CountryId },
@@ -62,7 +58,7 @@ export const PROPOSED_1953_TIER1_ROSTER = [
 
 export type Proposed1953Tier1EntityId = (typeof PROPOSED_1953_TIER1_ROSTER)[number]["entityId"];
 
-/** Epic #3712 follow-up placeholder scheme when a dedicated issue does not exist yet. */
+/** Epic follow-up placeholder scheme when a dedicated issue does not exist yet. */
 export function tier1FollowUpIssue(entityId: string, capabilityId: string): string {
   return `#3712/follow-up/${entityId}/${capabilityId}`;
 }
@@ -84,13 +80,6 @@ export interface TierReclassificationRecord {
   appliedTier: WorldSimulationTier;
   reason: string;
   followUpIssues: string[];
-}
-
-export interface ManifestReadinessSnapshot {
-  autonomous: ReadinessResult;
-  player: ReadinessResult;
-  hardBlockers: string[];
-  flavorGaps: string[];
 }
 
 /**
@@ -118,19 +107,16 @@ export const TIER1_1953_AUTONOMOUS_RECLASSIFICATIONS: ReadonlyArray<{
  * "ready") but are demoted to sphere-macro anyway as a deliberate product
  * decision independent of capability evidence. Distinct from
  * {@link TIER1_1953_AUTONOMOUS_RECLASSIFICATIONS}, which is reserved for
- * probe-confirmed autonomous hard-blocks — entries here must NOT have an
+ * probe-confirmed autonomous hard-blocks: entries here must NOT have an
  * autonomous blocker; if the live contract ever reports one for an entity in
  * this list, it belongs in the reclassifications list instead.
  *
- * ES (owner decision, 2026-07-28): Spain's regions/parties/budgets are fully
- * authored and the readiness contract reports it autonomous-ready — exactly
- * like FR/IT/SE/TR. But 1953 Spain is Franco's dictatorship: congresoDiputados
- * and the Senado are both era-gated off via a shared null anchor, so a
- * "full-autonomous, economy-preview" classification models a legislature that
- * never holds an election for the life of a 1953-default world. Demoted to
- * sphere-macro for 1953-default ONLY; Spain stays full-autonomous in every
- * later preset (Franco died 1975; Spain's first democratic election was
- * 1977) — see worldEntityManifest.ts's ES sphereMacroEntry.
+ * ES: Spain's regions/parties/budgets are fully authored and the readiness
+ * contract reports it autonomous-ready, but 1953 Spain is Franco's
+ * dictatorship: congresoDiputados and the Senado are both era-gated off via a
+ * shared null anchor, so a full-autonomous classification would model a
+ * legislature that never holds an election. Demoted to sphere-macro for
+ * 1953-default ONLY; Spain stays full-autonomous in every later preset.
  */
 export const TIER1_1953_POLICY_DEMOTIONS: ReadonlyArray<{
   entityId: CountryId;

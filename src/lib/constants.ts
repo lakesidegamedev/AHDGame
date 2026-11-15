@@ -9,63 +9,9 @@
  * The `constants/` directory contains modular constant files (countries, states, cabinet, etc.).
  */
 
-/**
- * All US state abbreviations in alphabetical order
- */
-export const US_STATES = [
-  "AL",
-  "AK",
-  "AZ",
-  "AR",
-  "CA",
-  "CO",
-  "CT",
-  "DE",
-  "FL",
-  "GA",
-  "HI",
-  "ID",
-  "IL",
-  "IN",
-  "IA",
-  "KS",
-  "KY",
-  "LA",
-  "ME",
-  "MD",
-  "MA",
-  "MI",
-  "MN",
-  "MS",
-  "MO",
-  "MT",
-  "NE",
-  "NV",
-  "NH",
-  "NJ",
-  "NM",
-  "NY",
-  "NC",
-  "ND",
-  "OH",
-  "OK",
-  "OR",
-  "PA",
-  "RI",
-  "SC",
-  "SD",
-  "TN",
-  "TX",
-  "UT",
-  "VT",
-  "VA",
-  "WA",
-  "WV",
-  "WI",
-  "WY",
-] as const;
+import { US_STATES } from "./countries/us/usStateCodes";
 
-export type StateAbbreviation = (typeof US_STATES)[number];
+export { US_STATES };
 
 /**
  * Representative landmark/landscape photos for each state.

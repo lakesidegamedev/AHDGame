@@ -6,9 +6,9 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui";
 
 /**
- * Suggestion #287 — inline control on an UNSIGNED founder slot that lets a
- * founder-owner swap the inactive founder for a willing replacement while the
- * charter is still `pending-signatures`.
+ * Inline control on an UNSIGNED founder slot that lets a founder-owner swap
+ * the inactive founder for a willing replacement while the charter is still
+ * `pending-signatures`.
  *
  * Search is name-based against `/api/characters/search` scoped to the charter's
  * country. Eligibility (human-owned, adjacency to the anchor founder's home

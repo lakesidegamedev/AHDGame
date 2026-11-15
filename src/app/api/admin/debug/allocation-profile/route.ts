@@ -17,31 +17,26 @@ import {
  * Async leak-diagnostic endpoint.
  *
  * POST /api/admin/debug/allocation-profile?durationMs=600000&samplingIntervalBytes=4096
- *   Kicks off a V8 sampling-heap-profile capture in the background and
- *   returns 202 IMMEDIATELY with timestamps. The HTTP response does not wait
- *   for the sample to complete — necessary because Cloudflare disconnects
- *   clients after ~100s and any sample longer than that would 524.
- *
- *   Returns 409 if another capture is already in progress (V8's sampling
- *   state is process-global; concurrent captures would corrupt each other).
+ *   Starts a background V8 sampling-heap-profile capture and returns 202
+ *   immediately. The response does not wait: Cloudflare disconnects clients
+ *   after ~100s and longer samples would 524. Returns 409 if another capture
+ *   is already in progress (V8 sampling state is process-global; concurrent
+ *   captures would corrupt each other).
  *
  * GET /api/admin/debug/allocation-profile?topN=25
- *   Returns the last completed profile (or last error) plus a `state` field:
- *     - "idle"        : no capture has ever run
- *     - "running"     : capture in progress, no completed result yet
- *     - "completed"   : capture finished successfully
- *     - "failed"      : capture finished with an error
- *   If a capture is running AND a previous completed result exists, the
- *   state is "running" but `lastCompleted` carries the previous result so
- *   callers can still inspect baselines while a new capture is in flight.
+ *   Returns the last completed profile (or last error) plus `state`:
+ *     - "idle"      : no capture has ever run
+ *     - "running"   : capture in progress, no completed result yet
+ *     - "completed" : capture finished successfully
+ *     - "failed"    : capture finished with an error
+ *   While a capture is running, `lastCompleted` still carries the previous
+ *   result so callers can inspect baselines mid-flight.
  *
- * Workflow:
- *   1. POST to start (e.g., durationMs=600000)
- *   2. Continue using the app — the capture runs server-side
- *   3. ~durationMs later, GET to retrieve the formatted report
+ * Workflow: POST to start, use the app while it runs server-side, GET after
+ * durationMs to retrieve the report.
  *
  * Auth: requireAdmin on both verbs
- * Errors: 400 (bad params), 403 (not admin), 409 (POST only — already running)
+ * Errors: 400 (bad params), 403 (not admin), 409 (POST only, already running)
  */
 
 const MAX_DURATION_MS = 10 * 60 * 1000;

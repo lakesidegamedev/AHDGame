@@ -3,6 +3,7 @@ import { requireBasicAuth } from "@/lib/api/requireAuth";
 import { getDb } from "@/lib/mongodb";
 import type { PoliticianOverride } from "@/lib/db/types";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
+import { politicianOverridesCollection } from "@/lib/db/repositories/politicianOverrides";
 
 // GET /api/politician-overrides — Returns all politician profile overrides (admin only)
 // Auth: requireBasicAuth
@@ -17,8 +18,7 @@ export async function GET() {
     }
 
     const db = await getDb();
-    const overrides = await db
-      .collection<PoliticianOverride>("politicianOverrides")
+    const overrides = await politicianOverridesCollection(db)
       .find({})
       .sort({ politicianId: 1 })
       .toArray();

@@ -1,15 +1,8 @@
 /**
  * Pacing constants for passive Org/Reg drift and decay processors.
- *
- * See [docs/design/political-system-reg-support.md §8.1](../../../../docs/design/political-system-reg-support.md)
- * for the full design and §8.2 for why these rates (drift 10× decay; both
- * very small per turn so movement is a slow background pressure).
- *
- * Phase 3 (regDriftDecay processor) consumes these. Phase 5 (general
- * election formulas) reads them for documentation context.
- *
- * Sourced from user direction 2026-05-03; tuning lands in the plan's
- * Balance Appendix, not here.
+ * Drift is 10x decay; both tiny per turn for slow background pressure.
+ * See [docs/design/political-system-reg-support.md](../../../../docs/design/political-system-reg-support.md)
+ * §8.1 for the full design.
  */
 
 import type { CountryId } from "@/lib/constants/countries";
@@ -19,35 +12,18 @@ import { UK_NON_PARTY_INDEPENDENT_BIAS } from "@/lib/countries/uk/geographyFacts
 import { DE_NON_PARTY_INDEPENDENT_BIAS } from "@/lib/countries/de/geographyFacts";
 
 /**
- * Passive Reg% drift per turn toward each party's `(Org% − country lag)`
+ * Passive Reg% drift per turn toward each party's `(Org% - country lag)`
  * baseline (see `REG_LAG_BELOW_ORG_PCT_BY_COUNTRY`). One-directional (up
- * only) — Reg only drifts UP when the target is above current Reg. Seeded
- * registration is durable and should move on real political causes, not
- * decay toward Org on a clock. Downward movement comes from the decay
- * mechanism (PASSIVE_REG_DECAY_RATE) and active political events.
+ * only): Reg only drifts UP when the target is above current Reg. Seeded
+ * registration is durable and should move on real political causes, not decay
+ * toward Org on a clock. Downward movement comes from the decay mechanism
+ * (PASSIVE_REG_DECAY_RATE) and active political events.
  *
  * Bounds: percent points per hourly turn.
  *
- * 2026-06-21: bumped 0.04 → 0.06 after reverting the active Registration
- * Drive action. Auto-build is the only Reg-growth lever again, so a moderate
- * pace bump (~50%) compensated for the lost active path. At 0.06 that was
- * ~1.44 pp/day toward the Org target; a committed party covered a 50-pt
- * climb in ~35 days vs ~52.
- *
- * 2026-07-28: made one-directional (up only). Downward drift was erasing
- * the Solid South's seeded 85-90% Democratic registration over ~800 turns.
- * Registration now only drifts up; the decay mechanism (0.004/turn) still
- * provides a slow downward pressure that active parties can recapture.
- *
- * 2026-08-30: the climb is sourced from over-registered parties once the
- * state's Independent + Unregistered pool is empty (`sourceFromSurplus`).
- * Every US pool had been at 0 since live turn ~140, and the ticket-1133
- * capacity cap then scaled every climb to zero, so Reg was frozen against
- * parties that had built Org. Bumped 0.06 → 0.075 (×1.25) in the same change:
- * a Georgia-sized 35 pp climb now takes ~470 turns (~20 days) instead of
- * ~590, and two organised challengers pull a 77% incumbent under 60 in
- * ~150 turns, the low end of the `STRONGHOLD_FALL_TIME_TURNS_TARGET` band.
- * A state with no party below its Org still does not move.
+ * The climb is sourced from over-registered parties once the state's
+ * Independent + Unregistered pool is empty (`sourceFromSurplus`); a state with
+ * no party below its Org still does not move.
  */
 export const PASSIVE_REG_DRIFT_RATE = 0.075 as const;
 
@@ -62,22 +38,13 @@ export const PASSIVE_REG_DRIFT_RATE = 0.075 as const;
 export const PASSIVE_REG_DECAY_RATE = 0.004 as const;
 
 /**
- * Share of each turn's decayed Reg that LAPSES back to the non-party pool
- * (Independent + Unregistered) instead of being redistributed to rival
- * parties. The remainder still routes via the sqrt(Org) eligibility weights.
- *
- * Why this exists: decay used to reach the pool only when NO party in the
- * state cleared `REG_DRIFT_CATCH_ELIGIBILITY_ORG_PCT` — i.e. essentially
- * never. Every lapsed registration was inherited by a rival instead, so with
- * drift drawing the pool down one-directionally the pool was a one-way sink.
- * It emptied in every US state by live turn ~155 (RU ~176, UK ~143) and could
- * never refill, which permanently disabled the pool-sourced Registration
- * Drive and pushed each state toward an unrealistic 100% party-registered
- * electorate. Splitting the decay models the two things that actually happen
- * to a lapsed registration: some voters switch party, some fall off the rolls.
- *
- * 0.5 = an even split, the reading the design's own language supports
- * ("Reg loses a small amount each turn unless actively maintained").
+ * Share of each turn's decayed Reg that lapses to the non-party pool
+ * (Independent + Unregistered) instead of routing to rival parties; the rest
+ * routes via sqrt(Org) eligibility weights. Without this, decay only
+ * redistributed Reg to rivals and the pool was a one-way sink that emptied
+ * permanently, disabling pool-sourced Registration Drives. Models the two
+ * real outcomes: some voters switch party, some fall off the rolls.
+ * 0.5 = even split.
  */
 export const REG_DECAY_LAPSE_TO_POOL_SHARE = 0.5 as const;
 
@@ -101,27 +68,13 @@ export const NON_PARTY_BUCKET_INDEPENDENT_BIAS = 1.5 as const;
 /**
  * Per-country: percentage points that Reg sits below Org at steady state.
  *
- * Real-world friction — not every voter the party reaches actually
- * registers with that party. The gap reflects each country's registration
- * culture:
- *   - US: strong "Independent" cultural identity, 40%+ of voters self-ID
- *     as independent → wide 5pp lag.
- *   - UK: less Independent framing, more weakly-aligned voters → 4pp.
- *   - JP: mushikutei (no-party) voters are dominant, weak party ID → 8pp.
- *   - DE: strong party ID, Stammwähler tradition, list-based politics → 3pp.
+ * Real-world friction: not every voter the party reaches actually registers
+ * with that party. The map is currently empty, so Reg targets Org exactly.
+ * Per-country friction can be reintroduced as a tunable if desired.
  *
  * Countries absent from this map default to 0 (Reg targets Org exactly).
- * Floor: target = `max(0, Org − lag)` so tiny-Org parties don't target
+ * Floor: target = `max(0, Org - lag)` so tiny-Org parties don't target
  * negative Reg.
- *
- * Decoupled 2026-06-18 (D4a): the per-country lags (US 5 / UK 4 / JP 8 / DE 3)
- * pinned Reg several points below Org, which — on top of Org itself rarely
- * exceeding ~40 — kept live Reg in the 13–32 band where the election Reg curves
- * barely bite. Removing the lag lets the passive equilibrium reach Org; the
- * active Registration Drive (Phase 6) + raised home-field cap carry committed
- * parties into the high-resistance band. The map is retained as a tunable
- * (empty = no lag, Reg targets Org); per-country friction can be reintroduced
- * later if desired.
  */
 export const REG_LAG_BELOW_ORG_PCT_BY_COUNTRY: Partial<Record<CountryId, number>> = {};
 
@@ -165,9 +118,7 @@ export const HOME_FIELD_DECAY_RELIEF = 0.25 as const;
 export const HOME_FIELD_DRIFT_BONUS = 0.01 as const;
 /**
  * Ceiling: the gov-driven upward drift never pushes Reg above this value.
- *
- * Raised 60 → 75 (2026-06-18 D4a) so a party sustaining the state executive can
- * build Reg into the high-resistance band where the election Reg curves bite —
- * headroom the lag-decouple + active Registration Drive (Phase 6) can fill.
+ * Set high enough that a party sustaining the state executive can build Reg
+ * into the high-resistance band where election Reg curves bite.
  */
 export const HOME_FIELD_REG_CAP = 75 as const;

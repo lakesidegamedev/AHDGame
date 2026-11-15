@@ -1,7 +1,7 @@
 /** Legislative leans describe each policy option on economic and social axes.
  * v2VotePosition supplies the same positions to proposals, votes and enacted laws. */
 import type { LawChoice } from "./eligibility";
-import type { PolicyDomain } from "@/lib/archetypeAffinities";
+import type { PolicyDomain } from "@/lib/policyShiftImpacts";
 
 type Axis = "economic" | "social";
 interface PoliticalRoute {

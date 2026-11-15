@@ -54,9 +54,9 @@ describe("seedUkBudgets regional policy seeding", () => {
   });
 
   it("seeds no legacy uk_* regional policies on the modern preset either", async () => {
-    // `isPoliticalPipelinePreset` is unconditionally true — the v2 law book runs
-    // at every preset, so the legacy UK catalog is pruned from every world and
-    // there is no preset where seeding these rows would resolve to real types.
+    // The political-legislation book runs at every preset, so the legacy UK
+    // catalog is pruned from every world and there is no preset where seeding
+    // these rows would resolve to real types.
     await seedUkBudgets(db as unknown as Db, false, () => {}, "default");
 
     expect(seededTypeIds().filter((id) => id?.startsWith("uk_"))).toEqual([]);

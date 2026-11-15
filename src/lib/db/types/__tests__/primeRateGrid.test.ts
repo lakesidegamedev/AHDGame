@@ -9,7 +9,7 @@ describe("snapToPrimeRateGrid", () => {
   });
 
   it("snaps the live off-grid US rate that locked out the chair", () => {
-    // Ticket #1238: the autonomous chair had left the US bank on this exact
+    // The autonomous chair had left the US bank on this exact
     // continuous Taylor-rule value, and every card submission was refused.
     expect(snapToPrimeRateGrid(4.653426586881501)).toBe(4.75);
   });

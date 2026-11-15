@@ -7,7 +7,7 @@ import { withAdminRoute } from "@/lib/api/withAdminAuth";
 // else in the game creates a `cold_war` conflict — `declareWar` only builds interstate
 // wars between playable countries.
 //
-// Auth: requireAdmin. Errors: 400, 403, 404.
+// Auth: requireAdmin. Errors: 400, 403, 409.
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getDb } from "@/lib/mongodb";
@@ -21,6 +21,7 @@ import { getWorldEntityPresetManifest } from "@/lib/world/worldEntityManifest";
 import { createConflict } from "@/lib/military/createConflict";
 import { validateColdWarConflict } from "@/lib/military/validateCreateConflict";
 import { conflictExists } from "@/lib/db/collections/conflicts";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 const sideSchema = z.object({
   label: z.string().min(1).max(80),
@@ -53,22 +54,17 @@ function toSide(input: z.infer<typeof sideSchema>): ConflictSide {
 
 export const POST = withAdminRoute(async (_auth, request: Request) => {
   const db = await getDb();
-  const gs = await db
-    .collection<GameState>("gameState")
-    .findOne(
-      { _id: "current" },
-      { projection: { conflictsEnabled: 1, currentTurn: 1, preset: 1 } }
-    );
-  if (!gs?.conflictsEnabled) {
-    return errorResponse(404, "Conflicts subsystem disabled");
-  }
+  const gs = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { projection: { currentTurn: 1, preset: 1 } }
+  );
 
   const parsed = await parseJsonBody(request, bodySchema);
   if (!parsed.success) {
     return errorResponse(parsed.status, parsed.error);
   }
 
-  const preset = typeof gs.preset === "string" ? gs.preset : DEFAULT_SEED_PRESET;
+  const preset = typeof gs?.preset === "string" ? gs.preset : DEFAULT_SEED_PRESET;
   const knownEntityIds = new Set(
     getWorldEntityPresetManifest(preset).entries.map((e) => e.entityId)
   );
@@ -87,7 +83,7 @@ export const POST = withAdminRoute(async (_auth, request: Request) => {
   });
   if (!check.ok) return errorResponse(check.status, check.error);
 
-  const currentTurn = gs.currentTurn ?? 0;
+  const currentTurn = gs?.currentTurn ?? 0;
   const id = `cw_${draft.hostCountry}_${currentTurn}`.toLowerCase();
   // The id is derived from host + turn, so creating two proxy wars in the same host on
   // the same turn would collide. `createConflict` inserts unconditionally, so without

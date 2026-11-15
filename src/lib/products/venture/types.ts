@@ -6,7 +6,7 @@
  */
 export type VentureDomain = "media" | "manufacturing";
 
-export type VentureStage = "development" | "released" | "flopped" | "cancelled" | "expired";
+type VentureStage = "development" | "released" | "flopped" | "cancelled" | "expired";
 
 export interface VentureEventChoice {
   id: string;
@@ -83,14 +83,4 @@ export interface ProductVenture {
   /** Estimated extra revenue earned so far from the lift, in anchor currency. */
   upliftToDateAnchor?: number;
   lastUpliftAnchor?: number;
-}
-
-/** Written on the corporation in the same update as the cash debit. */
-export interface VentureDebitReceipt {
-  turn: number;
-  amountAnchor: number;
-  /** Part of the debit that went into the product itself. */
-  investmentAnchor: number;
-  /** Part of the debit that paid event costs. */
-  chargeAnchor: number;
 }

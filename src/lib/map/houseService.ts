@@ -3,6 +3,8 @@ import type { ElectedOfficial, PoliticalParty } from "@/lib/db/types";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { UK_REGIONS } from "@/lib/constants/uk";
 import { getLowerChamberOfficeType } from "@/lib/legislature/chamberOfficeType";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 export interface MapHouseState {
   leadingParty: string;
@@ -51,8 +53,8 @@ export async function computeHouseMap(
   // Query without countryId filter since older records may not have it set,
   // then filter results by state prefix to ensure correct country
   const [parties, allReps] = await Promise.all([
-    db.collection<PoliticalParty>("politicalParties").find({ countryId }).toArray(),
-    db.collection<ElectedOfficial>("electedOfficials").find({ officeType }).toArray(),
+    politicalPartiesCollection(db).find({ countryId }).toArray(),
+    electedOfficialsCollection(db).find({ officeType }).toArray(),
   ]);
   // Filter to correct country using countryId field
   const reps = allReps.filter((r) => r.state && (r.countryId ?? "US") === countryId);

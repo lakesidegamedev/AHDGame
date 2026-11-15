@@ -1,6 +1,6 @@
 import { rejectWhileTurnProcessing } from "./turnGuard";
 /**
- * Build capacity across many sectors in one request (suggestion 391).
+ * Build capacity across many sectors in one request.
  *
  * Every sector goes through `placeCapacityBuild`, the exact single-sector build
  * path behind POST /api/corporations/[id]/sectors/[sectorId]/build, one sector
@@ -40,6 +40,8 @@ import {
   runAfterBuild,
 } from "@/lib/corporations/rules/operatingReserve";
 import { placeCapacityBuild } from "./buildCapacity";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -145,7 +147,7 @@ export async function bulkBuildCapacity(request: Request, { params }: RouteParam
       );
     }
 
-    const sectorsCol = db.collection<CorporateSector>("corporateSectors");
+    const sectorsCol = corporateSectorsCollection(db);
     const holdings = await sectorsCol
       .find(
         { corporationId: corporation._id },
@@ -302,7 +304,7 @@ export async function bulkBuildCapacity(request: Request, { params }: RouteParam
     let spentLocal = 0;
     let stopped = false;
     let builtCount = 0;
-    const corpsCol = db.collection<Corporation>("corporations");
+    const corpsCol = corporationsCollection(db);
     for (const [i, { sector }] of ordered.entries()) {
       const row = rows[i];
       if (stopped) {

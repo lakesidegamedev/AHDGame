@@ -12,7 +12,7 @@ Set a daily **R&D budget** in the Budget section of the **CEO Office** tab. Each
 | Base gain with any budget | 1.2 per turn, plus 0.78 x ln(1 + budget / 100,000) |
 | Decay | 3% of current score per turn |
 | Diminishing returns | Gain falls as score rises; halved at score 100, and falls faster above it |
-| Node score cost | Set by decade: 5 (1940s), 6, 8, 11, 13 (1979), 18, 24, 30, 38 (2019), 48 (2029) |
+| Node score cost | Set by decade: 5 (1940s), 6, 8, 11, 13 (1979), 18, 24, 30, 38 (2019), 48 (2029), 60 (2039), 75 (2049) |
 | Specialization cost | 2 times the decade cost; capstones 3 times |
 | Node cash cost | Value of the node over one game year, or 5% of daily revenue for nodes with no running value |
 | Overhead cap | R&D, marketing, logistics and CEO salary together cannot exceed 150% of daily revenue |
@@ -38,7 +38,47 @@ Worker morale also nudges efficiency: paying wages above baseline makes your R&D
 
 ## Reading the Tech tab
 
-Every private corporation has a **Tech** tab listing research nodes organized by **decade tier**. The world's current calendar year (derived from the active era preset plus elapsed game years) determines which decade you research. Decades before the current one show as baseline research: a corporation founded after them gets the main nodes of both lanes free, and their specializations can no longer be researched. Future decades open when the clock reaches them. A world that starts in 2019 only ever researches the final two tiers; a 1953 start begins at the 1950s tier and walks the rest of the tree over decades.
+Every private corporation has a **Tech** tab listing research nodes organized by **decade tier**. The world's current calendar year (derived from the active era preset plus elapsed game years) determines which decade you research. Decades before the current one show as baseline research: a corporation founded after them gets the main nodes of both lanes free, and their specializations can no longer be researched. Future decades open when the clock reaches them. A world that starts in 2019 researches the 2019 tier and every later one; a 1953 start begins at the 1950s tier and walks the rest of the tree over decades. The last tier, 2049, opens in 2049 and stays current from then on.
+
+The **2039 tier** centers the Corporate lane on agent-run operations, automated compliance and supply networks that survive disruption. Its Sector lanes unlock new production methods, each with heavier inputs than the methods it competes with: grid-scale storage and advanced fission for energy, direct air capture for chemicals, biofoundries for healthcare, humanoid robotics for manufacturing, agentic services for technology, cellular agriculture, printed mass timber for construction, drone swarms for defense, orbital constellations for telecommunications, orbital logistics, and personalized media for both media types.
+
+The **2049 tier** is the speculative frontier. Its Sector lanes unlock five breakthrough methods: commercial fusion for energy, space resources for extraction, gene therapy at scale for healthcare, autonomous districts for real estate and neural interfaces for technology. A breakthrough needs more than the calendar and your own unlock node: every corporation in that sector together must have spent enough R&D points on research from the 2039 tier onward. A sector that researches hard gets its breakthrough early in the tier; one that does not may wait years or never get it.
+
+**Frontier programmes** keep research useful after the last tier. Once you own all nine core technologies of the 2049 tier in your committed lane, you can fund repeatable programmes for your primary sector: each one adds 0.4% plant output or cuts plant inputs by 0.6%, costs 15% more R&D points than the one before, and stays inside the usual plant output and input caps. Programme effects never expire.
+
+**Retired methods.** Some old methods retire at a tier: conventional coal-heavy power in 2039 and combustion-engine vehicle lines in 2049. From then on no new site can start on them and no sector can switch to them. Sites already running them keep going, but their inputs cost 1.5% more for each year since retirement, up to 15%. Switching a retired site to one of its named successors (advanced fission or renewables for power, electric or autonomous vehicles for car makers) costs 60% less than a normal retool. AI-run companies convert their own sites automatically.
+
+**Build time and downsides.** No late-tier method is free. Every method from the 2039 and 2049 tiers lists what it needs, how long a site takes to build and a plain-words downside. When you switch a sector to one:
+
+- **The old method keeps running while the new one is built.** The sector stays on its old method until the build time is nearly up, then the usual 12-turn phase-in starts, so the new method is fully online after the full build time (48 turns is one game year).
+- **Cancelling during the build is free.** The sector goes back to its old method at once and nothing more is charged.
+- **The downside is a one-off bill.** Adopting the method adds a charge, as a share of the sector's daily revenue, on top of the normal retooling fee (25% of daily revenue). Waivers on the retooling fee, such as the free retool into a scarce resource, do not cover it.
+
+| Method | Build time (turns) | One-off charge (share of daily revenue) | Downside |
+| --- | --- | --- | --- |
+| Fusion (commercial) | 240 | 60% | Heaviest capital and licensing bill |
+| Space resources | 240 | 50% | Launch dependency, returns arrive after years |
+| Advanced fission | 192 | 50% | Four-year build, heavy licensing and safety bill |
+| Autonomous districts | 144 | 40% | One failure hits a whole district |
+| Humanoid robotics | 120 | 30% | Heavy electronics and rare earths, displaced workers raise unemployment |
+| Direct air capture | 120 | 30% | Very high energy draw, earns little without a carbon price |
+| Gene therapy at scale | 120 | 40% | Failed trials are written off |
+| Autonomous deep mining | 120 | 40% | A failed shaft is a total write-off |
+| Grid storage | 96 | 20% | Media wear out, no base load |
+| Neural interfaces | 96 | 35% | Privacy backlash risk |
+| Cellular agriculture | 96 | 25% | High energy and chemical inputs, farm lobbies resist |
+| Orbital logistics | 96 | 35% | Scarce, costly launches |
+| Solid-state vehicles | 96 | 35% | Costly cell lines |
+| Biofoundry | 72 | 30% | Biosafety incidents hit hard |
+| Drone swarms | 72 | 30% | Exposed to export controls |
+| Printed mass timber | 72 | 20% | Needs a steady timber and chemical supply |
+| Agentic services | 48 | 15% | Compute grows with scale, more layoffs |
+| Agentic property operations | 48 | 20% | Tenants resist automated management |
+| Personalised media | 36 | 20% | Privacy complaints and regulatory exposure |
+| Agent asset management | 36 | 20% | A model error hits every client at once |
+| Agentic storefronts | 36 | 15% | Thin margins as rivals copy it |
+
+Plan around the build time: a sector switched to fusion makes nothing new for five game years. The four methods that replace workers (humanoid robotics, agentic services, autonomous factory and autonomous freight) also pay the [automation levy](/wiki/automation-levy) in countries that charge one.
 
 Each decade forks into two **lanes**:
 
@@ -107,5 +147,5 @@ probability = min(1, rdScore / 200)
 
 On success, one sector receives a permanent **boost** (2-10% for regular corps, 1-10% for extraction). Regular corps get a random sector; extraction corps get the sector whose output is most capacity-constrained. Under the plants economy the boost arrives as free plant capacity rather than revenue. Extraction corps also gain permanent **state resource capacity** in states that track it. Breakthroughs notify the CEO in-game. Trees give targeted power, and breakthroughs add random sector growth on top.
 
-Applies to private corporations in any world with tech trees switched on (the default); state-owned corporations have no Tech tab, and command economies allow no private corporations. Last checked 2026-10-30, version 1.18.0. This system has no separate design page yet.
+Applies to private corporations in any world with tech trees switched on (the default); state-owned corporations have no Tech tab, and command economies allow no private corporations. Last checked 2026-11-10, version 1.20.0. This system has no separate design page yet.
 `;

@@ -17,6 +17,7 @@ import {
   type RolloutChange,
   type RolloutEvidence,
 } from "@/lib/banking/rules/rollout";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 const changeSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("mode"), mode: z.enum(["off", "shadow", "authoritative"]) }),
@@ -117,7 +118,7 @@ export const POST = withAdminRoute(async (auth, request: Request) => {
     });
   }
   if (decision.direction !== "none") {
-    await db.collection<GameConfig>("gameConfig").updateOne(
+    await gameConfigCollection(db).updateOne(
       { _id: "default" },
       {
         $set: {

@@ -1,23 +1,14 @@
 import type { CountryEraOverride } from "../../contract";
 
 /**
- * GR, 2027.
+ * GR, 2027. Generated; regenerate with gen-country-eras.ts GR --force.
+ * Differences only; everything not named here comes from base modules.
+ * No per-era orders of battle: falls back to the base set.
  *
- * ⚠ GENERATED from `__snapshots__/gr.pre-move.json`. Regenerate with:
- *
- *     npx tsx scripts/countries/gen-country-eras.ts GR --force
- *
- * ⚠ DIFFERENCES ONLY. Everything not named here comes from the base modules.
- *
- * No per-era orders of battle: this era falls back to the base set rather
- * than inventing an empty one.
- *
- * ⚠️ `usdExchangeRate` IS SET HERE BECAUSE NO 2027 ERA SET IT. The field is the
- * anchor value of ONE unit of this country's stored seed currency. The base
- * value (0.027) is per-drachma; 2027 seeds GR budgets in EUR, so the anchor
- * must be scaled by the authored cross rate: 0.027 x 37 (GRD/anchor) / 0.92
- * (EUR/anchor) — the same table `seedExchangeRates` uses. Left unset, the
- * anchor normalization and the seeded EUR budget would disagree ~40x.
+ * `usdExchangeRate` anchors one unit of the seeded currency. Base is
+ * per-drachma; 2027 seeds in EUR, so it is scaled by the cross rate:
+ * 0.027 x 37 / 0.92. Unset, anchor normalization and seeded EUR budget
+ * disagree ~40x.
  */
 export const GR_2027: CountryEraOverride = {
   preset: "2027-default",

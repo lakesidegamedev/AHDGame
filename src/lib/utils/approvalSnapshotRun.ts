@@ -6,6 +6,10 @@ import {
   loadMarketAdjustmentEffects,
   marketAdjustmentApprovalModifiers,
 } from "@/lib/crises/marketAdjustment/approvalEffects";
+import {
+  fiscalConsolidationApprovalModifiers,
+  loadFiscalConsolidationApprovalEffects,
+} from "@/lib/budget/fiscalStabilizer";
 import type { Db } from "mongodb";
 import { COUNTRY_CONFIGS, COUNTRY_ORDER, type CountryId } from "@/lib/constants/countries";
 import { getConflictsCollection } from "@/lib/db/collections/conflicts";
@@ -18,6 +22,9 @@ import {
   guestsToRelease,
   planApprovalSnapshot,
 } from "@/lib/utils/approvalSnapshotTargets";
+import { statesCollection } from "@/lib/db/repositories/states";
+import type { Document } from "mongodb";
+import { governmentApprovalsCollection } from "@/lib/db/repositories/governmentApprovals";
 
 /**
  * Orchestration for the per-turn approval snapshot: who gets one, and whose
@@ -41,18 +48,10 @@ export interface ApprovalSnapshotRun {
 /**
  * Run the per-turn approval snapshot across every country that needs one.
  *
- * This used to be the `active` countries alone, which left a hole: every country
- * in the game has a reachable approval page backed by full metrics, but a
- * country at war and not yet playable had no `governmentApprovals` document at
- * all. Its war block was therefore computed nowhere and shown nowhere, and its
- * page fell back to the live recompute in `loadNationalApproval` — which by
- * design carries none of the national providers. Both of the non-playable
- * belligerents in the War for Germany sat in exactly that state, each with a
- * scoring war block nobody could see.
- *
- * Guests (belligerents that are not `active`) are released again once their war
- * is over AND their exhaustion has finished healing, which can be many hundreds
- * of turns after the last shot. See `releaseApprovalGuests` for why that matters.
+ * Must include non-`active` belligerents: every country has a reachable
+ * approval page, but one without a `governmentApprovals` document falls back to
+ * the live recompute, which carries none of the national providers. Guests are
+ * released once their war is over and their exhaustion has healed.
  */
 export async function snapshotApprovalsForTurn(
   db: Db,
@@ -62,7 +61,7 @@ export async function snapshotApprovalsForTurn(
   marketAdjustmentStage = 0
 ): Promise<ApprovalSnapshotRun> {
   const activeIds = COUNTRY_ORDER.filter((id) => COUNTRY_CONFIGS[id].status === "active");
-  const approvals = db.collection<GovernmentApproval>("governmentApprovals");
+  const approvals = governmentApprovalsCollection(db);
 
   const [conflicts, documentedDocs, seededStateCountries] = await Promise.all([
     getConflictsCollection(db)
@@ -87,7 +86,7 @@ export async function snapshotApprovalsForTurn(
     // Cheap: one projection over a collection with one document per country that
     // has ever needed one.
     approvals.find({}, { projection: { _id: 1 } }).toArray(),
-    db.collection("states").distinct("countryId"),
+    statesCollection<Document>(db).distinct("countryId"),
   ]);
 
   const known = (id: unknown): id is CountryId => typeof id === "string" && id in COUNTRY_CONFIGS;
@@ -98,11 +97,13 @@ export async function snapshotApprovalsForTurn(
   const plan = planApprovalSnapshot(activeIds, belligerents, documented, seeded);
   const bankFailures = await loadBankFailureEffects(db, turn, bankFailurePolitics);
   const marketAdjustment = await loadMarketAdjustmentEffects(db, turn, marketAdjustmentStage);
+  const fiscalConsolidation = await loadFiscalConsolidationApprovalEffects(db, turn);
   await Promise.all(
     plan.ids.map((id) => {
       const modifiers = [
         ...bankFailureApprovalModifiers(bankFailures.get(id)),
         ...marketAdjustmentApprovalModifiers(marketAdjustment.get(id)),
+        ...fiscalConsolidationApprovalModifiers(fiscalConsolidation.get(id)),
       ];
       return modifiers.length > 0
         ? snapshotApprovalHistory(db, id, turn, telemetryCtx, modifiers)
@@ -117,22 +118,16 @@ export async function snapshotApprovalsForTurn(
 }
 
 /**
- * Drop the approval documents of guests whose war is finished.
+ * Drop approval documents of guests whose war is finished.
  *
- * `loadNationalApproval` prefers a stored rating over its live recompute
- * unconditionally, and nothing refreshes a non-active country that is not at
- * war — so a document left behind here would pin that country's page to its
- * last wartime number permanently. Releasing it puts the country back exactly
- * where it was before the war: no document, live recompute, the same as every
- * other country at peace.
+ * `loadNationalApproval` prefers a stored rating over live recompute, and
+ * nothing refreshes a non-active country at peace. A document left behind
+ * would pin that country's page to its last wartime number permanently.
+ * A document written by another system without a snapshot keeping it current
+ * is stale by construction; a stale rating is worse than none.
  *
- * The same argument covers a document some other system (a crisis effect, say)
- * wrote for one of these countries: with no snapshot keeping it current it is
- * stale by construction, and a stale rating is worse than none.
- *
- * Active countries are filtered out a second time even though `plan.guests`
- * already excludes them. This deletes live production documents, and one
- * redundant guard is cheap next to dropping a playable country's history.
+ * Active countries are re-filtered as a cheap guard before deleting live
+ * production documents.
  */
 async function releaseApprovalGuests(
   db: Db,
@@ -141,7 +136,7 @@ async function releaseApprovalGuests(
 ): Promise<CountryId[]> {
   if (guests.length === 0) return [];
 
-  const approvals = db.collection<GovernmentApproval>("governmentApprovals");
+  const approvals = governmentApprovalsCollection(db);
   const docs = await approvals
     .find({ _id: { $in: guests } }, { projection: { _id: 1, warExhaustion: 1 } })
     .toArray();

@@ -1,0 +1,122 @@
+{
+  "config": {
+    "governmentType": "onePartyState",
+    "regionLabel": "Region",
+    "legislature": {
+      "name": "Federal Assembly",
+      "lowerChamber": {
+        "key": "chamberOfThePeople",
+        "name": "Chamber of the People",
+        "shortName": "People",
+        "seats": 200,
+        "description": "200 deputies of the Chamber of the People, elected to five-year terms - a single-list body controlled by the ruling communist party within the National Front."
+      },
+      "upperChamber": {
+        "key": "chamberOfNations",
+        "name": "Chamber of Nations",
+        "shortName": "Nations",
+        "seats": 150,
+        "description": "The Chamber of Nations - the federal chamber representing the Czech and Slovak republics.",
+        "elected": true
+      }
+    },
+    "officeTypes": [
+      {
+        "key": "generalSecretary",
+        "label": "General Secretary",
+        "labelPlural": "General Secretaries",
+        "isExecutive": true,
+        "isSubNational": false
+      },
+      {
+        "key": "president",
+        "label": "President",
+        "labelPlural": "Presidents",
+        "isExecutive": true,
+        "isSubNational": false,
+        "isHeadOfState": true
+      },
+      {
+        "key": "assemblyDeputy",
+        "label": "Deputy",
+        "labelPlural": "Deputies",
+        "chamberKey": "chamberOfThePeople",
+        "isExecutive": false,
+        "isSubNational": false
+      },
+      {
+        "key": "centralBankChair",
+        "label": "Governor of the SBČS",
+        "labelPlural": "Governors of the SBČS",
+        "isExecutive": false,
+        "isSubNational": false
+      }
+    ],
+    "lowerElectionSystem": { "snapElectionsAllowed": false }
+  },
+  "eraOverrides": {
+    "1991-default": {
+      "governmentType": "parliamentaryRepublic",
+      "legislature": {
+        "name": "Federal Assembly",
+        "lowerChamber": {
+          "key": "chamberOfThePeople",
+          "name": "Chamber of the People",
+          "shortName": "People",
+          "seats": 150,
+          "description": "150 deputies elected by proportional representation in 1990."
+        },
+        "upperChamber": {
+          "key": "chamberOfNations",
+          "name": "Chamber of Nations",
+          "shortName": "Nations",
+          "seats": 150,
+          "description": "150 deputies, equally divided between the Czech and Slovak republics.",
+          "elected": true
+        }
+      },
+      "officeTypes": [
+        {
+          "key": "primeMinister",
+          "label": "Prime Minister",
+          "labelPlural": "Prime Ministers",
+          "isExecutive": true,
+          "isSubNational": false
+        },
+        {
+          "key": "president",
+          "label": "President",
+          "labelPlural": "Presidents",
+          "isExecutive": true,
+          "isSubNational": false,
+          "isHeadOfState": true
+        },
+        {
+          "key": "assemblyDeputy",
+          "label": "Deputy",
+          "labelPlural": "Deputies",
+          "chamberKey": "chamberOfThePeople",
+          "isExecutive": false,
+          "isSubNational": false
+        },
+        {
+          "key": "nationsDeputy",
+          "label": "Deputy of Nations",
+          "labelPlural": "Deputies of Nations",
+          "chamberKey": "chamberOfNations",
+          "isExecutive": false,
+          "isSubNational": false
+        },
+        {
+          "key": "centralBankChair",
+          "label": "Governor of the SBČS",
+          "labelPlural": "Governors of the SBČS",
+          "isExecutive": false,
+          "isSubNational": false
+        }
+      ],
+      "lowerElectionSystem": { "snapElectionsAllowed": true },
+      "upperElectionSystem": { "snapElectionsAllowed": true }
+    }
+  }
+}

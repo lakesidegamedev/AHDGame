@@ -1,3 +1,4 @@
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { getGameTime } from "@/lib/time/gameTime";
 import {
   presenceBuiltThisTurn,
@@ -15,6 +16,8 @@ import { loadRacePresence } from "@/lib/politicalOperations/racePresence";
 import { loadCampaignFxRate } from "@/lib/currency/campaignFxRate";
 import { statePresenceNextCost } from "@/lib/campaigns/statePresenceCost";
 import type { CharacterStateOrg, PoliticalParty } from "@/lib/db/types";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { characterStateOrgCollection } from "@/lib/db/repositories/characterStateOrg";
 
 /**
  * GET /api/political-operations/state-org/list
@@ -46,7 +49,7 @@ async function handleGET(request?: Request) {
           })
         ).candidate
       : auth.user.character;
-    if (character.countryId !== "US") {
+    if (!countryHasFeature("stateOrganisations", character.countryId)) {
       const [{ residentPoliticalIds }, racePresence] = await Promise.all([
         loadUsPoliticalStateIds(db),
         loadRacePresence(db, character._id),
@@ -65,21 +68,16 @@ async function handleGET(request?: Request) {
     }
 
     const [rows, party, { residentPoliticalIds }, racePresence, fxRate] = await Promise.all([
-      db
-        .collection<CharacterStateOrg>("characterStateOrg")
-        .find({ characterId: character._id })
-        .toArray(),
+      characterStateOrgCollection(db).find({ characterId: character._id }).toArray(),
       // Look up the character's party doc so custom-party hex colors flow
       // through to the map. Falls back to the canonical getPartyHex default
       // (blue / red / grey) when the doc is missing or the party is the
       // sentinel "independent".
       character.party && character.party !== "independent"
-        ? db
-            .collection<PoliticalParty>("politicalParties")
-            .findOne(
-              { countryId: "US", sequentialId: Number(character.party) },
-              { projection: { color: 1, name: 1, abbreviation: 1 } }
-            )
+        ? politicalPartiesCollection(db).findOne(
+            { countryId: "US", sequentialId: Number(character.party) },
+            { projection: { color: 1, name: 1, abbreviation: 1 } }
+          )
         : Promise.resolve(null),
       loadUsPoliticalStateIds(db),
       // Every candidate in the live presidential race, so the map can show the

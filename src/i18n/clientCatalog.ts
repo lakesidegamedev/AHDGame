@@ -199,6 +199,53 @@ export const CLIENT_CATALOG_RULES: readonly ClientCatalogRule[] = [
   { prefix: "/wiki", namespaces: ["nav", "tutorial"] },
 ];
 
+/**
+ * Public routes a signed-out visitor can land on, with the namespaces their
+ * client trees translate beyond the shell (analyzer output). Signed-in players
+ * always get the full catalog: they can open dialogs and panels that translate
+ * namespaces the page itself does not. `/guides`, `/news` and `/wiki` reuse the
+ * main rules above.
+ */
+const SIGNED_OUT_RULES: ReadonlyArray<{ prefix: string; namespaces: readonly string[] }> = [
+  { prefix: "/about", namespaces: ["nav", "tutorial"] },
+  { prefix: "/faq", namespaces: ["nav", "tutorial"] },
+  { prefix: "/privacy", namespaces: ["nav", "tutorial"] },
+  { prefix: "/contact", namespaces: ["nav", "tutorial"] },
+  { prefix: "/supporters", namespaces: ["nav", "tutorial"] },
+  { prefix: "/changelog", namespaces: ["nav", "tutorial"] },
+  { prefix: "/login", namespaces: ["auth", "nav", "tutorial"] },
+  { prefix: "/register", namespaces: ["auth", "nav", "tutorial"] },
+  { prefix: "/forgot-password", namespaces: ["nav", "tutorial"] },
+  { prefix: "/search", namespaces: ["nav", "tutorial"] },
+  { prefix: "/tutorial", namespaces: ["nav", "tutorial"] },
+  { prefix: "/sectors", namespaces: ["nav", "tutorial"] },
+  { prefix: "/corporations", namespaces: ["nav", "tutorial"] },
+];
+
+const SIGNED_OUT_REUSED_PREFIXES = ["/guides", "/news", "/wiki"] as const;
+
+/**
+ * The non-shell namespaces `app/template.tsx` ships to a signed-out visitor, or
+ * `null` for the full catalog.
+ */
+export function signedOutTemplateNamespaces(
+  pathname: string | null | undefined
+): readonly string[] | null {
+  if (!pathname || !pathname.startsWith("/")) return null;
+  const normalized = pathname.length > 1 ? pathname.replace(/\/+$/, "") : pathname;
+  const own = SIGNED_OUT_RULES.find(
+    (rule) => normalized === rule.prefix || normalized.startsWith(`${rule.prefix}/`)
+  );
+  const reused = SIGNED_OUT_REUSED_PREFIXES.some(
+    (prefix) => normalized === prefix || normalized.startsWith(`${prefix}/`)
+  );
+  const namespaces =
+    own?.namespaces ?? (normalized === "/" || reused ? clientNamespacesForPath(normalized) : null);
+  if (!namespaces) return null;
+  const shell = new Set<string>(SHELL_CLIENT_NAMESPACES);
+  return namespaces.filter((namespace) => !shell.has(namespace));
+}
+
 function matchesPattern(pattern: string, pathname: string): boolean {
   const want = pattern.split("/").filter(Boolean);
   const got = pathname.split("/").filter(Boolean);

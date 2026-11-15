@@ -4,26 +4,19 @@
  * then applies the same portable residence and nomination rules as the ballot model.
  */
 import type { Db } from "mongodb";
-import type {
-  Character,
-  CountryGameState,
-  Election,
-  GameState,
-  PoliticalParty,
-} from "@/lib/db/types";
-import {
-  RUSSIAN_DUMA_REPEAT_OPENINGS_COLLECTION,
-  type RussianDumaRepeatOpeningRecord,
-} from "./dumaRepeatOpening";
-import {
-  RUSSIAN_DUMA_RESULTS_COLLECTION,
-  type RussianDumaResultRecord,
-} from "./dumaElectionResult";
+import type { Character, Election } from "@/lib/db/types";
+import { type RussianDumaRepeatOpeningRecord } from "./dumaRepeatOpening";
+import { type RussianDumaResultRecord } from "./dumaElectionResult";
 import { russianDumaBoundRoot, loadRussianDumaAuthority } from "./dumaConvocationAuthority";
 import { loadRussianAssemblyRepeatTerm } from "./assemblyRepeatTerm";
 import { loadPendingRussianCouncilOwners } from "./pendingCouncilMandates";
 import { russianDumaConvocationOfficeCompatible } from "./rules/dumaConvocation";
 import { decideRussianDumaFiling } from "./rules/assemblyFiling";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
+import { russianDumaElectionResultsCollection } from "@/lib/db/repositories/russianDumaElectionResults";
+import { russianDumaRepeatOpeningsCollection } from "@/lib/db/repositories/russianDumaRepeatOpenings";
 export async function validateRussianDumaPlayerFiling(input: {
   db: Db;
   election: Election;
@@ -35,10 +28,11 @@ export async function validateRussianDumaPlayerFiling(input: {
   registrationOrder: number;
 }) {
   const { db, election, character, turn, registrationOrder } = input;
-  const game = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { projection: { preset: 1 } });
-  const country = await db.collection<CountryGameState>("countryGameStates").findOne(
+  const game = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { projection: { preset: 1 } }
+  );
+  const country = await countryGameStatesCollection(db).findOne(
     { _id: "RU" },
     {
       projection: {
@@ -69,22 +63,22 @@ export async function validateRussianDumaPlayerFiling(input: {
       !russianDumaBoundRoot(country)?.equals(binding.rootCohortId)
     )
       return { allowed: false as const, reason: "unbound-mandate" as const };
-    const opening = await db
-      .collection<RussianDumaRepeatOpeningRecord>(RUSSIAN_DUMA_REPEAT_OPENINGS_COLLECTION)
-      .findOne(
-        { _id: `${binding.rootCohortId.toHexString()}:repeat:${binding.generation}` },
-        {
-          projection: {
-            rootCohortId: 1,
-            cohortId: 1,
-            generation: 1,
-            mandateSinceTurn: 1,
-            previousResultId: 1,
-            electionIds: 1,
-            seatIds: 1,
-          },
-        }
-      );
+    const opening = await russianDumaRepeatOpeningsCollection<RussianDumaRepeatOpeningRecord>(
+      db
+    ).findOne(
+      { _id: `${binding.rootCohortId.toHexString()}:repeat:${binding.generation}` },
+      {
+        projection: {
+          rootCohortId: 1,
+          cohortId: 1,
+          generation: 1,
+          mandateSinceTurn: 1,
+          previousResultId: 1,
+          electionIds: 1,
+          seatIds: 1,
+        },
+      }
+    );
     if (
       !opening?.rootCohortId.equals(binding.rootCohortId) ||
       !opening.cohortId.equals(binding.cohortId) ||
@@ -95,23 +89,23 @@ export async function validateRussianDumaPlayerFiling(input: {
         election.seatId
     )
       return { allowed: false as const, reason: "unbound-mandate" as const };
-    const previous = await db
-      .collection<RussianDumaResultRecord>(RUSSIAN_DUMA_RESULTS_COLLECTION)
-      .findOne(
-        { _id: opening.previousResultId },
-        {
-          projection: {
-            countryId: 1,
-            preset: 1,
-            cohortId: 1,
-            rootCohortId: 1,
-            generation: 1,
-            mandateSinceTurn: 1,
-            result: 1,
-            seatedOnTurn: 1,
-          },
-        }
-      );
+    const previous = await russianDumaElectionResultsCollection<RussianDumaResultRecord>(
+      db
+    ).findOne(
+      { _id: opening.previousResultId },
+      {
+        projection: {
+          countryId: 1,
+          preset: 1,
+          cohortId: 1,
+          rootCohortId: 1,
+          generation: 1,
+          mandateSinceTurn: 1,
+          result: 1,
+          seatedOnTurn: 1,
+        },
+      }
+    );
     if (
       !previous ||
       previous.countryId !== "RU" ||
@@ -140,12 +134,10 @@ export async function validateRussianDumaPlayerFiling(input: {
     Number.isSafeInteger(partySequence) &&
     partySequence > 0 &&
     String(partySequence) === character.party
-      ? await db
-          .collection<PoliticalParty>("politicalParties")
-          .findOne(
-            { countryId: "RU", sequentialId: partySequence, regimeStatus: { $ne: "banned" } },
-            { projection: { countryId: 1, sequentialId: 1, regimeStatus: 1 } }
-          )
+      ? await politicalPartiesCollection(db).findOne(
+          { countryId: "RU", sequentialId: partySequence, regimeStatus: { $ne: "banned" } },
+          { projection: { countryId: 1, sequentialId: 1, regimeStatus: 1 } }
+        )
       : null;
   const pendingCouncil = await loadPendingRussianCouncilOwners({
     db,

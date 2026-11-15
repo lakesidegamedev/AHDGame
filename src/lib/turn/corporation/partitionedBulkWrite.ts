@@ -1,25 +1,10 @@
 /**
- * Split one large bulkWrite into a few concurrent ordered bulkWrites that
- * touch disjoint documents.
- *
- * The corporation turn rewrites every live supply agreement and every sector
- * each turn. A single ordered bulkWrite sends those as back-to-back batches
- * that the server applies one after another; the documents do not depend on
- * each other, so the batches can be applied side by side instead.
- *
- * The final state is the same as one ordered bulkWrite because:
- * - every op fixes one scalar `_id` (with optional document-local guards),
- *   and all ops for one `_id`
- *   land in the same partition in their original relative order, and each
- *   partition is itself an ordered bulkWrite; and
- * - an update/replace/delete keyed by `_id` reads and writes that one
- *   document only, so ops on different documents commute.
- * Anything else (inserts, filters without a scalar `_id`, an `_id` operator query)
- * falls back to the single ordered bulkWrite this replaces.
- *
- * The one behavioural difference is on failure: an ordered bulkWrite stops at
- * the first failing op, while here the other partitions still run. Every
- * caller lets the error abort the turn either way.
+ * Split one large bulkWrite into a few concurrent ordered bulkWrites touching
+ * disjoint documents. Operations are partitioned by scalar _id with document-
+ * local guards preserved in original relative order per partition, so the final
+ * state matches a single ordered bulkWrite. Inserts, non-scalar _id filters,
+ * and _id operator queries fall back to the single ordered bulkWrite.
+ * Difference: on failure other partitions still run; callers abort the turn.
  */
 
 import { ObjectId, type AnyBulkWriteOperation, type Collection, type Document } from "mongodb";

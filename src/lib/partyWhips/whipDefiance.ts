@@ -27,6 +27,16 @@ import { getOfficeTypeForChamber } from "@/lib/legislature/chamberOfficeType";
 import { impeachmentStageChamberKey } from "@/lib/impeachment/impeachmentTally";
 import type { Impeachment } from "@/lib/db/types/impeachment";
 import { isBillWhipInCurrentPhase } from "@/lib/congress/billWhipPhase";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { billsCollection } from "@/lib/db/repositories/bills";
+import { cabinetNominationsCollection } from "@/lib/db/repositories/cabinetNominations";
+import { billWhipsCollection } from "@/lib/db/repositories/billWhips";
+import { scotusNominationsCollection } from "@/lib/db/repositories/scotusNominations";
+import { caucusMembershipsCollection } from "@/lib/db/repositories/caucusMemberships";
+import { impeachmentsCollection } from "@/lib/db/repositories/impeachments";
+import { speakerVacateMotionsCollection } from "@/lib/db/repositories/speakerVacateMotions";
 
 export interface WhipDefianceScope {
   countryId: CountryId;
@@ -248,9 +258,10 @@ function loadScotusTarget(
 }
 
 async function loadVacateTarget(db: Db, whip: BillWhip): Promise<TargetContext | null> {
-  const motion = await db
-    .collection<SpeakerVacateMotion>("speakerVacateMotions")
-    .findOne({ _id: "current", status: "voting" });
+  const motion = await speakerVacateMotionsCollection(db).findOne({
+    _id: "current",
+    status: "voting",
+  });
   // Only whips issued during THIS motion describe the ballots on it; the
   // singleton "current" id is reused, so an older whip must not be scored
   // against a fresh motion's votes.
@@ -271,9 +282,10 @@ async function loadVacateTarget(db: Db, whip: BillWhip): Promise<TargetContext |
 
 async function loadImpeachmentTarget(db: Db, whip: BillWhip): Promise<TargetContext | null> {
   if (!(whip.targetId instanceof ObjectId)) return null;
-  const impeachment = await db
-    .collection<Impeachment>("impeachments")
-    .findOne({ _id: whip.targetId, stage: { $in: ["house", "senate"] } });
+  const impeachment = await impeachmentsCollection(db).findOne({
+    _id: whip.targetId,
+    stage: { $in: ["house", "senate"] },
+  });
   if (!impeachment) return null;
 
   // Read the map for the stage the whip was issued against. A whip from the
@@ -472,20 +484,17 @@ async function buildWhipDefianceSnapshotsForScopes(
   ];
   const [bills, nominations, scotusNominations] = await Promise.all([
     billIds.length
-      ? db
-          .collection<Bill>("bills")
+      ? billsCollection(db)
           .find({ _id: { $in: billIds } })
           .toArray()
       : Promise.resolve([] as Bill[]),
     cabinetIds.length
-      ? db
-          .collection<CabinetNomination>("cabinetNominations")
+      ? cabinetNominationsCollection(db)
           .find({ _id: { $in: cabinetIds }, status: "active" })
           .toArray()
       : Promise.resolve([] as CabinetNomination[]),
     scotusIds.length
-      ? db
-          .collection<ScotusNomination>("scotusNominations")
+      ? scotusNominationsCollection(db)
           .find({ _id: { $in: scotusIds }, status: "active" })
           .toArray()
       : Promise.resolve([] as ScotusNomination[]),
@@ -567,22 +576,19 @@ async function buildWhipDefianceSnapshotsForScopes(
   >;
   const [characters, npps, officials] = await Promise.all([
     missingCharacterIds.length
-      ? db
-          .collection<Character>("characters")
+      ? charactersCollection(db)
           .find({ _id: { $in: missingCharacterIds } })
           .project<Pick<Character, "_id" | "name" | "party">>({ _id: 1, name: 1, party: 1 })
           .toArray()
       : Promise.resolve([] as Character[]),
     missingNppIds.length
-      ? db
-          .collection<NPP>("npps")
+      ? nppsCollection(db)
           .find({ _id: { $in: missingNppIds } })
           .project<Pick<NPP, "_id" | "name" | "party">>({ _id: 1, name: 1, party: 1 })
           .toArray()
       : Promise.resolve([] as NPP[]),
     officialClauses.length
-      ? db
-          .collection<ElectedOfficial>("electedOfficials")
+      ? electedOfficialsCollection(db)
           .find({ officeType: { $in: officeTypes }, $or: officialClauses })
           .project<VoterOfficial>({ characterId: 1, nppId: 1, isNPP: 1, state: 1, officeType: 1 })
           .toArray()
@@ -595,8 +601,7 @@ async function buildWhipDefianceSnapshotsForScopes(
           caucusIds.some((id) => id.toString() === membership.caucusId.toString())
       )
     : caucusIds.length && membershipClauses.length
-      ? await db
-          .collection<CaucusMembership>("caucusMemberships")
+      ? await caucusMembershipsCollection(db)
           .find({ caucusId: { $in: caucusIds }, status: "active", $or: membershipClauses })
           .toArray()
       : [];
@@ -744,8 +749,7 @@ export async function buildWhipDefianceSnapshot(
           (!scope.stateId || whip.stateId === scope.stateId) &&
           (!scope.caucusId || whip.caucusId?.toString() === scope.caucusId.toString())
       )
-    : await db
-        .collection<BillWhip>("billWhips")
+    : await billWhipsCollection(db)
         .find({
           issuedBy: scope.issuedBy,
           countryId: scope.countryId,

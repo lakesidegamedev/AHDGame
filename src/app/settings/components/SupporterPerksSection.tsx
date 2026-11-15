@@ -41,7 +41,7 @@ const CARD_CLASS =
   "relative overflow-hidden rounded-3xl border border-card-border/80 bg-gradient-to-br from-card via-card to-card-elevated/55 p-5 shadow-sm";
 
 function tierLabel(tier: PerksState["tier"], t: Translator): string {
-  if (tier === "supporter-plus-plus") return "Supporter++";
+  if (tier === "supporter-plus-plus") return "Champion";
   if (tier === "supporter-plus") return "Supporter+";
   if (tier === "supporter") return "Supporter";
   return t("supporterPerks.notSubscribed");

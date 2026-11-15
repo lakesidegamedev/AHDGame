@@ -16,6 +16,9 @@ import type {
 } from "@/lib/banking/rules/boundary";
 import { legsNet } from "@/lib/banking/rules/invariants";
 import type { IndexFund, IndexFundHolding } from "@/lib/db/types";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import { fundFloatSettlementsCollection } from "@/lib/db/repositories/fundFloatSettlements";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
 
 export type FundFloatPlan = {
   key: string;
@@ -106,14 +109,14 @@ export async function claimFundFloatPlan(db: Db, fund: SettlementFund, plan: Fun
   // A multi-sale redemption can then undo its own trades in reverse order.
   const previous = fund.floatSettlementPlan;
   if (previous && previous.state !== "pending")
-    await db
-      .collection<{ _id: string; fundId: ObjectId; plan: FundFloatPlan }>("fundFloatSettlements")
-      .updateOne(
-        { _id: previous.key },
-        { $setOnInsert: { fundId: fund._id, plan: previous } },
-        { upsert: true }
-      );
-  const claimed = await db.collection<SettlementFund>("indexFunds").findOneAndUpdate(
+    await fundFloatSettlementsCollection<{ _id: string; fundId: ObjectId; plan: FundFloatPlan }>(
+      db
+    ).updateOne(
+      { _id: previous.key },
+      { $setOnInsert: { fundId: fund._id, plan: previous } },
+      { upsert: true }
+    );
+  const claimed = await indexFundsCollection<SettlementFund>(db).findOneAndUpdate(
     {
       _id: fund._id,
       cashAnchor: fund.cashAnchor,
@@ -143,9 +146,9 @@ async function compensateRefusal(
   plan: FundFloatPlan,
   reverseCompleted = false
 ) {
-  const record = await db
-    .collection<FloatJournal>(MONEY_MOVE_COLLECTION)
-    .findOne({ _id: plan.transition.key });
+  const record = await bankMoneyMovesCollection<FloatJournal>(db).findOne({
+    _id: plan.transition.key,
+  });
   if (!record) return false;
   if (reverseCompleted) {
     if (record.status !== "applied" || !record.legs.every((leg) => leg.applied)) return false;
@@ -222,7 +225,7 @@ async function compensateRefusal(
     ],
     event: { kind: "prop.traded", command: "fund_float_refund" },
   };
-  await db.collection<SettlementFund>("indexFunds").updateOne(
+  await indexFundsCollection<SettlementFund>(db).updateOne(
     {
       _id: fundId,
       "floatSettlementPlan.key": plan.key,
@@ -242,12 +245,10 @@ async function compensateRefusal(
       },
     }
   );
-  const frozen = await db
-    .collection<SettlementFund>("indexFunds")
-    .findOne(
-      { _id: fundId, "floatSettlementPlan.key": plan.key },
-      { projection: { floatSettlementPlan: 1 } }
-    );
+  const frozen = await indexFundsCollection<SettlementFund>(db).findOne(
+    { _id: fundId, "floatSettlementPlan.key": plan.key },
+    { projection: { floatSettlementPlan: 1 } }
+  );
   if (!frozen?.floatSettlementPlan?.compensation)
     throw new Error("Fund refund plan is unavailable");
   const result = await finish(db, frozen.floatSettlementPlan.compensation);
@@ -258,12 +259,10 @@ async function compensateRefusal(
 
 /** Unknown acknowledgements resume the original plan; only proven refusals reverse it. */
 export async function settleFundFloatPlan(db: Db, fundId: ObjectId, plan: FundFloatPlan) {
-  const original = await db
-    .collection<SettlementFund>("indexFunds")
-    .findOne(
-      { _id: fundId, "floatSettlementPlan.key": plan.key },
-      { projection: { floatSettlementPlan: 1 } }
-    );
+  const original = await indexFundsCollection<SettlementFund>(db).findOne(
+    { _id: fundId, "floatSettlementPlan.key": plan.key },
+    { projection: { floatSettlementPlan: 1 } }
+  );
   if (!original?.floatSettlementPlan)
     throw new Error("The original fund float quote is unavailable");
   plan = original.floatSettlementPlan;
@@ -289,18 +288,16 @@ export async function settleFundFloatPlan(db: Db, fundId: ObjectId, plan: FundFl
 
 /** A caller reversing its own completed trade retains inverse cash and audit witnesses. */
 export async function reverseCompletedFundFloatPlan(db: Db, fundId: ObjectId, plan: FundFloatPlan) {
-  const proof = await db.collection<FloatJournal>(MONEY_MOVE_COLLECTION).findOne({ _id: plan.key });
+  const proof = await bankMoneyMovesCollection<FloatJournal>(db).findOne({ _id: plan.key });
   if (proof?.reversedBy) {
     const result = await resumeSettlement(db, proof.reversedBy);
     if (!completed(result)) throw new Error(result.error ?? "Fund trade reversal is incomplete");
     return false;
   }
-  const current = await db
-    .collection<SettlementFund>("indexFunds")
-    .findOne(
-      { _id: fundId },
-      { projection: { floatSettlementPlan: 1, holdings: 1, floatSettlementGeneration: 1 } }
-    );
+  const current = await indexFundsCollection<SettlementFund>(db).findOne(
+    { _id: fundId },
+    { projection: { floatSettlementPlan: 1, holdings: 1, floatSettlementGeneration: 1 } }
+  );
   if (!current?.floatSettlementPlan)
     throw new Error("The original completed fund trade is unavailable");
   const active = current.floatSettlementPlan;
@@ -310,11 +307,11 @@ export async function reverseCompletedFundFloatPlan(db: Db, fundId: ObjectId, pl
     active.key === plan.key
       ? active
       : (
-          await db
-            .collection<{ _id: string; fundId: ObjectId; plan: FundFloatPlan }>(
-              "fundFloatSettlements"
-            )
-            .findOne({ _id: plan.key, fundId })
+          await fundFloatSettlementsCollection<{
+            _id: string;
+            fundId: ObjectId;
+            plan: FundFloatPlan;
+          }>(db).findOne({ _id: plan.key, fundId })
         )?.plan;
   if (
     !archived ||
@@ -325,7 +322,7 @@ export async function reverseCompletedFundFloatPlan(db: Db, fundId: ObjectId, pl
   )
     throw new Error("The fund trade cannot be reversed without its completed settlement proof");
   const requested = { ...archived, state: "pending" as const, undoRequested: true };
-  const claimed = await db.collection<SettlementFund>("indexFunds").findOneAndUpdate(
+  const claimed = await indexFundsCollection<SettlementFund>(db).findOneAndUpdate(
     {
       _id: fundId,
       "floatSettlementPlan.key": active.key,
@@ -344,8 +341,7 @@ export async function reverseCompletedFundFloatPlan(db: Db, fundId: ObjectId, pl
 
 /** Recovery precedes pricing, rebalancing and queued payouts in the ordinary cron. */
 export async function recoverAllFundFloatSettlements(db: Db) {
-  const pending = await db
-    .collection<SettlementFund>("indexFunds")
+  const pending = await indexFundsCollection<SettlementFund>(db)
     .find(
       {
         floatSettlementPlan: { $exists: true },

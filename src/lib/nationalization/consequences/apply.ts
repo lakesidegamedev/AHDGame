@@ -12,6 +12,7 @@ import type {
   LeaderConfidenceHistoryEntry,
 } from "@/lib/db/types/countryLeaderState";
 import { logWireEvent } from "@/lib/wireEvent";
+import { logger } from "@/lib/observability/logger";
 import { getCountryConfig } from "@/lib/constants/countries";
 import type { CountryId } from "@/lib/constants/countries";
 import { readInvestorConfidence, writeInvestorConfidence } from "../investorConfidence";
@@ -25,13 +26,18 @@ import {
   computePrivatizationConfidenceBoost,
   computePrivatizationApprovalNudge,
   computePrivatizationLegitimacyDelta,
+  computeForeignExpropriationTension,
 } from "./compute";
 import { applyLegacyTrustDelta } from "@/lib/sovereignDefault/sideEffects/trustHit";
+import { applyTensionEvent } from "@/lib/coldwar/tension";
 import type {
   ConsequenceContext,
   ConsequenceResult,
   PrivatizationConsequenceContext,
 } from "./types";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { countryLeaderStatesCollection } from "@/lib/db/repositories/countryLeaderStates";
 
 export async function applyNationalizationConsequences(
   db: Db,
@@ -92,16 +98,39 @@ export async function applyNationalizationConsequences(
     await applyLegitimacyDelta(db, ctx.countryId, legitimacyDelta, ctx.turn);
   }
 
-  // ── Foreign owner: record + wire only, no relations delta (spec §12.3). ────
+  const sectorLabel = ctx.sectorTypes.length > 0 ? ctx.sectorTypes.join("/") : "asset";
+  const foreignSuffix = ctx.foreignOwnerCountryId ? ` (${ctx.foreignOwnerCountryId}-owned)` : "";
+
+  // ── Foreign owner: world tension (spec §12.3) ─────────────────────────────
+  // There is no bilateral relations scalar in this repo, so the diplomatic
+  // consequence runs through the shared cold-war tension ledger: DEFCON,
+  // procurement demand and detente goodwill all read it, and every country sees
+  // the same incident. Scaled by the payment tier, because a compensated taking
+  // is a transaction and a seizure is an incident. A tension write failure must
+  // not fail a taking that already moved ownership, so it is logged and dropped.
   let foreignOwnerRecorded: ConsequenceResult["foreignOwnerRecorded"] = null;
+  let tensionDelta = 0;
   if (ctx.foreignOwnerCountryId && ctx.foreignOwnerCountryId !== ctx.countryId) {
     foreignOwnerRecorded = ctx.foreignOwnerCountryId;
-    // TODO(diplomacy): bilateral-relations delta + retaliation when a relations
-    // system exists. For now we only surface the event below.
+    tensionDelta = computeForeignExpropriationTension(ctx.tier);
+    if (tensionDelta > 0) {
+      try {
+        await applyTensionEvent(
+          db,
+          ctx.turn,
+          "crisis",
+          `${countryName(ctx.countryId)} seized ${sectorLabel} assets owned by ${countryName(
+            foreignOwnerRecorded
+          )}`,
+          tensionDelta
+        );
+      } catch (err) {
+        logger.error("nationalization", "Tension event for a foreign taking failed", err, {
+          countryId: ctx.countryId,
+        });
+      }
+    }
   }
-
-  const sectorLabel = ctx.sectorTypes.length > 0 ? ctx.sectorTypes.join("/") : "asset";
-  const foreignSuffix = foreignOwnerRecorded ? ` (${foreignOwnerRecorded}-owned)` : "";
   await logWireEvent(
     "corporation_nationalized",
     `${ctx.countryId} nationalized a ${sectorLabel}${foreignSuffix}`
@@ -113,14 +142,21 @@ export async function applyNationalizationConsequences(
     legitimacyDelta,
     approvalMetricNudges,
     foreignOwnerRecorded,
+    tensionDelta,
   };
+}
+
+/** Display name for a tension label; falls back to the id for an unseeded country. */
+function countryName(countryId: CountryId): string {
+  return getCountryConfig(countryId)?.name ?? countryId;
 }
 
 /** Active regime's governing party id (most-recently-updated leader-state). */
 async function resolveActiveGoverningPartyId(db: Db, countryId: CountryId): Promise<string | null> {
-  const leader = await db
-    .collection<CountryLeaderState>("countryLeaderStates")
-    .findOne({ countryId }, { sort: { updatedAt: -1 } });
+  const leader = await countryLeaderStatesCollection(db).findOne(
+    { countryId },
+    { sort: { updatedAt: -1 } }
+  );
   return leader?.governingPartyId ?? null;
 }
 
@@ -162,6 +198,7 @@ export async function applyPrivatizationConsequences(
     legitimacyDelta,
     approvalMetricNudges,
     foreignOwnerRecorded: null,
+    tensionDelta: 0,
   };
 }
 
@@ -179,8 +216,7 @@ async function applyPublicTrustNudge(
   await applyLegacyTrustDelta(db, countryId, delta);
 
   // The reported nudges stay per-region so callers keep their existing shape.
-  const states = await db
-    .collection<State>("states")
+  const states = await statesCollection(db)
     .find({ countryId }, { projection: { _id: 1 } })
     .toArray();
   return states.map((s) => ({
@@ -198,7 +234,7 @@ async function applyLegitimacyDelta(
   turn: number,
   reason: string = "nationalization"
 ): Promise<void> {
-  const coll = db.collection<CountryLeaderState>("countryLeaderStates");
+  const coll = countryLeaderStatesCollection(db);
   // A country accumulates one leader-state doc per leader over time; target the
   // ACTIVE regime (most-recently-updated), not an arbitrary/stale former leader.
   const leader = await coll.findOne({ countryId }, { sort: { updatedAt: -1 } });
@@ -237,9 +273,10 @@ async function resolveIdeologyMultiplier(
   if (!governingPartyId) return computeIdeologyMultiplier(null);
   const seq = Number(governingPartyId);
   if (!Number.isFinite(seq)) return computeIdeologyMultiplier(null);
-  const party = await db
-    .collection<PoliticalParty>("politicalParties")
-    .findOne({ countryId, sequentialId: seq }, { projection: { economicPosition: 1 } });
+  const party = await politicalPartiesCollection(db).findOne(
+    { countryId, sequentialId: seq },
+    { projection: { economicPosition: 1 } }
+  );
   if (!party || typeof party.economicPosition !== "number") return computeIdeologyMultiplier(null);
   return computeIdeologyMultiplier(party.economicPosition / 5); // [-5,5] → [-1,1]
 }

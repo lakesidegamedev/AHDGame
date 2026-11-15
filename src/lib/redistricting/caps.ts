@@ -7,6 +7,7 @@
  * gap (10%, 20% or 35%).
  */
 import type { Db } from "mongodb";
+import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
 
 export const REDISTRICT_AUTHORITY_LAW = "us_state_redistricting_authority";
 export const REDISTRICT_COMPACTNESS_LAW = "us_state_compactness";
@@ -79,9 +80,10 @@ async function readOptionIndex(
   stateId: string,
   legislationTypeId: string
 ): Promise<number> {
-  const policy = await db
-    .collection<{ policyOptionIndex?: number }>("statePolicies")
-    .findOne({ stateId, legislationTypeId });
+  const policy = await statePoliciesCollection<{ policyOptionIndex?: number }>(db).findOne({
+    stateId,
+    legislationTypeId,
+  });
   return policy?.policyOptionIndex ?? 1; // center default
 }
 

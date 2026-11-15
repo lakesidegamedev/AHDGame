@@ -10,18 +10,12 @@ import { parseHeapSnapshotJson } from "@/lib/observability/heapWatchdog";
 /*
  * POST /api/admin/debug/heap-snapshot
  *
- * Point-in-time top-constructors report. Writes a V8 heap snapshot to /tmp,
- * parses it, and returns the top-N constructors by total `self_size`.
+ * Captures a V8 heap snapshot, parses it, returns top-N constructors by
+ * total self_size. Companion to the allocation profile endpoint (which shows
+ * allocations over a window); diff two captures to find leaks.
  *
- * This is the "what's currently in memory" companion to the allocation
- * profile endpoint (which shows "what was allocated during a window").
- * Useful workflow: call this once for a baseline, wait for the leak to
- * accumulate, call again, diff the two reports.
- *
- * The snapshot itself transiently ~2x peak memory while v8 serializes —
- * safe at the 5GB Railway cap with current heap usage (~250MB), but the
- * heapWatchdog explicitly removed this from its trip handler because the
- * pre-OOM trip path had no headroom. Manual invocation is fine.
+ * Snapshotting transiently uses ~2x peak memory; fine at current heap size but
+ * not safe on the pre-OOM watchdog path, so it is manual-invocation only.
  *
  * Auth: requireAdmin
  * Errors: 403

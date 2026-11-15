@@ -1,32 +1,22 @@
 /**
  * Corporation liquidCapital currency helpers.
  *
- * Invariant after the forex migration:
+ * Invariants:
  *   - `corporation.liquidCapital` is denominated in `liquidCurrencyCode` (the
- *     corp's home currency, e.g. JPY for JP corps, GBP for UK corps, USD for
- *     US corps). Pre-forex corps have no `liquidCurrencyCode` and their
- *     balance is still in ₳ (internal / anchor units).
- *   - Internal turn-processor math runs in ₳ (anchor), and the client's
- *     `formatAmount()` likewise assumes ₳ input and multiplies by the display
- *     FX rate. BUT since v0.2.6 several STORED per-corp economic fields —
- *     `CorporateSector.revenue` / `currentGrowthCost`, `sharePrice`,
- *     `marketingBudget` / `logisticsBudget`, `ceoSalary` — are persisted in
- *     the corp's `liquidCurrencyCode`, NOT ₳ (see `corpEconomyFields.ts`).
- *     Normalize those via `readCorpEconomicAnchor` before any ₳ math; never
- *     treat a stored `sector.revenue` as ₳ directly (doing so silently scaled
- *     a sector-revenue-derived cost by the FX rate and broke affordability
- *     gates for non-USD corps).
- *   - ALL forex-active currencies — including USD — float against ₳ and must
- *     use the live exchange rate when converting. ₳ is its own anchor unit;
- *     there is no currency that is 1:1 with ₳ by definition. (Early forex
- *     code treated USD as identical to ₳; that assumption is no longer true
- *     once USD is in `FOREX_ACTIVE_CURRENCIES` and the rate floats.)
+ *     corp's home currency). Corps without that field hold their balance in
+ *     ₳ (anchor units).
+ *   - Internal turn-processor math runs in ₳, as does `formatAmount()`. But
+ *     several STORED per-corp economic fields (`CorporateSector.revenue` /
+ *     `currentGrowthCost`, `sharePrice`, `marketingBudget` /
+ *     `logisticsBudget`, `ceoSalary`) are persisted in `liquidCurrencyCode`,
+ *     NOT ₳. Normalize those via `readCorpEconomicAnchor` before any ₳ math;
+ *     never treat a stored `sector.revenue` as ₳ directly.
+ *   - ALL forex-active currencies, including USD, float against ₳ and must
+ *     use the live rate. There is no currency 1:1 with ₳ by definition.
  *
- * Any code path that wants to `$inc` or compare against `liquidCapital` in
- * home-currency units MUST first convert through one of these helpers.
- * Otherwise we leak value: a 1 ₳ payment gets added literally to a JPY
- * balance (~0.01 ¥ instead of ~87 ¥), so non-anchor corps accrue ~100× less
- * cash than the UI claims they are earning.
+ * Any path that `$inc`s or compares `liquidCapital` in home-currency units
+ * MUST convert through these helpers, otherwise value leaks: a 1 ₳ payment
+ * lands as ~0.01 ¥ instead of ~87 ¥.
  */
 
 import type { Db } from "mongodb";
@@ -34,6 +24,8 @@ import type { CurrencyCode } from "@/lib/constants/currencies";
 import { COUNTRY_CURRENCY_MAP, eraRateForCurrency } from "@/lib/constants/currencies";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
 import type { ExchangeRate } from "@/lib/db/types";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 // Re-exported so server-side callers keep importing them from here. The
 // definitions live in the client-safe module because two client components need
 // them, and this file reaches `mongodb` — see corpWalletSpend.ts.
@@ -230,7 +222,7 @@ export async function getCorpFxRate(db: Db, corp: CorpCapitalCurrencyInfo): Prom
   const code = resolveCorpLiquidCurrencyCode(corp);
   // Only pre-forex corps (no resolvable code) skip conversion. USD is forex-active.
   if (!code) return 1.0;
-  const doc = await db.collection<ExchangeRate>("exchangeRates").findOne({ currencyCode: code });
+  const doc = await exchangeRatesCollection(db).findOne({ currencyCode: code });
   if (doc?.rate && doc.rate > 0) return doc.rate;
   return (await eraFallbackRate(db, code)) ?? 1.0;
 }
@@ -242,7 +234,7 @@ export async function getCorpFxRate(db: Db, corp: CorpCapitalCurrencyInfo): Prom
  * rate, then 1.0.
  */
 export async function getCurrencyFxRate(db: Db, code: CurrencyCode): Promise<number> {
-  const doc = await db.collection<ExchangeRate>("exchangeRates").findOne({ currencyCode: code });
+  const doc = await exchangeRatesCollection(db).findOne({ currencyCode: code });
   if (doc?.rate && doc.rate > 0) return doc.rate;
   return (await eraFallbackRate(db, code)) ?? 1.0;
 }
@@ -261,7 +253,7 @@ export async function getSectorHostFxRate(
 ): Promise<number> {
   const code = resolveSectorHostCurrencyCode(sector, corp);
   if (!code) return 1.0;
-  const doc = await db.collection<ExchangeRate>("exchangeRates").findOne({ currencyCode: code });
+  const doc = await exchangeRatesCollection(db).findOne({ currencyCode: code });
   if (doc?.rate && doc.rate > 0) return doc.rate;
   return (await eraFallbackRate(db, code)) ?? 1.0;
 }
@@ -317,9 +309,10 @@ export function shareTradeAnchorValue(
  */
 async function presetFromDb(db: Db): Promise<string | undefined> {
   try {
-    const gs = await db
-      .collection<{ _id: string; preset?: string }>("gameState")
-      .findOne({ _id: "current" }, { projection: { preset: 1 } });
+    const gs = await gameStateCollection<{ _id: string; preset?: string }>(db).findOne(
+      { _id: "current" },
+      { projection: { preset: 1 } }
+    );
     return gs?.preset ?? DEFAULT_SEED_PRESET;
   } catch {
     return undefined;
@@ -337,8 +330,7 @@ export async function loadFxRatesByCurrency(db: Db): Promise<Map<CurrencyCode, n
   }
 
   if (!fxRateCachePromise) {
-    fxRateCachePromise = db
-      .collection<ExchangeRate>("exchangeRates")
+    fxRateCachePromise = exchangeRatesCollection(db)
       .find({})
       .toArray()
       .then((docs) => {

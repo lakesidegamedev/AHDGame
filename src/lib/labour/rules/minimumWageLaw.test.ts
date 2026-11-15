@@ -8,6 +8,7 @@ import {
   MINIMUM_WAGE_LAW_KAITZ_MAX,
   MINIMUM_WAGE_LAW_SCALES,
   MINIMUM_WAGE_LAW_TYPE_IDS,
+  SAVED_WORLD_MINIMUM_WAGE_LAW_SCALES,
   policyOptionIndexOf,
 } from "./minimumWageLaw";
 
@@ -19,7 +20,11 @@ describe("minimum wage law scales", () => {
     const national = catalog.filter(
       (t) => /^[a-z]{2}_minimum_wage$/.test(t._id) && t.allowedScope !== "state"
     );
-    expect(national.map((t) => t._id).sort()).toEqual([...MINIMUM_WAGE_LAW_TYPE_IDS].sort());
+    expect(national.map((t) => t._id).sort()).toEqual(
+      MINIMUM_WAGE_LAW_TYPE_IDS.filter(
+        (id) => !id.includes(".") && !SAVED_WORLD_MINIMUM_WAGE_LAW_SCALES[id]
+      ).sort()
+    );
     for (const type of national) {
       const scale = MINIMUM_WAGE_LAW_SCALES[type._id]!;
       const options = type.policyOptions ?? [];
@@ -35,18 +40,18 @@ describe("minimum wage law scales", () => {
   });
 
   it("puts each country's current statutory option on its real Kaitz ratio", () => {
-    expect(minimumWageLawKaitz("us_minimum_wage", 4)).toBe(0.28);
-    expect(minimumWageLawKaitz("de_minimum_wage", 3)).toBe(0.55);
+    expect(minimumWageLawKaitz("us.economy.workerSecurity.primary", 1)).toBe(0.28);
+    expect(minimumWageLawKaitz("de.economy.workerSecurity.primary", 2)).toBe(0.55);
     expect(minimumWageLawKaitz("ie_minimum_wage", 3)).toBe(0.6);
-    expect(minimumWageLawKaitz("jp_minimum_wage", 3)).toBe(0.45);
+    expect(minimumWageLawKaitz("jp.economy.workerSecurity.primary", 2)).toBe(0.45);
   });
 
   it("gives abolition options, unknown laws and unknown options no floor", () => {
-    expect(minimumWageLawKaitz("de_minimum_wage", 0)).toBe(0);
-    expect(minimumWageLawKaitz("jp_minimum_wage", 6)).toBe(0);
+    expect(minimumWageLawKaitz("de.economy.workerSecurity.primary", 0)).toBe(0);
+    expect(minimumWageLawKaitz("jp.economy.workerSecurity.primary", 0)).toBe(0);
     expect(minimumWageLawKaitz("cn_minimum_wage", 6)).toBe(0);
-    expect(minimumWageLawKaitz("jp_minimum_wage", 9)).toBe(0);
-    expect(minimumWageLawKaitz("jp_minimum_wage", null)).toBe(0);
+    expect(minimumWageLawKaitz("jp.economy.workerSecurity.primary", 9)).toBe(0);
+    expect(minimumWageLawKaitz("jp.economy.workerSecurity.primary", null)).toBe(0);
     expect(minimumWageLawKaitz("us_state_minimum_wage", 0)).toBe(0);
   });
 
@@ -64,6 +69,7 @@ describe("minimum wage law scales", () => {
   it("reads the option index from the row or from its id", () => {
     expect(policyOptionIndexOf({ policyOptionIndex: 2 })).toBe(2);
     expect(policyOptionIndexOf({ policyOptionId: "minimum_wage_opt_4" })).toBe(4);
+    expect(policyOptionIndexOf({ policyOptionId: "l3" })).toBe(3);
     expect(policyOptionIndexOf({ policyOptionId: "custom" })).toBeNull();
   });
 
@@ -80,7 +86,11 @@ describe("buildMinWageRatioWithLaws", () => {
 
   it("sets the floor from an enacted law", () => {
     const out = buildMinWageRatioWithLaws(budgets, [
-      { countryId: "DE", legislationTypeId: "de_minimum_wage", policyOptionIndex: 6 },
+      {
+        countryId: "DE",
+        legislationTypeId: "de.economy.workerSecurity.primary",
+        policyOptionIndex: 4,
+      },
     ]);
     expect(out.get("DE")).toBe(0.82);
     expect(out.has("US")).toBe(false);
@@ -90,15 +100,15 @@ describe("buildMinWageRatioWithLaws", () => {
     const before = buildMinWageRatioWithLaws(budgets, [
       {
         countryId: "JP",
-        legislationTypeId: "jp_minimum_wage",
-        policyOptionId: "jp_minimum_wage_opt_3",
+        legislationTypeId: "jp.economy.workerSecurity.primary",
+        policyOptionId: "l2",
       },
     ]);
     const after = buildMinWageRatioWithLaws(budgets, [
       {
         countryId: "JP",
-        legislationTypeId: "jp_minimum_wage",
-        policyOptionId: "jp_minimum_wage_opt_1",
+        legislationTypeId: "jp.economy.workerSecurity.primary",
+        policyOptionId: "l4",
       },
     ]);
     expect(before.get("JP")).toBe(0.45);
@@ -108,15 +118,27 @@ describe("buildMinWageRatioWithLaws", () => {
   it("clears the floor on repeal or abolition", () => {
     expect(buildMinWageRatioWithLaws(budgets, []).size).toBe(0);
     const abolished = buildMinWageRatioWithLaws(budgets, [
-      { countryId: "JP", legislationTypeId: "jp_minimum_wage", policyOptionIndex: 6 },
+      {
+        countryId: "JP",
+        legislationTypeId: "jp.economy.workerSecurity.primary",
+        policyOptionIndex: 0,
+      },
     ]);
     expect(abolished.has("JP")).toBe(false);
   });
 
   it("lets an admin override win, including an explicit zero", () => {
     const policies = [
-      { countryId: "DE", legislationTypeId: "de_minimum_wage", policyOptionIndex: 6 },
-      { countryId: "JP", legislationTypeId: "jp_minimum_wage", policyOptionIndex: 0 },
+      {
+        countryId: "DE",
+        legislationTypeId: "de.economy.workerSecurity.primary",
+        policyOptionIndex: 4,
+      },
+      {
+        countryId: "JP",
+        legislationTypeId: "jp.economy.workerSecurity.primary",
+        policyOptionIndex: 4,
+      },
     ];
     const out = buildMinWageRatioWithLaws(
       [
@@ -135,13 +157,21 @@ describe("buildMinWageRatioWithLaws", () => {
       policies
     );
     expect(cleared.get("DE")).toBe(0.82);
-    expect(cleared.get("JP")).toBe(0.82);
+    expect(cleared.get("JP")).toBe(0.68);
   });
 
   it("keeps each country's floor separate", () => {
     const out = buildMinWageRatioWithLaws(budgets, [
-      { countryId: "DE", legislationTypeId: "de_minimum_wage", policyOptionIndex: 3 },
-      { countryId: "JP", legislationTypeId: "jp_minimum_wage", policyOptionIndex: 1 },
+      {
+        countryId: "DE",
+        legislationTypeId: "de.economy.workerSecurity.primary",
+        policyOptionIndex: 2,
+      },
+      {
+        countryId: "JP",
+        legislationTypeId: "jp.economy.workerSecurity.primary",
+        policyOptionIndex: 4,
+      },
       { countryId: "NG", legislationTypeId: "ng_minimum_wage", policyOptionIndex: 0 },
       { countryId: "US", legislationTypeId: "unrelated_law", policyOptionIndex: 0 },
     ]);
@@ -151,5 +181,41 @@ describe("buildMinWageRatioWithLaws", () => {
   it("matches the admin-only map when no law is in force", () => {
     const admin = [{ countryId: "DE", minimumWageKaitzRatio: 0.6 }, { countryId: "US" }];
     expect(buildMinWageRatioWithLaws(admin, [])).toEqual(buildMinWageRatioByCountry(admin));
+  });
+});
+
+describe("saved worlds on old minimum wage laws", () => {
+  it("never lists a saved-world law that new worlds still seed", () => {
+    for (const id of Object.keys(SAVED_WORLD_MINIMUM_WAGE_LAW_SCALES))
+      expect(
+        catalog.some((t) => t._id === id),
+        id
+      ).toBe(false);
+  });
+
+  it("keeps the floor a saved world enacted before its country joined the law book", () => {
+    const out = buildMinWageRatioWithLaws(
+      [],
+      [
+        { countryId: "JP", legislationTypeId: "jp_minimum_wage", policyOptionIndex: 3 },
+        {
+          countryId: "DE",
+          legislationTypeId: "de_minimum_wage",
+          policyOptionId: "de_minimum_wage_opt_3",
+        },
+      ]
+    );
+    expect(out.get("JP")).toBe(0.45);
+    expect(out.get("DE")).toBe(0.55);
+    expect(MINIMUM_WAGE_LAW_TYPE_IDS).toContain("jp_minimum_wage");
+  });
+
+  it("keeps China's old-book floor, whose options run from the highest floor down", () => {
+    const out = buildMinWageRatioWithLaws(
+      [],
+      [{ countryId: "CN", legislationTypeId: "cn_minimum_wage", policyOptionIndex: 1 }]
+    );
+    expect(out.get("CN")).toBe(0.4);
+    expect(minimumWageLawKaitz("cn_minimum_wage", 5)).toBe(0);
   });
 });

@@ -60,7 +60,7 @@ function reducer(state: State, action: Action): State {
 }
 
 const conversationHref = (reportId: string, backHref?: string) => {
-  const base = `/moderator/mail-reports/${reportId}`;
+  const base = `/control/support/mail-reports/${reportId}`;
   if (!backHref) return base;
   return `${base}?back=${encodeURIComponent(backHref)}`;
 };

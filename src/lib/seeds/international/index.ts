@@ -28,10 +28,45 @@ import { getBlrModel } from "./blr";
 import { getUaModel } from "./ua";
 import { getCsModel } from "./cs";
 import { getBalModel } from "./bal";
+import { getCaModel } from "@/lib/countries/ca/layer1Model";
+import { getQcModel } from "@/lib/countries/qc/layer1Model";
 import { getSuccessor1991Model, type Successor1991CountryId } from "./successor1991";
 
 export { buildModelRegionDemographics } from "./derive";
 export type { CountryLayer1Model } from "./types";
+
+const LAYER1_MODEL_BUILDERS: Record<string, (era: EraId) => CountryLayer1Model | null> = {
+  UK: getUkModel,
+  SCO: getScoModel,
+  WAL: getWalModel,
+  DE: getDeModel,
+  JP: getJpModel,
+  IE: getIeModel,
+  BR: getBrModel,
+  CN: getCnModel,
+  NG: getNgModel,
+  RU: getRuModel,
+  FR: getFrModel,
+  IT: getItModel,
+  ES: getEsModel,
+  SE: getSeModel,
+  TR: getTrModel,
+  GR: getGrModel,
+  AT: getAtModel,
+  FI: getFiModel,
+  DD: getDdModel,
+  HU: getHuModel,
+  PL: getPlModel,
+  RO: getRoModel,
+  YU: getYuModel,
+  BG: getBgModel,
+  BLR: getBlrModel,
+  UKR: getUaModel,
+  CS: getCsModel,
+  BAL: getBalModel,
+  CA: getCaModel,
+  QC: getQcModel,
+};
 
 /**
  * Resolve a country's historically-grounded Layer-1 model for an era, or null
@@ -44,66 +79,6 @@ export function getCountryLayer1Model(countryId: string, era: EraId): CountryLay
   ) {
     return getSuccessor1991Model(countryId as Successor1991CountryId);
   }
-  switch (countryId) {
-    case "UK":
-      return getUkModel(era);
-    // Devolved nations: their own census, the UK's voter groups. Without these
-    // both fell through to the legacy archetype vote path.
-    case "SCO":
-      return getScoModel(era);
-    case "WAL":
-      return getWalModel(era);
-    case "DE":
-      return getDeModel(era);
-    case "JP":
-      return getJpModel(era);
-    case "IE":
-      return getIeModel(era);
-    case "BR":
-      return getBrModel(era);
-    case "CN":
-      return getCnModel(era);
-    case "NG":
-      return getNgModel(era);
-    case "RU":
-      return getRuModel(era);
-    case "FR":
-      return getFrModel(era);
-    case "IT":
-      return getItModel(era);
-    case "ES":
-      return getEsModel(era);
-    case "SE":
-      return getSeModel(era);
-    case "TR":
-      return getTrModel(era);
-    case "GR":
-      return getGrModel(era);
-    case "AT":
-      return getAtModel(era);
-    case "FI":
-      return getFiModel(era);
-    case "DD":
-      return getDdModel(era);
-    case "HU":
-      return getHuModel(era);
-    case "PL":
-      return getPlModel(era);
-    case "RO":
-      return getRoModel(era);
-    case "YU":
-      return getYuModel(era);
-    case "BG":
-      return getBgModel(era);
-    case "BLR":
-      return getBlrModel(era);
-    case "UKR":
-      return getUaModel(era);
-    case "CS":
-      return getCsModel(era);
-    case "BAL":
-      return getBalModel(era);
-    default:
-      return null;
-  }
+  if (!Object.hasOwn(LAYER1_MODEL_BUILDERS, countryId)) return null;
+  return LAYER1_MODEL_BUILDERS[countryId](era);
 }

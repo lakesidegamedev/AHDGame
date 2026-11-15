@@ -1,8 +1,11 @@
 import type { ResetRegionalOpeningBoard } from "@/lib/resetFinance/rules/regionalOpeningBoard";
 import type { OpeningLawReference } from "@/lib/resetLegislation/openingLaw";
 import { regionalizeOpeningReferences } from "@/lib/resetLegislation/rules/regionalizeOpeningReferences";
-import type { ResetMetricSnapshot } from "@/lib/resetMetrics/rules/snapshot";
-import type { SecedingCountryId } from "../subRegions";
+import {
+  normalizeNationalMetricBoard,
+  type ResetMetricSnapshot,
+} from "@/lib/resetMetrics/rules/snapshot";
+import type { ResetV2Successor } from "../subRegions";
 import { fiscalOwnerReadings, type FiscalOwnerInput } from "@/lib/resetMetrics/rules/fiscalOwner";
 import {
   clearCountrySources,
@@ -16,7 +19,7 @@ export interface SuccessorRegionSeed {
 }
 
 export function buildSuccessorMetricRows(input: {
-  countryId: SecedingCountryId;
+  countryId: ResetV2Successor;
   aggregate: ResetMetricSnapshot;
   national: ResetMetricSnapshot;
   regions: readonly SuccessorRegionSeed[];
@@ -68,20 +71,22 @@ export function buildSuccessorMetricRows(input: {
       Object.entries(readings).map(([id, row]) => [id, [{ turn, value: row.value! }]])
     );
   return [
-    clearCountrySources({
-      ...national,
-      _id: `${countryId}:national`,
-      countryId,
-      scope: "national",
-      regionId: undefined,
-      sourceTurn: turn,
-      asOfTurn: turn,
-      observations,
-      openingValues: Object.fromEntries(
-        Object.entries(observations).map(([id, row]) => [id, row.value!])
-      ),
-      history: history(observations),
-    }),
+    normalizeNationalMetricBoard(
+      clearCountrySources({
+        ...national,
+        _id: `${countryId}:national`,
+        countryId,
+        scope: "national",
+        regionId: undefined,
+        sourceTurn: turn,
+        asOfTurn: turn,
+        observations,
+        openingValues: Object.fromEntries(
+          Object.entries(observations).map(([id, row]) => [id, row.value!])
+        ),
+        history: history(observations),
+      })
+    ),
     ...regions.map((region) =>
       clearCountrySources({
         ...aggregate,
@@ -93,7 +98,11 @@ export function buildSuccessorMetricRows(input: {
         observations: Object.fromEntries(
           Object.entries(aggregate.observations).map(([id, row]) => [
             id,
-            inheritedRegionalObservation(row, weights[region.id]),
+            {
+              ...inheritedRegionalObservation(row, weights[region.id]),
+              observedAtTurn: row.observedAtTurn ?? row.lastUpdatedTurn ?? aggregate.asOfTurn,
+              lastUpdatedTurn: turn,
+            },
           ])
         ),
         history: history(aggregate.observations),
@@ -104,7 +113,7 @@ export function buildSuccessorMetricRows(input: {
 }
 
 export function buildSuccessorRegionalRows(input: {
-  countryId: SecedingCountryId;
+  countryId: ResetV2Successor;
   aggregate: ResetRegionalOpeningBoard;
   regionalReferences: readonly OpeningLawReference[];
   regions: readonly SuccessorRegionSeed[];

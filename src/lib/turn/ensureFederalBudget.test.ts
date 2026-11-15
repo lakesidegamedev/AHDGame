@@ -184,3 +184,45 @@ describe("findFederalBudgetCountryMismatches", () => {
     expect(result).toEqual([]);
   });
 });
+
+describe("ensureFederalBudgets", () => {
+  it("reads once and heals nothing when every budget exists", async () => {
+    db.collection("federalBudget");
+    const col = db.collectionMocks["federalBudget"]!;
+    col.find = vi.fn().mockReturnValue({
+      toArray: vi.fn().mockResolvedValue([{ _id: "federal" }, { _id: "UK" }]),
+    });
+    col.findOne = vi.fn();
+
+    const { ensureFederalBudgets } = await import("./ensureFederalBudget");
+    await ensureFederalBudgets(db as unknown as Db, ["US", "UK", "US"], "1953-default");
+
+    expect(col.find).toHaveBeenCalledTimes(1);
+    expect(col.find).toHaveBeenCalledWith(
+      { _id: { $in: ["federal", "UK"] } },
+      { projection: { _id: 1 } }
+    );
+    expect(col.findOne).not.toHaveBeenCalled();
+    expect(col.updateOne).not.toHaveBeenCalled();
+  });
+
+  it("sends only the missing country through the single-country heal", async () => {
+    db.collection("federalBudget");
+    const col = db.collectionMocks["federalBudget"]!;
+    col.find = vi.fn().mockReturnValue({
+      toArray: vi.fn().mockResolvedValue([{ _id: "federal" }]),
+    });
+    let findOneCalls = 0;
+    col.findOne = vi.fn().mockImplementation(() => {
+      findOneCalls += 1;
+      return Promise.resolve(findOneCalls === 1 ? null : { _id: "UK", countryId: "UK" });
+    });
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    const { ensureFederalBudgets } = await import("./ensureFederalBudget");
+    await ensureFederalBudgets(db as unknown as Db, ["US", "UK"], "1953-default");
+
+    expect(col.updateOne).toHaveBeenCalledTimes(1);
+    expect(col.updateOne.mock.calls[0]![0]).toEqual({ _id: "UK" });
+  });
+});

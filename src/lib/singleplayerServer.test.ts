@@ -124,7 +124,7 @@ describe("singleplayer maintenance recovery", () => {
 
   it("exposes the persisted boolean feature map to the owner panel", async () => {
     const db = createMockDb();
-    const featureFlags = { forexEnabled: false, worldEventsEnabled: true };
+    const featureFlags = { forexEnabled: false, sectorTechTreesEnabled: true };
     db.collection("gameState").findOne.mockResolvedValue({
       _id: "current",
       currentTurn: 3,
@@ -162,9 +162,9 @@ describe("singleplayer maintenance recovery", () => {
       permanentHeadOfState: true,
     });
     expect(set.singleplayerConfig.featureFlags.forexEnabled).toBe(false);
-    expect(set.singleplayerConfig.featureFlags.worldEventsEnabled).toBe(true);
+    expect(set.singleplayerConfig.featureFlags.sectorTechTreesEnabled).toBe(true);
     expect(set.forexEnabled).toBe(false);
-    expect(set.worldEventsEnabled).toBe(true);
+    expect(set.sectorTechTreesEnabled).toBe(true);
     expect(set.nppAutonomyLevel).toBe("v4");
   });
 

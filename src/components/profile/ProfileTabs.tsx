@@ -37,7 +37,6 @@ type ProfileView = "political" | "military" | "business";
  * the view tabs; the selected view renders below it at page width.
  */
 export function ProfileTabs({
-  conflictsEnabled,
   subject,
   adopted,
   general,
@@ -52,7 +51,6 @@ export function ProfileTabs({
   actions,
   children,
 }: {
-  conflictsEnabled: boolean;
   subject: CharacterSubject;
   adopted: Record<string, number>;
   general: ProfileGeneral | null;
@@ -78,11 +76,10 @@ export function ProfileTabs({
   });
   const service = militaryService ?? { commissioned: !!general };
   const militaryAvailable =
-    conflictsEnabled &&
-    (service.commissioned ||
-      !!general ||
-      service.commissionedTurn != null ||
-      service.dismissedTurn != null);
+    service.commissioned ||
+    !!general ||
+    service.commissionedTurn != null ||
+    service.dismissedTurn != null;
   const requested = selection.subjectId === subject.id ? selection.view : "political";
   const tab =
     (requested === "military" && !militaryAvailable) || (requested === "business" && !business)
@@ -92,9 +89,7 @@ export function ProfileTabs({
     { id: "political", locked: null },
     {
       id: "military",
-      locked: militaryAvailable
-        ? null
-        : t(conflictsEnabled ? "militaryLocked" : "militaryDisabled"),
+      locked: militaryAvailable ? null : t("militaryLocked"),
     },
     { id: "business", locked: business ? null : t("businessLocked") },
   ];

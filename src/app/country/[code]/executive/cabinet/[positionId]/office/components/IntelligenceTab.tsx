@@ -5,6 +5,7 @@ import { type CountryId } from "@/lib/constants/countriesCore";
 import { COUNTRY_CLIENT_CONFIGS, getCountryDisplayName } from "@/lib/constants/countryClientConfig";
 import { fmtMoneyAbs } from "./energy/energyUi";
 import { apiErrorText } from "@/lib/errors/catalog";
+import { CyberOperationsPanel } from "./CyberOperationsPanel";
 
 interface AgencyView {
   tradecraft: number;
@@ -383,6 +384,14 @@ export default function IntelligenceTab({
           </>
         )}
       </section>
+
+      {canAct && (
+        <CyberOperationsPanel
+          countryId={countryId}
+          positionId={positionId}
+          currencySymbol={currencySymbol}
+        />
+      )}
 
       {canAct && (
         <section className="rounded-xl border border-card-border bg-card p-4 shadow-card">

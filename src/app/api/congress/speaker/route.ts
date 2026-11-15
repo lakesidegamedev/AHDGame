@@ -24,6 +24,7 @@ import { handleSpeakerAction } from "@/lib/congress/speaker/actions";
 import { getGameTime } from "@/lib/time/gameTime";
 import { isLeadershipElectionClosed } from "@/lib/congress/leadershipElections";
 import type { SpeakerElection } from "@/lib/db/types";
+import { speakerElectionsCollection } from "@/lib/db/repositories/speakerElections";
 
 // Re-export types for frontend
 export type {
@@ -44,9 +45,7 @@ export async function GET() {
 
     await vacateSpeakerIfLostSeat(db);
 
-    const electionDoc = await db
-      .collection<SpeakerElection>("speakerElections")
-      .findOne({ _id: "current" });
+    const electionDoc = await speakerElectionsCollection(db).findOne({ _id: "current" });
     if (electionDoc?.status === "voting") {
       const gameTime = await getGameTime();
       if (isLeadershipElectionClosed(electionDoc, gameTime.currentTurn, gameTime.effectiveNow)) {

@@ -6,15 +6,7 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { requireBotToken } from "@/lib/api/requireBotToken";
 import { checkRateLimit, rateLimitResponse, BOT_FINANCIAL_LIMITS } from "@/lib/api/rateLimit";
 import { toAbsoluteUploadUrl } from "@/lib/discord";
-import type {
-  Corporation,
-  CorporateSector,
-  State,
-  StateMetrics,
-  Bond,
-  CentralBank,
-} from "@/lib/db/types";
-import type { Character } from "@/lib/db/types/character";
+import type { CorporateSector, State, StateMetrics } from "@/lib/db/types";
 import { bulkFetchCharacterNames } from "@/lib/db/characterLookup";
 import {
   OPERATING_SECTOR_TYPE_LABELS,
@@ -52,6 +44,13 @@ import {
 import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { getBankId } from "@/lib/centralBank/helpers";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://ahousedividedgame.com";
 
@@ -81,24 +80,21 @@ export async function GET(request: Request) {
     const db = await getDb();
 
     const escapedName = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    const corporation = await db
-      .collection<Corporation>("corporations")
-      .findOne({ name: { $regex: new RegExp(`^${escapedName}$`, "i") } });
+    const corporation = await corporationsCollection(db).findOne({
+      name: { $regex: new RegExp(`^${escapedName}$`, "i") },
+    });
 
     if (!corporation) {
       return NextResponse.json({ found: false });
     }
 
     const [ceo, sectors, outstandingBonds, gameState] = await Promise.all([
-      db
-        .collection<Character>("characters")
-        .findOne({ _id: corporation.ceoId }, { projection: { name: 1, sequentialId: 1 } }),
-      db
-        .collection<CorporateSector>("corporateSectors")
-        .find({ corporationId: corporation._id })
-        .toArray(),
-      db
-        .collection<Bond>("bonds")
+      charactersCollection(db).findOne(
+        { _id: corporation.ceoId },
+        { projection: { name: 1, sequentialId: 1 } }
+      ),
+      corporateSectorsCollection(db).find({ corporationId: corporation._id }).toArray(),
+      bondsCollection(db)
         .find({ corporationId: corporation._id, matured: false })
         .sort({ createdAt: -1 })
         .toArray(),
@@ -129,8 +125,7 @@ export async function GET(request: Request) {
     const [states, stateMetricsDocs] =
       uniqueStateIds.length > 0
         ? await Promise.all([
-            db
-              .collection<State>("states")
+            statesCollection(db)
               .find({ _id: { $in: uniqueStateIds } })
               .project<Pick<State, "_id" | "name" | "sectorSpecializations">>({
                 _id: 1,
@@ -140,8 +135,7 @@ export async function GET(request: Request) {
               .toArray(),
             // SP5: unemployment lives on macroMetrics (workforceSkill flows
             // through loadWorkforceSkillByState separately).
-            db
-              .collection<StateMetrics>("macroMetrics")
+            macroMetricsCollection(db)
               .find(
                 { _id: { $in: uniqueStateIds } },
                 { projection: { "economic.unemploymentRate.value": 1 } }
@@ -176,16 +170,12 @@ export async function GET(request: Request) {
         0,
         Math.min(100, sector.profitMargin + unemploymentMod + stateSectorSpecializationMod)
       );
-      // Ticket 1122: under plants the turn persists the P&L it booked. Prefer
-      // it: the margin rebuilt here is two modifiers wide and never saw the
-      // physical cost model, and inverting ANY margin drops upkeep and
-      // compliance and cannot represent a negative operating cost. Falls back
-      // to the old expression for rows without the field.
-      // Realized, not nameplate — the same basis the NPV block further down in
-      // this same route already uses, so the per-sector rows and the balance
-      // sheet in one response cannot disagree. `workers` below deliberately
-      // stays on the nameplate: headcount tracks installed capacity, not what
-      // the sector managed to sell. See lib/corporations/sectorRevenueBasis.
+      // Under plants the turn persists the booked P&L; prefer it over the
+      // rebuilt margin, which never saw the physical cost model and cannot
+      // represent a negative operating cost. Falls back to the old expression
+      // for rows without the field. Realized, not nameplate, matching the NPV
+      // block below; `workers` below stays nameplate. See
+      // lib/corporations/sectorRevenueBasis.
       const sectorRevenue = sectorEconomicRevenue(sector);
       const bookedPnl = readPlantsPnl(sector);
       const maintenance = bookedPnl
@@ -298,11 +288,10 @@ export async function GET(request: Request) {
         Math.min(100, sector.profitMargin + unemploymentMod + stateSectorSpecializationMod)
       );
       const sectorRevenue = sectorEconomicRevenue(sector);
-      // Ticket 1122: under plants the turn persists the P&L it booked. Prefer
-      // it: the margin rebuilt here is two modifiers wide and never saw the
-      // physical cost model, and inverting ANY margin drops upkeep and
-      // compliance and cannot represent a negative operating cost. Falls back
-      // to the old expression for rows without the field.
+      // Under plants the turn persists the P&L it booked. Prefer it: the margin
+      // rebuilt here is two modifiers wide and never saw the physical cost
+      // model, and inverting any margin drops upkeep and compliance and cannot
+      // represent a negative operating cost. Falls back for pre-field rows.
       const bookedNpvPnl = readPlantsPnl(sector);
       const profit = bookedNpvPnl
         ? bookedNpvPnl.profit
@@ -394,9 +383,7 @@ export async function GET(request: Request) {
 
     const countryId = corporation.countryId;
     // getBankId: shared-bank members (IE → ECB) have no doc under their own id.
-    const centralBank = await db
-      .collection<CentralBank>("centralBanks")
-      .findOne({ _id: getBankId(countryId) });
+    const centralBank = await centralBanksCollection(db).findOne({ _id: getBankId(countryId) });
     const primeRate =
       centralBank?.primeRate ?? getCountryConfig(countryId).centralBank.defaultPrimeRate;
     const effectiveCouponRate = getBondCouponRate(primeRate, creditRating.rating);

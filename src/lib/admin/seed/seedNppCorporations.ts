@@ -4,6 +4,8 @@
  * consumes available market capacity. Player miners use supported deposits.
  */
 
+import { isBackgroundInPreset } from "@/lib/world/eraRoster";
+import { isExcludedPreset, type PresetExclusions } from "@/lib/seeds/presetExclusions";
 import type { Db } from "mongodb";
 import type { StateResourceCapacity } from "@/lib/db/types/stateResourceCapacity";
 import { chooseSeedExtractionSite } from "@/lib/extraction/rules/seedPlacement";
@@ -27,6 +29,9 @@ import {
 } from "@/lib/admin/seed/seedCountryGameStates";
 import { scheduledMarketizationLevel, DUAL_TRACK_CEILING } from "@/lib/constants/commandEconomy";
 import { batchSpawnNppCorporations, NPP_CAPITAL_STATES } from "@/lib/admin/spawnNppCorporation";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { stateResourceCapacityCollection } from "@/lib/db/repositories/stateResourceCapacity";
 
 export interface NppCorpCountryPlan {
   countryId: CountryId;
@@ -37,39 +42,38 @@ export interface NppCorpCountryPlan {
 }
 
 /**
- * Presets that spawn NPP market corporations.
+ * Presets that do NOT spawn NPP market corporations; every other preset does.
  *
- * ⚠️ This list exists because the gate below used to be implicit. It read
- * `getPresetEnablementCountries(preset) === null` as "this preset is
- * admin-managed, leave it alone", which happened to exclude 2019 and 2023
- * because those had no manifest map. The era roster gives every preset a map,
- * so that guard silently stopped firing — and a 2019 reset would have begun
- * spawning NPP corps for eight countries that previously got none.
- *
- * That is an economy change, not a config one, so it is an explicit list rather
- * than a side effect.
- *
- * ⚠ "2019-default" IS UPSTREAM'S DECISION, NOT A QUIET EDIT. This list
- * originally reproduced the old behaviour exactly, with a note that adding 2019
- * would be a deliberate product decision wanting a simulation report. Upstream
- * then made that decision in "make every seed complete" (#1669): its test
- * changed from `nppCorpSpawnPlan("2019-default")` returning [] to requiring a
- * plan covering US, UK, JP, DE, IE and CN. Following the source of truth here
- * is not the same as choosing it unilaterally.
- *
- * ⚠ 2023 AND 2027 STAY OUT. Upstream decided 2019 and only 2019, and the
- * reasoning above still applies to the other two: both now have enablement maps
- * from the era roster, so adding them is a one-line edit with an economy-wide
- * effect and no simulation report behind it. Leave them to an explicit call.
+ * Spawning corporations is an economy change, so leaving a preset out is a
+ * decision that carries a reason here.
  */
-const NPP_CORP_SPAWN_PRESETS = new Set<string>([
-  "1953-default",
-  "1979-default",
-  "1991-default",
-  "1999-default",
-  "2007-default",
-  "2019-default",
-]);
+export const NPP_CORP_SPAWN_EXCLUSIONS: PresetExclusions = {
+  "2023-default": "no decision has been made to give this era NPP market corporations",
+  empty: "variant of the 2019 world that has never spawned NPP corporations",
+  "2019-no-parties": "variant of the 2019 world that has never spawned NPP corporations",
+};
+
+/**
+ * Presets whose NPP-run countries do NOT open with one competitor per market;
+ * every other preset gets one.
+ */
+export const NPP_RUN_COUNTRY_SPAWN_EXCLUSIONS: PresetExclusions = {
+  "1953-default": "keeps the market it shipped with",
+  "1979-default": "keeps the market it shipped with",
+  "1991-default": "keeps the market it shipped with",
+  "1999-default": "keeps the market it shipped with",
+  "2007-default": "keeps the market it shipped with",
+  "2019-default": "keeps the market it shipped with",
+  "2023-default": "keeps the market it shipped with",
+  empty: "variant of the 2019 world",
+  "2019-no-parties": "variant of the 2019 world",
+};
+
+export const spawnsNppCorporations = (preset: string) =>
+  !isExcludedPreset(NPP_CORP_SPAWN_EXCLUSIONS, preset);
+
+export const spawnsRunCountryCompetitors = (preset: string) =>
+  !isExcludedPreset(NPP_RUN_COUNTRY_SPAWN_EXCLUSIONS, preset);
 
 /**
  * The per-country NPP market-corp spawn policy for a preset. Pure — no DB
@@ -77,14 +81,17 @@ const NPP_CORP_SPAWN_PRESETS = new Set<string>([
  * source of truth. Returns `[]` for presets that do not spawn NPP corps.
  */
 export function nppCorpSpawnPlan(preset: string, startingYear: number): NppCorpCountryPlan[] {
-  if (!NPP_CORP_SPAWN_PRESETS.has(preset)) return [];
+  if (!spawnsNppCorporations(preset)) return [];
   const mapped = getPresetEnablementCountries(preset);
   if (!mapped) return [];
 
   // US runs off the global GameState and is excluded from the enablement map,
   // but it is always the flagship player-enabled country.
   const usId = COUNTRY_CONFIGS.US.id;
-  const countries: CountryId[] = [usId, ...mapped];
+  // Background countries run no corporations.
+  const countries: CountryId[] = [usId, ...mapped].filter(
+    (countryId) => !isBackgroundInPreset(preset, countryId)
+  );
   const plan: NppCorpCountryPlan[] = [];
 
   for (const countryId of countries) {
@@ -94,7 +101,13 @@ export function nppCorpSpawnPlan(preset: string, startingYear: number): NppCorpC
     } else {
       const tier = getPresetEnablementTier(preset, countryId);
       if (!tier) continue;
-      perSectorCount = tier.enabledForPlayers ? 1 : tier.economyPreview ? 2 : 0;
+      perSectorCount = tier.enabledForPlayers
+        ? 1
+        : tier.economyPreview
+          ? 2
+          : spawnsRunCountryCompetitors(preset)
+            ? 1
+            : 0;
     }
     if (perSectorCount === 0) continue;
 
@@ -146,14 +159,10 @@ export async function seedNppCorporations(
     const extractionSite =
       preset === "1991-default" && ["US", "UK", "JP"].includes(countryId)
         ? chooseSeedExtractionSite(
-            await db
-              .collection<StateResourceCapacity>("stateResourceCapacity")
-              .find({ countryId })
-              .toArray()
+            await stateResourceCapacityCollection(db).find({ countryId }).toArray()
           )
         : null;
-    const existing = await db
-      .collection<Corporation>("corporations")
+    const existing = await corporationsCollection(db)
       .find({ ceoType: "npp", countryId })
       .project<Pick<Corporation, "type" | "industryModel" | "mediaDiscriminator">>({
         type: 1,
@@ -165,8 +174,7 @@ export async function seedNppCorporations(
     // economy rather than its capital region (see rules/nppSeedCapacity.ts).
     const countryStates =
       preset === "1991-default"
-        ? await db
-            .collection<State>("states")
+        ? await statesCollection(db)
             .find({ countryId, _id: { $not: /^NATIONAL_/ } })
             .project<Pick<State, "_id" | "gdp">>({ gdp: 1 })
             .toArray()

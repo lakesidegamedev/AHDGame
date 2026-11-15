@@ -36,20 +36,17 @@ import { FI_IDENTITY } from "@/lib/countries/fi/identity";
 import { BR_IDENTITY } from "@/lib/countries/br/identity";
 import { SCO_IDENTITY } from "@/lib/countries/sco/identity";
 import { WAL_IDENTITY } from "@/lib/countries/wal/identity";
+import { CA_IDENTITY } from "@/lib/countries/ca/identity";
+import { QC_IDENTITY } from "@/lib/countries/qc/identity";
 
 /**
- * Situation-board dressing for a nation's command: its classification strip, the name
- * of its high command, and an accent colour.
+ * Situation-board dressing for a nation's command: classification strip, high-command
+ * name, and accent colour.
  *
- * FLAVOUR ONLY — it deliberately carries no bloc. This table used to hold a `bloc`
- * field that the whole military system treated as the authoritative answer to "whose
- * side is this country on", which it was in no position to be: it covered 9 of 27
- * countries, silently read every other nation as western, and could not follow a
- * nation into or out of an alliance. Bloc is read from live organisation membership
- * now (`@/lib/military/bloc`); this is a lookup for how the board should LOOK.
- *
- * `command` is a nation's own name for its high command and does not imply alignment —
- * `blocName` is derived from the live roll and passed in by the server component.
+ * FLAVOUR ONLY: carries no bloc. Bloc is read from live organisation membership
+ * (`@/lib/military/bloc`); `command` is a nation's own name for its high command and
+ * does not imply alignment. `blocName` is derived from the live roll and passed in by
+ * the server component.
  */
 export interface CountryCommandFlavor {
   glyph: string;
@@ -72,6 +69,8 @@ export const COUNTRY_COMMAND_FLAVOR: Record<string, CountryCommandFlavor> = {
   US: US_IDENTITY.commandFlavor,
   UK: UK_IDENTITY.commandFlavor,
   IE: IE_IDENTITY.commandFlavor,
+  CA: CA_IDENTITY.commandFlavor,
+  QC: QC_IDENTITY.commandFlavor,
   DE: DE_IDENTITY.commandFlavor,
   DD: DD_IDENTITY.commandFlavor,
   JP: JP_IDENTITY.commandFlavor,

@@ -2,9 +2,9 @@ import { CDN_LOGO_URL } from "@/lib/images/staticCdnAssets";
 import type { Metadata } from "next";
 import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
-import type { Bond } from "@/lib/db/types/bond";
 import { BOND_MATURITY_LABELS } from "@/lib/db/types/bond";
 import { getSiteUrl } from "@/lib/siteMetadata";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -21,7 +21,7 @@ export async function generateMetadata({
     if (!ObjectId.isValid(id)) return {};
 
     const db = await getDb();
-    const bond = await db.collection<Bond>("bonds").findOne(
+    const bond = await bondsCollection(db).findOne(
       { _id: new ObjectId(id) },
       {
         projection: {

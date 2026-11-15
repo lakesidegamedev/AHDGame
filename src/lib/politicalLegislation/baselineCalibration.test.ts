@@ -12,24 +12,35 @@ import { computeLawCost, type FiscalBase } from "./costEngine";
 import { getCatalog } from "./catalog";
 import type { LawCountryId } from "./types";
 
-const BASES: Record<LawCountryId, FiscalBase> = {
+/** The goldens come from the 1953 catalog documents; the DE and JP books open in a later era. */
+type CalibratedCountryId = Exclude<LawCountryId, "DE" | "JP" | "CN">;
+
+const BASES: Record<CalibratedCountryId, FiscalBase> = {
   US: { gdp: 397_100_000_000, population: 151_300_000 },
   UK: { gdp: 19_800_000_000, population: 52_600_000 },
   RU: { gdp: 1_400_000_000_000, population: 189_500_000 },
   DD: { gdp: 50_000_000_000, population: 18_400_000 },
+  CA: { gdp: 3_450_000_000_000, population: 41_500_000 },
 };
 
 /** Seeded-outlays targets (§4.2) and the catalog docs' §5 computed deviations. */
-const TARGETS: Record<LawCountryId, { outlays: number; docDeviation: number; revenue: number }> = {
+const TARGETS: Record<
+  CalibratedCountryId,
+  { outlays: number; docDeviation: number; revenue: number }
+> = {
   US: { outlays: 76_100_000_000, docDeviation: 0.098, revenue: 480_000_000 },
   UK: { outlays: 4_520_000_000, docDeviation: 0.137, revenue: 15_000_000 },
   RU: { outlays: 535_000_000_000, docDeviation: -0.053, revenue: 13_600_000_000 },
   // DD (RU-parity catalog on the DDM 50B basis): baseline rollup ≈ M 16.11B
   // against 17.3B seeded outlays (spending categories + state grants).
   DD: { outlays: 17_300_000_000, docDeviation: -0.069, revenue: 450_000_000 },
+  // Canada has no catalog document: its targets are the authored rollup itself,
+  // so this row pins the opening book against silent drift rather than
+  // reconciling it to an external figure.
+  CA: { outlays: 809_800_000_000, docDeviation: 0, revenue: 3_450_000_000 },
 };
 
-function baselineTotals(countryId: LawCountryId) {
+function baselineTotals(countryId: CalibratedCountryId) {
   let cost = 0;
   let revenue = 0;
   const byKey: Record<string, number> = {};
@@ -55,7 +66,7 @@ function baselineTotals(countryId: LawCountryId) {
 }
 
 describe("baseline fiscal calibration (±15% + doc-deviation pinning)", () => {
-  for (const countryId of ["US", "UK", "RU", "DD"] as const) {
+  for (const countryId of ["US", "UK", "RU", "DD", "CA"] as const) {
     it(`${countryId}: baseline sum within ±15% of seeded outlays and ±1pt of the doc's §5 figure`, () => {
       const { cost } = baselineTotals(countryId);
       const target = TARGETS[countryId];

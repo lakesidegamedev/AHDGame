@@ -10,13 +10,7 @@ import {
 } from "@/lib/constants/countries";
 import { applyBillVotePolicyShift, shouldApplyVoteShift } from "@/lib/policyShift";
 import { buildEmbeddedVoteTallyUpdate } from "@/lib/votes/embeddedVoteTally";
-import type {
-  Character,
-  ElectedOfficial,
-  GameState,
-  PoliticalParty,
-  StateBill,
-} from "@/lib/db/types";
+import type { ElectedOfficial, GameState, PoliticalParty, StateBill } from "@/lib/db/types";
 import { isBannedParty } from "@/lib/turn/onePartyConstraints";
 import { getCountryState } from "@/lib/countryState";
 import { createNotification } from "@/lib/notifications";
@@ -25,6 +19,11 @@ import { generateBillSignedNews, generateBillVetoedNews } from "@/lib/news";
 import { isVotingDeadlinePassed } from "@/lib/legislature/billVotingWindow";
 import type { LegislatureCommandResult } from "@/lib/legislature/commands/types";
 import { captureBillStatusChanged } from "@/lib/analytics/billStatusAnalytics";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { stateBillsCollection } from "@/lib/db/repositories/stateBills";
 
 const OVERRIDE_VOTING_HOURS = 24;
 
@@ -66,7 +65,7 @@ export async function castStateBillVote(
 
   const countryConfig = getCountryConfig(countryId);
   const subNationalOffice = getSubNationalLegislatureKey(countryId);
-  const official = await db.collection<ElectedOfficial>("electedOfficials").findOne({
+  const official = await electedOfficialsCollection(db).findOne({
     officeType: subNationalOffice,
     state: stateId,
     characterId: character._id,
@@ -86,9 +85,10 @@ export async function castStateBillVote(
   // restrictions lift immediately on conversion.
   const runtimeState = await getCountryState(db, countryId);
   if (runtimeState.governmentType === "onePartyState" && character.party) {
-    const voterParty = await db
-      .collection<PoliticalParty>("politicalParties")
-      .findOne({ sequentialId: parseInt(character.party, 10), countryId });
+    const voterParty = await politicalPartiesCollection(db).findOne({
+      sequentialId: parseInt(character.party, 10),
+      countryId,
+    });
     // RUNTIME shape, not `countryConfig` — see the note in `nationalBillActions`.
     if (isBannedParty({ governmentType: runtimeState.governmentType }, voterParty)) {
       return {
@@ -99,7 +99,7 @@ export async function castStateBillVote(
   }
 
   const seatsHeld = official.seatsHeld ?? 1;
-  const bill = await db.collection<StateBill>("stateBills").findOne({
+  const bill = await stateBillsCollection(db).findOne({
     _id: new ObjectId(billId),
     stateId,
   });
@@ -111,16 +111,14 @@ export async function castStateBillVote(
     return { status: 400, body: { error: "Voting is not open for this bill" } };
   }
 
-  const voteAcceptGameState = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" });
+  const voteAcceptGameState = await gameStateCollection(db).findOne({ _id: "current" });
   const voteAcceptTurn = voteAcceptGameState?.currentTurn ?? 0;
   if (isVotingDeadlinePassed(bill.votingEndsAt, now, bill.votingEndsOnTurn, voteAcceptTurn)) {
     return { status: 400, body: { error: "Voting has ended" } };
   }
 
   const charId = character._id.toString();
-  const updateResult = await db.collection<StateBill>("stateBills").updateOne(
+  const updateResult = await stateBillsCollection(db).updateOne(
     { _id: bill._id, status: "active" },
     buildEmbeddedVoteTallyUpdate({
       voteField: "votes",
@@ -205,7 +203,7 @@ export async function castStateBillOverrideVote(
   if (invalidBillId) return invalidBillId;
 
   const subNationalOffice = getSubNationalLegislatureKey(countryId);
-  const official = await db.collection<ElectedOfficial>("electedOfficials").findOne({
+  const official = await electedOfficialsCollection(db).findOne({
     officeType: subNationalOffice,
     state: stateId,
     characterId: character._id,
@@ -221,7 +219,7 @@ export async function castStateBillOverrideVote(
   }
 
   const seatsHeld = official.seatsHeld ?? 1;
-  const bill = await db.collection<StateBill>("stateBills").findOne({
+  const bill = await stateBillsCollection(db).findOne({
     _id: new ObjectId(billId),
     stateId,
   });
@@ -233,9 +231,7 @@ export async function castStateBillOverrideVote(
   if (bill.status !== "veto_override") {
     return { status: 400, body: { error: "Override voting is not open for this bill" } };
   }
-  const overrideAcceptGameState = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" });
+  const overrideAcceptGameState = await gameStateCollection(db).findOne({ _id: "current" });
   const overrideAcceptTurn = overrideAcceptGameState?.currentTurn ?? 0;
   if (
     isVotingDeadlinePassed(
@@ -249,7 +245,7 @@ export async function castStateBillOverrideVote(
   }
 
   const charId = character._id.toString();
-  const updateResult = await db.collection<StateBill>("stateBills").updateOne(
+  const updateResult = await stateBillsCollection(db).updateOne(
     { _id: bill._id, status: "veto_override" },
     buildEmbeddedVoteTallyUpdate({
       voteField: "overrideVotes",
@@ -350,7 +346,7 @@ export async function takeStateBillGovernorAction(
     };
   }
 
-  const bill = await db.collection<StateBill>("stateBills").findOne({
+  const bill = await stateBillsCollection(db).findOne({
     _id: new ObjectId(billId),
     stateId,
   });
@@ -387,7 +383,7 @@ export async function takeStateBillGovernorAction(
       }
     }
 
-    const signed = await db.collection<StateBill>("stateBills").updateOne(
+    const signed = await stateBillsCollection(db).updateOne(
       { _id: bill._id, status: "passed" },
       {
         $set: {
@@ -403,7 +399,7 @@ export async function takeStateBillGovernorAction(
       return { status: 409, body: { error: "This bill already received a governor decision." } };
     }
 
-    const gameState = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+    const gameState = await gameStateCollection(db).findOne({ _id: "current" });
     const currentTurn = gameState?.currentTurn ?? 1;
     await captureBillStatusChanged({
       db,
@@ -434,9 +430,10 @@ export async function takeStateBillGovernorAction(
     }
 
     if (bill.sponsorId) {
-      const sponsor = await db
-        .collection<Character>("characters")
-        .findOne({ _id: bill.sponsorId }, { projection: { userId: 1 } });
+      const sponsor = await charactersCollection(db).findOne(
+        { _id: bill.sponsorId },
+        { projection: { userId: 1 } }
+      );
       if (sponsor) {
         await createNotification({
           userId: sponsor.userId,
@@ -453,9 +450,10 @@ export async function takeStateBillGovernorAction(
     // governor-queued bills (sponsorId is null in that case).
     const sponsorName = bill.sponsorId
       ? ((
-          await db
-            .collection<Character>("characters")
-            .findOne({ _id: bill.sponsorId }, { projection: { name: 1 } })
+          await charactersCollection(db).findOne(
+            { _id: bill.sponsorId },
+            { projection: { name: 1 } }
+          )
         )?.name ??
         bill.sponsorName ??
         "Unknown")
@@ -468,11 +466,11 @@ export async function takeStateBillGovernorAction(
   }
 
   const overrideVotingEndsAt = new Date(now.getTime() + OVERRIDE_VOTING_HOURS * 3_600_000);
-  const vetoGameState = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+  const vetoGameState = await gameStateCollection(db).findOne({ _id: "current" });
   const vetoTurn = vetoGameState?.currentTurn ?? 1;
   const overrideVotingEndsOnTurn = vetoTurn + OVERRIDE_VOTING_HOURS;
   const trimmedVetoMessage = vetoMessage?.trim();
-  const vetoed = await db.collection<StateBill>("stateBills").updateOne(
+  const vetoed = await stateBillsCollection(db).updateOne(
     { _id: bill._id, status: "passed" },
     {
       $set: {
@@ -511,9 +509,10 @@ export async function takeStateBillGovernorAction(
   });
 
   if (bill.sponsorId) {
-    const sponsor = await db
-      .collection<Character>("characters")
-      .findOne({ _id: bill.sponsorId }, { projection: { userId: 1 } });
+    const sponsor = await charactersCollection(db).findOne(
+      { _id: bill.sponsorId },
+      { projection: { userId: 1 } }
+    );
     if (sponsor) {
       await createNotification({
         userId: sponsor.userId,

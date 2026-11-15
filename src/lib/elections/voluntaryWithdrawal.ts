@@ -1,5 +1,6 @@
 import type { Db, ObjectId } from "mongodb";
 import type { ElectionCandidate } from "@/lib/db/types";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 
 /**
  * Elections (as id strings) among `electionIds` that this character left
@@ -13,8 +14,7 @@ export async function findVoluntaryWithdrawals(
   electionIds: ObjectId[]
 ): Promise<Set<string>> {
   if (electionIds.length === 0) return new Set();
-  const rows = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const rows = await electionCandidatesCollection(db)
     .find(
       {
         characterId,

@@ -16,18 +16,9 @@ import type {
 } from "@/lib/partyAnalytics/types";
 import { apiErrorText } from "@/lib/errors/catalog";
 
-function getRiskBadgeColor(riskLabel: PartyAnalyticsRiskItem["riskLabel"]) {
-  switch (riskLabel) {
-    case "Critical":
-      return "error";
-    case "Elevated":
-      return "warning";
-    default:
-      return "secondary";
-  }
-}
-
-function getCaucusRiskBadgeColor(riskLabel: PartyAnalyticsCaucusRiskItem["exitRiskLabel"]) {
+function getRiskBadgeColor(
+  riskLabel: PartyAnalyticsRiskItem["riskLabel"] | PartyAnalyticsCaucusRiskItem["exitRiskLabel"]
+) {
   switch (riskLabel) {
     case "Critical":
       return "error";
@@ -180,7 +171,7 @@ function CaucusRiskRow({ item }: { item: PartyAnalyticsCaucusRiskItem }) {
       <div className="min-w-0">
         <div className="flex items-center gap-2">
           <p className="truncate text-sm font-medium text-foreground">{item.nppName}</p>
-          <Badge color={getCaucusRiskBadgeColor(item.exitRiskLabel)}>{item.exitRiskLabel}</Badge>
+          <Badge color={getRiskBadgeColor(item.exitRiskLabel)}>{item.exitRiskLabel}</Badge>
         </div>
         <p className="text-body-sm text-muted">
           {item.caucusName}

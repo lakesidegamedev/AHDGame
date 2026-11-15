@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { negotiateDraftFromSearch, negotiateHref } from "./negotiateLink";
 
 describe("negotiateHref", () => {
-  // Ticket 1418: the offers page Negotiate link dropped the offer, so the form
+  // The offers page Negotiate link dropped the offer, so the form
   // opened blank in the supplier role and a buyer was refused for having no
   // plants making the commodity.
   it("carries a sell offer's terms so the form opens in the buyer role", () => {

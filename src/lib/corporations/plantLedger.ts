@@ -5,11 +5,6 @@ export interface PlantLedgerState {
   plantUnitRemainder: number;
 }
 
-interface PlantLedgerSector extends PlantSizingSector {
-  plantCount?: number | null;
-  plantUnitRemainder?: number | null;
-}
-
 function finiteNonNegative(value: number | null | undefined): number {
   return typeof value === "number" && Number.isFinite(value) ? Math.max(0, value) : 0;
 }
@@ -172,21 +167,6 @@ export function advancePlantLedger(input: {
     plantCount: seeded.plantCount + completedPlants,
     plantUnitRemainder: accumulated - completedPlants * quantum,
   };
-}
-
-/** Adapt a persisted sector row to the construction-ledger calculation. */
-export function advanceSectorPlantLedger(
-  sector: PlantLedgerSector,
-  currentCapitalStock: number,
-  deliveredUnits: number
-): PlantLedgerState {
-  return advancePlantLedger({
-    sector,
-    plantCount: sector.plantCount,
-    plantUnitRemainder: sector.plantUnitRemainder,
-    currentCapitalStock,
-    deliveredUnits,
-  });
 }
 
 /** Allocate a carve to whole plants while conserving the exact opening count. */

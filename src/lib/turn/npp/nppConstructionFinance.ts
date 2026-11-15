@@ -31,6 +31,11 @@ import {
   boundShortageGrowthFinanceCandidates,
   type ShortageGrowthFinanceConfig,
 } from "@/lib/turn/npp/rules/shortageGrowthFinance";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { bankLoansCollection } from "@/lib/db/repositories/bankLoans";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import { corporationHistoryCollection } from "@/lib/db/repositories/corporationHistory";
 
 type ConstructionBorrowerLoan = Pick<
   BankLoan,
@@ -125,8 +130,7 @@ export async function loadNppConstructionFundingPool(input: {
   const historyStart = Math.max(1, turn - CORP_INCOME_AVERAGING_TURNS + 1);
 
   const [bankCorporations, histories, loans] = await Promise.all([
-    db
-      .collection<Corporation>("corporations")
+    corporationsCollection(db)
       .find(
         {
           "bankCharter.status": "active",
@@ -143,10 +147,7 @@ export async function loadNppConstructionFundingPool(input: {
         }
       )
       .toArray(),
-    db
-      .collection<Pick<CorporationHistory, "corporationId" | "turn" | "income">>(
-        "corporationHistory"
-      )
+    corporationHistoryCollection<Pick<CorporationHistory, "corporationId" | "turn" | "income">>(db)
       .find({ corporationId: { $in: borrowerIds }, turn: { $gte: historyStart, $lte: turn } })
       .project<Pick<CorporationHistory, "corporationId" | "turn" | "income">>({
         corporationId: 1,
@@ -154,8 +155,7 @@ export async function loadNppConstructionFundingPool(input: {
         income: 1,
       })
       .toArray(),
-    db
-      .collection<BankLoan>("bankLoans")
+    bankLoansCollection(db)
       .find({
         borrowerType: "corporation",
         borrowerId: { $in: borrowerIds },
@@ -179,14 +179,12 @@ export async function loadNppConstructionFundingPool(input: {
   ];
   const [funds, centralBanks] = await Promise.all([
     fundIds.length > 0
-      ? db
-          .collection<BlacklistFund>("indexFunds")
+      ? indexFundsCollection<BlacklistFund>(db)
           .find({ slug: { $in: fundIds } })
           .project<BlacklistFund>({ slug: 1, targetConstituents: 1 })
           .toArray()
       : Promise.resolve([]),
-    db
-      .collection<CentralBank>("centralBanks")
+    centralBanksCollection(db)
       .find({
         _id: { $in: currencies.map((currency) => getBankId(getCountryIdForCurrency(currency))) },
       })

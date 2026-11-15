@@ -1,5 +1,6 @@
 import type { Db } from "mongodb";
 import type { UserPayload } from "@/lib/auth";
+import { unifiedSessionsCollection } from "@/lib/db/repositories/unifiedSessions";
 
 type UnifiedSessionClaims = Pick<UserPayload, "userId" | "authSource" | "sid">;
 
@@ -12,15 +13,16 @@ export async function unifiedSessionIsCurrent(
   payload: UnifiedSessionClaims
 ): Promise<boolean> {
   if (!isUnifiedPayload(payload)) return false;
-  const session = await db
-    .collection<{ _id: string; userId: string; revokedAt: Date | null; expiresAt: Date }>(
-      "unifiedSessions"
-    )
-    .findOne({
-      _id: payload.sid,
-      userId: payload.userId,
-      revokedAt: null,
-      expiresAt: { $gt: new Date() },
-    });
+  const session = await unifiedSessionsCollection<{
+    _id: string;
+    userId: string;
+    revokedAt: Date | null;
+    expiresAt: Date;
+  }>(db).findOne({
+    _id: payload.sid,
+    userId: payload.userId,
+    revokedAt: null,
+    expiresAt: { $gt: new Date() },
+  });
   return session !== null;
 }

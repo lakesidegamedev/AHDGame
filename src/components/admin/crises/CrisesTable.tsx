@@ -8,10 +8,7 @@ interface CrisesTableProps {
   crises: Crisis[];
   loading: boolean;
   startingYear: number | undefined;
-  /**
-   * Founding-phase clock; crisis turns are stored RAW (#1208). REQUIRED on
-   * purpose: an optional one let a call site be missed silently.
-   */
+  /** Crisis turns are stored RAW. REQUIRED on purpose: an optional clock let call sites be missed silently. */
   clock: CalendarClock;
   onResolve: (id: string) => void;
   onDelete: (id: string) => void;

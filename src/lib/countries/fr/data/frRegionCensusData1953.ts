@@ -1,26 +1,9 @@
 /**
- * France Region Census Profiles — Layer 1 (1953, Fourth Republic).
- *
- * SEED INDEPENDENCE — DO NOT DERIVE FROM ANOTHER ERA.
- * Anchored on 1954 Census of France. NOT imported/transformed from frRegionCensusData.ts.
- *
- * Key 1953 anchors (vs 1979):
- * - Education: HIGHER primary_or_below — certificat d'études primaires was
- *   the peak for most French workers; baccalauréat was elite (<5% of cohort).
- * - Ethnicity: LOWER north_african (Algerian immigration was tiny before
- *   1962 war; ~100k vs 1.5M in 1975); HIGHER european_immigrant (Italian,
- *   Spanish, Polish inter-war migrants still present).
- * - Age: older distribution — WWII losses thinned mid cohort; postwar baby
- *   boom not yet in adult population; aging rural exodus survivors.
- * - Urbanization: lower urban — Paris is huge but provincial France is mostly
- *   rural; "rural" ~53% of population in 1946 Census.
- *
- * Dimension keys match FRRegionLayer1:
- *   ethnicity: french | european_immigrant | north_african | other
- *   education: primary_or_below | secondary | vocational | university
- *   age: young | mid | mature | senior
- *   income: low | middle | high
- *   urbanization: urban | suburban | rural
+ * France (Fourth Republic) 1953 region census profiles.
+ * Anchored on the 1954 Census. Values independently authored, NOT derived
+ * from other eras. Versus later eras: higher primary_or_below education;
+ * fewer north_african and more european_immigrant; older age distribution;
+ * more rural (rural ~53% in 1946 Census).
  */
 
 import type { FRRegionLayer1 } from "@/lib/seeds/fr/frRegionCensusData";

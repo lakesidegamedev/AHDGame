@@ -1,5 +1,5 @@
 import { ObjectId, type Db } from "mongodb";
-import type { Bond, Character, Corporation, CorporateSector, CentralBank } from "@/lib/db/types";
+import type { Character, Corporation, CorporateSector } from "@/lib/db/types";
 import type { ImperialCharacter } from "@/lib/db/types/imperialCharacter";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
 import { buildPersonalBalanceInc, getHomeCurrency } from "@/lib/currency/characterFunds";
@@ -24,6 +24,21 @@ import { logWireEvent, wireHeadlineCorpRestructured } from "@/lib/wireEvent";
 import { badRequest } from "@/lib/api/errors";
 import { loadWorldEraUnitScale } from "@/lib/currency/gdpAnchorRate";
 import { SETTLEMENT_HISTORY_EXCLUDED } from "@/lib/banking/settlementHistory";
+import { bondPoolCurrency, creditBondPool } from "@/lib/bonds/marketPool";
+import {
+  addInstitutionalBondPayout,
+  emptyInstitutionalBondPayouts,
+  assertNoBankTreasuryHolders,
+  payInstitutionalBondHolders,
+  selfHeldBondUnits,
+} from "@/lib/bonds/payInstitutionalBondHolders";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
+import type { Document } from "mongodb";
 
 export interface CorporationRestructureResult {
   /** Defaulted principal repaid in full, in ₳. */
@@ -65,15 +80,12 @@ export async function executeCorporationBondRestructure(
   }
   const { now, cureTurn } = options;
 
-  const refreshed = await db
-    .collection<Corporation>("corporations")
-    .findOne({ _id: corporation._id });
+  const refreshed = await corporationsCollection(db).findOne({ _id: corporation._id });
   if (!refreshed) {
     throw badRequest("Corporation not found");
   }
 
-  const defaultedBonds = await db
-    .collection<Bond>("bonds")
+  const defaultedBonds = await bondsCollection(db)
     .find({ corporationId: refreshed._id, matured: false, defaulted: true })
     .toArray();
   if (defaultedBonds.length === 0) {
@@ -81,11 +93,8 @@ export async function executeCorporationBondRestructure(
   }
 
   const [sectors, centralBanks, fxByCurrency, marketMode, gameState] = await Promise.all([
-    db
-      .collection<CorporateSector>("corporateSectors")
-      .find({ corporationId: refreshed._id })
-      .toArray(),
-    db.collection<CentralBank>("centralBanks").find({}).toArray(),
+    corporateSectorsCollection(db).find({ corporationId: refreshed._id }).toArray(),
+    centralBanksCollection(db).find({}).toArray(),
     loadFxRatesByCurrency(db),
     getMarketSystemModeForDb(db),
     getGameState(db),
@@ -146,10 +155,37 @@ export async function executeCorporationBondRestructure(
     couponRate: number;
   }> = [];
 
+  const institutionalPayouts = emptyInstitutionalBondPayouts();
+  const floatCreditsByPool = new Map<CurrencyCode, number>();
+  let selfHeldAnchor = 0;
+
   for (const bond of defaultedBonds) {
     const bondCcy = (bond.currencyCode ?? undefined) as CurrencyCode | undefined;
     const bondRate = bondCcy ? (fxByCurrency.get(bondCcy) ?? 1) : 1;
+    // The pool and the issuer's own units are creditors too: the pool is paid
+    // at face, and the issuer owes itself nothing so that slice is not debited.
+    if ((bond.publicFloat ?? 0) > 0) {
+      const poolCcy = bondPoolCurrency(bond);
+      floatCreditsByPool.set(
+        poolCcy,
+        (floatCreditsByPool.get(poolCcy) ?? 0) + bond.publicFloat * BOND_UNIT_FACE_VALUE
+      );
+    }
+    selfHeldAnchor += corpCapitalToAnchor(
+      selfHeldBondUnits(bond) * BOND_UNIT_FACE_VALUE,
+      bondCcy,
+      bondRate
+    );
+    assertNoBankTreasuryHolders([bond]);
     for (const h of bond.holders) {
+      if (h.fundId || h.nppId) {
+        addInstitutionalBondPayout(
+          institutionalPayouts,
+          h,
+          corpCapitalToAnchor(h.units * BOND_UNIT_FACE_VALUE, bondCcy, bondRate)
+        );
+        continue;
+      }
       const faceAnchor = corpCapitalToAnchor(h.units * BOND_UNIT_FACE_VALUE, bondCcy, bondRate);
       if (h.characterId) {
         const k = h.characterId.toString();
@@ -208,13 +244,15 @@ export async function executeCorporationBondRestructure(
   // 1. Apply the net cash movement: + salvage proceeds − defaulted principal.
   //    By construction (preview.feasible) the result is non-negative.
   const proceedsLocal = anchorToCorpLiquidCapital(preview.proceeds, refreshed, corpFxRate);
-  const costLocal = anchorToCorpLiquidCapital(defaultedPrincipalAnchor, refreshed, corpFxRate);
-  await db
-    .collection<Corporation>("corporations")
-    .updateOne(
-      { _id: refreshed._id },
-      { $inc: { liquidCapital: proceedsLocal - costLocal }, $set: { updatedAt: now } }
-    );
+  const costLocal = anchorToCorpLiquidCapital(
+    Math.max(0, defaultedPrincipalAnchor - selfHeldAnchor),
+    refreshed,
+    corpFxRate
+  );
+  await corporationsCollection(db).updateOne(
+    { _id: refreshed._id },
+    { $inc: { liquidCapital: proceedsLocal - costLocal }, $set: { updatedAt: now } }
+  );
 
   // 2. Liquidate the selected sectors (idempotent, not transaction-safe, must
   //    run outside any transaction). NPP operators take over most of each
@@ -225,7 +263,7 @@ export async function executeCorporationBondRestructure(
 
   // 3. Cure the defaulted bonds.
   const bondIds = defaultedBonds.map((b) => b._id);
-  await db.collection<Bond>("bonds").updateMany(
+  await bondsCollection(db).updateMany(
     { _id: { $in: bondIds }, corporationId: refreshed._id, matured: false, defaulted: true },
     {
       $set: {
@@ -241,8 +279,7 @@ export async function executeCorporationBondRestructure(
   // 4. Pay bondholders in full.
   if (charIncs.size > 0) {
     const charIds = [...charIncs.keys()].map((idStr) => new ObjectId(idStr));
-    const charDocs = await db
-      .collection<Character>("characters")
+    const charDocs = await charactersCollection(db)
       .find({ _id: { $in: charIds } })
       .project<Pick<Character, "_id" | "countryId" | "name">>({ _id: 1, countryId: 1, name: 1 })
       .toArray();
@@ -263,13 +300,12 @@ export async function executeCorporationBondRestructure(
         },
       };
     });
-    if (charOps.length > 0) await db.collection<Character>("characters").bulkWrite(charOps);
+    if (charOps.length > 0) await charactersCollection(db).bulkWrite(charOps);
   }
 
   if (imperialIncs.size > 0) {
     const imperialIds = [...imperialIncs.keys()].map((idStr) => new ObjectId(idStr));
-    const imperialDocs = await db
-      .collection<ImperialCharacter>("imperialCharacters")
+    const imperialDocs = await imperialCharactersCollection(db)
       .find({ _id: { $in: imperialIds } })
       .project<Pick<ImperialCharacter, "_id" | "countryId" | "name">>({
         _id: 1,
@@ -294,13 +330,13 @@ export async function executeCorporationBondRestructure(
         },
       };
     });
-    if (imperialOps.length > 0) await db.collection("imperialCharacters").bulkWrite(imperialOps);
+    if (imperialOps.length > 0)
+      await imperialCharactersCollection<Document>(db).bulkWrite(imperialOps);
   }
 
   if (corpIncs.size > 0) {
     const creditorIds = [...corpIncs.keys()].map((idStr) => new ObjectId(idStr));
-    const creditorDocs = await db
-      .collection<Corporation>("corporations")
+    const creditorDocs = await corporationsCollection(db)
       .find({ _id: { $in: creditorIds } }, { projection: SETTLEMENT_HISTORY_EXCLUDED })
       .toArray();
     const resolvedCreditors = creditorDocs.map((creditor) => {
@@ -325,10 +361,26 @@ export async function executeCorporationBondRestructure(
         },
       ];
     });
-    if (corpOps.length > 0) await db.collection<Corporation>("corporations").bulkWrite(corpOps);
+    if (corpOps.length > 0) await corporationsCollection(db).bulkWrite(corpOps);
   }
 
+  // 4b. Pool, fund and NPP holders are paid in full like everyone else.
+  for (const [poolCcy, local] of floatCreditsByPool) {
+    await creditBondPool(db, poolCcy, local, "maturitiesIn", now);
+  }
+  const fundTxEntries = await payInstitutionalBondHolders(db, institutionalPayouts, {
+    turn: cureTurn,
+    now,
+    source: "default_restructure_payoff",
+    issuerId: refreshed._id,
+    issuerName: refreshed.name,
+    txType: "bond_maturity",
+  });
+
   // 5. Ledger: one bond_maturity row per (holder, bond), tagged as a restructure payoff.
+  if (fundTxEntries.length > 0) {
+    void emitTxBulk(db, fundTxEntries, await loadTxThresholds(db));
+  }
   if (pendingMaturityTxs.length > 0) {
     const txEntries = pendingMaturityTxs.map((t) => {
       const bondRate = t.bondCcy ? (fxByCurrency.get(t.bondCcy) ?? 1) : 1;

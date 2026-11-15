@@ -40,6 +40,7 @@ import type {
 import { viewerIsSingleplayerOwner, visibleStaffNavItems } from "./staffNavItems";
 import type { NavbarAction, NavbarState } from "./useNavbarState";
 import { campaignManagerHref } from "@/lib/campaignManager/links";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 // Same on-demand loading as the desktop panels: the switcher only mounts once
 // the profile section is expanded.
@@ -81,7 +82,6 @@ export interface NavbarMobileMenuProps {
   onOpenFeedback?: () => void;
   feedbackCapturing: boolean;
   wikiDisabled: boolean;
-  conflictsEnabled: boolean;
   unionsEnabled: boolean;
   settlementCrisisLive: boolean;
   pageCountry: CountryId;
@@ -144,7 +144,6 @@ export function NavbarMobileMenu({
   onOpenFeedback,
   feedbackCapturing,
   wikiDisabled,
-  conflictsEnabled,
   unionsEnabled,
   settlementCrisisLive,
   pageCountry,
@@ -260,11 +259,12 @@ export function NavbarMobileMenu({
         {/* Staff tools - collapsible, admin/mod only. Kept OUT of the flat
             top-level list on purpose: ops/staff links live under this one
             gated "Staff" section, never as headlining tabs. */}
-        {(user?.isAdmin || user?.isModerator) &&
+        {(user?.isAdmin || user?.isModerator || user?.isJuniorDev) &&
           (() => {
             const staffItems = visibleStaffNavItems({
               isAdmin: !!user?.isAdmin,
               isModerator: !!user?.isModerator,
+              isJuniorDev: !!user?.isJuniorDev,
               isSingleplayerOwner: viewerIsSingleplayerOwner(user),
             });
             if (staffItems.length === 0) return null;
@@ -495,7 +495,7 @@ export function NavbarMobileMenu({
                   </Link>
                 )}
 
-                {userCountry === "US" && (
+                {countryHasFeature("usUi", userCountry) && (
                   <Link
                     href="/political-operations"
                     onClick={onClose}
@@ -570,7 +570,6 @@ export function NavbarMobileMenu({
                 myCorporationId={myCorporationId}
                 myCorporationHasGroup={myCorporationHasGroup}
                 myUnionId={myUnionId}
-                conflictsEnabled={conflictsEnabled}
                 unionsEnabled={unionsEnabled}
                 settlementCrisisLive={settlementCrisisLive}
               />

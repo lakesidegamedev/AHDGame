@@ -2,7 +2,7 @@ import { formatSectorTypeSlugsInText } from "@/lib/utils/formatSectorTypeSlugsIn
 import { fetchBordersByUserIds } from "@/lib/db/patreonBorders";
 import { badRequest } from "@/lib/api/errors";
 import { ObjectId, type Db } from "mongodb";
-import type { Character, NewsPost, NewsReaction } from "@/lib/db/types";
+import type { NewsPost, NewsReaction } from "@/lib/db/types";
 import { withPublicNewsVisibility } from "@/lib/news/publicModeration";
 import {
   serializeNewsPost,
@@ -11,6 +11,9 @@ import {
   type NewsPostView,
   type NewsReplyView,
 } from "@/lib/news/dto/newsView";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { newsPostsCollection } from "@/lib/db/repositories/newsPosts";
+import { newsReactionsCollection } from "@/lib/db/repositories/newsReactions";
 
 export interface GetNewsFeedInput {
   limit: number;
@@ -40,8 +43,7 @@ export async function getNewsFeed(
     query.authorId = new ObjectId(authorId);
   }
 
-  const posts = await db
-    .collection<NewsPost>("newsPosts")
+  const posts = await newsPostsCollection(db)
     .find(withPublicNewsVisibility(query))
     .sort({ createdAt: -1 })
     .skip(offset)
@@ -81,8 +83,7 @@ export async function getNewsReplies(
   }
 
   const postOid = new ObjectId(postId);
-  const replies = await db
-    .collection<NewsPost>("newsPosts")
+  const replies = await newsPostsCollection(db)
     .find({ parentId: postOid })
     .sort({ createdAt: 1 })
     .limit(50)
@@ -108,8 +109,7 @@ async function getUserReactionMap(
     return new Map();
   }
 
-  const reactions = await db
-    .collection<NewsReaction>("newsReactions")
+  const reactions = await newsReactionsCollection(db)
     .find({ postId: { $in: posts.map((post) => post._id) }, userId })
     .toArray();
 
@@ -128,8 +128,7 @@ async function getAuthorPresentationMap(
   }
 
   const authorOids = authorIds.map((id) => new ObjectId(id));
-  const characters = await db
-    .collection<Character>("characters")
+  const characters = await charactersCollection(db)
     .find({ _id: { $in: authorOids } }, { projection: { _id: 1, sequentialId: 1, userId: 1 } })
     .toArray();
 

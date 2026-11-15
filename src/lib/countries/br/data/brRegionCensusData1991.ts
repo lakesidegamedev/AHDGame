@@ -1,9 +1,8 @@
 /**
- * Brazil Region Census Profiles — 1991 era.
+ * Brazil Region Census Profiles, 1991 era.
  *
- * 1991-default companion to {@link brRegionCensusData} (the 2019 profiles).
- * Selected at render time via the preset registry under the `1991-default`
- * reset preset.
+ * Companion to {@link brRegionCensusData} (the 2019 profiles). Selected at
+ * render time via the preset registry under the `1991-default` reset preset.
  *
  * Sources / methodology (approximate, % of adult population): IBGE Censo
  * Demográfico 1991. Strong regional contrasts: the South is predominantly
@@ -12,8 +11,8 @@
  * schooled. Income uses era-neutral relative tiers (no cruzeiro/real
  * thresholds).
  *
- * Directional vs the 2019 profiles: lower `superior` attainment and lower
- * urbanization, strongest in the North and Northeast.
+ * Versus 2019: lower `superior` attainment and lower urbanization, strongest
+ * in the North and Northeast.
  */
 
 import type { BRRegionLayer1 } from "@/lib/seeds/br/brRegionCensusData";

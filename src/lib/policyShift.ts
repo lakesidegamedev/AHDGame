@@ -1,5 +1,5 @@
 import type { ClientSession, Db, ObjectId } from "mongodb";
-import type { AxisPositions, Character, PolicyShiftLedgerEntry } from "@/lib/db/types";
+import type { AxisPositions, PolicyShiftLedgerEntry } from "@/lib/db/types";
 import { clamp } from "@/lib/numeric/rules";
 import { snapToPositionGrid } from "@/lib/utils/politics";
 import {
@@ -7,6 +7,7 @@ import {
   computeVoteShift,
   type BillVote,
 } from "@/lib/legislature/rules/votePolicyShift";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 export * from "@/lib/legislature/rules/votePolicyShift";
 const POSITION_MIN = -5;
 const POSITION_MAX = 5;
@@ -70,7 +71,7 @@ export async function applyBillVotePolicyShift(
   if (changeEconomic === 0 && changeSocial === 0 && entry) return;
 
   if (changeEconomic !== 0 || changeSocial !== 0) {
-    await db.collection<Character>("characters").updateOne(
+    await charactersCollection(db).updateOne(
       { _id: characterId },
       {
         $set: {

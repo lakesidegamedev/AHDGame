@@ -19,6 +19,7 @@
 import type { Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import type { NationalPartyElection, PoliticalParty } from "@/lib/db/types";
+import { nationalPartyElectionsCollection } from "@/lib/db/repositories/nationalPartyElections";
 
 /** How many turns before an election closes the freeze begins. */
 export const LEADERSHIP_FREEZE_TURNS = 2;
@@ -40,16 +41,14 @@ export async function isLeadershipElectionFreezeActive(
   party: Pick<PoliticalParty, "sequentialId"> & { countryId: CountryId },
   currentTurn: number
 ): Promise<boolean> {
-  const closing = await db
-    .collection<NationalPartyElection>("nationalPartyElections")
-    .countDocuments(
-      {
-        partyId: String(party.sequentialId),
-        countryId: party.countryId,
-        status: "voting",
-        endTurn: { $lte: currentTurn + LEADERSHIP_FREEZE_TURNS },
-      },
-      { limit: 1 }
-    );
+  const closing = await nationalPartyElectionsCollection(db).countDocuments(
+    {
+      partyId: String(party.sequentialId),
+      countryId: party.countryId,
+      status: "voting",
+      endTurn: { $lte: currentTurn + LEADERSHIP_FREEZE_TURNS },
+    },
+    { limit: 1 }
+  );
   return closing > 0;
 }

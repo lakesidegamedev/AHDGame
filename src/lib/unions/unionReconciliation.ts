@@ -1,16 +1,14 @@
 import type { Db, ObjectId } from "mongodb";
 import type { Character, Union } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { unionsCollection } from "@/lib/db/repositories/unions";
 
 /**
- * v3 Phase 8 code-review fix #8: `Character.unionLeaderOf` is documented as a
- * denormalized read cache of `Union.ownerId` (the source of truth), with a
- * "defensive read-repair on the read path" — but no such repair previously
- * existed anywhere, so any desync (e.g. a crashed request between
- * `claimUnion`'s two writes) was permanent, and could even lock a character
- * out of ever claiming a union again (`claimUnion` 409s whenever
- * `character.unionLeaderOf != null`). These two helpers actually implement
- * the promised repair, called from the read paths that already load a
- * `union`/`character` document.
+ * Self-heal helpers for the `Character.unionLeaderOf` cache, the denormalized
+ * mirror of `Union.ownerId` (source of truth). Desyncs (e.g. a crash between
+ * `claimUnion`'s two writes) would otherwise persist and can lock a character
+ * out of reclaiming, since `claimUnion` 409s when the cache is non-null.
+ * Called from read paths that already load `union`/`character`.
  */
 
 /**
@@ -24,17 +22,16 @@ export async function reconcileUnionOwnerCache(
   union: Pick<Union, "_id" | "ownerId">
 ): Promise<void> {
   if (!union.ownerId) return;
-  const owner = await db
-    .collection<Character>("characters")
-    .findOne({ _id: union.ownerId }, { projection: { unionLeaderOf: 1 } });
+  const owner = await charactersCollection(db).findOne(
+    { _id: union.ownerId },
+    { projection: { unionLeaderOf: 1 } }
+  );
   if (!owner) return;
   if (owner.unionLeaderOf && owner.unionLeaderOf.toString() === union._id.toString()) return;
-  await db
-    .collection<Character>("characters")
-    .updateOne(
-      { _id: union.ownerId },
-      { $set: { unionLeaderOf: union._id, updatedAt: new Date() } }
-    );
+  await charactersCollection(db).updateOne(
+    { _id: union.ownerId },
+    { $set: { unionLeaderOf: union._id, updatedAt: new Date() } }
+  );
 }
 
 /**
@@ -53,13 +50,15 @@ export async function reconcileUnionLeaderCache(
   character: Pick<Character, "_id" | "unionLeaderOf">
 ): Promise<ObjectId | null> {
   if (!character.unionLeaderOf) return null;
-  const union = await db
-    .collection<Union>("unions")
-    .findOne({ _id: character.unionLeaderOf }, { projection: { ownerId: 1 } });
+  const union = await unionsCollection(db).findOne(
+    { _id: character.unionLeaderOf },
+    { projection: { ownerId: 1 } }
+  );
   const matches = union?.ownerId && union.ownerId.toString() === character._id.toString();
   if (matches) return character.unionLeaderOf;
-  await db
-    .collection<Character>("characters")
-    .updateOne({ _id: character._id }, { $set: { unionLeaderOf: null, updatedAt: new Date() } });
+  await charactersCollection(db).updateOne(
+    { _id: character._id },
+    { $set: { unionLeaderOf: null, updatedAt: new Date() } }
+  );
   return null;
 }

@@ -2,7 +2,7 @@
 
 import type { GameHealthSnapshot } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countriesCore";
-import { COUNTRY_CURRENCY_MAP, CURRENCY_SYMBOLS } from "@/lib/constants/currencies";
+import { COUNTRY_CURRENCY_MAP, CURRENCY_SYMBOLS } from "@/lib/constants/currencyCodes";
 
 interface Props {
   snapshot: GameHealthSnapshot | null;

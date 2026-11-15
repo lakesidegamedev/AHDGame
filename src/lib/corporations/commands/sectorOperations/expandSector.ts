@@ -7,7 +7,7 @@ import { NextResponse } from "next/server";
 import type { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import { getEraUnitScale } from "@/lib/constants/sectorSeedEra";
-import { resolvePresetIdFromGameState } from "@/lib/world/countryReadinessContract";
+import { resolvePresetIdFromGameState } from "@/lib/world/presetId";
 import { requireCorporationActionsEnabled } from "@/lib/api/requireCorporationActions";
 import { requireBasicAuth } from "@/lib/api/requireAuth";
 import { parseJsonBody } from "@/lib/api/validate";
@@ -15,8 +15,6 @@ import { expandSectorSchema } from "@/lib/api/schemas/corporations";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { resolveCorporation, requireCeo } from "@/lib/api/corporations/resolveQuery";
 import type {
-  Character,
-  Corporation,
   CorporateSector,
   GameState,
   GameConfig,
@@ -31,7 +29,12 @@ import {
   DEFAULT_SECTOR_STARTING_WORKERS,
   operatingSectorIdentity,
 } from "@/lib/constants/corporations";
-import { revenuePerCapacityUnit } from "@/lib/constants/capacityEconomy";
+import {
+  capacityRescaleRatio,
+  rescaleBuildQueueForStrategyChange,
+  revenuePerCapacityUnit,
+} from "@/lib/constants/capacityEconomy";
+import { foundingSunsetSuccessor } from "@/lib/corporations/foundingSunsetSuccessor";
 import { sectorEntryFeeAnchor } from "@/lib/corporations/foundingPlant";
 import {
   evaluateMarketEntry,
@@ -67,6 +70,14 @@ import {
   retailCapacityExpansionPaused,
   retailDemandTransitionTurnsRemaining,
 } from "@/lib/market/retailDemandTransition";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
 
 /** HTTP status for each entry refusal. */
 const MARKET_ENTRY_STATUS: Record<MarketEntryBlockReason, number> = {
@@ -141,7 +152,7 @@ export async function expandSector(request: Request, { params }: RouteParams) {
     // the sector's own `countryId` all key off `state.countryId`, not the corp's.
     // Filtering by `corporation.countryId` here silently 400'd every foreign
     // market the expand UI openly offers.
-    const state = await db.collection<State>("states").findOne({ _id: stateId });
+    const state = await statesCollection(db).findOne({ _id: stateId });
     if (!state) {
       return errorResponse(400, "Invalid state");
     }
@@ -157,7 +168,7 @@ export async function expandSector(request: Request, { params }: RouteParams) {
     const blockedCountries = await loadCommandEconomyBlockedCountries(db, [state.countryId]);
 
     // Check not already in this state
-    const existingSector = await db.collection<CorporateSector>("corporateSectors").findOne(
+    const existingSector = await corporateSectorsCollection(db).findOne(
       plantsEnabled
         ? {
             corporationId: corporation._id,
@@ -168,11 +179,11 @@ export async function expandSector(request: Request, { params }: RouteParams) {
           }
         : { corporationId: corporation._id, stateId }
     );
-    const gameState = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+    const gameState = await gameStateCollection(db).findOne({ _id: "current" });
     let retailPauseTurnsRemaining: number | null = null;
     if (plantsEnabled && sectorType === "retail") {
       const currentTurn = gameState?.currentTurn ?? 0;
-      const transition = await db.collection<GameConfig>("gameConfig").findOne(
+      const transition = await gameConfigCollection(db).findOne(
         { _id: "default" },
         {
           projection: {
@@ -253,13 +264,15 @@ export async function expandSector(request: Request, { params }: RouteParams) {
       const [primeRate, ceoChar, hostMetrics, nationalMarketSharePercent] = await Promise.all([
         resolveCountryPrimeRate(db, state.countryId),
         corporation.ceoId
-          ? db
-              .collection<Character>("characters")
-              .findOne({ _id: corporation.ceoId }, { projection: { "stats.businessAcumen": 1 } })
+          ? charactersCollection(db).findOne(
+              { _id: corporation.ceoId },
+              { projection: { "stats.businessAcumen": 1 } }
+            )
           : Promise.resolve(null),
-        db
-          .collection<StateMetrics>("macroMetrics")
-          .findOne({ _id: stateId }, { projection: { "economic.costOfLiving": 1 } }),
+        macroMetricsCollection(db).findOne(
+          { _id: stateId },
+          { projection: { "economic.costOfLiving": 1 } }
+        ),
         fetchCorporationNationalSectorSharePercent(db, {
           corporationId: corporation._id,
           countryId: state.countryId as CountryId,
@@ -327,16 +340,13 @@ export async function expandSector(request: Request, { params }: RouteParams) {
       { countryId: state.countryId },
       corporation
     );
-    // Under plants the legacy nameplate must match the STARTER quantum, not the
-    // ₳1M/day legacy grant: sectorTurn only restates `revenue` from owned
+    // Under plants the legacy nameplate must match the STARTER quantum, not
+    // the ₳1M/day legacy grant: sectorTurn only restates `revenue` from owned
     // capacity, and a founding sector owns 0 for its whole build window, so
-    // whatever is written here PERSISTS for ~17 turns and feeds market share,
-    // dominance and competitor-revenue reads. Measured live (ticket #1027
-    // follow-up): a facility-quantum founding carried a ₳1,050,544 nameplate at
-    // capitalStock 0 and dominated its (state, type) market-share panel while
-    // producing nothing. Price the nameplate at what the starter build will
-    // actually be worth once it lands (units × revenue-per-unit at the default
-    // mix — the same figure the plants restatement converges to).
+    // whatever is written here persists for ~17 turns and feeds market share,
+    // dominance and competitor-revenue reads. Price it at units ×
+    // revenue-per-unit at the default mix, the figure the plants restatement
+    // converges to.
     const startingRevenueAnchor = plantsEnabled
       ? starterUnits *
         revenuePerCapacityUnit(sectorType, eraUnitScale, industryModel, mediaDiscriminator)
@@ -406,11 +416,35 @@ export async function expandSector(request: Request, { params }: RouteParams) {
       newSector.plantsStartTurn = currentTurn;
     }
 
+    // A lane whose default method is retired (sunset) founds on its first
+    // successor open to this corporation. The starter order was priced at the
+    // default mix, so its units convert at the same RPU ratio a retool uses
+    // and the paid value is unchanged.
+    const foundingSuccessor = foundingSunsetSuccessor({
+      lane,
+      corporation,
+      currentYear: quoteYear,
+      techTreesEnabled: true,
+    });
+    if (foundingSuccessor) {
+      newSector.strategyId = foundingSuccessor;
+      if (newSector.buildQueue) {
+        newSector.buildQueue = rescaleBuildQueueForStrategyChange(
+          newSector.buildQueue,
+          capacityRescaleRatio(
+            sectorType,
+            null,
+            foundingSuccessor,
+            industryModel,
+            mediaDiscriminator
+          )
+        );
+      }
+    }
+
     let newSectorId: ObjectId;
     try {
-      const inserted = await db
-        .collection<CorporateSector>("corporateSectors")
-        .insertOne(newSector as CorporateSector);
+      const inserted = await corporateSectorsCollection(db).insertOne(newSector as CorporateSector);
       newSectorId = inserted.insertedId;
     } catch (error) {
       if (isCorporateSectorDuplicateKey(error)) {
@@ -425,7 +459,7 @@ export async function expandSector(request: Request, { params }: RouteParams) {
       corporation,
       corpFxRate
     );
-    const debit = await db.collection<Corporation>("corporations").updateOne(
+    const debit = await corporationsCollection(db).updateOne(
       {
         _id: corporation._id,
         liquidCapital: { $gte: costInCorpCapital },
@@ -434,7 +468,7 @@ export async function expandSector(request: Request, { params }: RouteParams) {
       { $inc: { liquidCapital: -costInCorpCapital }, $set: { updatedAt: now } }
     );
     if (debit.matchedCount !== 1) {
-      await db.collection<CorporateSector>("corporateSectors").deleteOne({ _id: newSectorId });
+      await corporateSectorsCollection(db).deleteOne({ _id: newSectorId });
       return errorResponse(
         409,
         "Insufficient spendable corporate funds, or outstanding taxes and payables."
@@ -449,31 +483,14 @@ export async function expandSector(request: Request, { params }: RouteParams) {
     }
 
     if (plantsEnabled && starterUnits > 0) {
-      // ─── Draw the starter capacity DOWN from the unowned pool ──────────────
-      //
-      // The pre-plants founding flow created capacity out of nothing: a new
-      // sector appeared with 1M ₳/day of output while the unowned market it
-      // entered kept every unit of its headroom. Market share (which is
-      // owned / (owned + headroom) under plants) therefore counted the same
-      // demand twice, and repeated found-and-abandon cycles inflated the world's
-      // capacity without ever consuming the demand backing it.
-      //
-      // Entering a market CONSUMES headroom. Pipeline update because
-      // `headroomUnits` and `revenue` are two views of one quantity and must
-      // move together (legacy readers still use `revenue`); both are clamped at
-      // 0 so a pool smaller than the starter build cannot go negative.
-      // The drawdown shape (upsert scaffolding, self-healing base, clamp at 0,
-      // and the trailing restatement of `revenue` from the post-draw units) is
-      // shared with `buildCapacity` via `unownedPoolDrawdown`. It used to live
-      // inline here and nowhere else, which is exactly how `buildCapacity`
-      // shipped without a drawdown at all (#1145).
-      // The pool row is an upsert, and its `countryId` is stamped from this
-      // bucket, so it has to be the HOST country like every other country read
-      // in this function. Taking the corporation's domicile here filed a
-      // brand-new pool row on a foreign state under the founder's own country:
-      // unreachable to the country the capacity is physically in, and counted
-      // as the founder's headroom by the sector browser and the supply math
-      // (ticket #1271, the same defect `buildCapacity` carried).
+      // Entering a market CONSUMES unowned headroom: market share is
+      // owned / (owned + headroom), so creating starter capacity without
+      // drawing the pool counts the same demand twice and inflates world
+      // capacity across found-and-abandon cycles. Headroom, revenue and the
+      // upsert must move together; both clamp at 0 so a small pool cannot go
+      // negative. The pool row is stamped with the HOST country, matching
+      // every other country read here; using the corp's domicile makes the
+      // row unreachable to the country the capacity is physically in.
       const starterDrawdown = unownedPoolDrawdown(
         { stateId, countryId: state.countryId, sectorType, industryModel, mediaDiscriminator },
         starterUnits,
@@ -481,11 +498,13 @@ export async function expandSector(request: Request, { params }: RouteParams) {
         eraUnitScale
       );
       if (starterDrawdown) {
-        await db
-          .collection<UnownedSector>("unownedSectors")
-          .updateOne({ stateId, sectorType, industryModel, mediaDiscriminator }, starterDrawdown, {
+        await unownedSectorsCollection(db).updateOne(
+          { stateId, sectorType, industryModel, mediaDiscriminator },
+          starterDrawdown,
+          {
             upsert: true,
-          });
+          }
+        );
       }
 
       // Shadow-ledger debit leg for the starter build — the cash → CIP reclass,

@@ -1,27 +1,18 @@
 /**
- * Phase 5/6, NPC unionization metric + standing labor-cost premium
+ * Unionization metric + standing labor-cost premium
  * (`labourSystemMode >= "unions"`).
  *
- * Per-sector, 0, 100, drifts toward a condition-driven target each turn.
- * `unionPremium()` turns unionization into a standing labor-cost surcharge
- * (Phase 6), see `src/lib/labour/strikes.ts` for the other Phase 6
- * mechanism (bounded-duration strike events), which is a separate file
- * since it carries its own state machine and constants. See
- * docs/plans/2026-06-30-labour-system.md, Phases 5, 6.
+ * Per-sector, 0 to 100, drifts toward a condition-driven target each turn.
+ * `unionPremium()` turns it into a standing labor-cost surcharge; strike events
+ * live in `src/lib/labour/strikes.ts` since they carry their own state machine.
  *
- * Shape note (why this is safe without v2's Δ-not-level discipline): the
- * v2 metric-engine registry nodes (medianIncome, unemploymentRate in
- * laborCost.ts) are RECURSIVE series with no mean-reversion, so a constant
- * LEVEL term held there would march the series to its bound and pin there,
- * they needed Δ-based terms instead. Unionization is a different shape: the
- * TARGET is recomputed fresh from current conditions every turn (never
- * accumulated onto its own past value), and `trendUnionization` only steps
- * the stored value toward that target by a bounded per-turn amount, hard-
- * clamped to [0,100]. A sustained condition produces a bounded SETTLE at
- * the corresponding target, not a runaway climb. This mirrors
- * `trendGrowthRate` (`sectorGrowth.ts`), the same pattern already used for
- * `currentGrowthRate` trending toward `targetGrowthRate`, not the v2
- * pattern. Safe by construction; LEVEL inputs are fine here.
+ * Why a LEVEL input is safe here, unlike the v2 metric-engine nodes (which are
+ * recursive series with no mean-reversion, so a constant level would pin at its
+ * bound): the TARGET is recomputed fresh from current conditions every turn,
+ * never accumulated onto its own past value, and `trendUnionization` steps the
+ * stored value toward it by a bounded per-turn amount clamped to [0,100]. A
+ * sustained condition settles at the target rather than climbing away. Same
+ * pattern as `trendGrowthRate` in `sectorGrowth.ts`.
  */
 
 /** Per-turn step limit on unionization drift (pp/turn). */

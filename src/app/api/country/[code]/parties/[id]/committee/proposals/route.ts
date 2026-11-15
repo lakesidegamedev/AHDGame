@@ -17,12 +17,15 @@ import {
   isProposalTypeLocked,
 } from "@/lib/parties/proposals";
 import { requiredYesVotes } from "@/lib/parties/proposalConstants";
-import type { CommitteeProposal, PoliticalParty, Character } from "@/lib/db/types";
+import type { CommitteeProposal, PoliticalParty } from "@/lib/db/types";
 import type {
   ProposalView,
   ProposalVoteSummary,
   ProposalsResponse,
 } from "@/lib/parties/dto/partyView";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { committeeProposalsCollection } from "@/lib/db/repositories/committeeProposals";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string }>;
@@ -49,15 +52,17 @@ async function toProposalView(
   targetCommitteeSize: number | undefined,
   myCharacterId: ObjectId
 ): Promise<ProposalView> {
-  const proposer = await db
-    .collection<Character>("characters")
-    .findOne({ _id: proposal.proposedBy }, { projection: { name: 1 } });
+  const proposer = await charactersCollection(db).findOne(
+    { _id: proposal.proposedBy },
+    { projection: { name: 1 } }
+  );
 
   let mergeField: ProposalView["merge"] | undefined;
   if (proposal.type === "merge" && proposal.merge) {
-    const targetParty = await db
-      .collection<PoliticalParty>("politicalParties")
-      .findOne({ _id: proposal.merge.targetPartyId }, { projection: { name: 1 } });
+    const targetParty = await politicalPartiesCollection(db).findOne(
+      { _id: proposal.merge.targetPartyId },
+      { projection: { name: 1 } }
+    );
     mergeField = {
       targetPartyId: proposal.merge.targetPartyId.toString(),
       targetPartyName: targetParty?.name ?? "Unknown",
@@ -66,12 +71,10 @@ async function toProposalView(
 
   let campaignerAppointmentField: ProposalView["campaignerAppointment"] | undefined;
   if (proposal.type === "campaignerAppointment" && proposal.campaignerAppointment) {
-    const targetCharacter = await db
-      .collection<Character>("characters")
-      .findOne(
-        { _id: proposal.campaignerAppointment.targetCharacterId },
-        { projection: { name: 1 } }
-      );
+    const targetCharacter = await charactersCollection(db).findOne(
+      { _id: proposal.campaignerAppointment.targetCharacterId },
+      { projection: { name: 1 } }
+    );
     campaignerAppointmentField = {
       targetCharacterId: proposal.campaignerAppointment.targetCharacterId.toString(),
       targetCharacterName: targetCharacter?.name ?? "Unknown",
@@ -80,9 +83,10 @@ async function toProposalView(
 
   let removeOfficeHolderField: ProposalView["removeOfficeHolder"] | undefined;
   if (proposal.type === "removeOfficeHolder" && proposal.removeOfficeHolder) {
-    const targetCharacter = await db
-      .collection<Character>("characters")
-      .findOne({ _id: proposal.removeOfficeHolder.targetCharacterId }, { projection: { name: 1 } });
+    const targetCharacter = await charactersCollection(db).findOne(
+      { _id: proposal.removeOfficeHolder.targetCharacterId },
+      { projection: { name: 1 } }
+    );
     removeOfficeHolderField = {
       role: proposal.removeOfficeHolder.role,
       targetCharacterId: proposal.removeOfficeHolder.targetCharacterId.toString(),
@@ -126,12 +130,10 @@ async function toProposalView(
 
 async function getTargetEligibleSize(db: Db, proposal: CommitteeProposal): Promise<number> {
   if (proposal.type !== "merge" || !proposal.merge) return 0;
-  const target = await db
-    .collection<PoliticalParty>("politicalParties")
-    .findOne(
-      { _id: proposal.merge.targetPartyId },
-      { projection: { committeeIds: 1, chairId: 1, viceChairId: 1, treasurerId: 1 } }
-    );
+  const target = await politicalPartiesCollection(db).findOne(
+    { _id: proposal.merge.targetPartyId },
+    { projection: { committeeIds: 1, chairId: 1, viceChairId: 1, treasurerId: 1 } }
+  );
   if (!target) return 0;
   return getEligibleVoterSet(target).size;
 }
@@ -164,25 +166,21 @@ export async function GET(_request: Request, { params }: RouteParams) {
     const isChair = party.chairId?.toString() === myCharStr;
     const isViceChair = party.viceChairId?.toString() === myCharStr;
     const isCommitteeMember = party.committeeIds.some((id) => id.toString() === myCharStr);
-    // Proposer eligibility (per 2026-05-22 redesign clarification): chair,
-    // vice-chair, or any National Committee member. Treasurer excluded
-    // from proposing but included in the voter set.
+    // Proposer eligibility: chair, vice-chair, or any National Committee member.
+    // Treasurer is excluded from proposing but included in the voter set.
     const canProposeAny = isChair || isViceChair || isCommitteeMember;
 
     const [rawOpen, rawPast, rawIncoming] = await Promise.all([
-      db
-        .collection<CommitteeProposal>("committeeProposals")
+      committeeProposalsCollection(db)
         .find({ partyId: party._id, status: "open" })
         .sort({ createdAt: -1 })
         .toArray(),
-      db
-        .collection<CommitteeProposal>("committeeProposals")
+      committeeProposalsCollection(db)
         .find({ partyId: party._id, status: { $in: ["passed", "rejected", "expired"] } })
         .sort({ createdAt: -1 })
         .limit(20)
         .toArray(),
-      db
-        .collection<CommitteeProposal>("committeeProposals")
+      committeeProposalsCollection(db)
         .find({ "merge.targetPartyId": party._id, status: "open" })
         .sort({ createdAt: -1 })
         .toArray(),
@@ -192,8 +190,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     const incomingProposingIds = [...new Set(rawIncoming.map((p) => p.partyId.toString()))];
     const proposingPartiesForIncoming =
       incomingProposingIds.length > 0
-        ? await db
-            .collection<PoliticalParty>("politicalParties")
+        ? await politicalPartiesCollection(db)
             .find({ _id: { $in: rawIncoming.map((p) => p.partyId) } })
             .project<{
               _id: ObjectId;
@@ -238,16 +235,16 @@ export async function GET(_request: Request, { params }: RouteParams) {
       openProposals,
       incomingMergeProposals,
       pastProposals,
-      // 2026-05-22 redesign: chair / vice-chair / committee can propose
-      // any type. Treasurer is included in the voter set but cannot
-      // propose. `canProposeMerge` retained for backward-compat with
-      // existing UI; condition is now identical to `canPropose`.
+      // Chair, vice-chair, and committee can propose any type.
+      // Treasurer can vote but not propose. `canProposeMerge` is kept
+      // for backward compat; identical to `canPropose`.
+      // Treasury-two-person-approval: surface mode so the modal can grey
+      // out the active option (server rejects no-op proposals anyway).
       canPropose: canProposeAny && !party.isDefunct,
       canProposeMerge: canProposeAny && !party.isDefunct,
       canVote: isEligibleVoter && !party.isDefunct,
-      // 2026-05-22 treasury-two-person-approval: surface the current
-      // mode so the modal can grey out the active option (no-op
-      // proposals are server-side rejected anyway).
+      // Surface the current mode so the modal can grey out the active option.
+      // No-op proposals are server-side rejected anyway.
       currentTransactionApprovalMode: party.transactionApprovalMode ?? "double",
     };
 
@@ -292,10 +289,9 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     const characterId = user.character._id;
-    // 2026-05-22 redesign (user clarification): proposer eligibility is
-    // chair OR vice-chair OR any National Committee member. Treasurer
-    // can vote but not propose. The voting body at resolution still
-    // includes treasurer via `getEligibleVoterSet`.
+    // Proposer eligibility: chair, vice-chair, or any committee member.
+    // Treasurer can vote but not propose; the resolution voter set
+    // still includes treasurer via `getEligibleVoterSet`.
     const characterIdStr = characterId.toString();
     const isChair = party.chairId?.toString() === characterIdStr;
     const isViceChair = party.viceChairId?.toString() === characterIdStr;
@@ -358,7 +354,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     // Duplicate-open guard: don't allow a second open proposal of the same
     // type/axis on the same party while the first is still pending. Prevents
     // racing the cooldown via two concurrent proposals.
-    const duplicateOpen = await db.collection<CommitteeProposal>("committeeProposals").findOne({
+    const duplicateOpen = await committeeProposalsCollection(db).findOne({
       partyId: party._id,
       status: "open",
       type: body.type,
@@ -379,12 +375,10 @@ export async function POST(request: Request, { params }: RouteParams) {
       if (targetPartyObjId.toString() === party._id.toString()) {
         return errorResponse(400, "Cannot merge a party with itself");
       }
-      const targetParty = await db
-        .collection<PoliticalParty>("politicalParties")
-        .findOne(
-          { _id: targetPartyObjId },
-          { projection: { countryId: 1, sequentialId: 1, isDefunct: 1 } }
-        );
+      const targetParty = await politicalPartiesCollection(db).findOne(
+        { _id: targetPartyObjId },
+        { projection: { countryId: 1, sequentialId: 1, isDefunct: 1 } }
+      );
       if (!targetParty) {
         return errorResponse(404, "Target party not found");
       }
@@ -478,9 +472,9 @@ export async function POST(request: Request, { params }: RouteParams) {
         body.type === "transactionApprovalMode" ? { mode: body.mode } : undefined,
     };
 
-    const result = await db
-      .collection<CommitteeProposal>("committeeProposals")
-      .insertOne(proposalDoc as CommitteeProposal);
+    const result = await committeeProposalsCollection(db).insertOne(
+      proposalDoc as CommitteeProposal
+    );
 
     return NextResponse.json({ success: true, proposalId: result.insertedId.toString() });
   } catch (error) {

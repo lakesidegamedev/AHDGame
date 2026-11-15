@@ -7,7 +7,7 @@ import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError } from "@/lib/api/errors";
-import type { Corporation } from "@/lib/db/types";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export async function POST() {
   try {
@@ -15,7 +15,7 @@ export async function POST() {
     if (!auth.ok) return auth.response;
 
     const db = await getDb();
-    const { modifiedCount } = await db.collection<Corporation>("corporations").updateMany(
+    const { modifiedCount } = await corporationsCollection(db).updateMany(
       {},
       {
         $set: {

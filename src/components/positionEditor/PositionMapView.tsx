@@ -18,7 +18,7 @@ import {
 } from "@/lib/utils/demographics";
 import { LeanSpectrum } from "./LeanSpectrum";
 import { listOverrides } from "@/lib/positionEditor/storage";
-import { computeDerivedComposition } from "@/lib/positionEditor/derive";
+import { fetchDerivedPreviews } from "@/lib/positionEditor/previewClient";
 import { allStatesFullToCsv, downloadCsv } from "@/lib/positionEditor/csv";
 import type { EraId, EditorStateConfig } from "@/lib/positionEditor/types";
 
@@ -61,13 +61,19 @@ export function PositionMapView() {
       const d = await response.json();
       {
         const overrides = new Map(listOverrides(era, country).map((o) => [o.stateId, o]));
-        const merged: PresetState[] = (d.states ?? []).map((s: PresetState) => {
-          const ov = overrides.get(s.stateId);
-          if (!ov) return s;
-          const derived = computeDerivedComposition(ov);
+        const presetStates: PresetState[] = d.states ?? [];
+        const edited = presetStates.filter((s) => overrides.has(s.stateId));
+        const previews = await fetchDerivedPreviews(
+          edited.map((s) => overrides.get(s.stateId)!),
+          signal
+        );
+        const previewById = new Map(edited.map((s, i) => [s.stateId, previews[i]]));
+        const merged: PresetState[] = presetStates.map((s) => {
+          const derived = previewById.get(s.stateId);
+          if (!derived) return s;
           return {
             stateId: s.stateId,
-            config: ov,
+            config: overrides.get(s.stateId)!,
             lean: {
               economic: derived.stateEconomicLean,
               social: derived.stateSocialLean,
@@ -159,11 +165,12 @@ export function PositionMapView() {
         <Button
           variant="secondary"
           size="sm"
-          onClick={() => {
-            const fullStates = states.map((s) => ({
+          onClick={async () => {
+            const previews = await fetchDerivedPreviews(states.map((s) => s.config));
+            const fullStates = states.map((s, i) => ({
               stateId: s.stateId,
               config: s.config,
-              derived: computeDerivedComposition(s.config),
+              derived: previews[i],
             }));
             downloadCsv(
               `positions-full-${era}-${country}.csv`,
@@ -244,7 +251,7 @@ export function PositionMapView() {
                 <Link
                   // Era and country come from picker values (DOM text), so every
                   // part of the URL is encoded rather than trusted.
-                  href={`/admin/position-editor/${encodeURIComponent(country)}/${encodeURIComponent(selected.stateId)}?era=${encodeURIComponent(era)}`}
+                  href={`/control/world/position-editor/${encodeURIComponent(country)}/${encodeURIComponent(selected.stateId)}?era=${encodeURIComponent(era)}`}
                   className="mt-4 block rounded-lg bg-primary px-3 py-2 text-center text-sm font-semibold text-white transition-colors hover:bg-primary-dark"
                 >
                   Edit state demographics →

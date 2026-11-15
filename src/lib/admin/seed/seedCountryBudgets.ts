@@ -4,10 +4,17 @@
  * Country-specific reset filters and seed steps retain their original ordering.
  */
 import type { Db } from "mongodb";
-import type { Corporation, CorporateSector, State } from "@/lib/db/types";
-import type { FederalBudget, EnactedLaw, StateBudget } from "@/lib/db/types/budget";
+import type { CorporateSector, State } from "@/lib/db/types";
+import type { EnactedLaw, StateBudget } from "@/lib/db/types/budget";
 import type { CountryId } from "@/lib/constants/countries";
 import type { generateStateBudgets } from "@/lib/seeds/reference/budgets";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { statesCollection } from "@/lib/db/repositories/states";
+import type { Document } from "mongodb";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
+import { enactedLawsCollection } from "@/lib/db/repositories/enactedLaws";
 
 interface CountryBudgetSeedOptions {
   countryId: CountryId;
@@ -37,22 +44,22 @@ export async function seedCountryBudgets(
   }: CountryBudgetSeedOptions
 ): Promise<void> {
   if (reset) {
-    await db.collection<FederalBudget>("federalBudget").deleteMany({ countryId });
+    await federalBudgetCollection(db).deleteMany({ countryId });
     const stateIds = (
-      await db.collection("states").find({ countryId }).project({ _id: 1 }).toArray()
+      await statesCollection<Document>(db).find({ countryId }).project({ _id: 1 }).toArray()
     ).map((state) => state._id as string);
     if (stateIds.length > 0) {
-      await db.collection<StateBudget>("stateBudgets").deleteMany({
+      await stateBudgetsCollection(db).deleteMany({
         stateId: { $in: stateIds },
         ...(regionalResetIncludesCountry ? { countryId } : {}),
       });
       if (legacyRegionalBudgetIds) {
-        await db.collection<StateBudget>("stateBudgets").deleteMany({
+        await stateBudgetsCollection(db).deleteMany({
           _id: { $in: legacyRegionalBudgetIds } as never,
         });
       }
     }
-    await db.collection<EnactedLaw>("enactedLaws").deleteMany({ countryId });
+    await enactedLawsCollection(db).deleteMany({ countryId });
     log(`Reset: deleted ${countryId} budget data`);
   }
 
@@ -75,9 +82,11 @@ export async function seedCountryBudgets(
   }
   if (nationalBudget) {
     const { _id, ...budgetData } = nationalBudget;
-    await db
-      .collection<FederalBudget>("federalBudget")
-      .updateOne({ _id }, { $set: { ...budgetData, updatedAt: new Date() } }, { upsert: true });
+    await federalBudgetCollection(db).updateOne(
+      { _id },
+      { $set: { ...budgetData, updatedAt: new Date() } },
+      { upsert: true }
+    );
     log(`Seeded 1 ${countryId} national budget`);
   }
 
@@ -96,7 +105,7 @@ export async function seedCountryBudgets(
     if (law.incomeCostFraction === undefined) unsetFields.incomeCostFraction = "";
     const update: Record<string, unknown> = { $set: lawWithoutId, $setOnInsert: { _id } };
     if (Object.keys(unsetFields).length > 0) update.$unset = unsetFields;
-    await db.collection<EnactedLaw>("enactedLaws").updateOne(
+    await enactedLawsCollection(db).updateOne(
       {
         legislationTypeId: law.legislationTypeId,
         scope: law.scope,
@@ -109,7 +118,7 @@ export async function seedCountryBudgets(
   }
   log(`Seeded ${enactedLaws.length} ${countryId} default enacted laws`);
 
-  const states = await db.collection<State>("states").find({ countryId }).toArray();
+  const states = await statesCollection(db).find({ countryId }).toArray();
   const statesForBudgets = states.map((state) => ({
     id: state._id,
     population: state.population,
@@ -119,9 +128,7 @@ export async function seedCountryBudgets(
   const stateBudgets = generateStateBudgets(statesForBudgets, fiscalYear);
   for (const budget of stateBudgets) {
     const { _id, ...budgetData } = budget;
-    await db
-      .collection<StateBudget>("stateBudgets")
-      .updateOne({ _id }, { $set: budgetData }, { upsert: true });
+    await stateBudgetsCollection(db).updateOne({ _id }, { $set: budgetData }, { upsert: true });
   }
   log(`Seeded ${stateBudgets.length} ${countryId} regional budgets`);
 
@@ -134,18 +141,18 @@ export async function seedCountryBudgets(
   );
   for (const entry of corpData) {
     const { _id: corpId, ...corporation } = entry.corporation;
-    await db
-      .collection<Corporation>("corporations")
-      .updateOne({ _id: corpId }, { $set: corporation }, { upsert: true });
+    await corporationsCollection(db).updateOne(
+      { _id: corpId },
+      { $set: corporation },
+      { upsert: true }
+    );
     for (const sector of entry.sectors) {
       const { _id: _sectorId, ...sectorData } = sector;
-      await db
-        .collection<CorporateSector>("corporateSectors")
-        .updateOne(
-          { corporationId: corpId, stateId: sector.stateId, sectorType: sector.sectorType },
-          { $set: sectorData },
-          { upsert: true }
-        );
+      await corporateSectorsCollection(db).updateOne(
+        { corporationId: corpId, stateId: sector.stateId, sectorType: sector.sectorType },
+        { $set: sectorData },
+        { upsert: true }
+      );
     }
   }
   if (corpData.length > 0)

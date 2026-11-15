@@ -10,7 +10,6 @@ import { parseJsonBody } from "@/lib/api/validate";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
-import type { Corporation } from "@/lib/db/types";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { isStateOwned } from "@/lib/nationalization/nationalCorporation";
 import { drawFromTreasury } from "@/lib/nationalization/treasury";
@@ -19,6 +18,7 @@ import { computeDrawAllowance } from "@/lib/nationalization/ceoFinance";
 import { DEFAULT_TREASURY_DRAW_CAP } from "@/lib/nationalization/constants";
 import { corporationQueryFromParamId } from "@/lib/api/corporations/resolveQuery";
 import { requireSeatedCeo } from "@/lib/nationalization/ceoRouteGuard";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 const schema = z.object({ amount: z.number().positive() });
 
@@ -54,9 +54,10 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     const db = await getDb();
-    const target = await db
-      .collection<Corporation>("corporations")
-      .findOne({ ...idQuery, countryOwnerId: countryId });
+    const target = await corporationsCollection(db).findOne({
+      ...idQuery,
+      countryOwnerId: countryId,
+    });
     if (!target || !isStateOwned(target)) {
       return errorResponse(404, "National Corporation not found for this country.");
     }
@@ -92,7 +93,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     );
 
     // Track the per-turn tally (reset on a new turn).
-    await db.collection<Corporation>("corporations").updateOne(
+    await corporationsCollection(db).updateOne(
       { _id: target._id },
       sameTurn
         ? { $inc: { treasuryDrawnThisTurn: amount }, $set: { updatedAt: now } }

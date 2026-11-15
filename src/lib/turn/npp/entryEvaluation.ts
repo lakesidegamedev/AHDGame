@@ -1,22 +1,10 @@
 // src/lib/turn/npp/entryEvaluation.ts
 /**
- * Pre-pricing entry-gate evaluation for one NPP corporation (section 5 of
- * `makeNppCorpDecision` in `nppCorporationBehavior.ts`).
+ * Pre-pricing entry-gate evaluation for one NPP corporation (step 5 of makeNppCorpDecision).
  *
- * Selects the entry candidate, applies the ordinary expectational and pacing
- * gates (profitability, margin band, logistics, cohort eligibility, shortage
- * credit, glut, nominal cash surplus), scores shortage pressure, and builds
- * the funnel diagnostic naming the first binding gate. The frontier-entry
- * experiment overlay (`frontierEntryCandidate.ts`) consumes this evaluation:
- * the diagnostic reason selects relaxable rejections and the gate values are
- * re-verified there.
+ * Selects the entry candidate, applies expectational and pacing gates (profitability, margin band, logistics, cohort eligibility, shortage credit, glut, nominal cash surplus), scores shortage pressure, and builds the funnel diagnostic naming the first binding gate. The frontier-entry overlay consumes this: the diagnostic reason selects relaxable rejections and gate values are re-verified there.
  *
- * Pure evaluation over decision-local inputs: no database, clock, randomness,
- * environment, network, or async. Gate order mirrors the founding-gate order
- * in `capacityDecisionTelemetry` so the diagnostic names the gate that
- * actually bound. Relocation is behavior-preserving by construction; the
- * frontier turn-path tests pin the byte-equivalent flag-off behavior and the
- * entry-diagnostics tests pin the reason order.
+ * Pure over decision-local inputs: no db, clock, randomness, environment, network, or async. Gate order mirrors capacityDecisionTelemetry so the diagnostic names the gate that actually bound.
  */
 import {
   ESSENTIAL_SHORTAGE_SCORE,

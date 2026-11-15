@@ -10,5 +10,4 @@ export interface SeedPreviewResponse {
   totalCurrentRevenue: number;
   totalProjectedDelta: number;
   totalDocs: number;
-  autoSectorSeedEnabled: boolean;
 }

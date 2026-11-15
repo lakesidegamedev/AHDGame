@@ -421,10 +421,7 @@ export function UnionBargainingPanel({
             isLeader &&
             (campaign.status === "negotiating" || campaign.status === "dispute") &&
             offer.proposedBy === "employer";
-          const canCounter =
-            isLeader &&
-            (campaign.status === "negotiating" || campaign.status === "dispute") &&
-            offer.proposedBy === "employer";
+          const canCounter = canAccept;
           const nextEscalation = nextEscalationFor(campaign.escalationLevel);
           const escalationPreview = campaign.escalationPreview;
           const escalationSupport = escalationPreview?.supportRequired ?? null;

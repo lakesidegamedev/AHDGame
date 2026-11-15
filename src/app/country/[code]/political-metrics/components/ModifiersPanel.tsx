@@ -1,17 +1,11 @@
 "use client";
 
 /**
- * SP2 §6, the Active-modifiers decomposition: each law contributing to the
- * metric's target, the structural-conditions residual, the standing cabinet
- * term, and the composed target with the current drift direction. Pure
- * presentation of the dynamics engine's own arithmetic: the rows sum
- * (pre-clamp) to the target.
- *
- * Ticket #1129: players reported that built estates did nothing. The cabinet
- * term was real and stored, but no surface showed it, the served target left it
- * out, and the channel was capped as one lump so a saturated order book made the
- * next estate worth exactly zero. The cap is now per channel, and the warning
- * only fires when every channel is full.
+ * Active-modifiers decomposition: each law contributing to the metric's target,
+ * the structural-conditions residual, the standing cabinet term, and the
+ * composed target with drift direction. Pure presentation of the dynamics
+ * engine's arithmetic: rows sum (pre-clamp) to the target. The cabinet channel
+ * cap is per channel, and the warning only fires when every channel is full.
  */
 
 import { useTranslations } from "next-intl";

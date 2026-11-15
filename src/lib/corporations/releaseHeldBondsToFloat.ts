@@ -1,5 +1,5 @@
 import type { Db, ObjectId } from "mongodb";
-import type { Bond } from "@/lib/db/types";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
 
 export interface ReleaseCorporationHeldBondsResult {
   unitsReleased: number;
@@ -9,29 +9,22 @@ export interface ReleaseCorporationHeldBondsResult {
 /**
  * When a corporation exits the game (dissolution, hostile-takeover absorption,
  * shell re-absorption), any corporate bonds it still HOLDS as a creditor must
- * have those units returned to the issuer's public float — otherwise the units
- * are orphaned: the issuer keeps `totalIssued` on its books (real debt it drew
- * down at issuance) but has zero outstanding units, so coupons stop and nothing
- * settles at maturity (the "bonds disappeared / ownership empty" symptom).
+ * have those units returned to the issuer's public float. Otherwise the units
+ * are orphaned: the issuer keeps `totalIssued` (real debt it drew down at
+ * issuance) but has zero outstanding units, so coupons stop and nothing settles
+ * at maturity.
  *
- * This is the bond analogue of {@link releaseCorporationHeldSharesToFloat}: the
- * issuer's debt stays real and live (it resumes paying coupons to float and
- * repays at maturity), and no corp is left with a holder entry pointing at a
- * deleted corporation.
- *
- * Callers that separately settle the held bonds at face value into the exiting
- * corp's liquidCapital (the two dissolution paths) should NOT use this helper —
- * they fold the `publicFloat` return into their own settlement loop so the
- * face-value credit and the float return stay in one pass. Use this for
- * deletion paths that strip holdings without a creditor payout (takeover
- * absorption, shell re-absorption).
+ * The issuer's debt stays real and live. Callers that settle the held bonds at
+ * face value into the exiting corp's liquidCapital (the two dissolution paths)
+ * should NOT use this helper; use it for paths that strip holdings without a
+ * creditor payout (takeover absorption, shell re-absorption).
  */
 export async function releaseCorporationHeldBondsToFloat(
   db: Db,
   holderCorporationId: ObjectId,
   now: Date = new Date()
 ): Promise<ReleaseCorporationHeldBondsResult> {
-  const bonds = db.collection<Bond>("bonds");
+  const bonds = bondsCollection(db);
 
   const held = await bonds
     .find({ "holders.corporationId": holderCorporationId }, { projection: { _id: 1, holders: 1 } })

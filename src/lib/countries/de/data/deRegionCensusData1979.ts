@@ -1,35 +1,16 @@
 /**
- * Germany Region Census Profiles — 1979 (divided-Germany) era.
+ * Germany region census profiles for 1979 (divided Germany).
  *
- * 1979-era companion to {@link deRegionCensusData} (the 2019 profiles).
- * All values independently authored from 1979 historical knowledge of each
- * Land — never derived by scaling another era's file.
+ * The Land set is fixed and includes the eastern Länder, so BB/MV/SN/ST/TH
+ * are authored with DDR-era socioeconomic profiles: state-compressed
+ * incomes, near-zero foreign population, and polytechnic education mapped
+ * onto the file's buckets. Berlin is a blend of West Berlin's Gastarbeiter
+ * community and the East Berlin DDR profile.
  *
- * IMPORTANT design decision: Germany was divided in 1979, but the game keeps
- * a fixed Land set including the eastern Länder. The eastern Länder
- * (BB/MV/SN/ST/TH) are therefore authored with DDR-era socioeconomic
- * profiles so a 1979 world is playable with the same regions:
- *   - full-employment industrial economy (incomes state-compressed: a very
- *     large "middle" band, tiny "high" band — the nomenklatura and a few
- *     private craftsmen — and a modest "low" band of pensioners);
- *   - near-zero foreign population (Vietnamese/Mozambican contract workers
- *     arrived mostly in the 1980s; what little existed is under "other");
- *   - the polytechnic education system (POS/EOS + Facharbeiter training)
- *     mapped onto the file's buckets: 10-class POS + apprenticeship counted
- *     as `berufsausbildung` (dominant), EOS/Abitur capped at ~10–12% by
- *     state quota, university attainment ~10%, `no_degree` mostly the
- *     pre-war-schooled elderly.
- * Berlin (BE) is authored as a blended city: West Berlin's large Turkish
- * Gastarbeiter community plus East Berlin's DDR profile.
- *
- * West Länder anchor (1979): mature Wirtschaftswunder economy under Schmidt;
- * Gastarbeiter communities (Turks, Italians, Yugoslavs, Greeks) concentrated
- * in the industrial belts of NW, BW, HE and the city-states; recruitment had
- * stopped in 1973 but family reunification kept shares high. Education was
- * still dominated by Volksschule/Hauptschule + Lehre; tertiary attainment in
- * the adult population was low (~8–12%) despite the 1970s university
- * expansion. Adult age structure was young (large 1950s–60s cohorts), with
- * a notable senior share from pre-WWI cohorts.
+ * West Länder: mature Wirtschaftsboom economy under Schmidt, Gastarbeiter
+ * communities concentrated in industrial belts, education dominated by
+ * Volksschule/Hauptschule plus Lehre, low tertiary attainment, young adult
+ * age structure. Values authored independently, not scaled from another era.
  */
 
 import type { DERegionLayer1 } from "@/lib/seeds/de/deRegionCensusData";

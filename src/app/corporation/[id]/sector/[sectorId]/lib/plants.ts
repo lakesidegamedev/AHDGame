@@ -46,7 +46,7 @@ export interface IdleCauseMeta {
 /**
  * State-scoped outputs (construction, freight, healthcare, real estate) sell
  * only where they are made, so a shortage on the world or national market
- * does not lift this sector's demand (ticket 1700).
+ * does not lift this sector's demand.
  */
 function localMarketNote(outputs: string[]): string {
   if (outputs.length === 0) return "";

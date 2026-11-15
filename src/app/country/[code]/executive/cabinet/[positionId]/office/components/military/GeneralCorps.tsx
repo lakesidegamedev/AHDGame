@@ -17,12 +17,7 @@ const STATE_LABEL: Record<CorpsMember["state"], { text: string; tone: "up" | "mu
 
 /**
  * A general's one-line standing: rank, discipline, and what the next promotion needs.
- *
- * This line used to read "{spec} · Lvl {level}", which misled twice over. "Unassigned"
- * beside a "Serving" badge read as a posting rather than an untrained doctrine tree,
- * and a bare level number said nothing about how a general advances — both of which a
- * player asked about in the same breath. Promotion is automatic on battle XP, so the
- * honest answer is to show the XP.
+ * Promotion is automatic on battle XP, so show XP progress rather than a bare level.
  */
 function standingLine(m: CorpsMember): string {
   if (m.level == null) return m.spec ?? "";

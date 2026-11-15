@@ -1,17 +1,7 @@
 /**
- * JP regional budget constraint system.
- *
- * Runs every turn alongside UK budget processing. Calculates each JP
- * region's budget from resident tax, fixed asset tax, and the national
- * government grant (Local Allocation Tax), then compares against enacted
- * spending. Regions in deficit for more than one turn trigger forced
- * austerity (most expensive programme downgraded one tier).
- *
  * Revenue = Resident Tax + Fixed Asset Tax + National Grant
- * Headroom = Revenue - Enacted Spending ≥ 0
- *
- * Default grant distribution: equal 1/8th per region.
- * The Internal Affairs minister can override those shares via cabinet settings.
+ * Headroom = Revenue - Enacted Spending >= 0
+ * Default grant split: equal 1/8 per region; cabinet can override shares.
  */
 
 import type { AnyBulkWriteOperation } from "mongodb";
@@ -28,9 +18,16 @@ import {
 } from "@/lib/governmentFinance/regionalProgramClaims";
 import { settleRegionalBudget } from "@/lib/governmentFinance/rules/regionalSettlement";
 import { resolveAnnualRegionalGrantPool } from "@/lib/governmentFinance/grantTransfers";
-import type { FederalBudget } from "@/lib/db/types/budget";
 import type { ResetLawProgramDocument } from "@/lib/resetLegislation/program";
 import { buildResetRegionalProgramClaims } from "@/lib/resetLegislation/rules/regionalClaims";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
+import { cabinetSettingsCollection } from "@/lib/db/repositories/cabinetSettings";
+import { regionalBudgetsCollection } from "@/lib/db/repositories/regionalBudgets";
+import { resetLawProgramsCollection } from "@/lib/db/repositories/resetLawPrograms";
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
@@ -129,21 +126,19 @@ export async function processJPRegionalBudgets(
   resetLegislationV2Enabled = false,
   resetWorldId?: string
 ): Promise<{ regionsProcessed: number }> {
-  const jpRegions = await db.collection<State>("states").find({ countryId: "JP" }).toArray();
+  const jpRegions = await statesCollection(db).find({ countryId: "JP" }).toArray();
   if (jpRegions.length === 0) return { regionsProcessed: 0 };
 
   const { stateCostByStateId } = await loadAnnualSubsidyCostMaps(db);
 
   // Fetch all enacted JP regional policies
   const regionIds = jpRegions.map((r) => r._id as string);
-  const allRegionalPolicies = await db
-    .collection<StatePolicy>("statePolicies")
+  const allRegionalPolicies = await statePoliciesCollection(db)
     .find({ stateId: { $in: regionIds } })
     .toArray();
   const resetPrograms =
     resetLegislationV2Enabled && resetWorldId
-      ? await db
-          .collection<ResetLawProgramDocument>("resetLawPrograms")
+      ? await resetLawProgramsCollection<ResetLawProgramDocument>(db)
           .find(
             {
               country: "JP",
@@ -172,8 +167,7 @@ export async function processJPRegionalBudgets(
   }
 
   // Fetch JP national policies (for Local Allocation Tax amount)
-  const nationalPolicies = await db
-    .collection<StatePolicy>("statePolicies")
+  const nationalPolicies = await statePoliciesCollection(db)
     .find({ stateId: "jp_national" })
     .toArray();
 
@@ -182,9 +176,7 @@ export async function processJPRegionalBudgets(
   const nationalLegTypeIds = new Set(nationalPolicies.map((p) => p.legislationTypeId));
   const allLegTypeIds = [...new Set([...regionalLegTypeIds, ...nationalLegTypeIds])];
 
-  const legTypes = await db
-    // full-read(legislationTypes): policyOptions tables price every regional law
-    .collection<LegislationType>("legislationTypes")
+  const legTypes = await legislationTypesCollection(db)
     .find({ _id: { $in: allLegTypeIds } })
     .toArray();
   const materializedLegTypes = regionalFinanceEnabled ? withLawAdministration(legTypes) : legTypes;
@@ -194,16 +186,20 @@ export async function processJPRegionalBudgets(
   const fundingPolicy = nationalPolicies.find(
     (p) => p.legislationTypeId === LOCAL_ALLOCATION_TAX_TYPE_ID
   );
-  const legacyNationalGrantPerCapita = fundingPolicy
-    ? getOptionCostPerCapita(fundingPolicy, legTypeMap)
-    : 0;
 
   const nationalPopulation = jpRegions.reduce((sum, r) => sum + r.population, 0);
-  const nationalBudget = regionalFinanceEnabled
-    ? await db
-        .collection<FederalBudget>("federalBudget")
-        .findOne({ countryId: "JP" }, { projection: { departmentAccounts: 1 } })
-    : null;
+  const nationalBudget =
+    regionalFinanceEnabled || !fundingPolicy
+      ? await federalBudgetCollection(db).findOne(
+          { countryId: "JP" },
+          { projection: { departmentAccounts: 1, "spending.stateGrants": 1 } }
+        )
+      : null;
+  // Worlds seeded with the one law book carry no allocation law; the budget's
+  // own state grants line is the pool.
+  const legacyNationalGrantPerCapita = fundingPolicy
+    ? getOptionCostPerCapita(fundingPolicy, legTypeMap)
+    : (nationalBudget?.spending?.stateGrants ?? 0) / Math.max(1, nationalPopulation);
   const departmentGrant = regionalFinanceEnabled
     ? resolveAnnualRegionalGrantPool({
         accounts: nationalBudget?.departmentAccounts ?? {},
@@ -226,15 +222,13 @@ export async function processJPRegionalBudgets(
   }
 
   // Fetch existing budget documents
-  const existingBudgets = await db
-    .collection<RegionalBudget>("regionalBudgets")
+  const existingBudgets = await regionalBudgetsCollection(db)
     .find({ _id: { $in: regionIds } })
     .toArray();
   const budgetMap = new Map(existingBudgets.map((b) => [b._id, b]));
 
   // Fetch real median income per region (SP5: economic.* lives on macroMetrics)
-  const stateMetrics = await db
-    .collection<StateMetrics>("macroMetrics")
+  const stateMetrics = await macroMetricsCollection(db)
     .find({ _id: { $in: regionIds } })
     .toArray();
   const metricsMap = new Map(stateMetrics.map((m) => [m._id, m]));
@@ -242,9 +236,9 @@ export async function processJPRegionalBudgets(
   // Cabinet settings are keyed as `${countryId}_${positionId}`. JP regional
   // transfers are administered through Internal Affairs, so the turn phase must
   // read that exact position key or the UI sliders never affect live budgets.
-  const ministerSetting = await db
-    .collection<CabinetSetting>("cabinetSettings")
-    .findOne({ _id: "JP_internal_affairs_minister" });
+  const ministerSetting = await cabinetSettingsCollection(db).findOne({
+    _id: "JP_internal_affairs_minister",
+  });
   const allocationPercents = ministerSetting?.allocationPercents ?? null;
 
   let regionsProcessed = 0;
@@ -434,10 +428,10 @@ export async function processJPRegionalBudgets(
   }
 
   if (statePolicyOps.length > 0) {
-    await db.collection<StatePolicy>("statePolicies").bulkWrite(statePolicyOps);
+    await statePoliciesCollection(db).bulkWrite(statePolicyOps);
   }
   if (regionalBudgetOps.length > 0) {
-    await db.collection<RegionalBudget>("regionalBudgets").bulkWrite(regionalBudgetOps);
+    await regionalBudgetsCollection(db).bulkWrite(regionalBudgetOps);
   }
 
   return { regionsProcessed };

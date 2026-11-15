@@ -17,22 +17,20 @@ export type NppDividendPolicy = "paying" | "withheld";
 export type NppDecisionLeg = "divest" | "growth" | "budget" | "dividend";
 
 /**
- * Finer binding-constraint vocabulary, one closed set that spans the four
+ * Finer binding-constraint vocabulary, one closed set spanning the four
  * decision legs.
  *
- * `NppOperatorBindingGate` names the COARSE gate — mostly the market-entry
- * reason, so almost every unexpanding corp reads `no_enterable_market`. That is
- * exactly the signal #2122 could not use: it cannot tell "the reinvest/divest
- * brain refused" from "there was nowhere to enter", and it never names the
- * divest, growth-band, budget, or dividend lever that actually bit. This
- * vocabulary names the internal lever instead, and, like the capacity-decision
- * outcomes, is a first-rejecting-gate funnel: at most one value is recorded per
- * corporation per turn, the earliest leg in
- * {@link NPP_DECISION_CONSTRAINT_PRECEDENCE} that fired.
+ * `NppOperatorBindingGate` names the COARSE gate (mostly market-entry reason,
+ * so almost every unexpanding corp reads `no_enterable_market`) and cannot
+ * distinguish a refused reinvest/divest brain from nowhere-to-enter, nor name
+ * the divest, growth-band, budget, or dividend lever that actually bit. This
+ * vocabulary names the internal lever instead, and, like capacity-decision
+ * outcomes, is a first-rejecting-gate funnel: at most one value per corporation
+ * per turn, the earliest leg in {@link NPP_DECISION_CONSTRAINT_PRECEDENCE} that
+ * fired.
  *
- * Aggregate-safe and privacy-safe by construction: the value is a bucket key, so
- * the persisted document holds a bounded number of keys and never a corporation,
- * NPP, player, or sector identifier.
+ * Aggregate-safe and privacy-safe: the value is a bucket key, so the persisted
+ * document holds a bounded number of keys and never an entity identifier.
  */
 export type NppDecisionConstraint =
   // 1. Divest leg — a losing sector is shed, or a shed is blocked.
@@ -62,8 +60,7 @@ export type NppDecisionConstraint =
  */
 export const NPP_DECISION_CONSTRAINT_PRECEDENCE = [
   // Divest leg: a blocked shed (protected core, or nothing else earning)
-  // outranks a completed shed, because a corp stuck holding a bleeder is the
-  // #2122 failure mode.
+  // outranks a completed shed, since a corp stuck holding a bleeder is the failure mode.
   "divest_core_protected",
   "divest_no_other_income",
   "divested",

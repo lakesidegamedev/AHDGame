@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 160" role="img" aria-label="AI Safety Accord emblem">
+  <title>AI Safety Accord</title>
+  <rect width="240" height="160" fill="#363A8A"/>
+  <g transform="translate(120 80)">
+    <circle r="52" fill="#5B5FC7"/>
+    <path d="M 0 -38 L 32 -24 L 32 6 C 32 24 16 34 0 40 C -16 34 -32 24 -32 6 L -32 -24 Z" fill="none" stroke="#ECEDFB" stroke-width="4"/>
+    <circle r="6" fill="#ECEDFB"/>
+    <circle cx="-14" cy="-10" r="4" fill="#ECEDFB"/>
+    <circle cx="14" cy="-10" r="4" fill="#ECEDFB"/>
+    <circle cx="0" cy="18" r="4" fill="#ECEDFB"/>
+    <path d="M 0 0 L -14 -10 M 0 0 L 14 -10 M 0 0 L 0 18" stroke="#ECEDFB" stroke-width="2.5"/>
+  </g>
+</svg>

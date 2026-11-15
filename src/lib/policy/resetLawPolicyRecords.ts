@@ -12,6 +12,9 @@ import {
 } from "./rules/resetLawRecords";
 import type { PolicyRecordResponse } from "./types";
 import type { PolicyProvenance } from "./policyRecordPayload";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { billsCollection } from "@/lib/db/repositories/bills";
+import { resetLawProgramsCollection } from "@/lib/db/repositories/resetLawPrograms";
 
 /** Enacted reset-era program laws for one country (national) or region, as display rows. */
 export async function loadResetLawProgramRows(
@@ -20,16 +23,13 @@ export async function loadResetLawProgramRows(
   scope: "national" | "regional",
   regionId?: string
 ): Promise<ResetLawProgramRow[]> {
-  const gameState = await db
-    .collection<GameState>("gameState")
-    .findOne(
-      { _id: "current" },
-      { projection: { resetWorldId: 1, startingYear: 1, preIteration: 1, preIterationTurns: 1 } }
-    );
+  const gameState = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { projection: { resetWorldId: 1, startingYear: 1, preIteration: 1, preIterationTurns: 1 } }
+  );
   const worldId = gameState?.resetWorldId;
   if (!worldId) return [];
-  const programs = await db
-    .collection<ResetLawProgramDocument>("resetLawPrograms")
+  const programs = await resetLawProgramsCollection<ResetLawProgramDocument>(db)
     .find({
       worldId,
       country: countryId as ResetLawProgramDocument["country"],
@@ -39,8 +39,7 @@ export async function loadResetLawProgramRows(
     .toArray();
   if (programs.length === 0) return [];
   const billIds = [...new Set(programs.map((program) => program.enactedByBillId.toString()))];
-  const bills = await db
-    .collection<Bill>("bills")
+  const bills = await billsCollection(db)
     .find(
       { _id: { $in: billIds.map((id) => new ObjectId(id)) } },
       { projection: { title: 1, enactedAt: 1 } }

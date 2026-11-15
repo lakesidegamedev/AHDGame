@@ -32,11 +32,9 @@ export function FieldCaption({
 /**
  * A numbered step panel.
  *
- * The marker always carries the step number. It used to swap the number for a
- * tick once the step was complete, which made the creator read "1, 2, 3, ✓, ✓,
- * 6": the player could no longer tell which step they were looking at, or how
- * many there were. Completion is now a state of the number (success colouring
- * plus a "Done" tag), not a replacement for it.
+ * The marker always shows the step number. Completion is a state of the
+ * number (success colouring plus a "Done" tag), never a replacement for it,
+ * so the player can always tell which step they are on and how many exist.
  */
 export function StepPanel({
   step,

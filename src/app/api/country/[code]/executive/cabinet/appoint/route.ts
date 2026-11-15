@@ -1,6 +1,6 @@
 import { errorResponse } from "@/lib/api/errors";
 import { COUNTRY_CONFIGS, type CountryId, isParliamentarySystem } from "@/lib/constants/countries";
-import { appointCabinetMemberHandler } from "@/lib/uk/cabinetApi";
+import { appointCabinetMemberHandler } from "@/lib/countries/uk/cabinetApi";
 
 export async function POST(request: Request, { params }: { params: Promise<{ code: string }> }) {
   const { code } = await params;

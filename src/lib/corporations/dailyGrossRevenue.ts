@@ -20,31 +20,26 @@ import {
   loadFxRatesByCurrency,
   resolveSectorHostCurrencyCode,
 } from "@/lib/currency/corporationCapital";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 /**
  * A corporation's daily gross revenue, expressed in the corp's OWN currency.
  *
- * Ticket #1118. This used to be a bare sum of every sector's `revenue`, which
- * silently added currencies together. Sector revenue is stored in the sector's
- * host currency, so a corp with one Japanese sector was summing hundreds of
- * millions of yen straight into a dollar total. The reporter had a Kansai
- * retail sector booking 268,000,000 JPY, worth well under a million dollars at
- * 1953 rates, next to fifteen million dollars of US sectors. The sum came out
- * around 283,000,000, roughly eighteen times the real figure, and every cost
- * priced off it inherited the error.
- *
- * Each sector is therefore converted to the anchor at its own host rate before
- * being added, and only the total is converted into the corp's currency.
+ * Sector revenue is stored in the sector's host currency, so summing `revenue`
+ * directly adds currencies together (a Kansai retail sector booking hundreds of
+ * millions of yen would inflate a dollar total by ~18x, and every cost priced
+ * off it inherits the error). Each sector is converted to the anchor at its own
+ * host rate before being added, and only the total is converted into the corp's
+ * currency.
  *
  * The `sectorEconomicScale` basis is preserved exactly: under plants that is
- * `max(revenue, capacity value)` rather than raw revenue, and callers depended
- * on that. The only thing that changes is that the amounts being added are
- * finally in the same unit.
+ * `max(revenue, capacity value)` rather than raw revenue, and callers depend on
+ * that. Only the units being added change.
  */
 export interface CorpDailyGrossRevenuePricing {
   dailyGrossRevenueLocal: number;
   capacityFloorApplied: boolean;
-  /** Era-scaled minimum tech node cash price in the corp's currency (#1506). */
+  /** Era-scaled minimum tech node cash price in the corp's currency. */
   techCashFloorLocal: number;
   /** Per-turn plant P&L tech nodes are valued against, in the corp's currency. */
   techPlantBasis: TechPlantBasis;
@@ -164,8 +159,7 @@ export async function corpDailyGrossRevenuePricingLocal(
   corp: Pick<Corporation, "_id"> & TechBasisCorp
 ): Promise<CorpDailyGrossRevenuePricing> {
   const [sectors, plantsEnabled, eraUnitScale, fxByCurrency] = await Promise.all([
-    db
-      .collection<CorporateSector>("corporateSectors")
+    corporateSectorsCollection(db)
       .find(
         { corporationId: corp._id },
         {

@@ -7,17 +7,13 @@ import type { OrderOfBattleEntry } from "@/lib/seeds/reference/ordersOfBattle";
 /**
  * CN's institutions, as pure data.
  *
- * ⚠ GENERATED FROM `__snapshots__/cn.pre-move.json`, NOT TRANSCRIBED.
- * Regenerate with:
+ * GENERATED, not transcribed. Regenerate with:
  *
  *     npx tsx scripts/countries/gen-country-institutions.ts CN --force
  *
- * ⚠ KEEP THIS FILE FREE OF VALUE IMPORTS. It is the light half of the pair:
- * registries that want one seat id or the legislative process import from HERE,
- * while `institutions.ts` composes these with the cabinet and is heavy. A
- * registry that reads a single string through the heavy module ships the whole
- * cabinet to the browser, which is a regression this work has already shipped
- * once. `clientSafeLeafModules.test.ts` enforces it.
+ * KEEP FREE OF VALUE IMPORTS: this is the light half of the pair. Importing
+ * from here avoids pulling the cabinet into the browser bundle.
+ * `clientSafeLeafModules.test.ts` enforces it.
  */
 
 export const CN_CONFIG: CountryConfig = {
@@ -410,7 +406,8 @@ export const CN_CONFIG: CountryConfig = {
     corporateProfitRatio: 0.06,
     centralTransferPerCapita: 35,
     defaultTaxRate: 25,
-    primaryTaxLegislationKey: "cn_enterprise_income_tax",
+    primaryTaxLegislationKey: "cn.tax.domesticCorporateTax",
+    savedWorldPrimaryTaxLegislationKey: "cn_enterprise_income_tax",
     resourceTaxLegislationKey: "cn_provincial_resource_tax",
     resourceExtractionRatio: 0.03,
     businessTaxConsumptionRatio: 0.5,
@@ -426,7 +423,6 @@ export const CN_CONFIG: CountryConfig = {
     viceChair: "Deputy General Secretary",
     committee: "Secretariat",
   },
-  demographicProfileId: "cn_archetypes",
   hasLeaderConfidenceModel: true,
   mapOverlay: "partyOrg",
   centralBank: {

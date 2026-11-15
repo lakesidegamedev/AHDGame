@@ -1,27 +1,27 @@
 // GET /api/admin/financial-logs/reconcile?subjectId=...&turns=24
 //
-// Compares the logged net of financialTxLog for a given subject over the last
-// `turns` turns against the actual balance delta read from `portfolioHistory`
-// snapshots. The result is the same "logged net vs actual" calculation we ran
-// by hand to surface the bond-buy exploit:
+// Compares the logged net of financialTxLog for a subject over the last
+// `turns` turns against the actual balance delta from `portfolioHistory`
+// snapshots (anchor units).
 //
-//   - For each turn snapshot in [now - turns, now], read total/cash/stock/bond
-//     value (denominated in anchor units).
-//   - Sum every financialTxLog row's `amount` for the subject in the same
-//     window, converted to anchor where currency rates allow.
-//   - Discrepancy = (actualΔ) − (loggedΔ). Anything ≫ 0 means cash flowed
-//     into the subject without a logged tx; ≪ 0 means logged tx outpaced
-//     actual movement (refund / cancel / reversal not captured).
+//   - For each snapshot in [now - turns, now], read total/cash/stock/bond value.
+//   - Sum every financialTxLog `amount` for the subject in the same window,
+//     converted to anchor where rates allow.
+//   - Discrepancy = actualΔ − loggedΔ. ≫ 0 means cash flowed in without a
+//     logged tx; ≪ 0 means logged tx outpaced actual movement (refund, cancel,
+//     or reversal not captured).
 //
-// Auth: requireAdmin. Errors: 400 (invalid params), 403, 404 (no
-// portfolioHistory rows for the subject).
+// Auth: requireAdmin. Errors: 400 (invalid params), 403, 404 (no history rows).
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { ObjectId } from "mongodb";
 import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
-import type { FinancialTxLogEntry, FinancialSubjectType } from "@/lib/db/types/financialTxLog";
+import type { FinancialSubjectType } from "@/lib/db/types/financialTxLog";
 import type { PortfolioHistory, GameState, ExchangeRate } from "@/lib/db/types";
+import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 const DEFAULT_TURNS = 24;
 const MAX_TURNS = 168; // matches retention window
@@ -57,10 +57,8 @@ export async function GET(request: Request) {
     const subjectId = new ObjectId(subjectIdParam);
 
     const [gameState, exchangeRates] = await Promise.all([
-      db
-        .collection<GameState>("gameState")
-        .findOne({ _id: "current" }, { projection: { currentTurn: 1 } }),
-      db.collection<ExchangeRate>("exchangeRates").find({}).toArray(),
+      gameStateCollection(db).findOne({ _id: "current" }, { projection: { currentTurn: 1 } }),
+      exchangeRatesCollection(db).find({}).toArray(),
     ]);
     const currentTurn = gameState?.currentTurn ?? 0;
     const minTurn = Math.max(0, currentTurn - turns);
@@ -84,8 +82,7 @@ export async function GET(request: Request) {
     // Pull tx rows for both subject + counterparty positions on this entity.
     // For the actual-net comparison only the SUBJECT side counts (counterparty
     // entries don't move this entity's wallet).
-    const txRows = await db
-      .collection<FinancialTxLogEntry>("financialTxLog")
+    const txRows = await financialTxLogCollection(db)
       .find({
         subjectId,
         subjectType: subjectTypeParam as FinancialSubjectType,

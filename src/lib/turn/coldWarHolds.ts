@@ -24,17 +24,10 @@ export const POLE_HOLD_TURNS = 3;
 /**
  * Resolve every proxy war that has been pinned at a pole for three turns.
  *
- * ⚠️ A TURN STEP, deliberately, not a check inside `applyOccupation`.
- *
- * That function runs only when a battle MOVES the front, and early-returns when
- * `control` does not change. Once a side is pinned at 100 the front cannot move any
- * further, so nothing would ever re-enter it and the timer would never fire — a
- * feature whose entry condition can never be met, with every test still green. This
- * sweeps by `poleSinceTurn` alone, on every turn, whether or not anyone fought.
- *
- * Reads `conflictsEnabled` itself. Every other conflict step is reached from a
- * declaration and inherits that gate upstream; this one is reached from a stamp on a
- * document, so it is the first that has to ask.
+ * ⚠️ A TURN STEP, not a check inside `applyOccupation`: that only runs when
+ * a battle moves the front and early-returns when `control` is unchanged, so
+ * a pinned front would never re-enter it. This sweeps by `poleSinceTurn`
+ * alone, on every turn.
  */
 export async function resolveColdWarHolds(
   db: Db,
@@ -45,8 +38,6 @@ export async function resolveColdWarHolds(
       { _id: "current" },
       {
         projection: {
-          conflictsEnabled: 1,
-          intOrgAlignmentEnabled: 1,
           currentYear: 1,
           currentTurn: 1,
           startingYear: 1,
@@ -54,7 +45,6 @@ export async function resolveColdWarHolds(
       }
     )
   );
-  if (!gameState?.conflictsEnabled) return { resolved: 0 };
 
   const held = await getConflictsCollection(db)
     .find({
@@ -94,12 +84,9 @@ export async function resolveColdWarHolds(
     await resolveConflict(db, conflict, conflict.poleSide, currentTurn, { endingType: "victory" });
     await admitHostsToWinningBloc(db, conflict, conflict.poleSide, currentTurn, preset);
 
-    // The alignment shift is gated SEPARATELY. `intOrgAlignmentEnabled` governs the
-    // influence subsystem, not the war: with it off the hosts still change hands,
-    // they simply do not also swing on a meter nobody is playing.
     const backer = conflict.poleSide === "A" ? conflict.sideA.backer : conflict.sideB.backer;
-    const year = resolveGameYear(gameState);
-    if (gameState.intOrgAlignmentEnabled === true && backer && year != null) {
+    const year = gameState ? resolveGameYear(gameState) : null;
+    if (backer && year != null) {
       await applyConflictOutcomeAlignment(db, {
         entityIds: hostEntitiesOf(conflict),
         bloc: backer as WorldBloc,

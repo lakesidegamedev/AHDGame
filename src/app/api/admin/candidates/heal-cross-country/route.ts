@@ -4,6 +4,9 @@ import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError } from "@/lib/api/errors";
 import { archiveCampaignsForCandidates } from "@/lib/campaigns/archiveWithdrawnCampaigns";
 import type { NPP, Election, ElectionCandidate } from "@/lib/db/types";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 
 /**
  * GET /api/admin/candidates/heal-cross-country
@@ -17,16 +20,14 @@ export async function GET() {
     const db = await getDb();
 
     // Get all NPPs with their country
-    const allNPPs = await db
-      .collection<NPP>("npps")
+    const allNPPs = await nppsCollection(db)
       .find({})
       .project({ _id: 1, name: 1, countryId: 1 })
       .toArray();
     const nppCountryMap = new Map(allNPPs.map((n) => [n._id.toString(), n]));
 
     // Get all active elections with their country
-    const activeElections = await db
-      .collection<Election>("elections")
+    const activeElections = await electionsCollection(db)
       .find({ status: "active" })
       .project({ _id: 1, countryId: 1, electionType: 1, state: 1 })
       .toArray();
@@ -34,8 +35,7 @@ export async function GET() {
 
     // Find NPP candidates in these elections
     const electionIds = activeElections.map((e) => e._id);
-    const nppCandidates = await db
-      .collection<ElectionCandidate>("electionCandidates")
+    const nppCandidates = await electionCandidatesCollection(db)
       .find({
         electionId: { $in: electionIds },
         isNPP: true,
@@ -89,16 +89,11 @@ export async function POST() {
     const now = new Date();
 
     // Get all NPPs with their country
-    const allNPPs = await db
-      .collection<NPP>("npps")
-      .find({})
-      .project({ _id: 1, countryId: 1 })
-      .toArray();
+    const allNPPs = await nppsCollection(db).find({}).project({ _id: 1, countryId: 1 }).toArray();
     const nppCountryMap = new Map(allNPPs.map((n) => [n._id.toString(), n.countryId]));
 
     // Get all active elections with their country
-    const activeElections = await db
-      .collection<Election>("elections")
+    const activeElections = await electionsCollection(db)
       .find({ status: "active" })
       .project({ _id: 1, countryId: 1 })
       .toArray();
@@ -106,8 +101,7 @@ export async function POST() {
 
     // Find and withdraw cross-country candidates
     const electionIds = activeElections.map((e) => e._id);
-    const nppCandidates = await db
-      .collection<ElectionCandidate>("electionCandidates")
+    const nppCandidates = await electionCandidatesCollection(db)
       .find({
         electionId: { $in: electionIds },
         isNPP: true,
@@ -132,7 +126,7 @@ export async function POST() {
     }
 
     const withdrawIds = toWithdraw.map((c) => c._id);
-    await db.collection<ElectionCandidate>("electionCandidates").updateMany(
+    await electionCandidatesCollection(db).updateMany(
       { _id: { $in: withdrawIds } },
       {
         $set: {

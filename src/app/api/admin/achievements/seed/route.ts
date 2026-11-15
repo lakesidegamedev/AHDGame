@@ -7,6 +7,9 @@ import { invalidateDefinitionsCache } from "@/lib/achievements/cache";
 import type { Achievement } from "@/lib/db/types";
 import { logWarning } from "@/lib/utils/errorLog";
 import { ObjectId } from "mongodb";
+import { achievementsCollection } from "@/lib/db/repositories/achievements";
+import type { Document } from "mongodb";
+import { characterAchievementsCollection } from "@/lib/db/repositories/characterAchievements";
 
 // POST /api/admin/achievements/seed — Seeds achievement definitions from static seed data if the collection is empty.
 // Auth: requireAdmin
@@ -14,7 +17,7 @@ import { ObjectId } from "mongodb";
 export const POST = withAdminAuth(async () => {
   try {
     const db = await getDb();
-    const achievementCount = await db.collection("achievements").countDocuments();
+    const achievementCount = await achievementsCollection<Document>(db).countDocuments();
 
     if (achievementCount > 0) {
       return NextResponse.json({
@@ -25,9 +28,8 @@ export const POST = withAdminAuth(async () => {
     }
 
     const achievementDocs = getAchievementDocsForSeed();
-    await db.collection<Achievement>("achievements").insertMany(achievementDocs);
-    await db
-      .collection("achievements")
+    await achievementsCollection(db).insertMany(achievementDocs);
+    await achievementsCollection<Document>(db)
       .createIndex({ slug: 1 }, { unique: true })
       .catch((error) => {
         logWarning("Index creation failed (may already exist)", {
@@ -36,8 +38,7 @@ export const POST = withAdminAuth(async () => {
           metadata: { index: "slug", error: String(error) },
         });
       });
-    await db
-      .collection("characterAchievements")
+    await characterAchievementsCollection<Document>(db)
       .createIndex({ characterId: 1, achievementId: 1 }, { unique: true })
       .catch((error) => {
         logWarning("Index creation failed (may already exist)", {
@@ -46,8 +47,7 @@ export const POST = withAdminAuth(async () => {
           metadata: { index: "characterId_achievementId", error: String(error) },
         });
       });
-    await db
-      .collection("characterAchievements")
+    await characterAchievementsCollection<Document>(db)
       .createIndex({ achievementId: 1 })
       .catch((error) => {
         logWarning("Index creation failed (may already exist)", {
@@ -75,7 +75,7 @@ export const POST = withAdminAuth(async () => {
 export const PATCH = withAdminAuth(async () => {
   try {
     const db = await getDb();
-    const col = db.collection("achievements");
+    const col = achievementsCollection<Document>(db);
     let synced = 0;
     let inserted = 0;
 

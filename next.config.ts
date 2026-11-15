@@ -105,15 +105,9 @@ const nextConfig: NextConfig = {
   // bundle small, and the instrumentation it skips (node-cron, auto-seed) is
   // exactly what a local world must not run. Production stays on `next start`
   // for the reasons above.
-  // CI's build job runs on the same 4 vCPU / 16 GB hosted runners as
-  // singleplayer packaging and starved the same way: three static-generation
-  // workers, each holding the whole server bundle, stalled page generation
-  // ("took more than 60 seconds") until the runner agent was killed, in about
-  // one build in five. NEXT_BUILD_CPUS caps the workers there; unset (Railway,
-  // local) leaves Next's default untouched. Singleplayer keeps its own cap below.
-  ...(process.env.SINGLEPLAYER !== "1" && Number(process.env.NEXT_BUILD_CPUS) > 0
-    ? { experimental: { cpus: Number(process.env.NEXT_BUILD_CPUS) } }
-    : {}),
+  // Each static-generation worker holds the server bundle. Use one on every
+  // host, including self-hosted builds without Railway or CI environment vars.
+  experimental: { cpus: 1 },
   ...(process.env.SINGLEPLAYER === "1"
     ? {
         output: "standalone" as const,
@@ -126,14 +120,7 @@ const nextConfig: NextConfig = {
           // SINGLEPLAYER_PRELOAD_ENTRIES=1 restores the default for the smoke
           // workflow's measurements.
           preloadEntriesOnStart: process.env.SINGLEPLAYER_PRELOAD_ENTRIES === "1",
-          // Packaging also runs on 4 vCPU / 16 GB hosted runners, where Next's
-          // default of cpus-1 static generation workers (3) each hold the whole
-          // server bundle on top of the Turbopack build and starved the runner
-          // until its agent was killed. package.mjs caps the worker count via
-          // SINGLEPLAYER_BUILD_CPUS; unset leaves Next's default untouched.
-          ...(Number(process.env.SINGLEPLAYER_BUILD_CPUS) > 0
-            ? { cpus: Number(process.env.SINGLEPLAYER_BUILD_CPUS) }
-            : {}),
+          cpus: 1,
         },
       }
     : {}),
@@ -193,6 +180,23 @@ const nextConfig: NextConfig = {
           { key: "Pragma", value: "no-cache" },
           { key: "Expires", value: "0" },
         ],
+      },
+      {
+        // The static landing page's poster frames, fonts and island scripts.
+        // Scripts and fonts are content-hashed or never edited in place, so they
+        // cache for a year; posters are regenerated rarely and revalidate daily.
+        source: "/landing/:path*",
+        headers: [
+          { key: "Cache-Control", value: "public, max-age=86400, stale-while-revalidate=604800" },
+        ],
+      },
+      {
+        source: "/landing/js/:path*",
+        headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }],
+      },
+      {
+        source: "/landing/fonts/:path*",
+        headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }],
       },
       {
         // Corp-detail and elections APIs return large JSON fetched client-side
@@ -266,15 +270,12 @@ const nextConfig: NextConfig = {
           { key: "Strict-Transport-Security", value: "max-age=31536000; includeSubDomains" },
           // Report-only CSP: collect violations and tune before switching to an
           // enforcing Content-Security-Policy. object-src/base-uri are already
-          // locked down; script/connect/frame are permissive for AdSense + YouTube.
-          // fundingchoicesmessages.google.com serves the GDPR/EU consent dialog
-          // (Google Funding Choices) and must be allowlisted or the message
-          // silently fails to render once this policy goes enforcing.
+          // locked down; script/connect/frame are permissive for analytics + YouTube.
           // worker-src blob: is kept for consent-gated replay/recording workers.
           {
             key: "Content-Security-Policy-Report-Only",
             value:
-              "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'self'; img-src 'self' data: blob: https:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.posthog.com https://pagead2.googlesyndication.com https://*.googlesyndication.com https://www.googletagmanager.com https://fundingchoicesmessages.google.com https://analytics.lakesidegames.net; worker-src 'self' blob:; connect-src 'self' https:; frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com https://*.googlesyndication.com https://googleads.g.doubleclick.net https://fundingchoicesmessages.google.com",
+              "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'self'; img-src 'self' data: blob: https:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.posthog.com https://analytics.lakesidegames.net; worker-src 'self' blob:; connect-src 'self' https:; frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com",
           },
         ],
       },

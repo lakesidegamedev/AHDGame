@@ -111,6 +111,8 @@ export interface StateMetrics {
      * the last completed tightness reading on the next turn.
      */
     labourDemand?: StateMetricValue;
+    /** 2027 world: workers automation methods no longer employ in the region. */
+    automationDisplaced?: StateMetricValue;
     labourTightness?: StateMetricValue;
     /** Desired-worker-weighted wage bid used for scarce-labour allocation. */
     labourDemandWageIndex?: StateMetricValue;
@@ -341,6 +343,10 @@ export interface StateMetrics {
      * Written only by the demographic-flows phase; excluded from approval scoring.
      */
     realizedMigrationRate?: StateMetricValue;
+    /** 2027 world: households per home as an index (100 = balanced). Metric engine readout. */
+    housingPressure?: StateMetricValue;
+    /** 2027 world: percent of adults with a tertiary education. Metric engine readout. */
+    tertiaryAttainment?: StateMetricValue;
   };
   mediaInformation: {
     mediaPolarization: StateMetricValue;

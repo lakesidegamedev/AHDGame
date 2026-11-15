@@ -9,6 +9,7 @@ import {
   readWindfallMarker,
   type WindfallMarker,
 } from "@/lib/remediation/defects/AHD-defence-supplier-windfall";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 const MARKER_PATH = `remediation.${DEFECT_ID}`;
 
@@ -29,8 +30,7 @@ export async function processDefenceWindfallRecoveryTurn(
   turn: number,
   now = new Date()
 ): Promise<DefenceWindfallRecoveryTurnResult> {
-  const corporations = await db
-    .collection<RecoveringCorporation>("corporations")
+  const corporations = await corporationsCollection<RecoveringCorporation>(db)
     .find(
       { [`${MARKER_PATH}.outstandingAmount`]: { $gt: 0 } },
       // The sweep reads cash and its own marker; the settlement stamps every

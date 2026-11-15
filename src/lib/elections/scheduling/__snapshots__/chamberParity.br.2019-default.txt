@@ -1,0 +1,138 @@
+## fresh-t1 br.chamber
+BR/chamber/CENTRO_OESTE c1 y2024 active seats=42 turns=1/168/192 dur=48/24 seat=BR-chamber-CENTRO_OESTE shift=- t=2026-11-08T12:00:00.000Z|2026-11-15T11:00:00.000Z|2026-11-16T11:00:00.000Z
+BR/chamber/NORDESTE c1 y2024 active seats=144 turns=1/168/192 dur=48/24 seat=BR-chamber-NORDESTE shift=- t=2026-11-08T12:00:00.000Z|2026-11-15T11:00:00.000Z|2026-11-16T11:00:00.000Z
+BR/chamber/NORTE c1 y2024 active seats=75 turns=1/168/192 dur=48/24 seat=BR-chamber-NORTE shift=- t=2026-11-08T12:00:00.000Z|2026-11-15T11:00:00.000Z|2026-11-16T11:00:00.000Z
+BR/chamber/SUDESTE c1 y2024 active seats=179 turns=1/168/192 dur=48/24 seat=BR-chamber-SUDESTE shift=- t=2026-11-08T12:00:00.000Z|2026-11-15T11:00:00.000Z|2026-11-16T11:00:00.000Z
+BR/chamber/SUL c1 y2024 active seats=73 turns=1/168/192 dur=48/24 seat=BR-chamber-SUL shift=- t=2026-11-08T12:00:00.000Z|2026-11-15T11:00:00.000Z|2026-11-16T11:00:00.000Z
+## fresh-t1 br.senate
+BR/senate/CENTRO_OESTE c1 y2022 active seats=12 turns=1/168/192 dur=288/264 seat=BR-senate-CENTRO_OESTE shift=- t=2026-11-08T12:00:00.000Z|2026-11-15T11:00:00.000Z|2026-11-16T11:00:00.000Z
+BR/senate/NORDESTE c1 y2022 active seats=27 turns=1/168/192 dur=288/264 seat=BR-senate-NORDESTE shift=- t=2026-11-08T12:00:00.000Z|2026-11-15T11:00:00.000Z|2026-11-16T11:00:00.000Z
+BR/senate/NORTE c1 y2022 active seats=21 turns=1/168/192 dur=288/264 seat=BR-senate-NORTE shift=- t=2026-11-08T12:00:00.000Z|2026-11-15T11:00:00.000Z|2026-11-16T11:00:00.000Z
+BR/senate/SUDESTE c1 y2022 active seats=12 turns=1/168/192 dur=288/264 seat=BR-senate-SUDESTE shift=- t=2026-11-08T12:00:00.000Z|2026-11-15T11:00:00.000Z|2026-11-16T11:00:00.000Z
+BR/senate/SUL c1 y2022 active seats=9 turns=1/168/192 dur=288/264 seat=BR-senate-SUL shift=- t=2026-11-08T12:00:00.000Z|2026-11-15T11:00:00.000Z|2026-11-16T11:00:00.000Z
+## fresh-t1 br.governor
+BR/governor/CENTRO_OESTE c1 y2024 active seats=1 turns=1/168/192 dur=192/168 seat=BR-governor-CENTRO_OESTE shift=- t=2026-11-08T12:00:00.000Z|2026-11-15T11:00:00.000Z|2026-11-16T11:00:00.000Z
+BR/governor/NORDESTE c1 y2024 active seats=1 turns=1/168/192 dur=192/168 seat=BR-governor-NORDESTE shift=- t=2026-11-08T12:00:00.000Z|2026-11-15T11:00:00.000Z|2026-11-16T11:00:00.000Z
+BR/governor/NORTE c1 y2024 active seats=1 turns=1/168/192 dur=192/168 seat=BR-governor-NORTE shift=- t=2026-11-08T12:00:00.000Z|2026-11-15T11:00:00.000Z|2026-11-16T11:00:00.000Z
+BR/governor/SUDESTE c1 y2024 active seats=1 turns=1/168/192 dur=192/168 seat=BR-governor-SUDESTE shift=- t=2026-11-08T12:00:00.000Z|2026-11-15T11:00:00.000Z|2026-11-16T11:00:00.000Z
+BR/governor/SUL c1 y2024 active seats=1 turns=1/168/192 dur=192/168 seat=BR-governor-SUL shift=- t=2026-11-08T12:00:00.000Z|2026-11-15T11:00:00.000Z|2026-11-16T11:00:00.000Z
+## fresh-t300 br.chamber
+BR/chamber/CENTRO_OESTE c2 y2028 active seats=42 turns=300/360/384 dur=48/24 seat=BR-chamber-CENTRO_OESTE shift=- t=2026-11-08T12:00:00.000Z|2026-11-11T00:00:00.000Z|2026-11-12T00:00:00.000Z
+BR/chamber/NORDESTE c2 y2028 active seats=144 turns=300/360/384 dur=48/24 seat=BR-chamber-NORDESTE shift=- t=2026-11-08T12:00:00.000Z|2026-11-11T00:00:00.000Z|2026-11-12T00:00:00.000Z
+BR/chamber/NORTE c2 y2028 active seats=75 turns=300/360/384 dur=48/24 seat=BR-chamber-NORTE shift=- t=2026-11-08T12:00:00.000Z|2026-11-11T00:00:00.000Z|2026-11-12T00:00:00.000Z
+BR/chamber/SUDESTE c2 y2028 active seats=179 turns=300/360/384 dur=48/24 seat=BR-chamber-SUDESTE shift=- t=2026-11-08T12:00:00.000Z|2026-11-11T00:00:00.000Z|2026-11-12T00:00:00.000Z
+BR/chamber/SUL c2 y2028 active seats=73 turns=300/360/384 dur=48/24 seat=BR-chamber-SUL shift=- t=2026-11-08T12:00:00.000Z|2026-11-11T00:00:00.000Z|2026-11-12T00:00:00.000Z
+## fresh-t300 br.senate
+BR/senate/CENTRO_OESTE c2 y2026 active seats=12 turns=300/360/384 dur=288/264 seat=BR-senate-CENTRO_OESTE shift=- t=2026-11-08T12:00:00.000Z|2026-11-11T00:00:00.000Z|2026-11-12T00:00:00.000Z
+BR/senate/NORDESTE c2 y2026 active seats=27 turns=300/360/384 dur=288/264 seat=BR-senate-NORDESTE shift=- t=2026-11-08T12:00:00.000Z|2026-11-11T00:00:00.000Z|2026-11-12T00:00:00.000Z
+BR/senate/NORTE c2 y2026 active seats=21 turns=300/360/384 dur=288/264 seat=BR-senate-NORTE shift=- t=2026-11-08T12:00:00.000Z|2026-11-11T00:00:00.000Z|2026-11-12T00:00:00.000Z
+BR/senate/SUDESTE c2 y2026 active seats=12 turns=300/360/384 dur=288/264 seat=BR-senate-SUDESTE shift=- t=2026-11-08T12:00:00.000Z|2026-11-11T00:00:00.000Z|2026-11-12T00:00:00.000Z
+BR/senate/SUL c2 y2026 active seats=9 turns=300/360/384 dur=288/264 seat=BR-senate-SUL shift=- t=2026-11-08T12:00:00.000Z|2026-11-11T00:00:00.000Z|2026-11-12T00:00:00.000Z
+## fresh-t300 br.governor
+BR/governor/CENTRO_OESTE c2 y2028 active seats=1 turns=300/360/384 dur=192/168 seat=BR-governor-CENTRO_OESTE shift=- t=2026-11-08T12:00:00.000Z|2026-11-11T00:00:00.000Z|2026-11-12T00:00:00.000Z
+BR/governor/NORDESTE c2 y2028 active seats=1 turns=300/360/384 dur=192/168 seat=BR-governor-NORDESTE shift=- t=2026-11-08T12:00:00.000Z|2026-11-11T00:00:00.000Z|2026-11-12T00:00:00.000Z
+BR/governor/NORTE c2 y2028 active seats=1 turns=300/360/384 dur=192/168 seat=BR-governor-NORTE shift=- t=2026-11-08T12:00:00.000Z|2026-11-11T00:00:00.000Z|2026-11-12T00:00:00.000Z
+BR/governor/SUDESTE c2 y2028 active seats=1 turns=300/360/384 dur=192/168 seat=BR-governor-SUDESTE shift=- t=2026-11-08T12:00:00.000Z|2026-11-11T00:00:00.000Z|2026-11-12T00:00:00.000Z
+BR/governor/SUL c2 y2028 active seats=1 turns=300/360/384 dur=192/168 seat=BR-governor-SUL shift=- t=2026-11-08T12:00:00.000Z|2026-11-11T00:00:00.000Z|2026-11-12T00:00:00.000Z
+## after-cycle1-t120 br.chamber
+BR/chamber/CENTRO_OESTE c2 y2028 active seats=42 turns=120/360/384 dur=48/24 seat=BR-chamber-CENTRO_OESTE shift=- t=2026-11-08T12:00:00.000Z|2026-11-18T12:00:00.000Z|2026-11-19T12:00:00.000Z
+BR/chamber/NORDESTE c2 y2028 active seats=144 turns=120/360/384 dur=48/24 seat=BR-chamber-NORDESTE shift=- t=2026-11-08T12:00:00.000Z|2026-11-18T12:00:00.000Z|2026-11-19T12:00:00.000Z
+BR/chamber/NORTE c2 y2028 active seats=75 turns=120/360/384 dur=48/24 seat=BR-chamber-NORTE shift=- t=2026-11-08T12:00:00.000Z|2026-11-18T12:00:00.000Z|2026-11-19T12:00:00.000Z
+BR/chamber/SUDESTE c2 y2028 active seats=179 turns=120/360/384 dur=48/24 seat=BR-chamber-SUDESTE shift=- t=2026-11-08T12:00:00.000Z|2026-11-18T12:00:00.000Z|2026-11-19T12:00:00.000Z
+BR/chamber/SUL c2 y2028 active seats=73 turns=120/360/384 dur=48/24 seat=BR-chamber-SUL shift=- t=2026-11-08T12:00:00.000Z|2026-11-18T12:00:00.000Z|2026-11-19T12:00:00.000Z
+## after-cycle1-t120 br.senate
+BR/senate/CENTRO_OESTE c2 y2026 active seats=12 turns=120/360/384 dur=288/264 seat=BR-senate-CENTRO_OESTE shift=- t=2026-11-08T12:00:00.000Z|2026-11-18T12:00:00.000Z|2026-11-19T12:00:00.000Z
+BR/senate/NORDESTE c2 y2026 active seats=27 turns=120/360/384 dur=288/264 seat=BR-senate-NORDESTE shift=- t=2026-11-08T12:00:00.000Z|2026-11-18T12:00:00.000Z|2026-11-19T12:00:00.000Z
+BR/senate/NORTE c2 y2026 active seats=21 turns=120/360/384 dur=288/264 seat=BR-senate-NORTE shift=- t=2026-11-08T12:00:00.000Z|2026-11-18T12:00:00.000Z|2026-11-19T12:00:00.000Z
+BR/senate/SUDESTE c2 y2026 active seats=12 turns=120/360/384 dur=288/264 seat=BR-senate-SUDESTE shift=- t=2026-11-08T12:00:00.000Z|2026-11-18T12:00:00.000Z|2026-11-19T12:00:00.000Z
+BR/senate/SUL c2 y2026 active seats=9 turns=120/360/384 dur=288/264 seat=BR-senate-SUL shift=- t=2026-11-08T12:00:00.000Z|2026-11-18T12:00:00.000Z|2026-11-19T12:00:00.000Z
+## after-cycle1-t120 br.governor
+BR/governor/CENTRO_OESTE c2 y2028 active seats=1 turns=120/360/384 dur=192/168 seat=BR-governor-CENTRO_OESTE shift=- t=2026-11-08T12:00:00.000Z|2026-11-18T12:00:00.000Z|2026-11-19T12:00:00.000Z
+BR/governor/NORDESTE c2 y2028 active seats=1 turns=120/360/384 dur=192/168 seat=BR-governor-NORDESTE shift=- t=2026-11-08T12:00:00.000Z|2026-11-18T12:00:00.000Z|2026-11-19T12:00:00.000Z
+BR/governor/NORTE c2 y2028 active seats=1 turns=120/360/384 dur=192/168 seat=BR-governor-NORTE shift=- t=2026-11-08T12:00:00.000Z|2026-11-18T12:00:00.000Z|2026-11-19T12:00:00.000Z
+BR/governor/SUDESTE c2 y2028 active seats=1 turns=120/360/384 dur=192/168 seat=BR-governor-SUDESTE shift=- t=2026-11-08T12:00:00.000Z|2026-11-18T12:00:00.000Z|2026-11-19T12:00:00.000Z
+BR/governor/SUL c2 y2028 active seats=1 turns=120/360/384 dur=192/168 seat=BR-governor-SUL shift=- t=2026-11-08T12:00:00.000Z|2026-11-18T12:00:00.000Z|2026-11-19T12:00:00.000Z
+## after-cycle1-t700 br.chamber
+BR/chamber/CENTRO_OESTE c4 y2036 active seats=42 turns=700/744/768 dur=48/24 seat=BR-chamber-CENTRO_OESTE shift=- t=2026-11-08T12:00:00.000Z|2026-11-10T08:00:00.000Z|2026-11-11T08:00:00.000Z
+BR/chamber/NORDESTE c4 y2036 active seats=144 turns=700/744/768 dur=48/24 seat=BR-chamber-NORDESTE shift=- t=2026-11-08T12:00:00.000Z|2026-11-10T08:00:00.000Z|2026-11-11T08:00:00.000Z
+BR/chamber/NORTE c4 y2036 active seats=75 turns=700/744/768 dur=48/24 seat=BR-chamber-NORTE shift=- t=2026-11-08T12:00:00.000Z|2026-11-10T08:00:00.000Z|2026-11-11T08:00:00.000Z
+BR/chamber/SUDESTE c4 y2036 active seats=179 turns=700/744/768 dur=48/24 seat=BR-chamber-SUDESTE shift=- t=2026-11-08T12:00:00.000Z|2026-11-10T08:00:00.000Z|2026-11-11T08:00:00.000Z
+BR/chamber/SUL c4 y2036 active seats=73 turns=700/744/768 dur=48/24 seat=BR-chamber-SUL shift=- t=2026-11-08T12:00:00.000Z|2026-11-10T08:00:00.000Z|2026-11-11T08:00:00.000Z
+## after-cycle1-t700 br.senate
+BR/senate/CENTRO_OESTE c4 y2034 active seats=12 turns=700/744/768 dur=288/264 seat=BR-senate-CENTRO_OESTE shift=- t=2026-11-08T12:00:00.000Z|2026-11-10T08:00:00.000Z|2026-11-11T08:00:00.000Z
+BR/senate/NORDESTE c4 y2034 active seats=27 turns=700/744/768 dur=288/264 seat=BR-senate-NORDESTE shift=- t=2026-11-08T12:00:00.000Z|2026-11-10T08:00:00.000Z|2026-11-11T08:00:00.000Z
+BR/senate/NORTE c4 y2034 active seats=21 turns=700/744/768 dur=288/264 seat=BR-senate-NORTE shift=- t=2026-11-08T12:00:00.000Z|2026-11-10T08:00:00.000Z|2026-11-11T08:00:00.000Z
+BR/senate/SUDESTE c4 y2034 active seats=12 turns=700/744/768 dur=288/264 seat=BR-senate-SUDESTE shift=- t=2026-11-08T12:00:00.000Z|2026-11-10T08:00:00.000Z|2026-11-11T08:00:00.000Z
+BR/senate/SUL c4 y2034 active seats=9 turns=700/744/768 dur=288/264 seat=BR-senate-SUL shift=- t=2026-11-08T12:00:00.000Z|2026-11-10T08:00:00.000Z|2026-11-11T08:00:00.000Z
+## after-cycle1-t700 br.governor
+BR/governor/CENTRO_OESTE c4 y2036 active seats=1 turns=700/744/768 dur=192/168 seat=BR-governor-CENTRO_OESTE shift=- t=2026-11-08T12:00:00.000Z|2026-11-10T08:00:00.000Z|2026-11-11T08:00:00.000Z
+BR/governor/NORDESTE c4 y2036 active seats=1 turns=700/744/768 dur=192/168 seat=BR-governor-NORDESTE shift=- t=2026-11-08T12:00:00.000Z|2026-11-10T08:00:00.000Z|2026-11-11T08:00:00.000Z
+BR/governor/NORTE c4 y2036 active seats=1 turns=700/744/768 dur=192/168 seat=BR-governor-NORTE shift=- t=2026-11-08T12:00:00.000Z|2026-11-10T08:00:00.000Z|2026-11-11T08:00:00.000Z
+BR/governor/SUDESTE c4 y2036 active seats=1 turns=700/744/768 dur=192/168 seat=BR-governor-SUDESTE shift=- t=2026-11-08T12:00:00.000Z|2026-11-10T08:00:00.000Z|2026-11-11T08:00:00.000Z
+BR/governor/SUL c4 y2036 active seats=1 turns=700/744/768 dur=192/168 seat=BR-governor-SUL shift=- t=2026-11-08T12:00:00.000Z|2026-11-10T08:00:00.000Z|2026-11-11T08:00:00.000Z
+## all-live br.chamber
+heal seats=144
+heal seats=179
+heal seats=42
+heal seats=73
+heal seats=75
+## all-live br.senate
+heal seats=12
+heal seats=12
+heal seats=21
+heal seats=27
+heal seats=9
+## all-live br.governor
+(none)
+## late-joiner br.chamber
+BR/chamber/SUL c3 y2032 active seats=73 turns=450/552/576 dur=48/24 seat=BR-chamber-SUL shift=- t=2026-11-08T12:00:00.000Z|2026-11-12T18:00:00.000Z|2026-11-13T18:00:00.000Z
+heal seats=144
+heal seats=179
+heal seats=42
+heal seats=75
+## late-joiner br.senate
+BR/senate/SUL c3 y2030 active seats=9 turns=450/552/576 dur=288/264 seat=BR-senate-SUL shift=- t=2026-11-08T12:00:00.000Z|2026-11-12T18:00:00.000Z|2026-11-13T18:00:00.000Z
+heal seats=12
+heal seats=12
+heal seats=21
+heal seats=27
+## late-joiner br.governor
+BR/governor/SUL c2 yundefined active seats=1 turns=400/430/460 dur=60/30 seat=BR-governor-SUL shift=- t=2026-10-01T00:00:00.000Z|2026-12-01T00:00:00.000Z|2027-01-01T00:00:00.000Z
+## late-joiner-with-history br.chamber
+BR/chamber/SUL c3 y2032 active seats=73 turns=450/552/576 dur=48/24 seat=BR-chamber-SUL shift=- t=2026-11-08T12:00:00.000Z|2026-11-12T18:00:00.000Z|2026-11-13T18:00:00.000Z
+heal seats=144
+heal seats=179
+heal seats=42
+heal seats=75
+## late-joiner-with-history br.senate
+BR/senate/SUL c3 y2030 active seats=9 turns=450/552/576 dur=288/264 seat=BR-senate-SUL shift=- t=2026-11-08T12:00:00.000Z|2026-11-12T18:00:00.000Z|2026-11-13T18:00:00.000Z
+heal seats=12
+heal seats=12
+heal seats=21
+heal seats=27
+## late-joiner-with-history br.governor
+BR/governor/SUL c3 y2032 active seats=1 turns=450/552/576 dur=192/168 seat=BR-governor-SUL shift=- t=2026-11-08T12:00:00.000Z|2026-11-12T18:00:00.000Z|2026-11-13T18:00:00.000Z
+## resolved-this-turn br.chamber
+(none)
+## resolved-this-turn br.senate
+(none)
+## resolved-this-turn br.governor
+(none)
+## gate-closed br.chamber
+BR/chamber/CENTRO_OESTE c2 y2028 active seats=42 turns=300/360/384 dur=48/24 seat=BR-chamber-CENTRO_OESTE shift=- t=2026-11-08T12:00:00.000Z|2026-11-11T00:00:00.000Z|2026-11-12T00:00:00.000Z
+BR/chamber/NORDESTE c2 y2028 active seats=144 turns=300/360/384 dur=48/24 seat=BR-chamber-NORDESTE shift=- t=2026-11-08T12:00:00.000Z|2026-11-11T00:00:00.000Z|2026-11-12T00:00:00.000Z
+BR/chamber/NORTE c2 y2028 active seats=75 turns=300/360/384 dur=48/24 seat=BR-chamber-NORTE shift=- t=2026-11-08T12:00:00.000Z|2026-11-11T00:00:00.000Z|2026-11-12T00:00:00.000Z
+BR/chamber/SUDESTE c2 y2028 active seats=179 turns=300/360/384 dur=48/24 seat=BR-chamber-SUDESTE shift=- t=2026-11-08T12:00:00.000Z|2026-11-11T00:00:00.000Z|2026-11-12T00:00:00.000Z
+BR/chamber/SUL c2 y2028 active seats=73 turns=300/360/384 dur=48/24 seat=BR-chamber-SUL shift=- t=2026-11-08T12:00:00.000Z|2026-11-11T00:00:00.000Z|2026-11-12T00:00:00.000Z
+## gate-closed br.senate
+BR/senate/CENTRO_OESTE c2 y2026 active seats=12 turns=300/360/384 dur=288/264 seat=BR-senate-CENTRO_OESTE shift=- t=2026-11-08T12:00:00.000Z|2026-11-11T00:00:00.000Z|2026-11-12T00:00:00.000Z
+BR/senate/NORDESTE c2 y2026 active seats=27 turns=300/360/384 dur=288/264 seat=BR-senate-NORDESTE shift=- t=2026-11-08T12:00:00.000Z|2026-11-11T00:00:00.000Z|2026-11-12T00:00:00.000Z
+BR/senate/NORTE c2 y2026 active seats=21 turns=300/360/384 dur=288/264 seat=BR-senate-NORTE shift=- t=2026-11-08T12:00:00.000Z|2026-11-11T00:00:00.000Z|2026-11-12T00:00:00.000Z
+BR/senate/SUDESTE c2 y2026 active seats=12 turns=300/360/384 dur=288/264 seat=BR-senate-SUDESTE shift=- t=2026-11-08T12:00:00.000Z|2026-11-11T00:00:00.000Z|2026-11-12T00:00:00.000Z
+BR/senate/SUL c2 y2026 active seats=9 turns=300/360/384 dur=288/264 seat=BR-senate-SUL shift=- t=2026-11-08T12:00:00.000Z|2026-11-11T00:00:00.000Z|2026-11-12T00:00:00.000Z
+## gate-closed br.governor
+BR/governor/CENTRO_OESTE c2 y2028 active seats=1 turns=300/360/384 dur=192/168 seat=BR-governor-CENTRO_OESTE shift=- t=2026-11-08T12:00:00.000Z|2026-11-11T00:00:00.000Z|2026-11-12T00:00:00.000Z
+BR/governor/NORDESTE c2 y2028 active seats=1 turns=300/360/384 dur=192/168 seat=BR-governor-NORDESTE shift=- t=2026-11-08T12:00:00.000Z|2026-11-11T00:00:00.000Z|2026-11-12T00:00:00.000Z
+BR/governor/NORTE c2 y2028 active seats=1 turns=300/360/384 dur=192/168 seat=BR-governor-NORTE shift=- t=2026-11-08T12:00:00.000Z|2026-11-11T00:00:00.000Z|2026-11-12T00:00:00.000Z
+BR/governor/SUDESTE c2 y2028 active seats=1 turns=300/360/384 dur=192/168 seat=BR-governor-SUDESTE shift=- t=2026-11-08T12:00:00.000Z|2026-11-11T00:00:00.000Z|2026-11-12T00:00:00.000Z
+BR/governor/SUL c2 y2028 active seats=1 turns=300/360/384 dur=192/168 seat=BR-governor-SUL shift=- t=2026-11-08T12:00:00.000Z|2026-11-11T00:00:00.000Z|2026-11-12T00:00:00.000Z

@@ -28,6 +28,7 @@ import type { DesktopNavMenu } from "@/components/navbar/desktopNavModel";
 import { buildMobileDock } from "@/components/navbar/mobileDockBuilder";
 import { buildNationalDetailsSections } from "@/components/navbar/nationDetailsSections";
 import { viewerIsSingleplayerOwner, visibleStaffNavItems } from "@/components/navbar/staffNavItems";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 const NO_STORE = { "Cache-Control": "no-store" };
 const MENU_KEYS: DesktopMenuKey[] = ["state", "nation", "world", "help", "staff"];
@@ -37,6 +38,7 @@ interface DockNav {
     singleplayer?: boolean;
     isAdmin?: boolean;
     isModerator?: boolean;
+    isJuniorDev?: boolean;
     username?: string;
     experimentalFeatures?: boolean;
     desktopNavigationLayout?: unknown;
@@ -57,7 +59,6 @@ interface DockNav {
   governorOffice: { stateId: string; stateName: string; countryCode: string } | null;
   isImperialMode: boolean;
   wikiDisabled: boolean;
-  conflictsEnabled: boolean;
   settlementCrisisLive: boolean;
   unionsEnabled: boolean;
   pendingCharterCount: number;
@@ -102,8 +103,7 @@ export async function GET(request: Request) {
     ) as CountryId;
 
     const [presidentElection, referendumCount] = await Promise.all([
-      db
-        .collection<Election>("elections")
+      electionsCollection(db)
         .findOne(
           {
             electionType: "president",
@@ -118,7 +118,7 @@ export async function GET(request: Request) {
         .catch(() => 0),
     ]);
 
-    const isStaff = !!(nav.user.isAdmin || nav.user.isModerator);
+    const isStaff = !!(nav.user.isAdmin || nav.user.isModerator || nav.user.isJuniorDev);
     const nationalDetailSections = buildNationalDetailsSections(pageCountry, {
       activePresidentElection: presidentElection
         ? { id: presidentElection._id.toString(), seatId: presidentElection.seatId ?? undefined }
@@ -150,7 +150,6 @@ export async function GET(request: Request) {
       myCorporationId: nav.myCorporationId,
       myCorporationHasGroup: nav.myCorporationHasGroup,
       myUnionId: nav.myUnionId,
-      conflictsEnabled: nav.conflictsEnabled,
       unionsEnabled: nav.unionsEnabled,
       settlementCrisisLive: nav.settlementCrisisLive,
       nationalDetailSections,
@@ -159,6 +158,7 @@ export async function GET(request: Request) {
         ? visibleStaffNavItems({
             isAdmin: !!nav.user.isAdmin,
             isModerator: !!nav.user.isModerator,
+            isJuniorDev: !!nav.user.isJuniorDev,
             isSingleplayerOwner: viewerIsSingleplayerOwner(nav.user),
           })
         : [],

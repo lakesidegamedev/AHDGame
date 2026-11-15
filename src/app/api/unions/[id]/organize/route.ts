@@ -14,6 +14,7 @@ import { getCharacterByUserId } from "@/lib/db/characterLookup";
 import { isLabourFullMode } from "@/lib/labour/featureFlag";
 import type { Union } from "@/lib/db/types";
 import { organizeUnion } from "@/lib/unions/commands/organizeUnion";
+import { unionsCollection } from "@/lib/db/repositories/unions";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -42,7 +43,7 @@ export async function POST(_request: Request, { params }: RouteParams) {
       return errorResponse(404, "Character not found");
     }
 
-    const union = await db.collection<Union>("unions").findOne({ _id: new ObjectId(id) });
+    const union = await unionsCollection(db).findOne({ _id: new ObjectId(id) });
     if (!union) {
       return errorResponse(404, "Union not found");
     }

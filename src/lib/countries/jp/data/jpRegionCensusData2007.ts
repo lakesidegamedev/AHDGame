@@ -1,19 +1,7 @@
 /**
- * Japan Region Census Profiles — 2007 era.
- *
- * 2007-default companion to {@link jpRegionCensusData} (the 2019 profiles).
- *
- * Era anchor: 2005 Population Census of Japan plus 2007 Ministry of Internal
- * Affairs population estimates (Koizumi-reform aftermath). All values
- * independently authored from historical knowledge of each region circa 2007 —
- * NOT derived by scaling any other era's file.
- *
- * Character of the era: national population peaked (2008); seniors near 30%
- * of adults in rural regions; Tokyo concentration accelerating after the
- * reform years while regional cities hollow out ("shutter streets"); foreign
- * residents ~1.7% nationally (Chinese now the largest group, Brazilians in
- * Chubu, Filipinos/Southeast Asians appearing); university advancement past
- * 50% of new cohorts. Income uses era-neutral relative tiers.
+ * Japan region census profiles for the 2007-default preset (companion to the 2019 profiles).
+ * Approximate % of adult population, anchored on the 2005 Census and 2007 population estimates.
+ * Independently authored per region circa 2007, not scaled from other eras. Income uses era-neutral relative tiers.
  */
 
 import type { JPRegionLayer1 } from "./jpRegionCensusData";

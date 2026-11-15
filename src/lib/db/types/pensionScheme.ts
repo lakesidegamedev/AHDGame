@@ -63,6 +63,21 @@ export interface PensionScheme {
   createdAtTurn: number;
   lastChargedTurn?: number;
   lastBenefitTurn?: number;
+  /** Turn each agreement was last charged on, set in the same update as the credit. */
+  agreementChargeTurns?: Record<string, number>;
+  /** Turn a fund investment was last started on, so a rerun of the turn does not invest again. */
+  lastInvestedTurn?: number;
+  /**
+   * An investment whose cash has left the scheme but whose fund-side writes may not all have
+   * landed. Finished forward, each step behind its own per-turn witness.
+   */
+  pendingInvestment?: {
+    turn: number;
+    fundId: ObjectId;
+    units: number;
+    navAnchor: number;
+    costAnchor: number;
+  } | null;
   /** Benefit cut applied last turn, 0..1. 0 means benefits were paid in full. */
   lastBenefitCutFraction?: number;
 

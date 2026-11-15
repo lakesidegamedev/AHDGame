@@ -34,10 +34,11 @@ afterEach(() => vi.unstubAllEnvs());
 
 function makeRequest(
   urlStr: string,
-  opts: { host?: string; cookies?: Record<string, string> } = {}
+  opts: { host?: string; cookies?: Record<string, string>; userAgent?: string } = {}
 ): NextRequest {
   const headers = new Headers();
   if (opts.host) headers.set("host", opts.host);
+  if (opts.userAgent) headers.set("user-agent", opts.userAgent);
   const req = new NextRequest(new URL(urlStr), { headers });
   for (const [k, v] of Object.entries(opts.cookies ?? {})) req.cookies.set(k, v);
   return req;
@@ -143,6 +144,106 @@ describe("proxy() — behaviors preserved from the deleted root middleware.ts", 
     // public-viewing mocked on → read-gate allows through as a normal next()
     expect(res.headers.get("location")).toBeNull();
     expect(res.headers.get("x-middleware-rewrite")).toBeNull();
+  });
+
+  it("stamps the real method on /api/* requests and overrides a client-supplied value", async () => {
+    // Read-only staff are allowed through the admin guards on this header, so
+    // a client must never be able to send its own.
+    const req = new NextRequest(new URL("https://ahousedividedgame.com/api/admin/users"), {
+      method: "POST",
+      headers: new Headers({
+        host: "ahousedividedgame.com",
+        "x-ahd-request-method": "GET",
+      }),
+    });
+    const res = await proxy(req);
+    expect(res.headers.get("x-middleware-request-x-ahd-request-method")).toBe("POST");
+  });
+});
+
+describe("proxy() — static landing rewrite", () => {
+  const home = "https://ahousedividedgame.com/";
+  const opts = { host: "ahousedividedgame.com" };
+
+  it("rewrites the anonymous home page to the internal route and stamps the path", async () => {
+    const res = await proxy(makeRequest(home, opts));
+    expect(res.headers.get("x-middleware-rewrite")).toContain("/landing-static");
+    expect(res.headers.get("x-middleware-request-x-pathname")).toBe("/");
+  });
+
+  it("keeps the query string for the page", async () => {
+    const res = await proxy(makeRequest(`${home}?utm_source=x`, opts));
+    expect(res.headers.get("x-middleware-rewrite")).toContain("/landing-static?utm_source=x");
+  });
+
+  it("does not rewrite a visitor with a session cookie", async () => {
+    const res = await proxy(makeRequest(home, { ...opts, cookies: { [AUTH_COOKIE_NAME]: "t" } }));
+    expect(res.headers.get("x-middleware-rewrite")).toBeNull();
+  });
+
+  it("does not rewrite an app webview or other paths", async () => {
+    const app = await proxy(
+      makeRequest(home, { ...opts, userAgent: "Mozilla/5.0 AHDClient-Desktop/1.0" })
+    );
+    const other = await proxy(makeRequest("https://ahousedividedgame.com/login", opts));
+    expect(other.headers.get("x-middleware-rewrite")).toBeNull();
+    expect(app.headers.get("x-middleware-rewrite") ?? "").not.toContain("/landing-static");
+  });
+
+  it("does not rewrite the wiki subdomain home page to the landing page", async () => {
+    const res = await proxy(
+      makeRequest("https://wiki.ahousedividedgame.com/", { host: "wiki.ahousedividedgame.com" })
+    );
+    expect(res.headers.get("x-middleware-rewrite")).not.toContain("/landing-static");
+  });
+
+  it("is still behind the maintenance gate", async () => {
+    mockMaintenanceStatus.mockResolvedValueOnce({ mode: "full", enabled: true });
+    const res = await proxy(makeRequest(home, opts));
+    expect(res.headers.get("location")).toContain("/maintenance");
+  });
+});
+
+describe("proxy() — retired admin and moderator panel URLs", () => {
+  const redirectOf = async (path: string) => {
+    const res = await proxy(
+      makeRequest(`https://ahousedividedgame.com${path}`, { host: "ahousedividedgame.com" })
+    );
+    expect(res.status).toBe(307);
+    const location = new URL(res.headers.get("location")!);
+    return location.pathname + location.search;
+  };
+
+  it("redirects the panel roots to the control panel", async () => {
+    expect(await redirectOf("/admin")).toBe("/control");
+    expect(await redirectOf("/moderator")).toBe("/control");
+  });
+
+  it("keeps deep links and carries other params over", async () => {
+    expect(await redirectOf("/admin?tab=players&sub=users")).toBe("/control/players/users");
+    expect(await redirectOf("/admin?tab=support&sub=suggestions&issue=9")).toBe(
+      "/control/support/suggestions?issue=9"
+    );
+    expect(await redirectOf("/moderator?tab=content&sub=wiki-review")).toBe(
+      "/control/community/wiki-review"
+    );
+  });
+
+  it("maps the standalone pages", async () => {
+    expect(await redirectOf("/admin/tasks")).toBe("/control/overview/tasks");
+    expect(await redirectOf("/admin/country/CN/regime")).toBe("/control/world/regime/CN");
+    expect(await redirectOf("/moderator/mail-reports/abc")).toBe(
+      "/control/support/mail-reports/abc"
+    );
+  });
+
+  it("does not touch the singleplayer admin page or look-alike paths", async () => {
+    for (const path of ["/singleplayer/admin", "/administration", "/moderators"]) {
+      const res = await proxy(
+        makeRequest(`https://ahousedividedgame.com${path}`, { host: "ahousedividedgame.com" })
+      );
+      expect(res.headers.get("location")).toBeNull();
+    }
   });
 });
 

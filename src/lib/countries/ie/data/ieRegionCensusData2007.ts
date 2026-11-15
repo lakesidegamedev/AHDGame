@@ -1,16 +1,8 @@
 /**
- * Ireland Region Census Profiles — 2007 (Celtic Tiger peak) era.
+ * Ireland Region Census Profiles for the 2007 peak-boom era.
  *
- * Era anchor: CSO Census of Population 2006. Every value is independently
- * authored from historical knowledge of each region in 2007 — NOT scaled or
- * derived from any other era file.
- *
- * 2007 Ireland: peak boom — construction at ~13% of employment, full
- * employment, and a very large EU-accession inflow (Poland, Lithuania, Latvia
- * post-2004) pushing foreign-born to roughly 10–15% nationally, spread
- * unusually evenly because migrant workers followed building sites and food
- * plants into rural counties. Age structure mid-heavy (returned emigrants plus
- * young EU workers). Income tiers are era-neutral relative tiers.
+ * Anchor: CSO Census of Population 2006. Values are authored independently per
+ * region, not scaled from other era files. Income tiers are era-neutral relative tiers.
  */
 
 import type { IERegionLayer1 } from "@/lib/seeds/ie/ieRegionCensusData";

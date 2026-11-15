@@ -15,11 +15,19 @@ import {
 } from "@/lib/currency/corporationCapital";
 import { buildPersonalBalanceInc, getHomeCurrency } from "@/lib/currency/characterFunds";
 import { allocateShareholderPool } from "@/lib/bonds/corporateBondDefault";
+import { NPP_ANCHOR_BALANCE_PATH } from "@/lib/corporations/payFundShareholders";
 import { treasuryAnchorValuation } from "@/lib/budget/rules/treasuryAccrual";
 import { writeGovBudgetLocal } from "@/lib/currency/govBudgetFields";
 import { resumeSettlement, settleTransition } from "@/lib/banking/settlementJournal";
 import type { BankingTransition, TransitionLeg } from "@/lib/banking/rules/boundary";
 import type { TreasuryCashOptions } from "./treasuryLedger";
+import { getNppsCollection } from "@/lib/db/collections/npps";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
 
 /**
  * Distribute a ₳-denominated shareholder pool pro-rata across every bucket:
@@ -43,9 +51,7 @@ export async function settleFundedWholeCorpShareholderPool(
 ): Promise<void> {
   const context = input.ledger.context;
   const settlementKey = `treasury-nationalization-buyout:${input.key}`;
-  const prior = await db
-    .collection<{ _id: string }>("bankMoneyMoves")
-    .findOne({ _id: settlementKey });
+  const prior = await bankMoneyMovesCollection<{ _id: string }>(db).findOne({ _id: settlementKey });
   if (prior) {
     const resumed = await resumeSettlement(db, settlementKey);
     if (resumed.status !== "applied" && !(resumed.status === "replayed" && !resumed.error))
@@ -58,17 +64,18 @@ export async function settleFundedWholeCorpShareholderPool(
   const personalRows = allocation.characterRows.filter((row) => row.payout > 0);
   const corpRows = allocation.corporationRows.filter((row) => row.payout > 0);
   const fundRows = allocation.fundRows.filter((row) => row.payout > 0);
+  const nppRows = (allocation.nppRows ?? []).filter((row) => row.payout > 0);
   const floatPayout = allocation.publicFloatRow?.payout ?? 0;
   const totalAnchor =
     personalRows.reduce((sum, row) => sum + row.payout, 0) +
     corpRows.reduce((sum, row) => sum + row.payout, 0) +
     fundRows.reduce((sum, row) => sum + row.payout, 0) +
+    nppRows.reduce((sum, row) => sum + row.payout, 0) +
     floatPayout;
   if (!(totalAnchor > 0)) return;
 
-  const [personalDocs, imperialDocs, corpDocs, funds] = await Promise.all([
-    db
-      .collection<Character>("characters")
+  const [personalDocs, imperialDocs, corpDocs, funds, npps] = await Promise.all([
+    charactersCollection(db)
       .find({
         _id: {
           $in: personalRows
@@ -77,8 +84,7 @@ export async function settleFundedWholeCorpShareholderPool(
         },
       })
       .toArray(),
-    db
-      .collection<ImperialCharacter>("imperialCharacters")
+    imperialCharactersCollection(db)
       .find({
         _id: {
           $in: personalRows
@@ -87,14 +93,20 @@ export async function settleFundedWholeCorpShareholderPool(
         },
       })
       .toArray(),
-    db
-      .collection<Corporation>("corporations")
+    corporationsCollection(db)
       .find({ _id: { $in: corpRows.map((row) => new ObjectId(row.corporationId)) } })
       .toArray(),
-    db
-      .collection<IndexFund>("indexFunds")
+    indexFundsCollection(db)
       .find({ _id: { $in: fundRows.map((row) => new ObjectId(row.fundId)) } })
       .toArray(),
+    getNppsCollection(db).then((npps) =>
+      npps
+        .find(
+          { _id: { $in: nppRows.map((row) => new ObjectId(row.nppId)) } },
+          { projection: { _id: 1 } }
+        )
+        .toArray()
+    ),
   ]);
   const personalById = new Map(
     [...personalDocs, ...imperialDocs].map((doc) => [doc._id.toString(), doc])
@@ -107,6 +119,9 @@ export async function settleFundedWholeCorpShareholderPool(
     throw new Error("Funded buyout corporate shareholder is missing");
   if (fundRows.some((row) => !fundById.has(row.fundId)))
     throw new Error("Funded buyout index-fund shareholder is missing");
+  const nppIds = new Set(npps.map((doc) => doc._id.toString()));
+  if (nppRows.some((row) => !nppIds.has(row.nppId)))
+    throw new Error("Funded buyout NPP shareholder is missing");
 
   const treasuryCurrency =
     context.treasuryCurrencies.get(input.countryId) ??
@@ -123,9 +138,10 @@ export async function settleFundedWholeCorpShareholderPool(
   );
   if (!(treasuryLocal > 0))
     throw new Error("Funded buyout rounded to a non-positive Treasury debit");
-  const budget = await db
-    .collection<{ countryId: string; currencyCode?: CurrencyCode | null }>("federalBudget")
-    .findOne({ countryId: input.countryId }, { projection: { countryId: 1, currencyCode: 1 } });
+  const budget = await federalBudgetCollection<{
+    countryId: string;
+    currencyCode?: CurrencyCode | null;
+  }>(db).findOne({ countryId: input.countryId }, { projection: { countryId: 1, currencyCode: 1 } });
   if (!budget) throw new Error("Funded buyout Treasury account is missing");
   const treasuryFilter: Record<string, unknown> = { countryId: budget.countryId };
   if (Object.prototype.hasOwnProperty.call(budget, "currencyCode"))
@@ -224,6 +240,17 @@ export async function settleFundedWholeCorpShareholderPool(
       note: `Pay frozen index-fund shareholder ${row.fundId}`,
     });
   }
+  for (const row of nppRows) {
+    legs.push({
+      kind: "credit",
+      amount: row.payout,
+      valuation: { currencyCode: "USD", localPerAnchor: 1 },
+      collection: "npps",
+      filter: { _id: new ObjectId(row.nppId) },
+      path: NPP_ANCHOR_BALANCE_PATH,
+      note: `Pay frozen NPP shareholder ${row.nppId}`,
+    });
+  }
   const projections = [
     {
       collection: "federalBudget",
@@ -279,7 +306,7 @@ export async function settleFundedWholeCorpLiquidation(
 ): Promise<void> {
   const context = input.ledger.context;
   const settlementKey = `treasury-nationalization-liquidation:${input.key}`;
-  if (await db.collection<{ _id: string }>("bankMoneyMoves").findOne({ _id: settlementKey })) {
+  if (await bankMoneyMovesCollection<{ _id: string }>(db).findOne({ _id: settlementKey })) {
     const resumed = await resumeSettlement(db, settlementKey);
     if (resumed.status !== "applied" && !(resumed.status === "replayed" && !resumed.error))
       throw new Error(resumed.error ?? "Funded corporation liquidation is incomplete");
@@ -360,9 +387,13 @@ export async function settleFundedWholeCorpLiquidation(
   );
   let treasuryFilter: Record<string, unknown> | undefined;
   if (treasuryLocal > 0) {
-    const budget = await db
-      .collection<{ countryId: string; currencyCode?: CurrencyCode | null }>("federalBudget")
-      .findOne({ countryId: input.countryId }, { projection: { countryId: 1, currencyCode: 1 } });
+    const budget = await federalBudgetCollection<{
+      countryId: string;
+      currencyCode?: CurrencyCode | null;
+    }>(db).findOne(
+      { countryId: input.countryId },
+      { projection: { countryId: 1, currencyCode: 1 } }
+    );
     if (!budget) throw new Error("Funded liquidation Treasury account is missing");
     treasuryFilter = { countryId: budget.countryId };
     if (Object.prototype.hasOwnProperty.call(budget, "currencyCode"))

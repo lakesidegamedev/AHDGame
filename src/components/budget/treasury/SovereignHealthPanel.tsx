@@ -3,6 +3,7 @@
 import { Fragment } from "react";
 import type { SovereignProjection } from "@/lib/publicFinance/queries/federalBudgetDetail";
 import type { SovereignCrisisState } from "@/lib/db/types/budget";
+import { TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import { formatFundsCompact } from "@/lib/utils/formatters";
 
 /**
@@ -131,6 +132,36 @@ function ceilingNotice(sovereign: SovereignProjection, sym: string) {
   return { title: "Debt ceiling warning", detail: `${use}${headroom}${horizon}` };
 }
 
+function sharePct(share: number, digits = 1): string {
+  return `${(share * 100).toFixed(digits)}%`;
+}
+
+function ConsolidationNotice({
+  summary,
+}: {
+  summary: NonNullable<SovereignProjection["consolidation"]>;
+}) {
+  const years = Math.max(1, Math.ceil(summary.turnsRemaining / TURNS_PER_YEAR));
+  return (
+    <div
+      className={`mt-3 rounded-md border px-3 py-2 ${TONE_BADGE.warning}`}
+      role="status"
+      data-testid="consolidation-package"
+    >
+      <div className="text-body-xs font-semibold">
+        Austerity package · fiscal year {summary.fiscalYear}
+      </div>
+      <div className="mt-0.5 text-body-xs leading-snug text-foreground/80">
+        Worth {sharePct(summary.sizeGdpShare)} of GDP: {sharePct(summary.taxShare, 0)} from tax
+        rises and {sharePct(summary.cutShare, 0)} from spending cuts. It cost the government{" "}
+        {summary.approvalCost.toFixed(1)} points of approval when enacted;{" "}
+        {summary.approvalEffectNow.toFixed(1)} points are still being felt and fade over about{" "}
+        {years} {years === 1 ? "year" : "years"}.
+      </div>
+    </div>
+  );
+}
+
 export function SovereignHealthPanel({
   sovereign,
   sym,
@@ -213,6 +244,8 @@ export function SovereignHealthPanel({
           gold={ceilingSignalTone === "warning"}
         />
       </div>
+
+      {sovereign.consolidation && <ConsolidationNotice summary={sovereign.consolidation} />}
 
       {ceiling && (
         <div

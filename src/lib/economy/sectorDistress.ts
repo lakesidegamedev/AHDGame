@@ -3,6 +3,7 @@ import { SECTOR_SUPPLY } from "@/lib/constants/commodities";
 import { OPERATING_SECTOR_TYPES } from "@/lib/constants/corporations";
 import type { OperatingSectorType } from "@/lib/constants/corporations";
 import type { CommodityPrice } from "@/lib/db/types/commodityPrice";
+import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
 
 export interface SectorDistressScore {
   sectorType: OperatingSectorType;
@@ -23,7 +24,7 @@ export interface SectorDistressScore {
  * supply_demand_ratio < 1 means shortage (production lagging demand, should grow).
  */
 export async function computeSectorDistressRanking(db: Db): Promise<SectorDistressScore[]> {
-  const commodityPrices = await db.collection<CommodityPrice>("commodityPrices").find({}).toArray();
+  const commodityPrices = await commodityPricesCollection(db).find({}).toArray();
 
   const priceMap = new Map(commodityPrices.map((c) => [c.commodity, c]));
 

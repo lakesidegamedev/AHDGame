@@ -4,24 +4,20 @@ import {
   ensureSCOElections,
   ensureSCOGovernorElections,
   ensureSCORegionalCouncilElections,
-} from "@/lib/turn/perpetualElections";
+} from "@/lib/elections/scheduling";
 
 /**
  * Scotland's elections.
  *
- * ⚠️ SERVER ONLY. The spawners reach `getDb`.
+ * SERVER ONLY: spawners reach `getDb`.
  *
- * ⚠️ NO `spawn`, AND NOTHING RELOCATED. Scotland has no row in
- * `SPAWN_ELECTIONS_REGISTRY`; these phases run through
- * `COUNTRY_ELECTION_PHASES`, in this order. Adding a `spawn` would run them a
- * second time each turn. The spawner functions stay where they are because their
- * files are shared between countries -- moving one into this folder would take
- * the others' elections with it.
+ * NO `spawn`: Scotland has no `SPAWN_ELECTIONS_REGISTRY` row; these phases run
+ * via `COUNTRY_ELECTION_PHASES`. Adding a `spawn` would run them twice per turn.
+ * Spawner fns stay where they are because their files are shared across
+ * countries.
  *
- * ⚠️ NO `seats`. There is no seat table for Scotland anywhere;
- * apportionment is read from the live regions, the way East Germany's
- * Volkskammer and Brazil's Senate are. An empty `byChamber` would describe a
- * chamber with no seats rather than one whose seats live elsewhere.
+ * NO `seats`: there is no seat table; apportionment reads from live regions.
+ * An empty `byChamber` would describe a chamber with no seats.
  */
 const phases: CountryElectionPhaseEntry[] = [
   { name: "scoElections", fn: ensureSCOElections },

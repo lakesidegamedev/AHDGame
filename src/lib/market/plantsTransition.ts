@@ -1,28 +1,19 @@
 /**
- * PLANTS TRANSITION — the operational layer around the tier flip.
+ * Operational layer around the plants tier flip: a preflight predicting what
+ * the flip will do, and a soak summary for the world it produces.
  *
- * The plants engine itself is merged and mode-gated. What this module adds is
- * the part an operator needs on the day: a preflight that predicts what the
- * flip will do BEFORE it happens, and a soak summary that says whether the
- * world that came out the other side is behaving.
+ * Everything here is PURE: no Mongo, no io, no clock. Scripts in scripts/ops
+ * load documents and print results. Keeping the arithmetic unit-testable
+ * without a live database is the point.
  *
- * Everything here is PURE — no Mongo, no io, no clock. The scripts in
- * `scripts/ops/` are thin readers that load documents, hand them to these
- * functions, and print the result. That split is the point: the reporting
- * logic (which is where the arithmetic mistakes live) is unit-testable without
- * a live database, and the same functions can be pointed at a sim world, a
- * sandbox, or prod without change.
+ * Predictions re-use the ENGINE's own primitives (`impliedOutputUnits`,
+ * `CAPITAL_SEED_HEADROOM`, `capacityPricePerUnit`, `getEffectiveStrategyRates`)
+ * rather than reimplementing flip formulas. A preflight with its own copy of
+ * the maths can pass while the engine does something else.
  *
- * The predictions here deliberately re-use the ENGINE's own primitives —
- * `impliedOutputUnits`, `CAPITAL_SEED_HEADROOM`, `capacityPricePerUnit`,
- * `getEffectiveStrategyRates` — rather than reimplementing the flip formulas.
- * A preflight that predicts the flip using its own copy of the maths is a
- * preflight that can pass while the engine does something else.
- *
- * Currency: every `*Anchor` figure is in ₳. Sector documents store money in
- * their host currency, so the CALLER converts to ₳ before handing rows in
- * (`readCorpEconomicAnchor`). Mixing a local figure into these inputs would
- * reproduce the t841 class of bug — see the nationalization money-safety notes.
+ * Currency: every `*Anchor` figure is in the anchor currency (₳). Sector
+ * documents store money in host currency, so callers convert first
+ * (`readCorpEconomicAnchor`). Mixing a local figure in corrupts the math.
  */
 import {
   CAPACITY_ANCHOR_YEAR,
@@ -64,16 +55,14 @@ export interface PlantsBuildOrderInput {
  *
  * The flip is not supply-neutral. `seedCapitalStock` seeds a migrating sector
  * at `impliedUnits × CAPITAL_SEED_HEADROOM` (1.1), and the plants nameplate is
- * restated as `capacity × mixPrice` — so a sector arriving WITHOUT usable
- * stored capacity has its nameplate, and therefore its contribution to world
- * commodity supply, step up by up to 10% on the flip turn. That write is not
- * governed: the λ ramp softens realized revenue, not the nameplate.
+ * restated as `capacity × mixPrice`, so a sector arriving WITHOUT usable stored
+ * capacity steps its nameplate up by up to 10% on the flip turn. That write is
+ * not governed: the λ ramp softens realized revenue, not the nameplate.
  *
- * A world coming from `capital` has real `capitalStock` on most sectors, which
- * wins the `max()`, so the aggregate step should be small. A world coming from
- * `clearing` or below has none, and every sector takes the full headroom step
- * at once — a ~10% world supply shock on a single turn, which will move every
- * commodity price. That is the number these thresholds exist to catch.
+ * A world from `capital` has real `capitalStock` on most sectors, which wins the
+ * `max()`, so the aggregate step is small. A world from `clearing` or below has
+ * none, and every sector takes the full step at once: a ~10% world supply shock
+ * in one turn. That is what these thresholds catch.
  */
 const PLANTS_SUPPLY_STEP_WARN_PCT = 0.02;
 export const PLANTS_SUPPLY_STEP_BLOCK_PCT = 0.05;
@@ -1004,19 +993,16 @@ export function mergeBuildFlows(flows: readonly PlantsBuildFlow[]): PlantsBuildF
 /**
  * What a rollback would COST for one sector, without writing anything.
  *
- * `restoreCapitalModeFromShadow` answers "what would the mutation be". This
- * answers the operator's actual question: "what do I lose". Two populations
- * matter and they are not the same:
+ * Two populations matter:
  *
- * - **No restore point** (`legacyRevenueShadow` absent or corrupt) — the
+ * - **No restore point** (`legacyRevenueShadow` absent or corrupt), the
  *   rollback CANNOT act. These sectors keep a plants-derived nameplate that
- *   capital mode will then compound forward. This is unrecoverable data loss
- *   in the sense that matters: there is no correct value to write.
- * - **Divergence** — the shadow is present and healthy, but live revenue has
- *   moved away from it, because the sector built (or lost) real capacity while
- *   in plants. Rolling back DISCARDS that. This is expected and fine — it is
- *   what a rollback means — but the operator has to see the magnitude to know
- *   what they are giving up.
+ *   capital mode will compound forward. Unrecoverable: no correct value to
+ *   write.
+ * - **Divergence**, the shadow is present and healthy, but live revenue has
+ *   moved away from it because the sector built or lost real capacity while
+ *   in plants. Rolling back DISCARDS that, which is what a rollback means;
+ *   the operator needs the magnitude.
  */
 export interface PlantsRollbackVerifySectorInput {
   id: string;

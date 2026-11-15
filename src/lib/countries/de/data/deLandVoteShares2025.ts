@@ -1,32 +1,19 @@
 /**
  * SEED INDEPENDENCE: DO NOT DERIVE FROM ANOTHER ERA.
- * Authored for 2025 directly; never imports or transforms the 1953/1990/2021 tables.
+ * Authored for 2025 directly; never imports or transforms other era tables.
  *
- * 2025 German Bundestag Zweitstimmen per Land
- *
- * Vote-share percentages from the 21st Bundestag election (23 February
- * 2025), the chamber `deRegions2027.ts` seats. Used by
- * `calculateDEStatePartyOrgs` when the active preset is `2027-default`.
+ * 2025 German Bundestag Zweitstimmen per Land, from the 21st Bundestag
+ * election (23 February 2025), the chamber deRegions2027.ts seats. Used by
+ * calculateDEStatePartyOrgs when the active preset is 2027-default.
  *
  * National result the regional table is calibrated against: CDU/CSU 28.5
  * (CDU 22.6 + CSU 6.0), AfD 20.8, SPD 16.4, Gruene 11.6, Linke 8.8,
- * BSW 5.0, FDP 4.3. The BSW (Sahra Wagenknecht Alliance, founded 2024) has
- * no `deParties.ts` seed, so its share goes unallocated rather than being
- * folded into a party that did not win it. The FDP fell below the 5%
- * threshold and left the Bundestag but continues as a seeded default.
+ * BSW 5.0, FDP 4.3. BSW has no deParties.ts seed, so its share goes
+ * unallocated rather than folded into another party. The FDP fell below the
+ * 5% threshold but continues as a seeded default.
  *
- * Key differences from the 2021 dataset:
- *   - Union weakest since the postwar era in the West (near 30% rather
- *     than mid-40s); SPD at historic lows outside Bremen and Lower Saxony.
- *   - AfD first in all five eastern Laender (32-39%) and near 20% in the
- *     West and South; Linke rebound strongest in Berlin (19.9%), Bremen
- *     and Hamburg.
- *   - CSU still only contests in BY; CDU still absent from BY.
- *
- * Values rounded for gameplay calibration from the official
- * Bundeswahlleiter 2025 Zweitstimmen-by-Land tables
- * (https://www.bundeswahlleiter.de/en/bundestagswahlen/2025/ergebnisse/bund.html),
- * cross-checked against the per-state summary table.
+ * Values rounded for gameplay calibration from the official Bundeswahlleiter
+ * 2025 Zweitstimmen-by-Land tables.
  */
 
 export const DE_LAND_VOTE_SHARES_2025: Record<string, Record<string, number>> = {

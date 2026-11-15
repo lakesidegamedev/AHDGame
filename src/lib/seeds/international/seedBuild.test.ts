@@ -3,7 +3,7 @@
  *
  * For each supported international country, verifies that
  * `buildModelRegionDemographics(getCountryLayer1Model(cc, "2019")!)` returns a
- * non-empty array of StateDemographics with valid invariants:
+ * non-empty array of CensusGroupView with valid invariants:
  *   - categoryWeights sums to 100
  *   - every group's economicLean and socialLean are within [-5, 5]
  *   - every group's population >= 0

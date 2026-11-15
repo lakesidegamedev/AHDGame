@@ -1,8 +1,8 @@
 import type { Db } from "mongodb";
-import type { FederalBudget } from "@/lib/db/types/budget";
 import { getTreasuryOperationsCollection } from "@/lib/db/collections/treasuryOperations";
 import { getNationalBudgetId } from "@/lib/bonds/sovereign";
 import { INVESTOR_CONFIDENCE_BASELINE } from "@/lib/nationalization/constants";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 /**
  * Cabinet Monetary turn step (4f). For each country with an ACTIVE debt-management
@@ -46,16 +46,17 @@ export async function applyTreasuryEffects(
     }
 
     const budgetId = getNationalBudgetId(doc.countryId);
-    const budget = await db.collection<FederalBudget>("federalBudget").findOne({ _id: budgetId });
+    const budget = await federalBudgetCollection(db).findOne({ _id: budgetId });
     const current = budget?.investorConfidence;
     if (typeof current !== "number" || current >= INVESTOR_CONFIDENCE_BASELINE) {
       // At/above baseline (or unset) — accelerated recovery has no effect.
       continue;
     }
     const next = Math.min(INVESTOR_CONFIDENCE_BASELINE, current + op.boostPerTurn);
-    await db
-      .collection<FederalBudget>("federalBudget")
-      .updateOne({ _id: budgetId }, { $set: { investorConfidence: next } });
+    await federalBudgetCollection(db).updateOne(
+      { _id: budgetId },
+      { $set: { investorConfidence: next } }
+    );
     opsApplied++;
   }
 

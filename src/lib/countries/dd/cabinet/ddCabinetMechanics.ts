@@ -1,21 +1,16 @@
 /**
- * East Germany (DD) Cabinet mechanics — Council of Ministers of the GDR.
+ * East Germany (DD) Cabinet mechanics: the GDR Council of Ministers.
  *
- * DD's cabinet is a command-economy Council of Ministers structurally identical
- * to the USSR's (same portfolios and policy levers: the planning-commission
- * chair, the central-bank liaison, and the Finance / Foreign-Trade / Internal-
- * Trade / Agriculture tier settings). DD's cabinet position IDs mirror RU's
- * one-for-one (see ddCabinet.ts), so we reuse RU_CABINET_MECHANICS verbatim,
- * remapping only the head-of-government key (RU `premier` → DD `generalSecretary`,
- * DD's executive office key). This keeps DD in lock-step with the RU mechanics
- * that ruCabinetEffectPaths.test.ts pins, instead of duplicating 400 lines that
- * would drift.
+ * Structurally identical to the USSR's cabinet, with the same portfolios
+ * and policy levers, and DD position ids mirror RU's one-for-one (see
+ * ddCabinet.ts). We reuse RU_CABINET_MECHANICS verbatim, remapping only
+ * the executive key (RU `premier` -> DD `generalSecretary`), so DD stays in
+ * lock-step with the RU mechanics ruCabinetEffectPaths.test.ts pins rather
+ * than duplicating ~400 drifting lines.
  *
- * Departments are the one thing DD does NOT inherit: RU's strings name Soviet
- * institutions, which leaked into the GDR council (the Staatsbank liaison read
- * "State Bank of the USSR", the Transport Minister read "Ministry of Railways").
- * DD_DEPARTMENTS overrides those per seat; the levers themselves stay shared.
- * Pinned by ddCabinetMechanics.test.ts.
+ * Departments are the exception: RU strings name Soviet institutions that
+ * would leak into the GDR council, so DD_DEPARTMENTS overrides them per
+ * seat while the levers stay shared. Pinned by ddCabinetMechanics.test.ts.
  */
 import type { CabinetPositionMechanics } from "@/lib/constants/cabinetMechanicsTypes";
 import { RU_CABINET_MECHANICS } from "@/lib/constants/ruCabinetMechanics";

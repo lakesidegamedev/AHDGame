@@ -10,33 +10,34 @@ import {
   DeleteObjectCommand,
   ListObjectsV2Command,
 } from "@aws-sdk/client-s3";
+import { servicesConfig } from "@/lib/config/services";
 
 export function isR2Enabled(): boolean {
   return !!(
-    process.env.CLOUDFLARE_R2_ACCOUNT_ID &&
-    process.env.CLOUDFLARE_R2_ACCESS_KEY_ID &&
-    process.env.CLOUDFLARE_R2_SECRET_ACCESS_KEY &&
-    process.env.CLOUDFLARE_R2_BUCKET_NAME
+    servicesConfig.r2AccountId() &&
+    servicesConfig.r2AccessKeyId() &&
+    servicesConfig.r2SecretAccessKey() &&
+    servicesConfig.r2BucketName()
   );
 }
 
 function getClient(): S3Client {
   return new S3Client({
     region: "auto",
-    endpoint: `https://${process.env.CLOUDFLARE_R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+    endpoint: `https://${servicesConfig.r2AccountId()}.r2.cloudflarestorage.com`,
     credentials: {
-      accessKeyId: process.env.CLOUDFLARE_R2_ACCESS_KEY_ID!,
-      secretAccessKey: process.env.CLOUDFLARE_R2_SECRET_ACCESS_KEY!,
+      accessKeyId: servicesConfig.r2AccessKeyId()!,
+      secretAccessKey: servicesConfig.r2SecretAccessKey()!,
     },
   });
 }
 
 function getBucket(): string {
-  return process.env.CLOUDFLARE_R2_BUCKET_NAME!;
+  return servicesConfig.r2BucketName()!;
 }
 
 function getPublicUrl(key: string): string {
-  const base = process.env.CLOUDFLARE_R2_PUBLIC_URL?.replace(/\/$/, "") ?? "";
+  const base = servicesConfig.r2PublicUrl()?.replace(/\/$/, "") ?? "";
   return `${base}/${key}`;
 }
 
@@ -103,7 +104,7 @@ function getExtFromKey(key: string): string {
 /** Delete a single file by its full public URL. */
 export async function deleteFileByUrl(url: string): Promise<void> {
   const client = getClient();
-  const base = process.env.CLOUDFLARE_R2_PUBLIC_URL?.replace(/\/$/, "") ?? "";
+  const base = servicesConfig.r2PublicUrl()?.replace(/\/$/, "") ?? "";
   if (!base || !url.startsWith(base)) return;
   const key = url.slice(base.length + 1);
   await client.send(new DeleteObjectCommand({ Bucket: getBucket(), Key: key }));

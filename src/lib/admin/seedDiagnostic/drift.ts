@@ -30,6 +30,11 @@ import {
 import type { SeedDiagnosticCheck, SeedDiagnosticSeverity } from "./types";
 import { calendarTurnFromGameState } from "./types";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 /** Default annual population growth percent when seed configs omit an explicit rate. */
 export const DEFAULT_POP_GROWTH_PCT = 1;
@@ -258,15 +263,13 @@ async function checkClockDrift(
   expect: SeedExpectations,
   calendarTurn: number
 ): Promise<SeedDiagnosticCheck[]> {
-  const gs = await db
-    .collection<{
-      currentTurn?: number;
-      currentYear?: number;
-      startingYear?: number;
-      preIteration?: { active?: boolean };
-      preIterationTurns?: number;
-    }>("gameState")
-    .findOne({ _id: "current" as never });
+  const gs = await gameStateCollection<{
+    currentTurn?: number;
+    currentYear?: number;
+    startingYear?: number;
+    preIteration?: { active?: boolean };
+    preIterationTurns?: number;
+  }>(db).findOne({ _id: "current" as never });
 
   if (!gs) {
     return [
@@ -352,12 +355,11 @@ async function checkLedgerHealth(db: Db): Promise<SeedDiagnosticCheck[]> {
 
 async function checkTreasurySign(db: Db, expect: SeedExpectations): Promise<SeedDiagnosticCheck[]> {
   const checks: SeedDiagnosticCheck[] = [];
-  const budgets = await db
-    .collection<{
-      countryId?: string;
-      treasuryBalance?: number;
-      debt?: { principal?: number };
-    }>("federalBudget")
+  const budgets = await federalBudgetCollection<{
+    countryId?: string;
+    treasuryBalance?: number;
+    debt?: { principal?: number };
+  }>(db)
     .find({})
     .toArray();
   const byCountry = new Map(budgets.map((b) => [String(b.countryId), b]));
@@ -402,15 +404,13 @@ export async function runDriftChecks(
   db: Db,
   opts?: { preset?: string; calendarTurn?: number }
 ): Promise<RunDriftChecksResult> {
-  const gs = await db
-    .collection<{
-      preset?: string;
-      currentTurn?: number;
-      currentYear?: number;
-      startingYear?: number;
-      preIterationTurns?: number;
-    }>("gameState")
-    .findOne({ _id: "current" as never });
+  const gs = await gameStateCollection<{
+    preset?: string;
+    currentTurn?: number;
+    currentYear?: number;
+    startingYear?: number;
+    preIterationTurns?: number;
+  }>(db).findOne({ _id: "current" as never });
 
   const preset =
     opts?.preset ?? (typeof gs?.preset === "string" ? gs.preset : null) ?? DEFAULT_SEED_PRESET;
@@ -445,9 +445,9 @@ export async function runDriftChecks(
 
   const liveMetrics = await collectLiveMetrics(db, expect);
 
-  const config = await db
-    .collection<{ commandEconomyEnabled?: boolean }>("gameConfig")
-    .findOne({ _id: "default" as never });
+  const config = await gameConfigCollection<{ commandEconomyEnabled?: boolean }>(db).findOne({
+    _id: "default" as never,
+  });
   const commandEnabled = config?.commandEconomyEnabled === true;
 
   const checks: SeedDiagnosticCheck[] = [];
@@ -505,10 +505,13 @@ export async function runDriftChecks(
   }
 
   // USD GDP-per-capita band (after forex is trusted).
-  const rates = await db.collection<ExchangeRate>("exchangeRates").find({}).toArray();
+  const rates = await exchangeRatesCollection(db).find({}).toArray();
   const rateMap = new Map(rates.map((r) => [r.countryId, r]));
-  const budgets = await db
-    .collection<{ countryId?: string; gdp?: number; population?: number }>("federalBudget")
+  const budgets = await federalBudgetCollection<{
+    countryId?: string;
+    gdp?: number;
+    population?: number;
+  }>(db)
     .find({})
     .toArray();
   const budgetByCountry = new Map(budgets.map((b) => [String(b.countryId), b]));
@@ -518,7 +521,7 @@ export async function runDriftChecks(
     if (!doc || doc.gdp == null || doc.population == null) continue;
 
     let forexRate = 1;
-    if (countryId !== "US") {
+    if (!countryHasFeature("usAdmin", countryId)) {
       const rateDoc = getRateDoc(rateMap, countryId as CountryId);
       if (rateDoc) {
         forexRate = rateFromDoc(rateDoc);

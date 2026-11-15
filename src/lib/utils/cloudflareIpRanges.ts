@@ -1,15 +1,11 @@
-// Cloudflare's published edge IP ranges (https://www.cloudflare.com/ips/, checked 2026-07).
-// Used as a defense-in-depth guard in alt-account detection: a login IP that
-// falls inside Cloudflare's own edge range is never a real client IP — it can
-// only get recorded that way from a proxy-header misconfiguration (the bug
-// fixed in src/lib/utils/network.ts) or a future regression of the same kind.
-// Excluding these from IP-based matching means any already-logged rows from
-// before that fix stop producing false alt-account matches immediately,
-// rather than waiting out the detectors' 7-14 day lookback windows.
+// Cloudflare's published edge IP ranges (https://www.cloudflare.com/ips/).
+// A login IP inside Cloudflare's edge range is never a real client IP; it
+// can only be recorded that way from a proxy-header misconfiguration or a
+// similar regression. Excluding these from IP-based matching prevents false
+// alt-account matches without waiting out the detectors' lookback windows.
 //
-// This list needs occasional refreshing against Cloudflare's published ranges
-// as they add capacity; staleness only means the guard under-catches, it
-// never causes a false exclusion of a real player's IP.
+// Refresh occasionally as Cloudflare adds capacity; staleness only means the
+// guard under-catches, never a false exclusion of a real player's IP.
 
 const CLOUDFLARE_IPV4_CIDRS = [
   "173.245.48.0/20",

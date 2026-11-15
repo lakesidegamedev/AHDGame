@@ -11,12 +11,13 @@ import type {
   CongressLeader,
   WhipIssuerRole,
 } from "@/lib/db/types";
+import { congressLeadersCollection } from "@/lib/db/repositories/congressLeaders";
 
 export type WhipChamber = BillWhip["chamber"];
 
 /** Map from chamber key to the congressLeaders roles that may whip in it.
  *  Whips have whip authority by definition — historically the position was
- *  scaffolded but never wired in (bug user-report 2026-05-17). */
+ *  scaffolded but never wired in. */
 const CHAMBER_LEADER_ROLES: Record<string, Array<Pick<CongressLeader, "role">["role"]>> = {
   house: [
     "speaker_of_the_house",
@@ -56,7 +57,7 @@ export async function getChamberLeaderRole(
   const roles = CHAMBER_LEADER_ROLES[chamber];
   if (!roles || roles.length === 0) return null;
 
-  const leader = await db.collection<CongressLeader>("congressLeaders").findOne({
+  const leader = await congressLeadersCollection(db).findOne({
     role: { $in: roles },
     characterId,
     party: partyId,

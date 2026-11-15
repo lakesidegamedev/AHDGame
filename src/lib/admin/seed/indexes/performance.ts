@@ -393,8 +393,8 @@ export async function seedPerfIndexes(db: Db, log: (msg: string) => void) {
 
   // corporationHistory, commodityPriceHistory, actionLogs and
   // statePartyElections are deliberately NOT indexed here. seedSlowQueryIndexes
-  // has owned those four since 2026-04-10; they were duplicated into this
-  // module on 2026-05-15 with byte-identical collection, key spec, name and
+  // has owned those four; they were duplicated into this
+  // module with byte-identical collection, key spec, name and
   // options, so each copy bought nothing and cost a no-op round trip per seed.
 
   // bonds — bondTurn.ts scans active bonds via `find({matured:false})` multiple
@@ -406,7 +406,7 @@ export async function seedPerfIndexes(db: Db, log: (msg: string) => void) {
   // adding ahead of growth, not as a hotfix.
   await ensureIndex(db, "bonds", { matured: 1, _id: 1 }, { name: "bonds_matured_id" }, log);
   // Creditor-side lookups: `{"holders.corporationId": id, matured: false}`. The
-  // corp detail page and the dissolve preview have always run it; ticket #1198
+  // corp detail page and the dissolve preview have always run it;
   // adds the bond-issuance route, which needs a corp's portfolio to price its
   // exit equity. The sibling (holders.characterId, matured, defaulted) index
   // covers the character case but nothing covered the corporate one.
@@ -611,9 +611,8 @@ export async function seedPerfIndexes(db: Db, log: (msg: string) => void) {
     log
   );
   // The index-fund rebalance reads open buy bids by fund before and after
-  // cancellation. The one-off 2026-08-10 migration creates this index in
-  // existing worlds, but a reset drops it while migration markers survive.
-  // Seed the same name and options so new/reset worlds retain that coverage.
+  // cancellation. A reset drops this index, so seed the same name and options
+  // to keep coverage in new and reset worlds.
   await ensureIndex(
     db,
     "shareOrders",

@@ -1,3 +1,4 @@
+import { hostsSovereigntyReferendums } from "@/lib/referendum/rules/sovereigntyRegions";
 import { z } from "zod";
 import { requireHumanSessionWithCharacter } from "@/lib/api/requireAuth";
 import { handleRouteError, errorResponse, statusResponse } from "@/lib/api/errors";
@@ -22,8 +23,8 @@ export async function POST(
     if (!COUNTRY_CONFIGS[countryId]) {
       return errorResponse(400, "Invalid country");
     }
-    if (countryId !== "UK") {
-      return errorResponse(400, "Devolution Policy is UK-only.");
+    if (!hostsSovereigntyReferendums(countryId)) {
+      return errorResponse(400, "This country has no Devolution Policy.");
     }
 
     const auth = await requireHumanSessionWithCharacter(request);

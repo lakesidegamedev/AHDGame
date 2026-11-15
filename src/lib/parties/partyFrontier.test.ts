@@ -8,10 +8,17 @@ import {
   canCharacterJoinParty,
   getPartyFrontiers,
   isolatedRegions,
+  getTerritoryAdjacency,
 } from "@/lib/parties/partyFrontier";
+import { connectedGrowthFrontier } from "@/lib/parties/rules/territory";
 import { STATE_ADJACENCY } from "@/lib/constants/stateAdjacency";
+import { annexedNeighbours } from "./rules/annexedAdjacency";
 
 describe("expandFrontier", () => {
+  it.each(["DON", "KIL"])("connects Ulster to Irish parties in %s", (region) => {
+    expect(expandFrontier("IE", [region]).has("NIR")).toBe(true);
+    expect(expandFrontier("IE", ["NIR"]).has(region)).toBe(true);
+  });
   it("includes the presence state itself plus its neighbours", () => {
     const f = expandFrontier("US", ["TN"]);
     expect(f.has("TN")).toBe(true);
@@ -113,7 +120,26 @@ describe("batched party frontiers", () => {
       },
       { projection: { party: 1, homeState: 1 } }
     );
-    expect(db.collection).toHaveBeenCalledTimes(4);
+    // Regions, three presence reads, and one party renewal read for re-entry.
+    expect(db.collection).toHaveBeenCalledTimes(5);
+  });
+
+  it("adds regions a party held within the last two renewal cycles", async () => {
+    const db = makeDb();
+    setMockCollection("states", {
+      find: vi.fn(() => ({
+        toArray: async () => Object.keys(STATE_ADJACENCY.US).map((id) => ({ _id: id })),
+      })),
+    });
+    setMockCollection("characters", {
+      find: vi.fn(() => ({ toArray: async () => [{ party: "1", homeState: "NY" }] })),
+    });
+    setMockCollection("partyRenewalStates", {
+      findOne: vi.fn().mockResolvedValue({ cycleIndex: 4, heldRegions: { "1": { CA: 3, TX: 1 } } }),
+    });
+    const result = await getPartyFrontiers(db, "US", ["1"]);
+    expect(result.get("1")).toContain("CA");
+    expect(result.get("1")).not.toContain("TX");
   });
 });
 
@@ -154,6 +180,7 @@ function setMockCollection(name: string, overrides: Record<string, unknown> = {}
   const defaults: Record<string, Mock> = {
     distinct: vi.fn().mockResolvedValue([]),
     find: vi.fn(() => ({ toArray: vi.fn().mockResolvedValue([]) })),
+    findOne: vi.fn().mockResolvedValue(null),
     aggregate: vi.fn(() => ({ toArray: vi.fn().mockResolvedValue([]) })),
     ...overrides,
   };
@@ -238,7 +265,7 @@ describe("getPartyFrontier", () => {
 
   it("returns presence and its one-hop expansion", async () => {
     const db = makeDb();
-    seedRegions(["NY"]);
+    seedRegions(["NY", "PA", "CA"]);
     setMockCollection("characters", { distinct: vi.fn().mockResolvedValue(["NY"]) });
 
     const { presence, frontier } = await getPartyFrontier(db, "US", "1");
@@ -318,5 +345,60 @@ describe("canCharacterJoinParty", () => {
     await expect(canCharacterJoinParty(db, { homeState: "" }, party, "US")).resolves.toEqual({
       ok: true,
     });
+  });
+});
+
+describe("annexed region (IE Northern Ireland)", () => {
+  const IE_WITH_NIR = [...Object.keys(STATE_ADJACENCY.IE), "NIR"];
+
+  it("lets a party present in Donegal grow into Northern Ireland once it is an Irish region", () => {
+    const presence = new Set(["DON"]);
+    const frontier = expandFrontier("IE", presence, IE_WITH_NIR);
+    expect(isInFrontier(presence, frontier, "NIR")).toBe(true);
+  });
+
+  it("lets a Dublin-only party reach Northern Ireland only by reconnecting through its border", () => {
+    const presence = new Set(["DUB"]);
+    const frontier = expandFrontier("IE", presence, IE_WITH_NIR);
+    // One hop from DUB is KIL; NIR is two hops away, so it stays closed.
+    expect(isInFrontier(presence, frontier, "NIR")).toBe(false);
+  });
+
+  it("does not detach a Northern Ireland foothold from a connected party", () => {
+    const presence = new Set(["DON", "KIL"]);
+    const adjacency = getTerritoryAdjacency("IE", IE_WITH_NIR);
+    const frontier = connectedGrowthFrontier(
+      presence,
+      expandFrontier("IE", presence, IE_WITH_NIR),
+      adjacency
+    );
+    expect(frontier.has("NIR")).toBe(true);
+  });
+
+  it("gives Northern Ireland neighbours in the territory graph, symmetric with the border regions", () => {
+    const adjacency = getTerritoryAdjacency("IE", IE_WITH_NIR);
+    expect([...adjacency.NIR].sort()).toEqual(["DON", "KIL", "MID"]);
+    expect(adjacency.DON).toContain("NIR");
+    expect(adjacency.KIL).toContain("NIR");
+    expect(adjacency.MID).toContain("NIR");
+  });
+
+  it("changes nothing while Northern Ireland is still outside the country", () => {
+    // The static graph now includes the transferable region too. Country
+    // ownership comes from the live state set, not every key in that graph.
+    const seeded = Object.keys(STATE_ADJACENCY.IE).filter((region) => region !== "NIR");
+    expect(expandFrontier("IE", ["DON"], seeded).has("NIR")).toBe(false);
+    expect(expandFrontier("IE", ["KIL"], seeded).has("NIR")).toBe(false);
+    expect(getTerritoryAdjacency("IE", seeded)).toEqual(
+      Object.fromEntries(Object.entries(STATE_ADJACENCY.IE).filter(([region]) => region !== "NIR"))
+    );
+    // Callers without a live set retain the static geography lookup.
+    expect(expandFrontier("IE", ["DON"]).has("NIR")).toBe(true);
+  });
+
+  it("does not add a transferred UK neighbour or an absent isolated region to a live frontier", () => {
+    const remainingUk = Object.keys(STATE_ADJACENCY.UK).filter((region) => region !== "SCO");
+    expect(expandFrontier("UK", ["NWE"], remainingUk).has("SCO")).toBe(false);
+    expect(expandFrontier("RU", ["MOS"], ["MOS"]).has("MOL")).toBe(false);
   });
 });

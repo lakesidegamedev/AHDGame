@@ -3,11 +3,13 @@
  * by cost representation and resolves the era-native cost forms. Flag-on only:
  * the two forms are consulted by costs.ts only when the era year is non-null;
  * flag-off keeps the legacy COST_SCALE_ANCHORS path byte-identical.
- *
- * Spec: docs/superpowers/specs/2026-07-06-era-legislation-costs-design.md
  */
 import { successorTaxInstrumentIds } from "@/lib/resetLegislation/successorTaxTypes";
 import { MECHANICAL_TYPE_IDS } from "@/lib/mechanicalLaws/legislation";
+import {
+  MODERN_ERA_COST_CLASSES,
+  MODERN_ERA_TYPE_IDS,
+} from "@/lib/seeds/shared/modernEraLegislation";
 import { getIncomeAnchor } from "./metricCatalog";
 import { bankingSeparationLegislationTypes } from "@/lib/seeds/shared/bankingSeparationLegislation";
 import { JP_ECONOMY } from "@/lib/countries/jp/economy";
@@ -17,6 +19,8 @@ import { DE_ECONOMY } from "@/lib/countries/de/economy";
 import { CN_ECONOMY } from "@/lib/countries/cn/economy";
 import { IE_ECONOMY } from "@/lib/countries/ie/economy";
 import { NG_ECONOMY } from "@/lib/countries/ng/economy";
+import { CA_ECONOMY } from "@/lib/countries/ca/economy";
+import { SAVED_WORLD_COST_CLASS } from "./savedWorldCostClasses";
 
 export type CostClass = "gdpFraction" | "perCapita" | "none";
 
@@ -35,6 +39,8 @@ export const LEGISLATION_COST_CLASS: Record<string, CostClass> = {
   ...BANKING_SEPARATION_COST_CLASSES,
   // Mechanical laws (competition, subsidiary limits, foreign investment) cost nothing.
   ...Object.fromEntries(MECHANICAL_TYPE_IDS.map((id) => [id, "none" as CostClass])),
+  // 2027 to 2040 law types: hand-priced per option (see modernEraLegislation.ts).
+  ...MODERN_ERA_COST_CLASSES,
   bal_economic_system: "none",
   bal_enterprise_levy: "none",
   bal_foreign_trade: "none",
@@ -109,68 +115,7 @@ export const LEGISLATION_COST_CLASS: Record<string, CostClass> = {
   bal_social_security_fund: "gdpFraction",
   bal_state_administration: "gdpFraction",
   bal_universal_education: "gdpFraction",
-  cn_academic_pressure_reform: "none",
-  cn_agricultural_subsidies: "gdpFraction",
-  cn_ai_strategy: "gdpFraction",
-  cn_anticorruption_campaign: "none",
-  cn_belt_and_road: "gdpFraction",
-  cn_climate_targets: "gdpFraction",
-  cn_common_prosperity: "perCapita",
-  cn_conscription: "gdpFraction",
-  cn_criminal_justice: "gdpFraction",
-  cn_customs_tariff: "none",
-  cn_cybersecurity: "gdpFraction",
-  cn_diaspora_engagement: "none",
-  cn_digital_infrastructure: "gdpFraction",
-  cn_education_funding: "perCapita",
-  cn_elder_care: "perCapita",
-  cn_emissions_trading_scheme: "gdpFraction",
-  cn_enterprise_income_tax: "none",
-  cn_family_policy: "perCapita",
-  cn_fiscal_stimulus: "gdpFraction",
-  cn_food_security: "gdpFraction",
-  cn_gaokao_reform: "perCapita",
-  cn_gender_equality: "perCapita",
-  cn_hk_macao_affairs: "none",
-  cn_housing: "gdpFraction",
-  cn_hukou_reform: "none",
-  cn_individual_income_tax: "none",
-  cn_industrial_strategy: "gdpFraction",
-  cn_internet_governance: "none",
-  cn_land_value_added_tax: "none",
-  cn_medical_insurance: "perCapita",
-  cn_mental_health: "perCapita",
-  cn_minimum_wage: "none",
-  cn_npc_reform: "none",
-  cn_nuclear_energy: "gdpFraction",
-  cn_pension_system: "perCapita",
-  cn_pla_modernization: "gdpFraction",
-  cn_press_freedom: "none",
-  cn_provincial_culture_propaganda: "gdpFraction",
-  cn_provincial_economic_development: "gdpFraction",
-  cn_provincial_education: "perCapita",
-  cn_provincial_environmental_policy: "gdpFraction",
-  cn_provincial_health_services: "perCapita",
-  cn_provincial_infrastructure_investment: "gdpFraction",
-  cn_provincial_public_security: "gdpFraction",
   cn_provincial_resource_tax: "none",
-  cn_public_health: "perCapita",
-  cn_public_security: "gdpFraction",
-  cn_rail_transport: "gdpFraction",
-  cn_renewable_energy_target: "gdpFraction",
-  cn_research_science: "gdpFraction",
-  cn_rural_revitalization: "gdpFraction",
-  cn_semiconductor_strategy: "gdpFraction",
-  cn_skilled_immigration: "none",
-  cn_social_insurance_contribution: "none",
-  cn_stamp_duty: "none",
-  cn_state_enterprises: "gdpFraction",
-  cn_state_media_funding: "gdpFraction",
-  cn_taiwan_strait_doctrine: "gdpFraction",
-  cn_un_security_council_posture: "none",
-  cn_urban_maintenance_construction_tax: "none",
-  cn_us_china_relations: "none",
-  cn_value_added_tax: "none",
   cs_defense_appropriations: "gdpFraction",
   cs_economic_system: "none",
   cs_enterprise_levy: "none",
@@ -186,76 +131,6 @@ export const LEGISLATION_COST_CLASS: Record<string, CostClass> = {
   cs_social_security_fund: "gdpFraction",
   cs_state_administration: "gdpFraction",
   cs_universal_education: "gdpFraction",
-  dd_civil_liberties: "none",
-  dd_economic_system: "none",
-  dd_enterprise_levy: "none",
-  dd_foreign_trade: "none",
-  dd_housing: "none",
-  dd_income_tax: "none",
-  dd_political_system: "none",
-  dd_price_controls: "none",
-  dd_product_tax: "none",
-  dd_social_insurance: "none",
-  de_academic_reform: "none",
-  de_agricultural_subsidies: "gdpFraction",
-  de_animal_welfare: "none",
-  de_asylum_policy: "none",
-  de_bundeswehr_funding: "gdpFraction",
-  de_carbon_pricing: "gdpFraction",
-  de_climate_targets: "gdpFraction",
-  de_constitutional_protection: "gdpFraction",
-  de_criminal_justice: "gdpFraction",
-  de_customs_tariff_rate: "none",
-  de_cybersecurity: "gdpFraction",
-  de_defense_posture: "gdpFraction",
-  de_digital_governance: "gdpFraction",
-  de_digital_infrastructure: "gdpFraction",
-  de_domestic_corporate_tax_rate: "none",
-  de_education_funding: "perCapita",
-  de_elder_care: "perCapita",
-  de_electoral_reform: "none",
-  de_eu_integration: "gdpFraction",
-  de_family_policy: "perCapita",
-  de_fiscal_stimulus_act: "gdpFraction",
-  de_food_security: "gdpFraction",
-  de_foreign_aid_diplomacy: "gdpFraction",
-  de_foreign_corporate_tax_rate: "none",
-  de_gender_equality: "perCapita",
-  de_government_ethics: "none",
-  de_grundgesetz_reform: "none",
-  de_health_insurance: "perCapita",
-  de_housing: "gdpFraction",
-  de_immigration_policy: "none",
-  de_income_tax_rate: "none",
-  de_integration_programs: "perCapita",
-  de_labor_reform: "none",
-  de_land_culture: "gdpFraction",
-  de_land_economic_development: "gdpFraction",
-  de_land_education: "perCapita",
-  de_land_health_services: "perCapita",
-  de_land_municipal_grants: "gdpFraction",
-  de_land_police: "gdpFraction",
-  de_mental_health: "perCapita",
-  de_minimum_wage: "none",
-  de_nuclear_energy: "gdpFraction",
-  de_payroll_social_insurance: "none",
-  de_pension_system: "perCapita",
-  de_policing_public_safety: "gdpFraction",
-  de_press_freedom: "none",
-  de_public_broadcasting: "gdpFraction",
-  de_public_health: "perCapita",
-  de_rail_transport: "gdpFraction",
-  de_renewable_energy_target: "gdpFraction",
-  de_research_science: "gdpFraction",
-  de_robotics_ai: "gdpFraction",
-  de_sme_mittelstand: "gdpFraction",
-  de_solidarity_surcharge: "none",
-  de_trade_agreements: "none",
-  de_trade_tax: "none",
-  de_unemployment_welfare: "perCapita",
-  de_university_tuition: "perCapita",
-  de_vat_rate: "none",
-  de_wehrpflicht: "gdpFraction",
   es_consumption_tax: "none",
   es_corporate_tax: "none",
   es_customs_tariff: "none",
@@ -293,6 +168,8 @@ export const LEGISLATION_COST_CLASS: Record<string, CostClass> = {
   hu_social_security_fund: "gdpFraction",
   hu_state_administration: "gdpFraction",
   hu_universal_education: "gdpFraction",
+  jp_fixed_asset_tax: "none",
+  jp_resident_tax: "none",
   ie_agricultural_subsidies: "gdpFraction",
   ie_capital_gains_tax: "none",
   ie_childcare_policy: "perCapita",
@@ -365,69 +242,6 @@ export const LEGISLATION_COST_CLASS: Record<string, CostClass> = {
   it_state_holdings: "none",
   it_vat: "none",
   it_welfare_state: "gdpFraction",
-  jp_academic_reform: "none",
-  jp_agricultural_subsidies: "gdpFraction",
-  jp_article9_sdf: "gdpFraction",
-  jp_climate_emissions: "gdpFraction",
-  jp_constitutional_reform: "none",
-  jp_consumption_tax: "none",
-  jp_criminal_justice: "gdpFraction",
-  jp_customs_tariff: "none",
-  jp_cybersecurity: "gdpFraction",
-  jp_defense_spending: "gdpFraction",
-  jp_digital_governance: "gdpFraction",
-  jp_digital_infrastructure: "gdpFraction",
-  jp_disaster_preparedness: "gdpFraction",
-  jp_domestic_corporation_tax: "none",
-  jp_education_funding: "perCapita",
-  jp_elder_care: "perCapita",
-  jp_electoral_reform: "none",
-  jp_family_policy: "perCapita",
-  jp_fiscal_stimulus: "gdpFraction",
-  jp_fixed_asset_tax: "none",
-  jp_food_security: "gdpFraction",
-  jp_foreign_aid_diplomacy: "gdpFraction",
-  jp_foreign_corporation_tax: "none",
-  jp_foreign_worker_policy: "gdpFraction",
-  jp_gender_equality: "perCapita",
-  jp_income_tax_rate: "none",
-  jp_integration_programs: "perCapita",
-  jp_jsdf_recruitment: "gdpFraction",
-  jp_labor_reform: "gdpFraction",
-  jp_local_allocation_tax: "gdpFraction",
-  jp_media_press: "gdpFraction",
-  jp_mental_health: "perCapita",
-  jp_minimum_wage: "none",
-  jp_national_health_insurance: "perCapita",
-  jp_nuclear_energy: "gdpFraction",
-  jp_pension: "gdpFraction",
-  jp_policing_public_safety: "gdpFraction",
-  jp_public_health: "perCapita",
-  jp_rail_transport: "gdpFraction",
-  jp_rd_investment: "gdpFraction",
-  jp_regional_agriculture: "gdpFraction",
-  jp_regional_autonomy: "gdpFraction",
-  jp_regional_economic_development: "gdpFraction",
-  jp_regional_education: "perCapita",
-  jp_regional_environment: "gdpFraction",
-  jp_regional_governance: "gdpFraction",
-  jp_regional_health: "perCapita",
-  jp_regional_policing: "gdpFraction",
-  jp_regional_skills: "perCapita",
-  jp_regional_social_services: "perCapita",
-  jp_regional_transport: "gdpFraction",
-  jp_regional_utilities: "gdpFraction",
-  jp_renewable_energy: "gdpFraction",
-  jp_research_science: "gdpFraction",
-  jp_resident_tax: "none",
-  jp_robotics_ai: "gdpFraction",
-  jp_rural_development: "gdpFraction",
-  jp_sme_support: "gdpFraction",
-  jp_social_insurance: "none",
-  jp_trade_agreements: "gdpFraction",
-  jp_university_tuition: "perCapita",
-  jp_visa_residency: "none",
-  jp_work_culture_reform: "perCapita",
   ng_agriculture_policy: "gdpFraction",
   ng_anti_corruption: "none",
   ng_basic_education: "perCapita",
@@ -525,22 +339,8 @@ export const LEGISLATION_COST_CLASS: Record<string, CostClass> = {
   se_local_grants: "gdpFraction",
   se_social_charges: "none",
   se_vat: "none",
-  resource_extraction_authority: "none",
   se_wage_earner_funds: "none",
   se_welfare_state: "gdpFraction",
-  senate_filibuster_rules: "none",
-  su_agriculture: "none",
-  su_civil_liberties: "none",
-  su_customs_tariff: "none",
-  su_defense_spending: "none",
-  su_economic_system: "none",
-  su_enterprise_levy: "none",
-  su_housing: "none",
-  su_individual_income_tax: "none",
-  su_political_system: "none",
-  su_price_controls: "none",
-  su_social_insurance: "none",
-  su_turnover_tax: "none",
   at_corporate_tax: "none",
   at_customs_tariff: "none",
   at_defense_appropriations: "gdpFraction",
@@ -597,133 +397,9 @@ export const LEGISLATION_COST_CLASS: Record<string, CostClass> = {
   tr_social_charges: "none",
   tr_state_enterprises: "none",
   tr_welfare_state: "gdpFraction",
-  uk_agriculture_policy: "gdpFraction",
-  uk_bbc_public_media: "gdpFraction",
-  uk_business_rates: "none",
-  uk_childcare: "perCapita",
-  uk_climate_net_zero: "gdpFraction",
-  uk_council_tax: "none",
-  uk_defence_spending: "gdpFraction",
-  uk_devolution_local_powers: "gdpFraction",
-  uk_digital_broadband: "gdpFraction",
-  uk_domestic_corporation_tax: "none",
-  uk_drug_policy: "none",
-  uk_education_funding: "perCapita",
-  uk_education_standards: "perCapita",
-  uk_electoral_reform: "none",
-  uk_energy_grid: "gdpFraction",
-  uk_excise_customs: "none",
-  uk_fiscal_spending: "gdpFraction",
-  uk_foreign_corporation_tax: "none",
-  uk_foreign_policy: "gdpFraction",
-  uk_government_ethics: "none",
-  uk_housing_planning: "perCapita",
-  uk_immigration_asylum: "none",
-  uk_income_tax_rate: "none",
-  uk_leasehold_reform: "perCapita",
-  uk_local_government_funding: "gdpFraction",
-  uk_mental_health: "perCapita",
-  uk_national_insurance: "none",
-  uk_national_service: "gdpFraction",
-  uk_nhs_funding: "perCapita",
-  uk_north_sea_energy: "gdpFraction",
-  uk_policing_crime: "gdpFraction",
-  uk_prison_rehabilitation: "gdpFraction",
-  uk_public_health: "perCapita",
-  uk_regional_agriculture: "gdpFraction",
-  uk_regional_economic_development: "gdpFraction",
-  uk_regional_education: "perCapita",
-  uk_regional_emergency_services: "gdpFraction",
-  uk_regional_environment: "gdpFraction",
-  uk_regional_governance: "gdpFraction",
-  uk_regional_health: "perCapita",
-  uk_regional_housing_development: "perCapita",
-  uk_regional_housing_support: "perCapita",
-  uk_regional_justice: "gdpFraction",
-  uk_regional_labour: "perCapita",
-  uk_regional_policing: "gdpFraction",
-  uk_regional_skills: "perCapita",
-  uk_regional_technology: "gdpFraction",
-  uk_regional_transport: "gdpFraction",
-  uk_regional_utilities: "gdpFraction",
-  uk_research_science: "gdpFraction",
-  uk_social_care: "perCapita",
-  uk_state_pensions: "perCapita",
-  uk_surveillance_privacy: "gdpFraction",
-  uk_technology_policy: "gdpFraction",
-  uk_transport_rail: "gdpFraction",
-  uk_trident_defence: "gdpFraction",
-  uk_tuition_fees: "perCapita",
-  uk_universal_credit: "perCapita",
-  uk_vat: "none",
-  uk_work_visas: "none",
-  uk_workers_rights: "perCapita",
-  uk_workforce_development: "perCapita",
-  us_border_security_enforcement: "gdpFraction",
-  us_broadband_energy: "gdpFraction",
-  us_civics_voting_rights: "none",
-  us_clean_energy: "gdpFraction",
-  us_conservation: "gdpFraction",
-  us_defense_spending: "gdpFraction",
-  us_drug_pricing_medicare: "perCapita",
-  us_emergency_services: "gdpFraction",
-  us_federal_domestic_corporate_tax_rate: "none",
-  us_federal_education_funding: "perCapita",
-  us_federal_foreign_corporate_tax_rate: "none",
-  us_federal_healthcare_funding: "perCapita",
-  us_federal_income_tax_rate: "none",
-  us_federal_payroll_tax_rate: "none",
-  us_federal_sales_tax_rate: "none",
-  us_federal_science_funding: "gdpFraction",
-  us_federal_spending_stimulus: "gdpFraction",
-  us_federal_tariff_rate: "none",
-  us_food_nutrition: "perCapita",
-  us_foreign_policy: "gdpFraction",
-  us_government_ethics: "none",
-  us_gun_control: "none",
-  us_housing: "perCapita",
-  us_law_enforcement_criminal_justice: "gdpFraction",
-  us_legal_immigration_visas: "none",
-  us_media_communications: "gdpFraction",
-  us_medicaid: "perCapita",
-  us_medicaid_expansion: "perCapita",
-  us_minimum_wage: "none",
-  us_national_service: "gdpFraction",
-  us_paid_family_leave: "perCapita",
-  us_prison_rehabilitation: "gdpFraction",
-  us_public_health: "perCapita",
-  us_reproductive_rights: "none",
-  us_school_standards: "perCapita",
-  us_social_security: "gdpFraction",
-  us_state_business_regulation: "gdpFraction",
   us_state_compactness: "none",
-  us_state_domestic_corporate_tax_rate: "none",
-  us_state_education_funding: "perCapita",
-  us_state_environment: "gdpFraction",
   us_state_fairness: "none",
-  us_state_food_assistance: "perCapita",
-  us_state_foreign_corporate_tax_rate: "none",
-  us_state_government_ethics: "none",
-  us_state_healthcare: "perCapita",
-  us_state_higher_education: "perCapita",
-  us_state_housing: "perCapita",
-  us_state_income_tax_rate: "none",
-  us_state_labor: "gdpFraction",
-  us_state_media_communications: "gdpFraction",
-  us_state_minimum_wage: "none",
-  us_state_policing: "gdpFraction",
-  us_state_prison_rehabilitation: "gdpFraction",
-  us_state_property_tax_rate: "none",
-  us_state_public_health: "perCapita",
   us_state_redistricting_authority: "none",
-  us_state_sales_tax_rate: "none",
-  us_state_spending_stimulus: "gdpFraction",
-  us_state_transportation: "gdpFraction",
-  us_state_utilities: "gdpFraction",
-  us_state_voting_rights: "none",
-  us_state_workforce_development: "gdpFraction",
-  us_transportation: "gdpFraction",
-  us_workforce_development: "gdpFraction",
   yu_defense_appropriations: "gdpFraction",
   yu_economic_system: "none",
   yu_enterprise_levy: "none",
@@ -744,10 +420,13 @@ export const LEGISLATION_COST_CLASS: Record<string, CostClass> = {
 /** typeId → rationale for deviating from the domain default. */
 export const COST_CLASS_OVERRIDES: Record<string, string> = {};
 
-/** Unknown typeId ⇒ "none" (fail-safe: never invent a phantom cost line). */
+/**
+ * Unknown typeId ⇒ "none" (fail-safe: never invent a phantom cost line). Laws
+ * only saved worlds still hold keep the class they were seeded with.
+ */
 export function getCostClass(typeId: string): CostClass {
   typeId = typeId.split(/__(?:income|capital)_/)[0];
-  return LEGISLATION_COST_CLASS[typeId] ?? "none";
+  return LEGISLATION_COST_CLASS[typeId] ?? SAVED_WORLD_COST_CLASS[typeId] ?? "none";
 }
 
 export interface EraCostContext {
@@ -759,7 +438,7 @@ export interface EraCostContext {
    * The country's LIVE national median income (local currency — same
    * denomination as `gdp`). The perCapita charge base: costs must track the
    * game's own economic history, not the real-world era anchor (macro-v1
-   * Phase 1; see 2026-07-09-gdp-growth-realism-design.md §3).
+   * Phase 1).
    */
   nationalMedianIncome?: number;
 }
@@ -784,19 +463,12 @@ export function resolveEraSpendingCost(
 ): number | undefined {
   const cls = getCostClass(typeId);
   if (cls === "gdpFraction") {
-    // A law/option whose type is classed here but was never migrated onto the
-    // era catalog (no `gdpCostFraction` materialized on THIS document — e.g. it
-    // still carries a legacy `gdpPerCapitaMultiplier`/`annualCostPerCapita`)
-    // must fall through to that legacy field, not silently book $0. Concretely:
-    // jp_national_health_insurance, jp_article9_sdf, ie_healthcare_policy,
-    // ie_defence_spending, cn_medical_insurance, cn_pla_modernization,
-    // ng_health_insurance, ng_defense_policy (and siblings) were all generated
-    // with a real `gdpPerCapitaMultiplier` and NO era field — before this fix,
-    // `?? 0` here made the era path win with a phantom zero, so
-    // calculateEnactedLawAnnualCost's `era !== undefined` short-circuit never
-    // reached the legacy branch that actually prices them. An explicit `0`
-    // (a genuinely materialized zero-cost option) is still honoured as 0; only
-    // an unmaterialized (`undefined`/non-finite) field defers to legacy pricing.
+    // A law/option classed here but never migrated onto the era catalog (no
+    // `gdpCostFraction` on THIS document; it still carries a legacy
+    // `gdpPerCapitaMultiplier`/`annualCostPerCapita`) must fall through to that
+    // legacy field, not silently book $0. An explicit `0` (a genuinely
+    // materialized zero-cost option) is still honoured; only an unmaterialized
+    // (`undefined`/non-finite) field defers to legacy pricing.
     if (typeof fields.gdpCostFraction !== "number" || !Number.isFinite(fields.gdpCostFraction)) {
       return undefined;
     }
@@ -811,27 +483,21 @@ export function resolveEraSpendingCost(
     }
     const frac = fields.incomeCostFraction;
     const i2g = incomeToGdp(ctx.countryId);
-    // perCapita cost is pinned to the calibrated share of GDP: `incomeCostFraction`
-    // was materialized as share / i2g, so `frac × i2g × gdp` === `share × gdp` (the
-    // gdpFraction target). The live national median income is NO LONGER used to
-    // scale the charge — it is symmetrically clamped to the calibrated income-to-GDP
-    // ratio from BOTH sides, which collapses to this same expression:
+    // perCapita cost is pinned to the calibrated share of GDP:
+    // `incomeCostFraction` is share / i2g, so `frac × i2g × gdp` === `share × gdp`.
+    // The live national median income does not scale the charge; it is clamped
+    // to the calibrated income-to-GDP ratio, which collapses to this expression.
     //
-    //   CEILING (#3000): a seed economy whose income metric never grew down with GDP
-    //   (CN ¥67.6k vs GDP/capita ¥2.4k, 28×) would inflate spending to a 204%-of-GDP
-    //   phantom deficit — capped at the calibrated ratio.
+    // Upper clamp: a seed economy whose income metric never grew with GDP (CN
+    // ¥67.6k vs ¥2.4k GDP/capita) would inflate spending to a phantom deficit.
+    // Lower clamp: where the income metric sits below its calibration anchor
+    // (JP 0.36x, NG 0.097x) every perCapita law was silently scaled down to a
+    // fraction of its calibrated %GDP, suppressing all perCapita spending.
     //
-    //   FLOOR (#3149): the mirror image. Where the income metric sits BELOW its
-    //   real-world calibration anchor (JP live ¥2.09M vs the ¥5.5M anchor, 0.36×;
-    //   NG 0.097×) every perCapita law was silently scaled down to a fraction of its
-    //   calibrated %GDP, suppressing ALL perCapita spending in those countries.
-    //
-    // Pinning to the calibrated share restores the intended %GDP for JP/NG, matches
-    // the gdpFraction class, and matches how every correctly-calibrated country
-    // (live income ≈ anchor ⇒ the old clamp was already inert) already resolved.
-    // It leaves i2g / frac untouched, so enacted-law snapshots stay consistent and
-    // no reseed or migration is required. `nationalMedianIncome` is retained on the
-    // context for the callers/telemetry but intentionally does not scale the charge.
+    // Pinning restores the intended %GDP and matches how correctly calibrated
+    // countries already resolved. It leaves i2g / frac untouched, so enacted-law
+    // snapshots stay consistent and no reseed is needed. `nationalMedianIncome`
+    // stays on the context for callers and telemetry but does not scale the charge.
     return frac * i2g * ctx.gdp;
   }
   return 0;
@@ -844,8 +510,7 @@ export function resolveEraSpendingCost(
 // seed-build time by `withEraCosts`, from a real-world domain max-share × the
 // option's generosity (its position on the type's own cost ladder). The fields
 // live on the seed options (inspectable, and hand-overridable — the materializer
-// never overwrites a value already set on an option). Reference:
-// docs/superpowers/era-cost-reference-shares.md.
+// never overwrites a value already set on an option).
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
@@ -885,32 +550,13 @@ export const DOMAIN_MAX_SHARE: Record<string, number> = {
 
 /** Per-type max-share overrides for big-ticket / outlier programs. */
 export const COST_SHARE_OVERRIDES: Record<string, number> = {
-  // Healthcare normalization (ticket #953 + issue #3137 follow-up): the /N
-  // domain split priced every country's flagship healthcare lever far below
-  // its real-world government-health share of GDP (game year 2012 anchors).
-  // Values are pre-CALIBRATION_SCALE (x1.5) per-type max shares chosen so the
-  // CURRENTLY ENACTED generosity lands near the anchor:
-  //   US  1.44% -> ~5.3%  (fed Medicare+Medicaid)
-  //   UK  1.63% -> ~7.5%  (NHS)
-  //   DE  3.17% -> ~8.5%  (public health insurance)
-  //   JP  1.19% -> ~7.5%  (the income-base fix has landed — #3149: the perCapita
-  //       income base is no longer suppressed to 0.36x calibration, so this
-  //       override now reaches its intended ~7.5% anchor. Retune DOWN, never up,
-  //       if a post-fix dry-run shows it overshooting.)
-  //   CN  3.60% -> ~1.7%  (2012 CN government health share; all four levers
-  //       are maxed since 1995, so shares come DOWN)
-  //   IE  3.60% -> ~5.9%
-  // After changing these, reseed legislationTypes AND run
-  // scripts/migrate-enacted-law-healthcare-fractions.ts — enacted laws
-  // snapshot fractions at enactment and never re-read the catalog.
-  us_federal_healthcare_funding: 0.043,
-  uk_nhs_funding: 0.067,
-  de_health_insurance: 0.048,
-  jp_national_health_insurance: 0.055,
-  cn_medical_insurance: 0.005,
-  cn_elder_care: 0.002,
-  cn_public_health: 0.002,
-  cn_mental_health: 0.002,
+  // Healthcare normalization: values are pre-CALIBRATION_SCALE (x1.5)
+  // per-type max shares chosen so enacted generosity lands near the 2012
+  // government-health-share-of-GDP anchor (US ~5.3%, UK ~7.5%, DE ~8.5%,
+  // JP ~7.5%, CN ~1.7%, IE ~5.9%). Retune JP DOWN, never up, if dry-run
+  // overshoots. After changing, reseed legislationTypes AND run
+  // scripts/migrate-enacted-law-healthcare-fractions.ts: enacted laws
+  // snapshot fractions and never re-read the catalog.
   ie_healthcare_policy: 0.021,
 };
 
@@ -937,6 +583,7 @@ export const REP_ECON: Partial<Record<string, { gdp: number; population: number 
   DE: DE_ECONOMY.repEcon,
   JP: JP_ECONOMY.repEcon,
   IE: IE_ECONOMY.repEcon,
+  CA: CA_ECONOMY.repEcon,
   CN: CN_ECONOMY.repEcon,
   NG: NG_ECONOMY.repEcon,
 };
@@ -965,6 +612,9 @@ interface MaterializeType {
 
 const round5 = (n: number) => Math.round(n * 1e5) / 1e5;
 
+/** Types that carry their own per-option cost fractions and claim no domain share. */
+const HAND_PRICED_TYPE_IDS: ReadonlySet<string> = new Set(MODERN_ERA_TYPE_IDS);
+
 /** Group key for the per-domain type count: country scope + policy domain. */
 function domainKey(type: MaterializeType): string {
   return `${(type.countryScope ?? "us").toUpperCase()}|${type.policyDomain}`;
@@ -980,6 +630,9 @@ export function countDomainTypes(types: MaterializeType[]): Map<string, number> 
   const counts = new Map<string, number>();
   for (const t of types) {
     if (getCostClass(t._id) === "none") continue;
+    // Hand-priced late-era laws must not split (and so reprice) the domain
+    // share of the laws that were already calibrated against it.
+    if (HAND_PRICED_TYPE_IDS.has(t._id)) continue;
     const k = domainKey(t);
     counts.set(k, (counts.get(k) ?? 0) + 1);
   }

@@ -17,6 +17,9 @@ import {
 } from "@/lib/api/schemas/settings";
 import type { StatePartyOrg } from "@/lib/db/types";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { adminLogsCollection } from "@/lib/db/repositories/adminLogs";
+import type { Document } from "mongodb";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string }>;
@@ -108,8 +111,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
 
     // Party sequentialId is unique per country, so a foreign character's party
-    // id collides onto the same-id party in this country. Block cross-country
-    // actors (admins included) — Bug #0668.
+    // id collides onto the same-id party here. Block cross-country actors.
     const crossCountry = crossCountryActionGuard(authUser.character, countryId);
     if (crossCountry) return crossCountry;
 
@@ -154,19 +156,16 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     if (config.storage === "statePartyOrg") {
       // tax → a scalar field on every state-party org row for this party+country.
-      const result = await db
-        .collection<StatePartyOrg>("statePartyOrg")
-        .updateMany(
-          { countryId, partyId: partyKey },
-          { $set: { [config.field]: value, updatedAt: now } }
-        );
+      const result = await statePartyOrgCollection(db).updateMany(
+        { countryId, partyId: partyKey },
+        { $set: { [config.field]: value, updatedAt: now } }
+      );
       statesUpdated = result.matchedCount;
     } else {
       // org building / suppression → the partyBudget collection. Reuse the exact
       // per-state writer (savePartyBudgetForScope) for every existing chapter so
       // the merge / legacy-countryId semantics match the per-state route exactly.
-      const chapters = await db
-        .collection<StatePartyOrg>("statePartyOrg")
+      const chapters = await statePartyOrgCollection(db)
         .find({ countryId, partyId: partyKey }, { projection: { stateId: 1 } })
         .toArray();
       const budgetCollection = await getPartyBudgetCollection();
@@ -185,7 +184,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       statesUpdated = chapters.length;
     }
 
-    await db.collection("adminLogs").insertOne({
+    await adminLogsCollection<Document>(db).insertOne({
       category: "system",
       action: "bulk_state_org_changed",
       username: authUser.username,

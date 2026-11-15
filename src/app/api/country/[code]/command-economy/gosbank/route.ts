@@ -10,7 +10,6 @@ import { parseJsonBody } from "@/lib/api/validate";
 import { forbidden, handleRouteError, errorResponse } from "@/lib/api/errors";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { getNationalBudgetId } from "@/lib/bonds/sovereign";
-import type { FederalBudget } from "@/lib/db/types/budget";
 import { commandEconomySoeSectors } from "@/lib/constants/commandEconomy";
 import {
   CREDIT_AGGRESSIVENESS_RANGE,
@@ -19,6 +18,7 @@ import {
 } from "@/lib/constants/commandEconomyOffices";
 import { canOperateGosbank } from "@/lib/economy/commandEconomyAuth";
 import { resolveWriteContext } from "@/lib/economy/queries/commandEconomyWriteContext";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 interface RouteContext {
   params: Promise<{ code: string }>;
@@ -99,9 +99,10 @@ export async function POST(request: Request, context: RouteContext) {
     const update: Record<string, unknown> = { $set: set };
     if (Object.keys(unset).length > 0) update.$unset = unset;
 
-    await db
-      .collection<FederalBudget>("federalBudget")
-      .updateOne({ _id: getNationalBudgetId(countryId) } as { _id: "federal" }, update);
+    await federalBudgetCollection(db).updateOne(
+      { _id: getNationalBudgetId(countryId) } as { _id: "federal" },
+      update
+    );
 
     return NextResponse.json({ success: true });
   } catch (error) {

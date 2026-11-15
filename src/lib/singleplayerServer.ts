@@ -3,6 +3,7 @@ import os from "os";
 import path from "path";
 import { ObjectId, type Db } from "mongodb";
 import { SINGLEPLAYER_USER_ID, singleplayerSessionClaims } from "@/lib/singleplayer";
+import { countriesByTier, isShippingPreset } from "@/lib/world/eraRoster";
 import { CDN_GEO } from "@/lib/images/cdnUrls";
 import { DEFAULT_GAME_STATE_FLAGS } from "@/lib/seeds/reference/featureFlagDefaults";
 import { invalidateMaintenanceCache } from "@/lib/maintenanceStatus";
@@ -21,6 +22,12 @@ import {
   migrateSingleplayerWorld,
   stampSingleplayerBaseline,
 } from "@/lib/migrations/singleplayerMigrations";
+import { serverEnv } from "@/lib/config/read";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { usersCollection } from "@/lib/db/repositories/users";
+import type { Document } from "mongodb";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 /**
  * Node-only singleplayer helpers. `@/lib/singleplayer` must stay importable
@@ -34,7 +41,7 @@ import {
  * The launcher sets `SINGLEPLAYER_HOME`; the default matches what it uses
  * when nothing is configured so both sides agree without coordination.
  */
-export function singleplayerHomeDir(env: Record<string, string | undefined> = process.env): string {
+export function singleplayerHomeDir(env: Record<string, string | undefined> = serverEnv()): string {
   const configured = env.SINGLEPLAYER_HOME?.trim();
   if (configured) return path.resolve(configured);
   return path.join(os.homedir(), ".a-house-divided");
@@ -43,11 +50,11 @@ export function singleplayerHomeDir(env: Record<string, string | undefined> = pr
 /** Written by a save-load request; the next start of the world applies it. */
 export const RESTORE_MARKER_FILE = "restore-pending.json";
 
-export function hasPendingRestore(env: Record<string, string | undefined> = process.env): boolean {
+export function hasPendingRestore(env: Record<string, string | undefined> = serverEnv()): boolean {
   return existsSync(path.join(singleplayerHomeDir(env), RESTORE_MARKER_FILE));
 }
 
-export function singleplayerCdnDir(env: Record<string, string | undefined> = process.env): string {
+export function singleplayerCdnDir(env: Record<string, string | undefined> = serverEnv()): string {
   return path.join(singleplayerHomeDir(env), "cdn");
 }
 
@@ -61,7 +68,7 @@ export async function ensureSingleplayerUser(
   db: Db,
   displayName = "Admin"
 ): Promise<{ created: boolean }> {
-  const users = db.collection("users");
+  const users = usersCollection<Document>(db);
   const _id = new ObjectId(SINGLEPLAYER_USER_ID);
   const claims = singleplayerSessionClaims();
   const now = new Date();
@@ -108,12 +115,14 @@ export interface SingleplayerStatus {
   permanentHeadOfState: boolean;
   playerless: boolean;
   spectatorPath: "/singleplayer/worldsim";
+  /** Countries a player can take in this world, from the era roster. */
+  playerCountries: string[];
   /** Map files the globe cannot render without; the launcher pre-warms these. */
   warmAssets: string[];
 }
 
 async function clearSingleplayerMaintenance(db: Db): Promise<void> {
-  const result = await db.collection<GameConfig>("gameConfig").updateOne(
+  const result = await gameConfigCollection(db).updateOne(
     { _id: "default", maintenanceMode: { $ne: "off" } },
     {
       $set: { maintenanceMode: "off" },
@@ -143,16 +152,15 @@ export async function singleplayerStatus(db: Db): Promise<SingleplayerStatus> {
   await clearSingleplayerMaintenance(db);
   const userId = new ObjectId(SINGLEPLAYER_USER_ID);
   const [gameState, character, characterCount] = await Promise.all([
-    db
-      .collection<GameState>("gameState")
-      .findOne(
-        { _id: "current" },
-        { projection: { currentTurn: 1, preset: 1, isProcessing: 1, singleplayerConfig: 1 } }
-      ),
-    db
-      .collection("characters")
-      .findOne({ userId, retiredAt: { $exists: false } }, { projection: { _id: 1, name: 1 } }),
-    db.collection("characters").countDocuments({ retiredAt: { $exists: false } }),
+    gameStateCollection(db).findOne(
+      { _id: "current" },
+      { projection: { currentTurn: 1, preset: 1, isProcessing: 1, singleplayerConfig: 1 } }
+    ),
+    charactersCollection(db).findOne(
+      { userId, retiredAt: { $exists: false } },
+      { projection: { _id: 1, name: 1 } }
+    ),
+    charactersCollection(db).countDocuments({ retiredAt: { $exists: false } }),
   ]);
   const config = gameState?.singleplayerConfig;
   if (config?.mode === "head-of-state") {
@@ -180,6 +188,10 @@ export async function singleplayerStatus(db: Db): Promise<SingleplayerStatus> {
     permanentHeadOfState: config?.permanentHeadOfState === true,
     playerless: characterCount === 0,
     spectatorPath: "/singleplayer/worldsim",
+    playerCountries:
+      typeof gameState?.preset === "string" && isShippingPreset(gameState.preset)
+        ? countriesByTier(gameState.preset, "player")
+        : [],
     warmAssets: Object.values(CDN_GEO).sort(),
   };
 }
@@ -203,7 +215,7 @@ export async function setSingleplayerConfig(
   // undefined as null, and a legacy world would start looking like one that
   // offers the guide.
   if (persisted.guide === undefined) delete persisted.guide;
-  await db.collection<GameState>("gameState").updateOne(
+  await gameStateCollection(db).updateOne(
     { _id: "current" },
     {
       $set: {
@@ -228,9 +240,10 @@ export async function setSingleplayerConfig(
 }
 
 export async function getSingleplayerConfig(db: Db): Promise<SingleplayerConfig | null> {
-  const state = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { projection: { singleplayerConfig: 1 } });
+  const state = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { projection: { singleplayerConfig: 1 } }
+  );
   return state?.singleplayerConfig ?? null;
 }
 

@@ -6,6 +6,7 @@ import { errorResponse } from "@/lib/api/errors";
 import { parseJsonBody } from "@/lib/api/validate";
 import { createAdminLog } from "@/lib/adminLog";
 import type { GameConfig } from "@/lib/db/types";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 const patchSchema = z.object({
   enabled: z.boolean(),
@@ -14,9 +15,10 @@ const patchSchema = z.object({
 // GET /api/admin/config/regional-conditions-overview
 export const GET = withAdminRoute(async (_auth) => {
   const db = await getDb();
-  const config = await db
-    .collection<GameConfig>("gameConfig")
-    .findOne({ _id: "default" }, { projection: { regionalConditionsOverviewEnabled: 1 } });
+  const config = await gameConfigCollection(db).findOne(
+    { _id: "default" },
+    { projection: { regionalConditionsOverviewEnabled: 1 } }
+  );
 
   return NextResponse.json({
     enabled: config?.regionalConditionsOverviewEnabled === true,
@@ -34,7 +36,7 @@ export const PATCH = withAdminRoute(async (auth, request: Request) => {
   const now = new Date().toISOString();
   const db = await getDb();
 
-  await db.collection<GameConfig>("gameConfig").updateOne(
+  await gameConfigCollection(db).updateOne(
     { _id: "default" },
     {
       $set: {

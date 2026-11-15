@@ -7,6 +7,7 @@ import {
   type CorpCapitalCurrencyInfo,
 } from "@/lib/currency/corporationCapital";
 import { readCorpEconomicAnchor } from "@/lib/currency/corpEconomyFields";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 type RevenueSector = {
   corporationId?: ObjectId | string | null;
@@ -48,8 +49,7 @@ export async function loadExtractionRevenueAnchorOf(
   const [fxByCurrency, corps] = await Promise.all([
     loadValuationFxRates(db),
     corpIds.length > 0
-      ? db
-          .collection<CorpCapitalCurrencyInfo & { _id: ObjectId }>("corporations")
+      ? corporationsCollection<CorpCapitalCurrencyInfo & { _id: ObjectId }>(db)
           .find({ _id: { $in: corpIds } }, { projection: { countryId: 1, liquidCurrencyCode: 1 } })
           .toArray()
       : Promise.resolve([]),

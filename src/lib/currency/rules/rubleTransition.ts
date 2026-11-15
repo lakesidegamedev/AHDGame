@@ -1,3 +1,4 @@
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 /**
  * Ruble transition rules (portable rules core).
  *
@@ -30,5 +31,5 @@ const RUB_PRESETS: ReadonlySet<string> = new Set(["2019-default", "2027-default"
 /** True when a fresh world of `preset` starts `countryId` on the ruble. */
 export function isRubleAdopted(countryId: string, preset: string): boolean {
   if (!RUB_PRESETS.has(preset)) return false;
-  return countryId === "RU";
+  return countryHasFeature("ruLib", countryId);
 }

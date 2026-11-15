@@ -17,6 +17,8 @@ import {
   reserveSectorsForTransition,
   releaseConstructionPropertyTransition,
 } from "@/lib/corporations/securedConstructionProperty";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 export interface NormalizedSectorSummary {
   sectorId: string;
@@ -40,13 +42,8 @@ export async function normalizeAndMergeCorporateSectors(
   normalizedSectors: NormalizedSectorSummary[];
   mergedGroups: MergedSectorSummary[];
 }> {
-  const allSectors = await db
-    .collection<CorporateSector>("corporateSectors")
-    .find({})
-    .sort({ createdAt: 1 })
-    .toArray();
-  const states = await db
-    .collection<State>("states")
+  const allSectors = await corporateSectorsCollection(db).find({}).sort({ createdAt: 1 }).toArray();
+  const states = await statesCollection(db)
     .find({}, { projection: { _id: 1, countryId: 1 } })
     .toArray();
   const stateCountryByStateId = buildSectorStateCountryMap(states);
@@ -60,9 +57,10 @@ export async function normalizeAndMergeCorporateSectors(
     const operatingCountryId = getSectorOperatingCountryId(sector, stateCountryByStateId);
     if (sector.countryId === operatingCountryId) continue;
     const previousCountryId = sector.countryId;
-    await db
-      .collection<CorporateSector>("corporateSectors")
-      .updateOne({ _id: sector._id }, { $set: { countryId: operatingCountryId, updatedAt: now } });
+    await corporateSectorsCollection(db).updateOne(
+      { _id: sector._id },
+      { $set: { countryId: operatingCountryId, updatedAt: now } }
+    );
     sector.countryId = operatingCountryId;
     sector.updatedAt = now;
     normalizedSectors.push({
@@ -128,25 +126,16 @@ export async function normalizeAndMergeCorporateSectors(
           )
         : (keeper.negativeProductionSustainedTurns ?? 0);
 
-    // PLANTS-GATED: the duplicate-row heal is a MERGE — the losing rows are
-    // deleted immediately below — so under plants their plant state
-    // (`capitalStock`, `buildQueue`, `constructionInProgressAnchor`,
-    // `mothballed`, `plantsStartTurn`) must be folded into the keeper first.
-    // Without the fold the heal silently destroys built capacity and the ₳
-    // sitting in in-flight build orders. Revenue is still combined for the
-    // legacy readers; under plants `sectorTurn` restates it from the folded
-    // capacity on the next tick.
+    // PLANTS-GATED: the duplicate-row heal is a MERGE, and losing rows are
+    // deleted below, so under plants their plant state (`capitalStock`,
+    // `buildQueue`, `constructionInProgressAnchor`, `mothballed`,
+    // `plantsStartTurn`) must be folded into the keeper first. Without the fold
+    // the heal destroys built capacity and in-flight ₳.
     //
-    // The fold is GATED, not unconditional. An earlier revision of this fix
-    // claimed folding was "a no-op below plants, where none of these fields are
-    // populated" — that is wrong. Under CAPITAL mode `sectorTurn` writes a
-    // non-zero `capitalStock` and re-derives it from revenue every turn, so
-    // summing it here would double a quantity capital mode owns; and spreading
-    // the fold would additionally stamp `buildQueue: []`,
-    // `constructionInProgressAnchor: 0`, `mothballed: false` and
-    // `plantsStartTurn: null` onto rows that legitimately carry none of them —
-    // waking a mothballed sector in the process. Below plants this heal must
-    // stay byte-identical to what it has always done.
+    // The fold is GATED: under CAPITAL mode `sectorTurn` owns `capitalStock`
+    // and re-derives it, so summing here would double it, and folding would
+    // stamp plant-only fields onto rows that carry none, waking mothballed
+    // sectors. Below plants this heal must stay byte-identical.
     const mergedPlantFields: SectorPlantFieldsUpdate | null = plantsEnabled
       ? group
           .filter((sector) => !sector._id.equals(keeper._id))
@@ -164,7 +153,7 @@ export async function normalizeAndMergeCorporateSectors(
           )
       : null;
 
-    const keeperWrite = await db.collection<CorporateSector>("corporateSectors").updateOne(
+    const keeperWrite = await corporateSectorsCollection(db).updateOne(
       {
         _id: keeper._id,
         "constructionPropertyTransition.key": keyById.get(keeper._id.toString()),
@@ -191,7 +180,7 @@ export async function normalizeAndMergeCorporateSectors(
       continue;
     }
 
-    const deleteResult = await db.collection<CorporateSector>("corporateSectors").deleteMany({
+    const deleteResult = await corporateSectorsCollection(db).deleteMany({
       $or: duplicates.map((sector) => ({
         _id: sector._id,
         "constructionPropertyTransition.key": keyById.get(sector._id.toString()),

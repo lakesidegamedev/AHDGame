@@ -14,7 +14,7 @@ import {
   canTriggerChallenge,
   resolveLeadershipBallot,
   type LeadershipElectorate,
-} from "@/lib/uk/leadership/leadershipRemoval";
+} from "@/lib/countries/uk/leadership/leadershipRemoval";
 import {
   LEADERSHIP_AMENDMENT_COOLDOWN_TURNS,
   LEADERSHIP_BALLOT_DURATION_TURNS,
@@ -23,35 +23,40 @@ import {
   validateRulesetAmendment,
   type CommitteeControl,
   type RulesetAmendmentPatch,
-} from "@/lib/uk/leadership/rules";
+} from "@/lib/countries/uk/leadership/rules";
 import {
   getOrSeedPartyLeadership,
   historyEntry,
   pushHistoryEntry,
-} from "@/lib/uk/leadership/leadershipStore";
-import type { LeadershipChallenge, UKPartyLeadership } from "@/lib/uk/leadership/leadershipTypes";
-import type { Character, ElectedOfficial, PoliticalParty } from "@/lib/db/types";
+} from "@/lib/countries/uk/leadership/leadershipStore";
+import type {
+  LeadershipChallenge,
+  UKPartyLeadership,
+} from "@/lib/countries/uk/leadership/leadershipTypes";
+import type { ElectedOfficial, PoliticalParty } from "@/lib/db/types";
 import type { Caucus, CaucusMembership } from "@/lib/db/types/caucus";
 import type { CountryId } from "@/lib/constants/countries";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { caucusesCollection } from "@/lib/db/repositories/caucuses";
+import { caucusMembershipsCollection } from "@/lib/db/repositories/caucusMemberships";
 
 /**
- * UK party leadership removal — shell commands (epic #856, ticket #861).
+ * UK party leadership removal shell commands.
  *
- * Wires the pure `leadershipRemoval` evaluator + `rules` helpers to storage:
- * per-party rulesets with CON/LAB defaults, the internal governing committee
- * (1922 / NEC analogue) with faction control, committee amendments within safe
- * bounds, and the full challenge lifecycle (letters/nominations → ballot →
- * resolution → immunity / leader replacement).
+ * Wires the leadershipRemoval evaluator to storage: per-party rulesets (CON/LAB
+ * defaults), the governing committee with faction control, and the full
+ * challenge lifecycle (letters/nominations, ballot, resolution, immunity,
+ * leader replacement).
  *
- * Party-leader confidence here is DISTINCT from government confidence: a
- * successful challenge vacates the party chair (the sitting leader) and the
- * existing national chair-election machinery seats the successor. The
- * government formation (PM, cabinet, VONC gauge) is never touched.
+ * Party-leader confidence is distinct from government confidence: a successful
+ * challenge vacates the party chair and the national chair-election machinery
+ * seats the successor. Government formation (PM, cabinet, VONC) is untouched.
  *
- * The sitting party leader IS the party chair. Removal clears chairId with no
- * auto-promotion (same semantics as the committee removeOfficeHolder flow);
- * the vice-chair inherits chair authority via the acting-chair helper until
- * the fresh chair election resolves.
+ * The sitting party leader is the party chair. Removal clears chairId with no
+ * auto-promotion; the vice-chair inherits chair authority via the acting-chair
+ * helper until the fresh chair election resolves.
  */
 
 export interface LeadershipActor {
@@ -99,6 +104,7 @@ export interface LeadershipStateView {
     isCommitteeMember: boolean;
     isPartyMp: boolean;
     canInitiate: boolean;
+    canBack: boolean;
   };
   history: UKPartyLeadership["history"];
 }
@@ -127,7 +133,7 @@ function isCommitteeMember(actor: LeadershipActor, party: PoliticalParty): boole
 
 /** Commons MPs of this party (the parliamentary party — denominator for triggers). */
 async function countPartyMps(db: Db, countryId: CountryId, party: PoliticalParty): Promise<number> {
-  return db.collection<ElectedOfficial>("electedOfficials").countDocuments({
+  return electedOfficialsCollection(db).countDocuments({
     countryId,
     officeType: getLowerChamberOfficeType(countryId),
     party: partySeqIdOf(party),
@@ -140,7 +146,7 @@ async function requirePartyMp(
   party: PoliticalParty,
   actor: LeadershipActor
 ): Promise<ElectedOfficial> {
-  const official = await db.collection<ElectedOfficial>("electedOfficials").findOne({
+  const official = await electedOfficialsCollection(db).findOne({
     characterId: actor._id,
     countryId,
     officeType: getLowerChamberOfficeType(countryId),
@@ -171,15 +177,13 @@ export async function getCommitteeSnapshot(
   const [characters, memberships, caucuses] = await Promise.all([
     memberIds.length === 0
       ? []
-      : db
-          .collection<Character>("characters")
+      : charactersCollection(db)
           .find({ _id: { $in: memberIds } })
           .project({ name: 1 })
           .toArray(),
     memberIds.length === 0
       ? []
-      : db
-          .collection<CaucusMembership>("caucusMemberships")
+      : caucusMembershipsCollection(db)
           .find({
             memberType: "character",
             memberId: { $in: memberIds },
@@ -189,8 +193,7 @@ export async function getCommitteeSnapshot(
           })
           .project({ memberId: 1, caucusId: 1 })
           .toArray(),
-    db
-      .collection<Caucus>("caucuses")
+    caucusesCollection(db)
       .find({ countryId, partyId: partySeqIdOf(party), disbandedAt: null })
       .project({ slug: 1 })
       .toArray(),
@@ -260,9 +263,10 @@ export async function getLeadershipState(
 
   let leader: LeadershipStateView["leader"] = null;
   if (party.chairId) {
-    const chair = await db
-      .collection<Character>("characters")
-      .findOne({ _id: party.chairId }, { projection: { name: 1 } });
+    const chair = await charactersCollection(db).findOne(
+      { _id: party.chairId },
+      { projection: { name: 1 } }
+    );
     leader = { characterId: party.chairId.toString(), name: chair?.name ?? "Unknown" };
   }
 
@@ -288,7 +292,7 @@ export async function getLeadershipState(
   const isCommittee = viewer != null && isCommitteeMember(viewer, party);
   let isMp = false;
   if (viewer != null && isMember) {
-    const official = await db.collection<ElectedOfficial>("electedOfficials").findOne({
+    const official = await electedOfficialsCollection(db).findOne({
       characterId: viewer._id,
       countryId,
       officeType: getLowerChamberOfficeType(countryId),
@@ -340,7 +344,17 @@ export async function getLeadershipState(
       isPartyMember: isMember,
       isCommitteeMember: isCommittee,
       isPartyMp: isMp,
-      canInitiate: isMp && leader != null && activeChallenge == null && !immune,
+      canInitiate:
+        isMp &&
+        leader != null &&
+        activeChallenge == null &&
+        !immune &&
+        !(viewer != null && party.chairId != null && party.chairId.equals(viewer._id)),
+      canBack:
+        isMp &&
+        activeChallenge != null &&
+        activeChallenge.status === "gathering" &&
+        !(viewer != null && activeChallenge.targetCharacterId.equals(viewer._id)),
     },
     history: leadership.history,
   };
@@ -369,12 +383,12 @@ export async function amendLeadershipRules(
   const validation = validateRulesetAmendment(patch);
   if (!validation.ok) throw badRequest(validation.errors.join("; "));
 
-  // Durable serialization with conference motion applies (ticket #862): the
-  // cooldown travels with the write as a compare-and-swap on the observed
-  // lastAmendedTurn, so a concurrent winner (motion or amendment) that moved
-  // it first makes this write miss instead of landing a second patch inside
-  // the window. `{ lastAmendedTurn: null }` matches null AND missing, so a
-  // legacy row without the field amends cleanly the first time.
+  // Durable serialization with conference motion applies: the cooldown travels
+  // with the write as a compare-and-swap on the observed lastAmendedTurn, so a
+  // concurrent winner (motion or amendment) that moved it first makes this write
+  // miss instead of landing a second patch inside the window.
+  // `{ lastAmendedTurn: null }` matches null AND missing, so a legacy row
+  // without the field amends cleanly the first time.
   for (let attempt = 0; attempt < 2; attempt++) {
     const leadership = await getOrSeedPartyLeadership(db, countryId, party, now, currentTurn);
     const sinceAmend = turnsSince(currentTurn, leadership.lastAmendedTurn);
@@ -466,9 +480,10 @@ export async function initiateLeadershipChallenge(
     throw badRequest("This party holds no Commons seats, so no challenge can trigger");
   }
 
-  const targetChar = await db
-    .collection<Character>("characters")
-    .findOne({ _id: party.chairId }, { projection: { name: 1 } });
+  const targetChar = await charactersCollection(db).findOne(
+    { _id: party.chairId },
+    { projection: { name: 1 } }
+  );
 
   const challengeId = new ObjectId();
   const opensImmediately = canTriggerChallenge(1, totalMps, leadership.ruleset, {
@@ -734,7 +749,7 @@ export async function castLeadershipBallotVote(
 
   let weight = 1;
   if (challenge.ballotRuleset.electorate === "mps") {
-    const official = await db.collection<ElectedOfficial>("electedOfficials").findOne({
+    const official = await electedOfficialsCollection(db).findOne({
       characterId: voter._id,
       countryId,
       officeType: getLowerChamberOfficeType(countryId),
@@ -745,9 +760,10 @@ export async function castLeadershipBallotVote(
     }
     weight = official.seatsHeld ?? 1;
   } else {
-    const member = await db
-      .collection<Character>("characters")
-      .findOne({ _id: voter._id, userId: { $exists: true } }, { projection: { party: 1 } });
+    const member = await charactersCollection(db).findOne(
+      { _id: voter._id, userId: { $exists: true } },
+      { projection: { party: 1 } }
+    );
     if (!member || member.party !== challenge.partyId) {
       throw forbidden("Only party members vote in this ballot");
     }
@@ -876,9 +892,10 @@ export async function resolveLeadershipChallenge(
   await releaseActiveChallenge(db, leadership, challenge, now);
 
   if (removed) {
-    const party = await db
-      .collection<PoliticalParty>("politicalParties")
-      .findOne({ countryId, sequentialId: parseInt(challenge.partyId, 10) });
+    const party = await politicalPartiesCollection(db).findOne({
+      countryId,
+      sequentialId: parseInt(challenge.partyId, 10),
+    });
     if (!party || !party.chairId || !party.chairId.equals(challenge.targetCharacterId)) {
       // Leadership already changed hands mid-ballot: the challenge is moot.
       await appendChallengeHistory(
@@ -894,9 +911,10 @@ export async function resolveLeadershipChallenge(
       );
       return { resolved: true, removed: false };
     }
-    await db
-      .collection<PoliticalParty>("politicalParties")
-      .updateOne({ _id: party._id }, { $set: { chairId: null, updatedAt: now } });
+    await politicalPartiesCollection(db).updateOne(
+      { _id: party._id },
+      { $set: { chairId: null, updatedAt: now } }
+    );
     await appendChallengeHistory(
       db,
       leadership,
@@ -908,9 +926,10 @@ export async function resolveLeadershipChallenge(
       ),
       now
     );
-    const target = await db
-      .collection<Character>("characters")
-      .findOne({ _id: challenge.targetCharacterId }, { projection: { userId: 1, name: 1 } });
+    const target = await charactersCollection(db).findOne(
+      { _id: challenge.targetCharacterId },
+      { projection: { userId: 1, name: 1 } }
+    );
     if (target?.userId) {
       await createNotification({
         userId: target.userId,

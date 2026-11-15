@@ -5,7 +5,7 @@ import {
   PRIMARY_LOCAL_ATTACK_COST_FUNDS,
   PRIMARY_LOCAL_ATTACK_FAV_POINTS,
   PRIMARY_VOTE_SUPPRESSION_COST_FUNDS,
-} from "@/lib/electionEngine/constants";
+} from "@/lib/elections/engine/constants";
 
 vi.mock("@/lib/time/gameTime", () => ({ getGameTime: vi.fn() }));
 vi.mock("@/lib/elections/phases", () => ({ isPrimaryEnded: vi.fn() }));

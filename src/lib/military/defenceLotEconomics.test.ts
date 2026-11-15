@@ -92,7 +92,7 @@ describe("lotProductionCost", () => {
   });
 });
 
-// Ticket #1134 follow-up. The 1953 world's live commodity book is era-scaled (steel 11.47,
+// The 1953 world's live commodity book is era-scaled (steel 11.47,
 // not 800), which makes `revenueBasisPerLot` reading the MODERN table look like a bug. It is
 // not, and these two tests are here so the next person to notice does not "fix" it.
 describe("the lot unit's base-price basis", () => {
@@ -228,7 +228,7 @@ describe("lotPriceBand", () => {
     expect((band.ceiling - cost) / band.ceiling).toBeLessThan(0.2);
   });
 
-  // Suggestion #292. Grade is one dial with two ends: cheap mass costs less to build AND
+  // Grade is one dial with two ends: cheap mass costs less to build AND
   // prices lower, premium costs more AND prices higher, so both doctrines are real choices.
   it("scales both ends of the band with grade", () => {
     const cheap = lotPriceBand({ anchorPrice: 10_000, productionCost, grade: 0 })!;
@@ -266,7 +266,7 @@ describe("factory allocation", () => {
     expect(defaultFactoryAllocation(1, 0)).toBe(0);
   });
 
-  // Ticket #1134: NatCorp CEOs are vacant, so a split default on a two-domain plant
+  // NatCorp CEOs are vacant, so a split default on a two-domain plant
   // would leave half the lines idle for the life of the order.
   it("gives state industry every free line at award", () => {
     expect(awardFactoryAllocation({ componentCount: 2, freeSlots: 4, stateOwned: true })).toBe(4);

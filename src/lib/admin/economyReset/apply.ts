@@ -16,7 +16,6 @@ import {
   type Db,
   type Document,
 } from "mongodb";
-import type { GameState } from "@/lib/db/types/gameState";
 import { collectBalances } from "@/lib/ledger/balanceSnapshot";
 import { LEDGER_ENTRIES_COLLECTION, finalizeLedgerEntry } from "@/lib/ledger/emit";
 import { getStartingYearForPreset } from "@/lib/constants/turnTime";
@@ -56,6 +55,27 @@ import {
   type EconomyResetPhase,
   type EconomyResetPlan,
 } from "./types";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { usersCollection } from "@/lib/db/repositories/users";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { adminLogsCollection } from "@/lib/db/repositories/adminLogs";
+import { stateResourceCapacityCollection } from "@/lib/db/repositories/stateResourceCapacity";
+import { bondHistoryCollection } from "@/lib/db/repositories/bondHistory";
+import { playerIncomeTaxAssessmentsCollection } from "@/lib/db/repositories/playerIncomeTaxAssessments";
+import { moneySupplySnapshotsCollection } from "@/lib/db/repositories/moneySupplySnapshots";
+import { pensionSchemesCollection } from "@/lib/db/repositories/pensionSchemes";
+import { ledgerEntriesCollection } from "@/lib/db/repositories/ledgerEntries";
+import { sovereignCouponClaimsCollection } from "@/lib/db/repositories/sovereignCouponClaims";
 
 type Log = (message: string) => void;
 
@@ -122,7 +142,7 @@ async function dropIfExists(db: Db, name: EconomyResetFullWipeCollection): Promi
 }
 
 function gameState(db: Db) {
-  return db.collection<GameState>("gameState");
+  return gameStateCollection(db);
 }
 
 // --- Phases ----------------------------------------------------------------
@@ -138,8 +158,7 @@ async function phaseHolders(db: Db, plan: EconomyResetPlan): Promise<void> {
       },
     }))
   );
-  const imperials = await db
-    .collection<Document>("imperialCharacters")
+  const imperials = await imperialCharactersCollection<Document>(db)
     .find({}, { projection: { initialIncomeTier: 1 } })
     .toArray();
   await bulk(
@@ -152,7 +171,7 @@ async function phaseHolders(db: Db, plan: EconomyResetPlan): Promise<void> {
       },
     }))
   );
-  await db.collection("npps").updateMany(
+  await nppsCollection<Document>(db).updateMany(
     {
       $or: [
         { currencyBalances: { $exists: true } },
@@ -164,21 +183,18 @@ async function phaseHolders(db: Db, plan: EconomyResetPlan): Promise<void> {
   );
   // Executive track records are the margins of companies the reset deletes;
   // they set NPP CEO pay demands and who is picked as CEO.
-  await db
-    .collection("npps")
-    .updateMany({ ceoTrackRecord: { $exists: true } }, { $unset: { ceoTrackRecord: "" } });
-  await db
-    .collection("npps")
-    .updateMany(
-      { lineOfCredit: { $exists: true } },
-      { $set: { lineOfCredit: { balances: {}, arrears: {} } } }
-    );
-  await db
-    .collection("users")
-    .updateMany(
-      { lastCorporationFoundedTurn: { $exists: true } },
-      { $unset: { lastCorporationFoundedTurn: "" } }
-    );
+  await nppsCollection<Document>(db).updateMany(
+    { ceoTrackRecord: { $exists: true } },
+    { $unset: { ceoTrackRecord: "" } }
+  );
+  await nppsCollection<Document>(db).updateMany(
+    { lineOfCredit: { $exists: true } },
+    { $set: { lineOfCredit: { balances: {}, arrears: {} } } }
+  );
+  await usersCollection<Document>(db).updateMany(
+    { lastCorporationFoundedTurn: { $exists: true } },
+    { $unset: { lastCorporationFoundedTurn: "" } }
+  );
   await bulk(
     db,
     "pensionSchemes",
@@ -208,13 +224,11 @@ async function phaseBonds(db: Db, plan: EconomyResetPlan): Promise<void> {
     }))
   );
   for (const ids of chunks(plan.corporateBondIds.map(oid), 5000)) {
-    await db.collection("bondHistory").deleteMany({ bondId: { $in: ids } });
-    await db.collection("bonds").deleteMany({ _id: { $in: ids }, ...CORPORATE_BOND_FILTER });
+    await bondHistoryCollection<Document>(db).deleteMany({ bondId: { $in: ids } });
+    await bondsCollection<Document>(db).deleteMany({ _id: { $in: ids }, ...CORPORATE_BOND_FILTER });
   }
 
-  const claims = db.collection<{ _id: string; claim: Document }>(
-    SOVEREIGN_COUPON_CLAIMS_COLLECTION
-  );
+  const claims = sovereignCouponClaimsCollection<{ _id: string; claim: Document }>(db);
   const deleteIds = plan.couponClaims.filter((c) => c.action === "delete").map((c) => c.id);
   for (const ids of chunks(deleteIds, 5000)) await claims.deleteMany({ _id: { $in: ids } });
   const trimIds = plan.couponClaims.filter((c) => c.action === "trim").map((c) => c.id);
@@ -245,8 +259,7 @@ async function phaseBonds(db: Db, plan: EconomyResetPlan): Promise<void> {
   // Unpaid maturity quotes drop their private legs and holders; the quote
   // shrinks by the planned amount, and any funded escrow stays on the bond.
   for (const patches of chunks(plan.maturityClaims, 1000)) {
-    const bonds = await db
-      .collection<Document>("bonds")
+    const bonds = await bondsCollection<Document>(db)
       .find(
         { _id: { $in: patches.map((patch) => oid(patch.bondId)) } },
         { projection: { "sovereignMaturityClaim.holderLegs": 1 } }
@@ -278,8 +291,7 @@ async function phaseBonds(db: Db, plan: EconomyResetPlan): Promise<void> {
   }
 
   if (plan.legacyCouponClaims.length > 0) {
-    const budgets = await db
-      .collection<Document>("federalBudget")
+    const budgets = await federalBudgetCollection<Document>(db)
       .find(
         { _id: { $in: plan.legacyCouponClaims.map((row) => row.budgetId) } as never },
         { projection: { sovereignCouponClaims: 1 } }
@@ -328,7 +340,7 @@ async function phaseCentralBanks(db: Db, plan: EconomyResetPlan): Promise<void> 
     }))
   );
   // Every private deposit is gone; the turn recomputes this from savings.
-  await db.collection("centralBanks").updateMany({}, { $set: { nationalSavingsBalance: 0 } });
+  await centralBanksCollection(db).updateMany({}, { $set: { nationalSavingsBalance: 0 } });
 }
 
 async function phaseTreasury(db: Db, plan: EconomyResetPlan, digest: string): Promise<void> {
@@ -337,8 +349,7 @@ async function phaseTreasury(db: Db, plan: EconomyResetPlan, digest: string): Pr
     credit.set(sweep.budgetId, (credit.get(sweep.budgetId) ?? 0) + sweep.treasuryCredit);
   const release = new Map<string, number>();
   for (const row of plan.defenceReleases) release.set(row.countryId, row.release);
-  const budgets = await db
-    .collection<Document>("federalBudget")
+  const budgets = await federalBudgetCollection<Document>(db)
     .find({}, { projection: { countryId: 1 } })
     .toArray();
   const ops: AnyBulkWriteOperation<Document>[] = [];
@@ -363,8 +374,8 @@ async function phaseTreasury(db: Db, plan: EconomyResetPlan, digest: string): Pr
   await bulk(db, "federalBudget", ops);
   // The fiscal scale measured the economy the reset deletes; it restarts from
   // the rebuilt economy's first funded turn.
-  await db.collection("federalBudget").updateMany({}, { $unset: { fiscalScale: "" } });
-  await db.collection("playerIncomeTaxAssessments").deleteMany(VOIDED_INCOME_TAX_FILTER);
+  await federalBudgetCollection(db).updateMany({}, { $unset: { fiscalScale: "" } });
+  await playerIncomeTaxAssessmentsCollection<Document>(db).deleteMany(VOIDED_INCOME_TAX_FILTER);
 }
 
 /** Stuck partial moves that owe nothing to a kept account are closed as rejected. */
@@ -405,42 +416,41 @@ async function phaseUnset(db: Db, plan: EconomyResetPlan): Promise<void> {
   } as never);
   // The rebuilt plants start from fresh-world configuration: gameplay flags on,
   // and no governor, recovery stage, funded lever or turn stamp from the old economy.
-  await db
-    .collection<Document>("gameConfig")
-    .updateOne({ _id: "default" as never }, freshPlantsGameConfigUpdate() as never);
-  await db
-    .collection("states")
-    .updateMany({}, { $unset: Object.fromEntries(STATE_SECTOR_UNSET_FIELDS.map((f) => [f, ""])) });
+  await gameConfigCollection<Document>(db).updateOne(
+    { _id: "default" as never },
+    freshPlantsGameConfigUpdate() as never
+  );
+  await statesCollection<Document>(db).updateMany(
+    {},
+    { $unset: Object.fromEntries(STATE_SECTOR_UNSET_FIELDS.map((f) => [f, ""])) }
+  );
   await reseedOutputTrends(db);
-  // Pension schemes are on the owner keep-list, but each belongs to a union and
-  // the unions are wiped. The holders phase has already converted every
-  // scheme's fund units to cash, so an empty scheme left pointing at a deleted
-  // union only keeps cutting benefits and piling up unpaid claims every turn.
-  await db.collection("pensionSchemes").deleteMany({ assetsAnchor: { $lte: 0 } });
+  // Pension schemes survive but their unions are wiped; holders phase already
+  // converted fund units to cash, so leaving an empty scheme pointing at a
+  // deleted union keeps cutting benefits and accruing unpaid claims.
+  await pensionSchemesCollection<Document>(db).deleteMany({ assetsAnchor: { $lte: 0 } });
   // Cumulative extraction by the old economy's mines. Kept, it shortens every
   // reserve's life for plants that never extracted from it.
-  await db
-    .collection("stateResourceCapacity")
-    .updateMany({ extractedUnits: { $exists: true } }, { $unset: { extractedUnits: "" } });
-  // Unions are wiped and reseeded vacant, so no character can still cache
-  // leadership of a union that no longer exists. Leaving it set would also
-  // block them from founding or taking another union (`foundUnion` 409s while
-  // `unionLeaderOf` is non-null) until a later read path repaired it.
-  await db
-    .collection("characters")
-    .updateMany({ unionLeaderOf: { $ne: null } }, { $set: { unionLeaderOf: null } });
+  await stateResourceCapacityCollection<Document>(db).updateMany(
+    { extractedUnits: { $exists: true } },
+    { $unset: { extractedUnits: "" } }
+  );
+  // Unions are wiped and reseeded vacant, so clear stale cached leadership:
+  // a non-null unionLeaderOf blocks foundUnion with a 409.
+  await charactersCollection(db).updateMany(
+    { unionLeaderOf: { $ne: null } },
+    { $set: { unionLeaderOf: null } }
+  );
   // Each region's employment ledger fixes its corporate job share the first
   // time corporate demand is measured and never revisits it. Kept across a
   // reset, the old economy's share (up to 99% of a state's workforce) stays
   // reserved for jobs the rebuilt plants do not offer, and those workers sit
   // unemployed indefinitely. Marking demand unknown makes the next metric pass
   // re-baseline the share from the rebuilt plants' real demand.
-  await db
-    .collection("macroMetrics")
-    .updateMany(
-      { "labourEmployment.corporateDemandKnown": true },
-      { $set: { "labourEmployment.corporateDemandKnown": false } }
-    );
+  await macroMetricsCollection<Document>(db).updateMany(
+    { "labourEmployment.corporateDemandKnown": true },
+    { $set: { "labourEmployment.corporateDemandKnown": false } }
+  );
 }
 
 /**
@@ -450,12 +460,10 @@ async function phaseUnset(db: Db, plan: EconomyResetPlan): Promise<void> {
  * as a deep slump, which feeds unemployment, migration, inflation and rates.
  */
 async function reseedOutputTrends(db: Db): Promise<void> {
-  const states = await db
-    .collection<Document>("states")
+  const states = await statesCollection<Document>(db)
     .find({}, { projection: { _id: 1 } })
     .toArray();
-  const metrics = await db
-    .collection<Document>("macroMetrics")
+  const metrics = await macroMetricsCollection<Document>(db)
     .find(
       { _id: { $in: states.map((state) => state._id) } },
       { projection: { "economic.sectorGrowth.value": 1, "economic.gdpGrowth.value": 1 } }
@@ -502,18 +510,18 @@ async function phaseReseedPrices(db: Db, plan: EconomyResetPlan, log: Log): Prom
   // A federation that dissolved may have moved to a new currency; the seed
   // table only knows the preset's opening one, so the live code is kept.
   const dissolved = await loadDissolvedFederations(db, plan.preset);
-  const liveCodes = await db
-    .collection<{ _id: string; currencyCode: string }>("exchangeRates")
+  const liveCodes = await exchangeRatesCollection<{ _id: string; currencyCode: string }>(db)
     .find({ _id: { $in: dissolved } }, { projection: { currencyCode: 1 } })
     .toArray();
-  await db.collection("exchangeRates").deleteMany({});
-  await db
-    .collection("centralBanks")
-    .updateMany({}, { $set: { ...CENTRAL_BANK_HISTORY_RESET, updatedAt: new Date() } });
+  await exchangeRatesCollection<Document>(db).deleteMany({});
+  await centralBanksCollection(db).updateMany(
+    {},
+    { $set: { ...CENTRAL_BANK_HISTORY_RESET, updatedAt: new Date() } }
+  );
   const { seedForex } = await import("@/lib/admin/seed/seedForex");
   await seedForex(db, log, plan.preset);
   if (liveCodes.length > 0)
-    await db.collection<{ _id: string; currencyCode: string }>("exchangeRates").bulkWrite(
+    await exchangeRatesCollection<{ _id: string; currencyCode: string }>(db).bulkWrite(
       liveCodes.map((row) => ({
         updateOne: {
           filter: { _id: row._id },
@@ -523,7 +531,9 @@ async function phaseReseedPrices(db: Db, plan: EconomyResetPlan, log: Log): Prom
     );
   // seedForex writes a turn-0 money supply row; the cleared economy was
   // measured at the current turn by the moneySupply phase, so only that stays.
-  await db.collection("moneySupplySnapshots").deleteMany({ turn: { $lt: plan.currentTurn } });
+  await moneySupplySnapshotsCollection<Document>(db).deleteMany({
+    turn: { $lt: plan.currentTurn },
+  });
 }
 
 async function phaseWitness(
@@ -535,10 +545,7 @@ async function phaseWitness(
   if (!plan.ledgerShadow) return 0;
   const [closing, emitted, rates] = await Promise.all([
     collectBalances(db, { treasuryCashLedgerEnabled: plan.treasuryCashLedgerEnabled }),
-    db
-      .collection<{ legs: { account: string; anchorAmount: number; role: string }[] }>(
-        LEDGER_ENTRIES_COLLECTION
-      )
+    ledgerEntriesCollection<{ legs: { account: string; anchorAmount: number; role: string }[] }>(db)
       .find(
         {
           turn: plan.ledgerTurn,
@@ -548,8 +555,7 @@ async function phaseWitness(
         { projection: { legs: 1 } }
       )
       .toArray(),
-    db
-      .collection<{ currencyCode: string; rate: number }>("exchangeRates")
+    exchangeRatesCollection<{ currencyCode: string; rate: number }>(db)
       .find({}, { projection: { currencyCode: 1, rate: 1 } })
       .toArray(),
   ]);
@@ -576,15 +582,13 @@ async function phaseWitness(
 
 async function phaseDiagnostic(db: Db, plan: EconomyResetPlan, log: Log): Promise<number> {
   const [sovereign, corporations] = await Promise.all([
-    db
-      .collection<Document>("bonds")
+    bondsCollection<Document>(db)
       .find(
         { issuerType: "sovereign", matured: false },
         { projection: { corporationId: 1, countryId: 1 } }
       )
       .toArray(),
-    db
-      .collection<Document>("corporations")
+    corporationsCollection<Document>(db)
       .find({}, { projection: { _id: 1, countryOwnerId: 1, isPrimaryNationalCorporation: 1 } })
       .toArray(),
   ]);
@@ -895,7 +899,7 @@ export async function applyEconomyReset(
       phasesRun.push(phase);
     }
     const completedAt = new Date();
-    await db.collection("adminLogs").updateOne(
+    await adminLogsCollection<Document>(db).updateOne(
       { _id: economyResetObjectId(digest, "adminLog") },
       {
         $setOnInsert: {

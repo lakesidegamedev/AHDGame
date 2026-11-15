@@ -12,7 +12,7 @@ import type {
   ElectedOfficial,
   Seat,
 } from "@/lib/db/types";
-import type { StateMetrics, CentralBank, SystemSettings, FederalBudget } from "@/lib/db/types";
+import type { StateMetrics, SystemSettings } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import { COUNTRY_ORDER, COUNTRY_CONFIGS, getOfficeTypeConfig } from "@/lib/constants/countries";
 import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
@@ -25,24 +25,37 @@ import {
   findFederalBudgetCountryMismatches,
 } from "@/lib/turn/ensureFederalBudget";
 import { summarizeGameHealth } from "@/lib/turn/rules/gameHealth";
+import { getFederalBudgetCollection } from "@/lib/db/collections/federalBudget";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import type { Document } from "mongodb";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { usersCollection } from "@/lib/db/repositories/users";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { seatsCollection } from "@/lib/db/repositories/seats";
+import { gameHealthSnapshotsCollection } from "@/lib/db/repositories/gameHealthSnapshots";
+import { partyMembersCollection } from "@/lib/db/repositories/partyMembers";
+import { systemSettingsCollection } from "@/lib/db/repositories/systemSettings";
 
 type SeatScopedOfficial = ElectedOfficial & { seatId?: string };
 
 /**
  * Collect game health metrics and write a snapshot document.
- * Runs as a turn phase in Group 13 (History). Purely observational — never modifies game state.
+ * Purely observational: never modifies game state.
  *
- * Auth: called by turnSystem.ts during processTurn()
- * Errors: caller wraps in runPhase() for isolation
- *
- * **Currency (v0.2.6):** `byCountry[*].totalCorporationRevenue` and
- * `byCountry[*].fundCirculation` / `averagePlayerFunds` are all scoped to a
- * single country via `$match: { countryId }`, so each figure stays in that
- * country's currency (for corps: `liquidCurrencyCode`; for character funds:
- * the character's home currency). No cross-country aggregation happens here,
- * so no FX conversion is needed — the bucket currency is implied by the
- * country key. Presenters should pair each byCountry value with the country's
- * currency symbol.
+ * All `byCountry` figures are scoped to a single country (corps by
+ * `liquidCurrencyCode`, funds by home currency), so no FX conversion is
+ * needed. Presenters pair each value with the country's currency symbol.
  */
 export async function processGameHealthSnapshot(
   db: Db,
@@ -95,12 +108,7 @@ export async function processGameHealthSnapshot(
     ([, telemetry]) => telemetry.status === "skipped"
   );
 
-  // Turn warnings (issue #2054): every entry of the turn warning channel
-  // persists here exactly once. Entries follow the `"<phase>: <message>"`
-  // convention (see the failureMessages parse above); entries without a
-  // prefix land under "unknown". Identical phase+message pairs collapse to
-  // one record, so a retried or replayed turn that re-pushes the same
-  // deterministic warning cannot inflate warningCount.
+  // Turn warnings: every entry of the turn warning channel persists here exactly once. Entries follow "<phase>: <message>"; entries without a prefix land under "unknown". Identical phase+message pairs collapse to one record, so a retried or replayed turn cannot inflate warningCount.
   const seenWarnings = new Set<string>();
   const turnWarnings: TurnWarning[] = [];
   for (const warning of warnings) {
@@ -134,9 +142,7 @@ export async function processGameHealthSnapshot(
   };
 
   // Check integrity cadence setting
-  const healthConfig = await db
-    .collection<SystemSettings>("systemSettings")
-    .findOne({ _id: "healthConfig" });
+  const healthConfig = await systemSettingsCollection(db).findOne({ _id: "healthConfig" });
   const cadence = healthConfig?.integrityCheckCadenceTurns ?? 1;
   const shouldRunIntegrity = turn % cadence === 0;
 
@@ -169,7 +175,7 @@ export async function processGameHealthSnapshot(
     economy,
   };
 
-  await db.collection("gameHealthSnapshots").insertOne(snapshot as GameHealthSnapshot);
+  await gameHealthSnapshotsCollection<Document>(db).insertOne(snapshot as GameHealthSnapshot);
 
   return { snapshotWritten: true, integrityCheckRan: shouldRunIntegrity, health };
 }
@@ -192,11 +198,10 @@ async function runIntegrityChecks(
     missingFederalBudget,
     budgetCountryMismatches,
   ] = await Promise.all([
-    // 1. Orphaned candidates: electionCandidates where electionId has no
-    // matching election (#2166): project to the join key before the $lookup so
-    // full candidate documents never cross the join. The count is unchanged.
-    db
-      .collection("electionCandidates")
+    // Orphaned candidates: electionCandidates whose electionId has no matching
+    // election. Project to the join key so full documents never cross the join;
+    // only existence matters.
+    electionCandidatesCollection<Document>(db)
       .aggregate([
         { $project: { electionId: 1 } },
         {
@@ -217,14 +222,12 @@ async function runIntegrityChecks(
     collectSeatIntegrity(db),
     // 3. Parties with neither human nor active NPC members. memberCount is
     // the human cache; NPC affiliations use the party sequentialId string.
-    db
-      .collection("politicalParties")
+    politicalPartiesCollection<Document>(db)
       .countDocuments({ memberCount: 0 })
       .then(async (humanless) => {
         const npcBacked =
           humanless > 0
-            ? await db
-                .collection("politicalParties")
+            ? await politicalPartiesCollection<Document>(db)
                 .aggregate<{ count: number }>([
                   { $match: { memberCount: 0 } },
                   { $project: { sequentialId: 1, countryId: 1 } },
@@ -261,11 +264,9 @@ async function runIntegrityChecks(
             : [];
         return [humanless, npcBacked] as const;
       }),
-    // 4. Party members referencing deleted parties (#2166): project to the
-    // join key before the $lookup so full member documents never cross the
-    // join. The count is unchanged.
-    db
-      .collection("partyMembers")
+    // Party members referencing deleted parties: project to the join key so full
+    // member documents never cross the join; only existence matters.
+    partyMembersCollection<Document>(db)
       .aggregate([
         { $project: { partyId: 1 } },
         {
@@ -284,10 +285,9 @@ async function runIntegrityChecks(
       .toArray(),
     // 5. Elections nearing resolution with zero candidates. Long-dated elections
     // are active for many turns before nominations open, so they are not gaps yet.
-    // (#2166): project to the join key after the status match so full election
-    // documents never cross the $lookup.
-    db
-      .collection("elections")
+    // Project to the join key after the status match so full election documents
+    // never cross the $lookup.
+    electionsCollection<Document>(db)
       .aggregate([
         {
           $match: {
@@ -428,12 +428,10 @@ export async function collectSeatIntegrity(
   db: Db
 ): Promise<{ orphanedOfficialCount: number; seatBackedSeatsWithoutOfficials: number }> {
   const [seats, officials] = await Promise.all([
-    db
-      .collection<Seat>("seats")
+    seatsCollection(db)
       .find({}, { projection: { _id: 1, countryId: 1, electionType: 1, state: 1 } })
       .toArray(),
-    db
-      .collection<SeatScopedOfficial>("electedOfficials")
+    electedOfficialsCollection<SeatScopedOfficial>(db)
       .find(
         {},
         {
@@ -504,7 +502,7 @@ export async function collectSeatIntegrity(
     // choosing either staggered chamber class. Its office and region are real,
     // but no exact class seat can be marked filled from that aggregate row.
     if (
-      official.countryId === "JP" &&
+      countryHasFeature("jpTurn", official.countryId) &&
       official.officeType === "sangiin" &&
       official.chamberClass == null &&
       (official.seatsHeld ?? 0) > 0 &&
@@ -546,13 +544,13 @@ async function collectPopulationStats(db: Db): Promise<PopulationStats> {
     filledSeats,
     enabledIds,
   ] = await Promise.all([
-    db.collection("users").countDocuments({ banned: { $ne: true } }),
-    db.collection("characters").countDocuments(),
-    db.collection("npps").countDocuments(),
-    db.collection("seats").countDocuments(),
-    db.collection("politicalParties").countDocuments(),
-    db.collection("elections").countDocuments({ status: "active" }),
-    db.collection("electedOfficials").countDocuments(),
+    usersCollection<Document>(db).countDocuments({ banned: { $ne: true } }),
+    charactersCollection<Document>(db).countDocuments(),
+    nppsCollection<Document>(db).countDocuments(),
+    seatsCollection<Document>(db).countDocuments(),
+    politicalPartiesCollection<Document>(db).countDocuments(),
+    electionsCollection<Document>(db).countDocuments({ status: "active" }),
+    electedOfficialsCollection<Document>(db).countDocuments(),
     // Simulated roster for the per-country breakdown below.
     getSimulatedCountryIds(db),
   ]);
@@ -579,36 +577,31 @@ async function collectPopulationStats(db: Db): Promise<PopulationStats> {
 
   // Batch per-country counts with $group aggregates instead of looping countDocuments
   const [charCounts, nppCounts, seatCounts, partyCounts, officialCounts] = await Promise.all([
-    db
-      .collection("characters")
+    charactersCollection<Document>(db)
       .aggregate([
         { $match: { countryId: { $in: activeCountryIds } } },
         { $group: { _id: "$countryId", count: { $sum: 1 } } },
       ])
       .toArray() as Promise<{ _id: string | null; count: number }[]>,
-    db
-      .collection("npps")
+    nppsCollection<Document>(db)
       .aggregate([
         { $match: { countryId: { $in: activeCountryIds } } },
         { $group: { _id: "$countryId", count: { $sum: 1 } } },
       ])
       .toArray() as Promise<{ _id: string | null; count: number }[]>,
-    db
-      .collection("seats")
+    seatsCollection<Document>(db)
       .aggregate([
         { $match: { countryId: { $in: activeCountryIds } } },
         { $group: { _id: "$countryId", count: { $sum: 1 } } },
       ])
       .toArray() as Promise<{ _id: string | null; count: number }[]>,
-    db
-      .collection("politicalParties")
+    politicalPartiesCollection<Document>(db)
       .aggregate([
         { $match: { countryId: { $in: activeCountryIds } } },
         { $group: { _id: "$countryId", count: { $sum: 1 } } },
       ])
       .toArray() as Promise<{ _id: string | null; count: number }[]>,
-    db
-      .collection("electedOfficials")
+    electedOfficialsCollection<Document>(db)
       .aggregate([
         { $match: { countryId: { $in: activeCountryIds } } },
         { $group: { _id: "$countryId", count: { $sum: 1 } } },
@@ -662,8 +655,7 @@ async function collectEconomyStats(db: Db): Promise<EconomyStats> {
   // would hide them. (#2166): only the discovery key and the inflation rate are
   // read.
   const [centralBanks, simulatedIds, fxRows, budgetDocs] = await Promise.all([
-    db
-      .collection<CentralBank>("centralBanks")
+    centralBanksCollection(db)
       .find({}, { projection: { countryId: 1, primeRate: 1 } })
       .toArray(),
     // Every country the engine simulates, not just those with a national
@@ -673,12 +665,10 @@ async function collectEconomyStats(db: Db): Promise<EconomyStats> {
     // of zeroes.
     getSimulatedCountryIds(db),
     // FX rates, so corporate revenue can be reported in a single comparable unit.
-    db
-      .collection<{ _id: string; rate?: number; currencyCode?: string }>("exchangeRates")
+    exchangeRatesCollection<{ _id: string; rate?: number; currencyCode?: string }>(db)
       .find({}, { projection: { rate: 1, currencyCode: 1 } })
       .toArray(),
-    db
-      .collection<FederalBudget>("federalBudget")
+    (await getFederalBudgetCollection(db))
       .find({}, { projection: { countryId: 1, "economicFactors.inflationRate": 1 } })
       .toArray(),
   ]);
@@ -715,13 +705,11 @@ async function collectEconomyStats(db: Db): Promise<EconomyStats> {
     stateGdps,
     fundAggs,
   ] = await Promise.all([
-    db
-      .collection<StateMetrics>("macroMetrics")
+    macroMetricsCollection(db)
       // (#2166): only the gdpGrowth value is read below.
       .find({ _id: { $in: nationalIds } }, { projection: { "economic.gdpGrowth.value": 1 } })
       .toArray(),
-    db
-      .collection("bonds")
+    bondsCollection(db)
       .aggregate([
         { $match: { countryId: { $in: countryIds } } },
         {
@@ -733,14 +721,12 @@ async function collectEconomyStats(db: Db): Promise<EconomyStats> {
         },
       ])
       .toArray(),
-    db
-      .collection("corporations")
+    corporationsCollection(db)
       .aggregate([
         { $match: { countryId: { $in: countryIds } } },
-        // Corps have no top-level `revenue` field — per-turn revenue lives on
-        // each sector (`sectors[].revenue`, home currency). The old `$sum: "$revenue"`
-        // therefore summed a missing field and was always 0 (#3298). Sum the
-        // per-corp sector revenues, then accumulate across the country's corps.
+        // Corps have no top-level `revenue`; per-turn revenue lives on each
+        // sector (`sectors[].revenue`, home currency). Sum per-corp sector
+        // revenues, then accumulate across the country's corps.
         {
           $group: {
             _id: "$countryId",
@@ -751,10 +737,8 @@ async function collectEconomyStats(db: Db): Promise<EconomyStats> {
       .toArray(),
     // Per-sector revenue moved OFF the corporation document into its own
     // `corporateSectors` collection, so the embedded-array sum above resolves
-    // to 0 for every country — the same failure mode as #3298 one schema move
-    // later. Aggregate the real collection.
-    db
-      .collection("corporateSectors")
+    // to 0 for every country. Aggregate the real collection.
+    corporateSectorsCollection<Document>(db)
       .aggregate([
         { $match: { countryId: { $in: countryIds } } },
         {
@@ -766,15 +750,13 @@ async function collectEconomyStats(db: Db): Promise<EconomyStats> {
         },
       ])
       .toArray(),
-    db
-      .collection("states")
+    statesCollection<Document>(db)
       .aggregate([
         { $match: { countryId: { $in: countryIds } } },
         { $group: { _id: "$countryId", gdp: { $sum: "$gdp" } } },
       ])
       .toArray(),
-    db
-      .collection("characters")
+    charactersCollection<Document>(db)
       .aggregate([
         { $match: { countryId: { $in: countryIds } } },
         {

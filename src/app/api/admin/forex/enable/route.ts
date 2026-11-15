@@ -15,12 +15,13 @@ import {
   createForexIndexes,
 } from "@/lib/currency/migration";
 import { getGameStatePresetOrDefault } from "@/lib/db/collections/gameState";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 const FOREX_MIGRATION_HEARTBEAT_MS = 30_000;
 
 export const POST = withAdminRoute(async (_auth) => {
   const db = await getDb();
-  const gameStateCol = db.collection<GameState>("gameState");
+  const gameStateCol = gameStateCollection(db);
   const gameState = await gameStateCol.findOne({ _id: "current" });
 
   if (!gameState) {

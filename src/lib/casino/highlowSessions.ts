@@ -20,6 +20,7 @@ import {
   toAnchor,
   type CasinoPlayer,
 } from "./house";
+import { casinoHighLowSessionsCollection } from "@/lib/db/repositories/casinoHighLowSessions";
 
 /**
  * High-low is the one house game that spans several requests, so its state
@@ -51,7 +52,7 @@ export interface HighLowSession {
   expiresAt: Date;
 }
 
-const sessions = (db: Db) => db.collection<HighLowSession>("casinoHighLowSessions");
+const sessions = (db: Db) => casinoHighLowSessionsCollection<HighLowSession>(db);
 
 export function publicSession(s: HighLowSession) {
   return {

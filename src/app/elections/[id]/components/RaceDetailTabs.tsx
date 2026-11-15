@@ -16,16 +16,11 @@ export interface RaceDetailPane {
 }
 
 /**
- * The race's detail views, one at a time.
+ * The race's detail views, one at a time. They answer different questions
+ * and none is the page's headline, so tabs avoid scrolling past each.
  *
- * These used to run down the page one after another — two full maps of the
- * United States, a trends chart, the state drivers and the factor ledger —
- * so reading any one of them meant scrolling past the rest. They answer
- * different questions and none of them is the page's headline, which the
- * hero above already carries.
- *
- * The section sits where the electoral map used to, because that map has to
- * lead: everything below it decomposes what it shows.
+ * Sits where the electoral map used to, because that map must lead:
+ * everything below decomposes what it shows.
  */
 export function RaceDetailTabs({
   panes,

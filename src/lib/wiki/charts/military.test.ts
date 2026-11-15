@@ -5,7 +5,7 @@ import { WAR_DECLARATION_COOLDOWN_TURNS } from "@/lib/military/warGoals";
 import { TRUCE_TURNS } from "@/lib/db/types/peaceOffer";
 import { TECH_UPKEEP_MULT } from "@/lib/constants/militaryCore";
 import { CAPACITY } from "@/lib/military/config";
-import { MARINE_LANDING_THRESHOLD } from "@/lib/navair/frontSupport";
+import { MARINE_SUSTAINMENT_SEA_CONTROL } from "@/lib/navair/frontSupport";
 import { BLOCKADE } from "@/lib/navair/blockade";
 import { JOIN_SHARE, LEAVE_SHARE } from "@/lib/alignment/membershipEligibility";
 import { TENURE_POINT_CAP } from "@/lib/military/generals";
@@ -47,9 +47,9 @@ describe("military wiki charts", () => {
     expect(withCmd[0][1] - withCmd[5][1]).toBe(Math.round(5 * CAPACITY.overCapacityFactor));
   });
 
-  it("sea control marks the landing threshold and peaks under it only when contested", () => {
+  it("sea control marks the marine sustainment line", () => {
     const spec = build("sea-control-build-and-decay");
-    expect(spec.markers?.find((m) => m.y !== undefined)?.y).toBe(MARINE_LANDING_THRESHOLD);
+    expect(spec.markers?.find((m) => m.y !== undefined)?.y).toBe(MARINE_SUSTAINMENT_SEA_CONTROL);
   });
 
   it("blockade closure goes total at the configured ratio", () => {

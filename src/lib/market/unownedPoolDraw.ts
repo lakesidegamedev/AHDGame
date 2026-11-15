@@ -1,42 +1,19 @@
 /**
- * Unowned-pool DRAWDOWN and CREDIT, as one shared pipeline shape.
+ * Unowned-pool drawdown and credit, shared so writers cannot drift apart.
  *
- * ─── Why this exists ────────────────────────────────────────────────────────
+ * Under plants, market share is `owned / (owned + headroomUnits)`, so any
+ * capacity increase must consume headroom or the same demand counts twice.
+ * Callers add capacity and then draw the pool in the same pipeline.
  *
- * The unowned pool is claimable market share. Under plants, market share is
- * `owned / (owned + headroomUnits)`, so a corp that ADDS capacity has to consume
- * headroom or the same demand is counted twice — once as the corp's own output
- * and again as market still up for grabs.
- *
- * `expandSector` got this right at FOUNDING and nothing else did. In particular
- * `buildCapacity` — the only way to grow an existing plant under plants — never
- * touched the pool at all, so every unit built after founding was free of the
- * pool while still counting as owned. Combined with `autoSectorSeed`, which
- * multiplies the pool UP whenever a commodity is distressed, the pool could only
- * trend upward no matter how much capacity the world actually built. Players saw
- * the result as "60% of this market is unowned but the game will not let me
- * expand into it" (ticket #1145), because the expand gate reads a demand gap
- * while the pie reads the pool.
- *
- * The drawdown itself was a 40-line inline pipeline inside `expandSector`, and
- * the module doc on `unownedHeadroom.ts` already records that pool writers have
- * drifted apart twice before. So the shape lives here, once, and both writers
- * call it.
- *
- * ─── Invariants every caller inherits ───────────────────────────────────────
- *
+ * Invariants every caller inherits:
  *  - PLANTS ONLY. Below plants `headroomUnits` is not the leading leg and
- *    nothing reads units, so a unit-denominated draw there would corrupt the
- *    pool. Callers gate on `plantsEnabled` and pass units.
- *  - UPSERT. A (state, type) bucket with no pool doc is legitimate — the
- *    auto-seeder creates them lazily — and without the upsert a drawdown
- *    silently matches nothing and the builder takes the capacity for free.
- *  - SELF-HEALING BASE. A pool doc predating the `headroomUnits` backfill has
- *    `revenue` and no units; `unownedHeadroomBaseExpr` derives units from
- *    revenue rather than defaulting to 0, which would wipe the market.
- *  - CLAMPED AT 0, and the trailing stage RESTATES `revenue` from the
- *    post-write units. Two independently clamped legs diverge permanently the
- *    moment either bottoms out.
+ *    nothing reads units; callers gate on `plantsEnabled` and pass units.
+ *  - UPSERT. A missing (state, type) pool doc is legitimate and created lazily;
+ *    a bare update would silently match nothing and give the capacity free.
+ *  - SELF-HEALING BASE. `unownedHeadroomBaseExpr` derives units from revenue
+ *    for docs predating the backfill instead of defaulting to 0.
+ *  - CLAMPED AT 0, and the trailing stage RESTATES `revenue` from post-write
+ *    units. Two independently clamped legs diverge once either bottoms out.
  */
 
 import type { CorporationType } from "@/lib/constants/corporations";

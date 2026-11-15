@@ -4,6 +4,7 @@ import { getPartyData } from "@/lib/wiki/partyData";
 import { getPartyFlavor } from "@/lib/wiki/partyFlavor";
 import { PolicyAlignmentCard } from "@/components/PolicyAlignmentCard";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -117,7 +118,7 @@ export default async function WikiPartyPage({ params, searchParams }: PageProps)
               {data.seatCounts.vicePresident}
             </div>
             <div className="text-sm text-muted">
-              {data.countryId === "US" ? "Vice president" : "Deputy executive"}
+              {countryHasFeature("usUi", data.countryId) ? "Vice president" : "Deputy executive"}
             </div>
           </div>
         </div>

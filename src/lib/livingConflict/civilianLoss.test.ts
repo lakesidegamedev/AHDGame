@@ -96,10 +96,6 @@ describe("civilian outcome outbox", () => {
       (await prepareConflictCivilianLossOrder(f.db, f.crisis, f.interaction, f.outcome))
         ?.effectiveTurn
     ).toBe(9);
-    f.memory.collection("gameState").findOne.mockResolvedValue({ livingConflictsEnabled: false });
-    expect(
-      await prepareConflictCivilianLossOrder(f.db, f.crisis, f.interaction, f.outcome)
-    ).toBeUndefined();
   });
   it("rejects non-belligerents, invalid authored shares and bad population before any claim", async () => {
     const f = fixture();
@@ -139,12 +135,11 @@ describe("civilian outcome outbox", () => {
         { globalResponseOutcome: { civilianLossOrder: { ...order, effectiveTurn: 9 } } },
         { globalResponseOutcome: { civilianLossOrder: { ...order, status: "complete" } } },
       ]);
-    expect(await loadPendingConflictCivilianLosses(f.db, "world", 8, true)).toEqual([order]);
+    expect(await loadPendingConflictCivilianLosses(f.db, "world", 8)).toEqual([order]);
     expect(f.memory.collection("crisisInteractions").find).toHaveBeenCalledWith(
       { civilianLossEpochId: "world", civilianLossPending: true },
       expect.anything()
     );
-    expect(await loadPendingConflictCivilianLosses(f.db, "world", 8, false)).toEqual([]);
   });
   it("confirms immutable history before clearing the claimed outcome and makes no treasury or military write", async () => {
     const f = fixture();

@@ -3,6 +3,8 @@ import { ObjectId } from "mongodb";
 import type { LocLedgerEntry, LocLedgerType } from "@/lib/db/types/locLedger";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { getCountryIdForCurrency } from "@/lib/constants/currencies";
+import { locLedgerCollection } from "@/lib/db/repositories/locLedger";
+import type { Document } from "mongodb";
 
 export async function insertLocLedgerEntry(
   db: Db,
@@ -33,7 +35,7 @@ export async function insertLocLedgerEntry(
     meta: params.meta,
     createdAt: new Date(),
   };
-  await db.collection("locLedger").insertOne(doc);
+  await locLedgerCollection<Document>(db).insertOne(doc);
 }
 
 export async function fetchLocLedgerForCharacter(
@@ -58,8 +60,7 @@ export async function fetchLocLedgerForCharacter(
 > {
   const filter: Record<string, unknown> = { characterId };
   if (currencyCode) filter.currencyCode = currencyCode;
-  const rows = await db
-    .collection<LocLedgerEntry>("locLedger")
+  const rows = await locLedgerCollection(db)
     .find(filter)
     .sort({ createdAt: -1 })
     .limit(limit)

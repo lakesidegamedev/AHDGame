@@ -2,12 +2,12 @@ import { getDb } from "@/lib/mongodb";
 import type { GameConfig } from "@/lib/db/types";
 
 /**
- * Labour/Unions system rollout mode. Graduated and ordered — each tier is a
- * superset of the previous one. See docs/plans/2026-06-30-labour-system.md.
+ * Labour/Unions system rollout mode. Graduated and ordered: each tier is a
+ * superset of the previous one.
  *
- * The enum, its order and the tier comparisons live in `@/lib/labour/modes`
+ * The enum, its order and tier comparisons live in `@/lib/labour/modes`
  * (pure, no Mongo) and are re-exported here so existing importers are
- * unaffected. Mirrors the market/modes split.
+ * unaffected.
  */
 export {
   LABOUR_MODE_ORDER,
@@ -18,6 +18,7 @@ export {
 } from "@/lib/labour/modes";
 
 import { isLabourSystemMode, labourAtLeast, type LabourSystemMode } from "@/lib/labour/modes";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 /**
  * Resolve the current labour-system mode.
@@ -32,9 +33,10 @@ export async function getLabourSystemMode(
     mode = preloadedConfig?.labourSystemMode;
   } else {
     const db = await getDb();
-    const config = await db
-      .collection<GameConfig>("gameConfig")
-      .findOne({ _id: "default" }, { projection: { labourSystemMode: 1 } });
+    const config = await gameConfigCollection(db).findOne(
+      { _id: "default" },
+      { projection: { labourSystemMode: 1 } }
+    );
     mode = config?.labourSystemMode;
   }
   return isLabourSystemMode(mode) ? mode : "off";
