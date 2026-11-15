@@ -38,6 +38,7 @@ import {
   buildActiveMarketBuckets,
   createPlacementSectorFacts,
   markMarketsActive,
+  type PlacementSignals,
 } from "@/lib/turn/npp/marketSignals";
 
 export {
@@ -105,9 +106,7 @@ import {
 import type { NppCorpUpdateOp } from "./npp/nppCashWrite";
 import type { NppReinvestmentCashWitness } from "./npp/reinvestmentCashLedger";
 
-import {
-  flushNppCapacityWriteback,
-} from "@/lib/turn/npp/capacityWriteback";
+import { flushNppCapacityWriteback } from "@/lib/turn/npp/capacityWriteback";
 import { loadWorldEraUnitScale } from "@/lib/currency/gdpAnchorRate";
 
 import { loadNppBehaviorConfig } from "@/lib/turn/npp/behaviorConfig";
@@ -418,29 +417,46 @@ export async function processNppCorporationDecisions(
   // measured gap only moves when plants come online, so unmet demand is read net
   // of it; otherwise two corporations would found into a gap that fits one plant.
   const demandClaims = await loadInFlightDemandClaims(db, countryOfState);
-  placementSignals.claimDemandUnits = (cell, units) =>
-    addDemandClaim(demandClaims, demandClaimKeyOf(cell), units);
-  placementSignals.unmetDemandUnitsOf = (cell, options) => {
+  // The measured gap and the claim key depend only on the bucket, the recipe and
+  // the price books, none of which move during the pass; claims are read live.
+  const gapMemo = new Map<string, { unmet: number | null; claimKey: string }>();
+  const readGap = (
+    cell: Parameters<NonNullable<PlacementSignals["unmetDemandUnitsOf"]>>[0],
+    options: Parameters<NonNullable<PlacementSignals["unmetDemandUnitsOf"]>>[1]
+  ) => {
+    const memoKey = `${cell.countryId}|${cell.stateId}|${cell.sectorType}|${cell.industryModel ?? ""}|${cell.mediaDiscriminator ?? ""}|${options?.strategyId ?? ""}|${options?.aggregate ?? "mean"}`;
+    const cached = gapMemo.get(memoKey);
+    if (cached) return cached;
     // The mix the new plant would actually run: its founding strategy, else the
     // sector default (getStrategy falls back to it).
     const supplyMix = getStrategy(
       getOperatingSectorType(cell.sectorType, cell.industryModel, cell.mediaDiscriminator),
       options?.strategyId ?? ""
     ).supply;
-    const unmet = cellUnmetDemandUnits({
-      supplyMix,
-      aggregate: options?.aggregate,
-      gapFor: (commodity) => {
-        const doc = priceByCommodity.get(commodity);
-        if (!doc) return null;
-        const [supply, demand] = isStateScopedCommodity(commodity)
-          ? [doc.stateSupply?.[cell.stateId], doc.stateDemand?.[cell.stateId]]
-          : [doc.nationalSupply?.[cell.countryId], doc.nationalDemand?.[cell.countryId]];
-        if (typeof supply !== "number" || typeof demand !== "number") return null;
-        return Math.max(0, demand - supply);
-      },
-    });
-    return netUnmetDemandUnits(unmet, demandClaims.get(demandClaimKeyOf(cell)));
+    const value = {
+      unmet: cellUnmetDemandUnits({
+        supplyMix,
+        aggregate: options?.aggregate,
+        gapFor: (commodity) => {
+          const doc = priceByCommodity.get(commodity);
+          if (!doc) return null;
+          const [supply, demand] = isStateScopedCommodity(commodity)
+            ? [doc.stateSupply?.[cell.stateId], doc.stateDemand?.[cell.stateId]]
+            : [doc.nationalSupply?.[cell.countryId], doc.nationalDemand?.[cell.countryId]];
+          if (typeof supply !== "number" || typeof demand !== "number") return null;
+          return Math.max(0, demand - supply);
+        },
+      }),
+      claimKey: demandClaimKeyOf(cell),
+    };
+    gapMemo.set(memoKey, value);
+    return value;
+  };
+  placementSignals.claimDemandUnits = (cell, units) =>
+    addDemandClaim(demandClaims, readGap(cell, undefined).claimKey, units);
+  placementSignals.unmetDemandUnitsOf = (cell, options) => {
+    const { unmet, claimKey } = readGap(cell, options);
+    return netUnmetDemandUnits(unmet, demandClaims.get(claimKey));
   };
 
   // Rival index for capacity-decision telemetry, off the already-loaded
