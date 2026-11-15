@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { WikiReviewActions } from "./WikiReviewActions";
 import { LocalTime } from "@/components/time/LocalTime";
+import { WikiReportsPanel } from "./WikiReportsPanel";
 
 interface PendingPage {
   _id: string;
@@ -20,7 +21,7 @@ interface PendingPage {
   originalDescription?: string;
 }
 
-export function WikiReviewTab() {
+function PendingSubmissions() {
   const [pending, setPending] = useState<PendingPage[]>([]);
   const [selected, setSelected] = useState<PendingPage | null>(null);
   const [loading, setLoading] = useState(true);
@@ -171,6 +172,15 @@ export function WikiReviewTab() {
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+export function WikiReviewTab() {
+  return (
+    <div className="space-y-10">
+      <PendingSubmissions />
+      <WikiReportsPanel />
     </div>
   );
 }

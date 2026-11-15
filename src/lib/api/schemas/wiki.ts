@@ -52,4 +52,5 @@ export const wikiReportSchema = z.object({
     .regex(/^[a-z0-9-]+$/, "Slug must be lowercase alphanumeric with hyphens"),
   reason: z.enum(["stale", "incorrect", "update-request", "other"]),
   note: z.string().max(2000).optional().default(""),
+  quote: z.string().max(500).optional().default(""),
 });

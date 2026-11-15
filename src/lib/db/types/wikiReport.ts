@@ -10,6 +10,12 @@ export interface WikiReport {
   slug: string;
   reason: WikiReportReason;
   note: string;
+  /** Page text the reporter highlighted as wrong. */
+  quote?: string;
+  /** Set by an admin when the report has been handled. */
+  resolved?: boolean;
+  resolvedAt?: Date;
+  resolvedBy?: ObjectId;
   ip: string;
   userId?: ObjectId;
   createdAt: Date;
