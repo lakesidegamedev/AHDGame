@@ -7,7 +7,7 @@ summary: >-
   requirement once per Apple account.
 tags: [auth, alts, moderation, accounts]
 badges: [minor]
-areas: [backend, admin]
+areas: [fullstack]
 ---
 
 ## What changed

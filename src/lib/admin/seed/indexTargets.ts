@@ -203,7 +203,7 @@ export const INDEX_TARGETS = [
   },
   {
     id: "indexesProviderLinkHistory",
-    label: "Indexes: Provider Link History",
+    label: "Indexes — Provider Link History",
     description:
       "providerLinkHistory: the per-account read that deletion and the alt run use, and the subject-hash lookup behind shared login-account scoring and the once-per-Apple-ID exemption. Without them each new link scans the whole collection.",
   },
