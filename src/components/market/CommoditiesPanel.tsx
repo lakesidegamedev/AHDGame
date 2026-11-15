@@ -50,14 +50,22 @@ export function CommoditiesPanel({
   return (
     <PanelState loading={loading} error={error} empty={(commodities ?? []).length === 0}>
       <div className="space-y-3">
-        <input
-          type="search"
-          value={filter}
-          onChange={(e) => setFilter(e.target.value)}
-          placeholder="Filter commodities"
-          aria-label="Filter commodities"
-          className="h-8 w-full rounded-md border border-card-border bg-background px-2 text-[13px] text-foreground focus:border-foreground focus:outline-none sm:w-64"
-        />
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <input
+            type="search"
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+            placeholder="Filter commodities"
+            aria-label="Filter commodities"
+            className="h-8 w-full rounded-md border border-card-border bg-background px-2 text-[13px] text-foreground focus:border-foreground focus:outline-none sm:w-64"
+          />
+          <Link
+            href="/commodity/shortages"
+            className="text-xs font-medium text-primary hover:underline"
+          >
+            Regional shortages →
+          </Link>
+        </div>
         <div className="overflow-x-auto rounded-xl border border-card-border bg-card shadow-card">
           <table className="w-full min-w-[640px] text-sm">
             <thead>
