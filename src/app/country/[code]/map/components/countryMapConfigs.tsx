@@ -113,6 +113,16 @@ export interface MapGameTime {
   preIterationTurns?: number;
 }
 
+export interface MapViewProps {
+  zoom?: number;
+  onZoomChange?: (zoom: number) => void;
+  resetKey?: number;
+  showLabels?: boolean;
+  highlightedRegions?: string[];
+  highlightColor?: string;
+  hideCrowdedLabels?: boolean;
+}
+
 export interface CountryMapConfig {
   countryId: ParliamentaryMapCountryId;
   modes: ReadonlyArray<MapModeConfig>;
@@ -136,11 +146,9 @@ export interface CountryMapConfig {
     gameTime?: MapGameTime;
     /** Live region roster (British-Isles maps); falls back to the static set. */
     regionCodes?: string[];
+    /** Shared atlas controls: zoom, labels, selection highlight and hover card. */
+    mapProps?: MapViewProps;
   }) => ReactNode;
-  aspectRatio: string;
-  /** Optional map container size override (defaults: max 340px wide, min 280px tall). */
-  mapMaxWidth?: string;
-  mapMinHeight?: string;
   /** Computes the per-region color/label/tooltip table for the chosen mode. */
   buildRegionData: (args: BuildRegionDataArgs) => Record<string, MapRegionCell>;
   /** European lean palette (red = left / blue = right) for the legend; must match buildRegionData's leanCell flag. */
@@ -750,16 +758,18 @@ export const COUNTRY_MAP_CONFIGS: Record<ParliamentaryMapCountryId, CountryMapCo
     })),
     regionListHeading: "All regions",
     headerSubtitle: `${UK_REGIONS.length} regions · ${totalUKConstituencies} Westminster constituencies`,
-    renderPaths: ({ regionData, onRegionClick, regionCodes }) => (
+    renderPaths: ({ regionData, onRegionClick, regionCodes, mapProps }) => (
       <RegionalGeoMap
         zoomable
+        {...mapProps}
         sourceUrl={BRITISH_ISLES_GEO_URL}
         regionCodes={regionCodes ?? [...UK_REGION_CODES]}
         regionData={regionData}
         onRegionClick={onRegionClick}
+        width={960}
+        height={600}
       />
     ),
-    aspectRatio: "280/400",
     buildRegionData: buildUKRegionData,
   },
   DE: {
@@ -780,16 +790,18 @@ export const COUNTRY_MAP_CONFIGS: Record<ParliamentaryMapCountryId, CountryMapCo
       const mandates = regions.reduce((s, r) => s + (DE_MANDATES_BY_ID.get(r.id) ?? 0), 0);
       return `${regions.length} Länder · ${mandates} direct mandates`;
     },
-    renderPaths: ({ regionData, onRegionClick, regionCodes }) => (
+    renderPaths: ({ regionData, onRegionClick, regionCodes, mapProps }) => (
       <RegionalGeoMap
         zoomable
+        {...mapProps}
         sourceUrl={GERMANY_GEO_URL}
         regionCodes={regionCodes ?? [...GERMANY_REGION_CODES]}
         regionData={regionData}
         onRegionClick={onRegionClick}
+        width={960}
+        height={600}
       />
     ),
-    aspectRatio: "280/400",
     buildRegionData: (args) => buildDERegionData(args, deRegions),
   },
   JP: {
@@ -803,16 +815,18 @@ export const COUNTRY_MAP_CONFIGS: Record<ParliamentaryMapCountryId, CountryMapCo
     })),
     regionListHeading: "All regions",
     headerSubtitle: `${JP_REGIONS.length} regions · ${totalShugiin} Shugiin seats`,
-    renderPaths: ({ regionData, onRegionClick, regionCodes }) => (
+    renderPaths: ({ regionData, onRegionClick, regionCodes, mapProps }) => (
       <RegionalGeoMap
         zoomable
+        {...mapProps}
         sourceUrl={JAPAN_GEO_URL}
         regionCodes={regionCodes ?? [...JP_REGION_CODES]}
         regionData={regionData}
         onRegionClick={onRegionClick}
+        width={960}
+        height={600}
       />
     ),
-    aspectRatio: "280/400",
     buildRegionData: buildJPRegionData,
   },
   CN: {
@@ -826,20 +840,18 @@ export const COUNTRY_MAP_CONFIGS: Record<ParliamentaryMapCountryId, CountryMapCo
     })),
     regionListHeading: "All regions",
     headerSubtitle: `${cnRegions.length} regions · ${totalNpcSeats} NPC seats`,
-    renderPaths: ({ regionData, onRegionClick, regionCodes, gameTime }) => (
+    renderPaths: ({ regionData, onRegionClick, regionCodes, gameTime, mapProps }) => (
       <RegionalGeoMap
         zoomable
+        {...mapProps}
         sourceUrl={isPreHKHandover(gameTime) ? CHINA_GEO_URL_PRE_HANDOVER : CHINA_GEO_URL}
         regionCodes={regionCodes ?? [...CN_REGION_CODES]}
         regionData={regionData}
         onRegionClick={onRegionClick}
-        width={480}
-        height={340}
+        width={960}
+        height={600}
       />
     ),
-    aspectRatio: "480/340",
-    mapMaxWidth: "420px",
-    mapMinHeight: "260px",
     buildRegionData: buildCNRegionData,
   },
   BR: {
@@ -853,17 +865,19 @@ export const COUNTRY_MAP_CONFIGS: Record<ParliamentaryMapCountryId, CountryMapCo
     })),
     regionListHeading: "All regions",
     headerSubtitle: `${brRegions.length} regions · ${totalBRChamber} Chamber seats`,
-    renderPaths: ({ regionData, onRegionClick, regionCodes }) => (
+    renderPaths: ({ regionData, onRegionClick, regionCodes, mapProps }) => (
       <RegionalGeoMap
         zoomable
+        {...mapProps}
         sourceUrl={BRAZIL_GEO_URL}
         regionCodes={regionCodes ?? [...BR_REGION_CODES]}
         regionData={regionData}
         onRegionClick={onRegionClick}
         labelOverrides={BR_LABEL_OVERRIDES}
+        width={960}
+        height={600}
       />
     ),
-    aspectRatio: "280/400",
     buildRegionData: buildBRRegionData,
   },
   NG: {
@@ -877,20 +891,18 @@ export const COUNTRY_MAP_CONFIGS: Record<ParliamentaryMapCountryId, CountryMapCo
     })),
     regionListHeading: "All zones",
     headerSubtitle: `${ngRegions.length} geopolitical zones`,
-    renderPaths: ({ regionData, onRegionClick, regionCodes }) => (
+    renderPaths: ({ regionData, onRegionClick, regionCodes, mapProps }) => (
       <RegionalGeoMap
         zoomable
+        {...mapProps}
         sourceUrl={NIGERIA_GEO_URL}
         regionCodes={regionCodes ?? [...NG_REGION_CODES]}
         regionData={regionData}
         onRegionClick={onRegionClick}
-        width={480}
-        height={340}
+        width={960}
+        height={600}
       />
     ),
-    aspectRatio: "480/340",
-    mapMaxWidth: "420px",
-    mapMinHeight: "260px",
     buildRegionData: (args) => buildZoneRegionData(ngRegions, args),
   },
   CA: {
@@ -904,20 +916,18 @@ export const COUNTRY_MAP_CONFIGS: Record<ParliamentaryMapCountryId, CountryMapCo
     })),
     regionListHeading: "All provinces and territories",
     headerSubtitle: `${caRegions2027.length} provinces and territories · ${totalCaCommons} MPs`,
-    renderPaths: ({ regionData, onRegionClick, regionCodes }) => (
+    renderPaths: ({ regionData, onRegionClick, regionCodes, mapProps }) => (
       <RegionalGeoMap
         zoomable
+        {...mapProps}
         sourceUrl={CANADA_GEO_URL}
         regionCodes={regionCodes ?? [...CA_REGION_CODES]}
         regionData={regionData}
         onRegionClick={onRegionClick}
-        width={480}
-        height={340}
+        width={960}
+        height={600}
       />
     ),
-    aspectRatio: "480/340",
-    mapMaxWidth: "420px",
-    mapMinHeight: "260px",
     buildRegionData: (args) => buildZoneRegionData(caRegions2027, args),
   },
 };
