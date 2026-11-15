@@ -432,7 +432,7 @@ export function hasEnterableHeadroom(
 }
 
 /**
- * Find the best unowned sector for expansion, prioritizing sectors that
+ * Find the best candidate market for expansion, prioritizing sectors that
  * match the corp's primary type, then secondary type; only a physically
  * confirmed critical shortage crosses types.
  *

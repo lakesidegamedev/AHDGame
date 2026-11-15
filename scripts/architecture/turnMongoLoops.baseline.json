@@ -3780,34 +3780,6 @@
       "fingerprint": "b14cdf85c7e9fee834aafe9ce97af398cf8708c1b16d3c8dd807a09e4f9ce59d"
     },
     {
-      "file": "src/lib/turn/autoSectorSeed.ts",
-      "operation": "find",
-      "owner": "processAutoSectorSeed",
-      "expression": "db .collection<UnownedSector>(\"unownedSectors\") .find({ sectorType, industryModel, mediaDiscriminator })",
-      "fingerprint": "bfe9b9e31e259060f1436fafbcc8d08dcd50d89cd6a3e045c539a947a82cf5a8"
-    },
-    {
-      "file": "src/lib/turn/autoSectorSeed.ts",
-      "operation": "updateMany",
-      "owner": "processAutoSectorSeed",
-      "expression": "db .collection<UnownedSector>(\"unownedSectors\") .updateMany({ _id: { $in: openIds } }, [boostPipeline])",
-      "fingerprint": "c3dc033bef544c5c8671e8a3591a8a3b7011b46f67603c32d31ffc1adbd32522"
-    },
-    {
-      "file": "src/lib/turn/autoSectorSeed.ts",
-      "operation": "updateMany",
-      "owner": "processAutoSectorSeed",
-      "expression": "db.collection(\"corporateSectors\").updateMany({ sectorType, industryModel, mediaDiscriminator, corporationId: { $in: natCorpObjectIds }, }, [ { $set: { revenue: { $round: [{ $multiply: [\"$revenue\", multiplier] }, 0] }, ...(plantsEnabled ? { capitalStock: { $multiply: [{ $ifNull: [\"$capitalStock\", 0] }, multiplier], }, plantCount: { $cond: [ { $gt: [boostedStock, 0] }, { $max: [1, { $floor: [{ $divide: [boostedStock, quantum] }] }] }, 0, ], }, plantUnitRemainder: { $cond: [ { $gte: [boostedStock, quantum] }, { $subtract: [ boostedStock, { $multiply: [ { $floor: [{ $divide: [boostedStock, quantum] }] }, quantum, ], }, ], }, 0, ], }, } : {}), updatedAt: now, }, }, ])",
-      "fingerprint": "367ebafe6d3441220b32f81c40129d8cd93bf84cd22a15ee1f5a9eda7ff44424"
-    },
-    {
-      "file": "src/lib/turn/autoSectorSeed.ts",
-      "operation": "insertOne",
-      "owner": "processAutoSectorSeed",
-      "expression": "db.collection<UnownedSector>(\"unownedSectors\").insertOne({ _id: new ObjectId(), stateId: state._id as string, countryId: state.countryId as CountryId, sectorType, industryModel, mediaDiscriminator, revenue: seedRevenue, headroomUnits: computeUnownedHeadroomUnits(sectorType, seedRevenue, eraUnitScale, industryModel, mediaDiscriminator), createdAt: now, updatedAt: now, })",
-      "fingerprint": "1c4506ee0a08b0ca2de79a1f381c3c160e8ce757ab233e015cdafe4963c34489"
-    },
-    {
       "file": "src/lib/world/playerHandoff.ts",
       "operation": "updateOne",
       "owner": "exitCountryForPlayers",

@@ -523,7 +523,7 @@ export function decideNppCapacityReinvestment({
           corpEarningsLocal: totalIncome,
           growthUnits,
           growthCostLocal: perUnitGrowthLocal * growthUnits,
-          demandHeadroomUnits: unmetUnits,
+          unmetDemandUnits: unmetUnits,
         });
         if (autopilotGate) {
           growthUnits = 0;

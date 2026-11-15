@@ -148,7 +148,7 @@ describe("evaluateAutopilotGrowthGate", () => {
     corpEarningsLocal: 1,
     growthUnits: 5,
     growthCostLocal: 5 * 10 * AUTOPILOT_PAYBACK_HORIZON_TURNS,
-    demandHeadroomUnits: 100,
+    unmetDemandUnits: 100,
   };
   it("passes at exactly the payback horizon", () => {
     expect(evaluateAutopilotGrowthGate(base)).toBeNull();
@@ -167,7 +167,7 @@ describe("evaluateAutopilotGrowthGate", () => {
     );
   });
   it("requires demand headroom", () => {
-    expect(evaluateAutopilotGrowthGate({ ...base, demandHeadroomUnits: 0 })).toBe(
+    expect(evaluateAutopilotGrowthGate({ ...base, unmetDemandUnits: 0 })).toBe(
       "autopilot_demand_headroom"
     );
   });
