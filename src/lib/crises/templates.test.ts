@@ -53,6 +53,25 @@ describe("crisis templates", () => {
     });
   });
 
+  describe("player-facing copy", () => {
+    it("has no em or en dashes in any description or wire", () => {
+      const bad: string[] = [];
+      for (const [key, t] of Object.entries(ALL_CRISIS_TEMPLATES)) {
+        for (const text of [t.description, t.wireMessageOnStart, t.wireMessageOnEnd ?? ""]) {
+          if (/[\u2013\u2014]/.test(text)) bad.push(key);
+        }
+      }
+      expect(bad).toEqual([]);
+    });
+
+    it("keeps wires short and descriptions out of boilerplate", () => {
+      for (const [key, t] of Object.entries(ALL_CRISIS_TEMPLATES)) {
+        expect(t.wireMessageOnStart.length, key).toBeLessThan(260);
+        expect(t.description.length, key).toBeGreaterThan(60);
+      }
+    });
+  });
+
   describe("template registry", () => {
     it("includes the six new templates", () => {
       expect(ALL_CRISIS_TEMPLATES.currency_crisis).toBeDefined();

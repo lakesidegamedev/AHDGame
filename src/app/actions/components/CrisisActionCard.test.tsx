@@ -65,6 +65,12 @@ function stubFeed(optionAvailability: Record<string, unknown> | null) {
   );
 }
 
+/** Decision cards start as one row; open each so its options are on screen. */
+async function openDecisionRows() {
+  const rows = await screen.findAllByRole("button", { expanded: false, name: /Your decision/ });
+  for (const row of rows) fireEvent.click(row);
+}
+
 afterEach(() => {
   vi.unstubAllGlobals();
   window.localStorage.clear();
@@ -78,6 +84,7 @@ describe("CrisisActionCard — options the nation cannot support", () => {
     });
 
     render(<CrisisActionCard />);
+    await openDecisionRows();
 
     const support = await screen.findByRole("button", { name: /Support the alliance line/i });
     expect(support.hasAttribute("disabled")).toBe(true);
@@ -91,6 +98,7 @@ describe("CrisisActionCard — options the nation cannot support", () => {
     });
 
     render(<CrisisActionCard />);
+    await openDecisionRows();
 
     const mediation = await screen.findByRole("button", { name: /Demand negotiations/i });
     expect(mediation.hasAttribute("disabled")).toBe(false);
@@ -100,6 +108,7 @@ describe("CrisisActionCard — options the nation cannot support", () => {
     stubFeed(null);
 
     render(<CrisisActionCard />);
+    await openDecisionRows();
 
     const support = await screen.findByRole("button", { name: /Support the alliance line/i });
     expect(support.hasAttribute("disabled")).toBe(false);
@@ -157,6 +166,7 @@ describe("CrisisActionCard — aid nodes", () => {
     stubAidFeed();
 
     render(<CrisisActionCard />);
+    await openDecisionRows();
 
     await screen.findByRole("heading", { name: "International aid" });
     expect(screen.queryByRole("button", { name: /Send Aid/i })).toBeNull();
@@ -167,6 +177,7 @@ describe("CrisisActionCard — aid nodes", () => {
     stubAidFeed();
 
     render(<CrisisActionCard />);
+    await openDecisionRows();
 
     const link = await screen.findByRole("link", { name: /aid/i });
     expect(link.getAttribute("href")).toBe("/world/crises/65b0000000000000000000aa");
@@ -219,6 +230,7 @@ describe("CrisisActionCard — refusals are attributed to their own crisis", () 
     stubTwoCrises();
 
     render(<CrisisActionCard />);
+    await openDecisionRows();
 
     const buttons = await screen.findAllByRole("button", { name: /Demand negotiations/i });
     expect(buttons).toHaveLength(2);
@@ -375,6 +387,7 @@ describe("CrisisActionCard — reading what a crisis is doing to you", () => {
       { value: 0.44999999999999996, label: "Unemployment from business contraction" },
     ]);
     render(<CrisisActionCard />);
+    await openDecisionRows();
 
     expect(await screen.findByText("-0.66 pp")).toBeTruthy();
     expect(screen.getByText("+0.45 pp")).toBeTruthy();
@@ -389,6 +402,7 @@ describe("CrisisActionCard — reading what a crisis is doing to you", () => {
       }))
     );
     render(<CrisisActionCard />);
+    await openDecisionRows();
 
     expect(await screen.findByText("+3 more")).toBeTruthy();
   });
@@ -396,6 +410,7 @@ describe("CrisisActionCard — reading what a crisis is doing to you", () => {
   it("prints no overflow pill when every effect is shown", async () => {
     stubEffectsFeed([{ value: -0.1, label: "margins" }]);
     render(<CrisisActionCard />);
+    await openDecisionRows();
 
     await screen.findByText("-0.1 pp");
     expect(screen.queryByText(/more$/)).toBeNull();
@@ -461,6 +476,7 @@ describe("CrisisActionCard — severity agrees with the crises page", () => {
   it("badges the live recession the way /world/crises does", async () => {
     stubSeverityFeed(RECESSION_EFFECTS);
     render(<CrisisActionCard />);
+    await openDecisionRows();
 
     // shared crisisSeverity scores this 1.70 → medium. The card's old private
     // copy summed ticks only (3.66) and called it high.
@@ -477,9 +493,33 @@ describe("CrisisActionCard — severity agrees with the crises page", () => {
     ];
     stubSeverityFeed(gdpLoss);
     render(<CrisisActionCard />);
+    await openDecisionRows();
 
     await screen.findByRole("heading", { name: "Recession" });
     expect(crisisSeverity({ effects: gdpLoss as never })).toBe("high");
     expect(document.querySelector('[class*="border-rose-500/40"]')).toBeTruthy();
+  });
+});
+
+describe("CrisisActionCard compact rows", () => {
+  it("shows a decision crisis as one row with its tag and deadline, options hidden", async () => {
+    stubFeed(null);
+    render(<CrisisActionCard />);
+
+    const row = await screen.findByRole("button", { expanded: false, name: /Berlin Crisis/ });
+    expect(row.textContent).toContain("Your decision");
+    expect(row.textContent).toContain("20h 15m left");
+    expect(screen.queryByRole("button", { name: /Support the alliance line/i })).toBeNull();
+  });
+
+  it("opens in one click and collapses again", async () => {
+    stubFeed(null);
+    render(<CrisisActionCard />);
+
+    fireEvent.click(await screen.findByRole("button", { expanded: false, name: /Berlin Crisis/ }));
+    expect(await screen.findByRole("button", { name: /Support the alliance line/i })).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: /Collapse Berlin Crisis/ }));
+    expect(screen.queryByRole("button", { name: /Support the alliance line/i })).toBeNull();
   });
 });

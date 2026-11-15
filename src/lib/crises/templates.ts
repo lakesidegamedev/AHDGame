@@ -425,7 +425,7 @@ export const HURRICANE_TEMPLATE: CrisisTemplate = {
   heroImage:
     "https://images.unsplash.com/photo-1457327289196-f38b88d97147?auto=format&fit=crop&w=1600&q=70",
   description:
-    "A Category 4 hurricane has made landfall in {location}, shredding power lines and flooding entire neighborhoods as storm surge pushes miles inland. Tens of thousands have fled to shelters, ports and refineries are shut down, and emergency crews are wading through debris to reach those stranded on rooftops. Officials warn it could take weeks to restore power and clear the worst-hit coastal communities.",
+    "A Category 4 hurricane comes ashore in {location} with storm surge pushing miles up rivers and canals. Homes along the coast are gone, refineries and ports have shut, and tens of thousands are in shelters without power. The region loses about 2% of its output at once. For about 4 turns unemployment climbs, the infrastructure backlog grows and approval falls the longer relief takes.",
   scope: "region",
   countryIds: [],
   regionIds: [],
@@ -438,8 +438,9 @@ export const HURRICANE_TEMPLATE: CrisisTemplate = {
     fx("tick", "approval", "government", "overall", -0.03, "Government approval erosion"),
   ],
   wireMessageOnStart:
-    "A major hurricane has struck {location}, leaving coastal regions facing severe flooding, damage, and mass displacement.",
-  wireMessageOnEnd: "Hurricane recovery is underway. Infrastructure repairs begin.",
+    "Hurricane landfall in {location}. Storm surge has flooded the coast, the ports are closed and tens of thousands are in shelters without power.",
+  wireMessageOnEnd:
+    "The wind is gone and the water is draining. Crews begin restoring power and reopening the ports.",
   interactionDefinition: {
     decisionTree: [
       {
@@ -521,7 +522,7 @@ const EARTHQUAKE_TEMPLATE: CrisisTemplate = {
   heroImage:
     "https://images.unsplash.com/photo-1677233860259-ce1a8e0f8498?auto=format&fit=crop&w=1600&q=70",
   description:
-    "A magnitude 7.2 earthquake has struck {location}, toppling buildings and severing highways and rail lines across the region. Hospitals are overwhelmed, power and water service have failed for hundreds of thousands, and search-and-rescue crews are racing to reach survivors trapped in the rubble. Aftershocks continue to rattle the area as the full scale of the damage comes into focus.",
+    "A magnitude 7.2 earthquake hits {location} and brings down apartment blocks, bridges and rail lines. Hospitals are full, and water and power are out for hundreds of thousands. Rescuers dig for survivors while aftershocks keep crews out of damaged buildings. The region loses about 3% of its output at once. For about 6 turns businesses stay shut, unemployment rises and the infrastructure backlog grows.",
   scope: "region",
   countryIds: [],
   regionIds: [],
@@ -534,8 +535,9 @@ const EARTHQUAKE_TEMPLATE: CrisisTemplate = {
     fx("tick", "approval", "government", "overall", -0.04, "Government approval erosion"),
   ],
   wireMessageOnStart:
-    "A major earthquake has struck {location}, collapsing buildings and triggering urgent search-and-rescue operations across the region.",
-  wireMessageOnEnd: "Earthquake recovery continues. Reconstruction efforts are scaling up.",
+    "A magnitude 7.2 earthquake has hit {location}. Buildings are down, bridges and rail lines are cut, and rescue crews are digging through rubble.",
+  wireMessageOnEnd:
+    "The aftershocks have faded. Crews are rebuilding roads, rail lines and water mains, and displaced families are going home.",
   interactionDefinition: {
     decisionTree: [
       {
@@ -624,7 +626,7 @@ const WILDFIRE_TEMPLATE: CrisisTemplate = {
   heroImage:
     "https://images.unsplash.com/photo-1692364221415-654b20e6d1d2?auto=format&fit=crop&w=1600&q=70",
   description:
-    "A fast-moving wildfire is tearing through {location}, incinerating homes and forcing entire towns to flee ahead of the flames. Thick smoke has pushed air quality to hazardous levels for miles, grounding aircraft and shuttering schools and businesses. Exhausted crews are cutting fire lines around the clock as shifting winds threaten to drive the blaze into populated areas.",
+    "A wildfire is moving through {location} faster than crews can cut lines, burning homes and forcing whole towns to leave. Smoke has pushed air quality to hazardous levels, closing schools and grounding flights. The region loses about 1% of its output at once. For about 3 turns air quality drops hard, burned power lines and roads widen the infrastructure backlog and approval slips.",
   scope: "region",
   countryIds: [],
   regionIds: [],
@@ -637,8 +639,9 @@ const WILDFIRE_TEMPLATE: CrisisTemplate = {
     fx("tick", "approval", "government", "overall", -0.02, "Government approval erosion"),
   ],
   wireMessageOnStart:
-    "A massive wildfire is burning across {location}, where air quality has turned hazardous and evacuations are underway.",
-  wireMessageOnEnd: "The wildfire is contained. Air quality begins to improve.",
+    "A wildfire is burning through {location}. Towns are being evacuated and the smoke has made the air hazardous to breathe.",
+  wireMessageOnEnd:
+    "Crews have the fire contained. The smoke is clearing and residents are returning to see what is left.",
   interactionDefinition: {
     decisionTree: [
       {
@@ -1782,7 +1785,7 @@ const STEEL_STRIKE_TEMPLATE: CrisisTemplate = {
   heroImage:
     "https://images.unsplash.com/photo-1598299803204-b73796f43289?auto=format&fit=crop&w=1600&q=70",
   description:
-    "The steelworkers have walked out nationwide. Blast furnaces bank down, and the shutdown ripples into autos, defense, construction, and power as steel supply dries up. The President must act.",
+    "Steelworkers have walked out nationwide. Blast furnaces are banking down, and carmakers, builders, defense contractors and power utilities are running short of steel. Mill margins collapse at once. For about 6 turns growth falls, prices rise, consumers and investors lose confidence and the government takes the blame. The head of state can seize the mills, force talks, concede the wage demands or hold firm.",
   scope: "country",
   countryIds: [],
   regionIds: [],
@@ -1811,9 +1814,9 @@ const STEEL_STRIKE_TEMPLATE: CrisisTemplate = {
     ),
   ],
   wireMessageOnStart:
-    "Steelworkers have struck nationwide. Furnaces are banking down and steel-dependent industry is grinding to a halt.",
+    "Steelworkers have struck nationwide. Furnaces are banking down, and carmakers, builders and defense contractors are warning of shortages.",
   wireMessageOnEnd:
-    "The steel strike is over. The settlement, imposed, negotiated, or won in court, reshapes the industry.",
+    "The steel strike is over. Whether the terms were imposed, negotiated or ordered by a court, the mills are firing up again.",
   interactionDefinition: {
     decisionTree: [
       {
@@ -1995,7 +1998,7 @@ export const UNION_BAN_GENERAL_STRIKE_TEMPLATE: CrisisTemplate = {
   heroImage:
     "https://images.unsplash.com/photo-1576193483630-1b61f26fad5b?auto=format&fit=crop&w=1600&q=70",
   description:
-    "Unions have been outlawed and the workforce has walked out rather than dissolve. Steel, car plants, the docks and freight have all stopped, and with no lawful union left there is nobody the government can sign an agreement with.",
+    "The government banned the unions, and the workforce walked out rather than dissolve. Steel and heavy plants, car assembly, the docks and freight have all stopped, and with no lawful union left there is nobody to sign an agreement with. Margins in those sectors collapse. Growth falls hard, prices rise on shortages, unemployment climbs and the government carries the blame for as long as it lasts. It can send in the army, open talks, ride it out or repeal the ban.",
   scope: "country",
   countryIds: [],
   regionIds: [],
@@ -2033,9 +2036,9 @@ export const UNION_BAN_GENERAL_STRIKE_TEMPLATE: CrisisTemplate = {
     fx("tick", "approval", "government", "overall", -0.05, "The government owns the paralysis"),
   ],
   wireMessageOnStart:
-    "Unions have been banned and the country has stopped working. Plants, docks and freight are all shut.",
+    "The union ban has set off a general strike. Plants, docks and freight have stopped across the country and shelves are emptying.",
   wireMessageOnEnd:
-    "The general strike is over. Work is restarting on whatever terms the government could get.",
+    "The general strike is over. Work restarts on whatever terms the government could get.",
   interactionDefinition: {
     decisionTree: [
       {
@@ -2534,7 +2537,7 @@ const NUCLEAR_ACCIDENT_TEMPLATE: CrisisTemplate = {
   heroImage:
     "https://images.unsplash.com/photo-1630142895963-6996ae6b3a5b?auto=format&fit=crop&w=1600&q=70",
   description:
-    "A reactor at a major nuclear facility in {location} has suffered a partial meltdown, prompting authorities to order the immediate evacuation of everyone within the surrounding exclusion zone. Radiation readings are climbing, food and water supplies are being seized for testing, and panicked residents are clogging highways as they flee. The disaster has reignited a fierce global debate over the safety of nuclear power.",
+    "A reactor in {location} has partly melted down. Everyone inside the exclusion zone has been ordered out, and food and water from the area are being seized for testing. Radiation readings are still rising and the evacuation roads are jammed. The region loses about 3% of its output at once. For about 10 turns air quality falls steeply while growth, investor confidence and approval stay depressed.",
   scope: "region",
   countryIds: [],
   regionIds: [],
@@ -2548,8 +2551,9 @@ const NUCLEAR_ACCIDENT_TEMPLATE: CrisisTemplate = {
     fx("tick", "approval", "government", "overall", -0.05, "Government approval collapse"),
   ],
   wireMessageOnStart:
-    "A nuclear accident in {location} has triggered mass evacuation as radiation fears spread across the region.",
-  wireMessageOnEnd: "The reactor is contained. Decontamination and recovery begin.",
+    "A reactor in {location} has partly melted down. The exclusion zone is being evacuated and radiation readings are climbing.",
+  wireMessageOnEnd:
+    "The reactor is stable. Decontamination of the exclusion zone begins and will be slow.",
   interactionDefinition: {
     decisionTree: [
       {
@@ -3066,7 +3070,7 @@ export const TSUNAMI_TEMPLATE: CrisisTemplate = {
   heroImage:
     "https://images.unsplash.com/photo-1745042006595-572d5a6e9caa?auto=format&fit=crop&w=1600&q=70",
   description:
-    "A massive undersea earthquake has sent a tsunami crashing into the coast of {location}, with waves surging far inland and sweeping away homes, vehicles, and entire neighborhoods within minutes. Harbors, fishing fleets, and seaside infrastructure have been obliterated, and the death toll is climbing as rescuers search the wreckage. Survivors are stranded on higher ground without power, clean water, or communications.",
+    "A large undersea earthquake has sent a tsunami into the coast of {location}. The waves ran far inland within minutes and took harbors, fishing fleets, coastal roads and whole neighborhoods. Survivors are stuck on high ground without power, clean water or phone service. The region loses about 3% of its output at once. For about 6 turns unemployment rises, the infrastructure backlog grows fast and approval slips.",
   scope: "region",
   countryIds: [],
   regionIds: [],
@@ -3079,8 +3083,9 @@ export const TSUNAMI_TEMPLATE: CrisisTemplate = {
     fx("tick", "approval", "government", "overall", -0.04, "Government approval erosion"),
   ],
   wireMessageOnStart:
-    "A tsunami has struck the coast of {location}, submerging entire communities as the death toll rises.",
-  wireMessageOnEnd: "Tsunami recovery is underway. Temporary infrastructure is restored.",
+    "A tsunami has hit the coast of {location}. Harbors and seaside neighborhoods are under water and the search for survivors is under way.",
+  wireMessageOnEnd:
+    "The water has gone. Temporary roads, power and water supply are back and the coast begins to rebuild.",
   interactionDefinition: {
     decisionTree: [
       {
@@ -3280,7 +3285,7 @@ export const TORNADO_TEMPLATE: CrisisTemplate = {
   heroImage:
     "https://images.unsplash.com/photo-1527482797697-8795b05a13fe?auto=format&fit=crop&w=1600&q=70",
   description:
-    "A violent tornado outbreak has carved a path of destruction across {location}, flattening homes, schools, and businesses along its track in a matter of minutes. Power is out for thousands, debris has blocked major roads, and emergency crews are combing collapsed structures for the missing. Forecasters warn that more supercells could spawn additional twisters before the system moves on.",
+    "A line of tornadoes has crossed {location}, flattening houses, a school and several businesses along a narrow track. Power is out, debris blocks the main roads and crews are searching collapsed buildings for the missing. More storm cells are still forming. The region loses about 1% of its output at once. Over about 2 turns the infrastructure backlog grows and approval slips.",
   scope: "region",
   countryIds: [],
   regionIds: [],
@@ -3292,8 +3297,9 @@ export const TORNADO_TEMPLATE: CrisisTemplate = {
     fx("tick", "approval", "government", "overall", -0.02, "Government approval erosion"),
   ],
   wireMessageOnStart:
-    "A tornado outbreak has torn through {location}, leaving homes flattened and power lines down along its path.",
-  wireMessageOnEnd: "The tornadoes have passed. Cleanup and rebuilding begin.",
+    "Tornadoes have torn through {location}. Houses are flattened, power lines are down and crews are searching the wreckage.",
+  wireMessageOnEnd:
+    "The storms have moved on. Crews clear roads and restore power and rebuilding begins.",
 };
 
 const FLOOD_TEMPLATE: CrisisTemplate = {
@@ -3303,7 +3309,7 @@ const FLOOD_TEMPLATE: CrisisTemplate = {
   heroImage:
     "https://images.unsplash.com/photo-1547683905-f686c993aae5?auto=format&fit=crop&w=1600&q=70",
   description:
-    "Days of relentless rain have overwhelmed rivers and drainage systems across {location}, sending muddy water surging through low-lying districts and downtown streets. Roads and rail links are cut off, thousands have been forced from their homes, and vast stretches of farmland sit underwater with crops ruined. Authorities are racing to reinforce levees as more rain is forecast.",
+    "Days of heavy rain have pushed rivers over their banks across {location}. Low districts and downtown streets are under water, roads and rail lines are cut and fields of crops are ruined. Thousands have left their homes while crews reinforce levees ahead of more rain. The region loses about 1.5% of its output at once. For about 4 turns the infrastructure backlog grows, food prices rise and approval slips.",
   scope: "region",
   countryIds: [],
   regionIds: [],
@@ -3316,8 +3322,8 @@ const FLOOD_TEMPLATE: CrisisTemplate = {
     fx("tick", "approval", "government", "overall", -0.025, "Government approval erosion"),
   ],
   wireMessageOnStart:
-    "Major flooding has submerged low-lying areas of {location}, cutting off roads and displacing thousands.",
-  wireMessageOnEnd: "Floodwaters recede. Damage assessments and repairs get underway.",
+    "Floodwater is covering low-lying districts of {location}. Roads and rail lines are cut and thousands have left their homes.",
+  wireMessageOnEnd: "The floodwater is draining. Damage surveys and repairs begin.",
 };
 
 const VOLCANIC_ERUPTION_TEMPLATE: CrisisTemplate = {
@@ -3327,7 +3333,7 @@ const VOLCANIC_ERUPTION_TEMPLATE: CrisisTemplate = {
   heroImage:
     "https://images.unsplash.com/photo-1759503408354-8cfa8a13115e?auto=format&fit=crop&w=1600&q=70",
   description:
-    "A volcano in {location} has erupted violently, spewing ash miles into the sky and sending rivers of lava and mud down its slopes toward populated valleys. Authorities have ordered mass evacuations as ashfall buries farmland and chokes towns, while airports across the region shut down with airspace declared unsafe. Scientists warn the eruption could intensify in the days ahead.",
+    "A volcano in {location} has erupted, throwing ash high into the air and sending mud and lava toward the valleys. Villages are being evacuated, ash is burying farmland and closing airports, and the air in nearby towns is hard to breathe. The region loses about 2.5% of its output at once. For about 5 turns air quality is poor, the infrastructure backlog grows and approval slips.",
   scope: "region",
   countryIds: [],
   regionIds: [],
@@ -3340,8 +3346,9 @@ const VOLCANIC_ERUPTION_TEMPLATE: CrisisTemplate = {
     fx("tick", "approval", "government", "overall", -0.03, "Government approval erosion"),
   ],
   wireMessageOnStart:
-    "A volcano in {location} has erupted, blanketing the area in ash and forcing mass evacuations.",
-  wireMessageOnEnd: "The eruption subsides. Ash cleanup and recovery begin.",
+    "A volcano in {location} has erupted. Ash is falling on nearby towns, the airports are closed and villages are being evacuated.",
+  wireMessageOnEnd:
+    "The eruption has died down. Crews begin clearing ash from roads, roofs and fields.",
 };
 
 const WINTER_STORM_TEMPLATE: CrisisTemplate = {
@@ -3351,7 +3358,7 @@ const WINTER_STORM_TEMPLATE: CrisisTemplate = {
   heroImage:
     "https://images.unsplash.com/photo-1616126393469-d32bbeb41511?auto=format&fit=crop&w=1600&q=70",
   description:
-    "A crippling winter storm has buried {location} under heavy snow and ice, snapping power lines and plunging hundreds of thousands of homes into cold and darkness. Highways and airports are shut down, stranding travelers, while hospitals strain under a surge of cold-related emergencies and heating demand pushes the grid to its limits. Officials are urging residents to stay off the roads until crews can dig out.",
+    "A winter storm has buried {location} in heavy snow and ice. Ice has brought down power lines, leaving homes cold and dark, while highways and airports are closed and travelers are stranded. Hospitals are filling with cold injuries as heating demand pushes the grid to its limit. The region loses about 0.8% of its output. Over about 2 turns grid reliability drops sharply and approval slips.",
   scope: "region",
   countryIds: [],
   regionIds: [],
@@ -3363,8 +3370,8 @@ const WINTER_STORM_TEMPLATE: CrisisTemplate = {
     fx("tick", "approval", "government", "overall", -0.02, "Government approval erosion"),
   ],
   wireMessageOnStart:
-    "A severe winter storm has paralyzed {location}, stranding residents amid power outages and impassable roads.",
-  wireMessageOnEnd: "The storm clears. Crews restore power and reopen roads.",
+    "A winter storm has shut down {location}. Ice has downed power lines, highways are closed and travelers are stranded.",
+  wireMessageOnEnd: "The storm has cleared. Crews have restored power and reopened the main roads.",
 };
 
 // ── INFRASTRUCTURE DISASTERS (sector margin shocks) ──────────────────────────
@@ -3485,7 +3492,7 @@ const DUST_STORM_TEMPLATE: CrisisTemplate = {
   heroImage:
     "https://images.unsplash.com/photo-1603695820889-f8a0a86b8712?auto=format&fit=crop&w=1600&q=70",
   description:
-    "A towering wall of dust has rolled across {location}, blotting out the sun and reducing visibility to a few meters along major highways. Drivers have pulled onto the shoulder with hazards on, flights are grounded, and residents are sealing doors and windows as fine grit works its way into homes and machinery. Forecasters expect the haze to linger for a day or two before the air clears.",
+    "A wall of dust has rolled over {location}, turning the afternoon dark and cutting visibility on the highways to a few meters. Drivers are stopped on the shoulder, flights are grounded and people are taping up windows against fine grit. The region loses under 1% of its output. For about 3 turns air quality drops, and clearing grit from roads and machinery adds to the infrastructure backlog.",
   scope: "region",
   countryIds: [],
   regionIds: [],
@@ -3498,8 +3505,8 @@ const DUST_STORM_TEMPLATE: CrisisTemplate = {
     fx("tick", "approval", "government", "overall", -0.02, "Government approval erosion"),
   ],
   wireMessageOnStart:
-    "A dust storm has swept across {location}, grounding flights and cutting visibility to near zero on major highways.",
-  wireMessageOnEnd: "The dust settles. Air quality slowly improves and roads reopen.",
+    "A dust storm has covered {location}. Visibility on the highways is almost zero and flights are grounded.",
+  wireMessageOnEnd: "The dust has settled. The air is clearing and the highways are open again.",
 };
 
 const HAILSTORM_TEMPLATE: CrisisTemplate = {
@@ -3509,7 +3516,7 @@ const HAILSTORM_TEMPLATE: CrisisTemplate = {
   heroImage:
     "https://images.unsplash.com/photo-1437624155766-b64bf17eb2ce?auto=format&fit=crop&w=1600&q=70",
   description:
-    "A sudden hailstorm has pelted {location} with stones large enough to dent cars, shatter skylights, and strip fields bare in a matter of minutes. Roofs and vehicles across the area took the worst of it, and growers are surveying shredded crops as adjusters mobilize. Cleanup crews are clearing storm drains clogged with leaves and ice as the system moves on.",
+    "Hail the size of golf balls has pounded {location}, denting cars, smashing skylights and stripping crops in minutes. Farmers are walking ruined fields and insurance adjusters are queuing to inspect roofs. The region loses about 1% of its output. For about 2 turns damaged roofs add to the infrastructure backlog and lost crops push food prices up.",
   scope: "region",
   countryIds: [],
   regionIds: [],
@@ -3522,8 +3529,8 @@ const HAILSTORM_TEMPLATE: CrisisTemplate = {
     fx("tick", "approval", "government", "overall", -0.015, "Government approval erosion"),
   ],
   wireMessageOnStart:
-    "A hailstorm has battered {location}, denting vehicles and shredding crops across the region.",
-  wireMessageOnEnd: "The hail clears. Insurance adjusters begin surveying the damage.",
+    "A hailstorm has hit {location}. Cars and roofs are smashed and crops are stripped bare.",
+  wireMessageOnEnd: "The hail has stopped. Adjusters are inspecting roofs and fields.",
 };
 
 const AVALANCHE_TEMPLATE: CrisisTemplate = {
@@ -3533,7 +3540,7 @@ const AVALANCHE_TEMPLATE: CrisisTemplate = {
   heroImage:
     "https://images.unsplash.com/photo-1650378789660-8f725a4146b3?auto=format&fit=crop&w=1600&q=70",
   description:
-    "A large avalanche has swept down a slope above {location}, burying a stretch of mountain road and several outbuildings under tons of snow. Search teams with dogs and probes are working the debris field, and the main route through the area is closed until crews can clear the slide and stabilize the slope. Officials are warning backcountry travelers to stay off steep terrain while the snowpack settles.",
+    "An avalanche has come down above {location}, burying a mountain road and several buildings under snow. Rescue teams with probes and dogs are searching the debris, and the main road is closed until the slope is made safe. The region loses about 1% of its output as mountain trade stops. For about 2 turns unemployment ticks up, the infrastructure backlog grows and approval slips.",
   scope: "region",
   countryIds: [],
   regionIds: [],
@@ -3546,8 +3553,9 @@ const AVALANCHE_TEMPLATE: CrisisTemplate = {
     fx("tick", "approval", "government", "overall", -0.02, "Government approval erosion"),
   ],
   wireMessageOnStart:
-    "An avalanche has buried a mountain road in {location}, prompting a search of the debris field.",
-  wireMessageOnEnd: "The road reopens. Recovery teams stand down as the slope stabilizes.",
+    "An avalanche has buried a mountain road near {location}. Rescue teams are searching the snow.",
+  wireMessageOnEnd:
+    "The road is open again and the rescue teams have stood down. Engineers keep watching the slope.",
 };
 
 const KING_TIDE_FLOODING_TEMPLATE: CrisisTemplate = {
@@ -3557,7 +3565,7 @@ const KING_TIDE_FLOODING_TEMPLATE: CrisisTemplate = {
   heroImage:
     "https://images.unsplash.com/photo-1657069344312-a500de53b566?auto=format&fit=crop&w=1600&q=70",
   description:
-    "Seasonal king tides have pushed seawater up through storm drains and over low seawalls across {location}, flooding coastal streets on dry afternoons. Saltwater is lapping at storefronts and grounding traffic in the lowest neighborhoods, and planners say the nuisance flooding is creeping higher each year. Crews are pumping out intersections and handing out sandbags as another tide cycle builds.",
+    "Seawater is coming up through the storm drains and over low seawalls in {location}, flooding streets on clear afternoons. Shop fronts and basements in the lowest streets take water at every high tide, and each year the line sits a little higher. The region loses about 0.6% of its output. For about 3 turns coastal property values slip, drains and seawalls add to the infrastructure backlog and approval slips.",
   scope: "region",
   countryIds: [],
   regionIds: [],
@@ -3570,8 +3578,9 @@ const KING_TIDE_FLOODING_TEMPLATE: CrisisTemplate = {
     fx("tick", "approval", "government", "overall", -0.02, "Government approval erosion"),
   ],
   wireMessageOnStart:
-    "King tides are flooding coastal streets in {location}, pushing saltwater over low seawalls on dry afternoons.",
-  wireMessageOnEnd: "The tides recede. Pumped-out streets reopen until the next cycle.",
+    "King tides are flooding the coastal streets of {location} on dry afternoons. Pumps are running at the lowest intersections.",
+  wireMessageOnEnd:
+    "The tide cycle has passed and the streets are dry. Pumps and sandbags are put away until the next one.",
 };
 
 const LANDSLIDE_TEMPLATE: CrisisTemplate = {
@@ -3581,7 +3590,7 @@ const LANDSLIDE_TEMPLATE: CrisisTemplate = {
   heroImage:
     "https://images.unsplash.com/photo-1621315898086-0e940d7a221e?auto=format&fit=crop&w=1600&q=70",
   description:
-    "A hillside above {location} has given way after sustained ground shaking and wet weather, sending a slide of mud and rock across homes and a key road below. Several structures are buried or pushed off their foundations, utilities are snapped, and geologists are assessing whether the slope is stable enough for rescue crews to work safely. Residents upslope are under evacuation orders as more rain is forecast.",
+    "A hillside above {location} has collapsed after days of wet weather, sending mud and rock over homes and the road below. Several houses are buried or pushed off their foundations and water and power lines are cut. Geologists are checking whether the slope is safe for rescuers, and neighbors upslope have been told to leave. The region loses about 1.2% of its output. For about 3 turns unemployment ticks up, the infrastructure backlog grows and approval slips.",
   scope: "region",
   countryIds: [],
   regionIds: [],
@@ -3594,9 +3603,9 @@ const LANDSLIDE_TEMPLATE: CrisisTemplate = {
     fx("tick", "approval", "government", "overall", -0.02, "Government approval erosion"),
   ],
   wireMessageOnStart:
-    "A landslide has buried homes and a key road in {location}, with evacuations ordered as more rain approaches.",
+    "A landslide has buried homes and a road in {location}. Residents upslope are being evacuated as more rain comes.",
   wireMessageOnEnd:
-    "The slope is stabilized. Crews begin clearing the slide and reconnecting utilities.",
+    "The slope is secure. Crews are clearing the slide and reconnecting water and power.",
 };
 
 const FOREST_PEST_OUTBREAK_TEMPLATE: CrisisTemplate = {
@@ -3606,7 +3615,7 @@ const FOREST_PEST_OUTBREAK_TEMPLATE: CrisisTemplate = {
   heroImage:
     "https://images.unsplash.com/photo-1567448903605-08e79b3ed079?auto=format&fit=crop&w=1600&q=70",
   description:
-    "A native bark beetle outbreak has flared across the forests of {location}, killing stands of weakened trees faster than crews can cut buffer lines. The dead timber is piling up across a region already prone to fire, air quality is slipping as respiring canopy thins, and foresters are scrambling to salvage log before the killed wood loses value. Officials warn the outbreak will take seasons to run its course.",
+    "Bark beetles are killing forests across {location}, and dead trees are standing faster than crews can cut and haul them. The dead timber is also fuel for the next fire season. The region loses about 1% of its output in timber value. For about 6 turns air quality weakens a little, the renewable energy share slips as forest biomass is lost and approval slips.",
   scope: "region",
   countryIds: [],
   regionIds: [],
@@ -3619,8 +3628,8 @@ const FOREST_PEST_OUTBREAK_TEMPLATE: CrisisTemplate = {
     fx("tick", "approval", "government", "overall", -0.015, "Government approval erosion"),
   ],
   wireMessageOnStart:
-    "A bark beetle outbreak is killing forests across {location}, leaving standing deadwood that fire crews fear.",
-  wireMessageOnEnd: "The outbreak slows. Salvage logging and replanting get underway.",
+    "Bark beetles are killing forests across {location}. Dead trees are piling up faster than crews can clear them.",
+  wireMessageOnEnd: "The outbreak is slowing. Salvage logging and replanting begin.",
 };
 
 // ── 1960s: USSR LIBERALIZATION AND US PROTEST ────────────────────────────────
@@ -3640,7 +3649,7 @@ export const PRAGUE_SPRING_TEMPLATE: CrisisTemplate = {
   heroImage:
     "https://images.unsplash.com/photo-1591259622709-bdb033b4be2b?auto=format&fit=crop&w=1600&q=70",
   description:
-    "A reform faction inside the ruling party is pushing to loosen censorship, ease travel restrictions, and open the economy to limited market pressure. Students and intellectuals are rallying behind it, and the reform's momentum is starting to worry party hardliners and neighboring governments alike.",
+    "A reform faction inside the ruling party wants looser censorship, easier travel and a limited opening to markets. Students and writers are marching behind it, and hardliners at home and in neighboring capitals are watching nervously. For about 6 turns party authority and approval are strained and investors are unsure which way the country is heading.",
   scope: "country",
   countryIds: [],
   regionIds: [],
@@ -3665,8 +3674,8 @@ export const PRAGUE_SPRING_TEMPLATE: CrisisTemplate = {
     ),
   ],
   wireMessageOnStart:
-    "A reform movement inside the ruling party is gathering pace in {location}, pressing for looser censorship and economic liberalization.",
-  wireMessageOnEnd: "The reform movement's moment passes, one way or another.",
+    "A reform faction inside the ruling party is gaining ground in {location}. It wants looser censorship and a limited opening to markets.",
+  wireMessageOnEnd: "The reform movement's moment ends, one way or another.",
   interactionDefinition: {
     decisionTree: [
       {
@@ -3797,7 +3806,7 @@ export const HARDLINER_BACKLASH_TEMPLATE: CrisisTemplate = {
   heroImage:
     "https://images.unsplash.com/photo-1591259622709-bdb033b4be2b?auto=format&fit=crop&w=1600&q=70",
   description:
-    "Hardliners inside the party, alarmed by recent liberalization, are maneuvering to reverse it and discipline the reformers who pushed it through.",
+    "Hardliners in the party, alarmed by the recent opening, are moving to reverse it and punish the reformers who pushed it. For about 4 turns approval falls as the leadership is seen to be pulled in two directions.",
   scope: "country",
   countryIds: [],
   regionIds: [],
@@ -3806,8 +3815,8 @@ export const HARDLINER_BACKLASH_TEMPLATE: CrisisTemplate = {
     fx("tick", "approval", "reformers", "overall", -0.02, "Hardliner pressure on reformers"),
   ],
   wireMessageOnStart:
-    "Party hardliners in {location} are moving to roll back recent liberalization and discipline the reformers behind it.",
-  wireMessageOnEnd: "The hardliner backlash subsides, its outcome already felt in the party ranks.",
+    "Party hardliners in {location} are moving to undo the recent liberalization and discipline the reformers.",
+  wireMessageOnEnd: "The backlash is spent. Its results are already felt in the party ranks.",
   interactionDefinition: {
     decisionTree: [
       {
@@ -3862,7 +3871,7 @@ export const CIVIL_RIGHTS_MARCHES_TEMPLATE: CrisisTemplate = {
   heroImage:
     "https://images.unsplash.com/photo-1591259622709-bdb033b4be2b?auto=format&fit=crop&w=1600&q=70",
   description:
-    "Mass marches for civil rights and voting rights are drawing hundreds of thousands into the streets. Organizers demand federal action; segregationist state officials dig in.",
+    "Marches for civil rights and voting rights are filling the streets of {location} with hundreds of thousands of people. Organizers want federal action and segregationist state officials are digging in. Daily life and shopping are disrupted, so consumer confidence slips for about 5 turns.",
   scope: "country",
   countryIds: [],
   regionIds: [],
@@ -3878,8 +3887,8 @@ export const CIVIL_RIGHTS_MARCHES_TEMPLATE: CrisisTemplate = {
     ),
   ],
   wireMessageOnStart:
-    "Mass civil rights marches are sweeping {location}, demanding federal action on voting rights and desegregation.",
-  wireMessageOnEnd: "The march movement's immediate wave subsides. Its demands remain unresolved.",
+    "Hundreds of thousands are marching for civil rights and voting rights in {location}. Organizers are demanding federal action.",
+  wireMessageOnEnd: "The marches wind down. The demands are still unmet.",
   interactionDefinition: {
     decisionTree: [
       {
@@ -4011,7 +4020,7 @@ export const CAMPUS_UNREST_TEMPLATE: CrisisTemplate = {
   heroImage:
     "https://images.unsplash.com/photo-1591259622709-bdb033b4be2b?auto=format&fit=crop&w=1600&q=70",
   description:
-    "Students have occupied campus buildings over the war, civil rights, and university governance. Administrators are under pressure to call in police; faculty are split.",
+    "Students have occupied campus buildings over the war, civil rights and how universities are run. Administrators are being pushed to call in the police and the faculty is split. The generation gap shows in the polls, and approval slips for about 3 turns.",
   scope: "country",
   countryIds: [],
   regionIds: [],
@@ -4028,7 +4037,7 @@ export const CAMPUS_UNREST_TEMPLATE: CrisisTemplate = {
   ],
   wireMessageOnStart:
     "Student occupations and walkouts are spreading across campuses in {location}.",
-  wireMessageOnEnd: "The campus occupations wind down as the term year runs out.",
+  wireMessageOnEnd: "The occupations end as the school year runs out.",
   interactionDefinition: {
     decisionTree: [
       {
@@ -4118,7 +4127,7 @@ export const URBAN_RIOTS_TEMPLATE: CrisisTemplate = {
   heroImage:
     "https://images.unsplash.com/photo-1591259622709-bdb033b4be2b?auto=format&fit=crop&w=1600&q=70",
   description:
-    "Unrest has broken out in urban neighborhoods long neglected by city and federal investment. Fires, looting, and clashes with police have residents and business owners bracing for what comes next.",
+    "Fires, looting and clashes with police have broken out in city neighborhoods that have gone years without investment. Shopkeepers are boarding up and business owners are bracing for the next night. For about 4 turns local commerce loses margin and growth is dragged down.",
   scope: "country",
   countryIds: [],
   regionIds: [],
@@ -4127,8 +4136,9 @@ export const URBAN_RIOTS_TEMPLATE: CrisisTemplate = {
     marginShock(-3, "Unrest disrupts local commerce"),
     fx("tick", "metric", "economy", "gdp", -0.01, "Local economic disruption"),
   ],
-  wireMessageOnStart: "Urban unrest has broken out in {location} amid long-standing grievances.",
-  wireMessageOnEnd: "The unrest subsides. The underlying grievances remain unaddressed.",
+  wireMessageOnStart:
+    "Fires and looting have broken out in the neighborhoods of {location} that have gone longest without investment.",
+  wireMessageOnEnd: "The unrest has died down. The grievances behind it remain.",
   interactionDefinition: {
     decisionTree: [
       {
@@ -4263,7 +4273,7 @@ export const ANTIWAR_PROTEST_TEMPLATE: CrisisTemplate = {
   heroImage:
     "https://images.unsplash.com/photo-1591259622709-bdb033b4be2b?auto=format&fit=crop&w=1600&q=70",
   description:
-    "Anti-war demonstrations are drawing large crowds, draft resistance is spreading, and the war's mounting cost is becoming a domestic political liability.",
+    "Anti-war crowds are growing, draft cards are being burned and the cost of the war is becoming a political problem at home. For about 4 turns approval slips while the government is blamed for the war.",
   scope: "country",
   countryIds: [],
   regionIds: [],
@@ -4281,7 +4291,7 @@ export const ANTIWAR_PROTEST_TEMPLATE: CrisisTemplate = {
     ];
   },
   wireMessageOnStart: "Anti-war demonstrations are spreading across {location}.",
-  wireMessageOnEnd: "The wave of anti-war demonstrations recedes, for now.",
+  wireMessageOnEnd: "The anti-war demonstrations recede, for now.",
   // A getter for the same reason `effects` is one: the option effects scale with
   // the live war, and a crisis snapshots this tree when it spawns.
   get interactionDefinition(): CrisisTemplate["interactionDefinition"] {
@@ -4543,7 +4553,7 @@ const VIETNAM_ADVISORS_TEMPLATE: CrisisTemplate = vietnamRungTemplate({
   rung: 1,
   name: "Vietnam: Advisory Mission",
   description:
-    "Officers, trainers and intelligence staff are on the ground in Vietnam on both sides of the line. No one has declared anything. Every capital insists these are technicians.",
+    "Foreign officers, trainers and intelligence staff are working inside Vietnam on both sides of the line. No government has declared anything, and every capital calls them technicians. The cost is small for now. For about 10 turns a little war spending reaches prices, households grow slightly uneasy and the leader's approval slips.",
   prompt:
     "Your service attaches want more people in country. Your ambassador wants fewer. Nothing you decide today will be reported as a war.",
   supportLabel: "Expand the advisory mission",
@@ -4554,8 +4564,8 @@ const VIETNAM_ADVISORS_TEMPLATE: CrisisTemplate = vietnamRungTemplate({
   deescalateLabel: "Draw the mission down",
   deescalateDescription:
     "Rotate advisors home and let the client stand on its own. Your hawks will call it abandonment.",
-  wireStart: "Foreign military advisors are reported in growing numbers across Vietnam.",
-  wireEnd: "The advisory question drops out of the headlines, for now.",
+  wireStart: "Foreign military advisors are reported in Vietnam in growing numbers on both sides.",
+  wireEnd: "The advisory mission falls out of the headlines, for now.",
   durationTurns: 10,
   inflationDrag: 0.004,
   confidenceDrag: -0.005,
@@ -4567,7 +4577,7 @@ const VIETNAM_MATERIEL_TEMPLATE: CrisisTemplate = vietnamRungTemplate({
   rung: 2,
   name: "Vietnam: Materiel and Money",
   description:
-    "Rifles, trucks, transport aircraft and hard currency now move to Vietnam in quantity. The fighting is still done by Vietnamese, with everyone else's equipment.",
+    "Rifles, trucks, transport aircraft and hard currency are now going to Vietnam by the shipload. Vietnamese soldiers still do the fighting, with other countries' equipment. The bill shows up at home. For about 10 turns prices rise, households grow uneasy and the leader loses approval.",
   prompt:
     "The shipments have outgrown anything you can call training aid. Your treasury notices, and so does the other bloc.",
   supportLabel: "Open the arsenal",
@@ -4578,8 +4588,8 @@ const VIETNAM_MATERIEL_TEMPLATE: CrisisTemplate = vietnamRungTemplate({
   deescalateLabel: "Throttle the shipments",
   deescalateDescription:
     "Slow the pipeline and put the money somewhere it does not shoot back at you.",
-  wireStart: "Arms shipments to both sides in Vietnam have reached wartime volumes.",
-  wireEnd: "The arms pipeline settles into a routine nobody reports on.",
+  wireStart: "Arms and money are now reaching both sides in Vietnam at wartime volumes.",
+  wireEnd: "The arms flow settles into a routine nobody reports on.",
   durationTurns: 10,
   inflationDrag: 0.006,
   confidenceDrag: -0.007,
@@ -4591,7 +4601,7 @@ const VIETNAM_TONKIN_TEMPLATE: CrisisTemplate = vietnamRungTemplate({
   rung: 3,
   name: "Vietnam: Incident in the Gulf",
   description:
-    "A destroyer reports coming under fire in the gulf. The second report is thinner than the first, and the third contradicts both. The legislature is being asked for a resolution granting the executive a free hand.",
+    "A destroyer reports being fired on in the gulf. The second report is thinner than the first and the third contradicts both. Meanwhile the legislature is being asked for a resolution giving the executive a free hand. Whatever happened out there, for about 8 turns war spending lifts prices, households grow uneasy and the leader's approval slips.",
   prompt:
     "You have a contested naval report and a draft resolution on your desk. What you say in the next day sets the legal footing for everything after it.",
   supportLabel: "Take the resolution and act on it",
@@ -4602,8 +4612,8 @@ const VIETNAM_TONKIN_TEMPLATE: CrisisTemplate = vietnamRungTemplate({
   deescalateLabel: "Call the report unconfirmed",
   deescalateDescription:
     "Refuse to build a war on a doubtful signal. Your opponents will say you let an attack on your navy go unanswered.",
-  wireStart: "A naval incident in the Gulf of Tonkin is reported. Details are disputed.",
-  wireEnd: "The gulf incident passes out of the news. The resolution it produced does not.",
+  wireStart: "A naval incident in the Gulf of Tonkin is reported. The accounts do not agree.",
+  wireEnd: "The gulf incident leaves the news. The resolution it produced stays on the books.",
   durationTurns: 8,
   inflationDrag: 0.008,
   confidenceDrag: -0.009,
@@ -4615,7 +4625,7 @@ const VIETNAM_AIR_CAMPAIGN_TEMPLATE: CrisisTemplate = vietnamRungTemplate({
   rung: 4,
   name: "Vietnam: Air Campaign",
   description:
-    "Sustained bombing is underway. It is measured in sorties flown, tonnage dropped and aircrew who do not come home, and it has not yet produced the political result anyone promised.",
+    "Bombing is now continuous. It is counted in sorties flown, tonnage dropped and aircrew who do not return, and it has not delivered the result anyone promised. Over about 12 turns it lifts prices, wears down household confidence and approval, and the war economy squeezes civilian factories' margins.",
   prompt:
     "The air staff want the target list widened. The bombing has not broken the other side's will, and each month of it is another month you have to defend at home.",
   supportLabel: "Widen the target list",
@@ -4627,7 +4637,7 @@ const VIETNAM_AIR_CAMPAIGN_TEMPLATE: CrisisTemplate = vietnamRungTemplate({
   deescalateDescription:
     "Stop the strikes and offer talks. Your air staff and your hawks will both call it a gift to the enemy.",
   wireStart: "A sustained bombing campaign over Vietnam has begun.",
-  wireEnd: "The air campaign settles into a rhythm the front pages stop counting.",
+  wireEnd: "The bombing becomes routine and the front pages stop counting.",
   durationTurns: 12,
   inflationDrag: 0.011,
   confidenceDrag: -0.013,
@@ -4639,7 +4649,7 @@ const VIETNAM_GROUND_COMMITMENT_TEMPLATE: CrisisTemplate = vietnamRungTemplate({
   rung: 5,
   name: "Vietnam: Ground Commitment",
   description:
-    "Combat divisions are ashore. Conscription stops being an argument about policy and becomes a letter arriving at somebody's house.",
+    "Combat divisions are ashore. Conscription stops being a policy argument and becomes a letter arriving at a kitchen table. Over about 14 turns war spending pushes prices up, household confidence and approval keep falling and civilian manufacturers lose margin to the war economy.",
   prompt:
     "Your commander in country wants more divisions and says he can finish it with them. He said that about the last request too.",
   supportLabel: "Send the divisions",
@@ -4650,8 +4660,8 @@ const VIETNAM_GROUND_COMMITMENT_TEMPLATE: CrisisTemplate = vietnamRungTemplate({
   deescalateLabel: "Begin withdrawing units",
   deescalateDescription:
     "Start bringing formations home and hand the fighting back to your client. The generals will say you lost it in the capital.",
-  wireStart: "Combat troops have been committed to Vietnam in division strength.",
-  wireEnd: "The deployment stabilises. The casualty lists do not.",
+  wireStart: "Combat divisions have landed in Vietnam. Draft calls are rising.",
+  wireEnd: "The deployment levels off. The casualty lists do not.",
   durationTurns: 14,
   inflationDrag: 0.015,
   confidenceDrag: -0.017,
@@ -4663,7 +4673,7 @@ const VIETNAM_FULL_WAR_TEMPLATE: CrisisTemplate = vietnamRungTemplate({
   rung: 6,
   name: "Vietnam: The Long War",
   description:
-    "There is no ceiling left, no exit date and a body count on the evening news. The war now runs your budget, your draft, your inflation and your politics.",
+    "There is no ceiling left and no exit date, and the body count is on the evening news. The war now sets your budget, your draft, your prices and your politics. For about 16 turns it is the heaviest drag of the whole Vietnam sequence on prices, confidence, approval and civilian manufacturing margins.",
   prompt:
     "Everyone in the room has a plan to win it and nobody has a date. The only decision left is whether you keep paying.",
   supportLabel: "Prosecute the war to the end",
@@ -4674,8 +4684,8 @@ const VIETNAM_FULL_WAR_TEMPLATE: CrisisTemplate = vietnamRungTemplate({
   deescalateLabel: "Negotiate a way out",
   deescalateDescription:
     "Open talks and start climbing down. Everything you spent gets relitigated at the next election.",
-  wireStart: "Vietnam is now a full war with no declared end.",
-  wireEnd: "The war grinds on past the point where the wire bothers to report it.",
+  wireStart: "Vietnam is now a full war with no end date.",
+  wireEnd: "The war grinds on past the point where the wire reports it.",
   durationTurns: 16,
   inflationDrag: 0.02,
   confidenceDrag: -0.023,
@@ -4809,7 +4819,7 @@ const VIETNAM_US_COMMITMENT_TEMPLATE: CrisisTemplate = vietnamCommitmentTemplate
   name: "Vietnam: The American Question",
   heroImage: VIETNAM_HERO[0],
   description:
-    "Saigon cannot hold the countryside on its own and everyone in the room knows it. The Joint Chiefs want a decision. The State Department wants a smaller one. Nobody wants to be the administration that lost Vietnam.",
+    "Saigon cannot hold the countryside alone, and everyone in the room knows it. The Joint Chiefs want a large decision and the State Department wants a small one. Nobody wants to be the administration that lost Vietnam. The choice is yours, and households grow uneasy while it is pending.",
   prompt:
     "You have twenty four hours before the press has this. Do you commit the United States to Vietnam, hold to the advisory mission you inherited, or start getting out?",
   holdLabel: "Hold to the advisory mission",
@@ -4821,8 +4831,7 @@ const VIETNAM_US_COMMITMENT_TEMPLATE: CrisisTemplate = vietnamCommitmentTemplate
   disengageLabel: "Begin getting out",
   disengageDescription:
     "Wind the commitment down and let Saigon stand on its own. You will be asked about it in every election you fight.",
-  wireStart:
-    "The administration is weighing a decision on Vietnam. A statement is expected within the day.",
+  wireStart: "The administration is weighing a decision on Vietnam. A statement is due today.",
   wireEnd: "Washington has settled its position on Vietnam.",
 });
 
@@ -4831,7 +4840,7 @@ const VIETNAM_USSR_COMMITMENT_TEMPLATE: CrisisTemplate = vietnamCommitmentTempla
   name: "Vietnam: The Question Before the Politburo",
   heroImage: VIETNAM_HERO[1],
   description:
-    "Hanoi has asked Moscow for weapons, money and men, and has asked Peking the same question. Whatever the Politburo decides, it decides in front of a rival that is watching for hesitation.",
+    "Hanoi has asked Moscow for weapons, money and men, and has put the same question to Peking. Whatever the Politburo decides, it decides in front of a rival watching for any sign of hesitation. The choice is yours, and the public reads the cables in the meantime.",
   prompt:
     "You have a day before the answer has to go back to Hanoi. Do you commit the Soviet Union to the north, hold the present level of assistance, or step back and let Peking carry it?",
   holdLabel: "Hold the present assistance",
@@ -4843,7 +4852,7 @@ const VIETNAM_USSR_COMMITMENT_TEMPLATE: CrisisTemplate = vietnamCommitmentTempla
   disengageLabel: "Step back and let Peking carry it",
   disengageDescription:
     "Reduce what goes south and let the rival claim the credit and the cost. Hardliners will call it a retreat.",
-  wireStart: "The Politburo is meeting on Vietnam. Hanoi is waiting on the answer.",
+  wireStart: "The Politburo is meeting on Vietnam. Hanoi is waiting for the answer.",
   wireEnd: "Moscow has settled its position on Vietnam.",
 });
 

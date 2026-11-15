@@ -91,9 +91,11 @@ function template(input: {
 export const WAR_EMERGENCY_CRISIS_TEMPLATES: Record<WarEmergencyTemplateKey, CrisisTemplate> = {
   war_panic_buying: template({
     name: "Wartime Panic Buying",
-    description: "War fears have emptied shelves as households hoard food, fuel, and basic goods.",
-    wireStart: "Panic buying has emptied shops as the war scare grips the public.",
-    wireEnd: "Supply queues ease and household buying begins to normalize.",
+    description:
+      "War fears have emptied the shelves as households hoard food, fuel and basic goods. Shops sell out within hours of a delivery. Retail margins take a large hit that fades over about 12 turns, and the government has to choose between appealing for calm, rationing and releasing stockpiles.",
+    wireStart:
+      "Panic buying has emptied the shops. People are queuing for bread and fuel as the war scare spreads.",
+    wireEnd: "Deliveries are catching up and people are buying normally again.",
     ambientEffect: ambientMargin("retail", -4, "Hoarding and shortages disrupt retail trade"),
     prompt: "How will the government restore access to essential goods?",
     options: [
@@ -120,9 +122,10 @@ export const WAR_EMERGENCY_CRISIS_TEMPLATES: Record<WarEmergencyTemplateKey, Cri
   war_bank_run: template({
     name: "Wartime Bank Run",
     description:
-      "Depositors are crowding bank branches as fear of a wider war turns into a flight for cash.",
-    wireStart: "A wartime bank run is spreading as depositors race to withdraw their savings.",
-    wireEnd: "Bank queues subside and the immediate run on deposits ends.",
+      "Savers are lining up outside bank branches to take out cash because they fear the war will spread. Banks are running short of notes and have stopped lending. Margins across the economy take a hard hit that fades over about 12 turns. The government can reassure savers, guarantee all deposits or close the banks for a holiday.",
+    wireStart:
+      "Savers are queuing at bank branches to take out cash as war fears grow. Some branches are running short.",
+    wireEnd: "The queues are gone and deposits are staying put.",
     ambientEffect: ambientMargin("financial", -8, "Deposit flight freezes credit markets"),
     prompt: "How will the government confront the run on the banks?",
     options: [
@@ -149,9 +152,10 @@ export const WAR_EMERGENCY_CRISIS_TEMPLATES: Record<WarEmergencyTemplateKey, Cri
   war_civil_defense_fever: template({
     name: "Civil Defense Fever",
     description:
-      "Shelter plans, air-raid drills, and survival preparations have become a national obsession.",
-    wireStart: "Civil defense fever is sweeping the country as families prepare for attack.",
-    wireEnd: "The wave of civil defense anxiety begins to recede.",
+      "Families are digging shelters, stocking cellars and queuing for drills and leaflets. People are spending on bunkers and tinned goods instead of ordinary things, so consumer trade loses a large share of its margin, fading over about 12 turns. The government can order drills, fund a national shelter program or dismiss the panic.",
+    wireStart:
+      "Families across the country are stocking cellars and building shelters. Air-raid drills are packed.",
+    wireEnd: "The shelter rush is fading and shops are selling ordinary goods again.",
     ambientEffect: ambientMargin(
       "retail",
       -18,
@@ -182,9 +186,9 @@ export const WAR_EMERGENCY_CRISIS_TEMPLATES: Record<WarEmergencyTemplateKey, Cri
   war_scare_protests: template({
     name: "War Scare Protests",
     description:
-      "Peace marches fill public squares as fear grows that the current war will escalate further.",
-    wireStart: "Large peace marches are demanding restraint from the government.",
-    wireEnd: "The immediate wave of war scare protests has passed.",
+      "Peace marches are filling the main squares as people fear the war will escalate. The crowds keep shoppers and workers away from city centers, so commerce loses margin that fades over about 12 turns. The government can let them march, address the nation or disperse the crowds.",
+    wireStart: "Large peace marches are filling the squares and calling for restraint.",
+    wireEnd: "The marches have thinned and the squares are back to normal.",
     ambientEffect: ambientMargin(
       "media_entertainment",
       -4,

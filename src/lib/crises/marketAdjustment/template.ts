@@ -17,7 +17,7 @@ export const MARKET_ADJUSTMENT_TEMPLATE_KEY = "market_adjustment";
 export const MARKET_ADJUSTMENT_TEMPLATE: CrisisTemplate = {
   name: "Market Adjustment",
   description:
-    "Too much capacity was built for what buyers can pay for. Plants across the economy are losing money, and the least viable will close or be retired while demand and prices settle.",
+    "Companies built more capacity than buyers can pay for. Plants across the economy are running at a loss, and the weakest will close or be retired until supply matches demand. It takes a long time, and the workers and owners of those plants carry the loss. The government can send a household transfer or let the adjustment run.",
   scope: "country",
   countryIds: [],
   regionIds: [],
@@ -37,7 +37,7 @@ export const MARKET_ADJUSTMENT_TEMPLATE: CrisisTemplate = {
   },
   effects: [],
   wireMessageOnStart:
-    "Plants across the country are losing money as the economy adjusts to what buyers can pay for. Closures and retirements are expected until capacity matches demand.",
+    "Plants across the country are losing money because buyers cannot afford what they produce. Closures and retirements are expected until capacity matches demand.",
   wireMessageOnEnd: "Most plants are covering their costs again and the adjustment is over.",
   interactionDefinition: {
     autoResolveOnExpiry: true,
