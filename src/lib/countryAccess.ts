@@ -16,6 +16,7 @@
  */
 
 import { AsyncLocalStorage } from "async_hooks";
+import { cache } from "react";
 import type { Db } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import {
@@ -291,9 +292,20 @@ export async function getAllCountryAccess(dbArg?: Db): Promise<Record<CountryId,
  * `getEconomyVisibleCountryIds()` when you need to include them.
  */
 export async function getEnabledCountryIds(): Promise<CountryId[]> {
+  // A copy: callers append to the list, and the read below is shared.
+  return [...(await loadEnabledCountryIdsForRequest())];
+}
+
+/**
+ * One `countryGameStates` read per server render. React `cache` memoizes only
+ * inside a request scope (the wiki index resolved this three times per render);
+ * outside one, such as the turn worker, it calls through every time, so no
+ * stale list can outlive the request.
+ */
+const loadEnabledCountryIdsForRequest = cache(async (): Promise<CountryId[]> => {
   const db = await getDb();
   return getEnabledCountryIdsFromDb(db);
-}
+});
 
 /**
  * `Db`-injecting variant of `getEnabledCountryIds`. Use from per-turn

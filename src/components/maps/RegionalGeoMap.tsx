@@ -91,6 +91,23 @@ interface RegionalGeoMapProps {
   zoom?: number;
   onZoomChange?: (zoom: number) => void;
   resetKey?: number;
+  /**
+   * Hide a region's on-map label when the text would be wider than the region's
+   * drawn shape, so small regions do not stack unreadable overlapping text.
+   * Labels reappear as the map is zoomed in.
+   */
+  hideCrowdedLabels?: boolean;
+}
+
+/** Whether a label of `textLength` characters fits inside a region `boxWidth` wide. */
+export function labelFits(
+  textLength: number,
+  boxWidth: number,
+  boxHeight: number,
+  zoom: number
+): boolean {
+  const charWidth = 5.4;
+  return boxWidth * zoom >= textLength * charWidth && boxHeight * zoom >= 11;
 }
 
 /**
@@ -345,6 +362,7 @@ export function RegionalGeoMap({
   zoom: controlledZoom,
   onZoomChange,
   resetKey = 0,
+  hideCrowdedLabels = false,
 }: RegionalGeoMapProps) {
   const [localZoom, setLocalZoom] = useState(1);
   const zoom = controlledZoom ?? localZoom;
@@ -462,7 +480,13 @@ export function RegionalGeoMap({
 
   const geoLayers = (
     <Geographies geography={shown}>
-      {({ geographies }: { geographies: GeoFeature[] }) => (
+      {({
+        geographies,
+        path,
+      }: {
+        geographies: GeoFeature[];
+        path?: { bounds: (f: GeoFeature) => [[number, number], [number, number]] };
+      }) => (
         <>
           {geographies.map((geo) => {
             const code = geo.properties?.regionCode;
@@ -565,6 +589,15 @@ export function RegionalGeoMap({
               if (!hasData) return null;
               const isHov = hovered === code;
               const [dx, dy] = labelOffsets?.[code] ?? [0, 0];
+              const text = regionLabelText(code, labelOverrides, data?.label);
+              if (hideCrowdedLabels && path && !isHov) {
+                try {
+                  const [[x0, y0], [x1, y1]] = path.bounds(geo);
+                  if (!labelFits(text.length, x1 - x0, y1 - y0, zoom)) return null;
+                } catch {
+                  /* Bounds unavailable: keep the label. */
+                }
+              }
               return (
                 <Annotation
                   key={`label-${geo.rsmKey}`}
@@ -581,7 +614,7 @@ export function RegionalGeoMap({
                     fill={isHov ? "#ffffff" : "rgba(255,255,255,0.9)"}
                     style={{ pointerEvents: "none", userSelect: "none" }}
                   >
-                    {regionLabelText(code, labelOverrides, data?.label)}
+                    {text}
                   </text>
                 </Annotation>
               );

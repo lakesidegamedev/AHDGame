@@ -186,4 +186,21 @@ describe("UnifiedMapWithModes", () => {
       expect(screen.getByText(region.secondaryLabel)).toBeTruthy();
     }
   });
+
+  it("shows the zoom, labels and details controls for every country", () => {
+    for (const id of ["UK", "JP", "CA"] as const) {
+      const { unmount } = render(
+        <UnifiedMapWithModes
+          mapData={null}
+          config={COUNTRY_CONFIGS[id]}
+          countryConfig={COUNTRY_MAP_CONFIGS[id]}
+          onRegionClick={vi.fn()}
+        />
+      );
+      expect(screen.getByRole("button", { name: "Zoom in" })).toBeTruthy();
+      expect(screen.getByLabelText("Labels")).toBeTruthy();
+      expect(screen.getByText(/Select a region on the map/)).toBeTruthy();
+      unmount();
+    }
+  });
 });
