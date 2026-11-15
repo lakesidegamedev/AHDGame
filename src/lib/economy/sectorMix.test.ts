@@ -124,18 +124,18 @@ describe("aggregateCountrySectorMix", () => {
     db.collectionMocks.gameConfig!.findOne.mockResolvedValue({ marketSystemMode: "plants" });
 
     const mix = await aggregateCountrySectorMix(db as unknown as Db, "US");
-    const automobiles = mix.find((s) => s.type === "manufacturing")!;
+    const vehicleMakers = mix.find((s) => s.type === "manufacturing")!;
 
-    // Two built automobile capacity units are $100,000 of plant nameplate.
+    // Two built vehicle capacity units are $100,000 of plant nameplate.
     // The vehicle ledger has another 40 visible units plus 10 units that were
-    // capped out of the price pass. On the automobile capacity basis, those
+    // capped out of the price pass. On the vehicle capacity basis, those
     // 50 units are $2.5M of latent demand.
-    expect(automobiles.totalMarketAnchor).toBe(2_600_000);
-    expect(automobiles.ownedPercent).toBeCloseTo(3.8, 1);
+    expect(vehicleMakers.totalMarketAnchor).toBe(2_600_000);
+    expect(vehicleMakers.ownedPercent).toBeCloseTo(3.8, 1);
 
     // Plants has no persisted target-growth signal; exposing 0.00% here would
     // claim a measured contraction/expansion that did not occur.
-    expect(automobiles.avgGrowth).toBeNull();
+    expect(vehicleMakers.avgGrowth).toBeNull();
   });
 
   it("books no latent market in a surplus scope of a truncated commodity", async () => {
@@ -180,11 +180,11 @@ describe("aggregateCountrySectorMix", () => {
     db.collectionMocks.gameConfig!.findOne.mockResolvedValue({ marketSystemMode: "plants" });
 
     const mix = await aggregateCountrySectorMix(db as unknown as Db, "US");
-    const automobiles = mix.find((s) => s.type === "manufacturing")!;
+    const vehicleMakers = mix.find((s) => s.type === "manufacturing")!;
 
     // Owned nameplate only: two built units are $100,000 of plant.
-    expect(automobiles.totalMarketAnchor).toBe(100_000);
-    expect(automobiles.ownedPercent).toBe(100);
+    expect(vehicleMakers.totalMarketAnchor).toBe(100_000);
+    expect(vehicleMakers.ownedPercent).toBe(100);
   });
 
   it("keeps latent physical buckets for a region with no local owned row", async () => {

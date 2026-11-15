@@ -29,7 +29,7 @@ describe("loadUSMediaOutletDelivery", () => {
         soldFraction: 0.5,
       },
       {
-        _id: "canonical-entertainment",
+        _id: "third-outlet",
         stateId: "CA",
         corporationId: { toString: () => "corp-3" },
         sectorType: "media",
@@ -62,8 +62,7 @@ describe("loadUSMediaOutletDelivery", () => {
       soldByCommodity: 1,
       outputUnitsByCommodity: 1,
     });
-    // The entertainment lane sells advertising since the entertainment
-    // commodity was removed, so it is an outlet too (and is not derated).
+    // Every media sector sells advertising, so each is an outlet.
     expect(outlets).toHaveLength(3);
     expect(outlets[0]).toMatchObject({
       stateId: "CA",

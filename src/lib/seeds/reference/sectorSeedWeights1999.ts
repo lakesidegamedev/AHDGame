@@ -14,7 +14,7 @@
  *   - manufacturing notably higher (~15% of GDP; offshoring hadn't accelerated)
  *   - telecommunications elevated (Telecom Act 1996 fiber/CLEC buildout, the
  *     telecom bubble) and technology high (dot-com investment surge)
- *   - automobiles higher (Big Three strength pre-2008)
+ *   - vehicle makers higher (Big Three strength pre-2008)
  *   - defense at its post-Cold-War LOW (the "peace dividend")
  *   - energy/extraction LOW (1999 oil ≈ $17/bbl)
  *   - real_estate below the mid-2000s bubble level

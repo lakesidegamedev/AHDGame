@@ -1,8 +1,8 @@
 /**
  * Coverage-backed advertising agreements.
  *
- * A buyer allocates part of its `marketingBudget` to a named Media and
- * Entertainment supplier. The allocation partitions the budget: it is never
+ * A buyer allocates part of its `marketingBudget` to a named Media
+ * supplier. The allocation partitions the budget: it is never
  * an extra expense, and settlement attribution only splits the spend the
  * corporation turn already settles. Unallocated budget clears anonymously at
  * neutral efficacy (spot).

@@ -86,12 +86,10 @@ export function isEligibleIndexFundConstituent(
     return false;
   if (definition.kind === "sector") {
     if (!definition.sectorType) return false;
-    // A vehicle maker or entertainment house belongs to its lane's fund, not
-    // the generic manufacturing or media fund.
-    if (corporation.type === definition.sectorType) {
-      return true;
-    }
-    return corporation.secondaryType === definition.sectorType;
+    return (
+      corporation.type === definition.sectorType ||
+      corporation.secondaryType === definition.sectorType
+    );
   }
 
   return true;

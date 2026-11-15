@@ -14,7 +14,7 @@
  *   - real_estate + construction elevated (residential bubble at its 2006–07 peak)
  *   - financial elevated (pre-crash leverage / securitization peak)
  *   - manufacturing materially higher (offshoring not yet at 2010s pace)
- *   - automobiles higher (Big Three still pre-bankruptcy)
+ *   - vehicle makers higher (Big Three still pre-bankruptcy)
  *   - energy/extraction higher (2007–08 oil & commodity run-up)
  *   - technology lower (pre-iPhone-mass-adoption, pre-cloud, pre-platform-era)
  *   - healthcare lower (pre-ACA expansion)
