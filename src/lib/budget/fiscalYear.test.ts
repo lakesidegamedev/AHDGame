@@ -524,8 +524,7 @@ describe("processFiscalYear", () => {
           },
         }),
         gameState: { _id: "current", nppAutonomyLevel: "v6" },
-        gameConfig:
-          over.gameConfig === undefined ? { fiscalStabilizerEnabled: true } : over.gameConfig,
+        gameConfig: over.gameConfig === undefined ? {} : over.gameConfig,
         countryGameStates: [
           {
             _id: countryId,
@@ -565,24 +564,6 @@ describe("processFiscalYear", () => {
       expect(restructureForInterestSpiral).toHaveBeenCalledWith(db, "IT", 760, expect.any(Number), {
         spiralYears: undefined,
       });
-    });
-
-    it.each([
-      ["off", { fiscalStabilizerEnabled: false }],
-      ["absent", {}],
-      ["an unseeded config", null],
-    ])("runs no package and no restructuring when the switch is %s", async (_label, gameConfig) => {
-      const db = italyWorld({ gameConfig });
-      await processFiscalYear(db as unknown as Db, 2006, 760);
-
-      const closeWrite = db._federalBudgetUpdateOne.mock.calls.find(
-        (c: unknown[]) => "fiscalYear" in ((c[1] as { $set: object }).$set ?? {})
-      );
-      const spending = (closeWrite![1] as { $set: { spending: { total: number } } }).$set.spending;
-      expect(spending.total).toBe(2_476e9);
-      expect(db._federalBudgetBulkWrite).not.toHaveBeenCalled();
-      expect(createSystemNewsPost).not.toHaveBeenCalled();
-      expect(restructureForInterestSpiral).not.toHaveBeenCalled();
     });
 
     it("leaves a player-run country's budget exactly as its laws price it", async () => {

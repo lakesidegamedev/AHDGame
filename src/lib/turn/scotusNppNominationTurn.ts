@@ -23,7 +23,7 @@ import { scotusNominationsCollection } from "@/lib/db/repositories/scotusNominat
 
 export interface ScotusNppNominationResult {
   nominated: number;
-  skipped?: "player-president" | "no-vacancy" | "no-party" | "disabled";
+  skipped?: "player-president" | "no-vacancy" | "no-party";
 }
 
 const VACANT_PRESIDENCY_NAME = "The Administration";

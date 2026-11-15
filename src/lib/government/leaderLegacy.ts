@@ -11,7 +11,6 @@
 import { ObjectId, type Db } from "mongodb";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { getCharactersCollection, getNppsCollection } from "@/lib/db/collections";
-import { isLiveWorldSwitchOn } from "@/lib/gameConfig/liveWorldSwitches";
 import { getLeaderLegaciesCollection } from "@/lib/db/collections/leaderLegacies";
 import type { LeaderLegacy } from "@/lib/db/types/leaderLegacy";
 import type { CrisisSliceForLegacy } from "@/lib/government/rules/leaderLegacyInputs";
@@ -80,7 +79,6 @@ export async function recordLeaderDeparture(
   db: Db,
   input: LeaderDepartureInput
 ): Promise<LeaderLegacy | null> {
-  if (!(await isLiveWorldSwitchOn(db, "leaderLegacyEnabled"))) return null;
   const { countryId, leaderKey, sinceTurn, turn } = input;
   const id = `${countryId}:${leaderKey}:${sinceTurn ?? "unknown"}`;
   const legacies = getLeaderLegaciesCollection(db);

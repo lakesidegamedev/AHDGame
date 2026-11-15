@@ -7,7 +7,7 @@ import {
   registerEventHandler,
   _resetEventHandlerRegistryForTests,
 } from "@/lib/events/substrate/registry";
-import { preeConfigFlags, processPlayerRandomEventsTurn } from "./driver";
+import { processPlayerRandomEventsTurn } from "./driver";
 
 vi.mock("@/lib/notifications", () => ({
   createNotification: vi.fn().mockResolvedValue(undefined),
@@ -297,15 +297,7 @@ describe("PREE driver", () => {
     expect(inRange.offered).toBe(1);
   });
 
-  it("reads the fallback switch off from a config that predates it", () => {
-    expect(preeConfigFlags({})).toEqual({
-      treasuryCashLedgerEnabled: false,
-      genericFallbackEnabled: false,
-    });
-    expect(preeConfigFlags({ preeGenericFallbackEnabled: true }).genericFallbackEnabled).toBe(true);
-  });
-
-  it("offers the undated fallback only when the world's switch is on", async () => {
+  it("offers the undated fallback when the dated packs are exhausted", async () => {
     registerTestHandler();
     wireCharacter();
 
@@ -325,21 +317,11 @@ describe("PREE driver", () => {
       perKindCooldowns: { "pree.test": 99 },
     });
 
-    const off = await processPlayerRandomEventsTurn(db as never, 10, {
+    const result = await processPlayerRandomEventsTurn(db as never, 11, {
       playerRandomEventsEnabled: true,
       currentYear: 2006,
-      genericFallbackEnabled: false,
     });
-    expect(off.offered).toBe(0);
-    expect(off.exhaustedOffers ?? 0).toBe(0);
-    expect(db.collectionMocks.eventInstances!.insertOne).not.toHaveBeenCalled();
-
-    const on = await processPlayerRandomEventsTurn(db as never, 11, {
-      playerRandomEventsEnabled: true,
-      currentYear: 2006,
-      genericFallbackEnabled: true,
-    });
-    expect(on.offered).toBe(1);
+    expect(result.offered).toBe(1);
   });
 
   it("broadcast event fires for every matching character at once, only inside its window", async () => {

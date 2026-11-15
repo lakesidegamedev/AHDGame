@@ -432,7 +432,7 @@ describe("director integration", () => {
         },
       ],
     });
-    const { db, calls } = makeDb({ ...baseData(), config: { crisisV2EmergentEnabled: true } });
+    const { db, calls } = makeDb(baseData());
     const result = await processCrisisV2Turn(db, 10);
     expect(result.opened).toBe(1);
     const docs = (
@@ -443,31 +443,8 @@ describe("director integration", () => {
     expect(docs[0].v2.stage).toBe("signal");
   });
 
-  it.each([
-    ["off", { crisisV2EmergentEnabled: false }],
-    ["absent", {}],
-    ["an unseeded config", null],
-  ])("opens no emergent crisis when the switch is %s", async (_label, config) => {
-    const load = vi.fn(async () => [
-      {
-        key: "a",
-        definitionId: "test-crisis",
-        scope: "national" as const,
-        countryIds: ["US"],
-        regionIds: [],
-        priority: 1,
-      },
-    ]);
-    registerCrisisOpenCandidateProvider({ id: "test", load });
-    const { db, calls } = makeDb({ ...baseData(), config });
-    const result = await processCrisisV2Turn(db, 10);
-    expect(result.opened).toBe(0);
-    expect(load).not.toHaveBeenCalled();
-    expect(calls.insertMany).not.toHaveBeenCalled();
-  });
-
-  it("still steps an open crisis when the switch is off", async () => {
-    const data = { ...baseData(), config: { crisisV2EmergentEnabled: false } };
+  it("steps an open crisis", async () => {
+    const data = baseData();
     data.crises = [liveCrisis()];
     const { db, calls } = makeDb(data);
     const result = await processCrisisV2Turn(db, 10);
