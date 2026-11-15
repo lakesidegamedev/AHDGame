@@ -83,6 +83,7 @@ import { isLegalManufacturingProductForPlant } from "@/lib/products/rules/manufa
 import { getMediaProductKind } from "@/lib/products/mediaProductCatalog";
 import { mediaProductOfferAvailability } from "@/lib/products/rules/mediaProductSales";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { clearingFillMeasured } from "./sectorTelemetry";
 
 /**
  * Clearing pre-pass for the corporation turn, extracted from index.ts so the
@@ -1070,6 +1071,8 @@ export function runClearingPrePass(input: ClearingPrePassInput): ClearingPrePass
       for (const [sectorId, meta] of loyaltySectorMeta) {
         const clearing = market.clearingBySectorId?.get(sectorId);
         if (!clearing) continue;
+        // No prior-turn book to clear against: the zero fill is not a signal.
+        if (!clearingFillMeasured(clearing, lookups.initializedLaggedBooks)) continue;
         let entry = byCorp.get(meta.corpId);
         if (!entry) {
           const corp = lookups.corpById.get(meta.corpId);

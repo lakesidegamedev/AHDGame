@@ -68,6 +68,14 @@ export function marketTelemetry(input: {
   mothballed: boolean;
   sector: Pick<CorporateSector, "lowFillTurns">;
   inventoryTurn?: InventoryTurnResult;
+  /**
+   * False when none of the sector's outputs had a prior-turn demand book to
+   * clear against: the first producing turn of a fresh world. Clearing then
+   * sells nothing by construction, which says nothing about the market, so
+   * the fill telemetry is left unwritten instead of recorded as zero. Pricing,
+   * loyalty and NPP strategy all read it next turn.
+   */
+  fillMeasured?: boolean;
 }): Record<string, unknown> {
   const {
     clearingEnabled,
@@ -78,11 +86,17 @@ export function marketTelemetry(input: {
     mothballed,
     sector,
     inventoryTurn,
+    fillMeasured = true,
   } = input;
   const update: Record<string, unknown> = {};
 
   if (clearingEnabled && clearing) {
     update.clearingFactor = Math.round(clearingFactor * 1000) / 1000;
+    update.effectivePosture = Math.round(clearing.effectivePosture * 1000) / 1000;
+    update.clearingStartTurn = clearingStartTurn ?? null;
+  }
+
+  if (clearingEnabled && clearing && fillMeasured) {
     update.soldFraction = Math.round(clearing.soldFraction * 1000) / 1000;
     if (!mothballed) {
       update.lowFillTurns =
@@ -110,8 +124,6 @@ export function marketTelemetry(input: {
         );
       }
     }
-    update.effectivePosture = Math.round(clearing.effectivePosture * 1000) / 1000;
-    update.clearingStartTurn = clearingStartTurn ?? null;
   }
 
   if (inventoryTurn) {
@@ -144,4 +156,20 @@ function roundedMap(
     out[commodity] = scale === undefined ? value : Math.round(value * scale) / scale;
   }
   return out;
+}
+
+/**
+ * Whether this turn's clearing measured the sector's fill. A book with no
+ * prior-turn aggregate (the first producing turn after a reset) clears
+ * nothing by construction; only outputs whose lagged book exists count.
+ * Without the set (worlds and tests that predate it) every fill is measured.
+ */
+export function clearingFillMeasured(
+  clearing: { soldByCommodity?: Partial<Record<string, number>> } | null | undefined,
+  initializedLaggedBooks: ReadonlySet<string> | undefined
+): boolean {
+  if (!clearing || !initializedLaggedBooks) return true;
+  const outputs = Object.keys(clearing.soldByCommodity ?? {});
+  if (outputs.length === 0) return true;
+  return outputs.some((commodity) => initializedLaggedBooks.has(commodity));
 }

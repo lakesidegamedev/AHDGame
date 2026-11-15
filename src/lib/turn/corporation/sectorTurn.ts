@@ -61,7 +61,11 @@ import {
 } from "./sectorLabour";
 import { advanceSectorInventory } from "@/lib/corporations/sectorInventory";
 import type { SectorTurnEnv, SectorTurnResult } from "./sectorTurnTypes";
-import { legacyRevenueShadowTelemetry, marketTelemetry } from "./sectorTelemetry";
+import {
+  clearingFillMeasured,
+  legacyRevenueShadowTelemetry,
+  marketTelemetry,
+} from "./sectorTelemetry";
 import { resolveSectorFreightBillingLegs } from "./freightBillingTurn";
 import { isExtractionStrategyZeroYield } from "@/lib/corporations/extractionStrategyAvailability";
 import { noBuyerPhaseOutProgress } from "@/lib/extraction/capacityHaircut";
@@ -1340,6 +1344,7 @@ export function processSector(
       mothballed,
       sector,
       inventoryTurn: inventoryTurn ?? undefined,
+      fillMeasured: clearingFillMeasured(clearing, lookups.initializedLaggedBooks),
     })
   );
   // Throughput telemetry + ramp anchor (display + next turn's fade-in).
