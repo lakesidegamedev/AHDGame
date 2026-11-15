@@ -396,14 +396,6 @@
       "dynamic": 2,
       "untyped": 2
     },
-    "src/lib/migrations/entries/2026-10-04-industry-model-market-indexes.ts": {
-      "dynamic": 2,
-      "untyped": 2
-    },
-    "src/lib/migrations/entries/2026-10-04-media-discriminator-market-indexes.ts": {
-      "dynamic": 2,
-      "untyped": 2
-    },
     "src/lib/migrations/entries/2026-10-04-political-media-order-indexes.ts": {
       "dynamic": 1,
       "untyped": 1
@@ -522,10 +514,6 @@
     },
     "src/lib/turn/campaignTurn.ts": {
       "dynamic": 1
-    },
-    "src/lib/turn/corporation/migrateEntertainmentRemoval.ts": {
-      "dynamic": 2,
-      "untyped": 2
     },
     "src/lib/turn/crisisV2/spillover.ts": {
       "dynamic": 1

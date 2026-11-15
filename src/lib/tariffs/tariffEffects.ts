@@ -1,4 +1,3 @@
-import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
 import type { Db } from "mongodb";
 import { ObjectId } from "mongodb";
 import type { Bill, Tariff, TariffProvision } from "@/lib/db/types";
@@ -100,8 +99,7 @@ export function getEffectiveTariffRate(
 export function computeCountryTariffPressure(
   tariffs: Tariff[],
   countryId: CountryId,
-  sectors: (Pick<CorporateSector, "corporationId" | "countryId" | "sectorType" | "revenue"> &
-    Partial<Pick<CorporateSector, "industryModel" | "mediaDiscriminator">>)[],
+  sectors: Pick<CorporateSector, "corporationId" | "countryId" | "sectorType" | "revenue">[],
   corpById: Map<string, Pick<Corporation, "_id" | "countryId">>,
   ftaCoverage?: FtaCoverage
 ): number {
@@ -117,11 +115,7 @@ export function computeCountryTariffPressure(
 
     totalDomesticRevenue += revenue;
 
-    const lane = getOperatingSectorType(
-      sector.sectorType,
-      sector.industryModel,
-      sector.mediaDiscriminator
-    );
+    const lane = sector.sectorType;
     sectorRevenueByType.set(lane, (sectorRevenueByType.get(lane) ?? 0) + revenue);
 
     const corp = corpById.get(sector.corporationId.toString());
@@ -272,8 +266,7 @@ export function tariffRulesNeedSectorPresenceKeys(tariffs: Tariff[]): boolean {
  * cross-border sectors only; used for tariff-aware commodity margin blending.
  */
 export function buildSectorPresenceKeys(
-  sectors: (Pick<CorporateSector, "corporationId" | "countryId" | "sectorType"> &
-    Partial<Pick<CorporateSector, "industryModel" | "mediaDiscriminator">>)[],
+  sectors: Pick<CorporateSector, "corporationId" | "countryId" | "sectorType">[],
   corpById: Map<string, Pick<Corporation, "_id" | "countryId">>
 ): Set<string> {
   const keys = new Set<string>();
@@ -283,11 +276,7 @@ export function buildSectorPresenceKeys(
     const sectorCountry = sector.countryId;
     const corpCountry = corp.countryId;
     if (sectorCountry === corpCountry) continue;
-    const lane = getOperatingSectorType(
-      sector.sectorType,
-      sector.industryModel,
-      sector.mediaDiscriminator
-    );
+    const lane = sector.sectorType;
     keys.add(`${sectorCountry}:${corpCountry}:${lane}`);
     keys.add(`${sectorCountry}:corp:${sector.corporationId.toString()}:${lane}`);
   }

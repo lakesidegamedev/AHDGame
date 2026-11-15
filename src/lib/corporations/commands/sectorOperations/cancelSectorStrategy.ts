@@ -185,9 +185,7 @@ export async function cancelSectorStrategy(request: Request, { params }: RoutePa
     const cancelRescaleRatio = capacityRescaleRatio(
       sector.sectorType as CorporationType,
       newTransitionFromStrategyId,
-      newStrategyId,
-      sector.industryModel,
-      sector.mediaDiscriminator
+      newStrategyId
     );
     const rescaledCapitalStock =
       plantsEnabled &&

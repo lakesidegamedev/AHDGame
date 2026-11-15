@@ -146,11 +146,10 @@ export default function CorporationGuidePage() {
               </table>
             </div>
             <p className="text-sm text-muted leading-relaxed">
-              There are <strong className="text-foreground">17 sector lines</strong>: Financial,
+              There are <strong className="text-foreground">15 sector lines</strong>: Financial,
               Media, Manufacturing, Healthcare, Retail, Technology, Energy, Agriculture, Real
               Estate, Defense, Telecommunications, Logistics, Extraction, Chemical Industries, and
-              Construction, plus two specialized lines: vehicles (Automobiles) inside Manufacturing
-              and entertainment inside Media.
+              Construction.
             </p>
             <SubHeader>Secondary type trade-off</SubHeader>
             <p className="text-sm text-muted leading-relaxed">
@@ -323,7 +322,7 @@ export default function CorporationGuidePage() {
                     <td className="px-4 py-2.5">
                       <Tag variant="negative">−5%</Tag>
                     </td>
-                    <td className="px-4 py-2.5">Retail, Real Estate, Entertainment</td>
+                    <td className="px-4 py-2.5">Retail, Real Estate</td>
                     <td className="px-4 py-2.5">1,500-3,500 per 100k</td>
                   </tr>
                   <tr>
@@ -804,8 +803,8 @@ Scaled growth  = 0.65 × ln(1 + dailyBudget / 100,000)
                     foreign rate on those sectors&apos; profits.
                   </li>
                   <li>
-                    • <strong className="text-foreground">Crime reduction</strong>. Helps Retail,
-                    Real Estate, Entertainment
+                    • <strong className="text-foreground">Crime reduction</strong>. Helps Retail and
+                    Real Estate
                   </li>
                   <li>
                     • <strong className="text-foreground">Deficit spending</strong>. +0.5% per 1% of

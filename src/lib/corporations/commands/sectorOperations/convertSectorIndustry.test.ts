@@ -27,8 +27,6 @@ function world(currentTurn: number, extraSectors: Record<string, unknown>[] = []
       stateId: "US-CA",
       countryId: "US",
       sectorType: "media",
-      industryModel: null,
-      mediaDiscriminator: null,
       strategyId: "standard",
       capitalStock: 100,
       capacityBookAnchor: 5000,
@@ -87,8 +85,6 @@ describe("convertSectorIndustryCore", () => {
         corporationId: corpId,
         stateId: "US-CA",
         sectorType: "construction",
-        industryModel: null,
-        mediaDiscriminator: null,
       },
     ]);
     const out = await convertSectorIndustryCore(db, {

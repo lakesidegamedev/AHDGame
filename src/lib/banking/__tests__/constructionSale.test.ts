@@ -126,39 +126,6 @@ function world(
 }
 
 describe("buyer-funded secured property sale", () => {
-  it.each([
-    { buyerLane: "media", buyerDiscriminator: "entertainment" },
-    { buyerLane: "media", buyerDiscriminator: null },
-  ])(
-    "preserves canonical entertainment identity against a buyer's media lane ($buyerDiscriminator)",
-    async ({ buyerLane, buyerDiscriminator }) => {
-      const w = world();
-      await w.db
-        .collection("corporateSectors")
-        .updateOne(
-          { _id: w.sectorId },
-          { $set: { sectorType: "media", mediaDiscriminator: "entertainment" } }
-        );
-      w.memory.seed("corporateSectors", [
-        {
-          _id: new ObjectId(),
-          corporationId: w.buyerId,
-          stateId: "US-CA",
-          sectorType: buyerLane,
-          mediaDiscriminator: buyerDiscriminator,
-        },
-      ]);
-      const result = await buySecuredConstructionProperty(w.input);
-      // A buyer already running this exact lane in the state folds the site in
-      // rather than holding a second row; either way the sale settles.
-      const sameLane = buyerDiscriminator === "entertainment";
-      expect(result).toMatchObject({ ok: true });
-      expect(
-        (result as { quote: { mergeIntoSectorId?: string } }).quote.mergeIntoSectorId !== undefined
-      ).toBe(sameLane);
-      expect(w.memory.collection("corporations").docs[1].liquidCapital).toBe(850_000);
-    }
-  );
   describe("when the buyer already runs that market", () => {
     async function withSurvivor(extra: Record<string, unknown> = {}) {
       const w = world();

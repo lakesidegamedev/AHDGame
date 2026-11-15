@@ -90,7 +90,6 @@ export function renewablesReliabilityPenalty(mix: RegionalPowerMix): number {
 export const DESIGN_LIFE_YEARS: Readonly<Record<string, number>> = {
   energy: 40,
   manufacturing: 30,
-  manufacturing_vehicles: 30,
   chemical_industries: 30,
   defense: 30,
 };
@@ -118,7 +117,6 @@ const OPENING_AGE_BY_METHOD: Readonly<Record<string, number>> = {
 const OPENING_AGE_BY_TYPE: Readonly<Record<string, number>> = {
   energy: 20,
   manufacturing: 18,
-  manufacturing_vehicles: 15,
   chemical_industries: 22,
   defense: 20,
 };

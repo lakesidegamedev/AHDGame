@@ -54,7 +54,7 @@ describe.each([
     it(`${countryId} is an industrial economy, not a service one`, () => {
       // Every seeded bloc economy is manufacturing/extraction/agriculture-led.
       // This is the assertion that actually fails on a flat fallback, since the
-      // even split puts manufacturing at 1/17 alongside media and entertainment.
+      // even split puts manufacturing at 1/15 alongside media.
       const w = getWeights(countryId);
       const heavy = w.manufacturing + w.extraction + w.agriculture + w.chemical_industries;
       expect(heavy, `${countryId} ${era} heavy-industry share`).toBeGreaterThan(0.3);

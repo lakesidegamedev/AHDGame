@@ -1,4 +1,3 @@
-import { getCorporateSectorLaneQuery } from "@/lib/corporations/sectorLocation";
 import { ObjectId, type Db } from "mongodb";
 import type { BankLoan } from "@/lib/db/types/bank";
 import type { CorporateSector } from "@/lib/db/types/corporation";
@@ -145,7 +144,7 @@ export async function buySecuredConstructionProperty(input: {
     const collision = await sectors.findOne({
       corporationId: buyerId,
       stateId: sector.stateId,
-      ...getCorporateSectorLaneQuery(sector),
+      sectorType: sector.sectorType,
     });
     // One site per market: a buyer who already runs this market takes the
     // purchased site into it, once the price has settled with the lender.

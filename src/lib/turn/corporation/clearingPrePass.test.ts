@@ -13,7 +13,7 @@ import { runClearingPrePass, type ClearingPrePassInput } from "./clearingPrePass
 import type { MarketContext } from "@/lib/market/marketContext";
 import type { buildCorporationLookups } from "./buildLookups";
 import { buildManufacturedSectorOutput } from "@/lib/products/rules/manufacturingRules";
-import { eraScaledBasePrices } from "@/lib/constants/commodities";
+import { commodityMixWeight, eraScaledBasePrices } from "@/lib/constants/commodities";
 import type { MediaProductProject } from "@/lib/products/mediaProduct";
 import { computeSupplyAgreementBuyerDemand } from "@/lib/corporations/groups/rules/inputDemand";
 
@@ -131,9 +131,9 @@ describe("runClearingPrePass with clearing enabled", () => {
   );
 
   it.each([
-    { sectorType: "manufacturing", industryModel: "vehicles", commodity: "steel" },
-    { sectorType: "media", mediaDiscriminator: "entertainment", commodity: "energy" },
-  ] as const)("reserves the actual $sectorType model's $commodity demand", (identity) => {
+    { sectorType: "manufacturing", strategyId: "standard", commodity: "iron" },
+    { sectorType: "media", strategyId: "legacy_broadcast", commodity: "energy" },
+  ] as const)("reserves the actual $sectorType recipe's $commodity demand", (identity) => {
     const { sector, lookups } = makeSectorWorld();
     Object.assign(sector, identity, { capitalStock: 100 });
     const result = runClearingPrePass(
@@ -167,18 +167,16 @@ describe("runClearingPrePass with clearing enabled", () => {
   });
 
   it.each([
-    { sectorType: "manufacturing", industryModel: "vehicles", commodity: "steel" },
-    { sectorType: "media", mediaDiscriminator: "entertainment", commodity: "energy" },
-  ] as const)("delivers own-group $commodity to the actual $sectorType model", (identity) => {
+    { sectorType: "manufacturing", strategyId: "standard", commodity: "iron" },
+    { sectorType: "media", strategyId: "legacy_broadcast", commodity: "energy" },
+  ] as const)("delivers own-group $commodity to the actual $sectorType recipe", (identity) => {
     const { corp, sector, lookups } = makeSectorWorld();
     Object.assign(corp, { internalSupplyPolicy: { priority: "own", discount: 0.1 } });
     Object.assign(sector, identity, { capitalStock: 100, stateId: "NY", countryId: "US" });
     const supplier = {
       ...sector,
       _id: "supplier-sector",
-      sectorType: identity.commodity === "energy" ? "energy" : "manufacturing",
-      industryModel: undefined,
-      mediaDiscriminator: undefined,
+      sectorType: identity.commodity === "energy" ? "energy" : "extraction",
       producedUnits: 100,
     };
     Object.assign(lookups, {
@@ -575,14 +573,20 @@ describe("runClearingPrePass with clearing enabled", () => {
     );
 
     const basePrices = eraScaledBasePrices(lookups.eraUnitScale);
+    const supplyRates = { steel: 0.4, building_materials: 0.2, vehicles: 0.5 };
+    const unitValue = (["steel", "building_materials", "vehicles"] as const).reduce(
+      (sum, commodity) =>
+        sum + commodityMixWeight(supplyRates, basePrices, commodity) * basePrices[commodity]!,
+      0
+    );
     const expected = buildManufacturedSectorOutput({
-      outputAnchor: 200 * (basePrices.steel! * 0.5 + basePrices.building_materials! * 0.5),
-      supplyRates: { steel: 0.4, building_materials: 0.2 },
+      outputAnchor: 200 * unitValue,
+      supplyRates,
       allocationShare: 0.5,
       stage: "mature",
       outputCommodity: "building_materials",
       basePrices,
-      currentSectorQualityByCommodity: { steel: 70, building_materials: 70 },
+      currentSectorQualityByCommodity: { steel: 70, building_materials: 70, vehicles: 70 },
       paidDevelopmentAnchor: 400,
       paidThresholdAnchor: 500,
     });
@@ -590,23 +594,23 @@ describe("runClearingPrePass with clearing enabled", () => {
     expect(market.clearingBySectorId?.get("sector1")?.soldByCommodity).toHaveProperty(
       "building_materials"
     );
-    expect(market.clearingBySectorId?.get("sector1")?.soldByCommodity).not.toHaveProperty(
-      "vehicles"
-    );
+    expect(market.clearingBySectorId?.get("sector1")?.soldByCommodity).toHaveProperty("vehicles");
     expect(producedByCorpCommodity.get("corp1")?.get("steel")).toBeCloseTo(
       expected.outputUnitsByCommodity.steel!
     );
     expect(producedByCorpCommodity.get("corp1")?.get("building_materials")).toBeCloseTo(
       expected.outputUnitsByCommodity.building_materials!
     );
-    expect(producedByCorpCommodity.get("corp1")?.get("vehicles")).toBeUndefined();
+    expect(producedByCorpCommodity.get("corp1")?.get("vehicles")).toBeCloseTo(
+      expected.outputUnitsByCommodity.vehicles!
+    );
   });
 
   it("uses paid product brand in real clearing premiums only when quality pricing is enabled", () => {
     const clear = (productBrand: number, premiumEnabled: boolean) => {
       const { lookups, sector } = makeSectorWorld();
       Object.assign(sector, {
-        industryModel: "vehicles",
+        strategyId: "vehicle_assembly",
         capitalStock: 200,
         plantCount: 1,
         operatingCapacityUnits: 200,
@@ -676,8 +680,7 @@ describe("runClearingPrePass with clearing enabled", () => {
       const sector = lookups.sectorsByCorp.get("corp1")![0];
       Object.assign(sector, {
         sectorType: "manufacturing",
-        industryModel: "vehicles",
-        strategyId: "standard",
+        strategyId: "vehicle_assembly",
         capitalStock: 200,
         plantCount: 1,
         producedUnits: 100,

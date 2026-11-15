@@ -191,8 +191,6 @@ export async function bulkBuildCapacity(request: Request, { params }: RouteParam
       const capacityUnits = sector.operatingCapacityUnits ?? sector.capitalStock ?? 0;
       const sizing = {
         sectorType: meta.sectorType,
-        industryModel: sector.industryModel,
-        mediaDiscriminator: sector.mediaDiscriminator,
         strategyId: sector.strategyId,
         capacityUnits,
       };

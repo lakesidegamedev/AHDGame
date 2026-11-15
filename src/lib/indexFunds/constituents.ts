@@ -1,5 +1,5 @@
 import type { ObjectId } from "mongodb";
-import { operatingSectorTypeFor, type OperatingSectorType } from "@/lib/constants/corporations";
+import { type OperatingSectorType } from "@/lib/constants/corporations";
 import type { CountryId } from "@/lib/constants/countries";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import type {
@@ -31,8 +31,6 @@ export type IndexFundCandidate = Pick<
   | "_id"
   | "countryId"
   | "type"
-  | "industryModel"
-  | "mediaDiscriminator"
   | "secondaryType"
   | "sharePrice"
   | "totalShares"
@@ -88,18 +86,10 @@ export function isEligibleIndexFundConstituent(
     return false;
   if (definition.kind === "sector") {
     if (!definition.sectorType) return false;
-    // A vehicle maker or entertainment house belongs to its lane's fund, not
-    // the generic manufacturing or media fund.
-    if (
-      operatingSectorTypeFor(
-        corporation.type,
-        corporation.industryModel,
-        corporation.mediaDiscriminator
-      ) === definition.sectorType
-    ) {
-      return true;
-    }
-    return corporation.secondaryType === definition.sectorType;
+    return (
+      corporation.type === definition.sectorType ||
+      corporation.secondaryType === definition.sectorType
+    );
   }
 
   return true;

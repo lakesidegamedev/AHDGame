@@ -305,10 +305,6 @@
       "longBlocks": 1,
       "narrativeLines": 2
     },
-    "scripts/migrations/2026-10-05-fold-automobile-entertainment-types.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 2
-    },
     "scripts/migrations/2026-10-07-activate-live-demographics-v2.ts": {
       "longBlocks": 0,
       "narrativeLines": 2
@@ -4767,7 +4763,7 @@
     },
     "src/lib/constants/sectorStrategyDefinitions.ts": {
       "longBlocks": 1,
-      "narrativeLines": 24
+      "narrativeLines": 22
     },
     "src/lib/constants/settlementCrisis.test.ts": {
       "longBlocks": 1,
@@ -5002,10 +4998,6 @@
       "narrativeLines": 0
     },
     "src/lib/corporations/economicActionLog.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/lib/corporations/entertainmentRemovalRescale.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
@@ -12121,10 +12113,6 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/lib/turn/corporation/migrateEntertainmentRemoval.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
     "src/lib/turn/corporation/nppInsolvencyDissolution.test.ts": {
       "longBlocks": 0,
       "narrativeLines": 2
@@ -12576,10 +12564,6 @@
     "src/lib/turn/npp/makeCorpDecision.ts": {
       "longBlocks": 1,
       "narrativeLines": 4
-    },
-    "src/lib/turn/npp/marketSignals.placement.test.ts": {
-      "longBlocks": 0,
-      "narrativeLines": 1
     },
     "src/lib/turn/npp/marketSignals.ts": {
       "longBlocks": 1,

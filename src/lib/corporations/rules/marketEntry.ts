@@ -17,7 +17,7 @@ import {
   computeBuildCost,
   techBuildTurns,
 } from "@/lib/constants/capacityEconomy";
-import type { OperatingSectorIdentity } from "@/lib/constants/corporationsClient";
+import type { OperatingSectorType } from "@/lib/constants/corporationsClient";
 import { foundingStarterUnits, sectorEntryFeeAnchor } from "@/lib/corporations/foundingPlant";
 
 /** Why a market cannot be entered right now, in the order the command checks. */
@@ -112,7 +112,7 @@ export function evaluateMarketEntry(facts: MarketEntryFacts): MarketEntryVerdict
 
 /** Inputs to {@link quoteFoundingEntry}. Tech effects are lane-scoped by the caller. */
 export interface FoundingQuoteInputs {
-  identity: OperatingSectorIdentity;
+  sectorType: OperatingSectorType;
   preset: string | undefined;
   currentYear: number;
   eraUnitScale: number;
@@ -150,13 +150,11 @@ export interface FoundingQuote {
  * The command charges exactly this and the picker quotes exactly this.
  */
 export function quoteFoundingEntry(inputs: FoundingQuoteInputs): FoundingQuote {
-  const { sectorType, industryModel, mediaDiscriminator } = inputs.identity;
+  const { sectorType } = inputs;
   const entryFeeAnchor = sectorEntryFeeAnchor(inputs.preset, inputs.techExpansionDiscount);
-  const starterUnits = foundingStarterUnits(sectorType, industryModel, mediaDiscriminator);
+  const starterUnits = foundingStarterUnits(sectorType);
   const starterBuildAnchor = computeBuildCost({
     sectorType,
-    industryModel,
-    mediaDiscriminator,
     units: starterUnits,
     // A founded sector has no chosen production method yet, so it runs and is
     // priced at the sector-type default.

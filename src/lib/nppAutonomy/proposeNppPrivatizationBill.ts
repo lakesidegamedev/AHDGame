@@ -65,8 +65,6 @@ type SectorRow = Pick<
   | "countryId"
   | "stateId"
   | "sectorType"
-  | "industryModel"
-  | "mediaDiscriminator"
   | "revenue"
   | "capitalStock"
   | "strategyId"
@@ -182,8 +180,6 @@ export async function proposeNppPrivatizationBill(
             countryId: 1,
             stateId: 1,
             sectorType: 1,
-            industryModel: 1,
-            mediaDiscriminator: 1,
             revenue: 1,
             capitalStock: 1,
             strategyId: 1,

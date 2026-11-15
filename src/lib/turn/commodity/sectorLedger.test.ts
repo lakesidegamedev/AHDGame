@@ -7,13 +7,10 @@ import {
 } from "@/lib/constants/commodities";
 import { impliedOutputUnits } from "@/lib/market/capital";
 import { getEffectiveStrategyRates } from "@/lib/constants/sectorStrategies";
-import { computeRawSupplyDemand } from "@/lib/constants/commodities";
 import type { SectorLedgerRow } from "./ledgerTypes";
-import type { CorporateSector } from "@/lib/db/types";
 import {
   accumulatePlantsUnits,
   buildExtractionRevenueInputs,
-  buildSectorRows,
   withRealizedOutputCaps,
 } from "./sectorLedger";
 import { computeExtractionCapacityMultipliers } from "@/lib/turn/extraction/extractionCapacity";
@@ -70,127 +67,6 @@ describe("accumulatePlantsUnits product output", () => {
 
     expect(accumulatePlantsUnits([sector], 20, COMMODITY_BASE_PRICES)).toEqual(expected);
     expect([...expected.keys()]).toEqual(["advertising"]);
-  });
-});
-
-describe("automobile model dual-read through commodity pricing", () => {
-  it("keeps the legacy recipe when a vehicle sector is stored as manufacturing plus model", () => {
-    const id = new ObjectId();
-    const base = {
-      _id: id,
-      corporationId: new ObjectId(),
-      stateId: "US-MI",
-      countryId: "US",
-      strategyId: "standard",
-      revenue: 250_000,
-      createdAt: new Date(),
-    };
-    const legacy = buildSectorRows({
-      allSectors: [{ ...base, sectorType: "manufacturing_vehicles" } as unknown as CorporateSector],
-      corporationById: new Map(),
-      natcorpIds: new Set(),
-      fxByCurrency: new Map(),
-      stateToCountry: new Map([["US-MI", "US"]]),
-      ledgerCurrentYear: null,
-      ledgerCommandEconomyEnabled: false,
-      turn: 1,
-    });
-    const modelled = buildSectorRows({
-      allSectors: [
-        {
-          ...base,
-          sectorType: "manufacturing",
-          industryModel: "vehicles",
-        } as unknown as CorporateSector,
-      ],
-      corporationById: new Map(),
-      natcorpIds: new Set(),
-      fxByCurrency: new Map(),
-      stateToCountry: new Map([["US-MI", "US"]]),
-      ledgerCurrentYear: null,
-      ledgerCommandEconomyEnabled: false,
-      turn: 1,
-    });
-
-    expect(modelled[0]?.industryModel).toBe("vehicles");
-    expect(computeRawSupplyDemand(modelled).global).toEqual(computeRawSupplyDemand(legacy).global);
-  });
-});
-
-describe("entertainment media dual-read through commodity pricing", () => {
-  it("keeps the legacy recipe for a canonical media row with the entertainment discriminator", () => {
-    const id = new ObjectId();
-    const base = {
-      _id: id,
-      corporationId: new ObjectId(),
-      stateId: "US-CA",
-      countryId: "US",
-      strategyId: "film_studio",
-      revenue: 250_000,
-      createdAt: new Date(),
-    };
-    const legacy = buildSectorRows({
-      allSectors: [{ ...base, sectorType: "media_entertainment" } as unknown as CorporateSector],
-      corporationById: new Map(),
-      natcorpIds: new Set(),
-      fxByCurrency: new Map(),
-      stateToCountry: new Map([["US-CA", "US"]]),
-      ledgerCurrentYear: null,
-      ledgerCommandEconomyEnabled: false,
-      turn: 1,
-    });
-    const canonical = buildSectorRows({
-      allSectors: [
-        {
-          ...base,
-          sectorType: "media",
-          mediaDiscriminator: "entertainment",
-        } as unknown as CorporateSector,
-      ],
-      corporationById: new Map(),
-      natcorpIds: new Set(),
-      fxByCurrency: new Map(),
-      stateToCountry: new Map([["US-CA", "US"]]),
-      ledgerCurrentYear: null,
-      ledgerCommandEconomyEnabled: false,
-      turn: 1,
-    });
-
-    expect(canonical[0]?.mediaDiscriminator).toBe("entertainment");
-    expect(computeRawSupplyDemand(canonical).global).toEqual(computeRawSupplyDemand(legacy).global);
-  });
-
-  it("does not apply the news media supply derate to the canonical entertainment lane", () => {
-    const base = {
-      _id: new ObjectId(),
-      corporationId: new ObjectId(),
-      stateId: "US-CA",
-      countryId: "US",
-      strategyId: "film_studio",
-      revenue: 250_000,
-      producedUnits: 40,
-      createdAt: new Date(),
-    };
-    const rows = (sector: Record<string, unknown>) =>
-      buildSectorRows({
-        allSectors: [{ ...base, ...sector } as unknown as CorporateSector],
-        corporationById: new Map(),
-        natcorpIds: new Set(),
-        fxByCurrency: new Map(),
-        stateToCountry: new Map([["US-CA", "US"]]),
-        ledgerCurrentYear: 1991,
-        ledgerCommandEconomyEnabled: true,
-        turn: 1,
-      });
-
-    const legacy = rows({ sectorType: "media_entertainment" });
-    const canonical = rows({ sectorType: "media", mediaDiscriminator: "entertainment" });
-    const news = rows({ sectorType: "media", mediaDiscriminator: "media", strategyId: "standard" });
-
-    expect(legacy[0]?.embargoSupplyFactor).toBe(1);
-    expect(canonical[0]?.embargoSupplyFactor).toBe(1);
-    expect(news[0]?.embargoSupplyFactor).toBe(0.1);
-    expect(computeRawSupplyDemand(canonical).global).toEqual(computeRawSupplyDemand(legacy).global);
   });
 });
 

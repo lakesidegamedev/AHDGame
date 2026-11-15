@@ -103,7 +103,7 @@ Raw D/S remains visible on the market screens. Prices and margins use the effect
 
 Beyond sector-level supply and demand, several macroeconomic forces inject additional commodity demand each turn:
 
-**Advertising:** Corporate marketing budgets convert to advertising commodity demand, distributed to the corporation's HQ state, but only as much as the corporation's liquid capital can actually fund for the next turn. The buyer pays only for the advertising that fills, at the clearing price, and that payment settles to the media and entertainment corporations whose offers filled it; unfilled budget stays in the buyer's treasury.
+**Advertising:** Corporate marketing budgets convert to advertising commodity demand, distributed to the corporation's HQ state, but only as much as the corporation's liquid capital can actually fund for the next turn. The buyer pays only for the advertising that fills, at the clearing price, and that payment settles to the media corporations whose offers filled it; unfilled budget stays in the buyer's treasury.
 
 **Healthcare services:** National healthcare budgets (Medicare, NHS, etc.) convert to healthcare_services demand. **1.5%** of annual healthcare spending is spread across turns as demand. Government spending in the [National Budget](/wiki/national-budget) also drives ordnance demand: 0.5% of the annual defense budget becomes weapons procurement.
 
@@ -303,8 +303,8 @@ The point for a player is simple: a commodity that stores well can be held throu
 
 | Commodity | Typical suppliers | Typical buyers |
 | --- | --- | --- |
-| Steel & Metals | Manufacturing, Defense | Construction, Automobiles, Defense, Real Estate |
-| Electronics & Semiconductors | Technology, Defense | Manufacturing, Healthcare, Telecommunications, Automobiles |
+| Steel & Metals | Manufacturing, Defense | Construction, Defense, Real Estate |
+| Electronics & Semiconductors | Technology, Defense | Manufacturing, Healthcare, Telecommunications |
 | Energy (Electricity) | Energy | All sectors (universal input) |
 | Industrial Chemicals | Chemical Industries | Extraction, Manufacturing, Chemical Industries, Energy, Technology, Defense |
 | Pharmaceuticals | Chemical Industries (Pharmaceuticals and Specialty Chemicals strategies) | Healthcare, Retail |
@@ -313,27 +313,25 @@ The point for a player is simple: a commodity that stores well can be held throu
 | Building Materials | Manufacturing, Construction (some strategies co-produce) | Construction, Real Estate, Telecommunications |
 | Construction Services | Construction | Real Estate, Energy, Extraction, Telecommunications |
 | Healthcare Services | Healthcare | (end consumer / government demand) |
-| Real Estate Services | Real Estate | Manufacturing, Technology, Financial, Healthcare, Automobiles, Logistics |
+| Real Estate Services | Real Estate | Manufacturing, Technology, Financial, Healthcare, Logistics |
 | Software & IT Services | Technology, Telecommunications | Financial, Healthcare, Media, Logistics, Defense |
 | Financial Services | Financial | Real Estate, Construction |
-| Advertising & Media | Media, Entertainment | Retail |
-| Vehicles & Machinery | Automobiles, Defense | Energy, Agriculture, Logistics, Extraction, Construction |
+| Advertising & Media | Media | Retail |
+| Vehicles & Machinery | Manufacturing, Defense | Energy, Agriculture, Logistics, Extraction, Construction |
 | Consumer Goods | Retail | (end consumer demand) |
 | Freight & Transportation | Logistics | Manufacturing, Agriculture, Chemical Industries, Extraction |
 | Consulting Services | Logistics | Technology, Financial, Media, Retail |
-| Iron Ore | Extraction | Manufacturing, Automobiles, Defense |
+| Iron Ore | Extraction | Manufacturing, Defense |
 | Coal | Extraction | Energy, Manufacturing |
 | Crude Oil | Extraction | Energy, Chemical Industries |
-| Rare Earth Minerals | Extraction | Technology, Defense, Energy (Renewables), Automobiles (EV), Manufacturing, Construction, Telecommunications |
+| Rare Earth Minerals | Extraction | Technology, Defense, Energy (Renewables), Manufacturing (EV), Construction, Telecommunications |
 | Timber & Lumber | Extraction | Manufacturing, Real Estate, Agriculture, Construction, Retail |
 | Natural Gas | Extraction | Energy, Manufacturing, Chemical Industries, Agriculture, Retail |
 | Ordnance & Weapons Systems | Defense | Government defense budgets, Extraction focused strategies (mining explosives) |
-| Plastics & Polymers | Chemical Industries (Industrial Chemicals co-produces; Plastics strategy maximises output) | Manufacturing, Healthcare, Agriculture, Automobiles, Construction, Retail |
+| Plastics & Polymers | Chemical Industries (Industrial Chemicals co-produces; Plastics strategy maximises output) | Manufacturing, Healthcare, Agriculture, Construction, Retail |
 | **Network Services** | **Telecommunications (all strategies)** | (macro demand from GDP: broadband/connectivity) |
 
 Copper is not a standalone commodity: its market was merged into Rare Earth Minerals, which now covers both and is priced as a demand-weighted blend of the two.
-
-Entertainment Services was retired as a separate commodity. Entertainment companies still operate as media companies and still supply advertising, but there is no separate entertainment commodity to build a strategy around.
 
 You can integrate vertically to insulate yourself (own both the producer and the consumer of a commodity), and lock in supply or demand with a [Supply Agreement](/wiki/supply-agreements).
 

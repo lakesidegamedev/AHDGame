@@ -750,8 +750,6 @@ export default function SectorDetailPage() {
                     marketSupplies={commodities?.supplies ?? []}
                     freightState={commodities?.freightState}
                     sectorType={sector.sectorType}
-                    industryModel={sector.industryModel}
-                    mediaDiscriminator={sector.mediaDiscriminator}
                     mediaAdvertisingCampaignFactor={sector.mediaAdvertisingCampaignFactor}
                     unionId={sector.unionId}
                     unionName={sector.unionName}
@@ -1144,8 +1142,6 @@ export default function SectorDetailPage() {
             stateLabourMarket={sector.stateLabourMarket}
             stateName={sector.stateName}
             sectorType={sector.sectorType}
-            industryModel={sector.industryModel}
-            mediaDiscriminator={sector.mediaDiscriminator}
             sectorLabel={sector.displayName || sector.sectorLabel}
             submitting={capacityBusy}
             errorMessage={capacityMessage}

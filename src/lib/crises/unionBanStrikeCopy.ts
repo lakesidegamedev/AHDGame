@@ -44,11 +44,7 @@ export const UNION_BAN_STRIKE_NODES = {
  * identifiers, not copy: the country-facing names are in
  * {@link STRUCK_TRADE_COPY}.
  */
-export const UNION_BAN_STRUCK_SECTORS: OperatingSectorType[] = [
-  "manufacturing",
-  "manufacturing_vehicles",
-  "logistics",
-];
+export const UNION_BAN_STRUCK_SECTORS: OperatingSectorType[] = ["manufacturing", "logistics"];
 
 /** What the struck trades are called in each country. Falls back to `default`. */
 const STRUCK_TRADE_COPY: Record<string, string> = {

@@ -12,8 +12,6 @@ const sec = (corp: ObjectId, stateId = "s1", sectorType = "mining") =>
     stateId,
     countryId: "US",
     sectorType,
-    industryModel: null,
-    mediaDiscriminator: null,
   }) as never;
 
 describe("buildGroupDominanceShares", () => {

@@ -6,8 +6,7 @@ import { JP_INDEX_FUND_NAMES } from "@/lib/countries/jp/economy";
 
 /**
  * Sector fund mapping: every operating lane gets its own standalone sector fund.
- * No composites — each lane maps 1:1 to a fund. The vehicles and entertainment
- * funds track the manufacturing vehicles lane and the media entertainment lane.
+ * No composites: each lane maps 1:1 to a fund.
  */
 export const SECTOR_FUND_MAPPINGS: readonly {
   sectorType: OperatingSectorType;
@@ -20,7 +19,6 @@ export const SECTOR_FUND_MAPPINGS: readonly {
   { sectorType: "chemical_industries", sectorLabel: "Chemicals", ticker: "GLBCHM" },
   { sectorType: "healthcare", sectorLabel: "Healthcare", ticker: "GLBHLT" },
   { sectorType: "retail", sectorLabel: "Retail", ticker: "GLBRTL" },
-  { sectorType: "manufacturing_vehicles", sectorLabel: "Automobiles", ticker: "GLBAUT" },
   { sectorType: "technology", sectorLabel: "Technology", ticker: "GLBTEC" },
   { sectorType: "energy", sectorLabel: "Energy", ticker: "GLBENR" },
   { sectorType: "agriculture", sectorLabel: "Agriculture", ticker: "GLBAGR" },
@@ -28,7 +26,6 @@ export const SECTOR_FUND_MAPPINGS: readonly {
   { sectorType: "construction", sectorLabel: "Construction", ticker: "GLBCON" },
   { sectorType: "defense", sectorLabel: "Defense", ticker: "GLBDEF" },
   { sectorType: "telecommunications", sectorLabel: "Telecom", ticker: "GLBCOM" },
-  { sectorType: "media_entertainment", sectorLabel: "Entertainment", ticker: "GLBENT" },
   { sectorType: "logistics", sectorLabel: "Logistics", ticker: "GLBTRN" },
   { sectorType: "extraction", sectorLabel: "Extraction & Mining", ticker: "GLBEXT" },
 ] as const;
@@ -46,7 +43,6 @@ export const SECTOR_FUND_PRIMARY_TYPES: Record<string, OperatingSectorType[]> = 
   Chemicals: ["chemical_industries"],
   Healthcare: ["healthcare"],
   Retail: ["retail"],
-  Automobiles: ["manufacturing_vehicles"],
   Technology: ["technology"],
   Energy: ["energy"],
   Agriculture: ["agriculture"],
@@ -54,7 +50,6 @@ export const SECTOR_FUND_PRIMARY_TYPES: Record<string, OperatingSectorType[]> = 
   Construction: ["construction"],
   Defense: ["defense"],
   Telecom: ["telecommunications"],
-  Entertainment: ["media_entertainment"],
   Logistics: ["logistics"],
   "Extraction & Mining": ["extraction"],
 };

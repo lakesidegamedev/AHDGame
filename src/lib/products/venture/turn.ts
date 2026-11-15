@@ -36,9 +36,7 @@ export function ventureSector(sector: CorporateSector): VentureSector {
   return {
     sectorId: sector._id.toString(),
     sectorType: sector.sectorType,
-    industryModel: sector.industryModel,
     strategyId: sector.strategyId,
-    mediaDiscriminator: sector.mediaDiscriminator,
     capitalStock: sector.capitalStock,
     plantCount: sector.plantCount,
     mothballed: sector.mothballed,

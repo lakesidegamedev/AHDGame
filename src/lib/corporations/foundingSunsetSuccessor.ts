@@ -15,10 +15,7 @@ import { sunsetSuccessorFor } from "@/lib/constants/techTree/sunset";
 
 export function foundingSunsetSuccessor(args: {
   lane: OperatingSectorType;
-  corporation: Pick<
-    Corporation,
-    "type" | "industryModel" | "mediaDiscriminator" | "unlockedTechNodeIds" | "techDecadeLane"
-  >;
+  corporation: Pick<Corporation, "type" | "unlockedTechNodeIds" | "techDecadeLane">;
   currentYear: number;
   techTreesEnabled: boolean;
 }): string | null {

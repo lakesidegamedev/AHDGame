@@ -196,14 +196,6 @@ describe("pledged property sale affordability", () => {
       eligible: false,
     });
     viewer.liquidCapital = 400_000;
-    memory.seed("corporateSectors", [
-      { ...makeSector({ corporationId: viewer._id, industryModel: "vehicles" }) },
-    ]);
-    expect(await buildSectorForSaleInfo(memory as unknown as Db, args)).toMatchObject({
-      hasFunds: true,
-      conflict: false,
-      eligible: true,
-    });
     memory.seed("corporateSectors", [{ ...makeSector({ corporationId: viewer._id }) }]);
     expect(await buildSectorForSaleInfo(memory as unknown as Db, args)).toMatchObject({
       hasFunds: true,

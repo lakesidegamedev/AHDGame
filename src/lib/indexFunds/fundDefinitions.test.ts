@@ -67,8 +67,8 @@ describe("fundDefinitions", () => {
   });
 
   describe("SECTOR_FUND_DEFINITIONS", () => {
-    it("has 17 sector funds — one per CorporationType", () => {
-      expect(SECTOR_FUND_DEFINITIONS).toHaveLength(17);
+    it("has 15 sector funds — one per CorporationType", () => {
+      expect(SECTOR_FUND_DEFINITIONS).toHaveLength(15);
     });
 
     it("all sector funds are global scope and USD-anchored", () => {
@@ -113,9 +113,9 @@ describe("fundDefinitions", () => {
   });
 
   describe("getAllFundDefinitions", () => {
-    it("returns the correct total: 8×2 country broad + 1 global broad + 17 sector + 12 bond = 46", () => {
+    it("returns the correct total: 8×2 country broad + 1 global broad + 15 sector + 12 bond = 44", () => {
       const all = getAllFundDefinitions();
-      expect(all).toHaveLength(46);
+      expect(all).toHaveLength(44);
     });
 
     it("returns unique slugs for all funds", () => {

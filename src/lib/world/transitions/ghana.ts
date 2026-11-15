@@ -15,7 +15,7 @@ import { GHANA_ENTITY_ID } from "./rules";
 const GHANA_1957_SECTOR_WEIGHTS: Partial<Record<OperatingSectorType, number>> = {
   agriculture: 32,
   extraction: 14,
-  manufacturing: 10,
+  manufacturing: 11,
   logistics: 8,
   retail: 7,
   energy: 5,
@@ -24,10 +24,8 @@ const GHANA_1957_SECTOR_WEIGHTS: Partial<Record<OperatingSectorType, number>> = 
   real_estate: 3,
   healthcare: 3,
   telecommunications: 2,
-  media: 2,
-  media_entertainment: 2,
+  media: 4,
   defense: 2,
-  manufacturing_vehicles: 1,
   chemical_industries: 0,
   technology: 0,
 };

@@ -14,7 +14,7 @@
  *   - real_estate + construction elevated (residential bubble at its 2006–07 peak)
  *   - financial elevated (pre-crash leverage / securitization peak)
  *   - manufacturing materially higher (offshoring not yet at 2010s pace)
- *   - automobiles higher (Big Three still pre-bankruptcy)
+ *   - vehicle makers higher (Big Three still pre-bankruptcy)
  *   - energy/extraction higher (2007–08 oil & commodity run-up)
  *   - technology lower (pre-iPhone-mass-adoption, pre-cloud, pre-platform-era)
  *   - healthcare lower (pre-ACA expansion)
@@ -35,20 +35,18 @@ export const COUNTRY_SECTOR_WEIGHTS_2007: Record<string, SectorWeightMap> = {
   US: {
     real_estate: 15,
     financial: 11,
-    manufacturing: 10,
+    manufacturing: 15,
     healthcare: 8,
     technology: 7,
     retail: 7,
     construction: 7,
     logistics: 5,
-    manufacturing_vehicles: 5,
     defense: 4,
     energy: 4,
-    media: 4,
+    media: 7,
     telecommunications: 4,
     chemical_industries: 4,
     extraction: 3,
-    media_entertainment: 3,
     agriculture: 2,
   },
 };

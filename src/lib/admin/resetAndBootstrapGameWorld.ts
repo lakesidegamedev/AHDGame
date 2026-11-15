@@ -172,17 +172,6 @@ export async function resetAndBootstrapGameWorld(
   // cycle-0 races and `detectPreIterationComplete` (which needs at least one
   // RESOLVED founding race) could never end the phase, pinning the calendar to
   // the era start forever.
-  // The 1991 vehicle and media taxonomy seeds run only on a reference rebuild
-  // (they need the empty market pool cleared below). A 1991 reset that kept the
-  // reference collections would clear their completion markers in teardown and
-  // never re-run them, leaving legacy vehicle/entertainment markets in a
-  // world the 1991 code expects to be converted. Refuse before the seal.
-  if (preset === "1991-default" && !resetReference) {
-    throw new Error(
-      "A 1991-default reset must rebuild reference data (resetReference: true); " +
-        "the 1991 vehicle and media taxonomy seeds only run on a reference rebuild"
-    );
-  }
   const startingParties = resolveStartingPartiesMode(preset, options.startingParties);
   const foundingEligible = !seedOnly && mode === "historical";
   const atPresetAnchor = isPresetAnchorDate(preset, options.startDate);

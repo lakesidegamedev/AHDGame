@@ -6,7 +6,7 @@ import Link from "next/link";
 import { InfoTooltip } from "@/components/InfoTooltip";
 import {
   getSectorStrategies,
-  getStrategyForOperatingModel,
+  getStrategy,
   STRATEGY_TRANSITION_TURNS,
   CANCEL_COST_FRACTION,
 } from "@/lib/constants/sectorStrategies";
@@ -38,7 +38,6 @@ import {
 } from "./plantsPresentation";
 import { facilityPlural, facilitySingular } from "@/lib/constants/facilityVocabulary";
 import { plantSizeForSector } from "@/lib/constants/facilityQuantum";
-import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
 import { GROWTH_RATE_TURNS_PER_YEAR } from "@/lib/constants/corporationsClient";
 import { SectorMarginDrilldown } from "./SectorMarginDrilldown";
 import { CapacityChain } from "./sectors/CapacityChain";
@@ -113,25 +112,10 @@ export function SectorRow({
   const [expanded, setExpanded] = useState(false);
 
   const { preset } = useWorldFlags();
-  const operatingSectorType = getOperatingSectorType(
-    sector.sectorType,
-    sector.industryModel,
-    sector.mediaDiscriminator
-  );
-  const strategies = getSectorStrategies(
-    operatingSectorType,
-    mediaOperatingModelsEnabled,
-    null,
-    preset
-  );
+  const operatingSectorType = sector.sectorType;
+  const strategies = getSectorStrategies(operatingSectorType, mediaOperatingModelsEnabled, preset);
   const currentId = sector.strategyId ?? "standard";
-  const currentStrategy = getStrategyForOperatingModel(
-    sector.sectorType,
-    currentId,
-    sector.industryModel,
-    sector.mediaDiscriminator,
-    preset
-  );
+  const currentStrategy = getStrategy(sector.sectorType, currentId, preset);
   const currentStrategyListed = strategies.some((strategy) => strategy.id === currentId);
   const isTransitioning = !!sector.transitionFromStrategyId;
   const isUpdating = strategyUpdatingSectorId === sector._id;
@@ -990,8 +974,6 @@ export function SectorRow({
         <div className="px-2 pb-3 pt-1">
           <StrategyChangeConfirm
             sectorType={sector.sectorType as CorporationType}
-            industryModel={sector.industryModel}
-            mediaDiscriminator={sector.mediaDiscriminator}
             currentStrategyId={currentId}
             targetStrategyId={pendingChange.targetStrategyId}
             dailyRevenue={sector.revenue}

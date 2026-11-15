@@ -16,7 +16,7 @@ import {
 } from "@/lib/turn/npp/marketSignals";
 import type { CorporateSector } from "@/lib/db/types";
 import { allowsNppIndustryInvestment } from "./rules/investmentProtection";
-import { getOperatingSectorType, STRATEGY_COOLDOWN_TURNS } from "@/lib/constants/sectorStrategies";
+import { STRATEGY_COOLDOWN_TURNS } from "@/lib/constants/sectorStrategies";
 import { CHRONIC_LOW_FILL_THRESHOLD } from "@/lib/turn/npp/strategyExpectedRevenue";
 import { GROWTH_COST_MARGIN_SHARE } from "@/lib/turn/npp/nppCorporationTuning";
 import { buildNppGlutMothballUpdates } from "@/lib/turn/npp/glutMothballing";
@@ -69,9 +69,7 @@ export function applyNppSectorPolicies({
     | "defense"
     | "telecommunications"
     | "logistics"
-    | "extraction"
-    | "manufacturing_vehicles"
-    | "media_entertainment";
+    | "extraction";
   primaryIndustryOnly: boolean;
   plants: NppPlantsContext | undefined;
   sectorUpdates: NppCorpDecision["sectorUpdates"];
@@ -90,15 +88,7 @@ export function applyNppSectorPolicies({
     // Skip sectors being divested
     if (divestedSectorIds.includes(sp.sector._id)) continue;
     if (
-      !allowsNppIndustryInvestment(
-        operatingCorpType,
-        getOperatingSectorType(
-          sp.sector.sectorType,
-          sp.sector.industryModel,
-          sp.sector.mediaDiscriminator
-        ),
-        primaryIndustryOnly
-      )
+      !allowsNppIndustryInvestment(operatingCorpType, sp.sector.sectorType, primaryIndustryOnly)
     ) {
       if (!plants?.enabled && (sp.sector.targetGrowthRate ?? 2) > 0) {
         sectorUpdates.push({

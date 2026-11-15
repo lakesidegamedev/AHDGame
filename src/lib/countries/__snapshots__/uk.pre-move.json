@@ -190,7 +190,7 @@
   "COUNTRY_SECTOR_WEIGHTS_1953": {
     "shape": "country-first",
     "value": {
-      "manufacturing": 28,
+      "manufacturing": 31,
       "energy": 10,
       "construction": 8,
       "agriculture": 6,
@@ -200,12 +200,10 @@
       "financial": 5,
       "defense": 4,
       "real_estate": 4,
-      "manufacturing_vehicles": 3,
       "telecommunications": 2,
-      "media": 2,
+      "media": 4,
       "healthcare": 2,
       "extraction": 2,
-      "media_entertainment": 2,
       "technology": 0
     }
   },
@@ -2561,7 +2559,6 @@
     "value": {
       "1953": {
         "manufacturing": "Amalgamated Engineering Union",
-        "manufacturing_vehicles": "Amalgamated Engineering Union",
         "extraction": "National Union of Mineworkers",
         "energy": "Electrical Trades Union",
         "construction": "National Federation of Building Trade Operatives",
@@ -2573,14 +2570,12 @@
         "chemical_industries": "National Union of General and Municipal Workers",
         "technology": "Amalgamated Engineering Union",
         "financial": "National Union of Bank Employees",
-        "media_entertainment": "Association of Cine-Technicians",
         "defense": "Amalgamated Engineering Union",
         "agriculture": "National Union of Agricultural Workers",
         "real_estate": "National Federation of Building Trade Operatives"
       },
       "1979": {
         "manufacturing": "Amalgamated Union of Engineering Workers",
-        "manufacturing_vehicles": "Amalgamated Union of Engineering Workers",
         "defense": "Amalgamated Union of Engineering Workers",
         "extraction": "National Union of Mineworkers",
         "energy": "General and Municipal Workers' Union",
@@ -2591,7 +2586,6 @@
         "retail": "Union of Shop, Distributive and Allied Workers",
         "logistics": "Transport and General Workers' Union",
         "media": "National Union of Journalists",
-        "media_entertainment": "Association of Cinematograph, Television and Allied Technicians",
         "telecommunications": "Union of Post Office Workers",
         "technology": "Association of Scientific, Technical and Managerial Staffs",
         "financial": "National Union of Bank Employees",
@@ -2599,7 +2593,6 @@
       },
       "1991": {
         "manufacturing": "Amalgamated Engineering Union",
-        "manufacturing_vehicles": "Amalgamated Engineering Union",
         "defense": "Amalgamated Engineering Union",
         "extraction": "National Union of Mineworkers",
         "energy": "GMB",
@@ -2610,7 +2603,6 @@
         "retail": "Usdaw",
         "logistics": "Transport and General Workers' Union",
         "media": "National Union of Journalists",
-        "media_entertainment": "BECTU",
         "telecommunications": "National Communications Union",
         "technology": "Manufacturing, Science and Finance",
         "financial": "Banking, Insurance and Finance Union",
@@ -2618,7 +2610,6 @@
       },
       "1999": {
         "manufacturing": "Amalgamated Engineering and Electrical Union",
-        "manufacturing_vehicles": "Amalgamated Engineering and Electrical Union",
         "defense": "Amalgamated Engineering and Electrical Union",
         "extraction": "National Union of Mineworkers",
         "energy": "GMB",
@@ -2629,7 +2620,6 @@
         "retail": "Usdaw",
         "logistics": "Transport and General Workers' Union",
         "media": "National Union of Journalists",
-        "media_entertainment": "BECTU",
         "telecommunications": "Communication Workers Union",
         "technology": "Manufacturing, Science and Finance",
         "financial": "Banking, Insurance and Finance Union",
@@ -2637,7 +2627,6 @@
       },
       "2007": {
         "manufacturing": "Unite the Union",
-        "manufacturing_vehicles": "Unite the Union",
         "extraction": "National Union of Mineworkers",
         "energy": "GMB",
         "construction": "Unite the Union",
@@ -2647,7 +2636,6 @@
         "logistics": "Unite the Union",
         "media": "National Union of Journalists",
         "defense": "Unite the Union",
-        "media_entertainment": "BECTU",
         "telecommunications": "Communication Workers Union",
         "chemical_industries": "Unite the Union",
         "technology": "Prospect",
@@ -2656,7 +2644,6 @@
       },
       "2019": {
         "manufacturing": "Unite the Union",
-        "manufacturing_vehicles": "Unite the Union",
         "extraction": "National Union of Mineworkers",
         "energy": "GMB",
         "construction": "Unite the Union",
@@ -2666,7 +2653,6 @@
         "logistics": "Unite the Union",
         "media": "National Union of Journalists",
         "defense": "Unite the Union",
-        "media_entertainment": "BECTU",
         "telecommunications": "Communication Workers Union",
         "chemical_industries": "Unite the Union",
         "technology": "Prospect",
@@ -2675,7 +2661,6 @@
       },
       "2023": {
         "manufacturing": "Unite the Union",
-        "manufacturing_vehicles": "Unite the Union",
         "extraction": "National Union of Mineworkers",
         "energy": "GMB",
         "construction": "Unite the Union",
@@ -2685,7 +2670,6 @@
         "logistics": "Unite the Union",
         "media": "National Union of Journalists",
         "defense": "Unite the Union",
-        "media_entertainment": "BECTU",
         "telecommunications": "Communication Workers Union",
         "chemical_industries": "Unite the Union",
         "technology": "Prospect",
@@ -2694,7 +2678,6 @@
       },
       "2027": {
         "manufacturing": "Unite the Union",
-        "manufacturing_vehicles": "Unite the Union",
         "extraction": "National Union of Mineworkers",
         "energy": "GMB",
         "construction": "Unite the Union",
@@ -2704,7 +2687,6 @@
         "logistics": "Unite the Union",
         "media": "National Union of Journalists",
         "defense": "Unite the Union",
-        "media_entertainment": "BECTU",
         "telecommunications": "Communication Workers Union",
         "chemical_industries": "Unite the Union",
         "technology": "Prospect",
@@ -5020,18 +5002,16 @@
     "value": {
       "real_estate": 14,
       "financial": 13,
-      "manufacturing": 9,
+      "manufacturing": 12,
       "technology": 8,
       "healthcare": 8,
       "retail": 7,
       "construction": 6,
-      "media": 5,
+      "media": 9,
       "chemical_industries": 5,
-      "media_entertainment": 4,
       "telecommunications": 4,
       "logistics": 4,
       "energy": 3,
-      "manufacturing_vehicles": 3,
       "defense": 3,
       "extraction": 3,
       "agriculture": 1
@@ -5040,7 +5020,7 @@
   "COUNTRY_SECTOR_WEIGHTS_1979": {
     "shape": "country-first",
     "value": {
-      "manufacturing": 22,
+      "manufacturing": 26,
       "energy": 9,
       "retail": 9,
       "real_estate": 8,
@@ -5051,18 +5031,16 @@
       "defense": 5,
       "healthcare": 4,
       "financial": 4,
-      "manufacturing_vehicles": 4,
       "logistics": 4,
       "telecommunications": 3,
       "technology": 1,
-      "media": 2,
-      "media_entertainment": 1
+      "media": 3
     }
   },
   "COUNTRY_SECTOR_WEIGHTS_1991": {
     "shape": "country-first",
     "value": {
-      "manufacturing": 16,
+      "manufacturing": 20,
       "financial": 11,
       "retail": 9,
       "construction": 8,
@@ -5071,12 +5049,10 @@
       "chemical_industries": 6,
       "energy": 5,
       "defense": 5,
-      "manufacturing_vehicles": 4,
       "extraction": 4,
       "logistics": 3,
       "telecommunications": 3,
-      "media": 4,
-      "media_entertainment": 2,
+      "media": 6,
       "technology": 2,
       "agriculture": 2
     }

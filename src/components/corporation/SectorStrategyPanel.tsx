@@ -23,7 +23,6 @@ import {
 } from "@/lib/constants/corporationsClient";
 import { COMMODITY_LABELS, type CommodityType } from "@/lib/constants/commoditiesCore";
 import {
-  getOperatingSectorLabel,
   getSectorStrategies,
   getStrategy,
   type SectorStrategy,
@@ -111,12 +110,10 @@ export function SectorStrategyPanel({
   const { preset } = useWorldFlags();
   // sectorType is already the operating type resolved by SectorsTab.
   const strategyType = sectorType;
-  const label =
-    getOperatingSectorLabel(sectorType) ?? OPERATING_SECTOR_TYPE_LABELS[sectorType] ?? sectorType;
+  const label = OPERATING_SECTOR_TYPE_LABELS[sectorType] ?? sectorType;
   const strategies: SectorStrategy[] = getSectorStrategies(
     strategyType,
     mediaOperatingModelsEnabled,
-    null,
     preset
   );
 

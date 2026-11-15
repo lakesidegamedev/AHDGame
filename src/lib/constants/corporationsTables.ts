@@ -543,7 +543,6 @@ export const SECTOR_RISK_PREMIUM: Record<string, number> = {
   chemical_industries: 0.05,
   healthcare: 0.05,
   retail: 0.04,
-  manufacturing_vehicles: 0.05,
   technology: 0.06,
   energy: 0.06,
   agriculture: 0.03,
@@ -551,7 +550,6 @@ export const SECTOR_RISK_PREMIUM: Record<string, number> = {
   construction: 0.04,
   defense: 0.04,
   telecommunications: 0.04,
-  media_entertainment: 0.06,
   logistics: 0.04,
   extraction: 0.06,
   default: 0.05,
@@ -570,11 +568,7 @@ export const WORKFORCE_SKILL_SECTORS = new Set<OperatingSectorType>([
 ]);
 
 /** Sectors affected by crime rate (foot traffic, theft, vandalism risk) */
-export const CRIME_RATE_SECTORS = new Set<OperatingSectorType>([
-  "retail",
-  "real_estate",
-  "media_entertainment",
-]);
+export const CRIME_RATE_SECTORS = new Set<OperatingSectorType>(["retail", "real_estate"]);
 
 /** Sectors affected by broadband access (connectivity-dependent operations) */
 export const BROADBAND_SECTORS = new Set<OperatingSectorType>([
@@ -589,7 +583,6 @@ export const ROAD_CONDITION_SECTORS = new Set<OperatingSectorType>([
   "manufacturing",
   "retail",
   "agriculture",
-  "manufacturing_vehicles",
   "construction",
   "logistics",
   "extraction",
@@ -600,7 +593,6 @@ export const CARBON_EMISSIONS_SECTORS = new Set<OperatingSectorType>([
   "energy",
   "chemical_industries",
   "manufacturing",
-  "manufacturing_vehicles",
   "extraction",
 ]);
 

@@ -4,7 +4,6 @@
  * 24 operating turns before automatic disposal can resume.
  */
 import { CAPACITY_BUILD_TURNS } from "@/lib/constants/capacityEconomy";
-import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
 import type { CorporateSector } from "@/lib/db/types";
 
 export const NPP_NEW_SECTOR_OPERATING_GRACE_TURNS = 24;
@@ -17,8 +16,6 @@ export function isNppDivestmentProtected(
     | "plantsStartTurn"
     | "nppFoundedTurn"
     | "sectorType"
-    | "industryModel"
-    | "mediaDiscriminator"
   >,
   turn: number
 ): boolean {
@@ -30,11 +27,7 @@ export function isNppDivestmentProtected(
   // Legacy sectors without a plants start turn retain their existing policy.
   if (start == null) return false;
   if (!Number.isFinite(start) || !Number.isFinite(turn)) return true;
-  const type = getOperatingSectorType(
-    sector.sectorType,
-    sector.industryModel,
-    sector.mediaDiscriminator
-  );
+  const type = sector.sectorType;
   const buildTurns = sector.plantsStartTurn != null ? CAPACITY_BUILD_TURNS(type, true) : 0;
   return turn < start + buildTurns + NPP_NEW_SECTOR_OPERATING_GRACE_TURNS;
 }

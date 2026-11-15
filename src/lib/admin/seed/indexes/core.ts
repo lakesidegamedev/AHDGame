@@ -4,27 +4,14 @@ import type { Db } from "mongodb";
 import { assertUniqueCorporationSequentialIds } from "./assertUniqueCorporationIds";
 import { ensureIndex } from "./helpers";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
-import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
-import type { Document } from "mongodb";
 
 export const CORPORATE_SECTOR_IDENTITY_INDEX_NAME =
-  "corporateSectors_corporation_state_type_models_unique";
+  "corporateSectors_corporation_state_type_unique";
 export const CORPORATE_SECTOR_IDENTITY_INDEX_KEY = {
   corporationId: 1,
   stateId: 1,
   sectorType: 1,
-  industryModel: 1,
-  mediaDiscriminator: 1,
 } as const;
-
-function hasCorporateSectorIdentityIndex(
-  indexes: Array<{ key?: unknown; unique?: boolean }>
-): boolean {
-  const serializedKey = JSON.stringify(CORPORATE_SECTOR_IDENTITY_INDEX_KEY);
-  return indexes.some(
-    (index) => JSON.stringify(index.key ?? {}) === serializedKey && index.unique === true
-  );
-}
 
 // Core identity and lookup indexes on user-facing collections.
 // These are the bare-minimum indexes the app needs to function.
@@ -264,15 +251,6 @@ export async function seedCoreIndexes(db: Db, log: (msg: string) => void) {
     { name: "corporateSectors_stateId" },
     log
   );
-  // Registered startup migration installs the model-aware unique key before
-  // bootstrap reaches this seeder. Do not normalize existing sector documents
-  // here: taxonomy deployment is index-only and must not heal old worlds.
-  const corporateSectorIndexes = await corporateSectorsCollection<Document>(db).indexes();
-  if (!hasCorporateSectorIdentityIndex(corporateSectorIndexes)) {
-    throw new Error(
-      `Required corporate sector identity index ${CORPORATE_SECTOR_IDENTITY_INDEX_NAME} is missing; run registered startup migrations first`
-    );
-  }
   await ensureIndex(
     db,
     "corporateSectors",

@@ -4,8 +4,8 @@
  */
 import { validateProductAllocations, type ProductPlantAllocation } from "./plantAllocations";
 export { validateProductAllocations, type ProductPlantAllocation } from "./plantAllocations";
-import { getOperatingSectorType, SECTOR_STRATEGIES } from "@/lib/constants/sectorStrategies";
-import type { OperatingSectorType, ManufacturingIndustryModel } from "@/lib/constants/corporations";
+import { SECTOR_STRATEGIES } from "@/lib/constants/sectorStrategies";
+import type { OperatingSectorType } from "@/lib/constants/corporations";
 import { getStrategyAvailability } from "@/lib/constants/techTree/strategyAvailability";
 import type { TechLane } from "@/lib/constants/techTree/nodes";
 import { getManufacturingProductKind, MANUFACTURING_PRODUCT_KINDS } from "../manufacturingCatalog";
@@ -14,7 +14,6 @@ export interface ManufacturingPlant {
   sectorId: string;
   corporationId: string;
   sectorType: string;
-  industryModel?: ManufacturingIndustryModel | null;
   strategyId?: string | null;
   capitalStock: number;
   plantCount: number;
@@ -52,7 +51,7 @@ export function legalManufacturingProductKinds(
   const legal = new Set<string>();
   for (const plant of plants) {
     if (!hasRealCapacity(plant)) continue;
-    const operatingType = getOperatingSectorType(plant.sectorType, plant.industryModel);
+    const operatingType = plant.sectorType;
     const strategies = SECTOR_STRATEGIES[operatingType as keyof typeof SECTOR_STRATEGIES];
     const strategy = strategies?.find(
       (candidate) => candidate.id === (plant.strategyId ?? "standard")
@@ -111,13 +110,11 @@ export function isLegalManufacturingProductForPlant(
   if (
     !kind ||
     !hasRealCapacity(plant) ||
-    !kind.sectorTypes.includes(
-      getOperatingSectorType(plant.sectorType, plant.industryModel) as OperatingSectorType
-    )
+    !kind.sectorTypes.includes(plant.sectorType as OperatingSectorType)
   ) {
     return false;
   }
-  const operatingType = getOperatingSectorType(plant.sectorType, plant.industryModel);
+  const operatingType = plant.sectorType;
   const strategy = SECTOR_STRATEGIES[operatingType as keyof typeof SECTOR_STRATEGIES]?.find(
     (candidate) => candidate.id === (plant.strategyId ?? "standard")
   );
@@ -126,7 +123,6 @@ export function isLegalManufacturingProductForPlant(
       ? getStrategyAvailability(
           {
             type: operatingType as OperatingSectorType,
-            industryModel: plant.industryModel,
             unlockedTechNodeIds: options.unlockedTechNodeIds
               ? [...options.unlockedTechNodeIds]
               : undefined,

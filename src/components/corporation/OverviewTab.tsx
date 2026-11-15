@@ -3,7 +3,6 @@
 import { consolidateSiteStatements } from "@/lib/corporations/rules/siteStatement";
 import { sectorDisplayProfit } from "./sectorSortUtils";
 
-import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
@@ -470,11 +469,7 @@ export default function OverviewTab({
       ? financials.currentGrowthRate
       : null;
   const stateCount = new Set(sectors.map((s) => s.stateId)).size;
-  const primaryType = getOperatingSectorType(
-    corporation.type,
-    corporation.industryModel,
-    corporation.mediaDiscriminator
-  );
+  const primaryType = corporation.type;
   const sectorTones = sectorTypeTones(
     sectors.map((s) => s.sectorType),
     primaryType

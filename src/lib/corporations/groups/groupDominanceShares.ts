@@ -5,10 +5,9 @@
  */
 import type { CorporateSector } from "@/lib/db/types";
 
-type ShareSector = Pick<
-  CorporateSector,
-  "_id" | "corporationId" | "stateId" | "sectorType" | "industryModel" | "mediaDiscriminator"
-> & { countryId?: string | null };
+type ShareSector = Pick<CorporateSector, "_id" | "corporationId" | "stateId" | "sectorType"> & {
+  countryId?: string | null;
+};
 
 export interface GroupDominanceShares {
   /** sectorId -> the owning group's combined share of the sector's (state, market) cell, percent. */
@@ -31,18 +30,8 @@ export function buildGroupDominanceShares(args: {
     const corpId = s.corporationId.toString();
     return args.rootByCorpId.get(corpId) ?? corpId;
   };
-  const localKey = (s: ShareSector) =>
-    [rootOf(s), s.stateId, s.sectorType, s.industryModel ?? "", s.mediaDiscriminator ?? ""].join(
-      "|"
-    );
-  const nationalKey = (s: ShareSector) =>
-    [
-      rootOf(s),
-      args.countryOf(s),
-      s.sectorType,
-      s.industryModel ?? "",
-      s.mediaDiscriminator ?? "",
-    ].join("|");
+  const localKey = (s: ShareSector) => [rootOf(s), s.stateId, s.sectorType].join("|");
+  const nationalKey = (s: ShareSector) => [rootOf(s), args.countryOf(s), s.sectorType].join("|");
 
   const localByCell = new Map<string, number>();
   const nationalByKey = new Map<string, number>();

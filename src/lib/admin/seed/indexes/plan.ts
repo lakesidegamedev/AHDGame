@@ -1,6 +1,5 @@
 import type { CreateIndexesOptions, Db, IndexSpecification } from "mongodb";
 import { seedIndexes } from "../seedIndexes";
-import { CORPORATE_SECTOR_IDENTITY_INDEX_KEY, CORPORATE_SECTOR_IDENTITY_INDEX_NAME } from "./core";
 
 /** One index `seedIndexes` creates, as captured without touching a database. */
 export type SeedIndexPlanEntry = {
@@ -23,24 +22,9 @@ export type SeedIndexPlanEntry = {
 export async function collectSeedIndexPlan(): Promise<SeedIndexPlanEntry[]> {
   const plan: SeedIndexPlanEntry[] = [];
   const recorded = (collection: string) => {
-    const indexes = plan
+    return plan
       .filter((entry) => entry.collection === collection)
       .map((entry) => ({ v: 2, key: entry.key, name: entry.options.name, ...entry.options }));
-    // Model the registered startup migration prerequisite without running data
-    // migrations in this recording database. The seeder still records its own
-    // ensureIndex call, so the guard remains part of the reconciliation plan.
-    if (
-      collection === "corporateSectors" &&
-      !indexes.some((index) => index.name === CORPORATE_SECTOR_IDENTITY_INDEX_NAME)
-    ) {
-      indexes.push({
-        v: 2,
-        key: CORPORATE_SECTOR_IDENTITY_INDEX_KEY,
-        name: CORPORATE_SECTOR_IDENTITY_INDEX_NAME,
-        unique: true,
-      });
-    }
-    return indexes;
   };
   const emptyCursor = () => {
     const cursor = {

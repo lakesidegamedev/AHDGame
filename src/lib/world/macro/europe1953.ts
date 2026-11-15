@@ -50,7 +50,7 @@ export const YUGOSLAVIA_ENTITY_ID = "YU";
 /** Matches sectorSeedWeights1953 ES (Franco autarky → Pact of Madrid 1953). */
 const ES_WEIGHTS: Partial<Record<OperatingSectorType, number>> = {
   agriculture: 25,
-  manufacturing: 18,
+  manufacturing: 19,
   construction: 10,
   energy: 10,
   extraction: 6, // Vizcaya iron; Río Tinto
@@ -60,11 +60,9 @@ const ES_WEIGHTS: Partial<Record<OperatingSectorType, number>> = {
   real_estate: 3,
   defense: 3,
   telecommunications: 2,
-  media: 2,
+  media: 3,
   healthcare: 2,
-  manufacturing_vehicles: 1, // SEAT founded 1950
   chemical_industries: 1,
-  media_entertainment: 1,
   technology: 0,
 };
 

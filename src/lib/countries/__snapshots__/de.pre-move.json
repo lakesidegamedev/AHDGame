@@ -234,9 +234,8 @@
   "COUNTRY_SECTOR_WEIGHTS_1953": {
     "shape": "country-first",
     "value": {
-      "manufacturing": 32,
+      "manufacturing": 40,
       "construction": 12,
-      "manufacturing_vehicles": 8,
       "chemical_industries": 8,
       "energy": 7,
       "retail": 5,
@@ -246,10 +245,9 @@
       "defense": 2,
       "real_estate": 2,
       "telecommunications": 2,
-      "media": 2,
+      "media": 3,
       "healthcare": 2,
       "extraction": 2,
-      "media_entertainment": 1,
       "technology": 0
     }
   },
@@ -1299,7 +1297,6 @@
     "value": {
       "1953": {
         "manufacturing": "IG Metall",
-        "manufacturing_vehicles": "IG Metall",
         "chemical_industries": "IG Chemie-Papier-Keramik",
         "construction": "IG Bau-Steine-Erden",
         "energy": "IG Bergbau",
@@ -1311,14 +1308,12 @@
         "technology": "IG Metall",
         "financial": "Gewerkschaft Handel, Banken und Versicherungen",
         "telecommunications": "Deutsche Postgewerkschaft",
-        "media_entertainment": "Deutsche Angestellten-Gewerkschaft",
         "defense": "IG Metall",
         "agriculture": "Gewerkschaft Gartenbau, Land- und Forstwirtschaft",
         "real_estate": "IG Bau-Steine-Erden"
       },
       "1979": {
         "manufacturing": "IG Metall",
-        "manufacturing_vehicles": "IG Metall",
         "chemical_industries": "IG Chemie-Papier-Keramik",
         "construction": "IG Bau-Steine-Erden",
         "energy": "IG Bergbau und Energie",
@@ -1330,14 +1325,12 @@
         "technology": "IG Metall",
         "financial": "Gewerkschaft Handel, Banken und Versicherungen",
         "telecommunications": "Deutsche Postgewerkschaft",
-        "media_entertainment": "Deutsche Angestellten-Gewerkschaft",
         "defense": "IG Metall",
         "agriculture": "Gewerkschaft Gartenbau, Land- und Forstwirtschaft",
         "real_estate": "IG Bau-Steine-Erden"
       },
       "1991": {
         "manufacturing": "IG Metall",
-        "manufacturing_vehicles": "IG Metall",
         "chemical_industries": "IG Chemie-Papier-Keramik",
         "construction": "IG Bau-Steine-Erden",
         "energy": "IG Bergbau und Energie",
@@ -1349,14 +1342,12 @@
         "technology": "IG Metall",
         "financial": "Gewerkschaft Handel, Banken und Versicherungen",
         "telecommunications": "Deutsche Postgewerkschaft",
-        "media_entertainment": "IG Medien",
         "defense": "IG Metall",
         "agriculture": "Gewerkschaft Gartenbau, Land- und Forstwirtschaft",
         "real_estate": "IG Bau-Steine-Erden"
       },
       "1999": {
         "manufacturing": "IG Metall",
-        "manufacturing_vehicles": "IG Metall",
         "chemical_industries": "IG BCE",
         "construction": "IG BAU",
         "energy": "IG BCE",
@@ -1368,14 +1359,12 @@
         "technology": "IG Metall",
         "financial": "Gewerkschaft Handel, Banken und Versicherungen",
         "telecommunications": "Deutsche Postgewerkschaft",
-        "media_entertainment": "IG Medien",
         "defense": "IG Metall",
         "agriculture": "IG BAU",
         "real_estate": "IG BAU"
       },
       "2007": {
         "manufacturing": "IG Metall",
-        "manufacturing_vehicles": "IG Metall",
         "chemical_industries": "IG BCE",
         "construction": "IG BAU",
         "energy": "IG BCE",
@@ -1387,14 +1376,12 @@
         "technology": "IG Metall",
         "financial": "ver.di",
         "telecommunications": "ver.di",
-        "media_entertainment": "ver.di",
         "defense": "IG Metall",
         "agriculture": "IG BAU",
         "real_estate": "IG BAU"
       },
       "2019": {
         "manufacturing": "IG Metall",
-        "manufacturing_vehicles": "IG Metall",
         "chemical_industries": "IG BCE",
         "construction": "IG BAU",
         "energy": "IG BCE",
@@ -1406,14 +1393,12 @@
         "technology": "IG Metall",
         "financial": "ver.di",
         "telecommunications": "ver.di",
-        "media_entertainment": "ver.di",
         "defense": "IG Metall",
         "agriculture": "IG BAU",
         "real_estate": "IG BAU"
       },
       "2023": {
         "manufacturing": "IG Metall",
-        "manufacturing_vehicles": "IG Metall",
         "chemical_industries": "IG BCE",
         "construction": "IG BAU",
         "energy": "IG BCE",
@@ -1425,14 +1410,12 @@
         "technology": "IG Metall",
         "financial": "ver.di",
         "telecommunications": "ver.di",
-        "media_entertainment": "ver.di",
         "defense": "IG Metall",
         "agriculture": "IG BAU",
         "real_estate": "IG BAU"
       },
       "2027": {
         "manufacturing": "IG Metall",
-        "manufacturing_vehicles": "IG Metall",
         "chemical_industries": "IG BCE",
         "construction": "IG BAU",
         "energy": "IG BCE",
@@ -1444,7 +1427,6 @@
         "technology": "IG Metall",
         "financial": "ver.di",
         "telecommunications": "ver.di",
-        "media_entertainment": "ver.di",
         "defense": "IG Metall",
         "agriculture": "IG BAU",
         "real_estate": "IG BAU"
@@ -4039,8 +4021,7 @@
   "COUNTRY_SECTOR_WEIGHTS": {
     "shape": "country-first",
     "value": {
-      "manufacturing": 14,
-      "manufacturing_vehicles": 11,
+      "manufacturing": 25,
       "chemical_industries": 9,
       "real_estate": 9,
       "financial": 8,
@@ -4050,10 +4031,9 @@
       "healthcare": 6,
       "retail": 5,
       "energy": 4,
-      "media": 3,
+      "media": 5,
       "defense": 3,
       "telecommunications": 3,
-      "media_entertainment": 2,
       "agriculture": 1,
       "extraction": 1
     }
@@ -4061,8 +4041,7 @@
   "COUNTRY_SECTOR_WEIGHTS_1979": {
     "shape": "country-first",
     "value": {
-      "manufacturing": 28,
-      "manufacturing_vehicles": 10,
+      "manufacturing": 38,
       "chemical_industries": 8,
       "energy": 7,
       "construction": 7,
@@ -4076,15 +4055,13 @@
       "extraction": 2,
       "telecommunications": 2,
       "technology": 1,
-      "media": 1,
-      "media_entertainment": 1
+      "media": 2
     }
   },
   "COUNTRY_SECTOR_WEIGHTS_1991": {
     "shape": "country-first",
     "value": {
-      "manufacturing": 22,
-      "manufacturing_vehicles": 11,
+      "manufacturing": 33,
       "chemical_industries": 11,
       "construction": 8,
       "real_estate": 8,
@@ -4094,10 +4071,9 @@
       "energy": 5,
       "logistics": 4,
       "defense": 3,
-      "media": 2,
+      "media": 3,
       "technology": 3,
       "telecommunications": 2,
-      "media_entertainment": 1,
       "agriculture": 1,
       "extraction": 1
     }
@@ -4112,7 +4088,7 @@
   },
   "DEFAULT_STRATEGIC_SECTORS": {
     "shape": "country-first",
-    "value": ["manufacturing_vehicles", "energy"]
+    "value": ["manufacturing", "energy"]
   },
   "DEFENSE_POSITION_BY_COUNTRY": {
     "shape": "country-first",

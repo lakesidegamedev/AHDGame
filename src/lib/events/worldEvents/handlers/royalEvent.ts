@@ -28,7 +28,7 @@ registerEventHandler({
             { type: "approvalDelta", delta: 3 },
             {
               type: "sectorDemandModifier",
-              sectorType: "media_entertainment",
+              sectorType: "media",
               pct: 6,
               durationTurns: 6,
             },
@@ -49,7 +49,7 @@ registerEventHandler({
             { type: "approvalDelta", delta: 2 },
             {
               type: "sectorDemandModifier",
-              sectorType: "media_entertainment",
+              sectorType: "media",
               pct: 5,
               durationTurns: 6,
             },
@@ -70,7 +70,7 @@ registerEventHandler({
             { type: "approvalDelta", delta: 1 },
             {
               type: "sectorDemandModifier",
-              sectorType: "media_entertainment",
+              sectorType: "media",
               pct: 2,
               durationTurns: 3,
             },

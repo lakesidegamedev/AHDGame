@@ -1,9 +1,4 @@
-import {
-  operatingSectorFilter,
-  operatingSectorIdentity,
-  corporationTypeOfLane,
-  type OperatingSectorType,
-} from "@/lib/constants/corporations";
+import { type OperatingSectorType } from "@/lib/constants/corporations";
 import type { Db } from "mongodb";
 import { recordCorporationExit } from "@/lib/corporations/exits/recordCorporationExit";
 import { ObjectId } from "mongodb";
@@ -85,7 +80,7 @@ export async function splitOffSectorType(db: Db, params: SplitOffParams): Promis
   const sectors =
     fromIds.length > 0
       ? await corporateSectorsCollection(db)
-          .find({ corporationId: { $in: fromIds }, ...operatingSectorFilter(params.sectorType) })
+          .find({ corporationId: { $in: fromIds }, sectorType: params.sectorType })
           .toArray()
       : [];
   // Financed sites move with their construction loans; the split-off becomes
@@ -123,13 +118,7 @@ export async function splitOffSectorType(db: Db, params: SplitOffParams): Promis
       // PRIMARY NatCorp (a sovereign issuer) but wrong for a producing split-off:
       // `corporation.type` drives expandSector/buildCapacity defaults and is read
       // by applyPriceMultipliers, so the default mislabels every split-off.
-      type: corporationTypeOfLane(params.sectorType),
-      ...(operatingSectorIdentity(params.sectorType).industryModel
-        ? { industryModel: operatingSectorIdentity(params.sectorType).industryModel }
-        : {}),
-      ...(operatingSectorIdentity(params.sectorType).mediaDiscriminator
-        ? { mediaDiscriminator: operatingSectorIdentity(params.sectorType).mediaDiscriminator }
-        : {}),
+      type: params.sectorType,
       isPrimaryNationalCorporation: false,
       assignedSectorTypes: [params.sectorType],
     });

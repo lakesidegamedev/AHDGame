@@ -55,10 +55,8 @@ const JO_WEIGHTS: Partial<Record<OperatingSectorType, number>> = {
   healthcare: 3,
   real_estate: 2,
   telecommunications: 1,
-  media: 1,
-  media_entertainment: 1,
+  media: 2,
   chemical_industries: 1,
-  manufacturing_vehicles: 0,
   technology: 0,
 };
 
@@ -76,10 +74,8 @@ const AF_WEIGHTS: Partial<Record<OperatingSectorType, number>> = {
   financial: 2,
   real_estate: 2,
   telecommunications: 1,
-  media: 1,
-  media_entertainment: 1,
+  media: 2,
   chemical_industries: 1,
-  manufacturing_vehicles: 0,
   technology: 0,
 };
 
@@ -96,11 +92,9 @@ const YE_WEIGHTS: Partial<Record<OperatingSectorType, number>> = {
   healthcare: 2,
   financial: 1,
   real_estate: 1,
-  media: 1,
-  media_entertainment: 1,
+  media: 2,
   telecommunications: 1,
   chemical_industries: 0,
-  manufacturing_vehicles: 0,
   technology: 0,
 };
 
@@ -119,9 +113,7 @@ const MM_WEIGHTS: Partial<Record<OperatingSectorType, number>> = {
   chemical_industries: 1,
   real_estate: 1,
   telecommunications: 1,
-  media: 1,
-  media_entertainment: 1,
-  manufacturing_vehicles: 0,
+  media: 2,
   technology: 0,
 };
 
@@ -138,11 +130,9 @@ const LA_WEIGHTS: Partial<Record<OperatingSectorType, number>> = {
   healthcare: 2,
   financial: 1,
   real_estate: 1,
-  media: 1,
-  media_entertainment: 1,
+  media: 2,
   telecommunications: 1,
   chemical_industries: 0,
-  manufacturing_vehicles: 0,
   technology: 0,
 };
 
@@ -152,18 +142,16 @@ const KH_WEIGHTS: Partial<Record<OperatingSectorType, number>> = {
   retail: 10,
   logistics: 8,
   construction: 7,
-  manufacturing: 7,
+  manufacturing: 8,
   extraction: 6, // timber; rubber via agri
   defense: 5,
   energy: 3,
   healthcare: 3,
   financial: 2,
   real_estate: 2,
-  media: 1,
-  media_entertainment: 1,
+  media: 2,
   telecommunications: 1,
   chemical_industries: 1,
-  manufacturing_vehicles: 1,
   technology: 0,
 };
 
@@ -182,16 +170,14 @@ const TH_WEIGHTS: Partial<Record<OperatingSectorType, number>> = {
   chemical_industries: 2,
   real_estate: 1,
   telecommunications: 1,
-  media: 1,
-  media_entertainment: 1,
-  manufacturing_vehicles: 0,
+  media: 2,
   technology: 0,
 };
 
 const IN_WEIGHTS: Partial<Record<OperatingSectorType, number>> = {
   // Nehru republic: First Plan (1951–56); textiles, steel plants starting, monsoon agri.
   agriculture: 42,
-  manufacturing: 16,
+  manufacturing: 17,
   construction: 8,
   logistics: 6,
   retail: 6,
@@ -203,9 +189,7 @@ const IN_WEIGHTS: Partial<Record<OperatingSectorType, number>> = {
   chemical_industries: 2,
   real_estate: 1,
   telecommunications: 1,
-  media: 1,
-  media_entertainment: 1,
-  manufacturing_vehicles: 1,
+  media: 2,
   technology: 0,
 };
 
@@ -223,10 +207,8 @@ const PK_WEIGHTS: Partial<Record<OperatingSectorType, number>> = {
   healthcare: 2,
   real_estate: 1,
   telecommunications: 1,
-  media: 1,
-  media_entertainment: 1,
+  media: 2,
   chemical_industries: 1,
-  manufacturing_vehicles: 0,
   technology: 0,
 };
 
@@ -244,10 +226,8 @@ const IR_WEIGHTS: Partial<Record<OperatingSectorType, number>> = {
   healthcare: 2,
   real_estate: 2,
   telecommunications: 1,
-  media: 1,
-  media_entertainment: 1,
+  media: 2,
   chemical_industries: 1,
-  manufacturing_vehicles: 0,
   technology: 0,
 };
 
@@ -265,10 +245,8 @@ const IQ_WEIGHTS: Partial<Record<OperatingSectorType, number>> = {
   healthcare: 2,
   real_estate: 2,
   telecommunications: 1,
-  media: 1,
-  media_entertainment: 1,
+  media: 2,
   chemical_industries: 1,
-  manufacturing_vehicles: 0,
   technology: 0,
 };
 
@@ -286,10 +264,8 @@ const EG_WEIGHTS: Partial<Record<OperatingSectorType, number>> = {
   healthcare: 2,
   real_estate: 2,
   telecommunications: 1,
-  media: 1,
-  media_entertainment: 1,
+  media: 2,
   chemical_industries: 1,
-  manufacturing_vehicles: 0,
   technology: 0,
 };
 
@@ -308,9 +284,7 @@ const SA_WEIGHTS: Partial<Record<OperatingSectorType, number>> = {
   real_estate: 1,
   telecommunications: 1,
   media: 1,
-  media_entertainment: 0,
   chemical_industries: 0,
-  manufacturing_vehicles: 0,
   technology: 0,
 };
 
@@ -328,10 +302,8 @@ const SY_WEIGHTS: Partial<Record<OperatingSectorType, number>> = {
   healthcare: 2,
   real_estate: 2,
   telecommunications: 1,
-  media: 1,
-  media_entertainment: 1,
+  media: 2,
   chemical_industries: 1,
-  manufacturing_vehicles: 0,
   technology: 0,
 };
 
@@ -349,10 +321,8 @@ const ID_WEIGHTS: Partial<Record<OperatingSectorType, number>> = {
   healthcare: 2,
   real_estate: 1,
   telecommunications: 1,
-  media: 1,
-  media_entertainment: 1,
+  media: 2,
   chemical_industries: 1,
-  manufacturing_vehicles: 0,
   technology: 0,
 };
 
@@ -372,8 +342,6 @@ const KP_WEIGHTS: Partial<Record<OperatingSectorType, number>> = {
   real_estate: 1,
   telecommunications: 1,
   media: 1,
-  media_entertainment: 0,
-  manufacturing_vehicles: 0,
   technology: 0,
 };
 
@@ -391,10 +359,8 @@ const KR_WEIGHTS: Partial<Record<OperatingSectorType, number>> = {
   healthcare: 2,
   real_estate: 1,
   telecommunications: 1,
-  media: 1,
-  media_entertainment: 1,
+  media: 2,
   chemical_industries: 1,
-  manufacturing_vehicles: 0,
   technology: 0,
 };
 
@@ -414,8 +380,6 @@ const NVN_WEIGHTS: Partial<Record<OperatingSectorType, number>> = {
   real_estate: 1,
   telecommunications: 1,
   media: 1,
-  media_entertainment: 0,
-  manufacturing_vehicles: 0,
   technology: 0,
 };
 
@@ -433,10 +397,8 @@ const SVN_WEIGHTS: Partial<Record<OperatingSectorType, number>> = {
   healthcare: 2,
   real_estate: 2,
   telecommunications: 1,
-  media: 1,
-  media_entertainment: 1,
+  media: 2,
   chemical_industries: 1,
-  manufacturing_vehicles: 0,
   technology: 0,
 };
 

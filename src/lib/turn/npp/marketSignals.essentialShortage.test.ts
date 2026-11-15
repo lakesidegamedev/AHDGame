@@ -171,7 +171,7 @@ describe("governed fragile-market supply routing", () => {
     const hc = ratios({ healthcare_services: 5.2 });
     expect(fragileMarketCommodityForSector("healthcare", "US", hc)).toBe("healthcare_services");
     const ads = ratios({ advertising: 2.0 });
-    expect(fragileMarketCommodityForSector("media_entertainment", "US", ads)).toBe("advertising");
+    expect(fragileMarketCommodityForSector("media", "US", ads)).toBe("advertising");
   });
 
   it("keeps healthcare entry disarmed below the critical-shortage bar (#2088)", () => {

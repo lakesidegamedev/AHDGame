@@ -209,7 +209,7 @@ describe("POST /api/country/[code]/legislature/bills — trade bills", () => {
         {
           type: "tariff",
           scopeType: "sector",
-          targetSectorType: "manufacturing_vehicles",
+          targetSectorType: "manufacturing",
           rate: 20,
         },
       ],

@@ -19,8 +19,6 @@ type SectorFacts = Pick<
   | "_id"
   | "corporationId"
   | "sectorType"
-  | "industryModel"
-  | "mediaDiscriminator"
   | "strategyId"
   | "capitalStock"
   | "capacityBookAnchor"
@@ -137,8 +135,6 @@ export function prepareProducerSector(input: {
     recessionCapacityFactor: input.recessionCapacityFactor,
     plantType: {
       sectorType: sector.sectorType,
-      industryModel: sector.industryModel,
-      mediaDiscriminator: sector.mediaDiscriminator,
       // Plant size follows the recipe; a vehicle strategy builds vehicle plants.
       strategyId: sector.strategyId,
     },

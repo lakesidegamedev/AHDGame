@@ -2,13 +2,11 @@ import { describe, expect, it } from "vitest";
 import { buildLocalRevenueShareLookup } from "./reinvestCandidatePool";
 import { computeMarketSharePercent } from "@/lib/corporations/marketShare";
 
-const sector = (stateId: string, sectorType: string, revenue: number, industryModel?: string) =>
+const sector = (stateId: string, sectorType: string, revenue: number) =>
   ({
     stateId,
     sectorType,
     revenue,
-    industryModel: industryModel ?? null,
-    mediaDiscriminator: null,
   }) as never;
 
 describe("buildLocalRevenueShareLookup", () => {
@@ -24,11 +22,9 @@ describe("buildLocalRevenueShareLookup", () => {
   it("gives a sole producer the whole bucket and keeps buckets independent", () => {
     const solo = sector("TX", "retail", 50);
     const other = sector("TX", "manufacturing", 999);
-    const vehicles = sector("TX", "manufacturing", 1, "vehicles");
-    const lookup = buildLocalRevenueShareLookup([solo, other, vehicles]);
+    const lookup = buildLocalRevenueShareLookup([solo, other]);
     expect(lookup(solo)).toBe(100);
     expect(lookup(other)).toBe(100);
-    expect(lookup(vehicles)).toBe(100);
   });
 
   it("reads zero for a bucket with no revenue", () => {

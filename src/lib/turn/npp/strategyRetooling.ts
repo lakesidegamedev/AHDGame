@@ -1,16 +1,12 @@
 import type { ObjectId } from "mongodb";
 import type { Corporation, CorporateSector } from "@/lib/db/types";
 import type { CorporationType, OperatingSectorType } from "@/lib/constants/corporations";
-import {
-  getOperatingSectorType,
-  SECTOR_STRATEGIES,
-  STRATEGY_COOLDOWN_TURNS,
-} from "@/lib/constants/sectorStrategies";
+import { SECTOR_STRATEGIES, STRATEGY_COOLDOWN_TURNS } from "@/lib/constants/sectorStrategies";
 import { getStrategyAvailability } from "@/lib/constants/techTree/strategyAvailability";
 import type { TechDiffusionSnapshot } from "@/lib/constants/techTree/diffusion";
 import { retoolRescaleFields } from "@/lib/corporations/retoolRescale";
 import type { CommodityPriceRatioFn } from "@/lib/turn/npp/marketSignals";
-import { isObsoleteNppParentStrategy, sunsetRepairTarget } from "./rules/obsoleteStrategyRepair";
+import { sunsetRepairTarget } from "./rules/obsoleteStrategyRepair";
 import { strategyPriceScore } from "./rules/foundingRecipe";
 import { isParentDirectedStrategyProtected } from "./rules/parentDirectedStrategy";
 
@@ -77,11 +73,7 @@ export function chooseNppStrategyRetool(ctx: StrategyRetoolContext): StrategyRet
     // A controlling parent's CEO chose this strategy; the AI leaves it alone.
     if (isParentDirectedStrategyProtected(sector, ctx.turn)) continue;
 
-    const operatingType = getOperatingSectorType(
-      sector.sectorType,
-      sector.industryModel,
-      sector.mediaDiscriminator
-    );
+    const operatingType = sector.sectorType;
     const strategies = SECTOR_STRATEGIES[operatingType as OperatingSectorType];
     if (!strategies || strategies.length < 2) continue;
     const countryId = sector.countryId ?? ctx.corp.countryId;
@@ -94,39 +86,9 @@ export function chooseNppStrategyRetool(ctx: StrategyRetoolContext): StrategyRet
     };
     const currentId = sector.strategyId ?? "standard";
     const current = strategies.find((strategy) => strategy.id === currentId);
-    if (!current) {
-      if (
-        !best?.corrective &&
-        isObsoleteNppParentStrategy(ctx.corp.ceoType, operatingType, currentId)
-      ) {
-        const standard = strategies.find((strategy) => strategy.id === "standard");
-        const isOpen = (candidate: (typeof strategies)[number]) =>
-          !getStrategyAvailability(
-            ctx.corp,
-            candidate,
-            ctx.currentYear,
-            ctx.techTreesEnabled,
-            world
-          ).locked;
-        // A retired standard sends the repair on to standard's successor.
-        const target =
-          standard && isOpen(standard)
-            ? standard
-            : standard && ctx.techTreesEnabled
-              ? sunsetRepairTarget(standard, strategies, ctx.currentYear, isOpen, (candidate) =>
-                  strategyPriceScore(candidate, countryId, ctx.priceRatioOf)
-                )
-              : null;
-        if (target) {
-          // Keep the obsolete source id throughout the normal blend. Replacing
-          // its fallback immediately would change paid capacity's unit basis.
-          best = { sector, toStrategyId: target.id, advantage: 0, corrective: true };
-        }
-      }
-      continue;
-    }
+    if (!current) continue;
     // A retired method converts to its best open successor, ahead of any
-    // price-seeking retool (the obsolete-id repair's corrective path).
+    // price-seeking retool.
     if (ctx.techTreesEnabled) {
       const successor = sunsetRepairTarget(
         current,
@@ -188,8 +150,6 @@ export function chooseNppStrategyRetool(ctx: StrategyRetoolContext): StrategyRet
       transitionCooldownUntilTurn: ctx.turn + STRATEGY_COOLDOWN_TURNS,
       ...retoolRescaleFields({
         sectorType: best.sector.sectorType as CorporationType,
-        industryModel: best.sector.industryModel,
-        mediaDiscriminator: best.sector.mediaDiscriminator,
         fromStrategyId,
         toStrategyId: best.toStrategyId,
         plantsEnabled: ctx.plantsEnabled,

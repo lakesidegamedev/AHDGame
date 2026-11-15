@@ -4,7 +4,7 @@
  * The rules live in rules/foundingRecipe; this binds them to the strategy
  * table and to era and tech gating.
  */
-import { operatingSectorIdentity, type OperatingSectorType } from "@/lib/constants/corporations";
+import { type OperatingSectorType } from "@/lib/constants/corporations";
 import { SECTOR_STRATEGIES, type SectorStrategy } from "@/lib/constants/sectorStrategies";
 import { isDecadeReached } from "@/lib/constants/techTree/decades";
 import { getStrategyAvailability } from "@/lib/constants/techTree/strategyAvailability";
@@ -45,11 +45,8 @@ export function foundingRecipeAvailable(
   countryId?: string
 ): (recipe: SectorStrategy) => boolean {
   const year = world.currentYear ?? 0;
-  const identity = operatingSectorIdentity(lane);
   const newCompany = {
-    type: identity.sectorType as OperatingSectorType,
-    industryModel: identity.industryModel ?? null,
-    mediaDiscriminator: identity.mediaDiscriminator ?? null,
+    type: lane as OperatingSectorType,
     unlockedTechNodeIds: [],
   };
   const sectorResearch = world.sectorResearchByLane?.get(lane);

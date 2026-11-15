@@ -9,7 +9,7 @@
  * sectors, no services, and must organize its way into the industry exactly
  * like an NPP challenger would.
  */
-import { operatingSectorIdentity, type OperatingSectorType } from "@/lib/constants/corporations";
+import { type OperatingSectorType } from "@/lib/constants/corporations";
 import { loadCampaignCurrencyRates } from "@/lib/campaigns/campaignCurrency";
 import type { Db } from "mongodb";
 import { ObjectId } from "mongodb";
@@ -104,10 +104,7 @@ export async function foundUnion(
   // fine in a different country or a different industry, but two rival
   // unions organizing the same industry in the same country cannot share one.
   const existingNames = await unionsCollection(db)
-    .find(
-      { countryId: input.countryId, ...operatingSectorIdentity(input.sectorType) },
-      { projection: { name: 1 } }
-    )
+    .find({ countryId: input.countryId, sectorType: input.sectorType }, { projection: { name: 1 } })
     .toArray();
   const nameLower = name.toLowerCase();
   if (existingNames.some((u) => (u.name ?? "").trim().toLowerCase() === nameLower)) {
@@ -199,7 +196,7 @@ export async function foundUnion(
     const insertResult = await unionsCollection(db).insertOne({
       _id: new ObjectId(),
       countryId: input.countryId,
-      ...operatingSectorIdentity(input.sectorType),
+      sectorType: input.sectorType,
       name,
       ownerId: character._id,
       ownerType: "character",

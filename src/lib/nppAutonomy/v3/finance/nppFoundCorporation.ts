@@ -31,7 +31,7 @@
  * for an NPP who then turns out unable to pay.
  */
 
-import { operatingSectorIdentity, type OperatingSectorType } from "@/lib/constants/corporations";
+import { type OperatingSectorType } from "@/lib/constants/corporations";
 import { ObjectId, type Db } from "mongodb";
 import type { NPP } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
@@ -115,16 +115,13 @@ export async function nppFoundCorporation(
     return { ok: false, reason: "Insufficient investment capital to found a corporation." };
   }
 
-  const identity = operatingSectorIdentity(lane);
   const name = generateNppCorpName(countryId, lane, []);
   let spawnResult;
   try {
     spawnResult = await spawnNppCorporation(db, {
       name,
       realName: "sector",
-      type: identity.sectorType,
-      industryModel: identity.industryModel,
-      mediaDiscriminator: identity.mediaDiscriminator,
+      type: lane,
       countryId,
       headquartersState: npp.homeState,
       nppPartyId: npp.party,
@@ -172,7 +169,7 @@ export async function nppFoundCorporation(
     ok: true,
     corporationId: spawnResult.corporationId,
     name: spawnResult.name,
-    type: identity.sectorType,
+    type: lane,
     foundingFee: foundingFeeLocal,
     foundingFeeAnchor,
     investmentCashAnchor: deducted.nppInvestmentCashAnchor ?? 0,

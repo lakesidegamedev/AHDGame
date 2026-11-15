@@ -43,8 +43,7 @@ const sectorWeightsBase = {
   chemical_industries: 5,
   extraction: 5,
   agriculture: 4,
-  media: 3,
-  media_entertainment: 2,
+  media: 5,
   defense: 2,
 };
 // No REP_ECON row; the folder omits `repEcon` rather than defaulting it.

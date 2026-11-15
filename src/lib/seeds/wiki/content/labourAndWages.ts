@@ -37,7 +37,6 @@ Profit changes by labour share x (level - 1) x payroll basis, so on a full run a
 | Financial | 32.5% | 1.7 |
 | Healthcare | 27.7% | 1.3 |
 | Media | 28.0% | 1.1 |
-| Entertainment (media line) | 28.0% | 0.85 |
 | Construction | 26.4% | 0.9 |
 | Defense | 24.0% | 1.3 |
 | Telecommunications | 20.0% | 1.2 |

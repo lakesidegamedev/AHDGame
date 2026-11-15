@@ -16,7 +16,6 @@ import { uniform } from "@/lib/seeds/reference/uniformUnionName";
 
 export const JP_UNION_NAMES_MODERN: Partial<Record<OperatingSectorType, string>> = {
   manufacturing: "Japanese Trade Union Confederation",
-  manufacturing_vehicles: "Confederation of Japan Automobile Workers' Unions",
   chemical_industries: "UA Zensen",
   construction: "National Federation of Construction Workers' Unions",
   energy: "Japanese Federation of Electric Wire and Electric Power Workers' Unions",
@@ -28,7 +27,6 @@ export const JP_UNION_NAMES_MODERN: Partial<Record<OperatingSectorType, string>>
   technology: "UA Zensen",
   financial: "National Federation of Finance Industry Workers' Unions",
   telecommunications: "UA Zensen",
-  media_entertainment: "UA Zensen",
   defense: "Japan Federation of Aviation Industry Workers' Unions",
   agriculture: "UA Zensen",
   real_estate: "UA Zensen",
@@ -41,7 +39,6 @@ export const JP_UNION_NAMES_2007: Partial<Record<OperatingSectorType, string>> =
   media: "UI Zensen",
   technology: "UI Zensen",
   telecommunications: "UI Zensen",
-  media_entertainment: "UI Zensen",
   agriculture: "UI Zensen",
   real_estate: "UI Zensen",
 };
@@ -53,14 +50,12 @@ export const JP_UNION_NAMES_1999: Partial<Record<OperatingSectorType, string>> =
   media: "Zensen Dōmei",
   technology: "Zensen Dōmei",
   telecommunications: "Zensen Dōmei",
-  media_entertainment: "Zensen Dōmei",
   agriculture: "Zensen Dōmei",
   real_estate: "Zensen Dōmei",
 };
 
 export const JP_UNION_NAMES_1991: Partial<Record<OperatingSectorType, string>> = {
   manufacturing: "Japanese Trade Union Confederation",
-  manufacturing_vehicles: "Confederation of Japan Automobile Workers' Unions",
   chemical_industries: "Japanese Federation of Synthetic Chemistry Workers' Unions",
   construction: "National Federation of Construction Workers' Unions",
   // Attribution to a single-era energy federation is uncertain; this is the
@@ -78,7 +73,6 @@ export const JP_UNION_NAMES_1991: Partial<Record<OperatingSectorType, string>> =
 
 export const JP_UNION_NAMES_1979: Partial<Record<OperatingSectorType, string>> = {
   manufacturing: "General Council of Trade Unions of Japan",
-  manufacturing_vehicles: "Confederation of Japan Automobile Workers' Unions",
   chemical_industries: "Japanese Federation of Synthetic Chemistry Workers' Unions",
   construction: "National Federation of Construction Workers' Unions",
   energy: "Japanese Federation of Electric Wire and Electric Power Workers' Unions",
@@ -94,7 +88,6 @@ export const JP_UNION_NAMES_1979: Partial<Record<OperatingSectorType, string>> =
 
 export const JP_UNION_NAMES_1953: Partial<Record<OperatingSectorType, string>> = {
   ...uniform("General Council of Trade Unions of Japan"),
-  manufacturing_vehicles: "All Japan Automobile Industry Workers' Union",
   telecommunications: "Japan Telecommunications Workers' Union",
   logistics: "All Japan Seamen's Union",
   extraction: "Japan Coal Miners' Union",

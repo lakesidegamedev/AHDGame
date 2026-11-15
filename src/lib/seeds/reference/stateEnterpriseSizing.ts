@@ -21,7 +21,6 @@ export const COUNTRY_SECTOR_SEED_MULTIPLIER: Partial<
   Record<CountryId, Partial<Record<OperatingSectorType, number>>>
 > = {
   DD: {
-    manufacturing_vehicles: 2,
     construction: 8,
   },
 };

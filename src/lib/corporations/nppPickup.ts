@@ -4,7 +4,6 @@ import type { DefenceContract } from "@/lib/db/types/defenceContract";
 import type { CountryId } from "@/lib/constants/countries";
 import { COUNTRY_CURRENCY_MAP, getSeedCurrencyCode } from "@/lib/constants/currencies";
 import type { CorporationType, OperatingSectorType } from "@/lib/constants/corporations";
-import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
 import { pickupMeasurementBasis, pickupProductionHistory } from "./nppPickup/rules";
 import { capacityRescaleRatio } from "@/lib/constants/capacityEconomy";
 import { createNppCorporationShell } from "@/lib/admin/spawnNppCorporation";
@@ -49,22 +48,14 @@ export interface SectorDisposalResult {
   unitsPickedUp: number;
 }
 
-function laneFilter(
-  sector: Pick<CorporateSector, "sectorType" | "industryModel" | "mediaDiscriminator">
-) {
+function laneFilter(sector: Pick<CorporateSector, "sectorType">) {
   return {
     sectorType: sector.sectorType,
-    industryModel: sector.industryModel ?? null,
-    mediaDiscriminator: sector.mediaDiscriminator ?? null,
   };
 }
 
 function laneOf(sector: CorporateSector): OperatingSectorType {
-  return getOperatingSectorType(
-    sector.sectorType as CorporationType,
-    sector.industryModel,
-    sector.mediaDiscriminator
-  ) as OperatingSectorType;
+  return sector.sectorType as CorporationType as OperatingSectorType;
 }
 
 function builtStock(sector: CorporateSector): number {
@@ -144,9 +135,6 @@ export async function chooseNppPickupReceiver(
     name: chooseNppCorporationName(hostCountry, lane, existingNames, Math.random),
     realName: "sector",
     type: sector.sectorType as CorporationType,
-    industryModel: (sector.industryModel ?? null) as CorporateSector["industryModel"] & null,
-    mediaDiscriminator: (sector.mediaDiscriminator ??
-      null) as CorporateSector["mediaDiscriminator"] & null,
     countryId: hostCountry as CountryId,
     headquartersState: sector.stateId,
     currencyCode,
@@ -182,9 +170,7 @@ export async function creditNppPickup(
     const ratio = capacityRescaleRatio(
       sector.sectorType as CorporationType,
       sector.strategyId,
-      receiver.strategyId,
-      sector.industryModel,
-      sector.mediaDiscriminator
+      receiver.strategyId
     );
     const incomingStock = carved.capitalStock * ratio;
     const merged = mergeSectorPlantFields(readSectorPlantFields(receiver), {
@@ -227,8 +213,6 @@ export async function creditNppPickup(
       countryId: hostCountry as CountryId,
       stateId: sector.stateId,
       sectorType: sector.sectorType,
-      ...(sector.industryModel ? { industryModel: sector.industryModel } : {}),
-      ...(sector.mediaDiscriminator ? { mediaDiscriminator: sector.mediaDiscriminator } : {}),
       targetGrowthRate: 0,
       currentGrowthRate: 0,
       currentGrowthCost: 0,

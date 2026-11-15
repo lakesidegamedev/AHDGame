@@ -50,7 +50,6 @@ const SECTOR_MAP_COLORS: Record<OperatingSectorType, string> = {
   chemical_industries: "#22c55e",
   healthcare: "#f43f5e",
   retail: "#8b5cf6",
-  manufacturing_vehicles: "#0ea5e9",
   technology: "#06b6d4",
   energy: "#eab308",
   agriculture: "#84cc16",
@@ -58,7 +57,6 @@ const SECTOR_MAP_COLORS: Record<OperatingSectorType, string> = {
   construction: "#fb923c",
   defense: "#64748b",
   telecommunications: "#6366f1",
-  media_entertainment: "#ec4899",
   logistics: "#78716c",
   extraction: "#737373",
 };

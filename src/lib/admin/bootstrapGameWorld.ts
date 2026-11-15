@@ -681,24 +681,6 @@ export async function bootstrapGameWorld(options: BootstrapOptions) {
   const log = options.log ?? (() => {});
   const { db } = options;
 
-  // Model and media-lane unique keys must exist before any seed writer creates
-  // overlapping market identities. These migrations also run at hosted startup.
-  const marketIdentityIndexes = MIGRATIONS.filter(
-    (migration) => migration.id === "2026-10-04-media-discriminator-market-indexes"
-  );
-  if (marketIdentityIndexes.length > 0) {
-    // Reset drops the runtime market collections (and their indexes) but keeps
-    // migrationsRun markers. Rebuild these idempotent, metadata-only indexes on
-    // every bootstrap instead of trusting the historical marker to mean the
-    // current collection still exists.
-    await runMigrations(db, {
-      migrations: marketIdentityIndexes,
-      dryRun: false,
-      only: marketIdentityIndexes.map((migration) => migration.id),
-      force: true,
-    });
-  }
-
   // Contain a RECOVERABLE block. Without a run record this is a bare call, so
   // direct callers are unaffected.
   //

@@ -10,8 +10,6 @@ export type MediaProductKindId =
   | "radio_program"
   | "television_series"
   | "cable_program"
-  | "film"
-  | "music_release"
   | "book"
   | "streaming_original";
 
@@ -73,26 +71,6 @@ export const MEDIA_PRODUCT_KINDS: readonly MediaProductKind[] = [
     durations: { development: 5, launch: 4, growth: 12, mature: 24, decline: 10 },
     tail: "syndication",
     technologyNodeName: "Cable Syndication",
-  },
-  {
-    id: "film",
-    modelId: "film_studio",
-    label: "Film",
-    outputCommodities: ["advertising"],
-    coverage: 0.4,
-    durations: { development: 10, launch: 4, growth: 8, mature: 16, decline: 12 },
-    tail: "syndication",
-    technologyNodeName: "Hollywood Studio System",
-  },
-  {
-    id: "music_release",
-    modelId: "music_label",
-    label: "Music release",
-    outputCommodities: ["advertising"],
-    coverage: 0.25,
-    durations: { development: 4, launch: 4, growth: 10, mature: 20, decline: 10 },
-    tail: "backlist",
-    technologyNodeName: "Record Labels",
   },
   {
     id: "book",

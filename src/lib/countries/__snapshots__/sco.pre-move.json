@@ -2001,18 +2001,16 @@
     "value": {
       "real_estate": 14,
       "financial": 13,
-      "manufacturing": 9,
+      "manufacturing": 12,
       "technology": 8,
       "healthcare": 8,
       "retail": 7,
       "construction": 6,
-      "media": 5,
+      "media": 9,
       "chemical_industries": 5,
-      "media_entertainment": 4,
       "telecommunications": 4,
       "logistics": 4,
       "energy": 3,
-      "manufacturing_vehicles": 3,
       "defense": 3,
       "extraction": 3,
       "agriculture": 1
@@ -2025,7 +2023,7 @@
   "COUNTRY_SECTOR_WEIGHTS_1991": {
     "shape": "country-first",
     "value": {
-      "manufacturing": 16,
+      "manufacturing": 20,
       "financial": 11,
       "retail": 9,
       "construction": 8,
@@ -2034,12 +2032,10 @@
       "chemical_industries": 6,
       "energy": 5,
       "defense": 5,
-      "manufacturing_vehicles": 4,
       "extraction": 4,
       "logistics": 3,
       "telecommunications": 3,
-      "media": 4,
-      "media_entertainment": 2,
+      "media": 6,
       "technology": 2,
       "agriculture": 2
     }

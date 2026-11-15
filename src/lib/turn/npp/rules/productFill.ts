@@ -57,3 +57,12 @@ export function gateFill(
   }
   return produced > 0 ? sold / produced : 0;
 }
+
+/**
+ * Whole-receipt sell-through in [0, 1]: sold / produced. A mine sells each of
+ * its resources into a separate market, so one resource selling out says
+ * nothing about the plant: its fill is what the whole run sold.
+ */
+export function wholeSellThrough(produced: number, sold: number): number {
+  return produced > 0 ? Math.max(0, Math.min(1, sold / produced)) : 0;
+}

@@ -85,8 +85,6 @@ export interface AttackCandidate {
     | "_id"
     | "stateId"
     | "sectorType"
-    | "mediaDiscriminator"
-    | "industryModel"
     | "countryId"
     | "revenue"
     | "capitalStock"
@@ -184,8 +182,6 @@ export async function executeNppSectorAttack(
       | "capitalStock"
       | "capacityBookAnchor"
       | "strategyId"
-      | "industryModel"
-      | "mediaDiscriminator"
     >;
     defender: AttackCandidate["defender"];
     currentTurn: number;
@@ -245,8 +241,6 @@ export async function executeNppSectorAttack(
     {
       stateId,
       sectorType: targetSector.sectorType,
-      industryModel: targetSector.industryModel ?? null,
-      mediaDiscriminator: targetSector.mediaDiscriminator ?? null,
       corporationId: attacker._id,
     },
     { projection: { _id: 1 } }
@@ -273,10 +267,6 @@ export async function executeNppSectorAttack(
       countryId: targetSector.countryId,
       stateId,
       sectorType: targetSector.sectorType as CorporationType,
-      ...(targetSector.industryModel ? { industryModel: targetSector.industryModel } : {}),
-      ...(targetSector.mediaDiscriminator
-        ? { mediaDiscriminator: targetSector.mediaDiscriminator }
-        : {}),
       targetGrowthRate: 0,
       currentGrowthRate: 0,
       currentGrowthCost: 0,
@@ -297,8 +287,6 @@ export async function executeNppSectorAttack(
             corporationId: attacker._id,
             stateId,
             sectorType: targetSector.sectorType,
-            industryModel: targetSector.industryModel ?? null,
-            mediaDiscriminator: targetSector.mediaDiscriminator ?? null,
           },
           { $inc: { revenue: captureInAttackerLocal }, $set: { updatedAt: now } }
         );
@@ -643,8 +631,6 @@ export async function runNppCorporateAttacks(
           capacityBookAnchor: 1,
           plantCount: 1,
           strategyId: 1,
-          industryModel: 1,
-          mediaDiscriminator: 1,
         },
       }
     )
@@ -655,7 +641,7 @@ export async function runNppCorporateAttacks(
     const corpKey = s.corporationId.toString();
     if (!sectorsByCorp.has(corpKey)) sectorsByCorp.set(corpKey, []);
     sectorsByCorp.get(corpKey)!.push(s);
-    const marketKey = `${s.stateId}::${s.sectorType}::${s.industryModel ?? ""}::${s.mediaDiscriminator ?? ""}`;
+    const marketKey = `${s.stateId}::${s.sectorType}`;
     if (!sectorsByMarket.has(marketKey)) sectorsByMarket.set(marketKey, []);
     sectorsByMarket.get(marketKey)!.push(s);
   }
@@ -706,17 +692,12 @@ export async function runNppCorporateAttacks(
     const markets = ownSectors.map((s) => ({
       stateId: s.stateId,
       sectorType: s.sectorType,
-      industryModel: s.industryModel ?? null,
-      mediaDiscriminator: s.mediaDiscriminator ?? null,
     }));
 
     // Rival sectors in those markets.
     const rivalSectors: CorporateSector[] = [];
     for (const m of markets) {
-      const bucket =
-        sectorsByMarket.get(
-          `${m.stateId}::${m.sectorType}::${m.industryModel ?? ""}::${m.mediaDiscriminator ?? ""}`
-        ) ?? [];
+      const bucket = sectorsByMarket.get(`${m.stateId}::${m.sectorType}`) ?? [];
       for (const s of bucket) {
         if (!s.corporationId.equals(attacker._id)) rivalSectors.push(s);
       }

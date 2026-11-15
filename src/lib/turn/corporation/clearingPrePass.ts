@@ -21,7 +21,7 @@ import {
   type LoyaltySectorInput,
 } from "./brandLoyaltyTurn";
 import {
-  getEffectiveStrategyRatesForOperatingModel,
+  getEffectiveStrategyRates,
   plannedEconomyMediaSupplyFactor,
 } from "@/lib/constants/sectorStrategies";
 import { isPlannedEconomy } from "@/lib/constants/commandEconomy";
@@ -262,20 +262,14 @@ export function runClearingPrePass(input: ClearingPrePassInput): ClearingPrePass
         );
         const sectorEmbargoSupplyFactor =
           embargoSupplyFactorFor(sector) *
-          plannedEconomyMediaSupplyFactor(
-            sector.sectorType,
-            plannedEconomy,
-            sector.mediaDiscriminator
-          );
+          plannedEconomyMediaSupplyFactor(sector.sectorType, plannedEconomy);
         const militaryRetainedFraction = 1 - freshMilitaryDiversion(sector, turn ?? 0);
-        const baseRates = getEffectiveStrategyRatesForOperatingModel(
+        const baseRates = getEffectiveStrategyRates(
           sector.sectorType,
           sector.strategyId ?? "standard",
           sector.transitionFromStrategyId,
           sector.transitionStartTurn,
           turn ?? 0,
-          sector.industryModel,
-          sector.mediaDiscriminator,
           lookups.preset,
           lookups.hardwareInputReliefStartTurn
         );
@@ -322,7 +316,6 @@ export function runClearingPrePass(input: ClearingPrePassInput): ClearingPrePass
             sectorId: sector._id.toString(),
             corporationId: corpId,
             sectorType: sector.sectorType,
-            industryModel: sector.industryModel,
             strategyId: sector.strategyId,
             capitalStock: sector.capitalStock ?? 0,
             plantCount: sector.plantCount ?? 0,
@@ -396,8 +389,6 @@ export function runClearingPrePass(input: ClearingPrePassInput): ClearingPrePass
             sectorId,
             corporationId: corpId,
             sectorType: sector.sectorType,
-            industryModel: sector.industryModel,
-            mediaDiscriminator: sector.mediaDiscriminator,
             revenueAnchor,
             strategyId: sector.strategyId,
             transitionFromStrategyId: sector.transitionFromStrategyId,

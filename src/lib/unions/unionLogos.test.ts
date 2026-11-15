@@ -31,7 +31,7 @@ describe("unionLogoUrl", () => {
   });
 
   it("uses Wikipedia's fair-use upload where Commons has no free licence", () => {
-    expect(unionLogoUrl("United Auto Workers")).toContain("en.wikipedia.org");
+    expect(unionLogoUrl("United Steelworkers of America")).toContain("en.wikipedia.org");
     expect(unionLogoUrl("International Brotherhood of Teamsters")).toContain("en.wikipedia.org");
   });
 

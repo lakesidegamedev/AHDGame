@@ -161,16 +161,6 @@ const SECTOR_CHANNEL_PROFILES: Record<OperatingSectorType, ChannelWeights> = {
     mediaTrust: 0.35,
     demographics: 0.6,
   },
-  manufacturing_vehicles: {
-    ...COMMON_PROFILE,
-    laborCost: 0.75,
-    laborQuality: 0.8,
-    consumerDemand: 0.6,
-    physicalLogistics: 0.9,
-    gridReliability: 0.85,
-    environmentalCompliance: 0.9,
-    innovation: 0.65,
-  },
   technology: {
     ...COMMON_PROFILE,
     laborQuality: 1,
@@ -238,15 +228,6 @@ const SECTOR_CHANNEL_PROFILES: Record<OperatingSectorType, ChannelWeights> = {
     regulatoryTrust: 0.65,
     innovation: 0.75,
     publicProcurement: 0.35,
-  },
-  media_entertainment: {
-    ...COMMON_PROFILE,
-    laborCost: 0.55,
-    consumerDemand: 0.85,
-    digitalInfrastructure: 0.55,
-    publicSafety: 0.65,
-    mediaTrust: 0.8,
-    demographics: 0.6,
   },
   logistics: {
     ...COMMON_PROFILE,
@@ -379,18 +360,6 @@ const STRATEGY_CHANNEL_OVERRIDES: Record<string, ChannelWeights> = {
     healthCapacity: 0.8,
     publicProcurement: 0.65,
   },
-  "manufacturing_vehicles.ev": {
-    digitalInfrastructure: 0.55,
-    gridReliability: 1,
-    environmentalCompliance: 1.05,
-    innovation: 0.95,
-  },
-  "manufacturing_vehicles.heavy_machinery": {
-    physicalLogistics: 1,
-    gridReliability: 0.9,
-    publicProcurement: 0.55,
-    consumerDemand: 0.4,
-  },
   "financial.fintech": {
     laborQuality: 0.95,
     digitalInfrastructure: 1.1,
@@ -471,18 +440,6 @@ const STRATEGY_CHANNEL_OVERRIDES: Record<string, ChannelWeights> = {
     digitalInfrastructure: 1.1,
     gridReliability: 1.15,
     innovation: 0.9,
-  },
-  "media_entertainment.streaming": {
-    digitalInfrastructure: 1,
-    consumerDemand: 0.8,
-    mediaTrust: 0.95,
-    publicSafety: 0.15,
-  },
-  "media_entertainment.live_venue": {
-    consumerDemand: 0.95,
-    publicSafety: 0.9,
-    physicalLogistics: 0.55,
-    mediaTrust: 0.65,
   },
   "logistics.automated": {
     laborCost: 0.45,

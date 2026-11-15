@@ -47,9 +47,9 @@ const COMMODITY_SUMMARIES: Record<CommodityType, string> = {
   financial_services:
     "underwriting, advisory, and trading capacity: demand flexes with debt issuance and the prevailing prime rate.",
   advertising:
-    "campaign-unit media capacity: supplied by media and entertainment, pulled hard by corporate marketing budgets.",
+    "campaign-unit media capacity: supplied by media, pulled hard by corporate marketing budgets.",
   vehicles:
-    "finished vehicles and heavy machinery: supplied by automobiles, defense, and vehicle lines in manufacturing, demanded by logistics, energy, agriculture, and households.",
+    "finished vehicles and heavy machinery: supplied by manufacturing (vehicle lines) and defense, demanded by logistics, energy, agriculture, and households.",
   retail:
     "the consumer-goods basket: households buy it directly, alongside a legacy demand leg that mirrors local retail output scaled by GDP growth (half national, half state) and is being phased out.",
   freight:
@@ -67,7 +67,7 @@ const COMMODITY_SUMMARIES: Record<CommodityType, string> = {
   ordnance:
     "finished weapons-system lots: supplied by defense, demanded by government defense budgets and by extraction (industrial blasting).",
   plastics:
-    "polymer and extrusion output: feedstock for manufacturing, healthcare packaging, automobiles, and construction.",
+    "polymer and extrusion output: feedstock for manufacturing, healthcare packaging, vehicles, and construction.",
   network_services:
     "subscription-equivalent broadband and connectivity capacity: unique output of telecom sectors, with macro demand scaling with state GDP.",
 };

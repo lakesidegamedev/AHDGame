@@ -21,33 +21,6 @@ describe("seedPlantLedger", () => {
       plantUnitRemainder: 0,
     });
   });
-
-  it("keeps the legacy one-unit vehicle facility quantum on a manufacturing model", () => {
-    const ledger = seedPlantLedger({ sectorType: "manufacturing", industryModel: "vehicles" }, 3.7);
-    expect(ledger.plantCount).toBe(3);
-    expect(ledger.plantUnitRemainder).toBeCloseTo(0.7);
-    expect(
-      plantCapacityDeltaPipeline(
-        { sectorType: "manufacturing", industryModel: "vehicles" },
-        1,
-        {}
-      )[1]?.$set
-    ).toMatchObject({
-      plantCount: {
-        $cond: [
-          { $lte: ["$capitalStock", 0] },
-          0,
-          {
-            $cond: [
-              { $lt: ["$capitalStock", 1] },
-              1,
-              { $floor: { $divide: ["$capitalStock", 1] } },
-            ],
-          },
-        ],
-      },
-    });
-  });
 });
 
 describe("vehicle recipe on a plain manufacturing sector", () => {
@@ -57,9 +30,6 @@ describe("vehicle recipe on a plain manufacturing sector", () => {
     const ledger = seedPlantLedger(sector, 41.7);
     expect(ledger.plantCount).toBe(41);
     expect(ledger.plantUnitRemainder).toBeCloseTo(0.7);
-    expect(ledger).toEqual(
-      seedPlantLedger({ sectorType: "manufacturing", industryModel: "vehicles" }, 41.7)
-    );
   });
 
   it("derives the atomic pipeline count on the same size", () => {

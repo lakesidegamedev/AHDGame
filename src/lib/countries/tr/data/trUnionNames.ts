@@ -15,7 +15,6 @@ import { uniform } from "@/lib/seeds/reference/uniformUnionName";
 
 export const TR_UNION_NAMES_MODERN: Partial<Record<OperatingSectorType, string>> = {
   manufacturing: "Türk Metal",
-  manufacturing_vehicles: "Türk Metal",
   chemical_industries: "Petrol-İş",
   construction: "Yol-İş",
   energy: "Tes-İş",
@@ -26,7 +25,6 @@ export const TR_UNION_NAMES_MODERN: Partial<Record<OperatingSectorType, string>>
   logistics: "TÜMTİS",
   financial: "Bank-Sen",
   telecommunications: "Haber-İş",
-  media_entertainment: "Basın-İş",
   defense: "Türk Metal",
   agriculture: "Tarım-İş",
   real_estate: "Yol-İş",

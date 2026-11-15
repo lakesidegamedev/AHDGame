@@ -53,7 +53,7 @@ const PRODUCER_SECTOR: Partial<Record<CommodityType, string>> = {
   ordnance: "manufacturing",
   chemicals: "chemical_industries",
   pharmaceuticals: "chemical_industries",
-  vehicles: "manufacturing_vehicles",
+  vehicles: "manufacturing",
   freight: "logistics",
 };
 

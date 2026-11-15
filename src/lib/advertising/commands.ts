@@ -185,7 +185,7 @@ export async function proposeAdvertisingAgreement(request: Request, initiatingCo
       .project<{ strategyId?: string | null }>({ strategyId: 1 })
       .toArray();
     if (supplierSectors.length === 0) {
-      return errorResponse(400, "Advertising suppliers must be Media & Entertainment corporations");
+      return errorResponse(400, "Advertising suppliers must be Media corporations");
     }
     if (
       !supplierSectors.some((sector) =>

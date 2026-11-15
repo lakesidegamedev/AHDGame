@@ -189,11 +189,7 @@ export const WAR_EMERGENCY_CRISIS_TEMPLATES: Record<WarEmergencyTemplateKey, Cri
       "Peace marches are filling the main squares as people fear the war will escalate. The crowds keep shoppers and workers away from city centers, so commerce loses margin that fades over about 12 turns. The government can let them march, address the nation or disperse the crowds.",
     wireStart: "Large peace marches are filling the squares and calling for restraint.",
     wireEnd: "The marches have thinned and the squares are back to normal.",
-    ambientEffect: ambientMargin(
-      "media_entertainment",
-      -4,
-      "Mass demonstrations disrupt city commerce"
-    ),
+    ambientEffect: ambientMargin("media", -4, "Mass demonstrations disrupt city commerce"),
     prompt: "How will the government respond to the marches?",
     options: [
       option(

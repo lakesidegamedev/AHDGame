@@ -1,4 +1,3 @@
-import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
 import type { Db, ObjectId } from "mongodb";
 import type { Corporation, MarketCapHistory, CorporationHistory } from "@/lib/db/types";
 import type { OperatingSectorType } from "@/lib/constants/corporations";
@@ -201,7 +200,7 @@ export async function snapshotMarketCap(
         exchangeCaps[apiKey] += capAnchor;
       }
 
-      const lane = getOperatingSectorType(corp.type, corp.industryModel, corp.mediaDiscriminator);
+      const lane = corp.type;
       bySector[lane] = (bySector[lane] ?? 0) + capAnchor;
     }
   }

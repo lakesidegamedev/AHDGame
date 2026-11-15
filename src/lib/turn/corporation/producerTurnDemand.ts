@@ -855,8 +855,6 @@ function preparationView(
     countryId: sector.countryId,
     stateId: sector.stateId,
     sectorType: sector.sectorType,
-    industryModel: sector.industryModel,
-    mediaDiscriminator: sector.mediaDiscriminator,
     strategyId: sector.strategyId,
     transitionFromStrategyId: sector.transitionFromStrategyId,
     transitionStartTurn: sector.transitionStartTurn,

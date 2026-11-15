@@ -29,7 +29,7 @@ Economic and social positions each run from -5 to +5. Economic: -5 is far left a
 - **Generated NPPs** ([NPP Behavior](/wiki/npp-behavior) starts from these seeds) who take their party's own economic and social position, plus randomised favorability, loyalty, ambition and stubbornness.
 - **National budgets, debt, credit ratings, tax bases and currencies**, using that era's values where they are authored.
 - **Regional demographics and metrics** for that era.
-- **Market demand in all 17 sector types** in every region, with no corporation in it yet except where a command economy's state enterprises hold that market, and separate per-region capacity ceilings for extractable resources.
+- **Market demand in all 15 sector types** in every region, with no corporation in it yet except where a command economy's state enterprises hold that market, and separate per-region capacity ceilings for extractable resources.
 
 Parliamentary governments are assembled from the starting seats ([Coalition Formation](/wiki/coalition-formation)). The 1991 preset also anchors its first elections to the real post-1991 calendar (for example the 1992 US and UK elections and the 1994 Bundestag), and leaves out parties that did not exist yet (for example AfD, Die Linke and Reform UK).
 
@@ -50,8 +50,8 @@ The seeded sector markets and specialties are what [corporations](/wiki/corporat
 Examples of the shape of the seeded markets in a 2019 world. The 1979, 1991, 2023 and 2027 openings apply one national sector mix to every region of a country, so regions differ there only by size:
 
 - California leans heavily to technology and lightly to extraction. West Virginia is the reverse.
-- New York is strongest in financial services. Bavaria has a strong automobile seed.
-- Tokyo and Kanto lean toward finance more than automobiles.
+- New York is strongest in financial services. Bavaria has a strong manufacturing seed.
+- Tokyo and Kanto lean toward finance more than manufacturing.
 - China's northwest opens around energy and extraction, while the east and south lean toward technology and manufacturing.
 - Brazil splits sharply: Norte favors extraction, Centro-Oeste favors agriculture, and Sudeste favors finance and manufacturing.
 

@@ -16,14 +16,14 @@ const plants: NppPlantsContext = {
   costOfLivingOf: () => null,
 };
 
-function corporation(): Corporation {
+function corporation(liquidCapital = 3_000_000): Corporation {
   return {
     _id: new ObjectId(),
     countryId: "US",
     type: "manufacturing",
     headquartersState: "CA",
     liquidCurrencyCode: "USD",
-    liquidCapital: 3_000_000,
+    liquidCapital,
     ceoType: "npp",
     rdScore: 100_000,
     unlockedTechNodeIds: autoGrantedNodeIds("manufacturing", 2020),
@@ -67,7 +67,7 @@ describe("NPP tech spending budget", () => {
   });
 
   it("does not spend the opening cash twice after capacity reinvestment", () => {
-    const corp = corporation();
+    const corp = corporation(2_900_000);
     const decision = makeNppCorpDecision(
       {
         corp,

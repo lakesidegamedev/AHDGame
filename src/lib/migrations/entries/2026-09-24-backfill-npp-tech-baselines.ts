@@ -1,7 +1,6 @@
 import type { AnyBulkWriteOperation, Db } from "mongodb";
 import type { Corporation, GameState } from "@/lib/db/types";
 import { autoGrantedNodeIds } from "@/lib/constants/techTree";
-import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
 import { STARTING_YEAR } from "@/lib/constants/turnTime";
 import { resolveGameYear } from "@/lib/era/era";
 import { isNppOwned } from "@/lib/corporations/nppOwned";
@@ -11,7 +10,7 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 type NppTechRow = Pick<
   Corporation,
-  "_id" | "type" | "industryModel" | "ceoType" | "caretakerCeo" | "unlockedTechNodeIds"
+  "_id" | "type" | "ceoType" | "caretakerCeo" | "unlockedTechNodeIds"
 >;
 
 async function backfillNppTechBaselines(db: Db, ctx: MigrationContext): Promise<MigrationResult> {
@@ -25,7 +24,6 @@ async function backfillNppTechBaselines(db: Db, ctx: MigrationContext): Promise<
     .project<NppTechRow>({
       _id: 1,
       type: 1,
-      industryModel: 1,
       ceoType: 1,
       caretakerCeo: 1,
       unlockedTechNodeIds: 1,
@@ -36,10 +34,7 @@ async function backfillNppTechBaselines(db: Db, ctx: MigrationContext): Promise<
   const operations: AnyBulkWriteOperation<Corporation>[] = [];
   for (const corporation of trueNppCorporations) {
     const owned = new Set(corporation.unlockedTechNodeIds ?? []);
-    const operatingType = getOperatingSectorType(
-      corporation.type,
-      corporation.industryModel
-    ) as Corporation["type"];
+    const operatingType = corporation.type as Corporation["type"];
     const missing = autoGrantedNodeIds(operatingType, currentYear).filter(
       (nodeId) => !owned.has(nodeId)
     );

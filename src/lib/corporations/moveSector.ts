@@ -65,8 +65,6 @@ export async function moveSectorToCorp(
     corporationId: destCorpId,
     stateId: sector.stateId,
     sectorType: sector.sectorType,
-    industryModel: sector.industryModel ?? null,
-    mediaDiscriminator: sector.mediaDiscriminator ?? null,
   });
 
   // Under plants, `revenue` is restated from `capitalStock × mixPrice` by the
@@ -93,9 +91,7 @@ export async function moveSectorToCorp(
       const ratio = capacityRescaleRatio(
         sector.sectorType as CorporationType,
         sector.strategyId,
-        existing.strategyId,
-        sector.industryModel,
-        sector.mediaDiscriminator
+        existing.strategyId
       );
       const donorStock =
         typeof sector.capitalStock === "number" && Number.isFinite(sector.capitalStock)
@@ -114,8 +110,6 @@ export async function moveSectorToCorp(
       const merged = mergeSectorPlantFields(
         {
           sectorType: existing.sectorType,
-          industryModel: existing.industryModel,
-          mediaDiscriminator: existing.mediaDiscriminator,
           capitalStock: existing.capitalStock,
           buildQueue: existing.buildQueue,
           mothballed: existing.mothballed,
@@ -127,8 +121,6 @@ export async function moveSectorToCorp(
         },
         {
           sectorType: sector.sectorType,
-          industryModel: sector.industryModel,
-          mediaDiscriminator: sector.mediaDiscriminator,
           capitalStock: Math.round(donorStock * ratio * 100) / 100,
           buildQueue: donorQueue,
           mothballed: sector.mothballed,

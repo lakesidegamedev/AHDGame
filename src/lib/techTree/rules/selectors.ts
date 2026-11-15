@@ -1,7 +1,4 @@
 import type { OperatingSectorType } from "@/lib/constants/corporations";
-import type { ManufacturingIndustryModel } from "@/lib/constants/corporations";
-import type { MediaDiscriminator } from "@/lib/constants/corporations";
-import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
 import { TECH_TREE, type TechLane, type TechTreeNode } from "@/lib/constants/techTree/nodes";
 import {
   aggregateTechEffects,
@@ -54,9 +51,7 @@ export function getUnlockedNodes(corp: TechCorpView): TechTreeNode[] {
   const ids = corp.unlockedTechNodeIds ?? [];
   if (ids.length === 0) return [];
   const idSet = new Set(ids);
-  return getTreeForType(
-    getOperatingSectorType(corp.type, corp.industryModel, corp.mediaDiscriminator)
-  ).filter((n) => idSet.has(n.id));
+  return getTreeForType(corp.type).filter((n) => idSet.has(n.id));
 }
 
 /** Flat list of effects from every unlocked node. */
@@ -74,17 +69,10 @@ export function getAggregatedTechEffects(corp: TechCorpView): AggregatedTechEffe
  * only sectors Sector-lane nodes apply to.
  */
 export function isPrimaryTechSector(
-  corp: Pick<TechCorpView, "type" | "industryModel" | "mediaDiscriminator">,
-  sectorType: OperatingSectorType,
-  industryModel?: ManufacturingIndustryModel | null,
-  mediaDiscriminator?: MediaDiscriminator | null
+  corp: Pick<TechCorpView, "type">,
+  sectorType: OperatingSectorType
 ): boolean {
-  return (
-    getOperatingSectorType(sectorType, industryModel, mediaDiscriminator) ===
-      getOperatingSectorType(corp.type, corp.industryModel, corp.mediaDiscriminator) &&
-    (industryModel ?? null) === (corp.industryModel ?? null) &&
-    (mediaDiscriminator ?? null) === (corp.mediaDiscriminator ?? null)
-  );
+  return sectorType === corp.type;
 }
 
 /**
@@ -95,11 +83,9 @@ export function isPrimaryTechSector(
  */
 export function getSectorTechEffects(
   corp: TechCorpView,
-  sectorType: OperatingSectorType,
-  industryModel?: ManufacturingIndustryModel | null,
-  mediaDiscriminator?: MediaDiscriminator | null
+  sectorType: OperatingSectorType
 ): AggregatedTechEffects {
-  const isPrimary = isPrimaryTechSector(corp, sectorType, industryModel, mediaDiscriminator);
+  const isPrimary = isPrimaryTechSector(corp, sectorType);
   const effects = getUnlockedNodes(corp).flatMap((node) => {
     if (node.lane === "generic")
       return node.effects.map((e) => scaleEffect(e, CORP_LANE_EFFECT_SCALE));
@@ -178,7 +164,7 @@ export function canUnlock(
   currentYear: number,
   funds: CanUnlockFunds
 ): CanUnlockResult {
-  const techType = getOperatingSectorType(corp.type, corp.industryModel, corp.mediaDiscriminator);
+  const techType = corp.type;
   const node = getNodeById(techType, nodeId);
   if (!node) return { ok: false, reason: "unknown-node" };
   if (!isDecadeReached(node.decadeId, currentYear)) {
@@ -319,13 +305,11 @@ export function isTechNodeEffectExpired(
 export function getSectorTechEffectsForYear(
   corp: TechCorpView,
   sectorType: OperatingSectorType,
-  currentYear: number,
-  industryModel?: ManufacturingIndustryModel | null,
-  mediaDiscriminator?: MediaDiscriminator | null
+  currentYear: number
 ): AggregatedTechEffects {
   const allowedIds = getActiveTechDecadeIds(currentYear);
 
-  const isPrimary = isPrimaryTechSector(corp, sectorType, industryModel, mediaDiscriminator);
+  const isPrimary = isPrimaryTechSector(corp, sectorType);
   const effects = getUnlockedNodes(corp).flatMap((node) => {
     if (!allowedIds.has(node.decadeId)) return [];
     if (node.lane === "generic")

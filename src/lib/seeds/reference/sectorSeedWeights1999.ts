@@ -14,7 +14,7 @@
  *   - manufacturing notably higher (~15% of GDP; offshoring hadn't accelerated)
  *   - telecommunications elevated (Telecom Act 1996 fiber/CLEC buildout, the
  *     telecom bubble) and technology high (dot-com investment surge)
- *   - automobiles higher (Big Three strength pre-2008)
+ *   - vehicle makers higher (Big Three strength pre-2008)
  *   - defense at its post-Cold-War LOW (the "peace dividend")
  *   - energy/extraction LOW (1999 oil ≈ $17/bbl)
  *   - real_estate below the mid-2000s bubble level
@@ -34,20 +34,18 @@ type SectorWeightMap = Partial<Record<OperatingSectorType, number>>;
 export const COUNTRY_SECTOR_WEIGHTS_1999: Record<string, SectorWeightMap> = {
   US: {
     real_estate: 13,
-    manufacturing: 12,
+    manufacturing: 18,
     financial: 9,
     technology: 8,
     healthcare: 7,
     retail: 7,
     telecommunications: 6,
-    manufacturing_vehicles: 6,
     construction: 5,
     chemical_industries: 5,
-    media: 4,
+    media: 7,
     logistics: 4,
     energy: 3,
     defense: 3,
-    media_entertainment: 3,
     agriculture: 2,
     extraction: 2,
   },

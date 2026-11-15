@@ -49,7 +49,7 @@ beforeEach(async () => {
     {
       _id: sectorId,
       corporationId,
-      sectorType: "manufacturing_vehicles",
+      sectorType: "manufacturing",
       strategyId: "standard",
       capitalStock: 1000,
       capacityBookAnchor: 50_000,

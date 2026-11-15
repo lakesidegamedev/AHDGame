@@ -82,6 +82,7 @@ describe("PlantPanel facility sizing", () => {
       ...plants,
       capacityUnits: 250,
       plantCount: undefined,
+      strategyId: "vehicle_assembly",
       buildQueue: [
         {
           orderIndex: 0,
@@ -102,7 +103,6 @@ describe("PlantPanel facility sizing", () => {
       <PlantPanel
         plants={vehiclePlants}
         sectorType="manufacturing"
-        industryModel="vehicles"
         averageWageLevel={1}
         isCeo={false}
         busy={false}
@@ -120,7 +120,7 @@ describe("PlantPanel facility sizing", () => {
   });
 });
 
-describe("PlantPanel vehicle recipe without a vehicle model", () => {
+describe("PlantPanel vehicle recipe", () => {
   it("counts vehicle plants for a manufacturing sector on a vehicle strategy", () => {
     const vehicleRecipePlants = {
       ...plants,
@@ -234,7 +234,6 @@ describe("PlantPanel order that lands whole", () => {
       <PlantPanel
         plants={steppedPlants}
         sectorType="manufacturing"
-        industryModel="vehicles"
         averageWageLevel={1}
         isCeo={false}
         busy={false}
@@ -482,48 +481,6 @@ describe("PlantPanel workforce", () => {
 
     expect(
       screen.getByText("Advertising campaigns counted: 0/day (25% media output factor)")
-    ).toBeTruthy();
-  });
-
-  it("does not describe entertainment media as advertising campaigns", () => {
-    render(
-      <PlantPanel
-        plants={plants}
-        marketSupplies={[
-          {
-            commodity: "software",
-            label: "Software",
-            icon: "SW",
-            colors: "",
-            unit: "licenses",
-            units: 50,
-            rate: 1,
-            basePrice: 1,
-            globalPrice: 1,
-            nationalPrice: 1,
-            regionalPrice: 1,
-            marketPrice: 1,
-            weight: 100,
-            priceImpact: 0,
-          },
-        ]}
-        sectorType="media"
-        mediaDiscriminator="entertainment"
-        mediaAdvertisingCampaignFactor={0.1}
-        averageWageLevel={1}
-        isCeo={false}
-        busy={false}
-        message=""
-        onOpenBuild={noop}
-        onCancelOrder={noop}
-        onMothball={noop}
-        onReactivate={noop}
-      />
-    );
-
-    expect(screen.queryByText(/Advertising campaigns counted/)).toBeNull();
-    expect(
-      screen.getByText(/Entertainment output is shown in its own commodity ledger/)
     ).toBeTruthy();
   });
 });

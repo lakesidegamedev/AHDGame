@@ -1336,7 +1336,6 @@
         "chemical_industries": "All-Union Central Council of Trade Unions",
         "healthcare": "All-Union Central Council of Trade Unions",
         "retail": "All-Union Central Council of Trade Unions",
-        "manufacturing_vehicles": "All-Union Central Council of Trade Unions",
         "technology": "All-Union Central Council of Trade Unions",
         "energy": "All-Union Central Council of Trade Unions",
         "agriculture": "All-Union Central Council of Trade Unions",
@@ -1344,7 +1343,6 @@
         "construction": "All-Union Central Council of Trade Unions",
         "defense": "All-Union Central Council of Trade Unions",
         "telecommunications": "All-Union Central Council of Trade Unions",
-        "media_entertainment": "All-Union Central Council of Trade Unions",
         "logistics": "All-Union Central Council of Trade Unions",
         "extraction": "All-Union Central Council of Trade Unions"
       },
@@ -1355,7 +1353,6 @@
         "chemical_industries": "All-Union Central Council of Trade Unions",
         "healthcare": "All-Union Central Council of Trade Unions",
         "retail": "All-Union Central Council of Trade Unions",
-        "manufacturing_vehicles": "All-Union Central Council of Trade Unions",
         "technology": "All-Union Central Council of Trade Unions",
         "energy": "All-Union Central Council of Trade Unions",
         "agriculture": "All-Union Central Council of Trade Unions",
@@ -1363,7 +1360,6 @@
         "construction": "All-Union Central Council of Trade Unions",
         "defense": "All-Union Central Council of Trade Unions",
         "telecommunications": "All-Union Central Council of Trade Unions",
-        "media_entertainment": "All-Union Central Council of Trade Unions",
         "logistics": "All-Union Central Council of Trade Unions",
         "extraction": "All-Union Central Council of Trade Unions"
       },
@@ -1374,7 +1370,6 @@
         "chemical_industries": "Federation of Trade Unions of Belarus",
         "healthcare": "Federation of Trade Unions of Belarus",
         "retail": "Federation of Trade Unions of Belarus",
-        "manufacturing_vehicles": "Federation of Trade Unions of Belarus",
         "technology": "Federation of Trade Unions of Belarus",
         "energy": "Federation of Trade Unions of Belarus",
         "agriculture": "Federation of Trade Unions of Belarus",
@@ -1382,7 +1377,6 @@
         "construction": "Federation of Trade Unions of Belarus",
         "defense": "Federation of Trade Unions of Belarus",
         "telecommunications": "Federation of Trade Unions of Belarus",
-        "media_entertainment": "Federation of Trade Unions of Belarus",
         "logistics": "Federation of Trade Unions of Belarus",
         "extraction": "Federation of Trade Unions of Belarus"
       },
@@ -1393,7 +1387,6 @@
         "chemical_industries": "Federation of Trade Unions of Belarus",
         "healthcare": "Federation of Trade Unions of Belarus",
         "retail": "Federation of Trade Unions of Belarus",
-        "manufacturing_vehicles": "Federation of Trade Unions of Belarus",
         "technology": "Federation of Trade Unions of Belarus",
         "energy": "Federation of Trade Unions of Belarus",
         "agriculture": "Federation of Trade Unions of Belarus",
@@ -1401,7 +1394,6 @@
         "construction": "Federation of Trade Unions of Belarus",
         "defense": "Federation of Trade Unions of Belarus",
         "telecommunications": "Federation of Trade Unions of Belarus",
-        "media_entertainment": "Federation of Trade Unions of Belarus",
         "logistics": "Federation of Trade Unions of Belarus",
         "extraction": "Federation of Trade Unions of Belarus"
       },
@@ -1412,7 +1404,6 @@
         "chemical_industries": "Federation of Trade Unions of Belarus",
         "healthcare": "Federation of Trade Unions of Belarus",
         "retail": "Federation of Trade Unions of Belarus",
-        "manufacturing_vehicles": "Federation of Trade Unions of Belarus",
         "technology": "Federation of Trade Unions of Belarus",
         "energy": "Federation of Trade Unions of Belarus",
         "agriculture": "Federation of Trade Unions of Belarus",
@@ -1420,7 +1411,6 @@
         "construction": "Federation of Trade Unions of Belarus",
         "defense": "Federation of Trade Unions of Belarus",
         "telecommunications": "Federation of Trade Unions of Belarus",
-        "media_entertainment": "Federation of Trade Unions of Belarus",
         "logistics": "Federation of Trade Unions of Belarus",
         "extraction": "Federation of Trade Unions of Belarus"
       },
@@ -1431,7 +1421,6 @@
         "chemical_industries": "Federation of Trade Unions of Belarus",
         "healthcare": "Federation of Trade Unions of Belarus",
         "retail": "Federation of Trade Unions of Belarus",
-        "manufacturing_vehicles": "Federation of Trade Unions of Belarus",
         "technology": "Federation of Trade Unions of Belarus",
         "energy": "Federation of Trade Unions of Belarus",
         "agriculture": "Federation of Trade Unions of Belarus",
@@ -1439,7 +1428,6 @@
         "construction": "Federation of Trade Unions of Belarus",
         "defense": "Federation of Trade Unions of Belarus",
         "telecommunications": "Federation of Trade Unions of Belarus",
-        "media_entertainment": "Federation of Trade Unions of Belarus",
         "logistics": "Federation of Trade Unions of Belarus",
         "extraction": "Federation of Trade Unions of Belarus"
       },
@@ -1450,7 +1438,6 @@
         "chemical_industries": "Federation of Trade Unions of Belarus",
         "healthcare": "Federation of Trade Unions of Belarus",
         "retail": "Federation of Trade Unions of Belarus",
-        "manufacturing_vehicles": "Federation of Trade Unions of Belarus",
         "technology": "Federation of Trade Unions of Belarus",
         "energy": "Federation of Trade Unions of Belarus",
         "agriculture": "Federation of Trade Unions of Belarus",
@@ -1458,7 +1445,6 @@
         "construction": "Federation of Trade Unions of Belarus",
         "defense": "Federation of Trade Unions of Belarus",
         "telecommunications": "Federation of Trade Unions of Belarus",
-        "media_entertainment": "Federation of Trade Unions of Belarus",
         "logistics": "Federation of Trade Unions of Belarus",
         "extraction": "Federation of Trade Unions of Belarus"
       },
@@ -1469,7 +1455,6 @@
         "chemical_industries": "Federation of Trade Unions of Belarus",
         "healthcare": "Federation of Trade Unions of Belarus",
         "retail": "Federation of Trade Unions of Belarus",
-        "manufacturing_vehicles": "Federation of Trade Unions of Belarus",
         "technology": "Federation of Trade Unions of Belarus",
         "energy": "Federation of Trade Unions of Belarus",
         "agriculture": "Federation of Trade Unions of Belarus",
@@ -1477,7 +1462,6 @@
         "construction": "Federation of Trade Unions of Belarus",
         "defense": "Federation of Trade Unions of Belarus",
         "telecommunications": "Federation of Trade Unions of Belarus",
-        "media_entertainment": "Federation of Trade Unions of Belarus",
         "logistics": "Federation of Trade Unions of Belarus",
         "extraction": "Federation of Trade Unions of Belarus"
       }
@@ -2030,12 +2014,11 @@
   "COUNTRY_SECTOR_WEIGHTS": {
     "shape": "country-first",
     "value": {
-      "manufacturing": 24,
+      "manufacturing": 30,
       "agriculture": 16,
       "chemical_industries": 10,
       "energy": 8,
       "construction": 7,
-      "manufacturing_vehicles": 6,
       "retail": 5
     }
   },
@@ -2046,12 +2029,11 @@
   "COUNTRY_SECTOR_WEIGHTS_1991": {
     "shape": "country-first",
     "value": {
-      "manufacturing": 24,
+      "manufacturing": 30,
       "agriculture": 16,
       "chemical_industries": 10,
       "energy": 8,
       "construction": 7,
-      "manufacturing_vehicles": 6,
       "retail": 5
     }
   },

@@ -6,12 +6,7 @@ import { computePlantOverhead } from "../../src/lib/corporations/plantCosts/rule
 import { COMMODITY_BASE_PRICES, type CommodityType } from "../../src/lib/constants/commodities";
 import { TURNS_PER_DAY, type OperatingSectorType } from "../../src/lib/constants/corporations";
 
-const family: OperatingSectorType[] = [
-  "manufacturing",
-  "manufacturing_vehicles",
-  "chemical_industries",
-  "defense",
-];
+const family: OperatingSectorType[] = ["manufacturing", "chemical_industries", "defense"];
 const scenarios = [
   { name: "base", inputRatio: 1, efficiency: 1, saleFraction: 1, priceFactor: 1 },
   { name: "input-inflation", inputRatio: 2.25, efficiency: 1, saleFraction: 1, priceFactor: 1 },

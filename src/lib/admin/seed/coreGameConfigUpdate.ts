@@ -33,9 +33,6 @@ export const STALE_MARKET_MODE_STAMP_UNSET: Readonly<Record<string, "">> = Objec
  * admin settings, not per-world state, and must NOT be listed here.
  */
 export const STALE_PER_WORLD_GAME_CONFIG_UNSET: Readonly<Record<string, "">> = Object.freeze({
-  // One-time entertainment removal migration stamp: a turn on the old world's
-  // counter. A new world runs the (no-op) migration once and restamps it.
-  entertainmentCommodityRemovedAtTurn: "",
   // Funded producer market switch turn: a turn on the old world's counter. A
   // new world needs its own opening conversion before it can be set again.
   producerMarketLiveFromTurn: "",

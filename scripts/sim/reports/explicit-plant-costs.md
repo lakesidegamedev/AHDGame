@@ -9,8 +9,6 @@ Overhead is 4% of the era-priced nominal basket for output actually produced. Pa
 | manufacturing       | standard                  |        9.2% |          -24.3% |               17.24% |   -44.13% |
 | manufacturing       | heavy_metals              |        6.2% |          -28.8% |                14.6% |   -48.89% |
 | manufacturing       | electronics_manufacturing |       11.2% |          -21.3% |                  19% |   -40.95% |
-| automobiles         | standard                  |        8.4% |          -26.6% |                16.8% |    -45.4% |
-| automobiles         | heavy_machinery           |        4.4% |          -32.6% |               13.28% |   -51.75% |
 | chemical_industries | standard                  |       26.5% |              0% |               32.86% |   -16.67% |
 | chemical_industries | fertilizers               |       28.5% |              3% |               34.62% |   -13.49% |
 | chemical_industries | pharmaceuticals           |       14.5% |            -18% |                22.3% |   -35.71% |

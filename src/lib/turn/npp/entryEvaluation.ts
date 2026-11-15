@@ -25,7 +25,7 @@ import type { Corporation, CorporateSector } from "@/lib/db/types";
 import type { MarketCandidate } from "@/lib/turn/npp/marketCandidates";
 import type { NppMarketEntryDiagnostic } from "@/lib/db/types/marketFormation";
 import type { CorporationType } from "@/lib/constants/corporations";
-import { getOperatingSectorType, SECTOR_STRATEGIES } from "@/lib/constants/sectorStrategies";
+import { SECTOR_STRATEGIES } from "@/lib/constants/sectorStrategies";
 import { foundingRecipeFor, type FoundingRecipeWorld } from "@/lib/turn/npp/foundingRecipeChoice";
 import { recipePeakOutputRatio } from "@/lib/turn/npp/rules/foundingRecipe";
 
@@ -89,9 +89,7 @@ export function evaluateNppEntry(input: NppEntryEvaluationInput): NppEntryEvalua
   // time on deterministic cohort slots, prefers the neighboring-state frontier,
   // and pauses when the current logistics strength cannot support another site.
   // A critical shortage may use corporate credit on that same cohort slot.
-  const existingBuckets = new Set(
-    sectors.map((s) => bucketKey(s.stateId, s.sectorType, s.industryModel, s.mediaDiscriminator))
-  );
+  const existingBuckets = new Set(sectors.map((s) => bucketKey(s.stateId, s.sectorType)));
   const frontierStates = expansionFrontierStates(corp.countryId, corp.headquartersState, sectors);
   const candidateExclusions = blankNppCandidateExclusions();
   const entryCandidate = findBestMarketCandidate(
@@ -107,8 +105,7 @@ export function evaluateNppEntry(input: NppEntryEvaluationInput): NppEntryEvalua
     input.eraUnitScale,
     placementSignals,
     frontierStates,
-    candidateExclusions,
-    corp.industryModel
+    candidateExclusions
   );
   const {
     candidatePriceRatioOf: entryCandidatePriceRatioOf,
@@ -117,13 +114,7 @@ export function evaluateNppEntry(input: NppEntryEvaluationInput): NppEntryEvalua
   } = resolveFragileEntryTreatment(entryCandidate, placementSignals, priceRatioOf);
   // The fragile-market treatment keeps priority; otherwise a funded world
   // builds the candidate lane's shortest recipe.
-  const candidateLane = entryCandidate
-    ? getOperatingSectorType(
-        entryCandidate.sectorType,
-        entryCandidate.industryModel,
-        entryCandidate.mediaDiscriminator
-      )
-    : null;
+  const candidateLane = entryCandidate ? entryCandidate.sectorType : null;
   const foundingStrategyId =
     fragileStrategyId ??
     (entryCandidate && candidateLane && input.fundedRecipeWorld

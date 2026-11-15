@@ -47,7 +47,7 @@ export interface CorpDailyGrossRevenuePricing {
 
 /** Without `type` every sector counts toward the all-sectors slice only. */
 type TechBasisCorp = Pick<Corporation, "countryId" | "liquidCurrencyCode"> &
-  Partial<Pick<Corporation, "type" | "industryModel" | "mediaDiscriminator">>;
+  Partial<Pick<Corporation, "type">>;
 
 /**
  * Per-turn plant revenue, input bill and labour bill from each sector's stored
@@ -88,12 +88,7 @@ export function corpTechPlantBasisFromSectors(
     const corpType = corp.type;
     const slices =
       corpType &&
-      isPrimaryTechSector(
-        { ...corp, type: corpType },
-        sector.sectorType as OperatingSectorType,
-        sector.industryModel,
-        sector.mediaDiscriminator
-      )
+      isPrimaryTechSector({ ...corp, type: corpType }, sector.sectorType as OperatingSectorType)
         ? [primary, all]
         : [all];
     for (const slice of slices) {
@@ -169,8 +164,6 @@ export async function corpDailyGrossRevenuePricingLocal(
             strategyId: 1,
             sectorType: 1,
             countryId: 1,
-            industryModel: 1,
-            mediaDiscriminator: 1,
             plantsPnl: 1,
           },
         }

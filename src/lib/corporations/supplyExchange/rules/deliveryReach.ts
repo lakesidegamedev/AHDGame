@@ -7,11 +7,8 @@
  * guard; this covers the buyer side, which nothing checked before.
  */
 import { SECTOR_DEMAND, type CommodityType } from "@/lib/constants/commodities";
-import type { MediaDiscriminator, OperatingSectorType } from "@/lib/constants/corporations";
-import {
-  getEffectiveStrategyRatesForOperatingModel,
-  getOperatingSectorType,
-} from "@/lib/constants/sectorStrategies";
+import type { OperatingSectorType } from "@/lib/constants/corporations";
+import { getEffectiveStrategyRates } from "@/lib/constants/sectorStrategies";
 import { isStateScopedCommodity } from "@/lib/market/rules/commodityMarketScope";
 
 export interface ReachSector {
@@ -21,8 +18,6 @@ export interface ReachSector {
   strategyId?: string | null;
   transitionFromStrategyId?: string | null;
   transitionStartTurn?: number | null;
-  industryModel?: string | null;
-  mediaDiscriminator?: MediaDiscriminator | null;
 }
 
 /** True when an operating sector's recipe consumes the commodity. */
@@ -32,24 +27,18 @@ export function sectorUsesCommodity(
   turn: number
 ): boolean {
   if (sector.mothballed === true) return false;
-  const rates = getEffectiveStrategyRatesForOperatingModel(
+  const rates = getEffectiveStrategyRates(
     sector.sectorType,
     sector.strategyId ?? "standard",
     sector.transitionFromStrategyId,
     sector.transitionStartTurn,
-    turn,
-    sector.industryModel,
-    sector.mediaDiscriminator
+    turn
   );
   const demand = rates.demand ?? {};
   if (Object.values(demand).some((rate) => (rate ?? 0) > 0)) {
     return (demand[commodity] ?? 0) > 0;
   }
-  const operatingType = getOperatingSectorType(
-    sector.sectorType,
-    sector.industryModel,
-    sector.mediaDiscriminator
-  );
+  const operatingType = sector.sectorType;
   return (SECTOR_DEMAND[operatingType as OperatingSectorType] ?? []).some(
     (entry) => entry.commodity === commodity && entry.rate > 0
   );

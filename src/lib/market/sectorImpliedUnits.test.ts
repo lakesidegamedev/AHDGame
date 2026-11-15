@@ -23,10 +23,4 @@ describe("computeSectorImpliedUnits", () => {
     const manufacturing = computeSectorImpliedUnits("manufacturing", 100_000, null, 1);
     expect(energy).not.toBeCloseTo(manufacturing, 0);
   });
-
-  it("uses the entertainment mix for the canonical media discriminator", () => {
-    expect(computeSectorImpliedUnits("media", 50_000, null, 1, null, "entertainment")).toBeCloseTo(
-      computeSectorImpliedUnits("media_entertainment", 50_000, null, 1)
-    );
-  });
 });

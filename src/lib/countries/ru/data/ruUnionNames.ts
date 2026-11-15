@@ -15,7 +15,6 @@ import { uniform } from "@/lib/seeds/reference/uniformUnionName";
 
 export const RU_UNION_NAMES_MODERN: Partial<Record<OperatingSectorType, string>> = {
   manufacturing: "Federation of Independent Trade Unions of Russia",
-  manufacturing_vehicles: "Federation of Independent Trade Unions of Russia",
   extraction: "Russian Independent Coal Employees' Union",
   energy: "Trade Union of Russian Fuel and Energy Sector Workers",
   construction: "Building Workers' Union of Russia",
@@ -28,7 +27,6 @@ export const RU_UNION_NAMES_MODERN: Partial<Record<OperatingSectorType, string>>
   technology: "Federation of Independent Trade Unions of Russia",
   financial: "Trade Union of Workers of the Banking Sector",
   telecommunications: "Federation of Independent Trade Unions of Russia",
-  media_entertainment: "Interregional Trade Union of Culture Workers",
   defense: "Federation of Independent Trade Unions of Russia",
   real_estate: "Building Workers' Union of Russia",
 };

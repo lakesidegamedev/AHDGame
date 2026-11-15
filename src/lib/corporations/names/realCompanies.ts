@@ -69,16 +69,6 @@ const US: CompanyTable = {
     "Best Buy",
     "Walgreens",
   ],
-  manufacturing_vehicles: [
-    "Ford|Ford Motor Company",
-    "General Motors",
-    "Tesla|Tesla, Inc.",
-    "Rivian",
-    "Paccar",
-    "Harley-Davidson",
-    "Oshkosh|Oshkosh Corporation",
-    "Cummins",
-  ],
   technology: [
     "Apple|Apple Inc.",
     "Microsoft",
@@ -149,16 +139,6 @@ const US: CompanyTable = {
     "Dish Network",
     "Frontier Communications",
   ],
-  media_entertainment: [
-    "Disney|The Walt Disney Company",
-    "Netflix",
-    "Warner Bros. Discovery",
-    "Paramount|Paramount Global",
-    "Live Nation|Live Nation Entertainment",
-    "Electronic Arts",
-    "Lionsgate|Lionsgate Studios",
-    "AMC Theatres",
-  ],
   logistics: [
     "UPS|United Parcel Service",
     "FedEx",
@@ -213,13 +193,6 @@ const UK: CompanyTable = {
   ],
   healthcare: ["Bupa", "Spire Healthcare", "Smith & Nephew", "Haleon", "Circle Health Group"],
   retail: ["Tesco", "Sainsbury's", "Marks & Spencer", "Kingfisher|Kingfisher plc", "Next|Next plc"],
-  manufacturing_vehicles: [
-    "Jaguar Land Rover",
-    "Aston Martin",
-    "McLaren|McLaren Automotive",
-    "Bentley",
-    "Alexander Dennis",
-  ],
   technology: [
     "Arm|Arm Holdings",
     "Sage Group",
@@ -257,13 +230,6 @@ const UK: CompanyTable = {
     "Ultra Electronics",
   ],
   telecommunications: ["BT Group", "Vodafone", "Virgin Media O2", "Sky Group", "TalkTalk Group"],
-  media_entertainment: [
-    "ITV|ITV plc",
-    "Pinewood Group",
-    "Games Workshop",
-    "Cineworld",
-    "Aardman Animations",
-  ],
   logistics: [
     "International Airlines Group",
     "Royal Mail",
@@ -305,13 +271,6 @@ const DE: CompanyTable = {
     "B. Braun",
   ],
   retail: ["Aldi", "Lidl", "Edeka", "Rewe|Rewe Group", "Otto Group"],
-  manufacturing_vehicles: [
-    "Volkswagen|Volkswagen Group",
-    "BMW",
-    "Mercedes-Benz|Mercedes-Benz Group",
-    "Porsche",
-    "Daimler Truck",
-  ],
   technology: [
     "SAP",
     "Infineon|Infineon Technologies",
@@ -336,13 +295,6 @@ const DE: CompanyTable = {
     "Freenet|Freenet AG",
     "Telefónica Germany",
     "United Internet",
-  ],
-  media_entertainment: [
-    "ProSiebenSat.1|ProSiebenSat.1 Media",
-    "RTL Group",
-    "Constantin Film",
-    "CTS Eventim",
-    "UFA|UFA GmbH",
   ],
   logistics: ["DHL|DHL Group", "Deutsche Bahn", "Lufthansa", "Hapag-Lloyd", "DB Schenker"],
   extraction: ["K+S|K+S AG", "Wintershall Dea", "RAG|RAG AG", "Aurubis", "LEAG"],
@@ -385,14 +337,6 @@ const JP: CompanyTable = {
     "Lawson|Lawson (store)",
     "Rakuten",
   ],
-  manufacturing_vehicles: [
-    "Toyota",
-    "Honda",
-    "Nissan",
-    "Suzuki",
-    "Mazda",
-    "Subaru|Subaru Corporation",
-  ],
   technology: ["Sony", "Fujitsu", "NEC", "Canon|Canon Inc.", "Keyence", "Tokyo Electron"],
   energy: [
     "TEPCO|Tokyo Electric Power Company",
@@ -428,14 +372,6 @@ const JP: CompanyTable = {
     "KDDI",
     "SoftBank|SoftBank Group",
     "Internet Initiative Japan",
-  ],
-  media_entertainment: [
-    "Nintendo",
-    "Toho",
-    "Bandai Namco|Bandai Namco Holdings",
-    "Kadokawa|Kadokawa Corporation",
-    "Square Enix",
-    "Toei|Toei Company",
   ],
   logistics: [
     "Yamato Transport",
@@ -486,14 +422,6 @@ const CN: CompanyTable = {
     "United Imaging|United Imaging Healthcare",
   ],
   retail: ["Alibaba|Alibaba Group", "JD.com", "Pinduoduo", "Suning.com", "Miniso"],
-  manufacturing_vehicles: [
-    "BYD|BYD Auto",
-    "Geely",
-    "SAIC Motor",
-    "Nio|Nio Inc.",
-    "Great Wall Motor",
-    "Xpeng",
-  ],
   technology: [
     "Huawei",
     "Tencent",
@@ -539,7 +467,6 @@ const CN: CompanyTable = {
     "CETC|China Electronics Technology Group Corporation",
   ],
   telecommunications: ["China Mobile", "China Telecom", "China Unicom", "ZTE", "China Tower"],
-  media_entertainment: ["ByteDance", "Bilibili", "iQIYI", "Wanda Film", "NetEase", "miHoYo"],
   logistics: ["SF Express", "COSCO Shipping", "Air China", "China Southern Airlines", "Cainiao"],
   extraction: [
     "PetroChina",
@@ -590,13 +517,6 @@ const CA: CompanyTable = {
     "Shoppers Drug Mart",
     "Lululemon",
   ],
-  manufacturing_vehicles: [
-    "Magna International",
-    "BRP|BRP Inc.",
-    "NFI Group",
-    "Prevost|Prevost (company)",
-    "Lion Electric|Lion Electric Company",
-  ],
   technology: [
     "Shopify",
     "BlackBerry|BlackBerry Limited",
@@ -643,14 +563,6 @@ const CA: CompanyTable = {
     "Vidéotron",
     "SaskTel",
     "Cogeco",
-  ],
-  media_entertainment: [
-    "Cineplex|Cineplex Entertainment",
-    "Corus Entertainment",
-    "Cirque du Soleil",
-    "Spin Master",
-    "WildBrain",
-    "Bell Media",
   ],
   logistics: [
     "Canadian National Railway",

@@ -40,8 +40,7 @@ import { blendVintageYear } from "@/lib/energyTransition/rules";
 import { getCountryConfig } from "@/lib/constants/countries";
 import { NEUTRAL_STAT } from "@/lib/stats/statsConstants";
 import {
-  getEffectiveStrategyRatesForOperatingModel,
-  getOperatingSectorType,
+  getEffectiveStrategyRates,
   STRATEGY_TRANSITION_TURNS,
 } from "@/lib/constants/sectorStrategies";
 import type { SectorUpdateOp } from "./types";
@@ -129,11 +128,7 @@ export function processSector(
   // The ids are read by a dozen map lookups below; convert once per sector.
   const sectorId = sector._id.toString();
   const corpId = corp._id.toString();
-  const operatingSectorType = getOperatingSectorType(
-    sector.sectorType,
-    sector.industryModel,
-    sector.mediaDiscriminator
-  );
+  const operatingSectorType = sector.sectorType;
 
   // Per-sector tech effects (see sectorTurn/sectorTechEffects.ts).
   const techEffects = resolveSectorTechEffects(
@@ -286,14 +281,12 @@ export function processSector(
   // capacity haircut, price realization, and the blended commodity margin
   // modifiers (so non-standard strategies are priced against what the
   // sector actually produces/consumes).
-  const strategyRates = getEffectiveStrategyRatesForOperatingModel(
+  const strategyRates = getEffectiveStrategyRates(
     sector.sectorType,
     sector.strategyId ?? "standard",
     sector.transitionFromStrategyId,
     sector.transitionStartTurn,
     turn ?? 0,
-    sector.industryModel,
-    sector.mediaDiscriminator,
     lookups.preset,
     lookups.hardwareInputReliefStartTurn
   );
@@ -851,11 +844,7 @@ export function processSector(
 
   const payrollSpecializationMod = isStateOwned(corp)
     ? 0
-    : specializationPayrollModifier(
-        operatingSectorType,
-        getOperatingSectorType(corp.type, corp.industryModel, corp.mediaDiscriminator),
-        corp.secondaryType
-      );
+    : specializationPayrollModifier(operatingSectorType, corp.type, corp.secondaryType);
   const { payrollBasis, operatingSaving } = specializationMaintenance({
     revenue: hourlyRevenue,
     operatingMargin: effectiveMargin,
@@ -1092,7 +1081,6 @@ export function processSector(
       sectorId,
       corporationId: corpId,
       sectorType: sector.sectorType,
-      industryModel: sector.industryModel,
       strategyId: sector.strategyId,
       capitalStock: sector.capitalStock ?? 0,
       plantCount: sector.plantCount ?? 0,

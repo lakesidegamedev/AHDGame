@@ -1,10 +1,5 @@
 import type { Filter, ObjectId } from "mongodb";
-import type {
-  CorporationType,
-  OperatingSectorType,
-  ManufacturingIndustryModel,
-} from "@/lib/constants/corporations";
-import type { MediaDiscriminator } from "@/lib/constants/corporations";
+import type { CorporationType, OperatingSectorType } from "@/lib/constants/corporations";
 import type { CommodityType } from "@/lib/constants/commodities";
 import type { CommodityDominanceSector } from "@/lib/corporations/rules/commodityDominance";
 import type { Corporation, CorporateSector, SectorBuildOrder } from "@/lib/db/types";
@@ -175,8 +170,6 @@ export interface NppCorpDecision {
     stateId: string;
     countryId: string;
     sectorType: CorporationType;
-    industryModel?: ManufacturingIndustryModel | null;
-    mediaDiscriminator?: MediaDiscriminator | null;
     revenue: number;
     profitMargin: number;
     strategyId?: string;
@@ -187,8 +180,6 @@ export interface NppCorpDecision {
   demandClaims?: Array<{
     stateId: string;
     sectorType: CorporationType;
-    industryModel?: ManufacturingIndustryModel | null;
-    mediaDiscriminator?: MediaDiscriminator | null;
     units: number;
     countryId: string;
   }>;
@@ -196,8 +187,6 @@ export interface NppCorpDecision {
   reinvestments?: Array<{
     sectorId: ObjectId;
     sectorType: CorporationType;
-    industryModel?: ManufacturingIndustryModel | null;
-    mediaDiscriminator?: MediaDiscriminator | null;
     units: number;
     costAnchor: number;
     costLocal: number;
@@ -270,8 +259,6 @@ export interface NppPlantsContext {
   nationalShareOf?: (
     corporationId: ObjectId,
     countryId: string,
-    sectorType: CorporationType,
-    industryModel?: string | null,
-    mediaDiscriminator?: MediaDiscriminator | null
+    sectorType: CorporationType
   ) => number;
 }

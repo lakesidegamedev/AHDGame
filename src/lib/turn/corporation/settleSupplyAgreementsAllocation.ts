@@ -528,8 +528,6 @@ export function computeDemandCappedContractReservations(args: {
 export interface SupplyAgreementDemandSector {
   corporationId: string;
   sectorType: CorporationType;
-  industryModel?: string | null;
-  mediaDiscriminator?: string | null;
   revenueAnchor: number;
   strategyId?: string;
   transitionFromStrategyId?: string | null;

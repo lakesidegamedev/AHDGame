@@ -47,10 +47,7 @@ import { emitTx } from "@/lib/financialTxLog/emit";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { logEconomicAction } from "@/lib/corporations/economicActionLog";
 import { createNotification } from "@/lib/notifications";
-import {
-  getCorporateSectorLaneQuery,
-  isCorporateSectorDuplicateKey,
-} from "@/lib/corporations/sectorLocation";
+import { isCorporateSectorDuplicateKey } from "@/lib/corporations/sectorLocation";
 import {
   identitySectorPlantFields,
   mergeSectorPlantFields,
@@ -198,7 +195,7 @@ export async function buyListedSector(request: Request, { params }: RouteParams)
     const existingBuyerSector = await corporateSectorsCollection(db).findOne({
       corporationId: buyer._id,
       stateId: sector.stateId,
-      ...getCorporateSectorLaneQuery(sector),
+      sectorType: sector.sectorType,
     });
     if (existingBuyerSector && hasProtectedConstructionProperty(existingBuyerSector))
       return errorResponse(409, "The buyer's existing site has an unfinished secured obligation.");

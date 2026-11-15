@@ -1,11 +1,6 @@
-import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
 import type { Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
-import {
-  OPERATING_SECTOR_TYPES,
-  operatingSectorIdentity,
-  type OperatingSectorType,
-} from "@/lib/constants/corporations";
+import { OPERATING_SECTOR_TYPES, type OperatingSectorType } from "@/lib/constants/corporations";
 import { batchSpawnNppCorporations, NPP_CAPITAL_STATES } from "@/lib/admin/spawnNppCorporation";
 import { loadPrivateEnterpriseBlockedCountries } from "@/lib/economy/queries/privateEnterpriseGate";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
@@ -83,13 +78,11 @@ export async function bootstrapWorldsimCorporations(
     // the missing slots so a partial bootstrap and a retry are both safe.
     const existing = await corporationsCollection<{ type: string }>(db)
       .find({ ceoType: "npp", countryId })
-      .project<{ type: string; industryModel?: string | null; mediaDiscriminator?: string | null }>(
-        { type: 1, industryModel: 1, mediaDiscriminator: 1 }
-      )
+      .project<{ type: string }>({ type: 1 })
       .toArray();
     const existingByType = new Map<string, number>();
     for (const corp of existing) {
-      const lane = getOperatingSectorType(corp.type, corp.industryModel, corp.mediaDiscriminator);
+      const lane = corp.type;
       existingByType.set(lane, (existingByType.get(lane) ?? 0) + 1);
     }
     const missing = OPERATING_SECTOR_TYPES.map((type) => ({
@@ -111,11 +104,8 @@ export async function bootstrapWorldsimCorporations(
       for (const [count, sectorTypes] of typesByCount) {
         const spawned = await batchSpawnNppCorporations(db, countryId, {
           sectorMarkets: sectorTypes.map((lane) => {
-            const identity = operatingSectorIdentity(lane);
             return {
-              type: identity.sectorType,
-              industryModel: identity.industryModel,
-              mediaDiscriminator: identity.mediaDiscriminator,
+              type: lane,
             };
           }),
           perSectorCount: count,
