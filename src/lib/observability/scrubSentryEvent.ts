@@ -38,7 +38,7 @@ function scrubCrumbData(crumb: Sentry.Breadcrumb): Record<string, unknown> | und
 /**
  * Keep diagnostic stacks while removing account data from error payloads.
  * The only user field that survives is the opaque account id, so staff can
- * find a player's own errors from a support ticket.
+ * find a player's own errors from their report.
  */
 export function scrubSentryEvent<T extends Sentry.ErrorEvent>(event: T): T {
   const userId = typeof event.user?.id === "string" ? event.user.id : undefined;

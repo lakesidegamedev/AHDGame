@@ -20,7 +20,7 @@ import {
 
 /**
  * Attach the signed-in player's opaque ids so staff can find a player's own
- * errors from a support ticket. Applied at send time, after the SDK has loaded.
+ * errors from a player report. Applied at send time, after the SDK has loaded.
  */
 export function withPlayerContext<T extends Sentry.ErrorEvent>(event: T): T {
   const player = getClientPlayerContext();
