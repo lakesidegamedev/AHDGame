@@ -7,7 +7,7 @@ summary: >-
   rehearsal gate.
 tags: [reset, tooling]
 badges: [patch]
-areas: [tooling]
+areas: [backend]
 ---
 
 ## What changed
