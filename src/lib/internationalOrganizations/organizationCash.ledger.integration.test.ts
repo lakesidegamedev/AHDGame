@@ -95,7 +95,7 @@ it("settles funded cross-currency dues once from Treasury cash", async () => {
     .updateOne({ _id: "default" as never }, { $set: { treasuryCashLedgerEnabled: true } });
   await db
     .collection("federalBudget")
-    .updateOne({ countryId: "US" }, { $set: { treasuryCashLocal: 1_000 } });
+    .updateOne({ countryId: "US" }, { $set: { treasuryCashLocal: 60 } });
   memory.seed("organizationFunds", [
     {
       _id: new ObjectId(),
@@ -109,13 +109,14 @@ it("settles funded cross-currency dues once from Treasury cash", async () => {
     { currencyCode: "USD", rate: 1 },
     { currencyCode: "EUR", rate: 0.9 },
   ]);
+  const opening = await collectBalances(db, { treasuryCashLedgerEnabled: true });
   expect(await chargeOrganizationDues(db, "EU", [{ countryId: "US", gdpUsd: 48_000_000 }])).toBe(
     54
   );
   await chargeOrganizationDues(db, "EU", [{ countryId: "US", gdpUsd: 48_000_000 }]);
   expect(
     (await db.collection("federalBudget").findOne({ countryId: "US" }))?.treasuryCashLocal
-  ).toBe(940);
+  ).toBe(0);
   expect((await db.collection("federalBudget").findOne({ countryId: "US" }))?.treasuryBalance).toBe(
     940
   );
@@ -127,6 +128,19 @@ it("settles funded cross-currency dues once from Treasury cash", async () => {
       .collection("bankMoneyMoves")
       .countDocuments({ status: "applied", kind: "organization_dues" })
   ).toBe(1);
+  const entries = await db.collection<LedgerEntry>("ledgerEntries").find({ turn: TURN }).toArray();
+  expect(
+    entries
+      .flatMap((entry) => entry.legs)
+      .filter((leg) => leg.role === "primary" && leg.account === "government_cash:US:USD")
+  ).toEqual([expect.objectContaining({ amount: -60 })]);
+  const report = reconcileLedger({
+    turn: TURN,
+    entries,
+    openingBalances: opening,
+    closingBalances: await collectBalances(db, { treasuryCashLedgerEnabled: true }),
+  });
+  expect(report.stockVsFlow.findings).toEqual([]);
 });
 it("does not fund an organization receipt when Treasury cash is unavailable", async () => {
   const { db } = fixture(cases[0]);
@@ -181,6 +195,12 @@ it("funds cross-currency aid from the organization balance and replays once", as
       .collection("bankMoneyMoves")
       .countDocuments({ status: "applied", kind: "organization_aid" })
   ).toBe(1);
+  const entries = await db.collection<LedgerEntry>("ledgerEntries").find({ turn: TURN }).toArray();
+  expect(
+    entries
+      .flatMap((entry) => entry.legs)
+      .filter((leg) => leg.role === "primary" && leg.account === "government_cash:US:USD")
+  ).toEqual([expect.objectContaining({ amount: 100 })]);
 });
 it.each(cases)("reconciles actual $currency spending and refund", async (row) => {
   const { db } = fixture(row),

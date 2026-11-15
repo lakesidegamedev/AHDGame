@@ -46,7 +46,7 @@ describe("stateBillActions", () => {
       ["stateBillVote", "Parks", 102],
       ["stateOverrideVote", "Tolls", 105],
     ]);
-    expect(items[0].href).toBe(`/country/us/region/oh/legislature/bills/${floor.toString()}`);
+    expect(items[0].href).toBe(`/country/us/region/OH/legislature/bills/${floor.toString()}`);
     expect(filters.stateBills?.[0]).toEqual({
       status: { $in: ["active", "veto_override"] },
       stateId: { $in: ["OH"] },

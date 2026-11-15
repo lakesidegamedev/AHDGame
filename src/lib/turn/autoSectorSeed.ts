@@ -130,6 +130,7 @@ export async function processAutoSectorSeed(
 
   const now = new Date();
   let sectorsUpdated = 0;
+  const newSectors: UnownedSector[] = [];
   // Seed at the WORLD's era, not the seed helper's 2019 default, so older
   // worlds don't grow modern sector revenue mid-turn.
   const preset = await getGameStatePresetOrDefault(db);
@@ -289,7 +290,7 @@ export async function processAutoSectorSeed(
         boostMultiplier: multiplier,
       });
 
-      await unownedSectorsCollection(db).insertOne({
+      newSectors.push({
         _id: new ObjectId(),
         stateId: state._id as string,
         countryId: state.countryId as CountryId,
@@ -313,6 +314,8 @@ export async function processAutoSectorSeed(
       sectorsUpdated++;
     }
   }
+
+  if (newSectors.length) await unownedSectorsCollection(db).insertMany(newSectors);
 
   await gameStateCollection<Document>(db).updateOne(
     {},

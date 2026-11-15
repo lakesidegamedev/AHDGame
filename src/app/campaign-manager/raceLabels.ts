@@ -1,3 +1,4 @@
+import { displayCanadianRegionCode } from "@/lib/countries/ca/regionCodes";
 import type { useTranslations } from "next-intl";
 import type { CountryId } from "@/lib/constants/countries";
 import { formatElectionTypeLabel } from "@/lib/utils/electionLabels";
@@ -23,7 +24,10 @@ export function raceTitle(
   const base =
     race.regionId === countryId
       ? t("nationalTitle", { type })
-      : t("raceTitle", { region: regionNames[race.regionId] ?? race.regionId, type });
+      : t("raceTitle", {
+          region: regionNames[race.regionId] ?? displayCanadianRegionCode(race.regionId),
+          type,
+        });
   if (race.stage !== "primary") return base;
   const party = race.primaryPartyName ?? race.primaryPartyId ?? "";
   return `${base} · ${t("primarySuffix", { party })}`;

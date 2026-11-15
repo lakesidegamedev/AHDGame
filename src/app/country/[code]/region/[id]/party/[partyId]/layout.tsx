@@ -1,3 +1,4 @@
+import { regionUrl } from "@/lib/urls";
 import { CDN_LOGO_URL } from "@/lib/images/staticCdnAssets";
 import type { Metadata } from "next";
 import { getDb } from "@/lib/mongodb";
@@ -48,7 +49,7 @@ export async function generateMetadata({
   const title = `${party.name} in ${regionName} | A House Divided`;
   const { name: countryName } = await resolveCountryIdentity(db, countryId);
   const description = `${party.abbreviation ? `${party.abbreviation} · ` : ""}${party.name} in ${regionName}, ${countryName}. Regional support, candidates, and turnout.`;
-  const url = `${getSiteUrl()}/country/${code}/region/${regionId}/party/${partyId}`;
+  const url = `${getSiteUrl()}${regionUrl(code, regionId)}/party/${partyId}`;
   const image = party.logoUrl || party.heroImageUrl || CDN_LOGO_URL;
 
   return {

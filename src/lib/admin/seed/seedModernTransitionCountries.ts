@@ -551,3 +551,6 @@ export async function seedModernTransitionCountry(
   await seedModernTransitionStatePartyOrg(db, reset, log, preset, countryId);
   await seedModernTransitionGovernmentFormation(db, log, preset, countryId);
 }
+
+// Shared with offline modeled-opening derivation; seeding keeps the same inputs.
+export { loadMetricsBundle as loadModernTransitionMetricsBundle };

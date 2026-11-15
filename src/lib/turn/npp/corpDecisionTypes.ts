@@ -168,6 +168,7 @@ export interface NppCorpDecision {
   cashFloorLocal: number;
   /** Exact total founding charge, separate from any reinvestment or borrowed cash. */
   foundingCashLocal?: number;
+  foundingCreditLocal?: number;
   sectorUpdates: Array<{
     filter: Filter<CorporateSector> & { _id: ObjectId };
     update: NppSectorUpdateDoc;

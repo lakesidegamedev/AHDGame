@@ -20,4 +20,6 @@ export interface BondTurnResult {
   sovereignCouponPaidByCountry?: Record<string, number>;
   sovereignMaturityCashPaidByCountry?: Record<string, number>;
   sovereignDebtFaceRetiredByCountry?: Record<string, number>;
+  /** Cash payouts were completed against the canonical funded Treasury ledger. */
+  sovereignServiceAlreadyFunded?: boolean;
 }

@@ -74,6 +74,16 @@ export async function seedOpeningMetrics1991(
   const expected = buildOpeningMetricSnapshots1991(worldId, sourceTurn).filter((row) =>
     countries.includes(row.countryId)
   );
+  return persistMetricOpening(db, worldId, sourceTurn, countries, expected);
+}
+
+export async function persistMetricOpening(
+  db: Db,
+  worldId: string,
+  sourceTurn: number,
+  countries: readonly (OpeningCountry | "CA")[],
+  expected: readonly ResetMetricSnapshot[]
+): Promise<ResetSystemSeedReceipt> {
   const seededRegions = await statesCollection(db)
     .find({ countryId: { $in: [...countries] } }, { projection: { _id: 1, countryId: 1 } })
     .toArray();
@@ -83,7 +93,7 @@ export async function seedOpeningMetrics1991(
     .sort();
   const seededRegionKeys = seededRegions.map((row) => `${row.countryId}:${row._id}`).sort();
   if (JSON.stringify(seededRegionKeys) !== JSON.stringify(expectedRegionKeys)) {
-    throw new Error("The seeded 1991 regions do not match the v2 metric opening catalog");
+    throw new Error("The seeded regions do not match the v2 metric opening catalog");
   }
   const collection = resetMetricSnapshotsCollection<ResetMetricSnapshot>(db);
   await collection.bulkWrite(
@@ -106,6 +116,7 @@ export async function seedOpeningMetrics1991(
           asOfTurn: 1,
           observations: 1,
           openingValues: 1,
+          modeledOpening: 1,
           history: 1,
         },
       }
@@ -116,7 +127,7 @@ export async function seedOpeningMetrics1991(
     persisted.length !== expected.length ||
     resetMetricSnapshotPayload(persisted) !== expectedPayload
   ) {
-    throw new Error("The persisted 1991 v2 metric opening failed readback verification");
+    throw new Error("The persisted v2 metric opening failed readback verification");
   }
   return {
     worldId,

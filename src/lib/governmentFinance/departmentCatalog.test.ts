@@ -29,6 +29,17 @@ const requiredPortfolios: PortfolioId[] = [
 ];
 
 describe("department catalog", () => {
+  it("covers every Canadian office and portfolio in the 2027 opening", () => {
+    const departments = getDepartmentDefinitions("CA", 2027);
+    expect(departments).toHaveLength(getCabinetPositions("CA").length);
+    for (const portfolio of requiredPortfolios) {
+      expect(resolvePortfolioDepartment("CA", portfolio, 2027), portfolio).toBeDefined();
+    }
+    for (const seat of getCabinetPositions("CA")) {
+      expect(departments.filter((d) => d.controllingPositionIds.includes(seat.id))).toHaveLength(1);
+    }
+    expect(getDepartmentDefinitions("CA", 1991)).toHaveLength(0);
+  });
   it("uses unique durable department ids", () => {
     const ids = DEPARTMENT_DEFINITIONS.map((definition) => definition.id);
     expect(new Set(ids).size).toBe(ids.length);

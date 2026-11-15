@@ -19,7 +19,6 @@ import {
   settleBankSovereignClaims,
 } from "@/lib/banking/bankSovereignClaims";
 import { resumeSettlement, settleTransition } from "@/lib/banking/settlementJournal";
-import { readForcedRolloverFaceLocal } from "@/lib/bonds/forcedSovereignRollover";
 import {
   freezeFundedSovereignBondMaturityQuote,
   marketSovereignRolloverCoupon,
@@ -83,6 +82,7 @@ export async function settleSovereignBondMaturityBond(
     bond,
     anchorRate: treasuryValuation.anchorRate,
     treasuryCashLedgerEnabled: true,
+    ledgerShadow: true,
   });
   const bondIdHex = bond._id.toHexString();
   if (newClaims.length > 0 || bankUnits > 0 || budgetsWithBankClaims.has(budgetId)) {
@@ -142,7 +142,10 @@ export async function settleSovereignBondMaturityBond(
     fundedSettlement?.status === "partial" ||
     (fundedSettlement?.status === "replayed" && fundedSettlement.error)
   )
-    fundedSettlement = await resumeSettlement(db, fundedSettlement.key);
+    fundedSettlement = {
+      ...fundedSettlement,
+      ...(await resumeSettlement(db, fundedSettlement.key)),
+    };
   if (
     !fundedSettlement ||
     (fundedSettlement.status !== "applied" &&
@@ -150,12 +153,10 @@ export async function settleSovereignBondMaturityBond(
   )
     return null;
 
-  // A forced rollover moved the pool's face to a replacement bond, so that
-  // face was never paid out of Treasury cash. The settlement already knows
-  // that face; only a resumed receipt has to read it back.
-  const forcedRolloverFaceLocal =
-    fundedSettlement.forcedRolloverFaceLocal ?? (await readForcedRolloverFaceLocal(db, bond));
-  const paidLocal = nonBankRepaymentLocal - forcedRolloverFaceLocal;
+  // Book face and funded cash use different scales after public-float novation.
+  const paidLocal = fundedSettlement.cashPaidLocal;
+  if (paidLocal === undefined || !Number.isFinite(paidLocal) || paidLocal < 0)
+    throw new Error("Completed sovereign maturity is missing its funded cash amount");
 
   return [
     ...maturityEntries,
@@ -172,7 +173,7 @@ export async function settleSovereignBondMaturityBond(
         bondId: bond._id.toHexString(),
         units: paidLocal / BOND_UNIT_FACE_VALUE,
         couponRate: bond.couponRate,
-        treasuryCashMovement: true,
+        treasuryCashMovement: false,
         ...treasuryValuation,
       },
     },

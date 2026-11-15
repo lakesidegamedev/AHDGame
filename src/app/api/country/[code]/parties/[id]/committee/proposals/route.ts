@@ -17,6 +17,7 @@ import {
   isProposalTypeLocked,
 } from "@/lib/parties/proposals";
 import { requiredYesVotes } from "@/lib/parties/proposalConstants";
+import { canRenameParty, DEFAULT_PARTY_RENAME_ERROR } from "@/lib/parties/rules/defaultIdentity";
 import type { CommitteeProposal, PoliticalParty } from "@/lib/db/types";
 import type {
   ProposalView,
@@ -309,6 +310,9 @@ export async function POST(request: Request, { params }: RouteParams) {
       return errorResponse(parsed.status, parsed.error);
     }
     const body = parsed.data;
+    if (body.type === "rename" && !canRenameParty(party)) {
+      return errorResponse(400, DEFAULT_PARTY_RENAME_ERROR);
+    }
 
     // Campaigner nominations originate from the Chair Office roster
     // editor, which owns the cap and residency checks. Refuse hand-rolled

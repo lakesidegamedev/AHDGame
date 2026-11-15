@@ -1,4 +1,5 @@
 "use client";
+import { displayCanadianRegionCode } from "@/lib/countries/ca/regionCodes";
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
@@ -72,11 +73,11 @@ export function RegionApprovalClient({
             {countryShortLabel} Approval &amp; active effects
           </Link>
           <span>/</span>
-          <span>{data?.stateName ?? stateId}</span>
+          <span>{displayCanadianRegionCode(data?.stateName ?? stateId)}</span>
         </div>
 
         <h1 className="text-2xl font-bold mb-1">
-          {data?.stateName ?? stateId} - Approval &amp; active effects
+          {displayCanadianRegionCode(data?.stateName ?? stateId)} - Approval &amp; active effects
         </h1>
         <p className="text-sm text-muted mb-8">{t("regionalIntro")}</p>
 

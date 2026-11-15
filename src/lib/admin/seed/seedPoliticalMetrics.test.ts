@@ -8,6 +8,7 @@ import { NATIONAL_BASELINES_1979 } from "@/lib/politicalMetrics/seeds/nationalBa
 import type { PoliticalMetricsDoc } from "@/lib/db/types/politicalMetrics";
 import type { PoliticalMetricId, PoliticalMetricsCountryId } from "@/lib/politicalMetrics/types";
 import { seedPoliticalMetrics } from "./seedPoliticalMetrics";
+import modeledOpening2027 from "@/lib/politicalMetrics/seeds/modeledOpening2027.json";
 
 /**
  * Issue #704 contract: seeded value = clamp(baseline + modifier ?? texture).
@@ -42,6 +43,30 @@ describe("seedPoliticalMetrics", () => {
   beforeEach(() => {
     db = createMockDb();
     db.collection("states").find().toArray.mockResolvedValue(STATES);
+  });
+
+  it("restores complete modeled country boards on a 2027 reset", async () => {
+    const regions = Object.entries(modeledOpening2027.boards).flatMap(([countryId, boards]) =>
+      Object.keys(boards).map((_id) => ({ _id, countryId }))
+    );
+    db.collection("states").find().toArray.mockResolvedValue(regions);
+    const result = await seedPoliticalMetrics(
+      db as unknown as Db,
+      false,
+      () => {},
+      2027,
+      "2027-default"
+    );
+    expect(result.regionsSeeded).toBe(regions.length);
+    const ops = bulkOps(db.collectionMocks.politicalMetrics!.bulkWrite);
+    for (const [, update] of ops) {
+      const doc = (update as { $set: PoliticalMetricsDoc }).$set;
+      expect(Object.keys(doc.values)).toHaveLength(63);
+      const boards = modeledOpening2027.boards[
+        doc.countryId as keyof typeof modeledOpening2027.boards
+      ] as Record<string, unknown>;
+      expect(doc.values).toEqual(boards[String(doc._id)]);
+    }
   });
 
   it("upserts one doc per US/UK/RU/DD region with base+modifier values", async () => {

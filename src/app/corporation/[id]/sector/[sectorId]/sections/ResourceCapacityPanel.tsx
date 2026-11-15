@@ -1,4 +1,5 @@
 "use client";
+import { displayCanadianRegionCode } from "@/lib/countries/ca/regionCodes";
 
 import { useState } from "react";
 import Link from "next/link";
@@ -106,7 +107,7 @@ export default function ResourceCapacityPanel({
                           href={`${regionUrl(s.countryId as CountryId, s.stateId)}?tab=resources`}
                           className="text-primary hover:underline"
                         >
-                          {s.stateId} ({s.countryId})
+                          {displayCanadianRegionCode(s.stateId)} ({s.countryId})
                         </Link>
                         <span className="text-muted">
                           {" "}

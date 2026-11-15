@@ -134,7 +134,7 @@ export const CA_CONFIG: CountryConfig = {
       partyStrengthWeight: 0,
     },
   ],
-  majorPartyIds: ["FUP", "NPA"],
+  majorPartyIds: ["LIB", "CON"],
   partyCreationNPPs: {
     statesRequired: 2,
     lockHomeState: false,

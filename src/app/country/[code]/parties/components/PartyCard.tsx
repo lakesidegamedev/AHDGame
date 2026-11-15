@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { PartyLogo } from "@/components/PartyLogo";
+import { DefaultPartyBadge } from "@/components/parties/DefaultPartyBadge";
 import { DiscordInviteButton } from "@/components/DiscordInviteButton";
 import { Avatar } from "@/components/Avatar";
 import { PlainPositionLabel } from "@/components/party/PlainPositionLabel";
@@ -63,6 +64,7 @@ export function PartyCard({
               {regimeLabel && <> · {regimeLabel}</>}
               {tier === "major" ? " · Major party" : " · Minor party"}
             </p>
+            {party.isDefault && <DefaultPartyBadge />}
           </div>
         </Link>
         <DiscordInviteButton inviteUrl={party.discordInviteUrl} entityName={party.name} />

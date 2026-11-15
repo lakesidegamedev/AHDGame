@@ -1,3 +1,4 @@
+import { canonicalCanadianPlayerUrl } from "@/lib/countries/ca/regionCodes";
 import { NextResponse } from "next/server";
 import { REQUEST_METHOD_HEADER } from "@/lib/staff/rules";
 import { legacyRedirect } from "@/lib/staff/panelRegistry";
@@ -201,6 +202,9 @@ const OAUTH_CALLBACK_PATH = /^\/api\/auth\/(discord|google|apple|oidc)\/callback
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  const compactUrl = canonicalCanadianPlayerUrl(request.url);
+  if (compactUrl && (request.method === "GET" || request.method === "HEAD"))
+    return NextResponse.redirect(compactUrl, 308);
   const host = request.headers.get("host") ?? "";
   const singleplayer = isSingleplayer();
 

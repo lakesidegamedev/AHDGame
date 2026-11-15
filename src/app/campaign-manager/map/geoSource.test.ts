@@ -16,6 +16,35 @@ import { boxesTouch, loadCampaignGeo } from "./geoSource";
 afterEach(() => vi.unstubAllGlobals());
 
 describe("loadCampaignGeo", () => {
+  it("loads Canadian layers only for the qualified preset", async () => {
+    const asset = {
+      w: 100,
+      h: 100,
+      regions: { CA_NT: { n: "Northwest Territories", d: "M0,0Z", bb: [0, 0, 100, 100], nb: [] } },
+      units: null,
+      supportedPresets: ["2027-default"],
+      unitLayerByType: { caCommons: "federal-ridings", governor: "census-divisions" },
+      unitLayers: {
+        "federal-ridings": {
+          units: { CA_NT: [{ id: "CA-FED-2023-61001", n: "Northwest Territories", d: "M0,0Z" }] },
+          unitLabelPlural: "Federal ridings",
+        },
+        "census-divisions": { units: { CA_NT: [] }, unitLabelPlural: "Census divisions" },
+      },
+    };
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify(asset)));
+    vi.stubGlobal("fetch", fetchMock);
+    expect(await loadCampaignGeo("CA", "1991-default")).toBeNull();
+    expect(fetchMock).not.toHaveBeenCalled();
+    const geo = await loadCampaignGeo("CA", "2027-default");
+    expect(geo?.unitLayerByType?.caCommons).toBe("federal-ridings");
+    expect(geo?.unitLayerByType?.governor).toBe("census-divisions");
+    expect(fetchMock).toHaveBeenCalledWith("/geo/campaign-manager/ca.json", expect.anything());
+    const calls = fetchMock.mock.calls.length;
+    expect(await loadCampaignGeo("CA", "2027-default")).toBe(geo);
+    expect(fetchMock).toHaveBeenCalledTimes(calls);
+  });
+
   it("has no map for a country without one", async () => {
     expect(await loadCampaignGeo("DE")).toBeNull();
   });

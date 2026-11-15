@@ -166,4 +166,20 @@ describe("shadow-cabinet route", () => {
     const [, update] = db.collectionMocks.politicalParties.updateOne.mock.calls[0]!;
     expect(update.$unset).toEqual({ "shadowCabinet.chancellor": "" });
   });
+  it("does not grant a player an NPC opposition leader's authority", async () => {
+    db.collection("politicalParties");
+    const { resolveOppositionLeaderForCountry } = await import("@/lib/parliament/oppositionLeader");
+    vi.mocked(resolveOppositionLeaderForCountry).mockResolvedValue({
+      chairId: null,
+      nppId: new ObjectId(),
+      partyDoc: { _id: oppositionPartyId, name: "Opposition", sequentialId: 2 },
+    } as never);
+    const { POST } = await import("./route");
+    const response = await POST(
+      makeRequest("POST", { positionId: "chancellor", characterId: eligibleCharId.toString() }),
+      { params: Promise.resolve({ code: "CA" }) }
+    );
+    expect(response.status).toBe(403);
+    expect(db.collectionMocks.politicalParties?.updateOne).not.toHaveBeenCalled();
+  });
 });

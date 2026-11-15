@@ -12,6 +12,7 @@ describe("metric detail country coverage", () => {
       const { readResetMetricDetail } = await import("@/lib/resetMetrics/readMetricDetail");
       vi.mocked(readResetMetricBoard).mockResolvedValue({
         status: "ready",
+        year: 1991,
         board: {} as ResetMetricSnapshot,
       });
       vi.mocked(readResetMetricDetail).mockResolvedValue({

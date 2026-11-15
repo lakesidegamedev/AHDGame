@@ -43,6 +43,7 @@ describe("applyPassedVoteEffects dissolution", () => {
     expect(executeDissolution).toHaveBeenCalledWith(expect.anything(), corporation, {
       requireDefaultedBonds: false,
       exitReason: "shareholder_vote",
+      turn: 10,
     });
   });
 });

@@ -1,4 +1,5 @@
 "use client";
+import { displayCanadianRegionCode } from "@/lib/countries/ca/regionCodes";
 
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
@@ -84,7 +85,7 @@ export function AdminAppointPmButton({ countryId }: { countryId: string }) {
                 <option value="">— Vacate position —</option>
                 {characters.map((c) => (
                   <option key={c._id} value={c._id}>
-                    {c.name} ({c.sequentialId ?? ""}) — {c.homeState}
+                    {c.name} ({c.sequentialId ?? ""}) — {displayCanadianRegionCode(c.homeState)}
                     {c.currentOffice ? " [Has office]" : ""}
                   </option>
                 ))}

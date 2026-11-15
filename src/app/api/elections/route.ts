@@ -1,3 +1,4 @@
+import { electionNavLabel } from "@/lib/elections/electionNavLabel";
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { getAuthUser } from "@/lib/auth"; // Optional auth — intentionally uses getAuthUser()
@@ -59,15 +60,11 @@ async function handleGet(request: Request) {
         election.electionType,
         (election.countryId ?? "US") as CountryId
       );
-
-      const isNational = ["president", "special_president", "primeMinister", "uachtaran"].includes(
-        election.electionType
-      );
       return NextResponse.json({
         myElection: {
           id: election._id.toString(),
           seatId: election.seatId ?? undefined,
-          label: isNational ? `${typeLabel} — National` : `${typeLabel} — ${election.state}`,
+          label: electionNavLabel(typeLabel, election),
         },
       });
     }

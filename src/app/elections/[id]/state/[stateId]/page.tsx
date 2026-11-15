@@ -1,3 +1,4 @@
+import { electionRegionUrl } from "@/lib/urls";
 import { redirect } from "next/navigation";
 import { getDb } from "@/lib/mongodb";
 import type { State } from "@/lib/db/types";
@@ -19,5 +20,5 @@ export default async function ElectionStateRedirect({
     { projection: { countryId: 1 } }
   );
   const countryId = state?.countryId ?? "US";
-  redirect(`/elections/${id}/country/${countryId.toLowerCase()}/region/${upper}`);
+  redirect(`${electionRegionUrl(id, countryId, upper)}`);
 }

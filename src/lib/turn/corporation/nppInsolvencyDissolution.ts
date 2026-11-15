@@ -219,6 +219,7 @@ export async function processNppInsolventCorpDissolution(
           executeCorporationBondDefaultDissolution(db, corp, {
             requireDefaultedBonds: false,
             exitReason: "npp_insolvency",
+            turn,
           })
       );
       // null → settlement already in progress elsewhere; skip, it'll be retried

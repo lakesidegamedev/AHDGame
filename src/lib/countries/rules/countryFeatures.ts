@@ -13,6 +13,12 @@ import { TURN_FEATURES } from "./features/turn";
 import { UI_FEATURES } from "./features/ui";
 
 export const COUNTRY_FEATURES = {
+  /** Seeded Commons MPs can lead the official opposition without a player chair. */
+  nppOppositionLeader: ["CA"],
+  /** The head of government must retain an elected lower-chamber seat. */
+  pmRequiresLowerSeat: ["UK", "CA"],
+  /** A pinned singleplayer PM may keep the scenario office without a Commons seat. */
+  pinnedSingleplayerPmSeatExemption: ["UK"],
   /** Referendums, devolution policy, party conference and manifestos. */
   ukDevolutionAndConference: ["UK"],
   /** Commons recall petitions. */

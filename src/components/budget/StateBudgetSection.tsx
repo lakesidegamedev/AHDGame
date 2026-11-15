@@ -9,6 +9,7 @@ import { regionApiSubUrl } from "@/lib/urls";
 interface BudgetData {
   budget: StateBudget;
   grantBreakdown: { program: string; amount: number }[];
+  grantBreakdownNote?: string;
 }
 
 interface StateBudgetSectionProps {
@@ -81,22 +82,23 @@ export function StateBudgetSection({ stateId, countryId, regionCode }: StateBudg
   }
 
   const { budget, grantBreakdown } = data;
-  const netBalance = budget.surplus !== 0 ? budget.surplus : budget.balance;
+  const netBalance = budget.surplus;
 
   return (
     <div className="space-y-6">
       <h2 className="text-xl font-semibold">State budget - FY{budget.fiscalYear}</h2>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <BudgetSummaryCard label="Revenue" value={budget.revenue.total} countryId={countryId} />
         <BudgetSummaryCard label="Spending" value={budget.spending.total} countryId={countryId} />
         <BudgetSummaryCard
-          label="Balance"
+          label="Annual surplus / deficit"
           value={netBalance}
           variant={netBalance >= 0 ? "surplus" : "deficit"}
           countryId={countryId}
         />
+        <BudgetSummaryCard label="Cash balance" value={budget.balance} countryId={countryId} />
       </div>
 
       {budget.taxRates && <IncomeTaxRates rates={budget.taxRates} />}
@@ -182,6 +184,9 @@ export function StateBudgetSection({ stateId, countryId, regionCode }: StateBudg
               <span className="font-mono">{formatMoney(grant.amount)}</span>
             </div>
           ))}
+          {data.grantBreakdownNote && (
+            <p className="text-xs text-muted">{data.grantBreakdownNote}</p>
+          )}
         </div>
       </div>
     </div>

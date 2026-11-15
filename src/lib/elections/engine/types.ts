@@ -445,6 +445,7 @@ export interface AccumulateVoteTurnPreload {
    */
   demographicDefaultsByState?: Map<string, StateDemographics>;
   /** Live age vectors loaded once for the phase when Demographics v2 is active. */
+  /** Population vectors keyed by country:region, including national aggregates. */
   regionDemographicsByState?: Map<string, RegionDemographics>;
   /** Countries whose reset-scoped Demographics v2 receipt is active. */
   demographicsV2Countries?: Set<string>;

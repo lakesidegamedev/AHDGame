@@ -15,12 +15,12 @@ export interface CashAuthorityClaim {
   amount: number;
 }
 
-export function settleResetCashTurn(input: {
+export function planResetCashTurn(input: {
   treasury: ResetNationalTreasurySnapshot;
   turn: number;
   claims: readonly CashAuthorityClaim[];
   flows: Omit<NationalTurnInput, "operatingClaims">;
-}): ResetNationalTreasurySnapshot {
+}): { next: ResetNationalTreasurySnapshot; externallyFundedBondCash: number } {
   const { treasury, turn, claims, flows } = input;
   if (!Number.isSafeInteger(turn) || turn !== treasury.settledThroughTurn + 1) {
     throw new Error("Treasury cash must advance exactly one turn");
@@ -90,17 +90,26 @@ export function settleResetCashTurn(input: {
         ? "debt_ceiling"
         : null;
   return {
-    ...treasury,
-    ...result.closing,
-    cash: result.closing.cash + retainedFraction,
-    settledThroughTurn: turn,
-    lastPaid: result.paid,
-    lastEmergencyAdvanceDrawn: result.emergencyAdvanceDrawn,
-    lastAppropriationFinancing: result.appropriationFinancing,
-    lastPaidByClaim,
-    claimArrears,
-    ...(crisis
-      ? { fiscalCrisis: { sinceTurn: treasury.fiscalCrisis?.sinceTurn ?? turn, reason: crisis } }
-      : {}),
+    externallyFundedBondCash: result.externallyFundedBondCash,
+    next: {
+      ...treasury,
+      ...result.closing,
+      cash: result.closing.cash + retainedFraction,
+      settledThroughTurn: turn,
+      lastPaid: result.paid,
+      lastEmergencyAdvanceDrawn: result.emergencyAdvanceDrawn,
+      lastAppropriationFinancing: result.appropriationFinancing,
+      lastPaidByClaim,
+      claimArrears,
+      ...(crisis
+        ? { fiscalCrisis: { sinceTurn: treasury.fiscalCrisis?.sinceTurn ?? turn, reason: crisis } }
+        : {}),
+    },
   };
+}
+
+export function settleResetCashTurn(
+  input: Parameters<typeof planResetCashTurn>[0]
+): ResetNationalTreasurySnapshot {
+  return planResetCashTurn(input).next;
 }

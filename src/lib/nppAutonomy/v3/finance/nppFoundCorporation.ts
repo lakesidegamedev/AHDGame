@@ -41,6 +41,7 @@ import { nppHomeFxRate, localToAnchor } from "./nppEconomicAccount";
 import { isPrivateEnterpriseBlocked } from "@/lib/economy/queries/privateEnterpriseGate";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { witnessNppFoundingCash } from "./shareCashLedger";
 
 export type NppFoundCorporationResult =
   | {
@@ -141,6 +142,8 @@ export async function nppFoundCorporation(
       reason: `Corporation founding failed: ${error instanceof Error ? error.message : String(error)}`,
     };
   }
+
+  await witnessNppFoundingCash(db, npp, foundingFeeAnchor, now);
 
   const corporationId = new ObjectId(spawnResult.corporationId);
   const autoCeoId = new ObjectId(spawnResult.nppId);

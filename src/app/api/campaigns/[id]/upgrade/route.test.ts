@@ -3,6 +3,7 @@ import { ObjectId } from "mongodb";
 import type { Db } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
 import { CAMPAIGN_ACTIVITY_HISTORY_CAP } from "@/lib/campaigns/constants/activityHistory";
+import { ERA_PRICE_LEVEL } from "@/lib/campaigns/rules/priceLevel";
 
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
 vi.mock("@/lib/api/requireAuth", () => ({ requireAuthWithCharacter: vi.fn() }));
@@ -242,18 +243,12 @@ describe("POST /api/campaigns/[id]/upgrade — no election found", () => {
   });
 });
 
-it.each([0.03673, 0.35808, 1, 1.28579])(
+it.each(["1953", "1991", "2019", "2027"] as const)(
   "charges era campaign upgrades at price %s",
-  async (priceLevel) => {
+  async (era) => {
     await setupRoute();
-    const preset =
-      priceLevel === 0.03673
-        ? "1953-default"
-        : priceLevel === 0.35808
-          ? "1991-default"
-          : priceLevel === 1
-            ? "2019-default"
-            : "2027-default";
+    const priceLevel = ERA_PRICE_LEVEL[era];
+    const preset = `${era}-default`;
     db.collection("gameConfig").findOne.mockResolvedValue({ campaignEraPriceLevelEnabled: true });
     db.collection("gameState").findOne.mockResolvedValue({
       _id: "current",

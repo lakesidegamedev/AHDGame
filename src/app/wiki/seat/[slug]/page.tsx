@@ -1,3 +1,4 @@
+import { displayCanadianRegionCode } from "@/lib/countries/ca/regionCodes";
 import Link from "next/link";
 import { Avatar } from "@/components/Avatar";
 import { notFound } from "next/navigation";
@@ -99,7 +100,7 @@ export default async function WikiSeatPage({ params }: PageProps) {
                           color: h.partyColor ?? "#888",
                         }}
                       >
-                        {h.partyAbbreviation}-{data.stateId}
+                        {h.partyAbbreviation}-{displayCanadianRegionCode(data.stateId)}
                       </span>
                     )}
                     {h.isNPP && (

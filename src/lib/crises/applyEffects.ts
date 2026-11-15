@@ -1,10 +1,12 @@
 import { operatingSectorFilter } from "@/lib/constants/corporations";
-import { type Db, type Filter, ObjectId } from "mongodb";
+import { type Db, ObjectId } from "mongodb";
 import type { CrisisEffect } from "@/lib/db/types/crisis";
 import { isMacroMetricPath } from "@/lib/macroMetrics/paths";
-import type { PoliticalMetricsDoc } from "@/lib/db/types/politicalMetrics";
 import { boardDeltaForLegacyEffect } from "@/lib/politicalLegislation/legacyEffectBridge";
-import { applyBoardDelta } from "@/lib/politicalLegislation/boardWrite";
+import {
+  applyBoardValueDeltasByRegion,
+  type BoardDelta,
+} from "@/lib/politicalLegislation/boardWrite";
 import type { CharacterStats, StatKey } from "@/lib/stats/statsConstants";
 import { STAT_MIN, STAT_MAX } from "@/lib/stats/statsConstants";
 import { resolveCrisisMetricPath } from "@/lib/crises/rules/metricPath";
@@ -136,22 +138,17 @@ async function applyMetricEffects(
   //
   // The paths are stripped of their trailing `.value` because the bridge takes
   // "category.metricId" — the legacy `$inc` shape carries a third segment.
+  const politicalDeltas: BoardDelta[] = [];
   for (const [path, delta] of Object.entries(politicalInc)) {
     const [category, metricId] = path.split(".");
     const hit = boardDeltaForLegacyEffect(category, metricId, delta);
     if (!hit) continue;
-    for (const stateId of targetStateIds) {
-      writes.push(
-        applyBoardDelta(
-          db,
-          { _id: stateId } as Filter<PoliticalMetricsDoc>,
-          hit.familyId,
-          hit.scoreDelta,
-          "value"
-        )
-      );
-    }
+    politicalDeltas.push({ familyId: hit.familyId, scoreDelta: hit.scoreDelta });
   }
+  if (politicalDeltas.length > 0)
+    writes.push(
+      applyBoardValueDeltasByRegion(db, new Map(targetStateIds.map((id) => [id, politicalDeltas])))
+    );
 
   await Promise.all(writes);
 }

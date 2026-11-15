@@ -79,7 +79,7 @@ export async function loadCharacterRoleBonuses(
         (row.officeType === "speaker" ? "speaker_ng_reps" : "president_ng_senate") as LeadershipRole
     ),
   ];
-  const isOppositionLeader = opposition?.chairId.toString() === id;
+  const isOppositionLeader = opposition?.chairId?.toString() === id;
   const isShadowCabinetMember = Object.values(opposition?.partyDoc?.shadowCabinet ?? {}).some(
     (appointment) => appointment?.characterId?.toString() === id
   );

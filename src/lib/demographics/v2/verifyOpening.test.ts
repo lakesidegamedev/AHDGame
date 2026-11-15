@@ -6,6 +6,27 @@ import { verifyDemographicsV2Opening } from "./verifyOpening";
 const vector = (value: number) => Array<number>(101).fill(value);
 
 describe("verifyDemographicsV2Opening", () => {
+  it("does not certify a Canadian region using a foreign row with the same id", async () => {
+    const db = createMockDb();
+    db.collection("states").find.mockReturnValue({
+      sort: vi.fn().mockReturnThis(),
+      toArray: vi.fn().mockResolvedValue([{ _id: "CA_ON", countryId: "CA" }]),
+    });
+    db.collection("regionDemographics").find.mockReturnValue({
+      sort: vi.fn().mockReturnThis(),
+      toArray: vi.fn().mockResolvedValue([
+        {
+          _id: "CA_ON",
+          countryId: "US",
+          ages: { male: vector(1), female: vector(1) },
+          lastUpdated: new Date("2026-11-14"),
+        },
+      ]),
+    });
+    await expect(
+      verifyDemographicsV2Opening(db as unknown as Db, "country-scoped", 1, ["CA"])
+    ).rejects.toThrow("missing live population vectors for: CA_ON");
+  });
   it("certifies complete, valid live vectors", async () => {
     const db = createMockDb();
     db.collection("states").find.mockReturnValue({

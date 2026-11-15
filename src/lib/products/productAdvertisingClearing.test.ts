@@ -169,6 +169,23 @@ describe("product advertising clearing pool", () => {
     }
     expect(await cash(db, usdBuyer._id)).toBeCloseTo(1_000_000 - a.buyerAmountLocal, 9);
     expect(await cash(db, eurBuyer._id)).toBeCloseTo(1_000_000 - c.buyerAmountLocal, 9);
+    const entries = db.collection("ledgerEntries").docs;
+    const primary = (id: ObjectId) =>
+      entries
+        .flatMap(
+          (entry) =>
+            entry.legs as { account: string; amount: number; role: string; anchorAmount: number }[]
+        )
+        .filter((leg) => leg.role === "primary" && leg.account.startsWith(`corporation:${id}:`))
+        .reduce((sum, leg) => sum + leg.amount, 0);
+    for (const seller of sellers)
+      expect(primary(seller._id)).toBeCloseTo(await cash(db, seller._id), 9);
+    expect(primary(usdBuyer._id)).toBeCloseTo(-a.buyerAmountLocal, 9);
+    expect(primary(eurBuyer._id)).toBeCloseTo(-c.buyerAmountLocal, 9);
+    for (const entry of entries)
+      expect(
+        (entry.legs as { anchorAmount: number }[]).reduce((sum, leg) => sum + leg.anchorAmount, 0)
+      ).toBeCloseTo(0, 9);
     expect(await poolTotal(db)).toBeLessThan(1e-9);
 
     const [clearing] = await journalRecords(db, CLEARING);
@@ -483,7 +500,8 @@ describe("product advertising clearing pool", () => {
     for (const record of orderRecords) {
       const frozen = JSON.stringify(record);
       expect(frozen).not.toContain("sellerAllocations");
-      expect(frozen.length).toBeLessThan(16_000);
+      // The durable cash witness adds a fixed-size buyer receipt, not a seller table.
+      expect(frozen.length).toBeLessThan(17_000);
       expect(record.status).toBe("applied");
     }
     expect(await db.collection(PRODUCT_ADVERTISING_PAYABLES_COLLECTION).countDocuments({})).toBe(0);

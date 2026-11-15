@@ -28,6 +28,11 @@ import { getBankId } from "@/lib/centralBank/helpers";
 
 function createMockDb() {
   const db = createEmptyMockDb();
+  const bonds = db.collection("bonds");
+  bonds.insertMany.mockImplementation(async (documents: Record<string, unknown>[]) => {
+    for (const document of documents) await bonds.insertOne(document);
+    return { acknowledged: true, insertedCount: documents.length, insertedIds: {} };
+  });
   db.collection("exchangeRates")
     .find()
     .toArray.mockResolvedValue(

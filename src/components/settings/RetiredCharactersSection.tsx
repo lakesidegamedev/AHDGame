@@ -1,4 +1,5 @@
 "use client";
+import { displayCanadianRegionCode } from "@/lib/countries/ca/regionCodes";
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
@@ -141,7 +142,8 @@ export function RetiredCharactersSection() {
                   ) : null}
                 </div>
                 <p className="text-xs text-muted mt-0.5">
-                  {snap.partyName} &middot; {snap.homeState}, {snap.countryId}
+                  {snap.partyName} &middot; {displayCanadianRegionCode(snap.homeState)},{" "}
+                  {snap.countryId}
                 </p>
                 {snap.highestOffice && (
                   <p className="text-xs text-muted mt-0.5">Highest office: {snap.highestOffice}</p>

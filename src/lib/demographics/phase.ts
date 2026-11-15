@@ -352,6 +352,7 @@ export async function runDemographicFlows(
             "openingValues.19": 1,
             "history.19": { $slice: 1 },
             scope: 1,
+            modeledOpening: 1,
           },
         }
       )
@@ -376,7 +377,9 @@ export async function runDemographicFlows(
         !Number.isFinite(preventable) ||
         !(() => {
           const ref = inheritedCalibrationRegion(demo.countryId, demo._id);
-          return v2Opening!.life[ref.countryId as "US" | "UK" | "JP" | "IE"]?.[ref.regionId];
+          return board?.modeledOpening
+            ? board.modeledOpening.life
+            : v2Opening!.life[ref.countryId as "US" | "UK" | "JP" | "IE"]?.[ref.regionId];
         })()
       ) {
         throw new Error(`V2 cohorts lack current health inputs for ${demo.countryId}:${demo._id}`);
@@ -435,6 +438,8 @@ export async function runDemographicFlows(
     const seededMigrationPct = useResetMetrics
       ? (() => {
           const ref = inheritedCalibrationRegion(demo.countryId, demo._id);
+          const model = v2HealthByRegion.get(`${demo.countryId}:${demo._id}`)?.modeledOpening;
+          if (model) return model.migrationRate;
           return v2Opening!.migration[ref.countryId as "US" | "UK" | "JP" | "IE"]?.[ref.regionId];
         })()
       : val(m?.population?.migrationRate, 0);
@@ -602,9 +607,11 @@ export async function runDemographicFlows(
     const useResetMetrics = v2Countries.has(p.countryId as "US" | "UK" | "JP");
     const calibration = inheritedCalibrationRegion(p.countryId, p.demo._id);
     const seededBirthRate = useResetMetrics
-      ? v2Opening!.fertility[calibration.countryId as "US" | "UK" | "JP" | "IE"]?.[
-          calibration.regionId
-        ]
+      ? v2HealthByRegion.get(`${p.countryId}:${p.demo._id}`)?.modeledOpening
+        ? v2HealthByRegion.get(`${p.countryId}:${p.demo._id}`)!.modeledOpening!.birthRateIndex
+        : v2Opening!.fertility[calibration.countryId as "US" | "UK" | "JP" | "IE"]?.[
+            calibration.regionId
+          ]
       : val(p.m?.population?.birthRate, 50);
     if (seededBirthRate === undefined) {
       throw new Error(
@@ -630,10 +637,12 @@ export async function runDemographicFlows(
       birthRateIndex,
       healthcare: useResetMetrics
         ? {
-            lifeExpectancy:
+            lifeExpectancy: (
+              v2HealthByRegion.get(`${p.countryId}:${p.demo._id}`)?.modeledOpening?.life ??
               v2Opening!.life[calibration.countryId as "US" | "UK" | "JP" | "IE"]![
                 calibration.regionId
-              ]!.openingYears,
+              ]!
+            ).openingYears,
             preventableMortality: v2HealthByRegion.get(`${p.countryId}:${p.demo._id}`)!
               .observations["19"]!.value!,
           }
@@ -663,6 +672,7 @@ export async function runDemographicFlows(
     if (useResetMetrics) {
       const board = v2HealthByRegion.get(`${p.countryId}:${p.demo._id}`)!;
       const reference =
+        board.modeledOpening?.life ??
         v2Opening!.life[calibration.countryId as "US" | "UK" | "JP" | "IE"]![calibration.regionId]!;
       const openingPreventable = board.openingValues?.["19"] ?? board.history?.["19"]?.[0]?.value;
       if (typeof openingPreventable !== "number")

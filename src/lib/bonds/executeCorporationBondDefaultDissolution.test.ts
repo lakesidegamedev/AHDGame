@@ -61,10 +61,14 @@ vi.mock("@/lib/turn/nppBondCash", () => ({
 vi.mock("@/lib/turn/currentTurn", () => ({
   getCurrentTurn: vi.fn().mockResolvedValue(251),
 }));
+vi.mock("./dissolutionCash", () => ({
+  retireDissolvedCorporationCash: vi.fn().mockResolvedValue(undefined),
+}));
 
 import { emitTxBulk } from "@/lib/financialTxLog/emit";
 import { payNppBondReturns } from "@/lib/turn/nppBondCash";
 import { executeCorporationBondDefaultDissolution } from "./executeCorporationBondDefaultDissolution";
+import { retireDissolvedCorporationCash } from "./dissolutionCash";
 import type { Corporation, Bond } from "@/lib/db/types";
 import type { FinancialTxLogEntry } from "@/lib/db/types/financialTxLog";
 
@@ -159,6 +163,29 @@ function emittedEntries(): Omit<FinancialTxLogEntry, "_id" | "expiresAt" | "flag
 
 describe("executeCorporationBondDefaultDissolution ledger rows (#3237)", () => {
   beforeEach(() => vi.clearAllMocks());
+
+  it("uses the processing turn for every settlement row and exit before the game clock commits", async () => {
+    const corp = baseCorp({ shareholders: [{ characterId: CHAR_ID, shares: 100 }] });
+    const db = makeDb({ corp: corp as unknown as Record<string, unknown>, issuerBonds: [] });
+    await executeCorporationBondDefaultDissolution(db, corp, {
+      requireDefaultedBonds: false,
+      turn: 252,
+    });
+    expect(emittedEntries().length).toBeGreaterThan(0);
+    expect(emittedEntries().every((entry) => entry.turn === 252)).toBe(true);
+    expect(exitWrites(db)[0][1]).toMatchObject({ $setOnInsert: { turn: 252 } });
+    expect(retireDissolvedCorporationCash).toHaveBeenCalledWith(
+      db,
+      expect.objectContaining({
+        corporation: corp._id.toHexString(),
+        liquidCapital: corp.liquidCapital,
+        turn: 252,
+      })
+    );
+    expect(vi.mocked(retireDissolvedCorporationCash).mock.invocationCallOrder[0]).toBeLessThan(
+      vi.mocked(db.collection("corporations").deleteOne).mock.invocationCallOrder[0]!
+    );
+  });
 
   it("does not finish the dissolution before its ledger-bearing transaction batch", async () => {
     let releaseTxBatch: (() => void) | undefined;

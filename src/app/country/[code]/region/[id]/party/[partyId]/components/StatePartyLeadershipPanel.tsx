@@ -1,4 +1,5 @@
 "use client";
+import { displayCanadianRegionCode } from "@/lib/countries/ca/regionCodes";
 
 import { useState } from "react";
 import Link from "next/link";
@@ -230,9 +231,10 @@ export function StatePartyLeadershipPanel({
           }}
         />
         <p className="text-[11px] text-muted">
-          Only party members whose home state is {stateParty.stateId} can be picked. Campaigners can
-          spend the state party&apos;s PS to build Organization. Managing, moving, and recruiting
-          non-player politicians (NPPs) stays with the chair, vice chair, and admins.
+          Only party members whose home state is {displayCanadianRegionCode(stateParty.stateId)} can
+          be picked. Campaigners can spend the state party&apos;s PS to build Organization.
+          Managing, moving, and recruiting non-player politicians (NPPs) stays with the chair, vice
+          chair, and admins.
         </p>
       </div>
 

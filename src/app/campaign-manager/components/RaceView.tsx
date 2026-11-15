@@ -8,6 +8,7 @@ import type { ElectionResponse } from "@/lib/elections/electionResponseTypes";
 import type { RaceWireItem } from "@/lib/elections/raceWireFeed";
 import {
   lastDelta,
+  isFinishedPrimary,
   myRaceSummary,
   partyLines,
   pollingSeries,
@@ -530,7 +531,7 @@ function RaceBody(
             name: race.multiSeat ? l.abbr : l.name,
             color: l.color,
           }))}
-          turnLabel={race.stage === "primary" ? "count" : "turn"}
+          turnLabel={race.stage === "primary" || isFinishedPrimary(race) ? "count" : "turn"}
         />
       </section>
 

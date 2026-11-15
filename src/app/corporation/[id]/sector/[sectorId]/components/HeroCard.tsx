@@ -1,4 +1,5 @@
 "use client";
+import { displayCanadianRegionCode } from "@/lib/countries/ca/regionCodes";
 
 import Image from "next/image";
 import Link from "next/link";
@@ -82,7 +83,7 @@ export default function HeroCard({
         {STATE_FLAGS[sector.stateId] && (
           <Image
             src={STATE_FLAGS[sector.stateId]}
-            alt={sector.stateId}
+            alt={displayCanadianRegionCode(sector.stateId)}
             width={44}
             height={30}
             className="shrink-0 rounded-md object-cover"

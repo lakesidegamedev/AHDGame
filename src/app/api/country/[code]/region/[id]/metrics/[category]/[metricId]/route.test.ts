@@ -66,6 +66,23 @@ describe("GET /api/country/[code]/region/[id]/metrics/[category]/[metricId]", ()
     });
   });
 
+  it.each([
+    ["us", "ca_national"],
+    ["ca", "federal"],
+  ])("rejects another country's national scope: %s/%s", async (code, id) => {
+    const { GET } = await import("./route");
+    const response = await GET(
+      new Request(
+        `http://localhost/api/country/${code}/region/${id}/metrics/economic/unemploymentRate`
+      ),
+      {
+        params: Promise.resolve({ code, id, category: "economic", metricId: "unemploymentRate" }),
+      }
+    );
+    expect(response.status).toBe(404);
+    expect(db.collectionMocks.macroMetrics!.findOne).not.toHaveBeenCalled();
+  });
+
   it("returns stored national values with history for the federal scope", async () => {
     const { GET } =
       await import("@/app/api/country/[code]/region/[id]/metrics/[category]/[metricId]/route");

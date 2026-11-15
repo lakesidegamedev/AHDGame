@@ -1,4 +1,5 @@
 "use client";
+import { displayCanadianRegionCode } from "@/lib/countries/ca/regionCodes";
 
 import type { InfraSummaryView } from "../../useCabinetOffice";
 import { INFRA_UPKEEP_UNIT } from "@/lib/constants/cabinetInfra";
@@ -89,7 +90,9 @@ export function InfraBudgetTab({
               key={regionId}
               className="flex items-center justify-between border-b border-card-border py-2 text-[12px] last:border-0"
             >
-              <span className="text-foreground">{siteName[regionId] ?? regionId}</span>
+              <span className="text-foreground">
+                {displayCanadianRegionCode(siteName[regionId] ?? regionId)}
+              </span>
               <span className="tabular text-muted">
                 {counts.operational} operational · {counts.building} building
               </span>

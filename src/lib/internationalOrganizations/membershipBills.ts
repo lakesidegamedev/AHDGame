@@ -107,24 +107,6 @@ export async function applyOrgFundProvision(
         if (result.status !== "applied" && result.status !== "replayed") {
           return { fundCountry, amountFund: 0 };
         }
-        if (result.status === "applied") {
-          await witnessOrganizationCash(db, batch, {
-            kind: "government",
-            ref: countryId,
-            countryId,
-            amount: -amountLocal,
-            site: "capitalization_treasury",
-            now: new Date(),
-          });
-          await witnessOrganizationCash(db, batch, {
-            kind: "org",
-            ref: p.organizationId,
-            countryId: fundCountry,
-            amount: amountFund,
-            site: "capitalization_fund",
-            now: new Date(),
-          });
-        }
         return { fundCountry, amountFund: result.status === "applied" ? amountFund : 0 };
       }
       const debit = await federalBudgetCollection(db).updateOne(

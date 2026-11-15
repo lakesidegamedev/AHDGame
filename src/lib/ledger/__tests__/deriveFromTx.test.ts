@@ -19,6 +19,27 @@ function tx(overrides: Partial<DerivableTx>): DerivableTx {
 }
 
 describe("deriveLedgerEntry (Phase 1 shim)", () => {
+  it("keeps central-bank public-float distributions out of the Treasury account", () => {
+    const distribution = tx({
+      type: "corp_dissolution_distribution",
+      subjectType: "government",
+      countryId: "CA",
+      meta: { side: "publicFloat", treasuryCashMovement: false },
+    });
+    expect(deriveLedgerEntry(distribution)).toBeNull();
+    expect(deriveLedgerEntry({ ...distribution, meta: {} })).not.toBeNull();
+  });
+  it.each(["corp_revenue", "corp_operating_loss", "corp_tax_paid", "bond_default"] as const)(
+    "keeps history for %s without duplicating its settlement journal",
+    (type) => {
+      expect(
+        deriveLedgerEntry(
+          tx({ type, subjectType: "corporation", meta: { ledgerOwnedBySettlement: true } })
+        )
+      ).toBeNull();
+      expect(deriveLedgerEntry(tx({ type, subjectType: "corporation" }))).not.toBeNull();
+    }
+  );
   it.each(["player_income_tax", "player_capital_gains_tax"] as const)(
     "does not re-import settlement-owned %s wallet or government receipts",
     (type) => {
@@ -56,14 +77,15 @@ describe("deriveLedgerEntry (Phase 1 shim)", () => {
       ).not.toBeNull();
     }
   );
-  it.each(["bank_cb_advance", "bank_prop_trade_buy", "bank_prop_trade_sell"] as const)(
-    "keeps marked %s vault movements separate from corporate liquid capital",
-    (type) =>
-      expect(
-        deriveLedgerEntry(
-          tx({ type, subjectType: "corporation", meta: { bankVaultMovement: true } })
-        )
-      ).toBeNull()
+  it.each([
+    "bank_cb_advance",
+    "bank_npc_loan_interest",
+    "bank_prop_trade_buy",
+    "bank_prop_trade_sell",
+  ] as const)("keeps marked %s vault movements separate from corporate liquid capital", (type) =>
+    expect(
+      deriveLedgerEntry(tx({ type, subjectType: "corporation", meta: { bankVaultMovement: true } }))
+    ).toBeNull()
   );
   it("does not let the vault marker suppress unrelated corporate cash", () => {
     expect(

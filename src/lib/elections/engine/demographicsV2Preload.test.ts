@@ -12,6 +12,54 @@ import {
 const vector = (value: number) => Array<number>(101).fill(value);
 
 describe("loadDemographicsV2Preload", () => {
+  it("keeps California separate from a Canadian national aggregate in the same sweep", async () => {
+    const db = createMockDb();
+    const row = (id: string, countryId: string, value: number) => ({
+      _id: id,
+      countryId,
+      ages: { male: vector(value), female: vector(value) },
+      lastUpdated: new Date("2026-11-14T00:00:00Z"),
+    });
+    db.collection("regionDemographics").find.mockReturnValue({
+      toArray: vi
+        .fn()
+        .mockResolvedValue([row("CA", "US", 1), row("CA_ON", "CA", 3), row("CA_QC", "CA", 5)]),
+    });
+    const result = await loadDemographicsV2Preload({
+      db: db as unknown as Db,
+      countries: ["US", "CA"],
+      regionFilter: { countryId: { $in: ["US", "CA"] } },
+      states: [
+        { _id: "CA", countryId: "US" },
+        { _id: "CA_ON", countryId: "CA" },
+        { _id: "CA_QC", countryId: "CA" },
+      ] as State[],
+      nationwideCountries: ["CA"],
+      gameState: {
+        _id: "current",
+        preset: "2027-default",
+        currentYear: 2027,
+        demographicsSystemVersion: "v2",
+        resetWorldId: "qualified-world",
+        resetVersionSeeds: {
+          demographics: {
+            worldId: "qualified-world",
+            revision: 1,
+            sourceTurn: 1,
+            completedAt: "2026-11-14",
+            verificationHash: "verified",
+            countries: ["US", "CA"],
+          },
+        },
+      } as GameState,
+    });
+    expect(result.demographicsV2Countries).toEqual(new Set(["US", "CA"]));
+    expect(result.regionDemographicsByState.get("US:CA")?.ages.male[0]).toBe(1);
+    expect(result.regionDemographicsByState.get("CA:CA")?.ages.male[0]).toBe(8);
+    expect(result.regionDemographicsByState.get("CA:CA_ON")?.ages.male[0]).toBe(3);
+    expect(result.regionDemographicsByState.has("CA")).toBe(false);
+    expect(db.collectionMocks.regionDemographics.find).toHaveBeenCalledTimes(1);
+  });
   it("does not read population rows for a v1 world", async () => {
     const db = createMockDb();
     const result = await loadDemographicsV2Preload({
@@ -80,8 +128,8 @@ describe("loadDemographicsV2Preload", () => {
       projection: { _id: 1, countryId: 1, ages: 1, lastUpdated: 1 },
     });
     expect(result.demographicsV2Countries).toEqual(new Set(["US"]));
-    expect(result.regionDemographicsByState.get("US")?.ages.male[0]).toBe(4);
-    expect(result.regionDemographicsByState.get("US")?.ages.female[100]).toBe(6);
+    expect(result.regionDemographicsByState.get("US:US")?.ages.male[0]).toBe(4);
+    expect(result.regionDemographicsByState.get("US:US")?.ages.female[100]).toBe(6);
   });
 });
 

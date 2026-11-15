@@ -1,3 +1,4 @@
+import { logger } from "@/lib/observability/logger";
 /**
  * V2 sovereign cash and Cabinet delivery. Actual bond payouts are reconciled
  * before a department receives authority; durable receipts make retries safe.
@@ -12,7 +13,8 @@ import {
   resetSystemVersionsForCountry,
   type ResetV2Readiness,
 } from "@/lib/resetVersions/rules";
-import { settleResetCashTurn } from "./rules/cashTurn";
+import { planResetCashTurn } from "./rules/cashTurn";
+import { reconcileSovereignDebtFaceFlows } from "./rules/sovereignProceeds";
 import { buildResetAuthorityClaims } from "./rules/authorityClaims";
 import type { ResetNationalTreasurySnapshot } from "./rules/treasurySnapshot";
 import type {
@@ -62,7 +64,7 @@ export async function settleResetTreasuryCashTurn(input: {
       .find(
         { countryId: { $in: countries } },
         {
-          projection: { countryId: 1, "revenue.total": 1, "debt.ceiling": 1 },
+          projection: { countryId: 1, "revenue.total": 1, "debt.ceiling": 1, "debt.principal": 1 },
         }
       )
       .toArray(),
@@ -130,10 +132,15 @@ export async function settleResetTreasuryCashTurn(input: {
       if (!values) throw new Error("V2 cash needs actual bond flow capture");
       return values[country] ?? 0;
     };
-    const next =
+    const faceFlows = reconcileSovereignDebtFaceFlows({
+      openingDebt: opening.debt,
+      closingDebt: budget.debt.principal,
+      issuedFace: flow(bondFlows.sovereignDebtFaceIssuedByCountry),
+    });
+    const plan =
       opening.settledThroughTurn === turn
-        ? opening
-        : settleResetCashTurn({
+        ? { next: opening, externallyFundedBondCash: 0 }
+        : planResetCashTurn({
             treasury: { ...opening, debtCeiling: budget.debt.ceiling },
             turn,
             claims,
@@ -142,12 +149,26 @@ export async function settleResetTreasuryCashTurn(input: {
               annualInterestRate: 0,
               periodsPerYear: 48,
               bondProceeds: flow(bondFlows.sovereignCashProceedsByCountry),
-              bondFaceIssued: flow(bondFlows.sovereignDebtFaceIssuedByCountry),
+              bondFaceIssued: faceFlows.issuedFace,
               bondMaturityCashPaid: flow(bondFlows.sovereignMaturityCashPaidByCountry),
-              bondFaceRetired: flow(bondFlows.sovereignDebtFaceRetiredByCountry),
+              bondFaceRetired: faceFlows.retiredFace,
               bondCouponCashPaid: flow(bondFlows.sovereignCouponPaidByCountry),
+              bondServiceAlreadyFunded: bondFlows.sovereignServiceAlreadyFunded === true,
             },
           });
+    const { next, externallyFundedBondCash } = plan;
+    if (externallyFundedBondCash > 0) {
+      logger.warn("treasury-cash", "funded bond reconciliation gap", {
+        worldId,
+        countryId: country,
+        turn,
+        amountLocal: externallyFundedBondCash,
+        openingCash: opening.cash,
+        bondProceeds: flow(bondFlows.sovereignCashProceedsByCountry),
+        maturityCashPaid: flow(bondFlows.sovereignMaturityCashPaidByCountry),
+        couponCashPaid: flow(bondFlows.sovereignCouponPaidByCountry),
+      });
+    }
     if (!next.lastPaidByClaim) throw new Error("V2 cash replay is missing its payment receipt");
     const deliveries = roster
       .filter((account) => !account.externallySettled)

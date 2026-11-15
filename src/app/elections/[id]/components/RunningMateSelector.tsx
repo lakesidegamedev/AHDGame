@@ -1,4 +1,5 @@
 "use client";
+import { displayCanadianRegionCode } from "@/lib/countries/ca/regionCodes";
 
 import { apiErrorText } from "@/lib/errors/catalog";
 import { useEffect, useMemo, useState } from "react";
@@ -206,7 +207,9 @@ export function RunningMateSelector({
                               <p className="truncate text-sm font-medium text-foreground">
                                 {character.name}
                               </p>
-                              <p className="text-xs text-muted">{character.homeState}</p>
+                              <p className="text-xs text-muted">
+                                {displayCanadianRegionCode(character.homeState)}
+                              </p>
                             </div>
                             <span
                               className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium"
@@ -343,7 +346,9 @@ export function RunningMateSelector({
                         <p className="truncate text-sm font-medium text-foreground">
                           {character.name}
                         </p>
-                        <p className="text-xs text-muted">{character.homeState}</p>
+                        <p className="text-xs text-muted">
+                          {displayCanadianRegionCode(character.homeState)}
+                        </p>
                       </div>
                       <span
                         className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium"

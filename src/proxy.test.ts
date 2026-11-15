@@ -478,3 +478,13 @@ describe("proxy() acquisition cookie", () => {
     expect(res.cookies.get("__ahd_src")).toBeUndefined();
   });
 });
+
+it("redirects a Canadian legacy region link to its compact public URL with its query intact", async () => {
+  const response = await proxy(
+    makeRequest("http://localhost:3000/country/ca/region/CA_NT/office?tab=budget")
+  );
+  expect(response.status).toBe(308);
+  expect(response.headers.get("location")).toBe(
+    "http://localhost:3000/country/ca/region/NT/office?tab=budget"
+  );
+});

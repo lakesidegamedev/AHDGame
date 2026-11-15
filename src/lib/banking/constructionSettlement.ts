@@ -20,6 +20,11 @@ import { settleTransition, resumeSettlement, type SettlementResult } from "./set
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import { bankLoansCollection } from "@/lib/db/repositories/bankLoans";
 import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
+import { loadTreasuryCashContext } from "@/lib/nationalization/treasuryLedger";
+import {
+  witnessConstructionContribution,
+  type ConstructionCashWitnessContext,
+} from "./constructionCashWitness";
 
 const complete = (result: SettlementResult) =>
   !result.error && (result.status === "applied" || result.status === "replayed");
@@ -33,6 +38,7 @@ export async function settleReservedConstruction(input: {
   sectorId: ObjectId;
   bank: BankingSnapshot;
   borrower: BorrowerSnapshot;
+  cashWitnessContext?: ConstructionCashWitnessContext | null;
 }): Promise<Result> {
   if (!input.enabled) return { ok: false, error: "Construction finance is not enabled" };
   const { db, sectorId } = input;
@@ -146,6 +152,13 @@ export async function settleReservedConstruction(input: {
       claim,
     });
     if (!contribution.ok) return { ok: false, error: contribution.error };
+    witnessConstructionContribution(
+      contribution.value,
+      claim,
+      input.cashWitnessContext === undefined
+        ? await loadTreasuryCashContext(db, input.bank.turn)
+        : input.cashWitnessContext
+    );
     let contributed = await settleTransition(db, contribution.value);
     if (
       contributed.status === "partial" ||

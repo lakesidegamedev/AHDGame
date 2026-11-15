@@ -1,4 +1,6 @@
 "use client";
+import { displayCanadianRegionCode } from "@/lib/countries/ca/regionCodes";
+
 import {
   BIDDING_TURNS_MIN,
   BIDDING_TURNS_MAX,
@@ -275,7 +277,9 @@ export function PublishTenderForm({
               className={inputClass}
             >
               {sortedStates.map((s) => (
-                <option key={s.stateId}>{s.stateId}</option>
+                <option value={s.stateId} key={s.stateId}>
+                  {displayCanadianRegionCode(s.stateId)}
+                </option>
               ))}
             </select>
           </label>
@@ -480,7 +484,7 @@ export function BidForm({
               .filter((s) => s.type === "defense")
               .map((s) => (
                 <option key={s._id} value={s._id}>
-                  {s.stateId} / {s.strategyId}
+                  {displayCanadianRegionCode(s.stateId)} / {s.strategyId}
                 </option>
               ))}
           </select>

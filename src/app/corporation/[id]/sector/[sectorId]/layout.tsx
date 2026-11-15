@@ -1,3 +1,4 @@
+import { displayCanadianRegionCode } from "@/lib/countries/ca/regionCodes";
 import { CDN_LOGO_URL } from "@/lib/images/staticCdnAssets";
 import type { Metadata } from "next";
 import { ObjectId } from "mongodb";
@@ -42,7 +43,7 @@ export async function generateMetadata({
 
   const sectorLabel = sector.displayName || sector.sectorType;
   const title = `${sectorLabel} | ${corp.name} | A House Divided`;
-  const description = `${sectorLabel} sector operated by ${corp.name} in ${sector.stateId}. Production, financials, and market position.`;
+  const description = `${sectorLabel} sector operated by ${corp.name} in ${displayCanadianRegionCode(sector.stateId)}. Production, financials, and market position.`;
   const url = `${getSiteUrl()}/corporation/${id}/sector/${sectorId}`;
   const image = corp.logoUrl || CDN_LOGO_URL;
 

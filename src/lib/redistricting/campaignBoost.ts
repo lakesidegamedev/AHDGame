@@ -1,3 +1,4 @@
+export const CAMPAIGN_BASE_PS_COST = 2;
 export const CAMPAIGN_BOOST_CAP = 7.5;
 export const CAMPAIGN_BOOST_DECAY = 0.5;
 export const CAMPAIGN_BOOST_PER_ACTION = 2.5;

@@ -12,7 +12,7 @@ import {
 describe("1991 v2 live Cabinet account opening", () => {
   const boards = buildOpeningDepartmentBoards1991("world-1991", 1);
   const fiscal = openingFiscalBooks1991();
-  const grants = {
+  const grants: Record<string, number> = {
     US: fiscal.US.grants,
     UK: fiscal.UK.grants,
     JP: fiscal.JP.grants,

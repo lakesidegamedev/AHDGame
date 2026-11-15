@@ -6,7 +6,8 @@ sys.path.insert(0, os.path.dirname(__file__))
 import pr_governance as g  # noqa: E402
 
 HEAD = "abcdef1234567890abcdef1234567890abcdef12"
-BODY = "## Conflict of interest\n- [x] None\n- [ ] Other\n"
+BODY = "## Conflict of interest\n- [x] None\n- [ ] Other\n\nAffects: every seller of steel\n"
+CONFLICT = "## Conflict of interest\n- [ ] Does not\n- [x] It does, disclosed\n\nAffects: nations at war\n"
 
 
 def pr(head_ref="feature", base_ref="development", fork=False, author="someone"):
@@ -25,8 +26,9 @@ def comment(who, body):
 ECON = ["src/lib/market/prices.ts"]
 
 
-def run(p, files=ECON, reviews=(), comments=(), guard_only=False):
-    return g.evaluate(p, files, lambda: (list(reviews), list(comments)), guard_only)
+def run(p, files=ECON, reviews=(), comments=(), guard_only=False, changed=None):
+    since = (lambda sha: changed[sha]) if changed is not None else None
+    return g.evaluate(p, files, lambda: (list(reviews), list(comments)), guard_only, since)
 
 
 class GovernanceTests(unittest.TestCase):
@@ -82,6 +84,34 @@ class GovernanceTests(unittest.TestCase):
         self.assertTrue(run(pr(), files=[".github/workflows/a.yml"]))
         self.assertEqual(run(pr(), guard_only=True), [])
         self.assertEqual(run(pr(), files=[".github/a.yml"], comments=[comment("Egg3901", f"/approve {HEAD}")]), [])
+
+
+    def test_test_files_are_not_economy(self):
+        self.assertEqual(run(pr(), files=["src/lib/market/a.test.ts", "src/lib/market/__tests__/b.ts"]), [])
+
+    def test_economy_needs_affects_line(self):
+        p = pr()
+        p["body"] = "## Conflict of interest\n- [x] None\n- [ ] Other\n<!-- Affects: placeholder -->\n"
+        ok = {"user": {"login": "Egg3901"}, "state": "APPROVED", "commit_id": HEAD}
+        self.assertTrue(run(p, reviews=[ok]))
+        self.assertEqual(run(p, files=["src/app/x.ts"]), [])
+
+    def test_approval_carries_over_non_economy_push(self):
+        old = {"user": {"login": "Egg3901"}, "state": "APPROVED", "commit_id": "1" * 40}
+        self.assertEqual(run(pr(), reviews=[old], changed={"1" * 40: ["src/lib/market/a.test.ts", "README.md"]}), [])
+        self.assertTrue(run(pr(), reviews=[old], changed={"1" * 40: ["src/lib/market/prices.ts"]}))
+        self.assertTrue(run(pr(), files=ECON + [".github/a.yml"], reviews=[old], changed={"1" * 40: []}))
+
+    def test_comment_approval_carries_over(self):
+        c = [comment("Egg3901", "/approve 1111111")]
+        self.assertEqual(run(pr(), comments=c, changed={"1111111": ["docs/x.md"]}), [])
+
+    def test_trusted_skips_economy_unless_conflicted(self):
+        p = pr(author="HyawiiGithub")
+        self.assertEqual(run(p), [])
+        p["body"] = CONFLICT
+        self.assertTrue(run(p))
+        self.assertTrue(run(pr(author="HyawiiGithub"), files=[".github/a.yml"]))
 
 
 if __name__ == "__main__":

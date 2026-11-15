@@ -116,7 +116,7 @@ function fixture() {
   const budgets = countries.map((countryId) => ({
     countryId,
     revenue: { total: 480 },
-    debt: { ceiling: 200 },
+    debt: { principal: 100, ceiling: 200 },
   }));
   for (const [name, rows] of [
     ["resetNationalTreasuries", treasuries],
@@ -177,11 +177,81 @@ function fixture() {
       ready,
       ...overrides,
     });
-  return { mock, accounts, treasuries, run };
+  return { mock, accounts, treasuries, budgets, run };
 }
 
 describe("v2 treasury and paid Cabinet turn integration", () => {
   beforeEach(() => vi.clearAllMocks());
+  it("does not duplicate a funded bond service liability or create spendable cash", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { treasuries, accounts, run } = fixture();
+    await run({
+      bondFlows: {
+        ...flow,
+        sovereignServiceAlreadyFunded: true,
+        sovereignCouponPaidByCountry: { US: 13 },
+      },
+    });
+    expect(treasuries[0]!.emergencyAdvance).toBe(0);
+    expect(treasuries[0]!.cash).toBe(0);
+    expect(accounts[0]!.lastAuthorityPaid).toBe(10);
+    const settled = structuredClone(treasuries);
+    await run({
+      bondFlows: {
+        ...flow,
+        sovereignServiceAlreadyFunded: true,
+        sovereignCouponPaidByCountry: { US: 13 },
+      },
+    });
+    expect(treasuries).toEqual(settled);
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(warn).toHaveBeenCalledWith(
+      "[treasury-cash] funded bond reconciliation gap",
+      expect.objectContaining({
+        countryId: "US",
+        worldId: "world",
+        turn: 2,
+        amountLocal: 3,
+        couponCashPaid: 13,
+        openingCash: 0,
+      })
+    );
+    warn.mockRestore();
+  });
+  it("keeps principal aligned through cash refunding and in-kind rollover", async () => {
+    const { treasuries, budgets, run } = fixture();
+    // Thirty redeemed and replaced in cash, plus a net twenty of new debt.
+    // An in-kind exchange of the remaining stock changes neither cash nor debt.
+    budgets[0]!.debt.principal = 120;
+    const bondFlows = {
+      ...flow,
+      sovereignDebtFaceIssuedByCountry: { US: 50 },
+      sovereignCashProceedsByCountry: { US: 45 },
+      sovereignDebtFaceRetiredByCountry: { US: 100 },
+      sovereignMaturityCashPaidByCountry: { US: 30 },
+    };
+    await run({ bondFlows });
+    expect(treasuries[0]!.debt).toBe(120);
+    expect(treasuries[0]!.cash).toBe(15);
+    const settled = structuredClone(treasuries);
+    await run({ bondFlows });
+    expect(treasuries).toEqual(settled);
+    expect(treasuries[1]!.debt).toBe(100);
+  });
+  it("retires funded maturity face independently of its cash payment and only once", async () => {
+    const { treasuries, budgets, run } = fixture();
+    budgets[0]!.debt.principal = 70;
+    const bondFlows = {
+      ...flow,
+      sovereignDebtFaceRetiredByCountry: { US: 30 },
+      sovereignMaturityCashPaidByCountry: { US: 20 },
+    };
+    await run({ bondFlows });
+    expect(treasuries[0]!.debt).toBe(70);
+    await run({ bondFlows });
+    expect(treasuries[0]!.debt).toBe(70);
+    expect(treasuries[1]!.debt).toBe(100);
+  });
   it("does no reads or writes for v1", async () => {
     const { mock, run } = fixture();
     expect(await run({ ready: { metrics: false, legislation: false, cabinet: false } })).toEqual({

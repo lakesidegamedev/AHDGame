@@ -12,6 +12,7 @@ import type { ResetCountry } from "@/lib/resetLegislation/fundingOwner";
 import { openingChoice1991 } from "@/lib/resetLegislation/rules/reviewCatalog";
 import type { MigrationLawPosition } from "./flows/internationalMigration";
 import { resetLawProgramsCollection } from "@/lib/db/repositories/resetLawPrograms";
+import type { ResetLawOpeningBoard } from "@/lib/resetLegislation/rules/openingBoard";
 
 const ENTRY_AND_RESIDENCE_FAMILY_ID = "L49";
 const LABOUR_MIGRATION_FAMILY_ID = "L52";
@@ -41,7 +42,7 @@ export async function loadMigrationLawPositions(
   countries: readonly ResetCountry[]
 ): Promise<Map<string, MigrationLawPositions>> {
   const familyIds = [ENTRY_AND_RESIDENCE_FAMILY_ID, LABOUR_MIGRATION_FAMILY_ID];
-  const [programs, { default: references }] = await Promise.all([
+  const [programs, { default: references }, boards] = await Promise.all([
     resetLawProgramsCollection<ResetLawProgramDocument>(db)
       .find(
         {
@@ -56,6 +57,12 @@ export async function loadMigrationLawPositions(
     // Raw crosswalk only: the opening choice needs statuses and option
     // indexes, not the fitted 1991 costs openingLaw computes on import.
     import("@/lib/resetLegislation/openingLawReferences.json"),
+    resetLawOpeningBoardsCollection<ResetLawOpeningBoard>(db)
+      .find(
+        { worldId, scope: "national", countryId: { $in: [...countries] } },
+        { projection: { countryId: 1, "references.L49": 1, "references.L52": 1 } }
+      )
+      .toArray(),
   ]);
   const enacted = new Map(
     programs.map((program) => [
@@ -66,9 +73,11 @@ export async function loadMigrationLawPositions(
   const resolve = (country: string, familyId: string): MigrationLawPosition => {
     const current = enacted.get(`${country}:${familyId}`);
     if (current) return current;
-    const reference = (references as OpeningLawReference[]).find(
-      (row) => row.country === country && row.scope === "national" && row.familyId === familyId
-    );
+    const reference =
+      boards.find((board) => board.countryId === country)?.references[familyId] ??
+      (references as OpeningLawReference[]).find(
+        (row) => row.country === country && row.scope === "national" && row.familyId === familyId
+      );
     return reference ? openingChoice1991(reference) : "center";
   };
   return new Map(
@@ -81,3 +90,5 @@ export async function loadMigrationLawPositions(
     ])
   );
 }
+
+import { resetLawOpeningBoardsCollection } from "@/lib/db/repositories/resetLawOpeningBoards";

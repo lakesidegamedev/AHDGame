@@ -64,8 +64,28 @@ describe("wage share labour cost", () => {
 
   it("does not read a thin run that sold old stock as a rich one", () => {
     const stock = { ...last, producedUnits: 10, soldUnits: 100 };
-    expect(wageShareLabourCost({ ...input, last: stock })).toBeLessThan(
-      wageShareLabourCost({ ...input, last: { ...stock, soldUnits: 10 } })
+    // Spread over the 100 units sold, not the 10 made: the same 5 a unit raise.
+    expect(wageShareLabourCost({ ...input, last: stock })).toBeCloseTo(600, 9);
+  });
+
+  it("scales the raise by last turn's sell-through", () => {
+    // Base 1 a unit, full raise 5 a unit: half sold pays half the raise.
+    expect(wageShareLabourCost({ ...input, last: { ...last, soldUnits: 50 } })).toBeCloseTo(350, 9);
+    expect(wageShareLabourCost({ ...input, last: { ...last, soldUnits: 0 } })).toBeCloseTo(100, 9);
+  });
+
+  it("reads a receipt with no sales count as fully sold", () => {
+    const noSalesCount: WageShareReceipt = {
+      producedUnits: 100,
+      revenue: 1500,
+      inputsConsumed: 500,
+      inventoryWriteOff: 0,
+      otherOperatingPaid: 100,
+      otherOperatingArrears: 0,
+    };
+    expect(wageShareLabourCost({ ...input, last: noSalesCount })).toBeCloseTo(
+      wageShareLabourCost(input),
+      9
     );
   });
 

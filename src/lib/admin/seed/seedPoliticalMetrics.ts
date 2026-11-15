@@ -70,7 +70,11 @@ export async function seedPoliticalMetrics(
   // has no emitted board seeds NO non-playable boards rather than falling back
   // to another era's; a 2019 world wearing 1953 numbers is exactly the silent
   // wrongness this project exists to end.
-  const boardsForPreset = getNonPlayableBoards()[preset];
+  const boardsForPreset =
+    preset === "2027-default"
+      ? ((await import("@/lib/politicalMetrics/seeds/modeledOpening2027.json")).default
+          .boards as Record<string, Record<string, Record<PoliticalMetricId, number>>>)
+      : getNonPlayableBoards()[preset];
   if (!boardsForPreset) {
     log(`No non-playable political boards emitted for preset ${preset}; playables only`);
   }

@@ -6,6 +6,7 @@ import { getPartyRoleLabel } from "@/lib/parties/partyRoleLabels";
 import type { PartyLeadershipTitles } from "@/lib/db/types/party";
 import { MergerNppWarning } from "./MergerNppWarning";
 import { apiErrorText } from "@/lib/errors/catalog";
+import { DEFAULT_PARTY_RENAME_ERROR } from "@/lib/parties/rules/defaultIdentity";
 
 type ProposalType =
   | "rename"
@@ -58,6 +59,7 @@ export function CreateProposalForm({
   partyId,
   countryCode,
   isChair,
+  isDefaultParty = false,
   currentTransactionApprovalMode,
   onCreated,
 }: {
@@ -65,11 +67,12 @@ export function CreateProposalForm({
   partyId: string;
   countryCode: string;
   isChair: boolean;
+  isDefaultParty?: boolean;
   currentTransactionApprovalMode: TransactionApprovalMode;
   onCreated: () => void;
 }) {
   const [open, setOpen] = useState(false);
-  const [type, setType] = useState<ProposalType>("rename");
+  const [type, setType] = useState<ProposalType>(isDefaultParty ? "positionShift" : "rename");
   const [newName, setNewName] = useState("");
   const [newAbbreviation, setNewAbbreviation] = useState("");
   const [axis, setAxis] = useState<"economic" | "social">("economic");
@@ -286,10 +289,11 @@ export function CreateProposalForm({
       </div>
 
       {/* Type selector */}
+      {isDefaultParty && <p className="text-sm text-muted">{DEFAULT_PARTY_RENAME_ERROR}</p>}
       <div className="flex flex-wrap gap-2">
         {(
           [
-            "rename",
+            ...(isDefaultParty ? [] : ["rename"]),
             "positionShift",
             "electionMethod",
             "electionDuration",

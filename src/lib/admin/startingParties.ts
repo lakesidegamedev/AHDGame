@@ -22,18 +22,21 @@ import { savingsAccountsCollection } from "@/lib/db/repositories/savingsAccounts
 import { governorOfficeStateCollection } from "@/lib/db/repositories/governorOfficeState";
 import { stateRegistrationPoolCollection } from "@/lib/db/repositories/stateRegistrationPool";
 
-export type StartingPartiesMode = "default" | "none";
+export type StartingPartiesMode = "default" | "none" | "no-npps";
 
 /** No preset alias: the economy, institutions and clock stay those of the preset. */
 export function resolveStartingPartiesMode(
   preset: string,
   mode: StartingPartiesMode = "default"
 ): StartingPartiesMode {
-  if (mode !== "default" && mode !== "none") throw new Error("Invalid starting parties mode");
+  if (mode !== "default" && mode !== "none" && mode !== "no-npps")
+    throw new Error("Invalid starting parties mode");
   if (preset === "2019-no-parties") return "none";
   if (mode === "none" && !supportsNoStartingParties(preset)) {
     throw new Error(`No starting parties is not supported for ${preset}`);
   }
+  if (mode === "no-npps" && preset !== "2027-default")
+    throw new Error("No NPPs is supported only for 2027-default");
   return mode;
 }
 
@@ -175,7 +178,18 @@ export async function startingArtifactFilters(
  * Reset-only cleanup, never a turn policy. Economic owners survive as independents;
  * players can create parties and enter the ordinary election lifecycle afterwards.
  */
-export async function clearStartingPolitics(db: Db, preset: string): Promise<void> {
+export const RETAINED_PARTY_COLLECTIONS = new Set<string>([
+  "politicalParties",
+  "partyCharters",
+  "statePartyOrg",
+  "partyBudget",
+]);
+
+export async function clearStartingPolitics(
+  db: Db,
+  preset: string,
+  keepParties = false
+): Promise<void> {
   const countries = await startingPoliticalCountries(db, preset);
   const countryFilter = startingCountryFilter(countries, true);
   const targetNpps = await nppsCollection(db)
@@ -249,6 +263,7 @@ export async function clearStartingPolitics(db: Db, preset: string): Promise<voi
     }
   );
   for (const collection of STARTING_POLITICAL_COLLECTIONS) {
+    if (keepParties && RETAINED_PARTY_COLLECTIONS.has(collection)) continue;
     await db.collection(collection).deleteMany(artifactFilters[collection]);
   }
   await electedOfficialsCollection<Document>(db).deleteMany({
@@ -262,6 +277,22 @@ export async function clearStartingPolitics(db: Db, preset: string): Promise<voi
   await governorOfficeStateCollection<Document>(db).updateMany(countryFilter, {
     $set: { characterId: null, characterName: "Vacant" },
   });
+  await congressionalDistrictsCollection(db).updateMany(countryFilter, {
+    $set: { holderCharacterId: null, holderNppId: null, holderParty: null },
+  });
+  if (keepParties) {
+    await politicalPartiesCollection(db).updateMany(countryFilter, {
+      $set: {
+        chairId: null,
+        viceChairId: null,
+        treasurerId: null,
+        committeeIds: [],
+        campaignerIds: [],
+        memberCount: 0,
+      },
+    });
+    return;
+  }
   // Party registrants become unattached voters; engagement is not changed.
   const pools = await stateRegistrationPoolCollection(db)
     .find(countryFilter)
@@ -295,3 +326,7 @@ export async function loadStartingPartiesMode(
     state?.preset === preset ? state.startingPartiesMode : "default"
   );
 }
+
+import { congressionalDistrictsCollection } from "@/lib/db/repositories/congressionalDistricts";
+
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";

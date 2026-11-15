@@ -187,24 +187,6 @@ export async function chargeOrganizationTribute(
         if (result.status !== "applied") continue;
         collectedLocal += fundedAmount;
         paid++;
-        if (result.status === "applied") {
-          await witnessOrganizationCash(db, batch, {
-            kind: "government",
-            ref: payer,
-            countryId: payer as CountryId,
-            amount: -owedLocal,
-            site: "tribute_treasury",
-            now,
-          });
-          await witnessOrganizationCash(db, batch, {
-            kind: "org",
-            ref: organizationId,
-            countryId: currencyCountryId,
-            amount: fundedAmount,
-            site: "tribute_fund",
-            now,
-          });
-        }
       } else if (treasury) {
         const payerRate = getGdpAnchorRate(payer as CountryId, preset);
         const owedLocal = Math.round(owedUsd / payerRate);

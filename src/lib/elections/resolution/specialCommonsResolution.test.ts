@@ -77,103 +77,113 @@ beforeEach(() => {
 });
 
 describe("special_commons additive seating", () => {
-  it("fills only the claimed tombstone: sitting MPs keep rows and currentOffice", async () => {
-    const election = {
-      _id: new ObjectId(),
-      countryId: "UK",
-      electionType: "special_commons",
-      state: "LON",
-      cycle: 1,
-      status: "active",
-      totalSeats: 1,
-      createdAt: NOW,
-      updatedAt: NOW,
-    } as Election;
+  it.each([
+    ["UK", "LON", "commons", "special_commons"],
+    ["CA", "CA_ON", "caCommons", "special_caCommons"],
+  ])(
+    "%s fills only the vacancy and preserves sitting MPs",
+    async (countryId, state, officeType, electionType) => {
+      const election = {
+        _id: new ObjectId(),
+        countryId,
+        electionType,
+        state,
+        cycle: 1,
+        status: "active",
+        totalSeats: 1,
+        createdAt: NOW,
+        updatedAt: NOW,
+      } as Election;
 
-    const winnerId = new ObjectId();
-    const tallyKey = winnerId.toString();
-    const tally = {
-      _id: new ObjectId(),
-      electionId: election._id,
-      state: "LON",
-      totalVotes: { [tallyKey]: 1000 },
-      candidateNames: {},
-      candidateParties: {},
-      turnSnapshots: [],
-      finalized: false,
-      createdAt: NOW,
-      updatedAt: NOW,
-    } as ElectionVoteTally;
+      const winnerId = new ObjectId();
+      const tallyKey = winnerId.toString();
+      const tally = {
+        _id: new ObjectId(),
+        electionId: election._id,
+        state,
+        totalVotes: { [tallyKey]: 1000 },
+        candidateNames: {},
+        candidateParties: {},
+        turnSnapshots: [],
+        finalized: false,
+        createdAt: NOW,
+        updatedAt: NOW,
+      } as ElectionVoteTally;
 
-    const winnerCharacterId = new ObjectId();
-    const winner = {
-      _id: winnerId,
-      electionId: election._id,
-      characterId: winnerCharacterId,
-      characterName: "By-Election Winner",
-      party: "LAB",
-      status: "active",
-      isNPP: false,
-      enteredAt: NOW,
-    };
-    const winnerUserId = new ObjectId();
-    const winnerChar = { _id: winnerCharacterId, userId: winnerUserId, favorability: 60 };
+      const winnerCharacterId = new ObjectId();
+      const winner = {
+        _id: winnerId,
+        electionId: election._id,
+        characterId: winnerCharacterId,
+        characterName: "By-Election Winner",
+        party: "LAB",
+        status: "active",
+        isNPP: false,
+        enteredAt: NOW,
+      };
+      const winnerUserId = new ObjectId();
+      const winnerChar = { _id: winnerCharacterId, userId: winnerUserId, favorability: 60 };
 
-    // One holder-less tombstone: the claimed vacancy this race fills.
-    const tombstoneId = new ObjectId();
-    const tombstone = {
-      _id: tombstoneId,
-      officeType: "commons",
-      countryId: "UK",
-      state: "LON",
-      characterId: null,
-      nppId: null,
-    };
-    db.collectionMocks["electionCandidates"]!.find.mockReturnValue(makeCursor([winner]));
-    db.collectionMocks["characters"]!.find.mockReturnValue(makeCursor([winnerChar]));
-    db.collectionMocks["electedOfficials"]!.find.mockReturnValue(makeCursor([tombstone]));
+      // One holder-less tombstone: the claimed vacancy this race fills.
+      const tombstoneId = new ObjectId();
+      const tombstone = {
+        _id: tombstoneId,
+        officeType,
+        countryId,
+        state,
+        characterId: null,
+        nppId: null,
+      };
+      db.collectionMocks["electionCandidates"]!.find.mockReturnValue(makeCursor([winner]));
+      db.collectionMocks["characters"]!.find.mockReturnValue(makeCursor([winnerChar]));
+      db.collectionMocks["electedOfficials"]!.find.mockReturnValue(makeCursor([tombstone]));
 
-    const { resolveOneGeneralElection } = await import("./generalResolution");
-    const result = await resolveOneGeneralElection(
-      db as unknown as Db,
-      election,
-      tally,
-      CURRENT_TURN,
-      NOW
-    );
+      const { resolveOneGeneralElection } = await import("./generalResolution");
+      const result = await resolveOneGeneralElection(
+        db as unknown as Db,
+        election,
+        tally,
+        CURRENT_TURN,
+        NOW
+      );
 
-    expect(result.resolved).toBe(true);
+      expect(result.resolved).toBe(true);
+      expect(db.collectionMocks["electedOfficials"]!.find).toHaveBeenCalledWith(
+        expect.objectContaining({ officeType, countryId, state, characterId: null, nppId: null }),
+        expect.anything()
+      );
 
-    // Additive: every official-row delete targets the claimed tombstone ids,
-    // never a broad delegation sweep.
-    const deleteCalls = db.collectionMocks["electedOfficials"]!.deleteMany.mock.calls;
-    expect(deleteCalls.length).toBeGreaterThanOrEqual(1);
-    for (const [filter] of deleteCalls) {
-      const ids = (filter as { _id?: { $in?: ObjectId[] } })?._id?.$in?.map(String);
-      // Every delete is id-targeted at claimed tombstones; a broad sweep
-      // would carry no `_id.$in` at all.
-      expect(ids).toBeDefined();
-      expect(ids).toContain(tombstoneId.toString());
+      // Additive: every official-row delete targets the claimed tombstone ids,
+      // never a broad delegation sweep.
+      const deleteCalls = db.collectionMocks["electedOfficials"]!.deleteMany.mock.calls;
+      expect(deleteCalls.length).toBeGreaterThanOrEqual(1);
+      for (const [filter] of deleteCalls) {
+        const ids = (filter as { _id?: { $in?: ObjectId[] } })?._id?.$in?.map(String);
+        // Every delete is id-targeted at claimed tombstones; a broad sweep
+        // would carry no `_id.$in` at all.
+        expect(ids).toBeDefined();
+        expect(ids).toContain(tombstoneId.toString());
+      }
+
+      // The winner is seated as a regular Commons MP.
+      const inserts = db.collectionMocks["electedOfficials"]!.insertOne.mock.calls;
+      expect(inserts.length).toBeGreaterThanOrEqual(1);
+      const winnerInsert = inserts.find((c) =>
+        JSON.stringify(c[0] ?? {}).includes("By-Election Winner")
+      );
+      expect(winnerInsert).toBeDefined();
+      expect(winnerInsert![0]).toMatchObject({ officeType, state });
+
+      // No stale-office sweep: sitting MPs keep their currentOffice, so neither
+      // characters nor NPPs are bulk-cleared.
+      expect(db.collectionMocks["characters"]!.updateMany).not.toHaveBeenCalled();
+      expect(db.collectionMocks["npps"]!.updateMany).not.toHaveBeenCalled();
+
+      // A by-election never respawns the regular cycle.
+      const { spawnCommonsElection } = await import("./electionSpawning");
+      expect(vi.mocked(spawnCommonsElection)).not.toHaveBeenCalled();
     }
-
-    // The winner is seated as a regular Commons MP.
-    const inserts = db.collectionMocks["electedOfficials"]!.insertOne.mock.calls;
-    expect(inserts.length).toBeGreaterThanOrEqual(1);
-    const winnerInsert = inserts.find((c) =>
-      JSON.stringify(c[0] ?? {}).includes("By-Election Winner")
-    );
-    expect(winnerInsert).toBeDefined();
-    expect(winnerInsert![0]).toMatchObject({ officeType: "commons", state: "LON" });
-
-    // No stale-office sweep: sitting MPs keep their currentOffice, so neither
-    // characters nor NPPs are bulk-cleared.
-    expect(db.collectionMocks["characters"]!.updateMany).not.toHaveBeenCalled();
-    expect(db.collectionMocks["npps"]!.updateMany).not.toHaveBeenCalled();
-
-    // A by-election never respawns the regular cycle.
-    const { spawnCommonsElection } = await import("./electionSpawning");
-    expect(vi.mocked(spawnCommonsElection)).not.toHaveBeenCalled();
-  });
+  );
 
   it("a regular commons race still sweeps the delegation", async () => {
     const election = {

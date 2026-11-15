@@ -1,3 +1,4 @@
+import { freezeCanadianRidingResult } from "@/lib/countries/ca/ridingResult";
 /**
  * Ordinary completed elections assign winners and advance their next cycle.
  * resolveOneGeneralElection leaves bound Assembly ballots to cohort certification,
@@ -13,7 +14,6 @@ import type {
   ElectedOfficial,
   ElectionStatus,
   ElectionVoteTally,
-  NPP,
   OfficeType,
   CareerEvent,
 } from "@/lib/db/types";
@@ -405,6 +405,17 @@ export async function resolveOneGeneralElection(
       survivingParty,
       candidates,
       totalVotesCast,
+    });
+
+    const canadianRidingResult = await freezeCanadianRidingResult({
+      election,
+      tally,
+      votes: effectiveVotes,
+      seats: seatsEstimate,
+      candidateParties: Object.fromEntries(
+        [...candidateMap].map(([id, c]) => [id, c.party ?? "independent"])
+      ),
+      parties: loadGeneralElectionCandidatesResult.ridingParties,
     });
 
     const officeAnalytics: Array<{
@@ -970,6 +981,7 @@ export async function resolveOneGeneralElection(
     await createNotifications(loserNotifInputs);
 
     await applyGeneralElectionAftermath({
+      canadianRidingResult,
       db,
       election,
       seatsEstimate,

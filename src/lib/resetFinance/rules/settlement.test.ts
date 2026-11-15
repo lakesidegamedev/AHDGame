@@ -15,6 +15,26 @@ const opening: NationalTreasuryState = {
 };
 
 describe("reset treasury settlement", () => {
+  it.each([false, true])("does not borrow again for already-funded service: %s", (funded) => {
+    const result = settleNationalTreasury(opening, {
+      revenue: 0,
+      annualInterestRate: 0,
+      periodsPerYear: 48,
+      operatingClaims: { mandatory: 0, grants: 0, existing: 5, new: 0 },
+      bondProceeds: 0,
+      bondFaceIssued: 0,
+      bondMaturityCashPaid: 20,
+      bondFaceRetired: 10,
+      bondCouponCashPaid: 15,
+      bondServiceAlreadyFunded: funded,
+    });
+    expect(result.emergencyAdvanceDrawn).toBe(funded ? 0 : 25);
+    expect(result.externallyFundedBondCash).toBe(funded ? 25 : 0);
+    expect(result.closing.cash).toBe(0);
+    expect(result.paid.existing).toBe(0);
+    expect(result.closing.debt).toBe(90);
+    expect(result.accountingResidual).toBe(0);
+  });
   it("pays priority claims, records unpaid obligations, and does not cap issuance silently", () => {
     const result = settleNationalTreasury(opening, {
       revenue: 20,

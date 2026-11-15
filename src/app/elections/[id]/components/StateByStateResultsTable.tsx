@@ -1,4 +1,5 @@
 "use client";
+import { displayCanadianRegionCode } from "@/lib/countries/ca/regionCodes";
 
 import { useState, useMemo } from "react";
 import { computeStateResults } from "./generalElectionHelpers";
@@ -101,7 +102,9 @@ export function StateByStateResultsTable({
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-2">
                     <span className="font-medium">{result.stateName}</span>
-                    <span className="text-xs text-muted">({result.stateId})</span>
+                    <span className="text-xs text-muted">
+                      ({displayCanadianRegionCode(result.stateId)})
+                    </span>
                   </div>
                 </td>
                 <td className="px-4 py-3 text-right">

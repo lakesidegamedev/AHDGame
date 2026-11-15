@@ -12,7 +12,7 @@
 import { SeedContractError } from "@/lib/seeds/contract/seedContractError";
 import { describe, expect, it } from "vitest";
 import { SLUG_TO_NAME, INDEPENDENT_SLUGS, buildOfficeType } from "./seedHistorical";
-import { getPresetSeats } from "@/lib/constants/historicalSeats";
+import { getPresetSeats, seatGroupsFor } from "@/lib/constants/historicalSeats";
 import { politicalParties as usParties } from "@/lib/seeds/reference/politicalParties";
 import { ukParties } from "@/lib/seeds/uk/ukParties";
 import { jpParties } from "@/lib/countries/jp/data/jpParties";
@@ -65,6 +65,16 @@ function slugsInPreset(preset: string): Set<string> {
 }
 
 describe("seedHistorical slug resolution", () => {
+  it("preserves each US Senate class in the incumbent office", () => {
+    const senate = seatGroupsFor("2027-default").US!.filter((s) => s.officeType === "senate");
+    expect(senate).toHaveLength(100);
+    for (const seat of senate)
+      expect(buildOfficeType(seat)).toMatchObject({
+        type: "senate",
+        state: seat.state,
+        senateClass: seat.senateClass,
+      });
+  });
   it("1991-default: every party slug in getPresetSeats resolves to a seeded preset-valid party or is whitelisted independent", () => {
     const slugs = slugsInPreset("1991-default");
     const validNames = partyNamesForPreset("1991-default");

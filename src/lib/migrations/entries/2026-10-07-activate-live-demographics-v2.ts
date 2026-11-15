@@ -1,4 +1,5 @@
 import type { Db } from "mongodb";
+import type { CountryId } from "@/lib/constants/countries";
 import type { GameState } from "@/lib/db/types/gameState";
 import { verifyDemographicsV2Opening } from "@/lib/demographics/v2/verifyOpening";
 import { RESET_V2_READY } from "@/lib/resetVersions/availability";
@@ -6,6 +7,7 @@ import {
   resetSeedComplete,
   resetSystemSelectionsFrom,
   resetSystemVersionsFrom,
+  demographicsV2OpeningCountries,
 } from "@/lib/resetVersions/rules";
 import type { Migration, MigrationContext, MigrationResult } from "../types";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
@@ -13,13 +15,21 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 export const LIVE_DEMOGRAPHICS_V2_MIGRATION_ID = "2026-10-07-activate-live-demographics-v2";
 
 const MIGRATION_ACTOR = `migration:${LIVE_DEMOGRAPHICS_V2_MIGRATION_ID}`;
-const LIVE_ACTIVATION_COUNTRIES = ["US", "UK", "JP", "IE"] as const;
+function activationCountries(state: ActivationState): string[] {
+  const countries: string[] = [...demographicsV2OpeningCountries(state.preset ?? ""), "IE"];
+  if (resetSeedComplete(state, "demographics")) {
+    countries.push(...(state.resetVersionSeeds?.demographics?.countries ?? []));
+  }
+  return [...new Set(countries)];
+}
 
 type ActivationState = Pick<
   GameState,
   | "_id"
+  | "preset"
   | "currentTurn"
   | "isActive"
+  | "isProcessing"
   | "resetWorldId"
   | "resetVersionSeeds"
   | "resetSystemSelections"
@@ -28,8 +38,10 @@ type ActivationState = Pick<
 
 const ACTIVATION_PROJECTION = {
   _id: 1,
+  preset: 1,
   currentTurn: 1,
   isActive: 1,
+  isProcessing: 1,
   resetWorldId: 1,
   resetVersionSeeds: 1,
   resetSystemSelections: 1,
@@ -44,6 +56,7 @@ function assertActivatableWorld(state: ActivationState | null): asserts state is
   if (state.isActive !== true) {
     throw new Error("Demographics v2 live promotion requires the current world to be active");
   }
+  if (state.isProcessing) throw new Error("Demographics v2 promotion requires an idle turn runner");
   if (!Number.isSafeInteger(state.currentTurn) || (state.currentTurn ?? 0) < 1) {
     throw new Error("Demographics v2 live promotion requires a valid current turn");
   }
@@ -56,7 +69,7 @@ function alreadyActivated(state: ActivationState): boolean {
   return (
     resetSystemVersionsFrom(state, RESET_V2_READY).demographics === "v2" &&
     resetSystemSelectionsFrom(state).demographics === "v2" &&
-    LIVE_ACTIVATION_COUNTRIES.every((countryId) =>
+    activationCountries(state).every((countryId) =>
       state.resetVersionSeeds?.demographics?.countries?.includes(countryId)
     )
   );
@@ -79,7 +92,7 @@ async function activateLiveDemographicsV2(db: Db, ctx: MigrationContext): Promis
     db,
     state.resetWorldId,
     state.currentTurn,
-    LIVE_ACTIVATION_COUNTRIES
+    activationCountries(state) as CountryId[]
   );
   const activatedAt = new Date().toISOString();
   const promotedState: ActivationState = {
@@ -88,10 +101,7 @@ async function activateLiveDemographicsV2(db: Db, ctx: MigrationContext): Promis
     resetVersionSeeds: { ...state.resetVersionSeeds, demographics: receipt },
     resetSystemSelections: { ...state.resetSystemSelections, demographics: "v2" },
   };
-  if (
-    resetSystemVersionsFrom(promotedState, RESET_V2_READY).demographics !== "v2" ||
-    !resetSeedComplete(promotedState, "demographics")
-  ) {
+  if (!alreadyActivated(promotedState) || !resetSeedComplete(promotedState, "demographics")) {
     throw new Error("Demographics v2 receipt did not satisfy the runtime activation contract");
   }
 
@@ -100,7 +110,7 @@ async function activateLiveDemographicsV2(db: Db, ctx: MigrationContext): Promis
       documentsScanned: 1,
       documentsUpdated: 0,
       notes: [
-        "DRY RUN, no writes. The active world's US, UK, JP, and inactive IE population vectors passed verification.",
+        `DRY RUN, no writes. Population vectors passed verification for ${receipt.countries?.join(", ")}.`,
         "Apply will atomically install the receipt, activate Demographics v2, and select v2 for the next reset.",
         "SCO and WAL remain deferred until independence creates and verifies their successor-region vectors.",
       ],
@@ -111,6 +121,7 @@ async function activateLiveDemographicsV2(db: Db, ctx: MigrationContext): Promis
     {
       _id: "current",
       isActive: true,
+      isProcessing: { $ne: true },
       currentTurn: state.currentTurn,
       resetWorldId: state.resetWorldId,
     },
@@ -139,11 +150,7 @@ async function activateLiveDemographicsV2(db: Db, ctx: MigrationContext): Promis
     { _id: "current" },
     { projection: ACTIVATION_PROJECTION }
   );
-  if (
-    !activated ||
-    resetSystemVersionsFrom(activated, RESET_V2_READY).demographics !== "v2" ||
-    resetSystemSelectionsFrom(activated).demographics !== "v2"
-  ) {
+  if (!activated || !alreadyActivated(activated)) {
     throw new Error("Demographics v2 activation did not pass its post-write verification");
   }
 
@@ -151,7 +158,7 @@ async function activateLiveDemographicsV2(db: Db, ctx: MigrationContext): Promis
     documentsScanned: 1,
     documentsUpdated: update.modifiedCount,
     notes: [
-      "Activated Demographics v2 after verifying US, UK, JP, and inactive IE population vectors.",
+      `Activated Demographics v2 after verifying population vectors for ${receipt.countries?.join(", ")}.`,
       "Selected Demographics v2 for the next reset without changing any other reset-system selection.",
       "SCO and WAL remain deferred until independence creates and verifies their successor-region vectors.",
     ],

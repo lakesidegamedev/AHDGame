@@ -476,7 +476,7 @@ export async function OnePartyExecutiveHub({ countryId }: { countryId: CountryId
       govPartyIds,
       partyBySeq
     );
-    if (result) {
+    if (result?.chairId) {
       oppositionLeaderChar = await charactersCollection(db).findOne({
         _id: result.chairId,
       });

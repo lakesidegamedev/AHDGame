@@ -12,6 +12,7 @@ import type {
   PoliticalParty,
 } from "@/lib/db/types";
 import { MAX_NATIONAL_CAMPAIGNERS } from "./access";
+import { canRenameParty } from "./rules/defaultIdentity";
 import { assertMergeEligibility, MergeEligibilityError } from "./mergeEligibility";
 import { withPartyTerritoryMutation } from "./territoryMutation";
 import { PartyTerritoryError } from "./relocationTerritory";
@@ -100,10 +101,10 @@ export function getEligibleVoterSet(party: PoliticalParty): Set<string> {
 
 // ─── Effect helpers ───────────────────────────────────────────────────────────
 
-async function applyRenameEffect(db: Db, proposal: CommitteeProposal): Promise<void> {
+async function applyRenameEffect(db: Db, proposal: CommitteeProposal): Promise<boolean> {
   if (!proposal.rename) throw new Error("Not a rename proposal");
-  await politicalPartiesCollection(db).updateOne(
-    { _id: proposal.partyId },
+  const result = await politicalPartiesCollection(db).updateOne(
+    { _id: proposal.partyId, countryId: proposal.countryId, isDefault: { $ne: true } },
     {
       $set: {
         name: proposal.rename.newName,
@@ -112,6 +113,7 @@ async function applyRenameEffect(db: Db, proposal: CommitteeProposal): Promise<v
       },
     }
   );
+  return result.matchedCount !== 0;
 }
 
 /**
@@ -1100,12 +1102,16 @@ export async function attemptResolution(
 
   const proposingParty = await politicalPartiesCollection(db).findOne(
     { _id: proposal.partyId },
-    { projection: { committeeIds: 1, chairId: 1, viceChairId: 1, treasurerId: 1 } }
+    { projection: { committeeIds: 1, chairId: 1, viceChairId: 1, treasurerId: 1, isDefault: 1 } }
   );
   if (!proposingParty) {
     // A deleted party can never come back, so an unresolvable row must not sit
     // open forever blocking the duplicate-proposal guard.
     await markProposalTerminal(db, proposal, "expired", currentTurn);
+    return;
+  }
+  if (proposal.type === "rename" && !canRenameParty(proposingParty)) {
+    await markProposalTerminal(db, proposal, "rejected", currentTurn);
     return;
   }
 
@@ -1184,7 +1190,10 @@ export async function attemptResolution(
       if (proposal.type === "merge") {
         await processMergeProposal(db, proposal, currentTurn);
       } else {
-        if (proposal.type === "rename") await applyRenameEffect(db, proposal);
+        if (proposal.type === "rename" && !(await applyRenameEffect(db, proposal))) {
+          await markResolved(db, proposal._id, "rejected", currentTurn);
+          return;
+        }
         if (proposal.type === "positionShift") await applyPositionShiftEffect(db, proposal);
         if (proposal.type === "electionMethod") await applyElectionMethodEffect(db, proposal);
         if (proposal.type === "electionDuration") await applyElectionDurationEffect(db, proposal);

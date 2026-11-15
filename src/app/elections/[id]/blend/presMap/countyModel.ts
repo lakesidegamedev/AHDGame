@@ -11,6 +11,10 @@ import { BLEND, BLEND_HEX } from "@/components/blend/tokens";
 /** The slice of the subdivision-results response the panel reads. */
 export interface CountyApiResponse {
   viewBox: string;
+  mode?: string;
+  resultStatus?: "frozen" | "unsupported";
+  notice?: string;
+  geometryAvailable?: boolean;
   subdivisions: {
     id: string;
     name: string;

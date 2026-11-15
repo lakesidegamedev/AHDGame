@@ -212,7 +212,8 @@ async function getNoConfidenceVotes(db: Awaited<ReturnType<typeof getDb>>) {
   return {
     votes: votes.map((v) => ({
       id: v._id.toString(),
-      pmCharacterId: v.targetPmCharacterId.toString(),
+      pmCharacterId: v.targetPmCharacterId?.toString() ?? null,
+      pmNppId: v.targetPmNppId?.toString() ?? null,
       pmName: v.targetPmName,
       proposedBy: v.proposedByName,
       votesFor: v.votesFor,

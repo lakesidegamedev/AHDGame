@@ -1,4 +1,5 @@
 "use client";
+import { displayCanadianRegionCode } from "@/lib/countries/ca/regionCodes";
 
 import { useMemo, useState } from "react";
 import { AlertTriangle } from "lucide-react";
@@ -404,7 +405,7 @@ export default function BulkBuildCapacityDialog({
                   <tr key={row.sectorId} className="border-t border-card-border">
                     <td className="px-3 py-2 text-foreground">
                       <span className="font-medium">
-                        {stateNames.get(row.sectorId) ?? row.stateId}
+                        {displayCanadianRegionCode(stateNames.get(row.sectorId) ?? row.stateId)}
                       </span>{" "}
                       <span className="text-muted">{typeLabel(row.sectorType)}</span>
                       {row.understaffed && (row.status === "ready" || row.status === "built") && (

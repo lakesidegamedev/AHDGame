@@ -26,7 +26,7 @@ export interface WorldFlags {
   /** Income vintage provenance for the medianIncome anchor; null on legacy data. */
   incomeStartVintages: Partial<Record<string, string>> | null;
   /** Reset choice: "none" means the playable countries opened with no parties. */
-  startingPartiesMode: "default" | "none";
+  startingPartiesMode: "default" | "none" | "no-npps";
   /** Set while the founding round runs: the turns its races close on. */
   foundingRound: { primaryEndTurn: number; generalEndTurn: number } | null;
   /** Effective, seed-verified versions; admin selections for a future reset are excluded. */

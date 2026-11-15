@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Db } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
+vi.mock("@/lib/resetVersions/seedModeledOpening", () => ({ seedModeledOpening: vi.fn() }));
 import { RESET_V2_SEED_REVISION } from "@/lib/resetVersions/rules";
 
 // Seed data is checked by the seed contract suite; this suite covers orchestration.
@@ -38,6 +39,39 @@ const receipt = {
 
 describe("reset v2 metric opening integration", () => {
   let db: MockDb;
+
+  it("routes a 2027 admin reset to the modeled seed and stamps its receipt", async () => {
+    db = createMockDb();
+    db.collection("gameState")
+      .findOne.mockResolvedValueOnce({ _id: "current", resetSystemSelections: { metrics: "v2" } })
+      .mockResolvedValueOnce({
+        _id: "current",
+        metricsSystemVersion: "v2",
+        resetWorldId: "new-world",
+        currentTurn: 1,
+      });
+    const { seedModeledOpening } = await import("@/lib/resetVersions/seedModeledOpening");
+    vi.mocked(seedModeledOpening).mockResolvedValue(receipt);
+    const { resetAndBootstrapGameWorld } = await import("./resetAndBootstrapGameWorld");
+    await resetAndBootstrapGameWorld({
+      db: db as unknown as Db,
+      preset: "2027-default",
+      skipDiagnostic: true,
+      recordRunLog: false,
+    });
+    expect(seedModeledOpening).toHaveBeenCalledWith(
+      db,
+      "2027-default",
+      "new-world",
+      1,
+      "metrics",
+      undefined
+    );
+    expect(db.collectionMocks.gameState!.updateOne).toHaveBeenCalledWith(
+      expect.objectContaining({ resetWorldId: "new-world", metricsSystemVersion: "v2" }),
+      { $set: { "resetVersionSeeds.metrics": receipt } }
+    );
+  });
 
   beforeEach(async () => {
     vi.clearAllMocks();

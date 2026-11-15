@@ -1,4 +1,5 @@
 "use client";
+import { displayCanadianRegionCode } from "@/lib/countries/ca/regionCodes";
 
 import { useState } from "react";
 import { trackAction } from "@/lib/observability/actionBreadcrumb";
@@ -89,7 +90,7 @@ export function PrimaryCampaignControls({
   const triggerSurge = async () => {
     if (
       !confirm(
-        `Surge your home state (${homeState})? Cost: $${surgeCostFunds.toLocaleString("en-US")} + ${surgeCostActions} actions. Adds +${surgeBoost}% to your own vote there for the rest of this primary. One-time per cycle.`
+        `Surge your home state (${displayCanadianRegionCode(homeState)})? Cost: $${surgeCostFunds.toLocaleString("en-US")} + ${surgeCostActions} actions. Adds +${surgeBoost}% to your own vote there for the rest of this primary. One-time per cycle.`
       )
     )
       return;
@@ -194,8 +195,8 @@ export function PrimaryCampaignControls({
               ) : (
                 <>
                   Add +{surgeBoost}% to your vote in{" "}
-                  <span className="font-semibold">{homeState}</span> for $
-                  {surgeCostFunds.toLocaleString("en-US")} + {surgeCostActions} actions
+                  <span className="font-semibold">{displayCanadianRegionCode(homeState)}</span> for
+                  ${surgeCostFunds.toLocaleString("en-US")} + {surgeCostActions} actions
                 </>
               )}
             </div>
@@ -210,7 +211,7 @@ export function PrimaryCampaignControls({
                 ? "Already used this primary cycle"
                 : !canSurge
                   ? "Not enough funds or actions"
-                  : `Surge ${homeState}`
+                  : `Surge ${displayCanadianRegionCode(homeState)}`
             }
           >
             {busy === "surge" ? "…" : "Surge home state"}

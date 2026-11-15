@@ -1,4 +1,5 @@
 "use client";
+import { displayCanadianRegionCode } from "@/lib/countries/ca/regionCodes";
 
 import { formatNum, appealColor, partyHex } from "../pollHelpers";
 import { EconomicPositionPip, SocialPositionPip } from "./PollCharts";
@@ -96,7 +97,7 @@ export function ElectionComparisonPanel({
         {useInRaceTotals ? "Estimated vote share" : "Vote potential"}
       </h2>
       <p className="mt-1 text-body-sm text-muted">
-        {type} election in {electionContext.state}.{" "}
+        {type} election in {displayCanadianRegionCode(electionContext.state)}.{" "}
         {useInRaceTotals
           ? "Group-level allocation, the same as the election engine."
           : "Rival figures come from reachable voters. Commission a poll during the race for an estimated share."}

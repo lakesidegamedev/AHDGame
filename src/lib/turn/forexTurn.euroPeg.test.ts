@@ -111,6 +111,32 @@ beforeEach(() => {
 });
 
 describe("euro follower live peg", () => {
+  it.each(["EUR", "BGL"])(
+    "updates a bankless shared quote without converting a %s ledger",
+    async (currencyCode) => {
+      mockEuroBanksAndRates();
+      const cursor = db.collectionMocks.exchangeRates.find();
+      const rows = await cursor.toArray();
+      cursor.toArray.mockResolvedValue([...rows, makeExchangeRate("BG", currencyCode, 0.92, 0.92)]);
+      db.collectionMocks.exchangeRates.bulkWrite.mockResolvedValue({ matchedCount: 1 });
+
+      await processForexTurn(db as unknown as Db, 50, "2027-default");
+
+      const writes = db.collectionMocks.exchangeRates.bulkWrite.mock.calls.flatMap(([ops]) => ops);
+      if (currencyCode === "EUR") {
+        const update = writes.find((op) => op.updateOne.filter._id === "BG").updateOne;
+        expect(update.filter).toEqual({ _id: "BG", currencyCode: "EUR" });
+        expect(update.update.$set.rate).toBe(rateUpdateFor("DE")?.rate);
+        expect(update.update.$set.rateHistory).toEqual([
+          { turn: 50, rate: rateUpdateFor("DE")?.rate },
+        ]);
+        expect(update.update.$set).not.toHaveProperty("currencyCode");
+      } else {
+        expect(writes).toEqual([]);
+      }
+    }
+  );
+
   it("publishes DE's post-update rate and macro target on every 2027 follower", async () => {
     mockEuroBanksAndRates();
     const result = await processForexTurn(db as unknown as Db, 50, "2027-default");

@@ -558,6 +558,7 @@ export async function emitCorporationTurnTx(args: {
         anchorAmount: revenueAnchorPreTax,
         meta: {
           revenue: snap.revenue,
+          ledgerOwnedBySettlement: snap.operatingCashLedgerOwnedBySettlement === true,
           federalTaxPaid: snap.federalTaxPaid,
           stateTaxPaid: snap.stateTaxPaid,
           netIncomeAfterTax: snap.income,
@@ -582,6 +583,7 @@ export async function emitCorporationTurnTx(args: {
           stateTaxPaid: snap.stateTaxPaid,
           perCountryAnchor: Object.fromEntries(snap.taxPaidByCountry),
           perStateAnchor: Object.fromEntries(snap.taxPaidByState),
+          ledgerOwnedBySettlement: snap.operatingCashLedgerOwnedBySettlement === true,
         },
       });
     }

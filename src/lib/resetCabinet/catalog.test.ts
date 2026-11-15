@@ -6,6 +6,15 @@ import { resetCabinetActions, resetActionsForSeat } from "./catalog";
 import { actionSecondaryTarget, actionSecondaryTargets } from "./secondaryTargets";
 
 describe("reset Cabinet action catalog", () => {
+  it("provides Canadian administrative and funded choices for every 2027 Cabinet office", () => {
+    for (const seat of getCabinetPositions("CA")) {
+      const rows = resetActionsForSeat("CA", seat.id);
+      expect(rows).toHaveLength(4);
+      expect(rows.filter((row) => row.costClass === "Staff")).toHaveLength(2);
+      expect(new Set(rows.map((row) => row.target)).size).toBe(2);
+      expect(rows.every((row) => !/(NHS|Exchequer|White House)/.test(row.description))).toBe(true);
+    }
+  });
   it("has distinct, described order slots with no national concurrency gate", () => {
     expect(resetCabinetActions.length).toBeGreaterThan(172);
     expect(new Set(resetCabinetActions.map((action) => action.id)).size).toBe(

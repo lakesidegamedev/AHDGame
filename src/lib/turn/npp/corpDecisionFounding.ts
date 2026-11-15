@@ -94,6 +94,7 @@ export function decideNppFounding({
 }) {
   let entryDiagnostic: NppCorpDecision["entryDiagnostic"] = initialEntryDiagnostic;
   let foundingCashLocal: number | undefined;
+  let foundingCreditLocal: number | undefined;
   let shortageCreditRequest: NppCorpDecision["shortageCreditRequest"];
   // foundingBlockEntered already requires a target; the check narrows the type.
   if (foundingBlockEntered && foundingTarget !== null) {
@@ -291,6 +292,7 @@ export function decideNppFounding({
         });
         cashLocal = entryCapital - foundingCost;
         foundingCashLocal = foundingCost;
+        if (entryCapital > liquidCapital) foundingCreditLocal = entryCapital - liquidCapital;
         entryDiagnostic = setNppMarketEntryReason(entryDiagnostic, "entered");
       } else {
         if (foundingOutcome.creditPath && borrowAllowed) {
@@ -343,6 +345,7 @@ export function decideNppFounding({
         });
         cashLocal = entryCapital - foundingCost;
         foundingCashLocal = foundingCost;
+        if (entryCapital > liquidCapital) foundingCreditLocal = entryCapital - liquidCapital;
         entryDiagnostic = setNppMarketEntryReason(entryDiagnostic, "entered");
       } else {
         if (foundingOutcome.creditPath && borrowAllowed) {
@@ -362,5 +365,11 @@ export function decideNppFounding({
       }
     }
   }
-  return { entryDiagnostic, cashLocal, foundingCashLocal, shortageCreditRequest };
+  return {
+    entryDiagnostic,
+    cashLocal,
+    foundingCashLocal,
+    foundingCreditLocal,
+    shortageCreditRequest,
+  };
 }

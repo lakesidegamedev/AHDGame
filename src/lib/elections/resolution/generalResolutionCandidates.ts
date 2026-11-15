@@ -1,11 +1,8 @@
+import { isCanadianCommons, isCanada } from "@/lib/countries/ca/rules/localGeography";
+import type { RidingParty } from "@/lib/countries/ca/ridingResult";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 /** Candidate loading, eligibility and effective vote totals for a general election. */
-import type {
-  ElectionVoteTally,
-  Election,
-  ElectionCandidate,
-  NPP,
-  Character,
-} from "@/lib/db/types";
+import type { ElectionVoteTally, Election, NPP, Character } from "@/lib/db/types";
 import { type Db, ObjectId } from "mongodb";
 import {
   type FirstMinisterBonusContext,
@@ -90,7 +87,29 @@ export async function loadGeneralElectionCandidates({
 
   // A candidacy filed under a party that has since merged away counts for,
   // and seats into, the party that absorbed it.
-  const survivingParty = await loadSurvivingPartyResolver(db, election.countryId ?? "US");
+  // Replaces the survivor lookup with one projected country-wide read, not a new query per riding.
+  const ridingParties =
+    isCanada(election.countryId) && isCanadianCommons(election.electionType)
+      ? await politicalPartiesCollection<RidingParty>(db)
+          .find(
+            { countryId: "CA" },
+            {
+              projection: {
+                _id: 1,
+                sequentialId: 1,
+                abbreviation: 1,
+                color: 1,
+                mergedIntoPartyId: 1,
+              },
+            }
+          )
+          .toArray()
+      : undefined;
+  const survivingParty = await loadSurvivingPartyResolver(
+    db,
+    election.countryId ?? "US",
+    ridingParties
+  );
   for (const c of candidates) c.party = survivingParty(c.party) ?? c.party;
 
   const candidateMap = new Map(candidates.map((c) => [c._id.toString(), c]));
@@ -286,6 +305,7 @@ export async function loadGeneralElectionCandidates({
     candidateMap,
     ineligibleCandidateIds,
     survivingParty,
+    ridingParties,
     candidates,
     effectiveVotes,
     totalVotesCast,

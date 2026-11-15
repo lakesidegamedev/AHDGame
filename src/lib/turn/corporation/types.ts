@@ -487,6 +487,9 @@ export interface CorpSnapshot {
   income: number;
   /** Net operating cash delta in the corporation's liquid currency for this turn. */
   operatingCashIncomeLocal?: number;
+  operatingCashLedgerOwnedBySettlement?: boolean;
+  /** Net advertising adjustment already applied by the corporate cash bulk write. */
+  operatingCashAdjustmentLocal?: number;
   deferredProducerDistributions?: {
     walletId: string;
     worldEpoch: string;

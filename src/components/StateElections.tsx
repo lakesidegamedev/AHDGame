@@ -1,4 +1,5 @@
 "use client";
+import { displayCanadianRegionCode } from "@/lib/countries/ca/regionCodes";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
@@ -482,7 +483,7 @@ export function StateElections({
           </h2>
           {federalElections.length > 0 && (
             <Link
-              href={`${countryElectionsUrl(countryId)}?state=${stateId}`}
+              href={`${countryElectionsUrl(countryId)}?state=${displayCanadianRegionCode(stateId)}`}
               className="text-xs text-muted hover:text-primary transition-colors"
             >
               View all →
@@ -497,7 +498,8 @@ export function StateElections({
         {character && character.homeState !== stateId && (
           <div className="mb-4 rounded-lg bg-yellow-500/10 p-3 text-sm text-yellow-400">
             You can only enter races in your home{" "}
-            {isParliamentary ? "region" : regionLabel.toLowerCase()} ({character.homeState})
+            {isParliamentary ? "region" : regionLabel.toLowerCase()} (
+            {displayCanadianRegionCode(character.homeState)})
           </div>
         )}
 
@@ -575,7 +577,7 @@ export function StateElections({
             <h2 className="text-xl font-semibold">{stateLabel}</h2>
             {stateElectionsList.length > 0 && (
               <Link
-                href={`${countryElectionsUrl(countryId)}?state=${stateId}`}
+                href={`${countryElectionsUrl(countryId)}?state=${displayCanadianRegionCode(stateId)}`}
                 className="text-xs text-muted hover:text-primary transition-colors"
               >
                 View all →
