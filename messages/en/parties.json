@@ -1,5 +1,10 @@
 {
   "parties": {
+    "characterCreation": {
+      "currentOrg": "Current Org: {percent}%",
+      "orgUnavailable": "Current Org: unavailable",
+      "orgHint": "Party organization in {region}"
+    },
     "registrationPresence": {
       "description": "Fund voter registration to grow your party's registered base. Spending is divided equally only across regions with a local player, active NPP or regional officeholder.",
       "allocated": "Allocated spending",

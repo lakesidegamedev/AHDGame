@@ -1,6 +1,7 @@
 "use client";
 
 import { PartyLogo } from "@/components/PartyLogo";
+import { useTranslations } from "next-intl";
 import type { CountryId } from "@/lib/constants/countriesCore";
 import {
   ALIGNMENT_META,
@@ -21,6 +22,7 @@ const REGIME_BADGE: Record<"ruling" | "approved" | "banned", { label: string; cl
 
 interface PartyPickerProps {
   countryId: string;
+  homeState: string;
   value: string;
   onChange: (partyId: string) => void;
   majorParties: PartyOption[];
@@ -38,6 +40,7 @@ function partyPoint(party: PartyOption): CompassPoint | null {
 
 export function PartyPicker({
   countryId,
+  homeState,
   value,
   onChange,
   majorParties,
@@ -84,6 +87,12 @@ export function PartyPicker({
               color={p.color}
               countryId={country}
               note={registeredPlayersLabel(p.playerCount)}
+              organization={
+                homeState && p.organizationByRegion
+                  ? (p.organizationByRegion[homeState] ?? 0)
+                  : undefined
+              }
+              homeState={homeState}
               point={partyPoint(p)}
               position={position}
               regimeStatus={isOnePartyState ? (p.regimeStatus ?? null) : null}
@@ -104,6 +113,12 @@ export function PartyPicker({
                 color={p.color}
                 countryId={country}
                 note={registeredPlayersLabel(p.playerCount)}
+                organization={
+                  homeState && p.organizationByRegion
+                    ? (p.organizationByRegion[homeState] ?? 0)
+                    : undefined
+                }
+                homeState={homeState}
                 point={partyPoint(p)}
                 position={position}
                 regimeStatus={isOnePartyState ? (p.regimeStatus ?? null) : null}
@@ -154,6 +169,8 @@ function PartyRow({
   color,
   countryId,
   note,
+  organization,
+  homeState,
   point,
   position,
   regimeStatus,
@@ -166,12 +183,15 @@ function PartyRow({
   color: string;
   countryId: CountryId;
   note: string;
+  organization?: number;
+  homeState?: string;
   point?: CompassPoint | null;
   position?: CompassPoint;
   regimeStatus?: "ruling" | "approved" | "banned" | null;
   selected: boolean;
   onSelect: (id: string) => void;
 }) {
+  const t = useTranslations("parties.characterCreation");
   const distance = point && position ? compassDistance(position, point) : null;
   // In a one-party state the regime badge is the decisive fact, and two badges
   // plus a logo crush the party name to nothing. Policy distance is still shown
@@ -208,6 +228,16 @@ function PartyRow({
           {name}
         </span>
         <span className="block truncate text-body-xs text-muted">{note}</span>
+        {homeState && (
+          <span
+            className="block text-body-xs text-muted"
+            title={t("orgHint", { region: homeState })}
+          >
+            {organization == null
+              ? t("orgUnavailable")
+              : t("currentOrg", { percent: organization.toFixed(1) })}
+          </span>
+        )}
       </span>
       {regimeStatus && (
         <span

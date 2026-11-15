@@ -4,7 +4,6 @@ import { requireAuthWithCharacter } from "@/lib/api/requireAuth";
 import { parseJsonBody } from "@/lib/api/validate";
 import { draftCharterSchema } from "@/lib/api/schemas/charters";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
-import type { PoliticalParty, StatePartyOrg } from "@/lib/db/types";
 import { resolvePartyTier } from "@/lib/parties/partyTier";
 import { ObjectId } from "mongodb";
 import { getPartyHex } from "@/lib/utils/politics";
@@ -18,6 +17,7 @@ import { nppsCollection } from "@/lib/db/repositories/npps";
 import type { Document } from "mongodb";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 import { usersCollection } from "@/lib/db/repositories/users";
+import { loadPartyOrganizationByRegion } from "@/lib/registration/partyOrganization";
 
 // GET /api/country/[code]/parties — Return all political parties in the country with member counts and leadership
 // Auth: public
@@ -27,6 +27,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
     const db = await getDb();
     const { searchParams } = new URL(request.url);
     const includeOrg = searchParams.get("includeOrg") === "1";
+    const includeRegionalOrg = searchParams.get("includeRegionalOrg") === "1";
 
     const { code } = await params;
     const countryId = code.toUpperCase() as CountryId;
@@ -71,7 +72,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
           .toArray()
       : Promise.resolve([]);
 
-    const [leaders, bannedUserDocs, nppAgg, orgAgg, allCharsInParties] = await Promise.all([
+    const [leaders, bannedUsers, nppAgg, orgAgg, partyMembers, orgByRegion] = await Promise.all([
       charactersCollection(db)
         .find(
           { _id: { $in: leaderIds } },
@@ -111,13 +112,16 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
           { projection: { _id: 1, party: 1, userId: 1 } }
         )
         .toArray(),
+      includeRegionalOrg
+        ? loadPartyOrganizationByRegion(db, countryId, partyIdStrings)
+        : Promise.resolve(new Map<string, Record<string, number>>()),
     ]);
 
     // Build banned character set
-    const bannedUserIds = new Set(bannedUserDocs.map((u: { _id: ObjectId }) => u._id.toString()));
+    const bannedUserIds = new Set(bannedUsers.map((u: { _id: ObjectId }) => u._id.toString()));
     // Build accurate player counts excluding banned users
     const playerCountMap = new Map<string, number>();
-    for (const char of allCharsInParties) {
+    for (const char of partyMembers) {
       if (bannedUserIds.has(char.userId.toString())) continue;
       playerCountMap.set(char.party, (playerCountMap.get(char.party) ?? 0) + 1);
     }
@@ -145,6 +149,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
       const nppCount = nppCountMap.get(partyIdStr) ?? 0;
       return {
         id: partyIdStr,
+        ...(includeRegionalOrg ? { organizationByRegion: orgByRegion.get(partyIdStr) ?? {} } : {}),
         ...(frontiers
           ? {
               frontierRegions: frontiers.get(partyIdStr),
