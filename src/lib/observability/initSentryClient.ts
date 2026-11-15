@@ -97,6 +97,15 @@ export function initSentryClient(): typeof Sentry.captureRouterTransitionStart {
       "NetworkError when attempting to fetch resource.",
       "The network connection was lost.",
       "cancelled",
+      // Firefox and Safari spelling of an aborted or offline fetch.
+      /^(TypeError: )?network error$/i,
+      // RSC payload stream cut off by navigation or a dropped connection.
+      /^(Error: )?Connection closed\.$/,
+      // Analytics beacon timing out on a slow connection; the page is unaffected.
+      /PostHog request timed out/,
+      // A third-party script or extension calling Google Analytics, which we do
+      // not load.
+      "gtag is not defined",
     ],
 
     // Drop anything whose top frame is an extension URL or a known third-party ad
