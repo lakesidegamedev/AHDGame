@@ -1,4 +1,5 @@
 import { productionOrderOutcomes } from "./productionOrderOutcomes";
+import { closingProducerCash, ProducerCashChanges } from "./cashChangesRules";
 import { settleProducerMarket, type ProducerOffer } from "./rules";
 import { settlePriorProducerPayables } from "./payablesRules";
 import { creditRunShare, producerCreditHeadroom } from "./producerCreditRules";
@@ -757,6 +758,17 @@ export function advanceProducerEconomy(
     }
   }
   const results: ProducerOperatingResult[] = [];
+  const cashChanges = new ProducerCashChanges(input.accounts.map((account) => account.id));
+  for (const payment of prior.payments)
+    cashChanges.transfer(payment.debtorAccountId, payment.creditorAccountId, payment.amount);
+  const sellerAccounts = new Map(
+    market.tradeReceipt.offers.map((offer) => [offer.id, offer.accountId])
+  );
+  const buyerAccounts = new Map(
+    market.tradeReceipt.orders.map((order) => [order.id, order.accountId])
+  );
+  for (const offer of market.offers) cashChanges.add(sellerAccounts.get(offer.id)!, offer.revenue);
+  for (const order of market.orders) cashChanges.add(buyerAccounts.get(order.id)!, -order.cost);
   const { closingAccounts } = buildProducerOperatingResults({
     market,
     input,
@@ -784,9 +796,17 @@ export function advanceProducerEconomy(
     heldForPayables,
     originalCash,
     inputOrders,
+    cashChanges,
   });
+  for (const plan of plans) {
+    const paid = payments.get(plan.id)!;
+    cashChanges.transfer(plan.accountId, plan.labourRecipientAccountId, paid.labour);
+    cashChanges.transfer(plan.accountId, plan.operatingRecipientAccountId, paid.operating);
+  }
+  const movements = cashChanges.rows();
   return {
-    accounts: closingAccounts,
+    accounts: closingProducerCash(input.accounts, movements, closingAccounts),
+    cashChanges: movements,
     payables: [...closingPayables.values()].sort((a, b) =>
       a.id < b.id ? -1 : a.id > b.id ? 1 : 0
     ),

@@ -24,7 +24,7 @@ import { presetForEra } from "./presetSelector";
 import { getRegionCensusData } from "./regionCensusData";
 import { stateCensusData } from "./stateDemographics";
 import type { Layer1Config } from "./stateDemographicsPure";
-import { getCountryLayer1Model } from "./international";
+import { getCountryLayer1Model, regionalElectoratePositions } from "./international";
 import {
   lerpNumericTree,
   recordEraInterpolationFallback,
@@ -260,7 +260,7 @@ function countrySubstrateAtAnchor(
   return {
     dims: [...model.dims],
     marginals: census,
-    positions: model.positions,
+    positions: regionalElectoratePositions(model, stateId),
     turnoutRates: model.turnoutRates,
   };
 }

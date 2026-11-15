@@ -82,3 +82,30 @@ export function getCountryLayer1Model(countryId: string, era: EraId): CountryLay
   if (!Object.hasOwn(LAYER1_MODEL_BUILDERS, countryId)) return null;
   return LAYER1_MODEL_BUILDERS[countryId](era);
 }
+
+/**
+ * A region's electorate bucket positions: the model's national table shifted
+ * by the region's `regionalContext` when the model applies it to the
+ * electorate. Every bucket moves by the same offset, so a region's mean lean
+ * moves by exactly that offset.
+ */
+export function regionalElectoratePositions(
+  model: CountryLayer1Model,
+  regionId: string
+): CountryLayer1Model["positions"] {
+  const context = model.electorateRegionalContext ? model.regionalContext?.[regionId] : undefined;
+  if (!context) return model.positions;
+  const de = context.economicLean ?? 0;
+  const ds = context.socialLean ?? 0;
+  return Object.fromEntries(
+    Object.entries(model.positions).map(([dim, buckets]) => [
+      dim,
+      Object.fromEntries(
+        Object.entries(buckets).map(([key, pos]) => [
+          key,
+          { economicLean: pos.economicLean + de, socialLean: pos.socialLean + ds },
+        ])
+      ),
+    ])
+  );
+}

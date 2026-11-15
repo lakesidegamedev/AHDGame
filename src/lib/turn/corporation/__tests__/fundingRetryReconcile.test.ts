@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { Db } from "mongodb";
 import { createInMemoryDb } from "@/lib/test-utils/inMemoryDb";
 import { applyMoneyMove, type MoneyMove } from "@/lib/banking/moneyMove";
-import { reconcileAppliedFunding } from "../fundedProducerTurn";
+import { reconcileAppliedFunding } from "../fundingRetryReconcile";
 
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
 
