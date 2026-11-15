@@ -976,6 +976,7 @@ export default function CreateCharacterClient() {
           playerCounts={statePlayerCounts}
           position={position}
           regionNoun={regionNoun}
+          parties={parties}
         />
       )}
     </StepPanel>
@@ -1154,6 +1155,7 @@ export default function CreateCharacterClient() {
         isSubmitting={isLoading}
         portrait={portrait}
         header={header}
+        parties={parties}
       />
 
       <p className="mt-2 px-1 text-body-sm text-muted">

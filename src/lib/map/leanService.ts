@@ -4,12 +4,15 @@ import { getGameStateCollection } from "@/lib/db/collections/gameState";
 import type { State, StateDemographics } from "@/lib/db/types";
 import { eraYearContextFromGameState } from "@/lib/era/context";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
-import { getDisplayLean, getLeanLabel } from "@/lib/utils/demographics";
+import { getDisplayLean } from "@/lib/utils/demographics";
 import {
   getLeanLabelHex,
   getSocialLeanLabelHex,
   getUkEconomicLeanLabelHex,
 } from "@/lib/utils/politics";
+import { regionLeanLabel, mainPartiesFor } from "@/lib/regionLean/partyLabel";
+import type { MainParties } from "@/lib/regionLean/rules";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
 
@@ -30,7 +33,7 @@ export async function computeLeanMap(
   db: Db,
   countryId: CountryId
 ): Promise<Record<string, MapLeanState>> {
-  const [allStates, allDemographics, gameState] = await Promise.all([
+  const [allStates, allDemographics, gameState, parties] = await Promise.all([
     statesCollection(db).find({ countryId }).toArray(),
     stateDemographicsCollection(db).find({ countryId }).toArray(),
     getGameStateCollection(db).then((col) =>
@@ -39,16 +42,33 @@ export async function computeLeanMap(
         { projection: { preset: 1, currentYear: 1, startingYear: 1 } }
       )
     ),
+    politicalPartiesCollection(db)
+      .find(
+        { countryId },
+        {
+          projection: {
+            sequentialId: 1,
+            name: 1,
+            abbreviation: 1,
+            economicPosition: 1,
+            socialPosition: 1,
+            isDefault: 1,
+            memberCount: 1,
+          },
+        }
+      )
+      .toArray(),
   ]);
+  const mainParties = mainPartiesFor(parties.map((p) => ({ ...p, id: String(p.sequentialId) })));
   const era = {
     preset: gameState?.preset ?? null,
     ...eraYearContextFromGameState(gameState),
   };
 
   if (countryId === COUNTRY_CONFIGS.UK.id || countryId === COUNTRY_CONFIGS.DE.id) {
-    return buildLeanUK(countryId, allStates, allDemographics, era);
+    return buildLeanUK(countryId, allStates, allDemographics, era, mainParties);
   }
-  return buildLeanUS(countryId, allStates, allDemographics, era);
+  return buildLeanUS(countryId, allStates, allDemographics, era, mainParties);
 }
 
 type EraLeanContext = { preset: string | null; year: number | null; startingYear: number | null };
@@ -71,7 +91,8 @@ function buildLeanUS(
   countryId: CountryId,
   allStates: State[],
   allDemographics: StateDemographics[],
-  era: EraLeanContext
+  era: EraLeanContext,
+  mainParties: MainParties | null
 ): Record<string, MapLeanState> {
   const demoByState = new Map(allDemographics.map((d) => [d._id, d]));
   const result: Record<string, MapLeanState> = {};
@@ -86,7 +107,7 @@ function buildLeanUS(
     );
 
     const displayLean = getDisplayLean(economicLean, socialLean);
-    const label = getLeanLabel(displayLean);
+    const label = regionLeanLabel(displayLean, mainParties);
     const { color } = getLeanLabelHex(displayLean);
     const econ = getLeanLabelHex(economicLean);
     const social = getSocialLeanLabelHex(socialLean);
@@ -116,7 +137,8 @@ function buildLeanUK(
   countryId: CountryId,
   allStates: State[],
   allDemographics: StateDemographics[],
-  era: EraLeanContext
+  era: EraLeanContext,
+  mainParties: MainParties | null
 ): Record<string, MapLeanState> {
   const demoByState = new Map(allDemographics.map((d) => [d._id, d]));
   const result: Record<string, MapLeanState> = {};
@@ -132,7 +154,7 @@ function buildLeanUK(
     );
 
     const displayLean = getDisplayLean(economicLean, socialLean);
-    const label = getLeanLabel(displayLean);
+    const label = regionLeanLabel(displayLean, mainParties);
     const combined = getUkEconomicLeanLabelHex(displayLean);
     const econ = getUkEconomicLeanLabelHex(economicLean);
     const socialMeta = getSocialLeanLabelHex(socialLean);
