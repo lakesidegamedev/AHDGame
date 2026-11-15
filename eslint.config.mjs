@@ -38,7 +38,7 @@ const eslintConfig = defineConfig([
     ".superpowers/**",
     ".agents-local-backup-*/**",
     // Playwright e2e tests — not part of the Next.js build, no React rules needed
-    "e2e/**",
+    "tests/e2e/**",
     // Ad-hoc debug/test scripts in project root
     "check-min-wage.js",
     "test-uk-filter.js",

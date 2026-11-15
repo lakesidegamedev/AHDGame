@@ -19,7 +19,7 @@ Issues labeled `good-first-issue` are verified and scoped.
 - **New mechanics.** The game has a design direction; talk before you build.
 - **Schema changes.** Anything in `src/lib/db/types` affects a live production database and needs a migration plan.
 
-Exploits and vulnerabilities: never in public issues. See [SECURITY.md](./SECURITY.md).
+Exploits and vulnerabilities: never in public issues. See [SECURITY.md](./.github/SECURITY.md).
 
 ## Local development
 

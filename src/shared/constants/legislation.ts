@@ -150,9 +150,8 @@ export function getProvisionCostTotal(numProvisions: number): number {
  * How many provisions count toward national political influence (NPI) when proposing a bill.
  * Policy provisions always count. Subsidy/end_subsidy rows (industry bills) use the same ladder.
  * Union-law rows (v3 Phase 7b) use the same ladder too — a union-law-only bill must cost NPI
- * like any other single-provision industry bill; omitting it here was a real bug (verified
- * fix — a union-law-only bill previously enacted a nationwide ±30pp unionization swing for
- * free). Tariff rows are excluded — trade tariffs do not spend NPI.
+ * like any other single-provision industry bill, or a union-law-only bill would enact a
+ * nationwide ±30pp unionization swing for free. Tariff rows are excluded — trade tariffs do not spend NPI.
  */
 export function countProvisionsChargedNationalInfluence(args: {
   policyProvisionCount: number;

@@ -29,12 +29,11 @@ export default defineConfig({
       "src/**/*.test.ts",
       "src/**/*.test.tsx",
       "src/**/*.spec.ts",
-      "shared/**/*.test.ts",
       "tests/**/*.test.ts",
       "scripts/**/*.test.ts",
     ],
     globals: true,
-    setupFiles: ["./vitest.setup.ts"],
+    setupFiles: ["./tests/setup.ts"],
     coverage: {
       provider: "v8",
       reporter: ["text", "json-summary"],
@@ -45,7 +44,7 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
-      "@shared": path.resolve(__dirname, "./shared"),
+      "@shared": path.resolve(__dirname, "./src/shared"),
     },
   },
 });

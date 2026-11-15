@@ -17,7 +17,7 @@ import {
   MAX_EFFECT_PER_LAW,
   FEDERAL_MULTIPLIER,
   getPolicyDecayFactor,
-} from "../shared/constants/formulas";
+} from "../src/shared/constants/formulas";
 
 interface SimulatedPolicy {
   legislationTypeId: string;

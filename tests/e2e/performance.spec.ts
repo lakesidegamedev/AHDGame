@@ -1,7 +1,7 @@
 /**
  * Performance tests for heavy and commonly visited pages.
  * Measures wall-clock time from navigation start until main content is visible.
- * Run with: npm run test:e2e:performance (or `npm run test:e2e -- e2e/performance.spec.ts`)
+ * Run with: npm run test:e2e:performance (or `npm run test:e2e -- tests/e2e/performance.spec.ts`)
  *
  * Requires dev server (npm run dev) or built app. Thresholds are tuned for CI;
  * local runs are typically faster.
