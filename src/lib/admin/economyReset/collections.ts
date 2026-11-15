@@ -137,10 +137,7 @@ export const ECONOMY_RESET_PARTIAL_WIPE_COLLECTIONS: Readonly<Record<string, str
  * Reference or non-manifest collections the reset also clears. They are not
  * runtime collections, so the full world reset handles them separately.
  */
-export const ECONOMY_RESET_EXTRA_WIPE_COLLECTIONS = Object.freeze([
-  // Rebuilt by seedUnownedSectors with refresh after the wipe.
-  "unownedSectors",
-] as const);
+export const ECONOMY_RESET_EXTRA_WIPE_COLLECTIONS: readonly never[] = Object.freeze([]);
 
 /**
  * Runtime collections the economy-only reset leaves in place: politics,

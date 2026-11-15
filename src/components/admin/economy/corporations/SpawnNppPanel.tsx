@@ -23,8 +23,8 @@ export function SpawnNppPanel({
       <h3 className="text-sm font-semibold">Spawn NPP corporation</h3>
       <p className="text-xs text-muted">
         Create a non-player-purchasable corporation. It will have no CEO, no user owner, and will
-        participate in turn processing. Starting revenue is captured from the unowned market (20% of
-        the sector&apos;s unowned revenue).
+        participate in turn processing. It opens at the standard size for its sector unless you set
+        a starting revenue.
       </p>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -113,7 +113,7 @@ export function SpawnNppPanel({
                 value: { startingRevenue: e.target.value },
               })
             }
-            placeholder="Leave empty to auto-capture from unowned market"
+            placeholder="Leave empty for the standard opening size"
             className="w-full rounded border border-card-border bg-background px-2 py-1 text-sm"
           />
         </div>

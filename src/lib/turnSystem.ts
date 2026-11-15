@@ -16,7 +16,6 @@ import { getDb } from "@/lib/mongodb";
 import { getGameStateCollection } from "@/lib/db/collections";
 import { ObjectId } from "mongodb";
 import { getGameState, invalidateGameStateCache } from "@/lib/gameState";
-import { getGameStatePresetOrDefault } from "@/lib/db/collections/gameState";
 import type {
   GameConfig,
   GameState,
@@ -37,7 +36,6 @@ import {
 import { STARTING_YEAR } from "@/lib/constants/turnTime";
 import { DEFAULT_GAME_STATE_FLAGS } from "@/lib/seeds/reference/featureFlagDefaults";
 import { DEFAULT_CYCLE_ANCHOR_CONTEXT } from "@/lib/elections/cycleAnchorContext";
-import { seedUnownedSectors } from "@/lib/admin/seed/seedUnownedSectors";
 import { processGameHealthSnapshot } from "@/lib/turn/gameHealthSnapshot";
 import {
   TURN_LOCK_STALE_MS,
@@ -119,8 +117,6 @@ import { resetResidueTurnRefusal } from "@/lib/admin/resetContract/rules/residue
 import { serverEnv } from "@/lib/config/read";
 import { workerConfig } from "@/lib/config/worker";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
-import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
-import type { Document } from "mongodb";
 import { turnLogsCollection } from "@/lib/db/repositories/turnLogs";
 
 /** Read once per process: the deployment does not change under a running server. */
@@ -490,19 +486,6 @@ async function processTurnImpl(
           };
         }
       }
-    }
-
-    const unownedCount = await unownedSectorsCollection<Document>(db).countDocuments();
-    if (unownedCount === 0) {
-      // Seed at the WORLD's era. This used to ride the seeder's "2019-default"
-      // parameter default, so a 1953 world auto-seeded modern sector floors
-      // mid-turn.
-      await seedUnownedSectors(
-        db,
-        (msg) => console.log(`[Turn] Auto-seed: ${msg}`),
-        1,
-        await getGameStatePresetOrDefault(db)
-      );
     }
 
     const lockResult = await (

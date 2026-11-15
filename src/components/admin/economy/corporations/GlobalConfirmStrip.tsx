@@ -3,7 +3,7 @@
 import type { Dispatch } from "react";
 import type { CorporationsAdminAction } from "../useCorporationsAdminState";
 
-type GlobalConfirmType = "resetAll" | "resumeAll" | "spawnUnowned";
+type GlobalConfirmType = "resetAll" | "resumeAll";
 
 export function GlobalConfirmStrip({
   globalConfirm,
@@ -21,9 +21,7 @@ export function GlobalConfirmStrip({
       <span className="text-warning font-medium">
         {globalConfirm === "resetAll"
           ? "Reset timers on all corporations?"
-          : globalConfirm === "resumeAll"
-            ? "Resume all suspended corporations?"
-            : "Apply a one-time 20% revenue boost to ALL unowned sectors and seed any missing ones?"}
+          : "Resume all suspended corporations?"}
       </span>
       <button
         onClick={() => onConfirm(globalConfirm)}

@@ -26,7 +26,6 @@ export const ECONOMY_RESET_FUND_MIGRATIONS: readonly string[] = Object.freeze([
   "2026-06-01-index-fund-seed",
   "2026-06-02-index-fund-real-bonds",
   "2026-09-03-equity-market-pools",
-  "2026-08-01-backfill-unowned-headroom-units",
 ]);
 
 /** Model and media-lane unique keys that must exist before seeders write markets. */

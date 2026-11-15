@@ -6,7 +6,7 @@
  * accumulate capital in the equity market. Reuses `spawnNppCorporation` (the
  * same auth-independent core the production admin batch-spawn tool and the
  * sim harness bootstrap both already use) for everything correctness-
- * critical — ticker generation, sector creation, unowned-market-derived
+ * critical — ticker generation, sector creation, standard-size
  * starting revenue, national-corp exclusion, share allocation math — rather
  * than reimplementing any of it.
  *

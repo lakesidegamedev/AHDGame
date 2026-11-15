@@ -13,7 +13,6 @@ import { buildBackground2027MacroCountry, isAuthoredBackground2027 } from "./bac
 export const MACRO_FORBIDDEN_SEED_COLLECTIONS = [
   "corporations",
   "corporateSectors",
-  "unownedSectors",
   "seats",
   "electedOfficials",
   "officeStates",

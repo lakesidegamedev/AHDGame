@@ -104,8 +104,7 @@ export interface CorporationsAdminState {
   currentTurn: number;
   confirm: ConfirmAction;
   inline: InlinePanel;
-  globalConfirm: "resetAll" | "resumeAll" | "spawnUnowned" | null;
-  spawnUnownedLog: string | null;
+  globalConfirm: "resetAll" | "resumeAll" | null;
   capitalAmount: string;
   hqCountry: string;
   hqRegion: string;
@@ -149,8 +148,7 @@ export type CorporationsAdminAction =
   | { type: "SET_CURRENT_TURN"; value: number }
   | { type: "SET_CONFIRM"; value: ConfirmAction }
   | { type: "SET_INLINE"; value: InlinePanel }
-  | { type: "SET_GLOBAL_CONFIRM"; value: "resetAll" | "resumeAll" | "spawnUnowned" | null }
-  | { type: "SET_SPAWN_UNOWNED_LOG"; value: string | null }
+  | { type: "SET_GLOBAL_CONFIRM"; value: "resetAll" | "resumeAll" | null }
   | { type: "SET_CAPITAL_AMOUNT"; value: string }
   | { type: "SET_HQ_COUNTRY"; value: string }
   | { type: "SET_HQ_REGION"; value: string }
@@ -179,7 +177,6 @@ const initialState: CorporationsAdminState = {
   confirm: null,
   inline: null,
   globalConfirm: null,
-  spawnUnownedLog: null,
   capitalAmount: "",
   hqCountry: "US",
   hqRegion: "",
@@ -232,8 +229,6 @@ function corporationsAdminReducer(
       return { ...state, inline: action.value };
     case "SET_GLOBAL_CONFIRM":
       return { ...state, globalConfirm: action.value };
-    case "SET_SPAWN_UNOWNED_LOG":
-      return { ...state, spawnUnownedLog: action.value };
     case "SET_CAPITAL_AMOUNT":
       return { ...state, capitalAmount: action.value };
     case "SET_HQ_COUNTRY":

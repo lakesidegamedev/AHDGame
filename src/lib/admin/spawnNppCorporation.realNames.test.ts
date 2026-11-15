@@ -7,7 +7,6 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { Db } from "mongodb";
 import { ObjectId } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
-import { computeUnownedHeadroomUnits } from "@/lib/market/unownedHeadroom";
 import { realCompanyNamesFor } from "@/lib/corporations/names/realNames";
 import { spawnNppCorporation } from "./spawnNppCorporation";
 
@@ -42,15 +41,10 @@ vi.mock("./nppCorpCeoSelection", () => ({
   buildCeoAffiliations: vi.fn().mockReturnValue([]),
   chooseNppCorpCeo: vi.fn().mockReturnValue({ kind: "new", party: null }),
 }));
-vi.mock("@/lib/admin/seed/seedUnownedSectors", () => ({
-  computeUnownedSeedRevenue: vi.fn().mockReturnValue(0),
-}));
 vi.mock("@/lib/market/featureFlag", () => ({
   getMarketSystemModeForDb: vi.fn().mockResolvedValue("capital"),
   marketAtLeast: vi.fn().mockReturnValue(false),
 }));
-
-const POOL_REVENUE = 40_000_000;
 
 describe("spawnNppCorporation real company names", () => {
   let db: MockDb;
@@ -62,7 +56,6 @@ describe("spawnNppCorporation real company names", () => {
       "npps",
       "corporations",
       "corporateSectors",
-      "unownedSectors",
       "politicalParties",
       "exchangeRates",
       "gameState",
@@ -88,14 +81,6 @@ describe("spawnNppCorporation real company names", () => {
       countryId: "US",
       name: "CA",
       gdp: 1_000_000_000,
-    });
-    db.collectionMocks.unownedSectors!.findOne.mockResolvedValue({
-      _id: new ObjectId(),
-      stateId: "CA",
-      countryId: "US",
-      sectorType: "technology",
-      revenue: POOL_REVENUE,
-      headroomUnits: computeUnownedHeadroomUnits("technology", POOL_REVENUE, 1),
     });
     db.collectionMocks.exchangeRates!.findOne.mockResolvedValue({ currencyCode: "X", rate: 1 });
   }

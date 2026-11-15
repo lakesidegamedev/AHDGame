@@ -48,17 +48,16 @@ beforeEach(() => {
       status: "failed",
       phaseReached: "build",
       logTail: [
-        'Reset ABORTED in build: Fresh vehicle-model seed preflight requires empty economic collections: {"unownedSectors":2791}',
+        'Reset ABORTED in build: Fresh vehicle-model seed preflight requires empty economic collections: {"corporations":12}',
       ],
     },
   });
-  db.collection("unownedSectors").countDocuments.mockResolvedValue(2791);
 });
 
 describe("1991 bootstrap recovery", () => {
   it("previews the failed build without changing archives or world data", async () => {
     const plan = await preview1991BootstrapRecovery(db as unknown as Db, runId);
-    expect(plan).toMatchObject({ ready: true, runId, unownedSectors: 2791 });
+    expect(plan).toMatchObject({ ready: true, runId });
     expect(bootstrapGameWorld).not.toHaveBeenCalled();
     for (const collection of Object.values(db.collectionMocks)) {
       expect(collection.updateOne).not.toHaveBeenCalled();
@@ -82,7 +81,6 @@ describe("1991 bootstrap recovery", () => {
       recover1991Bootstrap(db as unknown as Db, { runId, adminUsername: "operator" })
     ).rejects.toThrow("not empty");
     expect(bootstrapGameWorld).not.toHaveBeenCalled();
-    expect(db.collectionMocks.unownedSectors.deleteMany).not.toHaveBeenCalled();
   });
 
   it("refuses a stale run id or a running world", async () => {
@@ -114,7 +112,6 @@ describe("1991 bootstrap recovery", () => {
       "lastReset.status": "failed",
       "lastReset.phaseReached": "build",
     });
-    expect(db.collectionMocks.unownedSectors.deleteMany).toHaveBeenCalledOnce();
     expect(captureSeedBaseline).toHaveBeenCalledOnce();
     expect(db.collectionMocks.characters.deleteMany).not.toHaveBeenCalled();
     expect(db.collectionMocks.elections.deleteMany).not.toHaveBeenCalled();
@@ -126,7 +123,6 @@ describe("1991 bootstrap recovery", () => {
     await expect(
       recover1991Bootstrap(db as unknown as Db, { runId, adminUsername: "operator" })
     ).rejects.toThrow("claimed");
-    expect(db.collectionMocks.unownedSectors.deleteMany).not.toHaveBeenCalled();
   });
   it.each([
     { isActive: true },
@@ -141,7 +137,6 @@ describe("1991 bootstrap recovery", () => {
       recover1991Bootstrap(db as unknown as Db, { runId, adminUsername: "operator" })
     ).rejects.toThrow("sealed inactive");
     expect(bootstrapGameWorld).not.toHaveBeenCalled();
-    expect(db.collectionMocks.unownedSectors.deleteMany).not.toHaveBeenCalled();
   });
 
   it("releases the recovery claim if its audit insert fails before cleanup", async () => {
@@ -149,7 +144,6 @@ describe("1991 bootstrap recovery", () => {
     await expect(
       recover1991Bootstrap(db as unknown as Db, { runId, adminUsername: "operator" })
     ).rejects.toThrow("audit unavailable");
-    expect(db.collectionMocks.unownedSectors.deleteMany).not.toHaveBeenCalled();
     expect(db.collectionMocks.gameConfig.updateOne.mock.calls.at(-1)?.[1]).toMatchObject({
       $set: { "lastReset.status": "failed" },
     });
@@ -170,6 +164,5 @@ describe("1991 bootstrap recovery", () => {
       recover1991Bootstrap(db as unknown as Db, { runId, adminUsername: "operator" })
     ).rejects.toThrow("vehicle-preflight");
     expect(bootstrapGameWorld).not.toHaveBeenCalled();
-    expect(db.collectionMocks.unownedSectors.deleteMany).not.toHaveBeenCalled();
   });
 });

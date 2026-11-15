@@ -3,8 +3,8 @@ import { expect, it } from "vitest";
 import { checkSectors } from "./conformance";
 import { buildSeedExpectations } from "./expectations";
 
-/** A world with no unowned sector pool anywhere. */
-function emptyPoolDb(): Db {
+/** A world with no corporations anywhere. */
+function emptyDb(): Db {
   return {
     collection: () => ({
       findOne: async () => null,
@@ -17,16 +17,19 @@ function emptyPoolDb(): Db {
   } as unknown as Db;
 }
 
-it("accepts an empty sector pool for a 2027 background country", async () => {
-  const checks = await checkSectors(emptyPoolDb(), buildSeedExpectations("2027-default"));
-  for (const id of ["sectors.FR.unowned", "sectors.RU.unowned", "sectors.IE.unowned"]) {
-    expect(checks.find((check) => check.id === id)?.severity, id).toBe("ok");
+it("checks no opening size for a 2027 background country", async () => {
+  const checks = await checkSectors(emptyDb(), buildSeedExpectations("2027-default"));
+  for (const id of ["sectors.FR.openingSize", "sectors.RU.openingSize", "sectors.IE.openingSize"]) {
+    expect(
+      checks.find((check) => check.id === id),
+      id
+    ).toBeUndefined();
   }
 });
 
-it("still rejects an empty sector pool for a fully simulated 2027 country", async () => {
-  const checks = await checkSectors(emptyPoolDb(), buildSeedExpectations("2027-default"));
-  for (const id of ["sectors.US.unowned", "sectors.UK.unowned", "sectors.DE.unowned"]) {
-    expect(checks.find((check) => check.id === id)?.severity, id).toBe("critical");
+it("checks the opening size of a fully simulated 2027 country", async () => {
+  const checks = await checkSectors(emptyDb(), buildSeedExpectations("2027-default"));
+  for (const id of ["sectors.US.openingSize", "sectors.UK.openingSize", "sectors.DE.openingSize"]) {
+    expect(checks.find((check) => check.id === id)?.severity, id).toBe("ok");
   }
 });

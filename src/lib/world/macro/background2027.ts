@@ -10,7 +10,6 @@
  * hash-based estimate other background entities use.
  */
 import { COMMODITY_BASE_PRICES, type ExtractableResource } from "@/lib/constants/commodities";
-import { SECTOR_MARKET_GDP_FRACTION } from "@/lib/constants/corporations";
 import { eraRateForCurrency, type CurrencyCode } from "@/lib/constants/currencies";
 import { getCountryDisplayName, type CountryId } from "@/lib/constants/countries";
 import { getNationalBudgetSeedConfigsForPreset } from "@/lib/seeds/reference/budgets";
@@ -160,11 +159,10 @@ export const BACKGROUND_2027_PROFILES: Readonly<Record<string, Background2027Pro
 
 /**
  * Size a background economy like a full country of the same GDP. A full
- * country's state market is GDP (millions) x SECTOR_MARKET_GDP_FRACTION per
- * turn; the 1953 aggregate scale (GDP / 48) would make these countries
+ * country's state market is GDP (millions) x 100 per turn; the 1953 aggregate scale (GDP / 48) would make these countries
  * thousands of times too small to move a market.
  */
-export const BACKGROUND_2027_CAPACITY_PER_GDP = SECTOR_MARKET_GDP_FRACTION;
+export const BACKGROUND_2027_CAPACITY_PER_GDP = 100;
 
 /** Population and annual GDP in millions of ₳ for one country. */
 export function background2027Scale(countryId: string): {

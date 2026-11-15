@@ -28,7 +28,6 @@ export function CorporationsAdminPanel() {
     confirm,
     inline,
     globalConfirm,
-    spawnUnownedLog,
     capitalAmount,
     hqCountry,
     hqRegion,
@@ -308,26 +307,14 @@ export function CorporationsAdminPanel() {
     }
   };
 
-  const handleGlobalAction = async (type: "resetAll" | "resumeAll" | "spawnUnowned") => {
+  const handleGlobalAction = async (type: "resetAll" | "resumeAll") => {
     dispatch({ type: "SET_ACTION_LOADING", value: type });
     dispatch({ type: "SET_ACTION_ERROR", value: null });
-    dispatch({ type: "SET_SPAWN_UNOWNED_LOG", value: null });
     try {
       if (type === "resetAll") {
         await callAction("/api/admin/corporations/reset-timers", "POST");
       } else if (type === "resumeAll") {
         await callAction("/api/admin/corporations/resume-all", "POST");
-      } else {
-        const result = (await callAction("/api/admin/corporations/seed-unowned", "POST")) as {
-          boostedCount?: number;
-          log?: string[];
-        };
-        const boosted = result.boostedCount ?? 0;
-        const seeded = result.log?.join(" — ") ?? "";
-        dispatch({
-          type: "SET_SPAWN_UNOWNED_LOG",
-          value: `Boosted ${boosted} sectors by 20%. ${seeded}`.trim(),
-        });
       }
       dispatch({ type: "SET_GLOBAL_CONFIRM", value: null });
       await fetchData();
@@ -423,17 +410,6 @@ export function CorporationsAdminPanel() {
           <button
             onClick={() =>
               dispatch({
-                type: "SET_GLOBAL_CONFIRM",
-                value: globalConfirm === "spawnUnowned" ? null : "spawnUnowned",
-              })
-            }
-            className="text-xs px-3 py-1.5 rounded border border-card-border hover:bg-background/60 transition-colors"
-          >
-            Spawn unowned (20% boost)
-          </button>
-          <button
-            onClick={() =>
-              dispatch({
                 type: "SET_INLINE",
                 value: inline?.type === "spawnNpp" ? null : { type: "spawnNpp", corpId: "global" },
               })
@@ -444,19 +420,6 @@ export function CorporationsAdminPanel() {
           </button>
         </div>
       </div>
-
-      {/* Spawn unowned result */}
-      {spawnUnownedLog && (
-        <div className="flex items-center justify-between gap-3 rounded-lg bg-success/10 border border-success/30 px-4 py-3 text-sm">
-          <span className="text-success">{spawnUnownedLog}</span>
-          <button
-            onClick={() => dispatch({ type: "SET_SPAWN_UNOWNED_LOG", value: null })}
-            className="text-xs text-muted hover:text-foreground"
-          >
-            Dismiss
-          </button>
-        </div>
-      )}
 
       {/* Spawn NPP Corp inline panel */}
       {inline?.type === "spawnNpp" && (

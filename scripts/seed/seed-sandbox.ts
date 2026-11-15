@@ -6,8 +6,7 @@
  *
  * Covers:
  *   - Full DE seed (regions, parties, demographics, statePartyOrg, stateMetrics,
- *     baselines, governmentFormation, legislation, budgets, seats, partyBudgets,
- *     unownedSectors)
+ *     baselines, governmentFormation, legislation, budgets, seats, partyBudgets)
  *   - UK central bank bootstrap
  *   - DE central bank bootstrap
  *   - nppEconomyEnabled → true in gameConfig
@@ -57,7 +56,6 @@ async function run() {
   await runDEBudgets(db);
   await runDESeats(db);
   await runDEPartyBudgets(db);
-  await runDEUnownedSectors(db);
   await runDESovereignCorp(db);
   await runDEElections();
 
@@ -122,11 +120,6 @@ async function runDESeats(db: Db) {
 async function runDEPartyBudgets(db: Db) {
   const { seedPartyBudgets } = await import("@/lib/admin/seed");
   await seedPartyBudgets(db, false, log);
-}
-
-async function runDEUnownedSectors(db: Db) {
-  const { seedUnownedSectors } = await import("@/lib/admin/seed");
-  await seedUnownedSectors(db, log, 1, PRESET);
 }
 
 async function runDESovereignCorp(db: Db) {

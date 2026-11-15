@@ -20,7 +20,7 @@ import { SECTOR_SEED_SCALE } from "./corporations";
 
 /**
  * Modern (2019-calibrated) minimum ₳ revenue for one unowned (state, sector)
- * bucket. Re-exported by `seedUnownedSectors` as `MIN_UNOWNED_SECTOR_REVENUE`.
+ * bucket.
  */
 export const MODERN_MIN_UNOWNED_SECTOR_REVENUE = 1_000_000;
 

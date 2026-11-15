@@ -29,7 +29,6 @@ function makeDb(opts: {
   budgets?: unknown[];
   exchangeRates?: unknown[];
   centralBanks?: unknown[];
-  unownedSectors?: unknown[];
   corporations?: unknown[];
   commodityPrices?: unknown[];
   baseline?: Record<string, unknown> | null;
@@ -51,7 +50,6 @@ function makeDb(opts: {
   getColl("federalBudget").find.mockReturnValue(cursorOf(opts.budgets ?? []));
   getColl("exchangeRates").find.mockReturnValue(cursorOf(opts.exchangeRates ?? []));
   getColl("centralBanks").find.mockReturnValue(cursorOf(opts.centralBanks ?? []));
-  getColl("unownedSectors").find.mockReturnValue(cursorOf(opts.unownedSectors ?? []));
   getColl("corporations").find.mockReturnValue(cursorOf(opts.corporations ?? []));
   getColl("commodityPrices").find.mockReturnValue(cursorOf(opts.commodityPrices ?? []));
   getColl("seedDiagnosticBaselines").findOne.mockResolvedValue(opts.baseline ?? null);
@@ -108,7 +106,6 @@ describe("captureSeedBaseline", () => {
           inflationHistory: [{ turn: 1, rate: 2.1 }],
         },
       ],
-      unownedSectors: [{ countryId: "US", revenue: 1_000_000 }],
       corporations: [{ countryId: "US", revenue: 500_000 }],
       commodityPrices: [
         { commodity: "oil", basePrice: 100, globalPrice: 110 },
@@ -131,7 +128,7 @@ describe("captureSeedBaseline", () => {
     expect(baseline.metrics["forex.US.rate"]).toBe(1);
     expect(baseline.metrics["centralBank.US.primeRate"]).toBe(5.25);
     expect(baseline.metrics["centralBank.US.inflation"]).toBe(2.1);
-    expect(baseline.metrics["sectors.US.aggregate"]).toBe(1_500_000);
+    expect(baseline.metrics["sectors.US.aggregate"]).toBe(500_000);
     expect(baseline.metrics["commodity.globalPriceIndex"]).toBeCloseTo(1.05, 10);
 
     expect(collections.seedDiagnosticBaselines!.replaceOne).toHaveBeenCalledWith(

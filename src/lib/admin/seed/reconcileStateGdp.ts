@@ -30,7 +30,7 @@ import { statesCollection } from "@/lib/db/repositories/states";
  *
  * Ordering: must run after a country's regions are seeded and before anything that
  * derives absolute values from state.gdp (state-budget seeders, country-owned corp
- * sizing, seedUnownedSectors). One call site: the end of seedAllCountryData for
+ * sizing). One call site: the end of seedAllCountryData for
  * every country on both bootstrap and in-world reset paths. state.capitalStock is
  * not seeded (the metric engine cold-starts it from gdp), so scaling gdp alone keeps
  * downstream consumers coherent.

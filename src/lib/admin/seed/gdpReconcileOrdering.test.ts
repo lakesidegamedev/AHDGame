@@ -4,7 +4,7 @@
  * `reconcileStateGdpWithNationalSeeds` rescales regional gdp to the authored
  * national figure. It must run after every country's regions exist and before
  * anything that derives absolute values from `state.gdp` — state budgets,
- * country-owned corp sizing, unowned-sector market sizing.
+ * country-owned corp sizing, state enterprise sizing.
  *
  * It used to be called twice: once at the end of `seedAllCountryData`, and once
  * per Warsaw-Pact country inside `seedEasternBlocBudget`, whose comment said
