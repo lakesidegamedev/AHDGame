@@ -4,6 +4,7 @@ import { trMetricPresetsModern } from "./data/trMetricPresetsModern";
 import { trRegionCensusData } from "@/lib/seeds/tr/trRegionCensusData";
 import { trRegionCensusDataModern } from "./data/trRegionCensusDataModern";
 import { trRegionCensusData1953 } from "@/lib/seeds/tr/trRegionCensusData1953";
+import { trRegionCensusData1991 } from "@/lib/seeds/tr/trRegionCensusData1991";
 import { trRegions } from "./data/trRegions";
 import { trRegions1991 } from "./data/trRegions1991";
 import { trRegions1953 } from "./data/trRegions1953";
@@ -37,7 +38,7 @@ const regionNames: Record<string, string> = Object.fromEntries(
 const censusBundles = {
   "1953-default": trRegionCensusData1953,
   "1979-default": trRegionCensusData,
-  "1991-default": trRegionCensusData,
+  "1991-default": trRegionCensusData1991,
   "1999-default": trRegionCensusData,
   "2007-default": trRegionCensusData,
   "2019-default": trRegionCensusDataModern,

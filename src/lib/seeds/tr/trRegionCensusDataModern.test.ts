@@ -3,6 +3,7 @@ import type { Db } from "mongodb";
 import { seedTRDemographics } from "@/lib/admin/seed/seedTR";
 import { trRegionCensusData } from "@/lib/seeds/tr/trRegionCensusData";
 import { trRegionCensusData1953 } from "@/lib/seeds/tr/trRegionCensusData1953";
+import { trRegionCensusData1991 } from "@/lib/seeds/tr/trRegionCensusData1991";
 import { trRegionCensusDataModern } from "@/lib/countries/tr/data/trRegionCensusDataModern";
 import {
   TR_MODERN_AGE_SHARES,
@@ -19,7 +20,7 @@ const ids = trRegions.map((region) => region._id);
 const historicalPresets = [
   ["1953-default", trRegionCensusData1953],
   ["1979-default", trRegionCensusData],
-  ["1991-default", trRegionCensusData],
+  ["1991-default", trRegionCensusData1991],
   ["1999-default", trRegionCensusData],
   ["2007-default", trRegionCensusData],
 ] as const;

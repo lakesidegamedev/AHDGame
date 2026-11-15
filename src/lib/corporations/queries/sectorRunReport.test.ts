@@ -88,6 +88,38 @@ describe("run report", () => {
     expect(r.unsoldShare).toBe(0);
   });
 
+  it("spreads what the company's own sites charged the sector over units sold", () => {
+    // 100 made, 80 sold at 1000. Receipt money is per turn: 8,000 charged by own sites on top of 20,000 materials.
+    const base = {
+      plannedRunShare: 1,
+      plannedUnits: 100,
+      producedUnits: 100,
+      offeredUnits: 80,
+      soldUnits: 80,
+      revenue: 80_000,
+      inputsConsumed: 20_000,
+      labourPaid: 10_000,
+      otherOperatingPaid: 4_000,
+      products: [],
+    };
+    const charged = buildRunReport(receipt({ ...base, internalSupplyCharge: 8_000 }), 673, LIVE)!;
+    expect(charged.unitOwnSiteCharge).toBeCloseTo(100);
+    const unitCost =
+      charged.unitMaterials! + charged.unitWages! + charged.unitSite! + charged.unitOwnSiteCharge!;
+    // What is left per unit equals profit after own-site charges.
+    expect(charged.unitPrice! - unitCost).toBeCloseTo((80_000 - 34_000 - 8_000) / 80);
+    expect(buildRunReport(receipt(base), 673, LIVE)!.unitOwnSiteCharge).toBe(0);
+    expect(
+      buildRunReport(receipt({ ...base, internalSupplyCharge: Number.NaN }), 673, LIVE)!
+        .unitOwnSiteCharge
+    ).toBe(0);
+  });
+
+  it("has no own-site charge per unit when nothing sold", () => {
+    const r = buildRunReport(receipt({ internalSupplyCharge: 500 }), 673, LIVE)!;
+    expect(r.unitOwnSiteCharge).toBeNull();
+  });
+
   it("calls an own-site iron mine whose materials cost more than its ask losing, not ramping (ticket 1765)", () => {
     const r = buildRunReport(receipt(), 673, LIVE)!;
     expect(r.reason).toBe("losing");

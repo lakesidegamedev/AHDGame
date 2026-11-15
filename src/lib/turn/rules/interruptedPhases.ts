@@ -36,6 +36,35 @@ export const SAFE_WHEN_INTERRUPTED: Readonly<Record<string, string>> = {
   investorConfidenceDecay: "decays a confidence counter; next turn continues it",
 };
 
+/**
+ * Steps proven safe to RERUN after a process death, under turn resilience stage 2:
+ * each applies its money moves behind a per-turn guard written in the same update
+ * as the move, so running it again for the same turn changes nothing already
+ * applied. An interrupted step on this list is rerun on resume instead of held.
+ * A step belongs here only with a test that kills it at every write boundary and
+ * reruns it to the uninterrupted end state; new steps are never on it by default.
+ */
+/** Turn resilience stage from which the stamped, rerun-safe write paths run and steps are rerun. */
+export const RERUN_SAFE_STAGE = 2;
+
+/** Whether a turn running at this resilience stage uses the stamped, rerun-safe write paths. */
+export function rerunSafeAt(stage: number | undefined): boolean {
+  return (stage ?? 0) >= RERUN_SAFE_STAGE;
+}
+
+export const RERUN_SAFE_WHEN_INTERRUPTED: Readonly<Record<string, string>> = {
+  treasuryTurn:
+    "accrual is one guarded claim per budget and turn, coupon payouts replay by receipt; killed at every write and rerun it matches an uninterrupted turn",
+  savingsInterestTurn:
+    "per-account accrual stamped with the turn in the same update, the quarterly credit is one receipted transaction; killed at every write and rerun the balances match an uninterrupted turn (forex path; diagnostic ledger rows and counters can come up short, never doubled)",
+  pensionTurn:
+    "employer debits carry a per-agreement per-turn stamp, each charge, benefit payment and fund investment is stamped on the scheme, fund-side writes finish forward behind per-turn witnesses; killed at every write and rerun it matches an uninterrupted turn (ledger rows can come up short, never doubled)",
+};
+
+export function isRerunSafeWhenInterrupted(phase: string): boolean {
+  return Object.prototype.hasOwnProperty.call(RERUN_SAFE_WHEN_INTERRUPTED, phase);
+}
+
 export function isSafeWhenInterrupted(phase: string): boolean {
   return Object.prototype.hasOwnProperty.call(SAFE_WHEN_INTERRUPTED, phase);
 }

@@ -50,6 +50,21 @@ describe("2027 preflight shell", () => {
     expect(report.findings).toEqual([]);
   });
 
+  it("fails when snapshot, backup or one-off collections of an old world are present", async () => {
+    const db = createInMemoryDb();
+    await seedWorld(db as unknown as Db, fullSimulationCountries(PREFLIGHT_PRESET));
+    const listed = ["gameState", "states", "recovery_snap_t272_s0to1_prices", "ariane_x_20261002"];
+    const withList = {
+      collection: (name: string) => db.collection(name),
+      listCollections: () => ({ toArray: async () => listed.map((name) => ({ name })) }),
+    } as unknown as Db;
+    const report = await runPreflight2027(withList, { mode: "fresh" });
+    const copies = report.findings.filter((f) => f.check === "world-copy-collections");
+    expect(copies).toHaveLength(2);
+    expect(copies.every((f) => f.severity === "fail")).toBe(true);
+    expect(copies.map((f) => f.detail).join("\n")).toContain("recovery_snap_t272_s0to1_prices");
+  });
+
   it("fails on a damaged world and writes nothing", async () => {
     const db = createInMemoryDb();
     const all = fullSimulationCountries(PREFLIGHT_PRESET);

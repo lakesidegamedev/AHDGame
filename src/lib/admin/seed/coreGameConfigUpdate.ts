@@ -75,6 +75,7 @@ export const STALE_PER_WORLD_GAME_CONFIG_UNSET: Readonly<Record<string, "">> = O
   economyMarketProgramActivatedBy: "",
   economyMarketProgramActivatedTurn: "",
   economyMarketProgramActivatedCommit: "",
+  economyMarketProgramCommit: "",
   // Freight rollout provenance and ramp. A ramp start past the new turn holds
   // the active freight effect at zero (src/lib/logistics/settlement.ts).
   freightSettlementModeUpdatedBy: "",
