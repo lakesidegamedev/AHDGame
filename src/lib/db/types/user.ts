@@ -39,7 +39,12 @@ export interface User {
   email: string;
   /** When the current `email` was proven by a confirmation link (POST /api/auth/confirm-email). */
   emailVerifiedAt?: Date;
+  /** Earlier addresses, newest last, recorded when the central account changes the email. */
+  emailHistory?: { email: string; changedAt: Date; source: "central" }[];
+  /** Lowercase sign-in key; the display form lives in `displayName`. */
   username: string;
+  /** Earlier usernames, newest last, recorded when the central account renames the player. */
+  usernameHistory?: { username: string; changedAt: Date; source: "central" }[];
   displayName: string;
   password: string;
   role: "admin" | "moderator" | "junior_dev" | "player";
@@ -71,6 +76,8 @@ export interface User {
   accountDeletion?: AccountDeletionCommand;
   /** Last time the password was set via change-password or reset-password. */
   passwordChangedAt?: Date;
+  /** Set when the central account took over the password and the local hash was cleared. */
+  passwordSupersededAt?: Date;
   /** When the 48-hour banned shareholder/CEO grace cleanup was applied. */
   bannedShareReleaseProcessedAt?: Date;
   /** CEO-held corporations snapshotted at ban time so share release survives later seat changes. */
@@ -179,6 +186,10 @@ export interface User {
   enableExperimentalUI?: boolean;
   /** Opt-in to experimental features (Settings). Off unless explicitly true. */
   experimentalFeatures?: boolean;
+  /** Staff-granted VPN access: a whitelisted account is never VPN-gated. */
+  vpnWhitelisted?: boolean;
+  vpnWhitelistedAt?: Date;
+  vpnWhitelistedBy?: string;
   /** Account presentation preference, preserved across world resets. Defaults to cards. */
   desktopNavigationLayout?: DesktopNavigationLayout;
   /** Account presentation preference, preserved across world resets. Defaults to dock. */

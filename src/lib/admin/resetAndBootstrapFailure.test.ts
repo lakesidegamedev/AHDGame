@@ -369,7 +369,7 @@ describe("resetAndBootstrapGameWorld — failure handling", () => {
         preset: "2019-default",
         startingParties: "none",
       })
-    ).rejects.toThrow("1991-default");
+    ).rejects.toThrow("not supported for 2019-default");
     expect(Object.keys(db.collectionMocks)).toHaveLength(0);
   });
 

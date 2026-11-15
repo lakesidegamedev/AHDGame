@@ -50,6 +50,7 @@ export interface PoliticalParty {
   campaignerIds?: ObjectId[];
   committeeIds: ObjectId[];
   memberCount: number;
+  /** Seed-owned designation; gameplay cannot rename this party or its abbreviation. */
   isDefault: boolean;
   createdBy: ObjectId | null;
   treasury: number;
@@ -122,6 +123,8 @@ export interface PoliticalParty {
   nppElectionMatureAtTurn?: number;
   createdAt: Date;
   updatedAt: Date;
+  /** Idempotency keys of money moves already applied to this party. */
+  appliedMoneyFlowKeys?: string[];
   /** Coalition this party belongs to, if any */
   coalitionId?: ObjectId | null;
   /** Set when this party has merged into another party and no longer exists as an active party */

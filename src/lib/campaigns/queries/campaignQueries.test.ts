@@ -20,6 +20,7 @@ vi.mock("@/lib/time/gameTime", async (importActual) => ({
 }));
 
 import { getCampaignDetail, getViewerCampaigns } from "./campaignQueries";
+import { ERA_PRICE_LEVEL } from "../rules/priceLevel";
 
 let db: MockDb;
 
@@ -1026,7 +1027,7 @@ it("uses the preset currency for detail income and excludes unsupported geograph
   });
   const detail = await getCampaignDetail(db as never, campaignId, user);
   expect(detail.currencyCode).toBe("EUR");
-  expect(detail.budget!.income.total).toBe(Math.round(60_000 * 1.28579 * 0.82));
+  expect(detail.budget!.income.total).toBe(Math.round(60_000 * ERA_PRICE_LEVEL["2027"] * 0.82));
   expect(detail.budget!.expenses.fieldOfficeMaintenance).toBe(0);
   expect(detail.funds).toBe(125_000);
 });

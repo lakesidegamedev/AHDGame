@@ -113,7 +113,7 @@ export const QC_CONFIG: CountryConfig = {
   ],
   // Only the Quebec-homed sovereigntist party carries over intact; Canada-wide
   // parties lose their Quebec branches and players re-form them.
-  majorPartyIds: ["AL"],
+  majorPartyIds: ["BQ"],
   partyCreationNPPs: {
     statesRequired: 2,
     lockHomeState: false,

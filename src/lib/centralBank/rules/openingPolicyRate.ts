@@ -66,6 +66,20 @@ export const OPENING_POLICY_RATES_2027: Partial<Record<CountryId, number>> = {
   // the 2019 LPR), not the 1.4 percent seven-day reverse repo rate. Source:
   // the People's Bank of China monthly LPR announcement.
   CN: 3,
+  // Euro members carry the ECB deposit facility rate, the same as DE.
+  FR: 2,
+  IT: 2,
+  ES: 2,
+  GR: 2,
+  AT: 2,
+  FI: 2,
+  IE: 2,
+  // Authored assumptions near each bank's late 2025 policy rate, carried
+  // forward unchanged. Not checked against a published January 2027 decision.
+  SE: 1.75,
+  PL: 4,
+  RO: 6.5,
+  RU: 16,
 };
 
 export function getOpeningPolicyRate(

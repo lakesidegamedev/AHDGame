@@ -118,7 +118,12 @@ export async function loadReviewedLawCatalog(input: {
       const reference = references[family.id];
       const profile = profileByFamily.get(family.id);
       if (!reference || !profile) throw new Error(`Missing reviewed inputs for ${family.id}`);
-      const seatId = scope === "national" ? fundingSeatForLaw(family, country) : null;
+      const fundingYear = board.modeledOpening?.year ?? 1991;
+      const enabledSeats = new Set(
+        board.modeledOpening && fundingYear >= 1980 ? ["secretary_of_education"] : []
+      );
+      const seatId =
+        scope === "national" ? fundingSeatForLaw(family, country, enabledSeats, fundingYear) : null;
       const account = seatId
         ? accounts.find((candidate) => candidate.controllingSeatId === seatId)
         : null;

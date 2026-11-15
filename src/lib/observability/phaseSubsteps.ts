@@ -20,6 +20,8 @@ import {
   roundTripCountsAvailable,
 } from "@/lib/observability/mongoRoundTrips";
 
+import { maybeInjectTurnFault } from "@/lib/turn/faultInjection";
+
 export type PhaseSubstep = { ms: number; roundTrips?: number; calls: number };
 export type PhaseSubsteps = Record<string, PhaseSubstep>;
 
@@ -43,6 +45,7 @@ export function substepMarker(now: () => number = () => performance.now()): Subs
   let lastRoundTrips = phaseRoundTrips(phase);
   return {
     mark(name: string) {
+      maybeInjectTurnFault(phase, name);
       const at = now();
       // Checked per mark: the monitor may observe its first command after the
       // marker was created, and counts before that are zero, not missing.
@@ -59,6 +62,22 @@ export function substepMarker(now: () => number = () => performance.now()): Subs
       lastRoundTrips = roundTrips;
     },
   };
+}
+
+/**
+ * Add an already measured duration to a named step of the current phase. For
+ * breakdowns of time that a surrounding `mark` also covers, so the pieces are
+ * named as parts of that step and not summed with it.
+ */
+export function recordPhaseSubstep(name: string, ms: number, calls = 1): void {
+  const phase = currentTurnPhase();
+  if (!phase || !Number.isFinite(ms) || ms < 0) return;
+  const steps = store().get(phase) ?? {};
+  const step = steps[name] ?? { ms: 0, calls: 0 };
+  step.ms += ms;
+  step.calls += calls;
+  steps[name] = step;
+  store().set(phase, steps);
 }
 
 /** Recorded steps for a phase, rounded for storage, without clearing them. */

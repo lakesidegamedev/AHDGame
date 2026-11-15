@@ -1,9 +1,11 @@
+import { finishedPrimaryResults } from "./finishedPrimaryResults";
 /**
  * Election details show registered candidates, primary results and counted votes.
  * _enrichElection retains Russian national list nominees together and uses the
  * same primary advance limit as the resolver.
  */
 import { resolveElectionYear } from "@/lib/utils/formatters";
+import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
 import { cycleAnchorContextFromGameState } from "./cycleAnchorContext";
 import { computeSeatMargins, type SeatProjection } from "@/lib/elections/seatMargins";
 import type { CongressionalDistrict } from "@/lib/db/types/congressionalDistrict";
@@ -43,18 +45,14 @@ import { censusMedianVoter } from "./censusMedianVoter";
 import { ObjectId } from "mongodb";
 import type {
   Election,
-  ElectionCandidate,
   Character,
   NPP,
-  PoliticalParty,
   GameState,
   NPPEndorsement,
   PlayerEndorsement,
   PrimarySnapshot,
   Campaign,
   StatePartyOrg,
-  StateRegistrationPool,
-  ElectionVoteTally,
   State,
   StateDemographics,
 } from "@/lib/db/types";
@@ -1363,22 +1361,6 @@ export async function _enrichElection(
   };
 }
 
-/** The tally's stored primary results, trimmed to what a finished view shows. */
-function finishedPrimaryResults(
-  results: NonNullable<ElectionVoteTally["primaryResults"]>
-): NonNullable<ElectionResponse["primaryResults"]> {
-  const out: NonNullable<ElectionResponse["primaryResults"]> = {};
-  for (const [partyId, rows] of Object.entries(results.byParty ?? {})) {
-    out[partyId] = rows.map((r) => ({
-      candidateId: r.candidateId,
-      characterName: r.characterName,
-      sharePct: r.sharePct,
-      won: r.won,
-    }));
-  }
-  return out;
-}
-
 // ---------------------------------------------------------------------------
 // Dependency fetcher for a single election
 // ---------------------------------------------------------------------------
@@ -1516,7 +1498,12 @@ export async function fetchDepsForElection(
       election.electionType === "president" ||
       election.electionType === "primeMinister" ||
       election.electionType === "uachtaran";
-    const q: Record<string, unknown> = { "currentOffice.type": election.electionType };
+    const q: Record<string, unknown> = {
+      ...(countryId === COUNTRY_CONFIGS.US.id
+        ? { $or: [{ countryId: COUNTRY_CONFIGS.US.id }, { countryId: null }] }
+        : { countryId }),
+      "currentOffice.type": election.electionType,
+    };
     if (!isNational) q["currentOffice.state"] = election.state;
     if (election.electionType === "senate" && election.senateClass != null) {
       q["currentOffice.senateClass"] = election.senateClass;

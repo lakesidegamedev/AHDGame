@@ -1,0 +1,613 @@
+{
+  "congress": 120,
+  "capturedAt": "2026-11-11",
+  "source": "Census TIGER/Line 2026 CD120; corrected files downloaded after November 9",
+  "sourceNotes": "https://www.census.gov/programs-surveys/geography/technical-documentation/user-note/120cd.html",
+  "projection": "d3 geoAlbersUsa",
+  "renderingSimplificationDegrees": 0.00025,
+  "use": "Rendering geometry only; not a population or vote allocation crosswalk. PVI is unavailable.",
+  "sources": [
+    {
+      "state": "AL",
+      "fips": "01",
+      "url": "https://www2.census.gov/geo/tiger/TIGER2026/CD/tl_2026_01_cd120.zip",
+      "sha256": "0fff80891184520f63889f24d2dbee39ae3489358399702d8c3470d55ae9a508",
+      "districts": 7
+    },
+    {
+      "state": "AK",
+      "fips": "02",
+      "url": "https://www2.census.gov/geo/tiger/TIGER2026/CD/tl_2026_02_cd120.zip",
+      "sha256": "eb44067aba01d4e8f4513700cea0f0cf4be84f9f2e8ff41ca138f6938b2ca495",
+      "districts": 1
+    },
+    {
+      "state": "AZ",
+      "fips": "04",
+      "url": "https://www2.census.gov/geo/tiger/TIGER2026/CD/tl_2026_04_cd120.zip",
+      "sha256": "1a908f7fd5f69989836f64aad23af20fef38cc2bd4fc8ccd183036b4f0f01431",
+      "districts": 9
+    },
+    {
+      "state": "AR",
+      "fips": "05",
+      "url": "https://www2.census.gov/geo/tiger/TIGER2026/CD/tl_2026_05_cd120.zip",
+      "sha256": "d6c34a891f1d9af78e1fcfe91931d3f6939925a572815422062a13460b6ddcb1",
+      "districts": 4
+    },
+    {
+      "state": "CA",
+      "fips": "06",
+      "url": "https://www2.census.gov/geo/tiger/TIGER2026/CD/tl_2026_06_cd120.zip",
+      "sha256": "5d441c64cb33ba3f6d8dee1be2ce5f7c1efa502f245ac67c36344de2567d4269",
+      "districts": 52
+    },
+    {
+      "state": "CO",
+      "fips": "08",
+      "url": "https://www2.census.gov/geo/tiger/TIGER2026/CD/tl_2026_08_cd120.zip",
+      "sha256": "0df19a54f14269de3268b31ff73f01b69dc4ecd2378dc538e97faaad605bc19e",
+      "districts": 8
+    },
+    {
+      "state": "CT",
+      "fips": "09",
+      "url": "https://www2.census.gov/geo/tiger/TIGER2026/CD/tl_2026_09_cd120.zip",
+      "sha256": "3012701bae6d745c083f69599ab6a4f6c0ad3e89e0c837738895b652a4a614c3",
+      "districts": 5
+    },
+    {
+      "state": "DE",
+      "fips": "10",
+      "url": "https://www2.census.gov/geo/tiger/TIGER2026/CD/tl_2026_10_cd120.zip",
+      "sha256": "7282cf2162be72b427554530762ac4a68ed1e1396f487d32571d38e43dec4ebd",
+      "districts": 1
+    },
+    {
+      "state": "FL",
+      "fips": "12",
+      "url": "https://www2.census.gov/geo/tiger/TIGER2026/CD/tl_2026_12_cd120.zip",
+      "sha256": "7d22cba78f6553e192fca414e78f96c07d2a38e96cdd6450e39b9c3ceed9a2f4",
+      "districts": 28
+    },
+    {
+      "state": "GA",
+      "fips": "13",
+      "url": "https://www2.census.gov/geo/tiger/TIGER2026/CD/tl_2026_13_cd120.zip",
+      "sha256": "414774fe1cb78cb292816646898b59d1d43b64f3c1312015a85bc57d26b1fca9",
+      "districts": 14
+    },
+    {
+      "state": "HI",
+      "fips": "15",
+      "url": "https://www2.census.gov/geo/tiger/TIGER2026/CD/tl_2026_15_cd120.zip",
+      "sha256": "5097bacbcc3e6738f450cd26ad0d72670a66246715790ed8772772a48c230a8a",
+      "districts": 2
+    },
+    {
+      "state": "ID",
+      "fips": "16",
+      "url": "https://www2.census.gov/geo/tiger/TIGER2026/CD/tl_2026_16_cd120.zip",
+      "sha256": "f281caca4ab1b294dba300ca52b8272f79ebadb6a5b066316a4bb09a6fd8dc5e",
+      "districts": 2
+    },
+    {
+      "state": "IL",
+      "fips": "17",
+      "url": "https://www2.census.gov/geo/tiger/TIGER2026/CD/tl_2026_17_cd120.zip",
+      "sha256": "035d698668fb51d34dbbe10c8340d4b2d9f99890e9f4dedf019c7da0a36c078b",
+      "districts": 17
+    },
+    {
+      "state": "IN",
+      "fips": "18",
+      "url": "https://www2.census.gov/geo/tiger/TIGER2026/CD/tl_2026_18_cd120.zip",
+      "sha256": "441ff14b94295a061e0481648bbd6e2708e6341f1af79e7f45fb58e2574c52fe",
+      "districts": 9
+    },
+    {
+      "state": "IA",
+      "fips": "19",
+      "url": "https://www2.census.gov/geo/tiger/TIGER2026/CD/tl_2026_19_cd120.zip",
+      "sha256": "09df98632953bf96763db4064f0e18ef9b821dd8af29024b5914db9a5379c0b8",
+      "districts": 4
+    },
+    {
+      "state": "KS",
+      "fips": "20",
+      "url": "https://www2.census.gov/geo/tiger/TIGER2026/CD/tl_2026_20_cd120.zip",
+      "sha256": "62110fe0d88ffd0a283f52aaa3c408d26888af482d45ff6be4ee8b31132b0db8",
+      "districts": 4
+    },
+    {
+      "state": "KY",
+      "fips": "21",
+      "url": "https://www2.census.gov/geo/tiger/TIGER2026/CD/tl_2026_21_cd120.zip",
+      "sha256": "a46476c2ece2b436efd48591c40ad20b61a33f55b3b6d11a6b375871e438101f",
+      "districts": 6
+    },
+    {
+      "state": "LA",
+      "fips": "22",
+      "url": "https://www2.census.gov/geo/tiger/TIGER2026/CD/tl_2026_22_cd120.zip",
+      "sha256": "3e614ea60510318c5e30a62f7e33a47e672b335e060b3c8adf6de1d1299e2208",
+      "districts": 6
+    },
+    {
+      "state": "ME",
+      "fips": "23",
+      "url": "https://www2.census.gov/geo/tiger/TIGER2026/CD/tl_2026_23_cd120.zip",
+      "sha256": "830c5b3baf554894f9b42af4ac5a9500cf2cd84b6dbad3b75eb9d64ad7d407d0",
+      "districts": 2
+    },
+    {
+      "state": "MD",
+      "fips": "24",
+      "url": "https://www2.census.gov/geo/tiger/TIGER2026/CD/tl_2026_24_cd120.zip",
+      "sha256": "3c75f0a8ff0a74e1345615e1ef7858feffce85b2a7c7eefedd424cc4edf3be57",
+      "districts": 8
+    },
+    {
+      "state": "MA",
+      "fips": "25",
+      "url": "https://www2.census.gov/geo/tiger/TIGER2026/CD/tl_2026_25_cd120.zip",
+      "sha256": "ef0deb8cc91e6e8e031011ac0510af7bb366fdabc098a5f02224c6e7d371254b",
+      "districts": 9
+    },
+    {
+      "state": "MI",
+      "fips": "26",
+      "url": "https://www2.census.gov/geo/tiger/TIGER2026/CD/tl_2026_26_cd120.zip",
+      "sha256": "fc75ae19a91fb84811e5c7fcdb6460091bc2e73fbe8d6ea1c8df60b2a40e096d",
+      "districts": 13
+    },
+    {
+      "state": "MN",
+      "fips": "27",
+      "url": "https://www2.census.gov/geo/tiger/TIGER2026/CD/tl_2026_27_cd120.zip",
+      "sha256": "d2f27a2a36d63a146e8faebb19974ab9ec1cd1fc1529f97a9e7795b7a95cc761",
+      "districts": 8
+    },
+    {
+      "state": "MS",
+      "fips": "28",
+      "url": "https://www2.census.gov/geo/tiger/TIGER2026/CD/tl_2026_28_cd120.zip",
+      "sha256": "40a80c7df0eeaa08b795e916548f0d82fac2f990b8ddcdcaf74753ca27d8de5f",
+      "districts": 4
+    },
+    {
+      "state": "MO",
+      "fips": "29",
+      "url": "https://www2.census.gov/geo/tiger/TIGER2026/CD/tl_2026_29_cd120.zip",
+      "sha256": "630f7e2fa275e32e7b3fde92c8807234e3372b7ed508f1c645be5a1d9264d9f3",
+      "districts": 8
+    },
+    {
+      "state": "MT",
+      "fips": "30",
+      "url": "https://www2.census.gov/geo/tiger/TIGER2026/CD/tl_2026_30_cd120.zip",
+      "sha256": "d094422db502b0a5940ed2b97a5eb8b992770e93f4e666afc83eb1b4d89300f4",
+      "districts": 2
+    },
+    {
+      "state": "NE",
+      "fips": "31",
+      "url": "https://www2.census.gov/geo/tiger/TIGER2026/CD/tl_2026_31_cd120.zip",
+      "sha256": "e2b9129b469a61589d0e91d74bf023a5cea757733a4289b69f3baef930975e1c",
+      "districts": 3
+    },
+    {
+      "state": "NV",
+      "fips": "32",
+      "url": "https://www2.census.gov/geo/tiger/TIGER2026/CD/tl_2026_32_cd120.zip",
+      "sha256": "28b76d5e696ff62c8271b190e5a3121839f8cad6bec5390d4c73b5c7bd63edc6",
+      "districts": 4
+    },
+    {
+      "state": "NH",
+      "fips": "33",
+      "url": "https://www2.census.gov/geo/tiger/TIGER2026/CD/tl_2026_33_cd120.zip",
+      "sha256": "a32e9b846da7b9176b01501375a03f18ce12dca3aa63acb11f950b64f2b2d647",
+      "districts": 2
+    },
+    {
+      "state": "NJ",
+      "fips": "34",
+      "url": "https://www2.census.gov/geo/tiger/TIGER2026/CD/tl_2026_34_cd120.zip",
+      "sha256": "86bca2912cc888379dd8a8f303aef145f431d01dfe4c01f3fdb61f84ff3e4027",
+      "districts": 12
+    },
+    {
+      "state": "NM",
+      "fips": "35",
+      "url": "https://www2.census.gov/geo/tiger/TIGER2026/CD/tl_2026_35_cd120.zip",
+      "sha256": "aba1ba5bfadeb1eb584560c5d39b838a1e09309efe83269248da49540f96f1ff",
+      "districts": 3
+    },
+    {
+      "state": "NY",
+      "fips": "36",
+      "url": "https://www2.census.gov/geo/tiger/TIGER2026/CD/tl_2026_36_cd120.zip",
+      "sha256": "42f5efa13be57f0e5f00d3db00086b3bcef704bc3cb833494b0f3e7cbafc4b62",
+      "districts": 26
+    },
+    {
+      "state": "NC",
+      "fips": "37",
+      "url": "https://www2.census.gov/geo/tiger/TIGER2026/CD/tl_2026_37_cd120.zip",
+      "sha256": "13f0680937b2fb426c50b07bfd6dd473a541cee69fa39d512759dd03e787b9ef",
+      "districts": 14
+    },
+    {
+      "state": "ND",
+      "fips": "38",
+      "url": "https://www2.census.gov/geo/tiger/TIGER2026/CD/tl_2026_38_cd120.zip",
+      "sha256": "2020142c8a251cbbc2b65c0800aa5123c8b460b45d494ed7256ecfaf6259c2cb",
+      "districts": 1
+    },
+    {
+      "state": "OH",
+      "fips": "39",
+      "url": "https://www2.census.gov/geo/tiger/TIGER2026/CD/tl_2026_39_cd120.zip",
+      "sha256": "4c18b9422c82639e078dacc4df32cdfa61689b1e2f92ec5b232b4ba3a2b3421b",
+      "districts": 15
+    },
+    {
+      "state": "OK",
+      "fips": "40",
+      "url": "https://www2.census.gov/geo/tiger/TIGER2026/CD/tl_2026_40_cd120.zip",
+      "sha256": "13fdcdf622b9b6cce8b5174f51692790ef2aa8ab5e8269c660c52cd13405837b",
+      "districts": 5
+    },
+    {
+      "state": "OR",
+      "fips": "41",
+      "url": "https://www2.census.gov/geo/tiger/TIGER2026/CD/tl_2026_41_cd120.zip",
+      "sha256": "0a725808dc3cc2dbc549ea2f205090af4bb0f70b32413e0979829167a411d697",
+      "districts": 6
+    },
+    {
+      "state": "PA",
+      "fips": "42",
+      "url": "https://www2.census.gov/geo/tiger/TIGER2026/CD/tl_2026_42_cd120.zip",
+      "sha256": "25f36969cbf6ef2bc03ebb9a6b8be54acfd555ecc2b4d7d130dafed3ee2ef79b",
+      "districts": 17
+    },
+    {
+      "state": "RI",
+      "fips": "44",
+      "url": "https://www2.census.gov/geo/tiger/TIGER2026/CD/tl_2026_44_cd120.zip",
+      "sha256": "471bec330066bb9ecc940d08f3501f6ba90eb217a9e4036aaee0fc26edea5b3d",
+      "districts": 2
+    },
+    {
+      "state": "SC",
+      "fips": "45",
+      "url": "https://www2.census.gov/geo/tiger/TIGER2026/CD/tl_2026_45_cd120.zip",
+      "sha256": "541371371ae5f80ac2374ef1903033c71d7ec1fd22135dd2ca7de79e0366238a",
+      "districts": 7
+    },
+    {
+      "state": "SD",
+      "fips": "46",
+      "url": "https://www2.census.gov/geo/tiger/TIGER2026/CD/tl_2026_46_cd120.zip",
+      "sha256": "9a2d5708d22bf75bd78a50fdc32aded343692733d260b285f1629e2dcd383b7b",
+      "districts": 1
+    },
+    {
+      "state": "TN",
+      "fips": "47",
+      "url": "https://www2.census.gov/geo/tiger/TIGER2026/CD/tl_2026_47_cd120.zip",
+      "sha256": "a1f017ae34e3a335492ded7572ec69f3d7e193ffbc144a9269fb7e1b8803d0fe",
+      "districts": 9
+    },
+    {
+      "state": "TX",
+      "fips": "48",
+      "url": "https://www2.census.gov/geo/tiger/TIGER2026/CD/tl_2026_48_cd120.zip",
+      "sha256": "3edba357705cbd64be72db0296c8d49d1d5e1fbaa1b3c2b55556c2e633d42c7f",
+      "districts": 38
+    },
+    {
+      "state": "UT",
+      "fips": "49",
+      "url": "https://www2.census.gov/geo/tiger/TIGER2026/CD/tl_2026_49_cd120.zip",
+      "sha256": "0222fbf567b75aadcf7c12c43fadf49050ae381fb4e69ae6566c76709d480223",
+      "districts": 4
+    },
+    {
+      "state": "VT",
+      "fips": "50",
+      "url": "https://www2.census.gov/geo/tiger/TIGER2026/CD/tl_2026_50_cd120.zip",
+      "sha256": "bcebac7a410e833274b502013216a6400159124845d307ca2b29599d673747ff",
+      "districts": 1
+    },
+    {
+      "state": "VA",
+      "fips": "51",
+      "url": "https://www2.census.gov/geo/tiger/TIGER2026/CD/tl_2026_51_cd120.zip",
+      "sha256": "657f900a2e85c9813e5fd360b021edfa128e0531bf1ce2492feff2d82e873291",
+      "districts": 11
+    },
+    {
+      "state": "WA",
+      "fips": "53",
+      "url": "https://www2.census.gov/geo/tiger/TIGER2026/CD/tl_2026_53_cd120.zip",
+      "sha256": "06567cf2744bfd932aa05082c5995a2853ca6eead904db0bb2b94b384a0f1e70",
+      "districts": 10
+    },
+    {
+      "state": "WV",
+      "fips": "54",
+      "url": "https://www2.census.gov/geo/tiger/TIGER2026/CD/tl_2026_54_cd120.zip",
+      "sha256": "dbc34329fb3a1006c6abe51d531cab6658ec161795cced9573053650ac06538c",
+      "districts": 2
+    },
+    {
+      "state": "WI",
+      "fips": "55",
+      "url": "https://www2.census.gov/geo/tiger/TIGER2026/CD/tl_2026_55_cd120.zip",
+      "sha256": "d37461db92c2597a300fcc3a9fefa65434a1904104b18ec041f75f0a91b69576",
+      "districts": 8
+    },
+    {
+      "state": "WY",
+      "fips": "56",
+      "url": "https://www2.census.gov/geo/tiger/TIGER2026/CD/tl_2026_56_cd120.zip",
+      "sha256": "3d8a9a6bf6346be86f79cc4348b5d464b50f785a71495a66c618965da1d32e8c",
+      "districts": 1
+    }
+  ],
+  "outputs": [
+    {
+      "state": "CT",
+      "districts": 5,
+      "sha256": "339b085e676935f76df59cbb40177d71e718dbcfe0b17371b64381032582f8b9"
+    },
+    {
+      "state": "DE",
+      "districts": 1,
+      "sha256": "8dddb04fd58c008f3adecf4f8b21806eeb6904f1a6247e10dbfc4432cf77eb71"
+    },
+    {
+      "state": "MA",
+      "districts": 9,
+      "sha256": "94ab55491048366e226d01fbdc993e12eb41a8d290184f6fe8101c1a409f91af"
+    },
+    {
+      "state": "MD",
+      "districts": 8,
+      "sha256": "688b3df178d06d653e67815c0c80f1725c28dc0b704205ffb1a4be4526fbf933"
+    },
+    {
+      "state": "ME",
+      "districts": 2,
+      "sha256": "a7c258278a16114ff6679daa5c1c6932b52685b714f87101cd3d26c0fe886f2c"
+    },
+    {
+      "state": "NH",
+      "districts": 2,
+      "sha256": "1624df8f1868878ea35ce54169d7cfc6ae701225c2aec849d8108069c75ac00b"
+    },
+    {
+      "state": "NJ",
+      "districts": 12,
+      "sha256": "f66cbff2adad0e429cdc7531d2917fed525e2df2b06d4f4bfb49338500292a87"
+    },
+    {
+      "state": "NY",
+      "districts": 26,
+      "sha256": "ecfed9b631c6876fd815d58718d1f6b2632ab808ca7b04998f2eb9a8c06ca0b2"
+    },
+    {
+      "state": "PA",
+      "districts": 17,
+      "sha256": "d191c924fa1a1131f3fb6ee7a1015501c5d6766ec50986e622583400b34d5930"
+    },
+    {
+      "state": "RI",
+      "districts": 2,
+      "sha256": "dde7ac4da95dcbbc2a4b9c7065fef90191cc47fb879ea57ff3d1597f48a2467a"
+    },
+    {
+      "state": "VT",
+      "districts": 1,
+      "sha256": "4032a2f00d5cd28e85d8a5c2cb54cddd04046ea6861d45ec6f0c562c8b00da32"
+    },
+    {
+      "state": "AL",
+      "districts": 7,
+      "sha256": "b9490b3a1d7f2bbeac68868372e9ca42337b14301620a75df03cf7b0012dd64a"
+    },
+    {
+      "state": "AR",
+      "districts": 4,
+      "sha256": "bfd14008f0ac50d5a4a29ee4da56d377522f7aaa6ba0d3f54c3ed4eefa0adc02"
+    },
+    {
+      "state": "FL",
+      "districts": 28,
+      "sha256": "271c4cb19f36039adc316ed13655fb94e8e6946f394982cd294bd37f72ecf432"
+    },
+    {
+      "state": "GA",
+      "districts": 14,
+      "sha256": "d288a2a2d1ce4ceef4519b16c18ca2f50b67e1dc259a8c475cba27c295fe9d74"
+    },
+    {
+      "state": "KY",
+      "districts": 6,
+      "sha256": "2136e8b4a9fb5fb904a65e8411d42232c80532d791de6ae8ee9cf5e36873f4e2"
+    },
+    {
+      "state": "LA",
+      "districts": 6,
+      "sha256": "548afa1477a4abb9cb741b896d7ddaacee068c8434290ba344dc061d2d3aa1a7"
+    },
+    {
+      "state": "MS",
+      "districts": 4,
+      "sha256": "224b57673e42bb99b6c50943b5eca83d232f2787161a7f663aca3042911165b6"
+    },
+    {
+      "state": "NC",
+      "districts": 14,
+      "sha256": "310d27212f2f5aeebc3fa6f23fcbd73751aac8c2499df9cba73b1b96f504c3ef"
+    },
+    {
+      "state": "SC",
+      "districts": 7,
+      "sha256": "85dee7198e929ff56b8b79c20a15d980d93d82ce4fbc3cfdc1d4136431700ca4"
+    },
+    {
+      "state": "TN",
+      "districts": 9,
+      "sha256": "de8191d07a2310761e853810d81325b99dd8116473a545045f1dea6432c4b40e"
+    },
+    {
+      "state": "VA",
+      "districts": 11,
+      "sha256": "2f38b2175a52078e0472cb6e335df6cdfd21955ea91f9209a3b97139c16346f9"
+    },
+    {
+      "state": "WV",
+      "districts": 2,
+      "sha256": "d9194a0e837ea1a0dfaadeca5ce9c6fe1e152fabf6b92ef35d9dfb3450678596"
+    },
+    {
+      "state": "IA",
+      "districts": 4,
+      "sha256": "eb1e7957dde26e986c3a2f2b7301a7fadf382f4e0e3cb492ca3381754d253676"
+    },
+    {
+      "state": "IL",
+      "districts": 17,
+      "sha256": "3ad40438af8a5dbe78003de39c835d295b619e1b70871cf451dc520735972760"
+    },
+    {
+      "state": "IN",
+      "districts": 9,
+      "sha256": "160c3cd289453c7dffad03be161af506a1e1c73aee7b6d2d5c6c1e9e0e644ce8"
+    },
+    {
+      "state": "KS",
+      "districts": 4,
+      "sha256": "1635bd0a9ed0b8b7dbb6de6c48461c66a98ba025c907ce1f66aa2b97b90602c8"
+    },
+    {
+      "state": "MI",
+      "districts": 13,
+      "sha256": "be869c1b465002e634d5dcfaa3328c85f95902c3b2b2d708165b50efc2a5473c"
+    },
+    {
+      "state": "MN",
+      "districts": 8,
+      "sha256": "93b2653642b79a60673beae30a2432479863bd4f8d0d18fd32bb0fb4b882ebd5"
+    },
+    {
+      "state": "MO",
+      "districts": 8,
+      "sha256": "32c0392a35f5111ae952c6885f93233048e1ee61de74c4c07d72a65fc6496a20"
+    },
+    {
+      "state": "ND",
+      "districts": 1,
+      "sha256": "0d89bda765867ff56b7b5be823e436abbc04cd01a8221000339e3648fa4a3831"
+    },
+    {
+      "state": "NE",
+      "districts": 3,
+      "sha256": "1ced7cbfd19409ec8e838ec1c5a1fdd8754fcab3ffa83637de7e373c01dc2192"
+    },
+    {
+      "state": "OH",
+      "districts": 15,
+      "sha256": "e0cd804626ff5f66aa8bab43fea3c1bec79d7dac1d7db6d8d986bf893c4d8060"
+    },
+    {
+      "state": "SD",
+      "districts": 1,
+      "sha256": "c8fc12518dd7877fd0ad771d790c091d7c1387be3c7db4ba9ee193a8c30ece72"
+    },
+    {
+      "state": "WI",
+      "districts": 8,
+      "sha256": "7e41571745822b96deb33cee2281abd0166e08fcd64170e5e5163c4ce3291cde"
+    },
+    {
+      "state": "AZ",
+      "districts": 9,
+      "sha256": "b1bf5014b76fbafb9f04b311dd096349fc5bce98182755d82ad223ffc79f9238"
+    },
+    {
+      "state": "NM",
+      "districts": 3,
+      "sha256": "e5c9b7cedd490a21c2efbc980d7fab01f0b42fc3f6c098e3afd54eda30d68e0f"
+    },
+    {
+      "state": "NV",
+      "districts": 4,
+      "sha256": "78def7cd44741b1afddd29f428216d19e1da736f135e73939b83f8c2d07c3e61"
+    },
+    {
+      "state": "OK",
+      "districts": 5,
+      "sha256": "ef5bc95733ed915536709f54b4ea463c9deebd1bb8414d85126ca42c7f9ed8d3"
+    },
+    {
+      "state": "TX",
+      "districts": 38,
+      "sha256": "374c1ce53758cba181c2ab21503d6df747f232f7a329aa91f2b0db7855d581d3"
+    },
+    {
+      "state": "UT",
+      "districts": 4,
+      "sha256": "1ff031e12b13bb5296b05f75934abd5055353373c815d65086f5aecd7d4e71c3"
+    },
+    {
+      "state": "AK",
+      "districts": 1,
+      "sha256": "b2da43d199eef74dee94a52a8ab94001b274a596ef3cd5de8c8855e89de76183"
+    },
+    {
+      "state": "CA",
+      "districts": 52,
+      "sha256": "7f43968e942bc21f06d8ffe53dea35780a5a1c0e26f5f88e60bebb734171429a"
+    },
+    {
+      "state": "CO",
+      "districts": 8,
+      "sha256": "60a136a066387517fc2156270006b218e844711fb33886c6433db488c4cf8640"
+    },
+    {
+      "state": "HI",
+      "districts": 2,
+      "sha256": "3def780944652417854e4d30b8f88fa664e646c03c0a9334e07f30ab55e82eb2"
+    },
+    {
+      "state": "ID",
+      "districts": 2,
+      "sha256": "9ce4cafd4c9d1e29e26d82a5fc4c56c36af548727faffaeff1669d3045778b9b"
+    },
+    {
+      "state": "MT",
+      "districts": 2,
+      "sha256": "ed65b351a135bce9f558b43d602fbb37d561aac7a5ae696f6f08459e7ded6639"
+    },
+    {
+      "state": "OR",
+      "districts": 6,
+      "sha256": "5dcdf27435d8fb33c5762011ca5b8cf62a089a25b6ddfad742019dd580d3984d"
+    },
+    {
+      "state": "WA",
+      "districts": 10,
+      "sha256": "45b40b36644f0d61fa862e1cf1540efa216140c6f5cb3e1bdae969a3fe3694f3"
+    },
+    {
+      "state": "WY",
+      "districts": 1,
+      "sha256": "a02f8151b1edace1a583eb3b60dfe8af590cc8d2d3652b37af8afbfbc2ffd9eb"
+    }
+  ]
+}

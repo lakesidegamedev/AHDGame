@@ -137,6 +137,8 @@ export async function selectGeneralElectionWinners({
     }
     const primaryShares = buildPrimaryShareMap(tally?.primaryResults ?? null);
     districted = await districtedHouseResolution(db, {
+      electionId: election._id.toString(),
+      preset: gsForHouse?.preset,
       countryId: "US",
       stateId: election.state as string,
       candidateVotes: effectiveVotes,
@@ -410,7 +412,7 @@ export async function selectGeneralElectionWinners({
         const vacantRows = await electedOfficialsCollection(db)
           .find(
             {
-              officeType: "commons",
+              officeType: officeKeyForElectionType(election.electionType, election.countryId),
               state: election.state,
               ...(election.countryId ? { countryId: election.countryId } : {}),
               characterId: null,

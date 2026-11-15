@@ -3,13 +3,14 @@ import { clientAvatarUrl } from "@/lib/client/avatarUrl";
 import { NextResponse } from "next/server";
 import { requireBasicAuth } from "@/lib/api/requireAuth";
 import { getDb } from "@/lib/mongodb";
-import type { User } from "@/lib/db/types";
-import { isPatreonActive, isPlusOrBetter } from "@/lib/db/types";
+import { isPatreonActive, tierIncludesSingleplayer } from "@/lib/db/types";
 import { ObjectId } from "mongodb";
 import { cookies } from "next/headers";
 import { getAuthUserFromToken } from "@/lib/auth";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { usersCollection } from "@/lib/db/repositories/users";
+import { entitlementExpiryMs, isFreeAccessOn } from "@/lib/freeAccess";
+import { hasLakesideEntitlement } from "@/lib/lakesideEntitlements";
 
 const OFFLINE_ENTITLEMENT_GRACE_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -58,26 +59,43 @@ export async function GET() {
   const avatarUrl = clientAvatarUrl(character?.avatarUrl) ?? clientAvatarUrl(discordAvatar);
   const nowMs = Date.now();
   const supporter = isPatreonActive(user.patreonTier ?? null, user.patreonExpiresAt ?? null);
-  const plusActive = supporter && isPlusOrBetter(user.patreonTier ?? null);
+  const tierActive = tierIncludesSingleplayer(
+    user.patreonTier ?? null,
+    user.patreonExpiresAt ?? null
+  );
   const tempExpiresMs = user.clientAccessExpiresAt
     ? new Date(user.clientAccessExpiresAt).getTime()
     : 0;
   const tempActive = tempExpiresMs > nowMs;
-  const singleplayerEntitled =
+  const realEntitled =
     auth.user.isModerator === true ||
     Boolean(user.singleplayerEntitledAt) ||
-    plusActive ||
+    tierActive ||
     tempActive;
+  const [freeAccess, lakesideGrant] = await Promise.all([
+    isFreeAccessOn(),
+    realEntitled
+      ? Promise.resolve(false)
+      : hasLakesideEntitlement(auth.user.userId, "ahd-singleplayer"),
+  ]);
+  const singleplayerEntitled = realEntitled || lakesideGrant || freeAccess;
+  // Grants and free access are revocable remotely, so they get the short cap too.
+  const freeAccessOnly = (freeAccess || lakesideGrant) && !realEntitled;
 
-  const graceEnd = nowMs + OFFLINE_ENTITLEMENT_GRACE_MS;
+  const graceEnd = entitlementExpiryMs({
+    nowMs,
+    graceMs: OFFLINE_ENTITLEMENT_GRACE_MS,
+    freeAccessOnly,
+  });
   const tempOnly =
-    tempActive && auth.user.isModerator !== true && !user.singleplayerEntitledAt && !plusActive;
+    tempActive && auth.user.isModerator !== true && !user.singleplayerEntitledAt && !tierActive;
 
   return NextResponse.json(
     {
       linked: true,
       displayName: user.displayName || user.username,
       supporter,
+      freeAccess,
       avatarUrl,
       singleplayer: {
         entitled: singleplayerEntitled,

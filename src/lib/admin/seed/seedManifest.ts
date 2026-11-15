@@ -46,7 +46,7 @@ const REFERENCE: CollectionEntry[] = [
     category: "reference",
     seededBy: "seedCountyPopulations",
     notes:
-      "US county, UK constituency and JP prefecture population stocks. Bootstrap replaces stocks from current state totals; migration inserts missing records only.",
+      "US county, UK constituency, JP prefecture and Canadian census-division population stocks. Bootstrap replaces stocks from current state totals; migration inserts missing records only.",
   },
   { name: "states", category: "reference", seededBy: "runCoreSeed" },
   { name: "policies", category: "reference", seededBy: "runCoreSeed" },
@@ -189,6 +189,12 @@ const REFERENCE: CollectionEntry[] = [
     category: "runtime",
     notes:
       "Carried books for the producer market shadow: cash, stock, unpaid bills and prices per run and turn, last two turns kept. Read only by the shadow phase.",
+  },
+  {
+    name: "corporationTurnJournal",
+    category: "runtime",
+    notes:
+      "Resume journal for the corporation turn: the computed write plan in chunks with per-chunk completion marks. Only written when turn resilience stage 2 is on; last few turns kept.",
   },
   {
     name: "producerPathClaims",

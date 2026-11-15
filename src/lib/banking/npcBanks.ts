@@ -95,7 +95,8 @@ export function npcBankSeedKey(countryId: CountryId, index: number): string {
 }
 
 /**
- * Era-appropriate generic bank names. No real institutions or people.
+ * Era-appropriate generic bank names. Modern worlds replace these with real
+ * banks at creation (see corporations/names/realNames).
  * Country flavor is generic phrasing only (First / Commercial / Provincial).
  */
 export function generateNpcBankName(
@@ -113,7 +114,7 @@ const DEFAULT_HISTORICAL_NAMES = ["Meridian Commercial Bank", "Harbourline Savin
 const DEFAULT_MODERN_NAMES = ["Meridian Banking Group", "Harbourline Financial"] as const;
 
 /**
- * Per-country display flavor. Patterns only; never real bank brands.
+ * Per-country display flavor for the generic names.
  * Absent countries fall back to the defaults above.
  */
 export const COUNTRY_HISTORICAL_NAMES: Partial<Record<CountryId, readonly string[]>> = {
@@ -340,6 +341,7 @@ export async function seedNpcBanks(
       try {
         const spawned = await spawnNppCorporation(db, {
           name,
+          realName: "bank",
           type: "financial",
           countryId,
           headquartersState: hqState,
@@ -357,7 +359,7 @@ export async function seedNpcBanks(
           log(`[seedNpcBanks] ${countryId} slot ${index}: corp created but charter failed`);
         } else {
           result.created += 1;
-          log(`[seedNpcBanks] ${countryId}: created "${name}" (${key})`);
+          log(`[seedNpcBanks] ${countryId}: created "${spawned.name}" (${key})`);
         }
       } catch (err) {
         result.charterFailures += 1;

@@ -7,6 +7,9 @@ interface MapControlsProps {
   viewMode: "map" | "globe";
   isAnimating: boolean;
   isFullscreen: boolean;
+  /** Whether a map click picks a nation for the side-by-side comparison. */
+  compareMode: boolean;
+  onCompareToggle: () => void;
   onViewChange: (target: "map" | "globe") => void;
   onFullscreenToggle: () => void;
   zoomRef: React.MutableRefObject<number>;
@@ -18,6 +21,8 @@ export default function MapControls({
   viewMode,
   isAnimating,
   isFullscreen,
+  compareMode,
+  onCompareToggle,
   onViewChange,
   onFullscreenToggle,
   zoomRef,
@@ -74,8 +79,36 @@ export default function MapControls({
 
   return (
     <div className="absolute top-3 right-3 z-10 flex flex-col items-end gap-2 pointer-events-none">
-      {/* Icon buttons row: fullscreen + gear */}
+      {/* Icon buttons row: compare, fullscreen, gear */}
       <div className="flex items-center gap-1 pointer-events-auto">
+        <button
+          onClick={onCompareToggle}
+          className={`w-8 h-8 flex items-center justify-center rounded-lg border border-card-border shadow-sm transition-colors ${
+            compareMode
+              ? "bg-primary text-white"
+              : "bg-card text-muted hover:text-foreground hover:bg-card-elevated"
+          }`}
+          title={compareMode ? "Stop comparing" : "Compare two nations"}
+          aria-label={compareMode ? "Stop comparing nations" : "Compare two nations"}
+          aria-pressed={compareMode}
+        >
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <line x1="12" y1="3" x2="12" y2="21" />
+            <path d="M7 6 3 10l4 4" />
+            <path d="M17 10 21 14l-4 4" />
+            <line x1="3" y1="10" x2="10" y2="10" />
+            <line x1="14" y1="14" x2="21" y2="14" />
+          </svg>
+        </button>
         <button
           onClick={onFullscreenToggle}
           className="w-8 h-8 flex items-center justify-center rounded-lg bg-card border border-card-border shadow-sm text-muted hover:text-foreground hover:bg-card-elevated transition-colors"

@@ -1,4 +1,5 @@
 "use client";
+import { displayCanadianRegionCode } from "@/lib/countries/ca/regionCodes";
 
 import { useState, useEffect, useRef } from "react";
 import { getMessageStyle } from "@/lib/utils/formatters";
@@ -58,6 +59,7 @@ export function ResourceGrantManager({ context = "admin" }: ResourceGrantManager
   const [fundsAmount, setFundsAmount] = useState<number>(0);
   const [cashOnHandAmount, setCashOnHandAmount] = useState<number>(0);
   const [grantPositionUpdateVoucher, setGrantPositionUpdateVoucher] = useState(false);
+  const [reason, setReason] = useState("");
   const [fxRates, setFxRates] = useState<Partial<Record<CurrencyCode, number>>>({});
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
@@ -203,6 +205,7 @@ export function ResourceGrantManager({ context = "admin" }: ResourceGrantManager
           funds: fundsAmount !== 0 ? fundsAmount : undefined,
           cashOnHand: cashOnHandAmount !== 0 ? cashOnHandAmount : undefined,
           positionUpdateVoucher: grantPositionUpdateVoucher || undefined,
+          reason: reason.trim() || undefined,
         }),
       });
 
@@ -214,6 +217,7 @@ export function ResourceGrantManager({ context = "admin" }: ResourceGrantManager
         setFundsAmount(0);
         setCashOnHandAmount(0);
         setGrantPositionUpdateVoucher(false);
+        setReason("");
         setSelectedIds(new Set());
         setGrantToAll(false);
         // Refresh character list to show updated values
@@ -387,6 +391,17 @@ export function ResourceGrantManager({ context = "admin" }: ResourceGrantManager
           </span>
         </div>
 
+        <label className="mb-4 block text-sm font-medium">
+          Reason (kept in the grants record)
+          <input
+            type="text"
+            value={reason}
+            maxLength={300}
+            onChange={(event) => setReason(event.target.value)}
+            className="mt-1 w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm"
+          />
+        </label>
+
         {/* Grant Button */}
         <button
           onClick={handleGrant}
@@ -468,7 +483,9 @@ export function ResourceGrantManager({ context = "admin" }: ResourceGrantManager
                       <span className={`text-xs ${getPartyTextColor(char.party)}`}>
                         {char.party.charAt(0).toUpperCase() + char.party.slice(1)}
                       </span>
-                      <span className="text-xs text-muted">({char.homeState})</span>
+                      <span className="text-xs text-muted">
+                        ({displayCanadianRegionCode(char.homeState)})
+                      </span>
                     </div>
                     <div className="text-xs text-muted">
                       {char.actions} actions | ₳{char.funds.toLocaleString("en-US")} campaign

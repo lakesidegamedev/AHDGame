@@ -1,4 +1,5 @@
 import * as cron from "node-cron";
+import { logger } from "@/lib/observability/logger";
 import { dispatchNativePush } from "@/lib/nativePush/dispatcher";
 import * as Sentry from "@sentry/nextjs";
 import { trackCheckpoint } from "@/lib/turn/subhour/checkpointTelemetry";
@@ -11,6 +12,12 @@ import { backupTurnSchedule, resolveTurnCronMinute, turnCronSchedule } from "./c
 import { getProcessingLockState, TURN_LOCK_STALE_MS } from "./turn/processingLock";
 import { recordTurnHeapDelta } from "@/lib/observability/heapWatchdog";
 import { getDb } from "@/lib/mongodb";
+import { workerConfig } from "@/lib/config/worker";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { createTurnRetryController, type TurnRetryAttempt } from "@/lib/turn/turnRetry";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { resolveTurnResilienceStage } from "@/lib/turn/rules/staleLock";
+import { tryFastStaleLockTakeover } from "@/lib/turn/turnLockHolder";
 import { deploymentServiceSlug } from "@/lib/deploymentIdentity";
 import { sweepPlayerRandomEventsRealtime } from "@/lib/events/pree/driver";
 import { persistApiAbuseScan } from "@/lib/api/abuseDetection";
@@ -59,11 +66,12 @@ const TURN_CRON_MONITOR_CONFIG = {
  * so trip events include the recent per-turn growth pattern.
  */
 async function runTurnWithHeapDiagnostics(
-  source: "primary" | "backup" | "stuckLockSweep"
-): Promise<ReturnType<typeof processTurn>> {
+  source: "primary" | "backup" | "stuckLockSweep" | "staleLockWatchdog" | "retry",
+  retryAttempt?: TurnRetryAttempt
+): Promise<Awaited<ReturnType<typeof processTurn>>> {
   const before = process.memoryUsage();
   const t0 = Date.now();
-  const result = await processTurn();
+  const result = await processTurn(retryAttempt ? { retryAttempt } : {});
   const after = process.memoryUsage();
   const durationMs = Date.now() - t0;
   const deltaBytes = after.heapUsed - before.heapUsed;
@@ -76,8 +84,18 @@ async function runTurnWithHeapDiagnostics(
   console.log(
     `[Heap] turn ${result.turn} (${source}): heapUsed ${(before.heapUsed / 1_000_000).toFixed(0)}MB → ${(after.heapUsed / 1_000_000).toFixed(0)}MB (delta=${deltaBytes >= 0 ? "+" : ""}${(deltaBytes / 1_000_000).toFixed(1)}MB) rss=${(after.rss / 1_000_000).toFixed(0)}MB dur=${durationMs}ms`
   );
+  // A retry attempt reports to the controller that scheduled it.
+  if (source !== "retry") void turnRetryController.onResult(result);
   return result;
 }
+
+const turnRetryController = createTurnRetryController({
+  run: (attempt) => runTurnWithHeapDiagnostics("retry", attempt),
+  record: async (entry) => {
+    const db = await getDb();
+    await gameStateCollection(db).updateOne({ _id: "current" }, { $set: { lastTurnRetry: entry } });
+  },
+});
 
 let nativePushCron: ReturnType<typeof cron.schedule> | null = null;
 let pushDispatchRunning = false;
@@ -86,6 +104,8 @@ let stockExchangeRefreshCron: ReturnType<typeof cron.schedule> | null = null;
 let fogOfWarCron: ReturnType<typeof cron.schedule> | null = null;
 let backupCron: ReturnType<typeof cron.schedule> | null = null;
 let stuckLockRecoveryCron: ReturnType<typeof cron.schedule> | null = null;
+let staleLockWatchdogCron: ReturnType<typeof cron.schedule> | null = null;
+let staleLockWatchdogRunning = false;
 
 /**
  * Two full stale windows: twice what the :00/:30 turn crons require before the
@@ -169,6 +189,9 @@ export async function initializeCronJobs() {
   }
   if (stuckLockRecoveryCron) {
     stuckLockRecoveryCron.stop();
+  }
+  if (staleLockWatchdogCron) {
+    staleLockWatchdogCron.stop();
   }
   if (playerEventsSweepCron) {
     playerEventsSweepCron.stop();
@@ -376,6 +399,8 @@ export async function initializeCronJobs() {
         // Clearing a stranded migration lock is the admin Reset Lock's job, not
         // this sweep's: taking it over could corrupt a half-applied migration.
         if (currentState.processingKind !== "turn") return;
+        // A held lock waits for a person (see the hold runbook in turnSystem.ts).
+        if (currentState.processingHoldReason) return;
 
         const lockState = getProcessingLockState(currentState);
         if (!lockState.isStale) return;
@@ -445,6 +470,49 @@ export async function initializeCronJobs() {
         Sentry.captureException(error, {
           tags: { component: "cron", job: "stuckLockSweep" },
         });
+      }
+    },
+    { timezone: "UTC" }
+  );
+
+  // Fast stale-lock watchdog (turnResilienceStage >= 1). Every minute it checks
+  // whether the turn lock's heartbeat is more than a few minutes old and, if so,
+  // takes the lock over by compare-and-set on the holder it read, then runs the
+  // normal turn, which resumes from the recorded step. At stage 0 it does nothing
+  // and the 20 minute rules above stay in force.
+  staleLockWatchdogCron = cron.schedule(
+    "* * * * *",
+    async () => {
+      if (staleLockWatchdogRunning) return;
+      staleLockWatchdogRunning = true;
+      try {
+        const db = await getDb();
+        const config = await gameConfigCollection(db).findOne(
+          { _id: "default" },
+          { projection: { turnResilienceStage: 1, simSandbox: 1 } }
+        );
+        const stage = resolveTurnResilienceStage({
+          configStage: config?.turnResilienceStage,
+          simSandbox: config?.simSandbox === true,
+          envStage: workerConfig.turnResilienceStage(),
+        });
+        if (stage < 1) return;
+        if (!(await tryFastStaleLockTakeover(db, stage))) return;
+        logger.warn("Cron", "Stale-lock watchdog took over a turn lock; resuming the turn");
+        try {
+          Sentry.captureMessage("Stale turn lock taken over by watchdog", {
+            level: "warning",
+            fingerprint: ["stale-turn-lock-watchdog"],
+          });
+        } catch {
+          // Telemetry must not gate recovery.
+        }
+        const result = await runTurnWithHeapDiagnostics("staleLockWatchdog");
+        logger.info("Cron", "Stale-lock watchdog result", { success: result.success });
+      } catch (error) {
+        logger.error("Cron", "Error in stale-lock watchdog", error, { job: "staleLockWatchdog" });
+      } finally {
+        staleLockWatchdogRunning = false;
       }
     },
     { timezone: "UTC" }
@@ -773,6 +841,10 @@ export async function restartCronWithSchedule(): Promise<boolean> {
     stuckLockRecoveryCron.stop();
     stuckLockRecoveryCron = null;
   }
+  if (staleLockWatchdogCron) {
+    staleLockWatchdogCron.stop();
+    staleLockWatchdogCron = null;
+  }
   if (playerEventsSweepCron) {
     playerEventsSweepCron.stop();
     playerEventsSweepCron = null;
@@ -834,6 +906,10 @@ export function stopCronJobs() {
   if (stuckLockRecoveryCron) {
     stuckLockRecoveryCron.stop();
     stuckLockRecoveryCron = null;
+  }
+  if (staleLockWatchdogCron) {
+    staleLockWatchdogCron.stop();
+    staleLockWatchdogCron = null;
   }
   if (playerEventsSweepCron) {
     playerEventsSweepCron.stop();

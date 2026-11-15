@@ -47,6 +47,7 @@ export async function ensureIrelandResetV2ForReunification(db: Db): Promise<{ pr
     { _id: "current" },
     {
       projection: {
+        preset: 1,
         currentTurn: 1,
         resetWorldId: 1,
         metricsSystemVersion: 1,

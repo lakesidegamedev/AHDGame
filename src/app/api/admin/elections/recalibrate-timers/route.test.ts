@@ -428,3 +428,36 @@ describe("Hungarian and Russian native timer custody", () => {
     }
   );
 });
+
+describe("Canadian calendar custody", () => {
+  const ctx = { preset: "2027-default", startingYear: 2027 };
+  it.each([
+    ["CA_AB", 48],
+    ["CA_QC", 192],
+    ["CA_BC", 96],
+    ["CA_ON", 144],
+  ])("retains %s's provincial anchor", (state, endTurn) => {
+    expect(
+      canonicalTurns(e("provincialLegislature", 1, { countryId: "CA", state }), undefined, ctx)
+        ?.endTurn
+    ).toBe(endTurn);
+    expect(
+      canonicalTurns(e("provincialLegislature", 2, { countryId: "CA", state }), undefined, ctx)
+        ?.endTurn
+    ).toBe(endTurn + 192);
+  });
+  it("preserves the stamped current term instead of adding another term", () => {
+    expect(
+      canonicalTurns(
+        e("caCommons", 5, { countryId: "CA", state: "CA_ON", shiftedScheduleEndTurn: 252 }),
+        60,
+        ctx
+      )
+    ).toEqual({ startTurn: 204, primaryEndTurn: 228, endTurn: 252 });
+  });
+  it("honors prior snap history on a legacy unstamped Canadian term", () => {
+    expect(
+      canonicalTurns(e("caCommons", 2, { countryId: "CA", state: "CA_ON" }), 60, ctx)?.endTurn
+    ).toBe(252);
+  });
+});

@@ -67,6 +67,48 @@ describe("getCachedLandingData", () => {
     expect(snapshot.currentYear).toBe(1994);
   });
 
+  it("carries the launch inputs from gameConfig and gameState", async () => {
+    findOne
+      .mockResolvedValueOnce({
+        seedYear: 2027,
+        maintenanceMode: true,
+        maintenanceExpectedEnd: "2026-11-15T22:00:00Z",
+      })
+      .mockResolvedValueOnce({
+        startingYear: 2027,
+        currentTurn: 1,
+        isActive: false,
+        nextScheduledTurn: null,
+      });
+    const snapshot = await getCachedLandingData();
+    expect(snapshot.launch).toEqual({
+      maintenanceMode: "full",
+      maintenanceExpectedEnd: "2026-11-15T22:00:00Z",
+      currentTurn: 1,
+      turnsActive: false,
+      nextScheduledTurn: null,
+    });
+  });
+
+  it("reports a running world's next turn as ISO and treats an empty ETA as unset", async () => {
+    findOne
+      .mockResolvedValueOnce({ seedYear: 2027, maintenanceMode: "off", maintenanceExpectedEnd: "" })
+      .mockResolvedValueOnce({
+        startingYear: 2027,
+        currentTurn: 9,
+        isActive: true,
+        nextScheduledTurn: new Date("2026-11-17T15:00:00Z"),
+      });
+    const snapshot = await getCachedLandingData();
+    expect(snapshot.launch).toEqual({
+      maintenanceMode: "off",
+      maintenanceExpectedEnd: null,
+      currentTurn: 9,
+      turnsActive: true,
+      nextScheduledTurn: "2026-11-17T15:00:00.000Z",
+    });
+  });
+
   it("falls back to the seed year when the world has no current year", async () => {
     const snapshot = await getCachedLandingData();
     expect(snapshot.currentYear).toBe(snapshot.seedYear);

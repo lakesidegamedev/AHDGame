@@ -70,6 +70,18 @@ export async function seedOpeningDepartmentBoards1991(
     },
     openingNamedGrantClaims1991()
   );
+  return persistCabinetOpening(db, worldId, sourceTurn, countries, expected, partition, fiscal);
+}
+
+export async function persistCabinetOpening(
+  db: Db,
+  worldId: string,
+  sourceTurn: number,
+  countries: readonly (ResetOpeningCountry | "CA")[],
+  expected: readonly ResetDepartmentOpeningBoard[],
+  partition: ReturnType<typeof buildOpeningDepartmentFundingPartition>,
+  fiscal: Parameters<typeof openingNationalTreasurySnapshots>[2]
+): Promise<ResetSystemSeedReceipt> {
   const collection = resetDepartmentOpeningBoardsCollection<ResetDepartmentOpeningBoard>(db);
   await collection.bulkWrite(
     expected.map((board) => ({
@@ -140,9 +152,7 @@ export async function seedOpeningDepartmentBoards1991(
   ) {
     throw new Error("The persisted 1991 v2 national treasury failed readback verification");
   }
-  const openingActions = openingCabinetActionStates(worldId, sourceTurn).filter((row) =>
-    countries.includes(row.countryId as ResetOpeningCountry)
-  );
+  const openingActions = openingCabinetActionStates(worldId, sourceTurn, countries);
   const actionStates = resetCabinetActionStatesCollection<ResetCabinetActionState>(db);
   await actionStates.bulkWrite(
     openingActions.map((row) => ({
@@ -155,7 +165,7 @@ export async function seedOpeningDepartmentBoards1991(
     .toArray();
   const expectedActionsPayload = cabinetActionStatesPayload(openingActions);
   if (
-    persistedActions.length !== openingActions.length ||
+    persistedActions.length !== countries.length ||
     cabinetActionStatesPayload(persistedActions) !== expectedActionsPayload
   ) {
     throw new Error("The persisted 1991 v2 Cabinet action opening failed readback verification");

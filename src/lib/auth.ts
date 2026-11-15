@@ -208,6 +208,7 @@ function mapUserToAuthUser(user: User, payload: UserPayload): AuthUser {
     activeCharacterId: user.activeCharacterId ? user.activeCharacterId.toString() : null,
     // Only present when opted in, so the rest of the auth shape is unchanged.
     ...(user.experimentalFeatures === true ? { experimentalFeatures: true } : {}),
+    ...(user.vpnWhitelisted === true ? { vpnWhitelisted: true } : {}),
   };
 }
 
@@ -228,6 +229,8 @@ export interface AuthUser {
   activeCharacterId?: string | null;
   /** Opt-in to experimental features, read from the account record. */
   experimentalFeatures?: boolean;
+  /** Staff granted this account VPN access; it is never VPN-gated. */
+  vpnWhitelisted?: boolean;
 }
 
 export interface AuthUserWithCharacter extends AuthUser {

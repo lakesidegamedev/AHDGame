@@ -71,7 +71,7 @@ async function authorizeOppositionLeader(
 
   const opposition = await resolveOppositionLeaderForCountry(db, countryId);
   if (!opposition) throw forbidden("There is no sitting Leader of the Opposition");
-  if (!opposition.chairId.equals(callerCharacter._id)) throw forbidden(unauthorized);
+  if (!opposition.chairId?.equals(callerCharacter._id)) throw forbidden(unauthorized);
   if (!opposition.partyDoc) {
     // A coalition with no resolvable member party has nowhere to store the
     // shadow cabinet; treat as a transient no-opposition-party state.

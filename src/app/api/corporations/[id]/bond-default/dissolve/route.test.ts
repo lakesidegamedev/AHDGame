@@ -30,6 +30,9 @@ vi.mock("@/lib/currency/featureFlag", () => ({
 vi.mock("@/lib/corporations/releaseHeldSharesToFloat", () => ({
   releaseCorporationHeldSharesToFloat: vi.fn().mockResolvedValue(undefined),
 }));
+vi.mock("@/lib/bonds/dissolutionCash", () => ({
+  retireDissolvedCorporationCash: vi.fn().mockResolvedValue(undefined),
+}));
 
 let db: MockDb;
 
@@ -343,6 +346,14 @@ describe("POST /api/corporations/[id]/bond-default/dissolve", () => {
     // Verify cleanup operations were called
     expect(db.collectionMocks.bonds.deleteMany).toHaveBeenCalled();
     expect(db.collectionMocks.corporations.deleteOne).toHaveBeenCalledWith({ _id: corpId });
+    const { retireDissolvedCorporationCash } = await import("@/lib/bonds/dissolutionCash");
+    expect(retireDissolvedCorporationCash).toHaveBeenCalledWith(
+      db,
+      expect.objectContaining({ corporation: corpId.toHexString() })
+    );
+    expect(vi.mocked(retireDissolvedCorporationCash).mock.invocationCallOrder[0]).toBeLessThan(
+      db.collectionMocks.corporations.deleteOne.mock.invocationCallOrder[0]
+    );
     expect(db.collectionMocks.unownedSectors.findOneAndUpdate).toHaveBeenCalledTimes(1);
     const sectorDeleteFilter = db.collectionMocks.corporateSectors.deleteMany.mock.calls[0][0];
     expect(sectorDeleteFilter._id.$in).toHaveLength(1);

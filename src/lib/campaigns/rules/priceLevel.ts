@@ -51,7 +51,7 @@ export const ERA_PRICE_LEVEL: Record<EraId, number> = {
   "2007": 0.6562,
   "2019": MODERN_PRICE_LEVEL,
   "2023": 1.14996,
-  "2027": 1.28579,
+  "2027": 1.37848,
 };
 
 /**

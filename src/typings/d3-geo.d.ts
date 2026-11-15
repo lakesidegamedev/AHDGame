@@ -6,6 +6,8 @@ type RawProjection = (lambda: number, phi: number) => [number, number];
 declare module "d3-geo" {
   export interface GeoProjection {
     (point: [number, number]): [number, number] | null;
+    /** Screen point back to `[lon, lat]`; null off the sphere. */
+    invert?(point: [number, number]): [number, number] | null;
     scale(): number;
     scale(scale: number): this;
     translate(): [number, number];
@@ -34,7 +36,9 @@ declare module "d3-geo" {
   /** Composite conic US projection with Alaska and Hawaii inset. */
   export function geoAlbersUsa(): GeoProjection;
   export function geoProjection(raw: RawProjection): GeoProjection;
-  export function geoPath(projection?: GeoProjection): GeoPath;
+  export function geoPath(projection?: GeoProjection, context?: unknown): GeoPath;
+  /** Whether a GeoJSON object contains the `[lon, lat]` point. */
+  export function geoContains(object: GeoPermissibleObjects, point: [number, number]): boolean;
   export function geoCentroid(object: GeoPermissibleObjects): [number, number];
   /** Spherical area of a GeoJSON object in steradians (0…4π). */
   export function geoArea(object: GeoPermissibleObjects): number;

@@ -1,36 +1,55 @@
 import { describe, it, expect } from "vitest";
 import type { Db } from "mongodb";
+import { createInMemoryDb } from "@/lib/test-utils/inMemoryDb";
 import { processCampaignBoostDecay } from "./campaignBoostDecay";
 
-function fakeDb(elections: Record<string, unknown>[]): {
-  db: Db;
-  elections: Record<string, unknown>[];
-} {
-  const db = {
-    collection(name: string) {
-      if (name === "gameState") return { findOne: async () => ({}) };
-      return {
-        find: () => ({ toArray: async () => elections }),
-        async updateOne(filter: { _id: unknown }, update: { $set: Record<string, unknown> }) {
-          const e = elections.find((x) => x._id === filter._id);
-          if (e) Object.assign(e, update.$set);
-          return { acknowledged: true };
-        },
-      };
-    },
-  } as unknown as Db;
-  return { db, elections };
-}
-
-describe("processCampaignBoostDecay", () => {
-  it("decays each election's boosts by one turn", async () => {
-    const { db, elections } = fakeDb([
-      { _id: "e1", districtCampaignBoosts: { "1": { "2": 7.5 } } },
+describe("Campaign Here decay", () => {
+  it("decays US and Canadian campaigns together and leaves closed/foreign race types untouched", async () => {
+    const memory = createInMemoryDb();
+    memory.seed("elections", [
+      {
+        _id: "us",
+        countryId: "US",
+        electionType: "house",
+        status: "active",
+        districtCampaignBoosts: { "1": { "2": 7.5 } },
+      },
+      {
+        _id: "ca",
+        countryId: "CA",
+        electionType: "caCommons",
+        status: "upcoming",
+        districtCampaignBoosts: { "35001": { "1": 2.5 } },
+      },
+      {
+        _id: "snap",
+        countryId: "CA",
+        electionType: "snap_caCommons",
+        status: "active",
+        districtCampaignBoosts: { "35001": { "1": 0.5 } },
+      },
+      {
+        _id: "closed",
+        countryId: "CA",
+        electionType: "caCommons",
+        status: "resolved",
+        districtCampaignBoosts: { "35001": { "1": 5 } },
+      },
+      {
+        _id: "provincial",
+        countryId: "CA",
+        electionType: "provincialLegislature",
+        status: "active",
+        districtCampaignBoosts: { "35001": { "1": 5 } },
+      },
     ]);
-    const res = await processCampaignBoostDecay(10, new Date(), db);
-    expect(res.electionsDecayed).toBe(1);
-    expect(
-      (elections[0].districtCampaignBoosts as Record<string, Record<string, number>>)["1"]["2"]
-    ).toBe(7); // 7.5 - 0.5
+    const result = await processCampaignBoostDecay(10, new Date(), memory as unknown as Db);
+    expect(result.electionsDecayed).toBe(3);
+    const rows = memory.collection("elections").docs;
+    expect(rows[0].districtCampaignBoosts).toEqual({ "1": { "2": 7 } });
+    expect(rows[1].districtCampaignBoosts).toEqual({ "35001": { "1": 2 } });
+    expect(rows[2].districtCampaignBoosts).toBeUndefined();
+    expect(rows[3].districtCampaignBoosts).toEqual({ "35001": { "1": 5 } });
+    expect(rows[4].districtCampaignBoosts).toEqual({ "35001": { "1": 5 } });
   });
 });

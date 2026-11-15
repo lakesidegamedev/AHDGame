@@ -91,7 +91,7 @@ const GDP_BASELINE_TABLE: Record<GdpBaselineCountry, Record<EraId, number>> = {
     "2007": 45_683,
     "2019": 69_618,
     "2023": 80_058,
-    "2027": 89_514,
+    "2027": 95_967,
   },
   UK: {
     "1953": 274,

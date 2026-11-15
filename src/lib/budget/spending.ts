@@ -1,3 +1,4 @@
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 /**
  * Federal / state spending projections derived from enacted laws.
  *
@@ -48,6 +49,9 @@ import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 import { enactedLawsCollection } from "@/lib/db/repositories/enactedLaws";
 import { regionalBudgetsCollection } from "@/lib/db/repositories/regionalBudgets";
+import { annualFormulaGrantPool } from "./rules/formulaGrants";
+import { formulaGrants } from "@/lib/seeds/reference/formulaGrants";
+import { usesCaProvincialFinance } from "@/lib/countries/ca/rules/provincialServices";
 
 // Re-exported so existing importers of `./spending` keep working.
 export { keepLatestActiveLawPerType } from "./keepLatestActiveLawPerType";
@@ -217,6 +221,7 @@ export async function calculateFederalLawAnnualCosts(
   activeLaws: EnactedLaw[];
   eraYear: number | null;
   commandEconomyEnabled: boolean;
+  preset?: string | null;
 }> {
   const budgetCountryId = (budget.countryId ||
     (budget._id === COUNTRY_CONFIGS.UK.id
@@ -269,6 +274,7 @@ export async function calculateFederalLawAnnualCosts(
     activeLaws,
     eraYear,
     commandEconomyEnabled: gameConfig?.commandEconomyEnabled === true,
+    preset: eraContext.preset,
   };
 }
 
@@ -287,7 +293,7 @@ export async function calculateFederalSpending(
     (budget._id === COUNTRY_CONFIGS.UK.id
       ? COUNTRY_CONFIGS.UK.id
       : COUNTRY_CONFIGS.US.id)) as CountryId;
-  const { items, eraYear, commandEconomyEnabled } = await calculateFederalLawAnnualCosts(
+  const { items, eraYear, commandEconomyEnabled, preset } = await calculateFederalLawAnnualCosts(
     db,
     budget,
     hoistedEraContext
@@ -317,6 +323,15 @@ export async function calculateFederalSpending(
       stateGrants = budget.baselineStateGrants;
     }
   }
+
+  // Formula receipts are appropriated annually, alongside the regional books.
+  if (countryHasFeature("usLib", budgetCountryId) && preset === "2027-default")
+    stateGrants = annualFormulaGrantPool(
+      budget.spending?.stateGrants,
+      budget.revenue.total,
+      formulaGrants
+    );
+  if (usesCaProvincialFinance(budgetCountryId, preset)) stateGrants = budget.spending.stateGrants;
 
   // The 1991 Russian law catalog covers only a portion of the observed
   // general-government envelope. Keep the calibrated non-law portion alongside

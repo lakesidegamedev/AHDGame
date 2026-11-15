@@ -1,4 +1,5 @@
 import { captureBillStatusChanged } from "@/lib/analytics/billStatusAnalytics";
+import { noConfidenceTargetStillInOffice } from "@/lib/government/rules/noConfidenceTarget";
 /**
  * Prime ministers, government formation and no-confidence votes in parliamentary
  * countries (UK, Japan, Germany and others). Seats are tallied by party
@@ -82,6 +83,10 @@ import { coalitionsCollection } from "@/lib/db/repositories/coalitions";
 import { cabinetMembersCollection } from "@/lib/db/repositories/cabinetMembers";
 import { ukCabinetCooldownsCollection } from "@/lib/db/repositories/ukCabinetCooldowns";
 import { billWhipsCollection } from "@/lib/db/repositories/billWhips";
+import { restoreParliamentarySeats } from "@/lib/parliament/restoreParliamentarySeats";
+import { selectNppOppositionLeader } from "@/lib/parliament/rules/nppOpposition";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { getLowerChamberOfficeType } from "@/lib/legislature/chamberOfficeType";
 
 export { resolveGoverningPartyIdsFromDocuments };
 
@@ -158,7 +163,7 @@ export async function resolveOppositionLeader(
   seatsByParty: Record<string, number>,
   govPartyIds: Set<string>,
   partyBySeq: Map<string, PoliticalParty>
-): Promise<{ chairId: ObjectId; partyDoc: PoliticalParty | null } | null> {
+): Promise<{ chairId: ObjectId | null; nppId?: ObjectId; partyDoc: PoliticalParty | null } | null> {
   let bestSeats = 0;
   let bestChairId: ObjectId | null = null;
   let bestPartyDoc: PoliticalParty | null = null;
@@ -207,6 +212,53 @@ export async function resolveOppositionLeader(
     }
   }
 
+  if (countryHasFeature("nppOppositionLeader", countryId)) {
+    const members = await (
+      await getElectedOfficialsCollection(db)
+    )
+      .find(
+        { countryId, officeType: getLowerChamberOfficeType(countryId), isNPP: true },
+        { projection: { nppId: 1, party: 1, seatsHeld: 1 } }
+      )
+      .toArray();
+    const candidates = members.filter(
+      (member) =>
+        member.nppId &&
+        member.party &&
+        !excludedPartyIds.has(member.party) &&
+        partyBySeq.has(member.party) &&
+        !partyBySeq.get(member.party)?.chairId &&
+        !partyBySeq.get(member.party)?.viceChairId
+    );
+    const live = candidates.length
+      ? await (
+          await getNppsCollection(db)
+        )
+          .find(
+            { _id: { $in: candidates.map((member) => member.nppId!) }, countryId, retiredAt: null },
+            { projection: { _id: 1 } }
+          )
+          .toArray()
+      : [];
+    const leader = selectNppOppositionLeader({
+      members: candidates.map((member) => ({
+        nppId: member.nppId!.toString(),
+        party: member.party!,
+        seats: member.seatsHeld ?? 1,
+      })),
+      seatsByParty,
+      eligiblePartyIds: new Set(candidates.map((member) => member.party!)),
+      liveNppIds: new Set(live.map((npp) => npp._id.toString())),
+      competingLeaderSeats: bestSeats,
+    });
+    if (leader) {
+      return {
+        chairId: null,
+        nppId: new ObjectId(leader.nppId),
+        partyDoc: partyBySeq.get(leader.party)!,
+      };
+    }
+  }
   if (!bestChairId) return null;
   return { chairId: bestChairId, partyDoc: bestPartyDoc };
 }
@@ -359,15 +411,19 @@ export async function updateParliamentaryGovernmentSeats(
           },
         }
       );
-      // Restore former cabinet holders before the broad cleanup. The restore
-      // pass reads cabinetMembers to find their character ids; running the
-      // safety-net delete concurrently can erase those rows first and strand a
-      // player with a null currentOffice despite a live electedOfficials seat.
-      await clearCabinetOnTransition(db, countryId);
-      await Promise.all([
-        ukCabinetCooldownsCollection<Document>(db).deleteMany({ countryId }),
-        cabinetMembersCollection<Document>(db).deleteMany({ countryId }),
-      ]);
+      // Japan keeps its outgoing cabinet in post as a caretaker until a new PM is
+      // confirmed (seatNewPrimeMinister clears the outgoing cabinet then).
+      if (countryId !== (COUNTRY_CONFIGS.JP?.id ?? "JP")) {
+        // Restore former cabinet holders before the broad cleanup. The restore
+        // pass reads cabinetMembers to find their character ids; running the
+        // safety-net delete concurrently can erase those rows first and strand a
+        // player with a null currentOffice despite a live electedOfficials seat.
+        await clearCabinetOnTransition(db, countryId);
+        await Promise.all([
+          ukCabinetCooldownsCollection<Document>(db).deleteMany({ countryId }),
+          cabinetMembersCollection<Document>(db).deleteMany({ countryId }),
+        ]);
+      }
       return;
     }
   }
@@ -638,6 +694,14 @@ export async function appointPrimeMinister(
     ),
     (await getNppsCollection(db)).updateMany({ "currentOffice.type": execKey, countryId }, clearPM),
   ]);
+
+  await restoreParliamentarySeats(
+    db,
+    countryId,
+    priorGov?.pmCharacterId ? [priorGov.pmCharacterId] : [],
+    priorGov?.pmNppId ? [priorGov.pmNppId] : [],
+    now
+  );
 
   if (characterId) {
     // ── Leader confidence: install or renew on PM appointment ─────────────
@@ -1339,11 +1403,19 @@ export async function resolveParliamentaryNoConfidenceVote(
   // cancel it rather than adjudicating a departed incumbent. Otherwise the
   // failed branch below cancels appointment votes filed during the vacancy and
   // blocks the formation of a replacement government.
-  const targetStillInOffice =
-    govFormationForTally?.status === "formed" &&
-    govFormationForTally.pmCharacterId != null &&
-    vote.targetPmCharacterId != null &&
-    govFormationForTally.pmCharacterId.toString() === vote.targetPmCharacterId.toString();
+  const targetStillInOffice = noConfidenceTargetStillInOffice(
+    govFormationForTally
+      ? {
+          status: govFormationForTally.status,
+          pmCharacterId: govFormationForTally.pmCharacterId?.toString(),
+          pmNppId: govFormationForTally.pmNppId?.toString(),
+        }
+      : null,
+    {
+      targetPmCharacterId: vote.targetPmCharacterId?.toString(),
+      targetPmNppId: vote.targetPmNppId?.toString(),
+    }
+  );
   if (!targetStillInOffice) {
     await votesColl.updateOne(
       { _id: voteId, status: "active" },
@@ -1391,16 +1463,16 @@ export async function resolveParliamentaryNoConfidenceVote(
       { $set: { seatsByParty, governingPartyId, updatedAt: now } }
     );
 
-    const pmChar = await (
-      await getCharactersCollection(db)
-    ).findOne({ _id: vote.targetPmCharacterId });
+    const pmChar = vote.targetPmCharacterId
+      ? await (await getCharactersCollection(db)).findOne({ _id: vote.targetPmCharacterId })
+      : null;
     if (pmChar?.userId) {
       notificationInputs.push({
         userId: pmChar.userId,
         title: "Removed from Office",
         message: `You have been removed as ${offices.config.executiveTitle} by a vote of no confidence (${vote.votesFor} for, ${vote.votesAgainst} against).`,
         type: "system",
-        metadata: { recipientCharacterId: vote.targetPmCharacterId.toString() },
+        metadata: { recipientCharacterId: vote.targetPmCharacterId!.toString() },
       });
     }
 
@@ -1463,16 +1535,16 @@ export async function resolveParliamentaryNoConfidenceVote(
       }
     }
 
-    const pmChar = await (
-      await getCharactersCollection(db)
-    ).findOne({ _id: vote.targetPmCharacterId });
+    const pmChar = vote.targetPmCharacterId
+      ? await (await getCharactersCollection(db)).findOne({ _id: vote.targetPmCharacterId })
+      : null;
     if (pmChar?.userId) {
       notificationInputs.push({
         userId: pmChar.userId,
         title: "Survived No-Confidence Vote",
         message: `You survived the vote of no confidence (${vote.votesAgainst} confidence, ${vote.votesFor} no confidence). A motion needs ${noConfidenceThresholdText} to carry.`,
         type: "system",
-        metadata: { recipientCharacterId: vote.targetPmCharacterId.toString() },
+        metadata: { recipientCharacterId: vote.targetPmCharacterId!.toString() },
       });
     }
   }
@@ -1767,6 +1839,8 @@ export async function unformGovernmentAndVacatePM(
   const collapsedAt =
     opts?.collapsedAt !== undefined ? opts.collapsedAt : reason === "post-election" ? null : now;
 
+  const isJapan = countryId === (COUNTRY_CONFIGS.JP?.id ?? "JP");
+  const keepCaretakerCabinet = reason === "snap" || isJapan;
   await govCol.updateOne(
     { _id: countryId },
     {
@@ -1789,11 +1863,11 @@ export async function unformGovernmentAndVacatePM(
         // the auto-snap loop (expired clock never re-armed → watcher fires
         // every turn). Matches existing NC-pass and reset-else-branch behavior.
         pmVacancyDeadlineTurn: currentTurn + PM_VACANCY_DEADLINE_TURNS,
-        ...(reason === "snap"
+        ...(keepCaretakerCabinet
           ? { caretaker: openCaretaker(currentTurn, existing.pmName ?? null) }
           : {}),
       },
-      ...(reason === "snap" ? {} : { $unset: { caretaker: "" } }),
+      ...(keepCaretakerCabinet ? {} : { $unset: { caretaker: "" } }),
     }
   );
 
@@ -1804,17 +1878,28 @@ export async function unformGovernmentAndVacatePM(
   // appointment votes filed during the vacancy.
   await cancelActiveNoConfidenceVotes(db, countryId, now);
 
-  // Restore former cabinet holders before the broad cleanup. The restore pass
-  // reads cabinetMembers to find their character ids; running the safety-net
-  // delete concurrently can erase those rows first and strand a player with a
-  // null currentOffice despite a live electedOfficials seat.
-  await clearCabinetOnTransition(db, countryId);
-  await Promise.all([
-    ukCabinetCooldownsCollection<Document>(db).deleteMany({ countryId }),
-    // Extra sweep catches any position not in the country's position map.
-    cabinetMembersCollection<Document>(db).deleteMany({ countryId }),
-  ]);
+  // Japan's outgoing cabinet stays in post as a caretaker until a new PM is
+  // confirmed (seatNewPrimeMinister calls clearCabinetOnTransition then).
+  if (!isJapan) {
+    // Restore former cabinet holders before the broad cleanup. The restore pass
+    // reads cabinetMembers to find their character ids; running the safety-net
+    // delete concurrently can erase those rows first and strand a player with a
+    // null currentOffice despite a live electedOfficials seat.
+    await clearCabinetOnTransition(db, countryId);
+    await Promise.all([
+      ukCabinetCooldownsCollection<Document>(db).deleteMany({ countryId }),
+      // Extra sweep catches any position not in the country's position map.
+      cabinetMembersCollection<Document>(db).deleteMany({ countryId }),
+    ]);
+  }
 
+  const departingNpps = countryHasFeature("pmRequiresLowerSeat", countryId)
+    ? await (
+        await getNppsCollection(db)
+      )
+        .find({ countryId, "currentOffice.type": execKeyVacate }, { projection: { _id: 1 } })
+        .toArray()
+    : [];
   const clearPM = { $set: { currentOffice: null, updatedAt: now } };
   const departingPlayers = await (
     await getCharactersCollection(db)
@@ -1835,6 +1920,13 @@ export async function unformGovernmentAndVacatePM(
       clearPM
     ),
   ]);
+  await restoreParliamentarySeats(
+    db,
+    countryId,
+    departingPlayers.map((player) => player._id),
+    departingNpps.map((npp) => npp._id),
+    now
+  );
   await Promise.all(
     departingPlayers.map((player) =>
       captureOfficeTransition({

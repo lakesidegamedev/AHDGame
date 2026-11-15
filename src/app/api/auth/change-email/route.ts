@@ -1,3 +1,4 @@
+import { accountFieldsRefusal } from "@/lib/auth/accountFields/mode";
 import { NextResponse } from "next/server";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { ObjectId } from "mongodb";
@@ -15,22 +16,23 @@ import { durableRateLimit } from "@/lib/api/rateLimit.mongo";
 import { recordAudit } from "@/lib/audit/recordAudit";
 import { createEmailChange } from "@/lib/emailChange";
 import { sendEmail } from "@/lib/email";
+import { renderBrandedEmail } from "@/lib/emailTemplate";
 import { usersCollection } from "@/lib/db/repositories/users";
 
 /** Per-account mail limit: 3 links per hour, so the route cannot be used to spam an inbox. */
 const SEND_LIMITS = { maxRequests: 3, windowMs: 60 * 60 * 1000 };
 const NO_STORE = { headers: { "Cache-Control": "private, no-store" } };
 
-function confirmEmailContent(url: string): { html: string; text: string } {
-  const text =
-    "Someone asked to use this address for an A House Divided account.\n\n" +
-    `Confirm it here: ${url}\n\n` +
-    "This link lasts 1 hour. If you did not ask for this, ignore this email and nothing will change.";
-  const html =
-    "<p>Someone asked to use this address for an A House Divided account.</p>" +
-    `<p><a href="${url}">Confirm this email address</a></p>` +
-    "<p>This link lasts 1 hour. If you did not ask for this, ignore this email and nothing will change.</p>";
-  return { html, text };
+function confirmEmailContent(url: string, baseUrl: string): { html: string; text: string } {
+  return renderBrandedEmail({
+    preheader: "Confirm this email address for your A House Divided account.",
+    heading: "Confirm your email address",
+    paragraphs: ["Someone asked to use this address for an A House Divided account."],
+    cta: { label: "Confirm this email address", url },
+    footnote:
+      "This link lasts 1 hour. If you did not ask for this, ignore this email and nothing will change.",
+    baseUrl,
+  });
 }
 
 // POST /api/auth/change-email — Mails a confirmation link to a new address. The account email changes only when the link is used.
@@ -38,6 +40,9 @@ function confirmEmailContent(url: string): { html: string; text: string } {
 // Errors: 400, 401, 404, 409, 429, 503
 export async function POST(request: Request) {
   try {
+    const accountFieldsBlock = accountFieldsRefusal("email");
+    if (accountFieldsBlock) return accountFieldsBlock;
+
     const auth = await requireBasicAuth();
     if (!auth.ok) return auth.response;
     const userId = auth.user.userId;
@@ -94,7 +99,7 @@ export async function POST(request: Request) {
     const { rawToken } = await createEmailChange(user._id, user.email, newEmail);
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://ahousedividedgame.com";
     const url = `${baseUrl}/confirm-email?token=${rawToken}`;
-    const { html, text } = confirmEmailContent(url);
+    const { html, text } = confirmEmailContent(url, baseUrl);
     const result = await sendEmail({
       to: newEmail,
       subject: "Confirm your A House Divided email",

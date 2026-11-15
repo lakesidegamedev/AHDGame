@@ -31,6 +31,8 @@ export const loginBodySchema = z.object({
   fingerprint: z.string().optional(),
   deviceKey: deviceKeySchema,
   fingerprintComponents: fingerprintComponentsSchema,
+  /** Where the page would navigate next; used only to carry it through a Lakeside session hop. */
+  returnTo: z.string().max(2048).nullish(),
 });
 
 export const registerBodySchema = z.object({

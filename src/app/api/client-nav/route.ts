@@ -1,3 +1,4 @@
+import { electionNavLabel } from "@/lib/elections/electionNavLabel";
 import { desktopNavigationLayout } from "@/lib/navigation/desktopNavigationLayout";
 import { resolveStaffRole } from "@/lib/staff/rules";
 import { mobileNavigationLayout } from "@/lib/navigation/mobileNavigationLayout";
@@ -33,7 +34,7 @@ import type { CountryId } from "@/lib/constants/countries";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
 import { isLabourFullMode } from "@/lib/labour/featureFlag";
 import { getGameStateCollection } from "@/lib/db/collections";
-import { isPatreonActive } from "@/lib/db/types";
+import { isPatreonActive, isPlusOrBetter } from "@/lib/db/types";
 import type { GameConfig } from "@/lib/db/types";
 import type {
   Campaign,
@@ -67,6 +68,8 @@ import { retiredCharactersCollection } from "@/lib/db/repositories/retiredCharac
 import { playerMailCollection } from "@/lib/db/repositories/playerMail";
 import { supremeCourtSeatsCollection } from "@/lib/db/repositories/supremeCourtSeats";
 import { settlementCrisesCollection } from "@/lib/db/repositories/settlementCrises";
+import { isFreeAccessOn } from "@/lib/freeAccess";
+import { hasLakesideEntitlement } from "@/lib/lakesideEntitlements";
 
 /**
  * Whether to show the "Campaign Manager" navbar link. Returns true for: admins,
@@ -252,6 +255,14 @@ export async function GET() {
       isForexEnabled(),
       isLabourFullMode(),
     ]);
+    const freeAccess = await isFreeAccessOn();
+    const sandboxByTier =
+      isPlusOrBetter(user?.patreonTier ?? null) &&
+      isPatreonActive(user?.patreonTier ?? null, user?.patreonExpiresAt ?? null);
+    const sandboxByLakeside =
+      user && !freeAccess && !sandboxByTier
+        ? await hasLakesideEntitlement(userId, "sandbox")
+        : false;
     const sandboxTesterAccessEnabled = user?.sandboxAccessGrantedAt
       ? (
           await gameConfigCollection(db).findOne(
@@ -523,17 +534,10 @@ export async function GET() {
                   election.electionType,
                   (election.countryId ?? character.countryId) as CountryId
                 );
-
-          const isNational = [
-            "president",
-            "special_president",
-            "primeMinister",
-            "uachtaran",
-          ].includes(election.electionType);
           activeElection = {
             id: election._id.toString(),
             seatId: election.seatId ?? undefined,
-            label: isNational ? `${typeLabel} — National` : `${typeLabel} — ${election.state}`,
+            label: electionNavLabel(typeLabel, election),
           };
         }
       }
@@ -758,7 +762,11 @@ export async function GET() {
           navCustomization: navCustomization(user.navCustomization),
           patreonTier: user.patreonTier ?? null,
           isPatronActive: isPatreonActive(user.patreonTier ?? null, user.patreonExpiresAt ?? null),
-          sandboxTesterAccess: sandboxTesterAccessEnabled && !!user.sandboxAccessGrantedAt,
+          sandboxTesterAccess:
+            freeAccess ||
+            sandboxByTier ||
+            sandboxByLakeside ||
+            (sandboxTesterAccessEnabled && !!user.sandboxAccessGrantedAt),
           imperialCharacter: activeImperialCharacterForUser,
           character: character
             ? {

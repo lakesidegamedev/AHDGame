@@ -48,8 +48,11 @@ import {
   bindProjectionTargets,
   invalidProjectionTarget,
   isUpdateProjection,
+  prepareLoanProjectionBatch,
+  flushLoanProjectionBatch,
 } from "./projectionSettlement";
 import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
+import { settlementReadEpoch } from "./settlementReadSnapshot";
 export { reviveObjectIds } from "./settlementEncoding";
 
 export type SettlementStatus = "applied" | "replayed" | "rejected" | "partial";
@@ -582,6 +585,24 @@ async function finishProjections(
     }
   }
 
+  const loanBatch = ownsAllProjections
+    ? await prepareLoanProjectionBatch(
+        db,
+        transition.key,
+        records.map((r) => r.projection)
+      )
+    : undefined;
+  const readEpoch = settlementReadEpoch();
+  const readSnapshot =
+    readEpoch === undefined || !records.some((r) => isUpdateProjection(r.projection))
+      ? undefined
+      : {
+          epoch: readEpoch,
+          record: await journal.findOne(
+            { _id: transition.key },
+            { projection: { projections: 1 } }
+          ),
+        };
   let stuck: string | undefined;
   // Insert projections carry fixed ids, so replaying one after a crash is a
   // duplicate-key no-op. Their "applied" marks therefore ride on the next
@@ -597,6 +618,8 @@ async function finishProjections(
       continue;
     }
     const projection = record.projection;
+    if (projection.collection !== "bankLoans")
+      await flushLoanProjectionBatch(db, transition.key, loanBatch);
     if (isUpdateProjection(projection) && !record.receiptProtocol && !record.claimedAt) {
       await journal.updateOne(
         {
@@ -630,7 +653,7 @@ async function finishProjections(
     }
 
     const outcome = isUpdateProjection(projection)
-      ? await applyProtectedProjection(db, transition.key, i, projection)
+      ? await applyProtectedProjection(db, transition.key, i, projection, loanBatch, readSnapshot)
       : (preInserted.get(i) ??
         (await applyProjection(db, projection, projectionStamp(transition.key, i))));
     if (!outcome.ok) {
@@ -645,6 +668,7 @@ async function finishProjections(
     insertMarks[`projections.${i}.applied`] = true;
   }
 
+  await flushLoanProjectionBatch(db, transition.key, loanBatch);
   if (failed) {
     // Keep update claims intact: a legacy ambiguity must never become a
     // fresh admission on the next recovery attempt. New protocols may retry

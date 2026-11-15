@@ -89,7 +89,6 @@ import {
   runCountryElectionEntries,
   selectCountryElectionEntries,
 } from "@/lib/turn/countryElectionPhase";
-import type { CountryId } from "@/lib/constants/countries";
 import { runNppGovernmentPhases } from "@/lib/nppAutonomy/processNppGovernment";
 import { TURNS_PER_YEAR, STARTING_YEAR } from "@/lib/constants/turnTime";
 import { isFiscalYearEnd, calculateFiscalYear, processFiscalYear } from "@/lib/budget/fiscalYear";
@@ -436,7 +435,7 @@ export function getTurnPhaseRegistry(): TurnPhaseAdapter[] {
         }
 
         const savingsInterestResult = await runtime.runPhase("savingsInterestTurn", () =>
-          processSavingsInterestTurn(context.db, newTurn)
+          processSavingsInterestTurn(context.db, newTurn, context.rerunSafe)
         );
         if (savingsInterestResult) {
           phaseResults.savingsInterestTurn = {
@@ -498,7 +497,7 @@ export function getTurnPhaseRegistry(): TurnPhaseAdapter[] {
         // writes the `laborCost` this reads, so the charge is always against
         // THIS turn's wage bill rather than last turn's.
         const pensionResult = await runtime.runPhase("pensionTurn", () =>
-          runPensionTurn(context.db, newTurn)
+          runPensionTurn(context.db, newTurn, context.rerunSafe)
         );
         if (pensionResult) {
           phaseResults.pensionTurn = {
@@ -799,7 +798,7 @@ export function getTurnPhaseRegistry(): TurnPhaseAdapter[] {
         if (priorityRegionDecayResult) {
           phaseResults.priorityRegionDecay = priorityRegionDecayResult;
         }
-        // Redistricting Campaign Here boosts erode toward 0 each turn (flag-gated no-op when off).
+        // District and riding Campaign Here boosts decay each turn; no active boosts means no writes.
         await runtime.runPhase("campaignBoostDecay", () =>
           processCampaignBoostDecay(newTurn, realNow)
         );

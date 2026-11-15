@@ -23,6 +23,7 @@ beforeEach(() => {
 });
 const TURN = 25;
 const cases = [
+  { countryId: "CA", currencyCode: "CAD", rate: 1.3698, stateId: "CA_ON" },
   { countryId: "US", currencyCode: "USD", rate: 1, stateId: "NY" },
   { countryId: "DE", currencyCode: "EUR", rate: 0.9, stateId: "BE" },
   { countryId: "JP", currencyCode: "JPY", rate: 137, stateId: "KAN" },
@@ -89,6 +90,65 @@ function fixture(row: (typeof cases)[number], mode = "plants", shadow = true) {
   ]);
   return { memory, db, id };
 }
+it.each(cases)(
+  "reconciles borrowed $currencyCode founding cash only after its write lands",
+  async (row) => {
+    const { db, id } = fixture(row);
+    const opening = await collectBalances(db);
+    const key = new ObjectId();
+    const witness = buildNppFoundingCashWitness({
+      corporationId: id,
+      key,
+      amountLocal: 195_966.7776200944,
+      creditLocal: 54_000,
+      currencyCode: row.currencyCode,
+      rate: row.rate,
+      turn: TURN,
+      now: new Date(),
+    })!;
+    await flushNppFoundingCashWitnesses(db, [witness]);
+    expect(await db.collection("ledgerEntries").countDocuments()).toBe(0);
+    await applyCorporationCashWrites(
+      db,
+      [
+        {
+          updateOne: {
+            filter: { _id: id },
+            update: {
+              $inc: { liquidCapital: 54_000 - 195_966.7776200944 },
+              $set: { nppFoundingCashWitnessKey: key.toHexString() },
+            },
+          },
+        },
+      ],
+      [witness]
+    );
+    await flushNppFoundingCashWitnesses(db, [witness]);
+    const entries = await db
+      .collection<LedgerEntry>("ledgerEntries")
+      .find({ turn: TURN })
+      .toArray();
+    expect(entries).toHaveLength(1);
+    expect(entries[0]!.legs).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          account: `corporation:${id}:${row.currencyCode}`,
+          amount: 54_000,
+          role: "primary",
+        }),
+      ])
+    );
+    const report = reconcileLedger({
+      turn: TURN,
+      entries,
+      openingBalances: opening,
+      closingBalances: await collectBalances(db),
+    });
+    expect(report.stockVsFlow.findings).toEqual([]);
+    expect(report.trialBalance.unbalancedCount).toBe(0);
+  }
+);
+
 for (const mode of ["plants", "off"]) {
   it.each(cases)(
     `reconciles actual ${mode} $currencyCode founding without duplicating reinvestment`,

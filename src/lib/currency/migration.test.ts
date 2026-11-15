@@ -430,16 +430,15 @@ describe("updateCentralBanks", () => {
     expect(ops.some((op) => op.updateOne.filter._id === "BG")).toBe(false);
   });
 
-  it("gives 2027 HU a forint bank and leaves unbudgeted PL and RO without one", async () => {
+  it("gives every budgeted 2027 transition country its own bank", async () => {
     const { updateCentralBanks } = await import("./migration");
     await updateCentralBanks(db as unknown as Db, "2027-default");
     const ops = db.collection("centralBanks").bulkWrite.mock.calls[0][0] as Array<{
       updateOne: { filter: { _id: string } };
     }>;
     const ids = ops.map((op) => op.updateOne.filter._id);
-    expect(ids).toContain("HU");
-    expect(ids).not.toContain("PL");
-    expect(ids).not.toContain("RO");
+    expect(ids).toEqual(expect.arrayContaining(["HU", "PL", "RO", "RU"]));
+    expect(ids).not.toContain("BG");
     expect(ids).not.toContain("DD");
   });
 

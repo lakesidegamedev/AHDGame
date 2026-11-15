@@ -2,11 +2,13 @@
 
 import dynamic from "next/dynamic";
 import { useState, useEffect } from "react";
+import { preload } from "react-dom";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { type CountryId } from "@/lib/constants/countriesCore";
 import type { MapOverviewResponse } from "@/lib/map/overviewTypes";
 import { regionUrl } from "@/lib/urls";
+import { USA_GEO_URL } from "@/lib/maps/usaGeometry";
 import { mapVariantFor } from "./mapVariant";
 import type { CountryMapViewConfig } from "./mapViewConfig";
 
@@ -20,22 +22,33 @@ interface CountryMapClientProps {
 // the US electoral map, the parliamentary map and the economy placeholder (and
 // their region configs) on every country map view.
 const MapLoading = () => <div className="h-[420px] w-full animate-pulse rounded-xl bg-card" />;
-const USMapWithModes = dynamic(
-  () => import("./components/USMapWithModes").then((m) => ({ default: m.USMapWithModes })),
-  { ssr: false, loading: MapLoading }
-);
-const UnifiedMapWithModes = dynamic(
-  () =>
-    import("./components/UnifiedMapWithModes").then((m) => ({ default: m.UnifiedMapWithModes })),
-  { ssr: false, loading: MapLoading }
-);
-const EconOnlyMapPlaceholder = dynamic(
-  () =>
-    import("./components/EconOnlyMapPlaceholder").then((m) => ({
-      default: m.EconOnlyMapPlaceholder,
-    })),
-  { ssr: false, loading: MapLoading }
-);
+const loadUSMap = () =>
+  import("./components/USMapWithModes").then((m) => ({ default: m.USMapWithModes }));
+const loadUnifiedMap = () =>
+  import("./components/UnifiedMapWithModes").then((m) => ({ default: m.UnifiedMapWithModes }));
+const loadEconOnlyMap = () =>
+  import("./components/EconOnlyMapPlaceholder").then((m) => ({
+    default: m.EconOnlyMapPlaceholder,
+  }));
+const USMapWithModes = dynamic(loadUSMap, { ssr: false, loading: MapLoading });
+const UnifiedMapWithModes = dynamic(loadUnifiedMap, { ssr: false, loading: MapLoading });
+const EconOnlyMapPlaceholder = dynamic(loadEconOnlyMap, { ssr: false, loading: MapLoading });
+
+/**
+ * Starts the renderer chunk (and the US geometry) while the overview request is
+ * still in flight, so the map does not wait for data and then for its own code.
+ */
+function warmMapRenderer(countryId: CountryId) {
+  const variant = mapVariantFor(countryId);
+  if (variant === "us") {
+    void loadUSMap();
+    preload(USA_GEO_URL, { as: "fetch", crossOrigin: "anonymous" });
+  } else if (variant === "parliamentary") {
+    void loadUnifiedMap();
+  } else {
+    void loadEconOnlyMap();
+  }
+}
 
 export default function CountryMapClient({ countryId, config }: CountryMapClientProps) {
   return <CountryMapContent key={countryId} countryId={countryId} config={config} />;
@@ -49,6 +62,7 @@ function CountryMapContent({ countryId, config }: CountryMapClientProps) {
   const [mapData, setMapData] = useState<MapOverviewResponse | null>(null);
 
   useEffect(() => {
+    warmMapRenderer(countryId);
     const controller = new AbortController();
     fetch(`/api/map/overview?countryId=${countryId}`, { signal: controller.signal })
       .then(async (res) => {

@@ -1,3 +1,4 @@
+import { loginIdentifierFilter } from "@/lib/auth/accountFields/rules";
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { createHash, randomBytes, randomUUID } from "crypto";
@@ -29,6 +30,19 @@ import {
 import { issueUnifiedGameSession } from "@/lib/auth/unifiedGameSession";
 import { recordIdentitySignals } from "@/lib/identityHistory/recordObservation";
 import { authConfig } from "@/lib/config/auth";
+import {
+  centralCheckPassword,
+  centralHealUnknownAccount,
+  decideCentralLogin,
+  getCentralLoginModeFor,
+  isLongPasswordForCentral,
+  recordLoginFallback,
+  recordLongPasswordLogin,
+  shadowCheckPassword,
+} from "@/lib/auth/centralLogin";
+import { decideSupersededLogin, SIGN_IN_UNAVAILABLE_MESSAGE } from "@/lib/auth/accountFields/rules";
+import { startLakesideHop } from "@/lib/auth/centralLogin/hop";
+import { loginDestination } from "@/lib/auth/lakesideLoginReturn";
 import { usersCollection } from "@/lib/db/repositories/users";
 import type { Document } from "mongodb";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
@@ -70,7 +84,8 @@ export async function POST(request: Request) {
     if (!parsed.success) {
       return errorResponse(parsed.status, parsed.error);
     }
-    const { email, password, fingerprint, deviceKey, fingerprintComponents } = parsed.data;
+    const { email, password, fingerprint, deviceKey, fingerprintComponents, returnTo } =
+      parsed.data;
 
     // Built once and reused for every outcome below — masked/hashed IP,
     // pass-through fingerprint/deviceKey (already opaque client-side
@@ -89,9 +104,7 @@ export async function POST(request: Request) {
     const usersCollectionHandle = usersCollection<Document>(db);
 
     // Find user by email or username
-    const user = await usersCollectionHandle.findOne({
-      $or: [{ email: email.toLowerCase() }, { username: email.toLowerCase() }],
-    });
+    const user = await usersCollectionHandle.findOne(loginIdentifierFilter(email));
 
     if (!user) {
       // Perform dummy bcrypt compare to prevent timing-based username enumeration
@@ -161,7 +174,50 @@ export async function POST(request: Request) {
     }
 
     // Verify password — reject OAuth-only accounts that have no password set
-    const isValidPassword = user.password && (await bcrypt.compare(password, user.password));
+    const userKey = user._id.toString();
+    const centralMode = getCentralLoginModeFor(userKey);
+    let isValidPassword: boolean;
+    if (!user.password && user.passwordSupersededAt && centralMode === "central") {
+      // The password lives centrally and no local copy exists, so an outage cannot fall back.
+      const superseded = isLongPasswordForCentral(password)
+        ? "reject"
+        : decideSupersededLogin(await centralCheckPassword(userKey, password));
+      if (superseded === "unavailable") {
+        recordAudit({
+          source: "api",
+          category: "auth",
+          action: "auth.login",
+          subject: { type: "user", id: user._id, name: user.username },
+          net: netBase,
+          outcome: "rejected",
+          reason: "central_unavailable",
+        });
+        return errorResponse(503, SIGN_IN_UNAVAILABLE_MESSAGE, {
+          headers: { "Cache-Control": "private, no-store" },
+        });
+      }
+      isValidPassword = superseded === "accept";
+    } else if (centralMode === "central" && user.password && !isLongPasswordForCentral(password)) {
+      const central = await centralCheckPassword(userKey, password);
+      const decision = decideCentralLogin(central);
+      if (decision.action === "fallback-local") {
+        isValidPassword = await bcrypt.compare(password, user.password);
+        recordLoginFallback(userKey, isValidPassword ? "ok" : "wrong", central);
+      } else if (decision.action === "heal-local") {
+        isValidPassword = await bcrypt.compare(password, user.password);
+        void centralHealUnknownAccount(user, isValidPassword ? "ok" : "wrong");
+      } else {
+        isValidPassword = decision.action === "accept";
+      }
+    } else {
+      isValidPassword = Boolean(user.password && (await bcrypt.compare(password, user.password)));
+      if (centralMode !== "off" && user.password) {
+        const local = isValidPassword ? "ok" : "wrong";
+        // Too long to hold centrally: the local copy decides and no bridge call is made.
+        if (isLongPasswordForCentral(password)) recordLongPasswordLogin(userKey, local);
+        else shadowCheckPassword(userKey, password, local);
+      }
+    }
 
     if (!isValidPassword) {
       recordAudit({
@@ -374,8 +430,24 @@ export async function POST(request: Request) {
         .catch(() => {});
     }
 
+    // Central mode only: a successful sign-in also opens a Lakeside session.
+    const lakesideHop =
+      centralMode === "central"
+        ? await startLakesideHop({
+            userId: userKey,
+            destination: loginDestination(returnTo, {
+              role: user.role,
+              isAdmin: user.isAdmin === true,
+              hasCompletedSetup: user.hasCompletedSetup ?? true,
+            }),
+            cookieStore,
+            fallbackOrigin: new URL(request.url).origin,
+          })
+        : null;
+
     return NextResponse.json({
       message: "Login successful",
+      ...(lakesideHop ? { lakesideHop } : {}),
       user: {
         id: user._id.toString(),
         email: user.email,

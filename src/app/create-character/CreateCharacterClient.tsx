@@ -334,9 +334,12 @@ export default function CreateCharacterClient() {
           router.replace("/profile");
           return;
         }
-        // Capture Discord linking state
-        if (data.user.discordId) {
+        // Capture Discord linking state. Apple sign-in satisfies the gate on
+        // its own, so the Discord prompt never opens for those accounts.
+        if (data.user.discordId || data.user.appleId) {
           dispatchDiscord({ type: "linked" });
+        }
+        if (data.user.discordId) {
           setDiscordData({
             discordId: data.user.discordId,
             discordUsername: data.user.discordUsername,

@@ -1,3 +1,4 @@
+import { accountFieldsRefusal } from "@/lib/auth/accountFields/mode";
 import { NextResponse } from "next/server";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { ObjectId } from "mongodb";
@@ -13,6 +14,14 @@ import { requireBasicAuth } from "@/lib/api/requireAuth";
 import { parseJsonBody } from "@/lib/api/validate";
 import { setPasswordSchema } from "@/lib/api/schemas/settings";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
+import {
+  CENTRAL_PASSWORD_TOO_LONG_MESSAGE,
+  CENTRAL_WRITE_UNAVAILABLE_MESSAGE,
+  centralRestoreAccount,
+  centralWriteFirst,
+  newPasswordTooLongForCentral,
+  shadowMirrorWrite,
+} from "@/lib/auth/centralLogin";
 import { usersCollection } from "@/lib/db/repositories/users";
 
 // POST /api/auth/set-password — Sets a password for a social-only account that has no existing password.
@@ -20,6 +29,9 @@ import { usersCollection } from "@/lib/db/repositories/users";
 // Errors: 400, 401, 404, 429
 export async function POST(request: Request) {
   try {
+    const accountFieldsBlock = accountFieldsRefusal("password");
+    if (accountFieldsBlock) return accountFieldsBlock;
+
     const auth = await requireBasicAuth();
     if (!auth.ok) return auth.response;
     const userId = auth.user.userId;
@@ -32,6 +44,9 @@ export async function POST(request: Request) {
       return errorResponse(parsed.status, parsed.error);
     }
     const { newPassword } = parsed.data;
+    if (newPasswordTooLongForCentral(newPassword)) {
+      return errorResponse(400, CENTRAL_PASSWORD_TOO_LONG_MESSAGE);
+    }
 
     const db = await getDb();
     const usersCollectionHandle = usersCollection(db);
@@ -53,26 +68,40 @@ export async function POST(request: Request) {
       return errorResponse(400, "Password already set. Use change password instead.");
     }
 
+    const passwordWrite = { op: "password-set", ahdUserId: userId, password: newPassword } as const;
+    if (!(await centralWriteFirst(passwordWrite))) {
+      return errorResponse(503, CENTRAL_WRITE_UNAVAILABLE_MESSAGE, {
+        headers: { "Cache-Control": "private, no-store" },
+      });
+    }
+
     const hashedPassword = await bcrypt.hash(newPassword, 12);
     const changedAt = new Date();
 
-    const updated = await usersCollectionHandle.updateOne(
-      {
-        _id: new ObjectId(userId),
-        password: user.password ?? null,
-        isBanned: { $ne: true },
-        ...authRevocationSnapshotFilter(user.authRevokedAt),
-        ...authMigrationFenceAbsentFilter(),
-      },
-      {
-        $set: {
-          password: hashedPassword,
+    let updated;
+    try {
+      updated = await usersCollectionHandle.updateOne(
+        {
+          _id: new ObjectId(userId),
+          password: user.password ?? null,
+          isBanned: { $ne: true },
+          ...authRevocationSnapshotFilter(user.authRevokedAt),
+          ...authMigrationFenceAbsentFilter(),
         },
-        $max: { passwordChangedAt: changedAt, authRevokedAt: changedAt },
-      }
-    );
+        {
+          $set: {
+            password: hashedPassword,
+          },
+          $max: { passwordChangedAt: changedAt, authRevokedAt: changedAt },
+        }
+      );
+    } catch (error) {
+      await centralRestoreAccount(user, { password: true });
+      throw error;
+    }
 
     if (updated.matchedCount !== 1) {
+      await centralRestoreAccount(user, { password: true });
       return errorResponse(
         409,
         "Your account changed during this request. Please sign in and try again.",
@@ -81,6 +110,7 @@ export async function POST(request: Request) {
     }
 
     invalidateCachedUser(userId);
+    shadowMirrorWrite(passwordWrite);
     return NextResponse.json({ message: "Password set successfully" });
   } catch (error) {
     return handleRouteError(error);

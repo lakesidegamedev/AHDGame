@@ -5,6 +5,7 @@ import { getDb } from "@/lib/mongodb";
 import { requireModerator } from "@/lib/api/requireModerator";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { parseJsonBody } from "@/lib/api/validate";
+import { withAuditedGrant } from "@/lib/audit/grants/recordGrant";
 import { createModAuditLog } from "@/lib/modAuditLog";
 import type { PatreonTier, User } from "@/lib/db/types";
 import { applyPatreonStatus } from "@/lib/patreon/service";
@@ -47,13 +48,29 @@ export async function POST(request: Request) {
 
     const expiresAtDate = tier === null ? new Date() : expiresAt ? new Date(expiresAt) : null;
 
-    await applyPatreonStatus(db, {
-      userId: objectId,
-      tier: tier as PatreonTier,
-      expiresAt: expiresAtDate,
-      adsDisabledDefault: true,
-      patreonUserId,
-    });
+    const apply = () =>
+      applyPatreonStatus(db, {
+        userId: objectId,
+        tier: tier as PatreonTier,
+        expiresAt: expiresAtDate,
+        adsDisabledDefault: true,
+        patreonUserId,
+      });
+    if (tier === null) {
+      await apply();
+    } else {
+      await withAuditedGrant(
+        db,
+        {
+          actorUserId: moderator.userId,
+          recipients: [{ type: "user", id: userId, name: user.username }],
+          kind: "access",
+          item: `Patreon tier ${tier}`,
+          reason: reason ?? "Control panel: Patreon tier set",
+        },
+        apply
+      );
+    }
 
     await createModAuditLog({
       moderatorId: moderator.userId,

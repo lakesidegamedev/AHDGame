@@ -1,5 +1,5 @@
 import type { NotificationType } from "@/lib/db/types/notifications";
-import { centralBankUrl } from "@/lib/urls";
+import { regionUrl, centralBankUrl } from "@/lib/urls";
 import { getRepresentativeCentralBankCountry } from "@/lib/centralBank/intorgRepresentative";
 import { campaignManagerHref } from "@/lib/campaignManager/links";
 
@@ -64,7 +64,7 @@ export function resolveSourceLink(
       const country = (asString(m.countryId) ?? "US").toLowerCase();
       return {
         label: "View bill",
-        href: `/country/${country}/region/${stateId.toLowerCase()}/legislature/bills/${effectiveBillId}`,
+        href: `${regionUrl(country, stateId.toLowerCase())}/legislature/bills/${effectiveBillId}`,
       };
     }
     return { label: "View bill", href: `/congress/bills/${effectiveBillId}` };
@@ -144,7 +144,7 @@ export function resolveSourceLink(
     const issueNumber = m.issueNumber as number;
     const label =
       type === "feedback_status_changed" ? `View issue #${issueNumber}` : `View #${issueNumber}`;
-    return { label, href: `/control/support/feedback?issue=${issueNumber}` };
+    return { label, href: "/control/support/suggestions" };
   }
 
   // ── Player suggestion (admin view) ────────────────────────────────────────

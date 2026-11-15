@@ -1,6 +1,7 @@
 /**
  * Era-specific flavor cards for the homepage carousel.
- * Each era gets 3 static "leader" cards plus dynamic event cards.
+ * Historical eras get 3 static "leader" cards, present-day eras a set of
+ * briefs, and live crises follow as dynamic cards.
  *
  * Portrait licensing: this is a public landing page, so every image slug must
  * have a documented free license before the asset is uploaded to the CDN.
@@ -23,14 +24,98 @@ export const FLAVOR_CARD_PORTRAITS: ReadonlySet<string> = new Set(["bush", "deng
 
 export type FlavorCard = {
   id: string;
+  /** A leader's name, or a brief's headline. */
   name: string;
   title: string;
   country: string;
   countryCode: string;
+  /** A leader's words, or a brief's body. Only a leader's are set as a quotation. */
   quote: string;
   imageSlug: string;
   year: string;
+  /**
+   * A brief on the world's pressures instead of a leader. Present-day worlds
+   * use these: every politician in them is fictional, so there is no one real
+   * to quote.
+   */
+  kind?: "brief";
 };
+
+/** The 2027 briefs, from the 1.20 release notes and the 2027 seed. */
+const BRIEFS_2027: FlavorCard[] = [
+  {
+    id: "brief-2027-automation",
+    kind: "brief",
+    name: "Automation and work",
+    title: "Automation tax, wage insurance, retraining",
+    country: "Every country",
+    countryCode: "",
+    quote:
+      "Where automation is widespread and unemployment is rising, a wave of AI layoffs can hit. Laws for 2027 and 2030 add an automation tax and wage insurance, and the 2030s bring a fight over who pays: retraining, a hiring subsidy or an automation pension levy.",
+    imageSlug: "",
+    year: "2029",
+  },
+  {
+    id: "brief-2027-ageing",
+    kind: "brief",
+    name: "An ageing population",
+    title: "Dependency ratio, longevity care",
+    country: "Every country",
+    countryCode: "",
+    quote:
+      "The world starts with a realistic oldest age and dependency ratio, and births and life expectancy follow each country's trend to 2050. A longevity care law opens in 2045, and computer-run politicians age and retire from 70.",
+    imageSlug: "",
+    year: "2045",
+  },
+  {
+    id: "brief-2027-climate",
+    kind: "brief",
+    name: "Climate pressure",
+    title: "Drought, migration, carbon border",
+    country: "Every country",
+    countryCode: "",
+    quote:
+      "Climate pressure builds every year. A megadrought can strike from 2031 and climate migration from 2035. A carbon border adjustment is among the laws for 2027 and 2030, fossil fuel sunsets follow in 2045 and a zero carbon economy in 2050.",
+    imageSlug: "",
+    year: "2031",
+  },
+  {
+    id: "brief-2027-cyber",
+    kind: "brief",
+    name: "Cyber operations",
+    title: "From the intelligence console",
+    country: "Every country",
+    countryCode: "",
+    quote:
+      "The head of intelligence can launch an operation against another country. Your cyber strength is set against the target's resilience, a score from 0 to 1. A success cuts its power and output; a traced one raises world tension and costs the sender approval.",
+    imageSlug: "",
+    year: "2028",
+  },
+  {
+    id: "brief-2027-canada",
+    kind: "brief",
+    name: "Canada and Quebec",
+    title: "343 MPs, 13 provinces and territories",
+    country: "Canada",
+    countryCode: "CA",
+    quote:
+      "Canada opens beside the United States with a 343-seat House of Commons, 778 provincial seats and a nineteen seat cabinet. Once Quebec's Sovereignty Desire reaches 60 its Premier can request a referendum, and a Yes can make Quebec a country.",
+    imageSlug: "",
+    year: "2027",
+  },
+  {
+    id: "brief-2027-calendar",
+    kind: "brief",
+    name: "The calendar to 2050",
+    title: "One real hour is one game week",
+    country: "Every country",
+    countryCode: "",
+    quote:
+      "New laws arrive in 2035, 2040, 2045 and 2050, research tiers open in 2039 and 2049, and the calendar holds a second pandemic, the Arctic, resistant infections, orbital debris and a fusion breakthrough.",
+    imageSlug: "",
+    year: "2050",
+  },
+];
 
 export const ERA_FLAVOR_CARDS: Record<string, FlavorCard[]> = {
   "1953": [
@@ -272,6 +357,8 @@ export const ERA_FLAVOR_CARDS: Record<string, FlavorCard[]> = {
     },
   ],
 };
+
+ERA_FLAVOR_CARDS["2027"] = BRIEFS_2027;
 
 /** Get flavor cards for an era, falling back to 1979. */
 export function getEraFlavorCards(year: number | string): FlavorCard[] {

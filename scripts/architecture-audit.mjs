@@ -51,6 +51,8 @@ const checks = [
       /src[\\/]proxy\.ts$/,
       // Verifies Apple's id_token against Apple's JWKS, not a game session.
       /src[\\/]lib[\\/]auth[\\/]apple\.ts$/,
+      // Verifies the Lakeside issuer's id_token after the session hop, not a game session.
+      /src[\\/]lib[\\/]auth[\\/]centralLogin[\\/]hop\.ts$/,
     ],
     description:
       "Use requireAuth() helpers from @/lib/api/requireAuth instead of manual jwtVerify().",

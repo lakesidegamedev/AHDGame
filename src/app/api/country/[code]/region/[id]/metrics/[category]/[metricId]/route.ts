@@ -121,6 +121,9 @@ export async function GET(
     // National scope IDs (federal, uk_national, jp_national, …) are lowercase by convention
     const idLower = id.toLowerCase();
     const stateId = NATIONAL_SCOPE[idLower] ? idLower : id;
+    if (NATIONAL_SCOPE[stateId] && NATIONAL_SCOPE[stateId] !== countryId) {
+      return errorResponse(404, "Region not found for this country");
+    }
     // Lower-is-better metrics improve by moving DOWN; keep policy push badge consistent.
     const isHigherBetter =
       getMetricDefinition(category as MetricCategoryId, metricId)?.isHigherBetter ?? true;

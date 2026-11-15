@@ -111,6 +111,7 @@ export function NationsTable({ rows }: { rows: NationRow[] }) {
             const party = snapshot.legislatureParty;
             const name = countryName(row.id);
             const highlight = highlights.get(row.id) ?? null;
+            const worldRank = worldMetricCtx?.rankFor(row.id) ?? null;
             const href = row.availability.isClickable ? row.availability.preferredPath : null;
             const isPlayable = row.availability.accessMode === "full";
             const executiveName = executive.isVacant ? "Vacant" : executive.name;
@@ -150,7 +151,12 @@ export function NationsTable({ rows }: { rows: NationRow[] }) {
                     {highlight && (
                       <p>
                         {highlight.label}:{" "}
-                        <span className="tabular-nums text-foreground">{highlight.value}</span>
+                        <span className="tabular-nums text-foreground">
+                          {highlight.value}
+                          {worldRank !== null && (
+                            <span className="ml-1 text-muted">#{worldRank}</span>
+                          )}
+                        </span>
                       </p>
                     )}
                   </div>
@@ -204,7 +210,14 @@ export function NationsTable({ rows }: { rows: NationRow[] }) {
                 {highlightLabel && (
                   <td className={`${TD} hidden text-right tabular-nums md:table-cell`}>
                     {highlight ? (
-                      <span className="font-semibold text-foreground">{highlight.value}</span>
+                      <span className="font-semibold text-foreground">
+                        {highlight.value}
+                        {worldRank !== null && (
+                          <span className="ml-1.5 text-body-sm font-normal text-muted">
+                            #{worldRank}
+                          </span>
+                        )}
+                      </span>
                     ) : (
                       <span className="text-muted">No data</span>
                     )}

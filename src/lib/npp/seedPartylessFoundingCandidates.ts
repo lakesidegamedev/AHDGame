@@ -1,4 +1,5 @@
 import { ObjectId, type Db } from "mongodb";
+import { supportsNoStartingParties } from "@/lib/admin/startingPartiesPresets";
 import type { Election, GameState, NPP, State } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import { getCountryConfigForRuntime } from "@/lib/constants/countries";
@@ -37,8 +38,8 @@ export async function seedPartylessFoundingCandidates(
   preset: string,
   log: (msg: string) => void = () => {}
 ): Promise<PartylessFoundingCandidatesResult> {
-  if (preset !== "1991-default") {
-    throw new Error("Partyless founding candidates are supported only for 1991-default");
+  if (!supportsNoStartingParties(preset)) {
+    throw new Error(`Partyless founding candidates are not supported for ${preset}`);
   }
 
   const gameState = await gameStateCollection(db).findOne(
@@ -46,12 +47,12 @@ export async function seedPartylessFoundingCandidates(
     { projection: { preset: 1, startingPartiesMode: 1, preIteration: 1 } }
   );
   if (
-    gameState?.preset !== "1991-default" ||
+    gameState?.preset !== preset ||
     gameState.startingPartiesMode !== "none" ||
     gameState.preIteration?.active !== true
   ) {
     throw new Error(
-      "Partyless founding candidates require an active 1991-default founding phase with no starting parties"
+      "Partyless founding candidates require an active founding phase with no starting parties"
     );
   }
 

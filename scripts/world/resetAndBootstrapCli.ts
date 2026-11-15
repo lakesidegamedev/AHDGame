@@ -1,26 +1,44 @@
 import { getValidatedEnv, type Env } from "@/lib/config/validatedEnv";
+import { supportsNoStartingParties } from "@/lib/admin/startingPartiesPresets";
 import type { ResetAndBootstrapOptions } from "@/lib/admin/resetAndBootstrapGameWorld";
 import { assertResetDatabaseMatchesApplication } from "@/lib/admin/resetPreflight";
 import type { Db } from "mongodb";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
 import type { BootstrapMode } from "@/lib/admin/bootstrapGameWorld";
 import { presetDefaultsToFoundingPhase } from "@/lib/seeds/presetSelector";
+import {
+  evaluateRehearsalRecord,
+  settingsFingerprint,
+  type RehearsalRecordLike,
+} from "@/lib/admin/resetRehearsal/gate";
 import { connectDb } from "../utils/db";
 import { closeResetDb } from "./closeResetDb";
 import { resolveResetTarget } from "./resetTarget";
+import { currentTreeHash, readRehearsalRecord } from "./rehearsalRecordFile";
 
 interface ResetAndBootstrapCliDependencies {
   validateEnvironment: () => Env;
   connectDb: (databaseName: string, uri: string) => Promise<Db>;
   closeDb: () => Promise<void>;
   reset: (options: ResetAndBootstrapOptions) => Promise<unknown>;
+  readRecord: (path: string) => RehearsalRecordLike | null;
+  treeHash: () => string;
+  now: () => number;
 }
 
 const defaultDependencies: Omit<ResetAndBootstrapCliDependencies, "reset"> = {
   validateEnvironment: getValidatedEnv,
   connectDb,
   closeDb: closeResetDb,
+  readRecord: readRehearsalRecord,
+  treeHash: currentTreeHash,
+  now: Date.now,
 };
+
+function getArgValue(args: readonly string[], name: string): string | undefined {
+  const arg = args.find((value) => value.startsWith(`${name}=`));
+  return arg?.slice(name.length + 1);
+}
 
 function getMode(args: readonly string[]): BootstrapMode {
   const arg = args.find((value) => value.startsWith("--mode="));
@@ -30,6 +48,24 @@ function getMode(args: readonly string[]): BootstrapMode {
 function getPreset(args: readonly string[]): string {
   const arg = args.find((value) => value.startsWith("--preset="));
   return arg?.split("=")[1] ?? DEFAULT_SEED_PRESET;
+}
+
+/** `--iteration=Iteration:5` stamps the new world's label; absent keeps the old one. */
+export function getIteration(
+  args: readonly string[]
+): ResetAndBootstrapOptions["iteration"] | undefined {
+  const arg = args.find((value) => value.startsWith("--iteration="));
+  if (!arg) return undefined;
+  const [type, rawNumber] = arg.slice("--iteration=".length).split(":");
+  const number = Number(rawNumber);
+  if (
+    (type !== "Alpha" && type !== "Beta" && type !== "Iteration") ||
+    !Number.isInteger(number) ||
+    number < 1
+  ) {
+    throw new Error("--iteration must look like Iteration:5, Beta:2 or Alpha:1");
+  }
+  return { type, number };
 }
 
 function hasFlag(args: readonly string[], flag: string): boolean {
@@ -54,9 +90,10 @@ export async function runResetAndBootstrapCli(
   const mode = getMode(args);
   const preset = getPreset(args);
   const startingParties = hasFlag(args, "--no-starting-parties") ? "none" : undefined;
-  if (startingParties === "none" && preset !== "1991-default") {
-    throw new Error("--no-starting-parties requires --preset=1991-default");
+  if (startingParties === "none" && !supportsNoStartingParties(preset)) {
+    throw new Error(`--no-starting-parties is not supported for --preset=${preset}`);
   }
+  const iteration = getIteration(args);
   const skipRegionalCouncil = hasFlag(args, "--skip-regional-council");
   const resetReference = !hasFlag(args, "--preserve-reference");
   if (!resetReference && preset === "1991-default") {
@@ -73,6 +110,40 @@ export async function runResetAndBootstrapCli(
     mode === "historical" &&
     (preIteration ?? presetDefaultsToFoundingPhase(preset, startingParties ?? "default"));
 
+  const settings = settingsFingerprint({
+    preset,
+    mode,
+    startingParties: startingParties ?? "default",
+    foundingPhase: foundingEffective,
+  });
+  const isRehearsalTarget = databaseName.startsWith("rehearsal-");
+  const skipReason = getArgValue(args, "--skip-rehearsal-gate");
+  const recordPath = getArgValue(args, "--rehearsal-record");
+  if (!hasFlag(args, "--check-target") && !isRehearsalTarget) {
+    if (skipReason !== undefined) {
+      if (skipReason.trim() === "")
+        throw new Error("--skip-rehearsal-gate needs a reason: --skip-rehearsal-gate=<reason>");
+      console.warn(
+        `WARNING: REHEARSAL GATE SKIPPED for ${databaseName}. Reason: ${skipReason}. This reset has no passing rehearsal behind it.`
+      );
+    } else {
+      if (!recordPath)
+        throw new Error(
+          "Refusing to reset: pass --rehearsal-record=<path> from a passing rehearse-reset run, or --skip-rehearsal-gate=<reason>"
+        );
+      const verdict = evaluateRehearsalRecord(deps.readRecord(recordPath), {
+        settingsFingerprint: settings,
+        treeHash: deps.treeHash(),
+        nowMs: deps.now(),
+      });
+      if (!verdict.ok)
+        throw new Error(
+          `Refusing to reset: ${verdict.message} (${verdict.reason}). Rehearse again with the same settings, or pass --skip-rehearsal-gate=<reason>`
+        );
+      console.log(`Rehearsal gate passed using ${recordPath}`);
+    }
+  }
+
   const db = await deps.connectDb(databaseName, applicationEnv.MONGODB_URI);
   try {
     assertResetDatabaseMatchesApplication(applicationEnv, db.databaseName, "connected database");
@@ -85,6 +156,11 @@ export async function runResetAndBootstrapCli(
       `Resetting and bootstrapping game world (mode=${mode}, preset=${preset}, startingParties=${startingParties ?? "preset defaults"}${
         foundingEffective ? ", pre-iteration founding" : ""
       })`
+    );
+    console.log(
+      iteration
+        ? `Iteration label: ${iteration.type} ${iteration.number}`
+        : "Iteration label: unchanged (pass --iteration=Iteration:<n> to set it)"
     );
     if (!resetReference) {
       console.log(
@@ -116,6 +192,7 @@ export async function runResetAndBootstrapCli(
       deleteProfiles: false,
       adminUsername: "CLI",
       preIteration,
+      ...(iteration ? { iteration } : {}),
       log: console.log,
     });
 

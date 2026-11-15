@@ -1,3 +1,4 @@
+import { canonicalCanadianPlayerUrl } from "@/lib/countries/ca/regionCodes";
 import { NextResponse } from "next/server";
 import { REQUEST_METHOD_HEADER } from "@/lib/staff/rules";
 import { legacyRedirect } from "@/lib/staff/panelRegistry";
@@ -18,16 +19,25 @@ import {
   serializeAcquisition,
 } from "@/lib/analytics/acquisition";
 import { authConfig } from "@/lib/config/auth";
+import { clientIpFromRequest } from "@/lib/utils/network";
+import { shouldServeStaticLanding } from "@/lib/landing/rules/staticLandingEligibility";
+import {
+  isClientShellUserAgent,
+  isInAppWebViewUserAgent,
+  isStoreAppUserAgent,
+} from "@/lib/displayMode";
+import { classifyIp } from "@/lib/vpn/detection";
+import {
+  VPN_BLOCKED_CODE,
+  VPN_BLOCKED_MESSAGE,
+  isVpnGateAllowedWritePath,
+  shouldBlockVpnRequest,
+} from "@/lib/vpn/gate";
 
 // Well-known root files that must never be rewritten under /wiki on the
 // subdomain — /robots.txt would otherwise hit the wiki [slug] route and serve
 // an HTML "Not Found" page instead of the metadata route.
-const WIKI_PASSTHROUGH_PATHS = new Set([
-  "/robots.txt",
-  "/sitemap.xml",
-  "/ads.txt",
-  "/manifest.webmanifest",
-]);
+const WIKI_PASSTHROUGH_PATHS = new Set(["/robots.txt", "/sitemap.xml", "/manifest.webmanifest"]);
 
 /**
  * Keep the raw Railway host (and any other non-canonical *.up.railway.app host)
@@ -79,8 +89,9 @@ function apiPassthrough(request: NextRequest): NextResponse {
  */
 async function handleApiReadGate(request: NextRequest): Promise<NextResponse> {
   const method = request.method.toUpperCase();
-  // Only reads are gated here — mutating routes already enforce their own auth.
-  if (method !== "GET" && method !== "HEAD") return apiPassthrough(request);
+  // Only reads are gated here. Mutating routes enforce their own auth; the
+  // VPN gate is the one write check that runs centrally.
+  if (method !== "GET" && method !== "HEAD") return handleApiWriteGate(request);
 
   // Default-on flag: a DB blip fails open (never 401 every read on a hiccup).
   let publicViewing = true;
@@ -111,6 +122,33 @@ async function handleApiReadGate(request: NextRequest): Promise<NextResponse> {
   return errorResponse(401, "Public viewing is disabled. Sign in to view this content.", {
     headers: { "Cache-Control": "private, no-store" },
   });
+}
+
+/**
+ * VPN gate for writes. A signed-in player connecting through a VPN who has not
+ * been whitelisted by staff may sign in and change account settings, but every
+ * game action is refused. Cheap checks run first: allowed paths and non-VPN
+ * connections never touch the session. Fails open on any lookup error.
+ */
+async function handleApiWriteGate(request: NextRequest): Promise<NextResponse> {
+  const { pathname } = request.nextUrl;
+  if (!request.cookies.has(AUTH_COOKIE_NAME) || isVpnGateAllowedWritePath(pathname)) {
+    return apiPassthrough(request);
+  }
+  try {
+    const classification = await classifyIp(clientIpFromRequest(request));
+    if (classification !== "vpn") return apiPassthrough(request);
+    const user = await getSessionUser(request);
+    if (shouldBlockVpnRequest({ method: request.method, pathname, user, classification })) {
+      return errorResponse(403, VPN_BLOCKED_MESSAGE, {
+        code: VPN_BLOCKED_CODE,
+        headers: { "Cache-Control": "private, no-store" },
+      });
+    }
+  } catch {
+    // Fail open: a lookup failure must never block writes.
+  }
+  return apiPassthrough(request);
 }
 
 /**
@@ -164,6 +202,9 @@ const OAUTH_CALLBACK_PATH = /^\/api\/auth\/(discord|google|apple|oidc)\/callback
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  const compactUrl = canonicalCanadianPlayerUrl(request.url);
+  if (compactUrl && (request.method === "GET" || request.method === "HEAD"))
+    return NextResponse.redirect(compactUrl, 308);
   const host = request.headers.get("host") ?? "";
   const singleplayer = isSingleplayer();
 
@@ -216,7 +257,7 @@ export async function proxy(request: NextRequest) {
   }
 
   // Canonical host is the apex domain. www duplicates every page (splits SEO
-  // signals and confuses the AdSense review), so 301 it. The raw Railway host
+  // signals), so 301 it. The raw Railway host
   // is NOT redirected — deploy healthchecks hit /api/health on it — it gets an
   // X-Robots-Tag: noindex header on its passthrough response instead.
   //
@@ -368,6 +409,31 @@ export async function proxy(request: NextRequest) {
     }
   }
 
+  // The signed-out home page is served as static HTML by an internal route
+  // handler. The rewrite is the exact anonymous browser visit the light shell
+  // already selects, evaluated after the maintenance gate above.
+  const userAgent = request.headers.get("user-agent") ?? "";
+  if (
+    shouldServeStaticLanding({
+      pathname,
+      method: request.method,
+      hasSessionCookie: hasAuth,
+      singleplayer,
+      isWikiSubdomain: host === "wiki.ahousedividedgame.com" || host.startsWith("wiki."),
+      isNativeApp: isInAppWebViewUserAgent(userAgent),
+      isClientShell: isClientShellUserAgent(userAgent),
+      isStoreApp: isStoreAppUserAgent(userAgent),
+    })
+  ) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/landing-static";
+    const requestHeaders = new Headers(request.headers);
+    requestHeaders.set("x-pathname", pathname);
+    requestHeaders.set("x-search", request.nextUrl.search);
+    const rewritten = NextResponse.rewrite(url, { request: { headers: requestHeaders } });
+    return withAcquisitionCookie(request, withRailwayNoindex(rewritten, host), host);
+  }
+
   const response = withRailwayNoindex(passthrough(request), host);
   return singleplayer ? response : withAcquisitionCookie(request, response, host);
 }
@@ -426,7 +492,7 @@ export const config = {
     // it, and Germany silently renders undivided while the page around it looks
     // perfectly fine. Static geometry has no game state in it and nothing to
     // seal.
-    "/((?!api/|_next/static|_next/image|monitoring|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|json)$).*)",
+    "/((?!api/|_next/static|_next/image|monitoring|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|avif|ico|json|js|css|woff2)$).*)",
     // Internal API routes — the read-gate above runs only when public viewing
     // mode is off, so this is a no-op pass-through during normal operation.
     "/api/:path*",

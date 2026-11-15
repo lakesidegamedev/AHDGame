@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { performance } from "node:perf_hooks";
-import { substepMarker } from "@/lib/observability/phaseSubsteps";
+import { recordPhaseSubstep, substepMarker } from "@/lib/observability/phaseSubsteps";
 import { ZOD_CURRENCY_ENUM } from "@/lib/constants/currencies";
 import { accountId } from "@/lib/ledger/accounts";
 import type { LedgerEntry } from "@/lib/ledger/types";
@@ -531,6 +531,31 @@ export function applySettlementClose(
   };
 }
 
+/**
+ * Parts of the economy step, named as pieces of `producerMarket.advanceEconomy`
+ * so a slow turn shows which pass or the final clearing took the time.
+ */
+function recordEconomyBreakdown(timings: StageTimings): void {
+  const part = (key: string) => (typeof timings[key] === "number" ? (timings[key] as number) : 0);
+  recordPhaseSubstep("producerMarket.advanceEconomy.setup", part("economySetupMs"));
+  recordPhaseSubstep("producerMarket.advanceEconomy.finalClearing", part("finalClearingMs"));
+  const passes = Array.isArray(timings.planningPassMs) ? timings.planningPassMs : [];
+  passes.forEach((ms, i) =>
+    recordPhaseSubstep(`producerMarket.advanceEconomy.pass${String(i + 1).padStart(2, "0")}`, ms)
+  );
+  const changed = Array.isArray(timings.planningPassChangedSites)
+    ? timings.planningPassChangedSites
+    : [];
+  // Sites still moving per pass, kept in the call count of a zero-time step.
+  changed.forEach((sites, i) =>
+    recordPhaseSubstep(
+      `producerMarket.advanceEconomy.pass${String(i + 1).padStart(2, "0")}.changedSites`,
+      0,
+      sites
+    )
+  );
+}
+
 export async function settleProducerTurn(
   db: Db,
   input: {
@@ -624,6 +649,8 @@ export async function settleProducerTurn(
               },
           timings
         );
+        phaseSteps.mark("producerMarket.advanceEconomy");
+        recordEconomyBreakdown(timings);
         clock.lap("advanceEconomyMs"); // total; the economy's own stages are itemised by advanceProducerEconomy
         // Freeze the actual pass count so offline replay does not need a clock.
         // The requested ceiling and stop reason remain in the diagnostics.
@@ -645,6 +672,7 @@ export async function settleProducerTurn(
     // discard it, because a retry recomputes the same market against the same
     // ceiling. The phase timeout still bounds this tail and keeps late completion.
     const encoded = encodeReceipt(payload);
+    phaseSteps.mark("producerMarket.encodeReceipt");
     clock.lap("encodeReceiptMs");
     const candidate: ProducerTurnRecord = {
       _id: key,
@@ -675,6 +703,7 @@ export async function settleProducerTurn(
       if (!record) throw new Error("Missing claimed producer receipt");
     }
     clock.lap("insertReceiptMs");
+    phaseSteps.mark("producerMarket.verifyStageClaim");
   }
   const frozen = claimedPayload ?? (await readFrozen(db, record));
   if (

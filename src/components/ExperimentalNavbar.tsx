@@ -28,7 +28,7 @@ import { UniversalSearch } from "./UniversalSearch";
 import { Avatar } from "./Avatar";
 import { CountryFlag } from "@/components/CountryFlag";
 import { type CountryId } from "@/lib/constants/countriesCore";
-import { getCountryClientConfig } from "@/lib/constants/countryClientConfig";
+import { COUNTRY_DISPLAY_CODES } from "@/lib/constants/countryDisplayCodes";
 import { useEnabledCountries, useCountryDisplayName } from "@/contexts/RegisteredCountriesContext";
 import {
   countryUrl,
@@ -411,7 +411,6 @@ export const ExperimentalNavbar = React.memo(function ExperimentalNavbar({
     [switchingImperial]
   );
 
-  const countryConf = getCountryClientConfig(pageCountry as CountryId);
   // Country-context awareness (matches the classic nav): the switcher lists the
   // nations actually registered in the current game, named per the active
   // preset/era AND any runtime rename — not every non-coming-soon country with
@@ -725,7 +724,7 @@ export const ExperimentalNavbar = React.memo(function ExperimentalNavbar({
       </MenuRow>
       {governorOffice && governorOffice.stateId === homeState.id && (
         <MenuRow
-          href={`/country/${homeState.countryId.toLowerCase()}/region/${homeState.id.toLowerCase()}/office`}
+          href={`${regionUrl(homeState.countryId.toLowerCase(), homeState.id.toLowerCase())}/office`}
           onNavigate={closeAll}
         >
           {t("state.governorOffice")}
@@ -1238,7 +1237,7 @@ export const ExperimentalNavbar = React.memo(function ExperimentalNavbar({
                     className="flex h-9 items-center gap-2 rounded-lg border border-card-border bg-card px-2.5 text-xs font-medium text-fg-2 transition-colors hover:border-muted/50 hover:text-foreground"
                   >
                     <CountryFlag country={pageCountry} size="sm" />
-                    <span>{countryConf.code}</span>
+                    <span>{COUNTRY_DISPLAY_CODES[pageCountry] ?? pageCountry}</span>
                     <Chevron open={open === "country"} />
                   </button>
                   {open === "country" && (

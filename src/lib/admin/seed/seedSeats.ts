@@ -27,6 +27,7 @@ import { BR_GEOGRAPHY } from "@/lib/countries/br/geography";
 import { IE_LOCAL_COUNCIL_SEATS } from "@/lib/countries/ie/data/ieLocalCouncilSeats";
 import { US_STATE_NAMES } from "@/lib/constants/usStateNames";
 import { CA_REGION_NAMES } from "@/lib/countries/ca/geographyFacts";
+import { CA_COMMONS_SEATS_PER_REGION } from "@/lib/countries/ca/data/caRegions2027";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { statesCollection } from "@/lib/db/repositories/states";
 import type { Document } from "mongodb";
@@ -70,6 +71,7 @@ function getElectionTypeLabel(electionType: string): string {
     case "president":
       return "President";
     case "commons":
+    case "caCommons":
       return "Commons";
     case "shugiin":
       return "Shugiin";
@@ -529,6 +531,27 @@ export async function seedSeats(
     createdAt: now,
     updatedAt: now,
   });
+
+  // Canada's Commons, only in worlds whose roster seeded its regions.
+  const caRegionDocs = await statesCollection<Document>(db)
+    .find({ countryId: "CA" }, { projection: { _id: 1 } })
+    .toArray();
+  for (const region of caRegionDocs) {
+    const regionId = String(region._id);
+    const totalSeats = CA_COMMONS_SEATS_PER_REGION[regionId];
+    if (!totalSeats) continue;
+    seats.push({
+      _id: buildSeatId("CA", "caCommons", regionId),
+      countryId: "CA",
+      electionType: "caCommons",
+      state: regionId,
+      totalSeats,
+      displayName: buildDisplayName("CA", "caCommons", regionId),
+      shortName: `${regionId.replace(/^CA_/, "")} Com`,
+      createdAt: now,
+      updatedAt: now,
+    });
+  }
 
   // CN NPC Delegates
   for (const region of cnRegions) {

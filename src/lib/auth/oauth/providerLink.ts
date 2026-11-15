@@ -10,6 +10,13 @@ import {
   providerLinkContextCookieName,
   verifyProviderLinkContext,
 } from "@/lib/auth/providerLinkContext";
+import {
+  bridgeAccountFromUser,
+  centralRestoreAccount,
+  centralWriteFirst,
+  shadowMirrorWrite,
+  type BridgeWriteOp,
+} from "@/lib/auth/centralLogin";
 import { isAuthMigrationFenced } from "@/lib/auth/sourceFence";
 import type { User } from "@/lib/db/types";
 import type { OAuthCookieStore, OAuthDb, OAuthLinkAdapter } from "./types";
@@ -87,6 +94,17 @@ export async function runOAuthLink(
     return adapter.linkResult("success");
   }
 
+  // Central mode records the provider id centrally first; refuse if it is unreachable.
+  const linkWrite: BridgeWriteOp = {
+    op: "account-upsert",
+    account: bridgeAccountFromUser(account, { [adapter.idField]: adapter.externalId }),
+  };
+  if (!(await centralWriteFirst(linkWrite))) {
+    return adapter.linkResult("error", "exchange_failed");
+  }
+  const restoreLink = () =>
+    centralRestoreAccount(account, { overrides: { [adapter.idField]: null } });
+
   // Evict before the write so parallel requests re-read the pre-link record.
   // The key is canonical: the fresh account id, not the cached grant.
   const cacheKey = account._id.toHexString();
@@ -107,6 +125,7 @@ export async function runOAuthLink(
       }
     );
   } catch {
+    await restoreLink();
     return adapter.linkResult("error", "exchange_failed");
   } finally {
     // A concurrent read may have repopulated the cache while the write was
@@ -116,13 +135,16 @@ export async function runOAuthLink(
     invalidateCachedUser(cacheKey);
   }
   if (write.acknowledged !== true) {
+    await restoreLink();
     return adapter.linkResult("error", "exchange_failed");
   }
   if (write.matchedCount !== 1) {
+    await restoreLink();
     // A concurrent provider, password, ban, or revocation write won the
     // snapshot race. Never report success without a confirmed write.
     return adapter.linkResult("error", "session_expired");
   }
 
+  shadowMirrorWrite(linkWrite);
   return adapter.linkResult("success");
 }

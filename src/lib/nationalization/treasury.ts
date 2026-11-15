@@ -16,6 +16,7 @@ import {
   witnessTreasuryCash,
   type TreasuryCashFlow,
   type TreasuryCashOptions,
+  FLOW_ACCOUNTING,
 } from "./treasuryLedger";
 import type { BankingTransition, TransitionProjection } from "@/lib/banking/rules/boundary";
 import { resumeSettlement, settleTransition } from "@/lib/banking/settlementJournal";
@@ -23,6 +24,7 @@ import { type MoneyMoveRecordLeg } from "@/lib/banking/moneyMove";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
+import { treasuryPaymentWitness } from "@/lib/budget/treasuryPaymentWitness";
 
 /**
  * Opt-in government-side witness for an event-driven caller whose own rows do
@@ -84,6 +86,7 @@ function fundedTreasuryExpenseTransition(input: {
   countryId: CountryId;
   amount: number;
   currency: CurrencyCode;
+  rate: number;
   turn: number;
   now: Date;
   witness: TreasuryWitness & { key: string };
@@ -114,6 +117,18 @@ function fundedTreasuryExpenseTransition(input: {
         note: "Update signed fiscal position after the funded expense",
       },
       ...(input.effects ?? []),
+      ...treasuryPaymentWitness({
+        key: `treasury-nationalization:${witness.key}`,
+        country: countryId,
+        currency: input.currency,
+        amount,
+        rate: input.rate,
+        turn: input.turn,
+        now: input.now,
+        signedPositionOwned: true,
+        txType: FLOW_ACCOUNTING[witness.flow].txType,
+        reason: FLOW_ACCOUNTING[witness.flow].reason,
+      }),
     ],
     event: {
       kind: "monetary.executed",
@@ -157,6 +172,12 @@ async function incTreasuryBalance(
       countryId,
       amount: Math.abs(delta),
       currency,
+      rate: treasuryAnchorValuation({
+        countryId,
+        currencyCode: currency,
+        preset: ledger.context.preset,
+        observedRate: ledger.context.rates.get(currency),
+      }).anchorRate,
       turn: ledger.context.turn,
       now,
       witness: { ...witness, key: witness.key },
@@ -890,6 +911,12 @@ export async function settleFundedSoeCapexGrant(
       countryId: input.countryId,
       amount: amountLocal,
       currency,
+      rate: treasuryAnchorValuation({
+        countryId: input.countryId,
+        currencyCode: currency,
+        preset: context.preset,
+        observedRate: context.rates.get(currency),
+      }).anchorRate,
       turn: context.turn,
       now: input.now,
       witness: { flow: "soe_capex_grant", key: input.key, site: "treasury:debitTreasurySoeCapex" },
@@ -1011,6 +1038,19 @@ export async function remitToTreasury(
           update: { $inc: { treasuryBalance: treasuryAmount }, $set: { updatedAt: now } },
           note: "Update signed fiscal position after the funded SOE remittance",
         },
+        soeRemittanceCashWitness({
+          key,
+          turn: context.turn,
+          now,
+          corporation: input.corpId.toString(),
+          country: input.countryId,
+          corporationCurrency: input.corpCurrency,
+          treasuryCurrency,
+          amount,
+          treasuryAmount,
+          corporationRate,
+          treasuryRate,
+        }),
       ],
       event: {
         kind: "monetary.executed",
@@ -1233,3 +1273,4 @@ async function witnessTreasuryTransfer(
     site,
   });
 }
+import { soeRemittanceCashWitness } from "./soeRemittanceLedger";

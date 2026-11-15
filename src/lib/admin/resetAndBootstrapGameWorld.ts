@@ -44,6 +44,7 @@ import type { GameIteration, GameState } from "@/lib/db/types/gameState";
 import { isPresetAnchorDate, type ResetStartDate } from "@/lib/admin/resetStartDate";
 import { RESET_V2_READY } from "@/lib/resetVersions/availability";
 import {
+  demographicsV2OpeningCountries,
   resetSeedComplete,
   resetSelectionPreflight,
   resetSystemSelectionsFrom,
@@ -220,6 +221,7 @@ export async function resetAndBootstrapGameWorld(
     { _id: "current" },
     {
       projection: {
+        preset: 1,
         metricsSystemVersion: 1,
         legislationSystemVersion: 1,
         cabinetSystemVersion: 1,
@@ -397,7 +399,7 @@ export async function resetAndBootstrapGameWorld(
     if (seedOnly && preset !== "2019-no-parties") {
       phaseReached = "officials";
       const result = await run.step("officials", "seedHistoricalOfficials", () =>
-        seedHistoricalOfficials(db, preset, preIteration ? "priors" : "winners")
+        seedHistoricalOfficials(db, preset, preIteration ? "priors" : "winners", collect)
       );
       if (result) {
         postSeedOfficials = result;
@@ -407,7 +409,8 @@ export async function resetAndBootstrapGameWorld(
       }
     }
 
-    if (startingParties === "none") await clearStartingPolitics(db, preset);
+    if (startingParties !== "default")
+      await clearStartingPolitics(db, preset, startingParties === "no-npps");
 
     // The v2 board is separate from all v1 working metric collections. A
     // receipt is written only after the whole board has been persisted and
@@ -419,7 +422,14 @@ export async function resetAndBootstrapGameWorld(
       }
       const freshState = await gameStateCollection(db).findOne(
         { _id: "current" },
-        { projection: { resetWorldId: 1, currentTurn: 1, metricsSystemVersion: 1 } }
+        {
+          projection: {
+            preset: 1,
+            resetWorldId: 1,
+            currentTurn: 1,
+            metricsSystemVersion: 1,
+          },
+        }
       );
       if (
         freshState?.metricsSystemVersion !== "v2" ||
@@ -430,11 +440,19 @@ export async function resetAndBootstrapGameWorld(
         throw new Error("Fresh reset state is missing the metrics v2 world identity");
       }
       const { seedOpeningMetrics1991 } = await import("@/lib/resetMetrics/seedOpening1991");
-      const receipt = await seedOpeningMetrics1991(
-        db,
-        freshState.resetWorldId,
-        freshState.currentTurn
-      );
+      const receipt =
+        preset === "1991-default" && atPresetAnchor
+          ? await seedOpeningMetrics1991(db, freshState.resetWorldId, freshState.currentTurn)
+          : await (
+              await import("@/lib/resetVersions/seedModeledOpening")
+            ).seedModeledOpening(
+              db,
+              preset,
+              freshState.resetWorldId,
+              freshState.currentTurn,
+              "metrics",
+              options.startDate
+            );
       const stamped = await gameStateCollection(db).updateOne(
         {
           _id: "current",
@@ -447,7 +465,7 @@ export async function resetAndBootstrapGameWorld(
       if (stamped.matchedCount !== 1) {
         throw new Error("Metrics v2 world changed before its seed receipt could be stamped");
       }
-      collect("Verified 1991 v2 metric opening for US, UK, and JP");
+      collect(`Verified ${preset} v2 metric opening`);
     }
     if (selectedVersions.legislation === "v2") {
       phaseReached = "v2 current-law opening";
@@ -458,6 +476,7 @@ export async function resetAndBootstrapGameWorld(
         { _id: "current" },
         {
           projection: {
+            preset: 1,
             resetWorldId: 1,
             resetVersionSeeds: 1,
             currentTurn: 1,
@@ -477,11 +496,19 @@ export async function resetAndBootstrapGameWorld(
         throw new Error("Fresh reset state lacks the prerequisite metrics v2 opening");
       }
       const { seedOpeningLawBoards1991 } = await import("@/lib/resetLegislation/seedOpening1991");
-      const receipt = await seedOpeningLawBoards1991(
-        db,
-        freshState.resetWorldId,
-        freshState.currentTurn
-      );
+      const receipt =
+        preset === "1991-default" && atPresetAnchor
+          ? await seedOpeningLawBoards1991(db, freshState.resetWorldId, freshState.currentTurn)
+          : await (
+              await import("@/lib/resetVersions/seedModeledOpening")
+            ).seedModeledOpening(
+              db,
+              preset,
+              freshState.resetWorldId,
+              freshState.currentTurn,
+              "legislation",
+              options.startDate
+            );
       const stamped = await gameStateCollection(db).updateOne(
         {
           _id: "current",
@@ -494,7 +521,7 @@ export async function resetAndBootstrapGameWorld(
       if (stamped.matchedCount !== 1) {
         throw new Error("Legislation v2 world changed before its seed receipt could be stamped");
       }
-      collect("Verified 1991 v2 current-law opening for US, UK, and JP");
+      collect(`Verified ${preset} v2 current-law opening`);
     }
     if (selectedVersions.cabinet === "v2") {
       phaseReached = "v2 department opening";
@@ -505,6 +532,7 @@ export async function resetAndBootstrapGameWorld(
         { _id: "current" },
         {
           projection: {
+            preset: 1,
             resetWorldId: 1,
             resetVersionSeeds: 1,
             currentTurn: 1,
@@ -525,11 +553,23 @@ export async function resetAndBootstrapGameWorld(
       }
       const { seedOpeningDepartmentBoards1991 } =
         await import("@/lib/resetFinance/seedOpeningDepartments1991");
-      const receipt = await seedOpeningDepartmentBoards1991(
-        db,
-        freshState.resetWorldId,
-        freshState.currentTurn
-      );
+      const receipt =
+        preset === "1991-default" && atPresetAnchor
+          ? await seedOpeningDepartmentBoards1991(
+              db,
+              freshState.resetWorldId,
+              freshState.currentTurn
+            )
+          : await (
+              await import("@/lib/resetVersions/seedModeledOpening")
+            ).seedModeledOpening(
+              db,
+              preset,
+              freshState.resetWorldId,
+              freshState.currentTurn,
+              "cabinet",
+              options.startDate
+            );
       const stamped = await gameStateCollection(db).updateOne(
         {
           _id: "current",
@@ -542,7 +582,7 @@ export async function resetAndBootstrapGameWorld(
       if (stamped.matchedCount !== 1) {
         throw new Error("Cabinet v2 world changed before its seed receipt could be stamped");
       }
-      collect("Verified 1991 v2 Cabinet opening claims for US, UK, and JP");
+      collect(`Verified ${preset} v2 Cabinet opening claims`);
     }
     if (selectedVersions.demographics === "v2") {
       phaseReached = "v2 demographics opening";
@@ -553,6 +593,7 @@ export async function resetAndBootstrapGameWorld(
         { _id: "current" },
         {
           projection: {
+            preset: 1,
             resetWorldId: 1,
             currentTurn: 1,
             demographicsSystemVersion: 1,
@@ -571,7 +612,8 @@ export async function resetAndBootstrapGameWorld(
       const receipt = await verifyDemographicsV2Opening(
         db,
         freshState.resetWorldId,
-        freshState.currentTurn
+        freshState.currentTurn,
+        demographicsV2OpeningCountries(preset)
       );
       const stamped = await gameStateCollection(db).updateOne(
         {
@@ -585,7 +627,7 @@ export async function resetAndBootstrapGameWorld(
       if (stamped.matchedCount !== 1) {
         throw new Error("Demographics v2 world changed before its receipt could be stamped");
       }
-      collect("Verified 1991 v2 demographics opening for US, UK, and JP");
+      collect(`Verified ${preset} v2 demographics opening for ${receipt.countries?.join(", ")}`);
     }
 
     if (preIteration && startingParties === "none") {

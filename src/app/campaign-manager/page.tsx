@@ -1,3 +1,4 @@
+import { canonicalRegionId } from "@/lib/constants/countriesCore";
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { getAuthUserWithCharacter } from "@/lib/auth";
@@ -6,7 +7,6 @@ import { getCountryConfig, type CountryId } from "@/lib/constants/countries";
 import { loadCountryNameOverrides } from "@/lib/country/countryIdentity";
 import { getGameStatePreset } from "@/lib/db/collections/gameState";
 import { ObjectId } from "mongodb";
-import type { Election, State } from "@/lib/db/types";
 import { campaignManagerCountry, presidentialRedirect } from "@/lib/campaignManager/links";
 import { parseCampaignManagerParams } from "@/lib/campaignManager/linkParams";
 import {
@@ -51,6 +51,8 @@ export default async function CampaignManagerPage({
   // Any country's races can be viewed: a linked race opens in its own country.
   const wanted = campaignManagerCountry(homeCountryId, linked, countryParam) as CountryId;
   const countryId = getCountryConfig(wanted) ? wanted : homeCountryId;
+  if (filter.regionId && filter.regionId !== "ALL")
+    filter.regionId = canonicalRegionId(countryId, filter.regionId);
   const [regions, preset, countryState, nameOverrides] = await Promise.all([
     statesCollection(db)
       .find({ countryId }, { projection: { _id: 1, name: 1 } })
@@ -69,8 +71,9 @@ export default async function CampaignManagerPage({
   return (
     <CampaignManagerClient
       // A new country is a new page: type, region and selection start over.
-      key={countryId}
+      key={`${countryId}:${preset}`}
       countryId={countryId}
+      preset={preset}
       countryName={view.countryName}
       regionNoun={view.regionNoun}
       regionNounPlural={view.regionNounPlural}

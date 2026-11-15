@@ -22,6 +22,11 @@ import { heldBlocRowIds, releaseVacatedBlocSeats } from "@/lib/elections/vacated
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import type { Document } from "mongodb";
+import {
+  CENTRAL_WRITE_UNAVAILABLE_MESSAGE,
+  centralWriteFirst,
+  shadowMirrorWrite,
+} from "@/lib/auth/centralLogin";
 import { usersCollection } from "@/lib/db/repositories/users";
 import { actionLogsCollection } from "@/lib/db/repositories/actionLogs";
 import { characterAchievementsCollection } from "@/lib/db/repositories/characterAchievements";
@@ -70,6 +75,11 @@ export const DELETE = withNoStore(async () => {
         400,
         "Admin accounts cannot be self-deleted. Please contact another admin."
       );
+    }
+
+    // Central mode removes the central account before any local destructive work.
+    if (!(await centralWriteFirst({ op: "account-delete", ahdUserId: userId }))) {
+      return errorResponse(503, CENTRAL_WRITE_UNAVAILABLE_MESSAGE);
     }
 
     // Find the user's character
@@ -200,6 +210,7 @@ export const DELETE = withNoStore(async () => {
 
     // Delete the user
     await usersCollectionHandle.deleteOne({ _id: objectId });
+    shadowMirrorWrite({ op: "account-delete", ahdUserId: userId });
 
     await clearAuthCookie("user_delete_account");
 

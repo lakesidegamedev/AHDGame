@@ -3,13 +3,11 @@
 /**
  * Hero chrome for the broadcast lander (the 1991 world): the headline with its
  * year odometer, the tier key along the foot of the first viewport, and the
- * blue ground glow the globe sits in. The globe's own art is
- * in `components/landing/broadcastGlobe`.
+ * blue ground glow the globe sits in.
  *
  * Signal red is deliberately off the brand palette, the same way the 1953 CRT
  * green is: it belongs to the broadcast, not to the site. Nothing here uses a
- * backdrop blur: it all sits over a globe that repaints every frame, and a
- * blur there is recomputed on each of them.
+ * backdrop blur over the globe.
  */
 import { useEffect, useState } from "react";
 import {
@@ -17,6 +15,7 @@ import {
   TIER_COLORS,
   TIER_LABELS,
   TIER_ORDER,
+  type CountryTier,
 } from "@/components/landing/countryTiers";
 
 /** Sans, tight and heavy, with the era's year picked out in signal red. */
@@ -101,11 +100,15 @@ export function YearOdometer({ from, to }: { from: number; to: number }) {
 export function BroadcastTierKey({
   hidden,
   backgroundIsSimulated,
+  counts,
 }: {
   hidden: boolean;
   /** Background Nations are the macro-simulated ones, drawn in their own colour. */
   backgroundIsSimulated: boolean;
+  /** Countries per tier. When given, only these tiers are listed, each with its count. */
+  counts?: Partial<Record<CountryTier, number>>;
 }) {
+  const tiers = counts ? TIER_ORDER.filter((tier) => counts[tier]) : TIER_ORDER;
   return (
     <ul
       aria-hidden="true"
@@ -113,7 +116,7 @@ export function BroadcastTierKey({
         hidden ? "opacity-0" : "opacity-90"
       }`}
     >
-      {TIER_ORDER.map((tier) => (
+      {tiers.map((tier) => (
         <li key={tier} className="inline-flex items-center gap-2">
           <span
             className="h-2 w-2 shrink-0 rounded-[2px]"
@@ -127,20 +130,23 @@ export function BroadcastTierKey({
           <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-white/70">
             {TIER_LABELS[tier]}
           </span>
+          {counts?.[tier] !== undefined && (
+            <span className="font-mono text-[10px] tabular-nums text-white">{counts[tier]}</span>
+          )}
         </li>
       ))}
     </ul>
   );
 }
 
-/** Blue ground glow under the globe, in place of the CRT phosphor field. */
-export function BroadcastBackdrop() {
+/** Ground glow under the globe, in place of the CRT phosphor field: blue, or cyan for the nightside look. */
+export function BroadcastBackdrop({ nightside = false }: { nightside?: boolean }) {
+  const rgb = nightside ? "34, 170, 220" : "37, 99, 235";
   return (
     <div
       className="pointer-events-none absolute inset-0"
       style={{
-        background:
-          "radial-gradient(circle at 60% 48%, rgba(37, 99, 235, 0.18), rgba(37, 99, 235, 0.05) 34%, transparent 56%)",
+        background: `radial-gradient(circle at 60% 48%, rgba(${rgb}, ${nightside ? 0.14 : 0.18}), rgba(${rgb}, 0.05) 34%, transparent 56%)`,
       }}
     />
   );

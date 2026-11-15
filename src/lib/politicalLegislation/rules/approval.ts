@@ -20,6 +20,7 @@ import { overallScore } from "@/lib/politicalMetrics/aggregate";
 import { POLITICAL_METRIC_FAMILIES } from "@/lib/politicalMetrics/families";
 import type { PoliticalLean, PoliticalMetricId } from "@/lib/politicalMetrics/types";
 import { NON_PLAYABLE_APPROVAL_NEUTRALS } from "@/lib/politicalMetrics/seeds/approvalNeutrals";
+import modeledNeutrals2027 from "@/lib/politicalMetrics/seeds/modeledApprovalNeutrals2027.json";
 
 export const APPROVAL_OBJECTIVE_WEIGHT = 0.7;
 export const APPROVAL_AFFINITY_WEIGHT = 0.3;
@@ -66,7 +67,12 @@ export function approvalNeutralFor(countryId: string, presetId?: string | null):
   }
   const authored = APPROVAL_NEUTRAL_SCORE[countryId];
   if (Number.isFinite(authored)) return authored;
-  const derived = presetId ? NON_PLAYABLE_APPROVAL_NEUTRALS[presetId]?.[countryId] : undefined;
+  const derived =
+    presetId === "2027-default"
+      ? (modeledNeutrals2027 as Readonly<Record<string, number>>)[countryId]
+      : presetId
+        ? NON_PLAYABLE_APPROVAL_NEUTRALS[presetId]?.[countryId]
+        : undefined;
   if (Number.isFinite(derived)) return derived as number;
   throw new Error(
     `No APPROVAL_NEUTRAL_SCORE calibrated for country ${countryId} at preset ${presetId ?? "(none)"}`

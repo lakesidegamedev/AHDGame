@@ -31,4 +31,18 @@ export const authConfig = {
   unifiedGeneralCohort: () => process.env.AHD_UNIFIED_GENERAL_COHORT,
   migrationSourceIssuer: () => process.env.AHD_MIGRATION_SOURCE_ISSUER,
   migrationProofLoadSecret: () => process.env.AHD_MIGRATION_PROOF_LOAD_SECRET,
+
+  accountFieldsMode: () => process.env.AHD_ACCOUNT_FIELDS_MODE,
+  usernameMode: () => process.env.AHD_USERNAME_MODE,
+  centralLoginMode: () => process.env.AHD_CENTRAL_LOGIN_MODE,
+  centralLoginTestUsers: () => process.env.AHD_CENTRAL_LOGIN_TEST_USERS,
+  accountsUrl: () => process.env.LAKESIDE_ACCOUNTS_URL,
+  accountsInternalToken: () => process.env.LAKESIDE_ACCOUNTS_INTERNAL_TOKEN,
+  accountBridgeUrl: () => process.env.LAKESIDE_ACCOUNT_BRIDGE_URL,
+  accountBridgeTokenUrl: () => process.env.LAKESIDE_ACCOUNT_BRIDGE_TOKEN_URL,
+  accountBridgeClientId: () => process.env.LAKESIDE_ACCOUNT_BRIDGE_CLIENT_ID,
+  accountBridgeClientSecret: () => process.env.LAKESIDE_ACCOUNT_BRIDGE_CLIENT_SECRET,
+  accountBridgeTimeoutMs: () => process.env.LAKESIDE_ACCOUNT_BRIDGE_TIMEOUT_MS,
+  accountBridgeBreakerFailures: () => process.env.LAKESIDE_ACCOUNT_BRIDGE_BREAKER_FAILURES,
+  accountBridgeBreakerOpenMs: () => process.env.LAKESIDE_ACCOUNT_BRIDGE_BREAKER_OPEN_MS,
 } as const;

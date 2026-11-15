@@ -1086,7 +1086,10 @@ export async function processNppCorporationDecisions(
         bankId: selected.bankId,
         principal: selected.principal,
         termTurns: NPP_CONSTRUCTION_FINANCE_TERM_TURNS,
-        preloadedFundingContext: selected.context,
+        preloadedFundingContext: {
+          ...selected.context,
+          cashWitnessContext: { ledgerShadowEnabled: ledgerShadow, rates: fxByCurrency },
+        },
       });
     }
   }

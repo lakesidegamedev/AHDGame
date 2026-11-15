@@ -106,4 +106,33 @@ describe("effective parliamentary executive offices", () => {
       });
     }
   );
+
+  it("keeps Japan's outgoing cabinet in post as caretaker when the PM vacates", async () => {
+    const { clearCabinetOnTransition } = await import("@/lib/cabinetTransition");
+    vi.mocked(clearCabinetOnTransition).mockClear();
+
+    const mem = createInMemoryDb();
+    const pmId = new ObjectId();
+    const ministerId = new ObjectId();
+    mem.seed("gameState", [{ _id: "current", preset: "1991-default", currentTurn: 40 }]);
+    mem.seed("governmentFormations", [
+      { _id: "JP", status: "formed", pmNppId: pmId, pmName: "Tarō" },
+    ]);
+    mem.seed("npps", [{ _id: pmId, countryId: "JP", currentOffice: { type: "prime_minister" } }]);
+    mem.seed("cabinetMembers", [
+      { _id: ministerId, countryId: "JP", positionId: "jp_finance", characterId: new ObjectId() },
+    ]);
+
+    await unformGovernmentAndVacatePM(mem as unknown as Db, "JP", new Date(0), {
+      reason: "no-confidence",
+    });
+
+    expect(clearCabinetOnTransition).not.toHaveBeenCalled();
+    expect(await mem.collection("cabinetMembers").findOne({ _id: ministerId })).toBeTruthy();
+    expect(await mem.collection("governmentFormations").findOne({ _id: "JP" })).toMatchObject({
+      status: "pending",
+      pmNppId: null,
+      caretaker: { sinceTurn: 40, reason: "dissolution", outgoingLeaderName: "Tarō" },
+    });
+  });
 });

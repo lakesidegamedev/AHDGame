@@ -31,10 +31,10 @@ const COLD_WAR_FISCAL_PRESETS = new Set(["1953-default", "1979-default"]);
 
 /**
  * 2027 countries that trade a currency but have no authored 2027 national
- * budget. Their regional GDP is authored in PLN and RON at 2024 rates, so the
- * currencies need exchange rows; a central bank waits for a fiscal book.
+ * budget, so they get exchange rows and no central bank. Empty now that every
+ * rostered country has a fiscal book.
  */
-const UNBUDGETED_2027: readonly CountryId[] = ["PL", "RO"];
+const UNBUDGETED_2027: readonly CountryId[] = [];
 
 /**
  * Every country the 2027 roster registers (player, npp or background), in the
@@ -75,7 +75,7 @@ export function getPresetMonetaryScope(preset: string): PresetMonetaryScope {
     ? []
     : POST_COLD_WAR_EXCLUSIONS.filter(
         (entry) =>
-          !["1991-default", "2019-default"].includes(preset) ||
+          !["1991-default", "2019-default", "2027-default"].includes(preset) ||
           !countryHasFeature("ruLib", entry.countryId)
       );
   // The 2027 Bulgarian fiscal row is EUR. Its exchange-rate row remains

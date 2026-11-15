@@ -38,6 +38,11 @@ import type { GameIteration } from "@/lib/db/types/gameState";
 import { assertKnownSeedPreset } from "@/lib/seeds/presetSelector";
 import { RESET_V2_READY } from "@/lib/resetVersions/availability";
 import { planGameStateRebuild } from "@/lib/admin/resetContract/rules/gameStateRebuild";
+import {
+  diffSwitches,
+  formatSwitchChange,
+  type SwitchChange,
+} from "@/lib/admin/resetContract/rules/switchChanges";
 import { applyPreservedFieldContracts } from "@/lib/admin/resetContract/applyPreservedFieldContracts";
 import { purgeOldCatalogueOverrides } from "@/lib/admin/resetContract/purgeOldCatalogueOverrides";
 import { PRESERVED_ACTIVITY_LOG_TYPES } from "@/lib/admin/resetContract/rules/preservedFields";
@@ -183,6 +188,17 @@ export const GAME_STATE_RESET_PRESERVED_FIELD_REASONS: Readonly<Record<string, s
       "Turn-runner lease heartbeat owned by processTurn and its shutdown recovery.",
     processingAbandonedAt:
       "Evidence for an interrupted partially committed turn; shutdown recovery owns it.",
+    lastTurnRetry:
+      "Diagnostic record of the last automatic turn retry, owned by the turn runner; kept across a reset so it stays readable.",
+    processingHoldReason:
+      "Turn hold awaiting a person after a mid-turn process death; owned by the turn runner.",
+    processingHeldPhases:
+      "The interrupted steps a turn hold is waiting on; owned by the turn runner.",
+    processingHeldAt: "When a turn hold was placed; owned by the turn runner.",
+    processingHolderId:
+      "Identity of the process holding the turn lock; owned by processTurn and its recovery.",
+    lastTurnFailure:
+      "Diagnostic record of the last failed turn, owned by the turn runner; kept across a reset so the failure stays readable.",
     processingPhase:
       "Turn-runner recovery evidence owned by processTurn and its shutdown recovery.",
     processingPhaseStatuses:
@@ -341,8 +357,29 @@ export interface ResetGameWorldResult {
     customPartiesDeleted: number;
     partyOrgRecordsDeleted: number;
     budgetSeedLog: string[];
+    /** Admin switches whose value this reset changed, for deliberate restoring. */
+    switchChanges?: SwitchChange[];
   };
 }
+
+/** gameState switches an admin can flip; runtime and per-reset fields are excluded. */
+const RESET_SWITCH_EXCLUDED_GAME_STATE_FIELDS: ReadonlySet<string> = new Set([
+  "isActive",
+  "isProcessing",
+  "startingPartiesMode",
+  "eurozoneEnabled",
+]);
+
+const TRACKED_GAME_STATE_SWITCHES: readonly string[] = [
+  ...new Set([
+    ...Object.keys(DEFAULT_GAME_STATE_FLAGS),
+    ...Object.keys(NON_GAMEPLAY_GAME_STATE_FIELDS),
+    "corporationActionsPaused",
+    "playerTransfersPaused",
+  ]),
+].filter((name) => !RESET_SWITCH_EXCLUDED_GAME_STATE_FIELDS.has(name));
+
+const TRACKED_GAME_CONFIG_SWITCHES: readonly string[] = Object.keys(FRESH_WORLD_GAME_CONFIG_FLAGS);
 
 export async function resetGameWorld(
   db: Db,
@@ -361,6 +398,7 @@ export async function resetGameWorld(
           { _id: "current" },
           {
             projection: {
+              preset: 1,
               metricsSystemVersion: 1,
               legislationSystemVersion: 1,
               cabinetSystemVersion: 1,
@@ -567,6 +605,9 @@ export async function resetGameWorld(
   // only in runSeed's reset branch, which a `resetReference: false` run skips.
   // Ops keys (maintenance, sandbox tester access, webhooks) are in neither list
   // and survive.
+  const configBefore = await gameConfigCollection<Record<string, unknown>>(db).findOne({
+    _id: "default",
+  } as never);
   await gameConfigCollection(db).updateOne(
     { _id: "default" },
     {
@@ -664,7 +705,7 @@ export async function resetGameWorld(
   // Law-created seats belong to the outgoing world. A fresh v1 world begins
   // without them; the historical 1991 Cabinet-v2 opening includes Education.
   gameStateUpdate.manuallyEnabledSeats =
-    selectedVersions.cabinet === "v2" ? ["secretary_of_education"] : [];
+    selectedVersions.cabinet === "v2" && resetDate.year >= 1980 ? ["secretary_of_education"] : [];
   if (options.iteration) {
     gameStateUpdate.iteration = options.iteration;
     // Maintain the global iteration registry so generated wiki office pages can
@@ -712,6 +753,27 @@ export async function resetGameWorld(
       : { $set: gameStateUpdate },
     { upsert: true }
   );
+
+  const switchChanges: SwitchChange[] = [
+    ...diffSwitches(
+      "gameState",
+      TRACKED_GAME_STATE_SWITCHES,
+      outgoingState as Record<string, unknown> | null,
+      await gameStateCollection<Record<string, unknown>>(db).findOne({ _id: "current" } as never)
+    ),
+    ...diffSwitches(
+      "gameConfig",
+      TRACKED_GAME_CONFIG_SWITCHES,
+      configBefore,
+      await gameConfigCollection<Record<string, unknown>>(db).findOne({ _id: "default" } as never)
+    ),
+  ];
+  if (switchChanges.length > 0) {
+    log(
+      `Reset changed ${switchChanges.length} admin switch(es); restore any that should stay: ` +
+        switchChanges.map(formatSwitchChange).join("; ")
+    );
+  }
 
   // `gameState` is exempt from the manifest-driven sweep (it is re-initialized in
   // place), and the update above is filtered to `_id: "current"` — so ANY other
@@ -807,6 +869,7 @@ export async function resetGameWorld(
       customPartiesDeleted: 0,
       partyOrgRecordsDeleted: 0,
       budgetSeedLog: [],
+      switchChanges,
     },
   };
 }

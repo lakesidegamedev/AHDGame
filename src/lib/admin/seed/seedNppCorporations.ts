@@ -5,6 +5,7 @@
  */
 
 import { isBackgroundInPreset } from "@/lib/world/eraRoster";
+import { isExcludedPreset, type PresetExclusions } from "@/lib/seeds/presetExclusions";
 import type { Db } from "mongodb";
 import type { StateResourceCapacity } from "@/lib/db/types/stateResourceCapacity";
 import { chooseSeedExtractionSite } from "@/lib/extraction/rules/seedPlacement";
@@ -41,25 +42,38 @@ export interface NppCorpCountryPlan {
 }
 
 /**
- * Presets that spawn NPP market corporations.
+ * Presets that do NOT spawn NPP market corporations; every other preset does.
  *
- * Explicit rather than a side effect of enablement-mapping: the era roster
- * gives every preset a map, so an implicit gate would start spawning NPP corps
- * for presets that previously got none. That is an economy change, not a config
- * one, so adding a preset here is a deliberate product decision backed by a
- * simulation report.
- *
- * "2019-default" is included per upstream's "make every seed complete"
- * decision; 2023 and 2027 stay out until an explicit call is made for them.
+ * Spawning corporations is an economy change, so leaving a preset out is a
+ * decision that carries a reason here.
  */
-const NPP_CORP_SPAWN_PRESETS = new Set<string>([
-  "1953-default",
-  "1979-default",
-  "1991-default",
-  "1999-default",
-  "2007-default",
-  "2019-default",
-]);
+export const NPP_CORP_SPAWN_EXCLUSIONS: PresetExclusions = {
+  "2023-default": "no decision has been made to give this era NPP market corporations",
+  empty: "variant of the 2019 world that has never spawned NPP corporations",
+  "2019-no-parties": "variant of the 2019 world that has never spawned NPP corporations",
+};
+
+/**
+ * Presets whose NPP-run countries do NOT open with one competitor per market;
+ * every other preset gets one.
+ */
+export const NPP_RUN_COUNTRY_SPAWN_EXCLUSIONS: PresetExclusions = {
+  "1953-default": "keeps the market it shipped with",
+  "1979-default": "keeps the market it shipped with",
+  "1991-default": "keeps the market it shipped with",
+  "1999-default": "keeps the market it shipped with",
+  "2007-default": "keeps the market it shipped with",
+  "2019-default": "keeps the market it shipped with",
+  "2023-default": "keeps the market it shipped with",
+  empty: "variant of the 2019 world",
+  "2019-no-parties": "variant of the 2019 world",
+};
+
+export const spawnsNppCorporations = (preset: string) =>
+  !isExcludedPreset(NPP_CORP_SPAWN_EXCLUSIONS, preset);
+
+export const spawnsRunCountryCompetitors = (preset: string) =>
+  !isExcludedPreset(NPP_RUN_COUNTRY_SPAWN_EXCLUSIONS, preset);
 
 /**
  * The per-country NPP market-corp spawn policy for a preset. Pure — no DB
@@ -67,7 +81,7 @@ const NPP_CORP_SPAWN_PRESETS = new Set<string>([
  * source of truth. Returns `[]` for presets that do not spawn NPP corps.
  */
 export function nppCorpSpawnPlan(preset: string, startingYear: number): NppCorpCountryPlan[] {
-  if (!NPP_CORP_SPAWN_PRESETS.has(preset)) return [];
+  if (!spawnsNppCorporations(preset)) return [];
   const mapped = getPresetEnablementCountries(preset);
   if (!mapped) return [];
 
@@ -87,7 +101,13 @@ export function nppCorpSpawnPlan(preset: string, startingYear: number): NppCorpC
     } else {
       const tier = getPresetEnablementTier(preset, countryId);
       if (!tier) continue;
-      perSectorCount = tier.enabledForPlayers ? 1 : tier.economyPreview ? 2 : 0;
+      perSectorCount = tier.enabledForPlayers
+        ? 1
+        : tier.economyPreview
+          ? 2
+          : spawnsRunCountryCompetitors(preset)
+            ? 1
+            : 0;
     }
     if (perSectorCount === 0) continue;
 

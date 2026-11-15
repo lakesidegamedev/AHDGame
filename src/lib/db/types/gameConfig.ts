@@ -168,6 +168,12 @@ export interface GameConfig {
    */
   managementOverheadPpPerDoubling?: number;
   /**
+   * Turn resilience. 0 or absent = today's behaviour. 1: a stale lock is taken
+   * over after about 3 minutes and a stopped turn retries from its failed step.
+   * 2: an interrupted corporation turn may also resume from its journal.
+   */
+  turnResilienceStage?: number;
+  /**
    * Funded producer market: >= 1 plans each plant's output from expected sales
    * minus held stock, so inputs and staffing follow the plan. 0 or absent = off.
    */

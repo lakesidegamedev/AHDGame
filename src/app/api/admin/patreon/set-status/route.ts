@@ -5,6 +5,7 @@ import { z } from "zod";
 import { getDb } from "@/lib/mongodb";
 import { errorResponse } from "@/lib/api/errors";
 import { parseJsonBody } from "@/lib/api/validate";
+import { withAuditedGrant } from "@/lib/audit/grants/recordGrant";
 import { createAdminLog } from "@/lib/adminLog";
 import type { PatreonTier, User } from "@/lib/db/types";
 import { applyPatreonStatus } from "@/lib/patreon/service";
@@ -36,13 +37,29 @@ export const POST = withAdminRoute(async (auth, request: Request) => {
 
   const expiresAtDate = tier === null ? new Date() : expiresAt ? new Date(expiresAt) : null;
 
-  await applyPatreonStatus(db, {
-    userId: objectId,
-    tier: tier as PatreonTier,
-    expiresAt: expiresAtDate,
-    adsDisabledDefault: true,
-    patreonUserId,
-  });
+  const apply = () =>
+    applyPatreonStatus(db, {
+      userId: objectId,
+      tier: tier as PatreonTier,
+      expiresAt: expiresAtDate,
+      adsDisabledDefault: true,
+      patreonUserId,
+    });
+  if (tier === null) {
+    await apply();
+  } else {
+    await withAuditedGrant(
+      db,
+      {
+        actorUserId: auth.admin.userId,
+        recipients: [{ type: "user", id: userId, name: user.username }],
+        kind: "access",
+        item: `Patreon tier ${tier}`,
+        reason: reason ?? "Control panel: Patreon tier set",
+      },
+      apply
+    );
+  }
 
   const character = await charactersCollection(db).findOne({ userId: objectId });
 

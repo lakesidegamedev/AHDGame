@@ -112,6 +112,8 @@ export const FRESH_PLANTS_CONFIG_UNSET: Readonly<Record<string, "">> = Object.fr
  * true of every plants economy, not a steer applied to the old one.
  */
 export const FRESH_PLANTS_CONFIG_KEPT: Readonly<Record<string, string>> = Object.freeze({
+  turnResilienceStage:
+    "operator switch for how the turn runner recovers from failures, not an economy rule",
   commodityFixStage:
     "acts on the legacy warm-up turns only: it closes the formula-demand treadmill there; funded turns price by the funded rule (updateScarcityMultiplierFunded) regardless of the stage",
   strengthUpkeepStage: "plant strength upkeep is a standing cost rule",

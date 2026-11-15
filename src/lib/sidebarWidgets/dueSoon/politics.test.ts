@@ -44,7 +44,7 @@ describe("partyBallots", () => {
         id: `statePartyElection:${stateChair.toString()}`,
         subject: "Union Party · OH",
         position: "chair",
-        href: "/country/us/region/oh/party/4",
+        href: "/country/us/region/OH/party/4",
         dueTurn: 102,
         dueAt: null,
       },

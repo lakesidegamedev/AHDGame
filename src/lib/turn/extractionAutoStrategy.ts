@@ -951,6 +951,7 @@ export async function processExtractionAutoStrategy(
     try {
       await spawnNppCorporation(db, {
         name,
+        realName: "sector",
         type: "extraction",
         countryId: candidate.countryId,
         headquartersState: candidate.stateId,

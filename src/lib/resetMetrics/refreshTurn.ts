@@ -75,6 +75,7 @@ export async function refreshResetMetricSnapshotsTurn(input: {
           lastRefreshFromTurn: 1,
           observations: 1,
           openingValues: 1,
+          modeledOpening: 1,
           householdSource: 1,
           householdIncomeModel: 1,
           // Raw survey component columns are offline evidence, never turn inputs.

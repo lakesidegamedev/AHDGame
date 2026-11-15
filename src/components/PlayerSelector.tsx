@@ -1,4 +1,5 @@
 "use client";
+import { displayCanadianRegionCode } from "@/lib/countries/ca/regionCodes";
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import Image from "next/image";
@@ -199,7 +200,7 @@ export function PlayerSelector({
                 <div className="text-xs text-muted flex items-center gap-2">
                   <span>{result.party}</span>
                   <span>•</span>
-                  <span>{result.homeState}</span>
+                  <span>{displayCanadianRegionCode(result.homeState)}</span>
                 </div>
                 <div className="text-[10px] text-muted/60 flex items-center gap-2 mt-0.5">
                   {result.username && <span>@{result.username}</span>}

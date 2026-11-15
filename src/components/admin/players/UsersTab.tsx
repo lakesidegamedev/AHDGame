@@ -169,6 +169,23 @@ export function UsersTab({ context = "admin" }: UsersTabProps) {
     }
   };
 
+  const handleSetVpnWhitelist = async (userId: string, username: string, whitelisted: boolean) => {
+    if (!confirm(`${whitelisted ? "Allow VPN for" : "Revoke VPN access from"} ${username}?`))
+      return;
+    try {
+      const res = await fetch("/api/admin/users/vpn-whitelist", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, whitelisted }),
+      });
+      const data = await res.json();
+      if (res.ok) fetchUsers();
+      else alert(`Error: ${apiErrorText(data, "Request failed")}`);
+    } catch {
+      alert("Network error");
+    }
+  };
+
   const handleDeleteUser = async (userId: string, username: string) => {
     if (
       !confirm(
@@ -495,6 +512,7 @@ export function UsersTab({ context = "admin" }: UsersTabProps) {
           onDeleteUser={handleDeleteUser}
           onSetSingleplayerEntitlement={handleSetSingleplayerEntitlement}
           onSetSandboxAccess={handleSetSandboxAccess}
+          onSetVpnWhitelist={context === "admin" ? handleSetVpnWhitelist : undefined}
         />
       )}
     </div>

@@ -10,6 +10,8 @@ import type { CountryId } from "@/lib/constants/countries";
 import { INTERNATIONAL_ORGANIZATIONS } from "@/lib/constants/internationalOrganizations";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
 import { treasuryAnchorValuation } from "@/lib/budget/rules/treasuryAccrual";
+import { fundedOrganizationCashWitnesses } from "./fundedCashWitness";
+import { ledgerTurnFromClock } from "@/lib/ledger/ledgerTurn";
 import { accountId, mintSinkAccount } from "@/lib/ledger/accounts";
 import { emitLedgerEntries } from "@/lib/ledger/emit";
 import type { LedgerEntryInput } from "@/lib/ledger/types";
@@ -28,6 +30,7 @@ import { customInternationalOrganizationsCollection } from "@/lib/db/repositorie
 
 export interface OrganizationCashContext {
   turn: number;
+  ledgerTurn?: number;
   preset: string;
   ledgerShadowEnabled?: boolean;
   treasuryCashLedgerEnabled?: boolean;
@@ -159,6 +162,7 @@ export async function settleOrganizationFundedCashMove(
       },
     ],
     projections: [
+      ...fundedOrganizationCashWitnesses(input, context),
       ...(input.sourceTreasuryCountry
         ? [
             {
@@ -251,6 +255,8 @@ export async function loadOrganizationCashContext(
     const founders = new Map(custom.map((row) => [row.id, row.foundingMembers?.[0] ?? "US"]));
     return {
       turn: resolvedTurn,
+      ledgerTurn:
+        state?.currentTurn === undefined ? resolvedTurn : ledgerTurnFromClock(state.currentTurn),
       preset: state?.preset ?? DEFAULT_SEED_PRESET,
       ledgerShadowEnabled,
       treasuryCashLedgerEnabled,

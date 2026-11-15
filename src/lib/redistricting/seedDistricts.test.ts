@@ -16,6 +16,8 @@ function makeFakeDb(seed: Record<string, unknown[]>): { db: Db; store: Record<st
         else rows.push(doc);
       };
       return {
+        findOne: async (filter: { _id: string }) =>
+          rows.find((r) => (r as { _id: string })._id === filter._id) ?? null,
         find: () => ({ toArray: async () => rows }),
         async updateOne(filter: { _id: string }, update: { $set: Record<string, unknown> }) {
           upsertOne(filter, update);

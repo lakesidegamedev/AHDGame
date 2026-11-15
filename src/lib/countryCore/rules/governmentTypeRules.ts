@@ -19,14 +19,18 @@ import {
 
 /** The short, player-facing form of a region id ("HU_BUD" -> "BUD"). */
 export function compactRegionCode(countryId: CountryId | string, regionId: string): string {
+  countryId = typeof countryId === "string" ? countryId.toUpperCase() : "";
   const prefix = `${countryId}_`;
-  return PREFIXED_REGION_ID_COUNTRIES.has(countryId as CountryId) && regionId.startsWith(prefix)
-    ? regionId.slice(prefix.length)
+  return PREFIXED_REGION_ID_COUNTRIES.has(countryId as CountryId) &&
+    regionId.toUpperCase().startsWith(prefix)
+    ? regionId.slice(prefix.length).toUpperCase()
     : regionId;
 }
 
 /** The canonical stored region id for a URL param ("BUD" -> "HU_BUD"). */
 export function canonicalRegionId(countryId: CountryId | string, regionParam: string): string {
+  regionParam = typeof regionParam === "string" ? regionParam.toUpperCase() : "";
+  countryId = typeof countryId === "string" ? countryId.toUpperCase() : "";
   const prefix = `${countryId}_`;
   return PREFIXED_REGION_ID_COUNTRIES.has(countryId as CountryId) && !regionParam.startsWith(prefix)
     ? `${prefix}${regionParam}`

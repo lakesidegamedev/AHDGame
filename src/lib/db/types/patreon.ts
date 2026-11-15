@@ -1,4 +1,7 @@
-export type PatreonTier = "supporter" | "supporter-plus" | "supporter-plus-plus" | null;
+/** Every paid supporter tier. Only the Supporter+ tiers include single-player and sandbox. */
+export const SUPPORTER_TIERS = ["supporter", "supporter-plus", "supporter-plus-plus"] as const;
+
+export type PatreonTier = (typeof SUPPORTER_TIERS)[number] | null;
 
 /**
  * True when the tier is Supporter+ or higher (Supporter++). Use for gates that
@@ -89,4 +92,9 @@ export function isPatreonActive(tier: PatreonTier, expiresAt?: Date | null): boo
   if (tier === null) return false;
   if (expiresAt == null) return true;
   return expiresAt.getTime() > Date.now();
+}
+
+/** Single-player is included with active Supporter+ and Champion, not plain Supporter. */
+export function tierIncludesSingleplayer(tier: PatreonTier, expiresAt?: Date | null): boolean {
+  return isPlusOrBetter(tier) && isPatreonActive(tier, expiresAt);
 }

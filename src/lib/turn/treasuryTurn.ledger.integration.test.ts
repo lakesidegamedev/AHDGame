@@ -7,6 +7,8 @@ import { deriveLedgerEntry } from "@/lib/ledger/deriveFromTx";
 import { reconcileLedger } from "@/lib/ledger/reconcile";
 import type { LedgerEntry } from "@/lib/ledger/types";
 import type { FederalBudget } from "@/lib/db/types/budget";
+import { INITIAL_RATES_1979 } from "@/lib/constants/currenciesTables";
+import type { CountryId } from "@/lib/constants/countries";
 import { processTreasuryTurn } from "./treasuryTurn";
 import { getDb } from "@/lib/mongodb";
 import { ObjectId } from "mongodb";
@@ -234,6 +236,87 @@ describe("treasury accrual stock-flow ownership", () => {
     const options = (find.mock.calls[0] as unknown[] | undefined)?.[1] as
       { projection?: Record<string, unknown> } | undefined;
     expect(options?.projection).not.toHaveProperty("holders");
+  });
+
+  /**
+   * A process death at ANY write boundary of the treasury phase, followed by a
+   * rerun of the same turn, lands the same cash, holder credits and ledger as an
+   * uninterrupted turn. Sweeps every write call, before and after it applies.
+   */
+  async function mixedHolderWorldAfterTurn9() {
+    const db = world(false);
+    const nppIds = Array.from({ length: 4 }, (_, i) => new ObjectId(`65000000000000000000009${i}`));
+    const fundIds = Array.from(
+      { length: 4 },
+      (_, i) => new ObjectId(`6500000000000000000000a${i}`)
+    );
+    db.seed(
+      "npps",
+      nppIds.map((_id) => ({ _id, nppInvestmentCashAnchor: 0 }))
+    );
+    db.seed(
+      "indexFunds",
+      fundIds.map((_id) => ({ _id, cashAnchor: 0 }))
+    );
+    db.seed("bonds", [
+      {
+        _id: new ObjectId("6500000000000000000000b0"),
+        issuerType: "sovereign",
+        countryId: "US",
+        currencyCode: "USD",
+        couponRate: 4.8,
+        maturityTurn: 48,
+        matured: false,
+        defaulted: false,
+        publicFloat: 0,
+        holders: [
+          ...nppIds.map((nppId) => ({ nppId, units: 10 })),
+          ...fundIds.map((fundId) => ({ fundId, units: 10 })),
+        ],
+      },
+    ]);
+    db.collection("federalBudget").docs[0].treasuryCashLocal = 1_000;
+    await processTreasuryTurn(9);
+    db.collection("gameConfig").docs[0].treasuryCashLedgerEnabled = true;
+    return db;
+  }
+
+  function endState(db: Awaited<ReturnType<typeof mixedHolderWorldAfterTurn9>>) {
+    return {
+      cashLocal: db.collection("federalBudget").docs[0].treasuryCashLocal,
+      balance: db.collection("federalBudget").docs[0].treasuryBalance,
+      npps: db.collection("npps").docs.map((r) => r.nppInvestmentCashAnchor),
+      funds: db.collection("indexFunds").docs.map((r) => r.cashAnchor),
+      ledgerEntries: db.collection("ledgerEntries").docs.length,
+    };
+  }
+
+  it("a death at any write boundary then a rerun equals an uninterrupted turn", async () => {
+    const clean = await mixedHolderWorldAfterTurn9();
+    await processTreasuryTurn(10);
+    const expected = endState(clean);
+    expect(expected.cashLocal).toBe(920);
+
+    let boundaries = 0;
+    for (const afterWrite of [false, true]) {
+      for (let onCall = 1; onCall <= 80; onCall++) {
+        const db = await mixedHolderWorldAfterTurn9();
+        const crash = withInjectedCrash(db, { onCall, afterWrite });
+        vi.mocked(getDb).mockResolvedValue(crash.db);
+        let died = false;
+        try {
+          await processTreasuryTurn(10);
+        } catch {
+          died = true;
+        }
+        vi.mocked(getDb).mockResolvedValue(db as unknown as Db);
+        if (!died) break;
+        boundaries += 1;
+        await processTreasuryTurn(10);
+        expect(endState(db), `death at write ${onCall} afterWrite=${afterWrite}`).toEqual(expected);
+      }
+    }
+    expect(boundaries).toBeGreaterThan(4);
   });
 
   it("funds opening bank-holder coupons once from treasury cash without changing gross budget interest", async () => {
@@ -530,7 +613,7 @@ describe("treasury accrual stock-flow ownership", () => {
     expect(db.collection("federalBudget").docs[0].treasuryBalance).toBe(0);
     expect(db.collection("ledgerEntries").docs.map((e) => e.turn)).toEqual([11]);
   });
-  it("preserves the complete unpriced flag-off budget cohort", async () => {
+  it("settles the flag-off 1979 Eastern bloc cohort at its authored rates", async () => {
     const db = world();
     await db
       .collection("gameConfig")
@@ -552,12 +635,13 @@ describe("treasury accrual stock-flow ownership", () => {
     expect((await processTreasuryTurn(10)).countriesProcessed).toBe(7);
     expect((await processTreasuryTurn(10)).countriesProcessed).toBe(0);
     for (const budget of db.collection("federalBudget").docs) {
+      const authored = INITIAL_RATES_1979[budget.countryId as CountryId];
       expect(budget.treasuryBalance).toBe(-500);
-      expect(budget.treasuryAccrual).toMatchObject({
-        anchorRate: null,
-        anchorRateSource: "unpriced",
-        ledgerShadow: false,
-      });
+      expect(budget.treasuryAccrual).toMatchObject(
+        budget._id === template._id
+          ? { anchorRate: null, anchorRateSource: "unpriced", ledgerShadow: false }
+          : { anchorRate: authored, anchorRateSource: "authored_budget_only", ledgerShadow: false }
+      );
     }
     expect(db.collection("ledgerEntries").docs).toHaveLength(0);
   });

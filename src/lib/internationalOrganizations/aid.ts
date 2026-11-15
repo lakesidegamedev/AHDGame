@@ -85,6 +85,10 @@ export async function payOrganizationAid(
   if (!(amountFund > 0)) return false;
   const context = await organizationCashContext(db, options);
   return withOrganizationCashBatch(db, context, async (batch) => {
+    // An organization can retain historical members outside this preset's
+    // fiscal roster. No recipient treasury means no payment, and no FX quote
+    // should be requested for that nonexistent destination.
+    if (batch?.treasuryCashLedgerEnabled && !batch.budgetCurrencies.has(recipient)) return false;
     const fundCountry = await resolveOrgFundCurrencyCountry(db, organizationId);
     const preset = batch?.preset ?? (await loadWorldPreset(db));
     const recipientLocal = convertLocal(fundCountry, recipient, amountFund, preset);
@@ -117,22 +121,6 @@ export async function payOrganizationAid(
       });
       if (result.status !== "applied" && result.status !== "replayed") return false;
       if (result.status === "applied") {
-        await witnessOrganizationCash(db, batch, {
-          kind: "org",
-          ref: organizationId,
-          countryId: fundCountry,
-          amount: -amountFund,
-          site: "aid_fund",
-          now: new Date(),
-        });
-        await witnessOrganizationCash(db, batch, {
-          kind: "government",
-          ref: recipient,
-          countryId: recipient,
-          amount: fundedRecipientLocal,
-          site: "aid_treasury",
-          now: new Date(),
-        });
         await applyOrganizationAidBoost(db, recipient, localToUsd(fundCountry, amountFund, preset));
       }
       return true;

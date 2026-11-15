@@ -121,6 +121,7 @@ export async function runCensus(
     await regenerateCongressionalDistricts(db, {
       countryId: "US",
       stateIds: toRegen,
+      preset: gameState?.preset,
       now: new Date(),
     });
   }

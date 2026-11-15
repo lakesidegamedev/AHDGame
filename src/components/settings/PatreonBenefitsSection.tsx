@@ -42,7 +42,7 @@ const SURFACE_CLASS =
   "relative overflow-hidden rounded-3xl border border-card-border/80 bg-gradient-to-br from-card via-card to-card-elevated/55 shadow-sm";
 
 function formatTierLabel(tier: PatreonTier): string {
-  if (tier === "supporter-plus-plus") return "Supporter++";
+  if (tier === "supporter-plus-plus") return "Champion";
   if (tier === "supporter-plus") return "Supporter+";
   if (tier === "supporter") return "Supporter";
   return "Not subscribed";

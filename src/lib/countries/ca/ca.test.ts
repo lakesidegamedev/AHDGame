@@ -108,7 +108,14 @@ describe("Canada regions", () => {
 });
 
 describe("Canada parties", () => {
-  it("authors five invented parties valid for 2027 only", () => {
+  it("authors five real parties valid for 2027 only", () => {
+    expect(caParties.map((p) => [p.name, p.abbreviation])).toEqual([
+      ["Liberal Party of Canada", "LIB"],
+      ["Conservative Party of Canada", "CON"],
+      ["New Democratic Party", "NDP"],
+      ["Bloc Québécois", "BQ"],
+      ["Green Party of Canada", "GRN"],
+    ]);
     expect(caParties).toHaveLength(5);
     for (const party of caParties) {
       expect(party.countryId).toBe("CA");
@@ -117,7 +124,7 @@ describe("Canada parties", () => {
     expect(new Set(caParties.map((p) => p.abbreviation)).size).toBe(5);
   });
 
-  it("runs the sovereigntist party in Quebec only", () => {
+  it("retains the Bloc's historical Quebec vote shares without inventing support elsewhere", () => {
     for (const [regionId, shares] of Object.entries(CA_REGION_POLLING_2025)) {
       const share = shares.ca_laurentian ?? 0;
       if (regionId === "CA_QC") expect(share).toBeGreaterThan(0);

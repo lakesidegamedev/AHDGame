@@ -1,12 +1,8 @@
 import type { Db } from "mongodb";
 import { recordCorporationExit } from "@/lib/corporations/exits/recordCorporationExit";
+import { retireDissolvedCorporationCash } from "./dissolutionCash";
 import { ObjectId } from "mongodb";
-import type {
-  Character,
-  Corporation,
-  CorporateSector,
-  CorporationExitReason,
-} from "@/lib/db/types";
+import type { Character, Corporation, CorporationExitReason } from "@/lib/db/types";
 import type { ImperialCharacter } from "@/lib/db/types/imperialCharacter";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
 import { buildPersonalBalanceInc, getHomeCurrency } from "@/lib/currency/characterFunds";
@@ -94,6 +90,7 @@ export async function executeCorporationBondDefaultDissolution(
     requireDefaultedBonds: boolean;
     exitReason?: CorporationExitReason;
     cooldownExempt?: boolean;
+    turn?: number;
   }
 ): Promise<CorporationDissolutionResult> {
   if (corporation.countryOwnerId) {
@@ -118,7 +115,7 @@ export async function executeCorporationBondDefaultDissolution(
   }
 
   const now = new Date();
-  const currentTurn = await getCurrentTurn(db);
+  const currentTurn = options.turn ?? (await getCurrentTurn(db));
   const forexEnabled = await isForexEnabled();
 
   const fxByCurrency = await loadFxRatesByCurrency(db);
@@ -649,6 +646,7 @@ export async function executeCorporationBondDefaultDissolution(
       counterpartyName: refreshedCorporation.name,
       meta: {
         side: "publicFloat",
+        treasuryCashMovement: false,
         sharePayAnchor: Math.round(allocation.publicFloatRow.payout * 100) / 100,
         floatShares: allocation.publicFloatRow.shares,
         centralBankId: cbId,
@@ -718,6 +716,7 @@ export async function executeCorporationBondDefaultDissolution(
       counterpartyName: "Bond default settlement",
       meta: {
         bondRecoveryPoolAnchor: Math.round(bondRecoveryPool * 100) / 100,
+        ledgerOwnedBySettlement: true,
         shareholderPoolAnchor: Math.round(shareholderPool * 100) / 100,
         totalBondClaimsAnchor: Math.round(totalBondClaims * 100) / 100,
         totalPayoutToPeopleAnchor: Math.round(totalCharShareAnchor * 100) / 100,
@@ -760,11 +759,23 @@ export async function executeCorporationBondDefaultDissolution(
     deletedAt: now,
   });
 
+  const retiredCurrency = refreshedCorporation.liquidCurrencyCode ?? "USD";
+  await retireDissolvedCorporationCash(db, {
+    corporation: refreshedCorporation._id.toHexString(),
+    currency: retiredCurrency,
+    rate: fxByCurrency.get(retiredCurrency) ?? 1,
+    liquidCapital: refreshedCorporation.liquidCapital,
+    pendingOperatingCash: refreshedCorporation.pendingOperatingCash ?? 0,
+    assetLiquidationCredit: assetLiquidationInc,
+    turn: currentTurn,
+    now,
+  });
   await corporationsCollection(db).deleteOne({ _id: refreshedCorporation._id });
   await recordCorporationExit(db, refreshedCorporation, {
     reason:
       options.exitReason ?? (options.requireDefaultedBonds ? "bond_default" : "forced_liquidation"),
     successorIds: disposal.recipientIds,
+    turn: currentTurn,
     now,
     cooldownExempt: options.cooldownExempt,
   });

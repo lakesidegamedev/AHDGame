@@ -1,22 +1,30 @@
 #!/usr/bin/env node
 /**
- * Lighthouse scorecard for the top-35 public pages in `pages.mjs`: per-page
- * JSON/HTML reports, a Markdown summary, and an optional floor-budget gate.
+ * Lighthouse scorecard for the pages in `pages.mjs`: per-page JSON reports, a
+ * Markdown summary, and an optional floor-budget gate.
  *
  * node scripts/perf/lighthouse/run.mjs --base=<url> --strategy=mobile|desktop
+ *   [--cohort=public|signed-in|all] [--storage=<login-state.mjs output>]
  *   [--pages=/,/faq] [--runs=3 (median)] [--out=<dir>] [--budget=strict|off]
- *   [--chrome-path=<chrome>]
+ *   [--chrome-path=<chrome>] [--corp=<id>] [--party=<id>]
  *
- * Needs the `lighthouse` and `chrome-launcher` devDependencies and a Chrome
- * (CHROME_PATH, --chrome-path, or a system install).
+ * The signed-in cohort needs --storage. Needs the `lighthouse` and
+ * `chrome-launcher` devDependencies and a Chrome binary.
  */
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import lighthouse from "lighthouse";
 import * as chromeLauncher from "chrome-launcher";
-import { TOP_PAGES } from "./pages.mjs";
-import { METRIC_BUDGETS, METRIC_IDS, PAGE_BUDGET_OVERRIDES, SCORE_BUDGETS } from "./budgets.mjs";
+import { readFile } from "node:fs/promises";
+import { SIGNED_IN_PAGES, TOP_PAGES } from "./pages.mjs";
+import {
+  METRIC_BUDGETS,
+  METRIC_IDS,
+  PAGE_BUDGET_OVERRIDES,
+  SCORE_BUDGETS,
+  SIGNED_IN_BUDGETS,
+} from "./budgets.mjs";
 
 const CATEGORIES = ["performance", "accessibility", "best-practices", "seo"];
 
@@ -38,6 +46,45 @@ if (!["mobile", "desktop"].includes(strategy)) {
   process.exit(2);
 }
 
+const cohort = arg("cohort", "public");
+if (!["public", "signed-in", "all"].includes(cohort)) {
+  console.error(`Unknown --cohort=${cohort}; expected public, signed-in or all.`);
+  process.exit(2);
+}
+const storagePath = arg("storage", "");
+const idParams = { corp: arg("corp", ""), party: arg("party", "") };
+
+let cookieHeader = "";
+if (cohort !== "public") {
+  if (!storagePath) {
+    console.error("--cohort=signed-in|all needs --storage=<login-state.mjs output>.");
+    process.exit(2);
+  }
+  const state = JSON.parse(await readFile(storagePath, "utf8"));
+  cookieHeader = (state.cookies ?? []).map((c) => `${c.name}=${c.value}`).join("; ");
+  if (!cookieHeader) {
+    console.error(`No cookies in ${storagePath}.`);
+    process.exit(2);
+  }
+}
+
+const cohortPages =
+  cohort === "public"
+    ? TOP_PAGES
+    : cohort === "signed-in"
+      ? SIGNED_IN_PAGES
+      : [...TOP_PAGES, ...SIGNED_IN_PAGES];
+
+/** Fills `:corp` / `:party`; a page whose id is unknown is skipped, not guessed. */
+function resolvePage(page) {
+  let missing = false;
+  const resolved = page.path.replace(/:(\w+)/g, (_, key) => {
+    if (!idParams[key]) missing = true;
+    return idParams[key] ?? "";
+  });
+  return missing ? null : { ...page, path: resolved, budgetKey: page.path };
+}
+
 const pages = only
   ? only
       .split(",")
@@ -45,13 +92,14 @@ const pages = only
       .filter(Boolean)
       .map(
         (value) =>
-          TOP_PAGES.find((page) => page.path === value) ?? {
+          cohortPages.find((page) => page.path === value) ?? {
             path: value,
             name: slug(value),
             group: "custom",
+            signedIn: cohort !== "public",
           }
       )
-  : TOP_PAGES;
+  : cohortPages.map(resolvePage).filter(Boolean);
 
 function slug(value) {
   if (value === "/") return "home";
@@ -121,7 +169,9 @@ function ms(value) {
 
 function evaluateBudget(page, scores, metrics, seoExcluded) {
   const limits = SCORE_BUDGETS[strategy];
-  const override = PAGE_BUDGET_OVERRIDES[page.path] ?? {};
+  const override = page.signedIn
+    ? (SIGNED_IN_BUDGETS[page.budgetKey ?? page.path] ?? {})
+    : (PAGE_BUDGET_OVERRIDES[page.budgetKey ?? page.path] ?? {});
   const breaches = [];
   const metricWarnings = [];
 
@@ -155,6 +205,44 @@ const chrome = await chromeLauncher.launch({
   chromeFlags: ["--headless=new", "--no-sandbox", "--disable-dev-shm-usage", "--disable-gpu"],
 });
 
+/**
+ * Installs the saved session cookies in the browser itself over the DevTools
+ * protocol. A Cookie request header alone is lost to Lighthouse's storage
+ * reset and its own navigations, which silently turns every signed-in page
+ * into the login page.
+ */
+async function installCookies(port, storagePath) {
+  const state = JSON.parse(await readFile(storagePath, "utf8"));
+  const version = await (await fetch(`http://127.0.0.1:${port}/json/version`)).json();
+  const socket = new WebSocket(version.webSocketDebuggerUrl);
+  await new Promise((resolve, reject) => {
+    socket.onopen = resolve;
+    socket.onerror = () => reject(new Error("DevTools connection failed"));
+  });
+  const cookies = (state.cookies ?? []).map((c) => ({
+    name: c.name,
+    value: c.value,
+    domain: c.domain,
+    path: c.path ?? "/",
+    httpOnly: c.httpOnly,
+    secure: c.secure,
+    sameSite: c.sameSite,
+    ...(c.expires > 0 ? { expires: c.expires } : {}),
+  }));
+  await new Promise((resolve, reject) => {
+    socket.onmessage = (event) => {
+      const message = JSON.parse(event.data);
+      if (message.id !== 1) return;
+      if (message.error) reject(new Error(message.error.message));
+      else resolve();
+    };
+    socket.send(JSON.stringify({ id: 1, method: "Storage.setCookies", params: { cookies } }));
+  });
+  socket.close();
+}
+
+if (cohort !== "public") await installCookies(chrome.port, storagePath);
+
 const rows = [];
 let breachCount = 0;
 
@@ -180,10 +268,17 @@ try {
         throttlingMethod: "simulate",
         ...(strategy === "desktop" ? { throttling: desktopThrottling } : {}),
         maxWaitForLoad: 90_000,
+        ...(page.signedIn ? { disableStorageReset: true } : {}),
       };
 
       try {
         const result = await lighthouse(url, flags);
+        if (
+          page.signedIn &&
+          /^\/(login|register)/.test(new URL(result.lhr.finalDisplayedUrl).pathname)
+        ) {
+          throw new Error(`redirected to ${result.lhr.finalDisplayedUrl}: session cookie rejected`);
+        }
         lastLhr = result.lhr;
         for (const category of CATEGORIES) {
           const score = lastLhr.categories[category]?.score;
@@ -195,6 +290,13 @@ try {
         }
       } catch (error) {
         lastError = error instanceof Error ? error.message : String(error);
+        if (lastError.includes("session cookie rejected")) {
+          console.error(
+            `FAIL ${page.path}: ${lastError}; stopping, every signed-in page would fail.`
+          );
+          await chrome.kill();
+          process.exit(3);
+        }
       }
     }
 
@@ -225,7 +327,13 @@ try {
           ? "page is noindex/disallowed"
           : null;
 
-    const { breaches, metricWarnings } = evaluateBudget(page, scores, metrics, seoExcluded);
+    const budgetPage = page.signedIn
+      ? {
+          ...page,
+          budgetKey: new URL(lastLhr.finalDisplayedUrl).pathname.replace(/[0-9a-f]{24}/, ":corp"),
+        }
+      : page;
+    const { breaches, metricWarnings } = evaluateBudget(budgetPage, scores, metrics, seoExcluded);
     breachCount += breaches.length;
 
     const name = page.name ?? slug(page.path);

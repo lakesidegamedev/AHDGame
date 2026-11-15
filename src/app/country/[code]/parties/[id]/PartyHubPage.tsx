@@ -7,9 +7,9 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { getMessageStyle } from "@/lib/utils/formatters";
-import { MAJOR_DEMOTION_GRACE_TURNS } from "@/lib/parties/partyTier";
 import { Button, CardSkeleton, Skeleton } from "@/components/ui";
 import { PartyLogo } from "@/components/PartyLogo";
+import { NationalPartyIdentityStatus } from "./components/NationalPartyIdentityStatus";
 import { RegimeOffersInbox } from "@/components/parties/RegimeOffersInbox";
 import { AgendaBannerWithEdit } from "@/components/party-hub/AgendaBannerWithEdit";
 import { type CountryId } from "@/lib/constants/countriesCore";
@@ -424,11 +424,11 @@ function PartyHubChrome({
           </div>
           {modViewBanner}
           {statsStrip}
-          {/* Scrolls sideways when the tabs outrun the width; the faded right
-              edge and the trailing space show there is more past the edge. */}
+          {/* Scrolls sideways when the tabs outrun the width; visible scrollbar
+              plus the faded right edge make off-screen tabs discoverable. */}
           <nav
             aria-label="Party sections"
-            className="flex gap-6 overflow-x-auto border-t border-card-border px-4 scrollbar-hide [mask-image:linear-gradient(to_right,black_calc(100%_-_2.5rem),transparent)] after:block after:w-6 after:shrink-0 after:content-[''] sm:px-7"
+            className="flex gap-6 overflow-x-auto border-t border-card-border px-4 [mask-image:linear-gradient(to_right,black_calc(100%_-_2.5rem),transparent)] after:block after:w-6 after:shrink-0 after:content-[''] sm:px-7"
           >
             {tabs.map((t) => (
               <button
@@ -871,22 +871,7 @@ function NationalPartyHub({ scope }: { scope: Extract<PartyHubScope, { kind: "na
           ? "Major party"
           : "Minor party"
       }
-      headerExtra={
-        party.majorDemotionWarning ? (
-          <p className="mt-3 max-w-xl text-body-sm text-muted">
-            <span className="font-semibold text-warning">Major party status at risk.</span> Org has
-            fallen below 10% in two-thirds of regions. Regain 20% Org in at least a third of regions
-            within{" "}
-            <span className="font-semibold tabular-nums text-foreground">
-              {Math.max(
-                0,
-                party.majorDemotionWarning.startedTurn + MAJOR_DEMOTION_GRACE_TURNS - currentTurn
-              )}
-            </span>{" "}
-            turns or this party will be demoted to Minor.
-          </p>
-        ) : null
-      }
+      headerExtra={<NationalPartyIdentityStatus party={party} currentTurn={currentTurn} />}
       headerActions={
         user?.hasCharacter ? (
           isInParty ? (
@@ -1105,6 +1090,7 @@ function NationalPartyHub({ scope }: { scope: Extract<PartyHubScope, { kind: "na
             partyId={id}
             characterId={user?.character?.id ?? null}
             isChair={isChair}
+            isDefaultParty={party.isDefault}
           />
         </div>
       )}

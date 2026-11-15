@@ -1,4 +1,10 @@
 import { chooseNppCorporationName } from "@/lib/corporations/names/rules";
+import {
+  chooseRealCompanyName,
+  isRealCompanyWorld,
+  realCompanyLogoUrl,
+  type RealNameKind,
+} from "@/lib/corporations/names/realNames";
 import type { Db, Document, WithId } from "mongodb";
 import { ObjectId } from "mongodb";
 import type { Corporation, CorporateSector, GameState, NPP } from "@/lib/db/types";
@@ -176,6 +182,8 @@ export interface SpawnNppCorporationInput {
   brandColor?: string;
   /** Optional ticker symbol (auto-generated if not provided) */
   tickerSymbol?: string;
+  /** Set when `name` is a generated placeholder a modern world may replace with a real company. */
+  realName?: RealNameKind;
   /**
    * Explicit NPP party sequentialId for the CEO. When omitted (or blank), the CEO
    * is chosen by {@link chooseNppCorpCeo}: an existing NPP without a corp is
@@ -251,6 +259,8 @@ export interface CreateNppCorporationShellInput {
   startingCapital?: number;
   brandColor?: string;
   tickerSymbol?: string;
+  /** Set when `name` is a generated placeholder a modern world may replace with a real company. */
+  realName?: RealNameKind;
   nppPartyId?: string;
   foundedAtTurn?: number;
   /** Tech nodes carried over in addition to the era's auto-granted set. */
@@ -276,6 +286,35 @@ export interface CreateNppCorporationShellResult {
 }
 
 /**
+ * A generated placeholder name becomes a real company in modern worlds when
+ * the country and industry still have an unused one. Explicit names pass through.
+ */
+async function resolveNppCorporationName(
+  db: Db,
+  input: {
+    requestedName: string;
+    realName: RealNameKind | undefined;
+    countryId: CountryId;
+    lane: OperatingSectorType;
+    worldYear: number | null;
+  }
+): Promise<string> {
+  if (!input.realName || !isRealCompanyWorld(input.worldYear)) return input.requestedName;
+  const existingNames = (
+    await corporationsCollection(db).find({}).project<{ name: string }>({ name: 1 }).toArray()
+  ).map((corp) => corp.name);
+  return (
+    chooseRealCompanyName({
+      countryId: input.countryId,
+      lane: input.lane,
+      kind: input.realName,
+      existingNames,
+      rng: Math.random,
+    }) ?? input.requestedName
+  );
+}
+
+/**
  * Insert an NPP-run corporation with no sectors: CEO selection, founding book,
  * tech grants, share structure, and the witnessed starting grant. Shared by the
  * admin/seed spawn (which then grants a founding sector out of the unowned pool)
@@ -287,7 +326,7 @@ export async function createNppCorporationShell(
   input: CreateNppCorporationShellInput
 ): Promise<CreateNppCorporationShellResult> {
   const {
-    name,
+    name: requestedName,
     type,
     industryModel,
     mediaDiscriminator,
@@ -359,10 +398,18 @@ export async function createNppCorporationShell(
       },
     }
   );
-  const techGrantIds = autoGrantedNodeIds(
-    getOperatingSectorType(type, industryModel, mediaDiscriminator),
-    (techGameState ? resolveGameYear(techGameState) : null) ?? getStartingYearForPreset(preset)
-  );
+  const worldYear =
+    (techGameState ? resolveGameYear(techGameState) : null) ?? getStartingYearForPreset(preset);
+  const operatingLane = getOperatingSectorType(type, industryModel, mediaDiscriminator);
+  const techGrantIds = autoGrantedNodeIds(operatingLane, worldYear);
+  const name = await resolveNppCorporationName(db, {
+    requestedName,
+    realName: input.realName,
+    countryId,
+    lane: operatingLane,
+    worldYear,
+  });
+  const logoUrl = realCompanyLogoUrl(name);
   const startingCapital =
     customCapital ??
     Math.round(
@@ -426,6 +473,7 @@ export async function createNppCorporationShell(
       : {}),
     ceoSalary: 0,
     brandColor: pickBrandColor(brandColor),
+    ...(logoUrl ? { logoUrl } : {}),
     sequentialId,
     totalShares: totalIssuedShares,
     sharePrice: initialSharePrice,
@@ -800,6 +848,7 @@ export async function spawnNppCorporation(
       startingCapital: customCapital,
       brandColor,
       tickerSymbol: customTicker,
+      realName: input.realName,
       nppPartyId,
       foundedAtTurn: input.foundedAtTurn,
       now,
@@ -825,7 +874,7 @@ export async function spawnNppCorporation(
   return {
     corporationId: corpId.toString(),
     sequentialId,
-    name,
+    name: corpDoc.name,
     type,
     ...(industryModel ? { industryModel } : {}),
     countryId,
@@ -931,6 +980,7 @@ export async function batchSpawnNppCorporations(
       try {
         const result = await spawnNppCorporation(db, {
           name,
+          realName: "sector",
           type,
           industryModel,
           mediaDiscriminator,

@@ -142,6 +142,7 @@ export async function chooseNppPickupReceiver(
   ).map((c) => c.name);
   const shell = await createNppCorporationShell(db, {
     name: chooseNppCorporationName(hostCountry, lane, existingNames, Math.random),
+    realName: "sector",
     type: sector.sectorType as CorporationType,
     industryModel: (sector.industryModel ?? null) as CorporateSector["industryModel"] & null,
     mediaDiscriminator: (sector.mediaDiscriminator ??

@@ -1,14 +1,14 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
-import { requireModerator } from "@/lib/api/requireModerator";
+import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError } from "@/lib/api/errors";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 // GET /api/moderator/resources/characters — List characters for resource grant UI.
-// Auth: requireModerator
+// Auth: requireAdmin
 // Errors: 403
 export async function GET() {
   try {
-    const auth = await requireModerator();
+    const auth = await requireAdmin();
     if (!auth.ok) return auth.response;
 
     const db = await getDb();

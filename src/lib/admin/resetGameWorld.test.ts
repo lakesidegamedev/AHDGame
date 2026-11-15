@@ -426,6 +426,43 @@ describe("resetGameWorld", () => {
     });
   });
 
+  it("reports admin switches the reset reverted, in the result and the log", async () => {
+    db.collection("gameState");
+    db.collection("gameConfig");
+    const state = db.collectionMocks.gameState;
+    state.findOne.mockImplementation(async () =>
+      state.updateOne.mock.calls.length === 0
+        ? { _id: "current", corporationActionsPaused: true, playerTransfersPaused: false }
+        : { _id: "current", corporationActionsPaused: false, playerTransfersPaused: false }
+    );
+    const config = db.collectionMocks.gameConfig;
+    config.findOne.mockImplementation(async () =>
+      config.updateOne.mock.calls.length === 0
+        ? { _id: "default", firstJoinerBecomesPartyChair: false }
+        : { _id: "default", firstJoinerBecomesPartyChair: true }
+    );
+    const lines: string[] = [];
+    const result = await resetGameWorld(db as never, {
+      deleteProfiles: true,
+      preset: "1991-default",
+      seedHistorical: false,
+      log: (msg) => lines.push(msg),
+    });
+    expect(result.details.switchChanges).toEqual(
+      expect.arrayContaining([
+        { source: "gameState", name: "corporationActionsPaused", before: true, after: false },
+        { source: "gameConfig", name: "firstJoinerBecomesPartyChair", before: false, after: true },
+      ])
+    );
+    expect(
+      lines.some(
+        (l) =>
+          l.includes("gameState.corporationActionsPaused: true -> false") &&
+          l.includes("gameConfig.firstJoinerBecomesPartyChair: false -> true")
+      )
+    ).toBe(true);
+  });
+
   it("uses the historical education seat only for a Cabinet v2 reset", async () => {
     await resetGameWorld(db as never, {
       deleteProfiles: true,

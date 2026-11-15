@@ -15,6 +15,9 @@ import {
   type CycleAnchorContext,
 } from "@/lib/elections/cycleAnchorContext";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { usRegionalElectionYearForWorld } from "@/lib/countries/us/rules/regionalElectionCalendar";
+import { provincialElectionYearForWorld } from "@/lib/countries/ca/rules/provincialElectionCalendar";
+import { CA_PROVINCIAL_LEGISLATURES } from "@/lib/countries/ca/data/caProvincialLegislatures";
 
 export * from "./formattersCore";
 
@@ -42,6 +45,8 @@ export function resolveElectionYear(
     electionYear?: number | null;
     senateClass?: number | null;
     chamberClass?: number | null;
+    countryId?: string;
+    state?: string;
   },
   ctx: CycleAnchorContext = DEFAULT_CYCLE_ANCHOR_CONTEXT
 ): number {
@@ -51,7 +56,9 @@ export function resolveElectionYear(
     election.cycle,
     election.senateClass,
     election.chamberClass,
-    ctx
+    ctx,
+    election.countryId as CountryId | undefined,
+    election.state
   );
 }
 
@@ -61,11 +68,24 @@ export function electionToLarpYear(
   senateClass?: number | null,
   chamberClass?: number | null,
   ctx: CycleAnchorContext = DEFAULT_CYCLE_ANCHOR_CONTEXT,
-  countryId?: CountryId
+  countryId?: CountryId,
+  state?: string
 ): number {
   // Cycle 0 is the pre-iteration "founding" election: it happens at the pinned
   // era start, so it is labeled with the starting year (not a pre-anchor year).
   if (cycle === 0) return ctx.startingYear;
+  const regional =
+    countryId && state
+      ? (usRegionalElectionYearForWorld(state, electionType, cycle, countryId, ctx.preset) ??
+        provincialElectionYearForWorld(
+          CA_PROVINCIAL_LEGISLATURES[state]?.nextElectionYear,
+          electionType,
+          cycle,
+          countryId,
+          ctx.preset
+        ))
+      : undefined;
+  if (regional !== undefined) return regional;
   const years =
     CANONICAL_REAL_ELECTION_YEARS_BY_PRESET[ctx.preset] ??
     CANONICAL_REAL_ELECTION_YEARS_BY_PRESET["2019-default"];

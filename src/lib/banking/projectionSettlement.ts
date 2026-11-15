@@ -5,6 +5,12 @@ import { SETTLED_KEYS_CAP } from "./moneyMove";
 import { reviveObjectIds } from "./settlementEncoding";
 import type { TransitionProjection } from "./rules/boundary";
 import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
+import { bankLoansCollection } from "@/lib/db/repositories/bankLoans";
+import {
+  settlementTargetSnapshot,
+  rememberSettlementTarget,
+  forgetSettlementTarget,
+} from "./settlementReadSnapshot";
 
 const RECEIPT = "pendingSettlementProjection";
 const REVISION = "settlementProjectionRevision";
@@ -32,6 +38,84 @@ interface Journal {
   projections?: ProjectionRecord[];
 }
 type Outcome = { ok: true; newlyApplied: boolean } | { ok: false; error: string };
+export interface LoanProjectionBatch {
+  targets: Map<string, Target>;
+  record: Journal;
+  delivered: Array<{ id: unknown; receipt: Receipt }>;
+}
+const targetKey = (id: unknown) => `${typeof id}:${String(id)}`;
+
+/** Read every loan target before its journal; CAS guards still serialize each write. */
+export async function prepareLoanProjectionBatch(
+  db: Db,
+  key: string,
+  projections: readonly TransitionProjection[]
+): Promise<LoanProjectionBatch | undefined> {
+  const loans = projections.filter((p) => p.collection === "bankLoans" && isUpdateProjection(p));
+  if (loans.length < 2 || loans.some(invalidProjectionTarget)) return undefined;
+  const ids = loans
+    .map((p) => reviveObjectIds(p.filter)?._id)
+    .filter((id): id is string | ObjectId => typeof id === "string" || id instanceof ObjectId);
+  if (ids.length !== loans.length) return undefined;
+  if (new Set(ids.map(targetKey)).size !== ids.length) return undefined;
+  const targets = await bankLoansCollection<Target & { _id: string | ObjectId }>(db)
+    .find(
+      { _id: { $in: ids } },
+      {
+        projection: { [RECEIPT]: 1, [REVISION]: 1, settledKeys: 1 },
+      }
+    )
+    .toArray();
+  const record = await bankMoneyMovesCollection<Journal>(db).findOne(
+    { _id: key },
+    { projection: { projections: 1, status: 1 } }
+  );
+  if (!record || record.status === "rejected") return undefined;
+  return {
+    targets: new Map(targets.map((target) => [targetKey(target._id), target])),
+    record,
+    delivered: [],
+  };
+}
+
+/** Receipts remain on targets until one durable journal acknowledgement covers the batch. */
+export async function flushLoanProjectionBatch(
+  db: Db,
+  key: string,
+  batch: LoanProjectionBatch | undefined
+): Promise<void> {
+  if (!batch?.delivered.length) return;
+  const marks: Record<string, unknown> = {};
+  const identities = batch.delivered.map(({ id, receipt }) => {
+    const path = `projections.${receipt.index}`;
+    marks[`${path}.applied`] = true;
+    marks[`${path}.appliedAt`] = new Date();
+    const identity =
+      id instanceof ObjectId
+        ? {
+            $or: [
+              { [`${path}.projection.filter._id`]: id },
+              { [`${path}.projection.filter._id`]: { $eq: { $oid: id.toHexString() } } },
+            ],
+          }
+        : { [`${path}.projection.filter._id`]: id };
+    return { [`${path}.projection.collection`]: "bankLoans", ...identity };
+  });
+  const ack = await bankMoneyMovesCollection<Journal>(db).updateOne(
+    { _id: key, status: { $ne: "rejected" }, $and: identities },
+    { $set: marks }
+  );
+  if (!ack.matchedCount) throw new Error("Loan projection batch requires journal reconciliation");
+  await bankLoansCollection<Target>(db).bulkWrite(
+    batch.delivered.map(({ id, receipt }) => ({
+      updateOne: {
+        filter: { _id: id, [RECEIPT]: receipt } as Filter<Target>,
+        update: { $unset: { [RECEIPT]: "" } },
+      },
+    }))
+  );
+  batch.delivered.length = 0;
+}
 const reserved = (path: string) =>
   [RECEIPT, REVISION, "settledKeys", "_id"].some((p) => path === p || path.startsWith(`${p}.`));
 function reservedGuard(value: unknown): boolean {
@@ -184,7 +268,9 @@ export async function applyProtectedProjection(
   db: Db,
   key: string,
   index: number,
-  projection: TransitionProjection
+  projection: TransitionProjection,
+  batch?: LoanProjectionBatch,
+  readSnapshot?: { epoch: number; record: Journal | null }
 ): Promise<Outcome> {
   if (invalidProjectionTarget(projection))
     return {
@@ -197,10 +283,23 @@ export async function applyProtectedProjection(
   const id = { _id: filter._id } as Filter<Target>;
   const stamp = `${key}#${index}`;
   for (let attempt = 0; attempt < 5; attempt++) {
-    const current = await target.findOne(id, {
-      projection: { [RECEIPT]: 1, [REVISION]: 1, settledKeys: 1 },
-    });
-    const record = await journal.findOne({ _id: key }, { projection: { projections: 1 } });
+    const cached = attempt === 0 && projection.collection === "bankLoans" ? batch : undefined;
+    const previous =
+      attempt === 0
+        ? settlementTargetSnapshot<Target>(db, "projection", projection.collection, filter._id)
+        : undefined;
+    const current = cached
+      ? cached.targets.get(targetKey(filter._id))
+      : previous
+        ? previous.value
+        : await target.findOne(id, {
+            projection: { [RECEIPT]: 1, [REVISION]: 1, settledKeys: 1 },
+          });
+    const record =
+      cached?.record ??
+      (previous && readSnapshot && previous.epoch <= readSnapshot.epoch
+        ? readSnapshot.record
+        : await journal.findOne({ _id: key }, { projection: { projections: 1 } }));
     const saved = record?.projections?.[index];
     if (!saved) return { ok: false, error: "Projection is missing from its original journal" };
     const originalFilter = reviveObjectIds(saved.projection.filter) as Document | undefined;
@@ -215,6 +314,7 @@ export async function applyProtectedProjection(
     const receipt = current?.pendingSettlementProjection;
     if (receipt) {
       await acknowledge(db, projection.collection, filter._id, receipt);
+      forgetSettlementTarget(db, "projection", projection.collection, filter._id);
       if (receipt.key === key && receipt.index === index) return { ok: true, newlyApplied: false };
       continue;
     }
@@ -268,7 +368,16 @@ export async function applyProtectedProjection(
           } as UpdateFilter<Target>)
     );
     if (write.matchedCount) {
-      await acknowledge(db, projection.collection, filter._id, delivered);
+      if (batch && projection.collection === "bankLoans")
+        batch.delivered.push({ id: filter._id, receipt: delivered });
+      else {
+        await acknowledge(db, projection.collection, filter._id, delivered);
+        rememberSettlementTarget(db, "projection", projection.collection, filter._id, {
+          _id: filter._id,
+          settlementProjectionRevision: delivered.generation,
+          settledKeys: [...(current.settledKeys ?? []), stamp].slice(-SETTLED_KEYS_CAP),
+        });
+      }
       return { ok: true, newlyApplied: true };
     }
   }

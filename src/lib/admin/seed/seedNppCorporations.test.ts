@@ -65,3 +65,20 @@ describe("nppCorpSpawnPlan (1953-default)", () => {
     );
   });
 });
+
+describe("nppCorpSpawnPlan (2027-default)", () => {
+  const plan = nppCorpSpawnPlan("2027-default", 2027);
+
+  it("opens the player country and every NPP-run country with 1 corp per sector", () => {
+    expect(plan.map((entry) => entry.countryId).sort()).toEqual(
+      ["CA", "CN", "DE", "JP", "UK", "US"].sort()
+    );
+    expect(plan.every((entry) => entry.perSectorCount === 1)).toBe(true);
+  });
+
+  it("leaves NPP-run countries without corporations in earlier presets", () => {
+    const earlier = nppCorpSpawnPlan("2019-default", 2019);
+    expect(earlier.some((entry) => entry.perSectorCount === 0)).toBe(false);
+    expect(nppCorpSpawnPlan("2023-default", 2023)).toEqual([]);
+  });
+});

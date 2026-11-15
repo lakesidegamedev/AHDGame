@@ -214,13 +214,13 @@ describe("seed calibration — 1953 (era-gated: reconciled at seed time)", () =>
   });
 });
 
-describe("era gate (refs #3247) — only pre-1999 eras are reconciled", () => {
+describe("era gate preserves other modern worlds and qualifies the 2027 US opening", () => {
   // Modern presets (2019 etc.) have their own state-sum vs authored-GDP
   // disagreements (US −14.6%, UK −31%, …) whose resolution is a pending
   // DESIGN DECISION — the reconciler must not silently re-scale modern
   // worlds on a reseed. The gate derives the era via eraForPreset, so
   // preset aliases follow their era family.
-  it("gates by era: 1953/1979/1991 reconcile, 1999+ do not", () => {
+  it("reconciles early eras and the explicitly chosen 2027 opening", () => {
     expect(shouldReconcileStateGdpForPreset("1953-default")).toBe(true);
     expect(shouldReconcileStateGdpForPreset("1979-default")).toBe(true);
     expect(shouldReconcileStateGdpForPreset("1991-default")).toBe(true);
@@ -228,6 +228,7 @@ describe("era gate (refs #3247) — only pre-1999 eras are reconciled", () => {
     expect(shouldReconcileStateGdpForPreset("2007-default")).toBe(false);
     expect(shouldReconcileStateGdpForPreset("2019-default")).toBe(false);
     expect(shouldReconcileStateGdpForPreset("2023-default")).toBe(false);
+    expect(shouldReconcileStateGdpForPreset("2027-default")).toBe(true);
     // Aliases follow their era family (both map to era 2019).
     expect(shouldReconcileStateGdpForPreset("empty")).toBe(false);
     expect(shouldReconcileStateGdpForPreset("2019-no-parties")).toBe(false);

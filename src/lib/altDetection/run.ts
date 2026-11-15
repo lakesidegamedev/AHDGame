@@ -5,6 +5,7 @@
 // Recomputes preserve existing clusters' moderator-set `status`/`reviewedBy`/
 // `reviewNote`.
 
+import { classifyIpSync, ensureVpnRangesLoaded } from "@/lib/vpn/detection";
 import { ObjectId, type Db } from "mongodb";
 import * as Sentry from "@sentry/nextjs";
 import type { User } from "@/lib/db/types/user";
@@ -326,7 +327,10 @@ function pushIp(
     byIp.set(ip, {
       ip,
       at,
-      isDatacenterOrCgnat: isDatacenterOrCgnat || existing?.isDatacenterOrCgnat,
+      // A known VPN exit is shared by strangers, so it gets the same capped
+      // treatment as a datacenter address.
+      isDatacenterOrCgnat:
+        isDatacenterOrCgnat || existing?.isDatacenterOrCgnat || classifyIpSync(ip) === "vpn",
       asn: asn ?? existing?.asn,
     });
   }
@@ -371,6 +375,8 @@ async function buildCandidateFacets(
   now: Date
 ): Promise<AltCandidateFacet[]> {
   const since = new Date(now.getTime() - CANDIDATE_LOOKBACK_MS);
+  // Local VPN range lists, so pushIp can mark VPN exits (never throws).
+  await ensureVpnRangesLoaded();
 
   const [users, characters] = await Promise.all([
     usersCollection(db)

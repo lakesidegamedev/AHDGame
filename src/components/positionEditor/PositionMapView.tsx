@@ -1,4 +1,6 @@
 "use client";
+import { displayCanadianRegionCode } from "@/lib/countries/ca/regionCodes";
+
 import { useMemo, useState } from "react";
 import { useAbortableEffectFetch } from "@/hooks/useAbortableEffectFetch";
 import Link from "next/link";
@@ -221,7 +223,9 @@ export function PositionMapView() {
           <div>
             {selected ? (
               <div className="sticky top-4 rounded-xl border border-card-border bg-card p-4 shadow-card">
-                <h2 className="text-lg text-foreground">{selected.stateId}</h2>
+                <h2 className="text-lg text-foreground">
+                  {displayCanadianRegionCode(selected.stateId)}
+                </h2>
                 <div className="mt-3 space-y-2 text-sm">
                   <div className="flex justify-between">
                     <span className="text-muted">Economic</span>

@@ -5,6 +5,7 @@ import { z } from "zod";
 import { errorResponse } from "@/lib/api/errors";
 import { parseJsonBody } from "@/lib/api/validate";
 import { getDb } from "@/lib/mongodb";
+import { withAuditedGrant } from "@/lib/audit/grants/recordGrant";
 import { createAdminLog } from "@/lib/adminLog";
 import { usersCollection } from "@/lib/db/repositories/users";
 import type { Document } from "mongodb";
@@ -29,21 +30,38 @@ export const PATCH = withAdminRoute(async (auth, request: Request) => {
   );
   if (!user) return errorResponse(404, "User not found");
 
-  await usersCollection<Document>(db).updateOne(
-    { _id },
-    granted
-      ? {
-          $set: {
-            sandboxAccessGrantedAt: new Date(),
-            sandboxAccessGrantedBy: auth.admin.username,
-            updatedAt: new Date(),
-          },
-        }
-      : {
-          $unset: { sandboxAccessGrantedAt: "", sandboxAccessGrantedBy: "" },
-          $set: { updatedAt: new Date() },
-        }
-  );
+  const apply = async () => {
+    await usersCollection<Document>(db).updateOne(
+      { _id },
+      granted
+        ? {
+            $set: {
+              sandboxAccessGrantedAt: new Date(),
+              sandboxAccessGrantedBy: auth.admin.username,
+              updatedAt: new Date(),
+            },
+          }
+        : {
+            $unset: { sandboxAccessGrantedAt: "", sandboxAccessGrantedBy: "" },
+            $set: { updatedAt: new Date() },
+          }
+    );
+  };
+  if (granted) {
+    await withAuditedGrant(
+      db,
+      {
+        actorUserId: auth.admin.userId,
+        recipients: [{ type: "user", id: userId, name: user.username }],
+        kind: "access",
+        item: "sandbox access",
+        reason: "Control panel: sandbox access granted",
+      },
+      apply
+    );
+  } else {
+    await apply();
+  }
   await createAdminLog({
     category: "account",
     action: granted ? "sandbox_access_granted" : "sandbox_access_revoked",

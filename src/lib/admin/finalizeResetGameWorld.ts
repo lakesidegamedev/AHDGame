@@ -1,3 +1,5 @@
+import { ensureUSMinorPartyOrgs } from "@/lib/countries/us/seedMinorPartyOrgs";
+import { reconcileCaDefaultPartyIdentities } from "@/lib/countries/ca/reconcileDefaultPartyIdentities";
 /**
  * Post-bootstrap finalize pass for a world reset.
  *
@@ -20,6 +22,8 @@ import type { Collection, Db, Document, ObjectId } from "mongodb";
 import type { PoliticalParty, StateDemographics, StatePartyOrg } from "@/lib/db/types";
 import type { PartySeed } from "@/lib/seeds/reference/politicalParties";
 import { getPresetById } from "@/lib/constants/historicalSeats";
+import { loadResetPartySeedCatalog } from "@/lib/admin/resetPartySeedCatalog";
+import { resetSurvivingPartiesToSeed } from "@/lib/admin/resetContract/resetSurvivingParties";
 import { ensureDefaultParties, presetMismatchedPartyNames } from "@/lib/seeds/ensureDefaultParties";
 import { getAllCountryAccess } from "@/lib/countryAccess";
 import { realignPartyCountersToExisting, resetPartyCounters } from "@/lib/db/sequentialId";
@@ -60,67 +64,7 @@ export interface FinalizeResetResult {
   adminDetails: string;
 }
 
-/**
- * Every authored default-party seed the reset's era cleanup judges against.
- *
- * A party is removed as preset-mismatched only when NO seed active in the new
- * preset carries its name, so every roster bootstrap can seed must be listed
- * here. The 1991 successor rosters and the 2019 rosters were missing: Bulgaria's
- * Movement for Rights and Freedoms, seeded for 1991 by the successor roster,
- * shares its name with a 2027-only seed and was deleted on every 1991 reset.
- */
-export async function loadResetPartySeedCatalog(): Promise<PartySeed[]> {
-  const { ukParties } = await import("@/lib/seeds/uk/ukParties");
-  const { politicalParties: usParties } = await import("@/lib/seeds/reference/politicalParties");
-  const { deParties } = await import("@/lib/seeds/de/deParties");
-  const { jpParties } = await import("@/lib/countries/jp/data/jpParties");
-  const { brParties } = await import("@/lib/seeds/br/brParties");
-  const { ieParties } = await import("@/lib/seeds/ie/ieParties");
-  const { frParties } = await import("@/lib/seeds/fr/frParties");
-  const { itParties } = await import("@/lib/seeds/it/itParties");
-  const { esParties } = await import("@/lib/seeds/es/esParties");
-  const { seParties } = await import("@/lib/seeds/se/seParties");
-  const { trParties } = await import("@/lib/seeds/tr/trParties");
-  const { huParties } = await import("@/lib/seeds/hu/huParties");
-  const { roParties } = await import("@/lib/seeds/ro/roParties");
-  const { ngParties } = await import("@/lib/seeds/ng/ngParties");
-  const { ruParties } = await import("@/lib/seeds/ru/ruParties");
-  const { ddParties } = await import("@/lib/seeds/dd/ddParties");
-  const { plParties } = await import("@/lib/seeds/pl/plParties");
-  const { yuParties } = await import("@/lib/seeds/yu/yuParties");
-  const { csParties } = await import("@/lib/seeds/cs/csParties");
-  const { bgParties } = await import("@/lib/seeds/bg/bgParties");
-  const { blrParties } = await import("@/lib/seeds/blr/blrParties");
-  const { balParties } = await import("@/lib/seeds/bal/balParties");
-  const { SUCCESSOR_PARTIES_1991 } = await import("@/lib/seeds/reference/successorParties1991");
-  const { PARTY_ROSTERS_2019 } = await import("@/lib/seeds/partyRosters2019");
-  return [
-    ...usParties,
-    ...ukParties,
-    ...deParties,
-    ...jpParties,
-    ...brParties,
-    ...ieParties,
-    ...frParties,
-    ...itParties,
-    ...esParties,
-    ...seParties,
-    ...trParties,
-    ...huParties,
-    ...roParties,
-    ...ngParties,
-    ...ruParties,
-    ...ddParties,
-    ...plParties,
-    ...yuParties,
-    ...csParties,
-    ...bgParties,
-    ...blrParties,
-    ...balParties,
-    ...Object.values(SUCCESSOR_PARTIES_1991).flat(),
-    ...Object.values(PARTY_ROSTERS_2019).flat(),
-  ];
-}
+export { loadResetPartySeedCatalog };
 
 /** Delete rows whose (countryId, partyId) pair names no surviving default party. */
 export async function deleteRowsOfRemovedParties(
@@ -140,8 +84,8 @@ export async function finalizeResetGameWorld(
   options: FinalizeResetOptions
 ): Promise<FinalizeResetResult> {
   const { preset, teardown, deleteProfiles } = options;
-  const noStartingParties =
-    (await loadStartingPartiesMode(db, preset, options.startingParties)) === "none";
+  const startingParties = await loadStartingPartiesMode(db, preset, options.startingParties);
+  const noStartingParties = startingParties === "none";
   const now = new Date();
   const sink = options.log;
   const finalizeLog: string[] = [];
@@ -158,7 +102,9 @@ export async function finalizeResetGameWorld(
   // the new party gets `max(sequentialId) + 1`, never a colliding seqId.
   if (preset !== "2019-no-parties") {
     await realignPartyCountersToExisting(db);
+    await reconcileCaDefaultPartyIdentities(db, preset);
     await ensureDefaultParties(db, preset);
+    await ensureUSMinorPartyOrgs(db, preset, true);
     // Mirror for statePartyOrg: insert rows for newly-added defaults so they
     // show up on the region Party Organizations page. Non-destructive — never
     // overwrites existing rows.
@@ -337,6 +283,19 @@ export async function finalizeResetGameWorld(
     }
 
     await ensureDefaultParties(db, preset);
+
+    // Every surviving default party returns to seed values, keeping only identity.
+    const restored = await resetSurvivingPartiesToSeed(
+      db,
+      preset,
+      await loadResetPartySeedCatalog()
+    );
+    log(
+      `Reset ${restored.parties} surviving default part(ies) to seed values; removed ${restored.chartersRemoved} charter(s)` +
+        (restored.unseeded.length > 0
+          ? `; no seed for ${restored.unseeded.length}: ${restored.unseeded.slice(0, 5).join(", ")}`
+          : "")
+    );
   }
 
   let partyOrgCleanupResult;
@@ -449,12 +408,10 @@ export async function finalizeResetGameWorld(
     logCollector(`IMF Corp already present (sequentialId=${imfResult.sequentialId ?? "?"}).`);
   }
 
-  // The audit row is opened by the orchestrator at the seal and closed with
-  // this string, so a reset dying in teardown or build still leaves a trace.
-  // Not gated on adminUsername so script-driven resets are audited too.
-  if (noStartingParties) {
-    await clearStartingPolitics(db, preset);
-    log("Starting parties: none; final political cleanup complete, economic ownership preserved");
+  // Final cleanup also covers politicians created during bootstrap.
+  if (startingParties !== "default") {
+    await clearStartingPolitics(db, preset, startingParties === "no-npps");
+    log("Final political cleanup complete; economic ownership preserved");
   }
 
   const adminDetails = deleteProfiles

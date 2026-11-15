@@ -2,6 +2,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, screen } from "@testing-library/react";
 import { renderWithElectionsMessages } from "@/lib/test-utils/renderWithElectionsMessages";
+import { endTimeToGameYear } from "@/lib/utils/formattersCore";
 import type { ElectionResponse } from "@/lib/elections/electionResponseTypes";
 import { RaceSchedule } from "./RaceSchedule";
 
@@ -12,7 +13,10 @@ vi.mock("@/contexts/useGameClock", () => ({
         ? { text: "Ended", urgency: "ended" }
         : { text: `${turn - 10} turns`, urgency: "normal" },
     formatRemaining: () => ({ text: "No timer", urgency: "normal" }),
-    formatYear: (ts: string | null) => (ts ? ts.slice(0, 4) : null),
+    currentTurn: 10,
+    lastTurnProcessed: new Date("2026-01-01T00:00:00Z"),
+    formatYear: (ts: Date | string | null) =>
+      ts ? endTimeToGameYear(ts, 10, new Date("2026-01-01T00:00:00Z"), 1994) : null,
   }),
 }));
 
@@ -46,7 +50,7 @@ describe("RaceSchedule", () => {
     expect(screen.queryByText("Primary opened")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Show full schedule" }));
     expect(screen.getByText("Primary opened")).toBeTruthy();
-    expect(screen.getByText("Ended · 1993")).toBeTruthy();
+    expect(screen.getByText("Ended · 1994")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Hide full schedule" })).toBeTruthy();
   });
 
@@ -65,4 +69,28 @@ describe("RaceSchedule", () => {
     );
     expect(container.textContent).toBe("");
   });
+});
+
+it("keeps turn-based years stable when saved timestamps drift during a pause", () => {
+  renderWithElectionsMessages(
+    <RaceSchedule
+      election={race({
+        primaryEndTurn: 120,
+        endTurn: 144,
+        primaryEndTime: "2050-01-01",
+        endTime: "2050-01-02",
+      })}
+    />
+  );
+  expect(screen.getByText("134 turns · 1996")).toBeTruthy();
+  expect(screen.queryByText(/2050/)).toBeNull();
+});
+
+it("keeps the timestamp fallback on legacy races without turn deadlines", () => {
+  renderWithElectionsMessages(
+    <RaceSchedule
+      election={race({ primaryEndTurn: null, endTurn: null, endTime: "2026-01-01T00:00:00Z" })}
+    />
+  );
+  expect(screen.getAllByText("No timer · 1994")).toHaveLength(2);
 });

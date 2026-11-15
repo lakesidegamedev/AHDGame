@@ -1,10 +1,10 @@
 import { getDb } from "@/lib/mongodb";
 import { getEnabledCountryIdsFromDb } from "@/lib/countryAccess";
 import type { GovernmentType } from "@/lib/constants/countries";
-import type { GameState, GameConfig } from "@/lib/db/types";
-import type { CountryState } from "@/lib/db/types/countryState";
 import { listCrises } from "@/lib/crises/queries/crisisQueries";
 import { buildGovernmentTypeMap } from "@/lib/landing/governmentTypeMap";
+import type { LaunchScheduleInput } from "@/lib/landing/rules/launchSchedule";
+import { normalizeMaintenanceMode } from "@/lib/maintenanceStatus";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
@@ -27,6 +27,8 @@ export type LandingDataSnapshot = {
   crises: LandingCrisisSnapshot[];
   playerCounts: Record<string, number>;
   governmentTypes: Record<string, GovernmentType>;
+  /** Inputs for `resolveLaunchSchedule`; the page resolves them against its own clock. */
+  launch: LaunchScheduleInput;
 };
 
 /** 60s is enough to collapse anonymous stampedes; still fresh for repeat visitors. */
@@ -43,10 +45,21 @@ export function invalidateLandingDataCache(): void {
 async function loadLandingData(): Promise<LandingDataSnapshot> {
   const db = await getDb();
   const [config, gs, crisisList, enabledIds, countRows, countryStateDocs] = await Promise.all([
-    gameConfigCollection(db).findOne({ _id: "default" }, { projection: { seedYear: 1 } }),
+    gameConfigCollection(db).findOne(
+      { _id: "default" },
+      { projection: { seedYear: 1, maintenanceMode: 1, maintenanceExpectedEnd: 1 } }
+    ),
     gameStateCollection(db).findOne(
       { _id: "current" },
-      { projection: { startingYear: 1, currentYear: 1 } }
+      {
+        projection: {
+          startingYear: 1,
+          currentYear: 1,
+          currentTurn: 1,
+          isActive: 1,
+          nextScheduledTurn: 1,
+        },
+      }
     ),
     listCrises(db, null, "active"),
     getEnabledCountryIdsFromDb(db),
@@ -83,7 +96,17 @@ async function loadLandingData(): Promise<LandingDataSnapshot> {
     countryIds: c.countryIds,
   }));
 
-  return { seedYear, currentYear, crises, playerCounts, governmentTypes };
+  const nextTurn = gs?.nextScheduledTurn ? new Date(gs.nextScheduledTurn) : null;
+  const launch: LaunchScheduleInput = {
+    maintenanceMode: normalizeMaintenanceMode(config?.maintenanceMode),
+    maintenanceExpectedEnd: config?.maintenanceExpectedEnd || null,
+    currentTurn: gs?.currentTurn ?? 1,
+    turnsActive: gs?.isActive === true,
+    nextScheduledTurn:
+      nextTurn && !Number.isNaN(nextTurn.getTime()) ? nextTurn.toISOString() : null,
+  };
+
+  return { seedYear, currentYear, crises, playerCounts, governmentTypes, launch };
 }
 
 /**

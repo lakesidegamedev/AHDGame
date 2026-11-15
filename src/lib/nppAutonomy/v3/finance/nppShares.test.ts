@@ -1,6 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ObjectId, type Db } from "mongodb";
 
+vi.mock("./shareCashLedger", () => ({
+  witnessNppShareCash: vi.fn().mockResolvedValue(undefined),
+}));
+import { witnessNppShareCash } from "./shareCashLedger";
 vi.mock("@/lib/corporations/shareholderOps", () => ({
   creditSharesToNpp: vi.fn(),
   debitSharesFromNpp: vi.fn(),
@@ -95,6 +99,7 @@ describe("nppBuyShares", () => {
     const [filter, update] = nppFindOneAndUpdate.mock.calls[0];
     expect(filter).toEqual({ _id: nppId, nppInvestmentCashAnchor: { $gte: EXPECTED_COST } });
     expect(update.$inc).toEqual({ nppInvestmentCashAnchor: -EXPECTED_COST });
+    expect(witnessNppShareCash).toHaveBeenCalledWith(db, npp, -EXPECTED_COST, expect.any(Date));
     // credited to the nppId holder variant
     const creditArgs = vi.mocked(creditSharesToNpp).mock.calls[0];
     expect(creditArgs[1]).toBe(corpId);
@@ -186,6 +191,7 @@ describe("nppBuyShares", () => {
       reason: "Insufficient investment capital for share purchase.",
     });
     expect(creditSharesToNpp).not.toHaveBeenCalled();
+    expect(witnessNppShareCash).not.toHaveBeenCalled();
   });
 
   it("rejects corporations outside the NPP's home currency (no FX)", async () => {
@@ -353,6 +359,7 @@ describe("nppSellShares", () => {
       { pools: expect.any(Map) }
     );
     expect(reverseFloatSellDebit).not.toHaveBeenCalled();
+    expect(witnessNppShareCash).toHaveBeenCalledWith(db, npp, EXPECTED_PROCEEDS, expect.any(Date));
   });
 
   it("sells EUR equity for a 2027 French NPP at the preloaded EUR rate", async () => {

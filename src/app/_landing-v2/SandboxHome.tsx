@@ -17,7 +17,7 @@ import dynamic from "next/dynamic";
 import { LandingIntakeBeacon } from "@/components/intake/LandingIntakeBeacon";
 import Image from "next/image";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { CDN_WORLD_GEO_URL } from "@/lib/images/cdnUrls";
 import {
@@ -25,18 +25,22 @@ import {
   LandingSectionHeading,
 } from "@/components/landing/LandingSectionHeading";
 import { getEraConfig } from "@/components/landing/eraThemes";
-import { buildStarfield } from "@/components/landing/globeEnhancements";
+import { globePosterBase } from "@/components/landing/globePosters";
 import { getEraFlavorCards } from "@/components/landing/flavorCards";
 import {
   battlegroundFeatureIdsForEra,
   economicPowerFeatureIdsForEra,
 } from "@/components/landing/countryTierRosters";
-import { successorProxiesForYear } from "@/components/landing/countryTiers";
-import { resolveEraCopy, type MarketedWorld } from "@/lib/marketing/marketedWorld";
+import { resolveEraCopy } from "@/lib/marketing/eraCopy";
+import type { MarketedWorld } from "@/lib/marketing/marketedWorld";
 import { CookieSettingsLink } from "@/components/CookieSettingsLink";
 import { CrtCountdown, useCrtCountdown } from "./CrtCountdown";
 import { BroadcastBackdrop, BroadcastHeadline, BroadcastTierKey } from "./BroadcastHero";
 import { EraExplainerLink } from "./EraExplainerLink";
+import { GlobePoster } from "./GlobePoster";
+import { useGlobeActivation } from "./useGlobeActivation";
+import { LaunchCountdown } from "./LaunchCountdown";
+import type { LaunchSchedule } from "@/lib/landing/rules/launchSchedule";
 import { LANDING_FOOTER_SECTIONS, LANDING_TRAY_LINKS } from "./publicLinks";
 import type { GovernmentType } from "@/lib/constants/countriesCore";
 import type { EraNation, EraTileKey } from "@/components/landing/eraThemes";
@@ -91,13 +95,22 @@ const tierLabel = (t: TFunc): Record<EraNation["tier"], { label: string; title: 
     title: t("landing.tiers.economyTitle"),
   },
   npp: {
-    label: t("landing.tiers.soon"),
-    title: t("landing.tiers.soonTitle"),
+    label: t("landing.tiers.computerRun"),
+    title: t("landing.tiers.computerRunTitle"),
   },
   background: {
     label: t("landing.tiers.background"),
     title: t("landing.tiers.backgroundTitle"),
   },
+});
+
+/** Group headings when the roster is grouped by tier. */
+const TIER_GROUPS: readonly EraNation["tier"][] = ["player", "econ", "npp", "background"];
+const tierGroupLabel = (t: TFunc): Record<EraNation["tier"], string> => ({
+  player: t("landing.tierGroups.player"),
+  econ: t("landing.tierGroups.econ"),
+  npp: t("landing.tierGroups.npp"),
+  background: t("landing.tierGroups.background"),
 });
 
 /** Only one-party/command systems land in Eastern Bloc — never default unknowns there. */
@@ -118,7 +131,7 @@ const GHOST_BUTTON_CLASSES =
 const ANDROID_BETA_APK_URL = "https://ops.lakesidegames.net/downloads/a-house-divided-0.3.1.apk";
 
 /** Opening view for an era that does not choose its own: the Mediterranean. */
-const DEFAULT_GLOBE_ROTATION: [number, number, number] = [-12, -38, 0];
+const GLOBE_ROTATION: [number, number, number] = [48, -30, 0];
 
 function links(isSignedIn: boolean) {
   return {
@@ -271,6 +284,8 @@ export function SandboxHome({
   world,
   backgroundMacroFeatureIds,
   currentYear,
+  launch,
+  renderedAt,
 }: {
   isSignedIn: boolean;
   era?: string | number;
@@ -294,28 +309,22 @@ export function SandboxHome({
   backgroundMacroFeatureIds?: readonly string[];
   /** The world's in-game year now. The broadcast headline rolls up to it. */
   currentYear?: number;
+  /** Doors open and first turn, resolved on the server. Absent once the world is running. */
+  launch?: LaunchSchedule | null;
+  /** When the server rendered this page (ISO). Picks the globe poster closest to the real sun. */
+  renderedAt: string;
 }) {
   const t = useTranslations("auth");
   const eraConfig = getEraConfig(era);
-  const [hoveredBloc, setHoveredBloc] = useState<BlocId | null>(null);
-  // True while the globe is idling through its historical-crisis showcase —
-  // fades the hero copy out of the way so the story reads without clutter.
-  const [showcaseActive, setShowcaseActive] = useState(false);
-  // Non-null only while the promo countdown is still running. It doubles as the
-  // pause switch for the globe's idle crisis tour: the countdown owns the hero
-  // until the deadline, after which both revert to normal behaviour with no
-  // deploy needed.
+  const [hoveredBloc, setHoveredBloc] = useState<string | null>(null);
+  // Non-null only while the promo countdown is still running.
   const countdown = useCrtCountdown();
+  const globeBoxRef = useRef<HTMLDivElement>(null);
+  const posterBase = globePosterBase(eraConfig.id, new Date(renderedAt));
+  const globeReady = useGlobeActivation(globeBoxRef, posterBase !== null);
+  const [globeDrawn, setGlobeDrawn] = useState(false);
+  const markGlobeDrawn = useCallback(() => setGlobeDrawn(true), []);
   const l = links(isSignedIn);
-
-  // Signal-field star scatter: a full-viewport layer independent of the
-  // globe's own tiny SVG canvas, so density/twinkle never depend on how much
-  // of that canvas the oversized background crop happens to show on-screen.
-  // Distinct seed from the globe's own starfield so the two patterns don't echo.
-  const signalFieldStars = useMemo(
-    () => buildStarfield({ width: 100, height: 100, count: 64, seed: 8420 }),
-    []
-  );
 
   const countriesByBloc = useMemo(() => {
     const western: EraNation[] = [];
@@ -339,6 +348,26 @@ export function SandboxHome({
   const tileBody = (key: EraTileKey): string => eraConfig.tileBodies?.[key] ?? tileBodies[key];
   const bloc = useMemo(() => blocMeta(t), [t]);
   const tier = useMemo(() => tierLabel(t), [t]);
+  const groupLabel = useMemo(() => tierGroupLabel(t), [t]);
+  const byTier = eraConfig.rosterGrouping === "tier";
+  const rosterGroups = useMemo(
+    () =>
+      byTier
+        ? TIER_GROUPS.map((tierId) => ({
+            id: tierId,
+            label: groupLabel[tierId],
+            countries: eraConfig.nations.filter((nation) => nation.tier === tierId),
+          })).filter((group) => group.countries.length > 0)
+        : visibleBlocs.map((blocId) => ({
+            id: blocId,
+            label: bloc[blocId].label,
+            countries: countriesByBloc[blocId],
+          })),
+    [byTier, groupLabel, eraConfig, visibleBlocs, bloc, countriesByBloc]
+  );
+  const heroLinks = [eraConfig.explainer, eraConfig.newsPost].flatMap((link) =>
+    link ? [{ href: link.href, label: link.labelKey ? t(link.labelKey) : link.label }] : []
+  );
   const footer = useMemo(() => footerNav(t), [t]);
   const tray = useMemo(() => trayNav(t), [t]);
   const learn = useMemo(() => learnLinks(t), [t]);
@@ -351,7 +380,6 @@ export function SandboxHome({
   const battlegroundFeatureIds = battlegroundFeatureIdsForEra(eraConfig.id);
   const economicPowerFeatureIds = economicPowerFeatureIdsForEra(eraConfig.id);
   // Czechoslovakia and Yugoslavia drawn over their successors where the era names them.
-  const successorProxies = useMemo(() => successorProxiesForYear(eraConfig.year), [eraConfig.year]);
 
   return (
     <div className="relative bg-background text-foreground">
@@ -377,74 +405,38 @@ export function SandboxHome({
                 background: `radial-gradient(circle at 60% 48%, ${wireframeColor}14, transparent 46%)`,
               }}
             />
-            <div
-              className="pointer-events-none absolute inset-0 overflow-hidden"
-              style={{
-                WebkitMaskImage: "radial-gradient(85% 85% at 60% 48%, #000 20%, transparent 92%)",
-                maskImage: "radial-gradient(85% 85% at 60% 48%, #000 20%, transparent 92%)",
-              }}
-            >
-              {signalFieldStars.map((s, i) => {
-                const size = 1.2 + s.r * 2;
-                const alphaHex = Math.round(s.opacity * 255)
-                  .toString(16)
-                  .padStart(2, "0");
-                return (
-                  <div
-                    key={s.id}
-                    className="ahd-star-twinkle absolute rounded-full"
-                    style={{
-                      left: `${s.cx}%`,
-                      top: `${s.cy}%`,
-                      width: `${size}px`,
-                      height: `${size}px`,
-                      background: `${wireframeColor}${alphaHex}`,
-                      animationDelay: `${s.twinkleDelay}s`,
-                      animationDuration: `${3.6 + (i % 4) * 0.6}s`,
-                    }}
-                  />
-                );
-              })}
-            </div>
-            <div
-              className="ahd-scan-drift pointer-events-none absolute inset-x-0 top-[-18vmax]"
-              style={{
-                height: "18vmax",
-                background: `linear-gradient(to bottom, transparent, ${wireframeColor}2e, transparent)`,
-                WebkitMaskImage: "radial-gradient(85% 85% at 60% 48%, #000 20%, transparent 92%)",
-                maskImage: "radial-gradient(85% 85% at 60% 48%, #000 20%, transparent 92%)",
-              }}
-            />
           </>
         )}
-        {broadcast && <BroadcastBackdrop />}
+        {broadcast && <BroadcastBackdrop nightside={eraConfig.id === "2027"} />}
         <div
+          ref={globeBoxRef}
           className="absolute left-[60%] top-[48%] h-[130vmax] w-[130vmax] -translate-x-1/2 -translate-y-1/2"
           style={
             wireframeColor ? { filter: `drop-shadow(0 0 18px ${wireframeColor}55)` } : undefined
           }
         >
-          <LandingGlobe
-            bare
-            enhanced
-            hideLiveIndicator
-            gameDate={eraConfig.gameDate}
-            countryAccess={eraConfig.accessMap}
-            geoUrl={CDN_WORLD_GEO_URL}
-            initialRotation={eraConfig.initialRotation ?? DEFAULT_GLOBE_ROTATION}
-            initialZoom={1.05}
-            wireframeColor={wireframeColor}
-            playerCounts={playerCounts}
-            battlegroundFeatureIds={battlegroundFeatureIds}
-            economicPowerFeatureIds={economicPowerFeatureIds}
-            onShowcaseActiveChange={setShowcaseActive}
-            showcasePaused={countdown !== null}
-            broadcast={broadcast}
-            hideTierLegend={Boolean(broadcast)}
-            markersFromSm={Boolean(broadcast)}
-            backgroundMacroFeatureIds={backgroundMacroFeatureIds}
-            successorProxies={successorProxies}
-          />
+          {posterBase ? <GlobePoster base={posterBase} hidden={globeDrawn} /> : null}
+          {globeReady ? (
+            <div
+              className={`absolute inset-0 transition-opacity duration-500 ${
+                posterBase && !globeDrawn ? "opacity-0" : "opacity-100"
+              }`}
+            >
+              <LandingGlobe
+                onReady={markGlobeDrawn}
+                countryAccess={eraConfig.accessMap}
+                geoUrl={CDN_WORLD_GEO_URL}
+                initialRotation={eraConfig.initialRotation ?? GLOBE_ROTATION}
+                initialZoom={1.05}
+                wireframeColor={wireframeColor}
+                playerCounts={playerCounts}
+                battlegroundFeatureIds={battlegroundFeatureIds}
+                economicPowerFeatureIds={economicPowerFeatureIds}
+                backgroundMacroFeatureIds={backgroundMacroFeatureIds}
+                markersFromSm={Boolean(broadcast)}
+              />
+            </div>
+          ) : null}
         </div>
 
         {/* Radial vignette fades globe into page background at edges. */}
@@ -464,15 +456,10 @@ export function SandboxHome({
           broadcast ? "pb-[calc(12vh+1.5rem)]" : ""
         }`}
       >
-        {/* Hero copy — fades out of the way during the idle crisis showcase,
-            back in the instant the user drags/scrolls/clicks. */}
-        <div
-          className={`mx-auto w-full max-w-7xl px-5 transition-opacity duration-700 ease-out sm:px-8 ${
-            showcaseActive ? "pointer-events-none opacity-0" : "pointer-events-auto opacity-100"
-          }`}
-        >
+        <div className="pointer-events-auto mx-auto w-full max-w-7xl px-5 sm:px-8">
           <div className="max-w-xl">
             <CrtCountdown remaining={countdown} />
+            <LaunchCountdown schedule={launch} />
             {broadcast ? (
               <>
                 <BroadcastHeadline
@@ -494,10 +481,7 @@ export function SandboxHome({
                 </p>
               </>
             )}
-            <EraExplainerLink
-              explainer={eraConfig.explainer}
-              tone={broadcast ? "onDark" : "theme"}
-            />
+            <EraExplainerLink links={heroLinks} tone={broadcast ? "onDark" : "theme"} />
             {/* Three actions, one shape each: create an account, come back to
                 one, or look around first. The app download lives in the drawer
                 below — it is not a way into the game. */}
@@ -526,11 +510,7 @@ export function SandboxHome({
         </div>
 
         {/* Scroll cue */}
-        <div
-          className={`absolute inset-x-0 bottom-6 flex flex-col items-center gap-1.5 transition-opacity duration-700 ease-out ${
-            showcaseActive ? "opacity-0" : "opacity-100"
-          }`}
-        >
+        <div className="absolute inset-x-0 bottom-6 flex flex-col items-center gap-1.5">
           <span className="text-body-sm font-medium text-muted">{t("landing.scrollCue")}</span>
           <span className="block h-5 w-[1px] bg-muted/60" aria-hidden />
         </div>
@@ -541,8 +521,9 @@ export function SandboxHome({
           <div className="absolute inset-x-0 bottom-[calc(12vh+1rem)]">
             <div className="mx-auto w-full max-w-7xl px-5 sm:px-8">
               <BroadcastTierKey
-                hidden={showcaseActive}
+                hidden={false}
                 backgroundIsSimulated={Boolean(backgroundMacroFeatureIds?.length)}
+                counts={broadcast.tierCounts}
               />
             </div>
           </div>
@@ -615,27 +596,33 @@ export function SandboxHome({
             <p className="mt-1 max-w-2xl text-body leading-relaxed text-muted">
               {resolveEraCopy(eraConfig.worldSectionDek, world)}
             </p>
-            <div className="mt-6 grid gap-x-12 gap-y-8 lg:grid-cols-2">
-              {visibleBlocs.map((blocId) => {
-                const meta = bloc[blocId];
-                const countries = countriesByBloc[blocId];
-                const isDimmed = hoveredBloc !== null && hoveredBloc !== blocId;
+            <div
+              className={`mt-6 grid gap-x-12 gap-y-8 ${
+                byTier ? "lg:grid-cols-[1fr_1fr_2fr]" : "lg:grid-cols-2"
+              }`}
+            >
+              {rosterGroups.map(({ id: groupId, label, countries }) => {
+                const isDimmed = hoveredBloc !== null && hoveredBloc !== groupId;
                 return (
                   <div
-                    key={blocId}
+                    key={groupId}
                     className={`transition-opacity duration-200 ${
                       isDimmed ? "opacity-40" : "opacity-100"
                     }`}
-                    onMouseEnter={() => setHoveredBloc(blocId)}
+                    onMouseEnter={() => setHoveredBloc(groupId)}
                     onMouseLeave={() => setHoveredBloc(null)}
                   >
                     <h4 className="flex flex-wrap items-baseline gap-x-2 text-body font-semibold text-foreground">
-                      {meta.label}
+                      {label}
                       <span className="text-body-sm font-normal text-muted">
                         {t("landing.nationCount", { count: countries.length })}
                       </span>
                     </h4>
-                    <ul className="mt-2 grid gap-x-8 gap-y-1.5 sm:grid-cols-2">
+                    <ul
+                      className={`mt-2 grid gap-x-8 gap-y-1.5 ${
+                        byTier && countries.length < 6 ? "" : "sm:grid-cols-2"
+                      }`}
+                    >
                       {countries.map((c) => {
                         const tierMeta = tier[c.tier];
                         return (
@@ -652,12 +639,15 @@ export function SandboxHome({
                             >
                               {c.name}
                             </span>
-                            <span
-                              className="shrink-0 text-body-sm text-muted"
-                              title={tierMeta.title}
-                            >
-                              {tierMeta.label}
-                            </span>
+                            {/* Grouped by tier, the heading already says it. */}
+                            {!byTier && (
+                              <span
+                                className="shrink-0 text-body-sm text-muted"
+                                title={tierMeta.title}
+                              >
+                                {tierMeta.label}
+                              </span>
+                            )}
                           </li>
                         );
                       })}
@@ -680,7 +670,9 @@ export function SandboxHome({
               {t("landing.worldInYear", { year: eraConfig.year })}
             </LandingSectionHeading>
             <p className="mb-8 mt-2 max-w-2xl text-body-lg leading-relaxed text-muted">
-              {t("landing.carouselDek")}
+              {getEraFlavorCards(era).some((card) => card.kind === "brief")
+                ? t("landing.carouselDekBriefs")
+                : t("landing.carouselDek")}
             </p>
             <FlavorCardCarousel staticCards={getEraFlavorCards(era)} crises={crises} />
           </div>
@@ -787,10 +779,7 @@ export function SandboxHome({
                     ))}
                     {col.headingKey === "landing.footer.legal" && (
                       <li>
-                        <CookieSettingsLink
-                          hideOnPrivacyPage
-                          className="text-body-sm text-muted transition-colors hover:text-foreground"
-                        />
+                        <CookieSettingsLink className="text-body-sm text-muted transition-colors hover:text-foreground" />
                       </li>
                     )}
                   </ul>

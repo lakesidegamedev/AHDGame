@@ -208,7 +208,11 @@ export async function createCharacterForAccount(userId: string, data: CreateChar
   }
 
   if (
-    requiresDiscordForNewCharacter(gameConfig.discordLinkRequiredForCharacter, userDoc?.discordId)
+    requiresDiscordForNewCharacter(
+      gameConfig.discordLinkRequiredForCharacter,
+      userDoc?.discordId,
+      userDoc?.appleId
+    )
   ) {
     return errorResponse(
       403,

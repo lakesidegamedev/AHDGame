@@ -1,3 +1,4 @@
+import { regionUrl } from "@/lib/urls";
 import { CDN_LOGO_URL } from "@/lib/images/staticCdnAssets";
 import type { Metadata } from "next";
 import { ObjectId } from "mongodb";
@@ -32,7 +33,7 @@ export async function generateMetadata({
   const title = `${bill.title} | A House Divided`;
   const description =
     truncate(bill.summary) || `Sponsored by ${bill.sponsorName}. Status: ${bill.status}.`;
-  const url = `${getSiteUrl()}/country/${code}/region/${id}/legislature/bills/${billId}`;
+  const url = `${getSiteUrl()}${regionUrl(code, id)}/legislature/bills/${billId}`;
 
   return {
     title,
