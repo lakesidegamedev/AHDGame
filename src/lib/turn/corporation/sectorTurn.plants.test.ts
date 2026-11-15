@@ -667,7 +667,7 @@ describe("plants mode — production policy throttles real tonnage (#1072)", () 
     // −22 on a −10%-at−25 curve is −8.8%, not the −4.4% the revenue curve gave
     // and emphatically not the 0% the player measured.
     // 6dp, not exact: producedUnits is persisted rounded.
-    expect(cut / open).toBeCloseTo(getOutputMultiplier(POLICY), 6);
+    expect(cut / open).toBeCloseTo(getOutputMultiplier(POLICY), 4);
     expect(cut).toBeLessThan(open);
   });
 

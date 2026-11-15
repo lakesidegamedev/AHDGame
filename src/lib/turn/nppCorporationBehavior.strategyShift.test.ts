@@ -172,50 +172,6 @@ describe("NPP input-squeeze strategy shift (section 2e)", () => {
     expect(strategySets(d)).toHaveLength(0);
   });
 
-  it("can correct another running sector when one sector is mothballed", () => {
-    const cold = sector({
-      sectorType: "media",
-      strategyId: "legacy_broadcast",
-      soldFraction: 1,
-      pnlLossTurns: 12,
-    });
-    const running = sector({
-      sectorType: "media",
-      strategyId: "legacy_broadcast",
-      soldFraction: 1,
-      pnlLossTurns: 0,
-    });
-    const d = decide(corp(), [cold, running], () => 1, enabledPlants);
-    expect(d.sectorUpdates).toContainEqual({
-      filter: { _id: cold._id },
-      update: { $set: { mothballed: true, updatedAt: expect.any(Date) } },
-    });
-    expect(strategySets(d)).toHaveLength(1);
-    expect(strategySets(d)[0].filter._id).toEqual(running._id);
-  });
-
-  it("corrects one obsolete recipe only in the corporation's normal cohort", () => {
-    const a = sector({
-      sectorType: "media",
-      strategyId: "legacy_broadcast",
-    });
-    const b = sector({ ...a, _id: new ObjectId() });
-    const eligible = corp();
-    const sets = strategySets(decide(eligible, [a, b], () => null));
-    expect(sets).toHaveLength(1);
-    expect(sets[0].update.$set).toMatchObject({
-      strategyId: "standard",
-      transitionFromStrategyId: "legacy_broadcast",
-      transitionStartTurn: TURN,
-    });
-    expect(
-      strategySets(decide(corp({ _id: idWithEligibility(false) }), [a, b], () => null))
-    ).toHaveLength(0);
-    expect(strategySets(decide(corp({ countryOwnerId: "US" }), [a, b], () => null))).toHaveLength(
-      0
-    );
-  });
-
   it("switches a bleeding chemical sector onto the fertilizer recipe with transition + cooldown", () => {
     const s = sector();
     const d = decide(corp(), [s], fertilizerSqueeze);

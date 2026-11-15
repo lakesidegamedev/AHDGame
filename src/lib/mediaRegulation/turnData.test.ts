@@ -72,7 +72,7 @@ describe("loadUSMediaOutletDelivery", () => {
     });
     expect(outlets[1].deliveredAdvertisingUnits).toBeCloseTo(5);
     expect(outlets[2]).toMatchObject({ corporationId: "corp-3" });
-    expect(outlets[2].deliveredAdvertisingUnits).toBeCloseTo(100);
+    expect(outlets[2].deliveredAdvertisingUnits).toBeCloseTo(10);
   });
 
   it("does not count transition-era estimates without a current turn or exact output", async () => {

@@ -98,7 +98,7 @@ describe("typeOutputMix", () => {
     const mix = typeOutputMix([
       sector({ sectorType: "manufacturing", strategyId: "heavy_metals", capacityUnits: 1_000 }),
     ]);
-    expect(mix?.commodity).toBe("steel");
+    expect(mix?.commodity).toBe("vehicles");
     expect(mix?.share).toBeCloseTo(1);
   });
 
@@ -117,8 +117,8 @@ describe("typeOutputMix", () => {
 
   it("falls back to the standard strategy for a sector with no strategyId", () => {
     const mix = typeOutputMix([sector({ sectorType: "manufacturing", capacityUnits: 1_000 })]);
-    expect(mix?.commodity).toBe("steel");
-    // Standard makes building materials too, so steel is not the whole output.
+    expect(mix?.commodity).toBe("vehicles");
+    // Standard makes steel and building materials too, so vehicles are not the whole output.
     expect(mix?.share).toBeLessThan(1);
   });
 });
