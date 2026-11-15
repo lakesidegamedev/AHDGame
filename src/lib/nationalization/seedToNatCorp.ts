@@ -1,6 +1,6 @@
 import type { Db } from "mongodb";
 import { ObjectId } from "mongodb";
-import type { CorporateSector, UnownedSector } from "@/lib/db/types";
+import type { CorporateSector } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import type { CorporationType } from "@/lib/constants/corporations";
 import { resolveNationalCorporationForSector } from "./nationalCorporation";
@@ -18,7 +18,6 @@ import {
 import { seedPlantLedger } from "@/lib/corporations/plantLedger";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
-import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
 
 const DEFAULT_PROFIT_MARGIN = 20;
 const DEFAULT_GROWTH_RATE = 1;
@@ -91,7 +90,7 @@ export async function incrementNatCorpSectorRevenue(
   // price` every turn — so a revenue-only seed is erased on the next tick and
   // the natcorp receives nothing. The quantity therefore has to land on
   // capacity. `computeSectorImpliedUnits` is the same ₳ → units conversion the
-  // engine's `impliedOutputUnits` and the unowned headroom derivation use, so
+  // engine's `impliedOutputUnits` uses, so
   // the units are commensurable with `capitalStock`. It takes ₳, NOT the
   // local-currency figure — `capitalStock` is currency-free.
   //
@@ -109,7 +108,7 @@ export async function incrementNatCorpSectorRevenue(
   // restatement of that same quantity. Below plants the capacity delta is 0 and
   // every write is byte-identical to the pre-P3b behaviour.
   const plantsEnabled = marketAtLeast(await getMarketSystemModeForDb(db), "plants");
-  // Dynamic import: budgets.ts reaches this module through seedUnownedSectors,
+  // Dynamic import: budgets.ts reaches this module through the seed path,
   // and a static gdpAnchorRate import would close the same init cycle
   // publicEnterpriseRevenue documents (gdpAnchorRate → countryReadinessContract
   // → budgets → … → here).
@@ -175,62 +174,6 @@ export async function incrementNatCorpSectorRevenue(
     updatedAt: now,
   } as CorporateSector);
   return "insert";
-}
-
-/** Move an unowned doc's revenue into the National Corporation and delete the doc. */
-export async function absorbUnownedDocIntoNatCorp(
-  db: Db,
-  doc: Pick<
-    UnownedSector,
-    | "_id"
-    | "stateId"
-    | "sectorType"
-    | "industryModel"
-    | "mediaDiscriminator"
-    | "countryId"
-    | "revenue"
-  >,
-  opts?: { revenueOverride?: number; dryRun?: boolean }
-): Promise<number> {
-  const revenue = Math.round(opts?.revenueOverride ?? doc.revenue ?? 0);
-  if (revenue <= 0) {
-    if (!opts?.dryRun) {
-      await unownedSectorsCollection(db).deleteOne({ _id: doc._id });
-    }
-    return 0;
-  }
-
-  if (!opts?.dryRun) {
-    await incrementNatCorpSectorRevenue(db, {
-      countryId: doc.countryId,
-      stateId: doc.stateId,
-      sectorType: doc.sectorType as CorporationType,
-      industryModel: doc.industryModel as CorporateSector["industryModel"],
-      mediaDiscriminator: doc.mediaDiscriminator,
-      revenueDelta: revenue,
-    });
-    await unownedSectorsCollection(db).deleteOne({ _id: doc._id });
-  }
-  return revenue;
-}
-
-/** Apply a revenue multiplier by absorbing the boosted amount into the National Corporation. */
-export async function boostUnownedDocIntoNatCorp(
-  db: Db,
-  doc: Pick<
-    UnownedSector,
-    | "_id"
-    | "stateId"
-    | "sectorType"
-    | "industryModel"
-    | "mediaDiscriminator"
-    | "countryId"
-    | "revenue"
-  >,
-  multiplier: number
-): Promise<number> {
-  const boosted = Math.round((doc.revenue ?? 0) * multiplier);
-  return absorbUnownedDocIntoNatCorp(db, doc, { revenueOverride: boosted });
 }
 
 export type OwnedSectorMergeInput = Pick<

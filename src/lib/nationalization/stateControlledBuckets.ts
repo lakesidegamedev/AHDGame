@@ -1,6 +1,6 @@
 import type { Db } from "mongodb";
-import type { CorporateSector, UnownedSector } from "@/lib/db/types";
-import { absorbOwnedSectorIntoNatCorp, absorbUnownedDocIntoNatCorp } from "./seedToNatCorp";
+import type { CorporateSector } from "@/lib/db/types";
+import { absorbOwnedSectorIntoNatCorp } from "./seedToNatCorp";
 import {
   enactedLawAllowsCorpMerge,
   loadSectorWideTakingAuthority,
@@ -9,7 +9,6 @@ import {
 } from "./enactedSectorTaking";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
-import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
 
 export { bucketKey } from "@/lib/market/marketBuckets";
 import { bucketKey } from "@/lib/market/marketBuckets";
@@ -24,7 +23,7 @@ export async function loadNationalCorpIds(db: Db): Promise<Set<string>> {
 
 /**
  * Buckets a National Corporation controls **via nationalization**, by revenue
- * majority. Protecting these keeps NPP auto-expansion and unowned regrowth from
+ * majority. Protecting these keeps NPP auto-expansion from
  * slowly re-fragmenting a sector the state nationalized. Scoped to buckets where
  * the national corp holds at least one BILL-nationalized sector (`nationalizedAtTurn`
  * stamped), so seeded state monopolies (e.g. the NHS, which intentionally keeps a
@@ -67,9 +66,8 @@ export function computeStateControlledBuckets(
 
 /**
  * Buckets where the National Corporation is the **only** corporate holder — no
- * private or NPC corp shares the (state, sectorType) cell. When nationalization
- * consumes the unowned pool the doc is deleted; admin unowned seeding must not
- * recreate it or market share and GDP growth get diluted.
+ * private or NPC corp shares the (state, sectorType) cell, so a new private
+ * entrant would dilute a market the state runs alone.
  */
 export function computeNatCorpSoleOwnerBuckets(
   corpSectors: Pick<
@@ -223,27 +221,6 @@ export async function loadSeedProtectedBucketKeys(db: Db): Promise<Set<string>> 
   return computeSeedProtectedBuckets(corpSectors, nationalCorpIds);
 }
 
-/**
- * `(stateId, sectorType)` pairs whose persisted unowned docs are erroneous —
- * the national corp fully controls the corporate market (sole owner or bill
- * nationalization). Used by the admin heal path after mistaken unowned seeding.
- */
-function computeErroneousUnownedBuckets(
-  corpSectors: Pick<
-    CorporateSector,
-    | "stateId"
-    | "sectorType"
-    | "industryModel"
-    | "mediaDiscriminator"
-    | "revenue"
-    | "corporationId"
-    | "nationalizedAtTurn"
-  >[],
-  nationalCorpIds: ReadonlySet<string>
-): Set<string> {
-  return computeSeedProtectedBuckets(corpSectors, nationalCorpIds);
-}
-
 type OwnedSectorMergeFields = Pick<
   CorporateSector,
   | "_id"
@@ -282,73 +259,43 @@ async function loadOwnedSectorMergeFields(db: Db): Promise<OwnedSectorMergeField
 
 export interface HealCapturedMarketsResult {
   dryRun: boolean;
-  unownedAbsorbedCount: number;
-  unownedRevenueTransferred: number;
   ownedSectorsMergedCount: number;
   ownedRevenueMerged: number;
   sampleKeys: string[];
 }
 
-/** Fix captured markets: absorb erroneous unowned pools and merge intruder corp sectors. */
+/** Fix captured markets: merge intruder corp sectors into the National Corporation. */
 export async function healCapturedMarkets(
   db: Db,
   opts: { dryRun?: boolean } = {}
 ): Promise<HealCapturedMarketsResult> {
   const dryRun = opts.dryRun ?? false;
   const nationalCorpIds = await loadNationalCorpIds(db);
-  const [corpSectors, enactedTakings, unownedSectors, ownedSectors] = await Promise.all([
+  const [corpSectors, enactedTakings, ownedSectors] = await Promise.all([
     loadCorpSectorBucketFields(db),
     loadSectorWideTakingAuthority(db, nationalCorpIds),
-    unownedSectorsCollection(db)
-      .find(
-        {},
-        {
-          projection: {
-            _id: 1,
-            stateId: 1,
-            sectorType: 1,
-            industryModel: 1,
-            mediaDiscriminator: 1,
-            countryId: 1,
-            revenue: 1,
-          },
-        }
-      )
-      .toArray(),
     loadOwnedSectorMergeFields(db),
   ]);
 
-  const protectedBuckets = computeErroneousUnownedBuckets(corpSectors, nationalCorpIds);
   const mergeBuckets = computeCapturedMarketMergeBuckets(
     corpSectors,
     nationalCorpIds,
     enactedTakings
   );
 
-  const toAbsorbUnowned = unownedSectors.filter((u) =>
-    protectedBuckets.has(bucketKey(u.stateId, u.sectorType, u.industryModel, u.mediaDiscriminator))
-  );
   const toMergeOwned = ownedSectors.filter(
     (s) =>
       mergeBuckets.has(bucketKey(s.stateId, s.sectorType, s.industryModel, s.mediaDiscriminator)) &&
       !nationalCorpIds.has(s.corporationId.toString())
   );
 
-  let unownedRevenueTransferred = 0;
   let ownedRevenueMerged = 0;
 
   if (!dryRun) {
-    for (const doc of toAbsorbUnowned) {
-      unownedRevenueTransferred += await absorbUnownedDocIntoNatCorp(db, doc);
-    }
     for (const sector of toMergeOwned) {
       ownedRevenueMerged += await absorbOwnedSectorIntoNatCorp(db, sector);
     }
   } else {
-    unownedRevenueTransferred = toAbsorbUnowned.reduce(
-      (sum, u) => sum + Math.max(0, Math.round(u.revenue ?? 0)),
-      0
-    );
     ownedRevenueMerged = toMergeOwned.reduce(
       (sum, s) => sum + Math.max(0, Math.round(s.revenue ?? 0)),
       0
@@ -356,9 +303,6 @@ export async function healCapturedMarkets(
   }
 
   const sampleKeys = [
-    ...toAbsorbUnowned.map((u) =>
-      bucketKey(u.stateId, u.sectorType, u.industryModel, u.mediaDiscriminator)
-    ),
     ...toMergeOwned.map((s) =>
       bucketKey(s.stateId, s.sectorType, s.industryModel, s.mediaDiscriminator)
     ),
@@ -366,8 +310,6 @@ export async function healCapturedMarkets(
 
   return {
     dryRun,
-    unownedAbsorbedCount: toAbsorbUnowned.length,
-    unownedRevenueTransferred,
     ownedSectorsMergedCount: toMergeOwned.length,
     ownedRevenueMerged,
     sampleKeys,

@@ -389,8 +389,8 @@ function NationalizeRow({
         <p className="rounded-lg border border-warning/30 bg-warning/10 px-2.5 py-1.5 text-[11px] text-warning">
           Nationalizing a whole corporation will{" "}
           <span className="font-semibold">destroy the corporation</span>: its domestic sectors are
-          nationalized into the National Corporation, and any foreign sectors are released to the
-          unowned market.
+          nationalized into the National Corporation, and any foreign sectors are taken by the
+          state they sit in.
         </p>
       )}
 
