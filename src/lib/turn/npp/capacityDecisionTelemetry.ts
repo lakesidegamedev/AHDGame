@@ -29,7 +29,7 @@ import {
   corpLiquidCapitalToAnchor,
   type CorpCapitalCurrencyInfo,
 } from "@/lib/currency/corporationCapital";
-import { bucketKey } from "@/lib/nationalization/stateControlledBuckets";
+import { bucketKey } from "@/lib/market/marketBuckets";
 
 /** In-memory rival corp ids per (state, sectorType) bucket. */
 export type CapacityCompetitorIndex = Map<string, Set<string>>;

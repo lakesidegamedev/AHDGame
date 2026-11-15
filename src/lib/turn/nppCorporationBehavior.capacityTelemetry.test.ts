@@ -25,7 +25,7 @@ import type { Corporation, CorporateSector } from "@/lib/db/types";
 import { candidatesByCountry } from "./npp/__fixtures__/marketCandidates";
 import type { MarketCandidate } from "./npp/marketCandidates";
 import { CAPACITY_ANCHOR_YEAR } from "@/lib/constants/capacityEconomy";
-import { bucketKey } from "@/lib/nationalization/stateControlledBuckets";
+import { bucketKey } from "@/lib/market/marketBuckets";
 import {
   CAPACITY_DECISION_COLLECTION,
   CAPACITY_DECISION_RETENTION_TURNS,

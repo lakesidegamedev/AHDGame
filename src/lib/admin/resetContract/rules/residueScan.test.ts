@@ -19,7 +19,7 @@ function cleanInput(): ResidueScanInput {
       currentYear: 2027,
       resetWorldId: "world-new",
       yearGuards: { lastCensusYear: null },
-      turnGuards: { lastAutoSeedTurn: null, buildDeliverySettledTurn: 0 },
+      turnGuards: { lastExtractionAutoStrategyTurn: null, buildDeliverySettledTurn: 0 },
       otherDocumentIds: [],
     },
     collectionAges: [
@@ -70,7 +70,7 @@ describe("evaluateResidueScan", () => {
       currentYear: 1991,
       resetWorldId: "world-old",
       yearGuards: { lastCensusYear: 2010 },
-      turnGuards: { lastAutoSeedTurn: 944 },
+      turnGuards: { lastExtractionAutoStrategyTurn: 944 },
       otherDocumentIds: ["debt_ceiling_crisis"],
     };
     input.appropriations = [
@@ -99,7 +99,7 @@ describe("evaluateResidueScan", () => {
       "game-state gameState: currentTurn is 1262, expected 1",
       "game-state gameState: resetWorldId does not match the world this reset stamped",
       "game-state gameState: lastCensusYear is 2010, after the fresh world's year 1991",
-      "game-state gameState: lastAutoSeedTurn is 944, after the fresh world's turn 1",
+      "game-state gameState: lastExtractionAutoStrategyTurn is 944, after the fresh world's turn 1",
       "game-state gameState: extra documents survive: debt_ceiling_crisis",
       "appropriation federalBudget: US defence account carries old-world state: accrued through turn 1261, encumbered 4000000, 2 held tender reservation(s)",
       "appropriation federalBudget: UK intelligence account carries old-world state: accrued through turn 1261",

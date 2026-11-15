@@ -125,7 +125,7 @@ export const ACKNOWLEDGED_OUTSIDE: ReadonlyArray<{
   {
     file: "src/lib/constants/sectorSeedEra.ts",
     country: "US",
-    why: "Mixed: US_NATIONAL_SEED_GDP_BY_ERA is United States data, while getEraNominalScale and MODERN_MIN_UNOWNED_SECTOR_REVENUE are the era-scaling machinery every country's sector seeding runs through. Bucket A: the GDP table moves, the scaler stays.",
+    why: "Mixed: US_NATIONAL_SEED_GDP_BY_ERA is United States data, while getEraNominalScale and MODERN_MIN_STATE_ENTERPRISE_REVENUE are the era-scaling machinery every country's sector seeding runs through. Bucket A: the GDP table moves, the scaler stays.",
   },
   {
     file: "src/lib/constants/cabinetMetrics.ts",

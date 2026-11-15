@@ -8,7 +8,7 @@ import type { CommodityType } from "@/lib/constants/commodities";
 import type { CorporationType } from "@/lib/constants/corporations";
 import { CAPACITY_ANCHOR_YEAR } from "@/lib/constants/capacityEconomy";
 import { ceoArchetypeModifiers } from "@/lib/turn/ceoArchetype";
-import { bucketKey } from "@/lib/nationalization/stateControlledBuckets";
+import { bucketKey } from "@/lib/market/marketBuckets";
 import { makeNppCorpDecision, type NppPlantsContext } from "../nppCorporationBehavior";
 import type { PlacementSignals } from "./marketSignals";
 import type { NppCorpDecisionContext } from "./corpDecisionTypes";

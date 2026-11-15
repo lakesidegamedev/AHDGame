@@ -4,7 +4,7 @@
  */
 import { getCountryConfig, type CountryId } from "@/lib/constants/countries";
 import type { OperatingSectorType } from "@/lib/constants/corporations";
-import { getMinUnownedSectorRevenue, getSectorSeedScale } from "@/lib/constants/sectorSeedEra";
+import { getMinStateEnterpriseRevenue, getSectorSeedScale } from "@/lib/constants/sectorSeedEra";
 import { getStateSectorWeights } from "@/lib/seeds/reference/sectorSeedWeights";
 
 /**
@@ -56,9 +56,6 @@ export function computeStateEnterpriseSeedRevenue(params: {
   );
   const downstreamMultiplier = countrySectorSeedMultiplier(countryId, sectorType);
   return Math.round(
-    Math.max(getMinUnownedSectorRevenue(preset), base) * downstreamMultiplier * boostMultiplier
+    Math.max(getMinStateEnterpriseRevenue(preset), base) * downstreamMultiplier * boostMultiplier
   );
 }
-
-/** Old name, kept until the cleanup track removes the remaining importers. */
-export const computeUnownedSeedRevenue = computeStateEnterpriseSeedRevenue;

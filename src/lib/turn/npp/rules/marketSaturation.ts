@@ -17,7 +17,7 @@
  */
 
 import type { CommodityType } from "@/lib/constants/commodities";
-import { bucketKey } from "@/lib/nationalization/stateControlledBuckets";
+import { bucketKey } from "@/lib/market/marketBuckets";
 import { sectorDemandGapUnits } from "@/lib/market/sectorDemandGap";
 import { COMMODITY_BASE_PRICES, commodityMixWeight } from "@/lib/constants/commodities";
 import { nppDemandThrottle, type FundedReceiptLike } from "./fundedSellThrough";

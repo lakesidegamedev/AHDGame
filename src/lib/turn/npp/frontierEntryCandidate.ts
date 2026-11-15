@@ -21,7 +21,7 @@ import {
   type FrontierEntryRelaxableReason,
 } from "@/lib/economy/frontierEntryExperiment";
 import { SECTOR_SUPPLY } from "@/lib/constants/commodities";
-import { bucketKey } from "@/lib/nationalization/stateControlledBuckets";
+import { bucketKey } from "@/lib/market/marketBuckets";
 import type { PlacementSignals } from "./marketSignals";
 import type { Corporation } from "@/lib/db/types";
 import type { MarketCandidate } from "@/lib/turn/npp/marketCandidates";

@@ -19,7 +19,7 @@ import {
   blankNppCandidateExclusions,
   buildNppMarketEntryDiagnostic,
 } from "@/lib/turn/npp/entryDiagnostics";
-import { bucketKey } from "@/lib/nationalization/stateControlledBuckets";
+import { bucketKey } from "@/lib/market/marketBuckets";
 import { ORDINARY_ENTRY_MIN_SHORTAGE } from "@/lib/turn/npp/nppCorporationTuning";
 import type { Corporation, CorporateSector } from "@/lib/db/types";
 import type { MarketCandidate } from "@/lib/turn/npp/marketCandidates";
