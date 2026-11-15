@@ -1,4 +1,5 @@
 "use client";
+import { displayCanadianRegionCode } from "@/lib/countries/ca/regionCodes";
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
@@ -119,7 +120,7 @@ export function StateLeanPanel({
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h2 className="text-lg font-semibold truncate">
-            {data?.stateName ?? stateId} lean breakdown
+            {displayCanadianRegionCode(data?.stateName ?? stateId)} lean breakdown
           </h2>
           {data && (
             <p className="mt-1 text-sm text-muted">

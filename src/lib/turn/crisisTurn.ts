@@ -1,15 +1,17 @@
 import { operatingSectorFilter } from "@/lib/constants/corporations";
-import { ObjectId, type Db, type Document, type Filter } from "mongodb";
+import { ObjectId, type Db, type Document } from "mongodb";
 import { logWireEvent } from "@/lib/wireEvent";
 import { createNotifications } from "@/lib/notifications";
 import { isMacroMetricPath } from "@/lib/macroMetrics/paths";
-import type { PoliticalMetricsDoc } from "@/lib/db/types/politicalMetrics";
 import {
   BOARD_TICK_DELTA_CAP,
   boardDeltaForLegacyEffect,
 } from "@/lib/politicalLegislation/legacyEffectBridge";
-import { applyBoardDelta } from "@/lib/politicalLegislation/boardWrite";
-import type { Crisis, CrisisEffect, CrisisInteraction } from "@/lib/db/types/crisis";
+import {
+  applyBoardValueDeltasByRegion,
+  type BoardDelta,
+} from "@/lib/politicalLegislation/boardWrite";
+import type { Crisis, CrisisEffect } from "@/lib/db/types/crisis";
 import { getMetricDefinition } from "@/lib/constants/metricDefinitions";
 import type { MetricCategoryId } from "@/lib/db/types";
 import {
@@ -549,6 +551,7 @@ async function applyMetricEffects(
   //
   // The bridge takes "category.metricId", so the trailing `.value` that the
   // legacy `$set` path carries is dropped.
+  const boardDeltas: BoardDelta[] = [];
   for (const [path, { delta, recurring }] of Object.entries(politicalDeltas)) {
     const [category, metricId] = path.split(".");
     // Recurring effects get the per-turn slice of the cap, so a crisis that
@@ -564,18 +567,12 @@ async function applyMetricEffects(
       recurring ? BOARD_TICK_DELTA_CAP : undefined
     );
     if (!hit) continue;
-    for (const stateId of targetStateIds) {
-      writes.push(
-        applyBoardDelta(
-          db,
-          { _id: stateId } as Filter<PoliticalMetricsDoc>,
-          hit.familyId,
-          hit.scoreDelta,
-          "value"
-        )
-      );
-    }
+    boardDeltas.push({ familyId: hit.familyId, scoreDelta: hit.scoreDelta });
   }
+  if (boardDeltas.length > 0)
+    writes.push(
+      applyBoardValueDeltasByRegion(db, new Map(targetStateIds.map((id) => [id, boardDeltas])))
+    );
 
   await Promise.all(writes);
 }

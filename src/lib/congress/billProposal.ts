@@ -133,6 +133,7 @@ export async function validateBillProvisions(
           { _id: "current" },
           {
             projection: {
+              preset: 1,
               resetWorldId: 1,
               startingYear: 1,
               metricsSystemVersion: 1,

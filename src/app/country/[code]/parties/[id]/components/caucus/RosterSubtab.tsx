@@ -1,4 +1,5 @@
 "use client";
+import { displayCanadianRegionCode } from "@/lib/countries/ca/regionCodes";
 
 import type { RosterEntry } from "./caucusTypes";
 import { toRoleLabel } from "./caucusUtils";
@@ -52,7 +53,8 @@ export function RosterSubtab({
               <div>
                 <div className="text-sm font-medium">{entry.name}</div>
                 <div className="text-body-sm text-muted">
-                  {entry.memberType === "character" ? "Player" : "NPP"} | {entry.homeState}
+                  {entry.memberType === "character" ? "Player" : "NPP"} |{" "}
+                  {displayCanadianRegionCode(entry.homeState)}
                   {entry.role !== "member" && ` | ${toRoleLabel(entry.role)}`}
                 </div>
               </div>

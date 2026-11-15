@@ -248,7 +248,12 @@ export const RUNTIME: CollectionEntry[] = [
   { name: "hu2011AssemblyCounts", category: "runtime" },
   { name: "hu2011ConstituencyByElections", category: "runtime" },
   { name: "hu2011AssemblyOfficeArchives", category: "runtime" },
-  { name: "electionVoteTallies", category: "runtime" },
+  {
+    name: "electionVoteTallies",
+    category: "runtime",
+    notes:
+      "Includes frozen House district results and geometry; removed with all tallies on reset so no prior-world result survives.",
+  },
   {
     name: "electionResultSnapshots",
     category: "runtime",

@@ -29,6 +29,19 @@ export interface CampaignGeo {
   units: Record<string, Array<{ id: string; n: string; d: string }>> | null;
   unitSource: "static" | "results";
   unitOffsetY: number;
+  /** Type-specific layers keep federal ridings separate from provincial statistical areas. */
+  unitLayers?: Record<
+    string,
+    {
+      units: Record<string, Array<{ id: string; n: string; d: string }>>;
+      unitLabelPlural: string;
+    }
+  >;
+  unitLayerByType?: Record<string, string>;
+  supportedPresets?: string[];
+  notice?: string;
+  /** Administrative water extents are clipped to the cartographic land outline. */
+  clipUnitsToRegions?: boolean;
   /** The framed inset outline (Japan's southern islands). */
   frame?: string;
   /** Smallest region box (width, height) that gets a label on the national map. */
@@ -79,15 +92,29 @@ async function loadStatic(url: string, countryId: string): Promise<CampaignGeo |
 }
 
 /** Countries with a Campaign Manager map, and how each one's map loads. */
-const LOADERS: Record<string, () => Promise<CampaignGeo | null>> = {
-  US: () =>
-    loadUs().catch((err: unknown) => {
-      console.warn("Campaign Manager: US map unavailable", err);
-      return null;
-    }),
-  UK: () => loadStatic("/geo/campaign-manager/uk.json", "UK"),
-  JP: () => loadStatic("/geo/campaign-manager/jp.json", "JP"),
+const LOADERS: Record<
+  string,
+  { load: () => Promise<CampaignGeo | null>; supportedPresets?: string[] }
+> = {
+  US: {
+    load: () =>
+      loadUs().catch((err: unknown) => {
+        console.warn("Campaign Manager: US map unavailable", err);
+        return null;
+      }),
+  },
+  UK: { load: () => loadStatic("/geo/campaign-manager/uk.json", "UK") },
+  JP: { load: () => loadStatic("/geo/campaign-manager/jp.json", "JP") },
+  CA: {
+    load: () => loadStatic("/geo/campaign-manager/ca.json", "CA"),
+    supportedPresets: ["2027-default"],
+  },
 };
+
+export function campaignGeoUnsupportedPreset(countryId: string, preset?: string): boolean {
+  const allowed = LOADERS[countryId]?.supportedPresets;
+  return allowed != null && !allowed.includes(preset ?? "");
+}
 
 const cache = new Map<string, Promise<CampaignGeo | null>>();
 
@@ -95,15 +122,20 @@ const cache = new Map<string, Promise<CampaignGeo | null>>();
  * The Campaign Manager map for a country, or null when it has none (or its
  * geometry failed to load; a failure is not cached, so the next visit retries).
  */
-export function loadCampaignGeo(countryId: string): Promise<CampaignGeo | null> {
-  const hit = cache.get(countryId);
+export function loadCampaignGeo(countryId: string, preset?: string): Promise<CampaignGeo | null> {
+  const key = `${countryId}:${preset ?? ""}`;
+  const hit = cache.get(key);
   if (hit) return hit;
   const loader = LOADERS[countryId];
-  if (!loader) return Promise.resolve(null);
-  const load = loader();
-  cache.set(countryId, load);
+  if (!loader || campaignGeoUnsupportedPreset(countryId, preset)) return Promise.resolve(null);
+  const load = loader
+    .load()
+    .then((geo) =>
+      geo?.supportedPresets && !geo.supportedPresets.includes(preset ?? "") ? null : geo
+    );
+  cache.set(key, load);
   void load.then((g) => {
-    if (!g) cache.delete(countryId);
+    if (!g) cache.delete(key);
   });
   return load;
 }

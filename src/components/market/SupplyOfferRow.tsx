@@ -1,4 +1,5 @@
 "use client";
+import { displayCanadianRegionCode } from "@/lib/countries/ca/regionCodes";
 
 import { useState } from "react";
 import Link from "next/link";
@@ -105,7 +106,14 @@ export function SupplyOfferRow({
         </span>
         <span className="text-sm font-semibold text-foreground">
           {COMMODITY_LABELS[commodity]}
-          {offer.stateId ? <span className="font-normal text-muted"> ({offer.stateId})</span> : ""}
+          {offer.stateId ? (
+            <span className="font-normal text-muted">
+              {" "}
+              ({displayCanadianRegionCode(offer.stateId)})
+            </span>
+          ) : (
+            ""
+          )}
         </span>
         <span className="text-sm font-semibold tabular-nums text-foreground md:text-right">
           {formatVolume(offer.volumeCap)}{" "}

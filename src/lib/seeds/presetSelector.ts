@@ -185,7 +185,7 @@ export function isEasternBlocEra(preset: string): boolean {
  */
 export function presetDefaultsToFoundingPhase(
   preset: string,
-  startingParties: "default" | "none" = "default"
+  startingParties: "default" | "none" | "no-npps" = "default"
 ): boolean {
   return (
     preset === "1953-default" ||

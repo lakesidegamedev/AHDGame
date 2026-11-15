@@ -13,6 +13,7 @@ import { resolveCountryCurrencyCode } from "@/lib/currency/govBudgetFields";
 import { expireFinancialCrisisAusterity } from "@/lib/crises/financialCrisisBudgetPolicy";
 import { advanceTaxRatePhaseIn } from "@/lib/budget/taxRatePhaseIn";
 import { getDb } from "@/lib/mongodb";
+import { loadCouponCashWitnessContext } from "@/lib/banking/fundedCouponPayeeWitness";
 import type { FederalBudget, TreasuryAccrualReceipt } from "@/lib/db/types/budget";
 import type { GameConfig } from "@/lib/db/types/gameConfig";
 import type { GameState } from "@/lib/db/types/gameState";
@@ -264,6 +265,9 @@ export async function processTreasuryTurn(_turn: number): Promise<{ countriesPro
       });
     }
   }
+  const couponCashWitness = treasuryCashLedgerEnabled
+    ? await loadCouponCashWitnessContext(db, rateByCurrency)
+    : undefined;
   function valuationFor(
     budget: FederalBudget
   ): Pick<TreasuryAccrualReceipt, "anchorRate" | "anchorRateSource" | "anchorRatePreset"> {
@@ -483,6 +487,7 @@ export async function processTreasuryTurn(_turn: number): Promise<{ countriesPro
           anchorRate: b.sovereignCouponClaims?.[0]?.anchorRate ?? 0,
           forexEnabled,
           corporateQuotes: corporationQuotes,
+          cashWitness: couponCashWitness,
           priorPayouts,
           lockedCashBoundLocal: couponCashBounds.get(String(b._id)),
           prefetch: couponPrefetch,
@@ -512,6 +517,7 @@ export async function processTreasuryTurn(_turn: number): Promise<{ countriesPro
               anchorRate: valuation.anchorRate!,
               forexEnabled,
               corporateQuotes: corporationQuotes,
+              cashWitness: couponCashWitness,
               priorPayouts,
               lockedCashBoundLocal: couponCashBounds.get(String(b._id)),
               prefetch: couponPrefetch,
@@ -710,6 +716,7 @@ export async function processTreasuryTurn(_turn: number): Promise<{ countriesPro
               anchorRate: valuation.anchorRate!,
               forexEnabled,
               corporateQuotes: corporationQuotes,
+              cashWitness: couponCashWitness,
               priorPayouts,
               lockedCashBoundLocal: couponCashBounds.get(String(b._id)),
               prefetch: couponPrefetch,

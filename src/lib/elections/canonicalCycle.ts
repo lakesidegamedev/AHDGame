@@ -1,3 +1,8 @@
+import { isCanada } from "@/lib/countries/ca/localGeographyFacts";
+import {
+  provincialCycle1EndTurn,
+  caOpeningProvincialPrimaryFloor,
+} from "@/lib/countries/ca/rules/provincialLegislature";
 /**
  * Canonical LARP-cycle math for perpetual elections, shared between
  * cron spawn paths, the admin recalibrate flow, and one-shot
@@ -13,6 +18,7 @@
  * `priorEndTurn` override replacing the bootstrap anchor.
  */
 import { brazilPresidentialRules } from "@/lib/countries/br/rules/presidential";
+import { usRegionalElectionYearForWorld } from "@/lib/countries/us/rules/regionalElectionCalendar";
 
 import {
   UK_COMMONS_CYCLE_PERIOD_HOURS,
@@ -197,6 +203,7 @@ export const FOUNDING_GENERAL_HOURS = 24;
 
 export interface CanonicalCycleParams {
   electionType: string;
+  state?: string;
   /** 1-indexed cycle number. */
   cycle: number;
   /** US Senate class. */
@@ -256,6 +263,18 @@ export function canonicalTurnsForCycle(params: CanonicalCycleParams): CanonicalC
   const dur = DEFAULT_DURATIONS[electionType];
   if (!dur) return null;
   const anchors = getCycleAnchors(ctx);
+  const regionalYear =
+    countryId && params.state
+      ? usRegionalElectionYearForWorld(params.state, electionType, cycle, countryId, ctx.preset)
+      : undefined;
+  if (regionalYear !== undefined) {
+    const endTurn = (regionalYear - ctx.startingYear + 1) * 48 + (ctx.preIterationTurns ?? 0);
+    return {
+      endTurn,
+      primaryEndTurn: endTurn - dur.generalDurationHours,
+      startTurn: cycle === 1 ? 1 : Math.max(1, endTurn - dur.durationHours),
+    };
+  }
   // The 1991 successor parliaments have their own post-1990 election dates.
   const successor = findSuccessorSchedule(countryId, electionType);
   if (successor) {
@@ -543,7 +562,12 @@ export function canonicalTurnsForCycle(params: CanonicalCycleParams): CanonicalC
       // staggered per province via customCycle1EndTurn. The Commons anchor
       // only gates the chamber to eras where Canada exists.
       if (anchors.caCommons == null) return null;
-      const cycle1End = customCycle1EndTurn ?? anchors.caCommons;
+      const cycle1End =
+        customCycle1EndTurn ??
+        (isCanada(countryId ?? "") && params.state
+          ? provincialCycle1EndTurn(params.state, ctx)
+          : undefined) ??
+        anchors.caCommons;
       const endTurn = cycle1End + (cycle - 1) * 192;
       return {
         endTurn,
@@ -739,7 +763,27 @@ export function pickNextCanonicalCycle(
     const primaryHoursLeft = primaryEndTurn - effectivePrimaryStart;
     const generalHoursLeft = endTurn - Math.max(primaryEndTurn, currentTurn);
 
-    if (primaryHoursLeft >= minPrimaryHours && generalHoursLeft >= minGeneralHours) {
+    // Opening calendars can clip the first primary; later cycles keep their minima.
+    const provincialFloor = caOpeningProvincialPrimaryFloor({
+      countryId: params.countryId,
+      electionType: params.electionType,
+      preset: params.ctx?.preset,
+      cycle,
+      currentTurn,
+      endTurn,
+      primaryEndTurn,
+      preIterationTurns: params.ctx?.preIterationTurns,
+      minPrimaryHours,
+    });
+    const primaryFloor =
+      provincialFloor ??
+      (countryHasFeature("usElections", params.countryId) &&
+      params.ctx?.preset === "2027-default" &&
+      cycle === 1 &&
+      endTurn - (params.ctx.preIterationTurns ?? 0) === 48
+        ? Math.min(minPrimaryHours, 23)
+        : minPrimaryHours);
+    if (primaryHoursLeft >= primaryFloor && generalHoursLeft >= minGeneralHours) {
       return { cycle, startTurn, primaryEndTurn, endTurn };
     }
   }

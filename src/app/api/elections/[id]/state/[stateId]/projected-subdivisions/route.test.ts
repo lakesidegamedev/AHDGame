@@ -121,3 +121,60 @@ describe("GET projected-subdivisions for a finished primary", () => {
     expect(Object.keys(body.candidateColors)).toEqual(["lefty", "gone"]);
   });
 });
+
+describe("Canadian riding placement response", () => {
+  it.each(["caCommons", "snap_caCommons", "special_caCommons"])(
+    "marks %s as seat-consistent and colors its assigned winners",
+    async (electionType) => {
+      const { resolveElectionRouteParam } = await import("@/lib/elections/electionParamResolution");
+      const { resolveElection } = await import("@/lib/elections/resolveElection");
+      const { getGameStatePresetOrDefault } = await import("@/lib/db/collections/gameState");
+      const { loadSubdivisionFile } = await import("@/lib/maps/subdivisionData");
+      const { unitRowsFrom } = await import("@/app/campaign-manager/map/mapModel");
+      vi.mocked(getGameStatePresetOrDefault).mockResolvedValue("2027-default");
+      vi.mocked(resolveElectionRouteParam).mockResolvedValue({
+        ok: true,
+        election: {
+          _id: "e",
+          electionType,
+          countryId: "CA",
+          state: "CA_ON",
+          status: "active",
+          totalSeats: 2,
+        },
+      } as never);
+      vi.mocked(loadSubdivisionFile).mockResolvedValue({
+        viewBox: "0 0 1 1",
+        subdivisions: ["35001", "35002"].map((code) => ({
+          id: `CA-FED-2023-${code}`,
+          name: code,
+          path: "M0,0Z",
+          electorate: 100,
+          partyShares: { LIB: 0.5, CON: 0.5 },
+        })),
+      } as never);
+      vi.mocked(resolveElection).mockResolvedValue({
+        inPrimary: false,
+        candidates: [
+          cand("d", "1", 70, -2, { partyAbbr: "LIB" }),
+          cand("r", "2", 30, 2, { partyAbbr: "CON" }),
+        ],
+        polling: { sharesPct: { d: 70, r: 30 } },
+        seatsEstimate: { d: 1, r: 1 },
+      } as never);
+      const response = await GET(
+        new NextRequest("http://t/api/elections/e/state/CA_ON/projected-subdivisions"),
+        { params: Promise.resolve({ id: "e", stateId: "CA_ON" }) }
+      );
+      expect(response.status).toBe(200);
+      const body = await response.json();
+      expect(body.mode).toBe("seatConsistent");
+      if (electionType === "special_caCommons")
+        expect(body.notice).toContain("only contested vacancies");
+      const rows = unitRowsFrom(body, "#111111");
+      expect(rows.map((row) => row.leaderPartyId).sort()).toEqual(["1", "2"]);
+      expect(body.subdivisions.map((s: { winner: string }) => s.winner).sort()).toEqual(["d", "r"]);
+      expect(rows.every((row) => row.shares[0].pct === 70)).toBe(true);
+    }
+  );
+});

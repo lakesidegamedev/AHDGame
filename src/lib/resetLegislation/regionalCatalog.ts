@@ -1,9 +1,11 @@
+import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
 /**
  * Regional choices in the 1991 reset. These are local service
  * and state-competent alternatives, not copies of a national statute. They
  * use reviewed, visibly provisional prices and outcome calibration for the
  * reset release. Future telemetry may support a later balance revision.
  */
+import { regionalPresentation } from "./regionalPresentation";
 import type { LegislativePosition } from "./catalog";
 import type { ResetCountry } from "./fundingOwner";
 
@@ -13,7 +15,8 @@ export interface RegionalLawLevel {
   position: LegislativePosition;
   title: string;
   description: string;
-  authorityKind: "state_statute" | "delegated_service_package";
+  authorityKind:
+    "state_statute" | "delegated_service_package" | "provincial_or_territorial_statute";
   fundingAccount: "regional_budget";
   sourceAnchor: string;
 }
@@ -1439,55 +1442,8 @@ const positions: readonly LegislativePosition[] = [
   "far_right",
 ];
 
-const regionalPresentation: Readonly<
-  Record<
-    ResetCountry,
-    {
-      titlePrefix: string;
-      authorityNote: string;
-      authorityKind: RegionalLawLevel["authorityKind"];
-    }
-  >
-> = {
-  US: {
-    titlePrefix: "State",
-    authorityNote: "State law sets the program and the state budget funds delivery.",
-    authorityKind: "state_statute",
-  },
-  UK: {
-    titlePrefix: "Local Authority",
-    authorityNote:
-      "Local authorities deliver this service within national law and their allocated budget.",
-    authorityKind: "delegated_service_package",
-  },
-  JP: {
-    titlePrefix: "Regional",
-    authorityNote:
-      "Prefectural services coordinate inside the game's eight regional aggregates and use the regional budget.",
-    authorityKind: "delegated_service_package",
-  },
-  IE: {
-    titlePrefix: "Local Authority",
-    authorityNote:
-      "Local authorities deliver this service within national law and their allocated budget.",
-    authorityKind: "delegated_service_package",
-  },
-  SCO: {
-    titlePrefix: "Council",
-    authorityNote:
-      "Scottish councils deliver this service within national law and their allocated budget.",
-    authorityKind: "delegated_service_package",
-  },
-  WAL: {
-    titlePrefix: "Council",
-    authorityNote:
-      "Welsh councils deliver this service within national law and their allocated budget.",
-    authorityKind: "delegated_service_package",
-  },
-};
-
 const authoredRegionalLevels: readonly RegionalLawLevel[] = localRoutes.flatMap((route) =>
-  (route.countries ?? (["US", "UK", "JP", "IE", "SCO", "WAL"] as const)).flatMap((country) =>
+  (route.countries ?? (["US", "UK", "JP", "IE", "SCO", "WAL", "CA"] as const)).flatMap((country) =>
     route.levels.map((level, index) => ({
       familyId: route.familyId,
       country,
@@ -1496,13 +1452,13 @@ const authoredRegionalLevels: readonly RegionalLawLevel[] = localRoutes.flatMap(
       description: `${level.description} ${regionalPresentation[country].authorityNote}`,
       authorityKind: regionalPresentation[country].authorityKind,
       fundingAccount: "regional_budget" as const,
-      sourceAnchor: `1991 reset crosswalk: ${country}:regional:${route.familyId}`,
+      sourceAnchor: `${country === COUNTRY_CONFIGS.CA.id ? "2027 modeled seed" : "1991 reset crosswalk"}: ${country}:regional:${route.familyId}`,
     }))
   )
 );
 
 const localizedPublicHealthLevels: readonly RegionalLawLevel[] = (
-  ["IE", "SCO", "WAL"] as const
+  ["IE", "SCO", "WAL", "CA"] as const
 ).flatMap((country) =>
   [
     [
@@ -1533,7 +1489,7 @@ const localizedPublicHealthLevels: readonly RegionalLawLevel[] = (
     description: `${description} ${regionalPresentation[country].authorityNote}`,
     authorityKind: regionalPresentation[country].authorityKind,
     fundingAccount: "regional_budget" as const,
-    sourceAnchor: `1991 reset crosswalk: ${country}:regional:L19`,
+    sourceAnchor: `${country === COUNTRY_CONFIGS.CA.id ? "2027 modeled seed" : "1991 reset crosswalk"}: ${country}:regional:L19`,
   }))
 );
 

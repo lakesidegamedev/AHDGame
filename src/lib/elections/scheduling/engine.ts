@@ -463,6 +463,7 @@ export function buildCanonicalSpawn(params: {
   const spawn = pickNextCanonicalCycle({
     electionType,
     countryId,
+    state,
     senateClass,
     chamberClass,
     prevCycle: prev?.cycle ?? 0,
@@ -501,7 +502,8 @@ export function buildCanonicalSpawn(params: {
       senateClass,
       chamberClass,
       ctx,
-      countryId
+      countryId,
+      state
     ),
     status,
     totalSeats: prev?.totalSeats ?? fallbackTotalSeats,

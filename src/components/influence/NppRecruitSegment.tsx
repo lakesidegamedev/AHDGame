@@ -1,4 +1,5 @@
 "use client";
+import { displayCanadianRegionCode } from "@/lib/countries/ca/regionCodes";
 
 import { useState } from "react";
 import { NppSlotTierTable } from "./NppSlotTierTable";
@@ -107,7 +108,7 @@ export function NppRecruitSegment({
                   sel ? "border-primary bg-primary/10" : "border-card-border hover:bg-card-elevated"
                 } ${s.inFrontier === false ? "opacity-40" : ""}`}
               >
-                <span className="text-xs font-bold">{s.stateId}</span>
+                <span className="text-xs font-bold">{displayCanadianRegionCode(s.stateId)}</span>
                 <span className="text-[10px] text-muted">
                   {s.inFrontier === false ? "out of reach" : `${s.stateOrg.toFixed(0)}%`}
                 </span>

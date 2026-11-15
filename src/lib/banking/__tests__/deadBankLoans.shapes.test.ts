@@ -19,7 +19,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ObjectId, type Db } from "mongodb";
 import { createInMemoryDb, type InMemoryDb } from "@/lib/test-utils/inMemoryDb";
-import { withInjectedCrash, type FaultPlan } from "@/lib/test-utils/faultyDb";
+import { withInjectedCrash, InjectedCrash, type FaultPlan } from "@/lib/test-utils/faultyDb";
 import { resetRecordAuditBufferForTest } from "@/lib/audit/recordAudit";
 import type { BankLoan } from "@/lib/db/types/bank";
 import { MONEY_MOVE_COLLECTION } from "@/lib/banking/moneyMove";
@@ -938,7 +938,10 @@ describe("a crashed dead-bank move resumes to the per-loan outcome", () => {
     for (const [label, plan] of stages) {
       const crashed = makeNamedCrashWorld();
       const faulty = withInjectedCrash(crashed, plan);
-      await expect(runBatched(faulty.db), label).rejects.toThrow();
+      await runBatched(faulty.db).catch((error) => {
+        expect(error, label).toBeInstanceOf(InjectedCrash);
+      });
+      expect(faulty.crashed, label).toBe(true);
       faulty.disarm();
 
       const resumed = await resumeSettlement(crashed as unknown as Db, batchKey);
@@ -979,7 +982,10 @@ describe("a crashed dead-bank move resumes to the per-loan outcome", () => {
     for (const [label, plan] of stages) {
       const crashed = makeConstructionCrashWorld();
       const faulty = withInjectedCrash(crashed, plan);
-      await expect(runBatched(faulty.db), label).rejects.toThrow();
+      await runBatched(faulty.db).catch((error) => {
+        expect(error, label).toBeInstanceOf(InjectedCrash);
+      });
+      expect(faulty.crashed, label).toBe(true);
       faulty.disarm();
 
       // The next turn's recovery reaps the lease and finishes its journal; a

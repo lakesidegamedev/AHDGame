@@ -104,6 +104,7 @@ import {
 import { loadDemographicsV2Preload } from "@/lib/elections/engine/demographicsV2Preload";
 import { summarizeParticipation, type ParticipationSummary } from "@/lib/demographics/v2/rules";
 import { demographicsV2CalibrationForCountry } from "@/lib/demographics/v2/calibration";
+import { demographicsRegionKey } from "@/lib/demographics/v2/rules/regionKey";
 import { eraYearContextFromGameState } from "@/lib/era/context";
 import { getEraMonetaryBaseline } from "@/lib/constants/monetaryEra";
 import { MONETARY_BASELINES } from "@/lib/constants/currencies";
@@ -843,10 +844,14 @@ export async function accumulatePresidentVoteTurn(
       partyGroupFavorabilityByKey,
       demographicDefaults: demographicDefaultsByState?.get(stateId) ?? null,
       ...(demographicsV2.demographicsV2Countries.has(electionCountryId) &&
-      demographicsV2.regionDemographicsByState.has(stateId)
+      demographicsV2.regionDemographicsByState.has(
+        demographicsRegionKey(electionCountryId, stateId)
+      )
         ? {
             v2: {
-              regionAges: demographicsV2.regionDemographicsByState.get(stateId)!.ages,
+              regionAges: demographicsV2.regionDemographicsByState.get(
+                demographicsRegionKey(electionCountryId, stateId)
+              )!.ages,
               votingAge: demographicsV2.votingAgeByCountry.get(electionCountryId) ?? 18,
               registeredShare: (() => {
                 const unregistered = registrationPoolMap.get(stateId)?.unregistered;

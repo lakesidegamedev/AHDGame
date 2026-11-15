@@ -465,7 +465,7 @@ function sovereignMaturityLedgerEntries(
         bondId: bond.bondId,
         units: paidLocal / BOND_UNIT_FACE_VALUE,
         couponRate: bond.couponRate,
-        treasuryCashMovement: true,
+        treasuryCashMovement: false,
         ...plan.treasuryValuation,
       },
     },

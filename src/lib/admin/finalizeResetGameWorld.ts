@@ -1,3 +1,5 @@
+import { ensureUSMinorPartyOrgs } from "@/lib/countries/us/seedMinorPartyOrgs";
+import { reconcileCaDefaultPartyIdentities } from "@/lib/countries/ca/reconcileDefaultPartyIdentities";
 /**
  * Post-bootstrap finalize pass for a world reset.
  *
@@ -82,8 +84,8 @@ export async function finalizeResetGameWorld(
   options: FinalizeResetOptions
 ): Promise<FinalizeResetResult> {
   const { preset, teardown, deleteProfiles } = options;
-  const noStartingParties =
-    (await loadStartingPartiesMode(db, preset, options.startingParties)) === "none";
+  const startingParties = await loadStartingPartiesMode(db, preset, options.startingParties);
+  const noStartingParties = startingParties === "none";
   const now = new Date();
   const sink = options.log;
   const finalizeLog: string[] = [];
@@ -100,7 +102,9 @@ export async function finalizeResetGameWorld(
   // the new party gets `max(sequentialId) + 1`, never a colliding seqId.
   if (preset !== "2019-no-parties") {
     await realignPartyCountersToExisting(db);
+    await reconcileCaDefaultPartyIdentities(db, preset);
     await ensureDefaultParties(db, preset);
+    await ensureUSMinorPartyOrgs(db, preset, true);
     // Mirror for statePartyOrg: insert rows for newly-added defaults so they
     // show up on the region Party Organizations page. Non-destructive — never
     // overwrites existing rows.
@@ -404,12 +408,10 @@ export async function finalizeResetGameWorld(
     logCollector(`IMF Corp already present (sequentialId=${imfResult.sequentialId ?? "?"}).`);
   }
 
-  // The audit row is opened by the orchestrator at the seal and closed with
-  // this string, so a reset dying in teardown or build still leaves a trace.
-  // Not gated on adminUsername so script-driven resets are audited too.
-  if (noStartingParties) {
-    await clearStartingPolitics(db, preset);
-    log("Starting parties: none; final political cleanup complete, economic ownership preserved");
+  // Final cleanup also covers politicians created during bootstrap.
+  if (startingParties !== "default") {
+    await clearStartingPolitics(db, preset, startingParties === "no-npps");
+    log("Final political cleanup complete; economic ownership preserved");
   }
 
   const adminDetails = deleteProfiles

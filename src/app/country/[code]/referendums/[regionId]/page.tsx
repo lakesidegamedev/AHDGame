@@ -2,7 +2,12 @@ import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getDb } from "@/lib/mongodb";
-import { COUNTRY_CONFIGS, getCountryConfig, type CountryId } from "@/lib/constants/countries";
+import {
+  canonicalRegionId,
+  COUNTRY_CONFIGS,
+  getCountryConfig,
+  type CountryId,
+} from "@/lib/constants/countries";
 import type { Bill, PoliticalParty, State, StatePartyOrg } from "@/lib/db/types";
 import { getCurrentTurn } from "@/lib/currentTurn";
 import { getAuthUserWithCharacter } from "@/lib/auth";
@@ -100,7 +105,7 @@ export default async function ReferendumDetailPage({
   params: Promise<{ code: string; regionId: string }>;
   searchParams: Promise<{ cycle?: string; wire?: string; target?: string; as?: string }>;
 }) {
-  const { code, regionId } = await params;
+  const { code, regionId: rawRegionId } = await params;
   const {
     cycle: cycleParam,
     wire: wireParam,
@@ -108,6 +113,7 @@ export default async function ReferendumDetailPage({
     as: asParam,
   } = await searchParams;
   const countryId = code.toUpperCase() as CountryId;
+  const regionId = canonicalRegionId(countryId, rawRegionId);
   if (!COUNTRY_CONFIGS[countryId]) notFound();
 
   const t = await getTranslations("nav.devolution");

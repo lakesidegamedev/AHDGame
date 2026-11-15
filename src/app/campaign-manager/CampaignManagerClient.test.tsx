@@ -79,6 +79,15 @@ beforeEach(() => {
 });
 afterEach(cleanup);
 
+it("explains an empty Canadian race list instead of leaving an unexplained blank page", () => {
+  mocks.races = [];
+  renderWithElectionsMessages(
+    <CampaignManagerClient {...props} countryId="CA" countryName="Canada" initialRaceKey={null} />
+  );
+  expect(screen.getByRole("status").textContent).toContain("No races are scheduled in Canada.");
+  expect(screen.getByRole("button", { name: "Try again" })).toBeTruthy();
+});
+
 it("loads Finished directly from the initial URL filter", () => {
   renderWithElectionsMessages(
     <CampaignManagerClient

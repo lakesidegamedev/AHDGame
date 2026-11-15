@@ -51,7 +51,7 @@ describe("reset system controls", () => {
     await waitFor(() =>
       expect(
         within(section).getByText(
-          "Next 1991 reset: v2. Changing this selection does not switch the running world."
+          "Next reset: v2. Changing this selection does not switch the running world."
         )
       ).toBeTruthy()
     );

@@ -49,6 +49,7 @@ describe("v2 metric board read", () => {
     expect(await readResetMetricBoard(db as unknown as Db, "US", undefined, ready)).toEqual({
       status: "ready",
       board,
+      year: 2019,
     });
     expect(db.collectionMocks.resetMetricSnapshots!.findOne.mock.calls[0]![0]).toEqual({
       _id: "US:national",
@@ -56,7 +57,7 @@ describe("v2 metric board read", () => {
     });
     db.collection("resetMetricSnapshots").findOne.mockResolvedValue({ ...board, regionId: null });
     const normalized = await readResetMetricBoard(db as unknown as Db, "US", undefined, ready);
-    expect(normalized).toEqual({ status: "ready", board });
+    expect(normalized).toEqual({ status: "ready", board, year: 2019 });
     if (normalized.status === "ready") expect(normalized.board).not.toHaveProperty("regionId");
     db.collection("gameState").findOne.mockResolvedValue({
       metricsSystemVersion: "v2",
@@ -74,6 +75,44 @@ describe("v2 metric board read", () => {
     expect(await readResetMetricBoard(db as unknown as Db, "US", undefined, ready)).toEqual({
       status: "invalid",
     });
+  });
+
+  it.each([
+    { currentYear: 2027, startingYear: 2027, currentTurn: 1, expected: 2027 },
+    // The authoritative clock includes custom reset dates and founding turns.
+    { currentYear: 2028, startingYear: 2027, currentTurn: 2, expected: 2028 },
+    { currentYear: 1991, startingYear: 1991, currentTurn: 60, expected: 1991 },
+    { startingYear: 2027, currentTurn: 48, expected: 2027 },
+    { startingYear: 2027, currentTurn: 49, expected: 2028 },
+    { startingYear: 1991, currentTurn: 49, expected: 1992 },
+    { preset: "1953-default", currentTurn: 49, expected: 1954 },
+    { preset: "2027-default", currentTurn: 1, expected: 2027 },
+    {
+      startingYear: 2027,
+      currentTurn: 60,
+      preIteration: { active: true },
+      expected: 2027,
+    },
+    { startingYear: 2027, currentTurn: 60, preIterationTurns: 12, expected: 2027 },
+    { startingYear: 2027, currentTurn: 61, preIterationTurns: 12, expected: 2028 },
+  ])("returns the world calendar year for $currentTurn: $expected", async (clock) => {
+    const db = createMockDb();
+    const { expected, ...date } = clock;
+    const board = buildOpeningMetricSnapshots1991("world-test", 1)[0]!;
+    board.asOfTurn = date.currentTurn;
+    db.collection("gameState").findOne.mockResolvedValue({
+      ...date,
+      metricsSystemVersion: "v2",
+      resetWorldId: "world-test",
+      resetVersionSeeds: { metrics: seed },
+    });
+    db.collection("resetMetricSnapshots").findOne.mockResolvedValue(board);
+    expect(await readResetMetricBoard(db as unknown as Db, "US", undefined, ready)).toEqual({
+      status: "ready",
+      board,
+      year: expected,
+    });
+    expect(db.collection("gameState").findOne).toHaveBeenCalledTimes(1);
   });
 
   it("does not serve a region board under the wrong country or world", async () => {

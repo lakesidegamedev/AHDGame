@@ -15,7 +15,7 @@ interface LegislatureHeaderProps {
   stats: {
     majorityParty: { name: string; color: string; seats: number };
     totalSeats: number;
-    leader: { label: string; name: string; id: string; sequentialId?: number | null } | null;
+    leader: { label: string; name: string; id: string | null; sequentialId?: number | null } | null;
     /**
      * Opposition/minority leader. `null` renders the cell as Vacant;
      * `undefined` omits the cell entirely (one-party legislatures where the
@@ -24,7 +24,7 @@ interface LegislatureHeaderProps {
     minorityLeader?: {
       label: string;
       name: string;
-      id: string;
+      id: string | null;
       sequentialId?: number | null;
     } | null;
   };
@@ -137,7 +137,9 @@ export default function LegislatureHeader({
           <span className="text-body-sm font-medium text-muted">
             {stats.leader?.label ?? "Leader"}
           </span>
-          {stats.leader ? (
+          {stats.leader && !stats.leader.id ? (
+            <span className="text-base font-bold truncate">{stats.leader.name}</span>
+          ) : stats.leader ? (
             <Link
               href={`/character/${stats.leader.sequentialId ?? stats.leader.id}`}
               className="text-base font-bold text-primary hover:underline truncate"
@@ -155,7 +157,9 @@ export default function LegislatureHeader({
             <span className="text-body-sm font-medium text-muted">
               {stats.minorityLeader?.label ?? "Minority leader"}
             </span>
-            {stats.minorityLeader ? (
+            {stats.minorityLeader && !stats.minorityLeader.id ? (
+              <span className="text-base font-bold truncate">{stats.minorityLeader.name}</span>
+            ) : stats.minorityLeader ? (
               <Link
                 href={`/character/${stats.minorityLeader.sequentialId ?? stats.minorityLeader.id}`}
                 className="text-base font-bold text-primary hover:underline truncate"

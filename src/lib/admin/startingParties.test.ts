@@ -13,6 +13,9 @@ it("supports an explicit empty start for 1991 and 2027, with legacy default unch
   expect(resolveStartingPartiesMode("1991-default")).toBe("default");
   expect(resolveStartingPartiesMode("2019-default")).toBe("default");
   expect(resolveStartingPartiesMode("1991-default", "none")).toBe("none");
+  expect(resolveStartingPartiesMode("2027-default", "none")).toBe("none");
+  expect(resolveStartingPartiesMode("2027-default", "no-npps")).toBe("no-npps");
+  expect(() => resolveStartingPartiesMode("1991-default", "no-npps")).toThrow();
   expect(resolveStartingPartiesMode("2019-no-parties")).toBe("none");
   expect(resolveStartingPartiesMode("2027-default")).toBe("default");
   expect(resolveStartingPartiesMode("2027-default", "none")).toBe("none");
@@ -22,6 +25,59 @@ it("supports an explicit empty start for 1991 and 2027, with legacy default unch
 });
 
 describe("reset political cleanup", () => {
+  it("2027 No NPPs preserves party organization, economic owners and background governments", async () => {
+    const memory = createInMemoryDb(),
+      db = memory as unknown as Db;
+    const politician = new ObjectId(),
+      owner = new ObjectId(),
+      foreign = new ObjectId();
+    memory.seed("gameState", [
+      { _id: "current", preset: "2027-default", startingPartiesMode: "no-npps" },
+    ]);
+    memory.seed("npps", [
+      { _id: politician, countryId: "US", party: "1", currentOffice: { type: "house" } },
+      { _id: owner, countryId: "US", party: "1", currentOffice: null },
+      { _id: foreign, countryId: "BR", party: "1", currentOffice: { type: "president" } },
+    ]);
+    memory.seed("politicalParties", [
+      { _id: "US-party", countryId: "US", chairId: politician },
+      { _id: "BR-party", countryId: "BR", chairId: foreign },
+    ]);
+    memory.seed("statePartyOrg", [{ _id: "US_PA_1", countryId: "US", registration: 65 }]);
+    memory.seed("stateRegistrationPool", [
+      { _id: "US_PA", countryId: "US", independent: 15, unregistered: 20 },
+    ]);
+    memory.seed("congressionalDistricts", [
+      { _id: "US_PA_1", countryId: "US", holderNppId: politician, holderParty: "DEM" },
+    ]);
+    memory.seed("corporations", [
+      { _id: "company", ceoType: "npp", ceoId: owner, shareholders: [] },
+    ]);
+    for (let i = 0; i < 2; i++) await clearStartingPolitics(db, "2027-default", true);
+    expect(await memory.collection("npps").findOne({ _id: politician })).toBeNull();
+    expect(await memory.collection("npps").findOne({ _id: owner })).toMatchObject({
+      party: "independent",
+      currentOffice: null,
+    });
+    expect(await memory.collection("npps").findOne({ _id: foreign })).toMatchObject({
+      party: "1",
+      currentOffice: { type: "president" },
+    });
+    expect(await memory.collection("politicalParties").findOne({ _id: "US-party" })).toMatchObject({
+      chairId: null,
+    });
+    expect(await memory.collection("politicalParties").findOne({ _id: "BR-party" })).toMatchObject({
+      chairId: foreign,
+    });
+    expect(
+      await memory.collection("congressionalDistricts").findOne({ _id: "US_PA_1" })
+    ).toMatchObject({ holderNppId: null, holderParty: null });
+    expect(await memory.collection("statePartyOrg").countDocuments({})).toBe(1);
+    expect(
+      await memory.collection("stateRegistrationPool").findOne({ _id: "US_PA" })
+    ).toMatchObject({ independent: 15, unregistered: 20 });
+    expect(await loadStartingPartiesMode(db, "2027-default")).toBe("no-npps");
+  });
   it("preserves economic ownership, independent registration, vacant seats and 1991 clock through repeat cleanup", async () => {
     const memory = createInMemoryDb();
     const db = memory as unknown as Db;

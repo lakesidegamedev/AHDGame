@@ -1,4 +1,5 @@
 "use client";
+import { displayCanadianRegionCode } from "@/lib/countries/ca/regionCodes";
 
 import { useGameEvents } from "@/hooks/useGameEvents";
 
@@ -128,7 +129,10 @@ export default function ElectionsClient({ code, initialElections }: ElectionsCli
   // linkable and survives back/forward. `useOptimistic` applies a change at once
   // and reconciles when the navigation commits, otherwise the controls freeze
   // until the server payload lands and a second click merges from stale state.
-  const urlFilters = useMemo(() => parseElectionsParams(searchParams), [searchParams]);
+  const urlFilters = useMemo(
+    () => parseElectionsParams(searchParams, countryId),
+    [searchParams, countryId]
+  );
   const [filters, applyOptimisticFilters] = useOptimistic(urlFilters);
 
   const navigate = useCallback(
@@ -305,7 +309,10 @@ export default function ElectionsClient({ code, initialElections }: ElectionsCli
               <div key={election.id} className="space-y-3">
                 <ManifestoFlavorBar countryCode={code} electionId={election.id} data={manifestos} />
                 <CommonsCarveUpPanel
-                  regionName={ELECTION_STATE_NAMES[election.state] ?? election.state}
+                  regionName={
+                    ELECTION_STATE_NAMES[election.state] ??
+                    displayCanadianRegionCode(election.state)
+                  }
                   regionId={election.state}
                   slices={carveUp.slices}
                   topDemographics={carveUp.topDemographics}

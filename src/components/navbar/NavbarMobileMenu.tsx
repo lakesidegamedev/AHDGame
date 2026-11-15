@@ -388,7 +388,7 @@ export function NavbarMobileMenu({
                 </Link>
                 {governorOffice && governorOffice.stateId === homeState.id && (
                   <Link
-                    href={`/country/${homeState.countryId.toLowerCase()}/region/${homeState.id.toLowerCase()}/office`}
+                    href={`${regionUrl(homeState.countryId.toLowerCase(), homeState.id.toLowerCase())}/office`}
                     onClick={onClose}
                     className="flex items-center rounded-lg px-3 py-2 text-sm transition-colors hover:bg-white/5 text-muted"
                   >

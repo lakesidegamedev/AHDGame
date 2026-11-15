@@ -122,6 +122,7 @@ export const EU_EUROZONE_MEMBERS: CountryId[] = ["DE", "IE"];
  * Legacy countries (US/UK/DE/JP/...) keep bare codes (AL, SCO, BW).
  */
 export const PREFIXED_REGION_ID_COUNTRIES: ReadonlySet<CountryId> = new Set<CountryId>([
+  "CA",
   "FR",
   "IT",
   "ES",

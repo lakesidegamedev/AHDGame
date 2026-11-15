@@ -1,3 +1,4 @@
+import { regionUrl } from "@/lib/urls";
 // src/lib/actions/recommendations.ts
 import type { Character, PartyBudget, PoliticalParty, StatePartyOrg } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
@@ -480,7 +481,7 @@ export function findUnownedOpportunities(
         estimatedBenefit: `${topOpp.estimatedCapturePercent}% market share per split`,
         targetUnownedRevenue: topOpp.unownedRevenue,
       },
-      link: `/country/${countryPath}/region/${topOpp.stateId.toUpperCase()}?tab=economy&sector=${sectorType}`,
+      link: `${regionUrl(countryPath, topOpp.stateId.toUpperCase())}?tab=economy&sector=${sectorType}`,
     });
   }
 
@@ -616,7 +617,7 @@ export function checkPartyActions(
         estimatedBenefit: "+1 organization unit per click; Org% follows bucket share",
         targetPartyName: partyName,
       },
-      link: `/country/${countryPath}/region/${statePartyOrg.stateId}/party/${statePartyOrg.partyId}`,
+      link: `${regionUrl(countryPath, statePartyOrg.stateId)}/party/${statePartyOrg.partyId}`,
     });
   }
 
@@ -716,7 +717,7 @@ export function generateRecommendations(
                 estimatedBenefit: `${sector.estimatedCapturePercent.toFixed(1)}% market share`,
                 targetUnownedRevenue: sector.unownedRevenue,
               },
-              link: `/country/${economy.countryId.toLowerCase()}/region/${economy.stateId.toUpperCase()}?tab=economy`,
+              link: `${regionUrl(economy.countryId.toLowerCase(), economy.stateId.toUpperCase())}?tab=economy`,
             });
           }
         }
@@ -820,7 +821,7 @@ export function generateRecommendations(
       link:
         vacant.level === "national"
           ? `/country/${countryPath}/parties/${vacant.partyId}/leadership`
-          : `/country/${countryPath}/region/${vacant.stateId}/party/${vacant.partyId}`,
+          : `${regionUrl(countryPath, vacant.stateId ?? "")}/party/${vacant.partyId}`,
     });
   }
 

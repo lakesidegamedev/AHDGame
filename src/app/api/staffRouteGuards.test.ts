@@ -1,5 +1,5 @@
 import { readFileSync, readdirSync, statSync } from "node:fs";
-import { join } from "node:path";
+import { join, relative, sep } from "node:path";
 import { describe, expect, it } from "vitest";
 
 /**
@@ -43,7 +43,7 @@ describe("staff API route guards", () => {
 
   it("routes every admin and moderator endpoint through a central guard", () => {
     const unguarded = files
-      .map((f) => f.slice(process.cwd().length + 1))
+      .map((f) => relative(process.cwd(), f).split(sep).join("/"))
       .filter((rel) => !(rel in EXEMPT))
       .filter((rel) => {
         const src = readFileSync(join(process.cwd(), rel), "utf8");

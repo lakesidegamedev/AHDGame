@@ -54,6 +54,7 @@ import { COUNTRY_CURRENCY_MAP, getSeedCurrencyCode } from "@/lib/constants/curre
 import { nppHomeFxRate, localToAnchor } from "./nppEconomicAccount";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { witnessNppShareCash } from "./shareCashLedger";
 
 export type NppShareBuyResult =
   | {
@@ -201,6 +202,8 @@ export async function nppBuyShares(
     sharesBought: shares,
     pools: tradePools,
   });
+
+  await witnessNppShareCash(db, npp, -costAnchor, now);
 
   return {
     ok: true,
@@ -381,6 +384,8 @@ export async function nppSellShares(
     // Only the balance is read back; an NPP document is ~28 KB.
     { returnDocument: "after", projection: { nppInvestmentCashAnchor: 1 } }
   );
+
+  if (credited) await witnessNppShareCash(db, npp, proceedsAnchor, now);
 
   void onFloatSellCommitted(db, corp, proceeds, { pools });
 

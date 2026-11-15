@@ -78,6 +78,7 @@ import {
 } from "./internationalOrganizationsEffects";
 import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
 import { organizationMembershipsCollection } from "@/lib/db/repositories/organizationMemberships";
+import { withSettlementReadSnapshot } from "@/lib/banking/settlementReadSnapshot";
 import type { Document } from "mongodb";
 
 /*
@@ -165,6 +166,10 @@ export async function processInternationalOrganizationsTurn(
   backgroundVotesCast: number;
   closeTimeBallotsCast?: number;
 }> {
+  return withSettlementReadSnapshot(() => processOrganizations(db, currentTurn));
+}
+
+async function processOrganizations(db: Db, currentTurn: number) {
   await reconcileEuropeanTreatyLive(db, currentTurn);
   // Auto-found orgs whose founding year has arrived BEFORE any vote/proposal
   // handling, so a newly founded org exists for this turn's steps.

@@ -1,16 +1,25 @@
 import type { AnyBulkWriteOperation, Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
-import type { StateMetrics } from "@/lib/db/types";
+import type { GameState, State, StateMetrics } from "@/lib/db/types";
 import type { RegionDemographics } from "@/lib/db/types/regionDemographics";
 import { NATIONAL_SCOPE_IDS } from "@/lib/constants/nationalScope";
 import { cohortAgeShares1991 } from "@/lib/seeds/rules/cohortAgeShares1991";
 import { getRegionCensusData } from "@/lib/seeds/regionCensusData";
 import { presetUsesDemographicPaths } from "@/lib/demographics/rules/demographicPaths";
 import { synthesizeAgeSexVector } from "@/lib/demographics/seedSynthesis";
-import { sexRatioFromVector, dependencyRatio } from "@/lib/demographics/cohortVector";
+import { wholePopulation } from "@/lib/demographics/rules/wholePopulation";
+import {
+  sexRatioFromVector,
+  dependencyRatio,
+  workingAgePopulation,
+  votingAgePopulation,
+} from "@/lib/demographics/cohortVector";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 import { regionDemographicsCollection } from "@/lib/db/repositories/regionDemographics";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { resolveVotingAgeEligible } from "@/lib/constants/votingAge";
+import { resolveWorkingAgeEligible, resolveRetirementAgeEligible } from "@/lib/constants/laborAge";
 
 /**
  * Stand up the per-region single-year age×sex cohort vector (`regionDemographics.ages`)
@@ -69,7 +78,7 @@ export async function seedCohortVectors(
     throw new Error("onlyMissing cannot be combined with replace");
   }
 
-  const [states, metricsDocs] = await Promise.all([
+  const [states, metricsDocs, world] = await Promise.all([
     statesCollection<StateDoc>(db)
       .find({}, { projection: { _id: 1, countryId: 1, population: 1 } })
       .toArray(),
@@ -86,7 +95,25 @@ export async function seedCohortVectors(
         }
       )
       .toArray(),
+    gameStateCollection<
+      GameState & { workingAgeEligible?: number; retirementAgeEligible?: number }
+    >(db).findOne(
+      { _id: "current" },
+      {
+        projection: {
+          preset: 1,
+          votingAgeEligible: 1,
+          votingAgeEligibleByCountry: 1,
+          workingAgeEligible: 1,
+          retirementAgeEligible: 1,
+        },
+      }
+    ),
   ]);
+  const eligibility = world?.preset === preset ? world : undefined;
+  const workingAge = resolveWorkingAgeEligible(eligibility);
+  const retirementAge = resolveRetirementAgeEligible(eligibility);
+  const openingYear = Number(preset.slice(0, 4));
 
   const metricsById = new Map(metricsDocs.map((m) => [String(m._id), m]));
   const realStates = states.filter((s) => !NATIONAL_SCOPE_IDS.has(String(s._id)));
@@ -114,6 +141,7 @@ export async function seedCohortVectors(
   const demoOps: AnyBulkWriteOperation<RegionDemographics>[] = [];
   const coveredIds: string[] = [];
   const metricOps: AnyBulkWriteOperation<StateMetrics>[] = [];
+  const stateOps: AnyBulkWriteOperation<State>[] = [];
 
   for (const state of realStates) {
     const id = String(state._id);
@@ -153,11 +181,8 @@ export async function seedCohortVectors(
       survivalSeniorTail: presetUsesDemographicPaths(preset),
     });
 
-    // People are whole; round each cell. Deterministic → idempotent on a fresh world.
-    const ages = {
-      male: vector.male.map((c) => Math.round(c)),
-      female: vector.female.map((c) => Math.round(c)),
-    };
+    // Allocate rounding remainders once across the entire population stock.
+    const ages = wholePopulation(vector, population);
     const summed = ages.male.reduce((a, b) => a + b, 0) + ages.female.reduce((a, b) => a + b, 0);
 
     stats.covered++;
@@ -181,6 +206,25 @@ export async function seedCohortVectors(
       // Dotted paths, deliberately: this must touch only these three metric
       // leaves and leave the rest of the `population` subtree alone.
       if (!onlyMissing) {
+        stateOps.push({
+          updateOne: {
+            filter: { _id: id, countryId: state.countryId },
+            update: {
+              $set: {
+                workingAgePopulation: Math.round(
+                  workingAgePopulation(ages, workingAge, retirementAge)
+                ),
+                votingEligiblePopulation: Math.round(
+                  votingAgePopulation(
+                    ages,
+                    resolveVotingAgeEligible(eligibility, openingYear, state.countryId)
+                  )
+                ),
+                militaryServicePopulation: 0,
+              },
+            },
+          },
+        });
         metricOps.push({
           updateOne: {
             filter: { _id: id },
@@ -227,6 +271,9 @@ export async function seedCohortVectors(
   }
   if (metricOps.length > 0) {
     await macroMetricsCollection(db).bulkWrite(metricOps, { ordered: true });
+  }
+  if (stateOps.length > 0) {
+    await statesCollection(db).bulkWrite(stateOps, { ordered: true });
   }
 
   log(

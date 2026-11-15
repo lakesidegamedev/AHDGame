@@ -21,6 +21,7 @@ import {
 import type { SovereignMaturityCashLeg } from "@/lib/bonds/sovereignMaturityPayoutTargets";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
+import { treasuryPaymentWitness } from "@/lib/budget/treasuryPaymentWitness";
 
 /** Everything one sovereign maturity settles, built before any money moves. */
 export interface SovereignMaturityPlan {
@@ -474,6 +475,17 @@ export function sovereignMaturityWaveFundingTransition(input: {
         update: { $inc: { treasuryBalance: -totalLocal } },
         note: "Record funded sovereign principal payment in signed fiscal position",
       },
+      ...treasuryPaymentWitness({
+        key: sovereignMaturityWaveKey(wave.countryId, turn, "fund"),
+        country: wave.countryId,
+        currency: wave.currencyCode,
+        amount: totalLocal,
+        rate: wave.localPerAnchor,
+        turn,
+        signedPositionOwned: true,
+        txType: "gov_bond_maturity_payment",
+        now: input.now,
+      }),
     ],
     event: {
       kind: "monetary.executed",

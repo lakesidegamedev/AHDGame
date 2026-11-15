@@ -48,6 +48,7 @@ export async function GET(request: Request, context: { params: Promise<{ code: s
       { _id: "current" },
       {
         projection: {
+          preset: 1,
           resetWorldId: 1,
           currentYear: 1,
           currentTurn: 1,

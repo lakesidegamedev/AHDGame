@@ -22,8 +22,9 @@ import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParti
 import { parliamentaryGovernmentsCollection } from "@/lib/db/repositories/parliamentaryGovernments";
 
 export interface ResolvedOppositionLeader {
-  /** Character id of the Leader of the Opposition (party or coalition chair). */
-  chairId: ObjectId;
+  /** Player party or coalition chair; null when a seated NPC leads the opposition. */
+  chairId: ObjectId | null;
+  nppId?: ObjectId;
   /** The single opposition party, or a coalition's largest member. May be null. */
   partyDoc: PoliticalParty | null;
 }
@@ -34,7 +35,7 @@ export interface ResolvedOppositionLeader {
  * This mirrors exactly what the executive hub does when it renders the
  * Opposition Leader plaque: union the governing bloc via
  * `resolveGoverningPartyIdsFromDocuments`, then select the largest non-governing
- * party/coalition that has a resolvable chair via `resolveOppositionLeader`.
+ * party/coalition with a chair or a supported NPC representative via `resolveOppositionLeader`.
  * Gated on a governing party existing (matching the hub's `if (govPartyId)`),
  * so a country with no formed government surfaces no Opposition Leader.
  */

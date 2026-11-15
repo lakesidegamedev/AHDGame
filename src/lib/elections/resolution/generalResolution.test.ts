@@ -157,6 +157,65 @@ beforeEach(async () => {
 // ── resolveOneGeneralElection ─────────────────────────────────────────────────
 
 describe("resolveOneGeneralElection", () => {
+  it("persists the district receipt in the finalized House tally", async () => {
+    const election = makeElection({ electionType: "house", state: "MT", totalSeats: 2 });
+    const a = makeCandidate(election._id, { party: "1" }),
+      b = makeCandidate(election._id, { party: "2" });
+    const tally = makeTally(
+      election._id,
+      { [a._id.toString()]: 500, [b._id.toString()]: 500 },
+      { state: "MT" }
+    );
+    db.collection("gameState");
+    db.collection("states");
+    db.collection("congressionalDistricts");
+    db.collection("politicalParties");
+    db.collectionMocks.gameState!.findOne.mockResolvedValue({
+      preset: "2027-default",
+      redistrictingEnabled: true,
+      currentYear: 2027,
+    });
+    db.collectionMocks.states!.find.mockReturnValue(
+      makeCursor([{ _id: "MT", countryId: "US", houseDistricts: 2 }])
+    );
+    db.collectionMocks.congressionalDistricts!.find.mockReturnValue(
+      makeCursor(
+        [1, 2].map((index) => ({
+          _id: `US_MT_${index}`,
+          countryId: "US",
+          stateId: "MT",
+          index,
+          netLean: index === 1 ? -16 : 16,
+        }))
+      )
+    );
+    db.collectionMocks.politicalParties!.find.mockReturnValue(
+      makeCursor([
+        { _id: "p1", sequentialId: 1, abbreviation: "DEM", economicPosition: -2 },
+        { _id: "p2", sequentialId: 2, abbreviation: "REP", economicPosition: 2 },
+      ])
+    );
+    db.collectionMocks.electionCandidates!.find.mockReturnValue(makeCursor([a, b]));
+    db.collectionMocks.characters!.find.mockReturnValue(
+      makeCursor([a, b].map((c) => ({ _id: c.characterId, userId: new ObjectId() })))
+    );
+    await resolveOneGeneralElection(db as unknown as Db, election, tally, CURRENT_TURN, NOW);
+    expect(db.collectionMocks.electionVoteTallies!.updateOne).toHaveBeenCalledWith(
+      { electionId: election._id },
+      expect.objectContaining({
+        $set: expect.objectContaining({
+          finalized: true,
+          houseDistrictResult: expect.objectContaining({
+            electionId: election._id.toString(),
+            geometryAvailable: true,
+            districts: expect.arrayContaining([
+              expect.objectContaining({ id: "MT-01", winner: a._id.toString() }),
+            ]),
+          }),
+        }),
+      })
+    );
+  });
   it.each(["no-tally", "zero-votes", "no-eligible-candidates"] as const)(
     "records Japan's frozen chamber capacity when a race ends with %s",
     async (emptyPath) => {

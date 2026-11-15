@@ -29,13 +29,13 @@ describe("resolveSourceLink", () => {
       stateId: "CA",
       countryId: "US",
     });
-    expect(s?.href).toBe("/country/us/region/ca/legislature/bills/abc123");
+    expect(s?.href).toBe("/country/us/region/CA/legislature/bills/abc123");
     expect(s?.label).toBe("View bill");
   });
 
   it("falls back to US country for legacy state bill notifications without countryId", () => {
     const s = resolveSourceLink("system", { billId: "abc123", stateId: "TX" });
-    expect(s?.href).toBe("/country/us/region/tx/legislature/bills/abc123");
+    expect(s?.href).toBe("/country/us/region/TX/legislature/bills/abc123");
   });
 
   it("links an election notification", () => {

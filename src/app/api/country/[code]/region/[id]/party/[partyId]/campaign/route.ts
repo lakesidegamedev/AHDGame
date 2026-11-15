@@ -1,3 +1,7 @@
+import {
+  campaignCanadianRiding,
+  CanadianRidingCampaignError,
+} from "@/lib/countries/ca/campaignRiding";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getDb } from "@/lib/mongodb";
@@ -9,24 +13,23 @@ import { findPartyBySequentialId } from "@/lib/db/partyLookup";
 import { canSpendOnStateParty } from "@/lib/parties/access";
 import {
   applyCampaignBoost,
+  CAMPAIGN_BASE_PS_COST,
   CAMPAIGN_BOOST_PER_ACTION,
   CAMPAIGN_SELF_EFFICIENCY,
   CAMPAIGN_ALLY_EFFICIENCY,
 } from "@/lib/redistricting/campaignBoost";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
-import type {
-  CongressionalDistrict,
-  Election,
-  ElectionCandidate,
-  StatePartyOrg,
-} from "@/lib/db/types";
 import { electionsCollection } from "@/lib/db/repositories/elections";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 import { congressionalDistrictsCollection } from "@/lib/db/repositories/congressionalDistricts";
 
-const BodySchema = z.object({ districtIndex: z.number().int().min(1) });
-const CAMPAIGN_BASE_PS_COST = 2;
+const BodySchema = z.object({
+  districtIndex: z.number().int().min(1),
+  electionId: z.string().min(1).max(64).optional(),
+  ridingId: z.string().max(64).optional(),
+  planVersion: z.string().max(16).optional(),
+});
 
 export async function POST(
   req: Request,
@@ -63,6 +66,29 @@ export async function POST(
         403,
         `Campaigning for ${party.name} draws on its party organisation, so it is limited to its officers. You need to be its chair, vice chair or campaigner in ${stateId}, or hold one of those roles nationally. A party leader can appoint you from the party's management page.`
       );
+    }
+
+    if (countryId === COUNTRY_CONFIGS.CA.id) {
+      const { electionId, ridingId, planVersion } = parsed.data;
+      if (!electionId || !ridingId || !planVersion)
+        return errorResponse(400, "Choose a riding and election from the current map");
+      try {
+        return NextResponse.json(
+          await campaignCanadianRiding(db, {
+            stateId,
+            partyId: String(party.sequentialId),
+            characterId: character._id,
+            districtIndex,
+            electionId,
+            ridingId,
+            planVersion,
+            now: new Date(),
+          })
+        );
+      } catch (error) {
+        if (error instanceof CanadianRidingCampaignError) return errorResponse(400, error.message);
+        throw error;
+      }
     }
 
     // Active house race for this state.

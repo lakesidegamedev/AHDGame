@@ -148,6 +148,16 @@ export function buildSuccessorRegionalRows(input: {
       annualSpending,
       familyOwned,
       otherExistingServices: annualSpending - familyOwned,
+      ...(aggregate.existingServicesByCategory
+        ? {
+            existingServicesByCategory: Object.fromEntries(
+              Object.entries(aggregate.existingServicesByCategory).map(([category, amount]) => [
+                category,
+                amount * share,
+              ])
+            ),
+          }
+        : {}),
       allocatedClaims,
     };
     return {

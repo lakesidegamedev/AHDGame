@@ -10,7 +10,12 @@ import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { requireAuth } from "@/lib/api/requireAuth";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
-import { getCountryConfig, isParliamentarySystem, type CountryId } from "@/lib/constants/countries";
+import {
+  COUNTRY_CONFIGS,
+  getCountryConfig,
+  isParliamentarySystem,
+  type CountryId,
+} from "@/lib/constants/countries";
 import type { StateBudget, EnactedLaw } from "@/lib/db/types/budget";
 import type { RegionalBudget } from "@/lib/db/types/regionalBudget";
 import type { StatePolicy } from "@/lib/db/types/statePolicy";
@@ -29,6 +34,7 @@ import { legislationTypesCollection } from "@/lib/db/repositories/legislationTyp
 import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
 import { enactedLawsCollection } from "@/lib/db/repositories/enactedLaws";
 import { regionalBudgetsCollection } from "@/lib/db/repositories/regionalBudgets";
+import { loadFormulaGrantBreakdown } from "@/lib/budget/grants";
 
 export async function GET(
   request: Request,
@@ -213,12 +219,10 @@ async function serveStateBudget(
     .find({ scope: "state", stateId, repealedAt: { $exists: false } })
     .toArray();
 
-  const grantBreakdown = [
-    { program: "Medicaid", amount: stateBudget.revenue.federalGrants * 0.55 },
-    { program: "Highway Fund", amount: stateBudget.revenue.federalGrants * 0.19 },
-    { program: "Education", amount: stateBudget.revenue.federalGrants * 0.15 },
-    { program: "SNAP", amount: stateBudget.revenue.federalGrants * 0.11 },
-  ];
+  const grantBreakdown =
+    countryId === COUNTRY_CONFIGS.US.id
+      ? await loadFormulaGrantBreakdown(db, stateId, stateBudget.revenue.federalGrants)
+      : [{ program: grantLabel, amount: stateBudget.revenue.federalGrants }];
   const spending = normalizeStateSpending(stateBudget.spending);
   const balance = stateBudget.revenue.total - spending.total;
 
@@ -227,10 +231,16 @@ async function serveStateBudget(
       ...stateBudget,
       spending,
       surplus: balance,
-      balance,
     },
     enactedLaws,
     grantBreakdown,
+    ...(countryId === COUNTRY_CONFIGS.US.id
+      ? {
+          grantBreakdownBasis: "current-formula-estimate",
+          grantBreakdownNote:
+            "Estimated program split using current formula weights, scaled to the booked grant total.",
+        }
+      : {}),
     grantLabel,
     currencyCode: resolveCountryCurrencyCode({ countryId }),
   });

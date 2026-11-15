@@ -15,6 +15,14 @@ import { parseCampaignManagerParams } from "./linkParams";
 import { openingFilter } from "./openingFilter";
 
 describe("campaignManagerHref", () => {
+  it.each(["US", "CA"])("round-trips the %s upcoming stage", (country) => {
+    const href = campaignManagerHref({ country, type: "governor", stage: "upcoming" });
+    const params = Object.fromEntries(new URL(href, "http://localhost").searchParams);
+    expect(parseCampaignManagerParams(params)).toMatchObject({
+      country,
+      filter: { type: "governor", stage: "upcoming" },
+    });
+  });
   it("builds a race link", () => {
     expect(campaignManagerHref({ race: "6ae803d32a6841f128efd90d" })).toBe(
       "/campaign-manager?race=6ae803d32a6841f128efd90d"
@@ -240,4 +248,13 @@ describe("campaign page links", () => {
       "/campaign/c1?tab=field&region=OH"
     );
   });
+});
+
+it("uses short Canadian region codes and preserves their country in public links", () => {
+  expect(campaignManagerHref({ region: "CA_NT", type: "caCommons" })).toBe(
+    "/campaign-manager?country=CA&type=caCommons&region=NT"
+  );
+  expect(parseCampaignManagerParams({ country: "CA", region: "CA_NT" }).filter.regionId).toBe(
+    "CA_NT"
+  );
 });

@@ -1,3 +1,4 @@
+import { migration as canadianCensusDivisions } from "./entries/2026-11-14-canadian-census-divisions";
 import { migration as financialTxLogTurnOrderIndex } from "./entries/2026-11-10-financial-tx-log-turn-order-index";
 import { migration as bucketApprovalsRename } from "./entries/2026-11-11-bucket-approvals-rename";
 import { migration as regionGroupDriftToBuckets } from "./entries/2026-11-11-region-group-drift-to-buckets";
@@ -457,6 +458,7 @@ export const HELD_MIGRATIONS: Migration[] = [
   // County stock initialization requires paused population writers and an explicit --only.
   countyPopulations,
   ukJpSubdivisionPopulations,
+  canadianCensusDivisions,
   jpLawLeanEffects,
   electoratePriorityLawBook,
   deLawBookBackfill,

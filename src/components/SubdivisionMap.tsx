@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { formatLeanLabel } from "@/lib/utils/subdivisionResults";
+import { formatSubdivisionLean, type SubdivisionInput } from "@/lib/utils/subdivisionResults";
 
 const DEFAULT_PARTY_COLORS: Record<string, string> = {
   democrat: "#3B82F6",
@@ -67,6 +67,7 @@ const FIPS_TO_STATE: Record<string, string> = {
 };
 
 export interface SubdivisionDatum {
+  leanStatus?: SubdivisionInput["leanStatus"];
   id: string;
   name: string;
   path: string;
@@ -82,6 +83,8 @@ export interface SubdivisionDatum {
    * and the tooltip shows winner/party/margin instead of a vote list.
    */
   party?: string;
+  partyLabel?: string;
+  marginAvailable?: boolean;
 }
 
 interface SubdivisionMapProps {
@@ -281,9 +284,9 @@ export function SubdivisionMap({
           style={{ left: tooltipPos.x + 12, top: tooltipPos.y - 8 }}
         >
           <div className="font-semibold text-slate-100">{hoveredSub.name}</div>
-          {typeof hoveredSub.leanScalar === "number" && (
+          {formatSubdivisionLean(hoveredSub.leanScalar, hoveredSub.leanStatus) && (
             <div className="text-slate-400 text-[10px]">
-              Lean: {formatLeanLabel(hoveredSub.leanScalar).label}
+              Lean: {formatSubdivisionLean(hoveredSub.leanScalar, hoveredSub.leanStatus)}
             </div>
           )}
           {!hoveredSub.winner && <div className="text-slate-400 text-[10px]">Vacant</div>}
@@ -297,10 +300,14 @@ export function SubdivisionMap({
                 <span className="text-slate-300">
                   {candidateNames[hoveredSub.winner] ?? "Unknown"}
                 </span>
-                <span className="text-slate-500 ml-auto capitalize">{hoveredSub.party}</span>
+                <span className="text-slate-500 ml-auto capitalize">
+                  {hoveredSub.partyLabel ?? hoveredSub.party}
+                </span>
               </div>
               <div className="text-slate-400 text-[10px]">
-                Margin: {hoveredSub.margin.toFixed(1)}%
+                {hoveredSub.marginAvailable === false
+                  ? "District vote margin unavailable"
+                  : `Margin: ${hoveredSub.margin.toFixed(1)}%`}
               </div>
             </div>
           )}

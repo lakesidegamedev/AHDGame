@@ -1,3 +1,4 @@
+import { displayCanadianRegionCode } from "@/lib/countries/ca/regionCodes";
 import { loadNationalGdpPerCapita } from "@/lib/campaigns/nationalGdpBasis";
 import { countImplementedSuggestions } from "@/lib/suggestions/completionAnnouncement";
 import { resolveCampaignPriceLevel } from "@/lib/campaigns/rules/priceLevel";
@@ -107,7 +108,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   if (!character) return {};
 
   const officeLabel = getOfficeLabel(character.currentOffice, character.countryId);
-  const locality = `${character.homeState}, ${character.countryId}`;
+  const locality = `${displayCanadianRegionCode(character.homeState)}, ${character.countryId}`;
   const title = `${character.name} | A House Divided`;
   const description =
     truncate(character.bio) ||
@@ -484,7 +485,7 @@ export default async function CharacterPage({ params }: PageProps) {
       : null;
   const currentRaceLabel =
     candidateElections.length === 1
-      ? `${formatElectionTypeLabel(candidateElections[0].election.electionType, character.countryId)} in ${candidateElections[0].election.state}`
+      ? `${formatElectionTypeLabel(candidateElections[0].election.electionType, character.countryId)} in ${displayCanadianRegionCode(candidateElections[0].election.state)}`
       : candidateElections.length > 1
         ? `${candidateElections.length} active races`
         : null;
@@ -816,7 +817,8 @@ export default async function CharacterPage({ params }: PageProps) {
                           : ""}
                       </Link>
                       <p className="mt-0.5 text-body-sm text-muted">
-                        {election.state} · {election.cycle} · {election.status}
+                        {displayCanadianRegionCode(election.state)} · {election.cycle} ·{" "}
+                        {election.status}
                       </p>
                     </li>
                   ))}
