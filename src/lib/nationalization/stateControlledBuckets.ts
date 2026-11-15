@@ -11,21 +11,8 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
 
-/**
- * `(stateId:sectorType)` key for a market bucket. Shared format across the
- * unowned-growth and NPP-expansion guards so they agree on what "this bucket" is.
- */
-export function bucketKey(
-  stateId: string,
-  sectorType: string,
-  industryModel?: string | null,
-  mediaDiscriminator?: string | null
-): string {
-  if (mediaDiscriminator) {
-    return `${stateId}:${sectorType}:${industryModel ?? "generic"}:${mediaDiscriminator}`;
-  }
-  return industryModel ? `${stateId}:${sectorType}:${industryModel}` : `${stateId}:${sectorType}`;
-}
+export { bucketKey } from "@/lib/market/marketBuckets";
+import { bucketKey } from "@/lib/market/marketBuckets";
 
 /** The `_id` strings of every National Corporation (countryOwnerId set). Few rows. */
 export async function loadNationalCorpIds(db: Db): Promise<Set<string>> {

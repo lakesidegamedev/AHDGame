@@ -30,21 +30,8 @@ import {
   revenuePerCapacityUnitForStrategy,
 } from "@/lib/constants/capacityEconomy";
 import { computeSectorImpliedUnits } from "@/lib/market/unownedHeadroom";
-import { STARTING_YEAR, TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 
-/**
- * World year for build pricing, resolved the same way `buildCapacity` does
- * (explicit `currentYear` when the game state carries one, else derived from
- * the turn counter).
- */
-export function resolveWorldYear(
-  currentYear: number | null | undefined,
-  currentTurn: number | null | undefined
-): number {
-  if (typeof currentYear === "number" && Number.isFinite(currentYear)) return currentYear;
-  const turn = typeof currentTurn === "number" && Number.isFinite(currentTurn) ? currentTurn : 0;
-  return STARTING_YEAR + Math.floor((Math.max(1, turn) - 1) / TURNS_PER_YEAR);
-}
+export { resolveWorldYear } from "@/lib/time/worldYear";
 
 /**
  * The ₳ quantity an attack is SIZED against, under plants.
