@@ -1,45 +1,21 @@
 import { describe, it, expect, vi } from "vitest";
 import {
-  effectiveMarketAnchor,
   computeMarketSharePercent,
   gdpDerivedMarketAnchor,
   buildMarketShareBySectorId,
   buildNationalDominanceShareBySectorId,
-  sectorCapacityUnits,
-  marketUnitsFromAnchor,
 } from "./marketShare";
 import type { CountryId } from "@/lib/constants/countries";
 import type { CorporationType } from "@/lib/constants/corporations";
 import type { CurrencyCode } from "@/lib/constants/currencies";
-import type { CorporateSector, UnownedSector } from "@/lib/db/types";
-import {
-  computeUnownedHeadroomUnits,
-  computeSectorImpliedUnits,
-  unownedHeadroomUnitsPerAnchor,
-} from "@/lib/market/unownedHeadroom";
-
-describe("effectiveMarketAnchor", () => {
-  it("with a persisted unowned pool, the market is owned + unowned", () => {
-    expect(effectiveMarketAnchor(800, 200, 50)).toBe(1000);
+import type { CorporateSector } from "@/lib/db/types";
+describe("computeMarketSharePercent", () => {
+  it("a sole owner reads 100%, not more", () => {
+    expect(computeMarketSharePercent(1000, 1000)).toBe(100);
   });
 
-  it("with a low owned total and no unowned doc, the GDP floor applies", () => {
-    expect(effectiveMarketAnchor(30, undefined, 100)).toBe(100);
-  });
-
-  // When a sector-wide nationalization consumes the unowned pool doc,
-  // the market fell back to the small GDP floor even though the consolidated
-  // owned revenue dwarfed it — producing market shares well over 100%. The
-  // effective market can never be smaller than what is already owned in it.
-  it("without an unowned doc, the market is never below total owned revenue", () => {
-    expect(effectiveMarketAnchor(1000, undefined, 100)).toBe(1000);
-  });
-});
-
-describe("computeMarketSharePercent over the corrected market", () => {
-  it("a sole owner with no unowned doc reads 100%, not >100%", () => {
-    const market = effectiveMarketAnchor(1000, undefined, 100);
-    expect(computeMarketSharePercent(1000, market)).toBe(100);
+  it("a non-positive market reads 0", () => {
+    expect(computeMarketSharePercent(1000, 0)).toBe(0);
   });
 });
 
@@ -89,56 +65,27 @@ describe("plants tier — unit-denominated market share", () => {
       capitalStock,
     }) as unknown as CorporateSector;
 
-  const unowned = (revenue: number, headroomUnits?: number): UnownedSector =>
-    ({ stateId: STATE_ID, sectorType: TYPE, revenue, headroomUnits }) as unknown as UnownedSector;
-
-  const build = (
-    sectors: CorporateSector[],
-    unownedSectors: UnownedSector[],
-    opts: { plantsEnabled?: boolean; gdp?: number } = {}
-  ) =>
+  const build = (sectors: CorporateSector[], opts: { gdp?: number } = {}) =>
     buildMarketShareBySectorId({
       sectors,
       stateById: stateById(opts.gdp ?? 0),
-      unownedSectors,
       exchangeRatesByCurrency: fx,
-      plantsEnabled: opts.plantsEnabled,
     });
 
   it("share is a sector's revenue over the cell's TOTAL real revenue", () => {
     // 1000 + 3000 = 4000 real revenue in the cell → 25% / 75%.
-    const shares = build([sector("a", 1000), sector("b", 3000)], []);
+    const shares = build([sector("a", 1000), sector("b", 3000)]);
     expect(shares.get("a")).toBeCloseTo(25, 10);
     expect(shares.get("b")).toBeCloseTo(75, 10);
   });
 
-  it("ignores the unowned pool entirely — it is not part of the denominator", () => {
-    // A huge unowned pool used to read as "unclaimed market" and shrink every
-    // share. It no longer touches the ratio.
-    const withPool = build([sector("a", 1000), sector("b", 3000)], [unowned(9_999_999, 500)]);
-    const withoutPool = build([sector("a", 1000), sector("b", 3000)], []);
-    expect(withPool.get("a")).toBeCloseTo(25, 10);
-    expect([...withPool.entries()]).toEqual([...withoutPool.entries()]);
-  });
-
-  it("is identical whether or not plants is enabled — one revenue basis everywhere", () => {
-    const sectors = [sector("a", 1000, 5), sector("b", 3000, 900)];
-    const off = build(sectors, [unowned(500, 42)]);
-    const on = build(sectors, [unowned(500, 42)], { plantsEnabled: true });
-    expect([...on.entries()]).toEqual([...off.entries()]);
-    expect(on.get("a")).toBeCloseTo(25, 10);
-  });
-
-  it("a sole producer reads 100%, no matter the unowned pool or GDP", () => {
-    const shares = build([sector("a", 1000)], [unowned(500_000, 999)], {
-      plantsEnabled: true,
-      gdp: 50_000_000,
-    });
+  it("a sole producer reads 100%, whatever the GDP", () => {
+    const shares = build([sector("a", 1000)], { gdp: 50_000_000 });
     expect(shares.get("a")).toBe(100);
   });
 
   it("a zero-revenue cell is finite (0), not NaN", () => {
-    const shares = build([sector("a", 0)], []);
+    const shares = build([sector("a", 0)]);
     expect(shares.get("a")).toBe(0);
     expect(Number.isFinite(shares.get("a")!)).toBe(true);
   });
@@ -149,7 +96,7 @@ describe("plants tier — unit-denominated market share", () => {
       { ...sector("ent-a", 100), sectorType: "media", mediaDiscriminator: "entertainment" },
       { ...sector("ent-b", 100), sectorType: "media", mediaDiscriminator: "entertainment" },
     ] as unknown as CorporateSector[];
-    const shares = build(sectors, []);
+    const shares = build(sectors);
 
     expect(shares.get("generic")).toBe(100);
     expect(shares.get("ent-a")).toBe(50);
@@ -192,94 +139,11 @@ describe("national dominance share market identity", () => {
     const shares = buildNationalDominanceShareBySectorId({
       sectors,
       stateById: new Map([[nationalStateId, { _id: nationalStateId, gdp: 0, countryId: "US" }]]),
-      unownedSectors: [],
       exchangeRatesByCurrency: new Map<CurrencyCode, number>([["USD" as CurrencyCode, 1]]),
     });
 
     expect(shares.get("generic")).toBe(100);
     expect(shares.get("canonical-ent")).toBe(50);
     expect(shares.get("ent-b")).toBe(50);
-  });
-});
-
-// A flipped sector's `capitalStock` is seeded from its OWN strategy's supply mix
-// (seedCapitalStock -> getEffectiveStrategyRates). Converting an UNFLIPPED
-// sibling's revenue through the DEFAULT "standard" mix therefore compared two
-// different unit bases. For a focused specialist the gap is not a rounding
-// error: at extraction, standard implies ~11.2 units per 1000 ₳ while
-// rare_earth_mining implies ~0.034 — a ~327x understatement of that sector's
-// share. This is a live defect under plants, not a cosmetic one.
-describe("sectorCapacityUnits — strategy-aware revenue conversion", () => {
-  const REVENUE = 1000;
-
-  it("converts an unflipped sector on its own strategy mix, not the default", () => {
-    const own = sectorCapacityUnits("extraction", undefined, REVENUE, "rare_earth_mining", 1);
-    const asDefault = sectorCapacityUnits("extraction", undefined, REVENUE, "standard", 1);
-
-    expect(own).toBeCloseTo(
-      computeSectorImpliedUnits("extraction", REVENUE, "rare_earth_mining", 1),
-      8
-    );
-    expect(own).not.toBeCloseTo(asDefault, 8);
-    // The specialist's mix is far narrower than the generic one.
-    expect(own).toBeLessThan(asDefault);
-  });
-
-  it("matches the basis capitalStock was seeded on for the same strategy", () => {
-    // A flipped sector reports its stored capacity verbatim; an unflipped one
-    // must land on the same unit scale so the two are summable.
-    const flipped = sectorCapacityUnits("extraction", 500, REVENUE, "oil_gas", 1);
-    expect(flipped).toBe(500);
-
-    const unflipped = sectorCapacityUnits("extraction", undefined, REVENUE, "oil_gas", 1);
-    expect(unflipped).toBeCloseTo(
-      computeSectorImpliedUnits("extraction", REVENUE, "oil_gas", 1),
-      8
-    );
-  });
-
-  it("falls back to the default mix when strategyId is absent or unknown", () => {
-    const viaDefault = computeSectorImpliedUnits("extraction", REVENUE, "standard", 1);
-    expect(sectorCapacityUnits("extraction", undefined, REVENUE, null, 1)).toBeCloseTo(
-      viaDefault,
-      8
-    );
-    expect(sectorCapacityUnits("extraction", undefined, REVENUE, undefined, 1)).toBeCloseTo(
-      viaDefault,
-      8
-    );
-    // getStrategy falls back to the type's first strategy for an unknown id.
-    expect(
-      sectorCapacityUnits("extraction", undefined, REVENUE, "no_such_strategy", 1)
-    ).toBeGreaterThan(0);
-  });
-
-  // The denominator side is deliberately NOT strategy-aware: neither the GDP
-  // floor nor an unowned pool is a specific operator, so converting them through
-  // some particular sector's specialism would make the market size depend on
-  // which sector happened to be asking.
-  it("leaves the GDP floor and unowned headroom on the generic default mix", () => {
-    expect(marketUnitsFromAnchor("extraction", REVENUE, 1)).toBeCloseTo(
-      computeSectorImpliedUnits("extraction", REVENUE, "standard", 1),
-      8
-    );
-    expect(computeUnownedHeadroomUnits("extraction", REVENUE, 1)).toBeCloseTo(
-      computeSectorImpliedUnits("extraction", REVENUE, "standard", 1),
-      8
-    );
-  });
-});
-
-// headroomUnits is maintained inside Mongo update pipelines (where the JS helper
-// cannot run) by multiplying revenue by a per-anchor constant. That is only
-// sound because impliedOutputUnits is strictly linear in revenue.
-describe("unownedHeadroomUnitsPerAnchor", () => {
-  it("reproduces computeUnownedHeadroomUnits by simple multiplication", () => {
-    for (const type of ["extraction", "manufacturing"] as CorporationType[]) {
-      const k = unownedHeadroomUnitsPerAnchor(type, 1);
-      for (const revenue of [1, 250, 10_000, 987_654]) {
-        expect(revenue * k).toBeCloseTo(computeUnownedHeadroomUnits(type, revenue, 1), 6);
-      }
-    }
   });
 });

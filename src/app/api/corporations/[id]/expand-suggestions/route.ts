@@ -202,6 +202,8 @@ export async function GET(request: Request, { params }: RouteParams) {
     const liquidCapitalAnchor = Math.round(liquidCapitalAnchorExact);
 
     let stateIds: string[];
+    // New-market mode reads every region once and reuses the rows below.
+    let allStates: Pick<State, "_id" | "name" | "countryId">[] | null = null;
 
     if (mode === "playerCorp") {
       // Find states where competitor corps operate in this sector type
@@ -216,12 +218,15 @@ export async function GET(request: Request, { params }: RouteParams) {
       stateIds = [...new Set(competitorSectors.map((s) => s.stateId))];
     } else {
       // Every region is a candidate: the goods market decides whether it pays.
-      const allStateIds = await statesCollection(db)
-        .find({}, { projection: { _id: 1 } })
-        .map((st) => st._id)
+      allStates = await statesCollection(db)
+        .find({}, { projection: { _id: 1, name: 1, countryId: 1 } })
         .toArray();
       const laneId = laneIdentities().filter((l) => l.lane === lane);
-      stateIds = enumerateCandidateBuckets(allStateIds, new Set(), laneId).map((b) => b.stateId);
+      stateIds = enumerateCandidateBuckets(
+        allStates.map((st) => st._id),
+        new Set(),
+        laneId
+      ).map((b) => b.stateId);
     }
 
     if (stateIds.length === 0) {
@@ -235,9 +240,11 @@ export async function GET(request: Request, { params }: RouteParams) {
 
     // Fetch all relevant data for the candidate states in parallel
     const [states, ownedSectors, siblingCorpSectors] = await Promise.all([
-      statesCollection(db)
-        .find({ _id: { $in: stateIds } }, { projection: { _id: 1, name: 1, countryId: 1 } })
-        .toArray(),
+      allStates
+        ? Promise.resolve(allStates)
+        : statesCollection(db)
+            .find({ _id: { $in: stateIds } }, { projection: { _id: 1, name: 1, countryId: 1 } })
+            .toArray(),
       corporateSectorsCollection(db)
         .find({ corporationId: corporation._id, ...marketFilter, stateId: { $in: stateIds } })
         .project<{ _id: string; stateId: string }>({ _id: 1, stateId: 1 })

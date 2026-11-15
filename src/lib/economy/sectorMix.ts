@@ -7,12 +7,7 @@
  */
 
 import type { Db } from "mongodb";
-import type {
-  CommodityPrice,
-  CorporateSector,
-  GameState,
-  State,
-} from "@/lib/db/types";
+import type { CommodityPrice, CorporateSector, GameState, State } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import {
   OPERATING_SECTOR_TYPES,
@@ -456,21 +451,20 @@ export async function aggregateCountrySectorMix(
   db: Db,
   countryId: CountryId
 ): Promise<CountrySectorMixEntry[]> {
-  const [states, sectors, fxByCurrency, preset, worldState, storedPrices] =
-    await Promise.all([
-      statesCollection(db)
-        .find({ countryId })
-        .project<Pick<State, "_id" | "name" | "gdp">>({ name: 1, gdp: 1 })
-        .toArray(),
-      corporateSectorsCollection(db).find({ countryId }).toArray(),
-      loadFxRatesByCurrency(db),
-      loadWorldPreset(db),
-      gameStateCollection(db).findOne(
-        { _id: "current" },
-        { projection: { currentTurn: 1, worldEpochId: 1 } }
-      ),
-      commodityPricesCollection(db).find({}).toArray(),
-    ]);
+  const [states, sectors, fxByCurrency, preset, worldState, storedPrices] = await Promise.all([
+    statesCollection(db)
+      .find({ countryId })
+      .project<Pick<State, "_id" | "name" | "gdp">>({ name: 1, gdp: 1 })
+      .toArray(),
+    corporateSectorsCollection(db).find({ countryId }).toArray(),
+    loadFxRatesByCurrency(db),
+    loadWorldPreset(db),
+    gameStateCollection(db).findOne(
+      { _id: "current" },
+      { projection: { currentTurn: 1, worldEpochId: 1 } }
+    ),
+    commodityPricesCollection(db).find({}).toArray(),
+  ]);
   // The national gap reads the funded country book of the prices' turn when
   // there is one: stored nationalDemand misses buyers with no state.
   const prices = await withFundedNationalBalances(db, storedPrices, worldState?.worldEpochId);
@@ -552,7 +546,10 @@ export async function aggregateCountrySectorMix(
         bucketKey(state._id, type),
       ];
       const owned = keys.reduce((sum, key) => sum + (plantsMarket.ownedByBucket.get(key) ?? 0), 0);
-      const market = keys.reduce((sum, key) => sum + (plantsMarket.marketByBucket.get(key) ?? 0), 0);
+      const market = keys.reduce(
+        (sum, key) => sum + (plantsMarket.marketByBucket.get(key) ?? 0),
+        0
+      );
       totalMarket += market;
       totalOwned += owned;
       if (market > 0 && (largest == null || market > largest.market)) {

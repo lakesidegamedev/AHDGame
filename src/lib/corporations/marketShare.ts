@@ -17,20 +17,12 @@ import {
   type CorpCapitalCurrencyInfo,
 } from "@/lib/currency/corporationCapital";
 import { readCorpEconomicAnchor } from "@/lib/currency/corpEconomyFields";
-import {
-  getGdpAnchorRate,
-  isKnownGdpAnchorCountry,
-} from "@/lib/currency/gdpAnchorRate";
+import { getGdpAnchorRate, isKnownGdpAnchorCountry } from "@/lib/currency/gdpAnchorRate";
 import { type CountryId } from "@/lib/constants/countries";
 import { SECTOR_MARKET_GDP_FRACTION, SECTOR_TYPE_COUNT } from "@/lib/constants/corporations";
-import type {
-  OperatingSectorType,
-  MediaDiscriminator,
-} from "@/lib/constants/corporations";
+import type { OperatingSectorType, MediaDiscriminator } from "@/lib/constants/corporations";
 
-import {
-  computeUnownedHeadroomUnits,
-} from "@/lib/market/unownedHeadroom";
+import { computeUnownedHeadroomUnits } from "@/lib/market/unownedHeadroom";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 

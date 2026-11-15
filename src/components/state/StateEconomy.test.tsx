@@ -38,9 +38,6 @@ const payload = {
       label: "Energy",
       totalMarket: 4_820_000,
       ownedRevenue: 3_760_000,
-      unownedRevenue: 1_060_000,
-      unownedPercent: 22,
-      splitCost: 96_400,
       estimatedCapture: 184_000,
       estimatedCapturePercent: 3.8,
       owners: [
@@ -65,9 +62,6 @@ const payload = {
       label: "Financial",
       totalMarket: 3_940_000,
       ownedRevenue: 0,
-      unownedRevenue: 3_940_000,
-      unownedPercent: 100,
-      splitCost: 350_000,
       estimatedCapture: 400_000,
       estimatedCapturePercent: 10,
       owners: [],
@@ -121,7 +115,7 @@ describe("StateEconomy", () => {
     const select = screen.getByRole("combobox", { name: /select sector/i });
     expect(select).toBeTruthy();
     fireEvent.change(select, { target: { value: "financial" } });
-    await waitFor(() => expect(screen.getByText(/No market activity|Unowned market/)).toBeTruthy());
+    await waitFor(() => expect(screen.getByText(/No market activity/)).toBeTruthy());
   });
 
   it("switches the sector detail when a board tile is clicked", async () => {
@@ -131,7 +125,7 @@ describe("StateEconomy", () => {
     const financialTile = document.querySelector('[data-sector="financial"]');
     expect(financialTile).toBeTruthy();
     fireEvent.click(financialTile!);
-    await waitFor(() => expect(screen.getByText(/No market activity|Unowned market/)).toBeTruthy());
+    await waitFor(() => expect(screen.getByText(/No market activity/)).toBeTruthy());
   });
 
   it("shows the national-context cross-link for the selected sector", async () => {
@@ -152,7 +146,7 @@ describe("StateEconomy", () => {
     expect(screen.getByText("+12%")).toBeTruthy();
   });
 
-  it("never offers Split unowned under plants mode", async () => {
+  it("never offers a market split", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValue({
@@ -162,12 +156,8 @@ describe("StateEconomy", () => {
           plantsMode: true,
           userCorporationId: "corp-me",
           userMarketingStrength: 40,
-          splitMsCost: 0,
           sectors: payload.sectors.map((s) => ({
             ...s,
-            splitCost: 0,
-            estimatedCapture: 0,
-            estimatedCapturePercent: 0,
             headroomUnits: 50_000,
           })),
         }),
@@ -183,7 +173,7 @@ describe("StateEconomy", () => {
     );
   });
 
-  it("labels the plants figure as room to build, not legacy unowned revenue", async () => {
+  it("labels the figure as room to build", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValue({
@@ -194,8 +184,6 @@ describe("StateEconomy", () => {
           userCorporationId: "corp-me",
           sectors: payload.sectors.map((s) => ({
             ...s,
-            unownedRevenue: 0,
-            splitCost: 0,
             headroomUnits: 1_200,
             headroomScope: "country",
           })),
@@ -216,7 +204,6 @@ describe("StateEconomy", () => {
       userCorporationId: "corp-me",
       sectors: payload.sectors.map((sector) => ({
         ...sector,
-        unownedRevenue: 0,
         headroomUnits: 0,
       })),
     };
@@ -289,16 +276,11 @@ describe("StateEconomy", () => {
 });
 
 describe("StateEconomy market control under plants (ticket #1162)", () => {
-  /**
-   * Under plants the route forces unownedPercent to 0 for every sector (#1145
-   * took the unowned pool out of the market-share denominator), so the old
-   * `100 - unownedPercent` read 100% on all 867 US cells including the 546 with
-   * no corporation in them at all.
-   */
+  /** Control reads from owner shares, so an empty sector never reads as fully owned. */
   const plantsPayload = {
     ...payload,
     plantsMode: true,
-    sectors: payload.sectors.map((s) => ({ ...s, unownedPercent: 0, headroomUnits: 1000 })),
+    sectors: payload.sectors.map((s) => ({ ...s, headroomUnits: 1000 })),
   };
 
   const stubPlants = (overrides: Record<string, unknown> = {}) =>
@@ -330,7 +312,7 @@ describe("StateEconomy market control under plants (ticket #1162)", () => {
     render(<StateEconomy stateId="TX" countryId="US" />);
     await waitFor(() => expect(screen.getByText("$1.82T")).toBeTruthy());
 
-    // Financial has owners: [] and, under plants, unownedPercent 0.
+    // Financial has no owners.
     fireEvent.change(screen.getByRole("combobox", { name: /select sector/i }), {
       target: { value: "financial" },
     });

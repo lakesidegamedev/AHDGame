@@ -205,8 +205,9 @@ export async function buildRegionEconomyResponse({
   const sectors = await corporateSectorsCollection(db).find({ stateId }).toArray();
 
   // Keyed by operating lane: the vehicles and entertainment markets are their own rows.
-  const laneOf = (row: Pick<CorporateSector, "sectorType" | "industryModel" | "mediaDiscriminator">) =>
-    getOperatingSectorType(row.sectorType, row.industryModel, row.mediaDiscriminator);
+  const laneOf = (
+    row: Pick<CorporateSector, "sectorType" | "industryModel" | "mediaDiscriminator">
+  ) => getOperatingSectorType(row.sectorType, row.industryModel, row.mediaDiscriminator);
   const plantsMode = marketAtLeast(await getMarketSystemModeForDb(db), "plants");
 
   // Get corporation details for each sector
