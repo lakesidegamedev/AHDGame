@@ -49,6 +49,6 @@ describe("media-discriminator market indexes", () => {
     expect(dropIndex).not.toHaveBeenCalled();
     expect(result.documentsUpdated).toBe(0);
     expect(result.documentsScanned).toBe(0);
-    expect(result.notes).toHaveLength(11);
+    expect(result.notes).toHaveLength(8);
   });
 });

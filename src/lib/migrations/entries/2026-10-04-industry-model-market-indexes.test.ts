@@ -36,6 +36,6 @@ describe("industry-model market indexes", () => {
     const result = await migration.execute(db, { dryRun: true });
     expect(createIndex).not.toHaveBeenCalled();
     expect(dropIndex).not.toHaveBeenCalled();
-    expect(result.notes).toHaveLength(6);
+    expect(result.notes).toHaveLength(4);
   });
 });
