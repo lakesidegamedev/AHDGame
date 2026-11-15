@@ -5,7 +5,11 @@ import { CRISIS_IMAGE_FILES, crisisImageKey, crisisImageUrl } from "./crisisImag
 
 const subject = (key: string) => {
   const t = ALL_CRISIS_TEMPLATES[key];
-  return { name: t.name, templateKey: key, kind: crisisKind(t) };
+  return {
+    name: t.name,
+    templateKey: key,
+    kind: crisisKind({ ...t, status: "active", startTurn: 0 }),
+  };
 };
 
 describe("crisisImageKey", () => {
