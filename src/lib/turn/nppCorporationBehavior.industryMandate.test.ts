@@ -3,7 +3,13 @@ import { ObjectId } from "mongodb";
 import { makeNppCorpDecision } from "./nppCorporationBehavior";
 import { ceoArchetypeModifiers } from "./ceoArchetype";
 import { groupOperator } from "@/lib/corporations/groups/operator";
-import type { Corporation, CorporateSector, UnownedSector } from "@/lib/db/types";
+import type { Corporation, CorporateSector } from "@/lib/db/types";
+import {
+  candidate,
+  candidatesByCountry,
+  demandSignals,
+} from "./npp/__fixtures__/marketCandidates";
+import { foundingStarterUnits } from "@/lib/corporations/foundingPlant";
 import type { GroupDirection } from "@/lib/corporations/groups/managementTypes";
 
 const ceoId = new ObjectId();
@@ -28,29 +34,15 @@ const sector = {
   effectiveProfitMargin: 30,
   targetGrowthRate: 2,
 } as CorporateSector;
-const pools = new Map<string, UnownedSector[]>([
-  [
-    "US",
-    [
-      {
-        _id: new ObjectId(),
-        stateId: "NV",
-        countryId: "US",
-        sectorType: "manufacturing",
-        revenue: 40_000_000,
-        headroomUnits: 10000,
-      },
-      {
-        _id: new ObjectId(),
-        stateId: "NV",
-        countryId: "US",
-        sectorType: "construction",
-        revenue: 40_000_000,
-        headroomUnits: 10000,
-      },
-    ] as UnownedSector[],
-  ],
+const pools = candidatesByCountry([
+  candidate({ stateId: "NV", sectorType: "manufacturing" }),
+  candidate({ stateId: "NV", sectorType: "construction" }),
 ]);
+const ROOM = foundingStarterUnits("construction") * 40;
+const signals = demandSignals({
+  "NV:manufacturing": foundingStarterUnits("manufacturing") * 40,
+  "NV:construction": ROOM,
+});
 const direction: GroupDirection = {
   revision: "revision",
   rootId: "root",
@@ -89,7 +81,8 @@ function decide(d: GroupDirection | undefined, sectors = [sector], plants = true
           primeRateOf: () => 0,
           costOfLivingOf: () => null,
         }
-      : undefined
+      : undefined,
+    signals
   );
 }
 

@@ -19,7 +19,8 @@ import {
 } from "./nppCorporationBehavior";
 import { ceoArchetypeModifiers } from "./ceoArchetype";
 import { CAPACITY_ANCHOR_YEAR } from "@/lib/constants/capacityEconomy";
-import type { Corporation, CorporateSector, UnownedSector } from "@/lib/db/types";
+import type { Corporation, CorporateSector } from "@/lib/db/types";
+import type { MarketCandidate } from "./npp/marketCandidates";
 
 const noState = new Set<string>();
 const TURN = 100;
@@ -86,7 +87,7 @@ function decide(
       now: new Date(),
       modifiers: ceoArchetypeModifiers("cautious"),
     },
-    new Map<string, UnownedSector[]>(),
+    new Map<string, MarketCandidate[]>(),
     noState,
     priceRatioOf,
     plants

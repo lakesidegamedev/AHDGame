@@ -9,7 +9,10 @@ import type { MarketCandidate } from "@/lib/turn/npp/marketCandidates";
 import type { PlacementSignals } from "@/lib/turn/npp/marketSignals";
 
 type CandidateOverrides = Partial<
-  Pick<MarketCandidate, "stateId" | "countryId" | "sectorType" | "industryModel" | "mediaDiscriminator">
+  Pick<
+    MarketCandidate,
+    "stateId" | "countryId" | "sectorType" | "industryModel" | "mediaDiscriminator"
+  >
 >;
 
 /** One candidate bucket; defaults to manufacturing in CA, US. */
@@ -97,4 +100,9 @@ export function roomOf(cell: object): number {
 export function withCandidateRoom(signals?: PlacementSignals): PlacementSignals {
   if (signals?.unmetDemandUnitsOf) return signals;
   return { ...signals, unmetDemandUnitsOf: (cell) => roomOf(cell) };
+}
+
+/** Signals that read the same unmet demand in every bucket. */
+export function uniformDemandSignals(units: number, base: PlacementSignals = {}): PlacementSignals {
+  return { ...base, unmetDemandUnitsOf: () => units };
 }

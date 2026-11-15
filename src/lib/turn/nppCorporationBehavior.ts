@@ -184,7 +184,6 @@ import {
   NPP_GROWTH_MAX_STEP_OF_RUN,
   NPP_SHORTAGE_ENTRIES_PER_TURN,
   NPP_FOUNDING_DEPLOY_FRACTION,
-  NPP_FOUNDING_HEADROOM_SHARE,
   DEFAULT_ARCHETYPE,
 } from "@/lib/turn/npp/nppCorporationTuning";
 import { SETTLEMENT_HISTORY_EXCLUDED } from "@/lib/banking/settlementHistory";
@@ -207,7 +206,6 @@ export {
   NPP_GROWTH_MAX_STEP_OF_RUN,
   NPP_SHORTAGE_ENTRIES_PER_TURN,
   NPP_FOUNDING_DEPLOY_FRACTION,
-  NPP_FOUNDING_HEADROOM_SHARE,
 };
 
 export async function processNppCorporationDecisions(
