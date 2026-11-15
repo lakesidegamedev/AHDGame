@@ -17,7 +17,22 @@ const noopImage: PickedImage = {
 
 const REPORTED_MISMATCH: CompassPoint = { economic: 0.3, social: 1.2 };
 
-function renderCandidateFile(regionName: string, electorate: CompassPoint) {
+const MAIN_PARTIES = [
+  { id: "lab", name: "Labour Party", economicPosition: -2, socialPosition: -1, memberCount: 20 },
+  {
+    id: "con",
+    name: "Conservative Party",
+    economicPosition: 2,
+    socialPosition: 2,
+    memberCount: 30,
+  },
+];
+
+function renderCandidateFile(
+  regionName: string,
+  electorate: CompassPoint,
+  parties?: typeof MAIN_PARTIES
+) {
   return render(
     <CandidateFile
       name="Test Candidate"
@@ -38,6 +53,7 @@ function renderCandidateFile(regionName: string, electorate: CompassPoint) {
       isSubmitting={false}
       portrait={noopImage}
       header={noopImage}
+      parties={parties}
     />
   );
 }
@@ -47,6 +63,15 @@ describe("CandidateFile electorate lean display", () => {
     renderCandidateFile("Reported region", REPORTED_MISMATCH);
     expect(
       screen.getByText("Electoral lean: Center-Right. Economic: Centrist. Social: Center-Trad.")
+    ).toBeTruthy();
+  });
+
+  it("labels the electoral lean by the main party it favours", () => {
+    renderCandidateFile("Reported region", { economic: 1.5, social: 1.5 }, MAIN_PARTIES);
+    expect(
+      screen.getByText(
+        "Electoral lean: Solid Conservative. Economic: Lean Right. Social: Lean Trad."
+      )
     ).toBeTruthy();
   });
 });
