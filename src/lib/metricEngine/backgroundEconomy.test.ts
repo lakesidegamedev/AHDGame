@@ -20,7 +20,8 @@ describe("backgroundSectorMass", () => {
   it("scales with regional GDP", () => {
     const small = backgroundSectorMass({ ...state, gdp: 1_000_000 }, "1991-default");
     const large = backgroundSectorMass({ ...state, gdp: 4_000_000 }, "1991-default");
-    const sum = (rows: { revenue: number }[]) => rows.reduce((total, row) => total + row.revenue, 0);
+    const sum = (rows: { revenue: number }[]) =>
+      rows.reduce((total, row) => total + row.revenue, 0);
     expect(sum(large)).toBeGreaterThan(sum(small));
   });
 

@@ -73,10 +73,7 @@ export function evaluateAutopilotGrowthGate(
 }
 
 /** Growth units after the demand headroom bound. */
-export function autopilotBoundGrowthUnits(
-  growthUnits: number,
-  unmetDemandUnits: number
-): number {
+export function autopilotBoundGrowthUnits(growthUnits: number, unmetDemandUnits: number): number {
   if (!Number.isFinite(growthUnits) || !Number.isFinite(unmetDemandUnits)) return 0;
   return Math.max(0, Math.floor(Math.min(growthUnits, unmetDemandUnits)));
 }

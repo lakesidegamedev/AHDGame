@@ -1441,13 +1441,15 @@ export async function bootstrapGameWorld(options: BootstrapOptions) {
     }
   }
 
-  const [stateCount, seatCount, electionCount, officialCount, partyBudgetCount] = await Promise.all([
-    statesCollection<Document>(db).countDocuments(),
-    seatsCollection<Document>(db).countDocuments(),
-    electionsCollection<Document>(db).countDocuments(),
-    electedOfficialsCollection<Document>(db).countDocuments(),
-    partyBudgetCollection<Document>(db).countDocuments(),
-  ]);
+  const [stateCount, seatCount, electionCount, officialCount, partyBudgetCount] = await Promise.all(
+    [
+      statesCollection<Document>(db).countDocuments(),
+      seatsCollection<Document>(db).countDocuments(),
+      electionsCollection<Document>(db).countDocuments(),
+      electedOfficialsCollection<Document>(db).countDocuments(),
+      partyBudgetCollection<Document>(db).countDocuments(),
+    ]
+  );
 
   const summary = {
     states: stateCount,

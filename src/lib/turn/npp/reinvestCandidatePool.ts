@@ -27,7 +27,10 @@ export interface ReinvestCandidate {
 
 /** Local revenue share of one sector, in percent of its (region, lane) bucket. */
 export type LocalShareLookup = (
-  sector: Pick<CorporateSector, "stateId" | "sectorType" | "industryModel" | "mediaDiscriminator"> & {
+  sector: Pick<
+    CorporateSector,
+    "stateId" | "sectorType" | "industryModel" | "mediaDiscriminator"
+  > & {
     revenue?: number;
   }
 ) => number;

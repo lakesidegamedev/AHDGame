@@ -38,7 +38,6 @@ const noPrices: CommodityPriceRatioFn = () => null;
 const noState = new Set<string>();
 const TURN = 200;
 
-
 const plantsCtx: NppPlantsContext = {
   enabled: true,
   eraUnitScale: 1,
@@ -564,11 +563,7 @@ describe("NPP capacity reinvestment — conservation and pricing", () => {
     // reaching it silently reinstates the bug. The cash leg must travel only as
     // `liquidCapitalDelta`. Covers spending, founding and no-op paths.
     const spends = decide(corp(), [sector()], [pool()], plantsCtx);
-    const noop = decide(
-      corp({ liquidCapital: 0 }),
-      [sector()],
-      [pool()]
-    );
+    const noop = decide(corp({ liquidCapital: 0 }), [sector()], [pool()]);
 
     for (const d of [spends, noop]) {
       expect(d.updates).not.toHaveProperty("liquidCapital");
