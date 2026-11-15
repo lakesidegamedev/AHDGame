@@ -21,9 +21,81 @@ Issues labeled `good-first-issue` are verified and scoped.
 
 Exploits and vulnerabilities: never in public issues. See [SECURITY.md](./SECURITY.md).
 
-## Setup
+## Local development
 
-Follow the README. `npm run bootstrap:full` creates a complete local world; `npm run seed` only loads the US reference pack.
+Requires Node 20.19+ or 22.12+ (CI runs Node 22) and a MongoDB instance.
+
+```bash
+git clone https://github.com/lakesidegamedev/AHDGame.git
+cd AHDGame
+npm ci
+cp .env.example .env.local
+```
+
+Set the required values in `.env.local`:
+
+```env
+MONGODB_URI=mongodb://localhost:27017/a-house-divided
+AUTH_SECRET=            # openssl rand -base64 32
+ADMIN_REGISTRATION_KEY= # lets the first account register as admin
+CRON_SECRET=            # authenticates the turn cron
+```
+
+Everything else in `.env.example` is optional for the main app. `INTERNAL_API_KEY` is needed by server-side task scripts, while OAuth, monitoring, CAPTCHA, R2, and bot integrations can stay unset for local development.
+
+```bash
+npm run bootstrap:full   # complete historical world, including officials
+npm run dev              # http://localhost:3000
+```
+
+`next dev` auto-seeds an empty database and starts the in-process turn scheduler. For UI-only work, set `DISABLE_DEV_BACKGROUND=1` and use `npm run bootstrap:full` when you intentionally need a complete world. `npm run seed` only loads the US reference pack and does not create a full playable world.
+
+The destructive `reset-and-bootstrap` commands require `--expect-db=<database>`.
+The target follows the app's precedence: `MONGODB_DB`, then `MONGO_DB_NAME`, then
+the database in the connection URI, then `a-house-divided`. Check the selected
+database without resetting it with:
+
+```bash
+npm run reset-and-bootstrap -- --expect-db=my_local_world --check-target
+```
+
+Removing `--check-target` performs the reset. A missing or mismatched target
+assertion exits before connecting or loading the reset implementation.
+
+Register at `/register` with your `ADMIN_REGISTRATION_KEY` to unlock the admin console. To trigger a turn manually:
+
+```bash
+curl -H "Authorization: Bearer $CRON_SECRET" http://localhost:3000/api/cron/turn
+```
+
+### Auth, briefly
+
+Password login plus optional Discord and Google OAuth, optional Turnstile on registration. Sessions are HS256 JWTs signed with `AUTH_SECRET` in HTTP-only cookies. Login and OAuth routes sign them; `src/lib/auth.ts` verifies them. `CRON_SECRET` authenticates cron routes, `INTERNAL_API_KEY` authenticates server-side scripts, and the Discord bot accepts deployment keys or user-created keys from Settings.
+
+### Everyday commands
+
+```bash
+npm run dev           # dev server
+npm run lint          # ESLint, with custom rules in eslint-rules/
+npm run typecheck     # tsc --noEmit
+npm run test:run      # Vitest unit and integration suite
+npm run test:e2e      # Playwright, needs the dev server running
+```
+
+CI runs on every pull request and on pushes to `development` and `main`: lint plus the architecture audit, format check, typecheck, the sharded unit suite, the Next build, and an integration job that runs federation transactions against an isolated Mongo replica set plus the full bootstrap fixture. A final `verify` job requires all of them. CodeQL, Semgrep, and dependency review run separately.
+
+Useful entry points:
+
+- `src/lib/turnSystem.ts` and `src/simulation/phases/` for the turn processor
+- `src/lib/db/types` for the data contracts
+- `scripts/seed/` for seeders, `scripts/world/` for bootstrap, `scripts/migrations/` for migrations
+- `scripts/sim/` for the headless world simulator, including `localWorldsimMcp.ts`, an MCP server over stdio that lets a coding agent run full world simulations against a local sandbox Mongo. World simulations are optional and run only when a maintainer asks for one; see [`scripts/sim/README.md`](./scripts/sim/README.md).
+
+### Public API MCP bridge
+
+For external read-only integrations, create a **public-scope** API key in Settings and run `npm run --silent api:mcp`. Configure your MCP client to launch that command with `AHD_API_KEY` in its environment. Set `AHD_API_BASE_URL` only for a local or alternate deployment; remote URLs must use HTTPS. The bridge exposes each public v1 read endpoint and own-key capabilities as tools, forwards the key in `X-API-Key`, and respects the API's existing rate limits. It has no write tools and does not use a session cookie. Keep the key in your client secrets store, outside repository config.
+
+The machine-readable catalog at `/api/public/v1/meta` includes MCP setup metadata and the static CDN base URL. CDN assets are public; API data still requires a scoped key. Singleplayer keeps its local `/cdn` mirror and limits downloaded assets to 20 MB each.
 
 ## The bar for a PR
 
@@ -54,84 +126,7 @@ on one unless the maintainer asks for it.
 | Scheduler, seed, migration or multiple phases | Bounded integrated replay on the relevant isolated state                                           | Longer campaign when unresolved effects span turns                              |
 | New economic feedback or long-horizon balance | Experiment with question, baseline, state, metrics and horizon                                     | World simulation only when the maintainer requests one                          |
 
-For a change-aware world plan, copy `scripts/sim/worldsim-plan.example.json`,
-replace the placeholder source commits/worktree names, and state the question,
-minimum horizon, relevant periodic cadences and engine-time budget. From the
-repository run:
-
-```bash
-npx tsx scripts/sim/planWorldsim.ts --request request.json --out plan.json
-```
-
-This command only reads git and writes a plan. Paths select presentation-only
-versus runtime evidence; declared semantic intent overrides presentation paths.
-Unknown runtime paths require an explicit horizon. `performance` defaults to a
-one-turn integrated smoke fallback; prefer the existing same-state phase replay
-where one exists. Neither a smoke nor a successful engine exit proves equivalence.
-Each declared period requires at least two cycle occurrences. A reviewer must
-identify longer feedback horizons: the planner cannot infer them from filenames.
-Aged-state requests are blocked until a compatible prepared-sandbox experiment
-is supplied separately, never replaced by a fresh world.
-
-The reservation is `(bootstrap + turns * secondsPerTurn) * safetyFactor` for each
-arm, rounded up. The default 700 seconds/turn is a planning assumption, not a
-benchmark. Insufficient budget leaves the required horizon unchanged and exits
-with code 2. Engine caps exclude queue waiting, collectors, control-plane work,
-and up to one second of termination grace. They do not price credits or enforce
-a whole-host memory ceiling; existing worker capacity admission still applies.
-
-After a budget-aware worker is deployed, `--enqueue` submits stable-id sandbox
-jobs through `OPS_MONGODB_URI` to the existing `simJobs` queue. Every source pin
-must be a clean registered task worktree and is rechecked by the worker. Jobs
-start only in the overnight window, never clone production, and retain their
-sandbox output for inspection. The versioned `full-budgeted-v1` mode is rejected
-by older workers rather than run without a cap. A standalone watchdog enforces
-the engine deadline even if the queue worker exits; expiration means unqualified.
-Repeated submission does not reset failed jobs or duplicate existing jobs. An
-explicit higher `attempt` reserves a new budget and separate sandbox for a retry.
-The worker must match the plan's Node version, platform and architecture. Stale
-budgeted leases fail instead of automatically spending another reservation.
-
-For reuse, supply `acceptedEvidence` entries with `fingerprint`, `verdict: passed`,
-`completedTurns`, `reportPath`, and the report's `reportSha256`. The reviewed JSON
-report must itself contain the matching fingerprint, verdict and completed turn
-count. The planner verifies its bytes and matches the entire source commit,
-runtime, preset, seed, horizon, question and declared cycles. This is deliberately
-conservative: even unrelated source changes invalidate reuse. A job's completed
-status alone is never accepted evidence. Review outcome/invariant and failure
-coverage before signing a report; keep actual reports outside the repository.
-
-The corporation payout primitive pilot runs with
-`npx tsx scripts/perf/money-move-qualification.ts --receipt receipt.json`.
-Run the identical harness in the baseline and candidate source worktrees; add
-`--baseline baseline.json` to the candidate command. It uses an owned temporary
-Mongo process and synthetic holders, never a configured database. Seven cases
-cover 3/12/120 holders, zero/3 ms simulated latency per awaited DB operation,
-duplicate replay and a lost credit acknowledgement. This qualifies the money
-move primitive, not a whole corporation phase or world.
-
-Each run has a ten-minute cap and stops its owned storage process on timeout.
-The receipt pins source, fixture, harness, dependencies and runtime; compares
-explicit balances, settled keys and journal legs; and records existing profiler
-counts, returned BSON bytes/documents, Node lifetime peak RSS and heap used.
-Node RSS excludes Mongo and host memory. For ordinary payouts, the matched
-baseline caps commands, returned documents and bytes. A lost bulk-write
-acknowledgement interrupts multiple credits, while a lost scalar-write
-acknowledgement interrupts one: recovery cost is diagnostic because interrupted
-states differ; final outputs must still match. Node peak RSS permits 25% process startup noise;
-wall clock is diagnostic. The existing whole corporation phase command budget
-also remains a ceiling, not proof that a whole phase fits. Never increase a
-budget just to make qualification pass.
-
-No compatible first-turn, periodic-boundary or aged-world snapshot is bundled.
-A checkpoint report alone is not a restorable snapshot. Select additional
-isolated integration evidence when those states or simultaneous writers matter.
-Actual world simulations follow the existing sandbox queue and claim window.
-For a long run, record question, source pins, valid initial state, horizon,
-stop conditions, estimated resource cost and wall-time bound. A failed run
-produces a diagnostic receipt; rerun only with changed input or a stated
-investigation. Reuse evidence only while its relevant inputs remain unchanged.
-Record required gate results and normal post-deployment observation separately.
+Tooling for the escalation column is documented beside it: the change-aware world simulation planner in [`scripts/sim/README.md`](./scripts/sim/README.md), and money-movement qualification in [`scripts/perf/README.md`](./scripts/perf/README.md).
 
 ## Code comments
 

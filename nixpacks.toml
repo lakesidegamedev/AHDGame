@@ -1,5 +1,0 @@
-[phases.setup]
-# Sharp/libvips resolves SVG text through fontconfig. Railway's minimal image
-# previously had no usable sans face, so generated Discord cards rendered text
-# as tofu boxes even though the SVG contained valid text.
-nixPkgs = ["nodejs_24", "npm-9_x", "fontconfig", "dejavu_fonts"]

@@ -57,9 +57,6 @@ const eslintConfig = defineConfig([
     // Card, etc.) rather than importing — no value in linting them.
     "docs/design-handoffs/**",
     ".design-bundle/**",
-    // Nationalization UI design bundle (Claude Design export) — same reason:
-    // reference-only mockups whose components reference shared globals, not imports.
-    "docs/superpowers/specs/**/prototype/**",
   ]),
   // Project-level rule overrides
   {
