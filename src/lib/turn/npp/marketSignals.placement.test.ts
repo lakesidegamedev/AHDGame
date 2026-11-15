@@ -460,7 +460,6 @@ describe("type discipline with the coverage treatment", () => {
       undefined,
       undefined,
       undefined,
-      null,
     ] as const;
     expect(findBestMarketCandidate(...args)).toBeNull();
     expect(findBestMarketCandidate(...args, true)?.sectorType).toBe("media");

@@ -137,7 +137,7 @@ describe("D9 — rescaleCapacityForStrategyChange", () => {
   it("is a no-op when the strategy does not actually change", () => {
     expect(capacityRescaleRatio("extraction", "coal_mining", "coal_mining")).toBe(1);
     expect(capacityRescaleRatio("manufacturing", null, "standard")).toBe(1);
-    expect(capacityRescaleRatio("manufacturing")).toBe(1);
+    expect(capacityRescaleRatio("manufacturing", null, null)).toBe(1);
   });
 
   it("leaves a sector with no capacity alone", () => {

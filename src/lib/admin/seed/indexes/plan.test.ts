@@ -19,15 +19,13 @@ describe("collectSeedIndexPlan (#2699)", () => {
     expect(names.has("financialTxLog_counterpartyId_id")).toBe(true);
     expect(
       plan.filter(
-        (entry) => entry.options.name === "corporateSectors_corporation_state_type_models_unique"
+        (entry) => entry.options.name === "corporateSectors_corporation_state_type_unique"
       )
     ).toHaveLength(1);
     expect(plan.some(isTextIndex)).toBe(true);
     expect(plan.some(isTtlIndex)).toBe(true);
     expect(
-      plan.find(
-        (entry) => entry.options.name === "corporateSectors_corporation_state_type_models_unique"
-      )
+      plan.find((entry) => entry.options.name === "corporateSectors_corporation_state_type_unique")
     ).toMatchObject({
       collection: "corporateSectors",
       key: {

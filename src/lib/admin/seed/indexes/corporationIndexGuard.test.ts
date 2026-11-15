@@ -50,7 +50,7 @@ const corporateSectorIdentityIndex = {
     stateId: 1,
     sectorType: 1,
   },
-  name: "corporateSectors_corporation_state_type_models_unique",
+  name: "corporateSectors_corporation_state_type_unique",
   unique: true,
 };
 

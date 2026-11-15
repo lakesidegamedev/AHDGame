@@ -57,12 +57,12 @@ describe("manufacturing product eligibility", () => {
   });
 
   it("applies product-specific strategy compatibility", () => {
-    const evPlant = { ...plants[1], strategyId: "ev" };
-    const legal = legalManufacturingProductKinds([evPlant]);
+    const heavyPlant = { ...plants[1], strategyId: "vehicle_heavy_machinery" };
+    const legal = legalManufacturingProductKinds([heavyPlant]);
 
-    expect(legal.map((kind) => kind.id)).toContain("passenger_car");
+    expect(legal.map((kind) => kind.id)).toContain("truck");
     expect(legal.map((kind) => kind.id)).toContain("commercial_vehicle");
-    expect(legal.map((kind) => kind.id)).not.toContain("truck");
+    expect(legal.map((kind) => kind.id)).not.toContain("passenger_car");
   });
 
   it("keeps vehicle product eligibility after the model-aware 1991 taxonomy conversion", () => {
@@ -124,7 +124,7 @@ describe("vehicle lines on ordinary manufacturing", () => {
   });
 
   it("does not offer vehicle products to a steel plant", () => {
-    expect(isLegalManufacturingProductForPlant("passenger_car", plant("standard"))).toBe(false);
+    expect(isLegalManufacturingProductForPlant("passenger_car", plant("heavy_metals"))).toBe(false);
     expect(isLegalManufacturingProductForPlant("truck", plant("heavy_metals"))).toBe(false);
   });
 });
