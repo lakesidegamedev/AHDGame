@@ -112,11 +112,15 @@ export async function POST(request: Request) {
 
       // Remember the linked login accounts too, so a banned player cannot
       // sign in with the same Apple, Discord or Google account on a new account.
-      await banProviderSubjects(db, user as { appleId?: unknown; discordId?: unknown; googleId?: unknown }, {
-        reason: banReason,
-        bannedAt: new Date(),
-        bannedBy: admin.username,
-      });
+      await banProviderSubjects(
+        db,
+        user as { appleId?: unknown; discordId?: unknown; googleId?: unknown },
+        {
+          reason: banReason,
+          bannedAt: new Date(),
+          bannedBy: admin.username,
+        }
+      );
 
       // Revoke the user's API keys. authRevokedAt kills session JWTs but the
       // key path is a separate credential channel — without this a banned
@@ -137,7 +141,10 @@ export async function POST(request: Request) {
       await vacatePartyLeadershipForBannedUser(db, objectId);
       await stripPartyMembershipForBannedUser(db, objectId);
     } else {
-      await unbanProviderSubjects(db, user as { appleId?: unknown; discordId?: unknown; googleId?: unknown });
+      await unbanProviderSubjects(
+        db,
+        user as { appleId?: unknown; discordId?: unknown; googleId?: unknown }
+      );
       await usersCollectionHandle.updateOne(
         { _id: objectId },
         {
