@@ -1,4 +1,5 @@
 "use client";
+import { displayCanadianRegionCode } from "@/lib/countries/ca/regionCodes";
 
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
@@ -412,7 +413,7 @@ export default function RetiredCharacterProfilePage() {
                     <tr>
                       <td className="py-1.5 pr-2 align-top text-muted font-medium">State</td>
                       <td className="py-1.5 text-foreground">
-                        {snap.homeState}, {snap.countryId}
+                        {displayCanadianRegionCode(snap.homeState)}, {snap.countryId}
                       </td>
                     </tr>
                     <tr>

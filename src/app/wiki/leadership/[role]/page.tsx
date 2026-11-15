@@ -1,3 +1,4 @@
+import { displayCanadianRegionCode } from "@/lib/countries/ca/regionCodes";
 import Link from "next/link";
 import { Avatar } from "@/components/Avatar";
 import { notFound } from "next/navigation";
@@ -94,7 +95,11 @@ export default async function WikiLeadershipPage({ params }: PageProps) {
                   {holder.partyName}
                 </span>
               )}
-              {holder.state && <span className="text-sm text-muted">({holder.state})</span>}
+              {holder.state && (
+                <span className="text-sm text-muted">
+                  ({displayCanadianRegionCode(holder.state)})
+                </span>
+              )}
             </div>
           </div>
         </div>

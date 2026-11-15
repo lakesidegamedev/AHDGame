@@ -1,4 +1,5 @@
 "use client";
+import { displayCanadianRegionCode } from "@/lib/countries/ca/regionCodes";
 
 import { useState } from "react";
 import AppointSenatorModal from "../governors/AppointSenatorModal";
@@ -56,7 +57,7 @@ export default function VacanciesPanel({
                     className="flex items-center justify-between rounded-lg bg-card-elevated border border-card-border px-3 py-2"
                   >
                     <span className="text-sm text-foreground">
-                      {vacancy.state}, Class {vacancy.senateClass}
+                      {displayCanadianRegionCode(vacancy.state)}, Class {vacancy.senateClass}
                     </span>
                     {canAppoint && (
                       <button
@@ -82,7 +83,7 @@ export default function VacanciesPanel({
                   key={index}
                   className="rounded-lg bg-card-elevated border border-card-border px-3 py-2 text-sm text-foreground"
                 >
-                  {vacancy.state}
+                  {displayCanadianRegionCode(vacancy.state)}
                   {vacancy.district ? `-${vacancy.district}` : ""} (vacant)
                 </div>
               ))}
@@ -99,7 +100,7 @@ export default function VacanciesPanel({
                   key={index}
                   className="rounded-lg bg-card-elevated border border-card-border px-3 py-2 text-sm text-foreground"
                 >
-                  {vacancy.state} (vacant)
+                  {displayCanadianRegionCode(vacancy.state)} (vacant)
                 </div>
               ))}
             </div>

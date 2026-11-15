@@ -1,6 +1,8 @@
 "use client";
+import { displayCanadianRegionCode } from "@/lib/countries/ca/regionCodes";
+import { canadianRidingNotice, isCanada } from "@/lib/countries/ca/localGeographyFacts";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { BLEND, FONT } from "@/components/blend/tokens";
 import { useBlendGround } from "@/components/blend/useBlendGround";
@@ -22,13 +24,14 @@ import {
 } from "@/lib/campaignManager/rules";
 import { typeLabel } from "../raceLabels";
 import { ratingChipStyle } from "../ui";
-import { loadCampaignGeo, type CampaignGeo } from "./geoSource";
+import { campaignGeoUnsupportedPreset, loadCampaignGeo, type CampaignGeo } from "./geoSource";
 import { countySourceFor, unitRowsFrom, visibleRegions, type UnitRow } from "./mapModel";
 import { useRegionUnits, type RegionUnitRequest } from "./useRegionUnits";
 import { useRegionShapes } from "./useRegionShapes";
 
 export interface CampaignMapProps {
   countryId: string;
+  preset?: string;
   countryName: string;
   regionNoun: string;
   races: CmRace[];
@@ -65,6 +68,7 @@ export function CampaignMap(props: CampaignMapProps) {
   const [frameWidth, setFrameWidth] = useState(0);
   const [partyOverlay, setPartyOverlay] = useState(false);
   const svgRef = useRef<SVGSVGElement>(null);
+  const mapId = useId().replace(/:/g, "");
   const { filter, races, selectedRace } = props;
   const sel = filter.regionId !== "ALL" ? filter.regionId : null;
   const fitBox = useMemo(() => {
@@ -106,13 +110,13 @@ export function CampaignMap(props: CampaignMapProps) {
 
   useEffect(() => {
     let live = true;
-    void loadCampaignGeo(props.countryId).then((g) => {
+    void loadCampaignGeo(props.countryId, props.preset).then((g) => {
       if (live) setGeo(g);
     });
     return () => {
       live = false;
     };
-  }, [props.countryId]);
+  }, [props.countryId, props.preset]);
 
   // Races of the chosen type and stage, by region (search and region ignored:
   // the map always shows the whole picture).
@@ -187,10 +191,20 @@ export function CampaignMap(props: CampaignMapProps) {
     return <MapFrameBox>{t("map.loading")}</MapFrameBox>;
   }
   if (geo === null) {
-    return <MapFrameBox>{t("map.unavailable")}</MapFrameBox>;
+    return (
+      <MapFrameBox>
+        {t(
+          campaignGeoUnsupportedPreset(props.countryId, props.preset)
+            ? "map.unsupportedPreset"
+            : "map.unavailable"
+        )}
+      </MapFrameBox>
+    );
   }
 
   const type = typeLabel(filter.type, props.countryId);
+  const layer = geo.unitLayers?.[geo.unitLayerByType?.[filter.type] ?? ""];
+  const staticUnits = geo.unitLayerByType ? layer?.units : geo.units;
   const regionLabel = (id: string) => filter.regionNames[id] ?? geo.regions[id]?.n ?? id;
   const regionShade = (id: string) => {
     const fill = regionFill(byRegion.get(id) ?? []);
@@ -202,7 +216,7 @@ export function CampaignMap(props: CampaignMapProps) {
   const unitsOf = (region: string) => {
     const rows = rowsByRegion[region];
     if (geo.unitSource === "static") {
-      return (geo.units?.[region] ?? []).map((u) => ({
+      return (staticUnits?.[region] ?? []).map((u) => ({
         id: u.id,
         name: u.n,
         d: u.d,
@@ -216,6 +230,9 @@ export function CampaignMap(props: CampaignMapProps) {
   };
 
   const selData = sel ? unitData[sel] : null;
+  const notice =
+    selData?.notice ??
+    (isCanada(props.countryId) ? canadianRidingNotice(filter.type, geo.notice) : geo.notice);
   // A finished race that counted nothing has no sub-unit results to draw.
   const noCount =
     selectedRace?.stage === "final" &&
@@ -248,6 +265,7 @@ export function CampaignMap(props: CampaignMapProps) {
 
   return (
     <section style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      {notice ? <p style={{ fontSize: 12, color: BLEND.muted, margin: 0 }}>{notice}</p> : null}
       <nav
         aria-label="Map location"
         style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 14 }}
@@ -280,7 +298,11 @@ export function CampaignMap(props: CampaignMapProps) {
               <span style={{ fontFamily: FONT.mono, fontSize: 12, color: BLEND.muted }}>
                 {t("map.units", {
                   count: unitCount,
-                  label: selData?.unitLabelPlural ?? shapeData[sel]?.unitLabelPlural ?? "",
+                  label:
+                    selData?.unitLabelPlural ??
+                    shapeData[sel]?.unitLabelPlural ??
+                    layer?.unitLabelPlural ??
+                    "",
                 }).trim()}
               </span>
             ) : null}
@@ -343,6 +365,19 @@ export function CampaignMap(props: CampaignMapProps) {
             userSelect: "none",
           }}
         >
+          {geo.clipUnitsToRegions ? (
+            <defs>
+              {Object.entries(geo.regions).map(([id, region]) => (
+                <clipPath
+                  key={id}
+                  id={`campaign-region-${mapId}-${id}`}
+                  clipPathUnits="userSpaceOnUse"
+                >
+                  <path d={region.d} clipRule="evenodd" />
+                </clipPath>
+              ))}
+            </defs>
+          ) : null}
           <g
             style={{
               transform: `translate(${view.x}px, ${view.y}px) scale(${view.k})`,
@@ -413,7 +448,15 @@ export function CampaignMap(props: CampaignMapProps) {
                   const own = region === sel;
                   const isNb = geo.regions[sel]?.nb.includes(region);
                   return (
-                    <g key={region} opacity={own ? 1 : isNb ? NEIGHBOUR_OPACITY : FAR_OPACITY}>
+                    <g
+                      key={region}
+                      opacity={own ? 1 : isNb ? NEIGHBOUR_OPACITY : FAR_OPACITY}
+                      clipPath={
+                        geo.clipUnitsToRegions
+                          ? `url(#campaign-region-${mapId}-${region})`
+                          : undefined
+                      }
+                    >
                       {unitsOf(region).map((u) => {
                         const on = own && picked?.id === u.id;
                         const label = u.row
@@ -484,7 +527,7 @@ export function CampaignMap(props: CampaignMapProps) {
                 textShadow: "0 1px 3px #000, 0 0 2px #000",
               }}
             >
-              {sel ? regionLabel(id) : id}
+              {sel ? regionLabel(id) : displayCanadianRegionCode(id)}
             </span>
           );
         })}

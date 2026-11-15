@@ -411,6 +411,12 @@ function orphanInsuranceTransition(
               update: { $inc: { treasuryBalance: -claim.amountLocal } },
               note: "Keep signed fiscal position aligned with funded claim payment",
             },
+            ...(claim.ledgerShadow
+              ? [
+                  fundingLedgerProjection(claim, key, attemptTurn, "government", "insurance"),
+                  fundingLedgerProjection(claim, key, attemptTurn, "government_cash", "insurance"),
+                ]
+              : []),
           ]
         : []),
       {
@@ -435,7 +441,8 @@ function fundingLedgerProjection(
   claim: BankSovereignClaim,
   key: string,
   turn: number,
-  account: "government" | "government_cash"
+  account: "government" | "government_cash",
+  destination: "funded" | "insurance" = "funded"
 ): BankingTransition["projections"][number] {
   if (!claim.anchorRate || !Number.isFinite(claim.anchorRate) || claim.anchorRate <= 0)
     throw new Error(`Bank sovereign claim ${claim.id} has no ledger valuation`);
@@ -459,7 +466,7 @@ function fundingLedgerProjection(
           role: "primary",
         },
         {
-          account: `sink:bank_sovereign_claim_funded:${claim.currencyCode}`,
+          account: `sink:bank_sovereign_claim_${destination}:${claim.currencyCode}`,
           amount: claim.amountLocal,
           currencyCode: claim.currencyCode,
           anchorAmount,

@@ -1,3 +1,4 @@
+import { electionNavLabel } from "@/lib/elections/electionNavLabel";
 import { desktopNavigationLayout } from "@/lib/navigation/desktopNavigationLayout";
 import { resolveStaffRole } from "@/lib/staff/rules";
 import { mobileNavigationLayout } from "@/lib/navigation/mobileNavigationLayout";
@@ -533,17 +534,10 @@ export async function GET() {
                   election.electionType,
                   (election.countryId ?? character.countryId) as CountryId
                 );
-
-          const isNational = [
-            "president",
-            "special_president",
-            "primeMinister",
-            "uachtaran",
-          ].includes(election.electionType);
           activeElection = {
             id: election._id.toString(),
             seatId: election.seatId ?? undefined,
-            label: isNational ? `${typeLabel} — National` : `${typeLabel} — ${election.state}`,
+            label: electionNavLabel(typeLabel, election),
           };
         }
       }

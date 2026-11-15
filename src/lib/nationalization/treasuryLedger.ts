@@ -29,7 +29,7 @@ import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
  * their counterparty row's type and reason so the money-supply check nets the
  * treasury leg against it.
  */
-const FLOW_ACCOUNTING = {
+export const FLOW_ACCOUNTING = {
   soe_remittance: { txType: "soe_remittance", reason: "soe_remittance" },
   soe_treasury_draw: { txType: "soe_treasury_draw", reason: "soe_treasury_draw" },
   soe_loss_backing: { txType: "soe_loss_backing", reason: "soe_loss_backing" },

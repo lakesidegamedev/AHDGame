@@ -1,3 +1,4 @@
+import { regionUrl } from "@/lib/urls";
 import type { ObjectId } from "mongodb";
 import type { CabinetNomination } from "@/lib/db/types/cabinet";
 import type { ScotusNomination } from "@/lib/db/types/scotus";
@@ -115,7 +116,7 @@ export async function partyBallots(ctx: DueSoonContext): Promise<DueSoonItem[]> 
         id: `statePartyElection:${election._id.toString()}`,
         subject: `${party.name} · ${election.stateId}`,
         position: election.position,
-        href: `/country/${code}/region/${election.stateId.toLowerCase()}/party/${canonicalId}`,
+        href: `${regionUrl(code, election.stateId.toLowerCase())}/party/${canonicalId}`,
         dueTurn: election.endTurn,
         dueAt: null,
       })),

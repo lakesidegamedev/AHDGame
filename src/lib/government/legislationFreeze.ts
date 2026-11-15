@@ -11,7 +11,7 @@
  * - NPP autonomous bill sponsorship calls this directly to skip the country
  *   (`src/lib/turn/npp/billSponsorship.ts`).
  *
- * Non-parliamentary countries (US, CA) are never frozen. `onePartyState`
+ * Non-parliamentary countries (such as US) are never frozen. `onePartyState`
  * counts as parliamentary — DD/CN/RU seat a head of government the same way.
  * A parliamentary country with no formation doc is not frozen either (first
  * boot / unseeded countries).

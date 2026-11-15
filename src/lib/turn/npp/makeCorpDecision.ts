@@ -659,7 +659,7 @@ export function makeNppCorpDecision(
   });
   entryDiagnostic = foundingResult.entryDiagnostic;
   cashLocal = foundingResult.cashLocal;
-  const { foundingCashLocal, shortageCreditRequest } = foundingResult;
+  const { foundingCashLocal, foundingCreditLocal, shortageCreditRequest } = foundingResult;
 
   // Frontier experiment slot accounting: every placement consumes one
   // cohort and one controller slot; experiment placements carry the trial
@@ -785,6 +785,7 @@ export function makeNppCorpDecision(
     // net movement whichever path ran. See `nppCashWrite.ts`.
     liquidCapitalDelta: cashLocal - liquidCapital,
     ...(foundingCashLocal === undefined ? {} : { foundingCashLocal }),
+    ...(foundingCreditLocal === undefined ? {} : { foundingCreditLocal }),
     cashFloorLocal: effectiveCashFloor,
     sectorUpdates,
     newSectors: newSectors.length > 0 ? newSectors : undefined,

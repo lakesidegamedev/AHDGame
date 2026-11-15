@@ -1,3 +1,4 @@
+import { regionUrl } from "@/lib/urls";
 import { CDN_LOGO_URL } from "@/lib/images/staticCdnAssets";
 import type { Metadata } from "next";
 import { getSiteUrl } from "@/lib/siteMetadata";
@@ -21,7 +22,7 @@ export async function generateMetadata({
   const label = def?.regionDisplayNames?.[id.toUpperCase()] ?? def?.name ?? metricId;
   const title = `${label} — ${id} | A House Divided`;
   const description = def?.description ?? `${label} trend for ${id}, updated every turn.`;
-  const url = `${getSiteUrl()}/country/${code}/region/${id}/metrics/${category}/${metricId}`;
+  const url = `${getSiteUrl()}${regionUrl(code, id)}/metrics/${category}/${metricId}`;
 
   return {
     title,

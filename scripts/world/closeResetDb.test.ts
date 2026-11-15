@@ -13,6 +13,8 @@ describe("reset CLI connection cleanup", () => {
   });
   afterEach(() => {
     global._mongoClientPromise = undefined;
+    globalThis._ahdContestsRunning = false;
+    vi.useRealTimers();
     vi.restoreAllMocks();
   });
 
@@ -26,6 +28,18 @@ describe("reset CLI connection cleanup", () => {
     expect(closeApplication).toHaveBeenCalledOnce();
     expect(closePrimary).toHaveBeenCalledOnce();
     expect(global._mongoClientPromise).toBeUndefined();
+  });
+
+  it("keeps connections open until post-turn contest writes finish", async () => {
+    vi.useFakeTimers();
+    globalThis._ahdContestsRunning = true;
+    const closing = closeResetDb();
+    await vi.advanceTimersByTimeAsync(50);
+    expect(closePrimary).not.toHaveBeenCalled();
+    globalThis._ahdContestsRunning = false;
+    await vi.advanceTimersByTimeAsync(25);
+    await closing;
+    expect(closePrimary).toHaveBeenCalledOnce();
   });
 
   it("closes the primary when no application pool was opened", async () => {

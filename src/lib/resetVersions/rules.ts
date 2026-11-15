@@ -18,11 +18,30 @@ const RESET_V2_SUCCESSOR_COUNTRIES = ["SCO", "WAL"] as const;
 export const RESET_V2_COUNTRIES = [
   ...RESET_V2_OPENING_COUNTRIES,
   ...RESET_V2_SUCCESSOR_COUNTRIES,
+  "CA",
 ] as const;
 export type ResetV2Country = (typeof RESET_V2_COUNTRIES)[number];
 
+const countryPresetRequirements: Readonly<Partial<Record<ResetV2Country, readonly string[]>>> = {
+  CA: ["2027-default"],
+};
+
 export function isResetV2Country(countryId: string): countryId is ResetV2Country {
   return (RESET_V2_COUNTRIES as readonly string[]).includes(countryId);
+}
+
+export type ModeledOpeningCountry = (typeof RESET_V2_OPENING_COUNTRIES)[number] | "CA";
+
+/** Modern countries join only presets with authored seed inputs. */
+export function resetV2OpeningCountriesForPreset(preset: string): ModeledOpeningCountry[] {
+  return preset === "2027-default"
+    ? [...RESET_V2_OPENING_COUNTRIES, "CA"]
+    : [...RESET_V2_OPENING_COUNTRIES];
+}
+
+/** Canada has an authored live population opening in the modern player preset. */
+export function demographicsV2OpeningCountries(preset: string): ("US" | "UK" | "JP" | "CA")[] {
+  return preset === "2027-default" ? ["US", "UK", "JP", "CA"] : ["US", "UK", "JP"];
 }
 
 /** Bump a revision when the verified opening representation changes incompatibly. */
@@ -58,6 +77,7 @@ export function mergeResetReceiptCountries(
 }
 
 export interface ResetVersionState {
+  preset?: unknown;
   metricsSystemVersion?: unknown;
   legislationSystemVersion?: unknown;
   cabinetSystemVersion?: unknown;
@@ -119,21 +139,29 @@ export function resetSystemVersionsForCountry(
   v2Ready: ResetV2Readiness,
   countryId: string
 ): Record<ResetSystem, ResetSystemVersion> {
-  if (!isResetV2Country(countryId)) {
-    return { metrics: "v1", legislation: "v1", cabinet: "v1", demographics: "v1" };
-  }
   const versions = resetSystemVersionsFrom(state, v2Ready);
-  if ((["US", "UK", "JP"] as const).includes(countryId as "US" | "UK" | "JP")) {
-    return versions;
-  }
+  const boardSupported =
+    isResetV2Country(countryId) &&
+    (!countryPresetRequirements[countryId] ||
+      countryPresetRequirements[countryId]!.includes(String(state?.preset)));
+  const legacyCore = (["US", "UK", "JP"] as const).includes(countryId as "US" | "UK" | "JP");
   const included = (system: ResetSystem) =>
-    state?.resetVersionSeeds?.[system]?.countries?.includes(countryId) === true;
+    state?.resetVersionSeeds?.[system]?.countries?.includes(countryId) ?? legacyCore;
   return {
-    metrics: versions.metrics === "v2" && included("metrics") ? "v2" : "v1",
+    metrics: boardSupported && versions.metrics === "v2" && included("metrics") ? "v2" : "v1",
     legislation:
-      versions.legislation === "v2" && included("metrics") && included("legislation") ? "v2" : "v1",
-    cabinet: versions.cabinet === "v2" && included("metrics") && included("cabinet") ? "v2" : "v1",
-    demographics: versions.demographics === "v2" && included("demographics") ? "v2" : "v1",
+      boardSupported &&
+      versions.legislation === "v2" &&
+      included("metrics") &&
+      included("legislation")
+        ? "v2"
+        : "v1",
+    cabinet:
+      boardSupported && versions.cabinet === "v2" && included("metrics") && included("cabinet")
+        ? "v2"
+        : "v1",
+    demographics:
+      boardSupported && versions.demographics === "v2" && included("demographics") ? "v2" : "v1",
   };
 }
 
@@ -166,11 +194,11 @@ export function resetSystemSelectionsFrom(
   };
 }
 
-/** A v2 reset can only use the authored opening era and complete runtime paths. */
+/** Selectors require complete runtime paths and their system dependencies. */
 export function resetSelectionPreflight(
   state: ResetVersionState | null,
-  preset: string,
-  atPresetAnchor: boolean,
+  _preset: string,
+  _atPresetAnchor: boolean,
   v2Ready: ResetV2Readiness
 ): { allowed: true } | { allowed: false; reason: string } {
   const raw = rawResetSystemSelectionsFrom(state);
@@ -180,9 +208,6 @@ export function resetSelectionPreflight(
   const selected = resetSystemSelectionsFrom(state);
   const requested = RESET_SYSTEMS.filter((system) => selected[system] === "v2");
   if (requested.length === 0) return { allowed: true };
-  if (preset !== "1991-default" || !atPresetAnchor) {
-    return { allowed: false, reason: "Reset v2 requires the 1991-default opening date" };
-  }
   const unavailable = requested.filter((system) => !v2Ready[system]);
   if (unavailable.length > 0) {
     return { allowed: false, reason: `Reset v2 systems are not ready: ${unavailable.join(", ")}` };

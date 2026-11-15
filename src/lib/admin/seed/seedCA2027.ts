@@ -1,7 +1,7 @@
 /**
  * Canada's 2027 political substrate: regions, default parties, voter groups,
- * regional metrics and baselines, provincial party organization and the
- * pending Commons formation. Canada seeds only once the 2027 roster includes
+ * regional metrics and baselines, provincial party organization and an
+ * initial Commons formation record. Canada seeds only once the 2027 roster includes
  * it, so this ships dark until the roster lists the country.
  */
 import { ObjectId, type AnyBulkWriteOperation, type Db, type Document } from "mongodb";
@@ -13,6 +13,7 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import { reserveSequentialIds } from "@/lib/db/sequentialId";
 import { writeSplitMetricsBulk } from "@/lib/macroMetrics/split";
 import { resolveSeedPartyTier } from "@/lib/seeds/defaultPartyTiers";
+import { reconcileCaDefaultPartyIdentities } from "@/lib/countries/ca/reconcileDefaultPartyIdentities";
 import {
   prunePresetMismatchedDefaultParties,
   selectPartyRosterForPreset,
@@ -69,13 +70,13 @@ export async function writeCA2027(db: Db, reset: boolean, log: Log): Promise<voi
   const now = new Date();
   await getGovernmentFormationsCollection(db).updateOne(
     { _id: formation._id },
-    { $set: { ...formation, updatedAt: now }, $setOnInsert: { createdAt: now } },
+    { $setOnInsert: { ...formation, createdAt: now, updatedAt: now } },
     { upsert: true }
   );
   log(
     `Seeded CA 2027: ${caRegions2027.length} regions, ${parties.length} parties, ` +
       `${groups} voter-group regions, ${orgs} party organizations, ` +
-      `${formation.totalSeats}-seat Commons pending (majority ${formation.majorityThreshold})`
+      `${formation.totalSeats}-seat Commons formation ensured (majority ${formation.majorityThreshold})`
   );
 }
 
@@ -101,6 +102,7 @@ async function seedRegions(db: Db): Promise<void> {
 }
 
 async function seedParties(db: Db): Promise<PoliticalParty[]> {
+  await reconcileCaDefaultPartyIdentities(db, PRESET);
   await prunePresetMismatchedDefaultParties(db, caParties, PRESET);
   const seeds = selectPartyRosterForPreset(caParties, PRESET);
   const parties = politicalPartiesCollection(db);

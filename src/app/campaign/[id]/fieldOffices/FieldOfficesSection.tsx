@@ -1,4 +1,5 @@
 "use client";
+import { displayCanadianRegionCode } from "@/lib/countries/ca/regionCodes";
 
 import { useCallback, useEffect, useState } from "react";
 import { BLEND, FONT, BLEND_LABEL } from "@/components/blend/tokens";
@@ -448,7 +449,7 @@ function OfficeList({
               {o.label}
               <span style={{ color: BLEND.mutedDim, fontFamily: FONT.mono, fontSize: 11 }}>
                 {" "}
-                {o.regionId}
+                {displayCanadianRegionCode(o.regionId)}
               </span>
             </button>
             <StrengthBar strength={o.strength} />

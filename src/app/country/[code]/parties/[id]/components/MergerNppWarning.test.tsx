@@ -45,6 +45,25 @@ function assertWarning() {
 }
 
 describe("merger NPP deletion warning", () => {
+  it("explains protected default identity and omits the rename option", () => {
+    wrap(
+      <CreateProposalForm
+        country="US"
+        countryCode="us"
+        partyId="3"
+        isChair
+        isDefaultParty
+        currentTransactionApprovalMode="double"
+        onCreated={() => {}}
+      />
+    );
+    fireEvent.click(screen.getByRole("button", { name: "+ New proposal" }));
+    expect(screen.queryByRole("button", { name: "Rename" })).toBeNull();
+    expect(
+      screen.getByText("Default parties cannot change their name or abbreviation.")
+    ).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Position shift" })).toBeTruthy();
+  });
   it("shows the warning before submitting a merger proposal", async () => {
     vi.stubGlobal(
       "fetch",

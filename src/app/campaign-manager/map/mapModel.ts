@@ -78,16 +78,25 @@ export function unitRowsFrom(
       : counted;
     const margin = shares.length > 1 ? shares[0].pct - shares[1].pct : (shares[0]?.pct ?? 0);
     const tier: MarginTier = seated ? "safe" : classifyMarginTier(margin);
-    const leaderColor = shares[0]?.color ?? colorOf(s.winner);
-    const fill = shares.length ? shadeColorForTier(leaderColor, tier, ground) : ground;
+    const placed = data.mode === "seatConsistent" || data.mode === "seatOrdered";
+    const leaderColor = placed ? colorOf(s.winner) : (shares[0]?.color ?? colorOf(s.winner));
+    const fill = placed
+      ? s.winner
+        ? shadeColorForTier(leaderColor, "safe", ground)
+        : ground
+      : shares.length
+        ? shadeColorForTier(leaderColor, tier, ground)
+        : ground;
     return {
       id: s.id,
       name: s.name,
       path: s.path,
       fill,
       ink: readableInk(fill),
-      tier,
-      leaderPartyId: shares[0]?.partyId ?? parties[s.winner] ?? "",
+      tier: placed ? "safe" : tier,
+      leaderPartyId: placed
+        ? (parties[s.winner] ?? "")
+        : (shares[0]?.partyId ?? parties[s.winner] ?? ""),
       ...(s.baselineLeader ? { baselineLeader: s.baselineLeader } : {}),
       shares,
     };

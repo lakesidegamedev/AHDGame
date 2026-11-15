@@ -50,3 +50,18 @@ it.each([null, { hasCharacter: false, character: null }])(
     });
   }
 );
+
+it("expands a short Canadian region filter before matching stored races", async () => {
+  const db = createMockDb();
+  db.collection("states").find.mockReturnValue({
+    toArray: async () => [{ _id: "CA_NT", name: "Northwest Territories" }],
+  });
+  db.collection("countryGameStates").findOne.mockResolvedValue(null);
+  mocks.db.mockResolvedValue(db);
+  mocks.auth.mockResolvedValue(null);
+  const page = await CampaignManagerPage({
+    searchParams: Promise.resolve({ country: "CA", region: "NT" }),
+  });
+  expect(page.props.countryId).toBe("CA");
+  expect(page.props.initialFilter.regionId).toBe("CA_NT");
+});

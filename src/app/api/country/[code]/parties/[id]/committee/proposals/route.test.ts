@@ -77,3 +77,27 @@ describe("merger proposal geography", () => {
     expect(db.collection("committeeProposals").insertOne).not.toHaveBeenCalled();
   });
 });
+
+it.each(["US", "CA"])("blocks default-party rename submission in %s", async (countryId) => {
+  vi.mocked(findPartyBySequentialId).mockResolvedValue({
+    ...source,
+    countryId,
+    isDefault: true,
+  } as never);
+  vi.mocked(requireAuthWithCharacter).mockResolvedValue({
+    ok: true,
+    user: { userId: "test", character: { _id: chairId, countryId, party: "1" } },
+  } as never);
+  const response = await POST(
+    new Request("http://localhost/api/proposals", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type: "rename", newName: "Changed Name", newAbbreviation: "NEW" }),
+    }),
+    { params: Promise.resolve({ code: countryId.toLowerCase(), id: "1" }) }
+  );
+  expect(response.status).toBe(400);
+  expect((await response.json()).error).toContain("Default parties cannot");
+  expect(db.collection("committeeProposals").insertOne).not.toHaveBeenCalled();
+  expect(db.collection("politicalParties").updateOne).not.toHaveBeenCalled();
+});

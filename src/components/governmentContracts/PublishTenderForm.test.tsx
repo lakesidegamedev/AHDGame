@@ -102,3 +102,35 @@ it("previews total daily capacity and converts a local government minimum into c
     minimumSigningFeeAnchor: 500,
   });
 });
+
+it("shows the Canadian short code but submits the canonical state ID", async () => {
+  const fetcher = vi.fn(async (_url: string, _init?: RequestInit) => new Response("{}"));
+  vi.stubGlobal("fetch", fetcher);
+  const access = {
+    currentTurn: 1,
+    nationalExtraction: true,
+    extractionEnabled: true,
+    defence: false,
+    regionalExtraction: false,
+    window: { endTurn: 12 },
+    currencyQuote: { code: "CAD", rate: 1 },
+    states: [{ stateId: "CA_ON", resources: ["oil"] }],
+    corporations: [],
+  } as ContractAccess;
+  render(
+    <NextIntlClientProvider locale="en" messages={messages}>
+      <PublishTenderForm
+        countryId="CA"
+        access={access}
+        initialType="extraction"
+        onDone={() => {}}
+      />
+    </NextIntlClientProvider>
+  );
+  const option = screen.getByRole("option", { name: "ON" }) as HTMLOptionElement;
+  expect(option.value).toBe("CA_ON");
+  expect(screen.queryByText("CA_ON")).toBeNull();
+  fireEvent.submit(option.closest("form")!);
+  await waitFor(() => expect(fetcher).toHaveBeenCalledOnce());
+  expect(JSON.parse(fetcher.mock.calls[0][1]!.body as string).terms.stateId).toBe("CA_ON");
+});

@@ -1,4 +1,5 @@
 "use client";
+import { displayCanadianRegionCode } from "@/lib/countries/ca/regionCodes";
 
 import type { EnergySummaryView } from "../../useCabinetOffice";
 import { SectionCard } from "../dossier";
@@ -45,7 +46,7 @@ export function MixTab({
               <div key={regionId}>
                 <div className="mb-1 flex items-center justify-between">
                   <span className="text-[12px] font-medium text-foreground">
-                    {siteName[regionId] ?? regionId}
+                    {displayCanadianRegionCode(siteName[regionId] ?? regionId)}
                   </span>
                   <span className="tabular text-[11px] text-muted">{fmtCapacity(total)}</span>
                 </div>

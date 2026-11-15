@@ -357,9 +357,9 @@ export const RESET_PRESETS: ResetPreset[] = [
   },
   {
     id: "2027-default",
-    name: "2027 Start Date - Five-Country Modern World",
+    name: "2027 Start Date - Default Parties",
     description:
-      "January 2027 with playable United States, United Kingdom, Japan, Germany, and China. Seats the US Congress, governors and state senates from the November 2026 election results and uses the latest completed national elections elsewhere.",
+      "January 2027 with playable United States, United Kingdom, Japan, Germany, and China. Uses provisional November 2026 US results with modeled fallbacks for pending counts for Congress, governors and state senates and uses the latest completed national elections elsewhere.",
     // Derived like every other preset. Upstream hard-coded the five PLAYER
     // countries here, but this list is what the admin reset picker offers and
     // what /api/admin/reset/presets returns, so it has to name every country the

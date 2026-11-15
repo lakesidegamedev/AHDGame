@@ -148,7 +148,7 @@ export function StateDropdownPanel({
       {/* Governor's / Minister-President's Office - only when viewer is the office-holder */}
       {governorOffice && governorOffice.stateId === stateId && (
         <Link
-          href={`/country/${countryId.toLowerCase()}/region/${stateId.toLowerCase()}/office`}
+          href={`${regionUrl(countryId.toLowerCase(), stateId.toLowerCase())}/office`}
           onClick={() => onClose()}
           className="flex items-center gap-2 px-4 py-2.5 text-sm text-foreground transition-colors hover:bg-background/60"
         >

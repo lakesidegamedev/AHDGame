@@ -45,6 +45,8 @@ import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
+import { treasuryPaymentWitness } from "@/lib/budget/treasuryPaymentWitness";
+import { sovereignPoolMaturityWitness } from "./sovereignPoolMaturityLedger";
 
 export async function settleSovereignBondMaturity(
   db: Db,
@@ -270,6 +272,7 @@ export async function freezeFundedSovereignBondMaturityQuote(
  */
 export type SovereignMaturitySettlement = SettlementResult & {
   forcedRolloverFaceLocal?: number;
+  cashPaidLocal?: number;
 };
 
 /**
@@ -363,6 +366,10 @@ export async function settleFundedSovereignBondMaturity(
     return {
       ...(await resumeSettlement(db, completedPayout._id)),
       forcedRolloverFaceLocal: quote.forcedRollover?.faceLocal ?? 0,
+      cashPaidLocal:
+        quote.publicFloatDisposition?.mode === "novation"
+          ? (quote.publicFloatDisposition.residualAmountLocal ?? 0)
+          : quote.amountLocal,
     };
   }
   const pendingFunding = priorReceipts.filter((row) => row._id !== `${claimId}:payout`);
@@ -450,9 +457,7 @@ export async function settleFundedSovereignBondMaturity(
   const previousPayout = previousPayoutReceipt;
   if (previousPayout) {
     const recovered = await resumeSettlement(db, previousPayout._id);
-    if (recovered.status === "applied" || (recovered.status === "replayed" && !recovered.error))
-      return recovered;
-    return recovered;
+    return { ...recovered, cashPaidLocal: cashAmountLocal };
   }
 
   if (quote.escrowLocal < cashAmountLocal) {
@@ -587,6 +592,17 @@ export async function settleFundedSovereignBondMaturity(
           update: { $inc: { treasuryBalance: -cashAmountLocal } },
           note: "Record funded sovereign principal payment in signed fiscal position",
         },
+        ...treasuryPaymentWitness({
+          key: attemptKey,
+          country: sourceCountryId,
+          currency: quote.currencyCode,
+          amount: cashAmountLocal,
+          rate: treasuryLocalPerAnchor,
+          turn,
+          signedPositionOwned: true,
+          txType: "gov_bond_maturity_payment",
+          now,
+        }),
       ],
       event: {
         kind: "monetary.executed",
@@ -682,6 +698,7 @@ export async function settleFundedSovereignBondMaturity(
         },
         note: "Retire matured sovereign debt after funded payouts",
       },
+      ...sovereignPoolMaturityWitness(payoutKey, turn, now, payoutHolderLegs, input.holderLegs),
       sovereignMaturityBondRetireProjection({
         bond,
         quote,
@@ -703,7 +720,11 @@ export async function settleFundedSovereignBondMaturity(
       meta: { bondId: bond._id.toHexString(), dueTurn },
     },
   });
-  return { ...settled, forcedRolloverFaceLocal: quote.forcedRollover?.faceLocal ?? 0 };
+  return {
+    ...settled,
+    forcedRolloverFaceLocal: quote.forcedRollover?.faceLocal ?? 0,
+    cashPaidLocal: cashAmountLocal,
+  };
 }
 
 export interface SovereignPrincipalResync {

@@ -1,4 +1,5 @@
 "use client";
+import { displayCanadianRegionCode } from "@/lib/countries/ca/regionCodes";
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
@@ -96,7 +97,7 @@ export function RaceDetail({
           {drivers ? (
             <PersuasionDrivers
               stateId={election.state}
-              stateName={regionName ?? election.state}
+              stateName={regionName ?? displayCanadianRegionCode(election.state)}
               candidates={drivers.candidates}
               inputs={drivers.inputs}
             />

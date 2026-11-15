@@ -1,3 +1,4 @@
+import { regionUrl } from "@/lib/urls";
 import Link from "next/link";
 import { type CountryId } from "@/lib/constants/countriesCore";
 import {
@@ -98,7 +99,7 @@ function LegislationSummary({
   const status = describeActivity(activity);
   const billHref =
     activity.kind === "in_flight"
-      ? `/country/${countryId.toLowerCase()}/region/${stateId.toLowerCase()}/legislature/bills/${activity.billId}`
+      ? `${regionUrl(countryId.toLowerCase(), stateId.toLowerCase())}/legislature/bills/${activity.billId}`
       : null;
   return (
     <div className="space-y-1.5">

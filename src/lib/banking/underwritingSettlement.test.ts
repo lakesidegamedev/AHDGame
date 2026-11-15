@@ -321,12 +321,18 @@ describe("settlePrimaryUnderwritingFill", () => {
     const fill = input();
     const faulty = withInjectedCrash(db, {
       collection: "corporations",
-      op: "updateOne",
-      onCall: 3,
+      onCall: 1,
+      matches: (args) => {
+        if (Array.isArray(args[0]))
+          return args[0].some((op) => op.updateOne?.update?.$inc?.liquidCapital === 19_700);
+        const update = args[1] as { $inc?: { liquidCapital?: number } };
+        return update.$inc?.liquidCapital === 19_700;
+      },
     });
     await expect(settlePrimaryUnderwritingFill(faulty.db, fill)).rejects.toBeInstanceOf(
       InjectedCrash
     );
+    expect(faulty.crashed).toBe(true);
     faulty.disarm();
 
     const state = docs(db);

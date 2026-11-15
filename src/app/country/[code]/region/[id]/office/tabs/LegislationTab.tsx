@@ -1,4 +1,5 @@
 "use client";
+import { regionUrl } from "@/lib/urls";
 
 import { InlineError } from "@/components/ui/InlineError";
 import { apiErrorText } from "@/lib/errors/catalog";
@@ -255,7 +256,7 @@ function ActivityRow({
 }) {
   const billHref =
     activity.kind === "in_flight"
-      ? `/country/${countryId.toLowerCase()}/region/${stateId.toLowerCase()}/legislature/bills/${activity.billId}`
+      ? `${regionUrl(countryId.toLowerCase(), stateId.toLowerCase())}/legislature/bills/${activity.billId}`
       : null;
 
   return (

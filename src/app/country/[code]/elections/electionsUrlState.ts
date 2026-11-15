@@ -1,3 +1,4 @@
+import { displayCanadianRegionCode } from "@/lib/countries/ca/regionCodes";
 /**
  * URL <-> filter state for the country elections page.
  *
@@ -8,7 +9,7 @@
  * it is the documented public shape for inbound links.
  */
 
-import { type CountryId } from "@/lib/constants/countriesCore";
+import { canonicalRegionId, type CountryId } from "@/lib/constants/countriesCore";
 import { COUNTRY_OFFICES } from "@/lib/constants/countryOfficesClient";
 
 /**
@@ -88,10 +89,17 @@ function parseOpen(raw: string | null): string[] | null {
   return raw.split(",").filter(Boolean);
 }
 
-export function parseElectionsParams(params: URLSearchParams): ElectionsFilters {
+export function parseElectionsParams(
+  params: URLSearchParams,
+  countryId?: string
+): ElectionsFilters {
   return {
     race: parseRace(params),
-    state: params.get("state") ?? "",
+    state: params.get("state")
+      ? countryId
+        ? canonicalRegionId(countryId, params.get("state")!)
+        : params.get("state")!
+      : "",
     view: params.get("view") === "map" ? "map" : "list",
     competitive: params.get("competitive") === "1",
     hideUpcoming: params.get("active") === "1",
@@ -111,7 +119,7 @@ export function toElectionsParams(f: ElectionsFilters): URLSearchParams {
     params.set("type", f.race);
   }
 
-  if (f.state) params.set("state", f.state);
+  if (f.state) params.set("state", displayCanadianRegionCode(f.state));
   if (f.view !== "list") params.set("view", f.view);
   if (f.competitive) params.set("competitive", "1");
   if (f.hideUpcoming) params.set("active", "1");

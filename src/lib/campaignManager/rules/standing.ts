@@ -229,7 +229,7 @@ export type PollingSeries = Array<{
  * snapshots, which carry no turn number, so they are numbered in order.
  */
 export function pollingSeries(full: ElectionResponse, race: CmRace): PollingSeries {
-  if (race.stage === "primary") {
+  if (race.stage === "primary" || isFinishedPrimary(race)) {
     const party = race.primaryPartyId ?? "";
     return (full.snapshotHistory ?? [])
       .map((s) => s.byParty?.[party])

@@ -1,4 +1,5 @@
 "use client";
+import { displayCanadianRegionCode } from "@/lib/countries/ca/regionCodes";
 
 import { useEffect, useMemo, useState, useRef } from "react";
 import Link from "next/link";
@@ -369,7 +370,7 @@ export function NppRosterPanel({
                         {n.name}
                       </Link>
                       <span className="text-xs text-muted">
-                        {n.homeState}
+                        {displayCanadianRegionCode(n.homeState)}
                         {n.currentOfficeLabel
                           ? ` · ${n.currentOfficeLabel}`
                           : n.activeCandidacyLabel
@@ -449,7 +450,7 @@ function NppDrawer({
         <div>
           <div className="font-semibold">{npp.name}</div>
           <div className="text-xs text-muted">
-            {npp.homeState}
+            {displayCanadianRegionCode(npp.homeState)}
             {npp.currentOfficeLabel ? ` · ${npp.currentOfficeLabel}` : ""}
           </div>
         </div>

@@ -43,7 +43,8 @@ export interface NoConfidenceVoteView extends ParliamentaryVoteView {
    */
   proposedByCharacterId: string | null;
   proposedByName: string;
-  targetPmCharacterId: string;
+  targetPmCharacterId: string | null;
+  targetPmNppId?: string | null;
   targetPmName: string;
   turnProposed: number;
 }

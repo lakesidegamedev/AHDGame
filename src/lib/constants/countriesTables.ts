@@ -1019,6 +1019,7 @@ export const ERA_COUNTRY_CONFIG_OVERRIDES: Record<
   // the derivation (base × R_legacy/R_EUR from the seeder's rate table). DE is
   // already EUR and IE converts at 1.0, so neither needs an entry.
   "2027-default": {
+    US: US_ERAS["2027-default"]?.config,
     FR: FR_ERAS["2027-default"]?.config,
     IT: IT_ERAS["2027-default"]?.config,
     ES: ES_ERAS["2027-default"]?.config,

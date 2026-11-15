@@ -3,25 +3,27 @@ import { ObjectId, type Db } from "mongodb";
 import { createInMemoryDb } from "@/lib/test-utils/inMemoryDb";
 import { processNppFundGeneration } from "./nppFundGeneration";
 import { projectNppGeneration } from "@/lib/utils/fundGeneration";
+import { ERA_PRICE_LEVEL } from "@/lib/campaigns/rules/priceLevel";
 vi.mock("@/lib/financialTxLog/emit", () => ({
   loadTxThresholds: async () => ({}),
   emitTxBulk: vi.fn(),
 }));
 vi.mock("@/lib/treasury/emit", () => ({ emitTreasuryTransactionsBulk: vi.fn() }));
 
-it.each([1, 0.03673, 0.35808, 1.28579])(
-  "generates and caps NGN funds at the world price basis %s",
-  async (priceLevel) => {
+it.each([
+  { era: "2027", enabled: false },
+  { era: "1953", enabled: true },
+  { era: "1991", enabled: true },
+  { era: "2027", enabled: true },
+] as const)(
+  "generates and caps NGN funds at the world price basis $era, enabled=$enabled",
+  async ({ era, enabled }) => {
+    const priceLevel = enabled ? ERA_PRICE_LEVEL[era] : 1;
     const db = createInMemoryDb();
     db.seed("gameConfig", [
-      { _id: "default", nppEconomyEnabled: true, campaignEraPriceLevelEnabled: priceLevel !== 1 },
+      { _id: "default", nppEconomyEnabled: true, campaignEraPriceLevelEnabled: enabled },
     ]);
-    const preset =
-      priceLevel === 0.03673
-        ? "1953-default"
-        : priceLevel === 0.35808
-          ? "1991-default"
-          : "2027-default";
+    const preset = `${era}-default`;
     db.seed("gameState", [{ _id: "current", preset }]);
     db.seed("states", [{ _id: "NG-test", countryId: "NG", population: 1_000_000 }]);
     db.seed("exchangeRates", [

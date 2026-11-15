@@ -58,7 +58,9 @@ export interface BillsData {
  */
 export interface LeadersData {
   primeMinister: {
-    characterId: string;
+    characterId: string | null;
+    nppId?: string | null;
+    isNPP?: boolean;
     sequentialId?: number | null;
     characterName: string;
     party: string | null;
@@ -66,7 +68,9 @@ export interface LeadersData {
     avatarUrl?: string | null;
   } | null;
   oppositionLeader: {
-    characterId: string;
+    characterId: string | null;
+    nppId?: string | null;
+    isNPP?: boolean;
     sequentialId?: number | null;
     characterName: string;
     party: string | null;
@@ -74,7 +78,9 @@ export interface LeadersData {
     avatarUrl?: string | null;
   } | null;
   speaker: {
-    characterId: string;
+    characterId: string | null;
+    nppId?: string | null;
+    isNPP?: boolean;
     sequentialId?: number | null;
     characterName: string;
     party: string | null;

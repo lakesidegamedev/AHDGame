@@ -8,6 +8,7 @@ import type { CountyApiResponse } from "./countyModel";
  *
  * Resolves to null when the state has no county results (404, empty, or a
  * network failure). A failure is not cached, so a later look retries.
+ * Explicit unsupported receipts retain their explanation even without geometry.
  */
 const results = new Map<string, CountyApiResponse>();
 const inflight = new Map<string, Promise<CountyApiResponse | null>>();
@@ -59,7 +60,8 @@ export function loadCounties(
       const res = await fetch(source.url(stateId));
       if (!res.ok) return null;
       const data = (await res.json()) as CountyApiResponse;
-      if (!Array.isArray(data.subdivisions) || data.subdivisions.length === 0) return null;
+      if (!Array.isArray(data.subdivisions)) return null;
+      if (data.subdivisions.length === 0 && data.resultStatus !== "unsupported") return null;
       results.set(key, data);
       return data;
     } catch {

@@ -12,7 +12,7 @@ import { congressionalDistrictsCollection } from "@/lib/db/repositories/congress
  */
 export async function regenerateCongressionalDistricts(
   db: Db,
-  opts: { countryId: CountryId; stateIds: string[]; now: Date }
+  opts: { countryId: CountryId; stateIds: string[]; now: Date; preset?: string }
 ): Promise<{ regenerated: number }> {
   if (opts.stateIds.length === 0) return { regenerated: 0 };
 
@@ -22,7 +22,13 @@ export async function regenerateCongressionalDistricts(
     stateId: { $in: opts.stateIds },
   });
 
-  const docs = await buildDistrictDocsForStates(db, opts.countryId, opts.now, opts.stateIds);
+  const docs = await buildDistrictDocsForStates(
+    db,
+    opts.countryId,
+    opts.now,
+    opts.stateIds,
+    opts.preset
+  );
   for (const doc of docs) {
     // Upsert by the deterministic `_id` (`${countryId}_${stateId}_${index}`)
     // rather than insert: if the delete missed a stale row, or a concurrent

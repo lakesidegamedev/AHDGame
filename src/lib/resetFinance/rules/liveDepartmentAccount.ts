@@ -58,15 +58,17 @@ export interface OpeningDepartmentFundingPartition {
 function activeDefinition(
   definitions: readonly DepartmentDefinition[],
   board: ResetDepartmentOpeningBoard,
-  seatId: string
+  seatId: string,
+  year: number,
+  annualAllocation: number
 ): DepartmentDefinition {
   const matches = definitions.filter(
     (definition) =>
       definition.countryId === board.countryId &&
       definition.controllingPositionIds.includes(seatId) &&
       definition.accountPolicyId &&
-      definition.activeFromYear <= 1991 &&
-      (definition.activeToYear === undefined || definition.activeToYear >= 1991) &&
+      definition.activeFromYear <= year &&
+      (definition.activeToYear === undefined || year < definition.activeToYear) &&
       (!definition.requiresEnabledSeatId || definition.requiresEnabledSeatId === seatId)
   );
   // A Cabinet member can coordinate another institution without its Treasury
@@ -76,8 +78,18 @@ function activeDefinition(
     matches.length > 1
       ? matches.filter((definition) => definition.usesControllerDepartmentName !== false)
       : matches;
+  if (owning.length === 0 && annualAllocation === 0) {
+    const reserved = definitions.find(
+      (definition) =>
+        definition.countryId === board.countryId &&
+        definition.controllingPositionIds.includes(seatId) &&
+        definition.accountPolicyId &&
+        definition.usesControllerDepartmentName !== false
+    );
+    if (reserved) return reserved;
+  }
   if (owning.length !== 1) {
-    throw new Error(`Ambiguous 1991 department for ${board.countryId}:${seatId}`);
+    throw new Error(`Ambiguous ${year} department for ${board.countryId}:${seatId}`);
   }
   return owning[0]!;
 }
@@ -88,12 +100,19 @@ export function buildOpeningDepartmentFundingPartition(
   grantEnvelope: Readonly<Partial<Record<ResetDepartmentOpeningBoard["countryId"], number>>>,
   namedGrantByFamily: Readonly<
     Partial<Record<ResetDepartmentOpeningBoard["countryId"], Readonly<Record<string, number>>>>
-  >
+  >,
+  year = 1991
 ): OpeningDepartmentFundingPartition {
   const accounts = new Map<string, ResetDepartmentAccountSnapshot>();
   for (const board of boards) {
     for (const opening of board.accounts) {
-      const definition = activeDefinition(definitions, board, opening.seatId);
+      const definition = activeDefinition(
+        definitions,
+        board,
+        opening.seatId,
+        year,
+        opening.annualAllocation
+      );
       const id = `${board.countryId}:${definition.id}`;
       const existing = accounts.get(id);
       if (existing && existing.controllingSeatId !== opening.seatId) {

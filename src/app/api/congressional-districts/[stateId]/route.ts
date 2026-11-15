@@ -3,11 +3,10 @@ import { readFile } from "fs/promises";
 import { join } from "path";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { getDb } from "@/lib/mongodb";
+import { getGameState } from "@/lib/gameState";
 import { buildDistrictSquareViews } from "@/lib/redistricting/districtSquareResponse";
-import type { CongressionalDistrict, Character, NPP } from "@/lib/db/types";
-import { charactersCollection } from "@/lib/db/repositories/characters";
-import { nppsCollection } from "@/lib/db/repositories/npps";
-import { congressionalDistrictsCollection } from "@/lib/db/repositories/congressionalDistricts";
+import type { CongressionalDistrict, Character, NPP, PoliticalParty } from "@/lib/db/types";
+import { usCongressionalGeometryDirectory } from "@/lib/countries/us/congressionalGeometry";
 
 /**
  * Returns the static congressional-district geometry for a single US
@@ -27,11 +26,20 @@ export async function GET(_req: Request, { params }: { params: Promise<{ stateId
       return errorResponse(400, "Invalid state id");
     }
 
-    const filePath = join(process.cwd(), "src", "data", "congressional-districts", `${state}.json`);
+    const gs = await getGameState();
+    const filePath = join(
+      process.cwd(),
+      "src",
+      "data",
+      usCongressionalGeometryDirectory(gs?.preset),
+      `${state}.json`
+    );
     try {
       const raw = await readFile(filePath, "utf-8");
       const parsed = JSON.parse(raw) as {
         viewBox: string;
+        geometrySource?: string;
+        leanBasis?: string;
         districts: { cd: string; path: string; cookPVI: number }[];
       };
       const baseDistricts = parsed.districts.map((d) => ({
@@ -40,7 +48,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ stateId
         cookPVI: d.cookPVI,
       }));
 
-      // Live square overlay.
+      // Live square overlay — only when the feature flag is on.
       const db = await getDb();
       const docs = (await congressionalDistrictsCollection(db)
         .find({ countryId: "US", stateId: state })
@@ -67,17 +75,30 @@ export async function GET(_req: Request, { params }: { params: Promise<{ stateId
         for (const n of npps) holderNames[String(n._id)] = n.name;
       }
 
+      const parties = await politicalPartiesCollection(db)
+        .find({ countryId: "US" }, { projection: { _id: 1, sequentialId: 1, abbreviation: 1 } })
+        .toArray();
+      const labels = Object.fromEntries(
+        parties.flatMap((p) => [
+          [String(p._id), p.abbreviation],
+          [String(p.sequentialId), p.abbreviation],
+          [p.abbreviation, p.abbreviation],
+        ])
+      );
       const views = buildDistrictSquareViews(
         parsed.districts.map((d) => d.cd),
         docs,
-        holderNames
+        holderNames,
+        labels
       );
       const redistricting = { enabled: true, districts: views };
 
       return NextResponse.json({
         viewBox: parsed.viewBox,
+        ...(parsed.geometrySource ? { geometrySource: parsed.geometrySource } : {}),
+        ...(parsed.leanBasis ? { leanBasis: parsed.leanBasis } : {}),
         districts: baseDistricts,
-        redistricting,
+        ...(redistricting ? { redistricting } : {}),
       });
     } catch {
       return errorResponse(404, `No CD data available for ${state}`);
@@ -86,3 +107,11 @@ export async function GET(_req: Request, { params }: { params: Promise<{ stateId
     return handleRouteError(error);
   }
 }
+
+import { charactersCollection } from "@/lib/db/repositories/characters";
+
+import { nppsCollection } from "@/lib/db/repositories/npps";
+
+import { congressionalDistrictsCollection } from "@/lib/db/repositories/congressionalDistricts";
+
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";

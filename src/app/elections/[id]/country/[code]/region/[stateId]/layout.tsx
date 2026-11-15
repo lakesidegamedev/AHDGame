@@ -1,3 +1,4 @@
+import { electionRegionUrl } from "@/lib/urls";
 import { CDN_LOGO_URL } from "@/lib/images/staticCdnAssets";
 import type { Metadata } from "next";
 import { ObjectId } from "mongodb";
@@ -60,7 +61,7 @@ export async function generateMetadata({
   const regionName = state?.name ?? stateId;
   const title = `${typeLabel} — ${regionName} | A House Divided`;
   const description = `Regional results for the ${typeLabel.toLowerCase()} in ${regionName}, ${countryId} — county / district breakdown.`;
-  const url = `${getSiteUrl()}/elections/${id}/country/${code}/region/${stateId}`;
+  const url = `${getSiteUrl()}${electionRegionUrl(id, code, stateId)}`;
 
   return {
     title,

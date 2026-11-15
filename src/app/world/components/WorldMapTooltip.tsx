@@ -10,6 +10,8 @@ interface WorldMapTooltipProps {
   filterHighlight?: { label: string; value: string } | null;
   corpsCount?: number;
   showClickHint?: boolean;
+  /** Overrides the default "Click to enter" line while comparison mode is on. */
+  clickHint?: string;
 }
 
 /** Availability labels arrive title-cased from the shared resolver; the tooltip reads them in sentence case. */
@@ -31,6 +33,7 @@ export default function WorldMapTooltip({
   filterHighlight,
   corpsCount,
   showClickHint,
+  clickHint,
 }: WorldMapTooltipProps) {
   return (
     <div
@@ -59,7 +62,7 @@ export default function WorldMapTooltip({
           {corpsCount} {corpsCount === 1 ? "corporation" : "corporations"}
         </span>
       )}
-      {showClickHint && <span className="text-muted">Click to enter</span>}
+      {showClickHint && <span className="text-muted">{clickHint ?? "Click to enter"}</span>}
     </div>
   );
 }

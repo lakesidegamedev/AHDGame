@@ -62,6 +62,61 @@ function makeCrisis(overrides: Partial<Crisis> = {}): Crisis {
 }
 
 describe("processCrisisTurn", () => {
+  it("batches recurring political damage across regions while retaining the tick cap", async () => {
+    const boards = db.collection("politicalMetrics");
+    boards.find().toArray.mockResolvedValue(
+      ["CA", "TX"].map((_id) => ({
+        _id,
+        countryId: "US",
+        values: { "infrastructure.condition": 60 },
+      }))
+    );
+    boards.find.mockClear();
+    const { applyCrisisTurnEffects } = await import("./crisisTurn");
+    await applyCrisisTurnEffects(
+      db as unknown as Db,
+      makeCrisis(),
+      [
+        {
+          effectType: "tick",
+          targetType: "metric",
+          metricCategory: "infrastructure",
+          metricField: "roadCondition",
+          sectorType: null,
+          strategyId: null,
+          value: -400,
+          label: "Road damage",
+        },
+      ],
+      ["CA", "TX"],
+      new Map([
+        ["CA", "US"],
+        ["TX", "US"],
+      ]),
+      new Map([["US", ["CA", "TX"]]])
+    );
+    expect(boards.find).toHaveBeenCalledTimes(1);
+    expect(boards.find).toHaveBeenCalledWith({ _id: { $in: ["CA", "TX"] } });
+    expect(boards.bulkWrite).toHaveBeenCalledTimes(1);
+    const writes = boards.bulkWrite.mock.calls[0]![0] as {
+      updateOne: { update: { $set: { values: Record<string, number> } } };
+    }[];
+    const { boardDeltaForLegacyEffect, BOARD_TICK_DELTA_CAP } =
+      await import("@/lib/politicalLegislation/legacyEffectBridge");
+    const delta = boardDeltaForLegacyEffect(
+      "infrastructure",
+      "roadCondition",
+      -400,
+      undefined,
+      BOARD_TICK_DELTA_CAP
+    )!;
+    expect(writes).toHaveLength(2);
+    expect(writes.map((write) => write.updateOne.update.$set.values[delta.familyId])).toEqual([
+      60 + delta.scoreDelta,
+      60 + delta.scoreDelta,
+    ]);
+  });
+
   it("returns 0 and does nothing when no active crises", async () => {
     db.collectionMocks.crises.find.mockReturnValue({ toArray: async () => [] });
 

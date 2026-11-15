@@ -74,6 +74,7 @@ export async function POST(request: Request, { params }: RouteParams) {
         {
           session,
           projection: {
+            preset: 1,
             currentTurn: 1,
             currentYear: 1,
             startingYear: 1,

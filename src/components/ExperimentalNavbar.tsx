@@ -724,7 +724,7 @@ export const ExperimentalNavbar = React.memo(function ExperimentalNavbar({
       </MenuRow>
       {governorOffice && governorOffice.stateId === homeState.id && (
         <MenuRow
-          href={`/country/${homeState.countryId.toLowerCase()}/region/${homeState.id.toLowerCase()}/office`}
+          href={`${regionUrl(homeState.countryId.toLowerCase(), homeState.id.toLowerCase())}/office`}
           onNavigate={closeAll}
         >
           {t("state.governorOffice")}

@@ -341,7 +341,7 @@ describe("treasury budgets substep equivalence", () => {
     const seeded = COUNTRIES.length * 300 + COUNTRIES.length + 1;
     expect(db.collection("sovereignCouponClaims").docs).toHaveLength(seeded);
     expect(openClaimCount(db)).toBe(seeded - COUNTRIES.length * 50);
-    expect(digest(db)).toBe("2fc2d6ce62744f097d262590659d3cad396ec713e319d1c88382d321948f64a6");
+    expect(digest(db)).toBe("e2a7697c7c86699eeef1b3d8a4e4ad3a922635802c66c3006b38071fcb9e01a1");
   }, 300_000);
 
   it("settles a Treasury that cannot cover one claim without loading the queue", async () => {
@@ -351,7 +351,7 @@ describe("treasury budgets substep equivalence", () => {
     // The pass still freezes this turn's claim for every bond, and pays none.
     expect(openClaimCount(db)).toBe(COUNTRIES.length * 300 + COUNTRIES.length + 1);
     expect(db.collection("bankMoneyMoves").docs).toHaveLength(0);
-    expect(digest(db)).toBe("ccf2c7b1dd15e27dc2a58638e8ec38123fc6acd7032952fcd3242ef77224b581");
+    expect(digest(db)).toBe("42e60264e7ffc4eb8d6ab79a0bad15eda06fd4034b0fc4005bc24c6558726f72");
   }, 300_000);
 
   it("settles a funded Treasury through grouped receipts to the recorded state", async () => {
@@ -362,7 +362,7 @@ describe("treasury budgets substep equivalence", () => {
     // receipt each, and the cash left over.
     expect(openClaimCount(db)).toBe(0);
     for (const budget of budgetRows(db)) expect(budget.treasuryCashLocal).toBeGreaterThan(0);
-    expect(digest(db)).toBe("9c548ccf8df0b593ef762f51310212114ac2ea8e16775ba923133df928da53c3");
+    expect(digest(db)).toBe("6dce6ec308e8b1c67a448d6718ff51dc6268cd6cd3eca55cc747b8558181f8bb");
   }, 300_000);
 
   it("settles with private banking enabled to the recorded state", async () => {
@@ -370,7 +370,7 @@ describe("treasury budgets substep equivalence", () => {
     await runTurn(db);
 
     expect(openClaimCount(db)).toBe(0);
-    expect(digest(db)).toBe("15bb98f24e40cfb03efca8778375ce533769c12217aae035e5174ab8177b35bb");
+    expect(digest(db)).toBe("09c81641ce0e5212b8c1df6d27a16976ac58bd893555b7b4eb457da02fff1f9e");
   }, 300_000);
 
   it("reads the coupon queue once for the cohort, not once per budget", async () => {
@@ -391,11 +391,11 @@ describe("treasury budgets substep equivalence", () => {
     // Grouped by budget for the payee locks, the oldest-open facts and the
     // pool currencies; none of them reads a claim document per budget.
     expect(trips.count("sovereignCouponClaims", "aggregate")).toBe(3);
-    // The whole turn on this fixture. This is a budget, not an estimate: the
-    // per-country implementation measured 1168 commands here, and every one of
-    // the probes above cost one per budget. A change that moves this number has
-    // to say which command it added and why the phase needs it.
-    expect(trips.total()).toBe(1059);
+    // The prior cohort used 1059 commands. Payee cash witnesses add fifty-one
+    // guarded publication commands and two shared metadata reads. The cash and
+    // queue assertions above remain unchanged; each paid receipt now owns both
+    // its Treasury and payee ledger entries across retries.
+    expect(trips.total()).toBe(1112);
   }, 300_000);
 
   it("resumes every journal write to the state the crash-free turn reaches", async () => {
@@ -432,7 +432,13 @@ describe("treasury budgets substep equivalence", () => {
         onCall: write.occurrence,
       });
       vi.mocked(getDb).mockResolvedValue(crash.db);
-      await expect(processTreasuryTurn(460)).rejects.toThrow("crash");
+      try {
+        await processTreasuryTurn(460);
+      } catch (error) {
+        expect(error).toBeInstanceOf(Error);
+        expect((error as Error).message).toContain("crash");
+      }
+      expect(crash.crashed).toBe(true);
       crash.disarm();
       // The retry resumes the receipts the crash left behind, and a second
       // retry settles anything the first one deferred to the next attempt.

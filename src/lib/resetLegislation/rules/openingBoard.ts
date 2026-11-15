@@ -15,6 +15,7 @@ export interface ResetLawOpeningBoard {
   ukTerritorialTax?: UkTerritorialTaxOpening;
   /** Current statutes and source fiscal obligations, not selectable policy levels. */
   references: Record<string, OpeningLawReference>;
+  modeledOpening?: { preset: string; year: number };
 }
 
 export function buildResetLawOpeningBoard(input: {
@@ -24,6 +25,8 @@ export function buildResetLawOpeningBoard(input: {
   sourceTurn: number;
   references: readonly OpeningLawReference[];
   ukTerritorialTax?: UkTerritorialTaxOpening;
+  modeled?: boolean;
+  modeledOpening?: ResetLawOpeningBoard["modeledOpening"];
 }): ResetLawOpeningBoard {
   if (!input.worldId || !Number.isSafeInteger(input.sourceTurn) || input.sourceTurn < 1) {
     throw new Error("Law opening board needs a world id and positive source turn");
@@ -31,7 +34,7 @@ export function buildResetLawOpeningBoard(input: {
   if (input.regionId === "") throw new Error("Law opening board has an empty region id");
   const scope = input.regionId === undefined ? "national" : "regional";
   if (
-    (countryHasFeature("ukSeeds", input.countryId) && scope === "regional") !==
+    (!input.modeled && countryHasFeature("ukSeeds", input.countryId) && scope === "regional") !==
     (input.ukTerritorialTax !== undefined)
   ) {
     throw new Error("UK regional law opening requires its territorial tax fixture");
@@ -68,7 +71,7 @@ export function buildResetLawOpeningBoard(input: {
         sourceIds.has(source.sourceId) ||
         !Number.isFinite(source.annualBooked) ||
         source.annualBooked < 0 ||
-        (source.replacementRestriction !== undefined &&
+        (source.replacementRestriction != null &&
           source.replacementRestriction !== "protected-transfer")
       ) {
         throw new Error(`Invalid ${reference.key} source component`);
@@ -83,11 +86,24 @@ export function buildResetLawOpeningBoard(input: {
     scope,
     ...(input.regionId === undefined ? {} : { regionId: input.regionId }),
     sourceTurn: input.sourceTurn,
+    ...(input.modeledOpening ? { modeledOpening: input.modeledOpening } : {}),
     ...(input.ukTerritorialTax ? { ukTerritorialTax: input.ukTerritorialTax } : {}),
     references: Object.fromEntries(
       [...input.references]
         .sort((a, b) => a.familyId.localeCompare(b.familyId))
-        .map((reference) => [reference.familyId, reference])
+        .map((reference) => [
+          reference.familyId,
+          {
+            ...reference,
+            sourceComponents: reference.sourceComponents.map((source) => {
+              const normalized = { ...source };
+              // Older modeled boards serialized explicit undefined as BSON null.
+              if (normalized.replacementRestriction == null)
+                delete normalized.replacementRestriction;
+              return normalized;
+            }),
+          },
+        ])
     ),
   };
 }
@@ -104,6 +120,7 @@ export function resetLawOpeningBoardPayload(boards: readonly ResetLawOpeningBoar
         board.scope,
         board.regionId ?? null,
         board.sourceTurn,
+        board.modeledOpening ?? null,
         board.ukTerritorialTax ?? null,
         Object.entries(board.references)
           .sort(([a], [b]) => a.localeCompare(b))

@@ -272,6 +272,7 @@ export async function applyPassedVoteEffects(opts: {
         executeCorporationBondDefaultDissolution(db, corporation, {
           requireDefaultedBonds: false,
           exitReason: "shareholder_vote",
+          turn: currentTurn,
         })
       );
       break;

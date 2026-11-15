@@ -3,7 +3,9 @@ import { Avatar } from "@/components/Avatar";
 import { getPartyLabel } from "@/lib/utils/politics";
 
 export interface LeaderCardCharacter {
-  characterId: string;
+  characterId: string | null;
+  nppId?: string | null;
+  isNPP?: boolean;
   sequentialId?: number | null;
   characterName: string;
   party: string | null;
@@ -32,12 +34,16 @@ export function LeaderCard({
             size="h-10 w-10"
           />
           <div>
-            <Link
-              href={`/character/${character.sequentialId ?? character.characterId}`}
-              className="font-semibold text-foreground hover:text-primary transition-colors"
-            >
-              {character.characterName}
-            </Link>
+            {character.characterId ? (
+              <Link
+                href={`/character/${character.sequentialId ?? character.characterId}`}
+                className="font-semibold text-foreground hover:text-primary transition-colors"
+              >
+                {character.characterName}
+              </Link>
+            ) : (
+              <span className="font-semibold text-foreground">{character.characterName}</span>
+            )}
             {character.party && (
               <p className="text-xs text-muted">{getPartyLabel(character.party)}</p>
             )}

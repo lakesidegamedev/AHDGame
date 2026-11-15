@@ -29,6 +29,7 @@ import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { openingStockCoupon } from "@/lib/bonds/rules/openingStockCoupon";
 
 export interface SeedSovereignBondInstrumentsResult {
   countriesSeeded: number;
@@ -119,11 +120,16 @@ export async function seedSovereignBondInstruments(
   // per-country query it replaced never matched them either, so skipping keeps
   // the coverage sums identical rather than folding stray bonds into a country.
   const coveredByCountry = new Map<string, number>();
+  const couponsByCountry = new Map<string, number>();
   for (const bond of bondRows) {
     if (!bond.countryId) continue;
     coveredByCountry.set(
       bond.countryId,
       (coveredByCountry.get(bond.countryId) ?? 0) + (bond.totalIssued ?? 0)
+    );
+    couponsByCountry.set(
+      bond.countryId,
+      (couponsByCountry.get(bond.countryId) ?? 0) + (bond.totalIssued * bond.couponRate) / 100
     );
   }
 
@@ -160,6 +166,14 @@ export async function seedSovereignBondInstruments(
     });
 
     const bondDocs: Omit<Bond, "_id">[] = [];
+    const stockCoupon = openingStockCoupon({
+      countryId,
+      fiscalYear: budget.fiscalYear,
+      averageRate: budget.debt?.interestRate,
+      annualInterest: budget.spending?.debtInterest,
+      uncoveredPrincipal: gap,
+      coveredCoupons: couponsByCountry.get(countryId) ?? 0,
+    });
     const openingCohorts = planOpeningSovereignMaturityCohorts({
       totalFace: gap,
       faceValue: BOND_UNIT_FACE_VALUE,
@@ -169,24 +183,16 @@ export async function seedSovereignBondInstruments(
       const maturityTurns = cohort.maturityTurns;
       const trancheAmount = cohort.amount;
       const totalUnits = Math.floor(trancheAmount / BOND_UNIT_FACE_VALUE);
-      // In the 1991 reset, instruments represent debt already outstanding, whose average
-      // coupon is authored by the fiscal seed. New issues use today's policy and
-      // risk spreads; resetting the old stock to those prices invents a different
-      // opening debt-service bill. Other presets and incomplete rows retain
-      // the existing policy-priced coupon and par instrument behavior.
-      const historicalAverageRate = budget.debt?.interestRate;
+      // The 1991 and US 2027 opening stocks retain authored debt service.
+      // New auctions still use the prevailing policy rate and credit spread.
       const couponRate =
-        budget.fiscalYear === 1991 &&
-        typeof historicalAverageRate === "number" &&
-        Number.isFinite(historicalAverageRate) &&
-        historicalAverageRate >= 0
-          ? historicalAverageRate * 100
-          : getSovereignCouponRate(
-              primeRate,
-              maturityTurns,
-              0,
-              sovereignCreditSpreadPp(budget.creditRating)
-            );
+        stockCoupon ??
+        getSovereignCouponRate(
+          primeRate,
+          maturityTurns,
+          0,
+          sovereignCreditSpreadPp(budget.creditRating)
+        );
 
       bondDocs.push({
         issuerType: "sovereign",
@@ -204,7 +210,7 @@ export async function seedSovereignBondInstruments(
         // Historic coupons remain fixed. Price them at prevailing yields so
         // cheap new borrowing cannot buy old high-coupon paper below fair value.
         marketPrice:
-          budget.fiscalYear === 1991
+          budget.fiscalYear === 1991 || stockCoupon !== null
             ? calculateBondMarketPrice(
                 couponRate,
                 getSovereignCouponRate(

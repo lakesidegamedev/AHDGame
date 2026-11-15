@@ -2,7 +2,7 @@ import { clamp } from "@/lib/numeric/rules";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 /** Portable, game-calibrated health access proxies until service ledgers exist. */
 export interface LiveHealthProxyInput {
-  countryId: "US" | "UK" | "JP" | "IE" | "SCO" | "WAL";
+  countryId: "US" | "UK" | "JP" | "IE" | "SCO" | "WAL" | "CA";
   uninsuredPercent: number | null;
   physicianRate: number | null;
   preparedness: number | null;

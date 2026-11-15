@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { BLEND, FONT } from "@/components/blend/tokens";
+import { MS_PER_TURN } from "@/lib/constants/turnTime";
 import { useGameClock } from "@/contexts/useGameClock";
 import type { ElectionResponse } from "@/lib/elections/electionResponseTypes";
 import { EYEBROW } from "../ui";
@@ -39,10 +40,16 @@ export function RaceSchedule({ election }: { election: ScheduleRace }) {
   const [open, setOpen] = useState(false);
   if (!election.endTime && !election.primaryEndTime) return null;
 
+  const yearFor = (turn: number | null | undefined, time: Date | string | null | undefined) =>
+    clock.formatYear(
+      turn != null
+        ? new Date(clock.lastTurnProcessed.getTime() + (turn - clock.currentTurn) * MS_PER_TURN)
+        : (time ?? null)
+    );
   const when = (turn: number | null | undefined, time: Date | string | null | undefined) => {
     const timer =
       turn != null ? clock.formatRemainingTurns(turn) : clock.formatRemaining(time ?? undefined);
-    const year = clock.formatYear(time ?? null);
+    const year = yearFor(turn, time);
     return {
       text: year ? t("when", { timer: timer.text, year }) : timer.text,
       ended: timer.urgency === "ended",
@@ -52,7 +59,7 @@ export function RaceSchedule({ election }: { election: ScheduleRace }) {
   const opens = when(election.startTurn, election.startTime);
   const primary = when(election.primaryEndTurn, election.primaryEndTime);
   const closes = when(election.endTurn, election.endTime);
-  const closeYear = clock.formatYear(election.endTime ?? null);
+  const closeYear = yearFor(election.endTurn, election.endTime);
   const closeYearText = closeYear != null ? String(closeYear) : null;
 
   const rows: Row[] = [

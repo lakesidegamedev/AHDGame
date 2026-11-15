@@ -69,7 +69,7 @@ describe("buildOnboardingStepContent", () => {
   it("walks a Canadian player through their home province and Parliament", () => {
     const ca = buildOnboardingStepContent(makeCharacter({ countryId: "CA", homeState: "CA_QC" }));
     expect(ca[0].title).toBe("Scout your home province");
-    expect(ca[0].link).toBe("/country/ca/region/CA_QC");
+    expect(ca[0].link).toBe("/country/ca/region/QC");
     expect(ca.find((s) => s.id === "first-vote")!.link).toBe("/country/ca/legislature");
     for (const step of ca) {
       expect(step.link).not.toMatch(/\/country\/(?!ca\/)/);

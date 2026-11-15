@@ -1,4 +1,5 @@
 "use client";
+import { displayCanadianRegionCode } from "@/lib/countries/ca/regionCodes";
 
 import Image from "next/image";
 import { getCountryFlagUrlForEra } from "@/lib/constants/flags";
@@ -30,7 +31,9 @@ export function PlayerBadge({ partyAbbrev, stateCode, countryId, size = "sm" }: 
       <span className="text-muted">(</span>
       {partyAbbrev && <span className="text-foreground/80 font-medium">{partyAbbrev}</span>}
       {partyAbbrev && stateCode && <span className="text-muted">-</span>}
-      {stateCode && <span className="text-foreground/70">{stateCode}</span>}
+      {stateCode && (
+        <span className="text-foreground/70">{displayCanadianRegionCode(stateCode)}</span>
+      )}
       <span className="text-muted">)</span>
       {cfg && (
         <Image

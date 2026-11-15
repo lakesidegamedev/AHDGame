@@ -1,4 +1,5 @@
 "use client";
+import { displayCanadianRegionCode } from "@/lib/countries/ca/regionCodes";
 
 import { useCallback, useEffect } from "react";
 import { Slider } from "@/components/ui";
@@ -438,7 +439,7 @@ export function ChairSubtab({
             ) : (
               recruitableNpps.map((option) => (
                 <option key={option.id} value={option.id}>
-                  {option.name} ({option.homeState})
+                  {option.name} ({displayCanadianRegionCode(option.homeState)})
                 </option>
               ))
             )}
@@ -451,7 +452,7 @@ export function ChairSubtab({
               <div>
                 <div className="text-sm font-semibold">{selectedRecruitNpp.name}</div>
                 <div className="mt-1 text-body-sm text-muted">
-                  {selectedRecruitNpp.homeState}
+                  {displayCanadianRegionCode(selectedRecruitNpp.homeState)}
                   {selectedRecruitNpp.currentOfficeLabel
                     ? ` | ${selectedRecruitNpp.currentOfficeLabel}`
                     : ""}
@@ -540,7 +541,7 @@ export function ChairSubtab({
               ) : (
                 memberOptions.map((option) => (
                   <option key={option.id} value={option.id}>
-                    {option.name} ({option.homeState})
+                    {option.name} ({displayCanadianRegionCode(option.homeState)})
                   </option>
                 ))
               )}

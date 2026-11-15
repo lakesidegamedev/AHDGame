@@ -27,13 +27,21 @@ describe("Canada opening party organization", () => {
     for (const row of rows) expect(row._id).toBe(`${row.stateId}_${row.partyId}`);
   });
 
-  it("gives the Quebec party a real machine only in Quebec", () => {
+  it("keeps Bloc opening support concentrated in Quebec while allowing national participation", () => {
     const laurentian = slugToId.ca_laurentian!;
     const quebec = rows.find((row) => row.stateId === "CA_QC" && row.partyId === laurentian)!;
     const alberta = rows.find((row) => row.stateId === "CA_AB" && row.partyId === laurentian)!;
     expect(quebec.organization).toBeGreaterThan(30);
     expect(alberta.organization).toBe(5);
     expect(alberta.registration).toBe(0);
+    expect(quebec.hasPresence).toBe(true);
+    expect(
+      rows.filter((row) => row.partyId === laurentian && row.hasPresence).map((row) => row.stateId)
+    ).toHaveLength(13);
+    expect(
+      rows.find((row) => row.stateId === "CA_NL" && row.partyId === slugToId.ca_green_horizon)
+        ?.hasPresence
+    ).toBe(true);
   });
 
   it("puts the right-of-centre party ahead in Alberta and the governing party ahead in Ontario", () => {

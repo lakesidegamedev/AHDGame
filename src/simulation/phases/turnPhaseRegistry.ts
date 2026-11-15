@@ -89,7 +89,6 @@ import {
   runCountryElectionEntries,
   selectCountryElectionEntries,
 } from "@/lib/turn/countryElectionPhase";
-import type { CountryId } from "@/lib/constants/countries";
 import { runNppGovernmentPhases } from "@/lib/nppAutonomy/processNppGovernment";
 import { TURNS_PER_YEAR, STARTING_YEAR } from "@/lib/constants/turnTime";
 import { isFiscalYearEnd, calculateFiscalYear, processFiscalYear } from "@/lib/budget/fiscalYear";
@@ -799,7 +798,7 @@ export function getTurnPhaseRegistry(): TurnPhaseAdapter[] {
         if (priorityRegionDecayResult) {
           phaseResults.priorityRegionDecay = priorityRegionDecayResult;
         }
-        // Redistricting Campaign Here boosts erode toward 0 each turn (flag-gated no-op when off).
+        // District and riding Campaign Here boosts decay each turn; no active boosts means no writes.
         await runtime.runPhase("campaignBoostDecay", () =>
           processCampaignBoostDecay(newTurn, realNow)
         );

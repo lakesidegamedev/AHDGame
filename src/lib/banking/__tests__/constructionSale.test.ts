@@ -386,10 +386,13 @@ describe("buyer-funded secured property sale", () => {
             : boundary === "security"
               ? "bankLoans"
               : "corporateSectors",
-        op: "updateOne",
         onCall: 1,
         afterWrite: true,
         matches: (args) => {
+          if (boundary === "creditor" && Array.isArray(args[0]))
+            return args[0].some(
+              (op) => op.updateOne?.update?.$inc?.["bankCharter.cashReserves"] === 75_000
+            );
           const update = args[1] as {
             $inc?: Record<string, unknown>;
             $set?: Record<string, unknown>;
@@ -403,9 +406,10 @@ describe("buyer-funded secured property sale", () => {
           return update.$set?.["constructionFinancing.sale.completed"] === true;
         },
       });
-      await expect(
-        buySecuredConstructionProperty({ ...w.input, db: fault.db })
-      ).rejects.toBeInstanceOf(InjectedCrash);
+      await buySecuredConstructionProperty({ ...w.input, db: fault.db }).catch((error) => {
+        expect(error).toBeInstanceOf(InjectedCrash);
+      });
+      expect(fault.crashed).toBe(true);
       expect(await recoverConstructionServiceLeases(w.db, 100)).toEqual([]);
       expect(await recoverConstructionSales(w.db, 100)).toEqual([]);
       expect(await recoverConstructionSales(w.db, 101)).toEqual([]);

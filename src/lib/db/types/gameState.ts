@@ -197,8 +197,8 @@ export interface GameState {
    * election years per era. Defaults to `"2019-default"` when undefined.
    */
   preset?: string;
-  /** Reset choice. Missing means default; overwritten on every reset. */
-  startingPartiesMode?: "default" | "none";
+  /** Starting parties mode; missing means default. */
+  startingPartiesMode?: "default" | "none" | "no-npps";
   /**
    * On for fresh worlds (`DEFAULT_GAME_STATE_FLAGS`) since the state GDP unit fix.
    * The commodity ledger then reads each state's GDP in anchor terms (stored

@@ -5,6 +5,10 @@ vi.mock("@/lib/admin/spawnNppCorporation", () => ({
   generateNppCorpName: vi.fn(() => "Test Corp"),
   spawnNppCorporation: vi.fn(),
 }));
+vi.mock("./shareCashLedger", () => ({
+  witnessNppFoundingCash: vi.fn().mockResolvedValue(undefined),
+}));
+import { witnessNppFoundingCash } from "./shareCashLedger";
 import { spawnNppCorporation } from "@/lib/admin/spawnNppCorporation";
 import { nppFoundCorporation } from "./nppFoundCorporation";
 import { stubMarketizationDb } from "@/lib/test-utils/stubMarketizationDb";
@@ -81,6 +85,12 @@ describe("nppFoundCorporation", () => {
     const [filter, update] = nppFindOneAndUpdate.mock.calls[0];
     expect(filter).toEqual({ _id: founderId, nppInvestmentCashAnchor: { $gte: FOUNDING_FEE } });
     expect(update.$inc).toEqual({ nppInvestmentCashAnchor: -FOUNDING_FEE });
+    expect(witnessNppFoundingCash).toHaveBeenCalledWith(
+      db,
+      founder,
+      FOUNDING_FEE,
+      expect.any(Date)
+    );
     // reassignment: renames the shareholder entry + flips ceoId
     expect(corpUpdateOne).toHaveBeenCalledWith(
       { _id: corpId, "shareholders.nppId": autoCeoId },
@@ -150,6 +160,7 @@ describe("nppFoundCorporation", () => {
     expect(res).toEqual({ ok: false, reason: "NPP already runs a corporation." });
     expect(nppFindOneAndUpdate).not.toHaveBeenCalled();
     expect(spawnNppCorporation).not.toHaveBeenCalled();
+    expect(witnessNppFoundingCash).not.toHaveBeenCalled();
   });
 
   it("rejects when funds are insufficient (guard returns null), no spawn attempted", async () => {
@@ -161,6 +172,7 @@ describe("nppFoundCorporation", () => {
       reason: "Insufficient investment capital to found a corporation.",
     });
     expect(spawnNppCorporation).not.toHaveBeenCalled();
+    expect(witnessNppFoundingCash).not.toHaveBeenCalled();
   });
 
   it("refunds the founding fee if spawnNppCorporation throws", async () => {
@@ -169,6 +181,7 @@ describe("nppFoundCorporation", () => {
 
     expect(res.ok).toBe(false);
     if (!res.ok) expect(res.reason).toContain("No capital state configured");
+    expect(witnessNppFoundingCash).not.toHaveBeenCalled();
     expect(nppUpdateOne).toHaveBeenCalledWith(
       { _id: founderId },
       expect.objectContaining({ $inc: { nppInvestmentCashAnchor: FOUNDING_FEE } })

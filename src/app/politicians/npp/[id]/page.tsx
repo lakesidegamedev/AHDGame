@@ -1,3 +1,4 @@
+import { displayCanadianRegionCode } from "@/lib/countries/ca/regionCodes";
 import { CDN_LOGO_URL } from "@/lib/images/staticCdnAssets";
 import type { Metadata } from "next";
 import Image from "next/image";
@@ -277,7 +278,7 @@ export default async function NppProfilePage({ params }: PageProps) {
                   href={regionUrl(npp.countryId ?? "US", npp.homeState)}
                   className="rounded-full border border-zinc-700 bg-zinc-800 px-3 py-1 text-xs text-zinc-300 hover:border-zinc-500 transition-colors"
                 >
-                  {homeState?.name || npp.homeState}
+                  {displayCanadianRegionCode(homeState?.name || npp.homeState)}
                 </Link>
               </div>
 

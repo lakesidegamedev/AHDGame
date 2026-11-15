@@ -4,6 +4,7 @@ import { bulkOps, createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
 import { frRegions1991 } from "@/lib/countries/fr/data/frRegions1991";
 import { esRegions1991 } from "@/lib/countries/es/data/esRegions1991";
 import { seedCohortVectors } from "./seedCohortVectors";
+import { workingAgePopulation, votingAgePopulation } from "@/lib/demographics/cohortVector";
 
 function withStatesAndMetrics(db: MockDb, states: unknown[], metrics: unknown[]) {
   // Vivify the lazily-created collection mocks before overriding them.
@@ -23,6 +24,24 @@ describe("seedCohortVectors", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     db = createMockDb();
+  });
+  it.each([
+    ["1953-default", 21],
+    ["2027-default", 18],
+  ] as const)("uses the %s opening franchise", async (preset, votingAge) => {
+    withStatesAndMetrics(db, [{ _id: "CA", countryId: "US", population: 1_000_000 }], []);
+    await seedCohortVectors(db as unknown as Db, preset, () => {});
+    const vector = (
+      bulkOps(db.collectionMocks.regionDemographics!.bulkWrite)[0]![1] as {
+        $set: { ages: { male: number[]; female: number[] } };
+      }
+    ).$set.ages;
+    const state = bulkOps(db.collectionMocks.states!.bulkWrite)[0]![1] as {
+      $set: { votingEligiblePopulation: number };
+    };
+    expect(state.$set.votingEligiblePopulation).toBe(
+      Math.round(votingAgePopulation(vector, votingAge))
+    );
   });
 
   it.each([
@@ -68,6 +87,16 @@ describe("seedCohortVectors", () => {
     expect(demoSet.$set.countryId).toBe("IE");
     expect(demoSet.$set.ages.male).toHaveLength(101);
     expect(demoSet.$set.ages.female).toHaveLength(101);
+    const stateSet = bulkOps(db.collectionMocks.states!.bulkWrite)[0]![1] as {
+      $set: Record<string, number>;
+    };
+    expect(stateSet.$set.workingAgePopulation).toBe(
+      Math.round(workingAgePopulation(demoSet.$set.ages))
+    );
+    expect(stateSet.$set.votingEligiblePopulation).toBe(
+      Math.round(votingAgePopulation(demoSet.$set.ages))
+    );
+    expect(stateSet.$set.workingAgePopulation).toBeGreaterThan(0);
 
     const metricSet = bulkOps(db.collectionMocks.macroMetrics!.bulkWrite)[0]![1] as {
       $set: Record<string, number>;
@@ -103,6 +132,7 @@ describe("seedCohortVectors", () => {
     // wrote, since the seeder no longer calls `updateOne` on any path at all.
     expect(db.collectionMocks.regionDemographics!.bulkWrite).not.toHaveBeenCalled();
     expect(db.collectionMocks.macroMetrics!.bulkWrite).not.toHaveBeenCalled();
+    expect(db.collectionMocks.states!.bulkWrite).not.toHaveBeenCalled();
   });
 
   it("fails closed before writing when a populated 1991 region has no dated age profile", async () => {

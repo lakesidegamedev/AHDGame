@@ -1,4 +1,5 @@
 "use client";
+import { displayCanadianRegionCode } from "@/lib/countries/ca/regionCodes";
 
 import { useEffect, useCallback } from "react";
 import { useOfficialsState } from "./officials/useOfficialsState";
@@ -430,7 +431,7 @@ export function OfficialsManager() {
                     .filter((c) => !c.currentOffice)
                     .map((char) => (
                       <option key={char._id} value={char._id}>
-                        {char.name} ({char.party}) - {char.homeState}
+                        {char.name} ({char.party}) - {displayCanadianRegionCode(char.homeState)}
                       </option>
                     ))}
                 </select>
@@ -550,7 +551,7 @@ export function OfficialsManager() {
                 <option value="">-- Vacate position --</option>
                 {state.characters.map((char) => (
                   <option key={char._id} value={char._id}>
-                    {char.name} ({char.party}) - {char.homeState}
+                    {char.name} ({char.party}) - {displayCanadianRegionCode(char.homeState)}
                     {char.currentOffice && " [Has office]"}
                   </option>
                 ))}

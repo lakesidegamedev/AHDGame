@@ -1,4 +1,5 @@
 "use client";
+import { displayCanadianRegionCode } from "@/lib/countries/ca/regionCodes";
 
 import { quoteOrganizationBatch } from "@/lib/parties/rules/repeatedOrganization";
 import type { CountryId } from "@/lib/constants/countriesCore";
@@ -418,7 +419,7 @@ export function StatePartyHQ({
                   onClick={() => setOpenId(r.regionId)}
                   className="rounded-full border border-card-border px-2 py-0.5 text-xs"
                 >
-                  {r.regionId}{" "}
+                  {displayCanadianRegionCode(r.regionId)}{" "}
                   <span style={{ color: toneColor(t.tone) }}>{r.organization.toFixed(0)}%</span>
                 </button>
               );

@@ -77,6 +77,27 @@ function fixture(country = "US", currency = "USD", fx = 1) {
   return { memory, db: memory as unknown as Db, id, snapshot };
 }
 describe("corporate tax-first settlement", () => {
+  it("witnesses the separate advertising adjustment without applying it to cash twice", async () => {
+    const f = fixture();
+    await f.db
+      .collection("corporations")
+      .updateOne({ _id: f.id }, { $inc: { liquidCapital: -10 } });
+    f.snapshot.operatingCashAdjustmentLocal = -10;
+    await settleCorporateTaxPriority(f.db, [f.snapshot], 4, now);
+    await settleCorporateTaxPriority(f.db, [f.snapshot], 4, now);
+    expect(f.snapshot.operatingCashLedgerOwnedBySettlement).toBe(true);
+    const corp = await f.db.collection("corporations").findOne({ _id: f.id });
+    expect(corp!.liquidCapital).toBe(100);
+    const rows = await f.db.collection("ledgerEntries").find({}).toArray();
+    const primary = rows
+      .flatMap((row) => row.legs)
+      .filter((leg) => leg.account === `corporation:${f.id}:USD` && leg.role === "primary");
+    expect(primary.reduce((sum, leg) => sum + leg.amount, 0)).toBe(corp!.liquidCapital - 100);
+    for (const row of rows)
+      expect(
+        row.legs.reduce((sum: number, leg: { anchorAmount: number }) => sum + leg.anchorAmount, 0)
+      ).toBeCloseTo(0);
+  });
   it.each([
     ["US", "USD", 1],
     ["UK", "GBP", 0.8],

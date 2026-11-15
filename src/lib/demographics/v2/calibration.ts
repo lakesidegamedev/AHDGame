@@ -40,6 +40,7 @@ export const DEFAULT_DEMOGRAPHICS_V2_CALIBRATION: DemographicsV2Calibration = {
 
 const STANDARD_COUNTRY_IDS = [
   "US",
+  "CA",
   "UK",
   "DE",
   "JP",

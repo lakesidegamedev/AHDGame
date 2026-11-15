@@ -1,3 +1,4 @@
+import { displayCanadianRegionCode } from "@/lib/countries/ca/regionCodes";
 /**
  * Per-state demographic carve-up panel.
  *
@@ -53,7 +54,7 @@ export function CarveUpPanel({
           {t("carveUp.title", { state: stateName })}
         </h3>
         <div className="flex items-center gap-2 text-[10px]">
-          <span className="text-muted">{stateId}</span>
+          <span className="text-muted">{displayCanadianRegionCode(stateId)}</span>
           {detailHref ? (
             <a href={detailHref} className="font-medium underline opacity-80 hover:opacity-100">
               {t("carveUp.viewDetails")}

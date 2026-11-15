@@ -1,4 +1,5 @@
 "use client";
+import { displayCanadianRegionCode } from "@/lib/countries/ca/regionCodes";
 
 import { useMemo, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
@@ -108,7 +109,7 @@ export function RaceFinder({
 
   const list = sortRaces(filterRaces(races, filter), watched);
   const allRegions = filter.regionId === "ALL";
-  const regionName = regionNames[filter.regionId] ?? filter.regionId;
+  const regionName = regionNames[filter.regionId] ?? displayCanadianRegionCode(filter.regionId);
 
   return (
     <aside

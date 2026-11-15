@@ -1,4 +1,5 @@
 "use client";
+import { displayCanadianRegionCode } from "@/lib/countries/ca/regionCodes";
 
 import { useCallback, useEffect, useState } from "react";
 import { useGameTurnStatus } from "@/hooks/useGameEvents";
@@ -732,7 +733,7 @@ function PrivatizeRow({
                 onChange={() => toggleSector(s.sectorId)}
               />
               <span className="capitalize">{s.sectorType}</span>
-              <span className="text-xs text-muted">· {s.stateId}</span>
+              <span className="text-xs text-muted">· {displayCanadianRegionCode(s.stateId)}</span>
             </label>
           ))}
         </div>
