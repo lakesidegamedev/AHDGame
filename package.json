@@ -67,7 +67,7 @@
     "verify:serial": "npm run lint && npm run format:check && npm run typecheck && npm run architecture:audit && npm run test:ci",
     "test:performance": "vitest run src/app/api/performance",
     "test:e2e": "playwright test",
-    "test:e2e:performance": "playwright test e2e/performance.spec.ts",
+    "test:e2e:performance": "playwright test tests/e2e/performance.spec.ts",
     "wiki:screenshots": "npx tsx scripts/wiki-screenshots.ts",
     "simulate": "npx tsx scripts/simulate-legislation.ts",
     "simulate:industrial-relations": "npx tsx scripts/simulate-industrial-relations.ts",
@@ -211,5 +211,62 @@
     "vite": "^8.3.4",
     "vitest": "^5.0.5"
   },
-  "license": "PolyForm-Noncommercial-1.0.0"
+  "license": "PolyForm-Noncommercial-1.0.0",
+  "prettier": {
+    "semi": true,
+    "singleQuote": false,
+    "tabWidth": 2,
+    "trailingComma": "es5",
+    "printWidth": 100,
+    "endOfLine": "auto",
+    "plugins": []
+  },
+  "knip": {
+    "entry": [
+      "src/app/**/{page,layout,route,error,loading,not-found,template,opengraph-image,icon,apple-icon}.{ts,tsx}",
+      "src/app/**/sitemap.ts",
+      "src/app/**/manifest.ts",
+      "src/app/**/robots.ts",
+      "src/instrumentation*.ts",
+      "src/sentry.*.config.ts",
+      "next.config.ts",
+      "playwright.config.ts",
+      "vitest.config.ts",
+      "postcss.config.mjs",
+      "eslint.config.mjs",
+      "commitlint.config.mjs",
+      "scripts/**/*.{ts,mjs,js}",
+      "src/proxy.ts",
+      "src/landing-islands/*.ts",
+      "src/**/*.test.{ts,tsx}",
+      "src/**/__tests__/**/*.{ts,tsx}",
+      "tests/**/*.{ts,tsx}"
+    ],
+    "project": [
+      "src/**/*.{ts,tsx}",
+      "scripts/**/*.{ts,mjs,js}"
+    ],
+    "ignore": [
+      "src/lib/seeds/**",
+      "src/lib/constants/**",
+      "src/data/**",
+      "src/lib/admin/seed/seedManifest.ts",
+      "src/typings/**",
+      "src/types/**",
+      "next-env.d.ts",
+      "scripts/archive/**",
+      "scripts/migrations/deprecated/**"
+    ],
+    "ignoreDependencies": [
+      "knip",
+      "tailwindcss",
+      "@types/*",
+      "husky",
+      "lint-staged",
+      "prettier",
+      "esbuild",
+      "eslint-plugin-*",
+      "eslint-config-*"
+    ]
+  }
 }

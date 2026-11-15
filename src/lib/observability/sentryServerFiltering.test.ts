@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import * as Sentry from "@sentry/nextjs";
-import "../../../sentry.server.config";
+import "../../sentry.server.config";
 
 vi.mock("@sentry/nextjs", () => ({ init: vi.fn() }));
 

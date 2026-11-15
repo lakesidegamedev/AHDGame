@@ -1,8 +1,22 @@
 # Changelog
 
-One post per release, named for its version, under `content/changelog/dev/`.
-Pre-0.4.0 history is frozen in `content/changelog/legacy/CHANGELOG.md` and
-rendered at `/changelog/legacy`.
+Release notes live here, in two audiences:
+
+| Directory                     | Audience                                                     | Published at                                  |
+| ----------------------------- | ------------------------------------------------------------ | --------------------------------------------- |
+| [`public/`](./public)         | Players: one post per release                                | `/changelog/<version>` and the GitHub release |
+| [`dev/`](./dev)               | Developers: the full record per release                      | folded from `unreleased/` at release          |
+| [`unreleased/`](./unreleased) | Notes from merged pull requests waiting for the next release | not published                                 |
+| [`npp/`](./npp)               | Non-player politician engine versions                        | `/changelog/npp`                              |
+| [`legacy/`](./legacy)         | Frozen pre-0.4.0 history                                     | `/changelog/legacy`                           |
+
+## Player posts
+
+Each player-facing post is named for its version. The stem is the published URL
+(`/changelog/<version>`) and is in the sitemap, so it never changes once
+shipped. Retired addresses are redirected in `src/lib/changelog/retiredSlugs.ts`.
+`npm run changelog:release` drafts the post from the notes it folds. The draft is
+raw material: rewrite it as prose for a player, and keep em and en dashes out of it.
 
 ## Adding to it
 

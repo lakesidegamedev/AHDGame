@@ -3,13 +3,13 @@ import { defineConfig, globalIgnores } from "eslint/config";
 import nextVitals from "eslint-config-next/core-web-vitals";
 import nextTs from "eslint-config-next/typescript";
 import prettierConfig from "eslint-config-prettier";
-import noCountryLiterals from "./eslint-rules/no-country-literals.js";
-import noSilentFetchCatch from "./eslint-rules/no-silent-fetch-catch.js";
-import noImplicitLocaleDatetime from "./eslint-rules/no-implicit-locale-datetime.js";
-import noUnawaitedAuthGuard from "./eslint-rules/no-unawaited-auth-guard.js";
-import noDottedBoardPath from "./eslint-rules/no-dotted-board-path.js";
-import noUncodedErrorResponse from "./eslint-rules/no-uncoded-error-response.js";
-import noUnscopedRateLimitKey from "./eslint-rules/no-unscoped-rate-limit-key.js";
+import noCountryLiterals from "./scripts/eslint-rules/no-country-literals.js";
+import noSilentFetchCatch from "./scripts/eslint-rules/no-silent-fetch-catch.js";
+import noImplicitLocaleDatetime from "./scripts/eslint-rules/no-implicit-locale-datetime.js";
+import noUnawaitedAuthGuard from "./scripts/eslint-rules/no-unawaited-auth-guard.js";
+import noDottedBoardPath from "./scripts/eslint-rules/no-dotted-board-path.js";
+import noUncodedErrorResponse from "./scripts/eslint-rules/no-uncoded-error-response.js";
+import noUnscopedRateLimitKey from "./scripts/eslint-rules/no-unscoped-rate-limit-key.js";
 
 const require = createRequire(import.meta.url);
 
@@ -38,7 +38,7 @@ const eslintConfig = defineConfig([
     ".superpowers/**",
     ".agents-local-backup-*/**",
     // Playwright e2e tests — not part of the Next.js build, no React rules needed
-    "e2e/**",
+    "tests/e2e/**",
     // Ad-hoc debug/test scripts in project root
     "check-min-wage.js",
     "test-uk-filter.js",

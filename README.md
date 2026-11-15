@@ -16,7 +16,7 @@ Run for office, pass laws, found corporations and steer a national economy, in a
 [![Release](https://img.shields.io/github/v/release/lakesidegamedev/AHDGame?style=flat-square&label=release)](https://github.com/lakesidegamedev/AHDGame/releases)
 [![License: PolyForm Noncommercial](https://img.shields.io/badge/license-PolyForm%20Noncommercial-555?style=flat-square)](./LICENSE.md)
 
-[Play](https://www.ahousedividedgame.com) · [Documentation](https://docs.lakesidegames.net) · [Changelog](./PUBLIC_CHANGELOG.md) · [Contributing](./CONTRIBUTING.md) · [Security](./SECURITY.md)
+[Play](https://www.ahousedividedgame.com) · [Documentation](https://docs.lakesidegames.net) · [Changelog](https://www.ahousedividedgame.com/changelog) · [Contributing](./CONTRIBUTING.md) · [Security](./.github/SECURITY.md)
 
 </div>
 
@@ -71,20 +71,22 @@ Game rules (formulas, eligibility, resolution) live in `rules.ts` modules that t
 
 ## Repository layout
 
-| Path                                                           | What lives there                                                            |
-| -------------------------------------------------------------- | --------------------------------------------------------------------------- |
-| [`src/app`](./src/app)                                         | Pages and API routes (Next.js App Router)                                   |
-| [`src/lib`](./src/lib)                                         | Domain logic, one directory per game system                                 |
-| [`src/simulation`](./src/simulation)                           | Turn engine and turn phases                                                 |
-| [`src/components`](./src/components)                           | Shared React components                                                     |
-| [`src/lib/seeds/wiki`](./src/lib/seeds/wiki)                   | Player wiki source                                                          |
-| [`scripts`](./scripts)                                         | Seeders, world bootstrap, migrations, simulator, CI and maintenance tooling |
-| [`messages`](./messages)                                       | UI translations                                                             |
-| [`content/changelog`](./content/changelog)                     | Changelog notes and release sources                                         |
-| [`public`](./public)                                           | Static assets, maps and images                                              |
-| [`e2e`](./e2e)                                                 | Playwright end-to-end tests                                                 |
-| [`eslint-rules`](./eslint-rules), [`.semgrep`](./.semgrep)     | Project-specific lint and security rules                                    |
-| [`shared`](./shared), [`vendor`](./vendor), [`tools`](./tools) | Shared constants, vendored packages, standalone tools                       |
+| Path                                         | What lives there                                                                           |
+| -------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| [`src/app`](./src/app)                       | Pages and API routes (Next.js App Router)                                                  |
+| [`src/lib`](./src/lib)                       | Domain logic, one directory per game system                                                |
+| [`src/simulation`](./src/simulation)         | Turn engine and turn phases                                                                |
+| [`src/components`](./src/components)         | Shared React components                                                                    |
+| [`src/shared`](./src/shared)                 | Formulas and constants used by both browser and server                                     |
+| [`src/lib/seeds/wiki`](./src/lib/seeds/wiki) | Player wiki source                                                                         |
+| [`scripts`](./scripts)                       | Seeders, world bootstrap, migrations, simulator, lint rules, CI and maintenance tooling    |
+| [`tests`](./tests)                           | Playwright end-to-end tests and repository-wide checks (unit tests sit next to their code) |
+| [`content/changelog`](./content/changelog)   | Changelog notes and release posts                                                          |
+| [`messages`](./messages)                     | UI translations                                                                            |
+| [`public`](./public)                         | Static assets, maps and images                                                             |
+| [`docs`](./docs)                             | Design system reference                                                                    |
+| [`vendor`](./vendor)                         | Vendored npm packages                                                                      |
+| [`.github`](./.github)                       | CI workflows, Semgrep rules, issue templates, security policy, code of conduct             |
 
 ## Quick start
 
@@ -105,7 +107,7 @@ Register at `/register` with your `ADMIN_REGISTRATION_KEY` to get the admin cons
 
 Bug fixes, UI and accessibility polish, tests, documentation and country content are welcome. Balance changes, new mechanics and schema changes start with an issue. Read [CONTRIBUTING.md](./CONTRIBUTING.md) before opening a pull request; AI coding agents should also read [AGENTS.md](./AGENTS.md).
 
-Found an exploit or vulnerability? Report it privately through [SECURITY.md](./SECURITY.md), never in a public issue. Player account problems go through in-game support or [Discord](https://discord.gg/DmF8zJJuqN).
+Found an exploit or vulnerability? Report it privately through [SECURITY.md](./.github/SECURITY.md), never in a public issue. Player account problems go through in-game support or [Discord](https://discord.gg/DmF8zJJuqN).
 
 ## Documentation
 

@@ -90,7 +90,7 @@ Thumbs.db
 next-env.d.ts
 
 # Shared compiled output (source is .ts)
-shared/**/*.js
+src/shared/**/*.js
 
 # Legacy backend (removed per MONOREPO_SETUP; may contain node_modules)
 /backend/

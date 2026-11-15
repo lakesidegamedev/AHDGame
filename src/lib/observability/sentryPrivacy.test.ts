@@ -12,9 +12,9 @@ const runtimes: Record<string, InitOptions> = {};
 
 beforeAll(async () => {
   const init = vi.mocked(Sentry.init);
-  await import("../../../sentry.server.config");
+  await import("../../sentry.server.config");
   runtimes.server = init.mock.calls.at(-1)![0]!;
-  await import("../../../sentry.edge.config");
+  await import("../../sentry.edge.config");
   runtimes.edge = init.mock.calls.at(-1)![0]!;
   initSentryClient();
   runtimes.browser = init.mock.calls.at(-1)![0]!;

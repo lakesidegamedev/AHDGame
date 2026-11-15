@@ -19,7 +19,7 @@ Issues labeled `good-first-issue` are verified and scoped.
 - **New mechanics.** The game has a design direction; talk before you build.
 - **Schema changes.** Anything in `src/lib/db/types` affects a live production database and needs a migration plan.
 
-Exploits and vulnerabilities: never in public issues. See [SECURITY.md](./SECURITY.md).
+Exploits and vulnerabilities: never in public issues. See [SECURITY.md](./.github/SECURITY.md).
 
 ## Local development
 
@@ -76,7 +76,7 @@ Password login plus optional Discord and Google OAuth, optional Turnstile on reg
 
 ```bash
 npm run dev           # dev server
-npm run lint          # ESLint, with custom rules in eslint-rules/
+npm run lint          # ESLint, with custom rules in scripts/eslint-rules/
 npm run typecheck     # tsc --noEmit
 npm run test:run      # Vitest unit and integration suite
 npm run test:e2e      # Playwright, needs the dev server running
