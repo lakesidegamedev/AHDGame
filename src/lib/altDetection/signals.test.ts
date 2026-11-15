@@ -67,6 +67,20 @@ describe("ALT_SIGNAL_REGISTRY", () => {
 describe("oauth_shared", () => {
   const def = getSignalDefinition("oauth_shared")!;
 
+  it("matches an earlier Apple sign-in held by both accounts", () => {
+    const a = facet({ userId: new ObjectId(), providerSubjects: { apple: ["h1", "h2"] } });
+    const b = facet({ userId: new ObjectId(), providerSubjects: { apple: ["h2"] } });
+    const match = def.evaluate(a, b, def.defaultWeight, NOW);
+    expect(match?.weight).toBe(0.97);
+    expect(match?.evidence).toBe("Shared Apple sign-in (now or earlier)");
+  });
+
+  it("does not match different providers that happen to share a hash", () => {
+    const a = facet({ userId: new ObjectId(), providerSubjects: { apple: ["h1"] } });
+    const b = facet({ userId: new ObjectId(), providerSubjects: { google: ["h1"] } });
+    expect(def.evaluate(a, b, def.defaultWeight, NOW)).toBeNull();
+  });
+
   it("matches on shared discordId", () => {
     const a = facet({ userId: new ObjectId(), discordId: "d1" });
     const b = facet({ userId: new ObjectId(), discordId: "d1" });

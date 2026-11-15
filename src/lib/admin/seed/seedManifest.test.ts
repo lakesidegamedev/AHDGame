@@ -142,6 +142,7 @@ describe("runtime lifecycle category determines reset selection", () => {
     "userSubscriptions",
     // Identity and moderation evidence
     "identityObservations",
+    "providerLinkHistory",
     "altLinks",
     "altClusters",
     "suspiciousCharacters",

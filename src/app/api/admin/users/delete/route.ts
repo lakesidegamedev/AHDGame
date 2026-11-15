@@ -18,6 +18,7 @@ import type { Document } from "mongodb";
 import { usersCollection } from "@/lib/db/repositories/users";
 import { actionLogsCollection } from "@/lib/db/repositories/actionLogs";
 import { identityObservationsCollection } from "@/lib/db/repositories/identityObservations";
+import { providerLinkHistoryCollection } from "@/lib/db/repositories/providerLinkHistory";
 
 // POST /api/admin/users/delete — Permanently delete a user account and their character.
 // Auth: requireAdmin
@@ -173,6 +174,8 @@ export const POST = withNoStore(async (request: Request) => {
     // removes the account's IP and fingerprint evidence rather than orphaning
     // 90 days of it.
     await identityObservationsCollection<Document>(db).deleteMany({ userId: objectId });
+    // Login-account link history goes with the account it describes.
+    await providerLinkHistoryCollection<Document>(db).deleteMany({ userId: objectId });
 
     // Delete the user
     await usersCollectionHandle.deleteOne({ _id: objectId });

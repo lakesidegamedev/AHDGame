@@ -1,3 +1,4 @@
+import { sharedProviderSubject } from "@/lib/auth/rules/providerLinkHistory";
 import type { ObjectId } from "mongodb";
 import type { AltSignal } from "@/lib/db/types/altDetection";
 import type { StoredFingerprintComponents } from "@/lib/utils/fingerprint";
@@ -98,6 +99,9 @@ export interface AltCandidateFacet {
   discordId?: string;
   googleId?: string;
   googleEmail?: string;
+  /** Keyed hashes of login-account subjects held now or earlier, per provider
+   * (`providerLinkHistory` plus the current ids). Raw ids never appear here. */
+  providerSubjects?: Partial<Record<"apple" | "discord" | "google", string[]>>;
   deviceKey?: string;
   trackingId?: string;
   /** All known fingerprint hashes (registration + last + history). */
@@ -423,13 +427,23 @@ export const ALT_SIGNAL_REGISTRY: SignalDefinition[] = [
   {
     type: "oauth_shared",
     defaultWeight: 0.97,
-    description: "Same Discord/Google account linked to both users — definitive.",
+    description:
+      "Same Apple, Discord or Google account linked to both users, now or earlier, definitive.",
     evaluate: (a, b, weight, now) => {
       if (a.discordId && a.discordId === b.discordId) {
         return { weight, evidence: "Shared Discord account link", detectedAt: now };
       }
       if (a.googleId && a.googleId === b.googleId) {
         return { weight, evidence: "Shared Google account link", detectedAt: now };
+      }
+      const sharedProvider = sharedProviderSubject(a.providerSubjects, b.providerSubjects);
+      if (sharedProvider) {
+        const label = { apple: "Apple", discord: "Discord", google: "Google" }[sharedProvider];
+        return {
+          weight,
+          evidence: `Shared ${label} sign-in (now or earlier)`,
+          detectedAt: now,
+        };
       }
       if (
         a.googleEmail &&

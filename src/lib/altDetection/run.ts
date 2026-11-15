@@ -51,6 +51,8 @@ import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 import { activityLogCollection } from "@/lib/db/repositories/activityLog";
 import type { Document } from "mongodb";
 import { actionLogsCollection } from "@/lib/db/repositories/actionLogs";
+import { providerLinkHistoryCollection } from "@/lib/db/repositories/providerLinkHistory";
+import { providerSubjectHash } from "@/lib/auth/providerLinkHistory";
 import { suspiciousCharactersCollection } from "@/lib/db/repositories/suspiciousCharacters";
 import { actionAuditLogCollection } from "@/lib/db/repositories/actionAuditLog";
 
@@ -397,6 +399,41 @@ async function buildCandidateFacets(
     userToCharIds.set(uid, arr);
   }
   const candidateCharacterIds = characters.map((c) => c._id);
+
+  // ── login-account subjects, now or earlier ───────────────────────────
+  const providerSubjectsByUser = new Map<
+    string,
+    Partial<Record<"apple" | "discord" | "google", Set<string>>>
+  >();
+  const addProviderSubject = (
+    uid: string,
+    provider: "apple" | "discord" | "google",
+    hash: string | null
+  ) => {
+    if (!hash) return;
+    const byProvider = providerSubjectsByUser.get(uid) ?? {};
+    const set = byProvider[provider] ?? new Set<string>();
+    set.add(hash);
+    byProvider[provider] = set;
+    providerSubjectsByUser.set(uid, byProvider);
+  };
+  for (const u of users) {
+    const uid = u._id.toString();
+    addProviderSubject(uid, "apple", providerSubjectHash("apple", u.appleId));
+    addProviderSubject(uid, "discord", providerSubjectHash("discord", u.discordId));
+    addProviderSubject(uid, "google", providerSubjectHash("google", u.googleId));
+  }
+  const linkHistoryRows = await providerLinkHistoryCollection<Document>(db)
+    .find(
+      { userId: { $in: candidateUserIds } },
+      { projection: { userId: 1, provider: 1, subjectHash: 1 } }
+    )
+    .toArray();
+  for (const row of linkHistoryRows) {
+    if (row.provider === "apple" || row.provider === "discord" || row.provider === "google") {
+      addProviderSubject(String(row.userId), row.provider, String(row.subjectHash));
+    }
+  }
 
   // ── ips / fingerprints / login timestamps ────────────────────────────
   const ipsByUser = new Map<string, Map<string, AltIpObservation>>();
@@ -809,6 +846,12 @@ async function buildCandidateFacets(
       discordId: u.discordId,
       googleId: u.googleId,
       googleEmail: u.googleEmail,
+      providerSubjects: Object.fromEntries(
+        Object.entries(providerSubjectsByUser.get(uid) ?? {}).map(([provider, hashes]) => [
+          provider,
+          [...(hashes ?? [])],
+        ])
+      ),
       deviceKey: eligibility.deviceKey.eligible ? u.deviceKey : undefined,
       trackingId: eligibility.trackingId.eligible ? u.trackingId : undefined,
       fingerprints: [...(fingerprintsByUser.get(uid) ?? [])],

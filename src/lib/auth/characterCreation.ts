@@ -1,4 +1,5 @@
 import { requiresDiscordForNewCharacter } from "@/lib/auth/rules/discordCharacterGate";
+import { appleExemptsDiscordGate } from "@/lib/auth/providerLinkHistory";
 import { NEW_CHARACTER_STARTING_INFLUENCE } from "@shared/constants/formulas";
 import {
   campaignAnchorToLocal,
@@ -207,16 +208,22 @@ export async function createCharacterForAccount(userId: string, data: CreateChar
     );
   }
 
+  const appleExempt =
+    gameConfig.discordLinkRequiredForCharacter === true && userDoc?.appleId && userDoc._id
+      ? await appleExemptsDiscordGate(db, userDoc._id, userDoc.appleId)
+      : true;
   if (
     requiresDiscordForNewCharacter(
       gameConfig.discordLinkRequiredForCharacter,
       userDoc?.discordId,
-      userDoc?.appleId
+      appleExempt ? userDoc?.appleId : null
     )
   ) {
     return errorResponse(
       403,
-      "Link your Discord account before creating a new character. Your existing characters remain playable.",
+      userDoc?.appleId
+        ? "This Apple account was used on another account before, so Discord linking is required. Link your Discord account before creating a new character. Your existing characters remain playable."
+        : "Link your Discord account before creating a new character. Your existing characters remain playable.",
       { code: "DISCORD_LINK_REQUIRED" }
     );
   }
