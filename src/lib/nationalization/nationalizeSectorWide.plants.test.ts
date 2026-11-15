@@ -279,7 +279,7 @@ describe("nationalizeSectorWide — plants capacity conservation", () => {
 });
 
 // ── (c) no capacity is conjured from a market ceiling ──
-describe("nationalizeSectorWide — plants never mint capacity", () => {
+describe("nationalizeSectorWide: plants never mint capacity", () => {
   let db: MockDb;
   const natRowId = new ObjectId();
 

@@ -1073,7 +1073,7 @@ export async function nationalizeWholeCorp(
   //       fans across split-offs + primary; each MERGES into the NatCorp's
   //       existing (state, type) holding so a repeat can't collide on the unique
   //       index). FOREIGN sectors (operated outside this country) cannot be held
-  //       under another jurisdiction — the host country's state enterprise takes
+  //       under another jurisdiction: the host country's state enterprise takes
   //       them, or they are dissolved when it has none. A sector with no countryId defaults to domestic (legacy-safe).
   const domesticSectors = targetSectors.filter(
     (s) => !s.countryId || s.countryId === params.countryId

@@ -27,7 +27,7 @@
  *     credited free build orders for capacity they already paid for. That is a
  *     SECOND supply wave, landing ~24 turns later, and it is invisible on the
  *     flip turn itself.
- *  4. **Whether any sector's data would break the flip identity** — a nameplate
+ *  4. **Whether any sector's data would break the flip identity**: a nameplate
  *     that is negative or non-finite, an output mix that prices to nothing, a
  *     sector already migrated but with no capacity left.
  *
