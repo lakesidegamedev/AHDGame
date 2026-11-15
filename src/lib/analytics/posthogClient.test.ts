@@ -1,3 +1,4 @@
+import { replaySampleRate } from "./posthogMode";
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 const state = vi.hoisted(() => ({
@@ -160,7 +161,7 @@ describe("PostHog consent boundary", () => {
     const config = state.init.mock.calls[0]?.[1] as Record<string, unknown>;
     expect(config.disable_session_recording).toBeUndefined();
     expect(config.session_recording).toMatchObject({
-      sampleRate: 0.1,
+      sampleRate: replaySampleRate(),
       maskAllInputs: true,
       recordHeaders: false,
       recordBody: false,
