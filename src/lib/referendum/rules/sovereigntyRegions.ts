@@ -52,6 +52,13 @@ export interface SovereigntyRegion {
    * seats two senators per state). Absent when the chamber follows its regions.
    */
   readonly parentUpperChamberSeats?: number;
+  /**
+   * Set when the "region" is a bloc of the parent's regions that leave
+   * together on one referendum (several US states becoming one country). The
+   * entry's `regionId` then names the bloc and these are its member regions.
+   * Absent for a single region.
+   */
+  readonly memberRegionIds?: readonly string[];
 }
 
 export const SOVEREIGNTY_REGIONS: readonly SovereigntyRegion[] = [
@@ -203,6 +210,13 @@ export function isSovereigntyRegion(regionId: string): boolean {
 /** True when the region's office names its mood as sovereignty rather than devolution. */
 export function usesSovereigntyWording(regionId: string): boolean {
   return sovereigntyRegion(regionId)?.wording === "sovereignty";
+}
+
+/** The member regions of a bloc entry, or the region itself for a single-region entry. */
+export function sovereigntyMemberRegionIds(regionId: string): string[] {
+  const entry = sovereigntyRegion(regionId);
+  if (!entry) return [];
+  return entry.memberRegionIds ? [...entry.memberRegionIds] : [entry.regionId];
 }
 
 /** Region ids for one country, in registry order. */
