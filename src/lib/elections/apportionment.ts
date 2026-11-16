@@ -183,13 +183,25 @@ export async function loadApportionment(
   year?: number | null,
   houseSeatsOverride?: Readonly<Record<string, number>>
 ): Promise<Apportionment> {
-  const usStates = (await statesCollection<Document>(db)
-    .find({ countryId: "US" }, { projection: { _id: 1, houseDistricts: 1, admittedYear: 1 } })
+  // One read covers the US states and any successor country that has seceded.
+  const successors = successorCountryIds(SOVEREIGNTY_REGIONS, "US");
+  const rows = (await statesCollection<Document>(db)
+    .find(
+      { countryId: { $in: ["US", ...successors] } },
+      { projection: { _id: 1, countryId: 1, houseDistricts: 1, admittedYear: 1 } }
+    )
     .toArray()) as unknown as Array<{
     _id: string;
+    countryId?: string;
     houseDistricts?: number;
     admittedYear?: number;
   }>;
+  const usStates = rows.filter((row) => !successors.includes(row.countryId ?? ""));
+  const seated = new Set(
+    rows.flatMap((row) =>
+      row.countryId != null && successors.includes(row.countryId) ? [row.countryId] : []
+    )
+  );
   const live: Record<string, number> = houseSeatsOverride ? { ...houseSeatsOverride } : {};
   if (!houseSeatsOverride) {
     for (const s of usStates) {
@@ -199,9 +211,7 @@ export async function loadApportionment(
   // A future-dated admission must not count yet — the year gate is what keeps
   // this consistent with the DC/ME-NE gates above.
   const admitted = admittedStateIdsAsOf(usStates, resolveApportionmentYear(preset, year));
-  const departed = stateIdsOfDeparted(
-    departedRegions(SOVEREIGNTY_REGIONS, "US", await seatedSuccessors(db, "US"))
-  );
+  const departed = stateIdsOfDeparted(departedRegions(SOVEREIGNTY_REGIONS, "US", seated));
   return buildApportionment(live, preset, year, admitted, departed);
 }
 
@@ -245,9 +255,9 @@ export async function seatedSuccessors(
 ): Promise<Set<string>> {
   const successors = successorCountryIds(SOVEREIGNTY_REGIONS, countryId);
   if (successors.length === 0) return new Set();
-  const rows = (await statesCollection<Document>(db)
+  const rows = await statesCollection(db)
     .find({ countryId: { $in: successors } }, { projection: { countryId: 1 } })
-    .toArray()) as unknown as Array<{ countryId?: string }>;
+    .toArray();
   return new Set(
     rows.flatMap((row) =>
       typeof row.countryId === "string" && successors.includes(row.countryId) ? [row.countryId] : []
