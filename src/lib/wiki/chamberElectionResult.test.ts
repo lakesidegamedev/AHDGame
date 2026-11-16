@@ -1,6 +1,10 @@
 import { ObjectId } from "mongodb";
 import { describe, expect, it } from "vitest";
-import { foldRegionTallies, sameChamberTypes } from "./chamberElectionResult";
+import {
+  buildPartySeatHistory,
+  foldRegionTallies,
+  sameChamberTypes,
+} from "./chamberElectionResult";
 
 const info = new Map([
   ["1", { name: "Labour Party", abbreviation: "LAB", color: "#e00" }],
@@ -92,5 +96,49 @@ describe("foldRegionTallies", () => {
       info
     );
     expect(parties[0].seats).toBe(2);
+  });
+});
+
+describe("buildPartySeatHistory", () => {
+  const mk = (type: string, cycle: number, day: number) => {
+    const rows = [new ObjectId(), new ObjectId()].map((_id) => ({
+      _id,
+      electionType: type,
+      cycle,
+      totalSeats: 2,
+      endTime: new Date(Date.UTC(2026, 0, day)),
+    }));
+    return rows;
+  };
+  const tally = (electionId: ObjectId, labSeats: number) => ({
+    electionId,
+    totalVotes: { l: 60, c: 40 },
+    candidateParties: { l: "1", c: "2" },
+    seatsEstimate: { l: labSeats, c: 2 - labSeats },
+    finalized: true,
+  });
+
+  it("builds a chronological line per chamber with seat change", () => {
+    const first = mk("commons", 1, 1);
+    const snap = mk("snap_commons", 2, 20);
+    const elections = [...snap, ...first];
+    const tallies = [...first.map((e) => tally(e._id, 1)), ...snap.map((e) => tally(e._id, 2))];
+    const history = buildPartySeatHistory("1", elections, tallies, info, () => 1990);
+    expect(history).toHaveLength(1);
+    expect(history[0].chamberLabel).toBe("House of Commons");
+    expect(history[0].points.map((p) => p.seats)).toEqual([2, 4]);
+    expect(history[0].points.map((p) => p.seatChange)).toEqual([null, 2]);
+    expect(history[0].points[1].electionType).toBe("snap_commons");
+  });
+
+  it("skips chambers where the party never took part", () => {
+    const first = mk("commons", 1, 1);
+    const tallies = first.map((e) => tally(e._id, 1));
+    expect(buildPartySeatHistory("9", first, tallies, info, () => 1990)).toEqual([]);
+  });
+
+  it("ignores a lone race that is not a whole chamber election", () => {
+    const [only] = mk("commons", 1, 1);
+    expect(buildPartySeatHistory("1", [only], [tally(only._id, 1)], info, () => 1990)).toEqual([]);
   });
 });

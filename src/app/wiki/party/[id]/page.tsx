@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getPartyData } from "@/lib/wiki/partyData";
+import { getPartyData, getPartySeatHistory } from "@/lib/wiki/partyData";
+import { PartySeatHistory } from "@/components/wiki/PartySeatHistory";
 import { getPartyFlavor } from "@/lib/wiki/partyFlavor";
 import { PolicyAlignmentCard } from "@/components/PolicyAlignmentCard";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
@@ -33,6 +34,13 @@ export default async function WikiPartyPage({ params, searchParams }: PageProps)
   const data = await getPartyData(id, parseCountryParam(country));
   if (!data) notFound();
 
+  const seatHistory = await getPartySeatHistory(
+    data.countryId,
+    data.id,
+    data.name,
+    data.abbreviation,
+    data.color
+  );
   const flavor = getPartyFlavor(data.id, data.name, data.abbreviation);
 
   return (
@@ -123,6 +131,8 @@ export default async function WikiPartyPage({ params, searchParams }: PageProps)
           </div>
         </div>
       </section>
+
+      <PartySeatHistory history={seatHistory} color={data.color} />
 
       <footer className="mt-12 border-t border-card-border pt-6">
         <Link href="/wiki/parties" className="text-sm text-muted hover:text-primary">

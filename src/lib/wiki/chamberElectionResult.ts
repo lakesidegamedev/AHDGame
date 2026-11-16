@@ -233,3 +233,138 @@ export async function loadChamberResult(
     government: await loadGovernment(db, election, partyInfo),
   };
 }
+
+export interface PartySeatPoint {
+  year: number | null;
+  endTime: string | null;
+  seats: number;
+  totalSeats: number;
+  votePct: number | null;
+  /** Seats minus the party's seats at the chamber's previous election. */
+  seatChange: number | null;
+  /** Snap and by-elections are marked so the chart reads correctly. */
+  electionType: string;
+}
+
+export interface PartySeatHistory {
+  chamberLabel: string;
+  points: PartySeatPoint[];
+}
+
+interface HistoryElectionRow {
+  _id: Election["_id"];
+  electionType: string;
+  cycle: number;
+  chamberClass?: Election["chamberClass"];
+  totalSeats?: number;
+  endTime?: Date;
+  electionYear?: number | null;
+}
+
+/**
+ * Groups region races into whole-chamber elections and returns one party's
+ * seat line per chamber, oldest first. Pure so the grouping can be tested.
+ */
+export function buildPartySeatHistory(
+  partyId: string,
+  elections: HistoryElectionRow[],
+  tallies: TallyRow[],
+  partyInfo: Map<string, WikiPartyInfo>,
+  yearOf: (e: HistoryElectionRow) => number | null
+): PartySeatHistory[] {
+  const groups = new Map<string, HistoryElectionRow[]>();
+  for (const e of elections) {
+    const key = `${e.electionType}|${e.cycle}|${e.chamberClass ?? ""}`;
+    const list = groups.get(key);
+    if (list) list.push(e);
+    else groups.set(key, [e]);
+  }
+
+  const byChamber = new Map<string, Array<PartySeatPoint & { sortTime: number }>>();
+  for (const members of groups.values()) {
+    if (members.length < 2) continue;
+    const first = members[0];
+    const chamberLabel = CHAMBER_LABELS[first.electionType] ?? "Legislature";
+    const { parties, totalSeats } = foldRegionTallies(members, tallies, partyInfo);
+    if (totalSeats <= 0) continue;
+    const totalVotes = parties.reduce((sum, p) => sum + p.votes, 0);
+    const mine = parties.find((p) => p.partyId === partyId);
+    const endMs = Math.max(...members.map((m) => m.endTime?.getTime() ?? 0));
+    const point = {
+      year: yearOf(first),
+      endTime: endMs > 0 ? new Date(endMs).toISOString() : null,
+      seats: mine?.seats ?? 0,
+      totalSeats,
+      votePct: totalVotes > 0 ? ((mine?.votes ?? 0) / totalVotes) * 100 : null,
+      seatChange: null as number | null,
+      electionType: first.electionType,
+      sortTime: endMs,
+    };
+    const list = byChamber.get(chamberLabel);
+    if (list) list.push(point);
+    else byChamber.set(chamberLabel, [point]);
+  }
+
+  const out: PartySeatHistory[] = [];
+  for (const [chamberLabel, list] of byChamber) {
+    list.sort((a, b) => a.sortTime - b.sortTime);
+    // A party that never won a seat or a vote in a chamber has no history there.
+    if (!list.some((p) => p.seats > 0 || (p.votePct ?? 0) > 0)) continue;
+    const points = list.map(({ sortTime: _sortTime, ...point }, i) => ({
+      ...point,
+      seatChange: i === 0 ? null : point.seats - list[i - 1].seats,
+    }));
+    out.push({ chamberLabel, points });
+  }
+  return out.sort((a, b) => a.chamberLabel.localeCompare(b.chamberLabel));
+}
+
+/** Seat history for one party across every chamber election in its country. */
+export async function loadPartySeatHistory(
+  db: Db,
+  countryId: string,
+  partyId: string,
+  partyInfo: Map<string, WikiPartyInfo>,
+  anchor: CycleAnchorContext
+): Promise<PartySeatHistory[]> {
+  const elections = await electionsCollection(db)
+    .find(
+      {
+        countryId: countryId as Election["countryId"],
+        electionType: { $in: [...NATIONAL_AGGREGATION_TYPES] },
+        status: { $in: ENDED },
+      },
+      {
+        projection: {
+          _id: 1,
+          electionType: 1,
+          cycle: 1,
+          chamberClass: 1,
+          totalSeats: 1,
+          endTime: 1,
+          electionYear: 1,
+          countryId: 1,
+        },
+      }
+    )
+    .toArray();
+  if (elections.length === 0) return [];
+
+  const tallies = await electionVoteTalliesCollection(db)
+    .find({ electionId: { $in: elections.map((e) => e._id) } })
+    .project<TallyRow>({
+      electionId: 1,
+      totalVotes: 1,
+      candidateParties: 1,
+      seatsEstimate: 1,
+      finalized: 1,
+    })
+    .toArray();
+
+  return buildPartySeatHistory(partyId, elections, tallies, partyInfo, (e) =>
+    resolveElectionYear(
+      { electionType: e.electionType, cycle: e.cycle, electionYear: e.electionYear, countryId },
+      anchor
+    )
+  );
+}
