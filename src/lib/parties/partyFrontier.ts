@@ -34,6 +34,8 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { isPartyAdjacencyEnabled } from "./adjacencyFlag";
+import { partyGrowthRegions } from "./rules/adjacencyGate";
 
 /** Keep paths inside the country's current region set, including transferred regions. */
 export function getTerritoryAdjacency(
@@ -191,12 +193,16 @@ export async function getPartyFrontier(
 ): Promise<{ presence: Set<string>; frontier: Set<string> }> {
   const regions = regionIds ?? (await getCountryRegionIds(db, countryId));
   const presence = await getPartyPresenceStates(db, countryId, partyId, regions);
+  const adjacencyEnabled = await isPartyAdjacencyEnabled(db);
   // An empty presence already fails open, so only a present party needs the read.
   const reentry =
-    presence.size > 0
+    adjacencyEnabled && presence.size > 0
       ? ((await loadReentryRegions(db, countryId, [partyId])).get(partyId) ?? [])
       : [];
-  return { presence, frontier: frontierFromPresence(countryId, presence, regions, reentry) };
+  return {
+    presence,
+    frontier: frontierFromPresence(countryId, presence, regions, reentry, adjacencyEnabled),
+  };
 }
 
 /**
@@ -208,7 +214,8 @@ export function frontierFromPresence(
   countryId: CountryId,
   presence: ReadonlySet<string>,
   regions: readonly string[],
-  reentry: readonly string[]
+  reentry: readonly string[],
+  adjacencyEnabled = true
 ): Set<string> {
   const frontier = connectedGrowthFrontier(
     presence,
@@ -220,7 +227,7 @@ export function frontierFromPresence(
       if (regions.includes(region)) frontier.add(region);
     }
   }
-  return frontier;
+  return partyGrowthRegions(frontier, regions, adjacencyEnabled);
 }
 
 /** Regions each party may re-enter under party renewal. Empty without renewal rows. */
@@ -291,6 +298,9 @@ export async function getPartyFrontiers(
 ): Promise<Map<string, string[] | null>> {
   if (partyIds.length === 0) return new Map();
   const regions = await getCountryRegionIds(db, countryId);
+  if (!(await isPartyAdjacencyEnabled(db))) {
+    return new Map(partyIds.map((id) => [id, [...regions].sort()]));
+  }
   const presence = await getPartyPresenceMap(db, countryId, partyIds, regions);
   const present = [...presence].filter(([, states]) => states.size > 0).map(([id]) => id);
   const reentry = present.length > 0 ? await loadReentryRegions(db, countryId, present) : new Map();
