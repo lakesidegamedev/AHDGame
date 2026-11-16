@@ -75,7 +75,7 @@ export async function splitParties(
 
   const regionSeqIds = new Set<number>();
   for (const o of officials)
-    if (members.has(o.state) && o.party && o.party !== "independent")
+    if (members.has(o.state ?? "") && o.party && o.party !== "independent")
       regionSeqIds.add(Number(o.party));
   for (const g of orgs) if (members.has(g.stateId)) regionSeqIds.add(Number(g.partyId));
 
@@ -88,7 +88,7 @@ export async function splitParties(
   // flip Sinn Fein or the SNP from a wholesale transfer to being dissolved on
   // the secession their region just voted for.
   const hasOutsidePresence = (seqId: number): boolean =>
-    officials.some((o) => o.party === String(seqId) && !members.has(o.state)) ||
+    officials.some((o) => o.party === String(seqId) && !members.has(o.state ?? "")) ||
     orgs.some(
       (g) =>
         g.partyId === String(seqId) &&

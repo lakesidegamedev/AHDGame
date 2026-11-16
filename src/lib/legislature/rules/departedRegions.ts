@@ -1,3 +1,4 @@
+import type { CountryId } from "@/lib/constants/countries";
 import type { SovereigntyRegion } from "@/lib/referendum/rules/sovereigntyRegions";
 
 /**
@@ -23,7 +24,7 @@ export function departedRegions(
 export function successorCountryIds(
   entries: readonly SovereigntyRegion[],
   countryId: string
-): string[] {
+): CountryId[] {
   return entries.flatMap((entry) =>
     entry.countryId === countryId && entry.actuates && entry.successorCountryId
       ? [entry.successorCountryId]

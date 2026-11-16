@@ -154,8 +154,8 @@ export async function finishSecession(
     label: string;
     title: string;
     details: Record<string, unknown>;
-    fromCountryId: string;
-    toCountryId: string;
+    fromCountryId: CountryId;
+    toCountryId: CountryId;
     currentTurn: number;
   }
 ): Promise<void> {

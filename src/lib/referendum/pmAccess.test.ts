@@ -12,7 +12,7 @@ describe("referendum PM access", () => {
     vi.clearAllMocks();
     vi.mocked(getCountryState).mockResolvedValue({
       governmentType: "parliamentary",
-    } as Awaited<ReturnType<typeof getCountryState>>);
+    } as never);
   });
   it("does not let party leadership override a human PM", async () => {
     const db = createMockDb();
@@ -51,7 +51,7 @@ describe("referendum PM access", () => {
     beforeEach(() => {
       vi.mocked(getCountryState).mockResolvedValue({
         governmentType: "presidential",
-      } as Awaited<ReturnType<typeof getCountryState>>);
+      } as never);
     });
 
     it("lets only the sitting human President decide", async () => {

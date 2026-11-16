@@ -196,10 +196,11 @@ export async function loadApportionment(
     houseDistricts?: number;
     admittedYear?: number;
   }>;
-  const usStates = rows.filter((row) => !successors.includes(row.countryId ?? ""));
+  const successorSet: ReadonlySet<string> = new Set(successors);
+  const usStates = rows.filter((row) => !successorSet.has(row.countryId ?? ""));
   const seated = new Set(
     rows.flatMap((row) =>
-      row.countryId != null && successors.includes(row.countryId) ? [row.countryId] : []
+      row.countryId != null && successorSet.has(row.countryId) ? [row.countryId] : []
     )
   );
   const live: Record<string, number> = houseSeatsOverride ? { ...houseSeatsOverride } : {};
