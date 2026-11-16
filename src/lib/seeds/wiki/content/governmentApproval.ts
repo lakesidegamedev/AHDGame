@@ -1,8 +1,8 @@
 export const governmentApprovalContent = `# Government Approval
 
-Leave half your cabinet empty and you start every turn 3.75 points in the hole; leave all of it empty and it is 7.5. Drag the country into a long war and the public wears down at a point a year. Government approval is the share of a country's people who support the government, from 0 to 100, scored from how the country is actually doing rather than how popular any one politician is. It matters because it scales the votes parties win in every election.
+Leave half your cabinet empty and you start every turn 3.8 points in the hole; leave all of it empty and it is 7.5. Drag the country into a long war and the public wears down at a point a year. Government approval is the share of a country's people who support the government, from 0 to 100, scored from how the country is actually doing rather than how popular any one politician is. It matters because it scales the votes parties win in every election.
 
-Open a country's Approval page to see approval, disapproval and net approval, the last 20 turns of history, and every active modifier with its value. A net approval above +10 is comfortable. Below 0 is a warning. Approval and disapproval always add to 100: there is no undecided group, and net approval is approval minus disapproval.
+Open a country's Approval page to see approval, disapproval and net approval, the last 20 turns of history, and every active modifier with a non-zero value. A net approval above +10 is comfortable. Below 0 is a warning. Approval and disapproval always add to 100: there is no undecided group, and net approval is approval minus disapproval.
 
 ![Country Approval page showing national approval, the state average and the regional conditions list](/wiki-images/screens/government-approval-country-approval.webp)
 
@@ -117,7 +117,7 @@ Rank your levers by size:
 4. Watch the named conditions. Metrics are scored against the national average, so lifting every state together barely moves the metric part; nationwide booms and slumps reach approval through conditions such as Economic Boom, Recession and High Unemployment.
 5. Close the gap in lagging states. A state that trails the national average on many metrics drags its own score, and populous states weigh most in the national figure.
 
-As opposition, track the named conditions. Rising unemployment that trips High Unemployment or Recession pulls approval down within a few turns, and the election multiplier makes that matter at the ballot box. Inflation has no direct approval term.
+As opposition, track the named conditions. Rising unemployment that trips High Unemployment or Recession pulls approval down within a few turns, and the election multiplier makes that matter at the ballot box. Inflation above 3% costs 1.5 approval points for each point over.
 
 If approval is under 40, expect recovery to take time. State ratings move at most 2 points a turn, so a 10 point gap needs at least 5 turns even if every metric turns around at once. National modifiers such as the cabinet penalty are the fast fixes. If approval dropped this turn, check the modifier lines first: a war line, an empty seat or a new Recession condition shows up there.
 
@@ -132,9 +132,9 @@ Each state's approval scales the vote pool in every election there:
 approval-vote-pool-multiplier
 \`\`\`
 
-This applies in [General Elections](/wiki/general-elections) races, and [Election Mechanics](/wiki/election-mechanics) scales the pool for the governing party. Regional approval also pushes independence and reunification desire toward the First Minister's stance. Low Westminster approval raises separation desire and high Westminster approval lowers it, independently of Westminster's stance ([Independence and Reunification Referendums](/wiki/referendums)).
+This applies in [General Elections](/wiki/general-elections) races, and [Election Mechanics](/wiki/election-mechanics) scales the pool by approval and office strength. Regional approval also pushes independence and reunification desire toward the First Minister's stance. Low Westminster approval raises separation desire and high Westminster approval lowers it, independently of Westminster's stance ([Independence and Reunification Referendums](/wiki/referendums)).
 
-Low approval does not trigger a snap election and does not remove the head of government. In the UK, approval below 50 does make NPP ministers more likely to resign and erodes the government's confidence gauge. Snap elections in parliamentary countries (UK, Japan, Germany) come from only two things: the Prime Minister (or Chancellor in Germany) choosing to dissolve the lower chamber, or no Prime Minister being appointed within 96 turns of the government entering pending status. See [Snap Elections](/wiki/snap-elections).
+Sustained low approval (4 turns in a row under 30, at least a year after the last election) can trigger a snap election, but it does not remove the head of government. In the UK, approval below 50 does make NPP ministers more likely to resign and erodes the government's confidence gauge. Snap elections in parliamentary countries (UK, Japan, Germany) come from the Prime Minister (or Chancellor in Germany) choosing to dissolve the lower chamber, no Prime Minister being appointed within 96 turns of the government entering pending status, or, in the UK when the rule is on, the confidence gauge bottoming out. See [Snap Elections](/wiki/snap-elections).
 
 Live in every world for every country. A world set in an earlier era ignores metrics that did not exist yet. The acting appointment penalty applies only in presidential countries with confirmation. War lines appear only for countries at war, or still carrying exhaustion from one. The union crackdown line appears only where unions are banned. Bank failure lines appear only in worlds with private banking. Last checked 2026-10-29, version 1.18.0. Exact rules: [Government Approval (design)](https://docs.lakesidegames.net/design/government-approval.html). See also: [Glossary](/wiki/glossary)
 `;

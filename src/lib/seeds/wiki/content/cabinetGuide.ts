@@ -12,12 +12,12 @@ import { OFFICE_POOL_TOP_UP_AP_COST } from "@/lib/actions/officePoolTopUpRules";
  */
 export const cabinetGuideContent = `# Cabinet Guide
 
-A minister in this game is not a title. Every cabinet seat in A House Divided is a real executive office with its own dashboard, metrics, and levers. This page is the live reference for every country's cabinet: pick a country tab below to see each post in succession order, the metrics it influences, and every action it can take.
+A minister in this game is not a title. Every cabinet seat in A House Divided is a real executive office with its own dashboard, metrics, and levers. This page is the live reference for every country's cabinet: pick a country tab below to see each post in succession order, the metrics it influences, and the levers and buildings it has.
 
 ## Who appoints the ministers
 
 - **Presidential systems (US, NG):** the President nominates and the Senate confirms. See [Cabinet](/wiki/cabinet) and the [Confirmation Process](/wiki/confirmation-process).
-- **Parliamentary systems (UK, DE, JP, IE):** the head of government appoints ministers directly after [Government Formation](/wiki/government-formation), with no confirmation vote. The whole cabinet resets when the government changes. One-party states (China, the Soviet Union, East Germany) also appoint ministers directly, by the Premier, the Chairman of the Council of Ministers or the General Secretary. Scotland and Wales are latent countries; they are not live player cabinets.
+- **Parliamentary systems (UK, DE, JP, IE):** the head of government appoints ministers directly after [Government Formation](/wiki/government-formation), with no confirmation vote. The whole cabinet resets when the government changes. One-party states (China, the Soviet Union, East Germany) also appoint ministers directly, by the Premier, the Chairman of the Council of Ministers or the General Secretary. Scotland and Wales have their own live cabinets, which mirror the Westminster portfolios with local titles.
 
 ## The levers a seat can pull
 

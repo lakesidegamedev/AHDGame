@@ -31,7 +31,7 @@ The general uses the swing-flow model: the same per-group pipeline as [Election 
 - Voter groups reward candidates whose positions are close to their centre ([Party Ideology](/wiki/party-ideology)). Influence does not feed appeal; it enters the vote only through reach.
 - Approval is (favorability / 100) to the power 0.8, so 0% favorability means 0 votes.
 - Party organization ([Party Organization](/wiki/party-organization)) is your party's share of the state's total, to the power 0.2. It applies in the general only. Primaries use a neutral 1x.
-- Registration makes a party's own voters harder to peel away (1.0x to 1.3x). Short-term support scales your base share of each group between 0.6x and 1.4x, and a support lead over a rival also drives votes your way in the swing between parties.
+- Registration makes a party's own voters harder to peel away (1.0x to 1.3x). Short-term support scales your base share of each group between 0.6x and 1.4x. Support does not feed the swing between parties.
 - Player characters lose up to 5% of their weight at infamy 100.
 - NPPs (computer-run candidates, see [NPP Elections](/wiki/npp-elections)) get an 0.8x weight in a general where at least one player is in the race.
 - UK elections also weight each party by the square root of its current registration share. A party at 25 registration gets 0.5x, and a party at 100 gets 1.0x. A party can grow from zero without being erased.
@@ -56,17 +56,17 @@ favorability-vote-scalar
 | Canvassing when the race ends within 4 turns | 2x |
 | Out-of-state action cost (Support and Attack) | 1.25x neighbour, 1.5x other |
 | Full Demographic Poll | 6 actions, ₳75,000 base |
-| Vice President | +2 actions per turn, +₳25,000 per turn |
+| Vice President | Pool of up to 2 banked actions (+1 every 12 turns), +₳25,000 per turn |
 
 ### Third parties, spoilers and ranked choice
 
 In first-past-the-post states (the default), a third-party candidate draws votes equal to 4% of their own vote from the ideologically nearest major-party candidate, measured on the econ and social grid. Major parties are regional: Democrat and Republican in the US, Labour and Conservative in England, SNP and Labour in Scotland, CDU and SPD in Germany, LDP and CDP in Japan. A strong Green costs the Democrat votes and a strong Libertarian costs the Republican, so major-party candidates should treat viable third parties as a threat in close races. In presidential races the rate is 2% and adjusted for who has more organization in the state.
 
-Regions seeded with **ranked choice voting** (several European countries, such as Ireland and France, use it) get no spoiler adjustment in their own races. Third parties compete on level footing there. No legislation switches a region's voting system, and presidential races always apply the spoiler.
+Regions seeded with **ranked choice voting** (several European countries, such as Ireland and France, use it) get no spoiler adjustment in their own races. Third parties compete on level footing there. Legislation can switch a region to ranked choice voting, and presidential races always apply the spoiler.
 
 ### Multi-seat races
 
-US House, State Senate, UK Commons regions, Bundestag Land races and Shugiin seats use proportional allocation by the largest remainder method; the Bundestag then adds list seats nationally by Sainte-Lague above a 5% threshold. The minimum party share to win a seat in a US House race is 1 divided by (seats + 1), kept between 10% and 20%, so small delegations need 20% and delegations of 9 or more need 10%. State Senate and UK Commons regions use a flat 10%. In a 2-seat House race the winner takes both unless the runner-up reaches the threshold. The seat estimate updates every turn.
+US House, State Senate, UK Commons regions and Shugiin seats use proportional allocation by the largest remainder method; Bundestag Land lists and the national list seats use Sainte-Lague above a 5% threshold. The minimum party share to win a seat in a US House race is 1 divided by (seats + 1), kept between 10% and 20%, so small delegations need 20% and delegations of 9 or more need 10%. State Senate and UK Commons regions use a flat 10%. In a 2-seat House race the winner takes both unless the runner-up reaches the threshold. The seat estimate updates every turn.
 
 If you run in a 4-seat region and your party projects to 42% of the vote, expect about 2 seats. A UK Commons party below 10% gets no seat unless no party clears the gate.
 
@@ -78,13 +78,13 @@ Presidential races resolve by Electoral College. State totals convert to elector
 
 ### Running mates
 
-Each presidential candidate can pick a running mate, and a player nominee without one is given a tentative pick from their party when the primary resolves. The pick must be a player character from the same country, cannot be the current President, cannot be yourself, cannot be an active candidate in the same race, and cannot have used up the presidential term limit. If the ticket wins, the Vice President takes office alongside the President and gets +2 actions per turn and a ₳25,000 per turn fund bonus. You can change your running mate any time before the election resolves, or clear it entirely. A player running mate can also campaign for the ticket as a surrogate. See [Running Mate Surrogate Campaigning](/wiki/running-mate-surrogate).
+Each presidential candidate can pick a running mate, and a player nominee without one is given a tentative pick from their party when the primary resolves. The pick must be a player character from the same country, cannot be the current President, cannot be yourself, cannot be an active candidate in the same race, and cannot have used up the presidential term limit. If the ticket wins, the Vice President takes office alongside the President and gets a pool of up to 2 banked actions (+1 every 12 turns) and a ₳25,000 per turn fund bonus. You can change your running mate any time before the election resolves, or clear it entirely. A player running mate can also campaign for the ticket as a surrogate. See [Running Mate Surrogate Campaigning](/wiki/running-mate-surrogate).
 
 ### Losing after leading
 
 Picture a two-way state general: your share of the votes cast is 52% through the 13 early turns and 50% through the 8 ramp turns, but an opponent's closing push holds you to 44% in the final 4 turns. Your final share is 0.5 x 52% + 0.2 x 50% + 0.3 x 44% = 26.0 + 10.0 + 13.2 = 49.2%. You led for 21 of 25 counting turns and still lost. The same race with the final band at 50% would have been 51.0%, a win. You need a strong closing week as well as a strong start.
 
-**Why did I lose the general after winning the primary?** The primary electorate is your party's registered voters, scored on alignment with them. The general electorate is everyone, scored on alignment with each voter group, and your opponents spent the primary building their own groups. See [Primary vs General Tactics](/wiki/primary-general-tactics).
+**Why did I lose the general after winning the primary?** The primary electorate is the state's voters with turnout scaled by how well they align with your party, and votes are scored across those voter groups. The general electorate is everyone, scored on alignment with each voter group, and your opponents spent the primary building their own groups. See [Primary vs General Tactics](/wiki/primary-general-tactics).
 
 ## Playing the three stages
 
@@ -112,15 +112,15 @@ Your phase plan decides when you spend; the longer version is in [Campaign Strat
 
 - Burn money on ads above favorability 80. The gain per ad is only +1.
 - Sit on influence and hope decay is slow. At 0.75% per turn you lose about 14% over 20 turns, more if your party holds the national executive.
-- Attack everyone. Attacks cost infamy and drain your own favorability.
+- Attack everyone. Attacks add 2 infamy to you and lower the target's favorability by 1.
 - Forget out-of-state costs: Support and Attack on a player in another state cost 1.25x (neighbour) or 1.5x (other) more actions. Barnstorm has no distance cost.
 - Withdraw to save resources unless you are pivoting. Withdrawn candidacies cannot be re-entered.
 
 ## What surrounds the general
 
-Some inputs shape the vote model from outside. [One-Party States](/wiki/one-party-states) apply vote multipliers by party tier, and a [snap election](/wiki/snap-elections) replaces the regular one and runs on the same vote math. Campaign Presence from [Political Operations](/wiki/political-operations) raises a presidential candidate's vote weight, upgrades and field offices in the [Campaign Manager](/wiki/campaign-manager) add votes and turnout, and a surrogate's visits under [Running Mate Surrogate Campaigning](/wiki/running-mate-surrogate) add favorability and turnout. District maps from [US House Redistricting](/wiki/us-house-redistricting) decide which House seats are close.
+Some inputs shape the vote model from outside. [One-Party States](/wiki/one-party-states) apply vote multipliers by party tier, and a [snap election](/wiki/snap-elections) replaces the regular one and runs on the same vote math. Campaign Presence from [Political Operations](/wiki/political-operations) raises a presidential candidate's vote weight, upgrades and field offices in the [Campaign Manager](/wiki/campaign-manager) add votes and turnout, and a surrogate's visits under [Running Mate Surrogate Campaigning](/wiki/running-mate-surrogate) add favorability. District maps from [US House Redistricting](/wiki/us-house-redistricting) decide which House seats are close.
 
 On the output side, the [Vote Factor Ledger](/wiki/vote-factor-ledger) explains each presidential candidate's votes from the latest counting turn, and [Live Election Results](/wiki/live-election-results) shows what the general phase length and final-turn weighting reveal on election night. Resolving a presidential general cuts every stored presence level to 25%.
 
-Thresholds above are for the US unless stated. The UK, Germany and Japan use their own cycle lengths and seat rules; see the country hubs. The Electoral College applies to the US presidency only. Live in every world and country with elections. Last checked 2026-10-30, version 1.18.0. Exact rules: [Elections (design)](https://docs.lakesidegames.net/design/elections.html). See also [Reference: Formulas](/wiki/reference-formulas) and [Fundraising and Ads](/wiki/fundraising-ads).
+Thresholds above are for the US unless stated. The UK, Germany and Japan use their own cycle lengths and seat rules; see the country hubs. The Electoral College applies to the US presidency only. Elections in some countries are gated by status or era. Last checked 2026-10-30, version 1.18.0. Exact rules: [Elections (design)](https://docs.lakesidegames.net/design/elections.html). See also [Reference: Formulas](/wiki/reference-formulas) and [Fundraising and Ads](/wiki/fundraising-ads).
 `;

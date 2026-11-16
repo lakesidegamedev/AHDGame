@@ -26,7 +26,7 @@ The NPI ladder makes omnibus bills expensive, the one-bill rule stops one sponso
 ## From filing to law
 
 1. **File the bill** from the Congress or Parliament page. It is open for voting at once.
-2. **Chamber vote.** Members vote For, Against or Abstain for 24 hours (the mechanics are on [Voting & Whips](/wiki/voting-and-whips)). Ordinary bills need a simple majority. Nationalization, privatization and war declarations need two-thirds of For plus Against in each required chamber.
+2. **Chamber vote.** Members vote For, Against or Abstain for 24 hours (the mechanics are on [Voting & Whips](/wiki/voting-and-whips)). Ordinary bills need a simple majority. Nationalization and privatization need two-thirds of For plus Against in each required chamber (one-party states use a simple majority), and war declarations always need two-thirds.
 3. **Second chamber** (bicameral countries). In a sequential flow a fresh 24 hour vote opens in the second chamber. Some countries vote in both chambers at once. Unicameral countries skip this step. In the US Senate, a [filibuster](/wiki/cloture-and-filibuster) lengthens this vote and raises the passing bar.
 4. **Executive action.** In presidential systems the president has 10 hours to sign or veto. No action means the bill is signed automatically. A veto goes to an override vote that needs For votes from two-thirds of the seated members of each chamber, not two-thirds of votes cast, so abstentions and absent members count against the override. Vacant seats are not counted. Parliamentary executives have no ordinary veto: the bill becomes law once the chamber and cabinet stages finish.
 5. **Enactment.** Each provision applies its policy effects every turn from then on (see [Policy Effects](/wiki/policy-effects)), and your proposal costs are refunded (action points only up to your action cap).
@@ -47,7 +47,7 @@ You file a three-provision healthcare bill in a bicameral presidential country. 
 
 ## Filing a bill
 
-- **Propose a bill** (any sitting member of a chamber that can originate it). The composer only offers chambers and categories your country has. Appointed chambers such as the Bundesrat and the House of Lords cannot originate bills. State bills use the same composer and the state governor signs them.
+- **Propose a bill** (any sitting member of a chamber that can originate it, with no bill of theirs still in its first chamber). The composer only offers chambers and categories your country has. Appointed chambers such as the Bundesrat and the House of Lords cannot originate bills. State bills use the same composer and the state governor signs them.
 - **Vote** on any open bill in your chamber.
 - **Whip** your party before the vote, if you hold a whip role.
 - **Withdraw** your own bill early.
@@ -87,7 +87,7 @@ Several of these reach into other systems:
 - The reserve-forces law level sets the conscription stance and so the manpower pool (see [manpower-conscription](/wiki/manpower-conscription)).
 - State laws set who draws House maps and the compactness and fairness tiers.
 - Chamber votes decide whether a [sovereign-default](/wiki/sovereign-default) crisis resolution passes.
-- A passing [referendum](/wiki/referendums) creates the Westminster consent bill (and a Dail bill for Northern Ireland); enacting the consent bills lets a later referendum transfer the region.
+- A passing [referendum](/wiki/referendums) creates the Westminster consent bill (and a Dail bill for Northern Ireland, only when Ireland is open to players); once the consent bills are enacted, the region is transferred automatically with no further referendum.
 - A divergent [Supreme Court](/wiki/scotus) ruling on a docket case can enact policy through the bill pipeline.
 
 Each policy provision pairs a legislation type with a policy option placed on an economic axis (left spends more, right spends less) and a social axis (progressive to conservative). Income tax is split into low, medium and high income provisions with their own rates.
@@ -133,7 +133,7 @@ Legislators who voted For an enacted bill see approval move among census groups 
 
 Enacted laws move state metrics every turn (see [National Metrics](/wiki/national-metrics)). The per-turn ticks of a national bill are split across regions: a US federal bill applies one fiftieth in each state, a UK bill one twelfth per region, Japan one eighth and Germany one sixteenth. The pull on each metric's long-run target uses the same fixed national share in every country, so a national law is equally strong whatever the number of regions. See [Policy Effects](/wiki/policy-effects).
 
-Live in every world that has a national legislature. The chambers, executive step and any cabinet stage depend on the country and era. Single-party states use their own restricted route. Bills go straight from filing to the floor vote; there is no committee stage (see [Committees](/wiki/committees)).
+Live in every country whose legislature has a bill lifecycle set up. The chambers, executive step and any cabinet stage depend on the country and era. Single-party states use their own restricted route. Bills go straight from filing to the floor vote; there is no committee stage (see [Committees](/wiki/committees)).
 
 Last checked 2026-10-29, version 1.18.0. Exact rules: [Bills & legislation design doc](https://docs.lakesidegames.net/design/bills-legislation.html)
 `;

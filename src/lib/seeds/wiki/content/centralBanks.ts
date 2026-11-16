@@ -1,24 +1,24 @@
 export const centralBanksContent = `# Central Banks
 
-One player in each country decides what money costs. The **Central Bank Chair** sets the **prime interest rate**, and that single number moves savings yields, loan costs, bond coupons, the exchange rate and inflation. The price of the job is **scrutiny**, a public score built from inflation and growth: miss on either and the bank is believed less, and everything the chair does gets more expensive.
+One player in each country decides what money costs. The **Central Bank Chair** sets the **prime interest rate**, and that single number moves savings yields, loan costs, bond coupons, the exchange rate and inflation. The price of the job is **scrutiny**, a public score built from inflation and growth: miss on either and the bank is believed less, and the chair's rate moves land with less force.
 
 Fully command economies run a passive monobank instead and the automatic rate setter does not fire. See [Planned / Command Economies](/wiki/planned-economies). The US Federal Reserve is run by a committee, covered on [FOMC / Rate-Setting Board](/wiki/fomc).
 
 ## Getting the chair
 
-**Nominations.** The holder of the country's executive office (President, Prime Minister or equivalent) nominates, at 1 action each, up to 3 player characters from their own country. Nominations open in the final 48 turns of a chair's term, whenever the seat is vacant, and at any time while an autonomous caretaker holds it. The head of government cannot be nominated, and neither can a cabinet member: leave the cabinet first. On a bank shared by several countries, each member's head of government nominates from their own country into the one pool.
+**Nominations.** The holder of the country's executive office (President, Prime Minister or equivalent) nominates, at 1 action each, up to 3 player characters who live in a country the bank covers. Nominations open in the final 48 turns of a chair's term, whenever the seat is vacant, and at any time while an autonomous caretaker holds it. The head of government cannot be nominated, and neither can a cabinet member: leave the cabinet first. On a bank shared by several countries, the executive of any member country can nominate a player character from any member country into the one pool.
 
 **The draw.** The draw runs when a term ends, when the seat is vacated (resignation, dismissal or removal), and for a bank that has never had a chair. It picks one nominee at random. Lobbying shifts the odds: weight is 1 + lobbying / 500,000, so 500,000 of lobbying doubles a nominee's weight. Any character in the bank's country can lobby, but only for someone already nominated, and pays in the bank's currency. Sitting heads of government, their deputies, ceremonial heads of state and cabinet members are skipped by the draw. A chair's acceptance clears every nomination and all lobbying.
 
 **Accepting.** The chosen player has **24 turns to accept**, and cannot accept while holding an executive office or a cabinet seat. If you decline, or let the clock run out, the draw repeats without you for that cycle. The 192-turn term starts when you accept.
 
-**No nominee.** If no one is eligible, the seat is left vacant or, when NPP autonomy is on, an autonomous caretaker is seated for a 192-turn term. The caretaker serves that whole term: nominations stay open, but the draw that can replace it runs only when the term ends. The caretaker sets the rate by rule, weighing measured slack (the output gap and unemployment), until a player takes over. The US Fed chair never gets a caretaker; it stays vacant until a nomination succeeds.
+**No nominee.** If no one is eligible, the seat is left vacant or, when NPP autonomy is on, an autonomous caretaker is seated for a 192-turn term. The caretaker serves that whole term: nominations stay open, but the draw that can replace it runs when the term ends, or earlier if the seat is flagged for automatic fill. The caretaker sets the rate by rule, weighing measured slack (the output gap and unemployment), until a player takes over. The US Fed chair never gets a caretaker; it stays vacant until a nomination succeeds.
 
 **Leaving.** A chair can resign, and the head of government can dismiss a player chair (see below). A chair who takes executive office (head of government, deputy or ceremonial head of state) is removed on the next turn. A chair who moves country resigns the post (see [Relocation](/wiki/relocation)). Each of these opens the draw.
 
-In the US the chair is seat 1 of the FOMC board. The President fills it either by nominating to that seat for a Senate vote (see [FOMC / Rate-Setting Board](/wiki/fomc) and [Confirmation Process](/wiki/confirmation-process)) or, when the seat falls vacant, through the draw above.
+In the US the chair is seat 1 of the FOMC board. The President fills it by nominating to that seat for a Senate vote (see [FOMC / Rate-Setting Board](/wiki/fomc) and [Confirmation Process](/wiki/confirmation-process)), and the draw above never seats it.
 
-Is it worth it? You gain +3 actions and the influence, and you risk losing 1.5 actions per turn once scrutiny passes 25, so the net is +1.5. Position bonuses do not stack: your national influence is the highest tier you hold, while the +3 actions stack with any other office.
+Is it worth it? You gain +3 actions and the influence, and you risk losing 1.5 actions per turn once scrutiny passes 25, so the net is +1.5. Position bonuses stack: the +3 actions add to any other office, though your national influence is the highest tier you hold.
 
 ## The limits you work inside
 
@@ -34,7 +34,7 @@ Each turn the game scores the chair, and each time the chair acts the game check
 | Time to accept a nomination | 24 turns |
 | Scrutiny that costs you actions | Above 25: you lose 1.5 actions per turn |
 | Chair bonus | +3 actions per turn, plus the cabinet tier of national influence (+1.5 per turn) |
-| Scrutiny gain | Capped at 8 per turn. Decays 5% per turn |
+| Scrutiny gain | Inflation and growth part capped at 8 per turn. Decays 5% per turn |
 | Relief for holding a correct stance | 6 scrutiny after 3 turns in a row |
 | Price of government interference | 12 for a rate override, 18 for dismissal, 22 for a statute |
 | Scrutiny kept through a handover | x0.75 when a pick is proposed and x0.75 again when it is accepted (about 56%). x0.75 if the seat is left vacant |
@@ -55,7 +55,7 @@ central-bank
 
 *The Federal Reserve page. The header shows the prime rate, inflation, savings flow, and reserves. The rate corridor shows the prime rate against the inflation band, and the left panel shows the Chair's term and public scrutiny.*
 
-If a rate change is refused, one of these applies: the 6-turn wait, a size limit, the 0 to 25 range, a currency peg with open capital (see below), a government-controlled bank, a command economy, or (at the US Fed) a seated board, since only the FOMC can change the rate while governors sit.
+If a rate change is refused, one of these applies: the 6-turn wait, a size limit, the 0 to 25 range, a currency peg with open capital (see below), a government-controlled bank (only the head of government or finance minister can move the rate), a command economy, or (at the US Fed) a move the board has not voted through, since the chair cannot set the rate alone while governors sit.
 
 Rules of thumb that hold up:
 
@@ -63,7 +63,7 @@ Rules of thumb that hold up:
 - Hike early. A bank that waits for inflation to peak has already lost credibility.
 - Do not cut into a supply shock. Easier credit does not make oil or food.
 - Do not defend a band the market does not believe, and cancel it before reserves run dry.
-- Do not fire a chair to reset scrutiny. Waiting costs less.
+- Do not fire a chair to shed scrutiny. The bank keeps all of it and takes 18 more. Waiting costs less.
 
 ## Scrutiny: the chair's report card
 
@@ -75,7 +75,7 @@ scrutinyDelta = (inflation - targetInflation) x 0.5 + (2.0 - gdpGrowth) x 0.5
 
 The growth target is 2.0%. Inflation targets are set per country (most developed markets use 2.0%). A miss pushes scrutiny up, good numbers push it down, and 5% of the existing score fades each turn. When the delta is a relief, it is dampened as scrutiny rises: it is multiplied by max(0.1, 1 - scrutiny / 150), so at 75 scrutiny, good news counts half.
 
-Take a chair with 20 scrutiny facing 4% inflation (target 2%) and 1% growth. The delta is (4 - 2) x 0.5 + (2 - 1) x 0.5 = +1.5. Next turn: 20 x 0.95 + 1.5 = 20.5. A bad month adds up, but a single bad turn can never add more than 8.
+Take a chair with 20 scrutiny facing 4% inflation (target 2%) and 1% growth. The delta is (4 - 2) x 0.5 + (2 - 1) x 0.5 = +1.5. Next turn: 20 x 0.95 + 1.5 = 20.5. A bad month adds up, but the inflation and growth part of a single turn can never add more than 8. One-off penalties such as a rate override or an oversized cut come on top.
 
 Scrutiny is not only a score. A discredited bank is believed less, which costs the country:
 
@@ -100,7 +100,7 @@ At 40 scrutiny with inflation on target and growth at 2%, three correct turns go
 
 A government can take control of its bank. The price is paid in scrutiny by the **institution**, not the person: 12 to set the rate directly (only while the bank is government-controlled), 18 to dismiss the sitting chair, 22 to revoke independence by statute. Granting independence refunds nothing, so repeated grants and revocations cannot launder the score.
 
-Changing the person does not reset the score. In a handover through the draw, scrutiny is multiplied by 0.75 when a pick is proposed and again when the pick accepts, so about 56% survives; a seat left vacant for lack of nominees also takes x0.75. Resigning cuts nothing by itself. A dismissal adds 18 before the replacement draw starts, so firing a chair always costs more than waiting the term out. Only a player chair can be dismissed.
+Changing the person does not reset the score. In a handover through the draw, scrutiny is multiplied by 0.75 when a pick is proposed and again when the pick accepts, so about 56% survives; a seat left vacant for lack of nominees also takes x0.75. Resigning leaves 75% of the score, the same as an expired term. A dismissal adds 18 before the replacement draw starts, so firing a chair always costs more than waiting the term out. Only a player chair can be dismissed.
 
 While a bank is government-controlled the chair is still chosen the usual way, but only the head of government or the finance minister can move the rate. The Bank of England had no operational independence until 1997, so a British world that starts earlier opens with the Treasury setting Bank Rate, and Parliament must legislate the change. Time passing does not do it. Granting independence gives the Bank of England back to its single governor; only the US bank gets a rate committee. A bank shared across countries, like the European Central Bank, cannot have its independence legislated by one member, and a euro member's own independence law leaves rate-setting with the euro authority.
 

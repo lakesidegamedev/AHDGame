@@ -35,7 +35,7 @@ DC has electoral votes in the normal count but no voting House delegation, so it
 
 A delegation votes for whichever candidate has the most of that state's weighted representative picks (a plurality, not a majority). If two or more candidates tie for the most, that state's vote is a tie and it **abstains**. A delegation with no eligible voters or no eligible candidates also abstains.
 
-The Senate is simpler: every senator casts a single vote among the eligible VP candidates, with no delegation weighting. The target is **a majority of the whole Senate roster**: 51 of 100 today, 49 of 96 in the 1950s. If nobody reaches it, the VP candidate with the most senators still wins, with ties broken deterministically, so the Senate never deadlocks.
+The Senate is simpler: every senator casts a single vote among the eligible VP candidates, with no delegation weighting. The target is **a majority of the whole Senate roster**: 51 of 100 today, 49 of 96 in the 1950s. If nobody reaches it, the Senate is deadlocked and a deterministic deadlock breaker picks the VP candidate.
 
 ## How each member picks
 

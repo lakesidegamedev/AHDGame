@@ -1,6 +1,6 @@
 export const campaignManagerContent = `# Campaign Manager
 
-The **Campaign Manager** (Campaign, then Campaign Manager, in the navigation) is where you follow and work every race in your country. It has three parts:
+The **Campaign Manager** (Campaign, then Campaign Manager, in the navigation) is where you follow and work every race below the presidency. Any country's races can be viewed, but only races in your own country can be entered. It has three parts:
 
 - **Find a Race.** Race types sorted into National and Regional, a Stage switch for Primary and General, a region picker and a search for candidates, races and regions. Each race shows its leader, margin and rating. Star a race to keep it near the top of the list on this device.
 - **The map and the race.** The country shaded race by race in each party's own Lean, Likely and Safe shades. Pick a region to zoom in: its counties, constituencies or prefectures fill in from the race's results, with the neighbours shown faded around it, and a click on one gives its projected call. Below the map are the race's standing, projected seats for multi-seat races, every candidate's poll, change, favorability and influence, polling by turn and the race wire.
@@ -12,7 +12,7 @@ A primary nobody has entered yet still shows, with a link to the election page w
 
 Once you declare for president, a campaign page is where money and actions turn into votes. Every presidential candidacy gets its own Campaign HQ: budget, upgrades, field offices, activity log, endorsements and manager assignments. It is separate from your character's profile and has its own action and money pools.
 
-**Eligibility.** Only presidential races have a campaign page: the US presidency, and presidential races in other countries with a directly elected president, such as Brazil, Nigeria and Russia. Every other race, from Senate and House seats to the UK Commons and the Japanese Diet, is campaigned for with your character's own [Actions](/wiki/fundraising-ads) and the race's election page.
+**Eligibility.** Only presidential races have a campaign page: the US presidency, and presidential races in other countries with a directly elected president, such as Brazil, Nigeria and Russia. Every other race, from Senate and House seats to the UK Commons and the Japanese Diet, is campaigned for with your character's own [Actions](/wiki/fundraising-ads) and the race's page in Campaign Manager.
 
 For upgrade tables, maintenance math and tactical priorities see [Campaign Strategy](/wiki/campaign-strategy), whose trees and costs are what you buy on this page.
 
@@ -44,18 +44,18 @@ The campaign has a **budget**: passive income and donations in (funds raised thr
 | Campaign owner (candidate) | Everything: budget, upgrades, activity log, managers, endorsements |
 | Campaign manager (appointed) | The same pages as the candidate, and can run upgrades and actions |
 | Party members | The public summary, with upgrade levels fogged to plus or minus 1 |
-| Public | Summary: candidate, party, managers, campaign strength and field offices, with upgrade levels fogged to plus or minus 3. No funds, actions, activity, endorsements or briefing |
+| Public | Summary: candidate, party, managers, campaign strength and field offices, with upgrade levels fogged to plus or minus 3. Funds and actions are shown too. No activity, endorsements or briefing |
 
 Fog of war is automatic and refreshes every turn. An estimate never shows below 0 or above the lever's maximum. It is drawn from the old single-level upgrade fields, which Strategic Ops tree purchases do not change, so it does not reflect a rival's trees. Your own display is always exact.
 
 ## Walking the page
 
 - **Vitals.** Across the top: war chest with net per turn and turns of runway, campaign actions against the bank cap, support, and campaign strength with its vote boost.
-- **Overview.** Every section below on one page.
+- **Overview.** A summary pane. Operations, Field offices, Money and Ledger each open in their own pane.
 - **Money.** Fundraising income, upkeep for each lever and for field offices, total upkeep, the per-turn net, lifetime funds and actions generated and spent, and boxes to contribute from your own funds or a party treasury.
 - **Strategic Ops.** Four branch trees: Fundraising, Media Spending, Ground Game and Opposition Research. Each card shows the starter node, its branches, the next cost in funds and campaign actions, and the current effect per turn. Ground Game, Media and field offices add votes and turnout in [General Elections](/wiki/general-elections). See [Campaign Strategy](/wiki/campaign-strategy) for what each does.
 - **Field offices.** Staff on the ground (below).
-- **Ledger.** Activity and Endorsements tabs, ten rows per page. Activity lists upgrade purchases (with their cost in funds and actions), automatic downgrades and their reason, Opposition Research resets, and suspending the campaign to endorse someone else. It keeps the last 200 entries, normally the campaign's whole life. Endorsements lists the players and politicians backing the campaign, and the panel says "Politicians" where the rest of the wiki says NPPs. Both tabs are visible only to the campaign's own side.
+- **Ledger.** Activity and Endorsements tabs, ten rows per page. Activity lists upgrade purchases (with their cost in funds and actions), automatic downgrades and their reason, Opposition Research resets, and suspending the campaign to endorse someone else. It keeps the last 200 entries, normally the campaign's whole life. Endorsements lists the players and politicians backing the campaign, and the panel says "Politicians" where the rest of the wiki says NPPs. Both tabs show for every viewer, but their records are visible only to the campaign's own side.
 - **Campaign Managers.** Appointment panel (below).
 - **Campaign room briefing.** Below the main page (below).
 
@@ -90,7 +90,7 @@ The [Vote Factor Ledger](/wiki/vote-factor-ledger) tells you why you have the vo
 
 If funds plus this turn's income cannot cover maintenance, the turn processor downgrades upgrades one step at a time, always the maintenance-bearing branch tier with the highest upkeep first, until maintenance is affordable.
 
-**An example.** A presidential campaign holds ₳1,000 in funds with the base ₳20,000 income this turn and runs the Ground Game starter (₳11,000 upkeep) and the Media Spending starter (₳12,000 upkeep). Funds plus income is ₳21,000 against ₳23,000 of upkeep. Neither tree has upkeep branches, so a starter can go, and Media's has the higher upkeep and is dropped, leaving ₳11,000, which ₳21,000 covers. The ₳60,000 paid for Media is gone with no refund. This turn's passive effects still fire at their old levels, and the Activity tab logs the downgrade as insolvency. Existing negative funds are not healed: the campaign keeps the debt but stops bleeding.
+**An example.** A presidential campaign holds ₳1,000 in funds with the base ₳20,000 income this turn and runs the Ground Game starter (₳11,000 upkeep) and the Media Spending starter (₳12,000 upkeep). Funds plus income is ₳21,000 against ₳23,000 of upkeep. Neither tree has an upkeep branch bought, so a starter can go as a last resort, and Media's has the higher upkeep and is dropped, leaving ₳11,000, which ₳21,000 covers. The ₳60,000 paid for Media is gone with no refund. This turn's passive effects still fire at their old levels, and the Activity tab logs the downgrade as insolvency. Existing negative funds are not healed: the campaign keeps the debt but stops bleeding.
 
 ## Donations
 

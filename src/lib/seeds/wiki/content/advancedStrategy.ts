@@ -10,7 +10,7 @@ Every race has an opportunity cost. Actions spent on one campaign cannot raise y
 
 **The governor-first arc.** A governor earns +2 actions a turn and signs or vetoes the state's bills. Dominate your home state, then move up once your national profile can carry a presidential primary.
 
-**The parliamentary arc (UK, Japan, Germany, Ireland).** Nobody runs for Prime Minister directly. Win a lower-chamber seat, stay a party member for at least 24 turns, stand in the party leadership election, then hope your party reaches a majority or a coalition. See [Multi-Country Play](/wiki/multi-country-play).
+**The parliamentary arc (UK, Japan, Germany, Ireland).** Nobody runs for Prime Minister directly. Win a lower-chamber seat, stay a party member for at least 24 turns, stand in the party leadership election, then hope your party can form a government, as a majority, a coalition or a minority. See [Multi-Country Play](/wiki/multi-country-play).
 
 **The corporation arc.** Found a corporation first (fee ₳1,000,000 in modern money, plus a starting treasury of ₳1,000,000) and enter politics with money already working. Your account can own one corporation at a time, and after it ends you wait 96 turns before founding another. See [Corporations](/wiki/corporations).
 

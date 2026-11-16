@@ -64,7 +64,7 @@ The 11 states are: Baden-Württemberg, Bavaria, Berlin, Bremen, Hamburg, Hesse, 
 
 Germany's upper chamber is the **Bundesrat**, representing the states. In-game it has no members and casts no votes: players cannot sit in it, and a federal bill becomes law on a single Bundestag vote.
 
-The five eastern states from reunified Germany (Brandenburg, Mecklenburg-Vorpommern, Saxony, Saxony-Anhalt, Thuringia) belong to East Germany (DD), which is a separate playable country in this era.
+The five eastern states from reunified Germany (Brandenburg, Mecklenburg-Vorpommern, Saxony, Saxony-Anhalt, Thuringia) belong to East Germany (DD) in the 1953 and 1979 presets, where it is a separate country. In reunified presets they belong to Germany.
 
 ### If the East wins the German Question
 

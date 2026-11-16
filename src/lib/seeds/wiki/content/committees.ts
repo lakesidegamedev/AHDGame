@@ -31,7 +31,7 @@ Ten members enter your party's committee election. Voters can pick up to six eac
 
 - **Stand for the committee** during the election and **vote** for up to six candidates, if you are a member of the party.
 - **As a committee member:** submit formal proposals to change the party and vote on them, together with the national chair, vice chair and treasurer. Proposals run 24 turns and pass at 60% of filled roles. Committee members propose and vote on party changes; full rules on [Party Leadership](/wiki/party-leadership).
-- **Chamber committees** do not exist, so there are no committee chairs to elect. See [Congress Leadership](/wiki/congress-leadership) for the offices that are elected in each chamber.
+- **Chamber committees** do not handle bills, but some chamber chairs are elected, such as the NPC Standing Committee Chairman and the CPPCC Chairman. See [Congress Leadership](/wiki/congress-leadership) for the offices that are elected in each chamber.
 
 Tips: with six votes each, vote for six: a vote withheld helps rivals. Enter early, since an earlier entry also wins ties.
 

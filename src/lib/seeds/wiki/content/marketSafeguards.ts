@@ -13,7 +13,7 @@ Every turn the game adds up the market value of every corporation and compares i
 
 ![Ladder of market models where a trip steps Plants back to Capital and Clearing or Capital back to Ledger, after which the safeguard switches itself off.](/wiki-images/diagrams/market-safeguards-model-ladder.svg)
 
-Fundamentals can only make the safeguard more forgiving. They excuse a fall that a lower valuation justifies, but they never lower the bar. A fall that fundamentals do not explain counts in full, including a large market-wide swing in sentiment. A hard fall for real reasons, such as a rate hike or a genuine earnings collapse, goes through unchallenged.
+Fundamentals can only make the safeguard more forgiving. They excuse a fall that a lower valuation justifies, but they never lower the bar. A fall that fundamentals do not explain counts in full, including a large market-wide swing in sentiment. A hard fall for real reasons, such as a rate hike or a genuine earnings collapse, is excused when fundamentals fall with it.
 
 | Item | Value |
 | --- | --- |
@@ -24,7 +24,7 @@ Fundamentals can only make the safeguard more forgiving. They excuse a fall that
 
 ## Three bad days
 
-The reference market value is 1,000 and fundamentals at that moment were also 1,000. Six turns later:
+The reference market value is 1,000 and fundamentals, recorded one turn later, were also 1,000. Five turns later:
 
 - The market falls to 700 and fundamentals have fallen to 800 because rates rose. Fair value is 800, so the drop is 1 minus 700 / 800 = 12.5%. That is under 25%, so nothing happens, even though the raw fall is 30%.
 - The market falls to 700 and fundamentals are still 1,000. Fair value stays 1,000, the drop is 30%, and the safeguard trips.
@@ -49,5 +49,5 @@ Nothing about your holdings, orders or company ownership is reversed. What chang
 
 If prices went flat or oddly stable, the step back is a plausible reason; the market is not broken for you alone. If your corporation relies on Plants-model revenue, expect a different margin picture afterward, so keep plans flexible.
 
-Watches worlds that run the Clearing, Capital or Plants market models while the operators keep it armed. It is armed by default, but a rebuilt economy starts with it off. In a world on an earlier model there is nothing to watch. Last checked 2026-10-29, version 1.18.0. There is no separate technical page yet and the numbers above are the exact rules; for how share prices are computed, see [Stock Market (design)](https://docs.lakesidegames.net/design/stock-market.html)
+Watches worlds that run the Clearing, Capital or Plants market models while the operators keep it armed. It is off by default and only runs once operators turn it on. In a world on an earlier model there is nothing to watch. Last checked 2026-10-29, version 1.18.0. There is no separate technical page yet and the numbers above are the exact rules; for how share prices are computed, see [Stock Market (design)](https://docs.lakesidegames.net/design/stock-market.html)
 `;

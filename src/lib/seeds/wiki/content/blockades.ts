@@ -1,6 +1,6 @@
 export const blockadesContent = `# Blockades
 
-A blockade is hulls in the water stopping trade that both parties still want. It is not an embargo, which is a political trade ban. You establish one by stationing naval formations on the sea approaches of a country you are at war with and holding them on the Blockade or Sea Denial posture. Closure is recomputed every turn from where your ships are, raises the target's trade costs continuously, and only closes trade outright under overwhelming force. It ends when the ships leave, are worn down or are driven off.
+A blockade is hulls in the water stopping trade that both parties still want. It is not an embargo, which is a political trade ban. You establish one by stationing naval formations on the sea approaches of a country you are at war with and holding them on a pressure posture, mainly Blockade or Sea Denial. Closure is recomputed every turn from where your ships are, raises the target's trade costs continuously, and only closes trade outright under overwhelming force. It ends when the ships leave, are worn down or are driven off.
 
 ## The numbers
 
@@ -10,7 +10,7 @@ A blockade is hulls in the water stopping trade that both parties still want. It
 | Port defence of an approach | The region's port rating (0 to 9) times 7, with a minimum of 1 |
 | Closure on one approach | Pressure divided by (pressure plus port defence) |
 | Total closure | Pressure at 9 times port defence or more |
-| Trade multiplier | 1 minus closure, never below 0.10, and 0 at total closure |
+| Trade multiplier | 1 minus closure, never below 0.10 until closure is total, and 0 at total closure |
 | Timing | Recomputed every turn from current positions, so it bites on arrival and stops when ships leave |
 | Condition penalty | Weight falls with damage, and faster under 50% condition |
 | War approval penalty | Starts when fleet condition drops under 70 |
@@ -23,7 +23,7 @@ A country's worst approach is the Mediterranean, which has a port rating of 8, s
 
 - **A war.** (See [Declaring War](/wiki/declaring-war): only hulls belonging to a country at war with the target count.) Only formations belonging to a country the target is at war with count. A neutral fleet parked on someone's coast closes nothing.
 - **The right water.** A country's trade passes through its home region (if it touches water) plus every navigable region next to it. Those are its **approaches**. Your ships must be stationed in one of them.
-- **The right posture.** The hulls, postures and berths that create lane pressure are covered in [Naval Vessel Classes & Standing Orders](/wiki/naval-vessel-classes). Only Blockade and Sea Denial apply real pressure. Sea Control adds about half a hull's weight, Escort a sliver, Transit and Port nothing. A carrier flying an air mission applies none.
+- **The right posture.** The hulls, postures and berths that create lane pressure are covered in [Naval Vessel Classes & Standing Orders](/wiki/naval-vessel-classes). Blockade and Sea Denial apply the most pressure. Sea Control adds about half a hull's weight, Escort a sliver, Transit and Port nothing. A carrier flying an air mission applies none.
 - **Sound, supplied hulls.** Pressure falls with damage, and much faster below 50 percent condition. Formations far from home, on a hostile coast, or crowded past the port's berths run low on supply and blockade at reduced weight.
 
 ## How closure is measured
@@ -45,9 +45,9 @@ blockade-closure-curve
 
 Blockade closure feeds the trade engine directly:
 
-- Every trade flow (see [Trade System](/wiki/trade-system)) into or out of the blockaded country has its trade affinity multiplied by one minus closure, floored at 10 percent. A partial blockade makes goods cost more to move and shifts buyers and sellers elsewhere.
+- Every trade flow (see [Trade System](/wiki/trade-system)) into or out of the blockaded country has its trade affinity multiplied by one minus closure, floored at 10 percent (until closure is total, when it drops to zero). A partial blockade makes goods cost more to move and shifts buyers and sellers elsewhere.
 - At total closure the multiplier is zero and the flow is treated exactly as an embargoed lane: the country's seaborne supply becomes unreachable.
-- An [embargo](/wiki/embargo-and-trade-exposure) and a blockade stack: an embargo blocks a lane outright and a blockade scales whatever affinity is left. A blockade on **either** end of a flow counts. Goods have to leave one coast and arrive at another, and shutting either does it. The heavier closure of the two applies.
+- An [embargo](/wiki/embargo-and-trade-exposure) and a blockade stack: a block-mode embargo closes a lane outright, a cap-mode embargo only limits units, and a blockade scales the affinity of lanes that stay open. A blockade on **either** end of a flow counts. Goods have to leave one coast and arrive at another, and shutting either does it. The heavier closure of the two applies.
 
 Blockade closure is recomputed from current fleet positions during the commodity price step each turn, so a fleet that arrives this turn bites this turn.
 
@@ -64,17 +64,17 @@ There is no blockade object to cancel. It exists only while the pressure does, s
 - the blockading formations change posture, move station or return to port;
 - the war ends, since only hostile hulls count;
 - the fleet is worn below the point where its pressure matters, through combat or damage;
-- the defender breaks it, by driving the fleet off in a surface action, striking it from the air, or bringing enough friendly weight into the region to contest sea control.
+- the defender breaks it, by driving the fleet off in a surface action or striking it from the air.
 
 Because closure follows the ships' positions turn by turn, a blockade is a commitment of ships and readiness, not a switch.
 
 ## Ordering one
 
 - **Blockader (the defence seat holder at war):** station naval formations in the target's approach regions on the Blockade or Sea Denial posture, from **Naval and air command** on the country page, which the defence seat holder reaches from the Commands tab of the defence cabinet office.
-- **Defender:** drive the fleet off in a surface action, strike it from the air, or bring friendly weight into the region to contest sea control.
+- **Defender:** drive the fleet off in a surface action or strike it from the air.
 - **Everyone else:** watch trade flows and commodity prices for the blockaded country, where the effect shows up.
 
-**Questions that come up.** *How do I blockade a country?* Be at war with it, then station ships on Blockade in one of its approach regions. *Why is my blockade not closing trade?* The target's port defence is higher than your pressure, your fleet is damaged, or it is on the wrong posture. *How do I break one?* See the list above. *Is a blockade the same as an embargo?* No. An embargo is a political trade ban. If both apply, an embargo blocks the lane outright, and a blockade multiplies whatever affinity is left, after tariffs.
+**Questions that come up.** *How do I blockade a country?* Be at war with it, then station ships on Blockade in one of its approach regions. *Why is my blockade not closing trade?* The target's port defence is higher than your pressure, your fleet is damaged enough to cut its pressure, or it is on the wrong posture. *How do I break one?* See the list above. *Is a blockade the same as an embargo?* No. An embargo is a political trade ban. If both apply, a block embargo closes the lane outright, and a blockade only multiplies the affinity of lanes still open, after tariffs.
 
-Works in every world and era where a navy exists and there is a war; Scotland and Wales have no defence seat. Last checked 2026-10-29, version 1.18.0. Exact rules: no design page of their own yet; the system is summarised on [The Cold War and conflict system (as shipped)](https://docs.lakesidegames.net/design/conflict-system-as-shipped.html)
+Works in every world and era where a navy exists and there is a war. Last checked 2026-10-29, version 1.18.0. Exact rules: no design page of their own yet; the system is summarised on [The Cold War and conflict system (as shipped)](https://docs.lakesidegames.net/design/conflict-system-as-shipped.html)
 `;

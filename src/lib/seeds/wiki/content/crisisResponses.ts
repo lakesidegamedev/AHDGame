@@ -42,7 +42,7 @@ A legislator cannot just spend. A legislature lever raises a fast-track **emerge
 
 Every crisis keeps a ledger: for each turn, who held which office, what they pulled (or that they had levers and pulled none), what it cost, how much severity it removed, and how bad the crisis was at that moment. It is shown on the crisis detail page as **Who did what**, with plain wording and cost lines. A holder who could have acted and did not is recorded as inaction, and it is weighted by how severe the crisis was.
 
-The record only covers offices that were in a position to act. A governor is only on the hook for crises in their state. A CEO only for crises touching their company's sectors or regions. Party leaders are only on the hook for national and world crises.
+The record only covers offices that were in a position to act. A governor is on the hook for national and world crises, and for local or state crises that reach their state. A CEO only for crises touching their company's sectors or regions. Party leaders are only on the hook for national and world crises.
 
 ## What a crisis leaves behind
 

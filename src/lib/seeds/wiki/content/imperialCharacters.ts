@@ -4,7 +4,7 @@ You will never run against the monarch, and you cannot become one. Some countrie
 
 ## Who they are
 
-Only the United Kingdom and Japan have this role today. Germany's Bundespräsident is not an imperial character. Players do not create or control these characters; game administrators set them up, one per country. Each one has a name, title, royal house, home region, biography, portrait and coat of arms, and appears on the country and profile pages. If you want to hold a seat in one of these countries, see [Create a Character](/wiki/create-a-character) and [Multi-Country Play](/wiki/multi-country-play).
+The United Kingdom, Japan and Germany have this role today, and Canada shares the United Kingdom's monarch. Germany's Bundespräsident is its ceremonial imperial character. Players do not create or control these characters; game administrators set them up, one per country. Each one has a name, title, royal house, home region, and an optional biography, portrait and coat of arms, and appears on the country and profile pages. If you want to hold a seat in one of these countries, see [Create a Character](/wiki/create-a-character) and [Multi-Country Play](/wiki/multi-country-play).
 
 ## Money, like anyone else
 

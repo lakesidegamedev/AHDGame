@@ -6,9 +6,9 @@ export const beta2Content = `**Iterations:** *Alpha 1 (not documented)*  ·  [[B
 
 # Beta 2
 
-> *"Seven nations, a Cold War map, and a world that started in 1991. Germany walked out of NATO, Britain declared war on China, Ireland proclaimed a Commonwealth, and the two richest people on earth run car companies nobody can buy shares in."*
+> *"Seven nations, a post-Cold War map, and a world that started in 1991. Germany walked out of NATO, Britain declared war on China, Ireland proclaimed a Commonwealth, and the two richest people on earth run car companies nobody can buy shares in."*
 
-**Beta 2** ran on the **era system** and is preserved here as a historical snapshot, not a description of the current world. The world booted on **1991** (a Cold War map with the Soviet Union still on it) and marched forward at roughly forty-eight turns per in-game year. At the time this article was written it was **turn 1192**, the in-game year was **2015**, and twenty-four years of simulated history had produced five American presidents, three Japanese prime ministers, one deposed Taoiseach, a German chancellor who never once commanded a majority, and a Chinese Communist Party whose internal confidence had fallen to 32 out of 100.
+**Beta 2** ran on the **era system** and is preserved here as a historical snapshot, not a description of the current world. The world booted on **1991** (a post-Cold War map with the Soviet Union still on it) and marched forward at roughly forty-eight turns per in-game year. At the time this article was written it was **turn 1192**, the in-game year was **2015**, and twenty-four years of simulated history had produced five American presidents, three Japanese prime ministers, one deposed Taoiseach, a German chancellor who never once commanded a majority, and a Chinese Communist Party whose internal confidence had fallen to 32 out of 100.
 
 Beta 2 launched with **six playable countries**: the United States, the United Kingdom, Japan, Germany, China, and Ireland, where [[Beta 1]] had three. **Nigeria** was added mid-iteration and held its first presidential election in the in-game year 2005. Brazil remains an economy-only preview.
 
@@ -139,7 +139,7 @@ Three Prime Ministers. Two of them left office by moving a no-confidence vote **
 | **Second PM** (Komeito) | 307-0 | moved no-confidence in own government, **passed 137-0** |
 | **Third PM** (Japan Socialist Party) | 170-1 | in office |
 
-Both of Japan's successful no-confidence votes were self-inflicted, unopposed, and recorded as constitutional crises. Japan is the only country in Beta 2 where the confidence mechanism functions as a resignation letter.
+Both of Japan's successful no-confidence votes were self-inflicted, unopposed, and recorded as constitutional crises. Japan is the only country in Beta 2 where the confidence mechanism was used as a resignation letter.
 
 Neither departure hurt anyone's career. The first PM is now Foreign Affairs Minister *and* Governor of the Bank of Japan *and* the wealthiest character in the game. The second is Environment Minister. The current PM governs a minority of 130 seats out of 511 and has personally sponsored ten of Japan's twenty-eight enacted laws, including *The Woke Agenda Act*, *The Subsidies for All Act*, and, five bills later, *The Growth and Spending Cuts Act*.
 
@@ -175,7 +175,7 @@ The government had already signalled its direction with a bill titled ***Embargo
 
 ### Cabinet and legislation
 
-The cabinet covers Finance, Foreign Affairs, Labour, Environment, Transport (whose minister also chairs the European Central Bank), Economy and Health.
+The cabinet covers Finance, Foreign Affairs, Interior, Defence, Justice, Labour, Environment, Transport, Economy, Health and Education.
 
 Fifty-nine bills signed, among them *Festung Europa*, ***MGGA*** and ***MGGA II***, the *Skilled Immigrants Only Act*, the *Maximale-Bundeswehr-Investitionsgesetz*, and a *UBI Act*, all from the same chancellery, in that order. The Bundestag has its own Speaker.
 
@@ -207,7 +207,7 @@ The standout is the ***Up The RA Act***, passed 1,409 to nil, whose official sum
 
 ### Cabinet
 
-The cabinet covers Foreign Affairs, Finance (whose minister is also Governor of the People's Bank), Defense, Commerce, Transport, Public Security and Human Resources.
+The cabinet covers Foreign Affairs, Finance, Defense, Commerce, Transport, Public Security and Human Resources.
 
 China also founded two international organisations, including the **Global Ummah Front**, whose stated purpose is *"World ownership."*
 
@@ -322,7 +322,7 @@ The global trade system, as of turn 1192, is closed and getting closer to sealed
 
 ### Crises
 
-Sixty-five crisis events fired across the iteration, in eighteen distinct varieties. The global ones hit everybody: a **ship blocking the Suez Canal** (turns 463-529, +2% inflation worldwide), **Supply Chain Disruption**, a **Trade War** event, and an **Energy Crisis**. The local ones were less democratic: earthquakes, floods, and a port shutdown in China; a bridge collapse, king tide flooding, and a **tsunami** in Japan; a power grid failure in the United States; a refugee crisis in Britain; an inflation spike in Ireland; an extreme heat wave in Germany; mass protests in Brazil.
+Sixty-five crisis events fired across the iteration, in eighteen distinct varieties. The global ones hit everybody: a **ship blocking the Suez Canal** (turns 463-529, +2% inflation worldwide), **Supply Chain Disruption**, a **Trade War** event, and an **Energy Crisis**. The national and local ones were less democratic: earthquakes, floods, and a port shutdown in China; a bridge collapse, king tide flooding, and a **tsunami** in Japan; a power grid failure in the United States; a refugee crisis in Britain; an inflation spike in Ireland; an extreme heat wave in Germany; mass protests in Brazil.
 
 ---
 
@@ -395,7 +395,7 @@ Each currency's exchange rate is quoted against the game's internal reference un
 | --- | --- | --- | --- | --- |
 | Japanese Yen | JP | 106 | 88.0 | **strengthened sharply** |
 | Nigerian Naira | NG | 1,550 | 1,464 | strengthened |
-| Euro | DE · IE | 0.92 | 0.914 | slightly stronger |
+| Euro | DE | 0.92 | 0.914 | slightly stronger |
 | Pound Sterling | UK | 0.75 | 0.754 | flat |
 | US Dollar | US | 1.00 | 1.187 | **weakened** |
 | Brazilian Real | BR | 5.00 | 5.66 | weakened |
@@ -403,7 +403,7 @@ Each currency's exchange rate is quoted against the game's internal reference un
 
 The headline is a **strong yen against a weak yuan**: Japan's export economy and off-exchange industrial giants on one side, China's nationalisation-then-privatisation whiplash and currency crisis on the other. Sterling's flatness across twenty-four in-game years is its own kind of achievement.
 
-The world's central banks are run by a Federal Reserve Chair, a Bank of England Governor, a Bank of Japan Governor (also Foreign Minister), a People's Bank of China Governor (also Finance Minister), and a European Central Bank Chair (also German Transport Minister).
+The world's central banks are run by a Federal Reserve Chair, a Bank of England Governor, a Bank of Japan Governor, a People's Bank of China Governor, and a European Central Bank Chair.
 
 ### Bonds and credit
 
@@ -416,7 +416,7 @@ The world's central banks are run by a Federal Reserve Chair, a Bank of England 
 Systems live in this iteration that [[Beta 1]] never had:
 
 - **The era system.** Beta 2 starts in 1991 and advances through historical eras, with era-appropriate metrics activating as the years pass. Beta 1 ran in a static present.
-- **The Cold War map.** The Soviet Union, East Germany, Yugoslavia, Czechoslovakia, and a dozen other 1991 states exist in the world with working currencies: the Soviet ruble, the Ostmark, the franc, the lira, the peseta. In later iterations the Soviet Union (RU) and East Germany (DD) are seated countries with active player bases, not unseated shells: treat any "unseated" claim as specific to this Beta 2 snapshot, not the current world.
+- **The post-Cold War map.** The Soviet Union, East Germany, Yugoslavia, Czechoslovakia, and a dozen other 1991 states exist in the world with working currencies: the Soviet ruble, the Ostmark, the franc, the lira, the peseta. In later iterations the Soviet Union (RU) and East Germany (DD) are seated countries with active player bases, not unseated shells: treat any "unseated" claim as specific to this Beta 2 snapshot, not the current world.
 - **Five new exchanges**: DAX, ISEQ, SSE, B3, and NGX joined NYSE, FTSE, and Nikkei.
 - **Index funds** (32), including global sector trackers.
 - **Nationalisation and national corporations**, with compensation tiers, privatisation votes, and strategic sector designations.
@@ -446,7 +446,7 @@ Systems live in this iteration that [[Beta 1]] never had:
 | 9 | Character I | UK | 92 |
 | 10 | Character J | US | 91 |
 
-Note who is *not* here: the President of the United States ranks third, and no head of government from the UK, Japan, or China appears at all. Beta 2's influence economy rewards legislators and ministers over executives.
+Note who is *not* here: the President of the United States ranks third, and no head of government from the UK, Japan, or China appears at all. Beta 2's top influence ranks went to legislators and ministers rather than executives, though executive offices earn the largest per-turn bonus.
 
 ### Parties by membership
 

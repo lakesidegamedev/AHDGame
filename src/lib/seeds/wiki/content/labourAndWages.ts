@@ -13,7 +13,7 @@ Each sector's payroll is billed as its own cost line, next to inputs and plant o
 > labour cost = labour share x payroll basis x wage level x union premium x minimum-wage floor x automation
 
 - **Labour share** is how much of revenue goes to pay in that sector type. It is higher in a technology firm than in an energy firm (table below).
-- **Payroll basis** is the value, at nominal prices, of the output your active plants are scheduled to run, scaled to the share of the crew you actually staffed. Idle lines employ no one.
+- **Payroll basis** is the value, at nominal prices, of the output your active plants are scheduled to run, scaled to the share of the crew you actually staffed. Idle lines still keep a skeleton crew.
 - **Wage level** is your slider. 1.0 is baseline.
 - **Union premium** is the surcharge from [Unions](/wiki/unions), up to 15%.
 - **Minimum-wage floor** lifts the cost only in sectors paying less than the floor.
@@ -26,8 +26,8 @@ Each sector's payroll is billed as its own cost line, next to inputs and plant o
 | Minimum wage ceiling | Kaitz ratio up to 1.0 (a floor at the median wage) |
 | Median sector pay level | 1.1 |
 | Union premium | Up to 15% of labour cost, scaled with unionization |
-| Wage-driven unemployment change | Only in a region with no labour-force figure: 1.5 points per 1.0 change in the state wage index, at most 1.5 points a turn |
-| Automation-driven unemployment change | Only in a region with no labour-force figure: 2.5 points per 1.0 change in the automation index, at most 1.5 points a turn |
+| Wage-driven unemployment change | One-time change per state when the labour system is at macro tier or above: 1.5 points per 1.0 change in the state wage index, at most 1.5 points a turn |
+| Automation-driven unemployment change | One-time change per state when the labour system is at macro tier or above: 2.5 points per 1.0 change in the automation index, at most 1.5 points a turn |
 
 Profit changes by labour share x (level - 1) x payroll basis, so on a full run a 0.1 move is worth about 1.6 points of revenue in manufacturing and 3.5 in technology.
 
@@ -46,7 +46,7 @@ Profit changes by labour share x (level - 1) x payroll basis, so on a full run a
 | Agriculture | 16.0% | 0.55 |
 | Manufacturing | 15.9% | 0.95 |
 | Chemical industries | 15.0% | 1.2 |
-| Vehicle manufacturing | 14.1% | 1.0 |
+| Vehicle manufacturing | 15.9% | 0.95 |
 | Extraction | 12.0% | 1.1 |
 | Energy | 10.0% | 1.2 |
 
@@ -66,14 +66,14 @@ wage-level-margin-change
 A cheap-labour strategy gives margin now and unionization later. A high-wage strategy costs margin but buys quality, R&D and calm. Think in lanes, not spikes.
 
 - **Quality:** the wage level feeds the wages pillar of [Output Quality](/wiki/output-quality), 20% of the blend. Going from 1.0 to 1.5 lifts that pillar from 0.5 to 0.8, which is worth about 10% of your quality score at the maximum.
-- **R&D:** wages above baseline lift R&D efficiency by up to 15%, wages below lower it (see [Corporate R&D & Tech Trees](/wiki/corporate-r-and-d)). Tech nodes there can also cut labour cost by up to 50% through automation. Automation lowers the bill without changing your headcount.
+- **R&D:** wages above baseline lift R&D efficiency by up to 15%, wages below lower it (see [Corporate R&D & Tech Trees](/wiki/corporate-r-and-d)). Tech nodes there can also cut labour cost by up to 50% through automation. Automation lowers the bill by cutting the crew you need, not the pay of the workers you keep.
 - **Unionization:** in a sector no union represents, a real wage (your wage level against the local cost of living) below 1.0 raises the unionization target, which adds a premium. A represented sector drifts toward its union's approval instead. A cut also leaves pay below what workers expect, and expectations only catch up slowly, so a sector above 55% unionization can strike. A strike you wait out adds 10 points of unionization. If unions appeared after you cut wages, this is why, and [Unions](/wiki/unions) covers what follows.
 
 ## When the state sets a floor
 
 A minimum wage matters only if your sector pays below it. Say the country has a minimum wage with a Kaitz ratio of 0.7. The floor is 0.7 x 1.1 = 0.77 on the pay scale. Retail (0.6) must lift pay by 0.77 / 0.6, so its labour costs rise **28%**. Agriculture (0.55) rises **40%**. Manufacturing at 0.95 is untouched. In general it raises your labour cost by the ratio of the floor to your sector's pay level.
 
-The floor is not a bill players can pass today: the game team sets it for each country, and minimum wage bills in the legislature do not change it, so watch the sector panel to see whether your sector is being lifted. What legislators can pass is union law, through [Bills & Legislation](/wiki/bills-legislation), which shapes how strongly unions form.
+The floor is set by the country's minimum wage law, so a minimum wage bill can change it unless the game team has set the ratio by hand. Watch the sector panel to see whether your sector is being lifted. Legislators can also pass union law, through [Bills & Legislation](/wiki/bills-legislation), which shapes how strongly unions form.
 
 ## What wages do to the state
 
@@ -82,7 +82,7 @@ Your slider moves a state's **wage index**, the worker-weighted average of wage 
 | Channel | Effect |
 | --- | --- |
 | **Median income** | A rise in the wage index nudges median income growth up. |
-| **Unemployment** | Wages do not move unemployment directly: it comes from the jobs employers want against the people available. Where employers want more workers than the state has, a sector paying above the state's average wage level staffs a larger share of what it wants. Only in a region with no labour-force figure does a 0.10 rise add 0.15 points to the unemployment target. |
+| **Unemployment** | Unemployment mostly comes from the jobs employers want against the people available. Where employers want more workers than the state has, a sector paying above the state's average wage level staffs a larger share of what it wants. A 0.10 rise in the state wage index also adds a one-time 0.15 points to the unemployment target. |
 | **Migration** | A region with above-baseline wages attracts more migrants, and below-baseline regions lose some. |
 
 One [corporation](/wiki/corporations) moves the state index only in proportion to its share of the state's workers, so a lone slider has a small effect, and labour cost is a direct part of each sector's margin. A country-wide shift, such as a minimum-wage rise, moves it a lot.
@@ -91,5 +91,5 @@ One [corporation](/wiki/corporations) moves the state index only in proportion t
 
 See also: [Pensions](/wiki/pensions), where the covered wage bill sets both the contribution and the accrual.
 
-Applies in current worlds, with labour shares higher in older eras (see the era multiplier). Command economies are closed to new private sector expansion, so most pay there is set by state-owned enterprises. Last checked 2026-10-30, version 1.18.0. Exact rules: [Labour design page](https://docs.lakesidegames.net/design/labour.html)
+Applies in worlds where the labour system is switched on, with labour shares higher in older eras (see the era multiplier). Command economies are closed to new private sector expansion, so most pay there is set by state-owned enterprises. Last checked 2026-10-30, version 1.18.0. Exact rules: [Labour design page](https://docs.lakesidegames.net/design/labour.html)
 `;

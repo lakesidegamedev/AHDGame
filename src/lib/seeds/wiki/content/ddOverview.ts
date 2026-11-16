@@ -9,13 +9,13 @@ const ddScenarios = getPlayerStartScenarios("DD")
 
 export const ddOverviewContent = `# East Germany
 
-In East Germany the election is not where you win: the seat split is fixed by the National Front, and what you compete for is who in your party fills its seats. East Germany (the German Democratic Republic) is a **one-party socialist state** playable in the **1953 and 1979 presets**. The ruling **SED** (Sozialistische Einheitspartei Deutschlands) governs through the **National Front**, a single electoral list it shares with four allied bloc parties, and the economy is centrally planned.
+In East Germany the election is not where you win: the seat split is fixed by the National Front, and what you compete for is who in your party fills its seats. East Germany (the German Democratic Republic) is a **one-party socialist state** seeded as an NPP-run state in the **1953 and 1979 presets**. The ruling **SED** (Sozialistische Einheitspartei Deutschlands) governs through the **National Front**, a single electoral list it shares with four allied bloc parties, and the economy is centrally planned.
 
 ## The National Front list
 
 The National Front is the bloc-party version of one-party rule (see [One-Party States](/wiki/one-party-states)): five seeded parties, one list, one permitted outcome.
 
-- **SED** is the **ruling** party (economic position -4): the only party that can form government, field executive candidates, or move a no-confidence vote (which one-party states skip anyway).
+- **SED** is the **ruling** party (economic position -4): the only party that can form government, field executive candidates, or move a no-confidence vote.
 - **CDU (Ost), LDPD, NDPD and DBD** are **approved** bloc parties. They hold seats, field Volkskammer candidates, propose and vote on bills, accept donations and sit in cabinet, but they **cannot form government** or contest the executive.
 - **Vote multipliers**: ruling votes weigh 3.0, approved 0.375, independents and banned parties 0. Player-created parties are automatically **banned** at charter ratification.
 - **Internal confidence gauge.** Like the USSR and China, East Germany runs the ruling-party leader-confidence model: the leader starts at 75, and popular legitimacy and party confidence drift each turn. At the third escalation stage a split spawns the **"Reform Wing of the SED"** as a breakaway party.
@@ -50,11 +50,11 @@ Elections ride a **192-turn cycle** (4 game years at 48 turns per year), anchore
 
 | Office | How filled | Term | Seats |
 | --- | --- | --- | --- |
-| General Secretary (head of government) | Proposed by the SED chair, confirmed by a Volkskammer vote, then kept by internal party confidence | No fixed term | 1 |
+| General Secretary (head of government) | Proposed by the SED chair, confirmed by a Volkskammer vote, then kept by internal party confidence | 5 years | 1 |
 | Chairman of the Council of State (ceremonial head of state) | Auto-populated as SED chair | No fixed term | 1 |
 | Volkskammer Deputy | Single-list regional election | 192 turns (4 game years, 8 real days) | 500 |
 | Land First Secretary (regional executive) | Regional election | 4 years | 1 per region |
-| President of the Staatsbank | Nominated by the General Secretary, then drawn | 4 years | 1 |
+| President of the Staatsbank | Nominated by the General Secretary, then drawn | 6 years | 1 |
 
 The General Secretary carries **+4 actions per turn**, a Volkskammer Deputy +1, a Land First Secretary +2, the Staatsbank President +3. The Chairman of the Council of State carries +0 actions and zero party-strength weight, and updates automatically whenever the SED chair changes (the China pattern). In the 1953 preset the head-of-government seat reads **"First Secretary"**, the SED leader's title until 1976. The **General Secretary** is the head of government.
 
@@ -95,7 +95,7 @@ Era gating is real: the **Minister of National Defence seat only exists from 195
 
 ## A planned economy with a fixed Mark
 
-In worlds that use the command economy (every new world), East Germany comes up **fully command**. Marketization is a dial from 0 (fully command) to 100 (fully market), and East Germany's is scheduled at **10** through 1990 in both presets. See [Planned Economies](/wiki/planned-economies).
+In worlds that use the command economy (the 1953 and 1979 presets turn it on), East Germany comes up **fully command**. Marketization is a dial from 0 (fully command) to 100 (fully market), and East Germany's is scheduled at **10** through 1990 in both presets. See [Planned Economies](/wiki/planned-economies).
 
 - **No stock exchange.** State enterprises are recorded against the **VVB** (Vereinigung Volkseigener Betriebe) register, and founding private corporations is disallowed.
 - **One state-owned enterprise per sector.** Every industry has a VEB-style enterprise with plant capacity (manufacturing, chemicals, energy, extraction, agriculture, and the rest of the sector board). All are headquartered administratively in East Berlin.
@@ -131,7 +131,7 @@ A war declared by or against either Germany, across the bloc line, freezes the q
 
 East Germany is a **founding member of the Warsaw Pact** in both eras. The pact's permanent chair, the Supreme Commander of the Unified Command, is held by the USSR: no other member can ever hold it. Between 1945 and 1990 the pact is the EAST bloc's accession channel on the Cold-War alignment axis, opposite NATO. See [International Organizations](/wiki/international-organizations).
 
-**A 1953 world seeds East Germany with zero military branches.** This is historical: the GDR had no national army until 1956, and the paramilitary police units before then sit under the Interior portfolio. The Nationale Volksarmee stands up in 1956: Land Forces (LaSK), People's Navy (VM) and Air Force / Air Defence (LSK/LV) all carry a 1956 establishment year and dissolve with the state in 1990. This is correct, not a bug. The world starts with no pre-seeded wars; every conflict comes from a player declaration or a world event. See [Conflicts Overview](/wiki/conflicts-overview).
+**A 1953 world seeds East Germany with zero military branches.** This is historical: the GDR had no national army until 1956, and the paramilitary police units before then sit under the Interior portfolio. The Nationale Volksarmee stands up in 1956: Land Forces (LaSK), People's Navy (VM) and Air Force / Air Defence (LSK/LV) all carry a 1956 establishment year and dissolve with the state in 1990. This is correct, not a bug. A world can be seeded mid-war; conflicts come from a player declaration, a world event or the world seed. See [Conflicts Overview](/wiki/conflicts-overview).
 
 ## Career: deputy to General Secretary
 
@@ -158,5 +158,5 @@ DD
 
 See also: [Core Systems](/wiki/core-systems) for turn structure and the action economy.
 
-Playable in the 1953 and 1979 presets only. In later presets Germany is already unified and East Germany does not exist. Command economy, one-party rules and the German Question apply in both presets. Last checked 2026-10-30, version 1.18.0.
+Present in the 1953 and 1979 presets only, as an NPP-run state. In later presets Germany is already unified and East Germany does not exist. Command economy, one-party rules and the German Question apply in both presets. Last checked 2026-10-30, version 1.18.0.
 `;

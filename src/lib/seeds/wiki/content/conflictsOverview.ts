@@ -28,7 +28,7 @@ A unit with no general sits in **reserve**, the homeland garrison. Reserve is al
 
 ## What a conflict is
 
-A **conflict** is a first-class battleground created during play. The world starts with **none**. There are no pre-seeded wars waiting on the map at a 1953 or 1979 reset: every conflict on the board was started by a player declaration or a world event.
+A **conflict** is a first-class battleground created during play. The world starts with **none**. There are no pre-seeded wars waiting on the map at a 1953 or 1979 reset: every conflict on the board was started by a player declaration, a world event or an admin.
 
 Each conflict carries:
 
@@ -48,7 +48,7 @@ A resolved conflict keeps its page until the world resets. That is the point of 
 
 | Surface | Route | Who uses it |
 | --- | --- | --- |
-| **Conflicts hub** | \`/world/conflicts\` | Everyone. The world map of active wars, with casualties and who holds what. |
+| **Conflicts hub** | /world/crises?view=conflicts | Everyone. The world map of active wars, with casualties and who holds what. |
 | **Conflict record** | \`/world/conflicts/<number>\` | Everyone, at their fog tier. The per-war page: territory, engagements, and (if you have standing) actions. |
 | **Combat Command** | \`/world/conflicts/combat\` | Your nation's war room. Order of battle, unit dossiers, forecasts, declaring offensives. |
 | **Defence office → Military** | Cabinet office of the defence seat | Recruit units, set postures, upgrade tech, assign units to generals, manage manpower. |
@@ -84,7 +84,7 @@ Two of these are worth reading twice.
 Not every nation has the machinery.
 
 - **Every sovereign country has a defence seat**, so every control on these pages exists for it: the playable countries and the wider roster alike (US, UK, CN, DE, JP, IE, BR, NG, RU, DD, PL, HU, RO, YU, BG, CS, UKR, BLR, BAL, FR, IT, ES, SE, TR, GR, AT, FI). Whether a *player* can sit in that seat depends on whether the country is open to players in your world; where it is not, the seat is run by the autonomous government, which recruits, deploys and can even ratify its way into a war.
-- **Read-only:** Scotland and Wales define no defence seat. Their forces exist and are simulated but nobody directs them.
+- **Scotland and Wales** each have a defence seat, the Cabinet Secretary for Defence, which works like the Westminster defence secretary.
 
 Era gating narrows this further. West Germany has **no armed forces at all in 1953**: the Bundeswehr stands up in 1955, and East Germany's NVA in 1956. A 1953 world correctly seeds those nations with zero branches rather than inventing a predecessor.
 
@@ -110,7 +110,7 @@ One deliberate gap: **incoming offensives are hidden.** You are not told that an
 
 Wars move on the hourly turn tick, in a fixed order:
 
-1. **Force effects.** Your army's upkeep hits the budget, its power and readiness feed public safety confidence, readiness drifts toward its posture baseline.
+1. **Force effects.** Your army's power and readiness feed public safety confidence. Upkeep and readiness drift toward the posture baseline are settled just before, by the defence appropriation sweep.
 2. **Battles resolve.** Offensives declared on an *earlier* turn fight now, against the enemy's real units as they stand at this moment.
 3. **Generals accrue tenure points**, placed after battles so a general promoted by this turn's fighting is already at the new rank.
 4. **Reinforcement.** Manpower regenerates and under-strength units top up in place, still under their own general.
@@ -123,7 +123,7 @@ The one-turn gap between declaring and resolving is the **defender's window**. I
 
 ## The Cold War layer
 
-Above all the boards on [/world/conflicts](/world/conflicts) sits the world's shared **tension gauge**: one 0 to 100 reading of how close the standoff is to boiling over, with a feed of the events that moved it and a strip of the world's nuclear powers. Nuclear tests, escalation, and crises push it up; time and detente bring it down, and its band drives readiness, procurement demand, and diplomatic goodwill across every country at once. See [Cold War Tension](/wiki/cold-war-tension) for the gauge itself and [The Nuclear Programme](/wiki/nuclear-programme) for the tree that puts the warheads behind it. Wars between nuclear-armed countries raise tension at once.
+Above all the boards on [/world/crises?view=conflicts](/world/crises?view=conflicts) sits the world's shared **tension gauge**: one 0 to 100 reading of how close the standoff is to boiling over, with a feed of the events that moved it and a strip of the world's nuclear powers. Nuclear tests, escalation, and crises push it up; time and detente bring it down, and its band drives readiness, procurement demand, and diplomatic goodwill across every country at once. See [Cold War Tension](/wiki/cold-war-tension) for the gauge itself and [The Nuclear Programme](/wiki/nuclear-programme) for the tree that puts the warheads behind it. Wars between nuclear-armed countries raise tension at once.
 
 The link runs both ways with the crisis system. High escalation in a campaign can open a real shooting war (see [Global Response Crises](/wiki/global-response-crises)), and while shooting wars are active they hold the tension floor up, which is what unlocks wartime crises in [World Events](/wiki/world-events).
 
@@ -148,7 +148,7 @@ Here is how the pieces meet, with turn numbers. One turn is one real hour.
 
 - **Every player:** read the public record, and watch the world gauge. If you sit in a legislature, vote on the declaration and whip for or against it. Your country's approval answers to the war whether or not you hold a military role.
 - **Defence seat holder:** recruit, assign, set posture, adopt doctrine, commission generals, and file the declaration. See [Units, Recruitment & Procurement](/wiki/military-units) and [National Doctrine](/wiki/national-doctrine).
-- **Commanding General or Theater Commander:** post generals and name offensives. See [Commands & Command Structure](/wiki/military-commands).
+- **Commanding General:** post generals and name a Theater Commander. **Theater Commander:** declare offensives. See [Commands & Command Structure](/wiki/military-commands).
 - **Head of government or foreign seat holder:** negotiate the way out. See [Peace, Indemnities & Truces](/wiki/peace-and-truces).
 
 **Questions that come up.** *How do I assign stuff to a conflict?* You assign units to a general, and your Commanding General posts that general. *Who declares and who ends it?* The head of government or the defence seat files, and the head of government or the foreign seat negotiates peace. *Why can't I see the enemy's units?* Force composition is hidden behind the fog tiers above. *Can we declare war on non-playable nations?* The target must be open to players in your world, though a country nobody currently plays qualifies. See [Declaring War](/wiki/declaring-war).
@@ -163,5 +163,5 @@ Here is how the pieces meet, with turn numbers. One turn is one real hour.
 - Want to end one? [Peace, Indemnities & Truces](/wiki/peace-and-truces).
 - Want to see it all put together? [A War, Start to Finish](/wiki/a-war-start-to-finish).
 
-Live in every world. West Germany has no armed forces in 1953, and Scotland and Wales have no defence seat. Last checked 2026-10-29, version 1.18.0. Exact rules: [The Cold War and conflict system (as shipped)](https://docs.lakesidegames.net/design/conflict-system-as-shipped.html)
+Live in every world. West Germany has no armed forces in 1953. Last checked 2026-10-29, version 1.18.0. Exact rules: [The Cold War and conflict system (as shipped)](https://docs.lakesidegames.net/design/conflict-system-as-shipped.html)
 `;
