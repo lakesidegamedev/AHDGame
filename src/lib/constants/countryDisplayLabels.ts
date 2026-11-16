@@ -269,6 +269,14 @@ export const COUNTRY_DISPLAY_LABELS: Record<CountryId, CountryDisplayLabel> = {
     regionLabel: "Region",
     regionLabelPlural: "Regions",
   },
+  AB: {
+    name: "Alberta",
+    exchangeName: "Alberta Securities Exchange",
+    flagEmoji: "🌾",
+    executiveLabel: "Office of the Premier",
+    regionLabel: "Region",
+    regionLabelPlural: "Regions",
+  },
   DD: {
     exchangeKind: "stateRegister",
     name: "East Germany",

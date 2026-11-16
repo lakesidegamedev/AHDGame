@@ -65,9 +65,7 @@ function fixture(direction: "buy" | "sell") {
   };
   memory.seed("indexFunds", [{ ...fund }]);
   memory.seed("corporations", [corp]);
-  memory.seed("gameConfig", [
-    { _id: "default", ledgerShadow: true, auditLog: true, indexFundsMode: "full" },
-  ]);
+  memory.seed("gameConfig", [{ _id: "default", ledgerShadow: true, auditLog: true }]);
   // Turn 6 is processed; turn 7 is accumulating.
   memory.seed("gameState", [{ _id: "current", currentTurn: 6 }]);
   vi.mocked(getDb).mockResolvedValue(db);

@@ -83,6 +83,7 @@ export const COUNTRY_CURRENCY_MAP: Record<CountryId, CurrencyCode> = {
   WAL: "GBP", // sterlingized — shares the UK's GBP (anchor stays UK)
   CA: "CAD",
   QC: "CAD", // shares Canada's CAD (anchor stays CA)
+  AB: "CAD", // shares Canada's CAD (anchor stays CA)
 };
 
 /**

@@ -15,12 +15,6 @@ import { handleRouteError, notFound, errorResponse } from "@/lib/api/errors";
 import { runTransactionWithSessionRetry } from "@/lib/db/transactionWithRetry";
 import { parseJsonBody } from "@/lib/api/validate";
 import {
-  isIndexFundsFullMode,
-  INDEX_FUNDS_PARTIAL_MESSAGE,
-  INDEX_FUNDS_DISABLED_MESSAGE,
-  isIndexFundsEnabled,
-} from "@/lib/indexFunds/featureFlag";
-import {
   resolveFundBySlugOrId,
   creditFundPosition,
   getPosition,
@@ -55,7 +49,6 @@ class FundQuoteMovedError extends Error {}
 
 // POST /api/investment-funds/[slug]/subscribe - Subscribe (buy) fund units
 // Auth: logged-in user with a character
-// Requires "full" mode - partial mode blocks player transactions.
 // Debits character's personal balance in the fund's anchor currency.
 export async function POST(request: Request, { params }: { params: Promise<{ slug: string }> }) {
   let claimedOperationId: string | undefined;
@@ -115,12 +108,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
     const execute = async () => {
       if (!(await fundTradeCapabilities(db, fund, { hasCharacter: true, units: 0 })).canSubscribe)
         return errorResponse(403, "This fund is not accepting investments.");
-      if (!(await isIndexFundsEnabled())) {
-        return errorResponse(403, INDEX_FUNDS_DISABLED_MESSAGE);
-      }
-      if (!(await isIndexFundsFullMode())) {
-        return errorResponse(403, INDEX_FUNDS_PARTIAL_MESSAGE);
-      }
 
       if (fund.status !== "active") {
         return errorResponse(400, "Fund is not accepting subscriptions");

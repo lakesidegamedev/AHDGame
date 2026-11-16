@@ -20,7 +20,6 @@ import type { PensionScheme } from "@/lib/db/types/pensionScheme";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
 import { emitTx } from "@/lib/financialTxLog/emit";
-import { isIndexFundsEnabled } from "@/lib/indexFunds/featureFlag";
 import { creditFundPosition, insertFundTransaction } from "@/lib/indexFunds/fundQueries";
 import { pensionInvestableCashAnchor } from "./rules";
 import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
@@ -57,10 +56,6 @@ export async function runPensionSchemeInvestments(
   currentTurn: number
 ): Promise<PensionInvestingResult> {
   const result: PensionInvestingResult = { schemesInvesting: 0, investedAnchor: 0, errors: [] };
-
-  // Fail closed. Schemes simply hold cash and every other pension mechanic is
-  // untouched.
-  if (!(await isIndexFundsEnabled())) return result;
 
   const schemes = await pensionSchemesCollection<PensionScheme>(db)
     .find({ assetsAnchor: { $gt: 0 } })

@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
-import { handleRouteError, errorResponse } from "@/lib/api/errors";
-import { isIndexFundsEnabled, INDEX_FUNDS_DISABLED_MESSAGE } from "@/lib/indexFunds/featureFlag";
+import { handleRouteError } from "@/lib/api/errors";
 import { listActiveFunds, listSnapshotsForFunds } from "@/lib/indexFunds/fundQueries";
 import { buildFundNavMetrics } from "@/lib/indexFunds/fundNavMetrics";
 import { filterFundsForExchange } from "@/lib/indexFunds/fundExchangeFilter";
@@ -12,9 +11,6 @@ import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 export async function GET(request: Request) {
   try {
     const db = await getDb();
-    if (!(await isIndexFundsEnabled())) {
-      return errorResponse(403, INDEX_FUNDS_DISABLED_MESSAGE);
-    }
 
     const { searchParams } = new URL(request.url);
     const exchangeParam = (searchParams.get("exchange") ?? "global").toUpperCase();

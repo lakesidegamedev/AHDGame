@@ -32,6 +32,7 @@ import { CABINET_POSITIONS } from "./cabinet";
 import { ECON_COUNTRY_CABINET_POSITIONS } from "./econCountryCabinet";
 import { CA_CABINET_POSITIONS } from "@/lib/countries/ca/cabinet/positions";
 import { QC_CABINET_SEATS } from "@/lib/countries/qc/data/qcCabinet";
+import { AB_CABINET_SEATS } from "@/lib/countries/ab/data/abCabinet";
 import { devolvedCabinetPositions } from "@/lib/cabinet/rules/devolvedSeats";
 
 /** One era display-name band; the last band with `from <= year` wins. */
@@ -119,6 +120,7 @@ const POSITIONS_BY_COUNTRY: Record<string, ReadonlyArray<CabinetPositionDef>> = 
   BR: ECON_COUNTRY_CABINET_POSITIONS,
   CA: CA_CABINET_POSITIONS,
   QC: devolvedCabinetPositions(QC_CABINET_SEATS),
+  AB: devolvedCabinetPositions(AB_CABINET_SEATS),
 };
 
 /** Get cabinet positions list for a country. */

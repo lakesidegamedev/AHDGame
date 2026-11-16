@@ -4,7 +4,6 @@ import { getDb } from "@/lib/mongodb";
 import { notFound, errorResponse } from "@/lib/api/errors";
 import { parseJsonBody } from "@/lib/api/validate";
 import { z } from "zod";
-import { isIndexFundsEnabled, INDEX_FUNDS_DISABLED_MESSAGE } from "@/lib/indexFunds/featureFlag";
 import { resolveFundBySlugOrId, insertFundTransaction } from "@/lib/indexFunds/fundQueries";
 import { calculateBackingRatio } from "@/lib/indexFunds/unitAccounting";
 import { recomputeNav } from "@/lib/indexFunds/fundCron";
@@ -36,9 +35,6 @@ export const POST = withAdminRoute(
     }
 
     const db = await getDb();
-    if (!(await isIndexFundsEnabled())) {
-      return errorResponse(403, INDEX_FUNDS_DISABLED_MESSAGE);
-    }
 
     const { slug } = await params;
     const fund = await resolveFundBySlugOrId(db, slug);

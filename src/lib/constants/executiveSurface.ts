@@ -30,6 +30,7 @@ import { UKR_IDENTITY } from "@/lib/countries/ukr/identity";
 import { BAL_IDENTITY } from "@/lib/countries/bal/identity";
 import { CA_IDENTITY } from "@/lib/countries/ca/identity";
 import { QC_IDENTITY } from "@/lib/countries/qc/identity";
+import { AB_IDENTITY } from "@/lib/countries/ab/identity";
 
 /**
  * Per-country configuration for the shared executive shell (instrument strip
@@ -98,6 +99,7 @@ export const EXECUTIVE_SURFACE: Record<CountryId, ExecutiveSurfaceConfig> = {
   WAL: WAL_IDENTITY.executiveSurface,
   CA: CA_IDENTITY.executiveSurface,
   QC: QC_IDENTITY.executiveSurface,
+  AB: AB_IDENTITY.executiveSurface,
 };
 
 export function getExecutiveSurface(countryId: CountryId): ExecutiveSurfaceConfig {

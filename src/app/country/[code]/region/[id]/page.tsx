@@ -59,6 +59,8 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 import { demographicDefaultsCollection } from "@/lib/db/repositories/demographicDefaults";
+import { loadCountryLeanScale } from "@/lib/regionLean/loadCountryLeanScale";
+import { regionLeanDisplay } from "@/lib/regionLean/scale";
 
 interface Props {
   params: Promise<{ code: string; id: string }>;
@@ -369,50 +371,51 @@ async function renderGenericRegion(countryId: CountryId, regionCode: string) {
   // The remaining reads below all depend only on data this batch already
   // returned, so they resolve together instead of as three separate round
   // trips: viewer party, office access and the region's major parties.
-  const [regionalConditionsOverviewEnabled, currentParty, officeCanManage, regionPartyDocs] =
-    await Promise.all([
-      // Pure config check — no round trip, kept in the batch for ordering.
-      Promise.resolve(isRegionalConditionsOverviewEnabled(gameConfig)),
-      // Viewer's party — used by the RegionDropdown to surface a "My Party" link
-      // to this region's party-branch page when the viewer is in this country.
-      getCurrentPartyNav(userData?.character),
-      // Whether the viewer may reach the regional executive's Office page — the
-      // human holder, OR an authorized party officer of an NPP-held office (state
-      // Chair/Vice, or national Chair/Vice when the state party has neither).
-      // Drives the "Office →" link visibility.
-      userData?.character?._id
-        ? resolveOfficeAccess(db, countryId, state._id, userData.character._id).then(
-            (access) => access.canManage
-          )
-        : Promise.resolve(false),
-      // Region major parties (with positions) for the Demographics dossier's
-      // preferred-party derivation. `isDefault` parties are the country's built-in
-      // major parties and are the only records that reliably carry econ/social
-      // positions; the semantic `majorPartyIds` codes have no PoliticalParty field
-      // to match against, so we select by `isDefault` here.
-      politicalPartiesCollection(db)
-        .find({ countryId, isDefault: true })
-        .project<
-          Pick<
-            PoliticalParty,
-            | "sequentialId"
-            | "name"
-            | "abbreviation"
-            | "color"
-            | "economicPosition"
-            | "socialPosition"
-          >
-        >({
-          sequentialId: 1,
-          name: 1,
-          abbreviation: 1,
-          color: 1,
-          economicPosition: 1,
-          socialPosition: 1,
-        })
-        .sort({ sequentialId: 1 })
-        .toArray(),
-    ]);
+  const [
+    regionalConditionsOverviewEnabled,
+    currentParty,
+    officeCanManage,
+    regionPartyDocs,
+    leanScale,
+  ] = await Promise.all([
+    // Pure config check — no round trip, kept in the batch for ordering.
+    Promise.resolve(isRegionalConditionsOverviewEnabled(gameConfig)),
+    // Viewer's party — used by the RegionDropdown to surface a "My Party" link
+    // to this region's party-branch page when the viewer is in this country.
+    getCurrentPartyNav(userData?.character),
+    // Whether the viewer may reach the regional executive's Office page — the
+    // human holder, OR an authorized party officer of an NPP-held office (state
+    // Chair/Vice, or national Chair/Vice when the state party has neither).
+    // Drives the "Office →" link visibility.
+    userData?.character?._id
+      ? resolveOfficeAccess(db, countryId, state._id, userData.character._id).then(
+          (access) => access.canManage
+        )
+      : Promise.resolve(false),
+    // Region major parties (with positions) for the Demographics dossier's
+    // preferred-party derivation. `isDefault` parties are the country's built-in
+    // major parties and are the only records that reliably carry econ/social
+    // positions; the semantic `majorPartyIds` codes have no PoliticalParty field
+    // to match against, so we select by `isDefault` here.
+    politicalPartiesCollection(db)
+      .find({ countryId, isDefault: true })
+      .project<
+        Pick<
+          PoliticalParty,
+          "sequentialId" | "name" | "abbreviation" | "color" | "economicPosition" | "socialPosition"
+        >
+      >({
+        sequentialId: 1,
+        name: 1,
+        abbreviation: 1,
+        color: 1,
+        economicPosition: 1,
+        socialPosition: 1,
+      })
+      .sort({ sequentialId: 1 })
+      .toArray(),
+    loadCountryLeanScale(db, countryId),
+  ]);
 
   // Per-bucket electorate profile for the Demographics tab. Derived from the
   // same granular units the vote engine uses, so the tab cannot disagree with
@@ -498,6 +501,10 @@ async function renderGenericRegion(countryId: CountryId, regionCode: string) {
   // unions both so seated deputies actually appear (ticket #1121).
   const countryConfig = getCountryConfig(countryId);
 
+  // Party-lean label and centred tones for the header and demographics tab.
+  const leanDisplay = calculatedLeans
+    ? regionLeanDisplay(leanScale, calculatedLeans.economicLean, calculatedLeans.socialLean)
+    : null;
   const regionParties: RegionPartyPosition[] = regionPartyDocs.map((p) => ({
     partyId: String(p.sequentialId),
     name: p.name,
@@ -594,6 +601,7 @@ async function renderGenericRegion(countryId: CountryId, regionCode: string) {
             count: state.houseDistricts,
           }}
           leans={calculatedLeans}
+          leanDisplay={leanDisplay}
           approval={
             governmentApproval != null
               ? {
@@ -639,6 +647,7 @@ async function renderGenericRegion(countryId: CountryId, regionCode: string) {
             censusData={getRegionCensusData(countryId, state._id, activePreset)}
             calculatedLeans={calculatedLeans}
             regionParties={regionParties}
+            leanDisplay={leanDisplay}
             partyOrg={serializedPartyOrg}
             turnoutData={turnoutData}
             bucketProfile={bucketProfile}

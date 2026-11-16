@@ -11,10 +11,6 @@ import {
 import type { NPP } from "@/lib/db/types";
 import { ObjectId } from "mongodb";
 
-vi.mock("@/lib/indexFunds/featureFlag", () => ({
-  isIndexFundsEnabled: vi.fn().mockResolvedValue(true),
-}));
-
 describe("nppInvesting", () => {
   const makeNPP = (overrides: Partial<NPP> = {}): NPP => ({
     _id: new ObjectId(),

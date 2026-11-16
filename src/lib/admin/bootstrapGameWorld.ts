@@ -954,10 +954,8 @@ export async function bootstrapGameWorld(options: BootstrapOptions) {
   );
   log("Built initial stock-exchange snapshot");
 
-  // Index funds ship on by default (gameConfig.indexFundsMode = "full"); run the
-  // idempotent fund-definition bootstrap migrations so the fund docs exist to
-  // back that flag on a fresh world. Mirrors the on-demand run in the admin
-  // index-funds enable route.
+  // Run the idempotent fund-definition bootstrap migrations so the fund docs
+  // exist on a fresh world.
   const forceIndexFundBootstrap =
     (await indexFundsCollection<Document>(db).countDocuments({}, { limit: 1 })) === 0;
   const indexFundBootstrap = await runMigrations(db, {

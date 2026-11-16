@@ -46,15 +46,22 @@ Once the mood reaches 60, the Premier can ask Canada's Prime Minister for a sove
 
 If Quebec leaves, Canada's Parliament shrinks with it. Quebec's 78 MPs leave the House of Commons, so the House has 265 seats and a majority becomes **133**. Quebec's 24 senators leave too, leaving 81. Quebec takes its share of the federal debt and treasury cash in proportion to its share of Canada's GDP.
 
+## Alberta
+
+Alberta has the same sovereignty mood, opening at 24, well below the 60 a Premier needs to ask for a referendum. Its Premier sets the stance from the Sovereignty tab, and a mood above 50 shifts votes in Alberta elections toward the **Alberta Sovereignty Party** and away from the two main federal parties.
+
+If Alberta becomes independent, it has six regions (Calgary, Edmonton, Central Alberta, Southern Alberta, Foothills and Rockies, and Northern Alberta), an 87-seat Legislative Assembly and the Canadian dollar. Canada keeps the rest: Alberta's 37 MPs leave the House of Commons, so the House has 306 seats and a majority becomes **154**, and Alberta's 6 senators leave too. If both Quebec and Alberta leave, the House has 228 seats and a majority needs **115**.
+
 ## Parties
 
-The five default parties use their real federal names.
+The default parties use their real federal names, plus one regional party.
 
 | Party | Abbreviation | Leaning |
 | --- | --- | --- |
 | Liberal Party of Canada | LIB | Centrist, governing at the start |
 | Conservative Party of Canada | CON | Right of centre, the main opposition |
 | Bloc Québécois | BQ | Quebec sovereigntist, eligible across Canada |
+| Alberta Sovereignty Party | ASP | Alberta sovereigntist, right of centre |
 | New Democratic Party | NDP | Left |
 | Green Party of Canada | GRN | Green |
 

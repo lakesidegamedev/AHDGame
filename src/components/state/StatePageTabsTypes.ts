@@ -13,6 +13,7 @@ import type { CountryId } from "@/lib/constants/countries";
 
 import type { ActiveModifier } from "@/lib/utils/approvalModifiers";
 import type { RegionPartyPosition } from "@/lib/demographics/preferredParty";
+import type { RegionLeanDisplay } from "@/lib/regionLean/scale";
 
 export interface PartyOrgDisplay {
   _id: string;
@@ -183,6 +184,8 @@ export interface StatePageTabsProps {
   /** Region's major parties (with positions) for the Demographics dossier's
    *  preferred-party derivation. Empty/omitted when none resolve. */
   regionParties?: RegionPartyPosition[];
+  /** Party-lean label and tones centred on the main-party even split. */
+  leanDisplay?: RegionLeanDisplay | null;
   /**
    * Per-bucket electorate profile, derived server-side from the same granular
    * units the vote engine uses. Null when the region has no Layer-1 substrate.

@@ -54,6 +54,13 @@ describe("getLiveLowerChamberSeats", () => {
     expect(await getLiveLowerChamberSeats(db as unknown as Db, "CA")).toBe(265);
     expect(lowerChamberMajorityThreshold(265)).toBe(133);
   });
+  it("shrinks Canada's Commons to the 306 seats left when Alberta secedes", async () => {
+    const rest = caRegions2027
+      .filter((r) => r._id !== "CA_AB")
+      .map((r) => ({ houseDistricts: r.houseDistricts }));
+    db.collection("states").find.mockReturnValue(cursorOf(rest));
+    expect(await getLiveLowerChamberSeats(db as unknown as Db, "CA")).toBe(306);
+  });
   it("retains the known two-seat UK seed discrepancy", async () => {
     db.collection("states").find.mockReturnValue(cursorOf([{ houseDistricts: 648 }]));
     expect(await getLiveLowerChamberSeats(db as unknown as Db, "UK")).toBe(650);
@@ -242,6 +249,17 @@ describe("getLiveUpperChamberSeats", () => {
       senate(caRegions2027.filter((r) => r._id !== "CA_QC"))
     );
     expect(await getLiveUpperChamberSeats(db as unknown as Db, "CA")).toBe(81);
+  });
+
+  it("drops Alberta's 6 senators from Canada's Senate on secession", async () => {
+    db.collection("states").find.mockReturnValue(
+      cursorOf(
+        caRegions2027
+          .filter((r) => r._id !== "CA_AB")
+          .map((r) => ({ stateSenateSeats: r.stateSenateSeats }))
+      )
+    );
+    expect(await getLiveUpperChamberSeats(db as unknown as Db, "CA")).toBe(99);
   });
 
   it("sums region stateSenateSeats for SE 1953 First Chamber", async () => {

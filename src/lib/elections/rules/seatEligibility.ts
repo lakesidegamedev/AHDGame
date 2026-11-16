@@ -65,6 +65,7 @@ export function getMultiSeatMinShare(
     electionType === "riksdag" ||
     electionType === "caCommons" ||
     electionType === "qcAssembly" ||
+    electionType === "abAssembly" ||
     electionType === "milletMeclisi" ||
     electionType === "nationalrat" ||
     electionType === "eduskunta" ||

@@ -88,9 +88,17 @@ const QUEBEC_POLICY_BLURBS: Record<DevolutionPolicy, string> = {
     "Quebec is a nation and should become a country. Preparing that choice is the work of this Government.",
 };
 
+const ALBERTA_POLICY_BLURBS: Record<DevolutionPolicy, string> = {
+  anti: "Alberta's place is in Canada. Separation would cost our people far more than it could ever give them.",
+  pro: "Alberta governs what is ours to govern and defends its powers, inside the federation.",
+  independence:
+    "Alberta should become a country. Preparing that choice is the work of this Government.",
+};
+
 function policyBlurb(stateId: string, policy: DevolutionPolicy): string {
   const id = stateId.toUpperCase();
   if (id === "CA_QC") return QUEBEC_POLICY_BLURBS[policy];
+  if (id === "CA_AB") return ALBERTA_POLICY_BLURBS[policy];
   if (id === "NIR" && policy === "independence") return POLICY_NIR_REUNIFICATION_BLURB;
   return POLICY_BLURBS[policy];
 }

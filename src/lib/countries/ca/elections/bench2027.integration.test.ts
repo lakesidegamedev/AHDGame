@@ -191,7 +191,7 @@ it("gives every default party a complete national election bench", async () => {
     .insertMany(
       caStatePartyOrgRows(CA_REGION_POLLING_2025, caSlugToPartyId(CA_PARTY_SLUG_TO_NAME, parties))
     );
-  expect(await seedCaElectionBench(db, "2027-default")).toBe(195);
+  expect(await seedCaElectionBench(db, "2027-default")).toBe(234);
   const regionalParty = parties.find((party) => party.abbreviation === "BQ")!;
   const actors = await db
     .collection("npps")

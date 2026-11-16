@@ -378,7 +378,12 @@ export async function ruElectionsLive(db: Db, _countryId: CountryId = "RU"): Pro
 }
 
 /** Lower chambers of successor nations, which take snap elections and fixed cycles. */
-const SUCCESSOR_LOWER_CHAMBERS: ReadonlySet<string> = new Set(["holyrood", "senedd", "qcAssembly"]);
+const SUCCESSOR_LOWER_CHAMBERS: ReadonlySet<string> = new Set([
+  "holyrood",
+  "senedd",
+  "qcAssembly",
+  "abAssembly",
+]);
 /**
  * Standup-cycle spawner for a seceded country's devolved lower chamber
  * (SCO Holyrood / WAL Senedd). Modeled on `ensureIEElections`: one canonical

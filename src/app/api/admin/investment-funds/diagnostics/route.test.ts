@@ -5,7 +5,6 @@ import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
 
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
 vi.mock("@/lib/api/requireAdmin", () => ({ requireAdmin: vi.fn() }));
-vi.mock("@/lib/indexFunds/featureFlag", () => ({ getIndexFundsMode: vi.fn() }));
 vi.mock("@/lib/indexFunds/fundDefinitions", () => ({ getAllFundDefinitions: vi.fn() }));
 vi.mock("@/lib/indexFunds/fundQueries", () => ({ listFunds: vi.fn() }));
 
@@ -17,7 +16,6 @@ describe("GET /api/admin/investment-funds/diagnostics", () => {
     db = createMockDb();
     const { getDb } = await import("@/lib/mongodb");
     const { requireAdmin } = await import("@/lib/api/requireAdmin");
-    const { getIndexFundsMode } = await import("@/lib/indexFunds/featureFlag");
     const { getAllFundDefinitions } = await import("@/lib/indexFunds/fundDefinitions");
     const { listFunds } = await import("@/lib/indexFunds/fundQueries");
 
@@ -26,7 +24,6 @@ describe("GET /api/admin/investment-funds/diagnostics", () => {
       ok: true,
       admin: { userId: "admin1", username: "admin", role: "admin", isAdmin: true },
     } as any);
-    vi.mocked(getIndexFundsMode).mockResolvedValue("partial");
     vi.mocked(getAllFundDefinitions).mockReturnValue([
       {
         slug: "global_top_50",
@@ -81,7 +78,6 @@ describe("GET /api/admin/investment-funds/diagnostics", () => {
 
     expect(res.status).toBe(200);
     expect(json.success).toBe(true);
-    expect(json.featureFlag).toEqual({ mode: "partial", enabled: true });
     expect(json.migration.markerPresent).toBe(false);
     expect(json.summary).toEqual({
       totalExpected: 4,

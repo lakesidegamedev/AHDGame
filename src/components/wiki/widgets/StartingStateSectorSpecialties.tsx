@@ -46,6 +46,7 @@ type StartingCountryId = Exclude<
   | "WAL"
   | "CA"
   | "QC"
+  | "AB"
 >;
 
 const REGIONS_BY_COUNTRY: Record<StartingCountryId, readonly State[]> = {

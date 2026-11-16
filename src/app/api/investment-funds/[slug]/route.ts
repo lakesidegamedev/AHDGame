@@ -4,9 +4,8 @@ import { resolveCorpLiquidCurrencyCode } from "@/lib/currency/corporationCapital
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
-import { handleRouteError, notFound, errorResponse } from "@/lib/api/errors";
+import { handleRouteError, notFound } from "@/lib/api/errors";
 import { getAuthUserWithCharacter } from "@/lib/auth";
-import { isIndexFundsEnabled, INDEX_FUNDS_DISABLED_MESSAGE } from "@/lib/indexFunds/featureFlag";
 import {
   resolveFundBySlugOrId,
   listFundPositions,
@@ -39,8 +38,6 @@ export async function GET(_request: Request, { params }: { params: Promise<{ slu
     const { slug } = await params;
     const fund = await resolveFundBySlugOrId(db, slug);
     if (!fund) throw notFound("Fund not found");
-    if (fund.mandate?.mode !== "picked_stocks" && !(await isIndexFundsEnabled()))
-      return errorResponse(403, INDEX_FUNDS_DISABLED_MESSAGE);
 
     const snapshots = await listFundSnapshots(db, fund._id, 1000);
     const navMetrics = buildFundNavMetrics(snapshots);
