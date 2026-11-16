@@ -15,7 +15,10 @@ import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
 import { statesCollection } from "@/lib/db/repositories/states";
 import type { Document } from "mongodb";
 import { SOVEREIGNTY_REGIONS } from "@/lib/referendum/rules/sovereigntyRegions";
-import { departedRegions } from "@/lib/legislature/rules/departedRegions";
+import {
+  departedRegions,
+  departedStateIds as stateIdsOfDeparted,
+} from "@/lib/legislature/rules/departedRegions";
 
 /** US senators per state (the +2 in EV = houseSeats + senators). */
 const SENATORS_PER_STATE = 2;
@@ -195,11 +198,9 @@ export async function loadApportionment(
   // A future-dated admission must not count yet — the year gate is what keeps
   // this consistent with the DC/ME-NE gates above.
   const admitted = admittedStateIdsAsOf(usStates, resolveApportionmentYear(preset, year));
-  const departed = departedRegions(
-    SOVEREIGNTY_REGIONS,
-    "US",
-    new Set(usStates.map((state) => state._id))
-  ).map((entry) => entry.regionId);
+  const departed = stateIdsOfDeparted(
+    departedRegions(SOVEREIGNTY_REGIONS, "US", new Set(usStates.map((state) => state._id)))
+  );
   return buildApportionment(live, preset, year, admitted, departed);
 }
 

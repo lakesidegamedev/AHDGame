@@ -37,6 +37,7 @@ import { CA_WORLD_REGION, CA_UN_MEMBER_SINCE } from "@/lib/countries/ca/geograph
 import { QC_WORLD_REGION } from "@/lib/countries/qc/geographyFacts";
 import { AB_WORLD_REGION } from "@/lib/countries/ab/geographyFacts";
 import { RTX_WORLD_REGION } from "@/lib/countries/rtx/geographyFacts";
+import { NEN_WORLD_REGION } from "@/lib/countries/nen/geographyFacts";
 import { RCA_WORLD_REGION } from "@/lib/countries/rca/geographyFacts";
 
 /** Coverage region for CountryConfig-backed entities (1953 gate + diagnostics). */
@@ -74,6 +75,7 @@ export const COUNTRY_REGIONS: Record<CountryId, WorldEntityRegion> = {
   QC: QC_WORLD_REGION,
   AB: AB_WORLD_REGION,
   RTX: RTX_WORLD_REGION,
+  NEN: NEN_WORLD_REGION,
   RCA: RCA_WORLD_REGION,
 };
 

@@ -135,6 +135,27 @@ export const usParties: PartySeed[] = [
     createdBy: null,
     validForPresets: ["2027-default"],
   },
+  {
+    seedOrder: 7,
+    countryId: "US",
+    name: "New England Independence Party",
+    abbreviation: "NEI",
+    tier: "minor",
+    color: "#1F4E79",
+    economicPosition: -2,
+    socialPosition: -3,
+    chairId: null,
+    viceChairId: null,
+    treasurerId: null,
+    committeeIds: [],
+    treasury: 1_000_000,
+    nationalTaxRate: 0,
+    politicalStrength: 0,
+    memberCount: 0,
+    isDefault: true,
+    createdBy: null,
+    validForPresets: ["2027-default"],
+  },
 ];
 
 /** Default party abbreviation to stable slug, for rules keyed by slug. */
@@ -143,4 +164,5 @@ export const US_PARTY_SLUG_BY_ABBREVIATION: Readonly<Record<string, string>> = {
   REP: "us_republican",
   LSI: "us_lone_star",
   BFI: "us_bear_flag",
+  NEI: "us_new_england",
 };

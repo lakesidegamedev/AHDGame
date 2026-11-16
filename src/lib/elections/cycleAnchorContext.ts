@@ -210,6 +210,12 @@ export interface PresetElectionYears {
    */
   rtxAssembly?: number | null;
   /**
+   * New England Legislative Assembly, used only if New England becomes independent in
+   * the 2027 world. A four-year fixed-date term from the 2027 election puts the
+   * next regular election in 2031.
+   */
+  nenAssembly?: number | null;
+  /**
    * California Legislative Assembly, used only if California becomes independent in
    * the 2027 world. A four-year fixed-date term from the 2027 election puts the
    * next regular election in 2031.
@@ -548,6 +554,7 @@ export const CANONICAL_REAL_ELECTION_YEARS_BY_PRESET: Record<string, PresetElect
     qcAssembly: 2030, // fixed-date term from the October 2026 Quebec election
     abAssembly: 2031, // fixed-date term from the 2027 Alberta election
     rtxAssembly: 2031, // fixed-date term from the 2027 Texas election
+    nenAssembly: 2031, // fixed-date term from the 2027 New England election
     rcaAssembly: 2031, // fixed-date term from the 2027 California election
   },
 };
@@ -614,6 +621,8 @@ export interface CycleAnchors {
   abAssembly: number | null;
   /** `null` = no Texas Assembly cycle in this era (Texas can exist in 2027 only). */
   rtxAssembly: number | null;
+  /** `null` = no New England Assembly cycle in this era (New England can exist in 2027 only). */
+  nenAssembly: number | null;
   /** `null` = no California Assembly cycle in this era (California can exist in 2027 only). */
   rcaAssembly: number | null;
 }
@@ -688,6 +697,7 @@ export function getCycleAnchors(ctx: CycleAnchorContext): CycleAnchors {
     qcAssembly: years.qcAssembly == null ? null : endOfYear(years.qcAssembly, sy, off),
     abAssembly: years.abAssembly == null ? null : endOfYear(years.abAssembly, sy, off),
     rtxAssembly: years.rtxAssembly == null ? null : endOfYear(years.rtxAssembly, sy, off),
+    nenAssembly: years.nenAssembly == null ? null : endOfYear(years.nenAssembly, sy, off),
     rcaAssembly: years.rcaAssembly == null ? null : endOfYear(years.rcaAssembly, sy, off),
   };
 }

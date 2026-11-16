@@ -27,6 +27,7 @@ const REGION_NAMES: Record<string, string> = {
   CA_QC: "Quebec",
   TX: "Texas",
   CA_AB: "Alberta",
+  NE_BLOC: "New England",
 };
 
 /** Celebratory green for a completed reunification. */

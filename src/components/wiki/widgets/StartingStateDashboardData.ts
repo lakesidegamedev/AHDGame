@@ -52,6 +52,7 @@ export type StartingCountryId = Exclude<
   | "QC"
   | "AB"
   | "RTX"
+  | "NEN"
   | "RCA"
 >;
 

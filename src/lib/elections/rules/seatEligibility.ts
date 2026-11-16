@@ -67,6 +67,7 @@ export function getMultiSeatMinShare(
     electionType === "qcAssembly" ||
     electionType === "abAssembly" ||
     electionType === "rtxAssembly" ||
+    electionType === "nenAssembly" ||
     electionType === "rcaAssembly" ||
     electionType === "milletMeclisi" ||
     electionType === "nationalrat" ||

@@ -31,6 +31,7 @@ import { CA_CABINET_MECHANICS } from "@/lib/countries/ca/cabinet/mechanics";
 import { QC_CABINET_SEATS } from "@/lib/countries/qc/data/qcCabinet";
 import { AB_CABINET_SEATS } from "@/lib/countries/ab/data/abCabinet";
 import { RTX_CABINET_SEATS } from "@/lib/countries/rtx/data/rtxCabinet";
+import { NEN_CABINET_SEATS } from "@/lib/countries/nen/data/nenCabinet";
 import { RCA_CABINET_SEATS } from "@/lib/countries/rca/data/rcaCabinet";
 import { devolvedCabinetMechanics } from "@/lib/cabinet/rules/devolvedSeats";
 
@@ -78,6 +79,7 @@ export const MECHANICS_BY_COUNTRY: Record<string, Record<string, CabinetPosition
   QC: devolvedCabinetMechanics(QC_CABINET_SEATS, UK_CABINET_MECHANICS),
   AB: devolvedCabinetMechanics(AB_CABINET_SEATS, UK_CABINET_MECHANICS),
   RTX: devolvedCabinetMechanics(RTX_CABINET_SEATS, UK_CABINET_MECHANICS),
+  NEN: devolvedCabinetMechanics(NEN_CABINET_SEATS, UK_CABINET_MECHANICS),
   RCA: devolvedCabinetMechanics(RCA_CABINET_SEATS, UK_CABINET_MECHANICS),
 };
 

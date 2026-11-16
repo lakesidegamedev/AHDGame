@@ -384,6 +384,7 @@ const SUCCESSOR_LOWER_CHAMBERS: ReadonlySet<string> = new Set([
   "qcAssembly",
   "abAssembly",
   "rtxAssembly",
+  "nenAssembly",
   "rcaAssembly",
 ]);
 /**

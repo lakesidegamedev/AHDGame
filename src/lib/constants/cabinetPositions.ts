@@ -34,6 +34,7 @@ import { CA_CABINET_POSITIONS } from "@/lib/countries/ca/cabinet/positions";
 import { QC_CABINET_SEATS } from "@/lib/countries/qc/data/qcCabinet";
 import { AB_CABINET_SEATS } from "@/lib/countries/ab/data/abCabinet";
 import { RTX_CABINET_SEATS } from "@/lib/countries/rtx/data/rtxCabinet";
+import { NEN_CABINET_SEATS } from "@/lib/countries/nen/data/nenCabinet";
 import { RCA_CABINET_SEATS } from "@/lib/countries/rca/data/rcaCabinet";
 import { devolvedCabinetPositions } from "@/lib/cabinet/rules/devolvedSeats";
 
@@ -124,6 +125,7 @@ const POSITIONS_BY_COUNTRY: Record<string, ReadonlyArray<CabinetPositionDef>> = 
   QC: devolvedCabinetPositions(QC_CABINET_SEATS),
   AB: devolvedCabinetPositions(AB_CABINET_SEATS),
   RTX: devolvedCabinetPositions(RTX_CABINET_SEATS),
+  NEN: devolvedCabinetPositions(NEN_CABINET_SEATS),
   RCA: devolvedCabinetPositions(RCA_CABINET_SEATS),
 };
 

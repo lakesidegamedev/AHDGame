@@ -21,6 +21,7 @@ import {
 } from "@/lib/constants/referendum";
 import { announceReferendumDecision } from "@/lib/referendum/referendumWebhooks";
 import { recordWireEvent } from "@/lib/referendum/wire";
+import { loadBlocMembers, loadPooledDesire } from "@/lib/referendum/blocMembers";
 import {
   hostsSovereigntyReferendums,
   referendumDecisionMakerTitle,
@@ -97,17 +98,33 @@ async function grantReferendumInTransaction(
     // A rebuffed petition inflames the cause: nudge the region's desire up
     // (clamped to 100) so a decline is not a free way to bury the question.
     // SP5: independenceDesire lives top-level on macroMetrics.
-    const metric = await macroMetricsCollection<MacroMetricsDoc>(db).findOne({ _id: ref.regionId });
-    const current = metric?.independenceDesire?.value ?? ref.yesShare;
-    await macroMetricsCollection<MacroMetricsDoc>(db).updateOne(
-      { _id: ref.regionId },
-      {
-        $set: {
-          "independenceDesire.value": Math.min(100, current + DECLINE_DESIRE_BUMP),
-          lastUpdated: new Date(),
-        },
-      }
-    );
+    const members = await loadBlocMembers(db, ref.regionId, ref.yesShare);
+    if (members.length === 1) {
+      const current = members[0].desire;
+      await macroMetricsCollection<MacroMetricsDoc>(db).updateOne(
+        { _id: ref.regionId },
+        {
+          $set: {
+            "independenceDesire.value": Math.min(100, current + DECLINE_DESIRE_BUMP),
+            lastUpdated: new Date(),
+          },
+        }
+      );
+    } else {
+      await macroMetricsCollection<MacroMetricsDoc>(db).bulkWrite(
+        members.map((member) => ({
+          updateOne: {
+            filter: { _id: member.regionId },
+            update: {
+              $set: {
+                "independenceDesire.value": Math.min(100, member.desire + DECLINE_DESIRE_BUMP),
+                lastUpdated: new Date(),
+              },
+            },
+          },
+        }))
+      );
+    }
     await afterCommit(db, () => announceReferendumDecision(ref, "decline").catch(() => {}));
     await recordWireEvent(db, {
       referendumId: ref._id!,
@@ -123,8 +140,7 @@ async function grantReferendumInTransaction(
   const closeTurn = currentTurn + CAMPAIGN_WINDOW_TURNS;
   // Seed the campaign baseline from the region's CURRENT desire at grant time
   // (spec §7), so the Yes share starts from where sentiment actually sits.
-  const metric = await macroMetricsCollection<MacroMetricsDoc>(db).findOne({ _id: ref.regionId });
-  const baseYesShare = metric?.independenceDesire?.value ?? ref.yesShare;
+  const baseYesShare = (await loadPooledDesire(db, ref.regionId)) ?? ref.yesShare;
   await refs.updateOne(
     { _id: ref._id, status: "requested" },
     {

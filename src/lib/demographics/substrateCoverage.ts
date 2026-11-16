@@ -228,6 +228,9 @@ export const REGION_ROSTERS: Partial<Record<CountryId, Partial<Record<EraId, Ros
   RTX: {
     "2027": () => import("@/lib/countries/rtx/data/rtxRegions").then((m) => m.rtxRegions),
   },
+  NEN: {
+    "2027": () => import("@/lib/countries/nen/data/nenRegions").then((m) => m.nenRegions),
+  },
   RCA: {
     "2027": () => import("@/lib/countries/rca/data/rcaRegions").then((m) => m.rcaRegions),
   },

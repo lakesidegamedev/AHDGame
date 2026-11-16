@@ -10,6 +10,10 @@ import type { Referendum } from "@/lib/db/types/referendum";
 import type { PollPoint } from "@/lib/referendum/pollSnapshot";
 import { getReferendumCollection } from "@/lib/db/collections/referendum";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import {
+  sovereigntyMemberRegionIds,
+  sovereigntyReferendumKey,
+} from "@/lib/referendum/rules/sovereigntyRegions";
 
 const TERMINAL = new Set(["declined", "settled", "completed", "cancelled"]);
 
@@ -43,7 +47,7 @@ export async function resolveRegionReferendumByCycle(
 ): Promise<ResolvedReferendumCycle | null> {
   const all = ordered(
     await getReferendumCollection(db)
-      .find({ countryId, regionId: regionId.toUpperCase() })
+      .find({ countryId, regionId: sovereigntyReferendumKey(regionId) })
       .sort({ requestedTurn: 1 })
       .toArray()
   );
@@ -89,14 +93,17 @@ export async function listCountryReferendums(
     ...new Set(all.filter((r) => r.status === "campaigning").map((r) => r.regionId)),
   ];
   const orgRows = activeRegionIds.length
-    ? await statePartyOrgCollection<{ stateId: string }>(db)
-        .find({ countryId, stateId: { $in: activeRegionIds } })
+    ? await statePartyOrgCollection<{ stateId: string; partyId: string }>(db)
+        .find({ countryId, stateId: { $in: activeRegionIds.flatMap(sovereigntyMemberRegionIds) } })
         .toArray()
     : [];
-  const orgCountByRegion = new Map<string, number>();
-  for (const row of orgRows) {
-    orgCountByRegion.set(row.stateId, (orgCountByRegion.get(row.stateId) ?? 0) + 1);
-  }
+  const orgPartiesByRegion = new Map<string, Set<string>>();
+  orgRows.forEach((row, index) => {
+    const key = sovereigntyReferendumKey(row.stateId);
+    const parties = orgPartiesByRegion.get(key) ?? new Set<string>();
+    parties.add(row.partyId != null ? String(row.partyId) : `row-${index}`);
+    orgPartiesByRegion.set(key, parties);
+  });
 
   const byRegion = new Map<string, Referendum[]>();
   for (const r of all) {
@@ -109,7 +116,7 @@ export async function listCountryReferendums(
       const positions = r.partyPositions ?? [];
       const forN = positions.filter((p) => p.side === "yes").length;
       const againstN = positions.filter((p) => p.side === "no").length;
-      const org = orgCountByRegion.get(r.regionId) ?? 0;
+      const org = orgPartiesByRegion.get(r.regionId)?.size ?? 0;
       const row: CountryReferendumRow = {
         regionId: r.regionId,
         cycle: i + 1,

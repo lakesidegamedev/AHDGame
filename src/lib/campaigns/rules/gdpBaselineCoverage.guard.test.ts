@@ -90,6 +90,7 @@ const PENDING_BASELINE: readonly string[] = [
   "QC",
   "AB",
   "RTX",
+  "NEN",
   "RCA",
   "RO",
   "SE",

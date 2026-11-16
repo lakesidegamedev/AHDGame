@@ -1,0 +1,65 @@
+{
+  "config": {
+    "governmentType": "parliamentaryRepublic",
+    "regionLabel": "Region",
+    "regionalBillAssentTitle": "Commissioner",
+    "legislature": {
+      "name": "Assembly",
+      "lowerChamber": {
+        "key": "nenAssembly",
+        "name": "Assembly",
+        "shortName": "Assembly",
+        "seats": 90,
+        "description": "90 members elected across New England's regions, seats shared by each region's vote."
+      }
+    },
+    "subNationalChamber": {
+      "key": "regionalCouncil",
+      "name": "Regional Council",
+      "shortName": "Council",
+      "regionalModel": true
+    },
+    "officeTypes": [
+      {
+        "key": "firstMinister",
+        "label": "Premier",
+        "labelPlural": "Premiers",
+        "isExecutive": true,
+        "isSubNational": false
+      },
+      {
+        "key": "nenAssembly",
+        "label": "Representative",
+        "labelPlural": "Representatives",
+        "chamberKey": "nenAssembly",
+        "isExecutive": false,
+        "isSubNational": false
+      },
+      {
+        "key": "governor",
+        "label": "Commissioner",
+        "labelPlural": "Commissioners",
+        "isExecutive": false,
+        "isSubNational": true
+      },
+      {
+        "key": "regionalCouncil",
+        "label": "Regional Councillor",
+        "labelPlural": "Regional Councillors",
+        "chamberKey": "regionalCouncil",
+        "isExecutive": false,
+        "isSubNational": true
+      },
+      {
+        "key": "centralBankChair",
+        "label": "Federal Reserve Chair",
+        "labelPlural": "Federal Reserve Chairs",
+        "isExecutive": false,
+        "isSubNational": false
+      }
+    ],
+    "lowerElectionSystem": {
+      "snapElectionsAllowed": true
+    }
+  }
+}

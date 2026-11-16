@@ -24,6 +24,10 @@ import {
 import { announceReferendumVoteResult } from "@/lib/referendum/referendumWebhooks";
 import { recordWireEvent } from "@/lib/referendum/wire";
 import {
+  sovereigntyMemberRegionIds,
+  sovereigntyRegionLabel,
+} from "@/lib/referendum/rules/sovereigntyRegions";
+import {
   CONVERSION_WINDOW_TURNS,
   SETTLED_COOLDOWN_TURNS,
   SETTLED_DESIRE_TARGET,
@@ -138,7 +142,7 @@ async function applyReferendumOutcomeInTransaction(
       title:
         ref.kind === "reunification"
           ? `${ref.regionId} votes to rejoin Ireland`
-          : `${ref.regionId} votes for independence`,
+          : `${sovereigntyRegionLabel(ref.regionId)} votes for independence`,
       details: {
         regionId: ref.regionId,
         kind: ref.kind,
@@ -171,20 +175,25 @@ async function applyReferendumOutcomeInTransaction(
   }
 
   // SP5: independenceDesire lives top-level on macroMetrics.
-  await macroMetricsCollection<MacroMetricsDoc>(db).updateOne(
-    { _id: ref.regionId },
-    {
-      $set: {
-        independenceDesire: { value: SETTLED_DESIRE_TARGET, trend: 0 },
-        lastUpdated: now,
+  const settled = {
+    $set: { independenceDesire: { value: SETTLED_DESIRE_TARGET, trend: 0 }, lastUpdated: now },
+  };
+  if (sovereigntyMemberRegionIds(ref.regionId).length === 1)
+    await macroMetricsCollection<MacroMetricsDoc>(db).updateOne({ _id: ref.regionId }, settled);
+  else
+    await macroMetricsCollection<MacroMetricsDoc>(db).bulkWrite([
+      {
+        updateMany: {
+          filter: { _id: { $in: sovereigntyMemberRegionIds(ref.regionId) } },
+          update: settled,
+        },
       },
-    }
-  );
+    ]);
   await recordCountryEvent(db, {
     countryId: ref.countryId,
     turn: currentTurn,
     eventType: "referendum_failed",
-    title: `${ref.regionId} referendum fails`,
+    title: `${sovereigntyRegionLabel(ref.regionId)} referendum fails`,
     details: {
       regionId: ref.regionId,
       kind: ref.kind,

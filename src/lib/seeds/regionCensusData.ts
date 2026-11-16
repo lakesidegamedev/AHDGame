@@ -53,6 +53,7 @@ import { CA_GEOGRAPHY } from "@/lib/countries/ca/geography";
 import { QC_GEOGRAPHY } from "@/lib/countries/qc/geography";
 import { AB_GEOGRAPHY } from "@/lib/countries/ab/geography";
 import { RTX_GEOGRAPHY } from "@/lib/countries/rtx/geography";
+import { NEN_GEOGRAPHY } from "@/lib/countries/nen/geography";
 import { RCA_GEOGRAPHY } from "@/lib/countries/rca/geography";
 
 export const CENSUS_BUNDLES: Partial<Record<CountryId, PresetBundles>> = {
@@ -102,6 +103,7 @@ export const CENSUS_BUNDLES: Partial<Record<CountryId, PresetBundles>> = {
   QC: QC_GEOGRAPHY.censusBundles,
   AB: AB_GEOGRAPHY.censusBundles,
   RTX: RTX_GEOGRAPHY.censusBundles,
+  NEN: NEN_GEOGRAPHY.censusBundles,
   RCA: RCA_GEOGRAPHY.censusBundles,
 };
 

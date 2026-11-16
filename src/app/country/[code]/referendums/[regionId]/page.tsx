@@ -1,4 +1,8 @@
-import { sovereigntyRegionIn } from "@/lib/referendum/rules/sovereigntyRegions";
+import { cohortMember } from "@/lib/referendum/rules/pooledElectorate";
+import {
+  sovereigntyMemberRegionIds,
+  sovereigntyRegionIn,
+} from "@/lib/referendum/rules/sovereigntyRegions";
 import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -53,7 +57,16 @@ import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
  * bucket conversion still carry archetype ids, which `turnoutTargetLabel`
  * humanizes rather than rendering blank.
  */
-function cohortName(groupId: string, countryId: string): string {
+function cohortName(
+  groupId: string,
+  countryId: string,
+  memberNames: ReadonlyMap<string, string> = new Map()
+): string {
+  const member = cohortMember(groupId);
+  if (member) {
+    const label = cohortName(groupId.slice(member.length + 1), countryId);
+    return `${memberNames.get(member) ?? member}: ${label}`;
+  }
   if (groupId === "_all") return "All voters";
   return turnoutTargetLabel(groupId, countryId);
 }
@@ -135,8 +148,18 @@ export default async function ReferendumDetailPage({
     getAuthUserWithCharacter(),
     getHeadOfGovernmentCharacterId(db, countryId),
   ]);
-  const regionName = stateDoc?.name ?? regionId.toUpperCase();
   const sovereignty = sovereigntyRegionIn(countryId, regionId);
+  const regionName = sovereignty?.displayName ?? stateDoc?.name ?? regionId.toUpperCase();
+  const memberIds = sovereigntyMemberRegionIds(regionId);
+  const memberNames = new Map<string, string>(
+    memberIds.length > 1
+      ? (
+          await statesCollection(db)
+            .find({ _id: { $in: memberIds } }, { projection: { name: 1 } })
+            .toArray()
+        ).map((row) => [row._id, row.name])
+      : []
+  );
   const noun = referendumKindLabel(ref.kind);
   const labels = referendumSideLabels(ref.kind);
   const isAdmin = user?.isAdmin === true;
@@ -149,9 +172,9 @@ export default async function ReferendumDetailPage({
 
   // Org-present parties in the region = the "could declare / undeclared" set.
   const regionStateParties = await statePartyOrgCollection(db)
-    .find({ countryId, stateId: regionId.toUpperCase() })
+    .find({ countryId, stateId: { $in: memberIds } })
     .toArray();
-  const orgPartyIds = regionStateParties.map((sp) => String(sp.partyId));
+  const orgPartyIds = [...new Set(regionStateParties.map((sp) => String(sp.partyId)))];
   const partyDocs = orgPartyIds.length
     ? await politicalPartiesCollection(db)
         .find({ countryId, sequentialId: { $in: orgPartyIds.map(Number) } })
@@ -198,7 +221,7 @@ export default async function ReferendumDetailPage({
       politicalPartiesCollection(db).findOne({ countryId, sequentialId: Number(viewerParty) }),
       statePartyOrgCollection(db).findOne({
         countryId,
-        stateId: regionId.toUpperCase(),
+        stateId: { $in: memberIds },
         partyId: viewerParty,
       }),
     ]);
@@ -220,7 +243,7 @@ export default async function ReferendumDetailPage({
     const m = modByGroup.get(c.groupId);
     return {
       groupId: c.groupId,
-      name: cohortName(c.groupId, countryId),
+      name: cohortName(c.groupId, countryId, memberNames),
       share: c.share,
       turnout: Math.max(0, Math.min(100, c.turnout + effTurnout(m?.turnoutMod ?? 0))),
       yesLean: Math.max(0, Math.min(100, c.yesLean + effLean(m?.leanMod ?? 0) + uniformLeanShift)),

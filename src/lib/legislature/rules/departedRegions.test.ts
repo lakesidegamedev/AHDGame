@@ -2,7 +2,11 @@ import { describe, expect, it } from "vitest";
 import { SOVEREIGNTY_REGIONS } from "@/lib/referendum/rules/sovereigntyRegions";
 import { buildApportionment } from "@/lib/elections/apportionment";
 import { liveSingleTierChamber } from "./liveChamber";
-import { departedRegions, upperChamberSeatsAfterDepartures } from "./departedRegions";
+import {
+  departedRegions,
+  departedStateIds,
+  upperChamberSeatsAfterDepartures,
+} from "./departedRegions";
 
 const texas = SOVEREIGNTY_REGIONS.find((entry) => entry.regionId === "TX")!;
 const actuating = [{ ...texas, actuates: true }];
@@ -45,9 +49,22 @@ describe("a US state leaving", () => {
 
 describe("the live registry once Texas can leave", () => {
   it("takes two senators off when Texas is gone from the live states", () => {
-    const departed = departedRegions(SOVEREIGNTY_REGIONS, "US", new Set(["NY", "CA"]));
+    const live = ["NY", "CA", "ME", "NH", "VT", "MA", "RI", "CT"];
+    const departed = departedRegions(SOVEREIGNTY_REGIONS, "US", new Set(live));
     expect(departed.map((entry) => entry.regionId)).toEqual(["TX"]);
     expect(upperChamberSeatsAfterDepartures(100, departed)).toBe(98);
+  });
+
+  it("takes twelve senators off once all six New England states have left", () => {
+    const departed = departedRegions(SOVEREIGNTY_REGIONS, "US", new Set(["NY", "CA", "TX"]));
+    expect(departed.map((entry) => entry.regionId)).toEqual(["NE_BLOC"]);
+    expect(departedStateIds(departed)).toEqual(["ME", "NH", "VT", "MA", "RI", "CT"]);
+    expect(upperChamberSeatsAfterDepartures(100, departed)).toBe(88);
+  });
+
+  it("keeps the bloc while any member state is still in the country", () => {
+    const live = new Set(["NY", "CA", "TX", "VT"]);
+    expect(departedRegions(SOVEREIGNTY_REGIONS, "US", live)).toEqual([]);
   });
 
   it("shrinks the House for the US once Texas can actuate", () => {

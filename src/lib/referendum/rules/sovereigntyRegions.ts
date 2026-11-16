@@ -52,6 +52,14 @@ export interface SovereigntyRegion {
    * seats two senators per state). Absent when the chamber follows its regions.
    */
   readonly parentUpperChamberSeats?: number;
+  /**
+   * States that leave together when `regionId` is a bloc id rather than a
+   * state. One referendum, one pooled result; the member states keep their ids
+   * and move to the successor country.
+   */
+  readonly memberRegionIds?: readonly string[];
+  /** How copy names a bloc, where no single region name exists. */
+  readonly displayName?: string;
 }
 
 export const SOVEREIGNTY_REGIONS: readonly SovereigntyRegion[] = [
@@ -181,9 +189,37 @@ export const SOVEREIGNTY_REGIONS: readonly SovereigntyRegion[] = [
     wording: "sovereignty",
     parentUpperChamberSeats: 2,
   },
+  {
+    countryId: "US",
+    regionId: "NE_BLOC",
+    kind: "independence",
+    targetCountryId: null,
+    successorCountryId: "NEN",
+    executiveTitle: "Governor",
+    nationalGovernmentName: "Washington",
+    parentName: "the United States",
+    decisionMakerTitle: "President",
+    consentBodyName: "Congress",
+    consentSponsor: "The Administration",
+    electionParties: {
+      separatist: ["us_new_england"],
+      rivals: ["us_republican", "us_democratic"],
+    },
+    actuates: true,
+    wording: "sovereignty",
+    parentUpperChamberSeats: 12,
+    memberRegionIds: ["ME", "NH", "VT", "MA", "RI", "CT"],
+    displayName: "New England",
+  },
 ];
 
-const BY_REGION = new Map(SOVEREIGNTY_REGIONS.map((entry) => [entry.regionId, entry]));
+/** A bloc id and each of its member states all resolve to the bloc's entry. */
+const BY_REGION = new Map<string, SovereigntyRegion>(
+  SOVEREIGNTY_REGIONS.flatMap((entry) => [
+    [entry.regionId, entry] as const,
+    ...(entry.memberRegionIds ?? []).map((member) => [member, entry] as const),
+  ])
+);
 
 /** The registry entry for a region, matched case-insensitively. */
 export function sovereigntyRegion(regionId: string): SovereigntyRegion | null {
@@ -205,11 +241,41 @@ export function usesSovereigntyWording(regionId: string): boolean {
   return sovereigntyRegion(regionId)?.wording === "sovereignty";
 }
 
-/** Region ids for one country, in registry order. */
+/** The state ids an entry covers: its members for a bloc, else its own region. */
+export function entryRegionIds(entry: SovereigntyRegion): readonly string[] {
+  return entry.memberRegionIds ?? [entry.regionId];
+}
+
+/** True when the entry is a bloc of several states rather than one region. */
+export function isSovereigntyBloc(entry: SovereigntyRegion): boolean {
+  return (entry.memberRegionIds?.length ?? 0) > 1;
+}
+
+/**
+ * The state ids a region or bloc id stands for. A single region is a bloc of
+ * one, so callers iterate the same way for both.
+ */
+export function sovereigntyMemberRegionIds(regionId: string): string[] {
+  const entry = sovereigntyRegion(regionId);
+  return entry ? [...entryRegionIds(entry)] : [regionId.toUpperCase()];
+}
+
+/** The id a referendum for this region is filed under (the bloc id for a member state). */
+export function sovereigntyReferendumKey(regionId: string): string {
+  return sovereigntyRegion(regionId)?.regionId ?? regionId.toUpperCase();
+}
+
+/** A region's name in event copy: the bloc name, else the id itself. */
+export function sovereigntyRegionLabel(regionId: string): string {
+  const entry = sovereigntyRegion(regionId);
+  return entry?.displayName ?? regionId;
+}
+
+/** State ids for one country, in registry order, with each bloc expanded to its members. */
 export function sovereigntyRegionIds(countryId: string): string[] {
-  return SOVEREIGNTY_REGIONS.filter((entry) => entry.countryId === countryId).map(
-    (entry) => entry.regionId
-  );
+  return SOVEREIGNTY_REGIONS.filter((entry) => entry.countryId === countryId).flatMap((entry) => [
+    ...entryRegionIds(entry),
+  ]);
 }
 
 /** Countries with at least one sovereignty region, in registry order. */

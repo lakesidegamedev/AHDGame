@@ -135,6 +135,7 @@ export async function clearCabinetOnTransition(db: Db, countryId: CountryId): Pr
     QC: getCabinetPositions("QC"),
     AB: getCabinetPositions("AB"),
     RTX: getCabinetPositions("RTX"),
+    NEN: getCabinetPositions("NEN"),
     RCA: getCabinetPositions("RCA"),
   };
   const positions = positionsByCountry[countryId];

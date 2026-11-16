@@ -39,7 +39,7 @@ export function getRtxModel(era: EraId): CountryLayer1Model | null {
     categoryId: "voterGroups",
     groupIds: [...composition.groupIds],
     dims: [...LAYER1_DIMS],
-    turnoutRates: composition.turnoutRates as unknown as CountryLayer1Model["turnoutRates"],
+    turnoutRates: Object.fromEntries(Object.entries(composition.turnoutRates)),
     positions,
     composition: composition.voterGroupComposition,
     defaultLeans: composition.defaultLeans,

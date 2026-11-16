@@ -33,6 +33,7 @@ import { CA_IDENTITY } from "@/lib/countries/ca/identity";
 import { QC_IDENTITY } from "@/lib/countries/qc/identity";
 import { AB_IDENTITY } from "@/lib/countries/ab/identity";
 import { RTX_IDENTITY } from "@/lib/countries/rtx/identity";
+import { NEN_IDENTITY } from "@/lib/countries/nen/identity";
 import { RCA_IDENTITY } from "@/lib/countries/rca/identity";
 
 /**
@@ -109,6 +110,7 @@ export const TREASURY_TEXT: Record<
   QC: QC_IDENTITY.treasuryText,
   AB: AB_IDENTITY.treasuryText,
   RTX: RTX_IDENTITY.treasuryText,
+  NEN: NEN_IDENTITY.treasuryText,
   RCA: RCA_IDENTITY.treasuryText,
 };
 

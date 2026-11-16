@@ -357,6 +357,7 @@ export const MILITARY_COUNTRY_SCALE: Record<CountryId, number> = {
   QC: 1,
   AB: 1,
   RTX: 1,
+  NEN: 1,
   RCA: 1,
 };
 

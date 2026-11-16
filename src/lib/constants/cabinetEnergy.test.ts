@@ -68,7 +68,8 @@ describe("resolveEnergyPosition + collisions", () => {
         cc === "QC" ||
         cc === "AB" ||
         cc === "RTX" ||
-        cc === "RCA"
+        cc === "RCA" ||
+        cc === "NEN"
       )
         continue;
       expect(

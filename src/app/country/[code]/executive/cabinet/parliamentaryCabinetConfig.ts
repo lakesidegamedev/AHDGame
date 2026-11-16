@@ -26,7 +26,8 @@ export type ParliamentaryCabinetCountryId =
   | "QC"
   | "AB"
   | "RTX"
-  | "RCA";
+  | "RCA"
+  | "NEN";
 
 export interface ParliamentaryCabinetHero {
   src: string;
@@ -252,8 +253,23 @@ export const PARLIAMENTARY_CABINET_CONFIGS: Record<
     hero: {
       src: "/api/images/hero/texas-capitol",
       alt: "The State Capitol, Austin",
-      tagline: "State Capitol · Ministers appointed by the Chief Minister",
+      tagline: "State House · Ministers appointed by the Chief Minister",
       titleFor: () => "Executive Council of Texas",
+    },
+  },
+  NEN: {
+    countryId: "NEN",
+    positions: getCabinetPositions("NEN"),
+    governmentLinkPath: "/country/nen/executive",
+    chamberMemberLabel: "Representative",
+    chamberName: "Assembly",
+    description:
+      "The Premier appoints ministers to the Executive Council of an independent New England without a confirmation vote. Ministers lead departments covering finance, foreign affairs, justice and public safety, defence, health, education, commerce and trade, local government, transportation, energy and water, and human services, governing through an Assembly majority. They serve at the Premier's pleasure and can be dismissed at any time.",
+    hero: {
+      src: "/api/images/hero/new-england-statehouse",
+      alt: "The State House, Boston",
+      tagline: "State House · Ministers appointed by the Premier",
+      titleFor: () => "Executive Council of New England",
     },
   },
   RCA: {
@@ -263,11 +279,11 @@ export const PARLIAMENTARY_CABINET_CONFIGS: Record<
     chamberMemberLabel: "Representative",
     chamberName: "Assembly",
     description:
-      "The Premier appoints ministers to the Executive Council of an independent California without a confirmation vote. Ministers lead departments covering finance, foreign affairs, justice and public safety, defence, health, education, commerce and trade, local government, transportation, energy and water, and human services, governing through a Assembly majority. They serve at the Premier's pleasure and can be dismissed at any time.",
+      "The Premier appoints ministers to the Executive Council of an independent California without a confirmation vote. Ministers lead departments covering finance, foreign affairs, justice and public safety, defence, health, education, commerce and trade, local government, transportation, energy and water, and human services, governing through an Assembly majority. They serve at the Premier's pleasure and can be dismissed at any time.",
     hero: {
       src: "/api/images/hero/california-capitol",
       alt: "The State Capitol, Sacramento",
-      tagline: "State Capitol · Ministers appointed by the Premier",
+      tagline: "State House · Ministers appointed by the Premier",
       titleFor: () => "Executive Council of California",
     },
   },

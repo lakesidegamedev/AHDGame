@@ -14,6 +14,9 @@ import {
   sovereigntyRegionIn,
   usesSovereigntyWording,
   independenceCopy,
+  entryRegionIds,
+  sovereigntyMemberRegionIds,
+  sovereigntyReferendumKey,
 } from "./sovereigntyRegions";
 
 describe("sovereignty registry", () => {
@@ -181,5 +184,41 @@ describe("registry wording", () => {
     expect(usesSovereigntyWording("CA_AB")).toBe(true);
     expect(usesSovereigntyWording("SCO")).toBe(false);
     expect(usesSovereigntyWording("CA_ON")).toBe(false);
+  });
+});
+
+describe("the New England bloc", () => {
+  it("answers to the bloc id and to each member state", () => {
+    for (const id of ["NE_BLOC", "ME", "nh", "VT", "MA", "RI", "CT"]) {
+      expect(sovereigntyRegionIn("US", id)).toMatchObject({
+        regionId: "NE_BLOC",
+        successorCountryId: "NEN",
+        parentUpperChamberSeats: 12,
+        wording: "sovereignty",
+      });
+    }
+    expect(sovereigntyRegionIn("CA", "ME")).toBeNull();
+  });
+
+  it("expands to its member states and leaves a single region as a bloc of one", () => {
+    expect(sovereigntyMemberRegionIds("NE_BLOC")).toEqual(["ME", "NH", "VT", "MA", "RI", "CT"]);
+    expect(sovereigntyMemberRegionIds("ME")).toEqual(["ME", "NH", "VT", "MA", "RI", "CT"]);
+    expect(sovereigntyMemberRegionIds("TX")).toEqual(["TX"]);
+    expect(sovereigntyMemberRegionIds("SCO")).toEqual(["SCO"]);
+    expect(sovereigntyReferendumKey("VT")).toBe("NE_BLOC");
+    expect(sovereigntyReferendumKey("TX")).toBe("TX");
+    expect(sovereigntyRegionIds("US")).toEqual(["TX", "CA", "ME", "NH", "VT", "MA", "RI", "CT"]);
+  });
+
+  it("gives every successor an id distinct from every state and country id", () => {
+    const us = SOVEREIGNTY_REGIONS.filter((entry) => entry.countryId === "US");
+    const stateIds = new Set(us.flatMap((entry) => entryRegionIds(entry)));
+    for (const entry of us) {
+      if (!entry.successorCountryId) continue;
+      expect(stateIds.has(entry.successorCountryId)).toBe(false);
+      expect(
+        SOVEREIGNTY_REGIONS.filter((other) => other.successorCountryId === entry.successorCountryId)
+      ).toHaveLength(1);
+    }
   });
 });

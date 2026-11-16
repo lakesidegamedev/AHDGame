@@ -43,7 +43,10 @@ import { WIRE_SWING_THRESHOLD } from "@/lib/constants/referendum";
 import {
   hostsSovereigntyReferendums,
   independenceCopy,
+  sovereigntyMemberRegionIds,
 } from "@/lib/referendum/rules/sovereigntyRegions";
+import { loadBlocMembers } from "@/lib/referendum/blocMembers";
+import { poolCohorts } from "@/lib/referendum/rules/pooledElectorate";
 import { resolveWestminsterPolicy } from "@/lib/governorOffice/devolution/rules";
 import { billsCollection } from "@/lib/db/repositories/bills";
 import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
@@ -63,6 +66,27 @@ async function buildCohortBaseline(
   regionId: string,
   regionDesire: number,
   peaceAgreement = false
+): Promise<ReferendumCohort[]> {
+  if (sovereigntyMemberRegionIds(regionId).length === 1)
+    return buildMemberCohorts(db, regionId, regionDesire, peaceAgreement);
+  // A bloc votes as one electorate built from each member's own voters.
+  const members = await loadBlocMembers(db, regionId, regionDesire);
+  return poolCohorts(
+    await Promise.all(
+      members.map(async (member) => ({
+        ...member,
+        cohorts: await buildMemberCohorts(db, member.regionId, member.desire, peaceAgreement),
+      }))
+    ),
+    regionDesire
+  );
+}
+
+async function buildMemberCohorts(
+  db: Db,
+  regionId: string,
+  regionDesire: number,
+  peaceAgreement: boolean
 ): Promise<ReferendumCohort[]> {
   const demo = await stateDemographicsCollection(db).findOne({ _id: regionId });
   if (!demo?.countryId) {
@@ -215,8 +239,11 @@ export async function processReferendumLifecycle(
 
     if (ref.status === "requested") {
       if (nppDecisionCountries.has(ref.countryId)) {
+        const stances = officeByCountry.get(ref.countryId)?.westminsterStances;
         const policy = resolveWestminsterPolicy(
-          officeByCountry.get(ref.countryId)?.westminsterStances?.[ref.regionId]?.policy
+          sovereigntyMemberRegionIds(ref.regionId)
+            .map((member) => stances?.[member]?.policy)
+            .find((candidate) => candidate != null) ?? stances?.[ref.regionId]?.policy
         );
         const action = nppReferendumDecision(currentTurn, ref.requestedTurn, policy);
         if (action) {

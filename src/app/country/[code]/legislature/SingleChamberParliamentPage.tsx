@@ -114,6 +114,17 @@ const PARLIAMENT_META: Partial<Record<CountryId, ParliamentMeta>> = {
     proposeChamberLabel: "House of Representatives",
     domesticOnlyLabel: "Texas-headquartered corporations only",
   },
+  NEN: {
+    heroSlug: "new-england-statehouse",
+    heroAlt: "The State Capitol, Boston",
+    headTitle: "Premier",
+    memberAbbr: "Asm.",
+    memberPlural: "Representatives",
+    presidingOfficer: "Speaker of the Assembly",
+    electoralSystem: "Regional proportional representation",
+    proposeChamberLabel: "Assembly",
+    domesticOnlyLabel: "New England-headquartered corporations only",
+  },
   RCA: {
     heroSlug: "california-capitol",
     heroAlt: "The State Capitol, Sacramento",

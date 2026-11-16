@@ -67,6 +67,11 @@ export const COUNTRY_RUNTIME_SEED: Record<CountryId, CountryRuntimeSeed> = {
     rulingPartyId: null,
     hasLeaderConfidenceModel: false,
   },
+  NEN: {
+    governmentType: "parliamentaryRepublic",
+    rulingPartyId: null,
+    hasLeaderConfidenceModel: false,
+  },
   RCA: {
     governmentType: "parliamentaryRepublic",
     rulingPartyId: null,

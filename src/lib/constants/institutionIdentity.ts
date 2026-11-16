@@ -36,6 +36,7 @@ import { CA_IDENTITY } from "@/lib/countries/ca/identity";
 import { QC_IDENTITY } from "@/lib/countries/qc/identity";
 import { AB_IDENTITY } from "@/lib/countries/ab/identity";
 import { RTX_IDENTITY } from "@/lib/countries/rtx/identity";
+import { NEN_IDENTITY } from "@/lib/countries/nen/identity";
 import { RCA_IDENTITY } from "@/lib/countries/rca/identity";
 
 /**
@@ -116,6 +117,7 @@ export const EXECUTIVE_TEXT: Record<CountryId, IdentityText> = {
   QC: QC_IDENTITY.executiveText,
   AB: AB_IDENTITY.executiveText,
   RTX: RTX_IDENTITY.executiveText,
+  NEN: NEN_IDENTITY.executiveText,
   RCA: RCA_IDENTITY.executiveText,
 };
 
@@ -159,6 +161,7 @@ export const POLICY_TEXT: Record<CountryId, IdentityText> = {
   QC: QC_IDENTITY.policyText,
   AB: AB_IDENTITY.policyText,
   RTX: RTX_IDENTITY.policyText,
+  NEN: NEN_IDENTITY.policyText,
   RCA: RCA_IDENTITY.policyText,
 };
 

@@ -29,6 +29,9 @@ const HERO_URLS: Record<string, string> = {
   // Texas State Capitol, Austin: the Texas executive and House.
   "texas-capitol":
     "https://commons.wikimedia.org/wiki/Special:FilePath/Texas_State_Capitol.jpg?width=1280",
+  // Massachusetts State House, Boston: the New England executive and Assembly.
+  "new-england-statehouse":
+    "https://commons.wikimedia.org/wiki/Special:FilePath/Massachusetts_State_House.jpg?width=1280",
   // California State Capitol, Sacramento: the California executive and Assembly.
   "california-capitol":
     "https://commons.wikimedia.org/wiki/Special:FilePath/California_State_Capitol.jpg?width=1280",

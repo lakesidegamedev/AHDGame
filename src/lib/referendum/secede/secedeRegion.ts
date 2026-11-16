@@ -30,7 +30,8 @@ import { computeNationalMetrics } from "@/lib/nationalMetrics";
 import { recordCountryEvent } from "@/lib/turn/history/recordCountryEvent";
 import { activateCountry } from "@/lib/country/registeredCountries";
 import { CAPITAL_SUBREGION, isResetV2Successor, isSecedingCountryId } from "./subRegions";
-import { sovereigntyRegionIn } from "../rules/sovereigntyRegions";
+import { isSovereigntyBloc, sovereigntyRegionIn } from "../rules/sovereigntyRegions";
+import { secedeBloc } from "./secedeBloc";
 import { expandToSubRegions } from "./expandToSubRegions";
 import { promoteEconomyToNational } from "./promoteEconomyToNational";
 import { splitParties } from "./splitParties";
@@ -75,6 +76,9 @@ async function secedeRegionInTransaction(
   if (!entry?.actuates || !isSecedingCountryId(toCountryId)) {
     return { ok: false, skipped: "unsupported-region" };
   }
+
+  if (isSovereigntyBloc(entry))
+    return secedeBloc(db, originalDb, entry, toCountryId, fromCountryId, currentTurn);
 
   // Guard: the region's aggregate states doc must exist; bail if already expanded.
   const aggregate = await statesCollection(db).findOne({ _id: regionId });

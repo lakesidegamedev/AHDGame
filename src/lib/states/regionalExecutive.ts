@@ -17,6 +17,7 @@
  *   - QC: elected `governor` per region → `"Prefect"`
  *   - AB: elected `governor` per region → `"Commissioner"`
  *   - RTX: elected `governor` per region → `"Commissioner"`
+ *   - NEN: elected `governor` per region → `"Commissioner"`
  *   - RCA: elected `governor` per region → `"Commissioner"`
  *   - CN: elected `governor` per macro-region → `"Governor"`
  *   - IE: elected `governor` per region, label varies by region (recycled
@@ -43,6 +44,7 @@ import { CA_REGIONAL_EXECUTIVE } from "@/lib/countries/ca/regionalExecutive";
 import { QC_REGIONAL_EXECUTIVE } from "@/lib/countries/qc/regionalExecutive";
 import { AB_REGIONAL_EXECUTIVE } from "@/lib/countries/ab/regionalExecutive";
 import { RTX_REGIONAL_EXECUTIVE } from "@/lib/countries/rtx/regionalExecutive";
+import { NEN_REGIONAL_EXECUTIVE } from "@/lib/countries/nen/regionalExecutive";
 import { RCA_REGIONAL_EXECUTIVE } from "@/lib/countries/rca/regionalExecutive";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
@@ -70,6 +72,7 @@ const UNIFORM_EXECUTIVE_OFFICES: Readonly<
   QC: QC_REGIONAL_EXECUTIVE,
   AB: AB_REGIONAL_EXECUTIVE,
   RTX: RTX_REGIONAL_EXECUTIVE,
+  NEN: NEN_REGIONAL_EXECUTIVE,
   RCA: RCA_REGIONAL_EXECUTIVE,
 };
 

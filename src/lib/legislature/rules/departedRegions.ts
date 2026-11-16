@@ -12,8 +12,16 @@ export function departedRegions(
 ): SovereigntyRegion[] {
   if (liveRegionIds.size === 0) return [];
   return entries.filter(
-    (entry) => entry.countryId === countryId && entry.actuates && !liveRegionIds.has(entry.regionId)
+    (entry) =>
+      entry.countryId === countryId &&
+      entry.actuates &&
+      (entry.memberRegionIds ?? [entry.regionId]).every((id) => !liveRegionIds.has(id))
   );
+}
+
+/** The state ids that left with the departed entries, each bloc expanded to its members. */
+export function departedStateIds(departed: readonly SovereigntyRegion[]): string[] {
+  return departed.flatMap((entry) => entry.memberRegionIds ?? [entry.regionId]);
 }
 
 /** Upper-chamber seats left once the departed regions' seats are removed. */
