@@ -4,13 +4,11 @@ import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
 import { makeCorporation } from "@/lib/test-utils/factories";
 import { getDb } from "@/lib/mongodb";
 import { getAuthUser } from "@/lib/auth";
-import { isIndexFundsEnabled } from "@/lib/indexFunds/featureFlag";
 import { listFundsBySponsor } from "@/lib/indexFunds/fundQueries";
 import { GET } from "./route";
 
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
 vi.mock("@/lib/auth", () => ({ getAuthUser: vi.fn() }));
-vi.mock("@/lib/indexFunds/featureFlag", () => ({ isIndexFundsEnabled: vi.fn() }));
 vi.mock("@/lib/indexFunds/fundQueries", () => ({ listFundsBySponsor: vi.fn() }));
 vi.mock("@/lib/currency/corporationCapital", () => ({
   getCorpFxRate: vi.fn().mockResolvedValue(2),
@@ -26,10 +24,8 @@ beforeEach(() => {
   corp = makeCorporation({ countryId: "US", liquidCapital: 30_000_000, liquidCurrencyCode: "USD" });
   vi.mocked(getDb).mockResolvedValue(db as unknown as Db);
   vi.mocked(getAuthUser).mockResolvedValue({ userId: String(corp.userId) } as never);
-  vi.mocked(isIndexFundsEnabled).mockResolvedValue(true);
   vi.mocked(listFundsBySponsor).mockResolvedValue([]);
   db.collection("corporations").findOne.mockImplementation(async () => corp);
-  db.collection("gameConfig").findOne.mockResolvedValue({ indexFundsMode: "full" });
   db.collection("federalBudget").findOne.mockResolvedValue({
     countryId: corp.countryId,
     currencyCode: "USD",
@@ -59,10 +55,7 @@ describe("fund creation capability", () => {
     corp.ceoVacant = true;
     expect((await read()).canCreate).toBe(false);
   });
-  it("denies creation when funds or corporation actions are disabled", async () => {
-    vi.mocked(isIndexFundsEnabled).mockResolvedValue(false);
-    expect((await read()).canCreate).toBe(false);
-    vi.mocked(isIndexFundsEnabled).mockResolvedValue(true);
+  it("denies creation when corporation actions are paused", async () => {
     db.collection("gameState").findOne.mockResolvedValue({ corporationActionsPaused: true });
     expect((await read()).canCreate).toBe(false);
   });

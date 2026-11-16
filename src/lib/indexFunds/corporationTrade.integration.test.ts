@@ -38,12 +38,6 @@ vi.mock("@/lib/financialTxLog/emit", () => ({
   loadTxThresholds: vi.fn(async () => ({})),
 }));
 vi.mock("./playerCommandAudit", () => ({ resumeFundCommandAudit: vi.fn() }));
-vi.mock("./featureFlag", () => ({
-  isIndexFundsFullMode: vi.fn(async () => true),
-  isIndexFundsEnabled: vi.fn(async () => true),
-  INDEX_FUNDS_DISABLED_MESSAGE: "disabled",
-  INDEX_FUNDS_PARTIAL_MESSAGE: "partial",
-}));
 vi.mock("@/lib/currency/featureFlag", () => ({ isForexEnabled: vi.fn(async () => false) }));
 vi.mock("@/lib/currency/corporationCapital", async (original) => ({
   ...(await original<typeof import("@/lib/currency/corporationCapital")>()),

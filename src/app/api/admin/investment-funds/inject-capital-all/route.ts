@@ -4,7 +4,6 @@ import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { parseJsonBody } from "@/lib/api/validate";
 import { z } from "zod";
-import { isIndexFundsEnabled, INDEX_FUNDS_DISABLED_MESSAGE } from "@/lib/indexFunds/featureFlag";
 import { listFunds, insertFundTransaction } from "@/lib/indexFunds/fundQueries";
 import { calculateBackingRatio } from "@/lib/indexFunds/unitAccounting";
 import { recomputeNav } from "@/lib/indexFunds/fundCron";
@@ -41,9 +40,6 @@ export async function POST(request: Request) {
     }
 
     const db = await getDb();
-    if (!(await isIndexFundsEnabled())) {
-      return errorResponse(403, INDEX_FUNDS_DISABLED_MESSAGE);
-    }
 
     const targetRatio = parsed.data.targetBackingRatio ?? 1.0;
     // Include paused/delisted funds — those are exactly the ones needing a top-up.

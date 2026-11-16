@@ -4,12 +4,6 @@ import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
 
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
 vi.mock("@/lib/auth", () => ({ getAuthUserWithCharacter: vi.fn() }));
-vi.mock("@/lib/indexFunds/featureFlag", () => ({
-  isIndexFundsEnabled: vi.fn(async () => true),
-  isIndexFundsFullMode: vi.fn(async () => true),
-  INDEX_FUNDS_DISABLED_MESSAGE: "Index funds are disabled",
-  INDEX_FUNDS_PARTIAL_MESSAGE: "Index funds are in partial mode",
-}));
 vi.mock("@/lib/currency/featureFlag", () => ({ isForexEnabled: vi.fn(async () => false) }));
 // Forex is disabled in these compensation tests; avoid importing its unrelated graph.
 vi.mock("@/lib/currency/autoConvert", () => ({

@@ -12,8 +12,6 @@ vi.mock("@/lib/api/requireCorporationActions", () => ({
   requireCorporationActionsEnabled: vi.fn(async () => null),
 }));
 vi.mock("@/lib/api/rateLimit", () => ({ checkRateLimit: vi.fn(() => ({ ok: true })) }));
-vi.mock("@/lib/indexFunds/featureFlag", () => ({ isIndexFundsEnabled: vi.fn(async () => true) }));
-vi.mock("@/lib/indexFunds/fundCron", () => ({ INDEX_FUNDS_DISABLED_MESSAGE: "Unavailable" }));
 vi.mock("@/lib/turn/currentTurn", () => ({ getCurrentTurn: vi.fn(async () => 1) }));
 vi.mock("@/lib/indexFunds/sponsorship/charterFund", () => ({ charterFund: vi.fn() }));
 

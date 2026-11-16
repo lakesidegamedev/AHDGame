@@ -14,6 +14,7 @@ import type {
   Layer1Config,
   IntlRegionCensus,
 } from "./StatePageTabsTypes";
+import type { RegionLeanDisplay } from "@/lib/regionLean/scale";
 
 interface TurnoutData {
   baseline: number;
@@ -185,12 +186,15 @@ function KpiStrip({
   population,
   economicLean,
   socialLean,
+  leanDisplay,
   avgTurnout,
   mediaPullLine,
 }: {
   population: number | null;
   economicLean: number | null;
   socialLean: number | null;
+  /** Party-lean label and centred tones; absent falls back to raw colouring. */
+  leanDisplay?: RegionLeanDisplay | null;
   avgTurnout: number | null;
   mediaPullLine?: string | null;
 }) {
@@ -203,16 +207,19 @@ function KpiStrip({
         <KpiCell label="Political lean">
           {economicLean !== null || socialLean !== null ? (
             <div className="flex flex-wrap items-center gap-1">
+              {leanDisplay && (
+                <span className="mr-1 text-sm font-semibold">{leanDisplay.label}</span>
+              )}
               {economicLean !== null && (
                 <span
-                  className={`inline-flex items-center rounded-md px-1.5 py-0.5 text-xs font-semibold ${leanTextClass(economicLean)}`}
+                  className={`inline-flex items-center rounded-md px-1.5 py-0.5 text-xs font-semibold ${leanTextClass(leanDisplay?.economicTone ?? economicLean)}`}
                 >
                   Econ {fmtLean(economicLean)}
                 </span>
               )}
               {socialLean !== null && (
                 <span
-                  className={`inline-flex items-center rounded-md px-1.5 py-0.5 text-xs font-semibold ${leanTextClass(socialLean)}`}
+                  className={`inline-flex items-center rounded-md px-1.5 py-0.5 text-xs font-semibold ${leanTextClass(leanDisplay?.socialTone ?? socialLean)}`}
                 >
                   Soc {fmtLean(socialLean)}
                 </span>
@@ -574,6 +581,7 @@ export function DemographicsAndTurnoutTab({
   turnoutData,
   countryId,
   regionParties = [],
+  leanDisplay = null,
   bucketProfile = null,
   population = null,
   isAdmin = false,
@@ -593,9 +601,10 @@ export function DemographicsAndTurnoutTab({
   turnoutData: TurnoutResponse | null;
   countryId?: string;
   regionParties?: RegionPartyPosition[];
+  leanDisplay?: RegionLeanDisplay | null;
 }) {
   const [viewMode, setViewMode] = useState<ViewMode>("combined");
-  const kpi = computeKpiProps({ demographics, turnoutData, population });
+  const kpi = { ...computeKpiProps({ demographics, turnoutData, population }), leanDisplay };
   const upperCountryId = countryId?.toUpperCase() as CountryId | undefined;
 
   if (!censusData && !demographics) {

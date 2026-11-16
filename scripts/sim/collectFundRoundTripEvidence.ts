@@ -138,7 +138,6 @@ async function main() {
         typeof config?.nppFundRedemptionEnabled === "boolean"
           ? config.nppFundRedemptionEnabled
           : null,
-      indexFundsMode: config?.indexFundsMode ?? null,
       equityLiquidityFacilityEnabled: config?.equityLiquidityFacilityEnabled ?? null,
       indexFundBondLiquidityEnabled: config?.indexFundBondLiquidityEnabled ?? null,
       funds,

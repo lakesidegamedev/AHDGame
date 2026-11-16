@@ -34,7 +34,6 @@ import {
   recordFundCommandQuote,
 } from "./playerCommand";
 import { resumeFundCommandAudit } from "./playerCommandAudit";
-import { isIndexFundsFullMode, INDEX_FUNDS_PARTIAL_MESSAGE } from "./featureFlag";
 import { quoteIndexFundSubscription } from "./unitAccounting";
 import { getQueuedRedemptionLiabilityAnchor } from "./fundValuation";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
@@ -77,8 +76,6 @@ export async function tradeCorporationFund(
     await resumeFundCommandAudit(db, command.key);
     return response;
   };
-  if (fund.mandate?.mode !== "picked_stocks" && !(await isIndexFundsFullMode()))
-    return finish(errorResponse(403, INDEX_FUNDS_PARTIAL_MESSAGE));
   const turnRejection = await rejectDuringTurn(db);
   if (turnRejection) return finish(turnRejection);
   if (kind === "subscribe" && fund.status !== "active")

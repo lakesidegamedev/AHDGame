@@ -13,6 +13,7 @@ import type { ActiveModifier } from "@/lib/utils/approvalModifiers";
 import { formatLeanValue, getLeanLabel, getSocialLeanLabel } from "@/lib/utils/demographics";
 import { positionBucketHex, usesEuropeanLeanColours } from "@/lib/utils/politics";
 import { buildCharacterHref, buildNppHref } from "@/lib/utils/profileUrls";
+import type { RegionLeanDisplay } from "@/lib/regionLean/scale";
 
 /** The regional chief executive as the region page serializes it. */
 export interface RegionHeaderExecutive {
@@ -44,6 +45,8 @@ export interface RegionHeaderProps {
   gdp: string;
   districts: { label: string; count: number };
   leans: { economicLean: number; socialLean: number } | null;
+  /** Party-lean label and tones centred on the main-party even split. */
+  leanDisplay?: RegionLeanDisplay | null;
   approval: { value: number; base: number; modifiers: ActiveModifier[]; href: string } | null;
   executiveLabel: string;
   executive: RegionHeaderExecutive | null;
@@ -122,6 +125,7 @@ export function RegionHeader(props: RegionHeaderProps) {
     gdp,
     districts,
     leans,
+    leanDisplay = null,
     approval,
     executiveLabel,
     executive,
@@ -254,15 +258,27 @@ export function RegionHeader(props: RegionHeaderProps) {
                 scroll={false}
                 className={FACT_LINK}
               >
-                <span
-                  style={{ color: positionBucketHex(leans.economicLean, "economic", european) }}
-                >
-                  {getLeanLabel(leans.economicLean)}
-                </span>
-                <span className="font-normal text-muted">, </span>
-                <span style={{ color: positionBucketHex(leans.socialLean, "social") }}>
-                  {getSocialLeanLabel(leans.socialLean)}
-                </span>
+                {leanDisplay ? (
+                  <span
+                    style={{
+                      color: positionBucketHex(leanDisplay.displayTone, "economic", european),
+                    }}
+                  >
+                    {leanDisplay.label}
+                  </span>
+                ) : (
+                  <>
+                    <span
+                      style={{ color: positionBucketHex(leans.economicLean, "economic", european) }}
+                    >
+                      {getLeanLabel(leans.economicLean)}
+                    </span>
+                    <span className="font-normal text-muted">, </span>
+                    <span style={{ color: positionBucketHex(leans.socialLean, "social") }}>
+                      {getSocialLeanLabel(leans.socialLean)}
+                    </span>
+                  </>
+                )}
               </Link>
             </Tooltip>
           </Fact>

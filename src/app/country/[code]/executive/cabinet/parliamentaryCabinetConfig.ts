@@ -13,7 +13,7 @@ import { getCountryFlagUrl } from "@/lib/constants";
 
 /** Countries that use the parliamentary direct-appointment cabinet pattern. */
 export type ParliamentaryCabinetCountryId =
-  "UK" | "DE" | "JP" | "IE" | "CN" | "RU" | "DD" | "SCO" | "WAL" | "CA" | "QC";
+  "UK" | "DE" | "JP" | "IE" | "CN" | "RU" | "DD" | "SCO" | "WAL" | "CA" | "QC" | "AB";
 
 export interface ParliamentaryCabinetHero {
   src: string;
@@ -211,6 +211,21 @@ export const PARLIAMENTARY_CABINET_CONFIGS: Record<
       alt: "The Parliament Building, Quebec City",
       tagline: "Parliament Building · Ministers appointed by the Premier",
       titleFor: () => "Executive Council of Quebec",
+    },
+  },
+  AB: {
+    countryId: "AB",
+    positions: getCabinetPositions("AB"),
+    governmentLinkPath: "/country/ab/executive",
+    chamberMemberLabel: "Member of the Legislative Assembly",
+    chamberName: "Legislative Assembly",
+    description:
+      "The Premier appoints ministers to the Executive Council of an independent Alberta without a confirmation vote. Ministers lead departments covering finance, intergovernmental relations, justice and public safety, defence, health, education, jobs and the economy, municipal affairs, transportation, energy and the environment, and community and social services, governing through a Legislative Assembly majority. They serve at the Premier's pleasure and can be dismissed at any time.",
+    hero: {
+      src: "/api/images/hero/alberta-legislature",
+      alt: "The Legislature Building, Edmonton",
+      tagline: "Legislature Building · Ministers appointed by the Premier",
+      titleFor: () => "Executive Council of Alberta",
     },
   },
 };

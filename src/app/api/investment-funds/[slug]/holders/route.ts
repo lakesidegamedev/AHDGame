@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { requireAuth } from "@/lib/api/requireAuth";
-import { handleRouteError, notFound, errorResponse } from "@/lib/api/errors";
-import { isIndexFundsEnabled, INDEX_FUNDS_DISABLED_MESSAGE } from "@/lib/indexFunds/featureFlag";
+import { handleRouteError, notFound } from "@/lib/api/errors";
 import {
   resolveFundBySlugOrId,
   listFundPositions,
@@ -19,9 +18,6 @@ export async function GET(_request: Request, { params }: { params: Promise<{ slu
     if (!auth.ok) return auth.response;
 
     const db = await getDb();
-    if (!(await isIndexFundsEnabled())) {
-      return errorResponse(403, INDEX_FUNDS_DISABLED_MESSAGE);
-    }
 
     const { slug } = await params;
     const fund = await resolveFundBySlugOrId(db, slug);

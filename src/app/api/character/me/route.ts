@@ -25,7 +25,6 @@ import type { CountryId } from "@/lib/constants/countries";
 import { reconcileUnionLeaderCache } from "@/lib/unions/unionReconciliation";
 import { TRACKED_ONBOARDING_STEP_IDS } from "@/lib/onboarding/checklist";
 import { isBankPropTradingEnabled } from "@/lib/banking/featureFlag";
-import { isIndexFundsEnabled } from "@/lib/indexFunds/featureFlag";
 import { listCharacterPositions, listFundsByIds } from "@/lib/indexFunds/fundQueries";
 import { enrichFundPositions } from "@/lib/indexFunds/fundPortfolioView";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
@@ -150,7 +149,6 @@ export async function GET(request?: Request) {
       borderMap,
       forexEnabled,
       reconciledUnionLeaderOf,
-      fundsFeatureEnabled,
       fundPositions,
     ] = await Promise.all([
       corporationsCollection(db).findOne(
@@ -175,24 +173,20 @@ export async function GET(request?: Request) {
       // read (see reconcileUnionLeaderCache's docblock) — also un-sticks a
       // character wrongly locked out of claiming a union.
       reconcileUnionLeaderCache(db, user.character),
-      includeFunds ? isIndexFundsEnabled() : Promise.resolve(false),
       includeFunds ? listCharacterPositions(db, user.character._id) : Promise.resolve([]),
     ]);
 
     // Fund definitions are the only read that depends on the positions above,
     // so it is one batched follow-up after the main wave rather than a per-row
-    // lookup. `null` means the feature is off for this world; the portfolio
-    // client hides the funds section on it.
+    // lookup.
     const fundPortfolio = !includeFunds
       ? undefined
-      : fundsFeatureEnabled
-        ? enrichFundPositions(
-            fundPositions,
-            await listFundsByIds(db, [
-              ...new Map(fundPositions.map((pos) => [pos.fundId.toString(), pos.fundId])).values(),
-            ])
-          )
-        : null;
+      : enrichFundPositions(
+          fundPositions,
+          await listFundsByIds(db, [
+            ...new Map(fundPositions.map((pos) => [pos.fundId.toString(), pos.fundId])).values(),
+          ])
+        );
 
     const activeElection: {
       id: string;
