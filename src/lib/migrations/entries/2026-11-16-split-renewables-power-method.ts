@@ -6,18 +6,8 @@ import { stateBillsCollection } from "@/lib/db/repositories/stateBills";
 import { subsidiesCollection } from "@/lib/db/repositories/subsidies";
 
 /**
- * The energy method "renewables" split into Wind Power and Solar Power. This
- * build no longer defines "renewables", so every stored reference moves:
- *
- * - Sectors running it, transitioning from it, directed to it by a parent, or
- *   with build orders priced at it become Wind Power. Renewables opened in
- *   1999 and solar opens in 2009, so wind is the method every such site could
- *   legally run.
- * - A subsidy aimed at renewables keeps covering both halves: it is retargeted
- *   to wind and a copy is added for solar.
- * - Pending bill provisions that name renewables are retargeted to wind.
- *
- * Every write filters on the old id, so a second run finds nothing to change.
+ * "renewables" no longer exists: stored references move to wind (open since
+ * 1999, unlike solar), and a renewables subsidy splits into wind and solar.
  */
 
 export const LEGACY_METHOD = "renewables";
