@@ -17,7 +17,7 @@ export const SECTOR_TYPE_BRIEFING: Record<OperatingSectorType, string> = {
   manufacturing:
     "Turns iron and coal into steel and building materials. Margins live and die on input prices, so a manufacturing corp fights for supply agreements as hard as for market share.",
   energy:
-    "Sells power to every other sector in the state. Demand is nearly guaranteed, but the fuel mix decides exposure: coal and gas prices, or electronics for renewables.",
+    "Sells power to every other sector in the state. Demand is nearly guaranteed, but the fuel mix decides exposure: coal and gas prices, or electronics for wind and solar.",
   extraction:
     "Pulls raw commodities out of a finite state deposit. Output depends on what is actually in the ground; deposits deplete, royalties are negotiated with the state.",
   retail:

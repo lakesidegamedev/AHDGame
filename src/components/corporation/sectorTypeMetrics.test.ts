@@ -158,7 +158,7 @@ describe("typeFossilShare", () => {
       sector({ sectorType: "energy", strategyId: "standard", capacityUnits: 1_000 }),
     ]);
     const renewable = typeFossilShare([
-      sector({ sectorType: "energy", strategyId: "renewables", capacityUnits: 1_000 }),
+      sector({ sectorType: "energy", strategyId: "wind", capacityUnits: 1_000 }),
     ]);
     expect(conventional).not.toBeNull();
     expect(renewable).not.toBeNull();

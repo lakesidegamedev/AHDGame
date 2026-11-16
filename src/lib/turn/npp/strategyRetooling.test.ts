@@ -99,7 +99,7 @@ describe("NPP sites on a retired (sunset) method convert to a successor", () => 
     // Advanced fission needs the corporation's own 2039 node; renewables is
     // inherited from a past decade, so it is the open successor.
     expect(decision?.updates).toMatchObject({
-      strategyId: "renewables",
+      strategyId: "wind",
       transitionFromStrategyId: "standard",
       transitionStartTurn: 100,
     });
@@ -126,7 +126,7 @@ describe("NPP retooling onto a 2049 breakthrough method", () => {
     });
   const plant = sector({
     sectorType: "energy",
-    strategyId: "renewables",
+    strategyId: "wind",
     effectiveProfitMargin: -10,
   });
   const base = {
@@ -167,7 +167,7 @@ describe("NPP retooling onto a 2049 breakthrough method", () => {
 describe("NPP retooling under technology diffusion", () => {
   const plant = sector({
     sectorType: "energy",
-    strategyId: "renewables",
+    strategyId: "wind",
     effectiveProfitMargin: -10,
   });
   const corp = makeCorporation({
