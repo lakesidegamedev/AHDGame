@@ -180,7 +180,7 @@
     "braces": "$braces"
   },
   "devDependencies": {
-    "@commitlint/cli": "^21.2.3",
+    "@commitlint/cli": "^21.2.4",
     "@commitlint/config-conventional": "^21.2.4",
     "@playwright/test": "^1.64.0",
     "@tailwindcss/postcss": "^4",
