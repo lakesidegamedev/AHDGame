@@ -101,7 +101,7 @@ const GDP_BASELINE_TABLE: Record<GdpBaselineCountry, Record<EraId, number>> = {
     "2007": 23_547,
     "2019": 29_734,
     "2023": 31_329,
-    "2027": 35_057,
+    "2027": 46_997,
   },
   DE: {
     "1953": 2_715,
@@ -111,7 +111,7 @@ const GDP_BASELINE_TABLE: Record<GdpBaselineCountry, Record<EraId, number>> = {
     "2007": 30_760,
     "2019": 45_479,
     "2023": 45_479,
-    "2027": 50_668,
+    "2027": 57_690,
   },
   JP: {
     // Modern cells are yen (local); 1953 is USD-anchored (unit "usd").
@@ -122,7 +122,7 @@ const GDP_BASELINE_TABLE: Record<GdpBaselineCountry, Record<EraId, number>> = {
     "2007": 4_051_515,
     "2019": 4_172_222,
     "2023": 4_172_222,
-    "2027": 4_486_839,
+    "2027": 5_696_485,
   },
   IE: {
     // No 2027 region bundle: seeder falls back to 2019, mirrored here.
@@ -133,7 +133,7 @@ const GDP_BASELINE_TABLE: Record<GdpBaselineCountry, Record<EraId, number>> = {
     "2007": 43_379,
     "2019": 90_928,
     "2023": 90_928,
-    "2027": 90_928,
+    "2027": 136_374,
   },
   NG: {
     // Modern cells are naira (local); 1953 is USD-anchored (unit "usd").
@@ -147,7 +147,7 @@ const GDP_BASELINE_TABLE: Record<GdpBaselineCountry, Record<EraId, number>> = {
     "2007": 3_724_138,
     "2019": 3_669_401,
     "2023": 3_677_130,
-    "2027": 3_669_401,
+    "2027": 3_247_230,
   },
   CN: {
     // Modern cells are yuan (local); 1953 is USD-anchored (unit "usd").
@@ -163,7 +163,7 @@ const GDP_BASELINE_TABLE: Record<GdpBaselineCountry, Record<EraId, number>> = {
     "2007": 21_028,
     "2019": 98_268,
     "2023": 98_268,
-    "2027": 110_339,
+    "2027": 125_658,
   },
   DD: {
     // The GDR exists only in the divided-Germany eras. `seedDDRegions` wires a
@@ -214,7 +214,7 @@ const GDP_BASELINE_TABLE: Record<GdpBaselineCountry, Record<EraId, number>> = {
     "2007": 1_813,
     "2019": 1_813,
     "2023": 1_813,
-    "2027": 1_813,
+    "2027": 1_376_623,
   },
   SCO: {
     // One latent bundle inserted on secession; every era repeats its 2019 value.
@@ -304,14 +304,13 @@ const BUNDLE_PRESET_OVERRIDES: Partial<Record<GdpBaselineCountry, Partial<Record
       "2019": "2027-default",
       "2023": "2027-default",
     },
-    // RU authors two bundles; everything outside 1953/1979 takes the
+    // RU authors 1953, 1979 and 2027 bundles; the other eras take the
     // `2019-default` fallback.
     RU: {
       "1991": "2019-default",
       "1999": "2019-default",
       "2007": "2019-default",
       "2023": "2019-default",
-      "2027": "2019-default",
     },
   };
 
