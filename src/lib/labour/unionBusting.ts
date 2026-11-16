@@ -1,5 +1,5 @@
 /**
- * Phase 7a — Union-busting (`labourSystemMode >= "full"`).
+ * Phase 7a — Union-busting.
  *
  * A CEO action that suppresses a sector's `unionization` at a cash cost and a
  * chance of backfire. Modeled directly on the existing whip-success pattern

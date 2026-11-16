@@ -71,8 +71,7 @@ export const PUT = withAdminRoute(async (auth, request: Request) => {
         // `AltScoringThresholds` shapes (every key present); widen to plain
         // `Record<string, number>` for storage — `GameConfig.altScoring`
         // deliberately types its fields loosely (no `lib/altDetection`
-        // import into `db/types/gameConfig.ts`, matching how e.g.
-        // `labourSystemMode` inlines its own literal union there).
+        // import into `db/types/gameConfig.ts`).
         altScoring: {
           weights: { ...resolved.weights } as Record<string, number>,
           thresholds: { ...resolved.thresholds } as Record<string, number>,

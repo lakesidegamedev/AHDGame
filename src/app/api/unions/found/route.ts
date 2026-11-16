@@ -1,6 +1,6 @@
 /**
  * POST /api/unions/found: found a rival union in an industry, seeding the
- * raid target `organizeSector` needs. Gated on `labourSystemMode >= "full"`.
+ * raid target `organizeSector` needs.
  * See `foundUnion` in `@/lib/unions/commands/foundUnion` for cost/validation.
  */
 import { NextResponse } from "next/server";
@@ -11,7 +11,6 @@ import { requireBasicAuth } from "@/lib/api/requireAuth";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { getCharacterByUserId } from "@/lib/db/characterLookup";
-import { isLabourFullMode } from "@/lib/labour/featureFlag";
 import { OPERATING_SECTOR_TYPES } from "@/lib/constants/corporations";
 import { countryIdSchema } from "@/lib/api/schemas/country";
 import { containsBlockedName } from "@/lib/moderation";
@@ -38,10 +37,6 @@ export async function POST(request: Request) {
   try {
     const auth = await requireBasicAuth();
     if (!auth.ok) return auth.response;
-
-    if (!(await isLabourFullMode())) {
-      return errorResponse(403, "Player-run unions are not enabled.");
-    }
 
     const rateLimit = checkRateLimit(`api/unions/found:${auth.user.userId}`, 20, 60000);
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);

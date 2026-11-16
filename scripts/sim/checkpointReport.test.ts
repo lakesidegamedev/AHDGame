@@ -29,7 +29,6 @@ function baseInput(): Parameters<typeof runSeedAudit>[0] {
     fiscal: [],
     bandIndex: {},
     flags: {
-      labourSystemMode: "full",
       marketSystemMode: "clearing",
       demographicsDemandEnabled: false,
       householdConsumptionEnabled: true,

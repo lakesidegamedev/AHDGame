@@ -35,7 +35,7 @@ function sector(overrides: Partial<CorporateSector> = {}): CorporateSector {
   } as unknown as CorporateSector;
 }
 
-function decide(sectors: CorporateSector[], priceRatioOf: CommodityPriceRatioFn, wages = true) {
+function decide(sectors: CorporateSector[], priceRatioOf: CommodityPriceRatioFn) {
   return makeNppCorpDecision(
     {
       corp: corp(),
@@ -43,7 +43,6 @@ function decide(sectors: CorporateSector[], priceRatioOf: CommodityPriceRatioFn,
       turn: 100,
       now: new Date(),
       modifiers: ceoArchetypeModifiers("cautious"),
-      labourWagesEnabled: wages,
     },
     noUnowned,
     noState,
@@ -55,11 +54,6 @@ const wageSets = (d: ReturnType<typeof decide>) =>
   d.sectorUpdates.filter((u) => "wageLevel" in ((u.update.$set ?? {}) as Record<string, unknown>));
 
 describe("NPP wage policy (section 2d)", () => {
-  it("is a no-op when labour wages are off", () => {
-    const d = decide([sector()], () => 1.4, false);
-    expect(wageSets(d)).toHaveLength(0);
-  });
-
   it("raises wages toward 1.08 in a shortage with healthy margins", () => {
     const s = sector({ wageLevel: 1 });
     const d = decide([s], () => 1.4);

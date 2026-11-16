@@ -1,6 +1,6 @@
 /**
  * POST /api/unions/[id]/organize-sector: targeted organizing drive / raid.
- * Gated on `labourSystemMode >= "full"`. See `organizeSector` in
+ * See `organizeSector` in
  * `@/lib/unions/commands/organizeSector` for the full contest rule.
  */
 import { NextResponse } from "next/server";
@@ -11,7 +11,6 @@ import { requireBasicAuth } from "@/lib/api/requireAuth";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { getCharacterByUserId } from "@/lib/db/characterLookup";
-import { isLabourFullMode } from "@/lib/labour/featureFlag";
 import { organizeSector } from "@/lib/unions/commands/organizeSector";
 
 interface RouteParams {
@@ -26,10 +25,6 @@ export async function POST(request: Request, { params }: RouteParams) {
   try {
     const auth = await requireBasicAuth();
     if (!auth.ok) return auth.response;
-
-    if (!(await isLabourFullMode())) {
-      return errorResponse(403, "Player-run unions are not enabled.");
-    }
 
     const rateLimit = checkRateLimit(
       `api/unions/[id]/organize-sector:${auth.user.userId}`,

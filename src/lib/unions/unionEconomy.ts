@@ -1,5 +1,5 @@
 /**
- * Phase 8, Player-run unions (`labourSystemMode >= "full"`), pure economy
+ * Phase 8, Player-run unions, pure economy
  * logic. A union has ONE leader (`Union.ownerId`), a treasury, and (union dues
  * v1) real dues/services economics living in `src/lib/unions/unionDues.ts`,
  * this file keeps the STRENGTH (leadership contest) and strike-preview logic,

@@ -46,7 +46,6 @@ import type { GameHealthSummary } from "@/lib/db/types/gameHealthSnapshot";
 import type { TurnLog } from "@/lib/db/types/turnLog";
 import type { WorldsimCorporationBootstrapResult } from "@/lib/sim/worldsimCorporationBootstrap";
 import { MARKET_MODE_ORDER, type MarketSystemMode } from "@/lib/market/modes";
-import { LABOUR_MODE_ORDER, type LabourSystemMode } from "@/lib/labour/modes";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
 import { applyCloneControllerPolicy } from "@/lib/sim/cloneControllers";
 import {
@@ -246,18 +245,6 @@ if (marketModeRaw && !MARKET_MODE_ORDER.includes(marketModeRaw as MarketSystemMo
 }
 const marketMode = marketModeRaw as MarketSystemMode | undefined;
 
-// --labour-mode is the exact counterpart of --market-mode. Both tiers were
-// raised together (wages->full, ledger->capital) when fresh worlds adopted the
-// production posture, but only the market half could be exercised here, so a
-// harness A/B silently held labour at the preset default and reported itself as
-// a clean comparison. Sourced from @/lib/labour/modes for the same purity
-// reason the market import documents.
-const labourModeRaw = arg("labour-mode");
-if (labourModeRaw && !LABOUR_MODE_ORDER.includes(labourModeRaw as LabourSystemMode)) {
-  console.error(`--labour-mode must be one of ${LABOUR_MODE_ORDER.join(", ")}`);
-  process.exit(1);
-}
-const labourMode = labourModeRaw as LabourSystemMode | undefined;
 const canonicalFreightBillingEnabled = parseOptionalBoolean(
   arg("canonical-freight-billing"),
   "canonical-freight-billing"
@@ -659,7 +646,6 @@ async function main() {
         macroGrowth,
         allFeatureFlags,
         marketMode,
-        labourMode,
         canonicalFreightBillingEnabled,
         shortageResponsiveSourcingEnabled,
         indexFundBondLiquidityEnabled,
@@ -695,16 +681,6 @@ async function main() {
           { upsert: true }
         );
       log(`Set marketSystemMode="${marketMode}" on sandbox gameConfig`);
-    }
-    if (labourMode) {
-      await db
-        .collection<GameConfig>("gameConfig")
-        .updateOne(
-          { _id: "default" },
-          { $set: { labourSystemMode: labourMode } },
-          { upsert: true }
-        );
-      log(`Set labourSystemMode="${labourMode}" on sandbox gameConfig`);
     }
     if (scarcityDrift) {
       await db
@@ -975,16 +951,6 @@ async function main() {
           { upsert: true }
         );
       log(`[clone] set marketSystemMode="${marketMode}" on cloned gameConfig`);
-    }
-    if (labourMode) {
-      await db
-        .collection<GameConfig>("gameConfig")
-        .updateOne(
-          { _id: "default" },
-          { $set: { labourSystemMode: labourMode } },
-          { upsert: true }
-        );
-      log(`[clone] set labourSystemMode="${labourMode}" on cloned gameConfig`);
     }
     if (scarcityDrift) {
       await db

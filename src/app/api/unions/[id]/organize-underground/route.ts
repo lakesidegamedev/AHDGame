@@ -2,7 +2,7 @@
  * POST /api/unions/[id]/organize-underground — spend action points to build
  * a suspended union's shadow pool. Open to every character in the union's
  * country while the ban holds. Body: { mode: "quiet" | "mass" }.
- * Gated on `labourSystemMode >= "full"`.
+ *
  */
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
@@ -13,7 +13,6 @@ import { requireBasicAuth } from "@/lib/api/requireAuth";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { getCharacterByUserId } from "@/lib/db/characterLookup";
-import { isLabourFullMode } from "@/lib/labour/featureFlag";
 import type { Union } from "@/lib/db/types";
 import { organizeUnderground } from "@/lib/unions/commands/organizeUnderground";
 import { unionsCollection } from "@/lib/db/repositories/unions";
@@ -26,10 +25,6 @@ export async function POST(request: Request, { params }: RouteParams) {
   try {
     const auth = await requireBasicAuth();
     if (!auth.ok) return auth.response;
-
-    if (!(await isLabourFullMode())) {
-      return errorResponse(403, "Player-run unions are not enabled.");
-    }
 
     const rateLimit = checkRateLimit(
       `api/unions/[id]/organize-underground:${auth.user.userId}`,

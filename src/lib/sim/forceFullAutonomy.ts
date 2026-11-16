@@ -131,13 +131,6 @@ export async function forceFullAutonomy(
         commandEconomyEnabled: true,
         commandEconomyEnabledBy: "sim-harness",
         commandEconomyEnabledAt: new Date().toISOString(),
-        // The seed default is "wages" — tier 1 of 4 on the off→wages→macro→
-        // unions→full ladder — which leaves the macro, unions and full tiers
-        // entirely inert. In particular `ownedUnionMembershipPressureByKey` is
-        // only fetched at "full", so union membership pressure never reaches
-        // unionization or labor cost no matter who leads the union. A world
-        // meant to exercise labour bargaining has to run at the top tier.
-        labourSystemMode: "full",
         // Seeded true today, but pinned here so a seed-default change cannot
         // silently switch the monetary layer off mid-programme. Gates the
         // per-currency M1/M2 snapshots, monetary transmission and central-bank

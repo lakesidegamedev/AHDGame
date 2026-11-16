@@ -625,7 +625,7 @@ export interface FederalBudget {
    */
   minimumWageKaitzRatio?: number;
   /**
-   * v3 Phase 7b (labourSystemMode >= "full"): union-law bias, -50 (strong
+   * v3 Phase 7b: union-law bias, -50 (strong
    * right-to-work) to +50 (strong collective-bargaining protection), 0 =
    * neutral/no law. Set by an enacted `UnionLawProvision` bill (see
    * `applyUnionLawProvision` in `src/lib/labour/unionLaws.ts`), the

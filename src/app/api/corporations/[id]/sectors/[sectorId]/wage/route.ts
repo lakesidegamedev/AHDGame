@@ -5,7 +5,7 @@ interface RouteParams {
 }
 
 // POST /api/corporations/[id]/sectors/[sectorId]/wage — Set a sector's wage level (Labour system).
-// Auth: requireBasicAuth (CEO). Gated on labourSystemMode ≥ "wages".
+// Auth: requireBasicAuth (CEO).
 // Errors: 400, 403, 404
 export async function POST(request: Request, { params }: RouteParams) {
   return setSectorWageLevel(request, { params });
