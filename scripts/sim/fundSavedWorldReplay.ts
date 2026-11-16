@@ -225,11 +225,7 @@ async function main() {
       }
     }
     const config = await target.collection("gameConfig").findOne({});
-    assert(
-      config?.indexFundsMode === "full" &&
-        config.nppFundRedemptionEnabled &&
-        config.equityLiquidityFacilityEnabled
-    );
+    assert(config?.nppFundRedemptionEnabled && config.equityLiquidityFacilityEnabled);
     const before = await audit(target);
     const { runIndexFundCron } = await import("../../src/lib/indexFunds/fundCron");
     const start = (await target.collection("gameState").findOne({}))!.currentTurn;

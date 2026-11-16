@@ -715,15 +715,6 @@ export interface GameConfig {
   /** Per-currency M1/M2 snapshots, monetary transmission, and central-bank operations. */
   moneySupplyEnabled?: boolean;
   /**
-   * Index funds rollout mode: off (disabled), partial (view + cron), full (+ trades).
-   * Legacy `indexFundsEnabled: true` is treated as full when mode is absent.
-   */
-  indexFundsMode?: "off" | "partial" | "full";
-  /**
-   * @deprecated Use `indexFundsMode`. When true and mode is absent, treated as full.
-   */
-  indexFundsEnabled?: boolean;
-  /**
    * Labour/Unions economic system rollout mode. Each tier supersets the previous:
    * off, wages, macro, unions, full. Absent/unknown means off. Resolve via `getLabourSystemMode`.
    */

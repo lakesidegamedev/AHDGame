@@ -65,7 +65,6 @@ export function FundHoldingsPanel({
   const [positions, setPositions] = useState<FundPosition[]>([]);
   const [transactions, setTransactions] = useState<FundTransaction[]>([]);
   const [loading, setLoading] = useState(true);
-  const [disabled, setDisabled] = useState(false);
   const [error, setError] = useState("");
   const [expandedFundId, setExpandedFundId] = useState<string | null>(null);
 
@@ -77,11 +76,6 @@ export function FundHoldingsPanel({
         const res = await fetch(`/api/character/${characterId}/fund-portfolio`, {
           cache: "no-store",
         });
-        if (res.status === 403) {
-          setDisabled(true);
-          setPositions([]);
-          return;
-        }
         if (!res.ok) {
           const body = (await res.json()) as { error?: string };
           setError(apiErrorText(body, "Failed to load fund portfolio"));
@@ -112,14 +106,6 @@ export function FundHoldingsPanel({
       <div className="space-y-3">
         <Skeleton className="h-24 w-full rounded-xl" />
         <Skeleton className="h-24 w-full rounded-xl" />
-      </div>
-    );
-  }
-
-  if (disabled) {
-    return (
-      <div className="rounded-xl border border-card-border bg-card p-6 text-center text-sm text-muted">
-        Index funds are not enabled on this server.
       </div>
     );
   }

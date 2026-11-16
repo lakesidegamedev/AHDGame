@@ -299,9 +299,8 @@ function PortfolioPageInner({ initialPortfolio }: PortfolioClientProps) {
         }
       }
       if (me?.fundPositions !== undefined) {
-        // null means the index-funds feature is off for this world, which hides
-        // the section; an array (even empty) enables it and feeds net worth.
-        setFundsFeatureEnabled(me.fundPositions !== null);
+        // The section waits for the first funds read, then feeds net worth.
+        setFundsFeatureEnabled(true);
       }
       if (me?.corporation && !me.corporation.isNationalCorp) {
         setCeoCorporation(me.corporation as MeCeoCorporation);

@@ -87,9 +87,7 @@ function fixture({ corps: corpCount = 4, pool = false, cash = 100_000 }: Options
         updatedAt: NOW,
       },
     ]);
-  memory.seed("gameConfig", [
-    { _id: "default", ledgerShadow: true, auditLog: true, indexFundsMode: "full" },
-  ]);
+  memory.seed("gameConfig", [{ _id: "default", ledgerShadow: true, auditLog: true }]);
   memory.seed("gameState", [{ _id: "current", currentTurn: TURN - 1 }]);
   vi.mocked(getDb).mockResolvedValue(db);
   const legs: FundShareBuyLeg[] = corps.map((corp, i) => ({

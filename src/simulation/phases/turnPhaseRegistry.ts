@@ -1554,16 +1554,6 @@ export function getTurnPhaseRegistry(): TurnPhaseAdapter[] {
       key: "indexFunds",
       async execute(context, runtime) {
         const { db, newTurn, phaseResults } = context;
-        const { isIndexFundsEnabled } = await import("@/lib/indexFunds/featureFlag");
-        if (!(await isIndexFundsEnabled())) {
-          await runtime.markPhaseSkipped(
-            "indexFunds",
-            "featureDisabled",
-            "Skipped because index funds are disabled."
-          );
-          return;
-        }
-
         const { runIndexFundCron } = await import("@/lib/indexFunds/fundCron");
         // Must go through runtime.runPhase so the phase is visible to
         // TurnPhaseTelemetryMap and production slow-phase alerting. A bare

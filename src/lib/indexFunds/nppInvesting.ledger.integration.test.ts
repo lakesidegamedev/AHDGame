@@ -10,9 +10,6 @@ import type { LedgerEntry } from "@/lib/ledger/types";
 import { processNPPFundInvestments } from "./nppInvesting";
 
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
-vi.mock("@/lib/indexFunds/featureFlag", () => ({
-  isIndexFundsEnabled: vi.fn().mockResolvedValue(true),
-}));
 
 it.each([
   { countryId: "US", currency: "USD", rate: 1 },

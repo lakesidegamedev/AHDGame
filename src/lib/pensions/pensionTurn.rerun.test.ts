@@ -27,7 +27,6 @@ const AGREEMENT = new ObjectId();
 
 function world(): InMemoryDb {
   const db = createInMemoryDb();
-  db.seed("gameConfig", [{ _id: "default", indexFundsMode: "partial" }]);
   db.seed("exchangeRates", [{ _id: "USD", currencyCode: "USD", rate: 1 }]);
   db.seed("unions", [{ _id: UNION, name: "Test Workers", countryId: "US" }]);
   db.seed("corporations", [
