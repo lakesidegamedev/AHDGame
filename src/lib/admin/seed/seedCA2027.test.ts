@@ -66,19 +66,26 @@ describe("seedCA2027", () => {
     for (let reset = 0; reset < 2; reset++) {
       await writeCA2027(db, true, () => {});
       const rows = await memory.collection("politicalParties").find({ countryId: "CA" }).toArray();
-      expect(rows).toHaveLength(5);
+      expect(rows).toHaveLength(6);
       expect(rows.map((row) => row._id)).toEqual(ids);
       expect(rows.map((row) => row.name)).toEqual(caParties.map((seed) => seed.name));
-      expect(rows.map((row) => row.abbreviation)).toEqual(["LIB", "CON", "NDP", "BQ", "GRN"]);
+      expect(rows.map((row) => row.abbreviation)).toEqual([
+        "LIB",
+        "CON",
+        "NDP",
+        "BQ",
+        "GRN",
+        "ASP",
+      ]);
       expect(rows.every((row) => row.isDefault)).toBe(true);
       const orgs = await memory.collection("statePartyOrg").find({ countryId: "CA" }).toArray();
-      expect(orgs).toHaveLength(65);
+      expect(orgs).toHaveLength(78);
       expect(
         orgs.filter((org) => String(org.partyId) === "4").every((org) => org.hasPresence)
       ).toBe(true);
-      expect(orgs.every((org) => ["1", "2", "3", "4", "5"].includes(String(org.partyId)))).toBe(
-        true
-      );
+      expect(
+        orgs.every((org) => ["1", "2", "3", "4", "5", "6"].includes(String(org.partyId)))
+      ).toBe(true);
     }
   });
   it("ships dark until the 2027 roster includes Canada", async () => {
@@ -99,10 +106,10 @@ describe("seedCA2027", () => {
       insertOne: { document: { sequentialId: number; countryId: string } };
     }>;
     expect(partyOps).toHaveLength(caParties.length);
-    expect(partyOps.map((op) => op.insertOne.document.sequentialId)).toEqual([1, 2, 3, 4, 5]);
+    expect(partyOps.map((op) => op.insertOne.document.sequentialId)).toEqual([1, 2, 3, 4, 5, 6]);
     expect(calls.stateDemographics!.bulkWrite.mock.calls[0]![0]).toHaveLength(13);
     expect(calls.stateBaselines!.bulkWrite.mock.calls[0]![0]).toHaveLength(13);
-    expect(calls.statePartyOrg!.bulkWrite.mock.calls[0]![0]).toHaveLength(13 * 5);
+    expect(calls.statePartyOrg!.bulkWrite.mock.calls[0]![0]).toHaveLength(13 * 6);
 
     const formation = calls.governmentFormations!.updateOne.mock.calls[0]![1].$setOnInsert;
     expect(calls.governmentFormations!.updateOne.mock.calls[0]![1]).not.toHaveProperty("$set");

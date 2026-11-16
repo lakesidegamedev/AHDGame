@@ -8,6 +8,7 @@
  */
 
 import type { DevolutionPolicy } from "@/lib/db/types/governorOfficeState";
+import { isCanadianSovereigntyRegion } from "@/lib/referendum/rules/sovereigntyRegions";
 
 // ─── Region eligibility ───────────────────────────────────────────────────────
 
@@ -100,8 +101,8 @@ export function highDesireElectionBonus(desire: number): number {
 
 // ─── UI label resolution ─────────────────────────────────────────────────────
 
-/** Quebec speaks of sovereignty, federalists and autonomists. */
-const QUEBEC_POLICY_LABELS: Record<DevolutionPolicy, string> = {
+/** Canadian provinces speak of sovereignty, federalists and autonomists. */
+const CANADIAN_POLICY_LABELS: Record<DevolutionPolicy, string> = {
   anti: "Federalist",
   pro: "Autonomist",
   independence: "Pro-Sovereignty",
@@ -109,13 +110,13 @@ const QUEBEC_POLICY_LABELS: Record<DevolutionPolicy, string> = {
 
 /**
  * Human-readable label for the metric in a given region. SCO/WAL render
- * "Independence Desire", NIR "Reunification Desire" and Quebec "Sovereignty
+ * "Independence Desire", NIR "Reunification Desire" and Canadian provinces "Sovereignty
  * Desire". The stored field is the same everywhere.
  */
 export function getIndependenceMetricLabel(stateId: string): string {
   const id = stateId.toUpperCase();
   if (id === "NIR") return "Reunification Desire";
-  if (id === "CA_QC") return "Sovereignty Desire";
+  if (isCanadianSovereigntyRegion(id)) return "Sovereignty Desire";
   return "Independence Desire";
 }
 
@@ -126,7 +127,7 @@ export function getIndependenceMetricLabel(stateId: string): string {
  */
 export function getDevolutionPolicyLabel(stateId: string, policy: DevolutionPolicy): string {
   const id = stateId.toUpperCase();
-  if (id === "CA_QC") return QUEBEC_POLICY_LABELS[policy];
+  if (isCanadianSovereigntyRegion(id)) return CANADIAN_POLICY_LABELS[policy];
   switch (policy) {
     case "anti":
       return "Anti-Devolution";

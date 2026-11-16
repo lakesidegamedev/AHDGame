@@ -95,6 +95,22 @@ export const SOVEREIGNTY_REGIONS: readonly SovereigntyRegion[] = [
     },
     actuates: true,
   },
+  {
+    countryId: "CA",
+    regionId: "CA_AB",
+    kind: "independence",
+    targetCountryId: null,
+    successorCountryId: "AB",
+    executiveTitle: "Premier",
+    nationalGovernmentName: "Ottawa",
+    parentName: "Canada",
+    consentSponsor: "Government of Canada",
+    electionParties: {
+      separatist: ["ca_alberta_sovereignty"],
+      rivals: ["ca_federal_unity", "ca_national_prosperity"],
+    },
+    actuates: false,
+  },
 ];
 
 const BY_REGION = new Map(SOVEREIGNTY_REGIONS.map((entry) => [entry.regionId, entry]));
@@ -112,6 +128,11 @@ export function sovereigntyRegionIn(countryId: string, regionId: string): Sovere
 
 export function isSovereigntyRegion(regionId: string): boolean {
   return BY_REGION.has(regionId.toUpperCase());
+}
+
+/** True for a Canadian province in the registry, which shares Quebec's sovereignty wording. */
+export function isCanadianSovereigntyRegion(regionId: string): boolean {
+  return sovereigntyRegion(regionId)?.countryId === "CA";
 }
 
 /** Region ids for one country, in registry order. */
