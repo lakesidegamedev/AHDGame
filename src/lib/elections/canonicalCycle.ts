@@ -78,7 +78,13 @@ const IT_SENATO_CYCLE_PERIOD_HOURS = 240;
  */
 /** Successor-nation chambers: anchor and cycle length, in turns. */
 const SUCCESSOR_CHAMBER_CYCLES: Record<
-  "holyrood" | "senedd" | "qcAssembly" | "abAssembly" | "rtxAssembly" | "rcaAssembly" | "nenAssembly",
+  | "holyrood"
+  | "senedd"
+  | "qcAssembly"
+  | "abAssembly"
+  | "rtxAssembly"
+  | "rcaAssembly"
+  | "nenAssembly",
   {
     anchor:
       | "scoHolyrood"
