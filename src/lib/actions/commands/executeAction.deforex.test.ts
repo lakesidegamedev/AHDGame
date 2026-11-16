@@ -149,8 +149,8 @@ describe("executeCharacterAction — campaign-fund de-forex", () => {
 
   it("debits a 2027 DE campaign in its frozen EUR denomination", async () => {
     vi.mocked(getGameState).mockResolvedValue({ currentTurn: 1, preset: "2027-default" } as never);
-    // The 2027 price-level quote is 90,000 anchor before the EUR basis ×0.92.
-    expect(await campaignDebit("DE", 0.92)).toBe(-82_800);
+    // The 2027 price-level quote is 85,000 anchor before the EUR basis ×0.92.
+    expect(await campaignDebit("DE", 0.92)).toBe(-78_200);
   });
 
   it("applies favorability immediately without creating a corporation-backed media order", async () => {

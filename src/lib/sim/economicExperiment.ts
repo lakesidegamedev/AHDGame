@@ -1,7 +1,4 @@
-export type FreightSettlementExperimentMode = "shadow" | "active";
-
 export interface EconomicExperimentConfig {
-  freightSettlementMode?: FreightSettlementExperimentMode;
   canonicalFreightBillingEnabled?: boolean;
   shortageResponsiveSourcingEnabled?: boolean;
   indexFundBondLiquidityEnabled?: boolean;
@@ -44,18 +41,15 @@ export function parseEquityLiquidityFacilityEnabled(
  * equity liquidity facility flag, its deprecated alias, and the sovereign
  * issuance consolidation and domestic coverage flags. */
 export function isGameplayOverrideArg(value: string): boolean {
-  return /^(--(?:market-mode|labour-mode|autonomy|difficulty|foreign-policy|foreign-policy-stage|freight-settlement|npp-market-coverage|npp-fragile-market-supply|npp-fund-redemption|canonical-freight-billing|shortage-responsive-sourcing|index-fund-bond-liquidity|sovereign-issuance-consolidation|domestic-sovereign-bond-coverage|equity-liquidity-facility|equity-liquidity|frontier-entry-experiment)=|--(?:scarcity-drift|brand-loyalty|brand-loyalty-slice|quality|demographics|command-economy|macro-growth|pre-iteration|no-pre-iteration)$)/.test(
+  return /^(--(?:market-mode|labour-mode|autonomy|difficulty|foreign-policy|foreign-policy-stage|npp-market-coverage|npp-fragile-market-supply|npp-fund-redemption|canonical-freight-billing|shortage-responsive-sourcing|index-fund-bond-liquidity|sovereign-issuance-consolidation|domestic-sovereign-bond-coverage|equity-liquidity-facility|equity-liquidity|frontier-entry-experiment)=|--(?:scarcity-drift|brand-loyalty|brand-loyalty-slice|quality|demographics|command-economy|macro-growth|pre-iteration|no-pre-iteration)$)/.test(
     value
   );
 }
 
 export function economicExperimentConfigSet(
   config: EconomicExperimentConfig
-): Record<string, boolean | FreightSettlementExperimentMode> {
+): Record<string, boolean> {
   return {
-    ...(config.freightSettlementMode !== undefined
-      ? { freightSettlementMode: config.freightSettlementMode }
-      : {}),
     ...(config.canonicalFreightBillingEnabled !== undefined
       ? { canonicalFreightBillingEnabled: config.canonicalFreightBillingEnabled }
       : {}),
@@ -138,7 +132,6 @@ export function allFeatureFlagsGameStateSet(
 export function economicExperimentCliArgs(config: EconomicExperimentConfig): string[] {
   const set = economicExperimentConfigSet(config);
   return [
-    ...(set.freightSettlementMode ? [`--freight-settlement=${set.freightSettlementMode}`] : []),
     ...(set.canonicalFreightBillingEnabled !== undefined
       ? [`--canonical-freight-billing=${String(set.canonicalFreightBillingEnabled)}`]
       : []),

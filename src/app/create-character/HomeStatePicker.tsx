@@ -4,6 +4,11 @@ import { useMemo, useState } from "react";
 import type { State } from "@/lib/db/types";
 import { formatPopulation } from "@/lib/utils/formatters";
 import { getDisplayLean, getLeanLabel, getSocialLeanLabel } from "@/lib/utils/demographics";
+import {
+  mainPartiesFor,
+  regionLeanLabel,
+  type PartyLabelSource,
+} from "@/lib/regionLean/partyLabel";
 import { compassDistance, type CompassPoint } from "@/lib/registration/alignment";
 import { playersHereSuffix } from "../register/components/playerCountLabels";
 
@@ -31,6 +36,8 @@ interface HomeStatePickerProps {
   position: CompassPoint;
   /** UK/JP call these regions rather than states. */
   regionNoun: string;
+  /** The country's parties; the two main ones set the scale for each region's lean label. */
+  parties?: readonly PartyLabelSource[];
 }
 
 /**
@@ -45,7 +52,9 @@ export function HomeStatePicker({
   playerCounts,
   position,
   regionNoun,
+  parties = [],
 }: HomeStatePickerProps) {
+  const mainParties = useMemo(() => mainPartiesFor(parties), [parties]);
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<SortKey>("fit");
 
@@ -125,7 +134,7 @@ export function HomeStatePicker({
           {rows.map(({ state, electorate, players }) => {
             const selected = value === state._id;
             const electoralLean = electorate
-              ? getLeanLabel(getDisplayLean(electorate.economic, electorate.social))
+              ? regionLeanLabel(getDisplayLean(electorate.economic, electorate.social), mainParties)
               : null;
             return (
               <div key={state._id}>

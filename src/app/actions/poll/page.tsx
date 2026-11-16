@@ -1,5 +1,6 @@
 "use client";
 
+import { WikiHelpLink } from "@/components/wiki/WikiHelpLink";
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import type { Character } from "@/lib/db/types";
@@ -315,9 +316,12 @@ export default function PollPage() {
         </header>
 
         <section aria-labelledby="poll-commission-heading" className="mt-8">
-          <h2 id="poll-commission-heading" className="text-heading font-semibold">
-            Commission a poll
-          </h2>
+          <div className="flex items-center gap-2">
+            <h2 id="poll-commission-heading" className="text-heading font-semibold">
+              Commission a poll
+            </h2>
+            <WikiHelpLink screen="poll" />
+          </div>
           <div role="radiogroup" aria-label="Poll type" className="mt-3 grid gap-3 sm:grid-cols-2">
             {tiers.map((t) => {
               const active = selectedTier === t.id;

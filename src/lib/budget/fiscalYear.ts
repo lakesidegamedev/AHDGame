@@ -281,7 +281,7 @@ export async function processFiscalYear(
   const [moneyWiringConfig, fxByCurrency, tariffExposureSnapshot, couponBooks] = await Promise.all([
     gameConfigCollection(db).findOne(
       { _id: "default" },
-      { projection: { interstateMoneyWiringEnabled: 1, fiscalStabilizerEnabled: 1 } }
+      { projection: { interstateMoneyWiringEnabled: 1 } }
     ),
     loadFxRatesByCurrency(db),
     loadTurnTariffInflationExposure(db, currentTurn),
@@ -290,7 +290,6 @@ export async function processFiscalYear(
     loadSovereignCouponBooks(db),
   ]);
   const moneyWiringEnabled = moneyWiringConfig?.interstateMoneyWiringEnabled === true;
-  const fiscalStabilizerEnabled = moneyWiringConfig?.fiscalStabilizerEnabled === true;
   const sourcedImportsByCountry = moneyWiringEnabled
     ? await loadLatestSourcedImportAggregates(db, currentTurn)
     : new Map<string, { tariffPaid: number; importValue: number }>();
@@ -543,7 +542,6 @@ export async function processFiscalYear(
         fiscalYear: newFiscalYear,
         turn: currentTurn,
         consolidate:
-          fiscalStabilizerEnabled &&
           (federalBudget.financialCrisisAusterityUntilTurn ?? -1) < currentTurn &&
           !federalBudget.imfSovereignBailoutActive,
       });
@@ -566,7 +564,7 @@ export async function processFiscalYear(
           update: { $set: { nationalFiscal: closed.fiscal } },
         },
       });
-      if (fiscalStabilizerEnabled && closed.restructure) {
+      if (closed.restructure) {
         interestSpiralCountries.add(countryId);
         backgroundSpiralYears.set(countryId, closed.interestSpiralYears);
       }
@@ -639,8 +637,6 @@ export async function processFiscalYear(
     const stabilizerUnset: Record<string, ""> = {};
     if (background) {
       // Handled above against the derived budget.
-    } else if (!fiscalStabilizerEnabled) {
-      // Switched off: no package, no restructuring, stored state left as is.
     } else if (nppGovernedCountries.has(countryId)) {
       const stabilized = applyFiscalStabilizer({
         budget: federalBudget,

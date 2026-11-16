@@ -1,4 +1,3 @@
-import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import type { Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import type { State } from "@/lib/db/types";
@@ -16,14 +15,10 @@ import { statesCollection } from "@/lib/db/repositories/states";
  * single per-country scalar so the sum matches the authored national GDP, preserving
  * every region's relative share.
  *
- * Era-agnostic mechanism, seed-path only, with two guards:
- * 1. Era gate: only pre-1999 eras (1953/1979/1991) are reconciled. Modern presets
- *    have their own state-sum vs authored-GDP disagreements whose resolution is a
- *    pending design decision, so a modern reseed must not re-scale regions. The
- *    reconciler is a no-op for 1999+.
- * 2. Tolerance guard: within a gated era, only countries deviating from the
- *    authored national GDP by more than STATE_GDP_RECONCILE_TOLERANCE (2%) are
- *    rescaled.
+ * Era-agnostic mechanism, seed-path only, for every preset the gate below
+ * admits. Only countries
+ * deviating from the authored national GDP by more than
+ * STATE_GDP_RECONCILE_TOLERANCE (2%) are rescaled.
  *
  * Runtime turn processing is never touched; after reconciliation both sources agree
  * from turn 1.
@@ -38,14 +33,17 @@ import { statesCollection } from "@/lib/db/repositories/states";
 export const STATE_GDP_RECONCILE_TOLERANCE = 0.02;
 
 /**
- * Era gate: pre-1999 eras plus the explicitly modeled 2027 US opening.
- * Derived from the preset via {@link eraForPreset} — no ad-hoc preset
- * string-matching — so preset aliases (e.g. `empty`, `2019-no-parties`
- * → era 2019) follow their era family. See the module doc for why modern
- * other modern eras are excluded (pending a canonical GDP decision).
+ * Presets whose authored national GDP is canonical, so regions are scaled to it:
+ * pre-1999 eras and 2027. The 2027 world reuses region tables authored in other
+ * units (whole currency instead of millions, a predecessor currency, an older
+ * price level), and the national figure is rebuilt from regions, so an
+ * unreconciled table rescales the whole economy on its first rebuild. The
+ * 1999 to 2023 presets keep their regional figures until their authored
+ * national GDPs are corrected.
  */
 export function shouldReconcileStateGdpForPreset(preset: string): boolean {
-  return Number(eraForPreset(preset)) < 1999 || eraForPreset(preset) === "2027";
+  const era = eraForPreset(preset);
+  return Number(era) < 1999 || era === "2027";
 }
 
 export interface CountryGdpScalar {
@@ -105,7 +103,6 @@ export function computeStateGdpScalars(
  * Normalize the `states` collection so each country's Σ regional gdp matches the
  * authored national GDP of the given preset's national-budget seed configs.
  * Idempotent: once normalized, the deviation is ~0 and re-runs are no-ops.
- * No-op for 1999+ eras (see {@link shouldReconcileStateGdpForPreset}).
  *
  * @param countryIds restrict to these countries (used by the eastern-bloc lane,
  *   whose regions seed after the main reconciliation pass); omit for all
@@ -118,17 +115,12 @@ export async function reconcileStateGdpWithNationalSeeds(
   countryIds?: CountryId[]
 ): Promise<CountryGdpScalar[]> {
   if (!shouldReconcileStateGdpForPreset(preset)) {
-    log(
-      `[GdpReconcile] skipped — era ${eraForPreset(preset)} (${preset}) is not gated for ` +
-        `seed-time regional-GDP reconciliation (pre-1999 and 2027 US only)`
-    );
+    log(`[GdpReconcile] skipped: ${preset} keeps its authored regional GDP`);
     return [];
   }
   const { getNationalBudgetSeedConfigsForPreset } = await import("@/lib/seeds/reference/budgets");
   const configs = getNationalBudgetSeedConfigsForPreset(preset).filter(
-    (c) =>
-      (!countryIds || countryIds.includes(c.countryId as CountryId)) &&
-      (eraForPreset(preset) !== "2027" || countryHasFeature("usSeeds", c.countryId))
+    (c) => !countryIds || countryIds.includes(c.countryId as CountryId)
   );
   if (configs.length === 0) return [];
 

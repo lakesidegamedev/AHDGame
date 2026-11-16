@@ -6,6 +6,7 @@ import {
   getWikiPageData,
   getWikiPagesBySlugs,
 } from "@/lib/wiki/getWikiPageData";
+import { extractWikiHeadings } from "@/lib/wiki/headings";
 import { loadWikiContent } from "@/lib/wiki/loadContent";
 import { getRedirectTarget } from "@/lib/wiki/redirects";
 import {
@@ -17,6 +18,7 @@ import {
 import { MarkdownContent } from "@/components/wiki/MarkdownContent";
 import { realLifeDateRange, tenureRangeWeekYear } from "@/lib/wiki/officeTenureDisplay";
 import { OfficeHistoryAdmin } from "@/components/wiki/OfficeHistoryAdmin";
+import { WikiTrustStrip } from "@/components/wiki/WikiTrustStrip";
 import { WikiTableOfContents } from "@/components/wiki/WikiTableOfContents";
 import { Breadcrumbs } from "@/components/wiki/layout/Breadcrumbs";
 import { PageMetadata } from "@/components/wiki/layout/PageMetadata";
@@ -88,36 +90,6 @@ export async function generateMetadata({ params }: WikiPageProps): Promise<Metad
   };
 }
 
-function extractHeadings(content: string): { id: string; text: string; level: number }[] {
-  const headings: { id: string; text: string; level: number }[] = [];
-  for (const line of content.split("\n")) {
-    const h2 = line.match(/^##\s+(.+)$/);
-    const h3 = line.match(/^###\s+(.+)$/);
-    if (h2) {
-      const text = h2[1].trim();
-      headings.push({
-        id: text
-          .toLowerCase()
-          .replace(/\s+/g, "-")
-          .replace(/[^a-z0-9-]/g, ""),
-        text,
-        level: 2,
-      });
-    } else if (h3) {
-      const text = h3[1].trim();
-      headings.push({
-        id: text
-          .toLowerCase()
-          .replace(/\s+/g, "-")
-          .replace(/[^a-z0-9-]/g, ""),
-        text,
-        level: 3,
-      });
-    }
-  }
-  return headings;
-}
-
 export default async function WikiPage({ params }: WikiPageProps) {
   const { slug } = await params;
   const redirectTo = getRedirectTarget(slug);
@@ -147,7 +119,7 @@ export default async function WikiPage({ params }: WikiPageProps) {
   const content = await loadWikiContent(slug);
   if (!content) notFound();
 
-  const headings = extractHeadings(content);
+  const headings = extractWikiHeadings(content);
   const user = await getAuthUserWithCharacter();
 
   // Fire-and-forget view count increment
@@ -181,6 +153,8 @@ export default async function WikiPage({ params }: WikiPageProps) {
           </Link>
         </div>
       )}
+
+      <WikiTrustStrip content={content} slug={slug} />
 
       <PageMetadata
         category={page.category}
@@ -223,7 +197,7 @@ function GeneratedOfficeWikiPage({
   isAdmin: boolean;
 }) {
   const content = editableContent ?? generatedOfficeDefaultContent(page.definition);
-  const headings = extractHeadings(content);
+  const headings = extractWikiHeadings(content);
   const current = page.currentHolder;
 
   return (

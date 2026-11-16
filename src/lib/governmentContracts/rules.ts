@@ -4,6 +4,7 @@
  * by price without choosing a winner for the government.
  */
 import type { ContractBid, GovernmentTender, TenderTab } from "./types";
+import { defenceSupplierCapShare } from "@/lib/military/defenceContractLimits";
 
 export const BIDDING_TURNS_MIN = 6;
 export const BIDDING_TURNS_MAX = 48;
@@ -65,6 +66,7 @@ export function defenceBidError(input: {
   floor: number | null;
   ceiling: number | null;
   supplierRemainingLots: number;
+  supplierRemainingAmount: number;
   lots: number;
 }): string | null {
   if (
@@ -77,10 +79,12 @@ export function defenceBidError(input: {
       input.floor,
       input.ceiling,
       input.supplierRemainingLots,
+      input.supplierRemainingAmount,
       input.lots,
     ].every((v) => typeof v === "number" && Number.isFinite(v)) ||
     input.amount <= 0 ||
-    input.lots <= 0
+    input.lots <= 0 ||
+    input.supplierRemainingAmount < 0
   )
     return "The procurement values must be finite and valid.";
   if (Math.min(input.supplierGrade, input.eraGrade ?? 3) < input.requiredGrade)
@@ -94,8 +98,78 @@ export function defenceBidError(input: {
   if (input.amount > input.ceiling) return "The bid is above the current permitted price band.";
   if (input.amount > input.maximum) return "The bid is above this tender's maximum.";
   if (input.supplierRemainingLots < input.lots)
-    return "The supplier cannot take this order within its quarterly concentration limit.";
+    return defenceConcentrationRefusal({
+      supplierRemainingLots: input.supplierRemainingLots,
+      supplierRemainingAmount: input.supplierRemainingAmount,
+      lots: input.lots,
+      amount: input.amount,
+    });
   return null;
+}
+
+function lotWord(count: number): string {
+  return count === 1 ? "lot" : "lots";
+}
+
+/**
+ * Explain a quarterly concentration refusal with the numbers the supplier can act on:
+ * how many lots still fit at the bid price, and the highest price per lot that fits
+ * the requested lots. Pure: callers pass the already computed remaining allowance.
+ */
+export function defenceConcentrationRefusal(input: {
+  supplierRemainingLots: number;
+  supplierRemainingAmount: number;
+  lots: number;
+  amount: number;
+}): string {
+  const fittingPrice = Math.floor(input.supplierRemainingAmount / input.lots);
+  const room = `only ${input.supplierRemainingLots} ${lotWord(input.supplierRemainingLots)} fit at the bid price of ${input.amount} per lot`;
+  if (fittingPrice >= 1)
+    return (
+      "The supplier cannot take this order within its quarterly concentration limit: " +
+      `${room}, but the highest price per lot that fits all ${input.lots} ${lotWord(input.lots)} is ${fittingPrice} per lot.`
+    );
+  return (
+    "The supplier cannot take this order within its quarterly concentration limit: " +
+    `${room}, and no price per lot fits all ${input.lots} ${lotWord(input.lots)} within the remaining allowance.`
+  );
+}
+
+/**
+ * Reject a defence tender no supplier could deliver even at the cheapest permitted bid.
+ * A tender is deliverable when the floor price times lots fits within the largest share
+ * any eligible supplier class may take: the full tranche when state-owned suppliers can
+ * bid in the country, otherwise the private one third share. Pure: the caller supplies
+ * the floor price, the tranche notional, and which supplier classes are eligible.
+ */
+export function defenceTenderDeliverabilityError(input: {
+  lots: number;
+  floorPricePerLot: number;
+  procurementNotional: number;
+  stateOwnedEligible: boolean;
+}): string | null {
+  const { lots, floorPricePerLot, procurementNotional } = input;
+  if (
+    ![lots, floorPricePerLot, procurementNotional].every(
+      (v) => typeof v === "number" && Number.isFinite(v)
+    ) ||
+    !Number.isInteger(lots) ||
+    lots <= 0 ||
+    !(floorPricePerLot > 0) ||
+    !(procurementNotional >= 0)
+  )
+    return "The tender size cannot be checked against the quarterly contracting tranche.";
+  const maxLots = Math.floor(
+    (procurementNotional * defenceSupplierCapShare(input.stateOwnedEligible)) / floorPricePerLot
+  );
+  if (lots <= maxLots) return null;
+  const head =
+    "No supplier could deliver this tender within the quarterly concentration limit: " +
+    `at the floor price of ${floorPricePerLot} per lot, `;
+  if (maxLots <= 0) return head + "a supplier's quarterly share fits no lots at this floor price.";
+  return (
+    head + `at most ${maxLots} ${lotWord(maxLots)} fit. Reduce the lots to ${maxLots} or fewer.`
+  );
 }
 
 export function tenderTab(

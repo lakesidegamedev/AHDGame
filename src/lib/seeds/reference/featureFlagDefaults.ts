@@ -70,7 +70,6 @@ export const FRESH_WORLD_GAME_CONFIG_FLAGS = {
   equityLiquidityFacilityEnabled: true,
   labourSystemMode: "full",
   marketSystemMode: "plants",
-  freightSettlementMode: "active",
   canonicalFreightBillingEnabled: true,
   interstateMoneyWiringEnabled: true,
   shortageResponsiveSourcingEnabled: true,
@@ -113,17 +112,8 @@ export const FRESH_WORLD_GAME_CONFIG_FLAGS = {
   outputBasis: "value_added",
   // Operational switches for systems that change a running world. A running
   // world has them absent (off) until an operator turns them on.
-  priceLevelEnabled: true,
-  fiscalStabilizerEnabled: true,
-  crisisV2EmergentEnabled: true,
   crisisV2StagesEnabled: true,
-  executiveSuccessionEnabled: true,
-  leaderLegacyEnabled: true,
   campaignLiveGdpBasisEnabled: true,
-  byElectionFillEnabled: true,
-  scotusNppNominationsEnabled: true,
-  scotusPendingDocketEnabled: true,
-  preeGenericFallbackEnabled: true,
   cyberOperationsEnabled: true,
 } as const satisfies Partial<GameConfig>;
 

@@ -73,6 +73,8 @@ export async function POST(request: Request) {
       slug: parsed.data.slug,
       reason: parsed.data.reason,
       note: parsed.data.note.trim(),
+      quote: parsed.data.quote.trim(),
+      resolved: false,
       ip,
       userId: user?.userId ? new ObjectId(user.userId) : undefined,
       createdAt: now,
@@ -87,6 +89,7 @@ export async function POST(request: Request) {
       slug: doc.slug,
       reason: doc.reason,
       note: doc.note,
+      quote: doc.quote,
       createdAt: now.toISOString(),
     });
 

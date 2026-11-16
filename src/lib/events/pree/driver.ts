@@ -191,13 +191,9 @@ async function sweepExpiredWithNotifications(
  */
 /** The random event options a world's config sets; absent reads off. */
 export function preeConfigFlags(
-  config:
-    Pick<GameConfig, "treasuryCashLedgerEnabled" | "preeGenericFallbackEnabled"> | null | undefined
-): { treasuryCashLedgerEnabled: boolean; genericFallbackEnabled: boolean } {
-  return {
-    treasuryCashLedgerEnabled: config?.treasuryCashLedgerEnabled === true,
-    genericFallbackEnabled: config?.preeGenericFallbackEnabled === true,
-  };
+  config: Pick<GameConfig, "treasuryCashLedgerEnabled"> | null | undefined
+): { treasuryCashLedgerEnabled: boolean } {
+  return { treasuryCashLedgerEnabled: config?.treasuryCashLedgerEnabled === true };
 }
 
 export async function processPlayerRandomEventsTurn(
@@ -208,8 +204,6 @@ export async function processPlayerRandomEventsTurn(
     treasuryCashLedgerEnabled?: boolean;
     /** In-game year for era gating (minYear/maxYear on definitions). Omit = no era filtering. */
     currentYear?: number;
-    /** Undated fallback when the dated packs are exhausted. Omit = on. */
-    genericFallbackEnabled?: boolean;
   }
 ): Promise<PlayerRandomEventsTurnResult> {
   await processLotteryAnnuities(db);
@@ -284,8 +278,7 @@ export async function processPlayerRandomEventsTurn(
         preloaded?.currentYear,
         broadcastDef,
         broadcastPreset,
-        preloaded?.treasuryCashLedgerEnabled,
-        preloaded?.genericFallbackEnabled !== false
+        preloaded?.treasuryCashLedgerEnabled
       );
       if (result === "offered") {
         offered++;
@@ -326,8 +319,7 @@ async function offerEventToCharacter(
   currentYear?: number,
   broadcastDef?: EventDefinition | null,
   broadcastPreset?: string,
-  treasuryCashLedgerEnabled = false,
-  genericFallbackEnabled = true
+  treasuryCashLedgerEnabled = false
 ): Promise<"offered" | "skipped" | "exhausted"> {
   const pendingInstance = await getEventInstancesCollection(db).findOne({
     scope: "character",
@@ -388,7 +380,6 @@ async function offerEventToCharacter(
       currentTurn,
       currentYear
     );
-    if (eligible.length === 0 && !genericFallbackEnabled) return "skipped";
     if (eligible.length === 0) {
       // Dated packs have run out for this character. The undated modern pool
       // keeps the world moving, even if it repeats a recent kind.

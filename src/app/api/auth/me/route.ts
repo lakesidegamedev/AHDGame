@@ -27,6 +27,7 @@ import { isForexEnabled } from "@/lib/currency/featureFlag";
 import { loadFxRatesRecord } from "@/lib/currency/corporationCapital";
 import { getNotificationBundleUserIds } from "@/lib/notifications/notificationBundle";
 import { getClientIp } from "@/lib/utils/network";
+import { appleExemptsDiscordGate } from "@/lib/auth/providerLinkHistory";
 import { recordIdentitySignals } from "@/lib/identityHistory/recordObservation";
 import { resolveStaffRole } from "@/lib/staff/rules";
 import { unifiedSessionIsCurrent } from "@/lib/auth/unifiedSession";
@@ -355,6 +356,12 @@ export const GET = withNoStore(async () => {
           googleName: user?.googleName ?? undefined,
           googleAvatar: user?.googleAvatar ?? undefined,
           appleId: user?.appleId ?? undefined,
+          // False when the Apple ID already belonged to another account, in
+          // which case Apple sign-in does not stand in for Discord linking.
+          appleExemptsDiscord:
+            user?._id && user.appleId
+              ? await appleExemptsDiscordGate(db, user._id, user.appleId)
+              : false,
           appleEmail: user?.appleEmail ?? undefined,
           hasPassword: !!user?.password,
           character: character

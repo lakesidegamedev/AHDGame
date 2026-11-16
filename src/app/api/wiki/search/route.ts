@@ -5,7 +5,13 @@ import { getAuthUser } from "@/lib/auth";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { checkWikiDisabled } from "@/lib/api/wikiGuard";
 import { escapeRegex } from "@/lib/utils/escapeRegex";
-import { rankWikiSearchCandidates, type WikiSearchCandidate } from "@/lib/wiki/wikiSearch";
+import {
+  hasFuzzyEligibleWord,
+  rankWikiSearchCandidates,
+  type WikiSearchCandidate,
+} from "@/lib/wiki/wikiSearch";
+import { docsItemsToCandidates, getDocsIndex } from "@/lib/wiki/docsSearch";
+import { extractWikiHeadings, type WikiHeading } from "@/lib/wiki/headings";
 import { getNonPageWikiSearchCandidates } from "@/lib/wiki/wikiSearchSources";
 import type { WikiPage } from "@/lib/db/types";
 import { wikiPagesCollection } from "@/lib/db/repositories/wikiPages";
@@ -16,6 +22,10 @@ import { wikiPagesCollection } from "@/lib/db/repositories/wikiPages";
  */
 const CANDIDATE_POOL_MULTIPLIER = 5;
 const MAX_CANDIDATE_POOL = 100;
+/** Docs hits are appended after wiki hits so they never push a wiki page out. */
+const MAX_DOCS_RESULTS = 3;
+/** Upper bound on pages scanned by the typo-tolerant fallback. */
+const MAX_FUZZY_POOL = 1000;
 
 // GET /api/wiki/search — Searches every wiki surface: published pages plus the
 // generated party/seat/office/election pages, category indexes and learning paths.
@@ -83,8 +93,8 @@ async function handleGET(request: Request) {
         : Promise.resolve([] as WikiSearchCandidate[]),
     ]);
 
-    const pageCandidates: WikiSearchCandidate[] = pageDocs.map((doc) => {
-      const page = doc as unknown as {
+    const toCandidate = (doc: unknown, headings?: WikiHeading[]): WikiSearchCandidate => {
+      const page = doc as {
         slug: string;
         title: string;
         description?: string;
@@ -104,14 +114,67 @@ async function handleGET(request: Request) {
         // Flagging it lets ranking place body hits last without projecting the
         // full article text on every keystroke.
         matchedBody: true,
+        headings,
       };
-    });
+    };
 
-    const results = rankWikiSearchCandidates(
-      query,
-      [...pageCandidates, ...nonPageCandidates],
-      limit
+    // Headings need the article text, which is fat. Load it once for the pool so
+    // a section match can outrank a body mention and deep-link to its anchor.
+    const headingsBySlug = new Map<string, WikiHeading[]>();
+    if (query && pageDocs.length > 0) {
+      const bodies = await wikiPages
+        .find({ ...filter, slug: { $in: pageDocs.map((d) => (d as { slug: string }).slug) } })
+        .project<{ slug: string; content?: string }>({ slug: 1, content: 1 })
+        .toArray();
+      for (const body of bodies) {
+        if (body.content) headingsBySlug.set(body.slug, extractWikiHeadings(body.content));
+      }
+    }
+
+    const pageCandidates = pageDocs.map((doc) =>
+      toCandidate(doc, headingsBySlug.get((doc as { slug: string }).slug))
     );
+
+    let results = rankWikiSearchCandidates(query, [...pageCandidates, ...nonPageCandidates], limit);
+
+    // The database regex cannot see a one-letter typo, so when the exact pass
+    // comes up short, scan page titles and descriptions for near matches.
+    if (query && results.length < limit && hasFuzzyEligibleWord(query)) {
+      const { $or: _or, ...broadFilter } = filter;
+      void _or;
+      const broad = await wikiPages
+        .find(broadFilter)
+        .project<Pick<WikiPage, "slug" | "title" | "description" | "tags" | "featured">>({
+          slug: 1,
+          title: 1,
+          description: 1,
+          tags: 1,
+          featured: 1,
+        })
+        .limit(MAX_FUZZY_POOL)
+        .toArray();
+      const seen = new Set(pageCandidates.map((c) => c.slug));
+      const extra = broad
+        .filter((doc) => !seen.has(doc.slug))
+        .map((doc) => ({ ...toCandidate(doc), matchedBody: false }));
+      results = rankWikiSearchCandidates(
+        query,
+        [...pageCandidates, ...extra, ...nonPageCandidates],
+        limit
+      );
+    }
+
+    // Docs are best-effort: getDocsIndex never throws and returns [] when the
+    // docs site is down, so search keeps working.
+    if (query && tags.length === 0) {
+      const docsIndex = await getDocsIndex();
+      const docsHits = rankWikiSearchCandidates(
+        query,
+        docsItemsToCandidates(docsIndex, query),
+        MAX_DOCS_RESULTS
+      );
+      results = [...results, ...docsHits];
+    }
 
     return NextResponse.json({ results });
   } catch (error) {

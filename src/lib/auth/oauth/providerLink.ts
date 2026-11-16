@@ -18,6 +18,7 @@ import {
   type BridgeWriteOp,
 } from "@/lib/auth/centralLogin";
 import { isAuthMigrationFenced } from "@/lib/auth/sourceFence";
+import { isProviderSubjectBanned, recordProviderLinkEvent } from "@/lib/auth/providerLinkHistory";
 import type { User } from "@/lib/db/types";
 import type { OAuthCookieStore, OAuthDb, OAuthLinkAdapter } from "./types";
 import { usersCollection } from "@/lib/db/repositories/users";
@@ -84,6 +85,11 @@ export async function runOAuthLink(
     return adapter.linkResult("error", "already_linked");
   }
 
+  // A login account tied to a banned player cannot be linked to another account.
+  if (await isProviderSubjectBanned(db, adapter.provider, adapter.externalId)) {
+    return adapter.linkResult("error", "registration_blocked");
+  }
+
   // Never silently replace a different existing provider link; the old link
   // must be explicitly unlinked first.
   const link = decideProviderLink(account, adapter.provider, adapter.externalId);
@@ -146,5 +152,12 @@ export async function runOAuthLink(
   }
 
   shadowMirrorWrite(linkWrite);
+  await recordProviderLinkEvent(db, {
+    userId: account._id,
+    provider: adapter.provider,
+    providerId: adapter.externalId,
+    action: "link",
+    at: linkedAt,
+  });
   return adapter.linkResult("success");
 }

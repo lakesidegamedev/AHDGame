@@ -1022,36 +1022,35 @@ export async function processCommodityPriceTurn(turn: number): Promise<Commodity
     policies: ownRoutePolicies,
   });
 
-  // ── Landed-price freight settlement (shadow or active) ─────────────────
-  const { freightSettlement, freightRampFraction, freightSettlementActive } =
-    await runFreightSettlementPhase(
-      db,
-      {
-        marketSystemMode,
-        allStates,
-        stateToCountry,
-        roadConditionByState,
-        existingPriceMap,
-        ledgerBasePrices: LEDGER_BASE_PRICES,
-        ledgerEraUnitScale,
-        tariffDocs,
-        ftaPairs,
-        affinityFor,
-        demandUsesByState,
-        ownRoutes,
-        ownFreightCapacityByState,
-        ownFreightMarketSupply: buildOwnMarketSupply({
-          sectors: ownRouteSectors,
-          supplyBySector: sectorUnits.supplyBySector,
-          policies: ownRoutePolicies,
-        }),
-      },
-      turn,
-      now,
-      global,
-      byState,
-      byCountry
-    );
+  // ── Landed-price freight settlement ─────────────────────────────────────
+  const { freightSettlement, freightRampFraction } = await runFreightSettlementPhase(
+    db,
+    {
+      marketSystemMode,
+      allStates,
+      stateToCountry,
+      roadConditionByState,
+      existingPriceMap,
+      ledgerBasePrices: LEDGER_BASE_PRICES,
+      ledgerEraUnitScale,
+      tariffDocs,
+      ftaPairs,
+      affinityFor,
+      demandUsesByState,
+      ownRoutes,
+      ownFreightCapacityByState,
+      ownFreightMarketSupply: buildOwnMarketSupply({
+        sectors: ownRouteSectors,
+        supplyBySector: sectorUnits.supplyBySector,
+        policies: ownRoutePolicies,
+      }),
+    },
+    turn,
+    now,
+    global,
+    byState,
+    byCountry
+  );
 
   const tradeClearing = clearAllCommodities(
     countries,
@@ -1060,13 +1059,9 @@ export async function processCommodityPriceTurn(turn: number): Promise<Commodity
     capUnitsFor,
     importCostMultiplierFor
   );
-  // Books and convergence count only trade the sourcing pass actually shipped
-  // (active settlement only; shadow sourcing delivers nothing). The raw
-  // clearing result is still what the flow snapshot persists.
-  const shippedClearing = capClearingToSourcedTrade(
-    tradeClearing,
-    freightSettlementActive ? freightSettlement?.sourcing : undefined
-  );
+  // Books and convergence count only trade the sourcing pass actually shipped.
+  // The raw clearing result is still what the flow snapshot persists.
+  const shippedClearing = capClearingToSourcedTrade(tradeClearing, freightSettlement?.sourcing);
   // Reachable books, built from the SAME pre-convergence balances the clearing
   // ran on. `applyTradeConvergence` mutates `byCountry` in place on the next
   // line, so this cannot move below it: post-convergence an importer's demand
@@ -1194,7 +1189,6 @@ export async function processCommodityPriceTurn(turn: number): Promise<Commodity
         : normalizeMarketRecoveryStage(fixStageCfg?.marketRecoveryStage),
     commandEconomyEnabled,
     priceCurrentYear,
-    freightSettlementActive,
     freightRampFraction,
     ownRouteCorporationIds: (() => {
       const byRoute = new Map<string, string[]>();

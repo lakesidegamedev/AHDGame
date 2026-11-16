@@ -12,7 +12,6 @@ import type { WithId } from "mongodb";
 export function buildCommodityBalanceLookups({
   commodityPrices,
   globalCommodityBalances,
-  options,
   stateCountryMap,
   latestTradeSnapshot,
 }: {
@@ -47,21 +46,6 @@ export function buildCommodityBalanceLookups({
     | "network_services",
     { supply: number; demand: number }
   >;
-  options:
-    | {
-        omitBuildQueue?: boolean;
-        plantsEnabled?: boolean;
-        explicitPlantCostsEnabled?: boolean;
-        productionTurn?: number;
-        moneyWiringEnabled?: boolean;
-        productLinesV2Enabled?: boolean;
-        mediaProductSlatesEnabled?: boolean;
-        freightSettlementActive?: boolean;
-        canonicalFreightBillingEnabled?: boolean;
-        mediaEditorialEnabled?: boolean;
-        politicalMediaMarketEnabled?: boolean;
-      }
-    | undefined;
   stateCountryMap: Map<string, CountryId>;
   latestTradeSnapshot: WithId<TradeFlowSnapshot>[];
 }) {
@@ -157,63 +141,59 @@ export function buildCommodityBalanceLookups({
       }
     }
 
-    if (options?.freightSettlementActive) {
-      for (const [stateId, availability] of Object.entries(cp.stateInputAvailability ?? {})) {
-        if (!Number.isFinite(availability)) continue;
-        if (!stateInputAvailabilityByState.has(stateId)) {
-          stateInputAvailabilityByState.set(stateId, new Map());
-        }
-        stateInputAvailabilityByState
-          .get(stateId)!
-          .set(cp.commodity, Math.max(0, Math.min(1, availability)));
+    for (const [stateId, availability] of Object.entries(cp.stateInputAvailability ?? {})) {
+      if (!Number.isFinite(availability)) continue;
+      if (!stateInputAvailabilityByState.has(stateId)) {
+        stateInputAvailabilityByState.set(stateId, new Map());
       }
-      // Sell-side twin of the availability read above: the share of a state's
-      // own output that last turn's network could place. Sectors offer into a
-      // COUNTRY-scoped clearing book while their goods move on a STATE-scoped
-      // network, so without this the offer claims deliveries the network never
-      // made (t225: 60.4% of world production stranded in a state that did not
-      // need it, against 28.7% of world demand unmet). Missing state, missing
-      // doc field, or zero supply all mean "no evidence of a limit" and are
-      // read as a ratio of 1 by the consumer.
-      for (const [stateId, placed] of Object.entries(cp.statePlacedSupply ?? {})) {
-        if (!Number.isFinite(placed)) continue;
-        const supply = cp.stateSupply?.[stateId] ?? 0;
-        if (!(supply > 0)) continue;
-        if (!statePlacementRatioByState.has(stateId)) {
-          statePlacementRatioByState.set(stateId, new Map());
-        }
-        statePlacementRatioByState
-          .get(stateId)!
-          .set(cp.commodity, Math.max(0, Math.min(1, placed / supply)));
+      stateInputAvailabilityByState
+        .get(stateId)!
+        .set(cp.commodity, Math.max(0, Math.min(1, availability)));
+    }
+    // Sell-side twin of the availability read above: the share of a state's
+    // own output that last turn's network could place. Sectors offer into a
+    // COUNTRY-scoped clearing book while their goods move on a STATE-scoped
+    // network, so without this the offer claims deliveries the network never
+    // made (t225: 60.4% of world production stranded in a state that did not
+    // need it, against 28.7% of world demand unmet). Missing state, missing
+    // doc field, or zero supply all mean "no evidence of a limit" and are
+    // read as a ratio of 1 by the consumer.
+    for (const [stateId, placed] of Object.entries(cp.statePlacedSupply ?? {})) {
+      if (!Number.isFinite(placed)) continue;
+      const supply = cp.stateSupply?.[stateId] ?? 0;
+      if (!(supply > 0)) continue;
+      if (!statePlacementRatioByState.has(stateId)) {
+        statePlacementRatioByState.set(stateId, new Map());
       }
-      // Second ratio, same denominator, different question. The placement ratio
-      // caps the OFFER (the book should shrink whatever the reason, glut
-      // included); this one is the only figure allowed to tell a player their
-      // goods could not get there. Keeping them apart is the whole point: the
-      // two states of the world call for opposite decisions.
-      for (const [stateId, byCorp] of Object.entries(cp.stateOwnerDeliveryLimited ?? {})) {
-        for (const [corpId, fraction] of Object.entries(byCorp)) {
-          if (!Number.isFinite(fraction)) continue;
-          let byState = ownerDeliveryLimitedRatioByCorp.get(corpId);
-          if (!byState) ownerDeliveryLimitedRatioByCorp.set(corpId, (byState = new Map()));
-          let byCommodity = byState.get(stateId);
-          if (!byCommodity) byState.set(stateId, (byCommodity = new Map()));
-          byCommodity.set(cp.commodity, Math.max(0, Math.min(1, fraction)));
-        }
+      statePlacementRatioByState
+        .get(stateId)!
+        .set(cp.commodity, Math.max(0, Math.min(1, placed / supply)));
+    }
+    // Second ratio, same denominator, different question. The placement ratio
+    // caps the OFFER (the book should shrink whatever the reason, glut
+    // included); this one is the only figure allowed to tell a player their
+    // goods could not get there. Keeping them apart is the whole point: the
+    // two states of the world call for opposite decisions.
+    for (const [stateId, byCorp] of Object.entries(cp.stateOwnerDeliveryLimited ?? {})) {
+      for (const [corpId, fraction] of Object.entries(byCorp)) {
+        if (!Number.isFinite(fraction)) continue;
+        let byState = ownerDeliveryLimitedRatioByCorp.get(corpId);
+        if (!byState) ownerDeliveryLimitedRatioByCorp.set(corpId, (byState = new Map()));
+        let byCommodity = byState.get(stateId);
+        if (!byCommodity) byState.set(stateId, (byCommodity = new Map()));
+        byCommodity.set(cp.commodity, Math.max(0, Math.min(1, fraction)));
       }
-      for (const [stateId, deliveryLimited] of Object.entries(
-        cp.stateDeliveryLimitedSupply ?? {}
-      )) {
-        if (!Number.isFinite(deliveryLimited)) continue;
-        const supply = cp.stateSupply?.[stateId] ?? 0;
-        if (!(supply > 0)) continue;
-        if (!stateDeliveryLimitedRatioByState.has(stateId)) {
-          stateDeliveryLimitedRatioByState.set(stateId, new Map());
-        }
-        stateDeliveryLimitedRatioByState
-          .get(stateId)!
-          .set(cp.commodity, Math.max(0, Math.min(1, deliveryLimited / supply)));
+    }
+    for (const [stateId, deliveryLimited] of Object.entries(cp.stateDeliveryLimitedSupply ?? {})) {
+      if (!Number.isFinite(deliveryLimited)) continue;
+      const supply = cp.stateSupply?.[stateId] ?? 0;
+      if (!(supply > 0)) continue;
+      if (!stateDeliveryLimitedRatioByState.has(stateId)) {
+        stateDeliveryLimitedRatioByState.set(stateId, new Map());
       }
+      stateDeliveryLimitedRatioByState
+        .get(stateId)!
+        .set(cp.commodity, Math.max(0, Math.min(1, deliveryLimited / supply)));
     }
 
     const perCountry = buildNationalCommodityBalances(cp, stateCountryMap);

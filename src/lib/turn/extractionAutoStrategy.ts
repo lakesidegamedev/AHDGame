@@ -334,12 +334,11 @@ export async function processExtractionAutoStrategy(
   // D9 capacity renormalization below is plants-only.
   const config = await gameConfigCollection(db).findOne(
     { _id: "default" },
-    { projection: { marketSystemMode: 1, freightSettlementMode: 1, marketGovernorCap: 1 } }
+    { projection: { marketSystemMode: 1, marketGovernorCap: 1 } }
   );
   const marketMode = isMarketSystemMode(config?.marketSystemMode) ? config.marketSystemMode : "off";
   const plantsEnabled = marketAtLeast(marketMode, "plants");
   const clearingEnabled = marketAtLeast(marketMode, "clearing");
-  const localInputsEnabled = clearingEnabled && config?.freightSettlementMode === "active";
   // The autopilot skips the per-corporation tech check, so it only picks
   // methods with no tech gate.
   const strategies = (SECTOR_STRATEGIES.extraction ?? []).filter(isUngatedStrategy);
@@ -689,7 +688,7 @@ export async function processExtractionAutoStrategy(
           clearingStartTurn: s.clearingStartTurn ?? undefined,
           throughputStartTurn: s.throughputStartTurn ?? undefined,
           governorCap: config?.marketGovernorCap,
-          localInputAvailability: localInputsEnabled ? {} : undefined,
+          localInputAvailability: clearingEnabled ? {} : undefined,
         };
         for (const [commodity, price] of priceByCommodity) {
           const key = commodity as CommodityType;

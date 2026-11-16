@@ -395,6 +395,7 @@ export const FRONT_DOOR_COLLECTIONS = [
   "nppMarketEntryFunnels",
   "playerContentReports",
   "identityObservations",
+  "providerLinkHistory",
   "passwordResets",
   "bondSaleIntents",
   "clientSimulationStatistics",

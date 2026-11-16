@@ -32,6 +32,7 @@ import { actionLogsCollection } from "@/lib/db/repositories/actionLogs";
 import { characterAchievementsCollection } from "@/lib/db/repositories/characterAchievements";
 import { retiredCharactersCollection } from "@/lib/db/repositories/retiredCharacters";
 import { identityObservationsCollection } from "@/lib/db/repositories/identityObservations";
+import { providerLinkHistoryCollection } from "@/lib/db/repositories/providerLinkHistory";
 
 // DELETE /api/auth/delete-account — Permanently deletes the authenticated user's account, character, and clears offices held.
 // Auth: requireBasicAuth
@@ -202,6 +203,8 @@ export const DELETE = withNoStore(async () => {
     // removes the account's IP and fingerprint evidence rather than orphaning
     // 90 days of it.
     await identityObservationsCollection<Document>(db).deleteMany({ userId: objectId });
+    // Login-account link history goes with the account it describes.
+    await providerLinkHistoryCollection<Document>(db).deleteMany({ userId: objectId });
 
     // App Store rule 5.1.1(v): deleting an account created or linked with
     // Sign in with Apple must revoke the Apple grant. Best effort, so an

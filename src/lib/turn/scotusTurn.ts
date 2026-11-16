@@ -12,7 +12,6 @@
  */
 import type { Db } from "mongodb";
 import { getDb } from "@/lib/mongodb";
-import type { GameConfig } from "@/lib/db/types/gameConfig";
 import { processScotusTenureTurn, type ScotusTenureTurnResult } from "./scotusTenureTurn";
 import { processScotusDocketTurn, type ScotusDocketTurnResult } from "./scotusDocketTurn";
 import {
@@ -37,30 +36,10 @@ export interface ScotusTurnResult {
   nominations: ScotusNominationLifecycleResult;
 }
 
-/** Live-world switches for the Court; a world seeded before them passes both false. */
-export interface ScotusTurnSwitches {
-  nppNominations: boolean;
-  pendingDocket: boolean;
-}
-
-/** The Court's switches as a world's config sets them; absent reads off. */
-export function scotusSwitches(
-  config:
-    | Pick<GameConfig, "scotusNppNominationsEnabled" | "scotusPendingDocketEnabled">
-    | null
-    | undefined
-): ScotusTurnSwitches {
-  return {
-    nppNominations: config?.scotusNppNominationsEnabled === true,
-    pendingDocket: config?.scotusPendingDocketEnabled === true,
-  };
-}
-
 export async function processScotusTurn(
   currentTurn: number,
   now: Date,
-  db?: Db,
-  switches: ScotusTurnSwitches = { nppNominations: true, pendingDocket: true }
+  db?: Db
 ): Promise<ScotusTurnResult> {
   const database = db ?? (await getDb());
   const tenure = await processScotusTenureTurn(currentTurn, database);
@@ -70,12 +49,12 @@ export async function processScotusTurn(
     database,
     Math.random(),
     Math.random(),
-    Math.random(),
-    switches.pendingDocket
+    Math.random()
   );
-  const nppNominations: ScotusNppNominationResult = switches.nppNominations
-    ? await processScotusNppNominations(currentTurn, database)
-    : { nominated: 0, skipped: "disabled" };
+  const nppNominations: ScotusNppNominationResult = await processScotusNppNominations(
+    currentTurn,
+    database
+  );
   const nominations = await processScotusNominationLifecycle(now, database);
   return { tenure, docket, surpriseCase, nppNominations, nominations };
 }

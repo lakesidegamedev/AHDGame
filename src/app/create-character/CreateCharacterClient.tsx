@@ -335,8 +335,8 @@ export default function CreateCharacterClient() {
           return;
         }
         // Capture Discord linking state. Apple sign-in satisfies the gate on
-        // its own, so the Discord prompt never opens for those accounts.
-        if (data.user.discordId || data.user.appleId) {
+        // its own, once per Apple ID, so the prompt stays closed for those accounts.
+        if (data.user.discordId || data.user.appleExemptsDiscord) {
           dispatchDiscord({ type: "linked" });
         }
         if (data.user.discordId) {
@@ -976,6 +976,7 @@ export default function CreateCharacterClient() {
           playerCounts={statePlayerCounts}
           position={position}
           regionNoun={regionNoun}
+          parties={parties}
         />
       )}
     </StepPanel>
@@ -1154,15 +1155,12 @@ export default function CreateCharacterClient() {
         isSubmitting={isLoading}
         portrait={portrait}
         header={header}
+        parties={parties}
       />
 
       <p className="mt-2 px-1 text-body-sm text-muted">
         New here?{" "}
-        <Link
-          href="https://wiki.ahousedividedgame.com/getting-started"
-          target="_blank"
-          className="text-primary hover:underline"
-        >
+        <Link href="/wiki/getting-started" target="_blank" className="text-primary hover:underline">
           Read the new player guide
         </Link>
       </p>

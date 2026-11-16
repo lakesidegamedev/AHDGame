@@ -50,16 +50,14 @@ export interface FreightSettlementInputs {
 export interface FreightSettlementOutcome {
   freightSettlement: FreightSettlement | null;
   freightRampFraction: number;
-  freightSettlementActive: boolean;
 }
 
 /**
- * Landed-price freight settlement (shadow or active), run on PRE-clearing
- * balances (preserving those raw balances for aggregate clearing). Determines
- * which sellers each state can buy from at landed price (ask + per-hop
- * freight + tariff), bounded by origin freight capacity. Shadow persists
- * routes only; active additionally persists delivered input availability for
- * the following corporation turn.
+ * Landed-price freight settlement, run on PRE-clearing balances (preserving
+ * those raw balances for aggregate clearing). Determines which sellers each
+ * state can buy from at landed price (ask + per-hop freight + tariff), bounded
+ * by origin freight capacity. Persists routes and the delivered input
+ * availability used by the following corporation turn.
  *
  * Ordering constraint: stays above clearAllCommodities/applyTradeConvergence,
  * which relieve byCountry in place. Freight demand (including final requests
@@ -90,14 +88,10 @@ export async function runFreightSettlementPhase(
     ownFreightCapacityByState,
     ownFreightMarketSupply,
   } = inputs;
-  // Freight is a separately-soaked rollout. The market ladder enables the
-  // ledger needed to observe routes, while this gate decides whether those
-  // deliveries constrain next turn's local plant inputs.
   const freightSettlementConfig = await gameConfigCollection(db).findOne(
     { _id: "default" },
     {
       projection: {
-        freightSettlementMode: 1,
         canonicalFreightBillingEnabled: 1,
         shortageResponsiveSourcingEnabled: 1,
         freightSettlementRampStartTurn: 1,
@@ -106,10 +100,7 @@ export async function runFreightSettlementPhase(
       },
     }
   );
-  const freightSettlementActive =
-    freightSettlementConfig?.freightSettlementMode === "active" &&
-    marketAtLeast(marketSystemMode, "clearing");
-  // Gradual freight-settlement ramp (Phase 4): fade the ACTIVE effect in over a
+  // Gradual freight-settlement ramp: fade the effect in over a
   // configured window instead of a hard balance step. R scales the cap here and
   // the persisted billing money below; unset window → 1 (instant, unchanged).
   const freightRampFraction = freightSettlementRampFraction(freightSettlementConfig, turn);
@@ -151,13 +142,13 @@ export async function runFreightSettlementPhase(
         affinityFor(commodity, exporter, importer) === 0,
       shortageResponsiveSourcingEnabled:
         freightSettlementConfig?.shortageResponsiveSourcingEnabled === true,
-      ownRoutes: freightSettlementActive ? ownRoutes : undefined,
+      ownRoutes,
       ownFreightCapacityByState:
-        freightSettlementActive && (freightSettlementConfig?.ownFreightFirstStage ?? 0) >= 1
+        (freightSettlementConfig?.ownFreightFirstStage ?? 0) >= 1
           ? (ownFreightCapacityByState ?? new Map())
           : undefined,
       ownFreightMarketSupply:
-        freightSettlementActive && (freightSettlementConfig?.ownFreightFirstStage ?? 0) >= 2
+        (freightSettlementConfig?.ownFreightFirstStage ?? 0) >= 2
           ? (ownFreightMarketSupply ?? new Map())
           : undefined,
     });
@@ -165,7 +156,7 @@ export async function runFreightSettlementPhase(
       includeFreightBilling: canonicalFreightBillingEnabled,
       billingBalancesByState: byState,
       billingRampFraction: freightRampFraction,
-      purchaseExposureMode: freightSettlementActive ? "active_delivered" : "shadow_simulated",
+      purchaseExposureMode: "active_delivered",
     });
     if (commodityDocs.length > 0) {
       // Lazy index for the {commodity} + latest-turn read path, mirroring
@@ -185,13 +176,8 @@ export async function runFreightSettlementPhase(
       );
     }
     // Player/telemetry indicator: expose the ramp fraction while it is mid-flight
-    // so the phase-in is legible on the markets tracker and admin view. Only when
-    // an active effect is actually being scaled (mode active or billing on).
-    if (
-      (freightSettlementActive || canonicalFreightBillingEnabled) &&
-      freightRampFraction > 0 &&
-      freightRampFraction < 1
-    ) {
+    // so the phase-in is legible on the markets tracker and admin view.
+    if (freightRampFraction > 0 && freightRampFraction < 1) {
       networkDoc.freightSettlementRampFraction = Math.round(freightRampFraction * 10000) / 10000;
     }
     const ownRouteBillingScale = canonicalFreightBillingEnabled
@@ -230,5 +216,5 @@ export async function runFreightSettlementPhase(
     });
   }
 
-  return { freightSettlement, freightRampFraction, freightSettlementActive };
+  return { freightSettlement, freightRampFraction };
 }

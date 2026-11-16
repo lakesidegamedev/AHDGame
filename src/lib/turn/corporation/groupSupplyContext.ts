@@ -28,7 +28,6 @@ import type { CoordinationBuyer } from "@/lib/corporations/groups/rules/marketCo
 export function buildGroupSupplyContext(
   lookups: CorporationLookups,
   turn: number,
-  freightSettlementActive: boolean,
   agreements: readonly SettleableSupplyAgreement[] = [],
   membership?: import("@/lib/corporations/groups/groupMembership").GroupMembership
 ): NonNullable<Parameters<typeof computeClearingFactors>[0]["groupSupply"]> {
@@ -204,7 +203,6 @@ export function buildGroupSupplyContext(
     localInputAvailabilityByState: lookups.stateInputAvailabilityByState,
     localBalancesByState: lookups.rawStateBalances,
     forecastByRoot,
-    freightSettlementActive,
     members,
     buyersByCommodity,
     locationBySector,

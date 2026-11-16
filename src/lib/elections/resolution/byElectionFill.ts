@@ -8,7 +8,6 @@
  * generated; races that already have a candidate are never touched.
  */
 
-import type { GameConfig } from "@/lib/db/types/gameConfig";
 import type { Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import type { Election, ElectionCandidate, NPP } from "@/lib/db/types";
@@ -228,16 +227,14 @@ export async function fillUncontestedByElections(
 
 /**
  * Governor by-election watcher followed by the fill guarantee for every live
- * by-election, when the world's `byElectionFillEnabled` switch is on.
+ * by-election.
  */
 export async function processByElectionsWithFill(
   db: Db,
   currentTurn: number,
-  now: Date,
-  config: Pick<GameConfig, "byElectionFillEnabled"> | null | undefined
+  now: Date
 ): Promise<{ spawned: number }> {
   const result = await processByElectionWatcher(db, currentTurn, now);
-  if (config?.byElectionFillEnabled === true)
-    await fillUncontestedByElections(db, currentTurn, now);
+  await fillUncontestedByElections(db, currentTurn, now);
   return result;
 }

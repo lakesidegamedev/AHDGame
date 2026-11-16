@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { rankWikiSearchCandidates, type WikiSearchCandidate } from "./wikiSearch";
+import { rankWikiSearchCandidates, withinOneEdit, type WikiSearchCandidate } from "./wikiSearch";
 
 function candidate(partial: Partial<WikiSearchCandidate> & { title: string }): WikiSearchCandidate {
   return {
@@ -137,5 +137,63 @@ describe("rankWikiSearchCandidates", () => {
     );
 
     expect(results[0]).not.toHaveProperty("matchedBody");
+  });
+});
+
+describe("heading and typo matching", () => {
+  it("ranks a heading match above a description match and returns its anchor", () => {
+    const results = rankWikiSearchCandidates(
+      "attack formula",
+      [
+        candidate({ title: "Overview", description: "Covers the attack formula briefly" }),
+        candidate({
+          title: "Combat",
+          headings: [
+            { id: "intro", text: "Intro", level: 2 },
+            { id: "attack-formula", text: "Attack formula", level: 2 },
+          ],
+        }),
+      ],
+      10
+    );
+
+    expect(results.map((r) => r.title)).toEqual(["Combat", "Overview"]);
+    expect(results[0].anchor).toBe("attack-formula");
+    expect(results[0].href).toBe("/wiki/combat#attack-formula");
+  });
+
+  it("keeps a title match above a heading match", () => {
+    const results = rankWikiSearchCandidates(
+      "tariffs",
+      [
+        candidate({ title: "Trade", headings: [{ id: "tariffs", text: "Tariffs", level: 2 }] }),
+        candidate({ title: "Tariffs" }),
+      ],
+      10
+    );
+    expect(results[0].title).toBe("Tariffs");
+  });
+
+  it("tolerates one wrong letter on words of 5 or more letters", () => {
+    const results = rankWikiSearchCandidates("filibustr", [candidate({ title: "Filibuster" })], 5);
+    expect(results).toHaveLength(1);
+  });
+
+  it("does not apply typo tolerance to short words", () => {
+    const results = rankWikiSearchCandidates("vots", [candidate({ title: "Vote" })], 5);
+    expect(results).toHaveLength(0);
+  });
+});
+
+describe("withinOneEdit", () => {
+  it("accepts substitution, insertion and deletion of one letter", () => {
+    expect(withinOneEdit("senate", "senete")).toBe(true);
+    expect(withinOneEdit("senate", "senat")).toBe(true);
+    expect(withinOneEdit("senat", "senate")).toBe(true);
+  });
+
+  it("rejects two edits", () => {
+    expect(withinOneEdit("senate", "sonato")).toBe(false);
+    expect(withinOneEdit("senate", "sen")).toBe(false);
   });
 });
