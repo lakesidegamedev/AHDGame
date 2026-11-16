@@ -218,7 +218,7 @@ const mixedSectors = [
   sector({
     _id: "s3",
     sectorType: "energy",
-    strategyId: "renewables",
+    strategyId: "solar",
     stateId: "NM",
     stateName: "New Mexico",
     displayName: "Albuquerque Solar",

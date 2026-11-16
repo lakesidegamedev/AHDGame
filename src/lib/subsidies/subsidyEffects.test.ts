@@ -64,15 +64,15 @@ describe("corpQualifiesForSubsidy", () => {
   });
 
   it("strategy filter matches sector.strategyId", () => {
-    const s = makeSubsidy({ scopeType: "economy_wide", targetStrategyId: "renewables" });
-    expect(corpQualifiesForSubsidy(s, "CA", "energy", "CA", "renewables", "US", "US")).toBe(true);
+    const s = makeSubsidy({ scopeType: "economy_wide", targetStrategyId: "wind" });
+    expect(corpQualifiesForSubsidy(s, "CA", "energy", "CA", "wind", "US", "US")).toBe(true);
     expect(corpQualifiesForSubsidy(s, "CA", "energy", "CA", "nuclear", "US", "US")).toBe(false);
   });
 
   it("strategy filter defaults to 'standard' when sector has no strategyId", () => {
     const s = makeSubsidy({ scopeType: "economy_wide", targetStrategyId: "standard" });
     expect(corpQualifiesForSubsidy(s, "CA", "energy", "CA", undefined, "US", "US")).toBe(true);
-    expect(corpQualifiesForSubsidy(s, "CA", "energy", "CA", "renewables", "US", "US")).toBe(false);
+    expect(corpQualifiesForSubsidy(s, "CA", "energy", "CA", "wind", "US", "US")).toBe(false);
   });
 
   it("domesticOnly national: rejects foreign corp", () => {

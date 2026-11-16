@@ -162,7 +162,7 @@ describe("D9 — retool leaves capital-mode utilization alone", () => {
    * to make.
    */
   const FROM = "standard";
-  const TO = "renewables";
+  const TO = "wind";
   // Deliberately below implied units so `capitalUtilization` is a live ratio
   // rather than pinned at its 1.0 ceiling — a clamped reading would prove nothing.
   const STOCK = 1_000;

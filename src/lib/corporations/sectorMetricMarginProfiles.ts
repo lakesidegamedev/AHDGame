@@ -288,12 +288,31 @@ const STRATEGY_CHANNEL_OVERRIDES: Record<string, ChannelWeights> = {
     environmentalCompliance: 0.7,
     innovation: 0.85,
   },
-  "energy.renewables": {
+  "energy.wind": {
     environmentalCompliance: 1.15,
     gridReliability: 1.1,
-    physicalLogistics: 0.8,
-    innovation: 0.75,
+    physicalLogistics: 0.85,
+    innovation: 0.7,
     publicProcurement: 0.55,
+  },
+  "energy.solar": {
+    environmentalCompliance: 1.15,
+    gridReliability: 1.1,
+    physicalLogistics: 0.7,
+    innovation: 0.85,
+    publicProcurement: 0.55,
+  },
+  "energy.hydroelectric": {
+    environmentalCompliance: 1.1,
+    gridReliability: 0.9,
+    physicalLogistics: 0.75,
+    publicProcurement: 0.7,
+  },
+  "energy.gas_fired": {
+    environmentalCompliance: 0.95,
+    gridReliability: 1,
+    physicalLogistics: 0.9,
+    publicProcurement: 0.5,
   },
   "energy.nuclear": {
     environmentalCompliance: 1.05,

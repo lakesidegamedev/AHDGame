@@ -5,6 +5,21 @@ import { relocationLeavesParty } from "./relocationParty";
 import { PartyTerritoryError } from "@/lib/parties/relocationTerritory";
 
 describe("relocation party reach", () => {
+  it("retains party on a distant domestic move when disabled, but leaves on a foreign move", async () => {
+    const db = createMockDb();
+    db.collection("gameConfig").findOne.mockResolvedValue({ partyAdjacencyEnabled: false });
+    db.collection("states").find.mockReturnValue({
+      toArray: async () => ["WA", "NY"].map((_id) => ({ _id })),
+    });
+    db.collection("characters").distinct.mockResolvedValue(["WA"]);
+    const character = { _id: new ObjectId(), party: "7", countryId: "US" as const };
+    expect(
+      await relocationLeavesParty(db as unknown as Db, character, { _id: "NY", countryId: "US" })
+    ).toBe(false);
+    expect(
+      await relocationLeavesParty(db as unknown as Db, character, { _id: "CA_ON", countryId: "CA" })
+    ).toBe(true);
+  });
   it.each([
     { destination: "WA", leaves: false },
     { destination: "OR", leaves: false },

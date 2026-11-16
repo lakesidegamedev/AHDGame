@@ -1,3 +1,4 @@
+import { migration as splitRenewablesPowerMethod } from "./entries/2026-11-16-split-renewables-power-method";
 import { migration as successorTaxTypes } from "./entries/2026-11-09-successor-tax-types";
 import { migration as incomeTaxTiers } from "./entries/2026-10-16-income-tax-tiers";
 import { migration as backfillMechanicalLawTypes } from "./entries/2026-10-21-backfill-mechanical-law-types";
@@ -118,6 +119,9 @@ export const REQUIRED_STARTUP_MIGRATIONS: readonly Migration[] = [
   // Regional voter drift moves to the census overlay this build reads; until it
   // does, every region's leans read as the seeded census.
   regionGroupDriftToBuckets,
+  // The renewables power method split into wind and solar; a sector or subsidy
+  // still naming it would point at a method this build no longer defines.
+  splitRenewablesPowerMethod,
 ];
 
 /** Index metadata can disappear on reset even when migration markers survive. */

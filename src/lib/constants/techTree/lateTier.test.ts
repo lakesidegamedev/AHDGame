@@ -145,9 +145,15 @@ describe("frontier programmes", () => {
 });
 
 describe("method sunsets", () => {
-  it("energy conventional retires in 2039 for advanced fission or renewables", () => {
+  it("energy conventional retires in 2039 for advanced fission, wind, solar, gas or hydro", () => {
     expect(energyStandard.sunsetDecade).toBe("2039");
-    expect(energyStandard.successorIds).toEqual(["advanced_fission", "renewables"]);
+    expect(energyStandard.successorIds).toEqual([
+      "advanced_fission",
+      "wind",
+      "solar",
+      "gas_fired",
+      "hydroelectric",
+    ]);
   });
 
   it("closes the method to new sites and retools from the sunset tier", () => {
@@ -168,7 +174,7 @@ describe("method sunsets", () => {
     expect(sunsetOperatingPenalty(energyStandard, 2039)).toBeCloseTo(SUNSET_PENALTY_PER_YEAR);
     expect(sunsetOperatingPenalty(energyStandard, 2042)).toBeCloseTo(4 * SUNSET_PENALTY_PER_YEAR);
     expect(sunsetOperatingPenalty(energyStandard, 2090)).toBe(SUNSET_PENALTY_CAP);
-    expect(sunsetOperatingPenalty(getStrategy("energy", "renewables"), 2090)).toBe(0);
+    expect(sunsetOperatingPenalty(getStrategy("energy", "wind"), 2090)).toBe(0);
   });
 
   it("raises every input of a sunset site and none of a converted one", () => {
@@ -181,18 +187,18 @@ describe("method sunsets", () => {
     expect(penalised.outputRateMult).toEqual({});
     // A null strategy is the lane default.
     expect(withSunsetPenalty(NEUTRAL_TECH_EFFECTS, "energy", null, 2042)).toEqual(penalised);
-    expect(withSunsetPenalty(NEUTRAL_TECH_EFFECTS, "energy", "renewables", 2042)).toBe(
+    expect(withSunsetPenalty(NEUTRAL_TECH_EFFECTS, "energy", "wind", 2042)).toBe(
       NEUTRAL_TECH_EFFECTS
     );
   });
 
   it("discounts the retool fee only for a sunset method moving to a named successor", () => {
-    expect(isSunsetConversion(energyStandard, "renewables", 2040)).toBe(true);
-    expect(sunsetRetoolCostMultiplier(energyStandard, "renewables", 2040)).toBeCloseTo(
+    expect(isSunsetConversion(energyStandard, "wind", 2040)).toBe(true);
+    expect(sunsetRetoolCostMultiplier(energyStandard, "wind", 2040)).toBeCloseTo(
       1 - SUNSET_CONVERSION_DISCOUNT
     );
     expect(sunsetRetoolCostMultiplier(energyStandard, "nuclear", 2040)).toBe(1);
-    expect(sunsetRetoolCostMultiplier(energyStandard, "renewables", 2038)).toBe(1);
+    expect(sunsetRetoolCostMultiplier(energyStandard, "wind", 2038)).toBe(1);
   });
 
   it("picks the first open successor", () => {
@@ -202,7 +208,7 @@ describe("method sunsets", () => {
     );
     expect(
       sunsetSuccessorFor(energyStandard, strategies, 2040, (s) => s.id !== "advanced_fission")?.id
-    ).toBe("renewables");
+    ).toBe("wind");
     expect(sunsetSuccessorFor(energyStandard, strategies, 2038, () => true)).toBeNull();
   });
 });

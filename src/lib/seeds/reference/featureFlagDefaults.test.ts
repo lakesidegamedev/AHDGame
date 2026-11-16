@@ -217,3 +217,15 @@ it("preserves the confidence freeze operator setting across resets and top-ups",
     settings: {},
   });
 });
+
+it.each([true, false])(
+  "preserves party adjacency enabled=%s across resets and top-ups",
+  (enabled) => {
+    expect(FRESH_WORLD_GAME_CONFIG_FLAGS).not.toHaveProperty("partyAdjacencyEnabled");
+    expect(NON_GAMEPLAY_GAME_CONFIG_FIELDS.partyAdjacencyEnabled).toContain("survives resets");
+    expect(splitFreshWorldGameConfigFlags({ partyAdjacencyEnabled: enabled })).toEqual({
+      flags: { partyAdjacencyEnabled: enabled },
+      settings: {},
+    });
+  }
+);

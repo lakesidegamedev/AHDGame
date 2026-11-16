@@ -422,7 +422,7 @@ A corporation's Overview tab has a **Simple / Pro** switch in its top right corn
 
 ## Operating strategies
 
-Each sector type has **4 to 8 operating strategies** that change which commodities it supplies and demands. Strategies are how you specialize: an energy sector can run Conventional (fossil fuels), Renewables Focus (solar/wind using electronics and rare earth), Nuclear Expansion (high output, heavy steel and chemicals), and several more besides. A chemical industries sector can pivot between industrial chemicals, fertilizer production, pharmaceuticals, or plastics.
+Each sector type has **4 to 8 operating strategies** that change which commodities it supplies and demands. Strategies are how you specialize: an energy sector can run Conventional (coal-heavy fossil fuels), Gas-Fired (cleaner than coal, fuel bill follows natural gas), Hydroelectric (near-firm, cheap to run, modest output), Wind Power and Solar Power (zero emissions but intermittent), Nuclear Expansion (high output, heavy steel and chemicals), and several more besides. A chemical industries sector can pivot between industrial chemicals, fertilizer production, pharmaceuticals, or plastics.
 
 **Strategies have no flat margin bonus**: their value comes mostly from commodity market dynamics. Each strategy also weights how much local conditions such as grid reliability, broadband or workforce skill move its margin, capped at 8 points in total. Switching to a strategy that supplies a scarce commodity or avoids expensive inputs can dramatically improve margins; switching into an oversupplied market does the opposite.
 
@@ -443,7 +443,7 @@ Computer-run corporations may automatically retool a sector onto a better strate
 
 | Sector | Strategies | Count |
 | --- | --- | --- |
-| Energy | Hydraulic Fracturing, Conventional, Renewables Focus, Nuclear Expansion, Smart Grid, Fusion Generation | 6 |
+| Energy | Conventional, Gas-Fired, Hydroelectric, Wind Power, Solar Power, Hydraulic Fracturing, Nuclear Expansion, Smart Grid, Fusion Generation | 9 |
 | Manufacturing | Additive Manufacturing, Autonomous Factory, Standard, Heavy Metals, Electronics Manufacturing, Vehicle Assembly, Trucks and Heavy Machinery | 7 |
 | Technology | Quantum Computing, AI Platforms, Standard, Hardware Focus, Software Focus | 5 |
 | Agriculture | Vertical Farming, Precision Agriculture, Traditional, Industrial, Sustainable | 5 |

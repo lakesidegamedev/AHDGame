@@ -112,7 +112,7 @@ describe("sunset conversion through the retool command", () => {
   it("charges the discounted fee to convert a retired method to a named successor", async () => {
     await wire(energySector("standard"), 2041);
     const { setSectorStrategy } = await import("./setSectorStrategy");
-    const res = await setSectorStrategy(request("renewables"), { params });
+    const res = await setSectorStrategy(request("wind"), { params });
     expect(res.status).toBe(200);
     const debit = db.collectionMocks.corporations.updateOne.mock.calls[0][1] as {
       $inc: { liquidCapital: number };
@@ -125,7 +125,7 @@ describe("sunset conversion through the retool command", () => {
   it("charges the full fee for the same move before the sunset", async () => {
     await wire(energySector("standard"), 2035);
     const { setSectorStrategy } = await import("./setSectorStrategy");
-    const res = await setSectorStrategy(request("renewables"), { params });
+    const res = await setSectorStrategy(request("wind"), { params });
     expect(res.status).toBe(200);
     const debit = db.collectionMocks.corporations.updateOne.mock.calls[0][1] as {
       $inc: { liquidCapital: number };
@@ -134,7 +134,7 @@ describe("sunset conversion through the retool command", () => {
   });
 
   it("refuses a retool onto the retired method", async () => {
-    await wire(energySector("renewables"), 2041);
+    await wire(energySector("wind"), 2041);
     const { setSectorStrategy } = await import("./setSectorStrategy");
     const res = await setSectorStrategy(request("standard"), { params });
     expect(res.status).toBe(400);

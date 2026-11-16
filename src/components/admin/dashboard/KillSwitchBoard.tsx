@@ -43,6 +43,15 @@ type SwitchDef = PatchSwitchDef | TurnSwitchDef;
 
 const SWITCHES: SwitchDef[] = [
   {
+    key: "party-adjacency",
+    kind: "patch",
+    url: "/api/admin/party/adjacency",
+    label: "Party adjacency requirement",
+    desc: "Enabled: joining, recruitment and party relocation follow adjacent territory rules. Disabled: players and NPPs may join, be recruited or relocate anywhere within the same country. Costs, cooldowns and other eligibility checks still apply. Default enabled.",
+    onLabel: "Enabled",
+    offLabel: "Disabled",
+  },
+  {
     key: "government-confidence",
     kind: "patch",
     url: "/api/admin/government-confidence",
