@@ -79,7 +79,7 @@ const BASE_SECTOR_STRATEGIES: Record<OperatingSectorType, SectorStrategy[]> = {
       // Coal-heavy conventional power retires with the 2039 tier: closed to new
       // plants, rising running costs for old ones, discounted conversion.
       sunsetDecade: "2039",
-      successorIds: ["advanced_fission", "renewables"],
+      successorIds: ["advanced_fission", "wind", "solar", "gas_fired", "hydroelectric"],
       // Matches SECTOR_SUPPLY/SECTOR_DEMAND in commodities.ts (energy output 0.65, oil 0.07, rare_earth 0.04; rare_earth covers copper).
       supply: { energy: 0.65 },
       demand: {
@@ -93,20 +93,61 @@ const BASE_SECTOR_STRATEGIES: Record<OperatingSectorType, SectorStrategy[]> = {
       },
     },
     {
-      id: "renewables",
+      id: "wind",
       requiresTechUnlock: true,
       minDecade: "1999",
-      name: "Renewables Focus",
+      name: "Wind Power",
       description:
-        "Solar, wind, and battery storage. Lower output but demands electronics for panels and inverters.",
-      // Tuned so renewables compete with fossil power; civil works need building materials.
-      supply: { energy: 0.55 },
+        "Onshore and offshore turbine farms. Zero emissions, but output comes and goes with the weather, and towers and generators need steel and rare earth magnets.",
+      supply: { energy: 0.56 },
       demand: {
-        electronics: 0.17,
-        rare_earth: 0.07,
-        building_materials: 0.12,
-        steel: 0.1,
+        steel: 0.18,
+        rare_earth: 0.09,
+        electronics: 0.08,
+        building_materials: 0.1,
         construction_services: 0.08,
+      },
+    },
+    {
+      id: "solar",
+      requiresTechUnlock: true,
+      minDecade: "2009",
+      name: "Solar Power",
+      description:
+        "Utility-scale solar farms. Zero emissions and intermittent like wind, with a heavy electronics bill for panels and inverters.",
+      supply: { energy: 0.54 },
+      demand: {
+        electronics: 0.22,
+        rare_earth: 0.06,
+        building_materials: 0.12,
+        steel: 0.06,
+        construction_services: 0.06,
+      },
+    },
+    {
+      id: "hydroelectric",
+      name: "Hydroelectric",
+      description:
+        "Dams and run-of-river stations. Zero emissions, near-firm output and cheap to run, but output per site is modest and the civil works need building materials and steel.",
+      supply: { energy: 0.52 },
+      demand: {
+        building_materials: 0.16,
+        steel: 0.12,
+        construction_services: 0.1,
+        freight: 0.04,
+      },
+    },
+    {
+      id: "gas_fired",
+      name: "Gas-Fired",
+      description:
+        "Gas turbine and combined-cycle plants. Firm on-demand power with about half the emissions of coal, but the fuel bill tracks the natural gas price.",
+      supply: { energy: 0.62 },
+      demand: {
+        natural_gas: 0.3,
+        steel: 0.14,
+        construction_services: 0.06,
+        rare_earth: 0.03,
       },
     },
     {

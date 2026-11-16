@@ -280,7 +280,8 @@ export function advanceEmployment(input: EmploymentInput): EmploymentResult {
 
 /** Corporate staffing consumes the prior completed employment allocation. */
 export function employmentStaffingTightness(
-  state: EmploymentState | undefined
+  state: EmploymentState | undefined,
+  options?: { countUnemployed?: boolean }
 ): number | undefined {
   if (
     !state?.corporateDemandKnown ||
@@ -288,6 +289,15 @@ export function employmentStaffingTightness(
     state.corporateDemand <= 0
   )
     return undefined;
+  if (options?.countUnemployed) {
+    const jobseekers = Math.max(
+      0,
+      finite(state.laborForce, 0) -
+        nonnegative(state.corporateEmployed) -
+        nonnegative(state.backgroundEmployed)
+    );
+    return state.corporateDemand / Math.max(1, nonnegative(state.corporateEmployed) + jobseekers);
+  }
   return state.corporateDemand / Math.max(1, nonnegative(state.corporateEmployed));
 }
 

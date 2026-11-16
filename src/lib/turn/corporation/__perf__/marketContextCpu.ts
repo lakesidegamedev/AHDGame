@@ -147,7 +147,6 @@ interface PrePassWorld {
   turn: number;
   currentYear: number;
   commandEconomyEnabled: boolean;
-  freightSettlementActive: boolean;
   supplyAgreementsEnabled: boolean;
   settleableAgreements: ReturnType<typeof loadSettleableSupplyAgreements> extends Promise<infer T>
     ? T
@@ -172,7 +171,6 @@ function prePassInput(world: PrePassWorld): ClearingPrePassInput {
     turn: world.turn,
     currentYear: world.currentYear,
     commandEconomyEnabled: world.commandEconomyEnabled,
-    freightSettlementActive: world.freightSettlementActive,
     supplyAgreementsEnabled: world.supplyAgreementsEnabled,
     settleableAgreements: world.settleableAgreements.agreements,
     contractedByCorpCommodity: new Map<string, Map<string, number>>(),
@@ -200,7 +198,6 @@ function fixtureWorld(world: ProductionTurnWorld): PrePassWorld {
     turn: world.turn,
     currentYear: 1991,
     commandEconomyEnabled: false,
-    freightSettlementActive: false,
     supplyAgreementsEnabled: false,
     settleableAgreements: { agreements: [], legacyStateLocalAgreementLive: false },
     stateLocalClearingBlocked: false,
@@ -237,8 +234,6 @@ async function databaseWorld(
   market.explicitPlantCostsEnabled = config?.explicitPlantCostsEnabled === true;
   market.commodityFixStage = normalizeCommodityFixStage(config?.commodityFixStage);
   market.marketRecoveryStage = normalizeMarketRecoveryStage(config?.marketRecoveryStage);
-  const freightSettlementActive =
-    (config as { freightSettlementMode?: string } | null)?.freightSettlementMode === "active";
   if (config?.canonicalFreightBillingEnabled === true) {
     const billing = buildFreightBillingBySector({
       lookups,
@@ -260,7 +255,6 @@ async function databaseWorld(
     turn,
     currentYear: gameState?.currentYear ?? 0,
     commandEconomyEnabled: config?.commandEconomyEnabled === true,
-    freightSettlementActive,
     supplyAgreementsEnabled,
     settleableAgreements: loaded,
     stateLocalClearingBlocked: loaded.legacyStateLocalAgreementLive,
@@ -323,8 +317,7 @@ async function main() {
   console.log(
     `pre-pass world: ${world.lookups.sectorsByCorp.size} corporations, turn ${world.turn}, ` +
       `clearing ${world.market.clearingEnabled}, plants ${world.market.plantsEnabled}, ` +
-      `agreements ${world.supplyAgreementsEnabled}, loyalty ${world.brandLoyaltyEnabled}, ` +
-      `freight ${world.freightSettlementActive}`
+      `agreements ${world.supplyAgreementsEnabled}, loyalty ${world.brandLoyaltyEnabled}`
   );
 
   const freightArgs = {

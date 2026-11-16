@@ -112,10 +112,7 @@ export default async function AboutPage() {
                   create an account
                 </Link>{" "}
                 and jump in. Our{" "}
-                <Link
-                  href="https://wiki.ahousedividedgame.com/getting-started"
-                  className="text-primary hover:underline"
-                >
+                <Link href="/wiki/getting-started" className="text-primary hover:underline">
                   new player guide
                 </Link>{" "}
                 walks you through the basics.

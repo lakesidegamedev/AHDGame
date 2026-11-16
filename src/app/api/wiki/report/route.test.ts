@@ -75,6 +75,34 @@ describe("POST /api/wiki/report", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it("stores a valid quote", async () => {
+    const { POST } = await import("./route");
+    const res = await POST(
+      post({ slug: "getting-started", reason: "incorrect", quote: "  Donors cost 5  " })
+    );
+    expect(res.status).toBe(200);
+    const inserted = db.collectionMocks.wikiReports.insertOne.mock.calls[0][0];
+    expect(inserted.quote).toBe("Donors cost 5");
+    expect(inserted.resolved).toBe(false);
+  });
+
+  it("stores an empty quote when none is sent", async () => {
+    const { POST } = await import("./route");
+    const res = await POST(post({ slug: "getting-started", reason: "stale" }));
+    expect(res.status).toBe(200);
+    const inserted = db.collectionMocks.wikiReports.insertOne.mock.calls[0][0];
+    expect(inserted.quote).toBe("");
+  });
+
+  it("rejects a quote over 500 characters", async () => {
+    const { POST } = await import("./route");
+    const res = await POST(
+      post({ slug: "getting-started", reason: "stale", quote: "x".repeat(501) })
+    );
+    expect(res.status).toBe(400);
+    expect(db.collectionMocks.wikiReports.insertOne).not.toHaveBeenCalled();
+  });
+
   it("relays to WIKI_REPORT_ENDPOINT when set", async () => {
     process.env.WIKI_REPORT_ENDPOINT = "https://example.test/wiki-reports";
     const { POST } = await import("./route");

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { WikiHelpLink } from "@/components/wiki/WikiHelpLink";
 import { BillProposalChip } from "@/components/bills/BillProposalChip";
 import { GameMonthTime } from "@/components/time/GameMonthTime";
 import type { BillDetail } from "../types";
@@ -121,9 +122,12 @@ export function BillHero({
 
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
           <div className="min-w-0 space-y-3">
-            <h1 className="text-2xl font-semibold leading-tight tracking-tight sm:text-3xl lg:text-4xl">
-              {bill.title}
-            </h1>
+            <div className="flex items-start gap-3">
+              <h1 className="text-2xl font-semibold leading-tight tracking-tight sm:text-3xl lg:text-4xl">
+                {bill.title}
+              </h1>
+              <WikiHelpLink screen="bill" className="mt-2" />
+            </div>
             {bill.summary && (
               <p className="max-w-3xl whitespace-pre-wrap break-words text-sm leading-relaxed text-muted sm:text-base">
                 {bill.summary}

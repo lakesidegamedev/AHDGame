@@ -1,5 +1,6 @@
 "use client";
 
+import { WikiHelpLink } from "@/components/wiki/WikiHelpLink";
 import { apiErrorText } from "@/lib/errors/catalog";
 import { useEffect, useState } from "react";
 import { SectionCard, Badge } from "../dossier";
@@ -128,7 +129,12 @@ export function DeclareWarPanel({
     <SectionCard
       title="Declaration of war"
       sub="Filed by the executive, ratified by the legislature"
-      right={!canAct ? <Badge tone="muted">Read-only</Badge> : undefined}
+      right={
+        <span className="flex items-center gap-2">
+          {!canAct && <Badge tone="muted">Read-only</Badge>}
+          <WikiHelpLink screen="war-declaration" />
+        </span>
+      }
     >
       {filed ? (
         <p className="text-[12px] text-success" role="status">

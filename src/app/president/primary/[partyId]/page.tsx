@@ -1,4 +1,5 @@
 import { CDN_LOGO_URL } from "@/lib/images/staticCdnAssets";
+import { WikiHelpLink } from "@/components/wiki/WikiHelpLink";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
@@ -406,9 +407,12 @@ export default async function PartyPrimaryPage({ params, searchParams }: PagePro
           >
             ← Back to presidential election
           </Link>
-          <h1 className="text-2xl font-bold mt-1" style={{ color: partyColor }}>
-            {party.name} Primary
-          </h1>
+          <div className="mt-1 flex items-center gap-2">
+            <h1 className="text-2xl font-bold" style={{ color: partyColor }}>
+              {party.name} Primary
+            </h1>
+            <WikiHelpLink screen="primaries" />
+          </div>
           <p className="text-sm text-muted">
             {family === "dem" ? "Democratic-family calendar" : "Republican-family calendar"} —{" "}
             {totalDelegates.toLocaleString()} total delegates, {majorityThreshold.toLocaleString()}{" "}

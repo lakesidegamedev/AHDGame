@@ -670,7 +670,7 @@ describe("processExtractionAutoStrategy", () => {
 
   function seedForecastMine(options: {
     mode: "off" | "realization" | "ledger" | "clearing" | "plants";
-    freight?: "off" | "active";
+    chemicalsAvailability?: number;
     ironRatio?: number;
     rareRatio?: number;
     ironReachableRatio?: number;
@@ -679,7 +679,6 @@ describe("processExtractionAutoStrategy", () => {
   }) {
     db.collectionMocks.gameConfig.findOne.mockResolvedValue({
       marketSystemMode: options.mode,
-      freightSettlementMode: options.freight ?? "off",
       marketGovernorCap: 1,
     });
     const corpId = new ObjectId();
@@ -707,7 +706,9 @@ describe("processExtractionAutoStrategy", () => {
         globalPrice: options.inputPricePartition ? 25 : 100,
         basePrice: 100,
         reachablePrices: options.inputPricePartition ? { US: 2000 } : undefined,
-        stateInputAvailability: { HB: 0 },
+        ...(options.chemicalsAvailability !== undefined
+          ? { stateInputAvailability: { HB: options.chemicalsAvailability } }
+          : {}),
       },
     ]);
     db.collectionMocks.commodityPrices.find.mockReturnValue(priceCursor);
@@ -752,16 +753,13 @@ describe("processExtractionAutoStrategy", () => {
     }
   );
 
-  it.each(["off", "active"] as const)(
-    "uses local input delivery only with active freight (%s)",
-    async (freight) => {
-      seedForecastMine({ mode: "clearing", freight });
-      const result = await processExtractionAutoStrategy(db as unknown as Db, 300, ENABLED);
+  it("uses local input delivery once clearing is on", async () => {
+    seedForecastMine({ mode: "clearing", chemicalsAvailability: 0 });
+    const result = await processExtractionAutoStrategy(db as unknown as Db, 300, ENABLED);
 
-      expect(result.restrategized).toBe(freight === "active" ? 0 : 1);
-      expect(db.collectionMocks.tradeFlowSnapshots.findOne).toHaveBeenCalledTimes(1);
-    }
-  );
+    expect(result.restrategized).toBe(0);
+    expect(db.collectionMocks.tradeFlowSnapshots.findOne).toHaveBeenCalledTimes(1);
+  });
 
   it("reads clearing books once for the cohort and caps forecast switches at three", async () => {
     seedForecastMine({ mode: "clearing", count: 8 });

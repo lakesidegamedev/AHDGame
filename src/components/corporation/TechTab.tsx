@@ -1,5 +1,6 @@
 "use client";
 
+import { WikiHelpLink } from "@/components/wiki/WikiHelpLink";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { Button, Modal, Skeleton } from "@/components/ui";
 import { useCurrency } from "@/contexts/CurrencyContext";
@@ -271,7 +272,10 @@ export default function TechTab({ corporationId, isCeo }: TechTabProps) {
   return (
     <div className="space-y-6">
       <div className="grid gap-x-8 gap-y-6 lg:grid-cols-[minmax(0,1fr)_320px]">
-        <DenseSection title={`${data.sectorLabel ?? "Sector"} tech tree`}>
+        <DenseSection
+          title={`${data.sectorLabel ?? "Sector"} tech tree`}
+          actions={<WikiHelpLink screen="corporation-tech" />}
+        >
           <div className="space-y-2 py-1 text-xs text-muted">
             <p>
               Spend R&amp;D points and cash to research technologies. Each decade splits into two

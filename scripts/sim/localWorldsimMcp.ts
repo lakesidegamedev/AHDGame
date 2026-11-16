@@ -178,12 +178,6 @@ const TOOLS: ToolDef[] = [
           description:
             'NPP autonomy tier. Omit for the harness default (v3). "v4" adds global economic behaviour and is what long full-world runs want.',
         },
-        freightSettlementMode: {
-          type: "string",
-          enum: ["shadow", "active"],
-          description:
-            "Geographic freight effect for this sandbox only. Use shadow for control and active for treatment.",
-        },
         canonicalFreightBillingEnabled: bool(
           "Whether accepted domestic hauls debit buyers and credit freight suppliers in this sandbox only. Explicit false is retained for control runs."
         ),
@@ -238,12 +232,6 @@ const TOOLS: ToolDef[] = [
       }
       if (a.autonomyLevel && !AUTONOMY_LEVELS.includes(a.autonomyLevel as never)) {
         throw new Error(`invalid autonomyLevel "${a.autonomyLevel}"`);
-      }
-      if (
-        a.freightSettlementMode &&
-        !["shadow", "active"].includes(String(a.freightSettlementMode))
-      ) {
-        throw new Error(`invalid freightSettlementMode "${a.freightSettlementMode}"`);
       }
       if (
         a.canonicalFreightBillingEnabled !== undefined &&
@@ -317,7 +305,6 @@ const TOOLS: ToolDef[] = [
         ...(a.sourceCommit !== undefined ? { sourceCommit: String(a.sourceCommit) } : {}),
         ...(a.marketSystemMode ? { marketSystemMode: a.marketSystemMode } : {}),
         ...(a.autonomyLevel ? { autonomyLevel: a.autonomyLevel } : {}),
-        ...(a.freightSettlementMode ? { freightSettlementMode: a.freightSettlementMode } : {}),
         ...(a.canonicalFreightBillingEnabled !== undefined
           ? { canonicalFreightBillingEnabled: a.canonicalFreightBillingEnabled }
           : {}),
@@ -354,7 +341,6 @@ const TOOLS: ToolDef[] = [
         sourceCommit: a.sourceCommit || "(worker default)",
         marketSystemMode: a.marketSystemMode || "off (preset default)",
         autonomyLevel: a.autonomyLevel || "v3 (harness default)",
-        freightSettlementMode: a.freightSettlementMode || "preset default",
         canonicalFreightBillingEnabled: a.canonicalFreightBillingEnabled ?? "preset default",
         shortageResponsiveSourcingEnabled: a.shortageResponsiveSourcingEnabled ?? "preset default",
         indexFundBondLiquidityEnabled: a.indexFundBondLiquidityEnabled ?? "preset default",

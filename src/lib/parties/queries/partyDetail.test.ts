@@ -638,7 +638,7 @@ describe("getPartyDetail", () => {
       } as unknown as PoliticalParty;
     }
 
-    async function detailWithPresence(presence: string[]) {
+    async function detailWithPresence(presence: string[], adjacencyEnabled = true) {
       const db: MockDb = createMockDb();
       const { getDb } = await import("@/lib/mongodb");
       vi.mocked(getDb).mockResolvedValue(db as unknown as Db);
@@ -650,6 +650,9 @@ describe("getPartyDetail", () => {
       db.collection("electedOfficials");
       db.collection("partyBudget");
       db.collection("gameConfig");
+      db.collectionMocks["gameConfig"]!.findOne.mockResolvedValue({
+        partyAdjacencyEnabled: adjacencyEnabled,
+      });
       db.collectionMocks["states"]!.find.mockReturnValue({
         toArray: async () => [{ _id: "NY" }, { _id: "PA" }, { _id: "CA" }],
       });
@@ -662,6 +665,11 @@ describe("getPartyDetail", () => {
       expect(detail.frontierRegions).toContain("NY");
       expect(detail.frontierRegions).toContain("PA");
       expect(detail.frontierRegions).not.toContain("CA");
+    });
+
+    it("reports every domestic region for the Join control when adjacency is disabled", async () => {
+      const detail = await detailWithPresence(["NY"], false);
+      expect(detail.frontierRegions).toEqual(["CA", "NY", "PA"]);
     });
 
     it("reports null for a party with no presence anywhere, meaning unrestricted", async () => {

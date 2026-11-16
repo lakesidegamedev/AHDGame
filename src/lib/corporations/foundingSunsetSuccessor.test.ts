@@ -16,7 +16,7 @@ describe("foundingSunsetSuccessor", () => {
   });
 
   it("founds on the first successor this corporation can run once the default retires", () => {
-    // Advanced fission needs the corporation's own 2039 node; renewables is
+    // Advanced fission needs the corporation's own 2039 node; wind is
     // inherited from a past decade.
     expect(
       foundingSunsetSuccessor({
@@ -25,7 +25,7 @@ describe("foundingSunsetSuccessor", () => {
         currentYear: 2041,
         techTreesEnabled: true,
       })
-    ).toBe("renewables");
+    ).toBe("wind");
     expect(
       foundingSunsetSuccessor({
         lane: "energy",

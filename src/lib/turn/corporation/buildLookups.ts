@@ -102,8 +102,6 @@ export async function buildCorporationLookups(
     productLinesV2Enabled?: boolean;
     /** Read durable media projects and receipts only while the feature gate is on. */
     mediaProductSlatesEnabled?: boolean;
-    /** Use lagged freight-delivery availability as a local input constraint. */
-    freightSettlementActive?: boolean;
     /**
      * Canonical freight billing v1 (issue #897):
      * gameConfig.canonicalFreightBillingEnabled. When true, loads last turn's
@@ -498,10 +496,43 @@ export async function buildCorporationLookups(
   } = buildCommodityBalanceLookups({
     commodityPrices,
     globalCommodityBalances,
-    options,
     stateCountryMap,
     latestTradeSnapshot,
   });
+
+  // GameConfig knobs read by the per-state loop below (labour staffing slack)
+  // and the overhead derivations further down. One read, before either use.
+  const overheadCfg = await gameConfigCollection<{
+    _id: string;
+    managementOverheadPpPerDoubling?: number;
+    strengthUpkeepStage?: number;
+    groupSizeCostsStage?: number;
+    soeSizeCostScale?: number;
+    dominanceRunningCostScale?: number;
+    honestBalanceSheetsStage?: number;
+    fundedOverheadStage?: number;
+    fundedHeadcountStage?: number;
+    fundedValuationStage?: number;
+    producerTariffStage?: number;
+    labourStaffingSlackStage?: number;
+  }>(db).findOne(
+    { _id: "default" },
+    {
+      projection: {
+        managementOverheadPpPerDoubling: 1,
+        strengthUpkeepStage: 1,
+        groupSizeCostsStage: 1,
+        soeSizeCostScale: 1,
+        dominanceRunningCostScale: 1,
+        honestBalanceSheetsStage: 1,
+        fundedOverheadStage: 1,
+        fundedHeadcountStage: 1,
+        fundedValuationStage: 1,
+        producerTariffStage: 1,
+        labourStaffingSlackStage: 1,
+      },
+    }
+  );
 
   // Build per-state margin modifier lookups
   const unemploymentByState = new Map<string, number>();
@@ -538,12 +569,21 @@ export async function buildCorporationLookups(
     if (typeof corrVal === "number") {
       corruptionByState.set(stateId, getCorruptionMarginModifier(corrVal));
     }
-    const allocatedTightness = employmentStaffingTightness(sm.labourEmployment);
+    const staffingSlackOn = (overheadCfg?.labourStaffingSlackStage ?? 0) >= 1;
+    const allocatedTightness = employmentStaffingTightness(
+      sm.labourEmployment,
+      staffingSlackOn ? { countUnemployed: true } : undefined
+    );
     const coverageTightness = sm.economic?.labourTightness?.value;
     const tightnessVal =
       allocatedTightness === undefined
         ? coverageTightness
-        : Math.max(Number.isFinite(coverageTightness) ? coverageTightness! : 0, allocatedTightness);
+        : staffingSlackOn
+          ? allocatedTightness
+          : Math.max(
+              Number.isFinite(coverageTightness) ? coverageTightness! : 0,
+              allocatedTightness
+            );
     if (typeof tightnessVal === "number" && Number.isFinite(tightnessVal)) {
       labourTightnessByState.set(stateId, tightnessVal);
     }
@@ -589,36 +629,7 @@ export async function buildCorporationLookups(
 
   // Management overhead: a margin charge on every sector of a corporation that
   // grows with its total whole-plant count (snowball brake). Off unless the
-  // gameConfig knob is set.
-  const overheadCfg = await gameConfigCollection<{
-    _id: string;
-    managementOverheadPpPerDoubling?: number;
-    strengthUpkeepStage?: number;
-    groupSizeCostsStage?: number;
-    soeSizeCostScale?: number;
-    dominanceRunningCostScale?: number;
-    honestBalanceSheetsStage?: number;
-    fundedOverheadStage?: number;
-    fundedHeadcountStage?: number;
-    fundedValuationStage?: number;
-    producerTariffStage?: number;
-  }>(db).findOne(
-    { _id: "default" },
-    {
-      projection: {
-        managementOverheadPpPerDoubling: 1,
-        strengthUpkeepStage: 1,
-        groupSizeCostsStage: 1,
-        soeSizeCostScale: 1,
-        dominanceRunningCostScale: 1,
-        honestBalanceSheetsStage: 1,
-        fundedOverheadStage: 1,
-        fundedHeadcountStage: 1,
-        fundedValuationStage: 1,
-        producerTariffStage: 1,
-      },
-    }
-  );
+  // gameConfig knob is set (read once above, before the per-state loop).
   const overheadPpPerDoubling = overheadCfg?.managementOverheadPpPerDoubling ?? 0;
   const fundedTariffsOn = (overheadCfg?.producerTariffStage ?? 0) >= 1;
   const strengthUpkeepStage =
@@ -872,11 +883,7 @@ export async function buildCorporationLookups(
   const ownRouteDeliveredByKey = new Map<string, number>();
   const ownRouteFreightByCorp = new Map<string, Map<string, Map<CommodityType, number>>>();
   let ownRouteGroupMembersByRoot = new Map<string, Set<string>>();
-  if (
-    options?.moneyWiringEnabled ||
-    options?.canonicalFreightBillingEnabled ||
-    options?.freightSettlementActive
-  ) {
+  {
     const networkDoc = await sourcingNetworkLoadCollection<SourcingNetworkDoc>(db)
       .find({ turn: { $lte: embargoTurn } })
       .sort({ turn: -1 })
@@ -897,12 +904,10 @@ export async function buildCorporationLookups(
         (doc?.ownRouteDelivered ?? []).map((route) => route.corporationId)
       );
     }
-    if (options?.freightSettlementActive) {
-      for (const r of doc?.ownRouteDelivered ?? []) {
-        if (!(typeof r.units === "number" && r.units > 0)) continue;
-        const key = ownRouteKey(r.commodity, r.corporationId, r.originStateId, r.destStateId);
-        ownRouteDeliveredByKey.set(key, (ownRouteDeliveredByKey.get(key) ?? 0) + r.units);
-      }
+    for (const r of doc?.ownRouteDelivered ?? []) {
+      if (!(typeof r.units === "number" && r.units > 0)) continue;
+      const key = ownRouteKey(r.commodity, r.corporationId, r.originStateId, r.destStateId);
+      ownRouteDeliveredByKey.set(key, (ownRouteDeliveredByKey.get(key) ?? 0) + r.units);
     }
     if (options?.moneyWiringEnabled && doc?.landedPremiums) {
       for (const [stateId, byCommodity] of Object.entries(doc.landedPremiums)) {

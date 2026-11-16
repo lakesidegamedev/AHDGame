@@ -103,6 +103,7 @@ import { ddRegions1953 } from "@/lib/seeds/dd/ddRegions1953";
 // takes the 2019-default fallback (`seedRURegions`).
 import { ruRegions } from "@/lib/seeds/ru/ruRegions";
 import { ruRegions1953 } from "@/lib/seeds/ru/ruRegions1953";
+import { ruRegions2027 } from "@/lib/countries/ru/data/ruRegions2027";
 // SCO and WAL ship one latent bundle each, inserted on secession.
 import { scoRegions } from "@/lib/countries/sco/data/scoRegions";
 import { walRegions } from "@/lib/countries/wal/data/walRegions";
@@ -226,7 +227,7 @@ const BUNDLES: Record<GdpBaselineCountry, Record<EraId, RegionRow[]>> = {
     "2007": ruRegions,
     "2019": ruRegions,
     "2023": ruRegions,
-    "2027": ruRegions,
+    "2027": ruRegions2027,
   },
   // One latent bundle each (no per-era seeding), so every era uses it; only
   // 2019 is recomputed and the rest are asserted as repeats.
@@ -301,7 +302,6 @@ const EXPECTED_BUNDLE_PRESET: Partial<Record<GdpBaselineCountry, Partial<Record<
       "1999": "2019-default",
       "2007": "2019-default",
       "2023": "2019-default",
-      "2027": "2019-default",
     },
     SCO: Object.fromEntries(ERAS.filter((e) => e !== "2019").map((e) => [e, "2019-default"])),
     WAL: Object.fromEntries(ERAS.filter((e) => e !== "2019").map((e) => [e, "2019-default"])),
@@ -331,7 +331,7 @@ function recomputeBaseline(country: GdpBaselineCountry, era: EraId): RecomputedC
   const rawMean = (sumGdpMillions * 1_000_000) / sumPop;
   let scalar = 1;
   let applied = false;
-  if (shouldReconcileStateGdpForPreset(preset) && (era !== "2027" || country === "US")) {
+  if (shouldReconcileStateGdpForPreset(preset)) {
     const national = getNationalBudgetSeedConfigsForPreset(preset).find(
       (c) => c.countryId === country
     )?.gdp;
@@ -444,7 +444,7 @@ describe("gdpBaseline table derivation (issue #798)", () => {
     expect(table.CN["1999"]).toBe(7_341);
     expect(table.CN["2007"]).toBe(21_028);
     expect(table.CN["2023"]).toBe(98_268);
-    expect(table.CN["2027"]).toBe(110_339);
+    expect(table.CN["2027"]).toBe(125_658);
     // Scale assertion: the 1953 USD-anchored cell is three orders of magnitude
     // below the modern yuan cells — mixing the denominations would pin every
     // CN scalar to a clamp.

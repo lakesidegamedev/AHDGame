@@ -78,13 +78,13 @@ describe("sovereignty registry", () => {
     for (const regionId of sovereigntyRegionIds("CA")) expect(seeded.has(regionId)).toBe(true);
   });
 
-  it("registers Alberta as a Canadian region whose successor is not built yet", () => {
+  it("registers Alberta as a Canadian region that can become the AB successor", () => {
     expect(sovereigntyRegionIn("CA", "CA_AB")).toMatchObject({
       kind: "independence",
       successorCountryId: "AB",
       executiveTitle: "Premier",
       nationalGovernmentName: "Ottawa",
-      actuates: false,
+      actuates: true,
     });
   });
 
@@ -220,5 +220,14 @@ describe("the New England bloc", () => {
         SOVEREIGNTY_REGIONS.filter((other) => other.successorCountryId === entry.successorCountryId)
       ).toHaveLength(1);
     }
+  });
+});
+
+describe("registry wording", () => {
+  it("names Canadian moods as sovereignty and UK moods as devolution", () => {
+    expect(usesSovereigntyWording("CA_QC")).toBe(true);
+    expect(usesSovereigntyWording("CA_AB")).toBe(true);
+    expect(usesSovereigntyWording("SCO")).toBe(false);
+    expect(usesSovereigntyWording("CA_ON")).toBe(false);
   });
 });

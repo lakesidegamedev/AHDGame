@@ -4,17 +4,13 @@
  * keep their ids and move to the successor, which then gets its own budget,
  * parties, interim head of government and first elections.
  */
-import { ObjectId, type Db, type Document } from "mongodb";
+import type { Db, Document } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
-import { afterCommit } from "@/lib/db/sessionDb";
-import { computeNationalMetrics } from "@/lib/nationalMetrics";
-import { recordCountryEvent } from "@/lib/turn/history/recordCountryEvent";
 import { updateParliamentaryGovernmentSeats } from "@/lib/turn/parliamentaryGovernment";
 import { activateCountry } from "@/lib/country/registeredCountries";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electionsCollection } from "@/lib/db/repositories/elections";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
-import { organizationMembershipsCollection } from "@/lib/db/repositories/organizationMemberships";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { countiesCollection } from "@/lib/db/repositories/counties";
@@ -25,8 +21,9 @@ import { promoteEconomyToNational } from "./promoteEconomyToNational";
 import { splitParties } from "./splitParties";
 import { carryOverOfficials } from "./carryOverOfficials";
 import { standupElections } from "./standupElections";
-import { CAPITAL_SUBREGION, SUB_REGION_SEEDS, type SecedingCountryId } from "./subRegions";
+import { SUB_REGION_SEEDS, type SecedingCountryId } from "./subRegions";
 import type { SecedeRegionResult } from "./secedeRegion";
+import { finishSecession } from "./finishSecession";
 
 export async function secedeBloc(
   db: Db,
@@ -89,7 +86,6 @@ export async function secedeBloc(
       };
     })
   );
-  const capital = CAPITAL_SUBREGION[toCountryId];
   await nppsCollection<Document>(db).updateMany(
     { homeState: { $in: members } },
     { $set: { countryId: toCountryId } }
@@ -115,46 +111,14 @@ export async function secedeBloc(
   );
   await updateParliamentaryGovernmentSeats(db, fromCountryId);
   await standupElections(db, toCountryId, currentTurn, now);
-  await organizationMembershipsCollection<Document>(db).updateOne(
-    { organizationId: "UN", countryId: toCountryId },
-    {
-      $setOnInsert: {
-        _id: new ObjectId(),
-        organizationId: "UN",
-        countryId: toCountryId,
-        status: "active",
-        joinedAt: now,
-        joinedTurn: currentTurn,
-      },
-    },
-    { upsert: true }
-  );
-
-  await afterCommit(db, async () => {
-    await computeNationalMetrics(originalDb).catch((err) =>
-      console.error(`${entry.regionId} secession national-metrics recompute failed:`, err)
-    );
-  });
-  const details = {
-    regionId: entry.regionId,
-    memberRegionIds: members,
+  await finishSecession(db, originalDb, {
+    label: entry.regionId,
+    title: entry.displayName ?? entry.regionId,
+    details: { regionId: entry.regionId, memberRegionIds: members, fromCountryId, toCountryId },
     fromCountryId,
     toCountryId,
-  };
-  await recordCountryEvent(db, {
-    countryId: fromCountryId,
-    turn: currentTurn,
-    eventType: "region_seceded",
-    title: `${entry.displayName ?? entry.regionId} secedes from ${fromCountryId}`,
-    details,
-  }).catch((err) => console.error(`${entry.regionId} secession history (from) failed:`, err));
-  await recordCountryEvent(db, {
-    countryId: toCountryId,
-    turn: currentTurn,
-    eventType: "region_seceded",
-    title: `${entry.displayName ?? entry.regionId} becomes an independent country`,
-    details,
-  }).catch((err) => console.error(`${entry.regionId} secession history (to) failed:`, err));
+    currentTurn,
+  });
 
   return {
     ok: true,

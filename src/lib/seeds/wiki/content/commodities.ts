@@ -324,7 +324,7 @@ The point for a player is simple: a commodity that stores well can be held throu
 | Iron Ore | Extraction | Manufacturing, Defense |
 | Coal | Extraction | Energy, Manufacturing |
 | Crude Oil | Extraction | Energy, Chemical Industries |
-| Rare Earth Minerals | Extraction | Technology, Defense, Energy (Renewables), Manufacturing (EV), Construction, Telecommunications |
+| Rare Earth Minerals | Extraction | Technology, Defense, Energy (Wind, Solar), Manufacturing (EV), Construction, Telecommunications |
 | Timber & Lumber | Extraction | Manufacturing, Real Estate, Agriculture, Construction, Retail |
 | Natural Gas | Extraction | Energy, Manufacturing, Chemical Industries, Agriculture, Retail |
 | Ordnance & Weapons Systems | Defense | Government defense budgets, Extraction focused strategies (mining explosives) |

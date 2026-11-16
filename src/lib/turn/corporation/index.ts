@@ -154,9 +154,6 @@ export async function processCorporationTurn(
   const interstateMoneyWiringEnabled =
     (marketGovernorConfig as { interstateMoneyWiringEnabled?: boolean } | null)
       ?.interstateMoneyWiringEnabled === true;
-  const freightSettlementActive =
-    (marketGovernorConfig as { freightSettlementMode?: string } | null)?.freightSettlementMode ===
-      "active" && marketAtLeast(marketSystemMode, "clearing");
   // Canonical freight billing (default OFF): when on, last turn's per-state
   // shipping money is loaded from sourcingNetworkLoad and apportioned across
   // sectors below. Off leaves lookup maps empty and billing inert.
@@ -181,7 +178,6 @@ export async function processCorporationTurn(
       explicitPlantCostsEnabled:
         plantsEnabledForMarketShare && marketGovernorConfig?.explicitPlantCostsEnabled === true,
       productionTurn: turn,
-      freightSettlementActive,
       moneyWiringEnabled: interstateMoneyWiringEnabled,
       canonicalFreightBillingEnabled,
       mediaEditorialEnabled:
@@ -452,7 +448,6 @@ export async function processCorporationTurn(
     turn,
     currentYear,
     commandEconomyEnabled,
-    freightSettlementActive,
     supplyAgreementsEnabled,
     settleableAgreements,
     contractedByCorpCommodity,

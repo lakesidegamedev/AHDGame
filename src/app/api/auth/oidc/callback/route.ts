@@ -1,3 +1,4 @@
+import { getBaseUrl } from "@/lib/utils/network";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { createRemoteJWKSet, jwtVerify } from "jose";
@@ -27,7 +28,7 @@ export async function GET(request: Request) {
   const clientSecret = authConfig.unifiedOidcClientSecret();
   const redirectUri = authConfig.unifiedOidcRedirectUri();
   if (!authConfig.unifiedOidcEnabled() || !issuer || !clientId || !clientSecret || !redirectUri) {
-    return NextResponse.redirect(new URL("/login?error=unified_unavailable", request.url));
+    return NextResponse.redirect(new URL("/login?error=unified_unavailable", getBaseUrl(request)));
   }
   const appOrigin = new URL(redirectUri).origin;
   const url = new URL(request.url);

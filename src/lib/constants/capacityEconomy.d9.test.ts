@@ -87,7 +87,7 @@ describe("D9 — rescaleCapacityForStrategyChange", () => {
     ["extraction", "rare_earth_mining", "coal_mining"],
     ["extraction", "standard", "timber_logging"],
     ["manufacturing", "standard", "heavy_metals"],
-    ["energy", "fracking", "renewables"],
+    ["energy", "fracking", "wind"],
   ];
 
   it.each(CASES)("keeps the nameplate invariant across %s %s -> %s", (type, from, to) => {

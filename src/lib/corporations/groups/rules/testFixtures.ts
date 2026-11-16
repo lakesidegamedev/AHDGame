@@ -29,7 +29,6 @@ export function coordinationFixture(): CoordinationBook {
     supply: 100,
     demand: 200,
     unitPriceAnchor: 2,
-    freightSettlementActive: false,
     members: [seller, buyer],
     sellers: [
       {

@@ -13,14 +13,25 @@ const REASON_LABELS: Record<WikiReportReason, string> = {
   other: "Other",
 };
 
+export const WIKI_REPORT_QUOTE_MAX = 500;
+
 interface WikiReportButtonProps {
   slug: string;
+  label?: string;
 }
 
-export function WikiReportButton({ slug }: WikiReportButtonProps) {
+/** Text the reader has highlighted on the page, trimmed to the quote limit. */
+function readSelectionQuote(): string {
+  if (typeof window === "undefined") return "";
+  const text = window.getSelection()?.toString().replace(/\s+/g, " ").trim() ?? "";
+  return text.slice(0, WIKI_REPORT_QUOTE_MAX);
+}
+
+export function WikiReportButton({ slug, label = "Report page issue" }: WikiReportButtonProps) {
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState<WikiReportReason>("stale");
   const [note, setNote] = useState("");
+  const [quote, setQuote] = useState("");
   const [status, setStatus] = useState<"idle" | "submitting" | "done" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
 
@@ -29,7 +40,14 @@ export function WikiReportButton({ slug }: WikiReportButtonProps) {
     setStatus("idle");
     setError(null);
     setNote("");
+    setQuote("");
     setReason("stale");
+  }
+
+  function openDialog() {
+    // Read before the modal takes focus, which clears the selection.
+    setQuote(readSelectionQuote());
+    setOpen(true);
   }
 
   async function submit(e: FormEvent) {
@@ -40,7 +58,7 @@ export function WikiReportButton({ slug }: WikiReportButtonProps) {
       const res = await fetch("/api/wiki/report", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ slug, reason, note: note.trim() }),
+        body: JSON.stringify({ slug, reason, note: note.trim(), quote: quote.trim() }),
       });
       if (res.status === 429) {
         setStatus("error");
@@ -64,10 +82,10 @@ export function WikiReportButton({ slug }: WikiReportButtonProps) {
     <>
       <button
         type="button"
-        onClick={() => setOpen(true)}
+        onClick={openDialog}
         className="rounded-md border border-card-border bg-card/40 px-2.5 py-1 text-muted hover:border-primary/40 hover:text-primary"
       >
-        Report page issue
+        {label}
       </button>
       <Modal open={open} onClose={close} title="Report page issue" maxWidthClass="max-w-sm">
         {status === "done" ? (
@@ -96,6 +114,17 @@ export function WikiReportButton({ slug }: WikiReportButtonProps) {
                   </option>
                 ))}
               </select>
+            </label>
+            <label className="block text-xs font-medium text-foreground">
+              The wrong text (optional)
+              <textarea
+                value={quote}
+                onChange={(e) => setQuote(e.target.value)}
+                maxLength={WIKI_REPORT_QUOTE_MAX}
+                rows={2}
+                className="mt-1 w-full rounded-md border border-card-border bg-card px-2 py-1.5 text-sm text-foreground"
+                placeholder="Highlight text on the page before reporting to fill this in"
+              />
             </label>
             <label className="block text-xs font-medium text-foreground">
               Note (optional)

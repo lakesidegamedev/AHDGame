@@ -208,7 +208,6 @@ export interface GameConfig {
    * sells to the general market out of that state (its output share of the
    * state's shipments rides its own trucks first; rivals get the remainder).
    * 0 or absent = one shared first-come pool.
-   * Needs freightSettlementMode "active" (own routes only run then).
    */
   ownFreightFirstStage?: number;
   /**
@@ -617,6 +616,8 @@ export interface GameConfig {
    * instead of nameplate staffing. 0 or absent = off.
    */
   fundedHeadcountStage?: number;
+  /** Labour system: >= 1 counts unemployed residents in the plant staffing tightness denominator. 0 or absent = off. */
+  labourStaffingSlackStage?: number;
   /**
    * Equity cashout limits: 1 caps the price the system equity pool pays for new
    * shares (no sentiment premium, no more than book or 15x trailing earnings per
@@ -820,19 +821,6 @@ export interface GameConfig {
   tradeConvergenceFullStartTurn?: number;
   inputDemandRealPhaseStartTurn?: number;
   /**
-   * Geographic freight rollout. Shadow records routes for calibration; active
-   * also feeds delivered state inputs into next turn's plant throughput.
-   */
-  freightSettlementMode?: "shadow" | "active";
-  /** Username of the admin who last changed the freight-settlement rollout. */
-  freightSettlementModeUpdatedBy?: string;
-  /** When the freight-settlement rollout was last changed (ISO 8601). */
-  freightSettlementModeUpdatedAt?: string;
-  /** World turn at which the freight-settlement rollout was last changed. */
-  freightSettlementModeUpdatedTurn?: number;
-  /** Governance record required for active freight settlement. */
-  freightSettlementIntervention?: EconomicInterventionPlan;
-  /**
    * Gradual freight-settlement ramp (markets plan Phase 4). When set, the
    * ACTIVE effect fades in linearly instead of landing at full strength on the
    * flip turn: a ramp fraction R = clamp01((turn - rampStartTurn) / rampTurns)
@@ -842,9 +830,8 @@ export interface GameConfig {
    * balance step into a measured phase-in so sales caps and the shipping bill
    * arrive together, gradually, with the effect visible each turn on the
    * markets tracker and the sector Freight tag. Unset (or rampTurns <= 0) → R is
-   * 1 whenever active, i.e. the pre-ramp instant-activation behavior, byte
-   * identical. Applies to whichever of freightSettlementMode:"active" /
-   * canonicalFreightBillingEnabled is on.
+   * 1, i.e. instant activation. Applies to the delivered-supply cap and to
+   * canonicalFreightBillingEnabled.
    */
   freightSettlementRampStartTurn?: number;
   freightSettlementRampTurns?: number;
@@ -1310,6 +1297,10 @@ export interface GameConfig {
    * tenders, bids, awards and offer acceptance are gated; existing settlement,
    * delivery, expiry and cancellation continue. Preserved with gameConfig. */
   governmentContractsEnabled?: boolean;
+
+  /** Party joining and recruitment require adjacent territory. Missing means enabled.
+   * Operator choice is preserved across world resets. */
+  partyAdjacencyEnabled?: boolean;
 
   /** Temporary confidence-gauge freeze. Missing means frozen. Explicitly enable
    * to resume drift, events and formation changes. Preserved across resets. */

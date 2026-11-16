@@ -11,7 +11,7 @@ import { setCharacterGateCookie } from "@/lib/auth/characterGateCookie";
 import { resolveReauthIssuedAt } from "@/lib/auth/sessionIssue";
 import { authMigrationFenceAbsentFilter, isAuthMigrationFenced } from "@/lib/auth/sourceFence";
 import { AUTH_COOKIE_NAME } from "@/lib/authCookieName";
-import { getClientIp } from "@/lib/utils/network";
+import { getClientIp, getBaseUrl } from "@/lib/utils/network";
 import { AUTH_LIMITS, rateLimitResponse } from "@/lib/api/rateLimit";
 import { durableRateLimit } from "@/lib/api/rateLimit.mongo";
 import { parseJsonBody } from "@/lib/api/validate";
@@ -441,7 +441,7 @@ export async function POST(request: Request) {
               hasCompletedSetup: user.hasCompletedSetup ?? true,
             }),
             cookieStore,
-            fallbackOrigin: new URL(request.url).origin,
+            fallbackOrigin: getBaseUrl(request),
           })
         : null;
 

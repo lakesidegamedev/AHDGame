@@ -17,7 +17,6 @@ describe("economic experiment configuration", () => {
   it("preserves explicit false for controlled baseline runs", () => {
     expect(
       economicExperimentConfigSet({
-        freightSettlementMode: "shadow",
         canonicalFreightBillingEnabled: false,
         shortageResponsiveSourcingEnabled: false,
         indexFundBondLiquidityEnabled: false,
@@ -29,7 +28,6 @@ describe("economic experiment configuration", () => {
         nppFragileMarketSupplyEnabled: false,
       })
     ).toEqual({
-      freightSettlementMode: "shadow",
       canonicalFreightBillingEnabled: false,
       shortageResponsiveSourcingEnabled: false,
       indexFundBondLiquidityEnabled: false,
@@ -42,7 +40,6 @@ describe("economic experiment configuration", () => {
     });
     expect(
       economicExperimentCliArgs({
-        freightSettlementMode: "shadow",
         canonicalFreightBillingEnabled: false,
         shortageResponsiveSourcingEnabled: false,
         indexFundBondLiquidityEnabled: false,
@@ -54,7 +51,6 @@ describe("economic experiment configuration", () => {
         nppFragileMarketSupplyEnabled: false,
       })
     ).toEqual([
-      "--freight-settlement=shadow",
       "--canonical-freight-billing=false",
       "--shortage-responsive-sourcing=false",
       "--index-fund-bond-liquidity=false",

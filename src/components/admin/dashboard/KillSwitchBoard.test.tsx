@@ -77,3 +77,38 @@ describe("Government Confidence kill switch", () => {
     );
   });
 });
+
+describe("Party adjacency requirement kill-switch card", () => {
+  it("loads the setting, sends explicit target values", async () => {
+    const confirm = vi.fn(() => true);
+    const fetch = vi.fn(
+      async (_url: string, init?: RequestInit) =>
+        new Response(
+          JSON.stringify(
+            init?.method === "PATCH"
+              ? { success: true, enabled: JSON.parse(init.body as string).enabled }
+              : { enabled: true, mode: "off" }
+          ),
+          { status: 200 }
+        )
+    );
+    vi.stubGlobal("confirm", confirm);
+    vi.stubGlobal("fetch", fetch);
+    render(<KillSwitchBoard />);
+    const card = await screen.findByRole("button", { name: /Party adjacency requirement/ });
+    expect(within(card).getByText("Enabled")).toBeTruthy();
+    fireEvent.click(card);
+    await within(card).findByText("Disabled");
+    expect(confirm).not.toHaveBeenCalled();
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/admin/party/adjacency",
+      expect.objectContaining({ method: "PATCH", body: JSON.stringify({ enabled: false }) })
+    );
+    fireEvent.click(card);
+    await within(card).findByText("Enabled");
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/admin/party/adjacency",
+      expect.objectContaining({ method: "PATCH", body: JSON.stringify({ enabled: true }) })
+    );
+  });
+});

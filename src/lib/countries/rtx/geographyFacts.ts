@@ -31,12 +31,12 @@ export const RTX_MAP_ANCHOR: [number, number] = [-99.5, 31.2];
 
 /** Which regions border which, by land. */
 export const RTX_ADJACENCY_MAP: AdjacencyMap = {
-  RTX_CAL: ["RTX_CEN", "RTX_SOU", "RTX_FOO"],
-  RTX_EDM: ["RTX_CEN", "RTX_NOR", "RTX_FOO"],
-  RTX_CEN: ["RTX_CAL", "RTX_CEN", "RTX_SOU", "RTX_FOO", "RTX_NOR"],
-  RTX_SOU: ["RTX_CAL", "RTX_CEN"],
-  RTX_FOO: ["RTX_CAL", "RTX_CEN", "RTX_CEN"],
-  RTX_NOR: ["RTX_CEN", "RTX_CEN"],
+  RTX_DFW: ["RTX_CEN", "RTX_EAS", "RTX_WES"],
+  RTX_HOU: ["RTX_CEN", "RTX_EAS", "RTX_SOU"],
+  RTX_CEN: ["RTX_DFW", "RTX_HOU", "RTX_SOU", "RTX_WES", "RTX_EAS"],
+  RTX_SOU: ["RTX_HOU", "RTX_CEN", "RTX_WES"],
+  RTX_WES: ["RTX_DFW", "RTX_CEN", "RTX_SOU"],
+  RTX_EAS: ["RTX_DFW", "RTX_HOU", "RTX_CEN"],
 };
 
 /** Map registry. Texas has no region map until its geometry is authored. */

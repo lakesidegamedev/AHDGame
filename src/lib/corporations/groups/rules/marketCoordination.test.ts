@@ -55,7 +55,6 @@ describe("group input routing safeguards", () => {
     expect(coordinateGroupBook(f).receipts).toEqual([]);
     f.buyers[0].countryId = "US";
     f.buyers[0].stateId = "NY";
-    f.freightSettlementActive = true;
     expect(coordinateGroupBook(f).receipts).toEqual([]);
   });
   it("fails closed for missing price, production and invalid commitments", () => {
@@ -79,7 +78,6 @@ describe("group input routing safeguards", () => {
 describe("verified physical group delivery", () => {
   it("fails closed without local delivery evidence and conserves the local pool", () => {
     const f = coordinationFixture();
-    f.freightSettlementActive = true;
     expect(coordinateGroupMarket(f).receipts).toEqual([]);
     const state = f.buyers[0].stateId;
     const local = new Map([[state, new Map([[f.commodity, 0.25]])]]);
@@ -91,7 +89,6 @@ describe("verified physical group delivery", () => {
   });
   it("shares one buyer cash budget across verified state slices", () => {
     const f = coordinationFixture();
-    f.freightSettlementActive = true;
     f.members[1].cashAvailableAnchor = 30;
     f.sellers = [...f.sellers, { ...f.sellers[0], sectorId: "ss2", stateId: "NY" }];
     f.buyers = [...f.buyers, { ...f.buyers[0], sectorId: "bb2", stateId: "NY" }];
@@ -113,7 +110,6 @@ describe("verified physical group delivery", () => {
 
 it("shares a reachable book ceiling across verified states without order bias", () => {
   const f = coordinationFixture();
-  f.freightSettlementActive = true;
   f.sellers = [...f.sellers, { ...f.sellers[0], sectorId: "ss2", stateId: "NY" }];
   f.buyers = [f.buyers[0], { ...f.buyers[0], sectorId: "bb2", stateId: "NY" }];
   const states = [f.buyers[0].stateId, "NY"];

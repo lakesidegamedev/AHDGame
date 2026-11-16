@@ -140,7 +140,6 @@ interface SimJob {
   startPolicy?: "immediate" | "window";
   marketSystemMode?: string;
   labourSystemMode?: string;
-  freightSettlementMode?: "shadow" | "active";
   canonicalFreightBillingEnabled?: boolean;
   shortageResponsiveSourcingEnabled?: boolean;
   indexFundBondLiquidityEnabled?: boolean;

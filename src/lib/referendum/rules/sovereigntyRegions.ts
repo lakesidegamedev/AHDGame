@@ -146,7 +146,7 @@ export const SOVEREIGNTY_REGIONS: readonly SovereigntyRegion[] = [
       separatist: ["ca_alberta_sovereignty"],
       rivals: ["ca_federal_unity", "ca_national_prosperity"],
     },
-    actuates: false,
+    actuates: true,
     wording: "sovereignty",
   },
   {

@@ -41,7 +41,10 @@ vi.mock("jose", async (importOriginal) => {
     },
   };
 });
-vi.mock("@/lib/utils/network", () => ({ getClientIp: async () => "192.0.2.1" }));
+vi.mock("@/lib/utils/network", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/utils/network")>()),
+  getClientIp: async () => "192.0.2.1",
+}));
 vi.mock("@/lib/api/rateLimit.mongo", () => ({ durableRateLimit: async () => ({ ok: true }) }));
 vi.mock("@/lib/audit/recordAudit", () => ({ recordAudit: vi.fn() }));
 vi.mock("@/lib/identityHistory/recordObservation", () => ({ recordIdentitySignals: vi.fn() }));

@@ -67,7 +67,6 @@ import {
   parseFrontierEntryExperimentArg,
   parseOptionalBoolean,
   SIM_ALL_FEATURE_FLAGS_EXCLUDE,
-  type FreightSettlementExperimentMode,
 } from "@/lib/sim/economicExperiment";
 
 interface SimRunDoc {
@@ -99,7 +98,6 @@ interface SimRunDoc {
   electionScope?: string[] | null;
   emptyCandidateSupplyCountries?: string[];
   economicExperiment?: {
-    freightSettlementMode?: FreightSettlementExperimentMode;
     canonicalFreightBillingEnabled?: boolean;
     shortageResponsiveSourcingEnabled?: boolean;
     indexFundBondLiquidityEnabled?: boolean;
@@ -260,11 +258,6 @@ if (labourModeRaw && !LABOUR_MODE_ORDER.includes(labourModeRaw as LabourSystemMo
   process.exit(1);
 }
 const labourMode = labourModeRaw as LabourSystemMode | undefined;
-const freightSettlementRaw = arg("freight-settlement");
-if (freightSettlementRaw && !["shadow", "active"].includes(freightSettlementRaw)) {
-  throw new Error(`--freight-settlement must be shadow or active (got "${freightSettlementRaw}")`);
-}
-const freightSettlementMode = freightSettlementRaw as FreightSettlementExperimentMode | undefined;
 const canonicalFreightBillingEnabled = parseOptionalBoolean(
   arg("canonical-freight-billing"),
   "canonical-freight-billing"
@@ -667,7 +660,6 @@ async function main() {
         allFeatureFlags,
         marketMode,
         labourMode,
-        freightSettlementMode,
         canonicalFreightBillingEnabled,
         shortageResponsiveSourcingEnabled,
         indexFundBondLiquidityEnabled,
@@ -910,7 +902,6 @@ async function main() {
   // mirrors financialTxLog into ledgerEntries, snapshots balances, and runs the
   // per-turn reconciler. See docs/plans/2026-07-05-shadow-ledger-plan.md §3.
   const economicExperiment = {
-    freightSettlementMode,
     canonicalFreightBillingEnabled,
     shortageResponsiveSourcingEnabled,
     indexFundBondLiquidityEnabled,

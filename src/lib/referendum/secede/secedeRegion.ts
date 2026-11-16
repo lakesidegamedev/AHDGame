@@ -1,6 +1,6 @@
 import { refundConversionConstruction } from "../refundConversionConstruction";
 import { updateParliamentaryGovernmentSeats } from "@/lib/turn/parliamentaryGovernment";
-import { withSessionDb, afterCommit, unboundDb } from "@/lib/db/sessionDb";
+import { withSessionDb, unboundDb } from "@/lib/db/sessionDb";
 /**
  * Atomic driver that stands a seceding region up as its registered successor
  * country (Scotland and Wales from the UK). Composes the SP2b + SP2c steps in dependency order,
@@ -21,17 +21,14 @@ import { withSessionDb, afterCommit, unboundDb } from "@/lib/db/sessionDb";
  *   8. History    — record a secession event for both sides.
  */
 import { convertLawPrograms } from "../conversionPrograms";
-import { ObjectId } from "mongodb";
 import { standupElections } from "./standupElections";
 import type { Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
-import type { State } from "@/lib/db/types";
-import { computeNationalMetrics } from "@/lib/nationalMetrics";
-import { recordCountryEvent } from "@/lib/turn/history/recordCountryEvent";
 import { activateCountry } from "@/lib/country/registeredCountries";
 import { CAPITAL_SUBREGION, isResetV2Successor, isSecedingCountryId } from "./subRegions";
 import { isSovereigntyBloc, sovereigntyRegionIn } from "../rules/sovereigntyRegions";
 import { secedeBloc } from "./secedeBloc";
+import { finishSecession } from "./finishSecession";
 import { expandToSubRegions } from "./expandToSubRegions";
 import { promoteEconomyToNational } from "./promoteEconomyToNational";
 import { splitParties } from "./splitParties";
@@ -41,7 +38,6 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import { electionsCollection } from "@/lib/db/repositories/elections";
 import type { Document } from "mongodb";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
-import { organizationMembershipsCollection } from "@/lib/db/repositories/organizationMemberships";
 
 export interface SecedeRegionArgs {
   regionId: string;
@@ -123,44 +119,14 @@ async function secedeRegionInTransaction(
 
   await updateParliamentaryGovernmentSeats(db, fromCountryId);
   await standupElections(db, toCountryId, currentTurn, new Date());
-  await organizationMembershipsCollection<Document>(db).updateOne(
-    { organizationId: "UN", countryId: toCountryId },
-    {
-      $setOnInsert: {
-        _id: new ObjectId(),
-        organizationId: "UN",
-        countryId: toCountryId,
-        status: "active",
-        joinedAt: new Date(),
-        joinedTurn: currentTurn,
-      },
-    },
-    { upsert: true }
-  );
-
-  await afterCommit(db, async () => {
-    // 7. Recompute the parent's and the new country's national figures.
-    await computeNationalMetrics(originalDb).catch((err) =>
-      console.error(`${regionId} secession national-metrics recompute failed:`, err)
-    );
+  await finishSecession(db, originalDb, {
+    label: regionId,
+    title: regionId,
+    details: { regionId, fromCountryId, toCountryId },
+    fromCountryId,
+    toCountryId,
+    currentTurn,
   });
-
-  // 8. Country-history events for both sides.
-  const details = { regionId, fromCountryId, toCountryId };
-  await recordCountryEvent(db, {
-    countryId: fromCountryId,
-    turn: currentTurn,
-    eventType: "region_seceded",
-    title: `${regionId} secedes from ${fromCountryId}`,
-    details,
-  }).catch((err) => console.error(`${regionId} secession history (from) failed:`, err));
-  await recordCountryEvent(db, {
-    countryId: toCountryId,
-    turn: currentTurn,
-    eventType: "region_seceded",
-    title: `${regionId} becomes an independent country`,
-    details,
-  }).catch((err) => console.error(`${regionId} secession history (to) failed:`, err));
 
   return {
     ok: true,
