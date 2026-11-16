@@ -66,16 +66,14 @@ export function WikiArticleFrame({
     >
       <div className="mx-auto min-w-0 max-w-[860px] px-4 pb-14 pt-7 sm:px-8 xl:mx-0 xl:px-11">
         {glance && (
-          <section
-            aria-label="At a glance"
-            className="mb-5 rounded-md p-3.5 xl:hidden"
-            style={{ background: "var(--card-muted)" }}
-          >
-            <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.06em] text-muted">
+          <details aria-label="At a glance" className="mb-3 xl:hidden">
+            <summary className="cursor-pointer py-1 text-[13px] font-semibold text-foreground">
               At a glance
+            </summary>
+            <div className="mt-2 rounded-md p-3" style={{ background: "var(--card-muted)" }}>
+              <GlanceTable rows={glance} />
             </div>
-            <GlanceTable rows={glance} />
-          </section>
+          </details>
         )}
         <WikiContentsList headings={headings} variant="dropdown" />
         {children}

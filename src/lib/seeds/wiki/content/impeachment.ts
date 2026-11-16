@@ -13,7 +13,7 @@ NPP blocs vote too. The target's own party defends them, opposition blocs from a
 
 ## Removing a governor
 
-The case starts at the conviction stage. A sitting member of that state's legislature files, and the legislature needs two-thirds of all its seats within 6 turns.
+The case starts at the conviction stage. A sitting member of that state's legislature files, and the legislature needs two-thirds of all its seats within 24 turns.
 
 ![Impeachment paths: lower chamber then upper chamber vote for a President, and a single two-thirds vote for a governor.](/wiki-images/diagrams/impeachment-process.svg)
 
@@ -21,7 +21,7 @@ The case starts at the conviction stage. A sitting member of that state's legisl
 | --- | --- |
 | Lower chamber vote | 24 turns, strict majority of all seats (half plus one) |
 | Upper chamber vote | 24 turns, two-thirds of all seats, rounded up |
-| Governor vote | 6 turns, two-thirds of all state legislature seats |
+| Governor vote | 24 turns, two-thirds of all state legislature seats |
 | Re-filing cooldown | 48 turns (1 game year, 2 real days) against the same target |
 | Active cases per target | 1 |
 
