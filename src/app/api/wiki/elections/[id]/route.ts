@@ -149,6 +149,16 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
       }[];
     }> = [];
 
+    // Delegates are keyed by candidate id; primary rows are keyed by name.
+    const delegatesFor = (partyId: string, characterName: string): number | undefined => {
+      const byCandidate = voteTally?.primaryDelegates?.[partyId];
+      if (!byCandidate) return undefined;
+      const candId = Object.keys(byCandidate).find(
+        (id) => voteTally?.candidateNames?.[id] === characterName
+      );
+      return candId ? byCandidate[candId] : undefined;
+    };
+
     if (voteTally?.primaryResults) {
       primaryResults = Object.entries(voteTally.primaryResults.byParty).map(
         ([partyId, entries]) => {
@@ -165,6 +175,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
                 primaryScore: e.primaryScore,
                 sharePct: e.sharePct,
                 won: e.won,
+                delegates: delegatesFor(partyId, e.characterName),
               })),
           };
         }

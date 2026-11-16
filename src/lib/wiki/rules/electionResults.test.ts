@@ -6,6 +6,7 @@ import {
   formatSwing,
   majoritySeats,
   seatChange,
+  stateWinnerRows,
   swingPoints,
   type ChamberPartyInput,
 } from "./electionResults";
@@ -125,5 +126,20 @@ describe("formatters", () => {
     expect(formatSignedInt(null)).toBe("");
     expect(formatSwing(2.345)).toBe("+2.3");
     expect(formatSwing(-0.04)).toBe("0.0");
+  });
+});
+
+describe("stateWinnerRows", () => {
+  it("names the winner, margin and electoral votes per state", () => {
+    const rows = stateWinnerRows({
+      OH: { votesByCandidate: { a: 55, b: 45 }, evByCandidate: { a: 17 } },
+      TX: { votesByCandidate: { a: 40, b: 60 }, evByCandidate: { b: 40 } },
+      WY: { votesByCandidate: {}, evByCandidate: {} },
+    });
+    expect(rows.map((r) => r.stateId)).toEqual(["TX", "OH", "WY"]);
+    expect(rows[0]).toMatchObject({ winnerId: "b", electoralVotes: 40 });
+    expect(rows[0].marginPct).toBeCloseTo(20);
+    expect(rows[1].winnerPct).toBeCloseTo(55);
+    expect(rows[2]).toMatchObject({ winnerId: null, marginPct: null, electoralVotes: 0 });
   });
 });

@@ -131,3 +131,44 @@ export function formatSwing(n: number | null): string {
   if (rounded === 0) return "0.0";
   return rounded > 0 ? `+${rounded.toFixed(1)}` : rounded.toFixed(1);
 }
+
+export interface StateWinnerRow {
+  stateId: string;
+  winnerId: string | null;
+  winnerVotes: number;
+  winnerPct: number | null;
+  /** Winner's lead over the runner-up, in percentage points of the state vote. */
+  marginPct: number | null;
+  electoralVotes: number;
+}
+
+/**
+ * One row per state: who took the most votes there and by how much, and the
+ * electoral votes the state carried. Sorted by electoral votes, then state id.
+ */
+export function stateWinnerRows(
+  stateVoteData: Record<
+    string,
+    { votesByCandidate: Record<string, number>; evByCandidate: Record<string, number> }
+  >
+): StateWinnerRow[] {
+  const rows = Object.entries(stateVoteData).map(([stateId, data]): StateWinnerRow => {
+    const ranked = Object.entries(data.votesByCandidate)
+      .filter(([, votes]) => votes > 0)
+      .sort((a, b) => b[1] - a[1]);
+    const total = sumValues(data.votesByCandidate);
+    const [winnerId, winnerVotes] = ranked[0] ?? [null, 0];
+    const runnerUp = ranked[1]?.[1] ?? 0;
+    return {
+      stateId,
+      winnerId,
+      winnerVotes,
+      winnerPct: votePercent(winnerVotes, total),
+      marginPct: total > 0 && winnerId ? ((winnerVotes - runnerUp) / total) * 100 : null,
+      electoralVotes: sumValues(data.evByCandidate),
+    };
+  });
+  return rows.sort(
+    (a, b) => b.electoralVotes - a.electoralVotes || a.stateId.localeCompare(b.stateId)
+  );
+}

@@ -19,6 +19,7 @@ import { GeneralResultsSection } from "./components/GeneralResultsSection";
 import {
   ElectoralCollegeAnalysis,
   ElectoralCollegeTable,
+  StateWinnersTable,
 } from "./components/ElectoralCollegeSection";
 import { ChamberResultsSection } from "./components/ChamberResultsSection";
 import { ElectionFooter } from "./components/ElectionFooter";
@@ -315,7 +316,10 @@ export default function WikiElectionDetailPage({ params }: { params: Promise<{ i
 
       {/* Electoral College Table (President only) */}
       {election.electionType === "president" && election.generalResults && (
-        <ElectoralCollegeTable generalResults={election.generalResults} />
+        <>
+          <ElectoralCollegeTable generalResults={election.generalResults} />
+          <StateWinnersTable generalResults={election.generalResults} />
+        </>
       )}
 
       {/* General Election Results Table */}

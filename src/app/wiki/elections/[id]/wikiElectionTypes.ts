@@ -14,6 +14,8 @@ export interface PrimaryCandidate {
   primaryScore: number;
   sharePct: number;
   won?: boolean;
+  /** Convention delegates awarded, when the primary allocates them. */
+  delegates?: number;
 }
 
 export interface PrimaryResult {
