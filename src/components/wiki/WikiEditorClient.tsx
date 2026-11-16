@@ -9,12 +9,23 @@ import { useToast } from "@/contexts/ToastContext";
 import { WikiEditorToolbar } from "./WikiEditorToolbar";
 import { TemplateSelector } from "./TemplateSelector";
 import { MarkdownContent } from "./MarkdownContent";
+import { WikiWriterProvider } from "./WikiViewerContext";
+import {
+  draftDiffersFrom,
+  draftKey as makeDraftKey,
+  loadDraft,
+  saveDraft,
+  type EditorDraft,
+} from "@/lib/wiki/editorDraft";
+import { applyWikilink, findWikilinkQuery, type WikilinkQuery } from "@/lib/wiki/wikilinkQuery";
 
 interface WikiEditorClientProps {
   mode: "create" | "edit";
   isAdmin: boolean;
   initialSlug?: string;
   initialCategory?: string;
+  /** Plain-words note shown above the form, such as "your last edit is waiting for review". */
+  pendingNotice?: string;
   initialData?: {
     title: string;
     description: string;
@@ -32,6 +43,7 @@ export function WikiEditorClient({
   isAdmin,
   initialSlug,
   initialCategory,
+  pendingNotice,
   initialData,
 }: WikiEditorClientProps) {
   const router = useRouter();
@@ -41,26 +53,23 @@ export function WikiEditorClient({
   const [showPreview, setShowPreview] = useState(false);
   const contentRef = useRef<HTMLTextAreaElement>(null);
 
-  // Load initial data for edit mode
+  // Load initial data for edit mode. Saved content is not an unsaved change.
   useEffect(() => {
     if (mode === "edit" && initialData) {
-      dispatch({ type: "SET_FIELD", field: "title", value: initialData.title });
-      dispatch({ type: "SET_FIELD", field: "description", value: initialData.description });
-      dispatch({ type: "SET_FIELD", field: "content", value: initialData.content });
-      dispatch({ type: "SET_FIELD", field: "tags", value: initialData.tags });
-      if (initialData.category) {
-        dispatch({ type: "SET_FIELD", field: "category", value: initialData.category });
-      }
-      if (initialData.difficulty) {
-        dispatch({ type: "SET_FIELD", field: "difficulty", value: initialData.difficulty });
-      }
-      if (initialData.featured !== undefined) {
-        dispatch({ type: "SET_FIELD", field: "featured", value: initialData.featured });
-      }
-      if (initialData.private !== undefined) {
-        dispatch({ type: "SET_FIELD", field: "private", value: initialData.private });
-      }
-      dispatch({ type: "SET_FIELD", field: "slug", value: initialSlug || "" });
+      dispatch({
+        type: "LOAD_INITIAL",
+        fields: {
+          title: initialData.title,
+          description: initialData.description,
+          content: initialData.content,
+          tags: initialData.tags,
+          ...(initialData.category && { category: initialData.category }),
+          ...(initialData.difficulty && { difficulty: initialData.difficulty }),
+          ...(initialData.featured !== undefined && { featured: initialData.featured }),
+          ...(initialData.private !== undefined && { private: initialData.private }),
+          slug: initialSlug || "",
+        },
+      });
     }
   }, [mode, initialData, initialSlug, dispatch]);
 
@@ -71,59 +80,64 @@ export function WikiEditorClient({
     }
   }, [mode, initialCategory, dispatch]);
 
-  // Auto-save to localStorage
+  const draftKey = makeDraftKey(mode, initialSlug);
+
+  // Save a draft shortly after typing stops, so a reload or a failed save
+  // never costs the writer their text.
   useEffect(() => {
     if (!state.isDirty) return;
-
-    const draftKey = mode === "edit" ? `wiki-draft-edit-${initialSlug}` : "wiki-draft-new";
     const timeout = setTimeout(() => {
-      localStorage.setItem(
+      saveDraft(
+        localStorage,
         draftKey,
-        JSON.stringify({
+        {
           title: state.title,
           description: state.description,
           content: state.content,
           tags: state.tags,
+          category: state.category,
           difficulty: state.difficulty,
           featured: state.featured,
-          timestamp: Date.now(),
-        })
+        },
+        Date.now()
       );
-    }, 30000); // 30 seconds
+    }, 1500);
 
     return () => clearTimeout(timeout);
-  }, [state, mode, initialSlug]);
+  }, [state, draftKey]);
 
-  // Load draft on mount
+  // Offer back a draft left by an earlier visit, for new pages and edits alike.
+  const [restorableDraft, setRestorableDraft] = useState<EditorDraft | null>(null);
+  const [draftAgeMinutes, setDraftAgeMinutes] = useState(1);
   useEffect(() => {
-    if (mode === "edit") return; // Only for create mode
-
-    const draftKey = "wiki-draft-new";
-    const savedDraft = localStorage.getItem(draftKey);
-
-    if (savedDraft) {
-      try {
-        const draft = JSON.parse(savedDraft);
-        const ageMinutes = (Date.now() - draft.timestamp) / 1000 / 60;
-
-        if (ageMinutes < 60 * 24) {
-          // Less than 24 hours old
-          const restore = window.confirm(
-            `Found a draft from ${Math.round(ageMinutes)} minutes ago. Restore it?`
-          );
-          if (restore) {
-            dispatch({ type: "LOAD_DRAFT", draft });
-          } else {
-            localStorage.removeItem(draftKey);
-          }
-        } else {
-          localStorage.removeItem(draftKey);
-        }
-      } catch {
-        localStorage.removeItem(draftKey);
-      }
+    const draft = loadDraft(localStorage, draftKey, Date.now());
+    if (!draft) return;
+    const saved = mode === "edit" ? initialData : undefined;
+    if (saved && !draftDiffersFrom(draft, saved)) {
+      localStorage.removeItem(draftKey);
+      return;
     }
-  }, [mode, dispatch]);
+    setDraftAgeMinutes(Math.max(1, Math.round((Date.now() - draft.timestamp) / 60000)));
+    setRestorableDraft(draft);
+    // Runs once per page load; initialData is stable for the page's lifetime.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draftKey, mode]);
+
+  const restoreDraft = () => {
+    if (!restorableDraft) return;
+    const { timestamp: _timestamp, ...fields } = restorableDraft;
+    void _timestamp;
+    dispatch({
+      type: "LOAD_DRAFT",
+      draft: { ...fields, difficulty: fields.difficulty ?? null },
+    });
+    setRestorableDraft(null);
+  };
+
+  const discardDraft = () => {
+    localStorage.removeItem(draftKey);
+    setRestorableDraft(null);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -190,8 +204,13 @@ export function WikiEditorClient({
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Failed to save page");
+        const error = await response.json().catch(() => null);
+        throw new Error(
+          error?.error ||
+            (response.status === 429
+              ? "Too many saves. Wait a moment and try again."
+              : "The page could not be saved. Your text is still here, so try again.")
+        );
       }
 
       const data = await response.json();
@@ -200,8 +219,7 @@ export function WikiEditorClient({
       const nextSlug = data.slug ?? data.page?.slug ?? initialSlug ?? state.slug;
       dispatch({ type: "SUBMIT_SUCCESS" });
 
-      // Clear draft on successful submit
-      const draftKey = mode === "edit" ? `wiki-draft-edit-${initialSlug}` : "wiki-draft-new";
+      // Only a saved page clears the draft.
       localStorage.removeItem(draftKey);
 
       showToast(
@@ -209,7 +227,9 @@ export function WikiEditorClient({
           ? mode === "create"
             ? "Page published"
             : "Changes published"
-          : "Submitted for review",
+          : mode === "edit"
+            ? "Edit sent for review. The current page stays up until it is approved."
+            : "Submitted for review",
         "success"
       );
       // Server components on /wiki/[slug] rely on fresh DB reads; without
@@ -218,7 +238,12 @@ export function WikiEditorClient({
       router.refresh();
       router.push(`/wiki/${nextSlug}`);
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Failed to save page";
+      const message =
+        error instanceof Error
+          ? error.message === "Failed to fetch"
+            ? "Could not reach the server. Your text is still here, so try again."
+            : error.message
+          : "The page could not be saved. Your text is still here, so try again.";
       dispatch({ type: "SUBMIT_ERROR", error: message });
       showToast(message, "error");
     }
@@ -302,8 +327,97 @@ export function WikiEditorClient({
     }
   };
 
+  const [link, setLink] = useState<WikilinkQuery | null>(null);
+  const [linkResults, setLinkResults] = useState<{ title: string; href: string }[]>([]);
+  const [linkIndex, setLinkIndex] = useState(0);
+
+  useEffect(() => {
+    if (!link || link.query.trim().length < 2) {
+      setLinkResults([]);
+      return;
+    }
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      fetch(`/api/wiki/search?q=${encodeURIComponent(link.query.trim())}&limit=8`)
+        .then((res) => (res.ok ? res.json() : { results: [] }))
+        .then((json: { results?: { title: string; href: string; kind?: string }[] }) => {
+          if (cancelled) return;
+          const pages = (json.results ?? []).filter(
+            (r) => r.kind === "page" && r.href.startsWith("/wiki/")
+          );
+          setLinkResults(pages.slice(0, 6).map((r) => ({ title: r.title, href: r.href })));
+          setLinkIndex(0);
+        })
+        .catch(() => !cancelled && setLinkResults([]));
+    }, 200);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [link]);
+
+  const pickLink = (choice: { title: string; href: string }) => {
+    const textarea = contentRef.current;
+    if (!textarea || !link) return;
+    const caret = textarea.selectionStart;
+    const next = applyWikilink(state.content, caret, link, choice.title, choice.href);
+    dispatch({ type: "SET_FIELD", field: "content", value: next.text });
+    setLink(null);
+    setLinkResults([]);
+    setTimeout(() => {
+      contentRef.current?.setSelectionRange(next.caret, next.caret);
+      contentRef.current?.focus();
+    }, 0);
+  };
+
+  const handleContentKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (linkResults.length === 0) return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setLinkIndex((i) => (i + 1) % linkResults.length);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setLinkIndex((i) => (i - 1 + linkResults.length) % linkResults.length);
+    } else if (e.key === "Enter" || e.key === "Tab") {
+      e.preventDefault();
+      const choice = linkResults[linkIndex];
+      if (choice) pickLink(choice);
+    } else if (e.key === "Escape") {
+      setLink(null);
+      setLinkResults([]);
+    }
+  };
+
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
+      {pendingNotice && (
+        <div
+          role="status"
+          className="rounded-md border border-card-border bg-card/60 p-4 text-sm text-foreground"
+        >
+          {pendingNotice}
+        </div>
+      )}
+      {restorableDraft && (
+        <div
+          role="status"
+          className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-primary/40 bg-primary/10 p-4 text-sm text-foreground"
+        >
+          <span>You have unsaved text from {draftAgeMinutes} minutes ago.</span>
+          <span className="flex gap-3">
+            <button type="button" onClick={restoreDraft} className="text-primary hover:underline">
+              Restore it
+            </button>
+            <button
+              type="button"
+              onClick={discardDraft}
+              className="text-muted hover:text-foreground"
+            >
+              Discard
+            </button>
+          </span>
+        </div>
+      )}
       {/* Title */}
       <div>
         <label htmlFor="title" className="block text-sm font-medium text-foreground">
@@ -383,23 +497,55 @@ export function WikiEditorClient({
             <WikiEditorToolbar onInsert={handleInsert} onInsertImage={handleInsertImage} />
           )}
           {showPreview ? (
-            <div className="min-h-[500px] rounded-md border border-card-border bg-card px-4 py-3">
-              <article className="prose prose-sm prose-invert max-w-none">
-                <MarkdownContent content={state.content} />
-              </article>
+            <div className="min-h-[500px] rounded-md border border-card-border bg-background px-4 py-6">
+              <div className="mx-auto max-w-4xl min-w-0 overflow-x-hidden">
+                <article className="prose prose-invert max-w-none overflow-x-hidden">
+                  <WikiWriterProvider isWriter>
+                    <MarkdownContent content={state.content} />
+                  </WikiWriterProvider>
+                </article>
+              </div>
             </div>
           ) : (
-            <textarea
-              ref={contentRef}
-              id="content"
-              value={state.content}
-              onChange={(e) =>
-                dispatch({ type: "SET_FIELD", field: "content", value: e.target.value })
-              }
-              rows={20}
-              className="block w-full rounded-md border border-card-border bg-card px-3 py-2 text-foreground shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary font-mono text-sm"
-              placeholder="Write your content here in markdown..."
-            />
+            <div className="relative">
+              <textarea
+                ref={contentRef}
+                id="content"
+                value={state.content}
+                onKeyDown={handleContentKeyDown}
+                onChange={(e) => {
+                  dispatch({ type: "SET_FIELD", field: "content", value: e.target.value });
+                  setLink(findWikilinkQuery(e.target.value, e.target.selectionStart));
+                }}
+                rows={20}
+                className="block w-full rounded-md border border-card-border bg-card px-3 py-2 text-foreground shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary font-mono text-sm"
+                placeholder="Write your content here in markdown. Type [[ to link another page."
+              />
+              {linkResults.length > 0 && (
+                <ul
+                  role="listbox"
+                  aria-label="Matching pages"
+                  className="absolute left-3 top-10 z-10 w-72 rounded-md border border-card-border bg-card shadow-lg"
+                >
+                  {linkResults.map((r, i) => (
+                    <li key={r.href} role="option" aria-selected={i === linkIndex}>
+                      <button
+                        type="button"
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          pickLink(r);
+                        }}
+                        className={`block w-full px-3 py-2 text-left text-sm text-foreground ${
+                          i === linkIndex ? "bg-primary/20" : "hover:bg-muted"
+                        }`}
+                      >
+                        {r.title}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
           )}
         </div>
         {state.errors.content && (

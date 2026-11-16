@@ -18,6 +18,7 @@ import {
 import { MarkdownContent } from "@/components/wiki/MarkdownContent";
 import { realLifeDateRange, tenureRangeWeekYear } from "@/lib/wiki/officeTenureDisplay";
 import { OfficeHistoryAdmin } from "@/components/wiki/OfficeHistoryAdmin";
+import { WikiWriterProvider } from "@/components/wiki/WikiViewerContext";
 import { WikiTrustStrip } from "@/components/wiki/WikiTrustStrip";
 import { WikiTableOfContents } from "@/components/wiki/WikiTableOfContents";
 import { Breadcrumbs } from "@/components/wiki/layout/Breadcrumbs";
@@ -90,6 +91,15 @@ export async function generateMetadata({ params }: WikiPageProps): Promise<Metad
   };
 }
 
+async function isPageAuthor(slug: string, userId: string): Promise<boolean> {
+  const db = await getDb();
+  const page = await wikiPagesCollection<Document>(db).findOne(
+    { slug },
+    { projection: { submittedBy: 1 } }
+  );
+  return page?.submittedBy?.toString() === userId;
+}
+
 export default async function WikiPage({ params }: WikiPageProps) {
   const { slug } = await params;
   const redirectTo = getRedirectTarget(slug);
@@ -121,6 +131,12 @@ export default async function WikiPage({ params }: WikiPageProps) {
 
   const headings = extractWikiHeadings(content);
   const user = await getAuthUserWithCharacter();
+  // Only the page's author and moderators can edit it; everyone else sees no controls.
+  const canWrite =
+    !!user &&
+    (user.isAdmin === true ||
+      user.isModerator === true ||
+      (await isPageAuthor(slug, user.userId.toString())));
 
   // Fire-and-forget view count increment
   getDb()
@@ -143,8 +159,14 @@ export default async function WikiPage({ params }: WikiPageProps) {
     <div className="mx-auto max-w-4xl min-w-0 overflow-x-hidden px-4 py-8">
       <Breadcrumbs items={[{ label: "Wiki", href: "/wiki" }, { label: page.title }]} />
 
-      {user && (
-        <div className="mb-4 flex justify-end">
+      {canWrite && (
+        <div className="mb-4 flex justify-end gap-2">
+          <Link
+            href={`/wiki/${slug}/history`}
+            className="rounded-md border border-card-border bg-card/40 px-4 py-2 text-sm text-muted transition-colors hover:border-primary/40 hover:text-primary"
+          >
+            History
+          </Link>
           <Link
             href={`/wiki/${slug}/edit`}
             className="rounded-md border border-card-border bg-card/40 px-4 py-2 text-sm text-muted transition-colors hover:border-primary/40 hover:text-primary"
@@ -171,7 +193,9 @@ export default async function WikiPage({ params }: WikiPageProps) {
       {headings.length > 0 && <WikiTableOfContents headings={headings} className="mb-8" />}
 
       <article className="prose prose-invert max-w-none overflow-x-hidden">
-        <MarkdownContent content={content} headings={headings} />
+        <WikiWriterProvider isWriter={canWrite}>
+          <MarkdownContent content={content} headings={headings} />
+        </WikiWriterProvider>
       </article>
 
       <RelatedPagesFooter

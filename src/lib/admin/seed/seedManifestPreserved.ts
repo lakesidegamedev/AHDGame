@@ -114,6 +114,11 @@ export const PRESERVED: CollectionEntry[] = [
     category: "preserved",
     notes: "Player-filed wiki page issue reports; feedback, survives world resets.",
   },
+  {
+    name: "wikiRevisions",
+    category: "preserved",
+    notes: "Approved page versions and moderator decisions; the wiki history and review log.",
+  },
   { name: "systemSettings", category: "preserved" },
   { name: "systemTags", category: "preserved" },
   { name: "tasks", category: "preserved", notes: "Admin task tracker." },

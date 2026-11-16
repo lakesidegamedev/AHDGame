@@ -28,9 +28,10 @@ export type WikiEditorAction =
   | { type: "SUBMIT_SUCCESS" }
   | { type: "SUBMIT_ERROR"; error: string }
   | { type: "LOAD_DRAFT"; draft: Partial<WikiEditorState> }
+  | { type: "LOAD_INITIAL"; fields: Partial<WikiEditorState> }
   | { type: "RESET" };
 
-const initialState: WikiEditorState = {
+export const initialWikiEditorState: WikiEditorState = {
   content: "",
   title: "",
   description: "",
@@ -53,7 +54,10 @@ function generateSlug(title: string): string {
     .replace(/[^a-z0-9-]/g, "");
 }
 
-function reducer(state: WikiEditorState, action: WikiEditorAction): WikiEditorState {
+export function wikiEditorReducer(
+  state: WikiEditorState,
+  action: WikiEditorAction
+): WikiEditorState {
   switch (action.type) {
     case "SET_FIELD": {
       const newState = {
@@ -105,6 +109,11 @@ function reducer(state: WikiEditorState, action: WikiEditorAction): WikiEditorSt
         errors: { _form: action.error },
       };
 
+    case "LOAD_INITIAL":
+      // Saved page content is not an unsaved change, so it must not trip the
+      // dirty flag that triggers the draft autosave.
+      return { ...state, ...action.fields, isDirty: false };
+
     case "LOAD_DRAFT":
       return {
         ...state,
@@ -113,7 +122,7 @@ function reducer(state: WikiEditorState, action: WikiEditorAction): WikiEditorSt
       };
 
     case "RESET":
-      return initialState;
+      return initialWikiEditorState;
 
     default:
       return state;
@@ -121,6 +130,6 @@ function reducer(state: WikiEditorState, action: WikiEditorAction): WikiEditorSt
 }
 
 export function useWikiEditorState() {
-  const [state, dispatch] = useReducer(reducer, initialState);
+  const [state, dispatch] = useReducer(wikiEditorReducer, initialWikiEditorState);
   return { state, dispatch };
 }

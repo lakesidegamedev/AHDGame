@@ -310,6 +310,7 @@ export const PRESERVED_COLLECTION_CONTRACT: Readonly<Record<string, PreservedCol
     suggestionReactions: { kind: "keep-whole", reason: KEEP_COMMUNITY },
     suggestionReads: { kind: "keep-whole", reason: KEEP_COMMUNITY },
     wikiReports: { kind: "keep-whole", reason: KEEP_COMMUNITY },
+    wikiRevisions: { kind: "keep-whole", reason: KEEP_COMMUNITY },
     wikiPages: { kind: "keep-whole", reason: KEEP_COMMUNITY },
     wikiTemplates: { kind: "keep-whole", reason: KEEP_COMMUNITY },
     playerBannerAds: { kind: "keep-whole", reason: KEEP_COMMUNITY },

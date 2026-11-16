@@ -11,6 +11,8 @@ import type { User, WikiPage, EditHistoryEntry } from "@/lib/db/types";
 import { ObjectId } from "mongodb";
 import { usersCollection } from "@/lib/db/repositories/users";
 import { wikiPagesCollection } from "@/lib/db/repositories/wikiPages";
+import { hasOpenPendingEdit, mergeApproval } from "@/lib/wiki/rules/editFlow";
+import { ensureBaselineRevision, pageFieldsOf, recordWikiRevision } from "@/lib/wiki/revisions";
 
 interface RouteContext {
   params: Promise<{ slug: string }>;
@@ -39,38 +41,51 @@ export async function POST(request: Request, context: RouteContext) {
       return NextResponse.json(notFound().toJson(), { status: 404 });
     }
 
-    if (existing.status !== "pending_review") {
+    const pendingEdit = hasOpenPendingEdit(existing) ? existing.pendingEdit : undefined;
+    if (existing.status !== "pending_review" && !pendingEdit) {
       return errorResponse(400, "Page is not pending review");
     }
 
     const now = new Date();
     const reviewerId = new ObjectId(auth.user.userId);
+    const proposed = pendingEdit ?? pageFieldsOf(existing);
+    const merged = mergeApproval(
+      {
+        title: proposed.title,
+        description: proposed.description,
+        content: proposed.content,
+        tags: proposed.tags,
+        category: proposed.category,
+        difficulty: proposed.difficulty,
+      },
+      parsed.data
+    );
+
     const updateData: Partial<WikiPage> = {
       status: "published",
       reviewedBy: reviewerId,
       updatedAt: now,
+      title: merged.title,
+      description: merged.description,
+      content: merged.content,
+      tags: merged.tags,
+      ...(merged.category !== undefined && { category: merged.category }),
+      ...(merged.difficulty !== undefined && { difficulty: merged.difficulty }),
     };
 
     const editEntries: EditHistoryEntry[] = [
-      { userId: reviewerId, timestamp: now, action: "approved" },
+      { userId: reviewerId, timestamp: now, action: "approved", note: parsed.data.note },
     ];
-    const editedFields: string[] = [];
-    if (parsed.data.editedContent) {
-      updateData.content = parsed.data.editedContent;
-      editedFields.push("content");
-    }
-    if (parsed.data.editedTitle) {
-      updateData.title = parsed.data.editedTitle;
-      editedFields.push("title");
-    }
-    if (parsed.data.editedDescription) {
-      updateData.description = parsed.data.editedDescription;
-      editedFields.push("description");
-    }
-    if (parsed.data.editedTags) {
-      updateData.tags = parsed.data.editedTags;
-      editedFields.push("tags");
-    }
+    const editedFields = (
+      [
+        ["content", parsed.data.editedContent],
+        ["title", parsed.data.editedTitle],
+        ["description", parsed.data.editedDescription],
+        ["tags", parsed.data.editedTags],
+      ] as const
+    )
+      .filter(([, value]) => value !== undefined)
+      .map(([name]) => name);
 
     if (editedFields.length > 0) {
       editEntries.push({
@@ -83,7 +98,13 @@ export async function POST(request: Request, context: RouteContext) {
 
     updateData.editHistory = [...(existing.editHistory || []), ...editEntries];
 
-    await wikiPages.updateOne({ slug }, { $set: updateData });
+    // Pages from before history have no stored copy of what is live now.
+    if (existing.status === "published") await ensureBaselineRevision(db, existing, now);
+
+    await wikiPages.updateOne(
+      { slug },
+      { $set: updateData, ...(pendingEdit && { $unset: { pendingEdit: "" } }) }
+    );
     const updated = await wikiPages.findOne({ slug });
 
     let submitterUsername: string | undefined;
@@ -101,6 +122,17 @@ export async function POST(request: Request, context: RouteContext) {
       }).catch((err) => console.error("[wiki] approve notify failed:", err));
     }
 
+    await recordWikiRevision(db, slug, {
+      kind: "approved",
+      fields: merged,
+      authorId: pendingEdit?.submittedBy ?? existing.submittedBy,
+      authorName: submitterUsername,
+      moderatorId: reviewerId,
+      moderatorName: auth.user.username,
+      note: parsed.data.note,
+      at: now,
+    });
+
     await createModAuditLog({
       moderatorId: auth.user.userId,
       moderatorName: auth.user.username,
@@ -110,7 +142,9 @@ export async function POST(request: Request, context: RouteContext) {
       details: `${slug}: ${updated?.title ?? existing.title}`,
     });
     revalidatePath(`/wiki/${slug}`);
-    return NextResponse.json({ success: true, page: updated });
+    const response = NextResponse.json({ success: true, page: updated });
+    response.headers.set("Cache-Control", "private, no-store");
+    return response;
   } catch (error) {
     return handleRouteError(error);
   }
