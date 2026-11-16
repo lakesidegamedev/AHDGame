@@ -34,6 +34,7 @@ const KIND_LABELS: Record<WikiSearchKind, string> = {
   cabinet: "Cabinet",
   leadership: "Leadership",
   election: "Elections",
+  docs: "Docs",
 };
 
 export interface WikiSearchGroup {

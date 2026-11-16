@@ -1160,11 +1160,7 @@ export default function CreateCharacterClient() {
 
       <p className="mt-2 px-1 text-body-sm text-muted">
         New here?{" "}
-        <Link
-          href="https://wiki.ahousedividedgame.com/getting-started"
-          target="_blank"
-          className="text-primary hover:underline"
-        >
+        <Link href="/wiki/getting-started" target="_blank" className="text-primary hover:underline">
           Read the new player guide
         </Link>
       </p>
