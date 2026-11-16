@@ -136,7 +136,6 @@ function runClearing() {
     turn: world.turn,
     currentYear: 1991,
     commandEconomyEnabled: false,
-    freightSettlementActive: false,
     supplyAgreementsEnabled: false,
     settleableAgreements: undefined,
     contractedByCorpCommodity: new Map(),

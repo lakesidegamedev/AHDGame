@@ -72,3 +72,44 @@ describe("HomeStatePicker — UK 1953 lean display", () => {
     expect(row.getByText("Economic: Centrist · Social: Center-Trad")).toBeTruthy();
   });
 });
+
+const MAIN_PARTIES = [
+  {
+    id: "lab",
+    name: "Labour Party",
+    economicPosition: -2,
+    socialPosition: -1,
+    isDefault: true,
+    memberCount: 20,
+  },
+  {
+    id: "con",
+    name: "Conservative Party",
+    economicPosition: 2,
+    socialPosition: 2,
+    isDefault: true,
+    memberCount: 30,
+  },
+];
+
+describe("HomeStatePicker party-scaled lean labels", () => {
+  it("labels each region by the main party it favours and how strongly", () => {
+    render(
+      <HomeStatePicker
+        states={[LON, SEE]}
+        value=""
+        onChange={() => {}}
+        playerCounts={{}}
+        position={{ economic: 0, social: 0 }}
+        regionNoun="region"
+        parties={MAIN_PARTIES}
+      />
+    );
+
+    const london = within(screen.getByRole("radio", { name: /London/ }));
+    expect(london.getByText("Electoral lean: Solid Labour")).toBeTruthy();
+    const southEast = within(screen.getByRole("radio", { name: /South East England/ }));
+    expect(southEast.getByText("Electoral lean: Likely Conservative")).toBeTruthy();
+    expect(southEast.getByText("Economic: Center-Left · Social: Center-Trad")).toBeTruthy();
+  });
+});

@@ -1,4 +1,5 @@
 "use client";
+import { WikiHelpLink } from "@/components/wiki/WikiHelpLink";
 import { displayCanadianRegionCode } from "@/lib/countries/ca/regionCodes";
 
 import { useState } from "react";
@@ -140,7 +141,10 @@ export function StatePartyLeadershipPanel({
   return (
     <div className="rounded-xl border border-card-border bg-card p-6 space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="font-semibold">State party leadership</h2>
+        <div className="flex items-center gap-2">
+          <h2 className="font-semibold">State party leadership</h2>
+          <WikiHelpLink screen="party-leadership" />
+        </div>
         <Link
           href={partyUrl(stateParty.countryId ?? DEFAULT_LEGACY_COUNTRY_ID, stateParty.partyId)}
           className="text-xs text-primary hover:underline"

@@ -6,6 +6,11 @@ import { bypassNextImageOptimization } from "@/lib/images/bypassImageOptimizatio
 import { getEconomicPositionName, getSocialPositionName } from "@/lib/utils/politics";
 import { getDisplayLean, getLeanLabel, getSocialLeanLabel } from "@/lib/utils/demographics";
 import {
+  mainPartiesFor,
+  regionLeanLabel,
+  type PartyLabelSource,
+} from "@/lib/regionLean/partyLabel";
+import {
   ALIGNMENT_META,
   alignmentBand,
   compassDistance,
@@ -47,6 +52,8 @@ interface CandidateFileProps {
   /** Optional portrait and header the player chose; uploaded after creation. */
   portrait: PickedImage;
   header: PickedImage;
+  /** The country's parties; the two main ones set the scale for the electoral lean label. */
+  parties?: readonly PartyLabelSource[];
 }
 
 /**
@@ -73,7 +80,9 @@ export function CandidateFile({
   isSubmitting,
   portrait,
   header,
+  parties = [],
 }: CandidateFileProps) {
+  const mainParties = mainPartiesFor(parties);
   const accent = partyColor ?? "var(--color-muted)";
   const outstanding = requirements.filter((r) => !r.met);
 
@@ -237,8 +246,9 @@ export function CandidateFile({
               distance={electorateDistance}
               detail={
                 electorate
-                  ? `Electoral lean: ${getLeanLabel(
-                      getDisplayLean(electorate.economic, electorate.social)
+                  ? `Electoral lean: ${regionLeanLabel(
+                      getDisplayLean(electorate.economic, electorate.social),
+                      mainParties
                     )}. Economic: ${getLeanLabel(electorate.economic)}. Social: ${getSocialLeanLabel(
                       electorate.social
                     )}.`

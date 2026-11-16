@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Children, isValidElement, type ReactNode } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { toRelativeWikiHref } from "@/lib/wiki/links";
 import { getWikiComponent } from "@/lib/wiki/componentRegistry";
 import { SKIP_GLOSSARY_PROP, wrapGlossaryChildren } from "@/components/wiki/wrapGlossaryChildren";
 import { WikiGuideScreenshot } from "@/components/wiki/WikiGuideScreenshot";
@@ -45,7 +46,8 @@ export function MarkdownContent({ content }: { content: string; headings?: TocHe
     <ReactMarkdown
       remarkPlugins={[remarkGfm]}
       components={{
-        a: ({ href, children }) => {
+        a: ({ href: rawHref, children }) => {
+          const href = rawHref ? toRelativeWikiHref(rawHref) : rawHref;
           if (href && (href.startsWith("/") || WIKI_LINK.test(href))) {
             return (
               <Link href={href} className="text-primary hover:underline" {...noGlossary}>

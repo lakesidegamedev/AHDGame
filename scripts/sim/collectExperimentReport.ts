@@ -192,7 +192,6 @@ async function main() {
                 "autonomyLevel",
                 "actors",
                 "allFeatureFlags",
-                "freightSettlementMode",
                 "canonicalFreightBillingEnabled",
                 "shortageResponsiveSourcingEnabled",
                 "indexFundBondLiquidityEnabled",

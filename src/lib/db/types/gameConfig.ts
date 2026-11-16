@@ -208,7 +208,6 @@ export interface GameConfig {
    * sells to the general market out of that state (its output share of the
    * state's shipments rides its own trucks first; rivals get the remainder).
    * 0 or absent = one shared first-come pool.
-   * Needs freightSettlementMode "active" (own routes only run then).
    */
   ownFreightFirstStage?: number;
   /**
@@ -367,25 +366,6 @@ export interface GameConfig {
    */
   outputBasis?: "gross" | "value_added";
   /**
-   * Operational switch for the price level. True compounds each country's
-   * `priceIndex` by its inflation and keeps `state.gdp` and the budget GDP
-   * basis nominal. Fresh worlds seed true; absent or false holds the index at 1
-   * and leaves the budget GDP basis on its fiscal-close snapshot.
-   */
-  priceLevelEnabled?: boolean;
-  /**
-   * Operational switch for the NPP fiscal stabilizer and the interest-spiral
-   * sovereign restructuring. True runs both at fiscal-year close. Fresh worlds
-   * seed true; absent or false skips both.
-   */
-  fiscalStabilizerEnabled?: boolean;
-  /**
-   * Operational switch for emergent crisis detection (crisis v2). True lets the
-   * detectors open new crises. Crises already open keep stepping and resolving
-   * either way. Fresh worlds seed true; absent or false opens none.
-   */
-  crisisV2EmergentEnabled?: boolean;
-  /**
    * Operational switch for the Crisis v2 engine on new crises. True attaches a
    * v2 instance (stages, blame, scars, forced events) to every crisis a
    * template or disaster spawns, and mirrors living conflicts as v2 crises.
@@ -393,48 +373,11 @@ export interface GameConfig {
    */
   crisisV2StagesEnabled?: boolean;
   /**
-   * Operational switch for the succession watcher: vacancy records for every
-   * executive office, deputy promotion outside the US, special elections and
-   * generated fills. Fresh worlds seed true; absent or false keeps only the US
-   * President-to-VP succession.
-   */
-  executiveSuccessionEnabled?: boolean;
-  /**
-   * Operational switch for leader legacies. True scores and stores a legacy
-   * when a head of government leaves office, which election swing and party
-   * renewal read. Fresh worlds seed true; absent or false records none.
-   */
-  leaderLegacyEnabled?: boolean;
-  /**
    * Operational switch for the campaign money basis. True measures campaign
    * income and costs against live national GDP per capita; absent or false
    * keeps the era table. Fresh worlds seed true.
    */
   campaignLiveGdpBasisEnabled?: boolean;
-  /**
-   * Operational switch for the by-election fill guarantee: an NPP candidate is
-   * filed for a live by-election nobody has entered before it closes. Fresh
-   * worlds seed true; absent or false leaves unentered by-elections empty.
-   */
-  byElectionFillEnabled?: boolean;
-  /**
-   * Operational switch for NPP Supreme Court nominations: a vacant seat gets a
-   * generated nominee when no player President is nominating. Fresh worlds
-   * seed true; absent or false waits for a player President.
-   */
-  scotusNppNominationsEnabled?: boolean;
-  /**
-   * Operational switch for the pending docket: a surprise case waits 12 to 36
-   * turns on the docket before the Court rules. Fresh worlds seed true; absent
-   * or false rules on the case the turn it is filed.
-   */
-  scotusPendingDocketEnabled?: boolean;
-  /**
-   * Operational switch for the undated random event fallback offered when a
-   * character has exhausted every dated pack. Fresh worlds seed true; absent or
-   * false offers nothing in that case.
-   */
-  preeGenericFallbackEnabled?: boolean;
   /**
    * Operational switch for cyber operations: player intelligence services,
    * computer-run governments and background governments may launch them.
@@ -673,6 +616,8 @@ export interface GameConfig {
    * instead of nameplate staffing. 0 or absent = off.
    */
   fundedHeadcountStage?: number;
+  /** Labour system: >= 1 counts unemployed residents in the plant staffing tightness denominator. 0 or absent = off. */
+  labourStaffingSlackStage?: number;
   /**
    * Equity cashout limits: 1 caps the price the system equity pool pays for new
    * shares (no sentiment premium, no more than book or 15x trailing earnings per
@@ -876,19 +821,6 @@ export interface GameConfig {
   tradeConvergenceFullStartTurn?: number;
   inputDemandRealPhaseStartTurn?: number;
   /**
-   * Geographic freight rollout. Shadow records routes for calibration; active
-   * also feeds delivered state inputs into next turn's plant throughput.
-   */
-  freightSettlementMode?: "shadow" | "active";
-  /** Username of the admin who last changed the freight-settlement rollout. */
-  freightSettlementModeUpdatedBy?: string;
-  /** When the freight-settlement rollout was last changed (ISO 8601). */
-  freightSettlementModeUpdatedAt?: string;
-  /** World turn at which the freight-settlement rollout was last changed. */
-  freightSettlementModeUpdatedTurn?: number;
-  /** Governance record required for active freight settlement. */
-  freightSettlementIntervention?: EconomicInterventionPlan;
-  /**
    * Gradual freight-settlement ramp (markets plan Phase 4). When set, the
    * ACTIVE effect fades in linearly instead of landing at full strength on the
    * flip turn: a ramp fraction R = clamp01((turn - rampStartTurn) / rampTurns)
@@ -898,9 +830,8 @@ export interface GameConfig {
    * balance step into a measured phase-in so sales caps and the shipping bill
    * arrive together, gradually, with the effect visible each turn on the
    * markets tracker and the sector Freight tag. Unset (or rampTurns <= 0) → R is
-   * 1 whenever active, i.e. the pre-ramp instant-activation behavior, byte
-   * identical. Applies to whichever of freightSettlementMode:"active" /
-   * canonicalFreightBillingEnabled is on.
+   * 1, i.e. instant activation. Applies to the delivered-supply cap and to
+   * canonicalFreightBillingEnabled.
    */
   freightSettlementRampStartTurn?: number;
   freightSettlementRampTurns?: number;

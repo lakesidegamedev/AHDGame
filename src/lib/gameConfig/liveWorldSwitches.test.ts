@@ -8,11 +8,11 @@ function dbWith(findOne: ReturnType<typeof vi.fn>): Db {
 
 describe("isLiveWorldSwitchOn", () => {
   it("is on only when the world's config sets the switch to true", async () => {
-    const findOne = vi.fn().mockResolvedValue({ leaderLegacyEnabled: true });
-    expect(await isLiveWorldSwitchOn(dbWith(findOne), "leaderLegacyEnabled")).toBe(true);
+    const findOne = vi.fn().mockResolvedValue({ cyberOperationsEnabled: true });
+    expect(await isLiveWorldSwitchOn(dbWith(findOne), "cyberOperationsEnabled")).toBe(true);
     expect(findOne).toHaveBeenCalledWith(
       { _id: "default" },
-      { projection: { leaderLegacyEnabled: 1 } }
+      { projection: { cyberOperationsEnabled: 1 } }
     );
   });
 
@@ -26,6 +26,6 @@ describe("isLiveWorldSwitchOn", () => {
 
   it("is off when the config cannot be read", async () => {
     const findOne = vi.fn().mockRejectedValue(new Error("down"));
-    expect(await isLiveWorldSwitchOn(dbWith(findOne), "executiveSuccessionEnabled")).toBe(false);
+    expect(await isLiveWorldSwitchOn(dbWith(findOne), "campaignLiveGdpBasisEnabled")).toBe(false);
   });
 });

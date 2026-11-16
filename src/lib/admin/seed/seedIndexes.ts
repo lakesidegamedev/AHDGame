@@ -30,6 +30,7 @@ import { seedProductVentureIndexes } from "./indexes/productVentures";
 import { seedCampaignFieldOfficeIndexes } from "./indexes/campaignFieldOffices";
 import { seedIntelligenceIndexes } from "./indexes/intelligence";
 import { seedIdentityHistoryIndexes } from "./indexes/identityHistory";
+import { seedProviderLinkHistoryIndexes } from "./indexes/providerLinkHistory";
 import { seedTelemetryIndexes } from "./indexes/telemetry";
 import { seedMoneyFlowIndexes } from "./indexes/moneyFlow";
 import { INDEX_TARGETS, type IndexTargetId, type IndexTargetMeta } from "./indexTargets";
@@ -85,6 +86,7 @@ const INDEX_RUNNERS: Record<IndexTargetId, IndexModule> = {
   indexesCampaignFieldOffices: seedCampaignFieldOfficeIndexes,
   indexesIntelligence: seedIntelligenceIndexes,
   indexesIdentityHistory: seedIdentityHistoryIndexes,
+  indexesProviderLinkHistory: seedProviderLinkHistoryIndexes,
   indexesTelemetry: seedTelemetryIndexes,
   indexesMoneyFlow: seedMoneyFlowIndexes,
   indexesCasino: seedCasinoIndexes,

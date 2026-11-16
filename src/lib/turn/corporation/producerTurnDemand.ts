@@ -313,10 +313,7 @@ export async function buildProducerTurnDemand(
       const countryId = String(b.countryId);
       const code = resolveCountryCurrencyCode(b);
       const rate = (code && lookups.exchangeRatesByCurrency.get(code)) || 1;
-      // Telemetry only. The demand rates already size each budget line to the
-      // plant economy; scaling by the plant share again shrank public buying
-      // several hundredfold and fed back on itself as funded value added fell.
-      shareFor(countryId);
+      const plantShare = shareFor(countryId);
       const byCategory = Object.fromEntries(
         Object.entries(b.spending?.byCategory ?? {}).map(([k, v]) => [k, (v as number) / rate])
       );
@@ -325,6 +322,7 @@ export async function buildProducerTurnDemand(
         byCategory,
         plannedEconomy: isPlannedEconomy(countryId, lookups.eraYear ?? null, false),
         stateWeights: stateWeightsByCountry.get(countryId) ?? new Map(),
+        plantShare,
       };
     }),
     TURNS_PER_YEAR

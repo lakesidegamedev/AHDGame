@@ -74,7 +74,6 @@ import {
   type CrisisOpenCandidate,
 } from "./crisisV2/registry";
 import { crisesCollection } from "@/lib/db/repositories/crises";
-import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 import { crisisInteractionsCollection } from "@/lib/db/repositories/crisisInteractions";
 import { crisisLeverUsesCollection } from "@/lib/db/repositories/crisisLeverUses";
 
@@ -288,22 +287,6 @@ async function openApproved(
   return docs.length;
 }
 
-/** Operational switch: absent or false stops the detectors; open crises still step. */
-async function loadEmergentEnabled(db: Db): Promise<boolean> {
-  try {
-    const config = await gameConfigCollection(db).findOne(
-      { _id: "default" },
-      { projection: { crisisV2EmergentEnabled: 1 } }
-    );
-    return config?.crisisV2EmergentEnabled === true;
-  } catch (error) {
-    logger.warn(COMPONENT, "emergent switch unreadable; detectors held off", {
-      error: String(error),
-    });
-    return false;
-  }
-}
-
 async function openNewCrises(
   db: Db,
   turn: number,
@@ -473,9 +456,6 @@ async function retryClosedDeliveries(db: Db, turn: number): Promise<void> {
  * sim, applies the lever uses recorded for it, steps severity and stage, routes
  * effect intents to the owning systems and writes the instance back in one bulk
  * write. A crisis that throws is skipped and the rest still run.
- *
- * While no crisis carries a `v2` instance and emergent detection is off, this costs
- * one indexed read, one config read and one projected read of the states.
  */
 export async function processCrisisV2Turn(db: Db, turn: number): Promise<CrisisV2TurnResult> {
   ensureBuiltinCrisisV2Content();
@@ -498,7 +478,6 @@ export async function processCrisisV2Turn(db: Db, turn: number): Promise<CrisisV
 
   if (crises.length === 0 && listCrisisOpenCandidateProviders().length === 0) return EMPTY_RESULT;
 
-  const emergentEnabled = await loadEmergentEnabled(db);
   ensureBuiltinCrisisHolderProviders();
   if (crises.length > 0) await runNppCrisisResponse(db, turn);
   const world: World =
@@ -804,8 +783,8 @@ export async function processCrisisV2Turn(db: Db, turn: number): Promise<CrisisV
   } catch (error) {
     logger.error(COMPONENT, "scar pass failed", error);
   }
-  result.opened = emergentEnabled ? await openNewCrises(db, turn, stillActive) : 0;
-  if (emergentEnabled) result.opened += (await runCrisisSpillover(db, turn)).opened;
+  result.opened = await openNewCrises(db, turn, stillActive);
+  result.opened += (await runCrisisSpillover(db, turn)).opened;
   return result;
 }
 

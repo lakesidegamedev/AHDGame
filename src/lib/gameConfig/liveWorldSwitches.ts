@@ -9,15 +9,7 @@ import { logger } from "@/lib/observability/logger";
  * turns it on.
  */
 export type LiveWorldSwitch =
-  | "crisisV2StagesEnabled"
-  | "executiveSuccessionEnabled"
-  | "leaderLegacyEnabled"
-  | "campaignLiveGdpBasisEnabled"
-  | "byElectionFillEnabled"
-  | "scotusNppNominationsEnabled"
-  | "scotusPendingDocketEnabled"
-  | "preeGenericFallbackEnabled"
-  | "cyberOperationsEnabled";
+  "crisisV2StagesEnabled" | "campaignLiveGdpBasisEnabled" | "cyberOperationsEnabled";
 
 /** True only when the world's gameConfig sets the switch to true. An unreadable config reads off. */
 export async function isLiveWorldSwitchOn(db: Db, key: LiveWorldSwitch): Promise<boolean> {

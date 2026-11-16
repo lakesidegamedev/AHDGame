@@ -73,16 +73,12 @@ export const STALE_PER_WORLD_GAME_CONFIG_UNSET: Readonly<Record<string, "">> = O
   economyMarketProgramActivatedTurn: "",
   economyMarketProgramActivatedCommit: "",
   economyMarketProgramCommit: "",
-  // Freight rollout provenance and ramp. A ramp start past the new turn holds
-  // the active freight effect at zero (src/lib/logistics/settlement.ts).
-  freightSettlementModeUpdatedBy: "",
-  freightSettlementModeUpdatedAt: "",
-  freightSettlementModeUpdatedTurn: "",
+  // A ramp start past the new turn holds the freight effect at zero
+  // (src/lib/logistics/settlement.ts).
   freightSettlementRampStartTurn: "",
   freightSettlementRampTurns: "",
   // Governance plans whose start and review turns belong to the old world. The
   // admin routes refuse to re-enable against a plan that starts in the future.
-  freightSettlementIntervention: "",
   shortageResponsiveSourcingIntervention: "",
   indexFundBondLiquidityIntervention: "",
   equityLiquidityFacilityIntervention: "",

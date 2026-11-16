@@ -59,7 +59,7 @@ export function InfluenceTab({
       <p className="text-body-xs text-muted">
         Spending here moves a nation between the poles.{" "}
         <a
-          href="https://wiki.ahousedividedgame.com/world-alignment"
+          href="/wiki/bloc-spheres"
           target="_blank"
           rel="noreferrer"
           className="underline underline-offset-2 transition-colors hover:text-foreground"

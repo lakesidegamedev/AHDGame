@@ -21,6 +21,7 @@ import {
 } from "@/lib/auth/centralLogin";
 import type { User } from "@/lib/db/types";
 import { usersCollection } from "@/lib/db/repositories/users";
+import { recordProviderLinkEvent } from "@/lib/auth/providerLinkHistory";
 
 export interface ProviderUnlinkSpec {
   provider: ProviderKind;
@@ -144,6 +145,13 @@ export async function unlinkProviderCredential(
   }
 
   if (unlinkWrite) shadowMirrorWrite(unlinkWrite);
+  await recordProviderLinkEvent(db, {
+    userId: account._id,
+    provider,
+    providerId: unlink.linkedId,
+    action: "unlink",
+    at: revokedAt,
+  });
 
   return NextResponse.json(
     { success: true },

@@ -1,3 +1,4 @@
+import { recordProviderLinkEvent } from "@/lib/auth/providerLinkHistory";
 import { NextResponse } from "next/server";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { ObjectId } from "mongodb";
@@ -147,6 +148,14 @@ export const POST = withNoStore(async (request: Request) => {
     if (updated.matchedCount !== 1) {
       return errorResponse(409, fenceConflictMessage);
     }
+
+    await recordProviderLinkEvent(db, {
+      userId: objectId,
+      provider: "discord",
+      providerId: discordId,
+      action: "unlink",
+      at: now,
+    });
 
     // Post-commit lookups and audit are best effort: the unlink already
     // committed, so they must not convert success into a retryable failure.

@@ -51,7 +51,6 @@ const LADDER_TOPS: Record<string, string | number> = {
   indexFundsMode: "full",
   labourSystemMode: "full",
   marketSystemMode: MARKET_MODE_ORDER[MARKET_MODE_ORDER.length - 1],
-  freightSettlementMode: "active",
 };
 
 describe("fresh-world flag policy", () => {
@@ -124,17 +123,8 @@ describe("fresh-world flag policy", () => {
 
   it("seeds the operational switches on for fresh worlds and only on insert for top-ups", () => {
     const switches = [
-      "priceLevelEnabled",
-      "fiscalStabilizerEnabled",
-      "crisisV2EmergentEnabled",
       "crisisV2StagesEnabled",
-      "executiveSuccessionEnabled",
-      "leaderLegacyEnabled",
       "campaignLiveGdpBasisEnabled",
-      "byElectionFillEnabled",
-      "scotusNppNominationsEnabled",
-      "scotusPendingDocketEnabled",
-      "preeGenericFallbackEnabled",
       "cyberOperationsEnabled",
     ];
     const { settings, flags } = splitFreshWorldGameConfigFlags(referenceGameConfig);

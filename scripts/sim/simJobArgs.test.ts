@@ -26,7 +26,6 @@ describe("sim worker runWorld argument emission", () => {
     const job: SimJobExperimentFields = {
       marketSystemMode: "capital",
       labourSystemMode: "full",
-      freightSettlementMode: "active",
       canonicalFreightBillingEnabled: true,
       shortageResponsiveSourcingEnabled: false,
       indexFundBondLiquidityEnabled: true,
@@ -42,7 +41,6 @@ describe("sim worker runWorld argument emission", () => {
     expect(buildRunWorldArgs(job)).toEqual([
       "--market-mode=capital",
       "--labour-mode=full",
-      "--freight-settlement=active",
       "--canonical-freight-billing=true",
       "--shortage-responsive-sourcing=false",
       "--index-fund-bond-liquidity=true",

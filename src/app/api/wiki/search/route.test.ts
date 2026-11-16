@@ -10,6 +10,12 @@ vi.mock("@/lib/wiki/wikiSearchSources", () => ({
   getNonPageWikiSearchCandidates: vi.fn(),
 }));
 
+vi.mock("@/lib/wiki/docsSearch", async () => {
+  const actual =
+    await vi.importActual<typeof import("@/lib/wiki/docsSearch")>("@/lib/wiki/docsSearch");
+  return { ...actual, getDocsIndex: vi.fn() };
+});
+
 let db: MockDb;
 
 interface PageDoc {
@@ -61,6 +67,8 @@ describe("GET /api/wiki/search", () => {
     const { checkWikiDisabled } = await import("@/lib/api/wikiGuard");
     vi.mocked(checkWikiDisabled).mockResolvedValue(null);
     await givenNonPageCandidates([]);
+    const { getDocsIndex } = await import("@/lib/wiki/docsSearch");
+    vi.mocked(getDocsIndex).mockResolvedValue([]);
   });
 
   it.each(["\u0000", "election\u0000history"])(
@@ -210,5 +218,49 @@ describe("GET /api/wiki/search", () => {
     const res = await GET(get("q=anything"));
 
     expect(res.status).toBe(403);
+  });
+  it("appends docs results labelled as docs and linked to the docs site", async () => {
+    givenPages([{ slug: "filibuster", title: "Filibuster" }]);
+    const { getDocsIndex } = await import("@/lib/wiki/docsSearch");
+    vi.mocked(getDocsIndex).mockResolvedValue([
+      { h: "/design/senate.html#filibuster", t: "Senate design", d: "Filibuster rules" },
+      { h: "/design/other.html", t: "Unrelated", d: "Nothing here" },
+    ]);
+
+    const hits = await hitsFor("q=filibuster");
+
+    expect(hits.map((h) => h.kind)).toEqual(["page", "docs"]);
+    expect(hits[1].href).toBe("https://docs.lakesidegames.net/design/senate.html#filibuster");
+  });
+
+  it("still returns wiki results when the docs index is unreachable", async () => {
+    givenPages([{ slug: "filibuster", title: "Filibuster" }]);
+    const { getDocsIndex } = await import("@/lib/wiki/docsSearch");
+    vi.mocked(getDocsIndex).mockResolvedValue([]);
+
+    const hits = await hitsFor("q=filibuster");
+
+    expect(hits.map((h) => h.slug)).toEqual(["filibuster"]);
+  });
+
+  it("deep-links to the best matching heading", async () => {
+    givenPages([{ slug: "combat", title: "Combat Guide" }]);
+    const cursor = db.collectionMocks.wikiPages.find();
+    cursor.toArray.mockResolvedValue([
+      { slug: "combat", title: "Combat Guide", content: "## Attack formula\ntext" },
+    ]);
+
+    const hits = (await hitsFor("q=attack+formula")) as Array<Hit & { anchor?: string }>;
+
+    expect(hits[0].href).toBe("/wiki/combat#attack-formula");
+    expect(hits[0].anchor).toBe("attack-formula");
+  });
+
+  it("finds a page despite a one-letter typo on a long word", async () => {
+    givenPages([{ slug: "filibuster", title: "Filibuster" }]);
+
+    const hits = await hitsFor("q=filibustr");
+
+    expect(hits.map((h) => h.slug)).toEqual(["filibuster"]);
   });
 });

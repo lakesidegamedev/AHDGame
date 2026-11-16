@@ -1,9 +1,10 @@
 import type { ObjectId } from "mongodb";
 
-export type BannedDeviceKind = "deviceKey" | "trackingId" | "fingerprint";
+export type BannedDeviceKind =
+  "deviceKey" | "trackingId" | "fingerprint" | "apple" | "discord" | "google";
 
 /**
- * One row per banned device signal in the `bannedDevices` collection.
+ * One row per banned device signal or login account (keyed subject hash) in the `bannedDevices` collection.
  * Unlike a users-doc match, these rows outlive account deletion, so a banned
  * player cannot register again from the same browser after self-deleting.
  */

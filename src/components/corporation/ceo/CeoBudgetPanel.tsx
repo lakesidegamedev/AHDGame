@@ -1,5 +1,6 @@
 "use client";
 
+import { WikiHelpLink } from "@/components/wiki/WikiHelpLink";
 import { useState } from "react";
 import { flushSync } from "react-dom";
 import {
@@ -273,15 +274,18 @@ export default function CeoBudgetPanel({
       title="Budget and income"
       meta={MONEY_PERIOD_PER_LABEL[periodView]}
       actions={
-        <Segmented
-          ariaLabel="Budget period"
-          options={PERIOD_OPTIONS}
-          value={periodView}
-          onChange={(p) => {
-            setDrafts({});
-            setPeriodView(p);
-          }}
-        />
+        <>
+          <WikiHelpLink screen="corporation-budget" />
+          <Segmented
+            ariaLabel="Budget period"
+            options={PERIOD_OPTIONS}
+            value={periodView}
+            onChange={(p) => {
+              setDrafts({});
+              setPeriodView(p);
+            }}
+          />
+        </>
       }
     >
       {corporation.autopilot != null && (

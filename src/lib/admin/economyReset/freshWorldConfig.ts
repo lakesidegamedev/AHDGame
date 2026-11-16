@@ -41,6 +41,8 @@ export const FRESH_PLANTS_CONFIG_UNSET: Readonly<Record<string, "">> = Object.fr
   producerDemandPlanStage: "",
   // Demand curve stage, switched on deliberately.
   producerDemandCurveStage: "",
+  // Staffing tightness counts jobseekers, switched on deliberately.
+  labourStaffingSlackStage: "",
   producerSpilloverStage: "",
   producerOwnSitesFirstStage: "",
   // Own shipments first on owned freight, switched on deliberately.

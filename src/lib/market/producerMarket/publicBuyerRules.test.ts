@@ -1,11 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { householdTransferFunding, publicBuyerFunding } from "./publicBuyerRules";
-import {
-  GOVT_HEALTHCARE_DEMAND_RATE,
-  GOVT_DEFENSE_ORDNANCE_DEMAND_RATE,
-} from "@/lib/constants/commodities";
 
 describe("public buyer funding", () => {
+  const PLANT_SHARE = 0.02;
   const [us] = publicBuyerFunding(
     [
       {
@@ -16,15 +13,78 @@ describe("public buyer funding", () => {
           ["NY", 3],
           ["CA", 1],
         ]),
+        plantShare: PLANT_SHARE,
       },
     ],
     48
   );
 
-  it("funds goods from each turn's slice of the existing budget, nothing more", () => {
-    const health = (4800 / 48) * GOVT_HEALTHCARE_DEMAND_RATE;
-    const ordnance = (9600 / 48) * GOVT_DEFENSE_ORDNANCE_DEMAND_RATE;
+  it("funds each turn's slice of the budget that falls inside the plant economy, nothing more", () => {
+    const health = (4800 / 48) * PLANT_SHARE;
+    const ordnance = (9600 / 48) * PLANT_SHARE;
     expect(us.fundingLocal).toBeCloseTo(health + ordnance, 9);
+  });
+
+  it("never buys more than the plant economy's share of the whole budget", () => {
+    const wholeBudgetPerTurn = (4800 + 9600) / 48;
+    expect(us.fundingLocal).toBeLessThanOrEqual(wholeBudgetPerTurn * PLANT_SHARE + 1e-9);
+  });
+
+  it("scales with the plant economy, so a country with ten times the plants buys ten times the goods", () => {
+    const fund = (plantShare: number) =>
+      publicBuyerFunding(
+        [
+          {
+            countryId: "US",
+            byCategory: { healthcare: 4800 },
+            plannedEconomy: false,
+            stateWeights: new Map([["NY", 1]]),
+            plantShare,
+          },
+        ],
+        48
+      )[0].fundingLocal;
+    expect(fund(0.2) / fund(0.02)).toBeCloseTo(10, 9);
+  });
+
+  it("buys a size the plants can make: a national budget no longer outruns one plant by orders of magnitude", () => {
+    // A national healthcare budget of 2e12 a year against a plant economy that
+    // turns over a few tens of thousands a turn in a 7e11-a-turn economy.
+    const gdpPerTurn = 7e11;
+    const plantTurnover = 3.2e4;
+    const [country] = publicBuyerFunding(
+      [
+        {
+          countryId: "US",
+          byCategory: { healthcare: 2e12 },
+          plannedEconomy: false,
+          stateWeights: new Map([["NY", 1]]),
+          plantShare: plantTurnover / gdpPerTurn,
+        },
+      ],
+      48
+    );
+    expect(country.fundingLocal).toBeLessThan(plantTurnover);
+    expect(country.fundingLocal).toBeGreaterThan(plantTurnover / 1000);
+  });
+
+  it("spends nothing where the plant economy has no measured share, and caps a share above 1", () => {
+    const fund = (plantShare: number) =>
+      publicBuyerFunding(
+        [
+          {
+            countryId: "US",
+            byCategory: { healthcare: 4800 },
+            plannedEconomy: false,
+            stateWeights: new Map([["NY", 1]]),
+            plantShare,
+          },
+        ],
+        48
+      )[0].fundingLocal;
+    expect(fund(0)).toBe(0);
+    expect(fund(Number.NaN)).toBe(0);
+    expect(fund(5)).toBeCloseTo(4800 / 48, 9);
   });
 
   it("buys local services in each state by weight, goods on the world book", () => {
@@ -38,7 +98,15 @@ describe("public buyer funding", () => {
 
   it("spends nothing on a budget with no goods lines", () => {
     const [x] = publicBuyerFunding(
-      [{ countryId: "X", byCategory: {}, plannedEconomy: false, stateWeights: new Map() }],
+      [
+        {
+          countryId: "X",
+          byCategory: {},
+          plannedEconomy: false,
+          stateWeights: new Map(),
+          plantShare: 1,
+        },
+      ],
       48
     );
     expect(x.fundingLocal).toBe(0);

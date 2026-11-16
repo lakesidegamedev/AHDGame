@@ -47,8 +47,10 @@ import {
   tenderDeadlines,
   tenderReservationValue,
   validContractCopy,
+  defenceTenderDeliverabilityError,
 } from "./rules";
 import { validateBid, ContractError } from "./eligibility";
+import { isStateOwned } from "@/lib/nationalization/nationalCorporation";
 import { activateDefenceBid } from "./defence";
 import type { publishTenderSchema, bidSchema } from "./schemas";
 import type { GovernmentTender, ContractBid } from "./types";
@@ -191,6 +193,20 @@ export async function publishTender(
         400
       );
     defenseLine = resolveDefenseLineFrom(budget);
+    const procurementNotional = defenceContractLotCaps(
+      defenseLine,
+      minimumPrice
+    ).procurementNotional;
+    const domesticSuppliers = await corporationsCollection(db)
+      .find({ countryId }, { projection: { countryOwnerId: 1, ownershipState: 1 } })
+      .toArray();
+    const undeliverable = defenceTenderDeliverabilityError({
+      lots: input.terms.lots,
+      floorPricePerLot: minimumPrice,
+      procurementNotional,
+      stateOwnedEligible: domesticSuppliers.some((c) => isStateOwned(c)),
+    });
+    if (undeliverable) throw new ContractError(undeliverable, 400);
   } else {
     const config = await loadContractIssuanceSettings(db);
     if (!config.contractIssuanceEnabled)

@@ -167,9 +167,7 @@ export async function processScotusSurpriseCaseTurn(
   db?: Db,
   spawnRandomDraw: number = Math.random(),
   templatePickRandomDraw: number = Math.random(),
-  hearingDelayRandomDraw: number = Math.random(),
-  /** Off: the Court rules on a new case the turn it is filed. */
-  pendingDocket = true
+  hearingDelayRandomDraw: number = Math.random()
 ): Promise<ScotusSurpriseCaseTurnResult> {
   const database = db ?? (await getDb());
 
@@ -226,13 +224,11 @@ export async function processScotusSurpriseCaseTurn(
     axis: template.axis,
     decisionYear,
     status: "pending",
-    hearingDueTurn:
-      currentTurn + (pendingDocket ? surpriseCaseHearingDelayTurns(hearingDelayRandomDraw) : 0),
+    hearingDueTurn: currentTurn + surpriseCaseHearingDelayTurns(hearingDelayRandomDraw),
     isSurprise: true,
     createdAt: new Date(),
     updatedAt: new Date(),
   });
 
-  const ruledNow = pendingDocket ? 0 : await decideDueSurpriseCases(database, currentTurn);
-  return { spawned: true, caseKey: template.templateKey, decided: decided + ruledNow };
+  return { spawned: true, caseKey: template.templateKey, decided };
 }
