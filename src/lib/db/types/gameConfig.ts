@@ -724,15 +724,6 @@ export interface GameConfig {
    */
   indexFundsEnabled?: boolean;
   /**
-   * Labour/Unions economic system rollout mode. Each tier supersets the previous:
-   * off, wages, macro, unions, full. Absent/unknown means off. Resolve via `getLabourSystemMode`.
-   */
-  labourSystemMode?: "off" | "wages" | "macro" | "unions" | "full";
-  /** Username of the admin who last changed the labour system mode. */
-  labourSystemModeUpdatedBy?: string;
-  /** When the labour system mode was last changed (ISO 8601). */
-  labourSystemModeUpdatedAt?: string;
-  /**
    * Structural market rework rollout mode (audit t806, "Nothing Wants to
    * Sell"). Graduated, each tier a superset of the previous (see
    *   off         — today's economy, unchanged (default)

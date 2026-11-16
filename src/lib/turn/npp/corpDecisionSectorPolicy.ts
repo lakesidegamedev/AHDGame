@@ -317,17 +317,15 @@ export function applyNppSectorPolicies({
     }
   }
 
-  // ── 2d. Wage policy (labour wages+) ───────────────────────────────────────
+  // ── 2d. Wage policy ───────────────────────────────────────
   // Stepped toward shortage/glut targets one tick at a time; see nppWagePolicy.
-  if (ctx.labourWagesEnabled) {
-    pushNppWageUpdates({
-      corp,
-      sectorProfits,
-      divestedSectorIds,
-      priceRatioOf,
-      now,
-      sectorUpdates,
-    });
-  }
+  pushNppWageUpdates({
+    corp,
+    sectorProfits,
+    divestedSectorIds,
+    priceRatioOf,
+    now,
+    sectorUpdates,
+  });
   return { conversionApplied, conversionCharge };
 }

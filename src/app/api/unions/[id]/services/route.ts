@@ -1,6 +1,6 @@
 /**
  * PATCH /api/unions/[id]/services: the union president switches the service
- * slate on/off. Gated on `labourSystemMode >= "full"`.
+ * slate on/off.
  *
  * Unknown service ids are dropped, not stored (`normalizeServiceIds`), so a
  * stale or hand-edited request body can never widen the effect beyond the
@@ -15,7 +15,6 @@ import { requireBasicAuth } from "@/lib/api/requireAuth";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { getCharacterByUserId } from "@/lib/db/characterLookup";
-import { isLabourFullMode } from "@/lib/labour/featureFlag";
 import { setUnionServices } from "@/lib/unions/commands/unionActions";
 
 interface RouteParams {
@@ -30,10 +29,6 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   try {
     const auth = await requireBasicAuth();
     if (!auth.ok) return auth.response;
-
-    if (!(await isLabourFullMode())) {
-      return errorResponse(403, "Player-run unions are not enabled.");
-    }
 
     const rateLimit = checkRateLimit(`api/unions/[id]/services:${auth.user.userId}`, 20, 60000);
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);

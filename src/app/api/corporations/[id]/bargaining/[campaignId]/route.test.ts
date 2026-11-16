@@ -7,7 +7,6 @@ vi.mock("@/lib/api/rateLimit", () => ({
   checkRateLimit: vi.fn(),
   rateLimitResponse: vi.fn(),
 }));
-vi.mock("@/lib/labour/featureFlag", () => ({ isLabourFullMode: vi.fn() }));
 vi.mock("@/lib/turn/currentTurn", () => ({ getCurrentTurn: vi.fn() }));
 vi.mock("@/lib/unions/commands/bargaining", () => ({
   actOnBargainingCampaignAsEmployer: vi.fn(),
@@ -38,8 +37,6 @@ beforeEach(async () => {
   } as never);
   const { checkRateLimit } = await import("@/lib/api/rateLimit");
   vi.mocked(checkRateLimit).mockReturnValue({ ok: true } as never);
-  const { isLabourFullMode } = await import("@/lib/labour/featureFlag");
-  vi.mocked(isLabourFullMode).mockResolvedValue(true);
   const { getCurrentTurn } = await import("@/lib/turn/currentTurn");
   vi.mocked(getCurrentTurn).mockResolvedValue(421);
 });

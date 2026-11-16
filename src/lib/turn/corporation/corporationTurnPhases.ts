@@ -42,7 +42,7 @@ import type { Document } from "mongodb";
  * v2: persist the per-state labour wage index (+ v2-3b: automation index) to
  * macroMetrics (SP5: economic.* re-homed off stateMetrics) so the macro
  * coupling (migration pull / medianIncome / unemployment, gated on
- * labourSystemMode ≥ "macro") can read it. Only written when the labour
+ * can read it. Only written when the labour
  * system is on, so it's inert otherwise.
  */
 export async function persistLabourIndices(args: {

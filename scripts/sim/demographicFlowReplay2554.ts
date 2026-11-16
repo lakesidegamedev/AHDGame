@@ -67,9 +67,7 @@ async function seedFixture(): Promise<Db> {
     startingYear: 1991,
     currentYear: 1991,
   } as never);
-  await db
-    .collection("gameConfig")
-    .insertOne({ _id: "default", labourSystemMode: "legacy" } as never);
+  await db.collection("gameConfig").insertOne({ _id: "default" } as never);
   for (const regionId of ["CA", "TX"]) {
     const male = Array<number>(101).fill(0);
     const female = Array<number>(101).fill(0);

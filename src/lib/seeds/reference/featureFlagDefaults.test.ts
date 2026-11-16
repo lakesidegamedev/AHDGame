@@ -49,7 +49,6 @@ const LADDER_TOPS: Record<string, string | number> = {
   nppForeignPolicyStage: "war",
   nppEntryViabilityMode: "enforce",
   indexFundsMode: "full",
-  labourSystemMode: "full",
   marketSystemMode: MARKET_MODE_ORDER[MARKET_MODE_ORDER.length - 1],
 };
 

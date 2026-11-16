@@ -47,9 +47,7 @@ async function seed(db: Db, year = 2019) {
     startingYear: year,
     currentYear: year,
   } as never);
-  await db
-    .collection("gameConfig")
-    .insertOne({ _id: "default", labourSystemMode: "legacy" } as never);
+  await db.collection("gameConfig").insertOne({ _id: "default" } as never);
   const states = await db
     .collection<{ _id: string; countryId: string; population: number }>("states")
     .find()

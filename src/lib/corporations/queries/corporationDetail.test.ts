@@ -4,7 +4,6 @@ import { type Db, ObjectId } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
 import { makeCharacter, makeCorporation } from "@/lib/test-utils/factories";
 import type { BankCharter } from "@/lib/db/types/bank";
-import { isLabourWagesEnabled } from "@/lib/labour/featureFlag";
 import {
   DOMINANCE_MARGIN_PENALTY_AT_FULL,
   DOMINANCE_MARKET_SHARE_THRESHOLD,
@@ -24,17 +23,6 @@ vi.mock("@/lib/corporations/turnReferenceData", () => ({
 vi.mock("@/lib/db/patreonBorders", () => ({
   fetchBordersByUserIds: vi.fn().mockResolvedValue(new Map()),
 }));
-// isLabourWagesEnabled opens its own DB handle (getDb) when no preloaded
-// config is passed — stub it so the query stays fully MockDb-driven.
-vi.mock("@/lib/labour/featureFlag", async () => {
-  const actual = await vi.importActual<typeof import("@/lib/labour/featureFlag")>(
-    "@/lib/labour/featureFlag"
-  );
-  return {
-    ...actual,
-    isLabourWagesEnabled: vi.fn().mockResolvedValue(false),
-  };
-});
 vi.mock("@/lib/corporations/imfPortfolioReceivables", () => ({
   findImfFacilityReceivablesForLender: vi
     .fn()
@@ -848,8 +836,6 @@ describe("loadCorporationDetailView", () => {
   });
 
   it("keeps a plants residual credit as signed maintenance so Gross Profit still matches derived opex (ticket #1122)", async () => {
-    vi.mocked(isLabourWagesEnabled).mockResolvedValueOnce(true);
-
     const ceo = makeCharacter({
       _id: new ObjectId(),
       userId: new ObjectId(),

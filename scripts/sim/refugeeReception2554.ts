@@ -67,9 +67,7 @@ async function main() {
       isProcessing: false,
       preset: "1991-default",
     });
-    await db
-      .collection<StringIdFixture>("gameConfig")
-      .insertOne({ _id: "default", labourSystemMode: "legacy" });
+    await db.collection<StringIdFixture>("gameConfig").insertOne({ _id: "default" });
     const male = Array.from({ length: 101 }, (_, age) => (age >= 20 && age < 60 ? 1250 : 0));
     for (const [id, countryId] of [
       ["YU_ORIGIN", "YU"],

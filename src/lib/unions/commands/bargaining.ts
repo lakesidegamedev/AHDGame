@@ -14,7 +14,6 @@ import type {
   StateMetrics,
   Union,
 } from "@/lib/db/types";
-import { isLabourMacroEnabled } from "@/lib/labour/featureFlag";
 import {
   labourTightnessScoreFromTightness,
   nationalTightnessWorkerWeighted,
@@ -108,14 +107,10 @@ export async function costOfLivingByState(
  * COLD-START FALLBACK: with no usable measured reading, fall back to
  * `laborTightnessFromUnemployment` off national unemployment.
  *
- * MODE GATE: the measured path requires `labourSystemMode` >= "macro", the tier
- * that gates the unemployment node's tightness channel. Below that the fallback
- * applies even if measured readings exist, so a disabled labour macro loop
- * behaves exactly as before.
  */
 export async function bargainingMacroInputs(db: Db, countryId: Union["countryId"]) {
   const nationalDocId = getNationalDocId(countryId);
-  const [metrics, budget, states, labourConfig] = await Promise.all([
+  const [metrics, budget, states] = await Promise.all([
     nationalDocId
       ? macroMetricsCollection(db).findOne(
           { _id: nationalDocId },
@@ -129,12 +124,11 @@ export async function bargainingMacroInputs(db: Db, countryId: Union["countryId"
     statesCollection(db)
       .find({ countryId }, { projection: { _id: 1 } })
       .toArray(),
-    gameConfigCollection(db).findOne({ _id: "default" }, { projection: { labourSystemMode: 1 } }),
   ]);
   const unemploymentFallback = metrics?.economic?.unemploymentRate?.value ?? 5;
   let laborTightness = laborTightnessFromUnemployment(unemploymentFallback);
   const stateIds = states.map((state) => state._id);
-  if (stateIds.length > 0 && (await isLabourMacroEnabled(labourConfig))) {
+  if (stateIds.length > 0) {
     const stateDocs = await macroMetricsCollection(db)
       .find(
         { _id: { $in: stateIds } },

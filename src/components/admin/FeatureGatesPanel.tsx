@@ -196,7 +196,7 @@ const NPP_ENTRY_VIABILITY_MODES: {
  * migrations on a fresh enable.
  */
 interface SystemMode {
-  key: "labourSystemMode" | "marketSystemMode" | "indexFundsMode";
+  key: "marketSystemMode" | "indexFundsMode";
   label: string;
   desc: string;
   endpoint: string;
@@ -205,20 +205,6 @@ interface SystemMode {
 }
 
 const SYSTEM_MODES: SystemMode[] = [
-  {
-    key: "labourSystemMode",
-    label: "Labour system",
-    desc: "Graduated rollout — each tier is a superset of the previous.",
-    endpoint: "/api/admin/config/labour",
-    defaultValue: gameConfigDefaults.labourSystemMode ?? "off",
-    levels: [
-      { value: "off", label: "Off", blurb: "Baseline economy, no labour dynamics." },
-      { value: "wages", label: "Wages", blurb: "Sector wage dynamics + minimum-wage laws." },
-      { value: "macro", label: "Macro", blurb: "Wages feed back into the macro engine." },
-      { value: "unions", label: "Unions", blurb: "Unions & collective bargaining." },
-      { value: "full", label: "Full", blurb: "Complete labour system." },
-    ],
-  },
   {
     key: "marketSystemMode",
     label: "Market structure",

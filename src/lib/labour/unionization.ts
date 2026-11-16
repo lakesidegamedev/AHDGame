@@ -1,6 +1,5 @@
 /**
  * Unionization metric + standing labor-cost premium
- * (`labourSystemMode >= "unions"`).
  *
  * Per-sector, 0 to 100, drifts toward a condition-driven target each turn.
  * `unionPremium()` turns it into a standing labor-cost surcharge; strike events

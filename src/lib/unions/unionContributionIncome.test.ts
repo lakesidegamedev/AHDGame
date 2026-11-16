@@ -9,12 +9,9 @@ function mockDb(opts: {
   organizers: { unionId: ObjectId; characterId: ObjectId; strength: number }[];
   unions: Record<string, unknown>[];
   sectors: Record<string, unknown>[];
-  mode?: "full" | "off";
 }): Db {
   return {
     collection: (name: string) => {
-      if (name === "gameConfig")
-        return { findOne: async () => ({ labourSystemMode: opts.mode ?? "full" }) };
       if (name === "unionOrganizers") {
         return {
           find: (filter: { characterId?: ObjectId; unionId?: { $in: ObjectId[] } }) => ({
@@ -85,9 +82,8 @@ describe("unionContributionIncomePerTurn", () => {
     expect(await unionContributionIncomePerTurn(db, me)).toBeCloseTo(pool * 0.4, 6);
   });
 
-  it.each(["vacant", "disabled"] as const)(
-    "does not project payments from a %s union system",
-    async (scenario) => {
+  it("does not project payments from a vacant union", async () => {
+    {
       const me = new ObjectId();
       const unionId = new ObjectId();
       const db = mockDb({
@@ -95,7 +91,7 @@ describe("unionContributionIncomePerTurn", () => {
         unions: [
           {
             _id: unionId,
-            ownerId: scenario === "vacant" ? null : new ObjectId(),
+            ownerId: null,
             treasury: 1000,
             duesPerWorkerAnnual: 1,
             politicalContributionPct: 0.5,
@@ -104,9 +100,8 @@ describe("unionContributionIncomePerTurn", () => {
         sectors: [
           { representingUnionId: unionId, workers: 100, unionization: 100, wagePerWorker: 100 },
         ],
-        mode: scenario === "disabled" ? "off" : "full",
       });
       expect(await unionContributionIncomePerTurn(db, me)).toBe(0);
     }
-  );
+  });
 });

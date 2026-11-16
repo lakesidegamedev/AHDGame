@@ -4,14 +4,12 @@ import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
 import { getDb } from "@/lib/mongodb";
 import { requireBasicAuth } from "@/lib/api/requireAuth";
 import { getCharacterByUserId } from "@/lib/db/characterLookup";
-import { isLabourFullMode } from "@/lib/labour/featureFlag";
 import { organizeUnderground } from "@/lib/unions/commands/organizeUnderground";
 import { POST } from "./route";
 
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
 vi.mock("@/lib/api/requireAuth", () => ({ requireBasicAuth: vi.fn() }));
 vi.mock("@/lib/db/characterLookup", () => ({ getCharacterByUserId: vi.fn() }));
-vi.mock("@/lib/labour/featureFlag", () => ({ isLabourFullMode: vi.fn() }));
 vi.mock("@/lib/unions/commands/organizeUnderground", () => ({
   organizeUnderground: vi.fn(),
 }));
@@ -37,7 +35,6 @@ beforeEach(() => {
     ok: true,
     user: { userId: "user-1" },
   } as never);
-  vi.mocked(isLabourFullMode).mockResolvedValue(true);
   vi.mocked(getCharacterByUserId).mockResolvedValue(character as never);
   vi.mocked(organizeUnderground).mockResolvedValue({
     ok: true,

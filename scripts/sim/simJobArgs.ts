@@ -3,7 +3,6 @@
 // "plants" job was rejected as invalid). Pure constant modules: no Mongo, no
 // env, safe to import eagerly.
 import { MARKET_MODE_ORDER, type MarketSystemMode } from "@/lib/market/modes";
-import { LABOUR_MODE_ORDER, type LabourSystemMode } from "@/lib/labour/modes";
 import { SIM_ACTOR_MODES } from "@/lib/sim/syntheticActors";
 import type { SimActorMode } from "@/lib/sim/actorCoverage";
 import { frontierEntryExperimentCliArgs } from "@/lib/sim/economicExperiment";
@@ -16,7 +15,6 @@ export interface SimJobExperimentFields {
   sovereignIssuanceConsolidationEnabled?: boolean;
   domesticSovereignBondCoverageEnabled?: boolean;
   marketSystemMode?: string;
-  labourSystemMode?: string;
   canonicalFreightBillingEnabled?: boolean;
   shortageResponsiveSourcingEnabled?: boolean;
   indexFundBondLiquidityEnabled?: boolean;
@@ -92,12 +90,6 @@ export function buildRunWorldArgs(job: SimJobExperimentFields): string[] {
       throw new Error(`invalid marketSystemMode "${job.marketSystemMode}"`);
     }
     args.push(`--market-mode=${job.marketSystemMode}`);
-  }
-  if (job.labourSystemMode) {
-    if (!LABOUR_MODE_ORDER.includes(job.labourSystemMode as LabourSystemMode)) {
-      throw new Error(`invalid labourSystemMode "${job.labourSystemMode}"`);
-    }
-    args.push(`--labour-mode=${job.labourSystemMode}`);
   }
   booleanFlag(job, "canonicalFreightBillingEnabled", "canonical-freight-billing", args);
   booleanFlag(job, "shortageResponsiveSourcingEnabled", "shortage-responsive-sourcing", args);

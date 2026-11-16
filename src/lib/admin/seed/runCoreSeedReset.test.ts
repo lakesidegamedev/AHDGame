@@ -24,8 +24,8 @@ describe("runSeed reset drops", () => {
   it("does not drop gameConfig, which holds operational state no seeder restores", () => {
     // `gameConfig` is a singleton whose ~113 fields are ~10 seeded reference
     // defaults and ~100 pieces of live operational state: maintenance mode, the
-    // Discord webhook URLs, every admin feature gate (labourSystemMode,
-    // marketSystemMode, indexFundsMode, moneySupplyEnabled, …). Dropping it
+    // Discord webhook URLs, every admin feature gate
+    // (marketSystemMode, indexFundsMode, moneySupplyEnabled, …). Dropping it
     // re-seeds the ten and silently discards the hundred — nothing anywhere
     // restores them, and `DEFAULT_GAME_STATE_FLAGS` covers `gameState`, not this
     // collection.

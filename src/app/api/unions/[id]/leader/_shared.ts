@@ -4,7 +4,6 @@ import { requireBasicAuth } from "@/lib/api/requireAuth";
 import { errorResponse } from "@/lib/api/errors";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { getCharacterByUserId } from "@/lib/db/characterLookup";
-import { isLabourFullMode } from "@/lib/labour/featureFlag";
 import type { Character, Union } from "@/lib/db/types";
 import { unionsCollection } from "@/lib/db/repositories/unions";
 
@@ -18,10 +17,6 @@ export async function loadUnionLeaderOffer(
 ): Promise<UnionLeaderOfferContext> {
   const auth = await requireBasicAuth();
   if (!auth.ok) return { ok: false, response: auth.response };
-
-  if (!(await isLabourFullMode())) {
-    return { ok: false, response: errorResponse(403, "Player-run unions are not enabled.") };
-  }
 
   const rateLimit = checkRateLimit(
     `api/unions/[id]/leader/${action}:${auth.user.userId}`,
