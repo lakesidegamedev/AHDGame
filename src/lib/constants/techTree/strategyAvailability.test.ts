@@ -5,7 +5,7 @@ import type { TechCorpView } from "./selectors";
 import { getStrategy } from "../sectorStrategies";
 
 const baseCorp: TechCorpView = { type: "energy", unlockedTechNodeIds: [] };
-const renewables = { id: "renewables", minDecade: "1999", requiresTechUnlock: true };
+const renewables = { id: "wind", minDecade: "1999", requiresTechUnlock: true };
 const standard = { id: "standard" };
 
 describe("getStrategyAvailability", () => {

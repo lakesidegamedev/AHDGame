@@ -1298,6 +1298,10 @@ export interface GameConfig {
    * delivery, expiry and cancellation continue. Preserved with gameConfig. */
   governmentContractsEnabled?: boolean;
 
+  /** Party joining and recruitment require adjacent territory. Missing means enabled.
+   * Operator choice is preserved across world resets. */
+  partyAdjacencyEnabled?: boolean;
+
   /** Temporary confidence-gauge freeze. Missing means frozen. Explicitly enable
    * to resume drift, events and formation changes. Preserved across resets. */
   governmentConfidenceEnabled?: boolean;

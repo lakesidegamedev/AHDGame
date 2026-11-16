@@ -30,6 +30,10 @@ export const FIRMING_WEIGHT_BY_METHOD: Readonly<Record<string, number>> = {
   smart_grid: 0.5,
 };
 
+/** Power methods whose output comes and goes with the weather. Hydro is near-firm and not listed. */
+export const INTERMITTENT_POWER_METHODS: readonly string[] = ["wind", "solar"];
+const INTERMITTENT = new Set(INTERMITTENT_POWER_METHODS);
+
 /** Firming capacity per unit of renewables that removes the penalty entirely. */
 export const STORAGE_RATIO_TARGET = 0.25;
 
@@ -57,7 +61,7 @@ export function regionalPowerMix(
     const capacity = Math.max(0, finite(sector.capacity));
     const method = sector.strategyId ?? "standard";
     mix.total += capacity;
-    if (method === "renewables") mix.renewables += capacity;
+    if (INTERMITTENT.has(method)) mix.renewables += capacity;
     mix.firming += capacity * (FIRMING_WEIGHT_BY_METHOD[method] ?? 0);
   }
   return mix;
@@ -107,7 +111,10 @@ const OPENING_AGE_BY_METHOD: Readonly<Record<string, number>> = {
   standard: 28,
   nuclear: 34,
   fracking: 12,
-  renewables: 8,
+  hydroelectric: 45,
+  gas_fired: 18,
+  wind: 8,
+  solar: 5,
   smart_grid: 6,
   grid_storage_utility: 0,
   advanced_fission: 0,
@@ -211,6 +218,7 @@ const CARBON_PRICE_FULL_BILL = 600;
 const ENERGY_INTENSITY_BY_METHOD: Readonly<Record<string, number>> = {
   standard: 1,
   fracking: 0.8,
+  gas_fired: 0.5,
 };
 const INTENSITY_BY_TYPE: Readonly<Record<string, number>> = {
   chemical_industries: 0.5,
@@ -261,7 +269,9 @@ export const CLEAN_POWER_TARGET = [0, 0.4, 0.6, 0.8, 0.95] as const;
 
 /** Power methods that count as clean. */
 export const CLEAN_POWER_METHODS: ReadonlySet<string> = new Set([
-  "renewables",
+  "wind",
+  "solar",
+  "hydroelectric",
   "nuclear",
   "smart_grid",
   "fusion",
