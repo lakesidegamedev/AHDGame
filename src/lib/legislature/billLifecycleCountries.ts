@@ -34,6 +34,7 @@ export const BILL_LIFECYCLE_COUNTRY_IDS: ReadonlySet<CountryId> = new Set<Countr
   "WAL",
   "CA",
   "QC",
+  "AB",
   "DE",
   "JP",
   "IE",

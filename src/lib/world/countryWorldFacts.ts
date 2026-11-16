@@ -35,6 +35,7 @@ import { UKR_WORLD_REGION, UKR_UN_MEMBER_SINCE } from "@/lib/countries/ukr/geogr
 import { BAL_WORLD_REGION } from "@/lib/countries/bal/geographyFacts";
 import { CA_WORLD_REGION, CA_UN_MEMBER_SINCE } from "@/lib/countries/ca/geographyFacts";
 import { QC_WORLD_REGION } from "@/lib/countries/qc/geographyFacts";
+import { AB_WORLD_REGION } from "@/lib/countries/ab/geographyFacts";
 
 /** Coverage region for CountryConfig-backed entities (1953 gate + diagnostics). */
 export const COUNTRY_REGIONS: Record<CountryId, WorldEntityRegion> = {
@@ -69,6 +70,7 @@ export const COUNTRY_REGIONS: Record<CountryId, WorldEntityRegion> = {
   WAL: WAL_WORLD_REGION,
   CA: CA_WORLD_REGION,
   QC: QC_WORLD_REGION,
+  AB: AB_WORLD_REGION,
 };
 
 /** UN admission year priors for CountryConfig sovereigns (strong defaults). */

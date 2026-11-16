@@ -22,7 +22,7 @@ describe("Canada opening party organization", () => {
   });
 
   it("writes one row per region and party, keyed region then party", () => {
-    expect(rows).toHaveLength(13 * 5);
+    expect(rows).toHaveLength(13 * 6);
     expect(new Set(rows.map((row) => row._id)).size).toBe(rows.length);
     for (const row of rows) expect(row._id).toBe(`${row.stateId}_${row.partyId}`);
   });
@@ -38,6 +38,11 @@ describe("Canada opening party organization", () => {
     expect(
       rows.filter((row) => row.partyId === laurentian && row.hasPresence).map((row) => row.stateId)
     ).toHaveLength(13);
+    const albertaSovereignty = slugToId.ca_alberta_sovereignty!;
+    const asp = rows.filter((row) => row.partyId === albertaSovereignty);
+    const aspAlberta = asp.find((row) => row.stateId === "CA_AB")!;
+    for (const row of asp.filter((r) => r.stateId !== "CA_AB"))
+      expect(aspAlberta.organization).toBeGreaterThan(row.organization);
     expect(
       rows.find((row) => row.stateId === "CA_NL" && row.partyId === slugToId.ca_green_horizon)
         ?.hasPresence

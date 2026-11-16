@@ -1,6 +1,6 @@
 export const referendumsContent = `# Independence and Reunification Referendums
 
-Scotland and Wales can leave the United Kingdom, Northern Ireland can leave to join Ireland, and in 2027 worlds Quebec can leave Canada. A passing vote changes the map: the region's offices, parties, elections, companies and resources all move. Getting there takes a region whose people want out, a First Minister who asks, a Prime Minister who agrees, a campaign that wins, and Parliament's consent.
+Scotland and Wales can leave the United Kingdom, Northern Ireland can leave to join Ireland, and in 2027 worlds Quebec and Alberta can leave Canada. A passing vote changes the map: the region's offices, parties, elections, companies and resources all move. Getting there takes a region whose people want out, a First Minister who asks, a Prime Minister who agrees, a campaign that wins, and Parliament's consent.
 
 ## From rising desire to a vote
 
@@ -97,6 +97,12 @@ When the transfer happens:
 In 2027 worlds Quebec has a Sovereignty Desire score that works the same way. Quebec's Premier files the request and Canada's Prime Minister decides. Independence needs a consent bill from Canada's House of Commons, sponsored by the Government of Canada.
 
 When Quebec leaves, it becomes eight regions: Montreal; Laval, Laurentides and Lanaudiere; Monteregie; Capitale-Nationale and Chaudiere-Appalaches; Estrie and Centre-du-Quebec; Outaouais and Abitibi-Temiscamingue; Mauricie and Saguenay-Lac-Saint-Jean; and Eastern and Northern Quebec. Residents move to the Quebec City region. A Quebec-homed Bloc Québécois moves with its members if it has no meaningful presence elsewhere in Canada. Otherwise it stays Canadian and its Quebec members become Independents, like members of other Canada-wide parties. The Premier stays on as caretaker head of government, Quebec keeps the Canadian dollar, and elections open at once for the 125-seat National Assembly, a Prefect in each region and the regional councils. After that the Assembly sits for four years. Canada loses Quebec's 78 MPs and 24 senators, so its House of Commons has 265 seats and a majority needs 133. Quebec takes the share of Canada's federal debt and treasury cash that matches its share of Canada's GDP.
+
+## Alberta
+
+Alberta follows the same path as Quebec. Its Sovereignty Desire opens at 24, Alberta's Premier files the request once it reaches 60, Canada's Prime Minister decides, and independence needs a consent bill from Canada's House of Commons, sponsored by the Government of Canada.
+
+When Alberta leaves, it becomes six regions: Calgary, Edmonton, Central Alberta, Southern Alberta, Foothills and Rockies, and Northern Alberta. Residents move to the Edmonton region. An Alberta-homed Alberta Sovereignty Party moves with its members if it has no meaningful presence elsewhere in Canada. The Premier stays on as caretaker head of government, Alberta keeps the Canadian dollar, and elections open at once for the 87-seat Legislative Assembly, a Commissioner in each region and the regional councils. Canada loses Alberta's 37 MPs and 6 senators, so its House of Commons has 306 seats and a majority needs 154. Alberta takes the share of Canada's federal debt and treasury cash that matches its share of Canada's GDP.
 - Regional ownership, parties, elections, companies, natural resources and the affected country maps all update. It is a world change, not a cosmetic result. New elections are stood up in the new country under [Election Mechanics](/wiki/election-mechanics), and a Northern Ireland reunification brings the region into [Ireland](/wiki/ie-overview).
 
 A transfer that stalls after the required consent is enacted is handled by the game team.

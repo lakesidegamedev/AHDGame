@@ -143,6 +143,9 @@ const OVERRIDES: Record<string, Partial<Record<MetricPath, number>>> = {
     "economic.costOfLiving": 104,
     "economic.unemploymentRate": 6.8,
     "economic.gdpGrowth": 2.4,
+    // Independence support in 2025 polling ran roughly 20 to 30 percent;
+    // seeded low in that band, well under the referendum request threshold.
+    "governance.independenceDesire": 24,
     "environment.renewableEnergy": 17,
     "environment.carbonEmissions": 62,
     "governance.budgetBalance": 0.4,
