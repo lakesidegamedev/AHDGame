@@ -2,7 +2,6 @@
 // every tier added after it was written (it stopped at "capital", so a
 // "plants" job was rejected as invalid). Pure constant modules: no Mongo, no
 // env, safe to import eagerly.
-import { MARKET_MODE_ORDER, type MarketSystemMode } from "@/lib/market/modes";
 import { LABOUR_MODE_ORDER, type LabourSystemMode } from "@/lib/labour/modes";
 import { SIM_ACTOR_MODES } from "@/lib/sim/syntheticActors";
 import type { SimActorMode } from "@/lib/sim/actorCoverage";
@@ -15,7 +14,6 @@ export interface SimJobExperimentFields {
   preparedSandbox?: PreparedSandbox;
   sovereignIssuanceConsolidationEnabled?: boolean;
   domesticSovereignBondCoverageEnabled?: boolean;
-  marketSystemMode?: string;
   labourSystemMode?: string;
   canonicalFreightBillingEnabled?: boolean;
   shortageResponsiveSourcingEnabled?: boolean;
@@ -87,12 +85,6 @@ export function parseActorsField(value: unknown): SimActorMode | undefined {
  * stays the only caller in production. */
 export function buildRunWorldArgs(job: SimJobExperimentFields): string[] {
   const args: string[] = [];
-  if (job.marketSystemMode) {
-    if (!MARKET_MODE_ORDER.includes(job.marketSystemMode as MarketSystemMode)) {
-      throw new Error(`invalid marketSystemMode "${job.marketSystemMode}"`);
-    }
-    args.push(`--market-mode=${job.marketSystemMode}`);
-  }
   if (job.labourSystemMode) {
     if (!LABOUR_MODE_ORDER.includes(job.labourSystemMode as LabourSystemMode)) {
       throw new Error(`invalid labourSystemMode "${job.labourSystemMode}"`);

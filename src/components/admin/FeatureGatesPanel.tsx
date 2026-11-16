@@ -196,7 +196,7 @@ const NPP_ENTRY_VIABILITY_MODES: {
  * migrations on a fresh enable.
  */
 interface SystemMode {
-  key: "labourSystemMode" | "marketSystemMode" | "indexFundsMode";
+  key: "labourSystemMode" | "indexFundsMode";
   label: string;
   desc: string;
   endpoint: string;
@@ -217,24 +217,6 @@ const SYSTEM_MODES: SystemMode[] = [
       { value: "macro", label: "Macro", blurb: "Wages feed back into the macro engine." },
       { value: "unions", label: "Unions", blurb: "Unions & collective bargaining." },
       { value: "full", label: "Full", blurb: "Complete labour system." },
-    ],
-  },
-  {
-    key: "marketSystemMode",
-    label: "Market structure",
-    desc: "Structural market rework — staged tiers.",
-    endpoint: "/api/admin/config/market",
-    defaultValue: gameConfigDefaults.marketSystemMode ?? "off",
-    levels: [
-      { value: "off", label: "Off", blurb: "Legacy market behavior." },
-      {
-        value: "realization",
-        label: "Realization",
-        blurb: "Corp revenue passes price realization.",
-      },
-      { value: "ledger", label: "Ledger", blurb: "Realization + double-entry financial ledger." },
-      { value: "clearing", label: "Clearing", blurb: "Order-book market clearing." },
-      { value: "capital", label: "Capital", blurb: "Full capital-markets tier." },
     ],
   },
   {
@@ -287,8 +269,9 @@ export function FeatureGatesPanel() {
 
   const fetchState = useCallback(async () => {
     try {
-      const [gatesRes, ...modeRes] = await Promise.all([
+      const [gatesRes, marketRes, ...modeRes] = await Promise.all([
         fetch("/api/admin/feature-gates"),
+        fetch("/api/admin/config/market"),
         ...SYSTEM_MODES.map((m) => fetch(m.endpoint)),
       ]);
       if (gatesRes.ok) setState((await gatesRes.json()) as GatesState);
@@ -296,23 +279,23 @@ export function FeatureGatesPanel() {
       for (let i = 0; i < SYSTEM_MODES.length; i++) {
         const res = modeRes[i];
         if (res.ok) {
-          const data = (await res.json()) as {
-            mode?: string;
-            commandEconomyEnabled?: boolean;
-            commandEconomySecondEconomyTolerance?: number;
-          };
+          const data = (await res.json()) as { mode?: string };
           next[SYSTEM_MODES[i].key] = data.mode ?? "off";
-          // Command-economy flags live on the market config route (gameConfig),
-          // not /feature-gates — pull them from that GET response.
-          if (SYSTEM_MODES[i].key === "marketSystemMode") {
-            setCommandEconomyEnabled(data.commandEconomyEnabled === true);
-            setCommandEconomyTolerance(
-              typeof data.commandEconomySecondEconomyTolerance === "number"
-                ? data.commandEconomySecondEconomyTolerance
-                : COMMAND_ECONOMY_DEFAULT_TOLERANCE
-            );
-          }
         }
+      }
+      // Command-economy flags live on the market config route (gameConfig),
+      // not /feature-gates.
+      if (marketRes.ok) {
+        const data = (await marketRes.json()) as {
+          commandEconomyEnabled?: boolean;
+          commandEconomySecondEconomyTolerance?: number;
+        };
+        setCommandEconomyEnabled(data.commandEconomyEnabled === true);
+        setCommandEconomyTolerance(
+          typeof data.commandEconomySecondEconomyTolerance === "number"
+            ? data.commandEconomySecondEconomyTolerance
+            : COMMAND_ECONOMY_DEFAULT_TOLERANCE
+        );
       }
       setModes(next);
     } catch {
@@ -390,37 +373,33 @@ export function FeatureGatesPanel() {
     }
   }, []);
 
-  /** PATCH market config flags; route requires `mode` on every write (same as MarketAdminPanel). */
-  const patchMarketFlags = useCallback(
-    async (body: Record<string, unknown>, savingId: string) => {
-      const currentMode = modes?.marketSystemMode ?? "off";
-      setSavingKey(savingId);
-      setError("");
-      try {
-        const res = await fetch("/api/admin/config/market", {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ mode: currentMode, ...body }),
-        });
-        const data = (await res.json()) as { error?: string };
-        if (!res.ok) {
-          setError(apiErrorText(data, "Failed to update command economy"));
-          return;
-        }
-        if (typeof body.commandEconomyEnabled === "boolean") {
-          setCommandEconomyEnabled(body.commandEconomyEnabled);
-        }
-        if (typeof body.commandEconomySecondEconomyTolerance === "number") {
-          setCommandEconomyTolerance(body.commandEconomySecondEconomyTolerance);
-        }
-      } catch {
-        setError("Network error");
-      } finally {
-        setSavingKey(null);
+  /** PATCH market config flags. */
+  const patchMarketFlags = useCallback(async (body: Record<string, unknown>, savingId: string) => {
+    setSavingKey(savingId);
+    setError("");
+    try {
+      const res = await fetch("/api/admin/config/market", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const data = (await res.json()) as { error?: string };
+      if (!res.ok) {
+        setError(apiErrorText(data, "Failed to update command economy"));
+        return;
       }
-    },
-    [modes]
-  );
+      if (typeof body.commandEconomyEnabled === "boolean") {
+        setCommandEconomyEnabled(body.commandEconomyEnabled);
+      }
+      if (typeof body.commandEconomySecondEconomyTolerance === "number") {
+        setCommandEconomyTolerance(body.commandEconomySecondEconomyTolerance);
+      }
+    } catch {
+      setError("Network error");
+    } finally {
+      setSavingKey(null);
+    }
+  }, []);
 
   if (loading) {
     return (

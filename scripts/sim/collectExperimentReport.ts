@@ -187,7 +187,6 @@ async function main() {
                 "sourceWorktree",
                 "sourceCommit",
                 "startPolicy",
-                "marketSystemMode",
                 "labourSystemMode",
                 "autonomyLevel",
                 "actors",

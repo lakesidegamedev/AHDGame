@@ -56,7 +56,6 @@ import { createInterface } from "readline";
 import { randomUUID } from "crypto";
 import { resolveSimPreset } from "./simPreset";
 import { MongoClient, type Db } from "mongodb";
-import { MARKET_MODE_ORDER, type MarketSystemMode } from "@/lib/market/modes";
 import { SIM_ACTOR_MODES } from "@/lib/sim/syntheticActors";
 import { parseActorsField } from "./simJobArgs";
 import { assertSimSourceShape } from "./simSource";
@@ -77,11 +76,6 @@ const SAFE_TOKEN = /^[a-zA-Z0-9_-]{1,64}$/;
  * for a week. worker.ts enforces <=5000 as the hard backstop regardless. */
 const MAX_SIM_TURNS = 1000;
 
-// Canonical tier list — a local literal here silently omitted every tier added
-// after it was written (it stopped at "capital", so "plants" was neither
-// advertised in the tool schema nor accepted). Pure constant module: no Mongo,
-// no env, safe to import eagerly.
-const MARKET_MODES = MARKET_MODE_ORDER;
 const AUTONOMY_LEVELS = ["v3", "v4", "v5", "v6"] as const;
 
 // ---------------------------------------------------------------------------
@@ -166,12 +160,6 @@ const TOOLS: ToolDef[] = [
         seed: str(
           "RNG seed label — also derives the sandbox db name (ahd_sim_<seed>). The SAME seed continues that world if it already exists rather than starting fresh."
         ),
-        marketSystemMode: {
-          type: "string",
-          enum: MARKET_MODES,
-          description:
-            'structural-market rollout tier seeded on the sandbox gameConfig; omit for the preset default ("off"). Long full-world runs generally want "capital".',
-        },
         autonomyLevel: {
           type: "string",
           enum: AUTONOMY_LEVELS,
@@ -227,9 +215,6 @@ const TOOLS: ToolDef[] = [
       const preset = resolveSimPreset(safe(a.preset, "preset"));
       const seed = safe(a.seed, "seed");
       const turns = turnsOf(a.turns);
-      if (a.marketSystemMode && !MARKET_MODES.includes(a.marketSystemMode as MarketSystemMode)) {
-        throw new Error(`invalid marketSystemMode "${a.marketSystemMode}"`);
-      }
       if (a.autonomyLevel && !AUTONOMY_LEVELS.includes(a.autonomyLevel as never)) {
         throw new Error(`invalid autonomyLevel "${a.autonomyLevel}"`);
       }
@@ -303,7 +288,6 @@ const TOOLS: ToolDef[] = [
           ? { sourceWorktree: safe(a.sourceWorktree, "sourceWorktree") }
           : {}),
         ...(a.sourceCommit !== undefined ? { sourceCommit: String(a.sourceCommit) } : {}),
-        ...(a.marketSystemMode ? { marketSystemMode: a.marketSystemMode } : {}),
         ...(a.autonomyLevel ? { autonomyLevel: a.autonomyLevel } : {}),
         ...(a.canonicalFreightBillingEnabled !== undefined
           ? { canonicalFreightBillingEnabled: a.canonicalFreightBillingEnabled }
@@ -339,7 +323,6 @@ const TOOLS: ToolDef[] = [
         actors: actors || "pure-npp (harness default)",
         sourceWorktree: a.sourceWorktree || "(worker default)",
         sourceCommit: a.sourceCommit || "(worker default)",
-        marketSystemMode: a.marketSystemMode || "off (preset default)",
         autonomyLevel: a.autonomyLevel || "v3 (harness default)",
         canonicalFreightBillingEnabled: a.canonicalFreightBillingEnabled ?? "preset default",
         shortageResponsiveSourcingEnabled: a.shortageResponsiveSourcingEnabled ?? "preset default",
