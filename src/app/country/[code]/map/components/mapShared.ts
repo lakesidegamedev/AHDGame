@@ -26,10 +26,7 @@ export function leanAxisValue(d: LeanFillSource, axis: LeanAxis): number {
  * the selected axis, floored at 0.5 and rounded up to one decimal so the legend
  * endpoints read cleanly. Symmetric so zero always sits on the neutral centre.
  */
-export function leanHalfRange(
-  lean: Record<string, LeanFillSource>,
-  axis: LeanAxis
-): number {
+export function leanHalfRange(lean: Record<string, LeanFillSource>, axis: LeanAxis): number {
   let max = 0;
   for (const d of Object.values(lean)) {
     max = Math.max(max, Math.abs(leanAxisValue(d, axis)));
