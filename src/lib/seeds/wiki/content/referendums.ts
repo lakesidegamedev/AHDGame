@@ -1,6 +1,6 @@
 export const referendumsContent = `# Independence and Reunification Referendums
 
-Scotland and Wales can leave the United Kingdom, Northern Ireland can leave to join Ireland, and in 2027 worlds Quebec can leave Canada. A passing vote changes the map: the region's offices, parties, elections, companies and resources all move. Getting there takes a region whose people want out, a First Minister who asks, a Prime Minister who agrees, a campaign that wins, and Parliament's consent.
+Scotland and Wales can leave the United Kingdom, Northern Ireland can leave to join Ireland, and in 2027 worlds Quebec can leave Canada and Texas and California can leave the United States. A passing vote changes the map: the region's offices, parties, elections, companies and resources all move. Getting there takes a region whose people want out, a First Minister who asks, a Prime Minister who agrees, a campaign that wins, and Parliament's consent.
 
 ## From rising desire to a vote
 
@@ -97,9 +97,18 @@ When the transfer happens:
 In 2027 worlds Quebec has a Sovereignty Desire score that works the same way. Quebec's Premier files the request and Canada's Prime Minister decides. Independence needs a consent bill from Canada's House of Commons, sponsored by the Government of Canada.
 
 When Quebec leaves, it becomes eight regions: Montreal; Laval, Laurentides and Lanaudiere; Monteregie; Capitale-Nationale and Chaudiere-Appalaches; Estrie and Centre-du-Quebec; Outaouais and Abitibi-Temiscamingue; Mauricie and Saguenay-Lac-Saint-Jean; and Eastern and Northern Quebec. Residents move to the Quebec City region. A Quebec-homed Bloc Québécois moves with its members if it has no meaningful presence elsewhere in Canada. Otherwise it stays Canadian and its Quebec members become Independents, like members of other Canada-wide parties. The Premier stays on as caretaker head of government, Quebec keeps the Canadian dollar, and elections open at once for the 125-seat National Assembly, a Prefect in each region and the regional councils. After that the Assembly sits for four years. Canada loses Quebec's 78 MPs and 24 senators, so its House of Commons has 265 seats and a majority needs 133. Quebec takes the share of Canada's federal debt and treasury cash that matches its share of Canada's GDP.
+
+## Texas and California
+
+In 2027 worlds Texas and California have an Independence Desire score that works the same way. Texas opens at 32 and California at 28. The state's Governor files the request once it reaches 60, and the President decides. A passing vote sends a consent bill to Congress, sponsored by the Administration, which has to clear the House, the Senate and the President's desk like any other bill. The Lone Star Independence Party in Texas and the Bear Flag Independence Party in California carry the cause at elections.
+
+When Texas leaves, it becomes the Republic of Texas with six regions: North Texas, Houston and the Gulf Coast, Central Texas, South Texas, West Texas and the Panhandle, and East Texas. Residents move to the Central Texas region. Elections open at once for a 150-seat House of Representatives, a Commissioner in each region and the regional councils. When California leaves, it becomes the California Republic with six regions: Los Angeles, the San Francisco Bay Area, San Diego and Orange, the Inland Empire, the Central Valley, and Sacramento and the North. Residents move to the Sacramento and the North region, and elections open for an 80-seat Assembly, a Commissioner in each region and the regional councils.
+
+In both cases the sitting Governor stays on as caretaker head of government, titled Chief Minister in Texas and Premier in California. The new country keeps the US dollar and the Federal Reserve, and a party that only exists in that state moves with its members. National parties stay American and their members become Independents there. The United States loses the state's seats: Texas takes 38 House seats, 2 Senate seats and 40 electoral votes, California takes 52 House seats, 2 Senate seats and 54 electoral votes. With Texas gone the House has 397 seats and a majority needs 199, the Senate has 98 seats and the Electoral College has 498 votes. If both leave the House has 345 seats (majority 173), the Senate 96 and the Electoral College 444.
+
 - Regional ownership, parties, elections, companies, natural resources and the affected country maps all update. It is a world change, not a cosmetic result. New elections are stood up in the new country under [Election Mechanics](/wiki/election-mechanics), and a Northern Ireland reunification brings the region into [Ireland](/wiki/ie-overview).
 
 A transfer that stalls after the required consent is enacted is handled by the game team.
 
-Live in the United Kingdom, in any world where Scotland, Wales and Northern Ireland have devolved governments, and in Canada in 2027 worlds. Other countries have no referendum system. Last checked 2026-11-11, version 1.20.0. Exact rules: [UK devolution policy (design)](https://docs.lakesidegames.net/design/uk-devolution-policy.html)
+Live in the United Kingdom, in any world where Scotland, Wales and Northern Ireland have devolved governments, in Canada in 2027 worlds, and in the United States in 2027 worlds. Other countries have no referendum system. Last checked 2026-11-11, version 1.20.0. Exact rules: [UK devolution policy (design)](https://docs.lakesidegames.net/design/uk-devolution-policy.html)
 `;
