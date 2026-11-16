@@ -129,6 +129,7 @@ describe("runtime lifecycle category determines reset selection", () => {
     "wikiPages",
     "wikiTemplates",
     "wikiReports",
+    "wikiRevisions",
     "manualOfficeHistory",
     "officeHistoryArchive",
     "politicianOverrides",

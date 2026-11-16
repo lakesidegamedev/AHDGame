@@ -47,7 +47,7 @@ Passive pull stops at 67, and that is on purpose: a bloc has to keep paying for 
 
 Open **World > International Orgs**, pick a bloc, then the **Influence** tab. It shows pole shares, targets and the bloc stress label.
 
-- **Commit an influence play.** A member of the bloc spends the organization's pooled fund to pull a target toward the bloc's pole. It is queued, and the turn processes it with the same caps as drift. A play can reach any nation.
+- **Commit an influence play.** A member of the bloc spends the organization's pooled fund to pull a target toward the bloc's pole. It is queued, and the turn processes it with the same caps as drift. A play can reach any nation that is not locked to a bloc.
 - **Pay aid.** Aid can only go to a member and needs a member vote. The recipient drifts toward the paying bloc, priced against its own economy. Aid keeps the clients you hold, plays win new ones.
 - **Propose membership.** A nation at or above 60 may be proposed. Proposals use one of the country's 4 diplomatic actions each turn.
 
@@ -64,13 +64,13 @@ Say the target has annual GDP of 20 billion. One point costs 0.1% of that, 20 mi
 - Spending 140 million buys 7 points but only 5 land that turn. The overflow is lost.
 - Spending 200 million buys the single-play maximum of 10 points, and 5 still land.
 
-Spending past 5% of a target's GDP in one turn is wasted, because 5 points a turn is the cap. Opposing pulls on different poles cancel before the cap, so a rival's counter-play can undo yours. Only the net direction counts. To move a nation into your sphere, pay for plays and aid until its lead clears the sphere gate (50 or 40).
+Spending past 0.5% of a target's GDP in one turn is wasted, because 5 points a turn is the cap. Opposing pulls on different poles cancel before the cap, so a rival's counter-play can undo yours. Only the net direction counts. To move a nation into your sphere, pay for plays and aid until its lead clears the sphere gate (50 with two poles, 40 with three, 35 with four or more).
 
 If a member defects, the sustained wants-out signal feeds your bloc's stress and can trigger a defection crisis for that nation. An open flashpoint raises the nation's movement cap from 5 to 7.5 while it lasts; see [Crisis Interaction](/wiki/crisis-interaction).
 
 ## When a bloc overreaches
 
-A bloc's own cohesion is a separate 0 to 1 gauge. An alliance that grabs half the map should not defend all of it as well as a compact one. Stress is built from three things about the bloc's members:
+A bloc's own stress is a separate 0 to 1 gauge. An alliance that grabs half the map should not defend all of it as well as a compact one. Stress is built from three things about the bloc's members:
 
 | Part | Weight | Counts as |
 | --- | --- | --- |

@@ -340,6 +340,7 @@ function WikiSearchBox() {
       </label>
       <input
         id={inputId}
+        data-wiki-search
         type="search"
         value={query}
         onChange={(e) => {

@@ -17,19 +17,19 @@ You hold a small budget of doctrine points and spend them on nodes in a tree of 
 | Starting doctrine points | 12 (plus 12 doctrines already adopted free) |
 | Income | 1 point at the start of each game year (48 turns) |
 | Tree size | 128 nodes in 8 categories |
-| Node cost | 1 to 5 points: 20 nodes cost 1, 27 cost 2, 39 cost 3, 32 cost 4, 10 cost 5 |
+| Node cost | 1 to 6 points: 20 nodes cost 1, 27 cost 2, 39 cost 3, 32 cost 4, 10 cost 5 |
 | Cost of the whole tree | 369 points |
 | Refund or respec | None |
 | Who adopts | The defence seat holder |
 
 ### Spending the first twelve points in 1953
 
-In a 1953 world the current era is Nuclear Age, so nodes up to the 1950s are open. A defence secretary who wants the nuclear programme spends 2 points on Strategic Bombing Campaigns (1940s) and 4 on Nuclear Delivery (1950s), which is 6 points before anything else. That is the entry gate for [The Nuclear Programme](/wiki/nuclear-programme). They add Armored Battle Groups (2 points) and three Defensive Warfare nodes: Trench Systems (1), Elastic Defense Theory (1) and Anti-Tank Networks (2). That is exactly 12 points. The chain mattered: Nuclear Delivery alone is 4 points, but the only way to reach it is to buy its 2-point predecessor first. That node is the entry gate for the nuclear tree that feeds the tension floor, covered in [Global Response Crises](/wiki/global-response-crises).
+In a 1953 world the current era is Nuclear Age, so nodes up to the 1950s are open. A defence secretary who wants the nuclear programme spends 2 points on Strategic Bombing Campaigns (1940s) and 4 on Nuclear Delivery (1950s), which is 6 points before anything else. Nuclear Delivery is the entry gate for [The Nuclear Programme](/wiki/nuclear-programme). They add Armored Battle Groups (2 points) and three Defensive Warfare nodes: Trench Systems (1), Elastic Defense Theory (1) and Anti-Tank Networks (2). That is exactly 12 points. Nuclear Delivery alone is 4 points and has no named prerequisite. Nuclear Delivery is the entry gate for the nuclear tree that feeds the tension floor, covered in [Global Response Crises](/wiki/global-response-crises).
 
 ## No refunds, no respec
 
 - Your nation starts with **12 doctrine points**.
-- The tree has **128 nodes**, costing **1 to 5 points each**.
+- The tree has **128 nodes**, costing **1 to 6 points each**.
 - **You gain 1 additional doctrine point at the start of each game year.** Fighting, research, and legislation do not grant more.
 
 Adopting the whole tree would cost **369 points**. A long campaign adds a handful of extra points, enough to specialise as later decades unlock, not enough to clear the tree.
@@ -79,7 +79,7 @@ doctrine-point-budget
 
 ## Era gating
 
-Every node carries a decade, from the 1900s to the 2040s, and 15 named eras run alongside them, from Industrial to Integrated. Your current era is the decade of the live game year, so the game calendar (see [The Game Loop](/wiki/the-game-loop)) sets your era, unlocks nodes by decade and pays the yearly point. A 1953 world sits in the Nuclear Age, a 1979 world in the Precision era, a 1991 world in the Expeditionary era, and a 2019 world in the Cyber-Hybrid era. Anything from a later decade shows as **Future** and cannot be adopted, however many points you hold.
+Every node carries a decade, from the 1900s to the 2050s, and 16 named eras run alongside them, from Industrial to Convergent. Your current era is the decade of the live game year, so the game calendar (see [The Game Loop](/wiki/the-game-loop)) sets your era, unlocks nodes by decade and pays the yearly point. A 1953 world sits in the Nuclear Age, a 1979 world in the Precision era, a 1991 world in the Expeditionary era, and a 2019 world in the Cyber-Hybrid era. Anything from a later decade shows as **Future** and cannot be adopted, however many points you hold.
 
 A long-running world progresses. Doctrines unreachable in 1953 open up as the calendar passes into the 1960s and beyond. **Banking points against a decade you know is coming is a legitimate strategy**, and one of the few ways to spend a scarce budget well.
 
@@ -120,7 +120,7 @@ Not every node does something in the engine yet. 23 of the 128 nodes carry an en
 
 The other 105 nodes are descriptive for now. Readiness and joint-operations figures shown on some Mobilization and Command & Intelligence nodes are displayed but not applied, and Irregular & Security nodes have no engine effect. A doctrine's supply-draw bonus changes what a formation draws from a front's supply, not the upkeep your defence appropriation pays.
 
-Each node states its effect in plain terms on the panel. The **Active doctrine effects** summary at the side of the Doctrine tab shows everything currently adopted, so you can see your national profile at a glance.
+Each node states its effect in plain terms on the panel. The **Active doctrine effects** summary at the side of the Doctrine tab lists the adopted nodes that carry an active effect label, so you can see much of your national profile at a glance.
 
 ## Doctrine and your generals
 
@@ -140,7 +140,7 @@ The server re-validates every adoption independently: points, prerequisites, and
 
 ## Adopting a node
 
-The defence seat holder opens the **Doctrine** tab of the defence office, picks a node that shows **Available**, and adopts it. The **Active Effects** panel shows everything in force.
+The defence seat holder opens the **Doctrine** tab of the defence office, picks a node that shows **Available**, and adopts it. The **Active Effects** panel shows the adopted nodes that carry an active effect label.
 
 ## Spending it well
 
@@ -160,7 +160,7 @@ The defence seat holder opens the **Doctrine** tab of the defence office, picks 
 
 ## See also
 
-- [Commands & Command Structure](/wiki/military-commands): where doctrine shows up in the org chart.
+- [Commands & Command Structure](/wiki/military-commands): how commands, generals and units are organised. Doctrine has its own tab in the defence office, not a place in the org chart.
 
-Works the same in every world and country that has a defence seat, as long as the conflict system is switched on; what you can adopt depends on the game year. Last checked 2026-10-29, version 1.18.0. Exact rules: [The Cold War and conflict system (as shipped)](https://docs.lakesidegames.net/design/conflict-system-as-shipped.html), under Doctrine
+Applies to every country that has a defence seat, in any world; what you can adopt depends on the game year. Last checked 2026-10-29, version 1.18.0. Exact rules: [The Cold War and conflict system (as shipped)](https://docs.lakesidegames.net/design/conflict-system-as-shipped.html), under Doctrine
 `;

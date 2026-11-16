@@ -1,6 +1,6 @@
 export const nppElectionsContent = `# NPP Elections
 
-Step into a primary and every NPP in it scores at half. That is the quickest lever a player has over NPP candidates, because you cannot choose which NPP runs. NPPs enter primaries and general elections on their own every turn, and they are the opponents you face when no other player is in the race. Party chairs can ask specific NPPs to run, and a player in the race makes every NPP candidate weaker.
+Step into a primary and every NPP in it scores at half. That is the quickest lever a player has over NPP candidates, because as a rank and file member you cannot choose which NPP runs. NPPs enter primaries on their own every turn, and they are the opponents you face when no other player is in the race. Party chairs can ask specific NPPs to run, and a player in the race makes every NPP candidate weaker.
 
 ## Getting on the ballot
 
@@ -43,7 +43,7 @@ As a rank and file member you cannot stop an NPP running. Enter the race to make
 
 A primary score of 60 for an NPP becomes 30. In a general election, if a player and an NPP would each have drawn 50 units of support from a group, the NPP counts as 40, and the player takes about **55.6%** of that group against **44.4%**.
 
-To beat one in a primary, stay close to your party and state positions (see [Party Ideology](/wiki/party-ideology)). NPPs have no campaign in the race, so they cannot run race ads or canvass. Their own campaign, advertise and fundraise actions only raise their general influence, favorability and funds, and below autonomy level 6 nothing moves their race Support. To beat one in a [general election](/wiki/general-elections), where NPP candidates carry that 80% weight against players, build your party's Org in the state (it weighs every candidate of that party, so it helps most against an NPP from another party), and target the voter groups an NPP does not appeal to.
+To beat one in a primary, stay close to your party and state positions (see [Party Ideology](/wiki/party-ideology)). NPPs cannot run race ads or canvass. Below autonomy level 6, their own campaign, advertise and fundraise actions only raise their general influence, favorability and funds, and nothing moves their race Support. At level 6 the first campaign action of a cycle is spent as a rally in their own race. To beat one in a [general election](/wiki/general-elections), where NPP candidates carry that 80% weight against players, build your party's Org in the state (it weighs every candidate of that party, so it helps most against an NPP from another party), and target the voter groups an NPP does not appeal to.
 
 NPPs start at a **Political Influence of 10** and decay never takes them below 10. New player characters start at no less than 10, so a new player does not begin behind every rival. A player's influence can still fall below 10 if neglected.
 
@@ -61,5 +61,5 @@ In worlds on autonomy **V6**, parties run their strongest NPPs for the biggest r
 | Slate limit per party per race | 3 |
 | V6 rally frequency | One every 4 turns |
 
-Live in every world and country with elections. Presidential entry is limited to countries nobody plays, where NPP autonomy is on. Last checked 2026-10-30, version 1.18.0. Exact rules: [NPP system design page](https://docs.lakesidegames.net/design/npp-system.html)
+The V6 rules run only in worlds on NPP autonomy V6, and only in countries where autonomy is at least V6; lower levels keep the older behaviour. Presidential entry is limited to countries nobody plays, where NPP autonomy is on. Last checked 2026-10-30, version 1.18.0. Exact rules: [NPP system design page](https://docs.lakesidegames.net/design/npp-system.html)
 `;

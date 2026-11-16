@@ -8,14 +8,14 @@ Most players lose races by misallocating across phases: over-campaigning early a
 2. **Contest (primary and early general):** you are a declared candidate. Sustain your base stats while running the race.
 3. **Close (final 4 turns of the general):** the campaign season multiplier turns on and the heaviest vote snapshots fall.
 
-Poll results from [Polling](/wiki/polling) decide which phases and groups get your spend, and group sizes and appeal in [Demographics & Targeting](/wiki/demographics-targeting) decide where to aim ads and canvassing. Every action should move you closer to winning your next election. Early game builds the foundation, mid game positions you, and late game is turnout and closing pressure.
+Poll results from [Polling](/wiki/polling) give vague hints about which groups need your spend, and group sizes and appeal in [Demographics & Targeting](/wiki/demographics-targeting) help you pick where to aim ads and canvassing, mainly groups where you hold a small share of the appeal. Every action should move you closer to winning your next election. Early game builds the foundation, mid game positions you, and late game is turnout and closing pressure.
 
 ### Which action first
 
 | Situation | Priority order |
 | --- | --- |
 | New character, no office | Campaign, Build Donor Network (to level 2), Fundraise, Commission Poll, Run Advertisements |
-| Mid-build, no election yet | Fundraise, Campaign, Build Donor Network, Barnstorm for allies |
+| Mid-build, no election yet | Fundraise, Campaign, Build Donor Network, Barnstorm for influence |
 | Primary declared | Campaign heavily, targeted ads, stay close to your party's platform |
 | General, opening | Campaign and ads in weak demographics, then a Full Demographic Poll |
 | General, middle | Maintain influence and favorability, Opposition Research on the leading opponent |
@@ -26,7 +26,7 @@ Poll results from [Polling](/wiki/polling) decide which phases and groups get yo
 
 Once you are a candidate, your campaign page has a **separate budget** spent on **Strategic Ops trees** (the Operations section). It is not your personal Campaign Funds. Each of four trees has a starter node you unlock first, then up to three branches, each with three tiers. Branch effects stack with the starter and with other branches in the same tree, so two campaigns can have very different effects from the same tree.
 
-Campaign pages exist only for presidential races, so these prices are what every campaign pays. The era price level and the campaign's currency apply on top.
+These prices are what every campaign pays. The era price level and the campaign's currency apply on top.
 
 | Tree | Starter (funds, actions) | Starter effect | Branches |
 | --- | --- | --- | --- |
@@ -37,7 +37,7 @@ Campaign pages exist only for presidential races, so these prices are what every
 
 The fundraising tree sets your campaign page's income (see [Fundraising and Ads](/wiki/fundraising-ads)), and the [Campaign Manager](/wiki/campaign-manager) is where you buy and monitor upgrades. Upgrades bought in the general phase cost 1.5x the funds and actions, so buy what you can in the primary.
 
-**Maintenance** comes out of campaign funds every turn. Ground Game and Media upkeep is doubled against the base table, and their tier-3 branches cost 1.5x. If funds plus this turn's income cannot cover maintenance, the engine drops the single tier with the most upkeep one step, and repeats until the campaign is solvent. A tree's starter is shed only after all its upkeep branches are gone. There is no refund. Opposition Research has no upkeep. It can be retargeted, with a 6-turn cooldown.
+**Maintenance** comes out of campaign funds every turn. Ground Game and Media upkeep is doubled against the base table, and their tier-3 branches cost 1.5x. If funds plus this turn's income cannot cover maintenance, the engine drops the single tier with the most upkeep one step, and repeats until the campaign is solvent. A tree's starter is shed only after all its upkeep branches are gone. There is no refund. Opposition Research has its own upkeep line in the Money section. It can be retargeted, with a 6-turn cooldown.
 
 ![The four Strategic Ops trees, each with a starter node and three branches of three tiers.](/wiki-images/diagrams/campaign-strategy-ops-trees.svg)
 
@@ -51,7 +51,7 @@ In the final 4 turns before an election closes, these effects automatically doub
 
 ## Fog of war
 
-Opponents do not see your exact upgrade levels, funds or research target on the campaign page. The public sees a per-lever level estimate that can be off by 3 levels either way, and your party sees within 1 level, never below 0 or above the lever's maximum. The fog refreshes every turn. The estimate is drawn from the old single-level upgrade fields, which Strategic Ops tree purchases do not change, so it does not reflect a rival's trees. Do not rely on opponent numbers.
+Opponents do not see your exact upgrade levels, funds or research target on the campaign page. The public sees a per-lever level estimate that can be off by 3 levels either way, and your party sees within 1 level, never below 0 or above the lever's maximum. The fog refreshes every hour. The estimate is drawn from the old single-level upgrade fields, which Strategic Ops tree purchases do not change, so it does not reflect a rival's trees. Do not rely on opponent numbers.
 
 ## The numbers
 
@@ -82,7 +82,7 @@ Take a presidential campaign with 9 endorsements, which earns 13 actions a turn.
 
 ## Budget red flags
 
-On the campaign page Money section watch for maintenance above funds plus income (a downgrade fires next turn), negative net per turn (funds are draining toward that point), and income declining (campaign income comes only from the Fundraising tree, so it falls only when a Direct Mail tier or the starter is downgraded). Field office upkeep is listed there too.
+On the campaign page Money section watch for maintenance above funds plus income (a downgrade fires next turn), negative net per turn (funds are draining toward that point), and income declining (campaign income comes only from the Fundraising tree, so it falls only when a Grassroots tier, a Direct Mail tier or the starter is downgraded). Field office upkeep is listed there too.
 
 ## Do and don't
 
@@ -98,5 +98,5 @@ Do not:
 - Keep Ground Game or Media tiers you cannot maintain.
 - Attack everything that moves. Attacks add infamy and fail more often as infamy rises.
 
-Live in every world and country with candidate campaigns. Which offices have a campaign page is listed under [Campaign Manager](/wiki/campaign-manager). Last checked 2026-10-30, version 1.18.0. Exact rules: [Campaign Strategy (design)](https://docs.lakesidegames.net/design/campaign-strategy.html). See also [Party Organization](/wiki/party-organization).
+Candidate campaigns run in US races, and in Canadian ridings in worlds using the 2027 preset. Which offices have a campaign page is listed under [Campaign Manager](/wiki/campaign-manager). Last checked 2026-10-30, version 1.18.0. Exact rules: [Campaign Strategy (design)](https://docs.lakesidegames.net/design/campaign-strategy.html). See also [Party Organization](/wiki/party-organization).
 `;

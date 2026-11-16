@@ -27,7 +27,7 @@ Pick the country you actually want to play. It scopes your elections, parties, l
 | Soviet Union | Economic region | Supreme Soviet or Nationalities Deputy |
 | East Germany | Land | Volkskammer Deputy |
 
-**Why the list is shorter than this table:** only countries open to players in your world appear in the picker, and [Game Starting State](/wiki/game-starting-state) explains how the world's era decides which countries and parties you can pick. At the start of a world, the United States, United Kingdom and Japan are open in the 1991 to 2023 presets, the United States, United Kingdom, Soviet Union and East Germany are open in the 1953 and 1979 presets, and the United States, United Kingdom, Germany, Japan and China are open in the 2027 preset. Other countries run as economies or as non-player politicians until they are opened later in a world's life.
+**Why the list is shorter than this table:** only countries open to players in your world appear in the picker, and [Game Starting State](/wiki/game-starting-state) explains how the world's era decides which countries and parties you can pick. At the start of a world, the United States, United Kingdom and Japan are open in the 1991 to 2023 presets, the United States, United Kingdom and Soviet Union are open in the 1953 and 1979 presets, and the United States, United Kingdom, Germany, Japan and China are open in the 2027 preset. Other countries run as economies or as non-player politicians until they are opened later in a world's life.
 
 The Soviet Union can only be picked in 1953 and 1979 worlds. In a 1991 world it runs as an economy only, and from 1999 on the country is Russia. The country hubs from [Getting Started](/wiki/getting-started) cover each one.
 
@@ -80,7 +80,7 @@ Characters who joined through a referral also get +10% Political Influence and F
 | Key number | Value |
 | --- | --- |
 | Characters per account | 1 |
-| Stat points to spend | 28, across 7 stats, 1 to 10 each |
+| Stat points to spend | 21 free points on top of the 1 minimum in each of 7 stats (28 total), 1 to 10 each |
 | Policy slider range | -5 to +5 on each axis |
 | Max move from one bill vote | 0.25 per axis |
 | First-days panel | 72 hours |
@@ -109,7 +109,7 @@ Tips:
 - [ ] Policy sliders within a few points of the party you joined.
 - [ ] Party joined the same day you created.
 - [ ] Starting actions not dumped into Fundraise before Donor Level 2.
-- [ ] First race identified on **Elections** (poll before declare).
+- [ ] First race identified on **Elections** (check the field before you declare).
 
-Open in every world unless closed for maintenance; which countries you can pick depends on the world's era, and some worlds require a linked Discord account first. Last checked 2026-10-29, version 1.18.0. Exact rules: [Stats & Actions (design)](https://docs.lakesidegames.net/design/stats-actions.html) and [Getting Started (design)](https://docs.lakesidegames.net/design/getting-started.html)
+Open in every world unless closed for maintenance or registration is switched off; which countries you can pick depends on the world's era, and some worlds require a linked Discord account first. Last checked 2026-10-29, version 1.18.0. Exact rules: [Stats & Actions (design)](https://docs.lakesidegames.net/design/stats-actions.html) and [Getting Started (design)](https://docs.lakesidegames.net/design/getting-started.html)
 `;

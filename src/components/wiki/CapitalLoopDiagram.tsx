@@ -9,7 +9,7 @@
 const LOOP_STEPS = [
   {
     label: "Growth budget",
-    detail: "The slider you set — the share of earnings you plough back in.",
+    detail: "The slider you set, the share of earnings you plough back in.",
     color: "bg-primary/20 text-primary",
   },
   {
@@ -69,7 +69,7 @@ export function CapitalLoopDiagram() {
 
       <p className="mb-4 text-[11px] text-muted">
         <span className="font-semibold text-error">Depreciation</span> pulls on the capacity box
-        every turn — if investment stops, capacity (and therefore output) drifts down.
+        every turn, if investment stops, capacity (and therefore output) drifts down.
       </p>
 
       <div className="rounded-lg border border-card-border bg-card/60 p-3">
@@ -89,7 +89,7 @@ export function CapitalLoopDiagram() {
           </span>
         </div>
         <p className="mt-2 text-[11px] text-muted">
-          The sector page shows this breakdown so you can see the true economics of every unit — the
+          The sector page shows this breakdown so you can see the true economics of every unit, the
           capital charge is the cost of the capacity that unit was produced on.
         </p>
       </div>

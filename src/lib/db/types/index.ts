@@ -88,9 +88,11 @@ export type {
   WikiPageContentType,
   WikiPageDifficulty,
   EditHistoryEntry,
+  PendingWikiEdit,
   AutoGenerateConfig,
 } from "./wikiPage";
 export type { WikiReport, WikiReportReason } from "./wikiReport";
+export type { WikiRevision, WikiRevisionKind } from "./wikiRevision";
 export type { SystemTag } from "./systemTag";
 export type { WikiTemplate, TemplateField, TemplateFieldType } from "./wikiTemplate";
 export * from "./politicianOverride";

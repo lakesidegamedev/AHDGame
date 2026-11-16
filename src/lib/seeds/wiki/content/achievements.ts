@@ -24,7 +24,7 @@ Each earned achievement shows what share of players have it and a rarity tier ba
 
 ### Contest achievements
 
-[Contests](/contests) has two tabs: Contests (this week's races and your history) and All time leaderboard (career rankings and champions). Results keep the names and scores recorded when the round settled. Cash totals count paid prizes only. Supporter awards are separate.
+[Contests](/contests) has two tabs: Contests (this week's races), with a Results view for your history and All time leaderboard (career rankings and champions). Results keep the names and scores recorded when the round settled. Cash totals count paid prizes only. Supporter awards are separate.
 
 | Achievement | Requirement |
 | --- | --- |
@@ -37,7 +37,7 @@ Each earned achievement shows what share of players have it and a rarity tier ba
 
 ### Supreme Court milestones
 
-A justice confirmed to the [Supreme Court](/wiki/scotus) earns **Equal Justice Under Law** and a career history entry. A justice who dies in office earns **Served for Life**. Earlier confirmations were backfilled when these shipped.
+A justice confirmed to the [Supreme Court](/wiki/scotus) earns **Equal Justice Under Law** and a career history entry. A justice who dies in office earns **Served for Life**. Earlier confirmations were backfilled with Equal Justice Under Law when these shipped. Earlier deaths in office were not backfilled.
 
 ### How the career ranking is scored
 

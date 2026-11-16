@@ -1,6 +1,6 @@
 export const multiCountryPlayContent = `# Multi-Country Play
 
-Your character belongs to one country, but your money does not have to. The world runs a roster of playable countries that depends on the era: the United States and United Kingdom in every era, the Soviet Union and East Germany in the 1953 and 1979 presets, Japan from 1991, and Germany and China in 2027. Countries such as Ireland, Brazil, Nigeria and the rest of Europe run as economies you can browse and invest in, and a country can be switched on for players during a world's life. Each has its own political system, legislature, election rules, and currency. The rest of the world is simulated: autonomous governments there legislate, trade, and conduct foreign policy on their own. This page covers what being locked to a country means, how the systems differ, and where your economic holdings cross borders.
+Your character belongs to one country, but your money does not have to. The world runs a roster of playable countries that depends on the era: the United States in every era, the United Kingdom in the earlier presets, the Soviet Union in the 1953 and 1979 presets, Japan in some later presets, and Canada alongside the United States in 2027. The United Kingdom, Germany, Japan and China run as computer-run simulations in 2027. Countries such as Ireland, Brazil, Nigeria and the rest of Europe run as economies you can browse and invest in, and a country can be switched on for players during a world's life. Each has its own political system, legislature, election rules, and currency (some countries share one, such as the pound or the euro). The rest of the world is simulated: autonomous governments there legislate, trade, and conduct foreign policy on their own. This page covers what being locked to a country means, how the systems differ, and where your economic holdings cross borders.
 
 ## One character, one country
 
@@ -20,7 +20,7 @@ However, economic investments (corporations, bonds, forex positions) cross count
 
 | Country | System | Legislature | Executive | Election method |
 |---|---|---|---|---|
-| United States | Presidential | Congress (Senate + House) | President (directly elected) | FPTP, staggered Senate classes |
+| United States | Presidential | Congress (Senate + House) | President (chosen by the electoral college) | Senate by FPTP in staggered classes; House by Hare-quota proportional vote share |
 | United Kingdom | Parliamentary | Parliament (Commons + Lords) | Prime Minister (confidence of Commons) | Regional multi-seat races split by largest remainder; snap elections allowed |
 | Germany | Parliamentary | Bundestag (+ Bundesrat) | Chancellor (confidence of Bundestag) | Mixed-member proportional (AMS) |
 | Japan | Parliamentary | Kokkai (Shūgiin + Sangiin) | Prime Minister (confidence of Shūgiin) | Regional multi-seat races split by largest remainder; snap elections allowed |
@@ -28,11 +28,11 @@ However, economic investments (corporations, bonds, forex positions) cross count
 | Ireland | Parliamentary | Oireachtas (Dáil + Seanad) | Taoiseach (confidence of Dáil); Uachtarán (directly elected, ceremonial head of state) | Hare-quota multi-seat allocation; snap elections allowed |
 | Brazil | Presidential | National Congress (Chamber + Senate) | President (directly elected, 2-term cap) | Open-list PR chamber, staggered FPTP senate |
 | Nigeria | Presidential | National Assembly (House + Senate) | President (directly elected, 2-term cap) | Multi-seat races in each of the six zones, split by largest remainder |
-| Soviet Union / East Germany / Eastern bloc | One-party state | Supreme Soviet (bicameral) / Volkskammer | Premier or General Secretary via internal party confidence | Only ruling and approved parties stand; regime can collapse |
+| Soviet Union / East Germany / Eastern bloc | One-party state | Supreme Soviet (bicameral) / Volkskammer | Premier or General Secretary chosen through the ruling party (USSR: nominated by a party chair, confirmed by Soviet of the Union deputies) | Only ruling and approved parties stand; regime can collapse |
 
 Parliamentary systems (UK, DE, JP, IE) form governments through legislative confidence rather than direct election. No one runs "for Prime Minister" / "Taoiseach" / "Chancellor" directly - you win a seat, your party wins a majority (or coalition), and the party leader is appointed. Ireland also elects a separate ceremonial head of state, the Uachtarán, on a 7-year nationwide ballot. The 1.0 simulation resolves that race from first-preference totals; ranked transfer fidelity is planned as a later electoral-system upgrade.
 
-China was the first one-party state modelled and the pattern is generic: see [One-Party States](/wiki/one-party-states) for how regime tiers, ruling-party confidence, liberalization reforms, and regime collapse work across every one-party state.
+China was the first one-party state modelled and the pattern is generic: see [One-Party States](/wiki/one-party-states) for how regime tiers, ruling-party confidence, liberalization reforms, and regime collapse work in one-party states (ruling-party confidence runs only in China, the Soviet Union and East Germany).
 
 ## Reaching the top in a parliamentary country
 
@@ -43,7 +43,7 @@ In the UK, Germany, Japan, and Ireland, the path to executive power is:
 3. If your party reaches a majority (UK: 326, DE: 316, JP: 233, IE: 81 seats) or can form a confidence coalition, the party leader is appointed PM / Chancellor / Taoiseach.
 4. Compete for party leadership through internal elections.
 
-**Snap elections** (UK, JP, DE, IE): The government can dissolve the lower chamber and call early elections. In UK, snap elections can be triggered by the PM; in JP, by the PM dissolving the Shūgiin; in DE, by the Chancellor dissolving the Bundestag; in IE, by the Taoiseach dissolving the Dáil. The Sangiin (JP upper house) and Bundesrat (DE upper house) cannot be dissolved. Snap elections compress the campaign cycle drastically; the dissolution rules are in [Snap Elections](/wiki/snap-elections).
+**Snap elections** (UK, JP, DE, IE): The government can dissolve the lower chamber and call early elections. In UK, snap elections can be triggered by the PM; in JP, by the PM dissolving the Shūgiin; in DE, by the Chancellor dissolving the Bundestag; in IE, by the Taoiseach dissolving the Dáil. The Sangiin (JP upper house) and Bundesrat (DE upper house) cannot be dissolved. Snap elections run on a short 48 hour window; the dissolution rules are in [Snap Elections](/wiki/snap-elections).
 
 **Germany's AMS system** means seat allocation is proportional to party vote share nationally, not just by constituency wins. Third parties are far more viable in Germany than in FPTP countries.
 

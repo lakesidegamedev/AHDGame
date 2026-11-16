@@ -30,7 +30,7 @@ export function playerWikiStarter(characterName: string): string {
   return [
     `# ${safeName}`,
     "",
-    "_Write your biography here. This page is maintained by the player — admins may moderate it._",
+    "_Write your biography here. This page is maintained by the player, admins may moderate it._",
     "",
     "## Background",
     "",

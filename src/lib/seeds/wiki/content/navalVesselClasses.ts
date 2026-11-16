@@ -17,7 +17,7 @@ You buy hulls as ordinary units (see [Units, Recruitment & Procurement](/wiki/mi
 | Posture readiness cost per turn | Blockade 14, Sea Control 12, Sea Denial 10, Transit 10, Escort 8, Port recovers 30 |
 | Readiness regained per turn | 6, on top of the posture's cost |
 | Sea control | 0 to 100 per region; rises 12 a turn, falls 15 |
-| Landing marines needs | Sea control of at least 65 in the adjacent water |
+| Marines fight at full strength | Sea control of at least 40 in the adjacent water |
 | Detection levels | 0 to 3 |
 | Repair per turn | 12 in port, 5 on station, scaled by supply |
 | Free repair ceiling | 100 at home, 90 in an allied port, 80 elsewhere |
@@ -25,7 +25,7 @@ You buy hulls as ordinary units (see [Units, Recruitment & Procurement](/wiki/mi
 
 ### Winning a region with a carrier group
 
-A carrier group and two destroyers enter a region where an enemy squadron holds sea control of 70. Your ships are about 78% of the weight in the region, so your sea control moves towards 78 at 12 a turn: 12, 24, 36, 48, 60, then 72 on turn 6. That passes the 65 needed to land marines, so your amphibious group can land on turn 6. The enemy's figure moves towards its 22% share and falls 15 a turn: 55, 40, 25, then 22.
+A carrier group and two destroyers enter a region where an enemy squadron holds sea control of 70. Your ships are about 78% of the weight in the region, so your sea control moves towards 78 at 12 a turn: 12, 24, 36, 48, 60, then 72 on turn 6. That is above the 40 that keeps marines supplied across the water, so your amphibious group fights at full strength. The enemy's figure moves towards its 22% share and falls 15 a turn: 55, 40, 25, then 22.
 
 Holding Sea Control costs each ship 12 readiness a turn and it regains 6, a net loss of 6. From 90 readiness the fleet drops below the withdrawal point of 25 after 11 turns, and then returns to port on default orders.
 
@@ -37,7 +37,7 @@ Holding Sea Control costs each ship 12 readiness a turn and it regains 6, a net 
 | Guided-Missile Destroyer | 330 | 1 | High | No | The dedicated anti-air escort. Second only to the carrier at shooting down strikes. |
 | Attack Submarine | 130 | 1 | Almost none | No | Hard to find, weak in a stand-up fight, cheap to keep on a lane. Its default job is sea denial. |
 | Frigate Squadron | 600 | 1 | Moderate | No | The light escort. Cheapest hull to buy and run. |
-| Amphibious Group | 2,800 | 2 | Low | No | Carries marines. Landing them across water needs your side to hold at least 65 sea control in the adjacent water. |
+| Amphibious Group | 2,800 | 2 | Low | No | Carries marines. They deploy like any other formation, but below 40 sea control in the adjacent water they fight as light infantry. |
 
 A carrier on station and sea control also cut or protect a land front's supply; see [Fighting a Battle](/wiki/fighting-a-battle). Combat weight ranks carrier, submarine, amphibious group, destroyer, frigate, in that order. A formation is worth what the rest of the military system says it is worth, after readiness, equipment, veterancy, damage and supply.
 
@@ -49,7 +49,7 @@ The station comparison shows estimated next-turn supply, support base, berth all
 
 ## Postures (standing orders)
 
-A posture persists across turns. Each costs readiness every turn it is held, and readiness regenerates slowly, so a fleet cannot hold an aggressive posture forever.
+A posture persists across turns. Each posture except Return to Port costs readiness every turn it is held, and readiness regenerates slowly, so a fleet cannot hold an aggressive posture forever.
 
 | Posture | Readiness cost per turn | What it does |
 | --- | --- | --- |
@@ -72,7 +72,7 @@ Formations you have not ordered follow a fixed priority list: return to port if 
 
 Wherever two hostile fleets share a region and at least one is on Blockade, Sea Control or Sea Denial, they fight that turn. The result is deterministic: the heavier side wins and the margin decides the damage. A wrecked formation is not deleted; it keeps its general and rebuilds through the normal reinforcement path.
 
-Each country holds a **sea control** figure from 0 to 100 per region. It moves toward your share of the weight present, rising 12 points a turn and falling 15, so leaving a lane costs more than returning earns. Uncontested presence builds it on its own.
+Each country holds a **sea control** figure from 0 to 100 per region. It moves toward your share of the weight present, rising 12 points a turn and falling 15, so leaving a lane costs more than returning earns. It only moves when there is something to contest: a hostile ship or aircraft in the region, or a war with someone.
 
 \`\`\`wiki-chart
 sea-control-build-and-decay
@@ -88,7 +88,7 @@ Hulls mend between fights, never during one: 12 condition a turn in port, 5 on s
 
 The defence seat holder commands the whole force from **Naval and air command** under the country page, reached from the Commands tab of the defence cabinet office (see [Commands & Command Structure](/wiki/military-commands) for the rest of that structure). For each formation you pick a posture, and for a carrier an air mission. To set a fleet to blockade, put it on the Blockade posture in a region on the target's approaches.
 
-**Questions that come up.** *Why will my amphibious group not land?* Your sea control in the adjacent water is under 65. *What does sea control do?* It decides who can land marines and shapes surface actions. *Why does my fleet keep returning to port?* It is in peacetime, or its condition is below 35 or its readiness below 25, and you gave it no order.
+**Questions that come up.** *Why do my marines fight as light infantry?* Your sea control in the adjacent water is under 40. *What does sea control do?* It decides whether marines are supplied across the water and shapes surface actions. *Why does my fleet keep returning to port?* It is in peacetime, or its condition is below 35 or its readiness below 25, and you gave it no order.
 
-Works in every world and era in which a country has a navy; which hulls exist depends on the year and the country's branches, and Scotland and Wales have no defence seat and so no fleet orders. Last checked 2026-10-29, version 1.18.0. Exact rules: no design page of their own yet; the unit catalogue and pricing are on [The Cold War and conflict system (as shipped)](https://docs.lakesidegames.net/design/conflict-system-as-shipped.html)
+Works in every world and era in which a country has a navy; which hulls exist depends on the year and the country's branches, and Scotland has no defence seat and so no fleet orders. Last checked 2026-10-29, version 1.18.0. Exact rules: no design page of their own yet; the unit catalogue and pricing are on [The Cold War and conflict system (as shipped)](https://docs.lakesidegames.net/design/conflict-system-as-shipped.html)
 `;

@@ -14,7 +14,7 @@ They affect each other but are not the same. A proxy campaign can exist before i
 
 ## Answering a window
 
-The head of state of a country with a role in the campaign picks an option from the card on **World Crises** or your actions page. The International Response Desk lists every open campaign. A card marked "National" means your government owns its own choice. The effects still spread past your border. Each country with a role answers separately, and one government's response does not close another's window. The same response cannot be applied twice, even if you submit it twice.
+The head of state of a country with a role in the campaign picks an option from the card on your actions page or the crisis detail page. The International Response Desk lists every open campaign. A card marked "National" means your government owns its own choice. The effects still spread past your border. Each country with a role answers separately, and one government's response does not close another's window. The same response cannot be applied twice, even if you submit it twice.
 
 | Item | Value |
 | --- | --- |
@@ -23,7 +23,7 @@ The head of state of a country with a role in the campaign picks an option from 
 | Northern Ireland party negotiation and ratification windows | 8 turns |
 | Consequence tracks and country memory | 0 to 100 each |
 
-If you do not answer, your role's authored default option is counted toward the shared outcome. It costs you nothing and records no commitment. In Vietnam it is "Hold the line" for the United States and "Maintain support" for the Soviet Union, so your commitment stays where it is. The pandemic is the exception: only answers actually given count toward its outcome. The campaign continues and can open another window later. Activity is your lever, not a requirement.
+If you do not answer, your role's authored default option is counted toward the shared outcome. It costs you nothing and records only a small neutral commitment. In Vietnam it is "Hold the line" for the United States and "Maintain support" for the Soviet Union, so your commitment barely changes. The pandemic is the exception: only answers actually given count toward its outcome. The campaign continues and can open another window later. Activity is your lever, not a requirement.
 
 ### Locked options
 
@@ -59,7 +59,7 @@ Does a Vietnam escalation drag you into war? No. At the air-campaign rung the sy
 
 ## How tension is set
 
-Discrete events (escalation, nuclear tests, crisis outcomes) move the reading immediately. Between events it eases down toward a pressure floor, which adds up the standing sources of danger, and it can never sit below that floor. Outcomes and escalation in campaigns move both the reading and the floor, and the resulting level raises strategic procurement demand in [Defence Procurement](/wiki/defence-procurement).
+Discrete events (escalation, nuclear tests, crisis outcomes) move the reading immediately. Between events it eases down toward a pressure floor, which adds up the standing sources of danger, and it never relaxes below that floor. Outcomes and escalation in campaigns move both the reading and the floor, and the resulting level raises strategic procurement demand in [Defence Procurement](/wiki/defence-procurement).
 
 | Item | Value |
 | --- | --- |
@@ -70,7 +70,7 @@ Discrete events (escalation, nuclear tests, crisis outcomes) move the reading im
 | Tension floor: world warheads | 1.2 times the square root of total warheads, capped at 18 (reached at 225 warheads) |
 | Tension movement toward the floor | 8% of the gap per turn when the reading is above the floor; when the floor is above the reading, the reading jumps straight to it that turn |
 
-On top of those, every active shooting war adds to the floor, weighted by intensity. A war with nuclear-armed countries on opposite sides holds the floor at Crisis on its own for as long as it burns. A long war that stays below hot intensity sheds part of that shock after twelve turns, but never below a substantial residual.
+On top of those, every active shooting war adds to the floor, weighted by intensity. A war with nuclear-armed countries on opposite sides holds the floor at Crisis on its own while the war is new or hot. A long war that stays below hot intensity sheds part of that shock after twelve turns, but never below a substantial residual.
 
 \`\`\`wiki-chart
 tension-floor-by-arsenal
@@ -93,7 +93,7 @@ At that rung, deepening the commitment costs 0.15% of smoothed GDP (0.0005 times
 
 ## Lowering tension and running the nuclear programme
 
-Choose de-escalating options in campaigns, avoid tests, and end wars. Relief cannot cross the floor, so the standing causes (warheads, wars, open campaigns) have to shrink first.
+Choose de-escalating options in campaigns, avoid tests, and end wars. Relief cannot cross the floor, so the standing causes (warheads, wars, Vietnam escalation, active crises) have to shrink first.
 
 Defence ministers run the [Nuclear Programme](/wiki/nuclear-programme) in the Defence Office. In a country able to run one, the conventional Nuclear Delivery doctrine in [National Doctrine](/wiki/national-doctrine) unlocks the tree. Device nodes need public tests, delivery nodes are adopted quietly. A stockpile with no delivery leg has no deterrence. Warheads raise the tension floor, and tests spike the reading. The shared [Cold War Tension](/wiki/cold-war-tension) reading in turn sets DEFCON, procurement pressure and the detente penalty.
 

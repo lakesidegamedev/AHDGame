@@ -25,7 +25,7 @@ Your count for a country is the higher of two numbers:
 Taking the higher number means a character with an old history but no counter still counts accurately, and a history that under-reports cannot give you a fresh two terms.
 
 - **A partial term counts as a full term.** A US vice president who takes over mid-term gets the counter increased by one, the same as winning an election.
-- **A US vice president who has already hit the cap cannot take over.** Succession is blocked for them. Automatic vice-presidential succession only runs in the US.
+- **A US vice president who has already hit the cap cannot take over.** Succession is blocked for them. Automatic vice-presidential succession runs in the US, Brazil and Nigeria, and in any country whose succession rule is a permanent deputy.
 - **An acting presidency from a [Contingent Election](/wiki/contingent-election) does not raise the counter, but it is recorded as an appointment in your career history, and the history scan counts appointments.** In practice it adds to your total.
 - **Founding terms do not count.** Terms flagged as founding terms in a character's history are subtracted from the total.
 - **The count is per country.** Terms served in one country do not count against your limit in another. The one exception is an old history entry with no country recorded, which the scan counts in every country with the same office.

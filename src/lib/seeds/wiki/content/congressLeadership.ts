@@ -10,7 +10,7 @@ Leadership elections are separate from constituency races. They are 24 hour plur
 2. **Members declare candidacy** during the window and members of the chamber vote. Declare from the Congress page, Leadership tab, which shows whether your party qualifies for each office and the voting deadline.
 3. **The ballot closes** after 24 hours. The top vote-getter takes the office; the rest are marked failed.
 
-U.S. congressional leadership races are player-only. NPPs do not run for, or vote in, Speaker, Majority Leader, Minority Leader or Pro Tempore ballots.
+U.S. congressional leadership races are player-only. NPPs do not run for, or decide, Speaker, Majority Leader, Minority Leader or Pro Tempore ballots on their own. They only vote when a player party whip directs their caucus.
 
 ## Who can run and vote
 
@@ -27,7 +27,7 @@ The **majority bloc** is the largest coalition or single party in the chamber; t
 
 ![Eligibility tree for Speaker, Majority Leader and Minority Leader with a 435 seat example.](/wiki-images/diagrams/congress-leadership-eligibility.svg)
 
-The Speaker belongs to the whole chamber, so every member votes. Majority offices belong to the party that controls the floor, so only that party picks them. Minority offices go to those who oppose it. Party-gated offices are also party-gated **tenure**: a sitting Pro Tempore, Majority Leader or Majority Whip who leaves the majority party loses the seat on the spot and a fresh 24 hour election opens. The same goes if your party is simply overtaken as the largest: the check runs every turn, so the seat is vacated within the hour and a fresh election opens for the new largest party.
+The Speaker belongs to the whole chamber, so every member votes. Majority offices belong to the party that controls the floor, so only that party picks them. Minority offices go to those who oppose it. Party-gated offices are also party-gated **tenure**: a sitting Pro Tempore, Majority Leader or Majority Whip who leaves the majority party loses the seat on the spot and a fresh 24 hour election opens. The same goes if your party is simply overtaken as the largest: the check runs when the Congress page is loaded, so the seat is vacated the next time that check runs and a fresh election opens for the new largest party.
 
 Tips: win the Speaker race by being acceptable to both sides, since everyone votes; to hold a majority office keep your party the largest in the chamber, because losing that status can cost you the seat.
 

@@ -12,6 +12,24 @@ export interface EditHistoryEntry {
   note?: string;
 }
 
+/**
+ * An author's edit to a live page, held until a moderator decides. The
+ * published fields stay untouched while this exists, so readers keep seeing
+ * the approved version.
+ */
+export interface PendingWikiEdit {
+  title: string;
+  description: string;
+  content: string;
+  tags: string[];
+  category?: string;
+  difficulty?: WikiPageDifficulty;
+  submittedBy: ObjectId;
+  submittedAt: Date;
+  /** Set when a moderator declines the edit; the author can revise and resubmit. */
+  rejection?: { reason: string; by: ObjectId; at: Date };
+}
+
 export interface AutoGenerateConfig {
   type: "party" | "leadership" | "seat" | "politician" | "office" | "election";
   entityId: string;
@@ -29,6 +47,9 @@ export interface WikiPage {
   status?: WikiPageStatus;
   submittedBy?: ObjectId;
   reviewedBy?: ObjectId;
+
+  /** Author edit awaiting review while the published version stays live. */
+  pendingEdit?: PendingWikiEdit;
 
   // Organization
   tags?: string[];

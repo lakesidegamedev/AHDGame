@@ -1,9 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { WikiReviewActions } from "./WikiReviewActions";
 import { LocalTime } from "@/components/time/LocalTime";
 import { WikiReportsPanel } from "./WikiReportsPanel";
+import { WikiReviewLogPanel } from "./WikiReviewLogPanel";
+import { MarkdownContent } from "@/components/wiki/MarkdownContent";
+import { diffLines, diffStats } from "@/lib/wiki/rules/lineDiff";
 
 interface PendingPage {
   _id: string;
@@ -19,6 +22,96 @@ interface PendingPage {
   originalContent?: string;
   originalTitle?: string;
   originalDescription?: string;
+  isEdit?: boolean;
+}
+
+/** Shows the proposed page as readers will see it, so images appear as images, with an optional line diff. */
+function ReviewBody({ page }: { page: PendingPage }) {
+  const [view, setView] = useState<"page" | "changes">(page.isEdit ? "changes" : "page");
+  const diff = useMemo(
+    () =>
+      page.isEdit && page.originalContent !== undefined
+        ? diffLines(page.originalContent, page.content)
+        : null,
+    [page]
+  );
+
+  return (
+    <div>
+      {diff && (
+        <div className="mb-3 flex items-center gap-2 text-sm">
+          <button
+            onClick={() => setView("changes")}
+            className={view === "changes" ? "font-semibold text-primary" : "text-muted"}
+          >
+            Changes ({diffStats(diff).added} added, {diffStats(diff).removed} removed)
+          </button>
+          <span className="text-muted">/</span>
+          <button
+            onClick={() => setView("page")}
+            className={view === "page" ? "font-semibold text-primary" : "text-muted"}
+          >
+            Proposed page
+          </button>
+        </div>
+      )}
+      {diff && view === "changes" ? (
+        <div className="bg-background border border-card-border rounded p-3 max-h-[32rem] overflow-y-auto font-mono text-xs whitespace-pre-wrap">
+          {diff.map((line, i) =>
+            line.op === "same" ? (
+              <div key={i} className="text-muted">
+                {"  "}
+                {line.text}
+              </div>
+            ) : (
+              <div key={i}>
+                <div
+                  className={
+                    line.op === "add"
+                      ? "bg-green-500/15 text-green-300"
+                      : "bg-red-500/15 text-red-300"
+                  }
+                >
+                  {line.op === "add" ? "+ " : "- "}
+                  {line.text}
+                </div>
+                {/* An added or removed image line is shown as the picture itself. */}
+                <DiffImage text={line.text} removed={line.op === "remove"} />
+              </div>
+            )
+          )}
+        </div>
+      ) : (
+        <div className="bg-background border border-card-border rounded p-4 max-h-[32rem] overflow-y-auto">
+          <article className="prose prose-invert max-w-none">
+            <MarkdownContent content={page.content} />
+          </article>
+        </div>
+      )}
+    </div>
+  );
+}
+
+const IMAGE_LINE = /!\[([^\]]*)\]\(([^)\s]+)\)/g;
+
+function DiffImage({ text, removed }: { text: string; removed: boolean }) {
+  const images = Array.from(text.matchAll(IMAGE_LINE)).filter(
+    (m) => m[2]?.startsWith("/") || /^https?:\/\//.test(m[2] ?? "")
+  );
+  if (images.length === 0) return null;
+  return (
+    <div className="my-1 flex flex-wrap gap-2">
+      {images.map((m, i) => (
+        <img
+          key={i}
+          src={m[2]}
+          alt={m[1] ?? ""}
+          loading="lazy"
+          className={`max-h-40 rounded border ${removed ? "border-red-500/50 opacity-60" : "border-green-500/50"}`}
+        />
+      ))}
+    </div>
+  );
 }
 
 function PendingSubmissions() {
@@ -48,6 +141,11 @@ function PendingSubmissions() {
             (p.authorName as string | undefined) ??
             "Unknown",
           createdAt: String(p.createdAt ?? ""),
+          isEdit: p.isEdit === true,
+          originalContent: p.originalContent === undefined ? undefined : String(p.originalContent),
+          originalTitle: p.originalTitle === undefined ? undefined : String(p.originalTitle),
+          originalDescription:
+            p.originalDescription === undefined ? undefined : String(p.originalDescription),
         }));
         setPending(pages);
       }
@@ -111,26 +209,7 @@ function PendingSubmissions() {
               <LocalTime value={selected.createdAt} options={{ dateStyle: "medium" }} />
             </p>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              {selected.originalContent && (
-                <div>
-                  <h4 className="text-sm font-medium text-muted mb-2">Original</h4>
-                  <div className="bg-background border border-card-border rounded p-4 max-h-96 overflow-y-auto">
-                    <div className="prose prose-sm prose-invert max-w-none">
-                      {selected.originalContent}
-                    </div>
-                  </div>
-                </div>
-              )}
-              <div>
-                <h4 className="text-sm font-medium text-muted mb-2">
-                  {selected.originalContent ? "Proposed changes" : "New content"}
-                </h4>
-                <div className="bg-background border border-card-border rounded p-4 max-h-96 overflow-y-auto">
-                  <div className="prose prose-sm prose-invert max-w-none">{selected.content}</div>
-                </div>
-              </div>
-            </div>
+            <ReviewBody page={selected} />
 
             <div className="mt-4 space-y-2">
               <p className="text-sm">
@@ -165,7 +244,7 @@ function PendingSubmissions() {
                   </p>
                 </div>
                 <span className="px-3 py-1 text-xs font-medium bg-warning/20 border border-warning/30 text-warning rounded-full">
-                  {page.status}
+                  {page.isEdit ? "edit to live page" : "new page"}
                 </span>
               </div>
             </div>
@@ -180,6 +259,7 @@ export function WikiReviewTab() {
   return (
     <div className="space-y-10">
       <PendingSubmissions />
+      <WikiReviewLogPanel />
       <WikiReportsPanel />
     </div>
   );

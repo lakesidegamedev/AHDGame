@@ -29,7 +29,7 @@ export default async function WikiLeadershipPage({ params }: PageProps) {
   const flavor = LEADERSHIP_FLAVOR[data.role as LeadershipRole];
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-8">
+    <div className="mx-auto max-w-[860px] px-4 py-7 sm:px-8">
       <nav className="mb-6 flex items-center gap-2 text-sm text-muted">
         <Link href="/wiki" className="hover:text-foreground">
           Wiki
@@ -43,14 +43,16 @@ export default async function WikiLeadershipPage({ params }: PageProps) {
       </nav>
 
       <header className="mb-8">
-        <h1 className="text-3xl font-bold tracking-tight text-foreground">{data.label}</h1>
+        <h1 className="text-[34px] font-extrabold leading-[1.15] tracking-[-0.03em] text-foreground">
+          {data.label}
+        </h1>
         <p className="mt-2 text-muted">
           {data.chamber === "house" ? "House of Representatives" : "Senate"} leadership position
         </p>
       </header>
 
       {flavor && (
-        <section className="mb-8 rounded-xl border border-card-border bg-card/60 p-6">
+        <section className="mb-8 ">
           <h2 className="mb-3 text-lg font-semibold text-foreground">About this role</h2>
           <p className="text-muted leading-relaxed">{flavor.blurb}</p>
           <h3 className="mt-4 mb-2 text-sm font-medium text-foreground">Key responsibilities</h3>
@@ -62,9 +64,11 @@ export default async function WikiLeadershipPage({ params }: PageProps) {
         </section>
       )}
 
-      <section className="rounded-xl border border-card-border bg-card/60 p-6">
-        <h2 className="mb-4 text-xl font-semibold text-foreground">Current holder</h2>
-        <div className="flex items-center gap-4 rounded-lg border border-card-border bg-card/40 p-4">
+      <section className="">
+        <h2 className="mb-4 text-[21px] font-extrabold tracking-[-0.03em] text-foreground">
+          Current holder
+        </h2>
+        <div className="flex items-center gap-4 border-b border-card-border/60 py-2.5">
           <Avatar
             url={holder.avatarUrl}
             name={holder.name}
@@ -84,7 +88,7 @@ export default async function WikiLeadershipPage({ params }: PageProps) {
               ) : (
                 <span className="font-semibold text-foreground">{holder.name}</span>
               )}
-              {holder.partyName && holder.partyName !== "—" && (
+              {holder.partyName && holder.partyName !== "-" && (
                 <span
                   className="rounded px-1.5 py-0.5 text-xs font-medium"
                   style={{

@@ -144,6 +144,7 @@ describe("resetGameWorld", () => {
         "wikiPages",
         "wikiTemplates",
         "wikiReports",
+        "wikiRevisions",
         "manualOfficeHistory",
         "officeHistoryArchive",
       ];

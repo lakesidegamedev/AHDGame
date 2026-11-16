@@ -15,7 +15,7 @@ A party can be in **only one** coalition at a time, and a coalition only holds p
 
 The coalition chair is the national chair of the chair party. If that party leaves, the longest-standing member party takes over.
 
-To see coalitions, go to \`/parties\`, switch from the Parties tab to the Coalitions tab and pick a country. A coalition page has Overview (averaged positions, leaders, any disband vote), Parties, Priorities, and a Chair's Office for the chair.
+To see coalitions, go to \`/parties\`, switch from the Parties tab to the Coalitions tab and pick a country. A coalition page has Overview (averaged positions, leaders, and the disband vote panel, which only member party chairs see), Parties, Priorities, and a Chair's Office for the chair.
 
 ![Coalition page with members, ideology and the list of member parties and their chairs](/wiki-images/screens/coalitions-coalition-page.webp)
 
@@ -60,5 +60,5 @@ Outside the US chambers, coalitions matter in parliamentary government formation
 | Disband vote length | 24 turns (24 hours at the standard pace) |
 | Yes votes needed to disband | More than half of all member parties |
 
-Bloc effects apply to US House and Senate leadership; parliamentary countries use coalitions in government formation instead. Same in every era and world that has parties. Last checked 2026-10-30, version 1.18.0. Exact rules: [Coalitions design page](https://docs.lakesidegames.net/design/coalitions.html)
+Bloc effects apply to US House and Senate leadership; parliamentary countries use coalitions in government formation instead. In a one-party state only the ruling party can use coalitions, and whether a coalition may form a government depends on the country's setup. Last checked 2026-10-30, version 1.18.0. Exact rules: [Coalitions design page](https://docs.lakesidegames.net/design/coalitions.html)
 `;

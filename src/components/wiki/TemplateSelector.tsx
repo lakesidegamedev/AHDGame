@@ -72,13 +72,70 @@ Comprehensive information.
 Links to related pages.
 `,
   },
+  {
+    id: "politician",
+    name: "Politician",
+    description: "Biography with a summary box",
+    sections: `{{infobox:politician|Name=|Party=|Office=|Country=|Born=}}
+
+## Background
+
+Where you grew up and what shaped your views.
+
+## Political career
+
+Offices held, campaigns and notable votes.
+
+## Positions
+
+The issues you care most about.
+`,
+  },
+  {
+    id: "party",
+    name: "Party",
+    description: "Party profile with a summary box and seats",
+    sections: `{{infobox:party|Name=|Chair=|Founded=|Ideology=|Country=}}
+
+## Platform
+
+What the party campaigns on.
+
+## History
+
+Founding, wins, splits and realignments.
+
+## Seats
+
+Add a seat chart with {{party-seats:us-1}} on its own line, using your country code and party number.
+`,
+  },
+  {
+    id: "corporation",
+    name: "Corporation",
+    description: "Company profile with a summary box",
+    sections: `{{infobox:corporation|Name=|CEO=|Founded=|Sector=|Ticker=}}
+
+## About
+
+What the company makes and who it serves.
+
+## History
+
+Milestones and leadership changes.
+
+## Share price
+
+Add a price chart with {{stock:1}} on its own line, using your corporation number.
+`,
+  },
 ];
 
 export function TemplateSelector({ selectedTemplate, onSelectTemplate }: TemplateSelectorProps) {
   return (
     <div className="space-y-3">
       <label className="block text-sm font-medium text-foreground">Template (optional)</label>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 gap-3">
         {templates.map((template) => (
           <button
             key={template.id}

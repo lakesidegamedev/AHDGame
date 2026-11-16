@@ -487,6 +487,40 @@ export const STATE_RESOURCE_CAPACITY: Record<string, StateResourceCapacityEntry>
   "TR:TR_ESA": { countryId: "TR", resources: { iron: 45000 } }, // Divriği iron ore
   "TR:TR_SEA": { countryId: "TR", resources: { oil: 30000, natural_gas: 7500 } }, // Batman oilfields
   "TR:TR_CEN": { countryId: "TR", resources: { coal: 22500 } }, // Anatolian lignite
+
+  // ── Canada ────────────────────────────────────────────────────────────
+  // 2027 opening. Ceilings are sized against the US entries above by recent
+  // provincial output (oil in barrels per day, gas in cubic feet per day,
+  // coal and iron ore in tonnes, timber in harvested volume), so a Canadian
+  // sector clears local demand with the same headroom a US state does.
+  "CA:CA_ON": {
+    countryId: "CA",
+    resources: { iron: 15000, timber: 60000, rare_earth: 300, coal: 1500 },
+  }, // Algoma and Sudbury-belt ore; boreal forestry; Ring of Fire and Elk Lake claims
+  "CA:CA_QC": {
+    countryId: "CA",
+    resources: { iron: 350000, timber: 105000, rare_earth: 750, natural_gas: 1500 },
+  }, // Fermont and Labrador Trough ore; Abitibi forests; Strange Lake REE
+  "CA:CA_BC": {
+    countryId: "CA",
+    resources: { natural_gas: 400000, coal: 75000, timber: 150000, oil: 6000 },
+  }, // Montney gas; Elk Valley metallurgical coal; coastal and interior forests
+  "CA:CA_AB": {
+    countryId: "CA",
+    resources: { oil: 300000, natural_gas: 750000, coal: 45000, timber: 45000 },
+  }, // Oil sands and Western Canada Sedimentary Basin; foothills coal; boreal forests
+  "CA:CA_SK": {
+    countryId: "CA",
+    resources: { oil: 40000, natural_gas: 12000, coal: 6000, timber: 12000, rare_earth: 1500 },
+  }, // Bakken and Lloydminster heavy oil; Estevan lignite; Saskatoon rare earth processing
+  "CA:CA_MB": { countryId: "CA", resources: { oil: 4500, timber: 12000, iron: 4500 } }, // Waskada oil; boreal timber; Thompson belt
+  "CA:CA_NS": { countryId: "CA", resources: { coal: 3000, timber: 15000 } }, // Cape Breton coal measures; Acadian forests
+  "CA:CA_NB": { countryId: "CA", resources: { timber: 37500, natural_gas: 3000 } }, // Acadian forests; Sussex gas
+  "CA:CA_NL": { countryId: "CA", resources: { oil: 20000, iron: 250000, timber: 7500 } }, // Jeanne d'Arc offshore oil; Labrador City ore
+  "CA:CA_PE": { countryId: "CA", resources: { timber: 1500 } }, // small woodlots
+  "CA:CA_YT": { countryId: "CA", resources: { timber: 3000, coal: 750 } }, // Southern Yukon forests; small coal seams
+  "CA:CA_NT": { countryId: "CA", resources: { timber: 3000, rare_earth: 750, natural_gas: 3000 } }, // Nechalacho rare earths; Cameron Hills gas
+  "CA:CA_NU": { countryId: "CA", resources: { iron: 70000 } }, // Mary River iron ore
 };
 
 /**
