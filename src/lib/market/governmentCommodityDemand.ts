@@ -12,7 +12,14 @@ import {
 export const GOVERNMENT_COMMODITY_DEMAND: ReadonlyArray<{
   category: string;
   commodity: CommodityType;
+  /** Whole-economy conversion of budget money to demand units (legacy engine). */
   rate: number;
+  /**
+   * Share of the budget line that buys this good from the plant economy's slice
+   * of the country (funded market). The line is already scaled to the plant
+   * economy, so this is the line's own purchase fraction, not a scale factor.
+   */
+  plantSliceFraction: number;
   plannedOnly?: boolean;
   regional?: boolean;
 }> = [
@@ -20,18 +27,21 @@ export const GOVERNMENT_COMMODITY_DEMAND: ReadonlyArray<{
     category: "healthcare",
     commodity: "healthcare_services",
     rate: GOVT_HEALTHCARE_DEMAND_RATE,
+    plantSliceFraction: 1,
     regional: true,
   },
   {
     category: "defense",
     commodity: "ordnance",
     rate: GOVT_DEFENSE_ORDNANCE_DEMAND_RATE,
+    plantSliceFraction: 1,
     regional: true,
   },
   {
     category: "education",
     commodity: "advertising",
     rate: STATE_MEDIA_DEMAND_RATE,
+    plantSliceFraction: STATE_MEDIA_DEMAND_RATE,
     plannedOnly: true,
   },
 ];
