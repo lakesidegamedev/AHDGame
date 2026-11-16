@@ -2,6 +2,7 @@ import { beforeEach, describe, it, expect, vi } from "vitest";
 import { ObjectId, type Db } from "mongodb";
 import type { AuthUserWithCharacter } from "@/lib/auth";
 import { createInMemoryDb } from "@/lib/test-utils/inMemoryDb";
+import type { DefenseLineSource } from "@/lib/turn/defenseEnvelope";
 import { publishTender, raiseOpenDefenceTenderToLiveFloor } from "./commands";
 import * as bidderAlerts from "./opportunityNotifications";
 import { tenders } from "./persistence";
@@ -94,7 +95,9 @@ describe("defence tender publication price floor", () => {
   }
   async function privateLotLimit() {
     const minimum = await floor("standard");
-    const budget = (await db.collection("federalBudget").findOne({ countryId: "US" }))!;
+    const budget = (await db
+      .collection<DefenseLineSource>("federalBudget")
+      .findOne({ countryId: "US" }))!;
     const notional = defenceContractLotCaps(
       resolveDefenseLineFrom(budget),
       minimum
