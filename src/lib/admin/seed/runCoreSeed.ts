@@ -109,7 +109,7 @@ import { policiesCollection } from "@/lib/db/repositories/policies";
  * whose ~113 fields are roughly ten seeded reference defaults and a hundred
  * pieces of live operational state — maintenance mode, the Discord webhook URLs,
  * and every admin feature gate (`marketSystemMode`,
- * `indexFundsMode`, `moneySupplyEnabled`, …). Dropping it re-seeded the ten and
+ * `moneySupplyEnabled`, …). Dropping it re-seeded the ten and
  * silently discarded the hundred. Per-world markers are cleared explicitly via
  * {@link STALE_PER_WORLD_GAME_CONFIG_UNSET} instead.
  *

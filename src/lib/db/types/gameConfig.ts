@@ -715,15 +715,6 @@ export interface GameConfig {
   /** Per-currency M1/M2 snapshots, monetary transmission, and central-bank operations. */
   moneySupplyEnabled?: boolean;
   /**
-   * Index funds rollout mode: off (disabled), partial (view + cron), full (+ trades).
-   * Legacy `indexFundsEnabled: true` is treated as full when mode is absent.
-   */
-  indexFundsMode?: "off" | "partial" | "full";
-  /**
-   * @deprecated Use `indexFundsMode`. When true and mode is absent, treated as full.
-   */
-  indexFundsEnabled?: boolean;
-  /**
    * Structural market rework rollout mode (audit t806, "Nothing Wants to
    * Sell"). Graduated, each tier a superset of the previous (see
    *   off         — today's economy, unchanged (default)
@@ -1288,6 +1279,10 @@ export interface GameConfig {
    * tenders, bids, awards and offer acceptance are gated; existing settlement,
    * delivery, expiry and cancellation continue. Preserved with gameConfig. */
   governmentContractsEnabled?: boolean;
+
+  /** Party joining and recruitment require adjacent territory. Missing means enabled.
+   * Operator choice is preserved across world resets. */
+  partyAdjacencyEnabled?: boolean;
 
   /** Temporary confidence-gauge freeze. Missing means frozen. Explicitly enable
    * to resume drift, events and formation changes. Preserved across resets. */

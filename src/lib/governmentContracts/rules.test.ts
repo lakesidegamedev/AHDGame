@@ -10,6 +10,7 @@ import {
   CONTRACTS_PAGE_SIZE,
   officeContractType,
   defenceBidError,
+  defenceTenderDeliverabilityError,
 } from "./rules";
 import { boardFilter } from "./queries";
 import { publishTenderSchema, bidSchema } from "./schemas";
@@ -86,6 +87,7 @@ describe("government tender rules", () => {
       floor: 50,
       ceiling: 200,
       supplierRemainingLots: 10,
+      supplierRemainingAmount: 1000,
       lots: 1,
     };
     expect(defenceBidError(input)).toContain("grade");
@@ -104,6 +106,7 @@ describe("government tender rules", () => {
       floor: 159148349783,
       ceiling: 159148349783,
       supplierRemainingLots: 10,
+      supplierRemainingAmount: 1591483497830,
       lots: 1,
     };
     expect(defenceBidError(input)).toBe(
@@ -136,6 +139,76 @@ describe("government tender rules", () => {
         ceiling: 300,
       })
     ).not.toContain("plant costs sit above");
+  });
+  it("explains concentration refusals with remaining lots and the fitting price", () => {
+    const base = {
+      supplierGrade: 3,
+      eraGrade: 3,
+      requiredGrade: 1,
+      maximum: 200,
+      floor: 50,
+      ceiling: 200,
+      lots: 10,
+    };
+    const fitting = defenceBidError({
+      ...base,
+      amount: 100,
+      supplierRemainingLots: 3,
+      supplierRemainingAmount: 350,
+    });
+    expect(fitting).toContain("quarterly concentration limit");
+    expect(fitting).toContain("3 lots");
+    expect(fitting).toContain("35");
+    const noneFit = defenceBidError({
+      ...base,
+      amount: 100,
+      supplierRemainingLots: 0,
+      supplierRemainingAmount: 5,
+    });
+    expect(noneFit).toContain("quarterly concentration limit");
+    expect(noneFit).toContain("0 lots");
+    expect(noneFit).toContain("no price per lot");
+  });
+  it("rejects tenders no supplier could deliver with the fitting lot count", () => {
+    expect(
+      defenceTenderDeliverabilityError({
+        lots: 3,
+        floorPricePerLot: 100,
+        procurementNotional: 1000,
+        stateOwnedEligible: false,
+      })
+    ).toBeNull();
+    const tooBig = defenceTenderDeliverabilityError({
+      lots: 4,
+      floorPricePerLot: 100,
+      procurementNotional: 1000,
+      stateOwnedEligible: false,
+    });
+    expect(tooBig).toContain("at most 3 lots");
+    const stateOwnedFits = defenceTenderDeliverabilityError({
+      lots: 10,
+      floorPricePerLot: 100,
+      procurementNotional: 1000,
+      stateOwnedEligible: true,
+    });
+    expect(stateOwnedFits).toBeNull();
+    const stateOwnedTooBig = defenceTenderDeliverabilityError({
+      lots: 11,
+      floorPricePerLot: 100,
+      procurementNotional: 1000,
+      stateOwnedEligible: true,
+    });
+    expect(stateOwnedTooBig).toContain("at most 10 lots");
+  });
+  it("rejects uncheckable tender sizes instead of publishing blind", () => {
+    expect(
+      defenceTenderDeliverabilityError({
+        lots: 0,
+        floorPricePerLot: 100,
+        procurementNotional: 1000,
+        stateOwnedEligible: false,
+      })
+    ).toContain("cannot be checked");
   });
   it("fixes pagination at ten and rejects invalid/unsafe page inputs", () => {
     expect(CONTRACTS_PAGE_SIZE).toBe(10);

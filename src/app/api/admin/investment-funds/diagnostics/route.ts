@@ -1,7 +1,6 @@
 import { withAdminRoute } from "@/lib/api/withAdminAuth";
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
-import { getIndexFundsMode } from "@/lib/indexFunds/featureFlag";
 import { getAllFundDefinitions } from "@/lib/indexFunds/fundDefinitions";
 import { filterFundsForExchange } from "@/lib/indexFunds/fundExchangeFilter";
 import { listFunds } from "@/lib/indexFunds/fundQueries";
@@ -12,8 +11,6 @@ import { migrationsRunCollection } from "@/lib/db/repositories/migrationsRun";
 // Errors: 403
 export const GET = withAdminRoute(async (_auth) => {
   const db = await getDb();
-  const mode = await getIndexFundsMode();
-
   const migrationMarker = await migrationsRunCollection<{ _id: string }>(db).findOne(
     { _id: "2026-06-01-index-fund-seed" },
     { projection: { _id: 1 } }
@@ -98,10 +95,6 @@ export const GET = withAdminRoute(async (_auth) => {
 
   return NextResponse.json({
     success: true,
-    featureFlag: {
-      mode,
-      enabled: mode === "partial" || mode === "full",
-    },
     migration: {
       id: "2026-06-01-index-fund-seed",
       markerPresent: migrationMarker !== null,

@@ -533,9 +533,11 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       },
       {
         name: "Renewables R&D",
-        description: "Early solar and wind capability diversifies output.",
+        description:
+          "Early wind and solar capability diversifies output. Unlocks Wind Power now and Solar Power from 2009.",
         effects: [
-          { kind: "unlockStrategy", strategyId: "renewables" },
+          { kind: "unlockStrategy", strategyId: "wind" },
+          { kind: "unlockStrategy", strategyId: "solar" },
           { kind: "inputEfficiency", pct: 0.03 },
         ],
       },

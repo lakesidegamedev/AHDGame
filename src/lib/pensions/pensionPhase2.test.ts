@@ -9,9 +9,6 @@ import { pensionFundingRatio, pensionSchemeAssetsAnchor } from "./rules";
 import type { IndexFund } from "@/lib/db/types/indexFund";
 
 vi.mock("@/lib/financialTxLog/emit", () => ({ emitTx: vi.fn().mockResolvedValue(undefined) }));
-vi.mock("@/lib/indexFunds/featureFlag", () => ({
-  isIndexFundsEnabled: vi.fn().mockResolvedValue(true),
-}));
 
 const SCHEME_ID = new ObjectId();
 const UNION_ID = new ObjectId();
@@ -271,16 +268,6 @@ describe("runPensionSchemeInvestments", () => {
     const result = await runPensionSchemeInvestments(db as unknown as Db, 12);
     expect(result.schemesInvesting).toBe(0);
     expect(db.collection("pensionSchemes").updateOne).not.toHaveBeenCalled();
-  });
-
-  it("fails closed with index funds switched off", async () => {
-    const { isIndexFundsEnabled } = await import("@/lib/indexFunds/featureFlag");
-    vi.mocked(isIndexFundsEnabled).mockResolvedValueOnce(false);
-    seed({ assetsAnchor: 100_000 });
-
-    const result = await runPensionSchemeInvestments(db as unknown as Db, 12);
-    expect(result).toEqual({ schemesInvesting: 0, investedAnchor: 0, errors: [] });
-    expect(db.collection("pensionSchemes").find).not.toHaveBeenCalled();
   });
 
   it("will not buy units off a fund quoting nothing", async () => {

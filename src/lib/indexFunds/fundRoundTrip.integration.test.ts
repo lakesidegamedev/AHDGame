@@ -28,11 +28,6 @@ import { TURNS_PER_DAY } from "@/lib/constants/turnTime";
 
 // ── Module mocks (external I/O boundaries only) ──────────────────────────────
 
-vi.mock("@/lib/indexFunds/featureFlag", () => ({
-  isIndexFundsEnabled: vi.fn().mockResolvedValue(true),
-  INDEX_FUNDS_DISABLED_MESSAGE: "disabled",
-  INDEX_FUNDS_PARTIAL_MESSAGE: "partial",
-}));
 vi.mock("@/lib/currency/featureFlag", () => ({
   isForexEnabled: vi.fn().mockResolvedValue(false),
 }));
@@ -242,7 +237,7 @@ function seedNpp(overrides: Record<string, unknown> = {}): Doc {
 }
 
 function seedConfig(overrides: Record<string, unknown> = {}): Doc {
-  return { _id: "default", indexFundsMode: "full", nppFundRedemptionEnabled: true, ...overrides };
+  return { _id: "default", nppFundRedemptionEnabled: true, ...overrides };
 }
 
 function roundTripSeed(config: Doc = seedConfig()) {

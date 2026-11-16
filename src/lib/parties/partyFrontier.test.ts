@@ -87,6 +87,28 @@ describe("expandFrontier", () => {
 
 describe("batched party frontiers", () => {
   beforeEach(resetMocks);
+  it("opens joining and picker eligibility to every live same-country region when disabled", async () => {
+    const db = makeDb();
+    seedRegions(["NY", "CA"]);
+    setMockCollection("gameConfig", {
+      findOne: vi.fn().mockResolvedValue({ partyAdjacencyEnabled: false }),
+    });
+    setMockCollection("characters", { distinct: vi.fn().mockResolvedValue(["NY"]) });
+    const reach = await getPartyFrontier(db, "US", "1");
+    expect(reach.presence).toEqual(new Set(["NY"]));
+    expect(reach.frontier).toEqual(new Set(["NY", "CA"]));
+    expect(reach.frontier.has("CA_ON")).toBe(false);
+    expect(
+      await canCharacterJoinParty(db, { homeState: "CA" }, { sequentialId: 1, name: "Test" }, "US")
+    ).toEqual({ ok: true });
+    const picker = await getPartyFrontiers(db, "US", ["1", "2"]);
+    expect(picker.get("1")).toEqual(["CA", "NY"]);
+    expect(picker.get("2")).toEqual(["CA", "NY"]);
+    expect(mockCollections.gameConfig.findOne).toHaveBeenCalledWith(
+      { _id: "default" },
+      { projection: { partyAdjacencyEnabled: 1 } }
+    );
+  });
   it("unions members, officials and active NPPs without queries per party", async () => {
     const db = makeDb();
     setMockCollection("states", {
@@ -121,7 +143,7 @@ describe("batched party frontiers", () => {
       { projection: { party: 1, homeState: 1 } }
     );
     // Regions, three presence reads, and one party renewal read for re-entry.
-    expect(db.collection).toHaveBeenCalledTimes(5);
+    expect(db.collection).toHaveBeenCalledTimes(6);
   });
 
   it("adds regions a party held within the last two renewal cycles", async () => {

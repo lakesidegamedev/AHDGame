@@ -8,7 +8,7 @@ import type { MajorDefaultParty } from "@/lib/seeds/defaultPartyTiers";
  * a centrist governing party ahead of a right-of-centre opposition, a
  * Quebec sovereigntist party, a shrunken left party and one Green seat.
  *
- * All five parties can organize and contest elections throughout Canada.
+ * All six parties can organize and contest elections throughout Canada.
  */
 // Legacy slugs remain stable saved-world IDs; the roster owns display identities.
 export const CA_PARTY_SLUGS = {
@@ -17,6 +17,7 @@ export const CA_PARTY_SLUGS = {
   labourCommons: "ca_labour_commons",
   laurentian: "ca_laurentian",
   greenHorizon: "ca_green_horizon",
+  albertaSovereignty: "ca_alberta_sovereignty",
 } as const;
 
 /** Default party abbreviation to stable slug, for rules keyed by slug. */
@@ -26,6 +27,7 @@ export const CA_PARTY_SLUG_BY_ABBREVIATION: Readonly<Record<string, string>> = {
   NDP: CA_PARTY_SLUGS.labourCommons,
   BQ: CA_PARTY_SLUGS.laurentian,
   GRN: CA_PARTY_SLUGS.greenHorizon,
+  ASP: CA_PARTY_SLUGS.albertaSovereignty,
 };
 
 function caParty(
@@ -65,6 +67,7 @@ export const caParties: PartySeed[] = [
   caParty(3, "New Democratic Party", "NDP", "#E8801A", -3, -3, 700_000),
   caParty(4, "Bloc Québécois", "BQ", "#2FA3D8", -1, -2, 600_000),
   caParty(5, "Green Party of Canada", "GRN", "#3F9B49", -3, -4, 400_000),
+  caParty(6, "Alberta Sovereignty Party", "ASP", "#7A5C2E", 4, 2, 150_000),
 ];
 
 /** Party slug to the seeded display name, for polling and organisation lookups. */
@@ -74,6 +77,7 @@ export const CA_PARTY_SLUG_TO_NAME: Readonly<Record<string, string>> = {
   [CA_PARTY_SLUGS.labourCommons]: "New Democratic Party",
   [CA_PARTY_SLUGS.laurentian]: "Bloc Québécois",
   [CA_PARTY_SLUGS.greenHorizon]: "Green Party of Canada",
+  [CA_PARTY_SLUGS.albertaSovereignty]: "Alberta Sovereignty Party",
 };
 
 /**
@@ -89,6 +93,7 @@ export const CA_REGION_POLLING_2025: Readonly<Record<string, Readonly<Record<str
     ca_labour_commons: 6,
     ca_laurentian: 0,
     ca_green_horizon: 1,
+    ca_alberta_sovereignty: 0,
   },
   CA_QC: {
     ca_federal_unity: 44,
@@ -96,6 +101,7 @@ export const CA_REGION_POLLING_2025: Readonly<Record<string, Readonly<Record<str
     ca_labour_commons: 3,
     ca_laurentian: 28,
     ca_green_horizon: 1,
+    ca_alberta_sovereignty: 0,
   },
   CA_BC: {
     ca_federal_unity: 46,
@@ -103,13 +109,15 @@ export const CA_REGION_POLLING_2025: Readonly<Record<string, Readonly<Record<str
     ca_labour_commons: 9,
     ca_laurentian: 0,
     ca_green_horizon: 2,
+    ca_alberta_sovereignty: 0,
   },
   CA_AB: {
     ca_federal_unity: 29,
-    ca_national_prosperity: 63,
+    ca_national_prosperity: 59,
     ca_labour_commons: 5,
     ca_laurentian: 0,
     ca_green_horizon: 1,
+    ca_alberta_sovereignty: 4,
   },
   CA_MB: {
     ca_federal_unity: 43,
@@ -117,6 +125,7 @@ export const CA_REGION_POLLING_2025: Readonly<Record<string, Readonly<Record<str
     ca_labour_commons: 9,
     ca_laurentian: 0,
     ca_green_horizon: 1,
+    ca_alberta_sovereignty: 0,
   },
   CA_SK: {
     ca_federal_unity: 29,
@@ -124,6 +133,7 @@ export const CA_REGION_POLLING_2025: Readonly<Record<string, Readonly<Record<str
     ca_labour_commons: 11,
     ca_laurentian: 0,
     ca_green_horizon: 1,
+    ca_alberta_sovereignty: 0,
   },
   CA_NS: {
     ca_federal_unity: 51,
@@ -131,6 +141,7 @@ export const CA_REGION_POLLING_2025: Readonly<Record<string, Readonly<Record<str
     ca_labour_commons: 6,
     ca_laurentian: 0,
     ca_green_horizon: 1,
+    ca_alberta_sovereignty: 0,
   },
   CA_NB: {
     ca_federal_unity: 49,
@@ -138,6 +149,7 @@ export const CA_REGION_POLLING_2025: Readonly<Record<string, Readonly<Record<str
     ca_labour_commons: 3,
     ca_laurentian: 0,
     ca_green_horizon: 2,
+    ca_alberta_sovereignty: 0,
   },
   CA_NL: {
     ca_federal_unity: 54,
@@ -145,6 +157,7 @@ export const CA_REGION_POLLING_2025: Readonly<Record<string, Readonly<Record<str
     ca_labour_commons: 4,
     ca_laurentian: 0,
     ca_green_horizon: 0,
+    ca_alberta_sovereignty: 0,
   },
   CA_PE: {
     ca_federal_unity: 47,
@@ -152,6 +165,7 @@ export const CA_REGION_POLLING_2025: Readonly<Record<string, Readonly<Record<str
     ca_labour_commons: 4,
     ca_laurentian: 0,
     ca_green_horizon: 7,
+    ca_alberta_sovereignty: 0,
   },
   CA_YT: {
     ca_federal_unity: 49,
@@ -159,6 +173,7 @@ export const CA_REGION_POLLING_2025: Readonly<Record<string, Readonly<Record<str
     ca_labour_commons: 8,
     ca_laurentian: 0,
     ca_green_horizon: 3,
+    ca_alberta_sovereignty: 0,
   },
   CA_NT: {
     ca_federal_unity: 48,
@@ -166,6 +181,7 @@ export const CA_REGION_POLLING_2025: Readonly<Record<string, Readonly<Record<str
     ca_labour_commons: 12,
     ca_laurentian: 0,
     ca_green_horizon: 2,
+    ca_alberta_sovereignty: 0,
   },
   CA_NU: {
     ca_federal_unity: 50,
@@ -173,6 +189,7 @@ export const CA_REGION_POLLING_2025: Readonly<Record<string, Readonly<Record<str
     ca_labour_commons: 22,
     ca_laurentian: 0,
     ca_green_horizon: 1,
+    ca_alberta_sovereignty: 0,
   },
 };
 

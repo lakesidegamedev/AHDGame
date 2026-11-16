@@ -731,6 +731,7 @@ export interface LegislationTypePosition {
     | "caCommons" // CA House of Commons
     | "caSenate" // CA Senate (appointed)
     | "qcAssembly" // QC National Assembly (successor country)
+    | "abAssembly" // AB Legislative Assembly (successor country)
     | "milletMeclisi"
     | "senato" // TR parliament chambers (added with 1979 Turkey)
     | "volkskammer" // DD Volkskammer (one-party; added with 1979 GDR)
@@ -1092,7 +1093,8 @@ export interface LegislationType {
     | "sco"
     | "wls"
     | "ca"
-    | "qc";
+    | "qc"
+    | "ab";
 
   /**
    * Political-legislation v2 (spec §6): the typed law's metric targets,

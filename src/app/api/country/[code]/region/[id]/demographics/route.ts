@@ -7,6 +7,8 @@ import { getGameStateCollection } from "@/lib/db/collections/gameState";
 import { bucketProfileLean, getBucketProfileForRegion } from "@/lib/demographics/bucketProfile";
 import { eraYearContextFromGameState } from "@/lib/era/context";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { loadCountryLeanScale } from "@/lib/regionLean/loadCountryLeanScale";
+import { regionLeanDisplay } from "@/lib/regionLean/scale";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string }>;
@@ -26,7 +28,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
 
     const db = await getDb();
 
-    const [state, gameState] = await Promise.all([
+    const [state, gameState, leanScale] = await Promise.all([
       statesCollection(db).findOne({ _id: stateId, countryId }),
       getGameStateCollection(db).then((games) =>
         games.findOne(
@@ -34,6 +36,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
           { projection: { preset: 1, currentYear: 1, currentTurn: 1, startingYear: 1 } }
         )
       ),
+      loadCountryLeanScale(db, countryId),
     ]);
     if (!state) {
       return errorResponse(404, "State not found");
@@ -60,6 +63,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
       stateName: state.name,
       calculatedEconomicLean: lean.economicLean,
       calculatedSocialLean: lean.socialLean,
+      leanDisplay: regionLeanDisplay(leanScale, lean.economicLean, lean.socialLean),
       sections: sections.map((section) => ({
         id: section.dim,
         name: section.dimLabel,

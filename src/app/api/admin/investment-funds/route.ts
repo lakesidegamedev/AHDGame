@@ -1,10 +1,8 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { requireAdmin } from "@/lib/api/requireAdmin";
-import { handleRouteError, errorResponse } from "@/lib/api/errors";
-import { isIndexFundsEnabled } from "@/lib/indexFunds/featureFlag";
+import { handleRouteError } from "@/lib/api/errors";
 import { listFunds } from "@/lib/indexFunds/fundQueries";
-import { INDEX_FUNDS_DISABLED_MESSAGE } from "@/lib/indexFunds/featureFlag";
 import { computeHoldingsValueAnchor } from "@/lib/indexFunds/fundAllocation";
 import { sumFundBondHoldingsValueAnchor } from "@/lib/bonds/fundBondHoldings";
 import { loadFxRatesRecord } from "@/lib/currency/corporationCapital";
@@ -22,9 +20,6 @@ export async function GET() {
     if (!auth.ok) return auth.response;
 
     const db = await getDb();
-    if (!(await isIndexFundsEnabled())) {
-      return errorResponse(403, INDEX_FUNDS_DISABLED_MESSAGE);
-    }
 
     const funds = await listFunds(db);
 

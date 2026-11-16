@@ -948,7 +948,7 @@ function LegacyProposeBillModal({
                           return next;
                         })
                       }
-                      placeholder="Strategy filter (optional, e.g. renewables)"
+                      placeholder="Strategy filter (optional, e.g. wind)"
                       className="w-full rounded-lg border border-card-border bg-background px-2 py-1.5 text-sm"
                     />
                     {sp.type === "subsidy" && (

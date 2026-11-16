@@ -25,6 +25,7 @@ const REGION_NAMES: Record<string, string> = {
   WAL: "Wales",
   NIR: "Northern Ireland",
   CA_QC: "Quebec",
+  CA_AB: "Alberta",
 };
 
 /** Celebratory green for a completed reunification. */
@@ -34,6 +35,7 @@ const INDEPENDENCE_COLORS: Record<string, number> = {
   SCO: 0x005eb8,
   WAL: 0xc8102e,
   CA_QC: 0x003da5,
+  CA_AB: 0x00a3e0,
 };
 const INDEPENDENCE_COLOR_FALLBACK = 0x1b9e77;
 const FOOTER = { text: "A House Divided" } as const;

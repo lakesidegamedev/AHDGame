@@ -50,6 +50,49 @@ describe("openNppCreationBatch", () => {
     vi.mocked(getDb).mockResolvedValue(mock as unknown as Db);
   });
 
+  it("keeps distant same-country affiliations in both creation paths when disabled", async () => {
+    mock.collection("gameConfig").findOne.mockResolvedValue({ partyAdjacencyEnabled: false });
+    expect(
+      (
+        await createNPP(
+          { state: "CA", countryId: "US", party: "7", targetOffice: null },
+          { existingNames: new Set() }
+        )
+      ).party
+    ).toBe("7");
+    const batch = openNppCreationBatch(mock as unknown as Db, new Map([["US", ["7"]]]));
+    try {
+      for (const state of ["CA", "NY"]) {
+        expect(
+          (
+            await batch.create(
+              { state, countryId: "US", party: "7", quality: 0 },
+              { existingNames: new Set() }
+            )
+          ).party
+        ).toBe("7");
+      }
+      expect(
+        (
+          await batch.create(
+            { state: "CA_ON", countryId: "US", party: "7", quality: 0 },
+            { existingNames: new Set() }
+          )
+        ).party
+      ).toBe("independent");
+    } finally {
+      await batch.close();
+    }
+    const reads = mock
+      .collection("gameConfig")
+      .findOne.mock.calls.filter(
+        (call: unknown[]) =>
+          (call[1] as { projection?: { partyAdjacencyEnabled?: number } } | undefined)?.projection
+            ?.partyAdjacencyEnabled
+      );
+    expect(reads).toHaveLength(2);
+  });
+
   it("reaches the same affiliation as createNPP for each NPP in turn", async () => {
     const oneByOne: string[] = [];
     for (const state of SEQUENCE) {

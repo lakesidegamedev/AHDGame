@@ -82,9 +82,7 @@ function world() {
       updatedAt: NOW,
     },
   ]);
-  memory.seed("gameConfig", [
-    { _id: "default", indexFundsMode: "full", ledgerShadow: true, turnLengthMinutes: 60 },
-  ]);
+  memory.seed("gameConfig", [{ _id: "default", ledgerShadow: true, turnLengthMinutes: 60 }]);
   memory.seed("exchangeRates", [{ currencyCode: "USD", rate: 1 }]);
   memory.seed("gameState", [{ _id: "current", currentTurn: 1 }]);
   vi.mocked(getDb).mockResolvedValue(db);

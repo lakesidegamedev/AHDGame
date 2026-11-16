@@ -4,6 +4,24 @@ import { createMockDb } from "@/lib/test-utils/mockDb";
 import { getRelocationTerritory } from "./relocationTerritory";
 
 describe("post-relocation live presence", () => {
+  it("allows fragmented territory moves when disabled, within the same country only", async () => {
+    const mock = createMockDb();
+    mock.collection("gameConfig").findOne.mockResolvedValue({ partyAdjacencyEnabled: false });
+    mock.collection("states").find.mockReturnValue({
+      toArray: async () => ["WA", "OR", "CA", "NY"].map((_id) => ({ _id })),
+    });
+    mock
+      .collection("characters")
+      .distinct.mockImplementation(async (_field: string, filter: Record<string, unknown>) =>
+        filter._id ? ["WA", "CA"] : ["WA", "OR", "CA"]
+      );
+    const territory = await getRelocationTerritory(mock as unknown as Db, "US", "7", {
+      characterId: new ObjectId(),
+    });
+    expect(territory.canDepart).toBe(true);
+    expect(territory.canMoveTo("NY")).toBe(true);
+    expect(territory.canMoveTo("CA_ON")).toBe(false);
+  });
   it.each(["characterId", "nppId"] as const)(
     "excludes the %s and their vacated office",
     async (kind) => {

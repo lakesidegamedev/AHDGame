@@ -6,10 +6,6 @@ import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
 vi.mock("@/lib/api/requireAdmin", () => ({ requireAdmin: vi.fn() }));
 vi.mock("@/lib/adminLog", () => ({ createAdminLog: vi.fn() }));
-vi.mock("@/lib/indexFunds/featureFlag", () => ({
-  isIndexFundsEnabled: vi.fn().mockResolvedValue(true),
-  INDEX_FUNDS_DISABLED_MESSAGE: "Index funds are disabled",
-}));
 
 let db: MockDb;
 
@@ -145,20 +141,5 @@ describe("POST /api/admin/investment-funds/deploy-cash-all", () => {
     const { POST } = await import("./route");
     const res = await POST(makeRequest({ amountAnchor: -500 }));
     expect(res.status).toBe(400);
-  });
-
-  it("returns 403 when index funds feature is disabled", async () => {
-    const { getDb } = await import("@/lib/mongodb");
-    vi.mocked(getDb).mockResolvedValue(db as unknown as Db);
-
-    const { requireAdmin } = await import("@/lib/api/requireAdmin");
-    vi.mocked(requireAdmin).mockResolvedValue(mockAdmin as never);
-
-    const { isIndexFundsEnabled } = await import("@/lib/indexFunds/featureFlag");
-    vi.mocked(isIndexFundsEnabled).mockResolvedValueOnce(false);
-
-    const { POST } = await import("./route");
-    const res = await POST(makeRequest({ amountAnchor: 1_000_000 }));
-    expect(res.status).toBe(403);
   });
 });

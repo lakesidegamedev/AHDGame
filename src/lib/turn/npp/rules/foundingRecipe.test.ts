@@ -167,8 +167,8 @@ describe("chooseFoundingRecipe with a retired standard recipe", () => {
       recipes: energy,
       countryId: "US",
       priceRatioOf: prices({ electronics: 0.5, rare_earth: 0.5 }),
-      isAvailable: (r) => r.id === "renewables" || r.id === "nuclear",
+      isAvailable: (r) => r.id === "solar" || r.id === "nuclear",
     });
-    expect(picked).toBe("renewables");
+    expect(picked).toBe("solar");
   });
 });

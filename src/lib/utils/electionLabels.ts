@@ -34,7 +34,9 @@ export const ELECTION_TYPE_LABEL_MAP: Record<string, string> = {
   senedd: "Senedd",
   snap_senedd: "Snap Senedd",
   qcAssembly: "National Assembly",
+  abAssembly: "Legislative Assembly",
   snap_qcAssembly: "Snap National Assembly",
+  snap_abAssembly: "Snap Legislative Assembly",
   // DE offices
   bundestag: "Bundestag",
   snap_bundestag: "Snap Bundestag",
@@ -143,6 +145,7 @@ export const ELECTION_TYPE_SHORT_LABEL: Record<string, string> = {
   special_caCommons: "Commons By-Election",
   provincialLegislature: "Provincial",
   qcAssembly: "Assembly",
+  abAssembly: "Assembly",
 };
 
 /**
@@ -205,7 +208,9 @@ export const MULTI_SEAT_TYPES: ReadonlySet<string> = new Set([
   "senedd",
   "snap_senedd",
   "qcAssembly",
+  "abAssembly",
   "snap_qcAssembly",
+  "snap_abAssembly",
   // Commons by-elections: multi-seat proportional like a regular
   // Commons race, but resolved ADDITIVELY (see generalResolution) — the sweep
   // that clears a region's delegation never runs for this type.
@@ -311,6 +316,7 @@ const SNAP_TO_REGULAR: Readonly<Record<string, string>> = {
   snap_holyrood: "holyrood",
   snap_senedd: "senedd",
   snap_qcAssembly: "qcAssembly",
+  snap_abAssembly: "abAssembly",
   snap_caCommons: "caCommons",
   snap_bundestag: "bundestag",
   snap_shugiin: "shugiin",
