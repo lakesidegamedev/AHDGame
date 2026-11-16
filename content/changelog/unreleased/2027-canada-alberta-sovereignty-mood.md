@@ -6,8 +6,8 @@ summary: >-
   and its Premier has a Sovereignty tab. A new Alberta Sovereignty Party joins
   the Canadian opening board.
 tags: [canada, referendums, parties]
-badges: [feature]
-areas: [engine, elections]
+badges: [minor]
+areas: [engine]
 ---
 
 ## What changed

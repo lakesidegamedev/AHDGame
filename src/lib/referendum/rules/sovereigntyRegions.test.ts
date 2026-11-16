@@ -12,6 +12,7 @@ import {
   sovereigntyRegion,
   sovereigntyRegionIds,
   sovereigntyRegionIn,
+  usesSovereigntyWording,
   independenceCopy,
 } from "./sovereigntyRegions";
 
@@ -77,7 +78,7 @@ describe("sovereignty registry", () => {
   it("registers Alberta as a Canadian region whose successor is not built yet", () => {
     expect(sovereigntyRegionIn("CA", "CA_AB")).toMatchObject({
       kind: "independence",
-      successorCountryId: "AB",
+      successorCountryId: null,
       executiveTitle: "Premier",
       nationalGovernmentName: "Ottawa",
       actuates: false,
@@ -128,5 +129,14 @@ describe("getSovereigntyGovernmentNames", () => {
       national: "Ottawa",
       sponsor: "Government of Canada",
     });
+  });
+});
+
+describe("registry wording", () => {
+  it("names Canadian moods as sovereignty and UK moods as devolution", () => {
+    expect(usesSovereigntyWording("CA_QC")).toBe(true);
+    expect(usesSovereigntyWording("CA_AB")).toBe(true);
+    expect(usesSovereigntyWording("SCO")).toBe(false);
+    expect(usesSovereigntyWording("CA_ON")).toBe(false);
   });
 });
