@@ -1,6 +1,5 @@
 /** Bulk sector operations apply CEO policies to a country or sector group, with optional cost previews. */
 import type { CountryId } from "@/lib/constants/countries";
-import { isLabourWagesEnabled, isLabourUnionsEnabled } from "@/lib/labour/featureFlag";
 import { loadCollectiveAgreementEffects } from "@/lib/unions/collectiveAgreementEffects";
 import { estimateWageChange } from "@/lib/corporations/rules/bulkWagePreview";
 import { loadValuationFxRates } from "@/lib/currency/corporationCapital";
@@ -87,10 +86,6 @@ export async function bulkSetSectorOperations(request: Request, { params }: Rout
         sectorType,
         preview,
       });
-    }
-
-    if (wageLevel !== undefined && !(await isLabourWagesEnabled())) {
-      return errorResponse(403, "The labour system is not enabled.");
     }
 
     const bulkMode =
@@ -210,9 +205,8 @@ export async function bulkSetSectorOperations(request: Request, { params }: Rout
         }
       | undefined;
     if (wageLevel !== undefined) {
-      const floors = (await isLabourUnionsEnabled())
-        ? (await loadCollectiveAgreementEffects(db, await getCurrentTurn(db))).wageFloorBySectorId
-        : new Map<string, number>();
+      const floors = (await loadCollectiveAgreementEffects(db, await getCurrentTurn(db)))
+        .wageFloorBySectorId;
       const fx = await loadValuationFxRates(db);
       const { toCorpCurrency } = buildSectorCurrencyRestatement(corporation, fx);
       let current = 0,

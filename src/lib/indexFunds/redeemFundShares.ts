@@ -17,12 +17,6 @@ import { badRequest, handleRouteError, notFound, errorResponse } from "@/lib/api
 import { runTransactionWithSessionRetry } from "@/lib/db/transactionWithRetry";
 import { parseJsonBody } from "@/lib/api/validate";
 import {
-  isIndexFundsFullMode,
-  INDEX_FUNDS_PARTIAL_MESSAGE,
-  INDEX_FUNDS_DISABLED_MESSAGE,
-  isIndexFundsEnabled,
-} from "@/lib/indexFunds/featureFlag";
-import {
   resolveFundBySlugOrId,
   debitFundPosition,
   insertFundTransaction,
@@ -65,7 +59,6 @@ const redeemSchema = z.object({
 
 // POST /api/investment-funds/[slug]/redeem - Redeem (sell) fund units
 // Auth: logged-in user with a character
-// Requires "full" mode - partial mode blocks player transactions.
 // Pays from fund cash, sells underlying shares to public float when needed,
 // then queues any remainder for the hourly fund cycle.
 export async function handleRedeemFundShares(
@@ -116,13 +109,6 @@ export async function handleRedeemFundShares(
     });
     if (command.response) return command.response;
     const execute = async () => {
-      if (fund.mandate?.mode !== "picked_stocks" && !(await isIndexFundsEnabled())) {
-        return errorResponse(403, INDEX_FUNDS_DISABLED_MESSAGE);
-      }
-      if (fund.mandate?.mode !== "picked_stocks" && !(await isIndexFundsFullMode())) {
-        return errorResponse(403, INDEX_FUNDS_PARTIAL_MESSAGE);
-      }
-
       const turnGuard = await rejectDuringTurn(db);
       if (turnGuard) return turnGuard;
       if (fund.status === "delisted") {

@@ -24,8 +24,6 @@ export interface NppCorpDecisionContext {
   fxRate?: number;
   /** Live local-per-anchor rates used to restate host-currency sector revenue. */
   fxByCurrency?: ReadonlyMap<string, number>;
-  /** Whether the labour system permits wage-level writes. */
-  labourWagesEnabled?: boolean;
   currentYear?: number;
   techTreesEnabled?: boolean;
   /**

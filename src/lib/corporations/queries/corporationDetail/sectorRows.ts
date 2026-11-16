@@ -35,7 +35,6 @@ import {
 import { isStateOwned } from "@/lib/nationalization/nationalCorporation";
 import { getInputMultiplier } from "@/lib/utils/productionPolicy";
 import { priceRealizationFactor } from "@/lib/market/priceRealization";
-import { isLabourWagesEnabled } from "@/lib/labour/featureFlag";
 import { getMarketSystemModeForDb, marketAtLeast } from "@/lib/market/featureFlag";
 import {
   CORP_GROWTH_TARGET_SPAN_TURNS,
@@ -121,7 +120,6 @@ export function getEmptyStateMetricValues(): StateMetricValues {
 }
 
 export interface SectorModeFlags {
-  labourWagesEnabled: boolean;
   plantsMode: boolean;
   commandEconomyEnabled: boolean;
   realizedGrowthRate: number | null;
@@ -140,10 +138,6 @@ export async function loadSectorModeFlags(
   db: Db,
   corporation: Corporation
 ): Promise<SectorModeFlags> {
-  // Labour system (wages on): the persisted per-sector labour cost is carved
-  // OUT of the gross maintenance recomputed below (profit-invariant).
-  const labourWagesEnabled = await isLabourWagesEnabled();
-
   // Plants tier: sectors are PLANTS, so the row's headline numbers become
   // physical (capacity, output, sales) rather than a growth rate. Resolved
   // once here and published on the returned corporation so every client
@@ -185,7 +179,6 @@ export async function loadSectorModeFlags(
   const ownTruckTeuByState = plantsMode ? await loadOwnTruckTeuByState(db, corporation) : {};
 
   return {
-    labourWagesEnabled,
     plantsMode,
     commandEconomyEnabled,
     realizedGrowthRate,
@@ -201,7 +194,6 @@ export interface SectorRowContext {
   transitionFirstFundedTurn?: number;
   plantsMode: boolean;
   commandEconomyEnabled?: boolean;
-  labourWagesEnabled: boolean;
   /** From loadSectorModeFlags; absent means no own-truck figure. */
   ownTruckTeuByState?: Record<string, number>;
   revenueRealizationRatio: number;
@@ -269,7 +261,6 @@ export function buildSectorDetails(ctx: SectorRowContext) {
     currentTurn,
     plantsMode,
     commandEconomyEnabled = false,
-    labourWagesEnabled,
     revenueRealizationRatio,
     restatement,
     tariffs,
@@ -673,7 +664,7 @@ export function buildSectorDetails(ctx: SectorRowContext) {
     totalFreightCosts += freightCost;
     totalFreightIncome += freightIncome;
     totalMaintenanceCosts += maintenance;
-    if (labourWagesEnabled && sectorLaborCostLocal != null && sectorLaborCostLocal > 0) {
+    if (sectorLaborCostLocal != null && sectorLaborCostLocal > 0) {
       totalLaborCosts += sectorLaborCostLocal;
       // Same wage bill in ₳ on the per-turn clock the pension pass charges on,
       // keyed by sector so a collective agreement can pick out just the sectors
@@ -700,7 +691,7 @@ export function buildSectorDetails(ctx: SectorRowContext) {
     country.revenue += financialRevenue;
     country.freightIncome += freightIncome;
     country.maintenance += maintenance;
-    if (labourWagesEnabled && sectorLaborCostLocal != null && sectorLaborCostLocal > 0) {
+    if (sectorLaborCostLocal != null && sectorLaborCostLocal > 0) {
       country.labor += sectorLaborCostLocal;
     }
     country.freightCosts += freightCost;

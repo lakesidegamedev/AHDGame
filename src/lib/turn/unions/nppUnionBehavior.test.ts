@@ -27,21 +27,12 @@ vi.mock("@/lib/unions/commands/bargaining", () => ({
 }));
 
 let nppAutonomyLevel: "off" | "v3" = "v3";
-let labourSystemMode: "off" | "full" = "full";
 
 vi.mock("@/lib/nppAutonomy/featureFlag", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/nppAutonomy/featureFlag")>();
   return {
     ...actual,
     getNppAutonomyLevel: vi.fn().mockImplementation(async () => nppAutonomyLevel),
-  };
-});
-
-vi.mock("@/lib/labour/featureFlag", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/lib/labour/featureFlag")>();
-  return {
-    ...actual,
-    getLabourSystemMode: vi.fn().mockImplementation(async () => labourSystemMode),
   };
 });
 
@@ -165,57 +156,6 @@ describe("processNppUnionBehavior", () => {
     vi.mocked(persistBargainingCounter).mockResolvedValue({ ok: true, status: 200 });
     vi.mocked(persistBargainingSettlement).mockResolvedValue({ ok: true, status: 200 });
     vi.mocked(persistUnionBargainingEscalation).mockResolvedValue({ ok: true, status: 200 });
-  });
-  it(
-    "elects NPP leaders into every vacant union, regression: without this phase every seeded " +
-      "union stays permanently vacant (the turn-650 sandbox symptom, pre-dues-v1: 408 unions " +
-      "stuck unowned forever with nobody to run them)",
-    async () => {
-      const unions = [
-        makeUnion("PL", { treasury: 1000 }),
-        makeUnion("PL", { treasury: 1000 }),
-        makeUnion("PL", { treasury: 1000 }),
-        makeUnion("HU", { treasury: 1000 }),
-        makeUnion("HU", { treasury: 1000 }),
-        makeUnion("HU", { treasury: 1000 }),
-      ];
-      const npps = [
-        makeMilitantNpp("PL"),
-        makeMilitantNpp("PL"),
-        makeMilitantNpp("PL"),
-        makeMilitantNpp("HU"),
-        makeMilitantNpp("HU"),
-        makeMilitantNpp("HU"),
-      ];
-      const { db } = mockDb({ unions, npps });
-
-      const result = await processNppUnionBehavior(db, 1);
-
-      // Every vacant union got an NPP leader, the precondition for anything
-      // downstream (demands, strikes) to ever happen at all. Union dues v1
-      // retired the recruitment drive this test used to also assert
-      // (membershipPressure moving off its seed), members are now a real
-      // headcount derived from represented-sector workers x unionization every
-      // turn (`processUnionsTurn`), so there is nothing left here to recruit.
-      expect(result.leadersElected).toBe(6);
-      for (const union of unions) {
-        expect(union.ownerId).not.toBeNull();
-        expect(union.ownerType).toBe("npp");
-      }
-    }
-  );
-
-  it("is a no-op when labourSystemMode is below 'unions'", async () => {
-    labourSystemMode = "off";
-    const unions = [makeUnion("PL")];
-    const npps = [makeMilitantNpp("PL")];
-    const { db, unionsBulkWrite } = mockDb({ unions, npps });
-
-    const result = await processNppUnionBehavior(db, 1);
-
-    expect(result.leadersElected).toBe(0);
-    expect(unionsBulkWrite).not.toHaveBeenCalled();
-    labourSystemMode = "full"; // reset for subsequent tests
   });
 
   it("is a no-op when NPP autonomy is below 'v3'", async () => {

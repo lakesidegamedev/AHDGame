@@ -57,9 +57,7 @@ async function seed(db: Db, ids?: string[]) {
     startingYear: 1991,
     currentYear: 1991,
   } as never);
-  await db
-    .collection("gameConfig")
-    .insertOne({ _id: "default", labourSystemMode: "legacy" } as never);
+  await db.collection("gameConfig").insertOne({ _id: "default" } as never);
   await db.collection("regionDemographics").insertMany(
     states.map((s) => {
       const male = Array<number>(101).fill(0);
@@ -202,9 +200,7 @@ describe.runIf(REAL_MONGO_ENABLED)("real Mongo county population qualification",
       expect(rebuilt).toEqual(initial);
       await seedCountyPopulations(db);
       expect(await db.collection("counties").find().sort({ _id: 1 }).toArray()).toEqual(initial);
-      await db
-        .collection("gameConfig")
-        .insertOne({ _id: "default", labourSystemMode: "legacy" } as never);
+      await db.collection("gameConfig").insertOne({ _id: "default" } as never);
       await db.collection("macroMetrics").insertMany(
         states.map((state) => ({
           _id: state._id,

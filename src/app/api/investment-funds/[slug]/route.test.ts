@@ -4,10 +4,6 @@ import { createMockDb } from "@/lib/test-utils/mockDb";
 
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
 vi.mock("@/lib/auth", () => ({ getAuthUserWithCharacter: vi.fn(async () => null) }));
-vi.mock("@/lib/indexFunds/featureFlag", () => ({
-  isIndexFundsEnabled: vi.fn(async () => true),
-  INDEX_FUNDS_DISABLED_MESSAGE: "Disabled",
-}));
 vi.mock("@/lib/currency/corporationCapital", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/currency/corporationCapital")>()),
   loadValuationFxRates: vi.fn(

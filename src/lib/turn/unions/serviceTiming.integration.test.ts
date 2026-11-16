@@ -6,7 +6,6 @@ import { loadLabourRelationsPoliticalNudgesByCountry } from "@/lib/unions/labour
 import { averageAnnualWage, servicesCostPerTurn } from "@/lib/unions/unionDues";
 import { processUnionsTurn } from "./index";
 
-vi.mock("@/lib/labour/featureFlag", () => ({ isLabourFullMode: vi.fn().mockResolvedValue(true) }));
 vi.mock("@/lib/currency/featureFlag", () => ({ isForexEnabled: vi.fn().mockResolvedValue(false) }));
 vi.mock("./labourRelationsTurn", () => ({
   processLabourRelationsTurn: vi.fn().mockResolvedValue({}),
@@ -33,7 +32,7 @@ describe("union service funding across turn phases", () => {
     };
     const cost = servicesCostPerTurn(100, averageAnnualWage([sector]), ["healthFund"]);
     memory.seed("gameState", [{ _id: "current", currentTurn: 100 }]);
-    memory.seed("gameConfig", [{ _id: "default", labourSystemMode: "full" }]);
+    memory.seed("gameConfig", [{ _id: "default" }]);
     memory.seed("corporateSectors", [sector]);
     memory.seed("unions", [
       {

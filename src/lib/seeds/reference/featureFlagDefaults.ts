@@ -65,10 +65,8 @@ export const FRESH_WORLD_GAME_CONFIG_FLAGS = {
   nppFragileMarketSupplyEnabled: true,
   lineOfCreditEnabled: true,
   moneySupplyEnabled: true,
-  indexFundsMode: "full",
   indexFundBondLiquidityEnabled: true,
   equityLiquidityFacilityEnabled: true,
-  labourSystemMode: "full",
   marketSystemMode: "plants",
   canonicalFreightBillingEnabled: true,
   interstateMoneyWiringEnabled: true,
@@ -166,7 +164,6 @@ export const NON_GAMEPLAY_GAME_CONFIG_FIELDS: Readonly<Record<string, string>> =
   bankConstructionAdmissionClosing: "runtime state: admission close latch",
   savingsAccountsMode:
     "storage migration (legacy fields to account rows) driven cohort by cohort from the banking rollout route, not a gameplay feature",
-  indexFundsEnabled: "deprecated alias of indexFundsMode",
   commandEconomyEnabled:
     "era-derived: bootstrap sets it from the preset (on for 1953 and 1979 command regimes)",
   demographicsDemandEnabled:

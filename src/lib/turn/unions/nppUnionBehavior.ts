@@ -16,7 +16,6 @@ import type {
   Union,
 } from "@/lib/db/types";
 import type { NPP } from "@/lib/db/types/npp";
-import { getLabourSystemMode, labourAtLeast } from "@/lib/labour/featureFlag";
 import { getNppAutonomyLevel, nppAutonomyLevelAtLeast } from "@/lib/nppAutonomy/featureFlag";
 import {
   activeCollectiveAgreementFilter,
@@ -135,7 +134,6 @@ export async function processNppUnionBehavior(
   const steps = substepMarker();
   const autonomy = await getNppAutonomyLevel(db);
   if (!nppAutonomyLevelAtLeast(autonomy, "v3")) return { ...EMPTY };
-  if (!labourAtLeast(await getLabourSystemMode(), "full")) return { ...EMPTY };
 
   const unions = await unionsCollection(db)
     .find({ suspended: { $ne: true } })

@@ -191,12 +191,10 @@ const NPP_ENTRY_VIABILITY_MODES: {
 
 /**
  * Graduated system modes that live on gameConfig instead of gameState. Writes
- * go through the existing per-system PATCH routes (NOT /feature-gates) because
- * some of them carry side effects — e.g. index-funds runs its bootstrap
- * migrations on a fresh enable.
+ * go through the existing per-system PATCH routes (NOT /feature-gates).
  */
 interface SystemMode {
-  key: "labourSystemMode" | "marketSystemMode" | "indexFundsMode";
+  key: "marketSystemMode";
   label: string;
   desc: string;
   endpoint: string;
@@ -205,20 +203,6 @@ interface SystemMode {
 }
 
 const SYSTEM_MODES: SystemMode[] = [
-  {
-    key: "labourSystemMode",
-    label: "Labour system",
-    desc: "Graduated rollout — each tier is a superset of the previous.",
-    endpoint: "/api/admin/config/labour",
-    defaultValue: gameConfigDefaults.labourSystemMode ?? "off",
-    levels: [
-      { value: "off", label: "Off", blurb: "Baseline economy, no labour dynamics." },
-      { value: "wages", label: "Wages", blurb: "Sector wage dynamics + minimum-wage laws." },
-      { value: "macro", label: "Macro", blurb: "Wages feed back into the macro engine." },
-      { value: "unions", label: "Unions", blurb: "Unions & collective bargaining." },
-      { value: "full", label: "Full", blurb: "Complete labour system." },
-    ],
-  },
   {
     key: "marketSystemMode",
     label: "Market structure",
@@ -235,18 +219,6 @@ const SYSTEM_MODES: SystemMode[] = [
       { value: "ledger", label: "Ledger", blurb: "Realization + double-entry financial ledger." },
       { value: "clearing", label: "Clearing", blurb: "Order-book market clearing." },
       { value: "capital", label: "Capital", blurb: "Full capital-markets tier." },
-    ],
-  },
-  {
-    key: "indexFundsMode",
-    label: "Index funds",
-    desc: "Fresh enable runs the fund-definition bootstrap migrations.",
-    endpoint: "/api/admin/config/index-funds",
-    defaultValue: gameConfigDefaults.indexFundsMode ?? "off",
-    levels: [
-      { value: "off", label: "Off", blurb: "Funds hidden." },
-      { value: "partial", label: "Partial", blurb: "Read-only pages + cron accrual." },
-      { value: "full", label: "Full", blurb: "Player buys/sells enabled." },
     ],
   },
 ];

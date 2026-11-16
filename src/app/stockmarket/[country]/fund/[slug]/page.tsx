@@ -74,9 +74,6 @@ function FundDetailContent({ country, slug }: { country: string; slug: string })
         }).catch(() => null),
       ]);
 
-      if (fundRes.status === 403) {
-        return { error: "Index funds are not enabled." };
-      }
       if (!fundRes.ok) {
         const body = (await fundRes.json()) as { error?: string };
         return { error: apiErrorText(body, "Fund not found") };

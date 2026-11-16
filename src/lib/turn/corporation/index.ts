@@ -27,7 +27,6 @@ import { installCaretakersForVacantCorps } from "./autoCaretakerVacantCorps";
 import { loadEngineSixCountries } from "./engineSixCountries";
 import { runNppCeoCareerPasses } from "./nppCeoPay";
 import { processSectors } from "./sectorCalculations";
-import { getLabourSystemMode, labourAtLeast } from "@/lib/labour/featureFlag";
 import { getMarketSystemMode, marketAtLeast } from "@/lib/market/featureFlag";
 import { buildMarketContext } from "@/lib/market/marketContext";
 import { normalizeCommodityFixStage } from "@/lib/market/commodityFixStages";
@@ -107,20 +106,17 @@ export async function processCorporationTurn(
   // instead of ~7 serial ones. marketGovernorConfig must be read here, before
   // the lookup build: the market-share basis below needs the mode and the mode
   // lives in this same document, so we resolve it exactly once per turn.
-  const [forexEnabled, thresholds, marketGovernorConfig, gameState, labourMode] = await Promise.all(
-    [
-      isForexEnabled(),
-      loadTxThresholds(db),
-      gameConfigCollection(db).findOne(
-        { _id: "default" },
-        {
-          projection: CORPORATION_TURN_GAME_CONFIG_PROJECTION,
-        }
-      ),
-      getGameState(),
-      getLabourSystemMode(),
-    ]
-  );
+  const [forexEnabled, thresholds, marketGovernorConfig, gameState] = await Promise.all([
+    isForexEnabled(),
+    loadTxThresholds(db),
+    gameConfigCollection(db).findOne(
+      { _id: "default" },
+      {
+        projection: CORPORATION_TURN_GAME_CONFIG_PROJECTION,
+      }
+    ),
+    getGameState(),
+  ]);
   mark("preamble");
   // Stage 2 journals each whole-call write step so an interrupted turn skips what
   // finished and stops on what it cannot prove safe to repeat.
@@ -281,51 +277,38 @@ export async function processCorporationTurn(
   const treasuryCashLedgerEnabled = marketGovernorConfig?.treasuryCashLedgerEnabled === true;
   mark("buildLookups+gameState");
 
-  // Labour/Unions system: when labourSystemMode ≥ "wages", sector profit carves
-  // an explicit, per-sector/per-era labor cost out of maintenance (resolved per
-  // sector inside processSectors from sectorType + currentYear). Inert (no
-  // economic change) when the mode is off, the default.
-  const fullEnabled = labourAtLeast(labourMode, "full");
+  // Sector profit carves an explicit, per-sector/per-era labor cost out of
+  // maintenance (resolved per sector inside processSectors from sectorType +
+  // currentYear).
   const bannedUnionCountryIds = buildUnionsBannedByCountry(lookups.federalBudgets);
   const [
     unionsById,
     collectiveAgreementEffects,
     industrialActionOutputFactorBySectorId,
     undergroundStrengthByCountrySector,
-  ] = fullEnabled
-    ? await Promise.all([
-        buildUnionEffectsById(db, turn ?? gameState?.currentTurn ?? 0),
-        loadCollectiveAgreementEffects(db, turn ?? gameState?.currentTurn ?? 0),
-        loadIndustrialActionOutputFactors(db),
-        loadUndergroundStrengthByCountrySector(db, bannedUnionCountryIds),
-      ])
-    : [undefined, undefined, undefined, undefined];
-  const wagesEnabled = labourAtLeast(labourMode, "wages");
+  ] = await Promise.all([
+    buildUnionEffectsById(db, turn ?? gameState?.currentTurn ?? 0),
+    loadCollectiveAgreementEffects(db, turn ?? gameState?.currentTurn ?? 0),
+    loadIndustrialActionOutputFactors(db),
+    loadUndergroundStrengthByCountrySector(db, bannedUnionCountryIds),
+  ]);
   const labour: LabourContext = {
-    wagesEnabled,
-    // minimumWageLawStage: the national minimum wage law in force sets the
-    // floor. Below the wages tier the floor is unused, so the law is not read.
+    wagesEnabled: true,
+    // minimumWageLawStage: the national minimum wage law in force sets the floor.
     minWageRatioByCountry: await resolveMinWageRatioByCountry(
       db,
       lookups.federalBudgets,
-      wagesEnabled ? marketGovernorConfig?.minimumWageLawStage : undefined
+      marketGovernorConfig?.minimumWageLawStage
     ),
-    // v3 Phase 5/6: gates the NPC unionization metric + strikes.
-    unionsEnabled: labourAtLeast(labourMode, "unions"),
-    // v3 Phase 7b: gates union-law bias + union-busting.
-    fullEnabled,
+    unionsEnabled: true,
+    fullEnabled: true,
     unionLawBiasByCountry: withAutomationUnionBias(
       buildUnionLawBiasByCountry(lookups.federalBudgets),
       lookups.automationPolicyByCountry
     ),
-    // Union ban (player suggestion #93): read at the "unions" tier (the same
-    // tier the unionization/strike machinery runs at), unlike the bias map
-    // above whose reads are gated at "full".
     unionsBannedByCountry: bannedUnionCountryIds,
     undergroundStrengthByCountrySector,
-    // Union dues v1: gated read, only fetched when fullEnabled, so a union
-    // document's mere existence never has an effect at a lower tier. Resolved
-    // per-sector via `CorporateSector.representingUnionId`, not by
+    // Resolved per-sector via `CorporateSector.representingUnionId`, not by
     // (countryId, sectorType), see `sectorLabour.ts`.
     unionsById,
     collectiveAgreementWageFloorBySectorId: collectiveAgreementEffects?.wageFloorBySectorId,

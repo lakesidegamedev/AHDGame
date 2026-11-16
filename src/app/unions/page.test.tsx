@@ -13,7 +13,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe('UnionsPage — labourSystemMode below "full"', () => {
+describe("UnionsPage — unions unavailable", () => {
   it("shows a clear not-enabled state instead of a broken error page with fake stats", async () => {
     global.fetch = vi.fn().mockResolvedValue(
       new Response(JSON.stringify({ error: "Player-run unions are not enabled." }), {
@@ -36,7 +36,7 @@ describe('UnionsPage — labourSystemMode below "full"', () => {
   });
 });
 
-describe('UnionsPage — labourSystemMode at "full"', () => {
+describe("UnionsPage — unions available", () => {
   it("still shows the normal leaderboard chrome when the feature is actually enabled", async () => {
     global.fetch = vi.fn().mockResolvedValue(
       new Response(JSON.stringify({ unions: [], bannedCountries: [] }), {

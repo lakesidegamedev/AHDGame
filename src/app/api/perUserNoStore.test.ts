@@ -76,10 +76,6 @@ const mockCheckWikiDisabled = vi.fn();
 vi.mock("@/lib/api/wikiGuard", () => ({ checkWikiDisabled: mockCheckWikiDisabled }));
 
 const mockIsLabourFullMode = vi.fn();
-vi.mock("@/lib/labour/featureFlag", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/lib/labour/featureFlag")>();
-  return { ...actual, isLabourFullMode: mockIsLabourFullMode };
-});
 
 const userId = new ObjectId().toHexString();
 const characterId = new ObjectId();

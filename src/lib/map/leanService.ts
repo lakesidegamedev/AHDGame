@@ -10,9 +10,8 @@ import {
   getSocialLeanLabelHex,
   getUkEconomicLeanLabelHex,
 } from "@/lib/utils/politics";
-import { regionLeanLabel, mainPartiesFor } from "@/lib/regionLean/partyLabel";
-import type { MainParties } from "@/lib/regionLean/rules";
-import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { loadCountryLeanScale } from "@/lib/regionLean/loadCountryLeanScale";
+import { regionLeanDisplay, type CountryLeanScale } from "@/lib/regionLean/scale";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
 
@@ -20,6 +19,10 @@ export interface MapLeanState {
   economicLean: number;
   socialLean: number;
   displayLean: number;
+  /** Lean from the even split between the two main parties; what fills read. */
+  labelEconomicLean: number;
+  labelSocialLean: number;
+  labelDisplayLean: number;
   color: string;
   label: string;
   tooltip: string[];
@@ -33,7 +36,7 @@ export async function computeLeanMap(
   db: Db,
   countryId: CountryId
 ): Promise<Record<string, MapLeanState>> {
-  const [allStates, allDemographics, gameState, parties] = await Promise.all([
+  const [allStates, allDemographics, gameState, scale] = await Promise.all([
     statesCollection(db).find({ countryId }).toArray(),
     stateDemographicsCollection(db).find({ countryId }).toArray(),
     getGameStateCollection(db).then((col) =>
@@ -42,33 +45,17 @@ export async function computeLeanMap(
         { projection: { preset: 1, currentYear: 1, startingYear: 1 } }
       )
     ),
-    politicalPartiesCollection(db)
-      .find(
-        { countryId },
-        {
-          projection: {
-            sequentialId: 1,
-            name: 1,
-            abbreviation: 1,
-            economicPosition: 1,
-            socialPosition: 1,
-            isDefault: 1,
-            memberCount: 1,
-          },
-        }
-      )
-      .toArray(),
+    loadCountryLeanScale(db, countryId),
   ]);
-  const mainParties = mainPartiesFor(parties.map((p) => ({ ...p, id: String(p.sequentialId) })));
   const era = {
     preset: gameState?.preset ?? null,
     ...eraYearContextFromGameState(gameState),
   };
 
   if (countryId === COUNTRY_CONFIGS.UK.id || countryId === COUNTRY_CONFIGS.DE.id) {
-    return buildLeanUK(countryId, allStates, allDemographics, era, mainParties);
+    return buildLeanUK(countryId, allStates, allDemographics, era, scale);
   }
-  return buildLeanUS(countryId, allStates, allDemographics, era, mainParties);
+  return buildLeanUS(countryId, allStates, allDemographics, era, scale);
 }
 
 type EraLeanContext = { preset: string | null; year: number | null; startingYear: number | null };
@@ -92,7 +79,7 @@ function buildLeanUS(
   allStates: State[],
   allDemographics: StateDemographics[],
   era: EraLeanContext,
-  mainParties: MainParties | null
+  scale: CountryLeanScale
 ): Record<string, MapLeanState> {
   const demoByState = new Map(allDemographics.map((d) => [d._id, d]));
   const result: Record<string, MapLeanState> = {};
@@ -107,15 +94,20 @@ function buildLeanUS(
     );
 
     const displayLean = getDisplayLean(economicLean, socialLean);
-    const label = regionLeanLabel(displayLean, mainParties);
-    const { color } = getLeanLabelHex(displayLean);
-    const econ = getLeanLabelHex(economicLean);
-    const social = getSocialLeanLabelHex(socialLean);
+    // Label and colours read from the even split between the two main parties.
+    const shown = regionLeanDisplay(scale, economicLean, socialLean);
+    const label = shown.label;
+    const { color } = getLeanLabelHex(shown.displayTone);
+    const econ = getLeanLabelHex(shown.economicTone);
+    const social = getSocialLeanLabelHex(shown.socialTone);
 
     result[stateId] = {
       economicLean,
       socialLean,
       displayLean,
+      labelEconomicLean: shown.economicTone,
+      labelSocialLean: shown.socialTone,
+      labelDisplayLean: shown.displayTone,
       color,
       label,
       economicColor: econ.color,
@@ -138,7 +130,7 @@ function buildLeanUK(
   allStates: State[],
   allDemographics: StateDemographics[],
   era: EraLeanContext,
-  mainParties: MainParties | null
+  scale: CountryLeanScale
 ): Record<string, MapLeanState> {
   const demoByState = new Map(allDemographics.map((d) => [d._id, d]));
   const result: Record<string, MapLeanState> = {};
@@ -154,16 +146,20 @@ function buildLeanUK(
     );
 
     const displayLean = getDisplayLean(economicLean, socialLean);
-    const label = regionLeanLabel(displayLean, mainParties);
-    const combined = getUkEconomicLeanLabelHex(displayLean);
-    const econ = getUkEconomicLeanLabelHex(economicLean);
-    const socialMeta = getSocialLeanLabelHex(socialLean);
-    const socialColor = getUkEconomicLeanLabelHex(socialLean).color;
+    const shown = regionLeanDisplay(scale, economicLean, socialLean);
+    const label = shown.label;
+    const combined = getUkEconomicLeanLabelHex(shown.displayTone);
+    const econ = getUkEconomicLeanLabelHex(shown.economicTone);
+    const socialMeta = getSocialLeanLabelHex(shown.socialTone);
+    const socialColor = getUkEconomicLeanLabelHex(shown.socialTone).color;
 
     result[regionId] = {
       economicLean,
       socialLean,
       displayLean,
+      labelEconomicLean: shown.economicTone,
+      labelSocialLean: shown.socialTone,
+      labelDisplayLean: shown.displayTone,
       color: combined.color,
       label,
       economicColor: econ.color,

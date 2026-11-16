@@ -273,7 +273,7 @@ export interface EuroAdoptionProvision {
 }
 
 /**
- * v3 Phase 7b (labourSystemMode >= "full"): union laws. A single signed axis
+ * v3 Phase 7b: union laws. A single signed axis
  * rather than the design doc's literal "right-to-work / collective-bargaining
  * sliders" — deliberate simplification, validated as architecturally safe
  * (every other non-policy provision is a raw typed field with its own

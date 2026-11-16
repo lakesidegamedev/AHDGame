@@ -1,11 +1,10 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { requireBasicAuth } from "@/lib/api/requireAuth";
-import { handleRouteError, errorResponse } from "@/lib/api/errors";
+import { handleRouteError } from "@/lib/api/errors";
 import { resolveCorporation, requireCeo } from "@/lib/api/corporations/resolveQuery";
 import type { BargainingCampaign, CollectiveAgreement, Union } from "@/lib/db/types";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
-import { isLabourFullMode } from "@/lib/labour/featureFlag";
 import {
   getBargainingMediationAvailability,
   isCollectiveAgreementActive,
@@ -22,9 +21,6 @@ export async function GET(_request: Request, { params }: RouteParams) {
   try {
     const auth = await requireBasicAuth();
     if (!auth.ok) return auth.response;
-    if (!(await isLabourFullMode())) {
-      return errorResponse(403, "Player-run unions are not enabled.");
-    }
     const db = await getDb();
     const { id } = await params;
     const resolved = await resolveCorporation(db, id);

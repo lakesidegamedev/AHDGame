@@ -340,7 +340,7 @@ describe("unemploymentNode", () => {
   });
 });
 
-describe("unemploymentNode — v2-3a labour wage-index Δ → jobs (gated on labourSystemMode ≥ 'macro')", () => {
+describe("unemploymentNode — v2-3a labour wage-index Δ → jobs", () => {
   it("a zero/absent Δ is byte-identical to the pre-v2-3 Okun target (parity)", () => {
     const absent = unemploymentNode.compute!(
       ctx({
@@ -414,7 +414,7 @@ describe("unemploymentNode — v2-3a labour wage-index Δ → jobs (gated on lab
   });
 });
 
-describe("unemploymentNode — v2-3b automation-index Δ → jobs (gated on labourSystemMode ≥ 'macro')", () => {
+describe("unemploymentNode — v2-3b automation-index Δ → jobs", () => {
   it("a zero/absent automation Δ is byte-identical to the pre-v2-3b baseline (parity)", () => {
     const absent = unemploymentNode.compute!(
       ctx({

@@ -71,8 +71,6 @@ import { partitionOpenMarkets } from "@/lib/economy/queries/privateEnterpriseGat
 import type { CommodityPrice } from "@/lib/db/types/commodityPrice";
 import type { ManufacturingProductProject } from "@/lib/products/manufacturingProject";
 
-import { labourAtLeast, isLabourSystemMode } from "@/lib/labour/modes";
-
 import { bucketKey } from "@/lib/market/marketBuckets";
 import {
   computeStateControlledBuckets,
@@ -631,8 +629,10 @@ export async function processNppCorporationDecisions(
       fxByCurrency.set(rate.currencyCode, rate.rate);
     }
   }
-  const { labourMode, retailExpansionPaused, ledgerShadow, bankingPolicy } =
-    await loadNppBehaviorConfig(db, turn);
+  const { retailExpansionPaused, ledgerShadow, bankingPolicy } = await loadNppBehaviorConfig(
+    db,
+    turn
+  );
   const nppConstructionFinanceEnabled =
     plants?.enabled === true &&
     bankingPolicy.privateBanking &&
@@ -756,8 +756,6 @@ export async function processNppCorporationDecisions(
     strategyGate?.frontierEntryExperimentEnabled
   );
 
-  const labourWagesEnabled = isLabourSystemMode(labourMode) && labourAtLeast(labourMode, "wages");
-
   // Pace AI free conversions: a per-country allowance of capacity book value per turn.
   const capacityBookByCountry = new Map<string, number>();
   if (conversionPaceShare > 0)
@@ -850,7 +848,6 @@ export async function processNppCorporationDecisions(
         isNationalEnterprise: !!corp.countryOwnerId,
       }),
       modifiers: autopilot ? AUTOPILOT_MODIFIERS : ceoArchetypeModifiers(archetype),
-      labourWagesEnabled,
       currentYear: techCurrentYear > 0 ? techCurrentYear : undefined,
       techTreesEnabled,
       sectorResearchByLane,

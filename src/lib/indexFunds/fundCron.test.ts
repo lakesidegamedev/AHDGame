@@ -96,10 +96,6 @@ vi.mock("@/lib/db/runWithOptionalTransaction", () => ({
 vi.mock("@/lib/indexFunds/fundConstituentLifecycle", () => ({
   findRemovedConstituentHoldings: vi.fn().mockReturnValue([]),
 }));
-vi.mock("@/lib/indexFunds/featureFlag", () => ({
-  isIndexFundsEnabled: vi.fn().mockResolvedValue(false),
-  INDEX_FUNDS_DISABLED_MESSAGE: "disabled",
-}));
 vi.mock("@/lib/indexFunds/fundBondReserve", () => ({ deployBondReserveFromCash: vi.fn() }));
 vi.mock("@/lib/indexFunds/fundCrossRebalancing", () => ({
   executeFundCrossRebalancing: vi.fn(),

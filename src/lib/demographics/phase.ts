@@ -80,7 +80,6 @@ import {
 } from "./flows/internationalMigration";
 import { loadMigrationLawPositions } from "./migrationLaws";
 import { planBilateralMigration, transferBilateralCohorts } from "./flows/rules/bilateralMigration";
-import { getLabourSystemMode, labourAtLeast } from "@/lib/labour/featureFlag";
 import { labourMigrationWageFactor } from "@/lib/labour/laborCost";
 import { LIFE_EXPECTANCY_MID, PREVENTABLE_MORTALITY_MID } from "./flows/mortality";
 import { loadPoliticalMacroInputs } from "@/lib/politicalLegislation/politicalMacroInputs";
@@ -261,7 +260,7 @@ export async function runDemographicFlows(
     "economic.labourWageIndex.value": 1,
     "economic.labourTightness.value": 1,
   } as Record<string, 1>;
-  const [demos, states, macroMetrics, gameState, labourConfig, politicalInputs, euMemberships] =
+  const [demos, states, macroMetrics, gameState, politicalInputs, euMemberships] =
     await Promise.all([
       regionDemographicsCollection(db).find({}).toArray(),
       statesCollection(db).find({}).toArray(),
@@ -282,11 +281,6 @@ export async function runDemographicFlows(
           preset?: string;
         } & ResetVersionState
       >({}),
-      // v2: read the labour mode via the SAME db (so tests' mock db is honored) and
-      // feed it as preloaded — never let getLabourSystemMode hit its own getDb.
-      gameConfigCollection(db)
-        .findOne({ _id: "default" }, { projection: { labourSystemMode: 1 } })
-        .catch(() => null),
       // Bridge A supplies the healthcare.* mortality inputs. The macro read
       // above carries no political values, so without this every region would
       // share one mortality curve.
@@ -397,12 +391,6 @@ export async function runDemographicFlows(
         })
       : new Map<string, Record<string, number>>();
 
-  // v2: labour→macro coupling is active only at labourSystemMode ≥ "macro".
-  const labourMacroEnabled = labourAtLeast(
-    await getLabourSystemMode(labourConfig ?? null),
-    "macro"
-  );
-
   // ── Stage 1: per-region LOCAL flows (aging/mortality/fertility/international) ──
   // Pass 1a: compute each region's net international migration (policy %, economic
   // pull, then per-region cap) and gather inputs. We need every region's net before
@@ -460,21 +448,19 @@ export async function runDemographicFlows(
       : integrationScore == null
         ? seededMigrationPct
         : modulateByPoliticalScore(seededMigrationPct, integrationScore, 1.5);
-    const labourVisaPct = !labourMacroEnabled
-      ? 0
-      : useResetMetrics
-        ? labourMigrationPct(
-            lawPositions?.labour,
+    const labourVisaPct = useResetMetrics
+      ? labourMigrationPct(
+          lawPositions?.labour,
+          val(m?.economic?.labourTightness, 0),
+          val(m?.economic?.labourWageIndex, 1),
+          migrationRatePct
+        )
+      : migrationRatePct > 0
+        ? labourShortageMigrationBonusPct(
             val(m?.economic?.labourTightness, 0),
-            val(m?.economic?.labourWageIndex, 1),
-            migrationRatePct
+            val(m?.economic?.labourWageIndex, 1)
           )
-        : migrationRatePct > 0
-          ? labourShortageMigrationBonusPct(
-              val(m?.economic?.labourTightness, 0),
-              val(m?.economic?.labourWageIndex, 1)
-            )
-          : 0;
+        : 0;
     const baseNet = (((migrationRatePct + labourVisaPct) / 100) * popNow) / TURNS_PER_YEAR;
     const gdpGrowthVal = val(m?.economic?.gdpGrowth, ECON_PULL_NEUTRAL.gdpGrowth);
     let econPull = economicPullFactor({
@@ -487,14 +473,11 @@ export async function runDemographicFlows(
       // gdpGrowth → gap 0 → pull 1 (parity), not the legacy 2.5-anchored pull.
       potential: val(m?.economic?.trendGrowth, val(m?.economic?.potentialGrowth, gdpGrowthVal)),
     });
-    // v2 labour→macro (gated on labourSystemMode ≥ "macro"): a region whose labour
-    // system pushed wages above baseline attracts more migrants; below, fewer.
-    // Bounded so it modulates — not dominates — the output-gap pull. Index 1.0
-    // (or labour off) ⇒ ×1.0 (parity).
-    if (labourMacroEnabled) {
-      const wageFactor = labourMigrationWageFactor(val(m?.economic?.labourWageIndex, 1));
-      econPull = Math.max(0.5, Math.min(1.5, econPull * wageFactor));
-    }
+    // Labour to macro: a region whose labour system pushed wages above
+    // baseline attracts more migrants; below, fewer. Bounded so it modulates,
+    // not dominates, the output-gap pull. Index 1.0 gives x1.0.
+    const wageFactor = labourMigrationWageFactor(val(m?.economic?.labourWageIndex, 1));
+    econPull = Math.max(0.5, Math.min(1.5, econPull * wageFactor));
     const cappedNet = capNetMigrants(
       applyEconomicPull(baseNet, econPull),
       popNow,
@@ -805,8 +788,8 @@ export async function runDemographicFlows(
             unemployment: val(w.m?.economic?.unemploymentRate, 5),
             medianIncome: val(w.m?.economic?.medianIncome, 50000),
             costOfLiving: val(w.m?.economic?.costOfLiving, 100),
-            labourTightness: labourMacroEnabled ? val(w.m?.economic?.labourTightness, 0) : 0,
-            labourWageIndex: labourMacroEnabled ? val(w.m?.economic?.labourWageIndex, 1) : 1,
+            labourTightness: val(w.m?.economic?.labourTightness, 0),
+            labourWageIndex: val(w.m?.economic?.labourWageIndex, 1),
           },
           avgIncome
         ),

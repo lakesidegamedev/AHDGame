@@ -153,13 +153,8 @@ export async function loadCorporationDetailView(args: {
     sectorFieldToCorpCcy
   );
 
-  const {
-    labourWagesEnabled,
-    plantsMode,
-    commandEconomyEnabled,
-    realizedGrowthRate,
-    ownTruckTeuByState,
-  } = await loadSectorModeFlags(db, corporation);
+  const { plantsMode, commandEconomyEnabled, realizedGrowthRate, ownTruckTeuByState } =
+    await loadSectorModeFlags(db, corporation);
 
   const { sectorDetails, totals, wageBillAnchorPerTurnBySectorId, physicalRollups } =
     buildSectorDetails({
@@ -169,7 +164,6 @@ export async function loadCorporationDetailView(args: {
       transitionFirstFundedTurn: await openingPromise,
       plantsMode,
       commandEconomyEnabled,
-      labourWagesEnabled,
       ownTruckTeuByState,
       revenueRealizationRatio,
       restatement,
@@ -192,7 +186,6 @@ export async function loadCorporationDetailView(args: {
     currentTurn,
     totals,
     wageBillAnchorPerTurnBySectorId,
-    labourWagesEnabled,
     restatement,
     fxByCurrency,
     federalBudgets,
@@ -256,7 +249,7 @@ export async function loadCorporationDetailView(args: {
       ...brandLoyaltyFields,
       /** True when this world runs `marketSystemMode >= "plants"`. */
       plantsMode,
-      labourEnabled: labourWagesEnabled,
+      labourEnabled: true,
       /** Corp-wide physical rollups; null outside plants. */
       physical,
       averageQuality:

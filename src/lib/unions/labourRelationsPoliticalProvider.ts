@@ -11,7 +11,6 @@ import type {
   GameConfig,
   Union,
 } from "@/lib/db/types";
-import { isLabourFullMode } from "@/lib/labour/featureFlag";
 import type { PoliticalMetricId } from "@/lib/politicalMetrics/types";
 import { normalizeServiceIds, servicesWorkerSecurityNudge } from "./unionServices";
 import { loadFundedUnionServices, UNION_SERVICE_FUNDING_PROJECTION } from "./unionServiceFunding";
@@ -145,12 +144,6 @@ export async function loadLabourRelationsPoliticalNudgesByCountry(
   db: Db,
   currentTurn: number
 ): Promise<CountryPoliticalNudges> {
-  const config = await gameConfigCollection(db).findOne(
-    { _id: "default" },
-    { projection: { labourSystemMode: 1 } }
-  );
-  if (!(await isLabourFullMode(config))) return new Map();
-
   const [campaigns, unions] = await Promise.all([
     bargainingCampaignsCollection(db)
       .find(
