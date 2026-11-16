@@ -10,11 +10,7 @@ import type { CorporationLookups } from "@/lib/turn/corporation/types";
 import { processSector, type SectorTurnEnv } from "@/lib/turn/corporation/sectorTurn";
 import { runClearingPrePass } from "@/lib/turn/corporation/clearingPrePass";
 import { buildMarketContext } from "@/lib/market/marketContext";
-import {
-  GROUP_ROUTE_ID_PREFIX,
-  ownRouteKey,
-  type InternalSupplyPolicy,
-} from "@/lib/market/internalSupply/rules";
+import { ownRouteKey, type InternalSupplyPolicy } from "@/lib/market/internalSupply/rules";
 function emptyLookups(): CorporationLookups {
   return {
     corporations: [],
