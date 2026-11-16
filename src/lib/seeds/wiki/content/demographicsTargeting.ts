@@ -24,7 +24,7 @@ For each cell each turn, the core of each candidate's weight is appeal x reach x
 | Factor | Range | What it measures |
 | --- | --- | --- |
 | Reach | 0.1 to 1.0 | Square root of political influence, 1.0 at influence 100. Never below 0.1 |
-| Appeal | about 0.5 to 35.5 | How close your positions are to the cell's, plus a direction bonus of up to 5 per axis. Influence does not enter appeal |
+| Appeal | about 0.5 to 35.5 | How close your positions are to the cell's, plus a direction bonus of up to 5 per axis. In presidential races influence adds up to 25 points to appeal; in state races it does not enter appeal |
 | Approval | 0 to 1 | (Favorability / 100) to the power 0.8 |
 | Party organization | 0 to 1.0 | Your party's share of the state's organization, to the power 0.2 |
 | Infamy | 0.95 to 1.0 | 1 - 0.05 x infamy / 100 (1.0 for NPPs) |
@@ -45,11 +45,11 @@ Appeal is 25 x ((50 - 5 x econ gap - 5 x social gap) / 50) to the power 1.5, plu
 appeal-policy-distance
 \`\`\`
 
-The curve is deliberately softer than squaring so that campaigning, favorability and organization still move outcomes, and ideology alone does not dominate every race. Each voter group's own centre on the grid decides what a position earns; see [Party Ideology](/wiki/party-ideology). A centrist (0, 0) is a moderate distance from every cell. A far-left candidate (-5, -5) is nearly on top of the most progressive cells and far from the most conservative. Specialists beat generalists inside their base. Generalists beat specialists across the whole field.
+The curve is deliberately softer than squaring so that campaigning, favorability and organization still move outcomes, and ideology alone does not dominate every race. Each voter group's own centre on the grid decides what a position earns; see [Party Ideology](/wiki/party-ideology). A centrist (0, 0) is right on top of the centrist cells and far from the most extreme ones. A far-left candidate (-5, -5) is nearly on top of the most progressive cells and far from the most conservative. Specialists beat generalists inside their base. Generalists beat specialists across the whole field.
 
 ### Ads or canvassing?
 
-A cell is worth its size times its turnout. A group that is 22% of the electorate at 40% turnout is worth 8.8. A group that is 15% at 70% is worth 10.5, so the smaller group is the bigger prize. Raising your favorability from 50 to 60 lifts your approval factor from 0.574 to 0.665, which is 16% more of your weight in every group. A single ad gain of +3 (50 to 53) is about +4.8%. Run Advertisements raises favorability everywhere; to work one group, targeted ads add a capped bonus there. By comparison, canvassing a group where you already have approval 80 and turnout is only 38% adds up to 2 points of turnout per action (4 in the closing turns). If you already own a group, canvass it. If you are 50-50 with it, advertise, with targeted ads if it is one group you need.
+A cell is worth its size times its turnout. A group that is 22% of the electorate at 40% turnout is worth 8.8. A group that is 15% at 70% is worth 10.5, so the smaller group is the bigger prize. Raising your favorability from 50 to 60 lifts your approval factor from 0.574 to 0.665, which is 16% more of your weight in every group. A single ad gain of +3 (50 to 53) is about +4.8%. Run Advertisements raises favorability everywhere; to work one group, targeted ads add a capped bonus there. By comparison, canvassing a group where you already have approval 80 and turnout is only 38% adds at most 0.05 points of turnout per action (0.1 in the closing turns). If you already own a group, canvass it. If you are 50-50 with it, advertise, with targeted ads if it is one group you need.
 
 ### Turnout
 
@@ -63,7 +63,7 @@ A modifier applies to the bucket you target and reaches every cell that carries 
 
 ### State political lean
 
-A state's lean is the turnout-weighted average of all its cells. Labels use the shared -5 to +5 ruler: 0 Centrist, plus or minus 1 Center-Left or Center-Right, plus or minus 2 Lean, plus or minus 3 Left or Right. In presidential races the lean marks a state as a swing state (where swing-canvassing ground game pays); the old per-state lean vote multiplier applies only to races that opened under the first presidential rules.
+A state's lean is the share-weighted average of all its cells. Labels use the shared -5 to +5 ruler: 0 Centrist, plus or minus 1 Center-Left or Center-Right, plus or minus 2 Lean, plus or minus 3 Left or Right. In presidential races the lean marks a state as a swing state (where swing-canvassing ground game pays); the old per-state lean vote multiplier applies to races on the first two presidential rule sets, but not the current one.
 
 ### The numbers
 

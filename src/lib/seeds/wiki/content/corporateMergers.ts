@@ -15,7 +15,7 @@ This is separate from a [hostile takeover](/wiki/corporations#privatization-buyo
 
 Open the Deals tab on your corporation page, search for a target by name (any country, so cross-border deals are allowed) and enter a price. You can withdraw an offer until it is answered.
 
-**Reference valuation.** Next to your price the game shows an independent fair-value estimate. It is the greater of the target's share price times its shares (the [Stock Market](/wiki/stock-market) price feeds it) and its cash plus the value of its sectors (the replacement cost of its plants in worlds with plants). You do not have to pay it. It lets both sides see whether an offer is generous or a lowball. Start from it: a player CEO will compare your price with what they could get on the stock market, so a premium helps. If you are short of cash when the deal closes, it fails before anything moves. Keep cash for the full price.
+**Reference valuation.** Next to your price the game shows an independent fair-value estimate. It is the greater of the target's share price times its shares (the [Stock Market](/wiki/stock-market) price feeds it) and its net balance-sheet value: cash plus the value of its sectors and other assets such as funds, bank equity and receivables, less debt (never below zero). You do not have to pay it. It lets both sides see whether an offer is generous or a lowball. Start from it: a player CEO will compare your price with what they could get on the stock market, so a premium helps. If you are short of cash when the deal closes, it fails before anything moves. Keep cash for the full price.
 
 You cannot make an offer when:
 
@@ -81,7 +81,7 @@ merger-review-timeout-outcomes
 
 Suppose the combined firm would hold 68% of an industry in the target's country, which has Active Enforcement (trip level 60%). The deal is referred. If the minister does nothing for 6 turns, the margin is 68 - 60 = 8 points, which is between 5 and 15, so it clears with a sell-down order. You then have 12 turns to bring your group's share of that industry below 60%. If you miss the deadline and your group earns ₳2,000,000 in that industry, you pay 5% = ₳100,000 every turn until you comply, and you cannot open new offers.
 
-Acquisition offers work in every world that has the Deals tab. If your world has acquisitions switched off, the Deals tab stays empty. The Keep as subsidiary outcome is offered only in worlds with subsidiaries. Merger review exists only in countries with a competition law and a reviewing seat in the current era, and never applies to state-owned corporations or command economies.
+Acquisition offers work in every world. The Deals tab is shown to the CEO of a corporation that can manage acquisitions. The Keep as subsidiary outcome is offered in every world, subject to the refusal rules above. Merger review exists only in countries with a competition law and a reviewing seat in the current era, and never applies to state-owned corporations or command economies.
 
 Last checked 2026-10-29, version 1.18.0. Exact rules: [Corporate Mergers and Acquisitions (design)](https://docs.lakesidegames.net/design/corporate-mergers-and-acquisitions.html)
 `;

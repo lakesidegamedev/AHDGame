@@ -1,6 +1,6 @@
 export const coreSystemsContent = `# Core Systems
 
-Every move you make is limited by the same three things: how fast the clock runs, how many actions you have left, and which of two money pools pays. A turn happens every real hour, each turn gives you actions to spend, and campaign money and personal money never mix. Learn these three and the rest of the game is detail.
+Every move you make is limited by the same three things: how fast the clock runs, how many actions you have left, and which of two money pools pays. A turn happens every real hour, each turn gives you actions to spend, and campaign money and personal money are separate pools, linked only by one costly donation action. Learn these three and the rest of the game is detail.
 
 ## The clock
 
@@ -90,7 +90,7 @@ Cash on Hand grows from dividends, CEO salary, bond coupons, share sales and wir
 \`\`\`flowchart-turn
 \`\`\`
 
-The list above is a simplified view of the election-facing steps. Actions and funds refresh first, then party elections, non-player politicians, bills, campaigns and election resolution, then policy effects, national numbers and history. Each step finishes before the next reads its results. A Campaign you spend at 03:59 raises your Political Influence at once, but it only feeds your income, polls and vote share when the 04:00 turn runs. The full order is on [Reference: Turn Order](/wiki/reference-turn-order).
+The list above is a simplified view of the election-facing steps. A few housekeeping steps run first (shareholder releases, tax bases, Cold War tension), then actions and funds refresh alongside corporations, then party elections, non-player politicians, bills, campaigns and election resolution, then policy effects, national numbers and history. Most steps finish before the next reads its results, but actions, funds and corporations run side by side. A Campaign you spend at 03:59 raises your Political Influence at once, but it only feeds your income, polls and vote share when the 04:00 turn runs. The full order is on [Reference: Turn Order](/wiki/reference-turn-order).
 
 ## A day in a large state
 
@@ -109,7 +109,7 @@ Tips: spend before you hit the hoard threshold, keep Campaign Funds and Cash on 
 
 **Cabinets.** Presidents and Prime Ministers appoint cabinets. In the US the President nominates any player or NPP politician of the country to the principal posts (Secretary of State, Treasury, Defense, Attorney General and the others). Senators vote For, Against or Abstain over a 24-hour window, and a simple majority confirms. The White House Chief of Staff needs no Senate vote. A President can fire any confirmed member and can bridge one vacancy with a 24-turn acting appointment per office per term. The +1 action a minister gets comes from the [Cabinet](/wiki/cabinet). Parliamentary countries follow their own conventions, on the country hubs.
 
-**Campaign page.** Every presidential candidacy has a Campaign page; other races are fought with your character's own actions. The owner sees budget, operations and manager assignment, the party sees an intelligence snapshot, and the public sees a basic summary. It is where you spend a separate budget on Fundraising, Ground Game, Media Spending and Opposition Research, each a branch tree rather than a flat ladder. Its budget draws on your funds. See [Campaign Manager](/wiki/campaign-manager) and [Campaign Strategy](/wiki/campaign-strategy).
+**Campaign page.** Every presidential candidacy has a Campaign page; other races are fought with your character's own actions. The owner sees budget, operations and manager assignment, the party sees an intelligence snapshot, and the public sees a basic summary. It is where you spend a separate budget on Fundraising, Ground Game, Media Spending and Opposition Research, each a branch tree rather than a flat ladder. Its budget is its own pool, separate from your personal funds. See [Campaign Manager](/wiki/campaign-manager) and [Campaign Strategy](/wiki/campaign-strategy).
 
-Applies in every world and era; office tables, term lengths and which offices exist differ by country, some countries are open only in some eras, and speeds can differ in single-player worlds. Last checked 2026-10-29, version 1.18.0. Exact rules: [Core Systems (design)](https://docs.lakesidegames.net/design/core-systems.html)
+Applies in most worlds and eras (the full Campaign page is used only for some races, such as US, UK and Japanese ones, while German and Irish races use a lighter election page); office tables, term lengths and which offices exist differ by country, some countries are open only in some eras, and speeds can differ in single-player worlds. Last checked 2026-10-29, version 1.18.0. Exact rules: [Core Systems (design)](https://docs.lakesidegames.net/design/core-systems.html)
 `;

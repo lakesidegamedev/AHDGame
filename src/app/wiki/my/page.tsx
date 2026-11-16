@@ -24,7 +24,7 @@ export default async function MyWikiPage() {
   if (!user) redirect("/login?returnUrl=/wiki/my");
   if (!user.character) {
     return (
-      <div className="mx-auto max-w-3xl px-4 py-12">
+      <div className="mx-auto max-w-[860px] px-4 py-7 sm:px-8">
         <h1 className="mb-3 text-2xl font-bold text-foreground">My wiki pages</h1>
         <p className="text-muted">
           You need an active character to create player-authored wiki pages.{" "}
@@ -68,13 +68,17 @@ export default async function MyWikiPage() {
   ]);
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-10">
+    <div className="mx-auto max-w-[860px] px-4 py-7 sm:px-8">
       <div className="mb-8">
-        <p className="section-label mb-2">Player-authored pages</p>
-        <h1 className="mb-2 text-3xl font-bold tracking-tight text-foreground">My wiki pages</h1>
+        <p className="text-[10px] font-semibold uppercase tracking-[0.06em] text-muted mb-2">
+          Player-authored pages
+        </p>
+        <h1 className="mb-2 text-[34px] font-extrabold leading-[1.15] tracking-[-0.03em] text-foreground">
+          My wiki pages
+        </h1>
         <p className="max-w-2xl text-muted">
           Claim dedicated wiki pages for your politician, your corporation, the party you lead, or a
-          historical event. Use the in-app editor — full markdown, inline image uploads, wiki
+          historical event. Use the in-app editor, full markdown, inline image uploads, wiki
           cross-links, and tables.
         </p>
       </div>
@@ -115,7 +119,7 @@ export default async function MyWikiPage() {
 
 function LimitationsBlock() {
   return (
-    <div className="mt-10 rounded-xl border border-card-border bg-card/40 p-6">
+    <div className="mt-10 ">
       <h2 className="mb-2 text-sm font-semibold text-muted">Rules &amp; limitations</h2>
       <ul className="list-disc space-y-1 pl-5 text-sm text-muted">
         <li>
@@ -133,7 +137,7 @@ function LimitationsBlock() {
         </li>
         <li>
           <strong>Images.</strong> PNG / JPEG / WebP / GIF up to 8 MB via the toolbar button.
-          External image URLs must be <code>http(s)</code> — <code>javascript:</code> and other
+          External image URLs must be <code>http(s)</code>, <code>javascript:</code> and other
           schemes are blocked.
         </li>
         <li>
@@ -152,11 +156,13 @@ function LimitationsBlock() {
 
 function EventCard() {
   return (
-    <div className="flex flex-col rounded-xl border border-card-border bg-card p-6">
-      <p className="section-label mb-1">Historical event</p>
+    <div className="flex flex-col ">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.06em] text-muted mb-1">
+        Historical event
+      </p>
       <h2 className="mb-4 text-xl font-bold text-foreground">Document a moment in history</h2>
       <p className="mb-4 text-sm text-muted">
-        Market crashes, landmark elections, major scandals — anyone can draft an event page. Because
+        Market crashes, landmark elections, major scandals, anyone can draft an event page. Because
         the slug is your choice, use the general &ldquo;new article&rdquo; flow.
       </p>
       <div className="mt-auto">
@@ -184,8 +190,10 @@ interface PageCardProps {
 function PageCard({ kind, title, subtitle, page, slug, disabled, disabledMessage }: PageCardProps) {
   const status = page?.status;
   return (
-    <div className="flex flex-col rounded-xl border border-card-border bg-card p-6">
-      <p className="section-label mb-1">{subtitle}</p>
+    <div className="flex flex-col ">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.06em] text-muted mb-1">
+        {subtitle}
+      </p>
       <h2 className="mb-4 text-xl font-bold text-foreground">{title}</h2>
 
       {disabled ? (

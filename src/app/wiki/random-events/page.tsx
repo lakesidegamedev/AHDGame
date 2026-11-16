@@ -8,7 +8,7 @@ import type { Document } from "mongodb";
 export const metadata: Metadata = {
   title: "Random events | wiki | A House Divided",
   description:
-    "Every random event in A House Divided — browse hero images, eligibility, and how each event plays out.",
+    "Every random event in A House Divided, browse hero images, eligibility, and how each event plays out.",
 };
 
 interface EventDef {
@@ -48,7 +48,7 @@ export default async function RandomEventsWikiPage() {
   const events = await getApprovedEvents();
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
+    <div className="mx-auto max-w-[1100px] px-4 py-7 sm:px-8">
       <nav className="mb-6 flex items-center gap-2 text-sm text-muted">
         <Link href="/wiki" className="hover:text-primary">
           Wiki
@@ -58,10 +58,12 @@ export default async function RandomEventsWikiPage() {
       </nav>
 
       <header className="mb-8 border-b border-card-border pb-6">
-        <h1 className="text-3xl font-bold tracking-tight text-foreground">Random events</h1>
+        <h1 className="text-[34px] font-extrabold leading-[1.15] tracking-[-0.03em] text-foreground">
+          Random events
+        </h1>
         <p className="mt-3 max-w-2xl text-muted">
           Each turn, eligible characters may receive a random event from the PREE (Player Random
-          Event Engine). Events are weighted by eligibility — some require holding office, running a
+          Event Engine). Events are weighted by eligibility, some require holding office, running a
           corporation, or being mid-campaign. Players choose from up to three options; the outcome
           is determined by a hidden dice roll.
         </p>
@@ -97,7 +99,7 @@ function EventCard({ event }: { event: EventDef }) {
           <Image src={event.image} alt={event.title} fill className="object-cover" unoptimized />
         ) : (
           <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-card to-card/40">
-            <span className="font-mono text-xs text-muted">{event.kind}</span>
+            <span className="tabular-nums text-xs text-muted">{event.kind}</span>
           </div>
         )}
       </div>

@@ -32,7 +32,7 @@ The whole-chamber rule stops a government being toppled by a thin turnout. It is
 ## Running the vote
 
 - **File a motion** from your country's executive page (10 Downing Street in the UK, under the Nation menu), if you hold a lower-chamber seat and the cooldown has run out.
-- **Vote** Aye or Nay. Individual player votes stay private; the executive page shows the Aye and Nay totals and a by-party breakdown of Aye, Nay and abstaining seats.
+- **Vote** Aye or Nay. Individual player votes stay private; the executive page shows the Aye and Nay totals and a by-party breakdown of Aye and Nay seats.
 - **Whip** your party's NPP seats before the window closes.
 - **File a replacement PM nomination** during the VONC if you chair a qualifying party or coalition.
 

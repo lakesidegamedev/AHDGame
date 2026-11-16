@@ -55,7 +55,7 @@ Both places show the same form and post the same bill. It greys out the countrie
 
 ## Counting the vote
 
-The two-thirds bar and the 24-turn window are ordinary bill rules from [Bills & Legislation](/wiki/bills-legislation).
+The two-thirds bar is stricter than the simple majority most bills need. General bill rules are in [Bills & Legislation](/wiki/bills-legislation).
 
 A chamber of 90 voters casts 61 For, 29 Against and 0 abstentions. 61 is 67.8% of 90, so it passes. The same chamber at 59 For and 31 Against is 65.6%, which fails. Exactly 60 For and 30 Against is 66.7% and passes, because the rule is "at least two-thirds". If 20 members abstain from a 90-seat chamber, only the 70 who voted count, so 47 For and 23 Against passes (67.1%).
 
@@ -105,7 +105,7 @@ Truces are recorded for every pair on opposite sides, not only the two principal
 
 ## Treaty allies come in with the defender
 
-A mutual-defence pact is enforced by the engine. Any Security or Bloc organization at the Article 5 alert posture counts as one, and so do NATO and the Warsaw Pact in worlds that start in the Cold War, whatever their posture. When a declaration against a member is enacted, every other member that holds a ballot is enrolled on the defender's side with no vote and no bill. The war's belligerent roll names the alliance, for example "Warsaw Pact → DD", and the countries pulled in are notified.
+A mutual-defence pact is enforced by the engine. Any Security or Bloc organization at the Article 5 alert posture counts as one, and so do NATO and the Warsaw Pact in worlds that start in the Cold War, whatever their posture. When a declaration against a member is enacted, every other member that has a government and is not already in the war is enrolled on the defender's side with no vote and no bill. The war's belligerent roll names the alliance, for example "Warsaw Pact → DD", and the countries pulled in are notified.
 
 The pact is also checked every turn, so an alliance that moves to Article 5 during a member's war brings its members in on the next turn, and a country that joins an alliance while a fellow member is under attack is enrolled on the next turn. Joining an alliance mid-war does not bring that alliance into a war you were already fighting.
 
@@ -148,5 +148,5 @@ Three more systems feel the new war at once. The conflict it creates or joins is
 - [Fighting a Battle](/wiki/fighting-a-battle): what to do once the war exists.
 - [A War, Start to Finish](/wiki/a-war-start-to-finish): a full worked example.
 
-Same in every world, era and government type; NATO and the Warsaw Pact count automatically only in worlds that begin in the Cold War, and the target must be open to players. Last checked 2026-10-29, version 1.18.0. Exact rules: [The Cold War and conflict system (as shipped)](https://docs.lakesidegames.net/design/conflict-system-as-shipped.html)
+Same in every government type; NATO and the Warsaw Pact count automatically only in worlds that begin in the Cold War, and the target must be open to players. Last checked 2026-10-29, version 1.18.0. Exact rules: [The Cold War and conflict system (as shipped)](https://docs.lakesidegames.net/design/conflict-system-as-shipped.html)
 `;

@@ -14,6 +14,7 @@ export function WikiReviewActions({ slug, onApprove, onReject }: WikiReviewActio
   const [approving, setApproving] = useState(false);
   const [rejecting, setRejecting] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
+  const [approveNote, setApproveNote] = useState("");
   const [showRejectModal, setShowRejectModal] = useState(false);
 
   const handleApprove = async () => {
@@ -24,7 +25,7 @@ export function WikiReviewActions({ slug, onApprove, onReject }: WikiReviewActio
       const response = await fetch(`/api/admin/wiki/review/${slug}/approve`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({}),
+        body: JSON.stringify(approveNote.trim() ? { note: approveNote.trim() } : {}),
       });
 
       if (response.ok) {
@@ -71,7 +72,16 @@ export function WikiReviewActions({ slug, onApprove, onReject }: WikiReviewActio
 
   return (
     <>
-      <div className="flex gap-2">
+      <div className="flex flex-wrap items-center gap-2">
+        <input
+          type="text"
+          value={approveNote}
+          onChange={(e) => setApproveNote(e.target.value)}
+          maxLength={500}
+          placeholder="Optional note on approval"
+          aria-label="Optional note on approval"
+          className="w-56 rounded-md border border-card-border bg-background px-3 py-2 text-sm text-foreground"
+        />
         <button
           onClick={handleApprove}
           disabled={approving}

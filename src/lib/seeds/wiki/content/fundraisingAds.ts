@@ -6,7 +6,7 @@ Ads turn money into favorability, and favorability scales every vote you win, so
 
 You have two money pools. They are not interchangeable.
 
-- **Campaign Funds:** what you spend on ads, polls, donor base, canvassing, Campaign Presence and party taxes. New characters start with ₳250,000. Every action on this page draws on this pool. It also pays for upgrades and maintenance in the [Campaign Manager](/wiki/campaign-manager), each Campaign Presence level in [Political Operations](/wiki/political-operations), each ₳100 canvass in [Canvassing](/wiki/canvassing), and every [Polling](/wiki/polling) action.
+- **Campaign Funds:** what you spend on ads, polls, donor base, canvassing, Campaign Presence and party taxes. New characters start with ₳250,000. Every action on this page draws on this pool. It also pays for upgrades and maintenance on the campaign page, each Campaign Presence level in [Political Operations](/wiki/political-operations), each ₳100 canvass in [Canvassing](/wiki/canvassing), and every [Polling](/wiki/polling) action.
 - **Cash on Hand:** your personal liquid cash. Among other things it is spent on wire transfers (Portfolio page) or donated into Campaign Funds with a Personal Campaign Donation, which keeps only 50% of it. It starts at ₳1,000,000, ₳2,500,000 or ₳5,000,000 by the wealth background you pick (plus ₳500,000 if you were referred).
 
 If an action shows "-₳100,000", it is Campaign Funds unless the action says "personal cash".
@@ -79,7 +79,7 @@ Because the result is rounded down, Charisma 5 or lower (a multiplier just under
 
 ### Targeted ads
 
-You can also buy ads aimed at one voter group in one state. Each targeted ad takes **1 action and ₳100** and adds 1 point of nominal bonus for that group, up to a cap of 25 points, with up to 50 ads per purchase. The bonus halves every 24 turns, and what it is worth to you depends on how well your positions fit that group, in the same way as canvassing (see [Canvassing](/wiki/canvassing)). To reach the cap you need 25 ads, about ₳2,500 and 25 actions, and then top it up as it fades. For example, after buying 25 ads (bonus 25), 24 turns later the bonus is 12.5, so 13 more ads restore it.
+You can also buy ads aimed at one voter group in one state. Each targeted ad takes **1 action and ₳100** and adds 1 point of nominal bonus for that group, up to a cap of 25 points, with up to 50 ads per purchase. The bonus halves every 24 turns, and what it is worth to you depends on how well your positions fit that group, as with canvassing, though the formula differs (see [Canvassing](/wiki/canvassing)). To reach the cap you need 25 ads, about ₳2,500 and 25 actions, and then top it up as it fades. For example, after buying 25 ads (bonus 25), 24 turns later the bonus is 12.5, so 13 more ads restore it.
 
 \`\`\`wiki-chart
 targeted-ad-decay
@@ -87,7 +87,7 @@ targeted-ad-decay
 
 ### Influence and the Campaign action
 
-A Campaign action costs 1 to 5 actions by influence tier and adds +1 political influence, reduced by 1/75 for every point above 50 (never below +0.1), scaled by your stats. Influence decays by 0.75% of its value each turn, and if your party holds the national executive that rate is multiplied by 2 minus approval over 100 (2.0x at 0% approval, 1.5x at 50%, 1.0x at 100%). At influence 80, decay is 0.6 a turn and a Campaign action adds about 0.6, so about one Campaign action a turn just holds your ground. Higher up, decay grows and each action adds less, so influence near 100 slides back toward 80 unless you keep campaigning.
+A Campaign action costs 1 to 5 actions by influence tier and adds +1 political influence, reduced by 1/75 for every point above 50 (never below +0.1), scaled by your stats. Influence decays by 0.75% of its value each turn, and if your party holds the national executive that rate is multiplied by 2 minus approval over 100 (2.0x at 0% approval, 1.5x at 50%, 1.0x at 100%). At influence 80, decay is 0.6 a turn and a Campaign action adds about 0.6, so about one Campaign action a turn just holds your ground. Higher up, decay grows and each action adds less, so influence near 100 slides back toward 80 even if you campaign every turn, and keeps falling if you stop.
 
 ### Donor network payback
 
@@ -95,7 +95,7 @@ Raising your donor base from level 1 to 2 costs about ₳5,000 at national-avera
 
 ### The campaign page budget
 
-Once you are a presidential candidate your campaign page has its own budget, separate from your personal Campaign Funds: passive income by fundraising level (₳20,000 at level 0 up to ₳5,000,000 at level 10), upgrade costs and maintenance. Other races have no campaign page. If the campaign cannot cover next turn's maintenance, levels downgrade automatically. The fundraising upgrade levels in [Campaign Strategy](/wiki/campaign-strategy) set that passive income, and the [Campaign Manager](/wiki/campaign-manager) is where you buy them.
+Once you are a presidential candidate your campaign page has its own budget, separate from your personal Campaign Funds: passive income by fundraising level (₳20,000 at level 0 up to ₳5,000,000 at level 10), upgrade costs and maintenance. Other races have no campaign page. If the campaign cannot cover next turn's maintenance, levels downgrade automatically. The fundraising upgrade levels in [Campaign Strategy](/wiki/campaign-strategy) set that passive income, and you buy them from the upgrade panel on the campaign page.
 
 ### Party tax
 
@@ -113,11 +113,11 @@ Tips:
 
 1. Spend your starting actions on the first Build Donor Network, to level 2.
 2. Fundraise regularly at level 2 and above.
-3. Run ads only when favorability is below your target. Do not ad-spam above 75.
+3. Run ads only when favorability is below your target. Above 80 each ad adds only +1, so do not ad-spam there.
 4. Upgrade the campaign page's fundraising level once you are a presidential candidate.
 5. Factor a high party tax (25% or more) into your per-turn income. Fundraise is untaxed, so it is the better source in a high-tax party.
 
 Common question, "Why am I always out of funds?": the sinks are ads (₳100,000 to ₳180,000 each), polls and Campaign Presence, against an income of only base + donor + office per turn. Fundraising and a higher donor level are the fix. If you are new, the income and ad rules behind the day-one ledger are in the [first campaign walkthrough](/wiki/first-campaign-walkthrough).
 
-Live in every world and country with campaigns. Office bonus tiers differ by country, and money amounts are shown in your home currency. Last checked 2026-10-30, version 1.18.0. Exact rules: [Fundraising and Ads (design)](https://docs.lakesidegames.net/design/fundraising-ads.html)
+Live in every world and country with campaigns. Office bonus tiers differ by country, and money amounts are shown in your chosen display currency. Last checked 2026-10-30, version 1.18.0. Exact rules: [Fundraising and Ads (design)](https://docs.lakesidegames.net/design/fundraising-ads.html)
 `;

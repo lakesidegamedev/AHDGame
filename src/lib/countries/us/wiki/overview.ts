@@ -40,14 +40,14 @@ House and State Senate races are different. Where a state elects several members
 
 The President is chosen by an indirect **electoral college**, not a national popular vote: each state casts its electoral votes as a block, so win a state, win its electoral votes. Maine and Nebraska are the exception: they award some electoral votes by congressional district.
 
-Primaries come first, and only one candidate per party advances to the general. In a multi-candidate primary, vote-splitting between similar candidates is a real risk: the spoiler effect applies. See [Primaries](/wiki/primaries) and [Election Mechanics](/wiki/election-mechanics) for the full rules, and [Campaign Strategy](/wiki/campaign-strategy) for fundraising, ads and canvassing.
+Primaries come first, and only one candidate per party advances to the general. The spoiler effect, where vote-splitting between similar candidates hurts them, applies only in general elections, not in primaries. See [Primaries](/wiki/primaries) and [Election Mechanics](/wiki/election-mechanics) for the full rules, and [Campaign Strategy](/wiki/campaign-strategy) for fundraising, ads and canvassing.
 
 ## Governing: divided government, vetoes and the Fed
 
 There are no confidence votes, no government formation and no snap elections. Once elected, the President governs for four years whichever party controls Congress, so **divided government is common**: one party holds the White House while the other controls one or both chambers.
 
 - **Congress** is two chambers. The Senate (100 seats, six-year staggered terms) confirms federal judges, cabinet members and the Federal Reserve Chair. The House (435 seats, two-year terms, all contested each cycle) is the larger chamber, and bills can start in either one.
-- **Bills** need both chambers and the President's signature. A veto opens a **24-hour** override vote, and the bill is enacted only if two-thirds of **all filled seats** in **both** the House and the Senate vote to override. Abstaining or not voting does not lower the bar. See [Bills and Legislation](/wiki/bills-legislation).
+- **Bills** need both chambers and then go to the President, who can sign or veto them. A veto opens a **24-hour** override vote, and the bill is enacted only if two-thirds of **all filled seats** in **both** the House and the Senate vote to override. Abstaining or not voting does not lower the bar. See [Bills and Legislation](/wiki/bills-legislation).
 - **The Cabinet** is the President's to fill; see the [Cabinet Guide](/wiki/cabinet-guide) for every post, its metrics and its actions.
 - **State Senators** vote on state-level legislation, and bills passed at the state level have regional policy effects.
 - **Founding a third party** means drafting a [Party Charter](/wiki/political-parties) co-signed by 3 human founders. Until all three sign, the party does not materialize. The charter system is the same in every country.

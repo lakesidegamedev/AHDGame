@@ -60,7 +60,7 @@ When making personal purchases in a foreign currency:
 Income from foreign corporations is handled differently by type:
 
 - **Dividends:** Automatically converted to your home currency at the market-maker rate (1% spread), so a foreign dividend arrives a little smaller. There is no per-holding preference: this conversion is automatic. See [Stock Market](/wiki/stock-market).
-- **Bond coupons:** Character coupons auto-convert to the holder's home currency at the market-maker spread. [Corporate Bonds](/wiki/corporate-bonds) pay in the issuer's currency, and [Sovereign Bonds](/wiki/sovereign-bonds) coupons and returns convert at the market-maker rate.
+- **Bond coupons:** Character coupons are paid in the bond's currency and deposited straight into that personal balance with no conversion; only corporation holders' foreign coupons convert at the market-maker spread. [Corporate Bonds](/wiki/corporate-bonds) pay in the issuer's currency, and [Sovereign Bonds](/wiki/sovereign-bonds) coupons and returns convert at the market-maker rate.
 - **CEO salary:** Paid in the corporation's home currency and deposited directly into your personal balance in that currency. No auto-conversion.
 
 ## What moves a rate
@@ -143,5 +143,5 @@ The standard forex speculation flow:
 
 The 24-turn volume lookback means heavy buying gradually pushes the rate down (strengthening the currency further), accelerating your returns, but also attracting other speculators who may exit before you. Watch a country's prime rate, inflation and growth, and remember one player cannot move a currency alone.
 
-Applies in every world with more than one active currency. Historical presets start from era-specific rates, and fully planned countries keep a fixed official rate. Last checked 2026-10-29, version 1.18.0. Exact rules: [Currency Exchange design page](https://docs.lakesidegames.net/design/currency-exchange.html)
+Applies only in worlds where currency exchange is switched on, and only for the countries in that world's currency scope. Historical presets start from era-specific rates, and fully planned countries keep a fixed official rate. Last checked 2026-10-29, version 1.18.0. Exact rules: [Currency Exchange design page](https://docs.lakesidegames.net/design/currency-exchange.html)
 `;

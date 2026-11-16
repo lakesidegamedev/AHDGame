@@ -6,7 +6,7 @@ This page covers that number: why it starts where it does, what it does to your 
 
 ## One meter, 0 to 100
 
-Every war has one territory meter, running 0 to 100, that measures how much of the host country side B holds. A war opens at the host's own end of the meter. Each battle with a winner pushes the meter towards the winner's end. The farther the front moves from where it started, the worse its supply gets, so each step is harder than the last. If the meter sits at an end for long enough, the war goes to terms. This page covers that arc.
+Every war has one territory meter, running 0 to 100, that measures how much of the host country side B holds. A war opens at the host's own end of the meter. Each battle with a winner pushes the meter towards the winner's end. The farther the front moves from where it started, the worse its supply gets, so a deep push gets harder to sustain. If the meter sits at an end for long enough, the war goes to terms. This page covers that arc.
 
 ### The numbers
 
@@ -56,11 +56,11 @@ So **an interstate invasion opens with the defender holding 100% of their own te
 
 A conflict also records the **starting line** it opened at. Almost everything below is measured from *that* point, not from the middle of the track.
 
-**A new war starts slowly.** The two sides do not field their armies at the same pace, since a defensive pact answers at once but a coalition of attackers needs bills and mobilisation. So the front moves at a fraction of its normal pace on the first turn of a war and speeds up to full pace over the opening 50 turns. A war cannot be run to a pole before the other side has had time to field an army.
+**A new war starts slowly.** The two sides do not field their armies at the same pace, since a defensive pact answers at once but a coalition of attackers needs bills and mobilisation. So the front moves at a fraction of its normal pace on the first turn of a war and speeds up to full pace over the opening 50 turns. A pole win cannot take effect before the war is 24 turns old, which gives the other side time to field an army.
 
 ## Moving the line
 
-Every battle that produces a winner moves control toward the winner's pole.
+Every battle that produces a winner and is placed on a front moves control toward the winner's pole.
 
 How far depends on how decisively it was won:
 
@@ -99,7 +99,7 @@ How the front is moving also affects approval at home; see [Government Approval]
 
 When the front has travelled roughly three-quarters of the way from its starting line toward a pole, the conflict's status changes from **Active** to **Winding Down**.
 
-It is a public signal that a war is approaching its conclusion, visible to everyone (status, fog tiers and the historical record all follow from the meter; see [Conflicts & the Military System](/wiki/conflicts-overview)), including neutrals deciding whether to intervene and to the losing side deciding whether to sue for peace.
+It is a public signal that a war is approaching its conclusion, visible to everyone (status follows from the meter, while fog tiers and the historical record follow from when the war resolves; see [Conflicts & the Military System](/wiki/conflicts-overview)), including neutrals deciding whether to intervene and to the losing side deciding whether to sue for peace.
 
 **It can reverse.** A front that swings back out of the enemy heartland returns to Active. Winding Down is a description of the current position, not a countdown.
 
@@ -126,7 +126,7 @@ Once the minimum has elapsed and a side holds a pole:
 
 1. The fighting stops. The conflict moves to **terms pending**: it takes no more offensives, accepts no more peace offers and admits no new belligerents, but it still counts as a live war everywhere else, so the wartime strip stays up and no second war can be declared between the same countries.
 2. **Every belligerent stands down.** For each country, its general postings at that conflict are dropped, which returns all of their units to reserve.
-3. **The victor has 24 turns to name a settlement.** The country that began the war on the winning side chooses one term (an indemnity, a change of government, or a bar on re-arming), and it lands on the country that began it on the losing side. Nobody has to agree. Let the window lapse and the war ends with nothing taken. See [Peace, Indemnities & Truces](/wiki/peace-and-truces).
+3. **The victor has 24 turns to name a settlement.** The country that began the war on the winning side chooses one term (a white peace, an indemnity, a change of government, a bar on re-arming, or, where the German Question rides on the war, reunification), and it lands on the country that began it on the losing side. Nobody has to agree. Let the window lapse and the war ends with nothing taken. See [Peace, Indemnities & Truces](/wiki/peace-and-truces).
 4. When the term is applied or the window lapses, the conflict is marked **resolved**, the winner and end turn are recorded, and **truces are recorded between every cross-side pair**: 240 turns, about ten real days.
 5. **The fog stays down for 480 turns, then lifts entirely.** Until then the conflict page reads as it did during the war: territory, casualties and verdicts for everyone, your own side's rosters for a belligerent's seats. Once the window lapses the page becomes an open archive: both sides' rosters, every engagement, what each formation lost. The war is listed under Historical Conflicts on the conflicts hub from the turn it ends.
 
@@ -138,7 +138,7 @@ Standing down works by removing the **posting**, not by clearing unit locations.
 
 ### The war goal is not enforced at victory
 
-The war goal recorded at declaration is what peace terms negotiate *against*. Reaching a pole decides the war on territorial grounds regardless of what was declared; the settlement the victor names is where the goal is actually collected.
+The war goal recorded at declaration is only a record of what the war was declared for. Reaching a pole decides the war on territorial grounds regardless of what was declared; the victor may name any allowed term, and the goal is not consulted.
 
 **Conquest is not currently selectable** precisely because nothing transfers territory between countries yet: a war fought for conquest could not be won on its own terms. Occupation is a wartime position, not a permanent annexation.
 
@@ -178,5 +178,5 @@ That is often the realistic outcome. Twenty unanswered decisive wins is a very l
 
 - [A War, Start to Finish](/wiki/a-war-start-to-finish): the whole arc.
 
-Works the same in every world and era. A war against an insurgency, or one whose losing founder has already left on a separate peace, skips the terms window; wars hosted in a country on neither side open at 50. Last checked 2026-10-29, version 1.18.0. Exact rules: [The Cold War and conflict system (as shipped)](https://docs.lakesidegames.net/design/conflict-system-as-shipped.html), under Battles and territory. Step sizes and supply constants are intentionally not published in the wiki.
+Which side a country on neither roster joins depends on the era's live bloc roll, and proxy wars resolve through their own pole hold. A war against an insurgency, or one whose losing founder has already left on a separate peace, skips the terms window; wars hosted in a country on neither side open at 50. Last checked 2026-10-29, version 1.18.0. Exact rules: [The Cold War and conflict system (as shipped)](https://docs.lakesidegames.net/design/conflict-system-as-shipped.html), under Battles and territory. Step sizes and supply constants are intentionally not published in the wiki.
 `;

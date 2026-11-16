@@ -1,10 +1,10 @@
 export const granularPollingContent = `# Granular Polling
 
-Your overall number looks flat, but you may be dominating one group and getting wiped out in another. Granular polling is a deeper read on the same electorate your normal poll covers. Instead of only an overall result, it breaks the state's voters into demographic segments, such as age, education or wealth, and shows how you and your rivals stand with each one, so you can spend ads and canvassing where they change votes.
+Your overall number looks flat, but you may be dominating one group and getting wiped out in another. Granular polling is a deeper read on the same electorate your normal poll covers. Instead of only an overall result and your five best and worst groups, it breaks the state's voters into demographic segments, such as age, education or wealth, and shows how you and your rivals stand with each one, so you can spend ads and canvassing where they change votes.
 
 ## Getting the panel
 
-Take a normal Quick or Full poll from the **Actions** page (see [Polling](/wiki/polling)). The panel is an extra section under your normal poll results, titled **Granular electorate**. It rides on the poll action you already take, with no extra cost and no extra action. Some older worlds show the standard poll only; nothing is broken on your end and there is nothing to unlock.
+Take a Full poll from the **Actions** page (see [Polling](/wiki/polling)). The panel is an extra section under your normal poll results, titled **Granular electorate**. It rides on the poll action you already take, with no extra cost and no extra action. A saved poll from before this panel existed is cleared, so take a new Full poll to see results. There is nothing to unlock.
 
 Available in current worlds for the US and for every country that has a census model, in primary and general polls. In presidential generals the panel counts your national campaign reach.
 

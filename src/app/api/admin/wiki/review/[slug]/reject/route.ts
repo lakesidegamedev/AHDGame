@@ -10,6 +10,8 @@ import type { User, WikiPage } from "@/lib/db/types";
 import { ObjectId } from "mongodb";
 import { usersCollection } from "@/lib/db/repositories/users";
 import { wikiPagesCollection } from "@/lib/db/repositories/wikiPages";
+import { hasOpenPendingEdit } from "@/lib/wiki/rules/editFlow";
+import { pageFieldsOf, recordWikiRevision } from "@/lib/wiki/revisions";
 
 interface RouteContext {
   params: Promise<{ slug: string }>;
@@ -38,30 +40,40 @@ export async function POST(request: Request, context: RouteContext) {
       return NextResponse.json(notFound().toJson(), { status: 404 });
     }
 
-    if (existing.status !== "pending_review") {
+    const pendingEdit = hasOpenPendingEdit(existing) ? existing.pendingEdit : undefined;
+    if (existing.status !== "pending_review" && !pendingEdit) {
       return errorResponse(400, "Page is not pending review");
     }
 
     const now = new Date();
     const reviewerId = new ObjectId(auth.user.userId);
-    await wikiPages.updateOne(
-      { slug },
+    const history = [
+      ...(existing.editHistory || []),
       {
-        $set: {
-          status: "draft",
-          updatedAt: now,
-          editHistory: [
-            ...(existing.editHistory || []),
-            {
-              userId: reviewerId,
-              timestamp: now,
-              action: "rejected",
-              note: parsed.data.reason,
-            },
-          ],
-        },
-      }
-    );
+        userId: reviewerId,
+        timestamp: now,
+        action: "rejected" as const,
+        note: parsed.data.reason,
+      },
+    ];
+    if (pendingEdit) {
+      // The live version stays published; the declined edit stays with the
+      // author so they can revise it instead of retyping.
+      await wikiPages.updateOne(
+        { slug },
+        {
+          $set: {
+            "pendingEdit.rejection": { reason: parsed.data.reason, by: reviewerId, at: now },
+            editHistory: history,
+          },
+        }
+      );
+    } else {
+      await wikiPages.updateOne(
+        { slug },
+        { $set: { status: "draft", updatedAt: now, editHistory: history } }
+      );
+    }
 
     let submitterUsername: string | undefined;
     if (existing.submittedBy) {
@@ -80,6 +92,23 @@ export async function POST(request: Request, context: RouteContext) {
       }).catch((err) => console.error("[wiki] reject notify failed:", err));
     }
 
+    const rejected = pendingEdit ?? pageFieldsOf(existing);
+    await recordWikiRevision(db, slug, {
+      kind: "rejected",
+      fields: {
+        title: rejected.title,
+        description: rejected.description,
+        content: rejected.content,
+        tags: rejected.tags ?? [],
+      },
+      authorId: pendingEdit?.submittedBy ?? existing.submittedBy,
+      authorName: submitterUsername,
+      moderatorId: reviewerId,
+      moderatorName: auth.user.username,
+      note: parsed.data.reason,
+      at: now,
+    });
+
     await createModAuditLog({
       moderatorId: auth.user.userId,
       moderatorName: auth.user.username,
@@ -89,7 +118,9 @@ export async function POST(request: Request, context: RouteContext) {
       details: `${slug}: ${existing.title} - ${parsed.data.reason}`,
     });
 
-    return NextResponse.json({ success: true });
+    const response = NextResponse.json({ success: true });
+    response.headers.set("Cache-Control", "private, no-store");
+    return response;
   } catch (error) {
     return handleRouteError(error);
   }

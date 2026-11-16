@@ -18,7 +18,7 @@ Borrow too much and the whole country gets poorer: a worse credit rating, less p
 | Healthcare income | Earnings of national healthcare corporations (the NHS, for example) |
 | Other | Non-tax receipts that grow with GDP, plus earnings of other state-owned corporations |
 
-Each source is a **tax base** (the amount of activity being taxed) multiplied by a rate. The rates come from enacted laws in [Bills & Legislation](/wiki/bills-legislation). The bases come from the economy: corporate profits and sales from [Corporations](/wiki/corporations), import value from [Tariffs](/wiki/tariffs). A US-headquartered corporation running a sector in Germany pays Germany's **foreign** corporate rate on those profits. A German-headquartered corporation in Germany pays the **domestic** rate.
+Each source is a **tax base** (the amount of activity being taxed) multiplied by a rate. The rates come from enacted laws in [Bills & Legislation](/wiki/bills-legislation). The bases come from the economy: corporate profits from [Corporations](/wiki/corporations), sales from GDP, import value from [Tariffs](/wiki/tariffs). A US-headquartered corporation running a sector in Germany pays Germany's **foreign** corporate rate on those profits. A German-headquartered corporation in Germany pays the **domestic** rate.
 
 Tax bases grow a little every turn with wages, trade and GDP ([National Metrics](/wiki/national-metrics) supplies the growth): one 48th of the yearly growth rate per turn. A growing economy collects more tax without anyone touching a rate.
 
@@ -32,13 +32,13 @@ Two other flows land here. Fund dividends are taxable income for holders, so [In
 - **State grants.** Transfers from the national budget to state budgets.
 - **Debt interest.** What the country pays on its sovereign bonds. This is already inside total spending, so it is not subtracted a second time.
 
-Government healthcare spending buys healthcare services and defence spending buys ordnance, which drives demand for [Commodities](/wiki/commodities); in planned economies education spending also buys state media advertising. Building upkeep above or below the envelope tilts the budget balance metric, and the department appropriation sets the size of that envelope (see [Cabinet Projects & Buildings](/wiki/cabinet-projects)). Funding options and weather disasters draw down the treasury, and the treasury balance decides whether a funding option is available (see [Crisis Interaction](/wiki/crisis-interaction)).
+Government healthcare spending buys healthcare services and defence spending buys ordnance, which drives demand for [Commodities](/wiki/commodities); in planned economies education spending also buys state media advertising. Building upkeep above or below the envelope tilts the budget balance metric, and the department appropriation sets the size of that envelope (see [Cabinet Projects & Buildings](/wiki/cabinet-projects)). Funding options and weather disasters draw down the treasury, and a turn the treasury cannot cover makes no progress on a funded programme (see [Crisis Interaction](/wiki/crisis-interaction)).
 
 ## Running a deficit
 
 Surplus is revenue minus spending. A positive surplus strengthens the treasury. A negative one is a deficit. Each turn the treasury balance moves by one 48th of the yearly balance before debt interest, and then debt service is taken off. Deficits also add inflation pressure in [National Metrics](/wiki/national-metrics).
 
-When the country runs a deficit it borrows by issuing sovereign bonds every 12 turns, one quarter of the yearly deficit each time (see [Sovereign Bonds](/wiki/sovereign-bonds)). Each issue adds debt and interest to spending. The size of the debt against the economy is what matters:
+When the country runs a deficit it borrows by issuing sovereign bonds every 12 turns, one quarter of the yearly deficit each time, plus a rollover of bonds maturing in the next quarter (see [Sovereign Bonds](/wiki/sovereign-bonds)). Each issue adds debt and interest to spending. The size of the debt against the economy is what matters:
 
 **Debt-to-GDP = total debt principal divided by GDP** (GDP smoothed over recent turns, so one noisy turn cannot change the rating).
 
@@ -92,7 +92,7 @@ Say a country has GDP of 2,000 and debt of 2,200 (money units in its own currenc
 - The margin drag is -2.5 for the first 100%, plus -1 for the next 10 points: **-3.5 points**.
 - Revenue is 800 and spending is 860, so the deficit is 60, or 3% of GDP. That adds **+1.5 points**.
 - Net effect on every margin in the country: -2.0 points.
-- Each quarter the treasury issues 60 / 4 = 15 of new bonds.
+- Each quarter the treasury issues 60 / 4 = 15 of new bonds for the deficit, plus a rollover of any bonds maturing in the next quarter.
 
 If debt keeps climbing to 3,000 (150%) the rating is still BB, but now each fiscal close costs 5 trust points and the margin drag has hit its -5 floor.
 
@@ -118,13 +118,13 @@ Open a country's Budget page to see revenue by source, spending by category, the
 
 - Raise a surplus: raise income, corporate or tariff rates, or cut discretionary spending categories.
 - Stimulate with a deficit: cut tax rates or add spending, and let quarterly bonds cover the gap.
-- Bring the rating up: reduce the deficit and let GDP grow. Watch the 60%, 100% and 150% lines, where the costs jump.
+- Bring the rating up: lower debt against GDP. A smaller deficit slows new borrowing, and GDP growth shrinks the ratio. Watch the 60%, 100% and 150% lines, where the costs jump.
 
 ## Your own income tax
 
 Characters pay income tax on what they personally earn: corporate salary, dividends (including index fund dividends), bond coupons, savings interest and bank deposit interest. Starting capital, transfers between characters, borrowing, campaign fundraising and repaid principal are not taxed.
 
-- **Your tier.** Earnings over the last 12 turns are scaled up to a yearly figure and compared with the median income of your home state. Below 75% of the median you pay the Low Income rate. From 75% up to just under 200% you pay Medium Income. At 200% and above you pay High Income. With a state median of 40,000, Low is under 30,000, Medium is 30,000 to 79,999 and High is 80,000 or more. Your earnings are first adjusted for the country's accumulated price level, so earning the same real income while prices rise does not push you into a higher tier. The same adjustment applies when tax is assessed and when it is withheld on a share sale. In a world where prices are not tracked, no adjustment is made. If you earned 6,000 in 12 turns, that scales to 24,000 a year, so you are in the Low tier.
+- **Your tier.** Earnings over the last 12 turns are scaled up to a yearly figure and compared with the median income of your home state. Below 75% of the median you pay the Low Income rate. From 75% up to just under 200% you pay Medium Income. At 200% and above you pay High Income. With a state median of 40,000, Low is under 30,000, Medium is 30,000 to 79,999 and High is 80,000 or more. Your earnings are first adjusted for the country's accumulated price level, so earning the same real income while prices rise does not push you into a higher tier. The same adjustment applies when tax is assessed. Tax withheld on a share sale only converts currency and does not use it. In a world where prices are not tracked, no adjustment is made. If you earned 6,000 in 12 turns, that scales to 24,000 a year, so you are in the Low tier.
 - **Who gets the tax.** The national rate for your tier goes to the national treasury and your home state's rate for the same tier goes to the state budget. Together they can never be more than the income itself.
 - **When it is charged.** Each turn you receive taxable income, from the money that income paid into.
 - **If you cannot pay in full.** Available cash pays part of the bill. Only the remaining debt counts against your wealth, and later turns collect more.

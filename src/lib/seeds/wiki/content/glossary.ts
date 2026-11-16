@@ -6,7 +6,7 @@ Met a word in the game or the wiki that you do not recognise? Look it up here. T
 
 **Action**: The primary resource consumed by player activities. Base 4 per turn, refreshed every real hour, with office bonuses added. Unused actions carry forward up to the Energy-scaled cap (baseline 200). Above the hoard threshold (baseline 100), the pool loses 4 actions before each refresh.
 
-**Action bonus**: Additional actions per turn granted by holding a specific office. Example: Senator gets +2/turn; an executive President gets +4/turn, most ceremonial ones +0 (Ireland's President gets +3). Central bank chair (+3), Supreme Court justice (+2) and chamber leadership (+1 to +3) stack on top.
+**Action bonus**: Additional actions per turn granted by holding a specific office. Example: Senator gets +2/turn; an executive President gets +4/turn, ceremonial ones get less than +4 (Ireland's President gets +3). Central bank chair (+3), Supreme Court justice (+2) and chamber leadership (+1 to +3) stack on top.
 
 **Alignment**: The component of primary and general election scores based on how close a candidate's policy position (econ + social) is to the party platform or the voter demographic. Also used in canvassing: the closer your ideology to a demographic group's ideology, the more effective your canvassing.
 
@@ -52,9 +52,9 @@ Met a word in the game or the wiki that you do not recognise? Look it up here. T
 
 **Endorsement**: A formal expression of support from a player or NPP for your candidacy. NPP endorsements grant campaign actions. Player endorsements count as campaign actions for presidential races only.
 
-**Favorability**: A 0 to 100 stat representing public approval of your character. Used in primary scoring (worth up to 35 pts state, 25 pts presidential) and general vote appeal (as an approval scalar). It is not an input to government approval; low government approval instead drains the governing party's members' favorability.
+**Favorability**: A 0 to 100 stat representing public approval of your character. Used in primary scoring (worth up to 35 pts state, 25 pts presidential) and general vote appeal (as an approval scalar). The head of government's favorability feeds government approval, and low government approval also drains the governing party's members' favorability.
 
-**FOMC**: The US Federal Reserve's 7-seat rate-setting committee. The chair proposes hike, cut, or hold; a strict majority of seated governors must agree. Vacant seats do not count, while seated governors without a ballot abstain. A new world opens with seven technocrat governors; seats that fall vacant are filled by presidential nomination and Senate confirmation, and a vacant chair seat can also be filled by the chair draw. Other central banks keep a single governor. See [FOMC / Rate-Setting Board](/wiki/fomc).
+**FOMC**: The US Federal Reserve's 7-seat rate-setting committee. The chair proposes hike, cut, or hold; a strict majority of seated governors must agree. Vacant seats do not count, while seated governors without a ballot abstain. A new world opens with seven technocrat governors; seats that fall vacant are filled by presidential nomination and Senate confirmation. Other central banks keep a single governor. See [FOMC / Rate-Setting Board](/wiki/fomc).
 
 **FPTP (First Past the Post)**: In single-seat races, the candidate with the most votes wins. In the game's multi-seat FPTP families, the flag also enables a third-party spoiler transfer before the configured seat allocator distributes seats.
 
@@ -66,7 +66,7 @@ Met a word in the game or the wiki that you do not recognise? Look it up here. T
 
 **Ground game**: A campaign branch tree (starter node plus Swing Canvassing, Get-Out-The-Vote, and Volunteer Corps branches) that boosts turnout in a race's competitive areas. Costs ongoing maintenance; unaffordable branches auto-downgrade.
 
-**Home state / region**: The sub-national unit (US state, UK region, DE Land, JP prefecture, or another country's configured region) where your character is based. Determines which elections you can enter, where you can canvass, and where your in-state party org applies.
+**Home state / region**: The sub-national unit (US state, UK region, DE Land, JP region, or another country's configured region) where your character is based. Determines which elections you can enter, where you can canvass, and where your in-state party org applies.
 
 **Ideology grid**: The two-axis system (econ × social) used to position characters, parties, NPPs, and voter groups. Alignment scoring uses Manhattan distance on this grid.
 
@@ -76,7 +76,7 @@ Met a word in the game or the wiki that you do not recognise? Look it up here. T
 
 **Kokkai**: The Japanese national legislature, composed of the Shūgiin (lower) and Sangiin (upper) houses.
 
-**Layer 1**: The census dimensions a region carries and the buckets inside them. In the US: race, age, education, wealth (plus ideology, which canvassing can target). They are combined into the cells used for vote appeal and turnout.
+**Layer 1**: The census dimensions a region carries and the buckets inside them. In the US: race, age, education, wealth (plus ideology, which is not part of the cells). They are combined into the cells used for vote appeal and turnout.
 
 **Majority**: The seat count required to control a legislative chamber or form a government: a bare majority of the chamber. US House: 218; UK Commons: 326; JP Shūgiin: 233; IE Dáil: 81; DE Bundestag: 316 in the modern preset, 244 in the 1953 preset (487 seats).
 
@@ -136,9 +136,9 @@ Met a word in the game or the wiki that you do not recognise? Look it up here. T
 
 **Turn log**: A record of everything that happened during a turn: which elections resolved, which bills advanced, which phases ran. Visible to admins; key events visible to players via notifications.
 
-**Whip directive**: An instruction from party leadership to NPP legislators on how to vote on a specific bill. NPPs in the party generally follow the whip. Players can defy the whip freely and it adds no infamy, though party leaders can see who defied them (and a UK Prime Minister can withdraw the whip from a governing-party MP). A vote a whip writes onto you never moves your own positions.
+**Whip directive**: An instruction from party leadership to legislators on how to vote on a bill, leadership election, government vote, nomination, motion to vacate or impeachment. NPPs in the party generally follow the whip. Players can defy the whip freely and it adds no infamy, though party leaders can see who defied them (and a UK Prime Minister can withdraw the whip from a governing-party MP). A vote a whip writes onto you never moves your own positions.
 
-**Withdrawal**: Cancelling an active candidacy. Once withdrawn, you cannot re-enter the same election. Your votes are permanently removed from the tally. Candidates who switch from one party to another mid-election are auto-withdrawn. Independent candidates who join a party stay in the race under their new party.
+**Withdrawal**: Cancelling an active candidacy. Once withdrawn, you usually cannot re-enter the same election (party committee and state party elections and HU/BG district filings allow it). Your votes are permanently removed from the tally. Candidates who switch from one party to another mid-election are auto-withdrawn. Independent candidates who join a party stay in the race under their new party.
 
 **World events**: Scheduled country-scope events offered to a head of government. At most one pending offer per country per turn. See [World Events](/wiki/world-events).
 

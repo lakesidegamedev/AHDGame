@@ -86,7 +86,7 @@ Warheads are not a unit in a battle report. Their effect is on the world's tempe
 
 ## Covert programmes
 
-East Germany cannot join the public ladder, but it can build a bomb in secret. A covert programme is a grind through five stages, from uranium diversion to device assembly. Each stage takes 60 units of progress. You choose a funding level each turn from the defence appropriation:
+East Germany cannot join the public ladder, but it can build a bomb in secret. A covert programme is a grind through five stages, from uranium diversion to device assembly. Each stage takes 60 units of progress. You set a funding level that stays until you change it, and each turn's cost is drawn from the defence appropriation:
 
 | Funding | Progress a turn | Cost a turn | Turns for all five stages |
 | --- | --- | --- | --- |

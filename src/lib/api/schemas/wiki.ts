@@ -38,6 +38,11 @@ export const approveWikiPageSchema = z.object({
   editedTitle: z.string().min(3).max(200).optional(),
   editedDescription: z.string().min(10).max(500).optional(),
   editedTags: z.array(z.string().min(2).max(30)).max(10).optional(),
+  note: z.string().max(500).optional(),
+});
+
+export const restoreWikiRevisionSchema = z.object({
+  revisionId: z.string().regex(/^[a-f0-9]{24}$/, "Invalid revision id"),
 });
 
 export const rejectWikiPageSchema = z.object({

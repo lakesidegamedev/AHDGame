@@ -1,6 +1,6 @@
 export const nationalizationContent = `# Nationalization
 
-If you own a company in a country that decides it wants it, you get 48 turns of notice and, with luck, full value. If you let your CEO seat sit empty for 72 turns, you may get neither. Nationalization is how a government takes a private corporation, or one of its sectors, into public hands. The state pays the owners (or does not), the assets move into the country's [National Corporation](/wiki/national-corporations), and taking a player-owned company costs the country investor confidence. Later the state can sell assets back to the market, which is called privatization.
+If you own a company in a country that decides it wants it, you get 48 turns of notice and, if a bill orders it, full value. If you let your CEO seat sit empty for 72 turns, you may get neither. Nationalization is how a government takes a private corporation, or one of its sectors, into public hands. The state pays the owners (or does not), the assets move into the country's [National Corporation](/wiki/national-corporations), and taking a player-owned company costs the country investor confidence. Later the state can sell assets back to the market, which is called privatization.
 
 \`\`\`
 private corp ──(nationalize: absorb)──▶  National Corporation  ──(privatize: spin out)──▶  new private corp
@@ -8,7 +8,7 @@ private corp ──(nationalize: absorb)──▶  National Corporation  ──(
 
 A taking has four parts: a **trigger** that makes the target eligible, an **authority** that orders it, a **compensation tier** that sets the payout, and **consequences** for confidence and politics.
 
-![Lifecycle of a nationalization: trigger, executive or legislative authority, compensation tier, absorption into the National Corporation and a privatization lockout, with investor confidence falling on each taking.](/wiki-images/diagrams/nationalization-lifecycle.svg)
+![Lifecycle of a nationalization: trigger, executive or legislative authority, compensation tier, absorption into the National Corporation and a privatization lockout, with investor confidence falling on each taking of a player company.](/wiki-images/diagrams/nationalization-lifecycle.svg)
 
 ## Can they take my company?
 
@@ -57,7 +57,7 @@ Every country has an **investor confidence** score from 0 to 100. It heals towar
 
 - Up to **35**, takings cost the base amount.
 - Above 35, the multiplier rises along a curve to 3.5 at SOCI 100. At SOCI 50 it is about 1.13.
-- On a bill-based taking, a statist governing party pays as little as half the cost, and a market-liberal one as much as 1.5 times. The executive route is scored as neutral.
+- On any taking, a statist governing party pays as little as half the cost, and a market-liberal one as much as 1.5 times. The executive route uses the same scaling.
 
 \`\`\`wiki-chart
 nationalization-cost-multiplier
@@ -101,7 +101,7 @@ The finance minister runs privatization from the Privatization tab. It carves pa
 
 A National Corporation holding most of a market must therefore sell in several steps. Privatizing is the way to bring SOCI down and win back confidence, which makes room for more takings, and market-leaning governments are rewarded politically for it. The privatize tab is hidden in command-economy eras, where there is no private sector to sell into.
 
-Live in every world and country with players enabled. Fair compensation is the target's tangible book value (replacement cost of its plants, plus other assets, minus debt). Worlds still on the older earnings-based economy price takings from capitalized earnings with a larger premium.
+Live in every world and country with players enabled, except command economies, where privatization is blocked. Fair compensation is the target's tangible book value (replacement cost of its plants, plus other assets, minus debt). Worlds still on the older earnings-based economy price takings from capitalized earnings with a larger premium.
 
 Last checked 2026-10-29, version 1.18.0. Exact constants: \`src/lib/nationalization/constants.ts\` in the open source repository (no design page covers nationalization yet). See also: [Glossary](/wiki/glossary)
 `;

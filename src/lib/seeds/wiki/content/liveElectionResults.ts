@@ -15,7 +15,7 @@ National races (House, Commons, Bundestag, Dáil and the other multi-seat nation
 | Lead needed for a call once the election has ended | any lead (ties are never called) |
 | Page refresh during a US presidential election night | every 10 seconds |
 | Page refresh otherwise, while the race is live | every 30 seconds |
-| Seats for a majority | half the chamber, plus one |
+| Seats for a majority | half the filled seats, plus one (vacant seats are not counted) |
 
 Before the final hour, the page shows each region's leader and a reporting percentage that creeps up as the general phase goes on, capped at 88% so nothing looks final too early. Nothing is called yet.
 
@@ -29,7 +29,7 @@ Reveal order is fixed per election. If you refresh, or your rival watches the sa
 
 ### US presidential election night
 
-A US presidential race replaces this drip in its final hour with a broadcast. States close their polls in real-world closing order, between 6% and 70% of the way through the hour. Reporting then climbs to a cap of 90% to 97%, never 100% inside the hour, and the shown shares carry noise that shrinks as reporting rises. A state is called only when its counted lead is too big for the uncounted final turn to overturn, with a 5% safety margin; bigger leads are called at lower reporting (25% to 75%). A state within 3 points at 50% reporting or more shows as too close to call. The board counts the votes as of the second-to-last turn, and once the race resolves it shows the real final result. The rules above (88%, 98%, the 5 point call) apply to every other race and to presidential races outside the US.
+A US presidential race replaces this drip in its final hour with a broadcast. States close their polls in real-world closing order, between 6% and 70% of the way through the hour. Reporting then climbs to a cap of 90% to 97%, never 100% inside the hour, and the shown shares carry noise that shrinks as reporting rises. A state is called only when its counted lead is too big for the uncounted final turn to overturn, with a 5% safety margin; bigger leads are called at lower reporting (25% to 75%). A state within 3 points at 50% reporting or more shows as too close to call. The board counts the votes as of the second-to-last turn, and once the race resolves it shows the real final result. The rules above (88% before the final hour, up to 98% inside it, the 5 point call after a reveal) apply to every other race and to presidential races outside the US.
 
 ## Lead versus call
 
@@ -43,7 +43,7 @@ A lead below 5 points during the final hour shows as a lead, not a call. Once th
 
 ![Decision list for calling a region: tied or no votes means no call, an ended election is called, a final-hour reveal needs a 5 point lead, otherwise only the lead shows.](/wiki-images/diagrams/live-election-results-region-call.svg)
 
-Take a state at 52% to 47% for the leader, a 5 point lead, with 3 turns left. Reporting reads at most 88% and the state is shown as a lead. In the final hour its reveal moment arrives at 40% of the way through: reporting jumps to 100% and, because 52 minus 47 is exactly 5 points, it is called. A neighbouring state at 51% to 48% reveals at the same time and stays "leading", a 3 point lead, until the election ends. Then it is called for its leader. The votes never changed between those views; only what the page shows did.
+Take a state at 52% to 47% for the leader, a 5 point lead, with 3 turns left. Reporting reads at most 88% and the state is shown as a lead. In the final hour its reveal moment arrives at 40% of the way through: reporting jumps to 100% and, because 52 minus 47 is exactly 5 points, it is called. A neighbouring state at 51% to 48% reveals at its own moment and stays "leading", a 3 point lead, until the election ends. Then it is called for its leader. The votes never changed between those views; only what the page shows did.
 
 So if your state is leading but not called, the lead is under 5 points or it has not reached its reveal moment yet. It will be called when the election ends unless it is tied.
 
@@ -52,8 +52,8 @@ So if your state is leading but not called, the lead is under 5 points or it has
 For multi-seat national chambers the page also shows a national projection:
 
 - **Too early**: no seats projected anywhere yet.
-- **Majority**: the leading party has reached half the chamber plus one.
-- **Hung parliament**: below that, in a Westminster-style chamber (Commons, Dáil, Bundestag, Shūgiin, Sangiin and the French, Italian, Spanish, Swedish and Turkish lower chambers).
+- **Majority**: the leading party has reached half the filled seats plus one.
+- **Hung parliament**: below that, in a Westminster-style chamber (Commons, Holyrood, Senedd, Quebec National Assembly, Dáil, Bundestag, Landtag, provincial legislatures, Shūgiin, Sangiin, the Canadian Commons and the French, Italian, Spanish, Swedish and Turkish lower chambers).
 - **Largest party**: below that, in other chambers. Shown as a lead over the runner-up.
 
 For a US President, called regions add up to \`calledEv\` (called electoral votes) and regions with an uncalled lead add up to \`leadingEv\`. A late big region can flip the projection. If no candidate reaches an electoral majority, see [Contingent Election](/wiki/contingent-election), which takes over from the electoral vote totals shown here.

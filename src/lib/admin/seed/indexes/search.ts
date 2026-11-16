@@ -94,5 +94,20 @@ export async function seedSearchIndexes(db: Db, log: (msg: string) => void) {
     log
   );
 
+  await ensureIndex(
+    db,
+    "wikiRevisions",
+    { slug: 1, createdAt: -1 },
+    { name: "wikiRevisions_slug_createdAt", background: true },
+    log
+  );
+  await ensureIndex(
+    db,
+    "wikiRevisions",
+    { kind: 1, createdAt: -1 },
+    { name: "wikiRevisions_kind_createdAt", background: true },
+    log
+  );
+
   log("Search indexes ensured");
 }

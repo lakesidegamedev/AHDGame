@@ -24,7 +24,7 @@ Delegates are always handed out as whole numbers and always add up to exactly wh
 
 ### Where a dropped candidate's delegates go
 
-A dropped candidate's delegates do not split evenly. Each survivor gets a share weighted by **affinity**: how close the survivor is to the dropped candidate in economic and social positions, from 1 for identical positions down to 0 for opposite corners of the chart. A closer survivor gets more. It is the same closeness measure used for [suspend-and-endorse transfers](/wiki/running-mate-surrogate). The convention does not read endorsements or voter-group appeal, so endorsing a rival does not steer your delegates.
+A dropped candidate's delegates do not split evenly. Each survivor gets a share weighted by **affinity**: how close the survivor is to the dropped candidate in economic and social positions, from 1 for identical positions down to 0 for opposite corners of the chart. A closer survivor gets more. It is the same closeness measure used for [suspend-and-endorse transfers](/wiki/running-mate-surrogate). Voter-group appeal also feeds into that closeness measure. If the dropped candidate has an active endorsement, the survivor they endorsed gets an extra 0.5 weight, so endorsing a rival tips your delegates toward them.
 
 If every weight is zero, the delegates split as evenly as possible.
 
@@ -36,7 +36,7 @@ If every weight is zero, the delegates split as evenly as possible.
 | Democratic delegates, modern roster | 3,889 (1,945 needed) |
 | Republican delegates, modern roster | 2,490 (1,246 needed) |
 | What weights a release | Closeness in economic and social positions |
-| Effect of an endorsement on a release | None |
+| Effect of an endorsement on a release | Adds 0.5 weight to the endorsed survivor |
 | Conventions run for | 1964 cycle onward |
 
 Each state's delegate count is the 2020 table, rescaled when an era's electoral votes for that state differ, with a minimum of 1.
@@ -56,7 +56,7 @@ D's 439 delegates went 100 to A, 220 to B and 119 to C, because B was closest to
 ## Playing for the convention
 
 - **Win delegates in the waves.** Anything that helps you in a state helps here too: [Campaign Presence](/wiki/political-operations), favorability and [polling](/wiki/polling). Whoever comes out on top is named as the nominee in the [General Elections](/wiki/general-elections).
-- **Endorsements do not move delegates.** If you are eliminated, your delegates follow ideological closeness, not who you endorsed, and you cannot hand them to a chosen candidate.
+- **Endorsements tip delegates.** If you are eliminated, your delegates follow ideological closeness, and the survivor you endorsed gets an extra 0.5 weight. This tips a close release but does not override closeness.
 - **Watch the delegate tracker** on the presidential primary race page to see where you stand against the majority.
 - **Position yourself.** If you are likely to finish mid-pack, being ideologically close to the leaders gets you delegates when others drop.
 

@@ -34,7 +34,7 @@ There are 48 turns in a game year.
 
 ## Can the country afford the payments?
 
-Revenue sets the payment cap and the deficit sets the loan size (see [National Budget](/wiki/national-budget)). While a bailout is active it caps the budget's interest rate and cuts spending to match revenue.
+Revenue sets the payment cap and the deficit and the bonds coming due set the loan size (see [National Budget](/wiki/national-budget)). While a bailout is active it caps the budget's interest rate and cuts spending to match revenue.
 
 Take a country with 80 billion of bonds maturing within 12 turns and a yearly deficit of 20 billion. The loan is **100 billion**. Interest is 125 million per turn (100 billion times 0.125%). The level payment over 240 turns is about 482.5 million per turn, and over the whole term the country pays back about 115.8 billion.
 
@@ -62,7 +62,7 @@ Only one action is allowed per bailout, and the first board member to act wins. 
 
 A bailout puts the country into recovery. It ends after at least 48 turns once the country also has a streak of 5 fiscal-discipline turns in a row, checked every turn. Leaving recovery resets the credit rating to BBB and starts a 100-turn credibility period, which only lowers the coupon the bond demand score sees by 0.5 points; real bond interest does not change. The loan itself can outlast recovery. It is a separate 240-turn schedule. Follow progress on the IMF overview screen (principal, rate, capture) and on the country page, which shows recovery progress and whether the facility is still active.
 
-The executive who submits the bailout loses 10 favorability and gains 5 infamy, and the country sees one civil-unrest news event. Company owners in the country take the -4.5 point margin penalty at full strength for 48 turns, then fading over 24, scaled by sector (see [Corporations](/wiki/corporations)). The penalty stops early if the country leaves recovery first.
+The executive who submits the bailout loses 10 favorability and gains 5 infamy, and the country sees one civil-unrest news event. Company owners in the country take the -4.5 point margin penalty at full strength for 48 turns, then fading over 24, scaled by sector (see [Corporations](/wiki/corporations)). The penalty keeps running on the same schedule after the country leaves recovery.
 
 | | Sovereign facility | Corporate restructuring |
 | --- | --- | --- |

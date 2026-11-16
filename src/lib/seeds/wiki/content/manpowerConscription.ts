@@ -45,7 +45,7 @@ A fresh world does not start you at the ceiling. Each nation opens with **25% of
 
 Recruiting draws a unit's full establishment from the pool, and disbanding a unit returns its **surviving** personnel (not its establishment) to it, up to the ceiling. Men that would push the pool past the ceiling are lost.
 
-**The ceiling follows your population.** It is recomputed every turn from the people living in your country. If a war or a shock shrinks the population, the ceiling falls, and a pool that is above the new ceiling is cut down to it on the next turn. The national force tier (reduced, standard or elevated) does not change manpower. It only changes upkeep and readiness.
+**The ceiling follows your population.** It is recomputed every turn from the people living in your country. If a war or a shock shrinks the population, the ceiling falls, and a pool that is above the new ceiling is cut down to it on the next turn. The national force tier (reduced, standard or elevated) does not change manpower. It mainly changes upkeep and readiness, and in some countries it also shifts other national metrics such as public trust, budget balance or GDP growth.
 
 ## The conscription ladder
 
@@ -148,9 +148,9 @@ The regeneration and ceiling shown are computed with the **same formulas the tur
 
 **Small elite formations are manpower-efficient.** A Special Forces Group costs 1,400 men. An Infantry Division costs 12,000. If your pool is the binding constraint, the ratio matters enormously.
 
-**Peacetime is for banking.** With no war on, regeneration accumulates toward the ceiling and gives you a mobilisation base. A nation that fights continuously never builds one, which is part of why long wars grind (see [Occupation, Territory & Victory](/wiki/occupation-and-victory)).
+**Peacetime is for banking.** With no war on, regeneration accumulates toward the ceiling and gives you a mobilisation base. A nation that fights continuously keeps spending its pool on replacements and builds little of one, which is part of why long wars grind (see [Occupation, Territory & Victory](/wiki/occupation-and-victory)).
 
-**Switch to Trained once the emergency passes.** Conscript mode is for plugging a hole fast. Leaving it on permanently converts your whole army to green troops over time.
+**Switch to Trained once the emergency passes.** Conscript mode is for plugging a hole fast. Leaving it on permanently keeps diluting the veterancy of every unit it rebuilds.
 
 **Watch the ceiling, not just the pool.** At the ceiling, regeneration is wasted: every turn you sit full is manpower you never receive. That is the moment to raise units.
 

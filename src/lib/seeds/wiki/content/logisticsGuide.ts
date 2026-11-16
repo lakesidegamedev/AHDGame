@@ -18,7 +18,7 @@ export const logisticsGuideContent = `# Logistics: Freight, Sourcing, and Supply
 
 Your sector shows a low selling %. Either nobody wants the goods, or buyers exist and the goods cannot reach them. Logistics is how you tell the difference. It connects the commodity market to the map: the game projects how a state with unmet input demand would source locally, across state lines, or from abroad after shipping and tariffs. Logistics sectors provide the freight capacity measured by that projection. Heavy haul becomes real Freight commodity demand, so tight capacity raises freight sold volume and price. Electricity and natural gas are the exception: they travel by wire and pipe, spend no freight capacity, and pay distance in transmission loss instead.
 
-In current worlds freight settlement is active. It does two things together: it caps a state's sales at what the freight network could actually deliver, and it **bills the shipping**. Buyers in a destination state are charged for their inbound hauls in proportion to the imported inputs they consume, and the same money is credited to the freight-supplying sectors in the origin state, so the charge and the haul revenue stay matched: a transfer between corporations, not a sink. In a world that is still phasing this in, the delivery cap and the shipping bill scale up together, and the phase-in fraction is shown on the markets view and the sector Freight tag.
+Freight settlement is switched on per world by an admin, and runs in shadow mode until then. When it is active, it does two things together: it caps a state's sales at what the freight network could actually deliver, and it **bills the shipping**. Buyers in a destination state are charged for their inbound hauls in proportion to the imported inputs they consume, and the same money is credited to the freight-supplying sectors in the origin state, so the charge and the haul revenue stay matched: a transfer between corporations, not a sink. In a world that is still phasing this in, the delivery cap and the shipping bill scale up together, and the phase-in fraction is shown on the markets view and the sector Freight tag.
 
 For a corporation, logistics answers three questions:
 
@@ -146,5 +146,5 @@ These names are easy to confuse:
 
 Spending on corporate logistics strength does not create TEU. Opening and operating a logistics sector does.
 
-Applies in current worlds, where freight settlement is active; eras and countries without a modelled freight network have no Logistics map. Last checked 2026-10-29, version 1.18.0. This guide has no separate design page.
+Applies in worlds where freight settlement is active; eras and countries without a modelled freight network have no Logistics map. Last checked 2026-10-29, version 1.18.0. This guide has no separate design page.
 `;

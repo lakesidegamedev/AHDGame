@@ -14,7 +14,7 @@ state-ps-reserve
 
 **NPP Action Points.** A separate pool for managing NPPs, spent only on NPP work.
 
-Spending PS in one state makes the next spend there dearer by 1 PS, up to 8, and the extra falls by 3 each turn. Other states are unaffected, so space out Build Org clicks in one state to keep the ladder low.
+Spending PS in one state makes the next spend there dearer by 1 PS, until the total cost of a spend reaches 8, and the extra falls by 3 each turn. Other states are unaffected, so space out Build Org clicks in one state to keep the ladder low.
 
 ![Resource flow from member taxes into the treasury, the treasury into Political Strength, Build Org and budgets for GOTV, suppression and registration, and NPP Action Points into NPP management.](/wiki-images/diagrams/party-actions-resource-flow.svg)
 
@@ -35,7 +35,7 @@ Every party is **Major** or **Minor**, shown as a badge on its page. The tier se
 | Treasury-bought PS | Up to 20 per turn |
 | National PS cap | 280 (Major); 100 + 10 per earned region (Minor) |
 | State PS cap | 30 (7.5 if the state party has no player members) |
-| Ladder: extra PS cost per spend in one state | +1, up to a cost of 8; falls 3 per turn |
+| Ladder: extra PS cost per spend in one state | +1, total cost capped at 8; falls 3 per turn |
 | Region earned / lost | At 20% Org / below 10% Org |
 | Demotion grace | 240 turns |
 | NPP Action Points: cap | National 160 Major / 80 Minor; state 40 Major / 20 Minor |
@@ -60,8 +60,8 @@ GOTV and suppression change the turnout of the voter groups described in [Demogr
 
 | Action | Who | Cost | Effect |
 | --- | --- | --- | --- |
-| Boost Favorability or Political Influence | National chair, vice chair or campaigner; state chair or vice chair | 1 NPP Action Point plus a fee (₳5,000 in the US) | Raises that stat on a same-party NPP; always succeeds |
-| Strengthen Loyalty or Improve Cooperation | Same | 1 NPP Action Point plus a fee (₳12,500 in the US) | Raises loyalty or lowers stubbornness; always succeeds |
+| Boost Favorability or Political Influence | National chair, vice chair or campaigner; state chair or vice chair | 1 NPP Action Point plus a fee (₳5,000 in the US) | Raises that stat on a same-party NPP; chance based, can fail or backfire |
+| Strengthen Loyalty or Improve Cooperation | Same | 1 NPP Action Point plus a fee (₳12,500 in the US) | Raises loyalty or lowers stubbornness; chance based, can fail or backfire |
 | Relocate an NPP | National leaders | 1 NPP Action Point | Moves the NPP to another home state |
 | Recruit an NPP | Chair or vice chair, national or state | 5 NPP Action Points plus ₳50,000 (US) | Creates a new party NPP, within the party's NPP capacity |
 | Slate | National or state chair and vice chair | No cost | Assigns a same-party NPP or player to a race |
@@ -75,5 +75,5 @@ Recruitment and management spend resources to add and steer NPPs; see [NPPs Over
 
 Check the demotion countdown if you are Major and slipping below 10% in many regions.
 
-Live in every world and country with parties. Prices shown in ₳ are for the US and scale to each country's currency. Last checked 2026-10-30, version 1.18.0. Exact rules: [Party Influence design page](https://docs.lakesidegames.net/design/party-influence.html) and [Party Building design page](https://docs.lakesidegames.net/design/party-building.html)
+Live in worlds and countries with parties; worlds started with no parties have no NPPs. Prices shown in ₳ are for the US and scale to each country's currency. Last checked 2026-10-30, version 1.18.0. Exact rules: [Party Influence design page](https://docs.lakesidegames.net/design/party-influence.html) and [Party Building design page](https://docs.lakesidegames.net/design/party-building.html)
 `;

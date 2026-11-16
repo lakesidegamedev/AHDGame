@@ -8,6 +8,7 @@ import { updateWikiPageSchema } from "@/lib/api/schemas/wiki";
 import type { WikiPage } from "@/lib/db/types";
 import { ObjectId } from "mongodb";
 import { wikiPagesCollection } from "@/lib/db/repositories/wikiPages";
+import { ensureBaselineRevision, pageFieldsOf, recordWikiRevision } from "@/lib/wiki/revisions";
 
 interface RouteContext {
   params: Promise<{ slug: string }>;
@@ -49,6 +50,19 @@ export async function PATCH(request: Request, context: RouteContext) {
       }
     );
     const updated = await wikiPages.findOne({ slug });
+
+    const textChanged =
+      "title" in fieldsToUpdate || "description" in fieldsToUpdate || "content" in fieldsToUpdate;
+    if (updated && textChanged && updated.status === "published") {
+      if (existing.status === "published") await ensureBaselineRevision(db, existing, now);
+      await recordWikiRevision(db, slug, {
+        kind: "moderator_edit",
+        fields: pageFieldsOf(updated),
+        moderatorId: adminId,
+        moderatorName: auth.user.username,
+        at: now,
+      });
+    }
 
     revalidatePath(`/wiki/${slug}`);
     return NextResponse.json({ success: true, page: updated, slug: updated?.slug });

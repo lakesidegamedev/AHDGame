@@ -51,7 +51,7 @@ Tips: ask supporters to vote, not to stay away, if a filibuster is likely, and a
 - Banned parties in a one-party state cannot act on legislation at all.
 - It never applies to leadership elections, confirmations or veto overrides.
 
-It does not park or kill the bill. The vote stays open and the status does not change. Ten filibusters on one bill still mean one three-fifths test.
+It does not kill the bill, but it parks it. The bill's earlier status is saved and restored after cloture. Ten filibusters on one bill still mean one three-fifths test.
 
 ## Abolishing the filibuster
 

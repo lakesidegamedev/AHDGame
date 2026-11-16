@@ -4,7 +4,7 @@ In parliamentary countries (UK, Japan, Germany, Ireland) an election does not ha
 
 ## After the count
 
-Each country's government is either **formed** (a PM is seated and legislation proceeds) or **pending** (no PM, legislation frozen). The route from one to the other:
+Each parliamentary country's government is normally either **formed** (a PM is seated and legislation proceeds) or **pending** (no PM, legislation frozen). The route from one to the other:
 
 1. **Election resolves.** The turn processor updates each party's seat count. A snap election unseats the PM when it is called, so the government is already pending when the results come in (see [Snap Elections](/wiki/snap-elections)). After a scheduled election a sitting PM stays in office and faces a confidence motion.
 2. **Confidence motion for the incumbent.** If the sitting PM kept their seat, a confidence motion is filed automatically and runs 24 hours while the PM stays in office. It passes if Aye is at least Nay, so a tie keeps the PM. If it fails, the PM is removed and the government goes pending. If the incumbent lost their seat, no motion is filed.

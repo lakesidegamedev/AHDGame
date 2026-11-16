@@ -11,7 +11,7 @@ The levies fall on a sector running an automation method. The four methods are:
 - Autonomous factory
 - Autonomous freight
 
-A sector on any other method pays nothing. The methods come from the late research tiers (see [Corporate R&D & Tech Trees](/wiki/corporate-r-and-d)).
+A sector on any other method pays nothing. The methods are unlocked through research (see [Corporate R&D & Tech Trees](/wiki/corporate-r-and-d)).
 
 ## What it costs a company
 
@@ -43,7 +43,7 @@ The automation tax law also keeps some workers on in automated plants: the stric
 - The levy is revenue, but it shrinks if companies choose other methods. Do not count on it as a steady source of income.
 - If you run a company, check the levy rate of the country where the plant sits before you switch a sector to an automation method (see [Corporations](/wiki/corporations) for how methods are switched, and [Corporate R&D & Tech Trees](/wiki/corporate-r-and-d) for build time and downsides).
 
-Applies to worlds that use the producer market. Worlds still on the older sector model have no input purchases to take the levy from, so the laws have no effect there.
+The treasury collection described above applies to worlds that use the producer market. Worlds still on the older sector model have no such transfer, so the levy instead makes the automating plant's inputs dearer by the same share.
 
 Last checked 2026-11-10, version 1.20.0.
 `;

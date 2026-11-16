@@ -31,7 +31,7 @@ Tension has two parts. **Events** push it up in one-off spikes: a nuclear test, 
 | CRISIS | 60 to 79 | The world holds its breath. Miscalculation gets expensive. |
 | BRINK | 80 and above | The final band. Nobody plans past it. |
 
-The band label is what most of the world's machinery reacts to.
+The dials below are computed from the raw reading. The band label is used for display.
 
 ### A floor of 38 and a thermonuclear test
 
@@ -47,7 +47,7 @@ tension-after-thermonuclear-test
 - **Escalation.** Climbing the rungs of an active proxy war raises the standing pressure, not just a one-off spike.
 - **Crises.** Each active world crisis keeps the temperature up while it burns. Campaign outcomes and escalation in [Global Response Crises](/wiki/global-response-crises) move the reading and the floor.
 - **The world's arsenals.** The total warhead count across all programmes sets part of the floor. An armed world is a tense world even on a quiet week.
-- **Shooting wars.** Every active war contributes according to its intensity. See [Conflicts & the Military System](/wiki/conflicts-overview) and [Declaring War](/wiki/declaring-war). A fresh war between nuclear-armed countries creates a crisis-grade shock. If a war stays limited for many turns, part of that initial panic slowly fades. Heating the war back up restores the full pressure at once, and an active conflict always leaves a substantial floor.
+- **Shooting wars.** Every active war contributes according to its intensity. See [Conflicts & the Military System](/wiki/conflicts-overview) and [Declaring War](/wiki/declaring-war). A fresh war between nuclear-armed countries creates a crisis-grade shock. If a war stays limited for many turns, part of that initial panic slowly fades. Heating the war back up restores the full pressure at once, and a war between nuclear-armed countries always leaves a substantial floor. Other wars add only 0.12 per point of intensity.
 
 ## What lowers it
 
@@ -76,5 +76,5 @@ High tension also brings **domestic world events** (the gauge gates the four war
 
 You do not control the gauge. You contribute to it. A well-timed test, a rung of escalation, a crisis left to burn: each is a decision about the world's temperature, and the whole world pays the bill together. The powers that read the gauge best are the ones that choose when to be provocative, not the ones that are provocative by accident.
 
-The gauge runs in every world with the Cold War layer, which is the default. It reads the same whatever the era, but the arsenals that feed it exist only where a nuclear programme has been opened. Last checked 2026-10-29, version 1.18.0. Exact rules: [The Cold War and conflict system (as shipped)](https://docs.lakesidegames.net/design/conflict-system-as-shipped.html)
+The gauge runs in every world with the Cold War layer, which is the default. Before 2027 it reads one global value; from 2027 the dials read the hottest of that value and the bloc-pair readings. The arsenals that feed it exist only where a nuclear programme has been opened. Last checked 2026-10-29, version 1.18.0. Exact rules: [The Cold War and conflict system (as shipped)](https://docs.lakesidegames.net/design/conflict-system-as-shipped.html)
 `;
