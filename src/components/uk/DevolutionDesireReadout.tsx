@@ -1,7 +1,7 @@
 "use client";
 import { TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import { useTranslations } from "next-intl";
-import { isCanadianSovereigntyRegion } from "@/lib/referendum/rules/sovereigntyRegions";
+import { usesSovereigntyWording } from "@/lib/referendum/rules/sovereigntyRegions";
 import type { DevolutionPolicy } from "@/lib/db/types/governorOfficeState";
 import type { IndependenceDesireDriftPerRegion } from "@/lib/governorOffice/devolution/rules";
 import {
@@ -21,12 +21,12 @@ const QUEBEC_STANCE_KEYS = {
   independence: "sovereignty",
 } as const satisfies Record<DevolutionPolicy, string>;
 export function stanceMessageKey(stateId: string, policy: DevolutionPolicy) {
-  if (isCanadianSovereigntyRegion(stateId)) return QUEBEC_STANCE_KEYS[policy];
+  if (usesSovereigntyWording(stateId)) return QUEBEC_STANCE_KEYS[policy];
   return policy === "independence" && stateId === "NIR" ? "reunification" : policy;
 }
 /** Message keys that name the two governments, by region. */
 function readoutKeys(stateId: string) {
-  if (isCanadianSovereigntyRegion(stateId))
+  if (usesSovereigntyWording(stateId))
     return {
       desire: "sovereigntyDesire",
       nationalStance: "ottawaStance",

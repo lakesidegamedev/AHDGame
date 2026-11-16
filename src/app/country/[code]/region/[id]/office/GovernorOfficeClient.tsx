@@ -23,7 +23,7 @@ import type { ReferendumPanelData } from "./tabs/devolution/ReferendumPanel";
 import type { Race } from "./tabs/endorsements/RaceList";
 import type { DevolutionPolicy } from "@/lib/db/types/governorOfficeState";
 import {
-  isCanadianSovereigntyRegion,
+  usesSovereigntyWording,
   sovereigntyRegionIn,
 } from "@/lib/referendum/rules/sovereigntyRegions";
 import { TabFallback } from "@/components/state/TabFallback";
@@ -118,7 +118,7 @@ function buildTabs(
   if (showDevolution)
     tabs.push({
       key: "devolution",
-      label: isCanadianSovereigntyRegion(stateId) ? "Sovereignty" : "Devolution",
+      label: usesSovereigntyWording(stateId) ? "Sovereignty" : "Devolution",
     });
   tabs.push(
     { key: "legislation", label: "Legislation" },
