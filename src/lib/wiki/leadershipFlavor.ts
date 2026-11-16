@@ -43,7 +43,7 @@ export const LEADERSHIP_FLAVOR: Record<LeadershipRole, LeadershipFlavor> = {
   majority_whip_house: {
     role: "majority_whip_house",
     blurb:
-      "The Majority Whip is the vote-counter and arm-twister of the majority party. They ensure members show up for crucial votes and know exactly where the caucus stands—no bill passes without the Whip's head count.",
+      "The Majority Whip is the vote-counter and arm-twister of the majority party. They ensure members show up for crucial votes and know exactly where the caucus stands, no bill passes without the Whip's head count.",
     responsibilities: [
       "Counts and secures votes for majority legislation",
       "Communicates leadership positions to rank-and-file",
@@ -54,7 +54,7 @@ export const LEADERSHIP_FLAVOR: Record<LeadershipRole, LeadershipFlavor> = {
   minority_whip_house: {
     role: "minority_whip_house",
     blurb:
-      "The Minority Whip keeps the opposition united and informed. When the majority brings a bill to the floor, the Minority Whip ensures every dissenting voice is heard—or strategically withheld—to maximize the minority's leverage.",
+      "The Minority Whip keeps the opposition united and informed. When the majority brings a bill to the floor, the Minority Whip ensures every dissenting voice is heard, or strategically withheld, to maximize the minority's leverage.",
     responsibilities: [
       "Counts minority votes and tracks positions",
       "Coordinates with Minority Leader on strategy",
@@ -98,7 +98,7 @@ export const LEADERSHIP_FLAVOR: Record<LeadershipRole, LeadershipFlavor> = {
   majority_whip_senate: {
     role: "majority_whip_senate",
     blurb:
-      "The Senate Majority Whip rounds up votes in a chamber where every member matters. With narrow margins, a single defection can sink a bill—making the Whip's job of knowing where each senator stands absolutely critical.",
+      "The Senate Majority Whip rounds up votes in a chamber where every member matters. With narrow margins, a single defection can sink a bill, making the Whip's job of knowing where each senator stands absolutely critical.",
     responsibilities: [
       "Counts votes and gauges support for majority bills",
       "Communicates leadership priorities to senators",
@@ -109,7 +109,7 @@ export const LEADERSHIP_FLAVOR: Record<LeadershipRole, LeadershipFlavor> = {
   minority_whip_senate: {
     role: "minority_whip_senate",
     blurb:
-      "The Senate Minority Whip keeps the opposition coordinated. In a body built on relationships and personal persuasion, the Whip ensures the minority speaks with one voice when it matters—and knows when to let members vote their conscience.",
+      "The Senate Minority Whip keeps the opposition coordinated. In a body built on relationships and personal persuasion, the Whip ensures the minority speaks with one voice when it matters, and knows when to let members vote their conscience.",
     responsibilities: [
       "Tracks minority senator positions on legislation",
       "Coordinates with Minority Leader on strategy",
@@ -120,7 +120,7 @@ export const LEADERSHIP_FLAVOR: Record<LeadershipRole, LeadershipFlavor> = {
   speaker_of_the_bundestag: {
     role: "speaker_of_the_bundestag",
     blurb:
-      "The Bundestagspräsident presides over the Bundestag, sets its agenda, and ranks second in the German order of constitutional precedence after the Federal President. By convention the position is held by a member of the largest Bundestag faction; mechanically the role mirrors the US Speaker of the House — top-vote-getter wins an open ballot among MdBs.",
+      "The Bundestagspräsident presides over the Bundestag, sets its agenda, and ranks second in the German order of constitutional precedence after the Federal President. By convention the position is held by a member of the largest Bundestag faction; mechanically the role mirrors the US Speaker of the House, top-vote-getter wins an open ballot among MdBs.",
     responsibilities: [
       "Presides over Bundestag sessions and maintains order",
       "Sets the legislative calendar and recognizes speakers",
@@ -131,7 +131,7 @@ export const LEADERSHIP_FLAVOR: Record<LeadershipRole, LeadershipFlavor> = {
   chair_npcsc: {
     role: "chair_npcsc",
     blurb:
-      "The Chairman of the NPC Standing Committee presides over the National People's Congress and its permanent body, steering the year-round legislative and state-oversight work that continues between full NPC sessions. Ranking among the state's highest offices, the role mirrors a presiding-officer mechanic — the top-vote-getter wins an open ballot among seated NPC delegates.",
+      "The Chairman of the NPC Standing Committee presides over the National People's Congress and its permanent body, steering the year-round legislative and state-oversight work that continues between full NPC sessions. Ranking among the state's highest offices, the role mirrors a presiding-officer mechanic, the top-vote-getter wins an open ballot among seated NPC delegates.",
     responsibilities: [
       "Presides over the National People's Congress and its Standing Committee",
       "Sets the legislative calendar and convenes Standing Committee sessions",
@@ -142,7 +142,7 @@ export const LEADERSHIP_FLAVOR: Record<LeadershipRole, LeadershipFlavor> = {
   chair_cppcc: {
     role: "chair_cppcc",
     blurb:
-      "The Chairman of the Chinese People's Political Consultative Conference heads the united-front advisory body, coordinating consultation among parties and social constituencies and channeling their proposals to the state. Mechanically the role mirrors a party-internal leadership election — the largest NPC party (the CCP) selects the Chairman by plurality of its delegates.",
+      "The Chairman of the Chinese People's Political Consultative Conference heads the united-front advisory body, coordinating consultation among parties and social constituencies and channeling their proposals to the state. Mechanically the role mirrors a party-internal leadership election, the largest NPC party (the CCP) selects the Chairman by plurality of its delegates.",
     responsibilities: [
       "Heads the CPPCC and convenes its consultative sessions",
       "Coordinates united-front consultation across parties and constituencies",

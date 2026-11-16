@@ -2,6 +2,7 @@ import type {
   ElectoralMapState,
   VoteTurnSnapshot,
 } from "@/app/elections/[id]/components/ElectionDetailTypes";
+import type { ChamberResult } from "@/lib/wiki/chamberElectionResult";
 import type {
   ContingentElectionDisplay,
   PresidentialResolutionMode,
@@ -13,6 +14,8 @@ export interface PrimaryCandidate {
   primaryScore: number;
   sharePct: number;
   won?: boolean;
+  /** Convention delegates awarded, when the primary allocates them. */
+  delegates?: number;
 }
 
 export interface PrimaryResult {
@@ -59,5 +62,7 @@ export interface ElectionDetail {
   primaryResults: PrimaryResult[];
   primarySnapshotHistory?: PrimarySnapshotPoint[];
   generalResults: GeneralResults | null;
+  /** Country-wide seats for legislative elections made of regional races. */
+  chamber?: ChamberResult | null;
   candidateCount: number;
 }

@@ -19,7 +19,9 @@ import { GeneralResultsSection } from "./components/GeneralResultsSection";
 import {
   ElectoralCollegeAnalysis,
   ElectoralCollegeTable,
+  StateWinnersTable,
 } from "./components/ElectoralCollegeSection";
+import { ChamberResultsSection } from "./components/ChamberResultsSection";
 import { ElectionFooter } from "./components/ElectionFooter";
 
 export default function WikiElectionDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -109,6 +111,12 @@ export default function WikiElectionDetailPage({ params }: { params: Promise<{ i
 
         {/* Info box - Election at a glance */}
         <ElectionInfoBox election={election} totalVotes={totalVotes} />
+
+        {election.chamber && (
+          <div className="clear-both">
+            <ChamberResultsSection chamber={election.chamber} />
+          </div>
+        )}
 
         {/* Background & Context */}
         {backgroundNarrative && (
@@ -308,7 +316,10 @@ export default function WikiElectionDetailPage({ params }: { params: Promise<{ i
 
       {/* Electoral College Table (President only) */}
       {election.electionType === "president" && election.generalResults && (
-        <ElectoralCollegeTable generalResults={election.generalResults} />
+        <>
+          <ElectoralCollegeTable generalResults={election.generalResults} />
+          <StateWinnersTable generalResults={election.generalResults} />
+        </>
       )}
 
       {/* General Election Results Table */}

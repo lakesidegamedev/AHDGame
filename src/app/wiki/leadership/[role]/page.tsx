@@ -84,7 +84,7 @@ export default async function WikiLeadershipPage({ params }: PageProps) {
               ) : (
                 <span className="font-semibold text-foreground">{holder.name}</span>
               )}
-              {holder.partyName && holder.partyName !== "—" && (
+              {holder.partyName && holder.partyName !== "-" && (
                 <span
                   className="rounded px-1.5 py-0.5 text-xs font-medium"
                   style={{

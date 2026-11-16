@@ -91,7 +91,7 @@ export async function getLeadershipData(role: string): Promise<LeadershipData | 
       entityId: doc?.characterId?.toString() ?? null,
       name: doc?.characterName ?? "Vacant",
       party,
-      partyName: p?.name ?? (party === "independent" ? "Independent" : (party ?? "—")),
+      partyName: p?.name ?? (party === "independent" ? "Independent" : (party ?? "-")),
       partyColor,
       state,
       avatarUrl,

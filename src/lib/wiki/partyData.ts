@@ -1,7 +1,11 @@
 /**
  * Party data for wiki party pages.
  */
+import { unstable_cache } from "next/cache";
 import { getDb } from "@/lib/mongodb";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { cycleAnchorContextFromGameState } from "@/lib/elections/cycleAnchorContext";
+import { loadPartySeatHistory, type PartySeatHistory } from "@/lib/wiki/chamberElectionResult";
 import type { Filter } from "mongodb";
 import type { PoliticalParty, ElectedOfficial } from "@/lib/db/types";
 import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
@@ -84,3 +88,30 @@ export async function getPartyData(
     seatCounts: { senate, house, governor, president, vicePresident },
   };
 }
+
+async function loadSeatHistory(
+  countryId: string,
+  partyId: string,
+  name: string,
+  abbreviation: string,
+  color: string
+): Promise<PartySeatHistory[]> {
+  const db = await getDb();
+  const gameState = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { projection: { startingYear: 1, preset: 1, preIterationTurns: 1, "preIteration.active": 1 } }
+  );
+  return loadPartySeatHistory(
+    db,
+    countryId,
+    partyId,
+    new Map([[partyId, { name, abbreviation, color }]]),
+    cycleAnchorContextFromGameState(gameState)
+  );
+}
+
+/** Seats per chamber election for one party. Cached: it reads every chamber election. */
+export const getPartySeatHistory = unstable_cache(loadSeatHistory, ["wiki-party-seat-history"], {
+  revalidate: 600,
+  tags: ["wiki-party-seat-history"],
+});

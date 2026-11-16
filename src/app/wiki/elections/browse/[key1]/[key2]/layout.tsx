@@ -37,7 +37,7 @@ export async function generateMetadata({
 
   if (isYearKey(key1)) {
     const typeLabel = TYPE_LABELS[key2] ?? formatElectionTypeLabel(key2);
-    title = `${key1} ${typeLabel} Elections — Wiki | A House Divided`;
+    title = `${key1} ${typeLabel} Elections | Wiki | A House Divided`;
     description = `${typeLabel} election results from ${key1}. Historical outcomes, candidates, and margins.`;
   } else {
     const typeLabel = TYPE_LABELS[key2] ?? formatElectionTypeLabel(key2);

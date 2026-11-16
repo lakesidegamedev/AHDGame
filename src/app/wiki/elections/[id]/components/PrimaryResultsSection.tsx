@@ -66,7 +66,7 @@ const PrimaryTrendChart = memo(function PrimaryTrendChart({
 
   return (
     <div className="mb-4">
-      <p className="text-body-sm font-medium text-muted mb-2">{partyName} — Share over time</p>
+      <p className="text-body-sm font-medium text-muted mb-2">{partyName}: share over time</p>
       <ResponsiveContainer width="100%" height={160}>
         <LineChart data={data} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
@@ -204,6 +204,9 @@ export const PrimaryResultsSection = memo(function PrimaryResultsSection({
                     <th className="pb-2 pr-4 font-medium text-foreground">Candidate</th>
                     <th className="pb-2 pr-4 font-medium text-foreground">Primary score</th>
                     <th className="pb-2 pr-4 font-medium text-foreground">Share</th>
+                    {party.candidates.some((c) => c.delegates != null) && (
+                      <th className="pb-2 pr-4 font-medium text-foreground">Delegates</th>
+                    )}
                     <th className="pb-2 font-medium text-foreground">Result</th>
                   </tr>
                 </thead>
@@ -216,13 +219,16 @@ export const PrimaryResultsSection = memo(function PrimaryResultsSection({
                       <td className="py-2 pr-4 font-medium text-foreground">{c.characterName}</td>
                       <td className="py-2 pr-4 text-muted">{c.primaryScore.toFixed(1)}</td>
                       <td className="py-2 pr-4 text-muted">{formatPct(c.sharePct)}</td>
+                      {party.candidates.some((cand) => cand.delegates != null) && (
+                        <td className="py-2 pr-4 text-muted">{c.delegates ?? 0}</td>
+                      )}
                       <td className="py-2">
                         {c.won ? (
                           <span className="rounded bg-success/10 border border-success/25 px-2 py-0.5 text-xs font-medium text-success">
                             Nominee
                           </span>
                         ) : (
-                          <span className="text-muted">—</span>
+                          <span className="text-muted">-</span>
                         )}
                       </td>
                     </tr>
