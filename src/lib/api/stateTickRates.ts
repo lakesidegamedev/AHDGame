@@ -19,6 +19,11 @@ import {
 import { getMetricDefinition } from "@/lib/constants/metricDefinitions";
 import { optionIntensity, type IntensityOption } from "@/lib/legislature/optionIntensity";
 import { computeIndependenceDesireDriftForRegion } from "@/lib/turn/independenceDesireDrift";
+import { loadIndependenceDesireSnapshots } from "@/lib/governorOffice/devolution/queries";
+import {
+  hostsSovereigntyReferendums,
+  sovereigntyRegion,
+} from "@/lib/referendum/rules/sovereigntyRegions";
 import type { PoliticalMetricsDoc } from "@/lib/db/types/politicalMetrics";
 import type { MacroMetricsDoc } from "@/lib/db/types/macroMetrics";
 import type { PoliticalMetricId } from "@/lib/politicalMetrics/types";
@@ -113,6 +118,8 @@ export async function computeStateTickRates(
     stateDoc: State | null;
     stateMetricsDoc: StateMetrics | null;
     legTypeMap: ReadonlyMap<string, LegislationType>;
+    /** Per-turn desire drift by registry region id, loaded once for the country. */
+    desireDriftByRegion?: ReadonlyMap<string, number>;
   }
 ): Promise<Record<string, Record<string, number>>> {
   try {
@@ -248,11 +255,13 @@ export async function computeStateTickRates(
     // tickRate here so the metric detail page's 48-turn forward projection
     // matches the "Net drift next turn" line on the FM Devolution tab. Falls
     // back to no entry when the helper returns null (non-UK or non-devolved).
-    const devolution = await computeIndependenceDesireDriftForRegion(db, stateId);
-    if (devolution) {
+    const preloadedDrift = preloaded?.desireDriftByRegion;
+    const driftDelta = preloadedDrift
+      ? preloadedDrift.get(sovereigntyRegion(stateId)?.regionId ?? "")
+      : (await computeIndependenceDesireDriftForRegion(db, stateId))?.delta;
+    if (driftDelta != null) {
       if (!rates.governance) rates.governance = {};
-      rates.governance.independenceDesire =
-        (rates.governance.independenceDesire ?? 0) + devolution.delta;
+      rates.governance.independenceDesire = (rates.governance.independenceDesire ?? 0) + driftDelta;
     }
 
     return rates;
@@ -366,6 +375,13 @@ export async function computeAllNationalMetricTickRates(
   }
 
   const statesWithSectors = new Set(sectorDocs.map((s) => s.stateId));
+  const desireDriftByRegion = new Map(
+    hostsSovereigntyReferendums(countryId)
+      ? (await loadIndependenceDesireSnapshots(db, countryId)).map(
+          (row) => [row.stateId, row.delta] as const
+        )
+      : []
+  );
   const entries = await Promise.all(
     countryStates.map(async (state): Promise<StateTickRateEntry> => {
       const localPolicies = policiesByScope.get(state._id) ?? [];
@@ -387,6 +403,7 @@ export async function computeAllNationalMetricTickRates(
           stateDoc: state,
           stateMetricsDoc: metricsByState.get(state._id) ?? null,
           legTypeMap: stateLegTypeMap,
+          desireDriftByRegion,
         }),
       };
     })

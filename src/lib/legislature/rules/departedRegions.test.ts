@@ -12,13 +12,13 @@ const texas = SOVEREIGNTY_REGIONS.find((entry) => entry.regionId === "TX")!;
 const actuating = [{ ...texas, actuates: true }];
 
 describe("departedRegions", () => {
-  it("counts a region that can actuate and is gone from the live regions", () => {
-    expect(departedRegions(actuating, "US", new Set(["CA", "NY"]))).toHaveLength(1);
+  it("counts a region whose successor country now holds regions", () => {
+    expect(departedRegions(actuating, "US", new Set(["RTX"]))).toHaveLength(1);
   });
-  it("ignores a region still present, an empty seed, and a latent entry", () => {
-    expect(departedRegions(actuating, "US", new Set(["TX", "NY"]))).toEqual([]);
+  it("ignores a region whose successor holds nothing, and a latent entry", () => {
     expect(departedRegions(actuating, "US", new Set())).toEqual([]);
-    expect(departedRegions([{ ...texas, actuates: false }], "US", new Set(["NY"]))).toEqual([]);
+    expect(departedRegions(actuating, "US", new Set(["RCA"]))).toEqual([]);
+    expect(departedRegions([{ ...texas, actuates: false }], "US", new Set(["RTX"]))).toEqual([]);
   });
 });
 
@@ -48,23 +48,21 @@ describe("a US state leaving", () => {
 });
 
 describe("the live registry once Texas can leave", () => {
-  it("takes two senators off when Texas is gone from the live states", () => {
-    const live = ["NY", "CA", "ME", "NH", "VT", "MA", "RI", "CT"];
-    const departed = departedRegions(SOVEREIGNTY_REGIONS, "US", new Set(live));
+  it("takes two senators off once the Republic of Texas holds regions", () => {
+    const departed = departedRegions(SOVEREIGNTY_REGIONS, "US", new Set(["RTX"]));
     expect(departed.map((entry) => entry.regionId)).toEqual(["TX"]);
     expect(upperChamberSeatsAfterDepartures(100, departed)).toBe(98);
   });
 
-  it("takes twelve senators off once all six New England states have left", () => {
-    const departed = departedRegions(SOVEREIGNTY_REGIONS, "US", new Set(["NY", "CA", "TX"]));
+  it("takes twelve senators off once New England holds regions", () => {
+    const departed = departedRegions(SOVEREIGNTY_REGIONS, "US", new Set(["NEN"]));
     expect(departed.map((entry) => entry.regionId)).toEqual(["NE_BLOC"]);
     expect(departedStateIds(departed)).toEqual(["ME", "NH", "VT", "MA", "RI", "CT"]);
     expect(upperChamberSeatsAfterDepartures(100, departed)).toBe(88);
   });
 
-  it("keeps the bloc while any member state is still in the country", () => {
-    const live = new Set(["NY", "CA", "TX", "VT"]);
-    expect(departedRegions(SOVEREIGNTY_REGIONS, "US", live)).toEqual([]);
+  it("treats a partly seeded world as whole: missing states are not departures", () => {
+    expect(departedRegions(SOVEREIGNTY_REGIONS, "US", new Set())).toEqual([]);
   });
 
   it("shrinks the House for the US once Texas can actuate", () => {

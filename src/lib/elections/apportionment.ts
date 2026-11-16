@@ -17,6 +17,7 @@ import type { Document } from "mongodb";
 import { SOVEREIGNTY_REGIONS } from "@/lib/referendum/rules/sovereigntyRegions";
 import {
   departedRegions,
+  successorCountryIds,
   departedStateIds as stateIdsOfDeparted,
 } from "@/lib/legislature/rules/departedRegions";
 
@@ -199,7 +200,7 @@ export async function loadApportionment(
   // this consistent with the DC/ME-NE gates above.
   const admitted = admittedStateIdsAsOf(usStates, resolveApportionmentYear(preset, year));
   const departed = stateIdsOfDeparted(
-    departedRegions(SOVEREIGNTY_REGIONS, "US", new Set(usStates.map((state) => state._id)))
+    departedRegions(SOVEREIGNTY_REGIONS, "US", await seatedSuccessors(db, "US"))
   );
   return buildApportionment(live, preset, year, admitted, departed);
 }
@@ -235,4 +236,21 @@ export function apportionHouseSeats(
     remaining -= 1;
   }
   return seats;
+}
+
+/** Successor countries of `countryId` that already hold regions, i.e. that have seceded. */
+export async function seatedSuccessors(
+  db: import("mongodb").Db,
+  countryId: string
+): Promise<Set<string>> {
+  const successors = successorCountryIds(SOVEREIGNTY_REGIONS, countryId);
+  if (successors.length === 0) return new Set();
+  const rows = (await statesCollection<Document>(db)
+    .find({ countryId: { $in: successors } }, { projection: { countryId: 1 } })
+    .toArray()) as unknown as Array<{ countryId?: string }>;
+  return new Set(
+    rows.flatMap((row) =>
+      typeof row.countryId === "string" && successors.includes(row.countryId) ? [row.countryId] : []
+    )
+  );
 }

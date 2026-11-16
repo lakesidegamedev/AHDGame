@@ -35,6 +35,7 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
 import { SOVEREIGNTY_REGIONS } from "@/lib/referendum/rules/sovereigntyRegions";
 import { departedRegions, upperChamberSeatsAfterDepartures } from "./rules/departedRegions";
+import { seatedSuccessors } from "@/lib/elections/apportionment";
 
 /** Active world preset, when present — drives era-conditional chamber sizes. */
 async function readActivePreset(db: Db): Promise<string | undefined> {
@@ -222,14 +223,7 @@ export async function getLiveUpperChamberSeats(db: Db, countryId: CountryId): Pr
       (entry) => entry.countryId === countryId && entry.actuates && entry.parentUpperChamberSeats
     );
     if (leaving.length === 0) return upper.seats;
-    const live = await statesCollection(db)
-      .find({ countryId }, { projection: { _id: 1 } })
-      .toArray();
-    const departed = departedRegions(
-      leaving,
-      countryId,
-      new Set(live.map((region) => String(region._id)))
-    );
+    const departed = departedRegions(leaving, countryId, await seatedSuccessors(db, countryId));
     return upperChamberSeatsAfterDepartures(upper.seats, departed);
   }
   const regions = await statesCollection(db)

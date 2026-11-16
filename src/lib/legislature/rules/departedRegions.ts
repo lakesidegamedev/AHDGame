@@ -2,20 +2,32 @@ import type { SovereigntyRegion } from "@/lib/referendum/rules/sovereigntyRegion
 
 /**
  * Registry regions of a country that have left: their entry can actuate and
- * the region no longer exists among the country's live regions. An empty
- * region list means nothing is seeded yet, so nothing counts as departed.
+ * its successor country now holds regions. Absence from the parent's region
+ * list is not proof, since a partly seeded world also lacks regions.
  */
 export function departedRegions(
   entries: readonly SovereigntyRegion[],
   countryId: string,
-  liveRegionIds: ReadonlySet<string>
+  seatedCountryIds: ReadonlySet<string>
 ): SovereigntyRegion[] {
-  if (liveRegionIds.size === 0) return [];
   return entries.filter(
     (entry) =>
       entry.countryId === countryId &&
       entry.actuates &&
-      (entry.memberRegionIds ?? [entry.regionId]).every((id) => !liveRegionIds.has(id))
+      entry.successorCountryId != null &&
+      seatedCountryIds.has(entry.successorCountryId)
+  );
+}
+
+/** Successor countries a country's registry entries can produce, for the seated-country query. */
+export function successorCountryIds(
+  entries: readonly SovereigntyRegion[],
+  countryId: string
+): string[] {
+  return entries.flatMap((entry) =>
+    entry.countryId === countryId && entry.actuates && entry.successorCountryId
+      ? [entry.successorCountryId]
+      : []
   );
 }
 

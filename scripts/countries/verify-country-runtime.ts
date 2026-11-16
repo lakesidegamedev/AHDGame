@@ -1169,6 +1169,15 @@ ABSENT_UPSTREAM.RCA = {
 };
 delete ABSENT_UPSTREAM.RCA.DEFAULT_STRATEGIC_SECTORS;
 
+/* New England is a latent successor too: strategic technology and media, 2027 census. */
+ABSENT_UPSTREAM.NEN = {
+  ...(ABSENT_UPSTREAM.NEN ?? {}),
+  COUNTRY_SECTOR_WEIGHTS_1991: "New England is absent from the 1991 world",
+  REGION_DEMOGRAPHIC_CATEGORY_IDS:
+    "no country-specific demographic category ids; the shared set applies",
+};
+delete ABSENT_UPSTREAM.NEN.DEFAULT_STRATEGIC_SECTORS;
+
 /**
  * A registry whose row for this country is SHARED machinery, not its data.
  *

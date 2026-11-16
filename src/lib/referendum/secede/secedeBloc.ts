@@ -22,8 +22,7 @@ import { splitParties } from "./splitParties";
 import { carryOverOfficials } from "./carryOverOfficials";
 import { standupElections } from "./standupElections";
 import { SUB_REGION_SEEDS, type SecedingCountryId } from "./subRegions";
-import type { SecedeRegionResult } from "./secedeRegion";
-import { finishSecession } from "./finishSecession";
+import { finishSecession, type SecedeRegionResult } from "./secedeRegion";
 
 export async function secedeBloc(
   db: Db,
