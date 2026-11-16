@@ -170,7 +170,6 @@ describe("balance replay validity", () => {
     }));
     db.collection("gameConfig").findOne.mockResolvedValue({
       marketSystemMode: "clearing",
-      freightSettlementMode: "active",
       marketGovernorCap: 0.2,
     });
     db.collection("gameState").findOne.mockResolvedValue({
@@ -230,7 +229,6 @@ describe("balance replay validity", () => {
     expect(scorer.tradeFlowSnapshot.books["country-b"]).toBeUndefined();
     expect(scorer.config).toEqual({
       marketSystemMode: "clearing",
-      freightSettlementMode: "active",
       marketGovernorCap: 0.2,
     });
     expect(saved.corporateSectors[0].soldByCommodity).toEqual({ iron: 12 });

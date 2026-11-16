@@ -43,7 +43,6 @@ export interface CoordinationBook {
   demand: number;
   unitPriceAnchor: number;
   /** With freight settlement, only co-located deliveries bypass the public network. */
-  freightSettlementActive: boolean;
   members: readonly SupplyMember[];
   sellers: readonly CoordinationSeller[];
   buyers: readonly CoordinationBuyer[];
@@ -116,7 +115,7 @@ export function coordinateGroupBook(input: CoordinationBook) {
       if (members.get(s.memberId)!.rootId !== members.get(b.memberId)!.rootId) continue;
       // Never turn a group preference into a trade-policy or transport bypass.
       if (s.memberId === b.memberId || !s.countryId || s.countryId !== b.countryId) continue;
-      if (input.freightSettlementActive && (!s.stateId || s.stateId !== b.stateId)) continue;
+      if (!s.stateId || s.stateId !== b.stateId) continue;
       lanes.add(groupSupplyLane(s.sectorId, b.sectorId, input.commodity));
     }
   const offers = eligibleSellers.map((s) => ({
@@ -198,7 +197,6 @@ export function coordinationSlices(
   localAvailability?: ReadonlyMap<string, ReadonlyMap<string, number>>,
   localDemand?: ReadonlyMap<string, ReadonlyMap<string, { demand: number }>>
 ): CoordinationBook[] {
-  if (!input.freightSettlementActive) return [input];
   const states = [...new Set(input.buyers.map((b) => b.stateId))].sort();
   const slices = states.flatMap((state) => {
     const availability = localAvailability?.get(state)?.get(input.commodity);

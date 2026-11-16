@@ -9,7 +9,6 @@ function clearingFixture(scale = 1) {
   f.buyers = [{ ...f.buyers[0], requiredUnits: 30 }];
   const context: NonNullable<Parameters<typeof computeClearingFactors>[0]["groupSupply"]> = {
     turn: 10,
-    freightSettlementActive: false,
     members: f.members,
     buyersByCommodity: new Map([["steel", f.buyers]]),
     locationBySector: new Map([["ss", { countryId: "US", stateId: "CA" }]]),
@@ -17,6 +16,8 @@ function clearingFixture(scale = 1) {
     receipts: [],
     availabilityBySector: new Map(),
     inputAllocationsBySector: new Map(),
+    localInputAvailabilityByState: new Map([["CA", new Map([["steel", 1]])]]),
+    localBalancesByState: new Map([["CA", new Map([["steel", { demand: 50 }]])]]),
   };
   const args: Parameters<typeof computeClearingFactors>[0] = {
     sectors: [

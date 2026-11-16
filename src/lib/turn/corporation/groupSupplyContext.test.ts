@@ -52,7 +52,7 @@ function fixture() {
 describe("loaded group market context", () => {
   it("reserves both state and corporation-wide buyer commitments exactly once", () => {
     const { child, sector, lookups } = fixture();
-    const first = buildGroupSupplyContext(lookups, 20, false);
+    const first = buildGroupSupplyContext(lookups, 20);
     const [commodity, buyers] = [...first.buyersByCommodity][0];
     const units = buyers[0].requiredUnits;
     const agreements = [
@@ -64,7 +64,7 @@ describe("loaded group market context", () => {
       },
       { buyerCorpId: child._id.toString(), commodity, volumeCap: units * 0.25 },
     ] as SettleableSupplyAgreement[];
-    const next = buildGroupSupplyContext(lookups, 20, false, agreements);
+    const next = buildGroupSupplyContext(lookups, 20, agreements);
     expect(next.buyersByCommodity.get(commodity)?.[0].contractedUnits).toBeCloseTo(units * 0.5);
     expect(
       next.members.find((m) => m.id === child._id.toString())!.cashAvailableAnchor
@@ -81,7 +81,7 @@ describe("loaded group market context", () => {
         root.subsidiaryFormalizedAtTurn = 1;
         root.shareholders = [{ corporationId: child._id, shares: 75 }];
       }
-      expect(buildGroupSupplyContext(lookups, 20, false).members).toEqual([]);
+      expect(buildGroupSupplyContext(lookups, 20).members).toEqual([]);
     }
   );
   it("does not treat an NPP caretaker of a player corporation as an autonomous supplier", () => {

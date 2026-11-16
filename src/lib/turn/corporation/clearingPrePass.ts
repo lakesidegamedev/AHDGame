@@ -104,7 +104,6 @@ export interface ClearingPrePassInput {
   turn: number | undefined;
   currentYear: number | undefined;
   commandEconomyEnabled: boolean;
-  freightSettlementActive: boolean;
   supplyAgreementsEnabled: boolean;
   settleableAgreements: SettleableSupplyAgreement[] | undefined;
   contractedByCorpCommodity: Map<string, Map<string, number>> | undefined;
@@ -158,7 +157,6 @@ export function runClearingPrePass(input: ClearingPrePassInput): ClearingPrePass
     turn,
     currentYear,
     commandEconomyEnabled,
-    freightSettlementActive,
     supplyAgreementsEnabled,
     settleableAgreements,
     contractSettlementByCorp,
@@ -240,10 +238,7 @@ export function runClearingPrePass(input: ClearingPrePassInput): ClearingPrePass
       stateId: string | undefined,
       supplyRates: Partial<Record<CommodityType, number>>,
       corpId?: string
-    ) =>
-      freightSettlementActive
-        ? sectorDeliveryLimited(lookups, stateId, supplyRates, corpId)
-        : { fraction: 0, freightClass: null };
+    ) => sectorDeliveryLimited(lookups, stateId, supplyRates, corpId);
     for (const [corpId, sectors] of lookups.sectorsByCorp) {
       const corp = lookups.corpById.get(corpId);
       // Owner identity is one fact per corporation, read by every offer leg
@@ -598,28 +593,20 @@ export function runClearingPrePass(input: ClearingPrePassInput): ClearingPrePass
         };
         // Placement limits sales of each output independently. An unsold
         // byproduct must not erase another commodity's delivered own supply.
-        if (freightSettlementActive) {
-          clearingInput.offerPlacementByCommodity = outputPlacementRatios(
-            clearingInput.supplyRates,
-            lookups.statePlacementRatioByState?.get(sector.stateId)
-          );
-          clearingInput.revenuePlacementByCommodity = outputPlacementRatios(
-            clearingInput.supplyRates,
-            revenuePlacementRatios(
-              lookups.statePlacementRatioByState?.get(sector.stateId),
-              lookups.stateDeliveryLimitedRatioByState?.get(sector.stateId)
-            )
-          );
-        }
-        if (freightSettlementActive) {
-          const deliveryLimit = deliveryLimitedForSector(
-            sector.stateId,
-            rates.supply ?? {},
-            corpId
-          );
-          deliveryLimitedBySectorId.set(sectorId, deliveryLimit.fraction);
-          deliveryLimitedClassBySectorId.set(sectorId, deliveryLimit.freightClass);
-        }
+        clearingInput.offerPlacementByCommodity = outputPlacementRatios(
+          clearingInput.supplyRates,
+          lookups.statePlacementRatioByState?.get(sector.stateId)
+        );
+        clearingInput.revenuePlacementByCommodity = outputPlacementRatios(
+          clearingInput.supplyRates,
+          revenuePlacementRatios(
+            lookups.statePlacementRatioByState?.get(sector.stateId),
+            lookups.stateDeliveryLimitedRatioByState?.get(sector.stateId)
+          )
+        );
+        const deliveryLimit = deliveryLimitedForSector(sector.stateId, rates.supply ?? {}, corpId);
+        deliveryLimitedBySectorId.set(sectorId, deliveryLimit.fraction);
+        deliveryLimitedClassBySectorId.set(sectorId, deliveryLimit.freightClass);
         const sectorCountryId =
           lookups.stateCountryMap?.get(sector.stateId) ??
           (sector as { countryId?: string }).countryId;
@@ -746,22 +733,14 @@ export function runClearingPrePass(input: ClearingPrePassInput): ClearingPrePass
     // apart, fills are depressed). Breaches go to the turn warning channel, not
     // just the worker log.
     const bookViolations: string[] = clearingInvariantBreaches;
-    // Telemetry only, and only while settlement is active: sectorTurn writes it
+    // Telemetry only: sectorTurn writes it
     // beside the fill it is NOT part of, so a player can read "nobody wanted it"
     // apart from "it could not get there". Carries the delivery-attributed
     // share alone, never the whole offer haircut.
-    if (freightSettlementActive) {
-      market.deliveryLimitedBySectorId = deliveryLimitedBySectorId;
-      market.deliveryLimitedClassBySectorId = deliveryLimitedClassBySectorId;
-    }
+    market.deliveryLimitedBySectorId = deliveryLimitedBySectorId;
+    market.deliveryLimitedClassBySectorId = deliveryLimitedClassBySectorId;
     const groupSupply = market.groupSupplyEnabled
-      ? buildGroupSupplyContext(
-          lookups,
-          turn ?? 0,
-          freightSettlementActive,
-          settleableAgreements,
-          input.groupMembership
-        )
+      ? buildGroupSupplyContext(lookups, turn ?? 0, settleableAgreements, input.groupMembership)
       : undefined;
     market.groupSupplyCommittedInputsBySector = groupSupply?.committedOutputBySector
       ? committedInputsBySector(groupSupply.buyersByCommodity)
@@ -773,7 +752,6 @@ export function runClearingPrePass(input: ClearingPrePassInput): ClearingPrePass
     market.groupSupplyInputsBySector = groupSupply?.inputAllocationsBySector;
     const internalSupply = internalSupplyEnabled
       ? buildInternalSupplyContext({
-          freightSettlementActive,
           lookups,
           market,
           sectors: supplyAgreementDemandSectors,

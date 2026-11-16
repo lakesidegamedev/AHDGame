@@ -93,7 +93,6 @@ export interface CommodityPricingContext {
   marketRecoveryStage?: number;
   commandEconomyEnabled: boolean;
   priceCurrentYear: number | null;
-  freightSettlementActive: boolean;
   freightRampFraction: number;
   /** Corporation ids behind each own-route identity, to persist owner-level delivery figures. */
   ownRouteCorporationIds?: ReadonlyMap<string, readonly string[]>;
@@ -155,7 +154,6 @@ export function priceCommodity(
     marketRecoveryStage,
     commandEconomyEnabled,
     priceCurrentYear,
-    freightSettlementActive,
     freightRampFraction,
     ownRouteCorporationIds,
     freightSettlement,
@@ -347,7 +345,7 @@ export function priceCommodity(
     nationalSupply[countryId] = Math.round(bal.supply * 100) / 100;
     nationalDemand[countryId] = Math.round(bal.demand * 100) / 100;
   }
-  if (freightSettlementActive && freightSettlement?.sourcing.foreignQuotes) {
+  if (freightSettlement?.sourcing.foreignQuotes) {
     nationalPrices = applyExportPriceFeedback({
       commodity,
       prices: nationalPrices,
@@ -436,9 +434,8 @@ export function priceCommodity(
       const cappedDelivered =
         freightSettlement?.deliveredSupplyByCommodity.get(commodity)?.get(stateId) ??
         stateBal.supply;
-      const deliveredSupply = freightSettlementActive
-        ? stateBal.supply + freightRampFraction * (cappedDelivered - stateBal.supply)
-        : stateBal.supply;
+      const deliveredSupply =
+        stateBal.supply + freightRampFraction * (cappedDelivered - stateBal.supply);
       const regionalLeg = isMacroPriceBlend
         ? nationalLeg
         : computeMarketPrice(effBaseFor(countryId), deliveredSupply, stateBal.demand, priceKnee);
@@ -475,39 +472,33 @@ export function priceCommodity(
     stateDemand[stateId] = Math.round(stateBal.demand * 100) / 100;
   }
 
-  const deliveredSupply = freightSettlementActive
-    ? Object.fromEntries(
-        freightSettlement?.deliveredSupplyByCommodity.get(commodity)?.entries() ?? []
-      )
-    : undefined;
-  const inputAvailability = freightSettlementActive
-    ? Object.fromEntries(
-        freightSettlement?.inputAvailabilityByCommodity.get(commodity)?.entries() ?? []
-      )
-    : undefined;
+  const deliveredSupply = Object.fromEntries(
+    freightSettlement?.deliveredSupplyByCommodity.get(commodity)?.entries() ?? []
+  );
+  const inputAvailability = Object.fromEntries(
+    freightSettlement?.inputAvailabilityByCommodity.get(commodity)?.entries() ?? []
+  );
   // Sell side of the same settlement: how much of each state's OWN output
   // found a buyer. Persisted next to the buy-side pair above so next turn's
   // corporation phase can offer only what a network could actually move.
   // Without it, clearing (country-scoped) and freight (state-scoped) keep
   // contradicting each other, which at t225 left 60.4% of world production
   // stranded in a state that did not need it.
-  const placedSupply = freightSettlementActive
-    ? Object.fromEntries(freightSettlement?.placedSupplyByCommodity.get(commodity)?.entries() ?? [])
-    : undefined;
+  const placedSupply = Object.fromEntries(
+    freightSettlement?.placedSupplyByCommodity.get(commodity)?.entries() ?? []
+  );
   // Why this is persisted separately and not derived as supply minus placed:
   // the difference lumps a glut in with a delivery failure, and the player
   // copy built on it says opposite things in the two cases.
-  const deliveryLimitedSupply = freightSettlementActive
-    ? Object.fromEntries(
-        freightSettlement?.deliveryLimitedSupplyByCommodity.get(commodity)?.entries() ?? []
-      )
-    : undefined;
+  const deliveryLimitedSupply = Object.fromEntries(
+    freightSettlement?.deliveryLimitedSupplyByCommodity.get(commodity)?.entries() ?? []
+  );
 
   // The state figure above covers every seller. Each route owner's own slice of
   // it is persisted per corporation so a sector shows its owner's goods, not
   // the whole state's. Only owners the sourcing pass measured appear.
   const ownerDeliveryLimited = (() => {
-    if (!freightSettlementActive || !ownRouteCorporationIds) return undefined;
+    if (!ownRouteCorporationIds) return undefined;
     const byState = freightSettlement?.sourcing.ownerDeliveryLimitedFractionByState?.get(commodity);
     if (!byState) return undefined;
     const out: Record<string, Record<string, number>> = {};

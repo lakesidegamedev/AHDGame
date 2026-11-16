@@ -155,11 +155,7 @@ export function buildExtractionStrategyObservation(
       "Pass 1 can retool sectors before pass 2; this snapshot does not preserve the exact pre-pass-2 candidate set.",
       "Use only for descriptive legacy-versus-candidate rankings on this same captured state, not exact historical choices or causal returns.",
     ],
-    config: projectRow(config ?? {}, [
-      "marketSystemMode",
-      "freightSettlementMode",
-      "marketGovernorCap",
-    ]),
+    config: projectRow(config ?? {}, ["marketSystemMode", "marketGovernorCap"]),
     gameState: projectRow(gameState ?? {}, [
       "currentTurn",
       "lastExtractionAutoStrategyTurn",
@@ -294,7 +290,6 @@ export async function snapshotSectorInvestment(
       {
         projection: {
           marketSystemMode: 1,
-          freightSettlementMode: 1,
           marketGovernorCap: 1,
         },
       }

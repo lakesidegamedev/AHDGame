@@ -17,7 +17,6 @@ export interface SimJobExperimentFields {
   domesticSovereignBondCoverageEnabled?: boolean;
   marketSystemMode?: string;
   labourSystemMode?: string;
-  freightSettlementMode?: string;
   canonicalFreightBillingEnabled?: boolean;
   shortageResponsiveSourcingEnabled?: boolean;
   indexFundBondLiquidityEnabled?: boolean;
@@ -99,14 +98,6 @@ export function buildRunWorldArgs(job: SimJobExperimentFields): string[] {
       throw new Error(`invalid labourSystemMode "${job.labourSystemMode}"`);
     }
     args.push(`--labour-mode=${job.labourSystemMode}`);
-  }
-  if (job.freightSettlementMode) {
-    if (
-      !(["shadow", "active"] as const).includes(job.freightSettlementMode as "shadow" | "active")
-    ) {
-      throw new Error(`invalid freightSettlementMode "${job.freightSettlementMode}"`);
-    }
-    args.push(`--freight-settlement=${job.freightSettlementMode}`);
   }
   booleanFlag(job, "canonicalFreightBillingEnabled", "canonical-freight-billing", args);
   booleanFlag(job, "shortageResponsiveSourcingEnabled", "shortage-responsive-sourcing", args);

@@ -541,7 +541,6 @@ export function computeClearingFactors(args: {
     localInputAvailabilityByState?: ReadonlyMap<string, ReadonlyMap<CommodityType, number>>;
     localBalancesByState?: ReadonlyMap<string, ReadonlyMap<CommodityType, { demand: number }>>;
     forecastByRoot?: Map<string, GroupForecastBasis>;
-    freightSettlementActive: boolean;
     members: readonly SupplyMember[];
     buyersByCommodity: ReadonlyMap<CommodityType, readonly CoordinationBuyer[]>;
     locationBySector: ReadonlyMap<string, { countryId: string; stateId: string }>;
@@ -1123,7 +1122,6 @@ export function computeClearingFactors(args: {
             demand: bal?.demand ?? 0,
             unitPriceAnchor: price,
             benchmarkFactor: realizedPriceOf(groupSellers[0]?.id ?? ""),
-            freightSettlementActive: groupContext.freightSettlementActive,
             buyers: ownBuyers,
             sellers: ownSellers.map((s) => {
               return {
@@ -1183,7 +1181,6 @@ export function computeClearingFactors(args: {
             supply: bal?.supply ?? 0,
             demand: bal?.demand ?? 0,
             unitPriceAnchor: price,
-            freightSettlementActive: groupContext.freightSettlementActive,
             members: groupContext.members
               .filter((m) => !groupContext.activeRoots || groupContext.activeRoots.has(m.rootId))
               .map((m) => ({

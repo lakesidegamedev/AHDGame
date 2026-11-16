@@ -87,7 +87,6 @@ export const CORPORATION_TURN_GAME_CONFIG_PROJECTION = {
   commandEconomyEnabled: 1,
   privateBankingEnabled: 1,
   interstateMoneyWiringEnabled: 1,
-  freightSettlementMode: 1,
   canonicalFreightBillingEnabled: 1,
   treasuryCashLedgerEnabled: 1,
   mediaEditorialEnabled: 1,

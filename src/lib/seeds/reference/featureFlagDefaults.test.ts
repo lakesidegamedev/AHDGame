@@ -51,7 +51,6 @@ const LADDER_TOPS: Record<string, string | number> = {
   indexFundsMode: "full",
   labourSystemMode: "full",
   marketSystemMode: MARKET_MODE_ORDER[MARKET_MODE_ORDER.length - 1],
-  freightSettlementMode: "active",
 };
 
 describe("fresh-world flag policy", () => {
