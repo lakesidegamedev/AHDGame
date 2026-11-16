@@ -15,7 +15,7 @@ import { processBillLifecycle } from "@/lib/billLifecycle";
 import { processStateBillTimers } from "@/lib/turn/billLifecycle/regionalEngine";
 import { processCabinetNominationLifecycle } from "@/lib/cabinetNominationLifecycle";
 import { processFomcNominationLifecycle } from "@/lib/fomcNominationLifecycle";
-import { processScotusTurn, scotusSwitches } from "@/lib/turn/scotusTurn";
+import { processScotusTurn } from "@/lib/turn/scotusTurn";
 import { processUkJrSurpriseTurn } from "@/lib/turn/ukJrSurpriseTurn";
 import { processUkLeadershipChallengeTurn } from "@/lib/turn/ukLeadershipChallengeTurn";
 import { processUkPartyConferenceTurn } from "@/lib/turn/ukPartyConferenceTurn";
@@ -1002,7 +1002,7 @@ export function getTurnPhaseRegistry(): TurnPhaseAdapter[] {
           // SCOTUS: parallel with cabinetNominations; must precede socialAxisDrift
           // so a diverged case's synthesized statePolicies are visible same turn.
           runtime.runPhase("scotusTurn", () =>
-            processScotusTurn(gameState.currentTurn, realNow, db, scotusSwitches(context.config))
+            processScotusTurn(gameState.currentTurn, realNow, db)
           ),
           // UK JR surprise flavor, same parallel group as SCOTUS; UK-only
           // mild uk_* enactments tagged uk_judicial_review_surprise.
@@ -1478,7 +1478,7 @@ export function getTurnPhaseRegistry(): TurnPhaseAdapter[] {
         // being elected, so there are no "mid-term" vacancies to backfill.
         if (!foundingActive) {
           await runtime.runPhase("byElectionWatcher", () =>
-            processByElectionsWithFill(db, newTurn, gameNow, context.config)
+            processByElectionsWithFill(db, newTurn, gameNow)
           );
           // Immediately after the governor watcher: same settled seat state,
           // separate country scope (UK Commons), separate election type.

@@ -367,25 +367,6 @@ export interface GameConfig {
    */
   outputBasis?: "gross" | "value_added";
   /**
-   * Operational switch for the price level. True compounds each country's
-   * `priceIndex` by its inflation and keeps `state.gdp` and the budget GDP
-   * basis nominal. Fresh worlds seed true; absent or false holds the index at 1
-   * and leaves the budget GDP basis on its fiscal-close snapshot.
-   */
-  priceLevelEnabled?: boolean;
-  /**
-   * Operational switch for the NPP fiscal stabilizer and the interest-spiral
-   * sovereign restructuring. True runs both at fiscal-year close. Fresh worlds
-   * seed true; absent or false skips both.
-   */
-  fiscalStabilizerEnabled?: boolean;
-  /**
-   * Operational switch for emergent crisis detection (crisis v2). True lets the
-   * detectors open new crises. Crises already open keep stepping and resolving
-   * either way. Fresh worlds seed true; absent or false opens none.
-   */
-  crisisV2EmergentEnabled?: boolean;
-  /**
    * Operational switch for the Crisis v2 engine on new crises. True attaches a
    * v2 instance (stages, blame, scars, forced events) to every crisis a
    * template or disaster spawns, and mirrors living conflicts as v2 crises.
@@ -393,48 +374,11 @@ export interface GameConfig {
    */
   crisisV2StagesEnabled?: boolean;
   /**
-   * Operational switch for the succession watcher: vacancy records for every
-   * executive office, deputy promotion outside the US, special elections and
-   * generated fills. Fresh worlds seed true; absent or false keeps only the US
-   * President-to-VP succession.
-   */
-  executiveSuccessionEnabled?: boolean;
-  /**
-   * Operational switch for leader legacies. True scores and stores a legacy
-   * when a head of government leaves office, which election swing and party
-   * renewal read. Fresh worlds seed true; absent or false records none.
-   */
-  leaderLegacyEnabled?: boolean;
-  /**
    * Operational switch for the campaign money basis. True measures campaign
    * income and costs against live national GDP per capita; absent or false
    * keeps the era table. Fresh worlds seed true.
    */
   campaignLiveGdpBasisEnabled?: boolean;
-  /**
-   * Operational switch for the by-election fill guarantee: an NPP candidate is
-   * filed for a live by-election nobody has entered before it closes. Fresh
-   * worlds seed true; absent or false leaves unentered by-elections empty.
-   */
-  byElectionFillEnabled?: boolean;
-  /**
-   * Operational switch for NPP Supreme Court nominations: a vacant seat gets a
-   * generated nominee when no player President is nominating. Fresh worlds
-   * seed true; absent or false waits for a player President.
-   */
-  scotusNppNominationsEnabled?: boolean;
-  /**
-   * Operational switch for the pending docket: a surprise case waits 12 to 36
-   * turns on the docket before the Court rules. Fresh worlds seed true; absent
-   * or false rules on the case the turn it is filed.
-   */
-  scotusPendingDocketEnabled?: boolean;
-  /**
-   * Operational switch for the undated random event fallback offered when a
-   * character has exhausted every dated pack. Fresh worlds seed true; absent or
-   * false offers nothing in that case.
-   */
-  preeGenericFallbackEnabled?: boolean;
   /**
    * Operational switch for cyber operations: player intelligence services,
    * computer-run governments and background governments may launch them.
