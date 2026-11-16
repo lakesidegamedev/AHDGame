@@ -89,7 +89,6 @@ const SUCCESSOR_CHAMBER_CYCLES: Record<
   qcAssembly: { anchor: "qcAssembly", periodHours: 192 },
   abAssembly: { anchor: "abAssembly", periodHours: 192 },
   rtxAssembly: { anchor: "rtxAssembly", periodHours: 192 },
-  rtxAssembly: { anchor: "rtxAssembly", periodHours: 192 },
 };
 
 const BETA_PARLIAMENT_CYCLES: Record<
