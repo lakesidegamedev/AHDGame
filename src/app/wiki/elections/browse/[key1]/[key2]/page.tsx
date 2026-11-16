@@ -93,7 +93,7 @@ export default function WikiElectionsGroupPage({
       : `${key1} ${typeLabel} Elections`;
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-8">
+    <div className="mx-auto max-w-[860px] px-4 py-7 sm:px-8">
       <nav className="mb-6 flex items-center gap-2 text-sm text-muted">
         <Link href="/wiki" className="hover:text-foreground">
           Wiki
@@ -107,7 +107,9 @@ export default function WikiElectionsGroupPage({
       </nav>
 
       <header className="mb-10">
-        <h1 className="mb-2 text-3xl font-bold tracking-tight text-foreground">{pageTitle}</h1>
+        <h1 className="mb-2 text-[34px] font-extrabold leading-[1.15] tracking-[-0.03em] text-foreground">
+          {pageTitle}
+        </h1>
         <p className="text-muted">
           {elections.length} completed election{elections.length !== 1 ? "s" : ""}
         </p>
@@ -118,7 +120,7 @@ export default function WikiElectionsGroupPage({
           {Array.from({ length: 6 }).map((_, i) => (
             <div
               key={i}
-              className="flex items-center justify-between rounded-lg border border-card-border bg-card/60 px-4 py-3"
+              className="flex items-center justify-between border-b border-card-border/60 py-2.5"
             >
               <Skeleton className="h-4 w-28" />
               <Skeleton className="h-4 w-4" />
@@ -134,9 +136,7 @@ export default function WikiElectionsGroupPage({
       )}
 
       {!loading && !error && elections.length === 0 && (
-        <div className="rounded-xl border border-card-border bg-card/40 p-8 text-center text-muted">
-          No completed elections match this filter.
-        </div>
+        <div className=" text-center text-muted">No completed elections match this filter.</div>
       )}
 
       {!loading && !error && elections.length > 0 && (
@@ -145,7 +145,7 @@ export default function WikiElectionsGroupPage({
             <Link
               key={item.id}
               href={`/wiki/elections/${item.id}`}
-              className="flex items-center justify-between rounded-lg border border-card-border bg-card/60 px-4 py-3 transition-colors hover:border-primary/40 hover:bg-card/80"
+              className="flex items-center justify-between border-b border-card-border/60 py-2.5 transition-colors hover:border-primary/40 hover:bg-card/80"
             >
               <span className="font-medium text-foreground">{item.label}</span>
               <span className="text-muted">→</span>

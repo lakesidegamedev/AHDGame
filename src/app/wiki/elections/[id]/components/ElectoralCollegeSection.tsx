@@ -116,7 +116,7 @@ export function ElectoralCollegeTable({ generalResults }: ElectoralCollegeTableP
   const isContingent = isContingentResolutionMode(generalResults.resolutionMode);
 
   return (
-    <section className="mb-10 rounded-xl border border-card-border bg-card/40 p-6 shadow-panel">
+    <section className="mb-10 ">
       <SectionLabel as="h3">Electoral College results</SectionLabel>
       <p className="mb-4 text-sm text-muted">
         {isContingent
@@ -125,11 +125,17 @@ export function ElectoralCollegeTable({ generalResults }: ElectoralCollegeTableP
       </p>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
-          <thead className="bg-card-elevated">
+          <thead>
             <tr className="border-b border-card-border text-left">
-              <th className="pb-2 pr-4 font-medium text-foreground">Candidate</th>
-              <th className="pb-2 pr-4 font-medium text-foreground">Party</th>
-              <th className="pb-2 font-medium text-foreground">Electoral votes</th>
+              <th className="border-b border-card-border py-1.5 pr-4 text-[10px] font-semibold uppercase tracking-[0.06em] text-muted">
+                Candidate
+              </th>
+              <th className="border-b border-card-border py-1.5 pr-4 text-[10px] font-semibold uppercase tracking-[0.06em] text-muted">
+                Party
+              </th>
+              <th className="border-b border-card-border py-1.5 text-[10px] font-semibold uppercase tracking-[0.06em] text-muted">
+                Electoral votes
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -143,9 +149,13 @@ export function ElectoralCollegeTable({ generalResults }: ElectoralCollegeTableP
                     key={candId}
                     className="border-b border-card-border/50 last:border-0 hover:bg-card-elevated/30 transition-colors"
                   >
-                    <td className="py-2 pr-4 font-medium text-foreground">{name}</td>
-                    <td className="py-2 pr-4 text-muted">{party}</td>
-                    <td className="py-2 font-medium text-foreground">{ev}</td>
+                    <td className="border-b border-card-border/60 py-2 pr-4 font-medium text-foreground">
+                      {name}
+                    </td>
+                    <td className="border-b border-card-border/60 py-2 pr-4 text-muted">{party}</td>
+                    <td className="border-b border-card-border/60 py-2 font-medium text-foreground">
+                      {ev}
+                    </td>
                   </tr>
                 );
               })}
@@ -163,17 +173,27 @@ export function StateWinnersTable({ generalResults }: { generalResults: GeneralR
   if (rows.length === 0) return null;
 
   return (
-    <section className="mb-10 rounded-xl border border-card-border bg-card/40 p-6 shadow-panel">
+    <section className="mb-10 ">
       <SectionLabel as="h3">Results by state</SectionLabel>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
-          <thead className="bg-card-elevated">
+          <thead>
             <tr className="border-b border-card-border text-left">
-              <th className="pb-2 pr-4 font-medium text-foreground">State</th>
-              <th className="pb-2 pr-4 font-medium text-foreground">Winner</th>
-              <th className="pb-2 pr-4 font-medium text-foreground">Share</th>
-              <th className="pb-2 pr-4 font-medium text-foreground">Margin</th>
-              <th className="pb-2 font-medium text-foreground">Electoral votes</th>
+              <th className="border-b border-card-border py-1.5 pr-4 text-[10px] font-semibold uppercase tracking-[0.06em] text-muted">
+                State
+              </th>
+              <th className="border-b border-card-border py-1.5 pr-4 text-[10px] font-semibold uppercase tracking-[0.06em] text-muted">
+                Winner
+              </th>
+              <th className="border-b border-card-border py-1.5 pr-4 text-[10px] font-semibold uppercase tracking-[0.06em] text-muted">
+                Share
+              </th>
+              <th className="border-b border-card-border py-1.5 pr-4 text-[10px] font-semibold uppercase tracking-[0.06em] text-muted">
+                Margin
+              </th>
+              <th className="border-b border-card-border py-1.5 text-[10px] font-semibold uppercase tracking-[0.06em] text-muted">
+                Electoral votes
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -184,18 +204,22 @@ export function StateWinnersTable({ generalResults }: { generalResults: GeneralR
               const party = row.winnerId ? generalResults.candidateParties[row.winnerId] : null;
               return (
                 <tr key={row.stateId} className="border-b border-card-border/50 last:border-0">
-                  <td className="py-2 pr-4 font-medium text-foreground">{row.stateId}</td>
-                  <td className="py-2 pr-4 text-muted">
+                  <td className="border-b border-card-border/60 py-2 pr-4 font-medium text-foreground">
+                    {row.stateId}
+                  </td>
+                  <td className="border-b border-card-border/60 py-2 pr-4 text-muted">
                     {name}
                     {party ? ` (${party})` : ""}
                   </td>
-                  <td className="py-2 pr-4 font-mono text-muted">
+                  <td className="border-b border-card-border/60 py-2 pr-4 tabular-nums text-muted">
                     {row.winnerPct == null ? "" : formatPct(row.winnerPct)}
                   </td>
-                  <td className="py-2 pr-4 font-mono text-muted">
+                  <td className="border-b border-card-border/60 py-2 pr-4 tabular-nums text-muted">
                     {row.marginPct == null ? "" : `${row.marginPct.toFixed(1)} pts`}
                   </td>
-                  <td className="py-2 font-mono text-foreground">{row.electoralVotes}</td>
+                  <td className="border-b border-card-border/60 py-2 tabular-nums text-foreground">
+                    {row.electoralVotes}
+                  </td>
                 </tr>
               );
             })}

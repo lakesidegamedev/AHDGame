@@ -74,7 +74,7 @@ export function ChamberResultsSection({ chamber }: { chamber: ChamberResult }) {
   const gov = chamber.government;
 
   return (
-    <section className="mb-10 rounded-xl border border-card-border bg-card/40 p-6 shadow-panel">
+    <section className="mb-10 ">
       <SectionLabel as="h3">{chamber.chamberLabel} result</SectionLabel>
       <p className="mb-4 text-sm text-muted">
         {chamber.totalSeats} seats across {chamber.regionCount} regions.
@@ -88,20 +88,38 @@ export function ChamberResultsSection({ chamber }: { chamber: ChamberResult }) {
         <table className="w-full min-w-[32rem] text-sm">
           <thead>
             <tr className="border-b border-card-border text-left text-xs uppercase text-muted">
-              <th className="py-2 pr-3 font-semibold">Party</th>
-              {showVotes && <th className="py-2 pr-3 text-right font-semibold">Votes</th>}
-              {showVotes && <th className="py-2 pr-3 font-semibold">Vote share</th>}
-              <th className="py-2 pr-3 text-right font-semibold">Seats</th>
-              {hasPrevious && <th className="py-2 pr-3 text-right font-semibold">Change</th>}
+              <th className="border-b border-card-border py-1.5 pr-3 text-[10px] font-semibold uppercase tracking-[0.06em] text-muted">
+                Party
+              </th>
+              {showVotes && (
+                <th className="border-b border-card-border py-1.5 pr-3 text-right text-[10px] font-semibold uppercase tracking-[0.06em] text-muted">
+                  Votes
+                </th>
+              )}
+              {showVotes && (
+                <th className="border-b border-card-border py-1.5 pr-3 text-[10px] font-semibold uppercase tracking-[0.06em] text-muted">
+                  Vote share
+                </th>
+              )}
+              <th className="border-b border-card-border py-1.5 pr-3 text-right text-[10px] font-semibold uppercase tracking-[0.06em] text-muted">
+                Seats
+              </th>
+              {hasPrevious && (
+                <th className="border-b border-card-border py-1.5 pr-3 text-right text-[10px] font-semibold uppercase tracking-[0.06em] text-muted">
+                  Change
+                </th>
+              )}
               {hasPrevious && showVotes && (
-                <th className="py-2 text-right font-semibold">Swing (pts)</th>
+                <th className="border-b border-card-border py-1.5 text-right text-[10px] font-semibold uppercase tracking-[0.06em] text-muted">
+                  Swing (pts)
+                </th>
               )}
             </tr>
           </thead>
           <tbody>
             {visible.map((p) => (
               <tr key={p.partyId} className="border-b border-card-border/50">
-                <td className="py-2 pr-3">
+                <td className="border-b border-card-border/60 py-2 pr-3">
                   <span
                     className="mr-2 inline-block h-3 w-3 rounded-sm align-middle"
                     style={{ backgroundColor: p.color }}
@@ -111,12 +129,12 @@ export function ChamberResultsSection({ chamber }: { chamber: ChamberResult }) {
                   {p.abbreviation && <span className="ml-1 text-muted">({p.abbreviation})</span>}
                 </td>
                 {showVotes && (
-                  <td className="py-2 pr-3 text-right font-mono text-muted">
+                  <td className="border-b border-card-border/60 py-2 pr-3 text-right tabular-nums text-muted">
                     {p.votes.toLocaleString("en-US")}
                   </td>
                 )}
                 {showVotes && (
-                  <td className="py-2 pr-3">
+                  <td className="border-b border-card-border/60 py-2 pr-3">
                     <div className="flex items-center gap-2">
                       <div className="h-2 w-24 overflow-hidden rounded-full bg-card-elevated">
                         <div
@@ -127,22 +145,26 @@ export function ChamberResultsSection({ chamber }: { chamber: ChamberResult }) {
                           }}
                         />
                       </div>
-                      <span className="font-mono text-xs text-muted">
+                      <span className="tabular-nums text-xs text-muted">
                         {p.votePct == null ? "" : formatPct(p.votePct)}
                       </span>
                     </div>
                   </td>
                 )}
-                <td className="py-2 pr-3 text-right font-mono font-semibold text-foreground">
+                <td className="border-b border-card-border/60 py-2 pr-3 text-right tabular-nums font-semibold text-foreground">
                   {p.seats}
                 </td>
                 {hasPrevious && (
-                  <td className={`py-2 pr-3 text-right font-mono ${changeClass(p.seatChange)}`}>
+                  <td
+                    className={`border-b border-card-border/60 py-2 pr-3 text-right tabular-nums ${changeClass(p.seatChange)}`}
+                  >
                     {formatSignedInt(p.seatChange)}
                   </td>
                 )}
                 {hasPrevious && showVotes && (
-                  <td className={`py-2 text-right font-mono ${changeClass(p.swing)}`}>
+                  <td
+                    className={`border-b border-card-border/60 py-2 text-right tabular-nums ${changeClass(p.swing)}`}
+                  >
                     {formatSwing(p.swing)}
                   </td>
                 )}
@@ -153,7 +175,7 @@ export function ChamberResultsSection({ chamber }: { chamber: ChamberResult }) {
       </div>
 
       {gov && gov.governingPartyName && (
-        <div className="mt-5 rounded-lg border border-card-border bg-card/50 p-4 text-sm">
+        <div className="mt-5 border-b border-card-border/60 py-2.5 text-sm">
           <h4 className="mb-1 font-semibold text-foreground">Government formed</h4>
           <p className="text-muted">
             {gov.governingPartyName}
