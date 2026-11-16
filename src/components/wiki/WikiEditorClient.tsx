@@ -119,9 +119,7 @@ export function WikiEditorClient({
     }
     setDraftAgeMinutes(Math.max(1, Math.round((Date.now() - draft.timestamp) / 60000)));
     setRestorableDraft(draft);
-    // Runs once per page load; initialData is stable for the page's lifetime.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [draftKey, mode]);
+  }, [draftKey, mode, initialData]);
 
   const restoreDraft = () => {
     if (!restorableDraft) return;

@@ -20,9 +20,7 @@ function useEmbedData<T>(url: string, accept: (json: unknown) => T | null): Load
     return () => {
       cancelled = true;
     };
-    // `accept` is a stable module-level function in every caller.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [url]);
+  }, [url, accept]);
   return result;
 }
 

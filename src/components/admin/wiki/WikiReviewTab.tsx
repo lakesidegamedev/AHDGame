@@ -102,7 +102,6 @@ function DiffImage({ text, removed }: { text: string; removed: boolean }) {
   return (
     <div className="my-1 flex flex-wrap gap-2">
       {images.map((m, i) => (
-        /* eslint-disable-next-line @next/next/no-img-element -- moderator preview of player-supplied URLs */
         <img
           key={i}
           src={m[2]}
