@@ -13,19 +13,10 @@ import {
   STATE_GDP_RECONCILE_TOLERANCE,
 } from "./reconcileStateGdp";
 
-/**
- * Region GDP (millions of local currency) must add up to the authored national
- * GDP after the seed step. The national figure is rebuilt from regions, so a
- * region table in another unit silently rescales a whole economy on its first
- * rebuild.
- *
- * Runs the real reconciler, database write included, over the region tables
- * the seeders use. Reconciled presets must land within the reconcile tolerance.
- * Presets left unreconciled must stay inside the seed contract's band, except
- * for the countries listed below, whose authored national figures need
- * correcting first. The list is exact: a new country drifting out of band, or a
- * listed one coming back in, fails until the list is updated.
- */
+// Regions (millions of local currency) must sum to the authored national GDP
+// after seeding: the national figure is rebuilt from regions, so a wrong-unit
+// table rescales a whole economy. Unreconciled presets may only miss the band
+// for the exact countries listed, whose national figures need correcting first.
 const UNRECONCILED_OUT_OF_BAND: Readonly<Record<string, readonly string[]>> = {
   "1999-default": ["CN", "IE", "NG", "TR"],
   "2007-default": ["BR", "CN", "IE", "NG", "TR", "UK"],
