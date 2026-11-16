@@ -74,13 +74,13 @@ describe("sovereignty registry", () => {
     for (const regionId of sovereigntyRegionIds("CA")) expect(seeded.has(regionId)).toBe(true);
   });
 
-  it("registers Alberta as a Canadian region whose successor is not built yet", () => {
+  it("registers Alberta as a Canadian region that can become the AB successor", () => {
     expect(sovereigntyRegionIn("CA", "CA_AB")).toMatchObject({
       kind: "independence",
       successorCountryId: "AB",
       executiveTitle: "Premier",
       nationalGovernmentName: "Ottawa",
-      actuates: false,
+      actuates: true,
     });
   });
 
