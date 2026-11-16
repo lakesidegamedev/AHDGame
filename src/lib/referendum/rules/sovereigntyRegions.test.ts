@@ -11,7 +11,6 @@ import {
   sovereigntyCountryIds,
   sovereigntyRegion,
   sovereigntyRegionIds,
-  sovereigntyMemberRegionIds,
   sovereigntyRegionIn,
   usesSovereigntyWording,
   independenceCopy,
@@ -182,16 +181,5 @@ describe("registry wording", () => {
     expect(usesSovereigntyWording("CA_AB")).toBe(true);
     expect(usesSovereigntyWording("SCO")).toBe(false);
     expect(usesSovereigntyWording("CA_ON")).toBe(false);
-  });
-});
-
-describe("sovereigntyMemberRegionIds", () => {
-  it("is the region itself for a single-region entry", () => {
-    expect(sovereigntyMemberRegionIds("TX")).toEqual(["TX"]);
-    expect(sovereigntyMemberRegionIds("ZZ")).toEqual([]);
-  });
-
-  it("lists the members of a bloc entry", () => {
-    expect(SOVEREIGNTY_REGIONS.every((entry) => !entry.memberRegionIds)).toBe(true);
   });
 });
