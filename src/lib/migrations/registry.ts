@@ -13,6 +13,7 @@ import { migration as modernEraBookBackfill } from "./entries/2026-11-13-modern-
 import { migration as realCompanyNames } from "./entries/2026-11-12-real-company-names";
 import { migration as dropUnreadTelemetryCollections } from "./entries/2026-11-15-drop-unread-telemetry-collections";
 import { migration as providerLinkHistoryIndexes } from "./entries/2026-11-15-provider-link-history-indexes";
+import { migration as wikiRevisionsIndexes } from "./entries/2026-11-16-wiki-revisions-indexes";
 import { migration as jpLawLeanEffects } from "./entries/2026-11-09-jp-law-lean-effects";
 import { migration as ukJpSubdivisionPopulations } from "./entries/2026-11-01-uk-jp-subdivision-populations";
 import { migration as archiveNonPresidentialCampaigns } from "./entries/2026-11-01-archive-non-presidential-campaigns";
@@ -416,6 +417,7 @@ export const MIGRATIONS: Migration[] = [
   regionGroupDriftToBuckets,
   providerLinkHistoryIndexes,
   splitRenewablesPowerMethod,
+  wikiRevisionsIndexes,
 ];
 
 // D13 rollback drill - registered but deliberately OUTSIDE the normal chain.

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Children, isValidElement, type ReactNode } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { expandWikiTags } from "@/lib/wiki/rules/embedTags";
 import { toRelativeWikiHref } from "@/lib/wiki/links";
 import { getWikiComponent } from "@/lib/wiki/componentRegistry";
 import { SKIP_GLOSSARY_PROP, wrapGlossaryChildren } from "@/components/wiki/wrapGlossaryChildren";
@@ -203,7 +204,7 @@ export function MarkdownContent({ content }: { content: string; headings?: TocHe
         },
       }}
     >
-      {content}
+      {expandWikiTags(content)}
     </ReactMarkdown>
   );
 }

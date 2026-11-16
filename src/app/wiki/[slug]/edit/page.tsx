@@ -42,6 +42,27 @@ export default async function WikiEditPage({ params }: EditPageProps) {
     redirect(`/wiki/${slug}`);
   }
 
+  // An author's earlier edit that is still waiting, or was declined, is where
+  // they pick up again, not the live text.
+  const pending = page.pendingEdit as
+    | {
+        title: string;
+        description: string;
+        content: string;
+        tags: string[];
+        category?: string;
+        difficulty?: "beginner" | "intermediate" | "advanced";
+        rejection?: { reason: string };
+      }
+    | undefined;
+  const editSource = pending && !canPublishDirectly ? pending : page;
+  const pendingNotice =
+    pending && !canPublishDirectly
+      ? pending.rejection
+        ? `A moderator did not approve your last edit: ${pending.rejection.reason} Your text is below. The live page is unchanged.`
+        : "Your last edit is waiting for review. Its text is below. Saving replaces it. The live page is unchanged."
+      : undefined;
+
   return (
     <div className="min-h-screen bg-background pb-16">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 py-8">
@@ -58,13 +79,14 @@ export default async function WikiEditPage({ params }: EditPageProps) {
           mode="edit"
           isAdmin={canPublishDirectly}
           initialSlug={slug}
+          pendingNotice={pendingNotice}
           initialData={{
-            title: page.title,
-            description: page.description,
-            content: page.content,
-            category: page.category,
-            tags: page.tags || [],
-            difficulty: page.difficulty,
+            title: editSource.title,
+            description: editSource.description,
+            content: editSource.content,
+            category: editSource.category ?? page.category,
+            tags: editSource.tags || [],
+            difficulty: editSource.difficulty,
             featured: page.featured,
             private: page.private,
           }}
