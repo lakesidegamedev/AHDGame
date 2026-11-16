@@ -43,6 +43,7 @@ import { UKR_ECONOMY } from "@/lib/countries/ukr/economy";
 import { BAL_ECONOMY } from "@/lib/countries/bal/economy";
 import { CA_ECONOMY } from "@/lib/countries/ca/economy";
 import { QC_ECONOMY } from "@/lib/countries/qc/economy";
+import { AB_ECONOMY } from "@/lib/countries/ab/economy";
 
 type SectorWeightMap = Partial<Record<OperatingSectorType, number>>;
 
@@ -127,6 +128,7 @@ export const COUNTRY_SECTOR_WEIGHTS: Record<CountryId, SectorWeightMap> = {
   DD: DD_ECONOMY.sectorWeights.base,
   CA: CA_ECONOMY.sectorWeights.base,
   QC: QC_ECONOMY.sectorWeights.base,
+  AB: AB_ECONOMY.sectorWeights.base,
 };
 
 export const STATE_SECTOR_WEIGHT_OVERRIDES: Partial<Record<string, SectorWeightMap>> = {

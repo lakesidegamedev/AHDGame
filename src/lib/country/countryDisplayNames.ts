@@ -23,6 +23,7 @@ const COUNTRY_NAMES: Record<CountryId, string> = {
   WAL: "Wales",
   CA: "Canada",
   QC: "Quebec",
+  AB: "Alberta",
   BR: "Brazil",
   CN: "China",
   NG: "Nigeria",

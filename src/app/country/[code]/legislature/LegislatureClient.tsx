@@ -75,6 +75,7 @@ const LEGISLATURE_COMPONENTS: Partial<Record<CountryId, ComponentType<{ countryI
     SCO: SingleChamberParliamentPage,
     WAL: SingleChamberParliamentPage,
     QC: SingleChamberParliamentPage,
+    AB: SingleChamberParliamentPage,
     CA: SingleChamberParliamentPage,
   };
 
