@@ -161,6 +161,26 @@ export const SOVEREIGNTY_REGIONS: readonly SovereigntyRegion[] = [
     wording: "sovereignty",
     parentUpperChamberSeats: 2,
   },
+  {
+    countryId: "US",
+    regionId: "CA",
+    kind: "independence",
+    targetCountryId: null,
+    successorCountryId: "RCA",
+    executiveTitle: "Governor",
+    nationalGovernmentName: "Washington",
+    parentName: "the United States",
+    decisionMakerTitle: "President",
+    consentBodyName: "Congress",
+    consentSponsor: "The Administration",
+    electionParties: {
+      separatist: ["us_bear_flag"],
+      rivals: ["us_republican", "us_democratic"],
+    },
+    actuates: true,
+    wording: "sovereignty",
+    parentUpperChamberSeats: 2,
+  },
 ];
 
 const BY_REGION = new Map(SOVEREIGNTY_REGIONS.map((entry) => [entry.regionId, entry]));

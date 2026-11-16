@@ -285,6 +285,14 @@ export const COUNTRY_DISPLAY_LABELS: Record<CountryId, CountryDisplayLabel> = {
     regionLabel: "Region",
     regionLabelPlural: "Regions",
   },
+  RCA: {
+    name: "California Republic",
+    exchangeName: "California Stock Exchange",
+    flagEmoji: "⭐",
+    executiveLabel: "Office of the Premier",
+    regionLabel: "Region",
+    regionLabelPlural: "Regions",
+  },
   DD: {
     exchangeKind: "stateRegister",
     name: "East Germany",

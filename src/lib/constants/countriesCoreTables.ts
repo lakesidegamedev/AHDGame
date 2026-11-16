@@ -44,7 +44,8 @@ export type CountryId =
   | "CA"
   | "QC"
   | "AB"
-  | "RTX";
+  | "RTX"
+  | "RCA";
 
 /**
  * Discrete government system enum driving executive and election mechanics.

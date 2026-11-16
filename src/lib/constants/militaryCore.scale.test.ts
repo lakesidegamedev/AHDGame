@@ -31,6 +31,7 @@ import { CA_MILITARY_SCALE } from "@/lib/countries/ca/institutionsFacts";
 import { QC_MILITARY_SCALE } from "@/lib/countries/qc/institutionsFacts";
 import { AB_MILITARY_SCALE } from "@/lib/countries/ab/institutionsFacts";
 import { RTX_MILITARY_SCALE } from "@/lib/countries/rtx/institutionsFacts";
+import { RCA_MILITARY_SCALE } from "@/lib/countries/rca/institutionsFacts";
 import { US_MILITARY_SCALE } from "@/lib/countries/us/institutionsFacts";
 import { WAL_MILITARY_SCALE } from "@/lib/countries/wal/institutionsFacts";
 import { YU_MILITARY_SCALE } from "@/lib/countries/yu/institutionsFacts";
@@ -74,6 +75,7 @@ const AUTHORED: Record<CountryId, number> = {
   QC: QC_MILITARY_SCALE,
   AB: AB_MILITARY_SCALE,
   RTX: RTX_MILITARY_SCALE,
+  RCA: RCA_MILITARY_SCALE,
   YU: YU_MILITARY_SCALE,
 };
 

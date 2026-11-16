@@ -172,6 +172,7 @@ export type AlignmentCountryKey =
   | "QC"
   | "AB"
   | "RTX"
+  | "RCA"
   | "RO"
   | "RU"
   | "RUA"
@@ -1868,6 +1869,14 @@ export const ALIGNMENT_ROSTER: readonly AlignmentRosterEntry[] = [
   {
     key: "RTX",
     name: "Republic of Texas",
+    tier: "historical-presence",
+    status1953: "dependent",
+    iso: [],
+    metro: "CA",
+  },
+  {
+    key: "RCA",
+    name: "California Republic",
     tier: "historical-presence",
     status1953: "dependent",
     iso: [],

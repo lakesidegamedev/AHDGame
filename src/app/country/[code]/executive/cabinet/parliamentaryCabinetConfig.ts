@@ -13,7 +13,20 @@ import { getCountryFlagUrl } from "@/lib/constants";
 
 /** Countries that use the parliamentary direct-appointment cabinet pattern. */
 export type ParliamentaryCabinetCountryId =
-  "UK" | "DE" | "JP" | "IE" | "CN" | "RU" | "DD" | "SCO" | "WAL" | "CA" | "QC" | "AB" | "RTX";
+  | "UK"
+  | "DE"
+  | "JP"
+  | "IE"
+  | "CN"
+  | "RU"
+  | "DD"
+  | "SCO"
+  | "WAL"
+  | "CA"
+  | "QC"
+  | "AB"
+  | "RTX"
+  | "RCA";
 
 export interface ParliamentaryCabinetHero {
   src: string;
@@ -241,6 +254,21 @@ export const PARLIAMENTARY_CABINET_CONFIGS: Record<
       alt: "The State Capitol, Austin",
       tagline: "State Capitol · Ministers appointed by the Chief Minister",
       titleFor: () => "Executive Council of Texas",
+    },
+  },
+  RCA: {
+    countryId: "RCA",
+    positions: getCabinetPositions("RCA"),
+    governmentLinkPath: "/country/rca/executive",
+    chamberMemberLabel: "Representative",
+    chamberName: "Assembly",
+    description:
+      "The Premier appoints ministers to the Executive Council of an independent California without a confirmation vote. Ministers lead departments covering finance, foreign affairs, justice and public safety, defence, health, education, commerce and trade, local government, transportation, energy and water, and human services, governing through a Assembly majority. They serve at the Premier's pleasure and can be dismissed at any time.",
+    hero: {
+      src: "/api/images/hero/california-capitol",
+      alt: "The State Capitol, Sacramento",
+      tagline: "State Capitol · Ministers appointed by the Premier",
+      titleFor: () => "Executive Council of California",
     },
   },
 };

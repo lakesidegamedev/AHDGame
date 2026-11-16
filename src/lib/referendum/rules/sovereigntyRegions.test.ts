@@ -138,6 +138,18 @@ describe("getSovereigntyGovernmentNames", () => {
     });
   });
 
+  it("gives California a President decision, a Congress consent vote and its own successor", () => {
+    expect(sovereigntyRegionIn("US", "CA")).toMatchObject({
+      kind: "independence",
+      decisionMakerTitle: "President",
+      consentBodyName: "Congress",
+      successorCountryId: "RCA",
+      actuates: true,
+      wording: "sovereignty",
+    });
+    expect(sovereigntyRegionIn("CA", "CA")).toBeNull();
+  });
+
   it("gives Texas a President decision and a Congress consent vote", () => {
     const texas = sovereigntyRegionIn("US", "TX");
     expect(texas).toMatchObject({

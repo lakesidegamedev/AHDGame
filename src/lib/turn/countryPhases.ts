@@ -126,6 +126,7 @@ import { CA_ELECTIONS } from "@/lib/countries/ca/elections";
 import { QC_ELECTIONS } from "@/lib/countries/qc/elections";
 import { AB_ELECTIONS } from "@/lib/countries/ab/elections";
 import { RTX_ELECTIONS } from "@/lib/countries/rtx/elections";
+import { RCA_ELECTIONS } from "@/lib/countries/rca/elections";
 import { JP_BILL_PHASE_SHAPE } from "@/lib/countries/jp/elections/billLifecycle";
 import { getElectionsCollection } from "@/lib/db/collections/elections";
 
@@ -144,6 +145,7 @@ export interface CountryBillPhaseEntry {
     | "qcBillLifecycle"
     | "abBillLifecycle"
     | "rtxBillLifecycle"
+    | "rcaBillLifecycle"
     | "ukBillLifecycle"
     | "jpBillLifecycle"
     | "ieBillLifecycle"
@@ -198,6 +200,11 @@ export const COUNTRY_BILL_PHASES: Partial<Record<CountryId, CountryBillPhaseEntr
   RTX: {
     phaseName: "rtxBillLifecycle",
     fn: (now, context) => runBillLifecycleForConfiguredCountry("RTX", now, context),
+    emptyResult: { enacted: 0, failed: 0 },
+  },
+  RCA: {
+    phaseName: "rcaBillLifecycle",
+    fn: (now, context) => runBillLifecycleForConfiguredCountry("RCA", now, context),
     emptyResult: { enacted: 0, failed: 0 },
   },
   CA: {
@@ -368,6 +375,8 @@ export const COUNTRY_ELECTION_PHASES: Partial<Record<CountryId, CountryElectionP
   AB: AB_ELECTIONS.electionPhases,
   // Successor country: no-op until an Texas referendum carries.
   RTX: RTX_ELECTIONS.electionPhases,
+  // Successor country: no-op until an California referendum carries.
+  RCA: RCA_ELECTIONS.electionPhases,
   IE: [
     { name: "ieElections", fn: ensureIEElections },
     { name: "ieUachtaranElections", fn: ensureIEUachtaranElections },

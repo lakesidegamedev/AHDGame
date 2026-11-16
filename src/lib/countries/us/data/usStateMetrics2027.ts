@@ -744,11 +744,11 @@ function eduTier(stateId: string): 1 | 2 | 3 | 4 | 5 {
 // ---------------------------------------------------------------------------
 
 /**
- * Opening separatist mood for states in the sovereignty registry. Texas sits
+ * Opening separatist mood for states in the sovereignty registry. Texas and California sit
  * well below the 60 needed to request a referendum, so secession starts as a
  * minority position that campaigns and national events can move.
  */
-const SECESSION_MOOD_2027: Record<string, number> = { TX: 32 };
+const SECESSION_MOOD_2027: Record<string, number> = { TX: 32, CA: 28 };
 
 function build2023Metrics(stateId: string): StateMetrics {
   const et = econTier(stateId) - 1; // 0..4

@@ -39,6 +39,7 @@ import { CA_MAP_REGISTRY } from "@/lib/countries/ca/geographyFacts";
 import { QC_MAP_REGISTRY } from "@/lib/countries/qc/geographyFacts";
 import { AB_MAP_REGISTRY } from "@/lib/countries/ab/geographyFacts";
 import { RTX_MAP_REGISTRY } from "@/lib/countries/rtx/geographyFacts";
+import { RCA_MAP_REGISTRY } from "@/lib/countries/rca/geographyFacts";
 
 export interface CountryMapConfig {
   /** Country ID */
@@ -117,6 +118,7 @@ export const COUNTRY_MAP_REGISTRY: Record<CountryId, CountryMapConfig> = {
   QC: QC_MAP_REGISTRY,
   AB: AB_MAP_REGISTRY,
   RTX: RTX_MAP_REGISTRY,
+  RCA: RCA_MAP_REGISTRY,
 };
 
 /**

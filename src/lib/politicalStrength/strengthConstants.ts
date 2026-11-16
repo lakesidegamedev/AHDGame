@@ -33,6 +33,7 @@ import { CA_ECONOMY } from "@/lib/countries/ca/economy";
 import { QC_ECONOMY } from "@/lib/countries/qc/economy";
 import { AB_ECONOMY } from "@/lib/countries/ab/economy";
 import { RTX_ECONOMY } from "@/lib/countries/rtx/economy";
+import { RCA_ECONOMY } from "@/lib/countries/rca/economy";
 
 /**
  * Political Strength reserve and pressure-ladder constants for Phase 3.
@@ -103,6 +104,7 @@ export const TREASURY_PS_RATE_BY_COUNTRY: Record<CountryId, { national: number; 
   QC: QC_ECONOMY.tax.treasuryPsRate,
   AB: AB_ECONOMY.tax.treasuryPsRate,
   RTX: RTX_ECONOMY.tax.treasuryPsRate,
+  RCA: RCA_ECONOMY.tax.treasuryPsRate,
 } as const;
 
 // ─── Pressure ladder ────────────────────────────────────────────────────────
@@ -244,6 +246,7 @@ export const REGION_COUNT_BY_COUNTRY: Record<CountryId, number> = {
   QC: 8, // 8 authored regions (seeded at independence)
   AB: 6, // 6 authored regions (seeded at independence)
   RTX: 6, // 6 authored regions (seeded at independence)
+  RCA: 6, // 6 authored regions (seeded at independence)
 } as const;
 
 /**

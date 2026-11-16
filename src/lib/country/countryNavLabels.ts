@@ -61,6 +61,13 @@ export const COUNTRY_NAV_LABELS: Record<CountryId, Omit<CountryNavLabels, "id">>
     legislatureName: "House of Representatives",
     legislaturePath: "/country/rtx/legislature",
   },
+  RCA: {
+    governmentType: "parliamentaryRepublic",
+    executiveLabel: "Office of the Premier",
+    executivePath: "/country/rca/executive",
+    legislatureName: "Assembly",
+    legislaturePath: "/country/rca/legislature",
+  },
   DE: {
     governmentType: "parliamentaryRepublic",
     executiveLabel: "Federal Chancellery",

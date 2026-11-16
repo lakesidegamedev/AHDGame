@@ -60,6 +60,7 @@ import { CA_ECONOMY } from "@/lib/countries/ca/economy";
 import { QC_ECONOMY } from "@/lib/countries/qc/economy";
 import { AB_ECONOMY } from "@/lib/countries/ab/economy";
 import { RTX_ECONOMY } from "@/lib/countries/rtx/economy";
+import { RCA_ECONOMY } from "@/lib/countries/rca/economy";
 import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
 import { governorExecutiveOrdersCollection } from "@/lib/db/repositories/governorExecutiveOrders";
@@ -121,6 +122,7 @@ export const LEGISLATION_COUNTRY_SCOPES: Record<
   QC: QC_ECONOMY.legislationScope,
   AB: AB_ECONOMY.legislationScope,
   RTX: RTX_ECONOMY.legislationScope,
+  RCA: RCA_ECONOMY.legislationScope,
 };
 
 /**

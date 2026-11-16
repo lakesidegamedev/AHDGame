@@ -114,6 +114,17 @@ const PARLIAMENT_META: Partial<Record<CountryId, ParliamentMeta>> = {
     proposeChamberLabel: "House of Representatives",
     domesticOnlyLabel: "Texas-headquartered corporations only",
   },
+  RCA: {
+    heroSlug: "california-capitol",
+    heroAlt: "The State Capitol, Sacramento",
+    headTitle: "Premier",
+    memberAbbr: "Asm.",
+    memberPlural: "Representatives",
+    presidingOfficer: "Speaker of the Assembly",
+    electoralSystem: "Regional proportional representation",
+    proposeChamberLabel: "Assembly",
+    domesticOnlyLabel: "California-headquartered corporations only",
+  },
   CA: {
     heroSlug: "parliament-hill",
     heroAlt: "Parliament Hill, Ottawa",

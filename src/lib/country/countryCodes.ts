@@ -21,6 +21,7 @@ const COUNTRY_CODES: Record<CountryId, string> = {
   QC: "QC",
   AB: "AB",
   RTX: "RTX",
+  RCA: "RCA",
   BR: "BR",
   CN: "CN",
   NG: "NG",

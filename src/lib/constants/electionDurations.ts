@@ -97,9 +97,11 @@ export const DEFAULT_DURATIONS: Record<
   // QC National Assembly: fixed four-year cycle, stood up at independence.
   // AB National Assembly: fixed four-year cycle, stood up at independence.
   // RTX National Assembly: fixed four-year cycle, stood up at independence.
+  // RCA National Assembly: fixed four-year cycle, stood up at independence.
   qcAssembly: { durationHours: 48, primaryDurationHours: 24, generalDurationHours: 24 },
   abAssembly: { durationHours: 48, primaryDurationHours: 24, generalDurationHours: 24 },
   rtxAssembly: { durationHours: 48, primaryDurationHours: 24, generalDurationHours: 24 },
+  rcaAssembly: { durationHours: 48, primaryDurationHours: 24, generalDurationHours: 24 },
   // Beta-country parliamentary lower chambers: 48h window; multi-year cycle gap handled by canonical schedule in the beta chamber specs.
   assembleeNationale: { durationHours: 48, primaryDurationHours: 24, generalDurationHours: 24 },
   cameraDeputati: { durationHours: 48, primaryDurationHours: 24, generalDurationHours: 24 },

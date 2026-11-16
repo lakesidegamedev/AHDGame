@@ -27,9 +27,11 @@ export const ANALYTICS_ELECTION_TYPES: ReadonlySet<string> = new Set([
   "qcAssembly",
   "abAssembly",
   "rtxAssembly",
+  "rcaAssembly",
   "snap_qcAssembly",
   "snap_abAssembly",
   "snap_rtxAssembly",
+  "snap_rcaAssembly",
   "regionalCouncil",
   // DE
   "bundestag",

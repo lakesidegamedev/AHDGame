@@ -21,6 +21,7 @@ const COUNTRY_MAP_PATHS: Record<CountryId, string> = {
   QC: "/country/qc/map",
   AB: "/country/ab/map",
   RTX: "/country/rtx/map",
+  RCA: "/country/rca/map",
   BR: "/country/br/map",
   CN: "/country/cn/map",
   NG: "/country/ng/map",
