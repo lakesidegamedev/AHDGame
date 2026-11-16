@@ -43,7 +43,7 @@ export interface ChamberResult {
   government: ChamberGovernment | null;
 }
 
-const ENDED = ["completed", "resolved"];
+const ENDED: Election["status"][] = ["completed", "resolved"];
 const INDEPENDENT: WikiPartyInfo = { name: "Independent", abbreviation: "IND", color: "#9CA3AF" };
 
 /** Election types that fill the same chamber, so one can be compared with another. */
