@@ -124,9 +124,9 @@ async function handleGET(request: Request) {
     if (query && pageDocs.length > 0) {
       const bodies = await wikiPages
         .find({ ...filter, slug: { $in: pageDocs.map((d) => (d as { slug: string }).slug) } })
-        .project({ slug: 1, content: 1 })
+        .project<{ slug: string; content?: string }>({ slug: 1, content: 1 })
         .toArray();
-      for (const body of bodies as unknown as Array<{ slug: string; content?: string }>) {
+      for (const body of bodies) {
         if (body.content) headingsBySlug.set(body.slug, extractWikiHeadings(body.content));
       }
     }
@@ -144,12 +144,18 @@ async function handleGET(request: Request) {
       void _or;
       const broad = await wikiPages
         .find(broadFilter)
-        .project({ slug: 1, title: 1, description: 1, tags: 1, featured: 1 })
+        .project<Pick<WikiPage, "slug" | "title" | "description" | "tags" | "featured">>({
+          slug: 1,
+          title: 1,
+          description: 1,
+          tags: 1,
+          featured: 1,
+        })
         .limit(MAX_FUZZY_POOL)
         .toArray();
       const seen = new Set(pageCandidates.map((c) => c.slug));
       const extra = broad
-        .filter((doc) => !seen.has((doc as unknown as { slug: string }).slug))
+        .filter((doc) => !seen.has(doc.slug))
         .map((doc) => ({ ...toCandidate(doc), matchedBody: false }));
       results = rankWikiSearchCandidates(
         query,
