@@ -32,6 +32,7 @@ import {
   loadReentryRegions,
 } from "@/lib/parties/partyFrontier";
 import { holdPartyTerritory, withPartyTerritoryMutation } from "@/lib/parties/territoryMutation";
+import { isPartyAdjacencyEnabled } from "@/lib/parties/adjacencyFlag";
 import fs from "fs";
 import path from "path";
 import { JP_ETHNICITY_WEIGHTS } from "@/lib/countries/jp/data/jpNppEthnicity";
@@ -641,6 +642,7 @@ export function openNppCreationBatch(
   const presenceByParty = new Map<string, Set<string>>();
   const reentryByParty = new Map<string, string[]>();
   let legislationTypes: LegislationType[] | undefined;
+  let adjacencyEnabled: Promise<boolean> | undefined;
 
   const territoryKey = (countryId: string, partyId: string) => `${countryId}:${partyId}`;
   const normalize = (partyId: string) => String(parseInt(partyId, 10));
@@ -687,7 +689,8 @@ export function openNppCreationBatch(
           countryId,
           presence,
           regions,
-          reentryByParty.get(key) ?? []
+          reentryByParty.get(key) ?? [],
+          await (adjacencyEnabled ??= isPartyAdjacencyEnabled(db))
         );
         if (isInFrontier(presence, frontier, config.state)) {
           if (config.state && regions.includes(config.state)) heldPresence = presence;

@@ -11,6 +11,7 @@ import {
   getTerritoryAdjacency,
 } from "./partyFrontier";
 import { preservesPartyTerritory } from "./rules/territory";
+import { isPartyAdjacencyEnabled } from "./adjacencyFlag";
 
 export const PARTY_TERRITORY_WARNING =
   "This move would disconnect your party's territory or expand a disconnected area without helping reconnect it. Keep another member, active NPP, or officeholder in any connecting region and expand only along a connecting path.";
@@ -29,11 +30,14 @@ export async function getRelocationTerritory(
     getPartyPresenceStates(db, countryId, partyId, regions, departing),
   ]);
   const adjacency = getTerritoryAdjacency(countryId, regions);
+  const adjacencyEnabled = await isPartyAdjacencyEnabled(db);
   return {
     before,
     remaining,
-    canDepart: preservesPartyTerritory(before, remaining, adjacency),
+    canDepart: !adjacencyEnabled || preservesPartyTerritory(before, remaining, adjacency),
     canMoveTo: (stateId: string) =>
-      preservesPartyTerritory(before, new Set([...remaining, stateId]), adjacency),
+      adjacencyEnabled
+        ? preservesPartyTerritory(before, new Set([...remaining, stateId]), adjacency)
+        : regions.includes(stateId),
   };
 }
