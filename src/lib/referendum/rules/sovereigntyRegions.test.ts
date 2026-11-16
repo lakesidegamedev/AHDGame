@@ -36,12 +36,12 @@ describe("sovereignty registry", () => {
     expect(sovereigntyRegionIn("US", "SCO")).toBeNull();
     expect(sovereigntyRegionIn("UK", "CA_QC")).toBeNull();
     expect(isSovereigntyRegion("LON")).toBe(false);
-    expect(hostsSovereigntyReferendums("US")).toBe(false);
+    expect(hostsSovereigntyReferendums("DE")).toBe(false);
     expect(hostsSovereigntyReferendums(undefined)).toBe(false);
   });
 
   it("lists each country once and each region once", () => {
-    expect(sovereigntyCountryIds()).toEqual(["UK", "CA"]);
+    expect(sovereigntyCountryIds()).toEqual(["UK", "CA", "US"]);
     const ids = SOVEREIGNTY_REGIONS.map((entry) => entry.regionId);
     expect(new Set(ids).size).toBe(ids.length);
   });
@@ -65,17 +65,20 @@ describe("getSovereigntyGovernmentNames", () => {
     expect(getSovereigntyGovernmentNames("CA_QC")).toEqual({
       regional: "Premier",
       national: "Ottawa",
+      decisionMaker: "Prime Minister",
     });
     expect(getSovereigntyGovernmentNames("sco")).toEqual({
       regional: "First Minister",
       national: "Westminster",
+      decisionMaker: "Prime Minister",
     });
   });
 
   it("falls back to the Westminster names outside the table", () => {
-    expect(getSovereigntyGovernmentNames("TX")).toEqual({
+    expect(getSovereigntyGovernmentNames("LON")).toEqual({
       regional: "First Minister",
       national: "Westminster",
+      decisionMaker: "Prime Minister",
     });
   });
 
@@ -86,12 +89,39 @@ describe("getSovereigntyGovernmentNames", () => {
       parent: "the United Kingdom",
       national: "Westminster",
       sponsor: "His Majesty's Government",
+      decisionMaker: "Prime Minister",
+      body: "the House of Commons",
     });
     expect(independenceCopy("CA_QC", (id) => names[id])).toEqual({
       region: "Quebec",
       parent: "Canada",
       national: "Ottawa",
       sponsor: "Government of Canada",
+      decisionMaker: "Prime Minister",
+      body: "the House of Commons",
     });
+  });
+
+  it("gives Texas a President decision and a Congress consent vote", () => {
+    const texas = sovereigntyRegionIn("US", "TX");
+    expect(texas).toMatchObject({
+      kind: "independence",
+      executiveTitle: "Governor",
+      decisionMakerTitle: "President",
+      nationalGovernmentName: "Washington",
+      consentBodyName: "Congress",
+      actuates: false,
+    });
+    expect(sovereigntyRegionIn("UK", "TX")).toBeNull();
+    expect(independenceCopy("TX", () => undefined)).toMatchObject({
+      decisionMaker: "President",
+      body: "Congress",
+      parent: "the United States",
+    });
+    expect(getSovereigntyGovernmentNames("TX")).toMatchObject({
+      regional: "Governor",
+      decisionMaker: "President",
+    });
+    expect(getSovereigntyGovernmentNames("SCO").decisionMaker).toBe("Prime Minister");
   });
 });

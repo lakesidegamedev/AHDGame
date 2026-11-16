@@ -93,4 +93,32 @@ export const usParties: PartySeed[] = [
       "2027-default",
     ],
   },
+  {
+    seedOrder: 5,
+    countryId: "US",
+    name: "Lone Star Independence Party",
+    abbreviation: "LSI",
+    tier: "minor",
+    color: "#1F3A6E",
+    economicPosition: 1,
+    socialPosition: 1,
+    chairId: null,
+    viceChairId: null,
+    treasurerId: null,
+    committeeIds: [],
+    treasury: 1_000_000,
+    nationalTaxRate: 0,
+    politicalStrength: 0,
+    memberCount: 0,
+    isDefault: true,
+    createdBy: null,
+    validForPresets: ["2027-default"],
+  },
 ];
+
+/** Default party abbreviation to stable slug, for rules keyed by slug. */
+export const US_PARTY_SLUG_BY_ABBREVIATION: Readonly<Record<string, string>> = {
+  DEM: "us_democratic",
+  REP: "us_republican",
+  LSI: "us_lone_star",
+};

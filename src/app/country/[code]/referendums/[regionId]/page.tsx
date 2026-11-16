@@ -1,3 +1,4 @@
+import { sovereigntyRegionIn } from "@/lib/referendum/rules/sovereigntyRegions";
 import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -65,7 +66,7 @@ function weightedTurnout(cohorts: { share: number; turnout: number }[]): number 
 }
 
 /** Plain-language summary of a non-campaigning referendum's state. */
-function statusSummary(ref: Referendum, region: string): string {
+function statusSummary(ref: Referendum, region: string, decisionMaker: string): string {
   const yes = ref.result ? `${Math.round(ref.result.finalYesShare)}% Yes` : null;
   if (ref.kind === "peace_agreement") {
     if (ref.status === "completed")
@@ -82,11 +83,11 @@ function statusSummary(ref: Referendum, region: string): string {
     case "settled":
       return `Defeated at the ballot box${yes ? ` — ${yes}` : ""}. The question is settled for now.`;
     case "declined":
-      return "Declined by the Prime Minister.";
+      return `Declined by the ${decisionMaker}.`;
     case "cancelled":
       return "The conversion was blocked — the region did not transfer.";
     case "requested":
-      return "Awaiting the Prime Minister's decision to grant the referendum.";
+      return `Awaiting the ${decisionMaker}'s decision to grant the referendum.`;
     case "granted":
       return "Granted — the campaign is opening.";
     case "polling":
@@ -135,6 +136,7 @@ export default async function ReferendumDetailPage({
     getHeadOfGovernmentCharacterId(db, countryId),
   ]);
   const regionName = stateDoc?.name ?? regionId.toUpperCase();
+  const sovereignty = sovereigntyRegionIn(countryId, regionId);
   const noun = referendumKindLabel(ref.kind);
   const labels = referendumSideLabels(ref.kind);
   const isAdmin = user?.isAdmin === true;
@@ -456,7 +458,13 @@ export default async function ReferendumDetailPage({
             ) : (
               <>
                 <h2 className="mb-2 text-sm font-semibold text-muted">Result</h2>
-                <p className="text-sm text-foreground">{statusSummary(ref, regionName)}</p>
+                <p className="text-sm text-foreground">
+                  {statusSummary(
+                    ref,
+                    regionName,
+                    sovereignty?.decisionMakerTitle ?? "Prime Minister"
+                  )}
+                </p>
                 {ref.result && (
                   <p className="mt-2 text-xs text-muted">
                     Final: {Math.round(ref.result.finalYesShare)}% Yes · turnout{" "}
@@ -520,6 +528,8 @@ export default async function ReferendumDetailPage({
             campaignCloseTurn={ref.campaignCloseTurn}
             currentTurn={currentTurn}
             isPM={isPM}
+            decisionMaker={sovereignty?.decisionMakerTitle}
+            nationalGovernment={sovereignty?.nationalGovernmentName}
             isAdmin={isAdmin}
             role={role}
             viewerCanDeclare={viewerCanDeclare}

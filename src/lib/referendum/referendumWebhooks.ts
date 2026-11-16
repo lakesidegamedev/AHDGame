@@ -25,6 +25,7 @@ const REGION_NAMES: Record<string, string> = {
   WAL: "Wales",
   NIR: "Northern Ireland",
   CA_QC: "Quebec",
+  TX: "Texas",
 };
 
 /** Celebratory green for a completed reunification. */
@@ -43,12 +44,17 @@ function regionName(regionId: string): string {
 }
 
 /** The parent government and country an independence region leaves. */
-function parentOf(regionId: string): { national: string; parent: string } {
+function parentOf(regionId: string): { national: string; parent: string; body: string } {
   const entry = sovereigntyRegion(regionId);
   return {
     national: entry?.nationalGovernmentName ?? "Westminster",
     parent: entry?.parentName ?? "the United Kingdom",
+    body: entry?.consentBodyName ?? "the House of Commons",
   };
+}
+
+function capitalize(text: string): string {
+  return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
 function noun(kind: ReferendumKind): string {
@@ -67,12 +73,13 @@ export function buildReferendumRequestedEmbed(args: {
   region: string;
   kind: ReferendumKind;
   executiveTitle?: string;
+  decisionMaker?: string;
 }): DiscordEmbed {
   return {
     title: `${args.region}: ${Noun(args.kind)} Referendum Requested`,
     description:
       `The ${args.executiveTitle ?? "First Minister"} of ${args.region} has formally petitioned for a ${noun(args.kind)} ` +
-      `referendum. It now awaits the Prime Minister's decision to grant or decline.`,
+      `referendum. It now awaits the ${args.decisionMaker ?? "Prime Minister"}'s decision to grant or decline.`,
     color: DISCORD_COLORS.electionOpen,
     footer: FOOTER,
   };
@@ -82,12 +89,14 @@ export function buildReferendumDecisionEmbed(args: {
   region: string;
   kind: ReferendumKind;
   action: "grant" | "decline";
+  decisionMaker?: string;
 }): DiscordEmbed {
+  const decisionMaker = args.decisionMaker ?? "Prime Minister";
   if (args.action === "grant") {
     return {
       title: `${args.region}: Referendum Granted`,
       description:
-        `The Prime Minister has **granted** ${args.region}'s ${noun(args.kind)} referendum. ` +
+        `The ${decisionMaker} has **granted** ${args.region}'s ${noun(args.kind)} referendum. ` +
         `A public campaign now opens ahead of the ballot.`,
       color: DISCORD_COLORS.billEnacted,
       footer: FOOTER,
@@ -95,7 +104,7 @@ export function buildReferendumDecisionEmbed(args: {
   }
   return {
     title: `${args.region}: Referendum Declined`,
-    description: `The Prime Minister has **declined** ${args.region}'s ${noun(args.kind)} referendum.`,
+    description: `The ${decisionMaker} has **declined** ${args.region}'s ${noun(args.kind)} referendum.`,
     color: DISCORD_COLORS.govCollapsed,
     footer: FOOTER,
   };
@@ -209,13 +218,15 @@ export function buildIndependenceConsentBillEmbed(args: {
   region: string;
   passed: boolean;
   national?: string;
+  body?: string;
 }): DiscordEmbed {
   const national = args.national ?? "Westminster";
+  const body = capitalize(args.body ?? "the House of Commons");
   return args.passed
     ? {
         title: `${national} Consents: ${args.region} (Independence) Bill Passes`,
         description:
-          `The House of Commons has **passed** the bill to release ${args.region} as an ` +
+          `${body} has **passed** the bill to release ${args.region} as an ` +
           `independent sovereign country. Independence will now take effect.`,
         color: DISCORD_COLORS.billEnacted,
         footer: FOOTER,
@@ -223,7 +234,7 @@ export function buildIndependenceConsentBillEmbed(args: {
     : {
         title: `${national} Rejects the ${args.region} (Independence) Bill`,
         description:
-          `The House of Commons has **rejected** the bill to release ${args.region}. ` +
+          `${body} has **rejected** the bill to release ${args.region}. ` +
           `Independence cannot proceed.`,
         color: DISCORD_COLORS.billVetoed,
         footer: FOOTER,
@@ -268,6 +279,7 @@ export async function announceReferendumRequested(ref: Referendum): Promise<void
       region: regionName(ref.regionId),
       kind: ref.kind,
       executiveTitle: sovereigntyRegion(ref.regionId)?.executiveTitle,
+      decisionMaker: sovereigntyRegion(ref.regionId)?.decisionMakerTitle,
     })
   );
 }
@@ -278,7 +290,12 @@ export async function announceReferendumDecision(
 ): Promise<void> {
   await announceToProcessCountries(
     ref,
-    buildReferendumDecisionEmbed({ region: regionName(ref.regionId), kind: ref.kind, action })
+    buildReferendumDecisionEmbed({
+      region: regionName(ref.regionId),
+      kind: ref.kind,
+      action,
+      decisionMaker: sovereigntyRegion(ref.regionId)?.decisionMakerTitle,
+    })
   );
 }
 
@@ -314,6 +331,7 @@ export async function announceConsentBillResolved(
           region: regionName(ref.regionId),
           passed,
           national: parentOf(ref.regionId).national,
+          body: parentOf(ref.regionId).body,
         })
       : buildConsentBillEmbed({ chamber, passed });
   await sendCountryGameEvent(targetCountry, embed);

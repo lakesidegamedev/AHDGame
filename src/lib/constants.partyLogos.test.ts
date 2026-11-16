@@ -29,6 +29,7 @@ describe("PARTY_LOGOS keying", () => {
     const defaults = [...usParties, ...caParties].filter(
       (party) =>
         party.isDefault &&
+        party.abbreviation !== "LSI" &&
         (!party.validForPresets || party.validForPresets.includes("2027-default"))
     );
     expect(defaults).toHaveLength(9);

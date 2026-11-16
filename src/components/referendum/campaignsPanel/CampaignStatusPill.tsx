@@ -3,7 +3,7 @@ import type { ReferendumStatus } from "@/lib/db/types/referendum";
 export type CampaignStatus = ReferendumStatus;
 
 const META: Record<CampaignStatus, { label: string; tone: "yes" | "no" | "amber" | "muted" }> = {
-  requested: { label: "Awaiting PM", tone: "amber" },
+  requested: { label: "Awaiting decision", tone: "amber" },
   granted: { label: "Opening", tone: "amber" },
   campaigning: { label: "Live", tone: "amber" },
   polling: { label: "Counting", tone: "amber" },

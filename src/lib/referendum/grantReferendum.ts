@@ -1,6 +1,7 @@
 import { withSessionDb, afterCommit } from "@/lib/db/sessionDb";
 /**
- * PM decision on a requested referendum. The Prime Minister grants it (opening
+ * Head-of-government decision on a requested referendum. The Prime Minister (the
+ * President in the United States) grants it (opening
  * the campaign) or declines it (cooldown). There is no separate Commons consent
  * vote at this stage — Westminster's legislative consent comes later as a
  * Commons bill at the conversion stage (alongside Ireland's Dáil bill).
@@ -20,7 +21,11 @@ import {
 } from "@/lib/constants/referendum";
 import { announceReferendumDecision } from "@/lib/referendum/referendumWebhooks";
 import { recordWireEvent } from "@/lib/referendum/wire";
-import { hostsSovereigntyReferendums } from "@/lib/referendum/rules/sovereigntyRegions";
+import {
+  hostsSovereigntyReferendums,
+  referendumDecisionMakerTitle,
+  decisionMakerTitleForCountry,
+} from "@/lib/referendum/rules/sovereigntyRegions";
 import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 
 export type GrantReferendumAction = "grant" | "decline";
@@ -28,7 +33,7 @@ export type GrantReferendumAction = "grant" | "decline";
 export interface GrantReferendumInput {
   countryId: CountryId;
   referendumId: string;
-  /** True when the acting character is the referendum country's sitting PM. */
+  /** True when the acting character is the country's sitting decision maker (PM or President). */
   isPM: boolean;
   action: GrantReferendumAction;
   /** Turn hosts supply the phase turn; HTTP callers use persisted GameState. */
@@ -57,7 +62,12 @@ async function grantReferendumInTransaction(
     return { status: 400, body: { error: "This country holds no sovereignty referendums." } };
   }
   if (!input.isPM && input.adminOverride !== true) {
-    return { status: 403, body: { error: "Only the Prime Minister can decide on a referendum." } };
+    return {
+      status: 403,
+      body: {
+        error: `Only the ${decisionMakerTitleForCountry(input.countryId)} can decide on a referendum.`,
+      },
+    };
   }
 
   if (!ObjectId.isValid(input.referendumId))
@@ -105,7 +115,7 @@ async function grantReferendumInTransaction(
       regionId: ref.regionId,
       turn: currentTurn,
       kind: "declined",
-      summary: "The Prime Minister declined the referendum.",
+      summary: `The ${referendumDecisionMakerTitle(ref.regionId)} declined the referendum.`,
     }).catch(() => {});
     return { status: 200, body: { declined: true } };
   }
@@ -136,7 +146,7 @@ async function grantReferendumInTransaction(
     regionId: ref.regionId,
     turn: currentTurn,
     kind: "granted",
-    summary: "The Prime Minister granted the referendum.",
+    summary: `The ${referendumDecisionMakerTitle(ref.regionId)} granted the referendum.`,
   }).catch(() => {});
   return { status: 200, body: { campaignCloseTurn: closeTurn } };
 }

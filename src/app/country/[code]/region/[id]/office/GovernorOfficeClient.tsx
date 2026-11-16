@@ -22,7 +22,7 @@ import type { DevolutionDriverSnapshot } from "./tabs/DevolutionTab";
 import type { ReferendumPanelData } from "./tabs/devolution/ReferendumPanel";
 import type { Race } from "./tabs/endorsements/RaceList";
 import type { DevolutionPolicy } from "@/lib/db/types/governorOfficeState";
-import { sovereigntyRegionIn } from "@/lib/referendum/rules/sovereigntyRegions";
+import { sovereigntyRegion, sovereigntyRegionIn } from "@/lib/referendum/rules/sovereigntyRegions";
 import { TabFallback } from "@/components/state/TabFallback";
 
 // Only the Overview tab is open on arrival; the others are one click away and
@@ -115,7 +115,7 @@ function buildTabs(
   if (showDevolution)
     tabs.push({
       key: "devolution",
-      label: stateId.toUpperCase() === "CA_QC" ? "Sovereignty" : "Devolution",
+      label: sovereigntyRegion(stateId)?.countryId === "UK" ? "Devolution" : "Sovereignty",
     });
   tabs.push(
     { key: "legislation", label: "Legislation" },
