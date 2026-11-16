@@ -8,7 +8,6 @@ import { withSessionDb, afterCommit } from "@/lib/db/sessionDb";
  * See the independence-process design.
  */
 import type { Db } from "mongodb";
-import type { MacroMetricsDoc } from "@/lib/db/types/macroMetrics";
 import type { CountryId } from "@/lib/constants/countries";
 import type { GovernorOfficeState } from "@/lib/db/types/governorOfficeState";
 import type { Referendum, ReferendumKind, ReferendumStatus } from "@/lib/db/types/referendum";
@@ -17,8 +16,11 @@ import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { REQUEST_AP_COST, referendumRequestEligibility } from "@/lib/constants/referendum";
 import { announceReferendumRequested } from "@/lib/referendum/referendumWebhooks";
 import { recordWireEvent } from "@/lib/referendum/wire";
-import { sovereigntyRegionIn } from "@/lib/referendum/rules/sovereigntyRegions";
-import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import {
+  sovereigntyMemberRegionIds,
+  sovereigntyRegionIn,
+} from "@/lib/referendum/rules/sovereigntyRegions";
+import { loadPooledDesire } from "@/lib/referendum/blocMembers";
 import { governorOfficeStateCollection } from "@/lib/db/repositories/governorOfficeState";
 
 /** Non-terminal statuses that count as "a referendum is in progress". */
@@ -74,15 +76,20 @@ async function requestReferendumInTransaction(
   const currentTurn = await getCurrentTurn(db);
   const refs = getReferendumCollection(db);
 
+  // Any member of a bloc may ask; the referendum is filed under the bloc.
+  const regionKey = region.regionId;
   // A shared office write serializes requests even when an admin pays no AP.
-  await governorOfficeStateCollection(db).updateOne(
-    { countryId, stateId },
-    { $inc: { referendumRequestRevision: 1 } }
-  );
-  const active = await refs.findOne({ regionId: stateId, status: { $in: ACTIVE_STATUSES } });
+  // A bloc takes the write on every member so two Governors cannot both open one.
+  for (const memberId of sovereigntyMemberRegionIds(regionKey)) {
+    await governorOfficeStateCollection(db).updateOne(
+      { countryId, stateId: memberId },
+      { $inc: { referendumRequestRevision: 1 } }
+    );
+  }
+  const active = await refs.findOne({ regionId: regionKey, status: { $in: ACTIVE_STATUSES } });
   const lastTerminal = await refs
     .find({
-      regionId: stateId,
+      regionId: regionKey,
       kind: { $in: ["independence", "reunification"] },
       status: { $in: TERMINAL_STATUSES },
     })
@@ -90,9 +97,8 @@ async function requestReferendumInTransaction(
     .limit(1)
     .toArray();
 
-  // SP5: independenceDesire lives top-level on macroMetrics.
-  const metric = await macroMetricsCollection<MacroMetricsDoc>(db).findOne({ _id: stateId });
-  const desire = metric?.independenceDesire?.value ?? 0;
+  // SP5: independenceDesire lives top-level on macroMetrics. A bloc pools its members.
+  const desire = (await loadPooledDesire(db, regionKey)) ?? 0;
 
   const elig = referendumRequestEligibility({
     desire,
@@ -113,7 +119,7 @@ async function requestReferendumInTransaction(
   const now = new Date();
   const doc: Referendum = {
     countryId,
-    regionId: stateId,
+    regionId: regionKey,
     kind,
     targetCountryId: region.targetCountryId,
     status: "requested",
@@ -149,7 +155,7 @@ async function requestReferendumInTransaction(
   await recordWireEvent(db, {
     referendumId: ins.insertedId,
     countryId,
-    regionId: stateId,
+    regionId: regionKey,
     turn: currentTurn,
     kind: "requested",
     summary: `The ${region.executiveTitle} requested a ${

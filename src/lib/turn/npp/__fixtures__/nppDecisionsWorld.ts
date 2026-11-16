@@ -391,7 +391,6 @@ export async function seedNppDecisionsWorld(
   await db.collection("gameConfig").insertOne({
     _id: "default",
     marketSystemMode: options.marketSystemMode ?? "plants",
-    labourSystemMode: "full",
     ledgerShadow: false,
     techTreesEnabled: options.techTreesEnabled === true,
     nppFragileMarketSupplyEnabled: true,

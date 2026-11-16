@@ -34,12 +34,16 @@ function stubDb(over: { candidate?: unknown | null } = {}): Db {
           : name === "gameState"
             ? { _id: "current", preset: "1953-default" }
             : null,
-      find: () => ({
+      find: (filter?: { _id?: { $in?: string[] } }) => ({
         toArray: async () =>
           name === "states"
             ? [
                 { _id: "IA", name: "Iowa" },
                 { _id: "OH", name: "Ohio" },
+                // Every other state the query asks for is still part of the country.
+                ...(filter?._id?.$in ?? [])
+                  .filter((id) => id !== "IA" && id !== "OH")
+                  .map((id) => ({ _id: id, name: id })),
               ]
             : [],
       }),

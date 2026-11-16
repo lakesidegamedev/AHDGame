@@ -35,6 +35,9 @@ import { walRegions } from "@/lib/seeds/wal/walRegions";
 import { caRegions2027 } from "@/lib/countries/ca/data/caRegions2027";
 import { qcRegions } from "@/lib/countries/qc/data/qcRegions";
 import { abRegions } from "@/lib/countries/ab/data/abRegions";
+import { rtxRegions } from "@/lib/countries/rtx/data/rtxRegions";
+import { rcaRegions } from "@/lib/countries/rca/data/rcaRegions";
+import { nenRegions } from "@/lib/countries/nen/data/nenRegions";
 import { yuRegions } from "@/lib/seeds/yu/yuRegions";
 
 const COUNTRY_REGIONS: Readonly<Record<CountryId, readonly { _id: string }[]>> = {
@@ -70,6 +73,9 @@ const COUNTRY_REGIONS: Readonly<Record<CountryId, readonly { _id: string }[]>> =
   CA: caRegions2027,
   QC: qcRegions,
   AB: abRegions,
+  RTX: rtxRegions,
+  RCA: rcaRegions,
+  NEN: nenRegions,
 };
 
 const ALL_COUNTRIES = Object.keys(COUNTRY_REGIONS) as CountryId[];

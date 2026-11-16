@@ -188,7 +188,6 @@ async function main() {
                 "sourceCommit",
                 "startPolicy",
                 "marketSystemMode",
-                "labourSystemMode",
                 "autonomyLevel",
                 "actors",
                 "allFeatureFlags",

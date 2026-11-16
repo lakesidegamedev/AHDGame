@@ -2,7 +2,6 @@
  * POST /api/corporations/[id]/sectors/[sectorId]/union-busting — CEO attempts
  * to suppress a sector's unionization (Phase 7a). Cash cost + chance of
  * backfire — see `src/lib/labour/unionBusting.ts`. CEO only. Gated on
- * `labourSystemMode >= "full"`.
  */
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
@@ -10,7 +9,6 @@ import { requireBasicAuth } from "@/lib/api/requireAuth";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { resolveCorporation, requireCeo } from "@/lib/api/corporations/resolveQuery";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
-import { isLabourFullMode } from "@/lib/labour/featureFlag";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { attemptUnionBusting } from "@/lib/corporations/commands/sectorOperations/attemptUnionBusting";
 
@@ -22,10 +20,6 @@ export async function POST(request: Request, { params }: RouteParams) {
   try {
     const auth = await requireBasicAuth();
     if (!auth.ok) return auth.response;
-
-    if (!(await isLabourFullMode())) {
-      return errorResponse(403, "Union-busting is not enabled.");
-    }
 
     const rateLimit = checkRateLimit(
       `api/corporations/[id]/sectors/[sectorId]/union-busting:${auth.user.userId}`,

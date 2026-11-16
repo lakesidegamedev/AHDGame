@@ -7,7 +7,6 @@ vi.mock("@/lib/campaigns/campaignCurrency", () => ({
   loadCampaignCurrencyRates: vi.fn().mockResolvedValue({ GBP: 2 }),
 }));
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
-vi.mock("@/lib/labour/featureFlag", () => ({ isLabourFullMode: vi.fn().mockResolvedValue(true) }));
 
 /** Captures the filter the route hands to `unions.find`. */
 const unionFind = vi.fn();

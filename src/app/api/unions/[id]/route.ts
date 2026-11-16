@@ -1,7 +1,7 @@
 /**
  * GET /api/unions/[id]: union detail plus CorporateSectors matching its
  * (countryId, sectorType) scope. Read-only, no auth; gated on
- * `labourSystemMode >= "full"` so live union data is not served when the
+ * so live union data is not served when the
  * feature is disabled.
  */
 import { NextResponse } from "next/server";
@@ -10,7 +10,6 @@ import { getDb } from "@/lib/mongodb";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { OPERATING_SECTOR_TYPE_LABELS } from "@/lib/constants/corporations";
 import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
-import { isLabourFullMode } from "@/lib/labour/featureFlag";
 import { reconcileUnionOwnerCache } from "@/lib/unions/unionReconciliation";
 import {
   isUnionLeadershipElectionOpen,
@@ -88,10 +87,6 @@ interface RouteParams {
 
 export async function GET(_request: Request, { params }: RouteParams) {
   try {
-    if (!(await isLabourFullMode())) {
-      return errorResponse(403, "Player-run unions are not enabled.");
-    }
-
     const { id } = await params;
     if (!ObjectId.isValid(id)) {
       return errorResponse(400, "Invalid union ID");

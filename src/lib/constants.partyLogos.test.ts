@@ -31,6 +31,9 @@ describe("PARTY_LOGOS keying", () => {
         party.isDefault &&
         // An invented regional party has no real-world logo to point at.
         party.abbreviation !== "ASP" &&
+        party.abbreviation !== "LSI" &&
+        party.abbreviation !== "BFI" &&
+        party.abbreviation !== "NEI" &&
         (!party.validForPresets || party.validForPresets.includes("2027-default"))
     );
     expect(defaults).toHaveLength(9);

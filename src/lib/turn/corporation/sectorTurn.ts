@@ -261,9 +261,8 @@ export function processSector(
   // turn's trigger — see the labour.unionsEnabled block below for where
   // strikes are triggered/resolved) has revenue throttled, not zeroed.
   // Checked on `labour.unionsEnabled` directly (not `wagesEnabled`):
-  // in practice unionsEnabled always implies wagesEnabled via
-  // LABOUR_MODE_ORDER, but LabourContext doesn't enforce that, so this
-  // reads `sector.strikeStartedAtTurn` regardless of wagesEnabled.
+  // LabourContext does not tie unionsEnabled to wagesEnabled, so this reads
+  // `sector.strikeStartedAtTurn` regardless of wagesEnabled.
   const tightness = lookups.labourTightnessByState.get(sector.stateId);
   const stateDemandWageIndex = lookups.labourDemandWageIndexByState?.get(sector.stateId);
   const {

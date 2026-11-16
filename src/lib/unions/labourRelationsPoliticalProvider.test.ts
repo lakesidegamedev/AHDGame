@@ -143,13 +143,7 @@ describe("labour relations political provider", () => {
   it("loads only live disputes and recent settlements, and unions with recorded service payments", async () => {
     const toArray = vi.fn().mockResolvedValue([]);
     const find = vi.fn().mockReturnValue({ toArray });
-    const collection = vi
-      .fn()
-      .mockImplementation((name: string) =>
-        name === "gameConfig"
-          ? { findOne: vi.fn().mockResolvedValue({ labourSystemMode: "full" }) }
-          : { find }
-      );
+    const collection = vi.fn().mockImplementation(() => ({ find }));
 
     await loadLabourRelationsPoliticalNudgesByCountry({ collection } as unknown as Db, 300);
 
@@ -171,21 +165,6 @@ describe("labour relations political provider", () => {
       { suspended: { $ne: true }, serviceReceipts: { $exists: true } },
       expect.objectContaining({ projection: expect.objectContaining({ serviceReceipts: 1 }) })
     );
-  });
-
-  it("is inert when the full labor system is disabled", async () => {
-    const campaignFind = vi.fn();
-    const db = {
-      collection: (name: string) =>
-        name === "gameConfig"
-          ? { findOne: vi.fn().mockResolvedValue({ labourSystemMode: "unions" }) }
-          : { find: campaignFind },
-    } as unknown as Db;
-
-    const nudges = await loadLabourRelationsPoliticalNudgesByCountry(db, 300);
-
-    expect(nudges.size).toBe(0);
-    expect(campaignFind).not.toHaveBeenCalled();
   });
 });
 

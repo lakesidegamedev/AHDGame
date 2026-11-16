@@ -2988,7 +2988,7 @@ describe("sector tech-tree effects", () => {
   });
 });
 
-describe("v3 Phase 5, NPC unionization metric (labourSystemMode ≥ 'unions')", () => {
+describe("v3 Phase 5, NPC unionization metric", () => {
   function sectorOpSet(
     result: ReturnType<typeof processSectors>,
     sectorId: ObjectId
@@ -3087,7 +3087,7 @@ describe("v3 Phase 5, NPC unionization metric (labourSystemMode ≥ 'unions')", 
   });
 });
 
-describe("v3 Phase 6, strikes & unionPremium (labourSystemMode ≥ 'unions')", () => {
+describe("v3 Phase 6, strikes & unionPremium", () => {
   function sectorOpSet(
     result: ReturnType<typeof processSectors>,
     sectorId: ObjectId
@@ -3301,7 +3301,7 @@ describe("v3 Phase 6, strikes & unionPremium (labourSystemMode ≥ 'unions')", (
   });
 });
 
-describe("v3 Phase 7b/8, union-law bias & membership-pressure wiring (labourSystemMode ≥ 'full')", () => {
+describe("v3 Phase 7b/8, union-law bias & membership-pressure wiring", () => {
   function sectorOpSet(
     result: ReturnType<typeof processSectors>,
     sectorId: ObjectId

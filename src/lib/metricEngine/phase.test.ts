@@ -548,7 +548,7 @@ describe("runMetricEngine — phase behavior", () => {
   });
 });
 
-describe("runMetricEngine — v2-2/v2-3a labour wage-index Δ → medianIncome + unemployment (gated on labourSystemMode ≥ 'macro')", () => {
+describe("runMetricEngine — v2-2/v2-3a labour wage-index Δ → medianIncome + unemployment", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     resetCorpFxRateCacheForTests();
@@ -562,7 +562,7 @@ describe("runMetricEngine — v2-2/v2-3a labour wage-index Δ → medianIncome +
     });
   }
 
-  function seed(target: MockDb, stateMetrics: unknown[], labourSystemMode: string) {
+  function seed(target: MockDb, stateMetrics: unknown[]) {
     setupCollection(target, "states", [
       {
         _id: "s1",
@@ -586,9 +586,7 @@ describe("runMetricEngine — v2-2/v2-3a labour wage-index Δ → medianIncome +
     ]);
     setupCollection(target, "stateBudgets", [{ _id: "s1", taxRates: { salesTax: 6 } }]);
     target.collection("gameConfig");
-    target.collectionMocks.gameConfig!.findOne = vi
-      .fn()
-      .mockResolvedValue({ _id: "default", labourSystemMode });
+    target.collectionMocks.gameConfig!.findOne = vi.fn().mockResolvedValue({ _id: "default" });
     target.collection("states");
     target.collectionMocks.states!.bulkWrite = vi.fn().mockResolvedValue({ ok: 1 });
   }
@@ -612,21 +610,17 @@ describe("runMetricEngine — v2-2/v2-3a labour wage-index Δ → medianIncome +
 
   it("gradually expands participation while employers keep asking for more workers", async () => {
     const shortage = createMockDb();
-    seed(
-      shortage,
-      [
-        {
-          _id: "s1",
-          economic: {
-            laborParticipation: { value: 60 },
-            laborForce: { value: 36 },
-            labourTightness: { value: 4.8 },
-            labourParticipationDemandBonus: { value: 0 },
-          },
+    seed(shortage, [
+      {
+        _id: "s1",
+        economic: {
+          laborParticipation: { value: 60 },
+          laborForce: { value: 36 },
+          labourTightness: { value: 4.8 },
+          labourParticipationDemandBonus: { value: 0 },
         },
-      ],
-      "macro"
-    );
+      },
+    ]);
     const ops: Array<{
       updateOne: { filter: { _id: string }; update: { $set: Record<string, number> } };
     }> = [];
@@ -646,23 +640,19 @@ describe("runMetricEngine — v2-2/v2-3a labour wage-index Δ → medianIncome +
 
   it("recomputes current tightness from this turn's demand and labor force", async () => {
     const currentDemand = createMockDb();
-    seed(
-      currentDemand,
-      [
-        {
-          _id: "s1",
-          economic: {
-            laborParticipation: { value: 60 },
-            laborForce: { value: 36 },
-            labourDemand: { value: 72.3 },
-            labourDemandTurn: 10,
-            labourTightness: { value: 4.8 },
-            labourParticipationDemandBonus: { value: 0 },
-          },
+    seed(currentDemand, [
+      {
+        _id: "s1",
+        economic: {
+          laborParticipation: { value: 60 },
+          laborForce: { value: 36 },
+          labourDemand: { value: 72.3 },
+          labourDemandTurn: 10,
+          labourTightness: { value: 4.8 },
+          labourParticipationDemandBonus: { value: 0 },
         },
-      ],
-      "macro"
-    );
+      },
+    ]);
     const ops: Array<{
       updateOne: { filter: { _id: string }; update: { $set: Record<string, number> } };
     }> = [];
@@ -698,23 +688,19 @@ describe("runMetricEngine — v2-2/v2-3a labour wage-index Δ → medianIncome +
 
   it("retains the previous tightness when corporation demand was not refreshed this turn", async () => {
     const pausedCorporations = createMockDb();
-    seed(
-      pausedCorporations,
-      [
-        {
-          _id: "s1",
-          economic: {
-            laborParticipation: { value: 60 },
-            laborForce: { value: 36 },
-            labourDemand: { value: 72.3 },
-            labourDemandTurn: 9,
-            labourTightness: { value: 4.8 },
-            labourParticipationDemandBonus: { value: 0 },
-          },
+    seed(pausedCorporations, [
+      {
+        _id: "s1",
+        economic: {
+          laborParticipation: { value: 60 },
+          laborForce: { value: 36 },
+          labourDemand: { value: 72.3 },
+          labourDemandTurn: 9,
+          labourTightness: { value: 4.8 },
+          labourParticipationDemandBonus: { value: 0 },
         },
-      ],
-      "macro"
-    );
+      },
+    ]);
     const ops: Array<{
       updateOne: { filter: { _id: string }; update: { $set: Record<string, number> } };
     }> = [];
@@ -736,25 +722,19 @@ describe("runMetricEngine — v2-2/v2-3a labour wage-index Δ → medianIncome +
 
   it("at 'macro', a positive wage-index Δ raises medianIncome above the no-Δ baseline", async () => {
     const withDelta = createMockDb();
-    seed(
-      withDelta,
-      [
-        {
-          _id: "s1",
-          economic: {
-            medianIncome: { value: 50_000, simBaseline: 50_000 },
-            labourWageIndexDelta: { value: 0.1 },
-          },
+    seed(withDelta, [
+      {
+        _id: "s1",
+        economic: {
+          medianIncome: { value: 50_000, simBaseline: 50_000 },
+          labourWageIndexDelta: { value: 0.1 },
         },
-      ],
-      "macro"
-    );
+      },
+    ]);
     const baseline = createMockDb();
-    seed(
-      baseline,
-      [{ _id: "s1", economic: { medianIncome: { value: 50_000, simBaseline: 50_000 } } }],
-      "macro"
-    );
+    seed(baseline, [
+      { _id: "s1", economic: { medianIncome: { value: 50_000, simBaseline: 50_000 } } },
+    ]);
 
     const withDeltaIncome = await runAndCaptureMedianIncome(withDelta);
     const baselineIncome = await runAndCaptureMedianIncome(baseline);
@@ -764,51 +744,19 @@ describe("runMetricEngine — v2-2/v2-3a labour wage-index Δ → medianIncome +
     expect(withDeltaIncome!).toBeGreaterThan(baselineIncome!);
   });
 
-  it("at 'wages' (below 'macro'), the Δ is gated off — parity with the no-Δ baseline", async () => {
-    const gatedOff = createMockDb();
-    seed(
-      gatedOff,
-      [
-        {
-          _id: "s1",
-          economic: {
-            medianIncome: { value: 50_000, simBaseline: 50_000 },
-            labourWageIndexDelta: { value: 0.1 },
-          },
-        },
-      ],
-      "wages"
-    );
-    const baseline = createMockDb();
-    seed(
-      baseline,
-      [{ _id: "s1", economic: { medianIncome: { value: 50_000, simBaseline: 50_000 } } }],
-      "wages"
-    );
-
-    const gatedOffIncome = await runAndCaptureMedianIncome(gatedOff);
-    const baselineIncome = await runAndCaptureMedianIncome(baseline);
-
-    expect(gatedOffIncome).toBe(baselineIncome);
-  });
-
   it("a wage-index change alone does not invent layoffs in the employment ledger", async () => {
     const withDelta = createMockDb();
-    seed(
-      withDelta,
-      [
-        {
-          _id: "s1",
-          economic: {
-            unemploymentRate: { value: 5 },
-            labourWageIndexDelta: { value: 0.1 },
-          },
+    seed(withDelta, [
+      {
+        _id: "s1",
+        economic: {
+          unemploymentRate: { value: 5 },
+          labourWageIndexDelta: { value: 0.1 },
         },
-      ],
-      "macro"
-    );
+      },
+    ]);
     const baseline = createMockDb();
-    seed(baseline, [{ _id: "s1", economic: { unemploymentRate: { value: 5 } } }], "macro");
+    seed(baseline, [{ _id: "s1", economic: { unemploymentRate: { value: 5 } } }]);
 
     const withDeltaUnemployment = await runAndCaptureUnemployment(withDelta);
     const baselineUnemployment = await runAndCaptureUnemployment(baseline);
@@ -816,49 +764,21 @@ describe("runMetricEngine — v2-2/v2-3a labour wage-index Δ → medianIncome +
     expect(withDeltaUnemployment).toBeDefined();
     expect(baselineUnemployment).toBeDefined();
     expect(withDeltaUnemployment!).toBe(baselineUnemployment!);
-  });
-
-  it("v2-3a: at 'wages' (below 'macro'), the unemployment Δ is gated off — parity with the no-Δ baseline", async () => {
-    const gatedOff = createMockDb();
-    seed(
-      gatedOff,
-      [
-        {
-          _id: "s1",
-          economic: {
-            unemploymentRate: { value: 5 },
-            labourWageIndexDelta: { value: 0.1 },
-          },
-        },
-      ],
-      "wages"
-    );
-    const baseline = createMockDb();
-    seed(baseline, [{ _id: "s1", economic: { unemploymentRate: { value: 5 } } }], "wages");
-
-    const gatedOffUnemployment = await runAndCaptureUnemployment(gatedOff);
-    const baselineUnemployment = await runAndCaptureUnemployment(baseline);
-
-    expect(gatedOffUnemployment).toBe(baselineUnemployment);
   });
 
   it("an automation-index change affects jobs through headcount rather than a duplicate unemployment penalty", async () => {
     const withDelta = createMockDb();
-    seed(
-      withDelta,
-      [
-        {
-          _id: "s1",
-          economic: {
-            unemploymentRate: { value: 5 },
-            automationIndexDelta: { value: -0.1 },
-          },
+    seed(withDelta, [
+      {
+        _id: "s1",
+        economic: {
+          unemploymentRate: { value: 5 },
+          automationIndexDelta: { value: -0.1 },
         },
-      ],
-      "macro"
-    );
+      },
+    ]);
     const baseline = createMockDb();
-    seed(baseline, [{ _id: "s1", economic: { unemploymentRate: { value: 5 } } }], "macro");
+    seed(baseline, [{ _id: "s1", economic: { unemploymentRate: { value: 5 } } }]);
 
     const withDeltaUnemployment = await runAndCaptureUnemployment(withDelta);
     const baselineUnemployment = await runAndCaptureUnemployment(baseline);
@@ -866,30 +786,6 @@ describe("runMetricEngine — v2-2/v2-3a labour wage-index Δ → medianIncome +
     expect(withDeltaUnemployment).toBeDefined();
     expect(baselineUnemployment).toBeDefined();
     expect(withDeltaUnemployment!).toBe(baselineUnemployment!);
-  });
-
-  it("v2-3b: at 'wages' (below 'macro'), the automation Δ is gated off — parity with the no-Δ baseline", async () => {
-    const gatedOff = createMockDb();
-    seed(
-      gatedOff,
-      [
-        {
-          _id: "s1",
-          economic: {
-            unemploymentRate: { value: 5 },
-            automationIndexDelta: { value: -0.1 },
-          },
-        },
-      ],
-      "wages"
-    );
-    const baseline = createMockDb();
-    seed(baseline, [{ _id: "s1", economic: { unemploymentRate: { value: 5 } } }], "wages");
-
-    const gatedOffUnemployment = await runAndCaptureUnemployment(gatedOff);
-    const baselineUnemployment = await runAndCaptureUnemployment(baseline);
-
-    expect(gatedOffUnemployment).toBe(baselineUnemployment);
   });
 });
 

@@ -7,7 +7,6 @@ import { getAuthUserWithCharacter } from "@/lib/auth";
 import { GET } from "./route";
 
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
-vi.mock("@/lib/labour/featureFlag", () => ({ isLabourFullMode: vi.fn().mockResolvedValue(true) }));
 vi.mock("@/lib/unions/unionReconciliation", () => ({ reconcileUnionOwnerCache: vi.fn() }));
 vi.mock("@/lib/gameState", () => ({
   getGameState: vi.fn().mockResolvedValue({ currentTurn: 100 }),

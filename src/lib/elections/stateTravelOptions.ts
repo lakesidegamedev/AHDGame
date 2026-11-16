@@ -63,6 +63,15 @@ export async function loadStateTravelOptions(db: Db, preset?: string): Promise<S
     .find({ _id: { $in: TRAVEL_STATE_IDS } })
     .toArray();
   const nameById = new Map(states.map((s) => [s._id as string, s.name]));
+  // A state that seceded no longer belongs to the US, so no candidate can move there.
+  const usStateIds = new Set(
+    (
+      await statesCollection(db)
+        .find({ _id: { $in: TRAVEL_STATE_IDS }, countryId: "US" }, { projection: { _id: 1 } })
+        .toArray()
+    ).map((s) => s._id as string)
+  );
+  const offered = (id: string) => usStateIds.size === 0 || usStateIds.has(id);
 
   const stateNameById: Record<string, string> = {};
   for (const stateId of TRAVEL_STATE_IDS) {
@@ -70,11 +79,13 @@ export async function loadStateTravelOptions(db: Db, preset?: string): Promise<S
   }
 
   return {
-    options: travelStateIds(resolvedPreset).map((id) => ({
-      id,
-      name: stateNameById[id],
-      actionCost: getTravelActionCost(id, resolvedPreset),
-    })),
+    options: travelStateIds(resolvedPreset)
+      .filter(offered)
+      .map((id) => ({
+        id,
+        name: stateNameById[id],
+        actionCost: getTravelActionCost(id, resolvedPreset),
+      })),
     stateNameById,
     preset: resolvedPreset,
   };

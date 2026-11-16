@@ -14,8 +14,13 @@ const DEPARTURE_COUNTRIES: ReadonlySet<string> = new Set(
  * seed discrepancy; every other chamber keeps at least its configured base and
  * grows when a region joins.
  */
-export function liveSingleTierChamber(countryId: string, sum: number, base: number): number {
-  if (DEPARTURE_COUNTRIES.has(countryId) && sum > 0 && sum < base - SEED_DISCREPANCY_TOLERANCE)
+export function liveSingleTierChamber(
+  countryId: string,
+  sum: number,
+  base: number,
+  departureCountries: ReadonlySet<string> = DEPARTURE_COUNTRIES
+): number {
+  if (departureCountries.has(countryId) && sum > 0 && sum < base - SEED_DISCREPANCY_TOLERANCE)
     return sum;
   return Math.max(sum, base);
 }

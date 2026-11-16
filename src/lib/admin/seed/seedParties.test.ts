@@ -4,6 +4,7 @@ import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
 import { seedParties, seedStatePartyOrg } from "./seedParties";
 import { fillAbsentSeedFields } from "./fillAbsentSeedFields";
 import { politicalParties } from "@/lib/seeds/reference/politicalParties";
+import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
 import { generateStatePartyOrg } from "@/lib/seeds/reference/statePartyOrg";
 
 /**
@@ -69,7 +70,7 @@ describe("seedParties", () => {
     ["1991-default", ["DEM", "REP", "LIB"]],
     ["1999-default", ["DEM", "REP", "LIB"]],
     ["2007-default", ["DEM", "REP", "GRN", "LIB"]],
-    ["2027-default", ["DEM", "REP", "GRN", "LIB"]],
+    ["2027-default", ["DEM", "REP", "GRN", "LIB", "LSI", "BFI", "NEI"]],
   ])("seeds only historically available US defaults for %s", async (preset, abbreviations) => {
     await seedParties(db as unknown as Db, () => {}, preset as string);
     const rows = db.collectionMocks.politicalParties!.insertOne.mock.calls.map((call) => call[0]);
@@ -82,7 +83,11 @@ describe("seedParties", () => {
     await seedParties(db as unknown as Db, () => {});
 
     const inserts = db.collectionMocks.politicalParties!.insertOne.mock.calls;
-    expect(inserts).toHaveLength(politicalParties.length);
+    // The regional independence parties exist only in 2027 worlds.
+    const forDefaultPreset = politicalParties.filter(
+      (party) => !party.validForPresets || party.validForPresets.includes(DEFAULT_SEED_PRESET)
+    );
+    expect(inserts).toHaveLength(forDefaultPreset.length);
     expect(inserts[0]![0]).toMatchObject({ name: "Democratic Party", countryId: "US" });
     expect(db.collectionMocks.politicalParties!.updateOne).not.toHaveBeenCalled();
   });

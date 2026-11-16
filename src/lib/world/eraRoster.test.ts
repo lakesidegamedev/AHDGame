@@ -59,7 +59,7 @@ describe("S1 — era roster totality", () => {
   });
 
   it("covers every CountryId across every shipping preset", () => {
-    expect(ALL).toHaveLength(32);
+    expect(ALL).toHaveLength(35);
     // Deliberate tripwires, not incidental. Adding a preset or a country should
     // fail here first, so whoever adds one is made to check that the roster
     // covers it rather than letting `tierFor` quietly answer "absent" forever.
@@ -178,6 +178,18 @@ describe("S1 — era roster totality", () => {
       expect(tierFor(preset, "SCO"), preset).toBe("absent");
       expect(tierFor(preset, "WAL"), preset).toBe("absent");
     }
+  });
+
+  it("RCA is absent everywhere: latent until a California referendum actuates", () => {
+    for (const preset of SHIPPING_PRESETS) expect(tierFor(preset, "RCA"), preset).toBe("absent");
+  });
+
+  it("NEN is absent everywhere: latent until a New England referendum actuates", () => {
+    for (const preset of SHIPPING_PRESETS) expect(tierFor(preset, "NEN"), preset).toBe("absent");
+  });
+
+  it("RTX is absent everywhere: latent until a Texas referendum actuates", () => {
+    for (const preset of SHIPPING_PRESETS) expect(tierFor(preset, "RTX"), preset).toBe("absent");
   });
 
   it("AB is absent everywhere: latent until an Alberta referendum actuates", () => {

@@ -19,7 +19,7 @@ import type { RepresentingUnionEffects } from "@/lib/unions/unionLookups";
 
 /** Per-turn labour context threaded into sector profit calculations. */
 export interface LabourContext {
-  /** True when `labourSystemMode >= "wages"`: labor becomes an explicit cost. */
+  /** Labor is an explicit cost. */
   wagesEnabled: boolean;
   /**
    * Minimum-wage Kaitz ratio (min wage ÷ median wage) per country. Absent/0 ⇒
@@ -27,14 +27,12 @@ export interface LabourContext {
    */
   minWageRatioByCountry?: ReadonlyMap<string, number>;
   /**
-   * v3 Phase 5/6: true when `labourSystemMode >= "unions"`. A strict superset
-   * of `wagesEnabled` (a higher tier in `LABOUR_MODE_ORDER`), gates the NPC
-   * unionization metric (`unionization.ts`) and strikes (`strikes.ts`).
+   * Gates the NPC unionization metric (`unionization.ts`) and strikes
+   * (`strikes.ts`).
    */
   unionsEnabled?: boolean;
   /**
-   * v3 Phase 7b: true when `labourSystemMode >= "full"`. A strict superset of
-   * `unionsEnabled`: gates union-law bias (`unionLawBiasByCountry` below)
+   * Gates union-law bias (`unionLawBiasByCountry` below)
    * feeding `unionizationDriftTarget()`/strike thresholds, and union-busting
    * (`src/lib/labour/unionBusting.ts`).
    */
@@ -334,7 +332,7 @@ export function computeSectorLaborCost(params: {
  * sectors. The per-sector pay structure cancels, so the index isolates *what the
  * labour system changed*: 1.0 = baseline (no slider moves, no binding floor),
  * >1 = wages pushed up, <1 = cut. The macro coupling reads this to move
- * economic.medianIncome (gated on labourSystemMode ≥ "macro"). Streamed during
+ * economic.medianIncome. Streamed during
  * the corp turn's sector loop, one accumulator per state.
  */
 export interface WageIndexAccumulator {
@@ -400,7 +398,7 @@ export function resolveAutomationIndex(acc: AutomationIndexAccumulator): number 
 }
 
 /**
- * v2-2 income coupling (gated on labourSystemMode ≥ "macro"): a CHANGE in the
+ * v2-2 income coupling: a CHANGE in the
  * per-state `labourWageIndex` (not its level, `medianIncome` compounds a
  * growth rate every turn, so a level term would grow income forever) feeds a
  * one-time wage-growth impulse into `medianIncomeNode`. `delta` is supplied
@@ -414,7 +412,7 @@ export function labourWageIncomePassthrough(delta: number): number {
 }
 
 /**
- * Wage term coupled into `unemploymentNode` (labourSystemMode >= "macro").
+ * Wage term coupled into `unemploymentNode`.
  *
  * Uses a CHANGE in `labourWageIndex` (a one-time bump), not a level: the
  * unemployment rate is carried forward turn to turn, so a sustained
@@ -454,7 +452,7 @@ export function labourUnemploymentAutomationPressure(delta: number): number {
 }
 
 /**
- * v2 migration coupling (gated on labourSystemMode ≥ "macro"): a region whose
+ * v2 migration coupling: a region whose
  * labour system has pushed wages above baseline attracts more migrants, below
  * baseline fewer. Bounded so it can only modulate the (v0) output-gap pull, not
  * dominate it. At the baseline index (1.0) the factor is exactly 1.0 (parity).

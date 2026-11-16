@@ -51,3 +51,31 @@ describe("loadStateTravelOptions", () => {
     expect(Object.keys(stateNameById)).toContain("AK");
   });
 });
+
+describe("loadStateTravelOptions after a secession", () => {
+  it("stops offering a state that has left the United States", async () => {
+    const usIds = TRAVEL_STATE_IDS.filter((id) => id !== "TX");
+    const db = {
+      collection: (name: string) => ({
+        findOne: vi
+          .fn()
+          .mockResolvedValue(
+            name === "gameState" ? { _id: "current", preset: "2027-default" } : null
+          ),
+        find: vi.fn((filter: { countryId?: string }) => ({
+          toArray: vi
+            .fn()
+            .mockResolvedValue(
+              filter.countryId === "US"
+                ? usIds.map((id) => ({ _id: id }))
+                : TRAVEL_STATE_IDS.map((id) => ({ _id: id, name: id }))
+            ),
+        })),
+      }),
+    } as unknown as Db;
+    const { options, stateNameById } = await loadStateTravelOptions(db);
+    expect(options.map((o) => o.id)).not.toContain("TX");
+    expect(options.map((o) => o.id)).toContain("OK");
+    expect(stateNameById.TX).toBe("TX");
+  });
+});

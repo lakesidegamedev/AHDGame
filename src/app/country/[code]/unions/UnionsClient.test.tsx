@@ -27,7 +27,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe('UnionsClient, labourSystemMode below "full"', () => {
+describe("UnionsClient, unions unavailable", () => {
   it("shows a clear not-enabled state instead of a broken error page with fake stats", async () => {
     global.fetch = vi.fn().mockResolvedValue(
       new Response(JSON.stringify({ error: "Player-run unions are not enabled." }), {
@@ -50,7 +50,7 @@ describe('UnionsClient, labourSystemMode below "full"', () => {
   });
 });
 
-describe('UnionsClient, labourSystemMode at "full"', () => {
+describe("UnionsClient, unions available", () => {
   it("still shows the normal country-scoped chrome when the feature is enabled", async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       new Response(JSON.stringify({ unions: [], bannedCountries: [] }), {

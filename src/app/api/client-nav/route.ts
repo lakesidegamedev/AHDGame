@@ -32,7 +32,6 @@ import { resolveMyUnionNav } from "@/lib/navigation/resolveMyUnionNav";
 import { formatElectionTypeLabel } from "@/lib/utils/electionLabels";
 import type { CountryId } from "@/lib/constants/countries";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
-import { isLabourFullMode } from "@/lib/labour/featureFlag";
 import { getGameStateCollection } from "@/lib/db/collections";
 import { isPatreonActive, isPlusOrBetter } from "@/lib/db/types";
 import type { GameConfig } from "@/lib/db/types";
@@ -216,7 +215,7 @@ export async function GET() {
     const userId = authUser.userId;
     const userOid = new ObjectId(userId);
 
-    const [user, presidentElection, gameState, forexEnabled, unionsEnabled] = await Promise.all([
+    const [user, presidentElection, gameState, forexEnabled] = await Promise.all([
       usersCollection(db).findOne(
         { _id: userOid },
         {
@@ -253,7 +252,6 @@ export async function GET() {
       presidentElectionPromise,
       gameStatePromise,
       isForexEnabled(),
-      isLabourFullMode(),
     ]);
     const freeAccess = await isFreeAccessOn();
     const sandboxByTier =
@@ -303,7 +301,7 @@ export async function GET() {
           isImperialMode: false,
           wikiDisabled,
           settlementCrisisLive,
-          unionsEnabled,
+          unionsEnabled: true,
           pendingCharterCount: 0,
           pendingSeasonRecapId: null,
         },
@@ -435,7 +433,7 @@ export async function GET() {
       myCorporationType = myCorporation?.type ?? null;
       myCorporationCountryId = myCorporation?.countryId ?? null;
 
-      if (unionsEnabled && !isImperialMode) {
+      if (!isImperialMode) {
         const myUnion = await resolveMyUnionNav(db, character);
         myUnionId = myUnion?.id ?? null;
       }
@@ -816,7 +814,7 @@ export async function GET() {
         isImperialMode,
         wikiDisabled,
         settlementCrisisLive,
-        unionsEnabled,
+        unionsEnabled: true,
         pendingCharterCount,
         pendingSeasonRecapId,
         crisisActionCount,

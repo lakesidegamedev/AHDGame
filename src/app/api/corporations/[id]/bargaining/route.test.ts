@@ -8,7 +8,6 @@ vi.mock("@/lib/api/corporations/resolveQuery", () => ({
   resolveCorporation: vi.fn(),
   requireCeo: vi.fn(),
 }));
-vi.mock("@/lib/labour/featureFlag", () => ({ isLabourFullMode: vi.fn() }));
 vi.mock("@/lib/turn/currentTurn", () => ({ getCurrentTurn: vi.fn() }));
 
 let db: MockDb;
@@ -34,8 +33,6 @@ beforeEach(async () => {
     corporation: { _id: corporationId },
   } as never);
   vi.mocked(requireCeo).mockReturnValue(null);
-  const { isLabourFullMode } = await import("@/lib/labour/featureFlag");
-  vi.mocked(isLabourFullMode).mockResolvedValue(true);
   const { getCurrentTurn } = await import("@/lib/turn/currentTurn");
   vi.mocked(getCurrentTurn).mockResolvedValue(420);
 });

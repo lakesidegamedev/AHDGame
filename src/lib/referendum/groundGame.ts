@@ -32,6 +32,8 @@ export interface GroundGameInput {
   /** sequentialId-string of the actor's party — official mode only. */
   partyId?: string;
   countryId: CountryId;
+  /** The member state whose party organization pays; defaults to the referendum's own region. */
+  stateId?: string;
   /** Display name for the wire (party abbreviation, or player name) — from the route. */
   actorName?: string;
 }
@@ -84,7 +86,7 @@ async function spendGroundGameInTransaction(
         countryId: ref.countryId,
         partyId: input.partyId,
         scope: "state",
-        stateId: ref.regionId,
+        stateId: input.stateId ?? ref.regionId,
         baseCost: preset.ps,
         action: "referendum-ground-game",
         now: new Date(),

@@ -277,7 +277,7 @@ export interface CorporateSector {
    */
   labourStaffingFactor?: number;
   /**
-   * Labour system (labourSystemMode ≥ "wages"): wage-level multiplier on the sector's baseline labor cost. 1.0 = baseline, which is profit-invariant (the labor slice is carved out of existing maintenance, not added on top). Player-editable; absent/undefined treated as 1.0.
+   * Labour system: wage-level multiplier on the sector's baseline labor cost. 1.0 = baseline, which is profit-invariant (the labor slice is carved out of existing maintenance, not added on top). Player-editable; absent/undefined treated as 1.0.
    */
   wageLevel?: number;
   /**
@@ -301,7 +301,7 @@ export interface CorporateSector {
   dominanceMarginPenaltyPp?: number;
   /**
    * Labour system telemetry: most recent per-turn labor cost written when
-   * labourSystemMode ≥ "wages" (home currency, daily basis like `revenue`).
+   * (home currency, daily basis like `revenue`).
    * Display/analytics only, not read back into the economy. Absent when the
    * labour system is off.
    */
@@ -313,7 +313,7 @@ export interface CorporateSector {
    */
   wagePerWorker?: number;
   /**
-   * v3 Phase 5/6 (labourSystemMode ≥ "unions"): per-sector NPC unionization
+   * v3 Phase 5/6: per-sector NPC unionization
    * pressure, 0, 100. Drifts toward a condition-driven target each turn (see
    * `src/lib/labour/unionization.ts`). Feeds a standing labor-cost surcharge
    * (`unionPremium()`) and the strike trigger threshold (`src/lib/labour/strikes.ts`).
@@ -338,7 +338,7 @@ export interface CorporateSector {
    */
   representingUnionId?: ObjectId | null;
   /**
-   * v3 Phase 6 (labourSystemMode ≥ "unions"): a slow-moving index of what
+   * v3 Phase 6: a slow-moving index of what
    * workers expect to be paid in real terms, trended toward the sector's
    * current real-wage index (`realWageIndex()` in unionization.ts) at most
    * `WORKER_EXPECTATION_TREND_STEP` per turn. The strike trigger fires when
@@ -362,7 +362,7 @@ export interface CorporateSector {
    */
   strikeCooldownUntilTurn?: number | null;
   /**
-   * v3 Phase 7 (labourSystemMode ≥ "full"): turn after which this sector's
+   * v3 Phase 7: turn after which this sector's
    * CEO may attempt another union-busting action, or null when not in
    * cooldown. Set on every busting attempt (success or backfire), see
    * `src/lib/labour/unionBusting.ts`.

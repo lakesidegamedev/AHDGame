@@ -31,6 +31,9 @@ import { getBalModel } from "./bal";
 import { getCaModel } from "@/lib/countries/ca/layer1Model";
 import { getQcModel } from "@/lib/countries/qc/layer1Model";
 import { getAbModel } from "@/lib/countries/ab/layer1Model";
+import { getRtxModel } from "@/lib/countries/rtx/layer1Model";
+import { getRcaModel } from "@/lib/countries/rca/layer1Model";
+import { getNenModel } from "@/lib/countries/nen/layer1Model";
 import { getSuccessor1991Model, type Successor1991CountryId } from "./successor1991";
 
 export { buildModelRegionDemographics } from "./derive";
@@ -68,6 +71,9 @@ const LAYER1_MODEL_BUILDERS: Record<string, (era: EraId) => CountryLayer1Model |
   CA: getCaModel,
   QC: getQcModel,
   AB: getAbModel,
+  RTX: getRtxModel,
+  RCA: getRcaModel,
+  NEN: getNenModel,
 };
 
 /**

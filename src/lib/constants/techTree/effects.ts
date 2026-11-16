@@ -87,7 +87,7 @@ export interface GrowthCostReductionEffect {
 
 /**
  * Proportional reduction to a sector's labor cost (automation), per turn.
- * Only bites when the labour system is on (labourSystemMode ≥ "wages"); no-op
+ * Only bites when the labour system is on; no-op
  * otherwise since labor isn't a separate cost line. 0.1 = labor 10% cheaper.
  */
 export interface LaborCostReductionEffect {

@@ -9,7 +9,6 @@ export async function loadNppBehaviorConfig(db: Db, turn: number) {
     { _id: "default" },
     {
       projection: {
-        labourSystemMode: 1,
         marketSystemMode: 1,
         ledgerShadow: 1,
         retailDemandTransitionStartTurn: 1,
@@ -19,7 +18,6 @@ export async function loadNppBehaviorConfig(db: Db, turn: number) {
     }
   );
   return {
-    labourMode: config?.labourSystemMode,
     ledgerShadow: config?.ledgerShadow === true,
     retailExpansionPaused: retailCapacityExpansionPaused(config, turn),
     bankingPolicy: resolveBankingPolicy(config),

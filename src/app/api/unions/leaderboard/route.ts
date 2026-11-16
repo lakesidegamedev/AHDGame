@@ -1,7 +1,7 @@
 /**
  * GET /api/unions/leaderboard: player-run unions (vacant or led), ranked by
  * real membership then treasury (union dues v1). Read-only, no auth required
- * (mirrors other public leaderboards). Gated on `labourSystemMode >= "full"`
+ * (mirrors other public leaderboards).
  * (code-review fix #10/#13).
  *
  * `?country=XX` scopes the list to one country (the page defaults it to the
@@ -10,12 +10,11 @@
  */
 import { NextResponse, type NextRequest } from "next/server";
 import { getDb } from "@/lib/mongodb";
-import { handleRouteError, errorResponse } from "@/lib/api/errors";
+import { handleRouteError } from "@/lib/api/errors";
 import type { CorporateSector, Union } from "@/lib/db/types";
 import { OPERATING_SECTOR_TYPE_LABELS } from "@/lib/constants/corporations";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
-import { isLabourFullMode } from "@/lib/labour/featureFlag";
 import { genericUnionName } from "@/lib/unions/unionNames";
 import { resolveUnionOwners } from "@/lib/unions/unionOwnerDisplay";
 import { unionApproval, unionMembers } from "@/lib/unions/unionDues";
@@ -29,10 +28,6 @@ import { unionsCollection } from "@/lib/db/repositories/unions";
 
 export async function GET(req: NextRequest) {
   try {
-    if (!(await isLabourFullMode())) {
-      return errorResponse(403, "Player-run unions are not enabled.");
-    }
-
     const db = await getDb();
     // Country ids are upper-case everywhere in the data ("UK"), but callers
     // reach this route with whatever case their URL segment carried, the

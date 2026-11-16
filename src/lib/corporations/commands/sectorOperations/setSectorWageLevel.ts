@@ -6,7 +6,6 @@ import { parseJsonBody } from "@/lib/api/validate";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { resolveCorporation, requireCeo } from "@/lib/api/corporations/resolveQuery";
 import { clampWageLevel } from "@/lib/labour/laborCost";
-import { isLabourWagesEnabled } from "@/lib/labour/featureFlag";
 import type { CorporateSector } from "@/lib/db/types";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { setSectorWageLevelSchema } from "@/lib/api/schemas/corporations";
@@ -20,7 +19,7 @@ interface RouteParams {
  * POST /api/corporations/[id]/sectors/[sectorId]/wage
  * Set the CEO-directed wage level for a sector.
  * 1.0 is the profit-invariant baseline; lower cuts wages, higher pays up.
- * CEO only. Available only when labourSystemMode ≥ "wages".
+ * CEO only. Available to the CEO.
  */
 export async function setSectorWageLevel(request: Request, { params }: RouteParams) {
   try {
@@ -28,9 +27,6 @@ export async function setSectorWageLevel(request: Request, { params }: RoutePara
     if (!auth.ok) return auth.response;
 
     // Gate: the wage lever only exists when the labour system is on.
-    if (!(await isLabourWagesEnabled())) {
-      return errorResponse(403, "The labour system is not enabled.");
-    }
 
     const rateLimit = checkRateLimit(
       `lib/corporations/commands/sectorOperations/setSectorWageLevel:${auth.user.userId}`,

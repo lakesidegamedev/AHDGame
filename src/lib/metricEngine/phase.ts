@@ -11,7 +11,6 @@ import type { StateMetrics, GameConfig } from "@/lib/db/types";
 import type { State } from "@/lib/db/types/state";
 import type { FederalBudget } from "@/lib/db/types/budget";
 import { getFederalBudgetCollection } from "@/lib/db/collections/federalBudget";
-import { isLabourMacroEnabled } from "@/lib/labour/featureFlag";
 import { getEraEnvelope } from "@/lib/era/metricCatalog";
 import { resolveGameYear } from "@/lib/era/era";
 import { NATIONAL_SCOPE_IDS, getNationalDocId } from "@/lib/constants/nationalScope";
@@ -388,13 +387,12 @@ export async function runMetricEngine(db: Db, turn: number): Promise<number> {
     fiscalTradeInputsProvider(db),
     // v2-2: read the labour mode via the SAME db (mock-db safe — see the
     // demographics-phase gotcha) so labourWageIndexDelta only feeds
-    // medianIncome at labourSystemMode ≥ "macro".
+    // medianIncome.
     gameConfigCollection(db)
       .findOne(
         { _id: "default" },
         {
           projection: {
-            labourSystemMode: 1,
             privateBankingEnabled: 1,
           },
         }
@@ -428,7 +426,6 @@ export async function runMetricEngine(db: Db, turn: number): Promise<number> {
     turn,
     labourConfig?.privateBankingEnabled === true
   );
-  const labourMacroEnabled = await isLabourMacroEnabled(labourConfig ?? null);
 
   // Resolve a country's prime rate: live central-bank doc → config default.
   const primeRateByBankId = new Map<string, number>();
@@ -855,12 +852,10 @@ export async function runMetricEngine(db: Db, turn: number): Promise<number> {
       priorMetricDoc?.livingConflictExposure,
       turn
     );
-    const participationDemandBonus = labourMacroEnabled
-      ? nextLabourParticipationBonus(
-          readMetricPath(priorMetricDoc, "economic.labourTightness", "value"),
-          readMetricPath(priorMetricDoc, "economic.labourParticipationDemandBonus", "value")
-        )
-      : 0;
+    const participationDemandBonus = nextLabourParticipationBonus(
+      readMetricPath(priorMetricDoc, "economic.labourTightness", "value"),
+      readMetricPath(priorMetricDoc, "economic.labourParticipationDemandBonus", "value")
+    );
     const effectiveLaborParticipation =
       Math.min(
         100,
@@ -1025,28 +1020,23 @@ export async function runMetricEngine(db: Db, turn: number): Promise<number> {
         if (genericLaggedIds.has(id)) prevValue[id] = v;
       }
     }
-    // v2-2/v2-3: labour wage-index Δ → medianIncome + unemployment, gated on
-    // labourSystemMode ≥ "macro" (the corp turn writes the fields whenever
-    // wages are enabled, a lower tier — so the gate has to live here, not at
-    // the write side).
-    if (labourMacroEnabled) {
-      const wageDelta = readMetricPath(prevDoc, "economic.labourWageIndexDelta", "value");
-      if (wageDelta !== undefined) seedCurrent["economic.labourWageIndexDelta"] = wageDelta;
-      // v2-3b: automation half of the jobs channel — unemploymentNode only.
-      const automationDelta = readMetricPath(prevDoc, "economic.automationIndexDelta", "value");
-      if (automationDelta !== undefined) {
-        seedCurrent["economic.automationIndexDelta"] = automationDelta;
-      }
-      // Use a same-turn demand-over-supply reading when the corporation
-      // phase produced a fresh demand snapshot. If corporations were paused,
-      // retain the last measured tightness rather than pairing stale demand
-      // with today's labor force. Corporate staffing uses the previous turn's
-      // ratio, so no same-turn feedback loop is introduced.
-      const tightness = hasCurrentLabourDemand
-        ? currentLabourTightness
-        : readMetricPath(prevDoc, "economic.labourTightness", "value");
-      if (tightness !== undefined) seedCurrent["economic.labourTightness"] = tightness;
+    // Labour wage-index delta feeds medianIncome and unemployment.
+    const wageDelta = readMetricPath(prevDoc, "economic.labourWageIndexDelta", "value");
+    if (wageDelta !== undefined) seedCurrent["economic.labourWageIndexDelta"] = wageDelta;
+    // v2-3b: automation half of the jobs channel — unemploymentNode only.
+    const automationDelta = readMetricPath(prevDoc, "economic.automationIndexDelta", "value");
+    if (automationDelta !== undefined) {
+      seedCurrent["economic.automationIndexDelta"] = automationDelta;
     }
+    // Use a same-turn demand-over-supply reading when the corporation
+    // phase produced a fresh demand snapshot. If corporations were paused,
+    // retain the last measured tightness rather than pairing stale demand
+    // with today's labor force. Corporate staffing uses the previous turn's
+    // ratio, so no same-turn feedback loop is introduced.
+    const tightness = hasCurrentLabourDemand
+      ? currentLabourTightness
+      : readMetricPath(prevDoc, "economic.labourTightness", "value");
+    if (tightness !== undefined) seedCurrent["economic.labourTightness"] = tightness;
 
     // §6.3 (P7b): the country's LAGGED economic model nudges its synergy metrics'
     // targets (node targets only; resolved to node ids). Parity-neutral when no

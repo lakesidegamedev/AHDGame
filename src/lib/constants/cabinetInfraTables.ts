@@ -13,6 +13,9 @@ import { DD_CABINET_SEAT_IDS } from "@/lib/countries/dd/institutionsFacts";
 import { CA_CABINET_SEAT_IDS } from "@/lib/countries/ca/institutionsFacts";
 import { QC_CABINET_SEAT_IDS } from "@/lib/countries/qc/institutionsFacts";
 import { AB_CABINET_SEAT_IDS } from "@/lib/countries/ab/institutionsFacts";
+import { RTX_CABINET_SEAT_IDS } from "@/lib/countries/rtx/institutionsFacts";
+import { NEN_CABINET_SEAT_IDS } from "@/lib/countries/nen/institutionsFacts";
+import { RCA_CABINET_SEAT_IDS } from "@/lib/countries/rca/institutionsFacts";
 
 export interface InfraArchetype {
   id: string;
@@ -145,6 +148,9 @@ export const INFRA_POSITION_BY_COUNTRY: Partial<Record<CountryId, string>> = {
   CA: CA_CABINET_SEAT_IDS.infrastructure,
   QC: QC_CABINET_SEAT_IDS.infrastructure,
   AB: AB_CABINET_SEAT_IDS.infrastructure,
+  RTX: RTX_CABINET_SEAT_IDS.infrastructure,
+  NEN: NEN_CABINET_SEAT_IDS.infrastructure,
+  RCA: RCA_CABINET_SEAT_IDS.infrastructure,
   RU: RU_CABINET_SEAT_IDS.infrastructure,
   DD: DD_CABINET_SEAT_IDS.infrastructure,
 };

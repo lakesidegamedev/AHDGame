@@ -28,7 +28,11 @@ import type {
 } from "@/lib/db/types";
 import type { DevolutionPolicy } from "@/lib/db/types/governorOfficeState";
 import { highDesireElectionBonus } from "@/lib/constants/devolution";
-import { sovereigntyRegionIn } from "@/lib/referendum/rules/sovereigntyRegions";
+import {
+  sovereigntyMemberRegionIds,
+  sovereigntyRegionIn,
+} from "@/lib/referendum/rules/sovereigntyRegions";
+import { loadPooledDesire } from "@/lib/referendum/blocMembers";
 import { referendumRequestEligibility } from "@/lib/constants/referendum";
 import { getReferendumCollection } from "@/lib/db/collections/referendum";
 import type { ReferendumPanelData } from "./tabs/devolution/ReferendumPanel";
@@ -436,23 +440,29 @@ export default async function GovernorOfficePage({ params }: Props) {
     if (snapshot) {
       const { previous, trend, policy, westminsterPolicy, inputs } = snapshot;
       // Current/most-recent referendum for this region + request eligibility.
+      const regionKey = sovereignty.regionId;
       const activeRef = await getReferendumCollection(db).findOne({
-        regionId: stateId,
+        regionId: regionKey,
         status: {
           $in: ["requested", "granted", "campaigning", "polling", "actuating"],
         },
       });
       const lastTerminal = await getReferendumCollection(db)
         .find({
-          regionId: stateId,
+          regionId: regionKey,
           status: { $in: ["declined", "settled", "completed", "cancelled"] },
         })
         .sort({ updatedAt: -1 })
         .limit(1)
         .toArray();
       const displayRef = activeRef ?? lastTerminal[0] ?? null;
+      // A bloc asks on the pooled desire of all its states, not this state's alone.
+      const requestDesire =
+        sovereigntyMemberRegionIds(regionKey).length > 1
+          ? ((await loadPooledDesire(db, regionKey)) ?? previous)
+          : previous;
       const eligibility = referendumRequestEligibility({
-        desire: previous,
+        desire: requestDesire,
         hasActiveReferendum: activeRef != null,
         cooldownReadyAtTurn: lastTerminal[0]?.cooldownReadyAtTurn ?? null,
         currentTurn,
