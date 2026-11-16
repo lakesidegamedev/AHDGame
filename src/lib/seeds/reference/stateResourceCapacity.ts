@@ -365,6 +365,7 @@ export const STATE_RESOURCE_CAPACITY: Record<string, StateResourceCapacityEntry>
   "PL:PL_MAL": { countryId: "PL", resources: { coal: 45000 } }, // Kraków/Jaworzno basin
   "PL:PL_POM": { countryId: "PL", resources: { timber: 22500 } }, // Pomeranian forests
   "PL:PL_EAS": { countryId: "PL", resources: { timber: 30000 } }, // Białowieża/eastern forests
+  "PL:PL_LOD": { countryId: "PL", resources: { coal: 90000 } }, // Bełchatów lignite
 
   // ── Czechoslovakia ────────────────────────────────────────────────────
   "CS:CS_BOH": { countryId: "CS", resources: { coal: 120000 } }, // North Bohemian lignite
@@ -375,6 +376,7 @@ export const STATE_RESOURCE_CAPACITY: Record<string, StateResourceCapacityEntry>
   // (Bauxite, Hungary's real 1953 headline mineral, has no engine resource.)
   "HU:HU_TRW": { countryId: "HU", resources: { coal: 60000 } }, // Tatabánya/Veszprém brown coal
   "HU:HU_NOR": { countryId: "HU", resources: { coal: 45000, iron: 9000 } }, // Borsod coal; Miskolc-area iron
+  "HU:HU_ALF": { countryId: "HU", resources: { natural_gas: 30000, oil: 15000 } }, // Algyő field, Great Plain
 
   // ── Romania ───────────────────────────────────────────────────────────
   // Ploiești was Europe's largest oil district outside the USSR in 1953.
@@ -382,10 +384,14 @@ export const STATE_RESOURCE_CAPACITY: Record<string, StateResourceCapacityEntry>
   "RO:RO_TRA": { countryId: "RO", resources: { natural_gas: 90000, timber: 22500 } }, // Transylvanian methane fields
   "RO:RO_OLT": { countryId: "RO", resources: { coal: 45000, oil: 15000 } }, // Jiu Valley coal
   "RO:RO_MOL": { countryId: "RO", resources: { oil: 15000 } }, // Bacău oil
+  "RO:RO_DOB": { countryId: "RO", resources: { natural_gas: 30000 } }, // Black Sea offshore gas
 
   // ── Bulgaria ──────────────────────────────────────────────────────────
-  "BG:BG_THR": { countryId: "BG", resources: { coal: 60000 } }, // Maritsa lignite
+  "BG:BG_THR": { countryId: "BG", resources: { coal: 60000 } }, // Maritsa lignite (pre-1999 regions)
   "BG:BG_SW": { countryId: "BG", resources: { coal: 22500, timber: 15000 } }, // Pernik coal; Rila/Pirin timber
+  // 2027 regions use NUTS ids.
+  "BG:BG34": { countryId: "BG", resources: { coal: 60000 } }, // Maritsa lignite (Yugoiztochen)
+  "BG:BG41": { countryId: "BG", resources: { coal: 22500, timber: 15000 } }, // Pernik coal; Rila/Pirin timber (Yugozapaden)
 
   // ── Byelorussia ───────────────────────────────────────────────────────
   "BLR:BLR_MIN": { countryId: "BLR", resources: { timber: 9000 } },
