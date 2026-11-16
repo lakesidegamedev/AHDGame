@@ -109,8 +109,7 @@ export const SOVEREIGNTY_REGIONS: readonly SovereigntyRegion[] = [
     regionId: "CA_AB",
     kind: "independence",
     targetCountryId: null,
-    // Set to "AB" once the Alberta country exists; until then nothing can actuate.
-    successorCountryId: null,
+    successorCountryId: "AB",
     executiveTitle: "Premier",
     nationalGovernmentName: "Ottawa",
     parentName: "Canada",
