@@ -233,6 +233,46 @@ describe("buildCorporationLookups — bond holdings", () => {
     expect(result.tradeRoutes).toBeNull();
   });
 
+  it("uses allocated tightness alone with the staffing slack stage on", async () => {
+    const labourEmployment = {
+      version: 1,
+      lastTurn: 10,
+      laborForce: 1_000_000,
+      corporateEmployed: 200_000,
+      backgroundEmployed: 670_000,
+      backgroundDemand: 670_000,
+      referenceCorporateShare: 0.2,
+      corporateDemand: 250_000,
+      corporateDemandKnown: true,
+      structuralRate: 4,
+      vacancies: 0,
+      vacancyToUnemployment: 0,
+      hires: 0,
+      separations: 0,
+    };
+    db.collection("macroMetrics").find.mockReturnValue(
+      makeCursor([
+        {
+          _id: "CA",
+          countryId: "US",
+          labourEmployment,
+          economic: { labourTightness: { value: 2 } },
+        },
+      ])
+    );
+
+    db.collection("gameConfig").findOne.mockResolvedValue(null);
+    const off = await buildCorporationLookups(db as unknown as Db);
+    expect(off.labourTightnessByState.get("CA")).toBe(2);
+
+    db.collection("gameConfig").findOne.mockResolvedValue({
+      _id: "default",
+      labourStaffingSlackStage: 1,
+    });
+    const on = await buildCorporationLookups(db as unknown as Db);
+    expect(on.labourTightnessByState.get("CA")).toBeCloseTo(250_000 / 330_000, 8);
+  });
+
   it("includes sovereign bond holdings in bondsHeldByCorpId", async () => {
     const lookups = await buildCorporationLookups(db as unknown as Db);
 

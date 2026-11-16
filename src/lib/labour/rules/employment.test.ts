@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { advanceEmployment, EMPTY_EMPLOYMENT_POLICY, type EmploymentInput } from "./employment";
+import {
+  advanceEmployment,
+  EMPTY_EMPLOYMENT_POLICY,
+  employmentStaffingTightness,
+  type EmploymentInput,
+  type EmploymentState,
+} from "./employment";
 
 const input = (extra: Partial<EmploymentInput> = {}): EmploymentInput => ({
   turn: 1,
@@ -160,6 +166,66 @@ describe("regional employment accounting", () => {
       });
     // Half of the gap closes every half turn at average skill.
     expect(result.state.corporateEmployed / 60_000).toBeGreaterThan(0.9);
+  });
+
+  it("counts unemployed residents in staffing tightness only when the stage is on", () => {
+    const state: EmploymentState = {
+      version: 1,
+      lastTurn: 10,
+      laborForce: 1_000_000,
+      corporateEmployed: 200_000,
+      backgroundEmployed: 670_000,
+      backgroundDemand: 670_000,
+      referenceCorporateShare: 0.2,
+      corporateDemand: 250_000,
+      corporateDemandKnown: true,
+      structuralRate: 4,
+      vacancies: 0,
+      vacancyToUnemployment: 0,
+      hires: 0,
+      separations: 0,
+    };
+    // 13% unemployment; demand exceeds corporate employment by 50k, well under
+    // the 130k unemployed residents the state can still supply.
+    expect(employmentStaffingTightness(state)).toBeCloseTo(1.25, 8);
+    const slack = employmentStaffingTightness(state, { countUnemployed: true });
+    expect(slack).toBeCloseTo(250_000 / 330_000, 8);
+    expect(slack).toBeLessThanOrEqual(1);
+  });
+
+  it("keeps staffing tightness unknown or demand-bound at the edges with the stage on", () => {
+    const base: EmploymentState = {
+      version: 1,
+      lastTurn: 10,
+      laborForce: 1_000_000,
+      corporateEmployed: 200_000,
+      backgroundEmployed: 670_000,
+      backgroundDemand: 670_000,
+      referenceCorporateShare: 0.2,
+      corporateDemand: 250_000,
+      corporateDemandKnown: true,
+      structuralRate: 4,
+      vacancies: 0,
+      vacancyToUnemployment: 0,
+      hires: 0,
+      separations: 0,
+    };
+    expect(employmentStaffingTightness({ ...base, corporateDemandKnown: false })).toBeUndefined();
+    expect(
+      employmentStaffingTightness(
+        { ...base, corporateDemandKnown: false },
+        { countUnemployed: true }
+      )
+    ).toBeUndefined();
+    expect(employmentStaffingTightness({ ...base, corporateDemand: 0 })).toBeUndefined();
+    expect(
+      employmentStaffingTightness({ ...base, corporateDemand: 0 }, { countUnemployed: true })
+    ).toBeUndefined();
+    const emptyForce = { ...base, laborForce: 0, corporateEmployed: 0, backgroundEmployed: 0 };
+    expect(employmentStaffingTightness(emptyForce, { countUnemployed: true })).toBeCloseTo(
+      employmentStaffingTightness(emptyForce)!,
+      8
+    );
   });
 
   it("cannot hire more company workers than there are jobseekers to match", () => {

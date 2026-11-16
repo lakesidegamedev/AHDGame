@@ -616,6 +616,8 @@ export interface GameConfig {
    * instead of nameplate staffing. 0 or absent = off.
    */
   fundedHeadcountStage?: number;
+  /** Labour system: >= 1 counts unemployed residents in the plant staffing tightness denominator. 0 or absent = off. */
+  labourStaffingSlackStage?: number;
   /**
    * Equity cashout limits: 1 caps the price the system equity pool pays for new
    * shares (no sentiment premium, no more than book or 15x trailing earnings per
