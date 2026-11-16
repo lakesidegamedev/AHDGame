@@ -387,6 +387,9 @@ export const STATE_RESOURCE_CAPACITY: Record<string, StateResourceCapacityEntry>
   "RO:RO_DOB": { countryId: "RO", resources: { natural_gas: 30000 } }, // Black Sea offshore gas
 
   // ── Bulgaria ──────────────────────────────────────────────────────────
+  "BG:BG_THR": { countryId: "BG", resources: { coal: 60000 } }, // Maritsa lignite (pre-1999 regions)
+  "BG:BG_SW": { countryId: "BG", resources: { coal: 22500, timber: 15000 } }, // Pernik coal; Rila/Pirin timber
+  // 2027 regions use NUTS ids.
   "BG:BG34": { countryId: "BG", resources: { coal: 60000 } }, // Maritsa lignite (Yugoiztochen)
   "BG:BG41": { countryId: "BG", resources: { coal: 22500, timber: 15000 } }, // Pernik coal; Rila/Pirin timber (Yugozapaden)
 
