@@ -159,7 +159,7 @@ describe("strategy section retool cost", () => {
     const section = energySection(2040);
     const full = section.retoolCost;
     expect(full).toBeGreaterThan(0);
-    expect(row(section, "renewables")).toMatchObject({
+    expect(row(section, "wind")).toMatchObject({
       retoolCostMultiplier: 0.4,
       retoolCost: Math.round(full * 0.4),
     });
@@ -167,7 +167,7 @@ describe("strategy section retool cost", () => {
 
   it("charges the full fee before the sunset and with tech trees off", () => {
     for (const section of [energySection(2038), energySection(2040, false)]) {
-      expect(row(section, "renewables")).toMatchObject({
+      expect(row(section, "wind")).toMatchObject({
         retoolCostMultiplier: 1,
         retoolCost: section.retoolCost,
       });

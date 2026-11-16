@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { NEUTRAL_TECH_EFFECTS } from "@/lib/constants/techTree";
 import {
   foldTransitionPolicies,
-  renewablesReliabilityEntry,
+  renewablesReliabilityEntries,
   sectorVintageYear,
   summarisePowerFleet,
   withEnergyTransition,
@@ -48,7 +48,7 @@ describe("summarisePowerFleet", () => {
   const sectors = [
     {
       sectorType: "energy",
-      strategyId: "renewables",
+      strategyId: "wind",
       stateId: "a",
       countryId: "US",
       capitalStock: 90,
@@ -62,7 +62,7 @@ describe("summarisePowerFleet", () => {
     },
     {
       sectorType: "energy",
-      strategyId: "renewables",
+      strategyId: "wind",
       stateId: "c",
       countryId: "UK",
       capitalStock: 50,
@@ -87,22 +87,26 @@ describe("summarisePowerFleet", () => {
     expect(fleet.renewablesPenaltyByState.has("c")).toBe(false);
   });
 
-  it("lands the penalty on renewables output only, through the disaster channel", () => {
-    const entry = renewablesReliabilityEntry(0.15);
-    const hit = computeDisasterPenaltySplit(
-      [entry],
-      { sectorType: "energy", strategyId: "renewables" },
-      10,
-      true
-    );
-    expect(hit.productionPenalty).toBeCloseTo(-15);
-    const miss = computeDisasterPenaltySplit(
-      [entry],
-      { sectorType: "energy", strategyId: "nuclear" },
-      10,
-      true
-    );
-    expect(miss.productionPenalty).toBe(0);
+  it("lands the penalty on wind and solar output only, through the disaster channel", () => {
+    const entries = renewablesReliabilityEntries(0.15);
+    for (const strategyId of ["wind", "solar"]) {
+      const hit = computeDisasterPenaltySplit(
+        entries,
+        { sectorType: "energy", strategyId },
+        10,
+        true
+      );
+      expect(hit.productionPenalty, strategyId).toBeCloseTo(-15);
+    }
+    for (const strategyId of ["nuclear", "hydroelectric", "gas_fired"]) {
+      const miss = computeDisasterPenaltySplit(
+        entries,
+        { sectorType: "energy", strategyId },
+        10,
+        true
+      );
+      expect(miss.productionPenalty, strategyId).toBe(0);
+    }
   });
 });
 
