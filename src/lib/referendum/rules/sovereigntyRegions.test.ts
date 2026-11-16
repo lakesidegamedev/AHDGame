@@ -78,7 +78,7 @@ describe("sovereignty registry", () => {
   it("registers Alberta as a Canadian region that can become the AB successor", () => {
     expect(sovereigntyRegionIn("CA", "CA_AB")).toMatchObject({
       kind: "independence",
-      successorCountryId: null,
+      successorCountryId: "AB",
       executiveTitle: "Premier",
       nationalGovernmentName: "Ottawa",
       actuates: true,
