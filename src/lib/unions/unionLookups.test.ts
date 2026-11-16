@@ -18,7 +18,6 @@ function world(overrides: Partial<Union> = {}, workers = 100) {
   };
   const db = {
     collection: (name: string) => {
-      if (name === "gameConfig") return { findOne: async () => ({ labourSystemMode: "full" }) };
       const rows =
         name === "unions"
           ? [union]

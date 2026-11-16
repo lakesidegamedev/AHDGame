@@ -1,5 +1,5 @@
 /**
- * Strikes (`labourSystemMode >= "unions"`).
+ * Strikes.
  *
  * Two mechanisms gated on the same tier: a standing `unionPremium` surcharge
  * (unionization.ts), and per-sector bounded strikes (this file): triggered when

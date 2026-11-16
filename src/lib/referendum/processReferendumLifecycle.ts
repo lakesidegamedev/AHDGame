@@ -1,7 +1,7 @@
 import { withSessionDb } from "@/lib/db/sessionDb";
 import { grantReferendum } from "./grantReferendum";
 import { nppReferendumDecision } from "./rules/decisions";
-import { getGovernmentFormationsCollection } from "@/lib/db/collections/governmentFormation";
+import { countriesWithNppDecisionMaker } from "./nppDecisionMaker";
 import type { GovernorOfficeState } from "@/lib/db/types/governorOfficeState";
 import { getNationalStateId } from "@/lib/policy/nationalStateId";
 import { cohortTurnout } from "./rules/cohorts";
@@ -21,6 +21,7 @@ import { GG_TURNOUT_MOD_CAP } from "@/lib/constants/referendum";
  * `@/lib/constants/referendum`.
  */
 import type { Db, Filter, ObjectId } from "mongodb";
+import type { CountryId } from "@/lib/constants/countries";
 import type { Referendum, ReferendumStatus } from "@/lib/db/types/referendum";
 import type { Bill, StateDemographics } from "@/lib/db/types";
 import { getReferendumCollection } from "@/lib/db/collections/referendum";
@@ -39,7 +40,13 @@ import { getGameStatePresetOrDefault } from "@/lib/db/collections/gameState";
 import { referendumYesShare } from "@/lib/referendum/resolveYesShare";
 import { recordWireEvent, type WireInput } from "@/lib/referendum/wire";
 import { WIRE_SWING_THRESHOLD } from "@/lib/constants/referendum";
-import { hostsSovereigntyReferendums } from "@/lib/referendum/rules/sovereigntyRegions";
+import {
+  hostsSovereigntyReferendums,
+  independenceCopy,
+  sovereigntyMemberRegionIds,
+} from "@/lib/referendum/rules/sovereigntyRegions";
+import { loadBlocMembers } from "@/lib/referendum/blocMembers";
+import { poolCohorts } from "@/lib/referendum/rules/pooledElectorate";
 import { resolveWestminsterPolicy } from "@/lib/governorOffice/devolution/rules";
 import { billsCollection } from "@/lib/db/repositories/bills";
 import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
@@ -59,6 +66,27 @@ async function buildCohortBaseline(
   regionId: string,
   regionDesire: number,
   peaceAgreement = false
+): Promise<ReferendumCohort[]> {
+  if (sovereigntyMemberRegionIds(regionId).length === 1)
+    return buildMemberCohorts(db, regionId, regionDesire, peaceAgreement);
+  // A bloc votes as one electorate built from each member's own voters.
+  const members = await loadBlocMembers(db, regionId, regionDesire);
+  return poolCohorts(
+    await Promise.all(
+      members.map(async (member) => ({
+        ...member,
+        cohorts: await buildMemberCohorts(db, member.regionId, member.desire, peaceAgreement),
+      }))
+    ),
+    regionDesire
+  );
+}
+
+async function buildMemberCohorts(
+  db: Db,
+  regionId: string,
+  regionDesire: number,
+  peaceAgreement: boolean
 ): Promise<ReferendumCohort[]> {
   const demo = await stateDemographicsCollection(db).findOne({ _id: regionId });
   if (!demo?.countryId) {
@@ -105,6 +133,10 @@ function seededVariance(id: string, turn: number): number {
     h = Math.imul(h, 16777619);
   }
   return ((h >>> 0) / 0xffffffff) * 2 - 1;
+}
+
+function capitalize(text: string): string {
+  return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
 interface CampaignSnapshot {
@@ -157,11 +189,9 @@ export async function processReferendumLifecycle(
         .map((ref) => ref.countryId)
     ),
   ];
-  const [ministries, nationalOffices] = requestCountries.length
+  const [nppDecisionCountries, nationalOffices] = requestCountries.length
     ? await Promise.all([
-        getGovernmentFormationsCollection(db)
-          .find({ _id: { $in: requestCountries } })
-          .toArray(),
+        countriesWithNppDecisionMaker(db, requestCountries),
         governorOfficeStateCollection(db)
           .find({
             $or: requestCountries.map((countryId) => ({
@@ -176,8 +206,7 @@ export async function processReferendumLifecycle(
           })
           .toArray(),
       ])
-    : [[], []];
-  const ministryByCountry = new Map(ministries.map((doc) => [String(doc._id), doc]));
+    : [new Set<CountryId>(), []];
   const officeByCountry = new Map(nationalOffices.map((doc) => [doc.countryId, doc]));
   const transitions: ReferendumLifecycleResult["transitions"] = [];
   const failures: NonNullable<ReferendumLifecycleResult["failures"]> = [];
@@ -209,10 +238,12 @@ export async function processReferendumLifecycle(
     const from = ref.status;
 
     if (ref.status === "requested") {
-      const ministry = ministryByCountry.get(ref.countryId);
-      if (ministry?.status === "formed" && ministry.pmNppId && !ministry.pmCharacterId) {
+      if (nppDecisionCountries.has(ref.countryId)) {
+        const stances = officeByCountry.get(ref.countryId)?.westminsterStances;
         const policy = resolveWestminsterPolicy(
-          officeByCountry.get(ref.countryId)?.westminsterStances?.[ref.regionId]?.policy
+          sovereigntyMemberRegionIds(ref.regionId)
+            .map((member) => stances?.[member]?.policy)
+            .find((candidate) => candidate != null) ?? stances?.[ref.regionId]?.policy
         );
         const action = nppReferendumDecision(currentTurn, ref.requestedTurn, policy);
         if (action) {
@@ -452,7 +483,7 @@ export async function processReferendumLifecycle(
             regionId: ref.regionId,
             turn: currentTurn,
             kind: "consent",
-            summary: `The Commons ${passed ? "passed" : "rejected"} the consent bill.`,
+            summary: `${capitalize(independenceCopy(ref.regionId, () => undefined).body)} ${passed ? "passed" : "rejected"} the consent bill.`,
           }).catch(() => {});
           await refs.updateOne(
             { _id: ref._id },

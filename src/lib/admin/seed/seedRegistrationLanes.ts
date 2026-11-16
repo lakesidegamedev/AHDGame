@@ -130,6 +130,9 @@ export async function seedRegistrationLanes(
     CA: new Map(),
     QC: new Map(),
     AB: new Map(),
+    RTX: new Map(),
+    NEN: new Map(),
+    RCA: new Map(),
   };
   for (const p of allParties) {
     const map = abbrLookup[p.countryId];

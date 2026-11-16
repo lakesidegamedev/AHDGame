@@ -521,7 +521,7 @@ export interface Character {
    */
   factionId?: ObjectId | null;
   /**
-   * v3 Phase 8 (labourSystemMode >= "full"): the Union this Character leads,
+   * v3 Phase 8: the Union this Character leads,
    * or null. Source of truth is `Union.ownerId` (see `src/lib/db/types/union.ts`)
    * — this field is a denormalized read cache, mirroring `factionId` above.
    * Written atomically with `Union.ownerId` (via `runWithOptionalTransaction`)

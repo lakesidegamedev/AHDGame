@@ -5,7 +5,6 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { parseJsonBody } from "@/lib/api/validate";
 import { getCharacterByUserId } from "@/lib/db/characterLookup";
-import { isLabourFullMode } from "@/lib/labour/featureFlag";
 import { getDb } from "@/lib/mongodb";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { actOnBargainingCampaignAsUnion } from "@/lib/unions/commands/bargaining";
@@ -36,9 +35,6 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   try {
     const auth = await requireBasicAuth();
     if (!auth.ok) return auth.response;
-    if (!(await isLabourFullMode())) {
-      return errorResponse(403, "Player-run unions are not enabled.");
-    }
     const rateLimit = checkRateLimit(
       `api/unions/[id]/bargaining/[campaignId]:${auth.user.userId}`,
       20,

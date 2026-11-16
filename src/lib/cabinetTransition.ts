@@ -134,6 +134,9 @@ export async function clearCabinetOnTransition(db: Db, countryId: CountryId): Pr
     WAL: WAL_CABINET_POSITIONS,
     QC: getCabinetPositions("QC"),
     AB: getCabinetPositions("AB"),
+    RTX: getCabinetPositions("RTX"),
+    NEN: getCabinetPositions("NEN"),
+    RCA: getCabinetPositions("RCA"),
   };
   const positions = positionsByCountry[countryId];
   if (!positions) return; // Country has no cabinet positions defined yet

@@ -78,13 +78,32 @@ const IT_SENATO_CYCLE_PERIOD_HOURS = 240;
  */
 /** Successor-nation chambers: anchor and cycle length, in turns. */
 const SUCCESSOR_CHAMBER_CYCLES: Record<
-  "holyrood" | "senedd" | "qcAssembly" | "abAssembly",
-  { anchor: "scoHolyrood" | "walSenedd" | "qcAssembly" | "abAssembly"; periodHours: number }
+  | "holyrood"
+  | "senedd"
+  | "qcAssembly"
+  | "abAssembly"
+  | "rtxAssembly"
+  | "rcaAssembly"
+  | "nenAssembly",
+  {
+    anchor:
+      | "scoHolyrood"
+      | "walSenedd"
+      | "qcAssembly"
+      | "abAssembly"
+      | "rtxAssembly"
+      | "rcaAssembly"
+      | "nenAssembly";
+    periodHours: number;
+  }
 > = {
   holyrood: { anchor: "scoHolyrood", periodHours: DEVOLVED_CHAMBER_CYCLE_PERIOD_HOURS },
   senedd: { anchor: "walSenedd", periodHours: DEVOLVED_CHAMBER_CYCLE_PERIOD_HOURS },
   qcAssembly: { anchor: "qcAssembly", periodHours: 192 },
   abAssembly: { anchor: "abAssembly", periodHours: 192 },
+  rtxAssembly: { anchor: "rtxAssembly", periodHours: 192 },
+  rcaAssembly: { anchor: "rcaAssembly", periodHours: 192 },
+  nenAssembly: { anchor: "nenAssembly", periodHours: 192 },
 };
 
 const BETA_PARLIAMENT_CYCLES: Record<
@@ -481,7 +500,10 @@ export function canonicalTurnsForCycle(params: CanonicalCycleParams): CanonicalC
     case "holyrood":
     case "senedd":
     case "qcAssembly":
-    case "abAssembly": {
+    case "abAssembly":
+    case "rtxAssembly":
+    case "rcaAssembly":
+    case "nenAssembly": {
       // Successor-nation chambers exist only after independence and take a
       // fixed cycle from the nearest canonical election year; the spawner walks
       // forward to the next cycle after the secession turn. A snap shifts the

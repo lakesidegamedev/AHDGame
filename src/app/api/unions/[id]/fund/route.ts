@@ -1,6 +1,6 @@
 /**
  * POST /api/unions/[id]/fund: the union president moves personal cash into
- * the treasury of the union they lead. Gated on `labourSystemMode >= "full"`.
+ * the treasury of the union they lead.
  *
  * Without this, dues are the only inflow, so a newly founded union with an
  * empty treasury cannot afford the drive needed to win the members dues are
@@ -17,7 +17,6 @@ import { requireBasicAuth } from "@/lib/api/requireAuth";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { getCharacterByUserId } from "@/lib/db/characterLookup";
-import { isLabourFullMode } from "@/lib/labour/featureFlag";
 import { fundUnionTreasury } from "@/lib/unions/commands/fundUnionTreasury";
 
 interface RouteParams {
@@ -32,10 +31,6 @@ export async function POST(request: Request, { params }: RouteParams) {
   try {
     const auth = await requireBasicAuth();
     if (!auth.ok) return auth.response;
-
-    if (!(await isLabourFullMode())) {
-      return errorResponse(403, "Player-run unions are not enabled.");
-    }
 
     const rateLimit = checkRateLimit(`api/unions/[id]/fund:${auth.user.userId}`, 20, 60000);
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);

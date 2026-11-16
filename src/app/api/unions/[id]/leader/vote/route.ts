@@ -14,7 +14,6 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { getCharacterByUserId } from "@/lib/db/characterLookup";
 import { bulkFetchCharacterNames } from "@/lib/db/characterLookup";
-import { isLabourFullMode } from "@/lib/labour/featureFlag";
 import type { Character, Union } from "@/lib/db/types";
 import type { UnionLeaderVote, UnionOrganizer } from "@/lib/db/types/union";
 import { voteUnionLeader } from "@/lib/unions/commands/voteUnionLeader";
@@ -51,10 +50,6 @@ const voteSchema = z.object({
 
 async function handleGET(_request: Request, { params }: RouteParams) {
   try {
-    if (!(await isLabourFullMode())) {
-      return errorResponse(403, "Player-run unions are not enabled.");
-    }
-
     const { id } = await params;
     if (!ObjectId.isValid(id)) {
       return errorResponse(400, "Invalid union ID");
@@ -237,10 +232,6 @@ export async function POST(request: Request, { params }: RouteParams) {
   try {
     const auth = await requireBasicAuth();
     if (!auth.ok) return auth.response;
-
-    if (!(await isLabourFullMode())) {
-      return errorResponse(403, "Player-run unions are not enabled.");
-    }
 
     const rateLimit = checkRateLimit(`api/unions/[id]/leader/vote:${auth.user.userId}`, 20, 60000);
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);

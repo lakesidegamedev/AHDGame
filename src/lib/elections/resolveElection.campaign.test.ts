@@ -62,8 +62,11 @@ it.each(["summary", "full"] as const)(
     expect(db.collection("states").find).toHaveBeenCalledTimes(2);
     const audienceReads = db
       .collection("states")
-      .find.mock.calls.filter(([query]: [{ countryId?: { $in?: string[] } }]) =>
-        Array.isArray(query.countryId?.$in)
+      .find.mock.calls.filter(
+        ([query, options]: [
+          { countryId?: { $in?: string[] } },
+          { projection?: Record<string, number> }?,
+        ]) => Array.isArray(query.countryId?.$in) && options?.projection?.houseDistricts == null
       );
     expect(audienceReads).toHaveLength(1);
     expect(_enrichElection).toHaveBeenCalledTimes(3);

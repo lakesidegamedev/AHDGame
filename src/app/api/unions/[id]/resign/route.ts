@@ -1,6 +1,6 @@
 /**
  * POST /api/unions/[id]/resign — the leader voluntarily releases leadership
- * (v3 Phase 8 code-review fix #5). Gated on `labourSystemMode >= "full"`.
+ * (v3 Phase 8 code-review fix #5).
  */
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
@@ -8,7 +8,6 @@ import { requireBasicAuth } from "@/lib/api/requireAuth";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { getCharacterByUserId } from "@/lib/db/characterLookup";
-import { isLabourFullMode } from "@/lib/labour/featureFlag";
 import { resignUnionLeadership } from "@/lib/unions/commands/resignUnionLeadership";
 
 interface RouteParams {
@@ -19,10 +18,6 @@ export async function POST(request: Request, { params }: RouteParams) {
   try {
     const auth = await requireBasicAuth();
     if (!auth.ok) return auth.response;
-
-    if (!(await isLabourFullMode())) {
-      return errorResponse(403, "Player-run unions are not enabled.");
-    }
 
     const rateLimit = checkRateLimit(`api/unions/[id]/resign:${auth.user.userId}`, 10, 60000);
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);

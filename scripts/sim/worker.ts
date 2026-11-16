@@ -139,7 +139,6 @@ interface SimJob {
   dbName: string;
   startPolicy?: "immediate" | "window";
   marketSystemMode?: string;
-  labourSystemMode?: string;
   canonicalFreightBillingEnabled?: boolean;
   shortageResponsiveSourcingEnabled?: boolean;
   indexFundBondLiquidityEnabled?: boolean;

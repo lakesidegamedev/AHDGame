@@ -75,8 +75,10 @@ describe("computeAllNationalMetricTickRates query budget", () => {
     await computeAllNationalMetricTickRates(db as never, "federal");
 
     expect(db.collectionMocks.statePolicies!.find).toHaveBeenCalledTimes(1);
+    // One read for the tick metrics and one for the independence drift preview,
+    // since Texas and California carry a separation mood; never one per state.
+    expect(db.collectionMocks.macroMetrics!.find).toHaveBeenCalledTimes(2);
     expect(db.collectionMocks.politicalMetrics!.find).toHaveBeenCalledTimes(1);
-    expect(db.collectionMocks.macroMetrics!.find).toHaveBeenCalledTimes(1);
     expect(db.collectionMocks.states!.findOne).not.toHaveBeenCalled();
   });
 });

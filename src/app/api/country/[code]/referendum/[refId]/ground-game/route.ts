@@ -1,4 +1,8 @@
-import { hostsSovereigntyReferendums } from "@/lib/referendum/rules/sovereigntyRegions";
+import {
+  hostsSovereigntyReferendums,
+  sovereigntyMemberRegionIds,
+} from "@/lib/referendum/rules/sovereigntyRegions";
+import { cohortMember } from "@/lib/referendum/rules/pooledElectorate";
 import { z } from "zod";
 import { requireHumanSessionWithCharacter } from "@/lib/api/requireAuth";
 import { handleRouteError, errorResponse, statusResponse } from "@/lib/api/errors";
@@ -62,22 +66,33 @@ export async function POST(
     const partyId = auth.user.character.party ?? null;
     // Wire display name: party abbreviation (official) or the player's name.
     let actorName = auth.user.character.name ?? "A volunteer";
+    let spendStateId: string | undefined;
     if (parsed.data.mode === "official") {
       if (!partyId) {
         return errorResponse(400, "You are not in a party.");
       }
-      const [partyDoc, stateParty] = await Promise.all([
+      // A bloc's campaign is paid from whichever member state the officer runs,
+      // preferring the state a targeted group belongs to.
+      const members = sovereigntyMemberRegionIds(ref.regionId);
+      const targetMember =
+        parsed.data.target === "whole" ? null : cohortMember(parsed.data.target.groupId);
+      const [partyDoc, stateParties] = await Promise.all([
         politicalPartiesCollection(db).findOne({ countryId, sequentialId: Number(partyId) }),
-        statePartyOrgCollection(db).findOne({
-          countryId,
-          stateId: ref.regionId,
-          partyId: String(partyId),
-        }),
+        statePartyOrgCollection(db)
+          .find({ countryId, stateId: { $in: members }, partyId: String(partyId) })
+          .toArray(),
       ]);
-      if (!partyDoc || !canSpendOnStateParty(partyDoc, stateParty, auth.user)) {
+      const ordered = [...stateParties].sort(
+        (a, b) => Number(b.stateId === targetMember) - Number(a.stateId === targetMember)
+      );
+      const payer = partyDoc
+        ? ordered.find((org) => canSpendOnStateParty(partyDoc, org, auth.user))
+        : undefined;
+      if (!partyDoc || (!payer && !canSpendOnStateParty(partyDoc, null, auth.user))) {
         return errorResponse(403, "Only a party officer may run an official ground game.");
       }
       actorName = partyDoc.abbreviation;
+      spendStateId = payer?.stateId ?? ref.regionId;
     }
 
     const result = await spendGroundGame(db, {
@@ -89,6 +104,7 @@ export async function POST(
       characterId: auth.user.character._id,
       partyId: parsed.data.mode === "official" ? String(partyId) : undefined,
       countryId,
+      stateId: spendStateId,
       actorName,
     });
     return statusResponse(result.status, result.body);

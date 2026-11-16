@@ -130,7 +130,7 @@ const SIM_RUN = {
   effectiveConfigInitial: {
     capturedAtTurn: 0,
     gameState: { forexEnabled: true },
-    gameConfig: { labourSystemMode: "full" },
+    gameConfig: { moneySupplyEnabled: true },
   },
   actorMode: "pure-npp",
   autonomyLevel: "v4",

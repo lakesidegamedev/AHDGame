@@ -5,14 +5,12 @@ import { getDb } from "@/lib/mongodb";
 import { requireBasicAuth } from "@/lib/api/requireAuth";
 import { checkRateLimit } from "@/lib/api/rateLimit";
 import { getCharacterByUserId } from "@/lib/db/characterLookup";
-import { isLabourFullMode } from "@/lib/labour/featureFlag";
 import { organizeSector } from "@/lib/unions/commands/organizeSector";
 import { POST } from "./route";
 
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
 vi.mock("@/lib/api/requireAuth", () => ({ requireBasicAuth: vi.fn() }));
 vi.mock("@/lib/db/characterLookup", () => ({ getCharacterByUserId: vi.fn() }));
-vi.mock("@/lib/labour/featureFlag", () => ({ isLabourFullMode: vi.fn() }));
 vi.mock("@/lib/unions/commands/organizeSector", () => ({ organizeSector: vi.fn() }));
 vi.mock("@/lib/api/rateLimit", () => ({
   checkRateLimit: vi.fn().mockReturnValue({ ok: true }),
@@ -44,7 +42,6 @@ beforeEach(() => {
     ok: true,
     user: { userId: "user-1" },
   } as never);
-  vi.mocked(isLabourFullMode).mockResolvedValue(true);
   vi.mocked(checkRateLimit).mockReturnValue({ ok: true } as never);
   let actions = 5;
   // Each read returns the balance after the previous drive, as the real
@@ -132,13 +129,6 @@ describe("POST /api/unions/[id]/organize-sectors", () => {
       const response = await POST(request({ sectorIds }), ctx);
       expect(response.status).toBe(400);
     }
-    expect(organizeSector).not.toHaveBeenCalled();
-  });
-
-  it("refuses while player-run unions are off", async () => {
-    vi.mocked(isLabourFullMode).mockResolvedValue(false);
-    const response = await POST(request({ sectorIds: [sectorA] }), ctx);
-    expect(response.status).toBe(403);
     expect(organizeSector).not.toHaveBeenCalled();
   });
 });

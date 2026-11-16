@@ -7,6 +7,9 @@ import type { Db } from "mongodb";
 import { getCountryConfig, type CountryId } from "@/lib/constants/countries";
 import type { ElectedOfficial } from "@/lib/db/types/officials";
 import type { ParliamentaryGovernment } from "@/lib/db/types/parliamentaryGovernment";
+import { interimHeadRegion } from "../rules/pooledElectorate";
+import { sovereigntyMemberRegionIds } from "../rules/sovereigntyRegions";
+import { statesCollection } from "@/lib/db/repositories/states";
 import { CAPITAL_SUBREGION, type SecedingCountryId } from "./subRegions";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
@@ -30,18 +33,47 @@ export async function carryOverOfficials(
 ): Promise<CarryOverOfficialsResult> {
   const now = new Date();
   const officials = electedOfficialsCollection(db);
+  const members = sovereigntyMemberRegionIds(regionId);
+  const bloc = members.length > 1;
+  // A bloc has several Governors: the most populous state's leads until elections;
+  // the others stay in office as regional executives.
+  let headState = regionId;
+  if (bloc) {
+    const rows = await statesCollection(db)
+      .find({ _id: { $in: members } }, { projection: { population: 1 } })
+      .toArray();
+    headState =
+      interimHeadRegion(
+        members.map((id) => ({
+          regionId: id,
+          population: rows.find((row) => row._id === id)?.population ?? 0,
+        }))
+      ) ?? members[0];
+  }
   const fm = await officials.findOne({
     countryId: fromCountryId,
     officeType: "governor",
-    state: regionId,
+    state: headState,
   });
+  const retained = bloc
+    ? await officials
+        .find({
+          countryId: fromCountryId,
+          officeType: "governor",
+          state: { $in: members.filter((id) => id !== headState) },
+        })
+        .toArray()
+    : [];
+  const retainedIds = new Set(retained.map((row) => String(row._id)));
   const residents = await charactersCollection(db)
     .find({ countryId: toCountryId }, { projection: { _id: 1 } })
     .toArray();
   const npps = await nppsCollection<Document>(db)
     .find({ countryId: toCountryId }, { projection: { _id: 1 } })
     .toArray();
-  const departing = await officials.find({ countryId: fromCountryId, state: regionId }).toArray();
+  const departing = (
+    await officials.find({ countryId: fromCountryId, state: { $in: members } }).toArray()
+  ).filter((row) => !retainedIds.has(String(row._id)));
   const characterIds = [
     ...residents.map((row) => row._id),
     ...departing.flatMap((row) => (row.characterId ? [row.characterId] : [])),
@@ -57,18 +89,27 @@ export async function carryOverOfficials(
   });
   if (government)
     await unformGovernmentAndVacatePM(db, fromCountryId, now, { reason: "lost-seat" });
-  await officials.deleteMany({ countryId: fromCountryId, $or: [{ state: regionId }, ...holders] });
+  await officials.deleteMany({
+    countryId: fromCountryId,
+    _id: { $nin: retained.map((row) => row._id) },
+    $or: [{ state: { $in: members } }, ...holders],
+  });
   await cabinetMembersCollection<Document>(db).deleteMany({
     countryId: fromCountryId,
     $or: holders,
   });
-  await seatsCollection<Document>(db).deleteMany({ countryId: fromCountryId, state: regionId });
+  await seatsCollection<Document>(db).deleteMany({
+    countryId: fromCountryId,
+    state: { $in: members },
+  });
+  const retainedCharacters = retained.flatMap((row) => (row.characterId ? [row.characterId] : []));
+  const retainedNpps = retained.flatMap((row) => (row.nppId ? [row.nppId] : []));
   await charactersCollection(db).updateMany(
-    { _id: { $in: characterIds } },
+    { _id: { $in: characterIds, $nin: retainedCharacters } },
     { $set: { currentOffice: null, updatedAt: now }, $unset: { cabinetPosition: "" } }
   );
   await nppsCollection<Document>(db).updateMany(
-    { _id: { $in: nppIds } },
+    { _id: { $in: nppIds, $nin: retainedNpps } },
     { $set: { currentOffice: null, updatedAt: now } }
   );
   if (!fm || (!fm.characterId && !fm.nppId)) {
@@ -76,7 +117,7 @@ export async function carryOverOfficials(
     return { msps: 0, headOfGov: 0 };
   }
   const party = idMap[Number(fm.party)] != null ? String(idMap[Number(fm.party)]) : "independent";
-  const state = CAPITAL_SUBREGION[toCountryId];
+  const state = bloc ? headState : CAPITAL_SUBREGION[toCountryId];
   await officials.insertOne({
     ...fm,
     countryId: toCountryId,

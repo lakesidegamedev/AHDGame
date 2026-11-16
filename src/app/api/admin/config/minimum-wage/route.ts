@@ -46,8 +46,7 @@ export async function GET() {
 // Auth: requireAdmin
 // Errors: 400, 403, 404
 //
-// Floors low-pay sectors' labor cost in the corporation turn (only when
-// labourSystemMode ≥ "wages"; inert otherwise). See
+// Floors low-pay sectors' labor cost in the corporation turn. See
 // docs/plans/2026-06-30-labour-system.md (Phase 3). With minimumWageLawStage
 // on, a set ratio overrides the national minimum wage law (any value, 0
 // included) and a cleared one hands the country back to the law.

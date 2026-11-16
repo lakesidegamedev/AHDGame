@@ -108,7 +108,7 @@ import { policiesCollection } from "@/lib/db/repositories/policies";
  * ⚠️ `gameConfig` is deliberately ABSENT and must stay absent. It is a singleton
  * whose ~113 fields are roughly ten seeded reference defaults and a hundred
  * pieces of live operational state — maintenance mode, the Discord webhook URLs,
- * and every admin feature gate (`labourSystemMode`, `marketSystemMode`,
+ * and every admin feature gate (`marketSystemMode`,
  * `moneySupplyEnabled`, …). Dropping it re-seeded the ten and
  * silently discarded the hundred. Per-world markers are cleared explicitly via
  * {@link STALE_PER_WORLD_GAME_CONFIG_UNSET} instead.

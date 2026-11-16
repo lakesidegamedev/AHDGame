@@ -25,7 +25,6 @@ import {
   freeCashFlowPerTurn,
   politicalContributionPerTurn,
 } from "@/lib/unions/unionPoliticalContributions";
-import { isLabourFullMode } from "@/lib/labour/featureFlag";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
 import { seedUnions } from "@/lib/admin/seed/seedUnions";
 import { OPERATING_SECTOR_TYPES } from "@/lib/constants/corporations";
@@ -122,24 +121,11 @@ export async function adoptUnrepresentedSectors(db: Db): Promise<number> {
  * mirroring `inactiveCeoSectorShed.ts` (uses `User.lastActivity`/`createdAt`). A vacated
  * union is excluded from this turn's processing.
  *
- * Gated on `labourSystemMode >= "full"`; when disabled, union state is frozen.
- *
  * Registered immediately after `"corporationTurn"` and reads sector state that phase
  * writes this same turn.
  */
 
 export async function processUnionsTurn(db: Db, turn?: number): Promise<UnionsTurnResult> {
-  if (!(await isLabourFullMode())) {
-    return {
-      unionsProcessed: 0,
-      vacatedForInactivity: 0,
-      sectorsAdopted: 0,
-      campaignsMovedToDispute: 0,
-      agreementsExpired: 0,
-      mediationsExpired: 0,
-    };
-  }
-
   const currentTurn = turn ?? (await getCurrentTurn(db));
   await processCrackdownLabourApprovalTurn(db, currentTurn);
   const labourRelations = await processLabourRelationsTurn(db, currentTurn);
@@ -164,7 +150,7 @@ export async function processUnionsTurn(db: Db, turn?: number): Promise<UnionsTu
   const expectedUnionCount = seededCountryIds.length * OPERATING_SECTOR_TYPES.length;
   if (unionCount < expectedUnionCount) {
     console.warn(
-      `[unionsTurn] labourSystemMode is 'full' but union roster is incomplete (${unionCount}/${expectedUnionCount}), backfilling via seedUnions(reset:false)`
+      `[unionsTurn] the union roster is incomplete (${unionCount}/${expectedUnionCount}), backfilling via seedUnions(reset:false)`
     );
     await seedUnions(db, (msg) => console.warn(`[unionsTurn] ${msg}`), preset, false);
   }

@@ -33,6 +33,9 @@ import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
+import { SOVEREIGNTY_REGIONS } from "@/lib/referendum/rules/sovereigntyRegions";
+import { departedRegions, upperChamberSeatsAfterDepartures } from "./rules/departedRegions";
+import { seatedSuccessors } from "@/lib/elections/apportionment";
 
 /** Active world preset, when present — drives era-conditional chamber sizes. */
 async function readActivePreset(db: Db): Promise<string | undefined> {
@@ -215,7 +218,14 @@ export async function getLiveUpperChamberSeats(db: Db, countryId: CountryId): Pr
   const config = getCountryConfig(countryId, preset);
   const upper = config.legislature.upperChamber;
   if (!upper) return 0;
-  if (!isUpperChamberRegionApportioned(countryId, preset)) return upper.seats;
+  if (!isUpperChamberRegionApportioned(countryId, preset)) {
+    const leaving = SOVEREIGNTY_REGIONS.filter(
+      (entry) => entry.countryId === countryId && entry.actuates && entry.parentUpperChamberSeats
+    );
+    if (leaving.length === 0) return upper.seats;
+    const departed = departedRegions(leaving, countryId, await seatedSuccessors(db, countryId));
+    return upperChamberSeatsAfterDepartures(upper.seats, departed);
+  }
   const regions = await statesCollection(db)
     .find({ countryId })
     .project<{ stateSenateSeats?: number }>({ stateSenateSeats: 1 })
