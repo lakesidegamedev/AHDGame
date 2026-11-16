@@ -123,7 +123,7 @@ export function CountryHistory({ data: rawCountry }: { data?: string }) {
       <header>
         <p className="text-body-sm font-medium text-muted">Live country history</p>
         <h3 className="mt-0.5 font-semibold text-foreground">
-          {data.countryName} — {data.headOfGovernmentTitle} timeline
+          {data.countryName}, {data.headOfGovernmentTitle} timeline
         </h3>
         {data.currentLeader && (
           <p className="mt-1 text-sm text-muted">
@@ -165,7 +165,7 @@ export function CountryHistory({ data: rawCountry }: { data?: string }) {
                           </span>
                         )}
                       </td>
-                      <td className="py-2 px-3 text-muted">{entry.party ?? "—"}</td>
+                      <td className="py-2 px-3 text-muted">{entry.party ?? "-"}</td>
                       <td className="py-2 px-3 text-right font-mono text-muted">
                         T{entry.startTurn} ·{" "}
                         <LocalTime value={entry.startDate} options={DATE_LABEL_OPTIONS} />
@@ -182,7 +182,7 @@ export function CountryHistory({ data: rawCountry }: { data?: string }) {
                             )}
                           </>
                         ) : (
-                          "—"
+                          "-"
                         )}
                       </td>
                     </tr>

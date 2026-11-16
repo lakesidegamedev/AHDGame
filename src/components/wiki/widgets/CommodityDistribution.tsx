@@ -36,7 +36,7 @@ interface DistributionData {
 }
 
 function formatNumber(n: number): string {
-  if (!Number.isFinite(n)) return "—";
+  if (!Number.isFinite(n)) return "-";
   const abs = Math.abs(n);
   if (abs >= 1_000_000) return `${(n / 1_000_000).toFixed(2)}M`;
   if (abs >= 1_000) return `${(n / 1_000).toFixed(1)}K`;

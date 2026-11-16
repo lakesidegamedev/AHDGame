@@ -74,7 +74,7 @@ export default async function MyWikiPage() {
         <h1 className="mb-2 text-3xl font-bold tracking-tight text-foreground">My wiki pages</h1>
         <p className="max-w-2xl text-muted">
           Claim dedicated wiki pages for your politician, your corporation, the party you lead, or a
-          historical event. Use the in-app editor — full markdown, inline image uploads, wiki
+          historical event. Use the in-app editor, full markdown, inline image uploads, wiki
           cross-links, and tables.
         </p>
       </div>
@@ -133,7 +133,7 @@ function LimitationsBlock() {
         </li>
         <li>
           <strong>Images.</strong> PNG / JPEG / WebP / GIF up to 8 MB via the toolbar button.
-          External image URLs must be <code>http(s)</code> — <code>javascript:</code> and other
+          External image URLs must be <code>http(s)</code>, <code>javascript:</code> and other
           schemes are blocked.
         </li>
         <li>
@@ -156,7 +156,7 @@ function EventCard() {
       <p className="section-label mb-1">Historical event</p>
       <h2 className="mb-4 text-xl font-bold text-foreground">Document a moment in history</h2>
       <p className="mb-4 text-sm text-muted">
-        Market crashes, landmark elections, major scandals — anyone can draft an event page. Because
+        Market crashes, landmark elections, major scandals, anyone can draft an event page. Because
         the slug is your choice, use the general &ldquo;new article&rdquo; flow.
       </p>
       <div className="mt-auto">

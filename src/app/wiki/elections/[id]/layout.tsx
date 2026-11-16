@@ -85,9 +85,9 @@ export async function generateMetadata({
     !["president", "commons", "snap_commons", "primeMinister", "uachtaran"].includes(
       election.electionType
     )
-      ? ` — ${election.state}`
+      ? `, ${election.state}`
       : "";
-  const title = `${year} ${typeLabel}${stateStr} — Wiki | A House Divided`;
+  const title = `${year} ${typeLabel}${stateStr} | Wiki | A House Divided`;
   const description = `Historical results, candidates, and analysis for the ${year} ${typeLabel.toLowerCase()}${stateStr}.`;
   const url = `${getWikiSiteUrl()}/elections/${id}`;
 

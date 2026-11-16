@@ -29,5 +29,5 @@ it("uses the active preset for legacy election metadata", async () => {
 
   const metadata = await generateMetadata({ params: Promise.resolve({ id: id.toString() }) });
 
-  expect(metadata.title).toBe("1955 General Election — Wiki | A House Divided");
+  expect(metadata.title).toBe("1955 General Election | Wiki | A House Divided");
 });

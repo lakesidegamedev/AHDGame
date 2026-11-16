@@ -53,7 +53,7 @@ export function formatCooldownMessage(result: CooldownResult): string {
   const hours = Math.floor(result.remainingMs / (60 * 60 * 1000));
   const minutes = Math.ceil((result.remainingMs % (60 * 60 * 1000)) / (60 * 1000));
   if (hours >= 1) {
-    return `You can create another wiki page in ${hours}h ${minutes}m. (12-hour cooldown between new pages — edits are unlimited.)`;
+    return `You can create another wiki page in ${hours}h ${minutes}m. (12-hour cooldown between new pages, edits are unlimited.)`;
   }
-  return `You can create another wiki page in ${minutes}m. (12-hour cooldown between new pages — edits are unlimited.)`;
+  return `You can create another wiki page in ${minutes}m. (12-hour cooldown between new pages, edits are unlimited.)`;
 }

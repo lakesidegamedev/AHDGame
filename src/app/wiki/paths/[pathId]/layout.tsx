@@ -20,7 +20,7 @@ export async function generateMetadata({
   const path = getLearningPathBySlug(pathId);
   if (!path) return {};
 
-  const title = `${path.title} — Learning Path | A House Divided`;
+  const title = `${path.title} | Learning Path | A House Divided`;
   const description =
     truncate(path.description) || `${path.title}: a curated guide for learning A House Divided.`;
   const url = `${getWikiSiteUrl()}/paths/${pathId}`;

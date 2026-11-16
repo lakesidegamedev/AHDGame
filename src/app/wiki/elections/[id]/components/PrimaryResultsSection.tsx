@@ -228,7 +228,7 @@ export const PrimaryResultsSection = memo(function PrimaryResultsSection({
                             Nominee
                           </span>
                         ) : (
-                          <span className="text-muted">—</span>
+                          <span className="text-muted">-</span>
                         )}
                       </td>
                     </tr>

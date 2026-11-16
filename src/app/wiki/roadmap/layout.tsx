@@ -4,7 +4,7 @@ import { wikiPublicPageMetadata } from "@/lib/siteMetadata";
 export const metadata: Metadata = wikiPublicPageMetadata({
   title: "Roadmap | A House Divided",
   description:
-    "Planned, in-progress, and completed features for A House Divided — alpha, beta, and release milestones.",
+    "Planned, in-progress, and completed features for A House Divided, alpha, beta, and release milestones.",
   pathname: "/wiki/roadmap",
 });
 

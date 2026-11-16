@@ -74,14 +74,14 @@ function rowSummary(row: ManualRow): string {
       ? "Incumbent"
       : row.endWeek != null && row.endYear != null
         ? `Week ${row.endWeek}, ${row.endYear}`
-        : "—";
-    segments.push(`Week ${row.startWeek}, ${row.startYear} – ${end}`);
+        : "-";
+    segments.push(`Week ${row.startWeek}, ${row.startYear} to ${end}`);
   }
   if (row.startDate) {
-    const end = row.isIncumbent ? "Present" : (row.endDate ?? "—");
-    segments.push(`${row.startDate} – ${end}`);
+    const end = row.isIncumbent ? "Present" : (row.endDate ?? "-");
+    segments.push(`${row.startDate} to ${end}`);
   }
-  const tenure = segments.length > 0 ? ` — ${segments.join(" · ")}` : "";
+  const tenure = segments.length > 0 ? `, ${segments.join(" · ")}` : "";
   return `${row.name}${row.party ? ` (${row.party})` : ""}${tenure}`;
 }
 

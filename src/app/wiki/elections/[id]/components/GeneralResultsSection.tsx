@@ -85,7 +85,7 @@ export function GeneralResultsSection({
               .map(([candId, name]) => {
                 const votes = generalResults.totalVotes[candId] ?? 0;
                 const pct = totalVotes > 0 ? (votes / totalVotes) * 100 : 0;
-                const party = generalResults.candidateParties[candId] ?? "—";
+                const party = generalResults.candidateParties[candId] ?? "-";
                 const seats = generalResults.seatsEstimate?.[candId];
                 return {
                   candId,
@@ -108,7 +108,7 @@ export function GeneralResultsSection({
                   <td className="py-2 text-muted">{formatPct(row.pct)}</td>
                   {generalResults.seatsEstimate &&
                     Object.keys(generalResults.seatsEstimate).length > 0 && (
-                      <td className="py-2 text-foreground">{row.seats ?? "—"}</td>
+                      <td className="py-2 text-foreground">{row.seats ?? "-"}</td>
                     )}
                 </tr>
               ))}
