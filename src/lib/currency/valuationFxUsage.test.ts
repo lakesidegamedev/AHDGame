@@ -18,16 +18,16 @@ import { readFileSync } from "node:fs";
 const DISPLAY_PATHS = [
   "src/lib/corporations/queries/corporationDetail/portfolioHoldings.ts",
   "src/lib/corporations/queries/corporationDetail/subsidiaryContext.ts",
-  "src/app/api/stock-exchange/wealth-list/route.ts",
+  "src/lib/api/commands/stock-exchange/wealth-list/handlers.ts",
   "src/lib/turn/investorWealthSnapshots.ts",
   "src/lib/character/financialData.ts",
-  "src/app/api/discord-bot/financials/route.ts",
-  "src/app/api/discord-bot/corporation/route.ts",
+  "src/lib/api/commands/discord-bot/financials/handlers.ts",
+  "src/lib/api/commands/discord-bot/corporation/handlers.ts",
   // Portfolio valuation must agree with the portfolio route above, including
   // the history series rendered on the same page.
   "src/lib/portfolio/loadCharacterPortfolio.ts",
   "src/lib/turn/portfolioSnapshot.ts",
-  "src/app/api/corporations/[id]/portfolio/route.ts",
+  "src/lib/api/commands/corporations/[id]/portfolio/handlers.ts",
   "src/lib/world/legacyLeaderboard.ts",
   // Ranks corps by revenue for the player info panel.
   "src/app/api/pip/corp/route.ts",
