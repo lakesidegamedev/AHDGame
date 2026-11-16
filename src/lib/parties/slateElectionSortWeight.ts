@@ -27,6 +27,7 @@ export function getSlateElectionSortWeight(electionType: string): number {
     case "holyrood":
     case "senedd":
     case "qcAssembly":
+    case "abAssembly":
     case "landtag":
     case "peoplesCongress":
     case "republicSupremeSoviet":

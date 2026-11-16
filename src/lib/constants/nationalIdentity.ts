@@ -30,6 +30,7 @@ import { UKR_IDENTITY } from "@/lib/countries/ukr/identity";
 import { BAL_IDENTITY } from "@/lib/countries/bal/identity";
 import { CA_IDENTITY } from "@/lib/countries/ca/identity";
 import { QC_IDENTITY } from "@/lib/countries/qc/identity";
+import { AB_IDENTITY } from "@/lib/countries/ab/identity";
 
 /**
  * National-identity layer for state-owned / National Corporation surfaces.
@@ -127,6 +128,7 @@ export const NATIONAL_IDENTITY: Record<CountryId, NationalIdentity> = {
   WAL: WAL_IDENTITY.national,
   CA: CA_IDENTITY.national,
   QC: QC_IDENTITY.national,
+  AB: AB_IDENTITY.national,
 };
 
 export function getNationalIdentity(countryId: CountryId): NationalIdentity {

@@ -11,9 +11,9 @@ import {
 // authored countries with their own regions, chambers, budgets and map shards,
 // but they ship at Poland's standing: seeded and visible on the world map, not
 // yet offered to players. QC is Canada's latent successor, like SCO and WAL.
-const LATENT: CountryId[] = ["SCO", "WAL", "BLR", "UKR", "BAL", "QC"];
+const LATENT: CountryId[] = ["SCO", "WAL", "BLR", "UKR", "BAL", "QC", "AB"];
 
-describe("Latent countries (SCO/WAL/UKR/BLR/BAL/QC) are invisible in SP1", () => {
+describe("Latent countries (SCO/WAL/UKR/BLR/BAL/QC/AB) are invisible in SP1", () => {
   it("are both coming-soon", () => {
     for (const id of LATENT) expect(getCountryConfig(id).status).toBe("coming-soon");
   });

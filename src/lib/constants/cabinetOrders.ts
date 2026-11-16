@@ -16,6 +16,7 @@ import { SCO_MINISTERIAL_ORDERS } from "./scoCabinet";
 import { WAL_MINISTERIAL_ORDERS } from "./walCabinet";
 import { CA_MINISTERIAL_ORDERS } from "@/lib/countries/ca/cabinet/orders";
 import { QC_CABINET_SEATS } from "@/lib/countries/qc/data/qcCabinet";
+import { AB_CABINET_SEATS } from "@/lib/countries/ab/data/abCabinet";
 import { devolvedCabinetOrders } from "./devolvedCabinet";
 
 export type { MinisterialOrderConfig } from "./cabinetMechanicsTypes";
@@ -38,6 +39,7 @@ export const ORDERS_BY_COUNTRY: Record<string, Record<string, MinisterialOrderCo
   WAL: WAL_MINISTERIAL_ORDERS,
   CA: CA_MINISTERIAL_ORDERS,
   QC: devolvedCabinetOrders(QC_CABINET_SEATS),
+  AB: devolvedCabinetOrders(AB_CABINET_SEATS),
 };
 
 /** Get ministerial orders for a position in a country. */

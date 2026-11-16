@@ -31,6 +31,7 @@ import { UKR_IDENTITY } from "@/lib/countries/ukr/identity";
 import { BAL_IDENTITY } from "@/lib/countries/bal/identity";
 import { CA_IDENTITY } from "@/lib/countries/ca/identity";
 import { QC_IDENTITY } from "@/lib/countries/qc/identity";
+import { AB_IDENTITY } from "@/lib/countries/ab/identity";
 
 /**
  * Treasury / Finance-Ministry identity overlay for the National Budget surface.
@@ -104,6 +105,7 @@ export const TREASURY_TEXT: Record<
   WAL: WAL_IDENTITY.treasuryText,
   CA: CA_IDENTITY.treasuryText,
   QC: QC_IDENTITY.treasuryText,
+  AB: AB_IDENTITY.treasuryText,
 };
 
 export const TREASURY_IDENTITY: Record<CountryId, TreasuryIdentity> = Object.fromEntries(

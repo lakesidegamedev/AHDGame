@@ -19,6 +19,7 @@ const COUNTRY_CODES: Record<CountryId, string> = {
   WAL: "WAL",
   CA: "CA",
   QC: "QC",
+  AB: "AB",
   BR: "BR",
   CN: "CN",
   NG: "NG",

@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { caStateMetrics } from "@/lib/countries/ca/data/caStateMetrics";
+import { STATE_ADJACENCY } from "@/lib/constants/stateAdjacency";
+import { COUNTRY_CONFIGS } from "@/lib/constants/countriesTables";
 import { caRegions2027 } from "@/lib/countries/ca/data/caRegions2027";
 import {
   SOVEREIGNTY_REGIONS,
@@ -47,6 +49,27 @@ describe("sovereignty registry", () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
+  it("gives every successor country an id no state or other country uses", () => {
+    const stateIds = new Set(
+      Object.values(STATE_ADJACENCY).flatMap((map) => [
+        ...Object.keys(map),
+        ...Object.values(map).flat(),
+      ])
+    );
+    const all = SOVEREIGNTY_REGIONS.flatMap((entry) =>
+      entry.successorCountryId ? [entry.successorCountryId] : []
+    );
+    expect(new Set(all).size).toBe(all.length);
+    // Scotland and Wales predate the rule: their country ids are also their region ids.
+    const successors = SOVEREIGNTY_REGIONS.filter((entry) => entry.countryId !== "UK").flatMap(
+      (entry) => (entry.successorCountryId ? [entry.successorCountryId] : [])
+    );
+    for (const id of successors) {
+      expect(Object.keys(COUNTRY_CONFIGS)).toContain(id);
+      expect(stateIds.has(id)).toBe(false);
+    }
+  });
+
   it("names Canadian regions that the 2027 seed creates", () => {
     const seeded = new Set(caRegions2027.map((region) => String(region._id)));
     for (const regionId of sovereigntyRegionIds("CA")) expect(seeded.has(regionId)).toBe(true);
@@ -55,7 +78,7 @@ describe("sovereignty registry", () => {
   it("registers Alberta as a Canadian region whose successor is not built yet", () => {
     expect(sovereigntyRegionIn("CA", "CA_AB")).toMatchObject({
       kind: "independence",
-      successorCountryId: null,
+      successorCountryId: "AB",
       executiveTitle: "Premier",
       nationalGovernmentName: "Ottawa",
       actuates: false,

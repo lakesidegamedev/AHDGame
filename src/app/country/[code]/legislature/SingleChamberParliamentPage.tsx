@@ -92,6 +92,17 @@ const PARLIAMENT_META: Partial<Record<CountryId, ParliamentMeta>> = {
     proposeChamberLabel: "National Assembly",
     domesticOnlyLabel: "Quebec-headquartered corporations only",
   },
+  AB: {
+    heroSlug: "alberta-legislature",
+    heroAlt: "The Legislature Building, Edmonton",
+    headTitle: "Premier",
+    memberAbbr: "MLA",
+    memberPlural: "MLAs",
+    presidingOfficer: "Speaker of the Legislative Assembly",
+    electoralSystem: "Regional proportional representation",
+    proposeChamberLabel: "Legislative Assembly",
+    domesticOnlyLabel: "Alberta-headquartered corporations only",
+  },
   CA: {
     heroSlug: "parliament-hill",
     heroAlt: "Parliament Hill, Ottawa",
