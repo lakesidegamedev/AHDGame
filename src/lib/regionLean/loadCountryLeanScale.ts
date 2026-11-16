@@ -1,9 +1,13 @@
 import type { Db } from "mongodb";
+import type { CountryId } from "@/lib/constants/countries";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { countryLeanScale, type CountryLeanScale } from "./scale";
 
 /** The country's lean scale from its stored parties. */
-export async function loadCountryLeanScale(db: Db, countryId: string): Promise<CountryLeanScale> {
+export async function loadCountryLeanScale(
+  db: Db,
+  countryId: CountryId
+): Promise<CountryLeanScale> {
   const parties = await politicalPartiesCollection(db)
     .find(
       { countryId },
