@@ -14,7 +14,7 @@ describe("departedRegions", () => {
   it("ignores a region still present, an empty seed, and a latent entry", () => {
     expect(departedRegions(actuating, "US", new Set(["TX", "NY"]))).toEqual([]);
     expect(departedRegions(actuating, "US", new Set())).toEqual([]);
-    expect(departedRegions([texas], "US", new Set(["NY"]))).toEqual([]);
+    expect(departedRegions([{ ...texas, actuates: false }], "US", new Set(["NY"]))).toEqual([]);
   });
 });
 
