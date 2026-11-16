@@ -157,7 +157,7 @@ export const SOVEREIGNTY_REGIONS: readonly SovereigntyRegion[] = [
       separatist: ["us_lone_star"],
       rivals: ["us_republican", "us_democratic"],
     },
-    actuates: false,
+    actuates: true,
     wording: "sovereignty",
     parentUpperChamberSeats: 2,
   },

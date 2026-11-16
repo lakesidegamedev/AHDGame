@@ -146,7 +146,7 @@ describe("getSovereigntyGovernmentNames", () => {
       decisionMakerTitle: "President",
       nationalGovernmentName: "Washington",
       consentBodyName: "Congress",
-      actuates: false,
+      actuates: true,
       successorCountryId: "RTX",
     });
     expect(sovereigntyRegionIn("UK", "TX")).toBeNull();

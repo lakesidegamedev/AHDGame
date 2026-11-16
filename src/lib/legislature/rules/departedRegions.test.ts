@@ -42,3 +42,15 @@ describe("a US state leaving", () => {
     expect(after.electoralVoteUnits.some((unit) => unit.stateId === "TX")).toBe(false);
   });
 });
+
+describe("the live registry once Texas can leave", () => {
+  it("takes two senators off when Texas is gone from the live states", () => {
+    const departed = departedRegions(SOVEREIGNTY_REGIONS, "US", new Set(["NY", "CA"]));
+    expect(departed.map((entry) => entry.regionId)).toEqual(["TX"]);
+    expect(upperChamberSeatsAfterDepartures(100, departed)).toBe(98);
+  });
+
+  it("shrinks the House for the US once Texas can actuate", () => {
+    expect(liveSingleTierChamber("US", 435 - 38, 435)).toBe(397);
+  });
+});
