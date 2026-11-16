@@ -84,6 +84,7 @@ export const COUNTRY_CURRENCY_MAP: Record<CountryId, CurrencyCode> = {
   CA: "CAD",
   QC: "CAD", // shares Canada's CAD (anchor stays CA)
   AB: "CAD", // shares Canada's CAD (anchor stays CA)
+  RTX: "USD", // shares the US dollar (anchor stays US)
 };
 
 /**

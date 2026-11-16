@@ -31,6 +31,7 @@ import { BAL_CONTINENT } from "@/lib/countries/bal/geographyFacts";
 import { CA_CONTINENT } from "@/lib/countries/ca/geographyFacts";
 import { QC_CONTINENT } from "@/lib/countries/qc/geographyFacts";
 import { AB_CONTINENT } from "@/lib/countries/ab/geographyFacts";
+import { RTX_CONTINENT } from "@/lib/countries/rtx/geographyFacts";
 
 export type Continent =
   "North America" | "South America" | "Europe" | "Africa" | "Asia" | "Oceania";
@@ -83,4 +84,5 @@ export const COUNTRY_CONTINENT: Record<CountryId, Continent> = {
   CA: CA_CONTINENT,
   QC: QC_CONTINENT,
   AB: AB_CONTINENT,
+  RTX: RTX_CONTINENT,
 };

@@ -61,7 +61,8 @@ describe("resolveEnergyPosition + collisions", () => {
   });
   it("legacy combined energy seats retain their Estates flagship", () => {
     for (const [cc, seat] of Object.entries(ENERGY_POSITION_BY_COUNTRY)) {
-      if (cc === "US" || cc === "SCO" || cc === "WAL" || cc === "QC" || cc === "AB") continue;
+      if (cc === "US" || cc === "SCO" || cc === "WAL" || cc === "QC" || cc === "AB" || cc === "RTX")
+        continue;
       expect(
         ESTATE_PORTFOLIO_BY_COUNTRY[cc as keyof typeof ESTATE_PORTFOLIO_BY_COUNTRY]?.[seat!]
       ).toBeDefined();

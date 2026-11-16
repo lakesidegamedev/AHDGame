@@ -383,6 +383,7 @@ const SUCCESSOR_LOWER_CHAMBERS: ReadonlySet<string> = new Set([
   "senedd",
   "qcAssembly",
   "abAssembly",
+  "rtxAssembly",
 ]);
 /**
  * Standup-cycle spawner for a seceded country's devolved lower chamber

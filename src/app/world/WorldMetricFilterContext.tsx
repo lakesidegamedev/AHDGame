@@ -28,6 +28,7 @@ const COUNTRY_ID_TO_ISO: Record<CountryId, string> = {
   CA: "124",
   QC: "124", // shares the Canadian code; not rendered until independence
   AB: "124", // shares the Canadian code; not rendered until independence
+  RTX: "840", // shares the US code; not rendered until independence
   BR: "076",
   CN: "156",
   NG: "566",

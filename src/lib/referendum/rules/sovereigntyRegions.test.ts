@@ -147,6 +147,7 @@ describe("getSovereigntyGovernmentNames", () => {
       nationalGovernmentName: "Washington",
       consentBodyName: "Congress",
       actuates: false,
+      successorCountryId: "RTX",
     });
     expect(sovereigntyRegionIn("UK", "TX")).toBeNull();
     expect(independenceCopy("TX", () => undefined)).toMatchObject({

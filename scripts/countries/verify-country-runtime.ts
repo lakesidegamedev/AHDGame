@@ -314,7 +314,7 @@ const BALTIC = ["BAL"];
  * sovereignty, and neither is sovereign. They also share the United Kingdom's
  * ISO code, 826, which is why neither folder owns one.
  */
-const DEVOLVED_NATIONS = ["SCO", "WAL", "QC", "AB"];
+const DEVOLVED_NATIONS = ["SCO", "WAL", "QC", "AB", "RTX"];
 const DEVOLVED_ABSENCES: Record<string, string> = {
   ...EASTERN_BLOC_ABSENCES,
   /*
@@ -444,17 +444,17 @@ const ABSENT_BY_REGISTRY: Array<[string, string, readonly string[]]> = [
   [
     "COUNTRY_SECTOR_WEIGHTS_1979",
     "no 1979 sector-weight override; the country inherits its base weights",
-    ["RU", "GR", "AT", "FI", "SCO", "WAL", "QC", "AB", "BLR"],
+    ["RU", "GR", "AT", "FI", "SCO", "WAL", "QC", "AB", "RTX", "BLR"],
   ],
   [
     "MONETARY_BASELINES_1953",
     "no 1953 monetary override; the country inherits its base baseline",
-    ["US", "UK", "CN", "IE", "SCO", "WAL", "QC", "AB"],
+    ["US", "UK", "CN", "IE", "SCO", "WAL", "QC", "AB", "RTX"],
   ],
   [
     "MONETARY_BASELINES_1971",
     "no 1971 monetary override; the country inherits its base baseline",
-    ["AT", "FI", "RO", "YU", "BG", "CS", "SCO", "WAL", "QC", "AB", "BLR", "UKR", "BAL"],
+    ["AT", "FI", "RO", "YU", "BG", "CS", "SCO", "WAL", "QC", "AB", "RTX", "BLR", "UKR", "BAL"],
   ],
   [
     "MONETARY_BASELINES_1979",
@@ -475,6 +475,7 @@ const ABSENT_BY_REGISTRY: Array<[string, string, readonly string[]]> = [
       "WAL",
       "QC",
       "AB",
+      "RTX",
       "BLR",
       "UKR",
       "BAL",
@@ -498,6 +499,7 @@ const ABSENT_BY_REGISTRY: Array<[string, string, readonly string[]]> = [
       "WAL",
       "QC",
       "AB",
+      "RTX",
       "BLR",
       "UKR",
       "BAL",
@@ -520,6 +522,7 @@ const ABSENT_BY_REGISTRY: Array<[string, string, readonly string[]]> = [
       "WAL",
       "QC",
       "AB",
+      "RTX",
       "BLR",
       "UKR",
       "BAL",
@@ -553,6 +556,7 @@ const ABSENT_BY_REGISTRY: Array<[string, string, readonly string[]]> = [
       "WAL",
       "QC",
       "AB",
+      "RTX",
       "BLR",
       "UKR",
       "BAL",
@@ -563,6 +567,7 @@ const ABSENT_BY_REGISTRY: Array<[string, string, readonly string[]]> = [
     "no census label set; consumers fall back to the generic labels",
     [
       "US",
+      "RTX",
       "RU",
       "NG",
       "FR",
@@ -587,12 +592,28 @@ const ABSENT_BY_REGISTRY: Array<[string, string, readonly string[]]> = [
   [
     "STATE_DISPLAY_NAMES",
     "no display-name map; the map falls back to compactRegionCode",
-    ["US", "RU", "DD", "NG", "SCO", "WAL", "QC", "AB", "UKR"],
+    ["US", "RU", "DD", "NG", "SCO", "WAL", "QC", "AB", "RTX", "UKR"],
   ],
   [
     "METRIC_PRESET_BUNDLES",
     "no metric presets are authored for any era",
-    ["DD", "PL", "HU", "RO", "YU", "BG", "CS", "SCO", "WAL", "QC", "AB", "BLR", "UKR", "BAL"],
+    [
+      "DD",
+      "PL",
+      "HU",
+      "RO",
+      "YU",
+      "BG",
+      "CS",
+      "SCO",
+      "WAL",
+      "QC",
+      "AB",
+      "RTX",
+      "BLR",
+      "UKR",
+      "BAL",
+    ],
   ],
   [
     "POPULATION_ANCHOR_BUNDLES",
@@ -619,6 +640,7 @@ const ABSENT_BY_REGISTRY: Array<[string, string, readonly string[]]> = [
       "WAL",
       "QC",
       "AB",
+      "RTX",
       "BLR",
       "UKR",
       "BAL",
@@ -642,6 +664,7 @@ const ABSENT_BY_REGISTRY: Array<[string, string, readonly string[]]> = [
       "WAL",
       "QC",
       "AB",
+      "RTX",
       "BLR",
       "UKR",
       "BAL",
@@ -671,6 +694,7 @@ const ABSENT_BY_REGISTRY: Array<[string, string, readonly string[]]> = [
       "WAL",
       "QC",
       "AB",
+      "RTX",
       "BLR",
       "UKR",
       "BAL",
@@ -702,6 +726,7 @@ const ABSENT_BY_REGISTRY: Array<[string, string, readonly string[]]> = [
       "WAL",
       "QC",
       "AB",
+      "RTX",
       "BLR",
       "UKR",
       "BAL",
@@ -732,6 +757,7 @@ const ABSENT_BY_REGISTRY: Array<[string, string, readonly string[]]> = [
       "WAL",
       "QC",
       "AB",
+      "RTX",
       "BLR",
       "UKR",
       "BAL",
@@ -740,12 +766,12 @@ const ABSENT_BY_REGISTRY: Array<[string, string, readonly string[]]> = [
   [
     "COUNTRY_BUCKET_LABELS",
     "the American terms are the global default (BUCKET_LABELS in bucketLabels.ts); a row here would copy the fallback",
-    ["US"],
+    ["US", "RTX"],
   ],
   [
     "RAW_BUNDLES",
     "no static state-metrics bundle; SCO/WAL fan out from the UK aggregate at secession, UKR regions are a deferred build",
-    ["SCO", "WAL", "QC", "AB", "UKR"],
+    ["SCO", "WAL", "QC", "AB", "RTX", "UKR"],
   ],
   [
     "NON_PARTY_BUCKET_INDEPENDENT_BIAS_BY_COUNTRY",
@@ -775,6 +801,7 @@ const ABSENT_BY_REGISTRY: Array<[string, string, readonly string[]]> = [
       "WAL",
       "QC",
       "AB",
+      "RTX",
       "BLR",
       "UKR",
       "BAL",
@@ -783,12 +810,12 @@ const ABSENT_BY_REGISTRY: Array<[string, string, readonly string[]]> = [
   [
     "GDP_DENOMINATION_1953",
     "not a 1953 starting country; later presets are uniformly local-currency",
-    ["SCO", "WAL", "QC", "AB"],
+    ["SCO", "WAL", "QC", "AB", "RTX"],
   ],
   [
     "COUNTRY_SECTOR_WEIGHTS_1953",
     "no 1953 sector-weight override; the country inherits its base weights",
-    ["RU", "SCO", "WAL", "QC", "AB", "BLR"],
+    ["RU", "SCO", "WAL", "QC", "AB", "RTX", "BLR"],
   ],
   [
     "REGIONAL_BILL_ASSENT_OFFICE_KEY",
@@ -815,6 +842,7 @@ const ABSENT_BY_REGISTRY: Array<[string, string, readonly string[]]> = [
       "WAL",
       "QC",
       "AB",
+      "RTX",
       "BLR",
       "UKR",
       "BAL",
@@ -823,7 +851,7 @@ const ABSENT_BY_REGISTRY: Array<[string, string, readonly string[]]> = [
   [
     "INCOME_ANCHORS",
     "no authored income anchors; the metric catalog falls back",
-    ["PL", "HU", "RO", "YU", "BG", "CS", "SCO", "WAL", "QC", "AB", "BLR", "UKR", "BAL"],
+    ["PL", "HU", "RO", "YU", "BG", "CS", "SCO", "WAL", "QC", "AB", "RTX", "BLR", "UKR", "BAL"],
   ],
   [
     "TARGETS",
@@ -849,6 +877,7 @@ const ABSENT_BY_REGISTRY: Array<[string, string, readonly string[]]> = [
       "WAL",
       "QC",
       "AB",
+      "RTX",
       "BLR",
       "UKR",
       "BAL",
@@ -879,6 +908,7 @@ const ABSENT_BY_REGISTRY: Array<[string, string, readonly string[]]> = [
       "WAL",
       "QC",
       "AB",
+      "RTX",
       "BLR",
       "UKR",
       "BAL",
@@ -909,6 +939,7 @@ const ABSENT_BY_REGISTRY: Array<[string, string, readonly string[]]> = [
       "WAL",
       "QC",
       "AB",
+      "RTX",
       "BLR",
       "UKR",
       "BAL",
@@ -965,6 +996,7 @@ const ABSENT_BY_REGISTRY: Array<[string, string, readonly string[]]> = [
       "WAL",
       "QC",
       "AB",
+      "RTX",
       "BLR",
       "UKR",
       "BAL",
@@ -1050,6 +1082,15 @@ ABSENT_UPSTREAM.AB = {
     "no country-specific demographic category ids; the shared set applies",
 };
 delete ABSENT_UPSTREAM.AB.DEFAULT_STRATEGIC_SECTORS;
+
+/* Texas is a latent successor too: strategic energy and extraction, 2027 census. */
+ABSENT_UPSTREAM.RTX = {
+  ...(ABSENT_UPSTREAM.RTX ?? {}),
+  COUNTRY_SECTOR_WEIGHTS_1991: "Texas is absent from the 1991 world",
+  REGION_DEMOGRAPHIC_CATEGORY_IDS:
+    "no country-specific demographic category ids; the shared set applies",
+};
+delete ABSENT_UPSTREAM.RTX.DEFAULT_STRATEGIC_SECTORS;
 
 /**
  * A registry whose row for this country is SHARED machinery, not its data.

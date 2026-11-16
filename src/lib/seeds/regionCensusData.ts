@@ -52,6 +52,7 @@ import { BAL_GEOGRAPHY } from "@/lib/countries/bal/geography";
 import { CA_GEOGRAPHY } from "@/lib/countries/ca/geography";
 import { QC_GEOGRAPHY } from "@/lib/countries/qc/geography";
 import { AB_GEOGRAPHY } from "@/lib/countries/ab/geography";
+import { RTX_GEOGRAPHY } from "@/lib/countries/rtx/geography";
 
 export const CENSUS_BUNDLES: Partial<Record<CountryId, PresetBundles>> = {
   PL: PL_GEOGRAPHY.censusBundles,
@@ -99,6 +100,7 @@ export const CENSUS_BUNDLES: Partial<Record<CountryId, PresetBundles>> = {
   CA: CA_GEOGRAPHY.censusBundles,
   QC: QC_GEOGRAPHY.censusBundles,
   AB: AB_GEOGRAPHY.censusBundles,
+  RTX: RTX_GEOGRAPHY.censusBundles,
 };
 
 /**

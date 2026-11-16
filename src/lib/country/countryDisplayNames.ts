@@ -24,6 +24,7 @@ const COUNTRY_NAMES: Record<CountryId, string> = {
   CA: "Canada",
   QC: "Quebec",
   AB: "Alberta",
+  RTX: "Republic of Texas",
   BR: "Brazil",
   CN: "China",
   NG: "Nigeria",

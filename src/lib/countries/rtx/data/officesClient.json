@@ -1,0 +1,65 @@
+{
+  "config": {
+    "governmentType": "parliamentaryRepublic",
+    "regionLabel": "Region",
+    "regionalBillAssentTitle": "Commissioner",
+    "legislature": {
+      "name": "House of Representatives",
+      "lowerChamber": {
+        "key": "rtxAssembly",
+        "name": "House of Representatives",
+        "shortName": "House",
+        "seats": 150,
+        "description": "150 members elected across Texas's regions, seats shared by each region's vote."
+      }
+    },
+    "subNationalChamber": {
+      "key": "regionalCouncil",
+      "name": "Regional Council",
+      "shortName": "Council",
+      "regionalModel": true
+    },
+    "officeTypes": [
+      {
+        "key": "firstMinister",
+        "label": "Chief Minister",
+        "labelPlural": "Chief Ministers",
+        "isExecutive": true,
+        "isSubNational": false
+      },
+      {
+        "key": "rtxAssembly",
+        "label": "Representative",
+        "labelPlural": "Representatives",
+        "chamberKey": "rtxAssembly",
+        "isExecutive": false,
+        "isSubNational": false
+      },
+      {
+        "key": "governor",
+        "label": "Commissioner",
+        "labelPlural": "Commissioners",
+        "isExecutive": false,
+        "isSubNational": true
+      },
+      {
+        "key": "regionalCouncil",
+        "label": "Regional Councillor",
+        "labelPlural": "Regional Councillors",
+        "chamberKey": "regionalCouncil",
+        "isExecutive": false,
+        "isSubNational": true
+      },
+      {
+        "key": "centralBankChair",
+        "label": "Federal Reserve Chair",
+        "labelPlural": "Federal Reserve Chairs",
+        "isExecutive": false,
+        "isSubNational": false
+      }
+    ],
+    "lowerElectionSystem": {
+      "snapElectionsAllowed": true
+    }
+  }
+}

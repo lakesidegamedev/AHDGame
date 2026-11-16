@@ -1,0 +1,44 @@
+import { describe, expect, it } from "vitest";
+import { SOVEREIGNTY_REGIONS } from "@/lib/referendum/rules/sovereigntyRegions";
+import { buildApportionment } from "@/lib/elections/apportionment";
+import { liveSingleTierChamber } from "./liveChamber";
+import { departedRegions, upperChamberSeatsAfterDepartures } from "./departedRegions";
+
+const texas = SOVEREIGNTY_REGIONS.find((entry) => entry.regionId === "TX")!;
+const actuating = [{ ...texas, actuates: true }];
+
+describe("departedRegions", () => {
+  it("counts a region that can actuate and is gone from the live regions", () => {
+    expect(departedRegions(actuating, "US", new Set(["CA", "NY"]))).toHaveLength(1);
+  });
+  it("ignores a region still present, an empty seed, and a latent entry", () => {
+    expect(departedRegions(actuating, "US", new Set(["TX", "NY"]))).toEqual([]);
+    expect(departedRegions(actuating, "US", new Set())).toEqual([]);
+    expect(departedRegions([texas], "US", new Set(["NY"]))).toEqual([]);
+  });
+});
+
+describe("a US state leaving", () => {
+  it("takes two seats off the Senate", () => {
+    expect(upperChamberSeatsAfterDepartures(100, actuating)).toBe(98);
+    expect(upperChamberSeatsAfterDepartures(100, [])).toBe(100);
+  });
+
+  it("shrinks the House by the state's seats", () => {
+    const surviving = 435 - 38;
+    expect(liveSingleTierChamber("US", surviving, 435, new Set(["US"]))).toBe(397);
+    expect(liveSingleTierChamber("US", surviving, 435, new Set())).toBe(435);
+  });
+
+  it("removes the state's electors from the college", () => {
+    const before = buildApportionment({}, "2027-default", 2027);
+    const after = buildApportionment({}, "2027-default", 2027, undefined, ["TX"]);
+    const texasElectors = before.electoralVotes.TX;
+    expect(texasElectors).toBe(before.houseSeats.TX + 2);
+    expect(after.electoralVotes.TX).toBeUndefined();
+    expect(after.houseSeats.TX).toBeUndefined();
+    const sum = (ev: Record<string, number>) => Object.values(ev).reduce((a, b) => a + b, 0);
+    expect(sum(before.electoralVotes) - sum(after.electoralVotes)).toBe(texasElectors);
+    expect(after.electoralVoteUnits.some((unit) => unit.stateId === "TX")).toBe(false);
+  });
+});

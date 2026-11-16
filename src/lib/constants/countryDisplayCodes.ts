@@ -27,6 +27,7 @@ export const COUNTRY_DISPLAY_CODES: Readonly<Record<string, string>> = {
   PL: "PL",
   QC: "QC",
   AB: "AB",
+  RTX: "RTX",
   RO: "RO",
   RU: "RU",
   SCO: "SCO",

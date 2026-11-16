@@ -103,6 +103,17 @@ const PARLIAMENT_META: Partial<Record<CountryId, ParliamentMeta>> = {
     proposeChamberLabel: "Legislative Assembly",
     domesticOnlyLabel: "Alberta-headquartered corporations only",
   },
+  RTX: {
+    heroSlug: "texas-capitol",
+    heroAlt: "The State Capitol, Austin",
+    headTitle: "Chief Minister",
+    memberAbbr: "Rep.",
+    memberPlural: "Representatives",
+    presidingOfficer: "Speaker of the House",
+    electoralSystem: "Regional proportional representation",
+    proposeChamberLabel: "House of Representatives",
+    domesticOnlyLabel: "Texas-headquartered corporations only",
+  },
   CA: {
     heroSlug: "parliament-hill",
     heroAlt: "Parliament Hill, Ottawa",

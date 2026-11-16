@@ -91,6 +91,7 @@ import { BAL_NPP_CAPITAL_STATE } from "@/lib/countries/bal/geographyFacts";
 import { CA_NPP_CAPITAL_STATE } from "@/lib/countries/ca/geographyFacts";
 import { QC_NPP_CAPITAL_STATE } from "@/lib/countries/qc/geographyFacts";
 import { AB_NPP_CAPITAL_STATE } from "@/lib/countries/ab/geographyFacts";
+import { RTX_NPP_CAPITAL_STATE } from "@/lib/countries/rtx/geographyFacts";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
@@ -149,6 +150,7 @@ export const NPP_CAPITAL_STATES: Record<CountryId, string> = {
   CA: CA_NPP_CAPITAL_STATE,
   QC: QC_NPP_CAPITAL_STATE, // latent: regions exist only after independence
   AB: AB_NPP_CAPITAL_STATE, // latent: regions exist only after independence
+  RTX: RTX_NPP_CAPITAL_STATE, // latent: regions exist only after independence
 };
 
 export interface SpawnNppCorporationInput {

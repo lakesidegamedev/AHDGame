@@ -26,6 +26,9 @@ const HERO_URLS: Record<string, string> = {
   // Alberta Legislature Building, Edmonton: the AB executive and Assembly.
   "alberta-legislature":
     "https://commons.wikimedia.org/wiki/Special:FilePath/Alberta_Legislature_Building.jpg?width=1280",
+  // Texas State Capitol, Austin: the Texas executive and House.
+  "texas-capitol":
+    "https://commons.wikimedia.org/wiki/Special:FilePath/Texas_State_Capitol.jpg?width=1280",
   // First Minister's official residence, 6 Charlotte Square, Edinburgh.
   "bute-house": "https://commons.wikimedia.org/wiki/Special:FilePath/Bute_House.jpg?width=1280",
   // Senedd, home of the Welsh Government / Welsh Parliament, Cardiff Bay.

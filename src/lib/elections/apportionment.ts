@@ -14,6 +14,8 @@ import { admittedStateIdsAsOf } from "./statehoodAdmission";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
 import { statesCollection } from "@/lib/db/repositories/states";
 import type { Document } from "mongodb";
+import { SOVEREIGNTY_REGIONS } from "@/lib/referendum/rules/sovereigntyRegions";
+import { departedRegions } from "@/lib/legislature/rules/departedRegions";
 
 /** US senators per state (the +2 in EV = houseSeats + senators). */
 const SENATORS_PER_STATE = 2;
@@ -134,9 +136,13 @@ export function buildApportionment(
   liveSeatsByState: Record<string, number>,
   preset: string | undefined,
   year?: number | null,
-  admittedStateIds?: Iterable<string>
+  admittedStateIds?: Iterable<string>,
+  departedStateIds?: Iterable<string>
 ): Apportionment {
   const seats: Record<string, number> = { ...getHouseSeats(preset) };
+  // A state that seceded keeps its row in the preset's frozen map; it must not
+  // keep its seats or electors.
+  for (const id of departedStateIds ?? []) delete seats[id];
   // States admitted mid-game are absent from the preset's frozen apportionment
   // map — that absence is exactly what "not a state yet" means here — so they
   // must be let into the map before the override loop, or the guard below drops
@@ -189,7 +195,12 @@ export async function loadApportionment(
   // A future-dated admission must not count yet — the year gate is what keeps
   // this consistent with the DC/ME-NE gates above.
   const admitted = admittedStateIdsAsOf(usStates, resolveApportionmentYear(preset, year));
-  return buildApportionment(live, preset, year, admitted);
+  const departed = departedRegions(
+    SOVEREIGNTY_REGIONS,
+    "US",
+    new Set(usStates.map((state) => state._id))
+  ).map((entry) => entry.regionId);
+  return buildApportionment(live, preset, year, admitted, departed);
 }
 
 /**

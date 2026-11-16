@@ -46,6 +46,12 @@ export interface SovereigntyRegion {
    * (a Sovereignty tab and desire) or the UK's "devolution".
    */
   readonly wording: "sovereignty" | "devolution";
+  /**
+   * Seats the parent's upper chamber loses when the region leaves, for a
+   * parent whose upper chamber is not apportioned by region (the US Senate
+   * seats two senators per state). Absent when the chamber follows its regions.
+   */
+  readonly parentUpperChamberSeats?: number;
 }
 
 export const SOVEREIGNTY_REGIONS: readonly SovereigntyRegion[] = [
@@ -140,7 +146,7 @@ export const SOVEREIGNTY_REGIONS: readonly SovereigntyRegion[] = [
     regionId: "TX",
     kind: "independence",
     targetCountryId: null,
-    successorCountryId: null,
+    successorCountryId: "RTX",
     executiveTitle: "Governor",
     nationalGovernmentName: "Washington",
     parentName: "the United States",
@@ -153,6 +159,7 @@ export const SOVEREIGNTY_REGIONS: readonly SovereigntyRegion[] = [
     },
     actuates: false,
     wording: "sovereignty",
+    parentUpperChamberSeats: 2,
   },
 ];
 

@@ -16,6 +16,7 @@
  *   - CA: elected `governor` per province or territory → `"Premier"`
  *   - QC: elected `governor` per region → `"Prefect"`
  *   - AB: elected `governor` per region → `"Commissioner"`
+ *   - RTX: elected `governor` per region → `"Commissioner"`
  *   - CN: elected `governor` per macro-region → `"Governor"`
  *   - IE: elected `governor` per region, label varies by region (recycled
  *     `governor` officeType for the Cathaoirleach):
@@ -40,6 +41,7 @@ import { regionalExecutiveSignForTenure } from "./regionalExecutiveConstants";
 import { CA_REGIONAL_EXECUTIVE } from "@/lib/countries/ca/regionalExecutive";
 import { QC_REGIONAL_EXECUTIVE } from "@/lib/countries/qc/regionalExecutive";
 import { AB_REGIONAL_EXECUTIVE } from "@/lib/countries/ab/regionalExecutive";
+import { RTX_REGIONAL_EXECUTIVE } from "@/lib/countries/rtx/regionalExecutive";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 /** Magnitude band of the regional-executive modifier (low / medium / high). */
@@ -65,6 +67,7 @@ const UNIFORM_EXECUTIVE_OFFICES: Readonly<
   CA: CA_REGIONAL_EXECUTIVE,
   QC: QC_REGIONAL_EXECUTIVE,
   AB: AB_REGIONAL_EXECUTIVE,
+  RTX: RTX_REGIONAL_EXECUTIVE,
 };
 
 /** UK regions whose devolved executive is a "First Minister". */

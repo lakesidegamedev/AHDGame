@@ -47,6 +47,7 @@ export const CONVERTED: readonly CountryId[] = [
   "CA",
   "QC",
   "AB",
+  "RTX",
 ];
 
 /**
