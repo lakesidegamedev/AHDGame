@@ -51,7 +51,6 @@ export type EvidenceInput = {
   requestedRedemptionFlag: boolean | null;
   initialRedemptionFlag: boolean | null;
   finalRedemptionFlag: boolean | null;
-  indexFundsMode: string | null;
   equityLiquidityFacilityEnabled: boolean | null;
   indexFundBondLiquidityEnabled: boolean | null;
   funds: FundRow[];
@@ -89,7 +88,6 @@ export function evaluateFundRoundTrip(input: EvidenceInput) {
     input.finalRedemptionFlag !== true
   )
     fail("NPP redemption flag not proven enabled for this run");
-  if (input.indexFundsMode !== "full") fail("indexFundsMode was not full");
   if (input.equityLiquidityFacilityEnabled !== true)
     fail("equity liquidity facility was not enabled");
 

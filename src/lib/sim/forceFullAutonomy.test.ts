@@ -89,13 +89,11 @@ describe("forceFullAutonomy", () => {
       ...(writes.find((w) => w.collection === "gameState")?.update.$set ?? {}),
     };
     // eurozoneEnabled is era-derived (seedForex); forcing it on corrupts FX for
-    // any preset predating the euro. indexFundsEnabled is superseded by
-    // indexFundsMode. altScoringEnabled is an ops kill-switch, on by default.
+    // any preset predating the euro. altScoringEnabled is an ops kill-switch, on by default.
     expect(set).not.toHaveProperty("eurozoneEnabled");
     // Arming the launch guard auto-reverts clearing/capital back to "ledger"
     // mid-run and disarms itself, silently ending the experiment.
     expect(set).not.toHaveProperty("marketGuardEnabled");
-    expect(set).not.toHaveProperty("indexFundsEnabled");
     expect(set).not.toHaveProperty("altScoringEnabled");
   });
 });

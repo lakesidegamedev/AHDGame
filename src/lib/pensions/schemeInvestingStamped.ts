@@ -11,7 +11,6 @@ import type { PensionScheme } from "@/lib/db/types/pensionScheme";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
 import { emitTx } from "@/lib/financialTxLog/emit";
-import { isIndexFundsEnabled } from "@/lib/indexFunds/featureFlag";
 import { insertFundTransaction } from "@/lib/indexFunds/fundQueries";
 import { isDuplicateKeyError } from "@/lib/elections/duplicateKey";
 import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
@@ -27,10 +26,6 @@ export async function runStampedPensionSchemeInvestments(
   currentTurn: number
 ): Promise<PensionInvestingResult> {
   const result: PensionInvestingResult = { schemesInvesting: 0, investedAnchor: 0, errors: [] };
-
-  // Fail closed. Schemes simply hold cash and every other pension mechanic is
-  // untouched.
-  if (!(await isIndexFundsEnabled())) return result;
 
   // Finish any investment whose cash already left a scheme before anything new starts.
   const unfinished = await pensionSchemesCollection<PensionScheme>(db)

@@ -51,7 +51,7 @@ function world() {
   }));
   memory.seed("indexFunds", funds.map((f) => ({ ...f })) as never);
   memory.seed("npps", npps);
-  memory.seed("gameConfig", [{ _id: "default", indexFundsMode: "full", ledgerShadow: true }]);
+  memory.seed("gameConfig", [{ _id: "default", ledgerShadow: true }]);
   memory.seed("exchangeRates", [{ currencyCode: "USD", rate: 1 }]);
   memory.seed("gameState", [{ _id: "current", currentTurn: 1 }]);
   vi.mocked(getDb).mockResolvedValue(db);

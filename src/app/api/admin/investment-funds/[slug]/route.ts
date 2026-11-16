@@ -4,7 +4,6 @@ import { getDb } from "@/lib/mongodb";
 import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError, notFound, errorResponse } from "@/lib/api/errors";
 import { parseJsonBody } from "@/lib/api/validate";
-import { isIndexFundsEnabled, INDEX_FUNDS_DISABLED_MESSAGE } from "@/lib/indexFunds/featureFlag";
 import { resolveFundBySlugOrId, setFundStatus } from "@/lib/indexFunds/fundQueries";
 import { createAdminLog } from "@/lib/adminLog";
 import type { IndexFund } from "@/lib/db/types";
@@ -21,9 +20,6 @@ export async function GET(_request: Request, { params }: { params: Promise<{ slu
     if (!auth.ok) return auth.response;
 
     const db = await getDb();
-    if (!(await isIndexFundsEnabled())) {
-      return errorResponse(403, INDEX_FUNDS_DISABLED_MESSAGE);
-    }
 
     const { slug } = await params;
     const fund = await resolveFundBySlugOrId(db, slug);
@@ -47,9 +43,6 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ sl
     }
 
     const db = await getDb();
-    if (!(await isIndexFundsEnabled())) {
-      return errorResponse(403, INDEX_FUNDS_DISABLED_MESSAGE);
-    }
 
     const { slug } = await params;
     const fund = await resolveFundBySlugOrId(db, slug);

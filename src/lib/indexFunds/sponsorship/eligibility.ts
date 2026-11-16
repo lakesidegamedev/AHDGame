@@ -1,7 +1,6 @@
 /** Fund creation eligibility is shared by the command and the bank's action menu. */
-import { isIndexFundsEnabled } from "../featureFlag";
 import type { Db } from "mongodb";
-import type { Corporation, GameConfig, GameState } from "@/lib/db/types";
+import type { Corporation, GameState } from "@/lib/db/types";
 import { fundBankCharter, fundSponsorEligibility } from "./rules/eligibility";
 import { FUND_CHARTER_FEE_ANCHOR, FUND_MIN_SEED_CAPITAL_ANCHOR } from "./constants";
 import { resolveCountryCurrencyCode } from "@/lib/currency/govBudgetFields";
@@ -15,7 +14,6 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import type { Document } from "mongodb";
 import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
-import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 export async function fundCreationEligibility(
   db: Db,
@@ -23,7 +21,7 @@ export async function fundCreationEligibility(
   options?: { replay?: boolean }
 ): Promise<string | null> {
   if (sponsor.ceoVacant) return "Appoint a CEO before creating a fund.";
-  const [sector, state, config, liveFunds] = await Promise.all([
+  const [sector, state, liveFunds] = await Promise.all([
     corporateSectorsCollection<Document>(db).findOne(
       { corporationId: sponsor._id, sectorType: "financial" },
       { projection: { _id: 1 } }
@@ -31,10 +29,6 @@ export async function fundCreationEligibility(
     gameStateCollection(db).findOne(
       { _id: "current" },
       { projection: { corporationActionsPaused: 1 } }
-    ),
-    gameConfigCollection(db).findOne(
-      { _id: "default" },
-      { projection: { indexFundsMode: 1, indexFundsEnabled: 1 } }
     ),
     indexFundsCollection<Document>(db).countDocuments({
       sponsorCorporationId: sponsor._id,
@@ -47,7 +41,6 @@ export async function fundCreationEligibility(
   });
   if (reason) return reason;
   if (state?.corporationActionsPaused) return "Corporation actions are currently paused.";
-  if (!(await isIndexFundsEnabled(config))) return "Investment funds are not enabled.";
   const bank = fundBankCharter(sponsor.bankCharter);
   if (!options?.replay && bank && liveFunds >= 3)
     return "A bank can manage at most three live funds.";

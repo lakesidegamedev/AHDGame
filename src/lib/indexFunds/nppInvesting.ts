@@ -9,7 +9,6 @@
  * of that income to funds (broad vs sector mix and domestic bias vary).
  *
  * Called from the fund cron (Step 6), throttled by NPP_FUND_INVESTMENT_INTERVAL.
- * Gated behind isIndexFundsEnabled (indexFundsMode).
  */
 
 import {
@@ -20,7 +19,6 @@ import {
   type UpdateOneModel,
 } from "mongodb";
 import type { NPP, IndexFund, IndexFundPosition, IndexFundTransaction } from "@/lib/db/types";
-import { isIndexFundsEnabled } from "@/lib/indexFunds/featureFlag";
 import { emitTxBulk, loadTxThresholds } from "@/lib/financialTxLog/emit";
 import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
 import { listActiveFunds } from "@/lib/indexFunds/fundQueries";
@@ -291,16 +289,6 @@ export async function processNPPFundInvestments(
   db: Db,
   options?: { currentTurn?: number; budgetMultiplier?: number }
 ): Promise<NPPFundInvestingResult> {
-  if (!(await isIndexFundsEnabled())) {
-    return {
-      nppsProcessed: 0,
-      totalInvested: 0,
-      errors: [],
-      redemptionsQueued: 0,
-      unitsRedeemed: 0,
-    };
-  }
-
   const errors: string[] = [];
   const currentTurn = options?.currentTurn ?? 0;
   // When the caller throttles this pass to run every Nth turn (a performance
