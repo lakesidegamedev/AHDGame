@@ -153,7 +153,6 @@ describe("buildWorldsimFeatureManifest", () => {
       demographicsDemand: false,
       macroGrowth: false,
       allFeatureFlags: true,
-      marketMode: "capital",
     });
     expect(manifest).toMatchObject({
       autonomyLevel: "v3",
@@ -161,7 +160,6 @@ describe("buildWorldsimFeatureManifest", () => {
       simTurnPhaseMode: "full",
       preIteration: true,
       allFeatureFlags: true,
-      marketMode: "capital",
     });
     expect(JSON.stringify(manifest)).toBe(
       JSON.stringify(
@@ -179,7 +177,6 @@ describe("buildWorldsimFeatureManifest", () => {
           demographicsDemand: false,
           macroGrowth: false,
           allFeatureFlags: true,
-          marketMode: "capital",
         })
       )
     );
